@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { createWriteStream } from 'node:fs';
+import { type WriteStream, createWriteStream } from 'node:fs';
 import { join } from 'node:path';
 import { ALWAYS_DISALLOWED_TOOLS, DEFAULT_ALLOWED_TOOLS, LOG_DIR, WORKER_SYSTEM_PROMPT, ensureDirs } from './config.ts';
 import { runClaude } from './claude.ts';
@@ -78,6 +78,11 @@ export function parseStatus(text: string | undefined): { blocked: boolean; reaso
   return { blocked: false, declared: false };
 }
 
+/** End the run log and wait until it is on disk, so readers never see a finished run with a partial log. */
+function closeLog(log: WriteStream): Promise<void> {
+  return new Promise((resolve) => log.end(() => resolve()));
+}
+
 /** Run a repo command (setup or tests) in the worktree. */
 export function runCommand(cmd: string, cwd: string, timeout: number): Promise<{ passed: boolean; output: string }> {
   return new Promise((resolve) => {
@@ -127,7 +132,7 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
     const setup = await runCommand(repo.setup_cmd, wt.path, SETUP_TIMEOUT_MS);
     log.write(JSON.stringify({ type: 'agentdeck_setup', cmd: repo.setup_cmd, passed: setup.passed, output: setup.output }) + '\n');
     if (!setup.passed) {
-      log.end();
+      await closeLog(log);
       pauseRepo(db, repo, `setup failed on task #${task.id}`);
       return finish(db, task, runId, { outcome: 'blocked', reason: `setup failed: ${lastLine(setup.output)}` });
     }
@@ -187,7 +192,7 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
     }
   }
 
-  log.end();
+  await closeLog(log);
   // Refused tool uses mean the repo's tool rules don't fit its work: every further task would hit the same wall.
   const denials = result?.permission_denials ?? [];
   runFields.denials = denials.length;
