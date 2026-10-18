@@ -38,6 +38,16 @@ const shown = computed(() => {
 });
 
 const label = (s: TaskStatus) => (s === 'cancel_requested' ? 'stopping' : s);
+
+const byId = computed(() => new Map(props.tasks.map((t) => [t.id, t])));
+
+/** The task this one is queued behind: its dependency isn't done yet, or is done with a PR that isn't merged. */
+function waitingOn(t: TaskSummary): number | null {
+  if (t.status !== 'queued' || t.after_task === null) return null;
+  const dep = byId.value.get(t.after_task);
+  if (!dep) return null; // older than the loaded page, so almost certainly finished
+  return dep.status === 'done' && (dep.pr_url === null || dep.pr_state === 'merged') ? null : t.after_task;
+}
 </script>
 
 <template>
@@ -61,6 +71,8 @@ const label = (s: TaskStatus) => (s === 'cancel_requested' ? 'stopping' : s);
           <span class="title">{{ t.title }}</span>
           <span class="meta muted">
             #{{ t.id }} · {{ t.repo }} · {{ label(t.status) }}<template v-if="t.source === 'planner'"> · planner</template
+            ><template v-if="waitingOn(t)"> · waiting on #{{ waitingOn(t) }}</template
+            ><template v-if="t.pr_url"> · PR {{ t.pr_state ?? 'open' }}</template
             ><template v-if="t.attempts > 1"> · try {{ t.attempts }}</template> ·
             {{ ago(t.updated_at) }}
           </span>

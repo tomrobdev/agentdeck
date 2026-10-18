@@ -15,7 +15,11 @@ export interface Repo {
   toolchain: string | null;
   setup_cmd: string | null;
   paused_reason: string | null;
+  pr_mode: PrMode;
 }
+
+export type PrMode = 'off' | 'draft' | 'ready';
+export type PrState = 'open' | 'merged' | 'closed';
 
 export interface DoctorCheck {
   name: string;
@@ -75,6 +79,9 @@ export interface TaskSummary {
   worktree: string | null;
   blocked_reason: string | null;
   source: 'manual' | 'planner';
+  pr_url: string | null;
+  pr_state: PrState | null;
+  after_task: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -197,7 +204,10 @@ export const api = {
   repos: () => call<Repo[]>('/api/repos'),
   addRepo: (r: { path: string; name?: string; test?: string; setup?: string }) => call<Repo>('/api/repos', { method: 'POST', json: r }),
   repo: (id: number) => call<RepoDetail>(`/api/repos/${id}`),
-  updateRepo: (id: number, patch: { goals?: string; auto_approve?: boolean; test_cmd?: string | null; setup_cmd?: string | null }) =>
+  updateRepo: (
+    id: number,
+    patch: { goals?: string; auto_approve?: boolean; test_cmd?: string | null; setup_cmd?: string | null; pr_mode?: PrMode },
+  ) =>
     call<RepoDetail>(`/api/repos/${id}`, { method: 'POST', json: patch }),
   plan: (id: number) => call<PlanResult>(`/api/repos/${id}/plan`, { method: 'POST' }),
   doctor: (id: number) => call<DoctorReport>(`/api/repos/${id}/doctor`, { method: 'POST' }),
@@ -211,7 +221,7 @@ export const api = {
   service: () => call<ServiceStatus>('/api/service'),
   tasks: () => call<TaskSummary[]>('/api/tasks'),
   task: (id: number) => call<TaskDetail>(`/api/tasks/${id}`),
-  addTask: (t: { repo: string; prompt: string; title?: string; model?: string; priority?: number; max_turns?: number }) =>
+  addTask: (t: { repo: string; prompt: string; title?: string; model?: string; priority?: number; max_turns?: number; after_task?: number }) =>
     call<TaskDetail>('/api/tasks', { method: 'POST', json: t }),
   cancel: (id: number) => call<{ result: string }>(`/api/tasks/${id}/cancel`, { method: 'POST' }),
   retry: (id: number) => call<TaskDetail>(`/api/tasks/${id}/retry`, { method: 'POST' }),

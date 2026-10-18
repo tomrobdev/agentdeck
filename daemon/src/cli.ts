@@ -3,7 +3,8 @@ import { parseArgs } from 'node:util';
 import * as actions from './actions.ts';
 import { startApi } from './api.ts';
 import { API_PORT, DB_PATH, DEFAULTS } from './config.ts';
-import { type Task, type TaskStatus, openDb } from './db.ts';
+import { type Db, type PrMode, type Task, type TaskStatus, openDb } from './db.ts';
+import { isWaiting } from './domain/pr.ts';
 import { removeWorktree } from './git.ts';
 import { BUDGET_KEYS } from './governor.ts';
 import type { NotifyKind } from './notify.ts';
@@ -22,11 +23,13 @@ Repos
   agentdeck repo set <repo> base_branch <branch>  branch new task worktrees start from
   agentdeck repo set <repo> test_cmd "<cmd>"      run after each task ("" for none)
   agentdeck repo set <repo> setup_cmd "<cmd>"     run in each worktree before claude ("" for none)
+  agentdeck repo set <repo> pr_mode off|draft|ready  push and open a PR when a task is done
   agentdeck goals <repo> [--file goals.md]        show (or replace) the goals the planner works from
   agentdeck plan <repo>                           run the planner now
 
 Tasks
   agentdeck add "<prompt>" --repo <name> [--title t] [--priority n] [--model sonnet] [--max-turns n] [--attempts n]
+                      [--after <task>]          wait until that task is done (and its PR merged, if it has one)
   agentdeck edit <id> [--title t] [--prompt p] [--priority n] [--model m] [--max-turns n] [--attempts n]
                                   for proposed, queued, blocked or failed tasks
   agentdeck ls [--status proposed|queued|running|done|blocked|failed|cancelled]
@@ -75,8 +78,10 @@ function taskId(arg: string | undefined): number {
   return id;
 }
 
-function fmtTask(t: Task, repoName: string): string {
-  const extra = t.blocked_reason && (t.status === 'blocked' || t.status === 'failed') ? `  — ${t.blocked_reason}` : '';
+function fmtTask(t: Task, repoName: string, db?: Db): string {
+  let extra = t.blocked_reason && (t.status === 'blocked' || t.status === 'failed') ? `  — ${t.blocked_reason}` : '';
+  if (t.status === 'queued' && t.after_task !== null && db && isWaiting(t, db.getTask(t.after_task))) extra += `  waiting on #${t.after_task}`;
+  if (t.pr_url) extra += `  PR ${t.pr_state ?? 'open'}: ${t.pr_url}`;
   return `${STATUS_ICON[t.status]} #${String(t.id).padEnd(4)} ${t.status.padEnd(9)} p${t.priority}  ${repoName.padEnd(14)} ${t.title}${extra}`;
 }
 
@@ -126,6 +131,7 @@ async function main(argv: string[]): Promise<void> {
       model: { type: 'string', short: 'm' },
       'max-turns': { type: 'string' },
       attempts: { type: 'string' },
+      after: { type: 'string' },
       status: { type: 'string', short: 's' },
       attempt: { type: 'string' },
       raw: { type: 'boolean' },
@@ -167,9 +173,10 @@ async function main(argv: string[]): Promise<void> {
         console.log(`${repo.name}: resumed`);
       } else if (sub === 'set') {
         const [, name, key, value = ''] = rest;
-        if (!name || !['auto_approve', 'base_branch', 'test_cmd', 'setup_cmd'].includes(key))
-          die('usage: agentdeck repo set <repo> auto_approve on|off | base_branch <branch> | test_cmd "<cmd>" | setup_cmd "<cmd>"');
-        if (key === 'auto_approve')
+        if (!name || !['auto_approve', 'base_branch', 'test_cmd', 'setup_cmd', 'pr_mode'].includes(key))
+          die('usage: agentdeck repo set <repo> auto_approve on|off | base_branch <branch> | test_cmd "<cmd>" | setup_cmd "<cmd>" | pr_mode off|draft|ready');
+        if (key === 'pr_mode') actions.updateRepo(db, name, { pr_mode: value as PrMode });
+        else if (key === 'auto_approve')
           actions.updateRepo(db, name, { auto_approve: ['1', 'on', 'true', 'yes'].includes(value.toLowerCase()) });
         else if (key === 'base_branch') actions.updateRepo(db, name, { base_branch: value });
         else if (key === 'setup_cmd') actions.updateRepo(db, name, { setup_cmd: value });
@@ -179,7 +186,7 @@ async function main(argv: string[]): Promise<void> {
         for (const r of db.listRepos()) {
           const goals = actions.repoDetail(db, r.id).goals.trim() ? 'goals ✓' : 'no goals';
           console.log(
-            `${r.name.padEnd(16)} ${r.path}  base=${r.base_branch}  toolchain=${r.toolchain ?? '-'}  setup=${r.setup_cmd ?? '-'}  test=${r.test_cmd ?? '-'}  ${goals}${r.auto_approve ? '  auto-approve' : ''}${r.paused_reason ? `  PAUSED (${r.paused_reason})` : ''}`,
+            `${r.name.padEnd(16)} ${r.path}  base=${r.base_branch}  toolchain=${r.toolchain ?? '-'}  setup=${r.setup_cmd ?? '-'}  test=${r.test_cmd ?? '-'}  pr=${r.pr_mode}  ${goals}${r.auto_approve ? '  auto-approve' : ''}${r.paused_reason ? `  PAUSED (${r.paused_reason})` : ''}`,
           );
         }
       } else die(`unknown repo command: ${sub}`);
@@ -195,8 +202,11 @@ async function main(argv: string[]): Promise<void> {
         model: flags.model,
         max_turns: flags['max-turns'] ? Number(flags['max-turns']) : undefined,
         max_attempts: flags.attempts ? Number(flags.attempts) : undefined,
+        after_task: flags.after ? taskId(flags.after) : undefined,
       });
-      console.log(`queued task #${t.id} on ${repoName(t.repo_id)} (${t.model}, ${t.max_turns} turns max)`);
+      console.log(
+        `queued task #${t.id} on ${repoName(t.repo_id)} (${t.model}, ${t.max_turns} turns max${t.after_task ? `, after #${t.after_task}` : ''})`,
+      );
       if (db.isPaused()) console.log('note: the daemon is paused; run `agentdeck resume` to start working');
       break;
     }
@@ -221,13 +231,13 @@ async function main(argv: string[]): Promise<void> {
     case 'ls': {
       const tasks = db.listTasks(flags.status as TaskStatus | undefined);
       if (!tasks.length) console.log('no tasks');
-      for (const t of tasks) console.log(fmtTask(t, repoName(t.repo_id)));
+      for (const t of tasks) console.log(fmtTask(t, repoName(t.repo_id), db));
       break;
     }
 
     case 'show': {
       const t = db.getTask(taskId(rest[0])) ?? die('no such task');
-      console.log(fmtTask(t, repoName(t.repo_id)));
+      console.log(fmtTask(t, repoName(t.repo_id), db));
       console.log(`model ${t.model}, attempts ${t.attempts}/${t.max_attempts}, max turns ${t.max_turns}`);
       if (t.branch) console.log(`branch   ${t.branch}`);
       if (t.worktree) console.log(`worktree ${t.worktree}`);

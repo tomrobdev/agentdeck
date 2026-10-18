@@ -8,6 +8,7 @@ import { detectToolchain, isToolchain, toolchainTools } from './domain/toolchain
 import { commitLeftovers, commitsAhead, ensureWorktree, rootInfo } from './git.ts';
 import { notifyLater } from './notify.ts';
 import { firstDenial, pauseRepo } from './pause.ts';
+import { openPullRequest } from './pull-requests.ts';
 
 export type Outcome = 'done' | 'blocked' | 'failed' | 'cancelled' | 'rate_limited';
 
@@ -203,7 +204,7 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
 }
 
 /** Record the run and move the task to its next state (including retry). */
-function finish(db: Db, task: Task, runId: number | null, res: WorkerResult, runFields: Partial<Run> = {}): WorkerResult {
+async function finish(db: Db, task: Task, runId: number | null, res: WorkerResult, runFields: Partial<Run> = {}): Promise<WorkerResult> {
   if (runId !== null) {
     db.finishRun(runId, {
       ...runFields,
@@ -232,10 +233,14 @@ function finish(db: Db, task: Task, runId: number | null, res: WorkerResult, run
   const final = db.getTask(task.id)!;
   if (final.status === 'done' || final.status === 'blocked' || final.status === 'failed') {
     const repo = db.getRepo(task.repo_id)?.name ?? '';
-    const body =
+    // The daemon opens the PR (agents cannot push). Whatever happens, the task stays done.
+    const pr = final.status === 'done' ? await openPullRequest(db, final) : {};
+    let body =
       final.status === 'done'
         ? `Ready to review on ${final.branch ?? 'its branch'}${repo ? ` in ${repo}` : ''}.`
         : `${final.blocked_reason ?? final.status}${repo ? ` (${repo})` : ''}`;
+    if (pr.url) body = `${body} PR: ${pr.url}`;
+    if (pr.error) body = `${body} Could not open a PR: ${pr.error}`;
     notifyLater(db, { kind: final.status, title: `#${task.id} ${final.status}: ${task.title}`, body, task_id: task.id });
   }
   return res;

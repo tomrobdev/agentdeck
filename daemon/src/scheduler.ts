@@ -6,6 +6,7 @@ import { type ChildProcess, spawn } from 'node:child_process';
 import { activeChildren, killGroup, reapOrphans } from './claude.ts';
 import { planNow } from './actions.ts';
 import { plannerDue } from './planner.ts';
+import { PR_REFRESH_MS, refreshPrStates } from './pull-requests.ts';
 import { runTask } from './worker.ts';
 
 export interface SchedulerOptions {
@@ -16,6 +17,8 @@ export interface SchedulerOptions {
   autoPlan?: boolean;
   /** Hold a `caffeinate -i` assertion while work is running (macOS). */
   keepAwake?: boolean;
+  /** How often to refresh the state of open PRs (off in once mode). */
+  prRefreshMs?: number;
   log?: (msg: string) => void;
 }
 
@@ -29,6 +32,8 @@ export class Scheduler {
   private lastHold: string | null = null;
   private planning = false;
   private caffeinate: ChildProcess | null = null;
+  private lastPrRefresh = 0;
+  private refreshingPrs = false;
 
   constructor(db: Db, opts: SchedulerOptions = {}) {
     this.db = db;
@@ -37,6 +42,7 @@ export class Scheduler {
       once: false,
       autoPlan: !opts.once,
       keepAwake: false,
+      prRefreshMs: PR_REFRESH_MS,
       log: (m) => console.log(`[${new Date().toISOString()}] ${m}`),
       ...opts,
     };
@@ -89,6 +95,7 @@ export class Scheduler {
       }
       if (this.opts.autoPlan && !this.planning && this.running.size < limit) this.maybePlan();
     }
+    this.maybeRefreshPrs();
     this.setAwake(this.running.size > 0 || this.planning);
     if (this.opts.once && this.running.size === 0 && !this.planning && (reason || !this.db.hasQueued())) {
       this.stop();
@@ -96,6 +103,18 @@ export class Scheduler {
     }
     clearTimeout(this.timer);
     this.schedule();
+  }
+
+  /** Every few minutes (not every tick), re-read the state of open PRs; a merged one releases the tasks waiting on it. */
+  private maybeRefreshPrs(): void {
+    if (this.opts.once || this.refreshingPrs || Date.now() - this.lastPrRefresh < this.opts.prRefreshMs) return;
+    this.lastPrRefresh = Date.now();
+    this.refreshingPrs = true;
+    refreshPrStates(this.db, this.opts.log)
+      .catch((err) => this.opts.log(`pr refresh crashed: ${err?.stack ?? err}`))
+      .finally(() => {
+        this.refreshingPrs = false;
+      });
   }
 
   /** Run the planner for the first repo whose queue has run dry. One planner at a time. */

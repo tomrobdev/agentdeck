@@ -18,7 +18,12 @@ export interface Repo {
   toolchain: string | null; // pnpm | yarn | npm | cargo | uv | go, null = not detected
   setup_cmd: string | null; // run in each worktree before claude
   paused_reason: string | null; // set = no task of this repo is claimed until `repo resume` or a passing doctor
+  pr_mode: PrMode; // what the daemon does when a task is done: nothing, open a draft PR, or open a ready PR
 }
+
+export type PrMode = 'off' | 'draft' | 'ready';
+export const PR_MODES: PrMode[] = ['off', 'draft', 'ready'];
+export type PrState = 'open' | 'merged' | 'closed';
 
 export interface PlannerRun {
   id: number;
@@ -47,6 +52,9 @@ export interface Task {
   blocked_reason: string | null;
   source: string; // manual | planner
   restarts: number; // times a daemon restart requeued this task mid-run
+  pr_url: string | null; // the pull request the daemon opened when the task finished
+  pr_state: PrState | null;
+  after_task: number | null; // not claimed until that task is done (and its PR merged, if it has one)
   created_at: string;
   updated_at: string;
 }
@@ -54,7 +62,12 @@ export interface Task {
 export type TaskSummary = Omit<Task, 'prompt'>;
 
 const SUMMARY_COLUMNS =
-  'id, repo_id, title, status, priority, model, max_turns, attempts, max_attempts, branch, worktree, blocked_reason, source, restarts, created_at, updated_at';
+  'id, repo_id, title, status, priority, model, max_turns, attempts, max_attempts, branch, worktree, blocked_reason, source, restarts, pr_url, pr_state, after_task, created_at, updated_at';
+
+/** SQL: tasks `d` that a dependent may build on: done, and merged if they have a PR. */
+const DEPENDENCY_MET = "d.status = 'done' AND (d.pr_url IS NULL OR d.pr_state = 'merged')";
+/** SQL: the task row `t` is free to start (it has no dependency, or the dependency is met). */
+const NOT_WAITING = `(t.after_task IS NULL OR EXISTS (SELECT 1 FROM tasks d WHERE d.id = t.after_task AND ${DEPENDENCY_MET}))`;
 
 export interface Run {
   id: number;
@@ -190,6 +203,11 @@ export const MIGRATIONS: Migration[] = [
   'ALTER TABLE repos ADD COLUMN toolchain TEXT; ALTER TABLE repos ADD COLUMN setup_cmd TEXT;',
   // 4: a repo can be paused (doctor failed, setup failed, permissions refused); runs count refused tool uses.
   'ALTER TABLE repos ADD COLUMN paused_reason TEXT; ALTER TABLE runs ADD COLUMN denials INTEGER NOT NULL DEFAULT 0;',
+  // 5: pull requests and task dependencies. pr_mode is off | draft | ready; pr_state is open | merged | closed.
+  `ALTER TABLE repos ADD COLUMN pr_mode TEXT NOT NULL DEFAULT 'off';
+   ALTER TABLE tasks ADD COLUMN pr_url TEXT;
+   ALTER TABLE tasks ADD COLUMN pr_state TEXT;
+   ALTER TABLE tasks ADD COLUMN after_task INTEGER;`,
 ];
 
 /** Runs every step above the database's user_version in one transaction; returns how many ran. */
@@ -279,7 +297,7 @@ export function openDb(path = DB_PATH) {
     listRepos(): Repo[] {
       return db.prepare('SELECT * FROM repos ORDER BY name').all() as unknown as Repo[];
     },
-    updateRepo(id: number, fields: Partial<Pick<Repo, 'auto_approve' | 'test_cmd' | 'setup_cmd' | 'planned_at' | 'base_branch'>>): void {
+    updateRepo(id: number, fields: Partial<Pick<Repo, 'auto_approve' | 'test_cmd' | 'setup_cmd' | 'planned_at' | 'base_branch' | 'pr_mode'>>): void {
       const keys = Object.keys(fields) as (keyof typeof fields)[];
       if (!keys.length) return;
       db.prepare(`UPDATE repos SET ${keys.map((k) => `${k} = ?`).join(', ')} WHERE id = ?`).run(...keys.map((k) => fields[k] ?? null), id);
@@ -334,10 +352,11 @@ export function openDb(path = DB_PATH) {
       max_attempts?: number;
       status?: 'queued' | 'proposed';
       source?: 'manual' | 'planner';
+      after_task?: number | null;
     }): Task {
       const info = db
         .prepare(
-          'INSERT INTO tasks (repo_id, title, prompt, priority, model, max_turns, max_attempts, status, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          'INSERT INTO tasks (repo_id, title, prompt, priority, model, max_turns, max_attempts, status, source, after_task) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         )
         .run(
           t.repo_id,
@@ -349,6 +368,7 @@ export function openDb(path = DB_PATH) {
           t.max_attempts ?? DEFAULTS.maxAttempts,
           t.status ?? 'queued',
           t.source ?? 'manual',
+          t.after_task ?? null,
         );
       return this.getTask(Number(info.lastInsertRowid))!;
     },
@@ -360,11 +380,12 @@ export function openDb(path = DB_PATH) {
         ? db.prepare('SELECT * FROM tasks WHERE status = ? ORDER BY priority DESC, id').all(status)
         : db.prepare('SELECT * FROM tasks ORDER BY id DESC').all()) as unknown as Task[];
     },
-    /** Whether a task could be claimed: queued, in a repo that isn't paused. */
+    /** Whether a task could be claimed: queued, not waiting on a dependency, in a repo that isn't paused. */
     hasQueued(): boolean {
       const row = db
         .prepare(
-          "SELECT EXISTS(SELECT 1 FROM tasks WHERE status = 'queued' AND repo_id IN (SELECT id FROM repos WHERE paused_reason IS NULL)) AS q",
+          `SELECT EXISTS(SELECT 1 FROM tasks t WHERE t.status = 'queued' AND ${NOT_WAITING}
+             AND t.repo_id IN (SELECT id FROM repos WHERE paused_reason IS NULL)) AS q`,
         )
         .get() as { q: number };
       return row.q === 1;
@@ -389,7 +410,10 @@ export function openDb(path = DB_PATH) {
     countRunning(): number {
       return (db.prepare("SELECT COUNT(*) AS n FROM tasks WHERE status IN ('running', 'cancel_requested')").get() as { n: number }).n;
     },
-    /** Atomically claim the next queued task of a repo that isn't paused, or undefined if none. */
+    /**
+     * Atomically claim the next queued task of a repo that isn't paused, or undefined if none.
+     * A task with `after_task` waits until that task is done and, if it has a PR, the PR is merged.
+     */
     claimNextTask(): Task | undefined {
       const from = fromStatuses({ type: 'claim' });
       const marks = from.map(() => '?').join(', ');
@@ -397,9 +421,9 @@ export function openDb(path = DB_PATH) {
         .prepare(
           `UPDATE tasks SET status = ?, attempts = attempts + 1, updated_at = ${now}
            WHERE status IN (${marks})
-             AND id = (SELECT id FROM tasks WHERE status IN (${marks})
-                         AND repo_id IN (SELECT id FROM repos WHERE paused_reason IS NULL)
-                       ORDER BY priority DESC, id LIMIT 1)
+             AND id = (SELECT t.id FROM tasks t WHERE t.status IN (${marks}) AND ${NOT_WAITING}
+                         AND t.repo_id IN (SELECT id FROM repos WHERE paused_reason IS NULL)
+                       ORDER BY t.priority DESC, t.id LIMIT 1)
            RETURNING *`,
         )
         .get(nextStatus(from[0], { type: 'claim' })!, ...from, ...from) as Task | undefined;
@@ -423,7 +447,14 @@ export function openDb(path = DB_PATH) {
         )
         .get(...keys.map((k) => fields[k] ?? null), id) as Task | undefined;
     },
-    updateTask(id: number, fields: Partial<Pick<Task, 'branch' | 'worktree' | 'blocked_reason' | 'priority'>>): void {
+    /** Done tasks whose pull request is still open, for the state refresh. */
+    openPrTasks(): Task[] {
+      return db.prepare("SELECT * FROM tasks WHERE status = 'done' AND pr_url IS NOT NULL AND pr_state = 'open'").all() as unknown as Task[];
+    },
+    updateTask(
+      id: number,
+      fields: Partial<Pick<Task, 'branch' | 'worktree' | 'blocked_reason' | 'priority' | 'pr_url' | 'pr_state'>>,
+    ): void {
       const keys = Object.keys(fields) as (keyof typeof fields)[];
       if (keys.length === 0) return;
       const sets = keys.map((k) => `${k} = ?`).join(', ');

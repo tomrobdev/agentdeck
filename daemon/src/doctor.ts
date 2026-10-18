@@ -81,13 +81,12 @@ export async function runDoctor(repo: Repo): Promise<Check[]> {
   const claude = findClaude();
   add('claude binary', !!claude, claude ?? `${claudeBin()} not found; install Claude Code or set AGENTDECK_CLAUDE_BIN`);
 
-  // Repos have no PR mode yet; once they do, anything but off needs a working gh and an origin to push to.
-  const prMode = (repo as Repo & { pr_mode?: string | null }).pr_mode;
-  if (prMode && prMode !== 'off') {
+  // A PR mode other than off needs an origin to push to and a working gh to open the PR.
+  if (repo.pr_mode !== 'off') {
+    const origin = await hasOrigin(repo.path);
+    add('origin remote', origin, origin ? 'origin exists' : `PR mode is ${repo.pr_mode} but the repo has no origin remote`);
     const gh = await ghAuth();
     add('gh auth', gh.ok, gh.ok ? 'gh auth status succeeded' : `gh auth status failed: ${gh.output}`);
-    const origin = await hasOrigin(repo.path);
-    add('origin remote', origin, origin ? 'origin exists' : `PR mode is ${prMode} but the repo has no origin remote`);
   }
 
   let worktree: string | null = null;
