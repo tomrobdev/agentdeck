@@ -79,7 +79,7 @@ export class Scheduler {
           .then((res) => this.opts.log(`task ${task.id}: ${res.outcome}${res.reason ? ` (${res.reason})` : ''}`))
           .catch((err) => {
             this.opts.log(`task ${task.id}: worker crashed: ${err?.stack ?? err}`);
-            this.db.updateTask(task.id, { status: 'failed', blocked_reason: String(err?.message ?? err) });
+            this.db.applyEvent(task.id, { type: 'finish', outcome: 'failed', retry: false }, { reason: String(err?.message ?? err) });
           })
           .finally(() => {
             this.running.delete(p);

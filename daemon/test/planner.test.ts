@@ -51,7 +51,7 @@ test('planner is due only with goals, an empty queue, and after the interval', (
 
   const t = db.addTask({ repo_id: repoId, title: 'busy', prompt: 'x' });
   assert.equal(plannerDue(db, repo), null, 'open work exists');
-  db.updateTask(t.id, { status: 'cancelled' });
+  db.applyEvent(t.id, { type: 'cancel' });
 
   db.updateRepo(repoId, { planned_at: new Date().toISOString().slice(0, 19).replace('T', ' ') });
   assert.equal(plannerDue(db, db.getRepo(repoId)!), null, 'planned recently');
@@ -60,7 +60,8 @@ test('planner is due only with goals, an empty queue, and after the interval', (
 
 test('planning proposes capped, de-duplicated tasks that wait for approval', async () => {
   const prior = db.addTask({ repo_id: repoId, title: 'Add a greeting helper!', prompt: 'already done' });
-  db.updateTask(prior.id, { status: 'done' });
+  db.applyEvent(prior.id, { type: 'claim' });
+  db.applyEvent(prior.id, { type: 'finish', outcome: 'done' });
   actions.updateSettings(db, { planner: { max_tasks: 2 } });
 
   const res = await actions.planNow(db, 'alpha');
@@ -90,7 +91,7 @@ test('approve queues a proposal, reject cancels it, neither works twice', () => 
   assert.equal(db.getTask(a.id)!.status, 'queued');
   assert.equal(db.getTask(b.id)!.status, 'cancelled');
   assert.throws(() => actions.approveTask(db, a.id), /not a proposal/);
-  db.updateTask(a.id, { status: 'cancelled' });
+  db.applyEvent(a.id, { type: 'cancel' });
 });
 
 test('an empty plan is recorded as nothing', async () => {

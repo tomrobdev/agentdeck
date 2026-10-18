@@ -2,15 +2,9 @@ import { DatabaseSync } from 'node:sqlite';
 import { DB_PATH, DEFAULTS, ensureDirs } from './config.ts';
 import { BUDGET_KEYS, type Budget, DEFAULT_BUDGET } from './governor.ts';
 
-export type TaskStatus =
-  | 'proposed' // suggested by the planner, waiting for approval
-  | 'queued'
-  | 'running'
-  | 'done'
-  | 'blocked'
-  | 'failed'
-  | 'cancel_requested'
-  | 'cancelled';
+import { type TaskEvent, type TaskStatus, fromStatuses, nextStatus } from './domain/task-lifecycle.ts';
+
+export type { TaskStatus };
 
 export interface Repo {
   id: number;
@@ -359,27 +353,59 @@ export function openDb(path = DB_PATH) {
     },
     /** Atomically claim the next queued task, or undefined if none. */
     claimNextTask(): Task | undefined {
+      const from = fromStatuses({ type: 'claim' });
+      const marks = from.map(() => '?').join(', ');
       return db
         .prepare(
-          `UPDATE tasks SET status = 'running', attempts = attempts + 1, updated_at = ${now}
-           WHERE id = (SELECT id FROM tasks WHERE status = 'queued' ORDER BY priority DESC, id LIMIT 1)
+          `UPDATE tasks SET status = ?, attempts = attempts + 1, updated_at = ${now}
+           WHERE status IN (${marks})
+             AND id = (SELECT id FROM tasks WHERE status IN (${marks}) ORDER BY priority DESC, id LIMIT 1)
            RETURNING *`,
         )
-        .get() as Task | undefined;
+        .get(nextStatus(from[0], { type: 'claim' })!, ...from, ...from) as Task | undefined;
     },
-    updateTask(id: number, fields: Partial<Pick<Task, 'status' | 'branch' | 'worktree' | 'blocked_reason' | 'priority'>>): void {
+    updateTask(id: number, fields: Partial<Pick<Task, 'branch' | 'worktree' | 'blocked_reason' | 'priority'>>): void {
       const keys = Object.keys(fields) as (keyof typeof fields)[];
       if (keys.length === 0) return;
       const sets = keys.map((k) => `${k} = ?`).join(', ');
       db.prepare(`UPDATE tasks SET ${sets}, updated_at = ${now} WHERE id = ?`).run(...keys.map((k) => fields[k] ?? null), id);
     },
-    /** Set status only if the task is currently in one of `from`. Returns true if it changed. */
-    transitionTask(id: number, from: TaskStatus[], to: TaskStatus): boolean {
-      const marks = from.map(() => '?').join(', ');
-      const info = db
-        .prepare(`UPDATE tasks SET status = ?, updated_at = ${now} WHERE id = ? AND status IN (${marks})`)
-        .run(to, id, ...from);
-      return info.changes > 0;
+    /**
+     * The only way to change a task's status. Asks the lifecycle whether `event` is allowed from the
+     * task's current status and writes the result guarded by that status, so a concurrent change
+     * (say, a cancel arriving as a run finishes) is never overwritten. Returns the updated task, or
+     * undefined if the task is missing or the event isn't allowed.
+     */
+    applyEvent(id: number, event: TaskEvent, opts: { reason?: string | null } = {}): Task | undefined {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const cur = this.getTask(id);
+        if (!cur) return undefined;
+        const to = nextStatus(cur.status, event);
+        if (!to) return undefined;
+        const sets = ['status = ?'];
+        const params: (string | number | null)[] = [to];
+        if (to !== 'cancelled') {
+          const give = 'attempts = MAX(attempts - 1, 0)';
+          if (event.type === 'claim') sets.push('attempts = attempts + 1');
+          else if (event.type === 'retry')
+            sets.push('max_attempts = attempts + 1'); // one more attempt on top of those used
+          else if (event.type === 'rate_limited') sets.push(give);
+          else if (event.type === 'recover') sets.push('restarts = restarts + 1', ...(to === 'queued' ? [give] : []));
+          if (event.type === 'finish' && event.outcome === 'done') sets.push('blocked_reason = NULL');
+          if (
+            (event.type === 'finish' && (event.outcome === 'blocked' || event.outcome === 'failed')) ||
+            (event.type === 'recover' && to === 'failed')
+          ) {
+            sets.push('blocked_reason = ?');
+            params.push(opts.reason ?? null);
+          }
+        }
+        const row = db
+          .prepare(`UPDATE tasks SET ${sets.join(', ')}, updated_at = ${now} WHERE id = ? AND status IN (?) RETURNING *`)
+          .get(...params, id, cur.status) as Task | undefined;
+        if (row) return row;
+      }
+      return undefined;
     },
     /** Claude processes recorded on runs that never finished: a previous daemon died mid-run. */
     unfinishedPids(): { pid: number; started_at: string }[] {
@@ -396,22 +422,21 @@ export function openDb(path = DB_PATH) {
      */
     recoverOrphans(): { requeued: number; failed: number } {
       db.prepare(`UPDATE runs SET ended_at = ${now}, outcome = 'failed', result_text = 'daemon restarted' WHERE ended_at IS NULL`).run();
-      db.prepare(`UPDATE tasks SET status = 'cancelled', updated_at = ${now} WHERE status = 'cancel_requested'`).run();
       db.prepare(`UPDATE planner_runs SET ended_at = ${now}, outcome = 'failed', note = 'daemon restarted' WHERE ended_at IS NULL`).run();
-      const failed = db
-        .prepare(
-          `UPDATE tasks SET status = 'failed', restarts = restarts + 1, updated_at = ${now},
-             blocked_reason = 'the daemon restarted ' || (restarts + 1) || ' times while this task was running'
-           WHERE status = 'running' AND restarts + 1 >= ?`,
-        )
-        .run(MAX_RESTARTS);
-      const requeued = db
-        .prepare(
-          `UPDATE tasks SET status = 'queued', attempts = MAX(attempts - 1, 0), restarts = restarts + 1, updated_at = ${now}
-           WHERE status = 'running'`,
-        )
-        .run();
-      return { requeued: Number(requeued.changes), failed: Number(failed.changes) };
+      let requeued = 0;
+      let failed = 0;
+      const orphans = db.prepare("SELECT id, restarts FROM tasks WHERE status IN ('running', 'cancel_requested')").all() as {
+        id: number;
+        restarts: number;
+      }[];
+      for (const o of orphans) {
+        const exhausted = o.restarts + 1 >= MAX_RESTARTS;
+        const reason = `the daemon restarted ${o.restarts + 1} times while this task was running`;
+        const t = this.applyEvent(o.id, { type: 'recover', exhausted }, { reason });
+        if (t?.status === 'queued') requeued++;
+        else if (t?.status === 'failed') failed++;
+      }
+      return { requeued, failed };
     },
 
     // --- runs ---

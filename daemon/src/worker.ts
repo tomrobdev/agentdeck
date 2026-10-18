@@ -162,27 +162,20 @@ function finish(db: Db, task: Task, runId: number | null, res: WorkerResult, run
       ...(res.reason && !runFields.result_text ? { result_text: res.reason } : {}),
     });
   }
+  // If cancel was requested while the run was ending, the lifecycle makes every outcome end 'cancelled'.
+  const reason = { reason: res.reason ?? null };
   switch (res.outcome) {
     case 'done':
-      db.updateTask(task.id, { status: 'done', blocked_reason: null });
-      break;
     case 'blocked':
-      db.updateTask(task.id, { status: 'blocked', blocked_reason: res.reason ?? null });
-      break;
     case 'cancelled':
-      db.updateTask(task.id, { status: 'cancelled' });
+      db.applyEvent(task.id, { type: 'finish', outcome: res.outcome }, reason);
       break;
     case 'rate_limited':
       // Not the task's fault: give the attempt back and requeue.
-      db.raw
-        .prepare("UPDATE tasks SET status = 'queued', attempts = MAX(attempts - 1, 0), updated_at = datetime('now') WHERE id = ?")
-        .run(task.id);
+      db.applyEvent(task.id, { type: 'rate_limited' });
       break;
     case 'failed':
-      db.updateTask(task.id, {
-        status: task.attempts < task.max_attempts ? 'queued' : 'failed',
-        blocked_reason: res.reason ?? null,
-      });
+      db.applyEvent(task.id, { type: 'finish', outcome: 'failed', retry: task.attempts < task.max_attempts }, reason);
       break;
   }
 

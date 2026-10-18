@@ -60,18 +60,18 @@ export function defaultTitle(prompt: string, max = 72): string {
 
 /** Returns 'cancelled' for idle tasks, 'stopping' when a running worker has been asked to stop. */
 export function cancelTask(db: Db, id: number): 'cancelled' | 'stopping' {
-  if (db.transitionTask(id, ['proposed', 'queued', 'blocked', 'failed'], 'cancelled')) return 'cancelled';
-  if (db.transitionTask(id, ['running'], 'cancel_requested')) return 'stopping';
-  throw new ActionError(`#${id} can't be cancelled from its current state`);
+  const t = db.applyEvent(id, { type: 'cancel' });
+  if (!t) throw new ActionError(`#${id} can't be cancelled from its current state`);
+  return t.status === 'cancel_requested' ? 'stopping' : 'cancelled';
 }
 
 /** Accept a planner proposal into the queue. */
 export function approveTask(db: Db, id: number): void {
-  if (!db.transitionTask(id, ['proposed'], 'queued')) throw new ActionError(`#${id} is not a proposal`);
+  if (!db.applyEvent(id, { type: 'approve' })) throw new ActionError(`#${id} is not a proposal`);
 }
 
 export function rejectTask(db: Db, id: number): void {
-  if (!db.transitionTask(id, ['proposed'], 'cancelled')) throw new ActionError(`#${id} is not a proposal`);
+  if (!db.applyEvent(id, { type: 'reject' })) throw new ActionError(`#${id} is not a proposal`);
 }
 
 function repoOrThrow(db: Db, nameOrId: string | number) {
@@ -121,9 +121,8 @@ export async function planNow(db: Db, nameOrId: string | number) {
 export function retryTask(db: Db, id: number): void {
   const t = db.getTask(id);
   if (!t) throw new ActionError('no such task');
-  if (!['blocked', 'failed', 'cancelled', 'done'].includes(t.status)) throw new ActionError(`#${id} is ${t.status}`);
   // One more attempt on top of what has been used.
-  db.raw.prepare("UPDATE tasks SET status = 'queued', max_attempts = attempts + 1, updated_at = datetime('now') WHERE id = ?").run(id);
+  if (!db.applyEvent(id, { type: 'retry' })) throw new ActionError(`#${id} is ${t.status}`);
 }
 
 export function setPaused(db: Db, paused: boolean): void {

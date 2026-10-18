@@ -23,10 +23,10 @@ test('hasQueued is true only while a queued task exists', () => {
   const queued = db.addTask({ repo_id: repo.id, title: 'q', prompt: 'q' });
   assert.equal(db.hasQueued(), true);
 
-  db.updateTask(queued.id, { status: 'running' });
+  assert.equal(db.claimNextTask()?.id, queued.id);
   assert.equal(db.hasQueued(), false);
 
-  db.updateTask(proposed.id, { status: 'queued' });
+  assert.ok(db.applyEvent(proposed.id, { type: 'approve' }));
   assert.equal(db.hasQueued(), true);
 });
 test('runsForTask query uses the runs_task index', () => {

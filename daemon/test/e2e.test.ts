@@ -90,7 +90,7 @@ test('rate limit requeues without spending an attempt and holds the queue', asyn
   assert.equal(t.status, 'queued');
   assert.equal(t.attempts, 0);
   assert.ok(Number(db.getSetting('rate_limited_until', '0')) * 1000 > Date.now());
-  db.updateTask(t.id, { status: 'cancelled' });
+  db.applyEvent(t.id, { type: 'cancel' });
   db.setSetting('rate_limited_until', '0');
 });
 
@@ -98,9 +98,31 @@ test('cancel stops a running task', async () => {
   const task = db.addTask({ repo_id: 1, title: 'slow', prompt: 'FAKE_SLOW' });
   const done = drain();
   while (db.getTask(task.id)!.status !== 'running') await new Promise((r) => setTimeout(r, 20));
-  db.transitionTask(task.id, ['running'], 'cancel_requested');
+  assert.equal(db.applyEvent(task.id, { type: 'cancel' })?.status, 'cancel_requested');
   await done;
   assert.equal(db.getTask(task.id)!.status, 'cancelled');
+});
+
+test('a cancel requested while the run is finishing wins over done', async () => {
+  // The run succeeds, then the repo's test command runs; cancel lands while it does.
+  const marker = join(home, 'tests-started');
+  db.updateRepo(1, { test_cmd: `touch ${marker} && sleep 1 && test -f fake-output.txt` });
+  try {
+    const task = db.addTask({ repo_id: 1, title: 'finishing', prompt: 'FAKE_DONE almost there' });
+    const done = drain();
+    while (!existsSync(marker)) await new Promise((r) => setTimeout(r, 20));
+    assert.equal(db.getTask(task.id)!.status, 'running');
+    assert.equal(db.applyEvent(task.id, { type: 'cancel' })?.status, 'cancel_requested');
+    await done;
+
+    const t = db.getTask(task.id)!;
+    assert.equal(t.status, 'cancelled', 'cancel is not overwritten by done');
+    assert.equal(t.blocked_reason, null);
+    assert.equal(db.runsForTask(t.id)[0].outcome, 'done', 'the run keeps its real outcome');
+    assert.equal(db.recentNotifications(1)[0]?.task_id === task.id, false, 'no "ready to review" for a cancelled task');
+  } finally {
+    db.updateRepo(1, { test_cmd: 'test -f fake-output.txt' });
+  }
 });
 
 test('orphaned running tasks are requeued on start', () => {
@@ -111,7 +133,7 @@ test('orphaned running tasks are requeued on start', () => {
   assert.equal(t.status, 'queued');
   assert.equal(t.attempts, 0);
   assert.equal(t.restarts, 1);
-  db.updateTask(t.id, { status: 'cancelled' });
+  db.applyEvent(t.id, { type: 'cancel' });
 });
 
 test('a task interrupted by repeated restarts fails instead of looping', async () => {
