@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue';
-import { ApiError, type Repo, type Status, type Task, type TaskDetail as Detail, api } from './api';
+import { onBeforeUnmount, onMounted, ref, watchEffect } from 'vue';
+import { ApiError, type Repo, type Status, type Task, type TaskDetail as Detail, api, describeState } from './api';
+import { setTrayStatus } from './native';
 import NewTaskForm from './components/NewTaskForm.vue';
 import ReposPanel from './components/ReposPanel.vue';
 import SettingsPanel from './components/SettingsPanel.vue';
@@ -56,6 +57,8 @@ async function act(fn: () => Promise<unknown>) {
 const togglePause = () => act(() => (status.value?.paused ? api.resume() : api.pause()));
 const cancelSelected = () => act(() => api.cancel(selectedId.value!));
 const retrySelected = () => act(() => api.retry(selectedId.value!));
+const approveSelected = () => act(() => api.approve(selectedId.value!));
+const rejectSelected = () => act(() => api.reject(selectedId.value!));
 const reloadRepos = async () => (repos.value = await api.repos());
 
 function select(id: number) {
@@ -69,6 +72,13 @@ function onCreated(task: Detail) {
   select(task.id);
   if (status.value?.paused) flash('Queued. The daemon is paused, so press Resume to start working.');
 }
+
+watchEffect(() => {
+  const s = status.value;
+  const label = describeState(s, offline.value).label;
+  const waiting = (s?.counts.proposed ?? 0) + (s?.counts.blocked ?? 0);
+  setTrayStatus(waiting ? `${label} · ${waiting} need you` : label);
+});
 
 onMounted(() => {
   refresh();
@@ -102,6 +112,8 @@ onBeforeUnmount(() => clearInterval(timer));
         :task="detail"
         @cancel="cancelSelected"
         @retry="retrySelected"
+        @approve="approveSelected"
+        @reject="rejectSelected"
       />
       <section v-else class="placeholder muted">
         <template v-if="tasks.length">Select a task.</template>

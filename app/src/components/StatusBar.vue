@@ -1,32 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { type Status, relTime, when } from '../api';
+import { type Status, describeState, relTime } from '../api';
 
 const props = defineProps<{ status: Status | null; offline: boolean; busy: boolean }>();
 defineEmits<{ toggle: []; newTask: []; repos: []; settings: [] }>();
 
-const limited = computed(() => {
-  const until = props.status?.rate_limited_until;
-  return until && until * 1000 > Date.now() ? until : null;
-});
-
-const state = computed(() => {
-  const s = props.status;
-  if (props.offline) return { label: 'Daemon offline', cls: 's-failed', title: '' };
-  if (!s) return { label: 'Connecting…', cls: 's-queued', title: '' };
-  if (s.paused) return { label: 'Paused', cls: 's-blocked', title: 'No new tasks start until you resume' };
-  if (limited.value) return { label: `Rate limited · ${relTime(limited.value)}`, cls: 's-blocked', title: 'Claude rejected a request; waiting for the window to reset' };
-  const g = s.governor;
-  if (!g.allow) {
-    return {
-      label: g.until ? `Holding · until ${when(g.until)}` : 'Holding',
-      cls: 's-blocked',
-      title: `Usage budget: ${g.reason}`,
-    };
-  }
-  if (s.running) return { label: 'Working', cls: 's-running', title: g.reason ?? '' };
-  return { label: 'Idle', cls: 's-done', title: g.reason ?? '' };
-});
+const state = computed(() => describeState(props.status, props.offline));
 
 /** Meters with a marker for the budget line that matters for each window. */
 const meters = computed(() => {

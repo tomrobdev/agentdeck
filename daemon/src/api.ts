@@ -3,6 +3,7 @@ import { closeSync, existsSync, openSync, readSync, statSync } from 'node:fs';
 import { type IncomingMessage, type Server, type ServerResponse, createServer } from 'node:http';
 import * as actions from './actions.ts';
 import { API_ALLOWED_ORIGINS, API_PORT } from './config.ts';
+import { serviceStatus } from './service.ts';
 import type { Db, TaskStatus } from './db.ts';
 
 type Handler = (req: IncomingMessage, res: ServerResponse, params: string[], body: any) => unknown | Promise<unknown>;
@@ -72,10 +73,16 @@ export function startApi(db: Db, port = API_PORT): Promise<Server> {
     ['POST', /^\/api\/pause$/, () => (actions.setPaused(db, true), actions.status(db))],
     ['POST', /^\/api\/resume$/, () => (actions.setPaused(db, false), actions.status(db))],
     ['GET', /^\/api\/settings$/, () => actions.getSettings(db)],
+    ['GET', /^\/api\/service$/, () => serviceStatus()],
     ['POST', /^\/api\/settings$/, (_q, _s, _p, b) => actions.updateSettings(db, b)],
     ['POST', /^\/api\/notify\/test$/, async () => (await actions.sendTestNotification(db), { ok: true })],
     ['GET', /^\/api\/repos$/, () => db.listRepos()],
     ['POST', /^\/api\/repos$/, (_q, _s, _p, b) => actions.addRepo(db, b)],
+    ['GET', /^\/api\/repos\/(\d+)$/, (_q, _s, [id]) => actions.repoDetail(db, Number(id))],
+    ['POST', /^\/api\/repos\/(\d+)$/, (_q, _s, [id], b) => actions.updateRepo(db, Number(id), b)],
+    ['POST', /^\/api\/repos\/(\d+)\/plan$/, (_q, _s, [id]) => actions.planNow(db, Number(id))],
+    ['POST', /^\/api\/tasks\/(\d+)\/approve$/, (_q, _s, [id]) => (actions.approveTask(db, Number(id)), taskDetail(db, Number(id)))],
+    ['POST', /^\/api\/tasks\/(\d+)\/reject$/, (_q, _s, [id]) => (actions.rejectTask(db, Number(id)), taskDetail(db, Number(id)))],
     [
       'GET',
       /^\/api\/tasks$/,

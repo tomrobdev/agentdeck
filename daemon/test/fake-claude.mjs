@@ -24,6 +24,7 @@ out({
   },
 });
 
+const isPlanner = args.includes('--json-schema');
 const result = (text, extra = {}) =>
   out({
     type: 'result',
@@ -37,7 +38,18 @@ const result = (text, extra = {}) =>
     ...extra,
   });
 
-if (prompt.includes('FAKE_ERROR')) {
+if (isPlanner) {
+  // Planner mode: answer with structured output. FAKE_PLAN_EMPTY in the goals → nothing to do.
+  const tasks = prompt.includes('FAKE_PLAN_EMPTY')
+    ? []
+    : [
+        { title: 'Add a greeting helper', prompt: 'FAKE_DONE add greet()', priority: 2, model: 'haiku' },
+        { title: 'Document the CLI', prompt: 'FAKE_DONE write docs', priority: 1, model: 'sonnet' },
+        { title: 'Add input validation', prompt: 'FAKE_DONE validate', priority: 1, model: 'sonnet' },
+        { title: 'Tidy the README', prompt: 'FAKE_DONE tidy', priority: 0, model: 'gpt-9' },
+      ];
+  result('planned', { structured_output: { tasks, note: tasks.length ? 'looked at src/' : 'goals already met' } });
+} else if (prompt.includes('FAKE_ERROR')) {
   process.stderr.write('fake failure\n');
   process.exit(1);
 } else if (prompt.includes('FAKE_RATELIMIT')) {

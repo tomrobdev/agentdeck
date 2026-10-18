@@ -3,8 +3,8 @@
 import { execFile } from 'node:child_process';
 import type { Db } from './db.ts';
 
-export type NotifyKind = 'done' | 'blocked' | 'failed' | 'hold';
-export const NOTIFY_KINDS: NotifyKind[] = ['done', 'blocked', 'failed', 'hold'];
+export type NotifyKind = 'done' | 'blocked' | 'failed' | 'hold' | 'proposed';
+export const NOTIFY_KINDS: NotifyKind[] = ['done', 'blocked', 'failed', 'hold', 'proposed'];
 
 export interface Notification {
   kind: NotifyKind | 'test';
@@ -23,7 +23,7 @@ export interface NotifySettings {
 export function notifySettings(db: Db): NotifySettings {
   return {
     desktop: db.getSetting('notify_desktop', '1') === '1',
-    events: db.getSetting('notify_events', 'done,blocked,failed,hold').split(',').filter(Boolean) as NotifyKind[],
+    events: db.getSetting('notify_events', 'done,blocked,failed,hold,proposed').split(',').filter(Boolean) as NotifyKind[],
     ntfy_topic: db.getSetting('ntfy_topic', ''),
     ntfy_server: db.getSetting('ntfy_server', 'https://ntfy.sh'),
   };
@@ -43,6 +43,7 @@ const NTFY_TAGS: Record<Notification['kind'], string> = {
   blocked: 'raising_hand',
   failed: 'x',
   hold: 'hourglass',
+  proposed: 'memo',
   test: 'bell',
 };
 

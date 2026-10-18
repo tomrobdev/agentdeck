@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { type NotificationRow, type NotifyKind, type Settings, ago, api } from '../api';
+import { type NotificationRow, type NotifyKind, type ServiceStatus, type Settings, ago, api } from '../api';
+import { isNative, launchAtLogin, setLaunchAtLogin } from '../native';
 import Modal from './Modal.vue';
 
 defineProps<{ notifications: NotificationRow[] }>();
@@ -11,6 +12,7 @@ const EVENTS: { key: NotifyKind; label: string }[] = [
   { key: 'failed', label: 'Task failed' },
   { key: 'done', label: 'Task done' },
   { key: 'hold', label: 'Work held by budget' },
+  { key: 'proposed', label: 'Planner proposals' },
 ];
 
 // Edited as whole percentages, stored as 0..1.
@@ -23,7 +25,13 @@ const form = ref<{
   desktop: boolean;
   events: NotifyKind[];
   ntfy_topic: string;
+  planner_enabled: boolean;
+  planner_interval_hours: number;
+  planner_max_tasks: number;
+  planner_model: string;
 } | null>(null);
+const service = ref<ServiceStatus | null>(null);
+const appAtLogin = ref<boolean | null>(null);
 const error = ref('');
 const saving = ref(false);
 const tested = ref('');
@@ -40,12 +48,27 @@ function load(s: Settings) {
     desktop: s.notify.desktop,
     events: [...s.notify.events],
     ntfy_topic: s.notify.ntfy_topic,
+    planner_enabled: s.planner.enabled,
+    planner_interval_hours: s.planner.interval_hours,
+    planner_max_tasks: s.planner.max_tasks,
+    planner_model: s.planner.model,
   };
+}
+
+async function toggleAppAtLogin() {
+  try {
+    await setLaunchAtLogin(!appAtLogin.value);
+    appAtLogin.value = await launchAtLogin();
+  } catch (e) {
+    error.value = (e as Error).message;
+  }
 }
 
 onMounted(async () => {
   try {
     load(await api.settings());
+    service.value = await api.service();
+    appAtLogin.value = await launchAtLogin();
   } catch (e) {
     error.value = (e as Error).message;
   }
@@ -65,6 +88,7 @@ async function save(close = true) {
         max_concurrent: f.max_concurrent,
         budget: { five_hour_max: f.five_hour_max / 100, five_hour_soft: f.five_hour_soft / 100, weekly_max: f.weekly_max / 100, pace_slack: f.pace_slack / 100 },
         notify: { desktop: f.desktop, events: f.events, ntfy_topic: f.ntfy_topic },
+        planner: { enabled: f.planner_enabled, interval_hours: f.planner_interval_hours, max_tasks: f.planner_max_tasks, model: f.planner_model },
       }),
     );
     emit('saved');
@@ -126,6 +150,46 @@ async function test() {
             <input type="number" min="1" max="8" v-model.number="form.max_concurrent" />
           </label>
         </div>
+      </section>
+
+      <section>
+        <h4>Planner</h4>
+        <p class="muted hint">
+          When a repo with goals has nothing queued, the planner reads its goals and code and proposes the next tasks. Write goals under
+          Repos.
+        </p>
+        <label class="check"><input type="checkbox" v-model="form.planner_enabled" /> Plan automatically when a queue runs dry</label>
+        <div class="grid three">
+          <label>
+            <span>At most every</span>
+            <span class="pct"><input type="number" min="0.25" step="0.25" v-model.number="form.planner_interval_hours" />hours</span>
+          </label>
+          <label>
+            <span>Tasks per plan</span>
+            <input type="number" min="1" max="10" v-model.number="form.planner_max_tasks" />
+          </label>
+          <label>
+            <span>Planner model</span>
+            <select v-model="form.planner_model">
+              <option value="haiku">Haiku</option>
+              <option value="sonnet">Sonnet</option>
+              <option value="opus">Opus</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section>
+        <h4>Always on</h4>
+        <div class="always">
+          <span class="pill" :class="service?.state === 'running' ? 's-done' : 's-blocked'">
+            <span class="dot" />{{ service?.installed ? `Daemon runs at login · ${service.state ?? 'not loaded'}` : 'Daemon not installed' }}
+          </span>
+          <small v-if="!service?.installed" class="muted">Run <code>agentdeck install</code> once and it starts at login and restarts if it dies.</small>
+        </div>
+        <label v-if="isNative" class="check">
+          <input type="checkbox" :checked="!!appAtLogin" @change="toggleAppAtLogin" /> Open this dashboard at login (in the menu bar)
+        </label>
       </section>
 
       <section>
@@ -205,6 +269,15 @@ label {
 }
 .pct input {
   width: 80px;
+}
+.grid.three {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+.always {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
 }
 small {
   font-size: 11px;

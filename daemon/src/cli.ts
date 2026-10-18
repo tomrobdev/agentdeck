@@ -8,34 +8,45 @@ import { removeWorktree } from './git.ts';
 import { BUDGET_KEYS } from './governor.ts';
 import type { NotifyKind } from './notify.ts';
 import { Scheduler } from './scheduler.ts';
+import * as service from './service.ts';
 
 const HELP = `agentdeck: always-on Claude Code task queue
 
 Repos
   agentdeck repo add <path> [--name n] [--base main] [--test "npm test"] [--tools "Read,Edit,Bash(npm *)"]
   agentdeck repo ls
+  agentdeck repo set <repo> auto_approve on|off   planner tasks skip approval
+  agentdeck goals <repo> [--file goals.md]        show (or replace) the goals the planner works from
+  agentdeck plan <repo>                           run the planner now
 
 Tasks
   agentdeck add "<prompt>" --repo <name> [--title t] [--priority n] [--model sonnet] [--max-turns n] [--attempts n]
-  agentdeck ls [--status queued|running|done|blocked|failed|cancelled]
+  agentdeck ls [--status proposed|queued|running|done|blocked|failed|cancelled]
   agentdeck show <id>
   agentdeck log <id> [--attempt n] [--raw]
+  agentdeck approve <id>...       queue planner proposals
+  agentdeck reject <id>...
   agentdeck cancel <id>
   agentdeck retry <id>
   agentdeck clean <id>          remove the task's worktree (its branch is kept)
 
 Daemon
+  agentdeck install             run the daemon at login via launchd (restarted if it dies)
+  agentdeck uninstall
+  agentdeck service             launchd status
   agentdeck daemon              run the scheduler in the foreground
   agentdeck run-once            work the queue until empty, then exit (ignores pause)
   agentdeck pause | resume
   agentdeck status
   agentdeck settings              show concurrency, usage budget and notification settings
   agentdeck set <key> <value>     max_concurrent, five_hour_max, five_hour_soft, weekly_max, pace_slack (0..1),
-                                  notify_desktop (on|off), notify_events (done,blocked,failed,hold), ntfy_topic, ntfy_server
+                                  notify_desktop (on|off), notify_events (done,blocked,failed,hold,proposed), ntfy_topic, ntfy_server,
+                                  planner_enabled (on|off), planner_interval_hours, planner_max_tasks, planner_model
   agentdeck notify-test           send a test notification on every enabled channel
 `;
 
 const STATUS_ICON: Record<TaskStatus, string> = {
+  proposed: '?',
   queued: '·',
   running: '▶',
   done: '✓',
@@ -96,6 +107,7 @@ async function main(argv: string[]): Promise<void> {
       status: { type: 'string', short: 's' },
       attempt: { type: 'string' },
       raw: { type: 'boolean' },
+      file: { type: 'string' },
       help: { type: 'boolean', short: 'h' },
     },
   });
@@ -118,8 +130,16 @@ async function main(argv: string[]): Promise<void> {
           tools: flags.tools?.split(',').map((t) => t.trim()),
         });
         console.log(`added repo "${repo.name}" (${repo.path}, base ${repo.base_branch}${repo.test_cmd ? `, tests: ${repo.test_cmd}` : ''})`);
+      } else if (sub === 'set') {
+        const [, name, key, value = ''] = rest;
+        if (key !== 'auto_approve' || !name) die('usage: agentdeck repo set <repo> auto_approve on|off');
+        actions.updateRepo(db, name, { auto_approve: ['1', 'on', 'true', 'yes'].includes(value.toLowerCase()) });
+        console.log(`${name}: auto_approve ${value}`);
       } else if (sub === 'ls' || !sub) {
-        for (const r of db.listRepos()) console.log(`${r.name.padEnd(16)} ${r.path}  base=${r.base_branch}  test=${r.test_cmd ?? '-'}`);
+        for (const r of db.listRepos()) {
+          const goals = actions.repoDetail(db, r.id).goals.trim() ? 'goals ✓' : 'no goals';
+          console.log(`${r.name.padEnd(16)} ${r.path}  base=${r.base_branch}  test=${r.test_cmd ?? '-'}  ${goals}${r.auto_approve ? '  auto-approve' : ''}`);
+        }
       } else die(`unknown repo command: ${sub}`);
       break;
     }
@@ -173,6 +193,58 @@ async function main(argv: string[]): Promise<void> {
       break;
     }
 
+    case 'goals': {
+      if (!rest[0]) die('usage: agentdeck goals <repo> [--file goals.md]');
+      if (flags.file) actions.updateRepo(db, rest[0], { goals: readFileSync(flags.file, 'utf8') });
+      const r = actions.repoDetail(db, rest[0]);
+      console.log(`# ${r.goals_path}\n`);
+      console.log(r.goals.trim() || '(empty: write the outcomes you want, priorities, and what not to touch)');
+      break;
+    }
+
+    case 'plan': {
+      if (!rest[0]) die('usage: agentdeck plan <repo>');
+      console.log(`planning ${rest[0]}…`);
+      const res = await actions.planNow(db, rest[0]);
+      console.log(`${res.outcome}${res.note ? `: ${res.note}` : ''}`);
+      for (const t of res.tasks) console.log(fmtTask(t, repoName(t.repo_id)));
+      for (const t of res.skipped) console.log(`  skipped (duplicate or over the cap): ${t}`);
+      if (res.tasks.some((t) => t.status === 'proposed')) console.log('approve with `agentdeck approve <id>`');
+      break;
+    }
+
+    case 'approve':
+    case 'reject': {
+      if (!rest.length) die(`usage: agentdeck ${cmd} <id>...`);
+      for (const arg of rest) {
+        const id = taskId(arg);
+        (cmd === 'approve' ? actions.approveTask : actions.rejectTask)(db, id);
+        console.log(`${cmd === 'approve' ? 'queued' : 'rejected'} #${id}`);
+      }
+      break;
+    }
+
+    case 'install': {
+      const st = await service.install();
+      console.log(`installed ${st.plist}`);
+      console.log(`daemon ${st.state ?? 'loading'}${st.pid ? ` (pid ${st.pid})` : ''}; it starts at login and restarts if it dies`);
+      console.log(`logs: ~/.agentdeck/logs/daemon.log · runs ${st.program}`);
+      break;
+    }
+
+    case 'uninstall':
+      await service.uninstall();
+      console.log('removed the launchd agent; the daemon is stopped');
+      break;
+
+    case 'service': {
+      const st = await service.serviceStatus();
+      console.log(`installed  ${st.installed ? st.plist : 'no'}`);
+      console.log(`loaded     ${st.loaded ? `${st.state ?? '?'}${st.pid ? `, pid ${st.pid}` : ''}` : 'no'}`);
+      console.log(`program    ${st.program}`);
+      break;
+    }
+
     case 'cancel': {
       const id = taskId(rest[0]);
       console.log(actions.cancelTask(db, id) === 'cancelled' ? `cancelled #${id}` : `stopping #${id}…`);
@@ -214,6 +286,10 @@ async function main(argv: string[]): Promise<void> {
       else if (key === 'notify_desktop') actions.updateSettings(db, { notify: { desktop: on(value) } });
       else if (key === 'notify_events') actions.updateSettings(db, { notify: { events: value.split(',').filter(Boolean) as NotifyKind[] } });
       else if (key === 'ntfy_topic' || key === 'ntfy_server') actions.updateSettings(db, { notify: { [key]: value } });
+      else if (key === 'planner_enabled') actions.updateSettings(db, { planner: { enabled: on(value) } });
+      else if (key === 'planner_interval_hours') actions.updateSettings(db, { planner: { interval_hours: Number(value) } });
+      else if (key === 'planner_max_tasks') actions.updateSettings(db, { planner: { max_tasks: Number(value) } });
+      else if (key === 'planner_model') actions.updateSettings(db, { planner: { model: value } });
       else die(`unknown setting "${key}"; see agentdeck help`);
       console.log(`${key} = ${value}`);
       break;
@@ -227,6 +303,7 @@ async function main(argv: string[]): Promise<void> {
       console.log(`notify_desktop  ${st.notify.desktop ? 'on' : 'off'}`);
       console.log(`notify_events   ${st.notify.events.join(',') || '-'}`);
       console.log(`ntfy            ${st.notify.ntfy_topic ? `${st.notify.ntfy_server}/${st.notify.ntfy_topic}` : 'off'}`);
+      console.log(`planner         ${st.planner.enabled ? 'on' : 'off'}, every ${st.planner.interval_hours}h when a queue is empty, up to ${st.planner.max_tasks} tasks, ${st.planner.model}`);
       console.log(`\ngovernor        ${d.allow ? 'allowing work' : 'holding'}${d.reason ? `: ${d.reason}` : ''}${d.until ? ` (lifts in ${relTime(d.until)})` : ''}`);
       if (d.weekly_allowed !== null) console.log(`weekly pace     ${Math.round(d.weekly_allowed * 100)}% of the 7d window allowed so far`);
       break;
@@ -254,7 +331,7 @@ async function main(argv: string[]): Promise<void> {
     case 'daemon':
     case 'run-once': {
       const once = cmd === 'run-once';
-      const scheduler = new Scheduler(db, { once });
+      const scheduler = new Scheduler(db, { once, keepAwake: !once });
       for (const sig of ['SIGINT', 'SIGTERM'] as const) {
         process.on(sig, () => {
           console.log(`${sig}: stopping workers; their tasks will be requeued on next start`);
@@ -263,7 +340,10 @@ async function main(argv: string[]): Promise<void> {
         });
       }
       if (!once) {
-        const api = await startApi(db);
+        const api = await startApi(db).catch((err) => {
+          if (err?.code === 'EADDRINUSE') die(`port ${API_PORT} is in use: another agentdeck daemon is probably running (see \`agentdeck service\`)`);
+          throw err;
+        });
         console.log(`api        http://127.0.0.1:${API_PORT}`);
         process.on('exit', () => api.close());
       }

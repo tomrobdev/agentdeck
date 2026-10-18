@@ -46,6 +46,29 @@ The dashboard has the queue (Active / Needs you / Done), task detail with every 
 5. The outcome is **done** (branch ready to review), **blocked** (the agent ended with `STATUS: BLOCKED: …`, or changed nothing), or **failed** (retried until `max_attempts`). A retry reuses the branch, and the new prompt includes the last attempt's result.
 6. A rate-limit rejection requeues the task without spending an attempt and holds the queue until the window resets.
 
+## Planner
+
+Give a repo goals and AgentDeck proposes its own next tasks:
+
+```sh
+agentdeck goals myproject --file goals.md   # or edit ~/.agentdeck/goals/myproject.md, or use Repos in the dashboard
+agentdeck plan myproject                    # run now; otherwise it runs when the repo's queue is empty
+agentdeck approve 12 13                     # proposals wait for you…
+agentdeck repo set myproject auto_approve on   # …unless you trust the planner on this repo
+```
+
+The planner runs `claude -p` read-only in the repo's main checkout. It reads the goals, the code, and the repo's open and recent tasks, then answers in a fixed JSON shape: up to `planner_max_tasks` (default 3) small tasks, each ending with a definition of done and a suggested model. Duplicates of existing tasks are dropped. It runs on its own only when a repo with goals has nothing open, at most every `planner_interval_hours` (default 3), and only when the governor allows work.
+
+## Always on
+
+```sh
+agentdeck install      # launchd agent: starts at login, restarted within seconds if it dies
+agentdeck service      # status
+agentdeck uninstall
+```
+
+The agent runs `daemon/src/cli.ts` from this checkout, so keep the checkout on `main`, and run `agentdeck install` again after pulling to restart it on the new code. Logs go to `~/.agentdeck/logs/daemon.log`. While tasks or the planner run, the daemon holds a `caffeinate -i` assertion so the Mac doesn't idle-sleep; it releases it when idle. In the dashboard, Settings → Always on turns on "Open this dashboard at login" (menu-bar tray only), and the tray menu shows the daemon's state.
+
 ## Usage governor
 
 Every Claude run reports live 5-hour and 7-day utilization (`rate_limit_event`). Before starting new work, the scheduler asks the governor:
@@ -74,7 +97,6 @@ The daemon sends a notification when a task finishes as done, blocked or failed 
 ```
 daemon/   Node + TypeScript: SQLite queue, scheduler, workers, CLI, local API
 app/      Tauri 2 + Vue 3 dashboard
-launchd/  plist to keep the daemon running                           (milestone 4)
 ```
 
 `cd daemon && npm test` runs the end-to-end tests with real git worktrees and a fake `claude` binary.
@@ -84,7 +106,7 @@ launchd/  plist to keep the daemon running                           (milestone 
 1. ~~Daemon core + CLI (queue, worker, worktrees)~~
 2. ~~Tauri + Vue dashboard~~
 3. ~~Usage governor + notifications~~
-4. Planner + always-on (launchd, launch at login)
+4. ~~Planner + always-on (launchd, launch at login)~~
 
 ## Safety defaults
 

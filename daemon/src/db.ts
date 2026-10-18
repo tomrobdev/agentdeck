@@ -3,6 +3,7 @@ import { DB_PATH, DEFAULTS, ensureDirs } from './config.ts';
 import { BUDGET_KEYS, type Budget, DEFAULT_BUDGET } from './governor.ts';
 
 export type TaskStatus =
+  | 'proposed' // suggested by the planner, waiting for approval
   | 'queued'
   | 'running'
   | 'done'
@@ -18,6 +19,19 @@ export interface Repo {
   base_branch: string;
   test_cmd: string | null;
   allowed_tools: string | null; // JSON array, null = defaults
+  auto_approve: number; // 1 = planner tasks skip approval
+  planned_at: string | null;
+}
+
+export interface PlannerRun {
+  id: number;
+  repo_id: number;
+  started_at: string;
+  ended_at: string | null;
+  outcome: string | null; // proposed | nothing | failed | rate_limited
+  proposed: number;
+  note: string | null;
+  log_path: string;
 }
 
 export interface Task {
@@ -34,6 +48,7 @@ export interface Task {
   branch: string | null;
   worktree: string | null;
   blocked_reason: string | null;
+  source: string; // manual | planner
   created_at: string;
   updated_at: string;
 }
@@ -113,6 +128,16 @@ CREATE TABLE IF NOT EXISTS usage_windows (
   status TEXT,
   observed_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+CREATE TABLE IF NOT EXISTS planner_runs (
+  id INTEGER PRIMARY KEY,
+  repo_id INTEGER NOT NULL REFERENCES repos(id),
+  started_at TEXT NOT NULL DEFAULT (datetime('now')),
+  ended_at TEXT,
+  outcome TEXT,
+  proposed INTEGER NOT NULL DEFAULT 0,
+  note TEXT,
+  log_path TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS notifications (
   id INTEGER PRIMARY KEY,
   kind TEXT NOT NULL,
@@ -127,6 +152,20 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 `;
 
+/** Columns added after the first release; CREATE TABLE IF NOT EXISTS won't add them to old databases. */
+const ADDED_COLUMNS: [table: string, column: string, ddl: string][] = [
+  ['repos', 'auto_approve', 'INTEGER NOT NULL DEFAULT 0'],
+  ['repos', 'planned_at', 'TEXT'],
+  ['tasks', 'source', "TEXT NOT NULL DEFAULT 'manual'"],
+];
+
+function migrate(db: DatabaseSync): void {
+  for (const [table, column, ddl] of ADDED_COLUMNS) {
+    const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+    if (!cols.some((c) => c.name === column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
+  }
+}
+
 export type Db = ReturnType<typeof openDb>;
 
 export function openDb(path = DB_PATH) {
@@ -134,6 +173,7 @@ export function openDb(path = DB_PATH) {
   const db = new DatabaseSync(path);
   db.exec('PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000; PRAGMA foreign_keys = ON;');
   db.exec(SCHEMA);
+  migrate(db);
 
   const now = "datetime('now')";
 
@@ -176,11 +216,48 @@ export function openDb(path = DB_PATH) {
     listRepos(): Repo[] {
       return db.prepare('SELECT * FROM repos ORDER BY name').all() as unknown as Repo[];
     },
+    updateRepo(id: number, fields: Partial<Pick<Repo, 'auto_approve' | 'test_cmd' | 'planned_at'>>): void {
+      const keys = Object.keys(fields) as (keyof typeof fields)[];
+      if (!keys.length) return;
+      db.prepare(`UPDATE repos SET ${keys.map((k) => `${k} = ?`).join(', ')} WHERE id = ?`).run(...keys.map((k) => fields[k] ?? null), id);
+    },
+
+    // --- planner ---
+    tasksForRepo(repo_id: number, limit = 40): Task[] {
+      return db.prepare('SELECT * FROM tasks WHERE repo_id = ? ORDER BY id DESC LIMIT ?').all(repo_id, limit) as unknown as Task[];
+    },
+    countOpen(repo_id: number): number {
+      return (
+        db.prepare("SELECT COUNT(*) AS n FROM tasks WHERE repo_id = ? AND status IN ('queued', 'running', 'proposed', 'cancel_requested')").get(repo_id) as { n: number }
+      ).n;
+    },
+    startPlannerRun(repo_id: number, log_path: string): number {
+      db.prepare(`UPDATE repos SET planned_at = ${now} WHERE id = ?`).run(repo_id);
+      return Number(db.prepare('INSERT INTO planner_runs (repo_id, log_path) VALUES (?, ?)').run(repo_id, log_path).lastInsertRowid);
+    },
+    finishPlannerRun(id: number, outcome: string, proposed: number, note: string | null): void {
+      db.prepare(`UPDATE planner_runs SET ended_at = ${now}, outcome = ?, proposed = ?, note = ? WHERE id = ?`).run(outcome, proposed, note, id);
+    },
+    plannerRuns(repo_id?: number, limit = 10): PlannerRun[] {
+      return (repo_id
+        ? db.prepare('SELECT * FROM planner_runs WHERE repo_id = ? ORDER BY id DESC LIMIT ?').all(repo_id, limit)
+        : db.prepare('SELECT * FROM planner_runs ORDER BY id DESC LIMIT ?').all(limit)) as unknown as PlannerRun[];
+    },
 
     // --- tasks ---
-    addTask(t: { repo_id: number; title: string; prompt: string; priority?: number; model?: string; max_turns?: number; max_attempts?: number }): Task {
+    addTask(t: {
+      repo_id: number;
+      title: string;
+      prompt: string;
+      priority?: number;
+      model?: string;
+      max_turns?: number;
+      max_attempts?: number;
+      status?: 'queued' | 'proposed';
+      source?: 'manual' | 'planner';
+    }): Task {
       const info = db
-        .prepare('INSERT INTO tasks (repo_id, title, prompt, priority, model, max_turns, max_attempts) VALUES (?, ?, ?, ?, ?, ?, ?)')
+        .prepare('INSERT INTO tasks (repo_id, title, prompt, priority, model, max_turns, max_attempts, status, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
         .run(
           t.repo_id,
           t.title,
@@ -189,6 +266,8 @@ export function openDb(path = DB_PATH) {
           t.model ?? DEFAULTS.model,
           t.max_turns ?? DEFAULTS.maxTurns,
           t.max_attempts ?? DEFAULTS.maxAttempts,
+          t.status ?? 'queued',
+          t.source ?? 'manual',
         );
       return this.getTask(Number(info.lastInsertRowid))!;
     },
@@ -229,6 +308,7 @@ export function openDb(path = DB_PATH) {
     recoverOrphans(): number {
       db.prepare(`UPDATE runs SET ended_at = ${now}, outcome = 'failed', result_text = 'daemon restarted' WHERE ended_at IS NULL`).run();
       db.prepare(`UPDATE tasks SET status = 'cancelled', updated_at = ${now} WHERE status = 'cancel_requested'`).run();
+      db.prepare(`UPDATE planner_runs SET ended_at = ${now}, outcome = 'failed', note = 'daemon restarted' WHERE ended_at IS NULL`).run();
       const info = db.prepare(`UPDATE tasks SET status = 'queued', attempts = MAX(attempts - 1, 0), updated_at = ${now} WHERE status = 'running'`).run();
       return Number(info.changes);
     },

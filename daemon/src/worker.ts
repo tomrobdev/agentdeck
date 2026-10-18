@@ -1,15 +1,14 @@
-import { type ChildProcess, execFile, spawn } from 'node:child_process';
+import { execFile } from 'node:child_process';
 import { createWriteStream } from 'node:fs';
 import { join } from 'node:path';
-import { createInterface } from 'node:readline';
 import {
   ALWAYS_DISALLOWED_TOOLS,
   DEFAULT_ALLOWED_TOOLS,
   LOG_DIR,
   WORKER_SYSTEM_PROMPT,
-  claudeBin,
   ensureDirs,
 } from './config.ts';
+import { runClaude } from './claude.ts';
 import type { Db, Repo, Run, Task } from './db.ts';
 import { commitLeftovers, commitsAhead, ensureWorktree } from './git.ts';
 import { notifyLater } from './notify.ts';
@@ -21,27 +20,7 @@ export interface WorkerResult {
   reason?: string;
 }
 
-interface ClaudeResult {
-  subtype?: string;
-  is_error?: boolean;
-  result?: string;
-  session_id?: string;
-  num_turns?: number;
-  total_cost_usd?: number;
-  api_error_status?: number | null;
-  usage?: {
-    input_tokens?: number;
-    output_tokens?: number;
-    cache_read_input_tokens?: number;
-    cache_creation_input_tokens?: number;
-  };
-}
-
-/** Live claude processes, so the daemon can stop them on shutdown. */
-export const activeChildren = new Set<ChildProcess>();
-
 const TEST_TIMEOUT_MS = 15 * 60_000;
-const CANCEL_POLL_MS = 2_000;
 
 export function buildPrompt(task: Task, previousRuns: Run[]): string {
   const last = previousRuns.at(-1);
@@ -119,52 +98,13 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
   const runId = db.startRun(task.id, task.attempts, logPath);
   const prompt = buildPrompt(task, db.runsForTask(task.id).filter((r) => r.id !== runId));
 
-  const child = spawn(claudeBin(), claudeArgs(task, repo, prompt), {
+  const { result, exitCode, rateLimitedUntil, cancelled } = await runClaude(db, {
+    args: claudeArgs(task, repo, prompt),
     cwd: wt.path,
-    env: { ...process.env, AGENTDECK_TASK_ID: String(task.id) },
-    stdio: ['ignore', 'pipe', 'pipe'],
+    log,
+    env: { AGENTDECK_TASK_ID: String(task.id) },
+    shouldCancel: () => db.getTask(task.id)?.status === 'cancel_requested',
   });
-  activeChildren.add(child);
-
-  let result: ClaudeResult | undefined;
-  let rateLimitedUntil: number | undefined;
-  let cancelled = false;
-
-  const cancelTimer = setInterval(() => {
-    if (db.getTask(task.id)?.status === 'cancel_requested' && !cancelled) {
-      cancelled = true;
-      child.kill('SIGTERM');
-    }
-  }, CANCEL_POLL_MS);
-
-  createInterface({ input: child.stdout }).on('line', (line) => {
-    log.write(line + '\n');
-    let ev: any;
-    try {
-      ev = JSON.parse(line);
-    } catch {
-      return;
-    }
-    if (ev.type === 'result') result = ev;
-    if (ev.type === 'rate_limit_event') {
-      const info = ev.rate_limit_info ?? {};
-      for (const [window, w] of Object.entries<any>(info.unifiedWindows ?? {})) {
-        db.recordUsageWindow(window, w.utilization ?? 0, w.resetsAt ?? 0, info.status ?? null);
-      }
-      if (info.status === 'rejected') rateLimitedUntil = info.resetsAt;
-    }
-  });
-  child.stderr.on('data', (d: Buffer) => log.write(JSON.stringify({ type: 'agentdeck_stderr', text: d.toString() }) + '\n'));
-
-  const exitCode: number = await new Promise((resolve) => {
-    child.on('error', (err) => {
-      log.write(JSON.stringify({ type: 'agentdeck_error', text: err.message }) + '\n');
-      resolve(-1);
-    });
-    child.on('close', (code) => resolve(code ?? -1));
-  });
-  clearInterval(cancelTimer);
-  activeChildren.delete(child);
 
   const usage = result?.usage ?? {};
   const runFields: Partial<Run> = {
@@ -188,8 +128,8 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
   let outcome: WorkerResult;
   if (cancelled) {
     outcome = { outcome: 'cancelled' };
-  } else if (rateLimitedUntil || result?.api_error_status === 429) {
-    const until = rateLimitedUntil ?? Math.floor(Date.now() / 1000) + 15 * 60;
+  } else if (rateLimitedUntil) {
+    const until = rateLimitedUntil;
     db.setSetting('rate_limited_until', String(until));
     outcome = { outcome: 'rate_limited', reason: `rate limited until ${new Date(until * 1000).toISOString()}` };
   } else if (!result || result.is_error || exitCode !== 0) {

@@ -7,6 +7,8 @@ export const HOME = process.env.AGENTDECK_HOME ?? join(homedir(), '.agentdeck');
 export const DB_PATH = join(HOME, 'agentdeck.db');
 export const LOG_DIR = join(HOME, 'logs');
 export const WORKTREE_DIR = join(HOME, 'worktrees');
+/** One goals file per repo, `<repo name>.md`, read by the planner. */
+export const GOALS_DIR = join(HOME, 'goals');
 
 /** Local API for the dashboard. Bound to 127.0.0.1 only. */
 export const API_PORT = Number(process.env.AGENTDECK_PORT ?? 4317);
@@ -20,7 +22,7 @@ export const API_ALLOWED_ORIGINS = new Set([
 ]);
 
 export function ensureDirs(): void {
-  for (const dir of [HOME, LOG_DIR, WORKTREE_DIR]) mkdirSync(dir, { recursive: true });
+  for (const dir of [HOME, LOG_DIR, WORKTREE_DIR, GOALS_DIR]) mkdirSync(dir, { recursive: true });
 }
 
 /** launchd starts us with a bare PATH, so look in the usual install spots. */

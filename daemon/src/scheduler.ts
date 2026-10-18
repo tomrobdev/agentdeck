@@ -2,12 +2,20 @@ import { DEFAULTS } from './config.ts';
 import type { Db } from './db.ts';
 import { decide } from './governor.ts';
 import { notifyLater } from './notify.ts';
-import { activeChildren, runTask } from './worker.ts';
+import { type ChildProcess, spawn } from 'node:child_process';
+import { activeChildren } from './claude.ts';
+import { planNow } from './actions.ts';
+import { plannerDue } from './planner.ts';
+import { runTask } from './worker.ts';
 
 export interface SchedulerOptions {
   tickMs?: number;
   /** Ignore the paused flag and exit once the queue is drained (for tests and `run-once`). */
   once?: boolean;
+  /** Propose new tasks from repo goals when a queue runs dry (off in once mode by default). */
+  autoPlan?: boolean;
+  /** Hold a `caffeinate -i` assertion while work is running (macOS). */
+  keepAwake?: boolean;
   log?: (msg: string) => void;
 }
 
@@ -19,10 +27,19 @@ export class Scheduler {
   private stopped = false;
   private drained: (() => void) | undefined;
   private lastHold: string | null = null;
+  private planning = false;
+  private caffeinate: ChildProcess | null = null;
 
   constructor(db: Db, opts: SchedulerOptions = {}) {
     this.db = db;
-    this.opts = { tickMs: DEFAULTS.tickMs, once: false, log: (m) => console.log(`[${new Date().toISOString()}] ${m}`), ...opts };
+    this.opts = {
+      tickMs: DEFAULTS.tickMs,
+      once: false,
+      autoPlan: !opts.once,
+      keepAwake: false,
+      log: (m) => console.log(`[${new Date().toISOString()}] ${m}`),
+      ...opts,
+    };
   }
 
   /** Start ticking. Resolves when stopped, or when the queue is drained in `once` mode. */
@@ -38,6 +55,7 @@ export class Scheduler {
   stop(): void {
     this.stopped = true;
     clearTimeout(this.timer);
+    this.setAwake(false);
     for (const child of activeChildren) child.kill('SIGTERM');
     this.drained?.();
   }
@@ -66,13 +84,42 @@ export class Scheduler {
           });
         this.running.add(p);
       }
+      if (this.opts.autoPlan && !this.planning && this.running.size < limit) this.maybePlan();
     }
-    if (this.opts.once && this.running.size === 0 && (reason || !this.db.listTasks('queued').length)) {
+    this.setAwake(this.running.size > 0 || this.planning);
+    if (this.opts.once && this.running.size === 0 && !this.planning && (reason || !this.db.listTasks('queued').length)) {
       this.stop();
       return;
     }
     clearTimeout(this.timer);
     this.schedule();
+  }
+
+  /** Run the planner for the first repo whose queue has run dry. One planner at a time. */
+  private maybePlan(): void {
+    const repo = this.db.listRepos().find((r) => plannerDue(this.db, r));
+    if (!repo) return;
+    this.planning = true;
+    this.opts.log(`planner: planning ${repo.name}`);
+    planNow(this.db, repo.id)
+      .then((r) => this.opts.log(`planner: ${repo.name}: ${r.outcome}, ${r.tasks.length} task(s)${r.note ? ` (${r.note})` : ''}`))
+      .catch((err) => this.opts.log(`planner: ${repo.name} crashed: ${err?.stack ?? err}`))
+      .finally(() => {
+        this.planning = false;
+        this.tick();
+      });
+  }
+
+  /** Keep the Mac from idle-sleeping while agents work; let it sleep when idle. */
+  private setAwake(on: boolean): void {
+    if (!this.opts.keepAwake || process.platform !== 'darwin') return;
+    if (on && !this.caffeinate) {
+      this.caffeinate = spawn('caffeinate', ['-i', '-w', String(process.pid)], { stdio: 'ignore' });
+      this.caffeinate.on('exit', () => (this.caffeinate = null));
+    } else if (!on && this.caffeinate) {
+      this.caffeinate.kill();
+      this.caffeinate = null;
+    }
   }
 
   /** Why we can't start new work right now (null if we can), and how many tasks may run. */
