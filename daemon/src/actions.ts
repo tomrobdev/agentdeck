@@ -1,7 +1,7 @@
 // Operations shared by the CLI and the HTTP API. They throw ActionError on bad input.
 import { existsSync, readFileSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
-import type { Db, Repo, Task } from './db.ts';
+import { type Db, PR_MODES, type PrMode, type Repo, type Task } from './db.ts';
 import { type Check, runDoctor } from './doctor.ts';
 import { detectToolchain } from './domain/toolchain.ts';
 import { currentBranch, isGitRepo, rootInfo } from './git.ts';
@@ -40,10 +40,21 @@ export async function addRepo(
 
 export function addTask(
   db: Db,
-  input: { repo?: string; prompt: string; title?: string; priority?: number; model?: string; max_turns?: number; max_attempts?: number },
+  input: {
+    repo?: string;
+    prompt: string;
+    title?: string;
+    priority?: number;
+    model?: string;
+    max_turns?: number;
+    max_attempts?: number;
+    after_task?: number;
+  },
 ): Task {
   const prompt = input.prompt?.trim();
   if (!prompt) throw new ActionError('a prompt is required');
+  if (input.after_task !== undefined && (!Number.isInteger(input.after_task) || !db.getTask(input.after_task)))
+    throw new ActionError(`--after: no task #${input.after_task}`);
   const repos = db.listRepos();
   const repo = input.repo ? db.findRepo(input.repo) : repos.length === 1 ? repos[0] : undefined;
   if (!repo) throw new ActionError(input.repo ? `no repo "${input.repo}"` : 'choose a repo (more than one is registered)');
@@ -55,6 +66,7 @@ export function addTask(
     model: input.model || undefined,
     max_turns: input.max_turns,
     max_attempts: input.max_attempts,
+    after_task: input.after_task,
   });
 }
 
@@ -138,9 +150,18 @@ export function repoDetail(db: Db, nameOrId: string | number) {
 export function updateRepo(
   db: Db,
   nameOrId: string | number,
-  patch: { goals?: string; auto_approve?: boolean; test_cmd?: string | null; setup_cmd?: string | null; base_branch?: string },
+  patch: {
+    goals?: string;
+    auto_approve?: boolean;
+    test_cmd?: string | null;
+    setup_cmd?: string | null;
+    base_branch?: string;
+    pr_mode?: PrMode;
+  },
 ) {
   const repo = repoOrThrow(db, nameOrId);
+  if (patch.pr_mode !== undefined && !PR_MODES.includes(patch.pr_mode))
+    throw new ActionError(`pr_mode must be one of ${PR_MODES.join(', ')}`);
   if (patch.base_branch !== undefined && !patch.base_branch.trim()) throw new ActionError('base_branch cannot be empty');
   if (patch.goals !== undefined) {
     if (patch.goals.length > 20_000) throw new ActionError('goals are limited to 20,000 characters');
@@ -151,6 +172,7 @@ export function updateRepo(
     ...(patch.test_cmd !== undefined ? { test_cmd: patch.test_cmd?.trim() || null } : {}),
     ...(patch.setup_cmd !== undefined ? { setup_cmd: patch.setup_cmd?.trim() || null } : {}),
     ...(patch.base_branch !== undefined ? { base_branch: patch.base_branch.trim() } : {}),
+    ...(patch.pr_mode !== undefined ? { pr_mode: patch.pr_mode } : {}),
   });
   return repoDetail(db, repo.id);
 }
@@ -335,6 +357,8 @@ export function parseLogLine(line: string): LogEntry[] {
       return [{ kind: 'setup', passed: ev.passed, cmd: ev.cmd, output: ev.output }];
     case 'agentdeck_tests':
       return [{ kind: 'tests', passed: ev.passed, output: ev.output }];
+    case 'agentdeck_pr':
+      return [ev.error ? { kind: 'error', text: `pull request: ${ev.error}` } : { kind: 'text', text: `Opened pull request ${ev.url}` }];
     case 'agentdeck_stderr':
     case 'agentdeck_error':
       return [{ kind: 'error', text: String(ev.text).trim() }];
