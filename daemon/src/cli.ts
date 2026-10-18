@@ -155,7 +155,8 @@ async function main(argv: string[]): Promise<void> {
         console.log(
           `added repo "${repo.name}" (${repo.path}, base ${repo.base_branch}, toolchain ${repo.toolchain ?? 'unknown'}${repo.setup_cmd ? `, setup: ${repo.setup_cmd}` : ''}${repo.test_cmd ? `, tests: ${repo.test_cmd}` : ''})`,
         );
-        if (!printDoctor(await actions.doctorRepo(db, repo.id)).ok) process.exitCode = 1;
+        // The repo is added either way; a failed doctor pauses it and says so, without failing the command.
+        printDoctor(await actions.doctorRepo(db, repo.id));
       } else if (sub === 'doctor') {
         if (!path) die('usage: agentdeck repo doctor <repo>');
         console.log(`checking ${path}… (this runs the repo's setup and test commands)`);

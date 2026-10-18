@@ -68,11 +68,21 @@ test('doctor passes on a healthy repo, clears a pause, and leaves no worktree be
     report.checks.map((c) => c.name),
     ['git repo', 'base branch', 'toolchain', 'claude binary', 'setup', 'tests', 'tool rules'],
   );
-  assert.ok(report.checks.every((c) => c.reason), 'every check says why');
+  assert.ok(
+    report.checks.every((c) => c.reason),
+    'every check says why',
+  );
   assert.equal(report.paused_reason, null);
   assert.equal(db.getRepo(r.id)!.paused_reason, null);
   assert.equal(worktrees(r.path).length, 1, 'temporary worktree removed');
   assert.deepEqual(doctorDirs(), []);
+});
+
+test('a repo without a toolchain is not a doctor failure', async () => {
+  repo('no-toolchain', { toolchain: null });
+  const report = await doctorRepo(db, 'no-toolchain');
+  const check = report.checks.find((k) => k.name === 'toolchain')!;
+  assert.equal(check.ok, true);
 });
 
 test('doctor fails and pauses the repo with the first failed check', async () => {
@@ -83,7 +93,6 @@ test('doctor fails and pauses the repo with the first failed check', async () =>
     reason: RegExp;
   }[] = [
     { name: 'no-tests', over: { test_cmd: null }, failed: ['tests'], reason: /no test command/ },
-    { name: 'no-toolchain', over: { toolchain: null }, failed: ['toolchain'], reason: /none detected/ },
     { name: 'bad-base', over: { base_branch: 'm3-governor' }, failed: ['base branch', 'tests'], reason: /no branch m3-governor/ },
     { name: 'failing-tests', over: { test_cmd: 'false', allowed_tools: ['Bash(false)'] }, failed: ['tests'], reason: /false failed/ },
     {

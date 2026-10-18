@@ -1,9 +1,10 @@
 import { existsSync, mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 
 /** Root for all runtime state: database, run logs, worktrees. */
-export const HOME = process.env.AGENTDECK_HOME ?? join(homedir(), '.agentdeck');
+// Resolved, so a relative AGENTDECK_HOME doesn't change meaning when git or a worktree runs elsewhere.
+export const HOME = resolve(process.env.AGENTDECK_HOME ?? join(homedir(), '.agentdeck'));
 export const DB_PATH = join(HOME, 'agentdeck.db');
 export const LOG_DIR = join(HOME, 'logs');
 export const WORKTREE_DIR = join(HOME, 'worktrees');

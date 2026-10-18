@@ -68,7 +68,7 @@ for (let i = 1; i <= N; i++) {
   execFileSync('git', ['config', 'user.name', 't'], { cwd: repo });
   execFileSync('git', ['config', 'user.email', 't@t'], { cwd: repo });
   const cli = (...a) => execFileSync(process.execPath, [CLI, ...a], { env, encoding: 'utf8' });
-  cli('repo', 'add', repo, '--test', 'true');
+  cli('repo', 'add', repo, '--test', 'node -e 0'); // a test command agents are allowed to run, so doctor passes
   for (let t = 0; t < TASKS; t++) cli('add', '--repo', 'demo', `task ${t}`);
 
   // First daemon: kill -9 at a random moment.

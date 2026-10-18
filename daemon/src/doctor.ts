@@ -71,7 +71,12 @@ export async function runDoctor(repo: Repo): Promise<Check[]> {
 
   const { files, scripts } = rootInfo(repo.path);
   const toolchain = repo.toolchain ?? detectToolchain(files, scripts)?.toolchain ?? null;
-  add('toolchain', !!toolchain, toolchain ? `${toolchain}${repo.toolchain ? '' : ' (detected)'}` : 'none detected or set');
+  // Not a failure: a repo built with make or plain scripts has no toolchain, only the generic tool rules.
+  add(
+    'toolchain',
+    true,
+    toolchain ? `${toolchain}${repo.toolchain ? '' : ' (detected)'}` : 'none detected: no setup step, generic tool rules only',
+  );
 
   const claude = findClaude();
   add('claude binary', !!claude, claude ?? `${claudeBin()} not found; install Claude Code or set AGENTDECK_CLAUDE_BIN`);
