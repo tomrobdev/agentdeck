@@ -165,10 +165,12 @@ export const api = {
   pause: () => call<Status>('/api/pause', { method: 'POST' }),
   resume: () => call<Status>('/api/resume', { method: 'POST' }),
   settings: () => call<Settings>('/api/settings'),
-  updateSettings: (
-    patch: { max_concurrent?: number; budget?: Partial<Budget>; notify?: Partial<Settings['notify']>; planner?: Partial<Settings['planner']> },
-  ) =>
-    call<Settings>('/api/settings', { method: 'POST', json: patch }),
+  updateSettings: (patch: {
+    max_concurrent?: number;
+    budget?: Partial<Budget>;
+    notify?: Partial<Settings['notify']>;
+    planner?: Partial<Settings['planner']>;
+  }) => call<Settings>('/api/settings', { method: 'POST', json: patch }),
   testNotify: () => call<{ ok: boolean }>('/api/notify/test', { method: 'POST' }),
   repos: () => call<Repo[]>('/api/repos'),
   addRepo: (r: { path: string; name?: string; test?: string }) => call<Repo>('/api/repos', { method: 'POST', json: r }),
@@ -222,9 +224,15 @@ export function describeState(s: Status | null, offline: boolean): { label: stri
   if (!s) return { label: 'Connecting…', cls: 's-queued', title: '' };
   if (s.paused) return { label: 'Paused', cls: 's-blocked', title: 'No new tasks start until you resume' };
   const limited = s.rate_limited_until && s.rate_limited_until * 1000 > Date.now() ? s.rate_limited_until : null;
-  if (limited) return { label: `Rate limited · ${relTime(limited)}`, cls: 's-blocked', title: 'Claude rejected a request; waiting for the window to reset' };
+  if (limited)
+    return {
+      label: `Rate limited · ${relTime(limited)}`,
+      cls: 's-blocked',
+      title: 'Claude rejected a request; waiting for the window to reset',
+    };
   const g = s.governor;
-  if (!g.allow) return { label: g.until ? `Holding · until ${when(g.until)}` : 'Holding', cls: 's-blocked', title: `Usage budget: ${g.reason}` };
+  if (!g.allow)
+    return { label: g.until ? `Holding · until ${when(g.until)}` : 'Holding', cls: 's-blocked', title: `Usage budget: ${g.reason}` };
   if (s.running) return { label: 'Working', cls: 's-running', title: g.reason ?? '' };
   return { label: 'Idle', cls: 's-done', title: g.reason ?? '' };
 }

@@ -228,7 +228,9 @@ export function openDb(path = DB_PATH) {
     },
     countOpen(repo_id: number): number {
       return (
-        db.prepare("SELECT COUNT(*) AS n FROM tasks WHERE repo_id = ? AND status IN ('queued', 'running', 'proposed', 'cancel_requested')").get(repo_id) as { n: number }
+        db
+          .prepare("SELECT COUNT(*) AS n FROM tasks WHERE repo_id = ? AND status IN ('queued', 'running', 'proposed', 'cancel_requested')")
+          .get(repo_id) as { n: number }
       ).n;
     },
     startPlannerRun(repo_id: number, log_path: string): number {
@@ -236,7 +238,12 @@ export function openDb(path = DB_PATH) {
       return Number(db.prepare('INSERT INTO planner_runs (repo_id, log_path) VALUES (?, ?)').run(repo_id, log_path).lastInsertRowid);
     },
     finishPlannerRun(id: number, outcome: string, proposed: number, note: string | null): void {
-      db.prepare(`UPDATE planner_runs SET ended_at = ${now}, outcome = ?, proposed = ?, note = ? WHERE id = ?`).run(outcome, proposed, note, id);
+      db.prepare(`UPDATE planner_runs SET ended_at = ${now}, outcome = ?, proposed = ?, note = ? WHERE id = ?`).run(
+        outcome,
+        proposed,
+        note,
+        id,
+      );
     },
     plannerRuns(repo_id?: number, limit = 10): PlannerRun[] {
       return (repo_id
@@ -257,7 +264,9 @@ export function openDb(path = DB_PATH) {
       source?: 'manual' | 'planner';
     }): Task {
       const info = db
-        .prepare('INSERT INTO tasks (repo_id, title, prompt, priority, model, max_turns, max_attempts, status, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+        .prepare(
+          'INSERT INTO tasks (repo_id, title, prompt, priority, model, max_turns, max_attempts, status, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        )
         .run(
           t.repo_id,
           t.title,
@@ -301,7 +310,9 @@ export function openDb(path = DB_PATH) {
     /** Set status only if the task is currently in one of `from`. Returns true if it changed. */
     transitionTask(id: number, from: TaskStatus[], to: TaskStatus): boolean {
       const marks = from.map(() => '?').join(', ');
-      const info = db.prepare(`UPDATE tasks SET status = ?, updated_at = ${now} WHERE id = ? AND status IN (${marks})`).run(to, id, ...from);
+      const info = db
+        .prepare(`UPDATE tasks SET status = ?, updated_at = ${now} WHERE id = ? AND status IN (${marks})`)
+        .run(to, id, ...from);
       return info.changes > 0;
     },
     /** After a crash, anything still marked running was orphaned: put it back in the queue. */
@@ -309,7 +320,9 @@ export function openDb(path = DB_PATH) {
       db.prepare(`UPDATE runs SET ended_at = ${now}, outcome = 'failed', result_text = 'daemon restarted' WHERE ended_at IS NULL`).run();
       db.prepare(`UPDATE tasks SET status = 'cancelled', updated_at = ${now} WHERE status = 'cancel_requested'`).run();
       db.prepare(`UPDATE planner_runs SET ended_at = ${now}, outcome = 'failed', note = 'daemon restarted' WHERE ended_at IS NULL`).run();
-      const info = db.prepare(`UPDATE tasks SET status = 'queued', attempts = MAX(attempts - 1, 0), updated_at = ${now} WHERE status = 'running'`).run();
+      const info = db
+        .prepare(`UPDATE tasks SET status = 'queued', attempts = MAX(attempts - 1, 0), updated_at = ${now} WHERE status = 'running'`)
+        .run();
       return Number(info.changes);
     },
 
@@ -321,7 +334,10 @@ export function openDb(path = DB_PATH) {
     finishRun(id: number, r: Partial<Omit<Run, 'id' | 'task_id' | 'attempt' | 'started_at' | 'log_path'>>): void {
       const keys = Object.keys(r) as (keyof typeof r)[];
       const sets = keys.map((k) => `${k} = ?`).join(', ');
-      db.prepare(`UPDATE runs SET ${sets}${keys.length ? ', ' : ''}ended_at = ${now} WHERE id = ?`).run(...keys.map((k) => r[k] ?? null), id);
+      db.prepare(`UPDATE runs SET ${sets}${keys.length ? ', ' : ''}ended_at = ${now} WHERE id = ?`).run(
+        ...keys.map((k) => r[k] ?? null),
+        id,
+      );
     },
     runsForTask(task_id: number): Run[] {
       return db.prepare('SELECT * FROM runs WHERE task_id = ? ORDER BY id').all(task_id) as unknown as Run[];
@@ -332,7 +348,9 @@ export function openDb(path = DB_PATH) {
       db.prepare('INSERT INTO notifications (kind, title, body, task_id) VALUES (?, ?, ?, ?)').run(kind, title, body, task_id);
       db.prepare('DELETE FROM notifications WHERE id <= (SELECT MAX(id) - 200 FROM notifications)').run();
     },
-    recentNotifications(limit = 20): { id: number; kind: string; title: string; body: string; task_id: number | null; created_at: string }[] {
+    recentNotifications(
+      limit = 20,
+    ): { id: number; kind: string; title: string; body: string; task_id: number | null; created_at: string }[] {
       return db.prepare('SELECT * FROM notifications ORDER BY id DESC LIMIT ?').all(limit) as never;
     },
 

@@ -58,12 +58,17 @@ test('add repo and task, then read it back', async () => {
   const bad = await api('/api/tasks', { method: 'POST', json: { repo: 'demo', prompt: '  ' } });
   assert.equal(bad.status, 400);
 
-  const task = await (await api('/api/tasks', { method: 'POST', json: { repo: 'demo', prompt: 'FAKE_DONE do it', title: 'Do it' } })).json();
+  const task = await (
+    await api('/api/tasks', { method: 'POST', json: { repo: 'demo', prompt: 'FAKE_DONE do it', title: 'Do it' } })
+  ).json();
   assert.equal(task.status, 'queued');
   assert.equal(task.repo, 'demo');
 
   const list = await (await api('/api/tasks?status=queued')).json();
-  assert.deepEqual(list.map((t: any) => t.id), [task.id]);
+  assert.deepEqual(
+    list.map((t: any) => t.id),
+    [task.id],
+  );
 });
 
 test('rejects browser requests from other origins', async () => {
@@ -109,7 +114,10 @@ test('settings round-trip with validation', async () => {
   assert.equal(badTopic.status, 400);
 
   const ok = await (
-    await api('/api/settings', { method: 'POST', json: { max_concurrent: 3, budget: { weekly_max: 0.7 }, notify: { events: ['blocked'], ntfy_topic: 'my-topic' } } })
+    await api('/api/settings', {
+      method: 'POST',
+      json: { max_concurrent: 3, budget: { weekly_max: 0.7 }, notify: { events: ['blocked'], ntfy_topic: 'my-topic' } },
+    })
   ).json();
   assert.equal(ok.max_concurrent, 3);
   assert.equal(ok.budget.weekly_max, 0.7);

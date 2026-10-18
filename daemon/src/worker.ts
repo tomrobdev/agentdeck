@@ -1,13 +1,7 @@
 import { execFile } from 'node:child_process';
 import { createWriteStream } from 'node:fs';
 import { join } from 'node:path';
-import {
-  ALWAYS_DISALLOWED_TOOLS,
-  DEFAULT_ALLOWED_TOOLS,
-  LOG_DIR,
-  WORKER_SYSTEM_PROMPT,
-  ensureDirs,
-} from './config.ts';
+import { ALWAYS_DISALLOWED_TOOLS, DEFAULT_ALLOWED_TOOLS, LOG_DIR, WORKER_SYSTEM_PROMPT, ensureDirs } from './config.ts';
 import { runClaude } from './claude.ts';
 import type { Db, Repo, Run, Task } from './db.ts';
 import { commitLeftovers, commitsAhead, ensureWorktree } from './git.ts';
@@ -96,7 +90,10 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
   const logPath = join(LOG_DIR, `task-${task.id}-attempt-${task.attempts}.jsonl`);
   const log = createWriteStream(logPath, { flags: 'a' });
   const runId = db.startRun(task.id, task.attempts, logPath);
-  const prompt = buildPrompt(task, db.runsForTask(task.id).filter((r) => r.id !== runId));
+  const prompt = buildPrompt(
+    task,
+    db.runsForTask(task.id).filter((r) => r.id !== runId),
+  );
 
   const { result, exitCode, rateLimitedUntil, cancelled } = await runClaude(db, {
     args: claudeArgs(task, repo, prompt),
@@ -158,7 +155,11 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
 /** Record the run and move the task to its next state (including retry). */
 function finish(db: Db, task: Task, runId: number | null, res: WorkerResult, runFields: Partial<Run> = {}): WorkerResult {
   if (runId !== null) {
-    db.finishRun(runId, { ...runFields, outcome: res.outcome, ...(res.reason && !runFields.result_text ? { result_text: res.reason } : {}) });
+    db.finishRun(runId, {
+      ...runFields,
+      outcome: res.outcome,
+      ...(res.reason && !runFields.result_text ? { result_text: res.reason } : {}),
+    });
   }
   switch (res.outcome) {
     case 'done':
@@ -172,7 +173,9 @@ function finish(db: Db, task: Task, runId: number | null, res: WorkerResult, run
       break;
     case 'rate_limited':
       // Not the task's fault: give the attempt back and requeue.
-      db.raw.prepare("UPDATE tasks SET status = 'queued', attempts = MAX(attempts - 1, 0), updated_at = datetime('now') WHERE id = ?").run(task.id);
+      db.raw
+        .prepare("UPDATE tasks SET status = 'queued', attempts = MAX(attempts - 1, 0), updated_at = datetime('now') WHERE id = ?")
+        .run(task.id);
       break;
     case 'failed':
       db.updateTask(task.id, {

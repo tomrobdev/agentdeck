@@ -14,7 +14,13 @@ const meters = computed(() => {
   return s.usage.map((w) => {
     const pct = Math.round(w.utilization * 100);
     if (w.window === 'five_hour') {
-      return { label: '5h', pct, resets: relTime(w.resets_at), mark: s.budget.five_hour_max, markTitle: `cap ${Math.round(s.budget.five_hour_max * 100)}%` };
+      return {
+        label: '5h',
+        pct,
+        resets: relTime(w.resets_at),
+        mark: s.budget.five_hour_max,
+        markTitle: `cap ${Math.round(s.budget.five_hour_max * 100)}%`,
+      };
     }
     const allowed = s.governor.weekly_allowed ?? s.budget.weekly_max;
     return { label: '7d', pct, resets: relTime(w.resets_at), mark: allowed, markTitle: `on pace up to ${Math.round(allowed * 100)}% now` };
@@ -27,7 +33,11 @@ const meters = computed(() => {
     <div class="brand">AgentDeck</div>
     <span class="pill" :class="state.cls" :title="state.title"><span class="dot" />{{ state.label }}</span>
     <span v-if="status && !offline" class="muted" :title="status.governor.reason ?? ''">
-      {{ status.running }}/{{ status.governor.max_concurrent }} slots<template v-if="status.governor.max_concurrent < status.max_concurrent"> (throttled)</template>
+      {{ status.running }}/{{ status.governor.max_concurrent }} slots<template
+        v-if="status.governor.max_concurrent < status.max_concurrent"
+      >
+        (throttled)</template
+      >
     </span>
 
     <div class="usage" v-if="meters.length && !offline">

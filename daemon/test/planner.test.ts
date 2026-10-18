@@ -65,7 +65,10 @@ test('planning proposes capped, de-duplicated tasks that wait for approval', asy
 
   const res = await actions.planNow(db, 'alpha');
   assert.equal(res.outcome, 'proposed');
-  assert.deepEqual(res.tasks.map((t) => t.title), ['Document the CLI', 'Add input validation']);
+  assert.deepEqual(
+    res.tasks.map((t) => t.title),
+    ['Document the CLI', 'Add input validation'],
+  );
   assert.deepEqual(res.skipped, ['Add a greeting helper', 'Tidy the README']);
   assert.ok(res.tasks.every((t) => t.status === 'proposed' && t.source === 'planner'));
 

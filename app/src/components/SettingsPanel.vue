@@ -86,9 +86,19 @@ async function save(close = true) {
     load(
       await api.updateSettings({
         max_concurrent: f.max_concurrent,
-        budget: { five_hour_max: f.five_hour_max / 100, five_hour_soft: f.five_hour_soft / 100, weekly_max: f.weekly_max / 100, pace_slack: f.pace_slack / 100 },
+        budget: {
+          five_hour_max: f.five_hour_max / 100,
+          five_hour_soft: f.five_hour_soft / 100,
+          weekly_max: f.weekly_max / 100,
+          pace_slack: f.pace_slack / 100,
+        },
         notify: { desktop: f.desktop, events: f.events, ntfy_topic: f.ntfy_topic },
-        planner: { enabled: f.planner_enabled, interval_hours: f.planner_interval_hours, max_tasks: f.planner_max_tasks, model: f.planner_model },
+        planner: {
+          enabled: f.planner_enabled,
+          interval_hours: f.planner_interval_hours,
+          max_tasks: f.planner_max_tasks,
+          model: f.planner_model,
+        },
       }),
     );
     emit('saved');
@@ -183,9 +193,13 @@ async function test() {
         <h4>Always on</h4>
         <div class="always">
           <span class="pill" :class="service?.state === 'running' ? 's-done' : 's-blocked'">
-            <span class="dot" />{{ service?.installed ? `Daemon runs at login · ${service.state ?? 'not loaded'}` : 'Daemon not installed' }}
+            <span class="dot" />{{
+              service?.installed ? `Daemon runs at login · ${service.state ?? 'not loaded'}` : 'Daemon not installed'
+            }}
           </span>
-          <small v-if="!service?.installed" class="muted">Run <code>agentdeck install</code> once and it starts at login and restarts if it dies.</small>
+          <small v-if="!service?.installed" class="muted"
+            >Run <code>agentdeck install</code> once and it starts at login and restarts if it dies.</small
+          >
         </div>
         <label v-if="isNative" class="check">
           <input type="checkbox" :checked="!!appAtLogin" @change="toggleAppAtLogin" /> Open this dashboard at login (in the menu bar)
@@ -204,8 +218,8 @@ async function test() {
           <span>ntfy topic for phone alerts <span class="muted">(optional)</span></span>
           <input v-model="form.ntfy_topic" placeholder="e.g. agentdeck-7f3k2" />
           <small class="muted">
-            Install the ntfy app and subscribe to the same topic. Task titles are sent to ntfy.sh, and anyone who knows the topic name can read
-            them, so pick something hard to guess.
+            Install the ntfy app and subscribe to the same topic. Task titles are sent to ntfy.sh, and anyone who knows the topic name can
+            read them, so pick something hard to guess.
           </small>
         </label>
       </section>

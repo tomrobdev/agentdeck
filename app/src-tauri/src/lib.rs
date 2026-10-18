@@ -1,7 +1,7 @@
 use tauri::{
+    Manager, WindowEvent, Wry,
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
-    Manager, Wry, WindowEvent,
 };
 use tauri_plugin_autostart::MacosLauncher;
 
@@ -30,7 +30,10 @@ fn set_tray_status(app: tauri::AppHandle, status: String) {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, None))
+        .plugin(tauri_plugin_autostart::init(
+            MacosLauncher::LaunchAgent,
+            None,
+        ))
         .invoke_handler(tauri::generate_handler![set_tray_status])
         .setup(|app| {
             let status = MenuItem::with_id(app, "status", "Connecting…", false, None::<&str>)?;

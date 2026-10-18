@@ -132,7 +132,9 @@ export class Scheduler {
     const hold = d.allow ? null : d.reason;
     // Announce a hold once, and only when it is actually keeping queued work waiting.
     if (hold && !this.lastHold && this.db.listTasks('queued').length) {
-      const lifts = d.until ? ` Resumes around ${new Date(d.until * 1000).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })}.` : '';
+      const lifts = d.until
+        ? ` Resumes around ${new Date(d.until * 1000).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })}.`
+        : '';
       this.opts.log(`governor hold: ${hold}`);
       notifyLater(this.db, { kind: 'hold', title: 'Holding queued work', body: `${hold}.${lifts}` });
       this.lastHold = hold;

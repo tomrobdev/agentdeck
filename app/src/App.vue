@@ -127,19 +127,9 @@ onBeforeUnmount(() => clearInterval(timer));
     </main>
 
     <NewTaskForm v-if="modal === 'new'" :repos="repos" @close="modal = null" @created="onCreated" @repos="modal = 'repos'" />
-    <ReposPanel
-      v-if="modal === 'repos'"
-      :repos="repos"
-      @close="modal = null"
-      @changed="reloadRepos"
-    />
+    <ReposPanel v-if="modal === 'repos'" :repos="repos" @close="modal = null" @changed="reloadRepos" />
 
-    <SettingsPanel
-      v-if="modal === 'settings'"
-      :notifications="status?.notifications ?? []"
-      @close="modal = null"
-      @saved="refresh"
-    />
+    <SettingsPanel v-if="modal === 'settings'" :notifications="status?.notifications ?? []" @close="modal = null" @saved="refresh" />
 
     <div v-if="toast" class="toast">{{ toast }}</div>
   </div>

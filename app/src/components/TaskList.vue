@@ -13,10 +13,21 @@ const FILTERS: { key: string; label: string; match: TaskStatus[] | null }[] = [
 ];
 const filter = ref('all');
 
-const ORDER: Record<TaskStatus, number> = { running: 0, cancel_requested: 0, proposed: 1, blocked: 2, failed: 3, queued: 4, done: 5, cancelled: 6 };
+const ORDER: Record<TaskStatus, number> = {
+  running: 0,
+  cancel_requested: 0,
+  proposed: 1,
+  blocked: 2,
+  failed: 3,
+  queued: 4,
+  done: 5,
+  cancelled: 6,
+};
 
 const counts = computed(() =>
-  Object.fromEntries(FILTERS.map((f) => [f.key, f.match ? props.tasks.filter((t) => f.match!.includes(t.status)).length : props.tasks.length])),
+  Object.fromEntries(
+    FILTERS.map((f) => [f.key, f.match ? props.tasks.filter((t) => f.match!.includes(t.status)).length : props.tasks.length]),
+  ),
 );
 
 const shown = computed(() => {
@@ -49,7 +60,8 @@ const label = (s: TaskStatus) => (s === 'cancel_requested' ? 'stopping' : s);
         <span class="main">
           <span class="title">{{ t.title }}</span>
           <span class="meta muted">
-            #{{ t.id }} · {{ t.repo }} · {{ label(t.status) }}<template v-if="t.source === 'planner'"> · planner</template><template v-if="t.attempts > 1"> · try {{ t.attempts }}</template> ·
+            #{{ t.id }} · {{ t.repo }} · {{ label(t.status) }}<template v-if="t.source === 'planner'"> · planner</template
+            ><template v-if="t.attempts > 1"> · try {{ t.attempts }}</template> ·
             {{ ago(t.updated_at) }}
           </span>
           <span v-if="t.blocked_reason && (t.status === 'blocked' || t.status === 'failed')" class="reason">{{ t.blocked_reason }}</span>

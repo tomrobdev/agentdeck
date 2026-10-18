@@ -113,7 +113,10 @@ async function planNow() {
               rows="9"
               placeholder="What should this repo become? Priorities first, then anything the agents must not touch."
             />
-            <small class="muted">Stored in <code>{{ open.goals_path }}</code>, which you can also edit in any editor.</small>
+            <small class="muted"
+              >Stored in <code>{{ open.goals_path }}</code
+              >, which you can also edit in any editor.</small
+            >
           </label>
           <div class="row">
             <label>

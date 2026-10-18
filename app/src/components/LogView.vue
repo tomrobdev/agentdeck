@@ -59,7 +59,9 @@ onBeforeUnmount(close);
         <div class="msg">{{ e.text }}</div>
       </template>
       <template v-else-if="e.kind === 'tool'">
-        <code><b>{{ e.name }}</b> {{ e.input }}</code>
+        <code
+          ><b>{{ e.name }}</b> {{ e.input }}</code
+        >
       </template>
       <template v-else-if="e.kind === 'result'">
         <div class="sep">result: {{ e.subtype }} · {{ e.turns }} turns</div>
