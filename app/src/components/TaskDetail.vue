@@ -61,6 +61,12 @@ async function copy(text: string, what: string) {
     <div v-if="task.blocked_reason && (task.status === 'blocked' || task.status === 'failed')" class="callout" :class="`s-${task.status}`">
       {{ task.blocked_reason }}
     </div>
+    <div v-if="task.waiting" class="callout" :class="{ 's-blocked': task.waiting.stuck }">
+      <template v-if="task.waiting.stuck">
+        Can't start: {{ task.waiting.stuck }}. Retry #{{ task.waiting.on }} to release this task, or cancel it.
+      </template>
+      <template v-else>Waiting on #{{ task.waiting.on }}: this task starts once it is done and its PR, if any, is merged.</template>
+    </div>
 
     <dl class="facts">
       <dt>Attempts</dt>

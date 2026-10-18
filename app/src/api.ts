@@ -82,6 +82,8 @@ export interface TaskSummary {
   pr_url: string | null;
   pr_state: PrState | null;
   after_task: number | null;
+  /** Set for a queued task held back by after_task; stuck says why its dependency won't get there on its own. */
+  waiting: { on: number; stuck: string | null } | null;
   created_at: string;
   updated_at: string;
 }

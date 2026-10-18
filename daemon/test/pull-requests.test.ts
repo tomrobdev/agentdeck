@@ -18,7 +18,9 @@ const { Scheduler } = await import('../src/application/scheduler.ts');
 const { github } = await import('../src/adapters/github.ts');
 const { refreshPrStates } = await import('../src/application/pull-requests.ts');
 const { addTask, ActionError, retryTask, updateRepo } = await import('../src/application/actions.ts');
-const { isWaiting } = await import('../src/domain/task/dependency.ts');
+const { dependencyState, isWaiting } = await import('../src/domain/task/dependency.ts');
+const { waitingFor } = await import('../src/application/dependencies.ts');
+const { cancelTask } = await import('../src/application/actions.ts');
 
 const db = openDb(join(home, 'test.db'));
 db.setSetting('max_concurrent', '1');
@@ -278,4 +280,81 @@ test('isWaiting mirrors the claim rule', () => {
   assert.equal(isWaiting({ after_task: 1 }, done), false);
   assert.equal(isWaiting({ after_task: 1 }, { ...done, pr_url: 'u', pr_state: 'open' }), true);
   assert.equal(isWaiting({ after_task: 1 }, { ...done, pr_url: 'u', pr_state: 'merged' }), false);
+});
+
+test('dependencyState says why a task is stuck', () => {
+  const done = { status: 'done', pr_url: null, pr_state: null };
+  const after = { after_task: 5 };
+  assert.deepEqual(dependencyState({ after_task: null }, undefined), { kind: 'none' });
+  assert.deepEqual(dependencyState(after, done), { kind: 'met' });
+  assert.deepEqual(dependencyState(after, { ...done, status: 'queued' }), { kind: 'waiting' });
+  assert.deepEqual(dependencyState(after, { ...done, status: 'cancel_requested' }), { kind: 'waiting' });
+  assert.deepEqual(dependencyState(after, { ...done, pr_url: 'u', pr_state: 'open' }), { kind: 'waiting' });
+  assert.deepEqual(dependencyState(after, { ...done, pr_url: 'u', pr_state: 'closed' }), {
+    kind: 'stuck',
+    reason: "#5's PR was closed without merging",
+  });
+  assert.deepEqual(dependencyState(after, { ...done, status: 'failed' }), { kind: 'stuck', reason: '#5 failed' });
+  assert.deepEqual(dependencyState(after, { ...done, status: 'blocked' }), { kind: 'stuck', reason: '#5 is blocked' });
+  assert.deepEqual(dependencyState(after, { ...done, status: 'cancelled' }), { kind: 'stuck', reason: '#5 was cancelled' });
+  assert.deepEqual(dependencyState(after, undefined), { kind: 'stuck', reason: '#5 no longer exists' });
+});
+
+/** Notifications about task `id`'s dependents being stuck. */
+const stuckNotices = (id: number) => db.recentNotifications(50).filter((n) => n.task_id === id && /can't start/.test(n.title));
+
+test('a blocked dependency notifies once, naming the waiting task, which stays queued until a retry', async () => {
+  const dep = db.addTask({ repo_id: repo.id, title: 'gets blocked', prompt: 'FAKE_BLOCKED nope' });
+  const later = addTask(db, { repo: 'demo', prompt: 'needs the first', title: 'Second step', after_task: dep.id });
+  await drain();
+
+  assert.equal(db.getTask(dep.id)!.status, 'blocked');
+  assert.equal(db.getTask(later.id)!.status, 'queued');
+  const notices = stuckNotices(dep.id);
+  assert.equal(notices.length, 1);
+  assert.equal(notices[0].kind, 'blocked');
+  assert.match(notices[0].title, /1 task can't start: #\d+ is blocked/);
+  assert.match(notices[0].body, new RegExp(`#${later.id} Second step`));
+  assert.match(notices[0].body, new RegExp(`Retry #${dep.id}`));
+  assert.deepEqual(waitingFor(db, db.getTask(later.id)!), { on: dep.id, stuck: `#${dep.id} is blocked` });
+
+  // A retry puts the dependency back on its way: no longer stuck, and done releases the dependent.
+  retryTask(db, dep.id);
+  assert.deepEqual(waitingFor(db, db.getTask(later.id)!), { on: dep.id, stuck: null });
+  assert.equal(finishNext(), dep.id);
+  assert.equal(waitingFor(db, db.getTask(later.id)!), null);
+  assert.equal(finishNext(), later.id);
+});
+
+test('a failure that will be retried does not notify, a final one does', async () => {
+  const dep = db.addTask({ repo_id: repo.id, title: 'errors', prompt: 'FAKE_ERROR', max_attempts: 2 });
+  addTask(db, { repo: 'demo', prompt: 'after errors', after_task: dep.id });
+  await drain();
+  assert.equal(db.getTask(dep.id)!.status, 'failed');
+  assert.equal(db.runsForTask(dep.id).length, 2);
+  assert.equal(stuckNotices(dep.id).length, 1, 'only the final failure notifies');
+});
+
+test('cancelling a dependency notifies; cancelling a task nobody waits on does not', () => {
+  const dep = db.addTask({ repo_id: repo.id, title: 'to cancel', prompt: 'x' });
+  addTask(db, { repo: 'demo', prompt: 'after the cancel', after_task: dep.id });
+  const alone = db.addTask({ repo_id: repo.id, title: 'alone', prompt: 'x' });
+  cancelTask(db, dep.id);
+  cancelTask(db, alone.id);
+  assert.match(stuckNotices(dep.id)[0].title, /was cancelled/);
+  assert.equal(stuckNotices(alone.id).length, 0);
+});
+
+test('a dependency PR closed without merging notifies when the refresh sees it', async () => {
+  const dep = db.addTask({ repo_id: repo.id, title: 'pr gets closed', prompt: 'x' });
+  const later = addTask(db, { repo: 'demo', prompt: 'after the closed pr', after_task: dep.id });
+  assert.equal(finishNext(), dep.id);
+  db.updateTask(dep.id, { pr_url: 'https://x/pull/40', pr_state: 'open' });
+  assert.equal(stuckNotices(dep.id).length, 0);
+
+  states = { 'https://x/pull/40': 'closed' };
+  await refreshPrStates(db);
+  assert.match(stuckNotices(dep.id)[0].title, /PR was closed without merging/);
+  assert.equal(waitingFor(db, db.getTask(later.id)!)?.stuck, `#${dep.id}'s PR was closed without merging`);
+  db.applyEvent(later.id, { type: 'cancel' });
 });

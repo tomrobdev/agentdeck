@@ -4,6 +4,7 @@ import { appendEvent } from '../adapters/run-log.ts';
 import type { Db } from '../db/index.ts';
 import { buildPrBody } from '../domain/pull-request/pr.ts';
 import type { Task } from '../domain/task/task.ts';
+import { warnStuckDependents } from './dependencies.ts';
 
 /** How often the scheduler re-reads the state of open PRs. */
 export const PR_REFRESH_MS = 3 * 60_000;
@@ -52,6 +53,7 @@ export async function refreshPrStates(db: Db, log: (msg: string) => void = () =>
       if (state !== task.pr_state) {
         db.updateTask(task.id, { pr_state: state });
         log(`task ${task.id}: PR is ${state}`);
+        if (state === 'closed') warnStuckDependents(db, task.id);
       }
     } catch (err) {
       log(`task ${task.id}: could not read PR state: ${(err as Error).message}`);

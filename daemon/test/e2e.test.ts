@@ -128,7 +128,7 @@ test('a cancel requested while the run is finishing wins over done', async () =>
 test('orphaned running tasks are requeued on start', () => {
   const task = db.addTask({ repo_id: 1, title: 'orphan', prompt: 'x' });
   db.claimNextTask();
-  assert.deepEqual(db.recoverOrphans(), { requeued: 1, failed: 0 });
+  assert.deepEqual(db.recoverOrphans(), { requeued: 1, failed: [] });
   const t = db.getTask(task.id)!;
   assert.equal(t.status, 'queued');
   assert.equal(t.attempts, 0);
@@ -141,10 +141,10 @@ test('a task interrupted by repeated restarts fails instead of looping', async (
   const task = db.addTask({ repo_id: 1, title: 'poison', prompt: 'x' });
   for (let i = 1; i < MAX_RESTARTS; i++) {
     db.claimNextTask();
-    assert.deepEqual(db.recoverOrphans(), { requeued: 1, failed: 0 });
+    assert.deepEqual(db.recoverOrphans(), { requeued: 1, failed: [] });
   }
   db.claimNextTask();
-  assert.deepEqual(db.recoverOrphans(), { requeued: 0, failed: 1 });
+  assert.deepEqual(db.recoverOrphans(), { requeued: 0, failed: [task.id] });
   const t = db.getTask(task.id)!;
   assert.equal(t.status, 'failed');
   assert.match(t.blocked_reason!, /restarted 3 times/);

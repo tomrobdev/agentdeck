@@ -99,6 +99,10 @@ export function taskStore(db: DatabaseSync) {
         )
         .all(status, status, status, status, before, before, limit, before) as unknown as TaskSummary[];
     },
+    /** Queued tasks that wait on `id` with `--after`. */
+    dependentsOf(id: number): Task[] {
+      return db.prepare("SELECT * FROM tasks WHERE after_task = ? AND status = 'queued' ORDER BY id").all(id) as unknown as Task[];
+    },
     /** Done tasks whose pull request is still open, for the state refresh. */
     openPrTasks(): Task[] {
       return db
@@ -190,12 +194,13 @@ export function taskStore(db: DatabaseSync) {
     /**
      * After a crash, anything still marked running was orphaned: put it back in the queue,
      * unless restarts keep interrupting it. Stop its claude process (`reapOrphans`) first.
+     * Returns how many were requeued and the ids of those failed.
      */
-    recoverOrphans(): { requeued: number; failed: number } {
+    recoverOrphans(): { requeued: number; failed: number[] } {
       db.prepare(`UPDATE runs SET ended_at = ${NOW}, outcome = 'failed', result_text = 'daemon restarted' WHERE ended_at IS NULL`).run();
       db.prepare(`UPDATE planner_runs SET ended_at = ${NOW}, outcome = 'failed', note = 'daemon restarted' WHERE ended_at IS NULL`).run();
       let requeued = 0;
-      let failed = 0;
+      const failed: number[] = [];
       const orphans = db.prepare("SELECT id, restarts FROM tasks WHERE status IN ('running', 'cancel_requested')").all() as {
         id: number;
         restarts: number;
@@ -205,7 +210,7 @@ export function taskStore(db: DatabaseSync) {
         const reason = `the daemon restarted ${o.restarts + 1} times while this task was running`;
         const t = this.applyEvent(o.id, { type: 'recover', exhausted }, { reason });
         if (t?.status === 'queued') requeued++;
-        else if (t?.status === 'failed') failed++;
+        else if (t?.status === 'failed') failed.push(t.id);
       }
       return { requeued, failed };
     },

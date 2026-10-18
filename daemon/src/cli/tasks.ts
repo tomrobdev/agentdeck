@@ -1,6 +1,7 @@
 // Task commands: add, edit, inspect and move tasks.
 import { readFileSync } from 'node:fs';
 import * as actions from '../application/actions.ts';
+import { waitingFor } from '../application/dependencies.ts';
 import { removeWorktree } from '../adapters/git.ts';
 import type { TaskStatus } from '../domain/task/lifecycle.ts';
 import { die, taskId, fmtTask, printLog } from './format.ts';
@@ -31,6 +32,8 @@ export const taskCommands: Record<string, Command> = {
     console.log(
       `queued task #${t.id} on ${repoName(t.repo_id)} (${t.model}, ${t.max_turns} turns max${t.after_task ? `, after #${t.after_task}` : ''})`,
     );
+    const waiting = waitingFor(db, t);
+    if (waiting?.stuck) console.log(`note: ${waiting.stuck}, so this task won't start until #${waiting.on} is retried`);
     if (db.isPaused()) console.log('note: the daemon is paused; run `agentdeck resume` to start working');
   },
   edit: ({ db, flags, rest, repoName }) => {
