@@ -22,6 +22,21 @@ agentdeck status                          # slots, counts, 5h / 7d usage from Cl
 
 Try it on a throwaway project first: `scripts/make-demo-repo.sh` creates one at `~/.agentdeck/demo-repo`.
 
+## Dashboard (Tauri + Vue)
+
+`agentdeck daemon` also serves a local API on `http://127.0.0.1:4317`, which the dashboard uses. It accepts browser requests only from the Tauri webview and the Vite dev server.
+
+```sh
+cd app && npm install
+npm run tauri dev                                  # native window with hot reload
+npm run tauri build -- --bundles app               # → src-tauri/target/release/bundle/macos/AgentDeck.app
+npm run dev                                        # or just the UI in a browser at http://localhost:1420
+```
+
+The dashboard has the queue (Active / Needs you / Done), task detail with every run and its final message, a live log streamed over SSE, a pause/resume toggle, 5h/7d usage meters, and forms for new tasks and repos. Closing the window hides it to the menu-bar tray, and the daemon keeps working either way.
+
+> **macOS 27 SDK linker error?** If Rust linking fails with `tapi error: malformed file … unknown architecture arm64e.x1-macos`, your Command Line Tools ship a newer SDK than their linker understands. Build against the 26.5 SDK: `export SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk`.
+
 ## How a task runs
 
 1. The scheduler claims the highest-priority queued task when a slot is free and it isn't paused or rate limited.
@@ -36,8 +51,8 @@ Every run records tokens, and Claude's `rate_limit_event` gives live 5-hour and 
 ## Layout
 
 ```
-daemon/   Node + TypeScript: SQLite queue, scheduler, workers, CLI   (done)
-app/      Tauri 2 + Vue 3 dashboard                                  (next)
+daemon/   Node + TypeScript: SQLite queue, scheduler, workers, CLI, local API
+app/      Tauri 2 + Vue 3 dashboard
 launchd/  plist to keep the daemon running                           (milestone 4)
 ```
 
@@ -46,7 +61,7 @@ launchd/  plist to keep the daemon running                           (milestone 
 ## Milestones
 
 1. ~~Daemon core + CLI (queue, worker, worktrees)~~
-2. Tauri + Vue dashboard
+2. ~~Tauri + Vue dashboard~~
 3. Usage governor + notifications
 4. Planner + always-on (launchd, launch at login)
 

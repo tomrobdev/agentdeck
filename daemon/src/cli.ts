@@ -1,9 +1,10 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { basename, resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
-import { DB_PATH, DEFAULTS } from './config.ts';
+import * as actions from './actions.ts';
+import { startApi } from './api.ts';
+import { API_PORT, DB_PATH, DEFAULTS } from './config.ts';
 import { type Task, type TaskStatus, openDb } from './db.ts';
-import { currentBranch, isGitRepo, removeWorktree } from './git.ts';
+import { removeWorktree } from './git.ts';
 import { Scheduler } from './scheduler.ts';
 
 const HELP = `agentdeck: always-on Claude Code task queue
@@ -61,31 +62,14 @@ function relTime(unixSeconds: number): string {
   return mins < 90 ? `${mins}m` : `${(mins / 60).toFixed(1)}h`;
 }
 
-/** Turn a stream-json log into something readable. */
-function printLog(path: string, raw: boolean): void {
-  const text = readFileSync(path, 'utf8');
-  if (raw) return void process.stdout.write(text);
-  for (const line of text.split('\n')) {
-    if (!line) continue;
-    let ev: any;
-    try {
-      ev = JSON.parse(line);
-    } catch {
-      console.log(line);
-      continue;
-    }
-    if (ev.type === 'assistant') {
-      for (const c of ev.message?.content ?? []) {
-        if (c.type === 'text' && c.text.trim()) console.log(`\n💬 ${c.text.trim()}`);
-        if (c.type === 'tool_use') console.log(`🔧 ${c.name} ${JSON.stringify(c.input).slice(0, 200)}`);
-      }
-    } else if (ev.type === 'result') {
-      console.log(`\n── result: ${ev.subtype}, ${ev.num_turns} turns, $${(ev.total_cost_usd ?? 0).toFixed(3)} equiv ──`);
-    } else if (ev.type === 'agentdeck_tests') {
-      console.log(`\n── tests ${ev.passed ? 'passed' : 'FAILED'} ──\n${ev.output.slice(-3000)}`);
-    } else if (ev.type === 'agentdeck_stderr' || ev.type === 'agentdeck_error') {
-      console.log(`⚠️  ${ev.text.trim()}`);
-    }
+/** Print a run's log in readable form. */
+function printLog(path: string): void {
+  for (const e of actions.readLog(path)) {
+    if (e.kind === 'text') console.log(`\n💬 ${e.text}`);
+    if (e.kind === 'tool') console.log(`🔧 ${e.name} ${e.input.slice(0, 200)}`);
+    if (e.kind === 'result') console.log(`\n── result: ${e.subtype}, ${e.turns} turns, $${e.cost.toFixed(3)} equiv ──`);
+    if (e.kind === 'tests') console.log(`\n── tests ${e.passed ? 'passed' : 'FAILED'} ──\n${e.output.slice(-3000)}`);
+    if (e.kind === 'error') console.log(`⚠️  ${e.text}`);
   }
 }
 
@@ -121,14 +105,12 @@ async function main(argv: string[]): Promise<void> {
       const [sub, path] = rest;
       if (sub === 'add') {
         if (!path) die('repo add needs a path');
-        const abs = resolve(path);
-        if (!existsSync(abs) || !(await isGitRepo(abs))) die(`${abs} is not a git repository`);
-        const repo = db.addRepo({
-          name: flags.name ?? basename(abs),
-          path: abs,
-          base_branch: flags.base ?? (await currentBranch(abs)),
-          test_cmd: flags.test ?? null,
-          allowed_tools: flags.tools ? flags.tools.split(',').map((s) => s.trim()) : null,
+        const repo = await actions.addRepo(db, {
+          path,
+          name: flags.name,
+          base: flags.base,
+          test: flags.test,
+          tools: flags.tools?.split(',').map((t) => t.trim()),
         });
         console.log(`added repo "${repo.name}" (${repo.path}, base ${repo.base_branch}${repo.test_cmd ? `, tests: ${repo.test_cmd}` : ''})`);
       } else if (sub === 'ls' || !sub) {
@@ -138,21 +120,16 @@ async function main(argv: string[]): Promise<void> {
     }
 
     case 'add': {
-      const prompt = rest.join(' ').trim();
-      if (!prompt) die('add needs a prompt');
-      const repos = db.listRepos();
-      const repo = flags.repo ? db.findRepo(flags.repo) : repos.length === 1 ? repos[0] : undefined;
-      if (!repo) die(flags.repo ? `no repo "${flags.repo}"` : 'pass --repo (more than one repo registered)');
-      const t = db.addTask({
-        repo_id: repo.id,
-        title: flags.title ?? prompt.split('\n')[0].slice(0, 80),
-        prompt,
+      const t = actions.addTask(db, {
+        repo: flags.repo,
+        prompt: rest.join(' '),
+        title: flags.title,
         priority: flags.priority ? Number(flags.priority) : undefined,
         model: flags.model,
         max_turns: flags['max-turns'] ? Number(flags['max-turns']) : undefined,
         max_attempts: flags.attempts ? Number(flags.attempts) : undefined,
       });
-      console.log(`queued task #${t.id} on ${repo.name} (${t.model}, ${t.max_turns} turns max)`);
+      console.log(`queued task #${t.id} on ${repoName(t.repo_id)} (${t.model}, ${t.max_turns} turns max)`);
       if (db.isPaused()) console.log('note: the daemon is paused; run `agentdeck resume` to start working');
       break;
     }
@@ -186,23 +163,20 @@ async function main(argv: string[]): Promise<void> {
       const runs = db.runsForTask(t.id);
       const run = flags.attempt ? runs.find((r) => r.attempt === Number(flags.attempt)) : runs.at(-1);
       if (!run) die('no runs yet');
-      printLog(run.log_path, !!flags.raw);
+      if (flags.raw) process.stdout.write(readFileSync(run.log_path, 'utf8'));
+      else printLog(run.log_path);
       break;
     }
 
     case 'cancel': {
       const id = taskId(rest[0]);
-      if (db.transitionTask(id, ['queued', 'blocked', 'failed'], 'cancelled')) console.log(`cancelled #${id}`);
-      else if (db.transitionTask(id, ['running'], 'cancel_requested')) console.log(`stopping #${id}…`);
-      else die(`#${id} can't be cancelled from its current state`);
+      console.log(actions.cancelTask(db, id) === 'cancelled' ? `cancelled #${id}` : `stopping #${id}…`);
       break;
     }
 
     case 'retry': {
       const id = taskId(rest[0]);
-      const t = db.getTask(id) ?? die('no such task');
-      if (!['blocked', 'failed', 'cancelled', 'done'].includes(t.status)) die(`#${id} is ${t.status}`);
-      db.raw.prepare("UPDATE tasks SET status = 'queued', max_attempts = attempts + 1, updated_at = datetime('now') WHERE id = ?").run(id);
+      actions.retryTask(db, id);
       console.log(`requeued #${id}`);
       break;
     }
@@ -218,13 +192,12 @@ async function main(argv: string[]): Promise<void> {
     }
 
     case 'pause':
-      db.setSetting('paused', '1');
+      actions.setPaused(db, true);
       console.log('paused: running tasks finish, no new ones start');
       break;
 
     case 'resume':
-      db.setSetting('paused', '0');
-      db.setSetting('rate_limited_until', '0');
+      actions.setPaused(db, false);
       console.log('resumed');
       break;
 
@@ -237,12 +210,12 @@ async function main(argv: string[]): Promise<void> {
     }
 
     case 'status': {
-      const counts = db.raw.prepare('SELECT status, COUNT(*) AS n FROM tasks GROUP BY status').all() as { status: string; n: number }[];
-      const until = Number(db.getSetting('rate_limited_until', '0'));
-      console.log(`state      ${db.isPaused() ? 'PAUSED' : 'active'}${until * 1000 > Date.now() ? ` (rate limited, resumes in ${relTime(until)})` : ''}`);
-      console.log(`slots      ${db.countRunning()}/${db.maxConcurrent()} running`);
-      console.log(`tasks      ${counts.map((c) => `${c.status} ${c.n}`).join(', ') || 'none'}`);
-      for (const w of db.usageWindows()) {
+      const st = actions.status(db);
+      const limited = st.rate_limited_until && st.rate_limited_until * 1000 > Date.now();
+      console.log(`state      ${st.paused ? 'PAUSED' : 'active'}${limited ? ` (rate limited, resumes in ${relTime(st.rate_limited_until!)})` : ''}`);
+      console.log(`slots      ${st.running}/${st.max_concurrent} running`);
+      console.log(`tasks      ${Object.entries(st.counts).map(([k, n]) => `${k} ${n}`).join(', ') || 'none'}`);
+      for (const w of st.usage) {
         console.log(`usage      ${w.window.padEnd(10)} ${(w.utilization * 100).toFixed(0).padStart(3)}%  resets in ${relTime(w.resets_at)}  (seen ${w.observed_at} UTC)`);
       }
       console.log(`db         ${DB_PATH}`);
@@ -260,6 +233,11 @@ async function main(argv: string[]): Promise<void> {
           process.exit(0);
         });
       }
+      if (!once) {
+        const api = await startApi(db);
+        console.log(`api        http://127.0.0.1:${API_PORT}`);
+        process.on('exit', () => api.close());
+      }
       console.log(`agentdeck ${once ? 'run-once' : 'daemon'}: ${db.isPaused() && !once ? 'PAUSED (agentdeck resume to start)' : 'active'}, max ${db.maxConcurrent()} concurrent, tick ${DEFAULTS.tickMs / 1000}s`);
       await scheduler.run();
       break;
@@ -271,4 +249,9 @@ async function main(argv: string[]): Promise<void> {
   db.close();
 }
 
-await main(process.argv.slice(2));
+try {
+  await main(process.argv.slice(2));
+} catch (err) {
+  if (err instanceof actions.ActionError) die(err.message);
+  throw err;
+}
