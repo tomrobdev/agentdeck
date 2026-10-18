@@ -1,0 +1,22 @@
+{
+  "name": "agentdeck-daemon",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AgentDeck daemon: task queue, scheduler and Claude Code workers",
+  "type": "module",
+  "bin": {
+    "agentdeck": "bin/agentdeck.js"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node src/cli.ts daemon",
+    "typecheck": "tsc",
+    "test": "node --test test/"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  }
+}
