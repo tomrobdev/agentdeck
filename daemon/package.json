@@ -15,6 +15,7 @@
     "dev": "node --watch-path=src src/cli.ts daemon",
     "typecheck": "tsc",
     "test": "AGENTDECK_NO_NOTIFY=1 node --test test/",
+    "test:crash": "node scripts/crash-test.mjs",
     "test:watch": "AGENTDECK_NO_NOTIFY=1 node --test --watch test/"
   },
   "devDependencies": {

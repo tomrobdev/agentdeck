@@ -17,7 +17,7 @@ process.stdout.on('error', (e) => {
   process.exit(141);
 });
 rec({ kind: 'start' });
-const ms = 1500 + Math.random() * 2500;
+const ms = 800 + Math.random() * 1200;
 out({ type: 'system', subtype: 'init', session_id: 's', cwd: process.cwd() });
 const stream = process.env.FAKE_STREAM === '1';
 const iv = stream ? setInterval(() => out({ type: 'assistant', message: { content: [{ type: 'text', text: 'working' }] } }), 300) : null;

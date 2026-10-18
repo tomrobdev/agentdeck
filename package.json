@@ -12,11 +12,12 @@
     "dev:app": "pnpm --filter agentdeck-app tauri:dev",
     "build": "pnpm --filter agentdeck-app tauri:build",
     "test": "pnpm --filter agentdeck-daemon test",
+    "test:crash": "pnpm --filter agentdeck-daemon test:crash",
     "typecheck": "pnpm -r typecheck",
     "check:rust": "pnpm --filter agentdeck-app check:rust",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "pnpm format:check && pnpm typecheck && pnpm test"
+    "check": "pnpm format:check && pnpm typecheck && pnpm test && pnpm test:crash"
   },
   "devDependencies": {
     "prettier": "^3.9.10"

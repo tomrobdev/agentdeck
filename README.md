@@ -102,8 +102,10 @@ app/      Tauri 2 + Vue 3 dashboard
 
 `pnpm test` runs the end-to-end tests with real git worktrees and a fake `claude` binary.
 
+`pnpm test:crash [iterations]` (default 10, about 10 s each) is a slower check, not part of `pnpm test`: it SIGKILLs the daemon at random points, restarts it, and verifies that every task ends in a final state, no worktree ever has two agents, no `claude` process is orphaned, worktrees match tasks, and attempt counts are sane. It prints a one-line summary and exits 1 on any violation.
+
 ```sh
-pnpm check                                         # format check + typecheck (app, daemon) + tests
+pnpm check                                         # format check + typecheck (app, daemon) + tests + crash test
 pnpm format                                        # Prettier, whole repo
 pnpm check:rust                                    # cargo fmt --check + clippy on the Tauri shell
 ```

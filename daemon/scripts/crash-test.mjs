@@ -1,20 +1,26 @@
 #!/usr/bin/env node
 // Crash test: SIGKILL the daemon at a random moment, restart it, check invariants.
-// Usage: node scripts/crash-test.mjs [iterations=40]
+// Usage: node scripts/crash-test.mjs [iterations=10]
+// Exits 1 if any invariant failed, 0 otherwise. Temp homes are removed on success.
 // Odd iterations use a streaming fake claude (FAKE_STREAM=1), even ones a quiet fake.
 import { execFileSync, spawn } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
-const N = Number(process.argv[2] ?? 40);
+const N = process.argv[2] === undefined ? 10 : Number(process.argv[2]);
+if (!Number.isInteger(N) || N < 1) {
+  console.error('usage: crash-test.mjs [iterations>=1]');
+  process.exit(2);
+}
 const DAEMON = resolve(import.meta.dirname, '..');
 const CLI = join(DAEMON, 'src/cli.ts');
 const FAKE = join(DAEMON, 'scripts/slow-claude.mjs');
+const OWN_ROOT = !process.env.CRASH_ROOT;
 const ROOT = process.env.CRASH_ROOT ?? mkdtempSync(join(tmpdir(), 'agentdeck-crash-'));
 mkdirSync(ROOT, { recursive: true });
-const TASKS = 4;
+const TASKS = 3;
 const TERMINAL = new Set(['done', 'blocked', 'failed', 'cancelled']);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const alive = (pid) => {
@@ -67,7 +73,7 @@ for (let i = 1; i <= N; i++) {
 
   // First daemon: kill -9 at a random moment.
   const d1 = spawn(process.execPath, [CLI, 'run-once'], { env, stdio: 'ignore' });
-  const killAt = 300 + Math.random() * 7000;
+  const killAt = 200 + Math.random() * 2500;
   await sleep(killAt);
   const killTime = Date.now();
   d1.kill('SIGKILL');
@@ -90,7 +96,7 @@ for (let i = 1; i <= N; i++) {
   const watch = setInterval(() => {
     for (const o of orphans) if (!diedAt.has(o.pid) && !alive(o.pid)) diedAt.set(o.pid, Date.now());
   }, 25);
-  const done = await Promise.race([new Promise((r) => d2.on('exit', () => r(true))), sleep(90_000).then(() => false)]);
+  const done = await Promise.race([new Promise((r) => d2.on('exit', () => r(true))), sleep(8_000).then(() => false)]);
   const drainMs = Date.now() - t2;
   writeFileSync(join(home, 'daemon2.log'), d2out);
   if (!done) {
@@ -172,3 +178,9 @@ console.log(
   `orphan claude processes total: ${orphanTotal}; committed into worktree after the kill: ${orphanCommitsAfterKill}; died of EPIPE: ${orphanEpipe}`,
 );
 writeFileSync(join(ROOT, 'results.json'), JSON.stringify({ N, fails, orphanTotal, orphanCommitsAfterKill, orphanEpipe }, null, 2));
+
+const violations = Object.values(fails).reduce((n, v) => n + v.length, 0);
+if (violations === 0 && OWN_ROOT) rmSync(ROOT, { recursive: true, force: true });
+else if (violations > 0) console.error(`temp homes kept in ${ROOT}`);
+console.log(`crash-test: ${N} iterations, ${violations} violations`);
+process.exit(violations > 0 ? 1 : 0);
