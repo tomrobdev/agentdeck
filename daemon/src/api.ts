@@ -71,6 +71,9 @@ export function startApi(db: Db, port = API_PORT): Promise<Server> {
     ['GET', /^\/api\/status$/, () => actions.status(db)],
     ['POST', /^\/api\/pause$/, () => (actions.setPaused(db, true), actions.status(db))],
     ['POST', /^\/api\/resume$/, () => (actions.setPaused(db, false), actions.status(db))],
+    ['GET', /^\/api\/settings$/, () => actions.getSettings(db)],
+    ['POST', /^\/api\/settings$/, (_q, _s, _p, b) => actions.updateSettings(db, b)],
+    ['POST', /^\/api\/notify\/test$/, async () => (await actions.sendTestNotification(db), { ok: true })],
     ['GET', /^\/api\/repos$/, () => db.listRepos()],
     ['POST', /^\/api\/repos$/, (_q, _s, _p, b) => actions.addRepo(db, b)],
     [

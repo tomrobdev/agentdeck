@@ -5,6 +5,8 @@ import { startApi } from './api.ts';
 import { API_PORT, DB_PATH, DEFAULTS } from './config.ts';
 import { type Task, type TaskStatus, openDb } from './db.ts';
 import { removeWorktree } from './git.ts';
+import { BUDGET_KEYS } from './governor.ts';
+import type { NotifyKind } from './notify.ts';
 import { Scheduler } from './scheduler.ts';
 
 const HELP = `agentdeck: always-on Claude Code task queue
@@ -27,7 +29,10 @@ Daemon
   agentdeck run-once            work the queue until empty, then exit (ignores pause)
   agentdeck pause | resume
   agentdeck status
-  agentdeck set max_concurrent <n>
+  agentdeck settings              show concurrency, usage budget and notification settings
+  agentdeck set <key> <value>     max_concurrent, five_hour_max, five_hour_soft, weekly_max, pace_slack (0..1),
+                                  notify_desktop (on|off), notify_events (done,blocked,failed,hold), ntfy_topic, ntfy_server
+  agentdeck notify-test           send a test notification on every enabled channel
 `;
 
 const STATUS_ICON: Record<TaskStatus, string> = {
@@ -202,18 +207,42 @@ async function main(argv: string[]): Promise<void> {
       break;
 
     case 'set': {
-      const [key, value] = rest;
-      if (key !== 'max_concurrent' || !Number(value)) die('usage: agentdeck set max_concurrent <n>');
-      db.setSetting(key, value);
+      const [key, value = ''] = rest;
+      const on = (v: string) => ['1', 'on', 'true', 'yes'].includes(v.toLowerCase());
+      if (key === 'max_concurrent') actions.updateSettings(db, { max_concurrent: Number(value) });
+      else if ((BUDGET_KEYS as string[]).includes(key)) actions.updateSettings(db, { budget: { [key]: Number(value) } });
+      else if (key === 'notify_desktop') actions.updateSettings(db, { notify: { desktop: on(value) } });
+      else if (key === 'notify_events') actions.updateSettings(db, { notify: { events: value.split(',').filter(Boolean) as NotifyKind[] } });
+      else if (key === 'ntfy_topic' || key === 'ntfy_server') actions.updateSettings(db, { notify: { [key]: value } });
+      else die(`unknown setting "${key}"; see agentdeck help`);
       console.log(`${key} = ${value}`);
       break;
     }
+
+    case 'settings': {
+      const st = actions.getSettings(db);
+      const d = actions.status(db).governor;
+      console.log(`max_concurrent  ${st.max_concurrent}`);
+      for (const [k, v] of Object.entries(st.budget)) console.log(`${k.padEnd(15)} ${v}`);
+      console.log(`notify_desktop  ${st.notify.desktop ? 'on' : 'off'}`);
+      console.log(`notify_events   ${st.notify.events.join(',') || '-'}`);
+      console.log(`ntfy            ${st.notify.ntfy_topic ? `${st.notify.ntfy_server}/${st.notify.ntfy_topic}` : 'off'}`);
+      console.log(`\ngovernor        ${d.allow ? 'allowing work' : 'holding'}${d.reason ? `: ${d.reason}` : ''}${d.until ? ` (lifts in ${relTime(d.until)})` : ''}`);
+      if (d.weekly_allowed !== null) console.log(`weekly pace     ${Math.round(d.weekly_allowed * 100)}% of the 7d window allowed so far`);
+      break;
+    }
+
+    case 'notify-test':
+      await actions.sendTestNotification(db);
+      console.log('sent');
+      break;
 
     case 'status': {
       const st = actions.status(db);
       const limited = st.rate_limited_until && st.rate_limited_until * 1000 > Date.now();
       console.log(`state      ${st.paused ? 'PAUSED' : 'active'}${limited ? ` (rate limited, resumes in ${relTime(st.rate_limited_until!)})` : ''}`);
       console.log(`slots      ${st.running}/${st.max_concurrent} running`);
+      if (st.governor.reason) console.log(`governor   ${st.governor.allow ? '' : 'HOLD: '}${st.governor.reason}${st.governor.until ? ` (lifts in ${relTime(st.governor.until)})` : ''}`);
       console.log(`tasks      ${Object.entries(st.counts).map(([k, n]) => `${k} ${n}`).join(', ') || 'none'}`);
       for (const w of st.usage) {
         console.log(`usage      ${w.window.padEnd(10)} ${(w.utilization * 100).toFixed(0).padStart(3)}%  resets in ${relTime(w.resets_at)}  (seen ${w.observed_at} UTC)`);

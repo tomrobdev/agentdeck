@@ -8,6 +8,7 @@ import { after, before, test } from 'node:test';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-test-'));
 process.env.AGENTDECK_HOME = home;
+process.env.AGENTDECK_NO_NOTIFY = '1';
 const fake = join(import.meta.dirname, 'fake-claude.mjs');
 chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
@@ -117,4 +118,27 @@ test('defaultTitle cuts at sentence or word boundary', async () => {
   assert.equal(defaultTitle('Fix the login bug. Then add tests.'), 'Fix the login bug');
   const long = defaultTitle('Add a truncate(s, n) function to src/strings.js that shortens s to at most n characters, ending with an ellipsis');
   assert.ok(long.endsWith('…') && long.length <= 73 && !long.includes(' cha…'), long);
+});
+
+test('final outcomes are recorded as notifications; retried failures are not', () => {
+  const kinds = db.recentNotifications(50).map((n) => n.kind);
+  assert.ok(kinds.includes('done'));
+  assert.ok(kinds.includes('blocked'));
+  assert.equal(kinds.filter((k) => k === 'failed').length, 1, 'only the final failure notifies');
+});
+
+test('governor holds queued work over the 5h cap and notifies once', async () => {
+  const now = Math.floor(Date.now() / 1000);
+  db.recordUsageWindow('five_hour', 0.9, now + 3600, 'allowed');
+  const before = db.recentNotifications(50).filter((n) => n.kind === 'hold').length;
+  const task = db.addTask({ repo_id: 1, title: 'held', prompt: 'FAKE_DONE' });
+  await drain(); // once mode stops when held
+  assert.equal(db.getTask(task.id)!.status, 'queued');
+  const holds = db.recentNotifications(50).filter((n) => n.kind === 'hold');
+  assert.equal(holds.length, before + 1);
+  assert.match(holds[0].body, /5h usage 90%/);
+
+  db.recordUsageWindow('five_hour', 0.1, now + 3600, 'allowed');
+  await drain();
+  assert.equal(db.getTask(task.id)!.status, 'done');
 });

@@ -12,6 +12,7 @@ import {
 } from './config.ts';
 import type { Db, Repo, Run, Task } from './db.ts';
 import { commitLeftovers, commitsAhead, ensureWorktree } from './git.ts';
+import { notifyLater } from './notify.ts';
 
 export type Outcome = 'done' | 'blocked' | 'failed' | 'cancelled' | 'rate_limited';
 
@@ -239,6 +240,17 @@ function finish(db: Db, task: Task, runId: number | null, res: WorkerResult, run
         blocked_reason: res.reason ?? null,
       });
       break;
+  }
+
+  // Tell a human about final outcomes (a failure that will be retried isn't final).
+  const final = db.getTask(task.id)!;
+  if (final.status === 'done' || final.status === 'blocked' || final.status === 'failed') {
+    const repo = db.getRepo(task.repo_id)?.name ?? '';
+    const body =
+      final.status === 'done'
+        ? `Ready to review on ${final.branch ?? 'its branch'}${repo ? ` in ${repo}` : ''}.`
+        : `${final.blocked_reason ?? final.status}${repo ? ` (${repo})` : ''}`;
+    notifyLater(db, { kind: final.status, title: `#${task.id} ${final.status}: ${task.title}`, body, task_id: task.id });
   }
   return res;
 }

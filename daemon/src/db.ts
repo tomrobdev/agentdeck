@@ -1,5 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
 import { DB_PATH, DEFAULTS, ensureDirs } from './config.ts';
+import { BUDGET_KEYS, type Budget, DEFAULT_BUDGET } from './governor.ts';
 
 export type TaskStatus =
   | 'queued'
@@ -112,6 +113,14 @@ CREATE TABLE IF NOT EXISTS usage_windows (
   status TEXT,
   observed_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+CREATE TABLE IF NOT EXISTS notifications (
+  id INTEGER PRIMARY KEY,
+  kind TEXT NOT NULL,
+  title TEXT NOT NULL,
+  body TEXT NOT NULL,
+  task_id INTEGER,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
@@ -143,6 +152,9 @@ export function openDb(path = DB_PATH) {
     isPaused(): boolean {
       // The daemon starts paused until someone explicitly resumes it.
       return this.getSetting('paused', '1') === '1';
+    },
+    budget(): Budget {
+      return Object.fromEntries(BUDGET_KEYS.map((k) => [k, Number(this.getSetting(k, String(DEFAULT_BUDGET[k])))])) as unknown as Budget;
     },
     maxConcurrent(): number {
       return Number(this.getSetting('max_concurrent', String(DEFAULTS.maxConcurrent)));
@@ -233,6 +245,15 @@ export function openDb(path = DB_PATH) {
     },
     runsForTask(task_id: number): Run[] {
       return db.prepare('SELECT * FROM runs WHERE task_id = ? ORDER BY id').all(task_id) as unknown as Run[];
+    },
+
+    // --- notifications ---
+    addNotification(kind: string, title: string, body: string, task_id: number | null): void {
+      db.prepare('INSERT INTO notifications (kind, title, body, task_id) VALUES (?, ?, ?, ?)').run(kind, title, body, task_id);
+      db.prepare('DELETE FROM notifications WHERE id <= (SELECT MAX(id) - 200 FROM notifications)').run();
+    },
+    recentNotifications(limit = 20): { id: number; kind: string; title: string; body: string; task_id: number | null; created_at: string }[] {
+      return db.prepare('SELECT * FROM notifications ORDER BY id DESC LIMIT ?').all(limit) as never;
     },
 
     // --- usage ---

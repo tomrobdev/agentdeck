@@ -58,6 +58,32 @@ export interface UsageWindow {
   observed_at: string;
 }
 
+export interface Budget {
+  five_hour_max: number;
+  five_hour_soft: number;
+  weekly_max: number;
+  pace_slack: number;
+}
+
+export interface Decision {
+  allow: boolean;
+  max_concurrent: number;
+  reason: string | null;
+  until: number | null;
+  weekly_allowed: number | null;
+}
+
+export type NotifyKind = 'done' | 'blocked' | 'failed' | 'hold';
+
+export interface NotificationRow {
+  id: number;
+  kind: NotifyKind | 'test';
+  title: string;
+  body: string;
+  task_id: number | null;
+  created_at: string;
+}
+
 export interface Status {
   paused: boolean;
   rate_limited_until: number | null;
@@ -65,6 +91,15 @@ export interface Status {
   max_concurrent: number;
   counts: Partial<Record<TaskStatus, number>>;
   usage: UsageWindow[];
+  governor: Decision;
+  budget: Budget;
+  notifications: NotificationRow[];
+}
+
+export interface Settings {
+  max_concurrent: number;
+  budget: Budget;
+  notify: { desktop: boolean; events: NotifyKind[]; ntfy_topic: string; ntfy_server: string };
 }
 
 export type LogEntry =
@@ -96,6 +131,10 @@ export const api = {
   status: () => call<Status>('/api/status'),
   pause: () => call<Status>('/api/pause', { method: 'POST' }),
   resume: () => call<Status>('/api/resume', { method: 'POST' }),
+  settings: () => call<Settings>('/api/settings'),
+  updateSettings: (patch: Partial<Omit<Settings, 'budget' | 'notify'>> & { budget?: Partial<Budget>; notify?: Partial<Settings['notify']> }) =>
+    call<Settings>('/api/settings', { method: 'POST', json: patch }),
+  testNotify: () => call<{ ok: boolean }>('/api/notify/test', { method: 'POST' }),
   repos: () => call<Repo[]>('/api/repos'),
   addRepo: (r: { path: string; name?: string; test?: string }) => call<Repo>('/api/repos', { method: 'POST', json: r }),
   tasks: () => call<Task[]>('/api/tasks'),
@@ -106,6 +145,11 @@ export const api = {
   retry: (id: number) => call<TaskDetail>(`/api/tasks/${id}/retry`, { method: 'POST' }),
   logUrl: (id: number, attempt?: number) => `${API_BASE}/api/tasks/${id}/log${attempt ? `?attempt=${attempt}` : ''}`,
 };
+
+/** "Tue 14:00" style, for when a hold lifts. */
+export function when(unixSeconds: number): string {
+  return new Date(unixSeconds * 1000).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' });
+}
 
 export function relTime(unixSeconds: number): string {
   const mins = Math.round((unixSeconds * 1000 - Date.now()) / 60_000);

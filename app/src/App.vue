@@ -3,6 +3,7 @@ import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { ApiError, type Repo, type Status, type Task, type TaskDetail as Detail, api } from './api';
 import NewTaskForm from './components/NewTaskForm.vue';
 import ReposPanel from './components/ReposPanel.vue';
+import SettingsPanel from './components/SettingsPanel.vue';
 import StatusBar from './components/StatusBar.vue';
 import TaskDetail from './components/TaskDetail.vue';
 import TaskList from './components/TaskList.vue';
@@ -17,7 +18,7 @@ const detail = ref<Detail | null>(null);
 const offline = ref(false);
 const busy = ref(false);
 const toast = ref('');
-const modal = ref<'new' | 'repos' | null>(null);
+const modal = ref<'new' | 'repos' | 'settings' | null>(null);
 
 let timer: number | undefined;
 
@@ -85,6 +86,7 @@ onBeforeUnmount(() => clearInterval(timer));
       @toggle="togglePause"
       @new-task="modal = 'new'"
       @repos="modal = 'repos'"
+      @settings="modal = 'settings'"
     />
 
     <div v-if="offline" class="offline">
@@ -118,6 +120,13 @@ onBeforeUnmount(() => clearInterval(timer));
       :repos="repos"
       @close="modal = null"
       @changed="reloadRepos"
+    />
+
+    <SettingsPanel
+      v-if="modal === 'settings'"
+      :notifications="status?.notifications ?? []"
+      @close="modal = null"
+      @saved="refresh"
     />
 
     <div v-if="toast" class="toast">{{ toast }}</div>

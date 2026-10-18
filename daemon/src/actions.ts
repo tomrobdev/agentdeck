@@ -3,6 +3,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
 import type { Db, Repo, Task } from './db.ts';
 import { currentBranch, isGitRepo } from './git.ts';
+import { BUDGET_KEYS, type Budget, decide, validateBudget } from './governor.ts';
+import { NOTIFY_KINDS, type NotifyKind, type NotifySettings, notify, notifySettings } from './notify.ts';
 
 export class ActionError extends Error {}
 
@@ -86,7 +88,65 @@ export function status(db: Db) {
     max_concurrent: db.maxConcurrent(),
     counts,
     usage: db.usageWindows(),
+    governor: decide(db.usageWindows(), db.budget(), db.maxConcurrent()),
+    budget: db.budget(),
+    notifications: db.recentNotifications(10),
   };
+}
+
+export interface Settings {
+  max_concurrent: number;
+  budget: Budget;
+  notify: NotifySettings;
+}
+
+export function getSettings(db: Db): Settings {
+  return { max_concurrent: db.maxConcurrent(), budget: db.budget(), notify: notifySettings(db) };
+}
+
+/** Apply a partial settings update after validating all of it. */
+export function updateSettings(db: Db, patch: { max_concurrent?: number; budget?: Partial<Budget>; notify?: Partial<NotifySettings> }): Settings {
+  const writes: [string, string][] = [];
+
+  if (patch.max_concurrent !== undefined) {
+    const n = Number(patch.max_concurrent);
+    if (!Number.isInteger(n) || n < 1 || n > 8) throw new ActionError('max_concurrent must be a whole number from 1 to 8');
+    writes.push(['max_concurrent', String(n)]);
+  }
+
+  if (patch.budget) {
+    const merged = { ...db.budget() };
+    for (const k of BUDGET_KEYS) if (patch.budget[k] !== undefined) merged[k] = Number(patch.budget[k]);
+    const err = validateBudget(merged);
+    if (err) throw new ActionError(err);
+    for (const k of BUDGET_KEYS) writes.push([k, String(merged[k])]);
+  }
+
+  if (patch.notify) {
+    const n = patch.notify;
+    if (n.desktop !== undefined) writes.push(['notify_desktop', n.desktop ? '1' : '0']);
+    if (n.events !== undefined) {
+      const bad = n.events.filter((e) => !NOTIFY_KINDS.includes(e as NotifyKind));
+      if (bad.length) throw new ActionError(`unknown notification events: ${bad.join(', ')}`);
+      writes.push(['notify_events', n.events.join(',')]);
+    }
+    if (n.ntfy_topic !== undefined) {
+      const topic = n.ntfy_topic.trim();
+      if (topic && !/^[\w-]{1,64}$/.test(topic)) throw new ActionError('ntfy topic: letters, digits, - and _ only');
+      writes.push(['ntfy_topic', topic]);
+    }
+    if (n.ntfy_server !== undefined) {
+      if (!/^https?:\/\/\S+$/.test(n.ntfy_server)) throw new ActionError('ntfy server must be an http(s) URL');
+      writes.push(['ntfy_server', n.ntfy_server]);
+    }
+  }
+
+  for (const [k, v] of writes) db.setSetting(k, v);
+  return getSettings(db);
+}
+
+export function sendTestNotification(db: Db): Promise<void> {
+  return notify(db, { kind: 'test', title: 'Test notification', body: 'Notifications from AgentDeck are working.' });
 }
 
 /** A run's stream-json log reduced to what a person wants to read. */
