@@ -1,0 +1,25 @@
+name: check
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: git config --global user.name ci && git config --global user.email ci@example.com
+      - run: pnpm format:check
+      - run: pnpm typecheck
+      - run: pnpm test
+      # The SIGKILL crash test; skipped until the script lands (PR #7).
+      - run: if [ -f daemon/scripts/crash-test.mjs ]; then node daemon/scripts/crash-test.mjs 5; fi
