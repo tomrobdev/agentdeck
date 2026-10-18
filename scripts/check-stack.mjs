@@ -8,9 +8,10 @@
 //   --crash   crash-test iterations per branch, 0 to skip (default 3)
 //   --remote  instead of checking locally, start the GitHub "check" workflow on each branch
 //   --all     also check AgentDeck's own agentdeck/task-* work branches (skipped by default)
-// Branches pointing at the same commit are checked once.
+// Branches pointing at the same commit are checked once. The results are also written to
+// <git dir>/check-stack.json, which the ci-status Claude Code mod shows.
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
@@ -142,6 +143,13 @@ for (const r of results) {
   );
 }
 const failed = results.filter((r) => r.failed);
+const saved = {
+  at: new Date().toISOString(),
+  base: opts.base,
+  tip: opts.tip,
+  rows: results.map(({ name, sha, steps, failed }) => ({ name, sha, steps, failed })),
+};
+writeFileSync(join(git('rev-parse', '--path-format=absolute', '--git-common-dir'), 'check-stack.json'), JSON.stringify(saved, null, 2));
 for (const r of failed) if (r.output) console.log(`\n--- ${r.name}: ${r.failed} ---\n${r.output}`);
 console.log(`\n${results.length - failed.length}/${results.length} branches pass`);
 process.exit(failed.length ? 1 : 0);
