@@ -66,6 +66,12 @@ onBeforeUnmount(close);
       <template v-else-if="e.kind === 'result'">
         <div class="sep">result: {{ e.subtype }} · {{ e.turns }} turns</div>
       </template>
+      <template v-else-if="e.kind === 'setup'">
+        <details :open="!e.passed">
+          <summary :class="e.passed ? 'ok' : 'bad'">Setup {{ e.passed ? 'done' : 'failed' }}: {{ e.cmd }}</summary>
+          <pre>{{ e.output }}</pre>
+        </details>
+      </template>
       <template v-else-if="e.kind === 'tests'">
         <details :open="!e.passed">
           <summary :class="e.passed ? 'ok' : 'bad'">Tests {{ e.passed ? 'passed' : 'failed' }}</summary>

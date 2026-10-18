@@ -34,7 +34,10 @@ export function claudeBin(): string {
   return 'claude';
 }
 
-/** Tools a worker may use unless the repo overrides them. No push, no network installs. */
+/**
+ * Generic tools every worker may use unless the repo overrides them. No push, no network installs.
+ * Build and test rules come from the repo's toolchain (domain/toolchain.ts).
+ */
 export const DEFAULT_ALLOWED_TOOLS = [
   'Read',
   'Edit',
@@ -49,15 +52,6 @@ export const DEFAULT_ALLOWED_TOOLS = [
   'Bash(ls*)',
   'Bash(cat*)',
   'Bash(node *)',
-  'Bash(npm test*)',
-  'Bash(npm run *)',
-  // pnpm runs scripts by name too; these cover the same ground as the npm rules, still no installs.
-  'Bash(pnpm test*)',
-  'Bash(pnpm run *)',
-  'Bash(pnpm typecheck*)',
-  'Bash(pnpm -r typecheck*)',
-  'Bash(pnpm format*)',
-  'Bash(pnpm check*)',
 ];
 
 export const ALWAYS_DISALLOWED_TOOLS = ['Bash(git push*)', 'Bash(git remote*)', 'Bash(rm -rf*)'];

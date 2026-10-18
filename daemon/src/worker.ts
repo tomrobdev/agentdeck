@@ -4,7 +4,8 @@ import { join } from 'node:path';
 import { ALWAYS_DISALLOWED_TOOLS, DEFAULT_ALLOWED_TOOLS, LOG_DIR, WORKER_SYSTEM_PROMPT, ensureDirs } from './config.ts';
 import { runClaude } from './claude.ts';
 import type { Db, Repo, Run, Task } from './db.ts';
-import { commitLeftovers, commitsAhead, ensureWorktree } from './git.ts';
+import { detectToolchain, isToolchain, toolchainTools } from './domain/toolchain.ts';
+import { commitLeftovers, commitsAhead, ensureWorktree, rootInfo } from './git.ts';
 import { notifyLater } from './notify.ts';
 
 export type Outcome = 'done' | 'blocked' | 'failed' | 'cancelled' | 'rate_limited';
@@ -15,6 +16,7 @@ export interface WorkerResult {
 }
 
 const TEST_TIMEOUT_MS = 15 * 60_000;
+const SETUP_TIMEOUT_MS = 10 * 60_000;
 
 export function buildPrompt(task: Task, previousRuns: Run[]): string {
   const last = previousRuns.at(-1);
@@ -31,8 +33,18 @@ export function buildPrompt(task: Task, previousRuns: Run[]): string {
     .join('\n');
 }
 
-export function claudeArgs(task: Task, repo: Repo, prompt: string): string[] {
-  const allowed: string[] = repo.allowed_tools ? JSON.parse(repo.allowed_tools) : DEFAULT_ALLOWED_TOOLS;
+/**
+ * The repo's own rules if it has them, otherwise the generic defaults plus its toolchain's rules.
+ * Repos registered before toolchain detection have no toolchain, so detect it from `dir` on the fly.
+ */
+export function effectiveTools(repo: Repo, dir: string): string[] {
+  if (repo.allowed_tools) return JSON.parse(repo.allowed_tools);
+  const { files, scripts } = rootInfo(dir);
+  const toolchain = isToolchain(repo.toolchain) ? repo.toolchain : detectToolchain(files, scripts)?.toolchain;
+  return [...DEFAULT_ALLOWED_TOOLS, ...(toolchain ? toolchainTools(toolchain, scripts) : [])];
+}
+
+export function claudeArgs(task: Task, allowed: string[], prompt: string): string[] {
   return [
     '-p',
     prompt,
@@ -65,12 +77,26 @@ export function parseStatus(text: string | undefined): { blocked: boolean; reaso
   return { blocked: false, declared: false };
 }
 
-function runTests(cmd: string, cwd: string): Promise<{ passed: boolean; output: string }> {
+/** Run a repo command (setup or tests) in the worktree. */
+function runCommand(cmd: string, cwd: string, timeout: number): Promise<{ passed: boolean; output: string }> {
   return new Promise((resolve) => {
-    execFile('sh', ['-c', cmd], { cwd, timeout: TEST_TIMEOUT_MS, maxBuffer: 8 * 1024 * 1024 }, (err, stdout, stderr) => {
-      resolve({ passed: !err, output: `${stdout}${stderr}`.slice(-20_000) });
+    execFile('sh', ['-c', cmd], { cwd, timeout, maxBuffer: 8 * 1024 * 1024 }, (err, stdout, stderr) => {
+      const output = `${stdout}${stderr}`.slice(-20_000);
+      resolve({ passed: !err, output: output || (err ? err.message : '') });
     });
   });
+}
+
+/** The last non-empty line of a command's output, for a one-line reason. */
+export function lastLine(output: string): string {
+  return (
+    output
+      .trim()
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .at(-1) ?? 'no output'
+  ).slice(0, 300);
 }
 
 /** Run one attempt of a task that the scheduler has already claimed (status = running). */
@@ -95,8 +121,18 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
     db.runsForTask(task.id).filter((r) => r.id !== runId),
   );
 
+  // Install dependencies before the agent starts: it isn't allowed to install them itself.
+  if (repo.setup_cmd) {
+    const setup = await runCommand(repo.setup_cmd, wt.path, SETUP_TIMEOUT_MS);
+    log.write(JSON.stringify({ type: 'agentdeck_setup', cmd: repo.setup_cmd, passed: setup.passed, output: setup.output }) + '\n');
+    if (!setup.passed) {
+      log.end();
+      return finish(db, task, runId, { outcome: 'blocked', reason: `setup failed: ${lastLine(setup.output)}` });
+    }
+  }
+
   const { result, exitCode, rateLimitedUntil, cancelled } = await runClaude(db, {
-    args: claudeArgs(task, repo, prompt),
+    args: claudeArgs(task, effectiveTools(repo, wt.path), prompt),
     cwd: wt.path,
     log,
     env: { AGENTDECK_TASK_ID: String(task.id) },
@@ -137,7 +173,7 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
     if (status.blocked) {
       outcome = { outcome: 'blocked', reason: status.reason ?? 'agent reported blocked' };
     } else if (repo.test_cmd) {
-      const tests = await runTests(repo.test_cmd, wt.path);
+      const tests = await runCommand(repo.test_cmd, wt.path, TEST_TIMEOUT_MS);
       log.write(JSON.stringify({ type: 'agentdeck_tests', passed: tests.passed, output: tests.output }) + '\n');
       runFields.tests_passed = tests.passed ? 1 : 0;
       outcome = tests.passed ? { outcome: 'done' } : { outcome: 'failed', reason: 'tests failed' };

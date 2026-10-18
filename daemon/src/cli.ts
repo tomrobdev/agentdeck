@@ -13,11 +13,13 @@ import * as service from './service.ts';
 const HELP = `agentdeck: always-on Claude Code task queue
 
 Repos
-  agentdeck repo add <path> [--name n] [--base main] [--test "npm test"] [--tools "Read,Edit,Bash(npm *)"]
+  agentdeck repo add <path> [--name n] [--base main] [--test "npm test"] [--setup "npm ci"] [--tools "Read,Edit,Bash(npm *)"]
+                                                  the toolchain is detected; flags override what it suggests
   agentdeck repo ls
   agentdeck repo set <repo> auto_approve on|off   planner tasks skip approval
   agentdeck repo set <repo> base_branch <branch>  branch new task worktrees start from
   agentdeck repo set <repo> test_cmd "<cmd>"      run after each task ("" for none)
+  agentdeck repo set <repo> setup_cmd "<cmd>"     run in each worktree before claude ("" for none)
   agentdeck goals <repo> [--file goals.md]        show (or replace) the goals the planner works from
   agentdeck plan <repo>                           run the planner now
 
@@ -86,6 +88,7 @@ function printLog(path: string): void {
     if (e.kind === 'text') console.log(`\n💬 ${e.text}`);
     if (e.kind === 'tool') console.log(`🔧 ${e.name} ${e.input.slice(0, 200)}`);
     if (e.kind === 'result') console.log(`\n── result: ${e.subtype}, ${e.turns} turns, $${e.cost.toFixed(3)} equiv ──`);
+    if (e.kind === 'setup') console.log(`\n── setup ${e.passed ? 'done' : 'FAILED'}: ${e.cmd} ──\n${e.output.slice(-3000)}`);
     if (e.kind === 'tests') console.log(`\n── tests ${e.passed ? 'passed' : 'FAILED'} ──\n${e.output.slice(-3000)}`);
     if (e.kind === 'error') console.log(`⚠️  ${e.text}`);
   }
@@ -99,6 +102,7 @@ async function main(argv: string[]): Promise<void> {
       name: { type: 'string' },
       base: { type: 'string' },
       test: { type: 'string' },
+      setup: { type: 'string' },
       tools: { type: 'string' },
       repo: { type: 'string', short: 'r' },
       title: { type: 'string', short: 't' },
@@ -129,25 +133,27 @@ async function main(argv: string[]): Promise<void> {
           name: flags.name,
           base: flags.base,
           test: flags.test,
+          setup: flags.setup,
           tools: flags.tools?.split(',').map((t) => t.trim()),
         });
         console.log(
-          `added repo "${repo.name}" (${repo.path}, base ${repo.base_branch}${repo.test_cmd ? `, tests: ${repo.test_cmd}` : ''})`,
+          `added repo "${repo.name}" (${repo.path}, base ${repo.base_branch}, toolchain ${repo.toolchain ?? 'unknown'}${repo.setup_cmd ? `, setup: ${repo.setup_cmd}` : ''}${repo.test_cmd ? `, tests: ${repo.test_cmd}` : ''})`,
         );
       } else if (sub === 'set') {
         const [, name, key, value = ''] = rest;
-        if (!name || !['auto_approve', 'base_branch', 'test_cmd'].includes(key))
-          die('usage: agentdeck repo set <repo> auto_approve on|off | base_branch <branch> | test_cmd "<cmd>"');
+        if (!name || !['auto_approve', 'base_branch', 'test_cmd', 'setup_cmd'].includes(key))
+          die('usage: agentdeck repo set <repo> auto_approve on|off | base_branch <branch> | test_cmd "<cmd>" | setup_cmd "<cmd>"');
         if (key === 'auto_approve')
           actions.updateRepo(db, name, { auto_approve: ['1', 'on', 'true', 'yes'].includes(value.toLowerCase()) });
         else if (key === 'base_branch') actions.updateRepo(db, name, { base_branch: value });
+        else if (key === 'setup_cmd') actions.updateRepo(db, name, { setup_cmd: value });
         else actions.updateRepo(db, name, { test_cmd: value });
         console.log(`${name}: ${key} ${value || '(none)'}`);
       } else if (sub === 'ls' || !sub) {
         for (const r of db.listRepos()) {
           const goals = actions.repoDetail(db, r.id).goals.trim() ? 'goals ✓' : 'no goals';
           console.log(
-            `${r.name.padEnd(16)} ${r.path}  base=${r.base_branch}  test=${r.test_cmd ?? '-'}  ${goals}${r.auto_approve ? '  auto-approve' : ''}`,
+            `${r.name.padEnd(16)} ${r.path}  base=${r.base_branch}  toolchain=${r.toolchain ?? '-'}  setup=${r.setup_cmd ?? '-'}  test=${r.test_cmd ?? '-'}  ${goals}${r.auto_approve ? '  auto-approve' : ''}`,
           );
         }
       } else die(`unknown repo command: ${sub}`);

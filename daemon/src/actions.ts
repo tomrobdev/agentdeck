@@ -2,26 +2,33 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
 import type { Db, Repo, Task } from './db.ts';
-import { currentBranch, isGitRepo } from './git.ts';
+import { DEFAULT_ALLOWED_TOOLS } from './config.ts';
+import { detectToolchain } from './domain/toolchain.ts';
+import { currentBranch, isGitRepo, rootInfo } from './git.ts';
 import { BUDGET_KEYS, type Budget, decide, validateBudget } from './governor.ts';
 import { NOTIFY_KINDS, type NotifyKind, type NotifySettings, notify, notifySettings } from './notify.ts';
 import { type PlannerSettings, goalsPath, planRepo, plannerSettings, readGoals, writeGoals } from './planner.ts';
 
 export class ActionError extends Error {}
 
+/** Register a repo. Its toolchain is detected from the root files and fills in whatever isn't given. */
 export async function addRepo(
   db: Db,
-  input: { path: string; name?: string; base?: string; test?: string | null; tools?: string[] | null },
+  input: { path: string; name?: string; base?: string; test?: string | null; setup?: string | null; tools?: string[] | null },
 ): Promise<Repo> {
   const abs = resolve(input.path.replace(/^~(?=\/|$)/, process.env.HOME ?? '~'));
   if (!existsSync(abs) || !(await isGitRepo(abs))) throw new ActionError(`${abs} is not a git repository`);
+  const { files, scripts } = rootInfo(abs);
+  const detected = detectToolchain(files, scripts);
   try {
     return db.addRepo({
       name: input.name || basename(abs),
       path: abs,
       base_branch: input.base || (await currentBranch(abs)),
-      test_cmd: input.test || null,
-      allowed_tools: input.tools?.length ? input.tools : null,
+      test_cmd: input.test || detected?.test_cmd || null,
+      allowed_tools: input.tools?.length ? input.tools : [...DEFAULT_ALLOWED_TOOLS, ...(detected?.tools ?? [])],
+      toolchain: detected?.toolchain ?? null,
+      setup_cmd: input.setup || detected?.setup_cmd || null,
     });
   } catch (err) {
     if (String(err).includes('UNIQUE')) throw new ActionError('a repo with that name or path is already registered');
@@ -88,7 +95,7 @@ export function repoDetail(db: Db, nameOrId: string | number) {
 export function updateRepo(
   db: Db,
   nameOrId: string | number,
-  patch: { goals?: string; auto_approve?: boolean; test_cmd?: string | null; base_branch?: string },
+  patch: { goals?: string; auto_approve?: boolean; test_cmd?: string | null; setup_cmd?: string | null; base_branch?: string },
 ) {
   const repo = repoOrThrow(db, nameOrId);
   if (patch.base_branch !== undefined && !patch.base_branch.trim()) throw new ActionError('base_branch cannot be empty');
@@ -99,6 +106,7 @@ export function updateRepo(
   db.updateRepo(repo.id, {
     ...(patch.auto_approve !== undefined ? { auto_approve: patch.auto_approve ? 1 : 0 } : {}),
     ...(patch.test_cmd !== undefined ? { test_cmd: patch.test_cmd?.trim() || null } : {}),
+    ...(patch.setup_cmd !== undefined ? { setup_cmd: patch.setup_cmd?.trim() || null } : {}),
     ...(patch.base_branch !== undefined ? { base_branch: patch.base_branch.trim() } : {}),
   });
   return repoDetail(db, repo.id);
@@ -233,6 +241,7 @@ export type LogEntry =
   | { kind: 'text'; text: string }
   | { kind: 'tool'; name: string; input: string }
   | { kind: 'result'; subtype: string; turns: number; cost: number }
+  | { kind: 'setup'; passed: boolean; cmd: string; output: string }
   | { kind: 'tests'; passed: boolean; output: string }
   | { kind: 'error'; text: string };
 
@@ -252,6 +261,8 @@ export function parseLogLine(line: string): LogEntry[] {
       });
     case 'result':
       return [{ kind: 'result', subtype: ev.subtype, turns: ev.num_turns ?? 0, cost: ev.total_cost_usd ?? 0 }];
+    case 'agentdeck_setup':
+      return [{ kind: 'setup', passed: ev.passed, cmd: ev.cmd, output: ev.output }];
     case 'agentdeck_tests':
       return [{ kind: 'tests', passed: ev.passed, output: ev.output }];
     case 'agentdeck_stderr':

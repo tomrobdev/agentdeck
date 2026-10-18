@@ -6,13 +6,17 @@
 //   FAKE_ERROR    exits non-zero with no result
 //   FAKE_RATELIMIT emits a rejected rate_limit_event
 //   FAKE_SLOW     sleeps 30s (for cancel tests)
+//   FAKE_NEEDS_SETUP  like FAKE_DONE, but blocks unless the repo's setup wrote setup-done.txt
+// Every run appends its prompt to $AGENTDECK_HOME/fake-claude-calls.log, so tests can tell it never started.
 import { execFileSync } from 'node:child_process';
-import { writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 const args = process.argv.slice(2);
 const prompt = args[args.indexOf('-p') + 1] ?? '';
 const out = (o) => process.stdout.write(JSON.stringify(o) + '\n');
 const resetsAt = Math.floor(Date.now() / 1000) + 3600;
+if (process.env.AGENTDECK_HOME) appendFileSync(join(process.env.AGENTDECK_HOME, 'fake-claude-calls.log'), `${prompt}\n`);
 
 out({ type: 'system', subtype: 'init', session_id: 'fake-session', cwd: process.cwd() });
 out({
@@ -57,6 +61,8 @@ if (isPlanner) {
   process.exit(1);
 } else if (prompt.includes('FAKE_BLOCKED')) {
   result('I need to know which database to use.\nSTATUS: BLOCKED: which database?');
+} else if (prompt.includes('FAKE_NEEDS_SETUP') && !existsSync('setup-done.txt')) {
+  result('setup-done.txt is missing.\nSTATUS: BLOCKED: setup did not run');
 } else if (prompt.includes('FAKE_SLOW')) {
   await new Promise((r) => setTimeout(r, 30_000));
   result('slow done\nSTATUS: DONE');

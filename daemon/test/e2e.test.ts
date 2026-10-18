@@ -208,3 +208,112 @@ test('governor holds queued work over the 5h cap and notifies once', async () =>
   await drain();
   assert.equal(db.getTask(task.id)!.status, 'done');
 });
+
+test('repo add detects the toolchain; repos registered before detection get its rules on the fly', async () => {
+  const { addRepo } = await import('../src/actions.ts');
+  const { effectiveTools } = await import('../src/worker.ts');
+  const { DEFAULT_ALLOWED_TOOLS } = await import('../src/config.ts');
+  const jsRepo = (name: string) => {
+    const dir = join(home, name);
+    execFileSync('mkdir', ['-p', dir]);
+    sh(dir, 'init', '-q', '-b', 'main');
+    writeFileSync(join(dir, 'package.json'), JSON.stringify({ scripts: { test: 'node --test', lint: 'eslint .' } }));
+    writeFileSync(join(dir, 'pnpm-lock.yaml'), '');
+    return dir;
+  };
+  const js = jsRepo('js-repo');
+
+  const repo = await addRepo(db, { path: js, name: 'js-repo', base: 'main' });
+  assert.equal(repo.toolchain, 'pnpm');
+  assert.equal(repo.setup_cmd, 'pnpm install --frozen-lockfile --prefer-offline');
+  assert.equal(repo.test_cmd, 'pnpm test');
+  const tools = JSON.parse(repo.allowed_tools!);
+  assert.deepEqual(tools, [...DEFAULT_ALLOWED_TOOLS, 'Bash(pnpm test*)', 'Bash(pnpm lint*)', 'Bash(pnpm run *)']);
+  assert.ok(!DEFAULT_ALLOWED_TOOLS.some((t) => /npm/.test(t)), 'package manager rules come from the toolchain');
+
+  const given = await addRepo(db, { path: jsRepo('js-given'), name: 'js-given', base: 'main', test: 'make check', setup: 'true', tools: ['Read'] });
+  assert.deepEqual([given.test_cmd, given.setup_cmd, given.allowed_tools], ['make check', 'true', '["Read"]']);
+
+  const legacy = { ...repo, allowed_tools: null, toolchain: null };
+  assert.deepEqual(effectiveTools(legacy, js), tools);
+  assert.deepEqual(effectiveTools({ ...legacy, path: repoPath }, repoPath), DEFAULT_ALLOWED_TOOLS);
+});
+
+const claudeCalls = () => {
+  const path = join(home, 'fake-claude-calls.log');
+  return existsSync(path) ? readFileSync(path, 'utf8') : '';
+};
+
+test('setup runs in the worktree before claude starts', async () => {
+  db.updateRepo(1, { setup_cmd: 'echo installing && echo ready > setup-done.txt' });
+  try {
+    const task = db.addTask({ repo_id: 1, title: 'needs deps', prompt: 'FAKE_NEEDS_SETUP go' });
+    await drain();
+    const t = db.getTask(task.id)!;
+    assert.equal(t.status, 'done', t.blocked_reason ?? '');
+    assert.ok(existsSync(join(t.worktree!, 'setup-done.txt')));
+    const log = readFileSync(db.runsForTask(t.id)[0].log_path, 'utf8').split('\n');
+    const setupAt = log.findIndex((l) => l.includes('"type":"agentdeck_setup"'));
+    const claudeAt = log.findIndex((l) => l.includes('"type":"system"'));
+    assert.ok(setupAt >= 0 && setupAt < claudeAt, 'setup is logged before claude output');
+    assert.match(log[setupAt], /"passed":true/);
+    assert.match(log[setupAt], /installing/);
+  } finally {
+    db.updateRepo(1, { setup_cmd: null });
+  }
+});
+
+test('a failing setup blocks the task without starting claude', async () => {
+  db.updateRepo(1, { setup_cmd: 'echo fetching deps && echo "ERR_PNPM_OFFLINE no network" >&2 && exit 3' });
+  try {
+    const task = db.addTask({ repo_id: 1, title: 'offline', prompt: 'FAKE_DONE never-runs-marker' });
+    await drain();
+    const t = db.getTask(task.id)!;
+    assert.equal(t.status, 'blocked');
+    assert.equal(t.blocked_reason, 'setup failed: ERR_PNPM_OFFLINE no network');
+    assert.equal(t.attempts, 1, 'blocked, not retried');
+    const [run] = db.runsForTask(t.id);
+    assert.equal(run.outcome, 'blocked');
+    assert.equal(run.pid, null, 'claude never spawned');
+    assert.doesNotMatch(claudeCalls(), /never-runs-marker/);
+    assert.match(readFileSync(run.log_path, 'utf8'), /"type":"agentdeck_setup".*"passed":false/);
+  } finally {
+    db.updateRepo(1, { setup_cmd: null });
+  }
+});
+
+test('a new worktree starts from origin/<base> when origin is ahead of the local base', async () => {
+  const seed = join(home, 'seed');
+  const origin = join(home, 'origin.git');
+  const local = join(home, 'local');
+  const other = join(home, 'other');
+  execFileSync('mkdir', ['-p', seed]);
+  sh(seed, 'init', '-q', '-b', 'main');
+  writeFileSync(join(seed, 'README.md'), 'seed\n');
+  sh(seed, 'add', '-A');
+  sh(seed, '-c', 'user.email=t@example.com', '-c', 'user.name=t', 'commit', '-q', '-m', 'seed');
+  sh(home, 'clone', '-q', '--bare', seed, origin);
+  sh(home, 'clone', '-q', origin, local);
+  sh(local, 'config', 'user.email', 'test@example.com');
+  sh(local, 'config', 'user.name', 'test');
+
+  // Someone else pushes to origin; the local main checkout falls behind.
+  sh(home, 'clone', '-q', origin, other);
+  writeFileSync(join(other, 'upstream.txt'), 'from origin\n');
+  sh(other, 'add', '-A');
+  sh(other, '-c', 'user.email=t@example.com', '-c', 'user.name=t', 'commit', '-q', '-m', 'upstream change');
+  sh(other, 'push', '-q', 'origin', 'main');
+  const upstreamHead = sh(other, 'rev-parse', 'HEAD');
+  assert.notEqual(sh(local, 'rev-parse', 'main'), upstreamHead);
+
+  const repo = db.addRepo({ name: 'cloned', path: local, base_branch: 'main' });
+  const task = db.addTask({ repo_id: repo.id, title: 'on fresh base', prompt: 'FAKE_DONE fresh' });
+  await drain();
+
+  const t = db.getTask(task.id)!;
+  assert.equal(t.status, 'done', t.blocked_reason ?? '');
+  assert.ok(existsSync(join(t.worktree!, 'upstream.txt')), 'worktree has origin’s commit');
+  sh(local, 'merge-base', '--is-ancestor', upstreamHead, t.branch!);
+  assert.equal(sh(local, 'rev-list', '--count', `origin/main..${t.branch}`), '1', 'only the agent’s commit on top');
+  assert.notEqual(sh(local, 'rev-parse', 'main'), upstreamHead, 'local main is left alone');
+});

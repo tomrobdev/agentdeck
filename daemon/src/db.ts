@@ -12,9 +12,11 @@ export interface Repo {
   path: string;
   base_branch: string;
   test_cmd: string | null;
-  allowed_tools: string | null; // JSON array, null = defaults
+  allowed_tools: string | null; // JSON array, null = generic defaults plus the toolchain's rules
   auto_approve: number; // 1 = planner tasks skip approval
   planned_at: string | null;
+  toolchain: string | null; // pnpm | yarn | npm | cargo | uv | go, null = not detected
+  setup_cmd: string | null; // run in each worktree before claude
 }
 
 export interface PlannerRun {
@@ -182,6 +184,8 @@ export const MIGRATIONS: Migration[] = [
   },
   // 2: runsForTask runs on every task view and every 500 ms per open log stream.
   'CREATE INDEX IF NOT EXISTS runs_task ON runs(task_id, id)',
+  // 3: repo integration. toolchain is detected at `repo add`; setup_cmd runs in each new worktree.
+  'ALTER TABLE repos ADD COLUMN toolchain TEXT; ALTER TABLE repos ADD COLUMN setup_cmd TEXT;',
 ];
 
 /** Runs every step above the database's user_version in one transaction; returns how many ran. */
@@ -240,10 +244,26 @@ export function openDb(path = DB_PATH) {
     },
 
     // --- repos ---
-    addRepo(r: { name: string; path: string; base_branch: string; test_cmd?: string | null; allowed_tools?: string[] | null }): Repo {
+    addRepo(r: {
+      name: string;
+      path: string;
+      base_branch: string;
+      test_cmd?: string | null;
+      allowed_tools?: string[] | null;
+      toolchain?: string | null;
+      setup_cmd?: string | null;
+    }): Repo {
       const info = db
-        .prepare('INSERT INTO repos (name, path, base_branch, test_cmd, allowed_tools) VALUES (?, ?, ?, ?, ?)')
-        .run(r.name, r.path, r.base_branch, r.test_cmd ?? null, r.allowed_tools ? JSON.stringify(r.allowed_tools) : null);
+        .prepare('INSERT INTO repos (name, path, base_branch, test_cmd, allowed_tools, toolchain, setup_cmd) VALUES (?, ?, ?, ?, ?, ?, ?)')
+        .run(
+          r.name,
+          r.path,
+          r.base_branch,
+          r.test_cmd ?? null,
+          r.allowed_tools ? JSON.stringify(r.allowed_tools) : null,
+          r.toolchain ?? null,
+          r.setup_cmd ?? null,
+        );
       return this.getRepo(Number(info.lastInsertRowid))!;
     },
     getRepo(id: number): Repo | undefined {
@@ -255,7 +275,7 @@ export function openDb(path = DB_PATH) {
     listRepos(): Repo[] {
       return db.prepare('SELECT * FROM repos ORDER BY name').all() as unknown as Repo[];
     },
-    updateRepo(id: number, fields: Partial<Pick<Repo, 'auto_approve' | 'test_cmd' | 'planned_at' | 'base_branch'>>): void {
+    updateRepo(id: number, fields: Partial<Pick<Repo, 'auto_approve' | 'test_cmd' | 'setup_cmd' | 'planned_at' | 'base_branch'>>): void {
       const keys = Object.keys(fields) as (keyof typeof fields)[];
       if (!keys.length) return;
       db.prepare(`UPDATE repos SET ${keys.map((k) => `${k} = ?`).join(', ')} WHERE id = ?`).run(...keys.map((k) => fields[k] ?? null), id);

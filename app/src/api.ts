@@ -12,6 +12,8 @@ export interface Repo {
   allowed_tools: string | null;
   auto_approve: number;
   planned_at: string | null;
+  toolchain: string | null;
+  setup_cmd: string | null;
 }
 
 export interface PlannerRun {
@@ -143,6 +145,7 @@ export type LogEntry =
   | { kind: 'text'; text: string }
   | { kind: 'tool'; name: string; input: string }
   | { kind: 'result'; subtype: string; turns: number; cost: number }
+  | { kind: 'setup'; passed: boolean; cmd: string; output: string }
   | { kind: 'tests'; passed: boolean; output: string }
   | { kind: 'error'; text: string };
 
@@ -177,9 +180,9 @@ export const api = {
   }) => call<Settings>('/api/settings', { method: 'POST', json: patch }),
   testNotify: () => call<{ ok: boolean }>('/api/notify/test', { method: 'POST' }),
   repos: () => call<Repo[]>('/api/repos'),
-  addRepo: (r: { path: string; name?: string; test?: string }) => call<Repo>('/api/repos', { method: 'POST', json: r }),
+  addRepo: (r: { path: string; name?: string; test?: string; setup?: string }) => call<Repo>('/api/repos', { method: 'POST', json: r }),
   repo: (id: number) => call<RepoDetail>(`/api/repos/${id}`),
-  updateRepo: (id: number, patch: { goals?: string; auto_approve?: boolean; test_cmd?: string | null }) =>
+  updateRepo: (id: number, patch: { goals?: string; auto_approve?: boolean; test_cmd?: string | null; setup_cmd?: string | null }) =>
     call<RepoDetail>(`/api/repos/${id}`, { method: 'POST', json: patch }),
   plan: (id: number) => call<PlanResult>(`/api/repos/${id}/plan`, { method: 'POST' }),
   approve: (id: number) => call<TaskDetail>(`/api/tasks/${id}/approve`, { method: 'POST' }),
