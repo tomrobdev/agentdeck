@@ -143,6 +143,7 @@ export async function planRepo(db: Db, repo: Repo): Promise<PlanResult> {
     cwd: repo.path,
     log,
     env: { AGENTDECK_PLANNER: '1' },
+    onSpawn: (pid) => db.setPlannerRunPid(runId, pid),
   });
   log.end();
 

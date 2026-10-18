@@ -85,8 +85,13 @@ export function repoDetail(db: Db, nameOrId: string | number) {
   return { ...repo, goals: readGoals(repo), goals_path: goalsPath(repo), planner_runs: db.plannerRuns(repo.id, 5) };
 }
 
-export function updateRepo(db: Db, nameOrId: string | number, patch: { goals?: string; auto_approve?: boolean; test_cmd?: string | null }) {
+export function updateRepo(
+  db: Db,
+  nameOrId: string | number,
+  patch: { goals?: string; auto_approve?: boolean; test_cmd?: string | null; base_branch?: string },
+) {
   const repo = repoOrThrow(db, nameOrId);
+  if (patch.base_branch !== undefined && !patch.base_branch.trim()) throw new ActionError('base_branch cannot be empty');
   if (patch.goals !== undefined) {
     if (patch.goals.length > 20_000) throw new ActionError('goals are limited to 20,000 characters');
     writeGoals(repo, patch.goals);
@@ -94,6 +99,7 @@ export function updateRepo(db: Db, nameOrId: string | number, patch: { goals?: s
   db.updateRepo(repo.id, {
     ...(patch.auto_approve !== undefined ? { auto_approve: patch.auto_approve ? 1 : 0 } : {}),
     ...(patch.test_cmd !== undefined ? { test_cmd: patch.test_cmd?.trim() || null } : {}),
+    ...(patch.base_branch !== undefined ? { base_branch: patch.base_branch.trim() } : {}),
   });
   return repoDetail(db, repo.id);
 }

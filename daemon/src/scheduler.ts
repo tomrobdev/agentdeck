@@ -1,9 +1,9 @@
 import { DEFAULTS } from './config.ts';
-import type { Db } from './db.ts';
+import { type Db, MAX_RESTARTS } from './db.ts';
 import { decide } from './governor.ts';
 import { notifyLater } from './notify.ts';
 import { type ChildProcess, spawn } from 'node:child_process';
-import { activeChildren } from './claude.ts';
+import { activeChildren, killGroup, reapOrphans } from './claude.ts';
 import { planNow } from './actions.ts';
 import { plannerDue } from './planner.ts';
 import { runTask } from './worker.ts';
@@ -44,8 +44,11 @@ export class Scheduler {
 
   /** Start ticking. Resolves when stopped, or when the queue is drained in `once` mode. */
   run(): Promise<void> {
-    const recovered = this.db.recoverOrphans();
-    if (recovered) this.opts.log(`requeued ${recovered} task(s) left running by a previous daemon`);
+    const reaped = reapOrphans(this.db.unfinishedPids());
+    if (reaped) this.opts.log(`stopped ${reaped} claude process(es) left running by a previous daemon`);
+    const { requeued, failed } = this.db.recoverOrphans();
+    if (requeued) this.opts.log(`requeued ${requeued} task(s) left running by a previous daemon`);
+    if (failed) this.opts.log(`failed ${failed} task(s) interrupted by ${MAX_RESTARTS} daemon restarts`);
     return new Promise((resolve) => {
       this.drained = resolve;
       this.tick();
@@ -56,7 +59,7 @@ export class Scheduler {
     this.stopped = true;
     clearTimeout(this.timer);
     this.setAwake(false);
-    for (const child of activeChildren) child.kill('SIGTERM');
+    for (const child of activeChildren) killGroup(child.pid);
     this.drained?.();
   }
 

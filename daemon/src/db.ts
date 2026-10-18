@@ -49,6 +49,7 @@ export interface Task {
   worktree: string | null;
   blocked_reason: string | null;
   source: string; // manual | planner
+  restarts: number; // times a daemon restart requeued this task mid-run
   created_at: string;
   updated_at: string;
 }
@@ -71,6 +72,7 @@ export interface Run {
   tests_passed: number | null; // 1, 0, or null when no test command
   result_text: string | null;
   log_path: string;
+  pid: number | null; // claude's process group while the run is live
 }
 
 const SCHEMA = `
@@ -157,7 +159,13 @@ const ADDED_COLUMNS: [table: string, column: string, ddl: string][] = [
   ['repos', 'auto_approve', 'INTEGER NOT NULL DEFAULT 0'],
   ['repos', 'planned_at', 'TEXT'],
   ['tasks', 'source', "TEXT NOT NULL DEFAULT 'manual'"],
+  ['tasks', 'restarts', 'INTEGER NOT NULL DEFAULT 0'],
+  ['runs', 'pid', 'INTEGER'],
+  ['planner_runs', 'pid', 'INTEGER'],
 ];
+
+/** A task requeued by this many daemon restarts is failed instead, in case the task itself kills the daemon. */
+export const MAX_RESTARTS = 3;
 
 function migrate(db: DatabaseSync): void {
   for (const [table, column, ddl] of ADDED_COLUMNS) {
@@ -216,7 +224,7 @@ export function openDb(path = DB_PATH) {
     listRepos(): Repo[] {
       return db.prepare('SELECT * FROM repos ORDER BY name').all() as unknown as Repo[];
     },
-    updateRepo(id: number, fields: Partial<Pick<Repo, 'auto_approve' | 'test_cmd' | 'planned_at'>>): void {
+    updateRepo(id: number, fields: Partial<Pick<Repo, 'auto_approve' | 'test_cmd' | 'planned_at' | 'base_branch'>>): void {
       const keys = Object.keys(fields) as (keyof typeof fields)[];
       if (!keys.length) return;
       db.prepare(`UPDATE repos SET ${keys.map((k) => `${k} = ?`).join(', ')} WHERE id = ?`).run(...keys.map((k) => fields[k] ?? null), id);
@@ -315,21 +323,49 @@ export function openDb(path = DB_PATH) {
         .run(to, id, ...from);
       return info.changes > 0;
     },
-    /** After a crash, anything still marked running was orphaned: put it back in the queue. */
-    recoverOrphans(): number {
+    /** Claude processes recorded on runs that never finished: a previous daemon died mid-run. */
+    unfinishedPids(): { pid: number; started_at: string }[] {
+      return db
+        .prepare(
+          `SELECT pid, started_at FROM runs WHERE ended_at IS NULL AND pid IS NOT NULL
+           UNION ALL SELECT pid, started_at FROM planner_runs WHERE ended_at IS NULL AND pid IS NOT NULL`,
+        )
+        .all() as never;
+    },
+    /**
+     * After a crash, anything still marked running was orphaned: put it back in the queue,
+     * unless restarts keep interrupting it. Stop its claude process (`reapOrphans`) first.
+     */
+    recoverOrphans(): { requeued: number; failed: number } {
       db.prepare(`UPDATE runs SET ended_at = ${now}, outcome = 'failed', result_text = 'daemon restarted' WHERE ended_at IS NULL`).run();
       db.prepare(`UPDATE tasks SET status = 'cancelled', updated_at = ${now} WHERE status = 'cancel_requested'`).run();
       db.prepare(`UPDATE planner_runs SET ended_at = ${now}, outcome = 'failed', note = 'daemon restarted' WHERE ended_at IS NULL`).run();
-      const info = db
-        .prepare(`UPDATE tasks SET status = 'queued', attempts = MAX(attempts - 1, 0), updated_at = ${now} WHERE status = 'running'`)
+      const failed = db
+        .prepare(
+          `UPDATE tasks SET status = 'failed', restarts = restarts + 1, updated_at = ${now},
+             blocked_reason = 'the daemon restarted ' || (restarts + 1) || ' times while this task was running'
+           WHERE status = 'running' AND restarts + 1 >= ?`,
+        )
+        .run(MAX_RESTARTS);
+      const requeued = db
+        .prepare(
+          `UPDATE tasks SET status = 'queued', attempts = MAX(attempts - 1, 0), restarts = restarts + 1, updated_at = ${now}
+           WHERE status = 'running'`,
+        )
         .run();
-      return Number(info.changes);
+      return { requeued: Number(requeued.changes), failed: Number(failed.changes) };
     },
 
     // --- runs ---
     startRun(task_id: number, attempt: number, log_path: string): number {
       const info = db.prepare('INSERT INTO runs (task_id, attempt, log_path) VALUES (?, ?, ?)').run(task_id, attempt, log_path);
       return Number(info.lastInsertRowid);
+    },
+    setRunPid(id: number, pid: number): void {
+      db.prepare('UPDATE runs SET pid = ? WHERE id = ?').run(pid, id);
+    },
+    setPlannerRunPid(id: number, pid: number): void {
+      db.prepare('UPDATE planner_runs SET pid = ? WHERE id = ?').run(pid, id);
     },
     finishRun(id: number, r: Partial<Omit<Run, 'id' | 'task_id' | 'attempt' | 'started_at' | 'log_path'>>): void {
       const keys = Object.keys(r) as (keyof typeof r)[];

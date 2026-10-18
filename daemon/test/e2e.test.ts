@@ -106,11 +106,53 @@ test('cancel stops a running task', async () => {
 test('orphaned running tasks are requeued on start', () => {
   const task = db.addTask({ repo_id: 1, title: 'orphan', prompt: 'x' });
   db.claimNextTask();
-  assert.equal(db.recoverOrphans(), 1);
+  assert.deepEqual(db.recoverOrphans(), { requeued: 1, failed: 0 });
   const t = db.getTask(task.id)!;
   assert.equal(t.status, 'queued');
   assert.equal(t.attempts, 0);
+  assert.equal(t.restarts, 1);
   db.updateTask(t.id, { status: 'cancelled' });
+});
+
+test('a task interrupted by repeated restarts fails instead of looping', async () => {
+  const { MAX_RESTARTS } = await import('../src/db.ts');
+  const task = db.addTask({ repo_id: 1, title: 'poison', prompt: 'x' });
+  for (let i = 1; i < MAX_RESTARTS; i++) {
+    db.claimNextTask();
+    assert.deepEqual(db.recoverOrphans(), { requeued: 1, failed: 0 });
+  }
+  db.claimNextTask();
+  assert.deepEqual(db.recoverOrphans(), { requeued: 0, failed: 1 });
+  const t = db.getTask(task.id)!;
+  assert.equal(t.status, 'failed');
+  assert.match(t.blocked_reason!, /restarted 3 times/);
+});
+
+test('claude processes left by a dead daemon are stopped, with their children', async () => {
+  const { spawn } = await import('node:child_process');
+  const { reapOrphans } = await import('../src/claude.ts');
+  const alive = (pgid: number) => {
+    try {
+      process.kill(-pgid, 0);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  // Stands in for claude plus a bash tool it started; ignores SIGTERM like a stuck process.
+  const child = spawn('sh', ['-c', "trap '' TERM; sleep 60 & sleep 60"], { detached: true, stdio: 'ignore' });
+  child.unref();
+  const pid = child.pid!;
+  const sqliteNow = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  await new Promise((r) => setTimeout(r, 200));
+
+  // A pid whose leader started at another time belongs to someone else: leave it alone.
+  assert.equal(reapOrphans([{ pid, started_at: '2020-01-01 00:00:00' }], 200), 0);
+  assert.ok(alive(pid));
+
+  assert.equal(reapOrphans([{ pid, started_at: sqliteNow }], 300), 1);
+  await new Promise((r) => setTimeout(r, 100));
+  assert.ok(!alive(pid), 'whole process group is gone, SIGKILL after the grace period');
 });
 
 test('defaultTitle cuts at sentence or word boundary', async () => {

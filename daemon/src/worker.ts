@@ -101,6 +101,7 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
     log,
     env: { AGENTDECK_TASK_ID: String(task.id) },
     shouldCancel: () => db.getTask(task.id)?.status === 'cancel_requested',
+    onSpawn: (pid) => db.setRunPid(runId, pid),
   });
 
   const usage = result?.usage ?? {};

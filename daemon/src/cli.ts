@@ -16,6 +16,8 @@ Repos
   agentdeck repo add <path> [--name n] [--base main] [--test "npm test"] [--tools "Read,Edit,Bash(npm *)"]
   agentdeck repo ls
   agentdeck repo set <repo> auto_approve on|off   planner tasks skip approval
+  agentdeck repo set <repo> base_branch <branch>  branch new task worktrees start from
+  agentdeck repo set <repo> test_cmd "<cmd>"      run after each task ("" for none)
   agentdeck goals <repo> [--file goals.md]        show (or replace) the goals the planner works from
   agentdeck plan <repo>                           run the planner now
 
@@ -134,9 +136,13 @@ async function main(argv: string[]): Promise<void> {
         );
       } else if (sub === 'set') {
         const [, name, key, value = ''] = rest;
-        if (key !== 'auto_approve' || !name) die('usage: agentdeck repo set <repo> auto_approve on|off');
-        actions.updateRepo(db, name, { auto_approve: ['1', 'on', 'true', 'yes'].includes(value.toLowerCase()) });
-        console.log(`${name}: auto_approve ${value}`);
+        if (!name || !['auto_approve', 'base_branch', 'test_cmd'].includes(key))
+          die('usage: agentdeck repo set <repo> auto_approve on|off | base_branch <branch> | test_cmd "<cmd>"');
+        if (key === 'auto_approve')
+          actions.updateRepo(db, name, { auto_approve: ['1', 'on', 'true', 'yes'].includes(value.toLowerCase()) });
+        else if (key === 'base_branch') actions.updateRepo(db, name, { base_branch: value });
+        else actions.updateRepo(db, name, { test_cmd: value });
+        console.log(`${name}: ${key} ${value || '(none)'}`);
       } else if (sub === 'ls' || !sub) {
         for (const r of db.listRepos()) {
           const goals = actions.repoDetail(db, r.id).goals.trim() ? 'goals ✓' : 'no goals';
