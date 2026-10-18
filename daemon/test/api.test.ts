@@ -8,6 +8,7 @@ import { after, before, test } from 'node:test';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-api-'));
 process.env.AGENTDECK_HOME = home;
+process.env.AGENTDECK_NO_NOTIFY = '1';
 const fake = join(import.meta.dirname, 'fake-claude.mjs');
 chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
@@ -95,4 +96,32 @@ test('cancel and retry', async () => {
   assert.equal(retried.status, 'queued');
   const cancelled = await (await api('/api/tasks/1/cancel', { method: 'POST' })).json();
   assert.equal(cancelled.result, 'cancelled');
+});
+
+test('settings round-trip with validation', async () => {
+  const s = await (await api('/api/settings')).json();
+  assert.equal(s.budget.weekly_max, 0.8);
+  assert.equal(s.notify.desktop, true);
+
+  const bad = await api('/api/settings', { method: 'POST', json: { budget: { weekly_max: 2 } } });
+  assert.equal(bad.status, 400);
+  const badTopic = await api('/api/settings', { method: 'POST', json: { notify: { ntfy_topic: 'has spaces' } } });
+  assert.equal(badTopic.status, 400);
+
+  const ok = await (
+    await api('/api/settings', { method: 'POST', json: { max_concurrent: 3, budget: { weekly_max: 0.7 }, notify: { events: ['blocked'], ntfy_topic: 'my-topic' } } })
+  ).json();
+  assert.equal(ok.max_concurrent, 3);
+  assert.equal(ok.budget.weekly_max, 0.7);
+  assert.equal(ok.budget.five_hour_max, 0.85, 'untouched keys keep their values');
+  assert.deepEqual(ok.notify.events, ['blocked']);
+
+  const st = await (await api('/api/status')).json();
+  assert.equal(typeof st.governor.allow, 'boolean');
+});
+
+test('test notification is recorded', async () => {
+  const res = await api('/api/notify/test', { method: 'POST' });
+  assert.equal(res.status, 200);
+  assert.equal(db.recentNotifications(1)[0].kind, 'test');
 });

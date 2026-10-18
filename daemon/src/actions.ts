@@ -3,6 +3,9 @@ import { existsSync, readFileSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
 import type { Db, Repo, Task } from './db.ts';
 import { currentBranch, isGitRepo } from './git.ts';
+import { BUDGET_KEYS, type Budget, decide, validateBudget } from './governor.ts';
+import { NOTIFY_KINDS, type NotifyKind, type NotifySettings, notify, notifySettings } from './notify.ts';
+import { type PlannerSettings, goalsPath, planRepo, plannerSettings, readGoals, writeGoals } from './planner.ts';
 
 export class ActionError extends Error {}
 
@@ -57,9 +60,56 @@ export function defaultTitle(prompt: string, max = 72): string {
 
 /** Returns 'cancelled' for idle tasks, 'stopping' when a running worker has been asked to stop. */
 export function cancelTask(db: Db, id: number): 'cancelled' | 'stopping' {
-  if (db.transitionTask(id, ['queued', 'blocked', 'failed'], 'cancelled')) return 'cancelled';
+  if (db.transitionTask(id, ['proposed', 'queued', 'blocked', 'failed'], 'cancelled')) return 'cancelled';
   if (db.transitionTask(id, ['running'], 'cancel_requested')) return 'stopping';
   throw new ActionError(`#${id} can't be cancelled from its current state`);
+}
+
+/** Accept a planner proposal into the queue. */
+export function approveTask(db: Db, id: number): void {
+  if (!db.transitionTask(id, ['proposed'], 'queued')) throw new ActionError(`#${id} is not a proposal`);
+}
+
+export function rejectTask(db: Db, id: number): void {
+  if (!db.transitionTask(id, ['proposed'], 'cancelled')) throw new ActionError(`#${id} is not a proposal`);
+}
+
+function repoOrThrow(db: Db, nameOrId: string | number) {
+  const repo = db.findRepo(String(nameOrId));
+  if (!repo) throw new ActionError(`no repo "${nameOrId}"`);
+  return repo;
+}
+
+export function repoDetail(db: Db, nameOrId: string | number) {
+  const repo = repoOrThrow(db, nameOrId);
+  return { ...repo, goals: readGoals(repo), goals_path: goalsPath(repo), planner_runs: db.plannerRuns(repo.id, 5) };
+}
+
+export function updateRepo(db: Db, nameOrId: string | number, patch: { goals?: string; auto_approve?: boolean; test_cmd?: string | null }) {
+  const repo = repoOrThrow(db, nameOrId);
+  if (patch.goals !== undefined) {
+    if (patch.goals.length > 20_000) throw new ActionError('goals are limited to 20,000 characters');
+    writeGoals(repo, patch.goals);
+  }
+  db.updateRepo(repo.id, {
+    ...(patch.auto_approve !== undefined ? { auto_approve: patch.auto_approve ? 1 : 0 } : {}),
+    ...(patch.test_cmd !== undefined ? { test_cmd: patch.test_cmd?.trim() || null } : {}),
+  });
+  return repoDetail(db, repo.id);
+}
+
+const planning = new Set<number>();
+
+/** Run the planner for one repo now, regardless of its schedule. */
+export async function planNow(db: Db, nameOrId: string | number) {
+  const repo = repoOrThrow(db, nameOrId);
+  if (planning.has(repo.id)) throw new ActionError(`already planning ${repo.name}`);
+  planning.add(repo.id);
+  try {
+    return await planRepo(db, repo);
+  } finally {
+    planning.delete(repo.id);
+  }
 }
 
 export function retryTask(db: Db, id: number): void {
@@ -86,7 +136,88 @@ export function status(db: Db) {
     max_concurrent: db.maxConcurrent(),
     counts,
     usage: db.usageWindows(),
+    governor: decide(db.usageWindows(), db.budget(), db.maxConcurrent()),
+    budget: db.budget(),
+    notifications: db.recentNotifications(10),
   };
+}
+
+export interface Settings {
+  max_concurrent: number;
+  budget: Budget;
+  notify: NotifySettings;
+  planner: PlannerSettings;
+}
+
+export function getSettings(db: Db): Settings {
+  return { max_concurrent: db.maxConcurrent(), budget: db.budget(), notify: notifySettings(db), planner: plannerSettings(db) };
+}
+
+/** Apply a partial settings update after validating all of it. */
+export function updateSettings(
+  db: Db,
+  patch: { max_concurrent?: number; budget?: Partial<Budget>; notify?: Partial<NotifySettings>; planner?: Partial<PlannerSettings> },
+): Settings {
+  const writes: [string, string][] = [];
+
+  if (patch.max_concurrent !== undefined) {
+    const n = Number(patch.max_concurrent);
+    if (!Number.isInteger(n) || n < 1 || n > 8) throw new ActionError('max_concurrent must be a whole number from 1 to 8');
+    writes.push(['max_concurrent', String(n)]);
+  }
+
+  if (patch.budget) {
+    const merged = { ...db.budget() };
+    for (const k of BUDGET_KEYS) if (patch.budget[k] !== undefined) merged[k] = Number(patch.budget[k]);
+    const err = validateBudget(merged);
+    if (err) throw new ActionError(err);
+    for (const k of BUDGET_KEYS) writes.push([k, String(merged[k])]);
+  }
+
+  if (patch.notify) {
+    const n = patch.notify;
+    if (n.desktop !== undefined) writes.push(['notify_desktop', n.desktop ? '1' : '0']);
+    if (n.events !== undefined) {
+      const bad = n.events.filter((e) => !NOTIFY_KINDS.includes(e as NotifyKind));
+      if (bad.length) throw new ActionError(`unknown notification events: ${bad.join(', ')}`);
+      writes.push(['notify_events', n.events.join(',')]);
+    }
+    if (n.ntfy_topic !== undefined) {
+      const topic = n.ntfy_topic.trim();
+      if (topic && !/^[\w-]{1,64}$/.test(topic)) throw new ActionError('ntfy topic: letters, digits, - and _ only');
+      writes.push(['ntfy_topic', topic]);
+    }
+    if (n.ntfy_server !== undefined) {
+      if (!/^https?:\/\/\S+$/.test(n.ntfy_server)) throw new ActionError('ntfy server must be an http(s) URL');
+      writes.push(['ntfy_server', n.ntfy_server]);
+    }
+  }
+
+  if (patch.planner) {
+    const p = patch.planner;
+    if (p.enabled !== undefined) writes.push(['planner_enabled', p.enabled ? '1' : '0']);
+    if (p.interval_hours !== undefined) {
+      const h = Number(p.interval_hours);
+      if (!(h >= 0.25 && h <= 168)) throw new ActionError('planner interval must be between 0.25 and 168 hours');
+      writes.push(['planner_interval_hours', String(h)]);
+    }
+    if (p.max_tasks !== undefined) {
+      const n = Number(p.max_tasks);
+      if (!Number.isInteger(n) || n < 1 || n > 10) throw new ActionError('planner max tasks must be a whole number from 1 to 10');
+      writes.push(['planner_max_tasks', String(n)]);
+    }
+    if (p.model !== undefined) {
+      if (!['haiku', 'sonnet', 'opus'].includes(p.model)) throw new ActionError('planner model must be haiku, sonnet or opus');
+      writes.push(['planner_model', p.model]);
+    }
+  }
+
+  for (const [k, v] of writes) db.setSetting(k, v);
+  return getSettings(db);
+}
+
+export function sendTestNotification(db: Db): Promise<void> {
+  return notify(db, { kind: 'test', title: 'Test notification', body: 'Notifications from AgentDeck are working.' });
 }
 
 /** A run's stream-json log reduced to what a person wants to read. */

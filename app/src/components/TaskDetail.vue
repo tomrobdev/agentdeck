@@ -4,7 +4,7 @@ import { type TaskDetail, ago, fmtTokens, totalTokens } from '../api';
 import LogView from './LogView.vue';
 
 const props = defineProps<{ task: TaskDetail }>();
-defineEmits<{ cancel: []; retry: [] }>();
+defineEmits<{ cancel: []; retry: []; approve: []; reject: [] }>();
 
 const attempt = ref<number | null>(null);
 const showPrompt = ref(false);
@@ -24,6 +24,7 @@ watch(latest, (now, before) => {
 const run = computed(() => props.task.runs.find((r) => r.attempt === attempt.value));
 const live = computed(() => props.task.status === 'running' && attempt.value === latest.value);
 const canCancel = computed(() => ['queued', 'running', 'blocked', 'failed'].includes(props.task.status));
+const proposed = computed(() => props.task.status === 'proposed');
 const canRetry = computed(() => ['blocked', 'failed', 'cancelled', 'done'].includes(props.task.status));
 const statusLabel = computed(() => (props.task.status === 'cancel_requested' ? 'stopping' : props.task.status));
 
@@ -39,14 +40,24 @@ async function copy(text: string, what: string) {
     <div class="head">
       <div>
         <h2>{{ task.title }}</h2>
-        <div class="muted">#{{ task.id }} · {{ task.repo }} · {{ task.model }} · created {{ ago(task.created_at) }}</div>
+        <div class="muted">
+          #{{ task.id }} · {{ task.repo }} · {{ task.model }} · {{ task.source === 'planner' ? 'proposed by the planner' : 'created' }}
+          {{ ago(task.created_at) }}
+        </div>
       </div>
       <span class="pill" :class="`s-${task.status}`"><span class="dot" />{{ statusLabel }}</span>
       <div class="spacer" />
+      <template v-if="proposed">
+        <button @click="$emit('reject')">Reject</button>
+        <button class="primary" @click="$emit('approve')">✓ Approve</button>
+      </template>
       <button v-if="canRetry" @click="$emit('retry')">↻ Retry</button>
       <button v-if="canCancel" @click="$emit('cancel')">{{ task.status === 'running' ? '■ Stop' : '✕ Cancel' }}</button>
     </div>
 
+    <div v-if="proposed" class="callout s-proposed">
+      The planner suggested this task. Read the prompt below, then approve it to queue it or reject it.
+    </div>
     <div v-if="task.blocked_reason && (task.status === 'blocked' || task.status === 'failed')" class="callout" :class="`s-${task.status}`">
       {{ task.blocked_reason }}
     </div>
@@ -70,7 +81,7 @@ async function copy(text: string, what: string) {
       </template>
       <dt>Prompt</dt>
       <dd>
-        <div class="prompt" :class="{ clamp: !showPrompt }" @click="showPrompt = !showPrompt">{{ task.prompt }}</div>
+        <div class="prompt" :class="{ clamp: !showPrompt && !proposed }" @click="showPrompt = !showPrompt">{{ task.prompt }}</div>
       </dd>
     </dl>
 
@@ -97,7 +108,7 @@ async function copy(text: string, what: string) {
       <div class="text">{{ run.result_text }}</div>
     </details>
 
-    <LogView :task-id="task.id" :attempt="attempt" :live="live" />
+    <LogView v-if="!proposed" :task-id="task.id" :attempt="attempt" :live="live" />
   </section>
 </template>
 

@@ -62,6 +62,7 @@ button {
   border-radius: 6px;
   padding: 4px 10px;
   cursor: pointer;
+  white-space: nowrap;
 }
 button:hover:not(:disabled) {
   border-color: var(--muted);
@@ -111,6 +112,7 @@ pre {
   border-radius: 50%;
   flex: none;
 }
+.s-proposed { --c: var(--accent); }
 .s-queued { --c: var(--queued); }
 .s-running, .s-cancel_requested { --c: var(--running); }
 .s-done { --c: var(--done); }
