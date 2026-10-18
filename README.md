@@ -7,7 +7,8 @@ Always-on agent manager for macOS. A background daemon works through a queue of 
 Needs Node 24+ (runs the TypeScript directly), git, and a logged-in `claude` CLI.
 
 ```sh
-cd daemon && npm install && npm link     # puts `agentdeck` on your PATH
+pnpm install                             # whole workspace (app + daemon)
+cd daemon && npm link                    # puts `agentdeck` on your PATH
 
 agentdeck repo add ~/code/myproject --test "npm test"
 agentdeck add --repo myproject "Add input validation to the signup form, with tests"
@@ -27,10 +28,10 @@ Try it on a throwaway project first: `scripts/make-demo-repo.sh` creates one at 
 `agentdeck daemon` also serves a local API on `http://127.0.0.1:4317`, which the dashboard uses. It accepts browser requests only from the Tauri webview and the Vite dev server.
 
 ```sh
-cd app && npm install
-npm run tauri dev                                  # native window with hot reload
-npm run tauri build -- --bundles app               # → src-tauri/target/release/bundle/macos/AgentDeck.app
-npm run dev                                        # or just the UI in a browser at http://localhost:1420
+pnpm dev                                           # dev daemon (restarts on edits) + native window; just the window if the service is running
+pnpm dev:app                                       # just the window, against an already-running daemon
+pnpm build                                         # → app/src-tauri/target/release/bundle/macos/AgentDeck.app
+pnpm --filter agentdeck-app dev                    # or just the UI in a browser at http://localhost:1420
 ```
 
 The dashboard has the queue (Active / Needs you / Done), task detail with every run and its final message, a live log streamed over SSE, a pause/resume toggle, 5h/7d usage meters, and forms for new tasks and repos. Closing the window hides it to the menu-bar tray, and the daemon keeps working either way.
@@ -73,12 +74,12 @@ The agent runs `daemon/src/cli.ts` from this checkout, so keep the checkout on `
 
 Every Claude run reports live 5-hour and 7-day utilization (`rate_limit_event`). Before starting new work, the scheduler asks the governor:
 
-| Setting | Default | Effect |
-|---|---|---|
-| `five_hour_soft` | 60% | Above this, run one task at a time |
-| `five_hour_max` | 85% | Above this, hold new tasks until the 5h window resets |
-| `weekly_max` | 80% | Never plan past this share of the 7-day window |
-| `pace_slack` | 10% | How far ahead of even pace it may run |
+| Setting          | Default | Effect                                                |
+| ---------------- | ------- | ----------------------------------------------------- |
+| `five_hour_soft` | 60%     | Above this, run one task at a time                    |
+| `five_hour_max`  | 85%     | Above this, hold new tasks until the 5h window resets |
+| `weekly_max`     | 80%     | Never plan past this share of the 7-day window        |
+| `pace_slack`     | 10%     | How far ahead of even pace it may run                 |
 
 Weekly pacing is linear. The allowance grows from 0 at the start of the 7-day window to `weekly_max` at reset, plus the slack. If you're ahead of pace, queued work waits until the allowance catches up, and the dashboard shows when that will be. Running tasks are never interrupted, and the headroom stays free for your own interactive Claude use.
 
@@ -99,7 +100,13 @@ daemon/   Node + TypeScript: SQLite queue, scheduler, workers, CLI, local API
 app/      Tauri 2 + Vue 3 dashboard
 ```
 
-`cd daemon && npm test` runs the end-to-end tests with real git worktrees and a fake `claude` binary.
+`pnpm test` runs the end-to-end tests with real git worktrees and a fake `claude` binary.
+
+```sh
+pnpm check                                         # format check + typecheck (app, daemon) + tests
+pnpm format                                        # Prettier, whole repo
+pnpm check:rust                                    # cargo fmt --check + clippy on the Tauri shell
+```
 
 ## Milestones
 

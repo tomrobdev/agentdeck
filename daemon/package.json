@@ -12,8 +12,10 @@
   },
   "scripts": {
     "start": "node src/cli.ts daemon",
+    "dev": "node --watch-path=src src/cli.ts daemon",
     "typecheck": "tsc",
-    "test": "AGENTDECK_NO_NOTIFY=1 node --test test/"
+    "test": "AGENTDECK_NO_NOTIFY=1 node --test test/",
+    "test:watch": "AGENTDECK_NO_NOTIFY=1 node --test --watch test/"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
