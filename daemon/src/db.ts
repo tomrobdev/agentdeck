@@ -297,7 +297,10 @@ export function openDb(path = DB_PATH) {
     listRepos(): Repo[] {
       return db.prepare('SELECT * FROM repos ORDER BY name').all() as unknown as Repo[];
     },
-    updateRepo(id: number, fields: Partial<Pick<Repo, 'auto_approve' | 'test_cmd' | 'setup_cmd' | 'planned_at' | 'base_branch' | 'pr_mode'>>): void {
+    updateRepo(
+      id: number,
+      fields: Partial<Pick<Repo, 'auto_approve' | 'test_cmd' | 'setup_cmd' | 'planned_at' | 'base_branch' | 'pr_mode'>>,
+    ): void {
       const keys = Object.keys(fields) as (keyof typeof fields)[];
       if (!keys.length) return;
       db.prepare(`UPDATE repos SET ${keys.map((k) => `${k} = ?`).join(', ')} WHERE id = ?`).run(...keys.map((k) => fields[k] ?? null), id);
@@ -449,7 +452,9 @@ export function openDb(path = DB_PATH) {
     },
     /** Done tasks whose pull request is still open, for the state refresh. */
     openPrTasks(): Task[] {
-      return db.prepare("SELECT * FROM tasks WHERE status = 'done' AND pr_url IS NOT NULL AND pr_state = 'open'").all() as unknown as Task[];
+      return db
+        .prepare("SELECT * FROM tasks WHERE status = 'done' AND pr_url IS NOT NULL AND pr_state = 'open'")
+        .all() as unknown as Task[];
     },
     updateTask(
       id: number,
