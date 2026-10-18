@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watchEffect } from 'vue';
-import { ApiError, type Repo, type Status, type Task, type TaskDetail as Detail, api, describeState } from './api';
+import { ApiError, type Repo, type Status, type TaskSummary, type TaskDetail as Detail, api, describeState } from './api';
 import { setTrayStatus } from './native';
 import NewTaskForm from './components/NewTaskForm.vue';
 import ReposPanel from './components/ReposPanel.vue';
@@ -12,7 +12,7 @@ import TaskList from './components/TaskList.vue';
 const POLL_MS = 2000;
 
 const status = ref<Status | null>(null);
-const tasks = ref<Task[]>([]);
+const tasks = ref<TaskSummary[]>([]);
 const repos = ref<Repo[]>([]);
 const selectedId = ref<number | null>(null);
 const detail = ref<Detail | null>(null);

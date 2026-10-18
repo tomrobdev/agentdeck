@@ -87,9 +87,14 @@ export function startApi(db: Db, port = API_PORT): Promise<Server> {
       'GET',
       /^\/api\/tasks$/,
       (req) => {
-        const status = new URL(req.url!, 'http://x').searchParams.get('status') as TaskStatus | null;
+        const q = new URL(req.url!, 'http://x').searchParams;
+        const status = q.get('status') as TaskStatus | null;
+        const limit = Math.min(Math.max(Math.floor(Number(q.get('limit'))) || 200, 1), 1000);
+        const before = Number(q.get('before')) || undefined;
         const names = new Map(db.listRepos().map((r) => [r.id, r.name]));
-        return db.listTasks(status ?? undefined).map((t) => ({ ...t, repo: names.get(t.repo_id) ?? null }));
+        return db
+          .listTaskSummaries({ status: status ?? undefined, limit, before })
+          .map((t) => ({ ...t, repo: names.get(t.repo_id) ?? null }));
       },
     ],
     ['POST', /^\/api\/tasks$/, (_q, _s, _p, b) => taskDetail(db, actions.addTask(db, b).id)],

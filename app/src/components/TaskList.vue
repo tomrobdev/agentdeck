@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { type Task, type TaskStatus, ago } from '../api';
+import { type TaskSummary, type TaskStatus, ago } from '../api';
 
-const props = defineProps<{ tasks: Task[]; selected: number | null }>();
+const props = defineProps<{ tasks: TaskSummary[]; selected: number | null }>();
 defineEmits<{ select: [id: number] }>();
 
 const FILTERS: { key: string; label: string; match: TaskStatus[] | null }[] = [

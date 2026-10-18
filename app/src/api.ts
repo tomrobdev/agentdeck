@@ -43,12 +43,12 @@ export interface ServiceStatus {
   state: string | null;
 }
 
-export interface Task {
+/** A task as returned by the list endpoint: everything except the prompt. */
+export interface TaskSummary {
   id: number;
   repo_id: number;
   repo: string | null;
   title: string;
-  prompt: string;
   status: TaskStatus;
   priority: number;
   model: string;
@@ -61,6 +61,10 @@ export interface Task {
   source: 'manual' | 'planner';
   created_at: string;
   updated_at: string;
+}
+
+export interface Task extends TaskSummary {
+  prompt: string;
 }
 
 export interface Run {
@@ -181,7 +185,7 @@ export const api = {
   approve: (id: number) => call<TaskDetail>(`/api/tasks/${id}/approve`, { method: 'POST' }),
   reject: (id: number) => call<TaskDetail>(`/api/tasks/${id}/reject`, { method: 'POST' }),
   service: () => call<ServiceStatus>('/api/service'),
-  tasks: () => call<Task[]>('/api/tasks'),
+  tasks: () => call<TaskSummary[]>('/api/tasks'),
   task: (id: number) => call<TaskDetail>(`/api/tasks/${id}`),
   addTask: (t: { repo: string; prompt: string; title?: string; model?: string; priority?: number; max_turns?: number }) =>
     call<TaskDetail>('/api/tasks', { method: 'POST', json: t }),

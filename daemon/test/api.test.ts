@@ -133,3 +133,51 @@ test('test notification is recorded', async () => {
   assert.equal(res.status, 200);
   assert.equal(db.recentNotifications(1)[0].kind, 'test');
 });
+
+test('task list returns summaries, pages with limit/before, and always includes active tasks', async () => {
+  const ids: number[] = [];
+  const active = await (await api('/api/tasks', { method: 'POST', json: { repo: 'demo', prompt: 'still queued' } })).json();
+  for (let i = 0; i < 5; i++) {
+    const t = await (await api('/api/tasks', { method: 'POST', json: { repo: 'demo', prompt: `secret prompt ${i}` } })).json();
+    await api(`/api/tasks/${t.id}/cancel`, { method: 'POST' });
+    ids.push(t.id);
+  }
+  const list = (path: string) => api(path).then((r) => r.json() as Promise<any[]>);
+
+  const all = await list('/api/tasks');
+  for (const t of all) {
+    assert.equal('prompt' in t, false, 'list rows omit the prompt');
+    assert.equal(t.repo, 'demo');
+  }
+  assert.equal((await (await api(`/api/tasks/${active.id}`)).json()).prompt, 'still queued', 'detail keeps the prompt');
+
+  // limit counts the newest tasks; active ones ride along on top.
+  const limited = await list('/api/tasks?limit=2');
+  assert.deepEqual(
+    limited.map((t) => t.id),
+    [ids[4], ids[3], active.id],
+  );
+
+  // before pages to older tasks, without repeating active ones.
+  const older = await list(`/api/tasks?limit=2&before=${ids[3]}`);
+  assert.deepEqual(
+    older.map((t) => t.id),
+    [ids[2], ids[1]],
+  );
+
+  // status filter composes with limit and before.
+  const cancelled = await list(`/api/tasks?status=cancelled&limit=2&before=${ids[3]}`);
+  assert.deepEqual(
+    cancelled.map((t) => t.id),
+    [ids[2], ids[1]],
+  );
+  const queued = await list('/api/tasks?status=queued&limit=1');
+  assert.deepEqual(
+    queued.map((t) => t.id),
+    [active.id],
+  );
+
+  // limit is clamped to 1..1000 and bad values fall back to the default.
+  assert.equal((await list('/api/tasks?limit=0')).length > 0, true);
+  assert.equal((await list('/api/tasks?limit=abc')).length, all.length);
+});

@@ -54,6 +54,11 @@ export interface Task {
   updated_at: string;
 }
 
+export type TaskSummary = Omit<Task, 'prompt'>;
+
+const SUMMARY_COLUMNS =
+  'id, repo_id, title, status, priority, model, max_turns, attempts, max_attempts, branch, worktree, blocked_reason, source, restarts, created_at, updated_at';
+
 export interface Run {
   id: number;
   task_id: number;
@@ -331,6 +336,23 @@ export function openDb(path = DB_PATH) {
     hasQueued(): boolean {
       const row = db.prepare("SELECT EXISTS(SELECT 1 FROM tasks WHERE status = 'queued') AS q").get() as { q: number };
       return row.q === 1;
+    },
+    /**
+     * Tasks without their prompt, newest first. Returns the `limit` newest tasks older than `before`
+     * (all tasks when omitted). On the first page (no `before`) every active task is included on top
+     * of the limit, so views of in-flight work stay complete. Later pages hold older tasks only.
+     */
+    listTaskSummaries(opts: { status?: TaskStatus; limit: number; before?: number }): TaskSummary[] {
+      const { status = null, limit, before = null } = opts;
+      return db
+        .prepare(
+          `SELECT ${SUMMARY_COLUMNS} FROM tasks
+           WHERE (? IS NULL OR status = ?)
+             AND (id IN (SELECT id FROM tasks WHERE (? IS NULL OR status = ?) AND (? IS NULL OR id < ?) ORDER BY id DESC LIMIT ?)
+                  OR (? IS NULL AND status IN ('proposed', 'queued', 'running', 'cancel_requested')))
+           ORDER BY id DESC`,
+        )
+        .all(status, status, status, status, before, before, limit, before) as unknown as TaskSummary[];
     },
     countRunning(): number {
       return (db.prepare("SELECT COUNT(*) AS n FROM tasks WHERE status IN ('running', 'cancel_requested')").get() as { n: number }).n;
