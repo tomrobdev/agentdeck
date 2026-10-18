@@ -13,9 +13,9 @@ const fake = join(import.meta.dirname, 'fake-claude.mjs');
 chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
 
-const { openDb } = await import('../src/db.ts');
-const { startApi } = await import('../src/api.ts');
-const { Scheduler } = await import('../src/scheduler.ts');
+const { openDb } = await import('../src/db/index.ts');
+const { startApi } = await import('../src/api/server.ts');
+const { Scheduler } = await import('../src/application/scheduler.ts');
 
 const db = openDb(join(home, 'test.db'));
 const server = await startApi(db, 0);

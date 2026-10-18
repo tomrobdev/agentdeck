@@ -19,10 +19,13 @@ Use these words in code, logs and UI.
 
 ## Boundaries
 
-- **Domain logic is pure:** no I/O. This covers task lifecycle transitions, governor decisions and prompt building. It lives in `daemon/src/domain/` and `governor.ts`.
-- **SQL lives only in `db.ts`.** Every task status change is a guarded `UPDATE … WHERE status IN (…)`, never a raw status write.
-- **Adapters hold the I/O:** `claude.ts`, `git.ts`, `notify.ts`, `service.ts`.
-- **Wiring:** `scheduler.ts`, `worker.ts`, `actions.ts`, `api.ts` and `cli.ts` connect domain and adapters.
+`daemon/src/` is layered. Imports point down the list: an outer layer may import an inner one, never the reverse.
+
+- **`domain/` is pure:** no I/O and no imports from other layers. It holds the entities (`Repo`, `Task`, `Run`, `PlannerRun`) and the decisions: task lifecycle, governor, prompts, tool rules, toolchain detection, planner proposals and PR bodies. One folder per aggregate: `task/`, `repo/`, `run/`, `planner/`, `usage/`, `pull-request/`.
+- **SQL lives only in `db/`,** one store per table group merged into one `Db` in `db/index.ts`. The schema and migrations are in `db/schema.ts`. Every task status change is a guarded `UPDATE … WHERE status IN (…)` (`applyEvent` in `db/tasks.ts`), never a raw status write.
+- **`adapters/` hold the I/O** (claude, processes, git, github, shell, notify, service, run logs, goals files). They import `domain/` and `config.ts` only, never `db/` or `application/`: they report through callbacks like `runClaude`'s `onUsage`.
+- **`application/` holds the use cases,** connecting domain, db and adapters: `scheduler.ts`, `worker.ts`, `planner.ts`, `pull-requests.ts`, `doctor.ts`, and the person-facing use cases in `repos.ts`, `tasks.ts` and `settings.ts`. `actions.ts` re-exports those for the CLI and the API.
+- **Entry points:** `api/` (the dashboard's HTTP API) and `cli/` (one file per command group). `src/cli.ts` stays put: the installed launchd plist runs it.
 - **Dashboard types:** the dashboard mirrors daemon types in `app/src/api.ts`, so keep them in sync.
 
 ## Rules

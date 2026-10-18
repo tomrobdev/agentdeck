@@ -8,7 +8,7 @@ import { after, test } from 'node:test';
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-db-'));
 process.env.AGENTDECK_HOME = home;
 
-const { openDb } = await import('../src/db.ts');
+const { openDb } = await import('../src/db/index.ts');
 const db = openDb(join(home, 'test.db'));
 
 after(() => db.close());
@@ -48,7 +48,7 @@ test('a database already at version 1 gets the runs_task index on open', async (
   const { mkdtempSync } = await import('node:fs');
   const { tmpdir } = await import('node:os');
   const { join } = await import('node:path');
-  const { MIGRATIONS, migrate } = await import('../src/db.ts');
+  const { MIGRATIONS, migrate } = await import('../src/db/index.ts');
   const path = join(mkdtempSync(join(tmpdir(), 'agentdeck-db-')), 'v1.db');
   const v1 = new DatabaseSync(path);
   migrate(v1, MIGRATIONS.slice(0, 1));
