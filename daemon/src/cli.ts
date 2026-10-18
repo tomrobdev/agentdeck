@@ -80,7 +80,8 @@ function taskId(arg: string | undefined): number {
 
 function fmtTask(t: Task, repoName: string, db?: Db): string {
   let extra = t.blocked_reason && (t.status === 'blocked' || t.status === 'failed') ? `  — ${t.blocked_reason}` : '';
-  if (t.status === 'queued' && t.after_task !== null && db && isWaiting(t, db.getTask(t.after_task))) extra += `  waiting on #${t.after_task}`;
+  if (t.status === 'queued' && t.after_task !== null && db && isWaiting(t, db.getTask(t.after_task)))
+    extra += `  waiting on #${t.after_task}`;
   if (t.pr_url) extra += `  PR ${t.pr_state ?? 'open'}: ${t.pr_url}`;
   return `${STATUS_ICON[t.status]} #${String(t.id).padEnd(4)} ${t.status.padEnd(9)} p${t.priority}  ${repoName.padEnd(14)} ${t.title}${extra}`;
 }
@@ -174,7 +175,9 @@ async function main(argv: string[]): Promise<void> {
       } else if (sub === 'set') {
         const [, name, key, value = ''] = rest;
         if (!name || !['auto_approve', 'base_branch', 'test_cmd', 'setup_cmd', 'pr_mode'].includes(key))
-          die('usage: agentdeck repo set <repo> auto_approve on|off | base_branch <branch> | test_cmd "<cmd>" | setup_cmd "<cmd>" | pr_mode off|draft|ready');
+          die(
+            'usage: agentdeck repo set <repo> auto_approve on|off | base_branch <branch> | test_cmd "<cmd>" | setup_cmd "<cmd>" | pr_mode off|draft|ready',
+          );
         if (key === 'pr_mode') actions.updateRepo(db, name, { pr_mode: value as PrMode });
         else if (key === 'auto_approve')
           actions.updateRepo(db, name, { auto_approve: ['1', 'on', 'true', 'yes'].includes(value.toLowerCase()) });

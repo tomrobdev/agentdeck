@@ -207,8 +207,7 @@ export const api = {
   updateRepo: (
     id: number,
     patch: { goals?: string; auto_approve?: boolean; test_cmd?: string | null; setup_cmd?: string | null; pr_mode?: PrMode },
-  ) =>
-    call<RepoDetail>(`/api/repos/${id}`, { method: 'POST', json: patch }),
+  ) => call<RepoDetail>(`/api/repos/${id}`, { method: 'POST', json: patch }),
   plan: (id: number) => call<PlanResult>(`/api/repos/${id}/plan`, { method: 'POST' }),
   doctor: (id: number) => call<DoctorReport>(`/api/repos/${id}/doctor`, { method: 'POST' }),
   resumeRepo: (id: number) => call<Repo>(`/api/repos/${id}/resume`, { method: 'POST' }),
@@ -221,8 +220,15 @@ export const api = {
   service: () => call<ServiceStatus>('/api/service'),
   tasks: () => call<TaskSummary[]>('/api/tasks'),
   task: (id: number) => call<TaskDetail>(`/api/tasks/${id}`),
-  addTask: (t: { repo: string; prompt: string; title?: string; model?: string; priority?: number; max_turns?: number; after_task?: number }) =>
-    call<TaskDetail>('/api/tasks', { method: 'POST', json: t }),
+  addTask: (t: {
+    repo: string;
+    prompt: string;
+    title?: string;
+    model?: string;
+    priority?: number;
+    max_turns?: number;
+    after_task?: number;
+  }) => call<TaskDetail>('/api/tasks', { method: 'POST', json: t }),
   cancel: (id: number) => call<{ result: string }>(`/api/tasks/${id}/cancel`, { method: 'POST' }),
   retry: (id: number) => call<TaskDetail>(`/api/tasks/${id}/retry`, { method: 'POST' }),
   logUrl: (id: number, attempt?: number) => `${API_BASE}/api/tasks/${id}/log${attempt ? `?attempt=${attempt}` : ''}`,

@@ -36,7 +36,19 @@ export const github = {
 
   /** `gh pr create` in the worktree; returns the new PR's URL. */
   async createPr(pr: CreatePr): Promise<string> {
-    const args = ['pr', 'create', '--base', pr.base, '--head', pr.head, '--title', pr.title, ...(pr.draft ? ['--draft'] : []), '--body', pr.body];
+    const args = [
+      'pr',
+      'create',
+      '--base',
+      pr.base,
+      '--head',
+      pr.head,
+      '--title',
+      pr.title,
+      ...(pr.draft ? ['--draft'] : []),
+      '--body',
+      pr.body,
+    ];
     try {
       const { stdout } = await exec('gh', args, { cwd: pr.cwd, timeout: 60_000 });
       const url = stdout.trim().split('\n').at(-1) ?? '';
