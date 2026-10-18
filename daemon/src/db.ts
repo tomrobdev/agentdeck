@@ -154,23 +154,53 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 `;
 
-/** Columns added after the first release; CREATE TABLE IF NOT EXISTS won't add them to old databases. */
-const ADDED_COLUMNS: [table: string, column: string, ddl: string][] = [
-  ['repos', 'auto_approve', 'INTEGER NOT NULL DEFAULT 0'],
-  ['repos', 'planned_at', 'TEXT'],
-  ['tasks', 'source', "TEXT NOT NULL DEFAULT 'manual'"],
-  ['tasks', 'restarts', 'INTEGER NOT NULL DEFAULT 0'],
-  ['runs', 'pid', 'INTEGER'],
-  ['planner_runs', 'pid', 'INTEGER'],
-];
-
 /** A task requeued by this many daemon restarts is failed instead, in case the task itself kills the daemon. */
 export const MAX_RESTARTS = 3;
 
-function migrate(db: DatabaseSync): void {
-  for (const [table, column, ddl] of ADDED_COLUMNS) {
-    const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
-    if (!cols.some((c) => c.name === column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
+export type Migration = string | ((db: DatabaseSync) => void);
+
+function addColumn(db: DatabaseSync, table: string, column: string, ddl: string): void {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  if (!cols.some((c) => c.name === column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
+}
+
+/**
+ * Ordered schema migrations; the database's `PRAGMA user_version` is the number of steps already applied.
+ * Only append: never edit or reorder a step that has shipped.
+ */
+export const MIGRATIONS: Migration[] = [
+  // 1: baseline. Brings a database from any earlier (unversioned) release up to date; the column
+  // additions are idempotent because old databases may already have some of them.
+  (db) => {
+    db.exec(SCHEMA);
+    addColumn(db, 'repos', 'auto_approve', 'INTEGER NOT NULL DEFAULT 0');
+    addColumn(db, 'repos', 'planned_at', 'TEXT');
+    addColumn(db, 'tasks', 'source', "TEXT NOT NULL DEFAULT 'manual'");
+    addColumn(db, 'tasks', 'restarts', 'INTEGER NOT NULL DEFAULT 0');
+    addColumn(db, 'runs', 'pid', 'INTEGER');
+    addColumn(db, 'planner_runs', 'pid', 'INTEGER');
+  },
+];
+
+/** Runs every step above the database's user_version in one transaction; returns how many ran. */
+export function migrate(db: DatabaseSync, steps: Migration[] = MIGRATIONS): number {
+  const current = (): number => (db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version;
+  if (current() >= steps.length) return 0;
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    // Re-read under the write lock in case another process migrated first.
+    const from = current();
+    for (let i = from; i < steps.length; i++) {
+      const step = steps[i];
+      if (typeof step === 'string') db.exec(step);
+      else step(db);
+    }
+    if (from < steps.length) db.exec(`PRAGMA user_version = ${steps.length}`);
+    db.exec('COMMIT');
+    return steps.length - from;
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
   }
 }
 
@@ -180,7 +210,6 @@ export function openDb(path = DB_PATH) {
   if (path === DB_PATH) ensureDirs();
   const db = new DatabaseSync(path);
   db.exec('PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000; PRAGMA foreign_keys = ON;');
-  db.exec(SCHEMA);
   migrate(db);
 
   const now = "datetime('now')";
