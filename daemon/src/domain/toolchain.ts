@@ -32,7 +32,23 @@ const SETUP: Record<Toolchain, string> = {
 const JS: Toolchain[] = ['pnpm', 'yarn', 'npm'];
 
 /** Package manager commands a script name would shadow; a rule for them could install or publish. */
-const PM_BUILTINS = new Set(['install', 'i', 'ci', 'add', 'update', 'up', 'upgrade', 'remove', 'rm', 'uninstall', 'link', 'publish', 'dlx', 'exec', 'x']);
+const PM_BUILTINS = new Set([
+  'install',
+  'i',
+  'ci',
+  'add',
+  'update',
+  'up',
+  'upgrade',
+  'remove',
+  'rm',
+  'uninstall',
+  'link',
+  'publish',
+  'dlx',
+  'exec',
+  'x',
+]);
 
 /** Script names that are safe to put inside a `Bash(...)` rule. */
 const SCRIPT_NAME = /^[\w:.@/-]+$/;

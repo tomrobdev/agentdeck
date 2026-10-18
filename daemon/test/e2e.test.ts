@@ -227,11 +227,23 @@ test('repo add detects the toolchain; repos registered before detection get its 
   assert.equal(repo.toolchain, 'pnpm');
   assert.equal(repo.setup_cmd, 'pnpm install --frozen-lockfile --prefer-offline');
   assert.equal(repo.test_cmd, 'pnpm test');
-  const tools = JSON.parse(repo.allowed_tools!);
-  assert.deepEqual(tools, [...DEFAULT_ALLOWED_TOOLS, 'Bash(pnpm test*)', 'Bash(pnpm lint*)', 'Bash(pnpm run *)']);
+  assert.equal(repo.allowed_tools, null, 'rules are not snapshotted, so they follow the scripts');
+  const tools = [...DEFAULT_ALLOWED_TOOLS, 'Bash(pnpm test*)', 'Bash(pnpm lint*)', 'Bash(pnpm run *)'];
+  assert.deepEqual(effectiveTools(repo, js), tools);
+  // A script added later is allowed without re-registering the repo.
+  writeFileSync(join(js, 'package.json'), JSON.stringify({ scripts: { test: 'node --test', lint: 'eslint .', typecheck: 'tsc' } }));
+  assert.ok(effectiveTools(repo, js).includes('Bash(pnpm typecheck*)'));
+  writeFileSync(join(js, 'package.json'), JSON.stringify({ scripts: { test: 'node --test', lint: 'eslint .' } }));
   assert.ok(!DEFAULT_ALLOWED_TOOLS.some((t) => /npm/.test(t)), 'package manager rules come from the toolchain');
 
-  const given = await addRepo(db, { path: jsRepo('js-given'), name: 'js-given', base: 'main', test: 'make check', setup: 'true', tools: ['Read'] });
+  const given = await addRepo(db, {
+    path: jsRepo('js-given'),
+    name: 'js-given',
+    base: 'main',
+    test: 'make check',
+    setup: 'true',
+    tools: ['Read'],
+  });
   assert.deepEqual([given.test_cmd, given.setup_cmd, given.allowed_tools], ['make check', 'true', '["Read"]']);
 
   const legacy = { ...repo, allowed_tools: null, toolchain: null };

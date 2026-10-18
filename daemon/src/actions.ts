@@ -2,7 +2,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
 import type { Db, Repo, Task } from './db.ts';
-import { DEFAULT_ALLOWED_TOOLS } from './config.ts';
 import { detectToolchain } from './domain/toolchain.ts';
 import { currentBranch, isGitRepo, rootInfo } from './git.ts';
 import { BUDGET_KEYS, type Budget, decide, validateBudget } from './governor.ts';
@@ -26,7 +25,8 @@ export async function addRepo(
       path: abs,
       base_branch: input.base || (await currentBranch(abs)),
       test_cmd: input.test || detected?.test_cmd || null,
-      allowed_tools: input.tools?.length ? input.tools : [...DEFAULT_ALLOWED_TOOLS, ...(detected?.tools ?? [])],
+      // Left null unless given, so the rules follow the repo's scripts as they change (worker.effectiveTools).
+      allowed_tools: input.tools?.length ? input.tools : null,
       toolchain: detected?.toolchain ?? null,
       setup_cmd: input.setup || detected?.setup_cmd || null,
     });
