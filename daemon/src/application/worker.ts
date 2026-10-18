@@ -10,6 +10,7 @@ import type { Db } from '../db/index.ts';
 import { buildPrompt, claudeArgs } from '../domain/run/prompt.ts';
 import { type Run, type WorkerResult, firstDenial, parseStatus } from '../domain/run/run.ts';
 import type { Task } from '../domain/task/task.ts';
+import { warnStuckDependents } from './dependencies.ts';
 import { notifyLater } from './notifications.ts';
 import { pauseRepo } from './pause.ts';
 import { openPullRequest } from './pull-requests.ts';
@@ -153,5 +154,6 @@ async function finish(db: Db, task: Task, runId: number | null, res: WorkerResul
     if (pr.error) body = `${body} Could not open a PR: ${pr.error}`;
     notifyLater(db, { kind: final.status, title: `#${task.id} ${final.status}: ${task.title}`, body, task_id: task.id });
   }
+  warnStuckDependents(db, task.id);
   return res;
 }

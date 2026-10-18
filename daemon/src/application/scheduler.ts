@@ -6,6 +6,7 @@ import { DEFAULTS } from '../config.ts';
 import type { Db } from '../db/index.ts';
 import { MAX_RESTARTS } from '../domain/task/lifecycle.ts';
 import { decide } from '../domain/usage/governor.ts';
+import { warnStuckDependents } from './dependencies.ts';
 import { notifyLater } from './notifications.ts';
 import { planNow, plannerDue } from './planner.ts';
 import { PR_REFRESH_MS, refreshPrStates } from './pull-requests.ts';
@@ -57,7 +58,8 @@ export class Scheduler {
     if (reaped) this.opts.log(`stopped ${reaped} claude process(es) left running by a previous daemon`);
     const { requeued, failed } = this.db.recoverOrphans();
     if (requeued) this.opts.log(`requeued ${requeued} task(s) left running by a previous daemon`);
-    if (failed) this.opts.log(`failed ${failed} task(s) interrupted by ${MAX_RESTARTS} daemon restarts`);
+    if (failed.length) this.opts.log(`failed ${failed.length} task(s) interrupted by ${MAX_RESTARTS} daemon restarts`);
+    for (const id of failed) warnStuckDependents(this.db, id);
     return new Promise((resolve) => {
       this.drained = resolve;
       this.tick();

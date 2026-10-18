@@ -2,6 +2,7 @@
 import { type IncomingMessage, type Server, type ServerResponse, createServer } from 'node:http';
 import { serviceStatus } from '../adapters/service.ts';
 import * as actions from '../application/actions.ts';
+import { waitingFor } from '../application/dependencies.ts';
 import { API_ALLOWED_ORIGINS, API_PORT } from '../config.ts';
 import type { Db } from '../db/index.ts';
 import type { TaskStatus } from '../domain/task/lifecycle.ts';
@@ -24,7 +25,7 @@ async function readBody(req: IncomingMessage): Promise<any> {
 function taskDetail(db: Db, id: number) {
   const task = db.getTask(id);
   if (!task) throw new actions.ActionError('no such task');
-  return { ...task, repo: db.getRepo(task.repo_id)?.name ?? null, runs: db.runsForTask(id) };
+  return { ...task, repo: db.getRepo(task.repo_id)?.name ?? null, waiting: waitingFor(db, task), runs: db.runsForTask(id) };
 }
 
 export function startApi(db: Db, port = API_PORT): Promise<Server> {
@@ -56,7 +57,7 @@ export function startApi(db: Db, port = API_PORT): Promise<Server> {
         const names = new Map(db.listRepos().map((r) => [r.id, r.name]));
         return db
           .listTaskSummaries({ status: status ?? undefined, limit, before })
-          .map((t) => ({ ...t, repo: names.get(t.repo_id) ?? null }));
+          .map((t) => ({ ...t, repo: names.get(t.repo_id) ?? null, waiting: waitingFor(db, t) }));
       },
     ],
     ['POST', /^\/api\/tasks$/, (_q, _s, _p, b) => taskDetail(db, actions.addTask(db, b).id)],

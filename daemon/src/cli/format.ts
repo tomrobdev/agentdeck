@@ -2,7 +2,7 @@
 import { readLog } from '../adapters/run-log.ts';
 import type { DoctorReport } from '../application/repos.ts';
 import type { Db } from '../db/index.ts';
-import { isWaiting } from '../domain/task/dependency.ts';
+import { waitingFor } from '../application/dependencies.ts';
 import type { TaskStatus } from '../domain/task/lifecycle.ts';
 import type { Task } from '../domain/task/task.ts';
 
@@ -30,8 +30,9 @@ export function taskId(arg: string | undefined): number {
 
 export function fmtTask(t: Task, repoName: string, db?: Db): string {
   let extra = t.blocked_reason && (t.status === 'blocked' || t.status === 'failed') ? `  — ${t.blocked_reason}` : '';
-  if (t.status === 'queued' && t.after_task !== null && db && isWaiting(t, db.getTask(t.after_task)))
-    extra += `  waiting on #${t.after_task}`;
+  const waiting = db ? waitingFor(db, t) : null;
+  if (waiting)
+    extra += waiting.stuck ? `  can't start: ${waiting.stuck} (retry #${waiting.on} or cancel this task)` : `  waiting on #${waiting.on}`;
   if (t.pr_url) extra += `  PR ${t.pr_state ?? 'open'}: ${t.pr_url}`;
   return `${STATUS_ICON[t.status]} #${String(t.id).padEnd(4)} ${t.status.padEnd(9)} p${t.priority}  ${repoName.padEnd(14)} ${t.title}${extra}`;
 }

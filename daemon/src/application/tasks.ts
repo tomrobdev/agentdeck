@@ -1,6 +1,7 @@
 // Use cases for tasks: add, edit, and move them through the lifecycle on a person's request.
 import type { Db } from '../db/index.ts';
 import { EDITABLE_STATUSES, type Task, defaultTitle } from '../domain/task/task.ts';
+import { warnStuckDependents } from './dependencies.ts';
 import { ActionError } from './errors.ts';
 
 export function addTask(
@@ -78,6 +79,7 @@ export function editTask(
 export function cancelTask(db: Db, id: number): 'cancelled' | 'stopping' {
   const t = db.applyEvent(id, { type: 'cancel' });
   if (!t) throw new ActionError(`#${id} can't be cancelled from its current state`);
+  warnStuckDependents(db, id);
   return t.status === 'cancel_requested' ? 'stopping' : 'cancelled';
 }
 
@@ -88,6 +90,7 @@ export function approveTask(db: Db, id: number): void {
 
 export function rejectTask(db: Db, id: number): void {
   if (!db.applyEvent(id, { type: 'reject' })) throw new ActionError(`#${id} is not a proposal`);
+  warnStuckDependents(db, id);
 }
 
 export function retryTask(db: Db, id: number): void {
