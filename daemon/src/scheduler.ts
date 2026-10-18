@@ -90,7 +90,7 @@ export class Scheduler {
       if (this.opts.autoPlan && !this.planning && this.running.size < limit) this.maybePlan();
     }
     this.setAwake(this.running.size > 0 || this.planning);
-    if (this.opts.once && this.running.size === 0 && !this.planning && (reason || !this.db.listTasks('queued').length)) {
+    if (this.opts.once && this.running.size === 0 && !this.planning && (reason || !this.db.hasQueued())) {
       this.stop();
       return;
     }
@@ -134,7 +134,7 @@ export class Scheduler {
     const d = decide(this.db.usageWindows(), this.db.budget(), this.db.maxConcurrent());
     const hold = d.allow ? null : d.reason;
     // Announce a hold once, and only when it is actually keeping queued work waiting.
-    if (hold && !this.lastHold && this.db.listTasks('queued').length) {
+    if (hold && !this.lastHold && this.db.hasQueued()) {
       const lifts = d.until
         ? ` Resumes around ${new Date(d.until * 1000).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })}.`
         : '';

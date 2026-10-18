@@ -1,7 +1,34 @@
+// Database helpers: real SQLite.
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
-import { openDb } from '../src/db.ts';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { after, test } from 'node:test';
 
+const home = mkdtempSync(join(tmpdir(), 'agentdeck-db-'));
+process.env.AGENTDECK_HOME = home;
+
+const { openDb } = await import('../src/db.ts');
+const db = openDb(join(home, 'test.db'));
+
+after(() => db.close());
+
+test('hasQueued is true only while a queued task exists', () => {
+  const repo = db.addRepo({ name: 'r', path: '/tmp/r', base_branch: 'main' });
+  assert.equal(db.hasQueued(), false);
+
+  const proposed = db.addTask({ repo_id: repo.id, title: 'p', prompt: 'p', status: 'proposed' });
+  assert.equal(db.hasQueued(), false);
+
+  const queued = db.addTask({ repo_id: repo.id, title: 'q', prompt: 'q' });
+  assert.equal(db.hasQueued(), true);
+
+  db.updateTask(queued.id, { status: 'running' });
+  assert.equal(db.hasQueued(), false);
+
+  db.updateTask(proposed.id, { status: 'queued' });
+  assert.equal(db.hasQueued(), true);
+});
 test('runsForTask query uses the runs_task index', () => {
   const db = openDb(':memory:');
   try {

@@ -328,6 +328,10 @@ export function openDb(path = DB_PATH) {
         ? db.prepare('SELECT * FROM tasks WHERE status = ? ORDER BY priority DESC, id').all(status)
         : db.prepare('SELECT * FROM tasks ORDER BY id DESC').all()) as unknown as Task[];
     },
+    hasQueued(): boolean {
+      const row = db.prepare("SELECT EXISTS(SELECT 1 FROM tasks WHERE status = 'queued') AS q").get() as { q: number };
+      return row.q === 1;
+    },
     countRunning(): number {
       return (db.prepare("SELECT COUNT(*) AS n FROM tasks WHERE status IN ('running', 'cancel_requested')").get() as { n: number }).n;
     },
