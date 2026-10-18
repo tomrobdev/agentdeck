@@ -129,7 +129,9 @@ async function main(argv: string[]): Promise<void> {
           test: flags.test,
           tools: flags.tools?.split(',').map((t) => t.trim()),
         });
-        console.log(`added repo "${repo.name}" (${repo.path}, base ${repo.base_branch}${repo.test_cmd ? `, tests: ${repo.test_cmd}` : ''})`);
+        console.log(
+          `added repo "${repo.name}" (${repo.path}, base ${repo.base_branch}${repo.test_cmd ? `, tests: ${repo.test_cmd}` : ''})`,
+        );
       } else if (sub === 'set') {
         const [, name, key, value = ''] = rest;
         if (key !== 'auto_approve' || !name) die('usage: agentdeck repo set <repo> auto_approve on|off');
@@ -138,7 +140,9 @@ async function main(argv: string[]): Promise<void> {
       } else if (sub === 'ls' || !sub) {
         for (const r of db.listRepos()) {
           const goals = actions.repoDetail(db, r.id).goals.trim() ? 'goals ✓' : 'no goals';
-          console.log(`${r.name.padEnd(16)} ${r.path}  base=${r.base_branch}  test=${r.test_cmd ?? '-'}  ${goals}${r.auto_approve ? '  auto-approve' : ''}`);
+          console.log(
+            `${r.name.padEnd(16)} ${r.path}  base=${r.base_branch}  test=${r.test_cmd ?? '-'}  ${goals}${r.auto_approve ? '  auto-approve' : ''}`,
+          );
         }
       } else die(`unknown repo command: ${sub}`);
       break;
@@ -284,7 +288,8 @@ async function main(argv: string[]): Promise<void> {
       if (key === 'max_concurrent') actions.updateSettings(db, { max_concurrent: Number(value) });
       else if ((BUDGET_KEYS as string[]).includes(key)) actions.updateSettings(db, { budget: { [key]: Number(value) } });
       else if (key === 'notify_desktop') actions.updateSettings(db, { notify: { desktop: on(value) } });
-      else if (key === 'notify_events') actions.updateSettings(db, { notify: { events: value.split(',').filter(Boolean) as NotifyKind[] } });
+      else if (key === 'notify_events')
+        actions.updateSettings(db, { notify: { events: value.split(',').filter(Boolean) as NotifyKind[] } });
       else if (key === 'ntfy_topic' || key === 'ntfy_server') actions.updateSettings(db, { notify: { [key]: value } });
       else if (key === 'planner_enabled') actions.updateSettings(db, { planner: { enabled: on(value) } });
       else if (key === 'planner_interval_hours') actions.updateSettings(db, { planner: { interval_hours: Number(value) } });
@@ -303,8 +308,12 @@ async function main(argv: string[]): Promise<void> {
       console.log(`notify_desktop  ${st.notify.desktop ? 'on' : 'off'}`);
       console.log(`notify_events   ${st.notify.events.join(',') || '-'}`);
       console.log(`ntfy            ${st.notify.ntfy_topic ? `${st.notify.ntfy_server}/${st.notify.ntfy_topic}` : 'off'}`);
-      console.log(`planner         ${st.planner.enabled ? 'on' : 'off'}, every ${st.planner.interval_hours}h when a queue is empty, up to ${st.planner.max_tasks} tasks, ${st.planner.model}`);
-      console.log(`\ngovernor        ${d.allow ? 'allowing work' : 'holding'}${d.reason ? `: ${d.reason}` : ''}${d.until ? ` (lifts in ${relTime(d.until)})` : ''}`);
+      console.log(
+        `planner         ${st.planner.enabled ? 'on' : 'off'}, every ${st.planner.interval_hours}h when a queue is empty, up to ${st.planner.max_tasks} tasks, ${st.planner.model}`,
+      );
+      console.log(
+        `\ngovernor        ${d.allow ? 'allowing work' : 'holding'}${d.reason ? `: ${d.reason}` : ''}${d.until ? ` (lifts in ${relTime(d.until)})` : ''}`,
+      );
       if (d.weekly_allowed !== null) console.log(`weekly pace     ${Math.round(d.weekly_allowed * 100)}% of the 7d window allowed so far`);
       break;
     }
@@ -317,12 +326,25 @@ async function main(argv: string[]): Promise<void> {
     case 'status': {
       const st = actions.status(db);
       const limited = st.rate_limited_until && st.rate_limited_until * 1000 > Date.now();
-      console.log(`state      ${st.paused ? 'PAUSED' : 'active'}${limited ? ` (rate limited, resumes in ${relTime(st.rate_limited_until!)})` : ''}`);
+      console.log(
+        `state      ${st.paused ? 'PAUSED' : 'active'}${limited ? ` (rate limited, resumes in ${relTime(st.rate_limited_until!)})` : ''}`,
+      );
       console.log(`slots      ${st.running}/${st.max_concurrent} running`);
-      if (st.governor.reason) console.log(`governor   ${st.governor.allow ? '' : 'HOLD: '}${st.governor.reason}${st.governor.until ? ` (lifts in ${relTime(st.governor.until)})` : ''}`);
-      console.log(`tasks      ${Object.entries(st.counts).map(([k, n]) => `${k} ${n}`).join(', ') || 'none'}`);
+      if (st.governor.reason)
+        console.log(
+          `governor   ${st.governor.allow ? '' : 'HOLD: '}${st.governor.reason}${st.governor.until ? ` (lifts in ${relTime(st.governor.until)})` : ''}`,
+        );
+      console.log(
+        `tasks      ${
+          Object.entries(st.counts)
+            .map(([k, n]) => `${k} ${n}`)
+            .join(', ') || 'none'
+        }`,
+      );
       for (const w of st.usage) {
-        console.log(`usage      ${w.window.padEnd(10)} ${(w.utilization * 100).toFixed(0).padStart(3)}%  resets in ${relTime(w.resets_at)}  (seen ${w.observed_at} UTC)`);
+        console.log(
+          `usage      ${w.window.padEnd(10)} ${(w.utilization * 100).toFixed(0).padStart(3)}%  resets in ${relTime(w.resets_at)}  (seen ${w.observed_at} UTC)`,
+        );
       }
       console.log(`db         ${DB_PATH}`);
       break;
@@ -341,13 +363,16 @@ async function main(argv: string[]): Promise<void> {
       }
       if (!once) {
         const api = await startApi(db).catch((err) => {
-          if (err?.code === 'EADDRINUSE') die(`port ${API_PORT} is in use: another agentdeck daemon is probably running (see \`agentdeck service\`)`);
+          if (err?.code === 'EADDRINUSE')
+            die(`port ${API_PORT} is in use: another agentdeck daemon is probably running (see \`agentdeck service\`)`);
           throw err;
         });
         console.log(`api        http://127.0.0.1:${API_PORT}`);
         process.on('exit', () => api.close());
       }
-      console.log(`agentdeck ${once ? 'run-once' : 'daemon'}: ${db.isPaused() && !once ? 'PAUSED (agentdeck resume to start)' : 'active'}, max ${db.maxConcurrent()} concurrent, tick ${DEFAULTS.tickMs / 1000}s`);
+      console.log(
+        `agentdeck ${once ? 'run-once' : 'daemon'}: ${db.isPaused() && !once ? 'PAUSED (agentdeck resume to start)' : 'active'}, max ${db.maxConcurrent()} concurrent, tick ${DEFAULTS.tickMs / 1000}s`,
+      );
       await scheduler.run();
       break;
     }

@@ -17,7 +17,16 @@ const xml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 
 /** launchd gives agents a bare PATH; spell out where node, git and claude live. */
 export function servicePath(): string {
-  const dirs = [dirname(process.execPath), join(homedir(), '.local/bin'), '/opt/homebrew/bin', '/usr/local/bin', '/usr/bin', '/bin', '/usr/sbin', '/sbin'];
+  const dirs = [
+    dirname(process.execPath),
+    join(homedir(), '.local/bin'),
+    '/opt/homebrew/bin',
+    '/usr/local/bin',
+    '/usr/bin',
+    '/bin',
+    '/usr/sbin',
+    '/sbin',
+  ];
   return [...new Set(dirs)].join(':');
 }
 

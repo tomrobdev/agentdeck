@@ -87,7 +87,13 @@ export function decide(windows: WindowObs[], budget: Budget, maxConcurrent: numb
   if (holds.length) {
     // The latest-lifting hold is the one that matters.
     const h = holds.reduce((a, b) => (b.until > a.until ? b : a));
-    return { allow: false, max_concurrent: max, reason: holds.map((x) => x.reason).join('; '), until: h.until, weekly_allowed: weeklyAllowed };
+    return {
+      allow: false,
+      max_concurrent: max,
+      reason: holds.map((x) => x.reason).join('; '),
+      until: h.until,
+      weekly_allowed: weeklyAllowed,
+    };
   }
   return { allow: true, max_concurrent: max, reason: throttle, until: null, weekly_allowed: weeklyAllowed };
 }

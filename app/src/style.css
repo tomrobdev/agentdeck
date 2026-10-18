@@ -112,19 +112,39 @@ pre {
   border-radius: 50%;
   flex: none;
 }
-.s-proposed { --c: var(--accent); }
-.s-queued { --c: var(--queued); }
-.s-running, .s-cancel_requested { --c: var(--running); }
-.s-done { --c: var(--done); }
-.s-blocked { --c: var(--blocked); }
-.s-failed { --c: var(--failed); }
-.s-cancelled { --c: var(--cancelled); }
-.dot { background: var(--c); }
-.s-running .dot, .dot.s-running {
+.s-proposed {
+  --c: var(--accent);
+}
+.s-queued {
+  --c: var(--queued);
+}
+.s-running,
+.s-cancel_requested {
+  --c: var(--running);
+}
+.s-done {
+  --c: var(--done);
+}
+.s-blocked {
+  --c: var(--blocked);
+}
+.s-failed {
+  --c: var(--failed);
+}
+.s-cancelled {
+  --c: var(--cancelled);
+}
+.dot {
+  background: var(--c);
+}
+.s-running .dot,
+.dot.s-running {
   animation: pulse 1.4s ease-in-out infinite;
 }
 @keyframes pulse {
-  50% { opacity: 0.35; }
+  50% {
+    opacity: 0.35;
+  }
 }
 
 .pill {

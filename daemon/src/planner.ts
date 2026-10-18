@@ -86,7 +86,11 @@ ${open.map(line).join('\n') || '(none)'}
 ${recent.map(line).join('\n') || '(none)'}`;
 }
 
-const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+const norm = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
 
 export interface PlanResult {
   outcome: 'proposed' | 'nothing' | 'failed' | 'rate_limited' | 'no_goals';
@@ -159,7 +163,9 @@ export async function planRepo(db: Db, repo: Repo): Promise<PlanResult> {
   const created: Task[] = [];
   const skipped: string[] = [];
   for (const raw of out.tasks as any[]) {
-    const title = String(raw?.title ?? '').trim().slice(0, 100);
+    const title = String(raw?.title ?? '')
+      .trim()
+      .slice(0, 100);
     const prompt = String(raw?.prompt ?? '').trim();
     if (!title || !prompt) continue;
     if (seen.has(norm(title)) || created.length >= s.max_tasks) {
@@ -185,7 +191,9 @@ export async function planRepo(db: Db, repo: Repo): Promise<PlanResult> {
   if (created.length) {
     notifyLater(db, {
       kind: 'proposed',
-      title: repo.auto_approve ? `Planner queued ${created.length} task(s) in ${repo.name}` : `${created.length} task(s) to approve in ${repo.name}`,
+      title: repo.auto_approve
+        ? `Planner queued ${created.length} task(s) in ${repo.name}`
+        : `${created.length} task(s) to approve in ${repo.name}`,
       body: created.map((t) => `• ${t.title}`).join('\n'),
     });
   }

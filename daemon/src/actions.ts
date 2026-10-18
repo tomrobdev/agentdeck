@@ -127,7 +127,10 @@ export function setPaused(db: Db, paused: boolean): void {
 
 export function status(db: Db) {
   const counts = Object.fromEntries(
-    (db.raw.prepare('SELECT status, COUNT(*) AS n FROM tasks GROUP BY status').all() as { status: string; n: number }[]).map((c) => [c.status, c.n]),
+    (db.raw.prepare('SELECT status, COUNT(*) AS n FROM tasks GROUP BY status').all() as { status: string; n: number }[]).map((c) => [
+      c.status,
+      c.n,
+    ]),
   );
   return {
     paused: db.isPaused(),
