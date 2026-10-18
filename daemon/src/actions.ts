@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
 import { type Db, PR_MODES, type PrMode, type Repo, type Task } from './db.ts';
 import { type Check, runDoctor } from './doctor.ts';
+import { normalizeNetwork } from './domain/sandbox.ts';
 import { detectToolchain } from './domain/toolchain.ts';
 import { currentBranch, isGitRepo, rootInfo } from './git.ts';
 import { BUDGET_KEYS, type Budget, decide, validateBudget } from './governor.ts';
@@ -157,11 +158,17 @@ export function updateRepo(
     setup_cmd?: string | null;
     base_branch?: string;
     pr_mode?: PrMode;
+    sandbox?: boolean;
+    /** Hosts the agent's sandboxed commands may reach; a string is split on commas and spaces. */
+    network?: string | string[];
   },
 ) {
   const repo = repoOrThrow(db, nameOrId);
   if (patch.pr_mode !== undefined && !PR_MODES.includes(patch.pr_mode))
     throw new ActionError(`pr_mode must be one of ${PR_MODES.join(', ')}`);
+  const network = patch.network !== undefined ? normalizeNetwork(patch.network) : undefined;
+  const badHost = network?.find((d) => !/^[A-Za-z0-9*.:[\]-]+$/.test(d));
+  if (badHost !== undefined) throw new ActionError(`not a host name: ${badHost}`);
   if (patch.base_branch !== undefined && !patch.base_branch.trim()) throw new ActionError('base_branch cannot be empty');
   if (patch.goals !== undefined) {
     if (patch.goals.length > 20_000) throw new ActionError('goals are limited to 20,000 characters');
@@ -173,6 +180,8 @@ export function updateRepo(
     ...(patch.setup_cmd !== undefined ? { setup_cmd: patch.setup_cmd?.trim() || null } : {}),
     ...(patch.base_branch !== undefined ? { base_branch: patch.base_branch.trim() } : {}),
     ...(patch.pr_mode !== undefined ? { pr_mode: patch.pr_mode } : {}),
+    ...(patch.sandbox !== undefined ? { sandbox: patch.sandbox ? 1 : 0 } : {}),
+    ...(network !== undefined ? { network: JSON.stringify(network) } : {}),
   });
   return repoDetail(db, repo.id);
 }

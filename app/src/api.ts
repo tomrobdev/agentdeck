@@ -16,6 +16,8 @@ export interface Repo {
   setup_cmd: string | null;
   paused_reason: string | null;
   pr_mode: PrMode;
+  sandbox: number;
+  network: string; // JSON array of hosts
 }
 
 export type PrMode = 'off' | 'draft' | 'ready';
@@ -206,7 +208,15 @@ export const api = {
   repo: (id: number) => call<RepoDetail>(`/api/repos/${id}`),
   updateRepo: (
     id: number,
-    patch: { goals?: string; auto_approve?: boolean; test_cmd?: string | null; setup_cmd?: string | null; pr_mode?: PrMode },
+    patch: {
+      goals?: string;
+      auto_approve?: boolean;
+      test_cmd?: string | null;
+      setup_cmd?: string | null;
+      pr_mode?: PrMode;
+      sandbox?: boolean;
+      network?: string[];
+    },
   ) => call<RepoDetail>(`/api/repos/${id}`, { method: 'POST', json: patch }),
   plan: (id: number) => call<PlanResult>(`/api/repos/${id}/plan`, { method: 'POST' }),
   doctor: (id: number) => call<DoctorReport>(`/api/repos/${id}/doctor`, { method: 'POST' }),

@@ -8,16 +8,30 @@
 //   FAKE_RATELIMIT emits a rejected rate_limit_event
 //   FAKE_SLOW     sleeps 30s (for cancel tests)
 //   FAKE_NEEDS_SETUP  like FAKE_DONE, but blocks unless the repo's setup wrote setup-done.txt
-// Every run appends its prompt to $AGENTDECK_HOME/fake-claude-calls.log, so tests can tell it never started.
+//   FAKE_NO_SANDBOX  if the --settings file enables the sandbox with failIfUnavailable, exits at startup like claude does
+// Every run appends its prompt to $AGENTDECK_HOME/fake-claude-calls.log, so tests can tell it never started,
+// and the --settings path it got (or "-") to $AGENTDECK_HOME/fake-claude-settings.log.
 import { execFileSync } from 'node:child_process';
-import { appendFileSync, existsSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const args = process.argv.slice(2);
 const prompt = args[args.indexOf('-p') + 1] ?? '';
 const out = (o) => process.stdout.write(JSON.stringify(o) + '\n');
 const resetsAt = Math.floor(Date.now() / 1000) + 3600;
-if (process.env.AGENTDECK_HOME) appendFileSync(join(process.env.AGENTDECK_HOME, 'fake-claude-calls.log'), `${prompt}\n`);
+const settingsPath = args.includes('--settings') ? args[args.indexOf('--settings') + 1] : undefined;
+if (process.env.AGENTDECK_HOME) {
+  appendFileSync(join(process.env.AGENTDECK_HOME, 'fake-claude-calls.log'), `${prompt}\n`);
+  appendFileSync(join(process.env.AGENTDECK_HOME, 'fake-claude-settings.log'), `${settingsPath ?? '-'}\n`);
+}
+
+if (prompt.includes('FAKE_NO_SANDBOX') && settingsPath) {
+  const { sandbox } = JSON.parse(readFileSync(settingsPath, 'utf8'));
+  if (sandbox?.enabled && sandbox.failIfUnavailable) {
+    process.stderr.write('Error: sandbox is required (sandbox.failIfUnavailable) but could not start: sandbox-exec not found\n');
+    process.exit(1);
+  }
+}
 
 out({ type: 'system', subtype: 'init', session_id: 'fake-session', cwd: process.cwd() });
 out({

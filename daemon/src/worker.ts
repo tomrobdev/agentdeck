@@ -1,9 +1,10 @@
 import { execFile } from 'node:child_process';
-import { type WriteStream, createWriteStream } from 'node:fs';
+import { type WriteStream, createWriteStream, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ALWAYS_DISALLOWED_TOOLS, DEFAULT_ALLOWED_TOOLS, LOG_DIR, WORKER_SYSTEM_PROMPT, ensureDirs } from './config.ts';
 import { runClaude } from './claude.ts';
 import type { Db, Repo, Run, Task } from './db.ts';
+import { parseNetwork, withoutUnscopedFileTools, workerSettings } from './domain/sandbox.ts';
 import { detectToolchain, isToolchain, toolchainTools } from './domain/toolchain.ts';
 import { commitLeftovers, commitsAhead, ensureWorktree, rootInfo } from './git.ts';
 import { notifyLater } from './notify.ts';
@@ -46,8 +47,23 @@ export function effectiveTools(repo: Repo, dir: string): string[] {
   return [...DEFAULT_ALLOWED_TOOLS, ...(toolchain ? toolchainTools(toolchain, scripts) : [])];
 }
 
-export function claudeArgs(task: Task, allowed: string[], prompt: string): string[] {
+/** Where a run's settings file goes: next to its log, outside the worktree so the agent can't rewrite it. */
+export function settingsPath(logPath: string): string {
+  return logPath.replace(/\.jsonl$/, '') + '.settings.json';
+}
+
+/** Write the run's sandbox and file-rule settings (domain/sandbox.ts) and return their path. */
+export function writeRunSettings(repo: Repo, worktree: string, logPath: string): string {
+  const path = settingsPath(logPath);
+  const settings = workerSettings({ worktree, sandbox: repo.sandbox !== 0, network: parseNetwork(repo.network) });
+  writeFileSync(path, JSON.stringify(settings, null, 2) + '\n');
+  return path;
+}
+
+export function claudeArgs(task: Task, allowed: string[], prompt: string, settings: string): string[] {
   return [
+    '--settings',
+    settings,
     '-p',
     prompt,
     '--output-format',
@@ -61,7 +77,9 @@ export function claudeArgs(task: Task, allowed: string[], prompt: string): strin
     'dontAsk',
     // One argv entry per rule: patterns like "Bash(npm test*)" contain spaces.
     '--allowedTools',
-    ...allowed,
+    // Edit and Write come from the settings file, limited to the worktree.
+    ...withoutUnscopedFileTools(allowed),
+    // Kept on top of the sandbox: the agent never pushes, sandbox or not.
     '--disallowedTools',
     ...ALWAYS_DISALLOWED_TOOLS,
     '--append-system-prompt',
@@ -139,8 +157,17 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
     }
   }
 
-  const { result, exitCode, rateLimitedUntil, cancelled } = await runClaude(db, {
-    args: claudeArgs(task, effectiveTools(repo, wt.path), prompt),
+  // Written after setup: setup runs here in the daemon, outside the sandbox, so installs keep the network.
+  let settings: string;
+  try {
+    settings = writeRunSettings(repo, wt.path, logPath);
+  } catch (err) {
+    await closeLog(log);
+    return finish(db, task, runId, { outcome: 'failed', reason: `settings: ${(err as Error).message}` });
+  }
+
+  const { result, exitCode, rateLimitedUntil, cancelled, stderr } = await runClaude(db, {
+    args: claudeArgs(task, effectiveTools(repo, wt.path), prompt, settings),
     cwd: wt.path,
     log,
     env: { AGENTDECK_TASK_ID: String(task.id) },
@@ -175,7 +202,11 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
     db.setSetting('rate_limited_until', String(until));
     outcome = { outcome: 'rate_limited', reason: `rate limited until ${new Date(until * 1000).toISOString()}` };
   } else if (!result || result.is_error || exitCode !== 0) {
-    outcome = { outcome: 'failed', reason: result?.subtype ?? `claude exited with code ${exitCode}` };
+    // No result means claude stopped before working, e.g. the sandbox could not start (failIfUnavailable): say why.
+    outcome = {
+      outcome: 'failed',
+      reason: result?.subtype ?? `claude exited with code ${exitCode}${stderr.trim() ? `: ${lastLine(stderr)}` : ''}`,
+    };
   } else {
     const status = parseStatus(result.result);
     if (status.blocked) {

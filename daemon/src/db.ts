@@ -19,6 +19,8 @@ export interface Repo {
   setup_cmd: string | null; // run in each worktree before claude
   paused_reason: string | null; // set = no task of this repo is claimed until `repo resume` or a passing doctor
   pr_mode: PrMode; // what the daemon does when a task is done: nothing, open a draft PR, or open a ready PR
+  sandbox: number; // 1 = the agent's Bash commands run in Claude Code's sandbox (the default)
+  network: string; // JSON array of hosts sandboxed commands may reach, '[]' = none
 }
 
 export type PrMode = 'off' | 'draft' | 'ready';
@@ -208,6 +210,9 @@ export const MIGRATIONS: Migration[] = [
    ALTER TABLE tasks ADD COLUMN pr_url TEXT;
    ALTER TABLE tasks ADD COLUMN pr_state TEXT;
    ALTER TABLE tasks ADD COLUMN after_task INTEGER;`,
+  // 6: worker sandbox (docs/adr/0001-worker-sandbox.md). network is a JSON array of allowed hosts.
+  `ALTER TABLE repos ADD COLUMN sandbox INTEGER NOT NULL DEFAULT 1;
+   ALTER TABLE repos ADD COLUMN network TEXT NOT NULL DEFAULT '[]';`,
 ];
 
 /** Runs every step above the database's user_version in one transaction; returns how many ran. */
@@ -299,7 +304,9 @@ export function openDb(path = DB_PATH) {
     },
     updateRepo(
       id: number,
-      fields: Partial<Pick<Repo, 'auto_approve' | 'test_cmd' | 'setup_cmd' | 'planned_at' | 'base_branch' | 'pr_mode'>>,
+      fields: Partial<
+        Pick<Repo, 'auto_approve' | 'test_cmd' | 'setup_cmd' | 'planned_at' | 'base_branch' | 'pr_mode' | 'sandbox' | 'network'>
+      >,
     ): void {
       const keys = Object.keys(fields) as (keyof typeof fields)[];
       if (!keys.length) return;

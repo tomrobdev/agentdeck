@@ -5,6 +5,7 @@ import { startApi } from './api.ts';
 import { API_PORT, DB_PATH, DEFAULTS } from './config.ts';
 import { type Db, type PrMode, type Task, type TaskStatus, openDb } from './db.ts';
 import { isWaiting } from './domain/pr.ts';
+import { parseNetwork } from './domain/sandbox.ts';
 import { removeWorktree } from './git.ts';
 import { BUDGET_KEYS } from './governor.ts';
 import type { NotifyKind } from './notify.ts';
@@ -24,6 +25,8 @@ Repos
   agentdeck repo set <repo> test_cmd "<cmd>"      run after each task ("" for none)
   agentdeck repo set <repo> setup_cmd "<cmd>"     run in each worktree before claude ("" for none)
   agentdeck repo set <repo> pr_mode off|draft|ready  push and open a PR when a task is done
+  agentdeck repo set <repo> sandbox on|off        run the agent's shell commands in Claude Code's sandbox (default on)
+  agentdeck repo set <repo> network "<hosts>"     hosts sandboxed commands may reach, e.g. "registry.npmjs.org,github.com" ("" for none)
   agentdeck goals <repo> [--file goals.md]        show (or replace) the goals the planner works from
   agentdeck plan <repo>                           run the planner now
 
@@ -174,13 +177,17 @@ async function main(argv: string[]): Promise<void> {
         console.log(`${repo.name}: resumed`);
       } else if (sub === 'set') {
         const [, name, key, value = ''] = rest;
-        if (!name || !['auto_approve', 'base_branch', 'test_cmd', 'setup_cmd', 'pr_mode'].includes(key))
+        if (!name || !['auto_approve', 'base_branch', 'test_cmd', 'setup_cmd', 'pr_mode', 'sandbox', 'network'].includes(key))
           die(
-            'usage: agentdeck repo set <repo> auto_approve on|off | base_branch <branch> | test_cmd "<cmd>" | setup_cmd "<cmd>" | pr_mode off|draft|ready',
+            'usage: agentdeck repo set <repo> auto_approve on|off | base_branch <branch> | test_cmd "<cmd>" | setup_cmd "<cmd>" | pr_mode off|draft|ready | sandbox on|off | network "<hosts>"',
           );
+        const on = ['1', 'on', 'true', 'yes'].includes(value.toLowerCase());
         if (key === 'pr_mode') actions.updateRepo(db, name, { pr_mode: value as PrMode });
-        else if (key === 'auto_approve')
-          actions.updateRepo(db, name, { auto_approve: ['1', 'on', 'true', 'yes'].includes(value.toLowerCase()) });
+        else if (key === 'auto_approve') actions.updateRepo(db, name, { auto_approve: on });
+        else if (key === 'sandbox') {
+          if (!on && !['0', 'off', 'false', 'no'].includes(value.toLowerCase())) die('usage: agentdeck repo set <repo> sandbox on|off');
+          actions.updateRepo(db, name, { sandbox: on });
+        } else if (key === 'network') actions.updateRepo(db, name, { network: value });
         else if (key === 'base_branch') actions.updateRepo(db, name, { base_branch: value });
         else if (key === 'setup_cmd') actions.updateRepo(db, name, { setup_cmd: value });
         else actions.updateRepo(db, name, { test_cmd: value });
@@ -189,7 +196,7 @@ async function main(argv: string[]): Promise<void> {
         for (const r of db.listRepos()) {
           const goals = actions.repoDetail(db, r.id).goals.trim() ? 'goals ✓' : 'no goals';
           console.log(
-            `${r.name.padEnd(16)} ${r.path}  base=${r.base_branch}  toolchain=${r.toolchain ?? '-'}  setup=${r.setup_cmd ?? '-'}  test=${r.test_cmd ?? '-'}  pr=${r.pr_mode}  ${goals}${r.auto_approve ? '  auto-approve' : ''}${r.paused_reason ? `  PAUSED (${r.paused_reason})` : ''}`,
+            `${r.name.padEnd(16)} ${r.path}  base=${r.base_branch}  toolchain=${r.toolchain ?? '-'}  setup=${r.setup_cmd ?? '-'}  test=${r.test_cmd ?? '-'}  pr=${r.pr_mode}  sandbox=${r.sandbox ? `on network=${parseNetwork(r.network).join(',') || '-'}` : 'OFF'}  ${goals}${r.auto_approve ? '  auto-approve' : ''}${r.paused_reason ? `  PAUSED (${r.paused_reason})` : ''}`,
           );
         }
       } else die(`unknown repo command: ${sub}`);
