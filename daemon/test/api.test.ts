@@ -134,6 +134,36 @@ test('test notification is recorded', async () => {
   assert.equal(db.recentNotifications(1)[0].kind, 'test');
 });
 
+test('POST /api/tasks/:id edits a task; bad edits are 400', async () => {
+  const task = await (await api('/api/tasks', { method: 'POST', json: { repo: 'demo', prompt: 'before' } })).json();
+  const patch = { prompt: 'after', max_turns: 7, priority: 2 };
+  const edited = await (await api(`/api/tasks/${task.id}`, { method: 'POST', json: patch })).json();
+  assert.deepEqual([edited.prompt, edited.max_turns, edited.priority, edited.status], ['after', 7, 2, 'queued']);
+
+  const bad = await api(`/api/tasks/${task.id}`, { method: 'POST', json: { max_turns: 'lots' } });
+  assert.equal(bad.status, 400);
+  assert.match((await bad.json()).error, /max_turns/);
+  await api(`/api/tasks/${task.id}/cancel`, { method: 'POST' });
+  const cancelled = await api(`/api/tasks/${task.id}`, { method: 'POST', json: { prompt: 'again' } });
+  assert.equal(cancelled.status, 400, 'cancelled tasks are not editable');
+});
+
+test('POST /api/repos/:id/doctor reports checks and pauses; resume clears the pause', async () => {
+  const repos = await (await api('/api/repos')).json();
+  const demo = repos.find((r: any) => r.name === 'demo');
+  assert.equal(demo.paused_reason, null);
+
+  const report = await (await api(`/api/repos/${demo.id}/doctor`, { method: 'POST' })).json();
+  assert.equal(report.ok, false, 'demo has no toolchain or test command');
+  assert.equal(report.checks[0].name, 'git repo');
+  assert.ok(report.checks.every((c: any) => typeof c.reason === 'string'));
+  assert.match(report.paused_reason, /^doctor: /);
+  assert.equal((await (await api(`/api/repos/${demo.id}`)).json()).paused_reason, report.paused_reason);
+
+  const resumed = await (await api(`/api/repos/${demo.id}/resume`, { method: 'POST' })).json();
+  assert.equal(resumed.paused_reason, null);
+});
+
 test('task list returns summaries, pages with limit/before, and always includes active tasks', async () => {
   const ids: number[] = [];
   const active = await (await api('/api/tasks', { method: 'POST', json: { repo: 'demo', prompt: 'still queued' } })).json();

@@ -12,7 +12,7 @@ export async function git(cwd: string, ...args: string[]): Promise<string> {
   return stdout.trim();
 }
 
-async function refExists(repoPath: string, ref: string): Promise<boolean> {
+export async function refExists(repoPath: string, ref: string): Promise<boolean> {
   try {
     await git(repoPath, 'rev-parse', '--verify', '--quiet', ref);
     return true;
@@ -23,7 +23,7 @@ async function refExists(repoPath: string, ref: string): Promise<boolean> {
 
 const branchExists = (repoPath: string, branch: string) => refExists(repoPath, `refs/heads/${branch}`);
 
-async function hasOrigin(repoPath: string): Promise<boolean> {
+export async function hasOrigin(repoPath: string): Promise<boolean> {
   return (await git(repoPath, 'remote')).split('\n').includes('origin');
 }
 
@@ -32,7 +32,7 @@ async function hasOrigin(repoPath: string): Promise<boolean> {
  * so tasks don't build on a stale local base), otherwise the local base. A failed fetch (offline)
  * falls back to whatever origin ref is already there.
  */
-async function startPoint(repoPath: string, base: string): Promise<string> {
+export async function startPoint(repoPath: string, base: string): Promise<string> {
   if (!(await hasOrigin(repoPath))) return base;
   try {
     await git(repoPath, 'fetch', '--quiet', 'origin', base);
@@ -93,6 +93,11 @@ export async function commitsAhead(worktree: string, base: string): Promise<numb
   const remote = `refs/remotes/origin/${base}`;
   const bases = (await refExists(worktree, remote)) ? [base, remote] : [base];
   return Number(await git(worktree, 'rev-list', '--count', 'HEAD', '--not', ...bases));
+}
+
+/** A throwaway checkout of `ref` with no branch of its own, for checks that must not leave anything behind. */
+export async function addDetachedWorktree(repo: Pick<Repo, 'path'>, path: string, ref: string): Promise<void> {
+  await git(repo.path, 'worktree', 'add', '--detach', path, ref);
 }
 
 export async function removeWorktree(repo: Repo, path: string): Promise<void> {

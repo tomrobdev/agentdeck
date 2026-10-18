@@ -3,6 +3,7 @@
 // Behaviour is picked by a keyword in the prompt:
 //   FAKE_DONE     writes a file, commits it, reports STATUS: DONE
 //   FAKE_BLOCKED  reports STATUS: BLOCKED
+//   FAKE_DENIED   reports STATUS: BLOCKED with two permission_denials in the result (FAKE_DENIED_DONE: finishes, same denials)
 //   FAKE_ERROR    exits non-zero with no result
 //   FAKE_RATELIMIT emits a rejected rate_limit_event
 //   FAKE_SLOW     sleeps 30s (for cancel tests)
@@ -56,6 +57,20 @@ if (isPlanner) {
 } else if (prompt.includes('FAKE_ERROR')) {
   process.stderr.write('fake failure\n');
   process.exit(1);
+} else if (prompt.includes('FAKE_DENIED')) {
+  // A tool use the permission rules refused; the agent gives up. FAKE_DENIED_DONE finishes anyway.
+  const permission_denials = [
+    { tool_name: 'Bash', tool_use_id: 'toolu_1', tool_input: { command: 'npx prettier --write .' } },
+    { tool_name: 'Bash', tool_use_id: 'toolu_2', tool_input: { command: 'python3 fix.py' } },
+  ];
+  if (prompt.includes('FAKE_DENIED_DONE')) {
+    writeFileSync('fake-output.txt', 'done despite a refusal\n');
+    execFileSync('git', ['add', '-A']);
+    execFileSync('git', ['commit', '-q', '-m', 'fake: add output']);
+    result('Worked around it.\nSTATUS: DONE', { permission_denials });
+  } else {
+    result('I could not run prettier.\nSTATUS: BLOCKED: permission refused', { permission_denials });
+  }
 } else if (prompt.includes('FAKE_RATELIMIT')) {
   result('rate limited', { is_error: true, subtype: 'error_during_execution', api_error_status: 429 });
   process.exit(1);

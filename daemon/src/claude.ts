@@ -71,6 +71,8 @@ export interface ClaudeResult {
   num_turns?: number;
   total_cost_usd?: number;
   api_error_status?: number | null;
+  /** Tool uses the permission rules refused during the run. */
+  permission_denials?: { tool_name?: string; tool_input?: { command?: unknown } & Record<string, unknown> }[];
   usage?: {
     input_tokens?: number;
     output_tokens?: number;

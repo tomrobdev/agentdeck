@@ -100,6 +100,7 @@ async function planNow() {
       <li v-for="r in repos" :key="r.id" :class="{ on: open?.id === r.id }">
         <button class="head" @click="edit(r)">
           <span class="name">{{ r.name }}</span>
+          <span v-if="r.paused_reason" class="paused" :title="r.paused_reason">paused · {{ r.paused_reason }}</span>
           <span class="muted">base {{ r.base_branch }}<template v-if="r.auto_approve"> · auto-approve</template></span>
           <span class="chev muted">{{ open?.id === r.id ? '▾' : '▸' }}</span>
         </button>
@@ -201,6 +202,14 @@ async function planNow() {
 }
 .name {
   font-weight: 600;
+}
+.paused {
+  color: var(--blocked);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 .chev {
   margin-left: auto;

@@ -7,6 +7,7 @@ import type { Db, Repo, Run, Task } from './db.ts';
 import { detectToolchain, isToolchain, toolchainTools } from './domain/toolchain.ts';
 import { commitLeftovers, commitsAhead, ensureWorktree, rootInfo } from './git.ts';
 import { notifyLater } from './notify.ts';
+import { firstDenial, pauseRepo } from './pause.ts';
 
 export type Outcome = 'done' | 'blocked' | 'failed' | 'cancelled' | 'rate_limited';
 
@@ -15,8 +16,8 @@ export interface WorkerResult {
   reason?: string;
 }
 
-const TEST_TIMEOUT_MS = 15 * 60_000;
-const SETUP_TIMEOUT_MS = 10 * 60_000;
+export const TEST_TIMEOUT_MS = 15 * 60_000;
+export const SETUP_TIMEOUT_MS = 10 * 60_000;
 
 export function buildPrompt(task: Task, previousRuns: Run[]): string {
   const last = previousRuns.at(-1);
@@ -78,7 +79,7 @@ export function parseStatus(text: string | undefined): { blocked: boolean; reaso
 }
 
 /** Run a repo command (setup or tests) in the worktree. */
-function runCommand(cmd: string, cwd: string, timeout: number): Promise<{ passed: boolean; output: string }> {
+export function runCommand(cmd: string, cwd: string, timeout: number): Promise<{ passed: boolean; output: string }> {
   return new Promise((resolve) => {
     execFile('sh', ['-c', cmd], { cwd, timeout, maxBuffer: 8 * 1024 * 1024 }, (err, stdout, stderr) => {
       const output = `${stdout}${stderr}`.slice(-20_000);
@@ -127,6 +128,7 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
     log.write(JSON.stringify({ type: 'agentdeck_setup', cmd: repo.setup_cmd, passed: setup.passed, output: setup.output }) + '\n');
     if (!setup.passed) {
       log.end();
+      pauseRepo(db, repo, `setup failed on task #${task.id}`);
       return finish(db, task, runId, { outcome: 'blocked', reason: `setup failed: ${lastLine(setup.output)}` });
     }
   }
@@ -186,6 +188,12 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
   }
 
   log.end();
+  // Refused tool uses mean the repo's tool rules don't fit its work: every further task would hit the same wall.
+  const denials = result?.permission_denials ?? [];
+  runFields.denials = denials.length;
+  if (denials.length && (outcome.outcome === 'blocked' || outcome.outcome === 'failed')) {
+    pauseRepo(db, repo, `permission refused on task #${task.id}: ${firstDenial(denials)}`);
+  }
   return finish(db, task, runId, outcome, runFields);
 }
 

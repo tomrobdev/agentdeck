@@ -17,6 +17,7 @@ export interface Repo {
   planned_at: string | null;
   toolchain: string | null; // pnpm | yarn | npm | cargo | uv | go, null = not detected
   setup_cmd: string | null; // run in each worktree before claude
+  paused_reason: string | null; // set = no task of this repo is claimed until `repo resume` or a passing doctor
 }
 
 export interface PlannerRun {
@@ -74,6 +75,7 @@ export interface Run {
   result_text: string | null;
   log_path: string;
   pid: number | null; // claude's process group while the run is live
+  denials: number; // tool uses refused by the permission rules during the run
 }
 
 /** The baseline schema run by migration step 1. Frozen: add new tables, columns and indexes as new steps. */
@@ -186,6 +188,8 @@ export const MIGRATIONS: Migration[] = [
   'CREATE INDEX IF NOT EXISTS runs_task ON runs(task_id, id)',
   // 3: repo integration. toolchain is detected at `repo add`; setup_cmd runs in each new worktree.
   'ALTER TABLE repos ADD COLUMN toolchain TEXT; ALTER TABLE repos ADD COLUMN setup_cmd TEXT;',
+  // 4: a repo can be paused (doctor failed, setup failed, permissions refused); runs count refused tool uses.
+  'ALTER TABLE repos ADD COLUMN paused_reason TEXT; ALTER TABLE runs ADD COLUMN denials INTEGER NOT NULL DEFAULT 0;',
 ];
 
 /** Runs every step above the database's user_version in one transaction; returns how many ran. */
@@ -280,6 +284,15 @@ export function openDb(path = DB_PATH) {
       if (!keys.length) return;
       db.prepare(`UPDATE repos SET ${keys.map((k) => `${k} = ?`).join(', ')} WHERE id = ?`).run(...keys.map((k) => fields[k] ?? null), id);
     },
+    /** Pause (reason) or resume (null) a repo unconditionally. */
+    setRepoPaused(id: number, reason: string | null): void {
+      db.prepare('UPDATE repos SET paused_reason = ? WHERE id = ?').run(reason, id);
+    },
+    /** Pause a repo that isn't paused yet. Returns false if it already was, keeping the first reason. */
+    pauseRepo(id: number, reason: string): boolean {
+      const res = db.prepare('UPDATE repos SET paused_reason = ? WHERE id = ? AND paused_reason IS NULL').run(reason, id);
+      return Number(res.changes) > 0;
+    },
 
     // --- planner ---
     tasksForRepo(repo_id: number, limit = 40): Task[] {
@@ -347,8 +360,13 @@ export function openDb(path = DB_PATH) {
         ? db.prepare('SELECT * FROM tasks WHERE status = ? ORDER BY priority DESC, id').all(status)
         : db.prepare('SELECT * FROM tasks ORDER BY id DESC').all()) as unknown as Task[];
     },
+    /** Whether a task could be claimed: queued, in a repo that isn't paused. */
     hasQueued(): boolean {
-      const row = db.prepare("SELECT EXISTS(SELECT 1 FROM tasks WHERE status = 'queued') AS q").get() as { q: number };
+      const row = db
+        .prepare(
+          "SELECT EXISTS(SELECT 1 FROM tasks WHERE status = 'queued' AND repo_id IN (SELECT id FROM repos WHERE paused_reason IS NULL)) AS q",
+        )
+        .get() as { q: number };
       return row.q === 1;
     },
     /**
@@ -371,7 +389,7 @@ export function openDb(path = DB_PATH) {
     countRunning(): number {
       return (db.prepare("SELECT COUNT(*) AS n FROM tasks WHERE status IN ('running', 'cancel_requested')").get() as { n: number }).n;
     },
-    /** Atomically claim the next queued task, or undefined if none. */
+    /** Atomically claim the next queued task of a repo that isn't paused, or undefined if none. */
     claimNextTask(): Task | undefined {
       const from = fromStatuses({ type: 'claim' });
       const marks = from.map(() => '?').join(', ');
@@ -379,10 +397,31 @@ export function openDb(path = DB_PATH) {
         .prepare(
           `UPDATE tasks SET status = ?, attempts = attempts + 1, updated_at = ${now}
            WHERE status IN (${marks})
-             AND id = (SELECT id FROM tasks WHERE status IN (${marks}) ORDER BY priority DESC, id LIMIT 1)
+             AND id = (SELECT id FROM tasks WHERE status IN (${marks})
+                         AND repo_id IN (SELECT id FROM repos WHERE paused_reason IS NULL)
+                       ORDER BY priority DESC, id LIMIT 1)
            RETURNING *`,
         )
         .get(nextStatus(from[0], { type: 'claim' })!, ...from, ...from) as Task | undefined;
+    },
+    /**
+     * Change a task's editable fields. Guarded by status like every other task write: only a task
+     * that is waiting (proposed, queued) or finished unsuccessfully (blocked, failed) can be edited.
+     * Returns the task, or undefined if it is missing or in another status.
+     */
+    editTask(
+      id: number,
+      fields: Partial<Pick<Task, 'title' | 'prompt' | 'priority' | 'model' | 'max_turns' | 'max_attempts'>>,
+    ): Task | undefined {
+      const keys = Object.keys(fields) as (keyof typeof fields)[];
+      if (keys.length === 0) return this.getTask(id);
+      const sets = keys.map((k) => `${k} = ?`).join(', ');
+      return db
+        .prepare(
+          `UPDATE tasks SET ${sets}, updated_at = ${now}
+           WHERE id = ? AND status IN ('proposed', 'queued', 'blocked', 'failed') RETURNING *`,
+        )
+        .get(...keys.map((k) => fields[k] ?? null), id) as Task | undefined;
     },
     updateTask(id: number, fields: Partial<Pick<Task, 'branch' | 'worktree' | 'blocked_reason' | 'priority'>>): void {
       const keys = Object.keys(fields) as (keyof typeof fields)[];

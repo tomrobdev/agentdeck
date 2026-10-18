@@ -16,6 +16,8 @@ Repos
   agentdeck repo add <path> [--name n] [--base main] [--test "npm test"] [--setup "npm ci"] [--tools "Read,Edit,Bash(npm *)"]
                                                   the toolchain is detected; flags override what it suggests
   agentdeck repo ls
+  agentdeck repo doctor <repo>                    check the repo is ready for unattended runs; pauses it if not (exit 1)
+  agentdeck repo resume <repo>                    let a paused repo's tasks run again
   agentdeck repo set <repo> auto_approve on|off   planner tasks skip approval
   agentdeck repo set <repo> base_branch <branch>  branch new task worktrees start from
   agentdeck repo set <repo> test_cmd "<cmd>"      run after each task ("" for none)
@@ -25,6 +27,8 @@ Repos
 
 Tasks
   agentdeck add "<prompt>" --repo <name> [--title t] [--priority n] [--model sonnet] [--max-turns n] [--attempts n]
+  agentdeck edit <id> [--title t] [--prompt p] [--priority n] [--model m] [--max-turns n] [--attempts n]
+                                  for proposed, queued, blocked or failed tasks
   agentdeck ls [--status proposed|queued|running|done|blocked|failed|cancelled]
   agentdeck show <id>
   agentdeck log <id> [--attempt n] [--raw]
@@ -76,6 +80,17 @@ function fmtTask(t: Task, repoName: string): string {
   return `${STATUS_ICON[t.status]} #${String(t.id).padEnd(4)} ${t.status.padEnd(9)} p${t.priority}  ${repoName.padEnd(14)} ${t.title}${extra}`;
 }
 
+/** Print each doctor check with its reason, then the verdict. */
+function printDoctor(report: actions.DoctorReport): actions.DoctorReport {
+  for (const c of report.checks) console.log(`${c.ok ? '✓' : '✗'} ${c.name.padEnd(14)} ${c.reason}`);
+  console.log(
+    report.ok
+      ? `${report.repo}: ready`
+      : `${report.repo}: PAUSED (${report.paused_reason}); fix the failed checks and run \`agentdeck repo doctor ${report.repo}\``,
+  );
+  return report;
+}
+
 function relTime(unixSeconds: number): string {
   const mins = Math.round((unixSeconds * 1000 - Date.now()) / 60_000);
   if (mins <= 0) return 'now';
@@ -104,6 +119,7 @@ async function main(argv: string[]): Promise<void> {
       test: { type: 'string' },
       setup: { type: 'string' },
       tools: { type: 'string' },
+      prompt: { type: 'string' },
       repo: { type: 'string', short: 'r' },
       title: { type: 'string', short: 't' },
       priority: { type: 'string', short: 'p' },
@@ -139,6 +155,15 @@ async function main(argv: string[]): Promise<void> {
         console.log(
           `added repo "${repo.name}" (${repo.path}, base ${repo.base_branch}, toolchain ${repo.toolchain ?? 'unknown'}${repo.setup_cmd ? `, setup: ${repo.setup_cmd}` : ''}${repo.test_cmd ? `, tests: ${repo.test_cmd}` : ''})`,
         );
+        if (!printDoctor(await actions.doctorRepo(db, repo.id)).ok) process.exitCode = 1;
+      } else if (sub === 'doctor') {
+        if (!path) die('usage: agentdeck repo doctor <repo>');
+        console.log(`checking ${path}… (this runs the repo's setup and test commands)`);
+        if (!printDoctor(await actions.doctorRepo(db, path)).ok) process.exitCode = 1;
+      } else if (sub === 'resume') {
+        if (!path) die('usage: agentdeck repo resume <repo>');
+        const repo = actions.resumeRepo(db, path);
+        console.log(`${repo.name}: resumed`);
       } else if (sub === 'set') {
         const [, name, key, value = ''] = rest;
         if (!name || !['auto_approve', 'base_branch', 'test_cmd', 'setup_cmd'].includes(key))
@@ -153,7 +178,7 @@ async function main(argv: string[]): Promise<void> {
         for (const r of db.listRepos()) {
           const goals = actions.repoDetail(db, r.id).goals.trim() ? 'goals ✓' : 'no goals';
           console.log(
-            `${r.name.padEnd(16)} ${r.path}  base=${r.base_branch}  toolchain=${r.toolchain ?? '-'}  setup=${r.setup_cmd ?? '-'}  test=${r.test_cmd ?? '-'}  ${goals}${r.auto_approve ? '  auto-approve' : ''}`,
+            `${r.name.padEnd(16)} ${r.path}  base=${r.base_branch}  toolchain=${r.toolchain ?? '-'}  setup=${r.setup_cmd ?? '-'}  test=${r.test_cmd ?? '-'}  ${goals}${r.auto_approve ? '  auto-approve' : ''}${r.paused_reason ? `  PAUSED (${r.paused_reason})` : ''}`,
           );
         }
       } else die(`unknown repo command: ${sub}`);
@@ -172,6 +197,23 @@ async function main(argv: string[]): Promise<void> {
       });
       console.log(`queued task #${t.id} on ${repoName(t.repo_id)} (${t.model}, ${t.max_turns} turns max)`);
       if (db.isPaused()) console.log('note: the daemon is paused; run `agentdeck resume` to start working');
+      break;
+    }
+
+    case 'edit': {
+      const id = taskId(rest[0]);
+      // A blank or non-numeric value becomes NaN, which editTask rejects.
+      const num = (v: string | undefined) => (v === undefined ? undefined : v.trim() === '' ? NaN : Number(v));
+      const t = actions.editTask(db, id, {
+        title: flags.title,
+        prompt: flags.prompt,
+        priority: num(flags.priority),
+        model: flags.model,
+        max_turns: num(flags['max-turns']),
+        max_attempts: num(flags.attempts),
+      });
+      console.log(fmtTask(t, repoName(t.repo_id)));
+      console.log(`model ${t.model}, attempts ${t.attempts}/${t.max_attempts}, max turns ${t.max_turns}`);
       break;
     }
 

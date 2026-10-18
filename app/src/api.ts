@@ -14,6 +14,20 @@ export interface Repo {
   planned_at: string | null;
   toolchain: string | null;
   setup_cmd: string | null;
+  paused_reason: string | null;
+}
+
+export interface DoctorCheck {
+  name: string;
+  ok: boolean;
+  reason: string;
+}
+
+export interface DoctorReport {
+  repo: string;
+  ok: boolean;
+  checks: DoctorCheck[];
+  paused_reason: string | null;
 }
 
 export interface PlannerRun {
@@ -82,6 +96,7 @@ export interface Run {
   cache_write_tokens: number;
   tests_passed: number | null;
   result_text: string | null;
+  denials: number;
 }
 
 export interface TaskDetail extends Task {
@@ -185,6 +200,12 @@ export const api = {
   updateRepo: (id: number, patch: { goals?: string; auto_approve?: boolean; test_cmd?: string | null; setup_cmd?: string | null }) =>
     call<RepoDetail>(`/api/repos/${id}`, { method: 'POST', json: patch }),
   plan: (id: number) => call<PlanResult>(`/api/repos/${id}/plan`, { method: 'POST' }),
+  doctor: (id: number) => call<DoctorReport>(`/api/repos/${id}/doctor`, { method: 'POST' }),
+  resumeRepo: (id: number) => call<Repo>(`/api/repos/${id}/resume`, { method: 'POST' }),
+  editTask: (
+    id: number,
+    patch: { title?: string; prompt?: string; priority?: number; model?: string; max_turns?: number; max_attempts?: number },
+  ) => call<TaskDetail>(`/api/tasks/${id}`, { method: 'POST', json: patch }),
   approve: (id: number) => call<TaskDetail>(`/api/tasks/${id}/approve`, { method: 'POST' }),
   reject: (id: number) => call<TaskDetail>(`/api/tasks/${id}/reject`, { method: 'POST' }),
   service: () => call<ServiceStatus>('/api/service'),

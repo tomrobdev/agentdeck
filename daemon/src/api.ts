@@ -81,6 +81,8 @@ export function startApi(db: Db, port = API_PORT): Promise<Server> {
     ['GET', /^\/api\/repos\/(\d+)$/, (_q, _s, [id]) => actions.repoDetail(db, Number(id))],
     ['POST', /^\/api\/repos\/(\d+)$/, (_q, _s, [id], b) => actions.updateRepo(db, Number(id), b)],
     ['POST', /^\/api\/repos\/(\d+)\/plan$/, (_q, _s, [id]) => actions.planNow(db, Number(id))],
+    ['POST', /^\/api\/repos\/(\d+)\/doctor$/, (_q, _s, [id]) => actions.doctorRepo(db, Number(id))],
+    ['POST', /^\/api\/repos\/(\d+)\/resume$/, (_q, _s, [id]) => actions.resumeRepo(db, Number(id))],
     ['POST', /^\/api\/tasks\/(\d+)\/approve$/, (_q, _s, [id]) => (actions.approveTask(db, Number(id)), taskDetail(db, Number(id)))],
     ['POST', /^\/api\/tasks\/(\d+)\/reject$/, (_q, _s, [id]) => (actions.rejectTask(db, Number(id)), taskDetail(db, Number(id)))],
     [
@@ -99,6 +101,7 @@ export function startApi(db: Db, port = API_PORT): Promise<Server> {
     ],
     ['POST', /^\/api\/tasks$/, (_q, _s, _p, b) => taskDetail(db, actions.addTask(db, b).id)],
     ['GET', /^\/api\/tasks\/(\d+)$/, (_q, _s, [id]) => taskDetail(db, Number(id))],
+    ['POST', /^\/api\/tasks\/(\d+)$/, (_q, _s, [id], b) => (actions.editTask(db, Number(id), b), taskDetail(db, Number(id)))],
     ['POST', /^\/api\/tasks\/(\d+)\/cancel$/, (_q, _s, [id]) => ({ result: actions.cancelTask(db, Number(id)) })],
     ['POST', /^\/api\/tasks\/(\d+)\/retry$/, (_q, _s, [id]) => (actions.retryTask(db, Number(id)), taskDetail(db, Number(id)))],
     [

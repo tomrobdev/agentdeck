@@ -2,10 +2,12 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
 import type { Db, Repo, Task } from './db.ts';
+import { type Check, runDoctor } from './doctor.ts';
 import { detectToolchain } from './domain/toolchain.ts';
 import { currentBranch, isGitRepo, rootInfo } from './git.ts';
 import { BUDGET_KEYS, type Budget, decide, validateBudget } from './governor.ts';
 import { NOTIFY_KINDS, type NotifyKind, type NotifySettings, notify, notifySettings } from './notify.ts';
+import { pauseRepo } from './pause.ts';
 import { type PlannerSettings, goalsPath, planRepo, plannerSettings, readGoals, writeGoals } from './planner.ts';
 
 export class ActionError extends Error {}
@@ -54,6 +56,47 @@ export function addTask(
     max_turns: input.max_turns,
     max_attempts: input.max_attempts,
   });
+}
+
+const EDITABLE = ['proposed', 'queued', 'blocked', 'failed'];
+
+/** Change a waiting or unsuccessful task's title, prompt, priority, model, turn limit or attempt limit. */
+export function editTask(
+  db: Db,
+  id: number,
+  patch: { title?: string; prompt?: string; priority?: number; model?: string; max_turns?: number; max_attempts?: number },
+): Task {
+  const task = db.getTask(id);
+  if (!task) throw new ActionError('no such task');
+  const fields: Parameters<Db['editTask']>[1] = {};
+
+  const text = (key: 'title' | 'prompt' | 'model') => {
+    const value = patch[key];
+    if (value === undefined) return;
+    if (typeof value !== 'string' || !value.trim()) throw new ActionError(`${key} cannot be empty`);
+    fields[key] = value.trim();
+  };
+  const whole = (key: 'priority' | 'max_turns' | 'max_attempts', min: number, max: number) => {
+    const value = patch[key];
+    if (value === undefined) return;
+    if (typeof value !== 'number' || !Number.isInteger(value) || value < min || value > max)
+      throw new ActionError(`${key} must be a whole number from ${min} to ${max}`);
+    fields[key] = value;
+  };
+  text('title');
+  text('prompt');
+  text('model');
+  whole('priority', -1000, 1000);
+  whole('max_turns', 1, 500);
+  whole('max_attempts', 1, 20);
+
+  if (!Object.keys(fields).length) throw new ActionError('nothing to change');
+  const edited = db.editTask(id, fields);
+  if (!edited) {
+    const now = db.getTask(id)?.status ?? task.status;
+    throw new ActionError(`#${id} is ${now}; only ${EDITABLE.join(', ')} tasks can be edited`);
+  }
+  return edited;
 }
 
 /** First sentence of the prompt, cut at a word boundary. */
@@ -110,6 +153,33 @@ export function updateRepo(
     ...(patch.base_branch !== undefined ? { base_branch: patch.base_branch.trim() } : {}),
   });
   return repoDetail(db, repo.id);
+}
+
+/** Let a paused repo's tasks run again. */
+export function resumeRepo(db: Db, nameOrId: string | number): Repo {
+  const repo = repoOrThrow(db, nameOrId);
+  db.setRepoPaused(repo.id, null);
+  return db.getRepo(repo.id)!;
+}
+
+export interface DoctorReport {
+  repo: string;
+  ok: boolean;
+  checks: Check[];
+  paused_reason: string | null;
+}
+
+/**
+ * Check that a repo is ready for unattended runs. A failure pauses the repo, naming the first failed check;
+ * a pass clears any pause.
+ */
+export async function doctorRepo(db: Db, nameOrId: string | number): Promise<DoctorReport> {
+  const repo = repoOrThrow(db, nameOrId);
+  const checks = await runDoctor(repo);
+  const failed = checks.find((c) => !c.ok);
+  if (failed) pauseRepo(db, repo, `doctor: ${failed.name}`, { replace: true });
+  else db.setRepoPaused(repo.id, null);
+  return { repo: repo.name, ok: !failed, checks, paused_reason: db.getRepo(repo.id)!.paused_reason };
 }
 
 const planning = new Set<number>();

@@ -47,6 +47,18 @@ The dashboard has the queue (Active / Needs you / Done), task detail with every 
 5. The outcome is **done** (branch ready to review), **blocked** (the agent ended with `STATUS: BLOCKED: …`, or changed nothing), or **failed** (retried until `max_attempts`). A retry reuses the branch, and the new prompt includes the last attempt's result.
 6. A rate-limit rejection requeues the task without spending an attempt and holds the queue until the window resets.
 
+## Repo doctor and paused repos
+
+```sh
+agentdeck repo doctor myproject   # checks, each with a reason; exit code 1 if any fails. `repo add` runs it too.
+agentdeck repo resume myproject   # let a paused repo's tasks run again
+agentdeck edit 12 --max-turns 60  # change a proposed, queued, blocked or failed task
+```
+
+Doctor checks that the path is a git repo, the base branch exists (locally or as `origin/<base>`), a toolchain is detected or set, and `claude` is found. If the repo has a PR mode other than off, it also checks `gh auth status` and that `origin` exists. In a temporary worktree from the base branch, it runs the setup command and the test command, then checks that the repo's tool rules allow every command the test command runs. The worktree is removed afterwards, pass or fail.
+
+A failed doctor **pauses the repo**: its queued tasks stay queued but aren't claimed, and you get a `hold` notification. A repo is also paused when a run's setup command fails (`setup failed on task #N`) or when a run ends blocked or failed after tool uses were refused (`permission refused on task #N: <command>`; the run records how many in `denials`). `repo ls`, the API and the Repos panel show the reason. `repo resume` clears it, and so does a passing doctor.
+
 ## Planner
 
 Give a repo goals and AgentDeck proposes its own next tasks:
