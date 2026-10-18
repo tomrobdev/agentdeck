@@ -111,3 +111,10 @@ test('orphaned running tasks are requeued on start', () => {
   assert.equal(t.attempts, 0);
   db.updateTask(t.id, { status: 'cancelled' });
 });
+
+test('defaultTitle cuts at sentence or word boundary', async () => {
+  const { defaultTitle } = await import('../src/actions.ts');
+  assert.equal(defaultTitle('Fix the login bug. Then add tests.'), 'Fix the login bug');
+  const long = defaultTitle('Add a truncate(s, n) function to src/strings.js that shortens s to at most n characters, ending with an ellipsis');
+  assert.ok(long.endsWith('…') && long.length <= 73 && !long.includes(' cha…'), long);
+});

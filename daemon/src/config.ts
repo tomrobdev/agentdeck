@@ -8,6 +8,17 @@ export const DB_PATH = join(HOME, 'agentdeck.db');
 export const LOG_DIR = join(HOME, 'logs');
 export const WORKTREE_DIR = join(HOME, 'worktrees');
 
+/** Local API for the dashboard. Bound to 127.0.0.1 only. */
+export const API_PORT = Number(process.env.AGENTDECK_PORT ?? 4317);
+
+/** Origins allowed to call the API from a browser context: the Tauri webview and the Vite dev server. */
+export const API_ALLOWED_ORIGINS = new Set([
+  'tauri://localhost',
+  'http://tauri.localhost',
+  'http://localhost:1420',
+  'http://127.0.0.1:1420',
+]);
+
 export function ensureDirs(): void {
   for (const dir of [HOME, LOG_DIR, WORKTREE_DIR]) mkdirSync(dir, { recursive: true });
 }
