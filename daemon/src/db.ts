@@ -75,6 +75,7 @@ export interface Run {
   pid: number | null; // claude's process group while the run is live
 }
 
+/** The baseline schema run by migration step 1. Frozen: add new tables, columns and indexes as new steps. */
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS repos (
   id INTEGER PRIMARY KEY,
@@ -180,6 +181,8 @@ export const MIGRATIONS: Migration[] = [
     addColumn(db, 'runs', 'pid', 'INTEGER');
     addColumn(db, 'planner_runs', 'pid', 'INTEGER');
   },
+  // 2: runsForTask runs on every task view and every 500 ms per open log stream.
+  'CREATE INDEX IF NOT EXISTS runs_task ON runs(task_id, id)',
 ];
 
 /** Runs every step above the database's user_version in one transaction; returns how many ran. */
