@@ -8,7 +8,7 @@ import {
   canApply,
   fromStatuses,
   nextStatus,
-} from '../src/domain/task-lifecycle.ts';
+} from '../src/domain/task/lifecycle.ts';
 
 const EVENTS: Record<string, TaskEvent> = {
   claim: { type: 'claim' },

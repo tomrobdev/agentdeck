@@ -14,11 +14,12 @@ const fake = join(import.meta.dirname, 'fake-claude.mjs');
 chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
 
-const { openDb } = await import('../src/db.ts');
-const { Scheduler } = await import('../src/scheduler.ts');
-const actions = await import('../src/actions.ts');
-const { plannerDue, buildPlannerPrompt } = await import('../src/planner.ts');
-const { renderPlist, servicePath, LABEL } = await import('../src/service.ts');
+const { openDb } = await import('../src/db/index.ts');
+const { Scheduler } = await import('../src/application/scheduler.ts');
+const actions = await import('../src/application/actions.ts');
+const { plannerDue } = await import('../src/application/planner.ts');
+const { buildPlannerPrompt } = await import('../src/domain/planner/plan.ts');
+const { renderPlist, servicePath, LABEL } = await import('../src/adapters/service.ts');
 
 const db = openDb(join(home, 'test.db'));
 

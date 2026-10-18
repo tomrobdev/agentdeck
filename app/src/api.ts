@@ -1,4 +1,4 @@
-// Client for the daemon's local API (daemon/src/api.ts).
+// Client for the daemon's local API (daemon/src/api/server.ts).
 export const API_BASE = 'http://127.0.0.1:4317';
 
 export type TaskStatus = 'proposed' | 'queued' | 'running' | 'done' | 'blocked' | 'failed' | 'cancel_requested' | 'cancelled';

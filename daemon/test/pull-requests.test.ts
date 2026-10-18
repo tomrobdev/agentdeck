@@ -13,12 +13,12 @@ const fake = join(import.meta.dirname, 'fake-claude.mjs');
 chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
 
-const { openDb } = await import('../src/db.ts');
-const { Scheduler } = await import('../src/scheduler.ts');
-const { github } = await import('../src/github.ts');
-const { refreshPrStates } = await import('../src/pull-requests.ts');
-const { addTask, ActionError, updateRepo } = await import('../src/actions.ts');
-const { isWaiting } = await import('../src/domain/pr.ts');
+const { openDb } = await import('../src/db/index.ts');
+const { Scheduler } = await import('../src/application/scheduler.ts');
+const { github } = await import('../src/adapters/github.ts');
+const { refreshPrStates } = await import('../src/application/pull-requests.ts');
+const { addTask, ActionError, retryTask, updateRepo } = await import('../src/application/actions.ts');
+const { isWaiting } = await import('../src/domain/task/dependency.ts');
 
 const db = openDb(join(home, 'test.db'));
 db.setSetting('max_concurrent', '1');
@@ -154,6 +154,28 @@ test('a gh failure after a good push also keeps the task done', async () => {
       return `https://github.com/acme/demo/pull/${calls.create.length}`;
     };
   }
+});
+
+test('a retried task keeps its open PR, but gets a new one once the old PR is merged', async () => {
+  updateRepo(db, 'demo', { pr_mode: 'ready' });
+  const task = db.addTask({ repo_id: repo.id, title: 'Retry me', prompt: 'FAKE_DONE retry' });
+  await drain();
+  const first = db.getTask(task.id)!.pr_url;
+  assert.ok(first);
+
+  retryTask(db, task.id);
+  await drain();
+  assert.equal(db.getTask(task.id)!.pr_url, first, 'an open PR is updated by the push');
+  assert.equal(calls.create.length, 1);
+  assert.equal(calls.push.length, 2);
+
+  db.updateTask(task.id, { pr_state: 'merged' });
+  retryTask(db, task.id);
+  await drain();
+  const t = db.getTask(task.id)!;
+  assert.equal(calls.create.length, 2, 'a merged PR cannot take new commits');
+  assert.notEqual(t.pr_url, first);
+  assert.equal(t.pr_state, 'open');
 });
 
 test('refreshPrStates updates open PRs of done tasks and leaves a failed lookup alone', async () => {
