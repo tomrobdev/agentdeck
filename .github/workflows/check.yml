@@ -2,6 +2,7 @@ name: check
 
 on:
   pull_request:
+  workflow_dispatch: # pnpm check:stack --remote starts it on each branch of a stack
   push:
     branches: [main]
 

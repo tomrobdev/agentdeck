@@ -17,7 +17,8 @@
     "check:rust": "pnpm --filter agentdeck-app check:rust",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "pnpm format:check && pnpm typecheck && pnpm test && pnpm test:crash"
+    "check": "pnpm format:check && pnpm typecheck && pnpm test && pnpm test:crash",
+    "check:stack": "node scripts/check-stack.mjs"
   },
   "devDependencies": {
     "prettier": "^3.9.10"
