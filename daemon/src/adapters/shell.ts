@@ -1,0 +1,24 @@
+// Runs a repo's own commands (setup, tests) through the shell.
+import { execFile } from 'node:child_process';
+
+/** Run a repo command in `cwd`. Never rejects: a failure or timeout is `passed: false`. */
+export function runCommand(cmd: string, cwd: string, timeout: number): Promise<{ passed: boolean; output: string }> {
+  return new Promise((resolve) => {
+    execFile('sh', ['-c', cmd], { cwd, timeout, maxBuffer: 8 * 1024 * 1024 }, (err, stdout, stderr) => {
+      const output = `${stdout}${stderr}`.slice(-20_000);
+      resolve({ passed: !err, output: output || (err ? err.message : '') });
+    });
+  });
+}
+
+/** The last non-empty line of a command's output, for a one-line reason. */
+export function lastLine(output: string): string {
+  return (
+    output
+      .trim()
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .at(-1) ?? 'no output'
+  ).slice(0, 300);
+}

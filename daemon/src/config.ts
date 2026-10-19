@@ -35,37 +35,6 @@ export function claudeBin(): string {
   return 'claude';
 }
 
-/**
- * Generic tools every worker may use unless the repo overrides them. No push, no network installs.
- * Build and test rules come from the repo's toolchain (domain/toolchain.ts).
- */
-export const DEFAULT_ALLOWED_TOOLS = [
-  'Read',
-  'Edit',
-  'Write',
-  'Glob',
-  'Grep',
-  'Bash(git status*)',
-  'Bash(git diff*)',
-  'Bash(git log*)',
-  'Bash(git add*)',
-  'Bash(git commit*)',
-  'Bash(ls*)',
-  'Bash(cat*)',
-  'Bash(node *)',
-];
-
-export const ALWAYS_DISALLOWED_TOOLS = ['Bash(git push*)', 'Bash(git remote*)', 'Bash(rm -rf*)'];
-
-/** Appended to every worker's system prompt; the worker parses the STATUS line. */
-export const WORKER_SYSTEM_PROMPT = `You are running unattended as an AgentDeck worker inside a git worktree on your own branch.
-- Complete the task fully, keeping changes focused on it.
-- Change files with the Edit and Write tools, not shell redirection or sed.
-- Run the project's tests if there are any, and fix failures you caused.
-- Commit your work with clear messages. Never push, never switch branches.
-- If you cannot finish (missing info, needs a human decision, blocked by permissions), stop and explain why.
-- End your final message with exactly one line: "STATUS: DONE" or "STATUS: BLOCKED: <one-line reason>".`;
-
 export const DEFAULTS = {
   maxConcurrent: 2,
   maxTurns: 40,
@@ -73,3 +42,7 @@ export const DEFAULTS = {
   model: 'sonnet',
   tickMs: 5_000,
 };
+
+/** How long a repo's setup and test commands may run. */
+export const SETUP_TIMEOUT_MS = 10 * 60_000;
+export const TEST_TIMEOUT_MS = 15 * 60_000;

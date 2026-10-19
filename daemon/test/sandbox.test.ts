@@ -3,10 +3,12 @@ import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { ALWAYS_DISALLOWED_TOOLS, DEFAULT_ALLOWED_TOOLS } from '../src/config.ts';
-import type { Repo, Task } from '../src/db.ts';
-import { normalizeNetwork, parseNetwork, workerSettings, worktreeFileRules } from '../src/domain/sandbox.ts';
-import { claudeArgs, settingsPath, writeRunSettings } from '../src/worker.ts';
+import { runSettings } from '../src/application/tools.ts';
+import type { Repo } from '../src/domain/repo/repo.ts';
+import { ALWAYS_DISALLOWED_TOOLS, DEFAULT_ALLOWED_TOOLS } from '../src/domain/repo/tools.ts';
+import { claudeArgs } from '../src/domain/run/prompt.ts';
+import { normalizeNetwork, parseNetwork, settingsPath, workerSettings, worktreeFileRules } from '../src/domain/run/sandbox.ts';
+import type { Task } from '../src/domain/task/task.ts';
 
 const wt = '/Users/me/.agentdeck/worktrees/demo/task-7';
 
@@ -48,7 +50,7 @@ test('network lists parse and normalize', () => {
 
 test('claudeArgs passes --settings and drops bare Edit/Write; push stays disallowed', () => {
   const task = { model: 'sonnet', max_turns: 10 } as Task;
-  const args = claudeArgs(task, [...DEFAULT_ALLOWED_TOOLS, 'Edit(src/**)'], 'do it', '/logs/task-1-attempt-1.settings.json');
+  const args = claudeArgs(task, [...DEFAULT_ALLOWED_TOOLS, 'Edit(src/**)'], 'do it', null, '/logs/task-1-attempt-1.settings.json');
   assert.equal(args[args.indexOf('--settings') + 1], '/logs/task-1-attempt-1.settings.json');
   const allowed = args.slice(args.indexOf('--allowedTools') + 1, args.indexOf('--disallowedTools'));
   assert.ok(!allowed.includes('Edit') && !allowed.includes('Write'), 'unscoped file tools would allow any path');
@@ -64,8 +66,8 @@ test('the settings file is written next to the run log with the repo’s sandbox
   assert.equal(settingsPath(log), join(dir, 'task-3-attempt-2.settings.json'));
   const repo = { sandbox: 1, network: '["registry.npmjs.org"]' } as Repo;
 
-  const on = JSON.parse(readFileSync(writeRunSettings(repo, wt, log), 'utf8'));
+  const on = JSON.parse(readFileSync(runSettings(repo, wt, log), 'utf8'));
   assert.deepEqual(on, workerSettings({ worktree: wt, sandbox: true, network: ['registry.npmjs.org'] }));
-  const off = JSON.parse(readFileSync(writeRunSettings({ ...repo, sandbox: 0 }, wt, log), 'utf8'));
+  const off = JSON.parse(readFileSync(runSettings({ ...repo, sandbox: 0 }, wt, log), 'utf8'));
   assert.deepEqual(off.sandbox, { enabled: false });
 });

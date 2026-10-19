@@ -8,7 +8,7 @@ Needs Node 24+ (runs the TypeScript directly), git, and a logged-in `claude` CLI
 
 ```sh
 pnpm install                             # whole workspace (app + daemon)
-cd daemon && npm link                    # puts `agentdeck` on your PATH
+pnpm setup:cli                           # puts `agentdeck` on your PATH (~/.local/bin)
 
 agentdeck repo add ~/code/myproject --test "npm test"
 agentdeck add --repo myproject "Add input validation to the signup form, with tests"
@@ -28,7 +28,7 @@ Try it on a throwaway project first: `scripts/make-demo-repo.sh` creates one at 
 `agentdeck daemon` also serves a local API on `http://127.0.0.1:4317`, which the dashboard uses. It accepts browser requests only from the Tauri webview and the Vite dev server.
 
 ```sh
-pnpm dev                                           # dev daemon (restarts on edits) + native window; just the window if the service is running
+pnpm dev                                           # the service daemon (installed if needed) + native window; see "Developing the daemon"
 pnpm dev:app                                       # just the window, against an already-running daemon
 pnpm build                                         # → app/src-tauri/target/release/bundle/macos/AgentDeck.app
 pnpm --filter agentdeck-app dev                    # or just the UI in a browser at http://localhost:1420
@@ -77,10 +77,18 @@ The planner runs `claude -p` read-only in the repo's main checkout. It reads the
 ```sh
 agentdeck install      # launchd agent: starts at login, restarted within seconds if it dies
 agentdeck service      # status
-agentdeck uninstall
+agentdeck service stop # unload the daemon but keep the plist; `service start` loads it again
+agentdeck restart      # graceful: pause new claims, wait for running tasks and planner runs, restart, restore pause
+agentdeck restart --now  # restart at once; a running task loses its run and is requeued
+agentdeck logs -f -n 100  # print or follow ~/.agentdeck/logs/daemon.log
+agentdeck uninstall    # unload and delete the plist
 ```
 
-The agent runs `daemon/src/cli.ts` from this checkout, so keep the checkout on `main`, and run `agentdeck install` again after pulling to restart it on the new code. Logs go to `~/.agentdeck/logs/daemon.log`. While tasks or the planner run, the daemon holds a `caffeinate -i` assertion so the Mac doesn't idle-sleep; it releases it when idle. In the dashboard, Settings → Always on turns on "Open this dashboard at login" (menu-bar tray only), and the tray menu shows the daemon's state.
+The agent runs `daemon/src/cli.ts` from this checkout, so keep the checkout on `main`. After pulling, `agentdeck restart` starts it on the new code. `pnpm reboot` and `pnpm logs` call `agentdeck restart` and `agentdeck logs -f` (run `pnpm setup:cli` once to put `agentdeck` on your PATH). While tasks or the planner run, the daemon holds a `caffeinate -i` assertion so the Mac doesn't idle-sleep; it releases it when idle. In the dashboard, Settings → Always on turns on "Open this dashboard at login" (menu-bar tray only), and the tray menu shows the daemon's state.
+
+### Developing the daemon
+
+`pnpm dev` uses the service daemon (it installs it if needed) and starts only the dashboard. To have the daemon pick up your edits, run `agentdeck set reload_on_change on` (or use the toggle in Settings → Always on). The daemon then watches `daemon/src`. Once a file has changed and no task or planner run is active, it logs why and exits, and launchd starts it again on the new code. While work runs it waits, and it claims no new tasks until it has reloaded. It is off by default, so a daemon running real tasks is never restarted by an unrelated edit.
 
 ## Usage governor
 

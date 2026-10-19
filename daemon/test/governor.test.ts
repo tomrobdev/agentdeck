@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { DEFAULT_BUDGET, decide, validateBudget } from '../src/governor.ts';
+import { DEFAULT_BUDGET, decide, validateBudget } from '../src/domain/usage/governor.ts';
 
 const NOW = 1_800_000_000;
 const DAY = 86400;

@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en" data-agentdeck-plan="1">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Plan first, then build</title>
+    <style>
+      :root {
+        --bg: #f6f6f4;
+        --panel: #ffffff;
+        --panel-2: #f0f0ed;
+        --border: #e2e2dd;
+        --text: #1d1d1b;
+        --muted: #6d6d68;
+        --accent: #c2622d;
+        --ok: #2e8b57;
+        --warn: #c98a10;
+        --bad: #c94141;
+        --info: #2f6fdb;
+        --code-bg: #f3f2ee;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme='light']) {
+          --bg: #161615;
+          --panel: #1f1f1d;
+          --panel-2: #272725;
+          --border: #33332f;
+          --text: #ecebe6;
+          --muted: #9a9993;
+          --accent: #e07a43;
+          --ok: #57b583;
+          --warn: #e0ab3c;
+          --bad: #e36d6d;
+          --info: #6c9bf0;
+          --code-bg: #1a1a18;
+        }
+      }
+      :root[data-theme='dark'] {
+        --bg: #161615;
+        --panel: #1f1f1d;
+        --panel-2: #272725;
+        --border: #33332f;
+        --text: #ecebe6;
+        --muted: #9a9993;
+        --accent: #e07a43;
+        --ok: #57b583;
+        --warn: #e0ab3c;
+        --bad: #e36d6d;
+        --info: #6c9bf0;
+        --code-bg: #1a1a18;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font:
+          15px/1.6 -apple-system,
+          BlinkMacSystemFont,
+          'SF Pro Text',
+          'Segoe UI',
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      .wrap {
+        display: grid;
+        grid-template-columns: 220px minmax(0, 1fr);
+        gap: 40px;
+        max-width: 1160px;
+        margin: 0 auto;
+        padding: 40px 24px 80px;
+      }
+      nav.toc {
+        position: sticky;
+        top: 24px;
+        align-self: start;
+        font-size: 13px;
+      }
+      nav.toc a {
+        display: block;
+        color: var(--muted);
+        text-decoration: none;
+        padding: 3px 0;
+      }
+      nav.toc a:hover {
+        color: var(--text);
+      }
+      nav.toc b {
+        display: block;
+        margin: 14px 0 4px;
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      h1 {
+        font-size: 30px;
+        line-height: 1.2;
+        margin: 0 0 6px;
+        letter-spacing: -0.01em;
+      }
+      h2 {
+        font-size: 21px;
+        margin: 56px 0 6px;
+        padding-top: 8px;
+        letter-spacing: -0.005em;
+      }
+      h3 {
+        font-size: 15px;
+        margin: 22px 0 6px;
+      }
+      p,
+      li {
+        max-width: 72ch;
+      }
+      .lede {
+        color: var(--muted);
+        font-size: 16px;
+        margin: 0 0 24px;
+      }
+      code,
+      pre {
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        font-size: 12.5px;
+      }
+      code {
+        background: var(--code-bg);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 0 4px;
+      }
+      pre {
+        background: var(--code-bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px 14px;
+        overflow-x: auto;
+        line-height: 1.45;
+      }
+      pre code {
+        background: none;
+        border: 0;
+        padding: 0;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 14px;
+        margin: 8px 0 4px;
+      }
+      th,
+      td {
+        text-align: left;
+        vertical-align: top;
+        padding: 7px 10px;
+        border-bottom: 1px solid var(--border);
+      }
+      th {
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 16px 18px;
+        margin: 14px 0;
+      }
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 6px 0 12px;
+      }
+      .tag {
+        font-size: 12px;
+        padding: 1px 8px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        background: var(--panel);
+      }
+      .tag.ok {
+        color: var(--ok);
+        border-color: color-mix(in srgb, var(--ok) 45%, transparent);
+      }
+      .tag.warn {
+        color: var(--warn);
+        border-color: color-mix(in srgb, var(--warn) 45%, transparent);
+      }
+      .tag.info {
+        color: var(--info);
+        border-color: color-mix(in srgb, var(--info) 45%, transparent);
+      }
+      .decision {
+        border-left: 3px solid var(--accent);
+      }
+      .decision h3 {
+        margin-top: 0;
+      }
+      .grid2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      ul.check {
+        list-style: none;
+        padding-left: 0;
+      }
+      ul.check li::before {
+        content: '☐ ';
+        color: var(--muted);
+      }
+      a {
+        color: var(--accent);
+      }
+      @media (max-width: 860px) {
+        .wrap {
+          grid-template-columns: 1fr;
+          gap: 0;
+          padding: 24px 16px 60px;
+        }
+        nav.toc {
+          position: static;
+          margin-bottom: 16px;
+        }
+        .grid2 {
+          grid-template-columns: 1fr;
+        }
+        table {
+          display: block;
+          overflow-x: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <nav class="toc">
+        <b>Plan</b>
+        <a href="#why">Why</a>
+        <a href="#decisions">Decisions</a>
+        <b>Steps</b>
+        <a href="#finish">0 · Finish plan files</a>
+        <a href="#live">1 · Live progress</a>
+        <a href="#queue">2 · Progress in the queue</a>
+        <a href="#plan-first">3 · Plan-first tasks</a>
+        <a href="#follow">4 · Build follows the plan</a>
+        <a href="#changes">5 · Request changes</a>
+        <a href="#pilot">6 · Pilot</a>
+        <b>After</b>
+        <a href="#open">Open questions</a>
+        <a href="#later">Not in this plan</a>
+      </nav>
+
+      <main>
+        <h1>Plan first, then build</h1>
+        <p class="lede" data-plan-summary>
+          Let a person check how a task will be done before it spends a full run building. A plan-first task runs once to write its plan and
+          stops; it waits for approval with the plan on its page; approval queues the build, which follows the plan and ticks off its steps
+          while the card shows the progress live. Written 2026-10-19, after <code>docs/plans/plan-files.html</code>.
+        </p>
+
+        <h2 id="why">Why</h2>
+        <p>
+          The pilot's costly failures come from a wrong approach, not from bad code: a run goes the wrong way for 40 turns, and the review
+          happens after the quota is spent. A plan costs a few turns and can be read in a minute. Plan files now exist, attach themselves to
+          tasks and show on Overview, so the gate is mostly lifecycle and prompt work.
+        </p>
+
+        <h2 id="decisions">Decisions</h2>
+        <table>
+          <tr>
+            <th>Decision</th>
+            <th>Why</th>
+          </tr>
+          <tr>
+            <td>A plan ready for review is a <code>proposed</code> task, not a new status</td>
+            <td>
+              Proposed already means "needs you": the queue groups it, Approve and Reject exist, and notifications fire. A new status would
+              touch the lifecycle, <code>ls</code> groups, board columns and every label. The page tells the two apart by the task's
+              <code>plan_first</code> flag.
+            </td>
+          </tr>
+          <tr>
+            <td>The planning run doesn't use an attempt</td>
+            <td><code>max_attempts</code> is for builds. Giving the attempt back works like <code>rate_limited</code> does today.</td>
+          </tr>
+          <tr>
+            <td>Live progress reads the worktree's files, not commits</td>
+            <td>Agents commit at the end. The collect at the end of the run stays the one that counts.</td>
+          </tr>
+          <tr>
+            <td>The planning run may write only under <code>docs/plans/</code></td>
+            <td>A plan run that edits code would be a build nobody approved. Enforced with tool rules, not just the prompt.</td>
+          </tr>
+        </table>
+
+        <section data-plan-step id="finish" data-status="doing">
+          <h2>0 · Finish plan files</h2>
+          <p>
+            Restart the daemon on the new code, check the plan frame in the Tauri window (CSP and <code>srcdoc</code>), and see a real
+            worker write a plan, get it collected, and show it on the card.
+          </p>
+          <p>
+            <b>Worker test, 2026-10-19:</b> demo task #17 wrote <code>docs/plans/word-count.html</code> in the format unprompted beyond the
+            task text. It was collected at the end of the run (2/3 steps, the last <code>blocked</code>). The run itself blocked on an
+            unrelated refusal (pilot incident 12). The agent marked the step blocked without saying why there, which step 4 asks for. Still
+            to do: the Tauri check.
+          </p>
+        </section>
+
+        <section data-plan-step id="live" data-status="todo">
+          <h2>1 · Live progress</h2>
+          <p>
+            While a task runs, the worker reads the plans under the worktree's <code>docs/plans/</code> every 15 seconds and saves those
+            that changed. A new adapter reads the files; <code>collectPlans</code> takes its file list from either source.
+          </p>
+        </section>
+
+        <section data-plan-step id="queue" data-status="todo">
+          <h2>2 · Progress in the queue</h2>
+          <p>
+            Task summaries carry <code>plan: { finished, total } | null</code>, shown as a small bar on list rows and board cards. Parsing
+            every plan on every list read is wasteful, so <code>db/plans.ts</code> keeps parsed plans keyed by id and
+            <code>updated_at</code>.
+          </p>
+        </section>
+
+        <section data-plan-step id="plan-first" data-status="todo">
+          <h2>3 · Plan-first tasks</h2>
+          <ul>
+            <li>
+              Migration step 8: <code>tasks.plan_first</code>. Set with <code>agentdeck add --plan-first</code> and a checkbox in the new
+              task form.
+            </li>
+            <li>
+              The first run gets a planning prompt: write <code>docs/plans/task-&lt;id&gt;.html</code> in the plan format, change nothing
+              else, end with <code>STATUS: DONE</code>.
+            </li>
+            <li>
+              A new lifecycle event <code>planned</code> moves <code>running → proposed</code> through <code>applyEvent</code>, gives the
+              attempt back and notifies. No plan collected means <code>blocked</code>: "the planning run wrote no plan".
+            </li>
+          </ul>
+        </section>
+
+        <section data-plan-step id="follow" data-status="todo">
+          <h2>4 · Build follows the plan</h2>
+          <p>
+            When a task has a plan, <code>buildPrompt</code> names it and tells the agent to follow it, set each step's
+            <code>data-status</code> as it goes, and commit the plan with the work. A step it can't do is marked <code>blocked</code> with
+            the reason in the step.
+          </p>
+        </section>
+
+        <section data-plan-step id="changes" data-status="todo">
+          <h2>5 · Request changes</h2>
+          <p>
+            On a planned proposal, Request changes takes a note and queues another planning run with the note in its prompt. The note is
+            kept as the event's reason, so the timeline shows it. Reject still cancels.
+          </p>
+        </section>
+
+        <section data-plan-step id="pilot" data-status="todo">
+          <h2>6 · Pilot</h2>
+          <p>
+            Run a plan-first wave on the demo repo and on AgentDeck. Add to the scorecard: plans approved without changes, and plan-first
+            builds done on their first run against the same measure for ordinary tasks.
+          </p>
+        </section>
+
+        <h2 id="open">Open questions</h2>
+        <ul>
+          <li>Should a repo be able to make plan-first the default, or only for tasks above some size the planner estimates?</li>
+          <li>Should the planner propose a plan with each task it proposes, so one approval covers both?</li>
+        </ul>
+
+        <h2 id="later">Not in this plan</h2>
+        <ul>
+          <li>Comments on single plan steps (needs the diff-comment work from the dashboard plan).</li>
+          <li>Showing how a plan changed between revisions.</li>
+          <li>Splitting a plan's steps into separate tasks with <code>--after</code> links.</li>
+        </ul>
+      </main>
+    </div>
+  </body>
+</html>

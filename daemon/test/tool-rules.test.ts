@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { bashPatterns, matchesRule, refusedCommands, splitCommand } from '../src/domain/tool-rules.ts';
+import { bashPatterns, matchesRule, refusedCommands, splitCommand } from '../src/domain/repo/tool-rules.ts';
 
 test('splitCommand splits on &&, ||, ; and |', () => {
   const table: [string, string[]][] = [

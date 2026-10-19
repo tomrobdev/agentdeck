@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en" data-agentdeck-plan="1">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Plan files</title>
+    <style>
+      :root {
+        --bg: #f6f6f4;
+        --panel: #ffffff;
+        --panel-2: #f0f0ed;
+        --border: #e2e2dd;
+        --text: #1d1d1b;
+        --muted: #6d6d68;
+        --accent: #c2622d;
+        --ok: #2e8b57;
+        --warn: #c98a10;
+        --bad: #c94141;
+        --info: #2f6fdb;
+        --code-bg: #f3f2ee;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme='light']) {
+          --bg: #161615;
+          --panel: #1f1f1d;
+          --panel-2: #272725;
+          --border: #33332f;
+          --text: #ecebe6;
+          --muted: #9a9993;
+          --accent: #e07a43;
+          --ok: #57b583;
+          --warn: #e0ab3c;
+          --bad: #e36d6d;
+          --info: #6c9bf0;
+          --code-bg: #1a1a18;
+        }
+      }
+      :root[data-theme='dark'] {
+        --bg: #161615;
+        --panel: #1f1f1d;
+        --panel-2: #272725;
+        --border: #33332f;
+        --text: #ecebe6;
+        --muted: #9a9993;
+        --accent: #e07a43;
+        --ok: #57b583;
+        --warn: #e0ab3c;
+        --bad: #e36d6d;
+        --info: #6c9bf0;
+        --code-bg: #1a1a18;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font:
+          15px/1.6 -apple-system,
+          BlinkMacSystemFont,
+          'SF Pro Text',
+          'Segoe UI',
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      .wrap {
+        display: grid;
+        grid-template-columns: 220px minmax(0, 1fr);
+        gap: 40px;
+        max-width: 1160px;
+        margin: 0 auto;
+        padding: 40px 24px 80px;
+      }
+      nav.toc {
+        position: sticky;
+        top: 24px;
+        align-self: start;
+        font-size: 13px;
+      }
+      nav.toc a {
+        display: block;
+        color: var(--muted);
+        text-decoration: none;
+        padding: 3px 0;
+      }
+      nav.toc a:hover {
+        color: var(--text);
+      }
+      nav.toc b {
+        display: block;
+        margin: 14px 0 4px;
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      h1 {
+        font-size: 30px;
+        line-height: 1.2;
+        margin: 0 0 6px;
+        letter-spacing: -0.01em;
+      }
+      h2 {
+        font-size: 21px;
+        margin: 56px 0 6px;
+        padding-top: 8px;
+        letter-spacing: -0.005em;
+      }
+      h3 {
+        font-size: 15px;
+        margin: 22px 0 6px;
+      }
+      p,
+      li {
+        max-width: 72ch;
+      }
+      .lede {
+        color: var(--muted);
+        font-size: 16px;
+        margin: 0 0 24px;
+      }
+      code,
+      pre {
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        font-size: 12.5px;
+      }
+      code {
+        background: var(--code-bg);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 0 4px;
+      }
+      pre {
+        background: var(--code-bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px 14px;
+        overflow-x: auto;
+        line-height: 1.45;
+      }
+      pre code {
+        background: none;
+        border: 0;
+        padding: 0;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 14px;
+        margin: 8px 0 4px;
+      }
+      th,
+      td {
+        text-align: left;
+        vertical-align: top;
+        padding: 7px 10px;
+        border-bottom: 1px solid var(--border);
+      }
+      th {
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 16px 18px;
+        margin: 14px 0;
+      }
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 6px 0 12px;
+      }
+      .tag {
+        font-size: 12px;
+        padding: 1px 8px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        background: var(--panel);
+      }
+      .tag.ok {
+        color: var(--ok);
+        border-color: color-mix(in srgb, var(--ok) 45%, transparent);
+      }
+      .tag.warn {
+        color: var(--warn);
+        border-color: color-mix(in srgb, var(--warn) 45%, transparent);
+      }
+      .tag.info {
+        color: var(--info);
+        border-color: color-mix(in srgb, var(--info) 45%, transparent);
+      }
+      .decision {
+        border-left: 3px solid var(--accent);
+      }
+      .decision h3 {
+        margin-top: 0;
+      }
+      .grid2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      ul.check {
+        list-style: none;
+        padding-left: 0;
+      }
+      ul.check li::before {
+        content: '☐ ';
+        color: var(--muted);
+      }
+      a {
+        color: var(--accent);
+      }
+      @media (max-width: 860px) {
+        .wrap {
+          grid-template-columns: 1fr;
+          gap: 0;
+          padding: 24px 16px 60px;
+        }
+        nav.toc {
+          position: static;
+          margin-bottom: 16px;
+        }
+        .grid2 {
+          grid-template-columns: 1fr;
+        }
+        table {
+          display: block;
+          overflow-x: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <nav class="toc">
+        <b>Plan</b>
+        <a href="#format">The format</a>
+        <b>Steps</b>
+        <a href="#parse">1 · Parser</a>
+        <a href="#store">2 · Store</a>
+        <a href="#collect">3 · Collect and attach</a>
+        <a href="#prompt">4 · Worker prompt</a>
+        <a href="#card">5 · Plan card</a>
+        <a href="#check">6 · Check in the app</a>
+      </nav>
+
+      <main>
+        <h1>Plan files: a plan format AgentDeck reads and shows on the task</h1>
+        <p class="lede" data-plan-summary>
+          Plans are HTML pages, readable as they are. Mark the title, summary and steps with data attributes so the daemon can parse them
+          with no dependency, attach them to their task, and show the steps and their status on the task's Overview, with the whole page one
+          click away. Written 2026-10-19 on branch <code>dashboard-views</code>.
+        </p>
+
+        <h2 id="format">The format</h2>
+        <p>
+          <code>&lt;html data-agentdeck-plan="1"&gt;</code> marks a plan, <code>&lt;p data-plan-summary&gt;</code> its summary, and each
+          <code>&lt;section data-plan-step data-status="todo|doing|done|blocked|skipped"&gt;</code> a step, titled by its first heading. The
+          rest is free HTML. The full spec is <code>docs/plan-format.md</code>; this page is written in the format.
+        </p>
+        <table>
+          <tr>
+            <th>Decision</th>
+            <th>Why</th>
+          </tr>
+          <tr>
+            <td>Data attributes on ordinary HTML</td>
+            <td>
+              The plans in <code>docs/plans/</code> are already HTML pages. Attributes keep them free-form for a person and need no parser
+              library.
+            </td>
+          </tr>
+          <tr>
+            <td>Store the HTML, parse on read</td>
+            <td>The parser can improve without a migration, and a plan is small next to the work of reading it from git.</td>
+          </tr>
+          <tr>
+            <td>A sandboxed frame with no scripts</td>
+            <td>A plan is written by an agent. It may style itself but never run code in the dashboard.</td>
+          </tr>
+        </table>
+
+        <section data-plan-step id="parse" data-status="done">
+          <h2>1 · Parser</h2>
+          <div class="meta"><span class="tag ok">done</span></div>
+          <p>
+            <code>domain/plan/plan.ts</code>: <code>parsePlan</code> drops comments, scripts and styles, checks the marker, and reads the
+            title, summary and steps. Unknown statuses read as <code>todo</code>.
+          </p>
+        </section>
+
+        <section data-plan-step id="store" data-status="done">
+          <h2>2 · Store</h2>
+          <div class="meta"><span class="tag ok">done</span></div>
+          <p>
+            Migration step 7 adds <code>task_plans</code>, one row per task and name. <code>db/plans.ts</code> upserts by name, moves
+            <code>updated_at</code> only when the HTML changes, and replaces a task's branch plans as one unit.
+          </p>
+        </section>
+
+        <section data-plan-step id="collect" data-status="done">
+          <h2>3 · Collect and attach</h2>
+          <div class="meta"><span class="tag ok">done</span></div>
+          <p>
+            After every run the worker reads the plans the branch added or changed under <code>docs/plans/</code>.
+            <code>agentdeck attach &lt;task&gt; [plan.html]</code> and <code>POST /api/tasks/:id/plans</code> attach one by hand. The task
+            detail lists them; <code>GET /api/tasks/:id/plans/:plan</code> returns the HTML.
+          </p>
+        </section>
+
+        <section data-plan-step id="prompt" data-status="done">
+          <h2>4 · Worker prompt</h2>
+          <div class="meta"><span class="tag ok">done</span></div>
+          <p>The worker's system prompt tells it where plans go and which attributes to use, and to keep each step's status current.</p>
+        </section>
+
+        <section data-plan-step id="card" data-status="done">
+          <h2>5 · Plan card</h2>
+          <div class="meta"><span class="tag ok">done</span></div>
+          <p>
+            <code>PlanCard.vue</code> on Overview: title, progress, summary and steps. A step with an id opens the page at that step; the
+            page shows in a frame sandboxed without scripts.
+          </p>
+        </section>
+
+        <section data-plan-step id="check" data-status="doing">
+          <h2>6 · Check in the app</h2>
+          <div class="meta"><span class="tag warn">in progress</span></div>
+          <p class="muted">
+            Checked in the browser against a dev daemon. Still to check in the Tauri window: that the CSP lets the
+            <code>srcdoc</code> frame load.
+          </p>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

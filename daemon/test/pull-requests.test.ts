@@ -13,12 +13,19 @@ const fake = join(import.meta.dirname, 'fake-claude.mjs');
 chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
 
-const { openDb } = await import('../src/db.ts');
-const { Scheduler } = await import('../src/scheduler.ts');
-const { github } = await import('../src/github.ts');
-const { refreshPrStates } = await import('../src/pull-requests.ts');
-const { addTask, ActionError, updateRepo } = await import('../src/actions.ts');
-const { isWaiting } = await import('../src/domain/pr.ts');
+const { openDb } = await import('../src/db/index.ts');
+const { Scheduler } = await import('../src/application/scheduler.ts');
+const { github } = await import('../src/adapters/github.ts');
+const { refreshPrStates } = await import('../src/application/pull-requests.ts');
+const { addTask, ActionError, closeTaskPr, retryTask, updateRepo } = await import('../src/application/actions.ts');
+const { buildPrompt } = await import('../src/domain/run/prompt.ts');
+const { latestReviewNote } = await import('../src/domain/task/history.ts');
+const { mergePreview, mergeTask } = await import('../src/application/actions.ts');
+const { mergeCheck, parsePrDetails } = await import('../src/domain/pull-request/merge.ts');
+type PrDetails = import('../src/domain/pull-request/merge.ts').PrDetails;
+const { dependencyState, isWaiting } = await import('../src/domain/task/dependency.ts');
+const { waitingFor } = await import('../src/application/dependencies.ts');
+const { cancelTask } = await import('../src/application/actions.ts');
 
 const db = openDb(join(home, 'test.db'));
 db.setSetting('max_concurrent', '1');
@@ -55,11 +62,44 @@ github.createPr = async (pr) => {
   return `https://github.com/acme/demo/pull/${calls.create.length}`;
 };
 github.prState = async (url) => states[url] ?? 'open';
+let closed: string[];
+let closeError: string | null;
+github.closePr = async (url) => {
+  if (closeError) throw new Error(closeError);
+  closed.push(url);
+};
+
+// Merging: what GitHub says about each PR, and what the daemon asked it to do.
+const cleanDetails: PrDetails = {
+  draft: false,
+  mergeable: 'MERGEABLE',
+  merge_state: 'CLEAN',
+  commits: 3,
+  files: 2,
+  additions: 10,
+  deletions: 4,
+  checks: { total: 2, failing: 0, pending: 0 },
+};
+let details: Record<string, PrDetails>;
+let merging: { ready: string[]; merged: { url: string; method: string; subject?: string; body?: string }[]; deleted: string[] };
+let mergeError: string | null;
+github.prDetails = async (url) => details[url] ?? cleanDetails;
+github.markReady = async (url) => void merging.ready.push(url);
+github.merge = async (pr) => {
+  if (mergeError) throw new Error(mergeError);
+  merging.merged.push({ url: pr.url, method: pr.method, subject: pr.message?.subject, body: pr.message?.body });
+};
+github.deleteRemoteBranch = async (_repoPath, branch) => void merging.deleted.push(branch);
 
 beforeEach(() => {
   calls = { push: [], create: [] };
   pushError = null;
   states = {};
+  closed = [];
+  closeError = null;
+  details = {};
+  merging = { ready: [], merged: [], deleted: [] };
+  mergeError = null;
   updateRepo(db, 'demo', { pr_mode: 'off' });
 });
 
@@ -125,7 +165,7 @@ test('a push failure keeps the task done, logs agentdeck_pr, and notifies with t
   const t = db.getTask(task.id)!;
   assert.equal(t.status, 'done');
   assert.equal(t.pr_url, null);
-  assert.equal(t.pr_state, null);
+  assert.equal(t.pr_state, 'failed', 'dependents see that the PR will not appear on its own');
   assert.equal(calls.create.length, 0, 'no PR without a pushed branch');
 
   const log = readFileSync(db.runsForTask(t.id).at(-1)!.log_path, 'utf8');
@@ -154,6 +194,65 @@ test('a gh failure after a good push also keeps the task done', async () => {
       return `https://github.com/acme/demo/pull/${calls.create.length}`;
     };
   }
+});
+
+test('a retried task keeps its open PR, but gets a new one once the old PR is merged', async () => {
+  updateRepo(db, 'demo', { pr_mode: 'ready' });
+  const task = db.addTask({ repo_id: repo.id, title: 'Retry me', prompt: 'FAKE_DONE retry' });
+  await drain();
+  const first = db.getTask(task.id)!.pr_url;
+  assert.ok(first);
+
+  retryTask(db, task.id);
+  await drain();
+  assert.equal(db.getTask(task.id)!.pr_url, first, 'an open PR is updated by the push');
+  assert.equal(calls.create.length, 1);
+  assert.equal(calls.push.length, 2);
+
+  db.updateTask(task.id, { pr_state: 'merged' });
+  retryTask(db, task.id);
+  await drain();
+  const t = db.getTask(task.id)!;
+  assert.equal(calls.create.length, 2, 'a merged PR cannot take new commits');
+  assert.notEqual(t.pr_url, first);
+  assert.equal(t.pr_state, 'open');
+});
+
+test('request changes: the note is on the timeline and first in the next prompt, and only the latest retry counts', async () => {
+  updateRepo(db, 'demo', { pr_mode: 'ready' });
+  const task = db.addTask({ repo_id: repo.id, title: 'Review me', prompt: 'FAKE_DONE review' });
+  await drain();
+  retryTask(db, task.id, '  Rename the helper.  ');
+  const events = db.eventsForTask(task.id);
+  assert.equal(events.at(-1)!.type, 'retry');
+  assert.equal(events.at(-1)!.reason, 'Rename the helper.');
+  assert.equal(latestReviewNote(events), 'Rename the helper.');
+
+  const prompt = buildPrompt(db.getTask(task.id)!, db.runsForTask(task.id), latestReviewNote(events));
+  assert.match(prompt, /^Changes requested in review:\nRename the helper\.\n/);
+  assert.ok(prompt.includes('FAKE_DONE review'));
+  assert.ok(!buildPrompt(db.getTask(task.id)!, db.runsForTask(task.id)).includes('Changes requested'));
+
+  await drain();
+  retryTask(db, task.id);
+  assert.equal(latestReviewNote(db.eventsForTask(task.id)), null);
+});
+
+test('close PR closes it with gh, marks it closed and only works on an open PR', async () => {
+  updateRepo(db, 'demo', { pr_mode: 'ready' });
+  const dep = db.addTask({ repo_id: repo.id, title: 'Close me', prompt: 'FAKE_DONE close' });
+  await drain();
+  const url = db.getTask(dep.id)!.pr_url!;
+
+  closeError = 'gh: not authenticated';
+  await assert.rejects(closeTaskPr(db, dep.id), /could not close the PR: gh: not authenticated/);
+  assert.equal(db.getTask(dep.id)!.pr_state, 'open');
+
+  closeError = null;
+  await closeTaskPr(db, dep.id);
+  assert.deepEqual(closed, [url]);
+  assert.equal(db.getTask(dep.id)!.pr_state, 'closed');
+  await assert.rejects(closeTaskPr(db, dep.id), /no open pull request/);
 });
 
 test('refreshPrStates updates open PRs of done tasks and leaves a failed lookup alone', async () => {
@@ -249,11 +348,329 @@ test('--after rejects a task that does not exist, and a failed dependency never 
 });
 
 test('isWaiting mirrors the claim rule', () => {
-  const done = { status: 'done', pr_url: null, pr_state: null };
+  const done = { status: 'done', pr_url: null, pr_state: null, pr_mode: 'off' };
   assert.equal(isWaiting({ after_task: null }, undefined), false);
+  assert.equal(isWaiting({ after_task: 1 }, { ...done, pr_mode: 'draft' }), true, 'its PR is not opened yet');
   assert.equal(isWaiting({ after_task: 1 }, undefined), true);
   assert.equal(isWaiting({ after_task: 1 }, { ...done, status: 'running' }), true);
   assert.equal(isWaiting({ after_task: 1 }, done), false);
   assert.equal(isWaiting({ after_task: 1 }, { ...done, pr_url: 'u', pr_state: 'open' }), true);
   assert.equal(isWaiting({ after_task: 1 }, { ...done, pr_url: 'u', pr_state: 'merged' }), false);
+});
+
+test('dependencyState says why a task is stuck', () => {
+  const done = { status: 'done', pr_url: null, pr_state: null, pr_mode: 'off' };
+  const after = { after_task: 5 };
+  assert.deepEqual(dependencyState({ after_task: null }, undefined), { kind: 'none' });
+  assert.deepEqual(dependencyState(after, done), { kind: 'met' });
+  assert.deepEqual(dependencyState(after, { ...done, pr_mode: 'ready' }), { kind: 'waiting' });
+  assert.deepEqual(dependencyState(after, { ...done, pr_mode: 'draft', pr_state: 'failed' }), {
+    kind: 'stuck',
+    reason: "#5's PR could not be opened",
+  });
+  assert.deepEqual(dependencyState(after, { ...done, status: 'queued' }), { kind: 'waiting' });
+  assert.deepEqual(dependencyState(after, { ...done, status: 'cancel_requested' }), { kind: 'waiting' });
+  assert.deepEqual(dependencyState(after, { ...done, pr_url: 'u', pr_state: 'open' }), { kind: 'waiting' });
+  assert.deepEqual(dependencyState(after, { ...done, pr_url: 'u', pr_state: 'closed' }), {
+    kind: 'stuck',
+    reason: "#5's PR was closed without merging",
+  });
+  assert.deepEqual(dependencyState(after, { ...done, status: 'failed' }), { kind: 'stuck', reason: '#5 failed' });
+  assert.deepEqual(dependencyState(after, { ...done, status: 'blocked' }), { kind: 'stuck', reason: '#5 is blocked' });
+  assert.deepEqual(dependencyState(after, { ...done, status: 'cancelled' }), { kind: 'stuck', reason: '#5 was cancelled' });
+  assert.deepEqual(dependencyState(after, undefined), { kind: 'stuck', reason: '#5 no longer exists' });
+});
+
+test('a dependent is not claimed while its dependency pushes and opens its PR', async () => {
+  updateRepo(db, 'demo', { pr_mode: 'draft' });
+  const dep = db.addTask({ repo_id: repo.id, title: 'slow push', prompt: 'FAKE_DONE slow' });
+  const later = addTask(db, { repo: 'demo', prompt: 'after the slow push', after_task: dep.id });
+  db.setSetting('max_concurrent', '2');
+
+  let release!: () => void;
+  const gate = new Promise<void>((r) => (release = r));
+  let pushing!: () => void;
+  const pushStarted = new Promise<void>((r) => (pushing = r));
+  const realPush = github.push;
+  github.push = async (repoPath, branch) => {
+    if (branch === dep.branch || branch === `agentdeck/task-${dep.id}`) {
+      pushing();
+      await gate;
+    }
+    return realPush(repoPath, branch);
+  };
+  try {
+    const running = new Scheduler(db, { once: true, tickMs: 10, log: () => {} }).run();
+    await pushStarted;
+    // The task is done, the push is still going: the PR does not exist yet.
+    assert.equal(db.getTask(dep.id)!.status, 'done');
+    assert.equal(db.getTask(dep.id)!.pr_url, null);
+    await new Promise((r) => setTimeout(r, 150)); // several scheduler ticks
+    assert.equal(db.getTask(later.id)!.status, 'queued', 'held while the PR is being opened');
+    assert.deepEqual(waitingFor(db, db.getTask(later.id)!), { on: dep.id, stuck: null });
+
+    release();
+    const deadline = Date.now() + 5000;
+    while (db.getTask(dep.id)!.pr_state !== 'open' && Date.now() < deadline) await new Promise((r) => setTimeout(r, 10));
+    await new Promise((r) => setTimeout(r, 100));
+    assert.equal(db.getTask(later.id)!.status, 'queued', 'held while the PR is open');
+    await running;
+  } finally {
+    github.push = realPush;
+    db.setSetting('max_concurrent', '1');
+  }
+  db.updateTask(dep.id, { pr_state: 'merged' });
+  assert.equal(db.claimNextTask()!.id, later.id);
+});
+
+test('a dependent is stuck, not released, when its dependency PR could not be opened', async () => {
+  updateRepo(db, 'demo', { pr_mode: 'draft' });
+  pushError = 'remote: Permission denied (publickey)';
+  const dep = db.addTask({ repo_id: repo.id, title: 'no push', prompt: 'FAKE_DONE nopush' });
+  const later = addTask(db, { repo: 'demo', prompt: 'after the failed push', after_task: dep.id });
+  await drain();
+
+  assert.equal(db.getTask(dep.id)!.status, 'done');
+  assert.equal(db.getTask(later.id)!.status, 'queued');
+  assert.deepEqual(waitingFor(db, db.getTask(later.id)!), { on: dep.id, stuck: `#${dep.id}'s PR could not be opened` });
+  assert.equal(db.claimNextTask(), undefined);
+});
+
+/** Notifications about task `id`'s dependents being stuck. */
+const stuckNotices = (id: number) => db.recentNotifications(50).filter((n) => n.task_id === id && /can't start/.test(n.title));
+
+test('a blocked dependency notifies once, naming the waiting task, which stays queued until a retry', async () => {
+  const dep = db.addTask({ repo_id: repo.id, title: 'gets blocked', prompt: 'FAKE_BLOCKED nope' });
+  const later = addTask(db, { repo: 'demo', prompt: 'needs the first', title: 'Second step', after_task: dep.id });
+  await drain();
+
+  assert.equal(db.getTask(dep.id)!.status, 'blocked');
+  assert.equal(db.getTask(later.id)!.status, 'queued');
+  const notices = stuckNotices(dep.id);
+  assert.equal(notices.length, 1);
+  assert.equal(notices[0].kind, 'blocked');
+  assert.match(notices[0].title, /1 task can't start: #\d+ is blocked/);
+  assert.match(notices[0].body, new RegExp(`#${later.id} Second step`));
+  assert.match(notices[0].body, new RegExp(`Retry #${dep.id}`));
+  assert.deepEqual(waitingFor(db, db.getTask(later.id)!), { on: dep.id, stuck: `#${dep.id} is blocked` });
+
+  // A retry puts the dependency back on its way: no longer stuck, and done releases the dependent.
+  retryTask(db, dep.id);
+  assert.deepEqual(waitingFor(db, db.getTask(later.id)!), { on: dep.id, stuck: null });
+  assert.equal(finishNext(), dep.id);
+  assert.equal(waitingFor(db, db.getTask(later.id)!), null);
+  assert.equal(finishNext(), later.id);
+});
+
+test('a failure that will be retried does not notify, a final one does', async () => {
+  const dep = db.addTask({ repo_id: repo.id, title: 'errors', prompt: 'FAKE_ERROR', max_attempts: 2 });
+  addTask(db, { repo: 'demo', prompt: 'after errors', after_task: dep.id });
+  await drain();
+  assert.equal(db.getTask(dep.id)!.status, 'failed');
+  assert.equal(db.runsForTask(dep.id).length, 2);
+  assert.equal(stuckNotices(dep.id).length, 1, 'only the final failure notifies');
+});
+
+test('cancelling a dependency notifies; cancelling a task nobody waits on does not', () => {
+  const dep = db.addTask({ repo_id: repo.id, title: 'to cancel', prompt: 'x' });
+  addTask(db, { repo: 'demo', prompt: 'after the cancel', after_task: dep.id });
+  const alone = db.addTask({ repo_id: repo.id, title: 'alone', prompt: 'x' });
+  cancelTask(db, dep.id);
+  cancelTask(db, alone.id);
+  assert.match(stuckNotices(dep.id)[0].title, /was cancelled/);
+  assert.equal(stuckNotices(alone.id).length, 0);
+});
+
+test('a dependency PR closed without merging notifies when the refresh sees it', async () => {
+  const dep = db.addTask({ repo_id: repo.id, title: 'pr gets closed', prompt: 'x' });
+  const later = addTask(db, { repo: 'demo', prompt: 'after the closed pr', after_task: dep.id });
+  assert.equal(finishNext(), dep.id);
+  db.updateTask(dep.id, { pr_url: 'https://x/pull/40', pr_state: 'open' });
+  assert.equal(stuckNotices(dep.id).length, 0);
+
+  states = { 'https://x/pull/40': 'closed' };
+  await refreshPrStates(db);
+  assert.match(stuckNotices(dep.id)[0].title, /PR was closed without merging/);
+  assert.equal(waitingFor(db, db.getTask(later.id)!)?.stuck, `#${dep.id}'s PR was closed without merging`);
+  db.applyEvent(later.id, { type: 'cancel' });
+});
+
+/** A done task with an open PR, as if the daemon had opened it. */
+function prTask(n: number, title = `merge ${n}`) {
+  const t = db.addTask({ repo_id: repo.id, title, prompt: 'x' });
+  const url = `https://github.com/acme/demo/pull/${n}`;
+  db.raw
+    .prepare("UPDATE tasks SET status = 'done', pr_url = ?, pr_state = 'open', branch = ? WHERE id = ?")
+    .run(url, `agentdeck/task-${t.id}`, t.id);
+  return { id: t.id, url };
+}
+
+test('mergeCheck: blocking problems and warnings', () => {
+  const pr = { ...cleanDetails };
+  assert.deepEqual(mergeCheck({ pr_state: 'open', pr, tests_passed: 1 }), { problems: [], warnings: [] });
+  assert.deepEqual(mergeCheck({ pr_state: 'merged', pr, tests_passed: 1 }).problems, ['the PR is merged']);
+  assert.match(mergeCheck({ pr_state: 'open', pr: { ...pr, mergeable: 'CONFLICTING' }, tests_passed: 1 }).problems[0], /conflicts/);
+  assert.match(mergeCheck({ pr_state: 'open', pr: { ...pr, merge_state: 'DIRTY' }, tests_passed: 1 }).problems[0], /conflicts/);
+
+  const warned = mergeCheck({
+    pr_state: 'open',
+    pr: { ...pr, draft: true, merge_state: 'BEHIND', checks: { total: 4, failing: 1, pending: 2 } },
+    tests_passed: 0,
+  });
+  assert.deepEqual(warned.problems, []);
+  assert.equal(warned.warnings.length, 5);
+  assert.match(warned.warnings.join('\n'), /draft[^]*moved on[^]*tests failed[^]*1 check failing[^]*2 checks still running/);
+  assert.equal(mergeCheck({ pr_state: 'open', pr, tests_passed: null }).warnings.length, 0, 'tests that never ran are not a warning');
+});
+
+test('parsePrDetails reads gh output, counting failing and pending checks', () => {
+  const d = parsePrDetails(
+    JSON.stringify({
+      isDraft: true,
+      mergeable: 'MERGEABLE',
+      mergeStateStatus: 'BEHIND',
+      commits: [{}, {}, {}],
+      additions: 12,
+      deletions: 3,
+      changedFiles: 5,
+      statusCheckRollup: [
+        { status: 'COMPLETED', conclusion: 'SUCCESS' },
+        { status: 'COMPLETED', conclusion: 'FAILURE' },
+        { status: 'IN_PROGRESS', conclusion: '' },
+        { state: 'ERROR' },
+        { state: 'PENDING' },
+        { status: 'COMPLETED', conclusion: 'SKIPPED' },
+      ],
+    }),
+  );
+  assert.deepEqual(d, {
+    draft: true,
+    mergeable: 'MERGEABLE',
+    merge_state: 'BEHIND',
+    commits: 3,
+    files: 5,
+    additions: 12,
+    deletions: 3,
+    checks: { total: 6, failing: 2, pending: 2 },
+  });
+});
+
+test('repo merge_method defaults to squash and rejects unknown values', () => {
+  assert.equal(repo.merge_method, 'squash');
+  assert.throws(() => updateRepo(db, 'demo', { merge_method: 'fast-forward' as never }), ActionError);
+  assert.equal(updateRepo(db, 'demo', { merge_method: 'rebase' }).merge_method, 'rebase');
+  assert.equal(updateRepo(db, 'demo', { merge_method: 'squash' }).merge_method, 'squash');
+});
+
+test('mergePreview shows the PR, the repo default method and the tasks the merge unblocks', async () => {
+  const t = prTask(100, 'Preview me');
+  const later = addTask(db, { repo: 'demo', prompt: 'follow-up', after_task: t.id, title: 'Follow-up' });
+  details[t.url] = { ...cleanDetails, checks: { total: 3, failing: 1, pending: 0 } };
+
+  const p = await mergePreview(db, t.id);
+  assert.equal(p.title, 'Preview me');
+  assert.equal(p.method, 'squash');
+  assert.equal(p.base, 'main');
+  assert.equal(p.branch, `agentdeck/task-${t.id}`);
+  assert.equal(p.commits, 3);
+  assert.deepEqual([p.files, p.additions, p.deletions], [2, 10, 4]);
+  assert.deepEqual(p.problems, []);
+  assert.deepEqual(p.warnings, ['1 check failing on GitHub']);
+  assert.deepEqual(p.unblocks, [{ id: later.id, title: 'Follow-up' }]);
+  assert.equal(merging.merged.length, 0, 'a preview merges nothing');
+  db.applyEvent(later.id, { type: 'cancel' });
+});
+
+test('mergeTask squashes by default, records it, and releases the tasks waiting on the PR', async () => {
+  const t = prTask(101, 'Ship it');
+  const later = addTask(db, { repo: 'demo', prompt: 'after the merge', after_task: t.id });
+  assert.ok(waitingFor(db, db.getTask(later.id)!), 'waits while the PR is open');
+
+  const res = await mergeTask(db, t.id);
+  assert.deepEqual(res, { method: 'squash', unblocked: [later.id] });
+  assert.equal(merging.merged.length, 1);
+  assert.equal(merging.merged[0].url, t.url);
+  assert.equal(merging.merged[0].method, 'squash');
+  assert.equal(merging.merged[0].subject, 'Ship it');
+  assert.ok(merging.merged[0].body!.endsWith(`Made by AgentDeck task #${t.id}.`));
+  assert.deepEqual(merging.ready, [], 'not a draft, so nothing to mark ready');
+  assert.deepEqual(merging.deleted, [], 'the branch stays unless asked');
+
+  const after = db.getTask(t.id)!;
+  assert.equal(after.status, 'done');
+  assert.equal(after.pr_state, 'merged');
+  assert.equal(after.merge_method, 'squash');
+  const event = db.eventsForTask(t.id).at(-1)!;
+  assert.deepEqual([event.type, event.from_status, event.to_status, event.reason], ['merge', 'done', 'done', 'squash merge']);
+  assert.equal(waitingFor(db, db.getTask(later.id)!), null, 'merged releases the dependent at once');
+  db.applyEvent(later.id, { type: 'cancel' });
+
+  await assert.rejects(mergeTask(db, t.id), /PR is merged/, 'a second merge is refused');
+});
+
+test('mergeTask uses the method asked for, then the repo default; a draft is marked ready first', async () => {
+  const a = prTask(102);
+  details[a.url] = { ...cleanDetails, draft: true };
+  await mergeTask(db, a.id, { method: 'rebase' });
+  assert.deepEqual(merging.ready, [a.url]);
+  assert.equal(merging.merged[0].method, 'rebase');
+  assert.equal(db.getTask(a.id)!.merge_method, 'rebase');
+
+  updateRepo(db, 'demo', { merge_method: 'merge' });
+  const b = prTask(103);
+  assert.equal((await mergePreview(db, b.id)).method, 'merge');
+  await mergeTask(db, b.id);
+  assert.equal(merging.merged[1].method, 'merge');
+  updateRepo(db, 'demo', { merge_method: 'squash' });
+});
+
+test('mergeTask refuses what cannot be merged and leaves the task as it was', async () => {
+  const conflicted = prTask(104);
+  details[conflicted.url] = { ...cleanDetails, mergeable: 'CONFLICTING' };
+  await assert.rejects(mergeTask(db, conflicted.id), /conflicts/);
+
+  const t = prTask(105);
+  await assert.rejects(mergeTask(db, t.id, { method: 'fast-forward' }), /method must be one of/);
+  mergeError = 'Pull request is not mergeable: branch protection';
+  await assert.rejects(mergeTask(db, t.id), /merge failed: Pull request is not mergeable/);
+  mergeError = null;
+
+  const queued = db.addTask({ repo_id: repo.id, title: 'not done', prompt: 'x' });
+  await assert.rejects(mergeTask(db, queued.id), /only a done task can be merged/);
+  db.applyEvent(queued.id, { type: 'cancel' });
+  const noPr = db.addTask({ repo_id: repo.id, title: 'no pr', prompt: 'x' });
+  db.raw.prepare("UPDATE tasks SET status = 'done' WHERE id = ?").run(noPr.id);
+  await assert.rejects(mergeTask(db, noPr.id), /has no pull request/);
+  await assert.rejects(mergeTask(db, 999999), /no such task/);
+
+  assert.equal(merging.merged.length, 0);
+  for (const id of [conflicted.id, t.id]) {
+    assert.equal(db.getTask(id)!.pr_state, 'open');
+    assert.equal(db.getTask(id)!.merge_method, null);
+    assert.ok(!db.eventsForTask(id).some((e) => e.type === 'merge'));
+  }
+});
+
+test('mergeTask can delete the remote branch and remove the worktree, and reports a cleanup that fails', async () => {
+  updateRepo(db, 'demo', { pr_mode: 'ready' });
+  const task = db.addTask({ repo_id: repo.id, title: 'Clean up after', prompt: 'FAKE_DONE cleanup' });
+  await drain();
+  const t = db.getTask(task.id)!;
+  assert.ok(t.worktree && t.pr_url);
+
+  const res = await mergeTask(db, t.id, { delete_branch: true });
+  assert.equal(res.cleanup_error, undefined);
+  assert.deepEqual(merging.deleted, [t.branch]);
+  const after = db.getTask(t.id)!;
+  assert.equal(after.worktree, null);
+  assert.equal(after.branch, t.branch, 'the local branch stays, so the diff can still be read');
+  assert.equal(sh(dir, 'branch', '--list', t.branch!), t.branch);
+
+  const other = prTask(106);
+  github.deleteRemoteBranch = async () => {
+    throw new Error('remote ref does not exist');
+  };
+  const failed = await mergeTask(db, other.id, { delete_branch: true });
+  assert.match(failed.cleanup_error!, /remote branch: remote ref does not exist/);
+  assert.equal(db.getTask(other.id)!.pr_state, 'merged', 'the merge stands');
 });

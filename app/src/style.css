@@ -1,20 +1,7 @@
+/* Colours come from themes.css, picked by data-theme and data-mode on <html> (theme.ts). */
 :root {
-  --bg: #f6f6f4;
-  --panel: #ffffff;
-  --panel-2: #f0f0ed;
-  --border: #e2e2dd;
-  --text: #1d1d1b;
-  --muted: #6d6d68;
-  --accent: #c2622d;
-  --accent-text: #ffffff;
-  --queued: #8a8a84;
-  --running: #2f6fdb;
-  --done: #2e8b57;
-  --blocked: #c98a10;
-  --failed: #c94141;
-  --cancelled: #9a9a94;
-  --code-bg: #f3f2ee;
   --radius: 8px;
+  color-scheme: light dark;
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
   font-size: 13px;
   line-height: 1.45;
@@ -23,23 +10,12 @@
   -webkit-font-smoothing: antialiased;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #161615;
-    --panel: #1f1f1d;
-    --panel-2: #272725;
-    --border: #33332f;
-    --text: #ecebe6;
-    --muted: #9a9993;
-    --accent: #e07a43;
-    --queued: #8f8e88;
-    --running: #6c9bf0;
-    --done: #57b583;
-    --blocked: #e0ab3c;
-    --failed: #e36d6d;
-    --cancelled: #77766f;
-    --code-bg: #1a1a18;
-  }
+/* Native controls and scrollbars follow the mode too. */
+:root[data-mode='light'] {
+  color-scheme: light;
+}
+:root[data-mode='dark'] {
+  color-scheme: dark;
 }
 
 * {
@@ -74,7 +50,11 @@ button:disabled {
 button.primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: var(--accent-text);
+  color: var(--accent-fg);
+}
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 input,
@@ -83,7 +63,7 @@ select {
   font: inherit;
   color: inherit;
   background: var(--panel);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: 6px;
   padding: 6px 8px;
   width: 100%;
@@ -157,4 +137,99 @@ pre {
   background: color-mix(in srgb, var(--c, var(--muted)) 14%, transparent);
   color: var(--c, var(--muted));
   white-space: nowrap;
+}
+
+/* Syntax highlighting (highlight.js classes), in the theme's --hl-* colours. */
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-built_in,
+.hljs-literal {
+  color: var(--hl-keyword);
+}
+.hljs-string,
+.hljs-regexp,
+.hljs-addition,
+.hljs-template-tag {
+  color: var(--hl-string);
+}
+.hljs-number,
+.hljs-symbol,
+.hljs-bullet {
+  color: var(--hl-number);
+}
+.hljs-comment,
+.hljs-quote,
+.hljs-meta {
+  color: var(--hl-comment);
+  font-style: italic;
+}
+.hljs-title,
+.hljs-section,
+.hljs-function .hljs-title {
+  color: var(--hl-title);
+}
+.hljs-type,
+.hljs-class .hljs-title,
+.hljs-title.class_ {
+  color: var(--hl-type);
+}
+.hljs-attr,
+.hljs-attribute,
+.hljs-variable,
+.hljs-property,
+.hljs-name {
+  color: var(--hl-attr);
+}
+.hljs-deletion {
+  color: var(--failed);
+}
+.hljs-emphasis {
+  font-style: italic;
+}
+.hljs-strong {
+  font-weight: 600;
+}
+
+/* A segmented control: a row of buttons, one of them on. */
+.seg {
+  display: flex;
+  flex: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.seg button {
+  border: none;
+  border-radius: 0;
+  background: none;
+  padding: 2px 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.seg button.on {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+/* How a file changed: A, M, D or R. */
+.badge {
+  font:
+    10px ui-monospace,
+    Menlo,
+    monospace;
+  width: 13px;
+  text-align: center;
+  flex: none;
+}
+.b-A {
+  color: var(--done);
+}
+.b-D {
+  color: var(--failed);
+}
+.b-M {
+  color: var(--blocked);
+}
+.b-R {
+  color: var(--running);
 }

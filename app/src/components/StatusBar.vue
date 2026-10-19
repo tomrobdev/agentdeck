@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { type Status, describeState, relTime } from '../api';
+import { needYouCount } from '../taskView';
+import { MODES, THEMES, type ThemeKey, mode, setMode, setTheme, theme } from '../theme';
 
 const props = defineProps<{ status: Status | null; offline: boolean; busy: boolean }>();
 defineEmits<{ toggle: []; newTask: []; repos: []; settings: [] }>();
 
 const state = computed(() => describeState(props.status, props.offline));
+const needYou = computed(() => needYouCount(props.status));
 
 /** Meters with a marker for the budget line that matters for each window. */
 const meters = computed(() => {
@@ -40,6 +43,8 @@ const meters = computed(() => {
       >
     </span>
 
+    <span v-if="needYou && !offline" class="muted" title="Proposals, blocked tasks and PRs waiting for review">{{ needYou }} need you</span>
+
     <div class="usage" v-if="meters.length && !offline">
       <div v-for="m in meters" :key="m.label" class="meter" :title="`${m.pct}% used · ${m.markTitle} · resets in ${m.resets}`">
         <span class="muted">{{ m.label }}</span>
@@ -53,6 +58,24 @@ const meters = computed(() => {
     </div>
 
     <div class="spacer" />
+    <div class="look">
+      <select :value="theme" aria-label="Theme" title="Theme" @change="setTheme(($event.target as HTMLSelectElement).value as ThemeKey)">
+        <option v-for="t in THEMES" :key="t.key" :value="t.key">{{ t.label }}</option>
+      </select>
+      <div class="seg" role="group" aria-label="Mode">
+        <button
+          v-for="m in MODES"
+          :key="m.key"
+          type="button"
+          :class="{ on: mode === m.key }"
+          :aria-pressed="mode === m.key"
+          :title="m.key === 'system' ? 'Follow the system light or dark setting' : `Always ${m.key}`"
+          @click="setMode(m.key)"
+        >
+          {{ m.label }}
+        </button>
+      </div>
+    </div>
     <button @click="$emit('settings')" :disabled="offline" title="Budget and notifications">Settings</button>
     <button @click="$emit('repos')" :disabled="offline">Repos</button>
     <button @click="$emit('toggle')" :disabled="offline || !status || busy">
@@ -118,6 +141,16 @@ const meters = computed(() => {
 }
 .spacer {
   flex: 1;
+}
+.look {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.look select {
+  width: auto;
+  padding: 2px 6px;
+  font-size: 12px;
 }
 @media (max-width: 1080px) {
   .reset {

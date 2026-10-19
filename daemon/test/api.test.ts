@@ -13,9 +13,9 @@ const fake = join(import.meta.dirname, 'fake-claude.mjs');
 chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
 
-const { openDb } = await import('../src/db.ts');
-const { startApi } = await import('../src/api.ts');
-const { Scheduler } = await import('../src/scheduler.ts');
+const { openDb } = await import('../src/db/index.ts');
+const { startApi } = await import('../src/api/server.ts');
+const { Scheduler } = await import('../src/application/scheduler.ts');
 
 const db = openDb(join(home, 'test.db'));
 const server = await startApi(db, 0);
@@ -63,6 +63,10 @@ test('add repo and task, then read it back', async () => {
   ).json();
   assert.equal(task.status, 'queued');
   assert.equal(task.repo, 'demo');
+  assert.deepEqual(
+    task.events.map((e: any) => [e.type, e.from_status, e.to_status]),
+    [['created', null, 'queued']],
+  );
 
   const list = await (await api('/api/tasks?status=queued')).json();
   assert.deepEqual(
@@ -101,6 +105,15 @@ test('cancel and retry', async () => {
   assert.equal(retried.status, 'queued');
   const cancelled = await (await api('/api/tasks/1/cancel', { method: 'POST' })).json();
   assert.equal(cancelled.result, 'cancelled');
+});
+
+test('retry takes a note, which the timeline keeps; close-pr needs an open PR', async () => {
+  const retried = await (await api('/api/tasks/1/retry', { method: 'POST', json: { note: 'Add a test.' } })).json();
+  assert.equal(retried.status, 'queued');
+  assert.equal(retried.events.at(-1).reason, 'Add a test.');
+  const noPr = await api('/api/tasks/1/close-pr', { method: 'POST' });
+  assert.equal(noPr.status, 400);
+  await api('/api/tasks/1/cancel', { method: 'POST' });
 });
 
 test('settings round-trip with validation', async () => {
@@ -210,4 +223,28 @@ test('task list returns summaries, pages with limit/before, and always includes 
   // limit is clamped to 1..1000 and bad values fall back to the default.
   assert.equal((await list('/api/tasks?limit=0')).length > 0, true);
   assert.equal((await list('/api/tasks?limit=abc')).length, all.length);
+});
+
+test('status reports which code the daemon runs, and restart waits while work runs', async () => {
+  const info = { commit: 'abc1234def', started_at: '2026-10-19T14:02:00.000Z' };
+  let requested = 0;
+  const server2 = await startApi(db, 0, () => {}, { info, requestRestart: () => requested++ });
+  const url = `http://127.0.0.1:${(server2.address() as AddressInfo).port}`;
+  try {
+    assert.deepEqual((await (await fetch(`${url}/api/status`)).json()).daemon, info);
+    // The default server has no checkout to name.
+    assert.equal((await (await api('/api/status')).json()).daemon.commit, null);
+
+    const idle = await (await fetch(`${url}/api/daemon/restart`, { method: 'POST' })).json();
+    assert.deepEqual(idle, { waiting: null });
+
+    const repo = db.listRepos()[0];
+    const planner = db.startPlannerRun(repo.id, join(home, 'planner.log'));
+    const busy = await (await fetch(`${url}/api/daemon/restart`, { method: 'POST' })).json();
+    assert.deepEqual(busy, { waiting: '1 planner run' });
+    assert.equal(requested, 2);
+    db.finishPlannerRun(planner, 'ok', 0, null);
+  } finally {
+    server2.close();
+  }
 });

@@ -13,9 +13,9 @@ const fake = join(import.meta.dirname, 'fake-claude.mjs');
 chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
 
-const { openDb } = await import('../src/db.ts');
-const { Scheduler } = await import('../src/scheduler.ts');
-const { parseStatus } = await import('../src/worker.ts');
+const { openDb } = await import('../src/db/index.ts');
+const { Scheduler } = await import('../src/application/scheduler.ts');
+const { parseStatus } = await import('../src/domain/run/run.ts');
 
 const repoPath = join(home, 'demo');
 const db = openDb(join(home, 'test.db'));
@@ -128,7 +128,7 @@ test('a cancel requested while the run is finishing wins over done', async () =>
 test('orphaned running tasks are requeued on start', () => {
   const task = db.addTask({ repo_id: 1, title: 'orphan', prompt: 'x' });
   db.claimNextTask();
-  assert.deepEqual(db.recoverOrphans(), { requeued: 1, failed: 0 });
+  assert.deepEqual(db.recoverOrphans(), { requeued: 1, failed: [] });
   const t = db.getTask(task.id)!;
   assert.equal(t.status, 'queued');
   assert.equal(t.attempts, 0);
@@ -137,14 +137,14 @@ test('orphaned running tasks are requeued on start', () => {
 });
 
 test('a task interrupted by repeated restarts fails instead of looping', async () => {
-  const { MAX_RESTARTS } = await import('../src/db.ts');
+  const { MAX_RESTARTS } = await import('../src/domain/task/lifecycle.ts');
   const task = db.addTask({ repo_id: 1, title: 'poison', prompt: 'x' });
   for (let i = 1; i < MAX_RESTARTS; i++) {
     db.claimNextTask();
-    assert.deepEqual(db.recoverOrphans(), { requeued: 1, failed: 0 });
+    assert.deepEqual(db.recoverOrphans(), { requeued: 1, failed: [] });
   }
   db.claimNextTask();
-  assert.deepEqual(db.recoverOrphans(), { requeued: 0, failed: 1 });
+  assert.deepEqual(db.recoverOrphans(), { requeued: 0, failed: [task.id] });
   const t = db.getTask(task.id)!;
   assert.equal(t.status, 'failed');
   assert.match(t.blocked_reason!, /restarted 3 times/);
@@ -152,7 +152,7 @@ test('a task interrupted by repeated restarts fails instead of looping', async (
 
 test('claude processes left by a dead daemon are stopped, with their children', async () => {
   const { spawn } = await import('node:child_process');
-  const { reapOrphans } = await import('../src/claude.ts');
+  const { reapOrphans } = await import('../src/adapters/processes.ts');
   const alive = (pgid: number) => {
     try {
       process.kill(-pgid, 0);
@@ -178,7 +178,7 @@ test('claude processes left by a dead daemon are stopped, with their children', 
 });
 
 test('defaultTitle cuts at sentence or word boundary', async () => {
-  const { defaultTitle } = await import('../src/actions.ts');
+  const { defaultTitle } = await import('../src/domain/task/task.ts');
   assert.equal(defaultTitle('Fix the login bug. Then add tests.'), 'Fix the login bug');
   const long = defaultTitle(
     'Add a truncate(s, n) function to src/strings.js that shortens s to at most n characters, ending with an ellipsis',
@@ -210,9 +210,9 @@ test('governor holds queued work over the 5h cap and notifies once', async () =>
 });
 
 test('repo add detects the toolchain; repos registered before detection get its rules on the fly', async () => {
-  const { addRepo } = await import('../src/actions.ts');
-  const { effectiveTools } = await import('../src/worker.ts');
-  const { DEFAULT_ALLOWED_TOOLS } = await import('../src/config.ts');
+  const { addRepo } = await import('../src/application/actions.ts');
+  const { effectiveTools } = await import('../src/application/tools.ts');
+  const { DEFAULT_ALLOWED_TOOLS } = await import('../src/domain/repo/tools.ts');
   const jsRepo = (name: string) => {
     const dir = join(home, name);
     execFileSync('mkdir', ['-p', dir]);
@@ -297,7 +297,7 @@ test('a failing setup blocks the task without starting claude', async () => {
 const settingsCalls = () => readFileSync(join(home, 'fake-claude-settings.log'), 'utf8').trim().split('\n');
 
 test('each run gets a sandbox settings file outside its worktree', async () => {
-  const { updateRepo } = await import('../src/actions.ts');
+  const { updateRepo } = await import('../src/application/actions.ts');
   const { LOG_DIR } = await import('../src/config.ts');
   db.setRepoPaused(1, null); // the failing setup above paused it
   assert.equal(db.getRepo(1)!.sandbox, 1, 'sandbox is on by default');
@@ -340,7 +340,7 @@ test('a sandbox that cannot start fails the run with claude’s reason', async (
 });
 
 test('repo network rejects things that are not host names', async () => {
-  const { ActionError, updateRepo } = await import('../src/actions.ts');
+  const { ActionError, updateRepo } = await import('../src/application/actions.ts');
   assert.throws(() => updateRepo(db, 1, { network: 'a.com, http://b.com/x' }), ActionError);
   assert.equal(db.getRepo(1)!.network, '[]');
 });
