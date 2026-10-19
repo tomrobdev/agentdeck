@@ -411,7 +411,9 @@ export const api = {
     after_task?: number;
   }) => call<TaskDetail>('/api/tasks', { method: 'POST', json: t }),
   cancel: (id: number) => call<{ result: string }>(`/api/tasks/${id}/cancel`, { method: 'POST' }),
-  retry: (id: number) => call<TaskDetail>(`/api/tasks/${id}/retry`, { method: 'POST' }),
+  /** `note` is "request changes": kept on the timeline and put first in the next run's prompt. */
+  retry: (id: number, note?: string) => call<TaskDetail>(`/api/tasks/${id}/retry`, { method: 'POST', json: note ? { note } : {} }),
+  closePr: (id: number) => call<TaskDetail>(`/api/tasks/${id}/close-pr`, { method: 'POST' }),
   mergePreview: (id: number) => call<MergePreview>(`/api/tasks/${id}/merge`),
   merge: (id: number, body: { method: MergeMethod; delete_branch: boolean }) =>
     call<MergeResult>(`/api/tasks/${id}/merge`, { method: 'POST', json: body }),

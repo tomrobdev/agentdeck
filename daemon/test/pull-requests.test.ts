@@ -17,10 +17,12 @@ const { openDb } = await import('../src/db/index.ts');
 const { Scheduler } = await import('../src/application/scheduler.ts');
 const { github } = await import('../src/adapters/github.ts');
 const { refreshPrStates } = await import('../src/application/pull-requests.ts');
+const { addTask, ActionError, closeTaskPr, retryTask, updateRepo } = await import('../src/application/actions.ts');
+const { buildPrompt } = await import('../src/domain/run/prompt.ts');
+const { latestReviewNote } = await import('../src/domain/task/history.ts');
 const { mergePreview, mergeTask } = await import('../src/application/actions.ts');
 const { mergeCheck, parsePrDetails } = await import('../src/domain/pull-request/merge.ts');
 type PrDetails = import('../src/domain/pull-request/merge.ts').PrDetails;
-const { addTask, ActionError, retryTask, updateRepo } = await import('../src/application/actions.ts');
 const { dependencyState, isWaiting } = await import('../src/domain/task/dependency.ts');
 const { waitingFor } = await import('../src/application/dependencies.ts');
 const { cancelTask } = await import('../src/application/actions.ts');
@@ -60,6 +62,12 @@ github.createPr = async (pr) => {
   return `https://github.com/acme/demo/pull/${calls.create.length}`;
 };
 github.prState = async (url) => states[url] ?? 'open';
+let closed: string[];
+let closeError: string | null;
+github.closePr = async (url) => {
+  if (closeError) throw new Error(closeError);
+  closed.push(url);
+};
 
 // Merging: what GitHub says about each PR, and what the daemon asked it to do.
 const cleanDetails: PrDetails = {
@@ -87,6 +95,8 @@ beforeEach(() => {
   calls = { push: [], create: [] };
   pushError = null;
   states = {};
+  closed = [];
+  closeError = null;
   details = {};
   merging = { ready: [], merged: [], deleted: [] };
   mergeError = null;
@@ -206,6 +216,43 @@ test('a retried task keeps its open PR, but gets a new one once the old PR is me
   assert.equal(calls.create.length, 2, 'a merged PR cannot take new commits');
   assert.notEqual(t.pr_url, first);
   assert.equal(t.pr_state, 'open');
+});
+
+test('request changes: the note is on the timeline and first in the next prompt, and only the latest retry counts', async () => {
+  updateRepo(db, 'demo', { pr_mode: 'ready' });
+  const task = db.addTask({ repo_id: repo.id, title: 'Review me', prompt: 'FAKE_DONE review' });
+  await drain();
+  retryTask(db, task.id, '  Rename the helper.  ');
+  const events = db.eventsForTask(task.id);
+  assert.equal(events.at(-1)!.type, 'retry');
+  assert.equal(events.at(-1)!.reason, 'Rename the helper.');
+  assert.equal(latestReviewNote(events), 'Rename the helper.');
+
+  const prompt = buildPrompt(db.getTask(task.id)!, db.runsForTask(task.id), latestReviewNote(events));
+  assert.match(prompt, /^Changes requested in review:\nRename the helper\.\n/);
+  assert.ok(prompt.includes('FAKE_DONE review'));
+  assert.ok(!buildPrompt(db.getTask(task.id)!, db.runsForTask(task.id)).includes('Changes requested'));
+
+  await drain();
+  retryTask(db, task.id);
+  assert.equal(latestReviewNote(db.eventsForTask(task.id)), null);
+});
+
+test('close PR closes it with gh, marks it closed and only works on an open PR', async () => {
+  updateRepo(db, 'demo', { pr_mode: 'ready' });
+  const dep = db.addTask({ repo_id: repo.id, title: 'Close me', prompt: 'FAKE_DONE close' });
+  await drain();
+  const url = db.getTask(dep.id)!.pr_url!;
+
+  closeError = 'gh: not authenticated';
+  await assert.rejects(closeTaskPr(db, dep.id), /could not close the PR: gh: not authenticated/);
+  assert.equal(db.getTask(dep.id)!.pr_state, 'open');
+
+  closeError = null;
+  await closeTaskPr(db, dep.id);
+  assert.deepEqual(closed, [url]);
+  assert.equal(db.getTask(dep.id)!.pr_state, 'closed');
+  await assert.rejects(closeTaskPr(db, dep.id), /no open pull request/);
 });
 
 test('refreshPrStates updates open PRs of done tasks and leaves a failed lookup alone', async () => {

@@ -169,6 +169,9 @@ export const EDITABLE_STATUSES: TaskStatus[] = ['proposed', 'queued', 'blocked',
 export const canEdit = (t: Pick<TaskSummary, 'status'>) => EDITABLE_STATUSES.includes(t.status);
 export const canApprove = (t: Pick<TaskSummary, 'status'>) => t.status === 'proposed';
 export const canRetry = (t: Pick<TaskSummary, 'status'>) => ['blocked', 'failed', 'done', 'cancelled'].includes(t.status);
+/** A done task whose PR waits on a person: they can send it back with a note, or close the PR. */
+export const canReview = (t: Pick<TaskSummary, 'status' | 'pr_url' | 'pr_state'>) =>
+  t.status === 'done' && !!t.pr_url && t.pr_state === 'open';
 export const canCancel = (t: Pick<TaskSummary, 'status'>) => ['queued', 'running', 'blocked', 'failed'].includes(t.status);
 /** A done task whose PR is still open can be merged from its page (daemon application/pull-requests.ts mergeable). */
 export const canMerge = (t: Pick<TaskSummary, 'status' | 'pr_url' | 'pr_state'>) =>

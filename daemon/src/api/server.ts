@@ -82,7 +82,12 @@ export function startApi(db: Db, port = API_PORT, wake: () => void = () => {}): 
     ['GET', /^\/api\/tasks\/(\d+)$/, (_q, _s, [id]) => taskDetail(db, Number(id))],
     ['POST', /^\/api\/tasks\/(\d+)$/, (_q, _s, [id], b) => (actions.editTask(db, Number(id), b), taskDetail(db, Number(id)))],
     ['POST', /^\/api\/tasks\/(\d+)\/cancel$/, (_q, _s, [id]) => ({ result: actions.cancelTask(db, Number(id)) })],
-    ['POST', /^\/api\/tasks\/(\d+)\/retry$/, (_q, _s, [id]) => (actions.retryTask(db, Number(id)), taskDetail(db, Number(id)))],
+    ['POST', /^\/api\/tasks\/(\d+)\/retry$/, (_q, _s, [id], b) => (actions.retryTask(db, Number(id), b?.note), taskDetail(db, Number(id)))],
+    [
+      'POST',
+      /^\/api\/tasks\/(\d+)\/close-pr$/,
+      async (_q, _s, [id]) => (await actions.closeTaskPr(db, Number(id)), taskDetail(db, Number(id))),
+    ],
     // Merge the task's PR. GET is the preview the confirm dialog shows; POST merges and wakes the scheduler so dependents start now.
     ['GET', /^\/api\/tasks\/(\d+)\/merge$/, (_q, _s, [id]) => actions.mergePreview(db, Number(id))],
     [

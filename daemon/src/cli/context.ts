@@ -23,6 +23,7 @@ export function parseCommandLine(argv: string[]) {
       status: { type: 'string', short: 's' },
       sort: { type: 'string' },
       attempt: { type: 'string' },
+      note: { type: 'string' },
       raw: { type: 'boolean' },
       method: { type: 'string' },
       yes: { type: 'boolean', short: 'y' },

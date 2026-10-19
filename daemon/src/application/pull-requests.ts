@@ -50,6 +50,13 @@ export async function openPullRequest(db: Db, task: Task): Promise<{ url?: strin
   }
 }
 
+/** Close a task's PR on GitHub and record it. Throws if `gh` fails. */
+export async function closePullRequest(db: Db, task: Task): Promise<void> {
+  await github.closePr(task.pr_url!, task.worktree ?? db.getRepo(task.repo_id)?.path ?? process.cwd());
+  db.updateTask(task.id, { pr_state: 'closed' });
+  warnStuckDependents(db, task.id);
+}
+
 /** What a person sees before merging a task's PR: the PR, what the merge does and what it releases. */
 export interface MergePreview {
   title: string;
