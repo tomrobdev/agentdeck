@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { type Changes, type TaskDetail, ago, api } from '../../api';
+import { useHotkeys } from '../../hotkeys';
 import { type TaskTab, go, openTask } from '../../router';
+import { canApprove, canCancel, canEdit, canRetry, statusLabel } from '../../taskView';
 import SnippetPopover from '../files/SnippetPopover.vue';
 import StatusIcon from '../queue/StatusIcon.vue';
 import ChangesTab from './ChangesTab.vue';
@@ -26,16 +28,20 @@ async function loadChanges() {
     return;
   }
   try {
-    changes.value = await api.changes(props.task.id);
+    const next = await api.changes(props.task.id);
     changesError.value = '';
+    // Same commits, same changes: keep the object so nothing downstream rebuilds.
+    if (next.head === changes.value?.head && next.base === changes.value?.base) return;
+    changes.value = next;
   } catch (e) {
     changesError.value = (e as Error).message;
   }
 }
+// Separate sources, so a poll that returns the same values doesn't refetch.
 watch(
-  () => [props.task.id, props.task.updated_at, props.task.branch],
-  (now, before) => {
-    if (before && now[0] !== before[0]) changes.value = null;
+  [() => props.task.id, () => props.task.updated_at, () => props.task.branch],
+  ([id], before) => {
+    if (before && id !== before[0]) changes.value = null;
     loadChanges();
   },
   { immediate: true },
@@ -61,14 +67,11 @@ const openFile = (path: string, line: number | null = null) =>
   openTask(props.task.id, 'code', { ref: 'head', path, ...(line ? { L: String(line) } : {}) });
 
 const s = computed(() => props.task.status);
-const canCancel = computed(() => ['queued', 'running', 'blocked', 'failed'].includes(s.value));
-const canRetry = computed(() => ['blocked', 'failed', 'cancelled', 'done'].includes(s.value));
-const statusLabel = computed(() => (s.value === 'cancel_requested' ? 'stopping' : s.value));
 
 // Editing the title in place, while the task is editable.
 const editingTitle = ref(false);
 const titleDraft = ref('');
-const titleEditable = computed(() => ['proposed', 'queued', 'blocked', 'failed'].includes(s.value));
+const titleEditable = computed(() => canEdit(props.task));
 function editTitle() {
   if (!titleEditable.value) return;
   titleDraft.value = props.task.title;
@@ -87,14 +90,7 @@ async function saveTitle() {
   }
 }
 
-function onKey(e: KeyboardEvent) {
-  if (e.key !== 'Escape' || e.defaultPrevented) return;
-  if (e.target instanceof HTMLElement && e.target.closest('input, textarea, select')) return;
-  if (document.querySelector('[role="dialog"]')) return;
-  go({ name: 'queue' });
-}
-onMounted(() => window.addEventListener('keydown', onKey));
-onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
+useHotkeys({ Escape: () => go({ name: 'queue' }) });
 </script>
 
 <template>
@@ -116,7 +112,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
           @blur="saveTitle"
         />
         <div class="sub">
-          <span class="pill" :class="`s-${task.status}`"><StatusIcon :task="task" :size="12" /> {{ statusLabel }}</span>
+          <span class="pill" :class="`s-${task.status}`"><StatusIcon :task="task" :size="12" /> {{ statusLabel(s) }}</span>
           <template v-if="task.branch">
             <code>{{ task.branch }}</code> <span class="muted">→</span> <code>{{ changes?.base_ref ?? 'base' }}</code>
           </template>
@@ -125,12 +121,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
         </div>
       </div>
       <div class="acts">
-        <template v-if="s === 'proposed'">
+        <template v-if="canApprove(task)">
           <button @click="emit('act', 'reject')">Reject</button>
           <button class="primary" @click="emit('act', 'approve')">✓ Approve</button>
         </template>
-        <button v-if="canRetry" @click="emit('act', 'retry')">↻ Retry</button>
-        <button v-if="canCancel" @click="emit('act', 'cancel')">{{ s === 'running' ? '■ Stop' : '✕ Cancel' }}</button>
+        <button v-if="canRetry(task)" @click="emit('act', 'retry')">↻ Retry</button>
+        <button v-if="canCancel(task)" @click="emit('act', 'cancel')">{{ s === 'running' ? '■ Stop' : '✕ Cancel' }}</button>
       </div>
     </header>
 
@@ -171,7 +167,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
           :attempt="attempt"
           :is-path="isPath"
           @select="(a) => go({ name: 'task', id: task.id, tab: 'runs', query: { run: String(a) } }, { replace: true })"
-          @file="openFile"
           @path="openFile"
         />
         <ChangesTab v-else-if="tab === 'changes'" :task="task" :changes="changes" :error="changesError" @open="openFile" />

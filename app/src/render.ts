@@ -91,6 +91,8 @@ export function languageFor(path: string): string | null {
   return BY_EXTENSION[name.split('.').pop() ?? ''] ?? null;
 }
 
+export const isMarkdown = (path: string) => languageFor(path) === 'markdown';
+
 const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 /** Highlighted HTML for some code; plain escaped text when the language is unknown or it fails. */
@@ -141,7 +143,22 @@ const md = new MarkdownIt({
   highlight: (code, lang) => `<pre class="hljs"><code>${highlight(code, hljs.getLanguage(lang) ? lang : null)}</code></pre>`,
 });
 
+/** Inline code that looks like a repo path, optionally with a line: `src/a.ts` or `src/a.ts:12`. */
+const PATH_LIKE = /^((?:[\w.@-]+\/)*[\w.@-]+\.\w+)(?::(\d+))?$/;
+
+// Inline code naming a file the page knows (env.isPath) becomes a link, unless it's already inside one.
+const codeInline = md.renderer.rules.code_inline!;
+md.renderer.rules.code_inline = (tokens, idx, options, env, self) => {
+  const html = codeInline(tokens, idx, options, env, self);
+  const isPath = (env as { isPath?: (path: string) => boolean } | undefined)?.isPath;
+  const m = tokens[idx].content.match(PATH_LIKE);
+  if (!m || !isPath?.(m[1])) return html;
+  const before = tokens.slice(0, idx);
+  if (before.filter((t) => t.type === 'link_open').length > before.filter((t) => t.type === 'link_close').length) return html;
+  return `<a class="path" href="#" data-path="${m[1]}" data-line="${m[2] ?? ''}">${html}</a>`;
+};
+
 /** Sanitised HTML for markdown text. Remote images are blocked by the CSP anyway. */
-export function markdownHtml(text: string): string {
-  return DOMPurify.sanitize(md.render(text), { USE_PROFILES: { html: true }, FORBID_TAGS: ['style', 'form', 'input'] });
+export function markdownHtml(text: string, isPath?: (path: string) => boolean): string {
+  return DOMPurify.sanitize(md.render(text, { isPath }), { USE_PROFILES: { html: true }, FORBID_TAGS: ['style', 'form', 'input'] });
 }

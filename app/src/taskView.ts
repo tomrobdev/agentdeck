@@ -146,14 +146,26 @@ export function groupTasks(tasks: TaskSummary[], by: GroupBy, sort: string): Gro
   }
 }
 
+/** What the daemon's lifecycle allows (domain/task/lifecycle.ts TRANSITIONS, task.ts EDITABLE_STATUSES). */
+export const EDITABLE_STATUSES: TaskStatus[] = ['proposed', 'queued', 'blocked', 'failed'];
+export const canEdit = (t: Pick<TaskSummary, 'status'>) => EDITABLE_STATUSES.includes(t.status);
+export const canApprove = (t: Pick<TaskSummary, 'status'>) => t.status === 'proposed';
+export const canRetry = (t: Pick<TaskSummary, 'status'>) => ['blocked', 'failed', 'done', 'cancelled'].includes(t.status);
+export const canCancel = (t: Pick<TaskSummary, 'status'>) => ['queued', 'running', 'blocked', 'failed'].includes(t.status);
+/** The one-key retry in the queue is for work that went wrong, not for re-running finished work. */
+export const quickRetry = (t: Pick<TaskSummary, 'status'>) => t.status === 'blocked' || t.status === 'failed';
+
+export const statusLabel = (s: TaskStatus) => (s === 'cancel_requested' ? 'stopping' : s);
+
 /** Board moves: which lifecycle event a drop from one status group to another means, if any. */
 export type BoardMove = 'approve' | 'reject' | 'retry' | 'cancel';
 export function boardMove(t: TaskSummary, to: StatusGroup): BoardMove | null {
   const from = statusGroup(t);
   if (from === to) return null;
   if (from === 'proposed') return to === 'queued' ? 'approve' : to === 'cancelled' ? 'reject' : null;
-  if (to === 'queued' && ['blocked', 'failed', 'done', 'cancelled'].includes(t.status)) return 'retry';
-  if (to === 'cancelled' && ['queued', 'blocked', 'failed'].includes(t.status)) return 'cancel';
+  if (to === 'queued' && canRetry(t)) return 'retry';
+  // A running task is stopped from its page, never by a drop.
+  if (to === 'cancelled' && canCancel(t) && t.status !== 'running') return 'cancel';
   return null;
 }
 

@@ -52,9 +52,9 @@ test('states pick out waiting and stuck tasks, and PR states of done tasks', () 
   assert.deepEqual(ids({ states: ['merged', 'blocked'] }), [3, 1], 'several states match any of them');
 });
 
-test('groups match the dashboard tabs: a stuck task needs you and is not active', () => {
+test('groups match the dashboard: a stuck task needs you and is not active', () => {
   assert.deepEqual(ids({ states: ['active'] }), [7, 6, 5]);
-  assert.deepEqual(ids({ states: ['needs-you'] }), [8, 4, 3]);
+  assert.deepEqual(ids({ states: ['needs-you'] }), [4, 3]);
 });
 
 test('repo and search narrow the list', () => {
@@ -70,7 +70,7 @@ test('sorts', () => {
   assert.deepEqual(ids({ sort: 'oldest' }), [1, 2, 3, 4, 5, 6, 7, 8]);
   assert.deepEqual(ids({ sort: 'priority' }).slice(0, 2), [8, 4]);
   assert.deepEqual(ids({ sort: 'updated' })[0], 1);
-  assert.deepEqual(ids({ sort: 'attention' }), [7, 6, 8, 3, 4, 5, 2, 1]);
+  assert.deepEqual(ids({ sort: 'attention' }), [4, 3, 8, 7, 6, 5, 2, 1], 'needs you, proposed, running, queued, done');
 });
 
 test('an unknown state or sort says which names are valid', () => {

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { type TaskDetail, api } from '../../api';
-import { openExternal } from '../../native';
+import { openExternal, useCopy } from '../../native';
 import { openTask } from '../../router';
-import { PRIORITY_LEVELS, priorityLevel } from '../../taskView';
+import { PRIORITY_LEVELS, canEdit, priorityLevel, statusLabel } from '../../taskView';
 import PriorityIcon from '../queue/PriorityIcon.vue';
 import StatusIcon from '../queue/StatusIcon.vue';
 
@@ -11,11 +11,10 @@ import StatusIcon from '../queue/StatusIcon.vue';
 const props = defineProps<{ task: TaskDetail }>();
 const emit = defineEmits<{ changed: []; error: [msg: string] }>();
 
-const EDITABLE = ['proposed', 'queued', 'blocked', 'failed'];
-const editable = computed(() => EDITABLE.includes(props.task.status));
+const editable = computed(() => canEdit(props.task));
 const editing = ref<'priority' | 'model' | 'max_turns' | null>(null);
 const draft = ref('');
-const copied = ref('');
+const { copied, copy } = useCopy();
 
 function edit(field: 'priority' | 'model' | 'max_turns') {
   if (!editable.value) return;
@@ -35,21 +34,14 @@ async function save() {
   }
 }
 
-async function copy(text: string, what: string) {
-  await navigator.clipboard.writeText(text);
-  copied.value = what;
-  setTimeout(() => (copied.value = ''), 1200);
-}
-
 const levelLabel = computed(() => PRIORITY_LEVELS.find((l) => l.key === priorityLevel(props.task.priority))!.label);
-const statusLabel = computed(() => (props.task.status === 'cancel_requested' ? 'stopping' : props.task.status));
 </script>
 
 <template>
   <aside class="side">
     <div class="prop">
       <div class="k">Status</div>
-      <div class="v"><StatusIcon :task="task" /> {{ statusLabel }}</div>
+      <div class="v"><StatusIcon :task="task" /> {{ statusLabel(task.status) }}</div>
     </div>
     <div class="prop">
       <div class="k">Priority</div>

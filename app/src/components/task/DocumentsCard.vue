@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
 import { type ChangedFile, api } from '../../api';
+import { isMarkdown } from '../../render';
 import Markdown from '../files/Markdown.vue';
 
 // Documents the task wrote or changed (markdown under docs/ or at the repo root), readable in place.
@@ -8,7 +9,7 @@ const props = defineProps<{ taskId: number; files: ChangedFile[]; head: string |
 const emit = defineEmits<{ open: [path: string]; path: [path: string, line: number | null] }>();
 
 const docs = computed(() =>
-  props.files.filter((f) => f.status !== 'D' && /\.(md|markdown)$/i.test(f.path) && (f.path.startsWith('docs/') || !f.path.includes('/'))),
+  props.files.filter((f) => f.status !== 'D' && isMarkdown(f.path) && (f.path.startsWith('docs/') || !f.path.includes('/'))),
 );
 const openDoc = ref<string | null>(null);
 const text = reactive(new Map<string, string>());
@@ -24,7 +25,7 @@ async function show(path: string) {
 }
 // Open the first document; reload when the branch moves.
 watch(
-  () => [props.head, docs.value[0]?.path],
+  [() => props.head, () => docs.value[0]?.path],
   () => {
     text.clear();
     openDoc.value = null;

@@ -1,5 +1,6 @@
 // Bridges to the Tauri shell. In a plain browser (npm run dev) these are no-ops.
 import { invoke } from '@tauri-apps/api/core';
+import { ref } from 'vue';
 import { disable, enable, isEnabled } from '@tauri-apps/plugin-autostart';
 
 export const isNative = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
@@ -27,4 +28,19 @@ export async function openExternal(url: string): Promise<void> {
     const { openUrl } = await import('@tauri-apps/plugin-opener');
     await openUrl(url);
   } else window.open(url, '_blank', 'noopener');
+}
+
+/** Copy text and say so for a moment: `copied` holds the key of what was copied last. */
+export function useCopy() {
+  const copied = ref('');
+  async function copy(text: string, what: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      return; // no clipboard access (insecure context or denied)
+    }
+    copied.value = what;
+    setTimeout(() => copied.value === what && (copied.value = ''), 1200);
+  }
+  return { copied, copy };
 }

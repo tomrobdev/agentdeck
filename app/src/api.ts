@@ -128,6 +128,8 @@ export interface TaskDetail extends Task {
 /** Git refs the file endpoints accept: the task's branch, or where it forked from the base branch. */
 export type FileRef = 'head' | 'base';
 
+export const CHANGE_LABEL: Record<ChangedFile['status'], string> = { A: 'added', M: 'modified', D: 'deleted', R: 'renamed' };
+
 export interface ChangedFile {
   path: string;
   old_path: string | null;
@@ -321,9 +323,9 @@ export function relTime(unixSeconds: number): string {
   return mins < 90 ? `${mins}m` : `${(mins / 60).toFixed(1)}h`;
 }
 
-/** SQLite's datetime('now') is UTC with no zone; git dates are ISO 8601 with one. */
+/** Every time from the daemon is SQLite's UTC `YYYY-MM-DD HH:MM:SS`, with no zone marker. */
 export function parseTime(s: string): number {
-  return /[zZ]|[+-]\d\d:?\d\d$/.test(s) ? Date.parse(s) : Date.parse(s.replace(' ', 'T') + 'Z');
+  return Date.parse(s.replace(' ', 'T') + 'Z');
 }
 
 export function ago(time: string): string {

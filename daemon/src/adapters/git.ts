@@ -51,6 +51,9 @@ export async function refExists(repoPath: string, ref: string): Promise<boolean>
 
 const branchExists = (repoPath: string, branch: string) => refExists(repoPath, `refs/heads/${branch}`);
 
+/** The commit a local branch is at, or null if there is no such branch. */
+export const branchCommit = (repoPath: string, branch: string) => resolveCommit(repoPath, `refs/heads/${branch}`);
+
 export async function hasOrigin(repoPath: string): Promise<boolean> {
   return (await git(repoPath, 'remote')).split('\n').includes('origin');
 }
@@ -203,14 +206,20 @@ async function isAncestor(repoPath: string, a: string, b: string): Promise<boole
  * Null when neither base ref exists or shares history with `head`.
  */
 export async function diffBase(repoPath: string, base: string, head: string): Promise<{ ref: string; sha: string } | null> {
-  let best: { ref: string; sha: string } | null = null;
-  for (const ref of [base, `origin/${base}`]) {
-    const tip = await resolveCommit(repoPath, ref === base ? `refs/heads/${base}` : `refs/remotes/${ref}`);
-    const sha = tip && (await mergeBase(repoPath, tip, head));
-    if (!sha) continue;
-    if (!best || (best.sha !== sha && (await isAncestor(repoPath, best.sha, sha)))) best = { ref, sha };
-  }
-  return best;
+  const candidates = await Promise.all(
+    [
+      { ref: base, full: `refs/heads/${base}` },
+      { ref: `origin/${base}`, full: `refs/remotes/origin/${base}` },
+    ].map(async ({ ref, full }) => {
+      const tip = await resolveCommit(repoPath, full);
+      const sha = tip && (await mergeBase(repoPath, tip, head));
+      return sha ? { ref, sha } : null;
+    }),
+  );
+  const [local, remote] = candidates;
+  if (!local || !remote) return local ?? remote;
+  if (local.sha === remote.sha) return local;
+  return (await isAncestor(repoPath, local.sha, remote.sha)) ? remote : local;
 }
 
 /** Files changed between two commits, renames detected. */

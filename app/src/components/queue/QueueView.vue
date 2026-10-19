@@ -1,7 +1,19 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import type { TaskSummary } from '../../api';
-import { type BoardMove, type Filters, applyFilters, emptyFilters, groupTasks, hasFilters, loadSetting, saveSetting } from '../../taskView';
+import { useHotkeys } from '../../hotkeys';
+import {
+  type BoardMove,
+  type Filters,
+  applyFilters,
+  canApprove,
+  emptyFilters,
+  groupTasks,
+  hasFilters,
+  loadSetting,
+  quickRetry,
+  saveSetting,
+} from '../../taskView';
 import BoardView from './BoardView.vue';
 import DisplayMenu, { type Display } from './DisplayMenu.vue';
 import FilterBar from './FilterBar.vue';
@@ -51,36 +63,30 @@ function step(by: number) {
   selected.value = list[Math.min(Math.max(i === -1 ? 0 : i + by, 0), list.length - 1)].id;
 }
 
-function onKey(e: KeyboardEvent) {
-  if (e.metaKey || e.ctrlKey || e.altKey) return;
-  if (e.target instanceof HTMLElement && e.target.closest('input, textarea, select, [contenteditable]')) return;
-  if (document.querySelector('.modal-backdrop, [role="dialog"]')) return;
-  const t = props.tasks.find((x) => x.id === selected.value);
-  const keys: Record<string, () => void> = {
-    j: () => step(1),
-    ArrowDown: () => step(1),
-    k: () => step(-1),
-    ArrowUp: () => step(-1),
-    Enter: () => t && emit('open', t.id),
-    a: () => t?.status === 'proposed' && emit('act', 'approve', t.id),
-    r: () => t && ['blocked', 'failed'].includes(t.status) && emit('act', 'retry', t.id),
-    v: () => (display.value = { ...display.value, mode: display.value.mode === 'list' ? 'board' : 'list' }),
-    c: () => emit('newTask'),
-  };
-  const fn = keys[e.key];
-  if (fn) {
-    e.preventDefault();
-    fn();
-  }
-}
-onMounted(() => window.addEventListener('keydown', onKey));
-onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
+const selectedTask = () => props.tasks.find((x) => x.id === selected.value);
+useHotkeys({
+  j: () => step(1),
+  ArrowDown: () => step(1),
+  k: () => step(-1),
+  ArrowUp: () => step(-1),
+  Enter: () => selected.value !== null && emit('open', selected.value),
+  a: () => {
+    const t = selectedTask();
+    if (t && canApprove(t)) emit('act', 'approve', t.id);
+  },
+  r: () => {
+    const t = selectedTask();
+    if (t && quickRetry(t)) emit('act', 'retry', t.id);
+  },
+  v: () => (display.value = { ...display.value, mode: display.value.mode === 'list' ? 'board' : 'list' }),
+  c: () => emit('newTask'),
+});
 </script>
 
 <template>
   <section class="queue">
     <div class="toolbar">
-      <div class="modes" role="tablist">
+      <div class="seg" role="tablist">
         <button :class="{ on: display.mode === 'list' }" role="tab" title="List (v)" @click="display = { ...display, mode: 'list' }">
           ≡ List
         </button>
@@ -143,24 +149,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
   gap: 10px;
   padding: 8px 16px;
   border-bottom: 1px solid var(--border);
-}
-.modes {
-  display: flex;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  overflow: hidden;
-  flex: none;
-}
-.modes button {
-  border: none;
-  border-radius: 0;
-  background: none;
-  padding: 2px 10px;
-  color: var(--muted);
-}
-.modes button.on {
-  background: var(--panel-2);
-  color: var(--text);
 }
 .empty {
   padding: 24px 16px;

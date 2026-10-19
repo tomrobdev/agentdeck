@@ -23,7 +23,6 @@ onBeforeUnmount(() => {
   document.removeEventListener('mousedown', onDoc);
   document.removeEventListener('keydown', onKey, true);
 });
-defineExpose({ close: () => (open.value = false) });
 </script>
 
 <template>

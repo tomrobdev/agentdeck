@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
+import { useHotkeys } from '../../hotkeys';
 
 /** A tree node. `meta` is shown at the row end (e.g. "+24 −3"); `badge` before the name (A, M, D, R). */
 export interface TreeNode {
@@ -7,6 +8,7 @@ export interface TreeNode {
   path: string;
   type: 'file' | 'dir';
   badge?: string;
+  badgeTitle?: string;
   meta?: string;
 }
 
@@ -129,14 +131,7 @@ function fuzzy(s: string, q: string): boolean {
   return i === q.length;
 }
 
-function onKey(e: KeyboardEvent) {
-  if (e.key !== 't' || e.metaKey || e.ctrlKey) return;
-  if (e.target instanceof HTMLElement && e.target.closest('input, textarea, select')) return;
-  e.preventDefault();
-  filterBox.value?.focus();
-}
-onMounted(() => window.addEventListener('keydown', onKey));
-onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
+useHotkeys({ t: () => filterBox.value?.focus() });
 </script>
 
 <template>
@@ -168,7 +163,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
           @click="r.node.type === 'dir' ? toggle(r.node.path) : emit('select', r.node.path)"
         >
           <span class="icon">{{ r.node.type === 'dir' ? (open.has(r.node.path) ? '▾' : '▸') : '' }}</span>
-          <span v-if="r.node.badge" class="badge" :class="`b-${r.node.badge}`">{{ r.node.badge }}</span>
+          <span v-if="r.node.badge" class="badge" :class="`b-${r.node.badge}`" :title="r.node.badgeTitle">{{ r.node.badge }}</span>
           <span class="name">{{ r.node.name }}</span>
           <span v-if="marks?.has(r.node.path)" class="mark" title="Changed by this task">●</span>
           <span v-if="r.node.meta" class="meta">{{ r.node.meta }}</span>
@@ -228,28 +223,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
 }
 .dir .name {
   font-weight: 500;
-}
-.badge {
-  font:
-    10px ui-monospace,
-    Menlo,
-    monospace;
-  width: 13px;
-  text-align: center;
-  border-radius: 3px;
-  flex: none;
-}
-.b-A {
-  color: var(--done);
-}
-.b-D {
-  color: var(--failed);
-}
-.b-M {
-  color: var(--blocked);
-}
-.b-R {
-  color: var(--running);
 }
 .mark {
   color: var(--blocked);

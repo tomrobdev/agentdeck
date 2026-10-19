@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue';
-import { type ChangedFile, type Changes, type FilePatch, type TaskDetail, ago, api } from '../../api';
+import { CHANGE_LABEL, type ChangedFile, type Changes, type FilePatch, type TaskDetail, ago, api } from '../../api';
+import { isMarkdown } from '../../render';
 import { loadSetting, saveSetting } from '../../taskView';
 import DiffView from '../files/DiffView.vue';
 import FileTree, { type TreeNode } from '../files/FileTree.vue';
@@ -38,7 +39,8 @@ const collapsed = reactive(new Set<string>());
 const shown = computed(() => files.value.filter((f) => !(hideViewed.value && isViewed(f))));
 
 // Patches load as their file scrolls near the view; the cache is per head commit.
-const patches = reactive(new Map<string, FilePatch | { error: string }>());
+type PatchState = { state: 'loading' } | { state: 'error'; error: string } | { state: 'ok'; patch: FilePatch };
+const patches = reactive(new Map<string, PatchState>());
 const preview = reactive(new Map<string, string>());
 const previewOn = reactive(new Set<string>());
 watch(
@@ -53,11 +55,11 @@ watch(
 
 async function loadPatch(path: string) {
   if (patches.has(path)) return;
-  patches.set(path, { error: '' }); // placeholder so it loads once
+  patches.set(path, { state: 'loading' });
   try {
-    patches.set(path, await api.diff(props.task.id, path));
+    patches.set(path, { state: 'ok', patch: await api.diff(props.task.id, path) });
   } catch (e) {
-    patches.set(path, { error: (e as Error).message });
+    patches.set(path, { state: 'error', error: (e as Error).message });
   }
 }
 
@@ -122,6 +124,7 @@ const loadTree = computed(() => {
         path: p,
         type: 'file',
         badge: f.status,
+        badgeTitle: CHANGE_LABEL[f.status],
         meta: f.binary ? 'bin' : `+${f.additions} −${f.deletions}`,
       });
     }
@@ -140,10 +143,6 @@ async function jump(path: string) {
   await nextTick();
   document.querySelector(`[data-path="${CSS.escape(path)}"]`)?.scrollIntoView({ block: 'start' });
 }
-
-const STATUS_LABEL: Record<string, string> = { A: 'added', M: 'modified', D: 'deleted', R: 'renamed' };
-const isMarkdown = (p: string) => /\.(md|markdown)$/i.test(p);
-const patchOf = (p: string) => patches.get(p);
 </script>
 
 <template>
@@ -187,7 +186,7 @@ const patchOf = (p: string) => patches.get(p);
               <button class="fold" @click="collapsed.has(f.path) ? collapsed.delete(f.path) : collapsed.add(f.path)">
                 {{ collapsed.has(f.path) ? '▸' : '▾' }}
               </button>
-              <span class="badge" :class="`b-${f.status}`" :title="STATUS_LABEL[f.status]">{{ f.status }}</span>
+              <span class="badge" :class="`b-${f.status}`" :title="CHANGE_LABEL[f.status]">{{ f.status }}</span>
               <span class="path">
                 <template v-if="f.old_path">{{ f.old_path }} → </template>{{ f.path }}
               </span>
@@ -211,17 +210,14 @@ const patchOf = (p: string) => patches.get(p);
                 <p v-else class="muted">Loading…</p>
               </div>
               <p v-else-if="f.binary" class="muted pad">Binary file not shown.</p>
-              <template v-else-if="patchOf(f.path)">
-                <p v-if="'error' in patchOf(f.path)! && (patchOf(f.path) as { error: string }).error" class="muted pad">
-                  {{ (patchOf(f.path) as { error: string }).error }}
-                </p>
-                <template v-else-if="'patch' in patchOf(f.path)!">
-                  <DiffView :path="f.path" :patch="(patchOf(f.path) as FilePatch).patch" :split="split" />
-                  <p v-if="(patchOf(f.path) as FilePatch).truncated" class="muted pad">Diff too large: showing the first 256 KB.</p>
+              <template v-for="p in [patches.get(f.path)]" v-else :key="f.path">
+                <p v-if="p?.state === 'error'" class="muted pad">{{ p.error }}</p>
+                <template v-else-if="p?.state === 'ok'">
+                  <DiffView :path="f.path" :patch="p.patch.patch" :split="split" />
+                  <p v-if="p.patch.truncated" class="muted pad">Diff too large: showing the first 256 KB.</p>
                 </template>
                 <p v-else class="muted pad">Loading…</p>
               </template>
-              <p v-else class="muted pad">Loading…</p>
             </template>
           </section>
           <p v-if="!shown.length" class="muted note">Every file is marked viewed.</p>
@@ -283,24 +279,6 @@ const patchOf = (p: string) => patches.get(p);
   width: auto;
   margin: 0;
 }
-.seg {
-  display: flex;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  overflow: hidden;
-}
-.seg button {
-  border: none;
-  border-radius: 0;
-  background: none;
-  padding: 1px 10px;
-  font-size: 12px;
-  color: var(--muted);
-}
-.seg button.on {
-  background: var(--panel-2);
-  color: var(--text);
-}
 .commit {
   display: flex;
   gap: 8px;
@@ -355,24 +333,6 @@ const patchOf = (p: string) => patches.get(p);
   background: none;
   padding: 0 4px;
   color: var(--muted);
-}
-.badge {
-  font:
-    10px ui-monospace,
-    Menlo,
-    monospace;
-}
-.b-A {
-  color: var(--done);
-}
-.b-D {
-  color: var(--failed);
-}
-.b-M {
-  color: var(--blocked);
-}
-.b-R {
-  color: var(--running);
 }
 .path {
   font:

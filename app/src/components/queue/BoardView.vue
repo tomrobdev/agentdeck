@@ -12,7 +12,10 @@ const emit = defineEmits<{ open: [id: number]; select: [id: number]; move: [kind
 const dragging = ref<TaskSummary | null>(null);
 const over = ref<string | null>(null);
 
-const moveTo = (key: string) => (dragging.value ? boardMove(dragging.value, key as StatusGroup) : null);
+/** The move a drop on each column would make, for the card being dragged. */
+const moves = computed<Record<string, BoardMove | null>>(() =>
+  Object.fromEntries(props.groups.map((g) => [g.key, dragging.value ? boardMove(dragging.value, g.key as StatusGroup) : null])),
+);
 const canDrag = (t: TaskSummary) => t.status !== 'running' && t.status !== 'cancel_requested';
 
 function onDragStart(e: DragEvent, t: TaskSummary) {
@@ -21,12 +24,12 @@ function onDragStart(e: DragEvent, t: TaskSummary) {
   if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
 }
 function onDragOver(e: DragEvent, key: string) {
-  if (!moveTo(key)) return;
+  if (!moves.value[key]) return;
   e.preventDefault(); // allows the drop
   over.value = key;
 }
 function onDrop(key: string) {
-  const kind = moveTo(key);
+  const kind = moves.value[key];
   if (kind && dragging.value) emit('move', kind, dragging.value.id);
   end();
 }
@@ -40,16 +43,15 @@ const LABELS: Record<BoardMove, string> = {
   retry: 'Drop to retry',
   cancel: 'Drop to cancel',
 };
-const columns = computed(() => props.groups);
 </script>
 
 <template>
   <div class="board">
     <section
-      v-for="g in columns"
+      v-for="g in groups"
       :key="g.key"
       class="col"
-      :class="{ target: !!moveTo(g.key), over: over === g.key }"
+      :class="{ target: !!moves[g.key], over: over === g.key }"
       @dragover="onDragOver($event, g.key)"
       @dragleave="over === g.key && (over = null)"
       @drop.prevent="onDrop(g.key)"
@@ -58,7 +60,7 @@ const columns = computed(() => props.groups);
         <span>{{ g.label }}</span>
         <span class="muted">{{ g.tasks.length }}</span>
       </header>
-      <div v-if="moveTo(g.key)" class="hint">{{ LABELS[moveTo(g.key)!] }}</div>
+      <div v-if="moves[g.key]" class="hint">{{ LABELS[moves[g.key]!] }}</div>
       <div class="cards">
         <article
           v-for="t in g.tasks"

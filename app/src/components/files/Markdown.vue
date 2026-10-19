@@ -4,22 +4,11 @@ import { openExternal } from '../../native';
 import { markdownHtml } from '../../render';
 
 // Rendered, sanitised markdown. Links open in the system browser; `isPath` turns inline code
-// that names a repo file into a link, reported through `path`.
+// that names a repo file into a link (see render.ts), reported through `path`.
 const props = defineProps<{ text: string; isPath?: (p: string) => boolean }>();
 const emit = defineEmits<{ path: [path: string, line: number | null] }>();
 
-const PATH_LIKE = /^([\w.@-]+\/)*[\w.@-]+\.\w+(?::(\d+))?$/;
-
-const html = computed(() => {
-  const out = markdownHtml(props.text);
-  if (!props.isPath) return out;
-  return out.replace(/<code>([^<]+)<\/code>/g, (whole, inner: string) => {
-    const m = inner.match(PATH_LIKE);
-    const path = m ? inner.replace(/:\d+$/, '') : null;
-    if (!path || !props.isPath!(path)) return whole;
-    return `<a class="path" data-path="${path}" data-line="${m![2] ?? ''}" href="#"><code>${inner}</code></a>`;
-  });
-});
+const html = computed(() => markdownHtml(props.text, props.isPath));
 
 function onClick(e: MouseEvent) {
   const a = (e.target as HTMLElement).closest('a');

@@ -69,10 +69,8 @@ export function taskStore(db: DatabaseSync) {
     getTask(id: number): Task | undefined {
       return db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as Task | undefined;
     },
-    listTasks(status?: TaskStatus): Task[] {
-      return (status
-        ? db.prepare('SELECT * FROM tasks WHERE status = ? ORDER BY priority DESC, id').all(status)
-        : db.prepare('SELECT * FROM tasks ORDER BY id DESC').all()) as unknown as Task[];
+    listTasks(): Task[] {
+      return db.prepare('SELECT * FROM tasks ORDER BY id DESC').all() as unknown as Task[];
     },
     tasksForRepo(repo_id: number, limit = 40): Task[] {
       return db.prepare('SELECT * FROM tasks WHERE repo_id = ? ORDER BY id DESC LIMIT ?').all(repo_id, limit) as unknown as Task[];

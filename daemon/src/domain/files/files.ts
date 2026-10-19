@@ -174,14 +174,17 @@ export function mergeChanges(nameStatus: string, numstat: string): ChangedFile[]
 /** Separators for `git log --format`: unit (field) and record. */
 export const LOG_FORMAT = '%H%x1f%s%x1f%an%x1f%aI%x1e';
 
+/** An ISO 8601 date as the API's one time format, SQLite's UTC `YYYY-MM-DD HH:MM:SS`. */
+export const sqliteUtc = (iso: string) => new Date(iso).toISOString().slice(0, 19).replace('T', ' ');
+
 export function parseLog(out: string): Commit[] {
   return out
     .split('\x1e')
     .map((r) => r.replace(/^\n/, ''))
     .filter((r) => r.trim())
     .map((r) => {
-      const [sha, subject, author, at] = r.split('\x1f');
-      return { sha, subject, author, at };
+      const [sha, subject, author, iso] = r.split('\x1f');
+      return { sha, subject, author, at: sqliteUtc(iso) };
     });
 }
 

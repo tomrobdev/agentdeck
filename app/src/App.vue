@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch, watchEffect } from 'vue';
+import { type Ref, computed, onBeforeUnmount, onMounted, ref, watch, watchEffect } from 'vue';
 import { ApiError, type Repo, type Status, type TaskSummary, type TaskDetail as Detail, api, describeState } from './api';
 import { setTrayStatus } from './native';
 import NewTaskForm from './components/NewTaskForm.vue';
@@ -30,14 +30,26 @@ function flash(msg: string) {
   setTimeout(() => (toast.value = ''), 3500);
 }
 
+// Each poll returns fresh objects. Keeping the old one when nothing changed stops every watcher and
+// computed below from re-running (and re-fetching) every 2 s.
+const lastJson = new Map<string, string>();
+function keep<T>(target: Ref<T>, key: string, next: T) {
+  const json = JSON.stringify(next);
+  if (lastJson.get(key) === json) return;
+  lastJson.set(key, json);
+  target.value = next;
+}
+
 async function refresh() {
   try {
-    const [s, t] = await Promise.all([api.status(), api.tasks()]);
-    status.value = s;
-    tasks.value = t;
+    // A task page only needs that task; the queue needs the list.
+    const id = pageId.value;
+    const [s, list, task] = await Promise.all([api.status(), id === null ? api.tasks() : null, id === null ? null : api.task(id)]);
+    keep(status, 'status', s);
+    if (list) keep(tasks, 'tasks', list);
+    if (task && pageId.value === task.id) keep(detail, 'detail', task);
     if (offline.value || !repos.value.length) repos.value = await api.repos();
     offline.value = false;
-    if (pageId.value !== null) detail.value = await api.task(pageId.value);
   } catch (e) {
     if (e instanceof ApiError && e.message === 'offline') offline.value = true;
   }
@@ -59,7 +71,10 @@ async function act(fn: () => Promise<unknown>) {
 const pageId = computed(() => (route.current.name === 'task' ? route.current.id : null));
 watch(pageId, (id) => {
   if (id !== null) selectedId.value = id;
-  if (detail.value?.id !== id) detail.value = null;
+  if (detail.value?.id !== id) {
+    detail.value = null;
+    lastJson.delete('detail');
+  }
   refresh();
 });
 

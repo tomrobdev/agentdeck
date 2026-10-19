@@ -2,7 +2,7 @@
 import { reactive } from 'vue';
 
 export type TaskTab = 'overview' | 'runs' | 'changes' | 'code';
-export const TASK_TABS: TaskTab[] = ['overview', 'runs', 'changes', 'code'];
+const TASK_TABS: TaskTab[] = ['overview', 'runs', 'changes', 'code'];
 
 export type Route = { name: 'queue' } | { name: 'task'; id: number; tab: TaskTab; query: Record<string, string> };
 
@@ -14,7 +14,7 @@ export function parseHash(hash: string): Route {
   return { name: 'task', id: Number(m[1]), tab, query: Object.fromEntries(new URLSearchParams(qs)) };
 }
 
-export function hashFor(route: Route): string {
+function hashFor(route: Route): string {
   if (route.name === 'queue') return '#/';
   const qs = new URLSearchParams(route.query).toString();
   return `#/tasks/${route.id}/${route.tab}${qs ? `?${qs}` : ''}`;

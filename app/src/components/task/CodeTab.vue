@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { type FileContent, type FileRef, type TaskDetail, api } from '../../api';
+import { useCopy } from '../../native';
+import { isMarkdown as isMarkdownPath } from '../../render';
 import { go } from '../../router';
 import CodeView, { type LineRange } from '../files/CodeView.vue';
 import FileTree, { type TreeNode } from '../files/FileTree.vue';
@@ -9,6 +11,8 @@ import Markdown from '../files/Markdown.vue';
 // Browse the task's branch (or its base) from git, with line links: #/tasks/16/code?ref=head&path=…&L=10-20
 const props = defineProps<{ task: TaskDetail; query: Record<string, string>; changed: Set<string> }>();
 
+// The task's id as its own computed: the 2 s poll replaces the task object, and keying on it would refetch.
+const taskId = computed(() => props.task.id);
 const ref_ = computed<FileRef>(() => (props.query.ref === 'base' ? 'base' : 'head'));
 const path = computed(() => props.query.path ?? null);
 const range = computed<LineRange | null>(() => {
@@ -19,12 +23,12 @@ const range = computed<LineRange | null>(() => {
 function setQuery(patch: Record<string, string | null>, replace = false) {
   const query = { ...props.query, ...patch };
   for (const k of Object.keys(query)) if (query[k] === null) delete query[k];
-  go({ name: 'task', id: props.task.id, tab: 'code', query: query as Record<string, string> }, { replace });
+  go({ name: 'task', id: taskId.value, tab: 'code', query: query as Record<string, string> }, { replace });
 }
 
 // A new loader per task and ref resets the tree.
 const loadTree = computed(() => {
-  const id = props.task.id;
+  const id = taskId.value;
   const r = ref_.value;
   return async (dir: string): Promise<TreeNode[]> =>
     (await api.tree(id, r, dir)).entries.map((e) => ({
@@ -39,14 +43,14 @@ const file = ref<FileContent | null>(null);
 const error = ref('');
 const raw = ref(false);
 watch(
-  () => [props.task.id, ref_.value, path.value],
+  [taskId, ref_, path],
   async () => {
     file.value = null;
     error.value = '';
     raw.value = false;
     if (!path.value) return;
     try {
-      file.value = await api.file(props.task.id, ref_.value, path.value);
+      file.value = await api.file(taskId.value, ref_.value, path.value);
     } catch (e) {
       error.value = (e as Error).message;
     }
@@ -54,15 +58,10 @@ watch(
   { immediate: true },
 );
 
-const isMarkdown = computed(() => !!path.value && /\.(md|markdown)$/i.test(path.value));
+const isMarkdown = computed(() => !!path.value && isMarkdownPath(path.value));
 const isImage = computed(() => !!path.value && /\.(png|jpe?g|gif|webp|ico|icns)$/i.test(path.value));
 const crumbs = computed(() => (path.value ?? '').split('/').filter(Boolean));
-const copied = ref('');
-async function copy(text: string, what: string) {
-  await navigator.clipboard.writeText(text);
-  copied.value = what;
-  setTimeout(() => (copied.value = ''), 1200);
-}
+const { copied, copy } = useCopy();
 const worktreePath = computed(() => (props.task.worktree && path.value ? `${props.task.worktree}/${path.value}` : null));
 const select = (r: LineRange) => setQuery({ L: r.from === r.to ? String(r.from) : `${r.from}-${r.to}` }, true);
 </script>
@@ -70,7 +69,7 @@ const select = (r: LineRange) => setQuery({ L: r.from === r.to ? String(r.from) 
 <template>
   <div class="code-tab">
     <aside class="side">
-      <div class="refs">
+      <div class="seg refs">
         <button :class="{ on: ref_ === 'head' }" :title="task.branch ?? ''" @click="setQuery({ ref: 'head', L: null })">Task branch</button>
         <button :class="{ on: ref_ === 'base' }" title="Where the branch started" @click="setQuery({ ref: 'base', L: null })">Base</button>
       </div>
@@ -134,28 +133,8 @@ const select = (r: LineRange) => setQuery({ L: r.from === r.to ? String(r.from) 
   gap: 8px;
   min-height: 0;
 }
-.refs,
-.seg {
-  display: flex;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  overflow: hidden;
-  flex: none;
-}
-.refs button,
-.seg button {
+.refs button {
   flex: 1;
-  border: none;
-  border-radius: 0;
-  background: none;
-  padding: 2px 10px;
-  font-size: 12px;
-  color: var(--muted);
-}
-.refs button.on,
-.seg button.on {
-  background: var(--panel-2);
-  color: var(--text);
 }
 .viewer {
   flex: 1;

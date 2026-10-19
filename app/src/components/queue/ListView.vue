@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { nextTick, watch } from 'vue';
-import { type TaskSummary, ago } from '../../api';
+import { ago } from '../../api';
 import { openExternal } from '../../native';
-import type { Group, GroupBy } from '../../taskView';
+import { type Group, type GroupBy, canApprove, quickRetry, statusLabel } from '../../taskView';
 import PriorityIcon from './PriorityIcon.vue';
 import StatusIcon from './StatusIcon.vue';
 
@@ -36,8 +36,6 @@ watch(
     document.querySelector(`[data-task-row="${id}"]`)?.scrollIntoView({ block: 'nearest' });
   },
 );
-
-const statusText = (t: TaskSummary) => (t.status === 'cancel_requested' ? 'stopping' : t.status);
 </script>
 
 <template>
@@ -78,11 +76,13 @@ const statusText = (t: TaskSummary) => (t.status === 'cancel_requested' ? 'stopp
               <span v-if="show.repo" class="chip repo">{{ t.repo }}</span>
             </span>
             <span class="actions" @click.stop>
-              <button v-if="t.status === 'proposed'" title="Approve (a)" @click="emit('act', 'approve', t.id)">Approve</button>
-              <button v-if="['blocked', 'failed'].includes(t.status)" title="Retry (r)" @click="emit('act', 'retry', t.id)">Retry</button>
+              <button v-if="canApprove(t)" title="Approve (a)" @click="emit('act', 'approve', t.id)">Approve</button>
+              <button v-if="quickRetry(t)" title="Retry (r)" @click="emit('act', 'retry', t.id)">Retry</button>
               <button v-if="t.pr_url" title="Open the pull request" @click="openExternal(t.pr_url)">PR ↗</button>
             </span>
-            <span v-if="show.time" class="time" :title="`${statusText(t)} · updated ${t.updated_at} UTC`">{{ ago(t.updated_at) }}</span>
+            <span v-if="show.time" class="time" :title="`${statusLabel(t.status)} · updated ${t.updated_at} UTC`">{{
+              ago(t.updated_at)
+            }}</span>
           </div>
           <p v-if="!g.tasks.length" class="none muted">No tasks</p>
         </template>

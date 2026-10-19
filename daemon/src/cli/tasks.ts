@@ -68,7 +68,7 @@ export const taskCommands: Record<string, Command> = {
       die((e as Error).message);
     }
     if (!tasks.length) console.log(all.length ? 'no matching tasks' : 'no tasks');
-    for (const t of tasks) console.log(fmtTask(t, repoName(t.repo_id), db));
+    for (const t of tasks) console.log(fmtTask(t, repoName(t.repo_id)));
     if (tasks.length && tasks.length < all.length) console.log(`${tasks.length} of ${all.length} tasks`);
   },
   show: ({ db, rest, repoName }) => {

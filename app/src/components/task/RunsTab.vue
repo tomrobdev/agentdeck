@@ -6,7 +6,7 @@ import Markdown from '../files/Markdown.vue';
 
 // The checks view: one card per run, then the chosen run's final message and log.
 const props = defineProps<{ task: TaskDetail; attempt: number | null; isPath?: (p: string) => boolean }>();
-const emit = defineEmits<{ select: [attempt: number]; file: [path: string]; path: [path: string, line: number | null] }>();
+const emit = defineEmits<{ select: [attempt: number]; path: [path: string, line: number | null] }>();
 
 const latest = computed(() => props.task.runs.at(-1)?.attempt ?? null);
 const chosen = computed(() => props.attempt ?? latest.value);
@@ -52,7 +52,7 @@ const live = computed(() => props.task.status === 'running' && chosen.value === 
       :attempt="chosen"
       :live="live"
       :worktree="task.worktree"
-      @file="emit('file', $event)"
+      @file="(p) => emit('path', p, null)"
     />
   </div>
 </template>

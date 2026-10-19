@@ -229,3 +229,47 @@ pre {
 .hljs-strong {
   font-weight: 600;
 }
+
+/* A segmented control: a row of buttons, one of them on. */
+.seg {
+  display: flex;
+  flex: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.seg button {
+  border: none;
+  border-radius: 0;
+  background: none;
+  padding: 2px 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.seg button.on {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+/* How a file changed: A, M, D or R. */
+.badge {
+  font:
+    10px ui-monospace,
+    Menlo,
+    monospace;
+  width: 13px;
+  text-align: center;
+  flex: none;
+}
+.b-A {
+  color: var(--done);
+}
+.b-D {
+  color: var(--failed);
+}
+.b-M {
+  color: var(--blocked);
+}
+.b-R {
+  color: var(--running);
+}

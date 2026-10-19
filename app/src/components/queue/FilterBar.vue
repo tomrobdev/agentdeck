@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, ref } from 'vue';
 import type { TaskSummary } from '../../api';
+import { useHotkeys } from '../../hotkeys';
 import { type Filters, STATES, hasFilters } from '../../taskView';
 import Popover from './Popover.vue';
 
@@ -19,19 +20,11 @@ function toggle(list: 'states' | 'repos', key: string) {
 }
 const set = (patch: Partial<Filters>) => (filters.value = { ...filters.value, ...patch });
 
-// "/" jumps to the search box, Escape leaves it.
-function onKey(e: KeyboardEvent) {
-  const typing = e.target instanceof HTMLElement && e.target.closest('input, textarea, select, [contenteditable]');
-  if (e.key === '/' && !typing) {
-    e.preventDefault();
-    search.value?.focus();
-  } else if (e.key === 'Escape' && e.target === search.value) {
-    set({ search: '' });
-    search.value?.blur();
-  }
+useHotkeys({ '/': () => search.value?.focus() });
+function leaveSearch() {
+  set({ search: '' });
+  search.value?.blur();
 }
-onMounted(() => window.addEventListener('keydown', onKey));
-onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
 </script>
 
 <template>
@@ -78,6 +71,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
       type="search"
       placeholder="Search  /"
       :value="filters.search"
+      @keydown.esc="leaveSearch"
       @input="set({ search: ($event.target as HTMLInputElement).value })"
     />
   </div>

@@ -1,5 +1,5 @@
 // Filtering and sorting task lists, for `agentdeck ls`. Pure: no I/O.
-// The dashboard's task list (app/src/components/TaskList.vue) uses the same groups, states and sorts.
+// Mirrored by the dashboard in app/src/taskView.ts: keep the states, groups and sorts in step.
 import type { TaskStatus } from './lifecycle.ts';
 import type { TaskSummary } from './task.ts';
 
@@ -32,30 +32,24 @@ const STATES: Record<string, Test> = {
   'no-pr': (t) => t.status === 'done' && !t.pr_url,
 };
 
-/** Names for several states at once, matching the dashboard's tabs. A stuck task needs you, so it isn't active. */
+/** Names for several states at once, matching the dashboard's groups. A stuck task needs you, so it isn't active. */
 const GROUPS: Record<string, Test> = {
   active: (t) => STATES.running(t) || (t.status === 'queued' && !stuck(t)),
-  'needs-you': (t) => ['proposed', 'blocked', 'failed', 'stuck'].some((s) => STATES[s](t)),
+  'needs-you': (t) => ['blocked', 'failed', 'stuck'].some((s) => STATES[s](t)),
 };
 
-export const STATE_NAMES = [...Object.keys(GROUPS), ...Object.keys(STATES)];
+const STATE_NAMES = [...Object.keys(GROUPS), ...Object.keys(STATES)];
 
 type Compare = (a: ListedTask, b: ListedTask) => number;
 
-/** Running first, then what needs a decision, then the queue, then finished work. */
-const ATTENTION: Record<TaskStatus, number> = {
-  running: 0,
-  cancel_requested: 0,
-  proposed: 1,
-  blocked: 2,
-  failed: 3,
-  queued: 4,
-  done: 5,
-  cancelled: 6,
-};
+/** The dashboard's status groups in attention order: what needs you, proposals, running, queued, finished. */
+function attentionRank(t: ListedTask): number {
+  if (GROUPS['needs-you'](t)) return 0;
+  return { proposed: 1, running: 2, cancel_requested: 2, queued: 3, done: 4, cancelled: 5, blocked: 0, failed: 0 }[t.status];
+}
 
 export const SORTS: Record<string, Compare> = {
-  attention: (a, b) => ATTENTION[a.status] - ATTENTION[b.status] || b.priority - a.priority || b.id - a.id,
+  attention: (a, b) => attentionRank(a) - attentionRank(b) || b.priority - a.priority || b.id - a.id,
   updated: (a, b) => b.updated_at.localeCompare(a.updated_at) || b.id - a.id,
   newest: (a, b) => b.id - a.id,
   oldest: (a, b) => a.id - b.id,
