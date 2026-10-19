@@ -3,6 +3,7 @@ import type { Db } from '../db/index.ts';
 import { EDITABLE_STATUSES, type Task, defaultTitle } from '../domain/task/task.ts';
 import { warnStuckDependents } from './dependencies.ts';
 import { ActionError } from './errors.ts';
+import { closePullRequest } from './pull-requests.ts';
 
 export function addTask(
   db: Db,
@@ -93,9 +94,23 @@ export function rejectTask(db: Db, id: number): void {
   warnStuckDependents(db, id);
 }
 
-export function retryTask(db: Db, id: number): void {
+/** Another attempt. A `note` ("request changes") is kept on the timeline and goes first in the next run's prompt. */
+export function retryTask(db: Db, id: number, note?: string): void {
   const t = db.getTask(id);
   if (!t) throw new ActionError('no such task');
+  if (note !== undefined && typeof note !== 'string') throw new ActionError('note must be text');
   // One more attempt on top of what has been used.
-  if (!db.applyEvent(id, { type: 'retry' })) throw new ActionError(`#${id} is ${t.status}`);
+  if (!db.applyEvent(id, { type: 'retry' }, { reason: note?.trim() || null })) throw new ActionError(`#${id} is ${t.status}`);
+}
+
+/** Close a task's open PR without merging it. Tasks waiting on it become stuck. */
+export async function closeTaskPr(db: Db, id: number): Promise<void> {
+  const t = db.getTask(id);
+  if (!t) throw new ActionError('no such task');
+  if (!t.pr_url || t.pr_state !== 'open') throw new ActionError(`#${id} has no open pull request`);
+  try {
+    await closePullRequest(db, t);
+  } catch (err) {
+    throw new ActionError(`could not close the PR: ${(err as Error).message}`);
+  }
 }

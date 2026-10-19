@@ -20,6 +20,7 @@ export function status(db: Db) {
     running: db.countRunning(),
     max_concurrent: db.maxConcurrent(),
     counts: db.countByStatus(),
+    review: db.countReview(),
     usage: db.usageWindows(),
     governor: decide(db.usageWindows(), db.budget(), db.maxConcurrent()),
     budget: db.budget(),

@@ -27,10 +27,12 @@ ${
 - End your final message with exactly one line: "STATUS: DONE" or "STATUS: BLOCKED: <one-line reason>".`;
 }
 
-export function buildPrompt(task: Task, previousRuns: Run[]): string {
+/** `reviewNote` is what the person asked to change when they sent the task back from review. */
+export function buildPrompt(task: Task, previousRuns: Run[], reviewNote: string | null = null): string {
   const last = previousRuns.at(-1);
   if (!last) return task.prompt;
   return [
+    reviewNote ? `Changes requested in review:\n${reviewNote}\n` : '',
     task.prompt,
     '',
     `--- This is attempt ${task.attempts}. The previous attempt ended as "${last.outcome}". ---`,
