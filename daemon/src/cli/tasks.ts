@@ -122,10 +122,15 @@ export const taskCommands: Record<string, Command> = {
     const id = taskId(rest[0]);
     console.log(actions.cancelTask(db, id) === 'cancelled' ? `cancelled #${id}` : `stopping #${id}…`);
   },
-  retry: ({ db, rest }) => {
+  retry: ({ db, flags, rest }) => {
     const id = taskId(rest[0]);
-    actions.retryTask(db, id);
+    actions.retryTask(db, id, flags.note);
     console.log(`requeued #${id}`);
+  },
+  'close-pr': async ({ db, rest }) => {
+    const id = taskId(rest[0]);
+    await actions.closeTaskPr(db, id);
+    console.log(`closed the pull request of #${id}`);
   },
   clean: async ({ db, rest }) => {
     const t = db.getTask(taskId(rest[0])) ?? die('no such task');

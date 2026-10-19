@@ -76,7 +76,12 @@ export function startApi(db: Db, port = API_PORT): Promise<Server> {
     ['GET', /^\/api\/tasks\/(\d+)$/, (_q, _s, [id]) => taskDetail(db, Number(id))],
     ['POST', /^\/api\/tasks\/(\d+)$/, (_q, _s, [id], b) => (actions.editTask(db, Number(id), b), taskDetail(db, Number(id)))],
     ['POST', /^\/api\/tasks\/(\d+)\/cancel$/, (_q, _s, [id]) => ({ result: actions.cancelTask(db, Number(id)) })],
-    ['POST', /^\/api\/tasks\/(\d+)\/retry$/, (_q, _s, [id]) => (actions.retryTask(db, Number(id)), taskDetail(db, Number(id)))],
+    ['POST', /^\/api\/tasks\/(\d+)\/retry$/, (_q, _s, [id], b) => (actions.retryTask(db, Number(id), b?.note), taskDetail(db, Number(id)))],
+    [
+      'POST',
+      /^\/api\/tasks\/(\d+)\/close-pr$/,
+      async (_q, _s, [id]) => (await actions.closeTaskPr(db, Number(id)), taskDetail(db, Number(id))),
+    ],
     [
       'GET',
       /^\/api\/tasks\/(\d+)\/log$/,

@@ -29,7 +29,8 @@ Tasks
   agentdeck approve <id>...       queue planner proposals
   agentdeck reject <id>...
   agentdeck cancel <id>
-  agentdeck retry <id>
+  agentdeck retry <id> [--note "…"]   another attempt; the note goes first in its prompt (changes requested in review)
+  agentdeck close-pr <id>       close the task's open pull request without merging
   agentdeck clean <id>          remove the task's worktree (its branch is kept)
 
 Daemon

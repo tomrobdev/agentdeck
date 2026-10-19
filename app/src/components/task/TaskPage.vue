@@ -3,7 +3,8 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { type Changes, type TaskDetail, ago, api, describeHold } from '../../api';
 import { useHotkeys } from '../../hotkeys';
 import { type TaskTab, go, openTask } from '../../router';
-import { canApprove, canCancel, canEdit, canRetry, statusLabel } from '../../taskView';
+import { canApprove, canCancel, canEdit, canRetry, canReview, statusLabel } from '../../taskView';
+import Modal from '../Modal.vue';
 import SnippetPopover from '../files/SnippetPopover.vue';
 import StatusIcon from '../queue/StatusIcon.vue';
 import ChangesTab from './ChangesTab.vue';
@@ -102,7 +103,32 @@ async function saveTitle() {
   }
 }
 
-useHotkeys({ Escape: () => go({ name: 'queue' }) });
+// Review actions on a done task's open PR. Both ask first: one sends the task back, the other closes the PR on GitHub.
+const reviewDialog = ref<'changes' | 'close' | null>(null);
+const note = ref('');
+const reviewBusy = ref(false);
+function openReview(kind: 'changes' | 'close') {
+  note.value = '';
+  reviewDialog.value = kind;
+}
+async function submitReview() {
+  const kind = reviewDialog.value;
+  if (!kind || reviewBusy.value) return;
+  if (kind === 'changes' && !note.value.trim()) return;
+  reviewBusy.value = true;
+  try {
+    await (kind === 'changes' ? api.retry(props.task.id, note.value.trim()) : api.closePr(props.task.id));
+    reviewDialog.value = null;
+    emit('changed');
+  } catch (e) {
+    reviewDialog.value = null;
+    emit('error', (e as Error).message);
+  } finally {
+    reviewBusy.value = false;
+  }
+}
+
+useHotkeys({ Escape: () => !reviewDialog.value && go({ name: 'queue' }) });
 </script>
 
 <template>
@@ -137,7 +163,11 @@ useHotkeys({ Escape: () => go({ name: 'queue' }) });
           <button @click="emit('act', 'reject')">Reject</button>
           <button class="primary" @click="emit('act', 'approve')">✓ Approve</button>
         </template>
-        <button v-if="canRetry(task)" @click="emit('act', 'retry')">↻ Retry</button>
+        <template v-if="canReview(task)">
+          <button @click="openReview('close')">Close PR</button>
+          <button class="primary" @click="openReview('changes')">↻ Request changes</button>
+        </template>
+        <button v-else-if="canRetry(task)" @click="emit('act', 'retry')">↻ Retry</button>
         <button v-if="canCancel(task)" @click="emit('act', 'cancel')">{{ s === 'running' ? '■ Stop' : '✕ Cancel' }}</button>
       </div>
     </header>
@@ -194,6 +224,39 @@ useHotkeys({ Escape: () => go({ name: 'queue' }) });
       </div>
       <Sidebar v-if="!wide" :task="task" @changed="emit('changed')" @error="emit('error', $event)" />
     </div>
+
+    <Modal v-if="reviewDialog === 'changes'" title="Request changes" @close="reviewDialog = null">
+      <p class="muted">
+        Sends #{{ task.id }} back for another attempt on the same branch. The note goes first in the next run's prompt and shows on the
+        timeline.
+      </p>
+      <textarea
+        v-model="note"
+        class="note"
+        rows="5"
+        placeholder="What should change?"
+        autofocus
+        @keydown.enter.meta.prevent="submitReview"
+        @keydown.enter.ctrl.prevent="submitReview"
+      />
+      <div class="dialog-acts">
+        <button @click="reviewDialog = null">Cancel</button>
+        <button class="primary" :disabled="!note.trim() || reviewBusy" @click="submitReview">Request changes</button>
+      </div>
+    </Modal>
+    <Modal v-if="reviewDialog === 'close'" title="Close pull request" @close="reviewDialog = null">
+      <p>
+        Close the pull request for #{{ task.id }} on GitHub without merging it? Tasks waiting on this one will stay stuck until it is
+        retried or they are cancelled.
+      </p>
+      <p>
+        <a :href="task.pr_url ?? ''" target="_blank" rel="noreferrer">{{ task.pr_url }}</a>
+      </p>
+      <div class="dialog-acts">
+        <button @click="reviewDialog = null">Cancel</button>
+        <button class="primary" :disabled="reviewBusy" autofocus @click="submitReview">Close PR</button>
+      </div>
+    </Modal>
   </section>
 </template>
 
@@ -262,6 +325,16 @@ h1.editable {
   display: flex;
   gap: 6px;
   flex: none;
+}
+.note {
+  width: 100%;
+  resize: vertical;
+}
+.dialog-acts {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 12px;
 }
 .tabs {
   display: flex;

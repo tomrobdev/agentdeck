@@ -107,6 +107,15 @@ test('cancel and retry', async () => {
   assert.equal(cancelled.result, 'cancelled');
 });
 
+test('retry takes a note, which the timeline keeps; close-pr needs an open PR', async () => {
+  const retried = await (await api('/api/tasks/1/retry', { method: 'POST', json: { note: 'Add a test.' } })).json();
+  assert.equal(retried.status, 'queued');
+  assert.equal(retried.events.at(-1).reason, 'Add a test.');
+  const noPr = await api('/api/tasks/1/close-pr', { method: 'POST' });
+  assert.equal(noPr.status, 400);
+  await api('/api/tasks/1/cancel', { method: 'POST' });
+});
+
 test('settings round-trip with validation', async () => {
   const s = await (await api('/api/settings')).json();
   assert.equal(s.budget.weekly_max, 0.8);

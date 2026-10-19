@@ -45,6 +45,13 @@ export async function openPullRequest(db: Db, task: Task): Promise<{ url?: strin
   }
 }
 
+/** Close a task's PR on GitHub and record it. Throws if `gh` fails. */
+export async function closePullRequest(db: Db, task: Task): Promise<void> {
+  await github.closePr(task.pr_url!, task.worktree ?? db.getRepo(task.repo_id)?.path ?? process.cwd());
+  db.updateTask(task.id, { pr_state: 'closed' });
+  warnStuckDependents(db, task.id);
+}
+
 /** Re-read the state of every open PR of a done task. A failed lookup leaves that task as it was. */
 export async function refreshPrStates(db: Db, log: (msg: string) => void = () => {}): Promise<void> {
   for (const task of db.openPrTasks()) {

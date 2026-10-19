@@ -13,3 +13,8 @@ export interface TaskEventRow {
   reason: string | null;
   at: string;
 }
+
+/** The note on the task's latest retry ("changes requested in review"), or null if that retry had none. */
+export function latestReviewNote(events: Pick<TaskEventRow, 'type' | 'reason'>[]): string | null {
+  return events.findLast((e) => e.type === 'retry')?.reason ?? null;
+}
