@@ -33,18 +33,36 @@ export interface Settings {
   budget: Budget;
   notify: NotifySettings;
   planner: PlannerSettings;
+  /** Restart the daemon onto new code when daemon/src changes and nothing is running. */
+  reload_on_change: boolean;
 }
 
+export const reloadOnChange = (db: Db) => db.getSetting('reload_on_change', '0') === '1';
+
 export function getSettings(db: Db): Settings {
-  return { max_concurrent: db.maxConcurrent(), budget: db.budget(), notify: notifySettings(db), planner: plannerSettings(db) };
+  return {
+    max_concurrent: db.maxConcurrent(),
+    budget: db.budget(),
+    notify: notifySettings(db),
+    planner: plannerSettings(db),
+    reload_on_change: reloadOnChange(db),
+  };
 }
 
 /** Apply a partial settings update after validating all of it. */
 export function updateSettings(
   db: Db,
-  patch: { max_concurrent?: number; budget?: Partial<Budget>; notify?: Partial<NotifySettings>; planner?: Partial<PlannerSettings> },
+  patch: {
+    max_concurrent?: number;
+    budget?: Partial<Budget>;
+    notify?: Partial<NotifySettings>;
+    planner?: Partial<PlannerSettings>;
+    reload_on_change?: boolean;
+  },
 ): Settings {
   const writes: [string, string][] = [];
+
+  if (patch.reload_on_change !== undefined) writes.push(['reload_on_change', patch.reload_on_change ? '1' : '0']);
 
   if (patch.max_concurrent !== undefined) {
     const n = Number(patch.max_concurrent);

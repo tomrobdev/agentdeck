@@ -28,6 +28,9 @@ export function parseCommandLine(argv: string[]) {
       yes: { type: 'boolean', short: 'y' },
       'keep-branch': { type: 'boolean' },
       file: { type: 'string' },
+      now: { type: 'boolean' },
+      follow: { type: 'boolean', short: 'f' },
+      lines: { type: 'string', short: 'n' },
       help: { type: 'boolean', short: 'h' },
     },
   });
