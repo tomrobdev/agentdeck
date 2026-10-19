@@ -3,7 +3,8 @@
 /** What the daemon does when a task is done: nothing, open a draft PR, or open a ready PR. */
 export type PrMode = 'off' | 'draft' | 'ready';
 export const PR_MODES: PrMode[] = ['off', 'draft', 'ready'];
-export type PrState = 'open' | 'merged' | 'closed';
+/** `failed` is the daemon's own: the task finished but its PR could not be opened (there is no pr_url). */
+export type PrState = 'open' | 'merged' | 'closed' | 'failed';
 
 export interface PrRun {
   attempt: number;

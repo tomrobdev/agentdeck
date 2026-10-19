@@ -155,7 +155,7 @@ test('a push failure keeps the task done, logs agentdeck_pr, and notifies with t
   const t = db.getTask(task.id)!;
   assert.equal(t.status, 'done');
   assert.equal(t.pr_url, null);
-  assert.equal(t.pr_state, null);
+  assert.equal(t.pr_state, 'failed', 'dependents see that the PR will not appear on its own');
   assert.equal(calls.create.length, 0, 'no PR without a pushed branch');
 
   const log = readFileSync(db.runsForTask(t.id).at(-1)!.log_path, 'utf8');
@@ -301,8 +301,9 @@ test('--after rejects a task that does not exist, and a failed dependency never 
 });
 
 test('isWaiting mirrors the claim rule', () => {
-  const done = { status: 'done', pr_url: null, pr_state: null };
+  const done = { status: 'done', pr_url: null, pr_state: null, pr_mode: 'off' };
   assert.equal(isWaiting({ after_task: null }, undefined), false);
+  assert.equal(isWaiting({ after_task: 1 }, { ...done, pr_mode: 'draft' }), true, 'its PR is not opened yet');
   assert.equal(isWaiting({ after_task: 1 }, undefined), true);
   assert.equal(isWaiting({ after_task: 1 }, { ...done, status: 'running' }), true);
   assert.equal(isWaiting({ after_task: 1 }, done), false);
@@ -311,10 +312,15 @@ test('isWaiting mirrors the claim rule', () => {
 });
 
 test('dependencyState says why a task is stuck', () => {
-  const done = { status: 'done', pr_url: null, pr_state: null };
+  const done = { status: 'done', pr_url: null, pr_state: null, pr_mode: 'off' };
   const after = { after_task: 5 };
   assert.deepEqual(dependencyState({ after_task: null }, undefined), { kind: 'none' });
   assert.deepEqual(dependencyState(after, done), { kind: 'met' });
+  assert.deepEqual(dependencyState(after, { ...done, pr_mode: 'ready' }), { kind: 'waiting' });
+  assert.deepEqual(dependencyState(after, { ...done, pr_mode: 'draft', pr_state: 'failed' }), {
+    kind: 'stuck',
+    reason: "#5's PR could not be opened",
+  });
   assert.deepEqual(dependencyState(after, { ...done, status: 'queued' }), { kind: 'waiting' });
   assert.deepEqual(dependencyState(after, { ...done, status: 'cancel_requested' }), { kind: 'waiting' });
   assert.deepEqual(dependencyState(after, { ...done, pr_url: 'u', pr_state: 'open' }), { kind: 'waiting' });
@@ -326,6 +332,61 @@ test('dependencyState says why a task is stuck', () => {
   assert.deepEqual(dependencyState(after, { ...done, status: 'blocked' }), { kind: 'stuck', reason: '#5 is blocked' });
   assert.deepEqual(dependencyState(after, { ...done, status: 'cancelled' }), { kind: 'stuck', reason: '#5 was cancelled' });
   assert.deepEqual(dependencyState(after, undefined), { kind: 'stuck', reason: '#5 no longer exists' });
+});
+
+test('a dependent is not claimed while its dependency pushes and opens its PR', async () => {
+  updateRepo(db, 'demo', { pr_mode: 'draft' });
+  const dep = db.addTask({ repo_id: repo.id, title: 'slow push', prompt: 'FAKE_DONE slow' });
+  const later = addTask(db, { repo: 'demo', prompt: 'after the slow push', after_task: dep.id });
+  db.setSetting('max_concurrent', '2');
+
+  let release!: () => void;
+  const gate = new Promise<void>((r) => (release = r));
+  let pushing!: () => void;
+  const pushStarted = new Promise<void>((r) => (pushing = r));
+  const realPush = github.push;
+  github.push = async (repoPath, branch) => {
+    if (branch === dep.branch || branch === `agentdeck/task-${dep.id}`) {
+      pushing();
+      await gate;
+    }
+    return realPush(repoPath, branch);
+  };
+  try {
+    const running = new Scheduler(db, { once: true, tickMs: 10, log: () => {} }).run();
+    await pushStarted;
+    // The task is done, the push is still going: the PR does not exist yet.
+    assert.equal(db.getTask(dep.id)!.status, 'done');
+    assert.equal(db.getTask(dep.id)!.pr_url, null);
+    await new Promise((r) => setTimeout(r, 150)); // several scheduler ticks
+    assert.equal(db.getTask(later.id)!.status, 'queued', 'held while the PR is being opened');
+    assert.deepEqual(waitingFor(db, db.getTask(later.id)!), { on: dep.id, stuck: null });
+
+    release();
+    const deadline = Date.now() + 5000;
+    while (db.getTask(dep.id)!.pr_state !== 'open' && Date.now() < deadline) await new Promise((r) => setTimeout(r, 10));
+    await new Promise((r) => setTimeout(r, 100));
+    assert.equal(db.getTask(later.id)!.status, 'queued', 'held while the PR is open');
+    await running;
+  } finally {
+    github.push = realPush;
+    db.setSetting('max_concurrent', '1');
+  }
+  db.updateTask(dep.id, { pr_state: 'merged' });
+  assert.equal(db.claimNextTask()!.id, later.id);
+});
+
+test('a dependent is stuck, not released, when its dependency PR could not be opened', async () => {
+  updateRepo(db, 'demo', { pr_mode: 'draft' });
+  pushError = 'remote: Permission denied (publickey)';
+  const dep = db.addTask({ repo_id: repo.id, title: 'no push', prompt: 'FAKE_DONE nopush' });
+  const later = addTask(db, { repo: 'demo', prompt: 'after the failed push', after_task: dep.id });
+  await drain();
+
+  assert.equal(db.getTask(dep.id)!.status, 'done');
+  assert.equal(db.getTask(later.id)!.status, 'queued');
+  assert.deepEqual(waitingFor(db, db.getTask(later.id)!), { on: dep.id, stuck: `#${dep.id}'s PR could not be opened` });
+  assert.equal(db.claimNextTask(), undefined);
 });
 
 /** Notifications about task `id`'s dependents being stuck. */

@@ -1,7 +1,7 @@
 // Why queued tasks haven't started: what holds the whole queue, and what holds each task.
 import type { Db } from '../db/index.ts';
+import { dependencyOf } from './dependencies.ts';
 import type { Repo } from '../domain/repo/repo.ts';
-import { dependencyState } from '../domain/task/dependency.ts';
 import { type QueueHold, type StartHold, queueHold, startHold } from '../domain/task/start.ts';
 import type { Task } from '../domain/task/task.ts';
 import { decide } from '../domain/usage/governor.ts';
@@ -43,7 +43,7 @@ export function startHolds(db: Db): (task: Pick<Task, 'status' | 'repo_id' | 'af
     startHold(task, {
       queue,
       repoPaused: repos.get(task.repo_id)?.paused_reason ?? null,
-      dependency: dependencyState(task, task.after_task === null ? undefined : db.getTask(task.after_task)),
+      dependency: dependencyOf(db, task),
       after: task.after_task,
       running,
       max: q.governor.max_concurrent,

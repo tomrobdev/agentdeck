@@ -11,9 +11,16 @@ export interface Waiting {
   stuck: string | null;
 }
 
+/** Where a task stands with its `after_task`, reading the dependency and its repo's pr_mode. */
+export function dependencyOf(db: Db, task: Pick<Task, 'after_task'>): DependencyState {
+  const dep = task.after_task === null ? undefined : db.getTask(task.after_task);
+  const pr_mode = dep ? (db.getRepo(dep.repo_id)?.pr_mode ?? 'off') : 'off';
+  return dependencyState(task, dep && { ...dep, pr_mode });
+}
+
 export function waitingFor(db: Db, task: Pick<Task, 'status' | 'after_task'>): Waiting | null {
   if (task.status !== 'queued' || task.after_task === null) return null;
-  const state: DependencyState = dependencyState(task, db.getTask(task.after_task));
+  const state = dependencyOf(db, task);
   if (state.kind === 'waiting') return { on: task.after_task, stuck: null };
   if (state.kind === 'stuck') return { on: task.after_task, stuck: state.reason };
   return null;
@@ -27,7 +34,7 @@ export function waitingFor(db: Db, task: Pick<Task, 'status' | 'after_task'>): W
 export function warnStuckDependents(db: Db, id: number): void {
   const dependents = db.dependentsOf(id);
   if (!dependents.length) return;
-  const state = dependencyState({ after_task: id }, db.getTask(id));
+  const state = dependencyOf(db, { after_task: id });
   if (state.kind !== 'stuck') return;
   const n = dependents.length;
   notifyLater(db, {
