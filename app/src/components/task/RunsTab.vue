@@ -5,12 +5,13 @@ import LogView from '../LogView.vue';
 import Markdown from '../files/Markdown.vue';
 
 // The checks view: one card per run, then the chosen run's final message and log.
-const props = defineProps<{ task: TaskDetail; attempt: number | null; isPath?: (p: string) => boolean }>();
-const emit = defineEmits<{ select: [attempt: number]; path: [path: string, line: number | null] }>();
+const props = defineProps<{ task: TaskDetail; runId: number | null; isPath?: (p: string) => boolean }>();
+const emit = defineEmits<{ select: [runId: number]; path: [path: string, line: number | null] }>();
 
-const latest = computed(() => props.task.runs.at(-1)?.attempt ?? null);
-const chosen = computed(() => props.attempt ?? latest.value);
-const run = computed(() => props.task.runs.find((r) => r.attempt === chosen.value));
+// Runs are picked by id: a resolve run shares its attempt number with a work run.
+const latest = computed(() => props.task.runs.at(-1)?.id ?? null);
+const chosen = computed(() => props.runId ?? latest.value);
+const run = computed(() => props.task.runs.find((r) => r.id === chosen.value));
 const live = computed(() => props.task.status === 'running' && chosen.value === latest.value);
 </script>
 
@@ -22,11 +23,13 @@ const live = computed(() => props.task.status === 'running' && chosen.value === 
         v-for="r in [...task.runs].reverse()"
         :key="r.id"
         class="card"
-        :class="[`s-${r.outcome ?? 'running'}`, { on: r.attempt === chosen }]"
-        @click="emit('select', r.attempt)"
+        :class="[`s-${r.outcome ?? 'running'}`, { on: r.id === chosen }]"
+        @click="emit('select', r.id)"
       >
         <span class="dot" />
-        <span class="name">Run {{ r.attempt }}</span>
+        <span class="name" :title="r.kind === 'resolve' ? 'Merged the base branch into the branch; uses no attempt' : undefined">{{
+          r.kind === 'resolve' ? 'Resolve conflicts' : `Run ${r.attempt}`
+        }}</span>
         <span class="outcome">{{ r.outcome ?? 'running' }}</span>
         <span class="checks">
           <span :class="r.tests_passed === null ? 'muted' : r.tests_passed ? 'ok' : 'bad'">
@@ -49,7 +52,7 @@ const live = computed(() => props.task.status === 'running' && chosen.value === 
     <LogView
       v-if="task.status !== 'proposed'"
       :task-id="task.id"
-      :attempt="chosen"
+      :run-id="chosen"
       :live="live"
       :worktree="task.worktree"
       @file="(p) => emit('path', p, null)"

@@ -1,9 +1,13 @@
 // The run entity and how to read a run's result. Pure: no I/O.
 
+/** `work` is an attempt at the task; `resolve` merges the base branch into the task's branch and never uses an attempt. */
+export type RunKind = 'work' | 'resolve';
+
 export interface Run {
   id: number;
   task_id: number;
-  attempt: number;
+  kind: RunKind;
+  attempt: number; // a resolve run carries the attempt it ran beside
   started_at: string;
   ended_at: string | null;
   outcome: string | null; // done | blocked | failed | cancelled
@@ -20,6 +24,36 @@ export interface Run {
   log_path: string;
   pid: number | null; // claude's process group while the run is live
   denials: number; // tool uses refused by the permission rules during the run
+}
+
+/** The parts of claude's final `result` event that a run records. */
+export interface ResultLike {
+  session_id?: string;
+  num_turns?: number;
+  total_cost_usd?: number;
+  result?: string;
+  usage?: {
+    input_tokens?: number;
+    output_tokens?: number;
+    cache_read_input_tokens?: number;
+    cache_creation_input_tokens?: number;
+  };
+}
+
+/** The run row's fields that claude's exit code and final result decide. */
+export function resultFields(result: ResultLike | undefined, exitCode: number): Partial<Run> {
+  const usage = result?.usage ?? {};
+  return {
+    exit_code: exitCode,
+    session_id: result?.session_id ?? null,
+    num_turns: result?.num_turns ?? null,
+    input_tokens: usage.input_tokens ?? 0,
+    output_tokens: usage.output_tokens ?? 0,
+    cache_read_tokens: usage.cache_read_input_tokens ?? 0,
+    cache_write_tokens: usage.cache_creation_input_tokens ?? 0,
+    cost_usd: result?.total_cost_usd ?? 0,
+    result_text: result?.result ?? null,
+  };
 }
 
 export type Outcome = 'done' | 'blocked' | 'failed' | 'cancelled' | 'rate_limited';

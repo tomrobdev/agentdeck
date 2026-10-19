@@ -19,6 +19,7 @@ export type TaskEvent =
   | { type: 'finish'; outcome: 'done' | 'blocked' | 'cancelled' } // a run ended
   | { type: 'finish'; outcome: 'failed'; retry: boolean } // a run failed; retry = attempts remain
   | { type: 'rate_limited' } // a run hit the usage limit; not the task's fault
+  | { type: 'conflict' } // a done task's branch conflicts with its base and the resolve run could not fix it
   | { type: 'cancel' }
   | { type: 'approve' } // accept a planner proposal
   | { type: 'reject' } // decline a planner proposal
@@ -31,7 +32,7 @@ export const TRANSITIONS: Record<TaskStatus, TaskStatus[]> = {
   queued: ['running', 'cancelled'],
   running: ['queued', 'done', 'blocked', 'failed', 'cancel_requested', 'cancelled'],
   cancel_requested: ['cancelled'],
-  done: ['queued'],
+  done: ['queued', 'blocked'],
   blocked: ['queued', 'cancelled'],
   failed: ['queued', 'cancelled'],
   cancelled: ['queued'],
@@ -45,6 +46,7 @@ export type RuleKey =
   | 'finish:failed'
   | 'finish:failed:retry'
   | 'rate_limited'
+  | 'conflict'
   | 'cancel'
   | 'approve'
   | 'reject'
@@ -68,6 +70,7 @@ export const RULES: Record<RuleKey, Partial<Record<TaskStatus, TaskStatus>>> = {
   'finish:failed': { running: 'failed', cancel_requested: 'cancelled' },
   'finish:failed:retry': { running: 'queued', cancel_requested: 'cancelled' },
   rate_limited: { running: 'queued', cancel_requested: 'cancelled' },
+  conflict: { done: 'blocked' },
   cancel: { proposed: 'cancelled', queued: 'cancelled', blocked: 'cancelled', failed: 'cancelled', running: 'cancel_requested' },
   approve: { proposed: 'queued' },
   reject: { proposed: 'cancelled' },

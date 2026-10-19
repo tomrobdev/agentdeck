@@ -139,6 +139,10 @@ export const MIGRATIONS: Migration[] = [
   // 8: merging a PR from the app. merge_method is squash | merge | rebase: the repo's default, and the one a task was merged with.
   `ALTER TABLE repos ADD COLUMN merge_method TEXT NOT NULL DEFAULT 'squash';
    ALTER TABLE tasks ADD COLUMN merge_method TEXT;`,
+  // 9: keeping task branches up to date with their base. A run is a work run or a resolve run (merging the base
+  // into the branch, which uses no attempt); auto_resolve lets the daemon start a resolve run on its own.
+  `ALTER TABLE repos ADD COLUMN auto_resolve INTEGER NOT NULL DEFAULT 1;
+   ALTER TABLE runs ADD COLUMN kind TEXT NOT NULL DEFAULT 'work';`,
 ];
 
 /** Runs every step above the database's user_version in one transaction; returns how many ran. */

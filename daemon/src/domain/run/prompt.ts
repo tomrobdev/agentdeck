@@ -29,7 +29,7 @@ ${
 
 /** `reviewNote` is what the person asked to change when they sent the task back from review. */
 export function buildPrompt(task: Task, previousRuns: Run[], reviewNote: string | null = null): string {
-  const last = previousRuns.at(-1);
+  const last = previousRuns.filter((r) => r.kind !== 'resolve').at(-1);
   if (!last) return task.prompt;
   return [
     reviewNote ? `Changes requested in review:\n${reviewNote}\n` : '',
@@ -42,6 +42,60 @@ export function buildPrompt(task: Task, previousRuns: Run[], reviewNote: string 
   ]
     .filter(Boolean)
     .join('\n');
+}
+
+/** How many commit messages of each side the resolve prompt quotes. */
+const SIDE_COMMITS = 15;
+
+export interface ResolveContext {
+  /** The base branch being merged into the task's branch, as the person knows it ("main"). */
+  base: string;
+  /** Files with conflict markers. */
+  files: string[];
+  /** Subjects of the commits on the task's branch that the base does not have. */
+  ours: string[];
+  /** Subjects of the commits on the base that the task's branch does not have. */
+  theirs: string[];
+  testCmd: string | null;
+}
+
+const bullets = (subjects: string[]) =>
+  subjects.length
+    ? [
+        ...subjects.slice(0, SIDE_COMMITS).map((s) => `- ${s}`),
+        ...(subjects.length > SIDE_COMMITS ? [`- … and ${subjects.length - SIDE_COMMITS} more`] : []),
+      ].join('\n')
+    : '- (none)';
+
+/**
+ * The prompt of a resolve run: the merge of the base into the task's branch is under way in the worktree and has
+ * conflicts. It names the files, both sides' commit messages and the task's goal, and asks for the intent of both sides.
+ */
+export function buildResolvePrompt(task: Pick<Task, 'id' | 'title' | 'prompt'>, ctx: ResolveContext): string {
+  return [
+    `AgentDeck conflict resolution for task #${task.id}: "${task.title}".`,
+    '',
+    `AgentDeck is merging \`${ctx.base}\` into this task's branch, and the merge stopped on conflicts. It is still in progress in this worktree: the conflicting files hold conflict markers (<<<<<<<, =======, >>>>>>>).`,
+    '',
+    'Conflicting files:',
+    ...ctx.files.map((f) => `- ${f}`),
+    '',
+    "The task's goal (what this branch is for):",
+    task.prompt.slice(0, 4000),
+    '',
+    `Commits on this branch (the task's side):`,
+    bullets(ctx.ours),
+    '',
+    `Commits on ${ctx.base} (the other side):`,
+    bullets(ctx.theirs),
+    '',
+    "Resolve every conflict so that the result keeps the intent of both sides: do not drop either side's change just to make the markers go away, and do not add unrelated changes.",
+    ctx.testCmd
+      ? `When no markers are left, run \`${ctx.testCmd}\` and fix what fails.`
+      : 'When no markers are left, run the tests if the project has any.',
+    'Then stage the files with `git add` and conclude the merge with `git commit --no-edit`. Do not abort the merge, switch branches or push.',
+    'If you cannot resolve it with confidence, stop and end with STATUS: BLOCKED and the reason.',
+  ].join('\n');
 }
 
 export function claudeArgs(task: Task, allowed: string[], prompt: string, testCmd: string | null): string[] {

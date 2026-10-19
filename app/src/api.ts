@@ -18,6 +18,8 @@ export interface Repo {
   paused_reason: string | null;
   pr_mode: PrMode;
   merge_method: MergeMethod;
+  /** 1 = the daemon starts a resolve run on its own when a branch conflicts with the base. */
+  auto_resolve: number;
 }
 
 export type PrMode = 'off' | 'draft' | 'ready';
@@ -109,6 +111,9 @@ export interface Task extends TaskSummary {
 
 export interface Run {
   id: number;
+  /** A resolve run merges the base branch into the task's branch and uses no attempt. */
+  kind: 'work' | 'resolve';
+  /** A resolve run carries the attempt it ran beside, so pick runs by id. */
   attempt: number;
   started_at: string;
   ended_at: string | null;
@@ -127,7 +132,8 @@ export interface Run {
 export interface TaskEventRow {
   id: number;
   task_id: number;
-  type: 'created' | 'merge' | 'claim' | 'finish' | 'rate_limited' | 'cancel' | 'approve' | 'reject' | 'retry' | 'recover';
+  type:
+    'created' | 'merge' | 'sync' | 'claim' | 'finish' | 'rate_limited' | 'conflict' | 'cancel' | 'approve' | 'reject' | 'retry' | 'recover';
   from_status: TaskStatus | null;
   to_status: TaskStatus | null;
   reason: string | null;
@@ -153,8 +159,22 @@ export interface MergePreview {
   /** Reasons the merge can't go ahead. */
   problems: string[];
   warnings: string[];
+  /** One of the problems is a conflict with the base branch, which a resolve run can fix. */
+  conflicting: boolean;
   /** Queued tasks waiting on this one. */
   unblocks: { id: number; title: string }[];
+}
+
+/** What bringing the base branch into a task's branch came to (POST /api/tasks/:id/resolve; daemon application/conflicts.ts). */
+export interface ResolveResult {
+  /** `skipped`: conflicts, but auto_resolve is off. `deferred`: the usage limit or a cancel stopped it. */
+  outcome: 'up_to_date' | 'clean' | 'resolved' | 'blocked' | 'skipped' | 'deferred' | 'error';
+  files: string[];
+  reason?: string;
+  /** The branch was pushed, so the PR has it. */
+  pushed: boolean;
+  push_error?: string;
+  task: TaskDetail;
 }
 
 export interface MergeResult {
@@ -392,6 +412,7 @@ export const api = {
       setup_cmd?: string | null;
       pr_mode?: PrMode;
       merge_method?: MergeMethod;
+      auto_resolve?: boolean;
     },
   ) => call<RepoDetail>(`/api/repos/${id}`, { method: 'POST', json: patch }),
   plan: (id: number) => call<PlanResult>(`/api/repos/${id}/plan`, { method: 'POST' }),
@@ -422,12 +443,14 @@ export const api = {
   mergePreview: (id: number) => call<MergePreview>(`/api/tasks/${id}/merge`),
   merge: (id: number, body: { method: MergeMethod; delete_branch: boolean }) =>
     call<MergeResult>(`/api/tasks/${id}/merge`, { method: 'POST', json: body }),
+  /** Merge the base branch into the task's branch; a conflict starts a claude run, so this can take minutes. */
+  resolve: (id: number) => call<ResolveResult>(`/api/tasks/${id}/resolve`, { method: 'POST' }),
   changes: (id: number) => call<Changes>(`/api/tasks/${id}/changes`),
   diff: (id: number, path: string) => call<FilePatch>(`/api/tasks/${id}/diff?path=${encodeURIComponent(path)}`),
   tree: (id: number, ref: FileRef, path = '') => call<TreeListing>(`/api/tasks/${id}/tree?ref=${ref}&path=${encodeURIComponent(path)}`),
   file: (id: number, ref: FileRef, path: string) => call<FileContent>(`/api/tasks/${id}/file?ref=${ref}&path=${encodeURIComponent(path)}`),
   planHtml: (id: number, planId: number) => call<{ html: string }>(`/api/tasks/${id}/plans/${planId}`),
-  logUrl: (id: number, attempt?: number) => `${API_BASE}/api/tasks/${id}/log${attempt ? `?attempt=${attempt}` : ''}`,
+  logUrl: (id: number, runId?: number) => `${API_BASE}/api/tasks/${id}/log${runId ? `?run=${runId}` : ''}`,
 };
 
 /** "Tue 14:00" style, for when a hold lifts. */

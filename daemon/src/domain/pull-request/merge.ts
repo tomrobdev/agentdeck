@@ -1,4 +1,5 @@
 // Whether a PR can be merged, and how. Pure: no I/O.
+import { isConflicting } from './conflict.ts';
 import type { PrState } from './pr.ts';
 
 /** How GitHub folds the PR into the base branch. Squash is the default: one task, one commit. */
@@ -75,7 +76,7 @@ export function mergeCheck(input: { pr_state: PrState | null; pr: PrDetails; tes
   const problems: string[] = [];
   const warnings: string[] = [];
   if (pr_state !== 'open') problems.push(`the PR is ${pr_state ?? 'not open'}`);
-  if (pr.mergeable === 'CONFLICTING' || pr.merge_state === 'DIRTY') problems.push('the branch has conflicts with the base branch');
+  if (isConflicting(pr)) problems.push('the branch has conflicts with the base branch');
   if (pr.draft) warnings.push('the PR is a draft; it will be marked ready for review first');
   if (pr.merge_state === 'BEHIND') warnings.push('the base branch has moved on since the branch was cut');
   if (pr.merge_state === 'BLOCKED' && !pr.draft)

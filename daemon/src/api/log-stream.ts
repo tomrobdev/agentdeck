@@ -7,9 +7,20 @@ import { parseLogLine } from '../domain/run/log.ts';
 const LOG_POLL_MS = 500;
 
 /** Stream a run's log as SSE: everything so far, then new lines until the run ends. */
-export function streamLog(db: Db, req: IncomingMessage, res: ServerResponse, taskId: number, attempt?: number): void {
+export function streamLog(
+  db: Db,
+  req: IncomingMessage,
+  res: ServerResponse,
+  taskId: number,
+  pick: { attempt?: number; run?: number } = {},
+): void {
   const runs = db.runsForTask(taskId);
-  const run = attempt ? runs.find((r) => r.attempt === attempt) : runs.at(-1);
+  // By attempt means the work run of that attempt; a resolve run is picked by its id.
+  const run = pick.run
+    ? runs.find((r) => r.id === pick.run)
+    : pick.attempt
+      ? runs.find((r) => r.attempt === pick.attempt && r.kind === 'work')
+      : runs.at(-1);
   res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
   if (!run) {
     res.write('event: end\ndata: {}\n\n');

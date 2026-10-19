@@ -4,6 +4,7 @@ import { github } from '../adapters/github.ts';
 import { appendEvent } from '../adapters/run-log.ts';
 import type { Db } from '../db/index.ts';
 import { type CheckCounts, MERGE_METHODS, type MergeMethod, isMergeMethod, mergeCheck } from '../domain/pull-request/merge.ts';
+import { isConflicting, isMergeabilityUnknown } from '../domain/pull-request/conflict.ts';
 import { buildPrBody } from '../domain/pull-request/pr.ts';
 import type { Task } from '../domain/task/task.ts';
 import { warnStuckDependents } from './dependencies.ts';
@@ -13,7 +14,7 @@ import { ActionError } from './errors.ts';
 export const PR_REFRESH_MS = 3 * 60_000;
 
 /** Record a PR event on the task's latest run log, where `agentdeck log` and the dashboard show it. */
-function logPrEvent(db: Db, taskId: number, event: { url?: string; error?: string }): void {
+export function logPrEvent(db: Db, taskId: number, event: { url?: string; error?: string }): void {
   const run = db.runsForTask(taskId).at(-1);
   if (run) appendEvent(run.log_path, { type: 'agentdeck_pr', ...event });
 }
@@ -75,6 +76,8 @@ export interface MergePreview {
   checks: CheckCounts;
   problems: string[];
   warnings: string[];
+  /** One of the problems is a conflict with the base branch, which a resolve run can fix. */
+  conflicting: boolean;
   /** Queued tasks waiting on this one with `--after`. */
   unblocks: { id: number; title: string }[];
 }
@@ -113,6 +116,7 @@ export async function mergePreview(db: Db, id: number): Promise<MergePreview> {
     tests_passed,
     checks: pr.checks,
     ...mergeCheck({ pr_state: task.pr_state, pr, tests_passed }),
+    conflicting: isConflicting(pr),
     unblocks: db.dependentsOf(id).map((t) => ({ id: t.id, title: t.title })),
   };
 }
@@ -149,6 +153,9 @@ export async function mergeTask(db: Db, id: number, opts: { method?: string; del
     throw new ActionError(`merge failed: ${(err as Error).message}`);
   }
   db.recordMerge(id, method, `${method} merge`);
+  // The base just moved: the repo's other open PRs may now conflict. The scheduler re-reads them at once
+  // (a setting, so a merge from the CLI reaches the daemon too).
+  db.setSetting(PR_CHECK_REQUESTED, String(Date.now()));
   const unblocked = db.dependentsOf(id).map((t) => t.id);
 
   const result: MergeResult = { method, unblocked };
@@ -166,18 +173,39 @@ export async function mergeTask(db: Db, id: number, opts: { method?: string; del
   return result;
 }
 
-/** Re-read the state of every open PR of a done task. A failed lookup leaves that task as it was. */
-export async function refreshPrStates(db: Db, log: (msg: string) => void = () => {}): Promise<void> {
+/** The setting that asks the scheduler to re-read the open PRs now (a person's merge changed the base). */
+export const PR_CHECK_REQUESTED = 'pr_check_requested';
+
+/** What a refresh found out about the open PRs beyond their state. */
+export interface PrRefresh {
+  /** Tasks whose open PR GitHub says conflicts with the base. */
+  conflicting: number[];
+  /** Open PRs whose mergeability GitHub has not worked out yet (it does so lazily, after the base moves). */
+  unknown: number;
+}
+
+/**
+ * Re-read the state of every open PR of a done task, and whether it still merges cleanly. A failed lookup leaves
+ * that task as it was. Resolving the conflicts it finds is the caller's call (`resolveConflicting`).
+ */
+export async function refreshPrStates(db: Db, log: (msg: string) => void = () => {}): Promise<PrRefresh> {
+  const found: PrRefresh = { conflicting: [], unknown: 0 };
   for (const task of db.openPrTasks()) {
     try {
-      const state = await github.prState(task.pr_url!, task.worktree ?? db.getRepo(task.repo_id)?.path ?? process.cwd());
+      const cwd = task.worktree ?? db.getRepo(task.repo_id)?.path ?? process.cwd();
+      const state = await github.prState(task.pr_url!, cwd);
       if (state !== task.pr_state) {
         db.updateTask(task.id, { pr_state: state });
         log(`task ${task.id}: PR is ${state}`);
         if (state === 'closed') warnStuckDependents(db, task.id);
       }
+      if (state !== 'open') continue;
+      const pr = await github.prDetails(task.pr_url!, cwd);
+      if (isConflicting(pr)) found.conflicting.push(task.id);
+      else if (isMergeabilityUnknown(pr)) found.unknown++;
     } catch (err) {
       log(`task ${task.id}: could not read PR state: ${(err as Error).message}`);
     }
   }
+  return found;
 }

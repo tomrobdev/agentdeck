@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en" data-agentdeck-plan="1">
+  <head>
+    <meta charset="utf-8" />
+    <title>Keep task branches up to date and resolve merge conflicts</title>
+    <style>
+      body {
+        font:
+          15px/1.5 system-ui,
+          sans-serif;
+        max-width: 52rem;
+        margin: 2rem auto;
+        padding: 0 1rem;
+      }
+      section {
+        border-left: 3px solid #ccc;
+        padding: 0 1rem;
+        margin: 1.25rem 0;
+      }
+      code {
+        background: #f3f3f3;
+        padding: 0 3px;
+        border-radius: 3px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Keep task branches up to date and resolve merge conflicts</h1>
+    <p data-plan-summary>
+      Task branches fall behind their base branch while they wait, run or sit in an open PR, and a PR that conflicts cannot be merged. The
+      daemon merges the latest base into the branch before every run and when an open PR starts conflicting, resolves a clean merge by
+      itself, hands real conflicts to a short <code>claude</code> resolve run, and blocks the task with the conflicting files when that
+      fails.
+    </p>
+
+    <h2>Decisions</h2>
+    <ul>
+      <li>Merge the base into the branch, never rebase: no force pushes, and squash merging hides the merge commit.</li>
+      <li>
+        The daemon runs <code>git fetch</code> and <code>git merge origin/&lt;base&gt;</code> in the worktree (agents cannot fetch). Without
+        an origin it merges the local base.
+      </li>
+      <li>A resolve run never uses an attempt and is stored as its own <code>kind</code> of run, next to the work runs.</li>
+      <li>
+        Per-repo <code>auto_resolve</code> (on by default) gates conflict runs that start on their own; clean merges always happen. A person
+        asking by hand overrides it.
+      </li>
+      <li>The task timeline records "Brought in main: clean" or "Resolved conflicts in N files" (event type <code>sync</code>).</li>
+    </ul>
+
+    <section data-plan-step id="domain" data-status="done">
+      <h2>Domain: decisions and vocabulary</h2>
+      <p>
+        <code>domain/pull-request/conflict.ts</code>: is a PR conflicting, the timeline texts, the blocked reason.
+        <code>domain/run/prompt.ts</code>: the resolve prompt (conflicting files, both sides' commit messages, the task's goal). Run gets a
+        <code>kind</code> (<code>work</code> | <code>resolve</code>). The lifecycle gets a <code>conflict</code> event (done to blocked);
+        history gets the <code>sync</code> type.
+      </p>
+    </section>
+
+    <section data-plan-step id="schema" data-status="done">
+      <h2>Schema and stores</h2>
+      <p>
+        Migration step 9 appended: <code>repos.auto_resolve</code> (default 1) and <code>runs.kind</code> (default <code>work</code>).
+        <code>startRun</code> takes a kind; <code>recordSync</code> writes a timeline row without a status change;
+        <code>applyEvent</code> handles <code>conflict</code> with its reason.
+      </p>
+    </section>
+
+    <section data-plan-step id="git" data-status="done">
+      <h2>Git adapter</h2>
+      <p>
+        Merge a ref into a worktree and report up to date, merged or conflicts (with the files); abort a merge or reset to the commit before
+        it; finish a merge the agent staged; find conflict markers left behind; list both sides' commit subjects; tell whether the branch is
+        ahead of its remote.
+      </p>
+    </section>
+
+    <section data-plan-step id="engine" data-status="done">
+      <h2>Application: bring in the base</h2>
+      <p>
+        <code>application/conflicts.ts</code> holds the shared step (fetch, merge, tests, resolve run, abort) and <code>syncTask</code> for
+        a done task: clean merge, tests, push; conflicts start a resolve run; on success push and stay done; on failure abort and block
+        through <code>applyEvent</code> with the files as the reason, and notify. An in-flight set stops two syncs, and a retry, from
+        touching one worktree.
+      </p>
+    </section>
+
+    <section data-plan-step id="worker" data-status="done">
+      <h2>At the start of every run</h2>
+      <p>
+        The worker brings the base into the branch after setup and before claude, on retries too. A clean merge or a resolved conflict goes
+        on the timeline and the run continues; an unresolved conflict blocks the task; a rate limit requeues it without using an attempt.
+      </p>
+    </section>
+
+    <section data-plan-step id="triggers" data-status="done">
+      <h2>When an open PR becomes conflicting</h2>
+      <p>
+        <code>refreshPrStates</code> also reads mergeability and returns the conflicting tasks; the scheduler resolves them when the
+        governor allows and a slot is free. <code>mergeTask</code> asks for an immediate re-check of the open PRs (a setting the scheduler
+        watches, so it works from the CLI too), repeated briefly while GitHub still reports UNKNOWN.
+      </p>
+    </section>
+
+    <section data-plan-step id="manual" data-status="done">
+      <h2>By hand: API, CLI and the repo setting</h2>
+      <p>
+        <code>POST /api/tasks/:id/resolve</code>, <code>agentdeck resolve &lt;id&gt;</code>, <code>auto_resolve</code> in
+        <code>updateRepo</code>, the CLI's <code>repo set</code> and the log stream (which can now pick a run by id).
+      </p>
+    </section>
+
+    <section data-plan-step id="dashboard" data-status="done">
+      <h2>Dashboard</h2>
+      <p>
+        <code>app/src/api.ts</code> mirrors the new fields. The merge dialog shows a Resolve conflicts button where the conflict is a
+        blocking problem. Runs are picked by id and a resolve run is labelled as one. The timeline shows the sync events. The repo editor
+        gets an auto-resolve switch.
+      </p>
+    </section>
+
+    <section data-plan-step id="tests" data-status="done">
+      <h2>Tests</h2>
+      <p>
+        A real temporary git repo with a conflicting change on main and a fake claude that resolves it: clean merge, resolved conflict,
+        failed resolution (abort and blocked), failing tests, auto_resolve off, start of run, PR-driven trigger, no attempt used, migration.
+      </p>
+    </section>
+
+    <section data-plan-step id="docs" data-status="done">
+      <h2>Docs and checks</h2>
+      <p>CLAUDE.md vocabulary, CLI help, then <code>pnpm format:check &amp;&amp; pnpm typecheck &amp;&amp; pnpm test</code>.</p>
+    </section>
+  </body>
+</html>

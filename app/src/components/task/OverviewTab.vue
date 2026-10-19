@@ -8,7 +8,7 @@ import PlanCard from './PlanCard.vue';
 // The prompt as the description, then everything that happened, oldest first: status changes
 // (task_events) and runs. Runs stand in for claim and finish events, which they describe better.
 const props = defineProps<{ task: TaskDetail; changes: Changes | null; isPath?: (p: string) => boolean }>();
-const emit = defineEmits<{ run: [attempt: number]; path: [path: string, line: number | null] }>();
+const emit = defineEmits<{ run: [runId: number]; path: [path: string, line: number | null] }>();
 
 const promptOpen = ref(false);
 const longPrompt = computed(() => props.task.prompt.length > 900 || props.task.prompt.split('\n').length > 18);
@@ -24,6 +24,8 @@ const EVENT_TEXT: Record<string, (e: TaskEventRow) => string> = {
   retry: (e) => (e.reason ? 'requested changes' : 'queued another attempt'),
   cancel: (e) => (e.to_status === 'cancel_requested' ? 'asked the run to stop' : 'cancelled the task'),
   merge: () => 'merged the pull request',
+  sync: (e) => e.reason ?? 'brought the base branch into the branch',
+  conflict: () => 'could not resolve conflicts with the base branch; blocked',
   rate_limited: () => 'hit the usage limit; back in the queue without using an attempt',
   recover: (e) => (e.to_status === 'failed' ? 'failed after repeated daemon restarts' : 'requeued after a daemon restart'),
 };
@@ -34,8 +36,8 @@ const items = computed<Item[]>(() => {
   const created = events.find((e) => e.type === 'created');
   out.push({ kind: 'created', at: created?.at ?? props.task.created_at });
   for (const ev of events) if (EVENT_TEXT[ev.type]) out.push({ kind: 'event', at: ev.at, ev });
-  const last = props.task.runs.at(-1)?.attempt;
-  for (const run of props.task.runs) out.push({ kind: 'run', at: run.started_at, run, latest: run.attempt === last });
+  const last = props.task.runs.at(-1)?.id;
+  for (const run of props.task.runs) out.push({ kind: 'run', at: run.started_at, run, latest: run.id === last });
   return out.sort((a, b) => a.at.localeCompare(b.at));
 });
 
@@ -79,14 +81,16 @@ const outcomeClass = (r: Run) => `s-${r.outcome ?? 'running'}`;
           <span class="node">{{ it.ev.type === 'retry' ? '↻' : it.ev.type === 'approve' ? '✓' : '•' }}</span>
           <span>
             {{ EVENT_TEXT[it.ev.type](it.ev) }}
-            <span v-if="it.ev.reason" class="muted"> · {{ it.ev.reason }}</span>
+            <span v-if="it.ev.reason && it.ev.type !== 'sync'" class="muted"> · {{ it.ev.reason }}</span>
           </span>
           <span class="when muted">{{ ago(it.at) }}</span>
         </template>
         <template v-else>
           <div class="runrow">
             <span class="node dot" />
-            <button class="runlink" @click="emit('run', it.run.attempt)">Run {{ it.run.attempt }}</button>
+            <button class="runlink" @click="emit('run', it.run.id)">
+              {{ it.run.kind === 'resolve' ? 'Resolve conflicts' : `Run ${it.run.attempt}` }}
+            </button>
             <span class="outcome">{{ it.run.outcome ?? 'running' }}</span>
             <span class="muted">
               · {{ runDuration(it.run) }}
