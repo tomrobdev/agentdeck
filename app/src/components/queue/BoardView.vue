@@ -85,6 +85,7 @@ const LABELS: Record<BoardMove, string> = {
             <span v-if="show.repo" class="chip">{{ t.repo }}</span>
             <span v-if="show.pr && t.pr_url" class="chip">PR {{ t.pr_state ?? 'open' }}</span>
             <span v-if="t.waiting" class="chip">{{ t.waiting.stuck ? 'stuck' : `waiting #${t.waiting.on}` }}</span>
+            <span v-if="t.unblocks.length" class="chip">unblocks {{ t.unblocks.map((id) => `#${id}`).join(' ') }}</span>
             <span v-if="t.source === 'planner'" class="chip">planner</span>
             <span class="time muted">{{ ago(t.updated_at) }}</span>
           </div>

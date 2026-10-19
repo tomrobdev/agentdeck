@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { createInterface } from 'node:readline/promises';
 import * as actions from '../application/actions.ts';
-import { waitingFor } from '../application/dependencies.ts';
+import { unblocksOf, waitingFor } from '../application/dependencies.ts';
 import { removeWorktree } from '../adapters/git.ts';
 import { planProgress } from '../domain/plan/plan.ts';
 import { TASK_STATUSES } from '../domain/task/lifecycle.ts';
@@ -62,7 +62,7 @@ export const taskCommands: Record<string, Command> = {
       .filter(Boolean);
     // One status keeps its old order, priority first; anything else lists the newest first.
     const sort = flags.sort ?? (states.length === 1 && (TASK_STATUSES as string[]).includes(states[0]) ? 'priority' : 'newest');
-    const all = db.listTasks().map((t) => ({ ...t, waiting: waitingFor(db, t) }));
+    const all = db.listTasks().map((t) => ({ ...t, waiting: waitingFor(db, t), unblocks: unblocksOf(db, t) }));
     let tasks;
     try {
       tasks = filterTasks(all, { states, repo_id: repo?.id, search: rest.join(' '), sort });

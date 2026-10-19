@@ -26,6 +26,12 @@ export function waitingFor(db: Db, task: Pick<Task, 'status' | 'after_task'>): W
   return null;
 }
 
+/** The queued tasks that wait on this one, for a task in review: merging its PR releases them. */
+export function unblocksOf(db: Db, task: Pick<Task, 'id' | 'status' | 'pr_state'>): number[] {
+  if (task.status !== 'done' || task.pr_state !== 'open') return [];
+  return db.dependentsOf(task.id).map((t) => t.id);
+}
+
 /**
  * Call after task `id` changes in a way that may strand the tasks waiting on it (it failed, was blocked
  * or cancelled, or its PR was closed). If so, notify once, naming them. They stay queued: retrying `id`
