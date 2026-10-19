@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dashboard Views Plan</title>
+<style>
+  :root {
+    --bg: #f6f6f4; --panel: #ffffff; --panel-2: #f0f0ed; --border: #e2e2dd; --text: #1d1d1b; --muted: #6d6d68;
+    --accent: #c2622d; --ok: #2e8b57; --warn: #c98a10; --bad: #c94141; --info: #2f6fdb; --code-bg: #f3f2ee;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #161615; --panel: #1f1f1d; --panel-2: #272725; --border: #33332f; --text: #ecebe6; --muted: #9a9993;
+      --accent: #e07a43; --ok: #57b583; --warn: #e0ab3c; --bad: #e36d6d; --info: #6c9bf0; --code-bg: #1a1a18;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #161615; --panel: #1f1f1d; --panel-2: #272725; --border: #33332f; --text: #ecebe6; --muted: #9a9993;
+    --accent: #e07a43; --ok: #57b583; --warn: #e0ab3c; --bad: #e36d6d; --info: #6c9bf0; --code-bg: #1a1a18;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.6 -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif; -webkit-font-smoothing: antialiased; }
+  .wrap { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 40px; max-width: 1160px; margin: 0 auto; padding: 40px 24px 80px; }
+  nav.toc { position: sticky; top: 24px; align-self: start; font-size: 13px; }
+  nav.toc a { display: block; color: var(--muted); text-decoration: none; padding: 3px 0; }
+  nav.toc a:hover { color: var(--text); }
+  nav.toc b { display: block; margin: 14px 0 4px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  h1 { font-size: 30px; line-height: 1.2; margin: 0 0 6px; letter-spacing: -.01em; }
+  h2 { font-size: 21px; margin: 56px 0 6px; padding-top: 8px; letter-spacing: -.005em; }
+  h3 { font-size: 15px; margin: 22px 0 6px; }
+  p, li { max-width: 72ch; }
+  .lede { color: var(--muted); font-size: 16px; margin: 0 0 24px; }
+  code, pre { font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 12.5px; }
+  code { background: var(--code-bg); border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; overflow-x: auto; line-height: 1.45; }
+  pre code { background: none; border: 0; padding: 0; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; margin: 8px 0 4px; }
+  th, td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--border); }
+  th { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; margin: 14px 0; }
+  .meta { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 12px; }
+  .tag { font-size: 12px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); background: var(--panel); }
+  .tag.ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, transparent); }
+  .tag.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
+  .tag.info { color: var(--info); border-color: color-mix(in srgb, var(--info) 45%, transparent); }
+  .decision { border-left: 3px solid var(--accent); }
+  .decision h3 { margin-top: 0; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .muted { color: var(--muted); }
+  ul.check { list-style: none; padding-left: 0; }
+  ul.check li::before { content: "☐ "; color: var(--muted); }
+  a { color: var(--accent); }
+  @media (max-width: 860px) {
+    .wrap { grid-template-columns: 1fr; gap: 0; padding: 24px 16px 60px; }
+    nav.toc { position: static; margin-bottom: 16px; }
+    .grid2 { grid-template-columns: 1fr; }
+    table { display: block; overflow-x: auto; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="toc">
+    <b>Plan</b>
+    <a href="#why">Why and scope</a>
+    <a href="#today">What exists today</a>
+    <a href="#decisions">Decisions</a>
+    <a href="#arch">Architecture</a>
+    <a href="#contract">API contract</a>
+    <b>Phases</b>
+    <a href="#p1">1 · Linear list</a>
+    <a href="#p2">2 · Board</a>
+    <a href="#p3">3 · Task page</a>
+    <a href="#p4">4 · Files changed</a>
+    <a href="#p5">5 · Code browser</a>
+    <a href="#p6">6 · Snippets in context</a>
+    <b>After</b>
+    <a href="#later">Not in this plan</a>
+  </nav>
+
+  <main>
+    <h1>Dashboard views: Linear-style queue, GitHub-style task page</h1>
+    <p class="lede">A plan for the AgentDeck dashboard's next step: a dense, keyboard-driven task list and board modelled on Linear, and a task page modelled on a GitHub pull request, with a diff viewer, a file tree and a code viewer that later work (snippets, documents) builds on. Written 2026-10-19, on top of branch <code>task-list-filters</code>.</p>
+
+    <h2 id="why">Why and scope</h2>
+    <p>Reviewing what an agent did is the slowest part of using AgentDeck. Today the dashboard shows a task's status, its prompt, the final message as plain text and a streamed log. To see the code, you open the worktree in an editor or wait for the PR on GitHub. The pilot's goal is tasks that become green draft PRs with nobody stepping in, and a fast way to check that work, inside the dashboard, is what makes that trust possible.</p>
+    <p>The queue view has a different problem: as the queue grows, a flat list with tabs stops telling you what needs you. Linear's list solves this with status groups, dense rows, a display menu and the keyboard.</p>
+    <p><b>In scope:</b> the dashboard (<code>app/</code>), read-only git endpoints in the daemon, a task event history, and structured file paths in the log. <b>Out of scope:</b> editing code from the dashboard, comments, labels and multi-user features.</p>
+    <p class="muted">Wording: the UI keeps the domain words from CLAUDE.md. A row is a <em>task</em>, never an issue or ticket; an attempt is a <em>run</em>.</p>
+
+    <h2 id="today">What exists today</h2>
+    <table>
+      <tr><th>Area</th><th>Now</th><th>Gap for this plan</th></tr>
+      <tr><td>Layout</td><td>Two panes: <code>TaskList.vue</code> (search, repo, sort, state chips) and <code>TaskDetail.vue</code> with <code>LogView.vue</code> (SSE log)</td><td>No routing, no full-width page, no board</td></tr>
+      <tr><td>Task data</td><td>Status, integer priority, repo, source, PR URL and state, <code>after_task</code>, runs with outcome, turns, tokens, tests, final message</td><td>No history of when each status change happened</td></tr>
+      <tr><td>Status changes</td><td>All go through <code>applyEvent</code> and <code>claimNextTask</code> in <code>db/tasks.ts</code></td><td>One choke point, so recording events there is complete</td></tr>
+      <tr><td>Git</td><td><code>adapters/git.ts</code>: worktrees, commits, <code>commitsAhead</code>, <code>startPoint</code></td><td>Nothing reads trees, files or diffs</td></tr>
+      <tr><td>Log</td><td><code>domain/run/log.ts</code> keeps tool input as JSON cut to 400 characters</td><td>A file path can be cut off, and the UI can't link to it</td></tr>
+      <tr><td>App deps</td><td>Vue and Tauri plugins only</td><td>No markdown renderer or syntax highlighter</td></tr>
+      <tr><td>Security</td><td>The API listens on 127.0.0.1 and checks the Origin. The webview CSP allows images only from <code>'self'</code> and <code>data:</code></td><td>Rendered agent markdown must be sanitised. Remote images stay blocked, which is what we want</td></tr>
+    </table>
+
+    <h2 id="decisions">Decisions</h2>
+    <p>The four open questions from the first draft, settled so building can start. Each can be revisited, and each notes what changing it would cost.</p>
+
+    <div class="card decision">
+      <h3>D1 · New dependencies: markdown-it, DOMPurify, highlight.js</h3>
+      <p>Markdown is needed in three places (prompts, final messages, <code>.md</code> files) and code highlighting in two (diffs, the file viewer). Writing either ourselves is a poor trade.</p>
+      <ul>
+        <li><b>markdown-it</b> (about 100 KB): CommonMark, with raw HTML off.</li>
+        <li><b>DOMPurify</b> (about 20 KB): sanitises its output anyway, since agent-written markdown is untrusted.</li>
+        <li><b>highlight.js</b>, core plus about 20 registered languages: synchronous, small, and good enough for review. Shiki is more accurate but larger and asynchronous (WASM or a regex engine). It can replace highlight.js later behind the same <code>highlight(code, lang)</code> function.</li>
+      </ul>
+      <p>The daemon gets no new dependencies. Diffs are parsed by our own small parser, because unified diff is a simple format.</p>
+    </div>
+
+    <div class="card decision">
+      <h3>D2 · Navigation: hash routes, list full width, task page full width</h3>
+      <p>Routes are <code>#/</code> (queue, list or board) and <code>#/tasks/16/&lt;tab&gt;</code> (task page). Clicking a row opens the page, and <kbd>Esc</kbd> or Back returns to the queue with its scroll and selection kept, as in Linear. Diffs and code need the full width, which the old split pane never had. A peek panel (<kbd>Space</kbd>) is left for later. Hash routing is about 30 lines, so there's no router dependency.</p>
+    </div>
+
+    <div class="card decision">
+      <h3>D3 · Priority: keep the integer, show four levels</h3>
+      <p>Priority stays an unbounded integer: the scheduler orders by it, and the planner and CLI set it. The UI shows Linear-style bars by bucket, with the number in the tooltip and the sidebar.</p>
+      <table>
+        <tr><th>Value</th><th>Shown as</th></tr>
+        <tr><td>0</td><td>No priority (dashes)</td></tr>
+        <tr><td>1–19</td><td>Low (1 bar)</td></tr>
+        <tr><td>20–39</td><td>Medium (2 bars)</td></tr>
+        <tr><td>40–59</td><td>High (3 bars)</td></tr>
+        <tr><td>60+</td><td>Urgent (filled square)</td></tr>
+      </table>
+    </div>
+
+    <div class="card decision">
+      <h3>D4 · Short id: keep <code>#16</code></h3>
+      <p>Ids are global, and branches (<code>agentdeck/task-16</code>), the CLI and notifications all use <code>#16</code>. A per-repo key such as <code>AD-16</code> would need a mapping everywhere for little gain. Rows show <code>#16</code> in the id column where Linear shows its key.</p>
+    </div>
+
+    <h2 id="arch">Architecture</h2>
+    <div class="grid2">
+      <div class="card">
+        <h3>Dashboard (<code>app/src</code>)</h3>
+        <ul>
+          <li><code>router.ts</code>: hash routes as a reactive <code>route</code>, plus <code>go()</code></li>
+          <li><code>taskView.ts</code>: groups, states, sorts and priority levels, moved out of <code>TaskList.vue</code>. It mirrors <code>daemon/src/domain/task/listing.ts</code></li>
+          <li><code>render.ts</code>: <code>markdown()</code> and <code>highlight()</code>, the only place the new dependencies are imported</li>
+          <li><code>components/queue/</code>: <code>QueueView</code>, <code>ListView</code>, <code>BoardView</code>, <code>FilterBar</code>, <code>DisplayMenu</code>, <code>StatusIcon</code>, <code>PriorityIcon</code></li>
+          <li><code>components/task/</code>: <code>TaskPage</code>, <code>OverviewTab</code>, <code>RunsTab</code>, <code>ChangesTab</code>, <code>CodeTab</code>, <code>Sidebar</code></li>
+          <li><code>components/files/</code>: <code>FileTree</code>, <code>DiffView</code>, <code>CodeView</code>, <code>Markdown</code>. These are standalone so snippets and documents can reuse them</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Daemon (<code>daemon/src</code>)</h3>
+        <ul>
+          <li><code>db/schema.ts</code>: migration step 6, the <code>task_events</code> table</li>
+          <li><code>db/tasks.ts</code>: <code>applyEvent</code>, <code>claimNextTask</code> and <code>addTask</code> record events. <code>eventsForTask()</code> reads them</li>
+          <li><code>adapters/git.ts</code>: <code>changedFiles</code>, <code>filePatch</code>, <code>listTree</code>, <code>readFile</code>, <code>commitsBetween</code>. These read git objects, never the worktree</li>
+          <li><code>domain/files/</code>: path validation, size limits and numstat parsing (pure)</li>
+          <li><code>application/files.ts</code>: resolves a task to its repo path, head and base, then calls git</li>
+          <li><code>api/server.ts</code>: four GET routes. Task detail gains <code>events</code></li>
+          <li><code>domain/run/log.ts</code>: tool entries gain a <code>file</code> field</li>
+        </ul>
+      </div>
+    </div>
+    <p>Layering stays as CLAUDE.md sets it: the git adapter knows nothing of tasks, the application layer joins db and git, and the domain stays pure. Endpoints read from git objects (<code>git show &lt;sha&gt;:&lt;path&gt;</code>), not the filesystem. That has three effects:</p>
+    <ul>
+      <li>They work after <code>agentdeck clean</code> removes the worktree, because the branch is kept.</li>
+      <li>A path can't reach outside the repo.</li>
+      <li>A running agent's half-written files are never shown as committed.</li>
+    </ul>
+
+    <h2 id="contract">API contract</h2>
+    <p>The contract both sides build against. Each ref is one of two words, never a ref name the client supplies:</p>
+    <ul>
+      <li><code>head</code>: the task's branch</li>
+      <li><code>base</code>: the merge base of that branch with the repo's base branch (or <code>origin/&lt;base&gt;</code> when only that exists)</li>
+    </ul>
+    <p>A task with no branch yet answers <code>400 {"error": "task has no branch yet"}</code>.</p>
+<pre><code>GET /api/tasks/:id            (existing) + events: TaskEventRow[]
+  TaskEventRow = { id, task_id, type, from_status, to_status, reason, at }
+  type: created | claim | finish | rate_limited | cancel | approve | reject | retry | recover
+
+GET /api/tasks/:id/changes
+  → { base_ref: "main", base: sha, head: sha,
+      files: [{ path, old_path: string|null, status: "A"|"M"|"D"|"R", additions, deletions, binary }],
+      commits: [{ sha, subject, author, at }] }
+
+GET /api/tasks/:id/diff?path=p
+  → { path, patch: string, truncated: boolean }          patch capped at 256 KB
+
+GET /api/tasks/:id/tree?ref=head|base&amp;path=dir           one level, folders first
+  → { ref, sha, path, entries: [{ name, path, type: "file"|"dir", size: number|null }] }
+
+GET /api/tasks/:id/file?ref=head|base&amp;path=p
+  → { path, ref, sha, size, binary, truncated, text: string|null }   text capped at 512 KB
+
+LogEntry tool  → { kind: "tool", name, input, file?: string }   file_path / path / notebook_path</code></pre>
+    <p>Paths are repo-relative. An absolute path, a <code>..</code> segment, a NUL byte, or a path starting with <code>-</code> is a 400. Git runs with <code>--</code> before paths. All git calls run in the repo's main checkout, which shares refs with the worktrees.</p>
+
+    <!-- ───────────────────────── Phase 1 ───────────────────────── -->
+    <h2 id="p1">Phase 1 · Linear-style list</h2>
+    <div class="meta"><span class="tag info">dashboard only</span><span class="tag">builds on task-list-filters</span></div>
+    <h3>Why</h3>
+    <p>The tabs hide what matters. You see either the active tasks or the ones that need you, never both, and counts are the only summary. Linear shows every group at once, collapsible, with dense rows you can scan and act on from the keyboard.</p>
+    <h3>Design</h3>
+<pre><code>[ ≡ List | ▦ Board ]   Status is Blocked, Stuck ×   Repo is demo ×   + Filter      ⌕ search   Display ▾
+▾ Needs you  3
+  ◔  ▮▮▮  #16  Run workers in the Claude Code sandbox     AgentDeck  ⎇ draft  waiting #15   2h
+▾ Proposed  2
+  ◌  ▮▯▯  #4   Add escapeHtml(s) helper with tests         demo       planner             3h
+▾ Running  1
+  ◐  ▮▮▯  #9   Cheap queue checks in the scheduler tick    AgentDeck                      5m
+▸ Done  11</code></pre>
+    <ul>
+      <li><b>Groups</b>, in attention order: Needs you (blocked, failed, stuck), Proposed, Running, Queued (including waiting), Done, Cancelled. Headers collapse, show counts, and are remembered. Cancelled starts collapsed.</li>
+      <li><b>Group by</b> status (the default), repo, priority level, or nothing. <b>Order within a group</b> uses the existing sorts.</li>
+      <li><b>Rows</b> are one 34 px line:
+        <ul>
+          <li>a status icon: each status has its own shape and colour, so it's not colour-only</li>
+          <li>a priority icon</li>
+          <li>the id, the title, then property chips (repo, PR state, planner, waiting/stuck, attempt)</li>
+          <li>the time, aligned right</li>
+          <li>a blocked reason as a second muted line, so a failure is visible without opening the task</li>
+        </ul></li>
+      <li><b>Display menu:</b> group by, order by, which properties to show, and whether to show empty groups. It replaces the tabs and the sort dropdown.</li>
+      <li><b>Filter bar:</b> each active filter is a removable chip (<code>Status is …</code>, <code>Repo is …</code>, <code>Source is planner</code>). "+ Filter" opens a small menu. The search stays.</li>
+      <li><b>Keyboard:</b>
+        <ul>
+          <li><kbd>j</kbd>/<kbd>k</kbd> or arrows move the selection, <kbd>Enter</kbd> opens, <kbd>/</kbd> goes to search</li>
+          <li><kbd>a</kbd> approves a proposal, <kbd>r</kbd> retries</li>
+          <li><kbd>v</kbd> toggles list and board, <kbd>c</kbd> opens New task</li>
+        </ul>
+        Cancel stays a button, because stopping a run loses work.</li>
+      <li><b>Hover actions</b> at the row end: Approve, Retry, Open PR.</li>
+    </ul>
+    <h3>Files</h3>
+    <p><code>QueueView.vue</code>, <code>ListView.vue</code>, <code>FilterBar.vue</code>, <code>DisplayMenu.vue</code>, <code>StatusIcon.vue</code>, <code>PriorityIcon.vue</code>, <code>taskView.ts</code>. <code>TaskList.vue</code> is removed.</p>
+    <h3>Done when</h3>
+    <ul class="check">
+      <li>Every group shows at once, with counts. Collapsing one is remembered across reloads.</li>
+      <li>Grouping by repo and by priority works, and each group keeps the chosen order.</li>
+      <li>The whole list can be worked from the keyboard, and a selected row stays in view.</li>
+      <li>The status icons can be told apart in greyscale.</li>
+      <li>The 2-second poll doesn't move the selection or the scroll position.</li>
+    </ul>
+
+    <!-- ───────────────────────── Phase 2 ───────────────────────── -->
+    <h2 id="p2">Phase 2 · Board</h2>
+    <div class="meta"><span class="tag info">dashboard only</span><span class="tag">after phase 1</span></div>
+    <h3>Why</h3>
+    <p>A board shows flow: how much is waiting for you compared with running and done. It also makes approving or retrying a batch quick. With a few dozen tasks it's the least urgent phase, but it reuses phase 1's groups and filters, so it's cheap.</p>
+    <h3>Design</h3>
+    <ul>
+      <li><b>Columns:</b> the same groups as the list's status grouping, each with a header count. Cards are a compact row: id, priority, title on up to 2 lines, chips. Filters and search apply as in the list.</li>
+      <li><b>Dragging</b> a card maps only to real lifecycle events, and drop targets light up only where the move is allowed:
+        <table>
+          <tr><th>From</th><th>To</th><th>Event</th></tr>
+          <tr><td>Proposed</td><td>Queued</td><td><code>approve</code></td></tr>
+          <tr><td>Proposed</td><td>Cancelled</td><td><code>reject</code></td></tr>
+          <tr><td>Needs you (blocked, failed), Done, Cancelled</td><td>Queued</td><td><code>retry</code></td></tr>
+          <tr><td>Queued, Needs you</td><td>Cancelled</td><td><code>cancel</code></td></tr>
+        </table>
+        A running task can't be dragged. Stopping it is a deliberate button press on the task page. The daemon still guards every move (<code>applyEvent</code>), so a stale board can't do harm: a refused move shows a toast.</li>
+      <li>Reordering within a column to change priority is left for later.</li>
+    </ul>
+    <h3>Done when</h3>
+    <ul class="check">
+      <li>Each allowed drop calls the matching endpoint, and the card moves on the next poll.</li>
+      <li>Moves that aren't allowed show no drop target.</li>
+      <li>Columns scroll on their own, and the board scrolls sideways on a narrow window.</li>
+    </ul>
+
+    <!-- ───────────────────────── Phase 3 ───────────────────────── -->
+    <h2 id="p3">Phase 3 · GitHub-style task page</h2>
+    <div class="meta"><span class="tag warn">daemon: migration step 6</span><span class="tag info">dashboard</span><span class="tag">adds markdown-it, DOMPurify</span></div>
+    <h3>Why</h3>
+    <p>A task is a pull request in all but name: a description (the prompt), a branch, attempts that act like CI runs, and a final message that acts like the author's summary. The PR page layout is one reviewers already read fluently. The timeline also answers "what happened to this task?", and today nothing does.</p>
+    <h3>Design</h3>
+<pre><code>← Queue   Run workers in the Claude Code sandbox  #16
+          ● queued   agentdeck/task-16 → main   2 runs   created by planner 2h ago     [Retry] [Cancel]
+          Overview · Runs 2 · Files changed 11 · Code
+┌──────────────────────────────────────────────┐ ┌──────────────────┐
+│ Prompt  (rendered markdown, collapsible)     │ │ Status   queued  │
+│ ─ timeline ───────────────────────────────── │ │ Priority ▮▮▮ 37  │
+│ ○ created by the planner              2h     │ │ Repo  AgentDeck  │
+│ ✓ approved                            2h     │ │ Model    opus ✎  │
+│ ▶ run 1 started                       1h     │ │ Attempts  1 / 2  │
+│ ✗ run 1 failed · tests ✗ · 66 turns   48m    │ │ Turns   max 80 ✎ │
+│   ▸ final message (markdown)                 │ │ After  #15 ✓     │
+│ ↻ retried                             45m    │ │ PR  draft ↗      │
+└──────────────────────────────────────────────┘ │ Branch  copy     │
+                                                 │ Worktree copy    │
+                                                 └──────────────────┘</code></pre>
+    <ul>
+      <li><b>Header:</b> the title (click to edit while the task is editable), <code>#id</code>, a status pill, branch → base, the run count, and actions (Approve or Reject, Retry, Stop or Cancel).</li>
+      <li><b>Overview:</b> the prompt rendered as markdown, then a timeline that merges <code>task_events</code>, runs (start, end, tests, turns, tokens) and the PR (opened, merged). Each run ends with its final message, rendered, and folded unless it's the latest run and didn't finish done. Older tasks have no events, so their timeline is built from <code>created_at</code> and runs.</li>
+      <li><b>Runs tab</b> (the checks view): one card per run, showing outcome, duration, turns, tokens, refused tools, and setup and test results with their output. The live log is embedded for the selected run. This is today's <code>TaskDetail</code> bottom half, rearranged.</li>
+      <li><b>Sidebar:</b> properties. Priority, model and max turns are edited inline through the existing <code>POST /api/tasks/:id</code>, only for editable statuses. Branch and worktree have copy buttons. The PR link opens in the browser.</li>
+      <li><b>Links</b> in rendered markdown open in the system browser (Tauri opener), never inside the webview.</li>
+    </ul>
+    <h3>Daemon</h3>
+<pre><code>-- migration step 6
+CREATE TABLE task_events (
+  id INTEGER PRIMARY KEY,
+  task_id INTEGER NOT NULL,
+  type TEXT NOT NULL,           -- created | the TaskEvent type
+  from_status TEXT, to_status TEXT,
+  reason TEXT,
+  at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX task_events_task ON task_events(task_id, id);</code></pre>
+    <p>Events are written in the same statement batch as the status change: inside <code>applyEvent</code> after a successful guarded <code>UPDATE … RETURNING</code>, in <code>claimNextTask</code>, and in <code>addTask</code> (<code>created</code>). A refused event writes nothing. Each event row and its status change are written in one transaction, so a crash can't leave one without the other.</p>
+    <h3>Done when</h3>
+    <ul class="check">
+      <li>Every status change after migrating shows in the timeline, in order, with its reason.</li>
+      <li>Prompts and final messages render as markdown. A <code>&lt;script&gt;</code> or <code>onerror</code> in agent output does nothing.</li>
+      <li>The Back button and <kbd>Esc</kbd> return to the queue with its scroll position kept.</li>
+      <li>The tests cover event recording for each event type, and that a refused transition records nothing.</li>
+    </ul>
+
+    <!-- ───────────────────────── Phase 4 ───────────────────────── -->
+    <h2 id="p4">Phase 4 · Files changed</h2>
+    <div class="meta"><span class="tag warn">daemon: git read endpoints</span><span class="tag info">dashboard</span><span class="tag">adds highlight.js</span></div>
+    <h3>Why</h3>
+    <p>This is the review itself. Today the only way to see what an agent changed is the worktree in an editor or the PR on GitHub, and PRs only exist for repos with <code>pr_mode</code> on. A diff inside the dashboard means a proposal, a blocked run or a done task can be judged where it's listed.</p>
+    <h3>Design</h3>
+<pre><code>Files changed 11   +401 −18    3 commits ▾                        [Unified | Split]   ☐ hide viewed
+┌ tree ───────────────────┐ ┌──────────────────────────────────────────────────────────────┐
+│ ▾ daemon/src            │ │ ▾ daemon/src/adapters/claude.ts        +24 −3      ☐ Viewed  │
+│   ▾ adapters            │ │  @@ -40,7 +40,12 @@ export function claudeArgs(            │
+│     claude.ts   +24 −3  │ │  40 40   const args = [                                      │
+│   ▾ domain              │ │  41    -   '--permission-mode', 'dontAsk',                   │
+│     sandbox.ts  +60     │ │     41 +   '--settings', settingsPath,                       │
+│ ▾ docs/adr              │ │ ▸ daemon/src/domain/sandbox.ts         +60         ☐ Viewed  │
+│   0001-worker…  +112    │ │ ▸ docs/adr/0001-worker-sandbox.md      +112  [Preview]       │
+└─────────────────────────┘ └──────────────────────────────────────────────────────────────┘</code></pre>
+    <ul>
+      <li><b>File tree</b> of changed paths, with folders compressed (<code>daemon/src</code>), <code>+</code>/<code>−</code> counts and A/M/D/R badges. Clicking a file scrolls to it.</li>
+      <li><b>Diffs:</b> files load their patch as they scroll into view, so 50 files don't mean 50 requests at once. Each file folds and has a "Viewed" box, stored per task and file in local storage, which also folds it. Patches over the limit show "Diff too large", and binary files show "Binary file".</li>
+      <li><b>Unified or split view</b>, with syntax highlighting by file extension, applied per line so a diff's partial lines still highlight.</li>
+      <li><b>Markdown files</b> get a rendered preview toggle, so an ADR can be read as a document.</li>
+      <li><b>Commits menu:</b> the commits on the branch, newest first. Picking one is left for later. For now it's information: a retry continues on the same branch, so you can see which commits came from which run.</li>
+      <li><b>Refresh:</b> changes are fetched when the tab opens and again when the task's <code>updated_at</code> changes. A running task's diff updates as its commits land.</li>
+    </ul>
+    <h3>Daemon</h3>
+    <p>New git adapter functions:</p>
+    <ul>
+      <li><code>changedFiles(repoPath, base, head)</code>: <code>git diff --numstat -z -M</code> plus <code>--name-status</code></li>
+      <li><code>filePatch(repoPath, base, head, path)</code></li>
+      <li><code>commitsBetween(repoPath, base, head)</code></li>
+    </ul>
+    <p><code>application/files.ts</code> resolves the task's repo, head (<code>rev-parse &lt;branch&gt;</code>) and base (<code>merge-base</code> with <code>startPoint</code>). Parsing numstat, validating paths and the size limits live in <code>domain/files/</code> and are unit-tested. The end-to-end test makes a branch with an added, a modified, a deleted, a renamed and a binary file, and checks the endpoints.</p>
+    <h3>Done when</h3>
+    <ul class="check">
+      <li>The diff for <code>task-16</code> matches <code>git diff main...agentdeck/task-16</code>: same files and line counts.</li>
+      <li>Renamed, deleted and binary files show correctly, and oversized patches are cut off with a notice.</li>
+      <li>Paths with <code>..</code>, absolute paths and option-like paths are refused, with tests.</li>
+      <li>The Viewed boxes survive a reload.</li>
+    </ul>
+
+    <!-- ───────────────────────── Phase 5 ───────────────────────── -->
+    <h2 id="p5">Phase 5 · Code browser and file viewer</h2>
+    <div class="meta"><span class="tag warn">daemon: tree and file endpoints</span><span class="tag info">dashboard</span></div>
+    <h3>Why</h3>
+    <p>A diff shows what changed, not the code around it. To judge a change you often need the whole file, a neighbouring module, or the document the agent wrote. This is also the base for what comes next: the user wants task pages to show code snippets and documents, and both need a tree, a file viewer and line links.</p>
+    <h3>Design</h3>
+    <ul>
+      <li><b>Ref switch:</b> <code>head</code> (the task branch) or <code>base</code>. Changed files are marked in the tree with a dot.</li>
+      <li><b>Tree:</b> loads one level at a time, folders first, with a quick filter box. <kbd>t</kbd> opens a fuzzy file finder across the paths loaded so far and the changed files. Breadcrumbs sit above the file.</li>
+      <li><b>File viewer:</b>
+        <ul>
+          <li>line numbers and syntax highlighting</li>
+          <li>click a line number to select it, shift-click for a range, and the URL becomes <code>#/tasks/16/code?path=…&amp;L=10-20</code></li>
+          <li>Copy, and Copy path</li>
+          <li>Markdown files show rendered by default, with a Raw toggle</li>
+          <li>Images (png, jpg, gif, svg as text) show a placeholder for now, because the CSP allows only <code>data:</code> URIs</li>
+          <li>binary and oversized files show a notice</li>
+        </ul></li>
+      <li><b>Open in editor:</b> copies the absolute path in the worktree, if it still exists. Real "open" support through Tauri is left for later.</li>
+    </ul>
+    <h3>Reusable pieces</h3>
+    <p><code>FileTree</code> takes a loader function, so the same tree serves "changed files" (all paths up front) and "repo tree" (loaded lazily). <code>CodeView</code> takes text, a language and an optional line range. <code>Markdown</code> takes text. Phase 6 and later work embed these with nothing else attached.</p>
+    <h3>Done when</h3>
+    <ul class="check">
+      <li>The AgentDeck repo browses to any file at head or base, and a 3,000-line file scrolls smoothly.</li>
+      <li>A line link, reopened, scrolls to and highlights those lines.</li>
+      <li>The tree works after <code>agentdeck clean</code> has removed the worktree.</li>
+    </ul>
+
+    <!-- ───────────────────────── Phase 6 ───────────────────────── -->
+    <h2 id="p6">Phase 6 · Snippets and documents in context</h2>
+    <div class="meta"><span class="tag warn">daemon: log parser</span><span class="tag info">dashboard</span></div>
+    <h3>Why</h3>
+    <p>The log and the final message keep naming files: "Read daemon/src/worker.ts", "I wrote docs/adr/0001-worker-sandbox.md". Each mention should be one click from the code. Documents the agent wrote, such as ADRs and plans, are often the most important output and belong on the Overview tab.</p>
+    <h3>Design</h3>
+    <ul>
+      <li><b>Log parser:</b> tool entries carry a <code>file</code> field taken from <code>file_path</code>, <code>path</code> or <code>notebook_path</code>, so a long input can no longer cut the path off. The UI strips the worktree prefix and links the entry to <code>Code</code> at head.</li>
+      <li><b>Final messages and prompts:</b> inline code that looks like a repo path (contains a <code>/</code> and a known extension, and is in the changed files or the tree) becomes a link.</li>
+      <li><b>Documents card</b> on Overview: changed <code>.md</code> files under <code>docs/</code>, or at the repo root, are listed. The first one is expanded, using <code>Markdown</code>.</li>
+      <li><b>Snippet hover:</b> hovering a <code>path:line</code> link shows ±5 lines in a popover, using <code>CodeView</code> with a line range.</li>
+    </ul>
+    <h3>Done when</h3>
+    <ul class="check">
+      <li>Task #16's log entries for Read and Edit link to the right files.</li>
+      <li>Its ADR shows as a document on Overview.</li>
+      <li>Paths that don't exist aren't turned into links.</li>
+    </ul>
+
+    <h2 id="later">Not in this plan</h2>
+    <ul>
+      <li>A peek panel (<kbd>Space</kbd>), a command palette (<kbd>⌘K</kbd>), and setting priority by dragging within a board column.</li>
+      <li>Diffs for each run. This needs <code>runs.head_sha</code> recorded at the end of each run, as a new migration step.</li>
+      <li>Comments on diff lines that feed into a retry prompt. This is the natural next step after review, and its own plan.</li>
+      <li>Moving search to the server for queues beyond the 200 most recent closed tasks.</li>
+      <li>Swapping highlight.js for Shiki if its accuracy matters.</li>
+    </ul>
+
+    <h2 id="order">Build order</h2>
+    <p>The daemon work (step 6 events, the git endpoints, the log <code>file</code> field) and the dashboard's phases 1 and 2 don't depend on each other, so they're built in parallel. Then phase 3 (the page shell and timeline), then 4, 5 and 6, each committed separately on branch <code>dashboard-views</code> with tests and the typecheck passing.</p>
+  </main>
+</div>
+</body>
+</html>
