@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
 import { type PlanStep, type TaskPlan, ago, api } from '../../api';
+import { type ModeKey, mode } from '../../theme';
 
 // One plan attached to the task: its steps and how far they got, and the whole page on request.
 // The page runs in a sandboxed frame with no scripts; same-origin only so we can size and scroll it.
@@ -12,27 +13,34 @@ const finished = computed(() => props.plan.steps.filter((s) => s.status === 'don
 const total = computed(() => props.plan.steps.length);
 
 // Readable defaults for a plan that brings no styles of its own. Put first in <head>, so a plan's own CSS wins.
-const BASE_STYLE = `<style>
-:root { color-scheme: light dark; }
+// The dashboard's mode decides the colour scheme: a plan follows the system only when the dashboard does.
+function baseStyle(m: ModeKey) {
+  const scheme = m === 'system' ? 'light dark' : m;
+  return `<style>
+:root { color-scheme: ${scheme}; }
 body { margin: 0; padding: 16px 20px; background: Canvas; color: CanvasText; font: 14px/1.6 -apple-system, BlinkMacSystemFont, sans-serif; }
 h1 { font-size: 1.5em; } h2 { font-size: 1.15em; margin-top: 1.4em; }
 code, pre { font-family: ui-monospace, Menlo, monospace; }
 </style>`;
-function withBaseStyle(page: string) {
+}
+function withBaseStyle(page: string, m: ModeKey) {
+  const style = baseStyle(m);
   const head = /<head[^>]*>/i.exec(page);
-  if (head) return page.slice(0, head.index + head[0].length) + BASE_STYLE + page.slice(head.index + head[0].length);
-  return page.replace(/^(\s*<!doctype[^>]*>)?/i, (doctype) => doctype + BASE_STYLE);
+  if (head) return page.slice(0, head.index + head[0].length) + style + page.slice(head.index + head[0].length);
+  return page.replace(/^(\s*<!doctype[^>]*>)?/i, (doctype) => doctype + style);
 }
 
 const full = ref(false);
-const html = ref<string | null>(null);
+const page = ref<string | null>(null);
+// Rebuilt when the mode changes, so the open plan switches at once (the frame reloads, so it returns to the top).
+const html = computed(() => (page.value === null ? null : withBaseStyle(page.value, mode.value)));
 const error = ref('');
 const frame = ref<HTMLIFrameElement | null>(null);
 let scrollTo: string | null = null;
 
 async function load() {
   try {
-    html.value = withBaseStyle((await api.planHtml(props.taskId, props.plan.id)).html);
+    page.value = (await api.planHtml(props.taskId, props.plan.id)).html;
     error.value = '';
   } catch (e) {
     error.value = `Couldn't load the plan: ${(e as Error).message}`;
@@ -42,7 +50,7 @@ async function load() {
 watch(
   () => [props.plan.id, props.plan.updated_at],
   () => {
-    html.value = null;
+    page.value = null;
     if (full.value) load();
   },
 );
@@ -51,7 +59,7 @@ async function show(stepId: string | null = null) {
   full.value = stepId ? true : !full.value;
   if (!full.value) return;
   scrollTo = stepId;
-  if (html.value === null) await load();
+  if (page.value === null) await load();
   else await nextTick().then(onFrameLoad);
 }
 

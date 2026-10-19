@@ -1,0 +1,340 @@
+/*
+ * Themes: sets of colour tokens. <html data-theme="…" data-mode="system|light|dark"> picks one (see theme.ts).
+ *
+ * Each theme has a light rule, a dark rule, and the dark values again under prefers-color-scheme for data-mode="system".
+ * Keep the system copy identical to the dark rule: daemon/test/themes.test.ts checks that, and that every pair
+ * the dashboard draws (text, status colours, code, tints) reaches WCAG AA in both modes.
+ *
+ * Warm is the default, and also applies before theme.ts has run.
+ */
+
+/* ── Warm: the original neutral greys with a terracotta accent ───────────── */
+:root,
+:root[data-theme='warm'] {
+  --bg: #f6f6f4;
+  --panel: #ffffff;
+  --panel-2: #f0f0ed;
+  --code-bg: #f3f2ee;
+  --border: #e2e2dd;
+  --border-input: #8f8f89;
+  --text: #1d1d1b;
+  --muted: #5f5f5a;
+  --accent: #9a4719;
+  --accent-fg: #ffffff;
+  --queued: #5c5c57;
+  --cancelled: #5c5c57;
+  --running: #1f58b8;
+  --done: #1c6a42;
+  --blocked: #8a5a00;
+  --failed: #b53030;
+  --merged: #7340c8;
+  --hl-keyword: #a1328f;
+  --hl-string: #276b3d;
+  --hl-number: #9a4f05;
+  --hl-comment: #5c5c57;
+  --hl-title: #2f5fc4;
+  --hl-type: #8b5a00;
+  --hl-attr: #6c42c0;
+}
+:root:not([data-theme])[data-mode='dark'],
+:root[data-theme='warm'][data-mode='dark'] {
+  --bg: #161615;
+  --panel: #1f1f1d;
+  --panel-2: #272725;
+  --code-bg: #1a1a18;
+  --border: #33332f;
+  --border-input: #6f6e68;
+  --text: #ecebe6;
+  --muted: #acaba5;
+  --accent: #e98a55;
+  --accent-fg: #161615;
+  --queued: #acaba5;
+  --cancelled: #acaba5;
+  --running: #6c9bf0;
+  --done: #57b583;
+  --blocked: #e0ab3c;
+  --failed: #ee7f7f;
+  --merged: #b99cf5;
+  --hl-keyword: #e08bd6;
+  --hl-string: #8fd3a0;
+  --hl-number: #f0b070;
+  --hl-comment: #b0afa8;
+  --hl-title: #8fb4ff;
+  --hl-type: #e8c47a;
+  --hl-attr: #c3a6ff;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]):not([data-mode='light']),
+  :root[data-theme='warm']:not([data-mode='light']) {
+    --bg: #161615;
+    --panel: #1f1f1d;
+    --panel-2: #272725;
+    --code-bg: #1a1a18;
+    --border: #33332f;
+    --border-input: #6f6e68;
+    --text: #ecebe6;
+    --muted: #acaba5;
+    --accent: #e98a55;
+    --accent-fg: #161615;
+    --queued: #acaba5;
+    --cancelled: #acaba5;
+    --running: #6c9bf0;
+    --done: #57b583;
+    --blocked: #e0ab3c;
+    --failed: #ee7f7f;
+    --merged: #b99cf5;
+    --hl-keyword: #e08bd6;
+    --hl-string: #8fd3a0;
+    --hl-number: #f0b070;
+    --hl-comment: #b0afa8;
+    --hl-title: #8fb4ff;
+    --hl-type: #e8c47a;
+    --hl-attr: #c3a6ff;
+  }
+}
+
+/* ── Cool: a blue-grey, Linear-like, with an indigo accent ───────────────── */
+:root[data-theme='cool'] {
+  --bg: #f4f5f8;
+  --panel: #ffffff;
+  --panel-2: #eceef3;
+  --code-bg: #f1f2f6;
+  --border: #dfe2ea;
+  --border-input: #858b9c;
+  --text: #1b1d26;
+  --muted: #565c6e;
+  --accent: #4350c4;
+  --accent-fg: #ffffff;
+  --queued: #555b6d;
+  --cancelled: #555b6d;
+  --running: #1c55bf;
+  --done: #186a41;
+  --blocked: #8a5700;
+  --failed: #b02838;
+  --merged: #7640cc;
+  --hl-keyword: #8f35b8;
+  --hl-string: #1d6e4c;
+  --hl-number: #a04a00;
+  --hl-comment: #555b6d;
+  --hl-title: #2e57c4;
+  --hl-type: #7e5400;
+  --hl-attr: #5e4fc9;
+}
+:root[data-theme='cool'][data-mode='dark'] {
+  --bg: #0e0f14;
+  --panel: #16181f;
+  --panel-2: #1e2028;
+  --code-bg: #12141a;
+  --border: #2a2d38;
+  --border-input: #6c7285;
+  --text: #e6e8f0;
+  --muted: #9ba1b4;
+  --accent: #8e98f5;
+  --accent-fg: #0e0f14;
+  --queued: #9ba1b4;
+  --cancelled: #9ba1b4;
+  --running: #6ea2ff;
+  --done: #52c28a;
+  --blocked: #e2b04a;
+  --failed: #f2808c;
+  --merged: #b79af7;
+  --hl-keyword: #d79bf2;
+  --hl-string: #8dd8ac;
+  --hl-number: #f2b27a;
+  --hl-comment: #a6acc0;
+  --hl-title: #8fb4ff;
+  --hl-type: #e9c981;
+  --hl-attr: #b4aaff;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme='cool']:not([data-mode='light']) {
+    --bg: #0e0f14;
+    --panel: #16181f;
+    --panel-2: #1e2028;
+    --code-bg: #12141a;
+    --border: #2a2d38;
+    --border-input: #6c7285;
+    --text: #e6e8f0;
+    --muted: #9ba1b4;
+    --accent: #8e98f5;
+    --accent-fg: #0e0f14;
+    --queued: #9ba1b4;
+    --cancelled: #9ba1b4;
+    --running: #6ea2ff;
+    --done: #52c28a;
+    --blocked: #e2b04a;
+    --failed: #f2808c;
+    --merged: #b79af7;
+    --hl-keyword: #d79bf2;
+    --hl-string: #8dd8ac;
+    --hl-number: #f2b27a;
+    --hl-comment: #a6acc0;
+    --hl-title: #8fb4ff;
+    --hl-type: #e9c981;
+    --hl-attr: #b4aaff;
+  }
+}
+
+/* ── GitHub: Primer's light and dark-dimmed-ish greys, with the blue link accent ─ */
+:root[data-theme='github'] {
+  --bg: #f6f8fa;
+  --panel: #ffffff;
+  --panel-2: #eaeef2;
+  --code-bg: #f6f8fa;
+  --border: #d0d7de;
+  --border-input: #818b98;
+  --text: #1f2328;
+  --muted: #4f5963;
+  --accent: #0757b5;
+  --accent-fg: #ffffff;
+  --queued: #4f5963;
+  --cancelled: #4f5963;
+  --running: #0757b5;
+  --done: #136a2b;
+  --blocked: #8a5a00;
+  --failed: #b81c28;
+  --merged: #6e40c9;
+  --hl-keyword: #b81c28;
+  --hl-string: #0a3069;
+  --hl-number: #0550ae;
+  --hl-comment: #4f5963;
+  --hl-title: #6e40c9;
+  --hl-type: #953800;
+  --hl-attr: #116329;
+}
+:root[data-theme='github'][data-mode='dark'] {
+  --bg: #0d1117;
+  --panel: #161b22;
+  --panel-2: #21262d;
+  --code-bg: #0d1117;
+  --border: #30363d;
+  --border-input: #6e7681;
+  --text: #e6edf3;
+  --muted: #adb4bd;
+  --accent: #5ba3fa;
+  --accent-fg: #0d1117;
+  --queued: #adb4bd;
+  --cancelled: #adb4bd;
+  --running: #58a6ff;
+  --done: #3fb950;
+  --blocked: #d29922;
+  --failed: #ff7b72;
+  --merged: #ba8fff;
+  --hl-keyword: #ff7b72;
+  --hl-string: #a5d6ff;
+  --hl-number: #79c0ff;
+  --hl-comment: #adb4bd;
+  --hl-title: #d2a8ff;
+  --hl-type: #ffa657;
+  --hl-attr: #7ee787;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme='github']:not([data-mode='light']) {
+    --bg: #0d1117;
+    --panel: #161b22;
+    --panel-2: #21262d;
+    --code-bg: #0d1117;
+    --border: #30363d;
+    --border-input: #6e7681;
+    --text: #e6edf3;
+    --muted: #adb4bd;
+    --accent: #5ba3fa;
+    --accent-fg: #0d1117;
+    --queued: #adb4bd;
+    --cancelled: #adb4bd;
+    --running: #58a6ff;
+    --done: #3fb950;
+    --blocked: #d29922;
+    --failed: #ff7b72;
+    --merged: #ba8fff;
+    --hl-keyword: #ff7b72;
+    --hl-string: #a5d6ff;
+    --hl-number: #79c0ff;
+    --hl-comment: #adb4bd;
+    --hl-title: #d2a8ff;
+    --hl-type: #ffa657;
+    --hl-attr: #7ee787;
+  }
+}
+
+/* ── High contrast: black on white and white on black, strong edges, 7:1 and up ── */
+:root[data-theme='contrast'] {
+  --bg: #ffffff;
+  --panel: #ffffff;
+  --panel-2: #ececec;
+  --code-bg: #f4f4f4;
+  --border: #6b6b6b;
+  --border-input: #1a1a1a;
+  --text: #000000;
+  --muted: #2e2e2e;
+  --accent: #0033cc;
+  --accent-fg: #ffffff;
+  --queued: #2e2e2e;
+  --cancelled: #2e2e2e;
+  --running: #0033cc;
+  --done: #005a1f;
+  --blocked: #6b4500;
+  --failed: #a80000;
+  --merged: #5a1fb0;
+  --hl-keyword: #7a0070;
+  --hl-string: #00561c;
+  --hl-number: #7a3200;
+  --hl-comment: #2e2e2e;
+  --hl-title: #0033aa;
+  --hl-type: #5c3a00;
+  --hl-attr: #4b1d99;
+}
+:root[data-theme='contrast'][data-mode='dark'] {
+  --bg: #000000;
+  --panel: #000000;
+  --panel-2: #1c1c1c;
+  --code-bg: #0c0c0c;
+  --border: #9a9a9a;
+  --border-input: #ffffff;
+  --text: #ffffff;
+  --muted: #e0e0e0;
+  --accent: #ffd633;
+  --accent-fg: #000000;
+  --queued: #e0e0e0;
+  --cancelled: #e0e0e0;
+  --running: #7fb2ff;
+  --done: #5ee08a;
+  --blocked: #ffc933;
+  --failed: #ff8a8a;
+  --merged: #d0b3ff;
+  --hl-keyword: #ff9cf0;
+  --hl-string: #8ff0a8;
+  --hl-number: #ffb870;
+  --hl-comment: #d0d0d0;
+  --hl-title: #99c2ff;
+  --hl-type: #ffd98a;
+  --hl-attr: #d0b8ff;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme='contrast']:not([data-mode='light']) {
+    --bg: #000000;
+    --panel: #000000;
+    --panel-2: #1c1c1c;
+    --code-bg: #0c0c0c;
+    --border: #9a9a9a;
+    --border-input: #ffffff;
+    --text: #ffffff;
+    --muted: #e0e0e0;
+    --accent: #ffd633;
+    --accent-fg: #000000;
+    --queued: #e0e0e0;
+    --cancelled: #e0e0e0;
+    --running: #7fb2ff;
+    --done: #5ee08a;
+    --blocked: #ffc933;
+    --failed: #ff8a8a;
+    --merged: #d0b3ff;
+    --hl-keyword: #ff9cf0;
+    --hl-string: #8ff0a8;
+    --hl-number: #ffb870;
+    --hl-comment: #d0d0d0;
+    --hl-title: #99c2ff;
+    --hl-type: #ffd98a;
+    --hl-attr: #d0b8ff;
+  }
+}

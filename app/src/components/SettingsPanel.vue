@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { type NotificationRow, type NotifyKind, type ServiceStatus, type Settings, ago, api } from '../api';
 import { isNative, launchAtLogin, setLaunchAtLogin } from '../native';
+import { MODES, THEMES, mode, setMode, setTheme, theme } from '../theme';
 import Modal from './Modal.vue';
 
 defineProps<{ notifications: NotificationRow[] }>();
@@ -131,6 +132,34 @@ async function test() {
   <Modal title="Settings" @close="$emit('close')">
     <p v-if="!form && !error" class="muted">Loading…</p>
     <form v-if="form" @submit.prevent="save()">
+      <section>
+        <h4>Appearance</h4>
+        <p class="muted hint">
+          Applies as you pick, and is remembered on this computer. The status bar has the same choice for quick comparing.
+        </p>
+        <div class="themes" role="radiogroup" aria-label="Theme">
+          <label v-for="t in THEMES" :key="t.key" class="check theme" :class="{ on: theme === t.key }">
+            <input type="radio" name="theme" :value="t.key" :checked="theme === t.key" @change="setTheme(t.key)" />
+            <span
+              ><b>{{ t.label }}</b
+              ><small class="muted"> {{ t.hint }}</small></span
+            >
+          </label>
+        </div>
+        <div class="seg modes" role="group" aria-label="Mode">
+          <button
+            v-for="m in MODES"
+            :key="m.key"
+            type="button"
+            :class="{ on: mode === m.key }"
+            :aria-pressed="mode === m.key"
+            @click="setMode(m.key)"
+          >
+            {{ m.label }}
+          </button>
+        </div>
+      </section>
+
       <section>
         <h4>Usage budget</h4>
         <p class="muted hint">
@@ -312,6 +341,23 @@ small {
 }
 .check input {
   width: auto;
+}
+.themes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.theme {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.theme.on {
+  border-color: var(--accent);
+}
+.modes {
+  align-self: flex-start;
 }
 .events {
   display: flex;
