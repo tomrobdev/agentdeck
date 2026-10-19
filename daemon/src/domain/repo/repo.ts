@@ -1,4 +1,5 @@
 // The repo entity. Pure: no I/O.
+import type { MergeMethod } from '../pull-request/merge.ts';
 import type { PrMode } from '../pull-request/pr.ts';
 
 export interface Repo {
@@ -14,4 +15,5 @@ export interface Repo {
   setup_cmd: string | null; // run in each worktree before claude
   paused_reason: string | null; // set = no task of this repo is claimed until `repo resume` or a passing doctor
   pr_mode: PrMode;
+  merge_method: MergeMethod; // how a PR is merged from the app unless the person picks another
 }

@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
-import { type Changes, type TaskDetail, ago, api, describeHold } from '../../api';
+import { type Changes, type MergeResult, type TaskDetail, ago, api, describeHold } from '../../api';
 import { useHotkeys } from '../../hotkeys';
 import { type TaskTab, go, openTask } from '../../router';
-import { canApprove, canCancel, canEdit, canRetry, statusLabel } from '../../taskView';
+import { canApprove, canCancel, canEdit, canMerge, canRetry, statusLabel } from '../../taskView';
 import SnippetPopover from '../files/SnippetPopover.vue';
 import StatusIcon from '../queue/StatusIcon.vue';
 import ChangesTab from './ChangesTab.vue';
 import CodeTab from './CodeTab.vue';
+import MergeDialog from './MergeDialog.vue';
 import OverviewTab from './OverviewTab.vue';
 import RunsTab from './RunsTab.vue';
 import Sidebar from './Sidebar.vue';
@@ -102,6 +103,13 @@ async function saveTitle() {
   }
 }
 
+const merging = ref(false);
+function onMerged(result: MergeResult) {
+  merging.value = false;
+  emit('changed');
+  if (result.cleanup_error) emit('error', `Merged, but cleanup failed: ${result.cleanup_error}`);
+}
+
 useHotkeys({ Escape: () => go({ name: 'queue' }) });
 </script>
 
@@ -137,10 +145,13 @@ useHotkeys({ Escape: () => go({ name: 'queue' }) });
           <button @click="emit('act', 'reject')">Reject</button>
           <button class="primary" @click="emit('act', 'approve')">✓ Approve</button>
         </template>
+        <button v-if="canMerge(task)" class="primary" @click="merging = true">Merge PR</button>
         <button v-if="canRetry(task)" @click="emit('act', 'retry')">↻ Retry</button>
         <button v-if="canCancel(task)" @click="emit('act', 'cancel')">{{ s === 'running' ? '■ Stop' : '✕ Cancel' }}</button>
       </div>
     </header>
+
+    <MergeDialog v-if="merging" :task-id="task.id" @close="merging = false" @merged="onMerged" />
 
     <nav class="tabs" role="tablist">
       <button

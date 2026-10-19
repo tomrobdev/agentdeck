@@ -136,6 +136,9 @@ export const MIGRATIONS: Migration[] = [
      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
      UNIQUE (task_id, name)
    );`,
+  // 8: merging a PR from the app. merge_method is squash | merge | rebase: the repo's default, and the one a task was merged with.
+  `ALTER TABLE repos ADD COLUMN merge_method TEXT NOT NULL DEFAULT 'squash';
+   ALTER TABLE tasks ADD COLUMN merge_method TEXT;`,
 ];
 
 /** Runs every step above the database's user_version in one transaction; returns how many ran. */

@@ -11,6 +11,7 @@ Repos
   agentdeck repo set <repo> test_cmd "<cmd>"      run after each task ("" for none)
   agentdeck repo set <repo> setup_cmd "<cmd>"     run in each worktree before claude ("" for none)
   agentdeck repo set <repo> pr_mode off|draft|ready  push and open a PR when a task is done
+  agentdeck repo set <repo> merge_method squash|merge|rebase  how the app and \`agentdeck merge\` merge a PR (default squash)
   agentdeck goals <repo> [--file goals.md]        show (or replace) the goals the planner works from
   agentdeck plan <repo>                           run the planner now
 
@@ -30,7 +31,10 @@ Tasks
   agentdeck reject <id>...
   agentdeck cancel <id>
   agentdeck retry <id>
-  agentdeck clean <id>          remove the task's worktree (its branch is kept)
+  agentdeck merge <id> [--method squash|merge|rebase] [--yes] [--keep-branch]
+                                  merge a done task's open PR: shows the preview, asks unless --yes, then deletes
+                                  the remote branch and the worktree unless --keep-branch
+  agentdeck clean <id>        remove the task's worktree (its branch is kept)
 
 Daemon
   agentdeck install             run the daemon at login via launchd (restarted if it dies)

@@ -39,7 +39,8 @@ function taskDetail(db: Db, id: number) {
   };
 }
 
-export function startApi(db: Db, port = API_PORT): Promise<Server> {
+/** `wake` runs after a change that may let queued work start, such as a merge (the scheduler's `wake`). */
+export function startApi(db: Db, port = API_PORT, wake: () => void = () => {}): Promise<Server> {
   const routes: [string, RegExp, Handler][] = [
     ['GET', /^\/api\/status$/, () => actions.status(db)],
     ['POST', /^\/api\/pause$/, () => (actions.setPaused(db, true), actions.status(db))],
@@ -77,6 +78,17 @@ export function startApi(db: Db, port = API_PORT): Promise<Server> {
     ['POST', /^\/api\/tasks\/(\d+)$/, (_q, _s, [id], b) => (actions.editTask(db, Number(id), b), taskDetail(db, Number(id)))],
     ['POST', /^\/api\/tasks\/(\d+)\/cancel$/, (_q, _s, [id]) => ({ result: actions.cancelTask(db, Number(id)) })],
     ['POST', /^\/api\/tasks\/(\d+)\/retry$/, (_q, _s, [id]) => (actions.retryTask(db, Number(id)), taskDetail(db, Number(id)))],
+    // Merge the task's PR. GET is the preview the confirm dialog shows; POST merges and wakes the scheduler so dependents start now.
+    ['GET', /^\/api\/tasks\/(\d+)\/merge$/, (_q, _s, [id]) => actions.mergePreview(db, Number(id))],
+    [
+      'POST',
+      /^\/api\/tasks\/(\d+)\/merge$/,
+      async (_q, _s, [id], b) => {
+        const result = await actions.mergeTask(db, Number(id), { method: b.method, delete_branch: b.delete_branch === true });
+        wake();
+        return { ...result, task: taskDetail(db, Number(id)) };
+      },
+    ],
     [
       'GET',
       /^\/api\/tasks\/(\d+)\/log$/,
