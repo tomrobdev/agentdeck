@@ -2,6 +2,7 @@
 // agents cannot push. Tests replace the members of `github` to fake the network.
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { type MergeMethod, type PrDetails, parsePrDetails } from '../domain/pull-request/merge.ts';
 import { type PrState, parsePrState } from '../domain/pull-request/pr.ts';
 import { gitRemote } from './git.ts';
 
@@ -65,6 +66,49 @@ export const github = {
       const state = parsePrState(String(JSON.parse(stdout).state ?? ''));
       if (!state) throw new Error(`unexpected PR state in ${stdout.trim()}`);
       return state;
+    } catch (err) {
+      throw failure(err);
+    }
+  },
+
+  /** What `gh pr view` says about a PR that decides whether it can merge. */
+  async prDetails(url: string, cwd: string): Promise<PrDetails> {
+    const fields = 'isDraft,mergeable,mergeStateStatus,commits,additions,deletions,changedFiles,statusCheckRollup';
+    try {
+      const { stdout } = await exec('gh', ['pr', 'view', url, '--json', fields], { cwd, timeout: 30_000, maxBuffer: 16 * 1024 * 1024 });
+      return parsePrDetails(stdout);
+    } catch (err) {
+      throw failure(err);
+    }
+  },
+
+  /** `gh pr ready`: take a draft PR out of draft. */
+  async markReady(url: string, cwd: string): Promise<void> {
+    try {
+      await exec('gh', ['pr', 'ready', url], { cwd, timeout: 30_000 });
+    } catch (err) {
+      throw failure(err);
+    }
+  },
+
+  /**
+   * `gh pr merge` with the given method. A squash gets `message` as its commit (subject and body).
+   * The branch is left alone (`deleteRemoteBranch` removes it afterwards), since gh would
+   * also try to delete the local branch, which the task's worktree has checked out.
+   */
+  async merge(pr: { url: string; cwd: string; method: MergeMethod; message?: { subject: string; body: string } }): Promise<void> {
+    const message = pr.method === 'squash' && pr.message ? ['--subject', pr.message.subject, '--body', pr.message.body] : [];
+    try {
+      await exec('gh', ['pr', 'merge', pr.url, `--${pr.method}`, ...message], { cwd: pr.cwd, timeout: 60_000 });
+    } catch (err) {
+      throw failure(err);
+    }
+  },
+
+  /** `git push origin --delete <branch>`. */
+  async deleteRemoteBranch(repoPath: string, branch: string): Promise<void> {
+    try {
+      await gitRemote(repoPath, 60_000, 'push', 'origin', '--delete', branch);
     } catch (err) {
       throw failure(err);
     }

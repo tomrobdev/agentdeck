@@ -74,6 +74,11 @@ export class Scheduler {
     this.drained?.();
   }
 
+  /** Check the queue now instead of at the next tick, after something changed that may let a task start. */
+  wake(): void {
+    this.tick();
+  }
+
   private schedule(): void {
     if (!this.stopped) this.timer = setTimeout(() => this.tick(), this.opts.tickMs);
   }

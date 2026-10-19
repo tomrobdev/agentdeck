@@ -1,6 +1,7 @@
 // Repo commands: register, configure and check repos, goals and the planner.
 import { readFileSync } from 'node:fs';
 import * as actions from '../application/actions.ts';
+import type { MergeMethod } from '../domain/pull-request/merge.ts';
 import type { PrMode } from '../domain/pull-request/pr.ts';
 import { die, fmtTask, printDoctor } from './format.ts';
 import type { Command } from './context.ts';
@@ -33,11 +34,12 @@ export const repoCommands: Record<string, Command> = {
       console.log(`${repo.name}: resumed`);
     } else if (sub === 'set') {
       const [, name, key, value = ''] = rest;
-      if (!name || !['auto_approve', 'base_branch', 'test_cmd', 'setup_cmd', 'pr_mode'].includes(key))
+      if (!name || !['auto_approve', 'base_branch', 'test_cmd', 'setup_cmd', 'pr_mode', 'merge_method'].includes(key))
         die(
-          'usage: agentdeck repo set <repo> auto_approve on|off | base_branch <branch> | test_cmd "<cmd>" | setup_cmd "<cmd>" | pr_mode off|draft|ready',
+          'usage: agentdeck repo set <repo> auto_approve on|off | base_branch <branch> | test_cmd "<cmd>" | setup_cmd "<cmd>" | pr_mode off|draft|ready | merge_method squash|merge|rebase',
         );
       if (key === 'pr_mode') actions.updateRepo(db, name, { pr_mode: value as PrMode });
+      else if (key === 'merge_method') actions.updateRepo(db, name, { merge_method: value as MergeMethod });
       else if (key === 'auto_approve')
         actions.updateRepo(db, name, { auto_approve: ['1', 'on', 'true', 'yes'].includes(value.toLowerCase()) });
       else if (key === 'base_branch') actions.updateRepo(db, name, { base_branch: value });
@@ -48,7 +50,7 @@ export const repoCommands: Record<string, Command> = {
       for (const r of db.listRepos()) {
         const goals = actions.repoDetail(db, r.id).goals.trim() ? 'goals ✓' : 'no goals';
         console.log(
-          `${r.name.padEnd(16)} ${r.path}  base=${r.base_branch}  toolchain=${r.toolchain ?? '-'}  setup=${r.setup_cmd ?? '-'}  test=${r.test_cmd ?? '-'}  pr=${r.pr_mode}  ${goals}${r.auto_approve ? '  auto-approve' : ''}${r.paused_reason ? `  PAUSED (${r.paused_reason})` : ''}`,
+          `${r.name.padEnd(16)} ${r.path}  base=${r.base_branch}  toolchain=${r.toolchain ?? '-'}  setup=${r.setup_cmd ?? '-'}  test=${r.test_cmd ?? '-'}  pr=${r.pr_mode}  merge=${r.merge_method}  ${goals}${r.auto_approve ? '  auto-approve' : ''}${r.paused_reason ? `  PAUSED (${r.paused_reason})` : ''}`,
         );
       }
     } else die(`unknown repo command: ${sub}`);

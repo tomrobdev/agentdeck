@@ -17,10 +17,17 @@ export interface Repo {
   setup_cmd: string | null;
   paused_reason: string | null;
   pr_mode: PrMode;
+  merge_method: MergeMethod;
 }
 
 export type PrMode = 'off' | 'draft' | 'ready';
 export type PrState = 'open' | 'merged' | 'closed';
+export type MergeMethod = 'squash' | 'merge' | 'rebase';
+export const MERGE_METHODS: { key: MergeMethod; label: string; hint: string }[] = [
+  { key: 'squash', label: 'Squash and merge', hint: 'One commit on the base branch' },
+  { key: 'merge', label: 'Create a merge commit', hint: 'Keeps every commit' },
+  { key: 'rebase', label: 'Rebase and merge', hint: 'Replays every commit on the base branch' },
+];
 
 export interface DoctorCheck {
   name: string;
@@ -82,6 +89,8 @@ export interface TaskSummary {
   source: 'manual' | 'planner';
   pr_url: string | null;
   pr_state: PrState | null;
+  /** How the PR was merged from the app. */
+  merge_method: MergeMethod | null;
   after_task: number | null;
   /** Set for a queued task held back by after_task; stuck says why its dependency won't get there on its own. */
   waiting: { on: number; stuck: string | null } | null;
@@ -115,11 +124,42 @@ export interface Run {
 export interface TaskEventRow {
   id: number;
   task_id: number;
-  type: 'created' | 'claim' | 'finish' | 'rate_limited' | 'cancel' | 'approve' | 'reject' | 'retry' | 'recover';
+  type: 'created' | 'merge' | 'claim' | 'finish' | 'rate_limited' | 'cancel' | 'approve' | 'reject' | 'retry' | 'recover';
   from_status: TaskStatus | null;
   to_status: TaskStatus | null;
   reason: string | null;
   at: string;
+}
+
+/** What merging a task's PR would do (GET /api/tasks/:id/merge; daemon application/pull-requests.ts). */
+export interface MergePreview {
+  title: string;
+  pr_url: string;
+  branch: string | null;
+  base: string;
+  /** The repo's default method; the dialog starts here. */
+  method: MergeMethod;
+  draft: boolean;
+  commits: number;
+  files: number;
+  additions: number;
+  deletions: number;
+  /** The last run's tests: 1 passed, 0 failed, null not run. */
+  tests_passed: number | null;
+  checks: { total: number; failing: number; pending: number };
+  /** Reasons the merge can't go ahead. */
+  problems: string[];
+  warnings: string[];
+  /** Queued tasks waiting on this one. */
+  unblocks: { id: number; title: string }[];
+}
+
+export interface MergeResult {
+  method: MergeMethod;
+  unblocked: number[];
+  /** Set when the merge went through but removing the branch or worktree did not. */
+  cleanup_error?: string;
+  task: TaskDetail;
 }
 
 export interface TaskDetail extends Task {
@@ -334,7 +374,14 @@ export const api = {
   repo: (id: number) => call<RepoDetail>(`/api/repos/${id}`),
   updateRepo: (
     id: number,
-    patch: { goals?: string; auto_approve?: boolean; test_cmd?: string | null; setup_cmd?: string | null; pr_mode?: PrMode },
+    patch: {
+      goals?: string;
+      auto_approve?: boolean;
+      test_cmd?: string | null;
+      setup_cmd?: string | null;
+      pr_mode?: PrMode;
+      merge_method?: MergeMethod;
+    },
   ) => call<RepoDetail>(`/api/repos/${id}`, { method: 'POST', json: patch }),
   plan: (id: number) => call<PlanResult>(`/api/repos/${id}/plan`, { method: 'POST' }),
   doctor: (id: number) => call<DoctorReport>(`/api/repos/${id}/doctor`, { method: 'POST' }),
@@ -359,6 +406,9 @@ export const api = {
   }) => call<TaskDetail>('/api/tasks', { method: 'POST', json: t }),
   cancel: (id: number) => call<{ result: string }>(`/api/tasks/${id}/cancel`, { method: 'POST' }),
   retry: (id: number) => call<TaskDetail>(`/api/tasks/${id}/retry`, { method: 'POST' }),
+  mergePreview: (id: number) => call<MergePreview>(`/api/tasks/${id}/merge`),
+  merge: (id: number, body: { method: MergeMethod; delete_branch: boolean }) =>
+    call<MergeResult>(`/api/tasks/${id}/merge`, { method: 'POST', json: body }),
   changes: (id: number) => call<Changes>(`/api/tasks/${id}/changes`),
   diff: (id: number, path: string) => call<FilePatch>(`/api/tasks/${id}/diff?path=${encodeURIComponent(path)}`),
   tree: (id: number, ref: FileRef, path = '') => call<TreeListing>(`/api/tasks/${id}/tree?ref=${ref}&path=${encodeURIComponent(path)}`),

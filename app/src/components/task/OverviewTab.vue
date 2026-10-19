@@ -23,6 +23,7 @@ const EVENT_TEXT: Record<string, (e: TaskEventRow) => string> = {
   reject: () => 'rejected the proposal',
   retry: () => 'queued another attempt',
   cancel: (e) => (e.to_status === 'cancel_requested' ? 'asked the run to stop' : 'cancelled the task'),
+  merge: () => 'merged the pull request',
   rate_limited: () => 'hit the usage limit; back in the queue without using an attempt',
   recover: (e) => (e.to_status === 'failed' ? 'failed after repeated daemon restarts' : 'requeued after a daemon restart'),
 };

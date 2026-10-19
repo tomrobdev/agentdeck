@@ -5,6 +5,7 @@ import { currentBranch, isGitRepo } from '../adapters/git.ts';
 import { goalsPath, readGoals, writeGoals } from '../adapters/goals.ts';
 import { rootInfo } from '../adapters/repo-root.ts';
 import type { Db } from '../db/index.ts';
+import { MERGE_METHODS, type MergeMethod, isMergeMethod } from '../domain/pull-request/merge.ts';
 import { PR_MODES, type PrMode } from '../domain/pull-request/pr.ts';
 import type { Repo } from '../domain/repo/repo.ts';
 import { detectToolchain } from '../domain/repo/toolchain.ts';
@@ -59,11 +60,14 @@ export function updateRepo(
     setup_cmd?: string | null;
     base_branch?: string;
     pr_mode?: PrMode;
+    merge_method?: MergeMethod;
   },
 ) {
   const repo = repoOrThrow(db, nameOrId);
   if (patch.pr_mode !== undefined && !PR_MODES.includes(patch.pr_mode))
     throw new ActionError(`pr_mode must be one of ${PR_MODES.join(', ')}`);
+  if (patch.merge_method !== undefined && !isMergeMethod(patch.merge_method))
+    throw new ActionError(`merge_method must be one of ${MERGE_METHODS.join(', ')}`);
   if (patch.base_branch !== undefined && !patch.base_branch.trim()) throw new ActionError('base_branch cannot be empty');
   if (patch.goals !== undefined) {
     if (patch.goals.length > 20_000) throw new ActionError('goals are limited to 20,000 characters');
@@ -75,6 +79,7 @@ export function updateRepo(
     ...(patch.setup_cmd !== undefined ? { setup_cmd: patch.setup_cmd?.trim() || null } : {}),
     ...(patch.base_branch !== undefined ? { base_branch: patch.base_branch.trim() } : {}),
     ...(patch.pr_mode !== undefined ? { pr_mode: patch.pr_mode } : {}),
+    ...(patch.merge_method !== undefined ? { merge_method: patch.merge_method } : {}),
   });
   return repoDetail(db, repo.id);
 }

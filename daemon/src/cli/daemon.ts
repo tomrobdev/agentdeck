@@ -21,7 +21,7 @@ const runScheduler: Command = async ({ db, cmd }) => {
     });
   }
   if (!once) {
-    const api = await startApi(db).catch((err) => {
+    const api = await startApi(db, API_PORT, () => scheduler.wake()).catch((err) => {
       if (err?.code === 'EADDRINUSE')
         die(`port ${API_PORT} is in use: another agentdeck daemon is probably running (see \`agentdeck service\`)`);
       throw err;

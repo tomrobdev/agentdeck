@@ -152,6 +152,9 @@ export const canEdit = (t: Pick<TaskSummary, 'status'>) => EDITABLE_STATUSES.inc
 export const canApprove = (t: Pick<TaskSummary, 'status'>) => t.status === 'proposed';
 export const canRetry = (t: Pick<TaskSummary, 'status'>) => ['blocked', 'failed', 'done', 'cancelled'].includes(t.status);
 export const canCancel = (t: Pick<TaskSummary, 'status'>) => ['queued', 'running', 'blocked', 'failed'].includes(t.status);
+/** A done task whose PR is still open can be merged from its page (daemon application/pull-requests.ts mergeable). */
+export const canMerge = (t: Pick<TaskSummary, 'status' | 'pr_url' | 'pr_state'>) =>
+  t.status === 'done' && !!t.pr_url && t.pr_state === 'open';
 /** The one-key retry in the queue is for work that went wrong, not for re-running finished work. */
 export const quickRetry = (t: Pick<TaskSummary, 'status'>) => t.status === 'blocked' || t.status === 'failed';
 
