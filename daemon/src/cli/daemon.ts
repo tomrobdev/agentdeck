@@ -2,7 +2,7 @@
 import { resolve } from 'node:path';
 import * as actions from '../application/actions.ts';
 import { startApi } from '../api/server.ts';
-import { headCommit } from '../adapters/git.ts';
+import { checkoutCommit } from '../adapters/git.ts';
 import { BUDGET_KEYS } from '../domain/usage/governor.ts';
 import type { NotifyKind } from '../domain/notification.ts';
 import { Scheduler } from '../application/scheduler.ts';
@@ -29,7 +29,7 @@ async function launchd<T>(fn: () => Promise<T>): Promise<T> {
 const runScheduler: Command = async ({ db, cmd }) => {
   const once = cmd === 'run-once';
   // Read once at start: it names the code this process loaded, even if the checkout moves on later.
-  const info = { commit: await headCommit(import.meta.dirname), started_at: new Date().toISOString() };
+  const info = { commit: await checkoutCommit(import.meta.dirname), started_at: new Date().toISOString() };
   let restartRequested = false;
   const changed: string[] = [];
   let lastChangeAt: number | null = null;
