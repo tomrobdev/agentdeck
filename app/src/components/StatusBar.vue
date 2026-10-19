@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { type Status, describeState, relTime } from '../api';
+import { needYouCount } from '../taskView';
 
 const props = defineProps<{ status: Status | null; offline: boolean; busy: boolean }>();
 defineEmits<{ toggle: []; newTask: []; repos: []; settings: [] }>();
 
 const state = computed(() => describeState(props.status, props.offline));
+const needYou = computed(() => needYouCount(props.status));
 
 /** Meters with a marker for the budget line that matters for each window. */
 const meters = computed(() => {
@@ -39,6 +41,8 @@ const meters = computed(() => {
         (throttled)</template
       >
     </span>
+
+    <span v-if="needYou && !offline" class="muted" title="Proposals, blocked tasks and PRs waiting for review">{{ needYou }} need you</span>
 
     <div class="usage" v-if="meters.length && !offline">
       <div v-for="m in meters" :key="m.label" class="meter" :title="`${m.pct}% used · ${m.markTitle} · resets in ${m.resets}`">

@@ -59,6 +59,15 @@ export const github = {
     }
   },
 
+  /** `gh pr close <url>`: closes the PR without merging; the branch stays. */
+  async closePr(url: string, cwd: string): Promise<void> {
+    try {
+      await exec('gh', ['pr', 'close', url], { cwd, timeout: 30_000 });
+    } catch (err) {
+      throw failure(err);
+    }
+  },
+
   /** `gh pr view <url> --json state`. */
   async prState(url: string, cwd: string): Promise<PrState> {
     try {

@@ -25,6 +25,7 @@ function task(id: number, fields: Partial<ListedTask> = {}): ListedTask {
     created_at: '2026-10-18 10:00:00',
     updated_at: '2026-10-18 10:00:00',
     waiting: null,
+    unblocks: [],
     ...fields,
   };
 }
@@ -38,6 +39,11 @@ const TASKS = [
   task(6, { status: 'running', title: 'Run workers in the sandbox', branch: 'agentdeck/task-6' }),
   task(7, { status: 'cancel_requested' }),
   task(8, { status: 'proposed', priority: 9 }),
+  task(9, { status: 'done', pr_url: 'https://x/9', pr_state: 'open' }),
+  task(10, { status: 'done', pr_url: 'https://x/10', pr_state: 'open', unblocks: [5] }),
+  task(11, { status: 'done', pr_url: 'https://x/11', pr_state: 'merged' }),
+  task(12, { status: 'cancelled' }),
+  task(13, { status: 'done', pr_url: 'https://x/13', pr_state: 'closed' }),
 ];
 
 const ids = (filter: Partial<Parameters<typeof filterTasks>[1]>) =>
@@ -48,9 +54,9 @@ test('states pick out waiting and stuck tasks, and PR states of done tasks', () 
   assert.deepEqual(ids({ states: ['waiting'] }), [5]);
   assert.deepEqual(ids({ states: ['queued'] }), [5, 4]);
   assert.deepEqual(ids({ states: ['running'] }), [7, 6], 'a task being stopped still counts as running');
-  assert.deepEqual(ids({ states: ['merged'] }), [1]);
+  assert.deepEqual(ids({ states: ['merged'] }), [11, 1]);
   assert.deepEqual(ids({ states: ['no-pr'] }), [2]);
-  assert.deepEqual(ids({ states: ['merged', 'blocked'] }), [3, 1], 'several states match any of them');
+  assert.deepEqual(ids({ states: ['merged', 'blocked'] }), [11, 3, 1], 'several states match any of them');
 });
 
 test('groups match the dashboard: a stuck task needs you and is not active', () => {
@@ -68,10 +74,20 @@ test('repo and search narrow the list', () => {
 });
 
 test('sorts', () => {
-  assert.deepEqual(ids({ sort: 'oldest' }), [1, 2, 3, 4, 5, 6, 7, 8]);
+  assert.deepEqual(ids({ sort: 'oldest' }), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
   assert.deepEqual(ids({ sort: 'priority' }).slice(0, 2), [8, 4]);
   assert.deepEqual(ids({ sort: 'updated' })[0], 1);
-  assert.deepEqual(ids({ sort: 'attention' }), [4, 3, 8, 7, 6, 5, 2, 1], 'needs you, proposed, running, queued, done');
+  assert.deepEqual(
+    ids({ sort: 'attention' }),
+    [4, 3, 10, 9, 8, 7, 6, 5, 13, 2, 11, 1, 12],
+    'needs you, review (the PR others wait on first), proposed, running, queued, done, merged, cancelled',
+  );
+});
+
+test('review is a done task whose PR is open', () => {
+  assert.deepEqual(ids({ states: ['review'] }), [10, 9]);
+  assert.deepEqual(ids({ states: ['pr-open'] }), [10, 9], 'the older name still works');
+  assert.deepEqual(ids({ states: ['review', 'blocked'] }), [10, 9, 3]);
 });
 
 test('an unknown state or sort says which names are valid', () => {

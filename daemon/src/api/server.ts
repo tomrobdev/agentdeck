@@ -2,7 +2,7 @@
 import { type IncomingMessage, type Server, type ServerResponse, createServer } from 'node:http';
 import { serviceStatus } from '../adapters/service.ts';
 import * as actions from '../application/actions.ts';
-import { waitingFor } from '../application/dependencies.ts';
+import { unblocksOf, waitingFor } from '../application/dependencies.ts';
 import { startHolds } from '../application/queue.ts';
 import { API_ALLOWED_ORIGINS, API_PORT } from '../config.ts';
 import type { Db } from '../db/index.ts';
@@ -32,6 +32,7 @@ function taskDetail(db: Db, id: number) {
     ...task,
     repo: db.getRepo(task.repo_id)?.name ?? null,
     waiting: waitingFor(db, task),
+    unblocks: unblocksOf(db, task),
     hold: startHolds(db)(task),
     runs: db.runsForTask(id),
     events: db.eventsForTask(id),
@@ -68,16 +69,25 @@ export function startApi(db: Db, port = API_PORT, wake: () => void = () => {}): 
         const before = Number(q.get('before')) || undefined;
         const names = new Map(db.listRepos().map((r) => [r.id, r.name]));
         const holdOf = startHolds(db);
-        return db
-          .listTaskSummaries({ status: status ?? undefined, limit, before })
-          .map((t) => ({ ...t, repo: names.get(t.repo_id) ?? null, waiting: waitingFor(db, t), hold: holdOf(t) }));
+        return db.listTaskSummaries({ status: status ?? undefined, limit, before }).map((t) => ({
+          ...t,
+          repo: names.get(t.repo_id) ?? null,
+          waiting: waitingFor(db, t),
+          unblocks: unblocksOf(db, t),
+          hold: holdOf(t),
+        }));
       },
     ],
     ['POST', /^\/api\/tasks$/, (_q, _s, _p, b) => taskDetail(db, actions.addTask(db, b).id)],
     ['GET', /^\/api\/tasks\/(\d+)$/, (_q, _s, [id]) => taskDetail(db, Number(id))],
     ['POST', /^\/api\/tasks\/(\d+)$/, (_q, _s, [id], b) => (actions.editTask(db, Number(id), b), taskDetail(db, Number(id)))],
     ['POST', /^\/api\/tasks\/(\d+)\/cancel$/, (_q, _s, [id]) => ({ result: actions.cancelTask(db, Number(id)) })],
-    ['POST', /^\/api\/tasks\/(\d+)\/retry$/, (_q, _s, [id]) => (actions.retryTask(db, Number(id)), taskDetail(db, Number(id)))],
+    ['POST', /^\/api\/tasks\/(\d+)\/retry$/, (_q, _s, [id], b) => (actions.retryTask(db, Number(id), b?.note), taskDetail(db, Number(id)))],
+    [
+      'POST',
+      /^\/api\/tasks\/(\d+)\/close-pr$/,
+      async (_q, _s, [id]) => (await actions.closeTaskPr(db, Number(id)), taskDetail(db, Number(id))),
+    ],
     // Merge the task's PR. GET is the preview the confirm dialog shows; POST merges and wakes the scheduler so dependents start now.
     ['GET', /^\/api\/tasks\/(\d+)\/merge$/, (_q, _s, [id]) => actions.mergePreview(db, Number(id))],
     [

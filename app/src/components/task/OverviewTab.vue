@@ -21,7 +21,7 @@ type Item =
 const EVENT_TEXT: Record<string, (e: TaskEventRow) => string> = {
   approve: () => 'approved the proposal',
   reject: () => 'rejected the proposal',
-  retry: () => 'queued another attempt',
+  retry: (e) => (e.reason ? 'requested changes' : 'queued another attempt'),
   cancel: (e) => (e.to_status === 'cancel_requested' ? 'asked the run to stop' : 'cancelled the task'),
   merge: () => 'merged the pull request',
   sync: (e) => e.reason ?? 'brought the base branch into the branch',

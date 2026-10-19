@@ -10,7 +10,7 @@ import StatusBar from './components/StatusBar.vue';
 import QueueView from './components/queue/QueueView.vue';
 import TaskPage from './components/task/TaskPage.vue';
 import { openTask, route } from './router';
-import type { BoardMove } from './taskView';
+import { type BoardMove, needYouCount, openingTab } from './taskView';
 
 const POLL_MS = 2000;
 
@@ -87,6 +87,11 @@ const ACTIONS: Record<BoardMove, (id: number) => Promise<unknown>> = {
   cancel: api.cancel,
 };
 const actOn = (kind: BoardMove, id: number) => act(() => ACTIONS[kind](id));
+/** A task in review opens on its diff, the rest on the overview. */
+function openFromQueue(id: number) {
+  const t = tasks.value.find((x) => x.id === id);
+  openTask(id, t ? openingTab(t) : 'overview');
+}
 const resumeDaemon = () => act(() => api.resume());
 const resumeRepo = (id: number) => act(() => api.resumeRepo(id));
 const reloadRepos = async () => (repos.value = await api.repos());
@@ -100,7 +105,7 @@ function onCreated(task: Detail) {
 watchEffect(() => {
   const s = status.value;
   const label = describeState(s, offline.value).label;
-  const waiting = (s?.counts.proposed ?? 0) + (s?.counts.blocked ?? 0);
+  const waiting = needYouCount(s);
   setTrayStatus(waiting ? `${label} · ${waiting} need you` : label);
 });
 
@@ -143,7 +148,14 @@ onBeforeUnmount(() => clearInterval(timer));
     </main>
     <main v-else class="body">
       <HoldsBar :status="status" :busy="busy" @resume="resumeDaemon" @resume-repo="resumeRepo" @settings="modal = 'settings'" />
-      <QueueView v-if="tasks.length" v-model:selected="selectedId" :tasks="tasks" @open="openTask" @act="actOn" @new-task="modal = 'new'" />
+      <QueueView
+        v-if="tasks.length"
+        v-model:selected="selectedId"
+        :tasks="tasks"
+        @open="openFromQueue"
+        @act="actOn"
+        @new-task="modal = 'new'"
+      />
       <section v-else class="placeholder muted">
         No tasks yet.
         <button class="primary" @click="modal = repos.length ? 'new' : 'repos'">

@@ -23,7 +23,7 @@ Tasks
                                   for proposed, queued, blocked or failed tasks
   agentdeck ls [<search>] [--status s,…] [--repo r] [--sort attention|updated|newest|oldest|priority]
                                   search matches #id, title, branch, model or reason; --status takes statuses,
-                                  states (waiting, stuck, pr-open, merged, pr-closed, no-pr) or groups (active, needs-you)
+                                  states (waiting, stuck, review, merged, pr-closed, no-pr) or groups (active, needs-you)
   agentdeck show <id>
   agentdeck log <id> [--attempt n] [--raw]
   agentdeck attach <id> [plan.html]   attach a plan (docs/plan-format.md) to a task; with no file,
@@ -31,13 +31,14 @@ Tasks
   agentdeck approve <id>...       queue planner proposals
   agentdeck reject <id>...
   agentdeck cancel <id>
-  agentdeck retry <id>
+  agentdeck retry <id> [--note "…"]   another attempt; the note goes first in its prompt (changes requested in review)
+  agentdeck close-pr <id>       close the task's open pull request without merging
   agentdeck merge <id> [--method squash|merge|rebase] [--yes] [--keep-branch]
                                   merge a done task's open PR: shows the preview, asks unless --yes, then deletes
                                   the remote branch and the worktree unless --keep-branch
   agentdeck resolve <id>      merge the base branch into a done task's branch (the PR gets the push); conflicts start
                                   a claude run, and if it fails the merge is undone and the task is blocked
-  agentdeck clean <id>        remove the task's worktree (its branch is kept)
+  agentdeck clean <id>          remove the task's worktree (its branch is kept)
 
 Daemon
   agentdeck install             run the daemon at login via launchd (restarted if it dies)

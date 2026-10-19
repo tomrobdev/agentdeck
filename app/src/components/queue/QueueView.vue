@@ -30,9 +30,14 @@ const display = ref<Display>(
     sort: 'attention',
     show: { repo: true, pr: true, time: true, reason: true },
     showEmpty: false,
-    collapsed: ['cancelled'],
+    collapsed: ['cancelled', 'merged'],
   }),
 );
+// Settings saved before the Merged group existed: collapse it once, then leave it to the user.
+if (loadSetting<boolean>('mergedCollapsed', false) === false) {
+  if (!display.value.collapsed.includes('merged')) display.value = { ...display.value, collapsed: [...display.value.collapsed, 'merged'] };
+  saveSetting('mergedCollapsed', true);
+}
 // The search box isn't remembered; the rest of the filters are.
 const saved = loadSetting<Omit<Filters, 'search'>>('filters', { states: [], repos: [], source: null });
 const filters = ref<Filters>({ ...emptyFilters(), ...saved, search: '' });
@@ -40,9 +45,17 @@ watch(display, (d) => saveSetting('display', d), { deep: true });
 watch(filters, ({ search: _, ...f }) => saveSetting('filters', f), { deep: true });
 
 const shown = computed(() => applyFilters(props.tasks, filters.value));
-const groups = computed(() =>
-  groupTasks(shown.value, display.value.mode === 'board' ? 'status' : display.value.groupBy, display.value.sort),
-);
+const groups = computed(() => {
+  const board = display.value.mode === 'board';
+  const all = groupTasks(shown.value, board ? 'status' : display.value.groupBy, display.value.sort);
+  if (!board) return all;
+  // The board reads left to right as the work flows: review sits just before done.
+  const review = all.find((g) => g.key === 'review');
+  if (!review) return all;
+  const rest = all.filter((g) => g !== review);
+  const done = rest.findIndex((g) => g.key === 'done');
+  return [...rest.slice(0, done), review, ...rest.slice(done)];
+});
 
 /** The rows in screen order, skipping collapsed groups: what j and k walk through. */
 const order = computed(() =>

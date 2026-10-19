@@ -9,6 +9,7 @@ import { LOG_DIR, SETUP_TIMEOUT_MS, TEST_TIMEOUT_MS, ensureDirs } from '../confi
 import type { Db } from '../db/index.ts';
 import { conflictReason, syncSummary } from '../domain/pull-request/conflict.ts';
 import { buildPrompt, claudeArgs } from '../domain/run/prompt.ts';
+import { latestReviewNote } from '../domain/task/history.ts';
 import { type Run, type WorkerResult, firstDenial, parseStatus, resultFields } from '../domain/run/run.ts';
 import type { Task } from '../domain/task/task.ts';
 import { bringInBase } from './conflicts.ts';
@@ -39,6 +40,7 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
   const prompt = buildPrompt(
     task,
     db.runsForTask(task.id).filter((r) => r.id !== runId),
+    latestReviewNote(db.eventsForTask(task.id)),
   );
 
   // Install dependencies before the agent starts: it isn't allowed to install them itself.
