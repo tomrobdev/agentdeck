@@ -14,8 +14,13 @@ const SUMMARY_COLUMNS =
 const statusList = (statuses: TaskStatus[]) => statuses.map((s) => `'${s}'`).join(', ');
 const OPEN = statusList(OPEN_STATUSES);
 
-/** SQL: tasks `d` that a dependent may build on: done, and merged if they have a PR. Mirrors domain/task/dependency.ts. */
-const DEPENDENCY_MET = "d.status = 'done' AND (d.pr_url IS NULL OR d.pr_state = 'merged')";
+/**
+ * SQL: tasks `d` that a dependent may build on: done, and merged unless their repo has pr_mode off.
+ * A done task whose PR isn't opened yet (or failed to open) has pr_url NULL, so it must not count as met.
+ * Mirrors domain/task/dependency.ts.
+ */
+const DEPENDENCY_MET = `d.status = 'done' AND (d.pr_state = 'merged' OR (d.pr_url IS NULL AND d.pr_state IS NULL
+  AND EXISTS (SELECT 1 FROM repos r WHERE r.id = d.repo_id AND r.pr_mode = 'off')))`;
 /** SQL: the task row `t` is free to start (it has no dependency, or the dependency is met). */
 const NOT_WAITING = `(t.after_task IS NULL OR EXISTS (SELECT 1 FROM tasks d WHERE d.id = t.after_task AND ${DEPENDENCY_MET}))`;
 

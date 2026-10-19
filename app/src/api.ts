@@ -21,7 +21,7 @@ export interface Repo {
 }
 
 export type PrMode = 'off' | 'draft' | 'ready';
-export type PrState = 'open' | 'merged' | 'closed';
+export type PrState = 'open' | 'merged' | 'closed' | 'failed';
 export type MergeMethod = 'squash' | 'merge' | 'rebase';
 export const MERGE_METHODS: { key: MergeMethod; label: string; hint: string }[] = [
   { key: 'squash', label: 'Squash and merge', hint: 'One commit on the base branch' },

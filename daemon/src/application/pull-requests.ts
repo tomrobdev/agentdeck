@@ -43,6 +43,8 @@ export async function openPullRequest(db: Db, task: Task): Promise<{ url?: strin
     return { url };
   } catch (err) {
     const error = (err as Error).message;
+    // Tell dependents the PR won't appear on its own. A PR that is already open stays open.
+    if (!(task.pr_url && task.pr_state === 'open')) db.updateTask(task.id, { pr_state: 'failed' });
     logPrEvent(db, task.id, { error });
     return { error };
   }
