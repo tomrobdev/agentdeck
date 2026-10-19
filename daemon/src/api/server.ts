@@ -15,6 +15,8 @@ function send(res: ServerResponse, code: number, data: unknown): void {
   res.end(JSON.stringify(data));
 }
 
+const query = (req: IncomingMessage) => new URL(req.url!, 'http://x').searchParams;
+
 async function readBody(req: IncomingMessage): Promise<any> {
   const chunks: Buffer[] = [];
   for await (const c of req) chunks.push(c as Buffer);
@@ -79,6 +81,19 @@ export function startApi(db: Db, port = API_PORT): Promise<Server> {
         streamLog(db, req, res, Number(id), attempt);
         return undefined; // streamLog owns the response
       },
+    ],
+    // Reads of the task's branch from git objects. ref is head or base, paths are repo-relative.
+    ['GET', /^\/api\/tasks\/(\d+)\/changes$/, (_q, _s, [id]) => actions.taskChanges(db, Number(id))],
+    ['GET', /^\/api\/tasks\/(\d+)\/diff$/, (req, _s, [id]) => actions.taskDiff(db, Number(id), query(req).get('path'))],
+    [
+      'GET',
+      /^\/api\/tasks\/(\d+)\/tree$/,
+      (req, _s, [id]) => actions.taskTree(db, Number(id), query(req).get('ref'), query(req).get('path')),
+    ],
+    [
+      'GET',
+      /^\/api\/tasks\/(\d+)\/file$/,
+      (req, _s, [id]) => actions.taskFile(db, Number(id), query(req).get('ref'), query(req).get('path')),
     ],
   ];
 
