@@ -108,8 +108,77 @@ export interface Run {
   denials: number;
 }
 
+/** One status change in a task's history (task_events). Tasks from before migration step 6 have none. */
+export interface TaskEventRow {
+  id: number;
+  task_id: number;
+  type: 'created' | 'claim' | 'finish' | 'rate_limited' | 'cancel' | 'approve' | 'reject' | 'retry' | 'recover';
+  from_status: TaskStatus | null;
+  to_status: TaskStatus | null;
+  reason: string | null;
+  at: string;
+}
+
 export interface TaskDetail extends Task {
   runs: Run[];
+  events: TaskEventRow[];
+}
+
+/** Git refs the file endpoints accept: the task's branch, or where it forked from the base branch. */
+export type FileRef = 'head' | 'base';
+
+export interface ChangedFile {
+  path: string;
+  old_path: string | null;
+  status: 'A' | 'M' | 'D' | 'R';
+  additions: number;
+  deletions: number;
+  binary: boolean;
+}
+
+export interface Commit {
+  sha: string;
+  subject: string;
+  author: string;
+  at: string;
+}
+
+export interface Changes {
+  base_ref: string;
+  base: string;
+  head: string;
+  files: ChangedFile[];
+  commits: Commit[];
+}
+
+export interface FilePatch {
+  path: string;
+  patch: string;
+  truncated: boolean;
+}
+
+export interface TreeEntry {
+  name: string;
+  path: string;
+  type: 'file' | 'dir';
+  size: number | null;
+}
+
+export interface TreeListing {
+  ref: FileRef;
+  sha: string;
+  path: string;
+  entries: TreeEntry[];
+}
+
+export interface FileContent {
+  path: string;
+  ref: FileRef;
+  sha: string;
+  size: number;
+  binary: boolean;
+  truncated: boolean;
+  text: string | null;
 }
 
 export interface UsageWindow {
@@ -167,7 +236,7 @@ export interface Settings {
 
 export type LogEntry =
   | { kind: 'text'; text: string }
-  | { kind: 'tool'; name: string; input: string }
+  | { kind: 'tool'; name: string; input: string; file?: string }
   | { kind: 'result'; subtype: string; turns: number; cost: number }
   | { kind: 'setup'; passed: boolean; cmd: string; output: string }
   | { kind: 'tests'; passed: boolean; output: string }
@@ -233,6 +302,10 @@ export const api = {
   }) => call<TaskDetail>('/api/tasks', { method: 'POST', json: t }),
   cancel: (id: number) => call<{ result: string }>(`/api/tasks/${id}/cancel`, { method: 'POST' }),
   retry: (id: number) => call<TaskDetail>(`/api/tasks/${id}/retry`, { method: 'POST' }),
+  changes: (id: number) => call<Changes>(`/api/tasks/${id}/changes`),
+  diff: (id: number, path: string) => call<FilePatch>(`/api/tasks/${id}/diff?path=${encodeURIComponent(path)}`),
+  tree: (id: number, ref: FileRef, path = '') => call<TreeListing>(`/api/tasks/${id}/tree?ref=${ref}&path=${encodeURIComponent(path)}`),
+  file: (id: number, ref: FileRef, path: string) => call<FileContent>(`/api/tasks/${id}/file?ref=${ref}&path=${encodeURIComponent(path)}`),
   logUrl: (id: number, attempt?: number) => `${API_BASE}/api/tasks/${id}/log${attempt ? `?attempt=${attempt}` : ''}`,
 };
 

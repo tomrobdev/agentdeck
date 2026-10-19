@@ -19,3 +19,12 @@ export function setTrayStatus(status: string): void {
   lastTray = status;
   invoke('set_tray_status', { status }).catch(() => {});
 }
+
+/** Open a URL in the system browser; in a plain browser, a new tab. Never navigates the dashboard itself. */
+export async function openExternal(url: string): Promise<void> {
+  if (!/^https?:\/\//.test(url)) return;
+  if (isNative) {
+    const { openUrl } = await import('@tauri-apps/plugin-opener');
+    await openUrl(url);
+  } else window.open(url, '_blank', 'noopener');
+}

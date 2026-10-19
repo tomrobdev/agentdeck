@@ -4,7 +4,7 @@ import { type TaskDetail, ago, fmtTokens, totalTokens } from '../api';
 import LogView from './LogView.vue';
 
 const props = defineProps<{ task: TaskDetail }>();
-defineEmits<{ cancel: []; retry: []; approve: []; reject: [] }>();
+defineEmits<{ back: []; cancel: []; retry: []; approve: []; reject: [] }>();
 
 const attempt = ref<number | null>(null);
 const showPrompt = ref(false);
@@ -38,6 +38,7 @@ async function copy(text: string, what: string) {
 <template>
   <section class="detail">
     <div class="head">
+      <button class="back" title="Back to the queue (Esc)" @click="$emit('back')">←</button>
       <div>
         <h2>{{ task.title }}</h2>
         <div class="muted">
