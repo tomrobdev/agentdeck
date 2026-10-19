@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { type Changes, type TaskDetail, ago, api } from '../../api';
 import { type TaskTab, go, openTask } from '../../router';
+import SnippetPopover from '../files/SnippetPopover.vue';
 import StatusIcon from '../queue/StatusIcon.vue';
 import ChangesTab from './ChangesTab.vue';
 import CodeTab from './CodeTab.vue';
@@ -13,6 +14,7 @@ import Sidebar from './Sidebar.vue';
 const props = defineProps<{ task: TaskDetail; tab: TaskTab; query: Record<string, string> }>();
 const emit = defineEmits<{ act: [kind: 'approve' | 'reject' | 'retry' | 'cancel']; changed: []; error: [msg: string] }>();
 
+const pageEl = ref<HTMLElement | null>(null);
 const changes = ref<Changes | null>(null);
 const changesError = ref('');
 
@@ -96,7 +98,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
 </script>
 
 <template>
-  <section class="page">
+  <section ref="pageEl" class="page">
+    <SnippetPopover v-if="pageEl" :task-id="task.id" :root="pageEl" />
     <header class="head">
       <button class="back" title="Back to the queue (Esc)" @click="go({ name: 'queue' })">←</button>
       <div class="titles">
@@ -157,6 +160,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
         <OverviewTab
           v-if="tab === 'overview'"
           :task="task"
+          :changes="changes"
           :is-path="isPath"
           @run="(a) => openTask(task.id, 'runs', { run: String(a) })"
           @path="openFile"

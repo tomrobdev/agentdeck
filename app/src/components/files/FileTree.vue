@@ -31,11 +31,23 @@ const error = ref('');
 const filter = ref('');
 const filterBox = ref<HTMLInputElement | null>(null);
 
-async function ensure(dir: string) {
-  if (children.has(dir) || loading.has(dir)) return;
+// In-flight loads, so a second caller waits for the first instead of seeing an empty folder.
+const pending = new Map<string, Promise<void>>();
+function ensure(dir: string): Promise<void> {
+  if (children.has(dir)) return Promise.resolve();
+  if (!pending.has(dir))
+    pending.set(
+      dir,
+      fetchDir(dir).finally(() => pending.delete(dir)),
+    );
+  return pending.get(dir)!;
+}
+async function fetchDir(dir: string) {
+  const load = props.load;
   loading.add(dir);
   try {
-    const list = await props.load(dir);
+    const list = await load(dir);
+    if (load !== props.load) return; // another task or ref took over meanwhile
     children.set(dir, list);
     if (props.expandAll) for (const n of list) if (n.type === 'dir') await toggle(n.path, true);
   } catch (e) {
@@ -59,6 +71,7 @@ watch(
   () => {
     children.clear();
     open.clear();
+    pending.clear();
     error.value = '';
     ensure('');
     revealSelected();

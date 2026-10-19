@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { type Run, type TaskDetail, type TaskEventRow, ago, fmtTokens, totalTokens, runDuration } from '../../api';
+import { type Changes, type Run, type TaskDetail, type TaskEventRow, ago, fmtTokens, runDuration, totalTokens } from '../../api';
 import Markdown from '../files/Markdown.vue';
+import DocumentsCard from './DocumentsCard.vue';
 
 // The prompt as the description, then everything that happened, oldest first: status changes
 // (task_events) and runs. Runs stand in for claim and finish events, which they describe better.
-const props = defineProps<{ task: TaskDetail; isPath?: (p: string) => boolean }>();
+const props = defineProps<{ task: TaskDetail; changes: Changes | null; isPath?: (p: string) => boolean }>();
 const emit = defineEmits<{ run: [attempt: number]; path: [path: string, line: number | null] }>();
 
 const promptOpen = ref(false);
@@ -51,6 +52,15 @@ const outcomeClass = (r: Run) => `s-${r.outcome ?? 'running'}`;
       </div>
       <button v-if="longPrompt" class="more" @click="promptOpen = !promptOpen">{{ promptOpen ? 'Show less' : 'Show all' }}</button>
     </article>
+
+    <DocumentsCard
+      :task-id="task.id"
+      :files="changes?.files ?? []"
+      :head="changes?.head ?? null"
+      :is-path="isPath"
+      @open="(p) => emit('path', p, null)"
+      @path="(p, l) => emit('path', p, l)"
+    />
 
     <ol class="timeline">
       <li v-for="(it, i) in items" :key="i" class="item" :class="it.kind === 'run' ? outcomeClass(it.run) : ''">
