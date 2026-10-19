@@ -11,6 +11,19 @@ const STEP_ICON: Record<PlanStep['status'], string> = { done: '✓', doing: '◐
 const finished = computed(() => props.plan.steps.filter((s) => s.status === 'done' || s.status === 'skipped').length);
 const total = computed(() => props.plan.steps.length);
 
+// Readable defaults for a plan that brings no styles of its own. Put first in <head>, so a plan's own CSS wins.
+const BASE_STYLE = `<style>
+:root { color-scheme: light dark; }
+body { margin: 0; padding: 16px 20px; background: Canvas; color: CanvasText; font: 14px/1.6 -apple-system, BlinkMacSystemFont, sans-serif; }
+h1 { font-size: 1.5em; } h2 { font-size: 1.15em; margin-top: 1.4em; }
+code, pre { font-family: ui-monospace, Menlo, monospace; }
+</style>`;
+function withBaseStyle(page: string) {
+  const head = /<head[^>]*>/i.exec(page);
+  if (head) return page.slice(0, head.index + head[0].length) + BASE_STYLE + page.slice(head.index + head[0].length);
+  return page.replace(/^(\s*<!doctype[^>]*>)?/i, (doctype) => doctype + BASE_STYLE);
+}
+
 const full = ref(false);
 const html = ref<string | null>(null);
 const error = ref('');
@@ -19,7 +32,7 @@ let scrollTo: string | null = null;
 
 async function load() {
   try {
-    html.value = (await api.planHtml(props.taskId, props.plan.id)).html;
+    html.value = withBaseStyle((await api.planHtml(props.taskId, props.plan.id)).html);
     error.value = '';
   } catch (e) {
     error.value = `Couldn't load the plan: ${(e as Error).message}`;
