@@ -2,11 +2,17 @@
 
 export type LogEntry =
   | { kind: 'text'; text: string }
-  | { kind: 'tool'; name: string; input: string }
+  | { kind: 'tool'; name: string; input: string; file?: string } // file: the path the tool reads or writes, uncut
   | { kind: 'result'; subtype: string; turns: number; cost: number }
   | { kind: 'setup'; passed: boolean; cmd: string; output: string }
   | { kind: 'tests'; passed: boolean; output: string }
   | { kind: 'error'; text: string };
+
+/** The file a tool call names (Read, Edit, Write: file_path; Glob, Grep: path; NotebookEdit: notebook_path). */
+function toolFile(input: any): string | undefined {
+  const file = input?.file_path ?? input?.path ?? input?.notebook_path;
+  return typeof file === 'string' && file ? file : undefined;
+}
 
 export function parseLogLine(line: string): LogEntry[] {
   let ev: any;
@@ -19,7 +25,10 @@ export function parseLogLine(line: string): LogEntry[] {
     case 'assistant':
       return (ev.message?.content ?? []).flatMap((c: any): LogEntry[] => {
         if (c.type === 'text' && c.text.trim()) return [{ kind: 'text', text: c.text.trim() }];
-        if (c.type === 'tool_use') return [{ kind: 'tool', name: c.name, input: JSON.stringify(c.input).slice(0, 400) }];
+        if (c.type === 'tool_use') {
+          const file = toolFile(c.input);
+          return [{ kind: 'tool', name: c.name, input: JSON.stringify(c.input).slice(0, 400), ...(file ? { file } : {}) }];
+        }
         return [];
       });
     case 'result':

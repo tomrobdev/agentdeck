@@ -13,6 +13,7 @@ import type { Task } from '../domain/task/task.ts';
 import { warnStuckDependents } from './dependencies.ts';
 import { notifyLater } from './notifications.ts';
 import { pauseRepo } from './pause.ts';
+import { collectPlans } from './plans.ts';
 import { openPullRequest } from './pull-requests.ts';
 import { effectiveTools } from './tools.ts';
 
@@ -76,6 +77,12 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
     await commitLeftovers(wt.path, `agentdeck: uncommitted work from task ${task.id}\n\n${task.title}`);
   } catch (err) {
     writeEvent(log, { type: 'agentdeck_error', text: `commit leftovers: ${(err as Error).message}` });
+  }
+  // Plans the agent wrote on its branch are attached to the task, whatever the outcome.
+  try {
+    await collectPlans(db, task.id);
+  } catch (err) {
+    writeEvent(log, { type: 'agentdeck_error', text: `collect plans: ${(err as Error).message}` });
   }
 
   let outcome: WorkerResult;

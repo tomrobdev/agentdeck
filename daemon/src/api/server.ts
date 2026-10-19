@@ -15,6 +15,8 @@ function send(res: ServerResponse, code: number, data: unknown): void {
   res.end(JSON.stringify(data));
 }
 
+const query = (req: IncomingMessage) => new URL(req.url!, 'http://x').searchParams;
+
 async function readBody(req: IncomingMessage): Promise<any> {
   const chunks: Buffer[] = [];
   for await (const c of req) chunks.push(c as Buffer);
@@ -25,7 +27,14 @@ async function readBody(req: IncomingMessage): Promise<any> {
 function taskDetail(db: Db, id: number) {
   const task = db.getTask(id);
   if (!task) throw new actions.ActionError('no such task');
-  return { ...task, repo: db.getRepo(task.repo_id)?.name ?? null, waiting: waitingFor(db, task), runs: db.runsForTask(id) };
+  return {
+    ...task,
+    repo: db.getRepo(task.repo_id)?.name ?? null,
+    waiting: waitingFor(db, task),
+    runs: db.runsForTask(id),
+    events: db.eventsForTask(id),
+    plans: db.plansForTask(id),
+  };
 }
 
 export function startApi(db: Db, port = API_PORT): Promise<Server> {
@@ -74,6 +83,23 @@ export function startApi(db: Db, port = API_PORT): Promise<Server> {
         return undefined; // streamLog owns the response
       },
     ],
+    // Reads of the task's branch from git objects. ref is head or base, paths are repo-relative.
+    ['GET', /^\/api\/tasks\/(\d+)\/changes$/, (_q, _s, [id]) => actions.taskChanges(db, Number(id))],
+    ['GET', /^\/api\/tasks\/(\d+)\/diff$/, (req, _s, [id]) => actions.taskDiff(db, Number(id), query(req).get('path'))],
+    [
+      'GET',
+      /^\/api\/tasks\/(\d+)\/tree$/,
+      (req, _s, [id]) => actions.taskTree(db, Number(id), query(req).get('ref'), query(req).get('path')),
+    ],
+    [
+      'GET',
+      /^\/api\/tasks\/(\d+)\/file$/,
+      (req, _s, [id]) => actions.taskFile(db, Number(id), query(req).get('ref'), query(req).get('path')),
+    ],
+    // Plans: collected from the branch after each run, or attached (domain/plan).
+    ['POST', /^\/api\/tasks\/(\d+)\/plans$/, (_q, _s, [id], b) => actions.attachPlan(db, Number(id), b)],
+    ['POST', /^\/api\/tasks\/(\d+)\/plans\/collect$/, (_q, _s, [id]) => actions.collectPlans(db, Number(id))],
+    ['GET', /^\/api\/tasks\/(\d+)\/plans\/(\d+)$/, (_q, _s, [id, pid]) => actions.planHtml(db, Number(id), Number(pid))],
   ];
 
   const server = createServer(async (req, res) => {

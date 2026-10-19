@@ -158,3 +158,118 @@ pre {
   color: var(--c, var(--muted));
   white-space: nowrap;
 }
+
+/* Syntax highlighting (highlight.js classes), in the dashboard's palette. */
+:root {
+  --hl-keyword: #a1328f;
+  --hl-string: #2d7d46;
+  --hl-number: #b45d06;
+  --hl-comment: #8a8a84;
+  --hl-title: #2f5fc4;
+  --hl-type: #8b5a00;
+  --hl-attr: #7a4fcf;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --hl-keyword: #e08bd6;
+    --hl-string: #8fd3a0;
+    --hl-number: #f0b070;
+    --hl-comment: #7f7e78;
+    --hl-title: #8fb4ff;
+    --hl-type: #e8c47a;
+    --hl-attr: #c3a6ff;
+  }
+}
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-built_in,
+.hljs-literal {
+  color: var(--hl-keyword);
+}
+.hljs-string,
+.hljs-regexp,
+.hljs-addition,
+.hljs-template-tag {
+  color: var(--hl-string);
+}
+.hljs-number,
+.hljs-symbol,
+.hljs-bullet {
+  color: var(--hl-number);
+}
+.hljs-comment,
+.hljs-quote,
+.hljs-meta {
+  color: var(--hl-comment);
+  font-style: italic;
+}
+.hljs-title,
+.hljs-section,
+.hljs-function .hljs-title {
+  color: var(--hl-title);
+}
+.hljs-type,
+.hljs-class .hljs-title,
+.hljs-title.class_ {
+  color: var(--hl-type);
+}
+.hljs-attr,
+.hljs-attribute,
+.hljs-variable,
+.hljs-property,
+.hljs-name {
+  color: var(--hl-attr);
+}
+.hljs-deletion {
+  color: var(--failed);
+}
+.hljs-emphasis {
+  font-style: italic;
+}
+.hljs-strong {
+  font-weight: 600;
+}
+
+/* A segmented control: a row of buttons, one of them on. */
+.seg {
+  display: flex;
+  flex: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.seg button {
+  border: none;
+  border-radius: 0;
+  background: none;
+  padding: 2px 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.seg button.on {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+/* How a file changed: A, M, D or R. */
+.badge {
+  font:
+    10px ui-monospace,
+    Menlo,
+    monospace;
+  width: 13px;
+  text-align: center;
+  flex: none;
+}
+.b-A {
+  color: var(--done);
+}
+.b-D {
+  color: var(--failed);
+}
+.b-M {
+  color: var(--blocked);
+}
+.b-R {
+  color: var(--running);
+}

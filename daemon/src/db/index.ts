@@ -2,6 +2,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { DB_PATH, ensureDirs } from '../config.ts';
 import { notificationStore } from './notifications.ts';
+import { planStore } from './plans.ts';
 import { plannerRunStore } from './planner-runs.ts';
 import { repoStore } from './repos.ts';
 import { runStore } from './runs.ts';
@@ -27,6 +28,7 @@ export function openDb(path = DB_PATH) {
     ...repoStore(db),
     ...taskStore(db),
     ...runStore(db),
+    ...planStore(db),
     ...plannerRunStore(db),
     ...notificationStore(db),
     ...usageStore(db),

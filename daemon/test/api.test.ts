@@ -63,6 +63,10 @@ test('add repo and task, then read it back', async () => {
   ).json();
   assert.equal(task.status, 'queued');
   assert.equal(task.repo, 'demo');
+  assert.deepEqual(
+    task.events.map((e: any) => [e.type, e.from_status, e.to_status]),
+    [['created', null, 'queued']],
+  );
 
   const list = await (await api('/api/tasks?status=queued')).json();
   assert.deepEqual(

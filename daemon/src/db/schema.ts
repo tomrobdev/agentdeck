@@ -115,6 +115,27 @@ export const MIGRATIONS: Migration[] = [
    ALTER TABLE tasks ADD COLUMN pr_url TEXT;
    ALTER TABLE tasks ADD COLUMN pr_state TEXT;
    ALTER TABLE tasks ADD COLUMN after_task INTEGER;`,
+  // 6: task history. One row per status change, written with the change itself (db/tasks.ts).
+  `CREATE TABLE task_events (
+     id INTEGER PRIMARY KEY,
+     task_id INTEGER NOT NULL,
+     type TEXT NOT NULL,           -- created | the TaskEvent type
+     from_status TEXT, to_status TEXT,
+     reason TEXT,
+     at TEXT NOT NULL DEFAULT (datetime('now'))
+   );
+   CREATE INDEX task_events_task ON task_events(task_id, id);`,
+  // 7: plans attached to a task (domain/plan). One row per plan name; the HTML is parsed on read.
+  `CREATE TABLE task_plans (
+     id INTEGER PRIMARY KEY,
+     task_id INTEGER NOT NULL,
+     name TEXT NOT NULL,           -- the path on the task's branch, or the attached file's name
+     source TEXT NOT NULL,         -- branch | attached
+     html TEXT NOT NULL,
+     created_at TEXT NOT NULL DEFAULT (datetime('now')),
+     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+     UNIQUE (task_id, name)
+   );`,
 ];
 
 /** Runs every step above the database's user_version in one transaction; returns how many ran. */

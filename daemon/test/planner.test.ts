@@ -86,7 +86,7 @@ test('planning proposes capped, de-duplicated tasks that wait for approval', asy
 });
 
 test('approve queues a proposal, reject cancels it, neither works twice', () => {
-  const [a, b] = db.listTasks('proposed');
+  const [a, b] = db.listTasks().filter((t) => t.status === 'proposed');
   actions.approveTask(db, a.id);
   actions.rejectTask(db, b.id);
   assert.equal(db.getTask(a.id)!.status, 'queued');

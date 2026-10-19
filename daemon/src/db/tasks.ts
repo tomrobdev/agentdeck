@@ -2,8 +2,9 @@
 import type { DatabaseSync } from 'node:sqlite';
 import { DEFAULTS } from '../config.ts';
 import { MAX_RESTARTS, type TaskEvent, type TaskStatus, fromStatuses, nextStatus } from '../domain/task/lifecycle.ts';
+import type { TaskEventRow, TaskEventType } from '../domain/task/history.ts';
 import { EDITABLE_STATUSES, OPEN_STATUSES, type Task, type TaskSummary } from '../domain/task/task.ts';
-import { NOW } from './sql.ts';
+import { NOW, atomically } from './sql.ts';
 
 const SUMMARY_COLUMNS =
   'id, repo_id, title, status, priority, model, max_turns, attempts, max_attempts, branch, worktree, blocked_reason, source, restarts, pr_url, pr_state, after_task, created_at, updated_at';
@@ -18,6 +19,12 @@ const DEPENDENCY_MET = "d.status = 'done' AND (d.pr_url IS NULL OR d.pr_state = 
 const NOT_WAITING = `(t.after_task IS NULL OR EXISTS (SELECT 1 FROM tasks d WHERE d.id = t.after_task AND ${DEPENDENCY_MET}))`;
 
 export function taskStore(db: DatabaseSync) {
+  /** Append to a task's history. Callers run it in the same `atomically` block as the status change. */
+  const recordEvent = (task_id: number, type: TaskEventType, from: TaskStatus | null, to: TaskStatus, reason: string | null = null) =>
+    db
+      .prepare('INSERT INTO task_events (task_id, type, from_status, to_status, reason) VALUES (?, ?, ?, ?, ?)')
+      .run(task_id, type, from, to, reason);
+
   return {
     addTask(t: {
       repo_id: number;
@@ -31,31 +38,39 @@ export function taskStore(db: DatabaseSync) {
       source?: 'manual' | 'planner';
       after_task?: number | null;
     }): Task {
-      const info = db
-        .prepare(
-          'INSERT INTO tasks (repo_id, title, prompt, priority, model, max_turns, max_attempts, status, source, after_task) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        )
-        .run(
-          t.repo_id,
-          t.title,
-          t.prompt,
-          t.priority ?? 0,
-          t.model ?? DEFAULTS.model,
-          t.max_turns ?? DEFAULTS.maxTurns,
-          t.max_attempts ?? DEFAULTS.maxAttempts,
-          t.status ?? 'queued',
-          t.source ?? 'manual',
-          t.after_task ?? null,
-        );
-      return this.getTask(Number(info.lastInsertRowid))!;
+      const status = t.status ?? 'queued';
+      const id = atomically(db, () => {
+        const info = db
+          .prepare(
+            'INSERT INTO tasks (repo_id, title, prompt, priority, model, max_turns, max_attempts, status, source, after_task) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          )
+          .run(
+            t.repo_id,
+            t.title,
+            t.prompt,
+            t.priority ?? 0,
+            t.model ?? DEFAULTS.model,
+            t.max_turns ?? DEFAULTS.maxTurns,
+            t.max_attempts ?? DEFAULTS.maxAttempts,
+            status,
+            t.source ?? 'manual',
+            t.after_task ?? null,
+          );
+        const id = Number(info.lastInsertRowid);
+        recordEvent(id, 'created', null, status);
+        return id;
+      });
+      return this.getTask(id)!;
+    },
+    /** A task's status changes, oldest first. Tasks from before migration step 6 have none. */
+    eventsForTask(task_id: number): TaskEventRow[] {
+      return db.prepare('SELECT * FROM task_events WHERE task_id = ? ORDER BY id').all(task_id) as unknown as TaskEventRow[];
     },
     getTask(id: number): Task | undefined {
       return db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as Task | undefined;
     },
-    listTasks(status?: TaskStatus): Task[] {
-      return (status
-        ? db.prepare('SELECT * FROM tasks WHERE status = ? ORDER BY priority DESC, id').all(status)
-        : db.prepare('SELECT * FROM tasks ORDER BY id DESC').all()) as unknown as Task[];
+    listTasks(): Task[] {
+      return db.prepare('SELECT * FROM tasks ORDER BY id DESC').all() as unknown as Task[];
     },
     tasksForRepo(repo_id: number, limit = 40): Task[] {
       return db.prepare('SELECT * FROM tasks WHERE repo_id = ? ORDER BY id DESC LIMIT ?').all(repo_id, limit) as unknown as Task[];
@@ -116,16 +131,22 @@ export function taskStore(db: DatabaseSync) {
     claimNextTask(): Task | undefined {
       const from = fromStatuses({ type: 'claim' });
       const marks = from.map(() => '?').join(', ');
-      return db
-        .prepare(
-          `UPDATE tasks SET status = ?, attempts = attempts + 1, updated_at = ${NOW}
-           WHERE status IN (${marks})
-             AND id = (SELECT t.id FROM tasks t WHERE t.status IN (${marks}) AND ${NOT_WAITING}
-                         AND t.repo_id IN (SELECT id FROM repos WHERE paused_reason IS NULL)
-                       ORDER BY t.priority DESC, t.id LIMIT 1)
-           RETURNING *`,
-        )
-        .get(nextStatus(from[0], { type: 'claim' })!, ...from, ...from) as Task | undefined;
+      const to = nextStatus(from[0], { type: 'claim' })!;
+      return atomically(db, () => {
+        const row = db
+          .prepare(
+            `UPDATE tasks SET status = ?, attempts = attempts + 1, updated_at = ${NOW}
+             WHERE status IN (${marks})
+               AND id = (SELECT t.id FROM tasks t WHERE t.status IN (${marks}) AND ${NOT_WAITING}
+                           AND t.repo_id IN (SELECT id FROM repos WHERE paused_reason IS NULL)
+                         ORDER BY t.priority DESC, t.id LIMIT 1)
+             RETURNING *`,
+          )
+          .get(to, ...from, ...from) as Task | undefined;
+        // A claim is allowed from one status only (queued), so that is where the task came from.
+        if (row) recordEvent(row.id, 'claim', from[0], to);
+        return row;
+      });
     },
     /**
      * Change a task's editable fields. Guarded by status like every other task write: only a task
@@ -184,9 +205,13 @@ export function taskStore(db: DatabaseSync) {
             params.push(opts.reason ?? null);
           }
         }
-        const row = db
-          .prepare(`UPDATE tasks SET ${sets.join(', ')}, updated_at = ${NOW} WHERE id = ? AND status IN (?) RETURNING *`)
-          .get(...params, id, cur.status) as Task | undefined;
+        const row = atomically(db, () => {
+          const row = db
+            .prepare(`UPDATE tasks SET ${sets.join(', ')}, updated_at = ${NOW} WHERE id = ? AND status IN (?) RETURNING *`)
+            .get(...params, id, cur.status) as Task | undefined;
+          if (row) recordEvent(id, event.type, cur.status, to, opts.reason ?? null);
+          return row;
+        });
         if (row) return row;
       }
       return undefined;

@@ -1,9 +1,21 @@
 // Adapter for local git: worktrees, branches and commits.
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { promisify } from 'node:util';
 import { WORKTREE_DIR } from '../config.ts';
+import {
+  type ChangedFile,
+  type Commit,
+  LOG_FORMAT,
+  PATCH_LIMIT,
+  type TreeEntry,
+  capText,
+  mergeChanges,
+  parseLog,
+  parseLsTree,
+  treeEntries,
+} from '../domain/files/files.ts';
 import type { Repo } from '../domain/repo/repo.ts';
 import type { Task } from '../domain/task/task.ts';
 
@@ -38,6 +50,9 @@ export async function refExists(repoPath: string, ref: string): Promise<boolean>
 }
 
 const branchExists = (repoPath: string, branch: string) => refExists(repoPath, `refs/heads/${branch}`);
+
+/** The commit a local branch is at, or null if there is no such branch. */
+export const branchCommit = (repoPath: string, branch: string) => resolveCommit(repoPath, `refs/heads/${branch}`);
 
 export async function hasOrigin(repoPath: string): Promise<boolean> {
   return (await git(repoPath, 'remote')).split('\n').includes('origin');
@@ -116,4 +131,148 @@ export async function isGitRepo(path: string): Promise<boolean> {
 
 export async function currentBranch(path: string): Promise<string> {
   return git(path, 'rev-parse', '--abbrev-ref', 'HEAD');
+}
+
+// Reading commits, trees and files. These read git objects only, never a worktree's files, so they
+// work after the worktree is gone and never show uncommitted work. Paths come after `--` and are
+// taken literally (no pathspec magic such as `:(top)` or globs).
+
+const READ_ENV = { ...process.env, GIT_LITERAL_PATHSPECS: '1' };
+// Diffs look the same whatever the person's git config says.
+const DIFF_FLAGS = ['--no-color', '--no-ext-diff', '--no-textconv', '--src-prefix=a/', '--dst-prefix=b/'];
+
+/** Like `git`, for reads: untrimmed output and literal pathspecs. */
+async function gitRead(cwd: string, ...args: string[]): Promise<string> {
+  const { stdout } = await exec('git', args, { cwd, maxBuffer: 64 * 1024 * 1024, env: READ_ENV });
+  return stdout;
+}
+
+/** Run git and keep at most `limit` bytes of its output, stopping it once there is more. */
+function gitCapped(cwd: string, limit: number, args: string[]): Promise<{ bytes: Buffer; truncated: boolean }> {
+  return new Promise((resolve, reject) => {
+    const child = spawn('git', args, { cwd, env: READ_ENV, stdio: ['ignore', 'pipe', 'pipe'] });
+    const chunks: Buffer[] = [];
+    let size = 0;
+    let truncated = false;
+    let stderr = '';
+    child.stdout.on('data', (c: Buffer) => {
+      if (truncated) return;
+      chunks.push(c);
+      size += c.length;
+      if (size > limit) {
+        truncated = true;
+        child.kill();
+      }
+    });
+    child.stderr.on('data', (c: Buffer) => (stderr += c.toString()));
+    child.on('error', reject);
+    child.on('close', (code) => {
+      if (code !== 0 && !truncated) return reject(new Error(`git ${args[0]} failed: ${stderr.trim()}`));
+      const all = Buffer.concat(chunks);
+      resolve({ bytes: truncated ? all.subarray(0, limit + 1) : all, truncated });
+    });
+  });
+}
+
+/** The commit `ref` names, or null if there is none. */
+export async function resolveCommit(repoPath: string, ref: string): Promise<string | null> {
+  try {
+    return (await git(repoPath, 'rev-parse', '--verify', '--quiet', `${ref}^{commit}`)) || null;
+  } catch {
+    return null;
+  }
+}
+
+async function mergeBase(repoPath: string, a: string, b: string): Promise<string | null> {
+  try {
+    return (await git(repoPath, 'merge-base', a, b)) || null;
+  } catch {
+    return null; // no common history
+  }
+}
+
+async function isAncestor(repoPath: string, a: string, b: string): Promise<boolean> {
+  try {
+    await git(repoPath, 'merge-base', '--is-ancestor', a, b);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Where `head` left the base branch: its merge base with the local base and with origin's copy,
+ * whichever is newer (a task branch starts from either, see startPoint). Doesn't fetch.
+ * Null when neither base ref exists or shares history with `head`.
+ */
+export async function diffBase(repoPath: string, base: string, head: string): Promise<{ ref: string; sha: string } | null> {
+  const candidates = await Promise.all(
+    [
+      { ref: base, full: `refs/heads/${base}` },
+      { ref: `origin/${base}`, full: `refs/remotes/origin/${base}` },
+    ].map(async ({ ref, full }) => {
+      const tip = await resolveCommit(repoPath, full);
+      const sha = tip && (await mergeBase(repoPath, tip, head));
+      return sha ? { ref, sha } : null;
+    }),
+  );
+  const [local, remote] = candidates;
+  if (!local || !remote) return local ?? remote;
+  if (local.sha === remote.sha) return local;
+  return (await isAncestor(repoPath, local.sha, remote.sha)) ? remote : local;
+}
+
+/** Files changed between two commits, renames detected. */
+export async function changedFiles(repoPath: string, base: string, head: string): Promise<ChangedFile[]> {
+  const [nameStatus, numstat] = await Promise.all([
+    gitRead(repoPath, 'diff', ...DIFF_FLAGS, '-M', '-z', '--name-status', base, head, '--'),
+    gitRead(repoPath, 'diff', ...DIFF_FLAGS, '-M', '-z', '--numstat', base, head, '--'),
+  ]);
+  return mergeChanges(nameStatus, numstat);
+}
+
+/** The unified diff of one file between two commits. Pass both paths of a rename so git pairs them. */
+export async function filePatch(
+  repoPath: string,
+  base: string,
+  head: string,
+  paths: string[],
+): Promise<{ patch: string; truncated: boolean }> {
+  const { bytes } = await gitCapped(repoPath, PATCH_LIMIT, ['diff', ...DIFF_FLAGS, '-M', base, head, '--', ...paths]);
+  const { text, truncated } = capText(bytes, PATCH_LIMIT, { wholeLines: true });
+  return { patch: text, truncated };
+}
+
+/** Commits reachable from `head` but not `base`, newest first. */
+export async function commitsBetween(repoPath: string, base: string, head: string): Promise<Commit[]> {
+  return parseLog(await gitRead(repoPath, 'log', '--no-color', `--format=${LOG_FORMAT}`, `${base}..${head}`, '--'));
+}
+
+/** What `path` is at `commit`: a blob (file) or tree (folder), or null if nothing is there. '' is the root. */
+export async function objectAt(
+  repoPath: string,
+  commit: string,
+  path: string,
+): Promise<{ type: 'blob' | 'tree'; size: number | null } | null> {
+  if (!path) return { type: 'tree', size: null };
+  const [entry] = parseLsTree(await gitRead(repoPath, 'ls-tree', '-l', '-z', commit, '--', path));
+  return entry && entry.path === path ? { type: entry.type, size: entry.size } : null;
+}
+
+/** One level of the folder `dir` ('' for the root) at `commit`: folders first, then by name. */
+export async function listTree(repoPath: string, commit: string, dir: string): Promise<TreeEntry[]> {
+  return treeEntries(await gitRead(repoPath, 'ls-tree', '-l', '-z', commit, '--', ...(dir ? [`${dir}/`] : [])));
+}
+
+/** The file at `path` in `commit`, at most `limit` bytes of it, or null if no file is there. */
+export async function readFile(
+  repoPath: string,
+  commit: string,
+  path: string,
+  limit: number,
+): Promise<{ size: number; bytes: Buffer; truncated: boolean } | null> {
+  const obj = await objectAt(repoPath, commit, path);
+  if (obj?.type !== 'blob') return null;
+  const { bytes, truncated } = await gitCapped(repoPath, limit, ['cat-file', 'blob', `${commit}:${path}`]);
+  return { size: obj.size ?? bytes.length, bytes, truncated };
 }

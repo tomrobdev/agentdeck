@@ -28,9 +28,10 @@ export function taskId(arg: string | undefined): number {
   return id;
 }
 
-export function fmtTask(t: Task, repoName: string, db?: Db): string {
+/** `waiting` is looked up in `db` unless the caller already has it. */
+export function fmtTask(t: Task & { waiting?: ReturnType<typeof waitingFor> }, repoName: string, db?: Db): string {
   let extra = t.blocked_reason && (t.status === 'blocked' || t.status === 'failed') ? `  — ${t.blocked_reason}` : '';
-  const waiting = db ? waitingFor(db, t) : null;
+  const waiting = t.waiting !== undefined ? t.waiting : db ? waitingFor(db, t) : null;
   if (waiting)
     extra += waiting.stuck ? `  can't start: ${waiting.stuck} (retry #${waiting.on} or cancel this task)` : `  waiting on #${waiting.on}`;
   if (t.pr_url) extra += `  PR ${t.pr_state ?? 'open'}: ${t.pr_url}`;

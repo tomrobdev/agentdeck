@@ -1,5 +1,6 @@
 // Client for the daemon's local API (daemon/src/api/server.ts).
-export const API_BASE = 'http://127.0.0.1:4317';
+// VITE_AGENTDECK_API points a dev build at another daemon (e.g. one run on a copy of the database).
+export const API_BASE: string = import.meta.env.VITE_AGENTDECK_API ?? 'http://127.0.0.1:4317';
 
 export type TaskStatus = 'proposed' | 'queued' | 'running' | 'done' | 'blocked' | 'failed' | 'cancel_requested' | 'cancelled';
 
@@ -108,8 +109,101 @@ export interface Run {
   denials: number;
 }
 
+/** One status change in a task's history (task_events). Tasks from before migration step 6 have none. */
+export interface TaskEventRow {
+  id: number;
+  task_id: number;
+  type: 'created' | 'claim' | 'finish' | 'rate_limited' | 'cancel' | 'approve' | 'reject' | 'retry' | 'recover';
+  from_status: TaskStatus | null;
+  to_status: TaskStatus | null;
+  reason: string | null;
+  at: string;
+}
+
 export interface TaskDetail extends Task {
   runs: Run[];
+  events: TaskEventRow[];
+  plans: TaskPlan[];
+}
+
+/** A step of a plan, read from its `<section data-plan-step data-status>` (daemon domain/plan). */
+export interface PlanStep {
+  id: string | null;
+  title: string;
+  status: 'todo' | 'doing' | 'done' | 'blocked' | 'skipped';
+}
+
+/** A plan attached to a task, parsed; its HTML comes from `api.planHtml`. */
+export interface TaskPlan {
+  id: number;
+  task_id: number;
+  name: string; // the path on the branch, or the attached file's name
+  source: 'branch' | 'attached';
+  version: string;
+  title: string;
+  summary: string | null;
+  steps: PlanStep[];
+  created_at: string;
+  updated_at: string;
+}
+
+/** Git refs the file endpoints accept: the task's branch, or where it forked from the base branch. */
+export type FileRef = 'head' | 'base';
+
+export const CHANGE_LABEL: Record<ChangedFile['status'], string> = { A: 'added', M: 'modified', D: 'deleted', R: 'renamed' };
+
+export interface ChangedFile {
+  path: string;
+  old_path: string | null;
+  status: 'A' | 'M' | 'D' | 'R';
+  additions: number;
+  deletions: number;
+  binary: boolean;
+}
+
+export interface Commit {
+  sha: string;
+  subject: string;
+  author: string;
+  at: string;
+}
+
+export interface Changes {
+  base_ref: string;
+  base: string;
+  head: string;
+  files: ChangedFile[];
+  commits: Commit[];
+}
+
+export interface FilePatch {
+  path: string;
+  patch: string;
+  truncated: boolean;
+}
+
+export interface TreeEntry {
+  name: string;
+  path: string;
+  type: 'file' | 'dir';
+  size: number | null;
+}
+
+export interface TreeListing {
+  ref: FileRef;
+  sha: string;
+  path: string;
+  entries: TreeEntry[];
+}
+
+export interface FileContent {
+  path: string;
+  ref: FileRef;
+  sha: string;
+  size: number;
+  binary: boolean;
+  truncated: boolean;
+  text: string | null;
 }
 
 export interface UsageWindow {
@@ -167,7 +261,7 @@ export interface Settings {
 
 export type LogEntry =
   | { kind: 'text'; text: string }
-  | { kind: 'tool'; name: string; input: string }
+  | { kind: 'tool'; name: string; input: string; file?: string }
   | { kind: 'result'; subtype: string; turns: number; cost: number }
   | { kind: 'setup'; passed: boolean; cmd: string; output: string }
   | { kind: 'tests'; passed: boolean; output: string }
@@ -233,6 +327,11 @@ export const api = {
   }) => call<TaskDetail>('/api/tasks', { method: 'POST', json: t }),
   cancel: (id: number) => call<{ result: string }>(`/api/tasks/${id}/cancel`, { method: 'POST' }),
   retry: (id: number) => call<TaskDetail>(`/api/tasks/${id}/retry`, { method: 'POST' }),
+  changes: (id: number) => call<Changes>(`/api/tasks/${id}/changes`),
+  diff: (id: number, path: string) => call<FilePatch>(`/api/tasks/${id}/diff?path=${encodeURIComponent(path)}`),
+  tree: (id: number, ref: FileRef, path = '') => call<TreeListing>(`/api/tasks/${id}/tree?ref=${ref}&path=${encodeURIComponent(path)}`),
+  file: (id: number, ref: FileRef, path: string) => call<FileContent>(`/api/tasks/${id}/file?ref=${ref}&path=${encodeURIComponent(path)}`),
+  planHtml: (id: number, planId: number) => call<{ html: string }>(`/api/tasks/${id}/plans/${planId}`),
   logUrl: (id: number, attempt?: number) => `${API_BASE}/api/tasks/${id}/log${attempt ? `?attempt=${attempt}` : ''}`,
 };
 
@@ -247,13 +346,23 @@ export function relTime(unixSeconds: number): string {
   return mins < 90 ? `${mins}m` : `${(mins / 60).toFixed(1)}h`;
 }
 
-/** SQLite datetime('now') is UTC without a zone marker. */
-export function ago(sqliteUtc: string): string {
-  const secs = Math.round((Date.now() - Date.parse(sqliteUtc.replace(' ', 'T') + 'Z')) / 1000);
+/** Every time from the daemon is SQLite's UTC `YYYY-MM-DD HH:MM:SS`, with no zone marker. */
+export function parseTime(s: string): number {
+  return Date.parse(s.replace(' ', 'T') + 'Z');
+}
+
+export function ago(time: string): string {
+  const secs = Math.round((Date.now() - parseTime(time)) / 1000);
   if (secs < 60) return `${secs}s ago`;
   if (secs < 3600) return `${Math.round(secs / 60)}m ago`;
   if (secs < 86400) return `${Math.round(secs / 3600)}h ago`;
   return `${Math.round(secs / 86400)}d ago`;
+}
+
+/** How long a run took, or has taken so far: "45s", "12m", "1.4h". */
+export function runDuration(r: Run): string {
+  const secs = ((r.ended_at ? parseTime(r.ended_at) : Date.now()) - parseTime(r.started_at)) / 1000;
+  return secs < 90 ? `${Math.round(secs)}s` : secs < 5400 ? `${Math.round(secs / 60)}m` : `${(secs / 3600).toFixed(1)}h`;
 }
 
 export function totalTokens(r: Run): number {
