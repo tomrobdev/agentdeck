@@ -6,9 +6,9 @@ import NewTaskForm from './components/NewTaskForm.vue';
 import ReposPanel from './components/ReposPanel.vue';
 import SettingsPanel from './components/SettingsPanel.vue';
 import StatusBar from './components/StatusBar.vue';
-import TaskDetail from './components/TaskDetail.vue';
 import QueueView from './components/queue/QueueView.vue';
-import { go, openTask, route } from './router';
+import TaskPage from './components/task/TaskPage.vue';
+import { openTask, route } from './router';
 import type { BoardMove } from './taskView';
 
 const POLL_MS = 2000;
@@ -112,15 +112,16 @@ onBeforeUnmount(() => clearInterval(timer));
     </div>
 
     <main v-else-if="pageId !== null" class="body">
-      <TaskDetail
-        v-if="detail"
+      <TaskPage
+        v-if="detail && route.current.name === 'task'"
         :task="detail"
-        @back="go({ name: 'queue' })"
-        @cancel="actOn('cancel', detail.id)"
-        @retry="actOn('retry', detail.id)"
-        @approve="actOn('approve', detail.id)"
-        @reject="actOn('reject', detail.id)"
+        :tab="route.current.tab"
+        :query="route.current.query"
+        @act="(kind) => actOn(kind, detail!.id)"
+        @changed="refresh"
+        @error="flash"
       />
+      <section v-else class="placeholder muted">Loading task #{{ pageId }}…</section>
     </main>
     <main v-else class="body">
       <QueueView v-if="tasks.length" v-model:selected="selectedId" :tasks="tasks" @open="openTask" @act="actOn" @new-task="modal = 'new'" />

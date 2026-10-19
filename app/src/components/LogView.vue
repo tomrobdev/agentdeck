@@ -2,7 +2,16 @@
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { type LogEntry, api } from '../api';
 
-const props = defineProps<{ taskId: number; attempt: number | null; live: boolean }>();
+const props = defineProps<{ taskId: number; attempt: number | null; live: boolean; worktree?: string | null }>();
+const emit = defineEmits<{ file: [path: string] }>();
+
+/** A tool's file as a repo path: inside the worktree, made relative; outside it, null (nothing to link to). */
+function repoPath(file: string | undefined): string | null {
+  if (!file) return null;
+  if (!file.startsWith('/')) return file.replace(/^\.\//, '');
+  const root = props.worktree ? props.worktree.replace(/\/$/, '') + '/' : null;
+  return root && file.startsWith(root) ? file.slice(root.length) : null;
+}
 
 const entries = ref<LogEntry[]>([]);
 const streaming = ref(false);
@@ -60,7 +69,11 @@ onBeforeUnmount(close);
       </template>
       <template v-else-if="e.kind === 'tool'">
         <code
-          ><b>{{ e.name }}</b> {{ e.input }}</code
+          ><b>{{ e.name }}</b>
+          <button v-if="repoPath(e.file)" class="file" :title="`Open ${repoPath(e.file)}`" @click="emit('file', repoPath(e.file)!)">
+            {{ repoPath(e.file) }}
+          </button>
+          {{ e.input }}</code
         >
       </template>
       <template v-else-if="e.kind === 'result'">
@@ -87,6 +100,15 @@ onBeforeUnmount(close);
 </template>
 
 <style scoped>
+.file {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--accent);
+  text-decoration: underline;
+  margin-right: 4px;
+}
 .log {
   overflow-y: auto;
   background: var(--code-bg);

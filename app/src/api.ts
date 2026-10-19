@@ -1,5 +1,6 @@
 // Client for the daemon's local API (daemon/src/api/server.ts).
-export const API_BASE = 'http://127.0.0.1:4317';
+// VITE_AGENTDECK_API points a dev build at another daemon (e.g. one run on a copy of the database).
+export const API_BASE: string = import.meta.env.VITE_AGENTDECK_API ?? 'http://127.0.0.1:4317';
 
 export type TaskStatus = 'proposed' | 'queued' | 'running' | 'done' | 'blocked' | 'failed' | 'cancel_requested' | 'cancelled';
 
@@ -320,13 +321,23 @@ export function relTime(unixSeconds: number): string {
   return mins < 90 ? `${mins}m` : `${(mins / 60).toFixed(1)}h`;
 }
 
-/** SQLite datetime('now') is UTC without a zone marker. */
-export function ago(sqliteUtc: string): string {
-  const secs = Math.round((Date.now() - Date.parse(sqliteUtc.replace(' ', 'T') + 'Z')) / 1000);
+/** SQLite's datetime('now') is UTC with no zone; git dates are ISO 8601 with one. */
+export function parseTime(s: string): number {
+  return /[zZ]|[+-]\d\d:?\d\d$/.test(s) ? Date.parse(s) : Date.parse(s.replace(' ', 'T') + 'Z');
+}
+
+export function ago(time: string): string {
+  const secs = Math.round((Date.now() - parseTime(time)) / 1000);
   if (secs < 60) return `${secs}s ago`;
   if (secs < 3600) return `${Math.round(secs / 60)}m ago`;
   if (secs < 86400) return `${Math.round(secs / 3600)}h ago`;
   return `${Math.round(secs / 86400)}d ago`;
+}
+
+/** How long a run took, or has taken so far: "45s", "12m", "1.4h". */
+export function runDuration(r: Run): string {
+  const secs = ((r.ended_at ? parseTime(r.ended_at) : Date.now()) - parseTime(r.started_at)) / 1000;
+  return secs < 90 ? `${Math.round(secs)}s` : secs < 5400 ? `${Math.round(secs / 60)}m` : `${(secs / 3600).toFixed(1)}h`;
 }
 
 export function totalTokens(r: Run): number {
