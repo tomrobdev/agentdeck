@@ -25,7 +25,13 @@ async function readBody(req: IncomingMessage): Promise<any> {
 function taskDetail(db: Db, id: number) {
   const task = db.getTask(id);
   if (!task) throw new actions.ActionError('no such task');
-  return { ...task, repo: db.getRepo(task.repo_id)?.name ?? null, waiting: waitingFor(db, task), runs: db.runsForTask(id) };
+  return {
+    ...task,
+    repo: db.getRepo(task.repo_id)?.name ?? null,
+    waiting: waitingFor(db, task),
+    runs: db.runsForTask(id),
+    events: db.eventsForTask(id),
+  };
 }
 
 export function startApi(db: Db, port = API_PORT): Promise<Server> {

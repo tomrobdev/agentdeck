@@ -1,0 +1,135 @@
+// Task history: every status change records one task_events row, atomically with the change.
+import assert from 'node:assert/strict';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { test } from 'node:test';
+
+process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-events-'));
+
+const { openDb } = await import('../src/db/index.ts');
+type Db = ReturnType<typeof openDb>;
+
+function setup() {
+  const db = openDb(':memory:');
+  const repo = db.addRepo({ name: 'r', path: '/tmp/r', base_branch: 'main' });
+  const add = (status: 'queued' | 'proposed' = 'queued') => db.addTask({ repo_id: repo.id, title: 't', prompt: 'p', status });
+  return { db, add };
+}
+
+const last = (db: Db, id: number) => {
+  const events = db.eventsForTask(id);
+  return events[events.length - 1];
+};
+const brief = (db: Db, id: number) => db.eventsForTask(id).map((e) => [e.type, e.from_status, e.to_status, e.reason]);
+
+test('addTask records created with the initial status', () => {
+  const { db, add } = setup();
+  const q = add();
+  const p = add('proposed');
+  assert.deepEqual(brief(db, q.id), [['created', null, 'queued', null]]);
+  assert.deepEqual(brief(db, p.id), [['created', null, 'proposed', null]]);
+  const e = last(db, q.id);
+  assert.equal(e.task_id, q.id);
+  assert.match(e.at, /^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d$/);
+  db.close();
+});
+
+test('claimNextTask records claim from queued to running', () => {
+  const { db, add } = setup();
+  const t = add();
+  assert.equal(db.claimNextTask()?.id, t.id);
+  assert.deepEqual(brief(db, t.id).at(-1), ['claim', 'queued', 'running', null]);
+  // Nothing to claim: nothing recorded.
+  assert.equal(db.claimNextTask(), undefined);
+  assert.equal(db.eventsForTask(t.id).length, 2);
+  db.close();
+});
+
+test('each lifecycle event records its type, from and to status and reason', () => {
+  const { db, add } = setup();
+  const cases: [string, () => number, Parameters<Db['applyEvent']>[1], string, string, string | null][] = [];
+  const running = () => {
+    const t = add();
+    db.applyEvent(t.id, { type: 'claim' });
+    return t.id;
+  };
+  const proposed = () => add('proposed').id;
+  const blocked = () => {
+    const id = running();
+    db.applyEvent(id, { type: 'finish', outcome: 'blocked' }, { reason: 'stuck' });
+    return id;
+  };
+  cases.push(['claim', () => add().id, { type: 'claim' }, 'queued', 'running', null]);
+  cases.push(['finish done', running, { type: 'finish', outcome: 'done' }, 'running', 'done', null]);
+  cases.push(['finish blocked', running, { type: 'finish', outcome: 'blocked' }, 'running', 'blocked', 'needs a key']);
+  cases.push(['finish failed', running, { type: 'finish', outcome: 'failed', retry: false }, 'running', 'failed', 'tests failed']);
+  cases.push(['finish failed retry', running, { type: 'finish', outcome: 'failed', retry: true }, 'running', 'queued', null]);
+  cases.push(['rate_limited', running, { type: 'rate_limited' }, 'running', 'queued', null]);
+  cases.push(['cancel queued', () => add().id, { type: 'cancel' }, 'queued', 'cancelled', null]);
+  cases.push(['cancel running', running, { type: 'cancel' }, 'running', 'cancel_requested', null]);
+  cases.push(['approve', proposed, { type: 'approve' }, 'proposed', 'queued', null]);
+  cases.push(['reject', proposed, { type: 'reject' }, 'proposed', 'cancelled', null]);
+  cases.push(['retry', blocked, { type: 'retry' }, 'blocked', 'queued', null]);
+  cases.push(['recover', running, { type: 'recover', exhausted: false }, 'running', 'queued', 'restarted']);
+  cases.push(['recover exhausted', running, { type: 'recover', exhausted: true }, 'running', 'failed', 'restarted']);
+
+  for (const [name, make, event, from, to, reason] of cases) {
+    const id = make();
+    const before = db.eventsForTask(id).length;
+    assert.ok(db.applyEvent(id, event, { reason }), name);
+    const events = db.eventsForTask(id);
+    assert.equal(events.length, before + 1, name);
+    assert.deepEqual(brief(db, id).at(-1), [event.type, from, to, reason], name);
+  }
+  db.close();
+});
+
+test('a refused event records nothing', () => {
+  const { db, add } = setup();
+  const t = add();
+  assert.equal(db.applyEvent(t.id, { type: 'approve' }), undefined);
+  assert.equal(db.applyEvent(t.id, { type: 'finish', outcome: 'done' }), undefined);
+  assert.equal(db.applyEvent(9999, { type: 'cancel' }), undefined);
+  assert.deepEqual(brief(db, t.id), [['created', null, 'queued', null]]);
+  assert.equal(db.eventsForTask(9999).length, 0);
+  db.close();
+});
+
+test('the status change and its event land together or not at all', () => {
+  const { db, add } = setup();
+  const t = add();
+  db.raw.exec('DROP TABLE task_events');
+  assert.throws(() => db.applyEvent(t.id, { type: 'cancel' }));
+  assert.equal(db.getTask(t.id)?.status, 'queued');
+  assert.throws(() => db.claimNextTask());
+  assert.equal(db.getTask(t.id)?.status, 'queued');
+  db.close();
+});
+
+test('events compose with an outer transaction', () => {
+  const { db, add } = setup();
+  const t = add();
+  db.raw.exec('BEGIN');
+  db.applyEvent(t.id, { type: 'cancel' });
+  db.raw.exec('ROLLBACK');
+  assert.equal(db.getTask(t.id)?.status, 'queued');
+  assert.deepEqual(brief(db, t.id), [['created', null, 'queued', null]]);
+  db.close();
+});
+
+test('recoverOrphans records a recover event per orphan', () => {
+  const { db, add } = setup();
+  const t = add();
+  db.claimNextTask();
+  db.recoverOrphans();
+  assert.deepEqual(brief(db, t.id).at(-1), ['recover', 'running', 'queued', 'the daemon restarted 1 times while this task was running']);
+  db.close();
+});
+
+test('eventsForTask uses the task_events_task index', () => {
+  const { db } = setup();
+  const plan = db.raw.prepare('EXPLAIN QUERY PLAN SELECT * FROM task_events WHERE task_id = ? ORDER BY id').all(1) as { detail: string }[];
+  assert.match(plan.map((p) => p.detail).join('\n'), /INDEX task_events_task/);
+  db.close();
+});
