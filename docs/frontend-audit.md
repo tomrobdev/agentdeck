@@ -8,17 +8,17 @@ Nothing in `app/` was changed. File references are `path:line` against the tree 
 
 ## 1. Stack and versions
 
-| Piece        | Declared (`app/package.json`) | Resolved (`pnpm-lock.yaml`) |
-| ------------ | ----------------------------- | --------------------------- |
-| Vue          | `^3.5.13`                     | 3.5.44                      |
-| Vite         | `^8.0.16`                     | 8.3.4                       |
-| Vue plugin   | `@vitejs/plugin-vue ^6.0.7`   | 6.0.10                      |
-| TypeScript   | `~6.0.3`                      | 6.0.3                       |
-| vue-tsc      | `^3.3.5`                      | 3.3.13                      |
-| Tauri        | `@tauri-apps/api ^2`, `cli ^2` | api 2.12.4, cli 2.12.3     |
-| highlight.js | `11.12.0`                     | 11.12.0                     |
-| markdown-it  | `15.0.3`                      | 15.0.3                      |
-| DOMPurify    | `3.4.17`                      | 3.4.17                      |
+| Piece        | Declared (`app/package.json`)  | Resolved (`pnpm-lock.yaml`) |
+| ------------ | ------------------------------ | --------------------------- |
+| Vue          | `^3.5.13`                      | 3.5.44                      |
+| Vite         | `^8.0.16`                      | 8.3.4                       |
+| Vue plugin   | `@vitejs/plugin-vue ^6.0.7`    | 6.0.10                      |
+| TypeScript   | `~6.0.3`                       | 6.0.3                       |
+| vue-tsc      | `^3.3.5`                       | 3.3.13                      |
+| Tauri        | `@tauri-apps/api ^2`, `cli ^2` | api 2.12.4, cli 2.12.3      |
+| highlight.js | `11.12.0`                      | 11.12.0                     |
+| markdown-it  | `15.0.3`                       | 15.0.3                      |
+| DOMPurify    | `3.4.17`                       | 3.4.17                      |
 
 - **No CSS tooling.** There is no PostCSS config, no Sass and no CSS framework. The whole design system is one global `style.css` (275 lines) plus a `<style scoped>` block in almost every SFC. `Markdown.vue:27` is the one unscoped block, because it styles `v-html` output.
 - **No router or state library.** `router.ts` and `taskView.ts` are hand-rolled. This is irrelevant to styling except that dynamic class names come from `taskView.ts` and `api.ts` (see section 6).
@@ -31,16 +31,16 @@ Nothing in `app/` was changed. File references are `path:line` against the tree 
 
 ### What exists (`style.css:1-43`, `162-182`)
 
-| Group         | Tokens                                                                                                      |
-| ------------- | ----------------------------------------------------------------------------------------------------------- |
-| Surface       | `--bg`, `--panel`, `--panel-2`, `--code-bg`                                                                 |
-| Line          | `--border`                                                                                                  |
-| Text          | `--text`, `--muted`                                                                                         |
-| Accent        | `--accent`, `--accent-text`                                                                                 |
-| Status        | `--queued`, `--running`, `--done`, `--blocked`, `--failed`, `--cancelled` (`proposed` reuses `--accent`)    |
-| Syntax        | `--hl-keyword`, `--hl-string`, `--hl-number`, `--hl-comment`, `--hl-title`, `--hl-type`, `--hl-attr`        |
-| Radius        | `--radius: 8px`                                                                                             |
-| Private       | `--c`, the "current status colour". It is set by the `.s-*` classes (`style.css:115-136`) and read by `.dot`, `.pill`, `StatusIcon`, `OverviewTab`, `RunsTab`. It is a good pattern and should survive the port. |
+| Group   | Tokens                                                                                                                                                                                                           |
+| ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Surface | `--bg`, `--panel`, `--panel-2`, `--code-bg`                                                                                                                                                                      |
+| Line    | `--border`                                                                                                                                                                                                       |
+| Text    | `--text`, `--muted`                                                                                                                                                                                              |
+| Accent  | `--accent`, `--accent-text`                                                                                                                                                                                      |
+| Status  | `--queued`, `--running`, `--done`, `--blocked`, `--failed`, `--cancelled` (`proposed` reuses `--accent`)                                                                                                         |
+| Syntax  | `--hl-keyword`, `--hl-string`, `--hl-number`, `--hl-comment`, `--hl-title`, `--hl-type`, `--hl-attr`                                                                                                             |
+| Radius  | `--radius: 8px`                                                                                                                                                                                                  |
+| Private | `--c`, the "current status colour". It is set by the `.s-*` classes (`style.css:115-136`) and read by `.dot`, `.pill`, `StatusIcon`, `OverviewTab`, `RunsTab`. It is a good pattern and should survive the port. |
 
 Colour tokens are well covered and already switch in dark mode. Everything else is missing or only half-there.
 
@@ -51,6 +51,7 @@ Colour tokens are well covered and already switch in dark mode. Everything else 
 **Type scale.** Only the root font is tokenised (`style.css:18-20`: 13px, 1.45). Sizes in use, in px: 8, 10, 11, 11.5, 12, 12.5, 13, 14, 15, 16, 18, 20, plus `em` sizes in `Markdown.vue:46-75` (1.45, 1.2, 1.05, 0.9). The values 11.5 and 12.5 each appear in 3 to 5 places and duplicate their neighbours (`ListView.vue:175`, `BoardView.vue:180`, `SnippetPopover.vue:87`, `FileTree.vue:204`, `CodeTab.vue:162`, `ChangesTab.vue:339`, `DocumentsCard.vue:89`). `font-size: 12px` alone appears about 45 times. Weights are 400, 500, 600 and one `650` (`StatusBar.vue:75`). Line heights are 1.3, 1.45, 1.5, 1.55 and 1.6.
 
 **Font families.** Two stacks are repeated as literals:
+
 - Sans: `style.css:18` and `PlanCard.vue:17` (the plan iframe's own copy).
 - Mono, long form `ui-monospace, 'SF Mono', Menlo, monospace`: `style.css:100`, `CodeView.vue:58`, `DiffView.vue:84`, `ReposPanel.vue:231`.
 - Mono, short form `ui-monospace, Menlo, monospace`: `style.css:256`, `ChangesTab.vue:248,255,338`, `FileTree.vue:232`, `SnippetPopover.vue:86`, `QueueView.vue:172`, `CodeTab.vue:161,205`, `DocumentsCard.vue:88`, `Sidebar.vue:157`.
@@ -60,6 +61,7 @@ That is 16 copies of two almost-equal stacks. The shorthand `font: 12px ui-monos
 **Radii.** One token (`--radius: 8px`) is used in 3 places (`App.vue:191`, `LogView.vue:116`, `ReposPanel.vue:185`). The literal `8px` appears in 15 more (`App.vue:202`, `Popover.vue:48`, `SnippetPopover.vue:79`, `BoardView.vue:143`, `TaskPage.vue:277`, `CodeTab.vue:145`, `DocumentsCard.vue:62`, `ChangesTab.vue:315`, `OverviewTab.vue:122,211`, `PlanCard.vue:109`, `RunsTab.vue:72,117`, and more). Other values: 1, 3, 4, 5, 6, 10, 12, 999 px and 50%. The set that is really in use is 4 (kbd, inline code), 6 (controls), 8 (cards, popovers), 12 (modal), pill. The odd ones are 3 (progress tracks), 5 (tree rows, menu items, inline code in `TaskPage.vue:228`) and 10 (`BoardView.vue:113`).
 
 **Shadows.** Three hard-coded, all black-alpha:
+
 - `Modal.vue:43`: `0 20px 60px rgb(0 0 0 / 0.25)`.
 - `Popover.vue:49`: `0 8px 28px rgb(0 0 0 / 0.18)`.
 - `SnippetPopover.vue:81`: `0 10px 30px rgb(0 0 0 / 0.22)`.
@@ -77,6 +79,7 @@ Two more inset "selected" accents: `ListView.vue:138` and `RunsTab.vue:92` (`ins
 **Layout widths.** Sidebar 240 (`Sidebar.vue:116`), changed-files tree 260 (`ChangesTab.vue:302`), code-tab side 280 (`CodeTab.vue:129`), board column 260 (`BoardView.vue:109`), modal 560 (`Modal.vue:36`), snippet popover 550 (`SnippetPopover.vue:76`) and a matching magic `window.innerWidth - 560` in script (`SnippetPopover.vue:43`).
 
 **Missing colour roles** (they are expressed today as one-off `color-mix` calls):
+
 - Tints: ten different `color-mix` percentages (8, 9, 10, 12, 13, 14, 16, 18, 20, 22, 26) over `--panel` or `transparent`.
 - A focus ring (only inputs get one, `style.css:91-96`; buttons rely on the browser default).
 - Control border (inputs and checkboxes reuse the decorative `--border`).
@@ -103,17 +106,17 @@ Five of them also carry the same header strip (`--panel-2` background, bottom bo
 
 ### 3.2 Chips and pills (9 variants)
 
-| Where                                             | Shape                         | Notes                                           |
-| ------------------------------------------------- | ----------------------------- | ----------------------------------------------- |
-| `style.css:150` `.pill`                           | pill, 14% tint of `--c`       | 12px, padding 2px 8px                           |
-| `TaskPage.vue:231` `.pill` (scoped override)      | pill, 16% tint over `--panel` | 500 weight, padding 2px 10px; shadows the global |
-| `ListView.vue:174` `.chip`                        | outline pill                  | 11.5px, `line-height: 18px`, `pr-*` colour variants (`:183-190`) |
-| `BoardView.vue:179` `.chip`                       | outline pill                  | same as ListView but no PR colours, so the two views disagree |
-| `CodeTab.vue:173` `.chip`                         | outline pill, amber           | 11px, 0 6px                                     |
-| `FilterBar.vue:89` `.fchip`                       | outline rounded-6 with ×      | not a pill radius                               |
-| `DisplayMenu.vue:96` `.prop`                      | toggle pill                   | on-state = 12% accent tint                      |
-| `TaskPage.vue:266` `.count`                       | filled pill                   | 11px, `--panel-2`                               |
-| `ReposPanel.vue:206` `.paused`                    | plain amber text              | not a chip, but a status label                  |
+| Where                                        | Shape                         | Notes                                                            |
+| -------------------------------------------- | ----------------------------- | ---------------------------------------------------------------- |
+| `style.css:150` `.pill`                      | pill, 14% tint of `--c`       | 12px, padding 2px 8px                                            |
+| `TaskPage.vue:231` `.pill` (scoped override) | pill, 16% tint over `--panel` | 500 weight, padding 2px 10px; shadows the global                 |
+| `ListView.vue:174` `.chip`                   | outline pill                  | 11.5px, `line-height: 18px`, `pr-*` colour variants (`:183-190`) |
+| `BoardView.vue:179` `.chip`                  | outline pill                  | same as ListView but no PR colours, so the two views disagree    |
+| `CodeTab.vue:173` `.chip`                    | outline pill, amber           | 11px, 0 6px                                                      |
+| `FilterBar.vue:89` `.fchip`                  | outline rounded-6 with ×      | not a pill radius                                                |
+| `DisplayMenu.vue:96` `.prop`                 | toggle pill                   | on-state = 12% accent tint                                       |
+| `TaskPage.vue:266` `.count`                  | filled pill                   | 11px, `--panel-2`                                                |
+| `ReposPanel.vue:206` `.paused`               | plain amber text              | not a chip, but a status label                                   |
 
 **Make one:** `Chip` with `tone` (neutral, accent, and the six statuses), `variant` (outline or tint) and a `size`. The `--c` custom property already gives the tone mechanism.
 
@@ -176,14 +179,14 @@ The "+n −n" add and del counts are written twice (`ChangesTab.vue:246-259`, `F
 
 Colours that bypass the tokens:
 
-| Value              | Where                                                                                  | Problem                                               |
-| ------------------ | -------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| `#8250df` (purple) | `ListView.vue:184-185` (`.pr-merged`)                                                  | Not themed. 3.3:1 on the dark panel (section 5).      |
-| `rgb(0 0 0 / .35)` | `Modal.vue:30`                                                                         | Same scrim in both themes.                            |
-| `rgb(0 0 0 / …)`   | `Modal.vue:43`, `Popover.vue:49`, `SnippetPopover.vue:81`                              | See section 2.                                        |
-| `white` via `--accent-text: #fff` | `style.css:9`, never overridden in dark                                  | White on the dark accent fails (section 5).           |
-| `Canvas` / `CanvasText` | `PlanCard.vue:17`                                                                 | Intentional (plan iframe), but follows the OS only.   |
-| `black` in mask    | `OverviewTab.vue:139`                                                                  | Alpha mask only, fine.                                |
+| Value                             | Where                                                     | Problem                                             |
+| --------------------------------- | --------------------------------------------------------- | --------------------------------------------------- |
+| `#8250df` (purple)                | `ListView.vue:184-185` (`.pr-merged`)                     | Not themed. 3.3:1 on the dark panel (section 5).    |
+| `rgb(0 0 0 / .35)`                | `Modal.vue:30`                                            | Same scrim in both themes.                          |
+| `rgb(0 0 0 / …)`                  | `Modal.vue:43`, `Popover.vue:49`, `SnippetPopover.vue:81` | See section 2.                                      |
+| `white` via `--accent-text: #fff` | `style.css:9`, never overridden in dark                   | White on the dark accent fails (section 5).         |
+| `Canvas` / `CanvasText`           | `PlanCard.vue:17`                                         | Intentional (plan iframe), but follows the OS only. |
+| `black` in mask                   | `OverviewTab.vue:139`                                     | Alpha mask only, fine.                              |
 
 Everything else uses `var(--…)`, and the `color-mix` tints are all expressed against tokens. That is good: the dark theme works wherever a token is used, which is nearly everywhere.
 
@@ -197,60 +200,60 @@ Ratios against WCAG 2.x. "Tint" means the 12 to 16% status tint used by pills an
 
 Neutrals and accent:
 
-| Pair                                           | Ratio | Result |
-| ---------------------------------------------- | ----- | ------ |
-| `--text` on `--panel`                          | 17.0  | pass   |
-| `--muted` (#6d6d68) on `--panel`               | 5.2   | pass   |
-| `--muted` on `--bg`                            | 4.8   | pass   |
-| `--muted` on `--panel-2` (headers, `.seg.on`)  | 4.55  | pass, barely |
-| `--muted` on `--code-bg`                       | 4.6   | pass, barely |
-| `--muted` on diff gutter, added line (22% green) | ≈4.0 | **fail** (`DiffView.vue:138-141`, line numbers) |
-| `--accent` (#c2622d) on `--panel`              | 4.1   | **fail** (links, `.link`, `.more`, `.hint`, hover text) |
-| `--accent` on `--panel-2` / `--bg`             | 3.6 / 3.8 | **fail** (`Markdown.vue:104` links on `--bg`, code-tab hint) |
-| `--accent-text` (#fff) on `--accent`           | 4.1   | **fail** (every `.primary` button, 13px text) |
-| `--border` on `--panel` (input and checkbox edges) | 1.3 | **fail** for a control boundary (3:1 needed, SC 1.4.11) |
+| Pair                                               | Ratio     | Result                                                       |
+| -------------------------------------------------- | --------- | ------------------------------------------------------------ |
+| `--text` on `--panel`                              | 17.0      | pass                                                         |
+| `--muted` (#6d6d68) on `--panel`                   | 5.2       | pass                                                         |
+| `--muted` on `--bg`                                | 4.8       | pass                                                         |
+| `--muted` on `--panel-2` (headers, `.seg.on`)      | 4.55      | pass, barely                                                 |
+| `--muted` on `--code-bg`                           | 4.6       | pass, barely                                                 |
+| `--muted` on diff gutter, added line (22% green)   | ≈4.0      | **fail** (`DiffView.vue:138-141`, line numbers)              |
+| `--accent` (#c2622d) on `--panel`                  | 4.1       | **fail** (links, `.link`, `.more`, `.hint`, hover text)      |
+| `--accent` on `--panel-2` / `--bg`                 | 3.6 / 3.8 | **fail** (`Markdown.vue:104` links on `--bg`, code-tab hint) |
+| `--accent-text` (#fff) on `--accent`               | 4.1       | **fail** (every `.primary` button, 13px text)                |
+| `--border` on `--panel` (input and checkbox edges) | 1.3       | **fail** for a control boundary (3:1 needed, SC 1.4.11)      |
 
 Status colours as text on `--panel`, then on their own tint:
 
-| Token (light)       | On panel | On its tint | Result |
-| ------------------- | -------- | ----------- | ------ |
-| `--queued` #8a8a84  | 3.5      | ≈3.0        | **fail** |
-| `--running` #2f6fdb | 4.75     | ≈4.0        | pill **fail** |
-| `--done` #2e8b57    | 4.2      | ≈3.6        | **fail** |
-| `--blocked` #c98a10 | 2.95     | ≈2.6        | **fail**, the worst |
-| `--failed` #c94141  | 4.9      | ≈4.0        | pill **fail** |
-| `--cancelled` #9a9a94 | 2.8    | n/a         | **fail** |
+| Token (light)         | On panel | On its tint | Result              |
+| --------------------- | -------- | ----------- | ------------------- |
+| `--queued` #8a8a84    | 3.5      | ≈3.0        | **fail**            |
+| `--running` #2f6fdb   | 4.75     | ≈4.0        | pill **fail**       |
+| `--done` #2e8b57      | 4.2      | ≈3.6        | **fail**            |
+| `--blocked` #c98a10   | 2.95     | ≈2.6        | **fail**, the worst |
+| `--failed` #c94141    | 4.9      | ≈4.0        | pill **fail**       |
+| `--cancelled` #9a9a94 | 2.8      | n/a         | **fail**            |
 
 Where these are used as text: pills (`style.css:150`, `TaskPage.vue:231`), the blocked reason line (`ListView.vue:159-168`), `.paused` (`ReposPanel.vue:206`), `.chip` in CodeTab, the `ok`/`bad` run labels (`RunsTab.vue:109-114`), `OverviewTab.vue:200` outcome, `+n`/`−n` counts (`ChangesTab.vue:246-259`), the plan step icons (`PlanCard.vue:169-179`) and `.badge` letters (`style.css:264-275`). As icon fills (`StatusIcon`, `PriorityIcon`) the 3:1 non-text bar applies and every colour except `--blocked` (2.95) and `--cancelled` (2.8) clears it. Shapes already differ per state, which is the right call.
 
 Syntax highlighting, on `--panel` (code view) and on the added-line tint (diff):
 
-| Token (light)           | On panel | On added line | Result |
-| ----------------------- | -------- | ------------- | ------ |
-| `--hl-keyword` #a1328f  | 6.2      | 5.2           | pass   |
-| `--hl-string` #2d7d46   | 5.1      | ≈4.3          | pass on panel, **fail** in diff |
-| `--hl-number` #b45d06   | 4.7      | ≈3.9          | pass on panel, **fail** in diff |
-| `--hl-comment` #8a8a84  | 3.5      | ≈2.9          | **fail** both (`.hljs-comment` is also italic and used for `.hljs-meta`) |
-| `--hl-title` #2f5fc4    | 5.9      | ≈5.0          | pass   |
-| `--hl-type` #8b5a00     | 5.9      | ≈5.0          | pass   |
-| `--hl-attr` #7a4fcf     | 5.5      | ≈4.6          | pass   |
+| Token (light)          | On panel | On added line | Result                                                                   |
+| ---------------------- | -------- | ------------- | ------------------------------------------------------------------------ |
+| `--hl-keyword` #a1328f | 6.2      | 5.2           | pass                                                                     |
+| `--hl-string` #2d7d46  | 5.1      | ≈4.3          | pass on panel, **fail** in diff                                          |
+| `--hl-number` #b45d06  | 4.7      | ≈3.9          | pass on panel, **fail** in diff                                          |
+| `--hl-comment` #8a8a84 | 3.5      | ≈2.9          | **fail** both (`.hljs-comment` is also italic and used for `.hljs-meta`) |
+| `--hl-title` #2f5fc4   | 5.9      | ≈5.0          | pass                                                                     |
+| `--hl-type` #8b5a00    | 5.9      | ≈5.0          | pass                                                                     |
+| `--hl-attr` #7a4fcf    | 5.5      | ≈4.6          | pass                                                                     |
 
 ### 5.2 Dark theme
 
-| Pair                                              | Ratio | Result |
-| ------------------------------------------------- | ----- | ------ |
-| `--text` on `--panel`                             | 13.8  | pass   |
-| `--muted` (#9a9993) on `--panel` / `--panel-2`    | 5.8 / 5.2 | pass |
-| `--accent` (#e07a43) on `--panel`                 | 5.5   | pass   |
-| `--accent-text` (#fff, not overridden) on `--accent` | 3.0 | **fail** (`.primary` buttons in dark) |
-| `--border` on `--panel`                           | 1.3   | **fail** as a control edge |
-| `#8250df` (PR merged) on `--panel`                | 3.3   | **fail** |
-| `--hl-comment` #7f7e78 on `--panel` / `--code-bg` | 4.1 / 4.3 | **fail** |
-| `--cancelled` #77766f on its tint                 | ≈3.1  | **fail** |
-| `--queued` #8f8e88 on its tint                    | ≈4.1  | **fail**, borderline |
-| `--failed` #e36d6d on its tint                    | ≈4.3  | **fail**, borderline |
-| `--running`, `--done`, `--blocked` on their tints | 4.8 to 6.5 | pass |
-| Other `--hl-*` on `--panel`                       | 8 to 11 | pass |
+| Pair                                                 | Ratio      | Result                                |
+| ---------------------------------------------------- | ---------- | ------------------------------------- |
+| `--text` on `--panel`                                | 13.8       | pass                                  |
+| `--muted` (#9a9993) on `--panel` / `--panel-2`       | 5.8 / 5.2  | pass                                  |
+| `--accent` (#e07a43) on `--panel`                    | 5.5        | pass                                  |
+| `--accent-text` (#fff, not overridden) on `--accent` | 3.0        | **fail** (`.primary` buttons in dark) |
+| `--border` on `--panel`                              | 1.3        | **fail** as a control edge            |
+| `#8250df` (PR merged) on `--panel`                   | 3.3        | **fail**                              |
+| `--hl-comment` #7f7e78 on `--panel` / `--code-bg`    | 4.1 / 4.3  | **fail**                              |
+| `--cancelled` #77766f on its tint                    | ≈3.1       | **fail**                              |
+| `--queued` #8f8e88 on its tint                       | ≈4.1       | **fail**, borderline                  |
+| `--failed` #e36d6d on its tint                       | ≈4.3       | **fail**, borderline                  |
+| `--running`, `--done`, `--blocked` on their tints    | 4.8 to 6.5 | pass                                  |
+| Other `--hl-*` on `--panel`                          | 8 to 11    | pass                                  |
 
 ### 5.3 Other accessibility notes
 
@@ -305,96 +308,96 @@ For the two follow-up tasks (themes, then Tailwind). Principles:
 
 ### Colour
 
-| Token             | Light     | Dark      | Notes                                                                   |
-| ----------------- | --------- | --------- | ----------------------------------------------------------------------- |
-| `--bg`            | `#f6f6f4` | `#161615` | unchanged                                                               |
-| `--panel`         | `#ffffff` | `#1f1f1d` | unchanged                                                               |
-| `--panel-2`       | `#f0f0ed` | `#272725` | unchanged                                                               |
-| `--code-bg`       | `#f3f2ee` | `#1a1a18` | unchanged                                                               |
-| `--border`        | `#e2e2dd` | `#33332f` | decorative dividers only                                                |
-| `--border-input`  | `#8f8f89` | `#6f6e68` | **new.** Control edges: 3.2:1 on panel in both themes                   |
-| `--text`          | `#1d1d1b` | `#ecebe6` | unchanged                                                               |
-| `--muted`         | `#5f5f5a` | `#9a9993` | light darkened from `#6d6d68`: 6.4 on panel, 4.9 on the diff gutter     |
-| `--accent`        | `#a8501f` | `#e07a43` | light darkened from `#c2622d`: 5.5 on panel, 4.8 on `--panel-2`         |
-| `--accent-fg`     | `#ffffff` | `#161615` | renamed from `--accent-text`; dark was white at 3.0, now 6.1            |
-| `--focus`         | `var(--accent)` | `var(--accent)` | **new.** 2px outline for `:focus-visible` on every control        |
-| `--queued`        | `#6b6b66` | `#9a9993` | 5.4 on panel                                                            |
-| `--cancelled`     | `#6b6b66` | `#9a9993` | shares the grey with `--queued`; the icon shape already differs         |
-| `--proposed`      | `var(--accent)` | `var(--accent)` | was an implicit alias in `.s-proposed` (`style.css:115`)          |
-| `--running`       | `#2563c9` | `#6c9bf0` | 5.7 on panel                                                            |
-| `--done`          | `#23744a` | `#57b583` | 5.7 on panel                                                            |
-| `--blocked`       | `#8a5a00` | `#e0ab3c` | amber becomes a brown in light; the old `#c98a10` was 2.95              |
-| `--failed`        | `#b53030` | `#ee7f7f` | 6.1 on panel; dark lifted from `#e36d6d`                                |
-| `--merged`        | `#7340c8` | `#b99cf5` | **new**, replaces the hard-coded `#8250df`                              |
-| `--on-status`     | `var(--panel)` | `var(--panel)` | **new.** Glyph colour on filled status and priority icons          |
+| Token            | Light           | Dark            | Notes                                                               |
+| ---------------- | --------------- | --------------- | ------------------------------------------------------------------- |
+| `--bg`           | `#f6f6f4`       | `#161615`       | unchanged                                                           |
+| `--panel`        | `#ffffff`       | `#1f1f1d`       | unchanged                                                           |
+| `--panel-2`      | `#f0f0ed`       | `#272725`       | unchanged                                                           |
+| `--code-bg`      | `#f3f2ee`       | `#1a1a18`       | unchanged                                                           |
+| `--border`       | `#e2e2dd`       | `#33332f`       | decorative dividers only                                            |
+| `--border-input` | `#8f8f89`       | `#6f6e68`       | **new.** Control edges: 3.2:1 on panel in both themes               |
+| `--text`         | `#1d1d1b`       | `#ecebe6`       | unchanged                                                           |
+| `--muted`        | `#5f5f5a`       | `#9a9993`       | light darkened from `#6d6d68`: 6.4 on panel, 4.9 on the diff gutter |
+| `--accent`       | `#a8501f`       | `#e07a43`       | light darkened from `#c2622d`: 5.5 on panel, 4.8 on `--panel-2`     |
+| `--accent-fg`    | `#ffffff`       | `#161615`       | renamed from `--accent-text`; dark was white at 3.0, now 6.1        |
+| `--focus`        | `var(--accent)` | `var(--accent)` | **new.** 2px outline for `:focus-visible` on every control          |
+| `--queued`       | `#6b6b66`       | `#9a9993`       | 5.4 on panel                                                        |
+| `--cancelled`    | `#6b6b66`       | `#9a9993`       | shares the grey with `--queued`; the icon shape already differs     |
+| `--proposed`     | `var(--accent)` | `var(--accent)` | was an implicit alias in `.s-proposed` (`style.css:115`)            |
+| `--running`      | `#2563c9`       | `#6c9bf0`       | 5.7 on panel                                                        |
+| `--done`         | `#23744a`       | `#57b583`       | 5.7 on panel                                                        |
+| `--blocked`      | `#8a5a00`       | `#e0ab3c`       | amber becomes a brown in light; the old `#c98a10` was 2.95          |
+| `--failed`       | `#b53030`       | `#ee7f7f`       | 6.1 on panel; dark lifted from `#e36d6d`                            |
+| `--merged`       | `#7340c8`       | `#b99cf5`       | **new**, replaces the hard-coded `#8250df`                          |
+| `--on-status`    | `var(--panel)`  | `var(--panel)`  | **new.** Glyph colour on filled status and priority icons           |
 
 Derived (written once, as `color-mix` over tokens, so they follow the theme):
 
-| Token                | Definition                                                      | Replaces                                         |
-| -------------------- | --------------------------------------------------------------- | ------------------------------------------------ |
-| `--tint-status`      | `12%`                                                           | pill 14% and 16%, callout 9%                     |
-| `--accent-soft`      | `color-mix(in srgb, var(--accent) 10%, var(--panel))`           | selected rows 8%, board drop 10%, tree 14%, prop on 12% |
-| `--accent-line`      | `color-mix(in srgb, var(--accent) 40%, transparent)`            | dashed drop target, callout borders              |
-| `--diff-add`         | `color-mix(in srgb, var(--done) 14%, var(--panel))`             | `DiffView.vue:132`                               |
-| `--diff-add-gutter`  | `color-mix(in srgb, var(--done) 22%, var(--panel))`             | `DiffView.vue:140`                               |
-| `--diff-del`         | `color-mix(in srgb, var(--failed) 13%, var(--panel))`           | `DiffView.vue:136`                               |
-| `--diff-del-gutter`  | `color-mix(in srgb, var(--failed) 20%, var(--panel))`           | `DiffView.vue:144`                               |
-| `--diff-hunk`        | `color-mix(in srgb, var(--running) 9%, var(--panel))`           | `DiffView.vue:126`                               |
-| `--line-hl`          | `color-mix(in srgb, var(--blocked) 18%, var(--panel))`          | `CodeView.vue:71` (gutter 26%)                   |
-| `--scrim`            | `rgb(0 0 0 / .35)` light, `rgb(0 0 0 / .6)` dark                | `Modal.vue:30`                                   |
+| Token               | Definition                                             | Replaces                                                |
+| ------------------- | ------------------------------------------------------ | ------------------------------------------------------- |
+| `--tint-status`     | `12%`                                                  | pill 14% and 16%, callout 9%                            |
+| `--accent-soft`     | `color-mix(in srgb, var(--accent) 10%, var(--panel))`  | selected rows 8%, board drop 10%, tree 14%, prop on 12% |
+| `--accent-line`     | `color-mix(in srgb, var(--accent) 40%, transparent)`   | dashed drop target, callout borders                     |
+| `--diff-add`        | `color-mix(in srgb, var(--done) 14%, var(--panel))`    | `DiffView.vue:132`                                      |
+| `--diff-add-gutter` | `color-mix(in srgb, var(--done) 22%, var(--panel))`    | `DiffView.vue:140`                                      |
+| `--diff-del`        | `color-mix(in srgb, var(--failed) 13%, var(--panel))`  | `DiffView.vue:136`                                      |
+| `--diff-del-gutter` | `color-mix(in srgb, var(--failed) 20%, var(--panel))`  | `DiffView.vue:144`                                      |
+| `--diff-hunk`       | `color-mix(in srgb, var(--running) 9%, var(--panel))`  | `DiffView.vue:126`                                      |
+| `--line-hl`         | `color-mix(in srgb, var(--blocked) 18%, var(--panel))` | `CodeView.vue:71` (gutter 26%)                          |
+| `--scrim`           | `rgb(0 0 0 / .35)` light, `rgb(0 0 0 / .6)` dark       | `Modal.vue:30`                                          |
 
 Syntax (the `.hljs-*` classes keep their names and read these):
 
-| Token           | Light     | Dark      | Notes                                         |
-| --------------- | --------- | --------- | --------------------------------------------- |
-| `--hl-keyword`  | `#a1328f` | `#e08bd6` | unchanged                                     |
-| `--hl-string`   | `#276b3d` | `#8fd3a0` | light darkened: 5.9 on panel, 4.9 on diff add |
-| `--hl-number`   | `#9a4f05` | `#f0b070` | light darkened: 5.4 on panel, 4.5 on diff add |
-| `--hl-comment`  | `#666660` | `#94938d` | light was 3.5 and dark 4.1; now 5.7 and 4.9, still italic |
-| `--hl-title`    | `#2f5fc4` | `#8fb4ff` | unchanged                                     |
-| `--hl-type`     | `#8b5a00` | `#e8c47a` | unchanged                                     |
-| `--hl-attr`     | `#7a4fcf` | `#c3a6ff` | unchanged                                     |
+| Token          | Light     | Dark      | Notes                                                     |
+| -------------- | --------- | --------- | --------------------------------------------------------- |
+| `--hl-keyword` | `#a1328f` | `#e08bd6` | unchanged                                                 |
+| `--hl-string`  | `#276b3d` | `#8fd3a0` | light darkened: 5.9 on panel, 4.9 on diff add             |
+| `--hl-number`  | `#9a4f05` | `#f0b070` | light darkened: 5.4 on panel, 4.5 on diff add             |
+| `--hl-comment` | `#666660` | `#94938d` | light was 3.5 and dark 4.1; now 5.7 and 4.9, still italic |
+| `--hl-title`   | `#2f5fc4` | `#8fb4ff` | unchanged                                                 |
+| `--hl-type`    | `#8b5a00` | `#e8c47a` | unchanged                                                 |
+| `--hl-attr`    | `#7a4fcf` | `#c3a6ff` | unchanged                                                 |
 
 ### Type
 
-| Token              | Value                                                                  | Replaces                                              |
-| ------------------ | ---------------------------------------------------------------------- | ----------------------------------------------------- |
-| `--font-sans`      | `-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif` | `style.css:18`, `PlanCard.vue:17`                 |
-| `--font-mono`      | `ui-monospace, 'SF Mono', Menlo, monospace`                            | the 16 copies                                         |
-| `--text-2xs`       | `10px`                                                                 | file badges, tree chevrons (8px mark becomes 10)      |
-| `--text-xs`        | `11px`                                                                 | kbd, small print, counts; absorbs 11.5                |
-| `--text-sm`        | `12px`                                                                 | secondary text, chips, code; absorbs 12.5             |
-| `--text-base`      | `13px`                                                                 | body                                                  |
-| `--text-md`        | `14px`                                                                 | brand, plan body                                      |
-| `--text-lg`        | `16px`                                                                 | modal title (was 15), offline title                   |
-| `--text-xl`        | `20px`                                                                 | task title; title input (was 18) matches it           |
-| `--leading-tight`  | `1.3`                                                                  | headings                                              |
-| `--leading-normal` | `1.45`                                                                 | body                                                  |
-| `--leading-code`   | `1.5`                                                                  | code, diff (was 1.5 and 1.55)                         |
-| `--leading-prose`  | `1.55`                                                                 | `.md`                                                 |
-| `--weight-normal` / `--weight-medium` / `--weight-semibold` | `400` / `500` / `600` | the `650` brand weight becomes 600 |
+| Token                                                       | Value                                                                      | Replaces                                         |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------ |
+| `--font-sans`                                               | `-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif` | `style.css:18`, `PlanCard.vue:17`                |
+| `--font-mono`                                               | `ui-monospace, 'SF Mono', Menlo, monospace`                                | the 16 copies                                    |
+| `--text-2xs`                                                | `10px`                                                                     | file badges, tree chevrons (8px mark becomes 10) |
+| `--text-xs`                                                 | `11px`                                                                     | kbd, small print, counts; absorbs 11.5           |
+| `--text-sm`                                                 | `12px`                                                                     | secondary text, chips, code; absorbs 12.5        |
+| `--text-base`                                               | `13px`                                                                     | body                                             |
+| `--text-md`                                                 | `14px`                                                                     | brand, plan body                                 |
+| `--text-lg`                                                 | `16px`                                                                     | modal title (was 15), offline title              |
+| `--text-xl`                                                 | `20px`                                                                     | task title; title input (was 18) matches it      |
+| `--leading-tight`                                           | `1.3`                                                                      | headings                                         |
+| `--leading-normal`                                          | `1.45`                                                                     | body                                             |
+| `--leading-code`                                            | `1.5`                                                                      | code, diff (was 1.5 and 1.55)                    |
+| `--leading-prose`                                           | `1.55`                                                                     | `.md`                                            |
+| `--weight-normal` / `--weight-medium` / `--weight-semibold` | `400` / `500` / `600`                                                      | the `650` brand weight becomes 600               |
 
 ### Space, shape, depth
 
-| Token                     | Value                                         | Notes                                           |
-| ------------------------- | --------------------------------------------- | ----------------------------------------------- |
-| `--spacing`               | `4px`                                         | The unit. Tailwind's `p-1` = 4px, `p-2` = 8px   |
-| scale in use              | 0.5 (2), 1 (4), 1.5 (6), 2 (8), 2.5 (10), 3 (12), 4 (16), 5 (20), 6 (24), 7 (28) | 5, 7, 14, 18, 22, 26 snap to the nearest step |
-| `--radius-xs`             | `4px`                                         | kbd, inline code                                |
-| `--radius-sm`             | `6px`                                         | buttons, inputs, `.seg`, tree rows (was 5)      |
-| `--radius-md`             | `8px`                                         | cards, popovers, board cards, board columns (was 10) |
-| `--radius-lg`             | `12px`                                        | modal                                           |
-| `--radius-pill`           | `999px`                                       | chips, pills, progress tracks (was 3)           |
-| `--shadow-popover`        | light `0 8px 28px rgb(0 0 0 / .18)`, dark `0 8px 28px rgb(0 0 0 / .5)` | menu and snippet panels (was .18 and .22) |
-| `--shadow-modal`          | light `0 20px 60px rgb(0 0 0 / .25)`, dark `0 20px 60px rgb(0 0 0 / .6)` | dialog                       |
-| `--z-sticky`              | `1`                                           | list group and file headers                     |
-| `--z-modal`               | `10`                                          | backdrop                                        |
-| `--z-popover`             | `20`                                          | menus                                           |
-| `--z-snippet`             | `30`                                          | hover snippet                                   |
-| `--z-toast`               | `40`                                          | **new.** The toast was under the scrim          |
-| `--dur-fast` / `--dur`    | `120ms` / `400ms`                             | caret turn, meter fill. Pulse (1.4s) stays and is disabled under `prefers-reduced-motion` |
-| `--breakpoint-sm` / `-md` / `-lg` | `720px` / `900px` / `1080px`          | the three existing media queries                |
-| `--w-sidebar` / `--w-tree` / `--w-column` | `240px` / `260px` / `260px`   | optional; `CodeTab` side (280) snaps to 260 or the tree to 280 |
+| Token                                     | Value                                                                            | Notes                                                                                     |
+| ----------------------------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `--spacing`                               | `4px`                                                                            | The unit. Tailwind's `p-1` = 4px, `p-2` = 8px                                             |
+| scale in use                              | 0.5 (2), 1 (4), 1.5 (6), 2 (8), 2.5 (10), 3 (12), 4 (16), 5 (20), 6 (24), 7 (28) | 5, 7, 14, 18, 22, 26 snap to the nearest step                                             |
+| `--radius-xs`                             | `4px`                                                                            | kbd, inline code                                                                          |
+| `--radius-sm`                             | `6px`                                                                            | buttons, inputs, `.seg`, tree rows (was 5)                                                |
+| `--radius-md`                             | `8px`                                                                            | cards, popovers, board cards, board columns (was 10)                                      |
+| `--radius-lg`                             | `12px`                                                                           | modal                                                                                     |
+| `--radius-pill`                           | `999px`                                                                          | chips, pills, progress tracks (was 3)                                                     |
+| `--shadow-popover`                        | light `0 8px 28px rgb(0 0 0 / .18)`, dark `0 8px 28px rgb(0 0 0 / .5)`           | menu and snippet panels (was .18 and .22)                                                 |
+| `--shadow-modal`                          | light `0 20px 60px rgb(0 0 0 / .25)`, dark `0 20px 60px rgb(0 0 0 / .6)`         | dialog                                                                                    |
+| `--z-sticky`                              | `1`                                                                              | list group and file headers                                                               |
+| `--z-modal`                               | `10`                                                                             | backdrop                                                                                  |
+| `--z-popover`                             | `20`                                                                             | menus                                                                                     |
+| `--z-snippet`                             | `30`                                                                             | hover snippet                                                                             |
+| `--z-toast`                               | `40`                                                                             | **new.** The toast was under the scrim                                                    |
+| `--dur-fast` / `--dur`                    | `120ms` / `400ms`                                                                | caret turn, meter fill. Pulse (1.4s) stays and is disabled under `prefers-reduced-motion` |
+| `--breakpoint-sm` / `-md` / `-lg`         | `720px` / `900px` / `1080px`                                                     | the three existing media queries                                                          |
+| `--w-sidebar` / `--w-tree` / `--w-column` | `240px` / `260px` / `260px`                                                      | optional; `CodeTab` side (280) snaps to 260 or the tree to 280                            |
 
 ### Components these tokens should land in
 
