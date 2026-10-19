@@ -5,7 +5,7 @@ Status: accepted, 2026-10-18
 ## Context
 
 Workers run `claude -p --permission-mode dontAsk` with an allow list of tool rules. The rules decide which
-commands may *start*, not what those commands then do. Rules such as `Bash(node *)` and `Bash(pnpm run *)`
+commands may _start_, not what those commands then do. Rules such as `Bash(node *)` and `Bash(pnpm run *)`
 let a worker run any code: it writes a `.mjs` file or a `package.json` script, then runs it. So "no network,
 no push, stay in the worktree" was only a convention. `Bash(git push*)` in the disallowed tools stops the
 literal command, not `node -e` doing the same thing.
