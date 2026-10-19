@@ -91,6 +91,9 @@ const ATTENTION: Record<StatusGroup, number> = {
   cancelled: 7,
 };
 
+/** The tasks waiting on this PR. A daemon from before the field existed sends none, which reads as empty. */
+export const unblocksOf = (t: TaskSummary): number[] => t.unblocks ?? [];
+
 type Compare = (a: TaskSummary, b: TaskSummary) => number;
 export const SORTS: { key: string; label: string; compare: Compare }[] = [
   {
@@ -99,7 +102,7 @@ export const SORTS: { key: string; label: string; compare: Compare }[] = [
     // In review, the PRs that hold up other tasks come first.
     compare: (a, b) =>
       ATTENTION[statusGroup(a)] - ATTENTION[statusGroup(b)] ||
-      b.unblocks.length - a.unblocks.length ||
+      unblocksOf(b).length - unblocksOf(a).length ||
       b.priority - a.priority ||
       b.id - a.id,
   },

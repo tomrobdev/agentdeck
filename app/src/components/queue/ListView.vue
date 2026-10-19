@@ -2,7 +2,7 @@
 import { nextTick, watch } from 'vue';
 import { ago } from '../../api';
 import { openExternal } from '../../native';
-import { type Group, type GroupBy, canApprove, quickRetry, statusLabel } from '../../taskView';
+import { type Group, type GroupBy, canApprove, quickRetry, statusLabel, unblocksOf } from '../../taskView';
 import PriorityIcon from './PriorityIcon.vue';
 import StatusIcon from './StatusIcon.vue';
 
@@ -71,8 +71,13 @@ watch(
             </span>
             <span class="chips">
               <span v-if="t.waiting && !t.waiting.stuck" class="chip">waiting #{{ t.waiting.on }}</span>
-              <span v-if="t.unblocks.length" class="chip unblocks" title="Merging this PR releases them">
-                unblocks {{ t.unblocks.map((id) => `#${id}`).join(' ') }}
+              <span v-if="unblocksOf(t).length" class="chip unblocks" title="Merging this PR releases them">
+                unblocks
+                {{
+                  unblocksOf(t)
+                    .map((id) => `#${id}`)
+                    .join(' ')
+                }}
               </span>
               <span v-if="t.source === 'planner'" class="chip">planner</span>
               <span v-if="t.attempts > 1" class="chip">try {{ t.attempts }}</span>

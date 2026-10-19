@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { type TaskSummary, ago } from '../../api';
-import { type BoardMove, type Group, type StatusGroup, boardMove } from '../../taskView';
+import { type BoardMove, type Group, type StatusGroup, boardMove, unblocksOf } from '../../taskView';
 import PriorityIcon from './PriorityIcon.vue';
 import StatusIcon from './StatusIcon.vue';
 
@@ -85,7 +85,14 @@ const LABELS: Record<BoardMove, string> = {
             <span v-if="show.repo" class="chip">{{ t.repo }}</span>
             <span v-if="show.pr && t.pr_url" class="chip">PR {{ t.pr_state ?? 'open' }}</span>
             <span v-if="t.waiting" class="chip">{{ t.waiting.stuck ? 'stuck' : `waiting #${t.waiting.on}` }}</span>
-            <span v-if="t.unblocks.length" class="chip">unblocks {{ t.unblocks.map((id) => `#${id}`).join(' ') }}</span>
+            <span v-if="unblocksOf(t).length" class="chip"
+              >unblocks
+              {{
+                unblocksOf(t)
+                  .map((id) => `#${id}`)
+                  .join(' ')
+              }}</span
+            >
             <span v-if="t.source === 'planner'" class="chip">planner</span>
             <span class="time muted">{{ ago(t.updated_at) }}</span>
           </div>

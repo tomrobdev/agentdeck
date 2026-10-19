@@ -94,3 +94,12 @@ test('graceful restart restores the pause state when the restart fails', async (
   assert.equal(db.isPaused(), true);
   db.close();
 });
+
+test('a requested restart exits once nothing is running, and waits otherwise', () => {
+  const asked = { ...base, enabled: false, changed: [], requested: true };
+  const busy = reloadDecision({ ...asked, tasks: 1 });
+  assert.deepEqual([busy.pending, busy.exit], [true, false]);
+  assert.match(busy.reason, /restart requested.*1 running task/);
+  const ready = reloadDecision(asked);
+  assert.deepEqual([ready.pending, ready.exit], [true, true]);
+});

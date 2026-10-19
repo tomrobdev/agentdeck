@@ -224,3 +224,27 @@ test('task list returns summaries, pages with limit/before, and always includes 
   assert.equal((await list('/api/tasks?limit=0')).length > 0, true);
   assert.equal((await list('/api/tasks?limit=abc')).length, all.length);
 });
+
+test('status reports which code the daemon runs, and restart waits while work runs', async () => {
+  const info = { commit: 'abc1234def', started_at: '2026-10-19T14:02:00.000Z' };
+  let requested = 0;
+  const server2 = await startApi(db, 0, () => {}, { info, requestRestart: () => requested++ });
+  const url = `http://127.0.0.1:${(server2.address() as AddressInfo).port}`;
+  try {
+    assert.deepEqual((await (await fetch(`${url}/api/status`)).json()).daemon, info);
+    // The default server has no checkout to name.
+    assert.equal((await (await api('/api/status')).json()).daemon.commit, null);
+
+    const idle = await (await fetch(`${url}/api/daemon/restart`, { method: 'POST' })).json();
+    assert.deepEqual(idle, { waiting: null });
+
+    const repo = db.listRepos()[0];
+    const planner = db.startPlannerRun(repo.id, join(home, 'planner.log'));
+    const busy = await (await fetch(`${url}/api/daemon/restart`, { method: 'POST' })).json();
+    assert.deepEqual(busy, { waiting: '1 planner run' });
+    assert.equal(requested, 2);
+    db.finishPlannerRun(planner, 'ok', 0, null);
+  } finally {
+    server2.close();
+  }
+});

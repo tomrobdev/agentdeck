@@ -6,6 +6,7 @@ import NewTaskForm from './components/NewTaskForm.vue';
 import HoldsBar from './components/queue/HoldsBar.vue';
 import ReposPanel from './components/ReposPanel.vue';
 import SettingsPanel from './components/SettingsPanel.vue';
+import StaleDaemonBar from './components/StaleDaemonBar.vue';
 import StatusBar from './components/StatusBar.vue';
 import QueueView from './components/queue/QueueView.vue';
 import TaskPage from './components/task/TaskPage.vue';
@@ -135,6 +136,7 @@ onBeforeUnmount(() => clearInterval(timer));
     </div>
 
     <main v-else-if="pageId !== null" class="body">
+      <StaleDaemonBar :status="status" @error="flash" />
       <TaskPage
         v-if="detail && route.current.name === 'task'"
         :task="detail"
@@ -147,6 +149,7 @@ onBeforeUnmount(() => clearInterval(timer));
       <section v-else class="placeholder muted">Loading task #{{ pageId }}…</section>
     </main>
     <main v-else class="body">
+      <StaleDaemonBar :status="status" @error="flash" />
       <HoldsBar :status="status" :busy="busy" @resume="resumeDaemon" @resume-repo="resumeRepo" @settings="modal = 'settings'" />
       <QueueView
         v-if="tasks.length"

@@ -2,6 +2,7 @@
 import { resolve } from 'node:path';
 import * as actions from '../application/actions.ts';
 import { startApi } from '../api/server.ts';
+import { headCommit } from '../adapters/git.ts';
 import { BUDGET_KEYS } from '../domain/usage/governor.ts';
 import type { NotifyKind } from '../domain/notification.ts';
 import { Scheduler } from '../application/scheduler.ts';
@@ -27,6 +28,9 @@ async function launchd<T>(fn: () => Promise<T>): Promise<T> {
 /** `daemon` and `run-once` share one implementation; `cmd` says which was typed. */
 const runScheduler: Command = async ({ db, cmd }) => {
   const once = cmd === 'run-once';
+  // Read once at start: it names the code this process loaded, even if the checkout moves on later.
+  const info = { commit: await headCommit(import.meta.dirname), started_at: new Date().toISOString() };
+  let restartRequested = false;
   const changed: string[] = [];
   let lastChangeAt: number | null = null;
   if (!once) {
@@ -39,7 +43,15 @@ const runScheduler: Command = async ({ db, cmd }) => {
     ? undefined
     : {
         check: ({ tasks, planning }: { tasks: number; planning: boolean }) =>
-          reloadDecision({ enabled: reloadOnChange(db), changed, lastChangeAt, now: Date.now(), tasks, planning }),
+          reloadDecision({
+            enabled: reloadOnChange(db),
+            changed,
+            lastChangeAt,
+            now: Date.now(),
+            tasks,
+            planning,
+            requested: restartRequested,
+          }),
         // launchd's KeepAlive starts the daemon again on the code now on disk.
         exit: () => process.exit(0),
       };
@@ -52,7 +64,12 @@ const runScheduler: Command = async ({ db, cmd }) => {
     });
   }
   if (!once) {
-    const api = await startApi(db, API_PORT, () => scheduler.wake()).catch((err) => {
+    const requestRestart = () => {
+      restartRequested = true;
+      // After the API has answered: waking may exit the process at once.
+      setTimeout(() => scheduler.wake(), 200);
+    };
+    const api = await startApi(db, API_PORT, () => scheduler.wake(), { info, requestRestart }).catch((err) => {
       if (err?.code === 'EADDRINUSE')
         die(`port ${API_PORT} is in use: another agentdeck daemon is probably running (see \`agentdeck service\`)`);
       throw err;

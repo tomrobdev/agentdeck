@@ -30,6 +30,8 @@ export interface ReloadInput {
   /** Tasks with a live run. */
   tasks: number;
   planning: boolean;
+  /** Someone asked for a restart (the dashboard's button), whatever the setting or the files say. */
+  requested?: boolean;
 }
 
 export interface ReloadDecision {
@@ -42,10 +44,15 @@ export interface ReloadDecision {
 }
 
 export function reloadDecision(i: ReloadInput): ReloadDecision {
+  const wait = restartWait({ tasks: i.tasks, planner: i.planning ? 1 : 0 });
+  if (i.requested) {
+    return wait
+      ? { pending: true, exit: false, reason: `restart requested; restarting once ${wait} finish` }
+      : { pending: true, exit: true, reason: 'restart requested and nothing is running; exiting so launchd starts the new code' };
+  }
   if (!i.enabled || !i.changed.length) return { pending: false, exit: false, reason: '' };
   const last = i.changed[i.changed.length - 1];
   const what = i.changed.length === 1 ? last : `${last} and ${i.changed.length - 1} more`;
-  const wait = restartWait({ tasks: i.tasks, planner: i.planning ? 1 : 0 });
   if (wait) return { pending: true, exit: false, reason: `source changed (${what}); reloading once ${wait} finish` };
   if (i.lastChangeAt !== null && i.now - i.lastChangeAt < RELOAD_QUIET_MS)
     return { pending: true, exit: false, reason: `source changed (${what}); waiting for edits to settle` };
