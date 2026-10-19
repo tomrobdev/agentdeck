@@ -20,6 +20,10 @@ export interface Repo {
   merge_method: MergeMethod;
   /** 1 = the daemon starts a resolve run on its own when a branch conflicts with the base. */
   auto_resolve: number;
+  /** 1 = the agent's shell commands run in Claude Code's sandbox. */
+  sandbox: number;
+  /** JSON array of hosts sandboxed commands may reach. */
+  network: string;
 }
 
 export type PrMode = 'off' | 'draft' | 'ready';
@@ -413,6 +417,8 @@ export const api = {
       pr_mode?: PrMode;
       merge_method?: MergeMethod;
       auto_resolve?: boolean;
+      sandbox?: boolean;
+      network?: string[];
     },
   ) => call<RepoDetail>(`/api/repos/${id}`, { method: 'POST', json: patch }),
   plan: (id: number) => call<PlanResult>(`/api/repos/${id}/plan`, { method: 'POST' }),

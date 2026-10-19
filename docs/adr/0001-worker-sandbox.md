@@ -27,7 +27,7 @@ literal command, not `node -e` doing the same thing.
 
 - For each run the worker writes `<log dir>/task-<id>-attempt-<n>.settings.json`. It goes next to the run
   log, outside the worktree, so the agent cannot edit it. The worker passes it with `--settings <file>`
-  (`worker.ts` `writeRunSettings`; the content comes from the pure `domain/sandbox.ts` `workerSettings`):
+  (`application/tools.ts` `runSettings`; the content comes from the pure `domain/run/sandbox.ts` `workerSettings`):
 
   ```json
   {
@@ -37,7 +37,7 @@ literal command, not `node -e` doing the same thing.
       "allowUnsandboxedCommands": false,
       "network": { "allowedDomains": ["<repos.network>"], "strictAllowlist": true }
     },
-    "permissions": { "allow": ["Edit(//<worktree>/**)", "Write(//<worktree>/**)"] }
+    "permissions": { "allow": ["Edit(//<worktree>/**)"] }
   }
   ```
 

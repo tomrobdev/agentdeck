@@ -13,7 +13,7 @@ import type { Task } from '../src/domain/task/task.ts';
 const wt = '/Users/me/.agentdeck/worktrees/demo/task-7';
 
 test('file rules cover the worktree by absolute path (// prefix)', () => {
-  assert.deepEqual(worktreeFileRules(wt), [`Edit(/${wt}/**)`, `Write(/${wt}/**)`]);
+  assert.deepEqual(worktreeFileRules(wt), [`Edit(/${wt}/**)`]);
   assert.deepEqual(worktreeFileRules(`${wt}/`), worktreeFileRules(wt));
   assert.ok(worktreeFileRules(wt)[0].startsWith('Edit(//Users/'));
 });
@@ -26,7 +26,7 @@ test('sandbox on: enabled, no fallback, strict allowlist from the repo', () => {
       allowUnsandboxedCommands: false,
       network: { allowedDomains: [], strictAllowlist: true },
     },
-    permissions: { allow: [`Edit(/${wt}/**)`, `Write(/${wt}/**)`] },
+    permissions: { allow: [`Edit(/${wt}/**)`] },
   });
   const net = workerSettings({ worktree: wt, sandbox: true, network: ['registry.npmjs.org', '*.github.com'] });
   assert.deepEqual(net.sandbox.network, { allowedDomains: ['registry.npmjs.org', '*.github.com'], strictAllowlist: true });
@@ -35,7 +35,7 @@ test('sandbox on: enabled, no fallback, strict allowlist from the repo', () => {
 test('sandbox off: disabled, file tools still limited to the worktree', () => {
   assert.deepEqual(workerSettings({ worktree: wt, sandbox: false, network: ['github.com'] }), {
     sandbox: { enabled: false },
-    permissions: { allow: [`Edit(/${wt}/**)`, `Write(/${wt}/**)`] },
+    permissions: { allow: [`Edit(/${wt}/**)`] },
   });
 });
 

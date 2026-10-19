@@ -318,7 +318,7 @@ test('each run gets a sandbox settings file outside its worktree', async () => {
       allowUnsandboxedCommands: false,
       network: { allowedDomains: ['registry.npmjs.org', 'github.com'], strictAllowlist: true },
     });
-    assert.deepEqual(settings.permissions.allow, [`Edit(/${t.worktree}/**)`, `Write(/${t.worktree}/**)`]);
+    assert.deepEqual(settings.permissions.allow, [`Edit(/${t.worktree}/**)`]);
 
     updateRepo(db, 1, { sandbox: false });
     const off = db.addTask({ repo_id: 1, title: 'unsandboxed', prompt: 'FAKE_DONE without the sandbox' });

@@ -12,12 +12,13 @@ export interface WorkerSettings {
 }
 
 /**
- * Edit and Write rules that only cover the worktree. Permission rules mark an absolute path with
- * a leading `//` (a single `/` would be relative to the settings file), hence `/` + the absolute path.
+ * The file-tool rule that only covers the worktree. An Edit rule covers every file-editing tool, Write
+ * included (Claude Code ignores Write rules). Permission rules mark an absolute path with a leading `//`
+ * (a single `/` would be relative to the settings file), hence `/` + the absolute path.
  */
 export function worktreeFileRules(worktree: string): string[] {
   const root = worktree.replace(/\/+$/, '');
-  return [`Edit(/${root}/**)`, `Write(/${root}/**)`];
+  return [`Edit(/${root}/**)`];
 }
 
 /**
