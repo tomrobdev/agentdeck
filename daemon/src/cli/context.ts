@@ -21,6 +21,7 @@ export function parseCommandLine(argv: string[]) {
       attempts: { type: 'string' },
       after: { type: 'string' },
       status: { type: 'string', short: 's' },
+      sort: { type: 'string' },
       attempt: { type: 'string' },
       raw: { type: 'boolean' },
       file: { type: 'string' },

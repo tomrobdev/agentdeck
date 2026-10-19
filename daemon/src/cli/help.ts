@@ -19,7 +19,9 @@ Tasks
                       [--after <task>]          wait until that task is done (and its PR merged, if it has one)
   agentdeck edit <id> [--title t] [--prompt p] [--priority n] [--model m] [--max-turns n] [--attempts n]
                                   for proposed, queued, blocked or failed tasks
-  agentdeck ls [--status proposed|queued|running|done|blocked|failed|cancelled]
+  agentdeck ls [<search>] [--status s,…] [--repo r] [--sort attention|updated|newest|oldest|priority]
+                                  search matches #id, title, branch, model or reason; --status takes statuses,
+                                  states (waiting, stuck, pr-open, merged, pr-closed, no-pr) or groups (active, needs-you)
   agentdeck show <id>
   agentdeck log <id> [--attempt n] [--raw]
   agentdeck approve <id>...       queue planner proposals

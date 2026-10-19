@@ -3,7 +3,8 @@ import { readFileSync } from 'node:fs';
 import * as actions from '../application/actions.ts';
 import { waitingFor } from '../application/dependencies.ts';
 import { removeWorktree } from '../adapters/git.ts';
-import type { TaskStatus } from '../domain/task/lifecycle.ts';
+import { TASK_STATUSES } from '../domain/task/lifecycle.ts';
+import { filterTasks } from '../domain/task/listing.ts';
 import { die, taskId, fmtTask, printLog } from './format.ts';
 import type { Command } from './context.ts';
 
@@ -51,10 +52,24 @@ export const taskCommands: Record<string, Command> = {
     console.log(fmtTask(t, repoName(t.repo_id)));
     console.log(`model ${t.model}, attempts ${t.attempts}/${t.max_attempts}, max turns ${t.max_turns}`);
   },
-  ls: ({ db, flags, repoName }) => {
-    const tasks = db.listTasks(flags.status as TaskStatus | undefined);
-    if (!tasks.length) console.log('no tasks');
+  ls: ({ db, flags, rest, repoName }) => {
+    const repo = flags.repo === undefined ? undefined : (db.findRepo(flags.repo) ?? die(`no repo "${flags.repo}"`));
+    const states = (flags.status ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    // One status keeps its old order, priority first; anything else lists the newest first.
+    const sort = flags.sort ?? (states.length === 1 && (TASK_STATUSES as string[]).includes(states[0]) ? 'priority' : 'newest');
+    const all = db.listTasks().map((t) => ({ ...t, waiting: waitingFor(db, t) }));
+    let tasks;
+    try {
+      tasks = filterTasks(all, { states, repo_id: repo?.id, search: rest.join(' '), sort });
+    } catch (e) {
+      die((e as Error).message);
+    }
+    if (!tasks.length) console.log(all.length ? 'no matching tasks' : 'no tasks');
     for (const t of tasks) console.log(fmtTask(t, repoName(t.repo_id), db));
+    if (tasks.length && tasks.length < all.length) console.log(`${tasks.length} of ${all.length} tasks`);
   },
   show: ({ db, rest, repoName }) => {
     const t = db.getTask(taskId(rest[0])) ?? die('no such task');
