@@ -6,6 +6,7 @@ import { BUDGET_KEYS, type Budget, decide, validateBudget } from '../domain/usag
 import { ActionError } from './errors.ts';
 import { notify, notifySettings } from './notifications.ts';
 import { plannerSettings } from './planner.ts';
+import { queueHolds } from './queue.ts';
 
 export function setPaused(db: Db, paused: boolean): void {
   db.setSetting('paused', paused ? '1' : '0');
@@ -23,6 +24,7 @@ export function status(db: Db) {
     governor: decide(db.usageWindows(), db.budget(), db.maxConcurrent()),
     budget: db.budget(),
     notifications: db.recentNotifications(10),
+    ...queueHolds(db),
   };
 }
 

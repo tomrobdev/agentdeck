@@ -3,6 +3,7 @@ import { type IncomingMessage, type Server, type ServerResponse, createServer } 
 import { serviceStatus } from '../adapters/service.ts';
 import * as actions from '../application/actions.ts';
 import { waitingFor } from '../application/dependencies.ts';
+import { startHolds } from '../application/queue.ts';
 import { API_ALLOWED_ORIGINS, API_PORT } from '../config.ts';
 import type { Db } from '../db/index.ts';
 import type { TaskStatus } from '../domain/task/lifecycle.ts';
@@ -31,6 +32,7 @@ function taskDetail(db: Db, id: number) {
     ...task,
     repo: db.getRepo(task.repo_id)?.name ?? null,
     waiting: waitingFor(db, task),
+    hold: startHolds(db)(task),
     runs: db.runsForTask(id),
     events: db.eventsForTask(id),
     plans: db.plansForTask(id),
@@ -64,9 +66,10 @@ export function startApi(db: Db, port = API_PORT): Promise<Server> {
         const limit = Math.min(Math.max(Math.floor(Number(q.get('limit'))) || 200, 1), 1000);
         const before = Number(q.get('before')) || undefined;
         const names = new Map(db.listRepos().map((r) => [r.id, r.name]));
+        const holdOf = startHolds(db);
         return db
           .listTaskSummaries({ status: status ?? undefined, limit, before })
-          .map((t) => ({ ...t, repo: names.get(t.repo_id) ?? null, waiting: waitingFor(db, t) }));
+          .map((t) => ({ ...t, repo: names.get(t.repo_id) ?? null, waiting: waitingFor(db, t), hold: holdOf(t) }));
       },
     ],
     ['POST', /^\/api\/tasks$/, (_q, _s, _p, b) => taskDetail(db, actions.addTask(db, b).id)],

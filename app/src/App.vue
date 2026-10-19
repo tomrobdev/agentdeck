@@ -3,6 +3,7 @@ import { type Ref, computed, onBeforeUnmount, onMounted, ref, watch, watchEffect
 import { ApiError, type Repo, type Status, type TaskSummary, type TaskDetail as Detail, api, describeState } from './api';
 import { setTrayStatus } from './native';
 import NewTaskForm from './components/NewTaskForm.vue';
+import HoldsBar from './components/queue/HoldsBar.vue';
 import ReposPanel from './components/ReposPanel.vue';
 import SettingsPanel from './components/SettingsPanel.vue';
 import StatusBar from './components/StatusBar.vue';
@@ -86,6 +87,8 @@ const ACTIONS: Record<BoardMove, (id: number) => Promise<unknown>> = {
   cancel: api.cancel,
 };
 const actOn = (kind: BoardMove, id: number) => act(() => ACTIONS[kind](id));
+const resumeDaemon = () => act(() => api.resume());
+const resumeRepo = (id: number) => act(() => api.resumeRepo(id));
 const reloadRepos = async () => (repos.value = await api.repos());
 
 function onCreated(task: Detail) {
@@ -139,6 +142,7 @@ onBeforeUnmount(() => clearInterval(timer));
       <section v-else class="placeholder muted">Loading task #{{ pageId }}…</section>
     </main>
     <main v-else class="body">
+      <HoldsBar :status="status" :busy="busy" @resume="resumeDaemon" @resume-repo="resumeRepo" @settings="modal = 'settings'" />
       <QueueView v-if="tasks.length" v-model:selected="selectedId" :tasks="tasks" @open="openTask" @act="actOn" @new-task="modal = 'new'" />
       <section v-else class="placeholder muted">
         No tasks yet.
