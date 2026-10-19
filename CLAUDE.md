@@ -16,15 +16,16 @@ Use these words in code, logs and UI.
 - **Planner:** proposes tasks from a repo's goals when its queue runs dry.
 - **Governor:** decides whether new work may start, from the 5-hour and 7-day **usage windows**. A **hold** is a governor decision to wait.
 - **Slot:** room for one running task (`max_concurrent`).
+- **Plan:** an HTML page attached to a task that says how it will be done, step by step (`docs/plan-format.md`). Not the planner's proposals. Write plans in `docs/plans/` in this format.
 
 ## Boundaries
 
 `daemon/src/` is layered. Imports point down the list: an outer layer may import an inner one, never the reverse.
 
-- **`domain/` is pure:** no I/O and no imports from other layers. It holds the entities (`Repo`, `Task`, `Run`, `PlannerRun`) and the decisions: task lifecycle, governor, prompts, tool rules, toolchain detection, planner proposals and PR bodies. One folder per aggregate: `task/`, `repo/`, `run/`, `planner/`, `usage/`, `pull-request/`.
+- **`domain/` is pure:** no I/O and no imports from other layers. It holds the entities (`Repo`, `Task`, `Run`, `PlannerRun`) and the decisions: task lifecycle, governor, prompts, tool rules, toolchain detection, planner proposals, plan parsing and PR bodies. One folder per aggregate: `task/`, `repo/`, `run/`, `planner/`, `plan/`, `usage/`, `pull-request/`.
 - **SQL lives only in `db/`,** one store per table group merged into one `Db` in `db/index.ts`. The schema and migrations are in `db/schema.ts`. Every task status change is a guarded `UPDATE … WHERE status IN (…)` (`applyEvent` in `db/tasks.ts`), never a raw status write.
 - **`adapters/` hold the I/O** (claude, processes, git, github, shell, notify, service, run logs, goals files). They import `domain/` and `config.ts` only, never `db/` or `application/`: they report through callbacks like `runClaude`'s `onUsage`.
-- **`application/` holds the use cases,** connecting domain, db and adapters: `scheduler.ts`, `worker.ts`, `planner.ts`, `pull-requests.ts`, `doctor.ts`, and the person-facing use cases in `repos.ts`, `tasks.ts` and `settings.ts`. `actions.ts` re-exports those for the CLI and the API.
+- **`application/` holds the use cases,** connecting domain, db and adapters: `scheduler.ts`, `worker.ts`, `planner.ts`, `pull-requests.ts`, `plans.ts`, `doctor.ts`, and the person-facing use cases in `repos.ts`, `tasks.ts` and `settings.ts`. `actions.ts` re-exports those for the CLI and the API.
 - **Entry points:** `api/` (the dashboard's HTTP API) and `cli/` (one file per command group). `src/cli.ts` stays put: the installed launchd plist runs it.
 - **Dashboard types:** the dashboard mirrors daemon types in `app/src/api.ts`, so keep them in sync.
 

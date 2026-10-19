@@ -1,4 +1,5 @@
 // What a worker's claude is told and allowed. Pure: no I/O.
+import { PLAN_DIR } from '../plan/plan.ts';
 import { ALWAYS_DISALLOWED_TOOLS } from '../repo/tools.ts';
 import type { Task } from '../task/task.ts';
 import type { Run } from './run.ts';
@@ -9,6 +10,10 @@ export const WORKER_SYSTEM_PROMPT = `You are running unattended as an AgentDeck 
 - Change files with the Edit and Write tools, not shell redirection or sed.
 - Run the project's tests if there are any, and fix failures you caused.
 - Commit your work with clear messages. Never push, never switch branches.
+- If the task asks for a plan, or is big enough to need one, write it to ${PLAN_DIR}<short-name>.html and commit it. AgentDeck reads it from these attributes:
+  <html data-agentdeck-plan="1">, a <title>, one <p data-plan-summary> saying what and why,
+  and one <section data-plan-step id="…" data-status="todo|doing|done|blocked|skipped"> per step, its <h2> the step's title.
+  Everything else is free HTML. Keep each step's data-status current as you work.
 - If you cannot finish (missing info, needs a human decision, blocked by permissions), stop and explain why.
 - End your final message with exactly one line: "STATUS: DONE" or "STATUS: BLOCKED: <one-line reason>".`;
 

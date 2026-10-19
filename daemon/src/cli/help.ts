@@ -24,6 +24,8 @@ Tasks
                                   states (waiting, stuck, pr-open, merged, pr-closed, no-pr) or groups (active, needs-you)
   agentdeck show <id>
   agentdeck log <id> [--attempt n] [--raw]
+  agentdeck attach <id> [plan.html]   attach a plan (docs/plan-format.md) to a task; with no file,
+                                  re-read the plans under docs/plans/ on the task's branch
   agentdeck approve <id>...       queue planner proposals
   agentdeck reject <id>...
   agentdeck cancel <id>

@@ -33,6 +33,7 @@ function taskDetail(db: Db, id: number) {
     waiting: waitingFor(db, task),
     runs: db.runsForTask(id),
     events: db.eventsForTask(id),
+    plans: db.plansForTask(id),
   };
 }
 
@@ -95,6 +96,10 @@ export function startApi(db: Db, port = API_PORT): Promise<Server> {
       /^\/api\/tasks\/(\d+)\/file$/,
       (req, _s, [id]) => actions.taskFile(db, Number(id), query(req).get('ref'), query(req).get('path')),
     ],
+    // Plans: collected from the branch after each run, or attached (domain/plan).
+    ['POST', /^\/api\/tasks\/(\d+)\/plans$/, (_q, _s, [id], b) => actions.attachPlan(db, Number(id), b)],
+    ['POST', /^\/api\/tasks\/(\d+)\/plans\/collect$/, (_q, _s, [id]) => actions.collectPlans(db, Number(id))],
+    ['GET', /^\/api\/tasks\/(\d+)\/plans\/(\d+)$/, (_q, _s, [id, pid]) => actions.planHtml(db, Number(id), Number(pid))],
   ];
 
   const server = createServer(async (req, res) => {

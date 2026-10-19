@@ -125,6 +125,17 @@ export const MIGRATIONS: Migration[] = [
      at TEXT NOT NULL DEFAULT (datetime('now'))
    );
    CREATE INDEX task_events_task ON task_events(task_id, id);`,
+  // 7: plans attached to a task (domain/plan). One row per plan name; the HTML is parsed on read.
+  `CREATE TABLE task_plans (
+     id INTEGER PRIMARY KEY,
+     task_id INTEGER NOT NULL,
+     name TEXT NOT NULL,           -- the path on the task's branch, or the attached file's name
+     source TEXT NOT NULL,         -- branch | attached
+     html TEXT NOT NULL,
+     created_at TEXT NOT NULL DEFAULT (datetime('now')),
+     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+     UNIQUE (task_id, name)
+   );`,
 ];
 
 /** Runs every step above the database's user_version in one transaction; returns how many ran. */

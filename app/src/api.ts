@@ -123,6 +123,28 @@ export interface TaskEventRow {
 export interface TaskDetail extends Task {
   runs: Run[];
   events: TaskEventRow[];
+  plans: TaskPlan[];
+}
+
+/** A step of a plan, read from its `<section data-plan-step data-status>` (daemon domain/plan). */
+export interface PlanStep {
+  id: string | null;
+  title: string;
+  status: 'todo' | 'doing' | 'done' | 'blocked' | 'skipped';
+}
+
+/** A plan attached to a task, parsed; its HTML comes from `api.planHtml`. */
+export interface TaskPlan {
+  id: number;
+  task_id: number;
+  name: string; // the path on the branch, or the attached file's name
+  source: 'branch' | 'attached';
+  version: string;
+  title: string;
+  summary: string | null;
+  steps: PlanStep[];
+  created_at: string;
+  updated_at: string;
 }
 
 /** Git refs the file endpoints accept: the task's branch, or where it forked from the base branch. */
@@ -309,6 +331,7 @@ export const api = {
   diff: (id: number, path: string) => call<FilePatch>(`/api/tasks/${id}/diff?path=${encodeURIComponent(path)}`),
   tree: (id: number, ref: FileRef, path = '') => call<TreeListing>(`/api/tasks/${id}/tree?ref=${ref}&path=${encodeURIComponent(path)}`),
   file: (id: number, ref: FileRef, path: string) => call<FileContent>(`/api/tasks/${id}/file?ref=${ref}&path=${encodeURIComponent(path)}`),
+  planHtml: (id: number, planId: number) => call<{ html: string }>(`/api/tasks/${id}/plans/${planId}`),
   logUrl: (id: number, attempt?: number) => `${API_BASE}/api/tasks/${id}/log${attempt ? `?attempt=${attempt}` : ''}`,
 };
 

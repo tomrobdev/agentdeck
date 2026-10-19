@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { type Changes, type Run, type TaskDetail, type TaskEventRow, ago, fmtTokens, runDuration, totalTokens } from '../../api';
 import Markdown from '../files/Markdown.vue';
 import DocumentsCard from './DocumentsCard.vue';
+import PlanCard from './PlanCard.vue';
 
 // The prompt as the description, then everything that happened, oldest first: status changes
 // (task_events) and runs. Runs stand in for claim and finish events, which they describe better.
@@ -52,6 +53,8 @@ const outcomeClass = (r: Run) => `s-${r.outcome ?? 'running'}`;
       </div>
       <button v-if="longPrompt" class="more" @click="promptOpen = !promptOpen">{{ promptOpen ? 'Show less' : 'Show all' }}</button>
     </article>
+
+    <PlanCard v-for="p in task.plans ?? []" :key="p.id" :task-id="task.id" :plan="p" @open="(path) => emit('path', path, null)" />
 
     <DocumentsCard
       :task-id="task.id"

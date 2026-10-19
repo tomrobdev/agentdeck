@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import * as actions from '../application/actions.ts';
 import { waitingFor } from '../application/dependencies.ts';
 import { removeWorktree } from '../adapters/git.ts';
+import { planProgress } from '../domain/plan/plan.ts';
 import { TASK_STATUSES } from '../domain/task/lifecycle.ts';
 import { filterTasks } from '../domain/task/listing.ts';
 import { die, taskId, fmtTask, printLog } from './format.ts';
@@ -78,6 +79,10 @@ export const taskCommands: Record<string, Command> = {
     if (t.branch) console.log(`branch   ${t.branch}`);
     if (t.worktree) console.log(`worktree ${t.worktree}`);
     console.log(`\n${t.prompt}\n`);
+    for (const p of db.plansForTask(t.id)) {
+      const { finished, total } = planProgress(p.steps);
+      console.log(`plan: ${p.title} (${p.name}, ${finished}/${total} steps)`);
+    }
     for (const r of db.runsForTask(t.id)) {
       const tokens = r.input_tokens + r.output_tokens + r.cache_read_tokens + r.cache_write_tokens;
       console.log(
@@ -93,6 +98,23 @@ export const taskCommands: Record<string, Command> = {
     if (!run) die('no runs yet');
     if (flags.raw) process.stdout.write(readFileSync(run.log_path, 'utf8'));
     else printLog(run.log_path);
+  },
+  attach: async ({ db, rest }) => {
+    const id = taskId(rest[0]);
+    const file = rest[1];
+    const read = (f: string) => {
+      try {
+        return readFileSync(f, 'utf8');
+      } catch (e) {
+        return die(`can't read ${f}: ${(e as Error).message}`);
+      }
+    };
+    const plans = file ? [actions.attachPlan(db, id, { name: file, html: read(file) })] : await actions.collectPlans(db, id);
+    if (!plans.length) console.log(`no plans on #${id}'s branch`);
+    for (const p of plans) {
+      const { finished, total } = planProgress(p.steps);
+      console.log(`#${id} plan: ${p.title} (${p.name}, ${finished}/${total} steps)`);
+    }
   },
   approve: approveOrReject,
   reject: approveOrReject,
