@@ -40,9 +40,17 @@ watch(display, (d) => saveSetting('display', d), { deep: true });
 watch(filters, ({ search: _, ...f }) => saveSetting('filters', f), { deep: true });
 
 const shown = computed(() => applyFilters(props.tasks, filters.value));
-const groups = computed(() =>
-  groupTasks(shown.value, display.value.mode === 'board' ? 'status' : display.value.groupBy, display.value.sort),
-);
+const groups = computed(() => {
+  const board = display.value.mode === 'board';
+  const all = groupTasks(shown.value, board ? 'status' : display.value.groupBy, display.value.sort);
+  if (!board) return all;
+  // The board reads left to right as the work flows: review sits just before done.
+  const review = all.find((g) => g.key === 'review');
+  if (!review) return all;
+  const rest = all.filter((g) => g !== review);
+  const done = rest.findIndex((g) => g.key === 'done');
+  return [...rest.slice(0, done), review, ...rest.slice(done)];
+});
 
 /** The rows in screen order, skipping collapsed groups: what j and k walk through. */
 const order = computed(() =>

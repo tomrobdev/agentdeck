@@ -24,6 +24,7 @@ function task(id: number, fields: Partial<ListedTask> = {}): ListedTask {
     created_at: '2026-10-18 10:00:00',
     updated_at: '2026-10-18 10:00:00',
     waiting: null,
+    unblocks: [],
     ...fields,
   };
 }
@@ -37,6 +38,8 @@ const TASKS = [
   task(6, { status: 'running', title: 'Run workers in the sandbox', branch: 'agentdeck/task-6' }),
   task(7, { status: 'cancel_requested' }),
   task(8, { status: 'proposed', priority: 9 }),
+  task(9, { status: 'done', pr_url: 'https://x/9', pr_state: 'open' }),
+  task(10, { status: 'done', pr_url: 'https://x/10', pr_state: 'open', unblocks: [5] }),
 ];
 
 const ids = (filter: Partial<Parameters<typeof filterTasks>[1]>) =>
@@ -67,10 +70,20 @@ test('repo and search narrow the list', () => {
 });
 
 test('sorts', () => {
-  assert.deepEqual(ids({ sort: 'oldest' }), [1, 2, 3, 4, 5, 6, 7, 8]);
+  assert.deepEqual(ids({ sort: 'oldest' }), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
   assert.deepEqual(ids({ sort: 'priority' }).slice(0, 2), [8, 4]);
   assert.deepEqual(ids({ sort: 'updated' })[0], 1);
-  assert.deepEqual(ids({ sort: 'attention' }), [4, 3, 8, 7, 6, 5, 2, 1], 'needs you, proposed, running, queued, done');
+  assert.deepEqual(
+    ids({ sort: 'attention' }),
+    [4, 3, 10, 9, 8, 7, 6, 5, 2, 1],
+    'needs you, review (the PR others wait on first), proposed, running, queued, done',
+  );
+});
+
+test('review is a done task whose PR is open', () => {
+  assert.deepEqual(ids({ states: ['review'] }), [10, 9]);
+  assert.deepEqual(ids({ states: ['pr-open'] }), [10, 9], 'the older name still works');
+  assert.deepEqual(ids({ states: ['review', 'blocked'] }), [10, 9, 3]);
 });
 
 test('an unknown state or sort says which names are valid', () => {

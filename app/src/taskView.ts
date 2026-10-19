@@ -1,5 +1,5 @@
 // How the queue is filtered, grouped and sorted. Mirrors daemon/src/domain/task/listing.ts (the CLI's `ls`).
-import type { TaskStatus, TaskSummary } from './api';
+import type { Status, TaskStatus, TaskSummary } from './api';
 
 type Test = (t: TaskSummary) => boolean;
 
@@ -9,6 +9,8 @@ const is =
     statuses.includes(t.status);
 export const isStuck: Test = (t) => t.status === 'queued' && !!t.waiting?.stuck;
 export const isWaiting: Test = (t) => t.status === 'queued' && !!t.waiting && !t.waiting.stuck;
+/** A done task whose pull request waits on you. */
+export const isReview: Test = (t) => t.status === 'done' && t.pr_state === 'open';
 
 /** States to filter by, finer than a status. Same names as `agentdeck ls --status`. */
 export const STATES: { key: string; label: string; test: Test }[] = [
@@ -19,8 +21,9 @@ export const STATES: { key: string; label: string; test: Test }[] = [
   { key: 'proposed', label: 'Proposed', test: is('proposed') },
   { key: 'blocked', label: 'Blocked', test: is('blocked') },
   { key: 'failed', label: 'Failed', test: is('failed') },
+  { key: 'review', label: 'Review', test: isReview },
   { key: 'done', label: 'Done', test: is('done') },
-  { key: 'pr-open', label: 'PR open', test: (t) => t.status === 'done' && t.pr_state === 'open' },
+  { key: 'pr-open', label: 'PR open', test: isReview },
   { key: 'merged', label: 'Merged', test: (t) => t.status === 'done' && t.pr_state === 'merged' },
   { key: 'pr-closed', label: 'PR closed', test: (t) => t.status === 'done' && t.pr_state === 'closed' },
   { key: 'no-pr', label: 'No PR', test: (t) => t.status === 'done' && !t.pr_url },
@@ -30,6 +33,7 @@ export const STATES: { key: string; label: string; test: Test }[] = [
 /** Status groups, in attention order. Every task is in exactly one; a stuck task needs you, so it isn't queued. */
 export const STATUS_GROUPS = [
   { key: 'needs-you', label: 'Needs you' },
+  { key: 'review', label: 'Review' },
   { key: 'proposed', label: 'Proposed' },
   { key: 'running', label: 'Running' },
   { key: 'queued', label: 'Queued' },
@@ -47,10 +51,19 @@ export function statusGroup(t: TaskSummary): StatusGroup {
       return isStuck(t) ? 'needs-you' : 'queued';
     case 'cancel_requested':
       return 'running';
+    case 'done':
+      return isReview(t) ? 'review' : 'done';
     default:
       return t.status;
   }
 }
+
+/** The tab a task opens on from the queue: a task in review is read as a diff. */
+export const openingTab = (t: TaskSummary): 'overview' | 'changes' => (isReview(t) ? 'changes' : 'overview');
+
+/** Tasks that wait on you: proposals to approve, blocked tasks and PRs to review. */
+export const needYouCount = (s: Pick<Status, 'counts' | 'review'> | null | undefined): number =>
+  (s?.counts.proposed ?? 0) + (s?.counts.blocked ?? 0) + (s?.review ?? 0);
 
 /** Priority stays an integer (the scheduler orders by it); the UI shows it as one of five levels. */
 export const PRIORITY_LEVELS = [
@@ -64,14 +77,19 @@ export type PriorityLevel = (typeof PRIORITY_LEVELS)[number]['key'];
 
 export const priorityLevel = (p: number): PriorityLevel => PRIORITY_LEVELS.find((l) => p >= l.min)!.key;
 
-const ATTENTION: Record<StatusGroup, number> = { 'needs-you': 0, proposed: 1, running: 2, queued: 3, done: 4, cancelled: 5 };
+const ATTENTION: Record<StatusGroup, number> = { 'needs-you': 0, review: 1, proposed: 2, running: 3, queued: 4, done: 5, cancelled: 6 };
 
 type Compare = (a: TaskSummary, b: TaskSummary) => number;
 export const SORTS: { key: string; label: string; compare: Compare }[] = [
   {
     key: 'attention',
     label: 'Needs attention',
-    compare: (a, b) => ATTENTION[statusGroup(a)] - ATTENTION[statusGroup(b)] || b.priority - a.priority || b.id - a.id,
+    // In review, the PRs that hold up other tasks come first.
+    compare: (a, b) =>
+      ATTENTION[statusGroup(a)] - ATTENTION[statusGroup(b)] ||
+      b.unblocks.length - a.unblocks.length ||
+      b.priority - a.priority ||
+      b.id - a.id,
   },
   { key: 'updated', label: 'Recently updated', compare: (a, b) => b.updated_at.localeCompare(a.updated_at) || b.id - a.id },
   { key: 'newest', label: 'Newest', compare: (a, b) => b.id - a.id },

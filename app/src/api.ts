@@ -85,6 +85,8 @@ export interface TaskSummary {
   after_task: number | null;
   /** Set for a queued task held back by after_task; stuck says why its dependency won't get there on its own. */
   waiting: { on: number; stuck: string | null } | null;
+  /** For a task in review: the queued tasks that wait on its PR. */
+  unblocks: number[];
   /** Why a queued task hasn't started yet; null once nothing holds it (or it isn't queued). */
   hold: StartHold | null;
   created_at: string;
@@ -248,6 +250,8 @@ export interface Status {
   running: number;
   max_concurrent: number;
   counts: Partial<Record<TaskStatus, number>>;
+  /** Done tasks whose PR is open. */
+  review: number;
   usage: UsageWindow[];
   governor: Decision;
   budget: Budget;

@@ -87,6 +87,10 @@ export function taskStore(db: DatabaseSync) {
       const rows = db.prepare('SELECT status, COUNT(*) AS n FROM tasks GROUP BY status').all() as { status: string; n: number }[];
       return Object.fromEntries(rows.map((r) => [r.status, r.n]));
     },
+    /** Done tasks whose pull request is open: the ones waiting for a review. */
+    countReview(): number {
+      return (db.prepare("SELECT COUNT(*) AS n FROM tasks WHERE status = 'done' AND pr_state = 'open'").get() as { n: number }).n;
+    },
     /** Whether a task could be claimed: queued, not waiting on a dependency, in a repo that isn't paused. */
     hasQueued(): boolean {
       const row = db

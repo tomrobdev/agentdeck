@@ -3,8 +3,8 @@
 import type { TaskStatus } from './lifecycle.ts';
 import type { TaskSummary } from './task.ts';
 
-/** A task as listed: with where it stands on its `after_task`, as waitingFor reports it. */
-export type ListedTask = TaskSummary & { waiting: { on: number; stuck: string | null } | null };
+/** A task as listed: with where it stands on its `after_task` (as waitingFor reports it) and the tasks its open PR holds up. */
+export type ListedTask = TaskSummary & { waiting: { on: number; stuck: string | null } | null; unblocks: number[] };
 
 type Test = (t: ListedTask) => boolean;
 
@@ -14,6 +14,8 @@ const is =
     statuses.includes(t.status);
 const waiting: Test = (t) => t.status === 'queued' && !!t.waiting && !t.waiting.stuck;
 const stuck: Test = (t) => t.status === 'queued' && !!t.waiting?.stuck;
+
+const review: Test = (t) => t.status === 'done' && t.pr_state === 'open';
 
 /** States finer than a status: a queued task may be waiting on --after or stuck, a done task may have a PR. */
 const STATES: Record<string, Test> = {
@@ -26,7 +28,8 @@ const STATES: Record<string, Test> = {
   cancelled: is('cancelled'),
   waiting,
   stuck,
-  'pr-open': (t) => t.status === 'done' && t.pr_state === 'open',
+  review,
+  'pr-open': review,
   merged: (t) => t.status === 'done' && t.pr_state === 'merged',
   'pr-closed': (t) => t.status === 'done' && t.pr_state === 'closed',
   'no-pr': (t) => t.status === 'done' && !t.pr_url,
@@ -42,14 +45,17 @@ const STATE_NAMES = [...Object.keys(GROUPS), ...Object.keys(STATES)];
 
 type Compare = (a: ListedTask, b: ListedTask) => number;
 
-/** The dashboard's status groups in attention order: what needs you, proposals, running, queued, finished. */
+/** The dashboard's status groups in attention order: what needs you, review, proposals, running, queued, finished. */
 function attentionRank(t: ListedTask): number {
   if (GROUPS['needs-you'](t)) return 0;
-  return { proposed: 1, running: 2, cancel_requested: 2, queued: 3, done: 4, cancelled: 5, blocked: 0, failed: 0 }[t.status];
+  if (review(t)) return 1;
+  return { proposed: 2, running: 3, cancel_requested: 3, queued: 4, done: 5, cancelled: 6, blocked: 0, failed: 0 }[t.status];
 }
 
 export const SORTS: Record<string, Compare> = {
-  attention: (a, b) => attentionRank(a) - attentionRank(b) || b.priority - a.priority || b.id - a.id,
+  // In review, the PRs that hold up other tasks come first.
+  attention: (a, b) =>
+    attentionRank(a) - attentionRank(b) || b.unblocks.length - a.unblocks.length || b.priority - a.priority || b.id - a.id,
   updated: (a, b) => b.updated_at.localeCompare(a.updated_at) || b.id - a.id,
   newest: (a, b) => b.id - a.id,
   oldest: (a, b) => a.id - b.id,
