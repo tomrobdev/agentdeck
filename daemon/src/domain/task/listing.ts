@@ -16,6 +16,7 @@ const waiting: Test = (t) => t.status === 'queued' && !!t.waiting && !t.waiting.
 const stuck: Test = (t) => t.status === 'queued' && !!t.waiting?.stuck;
 
 const review: Test = (t) => t.status === 'done' && t.pr_state === 'open';
+const merged: Test = (t) => t.status === 'done' && t.pr_state === 'merged';
 
 /** States finer than a status: a queued task may be waiting on --after or stuck, a done task may have a PR. */
 const STATES: Record<string, Test> = {
@@ -30,7 +31,7 @@ const STATES: Record<string, Test> = {
   stuck,
   review,
   'pr-open': review,
-  merged: (t) => t.status === 'done' && t.pr_state === 'merged',
+  merged,
   'pr-closed': (t) => t.status === 'done' && t.pr_state === 'closed',
   'no-pr': (t) => t.status === 'done' && !t.pr_url,
 };
@@ -45,11 +46,12 @@ const STATE_NAMES = [...Object.keys(GROUPS), ...Object.keys(STATES)];
 
 type Compare = (a: ListedTask, b: ListedTask) => number;
 
-/** The dashboard's status groups in attention order: what needs you, review, proposals, running, queued, finished. */
+/** The dashboard's status groups in attention order: what needs you, review, proposals, running, queued, done, merged, cancelled. */
 function attentionRank(t: ListedTask): number {
   if (GROUPS['needs-you'](t)) return 0;
   if (review(t)) return 1;
-  return { proposed: 2, running: 3, cancel_requested: 3, queued: 4, done: 5, cancelled: 6, blocked: 0, failed: 0 }[t.status];
+  if (merged(t)) return 6;
+  return { proposed: 2, running: 3, cancel_requested: 3, queued: 4, done: 5, cancelled: 7, blocked: 0, failed: 0 }[t.status];
 }
 
 export const SORTS: Record<string, Compare> = {

@@ -11,6 +11,8 @@ export const isStuck: Test = (t) => t.status === 'queued' && !!t.waiting?.stuck;
 export const isWaiting: Test = (t) => t.status === 'queued' && !!t.waiting && !t.waiting.stuck;
 /** A done task whose pull request waits on you. */
 export const isReview: Test = (t) => t.status === 'done' && t.pr_state === 'open';
+/** A done task whose pull request is merged: finished history. */
+export const isMerged: Test = (t) => t.status === 'done' && t.pr_state === 'merged';
 
 /** States to filter by, finer than a status. Same names as `agentdeck ls --status`. */
 export const STATES: { key: string; label: string; test: Test }[] = [
@@ -24,7 +26,7 @@ export const STATES: { key: string; label: string; test: Test }[] = [
   { key: 'review', label: 'Review', test: isReview },
   { key: 'done', label: 'Done', test: is('done') },
   { key: 'pr-open', label: 'PR open', test: isReview },
-  { key: 'merged', label: 'Merged', test: (t) => t.status === 'done' && t.pr_state === 'merged' },
+  { key: 'merged', label: 'Merged', test: isMerged },
   { key: 'pr-closed', label: 'PR closed', test: (t) => t.status === 'done' && t.pr_state === 'closed' },
   { key: 'no-pr', label: 'No PR', test: (t) => t.status === 'done' && !t.pr_url },
   { key: 'cancelled', label: 'Cancelled', test: is('cancelled') },
@@ -38,6 +40,7 @@ export const STATUS_GROUPS = [
   { key: 'running', label: 'Running' },
   { key: 'queued', label: 'Queued' },
   { key: 'done', label: 'Done' },
+  { key: 'merged', label: 'Merged' },
   { key: 'cancelled', label: 'Cancelled' },
 ] as const;
 export type StatusGroup = (typeof STATUS_GROUPS)[number]['key'];
@@ -52,7 +55,7 @@ export function statusGroup(t: TaskSummary): StatusGroup {
     case 'cancel_requested':
       return 'running';
     case 'done':
-      return isReview(t) ? 'review' : 'done';
+      return isReview(t) ? 'review' : isMerged(t) ? 'merged' : 'done';
     default:
       return t.status;
   }
@@ -77,7 +80,16 @@ export type PriorityLevel = (typeof PRIORITY_LEVELS)[number]['key'];
 
 export const priorityLevel = (p: number): PriorityLevel => PRIORITY_LEVELS.find((l) => p >= l.min)!.key;
 
-const ATTENTION: Record<StatusGroup, number> = { 'needs-you': 0, review: 1, proposed: 2, running: 3, queued: 4, done: 5, cancelled: 6 };
+const ATTENTION: Record<StatusGroup, number> = {
+  'needs-you': 0,
+  review: 1,
+  proposed: 2,
+  running: 3,
+  queued: 4,
+  done: 5,
+  merged: 6,
+  cancelled: 7,
+};
 
 type Compare = (a: TaskSummary, b: TaskSummary) => number;
 export const SORTS: { key: string; label: string; compare: Compare }[] = [
