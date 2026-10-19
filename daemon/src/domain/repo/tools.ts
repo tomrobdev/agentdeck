@@ -19,6 +19,12 @@ export const DEFAULT_ALLOWED_TOOLS = [
   'Bash(git commit*)',
   'Bash(ls*)',
   'Bash(cat*)',
+  // Read-only helpers agents chain into one command (`cd app && ls; wc -l …`): one refused part refuses it all.
+  'Bash(cd *)',
+  'Bash(pwd*)',
+  'Bash(wc *)',
+  'Bash(head *)',
+  'Bash(tail *)',
   'Bash(node *)',
 ];
 
