@@ -106,6 +106,10 @@ export const daemonCommands: Record<string, Command> = {
       console.log(
         `governor   ${st.governor.allow ? '' : 'HOLD: '}${st.governor.reason}${st.governor.until ? ` (lifts in ${relTime(st.governor.until)})` : ''}`,
       );
+    for (const r of st.paused_repos)
+      console.log(
+        `repo       ${r.name} PAUSED (${r.queued} queued): ${r.reason.split('\n')[0].slice(0, 100)}  → agentdeck repo resume ${r.name}`,
+      );
     console.log(
       `tasks      ${
         Object.entries(st.counts)

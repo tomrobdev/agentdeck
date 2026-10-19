@@ -67,6 +67,7 @@ watch(
                 {{ t.blocked_reason }}
               </span>
               <span v-else-if="show.reason && t.waiting?.stuck" class="reason">Can't start: {{ t.waiting.stuck }}</span>
+              <span v-else-if="show.reason && t.hold?.kind === 'repo-paused'" class="reason">Can't start: {{ t.repo }} is paused</span>
             </span>
             <span class="chips">
               <span v-if="t.waiting && !t.waiting.stuck" class="chip">waiting #{{ t.waiting.on }}</span>

@@ -85,6 +85,8 @@ export interface TaskSummary {
   after_task: number | null;
   /** Set for a queued task held back by after_task; stuck says why its dependency won't get there on its own. */
   waiting: { on: number; stuck: string | null } | null;
+  /** Why a queued task hasn't started yet; null once nothing holds it (or it isn't queued). */
+  hold: StartHold | null;
   created_at: string;
   updated_at: string;
 }
@@ -250,6 +252,36 @@ export interface Status {
   governor: Decision;
   budget: Budget;
   notifications: NotificationRow[];
+  /** What stops every queued task, if anything. */
+  hold: QueueHold | null;
+  paused_repos: { id: number; name: string; reason: string; queued: number }[];
+}
+
+// Mirrors daemon/src/domain/task/start.ts.
+export type QueueHold =
+  { kind: 'daemon-paused' } | { kind: 'rate-limited'; until: number } | { kind: 'governor'; reason: string; until: number | null };
+export type StartHold =
+  | QueueHold
+  | { kind: 'repo-paused'; reason: string }
+  | { kind: 'dependency'; on: number; stuck: string | null }
+  | { kind: 'slots'; running: number; max: number };
+
+/** A hold in a few words, for chips and callouts. */
+export function describeHold(h: StartHold): string {
+  switch (h.kind) {
+    case 'daemon-paused':
+      return 'AgentDeck is paused';
+    case 'rate-limited':
+      return `Claude rate-limited us; resumes ${relTime(h.until)}`;
+    case 'governor':
+      return `Holding for the usage budget: ${h.reason}${h.until ? `; lifts around ${when(h.until)}` : ''}`;
+    case 'repo-paused':
+      return `The repo is paused: ${h.reason.split('\n')[0]}`;
+    case 'dependency':
+      return h.stuck ? `Waits for #${h.on}, which won't get there: ${h.stuck}` : `Waits for #${h.on} to finish`;
+    case 'slots':
+      return `Waiting for a free slot (${h.running} of ${h.max} in use)`;
+  }
 }
 
 export interface Settings {

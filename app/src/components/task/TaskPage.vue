@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
-import { type Changes, type TaskDetail, ago, api } from '../../api';
+import { type Changes, type TaskDetail, ago, api, describeHold } from '../../api';
 import { useHotkeys } from '../../hotkeys';
 import { type TaskTab, go, openTask } from '../../router';
 import { canApprove, canCancel, canEdit, canRetry, statusLabel } from '../../taskView';
@@ -17,6 +17,18 @@ const props = defineProps<{ task: TaskDetail; tab: TaskTab; query: Record<string
 const emit = defineEmits<{ act: [kind: 'approve' | 'reject' | 'retry' | 'cancel']; changed: []; error: [msg: string] }>();
 
 const pageEl = ref<HTMLElement | null>(null);
+
+const resumeRepo = () => api.resumeRepo(props.task.repo_id);
+
+/** Clear what holds this task back (resume the daemon or the repo), then refresh. */
+async function clearHold(fn: () => Promise<unknown>) {
+  try {
+    await fn();
+    emit('changed');
+  } catch (e) {
+    emit('error', (e as Error).message);
+  }
+}
 const changes = ref<Changes | null>(null);
 const changesError = ref('');
 
@@ -144,8 +156,16 @@ useHotkeys({ Escape: () => go({ name: 'queue' }) });
     </nav>
 
     <div v-if="task.blocked_reason && (s === 'blocked' || s === 'failed')" class="callout" :class="`s-${s}`">{{ task.blocked_reason }}</div>
-    <div v-else-if="task.waiting?.stuck" class="callout s-blocked">
-      Can't start: {{ task.waiting.stuck }}. Retry #{{ task.waiting.on }} to release this task, or cancel it.
+    <div v-else-if="task.hold" class="callout hold" :class="task.hold.kind === 'slots' ? 's-queued' : 's-blocked'">
+      <span class="what">
+        <strong>Not started yet.</strong> {{ describeHold(task.hold) }}.
+        <template v-if="task.hold.kind === 'dependency' && task.hold.stuck">
+          Retry #{{ task.hold.on }} to release this task, or cancel it.
+        </template>
+      </span>
+      <button v-if="task.hold.kind === 'daemon-paused'" class="primary" @click="clearHold(api.resume)">▶ Resume</button>
+      <button v-else-if="task.hold.kind === 'repo-paused'" class="primary" @click="clearHold(resumeRepo)">▶ Resume {{ task.repo }}</button>
+      <button v-else-if="task.hold.kind === 'dependency'" @click="openTask(task.hold.on)">Open #{{ task.hold.on }}</button>
     </div>
     <div v-else-if="s === 'proposed'" class="callout s-proposed">
       The planner suggested this task. Read the prompt, then approve it to queue it or reject it.
@@ -277,6 +297,16 @@ h1.editable {
   border-radius: 8px;
   border: 1px solid color-mix(in srgb, var(--c) 40%, transparent);
   background: color-mix(in srgb, var(--c) 9%, var(--panel));
+}
+.callout.hold {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.callout.hold .what {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .content {
   display: flex;
