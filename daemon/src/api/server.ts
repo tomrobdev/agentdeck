@@ -41,11 +41,20 @@ function taskDetail(db: Db, id: number) {
 }
 
 /** `wake` runs after a change that may let queued work start, such as a merge (the scheduler's `wake`). */
-export function startApi(db: Db, port = API_PORT, wake: () => void = () => {}): Promise<Server> {
+export function startApi(
+  db: Db,
+  port = API_PORT,
+  wake: () => void = () => {},
+  daemon: { info: actions.DaemonInfo; requestRestart: () => void } = {
+    info: { commit: null, started_at: new Date().toISOString() },
+    requestRestart: () => {},
+  },
+): Promise<Server> {
   const routes: [string, RegExp, Handler][] = [
-    ['GET', /^\/api\/status$/, () => actions.status(db)],
-    ['POST', /^\/api\/pause$/, () => (actions.setPaused(db, true), actions.status(db))],
-    ['POST', /^\/api\/resume$/, () => (actions.setPaused(db, false), actions.status(db))],
+    ['GET', /^\/api\/status$/, () => actions.status(db, daemon.info)],
+    ['POST', /^\/api\/pause$/, () => (actions.setPaused(db, true), actions.status(db, daemon.info))],
+    ['POST', /^\/api\/resume$/, () => (actions.setPaused(db, false), actions.status(db, daemon.info))],
+    ['POST', /^\/api\/daemon\/restart$/, () => actions.restartDaemon(db, daemon.requestRestart)],
     ['GET', /^\/api\/settings$/, () => actions.getSettings(db)],
     ['GET', /^\/api\/service$/, () => serviceStatus()],
     ['POST', /^\/api\/settings$/, (_q, _s, _p, b) => actions.updateSettings(db, b)],

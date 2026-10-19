@@ -3,6 +3,7 @@ import type { Db } from '../db/index.ts';
 import { NOTIFY_KINDS, type NotifyKind, type NotifySettings } from '../domain/notification.ts';
 import { MODELS, type PlannerSettings } from '../domain/planner/plan.ts';
 import { BUDGET_KEYS, type Budget, decide, validateBudget } from '../domain/usage/governor.ts';
+import { restartWait } from '../domain/daemon/restart.ts';
 import { ActionError } from './errors.ts';
 import { notify, notifySettings } from './notifications.ts';
 import { plannerSettings } from './planner.ts';
@@ -13,8 +14,16 @@ export function setPaused(db: Db, paused: boolean): void {
   if (!paused) db.setSetting('rate_limited_until', '0');
 }
 
-export function status(db: Db) {
+/** Which code the daemon is running, recorded once at start. */
+export interface DaemonInfo {
+  /** The commit of the daemon's checkout; null when it is not a git checkout. */
+  commit: string | null;
+  started_at: string;
+}
+
+export function status(db: Db, daemon: DaemonInfo = { commit: null, started_at: new Date(0).toISOString() }) {
   return {
+    daemon,
     paused: db.isPaused(),
     rate_limited_until: Number(db.getSetting('rate_limited_until', '0')) || null,
     running: db.countRunning(),
@@ -27,6 +36,15 @@ export function status(db: Db) {
     notifications: db.recentNotifications(10),
     ...queueHolds(db),
   };
+}
+
+/**
+ * Ask the daemon to exit so launchd starts it on the code on disk. It exits once nothing is running;
+ * `waiting` says what it is waiting for, or null when it is exiting now.
+ */
+export function restartDaemon(db: Db, request: () => void): { waiting: string | null } {
+  request();
+  return { waiting: restartWait({ tasks: db.countRunning(), planner: db.countRunningPlannerRuns() }) };
 }
 
 export interface Settings {

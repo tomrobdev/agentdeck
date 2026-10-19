@@ -95,7 +95,8 @@ export interface TaskSummary {
   /** Set for a queued task held back by after_task; stuck says why its dependency won't get there on its own. */
   waiting: { on: number; stuck: string | null } | null;
   /** For a task in review: the queued tasks that wait on its PR. */
-  unblocks: number[];
+  /** Missing from a daemon that predates it; read it as empty. */
+  unblocks?: number[];
   /** Why a queued task hasn't started yet; null once nothing holds it (or it isn't queued). */
   hold: StartHold | null;
   created_at: string;
@@ -285,6 +286,8 @@ export interface NotificationRow {
 }
 
 export interface Status {
+  /** The code the daemon is running. Missing from a daemon that predates it. */
+  daemon?: { commit: string | null; started_at: string };
   paused: boolean;
   rate_limited_until: number | null;
   running: number;
@@ -366,6 +369,8 @@ export const api = {
   status: () => call<Status>('/api/status'),
   pause: () => call<Status>('/api/pause', { method: 'POST' }),
   resume: () => call<Status>('/api/resume', { method: 'POST' }),
+  /** Exit once nothing is running so launchd starts the daemon on the new code. `waiting` says what it waits for. */
+  restartDaemon: () => call<{ waiting: string | null }>('/api/daemon/restart', { method: 'POST' }),
   settings: () => call<Settings>('/api/settings'),
   updateSettings: (patch: {
     max_concurrent?: number;
@@ -461,6 +466,14 @@ export function totalTokens(r: Run): number {
 
 export function fmtTokens(n: number): string {
   return n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1000 ? `${Math.round(n / 1000)}k` : String(n);
+}
+
+/** The banner text when the daemon runs a different commit than the dashboard, else null. Unknown commits never warn. */
+export function describeStaleDaemon(s: Status | null, dashboardCommit: string | null): string | null {
+  const d = s?.daemon;
+  if (!d?.commit || !dashboardCommit || d.commit === dashboardCommit) return null;
+  const started = new Date(d.started_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+  return `The daemon is running older code (${d.commit.slice(0, 7)}, started ${started}). Restart it to match the dashboard.`;
 }
 
 /** One label for the daemon's state, shared by the status bar and the tray. */

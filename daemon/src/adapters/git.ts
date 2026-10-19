@@ -40,6 +40,15 @@ export async function gitRemote(cwd: string, timeoutMs: number, ...args: string[
   return stdout.trim();
 }
 
+/** The commit checked out in `cwd`, or null when it is not a git checkout. */
+export async function headCommit(cwd: string): Promise<string | null> {
+  try {
+    return (await git(cwd, 'rev-parse', 'HEAD')) || null;
+  } catch {
+    return null;
+  }
+}
+
 export async function refExists(repoPath: string, ref: string): Promise<boolean> {
   try {
     await git(repoPath, 'rev-parse', '--verify', '--quiet', ref);
