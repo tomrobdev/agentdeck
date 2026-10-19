@@ -8,7 +8,7 @@ Needs Node 24+ (runs the TypeScript directly), git, and a logged-in `claude` CLI
 
 ```sh
 pnpm install                             # whole workspace (app + daemon)
-cd daemon && npm link                    # puts `agentdeck` on your PATH
+pnpm setup:cli                           # puts `agentdeck` on your PATH (~/.local/bin)
 
 agentdeck repo add ~/code/myproject --test "npm test"
 agentdeck add --repo myproject "Add input validation to the signup form, with tests"
@@ -80,7 +80,7 @@ agentdeck service      # status
 agentdeck uninstall
 ```
 
-The agent runs `daemon/src/cli.ts` from this checkout, so keep the checkout on `main`, and run `agentdeck install` again after pulling to restart it on the new code. Logs go to `~/.agentdeck/logs/daemon.log`. While tasks or the planner run, the daemon holds a `caffeinate -i` assertion so the Mac doesn't idle-sleep; it releases it when idle. In the dashboard, Settings → Always on turns on "Open this dashboard at login" (menu-bar tray only), and the tray menu shows the daemon's state.
+The agent runs `daemon/src/cli.ts` from this checkout, so keep the checkout on `main`, and run `agentdeck install` again after pulling to restart it on the new code. Logs go to `~/.agentdeck/logs/daemon.log` (`pnpm logs` follows them). `pnpm reboot` restarts the service on the current code; a task running at that moment loses its run and is requeued. While tasks or the planner run, the daemon holds a `caffeinate -i` assertion so the Mac doesn't idle-sleep; it releases it when idle. In the dashboard, Settings → Always on turns on "Open this dashboard at login" (menu-bar tray only), and the tray menu shows the daemon's state.
 
 ## Usage governor
 
