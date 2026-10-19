@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="en" data-agentdeck-plan="1">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Review and merge in the dashboard</title>
+    <style>
+      :root {
+        --bg: #f6f6f4;
+        --panel: #ffffff;
+        --panel-2: #f0f0ed;
+        --border: #e2e2dd;
+        --text: #1d1d1b;
+        --muted: #6d6d68;
+        --accent: #c2622d;
+        --ok: #2e8b57;
+        --warn: #c98a10;
+        --bad: #c94141;
+        --info: #2f6fdb;
+        --code-bg: #f3f2ee;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme='light']) {
+          --bg: #161615;
+          --panel: #1f1f1d;
+          --panel-2: #272725;
+          --border: #33332f;
+          --text: #ecebe6;
+          --muted: #9a9993;
+          --accent: #e07a43;
+          --ok: #57b583;
+          --warn: #e0ab3c;
+          --bad: #e36d6d;
+          --info: #6c9bf0;
+          --code-bg: #1a1a18;
+        }
+      }
+      :root[data-theme='dark'] {
+        --bg: #161615;
+        --panel: #1f1f1d;
+        --panel-2: #272725;
+        --border: #33332f;
+        --text: #ecebe6;
+        --muted: #9a9993;
+        --accent: #e07a43;
+        --ok: #57b583;
+        --warn: #e0ab3c;
+        --bad: #e36d6d;
+        --info: #6c9bf0;
+        --code-bg: #1a1a18;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font:
+          15px/1.6 -apple-system,
+          BlinkMacSystemFont,
+          'SF Pro Text',
+          'Segoe UI',
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      .wrap {
+        display: grid;
+        grid-template-columns: 220px minmax(0, 1fr);
+        gap: 40px;
+        max-width: 1160px;
+        margin: 0 auto;
+        padding: 40px 24px 80px;
+      }
+      nav.toc {
+        position: sticky;
+        top: 24px;
+        align-self: start;
+        font-size: 13px;
+      }
+      nav.toc a {
+        display: block;
+        color: var(--muted);
+        text-decoration: none;
+        padding: 3px 0;
+      }
+      nav.toc a:hover {
+        color: var(--text);
+      }
+      nav.toc b {
+        display: block;
+        margin: 14px 0 4px;
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      h1 {
+        font-size: 30px;
+        line-height: 1.2;
+        margin: 0 0 6px;
+        letter-spacing: -0.01em;
+      }
+      h2 {
+        font-size: 21px;
+        margin: 56px 0 6px;
+        padding-top: 8px;
+        letter-spacing: -0.005em;
+      }
+      h3 {
+        font-size: 15px;
+        margin: 22px 0 6px;
+      }
+      p,
+      li {
+        max-width: 72ch;
+      }
+      .lede {
+        color: var(--muted);
+        font-size: 16px;
+        margin: 0 0 24px;
+      }
+      code,
+      pre {
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        font-size: 12.5px;
+      }
+      code {
+        background: var(--code-bg);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 0 4px;
+      }
+      pre {
+        background: var(--code-bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px 14px;
+        overflow-x: auto;
+        line-height: 1.45;
+      }
+      pre code {
+        background: none;
+        border: 0;
+        padding: 0;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 14px;
+        margin: 8px 0 4px;
+      }
+      th,
+      td {
+        text-align: left;
+        vertical-align: top;
+        padding: 7px 10px;
+        border-bottom: 1px solid var(--border);
+      }
+      th {
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 16px 18px;
+        margin: 14px 0;
+      }
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 6px 0 12px;
+      }
+      .tag {
+        font-size: 12px;
+        padding: 1px 8px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        background: var(--panel);
+      }
+      .tag.ok {
+        color: var(--ok);
+        border-color: color-mix(in srgb, var(--ok) 45%, transparent);
+      }
+      .tag.warn {
+        color: var(--warn);
+        border-color: color-mix(in srgb, var(--warn) 45%, transparent);
+      }
+      .tag.info {
+        color: var(--info);
+        border-color: color-mix(in srgb, var(--info) 45%, transparent);
+      }
+      .decision {
+        border-left: 3px solid var(--accent);
+      }
+      .decision h3 {
+        margin-top: 0;
+      }
+      .grid2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      ul.check {
+        list-style: none;
+        padding-left: 0;
+      }
+      ul.check li::before {
+        content: '☐ ';
+        color: var(--muted);
+      }
+      a {
+        color: var(--accent);
+      }
+      @media (max-width: 860px) {
+        .wrap {
+          grid-template-columns: 1fr;
+          gap: 0;
+          padding: 24px 16px 60px;
+        }
+        nav.toc {
+          position: static;
+          margin-bottom: 16px;
+        }
+        .grid2 {
+          grid-template-columns: 1fr;
+        }
+        table {
+          display: block;
+          overflow-x: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <nav class="toc">
+        <b>Plan</b>
+        <a href="#why">Why</a>
+        <a href="#today">What exists today</a>
+        <a href="#decisions">Decisions</a>
+        <b>Steps</b>
+        <a href="#merge">1 · Merge from the app</a>
+        <a href="#revise">2 · Request changes and close</a>
+        <a href="#review">3 · Review group</a>
+        <b>After</b>
+        <a href="#open">Open questions</a>
+        <a href="#later">Not in this plan</a>
+      </nav>
+
+      <main>
+        <h1>Review and merge in the dashboard</h1>
+        <p class="lede" data-plan-summary>
+          Finish the review loop inside AgentDeck: a Review group shows done tasks whose PR waits on you, and the task page can merge the PR
+          after a confirm (squash by default), send the task back with a note, or close the PR. A merge releases the tasks waiting on it at
+          once. Written 2026-10-19, after the <code>--after</code> chain #18 → #19 → #20 sat waiting on a draft PR nobody had opened.
+        </p>
+
+        <h2 id="why">Why</h2>
+        <p>
+          The dashboard already shows a task like a pull request: diffs with rendered markdown, a file tree and code viewer, the runs and
+          the plan. But acting on what you read means leaving for GitHub, and <code>--after</code> chains only move on a merge. Finished
+          work also hides among the other done tasks, so nothing says "this PR is holding up two tasks".
+        </p>
+
+        <h2 id="today">What exists today</h2>
+        <table>
+          <tr>
+            <th>Area</th>
+            <th>Now</th>
+          </tr>
+          <tr>
+            <td>PRs</td>
+            <td>
+              <code>application/pull-requests.ts</code> pushes and opens a PR when a task is done (<code>pr_mode</code> off, draft or ready)
+              and re-reads open PRs every 3 minutes (<code>PR_REFRESH_MS</code>). <code>adapters/github.ts</code> has <code>push</code>,
+              <code>createPr</code> and <code>prState</code>.
+            </td>
+          </tr>
+          <tr>
+            <td>Retry</td>
+            <td>
+              The <code>retry</code> event already moves <code>done → queued</code>, the run continues on the same branch, and a retried
+              task with an open PR pushes to that PR instead of opening another. It takes no note.
+            </td>
+          </tr>
+          <tr>
+            <td>Task page</td>
+            <td>Overview, Runs, Files changed, Code. The PR is a link in the sidebar.</td>
+          </tr>
+          <tr>
+            <td>Queue</td>
+            <td>Groups by status, with "needs you" for blocked, failed and stuck tasks. Done tasks with an open PR sit under Done.</td>
+          </tr>
+        </table>
+
+        <h2 id="decisions">Decisions</h2>
+        <table>
+          <tr>
+            <th>Decision</th>
+            <th>Why</th>
+          </tr>
+          <tr>
+            <td>Squash by default, set per repo, overridable per task</td>
+            <td>
+              One task becomes one commit on the base branch, titled after the task with the PR body as its message, and reverts in one
+              step. Retries and plan-status commits are noise there. Run logs and the PR keep the detail. A big task with meaningful commits
+              (a port done group by group) can use <code>merge</code>.
+            </td>
+          </tr>
+          <tr>
+            <td>Always confirm a merge</td>
+            <td>
+              It writes to the base branch on GitHub and can't be undone from the app. The dialog shows the method, the size, the tests, any
+              warnings and what the merge unblocks; Enter confirms, so it stays quick.
+            </td>
+          </tr>
+          <tr>
+            <td>Request changes is a retry with a note, not a new status</td>
+            <td>
+              Retry already does the right thing with the branch and the open PR. The note is kept as the event's reason so the timeline
+              shows it, and the next run's prompt includes it.
+            </td>
+          </tr>
+          <tr>
+            <td>The daemon merges through <code>gh</code>, as it opens PRs</td>
+            <td>Agents still can't push. Only a person's click (or <code>agentdeck merge</code>) merges.</td>
+          </tr>
+        </table>
+
+        <section data-plan-step id="merge" data-status="todo">
+          <h2>1 · Merge from the app</h2>
+          <p>
+            Migration (the next free step): <code>repos.merge_method TEXT NOT NULL DEFAULT 'squash'</code> and a nullable
+            <code>tasks.merge_method</code>. In <code>domain/pull-request/</code>, a pure <code>mergeCheck</code> that turns a PR's state
+            into blocking problems (not open, conflicts) and warnings (draft, base moved on, tests failed on the last run, failing checks).
+            In <code>adapters/github.ts</code>: <code>prDetails</code> (<code
+              >gh pr view --json isDraft,mergeable,mergeStateStatus,commits,additions,deletions,changedFiles,statusCheckRollup</code
+            >), <code>markReady</code>, <code>merge(method, deleteBranch)</code>. A use case <code>mergeTask</code> in
+            <code>application/pull-requests.ts</code>: mark a draft ready, merge, set <code>pr_state</code> to merged, record a task event,
+            remove the worktree if asked, and let the scheduler tick so dependents start now. API:
+            <code>GET /api/tasks/:id/merge</code> (the preview, including the tasks it unblocks) and
+            <code>POST /api/tasks/:id/merge</code> with <code>{ method, delete_branch }</code>. CLI:
+            <code>agentdeck merge &lt;id&gt; [--method squash|merge|rebase] [--yes]</code>, which prints the preview and asks unless
+            <code>--yes</code>. Repo setting in the Repos panel and <code>agentdeck repo set &lt;repo&gt; merge_method</code>.
+          </p>
+          <p>
+            Dashboard: a <b>Merge PR</b> button in the task page header for a done task with an open PR. It opens a confirm dialog: the
+            title, <code>branch → base</code>, the method with a menu to change it, commits (n → 1 for squash), files and lines, tests from
+            the last run and GitHub checks, the tasks it unblocks, a "delete branch and worktree" checkbox (on), warnings above the buttons,
+            and blocking problems disabling the merge. Enter merges, Esc cancels. Tests fake <code>github</code> as the PR tests do.
+          </p>
+        </section>
+
+        <section data-plan-step id="revise" data-status="todo">
+          <h2>2 · Request changes and close</h2>
+          <p>
+            <b>Request changes</b> on a done task with an open PR: a note box, then the <code>retry</code> event with the note as its reason
+            (<code>POST /api/tasks/:id/retry</code> takes an optional <code>note</code>;
+            <code>agentdeck retry &lt;id&gt; --note "…"</code>). <code>buildPrompt</code> puts the latest note first in the next run's
+            prompt, under "Changes requested in review". The timeline shows the note. <b>Close PR</b>: confirm, <code>gh pr close</code>,
+            set <code>pr_state</code> to closed; tasks waiting on it become stuck, which the hold callout already explains.
+          </p>
+        </section>
+
+        <section data-plan-step id="review" data-status="todo">
+          <h2>3 · Review group</h2>
+          <p>
+            A <b>Review</b> state and group for done tasks with an open PR, placed after "needs you" in attention order, in both
+            <code>domain/task/listing.ts</code> and its mirror <code>app/src/taskView.ts</code> (and
+            <code>agentdeck ls --status review</code>). Within it, tasks that others wait on come first, with a chip "unblocks #19". Opening
+            a task from the group lands on Files changed. The status bar and tray count it with the tasks that need you. The board shows it
+            as a column between Running and Done.
+          </p>
+        </section>
+
+        <h2 id="open">Open questions</h2>
+        <ul>
+          <li>Should merging also pull the repo's local base branch, so the next task's worktree starts from it without a fetch?</li>
+          <li>Should a repo be able to auto-merge when tests and checks pass (no review), for low-risk goals?</li>
+        </ul>
+
+        <h2 id="later">Not in this plan</h2>
+        <ul>
+          <li>Line comments on the diff that become part of the request-changes note.</li>
+          <li>Reviewing several PRs as one stack.</li>
+        </ul>
+      </main>
+    </div>
+  </body>
+</html>
