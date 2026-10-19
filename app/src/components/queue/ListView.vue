@@ -182,8 +182,8 @@ watch(
   line-height: 18px;
 }
 .chip.pr-merged {
-  color: #8250df;
-  border-color: color-mix(in srgb, #8250df 45%, transparent);
+  color: var(--merged);
+  border-color: color-mix(in srgb, var(--merged) 45%, transparent);
 }
 .chip.pr-open {
   color: var(--done);

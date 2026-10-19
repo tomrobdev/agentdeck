@@ -1,20 +1,7 @@
+/* Colours come from themes.css, picked by data-theme and data-mode on <html> (theme.ts). */
 :root {
-  --bg: #f6f6f4;
-  --panel: #ffffff;
-  --panel-2: #f0f0ed;
-  --border: #e2e2dd;
-  --text: #1d1d1b;
-  --muted: #6d6d68;
-  --accent: #c2622d;
-  --accent-text: #ffffff;
-  --queued: #8a8a84;
-  --running: #2f6fdb;
-  --done: #2e8b57;
-  --blocked: #c98a10;
-  --failed: #c94141;
-  --cancelled: #9a9a94;
-  --code-bg: #f3f2ee;
   --radius: 8px;
+  color-scheme: light dark;
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
   font-size: 13px;
   line-height: 1.45;
@@ -23,23 +10,12 @@
   -webkit-font-smoothing: antialiased;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #161615;
-    --panel: #1f1f1d;
-    --panel-2: #272725;
-    --border: #33332f;
-    --text: #ecebe6;
-    --muted: #9a9993;
-    --accent: #e07a43;
-    --queued: #8f8e88;
-    --running: #6c9bf0;
-    --done: #57b583;
-    --blocked: #e0ab3c;
-    --failed: #e36d6d;
-    --cancelled: #77766f;
-    --code-bg: #1a1a18;
-  }
+/* Native controls and scrollbars follow the mode too. */
+:root[data-mode='light'] {
+  color-scheme: light;
+}
+:root[data-mode='dark'] {
+  color-scheme: dark;
 }
 
 * {
@@ -74,7 +50,11 @@ button:disabled {
 button.primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: var(--accent-text);
+  color: var(--accent-fg);
+}
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 input,
@@ -83,7 +63,7 @@ select {
   font: inherit;
   color: inherit;
   background: var(--panel);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-input);
   border-radius: 6px;
   padding: 6px 8px;
   width: 100%;
@@ -159,27 +139,7 @@ pre {
   white-space: nowrap;
 }
 
-/* Syntax highlighting (highlight.js classes), in the dashboard's palette. */
-:root {
-  --hl-keyword: #a1328f;
-  --hl-string: #2d7d46;
-  --hl-number: #b45d06;
-  --hl-comment: #8a8a84;
-  --hl-title: #2f5fc4;
-  --hl-type: #8b5a00;
-  --hl-attr: #7a4fcf;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --hl-keyword: #e08bd6;
-    --hl-string: #8fd3a0;
-    --hl-number: #f0b070;
-    --hl-comment: #7f7e78;
-    --hl-title: #8fb4ff;
-    --hl-type: #e8c47a;
-    --hl-attr: #c3a6ff;
-  }
-}
+/* Syntax highlighting (highlight.js classes), in the theme's --hl-* colours. */
 .hljs-keyword,
 .hljs-selector-tag,
 .hljs-built_in,
