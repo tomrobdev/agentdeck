@@ -222,6 +222,15 @@ test('a refused tool use that ends a run pauses the repo and counts denials on t
   assert.equal(db.getRepo(r.id)!.paused_reason, null);
 });
 
+test('a run that finishes despite refusals but fails its tests does not pause the repo', async () => {
+  const r = repo('denied-tests', { test_cmd: 'false' });
+  const t = db.addTask({ repo_id: r.id, title: 'formatting', prompt: 'FAKE_DENIED_DONE go', max_attempts: 1 });
+  await drain();
+  assert.equal(db.getTask(t.id)!.status, 'failed');
+  assert.equal(db.runsForTask(t.id)[0].denials, 2);
+  assert.equal(db.getRepo(r.id)!.paused_reason, null);
+});
+
 test('edit changes the fields of a proposed, queued, blocked or failed task', () => {
   const r = repo('edits');
   const task = db.addTask({ repo_id: r.id, title: 'old', prompt: 'old prompt', status: 'proposed' });

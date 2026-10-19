@@ -51,7 +51,7 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
   }
 
   const { result, exitCode, rateLimitedUntil, cancelled } = await runClaude({
-    args: claudeArgs(task, effectiveTools(repo, wt.path), prompt),
+    args: claudeArgs(task, effectiveTools(repo, wt.path), prompt, repo.test_cmd),
     cwd: wt.path,
     log,
     env: { AGENTDECK_TASK_ID: String(task.id) },
@@ -113,9 +113,11 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
 
   await closeLog(log);
   // Refused tool uses mean the repo's tool rules don't fit its work: every further task would hit the same wall.
+  // Not when the agent finished and only the test command failed: the refusals didn't stop it.
   const denials = result?.permission_denials ?? [];
   runFields.denials = denials.length;
-  if (denials.length && (outcome.outcome === 'blocked' || outcome.outcome === 'failed')) {
+  const testsFailed = runFields.tests_passed === 0;
+  if (denials.length && !testsFailed && (outcome.outcome === 'blocked' || outcome.outcome === 'failed')) {
     pauseRepo(db, repo, `permission refused on task #${task.id}: ${firstDenial(denials)}`);
   }
   return finish(db, task, runId, outcome, runFields);
