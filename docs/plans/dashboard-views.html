@@ -270,6 +270,59 @@
           on. Written 2026-10-19, on top of branch <code>task-list-filters</code>.
         </p>
 
+        <div class="card" id="status">
+          <h3 style="margin-top: 0">Status: built on branch <code>dashboard-views</code></h3>
+          <table>
+            <tr>
+              <th>Phase</th>
+              <th>State</th>
+              <th>Notes</th>
+            </tr>
+            <tr>
+              <td>1 · List</td>
+              <td><span class="tag ok">built</span></td>
+              <td>Checked in the browser against the live queue.</td>
+            </tr>
+            <tr>
+              <td>2 · Board</td>
+              <td><span class="tag ok">built</span></td>
+              <td>The columns render. Dragging wasn't tried on real tasks, because each drop changes a task.</td>
+            </tr>
+            <tr>
+              <td>3 · Task page</td>
+              <td><span class="tag ok">built</span></td>
+              <td>
+                <code>task_events</code> is migration step 6. Tasks from before it show a timeline built from their creation time and runs.
+              </td>
+            </tr>
+            <tr>
+              <td>4 · Files changed</td>
+              <td><span class="tag ok">built</span></td>
+              <td>
+                Checked on task #16 (11 files). The base is the newer of local <code>main</code> and <code>origin/main</code>, never fetched
+                during a GET, so a stale local main can't pull upstream commits into the diff.
+              </td>
+            </tr>
+            <tr>
+              <td>5 · Code</td>
+              <td><span class="tag ok">built</span></td>
+              <td>Line links, rendered markdown and the <kbd>t</kbd> finder were all checked.</td>
+            </tr>
+            <tr>
+              <td>6 · Snippets</td>
+              <td><span class="tag ok">built</span></td>
+              <td>
+                The log, the final message and the Documents card were checked. The <code>path:line</code> hover wasn't seen live: no task's
+                text has such a link yet.
+              </td>
+            </tr>
+          </table>
+          <p class="muted">
+            Still to check in the Tauri window (not the browser): that links open in the system browser, and that the CSP allows every
+            request.
+          </p>
+        </div>
+
         <h2 id="why">Why and scope</h2>
         <p>
           Reviewing what an agent did is the slowest part of using AgentDeck. Today the dashboard shows a task's status, its prompt, the
