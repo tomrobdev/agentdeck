@@ -1,13 +1,14 @@
 // Tasks. Every status change goes through applyEvent (or claimNextTask), guarded by the current status.
 import type { DatabaseSync } from 'node:sqlite';
 import { DEFAULTS } from '../config.ts';
+import type { MergeMethod } from '../domain/pull-request/merge.ts';
 import { MAX_RESTARTS, type TaskEvent, type TaskStatus, fromStatuses, nextStatus } from '../domain/task/lifecycle.ts';
 import type { TaskEventRow, TaskEventType } from '../domain/task/history.ts';
 import { EDITABLE_STATUSES, OPEN_STATUSES, type Task, type TaskSummary } from '../domain/task/task.ts';
 import { NOW, atomically } from './sql.ts';
 
 const SUMMARY_COLUMNS =
-  'id, repo_id, title, status, priority, model, max_turns, attempts, max_attempts, branch, worktree, blocked_reason, source, restarts, pr_url, pr_state, after_task, created_at, updated_at';
+  'id, repo_id, title, status, priority, model, max_turns, attempts, max_attempts, branch, worktree, blocked_reason, source, restarts, pr_url, pr_state, merge_method, after_task, created_at, updated_at';
 
 /** SQL list of fixed status literals, for `status IN (…)`. */
 const statusList = (statuses: TaskStatus[]) => statuses.map((s) => `'${s}'`).join(', ');
@@ -168,12 +169,29 @@ export function taskStore(db: DatabaseSync) {
     },
     updateTask(
       id: number,
-      fields: Partial<Pick<Task, 'branch' | 'worktree' | 'blocked_reason' | 'priority' | 'pr_url' | 'pr_state'>>,
+      fields: Partial<Pick<Task, 'branch' | 'worktree' | 'blocked_reason' | 'priority' | 'pr_url' | 'pr_state' | 'merge_method'>>,
     ): void {
       const keys = Object.keys(fields) as (keyof typeof fields)[];
       if (keys.length === 0) return;
       const sets = keys.map((k) => `${k} = ?`).join(', ');
       db.prepare(`UPDATE tasks SET ${sets}, updated_at = ${NOW} WHERE id = ?`).run(...keys.map((k) => fields[k] ?? null), id);
+    },
+    /**
+     * Record that a done task's PR was merged: the PR state, the method and a history row, together.
+     * Guarded like every task write: only a done task whose PR is open. Returns false if it was not.
+     */
+    recordMerge(id: number, method: MergeMethod, reason: string): boolean {
+      return atomically(db, () => {
+        const res = db
+          .prepare(
+            `UPDATE tasks SET pr_state = 'merged', merge_method = ?, updated_at = ${NOW}
+             WHERE id = ? AND status = 'done' AND pr_state = 'open'`,
+          )
+          .run(method, id);
+        if (!Number(res.changes)) return false;
+        recordEvent(id, 'merge', 'done', 'done', reason);
+        return true;
+      });
     },
     /**
      * The only way to change a task's status. Asks the lifecycle whether `event` is allowed from the

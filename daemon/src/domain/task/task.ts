@@ -1,4 +1,5 @@
 // The task entity. Pure: no I/O.
+import type { MergeMethod } from '../pull-request/merge.ts';
 import type { PrState } from '../pull-request/pr.ts';
 import type { TaskStatus } from './lifecycle.ts';
 
@@ -20,6 +21,7 @@ export interface Task {
   restarts: number; // times a daemon restart requeued this task mid-run
   pr_url: string | null; // the pull request the daemon opened when the task finished
   pr_state: PrState | null;
+  merge_method: MergeMethod | null; // how the PR was merged from the app
   after_task: number | null; // not claimed until that task is done (and its PR merged, if it has one)
   created_at: string;
   updated_at: string;

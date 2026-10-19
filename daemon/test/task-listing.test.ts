@@ -20,6 +20,7 @@ function task(id: number, fields: Partial<ListedTask> = {}): ListedTask {
     restarts: 0,
     pr_url: null,
     pr_state: null,
+    merge_method: null,
     after_task: null,
     created_at: '2026-10-18 10:00:00',
     updated_at: '2026-10-18 10:00:00',

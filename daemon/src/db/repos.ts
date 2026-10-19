@@ -37,7 +37,7 @@ export function repoStore(db: DatabaseSync) {
     },
     updateRepo(
       id: number,
-      fields: Partial<Pick<Repo, 'auto_approve' | 'test_cmd' | 'setup_cmd' | 'planned_at' | 'base_branch' | 'pr_mode'>>,
+      fields: Partial<Pick<Repo, 'auto_approve' | 'test_cmd' | 'setup_cmd' | 'planned_at' | 'base_branch' | 'pr_mode' | 'merge_method'>>,
     ): void {
       const keys = Object.keys(fields) as (keyof typeof fields)[];
       if (!keys.length) return;

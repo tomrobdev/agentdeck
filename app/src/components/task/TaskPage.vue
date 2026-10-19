@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
-import { type Changes, type TaskDetail, ago, api, describeHold } from '../../api';
+import { type Changes, type MergeResult, type TaskDetail, ago, api, describeHold } from '../../api';
 import { useHotkeys } from '../../hotkeys';
 import { type TaskTab, go, openTask } from '../../router';
-import { canApprove, canCancel, canEdit, canRetry, canReview, statusLabel } from '../../taskView';
+import { canApprove, canCancel, canEdit, canMerge, canRetry, canReview, statusLabel } from '../../taskView';
 import Modal from '../Modal.vue';
 import SnippetPopover from '../files/SnippetPopover.vue';
 import StatusIcon from '../queue/StatusIcon.vue';
 import ChangesTab from './ChangesTab.vue';
 import CodeTab from './CodeTab.vue';
+import MergeDialog from './MergeDialog.vue';
 import OverviewTab from './OverviewTab.vue';
 import RunsTab from './RunsTab.vue';
 import Sidebar from './Sidebar.vue';
@@ -128,7 +129,14 @@ async function submitReview() {
   }
 }
 
-useHotkeys({ Escape: () => !reviewDialog.value && go({ name: 'queue' }) });
+const merging = ref(false);
+function onMerged(result: MergeResult) {
+  merging.value = false;
+  emit('changed');
+  if (result.cleanup_error) emit('error', `Merged, but cleanup failed: ${result.cleanup_error}`);
+}
+
+useHotkeys({ Escape: () => !reviewDialog.value && !merging.value && go({ name: 'queue' }) });
 </script>
 
 <template>
@@ -165,12 +173,15 @@ useHotkeys({ Escape: () => !reviewDialog.value && go({ name: 'queue' }) });
         </template>
         <template v-if="canReview(task)">
           <button @click="openReview('close')">Close PR</button>
-          <button class="primary" @click="openReview('changes')">↻ Request changes</button>
+          <button @click="openReview('changes')">↻ Request changes</button>
         </template>
         <button v-else-if="canRetry(task)" @click="emit('act', 'retry')">↻ Retry</button>
+        <button v-if="canMerge(task)" class="primary" @click="merging = true">Merge PR</button>
         <button v-if="canCancel(task)" @click="emit('act', 'cancel')">{{ s === 'running' ? '■ Stop' : '✕ Cancel' }}</button>
       </div>
     </header>
+
+    <MergeDialog v-if="merging" :task-id="task.id" @close="merging = false" @merged="onMerged" />
 
     <nav class="tabs" role="tablist">
       <button

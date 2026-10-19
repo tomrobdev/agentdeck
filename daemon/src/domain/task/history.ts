@@ -1,8 +1,11 @@
 // A task's history: one row per status change. Pure: no I/O.
 import type { TaskEvent, TaskStatus } from './lifecycle.ts';
 
-/** `created` when the task was added, otherwise the lifecycle event that changed its status. */
-export type TaskEventType = 'created' | TaskEvent['type'];
+/**
+ * `created` when the task was added, `merge` when its PR was merged from the app (the status stays done),
+ * otherwise the lifecycle event that changed its status.
+ */
+export type TaskEventType = 'created' | 'merge' | TaskEvent['type'];
 
 export interface TaskEventRow {
   id: number;

@@ -1,5 +1,6 @@
 // Task commands: add, edit, inspect and move tasks.
 import { readFileSync } from 'node:fs';
+import { createInterface } from 'node:readline/promises';
 import * as actions from '../application/actions.ts';
 import { waitingFor } from '../application/dependencies.ts';
 import { removeWorktree } from '../adapters/git.ts';
@@ -131,6 +132,37 @@ export const taskCommands: Record<string, Command> = {
     const id = taskId(rest[0]);
     await actions.closeTaskPr(db, id);
     console.log(`closed the pull request of #${id}`);
+  },
+  merge: async ({ db, flags, rest }) => {
+    const id = taskId(rest[0]);
+    const preview = await actions.mergePreview(db, id);
+    const method = flags.method ?? preview.method;
+    const { commits, files, additions, deletions, checks } = preview;
+    console.log(`${preview.title}  #${id}`);
+    console.log(`${preview.pr_url}`);
+    console.log(
+      `${preview.branch ?? '?'} → ${preview.base}, ${method}${method === 'squash' ? ` (${commits} → 1 commit)` : `, ${commits} commits`}`,
+    );
+    console.log(`${files} files, +${additions} −${deletions}`);
+    const tests = preview.tests_passed === null ? 'not run' : preview.tests_passed ? 'passed' : 'FAILED';
+    console.log(
+      `tests ${tests}; GitHub checks: ${checks.total ? `${checks.total} (${checks.failing} failing, ${checks.pending} running)` : 'none'}`,
+    );
+    if (preview.unblocks.length) console.log(`unblocks ${preview.unblocks.map((t) => `#${t.id}`).join(', ')}`);
+    for (const w of preview.warnings) console.log(`warning: ${w}`);
+    for (const p of preview.problems) console.log(`problem: ${p}`);
+    if (preview.problems.length) die(`can't merge #${id}`);
+    if (!flags.yes) {
+      const rl = createInterface({ input: process.stdin, output: process.stdout });
+      const answer = await rl.question(`merge into ${preview.base} with ${method}? [y/N] `);
+      rl.close();
+      if (!/^y(es)?$/i.test(answer.trim())) return void console.log('not merged');
+    }
+    const res = await actions.mergeTask(db, id, { method, delete_branch: !flags['keep-branch'] });
+    console.log(
+      `merged #${id} (${res.method})${res.unblocked.length ? `; ${res.unblocked.map((n) => `#${n}`).join(', ')} can start` : ''}`,
+    );
+    if (res.cleanup_error) console.log(`cleanup incomplete: ${res.cleanup_error}`);
   },
   clean: async ({ db, rest }) => {
     const t = db.getTask(taskId(rest[0])) ?? die('no such task');
