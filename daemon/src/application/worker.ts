@@ -18,7 +18,7 @@ import { notifyLater } from './notifications.ts';
 import { pauseRepo } from './pause.ts';
 import { collectPlans } from './plans.ts';
 import { openPullRequest } from './pull-requests.ts';
-import { effectiveTools } from './tools.ts';
+import { effectiveTools, runSettings } from './tools.ts';
 
 /** Run one attempt of a task that the scheduler has already claimed (status = running). */
 export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
@@ -75,8 +75,17 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
     return finish(db, task, runId, { outcome: 'cancelled' });
   }
 
-  const { result, exitCode, rateLimitedUntil, cancelled } = await runClaude({
-    args: claudeArgs(task, effectiveTools(repo, wt.path), prompt, repo.test_cmd),
+  // Written after setup: setup runs here in the daemon, outside the sandbox, so installs keep the network.
+  let settings: string;
+  try {
+    settings = runSettings(repo, wt.path, logPath);
+  } catch (err) {
+    await closeLog(log);
+    return finish(db, task, runId, { outcome: 'failed', reason: `settings: ${(err as Error).message}` });
+  }
+
+  const { result, exitCode, rateLimitedUntil, cancelled, stderr } = await runClaude({
+    args: claudeArgs(task, effectiveTools(repo, wt.path), prompt, repo.test_cmd, settings),
     cwd: wt.path,
     log,
     env: { AGENTDECK_TASK_ID: String(task.id) },
@@ -107,7 +116,11 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
     db.setSetting('rate_limited_until', String(until));
     outcome = { outcome: 'rate_limited', reason: `rate limited until ${new Date(until * 1000).toISOString()}` };
   } else if (!result || result.is_error || exitCode !== 0) {
-    outcome = { outcome: 'failed', reason: result?.subtype ?? `claude exited with code ${exitCode}` };
+    // No result means claude stopped before working, e.g. the sandbox could not start (failIfUnavailable): say why.
+    outcome = {
+      outcome: 'failed',
+      reason: result?.subtype ?? `claude exited with code ${exitCode}${stderr.trim() ? `: ${lastLine(stderr)}` : ''}`,
+    };
   } else {
     const status = parseStatus(result.result);
     if (status.blocked) {

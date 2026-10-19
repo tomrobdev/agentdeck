@@ -31,7 +31,11 @@ export interface ClaudeRun {
   /** Set when Claude rejected a request on rate limits (unix seconds). */
   rateLimitedUntil: number | undefined;
   cancelled: boolean;
+  /** The end of what claude wrote to stderr, e.g. why it refused to start. */
+  stderr: string;
 }
+
+const STDERR_TAIL = 4_000;
 
 const CANCEL_POLL_MS = 2_000;
 
@@ -63,7 +67,7 @@ export async function runClaude(opts: {
   activeChildren.add(child);
   if (child.pid) opts.onSpawn?.(child.pid);
 
-  const run: ClaudeRun = { result: undefined, exitCode: -1, rateLimitedUntil: undefined, cancelled: false };
+  const run: ClaudeRun = { result: undefined, exitCode: -1, rateLimitedUntil: undefined, cancelled: false, stderr: '' };
 
   const cancelTimer = opts.shouldCancel
     ? setInterval(() => {
@@ -91,7 +95,10 @@ export async function runClaude(opts: {
       if (info.status === 'rejected') run.rateLimitedUntil = info.resetsAt;
     }
   });
-  child.stderr.on('data', (d: Buffer) => log.write(JSON.stringify({ type: 'agentdeck_stderr', text: d.toString() }) + '\n'));
+  child.stderr.on('data', (d: Buffer) => {
+    run.stderr = (run.stderr + d.toString()).slice(-STDERR_TAIL);
+    log.write(JSON.stringify({ type: 'agentdeck_stderr', text: d.toString() }) + '\n');
+  });
 
   run.exitCode = await new Promise((resolve) => {
     child.on('error', (err) => {

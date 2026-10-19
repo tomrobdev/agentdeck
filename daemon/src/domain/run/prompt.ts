@@ -1,6 +1,7 @@
 // What a worker's claude is told and allowed. Pure: no I/O.
 import { PLAN_DIR } from '../plan/plan.ts';
 import { ALWAYS_DISALLOWED_TOOLS } from '../repo/tools.ts';
+import { withoutUnscopedFileTools } from './sandbox.ts';
 import type { Task } from '../task/task.ts';
 import type { Run } from './run.ts';
 
@@ -98,8 +99,11 @@ export function buildResolvePrompt(task: Pick<Task, 'id' | 'title' | 'prompt'>, 
   ].join('\n');
 }
 
-export function claudeArgs(task: Task, allowed: string[], prompt: string, testCmd: string | null): string[] {
+/** `settings` is the run's settings file (sandbox and worktree-only file rules, domain/run/sandbox.ts). */
+export function claudeArgs(task: Task, allowed: string[], prompt: string, testCmd: string | null, settings: string): string[] {
   return [
+    '--settings',
+    settings,
     '-p',
     prompt,
     '--output-format',
@@ -113,7 +117,9 @@ export function claudeArgs(task: Task, allowed: string[], prompt: string, testCm
     'dontAsk',
     // One argv entry per rule: patterns like "Bash(npm test*)" contain spaces.
     '--allowedTools',
-    ...allowed,
+    // Edit and Write come from the settings file, limited to the worktree.
+    ...withoutUnscopedFileTools(allowed),
+    // Kept on top of the sandbox: the agent never pushes, sandbox or not.
     '--disallowedTools',
     ...ALWAYS_DISALLOWED_TOOLS,
     '--append-system-prompt',

@@ -33,7 +33,7 @@ import { warnStuckDependents } from './dependencies.ts';
 import { ActionError } from './errors.ts';
 import { notifyLater } from './notifications.ts';
 import { logPrEvent } from './pull-requests.ts';
-import { effectiveTools } from './tools.ts';
+import { effectiveTools, runSettings } from './tools.ts';
 
 /** What bringing the base branch into a task's branch came to. A merge that did not stick is already undone. */
 export type BringInResult =
@@ -110,8 +110,8 @@ async function resolveConflicts(
   const logPath = join(LOG_DIR, `task-${task.id}-resolve-${Date.now()}.jsonl`);
   const log = createWriteStream(logPath, { flags: 'a' });
   const runId = db.startRun(task.id, task.attempts, logPath, 'resolve');
-  const { result, exitCode, rateLimitedUntil, cancelled } = await runClaude({
-    args: claudeArgs(task, effectiveTools(repo, worktree), prompt, repo.test_cmd),
+  const { result, exitCode, rateLimitedUntil, cancelled, stderr } = await runClaude({
+    args: claudeArgs(task, effectiveTools(repo, worktree), prompt, repo.test_cmd, runSettings(repo, worktree, logPath)),
     cwd: worktree,
     log,
     env: { AGENTDECK_TASK_ID: String(task.id) },
@@ -132,7 +132,7 @@ async function resolveConflicts(
       reason = `rate limited until ${new Date(rateLimitedUntil * 1000).toISOString()}`;
     } else if (!result || result.is_error || exitCode !== 0) {
       outcome = 'failed';
-      reason = result?.subtype ?? `claude exited with code ${exitCode}`;
+      reason = result?.subtype ?? `claude exited with code ${exitCode}${stderr.trim() ? `: ${lastLine(stderr)}` : ''}`;
     } else if (parseStatus(result.result).blocked) {
       outcome = 'blocked';
       reason = parseStatus(result.result).reason ?? 'the agent could not resolve the conflicts';

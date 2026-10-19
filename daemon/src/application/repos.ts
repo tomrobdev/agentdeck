@@ -1,4 +1,5 @@
 // Use cases for repos: register, configure, check, pause and resume.
+import { normalizeNetwork } from '../domain/run/sandbox.ts';
 import { existsSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
 import { currentBranch, isGitRepo } from '../adapters/git.ts';
@@ -62,9 +63,15 @@ export function updateRepo(
     pr_mode?: PrMode;
     merge_method?: MergeMethod;
     auto_resolve?: boolean;
+    sandbox?: boolean;
+    /** Hosts the agent's sandboxed commands may reach; a string is split on commas and spaces. */
+    network?: string | string[];
   },
 ) {
   const repo = repoOrThrow(db, nameOrId);
+  const network = patch.network !== undefined ? normalizeNetwork(patch.network) : undefined;
+  const badHost = network?.find((d) => !/^[A-Za-z0-9*.:[\]-]+$/.test(d));
+  if (badHost !== undefined) throw new ActionError(`not a host name: ${badHost}`);
   if (patch.pr_mode !== undefined && !PR_MODES.includes(patch.pr_mode))
     throw new ActionError(`pr_mode must be one of ${PR_MODES.join(', ')}`);
   if (patch.merge_method !== undefined && !isMergeMethod(patch.merge_method))
@@ -82,6 +89,8 @@ export function updateRepo(
     ...(patch.pr_mode !== undefined ? { pr_mode: patch.pr_mode } : {}),
     ...(patch.merge_method !== undefined ? { merge_method: patch.merge_method } : {}),
     ...(patch.auto_resolve !== undefined ? { auto_resolve: patch.auto_resolve ? 1 : 0 } : {}),
+    ...(patch.sandbox !== undefined ? { sandbox: patch.sandbox ? 1 : 0 } : {}),
+    ...(network !== undefined ? { network: JSON.stringify(network) } : {}),
   });
   return repoDetail(db, repo.id);
 }

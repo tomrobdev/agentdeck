@@ -143,6 +143,9 @@ export const MIGRATIONS: Migration[] = [
   // into the branch, which uses no attempt); auto_resolve lets the daemon start a resolve run on its own.
   `ALTER TABLE repos ADD COLUMN auto_resolve INTEGER NOT NULL DEFAULT 1;
    ALTER TABLE runs ADD COLUMN kind TEXT NOT NULL DEFAULT 'work';`,
+  // 10: worker sandbox (docs/adr/0001-worker-sandbox.md). network is a JSON array of hosts sandboxed commands may reach.
+  `ALTER TABLE repos ADD COLUMN sandbox INTEGER NOT NULL DEFAULT 1;
+   ALTER TABLE repos ADD COLUMN network TEXT NOT NULL DEFAULT '[]';`,
 ];
 
 /** Runs every step above the database's user_version in one transaction; returns how many ran. */

@@ -20,6 +20,8 @@ const autoApprove = ref(false);
 const testCmd = ref('');
 const mergeMethod = ref<MergeMethod>('squash');
 const autoResolve = ref(true);
+const sandbox = ref(true);
+const network = ref('');
 const editError = ref('');
 const editMsg = ref('');
 const busy = ref<'' | 'save' | 'plan'>('');
@@ -46,6 +48,8 @@ function load(d: RepoDetail) {
   testCmd.value = d.test_cmd ?? '';
   mergeMethod.value = d.merge_method;
   autoResolve.value = !!d.auto_resolve;
+  sandbox.value = !!d.sandbox;
+  network.value = parseHosts(d.network).join(', ');
 }
 
 async function edit(r: Repo) {
@@ -70,6 +74,8 @@ async function save(): Promise<boolean> {
         test_cmd: testCmd.value,
         merge_method: mergeMethod.value,
         auto_resolve: autoResolve.value,
+        sandbox: sandbox.value,
+        network: network.value.split(/[\s,]+/).filter(Boolean),
       }),
     );
     editMsg.value = 'Saved';
@@ -102,6 +108,16 @@ async function planNow() {
     editMsg.value = '';
   } finally {
     busy.value = '';
+  }
+}
+
+/** The repo's `network` column: a JSON array of hosts. */
+function parseHosts(json: string | undefined): string[] {
+  try {
+    const v = JSON.parse(json ?? '[]');
+    return Array.isArray(v) ? v.filter((d): d is string => typeof d === 'string') : [];
+  } catch {
+    return [];
   }
 }
 </script>
@@ -155,6 +171,17 @@ async function planNow() {
                 >(a claude run when a branch or an open PR conflicts with the base; clean merges always happen)</span
               ></span
             >
+          </label>
+          <label class="check inline">
+            <input type="checkbox" v-model="sandbox" />
+            <span
+              >Run the agent's shell commands in the sandbox
+              <span class="muted">(confined to the worktree and the hosts below; docs/adr/0001-worker-sandbox.md)</span></span
+            >
+          </label>
+          <label v-if="sandbox">
+            <span>Network hosts <span class="muted">(sandboxed commands may reach these; empty = none)</span></span>
+            <input v-model="network" placeholder="registry.npmjs.org, github.com" />
           </label>
           <p v-if="open.planner_runs.length" class="muted last" :title="open.planner_runs[0].note ?? ''">
             Last plan {{ ago(open.planner_runs[0].started_at) }}: {{ open.planner_runs[0].outcome ?? 'running' }}

@@ -294,6 +294,57 @@ test('a failing setup blocks the task without starting claude', async () => {
   }
 });
 
+const settingsCalls = () => readFileSync(join(home, 'fake-claude-settings.log'), 'utf8').trim().split('\n');
+
+test('each run gets a sandbox settings file outside its worktree', async () => {
+  const { updateRepo } = await import('../src/application/actions.ts');
+  const { LOG_DIR } = await import('../src/config.ts');
+  db.setRepoPaused(1, null); // the failing setup above paused it
+  assert.equal(db.getRepo(1)!.sandbox, 1, 'sandbox is on by default');
+  assert.equal(db.getRepo(1)!.network, '[]', 'no hosts by default');
+  updateRepo(db, 1, { network: 'registry.npmjs.org, github.com' });
+  try {
+    const task = db.addTask({ repo_id: 1, title: 'sandboxed', prompt: 'FAKE_DONE in the sandbox' });
+    await drain();
+    const t = db.getTask(task.id)!;
+    assert.equal(t.status, 'done', t.blocked_reason ?? '');
+    const path = settingsCalls().at(-1)!;
+    assert.equal(path, join(LOG_DIR, `task-${t.id}-attempt-1.settings.json`));
+    assert.ok(!path.startsWith(t.worktree!), 'the agent cannot edit its own settings');
+    const settings = JSON.parse(readFileSync(path, 'utf8'));
+    assert.deepEqual(settings.sandbox, {
+      enabled: true,
+      failIfUnavailable: true,
+      allowUnsandboxedCommands: false,
+      network: { allowedDomains: ['registry.npmjs.org', 'github.com'], strictAllowlist: true },
+    });
+    assert.deepEqual(settings.permissions.allow, [`Edit(/${t.worktree}/**)`]);
+
+    updateRepo(db, 1, { sandbox: false });
+    const off = db.addTask({ repo_id: 1, title: 'unsandboxed', prompt: 'FAKE_DONE without the sandbox' });
+    await drain();
+    assert.equal(db.getTask(off.id)!.status, 'done');
+    assert.deepEqual(JSON.parse(readFileSync(settingsCalls().at(-1)!, 'utf8')).sandbox, { enabled: false });
+  } finally {
+    updateRepo(db, 1, { sandbox: true, network: '' });
+  }
+});
+
+test('a sandbox that cannot start fails the run with claude’s reason', async () => {
+  const task = db.addTask({ repo_id: 1, title: 'no sandbox', prompt: 'FAKE_NO_SANDBOX', max_attempts: 1 });
+  await drain();
+  const t = db.getTask(task.id)!;
+  assert.equal(t.status, 'failed');
+  assert.match(t.blocked_reason!, /^claude exited with code 1: Error: sandbox is required .* could not start/);
+  assert.match(db.runsForTask(t.id)[0].result_text!, /could not start/);
+});
+
+test('repo network rejects things that are not host names', async () => {
+  const { ActionError, updateRepo } = await import('../src/application/actions.ts');
+  assert.throws(() => updateRepo(db, 1, { network: 'a.com, http://b.com/x' }), ActionError);
+  assert.equal(db.getRepo(1)!.network, '[]');
+});
+
 test('a new worktree starts from origin/<base> when origin is ahead of the local base', async () => {
   const seed = join(home, 'seed');
   const origin = join(home, 'origin.git');

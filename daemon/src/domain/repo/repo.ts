@@ -17,4 +17,6 @@ export interface Repo {
   pr_mode: PrMode;
   merge_method: MergeMethod; // how a PR is merged from the app unless the person picks another
   auto_resolve: number; // 1 = the daemon starts a resolve run on its own when a branch conflicts with the base
+  sandbox: number; // 1 = the agent's Bash commands run in Claude Code's sandbox (the default)
+  network: string; // JSON array of hosts sandboxed commands may reach, '[]' = none
 }

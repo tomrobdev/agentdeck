@@ -13,6 +13,8 @@ Repos
   agentdeck repo set <repo> pr_mode off|draft|ready  push and open a PR when a task is done
   agentdeck repo set <repo> merge_method squash|merge|rebase  how the app and \`agentdeck merge\` merge a PR (default squash)
   agentdeck repo set <repo> auto_resolve on|off   start a conflict run on its own when a branch conflicts with the base (default on)
+  agentdeck repo set <repo> sandbox on|off        run the agent's shell commands in Claude Code's sandbox (default on)
+  agentdeck repo set <repo> network "<hosts>"     hosts sandboxed commands may reach, e.g. "registry.npmjs.org,github.com" ("" for none)
   agentdeck goals <repo> [--file goals.md]        show (or replace) the goals the planner works from
   agentdeck plan <repo>                           run the planner now
 

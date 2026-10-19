@@ -1,0 +1,73 @@
+import assert from 'node:assert/strict';
+import { mkdtempSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { test } from 'node:test';
+import { runSettings } from '../src/application/tools.ts';
+import type { Repo } from '../src/domain/repo/repo.ts';
+import { ALWAYS_DISALLOWED_TOOLS, DEFAULT_ALLOWED_TOOLS } from '../src/domain/repo/tools.ts';
+import { claudeArgs } from '../src/domain/run/prompt.ts';
+import { normalizeNetwork, parseNetwork, settingsPath, workerSettings, worktreeFileRules } from '../src/domain/run/sandbox.ts';
+import type { Task } from '../src/domain/task/task.ts';
+
+const wt = '/Users/me/.agentdeck/worktrees/demo/task-7';
+
+test('file rules cover the worktree by absolute path (// prefix)', () => {
+  assert.deepEqual(worktreeFileRules(wt), [`Edit(/${wt}/**)`]);
+  assert.deepEqual(worktreeFileRules(`${wt}/`), worktreeFileRules(wt));
+  assert.ok(worktreeFileRules(wt)[0].startsWith('Edit(//Users/'));
+});
+
+test('sandbox on: enabled, no fallback, strict allowlist from the repo', () => {
+  assert.deepEqual(workerSettings({ worktree: wt, sandbox: true, network: [] }), {
+    sandbox: {
+      enabled: true,
+      failIfUnavailable: true,
+      allowUnsandboxedCommands: false,
+      network: { allowedDomains: [], strictAllowlist: true },
+    },
+    permissions: { allow: [`Edit(/${wt}/**)`] },
+  });
+  const net = workerSettings({ worktree: wt, sandbox: true, network: ['registry.npmjs.org', '*.github.com'] });
+  assert.deepEqual(net.sandbox.network, { allowedDomains: ['registry.npmjs.org', '*.github.com'], strictAllowlist: true });
+});
+
+test('sandbox off: disabled, file tools still limited to the worktree', () => {
+  assert.deepEqual(workerSettings({ worktree: wt, sandbox: false, network: ['github.com'] }), {
+    sandbox: { enabled: false },
+    permissions: { allow: [`Edit(/${wt}/**)`] },
+  });
+});
+
+test('network lists parse and normalize', () => {
+  assert.deepEqual(parseNetwork('["a.com","b.org"]'), ['a.com', 'b.org']);
+  assert.deepEqual(parseNetwork(null), []);
+  assert.deepEqual(parseNetwork('not json'), []);
+  assert.deepEqual(parseNetwork('{"a":1}'), []);
+  assert.deepEqual(normalizeNetwork(' a.com, b.org  a.com '), ['a.com', 'b.org']);
+  assert.deepEqual(normalizeNetwork(''), []);
+});
+
+test('claudeArgs passes --settings and drops bare Edit/Write; push stays disallowed', () => {
+  const task = { model: 'sonnet', max_turns: 10 } as Task;
+  const args = claudeArgs(task, [...DEFAULT_ALLOWED_TOOLS, 'Edit(src/**)'], 'do it', null, '/logs/task-1-attempt-1.settings.json');
+  assert.equal(args[args.indexOf('--settings') + 1], '/logs/task-1-attempt-1.settings.json');
+  const allowed = args.slice(args.indexOf('--allowedTools') + 1, args.indexOf('--disallowedTools'));
+  assert.ok(!allowed.includes('Edit') && !allowed.includes('Write'), 'unscoped file tools would allow any path');
+  assert.ok(allowed.includes('Read') && allowed.includes('Edit(src/**)'));
+  const disallowed = args.slice(args.indexOf('--disallowedTools') + 1, args.indexOf('--append-system-prompt'));
+  assert.deepEqual(disallowed, ALWAYS_DISALLOWED_TOOLS);
+  assert.ok(disallowed.includes('Bash(git push*)') && disallowed.includes('Bash(git remote*)'));
+});
+
+test('the settings file is written next to the run log with the repo’s sandbox settings', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'agentdeck-sandbox-'));
+  const log = join(dir, 'task-3-attempt-2.jsonl');
+  assert.equal(settingsPath(log), join(dir, 'task-3-attempt-2.settings.json'));
+  const repo = { sandbox: 1, network: '["registry.npmjs.org"]' } as Repo;
+
+  const on = JSON.parse(readFileSync(runSettings(repo, wt, log), 'utf8'));
+  assert.deepEqual(on, workerSettings({ worktree: wt, sandbox: true, network: ['registry.npmjs.org'] }));
+  const off = JSON.parse(readFileSync(runSettings({ ...repo, sandbox: 0 }, wt, log), 'utf8'));
+  assert.deepEqual(off.sandbox, { enabled: false });
+});
