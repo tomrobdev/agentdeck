@@ -49,15 +49,19 @@ literal command, not `node -e` doing the same thing.
     worktree only. In permission rules, `//` marks an absolute path. A single `/` would be relative to the
     settings file, so the worker writes `/` followed by the absolute path. The bare `Edit` and `Write`
     rules are removed from `--allowedTools`, because they would allow any path.
+
 - `Bash(git push*)`, `Bash(git remote*)` and `Bash(rm -rf*)` stay in `--disallowedTools` as an extra block.
+
 - New migration step 6 adds two columns: `repos.network`, a JSON array of hosts (default `[]`, no network),
-  and `repos.sandbox`, `INTEGER NOT NULL DEFAULT 1`. Set them with `agentdeck repo set <repo> network
-  "registry.npmjs.org,github.com"` and `agentdeck repo set <repo> sandbox on|off`. With the sandbox off,
+  and `repos.sandbox`, `INTEGER NOT NULL DEFAULT 1`. Set them with
+  `agentdeck repo set <repo> network "registry.npmjs.org,github.com"` and `agentdeck repo set <repo> sandbox on|off`. With the sandbox off,
   the settings file has `sandbox.enabled: false` but keeps the worktree-only file rules.
+
 - `setup_cmd` and `test_cmd` run in the daemon, outside the sandbox, so `pnpm install` and similar commands
   still have the network. The planner is unchanged. Its tools are read-only (Read, Glob, Grep, and
   `git log`/`show`/`diff`, `ls`, `cat`), with no interpreter and no Edit or Write, so it has no way to
   run code of its own.
+
 - If claude exits without a result (the sandbox couldn't start, for example), the last line of its stderr
   is added to the run's failure reason (`claude exited with code 1: <stderr>`). That reason is stored as
   the task's `blocked_reason` and shown in `agentdeck ls` and in notifications.
