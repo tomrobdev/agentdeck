@@ -29,6 +29,7 @@ const form = ref<{
   planner_interval_hours: number;
   planner_max_tasks: number;
   planner_model: string;
+  reload_on_change: boolean;
 } | null>(null);
 const service = ref<ServiceStatus | null>(null);
 const appAtLogin = ref<boolean | null>(null);
@@ -52,6 +53,7 @@ function load(s: Settings) {
     planner_interval_hours: s.planner.interval_hours,
     planner_max_tasks: s.planner.max_tasks,
     planner_model: s.planner.model,
+    reload_on_change: s.reload_on_change,
   };
 }
 
@@ -86,6 +88,7 @@ async function save(close = true) {
     load(
       await api.updateSettings({
         max_concurrent: f.max_concurrent,
+        reload_on_change: f.reload_on_change,
         budget: {
           five_hour_max: f.five_hour_max / 100,
           five_hour_soft: f.five_hour_soft / 100,
@@ -201,6 +204,12 @@ async function test() {
             >Run <code>agentdeck install</code> once and it starts at login and restarts if it dies.</small
           >
         </div>
+        <label class="check">
+          <input type="checkbox" v-model="form.reload_on_change" /> Restart the daemon when its source changes (for developing AgentDeck)
+        </label>
+        <small class="muted"
+          >Once something in daemon/src changed and no task or planner run is active, it exits and launchd starts the new code.</small
+        >
         <label v-if="isNative" class="check">
           <input type="checkbox" :checked="!!appAtLogin" @change="toggleAppAtLogin" /> Open this dashboard at login (in the menu bar)
         </label>

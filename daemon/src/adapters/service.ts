@@ -1,5 +1,5 @@
 // Runs the daemon as a per-user launchd agent: starts at login, restarted if it dies.
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir, userInfo } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -34,7 +34,7 @@ export function servicePath(): string {
 export function renderPlist(): string {
   const env: Record<string, string> = { PATH: servicePath(), HOME: homedir() };
   if (process.env.AGENTDECK_HOME) env.AGENTDECK_HOME = HOME;
-  const log = join(LOG_DIR, 'daemon.log');
+  const log = DAEMON_LOG;
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -92,6 +92,51 @@ async function bootout(): Promise<void> {
   }
 }
 
+export const DAEMON_LOG = join(LOG_DIR, 'daemon.log');
+
+/** Print the last `lines` of the daemon log to stdout; with `follow`, keep printing until interrupted. */
+export function tailLog(lines: number, follow: boolean): Promise<void> {
+  if (!existsSync(DAEMON_LOG)) throw new Error(`no log yet at ${DAEMON_LOG}`);
+  return new Promise((resolve, reject) => {
+    const child = spawn('tail', ['-n', String(lines), ...(follow ? ['-f'] : []), DAEMON_LOG], { stdio: 'inherit' });
+    child.on('error', reject);
+    child.on('close', () => resolve());
+  });
+}
+
+/** Load the installed plist without rewriting it. */
+export async function start(): Promise<ServiceStatus> {
+  if (!existsSync(PLIST_PATH)) throw new Error('the service is not installed; run `agentdeck install`');
+  if ((await serviceStatus()).loaded) throw new Error('the service is already started');
+  await exec('launchctl', ['bootstrap', domain(), PLIST_PATH]);
+  return waitRunning();
+}
+
+/** Unload the service so the daemon stops, keeping the plist (it starts again at login or with `service start`). */
+export async function stop(): Promise<void> {
+  if (!(await serviceStatus()).loaded) throw new Error('the service is not running');
+  await exec('launchctl', ['bootout', `${domain()}/${LABEL}`]);
+}
+
+/** Kill the daemon and let launchd start it again on whatever code is on disk. */
+export async function restart(): Promise<ServiceStatus> {
+  const st = await serviceStatus();
+  if (!st.installed) throw new Error('the service is not installed; run `agentdeck install`');
+  if (!st.loaded) return start();
+  await exec('launchctl', ['kickstart', '-k', `${domain()}/${LABEL}`]);
+  return waitRunning();
+}
+
+// launchd reports a transient spawn state for a moment; wait briefly for "running".
+async function waitRunning(): Promise<ServiceStatus> {
+  for (let i = 0; i < 20; i++) {
+    const st = await serviceStatus();
+    if (st.state === 'running') return st;
+    await new Promise((r) => setTimeout(r, 150));
+  }
+  return serviceStatus();
+}
+
 /** Write the plist and (re)load it. The daemon starts right away and at every login. */
 export async function install(): Promise<ServiceStatus> {
   ensureDirs();
@@ -99,13 +144,7 @@ export async function install(): Promise<ServiceStatus> {
   writeFileSync(PLIST_PATH, renderPlist());
   await bootout();
   await exec('launchctl', ['bootstrap', domain(), PLIST_PATH]);
-  // launchd reports a transient spawn state for a moment; wait briefly for "running".
-  for (let i = 0; i < 20; i++) {
-    const st = await serviceStatus();
-    if (st.state === 'running') return st;
-    await new Promise((r) => setTimeout(r, 150));
-  }
-  return serviceStatus();
+  return waitRunning();
 }
 
 export async function uninstall(): Promise<void> {

@@ -1,4 +1,5 @@
 // Daemon commands: the service, the scheduler, pause, status and settings.
+import { resolve } from 'node:path';
 import * as actions from '../application/actions.ts';
 import { startApi } from '../api/server.ts';
 import { BUDGET_KEYS } from '../domain/usage/governor.ts';
@@ -6,13 +7,43 @@ import type { NotifyKind } from '../domain/notification.ts';
 import { Scheduler } from '../application/scheduler.ts';
 import * as service from '../adapters/service.ts';
 import { API_PORT, DB_PATH, DEFAULTS } from '../config.ts';
+import { gracefulRestart } from '../application/restart.ts';
+import { reloadOnChange } from '../application/settings.ts';
+import { reloadDecision } from '../domain/daemon/restart.ts';
+import { watchSource } from '../adapters/watch.ts';
+import { logsOptions, restartOptions, serviceAction } from './daemon-args.ts';
 import { die, relTime } from './format.ts';
 import type { Command } from './context.ts';
+
+/** Adapter failures are plain Errors with a message fit to print. */
+async function launchd<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (err) {
+    return die(err instanceof Error ? err.message : String(err));
+  }
+}
 
 /** `daemon` and `run-once` share one implementation; `cmd` says which was typed. */
 const runScheduler: Command = async ({ db, cmd }) => {
   const once = cmd === 'run-once';
-  const scheduler = new Scheduler(db, { once, keepAwake: !once });
+  const changed: string[] = [];
+  let lastChangeAt: number | null = null;
+  if (!once) {
+    watchSource(resolve(import.meta.dirname, '..'), (file) => {
+      if (!changed.includes(file)) changed.push(file);
+      lastChangeAt = Date.now();
+    });
+  }
+  const reload = once
+    ? undefined
+    : {
+        check: ({ tasks, planning }: { tasks: number; planning: boolean }) =>
+          reloadDecision({ enabled: reloadOnChange(db), changed, lastChangeAt, now: Date.now(), tasks, planning }),
+        // launchd's KeepAlive starts the daemon again on the code now on disk.
+        exit: () => process.exit(0),
+      };
+  const scheduler = new Scheduler(db, { once, keepAwake: !once, reload });
   for (const sig of ['SIGINT', 'SIGTERM'] as const) {
     process.on(sig, () => {
       console.log(`${sig}: stopping workers; their tasks will be requeued on next start`);
@@ -46,11 +77,39 @@ export const daemonCommands: Record<string, Command> = {
     await service.uninstall();
     console.log('removed the launchd agent; the daemon is stopped');
   },
-  service: async () => {
+  service: async ({ rest }) => {
+    const action = serviceAction(rest);
+    if (action === 'start') {
+      const st = await launchd(service.start);
+      console.log(`service started: daemon ${st.state ?? 'loading'}${st.pid ? ` (pid ${st.pid})` : ''}`);
+    } else if (action === 'stop') {
+      await launchd(service.stop);
+      console.log(`service stopped; the plist is kept (\`agentdeck service start\` brings it back, \`agentdeck uninstall\` removes it)`);
+    } else {
+      const st = await service.serviceStatus();
+      console.log(`installed  ${st.installed ? st.plist : 'no'}`);
+      console.log(`loaded     ${st.loaded ? `${st.state ?? '?'}${st.pid ? `, pid ${st.pid}` : ''}` : 'no'}`);
+      console.log(`program    ${st.program}`);
+    }
+  },
+  restart: async ({ db, flags, rest }) => {
+    const { graceful } = restartOptions(flags, rest);
     const st = await service.serviceStatus();
-    console.log(`installed  ${st.installed ? st.plist : 'no'}`);
-    console.log(`loaded     ${st.loaded ? `${st.state ?? '?'}${st.pid ? `, pid ${st.pid}` : ''}` : 'no'}`);
-    console.log(`program    ${st.program}`);
+    if (!st.installed) die('the service is not installed; run `agentdeck install`');
+    if (graceful && st.loaded) {
+      let interrupted = false;
+      process.once('SIGINT', () => (interrupted = true));
+      await launchd(() => gracefulRestart(db, { restart: service.restart, log: console.log, aborted: () => interrupted }));
+    } else {
+      const running = db.countRunning();
+      if (running && st.loaded) console.log(`restarting at once: ${running} running task(s) lose their run and are requeued`);
+      await launchd(service.restart);
+    }
+    console.log('agentdeck daemon restarted');
+  },
+  logs: async ({ flags, rest }) => {
+    const { lines, follow } = logsOptions(flags, rest);
+    await launchd(() => service.tailLog(lines, follow));
   },
   pause: ({ db }) => {
     actions.setPaused(db, true);
@@ -68,6 +127,7 @@ export const daemonCommands: Record<string, Command> = {
     else if (key === 'notify_desktop') actions.updateSettings(db, { notify: { desktop: on(value) } });
     else if (key === 'notify_events') actions.updateSettings(db, { notify: { events: value.split(',').filter(Boolean) as NotifyKind[] } });
     else if (key === 'ntfy_topic' || key === 'ntfy_server') actions.updateSettings(db, { notify: { [key]: value } });
+    else if (key === 'reload_on_change') actions.updateSettings(db, { reload_on_change: on(value) });
     else if (key === 'planner_enabled') actions.updateSettings(db, { planner: { enabled: on(value) } });
     else if (key === 'planner_interval_hours') actions.updateSettings(db, { planner: { interval_hours: Number(value) } });
     else if (key === 'planner_max_tasks') actions.updateSettings(db, { planner: { max_tasks: Number(value) } });
@@ -80,6 +140,7 @@ export const daemonCommands: Record<string, Command> = {
     const d = actions.status(db).governor;
     console.log(`max_concurrent  ${st.max_concurrent}`);
     for (const [k, v] of Object.entries(st.budget)) console.log(`${k.padEnd(15)} ${v}`);
+    console.log(`reload_on_change ${st.reload_on_change ? 'on' : 'off'}`);
     console.log(`notify_desktop  ${st.notify.desktop ? 'on' : 'off'}`);
     console.log(`notify_events   ${st.notify.events.join(',') || '-'}`);
     console.log(`ntfy            ${st.notify.ntfy_topic ? `${st.notify.ntfy_server}/${st.notify.ntfy_topic}` : 'off'}`);

@@ -5,6 +5,7 @@ import { activeChildren, killGroup, reapOrphans } from '../adapters/processes.ts
 import { DEFAULTS } from '../config.ts';
 import type { Db } from '../db/index.ts';
 import { MAX_RESTARTS } from '../domain/task/lifecycle.ts';
+import type { ReloadDecision } from '../domain/daemon/restart.ts';
 import { decide } from '../domain/usage/governor.ts';
 import { warnStuckDependents } from './dependencies.ts';
 import { notifyLater } from './notifications.ts';
@@ -22,17 +23,21 @@ export interface SchedulerOptions {
   keepAwake?: boolean;
   /** How often to refresh the state of open PRs (off in once mode). */
   prRefreshMs?: number;
+  /** Restart onto new code: `check` says whether that is due, `exit` ends the process once it is. */
+  reload?: { check: (busy: { tasks: number; planning: boolean }) => ReloadDecision; exit: () => void };
   log?: (msg: string) => void;
 }
 
 export class Scheduler {
   private readonly db: Db;
-  private readonly opts: Required<SchedulerOptions>;
+  private readonly opts: Required<Omit<SchedulerOptions, 'reload'>>;
+  private readonly reload: SchedulerOptions['reload'];
   private readonly running = new Set<Promise<unknown>>();
   private timer: NodeJS.Timeout | undefined;
   private stopped = false;
   private drained: (() => void) | undefined;
   private lastHold: string | null = null;
+  private lastReload: string | null = null;
   private planning = false;
   private readonly awake: KeepAwake;
   private lastPrRefresh = 0;
@@ -49,6 +54,7 @@ export class Scheduler {
       log: (m) => console.log(`[${new Date().toISOString()}] ${m}`),
       ...opts,
     };
+    this.reload = opts.reload;
     this.awake = new KeepAwake(this.opts.keepAwake);
   }
 
@@ -85,7 +91,16 @@ export class Scheduler {
 
   private tick(): void {
     if (this.stopped) return;
-    const { reason, limit } = this.gate();
+    const reload = this.reload?.check({ tasks: this.running.size, planning: this.planning });
+    if (reload?.exit) {
+      this.opts.log(reload.reason);
+      this.stop();
+      this.reload!.exit();
+      return;
+    }
+    if (reload?.pending && reload.reason !== this.lastReload) this.opts.log(reload.reason);
+    this.lastReload = reload?.pending ? reload.reason : null;
+    const { reason, limit } = reload?.pending ? { reason: 'reload pending', limit: 0 } : this.gate();
     if (!reason) {
       while (this.running.size < limit) {
         const task = this.db.claimNextTask();

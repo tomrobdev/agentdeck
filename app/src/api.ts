@@ -329,6 +329,7 @@ export interface Settings {
   budget: Budget;
   notify: { desktop: boolean; events: NotifyKind[]; ntfy_topic: string; ntfy_server: string };
   planner: { enabled: boolean; interval_hours: number; max_tasks: number; model: string };
+  reload_on_change: boolean;
 }
 
 export type LogEntry =
@@ -367,6 +368,7 @@ export const api = {
     budget?: Partial<Budget>;
     notify?: Partial<Settings['notify']>;
     planner?: Partial<Settings['planner']>;
+    reload_on_change?: boolean;
   }) => call<Settings>('/api/settings', { method: 'POST', json: patch }),
   testNotify: () => call<{ ok: boolean }>('/api/notify/test', { method: 'POST' }),
   repos: () => call<Repo[]>('/api/repos'),

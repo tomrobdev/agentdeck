@@ -20,6 +20,9 @@ export function plannerRunStore(db: DatabaseSync) {
         id,
       );
     },
+    countRunningPlannerRuns(): number {
+      return Number((db.prepare('SELECT COUNT(*) AS n FROM planner_runs WHERE ended_at IS NULL').get() as { n: number }).n);
+    },
     plannerRuns(repo_id?: number, limit = 10): PlannerRun[] {
       return (repo_id
         ? db.prepare('SELECT * FROM planner_runs WHERE repo_id = ? ORDER BY id DESC LIMIT ?').all(repo_id, limit)
