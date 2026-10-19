@@ -89,12 +89,23 @@ export function startApi(db: Db, port = API_PORT, wake: () => void = () => {}): 
         return { ...result, task: taskDetail(db, Number(id)) };
       },
     ],
+    // Bring the base branch into the task's branch, resolving conflicts with a claude run. Answers when it is done.
+    [
+      'POST',
+      /^\/api\/tasks\/(\d+)\/resolve$/,
+      async (_q, _s, [id]) => {
+        const report = await actions.resolveTask(db, Number(id));
+        wake();
+        return { ...report, task: taskDetail(db, Number(id)) };
+      },
+    ],
     [
       'GET',
       /^\/api\/tasks\/(\d+)\/log$/,
       (req, res, [id]) => {
-        const attempt = Number(new URL(req.url!, 'http://x').searchParams.get('attempt')) || undefined;
-        streamLog(db, req, res, Number(id), attempt);
+        const q = new URL(req.url!, 'http://x').searchParams;
+        // A run by its id (resolve runs share an attempt number with a work run), or by attempt.
+        streamLog(db, req, res, Number(id), { attempt: Number(q.get('attempt')) || undefined, run: Number(q.get('run')) || undefined });
         return undefined; // streamLog owns the response
       },
     ],

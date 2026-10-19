@@ -19,6 +19,7 @@ const goals = ref('');
 const autoApprove = ref(false);
 const testCmd = ref('');
 const mergeMethod = ref<MergeMethod>('squash');
+const autoResolve = ref(true);
 const editError = ref('');
 const editMsg = ref('');
 const busy = ref<'' | 'save' | 'plan'>('');
@@ -44,6 +45,7 @@ function load(d: RepoDetail) {
   autoApprove.value = !!d.auto_approve;
   testCmd.value = d.test_cmd ?? '';
   mergeMethod.value = d.merge_method;
+  autoResolve.value = !!d.auto_resolve;
 }
 
 async function edit(r: Repo) {
@@ -67,6 +69,7 @@ async function save(): Promise<boolean> {
         auto_approve: autoApprove.value,
         test_cmd: testCmd.value,
         merge_method: mergeMethod.value,
+        auto_resolve: autoResolve.value,
       }),
     );
     editMsg.value = 'Saved';
@@ -143,6 +146,15 @@ async function planNow() {
             <select v-model="mergeMethod">
               <option v-for="m in MERGE_METHODS" :key="m.key" :value="m.key">{{ m.label }} · {{ m.hint }}</option>
             </select>
+          </label>
+          <label class="check inline">
+            <input type="checkbox" v-model="autoResolve" />
+            <span
+              >Resolve merge conflicts automatically
+              <span class="muted"
+                >(a claude run when a branch or an open PR conflicts with the base; clean merges always happen)</span
+              ></span
+            >
           </label>
           <p v-if="open.planner_runs.length" class="muted last" :title="open.planner_runs[0].note ?? ''">
             Last plan {{ ago(open.planner_runs[0].started_at) }}: {{ open.planner_runs[0].outcome ?? 'running' }}
@@ -283,6 +295,10 @@ label {
 }
 .check input {
   width: auto;
+}
+.check.inline {
+  align-self: auto;
+  padding-bottom: 0;
 }
 .row {
   display: flex;

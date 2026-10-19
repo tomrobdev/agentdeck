@@ -6,7 +6,7 @@ import Modal from '../Modal.vue';
 // The confirm before a merge: it writes to the base branch on GitHub and can't be undone from here.
 // Enter merges, Esc cancels (Modal).
 const props = defineProps<{ taskId: number }>();
-const emit = defineEmits<{ close: []; merged: [result: MergeResult] }>();
+const emit = defineEmits<{ close: []; merged: [result: MergeResult]; changed: [] }>();
 
 const preview = ref<MergePreview | null>(null);
 const loadError = ref('');
@@ -14,17 +14,47 @@ const method = ref<MergeMethod>('squash');
 const deleteBranch = ref(true);
 const merging = ref(false);
 const mergeError = ref('');
+const resolving = ref(false);
+const resolveNote = ref('');
 
-onMounted(async () => {
+async function load() {
   try {
     preview.value = await api.mergePreview(props.taskId);
     method.value = preview.value.method;
   } catch (e) {
     loadError.value = (e as Error).message;
   }
-});
+}
+onMounted(load);
 
-const canConfirm = computed(() => !!preview.value && !preview.value.problems.length && !merging.value);
+const canConfirm = computed(() => !!preview.value && !preview.value.problems.length && !merging.value && !resolving.value);
+
+// Merge the base branch into the task's branch. A conflict starts a claude run, so this can take minutes.
+async function resolve() {
+  resolving.value = true;
+  mergeError.value = resolveNote.value = '';
+  try {
+    const res = await api.resolve(props.taskId);
+    emit('changed');
+    if (res.outcome === 'blocked') return emit('close'); // the task page shows why it is blocked
+    const files = `${res.files.length} ${res.files.length === 1 ? 'file' : 'files'}`;
+    resolveNote.value =
+      res.outcome === 'resolved'
+        ? `Resolved conflicts in ${files}.`
+        : res.outcome === 'clean'
+          ? 'Brought in the base branch.'
+          : res.outcome === 'up_to_date'
+            ? 'The branch is already up to date.'
+            : (res.reason ?? res.outcome);
+    if (res.push_error) mergeError.value = `Could not push: ${res.push_error}`;
+    else if (res.pushed) resolveNote.value += ' Pushed; GitHub may take a moment to see it.';
+    await load();
+  } catch (e) {
+    mergeError.value = (e as Error).message;
+  } finally {
+    resolving.value = false;
+  }
+}
 
 const commitsLine = computed(() => {
   const n = preview.value?.commits ?? 0;
@@ -117,6 +147,17 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
       <ul v-if="preview.problems.length" class="notes problem">
         <li v-for="p in preview.problems" :key="p">✕ Can't merge: {{ p }}</li>
       </ul>
+      <div v-if="preview.conflicting" class="resolve">
+        <button :disabled="resolving || merging" @click="resolve">{{ resolving ? 'Resolving…' : 'Resolve conflicts' }}</button>
+        <span class="muted">
+          {{
+            resolving
+              ? 'Merging the base branch into the branch; a conflict starts a claude run, which can take a few minutes.'
+              : 'Merges the base branch into the branch and has claude resolve conflicts. If it cannot, the task is blocked.'
+          }}
+        </span>
+      </div>
+      <p v-if="resolveNote" class="muted">{{ resolveNote }}</p>
       <p v-if="mergeError" class="error">{{ mergeError }}</p>
     </div>
 
@@ -202,6 +243,14 @@ dd {
 .error {
   color: var(--failed);
   margin: 0;
+}
+.resolve {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.resolve .muted {
+  font-size: 12px;
 }
 .actions {
   display: flex;

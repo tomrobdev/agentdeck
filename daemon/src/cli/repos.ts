@@ -34,14 +34,16 @@ export const repoCommands: Record<string, Command> = {
       console.log(`${repo.name}: resumed`);
     } else if (sub === 'set') {
       const [, name, key, value = ''] = rest;
-      if (!name || !['auto_approve', 'base_branch', 'test_cmd', 'setup_cmd', 'pr_mode', 'merge_method'].includes(key))
+      if (!name || !['auto_approve', 'auto_resolve', 'base_branch', 'test_cmd', 'setup_cmd', 'pr_mode', 'merge_method'].includes(key))
         die(
-          'usage: agentdeck repo set <repo> auto_approve on|off | base_branch <branch> | test_cmd "<cmd>" | setup_cmd "<cmd>" | pr_mode off|draft|ready | merge_method squash|merge|rebase',
+          'usage: agentdeck repo set <repo> auto_approve on|off | auto_resolve on|off | base_branch <branch> | test_cmd "<cmd>" | setup_cmd "<cmd>" | pr_mode off|draft|ready | merge_method squash|merge|rebase',
         );
       if (key === 'pr_mode') actions.updateRepo(db, name, { pr_mode: value as PrMode });
       else if (key === 'merge_method') actions.updateRepo(db, name, { merge_method: value as MergeMethod });
       else if (key === 'auto_approve')
         actions.updateRepo(db, name, { auto_approve: ['1', 'on', 'true', 'yes'].includes(value.toLowerCase()) });
+      else if (key === 'auto_resolve')
+        actions.updateRepo(db, name, { auto_resolve: ['1', 'on', 'true', 'yes'].includes(value.toLowerCase()) });
       else if (key === 'base_branch') actions.updateRepo(db, name, { base_branch: value });
       else if (key === 'setup_cmd') actions.updateRepo(db, name, { setup_cmd: value });
       else actions.updateRepo(db, name, { test_cmd: value });

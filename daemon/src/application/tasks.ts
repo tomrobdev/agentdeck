@@ -1,6 +1,7 @@
 // Use cases for tasks: add, edit, and move them through the lifecycle on a person's request.
 import type { Db } from '../db/index.ts';
 import { EDITABLE_STATUSES, type Task, defaultTitle } from '../domain/task/task.ts';
+import { isSyncing } from './conflicts.ts';
 import { warnStuckDependents } from './dependencies.ts';
 import { ActionError } from './errors.ts';
 
@@ -96,6 +97,7 @@ export function rejectTask(db: Db, id: number): void {
 export function retryTask(db: Db, id: number): void {
   const t = db.getTask(id);
   if (!t) throw new ActionError('no such task');
+  if (isSyncing(id)) throw new ActionError(`#${id} is being brought up to date with its base branch; try again when that is done`);
   // One more attempt on top of what has been used.
   if (!db.applyEvent(id, { type: 'retry' })) throw new ActionError(`#${id} is ${t.status}`);
 }

@@ -1,6 +1,6 @@
 // Adapter for local git: worktrees, branches and commits.
 import { execFile, spawn } from 'node:child_process';
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { promisify } from 'node:util';
 import { WORKTREE_DIR } from '../config.ts';
@@ -110,6 +110,76 @@ export async function commitsAhead(worktree: string, base: string): Promise<numb
   const remote = `refs/remotes/origin/${base}`;
   const bases = (await refExists(worktree, remote)) ? [base, remote] : [base];
   return Number(await git(worktree, 'rev-list', '--count', 'HEAD', '--not', ...bases));
+}
+
+// Bringing the base branch into a task's branch. Always a merge, never a rebase: no force pushes, and the
+// squash merge of the PR hides the merge commit anyway.
+
+/** What merging a ref into a worktree did. */
+export type MergeOutcome = { kind: 'up_to_date' } | { kind: 'merged' } | { kind: 'conflicts'; files: string[] };
+
+export const headCommit = (worktree: string) => git(worktree, 'rev-parse', 'HEAD');
+
+/** A merge has stopped and is waiting to be committed or aborted. */
+export const mergeInProgress = (worktree: string) => refExists(worktree, 'MERGE_HEAD');
+
+/** Files with unresolved conflicts, as git sees them. */
+export async function conflictedFiles(worktree: string): Promise<string[]> {
+  return (await git(worktree, 'diff', '--name-only', '--diff-filter=U')).split('\n').filter(Boolean);
+}
+
+/**
+ * `git merge <ref>` in the worktree. A clean merge is committed by git. On conflicts the merge is left
+ * in progress, markers and all, for a resolve run (or `abortMerge`). Any other failure throws.
+ */
+export async function mergeRef(worktree: string, ref: string): Promise<MergeOutcome> {
+  const before = await headCommit(worktree);
+  try {
+    await git(worktree, 'merge', '--no-edit', ref);
+  } catch (err) {
+    if (await mergeInProgress(worktree)) {
+      const files = await conflictedFiles(worktree);
+      if (files.length) return { kind: 'conflicts', files };
+    }
+    throw err;
+  }
+  return (await headCommit(worktree)) === before ? { kind: 'up_to_date' } : { kind: 'merged' };
+}
+
+/** Undo a merge: abort it if it is in progress, and put the branch back at `head` if it moved. */
+export async function abortMerge(worktree: string, head: string): Promise<void> {
+  if (await mergeInProgress(worktree)) await git(worktree, 'merge', '--abort');
+  if ((await headCommit(worktree)) !== head) await git(worktree, 'reset', '--hard', head);
+}
+
+/** Of `files`, those that still hold conflict markers in the worktree. */
+export function filesWithMarkers(worktree: string, files: string[]): string[] {
+  return files.filter((file) => {
+    const path = join(worktree, file);
+    return existsSync(path) && /^(<{7}|>{7})( |$)/m.test(readFileSync(path, 'latin1'));
+  });
+}
+
+/** Commit a merge the agent staged but did not commit. Returns false if none was waiting. */
+export async function concludeMerge(worktree: string): Promise<boolean> {
+  if (!(await mergeInProgress(worktree))) return false;
+  await git(worktree, 'add', '-A');
+  await git(worktree, 'commit', '-q', '--no-edit');
+  return true;
+}
+
+/** While a merge is in progress: subjects of the commits only the task's branch has, and only the other side has. */
+export async function mergeSides(worktree: string): Promise<{ ours: string[]; theirs: string[] }> {
+  const subjects = async (range: string) =>
+    (await git(worktree, 'log', '--no-color', '--format=%s', '-n', '40', range, '--')).split('\n').filter(Boolean);
+  return { ours: await subjects('MERGE_HEAD..HEAD'), theirs: await subjects('HEAD..MERGE_HEAD') };
+}
+
+/** Commits on `branch` that origin's copy of it lacks, or null when origin has no copy (it was never pushed). */
+export async function aheadOfRemote(worktree: string, branch: string): Promise<number | null> {
+  const remote = `refs/remotes/origin/${branch}`;
+  if (!(await refExists(worktree, remote))) return null;
+  return Number(await git(worktree, 'rev-list', '--count', 'HEAD', '--not', remote));
 }
 
 /** A throwaway checkout of `ref` with no branch of its own, for checks that must not leave anything behind. */

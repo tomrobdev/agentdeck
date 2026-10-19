@@ -8,9 +8,12 @@
 //   FAKE_RATELIMIT emits a rejected rate_limit_event
 //   FAKE_SLOW     sleeps 30s (for cancel tests)
 //   FAKE_NEEDS_SETUP  like FAKE_DONE, but blocks unless the repo's setup wrote setup-done.txt
+// A resolve run (the prompt starts "AgentDeck conflict resolution") keeps both sides of every conflict and commits the merge;
+// FAKE_RESOLVE_BLOCKED reports BLOCKED, _LEAVE says DONE with the markers still there, _ABORT aborts the merge itself,
+// _STAGE stages the files without committing. The words come from the task's prompt, which the resolve prompt quotes.
 // Every run appends its prompt to $AGENTDECK_HOME/fake-claude-calls.log, so tests can tell it never started.
 import { execFileSync } from 'node:child_process';
-import { appendFileSync, existsSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const args = process.argv.slice(2);
@@ -54,6 +57,29 @@ if (isPlanner) {
         { title: 'Tidy the README', prompt: 'FAKE_DONE tidy', priority: 0, model: 'gpt-9' },
       ];
   result('planned', { structured_output: { tasks, note: tasks.length ? 'looked at src/' : 'goals already met' } });
+} else if (prompt.startsWith('AgentDeck conflict resolution')) {
+  // A resolve run: a merge is in progress in the worktree. Keep both sides of every conflict, unless told otherwise.
+  const git = (...a) => execFileSync('git', a, { encoding: 'utf8' });
+  const files = git('diff', '--name-only', '--diff-filter=U').split('\n').filter(Boolean);
+  if (prompt.includes('FAKE_RESOLVE_BLOCKED')) {
+    result('The two sides contradict each other.\nSTATUS: BLOCKED: which behaviour wins?');
+  } else if (prompt.includes('FAKE_RESOLVE_LEAVE')) {
+    result('Looked at it.\nSTATUS: DONE');
+  } else if (prompt.includes('FAKE_RESOLVE_ABORT')) {
+    git('merge', '--abort');
+    result('Gave up on the merge.\nSTATUS: DONE');
+  } else {
+    for (const f of files) {
+      const text = readFileSync(f, 'utf8')
+        .split('\n')
+        .filter((l) => !/^(<{7}|={7}|>{7})( |$)/.test(l))
+        .join('\n');
+      writeFileSync(f, text);
+      git('add', f);
+    }
+    if (!prompt.includes('FAKE_RESOLVE_STAGE')) git('commit', '-q', '--no-edit');
+    result(`Resolved ${files.length} file(s).\nSTATUS: DONE`);
+  }
 } else if (prompt.includes('FAKE_ERROR')) {
   process.stderr.write('fake failure\n');
   process.exit(1);

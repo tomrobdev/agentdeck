@@ -61,6 +61,7 @@ export function updateRepo(
     base_branch?: string;
     pr_mode?: PrMode;
     merge_method?: MergeMethod;
+    auto_resolve?: boolean;
   },
 ) {
   const repo = repoOrThrow(db, nameOrId);
@@ -80,6 +81,7 @@ export function updateRepo(
     ...(patch.base_branch !== undefined ? { base_branch: patch.base_branch.trim() } : {}),
     ...(patch.pr_mode !== undefined ? { pr_mode: patch.pr_mode } : {}),
     ...(patch.merge_method !== undefined ? { merge_method: patch.merge_method } : {}),
+    ...(patch.auto_resolve !== undefined ? { auto_resolve: patch.auto_resolve ? 1 : 0 } : {}),
   });
   return repoDetail(db, repo.id);
 }

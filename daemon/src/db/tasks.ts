@@ -199,6 +199,20 @@ export function taskStore(db: DatabaseSync) {
       });
     },
     /**
+     * Record that the base branch was brought into a task's branch: a history row, no status change.
+     * Guarded like every task write: only a running or done task. Returns false if it was not.
+     */
+    recordSync(id: number, reason: string): boolean {
+      return atomically(db, () => {
+        const row = db
+          .prepare(`UPDATE tasks SET updated_at = ${NOW} WHERE id = ? AND status IN ('running', 'done') RETURNING status`)
+          .get(id) as { status: TaskStatus } | undefined;
+        if (!row) return false;
+        recordEvent(id, 'sync', row.status, row.status, reason);
+        return true;
+      });
+    },
+    /**
      * The only way to change a task's status. Asks the lifecycle whether `event` is allowed from the
      * task's current status and writes the result guarded by that status, so a concurrent change
      * (say, a cancel arriving as a run finishes) is never overwritten. Returns the updated task, or
@@ -222,7 +236,8 @@ export function taskStore(db: DatabaseSync) {
           if (event.type === 'finish' && event.outcome === 'done') sets.push('blocked_reason = NULL');
           if (
             (event.type === 'finish' && (event.outcome === 'blocked' || event.outcome === 'failed')) ||
-            (event.type === 'recover' && to === 'failed')
+            (event.type === 'recover' && to === 'failed') ||
+            event.type === 'conflict'
           ) {
             sets.push('blocked_reason = ?');
             params.push(opts.reason ?? null);

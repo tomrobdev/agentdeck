@@ -8,6 +8,14 @@ export type LogEntry =
   | { kind: 'tests'; passed: boolean; output: string }
   | { kind: 'error'; text: string };
 
+/** What the daemon's `agentdeck_sync` event (bringing the base branch in before a run) says in the log. */
+const SYNC_TEXT: Record<string, string> = {
+  clean: 'Brought the base branch into the branch: clean merge.',
+  resolved: 'Resolved conflicts with the base branch.',
+  needs_resolution: 'The base branch conflicts with this branch, and auto-resolve is off: working on the branch as it is.',
+  error: 'Could not bring in the base branch; working on the branch as it is.',
+};
+
 /** The file a tool call names (Read, Edit, Write: file_path; Glob, Grep: path; NotebookEdit: notebook_path). */
 function toolFile(input: any): string | undefined {
   const file = input?.file_path ?? input?.path ?? input?.notebook_path;
@@ -39,6 +47,8 @@ export function parseLogLine(line: string): LogEntry[] {
       return [{ kind: 'tests', passed: ev.passed, output: ev.output }];
     case 'agentdeck_pr':
       return [ev.error ? { kind: 'error', text: `pull request: ${ev.error}` } : { kind: 'text', text: `Opened pull request ${ev.url}` }];
+    case 'agentdeck_sync':
+      return SYNC_TEXT[ev.kind] ? [{ kind: 'text' as const, text: SYNC_TEXT[ev.kind] }] : [];
     case 'agentdeck_stderr':
     case 'agentdeck_error':
       return [{ kind: 'error', text: String(ev.text).trim() }];

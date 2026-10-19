@@ -87,7 +87,7 @@ export const taskCommands: Record<string, Command> = {
     for (const r of db.runsForTask(t.id)) {
       const tokens = r.input_tokens + r.output_tokens + r.cache_read_tokens + r.cache_write_tokens;
       console.log(
-        `run ${r.attempt}: ${r.outcome ?? 'running'}  turns=${r.num_turns ?? '-'}  tokens=${tokens}  tests=${r.tests_passed === null ? '-' : r.tests_passed ? 'pass' : 'fail'}  ${r.started_at}`,
+        `${r.kind === 'resolve' ? 'conflict run' : 'run'} ${r.attempt}: ${r.outcome ?? 'running'}  turns=${r.num_turns ?? '-'}  tokens=${tokens}  tests=${r.tests_passed === null ? '-' : r.tests_passed ? 'pass' : 'fail'}  ${r.started_at}`,
       );
       if (r.result_text) console.log(`  ${r.result_text.trim().split('\n').slice(-6).join('\n  ')}`);
     }
@@ -95,7 +95,7 @@ export const taskCommands: Record<string, Command> = {
   log: ({ db, flags, rest }) => {
     const t = db.getTask(taskId(rest[0])) ?? die('no such task');
     const runs = db.runsForTask(t.id);
-    const run = flags.attempt ? runs.find((r) => r.attempt === Number(flags.attempt)) : runs.at(-1);
+    const run = flags.attempt ? runs.find((r) => r.attempt === Number(flags.attempt) && r.kind === 'work') : runs.at(-1);
     if (!run) die('no runs yet');
     if (flags.raw) process.stdout.write(readFileSync(run.log_path, 'utf8'));
     else printLog(run.log_path);
@@ -158,6 +158,25 @@ export const taskCommands: Record<string, Command> = {
       `merged #${id} (${res.method})${res.unblocked.length ? `; ${res.unblocked.map((n) => `#${n}`).join(', ')} can start` : ''}`,
     );
     if (res.cleanup_error) console.log(`cleanup incomplete: ${res.cleanup_error}`);
+  },
+  resolve: async ({ db, rest }) => {
+    const id = taskId(rest[0]);
+    console.log(`bringing the base branch into #${id}'s branch… (a conflict starts a claude run and can take a while)`);
+    const r = await actions.resolveTask(db, id);
+    const files = `${r.files.length} ${r.files.length === 1 ? 'file' : 'files'}`;
+    const lines: Record<typeof r.outcome, string> = {
+      up_to_date: `#${id} is already up to date`,
+      clean: `#${id}: brought in the base branch, no conflicts`,
+      resolved: `#${id}: resolved conflicts in ${files}: ${r.files.join(', ')}`,
+      blocked: `#${id} is now blocked: ${r.reason}`,
+      skipped: `#${id} conflicts in ${files} (${r.files.join(', ')}), but ${r.reason}`,
+      deferred: `#${id} not done: ${r.reason}`,
+      error: `#${id}: ${r.reason}`,
+    };
+    console.log(lines[r.outcome]);
+    if (r.pushed) console.log('pushed; the pull request has it');
+    if (r.push_error) console.log(`push failed: ${r.push_error}`);
+    if (r.outcome === 'blocked') process.exitCode = 1;
   },
   clean: async ({ db, rest }) => {
     const t = db.getTask(taskId(rest[0])) ?? die('no such task');

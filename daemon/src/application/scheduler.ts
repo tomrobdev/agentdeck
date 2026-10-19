@@ -10,8 +10,13 @@ import { decide } from '../domain/usage/governor.ts';
 import { warnStuckDependents } from './dependencies.ts';
 import { notifyLater } from './notifications.ts';
 import { planNow, plannerDue } from './planner.ts';
-import { PR_REFRESH_MS, refreshPrStates } from './pull-requests.ts';
+import { resolveConflicting } from './conflicts.ts';
+import { PR_CHECK_REQUESTED, PR_REFRESH_MS, refreshPrStates } from './pull-requests.ts';
 import { runTask } from './worker.ts';
+
+/** After a merge, how many times to re-read PRs whose mergeability GitHub is still computing, and how far apart. */
+const PR_RECHECKS = 6;
+const PR_RECHECK_MS = 20_000;
 
 export interface SchedulerOptions {
   tickMs?: number;
@@ -42,6 +47,10 @@ export class Scheduler {
   private readonly awake: KeepAwake;
   private lastPrRefresh = 0;
   private refreshingPrs = false;
+  /** The latest `pr_check_requested` this scheduler has acted on. */
+  private handledPrCheck = Date.now();
+  private recheckLeft = 0;
+  private recheckAt = 0;
 
   constructor(db: Db, opts: SchedulerOptions = {}) {
     this.db = db;
@@ -130,16 +139,45 @@ export class Scheduler {
     this.schedule();
   }
 
-  /** Every few minutes (not every tick), re-read the state of open PRs; a merged one releases the tasks waiting on it. */
+  /**
+   * Every few minutes (not every tick), re-read the state of open PRs; a merged one releases the tasks waiting on it,
+   * and a conflicting one gets the base merged in. A merge from the app or the CLI asks for a re-read at once, and
+   * while GitHub is still working out whether the other PRs conflict it is repeated every few seconds.
+   */
   private maybeRefreshPrs(): void {
-    if (this.opts.once || this.refreshingPrs || Date.now() - this.lastPrRefresh < this.opts.prRefreshMs) return;
-    this.lastPrRefresh = Date.now();
+    if (this.opts.once || this.refreshingPrs) return;
+    const requested = Number(this.db.getSetting(PR_CHECK_REQUESTED, '0'));
+    const now = Date.now();
+    const due =
+      now - this.lastPrRefresh >= this.opts.prRefreshMs ||
+      requested > this.handledPrCheck ||
+      (this.recheckLeft > 0 && now >= this.recheckAt);
+    if (!due) return;
+    if (requested > this.handledPrCheck) this.recheckLeft = PR_RECHECKS;
+    this.handledPrCheck = Math.max(this.handledPrCheck, requested);
+    this.lastPrRefresh = now;
     this.refreshingPrs = true;
     refreshPrStates(this.db, this.opts.log)
+      .then((found) => {
+        this.recheckLeft = found.unknown ? Math.max(this.recheckLeft - 1, 0) : 0;
+        this.recheckAt = Date.now() + PR_RECHECK_MS;
+        if (found.conflicting.length) this.resolveConflicts(found.conflicting);
+      })
       .catch((err) => this.opts.log(`pr refresh crashed: ${err?.stack ?? err}`))
       .finally(() => {
         this.refreshingPrs = false;
       });
+  }
+
+  /** Merge the base into conflicting PRs' branches in the background; counts as a running task while it works. */
+  private resolveConflicts(ids: number[]): void {
+    const p = resolveConflicting(this.db, ids, this.opts.log)
+      .catch((err) => this.opts.log(`conflict resolution crashed: ${err?.stack ?? err}`))
+      .finally(() => {
+        this.running.delete(p);
+        this.tick();
+      });
+    this.running.add(p);
   }
 
   /** Run the planner for the first repo whose queue has run dry. One planner at a time. */

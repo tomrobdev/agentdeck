@@ -75,7 +75,7 @@ const TABS = computed(() => [
 ]);
 const wide = computed(() => props.tab === 'changes' || props.tab === 'code');
 
-const attempt = computed(() => (props.query.run ? Number(props.query.run) : null));
+const runId = computed(() => (props.query.run ? Number(props.query.run) : null));
 const openFile = (path: string, line: number | null = null) =>
   openTask(props.task.id, 'code', { ref: 'head', path, ...(line ? { L: String(line) } : {}) });
 
@@ -151,7 +151,7 @@ useHotkeys({ Escape: () => go({ name: 'queue' }) });
       </div>
     </header>
 
-    <MergeDialog v-if="merging" :task-id="task.id" @close="merging = false" @merged="onMerged" />
+    <MergeDialog v-if="merging" :task-id="task.id" @close="merging = false" @merged="onMerged" @changed="emit('changed')" />
 
     <nav class="tabs" role="tablist">
       <button
@@ -189,15 +189,15 @@ useHotkeys({ Escape: () => go({ name: 'queue' }) });
           :task="task"
           :changes="changes"
           :is-path="isPath"
-          @run="(a) => openTask(task.id, 'runs', { run: String(a) })"
+          @run="(id) => openTask(task.id, 'runs', { run: String(id) })"
           @path="openFile"
         />
         <RunsTab
           v-else-if="tab === 'runs'"
           :task="task"
-          :attempt="attempt"
+          :run-id="runId"
           :is-path="isPath"
-          @select="(a) => go({ name: 'task', id: task.id, tab: 'runs', query: { run: String(a) } }, { replace: true })"
+          @select="(id) => go({ name: 'task', id: task.id, tab: 'runs', query: { run: String(id) } }, { replace: true })"
           @path="openFile"
         />
         <ChangesTab v-else-if="tab === 'changes'" :task="task" :changes="changes" :error="changesError" @open="openFile" />

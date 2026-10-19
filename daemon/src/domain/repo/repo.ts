@@ -16,4 +16,5 @@ export interface Repo {
   paused_reason: string | null; // set = no task of this repo is claimed until `repo resume` or a passing doctor
   pr_mode: PrMode;
   merge_method: MergeMethod; // how a PR is merged from the app unless the person picks another
+  auto_resolve: number; // 1 = the daemon starts a resolve run on its own when a branch conflicts with the base
 }

@@ -7,9 +7,11 @@ import { closeLog, writeEvent } from '../adapters/run-log.ts';
 import { lastLine, runCommand } from '../adapters/shell.ts';
 import { LOG_DIR, SETUP_TIMEOUT_MS, TEST_TIMEOUT_MS, ensureDirs } from '../config.ts';
 import type { Db } from '../db/index.ts';
+import { conflictReason, syncSummary } from '../domain/pull-request/conflict.ts';
 import { buildPrompt, claudeArgs } from '../domain/run/prompt.ts';
-import { type Run, type WorkerResult, firstDenial, parseStatus } from '../domain/run/run.ts';
+import { type Run, type WorkerResult, firstDenial, parseStatus, resultFields } from '../domain/run/run.ts';
 import type { Task } from '../domain/task/task.ts';
+import { bringInBase } from './conflicts.ts';
 import { warnStuckDependents } from './dependencies.ts';
 import { notifyLater } from './notifications.ts';
 import { pauseRepo } from './pause.ts';
@@ -40,14 +42,35 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
   );
 
   // Install dependencies before the agent starts: it isn't allowed to install them itself.
-  if (repo.setup_cmd) {
+  const setUp = async (): Promise<WorkerResult | null> => {
+    if (!repo.setup_cmd) return null;
     const setup = await runCommand(repo.setup_cmd, wt.path, SETUP_TIMEOUT_MS);
     writeEvent(log, { type: 'agentdeck_setup', cmd: repo.setup_cmd, passed: setup.passed, output: setup.output });
-    if (!setup.passed) {
-      await closeLog(log);
-      pauseRepo(db, repo, `setup failed on task #${task.id}`);
-      return finish(db, task, runId, { outcome: 'blocked', reason: `setup failed: ${lastLine(setup.output)}` });
-    }
+    if (setup.passed) return null;
+    await closeLog(log);
+    pauseRepo(db, repo, `setup failed on task #${task.id}`);
+    return finish(db, task, runId, { outcome: 'blocked', reason: `setup failed: ${lastLine(setup.output)}` });
+  };
+  const setupFailure = await setUp();
+  if (setupFailure) return setupFailure;
+
+  // Bring the latest base into the branch, on retries too, so the agent builds on current code.
+  const synced = await bringInBase(db, task, repo, wt.path, { allowResolve: repo.auto_resolve === 1, runTests: false });
+  writeEvent(log, { type: 'agentdeck_sync', ...synced });
+  if (synced.kind === 'clean' || synced.kind === 'resolved') {
+    db.recordSync(task.id, syncSummary(repo.base_branch, synced.kind, synced.kind === 'resolved' ? synced.files : []));
+    // The merge may have changed what the setup installs.
+    const resetupFailure = await setUp();
+    if (resetupFailure) return resetupFailure;
+  } else if (synced.kind === 'failed') {
+    await closeLog(log);
+    return finish(db, task, runId, { outcome: 'blocked', reason: conflictReason(repo.base_branch, synced.files, synced.reason) });
+  } else if (synced.kind === 'rate_limited') {
+    await closeLog(log);
+    return finish(db, task, runId, { outcome: 'rate_limited', reason: synced.reason });
+  } else if (synced.kind === 'cancelled') {
+    await closeLog(log);
+    return finish(db, task, runId, { outcome: 'cancelled' });
   }
 
   const { result, exitCode, rateLimitedUntil, cancelled } = await runClaude({
@@ -60,18 +83,7 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
     onUsage: (w) => db.recordUsageWindow(w.window, w.utilization, w.resets_at, w.status),
   });
 
-  const usage = result?.usage ?? {};
-  const runFields: Partial<Run> = {
-    exit_code: exitCode,
-    session_id: result?.session_id ?? null,
-    num_turns: result?.num_turns ?? null,
-    input_tokens: usage.input_tokens ?? 0,
-    output_tokens: usage.output_tokens ?? 0,
-    cache_read_tokens: usage.cache_read_input_tokens ?? 0,
-    cache_write_tokens: usage.cache_creation_input_tokens ?? 0,
-    cost_usd: result?.total_cost_usd ?? 0,
-    result_text: result?.result ?? null,
-  };
+  const runFields: Partial<Run> = resultFields(result, exitCode);
 
   try {
     await commitLeftovers(wt.path, `agentdeck: uncommitted work from task ${task.id}\n\n${task.title}`);

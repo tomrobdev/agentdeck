@@ -2,7 +2,7 @@
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { type LogEntry, api } from '../api';
 
-const props = defineProps<{ taskId: number; attempt: number | null; live: boolean; worktree?: string | null }>();
+const props = defineProps<{ taskId: number; runId: number | null; live: boolean; worktree?: string | null }>();
 const emit = defineEmits<{ file: [path: string] }>();
 
 /** A tool's file as a repo path: inside the worktree, made relative; outside it, null (nothing to link to). */
@@ -28,10 +28,10 @@ function close() {
 function open() {
   close();
   entries.value = [];
-  if (!props.attempt) return;
+  if (!props.runId) return;
   stick = true;
   streaming.value = true;
-  source = new EventSource(api.logUrl(props.taskId, props.attempt));
+  source = new EventSource(api.logUrl(props.taskId, props.runId));
   source.onmessage = async (e) => {
     entries.value.push(...(JSON.parse(e.data) as LogEntry[]));
     if (stick) {
@@ -48,8 +48,8 @@ function onScroll() {
   if (el) stick = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
 }
 
-// Reopen when the task or attempt changes, or when a finished run's task starts running again.
-watch(() => [props.taskId, props.attempt], open, { immediate: true });
+// Reopen when the task or run changes, or when a finished run's task starts running again.
+watch(() => [props.taskId, props.runId], open, { immediate: true });
 watch(
   () => props.live,
   (live) => {
@@ -61,7 +61,7 @@ onBeforeUnmount(close);
 
 <template>
   <div class="log" ref="box" @scroll="onScroll">
-    <p v-if="!attempt" class="muted pad">No runs yet. The log appears here when the task starts.</p>
+    <p v-if="!runId" class="muted pad">No runs yet. The log appears here when the task starts.</p>
     <p v-else-if="!entries.length" class="muted pad">{{ streaming ? 'Waiting for output…' : 'Empty log.' }}</p>
     <div v-for="(e, i) in entries" :key="i" class="entry" :class="`k-${e.kind}`">
       <template v-if="e.kind === 'text'">
