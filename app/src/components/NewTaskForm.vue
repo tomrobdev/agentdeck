@@ -12,6 +12,8 @@ const prompt = ref('');
 const model = ref('sonnet');
 const priority = ref(0);
 const maxTurns = ref(40);
+const planPath = ref('');
+const planSteps = ref('');
 const error = ref('');
 const saving = ref(false);
 const promptEl = ref<HTMLTextAreaElement | null>(null);
@@ -29,6 +31,11 @@ async function submit() {
       model: model.value,
       priority: priority.value,
       max_turns: maxTurns.value,
+      plan_path: planPath.value.trim() || undefined,
+      plan_steps: planSteps.value
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
     });
     emit('created', task);
   } catch (e) {
@@ -82,6 +89,16 @@ async function submit() {
         <label class="field flex-[0_0_84px]">
           Max turns
           <input type="number" v-model.number="maxTurns" min="1" />
+        </label>
+      </div>
+      <div class="flex gap-2.5">
+        <label class="field flex-1">
+          <span>Plan <span class="muted">(optional, a file on the base branch)</span></span>
+          <input v-model="planPath" placeholder="docs/plans/my-plan.html" />
+        </label>
+        <label class="field flex-1">
+          <span>Steps <span class="muted">(ids, comma-separated; blank for every unfinished step)</span></span>
+          <input v-model="planSteps" placeholder="step-a, step-b" :disabled="!planPath.trim()" />
         </label>
       </div>
       <p v-if="error" class="form-error">{{ error }}</p>

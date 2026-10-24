@@ -98,6 +98,10 @@ export interface TaskSummary {
   /** How the PR was merged from the app. */
   merge_method: MergeMethod | null;
   after_task: number | null;
+  /** The plan this task carries out: a repo-relative path under docs/plans/. */
+  plan_path: string | null;
+  /** JSON array of that plan's step ids; null means every unfinished step. Missing from a daemon that predates it. */
+  plan_steps: string | null;
   /** Set for a queued task held back by after_task; stuck says why its dependency won't get there on its own. */
   waiting: { on: number; stuck: string | null } | null;
   /** For a task in review: the queued tasks that wait on its PR. */
@@ -427,7 +431,18 @@ export const api = {
   resumeRepo: (id: number) => call<Repo>(`/api/repos/${id}/resume`, { method: 'POST' }),
   editTask: (
     id: number,
-    patch: { title?: string; prompt?: string; priority?: number; model?: string; max_turns?: number; max_attempts?: number },
+    patch: {
+      title?: string;
+      prompt?: string;
+      priority?: number;
+      model?: string;
+      max_turns?: number;
+      max_attempts?: number;
+      /** null clears the link. */
+      plan_path?: string | null;
+      /** null means every unfinished step. */
+      plan_steps?: string[] | null;
+    },
   ) => call<TaskDetail>(`/api/tasks/${id}`, { method: 'POST', json: patch }),
   approve: (id: number) => call<TaskDetail>(`/api/tasks/${id}/approve`, { method: 'POST' }),
   reject: (id: number) => call<TaskDetail>(`/api/tasks/${id}/reject`, { method: 'POST' }),
@@ -442,6 +457,8 @@ export const api = {
     priority?: number;
     max_turns?: number;
     after_task?: number;
+    plan_path?: string;
+    plan_steps?: string[];
   }) => call<TaskDetail>('/api/tasks', { method: 'POST', json: t }),
   cancel: (id: number) => call<{ result: string }>(`/api/tasks/${id}/cancel`, { method: 'POST' }),
   /** `note` is "request changes": kept on the timeline and put first in the next run's prompt. */

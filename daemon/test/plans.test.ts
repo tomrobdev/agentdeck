@@ -231,3 +231,72 @@ test('a plan attached from docs/plans/ is replaced by the branch copy, leaving o
   );
   assert.equal(plans[0].steps[0].status, 'done');
 });
+
+// Tasks linked to plan steps: the plan is read from the repo's base branch when the task is added or edited.
+const { editTask, addTask } = await import('../src/application/actions.ts');
+const { planStepIds } = await import('../src/domain/task/task.ts');
+mkdirSync(join(repoPath, 'docs/plans'), { recursive: true });
+writeFileSync(join(repoPath, 'docs/plans/linked.html'), PLAN);
+writeFileSync(join(repoPath, 'docs/plans/page.html'), '<html><body>not a plan</body></html>');
+git('add', '-A');
+git('commit', '-q', '-m', 'Plan on the base branch');
+
+test('add links a task to a plan on the base branch, with and without steps', async () => {
+  const some = await addTask(db, { repo: 'demo', prompt: 'do it', plan_path: 'docs/plans/linked.html', plan_steps: 's1, s2' });
+  assert.equal(some.plan_path, 'docs/plans/linked.html');
+  assert.deepEqual(planStepIds(some), ['s1', 's2']);
+
+  const every = await addTask(db, { repo: 'demo', prompt: 'do it all', plan_path: 'docs/plans/linked.html' });
+  assert.equal(every.plan_path, 'docs/plans/linked.html');
+  assert.equal(every.plan_steps, null);
+  assert.equal(planStepIds(every), null);
+
+  const viaApi = await call('/api/tasks', { repo: 'demo', prompt: 'api', plan_path: 'docs/plans/linked.html', plan_steps: ['s2'] });
+  assert.equal(viaApi.body.plan_path, 'docs/plans/linked.html');
+  assert.equal(viaApi.body.plan_steps, '["s2"]');
+
+  const plain = await addTask(db, { repo: 'demo', prompt: 'no plan' });
+  assert.deepEqual([plain.plan_path, plain.plan_steps], [null, null]);
+});
+
+test('add refuses a missing file, a file that is not a plan, an unknown step and steps without a plan', async () => {
+  const refuses = (input: Parameters<typeof addTask>[1], message: RegExp) =>
+    assert.rejects(addTask(db, { ...input, repo: 'demo', prompt: 'x' }), (err) => err instanceof Error && message.test(err.message));
+  await refuses({ prompt: 'x', plan_path: 'docs/plans/missing.html' }, /docs\/plans\/missing\.html is not on demo's base branch/);
+  await refuses({ prompt: 'x', plan_path: 'docs/plans/page.html' }, /is not an AgentDeck plan/);
+  await refuses({ prompt: 'x', plan_path: 'README.md' }, /not a plan path/);
+  await refuses({ prompt: 'x', plan_path: 'docs/plans/../README.md' }, /not a plan path/);
+  await refuses(
+    { prompt: 'x', plan_path: 'docs/plans/linked.html', plan_steps: 's1,nope,gone' },
+    /has no step nope, gone \(it has s1, s2\)/,
+  );
+  await refuses({ prompt: 'x', plan_steps: 's1' }, /--steps needs --plan/);
+  // A plan only on a task branch is not on the base branch.
+  await refuses({ prompt: 'x', plan_path: 'docs/plans/cache.html' }, /not on demo's base branch/);
+});
+
+test('edit sets, changes and clears the plan link', async () => {
+  const t = db.addTask({ repo_id: repo.id, title: 'e', prompt: 'p' });
+  const linked = await editTask(db, t.id, { plan_path: 'docs/plans/linked.html', plan_steps: ['s1'] });
+  assert.deepEqual([linked.plan_path, planStepIds(linked)], ['docs/plans/linked.html', ['s1']]);
+
+  const moreSteps = await editTask(db, t.id, { plan_steps: 's1,s2' });
+  assert.deepEqual(planStepIds(moreSteps), ['s1', 's2']);
+  assert.equal((await editTask(db, t.id, { title: 'renamed' })).plan_path, 'docs/plans/linked.html', 'other edits keep the link');
+
+  await assert.rejects(editTask(db, t.id, { plan_steps: 'nope' }), /has no step nope/);
+  assert.deepEqual(planStepIds(db.getTask(t.id)!), ['s1', 's2'], 'a refused edit changes nothing');
+
+  const everyStep = await editTask(db, t.id, { plan_steps: null });
+  assert.equal(everyStep.plan_steps, null);
+  assert.equal(everyStep.plan_path, 'docs/plans/linked.html');
+
+  const cleared = await editTask(db, t.id, { plan_path: '' });
+  assert.deepEqual([cleared.plan_path, cleared.plan_steps], [null, null]);
+
+  const other = db.addTask({ repo_id: repo.id, title: 'o', prompt: 'p' });
+  await assert.rejects(editTask(db, other.id, { plan_steps: ['s1'] }), /--steps needs --plan/);
+  const viaApi = await call(`/api/tasks/${other.id}`, { plan_path: 'docs/plans/linked.html' });
+  assert.equal(viaApi.body.plan_path, 'docs/plans/linked.html');
+  assert.equal((await call(`/api/tasks/${other.id}`, { plan_path: null })).body.plan_path, null);
+});

@@ -8,7 +8,7 @@ import { EDITABLE_STATUSES, OPEN_STATUSES, type Task, type TaskSummary } from '.
 import { NOW, atomically } from './sql.ts';
 
 const SUMMARY_COLUMNS =
-  'id, repo_id, title, status, priority, model, max_turns, attempts, max_attempts, branch, worktree, blocked_reason, source, restarts, pr_url, pr_state, merge_method, after_task, created_at, updated_at';
+  'id, repo_id, title, status, priority, model, max_turns, attempts, max_attempts, branch, worktree, blocked_reason, source, restarts, pr_url, pr_state, merge_method, after_task, plan_path, plan_steps, created_at, updated_at';
 
 /** SQL list of fixed status literals, for `status IN (…)`. */
 const statusList = (statuses: TaskStatus[]) => statuses.map((s) => `'${s}'`).join(', ');
@@ -43,12 +43,14 @@ export function taskStore(db: DatabaseSync) {
       status?: 'queued' | 'proposed';
       source?: 'manual' | 'planner';
       after_task?: number | null;
+      plan_path?: string | null;
+      plan_steps?: string | null;
     }): Task {
       const status = t.status ?? 'queued';
       const id = atomically(db, () => {
         const info = db
           .prepare(
-            'INSERT INTO tasks (repo_id, title, prompt, priority, model, max_turns, max_attempts, status, source, after_task) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO tasks (repo_id, title, prompt, priority, model, max_turns, max_attempts, status, source, after_task, plan_path, plan_steps) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
           )
           .run(
             t.repo_id,
@@ -61,6 +63,8 @@ export function taskStore(db: DatabaseSync) {
             status,
             t.source ?? 'manual',
             t.after_task ?? null,
+            t.plan_path ?? null,
+            t.plan_steps ?? null,
           );
         const id = Number(info.lastInsertRowid);
         recordEvent(id, 'created', null, status);
@@ -164,7 +168,7 @@ export function taskStore(db: DatabaseSync) {
      */
     editTask(
       id: number,
-      fields: Partial<Pick<Task, 'title' | 'prompt' | 'priority' | 'model' | 'max_turns' | 'max_attempts'>>,
+      fields: Partial<Pick<Task, 'title' | 'prompt' | 'priority' | 'model' | 'max_turns' | 'max_attempts' | 'plan_path' | 'plan_steps'>>,
     ): Task | undefined {
       const keys = Object.keys(fields) as (keyof typeof fields)[];
       if (keys.length === 0) return this.getTask(id);
