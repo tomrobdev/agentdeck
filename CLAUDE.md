@@ -35,3 +35,5 @@ Use these words in code, logs and UI.
 - **No new runtime dependencies** without a reason. Drizzle is deferred until 1.0 is stable.
 - **Schema changes are appended as new migration steps.** Never edit a step that has shipped.
 - **Every `claude` runs in its own process group** with its pid recorded on the run, so crash recovery can stop it.
+- **Keep this checkout on `main`.** The installed daemon runs its `daemon/src/cli.ts`, so switching branches here swaps the live daemon's code. Try task branches from their worktrees.
+- **Delegating to AgentDeck:** when to queue a task instead of doing it here, how to write it, and how to work in a task's worktree are in the `delegate` skill (`.claude/skills/delegate/SKILL.md`).

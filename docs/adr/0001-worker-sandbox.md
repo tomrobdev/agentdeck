@@ -35,7 +35,7 @@ literal command, not `node -e` doing the same thing.
       "enabled": true,
       "failIfUnavailable": true,
       "allowUnsandboxedCommands": false,
-      "network": { "allowedDomains": ["<repos.network>"], "strictAllowlist": true }
+      "network": { "allowedDomains": ["<repos.network>"], "strictAllowlist": true, "allowLocalBinding": true }
     },
     "permissions": { "allow": ["Edit(//<worktree>/**)"] }
   }
@@ -45,6 +45,8 @@ literal command, not `node -e` doing the same thing.
   - `allowUnsandboxedCommands: false`: claude can't retry a refused command outside the sandbox
     (`dangerouslyDisableSandbox` is ignored).
   - `strictAllowlist`: hosts outside `allowedDomains` are refused, with no prompt (there is nobody to answer one).
+  - `allowLocalBinding`: commands may listen on localhost ports, so test suites that start a local server can run.
+    Added 2026-10-24 after task #34 blocked on `listen EPERM`. It opens no outbound connection.
   - `permissions.allow`: the file tools (Edit, Write) run outside the sandbox, so they get rules for the
     worktree only. In permission rules, `//` marks an absolute path. A single `/` would be relative to the
     settings file, so the worker writes `/` followed by the absolute path. The bare `Edit` and `Write`

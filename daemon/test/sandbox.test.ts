@@ -24,12 +24,16 @@ test('sandbox on: enabled, no fallback, strict allowlist from the repo', () => {
       enabled: true,
       failIfUnavailable: true,
       allowUnsandboxedCommands: false,
-      network: { allowedDomains: [], strictAllowlist: true },
+      network: { allowedDomains: [], strictAllowlist: true, allowLocalBinding: true },
     },
     permissions: { allow: [`Edit(/${wt}/**)`] },
   });
   const net = workerSettings({ worktree: wt, sandbox: true, network: ['registry.npmjs.org', '*.github.com'] });
-  assert.deepEqual(net.sandbox.network, { allowedDomains: ['registry.npmjs.org', '*.github.com'], strictAllowlist: true });
+  assert.deepEqual(net.sandbox.network, {
+    allowedDomains: ['registry.npmjs.org', '*.github.com'],
+    strictAllowlist: true,
+    allowLocalBinding: true,
+  });
 });
 
 test('sandbox off: disabled, file tools still limited to the worktree', () => {

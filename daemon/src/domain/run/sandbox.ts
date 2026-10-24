@@ -6,7 +6,7 @@ export interface WorkerSettings {
     enabled: boolean;
     failIfUnavailable?: boolean;
     allowUnsandboxedCommands?: boolean;
-    network?: { allowedDomains: string[]; strictAllowlist: boolean };
+    network?: { allowedDomains: string[]; strictAllowlist: boolean; allowLocalBinding: boolean };
   };
   permissions: { allow: string[] };
 }
@@ -24,7 +24,9 @@ export function worktreeFileRules(worktree: string): string[] {
 /**
  * With the sandbox on, every Bash command (and what it starts) is confined by the OS to the worktree
  * and to `network` hosts. It must not fall back to running unsandboxed: not when the sandbox can't
- * start (failIfUnavailable), and not command by command (allowUnsandboxedCommands).
+ * start (failIfUnavailable), and not command by command (allowUnsandboxedCommands). Binding a localhost port
+ * stays allowed (allowLocalBinding), so tests that start a local server can run; outbound connections still go
+ * through the allowlist.
  */
 export function workerSettings(opts: { worktree: string; sandbox: boolean; network: string[] }): WorkerSettings {
   const permissions = { allow: worktreeFileRules(opts.worktree) };
@@ -34,7 +36,7 @@ export function workerSettings(opts: { worktree: string; sandbox: boolean; netwo
       enabled: true,
       failIfUnavailable: true,
       allowUnsandboxedCommands: false,
-      network: { allowedDomains: [...opts.network], strictAllowlist: true },
+      network: { allowedDomains: [...opts.network], strictAllowlist: true, allowLocalBinding: true },
     },
     permissions,
   };
