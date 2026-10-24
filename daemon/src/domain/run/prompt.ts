@@ -24,6 +24,7 @@ ${
 - If the task asks for a plan, or is big enough to need one, write it to ${PLAN_DIR}<short-name>.html and commit it. AgentDeck reads it from these attributes:
   <html data-agentdeck-plan="1">, a <title>, one <p data-plan-summary> saying what and why,
   and one <section data-plan-step id="…" data-status="todo|doing|done|blocked|skipped"> per step, its <h2> the step's title.
+  A step may list its checks in <ul data-plan-done>, one <li> each.
   Everything else is free HTML. Keep each step's data-status current as you work.
 - If you cannot finish (missing info, needs a human decision, blocked by permissions), stop and explain why.
 - End your final message with exactly one line: "STATUS: DONE" or "STATUS: BLOCKED: <one-line reason>".`;

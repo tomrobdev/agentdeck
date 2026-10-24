@@ -43,12 +43,41 @@ test('parsePlan reads the title, summary and steps, in order', () => {
   assert.equal(plan.title, 'Speed up the & cache');
   assert.equal(plan.summary, 'Make reads fast, and keep them correct.');
   assert.deepEqual(plan.steps, [
-    { id: 's1', title: 'Measure', status: 'done' },
-    { id: 's2', title: 'Add the LRU', status: 'doing' },
-    { id: null, title: 'Unknown status', status: 'todo' },
-    { id: null, title: 'Named step', status: 'skipped' },
+    { id: 's1', title: 'Measure', status: 'done', done: [] },
+    { id: 's2', title: 'Add the LRU', status: 'doing', done: [] },
+    { id: null, title: 'Unknown status', status: 'todo', done: [] },
+    { id: null, title: 'Named step', status: 'skipped', done: [] },
   ]);
   assert.deepEqual(planProgress(plan.steps), { finished: 2, total: 4 });
+});
+
+test('parsePlan reads a step’s done criteria: a list, plain text, none, and not from comments or templates', () => {
+  const plan = parsePlan(`<html data-agentdeck-plan="1"><body>
+    <section data-plan-step id="a"><h2>List</h2>
+      <ul data-plan-done><li>One <code>x</code></li><li>
+        Two &amp; three</li><li> </li></ul>
+      <ul data-plan-done><li>Second list is ignored</li></ul>
+    </section>
+    <section data-plan-step id="b"><h2>Text</h2><p data-plan-done>All   of <b>this</b> is one check.</p></section>
+    <section data-plan-step id="c"><h2>None</h2><ul><li>Not criteria</li></ul></section>
+    <section data-plan-step id="d"><h2>Hidden</h2>
+      <!-- <ul data-plan-done><li>In a comment</li></ul> -->
+      <template><ul data-plan-done><li>In a template</li></ul></template>
+    </section>
+    <section data-plan-step id="e"><h2>Empty</h2><ul data-plan-done></ul></section>
+  </body></html>`)!;
+  assert.deepEqual(
+    plan.steps.map((s) => s.done),
+    [['One x', 'Two & three'], ['All of this is one check.'], [], [], []],
+  );
+});
+
+test('this plan’s own steps all carry done criteria', async () => {
+  const { readFileSync } = await import('node:fs');
+  const html = readFileSync(new URL('../../docs/plans/plan-linked-tasks.html', import.meta.url), 'utf8');
+  const plan = parsePlan(html)!;
+  assert.equal(plan.steps.length, 4);
+  for (const s of plan.steps) assert.ok(s.done.length > 0, `${s.id} has criteria`);
 });
 
 test('parsePlan needs the marker on <html>, and falls back to <h1> for the title', () => {
