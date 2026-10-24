@@ -1,5 +1,6 @@
 import { defineConfig, type Plugin } from 'vite';
 import vue from '@vitejs/plugin-vue';
+import tailwindcss from '@tailwindcss/vite';
 // @ts-expect-error type error without @types/node package
 import process from 'node:process';
 // @ts-expect-error type error without @types/node package
@@ -28,7 +29,7 @@ const commitEndpoint = (): Plugin => ({
 
 // https://vite.dev/config/
 export default defineConfig(() => ({
-  plugins: [vue(), commitEndpoint()],
+  plugins: [vue(), tailwindcss(), commitEndpoint()],
 
   // The commit the dashboard was built from; compared with the daemon's to show a banner when they differ.
   define: { __APP_COMMIT__: JSON.stringify(headCommit()) },

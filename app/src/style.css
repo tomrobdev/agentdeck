@@ -1,235 +1,417 @@
-/* Colours come from themes.css, picked by data-theme and data-mode on <html> (theme.ts). */
-:root {
-  --radius: 8px;
-  color-scheme: light dark;
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
-  font-size: 13px;
-  line-height: 1.45;
-  color: var(--text);
-  background: var(--bg);
-  -webkit-font-smoothing: antialiased;
+/*
+ * The dashboard's stylesheet: Tailwind v4 plus the few things utilities cannot express well.
+ *
+ * Colours come from themes.css (plain custom properties picked by data-theme and data-mode on <html>, see theme.ts).
+ * @theme inline below exposes them as utilities (bg-panel, text-muted, border-border), reading the variable where it is
+ * used, so a theme or mode switch needs no rebuild. Components use utilities in their templates; what stays here is
+ * the highlight.js classes, the status hooks (.s-*), and a handful of repeated patterns written once.
+ *
+ * Preflight is not imported on purpose: the dashboard looked the way it does with browser defaults, and a port must
+ * not change that. Everything here is in a layer, so utilities in a template always beat it.
+ */
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+/* dark: follows the mode the person picked, not the OS media query. Tokens already swap per mode, so it is rarely needed. */
+@custom-variant dark (&:where([data-mode='dark'], [data-mode='dark'] *));
+
+@theme {
+  --color-*: initial;
+  --font-*: initial;
+  --text-*: initial;
+  --radius-*: initial;
+  --shadow-*: initial;
+  --breakpoint-*: initial;
+
+  /* The 13px root is for text; spacing is its own px unit, so p-1 is 4px whatever the root size. */
+  --spacing: 4px;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --text-2xs: 10px;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-base: 13px;
+  --text-md: 14px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-pill: 999px;
+
+  --shadow-popover: 0 8px 28px rgb(0 0 0 / 0.18);
+  --shadow-modal: 0 20px 60px rgb(0 0 0 / 0.25);
+
+  /* max-sm: and friends are the three widths the layout already switched at. */
+  --breakpoint-sm: 720px;
+  --breakpoint-md: 900px;
+  --breakpoint-lg: 1080px;
 }
 
-/* Native controls and scrollbars follow the mode too. */
-:root[data-mode='light'] {
-  color-scheme: light;
-}
-:root[data-mode='dark'] {
-  color-scheme: dark;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-html,
-body,
-#app {
-  margin: 0;
-  height: 100%;
-  background: var(--bg);
-}
-
-button {
-  font: inherit;
-  color: inherit;
-  background: var(--panel-2);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 4px 10px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-button:hover:not(:disabled) {
-  border-color: var(--muted);
-}
-button:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-button.primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-fg);
-}
-button:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+@theme inline {
+  --color-bg: var(--bg);
+  --color-panel: var(--panel);
+  --color-panel-2: var(--panel-2);
+  --color-code-bg: var(--code-bg);
+  --color-border: var(--border);
+  --color-border-input: var(--border-input);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-queued: var(--queued);
+  --color-running: var(--running);
+  --color-done: var(--done);
+  --color-blocked: var(--blocked);
+  --color-failed: var(--failed);
+  --color-cancelled: var(--cancelled);
+  --color-merged: var(--merged);
+  /* The colour of the status being drawn, set by the .s-* classes. */
+  --color-status: var(--c);
+  --color-transparent: transparent;
+  --color-current: currentColor;
 }
 
-input,
-textarea,
-select {
-  font: inherit;
-  color: inherit;
-  background: var(--panel);
-  border: 1px solid var(--border-input);
-  border-radius: 6px;
-  padding: 6px 8px;
-  width: 100%;
-}
-input:focus,
-textarea:focus,
-select:focus {
-  outline: 2px solid color-mix(in srgb, var(--accent) 40%, transparent);
-  border-color: var(--accent);
-}
+@layer base {
+  :root {
+    color-scheme: light dark;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--text);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+  }
 
-code,
-pre {
-  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-  font-size: 12px;
-}
+  /* Native controls and scrollbars follow the mode too. */
+  :root[data-mode='light'] {
+    color-scheme: light;
+  }
+  :root[data-mode='dark'] {
+    color-scheme: dark;
+  }
 
-.muted {
-  color: var(--muted);
-}
+  * {
+    box-sizing: border-box;
+  }
 
-.dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex: none;
-}
-.s-proposed {
-  --c: var(--accent);
-}
-.s-queued {
-  --c: var(--queued);
-}
-.s-running,
-.s-cancel_requested {
-  --c: var(--running);
-}
-.s-done {
-  --c: var(--done);
-}
-.s-blocked {
-  --c: var(--blocked);
-}
-.s-failed {
-  --c: var(--failed);
-}
-.s-cancelled {
-  --c: var(--cancelled);
-}
-.dot {
-  background: var(--c);
-}
-.s-running .dot,
-.dot.s-running {
-  animation: pulse 1.4s ease-in-out infinite;
-}
-@keyframes pulse {
-  50% {
-    opacity: 0.35;
+  html,
+  body,
+  #app {
+    margin: 0;
+    height: 100%;
+    background: var(--bg);
+  }
+
+  button {
+    font: inherit;
+    color: inherit;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 10px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  button:hover:not(:disabled) {
+    border-color: var(--muted);
+  }
+  button:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+  button.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-fg);
+  }
+  button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  input:not([type='checkbox'], [type='radio']),
+  textarea,
+  select {
+    font: inherit;
+    color: inherit;
+    background: var(--panel);
+    border: 1px solid var(--border-input);
+    border-radius: 6px;
+    padding: 6px 8px;
+    width: 100%;
+  }
+  input:not([type='checkbox'], [type='radio']):focus,
+  textarea:focus,
+  select:focus {
+    outline: 2px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    border-color: var(--accent);
+  }
+
+  code,
+  pre {
+    font-family: var(--font-mono);
+    font-size: 12px;
   }
 }
 
-.pill {
-  display: inline-flex;
+/* Repeated patterns the audit found (docs/frontend-audit.md §3), written once. */
+@utility spacer {
+  flex: 1;
+}
+
+/* A bordered panel; add card-head for a header strip. */
+@utility card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  overflow: hidden;
+}
+@utility card-head {
+  display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 2px 8px;
-  border-radius: 999px;
+  gap: 8px;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--border);
+}
+
+/* A button with no chrome, for text links and icon buttons. */
+@utility btn-ghost {
+  border: none;
+  background: none;
+  padding: 0;
+  border-radius: 0;
+}
+@utility btn-mini {
+  padding: 1px 8px;
   font-size: 12px;
-  background: color-mix(in srgb, var(--c, var(--muted)) 14%, transparent);
-  color: var(--c, var(--muted));
+}
+
+/* A small outline pill, muted by default; chip-accent, chip-done, chip-merged and chip-blocked colour it. */
+@utility chip {
+  display: inline-block;
+  font-size: 11.5px;
+  line-height: 18px;
+  padding: 0 7px;
+  border: 1px solid var(--chip-border, var(--border));
+  border-radius: 999px;
+  color: var(--chip-c, var(--muted));
+  white-space: nowrap;
+}
+@utility chip-accent {
+  --chip-c: var(--accent);
+  --chip-border: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+@utility chip-done {
+  --chip-c: var(--done);
+  --chip-border: color-mix(in srgb, var(--done) 45%, transparent);
+}
+@utility chip-merged {
+  --chip-c: var(--merged);
+  --chip-border: color-mix(in srgb, var(--merged) 45%, transparent);
+}
+@utility chip-blocked {
+  --chip-c: var(--blocked);
+  --chip-border: color-mix(in srgb, var(--blocked) 45%, transparent);
+}
+
+/* The small uppercase label above a group of menu options. */
+@utility sec-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  padding: 8px 8px 2px;
+}
+
+/* Label over a control, in a form. */
+@utility field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+@utility check {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
   white-space: nowrap;
 }
 
-/* Syntax highlighting (highlight.js classes), in the theme's --hl-* colours. */
-.hljs-keyword,
-.hljs-selector-tag,
-.hljs-built_in,
-.hljs-literal {
-  color: var(--hl-keyword);
-}
-.hljs-string,
-.hljs-regexp,
-.hljs-addition,
-.hljs-template-tag {
-  color: var(--hl-string);
-}
-.hljs-number,
-.hljs-symbol,
-.hljs-bullet {
-  color: var(--hl-number);
-}
-.hljs-comment,
-.hljs-quote,
-.hljs-meta {
-  color: var(--hl-comment);
-  font-style: italic;
-}
-.hljs-title,
-.hljs-section,
-.hljs-function .hljs-title {
-  color: var(--hl-title);
-}
-.hljs-type,
-.hljs-class .hljs-title,
-.hljs-title.class_ {
-  color: var(--hl-type);
-}
-.hljs-attr,
-.hljs-attribute,
-.hljs-variable,
-.hljs-property,
-.hljs-name {
-  color: var(--hl-attr);
-}
-.hljs-deletion {
+@utility form-error {
   color: var(--failed);
-}
-.hljs-emphasis {
-  font-style: italic;
-}
-.hljs-strong {
-  font-weight: 600;
+  margin: 0;
 }
 
-/* A segmented control: a row of buttons, one of them on. */
-.seg {
-  display: flex;
-  flex: none;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  overflow: hidden;
-}
-.seg button {
-  border: none;
-  border-radius: 0;
-  background: none;
-  padding: 2px 10px;
-  font-size: 12px;
-  color: var(--muted);
-}
-.seg button.on {
-  background: var(--panel-2);
-  color: var(--text);
-}
+@layer components {
+  kbd {
+    font: 11px var(--font-mono);
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    padding: 0 4px;
+    margin: 0 1px;
+  }
 
-/* How a file changed: A, M, D or R. */
-.badge {
-  font:
-    10px ui-monospace,
-    Menlo,
-    monospace;
-  width: 13px;
-  text-align: center;
-  flex: none;
-}
-.b-A {
-  color: var(--done);
-}
-.b-D {
-  color: var(--failed);
-}
-.b-M {
-  color: var(--blocked);
-}
-.b-R {
-  color: var(--running);
+  .muted {
+    color: var(--muted);
+  }
+
+  .dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex: none;
+    background: var(--c);
+  }
+
+  /* --c is the colour of the status being drawn; dots, pills and icons read it. */
+  .s-proposed {
+    --c: var(--accent);
+  }
+  .s-queued {
+    --c: var(--queued);
+  }
+  .s-running,
+  .s-cancel_requested {
+    --c: var(--running);
+  }
+  .s-done {
+    --c: var(--done);
+  }
+  .s-blocked {
+    --c: var(--blocked);
+  }
+  .s-failed {
+    --c: var(--failed);
+  }
+  .s-cancelled {
+    --c: var(--cancelled);
+  }
+  .s-running .dot,
+  .dot.s-running {
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    50% {
+      opacity: 0.35;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .s-running .dot,
+    .dot.s-running {
+      animation: none;
+    }
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    background: color-mix(in srgb, var(--c, var(--muted)) 14%, transparent);
+    color: var(--c, var(--muted));
+    white-space: nowrap;
+  }
+
+  /* Syntax highlighting (highlight.js classes), in the theme's --hl-* colours. */
+  .hljs-keyword,
+  .hljs-selector-tag,
+  .hljs-built_in,
+  .hljs-literal {
+    color: var(--hl-keyword);
+  }
+  .hljs-string,
+  .hljs-regexp,
+  .hljs-addition,
+  .hljs-template-tag {
+    color: var(--hl-string);
+  }
+  .hljs-number,
+  .hljs-symbol,
+  .hljs-bullet {
+    color: var(--hl-number);
+  }
+  .hljs-comment,
+  .hljs-quote,
+  .hljs-meta {
+    color: var(--hl-comment);
+    font-style: italic;
+  }
+  .hljs-title,
+  .hljs-section,
+  .hljs-function .hljs-title {
+    color: var(--hl-title);
+  }
+  .hljs-type,
+  .hljs-class .hljs-title,
+  .hljs-title.class_ {
+    color: var(--hl-type);
+  }
+  .hljs-attr,
+  .hljs-attribute,
+  .hljs-variable,
+  .hljs-property,
+  .hljs-name {
+    color: var(--hl-attr);
+  }
+  .hljs-deletion {
+    color: var(--failed);
+  }
+  .hljs-emphasis {
+    font-style: italic;
+  }
+  .hljs-strong {
+    font-weight: 600;
+  }
+
+  /* A segmented control: a row of buttons, one of them on. */
+  .seg {
+    display: flex;
+    flex: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .seg button {
+    border: none;
+    border-radius: 0;
+    background: none;
+    padding: 2px 10px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .seg button.on {
+    background: var(--panel-2);
+    color: var(--text);
+  }
+
+  /* How a file changed: A, M, D or R. */
+  .badge {
+    font: 10px var(--font-mono);
+    width: 13px;
+    text-align: center;
+    flex: none;
+  }
+  .b-A {
+    color: var(--done);
+  }
+  .b-D {
+    color: var(--failed);
+  }
+  .b-M {
+    color: var(--blocked);
+  }
+  .b-R {
+    color: var(--running);
+  }
 }
