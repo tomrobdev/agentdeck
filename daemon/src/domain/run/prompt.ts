@@ -15,7 +15,8 @@ export function workerSystemPrompt(testCmd: string | null): string {
 - Change files with the Edit and Write tools, not shell redirection or sed.
 ${
   testCmd
-    ? `- Before you finish, run \`${testCmd}\` and fix what fails, including formatting. AgentDeck runs it after you, and the task fails if it doesn't pass.`
+    ? `- Before you finish, run \`${testCmd}\` and fix what fails, including formatting. AgentDeck runs it after you, and the task fails if it doesn't pass.
+- Your shell commands run in a sandbox, and AgentDeck runs \`${testCmd}\` again outside it. A test that fails only because the sandbox refused something (EPERM, "operation not permitted", a refused host or port, a blocked \`ps\`) is not a reason to stop: fix every other failure, then finish with STATUS: DONE and name those tests in your final message.`
     : "- Run the project's tests if there are any, and fix failures you caused."
 }
 - Some commands are refused by AgentDeck's tool rules. A refusal covers only that one command: try a simpler command or another tool (Read, Glob, Grep instead of cat, find, grep), and keep working.

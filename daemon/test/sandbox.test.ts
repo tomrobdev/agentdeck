@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import { runSettings } from '../src/application/tools.ts';
 import type { Repo } from '../src/domain/repo/repo.ts';
 import { ALWAYS_DISALLOWED_TOOLS, DEFAULT_ALLOWED_TOOLS } from '../src/domain/repo/tools.ts';
-import { claudeArgs } from '../src/domain/run/prompt.ts';
+import { claudeArgs, workerSystemPrompt } from '../src/domain/run/prompt.ts';
 import { normalizeNetwork, parseNetwork, settingsPath, workerSettings, worktreeFileRules } from '../src/domain/run/sandbox.ts';
 import type { Task } from '../src/domain/task/task.ts';
 
@@ -62,6 +62,14 @@ test('claudeArgs passes --settings and drops bare Edit/Write; push stays disallo
   const disallowed = args.slice(args.indexOf('--disallowedTools') + 1, args.indexOf('--append-system-prompt'));
   assert.deepEqual(disallowed, ALWAYS_DISALLOWED_TOOLS);
   assert.ok(disallowed.includes('Bash(git push*)') && disallowed.includes('Bash(git remote*)'));
+});
+
+test('the worker prompt says sandbox-only test failures are no reason to block', () => {
+  const prompt = workerSystemPrompt('pnpm test');
+  assert.match(prompt, /AgentDeck runs `pnpm test` again outside it/);
+  assert.match(prompt, /not a reason to stop: fix every other failure, then finish with STATUS: DONE/);
+  // Without a test command nothing reruns the tests, so a sandboxed failure can't be waved through.
+  assert.doesNotMatch(workerSystemPrompt(null), /again outside it/);
 });
 
 test('the settings file is written next to the run log with the repo’s sandbox settings', () => {
