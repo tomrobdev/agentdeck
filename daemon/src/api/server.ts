@@ -87,9 +87,9 @@ export function startApi(
         }));
       },
     ],
-    ['POST', /^\/api\/tasks$/, (_q, _s, _p, b) => taskDetail(db, actions.addTask(db, b).id)],
+    ['POST', /^\/api\/tasks$/, async (_q, _s, _p, b) => taskDetail(db, (await actions.addTask(db, b)).id)],
     ['GET', /^\/api\/tasks\/(\d+)$/, (_q, _s, [id]) => taskDetail(db, Number(id))],
-    ['POST', /^\/api\/tasks\/(\d+)$/, (_q, _s, [id], b) => (actions.editTask(db, Number(id), b), taskDetail(db, Number(id)))],
+    ['POST', /^\/api\/tasks\/(\d+)$/, async (_q, _s, [id], b) => (await actions.editTask(db, Number(id), b), taskDetail(db, Number(id)))],
     ['POST', /^\/api\/tasks\/(\d+)\/cancel$/, (_q, _s, [id]) => ({ result: actions.cancelTask(db, Number(id)) })],
     ['POST', /^\/api\/tasks\/(\d+)\/retry$/, (_q, _s, [id], b) => (actions.retryTask(db, Number(id), b?.note), taskDetail(db, Number(id)))],
     [

@@ -308,9 +308,9 @@ function finishNext(): number {
   return t.id;
 }
 
-test('--after holds a task until its dependency is done', () => {
+test('--after holds a task until its dependency is done', async () => {
   const dep = db.addTask({ repo_id: repo.id, title: 'first', prompt: 'x', priority: -5 });
-  const later = addTask(db, { repo: 'demo', prompt: 'second', after_task: dep.id, priority: 10 });
+  const later = await addTask(db, { repo: 'demo', prompt: 'second', after_task: dep.id, priority: 10 });
   assert.equal(later.after_task, dep.id);
   assert.equal(db.hasQueued(), true);
 
@@ -322,9 +322,9 @@ test('--after holds a task until its dependency is done', () => {
   assert.equal(db.claimNextTask()!.id, later.id, 'done with no PR releases the dependent');
 });
 
-test('--after waits for the dependency PR to be merged', () => {
+test('--after waits for the dependency PR to be merged', async () => {
   const dep = db.addTask({ repo_id: repo.id, title: 'with pr', prompt: 'x' });
-  const later = addTask(db, { repo: 'demo', prompt: 'after the pr', after_task: dep.id });
+  const later = await addTask(db, { repo: 'demo', prompt: 'after the pr', after_task: dep.id });
   assert.equal(finishNext(), dep.id);
   db.updateTask(dep.id, { pr_url: 'https://x/pull/30', pr_state: 'open' });
 
@@ -337,10 +337,10 @@ test('--after waits for the dependency PR to be merged', () => {
   assert.equal(db.claimNextTask()!.id, later.id);
 });
 
-test('--after rejects a task that does not exist, and a failed dependency never releases', () => {
-  assert.throws(() => addTask(db, { repo: 'demo', prompt: 'x', after_task: 99999 }), /no task #99999/);
+test('--after rejects a task that does not exist, and a failed dependency never releases', async () => {
+  await assert.rejects(() => addTask(db, { repo: 'demo', prompt: 'x', after_task: 99999 }), /no task #99999/);
   const dep = db.addTask({ repo_id: repo.id, title: 'will fail', prompt: 'x' });
-  addTask(db, { repo: 'demo', prompt: 'never', after_task: dep.id });
+  await addTask(db, { repo: 'demo', prompt: 'never', after_task: dep.id });
   const claimed = db.claimNextTask()!;
   assert.equal(claimed.id, dep.id);
   db.applyEvent(dep.id, { type: 'finish', outcome: 'blocked' }, { reason: 'stuck' });
@@ -384,7 +384,7 @@ test('dependencyState says why a task is stuck', () => {
 test('a dependent is not claimed while its dependency pushes and opens its PR', async () => {
   updateRepo(db, 'demo', { pr_mode: 'draft' });
   const dep = db.addTask({ repo_id: repo.id, title: 'slow push', prompt: 'FAKE_DONE slow' });
-  const later = addTask(db, { repo: 'demo', prompt: 'after the slow push', after_task: dep.id });
+  const later = await addTask(db, { repo: 'demo', prompt: 'after the slow push', after_task: dep.id });
   db.setSetting('max_concurrent', '2');
 
   let release!: () => void;
@@ -427,7 +427,7 @@ test('a dependent is stuck, not released, when its dependency PR could not be op
   updateRepo(db, 'demo', { pr_mode: 'draft' });
   pushError = 'remote: Permission denied (publickey)';
   const dep = db.addTask({ repo_id: repo.id, title: 'no push', prompt: 'FAKE_DONE nopush' });
-  const later = addTask(db, { repo: 'demo', prompt: 'after the failed push', after_task: dep.id });
+  const later = await addTask(db, { repo: 'demo', prompt: 'after the failed push', after_task: dep.id });
   await drain();
 
   assert.equal(db.getTask(dep.id)!.status, 'done');
@@ -441,7 +441,7 @@ const stuckNotices = (id: number) => db.recentNotifications(50).filter((n) => n.
 
 test('a blocked dependency notifies once, naming the waiting task, which stays queued until a retry', async () => {
   const dep = db.addTask({ repo_id: repo.id, title: 'gets blocked', prompt: 'FAKE_BLOCKED nope' });
-  const later = addTask(db, { repo: 'demo', prompt: 'needs the first', title: 'Second step', after_task: dep.id });
+  const later = await addTask(db, { repo: 'demo', prompt: 'needs the first', title: 'Second step', after_task: dep.id });
   await drain();
 
   assert.equal(db.getTask(dep.id)!.status, 'blocked');
@@ -464,16 +464,16 @@ test('a blocked dependency notifies once, naming the waiting task, which stays q
 
 test('a failure that will be retried does not notify, a final one does', async () => {
   const dep = db.addTask({ repo_id: repo.id, title: 'errors', prompt: 'FAKE_ERROR', max_attempts: 2 });
-  addTask(db, { repo: 'demo', prompt: 'after errors', after_task: dep.id });
+  await addTask(db, { repo: 'demo', prompt: 'after errors', after_task: dep.id });
   await drain();
   assert.equal(db.getTask(dep.id)!.status, 'failed');
   assert.equal(db.runsForTask(dep.id).length, 2);
   assert.equal(stuckNotices(dep.id).length, 1, 'only the final failure notifies');
 });
 
-test('cancelling a dependency notifies; cancelling a task nobody waits on does not', () => {
+test('cancelling a dependency notifies; cancelling a task nobody waits on does not', async () => {
   const dep = db.addTask({ repo_id: repo.id, title: 'to cancel', prompt: 'x' });
-  addTask(db, { repo: 'demo', prompt: 'after the cancel', after_task: dep.id });
+  await addTask(db, { repo: 'demo', prompt: 'after the cancel', after_task: dep.id });
   const alone = db.addTask({ repo_id: repo.id, title: 'alone', prompt: 'x' });
   cancelTask(db, dep.id);
   cancelTask(db, alone.id);
@@ -483,7 +483,7 @@ test('cancelling a dependency notifies; cancelling a task nobody waits on does n
 
 test('a dependency PR closed without merging notifies when the refresh sees it', async () => {
   const dep = db.addTask({ repo_id: repo.id, title: 'pr gets closed', prompt: 'x' });
-  const later = addTask(db, { repo: 'demo', prompt: 'after the closed pr', after_task: dep.id });
+  const later = await addTask(db, { repo: 'demo', prompt: 'after the closed pr', after_task: dep.id });
   assert.equal(finishNext(), dep.id);
   db.updateTask(dep.id, { pr_url: 'https://x/pull/40', pr_state: 'open' });
   assert.equal(stuckNotices(dep.id).length, 0);
@@ -564,7 +564,7 @@ test('repo merge_method defaults to squash and rejects unknown values', () => {
 
 test('mergePreview shows the PR, the repo default method and the tasks the merge unblocks', async () => {
   const t = prTask(100, 'Preview me');
-  const later = addTask(db, { repo: 'demo', prompt: 'follow-up', after_task: t.id, title: 'Follow-up' });
+  const later = await addTask(db, { repo: 'demo', prompt: 'follow-up', after_task: t.id, title: 'Follow-up' });
   details[t.url] = { ...cleanDetails, checks: { total: 3, failing: 1, pending: 0 } };
 
   const p = await mergePreview(db, t.id);
@@ -583,7 +583,7 @@ test('mergePreview shows the PR, the repo default method and the tasks the merge
 
 test('mergeTask squashes by default, records it, and releases the tasks waiting on the PR', async () => {
   const t = prTask(101, 'Ship it');
-  const later = addTask(db, { repo: 'demo', prompt: 'after the merge', after_task: t.id });
+  const later = await addTask(db, { repo: 'demo', prompt: 'after the merge', after_task: t.id });
   assert.ok(waitingFor(db, db.getTask(later.id)!), 'waits while the PR is open');
 
   const res = await mergeTask(db, t.id);

@@ -146,6 +146,10 @@ export const MIGRATIONS: Migration[] = [
   // 10: worker sandbox (docs/adr/0001-worker-sandbox.md). network is a JSON array of hosts sandboxed commands may reach.
   `ALTER TABLE repos ADD COLUMN sandbox INTEGER NOT NULL DEFAULT 1;
    ALTER TABLE repos ADD COLUMN network TEXT NOT NULL DEFAULT '[]';`,
+  // 11: a task can name the plan and steps it carries out (docs/plans/plan-linked-tasks.html). plan_path is
+  // repo-relative under docs/plans/; plan_steps is a JSON array of step ids, NULL for every unfinished step.
+  `ALTER TABLE tasks ADD COLUMN plan_path TEXT;
+   ALTER TABLE tasks ADD COLUMN plan_steps TEXT;`,
 ];
 
 /** Runs every step above the database's user_version in one transaction; returns how many ran. */

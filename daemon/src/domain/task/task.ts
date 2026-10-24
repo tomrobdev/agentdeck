@@ -23,11 +23,24 @@ export interface Task {
   pr_state: PrState | null;
   merge_method: MergeMethod | null; // how the PR was merged from the app
   after_task: number | null; // not claimed until that task is done (and its PR merged, if it has one)
+  plan_path: string | null; // the plan this task carries out: a repo-relative path under docs/plans/
+  plan_steps: string | null; // JSON array of that plan's step ids; null means every unfinished step (see planStepIds)
   created_at: string;
   updated_at: string;
 }
 
 export type TaskSummary = Omit<Task, 'prompt'>;
+
+/** The step ids in a task's `plan_steps`, or null when it names none (every unfinished step). */
+export function planStepIds(task: Pick<Task, 'plan_steps'>): string[] | null {
+  if (task.plan_steps === null) return null;
+  try {
+    const ids: unknown = JSON.parse(task.plan_steps);
+    return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string') : null;
+  } catch {
+    return null;
+  }
+}
 
 /** Statuses whose task still needs work or a decision. */
 export const OPEN_STATUSES: TaskStatus[] = ['proposed', 'queued', 'running', 'cancel_requested'];

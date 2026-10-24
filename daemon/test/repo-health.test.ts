@@ -231,17 +231,17 @@ test('a run that finishes despite refusals but fails its tests does not pause th
   assert.equal(db.getRepo(r.id)!.paused_reason, null);
 });
 
-test('edit changes the fields of a proposed, queued, blocked or failed task', () => {
+test('edit changes the fields of a proposed, queued, blocked or failed task', async () => {
   const r = repo('edits');
   const task = db.addTask({ repo_id: r.id, title: 'old', prompt: 'old prompt', status: 'proposed' });
 
   const patch = { title: ' New title ', prompt: 'new prompt', priority: 3, model: 'opus', max_turns: 12, max_attempts: 4 };
-  const t = editTask(db, task.id, patch);
+  const t = await editTask(db, task.id, patch);
   assert.deepEqual(
     [t.title, t.prompt, t.priority, t.model, t.max_turns, t.max_attempts, t.status],
     ['New title', 'new prompt', 3, 'opus', 12, 4, 'proposed'],
   );
-  assert.equal(editTask(db, task.id, { priority: 0 }).title, 'New title', 'other fields are left alone');
+  assert.equal((await editTask(db, task.id, { priority: 0 })).title, 'New title', 'other fields are left alone');
 
   // Queued comes last: claiming below takes the oldest queued task.
   const finishes: Record<string, TaskEvent | undefined> = {
@@ -256,40 +256,40 @@ test('edit changes the fields of a proposed, queued, blocked or failed task', ()
       db.applyEvent(s.id, event);
     }
     assert.equal(db.getTask(s.id)!.status, status);
-    assert.equal(editTask(db, s.id, { max_turns: 5 }).max_turns, 5, status);
+    assert.equal((await editTask(db, s.id, { max_turns: 5 })).max_turns, 5, status);
     if (!event) db.applyEvent(s.id, { type: 'cancel' });
   }
 });
 
-test('edit refuses other statuses, unknown tasks, empty edits and invalid values', () => {
+test('edit refuses other statuses, unknown tasks, empty edits and invalid values', async () => {
   const r = repo('edit-refusals');
   const task = db.addTask({ repo_id: r.id, title: 't', prompt: 'p' });
   const refuses = (id: number, patch: Parameters<typeof editTask>[2], message: RegExp) =>
-    assert.throws(
+    assert.rejects(
       () => editTask(db, id, patch),
       (err) => err instanceof ActionError && message.test(err.message),
       JSON.stringify(patch),
     );
 
-  refuses(9999, { title: 'x' }, /no such task/);
-  refuses(task.id, {}, /nothing to change/);
-  refuses(task.id, { title: '  ' }, /title cannot be empty/);
-  refuses(task.id, { prompt: '' }, /prompt cannot be empty/);
-  refuses(task.id, { model: ' ' }, /model cannot be empty/);
-  refuses(task.id, { priority: 1.5 }, /priority must be a whole number/);
-  refuses(task.id, { priority: NaN }, /priority must be a whole number/);
-  refuses(task.id, { max_turns: 0 }, /max_turns must be a whole number from 1/);
-  refuses(task.id, { max_attempts: 0 }, /max_attempts must be a whole number from 1/);
-  refuses(task.id, { max_turns: '9' as never }, /max_turns/);
+  await refuses(9999, { title: 'x' }, /no such task/);
+  await refuses(task.id, {}, /nothing to change/);
+  await refuses(task.id, { title: '  ' }, /title cannot be empty/);
+  await refuses(task.id, { prompt: '' }, /prompt cannot be empty/);
+  await refuses(task.id, { model: ' ' }, /model cannot be empty/);
+  await refuses(task.id, { priority: 1.5 }, /priority must be a whole number/);
+  await refuses(task.id, { priority: NaN }, /priority must be a whole number/);
+  await refuses(task.id, { max_turns: 0 }, /max_turns must be a whole number from 1/);
+  await refuses(task.id, { max_attempts: 0 }, /max_attempts must be a whole number from 1/);
+  await refuses(task.id, { max_turns: '9' as never }, /max_turns/);
   assert.equal(db.getTask(task.id)!.title, 't', 'a refused edit changes nothing');
   assert.equal(db.getTask(task.id)!.max_turns, 40);
 
   db.claimNextTask(); // running
   assert.equal(db.getTask(task.id)!.status, 'running');
-  refuses(task.id, { title: 'x' }, /is running; only proposed, queued, blocked, failed tasks can be edited/);
+  await refuses(task.id, { title: 'x' }, /is running; only proposed, queued, blocked, failed tasks can be edited/);
   db.applyEvent(task.id, { type: 'finish', outcome: 'done' });
-  refuses(task.id, { title: 'x' }, /is done/);
+  await refuses(task.id, { title: 'x' }, /is done/);
   db.applyEvent(task.id, { type: 'retry' });
   db.applyEvent(task.id, { type: 'cancel' });
-  refuses(task.id, { title: 'x' }, /is cancelled/);
+  await refuses(task.id, { title: 'x' }, /is cancelled/);
 });

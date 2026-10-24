@@ -7,6 +7,7 @@ import { removeWorktree } from '../adapters/git.ts';
 import { planProgress } from '../domain/plan/plan.ts';
 import { TASK_STATUSES } from '../domain/task/lifecycle.ts';
 import { filterTasks } from '../domain/task/listing.ts';
+import { planStepIds } from '../domain/task/task.ts';
 import { die, taskId, fmtTask, printLog } from './format.ts';
 import type { Command } from './context.ts';
 
@@ -21,8 +22,8 @@ const approveOrReject: Command = ({ db, cmd, rest }) => {
 };
 
 export const taskCommands: Record<string, Command> = {
-  add: ({ db, flags, rest, repoName }) => {
-    const t = actions.addTask(db, {
+  add: async ({ db, flags, rest, repoName }) => {
+    const t = await actions.addTask(db, {
       repo: flags.repo,
       prompt: rest.join(' '),
       title: flags.title,
@@ -31,6 +32,8 @@ export const taskCommands: Record<string, Command> = {
       max_turns: flags['max-turns'] ? Number(flags['max-turns']) : undefined,
       max_attempts: flags.attempts ? Number(flags.attempts) : undefined,
       after_task: flags.after ? taskId(flags.after) : undefined,
+      plan_path: flags.plan,
+      plan_steps: flags.steps,
     });
     console.log(
       `queued task #${t.id} on ${repoName(t.repo_id)} (${t.model}, ${t.max_turns} turns max${t.after_task ? `, after #${t.after_task}` : ''})`,
@@ -39,17 +42,19 @@ export const taskCommands: Record<string, Command> = {
     if (waiting?.stuck) console.log(`note: ${waiting.stuck}, so this task won't start until #${waiting.on} is retried`);
     if (db.isPaused()) console.log('note: the daemon is paused; run `agentdeck resume` to start working');
   },
-  edit: ({ db, flags, rest, repoName }) => {
+  edit: async ({ db, flags, rest, repoName }) => {
     const id = taskId(rest[0]);
     // A blank or non-numeric value becomes NaN, which editTask rejects.
     const num = (v: string | undefined) => (v === undefined ? undefined : v.trim() === '' ? NaN : Number(v));
-    const t = actions.editTask(db, id, {
+    const t = await actions.editTask(db, id, {
       title: flags.title,
       prompt: flags.prompt,
       priority: num(flags.priority),
       model: flags.model,
       max_turns: num(flags['max-turns']),
       max_attempts: num(flags.attempts),
+      plan_path: flags.plan,
+      plan_steps: flags.steps,
     });
     console.log(fmtTask(t, repoName(t.repo_id)));
     console.log(`model ${t.model}, attempts ${t.attempts}/${t.max_attempts}, max turns ${t.max_turns}`);
@@ -79,6 +84,10 @@ export const taskCommands: Record<string, Command> = {
     console.log(`model ${t.model}, attempts ${t.attempts}/${t.max_attempts}, max turns ${t.max_turns}`);
     if (t.branch) console.log(`branch   ${t.branch}`);
     if (t.worktree) console.log(`worktree ${t.worktree}`);
+    if (t.plan_path) {
+      const steps = planStepIds(t);
+      console.log(`plan     ${t.plan_path} (${steps ? `steps ${steps.join(', ')}` : 'every unfinished step'})`);
+    }
     console.log(`\n${t.prompt}\n`);
     for (const p of db.plansForTask(t.id)) {
       const { finished, total } = planProgress(p.steps);
