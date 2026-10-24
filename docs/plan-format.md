@@ -43,7 +43,7 @@ Everything else is free HTML: tables, code, notes, inline `<style>`. Scripts don
 ## How a plan reaches a task
 
 - **From the task's branch.** After every run, the daemon reads the HTML files the branch added or changed under `docs/plans/` and attaches those that carry the marker. A plan deleted from the branch is detached. Workers are told the format in their system prompt (`domain/run/prompt.ts`).
-- **Attached by hand.** `agentdeck attach <task> plan.html` attaches a plan written anywhere, under its file name; attaching the same name again replaces it. `agentdeck attach <task>` with no file re-reads the branch.
+- **Attached by hand.** `agentdeck attach <task> plan.html` attaches a plan written anywhere, under its file name; attaching the same name again replaces it. A file under `docs/plans/` is named by its path from there on (`docs/plans/x.html`), the name the branch's copy gets, so once the branch has the file, its copy replaces the attached one. `agentdeck attach <task>` with no file re-reads the branch.
 - **Through the API.** `POST /api/tasks/:id/plans` with `{ "name": "plan.html", "html": "…" }`. `POST /api/tasks/:id/plans/collect` re-reads the branch.
 
 The task detail (`GET /api/tasks/:id`) lists the parsed plans under `plans`, without their HTML; `GET /api/tasks/:id/plans/:plan` returns `{ html }`. The parser is `parsePlan` in `daemon/src/domain/plan/plan.ts`.
