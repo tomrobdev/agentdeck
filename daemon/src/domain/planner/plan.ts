@@ -30,6 +30,14 @@ export interface PlanResult {
 
 export const MODELS = ['haiku', 'sonnet', 'opus'];
 
+/** The sections every task prompt has, in order. The delegate skill (.claude/skills/delegate) asks for the same. */
+export const PROMPT_SECTIONS = `Goal: what the task achieves, in a sentence or two.
+Context: the files to start from, why it is needed, related tasks or plans.
+Change: what to do.
+Out of scope: what not to touch.
+Constraints: limits the agent must keep to, such as no new dependencies or no changes to package.json.
+Definition of done: the test command passing, plus concrete checks a reviewer can confirm.`;
+
 export const PLAN_SCHEMA = {
   type: 'object',
   properties: {
@@ -39,7 +47,7 @@ export const PLAN_SCHEMA = {
         type: 'object',
         properties: {
           title: { type: 'string', description: 'Imperative, under 70 characters' },
-          prompt: { type: 'string', description: 'Instructions for the coding agent, ending with a concrete definition of done' },
+          prompt: { type: 'string', description: 'Instructions for the coding agent, in the sections listed in the prompt' },
           priority: { type: 'integer', minimum: 0, maximum: 3 },
           model: { type: 'string', enum: MODELS },
         },
@@ -63,10 +71,13 @@ Propose at most ${maxTasks} new tasks that move the goals forward. An unattended
 
 Each task must be:
 - small enough for one focused session, and independent of the other proposals
-- testable, with a prompt that ends with a concrete definition of done
+- testable, with a concrete definition of done
 - not already covered by an open or recent task below, and not something the goals rule out
 Prefer the highest-value next step. Use haiku for mechanical work, sonnet by default, opus only for genuinely hard tasks.
 If nothing is worth doing right now, return an empty list and say why in "note".
+
+Write each prompt in these sections, one paragraph or list each, headed by the section name:
+${PROMPT_SECTIONS}
 
 ## Goals
 ${goals.trim()}
