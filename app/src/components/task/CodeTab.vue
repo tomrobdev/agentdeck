@@ -67,9 +67,9 @@ const select = (r: LineRange) => setQuery({ L: r.from === r.to ? String(r.from) 
 </script>
 
 <template>
-  <div class="code-tab">
-    <aside class="side">
-      <div class="seg refs">
+  <div class="flex min-h-0 flex-1 gap-4 pb-4">
+    <aside class="flex min-h-0 w-70 flex-none flex-col gap-2 max-md:hidden">
+      <div class="seg *:flex-1">
         <button :class="{ on: ref_ === 'head' }" :title="task.branch ?? ''" @click="setQuery({ ref: 'head', L: null })">Task branch</button>
         <button :class="{ on: ref_ === 'base' }" title="Where the branch started" @click="setQuery({ ref: 'base', L: null })">Base</button>
       </div>
@@ -81,139 +81,54 @@ const select = (r: LineRange) => setQuery({ L: r.from === r.to ? String(r.from) 
         :known="[...changed]"
         @select="(p) => setQuery({ path: p, L: null })"
       />
-      <p v-else class="muted">No branch yet.</p>
+      <p v-else class="text-muted">No branch yet.</p>
     </aside>
-    <section class="viewer">
-      <p v-if="!path" class="muted hint">Pick a file. Press <kbd>t</kbd> to find one by name.</p>
+    <section class="card flex min-w-0 flex-1 flex-col">
+      <p v-if="!path" class="p-6 text-muted">Pick a file. Press <kbd>t</kbd> to find one by name.</p>
       <template v-else>
-        <header class="vhead">
-          <nav class="crumbs">
+        <header class="card-head px-2.5 py-1.5">
+          <nav class="truncate font-mono text-sm leading-[normal]">
             <span v-for="(c, i) in crumbs" :key="i"
-              ><span v-if="i" class="sep">/</span><b v-if="i === crumbs.length - 1">{{ c }}</b
+              ><span v-if="i" class="mx-[3px] text-muted">/</span><b v-if="i === crumbs.length - 1">{{ c }}</b
               ><span v-else>{{ c }}</span></span
             >
           </nav>
-          <span v-if="changed.has(path) && ref_ === 'head'" class="chip">changed</span>
-          <span v-if="file" class="muted size">{{ file.size < 1024 ? `${file.size} B` : `${Math.round(file.size / 1024)} KB` }}</span>
+          <span
+            v-if="changed.has(path) && ref_ === 'head'"
+            class="rounded-full border border-[color-mix(in_srgb,var(--blocked)_45%,transparent)] px-1.5 text-xs text-blocked"
+            >changed</span
+          >
+          <span v-if="file" class="text-sm text-muted">{{
+            file.size < 1024 ? `${file.size} B` : `${Math.round(file.size / 1024)} KB`
+          }}</span>
           <div class="spacer" />
           <div v-if="isMarkdown && file?.text !== null" class="seg">
             <button :class="{ on: !raw }" @click="raw = false">Preview</button>
             <button :class="{ on: raw }" @click="raw = true">Code</button>
           </div>
-          <button class="mini" @click="copy(path, 'path')">{{ copied === 'path' ? 'Copied' : 'Copy path' }}</button>
-          <button v-if="file?.text" class="mini" @click="copy(file.text, 'text')">{{ copied === 'text' ? 'Copied' : 'Copy' }}</button>
-          <button v-if="worktreePath" class="mini" title="Copies the file's path in the worktree" @click="copy(worktreePath, 'wt')">
+          <button class="btn-mini" @click="copy(path, 'path')">{{ copied === 'path' ? 'Copied' : 'Copy path' }}</button>
+          <button v-if="file?.text" class="btn-mini" @click="copy(file.text, 'text')">{{ copied === 'text' ? 'Copied' : 'Copy' }}</button>
+          <button v-if="worktreePath" class="btn-mini" title="Copies the file's path in the worktree" @click="copy(worktreePath, 'wt')">
             {{ copied === 'wt' ? 'Copied' : 'Open in editor' }}
           </button>
         </header>
-        <p v-if="error" class="muted pad">{{ error }}</p>
-        <p v-else-if="!file" class="muted pad">Loading…</p>
-        <p v-else-if="file.binary" class="muted pad">{{ isImage ? 'Image files aren’t shown yet.' : 'Binary file not shown.' }}</p>
-        <div v-else-if="isMarkdown && !raw" class="mdview"><Markdown :text="file.text ?? ''" /></div>
-        <CodeView v-else class="cv" :text="file.text ?? ''" :path="path" :range="range" scroll-to-range @select="select" />
-        <p v-if="file?.truncated" class="muted pad">File too large: showing the first 512 KB.</p>
+        <p v-if="error" class="m-0 px-3.5 py-3 text-muted">{{ error }}</p>
+        <p v-else-if="!file" class="m-0 px-3.5 py-3 text-muted">Loading…</p>
+        <p v-else-if="file.binary" class="m-0 px-3.5 py-3 text-muted">
+          {{ isImage ? 'Image files aren’t shown yet.' : 'Binary file not shown.' }}
+        </p>
+        <div v-else-if="isMarkdown && !raw" class="flex-1 overflow-y-auto px-6.5 py-4.5"><Markdown :text="file.text ?? ''" /></div>
+        <CodeView
+          v-else
+          class="min-h-0 flex-1 py-1.5"
+          :text="file.text ?? ''"
+          :path="path"
+          :range="range"
+          scroll-to-range
+          @select="select"
+        />
+        <p v-if="file?.truncated" class="m-0 px-3.5 py-3 text-muted">File too large: showing the first 512 KB.</p>
       </template>
     </section>
   </div>
 </template>
-
-<style scoped>
-.code-tab {
-  display: flex;
-  gap: 16px;
-  flex: 1;
-  min-height: 0;
-  padding-bottom: 16px;
-}
-.side {
-  width: 280px;
-  flex: none;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-height: 0;
-}
-.refs button {
-  flex: 1;
-}
-.viewer {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--panel);
-  overflow: hidden;
-}
-.hint {
-  padding: 24px;
-}
-.vhead {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  background: var(--panel-2);
-  border-bottom: 1px solid var(--border);
-}
-.crumbs {
-  font:
-    12.5px ui-monospace,
-    Menlo,
-    monospace;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.sep {
-  color: var(--muted);
-  margin: 0 3px;
-}
-.chip {
-  font-size: 11px;
-  padding: 0 6px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--blocked) 45%, transparent);
-  color: var(--blocked);
-}
-.size {
-  font-size: 12px;
-}
-.spacer {
-  flex: 1;
-}
-.mini {
-  padding: 1px 8px;
-  font-size: 12px;
-}
-.pad {
-  padding: 12px 14px;
-  margin: 0;
-}
-.cv {
-  flex: 1;
-  min-height: 0;
-  padding: 6px 0;
-}
-.mdview {
-  padding: 18px 26px;
-  overflow-y: auto;
-  flex: 1;
-}
-kbd {
-  font:
-    11px ui-monospace,
-    Menlo,
-    monospace;
-  border: 1px solid var(--border);
-  border-bottom-width: 2px;
-  border-radius: 4px;
-  padding: 0 4px;
-}
-@media (max-width: 900px) {
-  .side {
-    display: none;
-  }
-}
-</style>

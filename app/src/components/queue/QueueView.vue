@@ -97,8 +97,8 @@ useHotkeys({
 </script>
 
 <template>
-  <section class="queue">
-    <div class="toolbar">
+  <section class="flex min-h-0 flex-1 flex-col bg-panel">
+    <div class="flex items-center gap-2.5 border-b border-border px-4 py-2 max-sm:flex-wrap">
       <div class="seg" role="tablist">
         <button :class="{ on: display.mode === 'list' }" role="tab" title="List (v)" @click="display = { ...display, mode: 'list' }">
           ≡ List
@@ -111,8 +111,9 @@ useHotkeys({
       <DisplayMenu v-model="display" />
     </div>
 
-    <p v-if="!shown.length && hasFilters(filters)" class="empty muted">
-      Nothing matches these filters. <button class="link" @click="filters = emptyFilters()">Clear filters</button>
+    <p v-if="!shown.length && hasFilters(filters)" class="muted px-4 py-6">
+      Nothing matches these filters.
+      <button class="btn-ghost text-accent underline" @click="filters = emptyFilters()">Clear filters</button>
     </p>
     <ListView
       v-else-if="display.mode === 'list'"
@@ -136,68 +137,14 @@ useHotkeys({
       @open="emit('open', $event)"
       @move="(kind, id) => emit('act', kind, id)"
     />
-    <footer class="foot muted">
+    <footer class="muted flex justify-between gap-3 border-t border-border px-4 py-[5px] text-sm">
       <span
         >{{ shown.length }}<template v-if="shown.length !== tasks.length"> of {{ tasks.length }}</template> tasks</span
       >
-      <span class="keys"
+      <span class="max-sm:hidden"
         ><kbd>j</kbd><kbd>k</kbd> move · <kbd>↵</kbd> open · <kbd>a</kbd> approve · <kbd>r</kbd> retry · <kbd>v</kbd> board ·
         <kbd>c</kbd> new · <kbd>/</kbd> search</span
       >
     </footer>
   </section>
 </template>
-
-<style scoped>
-.queue {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  flex: 1;
-  background: var(--panel);
-}
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 16px;
-  border-bottom: 1px solid var(--border);
-}
-.empty {
-  padding: 24px 16px;
-}
-.link {
-  border: none;
-  background: none;
-  padding: 0;
-  color: var(--accent);
-  text-decoration: underline;
-}
-.foot {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 5px 16px;
-  font-size: 12px;
-  border-top: 1px solid var(--border);
-}
-kbd {
-  font:
-    11px ui-monospace,
-    Menlo,
-    monospace;
-  border: 1px solid var(--border);
-  border-bottom-width: 2px;
-  border-radius: 4px;
-  padding: 0 4px;
-  margin: 0 1px;
-}
-@media (max-width: 720px) {
-  .toolbar {
-    flex-wrap: wrap;
-  }
-  .keys {
-    display: none;
-  }
-}
-</style>

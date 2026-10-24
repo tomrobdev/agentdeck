@@ -63,33 +63,12 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div v-if="shown" class="snippet" :style="{ left: `${Math.max(8, shown.x)}px`, top: `${shown.y}px` }">
-    <div class="shead">{{ shown.path }}:{{ shown.line }}</div>
+  <div
+    v-if="shown"
+    class="pointer-events-none fixed z-30 w-[550px] max-w-[calc(100vw-16px)] overflow-hidden rounded-md border border-border bg-panel shadow-popover"
+    :style="{ left: `${Math.max(8, shown.x)}px`, top: `${shown.y}px` }"
+  >
+    <div class="border-b border-border bg-panel-2 px-2.5 py-1 font-mono text-xs text-muted">{{ shown.path }}:{{ shown.line }}</div>
     <CodeView :text="shown.text" :path="shown.path" :first="shown.first" :range="{ from: shown.line, to: shown.line }" />
   </div>
 </template>
-
-<style scoped>
-.snippet {
-  position: fixed;
-  z-index: 30;
-  width: 550px;
-  max-width: calc(100vw - 16px);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--panel);
-  box-shadow: 0 10px 30px rgb(0 0 0 / 0.22);
-  overflow: hidden;
-  pointer-events: none;
-}
-.shead {
-  font:
-    11.5px ui-monospace,
-    Menlo,
-    monospace;
-  padding: 4px 10px;
-  background: var(--panel-2);
-  border-bottom: 1px solid var(--border);
-  color: var(--muted);
-}
-</style>

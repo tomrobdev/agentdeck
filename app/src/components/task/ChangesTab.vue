@@ -146,27 +146,27 @@ async function jump(path: string) {
 </script>
 
 <template>
-  <div class="changes">
-    <p v-if="error" class="muted note">{{ error }}</p>
-    <p v-else-if="!changes" class="muted note">Loading changes…</p>
-    <p v-else-if="!files.length" class="muted note">
+  <div class="flex min-h-0 flex-1 flex-col">
+    <p v-if="error" class="py-2 text-muted">{{ error }}</p>
+    <p v-else-if="!changes" class="py-2 text-muted">Loading changes…</p>
+    <p v-else-if="!files.length" class="py-2 text-muted">
       No changes against <code>{{ changes.base_ref }}</code> yet.
     </p>
     <template v-else>
-      <div class="bar">
+      <div class="flex items-center gap-2 pb-2.5">
         <b>{{ files.length }} {{ files.length === 1 ? 'file' : 'files' }}</b>
-        <span class="add">+{{ totals.add }}</span
-        ><span class="del">−{{ totals.del }}</span>
+        <span class="font-mono text-sm leading-[normal] text-done">+{{ totals.add }}</span
+        ><span class="font-mono text-sm leading-[normal] text-failed">−{{ totals.del }}</span>
         <Popover>
           <template #trigger
-            ><button class="mini">
+            ><button class="btn-mini">
               {{ changes.commits.length }} {{ changes.commits.length === 1 ? 'commit' : 'commits' }} ▾
             </button></template
           >
-          <div v-for="c in changes.commits" :key="c.sha" class="commit">
+          <div v-for="c in changes.commits" :key="c.sha" class="flex gap-2 px-2 py-1 text-sm whitespace-nowrap">
             <code>{{ c.sha.slice(0, 7) }}</code>
-            <span class="subj">{{ c.subject }}</span>
-            <span class="muted">{{ ago(c.at) }}</span>
+            <span class="max-w-[380px] flex-1 truncate">{{ c.subject }}</span>
+            <span class="text-muted">{{ ago(c.at) }}</span>
           </div>
         </Popover>
         <div class="spacer" />
@@ -176,183 +176,56 @@ async function jump(path: string) {
           <button :class="{ on: split }" @click="split = true">Split</button>
         </div>
       </div>
-      <div class="body">
-        <aside class="tree">
+      <div class="flex min-h-0 flex-1 gap-4">
+        <aside class="min-h-0 w-65 flex-none pb-4 max-md:hidden">
           <FileTree :load="loadTree" :selected="current" expand-all :known="files.map((f) => f.path)" @select="jump" />
         </aside>
-        <div class="files">
-          <section v-for="f in shown" :key="f.path" :ref="sectionRef" class="file" :data-path="f.path">
-            <header class="fhead">
-              <button class="fold" @click="collapsed.has(f.path) ? collapsed.delete(f.path) : collapsed.add(f.path)">
+        <div class="min-w-0 flex-1 overflow-y-auto pb-6">
+          <section v-for="f in shown" :key="f.path" :ref="sectionRef" class="card mb-3" :data-path="f.path">
+            <header class="card-head sticky top-0 z-[1] px-2.5 py-1.5">
+              <button
+                class="border-0 bg-transparent px-1 py-0 text-muted"
+                @click="collapsed.has(f.path) ? collapsed.delete(f.path) : collapsed.add(f.path)"
+              >
                 {{ collapsed.has(f.path) ? '▸' : '▾' }}
               </button>
               <span class="badge" :class="`b-${f.status}`" :title="CHANGE_LABEL[f.status]">{{ f.status }}</span>
-              <span class="path">
+              <span class="truncate font-mono text-sm leading-[normal]">
                 <template v-if="f.old_path">{{ f.old_path }} → </template>{{ f.path }}
               </span>
-              <span class="add">+{{ f.additions }}</span
-              ><span class="del">−{{ f.deletions }}</span>
+              <span class="font-mono text-sm leading-[normal] text-done">+{{ f.additions }}</span
+              ><span class="font-mono text-sm leading-[normal] text-failed">−{{ f.deletions }}</span>
               <div class="spacer" />
               <button
                 v-if="isMarkdown(f.path) && f.status !== 'D'"
-                class="mini"
-                :class="{ on: previewOn.has(f.path) }"
+                class="btn-mini"
+                :class="previewOn.has(f.path) && 'border-accent'"
                 @click="togglePreview(f.path)"
               >
                 Preview
               </button>
-              <button v-if="f.status !== 'D'" class="mini" title="Open the whole file" @click="emit('open', f.path)">View file</button>
+              <button v-if="f.status !== 'D'" class="btn-mini" title="Open the whole file" @click="emit('open', f.path)">View file</button>
               <label class="check"><input type="checkbox" :checked="isViewed(f)" @change="setViewed(f, !isViewed(f))" /> Viewed</label>
             </header>
             <template v-if="!collapsed.has(f.path)">
-              <div v-if="previewOn.has(f.path)" class="preview">
+              <div v-if="previewOn.has(f.path)" class="px-4.5 py-3.5">
                 <Markdown v-if="preview.has(f.path)" :text="preview.get(f.path)!" />
-                <p v-else class="muted">Loading…</p>
+                <p v-else class="text-muted">Loading…</p>
               </div>
-              <p v-else-if="f.binary" class="muted pad">Binary file not shown.</p>
+              <p v-else-if="f.binary" class="m-0 px-3.5 py-2.5 text-muted">Binary file not shown.</p>
               <template v-for="p in [patches.get(f.path)]" v-else :key="f.path">
-                <p v-if="p?.state === 'error'" class="muted pad">{{ p.error }}</p>
+                <p v-if="p?.state === 'error'" class="m-0 px-3.5 py-2.5 text-muted">{{ p.error }}</p>
                 <template v-else-if="p?.state === 'ok'">
                   <DiffView :path="f.path" :patch="p.patch.patch" :split="split" />
-                  <p v-if="p.patch.truncated" class="muted pad">Diff too large: showing the first 256 KB.</p>
+                  <p v-if="p.patch.truncated" class="m-0 px-3.5 py-2.5 text-muted">Diff too large: showing the first 256 KB.</p>
                 </template>
-                <p v-else class="muted pad">Loading…</p>
+                <p v-else class="m-0 px-3.5 py-2.5 text-muted">Loading…</p>
               </template>
             </template>
           </section>
-          <p v-if="!shown.length" class="muted note">Every file is marked viewed.</p>
+          <p v-if="!shown.length" class="py-2 text-muted">Every file is marked viewed.</p>
         </div>
       </div>
     </template>
   </div>
 </template>
-
-<style scoped>
-.changes {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  flex: 1;
-}
-.note {
-  padding: 8px 0;
-}
-.bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-bottom: 10px;
-}
-.add {
-  color: var(--done);
-  font:
-    12px ui-monospace,
-    Menlo,
-    monospace;
-}
-.del {
-  color: var(--failed);
-  font:
-    12px ui-monospace,
-    Menlo,
-    monospace;
-}
-.spacer {
-  flex: 1;
-}
-.mini {
-  padding: 1px 8px;
-  font-size: 12px;
-}
-.mini.on {
-  border-color: var(--accent);
-}
-.check {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  color: var(--muted);
-  white-space: nowrap;
-}
-.check input {
-  width: auto;
-  margin: 0;
-}
-.commit {
-  display: flex;
-  gap: 8px;
-  padding: 4px 8px;
-  font-size: 12px;
-  white-space: nowrap;
-}
-.subj {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 380px;
-}
-.body {
-  display: flex;
-  gap: 16px;
-  min-height: 0;
-  flex: 1;
-}
-.tree {
-  width: 260px;
-  flex: none;
-  min-height: 0;
-  padding-bottom: 16px;
-}
-.files {
-  flex: 1;
-  min-width: 0;
-  overflow-y: auto;
-  padding-bottom: 24px;
-}
-.file {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  margin-bottom: 12px;
-  background: var(--panel);
-  overflow: hidden;
-}
-.fhead {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  background: var(--panel-2);
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  z-index: 1;
-}
-.fold {
-  border: none;
-  background: none;
-  padding: 0 4px;
-  color: var(--muted);
-}
-.path {
-  font:
-    12.5px ui-monospace,
-    Menlo,
-    monospace;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.pad {
-  padding: 10px 14px;
-  margin: 0;
-}
-.preview {
-  padding: 14px 18px;
-}
-@media (max-width: 900px) {
-  .tree {
-    display: none;
-  }
-}
-</style>

@@ -39,39 +39,60 @@ watch(
 </script>
 
 <template>
-  <div class="list" role="list">
+  <div class="min-h-0 flex-1 overflow-y-auto" role="list">
     <template v-for="g in groups" :key="g.key">
-      <section v-if="g.tasks.length || showEmpty" class="group">
-        <button v-if="groupBy !== 'none'" class="ghead" :aria-expanded="!collapsed.includes(g.key)" @click="emit('toggle', g.key)">
-          <span class="caret" :class="{ shut: collapsed.includes(g.key) }">▾</span>
-          <span class="glabel">{{ g.label }}</span>
-          <span class="gcount">{{ g.tasks.length }}</span>
+      <section v-if="g.tasks.length || showEmpty">
+        <button
+          v-if="groupBy !== 'none'"
+          class="sticky top-0 z-1 flex w-full items-center gap-2 rounded-none border-0 border-b bg-panel-2 px-4 py-1.5 font-semibold"
+          :aria-expanded="!collapsed.includes(g.key)"
+          @click="emit('toggle', g.key)"
+        >
+          <span
+            class="text-2xs text-muted transition-transform duration-[120ms] ease-[ease]"
+            :class="collapsed.includes(g.key) ? '-rotate-90' : ''"
+            >▾</span
+          >
+          <span>{{ g.label }}</span>
+          <span class="font-normal text-muted">{{ g.tasks.length }}</span>
         </button>
         <template v-if="!collapsed.includes(g.key)">
           <div
             v-for="t in g.tasks"
             :key="t.id"
-            class="row"
+            class="group flex min-h-9 cursor-default items-center gap-2.5 border-b border-border px-4 py-1"
             role="listitem"
-            :class="[`s-${t.status}`, { sel: t.id === selected }]"
+            :class="[
+              `s-${t.status}`,
+              t.id === selected ? 'bg-[color-mix(in_srgb,var(--accent)_8%,var(--panel))] shadow-[inset_2px_0_0_var(--accent)]' : '',
+            ]"
             :data-task-row="t.id"
             @click="emit('open', t.id)"
             @mouseenter="emit('select', t.id)"
           >
             <PriorityIcon :priority="t.priority" />
-            <span class="id">#{{ t.id }}</span>
+            <span class="w-[34px] flex-none text-sm text-muted tabular-nums">#{{ t.id }}</span>
             <StatusIcon :task="t" />
-            <span class="main">
-              <span class="title">{{ t.title }}</span>
-              <span v-if="show.reason && t.blocked_reason && (t.status === 'blocked' || t.status === 'failed')" class="reason">
+            <span class="flex min-w-0 flex-1 flex-col">
+              <span class="truncate font-medium">{{ t.title }}</span>
+              <span
+                v-if="show.reason && t.blocked_reason && (t.status === 'blocked' || t.status === 'failed')"
+                class="truncate text-sm text-blocked group-[.s-failed]:text-failed"
+              >
                 {{ t.blocked_reason }}
               </span>
-              <span v-else-if="show.reason && t.waiting?.stuck" class="reason">Can't start: {{ t.waiting.stuck }}</span>
-              <span v-else-if="show.reason && t.hold?.kind === 'repo-paused'" class="reason">Can't start: {{ t.repo }} is paused</span>
+              <span v-else-if="show.reason && t.waiting?.stuck" class="truncate text-sm text-blocked group-[.s-failed]:text-failed"
+                >Can't start: {{ t.waiting.stuck }}</span
+              >
+              <span
+                v-else-if="show.reason && t.hold?.kind === 'repo-paused'"
+                class="truncate text-sm text-blocked group-[.s-failed]:text-failed"
+                >Can't start: {{ t.repo }} is paused</span
+              >
             </span>
-            <span class="chips">
+            <span class="flex flex-none gap-1 max-sm:[&>:not([data-repo])]:hidden">
               <span v-if="t.waiting && !t.waiting.stuck" class="chip">waiting #{{ t.waiting.on }}</span>
-              <span v-if="unblocksOf(t).length" class="chip unblocks" title="Merging this PR releases them">
+              <span v-if="unblocksOf(t).length" class="chip chip-accent" title="Merging this PR releases them">
                 unblocks
                 {{
                   unblocksOf(t)
@@ -81,161 +102,29 @@ watch(
               </span>
               <span v-if="t.source === 'planner'" class="chip">planner</span>
               <span v-if="t.attempts > 1" class="chip">try {{ t.attempts }}</span>
-              <span v-if="show.pr && t.pr_url" class="chip" :class="`pr-${t.pr_state ?? 'open'}`">PR {{ t.pr_state ?? 'open' }}</span>
-              <span v-if="show.repo" class="chip repo">{{ t.repo }}</span>
+              <span
+                v-if="show.pr && t.pr_url"
+                class="chip"
+                :class="t.pr_state === 'merged' ? 'chip-merged' : (t.pr_state ?? 'open') === 'open' ? 'chip-done' : ''"
+                >PR {{ t.pr_state ?? 'open' }}</span
+              >
+              <span v-if="show.repo" data-repo class="chip max-w-[120px] truncate">{{ t.repo }}</span>
             </span>
-            <span class="actions" @click.stop>
-              <button v-if="canApprove(t)" title="Approve (a)" @click="emit('act', 'approve', t.id)">Approve</button>
-              <button v-if="quickRetry(t)" title="Retry (r)" @click="emit('act', 'retry', t.id)">Retry</button>
-              <button v-if="t.pr_url" title="Open the pull request" @click="openExternal(t.pr_url)">PR ↗</button>
+            <span class="flex-none gap-1" :class="t.id === selected ? 'flex' : 'hidden group-hover:flex'" @click.stop>
+              <button v-if="canApprove(t)" class="btn-mini" title="Approve (a)" @click="emit('act', 'approve', t.id)">Approve</button>
+              <button v-if="quickRetry(t)" class="btn-mini" title="Retry (r)" @click="emit('act', 'retry', t.id)">Retry</button>
+              <button v-if="t.pr_url" class="btn-mini" title="Open the pull request" @click="openExternal(t.pr_url)">PR ↗</button>
             </span>
-            <span v-if="show.time" class="time" :title="`${statusLabel(t.status)} · updated ${t.updated_at} UTC`">{{
-              ago(t.updated_at)
-            }}</span>
+            <span
+              v-if="show.time"
+              class="w-[52px] flex-none text-right text-sm text-muted tabular-nums"
+              :title="`${statusLabel(t.status)} · updated ${t.updated_at} UTC`"
+              >{{ ago(t.updated_at) }}</span
+            >
           </div>
-          <p v-if="!g.tasks.length" class="none muted">No tasks</p>
+          <p v-if="!g.tasks.length" class="m-0 border-b border-border py-2 pr-4 pl-[58px] text-sm text-muted">No tasks</p>
         </template>
       </section>
     </template>
   </div>
 </template>
-
-<style scoped>
-.list {
-  overflow-y: auto;
-  flex: 1;
-  min-height: 0;
-}
-.ghead {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  border: none;
-  border-radius: 0;
-  border-bottom: 1px solid var(--border);
-  background: var(--panel-2);
-  padding: 6px 16px;
-  font-weight: 600;
-  position: sticky;
-  top: 0;
-  z-index: 1;
-}
-.caret {
-  font-size: 10px;
-  color: var(--muted);
-  transition: transform 0.12s;
-}
-.caret.shut {
-  transform: rotate(-90deg);
-}
-.gcount {
-  color: var(--muted);
-  font-weight: 400;
-}
-.row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 36px;
-  padding: 4px 16px;
-  border-bottom: 1px solid var(--border);
-  cursor: default;
-}
-.row.sel {
-  background: color-mix(in srgb, var(--accent) 8%, var(--panel));
-  box-shadow: inset 2px 0 0 var(--accent);
-}
-.id {
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-  width: 34px;
-  flex: none;
-  font-size: 12px;
-}
-.main {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  flex: 1;
-}
-.title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-weight: 500;
-}
-.reason {
-  font-size: 12px;
-  color: var(--blocked);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.s-failed .reason {
-  color: var(--failed);
-}
-.chips {
-  display: flex;
-  gap: 4px;
-  flex: none;
-}
-.chip {
-  font-size: 11.5px;
-  padding: 0 7px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  color: var(--muted);
-  white-space: nowrap;
-  line-height: 18px;
-}
-.chip.pr-merged {
-  color: var(--merged);
-  border-color: color-mix(in srgb, var(--merged) 45%, transparent);
-}
-.chip.pr-open {
-  color: var(--done);
-  border-color: color-mix(in srgb, var(--done) 45%, transparent);
-}
-.chip.unblocks {
-  color: var(--accent);
-  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
-}
-.chip.repo {
-  max-width: 120px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.actions {
-  display: none;
-  gap: 4px;
-  flex: none;
-}
-.actions button {
-  padding: 1px 8px;
-  font-size: 12px;
-}
-.row:hover .actions,
-.row.sel .actions {
-  display: flex;
-}
-.time {
-  color: var(--muted);
-  font-size: 12px;
-  width: 52px;
-  text-align: right;
-  flex: none;
-  font-variant-numeric: tabular-nums;
-}
-.none {
-  padding: 8px 16px 8px 58px;
-  margin: 0;
-  font-size: 12px;
-  border-bottom: 1px solid var(--border);
-}
-@media (max-width: 720px) {
-  .chips .chip:not(.repo) {
-    display: none;
-  }
-}
-</style>

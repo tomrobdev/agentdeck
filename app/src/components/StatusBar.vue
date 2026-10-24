@@ -32,8 +32,8 @@ const meters = computed(() => {
 </script>
 
 <template>
-  <header class="bar">
-    <div class="brand">AgentDeck</div>
+  <header class="flex items-center gap-3 border-b border-border bg-panel px-4 py-2.5">
+    <div class="text-md font-[650] tracking-[-0.01em]">AgentDeck</div>
     <span class="pill" :class="state.cls" :title="state.title"><span class="dot" />{{ state.label }}</span>
     <span v-if="status && !offline" class="muted" :title="status.governor.reason ?? ''">
       {{ status.running }}/{{ status.governor.max_concurrent }} slots<template
@@ -45,21 +45,39 @@ const meters = computed(() => {
 
     <span v-if="needYou && !offline" class="muted" title="Proposals, blocked tasks and PRs waiting for review">{{ needYou }} need you</span>
 
-    <div class="usage" v-if="meters.length && !offline">
-      <div v-for="m in meters" :key="m.label" class="meter" :title="`${m.pct}% used · ${m.markTitle} · resets in ${m.resets}`">
+    <div class="ml-2 flex gap-4" v-if="meters.length && !offline">
+      <div
+        v-for="m in meters"
+        :key="m.label"
+        class="flex items-center gap-1.5 tabular-nums"
+        :title="`${m.pct}% used · ${m.markTitle} · resets in ${m.resets}`"
+      >
         <span class="muted">{{ m.label }}</span>
-        <div class="track">
-          <div class="fill" :style="{ width: m.pct + '%' }" :class="{ hot: m.pct >= m.mark * 100 }" />
-          <div class="mark" :style="{ left: m.mark * 100 + '%' }" />
+        <div class="relative h-1.5 w-20 rounded-[3px] bg-panel-2">
+          <div
+            class="h-full rounded-[3px] transition-[width] duration-[400ms]"
+            :style="{ width: m.pct + '%' }"
+            :class="m.pct >= m.mark * 100 ? 'bg-blocked' : 'bg-running'"
+          />
+          <div
+            class="absolute -top-[3px] -bottom-[3px] -ml-px w-0.5 rounded-[1px] bg-text opacity-55"
+            :style="{ left: m.mark * 100 + '%' }"
+          />
         </div>
         <span>{{ m.pct }}%</span>
-        <span class="muted reset">↻ {{ m.resets }}</span>
+        <span class="muted text-xs max-lg:hidden">↻ {{ m.resets }}</span>
       </div>
     </div>
 
     <div class="spacer" />
-    <div class="look">
-      <select :value="theme" aria-label="Theme" title="Theme" @change="setTheme(($event.target as HTMLSelectElement).value as ThemeKey)">
+    <div class="flex items-center gap-1.5">
+      <select
+        class="w-auto px-1.5 py-0.5 text-sm"
+        :value="theme"
+        aria-label="Theme"
+        title="Theme"
+        @change="setTheme(($event.target as HTMLSelectElement).value as ThemeKey)"
+      >
         <option v-for="t in THEMES" :key="t.key" :value="t.key">{{ t.label }}</option>
       </select>
       <div class="seg" role="group" aria-label="Mode">
@@ -84,77 +102,3 @@ const meters = computed(() => {
     <button class="primary" @click="$emit('newTask')" :disabled="offline">+ New task</button>
   </header>
 </template>
-
-<style scoped>
-.bar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--border);
-  background: var(--panel);
-}
-.brand {
-  font-weight: 650;
-  letter-spacing: -0.01em;
-  font-size: 14px;
-}
-.usage {
-  display: flex;
-  gap: 16px;
-  margin-left: 8px;
-}
-.meter {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-variant-numeric: tabular-nums;
-}
-.track {
-  position: relative;
-  width: 80px;
-  height: 6px;
-  border-radius: 3px;
-  background: var(--panel-2);
-}
-.fill {
-  height: 100%;
-  border-radius: 3px;
-  background: var(--running);
-  transition: width 0.4s;
-}
-.fill.hot {
-  background: var(--blocked);
-}
-.mark {
-  position: absolute;
-  top: -3px;
-  bottom: -3px;
-  width: 2px;
-  margin-left: -1px;
-  background: var(--text);
-  opacity: 0.55;
-  border-radius: 1px;
-}
-.reset {
-  font-size: 11px;
-}
-.spacer {
-  flex: 1;
-}
-.look {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.look select {
-  width: auto;
-  padding: 2px 6px;
-  font-size: 12px;
-}
-@media (max-width: 1080px) {
-  .reset {
-    display: none;
-  }
-}
-</style>

@@ -40,8 +40,8 @@ const splitHunks = computed(() => hunks.value.map((h) => ({ header: h.header, ro
 </script>
 
 <template>
-  <div class="diff" :class="{ split }">
-    <p v-if="!hunks.length" class="muted empty">No line changes (mode or rename only).</p>
+  <div class="diff overflow-x-auto font-mono text-sm leading-normal" :class="{ split }">
+    <p v-if="!hunks.length" class="muted px-3.5 py-2.5 font-sans">No line changes (mode or rename only).</p>
     <table v-else-if="!split">
       <tbody v-for="(h, hi) in hunks" :key="hi">
         <tr class="hunk">
@@ -79,14 +79,6 @@ const splitHunks = computed(() => hunks.value.map((h) => ({ header: h.header, ro
 </template>
 
 <style scoped>
-.diff {
-  overflow-x: auto;
-  font:
-    12px/1.5 ui-monospace,
-    'SF Mono',
-    Menlo,
-    monospace;
-}
 table {
   border-collapse: collapse;
   width: 100%;
@@ -145,9 +137,5 @@ td.no.del {
 }
 td.blank {
   background: var(--panel-2);
-}
-.empty {
-  padding: 10px 14px;
-  font-family: inherit;
 }
 </style>

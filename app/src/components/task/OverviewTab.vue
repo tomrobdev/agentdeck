@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { type Changes, type Run, type TaskDetail, type TaskEventRow, ago, fmtTokens, runDuration, totalTokens } from '../../api';
 import Markdown from '../files/Markdown.vue';
 import DocumentsCard from './DocumentsCard.vue';
+import FinalMessage from './FinalMessage.vue';
 import PlanCard from './PlanCard.vue';
 
 // The prompt as the description, then everything that happened, oldest first: status changes
@@ -42,19 +43,33 @@ const items = computed<Item[]>(() => {
 });
 
 const outcomeClass = (r: Run) => `s-${r.outcome ?? 'running'}`;
+
+// A timeline entry, and the marker that sits on the line to its left.
+const item = 'relative flex flex-wrap items-baseline gap-2 py-2 pr-0 pl-4';
+const node = 'absolute top-[7px] -left-[21px] grid size-5 place-items-center rounded-full bg-bg text-sm text-muted';
+const when = 'ml-auto text-sm text-muted';
 </script>
 
 <template>
-  <div class="overview">
-    <article class="box">
-      <header class="bhead">
+  <div class="flex min-w-0 flex-col gap-4.5">
+    <article class="card">
+      <header class="card-head gap-1.5 px-3.5 py-2">
         <b>{{ task.source === 'planner' ? 'Planner' : 'You' }}</b>
-        <span class="muted">wrote the prompt {{ ago(task.created_at) }}</span>
+        <span class="text-muted">wrote the prompt {{ ago(task.created_at) }}</span>
       </header>
-      <div class="bbody" :class="{ clamp: longPrompt && !promptOpen }">
+      <div
+        class="px-3.5 py-3"
+        :class="longPrompt && !promptOpen && 'max-h-80 overflow-hidden [mask-image:linear-gradient(to_bottom,black_70%,transparent)]'"
+      >
         <Markdown :text="task.prompt" :is-path="isPath" @path="(p, l) => emit('path', p, l)" />
       </div>
-      <button v-if="longPrompt" class="more" @click="promptOpen = !promptOpen">{{ promptOpen ? 'Show less' : 'Show all' }}</button>
+      <button
+        v-if="longPrompt"
+        class="w-full rounded-none border-0 border-t border-border bg-transparent p-1.5 text-accent"
+        @click="promptOpen = !promptOpen"
+      >
+        {{ promptOpen ? 'Show less' : 'Show all' }}
+      </button>
     </article>
 
     <PlanCard v-for="p in task.plans ?? []" :key="p.id" :task-id="task.id" :plan="p" @open="(path) => emit('path', path, null)" />
@@ -68,160 +83,48 @@ const outcomeClass = (r: Run) => `s-${r.outcome ?? 'running'}`;
       @path="(p, l) => emit('path', p, l)"
     />
 
-    <ol class="timeline">
-      <li v-for="(it, i) in items" :key="i" class="item" :class="it.kind === 'run' ? outcomeClass(it.run) : ''">
+    <ol class="my-0 ml-3 list-none border-l-2 border-border pl-2.5">
+      <li v-for="(it, i) in items" :key="i" :class="[item, it.kind === 'run' && outcomeClass(it.run)]">
         <template v-if="it.kind === 'created'">
-          <span class="node">○</span>
+          <span :class="node">○</span>
           <span
             ><b>{{ task.source === 'planner' ? 'The planner' : 'You' }}</b> created this task</span
           >
-          <span class="when muted">{{ ago(it.at) }}</span>
+          <span :class="when">{{ ago(it.at) }}</span>
         </template>
         <template v-else-if="it.kind === 'event'">
-          <span class="node">{{ it.ev.type === 'retry' ? '↻' : it.ev.type === 'approve' ? '✓' : '•' }}</span>
+          <span :class="node">{{ it.ev.type === 'retry' ? '↻' : it.ev.type === 'approve' ? '✓' : '•' }}</span>
           <span>
             {{ EVENT_TEXT[it.ev.type](it.ev) }}
-            <span v-if="it.ev.reason && it.ev.type !== 'sync'" class="muted"> · {{ it.ev.reason }}</span>
+            <span v-if="it.ev.reason && it.ev.type !== 'sync'" class="text-muted"> · {{ it.ev.reason }}</span>
           </span>
-          <span class="when muted">{{ ago(it.at) }}</span>
+          <span :class="when">{{ ago(it.at) }}</span>
         </template>
         <template v-else>
-          <div class="runrow">
-            <span class="node dot" />
-            <button class="runlink" @click="emit('run', it.run.id)">
+          <div class="flex w-full flex-wrap items-baseline gap-1.5">
+            <span :class="node" class="dot after:size-2.5 after:rounded-full after:bg-[var(--c,var(--running))]" />
+            <button class="btn-ghost font-semibold hover:text-accent" @click="emit('run', it.run.id)">
               {{ it.run.kind === 'resolve' ? 'Resolve conflicts' : `Run ${it.run.attempt}` }}
             </button>
-            <span class="outcome">{{ it.run.outcome ?? 'running' }}</span>
-            <span class="muted">
+            <span class="font-medium text-[color:var(--c,var(--running))]">{{ it.run.outcome ?? 'running' }}</span>
+            <span class="text-muted">
               · {{ runDuration(it.run) }}
               <template v-if="it.run.num_turns"> · {{ it.run.num_turns }} turns</template>
               <template v-if="totalTokens(it.run)"> · {{ fmtTokens(totalTokens(it.run)) }} tokens</template>
               <template v-if="it.run.tests_passed !== null"> · tests {{ it.run.tests_passed ? 'passed' : 'failed' }}</template>
               <template v-if="it.run.denials"> · {{ it.run.denials }} refused</template>
             </span>
-            <span class="when muted">{{ ago(it.at) }}</span>
+            <span :class="when">{{ ago(it.at) }}</span>
           </div>
-          <details v-if="it.run.result_text" class="final" :open="it.latest">
-            <summary>Final message</summary>
+          <FinalMessage v-if="it.run.result_text" class="w-full" :open="it.latest">
             <Markdown :text="it.run.result_text" :is-path="isPath" @path="(p, l) => emit('path', p, l)" />
-          </details>
+          </FinalMessage>
         </template>
       </li>
-      <li v-if="task.pr_url" class="item">
-        <span class="node">⎇</span>
+      <li v-if="task.pr_url" :class="item">
+        <span :class="node">⎇</span>
         <span>Pull request {{ task.pr_state ?? 'open' }}</span>
       </li>
     </ol>
   </div>
 </template>
-
-<style scoped>
-.overview {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  min-width: 0;
-}
-.box {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--panel);
-  overflow: hidden;
-}
-.bhead {
-  display: flex;
-  gap: 6px;
-  padding: 8px 14px;
-  background: var(--panel-2);
-  border-bottom: 1px solid var(--border);
-}
-.bbody {
-  padding: 12px 14px;
-}
-.bbody.clamp {
-  max-height: 320px;
-  overflow: hidden;
-  mask-image: linear-gradient(to bottom, black 70%, transparent);
-}
-.more {
-  border: none;
-  border-top: 1px solid var(--border);
-  border-radius: 0;
-  width: 100%;
-  background: none;
-  color: var(--accent);
-  padding: 6px;
-}
-.timeline {
-  list-style: none;
-  margin: 0;
-  padding: 0 0 0 10px;
-  border-left: 2px solid var(--border);
-  margin-left: 12px;
-}
-.item {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 8px;
-  padding: 8px 0 8px 16px;
-  position: relative;
-}
-.node {
-  position: absolute;
-  left: -21px;
-  top: 7px;
-  width: 20px;
-  height: 20px;
-  display: grid;
-  place-items: center;
-  background: var(--bg);
-  color: var(--muted);
-  font-size: 12px;
-}
-.node.dot::after {
-  content: '';
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--c, var(--running));
-}
-.runrow {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 6px;
-  width: 100%;
-}
-.runlink {
-  border: none;
-  background: none;
-  padding: 0;
-  font-weight: 600;
-}
-.runlink:hover {
-  color: var(--accent);
-}
-.outcome {
-  color: var(--c, var(--running));
-  font-weight: 500;
-}
-.when {
-  margin-left: auto;
-  font-size: 12px;
-}
-.final {
-  width: 100%;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--panel);
-  padding: 8px 14px;
-}
-.final summary {
-  cursor: pointer;
-  color: var(--muted);
-}
-.final[open] summary {
-  margin-bottom: 8px;
-}
-</style>

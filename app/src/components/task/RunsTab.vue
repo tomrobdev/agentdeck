@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { type TaskDetail, ago, fmtTokens, runDuration, totalTokens } from '../../api';
 import LogView from '../LogView.vue';
 import Markdown from '../files/Markdown.vue';
+import FinalMessage from './FinalMessage.vue';
 
 // The checks view: one card per run, then the chosen run's final message and log.
 const props = defineProps<{ task: TaskDetail; runId: number | null; isPath?: (p: string) => boolean }>();
@@ -16,38 +17,40 @@ const live = computed(() => props.task.status === 'running' && chosen.value === 
 </script>
 
 <template>
-  <div class="runs">
-    <p v-if="!task.runs.length" class="muted">No runs yet. A run starts when the scheduler picks this task up.</p>
-    <div v-else class="cards">
+  <div class="flex min-h-0 flex-1 flex-col gap-3">
+    <p v-if="!task.runs.length" class="text-muted">No runs yet. A run starts when the scheduler picks this task up.</p>
+    <div v-else class="flex flex-none flex-col overflow-hidden rounded-md border border-border">
       <button
         v-for="r in [...task.runs].reverse()"
         :key="r.id"
-        class="card"
-        :class="[`s-${r.outcome ?? 'running'}`, { on: r.id === chosen }]"
+        class="flex items-center gap-2.5 rounded-none border-0 border-b border-border px-3.5 py-2 text-left last:border-b-0 hover:border-muted"
+        :class="[
+          `s-${r.outcome ?? 'running'}`,
+          r.id === chosen ? 'bg-[color-mix(in_srgb,var(--accent)_8%,var(--panel))] shadow-[inset_2px_0_0_var(--accent)]' : 'bg-panel',
+        ]"
         @click="emit('select', r.id)"
       >
         <span class="dot" />
-        <span class="name" :title="r.kind === 'resolve' ? 'Merged the base branch into the branch; uses no attempt' : undefined">{{
+        <span class="font-semibold" :title="r.kind === 'resolve' ? 'Merged the base branch into the branch; uses no attempt' : undefined">{{
           r.kind === 'resolve' ? 'Resolve conflicts' : `Run ${r.attempt}`
         }}</span>
-        <span class="outcome">{{ r.outcome ?? 'running' }}</span>
-        <span class="checks">
-          <span :class="r.tests_passed === null ? 'muted' : r.tests_passed ? 'ok' : 'bad'">
+        <span class="text-status">{{ r.outcome ?? 'running' }}</span>
+        <span class="flex gap-2 text-sm">
+          <span :class="r.tests_passed === null ? 'text-muted' : r.tests_passed ? 'text-done' : 'text-failed'">
             tests {{ r.tests_passed === null ? '–' : r.tests_passed ? '✓' : '✗' }}
           </span>
-          <span v-if="r.denials" class="bad">{{ r.denials }} refused</span>
+          <span v-if="r.denials" class="text-failed">{{ r.denials }} refused</span>
         </span>
-        <span class="muted stats">
+        <span class="ml-auto text-sm text-muted">
           {{ runDuration(r) }}<template v-if="r.num_turns"> · {{ r.num_turns }} turns</template
           ><template v-if="totalTokens(r)"> · {{ fmtTokens(totalTokens(r)) }} tok</template> · {{ ago(r.started_at) }}
         </span>
       </button>
     </div>
 
-    <details v-if="run?.result_text" class="final" :open="run.outcome !== 'done'">
-      <summary>Final message</summary>
+    <FinalMessage v-if="run?.result_text" class="max-h-[40vh] flex-none overflow-y-auto" :open="run.outcome !== 'done'">
       <Markdown :text="run.result_text" :is-path="isPath" @path="(p, l) => emit('path', p, l)" />
-    </details>
+    </FinalMessage>
 
     <LogView
       v-if="task.status !== 'proposed'"
@@ -59,76 +62,3 @@ const live = computed(() => props.task.status === 'running' && chosen.value === 
     />
   </div>
 </template>
-
-<style scoped>
-.runs {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-height: 0;
-  flex: 1;
-}
-.cards {
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
-  flex: none;
-}
-.card {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  border: none;
-  border-bottom: 1px solid var(--border);
-  border-radius: 0;
-  background: var(--panel);
-  padding: 8px 14px;
-  text-align: left;
-}
-.card:last-child {
-  border-bottom: none;
-}
-.card.on {
-  background: color-mix(in srgb, var(--accent) 8%, var(--panel));
-  box-shadow: inset 2px 0 0 var(--accent);
-}
-.name {
-  font-weight: 600;
-}
-.outcome {
-  color: var(--c);
-}
-.checks {
-  display: flex;
-  gap: 8px;
-  font-size: 12px;
-}
-.stats {
-  margin-left: auto;
-  font-size: 12px;
-}
-.ok {
-  color: var(--done);
-}
-.bad {
-  color: var(--failed);
-}
-.final {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--panel);
-  padding: 8px 14px;
-  flex: none;
-  max-height: 40vh;
-  overflow-y: auto;
-}
-.final summary {
-  cursor: pointer;
-  color: var(--muted);
-}
-.final[open] summary {
-  margin-bottom: 8px;
-}
-</style>

@@ -44,56 +44,24 @@ watch(
 </script>
 
 <template>
-  <div ref="root" class="code">
-    <div v-for="(h, i) in html" :key="i" class="ln" :class="{ hl: inRange(i + 1 + offset) }" :data-line="i + 1 + offset">
-      <button class="no" tabindex="-1" @click="click(i + 1 + offset, $event)">{{ i + 1 + offset }}</button>
+  <div ref="root" class="overflow-auto bg-panel font-mono text-sm leading-[1.55]">
+    <div
+      v-for="(h, i) in html"
+      :key="i"
+      class="flex min-w-max"
+      :class="inRange(i + 1 + offset) ? 'bg-[color-mix(in_srgb,var(--blocked)_18%,var(--panel))]' : ''"
+      :data-line="i + 1 + offset"
+    >
+      <button
+        class="sticky left-0 w-[52px] flex-none cursor-pointer rounded-none border-none py-0 pr-2.5 pl-0 text-right select-none hover:text-text"
+        :class="inRange(i + 1 + offset) ? 'bg-[color-mix(in_srgb,var(--blocked)_26%,var(--panel))] text-text' : 'bg-panel text-muted'"
+        tabindex="-1"
+        @click="click(i + 1 + offset, $event)"
+      >
+        {{ i + 1 + offset }}
+      </button>
       <!-- eslint-disable-next-line vue/no-v-html -- escaped by highlight.js -->
-      <span class="txt" v-html="h || ' '" />
+      <span class="pr-4 whitespace-pre" v-html="h || ' '" />
     </div>
   </div>
 </template>
-
-<style scoped>
-.code {
-  font:
-    12px/1.55 ui-monospace,
-    'SF Mono',
-    Menlo,
-    monospace;
-  overflow: auto;
-  background: var(--panel);
-}
-.ln {
-  display: flex;
-  min-width: max-content;
-}
-.ln.hl {
-  background: color-mix(in srgb, var(--blocked) 18%, var(--panel));
-}
-.no {
-  position: sticky;
-  left: 0;
-  flex: none;
-  width: 52px;
-  padding: 0 10px 0 0;
-  border: none;
-  border-radius: 0;
-  background: var(--panel);
-  color: var(--muted);
-  text-align: right;
-  font: inherit;
-  cursor: pointer;
-  user-select: none;
-}
-.ln.hl .no {
-  background: color-mix(in srgb, var(--blocked) 26%, var(--panel));
-  color: var(--text);
-}
-.no:hover {
-  color: var(--text);
-}
-.txt {
-  white-space: pre;
-  padding-right: 16px;
-}
-</style>

@@ -10,7 +10,7 @@ const title = computed(() => `${PRIORITY_LEVELS.find((l) => l.key === level.valu
 </script>
 
 <template>
-  <svg class="prio" :class="`p-${level}`" width="14" height="14" viewBox="0 0 14 14" role="img" :aria-label="title">
+  <svg class="block flex-none" :class="`p-${level}`" width="14" height="14" viewBox="0 0 14 14" role="img" :aria-label="title">
     <title>{{ title }}</title>
     <template v-if="level === 'urgent'">
       <rect x="1.5" y="1.5" width="11" height="11" rx="2.5" fill="var(--failed)" />
@@ -34,10 +34,3 @@ const title = computed(() => `${PRIORITY_LEVELS.find((l) => l.key === level.valu
     </template>
   </svg>
 </template>
-
-<style scoped>
-.prio {
-  flex: none;
-  display: block;
-}
-</style>

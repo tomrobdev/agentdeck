@@ -124,46 +124,54 @@ function parseHosts(json: string | undefined): string[] {
 
 <template>
   <Modal title="Repos" @close="$emit('close')">
-    <ul v-if="repos.length" class="repos">
-      <li v-for="r in repos" :key="r.id" :class="{ on: open?.id === r.id }">
-        <button class="head" @click="edit(r)">
-          <span class="name">{{ r.name }}</span>
-          <span v-if="r.paused_reason" class="paused" :title="r.paused_reason">paused · {{ r.paused_reason }}</span>
+    <ul v-if="repos.length" class="m-0 mb-4 flex list-none flex-col gap-2 p-0">
+      <li
+        v-for="r in repos"
+        :key="r.id"
+        class="flex flex-col gap-0.5 rounded-md border px-2.5 py-2"
+        :class="open?.id === r.id ? 'border-accent' : 'border-border'"
+      >
+        <button class="btn-ghost flex items-baseline gap-2 text-left" @click="edit(r)">
+          <span class="font-semibold">{{ r.name }}</span>
+          <span v-if="r.paused_reason" class="min-w-0 truncate text-sm text-blocked" :title="r.paused_reason"
+            >paused · {{ r.paused_reason }}</span
+          >
           <span class="muted">base {{ r.base_branch }}<template v-if="r.auto_approve"> · auto-approve</template></span>
-          <span class="chev muted">{{ open?.id === r.id ? '▾' : '▸' }}</span>
+          <span class="muted ml-auto">{{ open?.id === r.id ? '▾' : '▸' }}</span>
         </button>
-        <code class="muted path">{{ r.path }}</code>
+        <code class="muted truncate text-sm">{{ r.path }}</code>
 
-        <form v-if="open?.id === r.id" class="editor" @submit.prevent="save">
-          <label>
+        <form v-if="open?.id === r.id" class="mt-2.5 flex flex-col gap-2.5" @submit.prevent="save">
+          <label class="field flex-1">
             <span>Goals <span class="muted">(the planner reads these when the queue runs dry)</span></span>
             <textarea
+              class="resize-y font-mono text-sm"
               v-model="goals"
               rows="9"
               placeholder="What should this repo become? Priorities first, then anything the agents must not touch."
             />
-            <small class="muted"
+            <small class="muted text-xs"
               >Stored in <code>{{ open.goals_path }}</code
               >, which you can also edit in any editor.</small
             >
           </label>
-          <div class="row">
-            <label>
+          <div class="flex gap-2.5">
+            <label class="field flex-1">
               <span>Test command</span>
               <input v-model="testCmd" placeholder="npm test" />
             </label>
-            <label class="check">
+            <label class="flex flex-none items-center gap-2 self-end pb-2">
               <input type="checkbox" v-model="autoApprove" />
               Auto-approve planner tasks
             </label>
           </div>
-          <label>
+          <label class="field flex-1">
             <span>Merge method <span class="muted">(when you merge a PR from the app)</span></span>
             <select v-model="mergeMethod">
               <option v-for="m in MERGE_METHODS" :key="m.key" :value="m.key">{{ m.label }} · {{ m.hint }}</option>
             </select>
           </label>
-          <label class="check inline">
+          <label class="flex flex-none items-center gap-2">
             <input type="checkbox" v-model="autoResolve" />
             <span
               >Resolve merge conflicts automatically
@@ -172,25 +180,25 @@ function parseHosts(json: string | undefined): string[] {
               ></span
             >
           </label>
-          <label class="check inline">
+          <label class="flex flex-none items-center gap-2">
             <input type="checkbox" v-model="sandbox" />
             <span
               >Run the agent's shell commands in the sandbox
               <span class="muted">(confined to the worktree and the hosts below; docs/adr/0001-worker-sandbox.md)</span></span
             >
           </label>
-          <label v-if="sandbox">
+          <label v-if="sandbox" class="field flex-1">
             <span>Network hosts <span class="muted">(sandboxed commands may reach these; empty = none)</span></span>
             <input v-model="network" placeholder="registry.npmjs.org, github.com" />
           </label>
-          <p v-if="open.planner_runs.length" class="muted last" :title="open.planner_runs[0].note ?? ''">
+          <p v-if="open.planner_runs.length" class="muted m-0 line-clamp-2 text-sm" :title="open.planner_runs[0].note ?? ''">
             Last plan {{ ago(open.planner_runs[0].started_at) }}: {{ open.planner_runs[0].outcome ?? 'running' }}
             <template v-if="open.planner_runs[0].proposed"> · {{ open.planner_runs[0].proposed }} task(s)</template>
             <template v-if="open.planner_runs[0].note"> · {{ open.planner_runs[0].note }}</template>
           </p>
-          <p v-if="editError" class="error">{{ editError }}</p>
-          <div class="actions">
-            <span class="muted msg">{{ editMsg }}</span>
+          <p v-if="editError" class="form-error">{{ editError }}</p>
+          <div class="flex items-center justify-end gap-2">
+            <span class="muted mr-auto text-sm">{{ editMsg }}</span>
             <button type="button" @click="planNow" :disabled="!!busy || !goals.trim()">
               {{ busy === 'plan' ? 'Planning…' : 'Save & plan now' }}
             </button>
@@ -201,148 +209,26 @@ function parseHosts(json: string | undefined): string[] {
     </ul>
     <p v-else class="muted">No repos yet.</p>
 
-    <form class="add" @submit.prevent="add">
-      <h4>Add a repo</h4>
-      <label>
+    <form class="flex flex-col gap-2.5 border-t border-border pt-3.5" @submit.prevent="add">
+      <h4 class="m-0">Add a repo</h4>
+      <label class="field flex-1">
         Path to a local git repo
         <input v-model="path" placeholder="~/Documents/Dev/myproject" />
       </label>
-      <div class="row">
-        <label>
+      <div class="flex gap-2.5">
+        <label class="field flex-1">
           <span>Name <span class="muted">(optional)</span></span>
           <input v-model="name" />
         </label>
-        <label>
+        <label class="field flex-1">
           <span>Test command <span class="muted">(run after each task)</span></span>
           <input v-model="test" placeholder="npm test" />
         </label>
       </div>
-      <p v-if="error" class="error">{{ error }}</p>
-      <div class="actions">
+      <p v-if="error" class="form-error">{{ error }}</p>
+      <div class="flex items-center justify-end gap-2">
         <button class="primary" type="submit" :disabled="saving || !path.trim()">Add repo</button>
       </div>
     </form>
   </Modal>
 </template>
-
-<style scoped>
-.repos {
-  list-style: none;
-  margin: 0 0 16px;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.repos li {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 8px 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.repos li.on {
-  border-color: var(--accent);
-}
-.head {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  border: none;
-  background: none;
-  padding: 0;
-  text-align: left;
-}
-.name {
-  font-weight: 600;
-}
-.paused {
-  color: var(--blocked);
-  font-size: 12px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-.chev {
-  margin-left: auto;
-}
-.path {
-  font-size: 12px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.editor {
-  margin-top: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-textarea {
-  resize: vertical;
-  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-  font-size: 12px;
-}
-small {
-  font-size: 11px;
-}
-.last {
-  margin: 0;
-  font-size: 12px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-h4 {
-  margin: 0;
-}
-.add {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  border-top: 1px solid var(--border);
-  padding-top: 14px;
-}
-label {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1;
-}
-.check {
-  flex-direction: row;
-  align-items: center;
-  gap: 8px;
-  flex: 0 0 auto;
-  align-self: flex-end;
-  padding-bottom: 8px;
-}
-.check input {
-  width: auto;
-}
-.check.inline {
-  align-self: auto;
-  padding-bottom: 0;
-}
-.row {
-  display: flex;
-  gap: 10px;
-}
-.actions {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 8px;
-}
-.msg {
-  margin-right: auto;
-  font-size: 12px;
-}
-.error {
-  color: var(--failed);
-  margin: 0;
-}
-</style>

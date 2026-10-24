@@ -118,7 +118,7 @@ onBeforeUnmount(() => clearInterval(timer));
 </script>
 
 <template>
-  <div class="shell">
+  <div class="flex h-screen flex-col">
     <StatusBar
       :status="status"
       :offline="offline"
@@ -129,13 +129,13 @@ onBeforeUnmount(() => clearInterval(timer));
       @settings="modal = 'settings'"
     />
 
-    <div v-if="offline" class="offline">
-      <h2>The AgentDeck daemon isn't running</h2>
+    <div v-if="offline" class="m-auto max-w-[420px] text-center">
+      <h2 class="text-lg">The AgentDeck daemon isn't running</h2>
       <p class="muted">Start it in a terminal and this window will connect on its own:</p>
-      <pre>cd daemon && npm start</pre>
+      <pre class="rounded-md border border-border bg-code-bg p-2.5">cd daemon && npm start</pre>
     </div>
 
-    <main v-else-if="pageId !== null" class="body">
+    <main v-else-if="pageId !== null" class="flex min-h-0 flex-1 flex-col">
       <StaleDaemonBar :status="status" @error="flash" />
       <TaskPage
         v-if="detail && route.current.name === 'task'"
@@ -146,9 +146,9 @@ onBeforeUnmount(() => clearInterval(timer));
         @changed="refresh"
         @error="flash"
       />
-      <section v-else class="placeholder muted">Loading task #{{ pageId }}…</section>
+      <section v-else class="muted flex flex-1 flex-col items-center justify-center gap-3">Loading task #{{ pageId }}…</section>
     </main>
-    <main v-else class="body">
+    <main v-else class="flex min-h-0 flex-1 flex-col">
       <StaleDaemonBar :status="status" @error="flash" />
       <HoldsBar :status="status" :busy="busy" @resume="resumeDaemon" @resume-repo="resumeRepo" @settings="modal = 'settings'" />
       <QueueView
@@ -159,7 +159,7 @@ onBeforeUnmount(() => clearInterval(timer));
         @act="actOn"
         @new-task="modal = 'new'"
       />
-      <section v-else class="placeholder muted">
+      <section v-else class="muted flex flex-1 flex-col items-center justify-center gap-3">
         No tasks yet.
         <button class="primary" @click="modal = repos.length ? 'new' : 'repos'">
           {{ repos.length ? 'Queue your first task' : 'Add a repo to get started' }}
@@ -172,53 +172,8 @@ onBeforeUnmount(() => clearInterval(timer));
 
     <SettingsPanel v-if="modal === 'settings'" :notifications="status?.notifications ?? []" @close="modal = null" @saved="refresh" />
 
-    <div v-if="toast" class="toast">{{ toast }}</div>
+    <div v-if="toast" class="fixed bottom-4 left-1/2 z-40 max-w-[calc(100vw-32px)] -translate-x-1/2 rounded-md bg-text px-3.5 py-2 text-bg">
+      {{ toast }}
+    </div>
   </div>
 </template>
-
-<style scoped>
-.shell {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-}
-.body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-.placeholder {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  align-items: center;
-  justify-content: center;
-}
-.offline {
-  margin: auto;
-  text-align: center;
-  max-width: 420px;
-}
-.offline h2 {
-  font-size: 16px;
-}
-.offline pre {
-  background: var(--code-bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 10px;
-}
-.toast {
-  position: fixed;
-  bottom: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--text);
-  color: var(--bg);
-  padding: 8px 14px;
-  border-radius: 8px;
-  max-width: calc(100vw - 32px);
-}
-</style>
