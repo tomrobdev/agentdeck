@@ -35,7 +35,7 @@ The repo must be registered (`agentdeck repo add <path>`). Workers run in Claude
 
 Anything bigger than a one-line change gets a plan first. Settle it with the user in this session.
 
-1. Write it to `docs/plans/<short-name>.html` in the plan format (`docs/plan-format.md` in the AgentDeck repo: the `data-agentdeck-plan="1"` marker, a `<p data-plan-summary>`, and one `<section data-plan-step id="…" data-status="todo">` per step).
+1. Write it to `docs/plans/<short-name>.html` in the plan format (`docs/plan-format.md` in the AgentDeck repo: the `data-agentdeck-plan="1"` marker, a `<p data-plan-summary>`, and one `<section data-plan-step id="…" data-status="todo">` per step, each with a `<ul data-plan-done>` list of its checks).
 2. Commit it to the base branch as its own commit, so the task's branch starts with it.
 
 ## Queue the task
@@ -57,11 +57,11 @@ agentdeck add "<prompt>" --repo <repo> --title "<title>" [--model sonnet] [--max
 
   Leave out a section only when it would be empty. The prompt should read well as a ticket.
 
-- **Plan:** the worker doesn't get the plan's contents. The prompt must name the file and the steps to do, e.g. `Follow docs/plans/x.html, steps 1–3, and set each step's data-status as you go.`
+- **Plan:** link the task to it with `--plan docs/plans/x.html --steps a,b` (step ids; without `--steps`, every step not yet done or skipped). The plan must be committed to the base branch first. The daemon puts the linked steps' text and done criteria into the worker's prompt, so a linked task's prompt has only Goal, Out of scope and Constraints; the steps supply Change and Definition of done.
 - **Model and turns:** the defaults are `sonnet` and 40 turns. Use `haiku` only for mechanical work. Raise `--max-turns` for multi-step plans (120 for a large port).
 - **`--after`:** use it when the task builds on another task's branch being merged.
 
-Don't `agentdeck attach` a plan that's committed to `docs/plans/`. The daemon picks it up from the branch after the first run that changes a step's status. An attached copy is stored under its file name, while the branch copy is stored under its path, so both show on the task and the attached one goes stale. Keep `attach` for plans that live outside the repo.
+To show the plan on the task's Overview before its first run, `agentdeck attach <id> docs/plans/<short-name>.html`. It's stored under its path, so the branch's copy replaces it once a run changes it.
 
 Tell the user the task id and stop. Don't poll it: AgentDeck notifies the user, and the user reviews the PR in the dashboard. In a later session, look only when asked: `agentdeck ls --status needs-you`, `agentdeck show <id>`, `agentdeck log <id>`.
 
