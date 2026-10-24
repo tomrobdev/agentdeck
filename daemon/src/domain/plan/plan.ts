@@ -44,12 +44,22 @@ export const isPlanPath = (path: string) => path.startsWith(PLAN_DIR) && /\.html
 
 /** The plan in `html`, or null if it doesn't carry the marker on its <html> tag. */
 export function parsePlan(html: string): ParsedPlan | null {
+  return readPlan(html)?.plan ?? null;
+}
+
+/** A parsed plan plus each step's body text (its heading and done criteria left out), in step order, for prompts. */
+export function parsePlanWithText(html: string): { plan: ParsedPlan; texts: string[] } | null {
+  return readPlan(html);
+}
+
+function readPlan(html: string): { plan: ParsedPlan; texts: string[] } | null {
   const doc = html.replace(/<!--[\s\S]*?-->/g, '').replace(/<(script|style|template)\b[\s\S]*?<\/\1\s*>/gi, '');
   const marker = MARKER.exec(doc);
   if (!marker) return null;
   const version = marker[1] ?? marker[2] ?? marker[3] ?? '1';
 
   const steps: PlanStep[] = [];
+  const texts: string[] = [];
   for (const m of doc.matchAll(/<section\b([^>]*)>([\s\S]*?)<\/section\s*>/gi)) {
     const attrs = attributes(m[1]);
     if (!('data-plan-step' in attrs)) continue;
@@ -61,15 +71,23 @@ export function parsePlan(html: string): ParsedPlan | null {
       status: PLAN_STEP_STATUSES.includes(status) ? status : 'todo',
       done: doneCriteria(m[2]),
     });
+    texts.push(
+      text(
+        m[2].replace(/<h[1-6]\b[^>]*>[\s\S]*?<\/h[1-6]\s*>/i, '').replace(/<(\w+)\b[^>]*\bdata-plan-done\b[^>]*>[\s\S]*?<\/\1\s*>/i, ''),
+      ),
+    );
   }
 
   const summary = /<(\w+)\b([^>]*\bdata-plan-summary\b[^>]*)>([\s\S]*?)<\/\1\s*>/i.exec(doc);
   const title = /<title\b[^>]*>([\s\S]*?)<\/title\s*>/i.exec(doc) ?? /<h1\b[^>]*>([\s\S]*?)<\/h1\s*>/i.exec(doc);
   return {
-    version,
-    title: (title && text(title[1])) || 'Untitled plan',
-    summary: (summary && text(summary[3])) || null,
-    steps,
+    plan: {
+      version,
+      title: (title && text(title[1])) || 'Untitled plan',
+      summary: (summary && text(summary[3])) || null,
+      steps,
+    },
+    texts,
   };
 }
 

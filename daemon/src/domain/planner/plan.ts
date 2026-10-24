@@ -36,7 +36,9 @@ Context: the files to start from, why it is needed, related tasks or plans.
 Change: what to do.
 Out of scope: what not to touch.
 Constraints: limits the agent must keep to, such as no new dependencies or no changes to package.json.
-Definition of done: the test command passing, plus concrete checks a reviewer can confirm.`;
+Definition of done: the test command passing, plus concrete checks a reviewer can confirm.
+
+A task linked to a plan (agentdeck add --plan) needs only Goal, Out of scope and Constraints: the daemon puts the linked steps into the worker's prompt, and they supply Change and Definition of done.`;
 
 export const PLAN_SCHEMA = {
   type: 'object',
