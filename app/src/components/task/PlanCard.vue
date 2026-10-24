@@ -39,6 +39,14 @@ function withBaseStyle(page: string, m: ModeKey) {
   return page.replace(/^(\s*<!doctype[^>]*>)?/i, (doctype) => doctype + style);
 }
 
+// Steps whose done criteria are showing, by position.
+const open = ref(new Set<number>());
+function toggle(i: number) {
+  const next = new Set(open.value);
+  if (!next.delete(i)) next.add(i);
+  open.value = next;
+}
+
 const full = ref(false);
 const page = ref<string | null>(null);
 // Rebuilt when the mode changes, so the open plan switches at once (the frame reloads, so it returns to the top).
@@ -102,21 +110,34 @@ function onFrameLoad() {
     </header>
     <p v-if="plan.summary" class="m-0 px-3.5 pt-2.5">{{ plan.summary }}</p>
     <ol v-if="plan.steps.length" class="m-0 list-none px-3.5 py-2">
-      <li v-for="(s, i) in plan.steps" :key="i" class="flex items-baseline gap-2 py-[3px]">
-        <span class="w-3.5 text-center font-semibold" :class="ICON_TONE[s.status]" :title="s.status">{{ STEP_ICON[s.status] }}</span>
-        <button
-          v-if="s.id"
-          class="btn-ghost text-left hover:text-accent"
-          :class="STEP_TONE[s.status]"
-          title="Show this step in the plan"
-          @click="show(s.id)"
-        >
-          {{ s.title }}
-        </button>
-        <span v-else :class="STEP_TONE[s.status]">{{ s.title }}</span>
-        <span v-if="s.status === 'doing' || s.status === 'blocked'" class="text-sm" :class="ICON_TONE[s.status]">{{
-          s.status === 'doing' ? 'in progress' : 'blocked'
-        }}</span>
+      <li v-for="(s, i) in plan.steps" :key="i" class="py-[3px]">
+        <div class="flex items-baseline gap-2">
+          <span class="w-3.5 text-center font-semibold" :class="ICON_TONE[s.status]" :title="s.status">{{ STEP_ICON[s.status] }}</span>
+          <button
+            v-if="s.id"
+            class="btn-ghost text-left hover:text-accent"
+            :class="STEP_TONE[s.status]"
+            title="Show this step in the plan"
+            @click="show(s.id)"
+          >
+            {{ s.title }}
+          </button>
+          <span v-else :class="STEP_TONE[s.status]">{{ s.title }}</span>
+          <span v-if="s.status === 'doing' || s.status === 'blocked'" class="text-sm" :class="ICON_TONE[s.status]">{{
+            s.status === 'doing' ? 'in progress' : 'blocked'
+          }}</span>
+          <button
+            v-if="s.done.length"
+            class="btn-ghost ml-auto text-sm text-muted hover:text-accent"
+            :aria-expanded="open.has(i)"
+            @click="toggle(i)"
+          >
+            {{ open.has(i) ? '▾' : '▸' }} {{ s.done.length }} {{ s.done.length === 1 ? 'check' : 'checks' }}
+          </button>
+        </div>
+        <ul v-if="open.has(i)" class="m-0 list-none py-1 pl-[22px] text-sm text-muted">
+          <li v-for="(c, j) in s.done" :key="j" class="py-px">☐ {{ c }}</li>
+        </ul>
       </li>
     </ol>
     <footer class="flex flex-wrap items-center gap-2 border-t border-border px-3.5 py-2 text-sm">

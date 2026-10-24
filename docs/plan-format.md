@@ -4,14 +4,15 @@ A plan is one HTML page that says how a task will be done, step by step. People 
 
 ## The marked parts
 
-| Part       | Markup                                                                     | Rules                                                                                                            |
-| ---------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Marker     | `<html data-agentdeck-plan="1">`                                           | Required. HTML without it is not a plan. The value is the format version.                                        |
-| Title      | `<title>…</title>`                                                         | Falls back to the first `<h1>`, then "Untitled plan".                                                            |
-| Summary    | `<p data-plan-summary>…</p>`                                               | Optional. One paragraph: what the plan does and why.                                                             |
-| Step       | `<section data-plan-step id="…" data-status="…">`                          | One per step, in order. Don't nest sections inside a step.                                                       |
-| Step title | the first `<h1>`–`<h6>` in the section                                     | All its text is the title, so keep badges out of it. Falls back to the value of `data-plan-step`, then "Step n". |
-| Status     | `data-status` on the step: `todo`, `doing`, `done`, `blocked` or `skipped` | Anything else reads as `todo`. Keep it current as the work moves.                                                |
+| Part          | Markup                                                                     | Rules                                                                                                                  |
+| ------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Marker        | `<html data-agentdeck-plan="1">`                                           | Required. HTML without it is not a plan. The value is the format version.                                              |
+| Title         | `<title>…</title>`                                                         | Falls back to the first `<h1>`, then "Untitled plan".                                                                  |
+| Summary       | `<p data-plan-summary>…</p>`                                               | Optional. One paragraph: what the plan does and why.                                                                   |
+| Step          | `<section data-plan-step id="…" data-status="…">`                          | One per step, in order. Don't nest sections inside a step.                                                             |
+| Step title    | the first `<h1>`–`<h6>` in the section                                     | All its text is the title, so keep badges out of it. Falls back to the value of `data-plan-step`, then "Step n".       |
+| Status        | `data-status` on the step: `todo`, `doing`, `done`, `blocked` or `skipped` | Anything else reads as `todo`. Keep it current as the work moves.                                                      |
+| Done criteria | `<ul data-plan-done>` inside a step                                        | Optional. One `<li>` per check; without `<li>`s the element's whole text is one check. The first one in a step counts. |
 
 Everything else is free HTML: tables, code, notes, inline `<style>`. Scripts don't run when the dashboard shows the page, and comments, `<script>`, `<style>` and `<template>` are ignored when reading the marked parts. Give each step an `id` so the dashboard can jump to it. A plan can be at most 512 KB.
 
@@ -31,6 +32,9 @@ Everything else is free HTML: tables, code, notes, inline `<style>`. Scripts don
     <section data-plan-step id="measure" data-status="done">
       <h2>Measure</h2>
       <p>…</p>
+      <ul data-plan-done>
+        <li>The slow reads are listed with timings.</li>
+      </ul>
     </section>
     <section data-plan-step id="cache" data-status="doing">
       <h2>Add the cache</h2>

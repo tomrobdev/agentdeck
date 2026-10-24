@@ -9,6 +9,7 @@ export interface PlanStep {
   id: string | null; // the section's id, for linking into the page
   title: string;
   status: PlanStepStatus;
+  done: string[]; // the done criteria, one per <li> of the step's [data-plan-done] element
 }
 
 export interface ParsedPlan {
@@ -58,6 +59,7 @@ export function parsePlan(html: string): ParsedPlan | null {
       id: attrs.id || null,
       title: (heading ? text(heading[1]) : '') || attrs['data-plan-step'] || `Step ${steps.length + 1}`,
       status: PLAN_STEP_STATUSES.includes(status) ? status : 'todo',
+      done: doneCriteria(m[2]),
     });
   }
 
@@ -69,6 +71,16 @@ export function parsePlan(html: string): ParsedPlan | null {
     summary: (summary && text(summary[3])) || null,
     steps,
   };
+}
+
+/** A step's done criteria: the first [data-plan-done] element's <li> texts, or its whole text as one item. */
+function doneCriteria(body: string): string[] {
+  const el = /<(\w+)\b([^>]*\bdata-plan-done\b[^>]*)>([\s\S]*?)<\/\1\s*>/i.exec(body);
+  if (!el) return [];
+  const items = [...el[3].matchAll(/<li\b[^>]*>([\s\S]*?)<\/li\s*>/gi)].map((li) => text(li[1])).filter(Boolean);
+  if (items.length) return items;
+  const whole = text(el[3]);
+  return whole ? [whole] : [];
 }
 
 /** How far a plan has got: done and skipped steps count as finished. */

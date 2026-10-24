@@ -200,6 +200,7 @@ export interface PlanStep {
   id: string | null;
   title: string;
   status: 'todo' | 'doing' | 'done' | 'blocked' | 'skipped';
+  done: string[]; // the done criteria, from the step's `<ul data-plan-done>`
 }
 
 /** A plan attached to a task, parsed; its HTML comes from `api.planHtml`. */
