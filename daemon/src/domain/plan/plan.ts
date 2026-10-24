@@ -76,9 +76,16 @@ export function planProgress(steps: PlanStep[]): { finished: number; total: numb
   return { finished: steps.filter((s) => s.status === 'done' || s.status === 'skipped').length, total: steps.length };
 }
 
-/** An attached plan's name: the file's base name, so attaching the same file again replaces it. */
+/**
+ * An attached plan's name, so attaching the same file again replaces it. A file under docs/plans/
+ * keeps its path from there on (the name collectPlans gives the branch's copy, which then replaces
+ * it); any other file is named by its base name.
+ */
 export function planName(fileName: string): string {
-  return fileName.slice(fileName.lastIndexOf('/') + 1).trim() || 'plan.html';
+  const path = fileName.trim();
+  const dir = new RegExp(`(?:^|/)(${PLAN_DIR}[^/].*)$`).exec(path);
+  if (dir) return dir[1].trim();
+  return path.slice(path.lastIndexOf('/') + 1).trim() || 'plan.html';
 }
 
 /** A tag's attributes, names lower-cased. A bare attribute has the value ''. */

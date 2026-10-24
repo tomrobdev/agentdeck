@@ -14,7 +14,7 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 const { isPlanPath, parsePlan, planName, planProgress } = await import('../src/domain/plan/plan.ts');
 const { openDb } = await import('../src/db/index.ts');
 const { startApi } = await import('../src/api/server.ts');
-const { collectPlans } = await import('../src/application/plans.ts');
+const { attachPlan, collectPlans } = await import('../src/application/plans.ts');
 
 const PLAN = `<!doctype html>
 <html lang="en" data-agentdeck-plan="1">
@@ -62,8 +62,18 @@ test('plan paths and names', () => {
   assert.equal(isPlanPath('docs/plans/cache.html'), true);
   assert.equal(isPlanPath('docs/plans/cache.md'), false);
   assert.equal(isPlanPath('docs/cache.html'), false);
-  assert.equal(planName('/Users/me/work/docs/plans/cache.html'), 'cache.html');
   assert.equal(planName(''), 'plan.html');
+});
+
+test('planName keeps the path from docs/plans/ on, and the file name for anything else', () => {
+  assert.equal(planName('/Users/me/work/docs/plans/cache.html'), 'docs/plans/cache.html');
+  assert.equal(planName('./docs/plans/cache.html'), 'docs/plans/cache.html');
+  assert.equal(planName('docs/plans/cache.html'), 'docs/plans/cache.html');
+  assert.equal(planName('/repo/docs/plans/sub/cache.html'), 'docs/plans/sub/cache.html');
+  assert.equal(planName('/Users/me/work/docs/cache.html'), 'cache.html');
+  assert.equal(planName('/tmp/mydocs/plans/cache.html'), 'cache.html');
+  assert.equal(planName('cache.html'), 'cache.html');
+  assert.equal(planName('/repo/docs/plans/'), 'plan.html');
 });
 
 test('the store upserts by name, keeps updated_at for the same HTML, and replaces branch plans', () => {
@@ -156,7 +166,7 @@ test('collectPlans attaches marked HTML under docs/plans/ from the branch, and t
 });
 
 test('POST /plans attaches a plan by file name and refuses HTML without the marker', async () => {
-  const ok = await call(`/api/tasks/${task.id}/plans`, { name: '/elsewhere/docs/plans/design.html', html: PLAN });
+  const ok = await call(`/api/tasks/${task.id}/plans`, { name: '/elsewhere/notes/design.html', html: PLAN });
   assert.equal(ok.status, 200);
   assert.equal(ok.body.name, 'design.html');
   assert.equal(ok.body.source, 'attached');
@@ -173,4 +183,22 @@ test('POST /plans attaches a plan by file name and refuses HTML without the mark
     again.body.map((p: any) => p.name),
     ['docs/plans/cache.html', 'design.html'],
   );
+});
+
+test('a plan attached from docs/plans/ is replaced by the branch copy, leaving one plan', async () => {
+  const other = db.addTask({ repo_id: repo.id, title: 't2', prompt: 'p' });
+  db.updateTask(other.id, { branch: 'agentdeck/task-1' });
+  const attached = attachPlan(db, other.id, {
+    name: join(repoPath, 'docs/plans/cache.html'),
+    html: PLAN.replace('done', 'todo'),
+  });
+  assert.equal(attached.name, 'docs/plans/cache.html');
+  assert.equal(attached.source, 'attached');
+
+  const plans = await collectPlans(db, other.id);
+  assert.deepEqual(
+    plans.map((p) => [p.name, p.source]),
+    [['docs/plans/cache.html', 'branch']],
+  );
+  assert.equal(plans[0].steps[0].status, 'done');
 });
