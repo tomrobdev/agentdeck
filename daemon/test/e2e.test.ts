@@ -316,7 +316,7 @@ test('each run gets a sandbox settings file outside its worktree', async () => {
       enabled: true,
       failIfUnavailable: true,
       allowUnsandboxedCommands: false,
-      network: { allowedDomains: ['registry.npmjs.org', 'github.com'], strictAllowlist: true },
+      network: { allowedDomains: ['registry.npmjs.org', 'github.com'], strictAllowlist: true, allowLocalBinding: true },
     });
     assert.deepEqual(settings.permissions.allow, [`Edit(/${t.worktree}/**)`]);
 
