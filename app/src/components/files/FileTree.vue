@@ -131,116 +131,54 @@ function fuzzy(s: string, q: string): boolean {
   return i === q.length;
 }
 
+const ROW = 'flex w-full items-center gap-[5px] rounded-sm border-none bg-transparent px-2 py-0.5 text-left text-sm whitespace-nowrap';
+const SELECTED = 'bg-[color-mix(in_srgb,var(--accent)_14%,var(--panel))]';
+
 useHotkeys({ t: () => filterBox.value?.focus() });
 </script>
 
 <template>
-  <div class="tree">
-    <input ref="filterBox" v-model="filter" class="filter" type="search" placeholder="Go to file  t" @keydown.esc="filter = ''" />
-    <p v-if="error" class="err">{{ error }}</p>
-    <div class="rows">
+  <div class="flex h-full min-h-0 flex-col">
+    <input
+      ref="filterBox"
+      v-model="filter"
+      class="mb-1.5 px-2 py-[3px]"
+      type="search"
+      placeholder="Go to file  t"
+      @keydown.esc="filter = ''"
+    />
+    <p v-if="error" class="text-sm text-failed">{{ error }}</p>
+    <div class="min-h-0 flex-1 overflow-y-auto">
       <template v-if="matches">
         <button
           v-for="p in matches"
           :key="p"
-          class="row file"
-          :class="{ sel: p === selected }"
+          :class="[ROW, p === selected ? SELECTED : 'hover:bg-panel-2']"
           :title="p"
           @click="(emit('select', p), (filter = ''))"
         >
-          <span class="name">{{ p }}</span>
+          <span class="flex-1 truncate">{{ p }}</span>
         </button>
-        <p v-if="!matches.length" class="muted none">No loaded file matches.</p>
+        <p v-if="!matches.length" class="muted px-2 py-1 text-sm">No loaded file matches.</p>
       </template>
       <template v-else>
         <button
           v-for="r in rows"
           :key="r.node.path"
-          class="row"
-          :class="[r.node.type, { sel: r.node.path === selected }]"
+          :class="[ROW, r.node.path === selected ? SELECTED : 'hover:bg-panel-2']"
           :style="{ paddingLeft: `${8 + r.depth * 14}px` }"
           :title="r.node.path"
           @click="r.node.type === 'dir' ? toggle(r.node.path) : emit('select', r.node.path)"
         >
-          <span class="icon">{{ r.node.type === 'dir' ? (open.has(r.node.path) ? '▾' : '▸') : '' }}</span>
+          <span class="w-2.5 flex-none text-2xs text-muted">{{ r.node.type === 'dir' ? (open.has(r.node.path) ? '▾' : '▸') : '' }}</span>
           <span v-if="r.node.badge" class="badge" :class="`b-${r.node.badge}`" :title="r.node.badgeTitle">{{ r.node.badge }}</span>
-          <span class="name">{{ r.node.name }}</span>
-          <span v-if="marks?.has(r.node.path)" class="mark" title="Changed by this task">●</span>
-          <span v-if="r.node.meta" class="meta">{{ r.node.meta }}</span>
+          <span class="flex-1 truncate" :class="r.node.type === 'dir' ? 'font-medium' : ''">{{ r.node.name }}</span>
+          <span v-if="marks?.has(r.node.path)" class="text-[8px] text-blocked" title="Changed by this task">●</span>
+          <span v-if="r.node.meta" class="font-mono text-xs text-muted">{{ r.node.meta }}</span>
           <span v-if="loading.has(r.node.path)" class="muted">…</span>
         </button>
-        <p v-if="!rows.length && !loading.size && !error" class="muted none">Empty.</p>
+        <p v-if="!rows.length && !loading.size && !error" class="muted px-2 py-1 text-sm">Empty.</p>
       </template>
     </div>
   </div>
 </template>
-
-<style scoped>
-.tree {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  height: 100%;
-}
-.filter {
-  margin: 0 0 6px;
-  padding: 3px 8px;
-}
-.rows {
-  overflow-y: auto;
-  flex: 1;
-  min-height: 0;
-}
-.row {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  width: 100%;
-  border: none;
-  border-radius: 5px;
-  background: none;
-  padding: 2px 8px;
-  text-align: left;
-  font-size: 12.5px;
-  white-space: nowrap;
-}
-.row:hover {
-  background: var(--panel-2);
-}
-.row.sel {
-  background: color-mix(in srgb, var(--accent) 14%, var(--panel));
-}
-.icon {
-  width: 10px;
-  flex: none;
-  color: var(--muted);
-  font-size: 10px;
-}
-.name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex: 1;
-}
-.dir .name {
-  font-weight: 500;
-}
-.mark {
-  color: var(--blocked);
-  font-size: 8px;
-}
-.meta {
-  font:
-    11px ui-monospace,
-    Menlo,
-    monospace;
-  color: var(--muted);
-}
-.none {
-  padding: 4px 8px;
-  font-size: 12px;
-}
-.err {
-  color: var(--failed);
-  font-size: 12px;
-}
-</style>
