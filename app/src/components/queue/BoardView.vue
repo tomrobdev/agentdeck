@@ -46,27 +46,30 @@ const LABELS: Record<BoardMove, string> = {
 </script>
 
 <template>
-  <div class="board">
+  <div class="flex min-h-0 flex-1 gap-2.5 overflow-x-auto px-4 py-3">
     <section
       v-for="g in groups"
       :key="g.key"
-      class="col"
-      :class="{ target: !!moves[g.key], over: over === g.key }"
+      class="flex min-h-0 flex-none basis-[260px] flex-col rounded-[10px] border"
+      :class="[
+        moves[g.key] ? 'border-dashed border-[color-mix(in_srgb,var(--accent)_40%,transparent)]' : 'border-transparent',
+        over === g.key ? 'bg-[color-mix(in_srgb,var(--accent)_10%,var(--panel-2))]' : 'bg-panel-2',
+      ]"
       @dragover="onDragOver($event, g.key)"
       @dragleave="over === g.key && (over = null)"
       @drop.prevent="onDrop(g.key)"
     >
-      <header class="chead">
+      <header class="flex gap-2 px-3 pt-2.5 pb-1.5 font-semibold">
         <span>{{ g.label }}</span>
         <span class="muted">{{ g.tasks.length }}</span>
       </header>
-      <div v-if="moves[g.key]" class="hint">{{ LABELS[moves[g.key]!] }}</div>
-      <div class="cards">
+      <div v-if="moves[g.key]" class="px-3 pb-1.5 text-sm text-accent">{{ LABELS[moves[g.key]!] }}</div>
+      <div class="flex flex-col gap-1.5 overflow-y-auto px-2 pb-2.5">
         <article
           v-for="t in g.tasks"
           :key="t.id"
-          class="card"
-          :class="{ sel: t.id === selected, dragging: dragging?.id === t.id }"
+          class="cursor-pointer rounded-md border bg-panel px-2.5 py-2"
+          :class="[t.id === selected ? 'border-accent' : 'border-border', dragging?.id === t.id ? 'opacity-50' : '']"
           :draggable="canDrag(t)"
           :title="canDrag(t) ? '' : 'A running task can only be stopped from its page'"
           @dragstart="onDragStart($event, t)"
@@ -74,14 +77,14 @@ const LABELS: Record<BoardMove, string> = {
           @click="emit('open', t.id)"
           @mouseenter="emit('select', t.id)"
         >
-          <div class="top">
-            <span class="id">#{{ t.id }}</span>
+          <div class="flex items-center gap-1.5">
+            <span class="text-sm text-muted">#{{ t.id }}</span>
             <PriorityIcon :priority="t.priority" />
             <div class="spacer" />
             <StatusIcon :task="t" />
           </div>
-          <div class="title">{{ t.title }}</div>
-          <div class="chips">
+          <div class="mt-1 mb-1.5 line-clamp-2 font-medium">{{ t.title }}</div>
+          <div class="flex flex-wrap items-center gap-1">
             <span v-if="show.repo" class="chip">{{ t.repo }}</span>
             <span v-if="show.pr && t.pr_url" class="chip">PR {{ t.pr_state ?? 'open' }}</span>
             <span v-if="t.waiting" class="chip">{{ t.waiting.stuck ? 'stuck' : `waiting #${t.waiting.on}` }}</span>
@@ -94,105 +97,10 @@ const LABELS: Record<BoardMove, string> = {
               }}</span
             >
             <span v-if="t.source === 'planner'" class="chip">planner</span>
-            <span class="time muted">{{ ago(t.updated_at) }}</span>
+            <span class="ml-auto text-sm text-muted">{{ ago(t.updated_at) }}</span>
           </div>
         </article>
       </div>
     </section>
   </div>
 </template>
-
-<style scoped>
-.board {
-  display: flex;
-  gap: 10px;
-  padding: 12px 16px;
-  overflow-x: auto;
-  flex: 1;
-  min-height: 0;
-}
-.col {
-  display: flex;
-  flex-direction: column;
-  flex: 0 0 260px;
-  min-height: 0;
-  background: var(--panel-2);
-  border: 1px solid transparent;
-  border-radius: 10px;
-}
-.col.target {
-  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
-  border-style: dashed;
-}
-.col.over {
-  background: color-mix(in srgb, var(--accent) 10%, var(--panel-2));
-}
-.chead {
-  display: flex;
-  gap: 8px;
-  padding: 10px 12px 6px;
-  font-weight: 600;
-}
-.hint {
-  font-size: 12px;
-  color: var(--accent);
-  padding: 0 12px 6px;
-}
-.cards {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 0 8px 10px;
-  overflow-y: auto;
-}
-.card {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 10px;
-  cursor: pointer;
-}
-.card.sel {
-  border-color: var(--accent);
-}
-.card.dragging {
-  opacity: 0.5;
-}
-.top {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.id {
-  color: var(--muted);
-  font-size: 12px;
-}
-.spacer {
-  flex: 1;
-}
-.title {
-  margin: 4px 0 6px;
-  font-weight: 500;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  align-items: center;
-}
-.chip {
-  font-size: 11.5px;
-  padding: 0 7px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  color: var(--muted);
-}
-.time {
-  margin-left: auto;
-  font-size: 12px;
-}
-</style>

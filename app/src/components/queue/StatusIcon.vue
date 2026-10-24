@@ -28,7 +28,7 @@ const TITLES: Record<string, string> = {
 
 <template>
   <svg
-    class="status-icon"
+    class="block flex-none"
     :class="`s-${task.status}`"
     :width="size ?? 14"
     :height="size ?? 14"
@@ -75,10 +75,3 @@ const TITLES: Record<string, string> = {
     </template>
   </svg>
 </template>
-
-<style scoped>
-.status-icon {
-  flex: none;
-  display: block;
-}
-</style>
