@@ -137,36 +137,52 @@ function onMerged(result: MergeResult) {
 }
 
 useHotkeys({ Escape: () => !reviewDialog.value && !merging.value && go({ name: 'queue' }) });
+
+// Branch names under the title.
+const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel))] px-1.5 py-px';
 </script>
 
 <template>
-  <section ref="pageEl" class="page">
+  <section ref="pageEl" class="flex min-h-0 flex-1 flex-col bg-bg">
     <SnippetPopover v-if="pageEl" :task-id="task.id" :root="pageEl" />
-    <header class="head">
-      <button class="back" title="Back to the queue (Esc)" @click="go({ name: 'queue' })">←</button>
-      <div class="titles">
-        <h1 v-if="!editingTitle" :class="{ editable: titleEditable }" :title="titleEditable ? 'Click to edit' : ''" @click="editTitle">
-          {{ task.title }} <span class="num">#{{ task.id }}</span>
+    <header class="flex items-start gap-3 px-6 pt-4 pb-2">
+      <button class="mt-0.5" title="Back to the queue (Esc)" @click="go({ name: 'queue' })">←</button>
+      <div class="min-w-0 flex-1">
+        <h1
+          v-if="!editingTitle"
+          class="m-0 text-xl leading-[1.3] font-semibold"
+          :class="titleEditable && 'cursor-text'"
+          :title="titleEditable ? 'Click to edit' : ''"
+          @click="editTitle"
+        >
+          {{ task.title }} <span class="font-normal text-muted">#{{ task.id }}</span>
         </h1>
         <input
           v-else
           v-model="titleDraft"
-          class="title-input"
+          class="text-xl font-semibold"
           autofocus
           @keydown.enter="saveTitle"
           @keydown.esc.prevent="editingTitle = false"
           @blur="saveTitle"
         />
-        <div class="sub">
-          <span class="pill" :class="`s-${task.status}`"><StatusIcon :task="task" :size="12" /> {{ statusLabel(s) }}</span>
+        <div class="mt-1.5 flex flex-wrap items-center gap-1.5 text-base">
+          <span
+            class="inline-flex items-center gap-[5px] rounded-full bg-[color-mix(in_srgb,var(--c)_16%,var(--panel))] px-2.5 py-0.5 font-medium whitespace-nowrap text-status text-sm"
+            :class="`s-${task.status}`"
+            ><StatusIcon :task="task" :size="12" /> {{ statusLabel(s) }}</span
+          >
           <template v-if="task.branch">
-            <code>{{ task.branch }}</code> <span class="muted">→</span> <code>{{ changes?.base_ref ?? 'base' }}</code>
+            <code :class="code">{{ task.branch }}</code> <span class="text-muted">→</span>
+            <code :class="code">{{ changes?.base_ref ?? 'base' }}</code>
           </template>
-          <span class="muted">· {{ task.runs.length }} {{ task.runs.length === 1 ? 'run' : 'runs' }}</span>
-          <span class="muted">· {{ task.source === 'planner' ? 'proposed by the planner' : 'created' }} {{ ago(task.created_at) }}</span>
+          <span class="text-muted">· {{ task.runs.length }} {{ task.runs.length === 1 ? 'run' : 'runs' }}</span>
+          <span class="text-muted"
+            >· {{ task.source === 'planner' ? 'proposed by the planner' : 'created' }} {{ ago(task.created_at) }}</span
+          >
         </div>
       </div>
-      <div class="acts">
+      <div class="flex flex-none gap-1.5">
         <template v-if="canApprove(task)">
           <button @click="emit('act', 'reject')">Reject</button>
           <button class="primary" @click="emit('act', 'approve')">✓ Approve</button>
@@ -183,22 +199,23 @@ useHotkeys({ Escape: () => !reviewDialog.value && !merging.value && go({ name: '
 
     <MergeDialog v-if="merging" :task-id="task.id" @close="merging = false" @merged="onMerged" @changed="emit('changed')" />
 
-    <nav class="tabs" role="tablist">
+    <nav class="flex gap-0.5 border-b border-border px-6" role="tablist">
       <button
         v-for="t in TABS"
         :key="t.key"
+        class="-mb-px rounded-none border-0 border-b-2 bg-transparent px-3 py-2"
         role="tab"
         :aria-selected="tab === t.key"
-        :class="{ on: tab === t.key }"
+        :class="tab === t.key ? 'border-accent font-semibold text-text' : 'border-transparent text-muted'"
         @click="openTask(task.id, t.key)"
       >
-        {{ t.label }} <span v-if="t.count !== null" class="count">{{ t.count }}</span>
+        {{ t.label }} <span v-if="t.count !== null" class="ml-0.5 rounded-full bg-panel-2 px-1.5 text-xs font-medium">{{ t.count }}</span>
       </button>
     </nav>
 
     <div v-if="task.blocked_reason && (s === 'blocked' || s === 'failed')" class="callout" :class="`s-${s}`">{{ task.blocked_reason }}</div>
-    <div v-else-if="task.hold" class="callout hold" :class="task.hold.kind === 'slots' ? 's-queued' : 's-blocked'">
-      <span class="what">
+    <div v-else-if="task.hold" class="callout flex items-center gap-3" :class="task.hold.kind === 'slots' ? 's-queued' : 's-blocked'">
+      <span class="min-w-0 flex-1 wrap-anywhere">
         <strong>Not started yet.</strong> {{ describeHold(task.hold) }}.
         <template v-if="task.hold.kind === 'dependency' && task.hold.stuck">
           Retry #{{ task.hold.on }} to release this task, or cancel it.
@@ -212,8 +229,8 @@ useHotkeys({ Escape: () => !reviewDialog.value && !merging.value && go({ name: '
       The planner suggested this task. Read the prompt, then approve it to queue it or reject it.
     </div>
 
-    <div class="content" :class="{ wide }">
-      <div class="main">
+    <div class="flex min-h-0 flex-1 gap-7 px-6 pt-4 max-md:flex-col" :class="wide ? 'overflow-hidden pb-0' : 'overflow-y-auto pb-6'">
+      <div class="flex min-w-0 flex-1 flex-col">
         <OverviewTab
           v-if="tab === 'overview'"
           :task="task"
@@ -237,20 +254,20 @@ useHotkeys({ Escape: () => !reviewDialog.value && !merging.value && go({ name: '
     </div>
 
     <Modal v-if="reviewDialog === 'changes'" title="Request changes" @close="reviewDialog = null">
-      <p class="muted">
+      <p class="text-muted">
         Sends #{{ task.id }} back for another attempt on the same branch. The note goes first in the next run's prompt and shows on the
         timeline.
       </p>
       <textarea
         v-model="note"
-        class="note"
+        class="w-full resize-y"
         rows="5"
         placeholder="What should change?"
         autofocus
         @keydown.enter.meta.prevent="submitReview"
         @keydown.enter.ctrl.prevent="submitReview"
       />
-      <div class="dialog-acts">
+      <div class="mt-3 flex justify-end gap-1.5">
         <button @click="reviewDialog = null">Cancel</button>
         <button class="primary" :disabled="!note.trim() || reviewBusy" @click="submitReview">Request changes</button>
       </div>
@@ -263,159 +280,10 @@ useHotkeys({ Escape: () => !reviewDialog.value && !merging.value && go({ name: '
       <p>
         <a :href="task.pr_url ?? ''" target="_blank" rel="noreferrer">{{ task.pr_url }}</a>
       </p>
-      <div class="dialog-acts">
+      <div class="mt-3 flex justify-end gap-1.5">
         <button @click="reviewDialog = null">Cancel</button>
         <button class="primary" :disabled="reviewBusy" autofocus @click="submitReview">Close PR</button>
       </div>
     </Modal>
   </section>
 </template>
-
-<style scoped>
-.page {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  flex: 1;
-  background: var(--bg);
-}
-.head {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 16px 24px 8px;
-}
-.back {
-  margin-top: 2px;
-}
-.titles {
-  flex: 1;
-  min-width: 0;
-}
-h1 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 600;
-  line-height: 1.3;
-}
-h1.editable {
-  cursor: text;
-}
-.num {
-  color: var(--muted);
-  font-weight: 400;
-}
-.title-input {
-  font-size: 18px;
-  font-weight: 600;
-}
-.sub {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin-top: 6px;
-  font-size: 13px;
-}
-.sub code {
-  background: color-mix(in srgb, var(--running) 10%, var(--panel));
-  border-radius: 5px;
-  padding: 1px 6px;
-}
-.pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 2px 10px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--c) 16%, var(--panel));
-  color: var(--c);
-  font-weight: 500;
-}
-.acts {
-  display: flex;
-  gap: 6px;
-  flex: none;
-}
-.note {
-  width: 100%;
-  resize: vertical;
-}
-.dialog-acts {
-  display: flex;
-  justify-content: flex-end;
-  gap: 6px;
-  margin-top: 12px;
-}
-.tabs {
-  display: flex;
-  gap: 2px;
-  padding: 0 24px;
-  border-bottom: 1px solid var(--border);
-}
-.tabs button {
-  border: none;
-  border-radius: 0;
-  background: none;
-  padding: 8px 12px;
-  color: var(--muted);
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-}
-.tabs button.on {
-  color: var(--text);
-  font-weight: 600;
-  border-bottom-color: var(--accent);
-}
-.count {
-  font-size: 11px;
-  background: var(--panel-2);
-  border-radius: 999px;
-  padding: 0 6px;
-  margin-left: 2px;
-  font-weight: 500;
-}
-.callout {
-  margin: 12px 24px 0;
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--c) 40%, transparent);
-  background: color-mix(in srgb, var(--c) 9%, var(--panel));
-}
-.callout.hold {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.callout.hold .what {
-  flex: 1;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-.content {
-  display: flex;
-  gap: 28px;
-  padding: 16px 24px 24px;
-  overflow-y: auto;
-  flex: 1;
-  min-height: 0;
-}
-.content.wide {
-  overflow: hidden;
-  padding-bottom: 0;
-}
-.main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-@media (max-width: 900px) {
-  .content {
-    flex-direction: column;
-  }
-  .content :deep(.side) {
-    width: 100%;
-  }
-}
-</style>

@@ -36,71 +36,22 @@ watch(
 </script>
 
 <template>
-  <article v-if="docs.length" class="docs">
-    <header class="dhead">
-      <b>Documents</b> <span class="muted">{{ docs.length }} written or changed by this task</span>
+  <article v-if="docs.length" class="card">
+    <header class="card-head px-3.5 py-2">
+      <b>Documents</b> <span class="text-muted">{{ docs.length }} written or changed by this task</span>
     </header>
-    <div v-for="d in docs" :key="d.path" class="doc">
-      <div class="drow">
-        <button class="name" @click="show(d.path)">
-          <span class="caret">{{ openDoc === d.path ? '▾' : '▸' }}</span> {{ d.path }}
+    <div v-for="d in docs" :key="d.path" class="[div+&]:border-t [div+&]:border-border">
+      <div class="flex items-center gap-2 px-3.5 py-1.5">
+        <button class="btn-ghost flex-1 text-left font-mono text-sm leading-[normal]" @click="show(d.path)">
+          <span class="text-2xs text-muted">{{ openDoc === d.path ? '▾' : '▸' }}</span> {{ d.path }}
         </button>
-        <span class="muted">{{ d.status === 'A' ? 'new' : 'changed' }}</span>
-        <button class="mini" @click="emit('open', d.path)">Open</button>
+        <span class="text-muted">{{ d.status === 'A' ? 'new' : 'changed' }}</span>
+        <button class="px-2 py-0 text-sm" @click="emit('open', d.path)">Open</button>
       </div>
-      <div v-if="openDoc === d.path" class="dbody">
+      <div v-if="openDoc === d.path" class="max-h-[60vh] overflow-y-auto px-[22px] pt-1 pb-4">
         <Markdown v-if="text.has(d.path)" :text="text.get(d.path)!" :is-path="isPath" @path="(p, l) => emit('path', p, l)" />
-        <p v-else class="muted">Loading…</p>
+        <p v-else class="text-muted">Loading…</p>
       </div>
     </div>
   </article>
 </template>
-
-<style scoped>
-.docs {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--panel);
-  overflow: hidden;
-}
-.dhead {
-  display: flex;
-  gap: 8px;
-  padding: 8px 14px;
-  background: var(--panel-2);
-  border-bottom: 1px solid var(--border);
-}
-.doc + .doc {
-  border-top: 1px solid var(--border);
-}
-.drow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 14px;
-}
-.name {
-  border: none;
-  background: none;
-  padding: 0;
-  flex: 1;
-  text-align: left;
-  font:
-    12.5px ui-monospace,
-    Menlo,
-    monospace;
-}
-.caret {
-  color: var(--muted);
-  font-size: 10px;
-}
-.mini {
-  padding: 0 8px;
-  font-size: 12px;
-}
-.dbody {
-  padding: 4px 22px 16px;
-  max-height: 60vh;
-  overflow-y: auto;
-}
-</style>

@@ -11,6 +11,15 @@ const emit = defineEmits<{ open: [path: string] }>();
 const STEP_ICON: Record<PlanStep['status'], string> = { done: '✓', doing: '◐', todo: '○', blocked: '!', skipped: '–' };
 const finished = computed(() => props.plan.steps.filter((s) => s.status === 'done' || s.status === 'skipped').length);
 const total = computed(() => props.plan.steps.length);
+// What colour a step's icon (and "in progress" label) takes, and how its title looks, by status.
+const ICON_TONE: Record<PlanStep['status'], string> = {
+  done: 'text-done',
+  doing: 'text-running',
+  todo: 'text-muted',
+  blocked: 'text-blocked',
+  skipped: 'text-muted',
+};
+const STEP_TONE: Record<PlanStep['status'], string> = { done: '', doing: '', todo: '', blocked: '', skipped: 'text-muted line-through' };
 
 // Readable defaults for a plan that brings no styles of its own. Put first in <head>, so a plan's own CSS wins.
 // The dashboard's mode decides the colour scheme: a plan follows the system only when the dashboard does.
@@ -76,160 +85,59 @@ function onFrameLoad() {
 </script>
 
 <template>
-  <article class="plan">
-    <header class="phead">
+  <article class="card">
+    <header class="card-head items-baseline px-3.5 py-2">
       <b>Plan</b>
-      <span class="title">{{ plan.title }}</span>
-      <span v-if="total" class="progress" :title="`${finished} of ${total} steps done or skipped`">
-        <span class="bar"><span :style="{ width: `${(100 * finished) / total}%` }" /></span>
+      <span class="min-w-0 flex-1 truncate">{{ plan.title }}</span>
+      <span
+        v-if="total"
+        class="flex items-center gap-1.5 text-sm text-muted tabular-nums"
+        :title="`${finished} of ${total} steps done or skipped`"
+      >
+        <span class="h-1.5 w-20 overflow-hidden rounded-[3px] bg-border"
+          ><span class="block h-full bg-done" :style="{ width: `${(100 * finished) / total}%` }"
+        /></span>
         {{ finished }}/{{ total }}
       </span>
     </header>
-    <p v-if="plan.summary" class="summary">{{ plan.summary }}</p>
-    <ol v-if="plan.steps.length" class="steps">
-      <li v-for="(s, i) in plan.steps" :key="i" :class="`st-${s.status}`">
-        <span class="icon" :title="s.status">{{ STEP_ICON[s.status] }}</span>
-        <button v-if="s.id" class="step" title="Show this step in the plan" @click="show(s.id)">{{ s.title }}</button>
-        <span v-else class="step">{{ s.title }}</span>
-        <span v-if="s.status === 'doing' || s.status === 'blocked'" class="state">{{
+    <p v-if="plan.summary" class="m-0 px-3.5 pt-2.5">{{ plan.summary }}</p>
+    <ol v-if="plan.steps.length" class="m-0 list-none px-3.5 py-2">
+      <li v-for="(s, i) in plan.steps" :key="i" class="flex items-baseline gap-2 py-[3px]">
+        <span class="w-3.5 text-center font-semibold" :class="ICON_TONE[s.status]" :title="s.status">{{ STEP_ICON[s.status] }}</span>
+        <button
+          v-if="s.id"
+          class="btn-ghost text-left hover:text-accent"
+          :class="STEP_TONE[s.status]"
+          title="Show this step in the plan"
+          @click="show(s.id)"
+        >
+          {{ s.title }}
+        </button>
+        <span v-else :class="STEP_TONE[s.status]">{{ s.title }}</span>
+        <span v-if="s.status === 'doing' || s.status === 'blocked'" class="text-sm" :class="ICON_TONE[s.status]">{{
           s.status === 'doing' ? 'in progress' : 'blocked'
         }}</span>
       </li>
     </ol>
-    <footer class="pfoot">
-      <button class="mini" @click="show()">{{ full ? 'Hide the plan' : 'Read the plan' }}</button>
-      <button v-if="plan.source === 'branch'" class="mini" @click="emit('open', plan.name)">Open file</button>
-      <span class="muted">
+    <footer class="flex flex-wrap items-center gap-2 border-t border-border px-3.5 py-2 text-sm">
+      <button class="px-2 py-0 text-sm" @click="show()">{{ full ? 'Hide the plan' : 'Read the plan' }}</button>
+      <button v-if="plan.source === 'branch'" class="px-2 py-0 text-sm" @click="emit('open', plan.name)">Open file</button>
+      <span class="ml-auto text-muted">
         <code>{{ plan.name }}</code> · {{ plan.source === 'branch' ? 'from the branch' : 'attached' }} · updated {{ ago(plan.updated_at) }}
       </span>
     </footer>
-    <div v-if="full" class="page">
-      <p v-if="error" class="muted pad">{{ error }}</p>
-      <p v-else-if="html === null" class="muted pad">Loading…</p>
-      <iframe v-else ref="frame" :srcdoc="html" sandbox="allow-same-origin" :title="plan.title" @load="onFrameLoad" />
+    <div v-if="full" class="border-t border-border">
+      <p v-if="error" class="px-3.5 py-2 text-muted">{{ error }}</p>
+      <p v-else-if="html === null" class="px-3.5 py-2 text-muted">Loading…</p>
+      <iframe
+        v-else
+        ref="frame"
+        class="block h-[70vh] w-full border-0 bg-bg"
+        :srcdoc="html"
+        sandbox="allow-same-origin"
+        :title="plan.title"
+        @load="onFrameLoad"
+      />
     </div>
   </article>
 </template>
-
-<style scoped>
-.plan {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--panel);
-  overflow: hidden;
-}
-.phead {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding: 8px 14px;
-  background: var(--panel-2);
-  border-bottom: 1px solid var(--border);
-}
-.title {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.progress {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--muted);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-}
-.bar {
-  width: 80px;
-  height: 6px;
-  border-radius: 3px;
-  background: var(--border);
-  overflow: hidden;
-}
-.bar span {
-  display: block;
-  height: 100%;
-  background: var(--done);
-}
-.summary {
-  margin: 0;
-  padding: 10px 14px 0;
-}
-.steps {
-  list-style: none;
-  margin: 0;
-  padding: 8px 14px;
-}
-.steps li {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding: 3px 0;
-}
-.icon {
-  width: 14px;
-  text-align: center;
-  color: var(--muted);
-  font-weight: 600;
-}
-.st-done .icon {
-  color: var(--done);
-}
-.st-doing .icon,
-.st-doing .state {
-  color: var(--running);
-}
-.st-blocked .icon,
-.st-blocked .state {
-  color: var(--blocked);
-}
-.st-skipped .step {
-  color: var(--muted);
-  text-decoration: line-through;
-}
-.step {
-  border: none;
-  background: none;
-  padding: 0;
-  text-align: left;
-  font: inherit;
-  color: inherit;
-}
-button.step:hover {
-  color: var(--accent);
-}
-.state {
-  font-size: 12px;
-}
-.pfoot {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
-  border-top: 1px solid var(--border);
-  font-size: 12px;
-}
-.pfoot .muted {
-  margin-left: auto;
-}
-.mini {
-  padding: 0 8px;
-  font-size: 12px;
-}
-.page {
-  border-top: 1px solid var(--border);
-}
-.pad {
-  padding: 8px 14px;
-}
-iframe {
-  display: block;
-  width: 100%;
-  height: 70vh;
-  border: none;
-  background: var(--bg);
-}
-</style>

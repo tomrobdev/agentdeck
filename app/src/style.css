@@ -242,11 +242,23 @@
   font-size: 12px;
   color: var(--muted);
   white-space: nowrap;
+  & input {
+    margin: 0;
+  }
 }
 
 @utility form-error {
   color: var(--failed);
   margin: 0;
+}
+
+/* A page-level notice tinted by the status colour (--c, set by an s-* class). */
+@utility callout {
+  margin: 12px 24px 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--c) 40%, transparent);
+  background: color-mix(in srgb, var(--c) 9%, var(--panel));
 }
 
 @layer components {

@@ -60,110 +60,52 @@ onBeforeUnmount(close);
 </script>
 
 <template>
-  <div class="log" ref="box" @scroll="onScroll">
-    <p v-if="!runId" class="muted pad">No runs yet. The log appears here when the task starts.</p>
-    <p v-else-if="!entries.length" class="muted pad">{{ streaming ? 'Waiting for output…' : 'Empty log.' }}</p>
-    <div v-for="(e, i) in entries" :key="i" class="entry" :class="`k-${e.kind}`">
+  <div ref="box" class="min-h-0 flex-1 overflow-y-auto rounded-md border border-border bg-code-bg py-2" @scroll="onScroll">
+    <p v-if="!runId" class="px-3.5 py-1 text-muted">No runs yet. The log appears here when the task starts.</p>
+    <p v-else-if="!entries.length" class="px-3.5 py-1 text-muted">{{ streaming ? 'Waiting for output…' : 'Empty log.' }}</p>
+    <div v-for="(e, i) in entries" :key="i" class="px-3.5 py-[3px]">
       <template v-if="e.kind === 'text'">
-        <div class="msg">{{ e.text }}</div>
+        <div class="py-1 whitespace-pre-wrap">{{ e.text }}</div>
       </template>
       <template v-else-if="e.kind === 'tool'">
-        <code
-          ><b>{{ e.name }}</b>
-          <button v-if="repoPath(e.file)" class="file" :title="`Open ${repoPath(e.file)}`" @click="emit('file', repoPath(e.file)!)">
+        <code class="block truncate text-muted"
+          ><b class="font-semibold text-running">{{ e.name }}</b>
+          <button
+            v-if="repoPath(e.file)"
+            class="btn-ghost mr-1 text-accent underline"
+            :title="`Open ${repoPath(e.file)}`"
+            @click="emit('file', repoPath(e.file)!)"
+          >
             {{ repoPath(e.file) }}
           </button>
           {{ e.input }}</code
         >
       </template>
       <template v-else-if="e.kind === 'result'">
-        <div class="sep">result: {{ e.subtype }} · {{ e.turns }} turns</div>
+        <div class="mt-1.5 border-t border-dashed border-border pt-1.5 text-sm text-muted">
+          result: {{ e.subtype }} · {{ e.turns }} turns
+        </div>
       </template>
       <template v-else-if="e.kind === 'setup'">
         <details :open="!e.passed">
-          <summary :class="e.passed ? 'ok' : 'bad'">Setup {{ e.passed ? 'done' : 'failed' }}: {{ e.cmd }}</summary>
-          <pre>{{ e.output }}</pre>
+          <summary class="cursor-pointer" :class="e.passed ? 'text-done' : 'text-failed'">
+            Setup {{ e.passed ? 'done' : 'failed' }}: {{ e.cmd }}
+          </summary>
+          <pre class="my-1.5 max-h-65 overflow-auto whitespace-pre-wrap">{{ e.output }}</pre>
         </details>
       </template>
       <template v-else-if="e.kind === 'tests'">
         <details :open="!e.passed">
-          <summary :class="e.passed ? 'ok' : 'bad'">Tests {{ e.passed ? 'passed' : 'failed' }}</summary>
-          <pre>{{ e.output }}</pre>
+          <summary class="cursor-pointer" :class="e.passed ? 'text-done' : 'text-failed'">
+            Tests {{ e.passed ? 'passed' : 'failed' }}
+          </summary>
+          <pre class="my-1.5 max-h-65 overflow-auto whitespace-pre-wrap">{{ e.output }}</pre>
         </details>
       </template>
       <template v-else>
-        <code class="bad">{{ e.text }}</code>
+        <code class="text-failed">{{ e.text }}</code>
       </template>
     </div>
-    <p v-if="streaming && entries.length" class="muted live">● live</p>
+    <p v-if="streaming && entries.length" class="px-3.5 py-1 text-sm text-running">● live</p>
   </div>
 </template>
-
-<style scoped>
-.file {
-  border: none;
-  background: none;
-  padding: 0;
-  font: inherit;
-  color: var(--accent);
-  text-decoration: underline;
-  margin-right: 4px;
-}
-.log {
-  overflow-y: auto;
-  background: var(--code-bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 8px 0;
-  min-height: 0;
-  flex: 1;
-}
-.pad {
-  padding: 4px 14px;
-}
-.entry {
-  padding: 3px 14px;
-}
-.msg {
-  white-space: pre-wrap;
-  padding: 4px 0;
-}
-.k-tool code {
-  display: block;
-  color: var(--muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.k-tool b {
-  color: var(--running);
-  font-weight: 600;
-}
-.sep {
-  margin-top: 6px;
-  padding-top: 6px;
-  border-top: 1px dashed var(--border);
-  color: var(--muted);
-  font-size: 12px;
-}
-pre {
-  white-space: pre-wrap;
-  max-height: 260px;
-  overflow: auto;
-  margin: 6px 0;
-}
-.ok {
-  color: var(--done);
-}
-.bad {
-  color: var(--failed);
-}
-summary {
-  cursor: pointer;
-}
-.live {
-  padding: 4px 14px;
-  color: var(--running);
-  font-size: 12px;
-}
-</style>
