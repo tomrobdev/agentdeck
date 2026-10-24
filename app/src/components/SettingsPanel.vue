@@ -131,22 +131,27 @@ async function test() {
 <template>
   <Modal title="Settings" @close="$emit('close')">
     <p v-if="!form && !error" class="muted">Loading…</p>
-    <form v-if="form" @submit.prevent="save()">
-      <section>
-        <h4>Appearance</h4>
-        <p class="muted hint">
+    <form v-if="form" class="flex flex-col gap-[18px]" @submit.prevent="save()">
+      <section class="flex flex-col gap-2.5">
+        <h4 class="m-0">Appearance</h4>
+        <p class="muted m-0 text-sm">
           Applies as you pick, and is remembered on this computer. The status bar has the same choice for quick comparing.
         </p>
-        <div class="themes" role="radiogroup" aria-label="Theme">
-          <label v-for="t in THEMES" :key="t.key" class="check theme" :class="{ on: theme === t.key }">
+        <div class="grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="Theme">
+          <label
+            v-for="t in THEMES"
+            :key="t.key"
+            class="flex cursor-pointer items-center gap-2 rounded-sm border px-2 py-1.5"
+            :class="theme === t.key ? 'border-accent' : 'border-border'"
+          >
             <input type="radio" name="theme" :value="t.key" :checked="theme === t.key" @change="setTheme(t.key)" />
             <span
               ><b>{{ t.label }}</b
-              ><small class="muted"> {{ t.hint }}</small></span
+              ><small class="muted text-xs"> {{ t.hint }}</small></span
             >
           </label>
         </div>
-        <div class="seg modes" role="group" aria-label="Mode">
+        <div class="seg self-start" role="group" aria-label="Mode">
           <button
             v-for="m in MODES"
             :key="m.key"
@@ -160,57 +165,69 @@ async function test() {
         </div>
       </section>
 
-      <section>
-        <h4>Usage budget</h4>
-        <p class="muted hint">
+      <section class="flex flex-col gap-2.5">
+        <h4 class="m-0">Usage budget</h4>
+        <p class="muted m-0 text-sm">
           AgentDeck reads your 5-hour and 7-day usage from Claude. It never interrupts a running task; these limits only decide when new
           tasks may start, so the rest stays free for your own Claude use.
         </p>
-        <div class="grid">
-          <label>
+        <div class="grid grid-cols-2 gap-x-4 gap-y-3">
+          <label class="field">
             <span>5h cap</span>
-            <span class="pct"><input type="number" min="1" max="100" v-model.number="form.five_hour_max" />%</span>
-            <small class="muted">Hold new tasks above this.</small>
+            <span class="flex items-center gap-1.5 [&_input]:w-20"
+              ><input type="number" min="1" max="100" v-model.number="form.five_hour_max" />%</span
+            >
+            <small class="muted text-xs">Hold new tasks above this.</small>
           </label>
-          <label>
+          <label class="field">
             <span>5h soft limit</span>
-            <span class="pct"><input type="number" min="1" max="100" v-model.number="form.five_hour_soft" />%</span>
-            <small class="muted">One task at a time above this.</small>
+            <span class="flex items-center gap-1.5 [&_input]:w-20"
+              ><input type="number" min="1" max="100" v-model.number="form.five_hour_soft" />%</span
+            >
+            <small class="muted text-xs">One task at a time above this.</small>
           </label>
-          <label>
+          <label class="field">
             <span>Weekly cap</span>
-            <span class="pct"><input type="number" min="1" max="100" v-model.number="form.weekly_max" />%</span>
-            <small class="muted">Spread evenly: about {{ perDay }}% a day.</small>
+            <span class="flex items-center gap-1.5 [&_input]:w-20"
+              ><input type="number" min="1" max="100" v-model.number="form.weekly_max" />%</span
+            >
+            <small class="muted text-xs">Spread evenly: about {{ perDay }}% a day.</small>
           </label>
-          <label>
+          <label class="field">
             <span>Pace slack</span>
-            <span class="pct"><input type="number" min="0" max="100" v-model.number="form.pace_slack" />%</span>
-            <small class="muted">How far ahead of even pace it may run.</small>
+            <span class="flex items-center gap-1.5 [&_input]:w-20"
+              ><input type="number" min="0" max="100" v-model.number="form.pace_slack" />%</span
+            >
+            <small class="muted text-xs">How far ahead of even pace it may run.</small>
           </label>
-          <label>
+          <label class="field">
             <span>Max concurrent tasks</span>
             <input type="number" min="1" max="8" v-model.number="form.max_concurrent" />
           </label>
         </div>
       </section>
 
-      <section>
-        <h4>Planner</h4>
-        <p class="muted hint">
+      <section class="flex flex-col gap-2.5">
+        <h4 class="m-0">Planner</h4>
+        <p class="muted m-0 text-sm">
           When a repo with goals has nothing queued, the planner reads its goals and code and proposes the next tasks. Write goals under
           Repos.
         </p>
-        <label class="check"><input type="checkbox" v-model="form.planner_enabled" /> Plan automatically when a queue runs dry</label>
-        <div class="grid three">
-          <label>
+        <label class="flex items-center gap-2"
+          ><input type="checkbox" v-model="form.planner_enabled" /> Plan automatically when a queue runs dry</label
+        >
+        <div class="grid grid-cols-3 gap-x-4 gap-y-3">
+          <label class="field">
             <span>At most every</span>
-            <span class="pct"><input type="number" min="0.25" step="0.25" v-model.number="form.planner_interval_hours" />hours</span>
+            <span class="flex items-center gap-1.5 [&_input]:w-20"
+              ><input type="number" min="0.25" step="0.25" v-model.number="form.planner_interval_hours" />hours</span
+            >
           </label>
-          <label>
+          <label class="field">
             <span>Tasks per plan</span>
             <input type="number" min="1" max="10" v-model.number="form.planner_max_tasks" />
           </label>
-          <label>
+          <label class="field">
             <span>Planner model</span>
             <select v-model="form.planner_model">
               <option value="haiku">Haiku</option>
@@ -221,60 +238,60 @@ async function test() {
         </div>
       </section>
 
-      <section>
-        <h4>Always on</h4>
-        <div class="always">
+      <section class="flex flex-col gap-2.5">
+        <h4 class="m-0">Always on</h4>
+        <div class="flex flex-col items-start gap-1.5">
           <span class="pill" :class="service?.state === 'running' ? 's-done' : 's-blocked'">
             <span class="dot" />{{
               service?.installed ? `Daemon runs at login · ${service.state ?? 'not loaded'}` : 'Daemon not installed'
             }}
           </span>
-          <small v-if="!service?.installed" class="muted"
+          <small v-if="!service?.installed" class="muted text-xs"
             >Run <code>agentdeck install</code> once and it starts at login and restarts if it dies.</small
           >
         </div>
-        <label class="check">
+        <label class="flex items-center gap-2">
           <input type="checkbox" v-model="form.reload_on_change" /> Restart the daemon when its source changes (for developing AgentDeck)
         </label>
-        <small class="muted"
+        <small class="muted text-xs"
           >Once something in daemon/src changed and no task or planner run is active, it exits and launchd starts the new code.</small
         >
-        <label v-if="isNative" class="check">
+        <label v-if="isNative" class="flex items-center gap-2">
           <input type="checkbox" :checked="!!appAtLogin" @change="toggleAppAtLogin" /> Open this dashboard at login (in the menu bar)
         </label>
       </section>
 
-      <section>
-        <h4>Notifications</h4>
-        <label class="check"><input type="checkbox" v-model="form.desktop" /> macOS notifications</label>
-        <div class="events">
-          <label v-for="e in EVENTS" :key="e.key" class="check">
+      <section class="flex flex-col gap-2.5">
+        <h4 class="m-0">Notifications</h4>
+        <label class="flex items-center gap-2"><input type="checkbox" v-model="form.desktop" /> macOS notifications</label>
+        <div class="flex flex-wrap gap-x-4 gap-y-1.5">
+          <label v-for="e in EVENTS" :key="e.key" class="flex items-center gap-2">
             <input type="checkbox" :value="e.key" v-model="form.events" /> {{ e.label }}
           </label>
         </div>
-        <label>
+        <label class="field">
           <span>ntfy topic for phone alerts <span class="muted">(optional)</span></span>
           <input v-model="form.ntfy_topic" placeholder="e.g. agentdeck-7f3k2" />
-          <small class="muted">
+          <small class="muted text-xs">
             Install the ntfy app and subscribe to the same topic. Task titles are sent to ntfy.sh, and anyone who knows the topic name can
             read them, so pick something hard to guess.
           </small>
         </label>
       </section>
 
-      <section v-if="notifications.length">
-        <h4>Recent alerts</h4>
-        <ul class="recent">
-          <li v-for="n in notifications.slice(0, 5)" :key="n.id">
+      <section v-if="notifications.length" class="flex flex-col gap-2.5">
+        <h4 class="m-0">Recent alerts</h4>
+        <ul class="m-0 flex list-none flex-col gap-1.5 p-0">
+          <li v-for="n in notifications.slice(0, 5)" :key="n.id" class="flex items-center gap-2">
             <span class="pill" :class="`s-${n.kind === 'hold' ? 'blocked' : n.kind}`">{{ n.kind }}</span>
-            <span class="title">{{ n.title }}</span>
+            <span class="flex-1 truncate">{{ n.title }}</span>
             <span class="muted">{{ ago(n.created_at) }}</span>
           </li>
         </ul>
       </section>
 
-      <p v-if="error" class="error">{{ error }}</p>
-      <div class="actions">
+      <p v-if="error" class="form-error">{{ error }}</p>
+      <div class="flex items-center gap-2">
         <button type="button" @click="test" :disabled="saving">Save &amp; send test</button>
         <span class="muted">{{ tested }}</span>
         <span class="spacer" />
@@ -282,117 +299,6 @@ async function test() {
         <button class="primary" type="submit" :disabled="saving">Save</button>
       </div>
     </form>
-    <p v-else-if="error" class="error">{{ error }}</p>
+    <p v-else-if="error" class="form-error">{{ error }}</p>
   </Modal>
 </template>
-
-<style scoped>
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-section {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-h4 {
-  margin: 0;
-}
-.hint {
-  margin: 0;
-  font-size: 12px;
-}
-.grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px 16px;
-}
-label {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.pct {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.pct input {
-  width: 80px;
-}
-.grid.three {
-  grid-template-columns: 1fr 1fr 1fr;
-}
-.always {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  align-items: flex-start;
-}
-small {
-  font-size: 11px;
-}
-.check {
-  flex-direction: row;
-  align-items: center;
-  gap: 8px;
-}
-.check input {
-  width: auto;
-}
-.themes {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-}
-.theme {
-  padding: 6px 8px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  cursor: pointer;
-}
-.theme.on {
-  border-color: var(--accent);
-}
-.modes {
-  align-self: flex-start;
-}
-.events {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 16px;
-}
-.recent {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.recent li {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-.recent .title {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-.spacer {
-  flex: 1;
-}
-.error {
-  color: var(--failed);
-  margin: 0;
-}
-</style>

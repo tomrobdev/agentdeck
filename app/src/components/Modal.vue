@@ -12,49 +12,17 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
 </script>
 
 <template>
-  <div class="backdrop" @click.self="$emit('close')">
-    <div class="modal" role="dialog" :aria-label="title">
-      <header>
-        <h3>{{ title }}</h3>
-        <button class="x" @click="$emit('close')" aria-label="Close">✕</button>
+  <div class="fixed inset-0 z-10 grid place-items-center bg-[rgb(0_0_0/0.35)]" @click.self="$emit('close')">
+    <div
+      class="max-h-[calc(100vh-64px)] w-[min(560px,calc(100vw-32px))] overflow-auto rounded-lg border border-border bg-panel px-5 pt-4 pb-5 shadow-modal"
+      role="dialog"
+      :aria-label="title"
+    >
+      <header class="mb-3 flex items-center">
+        <h3 class="m-0 flex-1 text-lg">{{ title }}</h3>
+        <button class="border-0 bg-transparent text-muted" @click="$emit('close')" aria-label="Close">✕</button>
       </header>
       <slot />
     </div>
   </div>
 </template>
-
-<style scoped>
-.backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgb(0 0 0 / 0.35);
-  display: grid;
-  place-items: center;
-  z-index: 10;
-}
-.modal {
-  width: min(560px, calc(100vw - 32px));
-  max-height: calc(100vh - 64px);
-  overflow: auto;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 16px 20px 20px;
-  box-shadow: 0 20px 60px rgb(0 0 0 / 0.25);
-}
-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 12px;
-}
-h3 {
-  margin: 0;
-  font-size: 15px;
-  flex: 1;
-}
-.x {
-  border: none;
-  background: none;
-  color: var(--muted);
-}
-</style>

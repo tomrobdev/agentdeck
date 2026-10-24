@@ -101,15 +101,17 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
 
 <template>
   <Modal title="Merge pull request" @close="emit('close')">
-    <p v-if="loadError" class="error">{{ loadError }}</p>
+    <p v-if="loadError" class="form-error">{{ loadError }}</p>
     <p v-else-if="!preview" class="muted">Reading the pull request from GitHub…</p>
-    <div v-else class="merge">
-      <p class="title">{{ preview.title }}</p>
-      <p class="branches">
+    <div v-else class="flex flex-col gap-2.5">
+      <p class="m-0 font-semibold">{{ preview.title }}</p>
+      <p class="m-0">
         <code>{{ preview.branch ?? '?' }}</code> <span class="muted">→</span> <code>{{ preview.base }}</code>
       </p>
 
-      <dl>
+      <dl
+        class="m-0 grid grid-cols-[max-content_1fr] gap-x-3.5 gap-y-1.5 [&>dd]:m-0 [&>dd]:flex [&>dd]:flex-wrap [&>dd]:items-center [&>dd]:gap-1.5 [&>dt]:text-muted"
+      >
         <dt>Method</dt>
         <dd>
           <select v-model="method" aria-label="Merge method">
@@ -121,35 +123,43 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
         <dd>{{ commitsLine }}</dd>
         <dt>Changes</dt>
         <dd>
-          {{ preview.files }} {{ preview.files === 1 ? 'file' : 'files' }} <span class="add">+{{ preview.additions }}</span>
-          <span class="del">−{{ preview.deletions }}</span>
+          {{ preview.files }} {{ preview.files === 1 ? 'file' : 'files' }} <span class="text-done">+{{ preview.additions }}</span>
+          <span class="text-failed">−{{ preview.deletions }}</span>
         </dd>
         <dt>Tests</dt>
-        <dd :class="{ bad: preview.tests_passed === 0 }">{{ tests }} <span class="muted">on the last run</span></dd>
+        <dd :class="{ 'text-failed': preview.tests_passed === 0 }">{{ tests }} <span class="muted">on the last run</span></dd>
         <dt>Checks</dt>
-        <dd :class="{ bad: preview.checks.failing }">{{ checks }} <span class="muted">on GitHub</span></dd>
+        <dd :class="{ 'text-failed': preview.checks.failing }">{{ checks }} <span class="muted">on GitHub</span></dd>
         <template v-if="preview.unblocks.length">
           <dt>Unblocks</dt>
           <dd>
-            <span v-for="t in preview.unblocks" :key="t.id" class="chip" :title="t.title">#{{ t.id }} {{ t.title }}</span>
+            <span v-for="t in preview.unblocks" :key="t.id" class="max-w-full truncate rounded-pill bg-panel-2 px-2" :title="t.title"
+              >#{{ t.id }} {{ t.title }}</span
+            >
           </dd>
         </template>
       </dl>
 
-      <label class="check">
-        <input v-model="deleteBranch" type="checkbox" />
+      <label class="flex items-start gap-2">
+        <input v-model="deleteBranch" class="mt-[3px]" type="checkbox" />
         Delete the remote branch and the worktree <span class="muted">(the local branch stays, so the diff remains readable)</span>
       </label>
 
-      <ul v-if="preview.warnings.length" class="notes warn">
+      <ul
+        v-if="preview.warnings.length"
+        class="m-0 flex list-none flex-col gap-0.5 rounded-md bg-[color-mix(in_srgb,var(--blocked)_10%,var(--panel))] px-3 py-2 text-blocked"
+      >
         <li v-for="w in preview.warnings" :key="w">⚠ {{ w }}</li>
       </ul>
-      <ul v-if="preview.problems.length" class="notes problem">
+      <ul
+        v-if="preview.problems.length"
+        class="m-0 flex list-none flex-col gap-0.5 rounded-md bg-[color-mix(in_srgb,var(--failed)_10%,var(--panel))] px-3 py-2 text-failed"
+      >
         <li v-for="p in preview.problems" :key="p">✕ Can't merge: {{ p }}</li>
       </ul>
-      <div v-if="preview.conflicting" class="resolve">
+      <div v-if="preview.conflicting" class="flex items-center gap-2.5">
         <button :disabled="resolving || merging" @click="resolve">{{ resolving ? 'Resolving…' : 'Resolve conflicts' }}</button>
-        <span class="muted">
+        <span class="muted text-sm">
           {{
             resolving
               ? 'Merging the base branch into the branch; a conflict starts a claude run, which can take a few minutes.'
@@ -158,104 +168,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
         </span>
       </div>
       <p v-if="resolveNote" class="muted">{{ resolveNote }}</p>
-      <p v-if="mergeError" class="error">{{ mergeError }}</p>
+      <p v-if="mergeError" class="form-error">{{ mergeError }}</p>
     </div>
 
-    <div class="actions">
+    <div class="mt-4 flex justify-end gap-2">
       <button @click="emit('close')">Cancel</button>
       <button class="primary" :disabled="!canConfirm" @click="merge">{{ merging ? 'Merging…' : 'Merge' }}</button>
     </div>
   </Modal>
 </template>
-
-<style scoped>
-.merge {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.title {
-  margin: 0;
-  font-weight: 600;
-}
-.branches {
-  margin: 0;
-}
-dl {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 6px 14px;
-  margin: 0;
-}
-dt {
-  color: var(--muted);
-}
-dd {
-  margin: 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
-.add {
-  color: var(--done);
-}
-.del,
-.bad {
-  color: var(--failed);
-}
-.chip {
-  background: var(--panel-2);
-  border-radius: 999px;
-  padding: 0 8px;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.check {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  gap: 8px;
-}
-.check input {
-  width: auto;
-  margin-top: 3px;
-}
-.notes {
-  list-style: none;
-  margin: 0;
-  padding: 8px 12px;
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.notes.warn {
-  color: var(--blocked);
-  background: color-mix(in srgb, var(--blocked) 10%, var(--panel));
-}
-.notes.problem {
-  color: var(--failed);
-  background: color-mix(in srgb, var(--failed) 10%, var(--panel));
-}
-.error {
-  color: var(--failed);
-  margin: 0;
-}
-.resolve {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.resolve .muted {
-  font-size: 12px;
-}
-.actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 16px;
-}
-</style>
