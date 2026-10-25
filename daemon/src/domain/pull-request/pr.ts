@@ -22,8 +22,24 @@ export function finalMessage(runs: PrRun[]): string {
   return text.replace(/\n?\s*STATUS:\s*(DONE|BLOCKED)\b.*$/i, '').trim();
 }
 
-/** The agent's final message, a table of the task's runs, and a signature. */
-export function buildPrBody(task: { id: number }, runs: PrRun[]): string {
+/** The plan a task carries out: its path and the linked steps as the branch has them. */
+export interface PrPlan {
+  path: string;
+  steps: { title: string; status: string; done: string[] }[];
+}
+
+/** The "Plan" section: each linked step with its status, and its done criteria as a checklist for the reviewer. */
+function planSection(plan: PrPlan): string[] {
+  const out = [`## Plan: \`${plan.path}\``];
+  for (const step of plan.steps) {
+    out.push('', `**${step.title}** (${step.status})`);
+    if (step.done.length) out.push('', ...step.done.map((d) => `- [ ] ${d}`));
+  }
+  return [...out, ''];
+}
+
+/** The agent's final message, the linked plan's steps, a table of the task's runs, and a signature. */
+export function buildPrBody(task: { id: number }, runs: PrRun[], plan: PrPlan | null = null): string {
   const rows = runs.map((r) => {
     const tests = r.tests_passed === null ? '-' : r.tests_passed ? 'pass' : 'fail';
     return `| ${r.attempt}${r.kind === 'resolve' ? ' (conflicts)' : ''} | ${r.outcome ?? '-'} | ${r.num_turns ?? '-'} | $${r.cost_usd.toFixed(2)} | ${tests} |`;
@@ -31,6 +47,7 @@ export function buildPrBody(task: { id: number }, runs: PrRun[]): string {
   return [
     finalMessage(runs) || '(the agent left no final message)',
     '',
+    ...(plan && plan.steps.length ? planSection(plan) : []),
     '| Attempt | Outcome | Turns | Cost | Tests |',
     '| --- | --- | --- | --- | --- |',
     ...rows,

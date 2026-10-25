@@ -3,9 +3,10 @@ import type { TaskEvent, TaskStatus } from './lifecycle.ts';
 
 /**
  * `created` when the task was added, `merge` when its PR was merged from the app and `sync` when the base branch was
- * brought into the task's branch (the status stays as it was), otherwise the lifecycle event that changed its status.
+ * brought into the task's branch (the status stays as it was), `plan_unfinished` when a done run left linked plan steps
+ * unfinished (a warning, the status stays as it was), otherwise the lifecycle event that changed its status.
  */
-export type TaskEventType = 'created' | 'merge' | 'sync' | TaskEvent['type'];
+export type TaskEventType = 'created' | 'merge' | 'sync' | 'plan_unfinished' | TaskEvent['type'];
 
 export interface TaskEventRow {
   id: number;

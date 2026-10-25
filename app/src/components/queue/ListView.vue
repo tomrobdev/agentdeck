@@ -100,6 +100,7 @@ watch(
                     .join(' ')
                 }}
               </span>
+              <span v-if="t.plan_unfinished" class="chip" title="The run left linked plan steps unfinished">steps unfinished</span>
               <span v-if="t.source === 'planner'" class="chip">planner</span>
               <span v-if="t.attempts > 1" class="chip">try {{ t.attempts }}</span>
               <span

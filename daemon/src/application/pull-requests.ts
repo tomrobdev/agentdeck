@@ -9,6 +9,7 @@ import { buildPrBody } from '../domain/pull-request/pr.ts';
 import type { Task } from '../domain/task/task.ts';
 import { warnStuckDependents } from './dependencies.ts';
 import { ActionError } from './errors.ts';
+import { prPlanFor } from './plans.ts';
 
 /** How often the scheduler re-reads the state of open PRs. */
 export const PR_REFRESH_MS = 3 * 60_000;
@@ -36,7 +37,7 @@ export async function openPullRequest(db: Db, task: Task): Promise<{ url?: strin
       base: repo.base_branch,
       head: task.branch,
       title: task.title,
-      body: buildPrBody(task, db.runsForTask(task.id)),
+      body: buildPrBody(task, db.runsForTask(task.id), await prPlanFor(db, task).catch(() => null)),
       draft: repo.pr_mode === 'draft',
     });
     db.updateTask(task.id, { pr_url: url, pr_state: 'open' });
@@ -148,7 +149,12 @@ export async function mergeTask(db: Db, id: number, opts: { method?: string; del
 
   try {
     if (pr.draft) await github.markReady(url, cwd);
-    await github.merge({ url, cwd, method, message: { subject: task.title, body: buildPrBody(task, db.runsForTask(id)) } });
+    await github.merge({
+      url,
+      cwd,
+      method,
+      message: { subject: task.title, body: buildPrBody(task, db.runsForTask(id), await prPlanFor(db, task).catch(() => null)) },
+    });
   } catch (err) {
     throw new ActionError(`merge failed: ${(err as Error).message}`);
   }

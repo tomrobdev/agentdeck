@@ -107,6 +107,8 @@ export interface TaskSummary {
   /** For a task in review: the queued tasks that wait on its PR. */
   /** Missing from a daemon that predates it; read it as empty. */
   unblocks?: number[];
+  /** A done task whose latest run left linked plan steps unfinished. Missing from a daemon that predates it. */
+  plan_unfinished?: boolean;
   /** Why a queued task hasn't started yet; null once nothing holds it (or it isn't queued). */
   hold: StartHold | null;
   created_at: string;
@@ -141,7 +143,19 @@ export interface TaskEventRow {
   id: number;
   task_id: number;
   type:
-    'created' | 'merge' | 'sync' | 'claim' | 'finish' | 'rate_limited' | 'conflict' | 'cancel' | 'approve' | 'reject' | 'retry' | 'recover';
+    | 'created'
+    | 'merge'
+    | 'sync'
+    | 'plan_unfinished'
+    | 'claim'
+    | 'finish'
+    | 'rate_limited'
+    | 'conflict'
+    | 'cancel'
+    | 'approve'
+    | 'reject'
+    | 'retry'
+    | 'recover';
   from_status: TaskStatus | null;
   to_status: TaskStatus | null;
   reason: string | null;

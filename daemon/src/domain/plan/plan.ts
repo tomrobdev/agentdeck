@@ -106,6 +106,23 @@ export function planProgress(steps: PlanStep[]): { finished: number; total: numb
   return { finished: steps.filter((s) => s.status === 'done' || s.status === 'skipped').length, total: steps.length };
 }
 
+const isFinished = (s: PlanStep) => s.status === 'done' || s.status === 'skipped';
+
+/** The steps a task is linked to in `html`: those named by `ids`, or every step when `ids` is null. Null if it isn't a plan. */
+export function linkedSteps(html: string, ids: string[] | null): PlanStep[] | null {
+  const plan = parsePlan(html);
+  return plan && plan.steps.filter((s) => ids === null || (s.id !== null && ids.includes(s.id)));
+}
+
+/** The steps a run was meant to finish but left neither done nor skipped. */
+export const unfinishedSteps = (steps: PlanStep[]): PlanStep[] => steps.filter((s) => !isFinished(s));
+
+/** The history line for linked steps a done run left unfinished. */
+export function unfinishedSummary(steps: PlanStep[]): string {
+  const list = steps.map((s) => `${s.id ?? s.title} (${s.status})`).join(', ');
+  return `left ${steps.length === 1 ? 'a linked plan step' : 'linked plan steps'} unfinished: ${list}`;
+}
+
 /**
  * An attached plan's name, so attaching the same file again replaces it. A file under docs/plans/
  * keeps its path from there on (the name collectPlans gives the branch's copy, which then replaces

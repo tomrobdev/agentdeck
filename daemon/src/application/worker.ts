@@ -8,10 +8,11 @@ import { lastLine, runCommand } from '../adapters/shell.ts';
 import { LOG_DIR, SETUP_TIMEOUT_MS, TEST_TIMEOUT_MS, ensureDirs } from '../config.ts';
 import type { Db } from '../db/index.ts';
 import { conflictReason, syncSummary } from '../domain/pull-request/conflict.ts';
+import { linkedSteps, unfinishedSteps, unfinishedSummary } from '../domain/plan/plan.ts';
 import { type PromptPlan, buildPrompt, claudeArgs } from '../domain/run/prompt.ts';
 import { latestReviewNote } from '../domain/task/history.ts';
 import { type Run, type WorkerResult, firstDenial, parseStatus, resultFields } from '../domain/run/run.ts';
-import type { Task } from '../domain/task/task.ts';
+import { type Task, planStepIds } from '../domain/task/task.ts';
 import { bringInBase } from './conflicts.ts';
 import { warnStuckDependents } from './dependencies.ts';
 import { notifyLater } from './notifications.ts';
@@ -142,6 +143,17 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
     }
     if (outcome.outcome === 'done' && (await commitsAhead(wt.path, repo.base_branch)) === 0) {
       outcome = { outcome: 'blocked', reason: 'agent finished without changing anything' };
+    }
+  }
+
+  // A done run that left linked plan steps unfinished is a warning, not a change of outcome.
+  if (outcome.outcome === 'done' && task.plan_path) {
+    try {
+      const html = (await planForRun(db, task))?.html;
+      const left = unfinishedSteps((html && linkedSteps(html, planStepIds(task))) || []);
+      if (left.length) db.recordPlanUnfinished(task.id, unfinishedSummary(left));
+    } catch (err) {
+      writeEvent(log, { type: 'agentdeck_error', text: `check plan steps: ${(err as Error).message}` });
     }
   }
 
