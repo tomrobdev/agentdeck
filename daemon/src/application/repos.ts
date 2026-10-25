@@ -10,9 +10,10 @@ import type { Db } from '../db/index.ts';
 import { MERGE_METHODS, type MergeMethod, isMergeMethod } from '../domain/pull-request/merge.ts';
 import { PR_MODES, type PrMode } from '../domain/pull-request/pr.ts';
 import type { Repo } from '../domain/repo/repo.ts';
+import { goalsError, networkError } from '../domain/repo/rules.ts';
 import { detectToolchain } from '../domain/repo/toolchain.ts';
 import { type Check, runDoctor } from './doctor.ts';
-import { ActionError } from './errors.ts';
+import { ActionError, refuse } from './errors.ts';
 import { flag, list, object, text, textOrNull } from './input.ts';
 import { requireRepo } from './lookups.ts';
 import { pauseRepo } from './pause.ts';
@@ -86,15 +87,14 @@ export function updateRepo(
   const sandbox = flag(body, 'sandbox');
   const hosts = list(body, 'network', { split: true });
   const network = hosts && normalizeNetwork(hosts);
-  const badHost = network?.find((d) => !/^[A-Za-z0-9*.:[\]-]+$/.test(d));
-  if (badHost !== undefined) throw new ActionError(`not a host name: ${badHost}`);
+  if (network) refuse(networkError(network));
   if (pr_mode !== undefined && !PR_MODES.includes(pr_mode as PrMode))
     throw new ActionError(`pr_mode must be one of ${PR_MODES.join(', ')}`);
   if (merge_method !== undefined && !isMergeMethod(merge_method))
     throw new ActionError(`merge_method must be one of ${MERGE_METHODS.join(', ')}`);
   if (base_branch === '') throw new ActionError('base_branch cannot be empty');
   if (goals !== undefined) {
-    if (goals.length > 20_000) throw new ActionError('goals are limited to 20,000 characters');
+    refuse(goalsError(goals));
     writeGoals(repo, goals);
   }
   db.updateRepo(repo.id, {
