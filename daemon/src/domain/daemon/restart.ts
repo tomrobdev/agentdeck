@@ -6,13 +6,13 @@ export interface Activity {
   /** Planner runs still going. */
   planner: number;
   /** Resolve runs still going (they belong to done tasks, so `tasks` doesn't count them). */
-  resolves?: number;
+  resolves: number;
 }
 
 const plural = (n: number, noun: string) => `${n} ${noun}${n === 1 ? '' : 's'}`;
 
 /** What a graceful restart is waiting for, or null when nothing is active. */
-export function restartWait({ tasks, planner, resolves = 0 }: Activity): string | null {
+export function restartWait({ tasks, planner, resolves }: Activity): string | null {
   const parts = [];
   if (tasks) parts.push(plural(tasks, 'running task'));
   if (resolves) parts.push(plural(resolves, 'resolve run'));
@@ -30,9 +30,8 @@ export interface ReloadInput {
   /** When the latest change happened, ms since the epoch. */
   lastChangeAt: number | null;
   now: number;
-  /** Tasks with a live run. */
-  tasks: number;
-  proposing: boolean;
+  /** What is running now. */
+  activity: Activity;
   /** Someone asked for a restart (the dashboard's button), whatever the setting or the files say. */
   requested?: boolean;
 }
@@ -47,7 +46,7 @@ export interface ReloadDecision {
 }
 
 export function reloadDecision(i: ReloadInput): ReloadDecision {
-  const wait = restartWait({ tasks: i.tasks, planner: i.proposing ? 1 : 0 });
+  const wait = restartWait(i.activity);
   if (i.requested) {
     return wait
       ? { pending: true, exit: false, reason: `restart requested; restarting once ${wait} finish` }

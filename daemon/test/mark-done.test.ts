@@ -9,6 +9,7 @@ process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-markdone-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { openDb } = await import('../src/db/index.ts');
+const { setPr } = await import('./support.ts');
 const { dependencyState } = await import('../src/domain/task/dependency.ts');
 const { TASK_STATUSES } = await import('../src/domain/task/lifecycle.ts');
 const { markDone, retryTask, ActionError } = await import('../src/application/actions.ts');
@@ -142,7 +143,7 @@ test('the SQL and the domain agree on when a dependency is met', () => {
           const dep = add();
           const later = add(dep.id);
           // Put the dependency in the state under test; `later` stays queued behind it.
-          db.updateTask(dep.id, { pr_url: pr_state ? 'https://x/pull/1' : null, pr_state });
+          setPr(db, dep.id, { pr_url: pr_state ? 'https://x/pull/1' : null, pr_state });
           bringTo(db, dep.id, status, done_by);
           const d = db.getTask(dep.id)!;
           const sqlMet = db.hasQueued() && db.claimNextTask()?.id === later.id;
@@ -200,10 +201,10 @@ test('a task after a person-done task starts unless that task has an open PR', a
   const dep2 = add();
   const later2 = add(dep2.id);
   bring(db, dep2.id, 'failed');
-  db.updateTask(dep2.id, { pr_url: 'https://x/pull/2', pr_state: 'open' });
+  setPr(db, dep2.id, { pr_url: 'https://x/pull/2', pr_state: 'open' });
   markDone(db, dep2.id);
   assert.equal(db.claimNextTask(), undefined, 'person-done with an open PR waits for the merge');
-  db.updateTask(dep2.id, { pr_state: 'merged' });
+  setPr(db, dep2.id, { pr_state: 'merged' });
   assert.equal(db.claimNextTask()!.id, later2.id);
   db.close();
 });

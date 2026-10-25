@@ -169,7 +169,7 @@ git('checkout', '-q', 'main');
 
 const repo = db.addRepo({ name: 'demo', path: repoPath, base_branch: 'main' });
 const task = db.addTask({ repo_id: repo.id, title: 't', prompt: 'p' });
-db.updateTask(task.id, { branch: 'agentdeck/task-1' });
+db.setCheckout(task.id, { branch: 'agentdeck/task-1' });
 
 const call = async (path: string, json?: unknown) => {
   const res = await fetch(
@@ -216,7 +216,7 @@ test('POST /plans attaches a plan by file name and refuses HTML without the mark
 
 test('a plan attached from docs/plans/ is replaced by the branch copy, leaving one plan', async () => {
   const other = db.addTask({ repo_id: repo.id, title: 't2', prompt: 'p' });
-  db.updateTask(other.id, { branch: 'agentdeck/task-1' });
+  db.setCheckout(other.id, { branch: 'agentdeck/task-1' });
   const attached = attachPlan(db, other.id, {
     name: join(repoPath, 'docs/plans/cache.html'),
     html: PLAN.replace('done', 'todo'),

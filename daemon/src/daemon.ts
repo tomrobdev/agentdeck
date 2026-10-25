@@ -6,7 +6,7 @@ import { checkoutCommit } from './adapters/git.ts';
 import { watchSource } from './adapters/watch.ts';
 import { Scheduler } from './application/scheduler.ts';
 import { API_PORT, DEFAULTS } from './config.ts';
-import { reloadDecision } from './domain/daemon/restart.ts';
+import { type Activity, reloadDecision } from './domain/daemon/restart.ts';
 
 export interface DaemonOptions {
   db: Db;
@@ -30,14 +30,13 @@ export async function runDaemon({ db, once, log = () => {} }: DaemonOptions): Pr
   const reload = once
     ? undefined
     : {
-        check: ({ tasks, proposing }: { tasks: number; proposing: boolean }) =>
+        check: (activity: Activity) =>
           reloadDecision({
             enabled: db.reloadOnChange(),
             changed,
             lastChangeAt,
             now: Date.now(),
-            tasks,
-            proposing,
+            activity,
             requested: restartRequested,
           }),
         // launchd's KeepAlive starts the daemon again on the code now on disk.

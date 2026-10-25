@@ -12,7 +12,7 @@ const { callDaemon } = await import('../src/cli/daemon-client.ts');
 const { RELOAD_QUIET_MS, reloadDecision, restartWait } = await import('../src/domain/daemon/restart.ts');
 const { openDb } = await import('../src/db/index.ts');
 
-const base = { enabled: true, changed: ['a.ts'], lastChangeAt: 0, now: RELOAD_QUIET_MS + 1, tasks: 0, proposing: false };
+const base = { enabled: true, changed: ['a.ts'], lastChangeAt: 0, now: RELOAD_QUIET_MS + 1 };
 
 function reloading() {
   const db = openDb(':memory:');
@@ -22,7 +22,7 @@ function reloading() {
     prRefreshMs: Number.MAX_SAFE_INTEGER,
     autoPlan: false,
     log: () => {},
-    reload: { check: (busy) => reloadDecision({ ...base, ...busy }), exit: () => void exited++ },
+    reload: { check: (busy) => reloadDecision({ ...base, activity: busy }), exit: () => void exited++ },
   });
   return { db, scheduler, exited: () => exited };
 }

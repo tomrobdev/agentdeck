@@ -14,6 +14,7 @@ chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
 
 const { openDb } = await import('../src/db/index.ts');
+const { setPr } = await import('./support.ts');
 const { Scheduler } = await import('../src/application/scheduler.ts');
 const { github } = await import('../src/adapters/github.ts');
 const { refreshPrStates } = await import('../src/application/pull-requests.ts');
@@ -209,7 +210,7 @@ test('a retried task keeps its open PR, but gets a new one once the old PR is me
   assert.equal(calls.create.length, 1);
   assert.equal(calls.push.length, 2);
 
-  db.updateTask(task.id, { pr_state: 'merged' });
+  setPr(db, task.id, { pr_state: 'merged' });
   retryTask(db, task.id);
   await drain();
   const t = db.getTask(task.id)!;
@@ -368,14 +369,14 @@ test('--after waits for the dependency PR to be merged', async () => {
   const dep = db.addTask({ repo_id: repo.id, title: 'with pr', prompt: 'x' });
   const later = await addTask(db, { repo: 'demo', prompt: 'after the pr', after_task: dep.id });
   assert.equal(finishNext(), dep.id);
-  db.updateTask(dep.id, { pr_url: 'https://x/pull/30', pr_state: 'open' });
+  setPr(db, dep.id, { pr_url: 'https://x/pull/30', pr_state: 'open' });
 
   assert.equal(db.claimNextTask(), undefined, 'PR still open');
   assert.equal(db.hasQueued(), false, 'a waiting task is not claimable work');
-  db.updateTask(dep.id, { pr_state: 'closed' });
+  setPr(db, dep.id, { pr_state: 'closed' });
   assert.equal(db.claimNextTask(), undefined, 'closed without merging does not release it');
 
-  db.updateTask(dep.id, { pr_state: 'merged' });
+  setPr(db, dep.id, { pr_state: 'merged' });
   assert.equal(db.claimNextTask()!.id, later.id);
 });
 
@@ -461,7 +462,7 @@ test('a dependent is not claimed while its dependency pushes and opens its PR', 
     github.push = realPush;
     db.setSetting('max_concurrent', '1');
   }
-  db.updateTask(dep.id, { pr_state: 'merged' });
+  setPr(db, dep.id, { pr_state: 'merged' });
   assert.equal(db.claimNextTask()!.id, later.id);
 });
 
@@ -527,7 +528,7 @@ test('a dependency PR closed without merging notifies when the refresh sees it',
   const dep = db.addTask({ repo_id: repo.id, title: 'pr gets closed', prompt: 'x' });
   const later = await addTask(db, { repo: 'demo', prompt: 'after the closed pr', after_task: dep.id });
   assert.equal(finishNext(), dep.id);
-  db.updateTask(dep.id, { pr_url: 'https://x/pull/40', pr_state: 'open' });
+  setPr(db, dep.id, { pr_url: 'https://x/pull/40', pr_state: 'open' });
   assert.equal(stuckNotices(dep.id).length, 0);
 
   states = { 'https://x/pull/40': 'closed' };

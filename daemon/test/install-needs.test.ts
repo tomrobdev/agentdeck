@@ -46,7 +46,7 @@ const repo = db.addRepo({ name: 'demo', path: dir, base_branch: 'main', toolchai
 async function blockedFor(items: string[], kind = 'deps') {
   const t = db.addTask({ repo_id: repo.id, title: 't', prompt: 'p' });
   const { branch, path } = await ensureWorktree(repo, t);
-  db.updateTask(t.id, { branch, worktree: path });
+  db.setCheckout(t.id, { branch, worktree: path });
   db.claimNextTask();
   db.applyEvent(
     t.id,

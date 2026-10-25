@@ -194,6 +194,7 @@ export interface TaskEventRow {
   type:
     | 'created'
     | 'merge'
+    | 'pr'
     | 'sync'
     | 'plan_unfinished'
     | 'environment_block'

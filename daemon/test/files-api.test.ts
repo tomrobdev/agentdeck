@@ -66,11 +66,11 @@ before(() => {
 
   const repo = db.addRepo({ name: 'demo', path: repoPath, base_branch: 'main' });
   const t = db.addTask({ repo_id: repo.id, title: 't', prompt: 'p' });
-  db.updateTask(t.id, { branch: 'agentdeck/task-1' });
+  db.setCheckout(t.id, { branch: 'agentdeck/task-1' });
   taskId = t.id;
   noBranchId = db.addTask({ repo_id: repo.id, title: 'n', prompt: 'p' }).id;
   goneBranchId = db.addTask({ repo_id: repo.id, title: 'g', prompt: 'p' }).id;
-  db.updateTask(goneBranchId, { branch: 'agentdeck/task-404' });
+  db.setCheckout(goneBranchId, { branch: 'agentdeck/task-404' });
 });
 
 after(() => {
@@ -256,7 +256,7 @@ test('the base is the newer merge base of the local base branch and origin/<base
   git('branch', '-q', '-D', 'upstream');
 
   const t = db.addTask({ repo_id: db.findRepo('demo')!.id, title: 't2', prompt: 'p' });
-  db.updateTask(t.id, { branch: 'agentdeck/task-2' });
+  db.setCheckout(t.id, { branch: 'agentdeck/task-2' });
   const { body } = await get(`/api/tasks/${t.id}/changes`);
   assert.equal(body.base_ref, 'origin/main');
   assert.equal(body.base, upstream);

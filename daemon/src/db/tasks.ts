@@ -3,7 +3,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { DEFAULTS } from '../config.ts';
 import type { MergeMethod } from '../domain/pull-request/merge.ts';
 import { MAX_RESTARTS, type TaskEvent, type TaskStatus, fromStatuses, nextStatus, transition } from '../domain/task/lifecycle.ts';
-import type { TaskEventRow, TaskEventType } from '../domain/task/history.ts';
+import type { PrEvent, TaskEventRow, TaskEventType } from '../domain/task/history.ts';
 import { EDITABLE_STATUSES, OPEN_STATUSES, type Task, type TaskSummary } from '../domain/task/task.ts';
 import { NOW, atomically } from './sql.ts';
 
@@ -198,14 +198,36 @@ export function taskStore(db: DatabaseSync) {
         )
         .get(...keys.map((k) => fields[k] ?? null), id) as Task | undefined;
     },
-    updateTask(
-      id: number,
-      fields: Partial<Pick<Task, 'branch' | 'worktree' | 'stop_reason' | 'priority' | 'pr_url' | 'pr_state' | 'merge_method'>>,
-    ): void {
+    /** Where a task's work is checked out. Not a status, so unguarded. */
+    setCheckout(id: number, fields: Partial<Pick<Task, 'branch' | 'worktree'>>): void {
       const keys = Object.keys(fields) as (keyof typeof fields)[];
       if (keys.length === 0) return;
       const sets = keys.map((k) => `${k} = ?`).join(', ');
       db.prepare(`UPDATE tasks SET ${sets}, updated_at = ${NOW} WHERE id = ?`).run(...keys.map((k) => fields[k] ?? null), id);
+    },
+    /**
+     * Record a change to a task's PR: `pr_state` (and `pr_url` when opened) and a 'pr' history row, together.
+     * Guarded on the PR state the change starts from, like every task write: an opened or failed PR replaces anything
+     * but an open one (and needs a done task), a close or a sighting only moves an open PR. A merge recorded in
+     * between is therefore never undone. Returns false if the task was not in a state the change applies to.
+     */
+    recordPr(id: number, e: PrEvent): boolean {
+      const [set, params, guard, reason]: [string, (string | null)[], string, string] =
+        e.type === 'opened'
+          ? ["pr_url = ?, pr_state = 'open'", [e.url], "pr_state IS NOT 'open' AND status = 'done'", `opened ${e.url}`]
+          : e.type === 'failed'
+            ? ["pr_state = 'failed'", [], "pr_state IS NOT 'open' AND status = 'done'", `could not open the PR: ${e.error}`]
+            : e.type === 'closed'
+              ? ["pr_state = 'closed'", [], "pr_state = 'open'", 'closed without merging']
+              : ['pr_state = ?', [e.state], "pr_state = 'open' AND ? <> 'open'", `PR is ${e.state}`];
+      return atomically(db, () => {
+        const row = db
+          .prepare(`UPDATE tasks SET ${set}, updated_at = ${NOW} WHERE id = ? AND ${guard} RETURNING status`)
+          .get(...params, id, ...(e.type === 'seen' ? [e.state] : [])) as { status: TaskStatus } | undefined;
+        if (!row) return false;
+        recordEvent(id, 'pr', row.status, row.status, reason);
+        return true;
+      });
     },
     /**
      * Record that a done task's PR was merged: the PR state, the method and a history row, together.

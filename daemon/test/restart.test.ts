@@ -16,12 +16,13 @@ const { openDb } = await import('../src/db/index.ts');
 const flagsOf = (...argv: string[]) => parseCommandLine(argv).values;
 
 test('restartWait says what is active', () => {
-  assert.equal(restartWait({ tasks: 0, planner: 0 }), null);
-  assert.equal(restartWait({ tasks: 1, planner: 0 }), '1 running task');
-  assert.equal(restartWait({ tasks: 2, planner: 1 }), '2 running tasks and 1 planner run');
+  assert.equal(restartWait({ tasks: 0, planner: 0, resolves: 0 }), null);
+  assert.equal(restartWait({ tasks: 1, planner: 0, resolves: 0 }), '1 running task');
+  assert.equal(restartWait({ tasks: 2, planner: 1, resolves: 0 }), '2 running tasks and 1 planner run');
 });
 
-const base = { enabled: true, changed: ['a.ts'], lastChangeAt: 0, now: RELOAD_QUIET_MS + 1, tasks: 0, proposing: false };
+const idle = { tasks: 0, planner: 0, resolves: 0 };
+const base = { enabled: true, changed: ['a.ts'], lastChangeAt: 0, now: RELOAD_QUIET_MS + 1, activity: idle };
 
 test('reload: nothing happens when off or when nothing changed', () => {
   assert.deepEqual(reloadDecision({ ...base, enabled: false }), { pending: false, exit: false, reason: '' });
@@ -29,10 +30,13 @@ test('reload: nothing happens when off or when nothing changed', () => {
 });
 
 test('reload: waits for running work, and for edits to settle, then exits', () => {
-  const busy = reloadDecision({ ...base, tasks: 1 });
+  const busy = reloadDecision({ ...base, activity: { ...idle, tasks: 1 } });
   assert.deepEqual([busy.pending, busy.exit], [true, false]);
   assert.match(busy.reason, /1 running task/);
-  assert.equal(reloadDecision({ ...base, proposing: true }).exit, false);
+  assert.equal(reloadDecision({ ...base, activity: { ...idle, planner: 1 } }).exit, false);
+  const resolving = reloadDecision({ ...base, activity: { ...idle, resolves: 1 } });
+  assert.match(resolving.reason, /1 resolve run/);
+  assert.doesNotMatch(resolving.reason, /running task/);
   const fresh = reloadDecision({ ...base, now: 10 });
   assert.deepEqual([fresh.pending, fresh.exit], [true, false]);
   const ready = reloadDecision(base);
@@ -97,7 +101,7 @@ test('graceful restart restores the pause state when the restart fails', async (
 
 test('a requested restart exits once nothing is running, and waits otherwise', () => {
   const asked = { ...base, enabled: false, changed: [], requested: true };
-  const busy = reloadDecision({ ...asked, tasks: 1 });
+  const busy = reloadDecision({ ...asked, activity: { ...idle, tasks: 1 } });
   assert.deepEqual([busy.pending, busy.exit], [true, false]);
   assert.match(busy.reason, /restart requested.*1 running task/);
   const ready = reloadDecision(asked);

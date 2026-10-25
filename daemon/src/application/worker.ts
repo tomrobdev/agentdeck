@@ -13,11 +13,9 @@ import { type Run, type WorkerResult, firstDenial, isEnvironmentBlock, parseStat
 import { type Task, leftoversMessage, planStepIds } from '../domain/task/task.ts';
 import { type TaskRunEnd, openTaskRun, startTaskRun } from './claude-run.ts';
 import { syncBranch } from './sync.ts';
-import { warnStuckDependents } from './dependencies.ts';
-import { notifyLater } from './notifications.ts';
 import { pauseRepo } from './pause.ts';
 import { collectPlans, planForRun } from './plans.ts';
-import { openPullRequest } from './pull-requests.ts';
+import { settle } from './settle.ts';
 
 /** Run one attempt of a task that the scheduler has already claimed (status = running). */
 export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
@@ -31,7 +29,7 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
   } catch (err) {
     return finish(db, task, null, { outcome: 'failed', reason: `worktree: ${(err as Error).message}` });
   }
-  db.updateTask(task.id, { branch: wt.branch, worktree: wt.path });
+  db.setCheckout(task.id, { branch: wt.branch, worktree: wt.path });
 
   const opened = openTaskRun(db, task, 'work');
   const { runId, log } = opened;
@@ -169,11 +167,12 @@ async function finish(db: Db, task: Task, runId: number | null, res: WorkerResul
   switch (res.outcome) {
     case 'done':
     case 'cancelled':
-      db.applyEvent(task.id, { type: 'finish', outcome: res.outcome }, reason);
+      await settle(db, task.id, { type: 'finish', outcome: res.outcome }, reason);
       break;
     case 'blocked':
       // The environment, not the task, is to blame: the attempt is given back.
-      db.applyEvent(
+      await settle(
+        db,
         task.id,
         { type: 'finish', outcome: 'blocked', environment: res.environment === true },
         { ...reason, needs: res.needs ? JSON.stringify(res.needs) : null },
@@ -181,27 +180,11 @@ async function finish(db: Db, task: Task, runId: number | null, res: WorkerResul
       break;
     case 'rate_limited':
       // Not the task's fault: give the attempt back and requeue.
-      db.applyEvent(task.id, { type: 'rate_limited' });
+      await settle(db, task.id, { type: 'rate_limited' });
       break;
     case 'failed':
-      db.applyEvent(task.id, { type: 'finish', outcome: 'failed', retry: task.attempts < task.max_attempts }, reason);
+      await settle(db, task.id, { type: 'finish', outcome: 'failed', retry: task.attempts < task.max_attempts }, reason);
       break;
   }
-
-  // Tell a human about final outcomes (a failure that will be retried isn't final).
-  const final = db.getTask(task.id)!;
-  if (final.status === 'done' || final.status === 'blocked' || final.status === 'failed') {
-    const repo = db.getRepo(task.repo_id)?.name ?? '';
-    // The daemon opens the PR (agents cannot push). Whatever happens, the task stays done.
-    const pr = final.status === 'done' ? await openPullRequest(db, final) : {};
-    let body =
-      final.status === 'done'
-        ? `Ready to review on ${final.branch ?? 'its branch'}${repo ? ` in ${repo}` : ''}.`
-        : `${final.stop_reason ?? final.status}${repo ? ` (${repo})` : ''}`;
-    if (pr.url) body = `${body} PR: ${pr.url}`;
-    if (pr.error) body = `${body} Could not open a PR: ${pr.error}`;
-    notifyLater(db, { kind: final.status, title: `#${task.id} ${final.status}: ${task.title}`, body, task_id: task.id });
-  }
-  warnStuckDependents(db, task.id);
   return res;
 }

@@ -76,7 +76,7 @@ test('deleting an archived repo leaves no rows, worktree, branch or files, and s
   const kept = fill(keep, { worktree: false });
   const mine = fill(gone, { worktree: true });
   const { path: worktree, branch } = await ensureWorktree(gone, db.getTask(mine.task.id)!);
-  db.updateTask(mine.task.id, { worktree, branch });
+  db.setCheckout(mine.task.id, { worktree, branch });
   assert.ok(existsSync(worktree));
   const keptBefore = rowsFor(keep.id);
 
@@ -100,7 +100,7 @@ test('a missing worktree, branch or log does not stop it', async () => {
   const repo = makeRepo('hollow');
   const { task, logs } = fill(repo, { worktree: false });
   rmSync(logs[0]);
-  db.updateTask(task.id, { worktree: join(home, 'no-such-worktree'), branch: 'agentdeck/task-missing' });
+  db.setCheckout(task.id, { worktree: join(home, 'no-such-worktree'), branch: 'agentdeck/task-missing' });
   actions.archiveRepo(db, 'hollow');
   const res = await actions.deleteRepo(db, 'hollow');
   assert.deepEqual(res.leftover, []);
