@@ -145,10 +145,15 @@ export function taskStore(db: DatabaseSync) {
     dependentsOf(id: number): Task[] {
       return db.prepare("SELECT * FROM tasks WHERE after_task = ? AND status = 'queued' ORDER BY id").all(id) as unknown as Task[];
     },
-    /** Done tasks whose pull request is still open, for the state refresh. */
+    /**
+     * Tasks whose pull request is still open, for the state refresh: done ones, and blocked or failed ones
+     * (a conflict blocks a done task and keeps its PR; a retry that fails keeps it too).
+     */
     openPrTasks(): Task[] {
       return db
-        .prepare(`SELECT * FROM tasks WHERE status = 'done' AND pr_url IS NOT NULL AND pr_state = 'open' AND ${IN_ACTIVE_REPO('repo_id')}`)
+        .prepare(
+          `SELECT * FROM tasks WHERE status IN ('done', 'blocked', 'failed') AND pr_url IS NOT NULL AND pr_state = 'open' AND ${IN_ACTIVE_REPO('repo_id')}`,
+        )
         .all() as unknown as Task[];
     },
     /**

@@ -193,8 +193,8 @@ export interface PrRefresh {
 }
 
 /**
- * Re-read the state of every open PR of a done task, and whether it still merges cleanly. A failed lookup leaves
- * that task as it was. Resolving the conflicts it finds is the caller's call (`resolveConflicting`).
+ * Re-read the state of every open PR of a done task, and whether it still merges cleanly. A blocked or failed task
+ * whose PR was merged becomes done; its mergeability is not read. A failed lookup leaves that task as it was. Resolving the conflicts it finds is the caller's call (`resolveConflicting`).
  */
 export async function refreshPrStates(db: Db, log: (msg: string) => void = () => {}): Promise<PrRefresh> {
   const found: PrRefresh = { conflicting: [], unknown: 0 };
@@ -206,8 +206,14 @@ export async function refreshPrStates(db: Db, log: (msg: string) => void = () =>
         db.updateTask(task.id, { pr_state: state });
         log(`task ${task.id}: PR is ${state}`);
         if (state === 'closed') warnStuckDependents(db, task.id);
+        if (
+          state === 'merged' &&
+          task.status !== 'done' &&
+          db.applyEvent(task.id, { type: 'pr_merged' }, { reason: 'PR merged on GitHub' })
+        )
+          log(`task ${task.id}: PR merged, task is done`);
       }
-      if (state !== 'open') continue;
+      if (state !== 'open' || task.status !== 'done') continue;
       const pr = await github.prDetails(task.pr_url!, cwd);
       if (isConflicting(pr)) found.conflicting.push(task.id);
       else if (isMergeabilityUnknown(pr)) found.unknown++;
