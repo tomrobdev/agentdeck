@@ -15,9 +15,9 @@ process.env.AGENTDECK_CLAUDE_BIN = fake;
 
 const { openDb } = await import('../src/db/index.ts');
 const { blockedTask, doneTask, failedTask, openPr, rerun, settlePr } = await import('./fixtures.ts');
-const { Scheduler } = await import('../src/application/scheduler.ts');
+const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
 const { github } = await import('../src/adapters/github.ts');
-const { refreshPrStates } = await import('../src/application/pull-requests.ts');
+const { refreshPrStates } = await import('../src/application/pull-request/pull-requests.ts');
 const { addTask, ActionError, closeTaskPr, retryTask, updateRepo } = await import('../src/application/actions.ts');
 const { buildPrompt } = await import('../src/domain/run/prompt.ts');
 const { latestReviewNote } = await import('../src/domain/task/history.ts');
@@ -25,7 +25,7 @@ const { mergePreview, mergeTask } = await import('../src/application/actions.ts'
 const { mergeCheck, parsePrDetails } = await import('../src/domain/pull-request/merge.ts');
 type PrDetails = import('../src/domain/pull-request/merge.ts').PrDetails;
 const { dependencyState } = await import('../src/domain/task/dependency.ts');
-const { waitingFor } = await import('../src/application/dependencies.ts');
+const { waitingFor } = await import('../src/application/task/dependencies.ts');
 const { cancelTask } = await import('../src/application/actions.ts');
 
 const db = openDb(join(home, 'test.db'));

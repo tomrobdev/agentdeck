@@ -1,12 +1,12 @@
 // Settling a task: the daemon's own events that end a run or a wait, applied together with what follows them.
-import type { Db } from '../db/index.ts';
-import { finalNotification } from '../domain/notification.ts';
-import type { PrEvent } from '../domain/task/history.ts';
-import type { TaskEvent } from '../domain/task/lifecycle.ts';
-import type { Task } from '../domain/task/task.ts';
+import type { Db } from '../../db/index.ts';
+import { finalNotification } from '../../domain/notification.ts';
+import type { PrEvent } from '../../domain/task/history.ts';
+import type { TaskEvent } from '../../domain/task/lifecycle.ts';
+import type { Task } from '../../domain/task/task.ts';
 import { warnStuckDependents } from './dependencies.ts';
-import { notifyLater } from './notifications.ts';
-import { openPullRequest } from './open-pr.ts';
+import { notifyLater } from '../notifications.ts';
+import { openPullRequest } from '../pull-request/open-pr.ts';
 
 /**
  * Apply `event` to task `id` and everything that follows its new status: done opens the PR (unless the PR

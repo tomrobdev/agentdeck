@@ -1,15 +1,15 @@
 // Pull requests: open one when a task finishes, and keep the state of open ones fresh.
-import { removeWorktree } from '../adapters/git.ts';
-import { github } from '../adapters/github.ts';
-import type { Db } from '../db/index.ts';
-import { type CheckCounts, MERGE_METHODS, type MergeMethod, isMergeMethod, mergeCheck } from '../domain/pull-request/merge.ts';
-import { isConflicting, isMergeabilityUnknown } from '../domain/pull-request/conflict.ts';
-import { buildPrBody } from '../domain/pull-request/pr.ts';
-import { hasOpenPr } from '../domain/task/stage.ts';
-import type { Task } from '../domain/task/task.ts';
-import { ActionError, flag, object, requireTask, requireTaskRepo, text } from './input.ts';
-import { prPlanFor } from './plans.ts';
-import { settle, settlePr } from './settle.ts';
+import { removeWorktree } from '../../adapters/git.ts';
+import { github } from '../../adapters/github.ts';
+import type { Db } from '../../db/index.ts';
+import { type CheckCounts, MERGE_METHODS, type MergeMethod, isMergeMethod, mergeCheck } from '../../domain/pull-request/merge.ts';
+import { isConflicting, isMergeabilityUnknown } from '../../domain/pull-request/conflict.ts';
+import { buildPrBody } from '../../domain/pull-request/pr.ts';
+import { hasOpenPr } from '../../domain/task/stage.ts';
+import type { Task } from '../../domain/task/task.ts';
+import { ActionError, flag, object, requireTask, requireTaskRepo, text } from '../input.ts';
+import { prPlanFor } from '../plans.ts';
+import { settle, settlePr } from '../task/settle.ts';
 
 /** How often the scheduler re-reads the state of open PRs. */
 export const PR_REFRESH_MS = 3 * 60_000;

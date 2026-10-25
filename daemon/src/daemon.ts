@@ -4,7 +4,7 @@ import type { Db } from './db/index.ts';
 import { startApi } from './api/server.ts';
 import { checkoutCommit } from './adapters/git.ts';
 import { watchSource } from './adapters/watch.ts';
-import { Scheduler } from './application/scheduler.ts';
+import { Scheduler } from './application/scheduler/scheduler.ts';
 import { API_PORT, DEFAULTS } from './config.ts';
 import { type Activity, reloadDecision } from './domain/daemon/restart.ts';
 

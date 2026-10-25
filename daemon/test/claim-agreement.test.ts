@@ -9,7 +9,7 @@ process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-claim-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { openDb } = await import('../src/db/index.ts');
-const { startWaits } = await import('../src/application/queue.ts');
+const { startWaits } = await import('../src/application/scheduler/queue.ts');
 
 test('claimNextTask picks the first queued task, by priority then id, that has no startWait', () => {
   const db = openDb(':memory:');

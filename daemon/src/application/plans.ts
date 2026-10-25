@@ -5,7 +5,7 @@ import type { PrPlan } from '../domain/pull-request/pr.ts';
 import type { PromptPlan } from '../domain/run/prompt.ts';
 import { type Task, planStepIds } from '../domain/task/task.ts';
 import { ActionError, object, requireTask, text } from './input.ts';
-import { taskChanges, taskFile } from './files.ts';
+import { taskChanges, taskFile } from './task/files.ts';
 
 /**
  * Read the plans the task's branch added or changed under docs/plans/ and store them, dropping

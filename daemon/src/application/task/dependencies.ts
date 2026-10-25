@@ -1,9 +1,9 @@
 // Tasks waiting on another with `--after`: why they wait, and telling a human when they're stuck.
-import type { Db } from '../db/index.ts';
-import { type DependencyState, dependencyState } from '../domain/task/dependency.ts';
-import { isReview } from '../domain/task/stage.ts';
-import type { Task } from '../domain/task/task.ts';
-import { notifyLater } from './notifications.ts';
+import type { Db } from '../../db/index.ts';
+import { type DependencyState, dependencyState } from '../../domain/task/dependency.ts';
+import { isReview } from '../../domain/task/stage.ts';
+import type { Task } from '../../domain/task/task.ts';
+import { notifyLater } from '../notifications.ts';
 
 /** What a queued task with `after_task` is waiting for, or null if it isn't held back. */
 export interface Waiting {

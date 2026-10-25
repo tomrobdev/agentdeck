@@ -1,16 +1,16 @@
 // The sequence every task-bound claude run shares: log, run row, settings, the process, and what its end means.
 import { createWriteStream, type WriteStream } from 'node:fs';
 import { join } from 'node:path';
-import { type ClaudeResult, type UsageWindow, runClaude } from '../adapters/claude.ts';
-import { writeSettings } from '../adapters/run-log.ts';
-import { LOG_DIR, ensureDirs } from '../config.ts';
-import type { Db } from '../db/index.ts';
-import type { Repo } from '../domain/repo/repo.ts';
-import { claudeArgs } from '../domain/run/prompt.ts';
-import { parseNetwork, settingsPath, workerSettings } from '../domain/run/sandbox.ts';
-import { type Run, type RunClass, type RunKind, classifyRun, resultFields } from '../domain/run/run.ts';
-import type { Task } from '../domain/task/task.ts';
-import { effectiveTools } from './tools.ts';
+import { type ClaudeResult, type UsageWindow, runClaude } from '../../adapters/claude.ts';
+import { writeSettings } from '../../adapters/run-log.ts';
+import { LOG_DIR, ensureDirs } from '../../config.ts';
+import type { Db } from '../../db/index.ts';
+import type { Repo } from '../../domain/repo/repo.ts';
+import { claudeArgs } from '../../domain/run/prompt.ts';
+import { parseNetwork, settingsPath, workerSettings } from '../../domain/run/sandbox.ts';
+import { type Run, type RunClass, type RunKind, classifyRun, resultFields } from '../../domain/run/run.ts';
+import type { Task } from '../../domain/task/task.ts';
+import { effectiveTools } from '../tools.ts';
 
 /**
  * Write the sandbox and file-rule settings for a claude run in `worktree` (docs/adr/0001-worker-sandbox.md)

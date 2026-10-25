@@ -1,7 +1,7 @@
 // Pausing a repo: its queued tasks stay queued but aren't claimed until someone fixes the cause.
-import type { Db } from '../db/index.ts';
-import type { Repo } from '../domain/repo/repo.ts';
-import { notifyLater } from './notifications.ts';
+import type { Db } from '../../db/index.ts';
+import type { Repo } from '../../domain/repo/repo.ts';
+import { notifyLater } from '../notifications.ts';
 
 /**
  * Pause a repo and tell a human. A repo that is already paused keeps its first reason (and doesn't

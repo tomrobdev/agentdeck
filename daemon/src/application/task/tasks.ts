@@ -1,20 +1,20 @@
 // Use cases for tasks: add, edit, and move them through the lifecycle on a person's request.
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { commitFiles, readFile, removeWorktree, resolveCommit } from '../adapters/git.ts';
-import { runProgram } from '../adapters/shell.ts';
-import type { Db } from '../db/index.ts';
-import { PLAN_LIMIT, isPlanPath, parsePlan } from '../domain/plan/plan.ts';
-import type { Repo } from '../domain/repo/repo.ts';
-import { readNeeds } from '../domain/task/needs.ts';
-import { hasOpenPr } from '../domain/task/stage.ts';
-import { archivedRepoError, maxAttemptsError, maxTurnsError, modelError, priorityError, stepsNeedPlanError } from '../domain/task/rules.ts';
-import { EDITABLE_STATUSES, type Task, defaultTitle, planStepIds } from '../domain/task/task.ts';
-import { lastLine } from '../domain/text.ts';
-import { isSyncing } from './sync.ts';
+import { commitFiles, readFile, removeWorktree, resolveCommit } from '../../adapters/git.ts';
+import { runProgram } from '../../adapters/shell.ts';
+import type { Db } from '../../db/index.ts';
+import { PLAN_LIMIT, isPlanPath, parsePlan } from '../../domain/plan/plan.ts';
+import type { Repo } from '../../domain/repo/repo.ts';
+import { readNeeds } from '../../domain/task/needs.ts';
+import { hasOpenPr } from '../../domain/task/stage.ts';
+import { archivedRepoError, maxAttemptsError, maxTurnsError, modelError, priorityError, stepsNeedPlanError } from '../../domain/task/rules.ts';
+import { EDITABLE_STATUSES, type Task, defaultTitle, planStepIds } from '../../domain/task/task.ts';
+import { lastLine } from '../../domain/text.ts';
+import { isSyncing } from '../sync.ts';
 import { warnStuckDependents } from './dependencies.ts';
-import { ActionError, object, refuse, requireTask, requireTaskRepo, text, whole } from './input.ts';
-import { closePullRequest } from './pull-requests.ts';
+import { ActionError, object, refuse, requireTask, requireTaskRepo, text, whole } from '../input.ts';
+import { closePullRequest } from '../pull-request/pull-requests.ts';
 
 /** Step ids as the CLI types them (a,b) or the API sends them (an array); null when none are named. */
 function stepList(value: unknown): string[] | null {

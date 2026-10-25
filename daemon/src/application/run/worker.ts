@@ -1,21 +1,21 @@
 // Runs one attempt of a claimed task: worktree, setup, claude, tests, then the task's next status.
-import { commitLeftovers, commitsAhead, ensureWorktree } from '../adapters/git.ts';
-import { closeLog, writeEvent } from '../adapters/run-log.ts';
-import { runCommand } from '../adapters/shell.ts';
-import { SETUP_TIMEOUT_MS, TEST_TIMEOUT_MS, ensureDirs } from '../config.ts';
-import type { Db } from '../db/index.ts';
-import { conflictReason, syncSummary } from '../domain/branch/sync.ts';
-import { lastLine } from '../domain/text.ts';
-import { linkedSteps, unfinishedSteps, unfinishedSummary } from '../domain/plan/plan.ts';
-import { type PromptPlan, buildPrompt } from '../domain/run/prompt.ts';
-import { latestReviewNote } from '../domain/task/history.ts';
-import { type Run, type WorkerResult, firstDenial, isEnvironmentBlock, parseStatus } from '../domain/run/run.ts';
-import { type Task, leftoversMessage, planStepIds } from '../domain/task/task.ts';
+import { commitLeftovers, commitsAhead, ensureWorktree } from '../../adapters/git.ts';
+import { closeLog, writeEvent } from '../../adapters/run-log.ts';
+import { runCommand } from '../../adapters/shell.ts';
+import { SETUP_TIMEOUT_MS, TEST_TIMEOUT_MS, ensureDirs } from '../../config.ts';
+import type { Db } from '../../db/index.ts';
+import { conflictReason, syncSummary } from '../../domain/branch/sync.ts';
+import { lastLine } from '../../domain/text.ts';
+import { linkedSteps, unfinishedSteps, unfinishedSummary } from '../../domain/plan/plan.ts';
+import { type PromptPlan, buildPrompt } from '../../domain/run/prompt.ts';
+import { latestReviewNote } from '../../domain/task/history.ts';
+import { type Run, type WorkerResult, firstDenial, isEnvironmentBlock, parseStatus } from '../../domain/run/run.ts';
+import { type Task, leftoversMessage, planStepIds } from '../../domain/task/task.ts';
 import { type TaskRunEnd, openTaskRun, startTaskRun } from './claude-run.ts';
-import { syncBranch } from './sync.ts';
-import { pauseRepo } from './pause.ts';
-import { collectPlans, planForRun } from './plans.ts';
-import { settle } from './settle.ts';
+import { syncBranch } from '../sync.ts';
+import { pauseRepo } from '../scheduler/pause.ts';
+import { collectPlans, planForRun } from '../plans.ts';
+import { settle } from '../task/settle.ts';
 
 /** Run one attempt of a task that the scheduler has already claimed (status = running). */
 export async function runTask(db: Db, task: Task): Promise<WorkerResult> {

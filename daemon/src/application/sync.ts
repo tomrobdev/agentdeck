@@ -28,11 +28,11 @@ import { lastLine } from '../domain/text.ts';
 import { startDecision } from '../domain/task/start.ts';
 import { hasOpenPr } from '../domain/task/stage.ts';
 import { type Task, leftoversMessage } from '../domain/task/task.ts';
-import { startTaskRun } from './claude-run.ts';
+import { startTaskRun } from './run/claude-run.ts';
 import { ActionError, requireTask, requireTaskRepo } from './input.ts';
-import { startGate } from './gate.ts';
-import { logPrEvent } from './open-pr.ts';
-import { settle } from './settle.ts';
+import { startGate } from './scheduler/gate.ts';
+import { logPrEvent } from './pull-request/open-pr.ts';
+import { settle } from './task/settle.ts';
 
 /** What a sync of a task's branch came to. A merge that did not stick is already undone. */
 export type SyncResult =

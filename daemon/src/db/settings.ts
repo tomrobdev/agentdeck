@@ -3,7 +3,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { DEFAULTS } from '../config.ts';
 import { NOTIFY_KINDS, type NotifyKind, type NotifySettings } from '../domain/notification.ts';
 import type { PlannerSettings } from '../domain/planner/proposals.ts';
-import type { Settings } from '../domain/settings.ts';
+import type { Settings } from '../domain/settings/settings.ts';
 import { BUDGET_KEYS, type Budget, DEFAULT_BUDGET } from '../domain/usage/governor.ts';
 import { atomically } from './sql.ts';
 

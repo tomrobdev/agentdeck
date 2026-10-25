@@ -1,11 +1,11 @@
 // Opening a task's pull request when it finishes done.
-import { github } from '../adapters/github.ts';
-import { appendEvent } from '../adapters/run-log.ts';
-import type { Db } from '../db/index.ts';
-import { buildPrBody } from '../domain/pull-request/pr.ts';
-import { hasOpenPr } from '../domain/task/stage.ts';
-import type { Task } from '../domain/task/task.ts';
-import { prPlanFor } from './plans.ts';
+import { github } from '../../adapters/github.ts';
+import { appendEvent } from '../../adapters/run-log.ts';
+import type { Db } from '../../db/index.ts';
+import { buildPrBody } from '../../domain/pull-request/pr.ts';
+import { hasOpenPr } from '../../domain/task/stage.ts';
+import type { Task } from '../../domain/task/task.ts';
+import { prPlanFor } from '../plans.ts';
 
 /** Record a PR event on the task's latest run log, where `agentdeck log` and the dashboard show it. */
 export function logPrEvent(db: Db, taskId: number, event: { url?: string; error?: string }): void {

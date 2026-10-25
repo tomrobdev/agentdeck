@@ -1,19 +1,19 @@
 // The daemon's loop: claims queued tasks into free slots when the governor allows, runs the planner
 // when a queue runs dry, and refreshes open PRs.
-import { KeepAwake } from '../adapters/caffeinate.ts';
-import { activeChildren, killGroup, reapOrphans } from '../adapters/processes.ts';
-import { DEFAULTS } from '../config.ts';
-import type { Db } from '../db/index.ts';
-import { MAX_RESTARTS } from '../domain/task/lifecycle.ts';
-import { describeWait, startDecision } from '../domain/task/start.ts';
-import type { Activity, ReloadDecision } from '../domain/daemon/restart.ts';
+import { KeepAwake } from '../../adapters/caffeinate.ts';
+import { activeChildren, killGroup, reapOrphans } from '../../adapters/processes.ts';
+import { DEFAULTS } from '../../config.ts';
+import type { Db } from '../../db/index.ts';
+import { MAX_RESTARTS } from '../../domain/task/lifecycle.ts';
+import { describeWait, startDecision } from '../../domain/task/start.ts';
+import type { Activity, ReloadDecision } from '../../domain/daemon/restart.ts';
 import { startGate } from './gate.ts';
-import { notifyLater } from './notifications.ts';
-import { proposeNow, plannerDue } from './planner.ts';
-import { resolveConflicting } from './sync.ts';
-import { PR_REFRESH_MS, refreshPrStates } from './pull-requests.ts';
-import { settle, settleRecovered } from './settle.ts';
-import { runTask } from './worker.ts';
+import { notifyLater } from '../notifications.ts';
+import { proposeNow, plannerDue } from '../planner.ts';
+import { resolveConflicting } from '../sync.ts';
+import { PR_REFRESH_MS, refreshPrStates } from '../pull-request/pull-requests.ts';
+import { settle, settleRecovered } from '../task/settle.ts';
+import { runTask } from '../run/worker.ts';
 
 /** After a merge, how many times to re-read PRs whose mergeability GitHub is still computing, and how far apart. */
 const PR_RECHECKS = 6;

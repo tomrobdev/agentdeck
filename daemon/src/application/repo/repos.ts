@@ -1,20 +1,20 @@
 // Use cases for repos: register, configure, check, pause and resume.
-import { normalizeNetwork, settingsPath } from '../domain/run/sandbox.ts';
+import { normalizeNetwork, settingsPath } from '../../domain/run/sandbox.ts';
 import { existsSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
-import { deleteBranch, currentBranch, isGitRepo, pruneWorktrees, removeWorktree } from '../adapters/git.ts';
-import { deleteGoals, goalsPath, readGoals, writeGoals } from '../adapters/goals.ts';
-import { rootInfo } from '../adapters/repo-root.ts';
-import { removeFiles } from '../adapters/run-log.ts';
-import type { Db } from '../db/index.ts';
-import { MERGE_METHODS, type MergeMethod, isMergeMethod } from '../domain/pull-request/merge.ts';
-import { PR_MODES, type PrMode } from '../domain/pull-request/pr.ts';
-import type { Repo } from '../domain/repo/repo.ts';
-import { goalsError, networkError } from '../domain/repo/rules.ts';
-import { detectToolchain } from '../domain/repo/toolchain.ts';
+import { deleteBranch, currentBranch, isGitRepo, pruneWorktrees, removeWorktree } from '../../adapters/git.ts';
+import { deleteGoals, goalsPath, readGoals, writeGoals } from '../../adapters/goals.ts';
+import { rootInfo } from '../../adapters/repo-root.ts';
+import { removeFiles } from '../../adapters/run-log.ts';
+import type { Db } from '../../db/index.ts';
+import { MERGE_METHODS, type MergeMethod, isMergeMethod } from '../../domain/pull-request/merge.ts';
+import { PR_MODES, type PrMode } from '../../domain/pull-request/pr.ts';
+import type { Repo } from '../../domain/repo/repo.ts';
+import { goalsError, networkError } from '../../domain/repo/rules.ts';
+import { detectToolchain } from '../../domain/repo/toolchain.ts';
 import { type Check, runDoctor } from './doctor.ts';
-import { ActionError, flag, list, object, refuse, requireRepo, text, textOrNull } from './input.ts';
-import { pauseRepo } from './pause.ts';
+import { ActionError, flag, list, object, refuse, requireRepo, text, textOrNull } from '../input.ts';
+import { pauseRepo } from '../scheduler/pause.ts';
 
 /** Register a repo. Its toolchain is detected from the root files and fills in whatever isn't given. */
 export async function addRepo(

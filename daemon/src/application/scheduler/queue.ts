@@ -1,9 +1,9 @@
 // What queued tasks wait for: what holds the whole queue, and what each task waits for.
-import type { Db } from '../db/index.ts';
-import { dependencyOf } from './dependencies.ts';
-import type { Repo } from '../domain/repo/repo.ts';
-import { type QueueWait, type StartWait, startDecision, startWait } from '../domain/task/start.ts';
-import type { Task } from '../domain/task/task.ts';
+import type { Db } from '../../db/index.ts';
+import { dependencyOf } from '../task/dependencies.ts';
+import type { Repo } from '../../domain/repo/repo.ts';
+import { type QueueWait, type StartWait, startDecision, startWait } from '../../domain/task/start.ts';
+import type { Task } from '../../domain/task/task.ts';
 import { startGate } from './gate.ts';
 
 export interface PausedRepo {
