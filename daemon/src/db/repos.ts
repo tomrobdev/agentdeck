@@ -1,6 +1,7 @@
 // Registered repos.
 import type { DatabaseSync } from 'node:sqlite';
 import type { Repo } from '../domain/repo/repo.ts';
+import { NOW } from './sql.ts';
 
 export function repoStore(db: DatabaseSync) {
   return {
@@ -32,8 +33,18 @@ export function repoStore(db: DatabaseSync) {
     findRepo(nameOrId: string): Repo | undefined {
       return db.prepare('SELECT * FROM repos WHERE name = ? OR id = ?').get(nameOrId, Number(nameOrId) || -1) as Repo | undefined;
     },
-    listRepos(): Repo[] {
-      return db.prepare('SELECT * FROM repos ORDER BY name').all() as unknown as Repo[];
+    /** Active repos, or with `{ archived: true }` only the archived ones. */
+    listRepos(opts: { archived?: boolean } = {}): Repo[] {
+      const where = opts.archived ? 'archived_at IS NOT NULL' : 'archived_at IS NULL';
+      return db.prepare(`SELECT * FROM repos WHERE ${where} ORDER BY name`).all() as unknown as Repo[];
+    },
+    /** Archive (true) or unarchive (false) a repo. */
+    setRepoArchived(id: number, archived: boolean): void {
+      db.prepare(`UPDATE repos SET archived_at = ${archived ? NOW : 'NULL'} WHERE id = ?`).run(id);
+    },
+    /** Whether a task of the repo is running or has a cancel requested. */
+    repoHasRunning(id: number): boolean {
+      return !!db.prepare("SELECT 1 FROM tasks WHERE repo_id = ? AND status IN ('running', 'cancel_requested') LIMIT 1").get(id);
     },
     updateRepo(
       id: number,

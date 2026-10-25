@@ -24,6 +24,8 @@ export interface Repo {
   sandbox: number;
   /** JSON array of hosts sandboxed commands may reach. */
   network: string;
+  /** When the repo was archived; null while it is active. */
+  archived_at: string | null;
 }
 
 export type PrMode = 'off' | 'draft' | 'ready';

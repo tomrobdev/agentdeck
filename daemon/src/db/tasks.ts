@@ -14,6 +14,9 @@ const SUMMARY_COLUMNS =
 const statusList = (statuses: TaskStatus[]) => statuses.map((s) => `'${s}'`).join(', ');
 const OPEN = statusList(OPEN_STATUSES);
 
+/** SQL: the repo id column `col` belongs to a repo that isn't archived. Archived repos' tasks are left out of every list and count. */
+const IN_ACTIVE_REPO = (col: string) => `${col} IN (SELECT id FROM repos WHERE archived_at IS NULL)`;
+
 /**
  * SQL: tasks `d` that a dependent may build on: done, and merged unless their repo has pr_mode off.
  * A done task whose PR isn't opened yet (or failed to open) has pr_url NULL, so it must not count as met.
@@ -80,7 +83,7 @@ export function taskStore(db: DatabaseSync) {
       return db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as Task | undefined;
     },
     listTasks(): Task[] {
-      return db.prepare('SELECT * FROM tasks ORDER BY id DESC').all() as unknown as Task[];
+      return db.prepare(`SELECT * FROM tasks WHERE ${IN_ACTIVE_REPO('repo_id')} ORDER BY id DESC`).all() as unknown as Task[];
     },
     tasksForRepo(repo_id: number, limit = 40): Task[] {
       return db.prepare('SELECT * FROM tasks WHERE repo_id = ? ORDER BY id DESC LIMIT ?').all(repo_id, limit) as unknown as Task[];
@@ -94,19 +97,28 @@ export function taskStore(db: DatabaseSync) {
     },
     /** How many tasks are in each status (statuses with none are left out). */
     countByStatus(): Record<string, number> {
-      const rows = db.prepare('SELECT status, COUNT(*) AS n FROM tasks GROUP BY status').all() as { status: string; n: number }[];
+      const rows = db.prepare(`SELECT status, COUNT(*) AS n FROM tasks WHERE ${IN_ACTIVE_REPO('repo_id')} GROUP BY status`).all() as {
+        status: string;
+        n: number;
+      }[];
       return Object.fromEntries(rows.map((r) => [r.status, r.n]));
     },
     /** Done tasks whose pull request is open: the ones waiting for a review. */
     countReview(): number {
-      return (db.prepare("SELECT COUNT(*) AS n FROM tasks WHERE status = 'done' AND pr_state = 'open'").get() as { n: number }).n;
+      return (
+        db
+          .prepare(`SELECT COUNT(*) AS n FROM tasks WHERE status = 'done' AND pr_state = 'open' AND ${IN_ACTIVE_REPO('repo_id')}`)
+          .get() as {
+          n: number;
+        }
+      ).n;
     },
     /** Whether a task could be claimed: queued, not waiting on a dependency, in a repo that isn't paused. */
     hasQueued(): boolean {
       const row = db
         .prepare(
           `SELECT EXISTS(SELECT 1 FROM tasks t WHERE t.status = 'queued' AND ${NOT_WAITING}
-             AND t.repo_id IN (SELECT id FROM repos WHERE paused_reason IS NULL)) AS q`,
+             AND t.repo_id IN (SELECT id FROM repos WHERE paused_reason IS NULL AND archived_at IS NULL)) AS q`,
         )
         .get() as { q: number };
       return row.q === 1;
@@ -121,7 +133,7 @@ export function taskStore(db: DatabaseSync) {
       return db
         .prepare(
           `SELECT ${SUMMARY_COLUMNS} FROM tasks
-           WHERE (? IS NULL OR status = ?)
+           WHERE (? IS NULL OR status = ?) AND ${IN_ACTIVE_REPO('repo_id')}
              AND (id IN (SELECT id FROM tasks WHERE (? IS NULL OR status = ?) AND (? IS NULL OR id < ?) ORDER BY id DESC LIMIT ?)
                   OR (? IS NULL AND status IN (${OPEN})))
            ORDER BY id DESC`,
@@ -135,7 +147,7 @@ export function taskStore(db: DatabaseSync) {
     /** Done tasks whose pull request is still open, for the state refresh. */
     openPrTasks(): Task[] {
       return db
-        .prepare("SELECT * FROM tasks WHERE status = 'done' AND pr_url IS NOT NULL AND pr_state = 'open'")
+        .prepare(`SELECT * FROM tasks WHERE status = 'done' AND pr_url IS NOT NULL AND pr_state = 'open' AND ${IN_ACTIVE_REPO('repo_id')}`)
         .all() as unknown as Task[];
     },
     /**
@@ -152,7 +164,7 @@ export function taskStore(db: DatabaseSync) {
             `UPDATE tasks SET status = ?, attempts = attempts + 1, updated_at = ${NOW}
              WHERE status IN (${marks})
                AND id = (SELECT t.id FROM tasks t WHERE t.status IN (${marks}) AND ${NOT_WAITING}
-                           AND t.repo_id IN (SELECT id FROM repos WHERE paused_reason IS NULL)
+                           AND t.repo_id IN (SELECT id FROM repos WHERE paused_reason IS NULL AND archived_at IS NULL)
                          ORDER BY t.priority DESC, t.id LIMIT 1)
              RETURNING *`,
           )
@@ -235,7 +247,7 @@ export function taskStore(db: DatabaseSync) {
     planUnfinishedIds(): Set<number> {
       const rows = db
         .prepare(
-          `SELECT t.id FROM tasks t WHERE t.status = 'done' AND EXISTS (
+          `SELECT t.id FROM tasks t WHERE t.status = 'done' AND ${IN_ACTIVE_REPO('t.repo_id')} AND EXISTS (
              SELECT 1 FROM task_events e WHERE e.task_id = t.id AND e.type = 'plan_unfinished'
                AND e.id > COALESCE((SELECT MAX(c.id) FROM task_events c WHERE c.task_id = t.id AND c.type = 'claim'), 0))`,
         )

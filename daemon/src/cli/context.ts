@@ -27,6 +27,7 @@ export function parseCommandLine(argv: string[]) {
       attempt: { type: 'string' },
       note: { type: 'string' },
       raw: { type: 'boolean' },
+      archived: { type: 'boolean' },
       method: { type: 'string' },
       yes: { type: 'boolean', short: 'y' },
       'keep-branch': { type: 'boolean' },
