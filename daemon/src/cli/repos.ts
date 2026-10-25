@@ -1,5 +1,6 @@
 // Repo commands: register, configure and check repos, goals and the planner.
 import { readFileSync } from 'node:fs';
+import { createInterface } from 'node:readline/promises';
 import * as actions from '../application/actions.ts';
 import type { MergeMethod } from '../domain/pull-request/merge.ts';
 import type { PrMode } from '../domain/pull-request/pr.ts';
@@ -37,6 +38,23 @@ export const repoCommands: Record<string, Command> = {
       if (!path) die(`usage: agentdeck repo ${sub} <repo>`);
       const repo = sub === 'archive' ? actions.archiveRepo(db, path) : actions.unarchiveRepo(db, path);
       console.log(`${repo.name}: ${sub}d`);
+    } else if (sub === 'delete') {
+      if (!path) die('usage: agentdeck repo delete <repo> [--yes]');
+      const p = actions.repoDeletionPreview(db, path);
+      if (!p.archived) die(`${p.repo} is not archived; archive it first, then delete`);
+      console.log(
+        `${p.repo}: will delete ${p.tasks} tasks, ${p.runs} runs and ${p.worktrees} worktrees, with their logs and the goals file.`,
+      );
+      console.log('Nothing on GitHub or the remote is touched; open PRs stay open.');
+      if (!flags.yes) {
+        const rl = createInterface({ input: process.stdin, output: process.stdout });
+        const answer = await rl.question(`delete ${p.repo} for good? [y/N] `);
+        rl.close();
+        if (!/^y(es)?$/i.test(answer.trim())) return void console.log('not deleted');
+      }
+      const res = await actions.deleteRepo(db, path);
+      console.log(`${res.repo}: deleted`);
+      for (const l of res.leftover) console.log(`could not remove: ${l}`);
     } else if (sub === 'set') {
       const [, name, key, value = ''] = rest;
       if (

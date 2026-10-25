@@ -69,6 +69,7 @@ export function startApi(
     ['POST', /^\/api\/repos\/(\d+)\/resume$/, (_q, _s, [id]) => actions.resumeRepo(db, Number(id))],
     ['POST', /^\/api\/repos\/(\d+)\/archive$/, (_q, _s, [id]) => actions.archiveRepo(db, Number(id))],
     ['POST', /^\/api\/repos\/(\d+)\/unarchive$/, (_q, _s, [id]) => actions.unarchiveRepo(db, Number(id))],
+    ['DELETE', /^\/api\/repos\/(\d+)$/, (_q, _s, [id]) => actions.deleteRepo(db, Number(id))],
     ['POST', /^\/api\/tasks\/(\d+)\/approve$/, (_q, _s, [id]) => (actions.approveTask(db, Number(id)), taskDetail(db, Number(id)))],
     ['POST', /^\/api\/tasks\/(\d+)\/reject$/, (_q, _s, [id]) => (actions.rejectTask(db, Number(id)), taskDetail(db, Number(id)))],
     [
@@ -161,7 +162,7 @@ export function startApi(
       res.setHeader('Vary', 'Origin');
     }
     if (req.method === 'OPTIONS') {
-      res.writeHead(204, { 'Access-Control-Allow-Methods': 'GET, POST', 'Access-Control-Allow-Headers': 'Content-Type' });
+      res.writeHead(204, { 'Access-Control-Allow-Methods': 'GET, POST, DELETE', 'Access-Control-Allow-Headers': 'Content-Type' });
       return void res.end();
     }
 

@@ -6,6 +6,7 @@ Repos
   agentdeck repo ls [--archived]                  list repos (only the archived ones with --archived)
   agentdeck repo archive <repo>                   hide the repo and its tasks and stop its work; refuses while a task runs
   agentdeck repo unarchive <repo>                 bring an archived repo and its tasks back as they were
+  agentdeck repo delete <repo> [--yes]            delete an archived repo, its tasks, runs, worktrees and logs for good (local only); asks unless --yes
   agentdeck repo doctor <repo>                    check the repo is ready for unattended runs; pauses it if not (exit 1)
   agentdeck repo resume <repo>                    let a paused repo's tasks run again
   agentdeck repo set <repo> auto_approve on|off   planner tasks skip approval

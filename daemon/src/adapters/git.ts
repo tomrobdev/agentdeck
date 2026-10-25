@@ -200,6 +200,16 @@ export async function removeWorktree(repo: Repo, path: string): Promise<void> {
   await git(repo.path, 'worktree', 'remove', '--force', path);
 }
 
+/** Delete a local branch, even unmerged. A branch that is already gone is fine. */
+export async function deleteBranch(repoPath: string, branch: string): Promise<void> {
+  if (await branchExists(repoPath, branch)) await git(repoPath, 'branch', '-D', branch);
+}
+
+/** Drop the records of worktrees whose folders are gone. */
+export async function pruneWorktrees(repoPath: string): Promise<void> {
+  await git(repoPath, 'worktree', 'prune');
+}
+
 export async function isGitRepo(path: string): Promise<boolean> {
   try {
     return (await git(path, 'rev-parse', '--is-inside-work-tree')) === 'true';
