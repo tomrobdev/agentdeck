@@ -1,8 +1,12 @@
 // Use cases for tasks: add, edit, and move them through the lifecycle on a person's request.
-import { readFile, resolveCommit } from '../adapters/git.ts';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { git, readFile, resolveCommit } from '../adapters/git.ts';
+import { lastLine, runProgram } from '../adapters/shell.ts';
 import type { Db } from '../db/index.ts';
 import { PLAN_LIMIT, isPlanPath, parsePlan } from '../domain/plan/plan.ts';
 import type { Repo } from '../domain/repo/repo.ts';
+import { readNeeds } from '../domain/run/run.ts';
 import { EDITABLE_STATUSES, type Task, defaultTitle, planStepIds } from '../domain/task/task.ts';
 import { isSyncing } from './conflicts.ts';
 import { warnStuckDependents } from './dependencies.ts';
@@ -174,6 +178,60 @@ export function retryTask(db: Db, id: number, note?: string): void {
   if (note !== undefined && typeof note !== 'string') throw new ActionError('note must be text');
   // One more attempt on top of what has been used.
   if (!db.applyEvent(id, { type: 'retry' }, { reason: note?.trim() || null })) throw new ActionError(`#${id} is ${t.status}`);
+}
+
+const INSTALLERS = ['pnpm', 'yarn', 'npm'];
+const LOCKFILES: Record<string, string> = { pnpm: 'pnpm-lock.yaml', yarn: 'yarn.lock', npm: 'package-lock.json' };
+const INSTALL_TIMEOUT_MS = 10 * 60_000;
+/** An npm package spec: `name`, `@scope/name` or either with `@version-or-tag`. No shell metacharacters, no leading dash. */
+const PACKAGE_SPEC = /^(@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*(@[A-Za-z0-9][A-Za-z0-9._^~*+-]*)?$/;
+
+/** The packages a deps request names and whether they go in devDependencies (`--dev` or `-D` among the items). */
+export function parseDepsRequest(items: string[]): { packages: string[]; dev: boolean } {
+  const dev = items.some((i) => i === '--dev' || i === '-D');
+  const packages = items.filter((i) => i !== '--dev' && i !== '-D');
+  if (!packages.length) throw new ActionError('the request names no packages');
+  const bad = packages.filter((p) => !PACKAGE_SPEC.test(p));
+  if (bad.length) throw new ActionError(`not a valid package name: ${bad.join(' ')}`);
+  return { packages, dev };
+}
+
+/**
+ * Install the packages a blocked task asked for (NEEDS deps) on its branch, then retry it. Only a person's request
+ * gets here (the API and the CLI); the worker and scheduler never call it. The package manager runs in the task's
+ * worktree through the daemon, outside the worker's sandbox. On failure the task stays blocked.
+ */
+export async function installNeeds(db: Db, id: number): Promise<{ packages: string[]; dev: boolean }> {
+  const task = db.getTask(id);
+  if (!task) throw new ActionError('no such task');
+  if (task.status !== 'blocked') throw new ActionError(`#${id} is ${task.status}, not blocked`);
+  const needs = readNeeds(task.needs);
+  if (needs?.kind !== 'deps') throw new ActionError(`#${id} has not asked for packages`);
+  const repo = db.getRepo(task.repo_id);
+  if (!repo) throw new ActionError('the task has no repo');
+  const toolchain = repo.toolchain ?? '';
+  if (!INSTALLERS.includes(toolchain))
+    throw new ActionError(
+      `${repo.name} uses ${toolchain || 'no detected toolchain'}: install ${needs.items.join(' ')} on the branch yourself, then retry`,
+    );
+  const { packages, dev } = parseDepsRequest(needs.items);
+  if (!task.worktree || !existsSync(task.worktree)) throw new ActionError(`#${id} has no worktree to install into`);
+  if (isSyncing(id)) throw new ActionError(`#${id} is being brought up to date with its base branch; try again when that is done`);
+
+  const args = toolchain === 'npm' ? ['install', dev ? '--save-dev' : '--save', ...packages] : ['add', ...(dev ? ['-D'] : []), ...packages];
+  const result = await runProgram(toolchain, args, task.worktree, INSTALL_TIMEOUT_MS);
+  if (!result.passed) {
+    throw new ActionError(`${toolchain} ${args[0]} failed: ${lastLine(result.output)}`);
+  }
+  const files = ['package.json', LOCKFILES[toolchain]].filter((f) => existsSync(join(task.worktree!, f)));
+  try {
+    await git(task.worktree, 'add', '--', ...files);
+    await git(task.worktree, 'commit', '-q', '-m', `agentdeck: add ${packages.join(' ')} for task #${id}`, '--', ...files);
+  } catch (err) {
+    throw new ActionError(`installed, but could not commit: ${lastLine((err as Error).message)}`);
+  }
+  retryTask(db, id, `AgentDeck installed ${packages.join(' ')}${dev ? ' (dev)' : ''} on the branch at the person's request.`);
+  return { packages, dev };
 }
 
 /** Close a task's open PR without merging it. Tasks waiting on it become stuck. */

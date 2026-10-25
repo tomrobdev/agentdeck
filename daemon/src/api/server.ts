@@ -101,6 +101,11 @@ export function startApi(
     ['POST', /^\/api\/tasks\/(\d+)\/retry$/, (_q, _s, [id], b) => (actions.retryTask(db, Number(id), b?.note), taskDetail(db, Number(id)))],
     [
       'POST',
+      /^\/api\/tasks\/(\d+)\/install-needs$/,
+      async (_q, _s, [id]) => (await actions.installNeeds(db, Number(id)), taskDetail(db, Number(id))),
+    ],
+    [
+      'POST',
       /^\/api\/tasks\/(\d+)\/close-pr$/,
       async (_q, _s, [id]) => (await actions.closeTaskPr(db, Number(id)), taskDetail(db, Number(id))),
     ],
