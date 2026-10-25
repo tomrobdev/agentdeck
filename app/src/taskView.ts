@@ -58,8 +58,7 @@ const ATTENTION: Record<StatusGroup, number> = {
   running: 3,
   queued: 4,
   done: 5,
-  merged: 6,
-  cancelled: 7,
+  cancelled: 6,
 };
 
 /** The tasks waiting on this PR. A daemon from before the field existed sends none, which reads as empty. */

@@ -31,13 +31,14 @@ const display = ref<Display>(
     sort: 'attention',
     show: { repo: true, pr: true, time: true, reason: true },
     showEmpty: false,
-    collapsed: ['cancelled', 'merged'],
+    collapsed: ['cancelled', 'done'],
   }),
 );
-// Settings saved before the Merged group existed: collapse it once, then leave it to the user.
-if (loadSetting<boolean>('mergedCollapsed', false) === false) {
-  if (!display.value.collapsed.includes('merged')) display.value = { ...display.value, collapsed: [...display.value.collapsed, 'merged'] };
-  saveSetting('mergedCollapsed', true);
+// Merged is part of Done now, which holds the finished history it did: collapse Done once, then leave it to the user.
+if (loadSetting<boolean>('doneCollapsed', false) === false) {
+  const collapsed = display.value.collapsed.filter((k) => k !== 'merged');
+  display.value = { ...display.value, collapsed: collapsed.includes('done') ? collapsed : [...collapsed, 'done'] };
+  saveSetting('doneCollapsed', true);
 }
 // The search box isn't remembered; the rest of the filters are.
 const saved = loadSetting<Omit<Filters, 'search'>>('filters', { states: [], repos: [], source: null });

@@ -8,7 +8,10 @@ export const isReview = (t: Pick<TaskSummary, 'status' | 'pr_state'>) => t.statu
 export const isMerged = (t: Pick<TaskSummary, 'status' | 'pr_state'>) => t.status === 'done' && t.pr_state === 'merged';
 export const isStuck = (t: Pick<TaskSummary, 'status' | 'waiting'>) => t.status === 'queued' && !!t.waiting?.stuck;
 
-/** Status groups, in attention order. Every task is in exactly one; a stuck task needs you, so it isn't queued. */
+/**
+ * Status groups, in attention order. Every task is in exactly one; a stuck task needs you, so it isn't queued. Done holds every
+ * finished task whose PR doesn't wait on you: merged, closed, or none. The PR chip tells them apart.
+ */
 export const STATUS_GROUPS = [
   { key: 'needs-you', label: 'Needs you' },
   { key: 'review', label: 'Review' },
@@ -16,7 +19,6 @@ export const STATUS_GROUPS = [
   { key: 'running', label: 'Running' },
   { key: 'queued', label: 'Queued' },
   { key: 'done', label: 'Done' },
-  { key: 'merged', label: 'Merged' },
   { key: 'cancelled', label: 'Cancelled' },
 ] as const;
 export type StatusGroup = (typeof STATUS_GROUPS)[number]['key'];
@@ -31,7 +33,7 @@ export function statusGroup(t: Pick<TaskSummary, 'status' | 'waiting' | 'pr_stat
     case 'cancel_requested':
       return 'running';
     case 'done':
-      return isReview(t) ? 'review' : isMerged(t) ? 'merged' : 'done';
+      return isReview(t) ? 'review' : 'done';
     default:
       return t.status;
   }

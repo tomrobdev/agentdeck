@@ -46,12 +46,11 @@ const STATE_NAMES = [...Object.keys(GROUPS), ...Object.keys(STATES)];
 
 type Compare = (a: ListedTask, b: ListedTask) => number;
 
-/** The dashboard's status groups in attention order: what needs you, review, proposals, running, queued, done, merged, cancelled. */
+/** The dashboard's status groups in attention order: what needs you, review, proposals, running, queued, done (merged too), cancelled. */
 function attentionRank(t: ListedTask): number {
   if (GROUPS['needs-you'](t)) return 0;
   if (review(t)) return 1;
-  if (merged(t)) return 6;
-  return { proposed: 2, running: 3, cancel_requested: 3, queued: 4, done: 5, cancelled: 7, blocked: 0, failed: 0 }[t.status];
+  return { proposed: 2, running: 3, cancel_requested: 3, queued: 4, done: 5, cancelled: 6, blocked: 0, failed: 0 }[t.status];
 }
 
 export const SORTS: Record<string, Compare> = {

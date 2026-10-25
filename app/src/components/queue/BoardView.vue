@@ -95,7 +95,9 @@ const LABELS: Record<BoardMove, string> = {
           <div class="mt-1 mb-1.5 line-clamp-2 font-medium">{{ t.title }}</div>
           <div class="flex flex-wrap items-center gap-1">
             <span v-if="show.repo" class="chip">{{ t.repo }}</span>
-            <span v-if="show.pr && t.pr_url" class="chip">PR {{ t.pr_state ?? 'open' }}</span>
+            <span v-if="show.pr && t.pr_url" class="chip" :class="t.pr_state === 'merged' ? 'chip-merged' : ''"
+              >PR {{ t.pr_state ?? 'open' }}</span
+            >
             <span v-if="t.waiting" class="chip">{{ t.waiting.stuck ? 'stuck' : `waiting #${t.waiting.on}` }}</span>
             <span v-if="unblocksOf(t).length" class="chip"
               >unblocks

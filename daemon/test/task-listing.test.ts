@@ -83,8 +83,8 @@ test('sorts', () => {
   assert.deepEqual(ids({ sort: 'updated' })[0], 1);
   assert.deepEqual(
     ids({ sort: 'attention' }),
-    [4, 3, 10, 9, 8, 7, 6, 5, 13, 2, 11, 1, 12],
-    'needs you, review (the PR others wait on first), proposed, running, queued, done, merged, cancelled',
+    [4, 3, 10, 9, 8, 7, 6, 5, 13, 11, 2, 1, 12],
+    'needs you, review (the PR others wait on first), proposed, running, queued, done (merged or not), cancelled',
   );
 });
 
