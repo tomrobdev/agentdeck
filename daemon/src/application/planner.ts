@@ -9,8 +9,7 @@ import type { Db } from '../db/index.ts';
 import { type ProposalResult, buildPlannerPrompt, plannerArgs, plannerDueReason, selectProposals } from '../domain/planner/proposals.ts';
 import type { Repo } from '../domain/repo/repo.ts';
 import { recordRateLimit, usageRecorder } from './claude-run.ts';
-import { ActionError } from './errors.ts';
-import { requireRepo } from './lookups.ts';
+import { ActionError, requireRepo } from './input.ts';
 import { notifyLater } from './notifications.ts';
 
 /** Why the planner should run for this repo now, or null. */

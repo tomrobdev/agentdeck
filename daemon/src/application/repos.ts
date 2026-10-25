@@ -13,9 +13,7 @@ import type { Repo } from '../domain/repo/repo.ts';
 import { goalsError, networkError } from '../domain/repo/rules.ts';
 import { detectToolchain } from '../domain/repo/toolchain.ts';
 import { type Check, runDoctor } from './doctor.ts';
-import { ActionError, refuse } from './errors.ts';
-import { flag, list, object, text, textOrNull } from './input.ts';
-import { requireRepo } from './lookups.ts';
+import { ActionError, flag, list, object, refuse, requireRepo, text, textOrNull } from './input.ts';
 import { pauseRepo } from './pause.ts';
 
 /** Register a repo. Its toolchain is detected from the root files and fills in whatever isn't given. */

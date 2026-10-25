@@ -1,5 +1,5 @@
 // Argument handling for the service, logs and restart commands, kept apart so it can be tested.
-import { ActionError } from '../application/errors.ts';
+import { ActionError } from '../application/actions.ts';
 import type { CommandContext } from './context.ts';
 
 export type ServiceAction = 'status' | 'start' | 'stop';

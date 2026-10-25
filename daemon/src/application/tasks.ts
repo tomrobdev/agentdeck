@@ -13,9 +13,7 @@ import { EDITABLE_STATUSES, type Task, defaultTitle, planStepIds } from '../doma
 import { lastLine } from '../domain/text.ts';
 import { isSyncing } from './sync.ts';
 import { warnStuckDependents } from './dependencies.ts';
-import { ActionError, refuse } from './errors.ts';
-import { object, text, whole } from './input.ts';
-import { requireTask, requireTaskRepo } from './lookups.ts';
+import { ActionError, object, refuse, requireTask, requireTaskRepo, text, whole } from './input.ts';
 import { closePullRequest } from './pull-requests.ts';
 
 /** Step ids as the CLI types them (a,b) or the API sends them (an array); null when none are named. */

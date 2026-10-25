@@ -118,6 +118,17 @@ test('each layer imports only the layers below it', () => {
   assert.deepEqual(found, []);
 });
 
+test('api/ and cli/ reach application/ only through actions.ts', () => {
+  const found: string[] = [];
+  for (const s of sources.filter((s) => ['api', 'cli', 'cli.ts'].includes(layerOf(s.path)))) {
+    for (const i of s.imports) {
+      if (i.target?.startsWith('application/') && i.target !== 'application/actions.ts')
+        found.push(`${at(s, i.line)} imports ${i.target}: entry points use the use cases through application/actions.ts`);
+    }
+  }
+  assert.deepEqual(found, []);
+});
+
 test('api/contract.ts imports nothing', () => {
   const contract = sources.find((s) => s.path === 'api/contract.ts')!;
   assert.deepEqual(

@@ -4,7 +4,7 @@ import type { StartWait } from '../domain/task/start.ts';
 import type { TaskStatus } from '../domain/task/lifecycle.ts';
 import type { Task } from '../domain/task/task.ts';
 import { type Waiting, unblocksOf, waitingFor } from './dependencies.ts';
-import { requireTask } from './lookups.ts';
+import { requireTask } from './input.ts';
 import { startWaits } from './queue.ts';
 
 /** What the queue says about one task, beyond the task row. */
