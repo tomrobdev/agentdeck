@@ -20,10 +20,10 @@ export function dependencyOf(db: Db, task: Pick<Task, 'after_task'>): Dependency
 }
 
 export function waitingFor(db: Db, task: Pick<Task, 'status' | 'after_task'>): Waiting | null {
-  if (task.status !== 'queued' || task.after_task === null) return null;
+  if (task.status !== 'queued') return null;
   const state = dependencyOf(db, task);
-  if (state.kind === 'waiting') return { on: task.after_task, stuck: null };
-  if (state.kind === 'stuck') return { on: task.after_task, stuck: state.reason };
+  if (state.kind === 'waiting') return { on: state.on, stuck: null };
+  if (state.kind === 'stuck') return { on: state.on, stuck: state.reason };
   return null;
 }
 
