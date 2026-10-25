@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { type TaskDetail, ago, fmtTokens, runDuration, totalTokens } from '../../api';
-import LogView from '../LogView.vue';
+import LogView from './LogView.vue';
 import Markdown from '../files/Markdown.vue';
 import FinalMessage from './FinalMessage.vue';
 

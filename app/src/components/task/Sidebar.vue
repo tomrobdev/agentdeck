@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { type TaskDetail, api } from '../../api';
-import { openExternal, useCopy } from '../../native';
+import { openExternal, useCopy } from '../../platform/native';
 import { openTask } from '../../router';
-import { PRIORITY_LEVELS, canEdit, priorityLevel, statusLabel } from '../../taskView';
-import { useActions } from '../../useActions';
-import PriorityIcon from '../queue/PriorityIcon.vue';
-import StatusIcon from '../queue/StatusIcon.vue';
+import { PRIORITY_LEVELS, canEdit, priorityLevel, statusLabel } from '../../lib/taskView';
+import { useActions } from '../../composables/useActions';
+import PriorityIcon from '../ui/PriorityIcon.vue';
+import StatusIcon from '../ui/StatusIcon.vue';
 
 // Task properties, GitHub-sidebar style. Priority, model and turns are editable while the task is.
 const props = defineProps<{ task: TaskDetail }>();

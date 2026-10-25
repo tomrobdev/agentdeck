@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { type TaskSummary, ago } from '../../api';
-import { type BoardMove, type Group, type StatusGroup, boardMove, unblocksOf } from '../../taskView';
+import { type BoardMove, type Group, type StatusGroup, boardMove, unblocksOf } from '../../lib/taskView';
 import MarkDoneDialog from '../task/MarkDoneDialog.vue';
-import PriorityIcon from './PriorityIcon.vue';
-import StatusIcon from './StatusIcon.vue';
+import PriorityIcon from '../ui/PriorityIcon.vue';
+import StatusIcon from '../ui/StatusIcon.vue';
 
 // Columns are the status groups. A drop is allowed only where it is a real lifecycle event.
 const props = defineProps<{ groups: Group[]; selected: number | null; show: { repo: boolean; pr: boolean } }>();

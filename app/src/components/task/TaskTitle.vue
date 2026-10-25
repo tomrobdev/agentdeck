@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { type TaskDetail, api } from '../../api';
-import { canEdit } from '../../taskView';
-import { useActions } from '../../useActions';
+import { canEdit } from '../../lib/taskView';
+import { useActions } from '../../composables/useActions';
 
 // The title, edited in place while the task is editable.
 const props = defineProps<{ task: TaskDetail }>();

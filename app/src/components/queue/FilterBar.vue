@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import type { TaskSummary } from '../../api';
-import { useHotkeys } from '../../hotkeys';
-import { FILTER_STATES, type Filters, hasFilters } from '../../taskView';
-import Popover from './Popover.vue';
+import { useHotkeys } from '../../composables/useHotkeys';
+import { FILTER_STATES, type Filters, hasFilters } from '../../lib/taskView';
+import Popover from '../ui/Popover.vue';
 
 const props = defineProps<{ tasks: TaskSummary[] }>();
 const filters = defineModel<Filters>({ required: true });

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
 import { type PlanStep, type TaskPlan, ago, api } from '../../api';
-import { type ModeKey, mode } from '../../theme';
+import { type ModeKey, mode } from '../../platform/theme';
 
 // One plan attached to the task: its steps and how far they got, and the whole page on request.
 // The page runs in a sandboxed frame with no scripts; same-origin only so we can size and scroll it.

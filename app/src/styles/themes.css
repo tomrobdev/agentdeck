@@ -1,11 +1,11 @@
 /*
- * Themes: sets of colour tokens. <html data-theme="…" data-mode="system|light|dark"> picks one (see theme.ts).
+ * Themes: sets of colour tokens. <html data-theme="…" data-mode="system|light|dark"> picks one (see platform/theme.ts).
  *
  * Each theme has a light rule, a dark rule, and the dark values again under prefers-color-scheme for data-mode="system".
  * Keep the system copy identical to the dark rule: daemon/test/themes.test.ts checks that, and that every pair
  * the dashboard draws (text, status colours, code, tints) reaches WCAG AA in both modes.
  *
- * Warm is the default, and also applies before theme.ts has run.
+ * Warm is the default, and also applies before platform/theme.ts has run.
  */
 
 /* ── Warm: the original neutral greys with a terracotta accent ───────────── */

@@ -1,7 +1,7 @@
 /*
  * The dashboard's stylesheet: Tailwind v4 plus the few things utilities cannot express well.
  *
- * Colours come from themes.css (plain custom properties picked by data-theme and data-mode on <html>, see theme.ts).
+ * Colours come from themes.css (plain custom properties picked by data-theme and data-mode on <html>, see platform/theme.ts).
  * @theme inline below exposes them as utilities (bg-panel, text-muted, border-border), reading the variable where it is
  * used, so a theme or mode switch needs no rebuild. Components use utilities in their templates; what stays here is
  * the highlight.js classes, the status hooks (.s-*), and a handful of repeated patterns written once.

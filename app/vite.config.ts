@@ -16,7 +16,7 @@ function headCommit(): string | null {
   }
 }
 
-/** In dev the page re-reads the commit when it hot-reloads (src/build.ts), so it never has to guess. */
+/** In dev the page re-reads the commit when it hot-reloads (src/platform/build.ts), so it never has to guess. */
 const commitEndpoint = (): Plugin => ({
   name: 'agentdeck-commit',
   configureServer(server) {

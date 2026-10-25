@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import type { TaskSummary } from '../../api';
-import { useHotkeys } from '../../hotkeys';
+import { useHotkeys } from '../../composables/useHotkeys';
 import { go, route } from '../../router';
 import {
   type BoardMove,
@@ -10,11 +10,10 @@ import {
   emptyFilters,
   groupTasks,
   hasFilters,
-  loadSetting,
   personEvents,
   quickRetry,
-  saveSetting,
-} from '../../taskView';
+} from '../../lib/taskView';
+import { loadSetting, saveSetting } from '../../lib/storage';
 import BoardView from './BoardView.vue';
 import DisplayMenu, { type Display } from './DisplayMenu.vue';
 import FilterBar from './FilterBar.vue';

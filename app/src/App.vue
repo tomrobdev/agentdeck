@@ -1,19 +1,19 @@
 <script setup lang="ts">
 import { type Ref, computed, onBeforeUnmount, onMounted, ref, watch, watchEffect } from 'vue';
 import { ApiError, type Repo, type Status, type TaskSummary, type TaskDetail as Detail, api, describeState } from './api';
-import { setTrayStatus } from './native';
-import NewTaskForm from './components/NewTaskForm.vue';
-import WaitBar from './components/queue/WaitBar.vue';
-import ReposPanel from './components/ReposPanel.vue';
-import SettingsPanel from './components/SettingsPanel.vue';
-import StaleDaemonBar from './components/StaleDaemonBar.vue';
-import AppHeader from './components/AppHeader.vue';
-import StatusBar from './components/StatusBar.vue';
+import { setTrayStatus } from './platform/native';
+import NewTaskForm from './components/panels/NewTaskForm.vue';
+import WaitBar from './components/layout/WaitBar.vue';
+import ReposPanel from './components/panels/ReposPanel.vue';
+import SettingsPanel from './components/panels/SettingsPanel.vue';
+import StaleDaemonBar from './components/layout/StaleDaemonBar.vue';
+import AppHeader from './components/layout/AppHeader.vue';
+import StatusBar from './components/layout/StatusBar.vue';
 import QueueView from './components/queue/QueueView.vue';
 import TaskPage from './components/task/TaskPage.vue';
 import { openTask, route } from './router';
-import { type BoardMove, needYouCount, openingTab } from './taskView';
-import { provideActions } from './useActions';
+import { type BoardMove, needYouCount, openingTab } from './lib/taskView';
+import { provideActions } from './composables/useActions';
 
 const POLL_MS = 2000;
 

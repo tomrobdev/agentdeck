@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { type MergeMethod, type MergePreview, type MergeResult, MERGE_METHODS, api } from '../../api';
-import { useActions } from '../../useActions';
-import Modal from '../Modal.vue';
+import { useActions } from '../../composables/useActions';
+import Modal from '../ui/Modal.vue';
 
 // The confirm before a merge: it writes to the base branch on GitHub and can't be undone from here.
 // Enter merges, Esc cancels (Modal). Errors show in the dialog, so it asks for the refresh, not `run`.

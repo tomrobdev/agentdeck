@@ -1,5 +1,5 @@
 // Every dashboard theme, in both modes, must pass WCAG AA (4.5:1 for text, 3:1 for control edges and icons).
-// Reads app/src/themes.css and checks the pairs the dashboard actually draws, including the tinted backgrounds.
+// Reads app/src/styles/themes.css and checks the pairs the dashboard actually draws, including the tinted backgrounds.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
@@ -7,7 +7,7 @@ import { test } from 'node:test';
 type Vars = Record<string, string>;
 type Rgb = [number, number, number];
 
-const css = readFileSync(new URL('../../app/src/themes.css', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+const css = readFileSync(new URL('../../app/src/styles/themes.css', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
 
 /** `selector { --a: b; }` rules, with the `@media (prefers-color-scheme: dark)` ones tagged. */
 function rules(source: string, media = false): { selector: string; vars: Vars; media: boolean }[] {

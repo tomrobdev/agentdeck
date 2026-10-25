@@ -1,6 +1,6 @@
 // A task's changes follow its branch: fetched on open and whenever the task moves.
 import { type Ref, computed, onBeforeUnmount, ref, watch } from 'vue';
-import { type Changes, type TaskDetail, api } from './api';
+import { type Changes, type TaskDetail, api } from '../api';
 
 export function useChanges(task: Ref<TaskDetail>) {
   const changes = ref<Changes | null>(null);

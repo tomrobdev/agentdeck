@@ -1,9 +1,9 @@
 // How the queue is grouped and shown. What a person may do with a task, how the queue is filtered and sorted and what a blocked
 // task needs are the daemon's domain (task/lifecycle.ts, listing.ts, needs.ts, stage.ts); this file re-exports what the views use.
-import type { Needs, Status, TaskStatus, TaskSummary } from './api';
-import { personEvents } from '../../daemon/src/domain/task/lifecycle.ts';
-import { DECISION_STATES, FILTER_STATES, SORT_OPTIONS, filterTasks } from '../../daemon/src/domain/task/listing.ts';
-import { readNeeds as readNeedsJson } from '../../daemon/src/domain/task/needs.ts';
+import type { Needs, Status, TaskStatus, TaskSummary } from '../api';
+import { personEvents } from '../../../daemon/src/domain/task/lifecycle.ts';
+import { DECISION_STATES, FILTER_STATES, SORT_OPTIONS, filterTasks } from '../../../daemon/src/domain/task/listing.ts';
+import { readNeeds as readNeedsJson } from '../../../daemon/src/domain/task/needs.ts';
 import {
   STATUS_GROUPS,
   type StatusGroup,
@@ -13,8 +13,8 @@ import {
   isStuck,
   isWaiting,
   statusGroup,
-} from '../../daemon/src/domain/task/stage.ts';
-import { EDITABLE_STATUSES } from '../../daemon/src/domain/task/task.ts';
+} from '../../../daemon/src/domain/task/stage.ts';
+import { EDITABLE_STATUSES } from '../../../daemon/src/domain/task/task.ts';
 
 // The board's move rule is in boardMove.ts, which the daemon's tests import.
 export { STATUS_GROUPS, type StatusGroup, hasOpenPr, isMerged, isReview, isStuck, isWaiting, statusGroup };
@@ -130,23 +130,3 @@ export function withHost(networkJson: string, host: string): string[] {
 }
 
 export const statusLabel = (s: TaskStatus) => (s === 'cancel_requested' ? 'stopping' : s);
-
-/** Per-browser view settings. Reads and writes never throw: storage can be missing or full. */
-export function loadSetting<T>(key: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(`agentdeck.${key}`);
-    if (raw === null) return fallback;
-    const v = JSON.parse(raw);
-    return typeof fallback === 'object' && fallback !== null && !Array.isArray(fallback) ? { ...fallback, ...v } : v;
-  } catch {
-    return fallback;
-  }
-}
-
-export function saveSetting(key: string, value: unknown): void {
-  try {
-    localStorage.setItem(`agentdeck.${key}`, JSON.stringify(value));
-  } catch {
-    // The view just won't be remembered.
-  }
-}

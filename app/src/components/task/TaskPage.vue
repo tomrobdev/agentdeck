@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed, ref, toRef } from 'vue';
 import { type TaskDetail, ago, api, describeWait } from '../../api';
-import { useHotkeys } from '../../hotkeys';
+import { useHotkeys } from '../../composables/useHotkeys';
 import { type TaskTab, go, openTask } from '../../router';
-import { readNeeds, statusLabel } from '../../taskView';
-import { useActions } from '../../useActions';
-import { useChanges } from '../../useChanges';
+import { readNeeds, statusLabel } from '../../lib/taskView';
+import { useActions } from '../../composables/useActions';
+import { useChanges } from '../../composables/useChanges';
 import SnippetPopover from '../files/SnippetPopover.vue';
-import StatusIcon from '../queue/StatusIcon.vue';
+import StatusIcon from '../ui/StatusIcon.vue';
 import ChangesTab from './ChangesTab.vue';
 import CodeTab from './CodeTab.vue';
 import NeedsCallout from './NeedsCallout.vue';

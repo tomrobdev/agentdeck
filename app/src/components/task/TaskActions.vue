@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { type MergeResult, type TaskDetail, api } from '../../api';
-import { canReview, personEvents } from '../../taskView';
-import { useActions } from '../../useActions';
-import Modal from '../Modal.vue';
+import { canReview, personEvents } from '../../lib/taskView';
+import { useActions } from '../../composables/useActions';
+import Modal from '../ui/Modal.vue';
 import MarkDoneDialog from './MarkDoneDialog.vue';
 import MergeDialog from './MergeDialog.vue';
 

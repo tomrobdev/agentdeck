@@ -30,7 +30,8 @@ Use these words in code, logs and UI.
 - **Entry points:** `api/` (the dashboard's HTTP API) and `cli/` (one file per command group). They may import `domain/` and `db/`, but reach adapters only through `application/`. `src/cli.ts` stays put: the installed launchd plist runs it.
 - **The CLI calls the use cases in its own process,** so it works while the daemon is down. Only work that starts `claude` (propose, a sync that may start a resolve run) goes to the daemon over HTTP (`cli/daemon-client.ts`). So the database is the only state the processes share: application code keeps no module-level state other than a lock, and a CLI change reaches the scheduler on its next tick. Each entry point parses its own input (flags, request bodies) into the use case's typed input.
 - **Composition root:** `src/daemon.ts` (`runDaemon`) wires the source watcher, the API and the scheduler. It logs through a callback and throws; `cli/daemon.ts` prints and exits.
-- **Dashboard types:** the API's request and response types are in `api/contract.ts`, which imports nothing. The dashboard imports them (`app/src/types.ts`), and `api/contract-check.ts` fails `pnpm typecheck` when a use case's type drifts from them.
+- **Dashboard types:** the API's request and response types are in `api/contract.ts`, which imports nothing. The dashboard imports them (`app/src/api/types.ts`), and `api/contract-check.ts` fails `pnpm typecheck` when a use case's type drifts from them.
+- **Dashboard layout (`app/src/`):** `api/` (types, calls and wording, imported as `api`), `composables/` (`useX` functions), `lib/` (pure helpers; rules come from the daemon's `domain/`, never copied), `platform/` (the Tauri shell, build commit, theme), `styles/`, and `components/` by area: `ui/` (shared pieces), `layout/` (the app's frame), `panels/`, `queue/`, `task/`, `files/`.
 
 ## Rules
 

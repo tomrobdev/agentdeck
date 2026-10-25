@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { openExternal } from '../../native';
-import { markdownHtml } from '../../render';
+import { openExternal } from '../../platform/native';
+import { markdownHtml } from '../../lib/render';
 
 // Rendered, sanitised markdown. Links open in the system browser; `isPath` turns inline code
-// that names a repo file into a link (see render.ts), reported through `path`.
+// that names a repo file into a link (see lib/render.ts), reported through `path`.
 const props = defineProps<{ text: string; isPath?: (p: string) => boolean }>();
 const emit = defineEmits<{ path: [path: string, line: number | null] }>();
 

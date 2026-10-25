@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { type DiffLine, parsePatch, splitRows } from '../../diff';
-import { highlightLines, languageFor } from '../../render';
+import { type DiffLine, parsePatch, splitRows } from '../../lib/diff';
+import { highlightLines, languageFor } from '../../lib/render';
 
 // One file's patch, unified or side by side, highlighted by the file's language.
 const props = defineProps<{ path: string; patch: string; split: boolean }>();

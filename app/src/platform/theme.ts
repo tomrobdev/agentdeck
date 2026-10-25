@@ -1,7 +1,7 @@
-// The dashboard's theme (a set of colours, themes.css) and mode (system, light or dark).
+// The dashboard's theme (a set of colours, styles/themes.css) and mode (system, light or dark).
 // Applied as data-theme and data-mode on <html>, so switching is one attribute write and every CSS variable follows at once.
 import { ref } from 'vue';
-import { loadSetting, saveSetting } from './taskView';
+import { loadSetting, saveSetting } from '../lib/storage';
 
 export const THEMES = [
   { key: 'warm', label: 'Warm', hint: 'Neutral greys, terracotta accent (default)' },

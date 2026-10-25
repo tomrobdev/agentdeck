@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { MERGE_METHODS, type Repo, type RepoDeletion, type RepoDetail, ago, api } from '../api';
-import { type RepoForm, toRepoForm, toRepoPatch } from '../forms';
-import { useActions } from '../useActions';
-import Modal from './Modal.vue';
+import { MERGE_METHODS, type Repo, type RepoDeletion, type RepoDetail, ago, api } from '../../api';
+import { type RepoForm, toRepoForm, toRepoPatch } from '../../lib/forms';
+import { useActions } from '../../composables/useActions';
+import Modal from '../ui/Modal.vue';
 
 defineProps<{ repos: Repo[] }>();
 defineEmits<{ close: [] }>();

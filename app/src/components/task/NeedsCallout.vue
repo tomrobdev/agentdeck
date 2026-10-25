@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue';
 import { type Needs, type RepoDetail, type TaskDetail, api } from '../../api';
-import { canInstallWith, depsAreDev, depsPackages, withHost } from '../../taskView';
-import { useActions } from '../../useActions';
-import Modal from '../Modal.vue';
+import { canInstallWith, depsAreDev, depsPackages, withHost } from '../../lib/taskView';
+import { useActions } from '../../composables/useActions';
+import Modal from '../ui/Modal.vue';
 
 // What a blocked task's worker said it needs, with the one action that clears it.
 const props = defineProps<{ task: TaskDetail; needs: Needs }>();

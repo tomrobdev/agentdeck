@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { type Repo, type TaskDetail, api } from '../api';
-import Modal from './Modal.vue';
+import { type Repo, type TaskDetail, api } from '../../api';
+import Modal from '../ui/Modal.vue';
 
 const props = defineProps<{ repos: Repo[] }>();
 const emit = defineEmits<{ close: []; created: [task: TaskDetail]; repos: [] }>();

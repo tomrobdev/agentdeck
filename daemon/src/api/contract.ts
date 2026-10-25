@@ -1,4 +1,4 @@
-// The HTTP API's request and response types: what the dashboard imports (app/src/types.ts) and what contract-check.ts
+// The HTTP API's request and response types: what the dashboard imports (app/src/api/types.ts) and what contract-check.ts
 // holds the use cases to. It imports nothing, so the app can read it without the daemon's modules or node types.
 // Fields marked "missing from a daemon that predates it" are optional so a newer dashboard still reads an older daemon.
 

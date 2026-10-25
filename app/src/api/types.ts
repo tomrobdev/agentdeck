@@ -1,6 +1,6 @@
 // The daemon's API types come from one contract (daemon/src/api/contract.ts), which the daemon checks against its use cases.
 // What is declared here is the dashboard's own.
-import type { ChangedFile, MergeMethod } from '../../daemon/src/api/contract.ts';
+import type { ChangedFile, MergeMethod } from '../../../daemon/src/api/contract.ts';
 
 export type {
   Budget,
@@ -56,7 +56,7 @@ export type {
   TreeEntry,
   TreeListing,
   UsageWindow,
-} from '../../daemon/src/api/contract.ts';
+} from '../../../daemon/src/api/contract.ts';
 
 export const MERGE_METHODS: { key: MergeMethod; label: string; hint: string }[] = [
   { key: 'squash', label: 'Squash and merge', hint: 'One commit on the base branch' },

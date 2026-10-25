@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { nextTick, watch } from 'vue';
 import { ago } from '../../api';
-import { openExternal } from '../../native';
-import { type Group, type GroupBy, personEvents, quickRetry, readNeeds, statusLabel, unblocksOf } from '../../taskView';
-import PriorityIcon from './PriorityIcon.vue';
-import StatusIcon from './StatusIcon.vue';
+import { openExternal } from '../../platform/native';
+import { type Group, type GroupBy, personEvents, quickRetry, readNeeds, statusLabel, unblocksOf } from '../../lib/taskView';
+import PriorityIcon from '../ui/PriorityIcon.vue';
+import StatusIcon from '../ui/StatusIcon.vue';
 
 export interface ShowProps {
   repo: boolean;

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { type FileContent, type FileRef, type TaskDetail, api } from '../../api';
-import { useCopy } from '../../native';
-import { isMarkdown as isMarkdownPath } from '../../render';
+import { useCopy } from '../../platform/native';
+import { isMarkdown as isMarkdownPath } from '../../lib/render';
 import { go } from '../../router';
 import CodeView, { type LineRange } from '../files/CodeView.vue';
 import FileTree, { type TreeNode } from '../files/FileTree.vue';

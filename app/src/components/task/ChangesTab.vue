@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import { CHANGE_LABEL, type ChangedFile, type Changes, type FilePatch, type TaskDetail, ago, api } from '../../api';
-import { isMarkdown } from '../../render';
-import { loadSetting, saveSetting } from '../../taskView';
+import { isMarkdown } from '../../lib/render';
+import { loadSetting, saveSetting } from '../../lib/storage';
 import DiffView from '../files/DiffView.vue';
 import FileTree, { type TreeNode } from '../files/FileTree.vue';
 import Markdown from '../files/Markdown.vue';
-import Popover from '../queue/Popover.vue';
+import Popover from '../ui/Popover.vue';
 
 // What the task's branch changes against the base branch: a tree of changed files and their diffs.
 const props = defineProps<{ task: TaskDetail; changes: Changes | null; error: string }>();

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
-import { type LogEntry, api } from '../api';
+import { type LogEntry, api } from '../../api';
 
 const props = defineProps<{ taskId: number; runId: number | null; live: boolean; worktree?: string | null }>();
 const emit = defineEmits<{ file: [path: string] }>();

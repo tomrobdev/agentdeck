@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
 import { type ChangedFile, api } from '../../api';
-import { isMarkdown } from '../../render';
+import { isMarkdown } from '../../lib/render';
 import Markdown from '../files/Markdown.vue';
 
 // Documents the task wrote or changed (markdown under docs/ or at the repo root), readable in place.

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
-import { useHotkeys } from '../../hotkeys';
+import { useHotkeys } from '../../composables/useHotkeys';
 
 /** A tree node. `meta` is shown at the row end (e.g. "+24 −3"); `badge` before the name (A, M, D, R). */
 export interface TreeNode {

@@ -2,7 +2,7 @@
 // The status bar along the bottom of the window: the daemon's state (click to pause or resume), slots,
 // and the usage windows. Actions and navigation are in the header (AppHeader.vue).
 import { computed } from 'vue';
-import { type Status, describeState, relTime } from '../api';
+import { type Status, describeState, relTime } from '../../api';
 
 const props = defineProps<{ status: Status | null; offline: boolean; busy: boolean }>();
 defineEmits<{ toggle: [] }>();

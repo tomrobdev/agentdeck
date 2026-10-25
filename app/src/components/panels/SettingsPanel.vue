@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { type NotificationRow, type NotifyKind, type ServiceStatus, type Settings, ago, api } from '../api';
-import { type SettingsForm, toSettingsForm, toSettingsPatch } from '../forms';
-import { isNative, launchAtLogin, setLaunchAtLogin } from '../native';
-import { MODES, THEMES, mode, setMode, setTheme, theme } from '../theme';
-import { useActions } from '../useActions';
-import Modal from './Modal.vue';
+import { type NotificationRow, type NotifyKind, type ServiceStatus, type Settings, ago, api } from '../../api';
+import { type SettingsForm, toSettingsForm, toSettingsPatch } from '../../lib/forms';
+import { isNative, launchAtLogin, setLaunchAtLogin } from '../../platform/native';
+import { MODES, THEMES, mode, setMode, setTheme, theme } from '../../platform/theme';
+import { useActions } from '../../composables/useActions';
+import Modal from '../ui/Modal.vue';
 
 defineProps<{ notifications: NotificationRow[] }>();
 const emit = defineEmits<{ close: [] }>();

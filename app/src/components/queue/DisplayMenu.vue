@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { GROUP_BYS, type GroupBy, SORT_OPTIONS } from '../../taskView';
+import { GROUP_BYS, type GroupBy, SORT_OPTIONS } from '../../lib/taskView';
 import type { ShowProps } from './ListView.vue';
-import Popover from './Popover.vue';
+import Popover from '../ui/Popover.vue';
 
 export interface Display {
   mode: 'list' | 'board';
