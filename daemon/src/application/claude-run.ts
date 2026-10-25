@@ -58,7 +58,7 @@ export async function startTaskRun(
     onUsage: usageRecorder(db),
   });
   const end = classifyRun(run);
-  if (end.kind === 'rate_limited') db.setSetting('rate_limited_until', String(end.until));
+  if (end.kind === 'rate_limited') db.setRateLimitedUntil(end.until);
   return { ...opened, end, result: run.result, fields: resultFields(run.result, run.exitCode) };
 }
 
@@ -69,5 +69,5 @@ export function usageRecorder(db: Db): (w: UsageWindow) => void {
 
 /** Remember that claude rejected a request on rate limits, so nothing starts until `until` (unix seconds). */
 export function recordRateLimit(db: Db, until: number): void {
-  db.setSetting('rate_limited_until', String(until));
+  db.setRateLimitedUntil(until);
 }

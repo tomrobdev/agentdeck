@@ -5,6 +5,7 @@ import type { PrPlan } from '../domain/pull-request/pr.ts';
 import type { PromptPlan } from '../domain/run/prompt.ts';
 import { type Task, planStepIds } from '../domain/task/task.ts';
 import { ActionError } from './errors.ts';
+import { requireTask } from './lookups.ts';
 import { taskChanges, taskFile } from './files.ts';
 
 /**
@@ -53,7 +54,7 @@ export async function prPlanFor(db: Db, task: Task): Promise<PrPlan | null> {
 
 /** Attach a plan written anywhere (a file, another session) to a task. Same name replaces it. */
 export function attachPlan(db: Db, id: number, input: { name?: unknown; html?: unknown }): TaskPlan {
-  if (!db.getTask(id)) throw new ActionError('no such task');
+  requireTask(db, id);
   if (typeof input.html !== 'string' || !input.html.trim()) throw new ActionError('html is required');
   if (Buffer.byteLength(input.html) > PLAN_LIMIT) throw new ActionError(`a plan can be at most ${PLAN_LIMIT / 1024} KB`);
   if (!parsePlan(input.html)) {

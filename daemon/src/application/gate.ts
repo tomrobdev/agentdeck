@@ -7,7 +7,7 @@ import type { QueueState } from '../domain/task/start.ts';
 export function startGate(db: Db): QueueState {
   return {
     paused: db.isPaused(),
-    rate_limited_until: Number(db.getSetting('rate_limited_until', '0')) || null,
+    rate_limited_until: db.rateLimitedUntil(),
     governor: decide(db.usageWindows(), db.budget(), db.maxConcurrent()),
   };
 }

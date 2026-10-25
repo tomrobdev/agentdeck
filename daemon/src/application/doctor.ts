@@ -1,11 +1,20 @@
 // Yes/no checks that a repo is ready for unattended runs. Does the I/O; the decisions on tool rules are in domain/.
-import { execFile } from 'node:child_process';
-import { accessSync, constants, existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
-import { delimiter, isAbsolute, join } from 'node:path';
-import { addDetachedWorktree, git, hasOrigin, isGitRepo, refExists, removeWorktree, startPoint } from '../adapters/git.ts';
+import { findClaude } from '../adapters/claude.ts';
+import { ghAuth } from '../adapters/github.ts';
+import {
+  addDetachedWorktree,
+  hasOrigin,
+  isGitRepo,
+  makeTempDir,
+  pruneWorktrees,
+  refExists,
+  removeTempDir,
+  removeWorktree,
+  startPoint,
+} from '../adapters/git.ts';
 import { rootInfo } from '../adapters/repo-root.ts';
 import { lastLine, runCommand } from '../adapters/shell.ts';
-import { SETUP_TIMEOUT_MS, TEST_TIMEOUT_MS, WORKTREE_DIR, claudeBin } from '../config.ts';
+import { SETUP_TIMEOUT_MS, TEST_TIMEOUT_MS, claudeBin } from '../config.ts';
 import type { Repo } from '../domain/repo/repo.ts';
 import { refusedCommands } from '../domain/repo/tool-rules.ts';
 import { detectToolchain } from '../domain/repo/toolchain.ts';
@@ -17,41 +26,6 @@ export interface Check {
   reason: string;
 }
 
-function executable(path: string): boolean {
-  try {
-    accessSync(path, constants.X_OK);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/** Where the claude binary is, or null. A bare name is looked up on PATH. */
-function findClaude(): string | null {
-  const bin = claudeBin();
-  if (isAbsolute(bin) || bin.includes('/')) return executable(bin) ? bin : null;
-  for (const dir of (process.env.PATH ?? '').split(delimiter)) {
-    if (dir && executable(join(dir, bin))) return join(dir, bin);
-  }
-  return null;
-}
-
-function ghAuth(): Promise<{ ok: boolean; output: string }> {
-  return new Promise((resolve) => {
-    execFile('gh', ['auth', 'status'], { timeout: 30_000 }, (err, stdout, stderr) => {
-      const text = `${stdout}${stderr}`.trim();
-      resolve({ ok: !err, output: text ? lastLine(text) : (err?.message ?? '') });
-    });
-  });
-}
-
-/** A fresh directory for the temporary worktree, under the daemon's own worktree dir. */
-function makeTempDir(repo: Repo): string {
-  const parent = join(WORKTREE_DIR, repo.name);
-  mkdirSync(parent, { recursive: true });
-  return mkdtempSync(join(parent, 'doctor-'));
-}
-
 /**
  * Run every check and return them in order. Checks that can't run because an earlier one failed are
  * reported as failed with "not run: …", so a green result always means everything was verified.
@@ -61,7 +35,7 @@ export async function runDoctor(repo: Repo): Promise<Check[]> {
   const checks: Check[] = [];
   const add = (name: string, ok: boolean, reason: string) => void checks.push({ name, ok, reason });
 
-  const isRepo = existsSync(repo.path) && (await isGitRepo(repo.path));
+  const isRepo = await isGitRepo(repo.path);
   add('git repo', isRepo, isRepo ? repo.path : `${repo.path} is not a git repository`);
   if (!isRepo) return checks;
 
@@ -92,10 +66,10 @@ export async function runDoctor(repo: Repo): Promise<Check[]> {
   }
 
   let worktree: string | null = null;
-  const tmp = baseOk ? makeTempDir(repo) : null;
+  const tmp = baseOk ? makeTempDir(repo, 'doctor') : null;
   try {
     if (tmp) {
-      const path = join(tmp, 'wt');
+      const path = tmp.worktree;
       try {
         await addDetachedWorktree(repo, path, await startPoint(repo.path, repo.base_branch));
         worktree = path;
@@ -136,8 +110,8 @@ export async function runDoctor(repo: Repo): Promise<Check[]> {
     }
   } finally {
     if (worktree) await removeWorktree(repo, worktree).catch(() => {});
-    if (tmp) rmSync(tmp, { recursive: true, force: true });
-    await git(repo.path, 'worktree', 'prune').catch(() => {});
+    if (tmp) removeTempDir(tmp.dir);
+    await pruneWorktrees(repo.path).catch(() => {});
   }
   return checks;
 }

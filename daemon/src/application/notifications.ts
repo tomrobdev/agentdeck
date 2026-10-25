@@ -2,23 +2,14 @@
 // Sent from the daemon so they arrive even when the dashboard is closed.
 import { desktop, ntfy } from '../adapters/notify.ts';
 import type { Db } from '../db/index.ts';
-import type { Notification, NotifyKind, NotifySettings } from '../domain/notification.ts';
-
-export function notifySettings(db: Db): NotifySettings {
-  return {
-    desktop: db.getSetting('notify_desktop', '1') === '1',
-    events: db.getSetting('notify_events', 'done,blocked,failed,hold,proposed').split(',').filter(Boolean) as NotifyKind[],
-    ntfy_topic: db.getSetting('ntfy_topic', ''),
-    ntfy_server: db.getSetting('ntfy_server', 'https://ntfy.sh'),
-  };
-}
+import type { Notification } from '../domain/notification.ts';
 
 /**
  * Record the notification and deliver it on the enabled channels.
  * AGENTDECK_NO_NOTIFY=1 (used by tests) records without delivering.
  */
 export async function notify(db: Db, n: Notification): Promise<void> {
-  const s = notifySettings(db);
+  const s = db.notifySettings();
   if (n.kind !== 'test' && !s.events.includes(n.kind)) return;
   db.addNotification(n.kind, n.title, n.body, n.task_id ?? null);
   if (process.env.AGENTDECK_NO_NOTIFY === '1') return;

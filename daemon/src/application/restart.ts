@@ -12,8 +12,6 @@ export interface RestartDeps {
   aborted?: () => boolean;
 }
 
-const setPause = (db: Db, paused: boolean) => db.setSetting('paused', paused ? '1' : '0');
-
 /**
  * Pause new claims, wait until no task or planner run is active (twice in a row, so a claim in flight
  * is seen), restart, then restore the pause state from before. The pause state is restored even when
@@ -23,7 +21,7 @@ export async function gracefulRestart(db: Db, deps: RestartDeps): Promise<{ wait
   const sleep = deps.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
   const pollMs = deps.pollMs ?? 2000;
   const wasPaused = db.isPaused();
-  setPause(db, true);
+  db.setPaused(true);
   let waited = false;
   try {
     let idle = 0;
@@ -48,7 +46,7 @@ export async function gracefulRestart(db: Db, deps: RestartDeps): Promise<{ wait
     deps.log('nothing is running; restarting');
     await deps.restart();
   } finally {
-    setPause(db, wasPaused);
+    db.setPaused(wasPaused);
   }
   return { waited };
 }

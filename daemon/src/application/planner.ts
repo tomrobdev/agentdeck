@@ -6,33 +6,18 @@ import { goalsPath, readGoals } from '../adapters/goals.ts';
 import { closeLog } from '../adapters/run-log.ts';
 import { LOG_DIR, ensureDirs } from '../config.ts';
 import type { Db } from '../db/index.ts';
-import {
-  type PlanResult,
-  type PlannerSettings,
-  buildPlannerPrompt,
-  plannerArgs,
-  plannerDueReason,
-  selectProposals,
-} from '../domain/planner/plan.ts';
+import { type PlanResult, buildPlannerPrompt, plannerArgs, plannerDueReason, selectProposals } from '../domain/planner/plan.ts';
 import type { Repo } from '../domain/repo/repo.ts';
 import { recordRateLimit, usageRecorder } from './claude-run.ts';
 import { ActionError } from './errors.ts';
+import { requireRepo } from './lookups.ts';
 import { notifyLater } from './notifications.ts';
-
-export function plannerSettings(db: Db): PlannerSettings {
-  return {
-    enabled: db.getSetting('planner_enabled', '1') === '1',
-    interval_hours: Number(db.getSetting('planner_interval_hours', '3')),
-    max_tasks: Number(db.getSetting('planner_max_tasks', '3')),
-    model: db.getSetting('planner_model', 'sonnet'),
-  };
-}
 
 /** Why the planner should run for this repo now, or null. */
 export function plannerDue(db: Db, repo: Repo, now = Date.now()): string | null {
   if (repo.archived_at) return null;
   const repoState = { hasGoals: !!readGoals(repo).trim(), openTasks: db.countOpen(repo.id), planned_at: repo.planned_at };
-  return plannerDueReason(plannerSettings(db), repoState, now);
+  return plannerDueReason(db.plannerSettings(), repoState, now);
 }
 
 export async function planRepo(db: Db, repo: Repo): Promise<PlanResult> {
@@ -40,7 +25,7 @@ export async function planRepo(db: Db, repo: Repo): Promise<PlanResult> {
   if (!goals.trim()) return { outcome: 'no_goals', tasks: [], skipped: [], note: `write goals in ${goalsPath(repo)} first` };
 
   ensureDirs();
-  const s = plannerSettings(db);
+  const s = db.plannerSettings();
   const logPath = join(LOG_DIR, `plan-${repo.name}-${Date.now()}.jsonl`);
   const log = createWriteStream(logPath, { flags: 'a' });
   const runId = db.startPlannerRun(repo.id, logPath);
@@ -95,8 +80,7 @@ const planning = new Set<number>();
 
 /** Run the planner for one repo now, regardless of its schedule. */
 export async function planNow(db: Db, nameOrId: string | number): Promise<PlanResult> {
-  const repo = db.findRepo(String(nameOrId));
-  if (!repo) throw new ActionError(`no repo "${nameOrId}"`);
+  const repo = requireRepo(db, nameOrId);
   if (repo.archived_at) throw new ActionError(`${repo.name} is archived; unarchive it first`);
   if (planning.has(repo.id)) throw new ActionError(`already planning ${repo.name}`);
   planning.add(repo.id);

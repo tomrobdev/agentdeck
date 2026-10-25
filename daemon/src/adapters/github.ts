@@ -5,6 +5,7 @@ import { promisify } from 'node:util';
 import { type MergeMethod, type PrDetails, parsePrDetails } from '../domain/pull-request/merge.ts';
 import { type PrState, parsePrState } from '../domain/pull-request/pr.ts';
 import { gitRemote } from './git.ts';
+import { lastLine } from './shell.ts';
 
 const exec = promisify(execFile);
 
@@ -22,6 +23,16 @@ function failure(err: unknown): Error {
   const e = err as { stderr?: string; message?: string };
   const text = (e.stderr?.trim() || e.message || String(err)).trim();
   return new Error(text.split('\n').filter(Boolean).slice(0, 3).join(' ').slice(0, 500));
+}
+
+/** Whether `gh` is logged in, and its last line of output to say why not. */
+export function ghAuth(): Promise<{ ok: boolean; output: string }> {
+  return new Promise((resolve) => {
+    execFile('gh', ['auth', 'status'], { timeout: 30_000 }, (err, stdout, stderr) => {
+      const text = `${stdout}${stderr}`.trim();
+      resolve({ ok: !err, output: text ? lastLine(text) : (err?.message ?? '') });
+    });
+  });
 }
 
 export const github = {

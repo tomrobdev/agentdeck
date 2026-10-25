@@ -540,7 +540,7 @@ test('merging a PR makes the scheduler re-read the open PRs at once and resolve 
 
   try {
     await mergeTask(db, merged.id);
-    assert.ok(Number(db.getSetting('pr_check_requested', '0')) > 0);
+    assert.ok(db.prCheckRequested() > 0);
     const deadline = Date.now() + 15_000;
     while (!syncEvents(other.id).length && Date.now() < deadline) await new Promise((r) => setTimeout(r, 25));
   } finally {

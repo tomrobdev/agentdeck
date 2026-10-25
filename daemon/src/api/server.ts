@@ -2,6 +2,7 @@
 import { type IncomingMessage, type Server, type ServerResponse, createServer } from 'node:http';
 import { serviceStatus } from '../adapters/service.ts';
 import * as actions from '../application/actions.ts';
+import { requireTask } from '../application/lookups.ts';
 import { unblocksOf, waitingFor } from '../application/dependencies.ts';
 import { startHolds } from '../application/queue.ts';
 import type { Scheduler } from '../application/scheduler.ts';
@@ -27,8 +28,7 @@ async function readBody(req: IncomingMessage): Promise<any> {
 }
 
 function taskDetail(db: Db, id: number) {
-  const task = db.getTask(id);
-  if (!task) throw new actions.ActionError('no such task');
+  const task = requireTask(db, id);
   return {
     ...task,
     repo: db.getRepo(task.repo_id)?.name ?? null,

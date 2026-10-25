@@ -9,7 +9,6 @@ import { Scheduler } from '../application/scheduler.ts';
 import * as service from '../adapters/service.ts';
 import { API_PORT, DB_PATH, DEFAULTS } from '../config.ts';
 import { gracefulRestart } from '../application/restart.ts';
-import { reloadOnChange } from '../application/settings.ts';
 import { reloadDecision } from '../domain/daemon/restart.ts';
 import { watchSource } from '../adapters/watch.ts';
 import { logsOptions, restartOptions, serviceAction } from './daemon-args.ts';
@@ -44,7 +43,7 @@ const runScheduler: Command = async ({ db, cmd }) => {
     : {
         check: ({ tasks, planning }: { tasks: number; planning: boolean }) =>
           reloadDecision({
-            enabled: reloadOnChange(db),
+            enabled: db.reloadOnChange(),
             changed,
             lastChangeAt,
             now: Date.now(),

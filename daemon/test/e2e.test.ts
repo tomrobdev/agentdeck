@@ -89,7 +89,7 @@ test('rate limit requeues without spending an attempt and holds the queue', asyn
   const t = db.getTask(task.id)!;
   assert.equal(t.status, 'queued');
   assert.equal(t.attempts, 0);
-  assert.ok(Number(db.getSetting('rate_limited_until', '0')) * 1000 > Date.now());
+  assert.ok((db.rateLimitedUntil() ?? 0) * 1000 > Date.now());
   db.applyEvent(t.id, { type: 'cancel' });
   db.setSetting('rate_limited_until', '0');
 });

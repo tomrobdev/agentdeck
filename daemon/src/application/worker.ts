@@ -9,7 +9,7 @@ import { linkedSteps, unfinishedSteps, unfinishedSummary } from '../domain/plan/
 import { type PromptPlan, buildPrompt } from '../domain/run/prompt.ts';
 import { latestReviewNote } from '../domain/task/history.ts';
 import { type Run, type WorkerResult, firstDenial, isEnvironmentBlock, parseStatus } from '../domain/run/run.ts';
-import { type Task, planStepIds } from '../domain/task/task.ts';
+import { type Task, leftoversMessage, planStepIds } from '../domain/task/task.ts';
 import { type TaskRunEnd, openTaskRun, startTaskRun } from './claude-run.ts';
 import { bringInBase } from './conflicts.ts';
 import { warnStuckDependents } from './dependencies.ts';
@@ -95,7 +95,7 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
   const runFields: Partial<Run> = ran.fields;
 
   try {
-    await commitLeftovers(wt.path, `agentdeck: uncommitted work from task ${task.id}\n\n${task.title}`);
+    await commitLeftovers(wt.path, leftoversMessage(task));
   } catch (err) {
     writeEvent(log, { type: 'agentdeck_error', text: `commit leftovers: ${(err as Error).message}` });
   }

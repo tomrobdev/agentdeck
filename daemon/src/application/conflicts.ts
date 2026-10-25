@@ -25,10 +25,11 @@ import type { Repo } from '../domain/repo/repo.ts';
 import { buildResolvePrompt } from '../domain/run/prompt.ts';
 import { parseStatus } from '../domain/run/run.ts';
 import { queueHold } from '../domain/task/start.ts';
-import type { Task } from '../domain/task/task.ts';
+import { type Task, leftoversMessage } from '../domain/task/task.ts';
 import { startTaskRun } from './claude-run.ts';
 import { warnStuckDependents } from './dependencies.ts';
 import { ActionError } from './errors.ts';
+import { requireTask, requireTaskRepo } from './lookups.ts';
 import { startGate } from './gate.ts';
 import { notifyLater } from './notifications.ts';
 import { logPrEvent } from './pull-requests.ts';
@@ -65,7 +66,7 @@ export async function bringInBase(db: Db, task: Task, repo: Repo, worktree: stri
   try {
     // A merge left half done by a crash would otherwise be committed with its markers.
     if (await mergeInProgress(worktree)) await abortMerge(worktree, await headCommit(worktree));
-    await commitLeftovers(worktree, `agentdeck: uncommitted work from task ${task.id}\n\n${task.title}`);
+    await commitLeftovers(worktree, leftoversMessage(task));
     const ref = await startPoint(repo.path, repo.base_branch);
     if (!(await refExists(worktree, ref))) return { kind: 'up_to_date' };
 
@@ -156,7 +157,7 @@ async function checkResolution(worktree: string, before: string, files: string[]
   const marked = filesWithMarkers(worktree, files);
   if (marked.length) return `conflict markers are still in ${marked.join(', ')}`;
   await concludeMerge(worktree);
-  await commitLeftovers(worktree, `agentdeck: uncommitted work from task ${task.id}\n\n${task.title}`);
+  await commitLeftovers(worktree, leftoversMessage(task));
   if ((await mergeInProgress(worktree)) || (await conflictedFiles(worktree)).length) return 'the merge was left unfinished';
   if ((await headCommit(worktree)) === before) return 'the merge was not committed';
   return '';
@@ -206,10 +207,8 @@ async function pushIfNeeded(
  * `manual` is a person asking (it ignores the repo's auto_resolve and throws what an automatic call only reports).
  */
 export async function syncTask(db: Db, id: number, opts: { manual: boolean }): Promise<SyncReport> {
-  const task = db.getTask(id);
-  if (!task) throw new ActionError('no such task');
-  const repo = db.getRepo(task.repo_id);
-  if (!repo) throw new ActionError('the task has no repo');
+  const task = requireTask(db, id);
+  const repo = requireTaskRepo(db, task);
   if (task.status !== 'done') throw new ActionError(`#${id} is ${task.status}; only a done task's branch is brought up to date this way`);
   if (!task.branch) throw new ActionError(`#${id} has no branch`);
   if (syncing.has(id)) throw new ActionError(`#${id} is already being brought up to date`);

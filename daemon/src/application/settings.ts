@@ -6,13 +6,12 @@ import { BUDGET_KEYS, type Budget, validateBudget } from '../domain/usage/govern
 import { restartWait } from '../domain/daemon/restart.ts';
 import { ActionError } from './errors.ts';
 import { startGate } from './gate.ts';
-import { notify, notifySettings } from './notifications.ts';
-import { plannerSettings } from './planner.ts';
+import { notify } from './notifications.ts';
 import { queueHolds } from './queue.ts';
 
 export function setPaused(db: Db, paused: boolean): void {
-  db.setSetting('paused', paused ? '1' : '0');
-  if (!paused) db.setSetting('rate_limited_until', '0');
+  db.setPaused(paused);
+  if (!paused) db.setRateLimitedUntil(0);
 }
 
 /** Which code the daemon is running, recorded once at start. */
@@ -60,15 +59,13 @@ export interface Settings {
   reload_on_change: boolean;
 }
 
-export const reloadOnChange = (db: Db) => db.getSetting('reload_on_change', '0') === '1';
-
 export function getSettings(db: Db): Settings {
   return {
     max_concurrent: db.maxConcurrent(),
     budget: db.budget(),
-    notify: notifySettings(db),
-    planner: plannerSettings(db),
-    reload_on_change: reloadOnChange(db),
+    notify: db.notifySettings(),
+    planner: db.plannerSettings(),
+    reload_on_change: db.reloadOnChange(),
   };
 }
 

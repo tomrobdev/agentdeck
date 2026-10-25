@@ -9,6 +9,7 @@ import { buildPrBody } from '../domain/pull-request/pr.ts';
 import type { Task } from '../domain/task/task.ts';
 import { warnStuckDependents } from './dependencies.ts';
 import { ActionError } from './errors.ts';
+import { requireTask, requireTaskRepo } from './lookups.ts';
 import { prPlanFor } from './plans.ts';
 
 /** How often the scheduler re-reads the state of open PRs. */
@@ -85,10 +86,8 @@ export interface MergePreview {
 
 /** The task, its repo and its open PR, or an ActionError saying why it can't be merged. */
 function mergeable(db: Db, id: number) {
-  const task = db.getTask(id);
-  if (!task) throw new ActionError('no such task');
-  const repo = db.getRepo(task.repo_id);
-  if (!repo) throw new ActionError('the task has no repo');
+  const task = requireTask(db, id);
+  const repo = requireTaskRepo(db, task);
   if (task.status !== 'done') throw new ActionError(`#${id} is ${task.status}; only a done task can be merged`);
   if (!task.pr_url) throw new ActionError(`#${id} has no pull request`);
   if (task.pr_state !== 'open') throw new ActionError(`#${id}'s PR is ${task.pr_state ?? 'not open'}`);
@@ -161,7 +160,7 @@ export async function mergeTask(db: Db, id: number, opts: { method?: string; del
   db.recordMerge(id, method, `${method} merge`);
   // The base just moved: the repo's other open PRs may now conflict. The scheduler re-reads them at once
   // (a setting, so a merge from the CLI reaches the daemon too).
-  db.setSetting(PR_CHECK_REQUESTED, String(Date.now()));
+  db.requestPrCheck();
   const unblocked = db.dependentsOf(id).map((t) => t.id);
 
   const result: MergeResult = { method, unblocked };
@@ -180,7 +179,6 @@ export async function mergeTask(db: Db, id: number, opts: { method?: string; del
 }
 
 /** The setting that asks the scheduler to re-read the open PRs now (a person's merge changed the base). */
-export const PR_CHECK_REQUESTED = 'pr_check_requested';
 
 /** What a refresh found out about the open PRs beyond their state. */
 export interface PrRefresh {
