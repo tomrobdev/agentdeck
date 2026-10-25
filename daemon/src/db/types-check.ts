@@ -1,6 +1,6 @@
 // Each table's row, as Drizzle infers it from tables.ts, must equal its domain type, so a column added to one and
 // not the other fails `pnpm typecheck`. Columns a domain type leaves out on purpose are named in the Omit.
-import type { PlannerRun } from '../domain/planner/plan.ts';
+import type { PlannerRun } from '../domain/planner/proposals.ts';
 import type { Repo } from '../domain/repo/repo.ts';
 import type { Run } from '../domain/run/run.ts';
 import type { TaskEventRow } from '../domain/task/history.ts';

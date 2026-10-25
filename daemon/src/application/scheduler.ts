@@ -9,8 +9,8 @@ import type { ReloadDecision } from '../domain/daemon/restart.ts';
 import { warnStuckDependents } from './dependencies.ts';
 import { startGate } from './gate.ts';
 import { notifyLater } from './notifications.ts';
-import { planNow, plannerDue } from './planner.ts';
-import { resolveConflicting } from './conflicts.ts';
+import { proposeNow, plannerDue } from './planner.ts';
+import { resolveConflicting } from './sync.ts';
 import { PR_REFRESH_MS, refreshPrStates } from './pull-requests.ts';
 import { runTask } from './worker.ts';
 
@@ -29,7 +29,7 @@ export interface SchedulerOptions {
   /** How often to refresh the state of open PRs (off in once mode). */
   prRefreshMs?: number;
   /** Restart onto new code: `check` says whether that is due, `exit` ends the process once it is. */
-  reload?: { check: (busy: { tasks: number; planning: boolean }) => ReloadDecision; exit: () => void };
+  reload?: { check: (busy: { tasks: number; proposing: boolean }) => ReloadDecision; exit: () => void };
   log?: (msg: string) => void;
 }
 
@@ -44,7 +44,7 @@ export class Scheduler {
   private lastHold: string | null = null;
   private lastReload: string | null = null;
   /** Planner runs going: the scheduler's own and the ones people asked for through the API. */
-  private planningRuns = 0;
+  private proposingRuns = 0;
   private readonly awake: KeepAwake;
   private lastPrRefresh = 0;
   private refreshingPrs = false;
@@ -96,24 +96,24 @@ export class Scheduler {
   }
 
   /**
-   * Count a resolve or planner run the API started: a resolve takes a slot, a plan counts as planning. Either one keeps
-   * a reload from exiting until it settles, and ticks when it does. Returns `p` itself so the caller can still await it.
+   * Count a sync or planner run the API started: a sync takes a slot, a proposing run counts as proposing. Either one
+   * keeps a reload from exiting until it settles, and ticks when it does. Returns `p` itself so the caller can still await it.
    */
-  track<T>(p: Promise<T>, kind: 'resolve' | 'plan'): Promise<T> {
+  track<T>(p: Promise<T>, kind: 'sync' | 'propose'): Promise<T> {
     const settled: Promise<unknown> = p
       .catch(() => {})
       .finally(() => {
-        if (kind === 'resolve') this.running.delete(settled);
-        else this.planningRuns--;
+        if (kind === 'sync') this.running.delete(settled);
+        else this.proposingRuns--;
         this.tick();
       });
-    if (kind === 'resolve') this.running.add(settled);
-    else this.planningRuns++;
+    if (kind === 'sync') this.running.add(settled);
+    else this.proposingRuns++;
     return p;
   }
 
-  private get planning(): boolean {
-    return this.planningRuns > 0;
+  private get proposing(): boolean {
+    return this.proposingRuns > 0;
   }
 
   private schedule(): void {
@@ -122,7 +122,7 @@ export class Scheduler {
 
   private tick(): void {
     if (this.stopped) return;
-    const reload = this.reload?.check({ tasks: this.running.size, planning: this.planning });
+    const reload = this.reload?.check({ tasks: this.running.size, proposing: this.proposing });
     if (reload?.exit) {
       this.opts.log(reload.reason);
       this.stop();
@@ -149,11 +149,11 @@ export class Scheduler {
           });
         this.running.add(p);
       }
-      if (this.opts.autoPlan && !this.planning && this.running.size < limit) this.maybePlan();
+      if (this.opts.autoPlan && !this.proposing && this.running.size < limit) this.maybePropose();
     }
     this.maybeRefreshPrs();
-    this.awake.set(this.running.size > 0 || this.planning);
-    if (this.opts.once && this.running.size === 0 && !this.planning && (reason || !this.db.hasQueued())) {
+    this.awake.set(this.running.size > 0 || this.proposing);
+    if (this.opts.once && this.running.size === 0 && !this.proposing && (reason || !this.db.hasQueued())) {
       this.stop();
       return;
     }
@@ -203,15 +203,15 @@ export class Scheduler {
   }
 
   /** Run the planner for the first repo whose queue has run dry. One planner at a time. */
-  private maybePlan(): void {
+  private maybePropose(): void {
     const repo = this.db.listRepos().find((r) => plannerDue(this.db, r));
     if (!repo) return;
-    this.opts.log(`planner: planning ${repo.name}`);
+    this.opts.log(`planner: proposing tasks for ${repo.name}`);
     this.track(
-      planNow(this.db, repo.id)
+      proposeNow(this.db, repo.id)
         .then((r) => this.opts.log(`planner: ${repo.name}: ${r.outcome}, ${r.tasks.length} task(s)${r.note ? ` (${r.note})` : ''}`))
         .catch((err) => this.opts.log(`planner: ${repo.name} crashed: ${err?.stack ?? err}`)),
-      'plan',
+      'propose',
     );
   }
 

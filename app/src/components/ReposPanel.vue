@@ -24,7 +24,7 @@ const sandbox = ref(true);
 const network = ref('');
 const editError = ref('');
 const editMsg = ref('');
-const busy = ref<'' | 'save' | 'plan'>('');
+const busy = ref<'' | 'save' | 'propose'>('');
 
 async function add() {
   error.value = '';
@@ -89,12 +89,12 @@ async function save(): Promise<boolean> {
   }
 }
 
-async function planNow() {
+async function proposeNow() {
   if (!open.value || !(await save())) return;
-  busy.value = 'plan';
-  editMsg.value = 'Planning… this reads the repo and can take a minute.';
+  busy.value = 'propose';
+  editMsg.value = 'Proposing tasks… this reads the repo and can take a minute.';
   try {
-    const res = await api.plan(open.value.id);
+    const res = await api.propose(open.value.id);
     editMsg.value =
       res.outcome === 'proposed'
         ? `${res.tasks.length} task(s) ${autoApprove.value ? 'queued' : 'proposed: approve them under Needs you'}.`
@@ -275,8 +275,8 @@ function parseHosts(json: string | undefined): string[] {
               Archive
             </button>
             <span class="muted mr-auto text-sm">{{ editMsg }}</span>
-            <button type="button" @click="planNow" :disabled="!!busy || !goals.trim()">
-              {{ busy === 'plan' ? 'Planning…' : 'Save & plan now' }}
+            <button type="button" @click="proposeNow" :disabled="!!busy || !goals.trim()">
+              {{ busy === 'propose' ? 'Proposing…' : 'Save & propose tasks' }}
             </button>
             <button class="primary" type="submit" :disabled="!!busy">Save</button>
           </div>

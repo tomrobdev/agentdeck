@@ -14,8 +14,8 @@ const method = ref<MergeMethod>('squash');
 const deleteBranch = ref(true);
 const merging = ref(false);
 const mergeError = ref('');
-const resolving = ref(false);
-const resolveNote = ref('');
+const syncing = ref(false);
+const syncNote = ref('');
 
 async function load() {
   try {
@@ -27,32 +27,32 @@ async function load() {
 }
 onMounted(load);
 
-const canConfirm = computed(() => !!preview.value && !preview.value.problems.length && !merging.value && !resolving.value);
+const canConfirm = computed(() => !!preview.value && !preview.value.problems.length && !merging.value && !syncing.value);
 
-// Merge the base branch into the task's branch. A conflict starts a claude run, so this can take minutes.
-async function resolve() {
-  resolving.value = true;
-  mergeError.value = resolveNote.value = '';
+// Sync the task's branch with the base branch. A conflict starts a claude run, so this can take minutes.
+async function sync() {
+  syncing.value = true;
+  mergeError.value = syncNote.value = '';
   try {
-    const res = await api.resolve(props.taskId);
+    const res = await api.sync(props.taskId);
     emit('changed');
     if (res.outcome === 'blocked') return emit('close'); // the task page shows why it is blocked
     const files = `${res.files.length} ${res.files.length === 1 ? 'file' : 'files'}`;
-    resolveNote.value =
+    syncNote.value =
       res.outcome === 'resolved'
         ? `Resolved conflicts in ${files}.`
         : res.outcome === 'clean'
-          ? 'Brought in the base branch.'
+          ? 'Synced with the base branch.'
           : res.outcome === 'up_to_date'
             ? 'The branch is already up to date.'
             : (res.reason ?? res.outcome);
     if (res.push_error) mergeError.value = `Could not push: ${res.push_error}`;
-    else if (res.pushed) resolveNote.value += ' Pushed; GitHub may take a moment to see it.';
+    else if (res.pushed) syncNote.value += ' Pushed; GitHub may take a moment to see it.';
     await load();
   } catch (e) {
     mergeError.value = (e as Error).message;
   } finally {
-    resolving.value = false;
+    syncing.value = false;
   }
 }
 
@@ -158,16 +158,16 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
         <li v-for="p in preview.problems" :key="p">✕ Can't merge: {{ p }}</li>
       </ul>
       <div v-if="preview.conflicting" class="flex items-center gap-2.5">
-        <button :disabled="resolving || merging" @click="resolve">{{ resolving ? 'Resolving…' : 'Resolve conflicts' }}</button>
+        <button :disabled="syncing || merging" @click="sync">{{ syncing ? 'Syncing…' : 'Sync with base' }}</button>
         <span class="muted text-sm">
           {{
-            resolving
-              ? 'Merging the base branch into the branch; a conflict starts a claude run, which can take a few minutes.'
-              : 'Merges the base branch into the branch and has claude resolve conflicts. If it cannot, the task is blocked.'
+            syncing
+              ? 'Syncing the branch with the base branch; a conflict starts a claude run, which can take a few minutes.'
+              : 'Merges the base branch into the branch and has claude settle conflicts. If it cannot, the task is blocked.'
           }}
         </span>
       </div>
-      <p v-if="resolveNote" class="muted">{{ resolveNote }}</p>
+      <p v-if="syncNote" class="muted">{{ syncNote }}</p>
       <p v-if="mergeError" class="form-error">{{ mergeError }}</p>
     </div>
 

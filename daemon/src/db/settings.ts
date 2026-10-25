@@ -2,7 +2,7 @@
 import type { DatabaseSync } from 'node:sqlite';
 import { DEFAULTS } from '../config.ts';
 import { NOTIFY_KINDS, type NotifyKind, type NotifySettings } from '../domain/notification.ts';
-import type { PlannerSettings } from '../domain/planner/plan.ts';
+import type { PlannerSettings } from '../domain/planner/proposals.ts';
 import { BUDGET_KEYS, type Budget, DEFAULT_BUDGET } from '../domain/usage/governor.ts';
 
 /** What each setting reads as until someone sets it. The daemon starts paused until someone resumes it. */

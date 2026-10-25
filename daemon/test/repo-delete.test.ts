@@ -40,7 +40,7 @@ function fill(repo: ReturnType<typeof makeRepo>, opts: { worktree: boolean }) {
     logs.push(log, settingsPath(log));
     db.startRun(task.id, n, log);
   }
-  const plog = join(home, `plan-${repo.name}.jsonl`);
+  const plog = join(home, `proposals-${repo.name}.jsonl`);
   writeFileSync(plog, '{}\n');
   logs.push(plog);
   db.startPlannerRun(repo.id, plog);

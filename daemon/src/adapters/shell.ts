@@ -20,5 +20,3 @@ export function runProgram(file: string, args: string[], cwd: string, timeout: n
     });
   });
 }
-
-export { lastLine } from '../domain/run/run.ts';

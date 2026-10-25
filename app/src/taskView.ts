@@ -162,7 +162,7 @@ export const canMerge = (t: Pick<TaskSummary, 'status' | 'pr_url' | 'pr_state'>)
 /** The one-key retry in the queue is for work that went wrong, not for re-running finished work. */
 export const quickRetry = (t: Pick<TaskSummary, 'status'>) => t.status === 'blocked' || t.status === 'failed';
 
-/** What a blocked task's worker said it needs (daemon domain/run/run.ts readNeeds); null for any other task or an unreadable value. */
+/** What a blocked task's worker said it needs (daemon domain/task/needs.ts readNeeds); null for any other task or an unreadable value. */
 export function readNeeds(t: Pick<TaskSummary, 'status' | 'needs'>): Needs | null {
   if (t.status !== 'blocked' || !t.needs) return null;
   try {

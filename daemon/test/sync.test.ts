@@ -20,9 +20,10 @@ const { Scheduler } = await import('../src/application/scheduler.ts');
 const { github } = await import('../src/adapters/github.ts');
 const { startApi } = await import('../src/api/server.ts');
 const { refreshPrStates } = await import('../src/application/pull-requests.ts');
-const { resolveConflicting } = await import('../src/application/conflicts.ts');
-const { ActionError, mergeTask, resolveTask, retryTask, updateRepo } = await import('../src/application/actions.ts');
-const { conflictReason, isConflicting, isMergeabilityUnknown, syncSummary } = await import('../src/domain/pull-request/conflict.ts');
+const { resolveConflicting } = await import('../src/application/sync.ts');
+const { ActionError, mergeTask, syncNow, retryTask, updateRepo } = await import('../src/application/actions.ts');
+const { isConflicting, isMergeabilityUnknown } = await import('../src/domain/pull-request/conflict.ts');
+const { conflictReason, syncSummary } = await import('../src/domain/branch/sync.ts');
 const { buildPrBody } = await import('../src/domain/pull-request/pr.ts');
 const { buildPrompt, buildResolvePrompt } = await import('../src/domain/run/prompt.ts');
 type PrDetails = import('../src/domain/pull-request/merge.ts').PrDetails;
@@ -187,7 +188,7 @@ test('a clean merge is committed, tested and pushed without a claude run', async
   advanceMain('other.txt', 'unrelated\n', 'Add other.txt');
   const before = resolveCalls();
 
-  const r = await resolveTask(db, t.id);
+  const r = await syncNow(db, t.id);
   assert.equal(r.outcome, 'clean');
   assert.equal(r.pushed, true);
   assert.deepEqual(pushes, [t.branch]);
@@ -200,7 +201,7 @@ test('a clean merge is committed, tested and pushed without a claude run', async
   assert.equal(parents(t.wt), 2, 'a merge commit, not a rebase');
   clean(t.wt);
 
-  const again = await resolveTask(db, t.id);
+  const again = await syncNow(db, t.id);
   assert.equal(again.outcome, 'up_to_date');
   assert.equal(syncEvents(t.id).length, 1, 'nothing to record when nothing came in');
   assert.deepEqual(pushes, [t.branch], 'and nothing to push');
@@ -212,7 +213,7 @@ test('a conflict starts a resolve run that keeps both sides; the task stays done
   const attempts = db.getTask(t.id)!.attempts;
   const before = resolveCalls();
 
-  const r = await resolveTask(db, t.id);
+  const r = await syncNow(db, t.id);
   assert.equal(r.outcome, 'resolved');
   assert.deepEqual(r.files, ['shared.txt']);
   assert.equal(r.pushed, true);
@@ -246,7 +247,7 @@ test('a conflict starts a resolve run that keeps both sides; the task stays done
 test('a resolve run that stages but does not commit still concludes the merge', async () => {
   const t = await doneTask('FAKE_RESOLVE_STAGE');
   conflictOnMain();
-  assert.equal((await resolveTask(db, t.id)).outcome, 'resolved');
+  assert.equal((await syncNow(db, t.id)).outcome, 'resolved');
   assert.equal(parents(t.wt), 2);
   clean(t.wt);
 });
@@ -274,7 +275,7 @@ for (const [flag, why] of [
     const attempts = db.getTask(t.id)!.attempts;
     const dependent = db.addTask({ repo_id: repo.id, title: 'waits', prompt: 'x', after_task: t.id });
 
-    const r = await resolveTask(db, t.id);
+    const r = await syncNow(db, t.id);
     assert.equal(r.outcome, 'blocked');
     assert.deepEqual(r.files, ['shared.txt']);
     assert.match(r.reason!, /^conflicts with main in 1 file: shared\.txt/);
@@ -312,7 +313,7 @@ test('tests that fail on the merged result undo a clean merge and block the task
   updateRepo(db, 'demo', { test_cmd: 'test ! -f other6.txt' });
   const head = sh(t.wt, 'rev-parse', 'HEAD');
 
-  const r = await resolveTask(db, t.id);
+  const r = await syncNow(db, t.id);
   assert.equal(r.outcome, 'blocked');
   assert.match(r.reason!, /^could not bring in main \(tests failed after merging main/);
   assert.equal(sh(t.wt, 'rev-parse', 'HEAD'), head);
@@ -327,7 +328,7 @@ test('tests that fail after a resolve run undo the merge and block the task', as
   updateRepo(db, 'demo', { test_cmd: 'false' });
   const head = sh(t.wt, 'rev-parse', 'HEAD');
 
-  const r = await resolveTask(db, t.id);
+  const r = await syncNow(db, t.id);
   assert.equal(r.outcome, 'blocked');
   assert.match(r.reason!, /shared\.txt.*tests failed/);
   assert.equal(sh(t.wt, 'rev-parse', 'HEAD'), head);
@@ -358,14 +359,14 @@ test('auto_resolve off: clean merges still happen, conflicts wait for a person',
   assert.equal(db.getTask(t.id)!.status, 'done', 'not blocked: the person decides');
 
   // By hand it still works.
-  assert.equal((await resolveTask(db, t.id)).outcome, 'resolved');
+  assert.equal((await syncNow(db, t.id)).outcome, 'resolved');
   assert.equal(resolveCalls(), before + 1);
   assert.equal(db.getTask(t.id)!.status, 'done');
 });
 
 /** What the scheduler's automatic path does for a task. */
 const syncAuto = async (id: number) => {
-  const { syncTask } = await import('../src/application/conflicts.ts');
+  const { syncTask } = await import('../src/application/sync.ts');
   return syncTask(db, id, { manual: false });
 };
 
@@ -373,7 +374,7 @@ test('a push that fails is reported and retried next time; the task stays done',
   const t = await doneTask();
   advanceMain('other3.txt', 'unrelated\n', 'Add other3.txt');
   pushError = 'remote: Permission denied (publickey)';
-  const r = await resolveTask(db, t.id);
+  const r = await syncNow(db, t.id);
   assert.equal(r.outcome, 'clean');
   assert.equal(r.pushed, false);
   assert.match(r.push_error!, /Permission denied/);
@@ -383,8 +384,8 @@ test('a push that fails is reported and retried next time; the task stays done',
 
 test('only a done task can be brought up to date by hand', async () => {
   const queued = db.addTask({ repo_id: repo.id, title: 'queued', prompt: 'x' });
-  await assert.rejects(resolveTask(db, queued.id), /only a done task/);
-  await assert.rejects(resolveTask(db, 999999), ActionError);
+  await assert.rejects(syncNow(db, queued.id), /only a done task/);
+  await assert.rejects(syncNow(db, 999999), ActionError);
   db.applyEvent(queued.id, { type: 'cancel' });
 });
 

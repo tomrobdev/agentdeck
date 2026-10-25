@@ -17,13 +17,14 @@ import {
 } from '../adapters/git.ts';
 import { github } from '../adapters/github.ts';
 import { closeLog, writeEvent } from '../adapters/run-log.ts';
-import { lastLine, runCommand } from '../adapters/shell.ts';
+import { runCommand } from '../adapters/shell.ts';
 import { TEST_TIMEOUT_MS } from '../config.ts';
 import type { Db } from '../db/index.ts';
-import { conflictReason, syncSummary } from '../domain/pull-request/conflict.ts';
+import { conflictReason, syncSummary } from '../domain/branch/sync.ts';
 import type { Repo } from '../domain/repo/repo.ts';
 import { buildResolvePrompt } from '../domain/run/prompt.ts';
 import { parseStatus } from '../domain/run/run.ts';
+import { lastLine } from '../domain/text.ts';
 import { queueHold } from '../domain/task/start.ts';
 import { type Task, leftoversMessage } from '../domain/task/task.ts';
 import { startTaskRun } from './claude-run.ts';
@@ -34,8 +35,8 @@ import { startGate } from './gate.ts';
 import { notifyLater } from './notifications.ts';
 import { logPrEvent } from './pull-requests.ts';
 
-/** What bringing the base branch into a task's branch came to. A merge that did not stick is already undone. */
-export type BringInResult =
+/** What a sync of a task's branch came to. A merge that did not stick is already undone. */
+export type SyncResult =
   | { kind: 'up_to_date' }
   | { kind: 'clean' }
   | { kind: 'resolved'; files: string[] }
@@ -48,7 +49,7 @@ export type BringInResult =
   /** Git itself failed (no base ref, a lock, …). */
   | { kind: 'error'; reason: string };
 
-interface BringIn {
+interface SyncOptions {
   /** A resolve run may start when the merge conflicts. */
   allowResolve: boolean;
   /** Run the repo's test command on the merged result (a done task's branch; a run about to start will be tested later). */
@@ -61,7 +62,7 @@ interface BringIn {
  * of run, which uses no attempt) fixes them. If that fails, the merge is aborted and the branch is left as it was.
  * Never throws.
  */
-export async function bringInBase(db: Db, task: Task, repo: Repo, worktree: string, opts: BringIn): Promise<BringInResult> {
+export async function syncBranch(db: Db, task: Task, repo: Repo, worktree: string, opts: SyncOptions): Promise<SyncResult> {
   let before: string | undefined;
   try {
     // A merge left half done by a crash would otherwise be committed with its markers.
@@ -103,7 +104,7 @@ async function resolveConflicts(
   before: string,
   files: string[],
   runTests: boolean,
-): Promise<BringInResult> {
+): Promise<SyncResult> {
   const prompt = buildResolvePrompt(task, { base: repo.base_branch, files, ...(await mergeSides(worktree)), testCmd: repo.test_cmd });
   const { runId, log, end, fields } = await startTaskRun(db, task, { kind: 'resolve', repo, worktree, prompt });
 
@@ -217,7 +218,7 @@ export async function syncTask(db: Db, id: number, opts: { manual: boolean }): P
   try {
     const wt = await ensureWorktree(repo, task);
     if (wt.path !== task.worktree) db.updateTask(id, { worktree: wt.path });
-    const res = await bringInBase(db, task, repo, wt.path, { allowResolve: opts.manual || repo.auto_resolve === 1, runTests: true });
+    const res = await syncBranch(db, task, repo, wt.path, { allowResolve: opts.manual || repo.auto_resolve === 1, runTests: true });
     switch (res.kind) {
       case 'up_to_date':
       case 'clean':
@@ -258,8 +259,8 @@ export async function syncTask(db: Db, id: number, opts: { manual: boolean }): P
   }
 }
 
-/** A person asked (`agentdeck resolve`, the merge dialog's button): the repo's auto_resolve does not apply. */
-export const resolveTask = (db: Db, id: number): Promise<SyncReport> => syncTask(db, id, { manual: true });
+/** A person asked (`agentdeck sync`, the dashboard's sync button): the repo's auto_resolve does not apply. */
+export const syncNow = (db: Db, id: number): Promise<SyncReport> => syncTask(db, id, { manual: true });
 
 /** Whether the governor lets a conflict run start now: not paused, not rate limited, inside the usage windows, a slot free. */
 export function canStartResolve(db: Db): boolean {

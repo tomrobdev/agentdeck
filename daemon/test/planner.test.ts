@@ -18,7 +18,7 @@ const { openDb } = await import('../src/db/index.ts');
 const { Scheduler } = await import('../src/application/scheduler.ts');
 const actions = await import('../src/application/actions.ts');
 const { plannerDue } = await import('../src/application/planner.ts');
-const { buildPlannerPrompt } = await import('../src/domain/planner/plan.ts');
+const { buildPlannerPrompt } = await import('../src/domain/planner/proposals.ts');
 const { renderPlist, servicePath, LABEL } = await import('../src/adapters/service.ts');
 
 const db = openDb(join(home, 'test.db'));
@@ -59,13 +59,13 @@ test('planner is due only with goals, an empty queue, and after the interval', (
   db.updateRepo(repoId, { planned_at: null });
 });
 
-test('planning proposes capped, de-duplicated tasks that wait for approval', async () => {
+test('proposing tasks yields capped, de-duplicated tasks that wait for approval', async () => {
   const prior = db.addTask({ repo_id: repoId, title: 'Add a greeting helper!', prompt: 'already done' });
   db.applyEvent(prior.id, { type: 'claim' });
   db.applyEvent(prior.id, { type: 'finish', outcome: 'done' });
   actions.updateSettings(db, { planner: { max_tasks: 2 } });
 
-  const res = await actions.planNow(db, 'alpha');
+  const res = await actions.proposeNow(db, 'alpha');
   assert.equal(res.outcome, 'proposed');
   assert.deepEqual(
     res.tasks.map((t) => t.title),
@@ -97,7 +97,7 @@ test('approve queues a proposal, reject cancels it, neither works twice', () => 
 
 test('an empty plan is recorded as nothing', async () => {
   actions.updateRepo(db, repoId, { goals: 'FAKE_PLAN_EMPTY' });
-  const res = await actions.planNow(db, repoId);
+  const res = await actions.proposeNow(db, repoId);
   assert.equal(res.outcome, 'nothing');
   assert.equal(res.note, 'goals already met');
   assert.equal(db.plannerRuns(repoId)[0].outcome, 'nothing');

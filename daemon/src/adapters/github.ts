@@ -5,7 +5,7 @@ import { promisify } from 'node:util';
 import { type MergeMethod, type PrDetails, parsePrDetails } from '../domain/pull-request/merge.ts';
 import { type PrState, parsePrState } from '../domain/pull-request/pr.ts';
 import { gitRemote } from './git.ts';
-import { lastLine } from './shell.ts';
+import { lastLine } from '../domain/text.ts';
 
 const exec = promisify(execFile);
 

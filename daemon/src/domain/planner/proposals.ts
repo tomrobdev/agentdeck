@@ -1,7 +1,7 @@
 // Turning a repo's goals into task proposals: the prompt, the answer's shape, and which proposals to keep.
-// Pure: no I/O. The planner runs read-only in the repo's main checkout and answers in PLAN_SCHEMA.
+// Pure: no I/O. The planner runs read-only in the repo's main checkout and answers in PROPOSALS_SCHEMA.
 import type { Repo } from '../repo/repo.ts';
-import { MODELS, OPEN_STATUSES, type Task } from '../task/task.ts';
+import { MODELS, OPEN_STATUSES, PROMPT_SECTIONS, type Task } from '../task/task.ts';
 
 export interface PlannerSettings {
   enabled: boolean;
@@ -22,24 +22,14 @@ export interface PlannerRun {
   pid: number | null; // the planner's claude process group while it runs, for crash recovery
 }
 
-export interface PlanResult {
+export interface ProposalResult {
   outcome: 'proposed' | 'nothing' | 'failed' | 'rate_limited' | 'no_goals';
   tasks: Task[];
   skipped: string[];
   note: string | null;
 }
 
-/** The sections every task prompt has, in order. The delegate skill (.claude/skills/delegate) asks for the same. */
-export const PROMPT_SECTIONS = `Goal: what the task achieves, in a sentence or two.
-Context: the files to start from, why it is needed, related tasks or plans.
-Change: what to do.
-Out of scope: what not to touch.
-Constraints: limits the agent must keep to, such as no new dependencies or no changes to package.json.
-Definition of done: the test command passing, plus concrete checks a reviewer can confirm.
-
-A task linked to a plan (agentdeck add --plan) needs only Goal, Out of scope and Constraints: the daemon puts the linked steps into the worker's prompt, and they supply Change and Definition of done.`;
-
-export const PLAN_SCHEMA = {
+export const PROPOSALS_SCHEMA = {
   type: 'object',
   properties: {
     tasks: {
@@ -108,7 +98,7 @@ export function plannerArgs(prompt: string, model: string): string[] {
     '--disallowedTools',
     ...PLANNER_DENIED,
     '--json-schema',
-    JSON.stringify(PLAN_SCHEMA),
+    JSON.stringify(PROPOSALS_SCHEMA),
   ];
 }
 

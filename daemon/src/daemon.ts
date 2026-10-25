@@ -30,14 +30,14 @@ export async function runDaemon({ db, once, log = () => {} }: DaemonOptions): Pr
   const reload = once
     ? undefined
     : {
-        check: ({ tasks, planning }: { tasks: number; planning: boolean }) =>
+        check: ({ tasks, proposing }: { tasks: number; proposing: boolean }) =>
           reloadDecision({
             enabled: db.reloadOnChange(),
             changed,
             lastChangeAt,
             now: Date.now(),
             tasks,
-            planning,
+            proposing,
             requested: restartRequested,
           }),
         // launchd's KeepAlive starts the daemon again on the code now on disk.

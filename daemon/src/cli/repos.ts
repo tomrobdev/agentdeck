@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { createInterface } from 'node:readline/promises';
 import * as actions from '../application/actions.ts';
-import type { PlanResult } from '../domain/planner/plan.ts';
+import type { ProposalResult } from '../domain/planner/proposals.ts';
 import type { MergeMethod } from '../domain/pull-request/merge.ts';
 import type { PrMode } from '../domain/pull-request/pr.ts';
 import { parseNetwork } from '../domain/run/sandbox.ts';
@@ -10,9 +10,22 @@ import { callDaemon } from './daemon-client.ts';
 import { die, fmtTask, printDoctor } from './format.ts';
 import type { Command } from './context.ts';
 
+const propose: Command = async ({ db, rest, repoName }) => {
+  if (!rest[0]) die('usage: agentdeck propose <repo>');
+  console.log(`proposing tasks for ${rest[0]}…`);
+  const repo = db.findRepo(rest[0]) ?? die(`no repo "${rest[0]}"`);
+  const res: ProposalResult = await callDaemon('POST', `/api/repos/${repo.id}/plan`, {});
+  console.log(`${res.outcome}${res.note ? `: ${res.note}` : ''}`);
+  for (const t of res.tasks) console.log(fmtTask(t, repoName(t.repo_id)));
+  for (const t of res.skipped) console.log(`  skipped (duplicate or over the cap): ${t}`);
+  if (res.tasks.some((t) => t.status === 'proposed')) console.log('approve with `agentdeck approve <id>`');
+};
+
 export const repoCommands: Record<string, Command> = {
-  repo: async ({ db, cmd, flags, rest }) => {
+  repo: async (args) => {
+    const { db, cmd, flags, rest } = args;
     const [sub, path] = rest;
+    if (sub === 'propose' || sub === 'plan') return propose({ ...args, rest: rest.slice(1) });
     if (sub === 'add') {
       if (!path) die('repo add needs a path');
       const repo = await actions.addRepo(db, {
@@ -99,14 +112,8 @@ export const repoCommands: Record<string, Command> = {
     console.log(`# ${r.goals_path}\n`);
     console.log(r.goals.trim() || '(empty: write the outcomes you want, priorities, and what not to touch)');
   },
-  plan: async ({ db, rest, repoName }) => {
-    if (!rest[0]) die('usage: agentdeck plan <repo>');
-    console.log(`planning ${rest[0]}…`);
-    const repo = db.findRepo(rest[0]) ?? die(`no repo "${rest[0]}"`);
-    const res: PlanResult = await callDaemon('POST', `/api/repos/${repo.id}/plan`, {});
-    console.log(`${res.outcome}${res.note ? `: ${res.note}` : ''}`);
-    for (const t of res.tasks) console.log(fmtTask(t, repoName(t.repo_id)));
-    for (const t of res.skipped) console.log(`  skipped (duplicate or over the cap): ${t}`);
-    if (res.tasks.some((t) => t.status === 'proposed')) console.log('approve with `agentdeck approve <id>`');
-  },
+  propose,
 };
+
+// `plan` is the old name of `propose`.
+repoCommands.plan = propose;

@@ -19,7 +19,7 @@ Repos
   agentdeck repo set <repo> sandbox on|off        run the agent's shell commands in Claude Code's sandbox (default on)
   agentdeck repo set <repo> network "<hosts>"     hosts sandboxed commands may reach, e.g. "registry.npmjs.org,github.com" ("" for none)
   agentdeck goals <repo> [--file goals.md]        show (or replace) the goals the planner works from
-  agentdeck plan <repo>                           run the planner now
+  agentdeck propose <repo>                        run the planner now (also: repo propose, plan)
 
 Tasks
   agentdeck add "<prompt>" --repo <name> [--title t] [--priority n] [--model sonnet] [--max-turns n] [--attempts n]
@@ -46,8 +46,8 @@ Tasks
   agentdeck merge <id> [--method squash|merge|rebase] [--yes] [--keep-branch]
                                   merge a done task's open PR: shows the preview, asks unless --yes, then deletes
                                   the remote branch and the worktree unless --keep-branch
-  agentdeck resolve <id>      merge the base branch into a done task's branch (the PR gets the push); conflicts start
-                                  a claude run, and if it fails the merge is undone and the task is blocked
+  agentdeck sync <id>         sync a done task's branch with the base branch (the PR gets the push); conflicts start
+                                  a claude run, and if it fails the merge is undone and the task is blocked (also: resolve)
   agentdeck clean <id>          remove the task's worktree (its branch is kept)
 
 Daemon
