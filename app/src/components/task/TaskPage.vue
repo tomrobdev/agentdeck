@@ -3,12 +3,13 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { type Changes, type MergeResult, type TaskDetail, ago, api, describeHold } from '../../api';
 import { useHotkeys } from '../../hotkeys';
 import { type TaskTab, go, openTask } from '../../router';
-import { canApprove, canCancel, canEdit, canMerge, canRetry, canReview, readNeeds, statusLabel } from '../../taskView';
+import { canApprove, canCancel, canEdit, canMarkDone, canMerge, canRetry, canReview, readNeeds, statusLabel } from '../../taskView';
 import Modal from '../Modal.vue';
 import SnippetPopover from '../files/SnippetPopover.vue';
 import StatusIcon from '../queue/StatusIcon.vue';
 import ChangesTab from './ChangesTab.vue';
 import CodeTab from './CodeTab.vue';
+import MarkDoneDialog from './MarkDoneDialog.vue';
 import MergeDialog from './MergeDialog.vue';
 import NeedsCallout from './NeedsCallout.vue';
 import OverviewTab from './OverviewTab.vue';
@@ -131,6 +132,23 @@ async function submitReview() {
   }
 }
 
+// Mark a blocked or failed task done by hand, with an optional note for the timeline.
+const markingDone = ref(false);
+async function submitMarkDone(doneNote: string) {
+  if (reviewBusy.value) return;
+  reviewBusy.value = true;
+  try {
+    await api.markDone(props.task.id, doneNote);
+    markingDone.value = false;
+    emit('changed');
+  } catch (e) {
+    markingDone.value = false;
+    emit('error', (e as Error).message);
+  } finally {
+    reviewBusy.value = false;
+  }
+}
+
 const merging = ref(false);
 function onMerged(result: MergeResult) {
   merging.value = false;
@@ -138,7 +156,7 @@ function onMerged(result: MergeResult) {
   if (result.cleanup_error) emit('error', `Merged, but cleanup failed: ${result.cleanup_error}`);
 }
 
-useHotkeys({ Escape: () => !reviewDialog.value && !merging.value && go({ name: 'queue' }) });
+useHotkeys({ Escape: () => !reviewDialog.value && !merging.value && !markingDone.value && go({ name: 'queue' }) });
 
 // Branch names under the title.
 const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel))] px-1.5 py-px';
@@ -194,11 +212,13 @@ const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel
           <button @click="openReview('changes')">↻ Request changes</button>
         </template>
         <button v-else-if="canRetry(task)" @click="emit('act', 'retry')">↻ Retry</button>
+        <button v-if="canMarkDone(task)" @click="markingDone = true">✓ Mark done</button>
         <button v-if="canMerge(task)" class="primary" @click="merging = true">Merge PR</button>
         <button v-if="canCancel(task)" @click="emit('act', 'cancel')">{{ s === 'running' ? '■ Stop' : '✕ Cancel' }}</button>
       </div>
     </header>
 
+    <MarkDoneDialog v-if="markingDone" :task="task" with-note :busy="reviewBusy" @close="markingDone = false" @confirm="submitMarkDone" />
     <MergeDialog v-if="merging" :task-id="task.id" @close="merging = false" @merged="onMerged" @changed="emit('changed')" />
 
     <nav class="flex gap-0.5 border-b border-border px-6" role="tablist">

@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import { type TaskSummary, ago } from '../../api';
 import { type BoardMove, type Group, type StatusGroup, boardMove, unblocksOf } from '../../taskView';
+import MarkDoneDialog from '../task/MarkDoneDialog.vue';
 import PriorityIcon from './PriorityIcon.vue';
 import StatusIcon from './StatusIcon.vue';
 
@@ -28,10 +29,17 @@ function onDragOver(e: DragEvent, key: string) {
   e.preventDefault(); // allows the drop
   over.value = key;
 }
+/** The task a drop is waiting to mark done: that move asks first. */
+const confirming = ref<TaskSummary | null>(null);
 function onDrop(key: string) {
   const kind = moves.value[key];
-  if (kind && dragging.value) emit('move', kind, dragging.value.id);
+  if (kind === 'mark_done') confirming.value = dragging.value;
+  else if (kind && dragging.value) emit('move', kind, dragging.value.id);
   end();
+}
+function confirmDone() {
+  if (confirming.value) emit('move', 'mark_done', confirming.value.id);
+  confirming.value = null;
 }
 function end() {
   dragging.value = null;
@@ -42,6 +50,7 @@ const LABELS: Record<BoardMove, string> = {
   reject: 'Drop to reject',
   retry: 'Drop to retry',
   cancel: 'Drop to cancel',
+  mark_done: 'Drop to mark done',
 };
 </script>
 
@@ -103,5 +112,6 @@ const LABELS: Record<BoardMove, string> = {
         </article>
       </div>
     </section>
+    <MarkDoneDialog v-if="confirming" :task="confirming" @close="confirming = null" @confirm="confirmDone" />
   </div>
 </template>
