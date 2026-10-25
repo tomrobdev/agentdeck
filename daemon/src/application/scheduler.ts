@@ -6,8 +6,8 @@ import { DEFAULTS } from '../config.ts';
 import type { Db } from '../db/index.ts';
 import { MAX_RESTARTS } from '../domain/task/lifecycle.ts';
 import type { ReloadDecision } from '../domain/daemon/restart.ts';
-import { decide } from '../domain/usage/governor.ts';
 import { warnStuckDependents } from './dependencies.ts';
+import { startGate } from './gate.ts';
 import { notifyLater } from './notifications.ts';
 import { planNow, plannerDue } from './planner.ts';
 import { resolveConflicting } from './conflicts.ts';
@@ -217,11 +217,13 @@ export class Scheduler {
 
   /** Why we can't start new work right now (null if we can), and how many tasks may run. */
   private gate(): { reason: string | null; limit: number } {
-    if (!this.opts.once && this.db.isPaused()) return { reason: 'paused', limit: 0 };
-    const until = Number(this.db.getSetting('rate_limited_until', '0'));
-    if (until * 1000 > Date.now()) return { reason: `rate limited until ${new Date(until * 1000).toLocaleTimeString()}`, limit: 0 };
+    const g = startGate(this.db);
+    if (!this.opts.once && g.paused) return { reason: 'paused', limit: 0 };
+    const until = g.rate_limited_until;
+    if (until && until * 1000 > Date.now())
+      return { reason: `rate limited until ${new Date(until * 1000).toLocaleTimeString()}`, limit: 0 };
 
-    const d = decide(this.db.usageWindows(), this.db.budget(), this.db.maxConcurrent());
+    const d = g.governor;
     const hold = d.allow ? null : d.reason;
     // Announce a hold once, and only when it is actually keeping queued work waiting.
     if (hold && !this.lastHold && this.db.hasQueued()) {

@@ -1,8 +1,5 @@
 // Keeps task branches up to date with their base branch and resolves merge conflicts.
 // The daemon does the git work in the task's worktree (agents cannot fetch); only a real conflict starts a claude run.
-import { createWriteStream } from 'node:fs';
-import { join } from 'node:path';
-import { runClaude } from '../adapters/claude.ts';
 import {
   abortMerge,
   aheadOfRemote,
@@ -21,19 +18,20 @@ import {
 import { github } from '../adapters/github.ts';
 import { closeLog, writeEvent } from '../adapters/run-log.ts';
 import { lastLine, runCommand } from '../adapters/shell.ts';
-import { LOG_DIR, TEST_TIMEOUT_MS, ensureDirs } from '../config.ts';
+import { TEST_TIMEOUT_MS } from '../config.ts';
 import type { Db } from '../db/index.ts';
 import { conflictReason, syncSummary } from '../domain/pull-request/conflict.ts';
 import type { Repo } from '../domain/repo/repo.ts';
-import { buildResolvePrompt, claudeArgs } from '../domain/run/prompt.ts';
-import { type Run, parseStatus, resultFields } from '../domain/run/run.ts';
+import { buildResolvePrompt } from '../domain/run/prompt.ts';
+import { parseStatus } from '../domain/run/run.ts';
+import { queueHold } from '../domain/task/start.ts';
 import type { Task } from '../domain/task/task.ts';
-import { decide } from '../domain/usage/governor.ts';
+import { startTaskRun } from './claude-run.ts';
 import { warnStuckDependents } from './dependencies.ts';
 import { ActionError } from './errors.ts';
+import { startGate } from './gate.ts';
 import { notifyLater } from './notifications.ts';
 import { logPrEvent } from './pull-requests.ts';
-import { effectiveTools, runSettings } from './tools.ts';
 
 /** What bringing the base branch into a task's branch came to. A merge that did not stick is already undone. */
 export type BringInResult =
@@ -105,37 +103,23 @@ async function resolveConflicts(
   files: string[],
   runTests: boolean,
 ): Promise<BringInResult> {
-  ensureDirs();
   const prompt = buildResolvePrompt(task, { base: repo.base_branch, files, ...(await mergeSides(worktree)), testCmd: repo.test_cmd });
-  const logPath = join(LOG_DIR, `task-${task.id}-resolve-${Date.now()}.jsonl`);
-  const log = createWriteStream(logPath, { flags: 'a' });
-  const runId = db.startRun(task.id, task.attempts, logPath, 'resolve');
-  const { result, exitCode, rateLimitedUntil, cancelled, stderr } = await runClaude({
-    args: claudeArgs(task, effectiveTools(repo, worktree), prompt, repo.test_cmd, runSettings(repo, worktree, logPath)),
-    cwd: worktree,
-    log,
-    env: { AGENTDECK_TASK_ID: String(task.id) },
-    shouldCancel: () => db.getTask(task.id)?.status === 'cancel_requested',
-    onSpawn: (pid) => db.setRunPid(runId, pid),
-    onUsage: (w) => db.recordUsageWindow(w.window, w.utilization, w.resets_at, w.status),
-  });
-  const fields: Partial<Run> = resultFields(result, exitCode);
+  const { runId, log, end, fields } = await startTaskRun(db, task, { kind: 'resolve', repo, worktree, prompt });
 
   let outcome: 'done' | 'blocked' | 'failed' | 'cancelled' | 'rate_limited';
   let reason = '';
   try {
-    if (cancelled) {
+    if (end.kind === 'cancelled') {
       outcome = 'cancelled';
-    } else if (rateLimitedUntil) {
-      db.setSetting('rate_limited_until', String(rateLimitedUntil));
+    } else if (end.kind === 'rate_limited') {
       outcome = 'rate_limited';
-      reason = `rate limited until ${new Date(rateLimitedUntil * 1000).toISOString()}`;
-    } else if (!result || result.is_error || exitCode !== 0) {
+      reason = end.reason;
+    } else if (end.kind === 'failed') {
       outcome = 'failed';
-      reason = result?.subtype ?? `claude exited with code ${exitCode}${stderr.trim() ? `: ${lastLine(stderr)}` : ''}`;
-    } else if (parseStatus(result.result).blocked) {
+      reason = end.reason;
+    } else if (parseStatus(end.result.result).blocked) {
       outcome = 'blocked';
-      reason = parseStatus(result.result).reason ?? 'the agent could not resolve the conflicts';
+      reason = parseStatus(end.result.result).reason ?? 'the agent could not resolve the conflicts';
     } else {
       reason = await checkResolution(worktree, before, files, task);
       if (!reason && runTests && repo.test_cmd) {
@@ -280,9 +264,9 @@ export const resolveTask = (db: Db, id: number): Promise<SyncReport> => syncTask
 
 /** Whether the governor lets a conflict run start now: not paused, not rate limited, inside the usage windows, a slot free. */
 export function canStartResolve(db: Db): boolean {
-  if (db.isPaused()) return false;
-  if (Number(db.getSetting('rate_limited_until', '0')) * 1000 > Date.now()) return false;
-  const d = decide(db.usageWindows(), db.budget(), db.maxConcurrent());
+  const gate = startGate(db);
+  if (queueHold(gate)) return false;
+  const d = gate.governor;
   return d.allow && db.countRunning() + syncing.size < d.max_concurrent;
 }
 
