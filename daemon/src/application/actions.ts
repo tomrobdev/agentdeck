@@ -1,10 +1,10 @@
 // The use cases the CLI and the HTTP API share. They throw ActionError on bad input.
 export { serviceStatus } from '../adapters/service.ts';
-export { type SyncReport, resolveTask } from './conflicts.ts';
+export { type SyncReport, syncNow } from './sync.ts';
 export { ActionError } from './errors.ts';
 export * from './files.ts';
 export { attachPlan, collectPlans, planHtml } from './plans.ts';
-export { planNow } from './planner.ts';
+export { proposeNow } from './planner.ts';
 export { mergePreview, mergeTask } from './pull-requests.ts';
 export * from './repos.ts';
 export type { Scheduler } from './scheduler.ts';

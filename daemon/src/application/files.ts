@@ -29,7 +29,7 @@ async function resolveHead(db: Db, id: number): Promise<{ repo: Repo; head: stri
 }
 
 /** Plus where that branch left the base branch. */
-async function resolveTask(db: Db, id: number): Promise<{ repo: Repo; head: string; base: { ref: string; sha: string } }> {
+async function taskRefs(db: Db, id: number): Promise<{ repo: Repo; head: string; base: { ref: string; sha: string } }> {
   const { repo, head } = await resolveHead(db, id);
   const base = await diffBase(repo.path, repo.base_branch, head);
   if (!base) throw new ActionError(`no common history with base branch "${repo.base_branch}"`);
@@ -42,7 +42,7 @@ async function resolveRef(db: Db, id: number, ref: FileRef): Promise<{ repo: Rep
     const { repo, head } = await resolveHead(db, id);
     return { repo, sha: head };
   }
-  const { repo, base } = await resolveTask(db, id);
+  const { repo, base } = await taskRefs(db, id);
   return { repo, sha: base.sha };
 }
 
@@ -77,7 +77,7 @@ export function parseFileRef(input: string | null | undefined): FileRef {
 }
 
 export async function taskChanges(db: Db, id: number): Promise<Changes> {
-  const { repo, head, base } = await resolveTask(db, id);
+  const { repo, head, base } = await taskRefs(db, id);
   const [files, commits] = await Promise.all([changedFilesCached(repo.path, base.sha, head), commitsBetween(repo.path, base.sha, head)]);
   return { base_ref: base.ref, base: base.sha, head, files, commits };
 }
@@ -85,7 +85,7 @@ export async function taskChanges(db: Db, id: number): Promise<Changes> {
 /** The patch of one changed file, cut at PATCH_LIMIT. */
 export async function taskDiff(db: Db, id: number, rawPath: string | null): Promise<FilePatch> {
   const p = path(rawPath);
-  const { repo, head, base } = await resolveTask(db, id);
+  const { repo, head, base } = await taskRefs(db, id);
   const file = (await changedFilesCached(repo.path, base.sha, head)).find((f) => f.path === p);
   if (!file) throw new ActionError(`${p} is not changed on this task's branch`);
   const { patch, truncated } = await filePatch(repo.path, base.sha, head, file.old_path ? [file.old_path, p] : [p]);

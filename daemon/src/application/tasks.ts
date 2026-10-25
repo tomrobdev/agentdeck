@@ -2,13 +2,14 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { git, readFile, removeWorktree, resolveCommit } from '../adapters/git.ts';
-import { lastLine, runProgram } from '../adapters/shell.ts';
+import { runProgram } from '../adapters/shell.ts';
 import type { Db } from '../db/index.ts';
 import { PLAN_LIMIT, isPlanPath, parsePlan } from '../domain/plan/plan.ts';
 import type { Repo } from '../domain/repo/repo.ts';
-import { readNeeds } from '../domain/run/run.ts';
+import { readNeeds } from '../domain/task/needs.ts';
 import { EDITABLE_STATUSES, MODELS, type Task, defaultTitle, isModel, planStepIds } from '../domain/task/task.ts';
-import { isSyncing } from './conflicts.ts';
+import { lastLine } from '../domain/text.ts';
+import { isSyncing } from './sync.ts';
 import { warnStuckDependents } from './dependencies.ts';
 import { ActionError } from './errors.ts';
 import { object, text, whole } from './input.ts';

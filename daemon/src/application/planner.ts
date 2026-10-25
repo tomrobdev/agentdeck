@@ -1,4 +1,4 @@
-// Runs the planner: turns a repo's goals file into task proposals (see domain/planner/plan.ts).
+// Runs the planner: turns a repo's goals file into task proposals (see domain/planner/proposals.ts).
 import { createWriteStream } from 'node:fs';
 import { join } from 'node:path';
 import { runClaude } from '../adapters/claude.ts';
@@ -6,7 +6,7 @@ import { goalsPath, readGoals } from '../adapters/goals.ts';
 import { closeLog } from '../adapters/run-log.ts';
 import { LOG_DIR, ensureDirs } from '../config.ts';
 import type { Db } from '../db/index.ts';
-import { type PlanResult, buildPlannerPrompt, plannerArgs, plannerDueReason, selectProposals } from '../domain/planner/plan.ts';
+import { type ProposalResult, buildPlannerPrompt, plannerArgs, plannerDueReason, selectProposals } from '../domain/planner/proposals.ts';
 import type { Repo } from '../domain/repo/repo.ts';
 import { recordRateLimit, usageRecorder } from './claude-run.ts';
 import { ActionError } from './errors.ts';
@@ -20,13 +20,13 @@ export function plannerDue(db: Db, repo: Repo, now = Date.now()): string | null 
   return plannerDueReason(db.plannerSettings(), repoState, now);
 }
 
-export async function planRepo(db: Db, repo: Repo): Promise<PlanResult> {
+export async function propose(db: Db, repo: Repo): Promise<ProposalResult> {
   const goals = readGoals(repo);
   if (!goals.trim()) return { outcome: 'no_goals', tasks: [], skipped: [], note: `write goals in ${goalsPath(repo)} first` };
 
   ensureDirs();
   const s = db.plannerSettings();
-  const logPath = join(LOG_DIR, `plan-${repo.name}-${Date.now()}.jsonl`);
+  const logPath = join(LOG_DIR, `proposals-${repo.name}-${Date.now()}.jsonl`);
   const log = createWriteStream(logPath, { flags: 'a' });
   const runId = db.startPlannerRun(repo.id, logPath);
   const existing = db.tasksForRepo(repo.id, 100);
@@ -76,17 +76,17 @@ export async function planRepo(db: Db, repo: Repo): Promise<PlanResult> {
   return { outcome: created.length ? 'proposed' : 'nothing', tasks: created, skipped, note };
 }
 
-const planning = new Set<number>();
+const proposing = new Set<number>();
 
 /** Run the planner for one repo now, regardless of its schedule. */
-export async function planNow(db: Db, nameOrId: string | number): Promise<PlanResult> {
+export async function proposeNow(db: Db, nameOrId: string | number): Promise<ProposalResult> {
   const repo = requireRepo(db, nameOrId);
   if (repo.archived_at) throw new ActionError(`${repo.name} is archived; unarchive it first`);
-  if (planning.has(repo.id)) throw new ActionError(`already planning ${repo.name}`);
-  planning.add(repo.id);
+  if (proposing.has(repo.id)) throw new ActionError(`already proposing tasks for ${repo.name}`);
+  proposing.add(repo.id);
   try {
-    return await planRepo(db, repo);
+    return await propose(db, repo);
   } finally {
-    planning.delete(repo.id);
+    proposing.delete(repo.id);
   }
 }

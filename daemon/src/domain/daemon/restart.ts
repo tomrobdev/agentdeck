@@ -32,7 +32,7 @@ export interface ReloadInput {
   now: number;
   /** Tasks with a live run. */
   tasks: number;
-  planning: boolean;
+  proposing: boolean;
   /** Someone asked for a restart (the dashboard's button), whatever the setting or the files say. */
   requested?: boolean;
 }
@@ -47,7 +47,7 @@ export interface ReloadDecision {
 }
 
 export function reloadDecision(i: ReloadInput): ReloadDecision {
-  const wait = restartWait({ tasks: i.tasks, planner: i.planning ? 1 : 0 });
+  const wait = restartWait({ tasks: i.tasks, planner: i.proposing ? 1 : 0 });
   if (i.requested) {
     return wait
       ? { pending: true, exit: false, reason: `restart requested; restarting once ${wait} finish` }

@@ -1,6 +1,6 @@
 // Planner runs: one row per planner claude process.
 import type { DatabaseSync } from 'node:sqlite';
-import type { PlannerRun } from '../domain/planner/plan.ts';
+import type { PlannerRun } from '../domain/planner/proposals.ts';
 import { NOW } from './sql.ts';
 
 export function plannerRunStore(db: DatabaseSync) {

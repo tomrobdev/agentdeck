@@ -1,17 +1,18 @@
 // Runs one attempt of a claimed task: worktree, setup, claude, tests, then the task's next status.
 import { commitLeftovers, commitsAhead, ensureWorktree } from '../adapters/git.ts';
 import { closeLog, writeEvent } from '../adapters/run-log.ts';
-import { lastLine, runCommand } from '../adapters/shell.ts';
+import { runCommand } from '../adapters/shell.ts';
 import { SETUP_TIMEOUT_MS, TEST_TIMEOUT_MS, ensureDirs } from '../config.ts';
 import type { Db } from '../db/index.ts';
-import { conflictReason, syncSummary } from '../domain/pull-request/conflict.ts';
+import { conflictReason, syncSummary } from '../domain/branch/sync.ts';
+import { lastLine } from '../domain/text.ts';
 import { linkedSteps, unfinishedSteps, unfinishedSummary } from '../domain/plan/plan.ts';
 import { type PromptPlan, buildPrompt } from '../domain/run/prompt.ts';
 import { latestReviewNote } from '../domain/task/history.ts';
 import { type Run, type WorkerResult, firstDenial, isEnvironmentBlock, parseStatus } from '../domain/run/run.ts';
 import { type Task, leftoversMessage, planStepIds } from '../domain/task/task.ts';
 import { type TaskRunEnd, openTaskRun, startTaskRun } from './claude-run.ts';
-import { bringInBase } from './conflicts.ts';
+import { syncBranch } from './sync.ts';
 import { warnStuckDependents } from './dependencies.ts';
 import { notifyLater } from './notifications.ts';
 import { pauseRepo } from './pause.ts';
@@ -64,8 +65,8 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
   const setupFailure = await setUp();
   if (setupFailure) return setupFailure;
 
-  // Bring the latest base into the branch, on retries too, so the agent builds on current code.
-  const synced = await bringInBase(db, task, repo, wt.path, { allowResolve: repo.auto_resolve === 1, runTests: false });
+  // Sync the branch with the latest base, on retries too, so the agent builds on current code.
+  const synced = await syncBranch(db, task, repo, wt.path, { allowResolve: repo.auto_resolve === 1, runTests: false });
   writeEvent(log, { type: 'agentdeck_sync', ...synced });
   if (synced.kind === 'clean' || synced.kind === 'resolved') {
     db.recordSync(task.id, syncSummary(repo.base_branch, synced.kind, synced.kind === 'resolved' ? synced.files : []));

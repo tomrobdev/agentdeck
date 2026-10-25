@@ -292,7 +292,7 @@ export interface PlanHtml {
 }
 
 /** POST /api/repos/:id/plan */
-export interface PlanResult {
+export interface ProposalResult {
   outcome: 'proposed' | 'nothing' | 'failed' | 'rate_limited' | 'no_goals';
   /** The proposals as stored, without the queue's view of them. */
   tasks: Pick<Task, 'id' | 'title' | 'prompt' | 'status'>[];
@@ -341,8 +341,8 @@ export interface MergeResult {
   task: TaskDetail;
 }
 
-/** What bringing the base branch into a task's branch came to (POST /api/tasks/:id/resolve). */
-export interface ResolveResult {
+/** What a sync of a task's branch came to (POST /api/tasks/:id/resolve). */
+export interface SyncResult {
   /** `skipped`: conflicts, but auto_resolve is off. `deferred`: the usage limit or a cancel stopped it. */
   outcome: 'up_to_date' | 'clean' | 'resolved' | 'blocked' | 'skipped' | 'deferred' | 'error';
   files: string[];

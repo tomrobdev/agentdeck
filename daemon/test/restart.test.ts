@@ -21,7 +21,7 @@ test('restartWait says what is active', () => {
   assert.equal(restartWait({ tasks: 2, planner: 1 }), '2 running tasks and 1 planner run');
 });
 
-const base = { enabled: true, changed: ['a.ts'], lastChangeAt: 0, now: RELOAD_QUIET_MS + 1, tasks: 0, planning: false };
+const base = { enabled: true, changed: ['a.ts'], lastChangeAt: 0, now: RELOAD_QUIET_MS + 1, tasks: 0, proposing: false };
 
 test('reload: nothing happens when off or when nothing changed', () => {
   assert.deepEqual(reloadDecision({ ...base, enabled: false }), { pending: false, exit: false, reason: '' });
@@ -32,7 +32,7 @@ test('reload: waits for running work, and for edits to settle, then exits', () =
   const busy = reloadDecision({ ...base, tasks: 1 });
   assert.deepEqual([busy.pending, busy.exit], [true, false]);
   assert.match(busy.reason, /1 running task/);
-  assert.equal(reloadDecision({ ...base, planning: true }).exit, false);
+  assert.equal(reloadDecision({ ...base, proposing: true }).exit, false);
   const fresh = reloadDecision({ ...base, now: 10 });
   assert.deepEqual([fresh.pending, fresh.exit], [true, false]);
   const ready = reloadDecision(base);

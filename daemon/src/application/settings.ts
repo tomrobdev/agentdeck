@@ -1,7 +1,7 @@
 // Use cases for the daemon as a whole: pause, status, and settings.
 import type { Db } from '../db/index.ts';
 import { NOTIFY_KINDS, type NotifyKind, type NotifySettings } from '../domain/notification.ts';
-import type { PlannerSettings } from '../domain/planner/plan.ts';
+import type { PlannerSettings } from '../domain/planner/proposals.ts';
 import { MODELS } from '../domain/task/task.ts';
 import { BUDGET_KEYS, type Budget, validateBudget } from '../domain/usage/governor.ts';
 import { restartWait } from '../domain/daemon/restart.ts';

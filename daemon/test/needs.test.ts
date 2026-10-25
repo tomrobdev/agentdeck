@@ -8,7 +8,8 @@ import { test } from 'node:test';
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-needs-'));
 
 const { openDb } = await import('../src/db/index.ts');
-const { isEnvironmentBlock, parseStatus, readNeeds } = await import('../src/domain/run/run.ts');
+const { isEnvironmentBlock, parseStatus } = await import('../src/domain/run/run.ts');
+const { readNeeds } = await import('../src/domain/task/needs.ts');
 const { workerSystemPrompt } = await import('../src/domain/run/prompt.ts');
 
 test('each NEEDS form parses', () => {

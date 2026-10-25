@@ -3,9 +3,10 @@ import { readFileSync } from 'node:fs';
 import { createInterface } from 'node:readline/promises';
 import * as actions from '../application/actions.ts';
 import { planProgress } from '../domain/plan/plan.ts';
-import { pickRun, readNeeds } from '../domain/run/run.ts';
+import { pickRun } from '../domain/run/run.ts';
 import { TASK_STATUSES } from '../domain/task/lifecycle.ts';
 import { filterTasks } from '../domain/task/listing.ts';
+import { readNeeds } from '../domain/task/needs.ts';
 import { planStepIds } from '../domain/task/task.ts';
 import { callDaemon } from './daemon-client.ts';
 import { die, taskId, fmtTask, printLog } from './format.ts';
@@ -193,9 +194,9 @@ export const taskCommands: Record<string, Command> = {
     );
     if (res.cleanup_error) console.log(`cleanup incomplete: ${res.cleanup_error}`);
   },
-  resolve: async ({ db, rest }) => {
+  sync: async ({ db, rest }) => {
     const id = taskId(rest[0]);
-    console.log(`bringing the base branch into #${id}'s branch… (a conflict starts a claude run and can take a while)`);
+    console.log(`syncing #${id}'s branch with the base branch… (a conflict starts a claude run and can take a while)`);
     const r: actions.SyncReport = await callDaemon('POST', `/api/tasks/${id}/resolve`, {});
     const files = `${r.files.length} ${r.files.length === 1 ? 'file' : 'files'}`;
     const lines: Record<typeof r.outcome, string> = {
@@ -217,3 +218,6 @@ export const taskCommands: Record<string, Command> = {
     console.log(`removed worktree; branch ${branch} kept`);
   },
 };
+
+// `resolve` is the old name of `sync`.
+taskCommands.resolve = taskCommands.sync;

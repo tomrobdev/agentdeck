@@ -12,7 +12,7 @@ const { callDaemon } = await import('../src/cli/daemon-client.ts');
 const { RELOAD_QUIET_MS, reloadDecision, restartWait } = await import('../src/domain/daemon/restart.ts');
 const { openDb } = await import('../src/db/index.ts');
 
-const base = { enabled: true, changed: ['a.ts'], lastChangeAt: 0, now: RELOAD_QUIET_MS + 1, tasks: 0, planning: false };
+const base = { enabled: true, changed: ['a.ts'], lastChangeAt: 0, now: RELOAD_QUIET_MS + 1, tasks: 0, proposing: false };
 
 function reloading() {
   const db = openDb(':memory:');
@@ -29,7 +29,7 @@ function reloading() {
 
 const tick = () => new Promise((r) => setImmediate(r));
 
-for (const kind of ['resolve', 'plan'] as const) {
+for (const kind of ['sync', 'propose'] as const) {
   test(`a tracked ${kind} keeps the reload from exiting until it settles`, async () => {
     const { scheduler, exited } = reloading();
     let finish!: () => void;
@@ -45,7 +45,7 @@ for (const kind of ['resolve', 'plan'] as const) {
 
 test('a tracked run that fails still lets the reload go ahead', async () => {
   const { scheduler, exited } = reloading();
-  const p = scheduler.track(Promise.reject(new Error('boom')), 'resolve');
+  const p = scheduler.track(Promise.reject(new Error('boom')), 'sync');
   await assert.rejects(p, /boom/);
   await tick();
   assert.equal(exited(), 1);
