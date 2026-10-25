@@ -6,6 +6,7 @@ import { BUDGET_KEYS, type Budget, validateBudget, validateSlots } from '../doma
 import { restartWait } from '../domain/daemon/restart.ts';
 import type { MergeMethod } from '../domain/pull-request/merge.ts';
 import type { PrMode } from '../domain/pull-request/pr.ts';
+import type { Settings } from '../domain/settings.ts';
 import { ActionError, flag, list, number, object, refuse, text, whole } from './input.ts';
 import { startGate } from './gate.ts';
 import { notify } from './notifications.ts';
@@ -53,23 +54,10 @@ export function restartDaemon(db: Db, request: () => void): { waiting: string | 
   };
 }
 
-export interface Settings {
-  max_concurrent: number;
-  budget: Budget;
-  notify: NotifySettings;
-  planner: PlannerSettings;
-  /** Restart the daemon onto new code when daemon/src changes and nothing is running. */
-  reload_on_change: boolean;
-}
+export type { Settings };
 
 export function getSettings(db: Db): Settings {
-  return {
-    max_concurrent: db.maxConcurrent(),
-    budget: db.budget(),
-    notify: db.notifySettings(),
-    planner: db.plannerSettings(),
-    reload_on_change: db.reloadOnChange(),
-  };
+  return db.readSettings();
 }
 
 export interface SettingsPatch {
@@ -121,71 +109,60 @@ export function repoSettingPatch(key: string | undefined, value: string): RepoPa
 
 /** Apply a partial settings update after validating all of it. */
 export function updateSettings(db: Db, patch: SettingsPatch): Settings {
-  const writes: [string, string][] = [];
+  const next = db.readSettings();
   const body = object(patch);
   const section = (key: string) => (body[key] === undefined ? undefined : object(body[key]));
 
-  const reload = flag(body, 'reload_on_change');
-  if (reload !== undefined) writes.push(['reload_on_change', reload ? '1' : '0']);
-
-  const maxConcurrent = whole(body, 'max_concurrent', validateSlots);
-  if (maxConcurrent !== undefined) writes.push(['max_concurrent', String(maxConcurrent)]);
+  next.reload_on_change = flag(body, 'reload_on_change') ?? next.reload_on_change;
+  next.max_concurrent = whole(body, 'max_concurrent', validateSlots) ?? next.max_concurrent;
 
   const budget = section('budget');
   if (budget) {
-    const merged = { ...db.budget() };
-    for (const k of BUDGET_KEYS) {
-      const value = number(budget, k);
-      if (value !== undefined) merged[k] = value;
-    }
-    const err = validateBudget(merged);
-    if (err) throw new ActionError(err);
-    for (const k of BUDGET_KEYS) writes.push([k, String(merged[k])]);
+    for (const k of BUDGET_KEYS) next.budget[k] = number(budget, k) ?? next.budget[k];
+    refuse(validateBudget(next.budget));
   }
 
   const n = section('notify');
   if (n) {
-    const desktop = flag(n, 'desktop');
-    if (desktop !== undefined) writes.push(['notify_desktop', desktop ? '1' : '0']);
+    next.notify.desktop = flag(n, 'desktop') ?? next.notify.desktop;
     const events = list(n, 'events');
     if (events !== undefined) {
       refuse(notifyEventsError(events));
-      writes.push(['notify_events', events.join(',')]);
+      next.notify.events = events as NotifyKind[];
     }
     const topic = text(n, 'ntfy_topic', { empty: true });
     if (topic !== undefined) {
       refuse(ntfyTopicError(topic));
-      writes.push(['ntfy_topic', topic]);
+      next.notify.ntfy_topic = topic;
     }
     const server = text(n, 'ntfy_server', { empty: true, raw: true });
     if (server !== undefined) {
       refuse(ntfyServerError(server));
-      writes.push(['ntfy_server', server]);
+      next.notify.ntfy_server = server;
     }
   }
 
   const p = section('planner');
   if (p) {
-    const enabled = flag(p, 'enabled');
-    if (enabled !== undefined) writes.push(['planner_enabled', enabled ? '1' : '0']);
+    next.planner.enabled = flag(p, 'enabled') ?? next.planner.enabled;
     const hours = number(p, 'interval_hours');
     if (hours !== undefined) {
       refuse(plannerIntervalError(hours));
-      writes.push(['planner_interval_hours', String(hours)]);
+      next.planner.interval_hours = hours;
     }
     const maxTasks = number(p, 'max_tasks');
     if (maxTasks !== undefined) {
       refuse(plannerMaxTasksError(maxTasks));
-      writes.push(['planner_max_tasks', String(maxTasks)]);
+      next.planner.max_tasks = maxTasks;
     }
     const model = text(p, 'model', { empty: true, raw: true });
     if (model !== undefined) {
       refuse(plannerModelError(model));
-      writes.push(['planner_model', model]);
+      next.planner.model = model;
     }
   }
 
-  for (const [k, v] of writes) db.setSetting(k, v);
+  db.writeSettings(next);
   return getSettings(db);
 }
 

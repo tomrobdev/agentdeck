@@ -3,7 +3,9 @@ import type { DatabaseSync } from 'node:sqlite';
 import { DEFAULTS } from '../config.ts';
 import { NOTIFY_KINDS, type NotifyKind, type NotifySettings } from '../domain/notification.ts';
 import type { PlannerSettings } from '../domain/planner/proposals.ts';
+import type { Settings } from '../domain/settings.ts';
 import { BUDGET_KEYS, type Budget, DEFAULT_BUDGET } from '../domain/usage/governor.ts';
+import { atomically } from './sql.ts';
 
 /** What each setting reads as until someone sets it. The daemon starts paused until someone resumes it. */
 export const SETTING_DEFAULTS = {
@@ -31,10 +33,45 @@ export function settingsStore(db: DatabaseSync) {
   const set = (key: string, value: string): void => {
     db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(key, value);
   };
+  const budget = (): Budget => Object.fromEntries(BUDGET_KEYS.map((k) => [k, Number(get(k))])) as unknown as Budget;
+  const notifySettings = (): NotifySettings => ({
+    desktop: get('notify_desktop') === '1',
+    events: get('notify_events').split(',').filter(Boolean) as NotifyKind[],
+    ntfy_topic: get('ntfy_topic'),
+    ntfy_server: get('ntfy_server'),
+  });
+  const plannerSettings = (): PlannerSettings => ({
+    enabled: get('planner_enabled') === '1',
+    interval_hours: Number(get('planner_interval_hours')),
+    max_tasks: Number(get('planner_max_tasks')),
+    model: get('planner_model'),
+  });
   return {
-    /** Raw access by key, for updateSettings. Everything else uses the typed accessors below. */
-    getSetting: get,
+    /** Raw write by key, for flags the daemon keeps for itself. The person's settings go through writeSettings. */
     setSetting: set,
+    /** The settings a person can change, as one value. */
+    readSettings: (): Settings => ({
+      max_concurrent: Number(get('max_concurrent')),
+      budget: budget(),
+      notify: notifySettings(),
+      planner: plannerSettings(),
+      reload_on_change: get('reload_on_change') === '1',
+    }),
+    /** Store all of `s` in one transaction. */
+    writeSettings: (s: Settings): void =>
+      atomically(db, () => {
+        set('max_concurrent', String(s.max_concurrent));
+        for (const k of BUDGET_KEYS) set(k, String(s.budget[k]));
+        set('notify_desktop', s.notify.desktop ? '1' : '0');
+        set('notify_events', s.notify.events.join(','));
+        set('ntfy_topic', s.notify.ntfy_topic);
+        set('ntfy_server', s.notify.ntfy_server);
+        set('planner_enabled', s.planner.enabled ? '1' : '0');
+        set('planner_interval_hours', String(s.planner.interval_hours));
+        set('planner_max_tasks', String(s.planner.max_tasks));
+        set('planner_model', s.planner.model);
+        set('reload_on_change', s.reload_on_change ? '1' : '0');
+      }),
     isPaused: (): boolean => get('paused') === '1',
     setPaused: (paused: boolean): void => set('paused', paused ? '1' : '0'),
     /** Unix seconds until which claude is rate limited, or null when it is not (or has lifted). */
@@ -44,19 +81,9 @@ export function settingsStore(db: DatabaseSync) {
     /** When a PR re-read was last asked for, in ms since the epoch. */
     prCheckRequested: (): number => Number(get('pr_check_requested')),
     requestPrCheck: (at = Date.now()): void => set('pr_check_requested', String(at)),
-    budget: (): Budget => Object.fromEntries(BUDGET_KEYS.map((k) => [k, Number(get(k))])) as unknown as Budget,
+    budget,
     maxConcurrent: (): number => Number(get('max_concurrent')),
-    notifySettings: (): NotifySettings => ({
-      desktop: get('notify_desktop') === '1',
-      events: get('notify_events').split(',').filter(Boolean) as NotifyKind[],
-      ntfy_topic: get('ntfy_topic'),
-      ntfy_server: get('ntfy_server'),
-    }),
-    plannerSettings: (): PlannerSettings => ({
-      enabled: get('planner_enabled') === '1',
-      interval_hours: Number(get('planner_interval_hours')),
-      max_tasks: Number(get('planner_max_tasks')),
-      model: get('planner_model'),
-    }),
+    notifySettings,
+    plannerSettings,
   };
 }
