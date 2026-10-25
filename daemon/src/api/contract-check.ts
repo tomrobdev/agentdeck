@@ -55,3 +55,4 @@ check<Fits<C.TaskPatch, In<typeof actions.editTask, 2>>>();
 check<Fits<C.SettingsPatch, In<typeof actions.updateSettings, 1>>>();
 check<Fits<C.MergeRequest, In<typeof actions.mergeTask, 2>>>();
 check<Fits<C.RetryRequest['note'], In<typeof actions.retryTask, 2>>>();
+check<Fits<C.MarkDoneRequest['note'], In<typeof actions.markDone, 2>>>();

@@ -150,6 +150,8 @@ export interface TaskSummary {
   plan_steps: string | null;
   /** JSON `{ kind: 'deps' | 'host' | 'edit', items: string[] }`: what the worker said it needs when it blocked. Missing from a daemon that predates it. */
   needs?: string | null;
+  /** 'person' when a person marked the task done by hand. Missing from a daemon that predates it. */
+  done_by?: 'person' | null;
   /** Set for a queued task held back by after_task; stuck says why its dependency won't get there on its own. */
   waiting: { on: number; stuck: string | null } | null;
   /** For a task in review: the queued tasks that wait on its PR. Missing from a daemon that predates it; read it as empty. */
@@ -203,6 +205,8 @@ export interface TaskEventRow {
     | 'approve'
     | 'reject'
     | 'retry'
+    | 'mark_done'
+    | 'pr_merged'
     | 'recover';
   from_status: TaskStatus | null;
   to_status: TaskStatus | null;
@@ -274,6 +278,11 @@ export interface CancelResult {
 
 /** POST /api/tasks/:id/retry: `note` is "request changes", kept on the timeline and put first in the next run's prompt. */
 export interface RetryRequest {
+  note?: string;
+}
+
+/** POST /api/tasks/:id/done: `note` is kept on the timeline. */
+export interface MarkDoneRequest {
   note?: string;
 }
 

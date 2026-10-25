@@ -348,7 +348,7 @@ test('--after rejects a task that does not exist, and a failed dependency never 
 });
 
 test('isWaiting mirrors the claim rule', () => {
-  const done = { status: 'done', pr_url: null, pr_state: null, pr_mode: 'off' };
+  const done = { status: 'done', pr_url: null, pr_state: null, pr_mode: 'off', done_by: null };
   assert.equal(isWaiting({ after_task: null }, undefined), false);
   assert.equal(isWaiting({ after_task: 1 }, { ...done, pr_mode: 'draft' }), true, 'its PR is not opened yet');
   assert.equal(isWaiting({ after_task: 1 }, undefined), true);
@@ -359,7 +359,7 @@ test('isWaiting mirrors the claim rule', () => {
 });
 
 test('dependencyState says why a task is stuck', () => {
-  const done = { status: 'done', pr_url: null, pr_state: null, pr_mode: 'off' };
+  const done = { status: 'done', pr_url: null, pr_state: null, pr_mode: 'off', done_by: null };
   const after = { after_task: 5 };
   assert.deepEqual(dependencyState({ after_task: null }, undefined), { kind: 'none' });
   assert.deepEqual(dependencyState(after, done), { kind: 'met' });

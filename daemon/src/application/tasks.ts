@@ -180,6 +180,17 @@ export function retryTask(db: Db, id: number, note?: string): void {
   if (!db.applyEvent(id, { type: 'retry' }, { reason: note?.trim() || null })) throw new ActionError(`#${id} is ${t.status}`);
 }
 
+/**
+ * A person finished or landed a blocked or failed task's work themselves. The optional `note` goes on the timeline.
+ * Done releases the tasks waiting on it (unless its PR is open: they wait for the merge), so no warnStuckDependents.
+ */
+export function markDone(db: Db, id: number, note?: string): void {
+  const t = requireTask(db, id);
+  if (note !== undefined && typeof note !== 'string') throw new ActionError('note must be text');
+  if (!db.applyEvent(id, { type: 'mark_done' }, { reason: note?.trim() || null }))
+    throw new ActionError(`#${id} is ${db.getTask(id)?.status ?? t.status}; only blocked or failed tasks can be marked done`);
+}
+
 const INSTALLERS = ['pnpm', 'yarn', 'npm'];
 const LOCKFILES: Record<string, string> = { pnpm: 'pnpm-lock.yaml', yarn: 'yarn.lock', npm: 'package-lock.json' };
 const INSTALL_TIMEOUT_MS = 10 * 60_000;

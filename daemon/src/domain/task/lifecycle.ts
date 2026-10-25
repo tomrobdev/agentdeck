@@ -25,6 +25,8 @@ export type TaskEvent =
   | { type: 'approve' } // accept a planner proposal
   | { type: 'reject' } // decline a planner proposal
   | { type: 'retry' } // a human asks for another attempt
+  | { type: 'mark_done' } // a person finished or landed the work themselves
+  | { type: 'pr_merged' } // the daemon found the task's open PR merged on GitHub
   | { type: 'recover'; exhausted: boolean }; // the daemon restarted mid-run; exhausted = too many restarts
 
 /** Every status each status may move to. `nextStatus` results are always listed here. */
@@ -34,8 +36,8 @@ export const TRANSITIONS: Record<TaskStatus, TaskStatus[]> = {
   running: ['queued', 'done', 'blocked', 'failed', 'cancel_requested', 'cancelled'],
   cancel_requested: ['cancelled'],
   done: ['queued', 'blocked'],
-  blocked: ['queued', 'cancelled'],
-  failed: ['queued', 'cancelled'],
+  blocked: ['queued', 'done', 'cancelled'],
+  failed: ['queued', 'done', 'cancelled'],
   cancelled: ['queued'],
 };
 
@@ -52,6 +54,8 @@ export type RuleKey =
   | 'approve'
   | 'reject'
   | 'retry'
+  | 'mark_done'
+  | 'pr_merged'
   | 'recover'
   | 'recover:exhausted';
 
@@ -76,6 +80,8 @@ export const RULES: Record<RuleKey, Partial<Record<TaskStatus, TaskStatus>>> = {
   approve: { proposed: 'queued' },
   reject: { proposed: 'cancelled' },
   retry: { blocked: 'queued', failed: 'queued', cancelled: 'queued', done: 'queued' },
+  mark_done: { blocked: 'done', failed: 'done' },
+  pr_merged: { blocked: 'done', failed: 'done' },
   recover: { running: 'queued', cancel_requested: 'cancelled' },
   'recover:exhausted': { running: 'failed', cancel_requested: 'cancelled' },
 };
