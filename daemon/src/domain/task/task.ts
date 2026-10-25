@@ -24,6 +24,7 @@ export interface Task {
   merge_method: MergeMethod | null; // how the PR was merged from the app
   after_task: number | null; // not claimed until that task is done (and its PR merged, if it has one)
   plan_path: string | null; // the plan this task carries out: a repo-relative path under docs/plans/
+  needs: string | null; // JSON Needs (domain/run/run.ts) the worker said it needs when it blocked; cleared when queued again
   plan_steps: string | null; // JSON array of that plan's step ids; null means every unfinished step (see planStepIds)
   created_at: string;
   updated_at: string;

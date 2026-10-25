@@ -27,6 +27,7 @@ const EVENT_TEXT: Record<string, (e: TaskEventRow) => string> = {
   merge: () => 'merged the pull request',
   sync: (e) => e.reason ?? 'brought the base branch into the branch',
   plan_unfinished: (e) => e.reason ?? 'left linked plan steps unfinished',
+  environment_block: () => 'blocked by the environment; attempt given back',
   conflict: () => 'could not resolve conflicts with the base branch; blocked',
   rate_limited: () => 'hit the usage limit; back in the queue without using an attempt',
   recover: (e) => (e.to_status === 'failed' ? 'failed after repeated daemon restarts' : 'requeued after a daemon restart'),

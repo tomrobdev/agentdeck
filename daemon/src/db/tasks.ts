@@ -8,7 +8,7 @@ import { EDITABLE_STATUSES, OPEN_STATUSES, type Task, type TaskSummary } from '.
 import { NOW, atomically } from './sql.ts';
 
 const SUMMARY_COLUMNS =
-  'id, repo_id, title, status, priority, model, max_turns, attempts, max_attempts, branch, worktree, blocked_reason, source, restarts, pr_url, pr_state, merge_method, after_task, plan_path, plan_steps, created_at, updated_at';
+  'id, repo_id, title, status, priority, model, max_turns, attempts, max_attempts, branch, worktree, blocked_reason, source, restarts, pr_url, pr_state, merge_method, after_task, plan_path, plan_steps, needs, created_at, updated_at';
 
 /** SQL list of fixed status literals, for `status IN (…)`. */
 const statusList = (statuses: TaskStatus[]) => statuses.map((s) => `'${s}'`).join(', ');
@@ -260,12 +260,13 @@ export function taskStore(db: DatabaseSync) {
      * (say, a cancel arriving as a run finishes) is never overwritten. Returns the updated task, or
      * undefined if the task is missing or the event isn't allowed.
      */
-    applyEvent(id: number, event: TaskEvent, opts: { reason?: string | null } = {}): Task | undefined {
+    applyEvent(id: number, event: TaskEvent, opts: { reason?: string | null; needs?: string | null } = {}): Task | undefined {
       for (let attempt = 0; attempt < 3; attempt++) {
         const cur = this.getTask(id);
         if (!cur) return undefined;
         const to = nextStatus(cur.status, event);
         if (!to) return undefined;
+        const environment = event.type === 'finish' && event.outcome === 'blocked' && event.environment === true;
         const sets = ['status = ?'];
         const params: (string | number | null)[] = [to];
         if (to !== 'cancelled') {
@@ -273,9 +274,14 @@ export function taskStore(db: DatabaseSync) {
           if (event.type === 'claim') sets.push('attempts = attempts + 1');
           else if (event.type === 'retry')
             sets.push('max_attempts = attempts + 1'); // one more attempt on top of those used
-          else if (event.type === 'rate_limited') sets.push(give);
+          else if (event.type === 'rate_limited' || environment) sets.push(give);
           else if (event.type === 'recover') sets.push('restarts = restarts + 1', ...(to === 'queued' ? [give] : []));
           if (event.type === 'finish' && event.outcome === 'done') sets.push('blocked_reason = NULL');
+          if (to === 'queued') sets.push('needs = NULL');
+          else if (event.type === 'finish' && event.outcome === 'blocked') {
+            sets.push('needs = ?');
+            params.push(opts.needs ?? null);
+          }
           if (
             (event.type === 'finish' && (event.outcome === 'blocked' || event.outcome === 'failed')) ||
             (event.type === 'recover' && to === 'failed') ||
@@ -289,7 +295,7 @@ export function taskStore(db: DatabaseSync) {
           const row = db
             .prepare(`UPDATE tasks SET ${sets.join(', ')}, updated_at = ${NOW} WHERE id = ? AND status IN (?) RETURNING *`)
             .get(...params, id, cur.status) as Task | undefined;
-          if (row) recordEvent(id, event.type, cur.status, to, opts.reason ?? null);
+          if (row) recordEvent(id, environment ? 'environment_block' : event.type, cur.status, to, opts.reason ?? null);
           return row;
         });
         if (row) return row;

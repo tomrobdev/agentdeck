@@ -16,7 +16,8 @@ export const TASK_STATUSES: TaskStatus[] = ['proposed', 'queued', 'running', 'do
 /** What happened to a task. Everything that changes a status is one of these. */
 export type TaskEvent =
   | { type: 'claim' } // the scheduler picked it up
-  | { type: 'finish'; outcome: 'done' | 'blocked' | 'cancelled' } // a run ended
+  | { type: 'finish'; outcome: 'done' | 'cancelled' } // a run ended
+  | { type: 'finish'; outcome: 'blocked'; environment?: boolean } // environment = the environment is to blame: the attempt is given back
   | { type: 'finish'; outcome: 'failed'; retry: boolean } // a run failed; retry = attempts remain
   | { type: 'rate_limited' } // a run hit the usage limit; not the task's fault
   | { type: 'conflict' } // a done task's branch conflicts with its base and the resolve run could not fix it

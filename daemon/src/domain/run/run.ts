@@ -61,14 +61,55 @@ export type Outcome = 'done' | 'blocked' | 'failed' | 'cancelled' | 'rate_limite
 export interface WorkerResult {
   outcome: Outcome;
   reason?: string;
+  /** For a blocked run: what the worker said it needs. */
+  needs?: Needs;
+  /** For a blocked run: the environment is to blame, so the attempt is given back. */
+  environment?: boolean;
+}
+
+export type NeedsKind = 'deps' | 'host' | 'edit';
+
+/** What a blocked worker needs before it can go on: packages, network hosts, or files it may not edit. */
+export interface Needs {
+  kind: NeedsKind;
+  items: string[];
+}
+
+/** "NEEDS deps: a b" / "NEEDS host: h" / "NEEDS edit: path" at the start of a blocked reason. */
+export function parseNeeds(reason: string | undefined): Needs | undefined {
+  const m = reason?.match(/^NEEDS\s+(deps|host|edit)\s*:\s*(.*)$/i);
+  if (!m) return undefined;
+  const items = m[2].split(/[\s,]+/).filter(Boolean);
+  return items.length ? { kind: m[1].toLowerCase() as NeedsKind, items } : undefined;
+}
+
+/** A task's `needs` column (JSON), or null when it has none or it is unreadable. */
+export function readNeeds(json: string | null): Needs | null {
+  if (!json) return null;
+  try {
+    const n = JSON.parse(json) as Partial<Needs>;
+    return n && typeof n.kind === 'string' && Array.isArray(n.items) ? (n as Needs) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** A block the environment caused, not the task: the worker named a need, tool uses were refused, or setup failed. */
+export function isEnvironmentBlock(b: { needs?: Needs; denials?: number; setupFailed?: boolean }): boolean {
+  return !!b.needs || (b.denials ?? 0) > 0 || !!b.setupFailed;
 }
 
 /** Pull "STATUS: BLOCKED: reason" out of the agent's final message. */
-export function parseStatus(text: string | undefined): { blocked: boolean; reason?: string; declared: boolean } {
+export function parseStatus(text: string | undefined): { blocked: boolean; reason?: string; declared: boolean; needs?: Needs } {
   const lines = (text ?? '').trim().split('\n').reverse();
   for (const line of lines) {
     const m = line.trim().match(/^STATUS:\s*(DONE|BLOCKED)(?::\s*(.*))?$/i);
-    if (m) return { blocked: m[1].toUpperCase() === 'BLOCKED', reason: m[2]?.trim(), declared: true };
+    if (m) {
+      const blocked = m[1].toUpperCase() === 'BLOCKED';
+      const reason = m[2]?.trim();
+      const needs = blocked ? parseNeeds(reason) : undefined;
+      return { blocked, reason, declared: true, ...(needs ? { needs } : {}) };
+    }
   }
   return { blocked: false, declared: false };
 }
