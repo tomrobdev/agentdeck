@@ -21,22 +21,8 @@ import type { Task } from '../domain/task/task.ts';
 
 const exec = promisify(execFile);
 
-export async function git(cwd: string, ...args: string[]): Promise<string> {
+async function git(cwd: string, ...args: string[]): Promise<string> {
   const { stdout } = await exec('git', args, { cwd, maxBuffer: 16 * 1024 * 1024 });
-  return stdout.trim();
-}
-
-/**
- * A git command that talks to a remote. It must never wait for a person: the daemon runs without a
- * terminal, and a credential prompt would hold the task's slot forever. So prompts are off and it times out.
- */
-export async function gitRemote(cwd: string, timeoutMs: number, ...args: string[]): Promise<string> {
-  const { stdout } = await exec('git', args, {
-    cwd,
-    timeout: timeoutMs,
-    maxBuffer: 16 * 1024 * 1024,
-    env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
-  });
   return stdout.trim();
 }
 
@@ -112,6 +98,12 @@ export async function commitLeftovers(worktree: string, message: string): Promis
   await git(worktree, 'add', '-A');
   await git(worktree, 'commit', '-q', '-m', message);
   return true;
+}
+
+/** Stage `files` and commit just them. */
+export async function commitFiles(worktree: string, files: string[], message: string): Promise<void> {
+  await git(worktree, 'add', '--', ...files);
+  await git(worktree, 'commit', '-q', '-m', message, '--', ...files);
 }
 
 /** Commits on the task branch that are on neither the local base nor origin's copy of it (it may start from either). */

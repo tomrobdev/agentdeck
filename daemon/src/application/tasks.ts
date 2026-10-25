@@ -1,7 +1,7 @@
 // Use cases for tasks: add, edit, and move them through the lifecycle on a person's request.
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { git, readFile, removeWorktree, resolveCommit } from '../adapters/git.ts';
+import { commitFiles, readFile, removeWorktree, resolveCommit } from '../adapters/git.ts';
 import { runProgram } from '../adapters/shell.ts';
 import type { Db } from '../db/index.ts';
 import { PLAN_LIMIT, isPlanPath, parsePlan } from '../domain/plan/plan.ts';
@@ -237,8 +237,7 @@ export async function installNeeds(db: Db, id: number): Promise<{ packages: stri
   }
   const files = ['package.json', LOCKFILES[toolchain]].filter((f) => existsSync(join(task.worktree!, f)));
   try {
-    await git(task.worktree, 'add', '--', ...files);
-    await git(task.worktree, 'commit', '-q', '-m', `agentdeck: add ${packages.join(' ')} for task #${id}`, '--', ...files);
+    await commitFiles(task.worktree, files, `agentdeck: add ${packages.join(' ')} for task #${id}`);
   } catch (err) {
     throw new ActionError(`installed, but could not commit: ${lastLine((err as Error).message)}`);
   }
