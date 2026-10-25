@@ -1,5 +1,5 @@
 // How the queue is filtered, grouped and sorted. Mirrors daemon/src/domain/task/listing.ts (the CLI's `ls`).
-import type { Status, TaskStatus, TaskSummary } from './api';
+import type { Needs, Status, TaskStatus, TaskSummary } from './api';
 
 type Test = (t: TaskSummary) => boolean;
 
@@ -194,6 +194,37 @@ export const canMerge = (t: Pick<TaskSummary, 'status' | 'pr_url' | 'pr_state'>)
   t.status === 'done' && !!t.pr_url && t.pr_state === 'open';
 /** The one-key retry in the queue is for work that went wrong, not for re-running finished work. */
 export const quickRetry = (t: Pick<TaskSummary, 'status'>) => t.status === 'blocked' || t.status === 'failed';
+
+/** What a blocked task's worker said it needs (daemon domain/run/run.ts readNeeds); null for any other task or an unreadable value. */
+export function readNeeds(t: Pick<TaskSummary, 'status' | 'needs'>): Needs | null {
+  if (t.status !== 'blocked' || !t.needs) return null;
+  try {
+    const n = JSON.parse(t.needs) as Partial<Needs>;
+    const kinds: string[] = ['deps', 'host', 'edit'];
+    return n && typeof n.kind === 'string' && kinds.includes(n.kind) && Array.isArray(n.items) ? (n as Needs) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The package names of a deps request, without its `--dev` flag (daemon application/tasks.ts parseDepsRequest). */
+export const depsPackages = (n: Needs) => n.items.filter((i) => i !== '--dev' && i !== '-D');
+export const depsAreDev = (n: Needs) => n.items.some((i) => i === '--dev' || i === '-D');
+
+/** Package managers the daemon installs with (application/tasks.ts INSTALLERS). */
+export const canInstallWith = (toolchain: string | null) => ['pnpm', 'yarn', 'npm'].includes(toolchain ?? '');
+
+/** A repo's network setting with a host added once. */
+export function withHost(networkJson: string, host: string): string[] {
+  let hosts: string[] = [];
+  try {
+    const parsed: unknown = JSON.parse(networkJson);
+    if (Array.isArray(parsed)) hosts = parsed.filter((h): h is string => typeof h === 'string');
+  } catch {
+    // an unreadable setting counts as none
+  }
+  return hosts.includes(host) ? hosts : [...hosts, host];
+}
 
 export const statusLabel = (s: TaskStatus) => (s === 'cancel_requested' ? 'stopping' : s);
 
