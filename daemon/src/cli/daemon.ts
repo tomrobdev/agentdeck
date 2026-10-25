@@ -1,6 +1,6 @@
 // Daemon commands: the service, the scheduler, pause, status and settings.
 import * as actions from '../application/actions.ts';
-import * as service from '../adapters/service.ts';
+import * as service from '../application/service.ts';
 import { DB_PATH } from '../config.ts';
 import { gracefulRestart } from '../application/restart.ts';
 import { runDaemon } from '../daemon.ts';

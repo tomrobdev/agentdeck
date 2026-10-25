@@ -1,5 +1,6 @@
 // The use cases the CLI and the HTTP API share. They throw ActionError on bad input.
-export { serviceStatus } from '../adapters/service.ts';
+export { readLog } from '../adapters/run-log.ts';
+export { serviceStatus } from './service.ts';
 export { type SyncReport, syncNow } from './sync.ts';
 export { ActionError } from './errors.ts';
 export * from './files.ts';

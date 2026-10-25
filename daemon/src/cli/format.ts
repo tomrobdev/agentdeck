@@ -1,6 +1,5 @@
 // How the CLI prints tasks, doctor reports, logs and times, and how it fails.
-import { readLog } from '../adapters/run-log.ts';
-import type { DoctorReport, TaskView } from '../application/actions.ts';
+import { type DoctorReport, type TaskView, readLog } from '../application/actions.ts';
 import type { TaskStatus } from '../domain/task/lifecycle.ts';
 import type { Task } from '../domain/task/task.ts';
 

@@ -27,15 +27,17 @@ Use these words in code, logs and UI.
 - **SQL lives only in `db/`,** one store per table group merged into one `Db` in `db/index.ts`. The schema and migrations are in `db/schema.ts`. Every task status change is a guarded `UPDATE … WHERE status IN (…)` (`applyEvent` in `db/tasks.ts`), never a raw status write.
 - **`adapters/` hold the I/O** (claude, processes, git, github, shell, notify, service, run logs, goals files). They import `domain/` and `config.ts` only, never `db/` or `application/`: they report through callbacks like `runClaude`'s `onUsage`.
 - **`application/` holds the use cases,** connecting domain, db and adapters: `scheduler.ts`, `worker.ts`, `planner.ts`, `pull-requests.ts`, `sync.ts` (syncing task branches with the base branch), `plans.ts`, `doctor.ts`, and the person-facing use cases in `repos.ts`, `tasks.ts` and `settings.ts`. `actions.ts` re-exports those for the CLI and the API.
-- **Entry points:** `api/` (the dashboard's HTTP API) and `cli/` (one file per command group). `src/cli.ts` stays put: the installed launchd plist runs it.
+- **Entry points:** `api/` (the dashboard's HTTP API) and `cli/` (one file per command group). They may import `domain/` and `db/`, but reach adapters only through `application/`. `src/cli.ts` stays put: the installed launchd plist runs it.
 - **Composition root:** `src/daemon.ts` (`runDaemon`) wires the source watcher, the API and the scheduler. It logs through a callback and throws; `cli/daemon.ts` prints and exits.
 - **Dashboard types:** the API's request and response types are in `api/contract.ts`, which imports nothing. The dashboard imports them (`app/src/types.ts`), and `api/contract-check.ts` fails `pnpm typecheck` when a use case's type drifts from them.
 
 ## Rules
 
+`daemon/test/architecture.test.ts` checks the Boundaries above, plus the dependency, migration and process-group rules below. Each failure names the file, line and rule.
+
 - **Erasable TypeScript only.** Node runs `.ts` directly, so no enums, namespaces or constructor parameter properties.
 - **No new runtime dependencies** without a reason. Drizzle at runtime is deferred until 1.0 is stable (`docs/plans/drizzle.html`); for now it is dev tooling only: `pnpm db:studio` browses the live database, `pnpm db:check` checks `db/tables.ts` against the migrations.
-- **Schema changes are appended as new migration steps.** Never edit a step that has shipped. Mirror the change in `db/tables.ts` and in the domain type: `pnpm typecheck` (`db/types-check.ts`) and `pnpm db:check` fail until all three agree.
+- **Schema changes are appended as new migration steps.** Never edit a step that has shipped. Mirror the change in `db/tables.ts` and in the domain type: `pnpm typecheck` (`db/types-check.ts`) and `pnpm db:check` fail until all three agree. Once a step is final, append the hash the test prints to `daemon/test/migrations.lock`.
 - **Every `claude` runs in its own process group** with its pid recorded on the run, so crash recovery can stop it.
 - **Keep this checkout on `main`.** The installed daemon runs its `daemon/src/cli.ts`, so switching branches here swaps the live daemon's code. Try task branches from their worktrees.
 - **Delegating to AgentDeck:** when to queue a task instead of doing it here, how to write it, and how to work in a task's worktree are in the `delegate` skill (`.claude/skills/delegate/SKILL.md`).
