@@ -27,6 +27,7 @@ Use these words in code, logs and UI.
 - **`adapters/` hold the I/O** (claude, processes, git, github, shell, notify, service, run logs, goals files). They import `domain/` and `config.ts` only, never `db/` or `application/`: they report through callbacks like `runClaude`'s `onUsage`.
 - **`application/` holds the use cases,** connecting domain, db and adapters: `scheduler.ts`, `worker.ts`, `planner.ts`, `pull-requests.ts`, `conflicts.ts` (bringing the base branch into task branches), `plans.ts`, `doctor.ts`, and the person-facing use cases in `repos.ts`, `tasks.ts` and `settings.ts`. `actions.ts` re-exports those for the CLI and the API.
 - **Entry points:** `api/` (the dashboard's HTTP API) and `cli/` (one file per command group). `src/cli.ts` stays put: the installed launchd plist runs it.
+- **Composition root:** `src/daemon.ts` (`runDaemon`) wires the source watcher, the API and the scheduler. It logs through a callback and throws; `cli/daemon.ts` prints and exits.
 - **Dashboard types:** the dashboard mirrors daemon types in `app/src/api.ts`, so keep them in sync.
 
 ## Rules

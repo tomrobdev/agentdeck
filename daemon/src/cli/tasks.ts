@@ -2,7 +2,6 @@
 import { readFileSync } from 'node:fs';
 import { createInterface } from 'node:readline/promises';
 import * as actions from '../application/actions.ts';
-import { removeWorktree } from '../adapters/git.ts';
 import { planProgress } from '../domain/plan/plan.ts';
 import { pickRun, readNeeds } from '../domain/run/run.ts';
 import { TASK_STATUSES } from '../domain/task/lifecycle.ts';
@@ -209,11 +208,7 @@ export const taskCommands: Record<string, Command> = {
     if (r.outcome === 'blocked') process.exitCode = 1;
   },
   clean: async ({ db, rest }) => {
-    const t = db.getTask(taskId(rest[0])) ?? die('no such task');
-    if (t.status === 'running' || t.status === 'cancel_requested') die('task is running');
-    if (!t.worktree) die('task has no worktree');
-    await removeWorktree(db.getRepo(t.repo_id)!, t.worktree);
-    db.updateTask(t.id, { worktree: null });
-    console.log(`removed worktree; branch ${t.branch} kept`);
+    const { branch } = await actions.removeTaskWorktree(db, taskId(rest[0]));
+    console.log(`removed worktree; branch ${branch} kept`);
   },
 };

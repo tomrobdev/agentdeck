@@ -38,6 +38,10 @@ export function routes({ db, scheduler }: ApiContext): Route[] {
       await actions.closeTaskPr(db, Number(id));
       return detail(id);
     }),
+    route('POST', /^\/api\/tasks\/(\d+)\/clean$/, async ({ params: [id] }) => {
+      await actions.removeTaskWorktree(db, Number(id));
+      return detail(id);
+    }),
     // Merge the task's PR. GET is the preview the confirm dialog shows; POST merges and wakes the scheduler so dependents start now.
     route('GET', /^\/api\/tasks\/(\d+)\/merge$/, ({ params: [id] }) => actions.mergePreview(db, Number(id))),
     route('POST', /^\/api\/tasks\/(\d+)\/merge$/, async ({ params: [id], body }) => {
