@@ -9,7 +9,7 @@ const home = mkdtempSync(join(tmpdir(), 'agentdeck-archive-'));
 process.env.AGENTDECK_HOME = home;
 
 const { openDb } = await import('../src/db/index.ts');
-const { setPr } = await import('./support.ts');
+const { openPr } = await import('./fixtures.ts');
 const actions = await import('../src/application/actions.ts');
 const { plannerDue } = await import('../src/application/planner.ts');
 const db = openDb(join(home, 'test.db'));
@@ -26,7 +26,7 @@ test('an archived repo and its tasks disappear everywhere, and come back unchang
   db.applyEvent(queued.id, { type: 'finish', outcome: 'done' });
   db.applyEvent(done.id, { type: 'claim' });
   db.applyEvent(done.id, { type: 'finish', outcome: 'done' });
-  for (const id of [queued.id, done.id]) setPr(db, id, { pr_url: `https://x/${id}`, pr_state: 'open' });
+  for (const id of [queued.id, done.id]) openPr(db, id, `https://x/${id}`);
   const again = db.addTask({ repo_id: gone.id, title: 'still queued', prompt: 'x', priority: 9 });
 
   const before = {

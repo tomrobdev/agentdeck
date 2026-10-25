@@ -14,7 +14,7 @@ chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
 
 const { openDb } = await import('../src/db/index.ts');
-const { setPr } = await import('./support.ts');
+const { blockedTask, doneTask, failedTask, openPr, rerun, settlePr } = await import('./fixtures.ts');
 const { Scheduler } = await import('../src/application/scheduler.ts');
 const { github } = await import('../src/adapters/github.ts');
 const { refreshPrStates } = await import('../src/application/pull-requests.ts');
@@ -210,7 +210,7 @@ test('a retried task keeps its open PR, but gets a new one once the old PR is me
   assert.equal(calls.create.length, 1);
   assert.equal(calls.push.length, 2);
 
-  setPr(db, task.id, { pr_state: 'merged' });
+  settlePr(db, task.id, 'merged');
   retryTask(db, task.id);
   await drain();
   const t = db.getTask(task.id)!;
@@ -257,11 +257,8 @@ test('close PR closes it with gh, marks it closed and only works on an open PR',
 });
 
 test('refreshPrStates updates open PRs of done tasks and leaves a failed lookup alone', async () => {
-  const mk = (url: string | null, state: 'open' | 'merged' | 'closed' | null) => {
-    const t = db.addTask({ repo_id: repo.id, title: `pr ${url}`, prompt: 'x' });
-    db.raw.prepare("UPDATE tasks SET status = 'done', pr_url = ?, pr_state = ? WHERE id = ?").run(url, state, t.id);
-    return t.id;
-  };
+  const mk = (url: string | null, state: 'open' | 'merged' | 'closed' | null) =>
+    doneTask(db, repo, { title: `pr ${url}`, pr: state, url: url ?? undefined }).id;
   const merged = mk('https://x/pull/10', 'open');
   const stillOpen = mk('https://x/pull/11', 'open');
   const broken = mk('https://x/pull/12', 'open');
@@ -289,17 +286,11 @@ test('refreshPrStates updates open PRs of done tasks and leaves a failed lookup 
 });
 
 test('refreshPrStates: a merged PR moves a blocked or failed task to done, a closed one leaves it, mergeability is never read', async () => {
-  const mk = (status: string, url: string) => {
-    const t = db.addTask({ repo_id: repo.id, title: `pr ${url}`, prompt: 'x' });
-    db.raw
-      .prepare("UPDATE tasks SET status = ?, stop_reason = 'conflict', pr_url = ?, pr_state = 'open' WHERE id = ?")
-      .run(status, url, t.id);
-    return t.id;
-  };
-  const blockedMerged = mk('blocked', 'https://x/pull/30');
-  const failedMerged = mk('failed', 'https://x/pull/31');
-  const blockedClosed = mk('blocked', 'https://x/pull/32');
-  const blockedOpen = mk('blocked', 'https://x/pull/33');
+  const mk = (make: typeof blockedTask, url: string) => make(db, repo, { title: `pr ${url}`, pr: 'open', url }).id;
+  const blockedMerged = mk(blockedTask, 'https://x/pull/30');
+  const failedMerged = mk(failedTask, 'https://x/pull/31');
+  const blockedClosed = mk(blockedTask, 'https://x/pull/32');
+  const blockedOpen = mk(blockedTask, 'https://x/pull/33');
   states = { 'https://x/pull/30': 'merged', 'https://x/pull/31': 'merged', 'https://x/pull/32': 'closed' };
   const details: string[] = [];
   const real = github.prDetails;
@@ -331,8 +322,7 @@ test('refreshPrStates: a merged PR moves a blocked or failed task to done, a clo
 });
 
 test('the scheduler refreshes PR states on its own, not only when work runs', async () => {
-  const t = db.addTask({ repo_id: repo.id, title: 'merge me', prompt: 'x' });
-  db.raw.prepare("UPDATE tasks SET status = 'done', pr_url = 'https://x/pull/20', pr_state = 'open' WHERE id = ?").run(t.id);
+  const t = doneTask(db, repo, { title: 'merge me', pr: 'open', url: 'https://x/pull/20' });
   states = { 'https://x/pull/20': 'merged' };
   const scheduler = new Scheduler(db, { tickMs: 10, prRefreshMs: 10, log: () => {} });
   const running = scheduler.run(); // paused by default: nothing is claimed
@@ -369,14 +359,17 @@ test('--after waits for the dependency PR to be merged', async () => {
   const dep = db.addTask({ repo_id: repo.id, title: 'with pr', prompt: 'x' });
   const later = await addTask(db, { repo: 'demo', prompt: 'after the pr', after_task: dep.id });
   assert.equal(finishNext(), dep.id);
-  setPr(db, dep.id, { pr_url: 'https://x/pull/30', pr_state: 'open' });
+  openPr(db, dep.id, 'https://x/pull/30');
 
   assert.equal(db.claimNextTask(), undefined, 'PR still open');
   assert.equal(db.hasQueued(), false, 'a waiting task is not claimable work');
-  setPr(db, dep.id, { pr_state: 'closed' });
+  settlePr(db, dep.id, 'closed');
   assert.equal(db.claimNextTask(), undefined, 'closed without merging does not release it');
 
-  setPr(db, dep.id, { pr_state: 'merged' });
+  // A closed PR is never merged: the dependency runs again, opens a new PR and that one is merged.
+  rerun(db, dep.id);
+  openPr(db, dep.id, 'https://x/pull/31');
+  settlePr(db, dep.id, 'merged');
   assert.equal(db.claimNextTask()!.id, later.id);
 });
 
@@ -462,7 +455,7 @@ test('a dependent is not claimed while its dependency pushes and opens its PR', 
     github.push = realPush;
     db.setSetting('max_concurrent', '1');
   }
-  setPr(db, dep.id, { pr_state: 'merged' });
+  settlePr(db, dep.id, 'merged');
   assert.equal(db.claimNextTask()!.id, later.id);
 });
 
@@ -528,7 +521,7 @@ test('a dependency PR closed without merging notifies when the refresh sees it',
   const dep = db.addTask({ repo_id: repo.id, title: 'pr gets closed', prompt: 'x' });
   const later = await addTask(db, { repo: 'demo', prompt: 'after the closed pr', after_task: dep.id });
   assert.equal(finishNext(), dep.id);
-  setPr(db, dep.id, { pr_url: 'https://x/pull/40', pr_state: 'open' });
+  openPr(db, dep.id, 'https://x/pull/40');
   assert.equal(stuckNotices(dep.id).length, 0);
 
   states = { 'https://x/pull/40': 'closed' };
@@ -540,11 +533,9 @@ test('a dependency PR closed without merging notifies when the refresh sees it',
 
 /** A done task with an open PR, as if the daemon had opened it. */
 function prTask(n: number, title = `merge ${n}`) {
-  const t = db.addTask({ repo_id: repo.id, title, prompt: 'x' });
   const url = `https://github.com/acme/demo/pull/${n}`;
-  db.raw
-    .prepare("UPDATE tasks SET status = 'done', pr_url = ?, pr_state = 'open', branch = ? WHERE id = ?")
-    .run(url, `agentdeck/task-${t.id}`, t.id);
+  const t = doneTask(db, repo, { title, pr: 'open', url });
+  db.setCheckout(t.id, { branch: `agentdeck/task-${t.id}` });
   return { id: t.id, url };
 }
 
@@ -681,8 +672,7 @@ test('mergeTask refuses what cannot be merged and leaves the task as it was', as
   const queued = db.addTask({ repo_id: repo.id, title: 'not done', prompt: 'x' });
   await assert.rejects(mergeTask(db, queued.id), /only a done task can be merged/);
   db.applyEvent(queued.id, { type: 'cancel' });
-  const noPr = db.addTask({ repo_id: repo.id, title: 'no pr', prompt: 'x' });
-  db.raw.prepare("UPDATE tasks SET status = 'done' WHERE id = ?").run(noPr.id);
+  const noPr = doneTask(db, repo, { title: 'no pr' });
   await assert.rejects(mergeTask(db, noPr.id), /has no pull request/);
   await assert.rejects(mergeTask(db, 999999), /no such task/);
 
