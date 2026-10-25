@@ -2,7 +2,7 @@
 import type { DatabaseSync } from 'node:sqlite';
 import { DEFAULTS } from '../config.ts';
 import type { MergeMethod } from '../domain/pull-request/merge.ts';
-import { MAX_RESTARTS, type TaskEvent, type TaskStatus, fromStatuses, nextStatus } from '../domain/task/lifecycle.ts';
+import { MAX_RESTARTS, type TaskEvent, type TaskStatus, fromStatuses, nextStatus, transition } from '../domain/task/lifecycle.ts';
 import type { TaskEventRow, TaskEventType } from '../domain/task/history.ts';
 import { EDITABLE_STATUSES, OPEN_STATUSES, type Task, type TaskSummary } from '../domain/task/task.ts';
 import { NOW, atomically } from './sql.ts';
@@ -270,42 +270,19 @@ export function taskStore(db: DatabaseSync) {
       for (let attempt = 0; attempt < 3; attempt++) {
         const cur = this.getTask(id);
         if (!cur) return undefined;
-        const to = nextStatus(cur.status, event);
-        if (!to) return undefined;
-        const environment = event.type === 'finish' && event.outcome === 'blocked' && event.environment === true;
-        const sets = ['status = ?'];
-        const params: (string | number | null)[] = [to];
-        if (to !== 'cancelled') {
-          const give = 'attempts = MAX(attempts - 1, 0)';
-          if (event.type === 'claim') sets.push('attempts = attempts + 1');
-          else if (event.type === 'retry')
-            sets.push('max_attempts = attempts + 1'); // one more attempt on top of those used
-          else if (event.type === 'rate_limited' || environment) sets.push(give);
-          else if (event.type === 'recover') sets.push('restarts = restarts + 1', ...(to === 'queued' ? [give] : []));
-          if ((event.type === 'finish' && event.outcome === 'done') || event.type === 'mark_done' || event.type === 'pr_merged')
-            sets.push('stop_reason = NULL');
-          if (event.type === 'mark_done' || event.type === 'pr_merged') sets.push('needs = NULL');
-          if (event.type === 'mark_done') sets.push("done_by = 'person'");
-          else if (cur.status === 'done') sets.push('done_by = NULL');
-          if (to === 'queued') sets.push('needs = NULL');
-          else if (event.type === 'finish' && event.outcome === 'blocked') {
-            sets.push('needs = ?');
-            params.push(opts.needs ?? null);
-          }
-          if (
-            (event.type === 'finish' && (event.outcome === 'blocked' || event.outcome === 'failed')) ||
-            (event.type === 'recover' && to === 'failed') ||
-            event.type === 'conflict'
-          ) {
-            sets.push('stop_reason = ?');
-            params.push(opts.reason ?? null);
-          }
-        }
+        const t = transition(cur, event, opts);
+        if (!t) return undefined;
+        const keys = Object.keys(t.changes) as (keyof typeof t.changes)[];
+        const sets = ['status = ?', ...keys.map((k) => `${k} = ?`)];
+        const params = [t.to, ...keys.map((k) => t.changes[k] ?? null)];
         const row = atomically(db, () => {
+          // Guarded on the status and on the counters the changes were computed from.
           const row = db
-            .prepare(`UPDATE tasks SET ${sets.join(', ')}, updated_at = ${NOW} WHERE id = ? AND status IN (?) RETURNING *`)
-            .get(...params, id, cur.status) as Task | undefined;
-          if (row) recordEvent(id, environment ? 'environment_block' : event.type, cur.status, to, opts.reason ?? null);
+            .prepare(
+              `UPDATE tasks SET ${sets.join(', ')}, updated_at = ${NOW} WHERE id = ? AND status = ? AND attempts = ? AND restarts = ? RETURNING *`,
+            )
+            .get(...params, id, cur.status, cur.attempts, cur.restarts) as Task | undefined;
+          if (row) recordEvent(id, t.history, cur.status, t.to, opts.reason ?? null);
           return row;
         });
         if (row) return row;

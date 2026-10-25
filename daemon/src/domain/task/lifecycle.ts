@@ -1,5 +1,7 @@
 // The task state machine, as data. Pure: no I/O, so it can be tested exhaustively.
 // db.applyEvent (db/tasks.ts) is the only thing that writes a status, and it asks this module first.
+import type { TaskEventType } from './history.ts';
+import type { Task } from './task.ts';
 
 export type TaskStatus =
   | 'proposed' // suggested by the planner, waiting for approval
@@ -109,6 +111,68 @@ export function canApply(from: TaskStatus, event: TaskEvent): boolean {
 /** Every status `event` is allowed from (for guards like `WHERE status IN (...)`). */
 export function fromStatuses(event: TaskEvent): TaskStatus[] {
   return Object.keys(RULES[ruleKey(event)]) as TaskStatus[];
+}
+
+/** The fields of a task that `transition` reads. */
+export type TransitionTask = Pick<Task, 'status' | 'attempts' | 'restarts'>;
+
+/** The fields an event sets, with their new values. A field not listed is left as it is. */
+export interface TaskChanges {
+  attempts?: number;
+  max_attempts?: number;
+  restarts?: number;
+  stop_reason?: string | null;
+  needs?: string | null;
+  done_by?: 'person' | null;
+}
+
+export interface Transition {
+  to: TaskStatus;
+  changes: TaskChanges;
+  /** The timeline type to record: the event's, or `environment_block` for a block the environment caused. */
+  history: TaskEventType;
+}
+
+/**
+ * What `event` does to `task`: the status it leads to, the new value of every field it sets and the
+ * history type; null if the event isn't allowed from the task's status. A cancelled outcome (the cancel
+ * wins from `cancel_requested`) changes no field.
+ */
+export function transition(
+  task: TransitionTask,
+  event: TaskEvent,
+  opts: { reason?: string | null; needs?: string | null } = {},
+): Transition | null {
+  const to = nextStatus(task.status, event);
+  if (!to) return null;
+  const environment = event.type === 'finish' && event.outcome === 'blocked' && event.environment === true;
+  const history: TaskEventType = environment ? 'environment_block' : event.type;
+  const changes: TaskChanges = {};
+  if (to === 'cancelled') return { to, changes, history };
+
+  const given = Math.max(task.attempts - 1, 0); // the attempt given back
+  if (event.type === 'claim') changes.attempts = task.attempts + 1;
+  else if (event.type === 'retry')
+    changes.max_attempts = task.attempts + 1; // one more attempt on top of those used
+  else if (event.type === 'rate_limited' || environment) changes.attempts = given;
+  else if (event.type === 'recover') {
+    changes.restarts = task.restarts + 1;
+    if (to === 'queued') changes.attempts = given;
+  }
+  if ((event.type === 'finish' && event.outcome === 'done') || event.type === 'mark_done' || event.type === 'pr_merged')
+    changes.stop_reason = null;
+  if (event.type === 'mark_done' || event.type === 'pr_merged') changes.needs = null;
+  if (event.type === 'mark_done') changes.done_by = 'person';
+  else if (task.status === 'done') changes.done_by = null;
+  if (to === 'queued') changes.needs = null;
+  else if (event.type === 'finish' && event.outcome === 'blocked') changes.needs = opts.needs ?? null;
+  if (
+    (event.type === 'finish' && (event.outcome === 'blocked' || event.outcome === 'failed')) ||
+    (event.type === 'recover' && to === 'failed') ||
+    event.type === 'conflict'
+  )
+    changes.stop_reason = opts.reason ?? null;
+  return { to, changes, history };
 }
 
 /** A task requeued by this many daemon restarts is failed instead, in case the task itself kills the daemon. */
