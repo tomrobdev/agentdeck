@@ -174,7 +174,7 @@ export function rejectTask(db: Db, id: number): void {
 export function retryTask(db: Db, id: number, note?: string): void {
   const t = db.getTask(id);
   if (!t) throw new ActionError('no such task');
-  if (isSyncing(id)) throw new ActionError(`#${id} is being brought up to date with its base branch; try again when that is done`);
+  if (isSyncing(db, id)) throw new ActionError(`#${id} is being brought up to date with its base branch; try again when that is done`);
   if (note !== undefined && typeof note !== 'string') throw new ActionError('note must be text');
   // One more attempt on top of what has been used.
   if (!db.applyEvent(id, { type: 'retry' }, { reason: note?.trim() || null })) throw new ActionError(`#${id} is ${t.status}`);
@@ -216,7 +216,7 @@ export async function installNeeds(db: Db, id: number): Promise<{ packages: stri
     );
   const { packages, dev } = parseDepsRequest(needs.items);
   if (!task.worktree || !existsSync(task.worktree)) throw new ActionError(`#${id} has no worktree to install into`);
-  if (isSyncing(id)) throw new ActionError(`#${id} is being brought up to date with its base branch; try again when that is done`);
+  if (isSyncing(db, id)) throw new ActionError(`#${id} is being brought up to date with its base branch; try again when that is done`);
 
   const args = toolchain === 'npm' ? ['install', dev ? '--save-dev' : '--save', ...packages] : ['add', ...(dev ? ['-D'] : []), ...packages];
   const result = await runProgram(toolchain, args, task.worktree, INSTALL_TIMEOUT_MS);

@@ -25,6 +25,14 @@ export function runStore(db: DatabaseSync) {
     runsForTask(task_id: number): Run[] {
       return db.prepare('SELECT * FROM runs WHERE task_id = ? ORDER BY id').all(task_id) as unknown as Run[];
     },
+    /** Resolve runs still going, in any daemon process. */
+    countRunningResolves(): number {
+      return Number((db.prepare("SELECT COUNT(*) AS n FROM runs WHERE kind = 'resolve' AND ended_at IS NULL").get() as { n: number }).n);
+    },
+    /** Whether a resolve run of this task has not finished. */
+    hasRunningResolve(task_id: number): boolean {
+      return !!db.prepare("SELECT 1 FROM runs WHERE task_id = ? AND kind = 'resolve' AND ended_at IS NULL LIMIT 1").get(task_id);
+    },
     /** Claude processes recorded on runs that never finished: a previous daemon died mid-run. */
     unfinishedPids(): { pid: number; started_at: string }[] {
       return db

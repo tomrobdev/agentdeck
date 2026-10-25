@@ -4,11 +4,13 @@ import { createInterface } from 'node:readline/promises';
 import * as actions from '../application/actions.ts';
 import { unblocksOf, waitingFor } from '../application/dependencies.ts';
 import { removeWorktree } from '../adapters/git.ts';
+import type { SyncReport } from '../application/conflicts.ts';
 import { planProgress } from '../domain/plan/plan.ts';
 import { readNeeds } from '../domain/run/run.ts';
 import { TASK_STATUSES } from '../domain/task/lifecycle.ts';
 import { filterTasks } from '../domain/task/listing.ts';
 import { planStepIds } from '../domain/task/task.ts';
+import { callDaemon } from './daemon-client.ts';
 import { die, taskId, fmtTask, printLog } from './format.ts';
 import type { Command } from './context.ts';
 
@@ -193,7 +195,7 @@ export const taskCommands: Record<string, Command> = {
   resolve: async ({ db, rest }) => {
     const id = taskId(rest[0]);
     console.log(`bringing the base branch into #${id}'s branch… (a conflict starts a claude run and can take a while)`);
-    const r = await actions.resolveTask(db, id);
+    const r: SyncReport = await callDaemon('POST', `/api/tasks/${id}/resolve`, {});
     const files = `${r.files.length} ${r.files.length === 1 ? 'file' : 'files'}`;
     const lines: Record<typeof r.outcome, string> = {
       up_to_date: `#${id} is already up to date`,

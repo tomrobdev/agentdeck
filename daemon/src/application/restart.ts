@@ -30,7 +30,11 @@ export async function gracefulRestart(db: Db, deps: RestartDeps): Promise<{ wait
     let last: string | null = null;
     while (idle < 2) {
       if (deps.aborted?.()) throw new Error('interrupted; nothing was restarted');
-      const wait = restartWait({ tasks: db.countRunning(), planner: db.countRunningPlannerRuns() });
+      const wait = restartWait({
+        tasks: db.countRunning(),
+        planner: db.countRunningPlannerRuns(),
+        resolves: db.countRunningResolves(),
+      });
       if (!wait) {
         idle++;
       } else {

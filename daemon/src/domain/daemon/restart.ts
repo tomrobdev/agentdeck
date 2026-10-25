@@ -5,14 +5,17 @@ export interface Activity {
   tasks: number;
   /** Planner runs still going. */
   planner: number;
+  /** Resolve runs still going (they belong to done tasks, so `tasks` doesn't count them). */
+  resolves?: number;
 }
 
 const plural = (n: number, noun: string) => `${n} ${noun}${n === 1 ? '' : 's'}`;
 
 /** What a graceful restart is waiting for, or null when nothing is active. */
-export function restartWait({ tasks, planner }: Activity): string | null {
+export function restartWait({ tasks, planner, resolves = 0 }: Activity): string | null {
   const parts = [];
   if (tasks) parts.push(plural(tasks, 'running task'));
+  if (resolves) parts.push(plural(resolves, 'resolve run'));
   if (planner) parts.push(plural(planner, 'planner run'));
   return parts.length ? parts.join(' and ') : null;
 }

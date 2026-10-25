@@ -181,8 +181,8 @@ async function checkResolution(worktree: string, before: string, files: string[]
 /** The branch merge is the daemon's only write to a done task's worktree: one at a time per task. */
 const syncing = new Set<number>();
 
-/** Whether a sync or resolve run is touching this task's worktree right now. */
-export const isSyncing = (id: number): boolean => syncing.has(id);
+/** Whether a sync or resolve run is touching this task's worktree right now, in this process or the daemon's. */
+export const isSyncing = (db: Db, id: number): boolean => syncing.has(id) || db.hasRunningResolve(id);
 
 export interface SyncReport {
   /** `skipped`: conflicts, but auto_resolve is off. `deferred`: the usage limit, or a cancel, stopped it. */
