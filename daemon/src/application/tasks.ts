@@ -7,6 +7,7 @@ import type { Db } from '../db/index.ts';
 import { PLAN_LIMIT, isPlanPath, parsePlan } from '../domain/plan/plan.ts';
 import type { Repo } from '../domain/repo/repo.ts';
 import { readNeeds } from '../domain/task/needs.ts';
+import { hasOpenPr } from '../domain/task/stage.ts';
 import { EDITABLE_STATUSES, MODELS, type Task, defaultTitle, isModel, planStepIds } from '../domain/task/task.ts';
 import { lastLine } from '../domain/text.ts';
 import { isSyncing } from './sync.ts';
@@ -254,7 +255,7 @@ export async function installNeeds(db: Db, id: number): Promise<{ packages: stri
 /** Close a task's open PR without merging it. Tasks waiting on it become stuck. */
 export async function closeTaskPr(db: Db, id: number): Promise<void> {
   const t = requireTask(db, id);
-  if (!t.pr_url || t.pr_state !== 'open') throw new ActionError(`#${id} has no open pull request`);
+  if (!t.pr_url || !hasOpenPr(t)) throw new ActionError(`#${id} has no open pull request`);
   try {
     await closePullRequest(db, t);
   } catch (err) {

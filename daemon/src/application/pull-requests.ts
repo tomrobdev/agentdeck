@@ -6,6 +6,7 @@ import type { Db } from '../db/index.ts';
 import { type CheckCounts, MERGE_METHODS, type MergeMethod, isMergeMethod, mergeCheck } from '../domain/pull-request/merge.ts';
 import { isConflicting, isMergeabilityUnknown } from '../domain/pull-request/conflict.ts';
 import { buildPrBody } from '../domain/pull-request/pr.ts';
+import { hasOpenPr } from '../domain/task/stage.ts';
 import type { Task } from '../domain/task/task.ts';
 import { warnStuckDependents } from './dependencies.ts';
 import { ActionError } from './errors.ts';
@@ -33,7 +34,7 @@ export async function openPullRequest(db: Db, task: Task): Promise<{ url?: strin
     await github.push(repo.path, task.branch);
     // A task retried while its PR is still open keeps that PR; the push above updated it.
     // Once that PR is merged or closed, the new commits need a new PR.
-    if (task.pr_url && task.pr_state === 'open') return { url: task.pr_url };
+    if (task.pr_url && hasOpenPr(task)) return { url: task.pr_url };
     const url = await github.createPr({
       cwd: task.worktree ?? repo.path,
       base: repo.base_branch,
@@ -48,7 +49,7 @@ export async function openPullRequest(db: Db, task: Task): Promise<{ url?: strin
   } catch (err) {
     const error = (err as Error).message;
     // Tell dependents the PR won't appear on its own. A PR that is already open stays open.
-    if (!(task.pr_url && task.pr_state === 'open')) db.updateTask(task.id, { pr_state: 'failed' });
+    if (!(task.pr_url && hasOpenPr(task))) db.updateTask(task.id, { pr_state: 'failed' });
     logPrEvent(db, task.id, { error });
     return { error };
   }
@@ -91,7 +92,7 @@ function mergeable(db: Db, id: number) {
   const repo = requireTaskRepo(db, task);
   if (task.status !== 'done') throw new ActionError(`#${id} is ${task.status}; only a done task can be merged`);
   if (!task.pr_url) throw new ActionError(`#${id} has no pull request`);
-  if (task.pr_state !== 'open') throw new ActionError(`#${id}'s PR is ${task.pr_state ?? 'not open'}`);
+  if (!hasOpenPr(task)) throw new ActionError(`#${id}'s PR is ${task.pr_state ?? 'not open'}`);
   // gh reads the PR by its URL, so any directory of the repo will do; the worktree may be gone.
   return { task, repo, url: task.pr_url, cwd: repo.path };
 }

@@ -1,6 +1,6 @@
 // Filtering and sorting task lists, for `agentdeck ls`. Pure: no I/O.
-// Mirrored by the dashboard in app/src/taskView.ts: keep the states, groups and sorts in step.
 import type { TaskStatus } from './lifecycle.ts';
+import { isMerged, isReview, isStuck, isWaiting } from './stage.ts';
 import type { TaskSummary } from './task.ts';
 
 /** A task as listed: with where it stands on its `after_task` (as waitingFor reports it) and the tasks its open PR holds up. */
@@ -12,11 +12,6 @@ const is =
   (...statuses: TaskStatus[]): Test =>
   (t) =>
     statuses.includes(t.status);
-const waiting: Test = (t) => t.status === 'queued' && !!t.waiting && !t.waiting.stuck;
-const stuck: Test = (t) => t.status === 'queued' && !!t.waiting?.stuck;
-
-const review: Test = (t) => t.status === 'done' && t.pr_state === 'open';
-const merged: Test = (t) => t.status === 'done' && t.pr_state === 'merged';
 
 /** States finer than a status: a queued task may be waiting on --after or stuck, a done task may have a PR. */
 const STATES: Record<string, Test> = {
@@ -27,18 +22,18 @@ const STATES: Record<string, Test> = {
   blocked: is('blocked'),
   failed: is('failed'),
   cancelled: is('cancelled'),
-  waiting,
-  stuck,
-  review,
-  'pr-open': review,
-  merged,
+  waiting: isWaiting,
+  stuck: isStuck,
+  review: isReview,
+  'pr-open': isReview,
+  merged: isMerged,
   'pr-closed': (t) => t.status === 'done' && t.pr_state === 'closed',
   'no-pr': (t) => t.status === 'done' && !t.pr_url,
 };
 
 /** Names for several states at once, matching the dashboard's groups. A stuck task needs you, so it isn't active. */
 const GROUPS: Record<string, Test> = {
-  active: (t) => STATES.running(t) || (t.status === 'queued' && !stuck(t)),
+  active: (t) => STATES.running(t) || (t.status === 'queued' && !isStuck(t)),
   'needs-you': (t) => ['blocked', 'failed', 'stuck'].some((s) => STATES[s](t)),
 };
 
@@ -49,7 +44,7 @@ type Compare = (a: ListedTask, b: ListedTask) => number;
 /** The dashboard's status groups in attention order: what needs you, review, proposals, running, queued, done (merged too), cancelled. */
 function attentionRank(t: ListedTask): number {
   if (GROUPS['needs-you'](t)) return 0;
-  if (review(t)) return 1;
+  if (isReview(t)) return 1;
   return { proposed: 2, running: 3, cancel_requested: 3, queued: 4, done: 5, cancelled: 6, blocked: 0, failed: 0 }[t.status];
 }
 
