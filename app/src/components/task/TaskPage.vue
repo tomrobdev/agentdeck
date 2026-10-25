@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
-import { type Changes, type MergeResult, type TaskDetail, ago, api, describeHold } from '../../api';
+import { type Changes, type MergeResult, type TaskDetail, ago, api, describeWait } from '../../api';
 import { useHotkeys } from '../../hotkeys';
 import { type TaskTab, go, openTask } from '../../router';
 import { canApprove, canCancel, canEdit, canMarkDone, canMerge, canRetry, canReview, readNeeds, statusLabel } from '../../taskView';
@@ -24,8 +24,8 @@ const pageEl = ref<HTMLElement | null>(null);
 
 const resumeRepo = () => api.resumeRepo(props.task.repo_id);
 
-/** Clear what holds this task back (resume the daemon or the repo), then refresh. */
-async function clearHold(fn: () => Promise<unknown>) {
+/** End what this task waits for (resume the daemon or the repo), then refresh. */
+async function clearWait(fn: () => Promise<unknown>) {
   try {
     await fn();
     emit('changed');
@@ -243,19 +243,19 @@ const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel
       @changed="emit('changed')"
       @error="emit('error', $event)"
     />
-    <div v-else-if="task.blocked_reason && (s === 'blocked' || s === 'failed')" class="callout" :class="`s-${s}`">
-      {{ task.blocked_reason }}
+    <div v-else-if="task.stop_reason && (s === 'blocked' || s === 'failed')" class="callout" :class="`s-${s}`">
+      {{ task.stop_reason }}
     </div>
-    <div v-else-if="task.hold" class="callout flex items-center gap-3" :class="task.hold.kind === 'slots' ? 's-queued' : 's-blocked'">
+    <div v-else-if="task.wait" class="callout flex items-center gap-3" :class="task.wait.kind === 'slots' ? 's-queued' : 's-blocked'">
       <span class="min-w-0 flex-1 wrap-anywhere">
-        <strong>Not started yet.</strong> {{ describeHold(task.hold) }}.
-        <template v-if="task.hold.kind === 'dependency' && task.hold.stuck">
-          Retry #{{ task.hold.on }} to release this task, or cancel it.
+        <strong>Not started yet.</strong> {{ describeWait(task.wait) }}.
+        <template v-if="task.wait.kind === 'dependency' && task.wait.stuck">
+          Retry #{{ task.wait.on }} to release this task, or cancel it.
         </template>
       </span>
-      <button v-if="task.hold.kind === 'daemon-paused'" class="primary" @click="clearHold(api.resume)">▶ Resume</button>
-      <button v-else-if="task.hold.kind === 'repo-paused'" class="primary" @click="clearHold(resumeRepo)">▶ Resume {{ task.repo }}</button>
-      <button v-else-if="task.hold.kind === 'dependency'" @click="openTask(task.hold.on)">Open #{{ task.hold.on }}</button>
+      <button v-if="task.wait.kind === 'daemon-paused'" class="primary" @click="clearWait(api.resume)">▶ Resume</button>
+      <button v-else-if="task.wait.kind === 'repo-paused'" class="primary" @click="clearWait(resumeRepo)">▶ Resume {{ task.repo }}</button>
+      <button v-else-if="task.wait.kind === 'dependency'" @click="openTask(task.wait.on)">Open #{{ task.wait.on }}</button>
     </div>
     <div v-else-if="s === 'proposed'" class="callout s-proposed">
       The planner suggested this task. Read the prompt, then approve it to queue it or reject it.

@@ -285,7 +285,7 @@ for (const [flag, why] of [
 
     const task = db.getTask(t.id)!;
     assert.equal(task.status, 'blocked');
-    assert.equal(task.blocked_reason, r.reason);
+    assert.equal(task.stop_reason, r.reason);
     assert.equal(task.attempts, attempts);
     const event = db.eventsForTask(t.id).at(-1)!;
     assert.deepEqual([event.type, event.from_status, event.to_status, event.reason], ['conflict', 'done', 'blocked', r.reason]);
@@ -433,7 +433,7 @@ test('a conflict at the start of a run that cannot be resolved blocks the task b
 
   const task = db.getTask(t.id)!;
   assert.equal(task.status, 'blocked');
-  assert.match(task.blocked_reason!, /^conflicts with main in 1 file: shared\.txt/);
+  assert.match(task.stop_reason!, /^conflicts with main in 1 file: shared\.txt/);
   assert.equal(workCalls(), before, 'the agent never started');
   assert.equal(sh(t.wt, 'rev-parse', 'HEAD'), head);
   clean(t.wt);

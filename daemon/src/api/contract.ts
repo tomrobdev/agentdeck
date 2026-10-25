@@ -8,7 +8,7 @@ export type TaskStatus = 'proposed' | 'queued' | 'running' | 'done' | 'blocked' 
 export type PrMode = 'off' | 'draft' | 'ready';
 export type PrState = 'open' | 'merged' | 'closed' | 'failed';
 export type MergeMethod = 'squash' | 'merge' | 'rebase';
-export type NotifyKind = 'done' | 'blocked' | 'failed' | 'hold' | 'proposed';
+export type NotifyKind = 'done' | 'blocked' | 'failed' | 'hold' | 'paused' | 'proposed';
 /** Git refs the file endpoints accept: the task's branch, or where it forked from the base branch. */
 export type FileRef = 'head' | 'base';
 
@@ -111,13 +111,13 @@ export interface Needs {
   items: string[];
 }
 
-/** What stops every queued task. */
-export type QueueHold =
+/** What every queued task waits for. */
+export type QueueWait =
   { kind: 'daemon-paused' } | { kind: 'rate-limited'; until: number } | { kind: 'governor'; reason: string; until: number | null };
 
-/** What stops one queued task. */
-export type StartHold =
-  | QueueHold
+/** What one queued task waits for. */
+export type StartWait =
+  | QueueWait
   | { kind: 'repo-paused'; reason: string }
   | { kind: 'dependency'; on: number; stuck: string | null }
   | { kind: 'slots'; running: number; max: number };
@@ -136,7 +136,7 @@ export interface TaskSummary {
   max_attempts: number;
   branch: string | null;
   worktree: string | null;
-  blocked_reason: string | null;
+  stop_reason: string | null;
   /** manual | planner */
   source: string;
   pr_url: string | null;
@@ -158,8 +158,8 @@ export interface TaskSummary {
   unblocks?: number[];
   /** A done task whose latest run left linked plan steps unfinished. Missing from a daemon that predates it. */
   plan_unfinished?: boolean;
-  /** Why a queued task hasn't started yet; null once nothing holds it (or it isn't queued). */
-  hold: StartHold | null;
+  /** What a queued task waits for; null once it waits for nothing (or it isn't queued). */
+  wait: StartWait | null;
   created_at: string;
   updated_at: string;
 }
@@ -465,8 +465,8 @@ export interface Status {
   governor: Decision;
   budget: Budget;
   notifications: NotificationRow[];
-  /** What stops every queued task, if anything. */
-  hold: QueueHold | null;
+  /** What every queued task waits for, if anything. */
+  wait: QueueWait | null;
   paused_repos: { id: number; name: string; reason: string; queued: number }[];
 }
 

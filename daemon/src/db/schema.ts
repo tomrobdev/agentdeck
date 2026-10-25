@@ -156,6 +156,11 @@ export const MIGRATIONS: Migration[] = [
   'ALTER TABLE tasks ADD COLUMN needs TEXT;',
   // 14: who said a task is done (docs/plans/manual-moves.html): 'person' when mark_done set it, NULL otherwise.
   'ALTER TABLE tasks ADD COLUMN done_by TEXT;',
+  // 15: the stop reason, named for the domain language (docs/plans/domain-model.html).
+  'ALTER TABLE tasks RENAME COLUMN blocked_reason TO stop_reason;',
+  // 16: a paused repo notifies with its own kind, `paused`, instead of `hold`. Whoever listened for `hold` keeps hearing both.
+  `UPDATE settings SET value = value || ',paused'
+   WHERE key = 'notify_events' AND ',' || value || ',' LIKE '%,hold,%' AND ',' || value || ',' NOT LIKE '%,paused,%';`,
 ];
 
 /** Runs every step above the database's user_version in one transaction; returns how many ran. */

@@ -12,8 +12,7 @@ Use these words in code, logs and UI.
 
 - **Repo:** a registered git repo with a base branch, a test command and goals.
 - **Task:** one unit of work on a repo. It moves through statuses: `proposed → queued → running → done | blocked | failed | cancelled`. A cancel during a run goes through `cancel_requested`.
-- **Stop reason:** why a task ended blocked or failed, in a line. (Stored as `blocked_reason` until that column is renamed.)
-- **Run:** one attempt at a task, one `claude` process. A task has at most `max_attempts` runs, and a retry continues on the same branch. A **resolve run** (`kind = 'resolve'`) is the other kind: the `claude` part of a sync, settling its conflicts. It uses no attempt.
+- **Stop reason:** why a task ended blocked or failed, in a line.- **Run:** one attempt at a task, one `claude` process. A task has at most `max_attempts` runs, and a retry continues on the same branch. A **resolve run** (`kind = 'resolve'`) is the other kind: the `claude` part of a sync, settling its conflicts. It uses no attempt.
 - **Sync:** bringing the base branch into a task's branch: before every run, and for a done task when its PR conflicts or a person asks. A clean merge needs no `claude`; conflicts start a resolve run. A **conflict** is a sync that could not be settled: the merge is undone and the task is blocked. Say sync, not "bring in" or "resolve", for the whole of it.
 - **Planner:** proposes tasks from a repo's goals when its queue runs dry. What it produces are **proposals** (tasks in `proposed`), never plans.
 - **Governor:** decides whether new work may start, from the 5-hour and 7-day **usage windows**. A **hold** is a governor decision to wait, and only that. A repo or the daemon is **paused**, never held.

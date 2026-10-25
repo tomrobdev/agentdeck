@@ -125,8 +125,9 @@ test('doctor fails and pauses the repo with the first failed check', async () =>
     assert.equal(worktrees(r.path).length, 1, `${c.name}: temporary worktree removed even on failure`);
   }
   assert.deepEqual(doctorDirs(), []);
-  const holds = db.recentNotifications(50).filter((n) => n.kind === 'hold');
-  assert.ok(holds.length >= cases.length, 'each pause notifies');
+  const pauses = db.recentNotifications(50).filter((n) => n.kind === 'paused');
+  assert.ok(pauses.length >= cases.length, 'each pause notifies');
+  assert.equal(db.recentNotifications(50).filter((n) => n.kind === 'hold').length, 0, 'a pause is not a governor hold');
 });
 
 test('doctor reports a missing repo, a missing claude binary, and PR mode without gh or origin', async () => {
@@ -188,14 +189,14 @@ test('a failing setup pauses the repo and notifies', async () => {
   const r = repo('setup-fails', { setup_cmd: 'exit 3' });
   const first = db.addTask({ repo_id: r.id, title: 'first', prompt: 'FAKE_DONE first', priority: 2 });
   const second = db.addTask({ repo_id: r.id, title: 'second', prompt: 'FAKE_DONE second' });
-  const holds = () => db.recentNotifications(100).filter((n) => n.kind === 'hold' && n.title.includes('setup-fails'));
+  const pauses = () => db.recentNotifications(100).filter((n) => n.kind === 'paused' && n.title.includes('setup-fails'));
 
   await drain();
   assert.equal(db.getTask(first.id)!.status, 'blocked');
   assert.equal(db.getTask(second.id)!.status, 'queued', 'the next task waits instead of failing the same way');
   assert.equal(db.getRepo(r.id)!.paused_reason, `setup failed on task #${first.id}`);
-  assert.equal(holds().length, 1);
-  assert.match(holds()[0].body, /agentdeck repo resume setup-fails/);
+  assert.equal(pauses().length, 1);
+  assert.match(pauses()[0].body, /agentdeck repo resume setup-fails/);
 });
 
 test('a refused tool use that ends a run pauses the repo and counts denials on the run', async () => {
@@ -209,7 +210,7 @@ test('a refused tool use that ends a run pauses the repo and counts denials on t
   assert.equal(db.runsForTask(t.id)[0].denials, 2);
   assert.equal(db.getRepo(r.id)!.paused_reason, `permission refused on task #${t.id}: npx prettier --write .`);
   assert.equal(db.getTask(next.id)!.status, 'queued');
-  assert.equal(db.recentNotifications(100).filter((n) => n.kind === 'hold' && n.title.includes('denied')).length, 1);
+  assert.equal(db.recentNotifications(100).filter((n) => n.kind === 'paused' && n.title.includes('denied')).length, 1);
 
   // A run that got through despite refusals records them but doesn't pause the repo.
   resumeRepo(db, 'denied');

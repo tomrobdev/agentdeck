@@ -1,7 +1,7 @@
-// Alerts for things that need a human: task finished, blocked, failed, proposals, or work held. Pure: no I/O.
+// Alerts for things that need a human: task finished, blocked, failed, proposals, a governor hold or a pause. Pure: no I/O.
 
-export type NotifyKind = 'done' | 'blocked' | 'failed' | 'hold' | 'proposed';
-export const NOTIFY_KINDS: NotifyKind[] = ['done', 'blocked', 'failed', 'hold', 'proposed'];
+export type NotifyKind = 'done' | 'blocked' | 'failed' | 'hold' | 'paused' | 'proposed';
+export const NOTIFY_KINDS: NotifyKind[] = ['done', 'blocked', 'failed', 'hold', 'paused', 'proposed'];
 
 export interface Notification {
   kind: NotifyKind | 'test';

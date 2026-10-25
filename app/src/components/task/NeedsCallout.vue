@@ -64,7 +64,7 @@ const allow = () =>
       <template v-else>
         <strong>Needs a change to</strong> <code>{{ needs.items.join(' ') }}</code
         >, which the worker may not edit. Make the edit yourself, then retry.
-        <div v-if="task.blocked_reason" class="mt-1 text-muted">{{ task.blocked_reason }}</div>
+        <div v-if="task.stop_reason" class="mt-1 text-muted">{{ task.stop_reason }}</div>
       </template>
       <div v-if="needs.kind === 'deps' && repo && !canInstallWith(repo.toolchain)" class="mt-1 text-muted">
         {{ repo.name }} uses {{ repo.toolchain ?? 'no detected toolchain' }}, so install them on the branch yourself.

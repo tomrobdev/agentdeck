@@ -1,27 +1,27 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { type Status, describeHold } from '../../api';
+import { type Status, describeWait } from '../../api';
 
-// What keeps queued tasks from starting, each with the action that clears it. Empty when nothing holds work back.
+// What queued tasks wait for, each with the action that ends the wait. Empty when nothing keeps work waiting.
 const props = defineProps<{ status: Status | null; busy: boolean }>();
 const emit = defineEmits<{ resume: []; resumeRepo: [id: number]; settings: [] }>();
 
 const queued = computed(() => props.status?.counts.queued ?? 0);
-const hold = computed(() => (queued.value ? (props.status?.hold ?? null) : null));
+const wait = computed(() => (queued.value ? (props.status?.wait ?? null) : null));
 const repos = computed(() => props.status?.paused_repos ?? []);
 </script>
 
 <template>
-  <div v-if="hold || repos.length" class="mx-6 mt-3 flex flex-col gap-1.5" role="status">
+  <div v-if="wait || repos.length" class="mx-6 mt-3 flex flex-col gap-1.5" role="status">
     <div
-      v-if="hold"
+      v-if="wait"
       class="s-blocked flex items-center gap-3 rounded-md border border-[color-mix(in_srgb,var(--c)_40%,transparent)] bg-[color-mix(in_srgb,var(--c)_9%,var(--panel))] px-3 py-2"
     >
       <span class="min-w-0 flex-1 truncate"
-        ><strong>{{ queued }} queued {{ queued === 1 ? 'task' : 'tasks' }} can't start.</strong> {{ describeHold(hold) }}.</span
+        ><strong>{{ queued }} queued {{ queued === 1 ? 'task' : 'tasks' }} can't start.</strong> {{ describeWait(wait) }}.</span
       >
-      <button v-if="hold.kind === 'daemon-paused'" class="primary shrink-0" :disabled="busy" @click="emit('resume')">▶ Resume</button>
-      <button v-else-if="hold.kind === 'governor'" class="shrink-0" @click="emit('settings')">Usage settings</button>
+      <button v-if="wait.kind === 'daemon-paused'" class="primary shrink-0" :disabled="busy" @click="emit('resume')">▶ Resume</button>
+      <button v-else-if="wait.kind === 'governor'" class="shrink-0" @click="emit('settings')">Usage settings</button>
     </div>
     <div
       v-for="r in repos"

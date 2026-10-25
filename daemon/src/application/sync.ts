@@ -25,7 +25,7 @@ import type { Repo } from '../domain/repo/repo.ts';
 import { buildResolvePrompt } from '../domain/run/prompt.ts';
 import { parseStatus } from '../domain/run/run.ts';
 import { lastLine } from '../domain/text.ts';
-import { queueHold } from '../domain/task/start.ts';
+import { queueWait } from '../domain/task/start.ts';
 import { type Task, leftoversMessage } from '../domain/task/task.ts';
 import { startTaskRun } from './claude-run.ts';
 import { warnStuckDependents } from './dependencies.ts';
@@ -265,7 +265,7 @@ export const syncNow = (db: Db, id: number): Promise<SyncReport> => syncTask(db,
 /** Whether the governor lets a conflict run start now: not paused, not rate limited, inside the usage windows, a slot free. */
 export function canStartResolve(db: Db): boolean {
   const gate = startGate(db);
-  if (queueHold(gate)) return false;
+  if (queueWait(gate)) return false;
   const d = gate.governor;
   return d.allow && db.countRunning() + syncing.size < d.max_concurrent;
 }

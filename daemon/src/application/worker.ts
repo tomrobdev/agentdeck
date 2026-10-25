@@ -197,7 +197,7 @@ async function finish(db: Db, task: Task, runId: number | null, res: WorkerResul
     let body =
       final.status === 'done'
         ? `Ready to review on ${final.branch ?? 'its branch'}${repo ? ` in ${repo}` : ''}.`
-        : `${final.blocked_reason ?? final.status}${repo ? ` (${repo})` : ''}`;
+        : `${final.stop_reason ?? final.status}${repo ? ` (${repo})` : ''}`;
     if (pr.url) body = `${body} PR: ${pr.url}`;
     if (pr.error) body = `${body} Could not open a PR: ${pr.error}`;
     notifyLater(db, { kind: final.status, title: `#${task.id} ${final.status}: ${task.title}`, body, task_id: task.id });

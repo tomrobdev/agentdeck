@@ -76,16 +76,16 @@ watch(
             <span class="flex min-w-0 flex-1 flex-col">
               <span class="truncate font-medium">{{ t.title }}</span>
               <span
-                v-if="show.reason && t.blocked_reason && (t.status === 'blocked' || t.status === 'failed')"
+                v-if="show.reason && t.stop_reason && (t.status === 'blocked' || t.status === 'failed')"
                 class="truncate text-sm text-blocked group-[.s-failed]:text-failed"
               >
-                {{ t.blocked_reason }}
+                {{ t.stop_reason }}
               </span>
               <span v-else-if="show.reason && t.waiting?.stuck" class="truncate text-sm text-blocked group-[.s-failed]:text-failed"
                 >Can't start: {{ t.waiting.stuck }}</span
               >
               <span
-                v-else-if="show.reason && t.hold?.kind === 'repo-paused'"
+                v-else-if="show.reason && t.wait?.kind === 'repo-paused'"
                 class="truncate text-sm text-blocked group-[.s-failed]:text-failed"
                 >Can't start: {{ t.repo }} is paused</span
               >

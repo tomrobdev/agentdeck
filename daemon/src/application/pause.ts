@@ -13,7 +13,7 @@ export function pauseRepo(db: Db, repo: Pick<Repo, 'id' | 'name'>, reason: strin
   else if (!db.pauseRepo(repo.id, reason)) return false;
   if (!wasPaused) {
     notifyLater(db, {
-      kind: 'hold',
+      kind: 'paused',
       title: `Paused ${repo.name}`,
       body: `${reason}. Fix it, then run \`agentdeck repo resume ${repo.name}\`.`,
     });

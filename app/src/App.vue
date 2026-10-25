@@ -3,7 +3,7 @@ import { type Ref, computed, onBeforeUnmount, onMounted, ref, watch, watchEffect
 import { ApiError, type Repo, type Status, type TaskSummary, type TaskDetail as Detail, api, describeState } from './api';
 import { setTrayStatus } from './native';
 import NewTaskForm from './components/NewTaskForm.vue';
-import HoldsBar from './components/queue/HoldsBar.vue';
+import WaitBar from './components/queue/WaitBar.vue';
 import ReposPanel from './components/ReposPanel.vue';
 import SettingsPanel from './components/SettingsPanel.vue';
 import StaleDaemonBar from './components/StaleDaemonBar.vue';
@@ -144,7 +144,7 @@ onBeforeUnmount(() => clearInterval(timer));
     </main>
     <main v-else class="flex min-h-0 flex-1 flex-col">
       <StaleDaemonBar :status="status" @error="flash" />
-      <HoldsBar :status="status" :busy="busy" @resume="resumeDaemon" @resume-repo="resumeRepo" @settings="modal = 'settings'" />
+      <WaitBar :status="status" :busy="busy" @resume="resumeDaemon" @resume-repo="resumeRepo" @settings="modal = 'settings'" />
       <QueueView
         v-if="tasks.length"
         v-model:selected="selectedId"

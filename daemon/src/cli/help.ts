@@ -63,7 +63,7 @@ Daemon
   agentdeck status
   agentdeck settings              show concurrency, usage budget and notification settings
   agentdeck set <key> <value>     max_concurrent, five_hour_max, five_hour_soft, weekly_max, pace_slack (0..1),
-                                  notify_desktop (on|off), notify_events (done,blocked,failed,hold,proposed), ntfy_topic, ntfy_server,
+                                  notify_desktop (on|off), notify_events (done,blocked,failed,hold,paused,proposed), ntfy_topic, ntfy_server,
                                   planner_enabled (on|off), planner_interval_hours, planner_max_tasks, planner_model,
                                   reload_on_change (on|off): restart onto new daemon/src code once nothing is running
   agentdeck notify-test           send a test notification on every enabled channel

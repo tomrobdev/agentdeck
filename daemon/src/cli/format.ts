@@ -28,7 +28,7 @@ export function taskId(arg: string | undefined): number {
 
 /** `waiting` and `unblocks` come from a task view (`taskDetail`, `withViews`); a plain task shows neither. */
 export function fmtTask(t: Task & { waiting?: TaskView['waiting']; unblocks?: number[] }, repoName: string): string {
-  let extra = t.blocked_reason && (t.status === 'blocked' || t.status === 'failed') ? `  — ${t.blocked_reason}` : '';
+  let extra = t.stop_reason && (t.status === 'blocked' || t.status === 'failed') ? `  — ${t.stop_reason}` : '';
   const waiting = t.waiting ?? null;
   if (waiting)
     extra += waiting.stuck ? `  can't start: ${waiting.stuck} (retry #${waiting.on} or cancel this task)` : `  waiting on #${waiting.on}`;

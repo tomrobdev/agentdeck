@@ -56,12 +56,12 @@ test('mark_done moves blocked and failed tasks to done, clears the reason and ne
     bring(db, t.id, from);
     const before = db.getTask(t.id)!;
     assert.equal(before.status, from);
-    assert.equal(before.blocked_reason !== null, true);
+    assert.equal(before.stop_reason !== null, true);
     const done = db.applyEvent(t.id, { type: 'mark_done' }, { reason: 'landed by hand' })!;
     assert.equal(done.status, 'done');
     assert.equal(done.attempts, before.attempts);
     assert.equal(done.max_attempts, before.max_attempts);
-    assert.equal(done.blocked_reason, null);
+    assert.equal(done.stop_reason, null);
     assert.equal(done.needs, null);
     assert.equal(done.done_by, 'person');
     const last = db.eventsForTask(t.id).at(-1)!;
@@ -105,7 +105,7 @@ test('pr_merged also moves blocked and failed tasks to done, without done_by', (
   bring(db, t.id, 'blocked');
   const done = db.applyEvent(t.id, { type: 'pr_merged' })!;
   assert.equal(done.status, 'done');
-  assert.equal(done.blocked_reason, null);
+  assert.equal(done.stop_reason, null);
   assert.equal(done.done_by, null);
   db.close();
 });

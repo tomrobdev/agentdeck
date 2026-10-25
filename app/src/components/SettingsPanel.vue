@@ -13,6 +13,7 @@ const EVENTS: { key: NotifyKind; label: string }[] = [
   { key: 'failed', label: 'Task failed' },
   { key: 'done', label: 'Task done' },
   { key: 'hold', label: 'Work held by budget' },
+  { key: 'paused', label: 'Repo paused' },
   { key: 'proposed', label: 'Planner proposals' },
 ];
 
@@ -283,7 +284,7 @@ async function test() {
         <h4 class="m-0">Recent alerts</h4>
         <ul class="m-0 flex list-none flex-col gap-1.5 p-0">
           <li v-for="n in notifications.slice(0, 5)" :key="n.id" class="flex items-center gap-2">
-            <span class="pill" :class="`s-${n.kind === 'hold' ? 'blocked' : n.kind}`">{{ n.kind }}</span>
+            <span class="pill" :class="`s-${n.kind === 'hold' || n.kind === 'paused' ? 'blocked' : n.kind}`">{{ n.kind }}</span>
             <span class="flex-1 truncate">{{ n.title }}</span>
             <span class="muted">{{ ago(n.created_at) }}</span>
           </li>

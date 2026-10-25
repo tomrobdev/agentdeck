@@ -126,6 +126,51 @@ test('a database from an earlier release upgrades to the fresh schema', () => {
   }
 });
 
+test('a stored blocked_reason survives as stop_reason', () => {
+  const t = tmpPath();
+  try {
+    const legacy = new DatabaseSync(t.path);
+    legacy.exec(OLD_SCHEMA);
+    legacy.exec("INSERT INTO repos (name, path) VALUES ('r', '/r')");
+    legacy.exec(
+      "INSERT INTO tasks (repo_id, title, prompt, status, model, max_turns, max_attempts, blocked_reason) VALUES (1, 't', 'p', 'blocked', 'm', 5, 2, 'which database?')",
+    );
+    legacy.close();
+
+    const db = openDb(t.path);
+    try {
+      assert.equal(db.getTask(1)!.stop_reason, 'which database?');
+    } finally {
+      db.close();
+    }
+  } finally {
+    t.cleanup();
+  }
+});
+
+test('a stored notify_events with hold gains paused; one without hold is unchanged', () => {
+  const upgraded = (value: string): string | undefined => {
+    const t = tmpPath();
+    try {
+      const legacy = new DatabaseSync(t.path);
+      legacy.exec(OLD_SCHEMA);
+      legacy.prepare("INSERT INTO settings (key, value) VALUES ('notify_events', ?)").run(value);
+      legacy.close();
+      const db = openDb(t.path);
+      try {
+        return (db.raw.prepare("SELECT value FROM settings WHERE key = 'notify_events'").get() as { value: string } | undefined)?.value;
+      } finally {
+        db.close();
+      }
+    } finally {
+      t.cleanup();
+    }
+  };
+  assert.equal(upgraded('done,hold'), 'done,hold,paused');
+  assert.equal(upgraded('done,blocked'), 'done,blocked');
+  assert.equal(upgraded('hold,paused'), 'hold,paused');
+});
+
 test('opening an up-to-date database runs no steps', () => {
   const t = tmpPath();
   try {
