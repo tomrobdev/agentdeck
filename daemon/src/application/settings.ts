@@ -2,9 +2,10 @@
 import type { Db } from '../db/index.ts';
 import { NOTIFY_KINDS, type NotifyKind, type NotifySettings } from '../domain/notification.ts';
 import { MODELS, type PlannerSettings } from '../domain/planner/plan.ts';
-import { BUDGET_KEYS, type Budget, decide, validateBudget } from '../domain/usage/governor.ts';
+import { BUDGET_KEYS, type Budget, validateBudget } from '../domain/usage/governor.ts';
 import { restartWait } from '../domain/daemon/restart.ts';
 import { ActionError } from './errors.ts';
+import { startGate } from './gate.ts';
 import { notify, notifySettings } from './notifications.ts';
 import { plannerSettings } from './planner.ts';
 import { queueHolds } from './queue.ts';
@@ -22,16 +23,17 @@ export interface DaemonInfo {
 }
 
 export function status(db: Db, daemon: DaemonInfo = { commit: null, started_at: new Date(0).toISOString() }) {
+  const gate = startGate(db);
   return {
     daemon,
-    paused: db.isPaused(),
-    rate_limited_until: Number(db.getSetting('rate_limited_until', '0')) || null,
+    paused: gate.paused,
+    rate_limited_until: gate.rate_limited_until,
     running: db.countRunning(),
     max_concurrent: db.maxConcurrent(),
     counts: db.countByStatus(),
     review: db.countReview(),
     usage: db.usageWindows(),
-    governor: decide(db.usageWindows(), db.budget(), db.maxConcurrent()),
+    governor: gate.governor,
     budget: db.budget(),
     notifications: db.recentNotifications(10),
     ...queueHolds(db),

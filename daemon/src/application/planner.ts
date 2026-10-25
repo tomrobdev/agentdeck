@@ -15,6 +15,7 @@ import {
   selectProposals,
 } from '../domain/planner/plan.ts';
 import type { Repo } from '../domain/repo/repo.ts';
+import { recordRateLimit, usageRecorder } from './claude-run.ts';
 import { ActionError } from './errors.ts';
 import { notifyLater } from './notifications.ts';
 
@@ -51,12 +52,12 @@ export async function planRepo(db: Db, repo: Repo): Promise<PlanResult> {
     log,
     env: { AGENTDECK_PLANNER: '1' },
     onSpawn: (pid) => db.setPlannerRunPid(runId, pid),
-    onUsage: (w) => db.recordUsageWindow(w.window, w.utilization, w.resets_at, w.status),
+    onUsage: usageRecorder(db),
   });
   await closeLog(log);
 
   if (run.rateLimitedUntil) {
-    db.setSetting('rate_limited_until', String(run.rateLimitedUntil));
+    recordRateLimit(db, run.rateLimitedUntil);
     db.finishPlannerRun(runId, 'rate_limited', 0, null);
     return { outcome: 'rate_limited', tasks: [], skipped: [], note: null };
   }

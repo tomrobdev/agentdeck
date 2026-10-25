@@ -1,0 +1,73 @@
+// The sequence every task-bound claude run shares: log, run row, settings, the process, and what its end means.
+import { createWriteStream, type WriteStream } from 'node:fs';
+import { join } from 'node:path';
+import { type ClaudeResult, type UsageWindow, runClaude } from '../adapters/claude.ts';
+import { LOG_DIR, ensureDirs } from '../config.ts';
+import type { Db } from '../db/index.ts';
+import type { Repo } from '../domain/repo/repo.ts';
+import { claudeArgs } from '../domain/run/prompt.ts';
+import { type Run, type RunClass, type RunKind, classifyRun, resultFields } from '../domain/run/run.ts';
+import type { Task } from '../domain/task/task.ts';
+import { effectiveTools, runSettings } from './tools.ts';
+
+/** A run row and its log, before claude starts. */
+export interface OpenedRun {
+  runId: number;
+  logPath: string;
+  log: WriteStream;
+}
+
+/** Open the log and the run row. A work run is named by its attempt, a resolve run by the time it started. */
+export function openTaskRun(db: Db, task: Task, kind: RunKind): OpenedRun {
+  ensureDirs();
+  const name = kind === 'work' ? `attempt-${task.attempts}` : `resolve-${Date.now()}`;
+  const logPath = join(LOG_DIR, `task-${task.id}-${name}.jsonl`);
+  const log = createWriteStream(logPath, { flags: 'a' });
+  const runId = db.startRun(task.id, task.attempts, logPath, kind);
+  return { runId, logPath, log };
+}
+
+/** What a task run came to. `fields` are the run row's columns that claude's exit decides. */
+export interface TaskRunEnd extends OpenedRun {
+  end: RunClass<ClaudeResult>;
+  result: ClaudeResult | undefined;
+  fields: Partial<Run>;
+}
+
+/**
+ * Run claude on a task in `worktree`: write the run settings, start the process with the cancel, pid and usage
+ * callbacks, and record a rate limit. `opened` is a run the caller opened earlier (it needed the log before claude).
+ * The caller decides what the end means and calls `finishRun`. Throws if the settings cannot be written.
+ */
+export async function startTaskRun(
+  db: Db,
+  task: Task,
+  opts: { kind: RunKind; repo: Repo; worktree: string; prompt: string; opened?: OpenedRun },
+): Promise<TaskRunEnd> {
+  const opened = opts.opened ?? openTaskRun(db, task, opts.kind);
+  const { runId, logPath, log } = opened;
+  const { repo, worktree } = opts;
+  const settings = runSettings(repo, worktree, logPath);
+  const run = await runClaude({
+    args: claudeArgs(task, effectiveTools(repo, worktree), opts.prompt, repo.test_cmd, settings),
+    cwd: worktree,
+    log,
+    env: { AGENTDECK_TASK_ID: String(task.id) },
+    shouldCancel: () => db.getTask(task.id)?.status === 'cancel_requested',
+    onSpawn: (pid) => db.setRunPid(runId, pid),
+    onUsage: usageRecorder(db),
+  });
+  const end = classifyRun(run);
+  if (end.kind === 'rate_limited') db.setSetting('rate_limited_until', String(end.until));
+  return { ...opened, end, result: run.result, fields: resultFields(run.result, run.exitCode) };
+}
+
+/** The `onUsage` callback that stores each usage window claude reports. */
+export function usageRecorder(db: Db): (w: UsageWindow) => void {
+  return (w) => db.recordUsageWindow(w.window, w.utilization, w.resets_at, w.status);
+}
+
+/** Remember that claude rejected a request on rate limits, so nothing starts until `until` (unix seconds). */
+export function recordRateLimit(db: Db, until: number): void {
+  db.setSetting('rate_limited_until', String(until));
+}

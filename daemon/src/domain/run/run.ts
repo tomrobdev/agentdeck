@@ -56,6 +56,52 @@ export function resultFields(result: ResultLike | undefined, exitCode: number): 
   };
 }
 
+/** The last non-empty line of a command's output, for a one-line reason. */
+export function lastLine(output: string): string {
+  return (
+    output
+      .trim()
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .at(-1) ?? 'no output'
+  ).slice(0, 300);
+}
+
+/** What a finished `claude` process left behind (the adapter's `ClaudeRun`). */
+export interface ClaudeRunLike<R extends ResultLike = ResultLike> {
+  result: (R & { is_error?: boolean; subtype?: string }) | undefined;
+  exitCode: number;
+  /** Set when Claude rejected a request on rate limits (unix seconds). */
+  rateLimitedUntil: number | undefined;
+  cancelled: boolean;
+  stderr: string;
+}
+
+export type RunClass<R extends ResultLike = ResultLike> =
+  | { kind: 'cancelled' }
+  | { kind: 'rate_limited'; until: number; reason: string }
+  | { kind: 'failed'; reason: string }
+  | { kind: 'finished'; result: R };
+
+/** What a claude process's end means: a cancel wins over a rate limit, which wins over a failure. */
+export function classifyRun<R extends ResultLike>(run: ClaudeRunLike<R>): RunClass<R> {
+  if (run.cancelled) return { kind: 'cancelled' };
+  if (run.rateLimitedUntil) {
+    const until = run.rateLimitedUntil;
+    return { kind: 'rate_limited', until, reason: `rate limited until ${new Date(until * 1000).toISOString()}` };
+  }
+  const { result, exitCode, stderr } = run;
+  if (!result || result.is_error || exitCode !== 0) {
+    // No result means claude stopped before working, e.g. the sandbox could not start (failIfUnavailable): say why.
+    return {
+      kind: 'failed',
+      reason: result?.subtype ?? `claude exited with code ${exitCode}${stderr.trim() ? `: ${lastLine(stderr)}` : ''}`,
+    };
+  }
+  return { kind: 'finished', result };
+}
+
 export type Outcome = 'done' | 'blocked' | 'failed' | 'cancelled' | 'rate_limited';
 
 export interface WorkerResult {

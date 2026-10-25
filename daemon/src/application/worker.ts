@@ -1,25 +1,22 @@
 // Runs one attempt of a claimed task: worktree, setup, claude, tests, then the task's next status.
-import { createWriteStream } from 'node:fs';
-import { join } from 'node:path';
-import { runClaude } from '../adapters/claude.ts';
 import { commitLeftovers, commitsAhead, ensureWorktree } from '../adapters/git.ts';
 import { closeLog, writeEvent } from '../adapters/run-log.ts';
 import { lastLine, runCommand } from '../adapters/shell.ts';
-import { LOG_DIR, SETUP_TIMEOUT_MS, TEST_TIMEOUT_MS, ensureDirs } from '../config.ts';
+import { SETUP_TIMEOUT_MS, TEST_TIMEOUT_MS, ensureDirs } from '../config.ts';
 import type { Db } from '../db/index.ts';
 import { conflictReason, syncSummary } from '../domain/pull-request/conflict.ts';
 import { linkedSteps, unfinishedSteps, unfinishedSummary } from '../domain/plan/plan.ts';
-import { type PromptPlan, buildPrompt, claudeArgs } from '../domain/run/prompt.ts';
+import { type PromptPlan, buildPrompt } from '../domain/run/prompt.ts';
 import { latestReviewNote } from '../domain/task/history.ts';
-import { type Run, type WorkerResult, firstDenial, isEnvironmentBlock, parseStatus, resultFields } from '../domain/run/run.ts';
+import { type Run, type WorkerResult, firstDenial, isEnvironmentBlock, parseStatus } from '../domain/run/run.ts';
 import { type Task, planStepIds } from '../domain/task/task.ts';
+import { type TaskRunEnd, openTaskRun, startTaskRun } from './claude-run.ts';
 import { bringInBase } from './conflicts.ts';
 import { warnStuckDependents } from './dependencies.ts';
 import { notifyLater } from './notifications.ts';
 import { pauseRepo } from './pause.ts';
 import { collectPlans, planForRun } from './plans.ts';
 import { openPullRequest } from './pull-requests.ts';
-import { effectiveTools, runSettings } from './tools.ts';
 
 /** Run one attempt of a task that the scheduler has already claimed (status = running). */
 export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
@@ -35,9 +32,8 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
   }
   db.updateTask(task.id, { branch: wt.branch, worktree: wt.path });
 
-  const logPath = join(LOG_DIR, `task-${task.id}-attempt-${task.attempts}.jsonl`);
-  const log = createWriteStream(logPath, { flags: 'a' });
-  const runId = db.startRun(task.id, task.attempts, logPath);
+  const opened = openTaskRun(db, task, 'work');
+  const { runId, log } = opened;
   let plan: PromptPlan | null = null;
   try {
     plan = await planForRun(db, task);
@@ -88,25 +84,15 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
   }
 
   // Written after setup: setup runs here in the daemon, outside the sandbox, so installs keep the network.
-  let settings: string;
+  let ran: TaskRunEnd;
   try {
-    settings = runSettings(repo, wt.path, logPath);
+    ran = await startTaskRun(db, task, { kind: 'work', repo, worktree: wt.path, prompt, opened });
   } catch (err) {
     await closeLog(log);
     return finish(db, task, runId, { outcome: 'failed', reason: `settings: ${(err as Error).message}` });
   }
-
-  const { result, exitCode, rateLimitedUntil, cancelled, stderr } = await runClaude({
-    args: claudeArgs(task, effectiveTools(repo, wt.path), prompt, repo.test_cmd, settings),
-    cwd: wt.path,
-    log,
-    env: { AGENTDECK_TASK_ID: String(task.id) },
-    shouldCancel: () => db.getTask(task.id)?.status === 'cancel_requested',
-    onSpawn: (pid) => db.setRunPid(runId, pid),
-    onUsage: (w) => db.recordUsageWindow(w.window, w.utilization, w.resets_at, w.status),
-  });
-
-  const runFields: Partial<Run> = resultFields(result, exitCode);
+  const { result, end } = ran;
+  const runFields: Partial<Run> = ran.fields;
 
   try {
     await commitLeftovers(wt.path, `agentdeck: uncommitted work from task ${task.id}\n\n${task.title}`);
@@ -121,20 +107,14 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
   }
 
   let outcome: WorkerResult;
-  if (cancelled) {
+  if (end.kind === 'cancelled') {
     outcome = { outcome: 'cancelled' };
-  } else if (rateLimitedUntil) {
-    const until = rateLimitedUntil;
-    db.setSetting('rate_limited_until', String(until));
-    outcome = { outcome: 'rate_limited', reason: `rate limited until ${new Date(until * 1000).toISOString()}` };
-  } else if (!result || result.is_error || exitCode !== 0) {
-    // No result means claude stopped before working, e.g. the sandbox could not start (failIfUnavailable): say why.
-    outcome = {
-      outcome: 'failed',
-      reason: result?.subtype ?? `claude exited with code ${exitCode}${stderr.trim() ? `: ${lastLine(stderr)}` : ''}`,
-    };
+  } else if (end.kind === 'rate_limited') {
+    outcome = { outcome: 'rate_limited', reason: end.reason };
+  } else if (end.kind === 'failed') {
+    outcome = { outcome: 'failed', reason: end.reason };
   } else {
-    const status = parseStatus(result.result);
+    const status = parseStatus(end.result.result);
     if (status.blocked) {
       outcome = { outcome: 'blocked', reason: status.reason ?? 'agent reported blocked', ...(status.needs ? { needs: status.needs } : {}) };
     } else if (repo.test_cmd) {
