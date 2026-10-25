@@ -5,6 +5,7 @@ import * as actions from '../application/actions.ts';
 import { unblocksOf, waitingFor } from '../application/dependencies.ts';
 import { removeWorktree } from '../adapters/git.ts';
 import { planProgress } from '../domain/plan/plan.ts';
+import { readNeeds } from '../domain/run/run.ts';
 import { TASK_STATUSES } from '../domain/task/lifecycle.ts';
 import { filterTasks } from '../domain/task/listing.ts';
 import { planStepIds } from '../domain/task/task.ts';
@@ -84,6 +85,8 @@ export const taskCommands: Record<string, Command> = {
     console.log(`model ${t.model}, attempts ${t.attempts}/${t.max_attempts}, max turns ${t.max_turns}`);
     if (t.branch) console.log(`branch   ${t.branch}`);
     if (t.worktree) console.log(`worktree ${t.worktree}`);
+    const needs = readNeeds(t.needs);
+    if (needs && t.status === 'blocked') console.log(`needs    ${needs.kind}: ${needs.items.join(' ')}`);
     if (t.plan_path) {
       const steps = planStepIds(t);
       console.log(`plan     ${t.plan_path} (${steps ? `steps ${steps.join(', ')}` : 'every unfinished step'})`);

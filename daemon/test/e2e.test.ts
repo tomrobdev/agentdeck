@@ -283,7 +283,7 @@ test('a failing setup blocks the task without starting claude', async () => {
     const t = db.getTask(task.id)!;
     assert.equal(t.status, 'blocked');
     assert.equal(t.blocked_reason, 'setup failed: ERR_PNPM_OFFLINE no network');
-    assert.equal(t.attempts, 1, 'blocked, not retried');
+    assert.equal(t.attempts, 0, 'blocked by the environment: the attempt is given back');
     const [run] = db.runsForTask(t.id);
     assert.equal(run.outcome, 'blocked');
     assert.equal(run.pid, null, 'claude never spawned');

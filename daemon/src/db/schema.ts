@@ -152,6 +152,8 @@ export const MIGRATIONS: Migration[] = [
    ALTER TABLE tasks ADD COLUMN plan_steps TEXT;`,
   // 12: archiving a repo (docs/plans/repo-archive.html). archived_at is when it was archived, NULL while it is active.
   'ALTER TABLE repos ADD COLUMN archived_at TEXT;',
+  // 13: what a blocked worker said it needs (docs/plans/fewer-blocks.html): JSON { kind, items }, NULL when nothing.
+  'ALTER TABLE tasks ADD COLUMN needs TEXT;',
 ];
 
 /** Runs every step above the database's user_version in one transaction; returns how many ran. */

@@ -114,6 +114,8 @@ export interface TaskSummary {
   plan_path: string | null;
   /** JSON array of that plan's step ids; null means every unfinished step. Missing from a daemon that predates it. */
   plan_steps: string | null;
+  /** JSON `{ kind: 'deps' | 'host' | 'edit', items: string[] }`: what the worker said it needs when it blocked. Missing from a daemon that predates it. */
+  needs?: string | null;
   /** Set for a queued task held back by after_task; stuck says why its dependency won't get there on its own. */
   waiting: { on: number; stuck: string | null } | null;
   /** For a task in review: the queued tasks that wait on its PR. */
@@ -159,6 +161,7 @@ export interface TaskEventRow {
     | 'merge'
     | 'sync'
     | 'plan_unfinished'
+    | 'environment_block'
     | 'claim'
     | 'finish'
     | 'rate_limited'

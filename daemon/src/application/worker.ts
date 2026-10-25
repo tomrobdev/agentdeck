@@ -11,7 +11,7 @@ import { conflictReason, syncSummary } from '../domain/pull-request/conflict.ts'
 import { linkedSteps, unfinishedSteps, unfinishedSummary } from '../domain/plan/plan.ts';
 import { type PromptPlan, buildPrompt, claudeArgs } from '../domain/run/prompt.ts';
 import { latestReviewNote } from '../domain/task/history.ts';
-import { type Run, type WorkerResult, firstDenial, parseStatus, resultFields } from '../domain/run/run.ts';
+import { type Run, type WorkerResult, firstDenial, isEnvironmentBlock, parseStatus, resultFields } from '../domain/run/run.ts';
 import { type Task, planStepIds } from '../domain/task/task.ts';
 import { bringInBase } from './conflicts.ts';
 import { warnStuckDependents } from './dependencies.ts';
@@ -59,7 +59,11 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
     if (setup.passed) return null;
     await closeLog(log);
     pauseRepo(db, repo, `setup failed on task #${task.id}`);
-    return finish(db, task, runId, { outcome: 'blocked', reason: `setup failed: ${lastLine(setup.output)}` });
+    return finish(db, task, runId, {
+      outcome: 'blocked',
+      reason: `setup failed: ${lastLine(setup.output)}`,
+      environment: isEnvironmentBlock({ setupFailed: true }),
+    });
   };
   const setupFailure = await setUp();
   if (setupFailure) return setupFailure;
@@ -132,7 +136,7 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
   } else {
     const status = parseStatus(result.result);
     if (status.blocked) {
-      outcome = { outcome: 'blocked', reason: status.reason ?? 'agent reported blocked' };
+      outcome = { outcome: 'blocked', reason: status.reason ?? 'agent reported blocked', ...(status.needs ? { needs: status.needs } : {}) };
     } else if (repo.test_cmd) {
       const tests = await runCommand(repo.test_cmd, wt.path, TEST_TIMEOUT_MS);
       writeEvent(log, { type: 'agentdeck_tests', passed: tests.passed, output: tests.output });
@@ -163,6 +167,7 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
   const denials = result?.permission_denials ?? [];
   runFields.denials = denials.length;
   const testsFailed = runFields.tests_passed === 0;
+  if (outcome.outcome === 'blocked' && isEnvironmentBlock({ needs: outcome.needs, denials: denials.length })) outcome.environment = true;
   if (denials.length && !testsFailed && (outcome.outcome === 'blocked' || outcome.outcome === 'failed')) {
     pauseRepo(db, repo, `permission refused on task #${task.id}: ${firstDenial(denials)}`);
   }
@@ -182,9 +187,16 @@ async function finish(db: Db, task: Task, runId: number | null, res: WorkerResul
   const reason = { reason: res.reason ?? null };
   switch (res.outcome) {
     case 'done':
-    case 'blocked':
     case 'cancelled':
       db.applyEvent(task.id, { type: 'finish', outcome: res.outcome }, reason);
+      break;
+    case 'blocked':
+      // The environment, not the task, is to blame: the attempt is given back.
+      db.applyEvent(
+        task.id,
+        { type: 'finish', outcome: 'blocked', environment: res.environment === true },
+        { ...reason, needs: res.needs ? JSON.stringify(res.needs) : null },
+      );
       break;
     case 'rate_limited':
       // Not the task's fault: give the attempt back and requeue.
