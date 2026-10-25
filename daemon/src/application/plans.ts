@@ -5,6 +5,7 @@ import type { PrPlan } from '../domain/pull-request/pr.ts';
 import type { PromptPlan } from '../domain/run/prompt.ts';
 import { type Task, planStepIds } from '../domain/task/task.ts';
 import { ActionError } from './errors.ts';
+import { object, text } from './input.ts';
 import { requireTask } from './lookups.ts';
 import { taskChanges, taskFile } from './files.ts';
 
@@ -60,7 +61,7 @@ export function attachPlan(db: Db, id: number, input: { name?: unknown; html?: u
   if (!parsePlan(input.html)) {
     throw new ActionError('not an AgentDeck plan: its <html> tag needs data-agentdeck-plan="1" (see docs/plan-format.md)');
   }
-  const name = planName(typeof input.name === 'string' ? input.name : '');
+  const name = planName(text(object(input), 'name', { empty: true, raw: true }) ?? '');
   db.savePlan(id, name, 'attached', input.html);
   return db.plansForTask(id).find((p) => p.name === name)!;
 }

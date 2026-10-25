@@ -13,6 +13,7 @@ import type { Repo } from '../domain/repo/repo.ts';
 import { detectToolchain } from '../domain/repo/toolchain.ts';
 import { type Check, runDoctor } from './doctor.ts';
 import { ActionError } from './errors.ts';
+import { flag, list, object, text, textOrNull } from './input.ts';
 import { requireRepo } from './lookups.ts';
 import { pauseRepo } from './pause.ts';
 
@@ -21,20 +22,28 @@ export async function addRepo(
   db: Db,
   input: { path: string; name?: string; base?: string; test?: string | null; setup?: string | null; tools?: string[] | null },
 ): Promise<Repo> {
-  const abs = resolve(input.path.replace(/^~(?=\/|$)/, process.env.HOME ?? '~'));
+  const body = object(input);
+  const path = text(body, 'path', { empty: true });
+  if (!path) throw new ActionError('a path is required');
+  const name = text(body, 'name', { empty: true });
+  const base = text(body, 'base', { empty: true });
+  const test = textOrNull(body, 'test');
+  const setup = textOrNull(body, 'setup');
+  const tools = body.tools === null ? undefined : list(body, 'tools');
+  const abs = resolve(path.replace(/^~(?=\/|$)/, process.env.HOME ?? '~'));
   if (!existsSync(abs) || !(await isGitRepo(abs))) throw new ActionError(`${abs} is not a git repository`);
   const { files, scripts } = rootInfo(abs);
   const detected = detectToolchain(files, scripts);
   try {
     return db.addRepo({
-      name: input.name || basename(abs),
+      name: name || basename(abs),
       path: abs,
-      base_branch: input.base || (await currentBranch(abs)),
-      test_cmd: input.test || detected?.test_cmd || null,
+      base_branch: base || (await currentBranch(abs)),
+      test_cmd: test || detected?.test_cmd || null,
       // Left null unless given, so the rules follow the repo's scripts as they change (application/tools.ts).
-      allowed_tools: input.tools?.length ? input.tools : null,
+      allowed_tools: tools?.length ? tools : null,
       toolchain: detected?.toolchain ?? null,
-      setup_cmd: input.setup || detected?.setup_cmd || null,
+      setup_cmd: setup || detected?.setup_cmd || null,
     });
   } catch (err) {
     if (String(err).includes('UNIQUE')) throw new ActionError('a repo with that name or path is already registered');
@@ -65,27 +74,38 @@ export function updateRepo(
   },
 ) {
   const repo = requireRepo(db, nameOrId);
-  const network = patch.network !== undefined ? normalizeNetwork(patch.network) : undefined;
+  const body = object(patch);
+  const goals = text(body, 'goals', { empty: true, raw: true });
+  const auto_approve = flag(body, 'auto_approve');
+  const test_cmd = textOrNull(body, 'test_cmd');
+  const setup_cmd = textOrNull(body, 'setup_cmd');
+  const base_branch = text(body, 'base_branch');
+  const pr_mode = text(body, 'pr_mode', { empty: true, raw: true });
+  const merge_method = text(body, 'merge_method', { empty: true, raw: true });
+  const auto_resolve = flag(body, 'auto_resolve');
+  const sandbox = flag(body, 'sandbox');
+  const hosts = list(body, 'network', { split: true });
+  const network = hosts && normalizeNetwork(hosts);
   const badHost = network?.find((d) => !/^[A-Za-z0-9*.:[\]-]+$/.test(d));
   if (badHost !== undefined) throw new ActionError(`not a host name: ${badHost}`);
-  if (patch.pr_mode !== undefined && !PR_MODES.includes(patch.pr_mode))
+  if (pr_mode !== undefined && !PR_MODES.includes(pr_mode as PrMode))
     throw new ActionError(`pr_mode must be one of ${PR_MODES.join(', ')}`);
-  if (patch.merge_method !== undefined && !isMergeMethod(patch.merge_method))
+  if (merge_method !== undefined && !isMergeMethod(merge_method))
     throw new ActionError(`merge_method must be one of ${MERGE_METHODS.join(', ')}`);
-  if (patch.base_branch !== undefined && !patch.base_branch.trim()) throw new ActionError('base_branch cannot be empty');
-  if (patch.goals !== undefined) {
-    if (patch.goals.length > 20_000) throw new ActionError('goals are limited to 20,000 characters');
-    writeGoals(repo, patch.goals);
+  if (base_branch === '') throw new ActionError('base_branch cannot be empty');
+  if (goals !== undefined) {
+    if (goals.length > 20_000) throw new ActionError('goals are limited to 20,000 characters');
+    writeGoals(repo, goals);
   }
   db.updateRepo(repo.id, {
-    ...(patch.auto_approve !== undefined ? { auto_approve: patch.auto_approve ? 1 : 0 } : {}),
-    ...(patch.test_cmd !== undefined ? { test_cmd: patch.test_cmd?.trim() || null } : {}),
-    ...(patch.setup_cmd !== undefined ? { setup_cmd: patch.setup_cmd?.trim() || null } : {}),
-    ...(patch.base_branch !== undefined ? { base_branch: patch.base_branch.trim() } : {}),
-    ...(patch.pr_mode !== undefined ? { pr_mode: patch.pr_mode } : {}),
-    ...(patch.merge_method !== undefined ? { merge_method: patch.merge_method } : {}),
-    ...(patch.auto_resolve !== undefined ? { auto_resolve: patch.auto_resolve ? 1 : 0 } : {}),
-    ...(patch.sandbox !== undefined ? { sandbox: patch.sandbox ? 1 : 0 } : {}),
+    ...(auto_approve !== undefined ? { auto_approve: auto_approve ? 1 : 0 } : {}),
+    ...(test_cmd !== undefined ? { test_cmd: test_cmd?.trim() || null } : {}),
+    ...(setup_cmd !== undefined ? { setup_cmd: setup_cmd?.trim() || null } : {}),
+    ...(base_branch !== undefined ? { base_branch } : {}),
+    ...(pr_mode !== undefined ? { pr_mode: pr_mode as PrMode } : {}),
+    ...(merge_method !== undefined ? { merge_method: merge_method as MergeMethod } : {}),
+    ...(auto_resolve !== undefined ? { auto_resolve: auto_resolve ? 1 : 0 } : {}),
+    ...(sandbox !== undefined ? { sandbox: sandbox ? 1 : 0 } : {}),
     ...(network !== undefined ? { network: JSON.stringify(network) } : {}),
   });
   return repoDetail(db, repo.id);

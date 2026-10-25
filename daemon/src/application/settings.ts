@@ -5,6 +5,7 @@ import { MODELS, type PlannerSettings } from '../domain/planner/plan.ts';
 import { BUDGET_KEYS, type Budget, validateBudget } from '../domain/usage/governor.ts';
 import { restartWait } from '../domain/daemon/restart.ts';
 import { ActionError } from './errors.ts';
+import { flag, list, number, object, text, whole } from './input.ts';
 import { startGate } from './gate.ts';
 import { notify } from './notifications.ts';
 import { queueHolds } from './queue.ts';
@@ -81,58 +82,68 @@ export function updateSettings(
   },
 ): Settings {
   const writes: [string, string][] = [];
+  const body = object(patch);
+  const section = (key: string) => (body[key] === undefined ? undefined : object(body[key]));
 
-  if (patch.reload_on_change !== undefined) writes.push(['reload_on_change', patch.reload_on_change ? '1' : '0']);
+  const reload = flag(body, 'reload_on_change');
+  if (reload !== undefined) writes.push(['reload_on_change', reload ? '1' : '0']);
 
-  if (patch.max_concurrent !== undefined) {
-    const n = Number(patch.max_concurrent);
-    if (!Number.isInteger(n) || n < 1 || n > 8) throw new ActionError('max_concurrent must be a whole number from 1 to 8');
-    writes.push(['max_concurrent', String(n)]);
-  }
+  const maxConcurrent = whole(body, 'max_concurrent', 1, 8);
+  if (maxConcurrent !== undefined) writes.push(['max_concurrent', String(maxConcurrent)]);
 
-  if (patch.budget) {
+  const budget = section('budget');
+  if (budget) {
     const merged = { ...db.budget() };
-    for (const k of BUDGET_KEYS) if (patch.budget[k] !== undefined) merged[k] = Number(patch.budget[k]);
+    for (const k of BUDGET_KEYS) {
+      const value = number(budget, k);
+      if (value !== undefined) merged[k] = value;
+    }
     const err = validateBudget(merged);
     if (err) throw new ActionError(err);
     for (const k of BUDGET_KEYS) writes.push([k, String(merged[k])]);
   }
 
-  if (patch.notify) {
-    const n = patch.notify;
-    if (n.desktop !== undefined) writes.push(['notify_desktop', n.desktop ? '1' : '0']);
-    if (n.events !== undefined) {
-      const bad = n.events.filter((e) => !NOTIFY_KINDS.includes(e as NotifyKind));
+  const n = section('notify');
+  if (n) {
+    const desktop = flag(n, 'desktop');
+    if (desktop !== undefined) writes.push(['notify_desktop', desktop ? '1' : '0']);
+    const events = list(n, 'events');
+    if (events !== undefined) {
+      const bad = events.filter((e) => !NOTIFY_KINDS.includes(e as NotifyKind));
       if (bad.length) throw new ActionError(`unknown notification events: ${bad.join(', ')}`);
-      writes.push(['notify_events', n.events.join(',')]);
+      writes.push(['notify_events', events.join(',')]);
     }
-    if (n.ntfy_topic !== undefined) {
-      const topic = n.ntfy_topic.trim();
+    const topic = text(n, 'ntfy_topic', { empty: true });
+    if (topic !== undefined) {
       if (topic && !/^[\w-]{1,64}$/.test(topic)) throw new ActionError('ntfy topic: letters, digits, - and _ only');
       writes.push(['ntfy_topic', topic]);
     }
-    if (n.ntfy_server !== undefined) {
-      if (!/^https?:\/\/\S+$/.test(n.ntfy_server)) throw new ActionError('ntfy server must be an http(s) URL');
-      writes.push(['ntfy_server', n.ntfy_server]);
+    const server = text(n, 'ntfy_server', { empty: true, raw: true });
+    if (server !== undefined) {
+      if (!/^https?:\/\/\S+$/.test(server)) throw new ActionError('ntfy server must be an http(s) URL');
+      writes.push(['ntfy_server', server]);
     }
   }
 
-  if (patch.planner) {
-    const p = patch.planner;
-    if (p.enabled !== undefined) writes.push(['planner_enabled', p.enabled ? '1' : '0']);
-    if (p.interval_hours !== undefined) {
-      const h = Number(p.interval_hours);
-      if (!(h >= 0.25 && h <= 168)) throw new ActionError('planner interval must be between 0.25 and 168 hours');
-      writes.push(['planner_interval_hours', String(h)]);
+  const p = section('planner');
+  if (p) {
+    const enabled = flag(p, 'enabled');
+    if (enabled !== undefined) writes.push(['planner_enabled', enabled ? '1' : '0']);
+    const hours = number(p, 'interval_hours');
+    if (hours !== undefined) {
+      if (!(hours >= 0.25 && hours <= 168)) throw new ActionError('planner interval must be between 0.25 and 168 hours');
+      writes.push(['planner_interval_hours', String(hours)]);
     }
-    if (p.max_tasks !== undefined) {
-      const n = Number(p.max_tasks);
-      if (!Number.isInteger(n) || n < 1 || n > 10) throw new ActionError('planner max tasks must be a whole number from 1 to 10');
-      writes.push(['planner_max_tasks', String(n)]);
+    const maxTasks = number(p, 'max_tasks');
+    if (maxTasks !== undefined) {
+      if (!Number.isInteger(maxTasks) || maxTasks < 1 || maxTasks > 10)
+        throw new ActionError('planner max tasks must be a whole number from 1 to 10');
+      writes.push(['planner_max_tasks', String(maxTasks)]);
     }
-    if (p.model !== undefined) {
-      if (!MODELS.includes(p.model)) throw new ActionError(`planner model must be one of ${MODELS.join(', ')}`);
-      writes.push(['planner_model', p.model]);
+    const model = text(p, 'model', { empty: true, raw: true });
+    if (model !== undefined) {
+      if (!MODELS.includes(model)) throw new ActionError(`planner model must be one of ${MODELS.join(', ')}`);
+      writes.push(['planner_model', model]);
     }
   }
 

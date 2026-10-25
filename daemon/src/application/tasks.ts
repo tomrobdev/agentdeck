@@ -11,6 +11,7 @@ import { EDITABLE_STATUSES, type Task, defaultTitle, planStepIds } from '../doma
 import { isSyncing } from './conflicts.ts';
 import { warnStuckDependents } from './dependencies.ts';
 import { ActionError } from './errors.ts';
+import { object, text, whole } from './input.ts';
 import { requireTask, requireTaskRepo } from './lookups.ts';
 import { closePullRequest } from './pull-requests.ts';
 
@@ -59,13 +60,21 @@ export async function addTask(
     plan_steps?: string[] | string;
   },
 ): Promise<Task> {
-  const prompt = input.prompt?.trim();
+  const body = object(input);
+  const prompt = text(body, 'prompt', { empty: true });
   if (!prompt) throw new ActionError('a prompt is required');
+  const title = text(body, 'title', { empty: true });
+  const model = text(body, 'model', { empty: true });
+  const repoName = text(body, 'repo', { empty: true });
+  const priority = whole(body, 'priority', -1000, 1000);
+  const max_turns = whole(body, 'max_turns', 1, 500);
+  const max_attempts = whole(body, 'max_attempts', 1, 20);
+  if (body.plan_path !== undefined && typeof body.plan_path !== 'string') throw new ActionError('plan_path must be text');
   if (input.after_task !== undefined && (!Number.isInteger(input.after_task) || !db.getTask(input.after_task)))
     throw new ActionError(`--after: no task #${input.after_task}`);
   const repos = db.listRepos();
-  const repo = input.repo ? db.findRepo(input.repo) : repos.length === 1 ? repos[0] : undefined;
-  if (!repo) throw new ActionError(input.repo ? `no repo "${input.repo}"` : 'choose a repo (more than one is registered)');
+  const repo = repoName ? db.findRepo(repoName) : repos.length === 1 ? repos[0] : undefined;
+  if (!repo) throw new ActionError(repoName ? `no repo "${repoName}"` : 'choose a repo (more than one is registered)');
   if (repo.archived_at) throw new ActionError(`${repo.name} is archived; unarchive it first`);
   const plan_path = typeof input.plan_path === 'string' ? input.plan_path.trim() : '';
   const steps = stepList(input.plan_steps);
@@ -73,12 +82,12 @@ export async function addTask(
   else if (steps) throw new ActionError('--steps needs --plan');
   return db.addTask({
     repo_id: repo.id,
-    title: input.title?.trim() || defaultTitle(prompt),
+    title: title || defaultTitle(prompt),
     prompt,
-    priority: input.priority,
-    model: input.model || undefined,
-    max_turns: input.max_turns,
-    max_attempts: input.max_attempts,
+    priority,
+    model: model || undefined,
+    max_turns,
+    max_attempts,
     after_task: input.after_task,
     plan_path: plan_path || null,
     plan_steps: plan_path && steps ? JSON.stringify(steps) : null,
@@ -107,25 +116,19 @@ export async function editTask(
   const task = requireTask(db, id);
   const fields: Parameters<Db['editTask']>[1] = {};
 
-  const text = (key: 'title' | 'prompt' | 'model') => {
-    const value = patch[key];
-    if (value === undefined) return;
-    if (typeof value !== 'string' || !value.trim()) throw new ActionError(`${key} cannot be empty`);
-    fields[key] = value.trim();
-  };
-  const whole = (key: 'priority' | 'max_turns' | 'max_attempts', min: number, max: number) => {
-    const value = patch[key];
-    if (value === undefined) return;
-    if (typeof value !== 'number' || !Number.isInteger(value) || value < min || value > max)
-      throw new ActionError(`${key} must be a whole number from ${min} to ${max}`);
-    fields[key] = value;
-  };
-  text('title');
-  text('prompt');
-  text('model');
-  whole('priority', -1000, 1000);
-  whole('max_turns', 1, 500);
-  whole('max_attempts', 1, 20);
+  const body = object(patch);
+  for (const key of ['title', 'prompt', 'model'] as const) {
+    const value = text(body, key);
+    if (value !== undefined) fields[key] = value;
+  }
+  for (const [key, min, max] of [
+    ['priority', -1000, 1000],
+    ['max_turns', 1, 500],
+    ['max_attempts', 1, 20],
+  ] as const) {
+    const value = whole(body, key, min, max);
+    if (value !== undefined) fields[key] = value;
+  }
 
   if (patch.plan_path !== undefined || patch.plan_steps !== undefined) {
     if (patch.plan_path !== null && patch.plan_path !== undefined && typeof patch.plan_path !== 'string')

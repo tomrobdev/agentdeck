@@ -9,6 +9,7 @@ import { buildPrBody } from '../domain/pull-request/pr.ts';
 import type { Task } from '../domain/task/task.ts';
 import { warnStuckDependents } from './dependencies.ts';
 import { ActionError } from './errors.ts';
+import { flag, object, text } from './input.ts';
 import { requireTask, requireTaskRepo } from './lookups.ts';
 import { prPlanFor } from './plans.ts';
 
@@ -136,8 +137,11 @@ export interface MergeResult {
  * a cleanup failure after the merge is returned, not thrown.
  */
 export async function mergeTask(db: Db, id: number, opts: { method?: string; delete_branch?: boolean } = {}): Promise<MergeResult> {
+  const body = object(opts);
+  const given = text(body, 'method', { empty: true, raw: true });
+  const deleteBranch = flag(body, 'delete_branch') === true;
   const { task, repo, url, cwd } = mergeable(db, id);
-  const method = opts.method ?? task.merge_method ?? repo.merge_method;
+  const method = given ?? task.merge_method ?? repo.merge_method;
   if (!isMergeMethod(method)) throw new ActionError(`method must be one of ${MERGE_METHODS.join(', ')}`);
 
   const pr = await github.prDetails(url, cwd).catch((err) => {
@@ -164,7 +168,7 @@ export async function mergeTask(db: Db, id: number, opts: { method?: string; del
   const unblocked = db.dependentsOf(id).map((t) => t.id);
 
   const result: MergeResult = { method, unblocked };
-  if (opts.delete_branch) {
+  if (deleteBranch) {
     const errors: string[] = [];
     if (task.branch)
       await github.deleteRemoteBranch(repo.path, task.branch).catch((err) => errors.push(`remote branch: ${(err as Error).message}`));
