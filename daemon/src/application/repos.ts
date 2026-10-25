@@ -55,23 +55,21 @@ export function repoDetail(db: Db, nameOrId: string | number) {
   return { ...repo, goals: readGoals(repo), goals_path: goalsPath(repo), planner_runs: db.plannerRuns(repo.id, 5) };
 }
 
-export function updateRepo(
-  db: Db,
-  nameOrId: string | number,
-  patch: {
-    goals?: string;
-    auto_approve?: boolean;
-    test_cmd?: string | null;
-    setup_cmd?: string | null;
-    base_branch?: string;
-    pr_mode?: PrMode;
-    merge_method?: MergeMethod;
-    auto_resolve?: boolean;
-    sandbox?: boolean;
-    /** Hosts the agent's sandboxed commands may reach; a string is split on commas and spaces. */
-    network?: string | string[];
-  },
-) {
+export interface RepoPatch {
+  goals?: string;
+  auto_approve?: boolean;
+  test_cmd?: string | null;
+  setup_cmd?: string | null;
+  base_branch?: string;
+  pr_mode?: PrMode;
+  merge_method?: MergeMethod;
+  auto_resolve?: boolean;
+  sandbox?: boolean;
+  /** Hosts the agent's sandboxed commands may reach; a string is split on commas and spaces. */
+  network?: string | string[];
+}
+
+export function updateRepo(db: Db, nameOrId: string | number, patch: RepoPatch) {
   const repo = requireRepo(db, nameOrId);
   const body = object(patch);
   const goals = text(body, 'goals', { empty: true, raw: true });

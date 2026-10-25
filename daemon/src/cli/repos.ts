@@ -3,8 +3,6 @@ import { readFileSync } from 'node:fs';
 import { createInterface } from 'node:readline/promises';
 import * as actions from '../application/actions.ts';
 import type { ProposalResult } from '../domain/planner/proposals.ts';
-import type { MergeMethod } from '../domain/pull-request/merge.ts';
-import type { PrMode } from '../domain/pull-request/pr.ts';
 import { parseNetwork } from '../domain/run/sandbox.ts';
 import { callDaemon } from './daemon-client.ts';
 import { die, fmtTask, printDoctor } from './format.ts';
@@ -13,7 +11,7 @@ import type { Command } from './context.ts';
 const propose: Command = async ({ db, rest, repoName }) => {
   if (!rest[0]) die('usage: agentdeck propose <repo>');
   console.log(`proposing tasks for ${rest[0]}…`);
-  const repo = db.findRepo(rest[0]) ?? die(`no repo "${rest[0]}"`);
+  const repo = actions.repoDetail(db, rest[0]);
   const res: ProposalResult = await callDaemon('POST', `/api/repos/${repo.id}/plan`, {});
   console.log(`${res.outcome}${res.note ? `: ${res.note}` : ''}`);
   for (const t of res.tasks) console.log(fmtTask(t, repoName(t.repo_id)));
@@ -56,45 +54,27 @@ export const repoCommands: Record<string, Command> = {
     } else if (sub === 'delete') {
       if (!path) die('usage: agentdeck repo delete <repo> [--yes]');
       const p = actions.repoDeletionPreview(db, path);
-      if (!p.archived) die(`${p.repo} is not archived; archive it first, then delete`);
-      console.log(
-        `${p.repo}: will delete ${p.tasks} tasks, ${p.runs} runs and ${p.worktrees} worktrees, with their logs and the goals file.`,
-      );
-      console.log('Nothing on GitHub or the remote is touched; open PRs stay open.');
-      if (!flags.yes) {
-        const rl = createInterface({ input: process.stdin, output: process.stdout });
-        const answer = await rl.question(`delete ${p.repo} for good? [y/N] `);
-        rl.close();
-        if (!/^y(es)?$/i.test(answer.trim())) return void console.log('not deleted');
+      // An unarchived repo skips the confirmation: deleteRepo refuses it below.
+      if (p.archived) {
+        console.log(
+          `${p.repo}: will delete ${p.tasks} tasks, ${p.runs} runs and ${p.worktrees} worktrees, with their logs and the goals file.`,
+        );
+        console.log('Nothing on GitHub or the remote is touched; open PRs stay open.');
+        if (!flags.yes) {
+          const rl = createInterface({ input: process.stdin, output: process.stdout });
+          const answer = await rl.question(`delete ${p.repo} for good? [y/N] `);
+          rl.close();
+          if (!/^y(es)?$/i.test(answer.trim())) return void console.log('not deleted');
+        }
       }
       const res = await actions.deleteRepo(db, path);
       console.log(`${res.repo}: deleted`);
       for (const l of res.leftover) console.log(`could not remove: ${l}`);
     } else if (sub === 'set') {
       const [, name, key, value = ''] = rest;
-      if (
-        !name ||
-        !['auto_approve', 'auto_resolve', 'base_branch', 'test_cmd', 'setup_cmd', 'pr_mode', 'merge_method', 'sandbox', 'network'].includes(
-          key,
-        )
-      )
-        die(
-          'usage: agentdeck repo set <repo> auto_approve on|off | auto_resolve on|off | base_branch <branch> | test_cmd "<cmd>" | setup_cmd "<cmd>" | pr_mode off|draft|ready | merge_method squash|merge|rebase | sandbox on|off | network "<hosts>"',
-        );
-      if (key === 'pr_mode') actions.updateRepo(db, name, { pr_mode: value as PrMode });
-      else if (key === 'merge_method') actions.updateRepo(db, name, { merge_method: value as MergeMethod });
-      else if (key === 'auto_approve')
-        actions.updateRepo(db, name, { auto_approve: ['1', 'on', 'true', 'yes'].includes(value.toLowerCase()) });
-      else if (key === 'auto_resolve')
-        actions.updateRepo(db, name, { auto_resolve: ['1', 'on', 'true', 'yes'].includes(value.toLowerCase()) });
-      else if (key === 'sandbox') {
-        const v = value.toLowerCase();
-        if (!['1', 'on', 'true', 'yes', '0', 'off', 'false', 'no'].includes(v)) die('usage: agentdeck repo set <repo> sandbox on|off');
-        actions.updateRepo(db, name, { sandbox: ['1', 'on', 'true', 'yes'].includes(v) });
-      } else if (key === 'network') actions.updateRepo(db, name, { network: value });
-      else if (key === 'base_branch') actions.updateRepo(db, name, { base_branch: value });
-      else if (key === 'setup_cmd') actions.updateRepo(db, name, { setup_cmd: value });
-      else actions.updateRepo(db, name, { test_cmd: value });
+      // No repo name means no key either, so the patch is what says how to use the command.
+      const patch = actions.repoSettingPatch(name && key, value);
+      actions.updateRepo(db, name, patch);
       console.log(`${name}: ${key} ${value || '(none)'}`);
     } else if (sub === 'ls' || !sub) {
       for (const r of db.listRepos({ archived: !!flags.archived })) {

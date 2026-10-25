@@ -4,10 +4,13 @@ import { type NotifyKind, type NotifySettings, notifyEventsError, ntfyServerErro
 import { type PlannerSettings, plannerIntervalError, plannerMaxTasksError, plannerModelError } from '../domain/planner/proposals.ts';
 import { BUDGET_KEYS, type Budget, validateBudget, validateSlots } from '../domain/usage/governor.ts';
 import { restartWait } from '../domain/daemon/restart.ts';
+import type { MergeMethod } from '../domain/pull-request/merge.ts';
+import type { PrMode } from '../domain/pull-request/pr.ts';
 import { ActionError, flag, list, number, object, refuse, text, whole } from './input.ts';
 import { startGate } from './gate.ts';
 import { notify } from './notifications.ts';
 import { queueWaits } from './queue.ts';
+import type { RepoPatch } from './repos.ts';
 
 export function setPaused(db: Db, paused: boolean): void {
   db.setPaused(paused);
@@ -77,9 +80,12 @@ export interface SettingsPatch {
   reload_on_change?: boolean;
 }
 
+const ON = ['1', 'on', 'true', 'yes'];
+const OFF = ['0', 'off', 'false', 'no'];
+const on = (v: string) => ON.includes(v.toLowerCase());
+
 /** The patch `agentdeck set <key> <value>` stands for. Throws ActionError for a key it does not know. */
 export function settingPatch(key: string | undefined, value: string): SettingsPatch {
-  const on = (v: string) => ['1', 'on', 'true', 'yes'].includes(v.toLowerCase());
   if (key === 'max_concurrent') return { max_concurrent: Number(value) };
   if (key && (BUDGET_KEYS as string[]).includes(key)) return { budget: { [key]: Number(value) } };
   if (key === 'notify_desktop') return { notify: { desktop: on(value) } };
@@ -91,6 +97,26 @@ export function settingPatch(key: string | undefined, value: string): SettingsPa
   if (key === 'planner_max_tasks') return { planner: { max_tasks: Number(value) } };
   if (key === 'planner_model') return { planner: { model: value } };
   throw new ActionError(`unknown setting "${key}"; see agentdeck help`);
+}
+
+const REPO_SETTING_USAGE =
+  'usage: agentdeck repo set <repo> auto_approve on|off | auto_resolve on|off | base_branch <branch> | test_cmd "<cmd>" | setup_cmd "<cmd>" | pr_mode off|draft|ready | merge_method squash|merge|rebase | sandbox on|off | network "<hosts>"';
+
+/** The patch `agentdeck repo set <repo> <key> <value>` stands for. Throws ActionError for a key it does not know. */
+export function repoSettingPatch(key: string | undefined, value: string): RepoPatch {
+  if (key === 'pr_mode') return { pr_mode: value as PrMode };
+  if (key === 'merge_method') return { merge_method: value as MergeMethod };
+  if (key === 'auto_approve') return { auto_approve: on(value) };
+  if (key === 'auto_resolve') return { auto_resolve: on(value) };
+  if (key === 'sandbox') {
+    if (![...ON, ...OFF].includes(value.toLowerCase())) throw new ActionError('usage: agentdeck repo set <repo> sandbox on|off');
+    return { sandbox: on(value) };
+  }
+  if (key === 'network') return { network: value };
+  if (key === 'base_branch') return { base_branch: value };
+  if (key === 'setup_cmd') return { setup_cmd: value };
+  if (key === 'test_cmd') return { test_cmd: value };
+  throw new ActionError(REPO_SETTING_USAGE);
 }
 
 /** Apply a partial settings update after validating all of it. */

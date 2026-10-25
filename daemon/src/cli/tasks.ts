@@ -61,7 +61,7 @@ export const taskCommands: Record<string, Command> = {
     console.log(`model ${t.model}, attempts ${t.attempts}/${t.max_attempts}, max turns ${t.max_turns}`);
   },
   ls: ({ db, flags, rest, repoName }) => {
-    const repo = flags.repo === undefined ? undefined : (db.findRepo(flags.repo) ?? die(`no repo "${flags.repo}"`));
+    const repo = flags.repo === undefined ? undefined : actions.repoDetail(db, flags.repo);
     const states = (flags.status ?? '')
       .split(',')
       .map((s) => s.trim())
@@ -105,8 +105,8 @@ export const taskCommands: Record<string, Command> = {
     }
   },
   log: ({ db, flags, rest }) => {
-    const t = db.getTask(taskId(rest[0])) ?? die('no such task');
-    const run = pickRun(db.runsForTask(t.id), { attempt: flags.attempt ? Number(flags.attempt) : undefined });
+    const t = actions.taskDetail(db, taskId(rest[0]));
+    const run = pickRun(t.runs, { attempt: flags.attempt ? Number(flags.attempt) : undefined });
     if (!run) die('no runs yet');
     if (flags.raw) process.stdout.write(readFileSync(run.log_path, 'utf8'));
     else printLog(run.log_path);
@@ -146,14 +146,16 @@ export const taskCommands: Record<string, Command> = {
   },
   'install-needs': async ({ db, flags, rest }) => {
     const id = taskId(rest[0]);
+    // Without a package request there is nothing to confirm: installNeeds says why.
     const needs = readNeeds(db.getTask(id)?.needs ?? null);
-    if (needs?.kind !== 'deps') die(`#${id} has not asked for packages`);
-    console.log(`#${id} asks for: ${needs.items.join(' ')}`);
-    if (!flags.yes) {
-      const rl = createInterface({ input: process.stdin, output: process.stdout });
-      const answer = await rl.question('install them on its branch and retry? [y/N] ');
-      rl.close();
-      if (!/^y(es)?$/i.test(answer.trim())) die('not installed');
+    if (needs?.kind === 'deps') {
+      console.log(`#${id} asks for: ${needs.items.join(' ')}`);
+      if (!flags.yes) {
+        const rl = createInterface({ input: process.stdin, output: process.stdout });
+        const answer = await rl.question('install them on its branch and retry? [y/N] ');
+        rl.close();
+        if (!/^y(es)?$/i.test(answer.trim())) die('not installed');
+      }
     }
     const { packages } = await actions.installNeeds(db, id);
     console.log(`installed ${packages.join(' ')} on #${id}'s branch; requeued`);
