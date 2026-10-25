@@ -26,6 +26,7 @@ export interface Repo {
   network: string;
   /** When the repo was archived; null while it is active. */
   archived_at: string | null;
+  created_at: string;
 }
 
 export type PrMode = 'off' | 'draft' | 'ready';

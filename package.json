@@ -17,10 +17,12 @@
     "test": "pnpm --filter agentdeck-daemon test",
     "test:crash": "pnpm --filter agentdeck-daemon test:crash",
     "typecheck": "pnpm -r typecheck",
+    "db:studio": "pnpm --filter agentdeck-daemon db:studio",
+    "db:check": "pnpm --filter agentdeck-daemon db:check",
     "check:rust": "pnpm --filter agentdeck-app check:rust",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "pnpm format:check && pnpm typecheck && pnpm test && pnpm test:crash",
+    "check": "pnpm format:check && pnpm typecheck && pnpm db:check && pnpm test && pnpm test:crash",
     "check:stack": "node scripts/check-stack.mjs"
   },
   "devDependencies": {

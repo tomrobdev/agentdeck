@@ -16,10 +16,14 @@
     "typecheck": "tsc",
     "test": "AGENTDECK_NO_NOTIFY=1 node --test test/",
     "test:crash": "node scripts/crash-test.mjs",
-    "test:watch": "AGENTDECK_NO_NOTIFY=1 node --test --watch test/"
+    "test:watch": "AGENTDECK_NO_NOTIFY=1 node --test --watch test/",
+    "db:studio": "drizzle-kit studio",
+    "db:check": "node scripts/db-check.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
+    "drizzle-kit": "1.0.0-rc.5",
+    "drizzle-orm": "1.0.0-rc.5",
     "typescript": "^5.9.0"
   }
 }

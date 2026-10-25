@@ -20,4 +20,5 @@ export interface Repo {
   sandbox: number; // 1 = the agent's Bash commands run in Claude Code's sandbox (the default)
   archived_at: string | null; // set = hidden everywhere and its work stopped, until `repo unarchive`
   network: string; // JSON array of hosts sandboxed commands may reach, '[]' = none
+  created_at: string;
 }

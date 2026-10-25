@@ -19,6 +19,7 @@ export interface PlannerRun {
   proposed: number;
   note: string | null;
   log_path: string;
+  pid: number | null; // the planner's claude process group while it runs, for crash recovery
 }
 
 export interface PlanResult {
