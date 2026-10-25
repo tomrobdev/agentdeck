@@ -9,7 +9,7 @@ process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-markdone-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { openDb } = await import('../src/db/index.ts');
-const { setPr } = await import('./support.ts');
+const { advance, settlePr } = await import('./fixtures.ts');
 const { dependencyState } = await import('../src/domain/task/dependency.ts');
 const { TASK_STATUSES } = await import('../src/domain/task/lifecycle.ts');
 const { markDone, retryTask, ActionError } = await import('../src/application/actions.ts');
@@ -143,8 +143,7 @@ test('the SQL and the domain agree on when a dependency is met', () => {
           const dep = add();
           const later = add(dep.id);
           // Put the dependency in the state under test; `later` stays queued behind it.
-          setPr(db, dep.id, { pr_url: pr_state ? 'https://x/pull/1' : null, pr_state });
-          bringTo(db, dep.id, status, done_by);
+          advance(db, dep.id, status, { pr: pr_state, doneBy: done_by });
           const d = db.getTask(dep.id)!;
           const sqlMet = db.hasQueued() && db.claimNextTask()?.id === later.id;
           const domainMet = dependencyState({ after_task: dep.id }, { ...d, pr_mode }).kind === 'met';
@@ -155,39 +154,6 @@ test('the SQL and the domain agree on when a dependency is met', () => {
         }
   assert.equal(cases, STATUSES.length * PR_STATES.length * 2 * 2);
 });
-
-/** Put a task in `status` with `done_by` set, the way a person (or the worker) would have; later tasks stay queued. */
-function bringTo(db: Db, id: number, status: TaskStatus, done_by: 'person' | null): void {
-  // The dependency must not be claimed ahead of its dependent in this setup, so take it by id.
-  const claim = () => {
-    const t = db.claimNextTask();
-    assert.equal(t?.id, id);
-  };
-  switch (status) {
-    case 'queued':
-      return;
-    case 'running':
-      return claim();
-    case 'cancelled':
-      return void db.applyEvent(id, { type: 'cancel' });
-    case 'done':
-      claim();
-      db.applyEvent(id, { type: 'finish', outcome: 'done' });
-      if (done_by) {
-        db.applyEvent(id, { type: 'conflict' });
-        db.applyEvent(id, { type: 'mark_done' });
-      }
-      return;
-    case 'blocked':
-    case 'failed':
-      claim();
-      db.applyEvent(
-        id,
-        status === 'blocked' ? { type: 'finish', outcome: 'blocked' } : { type: 'finish', outcome: 'failed', retry: false },
-      );
-      return;
-  }
-}
 
 test('a task after a person-done task starts unless that task has an open PR', async () => {
   const { db, add } = setup();
@@ -200,11 +166,10 @@ test('a task after a person-done task starts unless that task has an open PR', a
 
   const dep2 = add();
   const later2 = add(dep2.id);
-  bring(db, dep2.id, 'failed');
-  setPr(db, dep2.id, { pr_url: 'https://x/pull/2', pr_state: 'open' });
+  advance(db, dep2.id, 'failed', { pr: 'open' }); // a retry that failed keeps the PR it had
   markDone(db, dep2.id);
   assert.equal(db.claimNextTask(), undefined, 'person-done with an open PR waits for the merge');
-  setPr(db, dep2.id, { pr_state: 'merged' });
+  settlePr(db, dep2.id, 'merged');
   assert.equal(db.claimNextTask()!.id, later2.id);
   db.close();
 });

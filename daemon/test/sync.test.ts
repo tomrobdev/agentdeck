@@ -20,6 +20,7 @@ const { Scheduler } = await import('../src/application/scheduler.ts');
 const { github } = await import('../src/adapters/github.ts');
 const { startApi } = await import('../src/api/server.ts');
 const { refreshPrStates } = await import('../src/application/pull-requests.ts');
+const { doneTask: doneTaskWithPr } = await import('./fixtures.ts');
 const { resolveConflicting } = await import('../src/application/sync.ts');
 const { ActionError, mergeTask, syncNow, retryTask, updateRepo } = await import('../src/application/actions.ts');
 const { isConflicting, isMergeabilityUnknown } = await import('../src/domain/pull-request/conflict.ts');
@@ -461,8 +462,7 @@ test('with auto_resolve off a run still starts when the base conflicts, on the b
 
 test('refreshPrStates reads mergeability: conflicting PRs are returned, unknown ones counted, merged ones not looked up', async () => {
   const mk = (url: string, state = 'open') => {
-    const t = db.addTask({ repo_id: repo.id, title: url, prompt: 'x' });
-    db.raw.prepare("UPDATE tasks SET status = 'done', pr_url = ?, pr_state = 'open' WHERE id = ?").run(url, t.id);
+    const t = doneTaskWithPr(db, repo, { title: url, pr: 'open', url });
     return { id: t.id, state };
   };
   const a = mk('https://x/pull/501');
@@ -485,7 +485,11 @@ test('refreshPrStates reads mergeability: conflicting PRs are returned, unknown 
   } finally {
     github.prState = state;
     github.prDetails = det;
-    for (const x of [a, b, c, d]) db.raw.prepare("UPDATE tasks SET status = 'cancelled' WHERE id = ?").run(x.id);
+    // Out of the way of the tests after this one: a done task is cancelled by retrying it first.
+    for (const x of [a, b, c, d]) {
+      db.applyEvent(x.id, { type: 'retry' });
+      db.applyEvent(x.id, { type: 'cancel' });
+    }
   }
 });
 
