@@ -1,6 +1,7 @@
 // Tasks waiting on another with `--after`: why they wait, and telling a human when they're stuck.
 import type { Db } from '../db/index.ts';
 import { type DependencyState, dependencyState } from '../domain/task/dependency.ts';
+import { isReview } from '../domain/task/stage.ts';
 import type { Task } from '../domain/task/task.ts';
 import { notifyLater } from './notifications.ts';
 
@@ -28,7 +29,7 @@ export function waitingFor(db: Db, task: Pick<Task, 'status' | 'after_task'>): W
 
 /** The queued tasks that wait on this one, for a task in review: merging its PR releases them. */
 export function unblocksOf(db: Db, task: Pick<Task, 'id' | 'status' | 'pr_state'>): number[] {
-  if (task.status !== 'done' || task.pr_state !== 'open') return [];
+  if (!isReview(task)) return [];
   return db.dependentsOf(task.id).map((t) => t.id);
 }
 

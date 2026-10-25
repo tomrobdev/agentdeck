@@ -26,6 +26,7 @@ import { buildResolvePrompt } from '../domain/run/prompt.ts';
 import { parseStatus } from '../domain/run/run.ts';
 import { lastLine } from '../domain/text.ts';
 import { queueWait } from '../domain/task/start.ts';
+import { hasOpenPr } from '../domain/task/stage.ts';
 import { type Task, leftoversMessage } from '../domain/task/task.ts';
 import { startTaskRun } from './claude-run.ts';
 import { warnStuckDependents } from './dependencies.ts';
@@ -188,7 +189,7 @@ async function pushIfNeeded(
   worktree: string,
   changed: boolean,
 ): Promise<{ pushed: boolean; error?: string }> {
-  if (!task.branch || !task.pr_url || task.pr_state !== 'open') return { pushed: false };
+  if (!task.branch || !task.pr_url || !hasOpenPr(task)) return { pushed: false };
   try {
     // A branch that was merged but not pushed (the push failed last time) still needs pushing.
     if (!changed && !(await aheadOfRemote(worktree, task.branch))) return { pushed: false };

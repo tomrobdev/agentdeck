@@ -1,43 +1,7 @@
 // Which lifecycle event a drop on the board means. Free of the dashboard's other modules so the daemon's tests can import it
-// (daemon/test/board-move.test.ts); taskView.ts re-exports it.
+// (daemon/test/board-move.test.ts); taskView.ts re-exports it. The status groups it moves between are in the daemon's stage.ts.
 import type { TaskSummary } from '../../daemon/src/api/contract.ts';
-
-/** A done task whose pull request waits on you. */
-export const isReview = (t: Pick<TaskSummary, 'status' | 'pr_state'>) => t.status === 'done' && t.pr_state === 'open';
-/** A done task whose pull request is merged: finished history. */
-export const isMerged = (t: Pick<TaskSummary, 'status' | 'pr_state'>) => t.status === 'done' && t.pr_state === 'merged';
-export const isStuck = (t: Pick<TaskSummary, 'status' | 'waiting'>) => t.status === 'queued' && !!t.waiting?.stuck;
-
-/**
- * Status groups, in attention order. Every task is in exactly one; a stuck task needs you, so it isn't queued. Done holds every
- * finished task whose PR doesn't wait on you: merged, closed, or none. The PR chip tells them apart.
- */
-export const STATUS_GROUPS = [
-  { key: 'needs-you', label: 'Needs you' },
-  { key: 'review', label: 'Review' },
-  { key: 'proposed', label: 'Proposed' },
-  { key: 'running', label: 'Running' },
-  { key: 'queued', label: 'Queued' },
-  { key: 'done', label: 'Done' },
-  { key: 'cancelled', label: 'Cancelled' },
-] as const;
-export type StatusGroup = (typeof STATUS_GROUPS)[number]['key'];
-
-export function statusGroup(t: Pick<TaskSummary, 'status' | 'waiting' | 'pr_state'>): StatusGroup {
-  switch (t.status) {
-    case 'blocked':
-    case 'failed':
-      return 'needs-you';
-    case 'queued':
-      return isStuck(t) ? 'needs-you' : 'queued';
-    case 'cancel_requested':
-      return 'running';
-    case 'done':
-      return isReview(t) ? 'review' : 'done';
-    default:
-      return t.status;
-  }
-}
+import { type StatusGroup, statusGroup } from '../../daemon/src/domain/task/stage.ts';
 
 type Status = Pick<TaskSummary, 'status'>;
 /** What the daemon's lifecycle allows (domain/task/lifecycle.ts TRANSITIONS). */

@@ -1,8 +1,18 @@
-// How the queue is filtered, grouped and sorted. Mirrors daemon/src/domain/task/listing.ts (the CLI's `ls`).
+// How the queue is filtered, grouped and sorted. The CLI's `ls` (daemon/src/domain/task/listing.ts) shares the stage checks.
 import type { Needs, Status, TaskStatus, TaskSummary } from './api';
-import { STATUS_GROUPS, type StatusGroup, isMerged, isReview, isStuck, statusGroup } from './boardMove';
+import {
+  STATUS_GROUPS,
+  type StatusGroup,
+  hasOpenPr,
+  isMerged,
+  isReview,
+  isStuck,
+  isWaiting,
+  statusGroup,
+} from '../../daemon/src/domain/task/stage.ts';
 
-// The status groups, the lifecycle checks and the board's move rule live in boardMove.ts, which the daemon's tests import.
+// The stage checks and status groups live in the daemon's domain/task/stage.ts; the board's move rule in boardMove.ts, which the daemon's tests import.
+export { STATUS_GROUPS, type StatusGroup, hasOpenPr, isMerged, isReview, isStuck, isWaiting, statusGroup };
 export * from './boardMove';
 
 type Test = (t: TaskSummary) => boolean;
@@ -11,7 +21,6 @@ const is =
   (...statuses: TaskStatus[]): Test =>
   (t) =>
     statuses.includes(t.status);
-export const isWaiting: Test = (t) => t.status === 'queued' && !!t.waiting && !t.waiting.stuck;
 
 /** States to filter by, finer than a status. Same names as `agentdeck ls --status`. */
 export const STATES: { key: string; label: string; test: Test }[] = [
@@ -154,11 +163,9 @@ export const EDITABLE_STATUSES: TaskStatus[] = ['proposed', 'queued', 'blocked',
 export const canEdit = (t: Pick<TaskSummary, 'status'>) => EDITABLE_STATUSES.includes(t.status);
 export const canApprove = (t: Pick<TaskSummary, 'status'>) => t.status === 'proposed';
 /** A done task whose PR waits on a person: they can send it back with a note, or close the PR. */
-export const canReview = (t: Pick<TaskSummary, 'status' | 'pr_url' | 'pr_state'>) =>
-  t.status === 'done' && !!t.pr_url && t.pr_state === 'open';
+export const canReview = (t: Pick<TaskSummary, 'status' | 'pr_url' | 'pr_state'>) => t.status === 'done' && !!t.pr_url && hasOpenPr(t);
 /** A done task whose PR is still open can be merged from its page (daemon application/pull-requests.ts mergeable). */
-export const canMerge = (t: Pick<TaskSummary, 'status' | 'pr_url' | 'pr_state'>) =>
-  t.status === 'done' && !!t.pr_url && t.pr_state === 'open';
+export const canMerge = (t: Pick<TaskSummary, 'status' | 'pr_url' | 'pr_state'>) => t.status === 'done' && !!t.pr_url && hasOpenPr(t);
 /** The one-key retry in the queue is for work that went wrong, not for re-running finished work. */
 export const quickRetry = (t: Pick<TaskSummary, 'status'>) => t.status === 'blocked' || t.status === 'failed';
 
