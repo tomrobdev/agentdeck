@@ -56,7 +56,7 @@ const PLANNER_DENIED = ['Edit', 'Write', 'NotebookEdit', 'Bash(git push*)', 'Bas
 export function buildPlannerPrompt(repo: Repo, goals: string, tasks: Task[], maxTasks: number): string {
   const open = tasks.filter((t) => OPEN_STATUSES.includes(t.status));
   const recent = tasks.filter((t) => !OPEN_STATUSES.includes(t.status)).slice(0, 15);
-  const line = (t: Task) => `- #${t.id} [${t.status}] ${t.title}${t.blocked_reason ? ` (${t.blocked_reason.slice(0, 120)})` : ''}`;
+  const line = (t: Task) => `- #${t.id} [${t.status}] ${t.title}${t.stop_reason ? ` (${t.stop_reason.slice(0, 120)})` : ''}`;
   return `You are the planner for the repository "${repo.name}". Read the goals below and look around the code (you are read-only).
 Propose at most ${maxTasks} new tasks that move the goals forward. An unattended coding agent will do each task alone, in its own git branch, with about 40 turns and the repo's test command (${repo.test_cmd ?? 'none'}) as the check.
 

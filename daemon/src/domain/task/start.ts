@@ -1,14 +1,14 @@
-// Why a queued task hasn't started, in the order the scheduler checks. Pure: no I/O.
+// What a queued task waits for, in the order the scheduler checks. Pure: no I/O.
 import type { Decision } from '../usage/governor.ts';
 import type { DependencyState } from './dependency.ts';
 
-/** What stops every queued task: the daemon is paused, Claude rate-limited us, or the governor holds. */
-export type QueueHold =
+/** What every queued task waits for: the daemon is paused, Claude rate-limited us, or the governor holds. */
+export type QueueWait =
   { kind: 'daemon-paused' } | { kind: 'rate-limited'; until: number } | { kind: 'governor'; reason: string; until: number | null };
 
-/** What stops one queued task. A task with no hold starts on the scheduler's next tick. */
-export type StartHold =
-  | QueueHold
+/** What one queued task waits for. A task that waits for nothing starts on the scheduler's next tick. */
+export type StartWait =
+  | QueueWait
   | { kind: 'repo-paused'; reason: string }
   | { kind: 'dependency'; on: number; stuck: string | null }
   | { kind: 'slots'; running: number; max: number };
@@ -21,25 +21,25 @@ export interface QueueState {
 }
 
 /** Mirrors the scheduler's gate, except that `paused` is whatever the caller says (run-once ignores it). */
-export function queueHold(q: QueueState, now = Date.now() / 1000): QueueHold | null {
+export function queueWait(q: QueueState, now = Date.now() / 1000): QueueWait | null {
   if (q.paused) return { kind: 'daemon-paused' };
   if (q.rate_limited_until && q.rate_limited_until > now) return { kind: 'rate-limited', until: q.rate_limited_until };
   if (!q.governor.allow) return { kind: 'governor', reason: q.governor.reason ?? 'usage budget', until: q.governor.until };
   return null;
 }
 
-/** Why a queued task can't start yet, or null if it will start on the next tick. Mirrors claimNextTask in db/tasks.ts. */
-export function startHold(
+/** What a queued task waits for, or null if it will start on the next tick. Mirrors claimNextTask in db/tasks.ts. */
+export function startWait(
   task: { status: string },
   ctx: {
-    queue: QueueHold | null;
+    queue: QueueWait | null;
     repoPaused: string | null;
     dependency: DependencyState;
     after: number | null;
     running: number;
     max: number;
   },
-): StartHold | null {
+): StartWait | null {
   if (task.status !== 'queued') return null;
   if (ctx.queue) return ctx.queue;
   if (ctx.repoPaused) return { kind: 'repo-paused', reason: ctx.repoPaused };

@@ -71,7 +71,7 @@ test('blocked task keeps the reason', async () => {
   await drain();
   const t = db.getTask(task.id)!;
   assert.equal(t.status, 'blocked');
-  assert.equal(t.blocked_reason, 'which database?');
+  assert.equal(t.stop_reason, 'which database?');
 });
 
 test('failing task retries up to max_attempts', async () => {
@@ -117,7 +117,7 @@ test('a cancel requested while the run is finishing wins over done', async () =>
 
     const t = db.getTask(task.id)!;
     assert.equal(t.status, 'cancelled', 'cancel is not overwritten by done');
-    assert.equal(t.blocked_reason, null);
+    assert.equal(t.stop_reason, null);
     assert.equal(db.runsForTask(t.id)[0].outcome, 'done', 'the run keeps its real outcome');
     assert.equal(db.recentNotifications(1)[0]?.task_id === task.id, false, 'no "ready to review" for a cancelled task');
   } finally {
@@ -147,7 +147,7 @@ test('a task interrupted by repeated restarts fails instead of looping', async (
   assert.deepEqual(db.recoverOrphans(), { requeued: 0, failed: [task.id] });
   const t = db.getTask(task.id)!;
   assert.equal(t.status, 'failed');
-  assert.match(t.blocked_reason!, /restarted 3 times/);
+  assert.match(t.stop_reason!, /restarted 3 times/);
 });
 
 test('claude processes left by a dead daemon are stopped, with their children', async () => {
@@ -262,7 +262,7 @@ test('setup runs in the worktree before claude starts', async () => {
     const task = db.addTask({ repo_id: 1, title: 'needs deps', prompt: 'FAKE_NEEDS_SETUP go' });
     await drain();
     const t = db.getTask(task.id)!;
-    assert.equal(t.status, 'done', t.blocked_reason ?? '');
+    assert.equal(t.status, 'done', t.stop_reason ?? '');
     assert.ok(existsSync(join(t.worktree!, 'setup-done.txt')));
     const log = readFileSync(db.runsForTask(t.id)[0].log_path, 'utf8').split('\n');
     const setupAt = log.findIndex((l) => l.includes('"type":"agentdeck_setup"'));
@@ -282,7 +282,7 @@ test('a failing setup blocks the task without starting claude', async () => {
     await drain();
     const t = db.getTask(task.id)!;
     assert.equal(t.status, 'blocked');
-    assert.equal(t.blocked_reason, 'setup failed: ERR_PNPM_OFFLINE no network');
+    assert.equal(t.stop_reason, 'setup failed: ERR_PNPM_OFFLINE no network');
     assert.equal(t.attempts, 0, 'blocked by the environment: the attempt is given back');
     const [run] = db.runsForTask(t.id);
     assert.equal(run.outcome, 'blocked');
@@ -307,7 +307,7 @@ test('each run gets a sandbox settings file outside its worktree', async () => {
     const task = db.addTask({ repo_id: 1, title: 'sandboxed', prompt: 'FAKE_DONE in the sandbox' });
     await drain();
     const t = db.getTask(task.id)!;
-    assert.equal(t.status, 'done', t.blocked_reason ?? '');
+    assert.equal(t.status, 'done', t.stop_reason ?? '');
     const path = settingsCalls().at(-1)!;
     assert.equal(path, join(LOG_DIR, `task-${t.id}-attempt-1.settings.json`));
     assert.ok(!path.startsWith(t.worktree!), 'the agent cannot edit its own settings');
@@ -335,7 +335,7 @@ test('a sandbox that cannot start fails the run with claude’s reason', async (
   await drain();
   const t = db.getTask(task.id)!;
   assert.equal(t.status, 'failed');
-  assert.match(t.blocked_reason!, /^claude exited with code 1: Error: sandbox is required .* could not start/);
+  assert.match(t.stop_reason!, /^claude exited with code 1: Error: sandbox is required .* could not start/);
   assert.match(db.runsForTask(t.id)[0].result_text!, /could not start/);
 });
 
@@ -374,7 +374,7 @@ test('a new worktree starts from origin/<base> when origin is ahead of the local
   await drain();
 
   const t = db.getTask(task.id)!;
-  assert.equal(t.status, 'done', t.blocked_reason ?? '');
+  assert.equal(t.status, 'done', t.stop_reason ?? '');
   assert.ok(existsSync(join(t.worktree!, 'upstream.txt')), 'worktree has origin’s commit');
   sh(local, 'merge-base', '--is-ancestor', upstreamHead, t.branch!);
   assert.equal(sh(local, 'rev-list', '--count', `origin/main..${t.branch}`), '1', 'only the agent’s commit on top');

@@ -15,7 +15,7 @@ function task(id: number, fields: Partial<ListedTask> = {}): ListedTask {
     max_attempts: 2,
     branch: null,
     worktree: null,
-    blocked_reason: null,
+    stop_reason: null,
     source: 'manual',
     restarts: 0,
     pr_url: null,
@@ -37,7 +37,7 @@ function task(id: number, fields: Partial<ListedTask> = {}): ListedTask {
 const TASKS = [
   task(1, { status: 'done', pr_url: 'https://x/1', pr_state: 'merged', updated_at: '2026-10-18 12:00:00' }),
   task(2, { status: 'done', updated_at: '2026-10-18 09:00:00' }),
-  task(3, { status: 'blocked', blocked_reason: 'permission refused', repo_id: 2 }),
+  task(3, { status: 'blocked', stop_reason: 'permission refused', repo_id: 2 }),
   task(4, { status: 'queued', priority: 5, after_task: 3, waiting: { on: 3, stuck: '#3 is blocked' } }),
   task(5, { status: 'queued', after_task: 6, waiting: { on: 6, stuck: null } }),
   task(6, { status: 'running', title: 'Run workers in the sandbox', branch: 'agentdeck/task-6' }),

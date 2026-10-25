@@ -8,7 +8,7 @@ import { EDITABLE_STATUSES, OPEN_STATUSES, type Task, type TaskSummary } from '.
 import { NOW, atomically } from './sql.ts';
 
 const SUMMARY_COLUMNS =
-  'id, repo_id, title, status, priority, model, max_turns, attempts, max_attempts, branch, worktree, blocked_reason, source, restarts, pr_url, pr_state, merge_method, after_task, plan_path, plan_steps, needs, done_by, created_at, updated_at';
+  'id, repo_id, title, status, priority, model, max_turns, attempts, max_attempts, branch, worktree, stop_reason, source, restarts, pr_url, pr_state, merge_method, after_task, plan_path, plan_steps, needs, done_by, created_at, updated_at';
 
 /** SQL list of fixed status literals, for `status IN (…)`. */
 const statusList = (statuses: TaskStatus[]) => statuses.map((s) => `'${s}'`).join(', ');
@@ -200,7 +200,7 @@ export function taskStore(db: DatabaseSync) {
     },
     updateTask(
       id: number,
-      fields: Partial<Pick<Task, 'branch' | 'worktree' | 'blocked_reason' | 'priority' | 'pr_url' | 'pr_state' | 'merge_method'>>,
+      fields: Partial<Pick<Task, 'branch' | 'worktree' | 'stop_reason' | 'priority' | 'pr_url' | 'pr_state' | 'merge_method'>>,
     ): void {
       const keys = Object.keys(fields) as (keyof typeof fields)[];
       if (keys.length === 0) return;
@@ -283,7 +283,7 @@ export function taskStore(db: DatabaseSync) {
           else if (event.type === 'rate_limited' || environment) sets.push(give);
           else if (event.type === 'recover') sets.push('restarts = restarts + 1', ...(to === 'queued' ? [give] : []));
           if ((event.type === 'finish' && event.outcome === 'done') || event.type === 'mark_done' || event.type === 'pr_merged')
-            sets.push('blocked_reason = NULL');
+            sets.push('stop_reason = NULL');
           if (event.type === 'mark_done' || event.type === 'pr_merged') sets.push('needs = NULL');
           if (event.type === 'mark_done') sets.push("done_by = 'person'");
           else if (cur.status === 'done') sets.push('done_by = NULL');
@@ -297,7 +297,7 @@ export function taskStore(db: DatabaseSync) {
             (event.type === 'recover' && to === 'failed') ||
             event.type === 'conflict'
           ) {
-            sets.push('blocked_reason = ?');
+            sets.push('stop_reason = ?');
             params.push(opts.reason ?? null);
           }
         }

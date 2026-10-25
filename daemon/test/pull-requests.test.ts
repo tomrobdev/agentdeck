@@ -291,7 +291,7 @@ test('refreshPrStates: a merged PR moves a blocked or failed task to done, a clo
   const mk = (status: string, url: string) => {
     const t = db.addTask({ repo_id: repo.id, title: `pr ${url}`, prompt: 'x' });
     db.raw
-      .prepare("UPDATE tasks SET status = ?, blocked_reason = 'conflict', pr_url = ?, pr_state = 'open' WHERE id = ?")
+      .prepare("UPDATE tasks SET status = ?, stop_reason = 'conflict', pr_url = ?, pr_state = 'open' WHERE id = ?")
       .run(status, url, t.id);
     return t.id;
   };
@@ -316,7 +316,7 @@ test('refreshPrStates: a merged PR moves a blocked or failed task to done, a clo
     const t = db.getTask(id)!;
     assert.equal(t.status, 'done');
     assert.equal(t.pr_state, 'merged');
-    assert.equal(t.blocked_reason, null);
+    assert.equal(t.stop_reason, null);
     assert.ok(db.eventsForTask(id).some((e) => e.type === 'pr_merged'));
   }
   assert.equal(db.getTask(blockedClosed)!.status, 'blocked');

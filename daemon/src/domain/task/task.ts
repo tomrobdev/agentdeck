@@ -16,7 +16,7 @@ export interface Task {
   max_attempts: number;
   branch: string | null;
   worktree: string | null;
-  blocked_reason: string | null;
+  stop_reason: string | null;
   source: string; // manual | planner
   restarts: number; // times a daemon restart requeued this task mid-run
   pr_url: string | null; // the pull request the daemon opened when the task finished

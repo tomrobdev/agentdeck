@@ -9,7 +9,7 @@ import { ActionError } from './errors.ts';
 import { flag, list, number, object, text, whole } from './input.ts';
 import { startGate } from './gate.ts';
 import { notify } from './notifications.ts';
-import { queueHolds } from './queue.ts';
+import { queueWaits } from './queue.ts';
 
 export function setPaused(db: Db, paused: boolean): void {
   db.setPaused(paused);
@@ -37,7 +37,7 @@ export function status(db: Db, daemon: DaemonInfo = { commit: null, started_at: 
     governor: gate.governor,
     budget: db.budget(),
     notifications: db.recentNotifications(10),
-    ...queueHolds(db),
+    ...queueWaits(db),
   };
 }
 

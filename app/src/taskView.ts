@@ -106,7 +106,7 @@ function matchesSearch(t: TaskSummary, text: string): boolean {
   if (!q) return true;
   const id = q.replace(/^#/, '');
   if (/^\d+$/.test(id)) return String(t.id).startsWith(id) || t.title.toLowerCase().includes(q);
-  return [t.title, t.repo, t.branch, t.model, t.blocked_reason].some((s) => s?.toLowerCase().includes(q));
+  return [t.title, t.repo, t.branch, t.model, t.stop_reason].some((s) => s?.toLowerCase().includes(q));
 }
 
 export function applyFilters(tasks: TaskSummary[], f: Filters): TaskSummary[] {

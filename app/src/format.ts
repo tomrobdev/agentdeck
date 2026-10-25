@@ -1,8 +1,8 @@
-// How the dashboard words what the daemon reports: times, durations, holds and the daemon's state.
-import type { Run, StartHold, Status } from './types.ts';
+// How the dashboard words what the daemon reports: times, durations, waits and the daemon's state.
+import type { Run, StartWait, Status } from './types.ts';
 
-/** A hold in a few words, for chips and callouts. */
-export function describeHold(h: StartHold): string {
+/** What a queued task waits for, in a few words, for chips and callouts. */
+export function describeWait(h: StartWait): string {
   switch (h.kind) {
     case 'daemon-paused':
       return 'AgentDeck is paused';
@@ -19,7 +19,7 @@ export function describeHold(h: StartHold): string {
   }
 }
 
-/** "Tue 14:00" style, for when a hold lifts. */
+/** "Tue 14:00" style, for when a wait ends. */
 export function when(unixSeconds: number): string {
   return new Date(unixSeconds * 1000).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' });
 }

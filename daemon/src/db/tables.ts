@@ -47,7 +47,7 @@ export const tasks = sqliteTable(
     max_attempts: integer().notNull(),
     branch: text(),
     worktree: text(),
-    blocked_reason: text(),
+    stop_reason: text(),
     created_at: text()
       .default(sql`datetime('now')`)
       .notNull(),

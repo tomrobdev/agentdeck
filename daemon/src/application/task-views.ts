@@ -1,11 +1,11 @@
 // Tasks as the dashboard and the CLI show them: a task plus what the queue says about it.
 import type { Db } from '../db/index.ts';
-import type { StartHold } from '../domain/task/start.ts';
+import type { StartWait } from '../domain/task/start.ts';
 import type { TaskStatus } from '../domain/task/lifecycle.ts';
 import type { Task } from '../domain/task/task.ts';
 import { type Waiting, unblocksOf, waitingFor } from './dependencies.ts';
 import { requireTask } from './lookups.ts';
-import { startHolds } from './queue.ts';
+import { startWaits } from './queue.ts';
 
 /** What the queue says about one task, beyond the task row. */
 export interface TaskView {
@@ -13,7 +13,7 @@ export interface TaskView {
   waiting: Waiting | null;
   unblocks: number[];
   plan_unfinished: boolean;
-  hold: StartHold | null;
+  wait: StartWait | null;
 }
 
 /** Each task with its view. Reads the repos, plans and queue state once for the whole list. */
@@ -22,7 +22,7 @@ export function withViews<T extends Pick<Task, 'id' | 'repo_id' | 'status' | 'af
   tasks: T[],
 ): (T & TaskView)[] {
   const names = new Map(db.listRepos().map((r) => [r.id, r.name]));
-  const holdOf = startHolds(db);
+  const waitOf = startWaits(db);
   const unfinished = db.planUnfinishedIds();
   return tasks.map((t) => ({
     ...t,
@@ -30,7 +30,7 @@ export function withViews<T extends Pick<Task, 'id' | 'repo_id' | 'status' | 'af
     waiting: waitingFor(db, t),
     unblocks: unblocksOf(db, t),
     plan_unfinished: unfinished.has(t.id),
-    hold: holdOf(t),
+    wait: waitOf(t),
   }));
 }
 

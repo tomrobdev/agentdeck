@@ -16,6 +16,7 @@ const NTFY_TAGS: Record<Notification['kind'], string> = {
   blocked: 'raising_hand',
   failed: 'x',
   hold: 'hourglass',
+  paused: 'pause_button',
   proposed: 'memo',
   test: 'bell',
 };
