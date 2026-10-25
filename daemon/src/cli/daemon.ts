@@ -1,8 +1,6 @@
 // Daemon commands: the service, the scheduler, pause, status and settings.
 import * as actions from '../application/actions.ts';
-import * as service from '../application/service.ts';
 import { DB_PATH } from '../config.ts';
-import { gracefulRestart } from '../application/restart.ts';
 import { runDaemon } from '../daemon.ts';
 import { logsOptions, restartOptions, serviceAction } from './daemon-args.ts';
 import { die, relTime } from './format.ts';
@@ -24,48 +22,48 @@ const runScheduler: Command = async ({ db, cmd }) => {
 
 export const daemonCommands: Record<string, Command> = {
   install: async () => {
-    const st = await service.install();
+    const st = await actions.install();
     console.log(`installed ${st.plist}`);
     console.log(`daemon ${st.state ?? 'loading'}${st.pid ? ` (pid ${st.pid})` : ''}; it starts at login and restarts if it dies`);
     console.log(`logs: ~/.agentdeck/logs/daemon.log · runs ${st.program}`);
   },
   uninstall: async () => {
-    await service.uninstall();
+    await actions.uninstall();
     console.log('removed the launchd agent; the daemon is stopped');
   },
   service: async ({ rest }) => {
     const action = serviceAction(rest);
     if (action === 'start') {
-      const st = await launchd(service.start);
+      const st = await launchd(actions.start);
       console.log(`service started: daemon ${st.state ?? 'loading'}${st.pid ? ` (pid ${st.pid})` : ''}`);
     } else if (action === 'stop') {
-      await launchd(service.stop);
+      await launchd(actions.stop);
       console.log(`service stopped; the plist is kept (\`agentdeck service start\` brings it back, \`agentdeck uninstall\` removes it)`);
     } else {
-      const st = await service.serviceStatus();
-      console.log(`installed  ${st.installed ? st.plist : 'no'}`);
+      const st = await actions.serviceStatus();
+      console.log(`installed${st.installed ? st.plist : 'no'}`);
       console.log(`loaded     ${st.loaded ? `${st.state ?? '?'}${st.pid ? `, pid ${st.pid}` : ''}` : 'no'}`);
       console.log(`program    ${st.program}`);
     }
   },
   restart: async ({ db, flags, rest }) => {
     const { graceful } = restartOptions(flags, rest);
-    const st = await service.serviceStatus();
+    const st = await actions.serviceStatus();
     if (!st.installed) die('the service is not installed; run `agentdeck install`');
     if (graceful && st.loaded) {
       let interrupted = false;
       process.once('SIGINT', () => (interrupted = true));
-      await launchd(() => gracefulRestart(db, { restart: service.restart, log: console.log, aborted: () => interrupted }));
+      await launchd(() => actions.gracefulRestart(db, { restart: actions.restart, log: console.log, aborted: () => interrupted }));
     } else {
       const running = db.countRunning();
       if (running && st.loaded) console.log(`restarting at once: ${running} running task(s) lose their run and are requeued`);
-      await launchd(service.restart);
+      await launchd(actions.restart);
     }
     console.log('agentdeck daemon restarted');
   },
   logs: async ({ flags, rest }) => {
     const { lines, follow } = logsOptions(flags, rest);
-    await launchd(() => service.tailLog(lines, follow));
+    await launchd(() => actions.tailLog(lines, follow));
   },
   pause: ({ db }) => {
     actions.setPaused(db, true);

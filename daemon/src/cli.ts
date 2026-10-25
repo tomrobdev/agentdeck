@@ -1,5 +1,5 @@
 // The `agentdeck` command. The launchd plist runs this file, so it stays at src/cli.ts.
-import { ActionError } from './application/errors.ts';
+import { ActionError } from './application/actions.ts';
 import { daemonCommands } from './cli/daemon.ts';
 import { die } from './cli/format.ts';
 import { HELP } from './cli/help.ts';

@@ -4,9 +4,7 @@ import { PLAN_LIMIT, type TaskPlan, isPlanPath, linkedSteps, parsePlan, planName
 import type { PrPlan } from '../domain/pull-request/pr.ts';
 import type { PromptPlan } from '../domain/run/prompt.ts';
 import { type Task, planStepIds } from '../domain/task/task.ts';
-import { ActionError } from './errors.ts';
-import { object, text } from './input.ts';
-import { requireTask } from './lookups.ts';
+import { ActionError, object, requireTask, text } from './input.ts';
 import { taskChanges, taskFile } from './files.ts';
 
 /**

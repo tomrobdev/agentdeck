@@ -21,11 +21,8 @@ export interface ApiOptions {
   daemon?: ApiContext['daemon'];
 }
 
-/** Start the API on 127.0.0.1. The positional form `startApi(db, port, scheduler, daemon)` is the same call. */
-export function startApi(options: ApiOptions): Promise<Server>;
-export function startApi(db: Db, port?: number, scheduler?: ApiScheduler, daemon?: ApiContext['daemon']): Promise<Server>;
-export function startApi(first: ApiOptions | Db, port?: number, scheduler?: ApiScheduler, daemon?: ApiContext['daemon']): Promise<Server> {
-  const options: ApiOptions = 'db' in first ? first : { db: first, port, scheduler, daemon };
+/** Start the API on 127.0.0.1. */
+export function startApi(options: ApiOptions): Promise<Server> {
   const ctx: ApiContext = {
     db: options.db,
     scheduler: options.scheduler ?? idleScheduler,

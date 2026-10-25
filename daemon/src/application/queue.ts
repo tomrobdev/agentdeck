@@ -36,7 +36,6 @@ export function startWaits(db: Db): (task: Pick<Task, 'status' | 'repo_id' | 'af
       queue,
       repoPaused: repos.get(task.repo_id)?.paused_reason ?? null,
       dependency: dependencyOf(db, task),
-      after: task.after_task,
       running: used,
       max: q.governor.max_concurrent,
     });

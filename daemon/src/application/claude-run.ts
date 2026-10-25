@@ -2,13 +2,25 @@
 import { createWriteStream, type WriteStream } from 'node:fs';
 import { join } from 'node:path';
 import { type ClaudeResult, type UsageWindow, runClaude } from '../adapters/claude.ts';
+import { writeSettings } from '../adapters/run-log.ts';
 import { LOG_DIR, ensureDirs } from '../config.ts';
 import type { Db } from '../db/index.ts';
 import type { Repo } from '../domain/repo/repo.ts';
 import { claudeArgs } from '../domain/run/prompt.ts';
+import { parseNetwork, settingsPath, workerSettings } from '../domain/run/sandbox.ts';
 import { type Run, type RunClass, type RunKind, classifyRun, resultFields } from '../domain/run/run.ts';
 import type { Task } from '../domain/task/task.ts';
-import { effectiveTools, runSettings } from './tools.ts';
+import { effectiveTools } from './tools.ts';
+
+/**
+ * Write the sandbox and file-rule settings for a claude run in `worktree` (docs/adr/0001-worker-sandbox.md)
+ * next to its log, and return their path for `--settings`.
+ */
+export function runSettings(repo: Repo, worktree: string, logPath: string): string {
+  const path = settingsPath(logPath);
+  writeSettings(path, workerSettings({ worktree, sandbox: repo.sandbox !== 0, network: parseNetwork(repo.network) }));
+  return path;
+}
 
 /** A run row and its log, before claude starts. */
 export interface OpenedRun {

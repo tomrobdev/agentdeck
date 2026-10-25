@@ -16,8 +16,7 @@ import {
   isBinary,
 } from '../domain/files/files.ts';
 import type { Repo } from '../domain/repo/repo.ts';
-import { ActionError } from './errors.ts';
-import { requireTask, requireTaskRepo } from './lookups.ts';
+import { ActionError, requireTask, requireTaskRepo } from './input.ts';
 
 /** The task's repo and the commit its branch is at. */
 async function resolveHead(db: Db, id: number): Promise<{ repo: Repo; head: string }> {

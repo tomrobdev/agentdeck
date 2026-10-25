@@ -15,7 +15,7 @@ const { openDb } = await import('../src/db/index.ts');
 const { startApi } = await import('../src/api/server.ts');
 
 const db = openDb(join(home, 'test.db'));
-const server = await startApi(db, 0);
+const server = await startApi({ db, port: 0 });
 const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 const repoPath = join(home, 'demo');
 const git = (...a: string[]) => execFileSync('git', a, { cwd: repoPath }).toString().trim();

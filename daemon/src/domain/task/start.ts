@@ -57,7 +57,6 @@ export function startWait(
     queue: QueueWait | null;
     repoPaused: string | null;
     dependency: DependencyState;
-    after: number | null;
     running: number;
     max: number;
   },
@@ -66,8 +65,8 @@ export function startWait(
   if (ctx.queue) return ctx.queue;
   if (ctx.repoPaused) return { kind: 'repo-paused', reason: ctx.repoPaused };
   const dep = ctx.dependency;
-  if (ctx.after !== null && (dep.kind === 'waiting' || dep.kind === 'stuck'))
-    return { kind: 'dependency', on: ctx.after, stuck: dep.kind === 'stuck' ? dep.reason : null };
+  if (dep.kind === 'waiting' || dep.kind === 'stuck')
+    return { kind: 'dependency', on: dep.on, stuck: dep.kind === 'stuck' ? dep.reason : null };
   if (ctx.running >= ctx.max) return { kind: 'slots', running: ctx.running, max: ctx.max };
   return null;
 }

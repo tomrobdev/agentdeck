@@ -7,9 +7,7 @@ import { isConflicting, isMergeabilityUnknown } from '../domain/pull-request/con
 import { buildPrBody } from '../domain/pull-request/pr.ts';
 import { hasOpenPr } from '../domain/task/stage.ts';
 import type { Task } from '../domain/task/task.ts';
-import { ActionError } from './errors.ts';
-import { flag, object, text } from './input.ts';
-import { requireTask, requireTaskRepo } from './lookups.ts';
+import { ActionError, flag, object, requireTask, requireTaskRepo, text } from './input.ts';
 import { prPlanFor } from './plans.ts';
 import { settle, settlePr } from './settle.ts';
 
