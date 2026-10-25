@@ -64,7 +64,8 @@ export function statusGroup(t: TaskSummary): StatusGroup {
 /** The tab a task opens on from the queue: a task in review is read as a diff. */
 export const openingTab = (t: TaskSummary): 'overview' | 'changes' => (isReview(t) ? 'changes' : 'overview');
 
-/** Tasks that wait on you: proposals to approve, blocked tasks and PRs to review. */
+/** Tasks that wait on you: proposals to approve, blocked tasks and PRs to review. The queue filter that shows them. */
+export const NEED_YOU_STATES = ['proposed', 'blocked', 'review'];
 export const needYouCount = (s: Pick<Status, 'counts' | 'review'> | null | undefined): number =>
   (s?.counts.proposed ?? 0) + (s?.counts.blocked ?? 0) + (s?.review ?? 0);
 

@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import type { TaskSummary } from '../../api';
 import { useHotkeys } from '../../hotkeys';
+import { go, route } from '../../router';
 import {
   type BoardMove,
   type Filters,
@@ -43,6 +44,16 @@ const saved = loadSetting<Omit<Filters, 'search'>>('filters', { states: [], repo
 const filters = ref<Filters>({ ...emptyFilters(), ...saved, search: '' });
 watch(display, (d) => saveSetting('display', d), { deep: true });
 watch(filters, ({ search: _, ...f }) => saveSetting('filters', f), { deep: true });
+// A link such as the header's "need you" opens the queue filtered to some states; the filter then stays the user's.
+watch(
+  () => route.current,
+  (r) => {
+    if (r.name !== 'queue' || !r.states) return;
+    filters.value = { ...emptyFilters(), states: r.states };
+    go({ name: 'queue' }, { replace: true });
+  },
+  { immediate: true },
+);
 
 const shown = computed(() => applyFilters(props.tasks, filters.value));
 const groups = computed(() => {

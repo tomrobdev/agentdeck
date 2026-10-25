@@ -3,7 +3,7 @@
 import { computed } from 'vue';
 import type { Status } from '../api';
 import { go, route } from '../router';
-import { needYouCount } from '../taskView';
+import { NEED_YOU_STATES, needYouCount } from '../taskView';
 
 const props = defineProps<{ status: Status | null; offline: boolean }>();
 defineEmits<{ newTask: []; repos: []; settings: [] }>();
@@ -24,7 +24,7 @@ const needYou = computed(() => needYouCount(props.status));
       v-if="needYou && !offline"
       class="nav mr-2"
       title="Proposals, blocked tasks and PRs waiting for review"
-      @click="go({ name: 'queue' })"
+      @click="go({ name: 'queue', states: NEED_YOU_STATES })"
     >
       <span class="rounded-full bg-accent px-1.5 text-xs text-accent-fg">{{ needYou }}</span> need you
     </button>
