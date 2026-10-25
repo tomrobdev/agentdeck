@@ -265,6 +265,6 @@ export async function removeTaskWorktree(db: Db, id: number): Promise<{ branch: 
   if (t.status === 'running' || t.status === 'cancel_requested') throw new ActionError('task is running');
   if (!t.worktree) throw new ActionError('task has no worktree');
   await removeWorktree(requireTaskRepo(db, t), t.worktree);
-  db.updateTask(t.id, { worktree: null });
+  db.setCheckout(t.id, { worktree: null });
   return { branch: t.branch };
 }

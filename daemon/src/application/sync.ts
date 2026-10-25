@@ -29,12 +29,11 @@ import { queueWait } from '../domain/task/start.ts';
 import { hasOpenPr } from '../domain/task/stage.ts';
 import { type Task, leftoversMessage } from '../domain/task/task.ts';
 import { startTaskRun } from './claude-run.ts';
-import { warnStuckDependents } from './dependencies.ts';
 import { ActionError } from './errors.ts';
 import { requireTask, requireTaskRepo } from './lookups.ts';
 import { startGate } from './gate.ts';
-import { notifyLater } from './notifications.ts';
-import { logPrEvent } from './pull-requests.ts';
+import { logPrEvent } from './open-pr.ts';
+import { settle } from './settle.ts';
 
 /** What a sync of a task's branch came to. A merge that did not stick is already undone. */
 export type SyncResult =
@@ -218,7 +217,7 @@ export async function syncTask(db: Db, id: number, opts: { manual: boolean }): P
   syncing.add(id);
   try {
     const wt = await ensureWorktree(repo, task);
-    if (wt.path !== task.worktree) db.updateTask(id, { worktree: wt.path });
+    if (wt.path !== task.worktree) db.setCheckout(id, { worktree: wt.path });
     const res = await syncBranch(db, task, repo, wt.path, { allowResolve: opts.manual || repo.auto_resolve === 1, runTests: true });
     switch (res.kind) {
       case 'up_to_date':
@@ -235,16 +234,7 @@ export async function syncTask(db: Db, id: number, opts: { manual: boolean }): P
         return { outcome: 'skipped', files: res.files, reason: 'the repo has auto_resolve off', pushed: false };
       case 'failed': {
         const reason = conflictReason(repo.base_branch, res.files, res.reason);
-        const blocked = db.applyEvent(id, { type: 'conflict' }, { reason });
-        if (blocked) {
-          warnStuckDependents(db, id);
-          notifyLater(db, {
-            kind: 'blocked',
-            title: `#${id} blocked: ${task.title}`,
-            body: `${reason} (${repo.name})`,
-            task_id: id,
-          });
-        }
+        await settle(db, id, { type: 'conflict' }, { reason });
         return { outcome: 'blocked', files: res.files, reason, pushed: false };
       }
       case 'rate_limited':

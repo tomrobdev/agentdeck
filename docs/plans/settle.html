@@ -112,7 +112,7 @@
       </tr>
     </table>
 
-    <section data-plan-step id="record-pr" data-status="todo">
+    <section data-plan-step id="record-pr" data-status="done">
       <h2>Guarded PR state writes</h2>
       <p>
         Add <code>recordPr</code> to <code>db/tasks.ts</code> and the <code>'pr'</code> event type to <code>domain/task/history.ts</code>.
@@ -134,7 +134,7 @@
       </ul>
     </section>
 
-    <section data-plan-step id="settle" data-status="todo">
+    <section data-plan-step id="settle" data-status="done">
       <h2>One settle call</h2>
       <p>
         Add <code>application/settle.ts</code> and the pure notification wording. Route the worker's <code>finish</code>, the scheduler's
@@ -156,7 +156,7 @@
       </ul>
     </section>
 
-    <section data-plan-step id="resolve-wording" data-status="todo">
+    <section data-plan-step id="resolve-wording" data-status="done">
       <h2>Name resolve runs in the reload log</h2>
       <p>
         The scheduler passes <code>tasks: this.running.size</code> to the reload check, which counts resolve runs and the planner as

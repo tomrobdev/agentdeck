@@ -5,13 +5,13 @@ import { activeChildren, killGroup, reapOrphans } from '../adapters/processes.ts
 import { DEFAULTS } from '../config.ts';
 import type { Db } from '../db/index.ts';
 import { MAX_RESTARTS } from '../domain/task/lifecycle.ts';
-import type { ReloadDecision } from '../domain/daemon/restart.ts';
-import { warnStuckDependents } from './dependencies.ts';
+import type { Activity, ReloadDecision } from '../domain/daemon/restart.ts';
 import { startGate } from './gate.ts';
 import { notifyLater } from './notifications.ts';
 import { proposeNow, plannerDue } from './planner.ts';
 import { resolveConflicting } from './sync.ts';
 import { PR_REFRESH_MS, refreshPrStates } from './pull-requests.ts';
+import { settle, settleRecovered } from './settle.ts';
 import { runTask } from './worker.ts';
 
 /** After a merge, how many times to re-read PRs whose mergeability GitHub is still computing, and how far apart. */
@@ -29,7 +29,7 @@ export interface SchedulerOptions {
   /** How often to refresh the state of open PRs (off in once mode). */
   prRefreshMs?: number;
   /** Restart onto new code: `check` says whether that is due, `exit` ends the process once it is. */
-  reload?: { check: (busy: { tasks: number; proposing: boolean }) => ReloadDecision; exit: () => void };
+  reload?: { check: (activity: Activity) => ReloadDecision; exit: () => void };
   log?: (msg: string) => void;
 }
 
@@ -37,7 +37,9 @@ export class Scheduler {
   private readonly db: Db;
   private readonly opts: Required<Omit<SchedulerOptions, 'reload'>>;
   private readonly reload: SchedulerOptions['reload'];
+  /** Everything holding a slot: task runs, and the syncs and conflict resolutions in `resolves`. */
   private readonly running = new Set<Promise<unknown>>();
+  private readonly resolves = new Set<Promise<unknown>>();
   private timer: NodeJS.Timeout | undefined;
   private stopped = false;
   private drained: (() => void) | undefined;
@@ -75,7 +77,7 @@ export class Scheduler {
     const { requeued, failed } = this.db.recoverOrphans();
     if (requeued) this.opts.log(`requeued ${requeued} task(s) left running by a previous daemon`);
     if (failed.length) this.opts.log(`failed ${failed.length} task(s) interrupted by ${MAX_RESTARTS} daemon restarts`);
-    for (const id of failed) warnStuckDependents(this.db, id);
+    settleRecovered(this.db, failed).catch((err) => this.opts.log(`settling recovered tasks crashed: ${err?.stack ?? err}`));
     return new Promise((resolve) => {
       this.drained = resolve;
       this.tick();
@@ -103,17 +105,32 @@ export class Scheduler {
     const settled: Promise<unknown> = p
       .catch(() => {})
       .finally(() => {
-        if (kind === 'sync') this.running.delete(settled);
+        if (kind === 'sync') this.releaseResolve(settled);
         else this.proposingRuns--;
         this.tick();
       });
-    if (kind === 'sync') this.running.add(settled);
+    if (kind === 'sync') this.holdResolve(settled);
     else this.proposingRuns++;
     return p;
   }
 
+  private holdResolve(p: Promise<unknown>): void {
+    this.running.add(p);
+    this.resolves.add(p);
+  }
+
+  private releaseResolve(p: Promise<unknown>): void {
+    this.running.delete(p);
+    this.resolves.delete(p);
+  }
+
   private get proposing(): boolean {
     return this.proposingRuns > 0;
+  }
+
+  /** What is going on that a restart would have to wait for. */
+  private get activity(): Activity {
+    return { tasks: this.running.size - this.resolves.size, resolves: this.resolves.size, planner: this.proposingRuns };
   }
 
   private schedule(): void {
@@ -122,7 +139,7 @@ export class Scheduler {
 
   private tick(): void {
     if (this.stopped) return;
-    const reload = this.reload?.check({ tasks: this.running.size, proposing: this.proposing });
+    const reload = this.reload?.check(this.activity);
     if (reload?.exit) {
       this.opts.log(reload.reason);
       this.stop();
@@ -141,7 +158,12 @@ export class Scheduler {
           .then((res) => this.opts.log(`task ${task.id}: ${res.outcome}${res.reason ? ` (${res.reason})` : ''}`))
           .catch((err) => {
             this.opts.log(`task ${task.id}: worker crashed: ${err?.stack ?? err}`);
-            this.db.applyEvent(task.id, { type: 'finish', outcome: 'failed', retry: false }, { reason: String(err?.message ?? err) });
+            return settle(
+              this.db,
+              task.id,
+              { type: 'finish', outcome: 'failed', retry: false },
+              { reason: String(err?.message ?? err) },
+            ).catch((e) => this.opts.log(`task ${task.id}: settling crashed: ${e?.stack ?? e}`));
           })
           .finally(() => {
             this.running.delete(p);
@@ -196,10 +218,10 @@ export class Scheduler {
     const p = resolveConflicting(this.db, ids, this.opts.log)
       .catch((err) => this.opts.log(`conflict resolution crashed: ${err?.stack ?? err}`))
       .finally(() => {
-        this.running.delete(p);
+        this.releaseResolve(p);
         this.tick();
       });
-    this.running.add(p);
+    this.holdResolve(p);
   }
 
   /** Run the planner for the first repo whose queue has run dry. One planner at a time. */

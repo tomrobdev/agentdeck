@@ -27,6 +27,7 @@ const EVENT_TEXT: Record<string, (e: TaskEventRow) => string> = {
   merge: () => 'merged the pull request',
   mark_done: () => 'marked done by hand',
   pr_merged: () => 'PR merged on GitHub',
+  pr: (e) => (e.reason ? `pull request ${e.reason}` : 'pull request changed'),
   sync: (e) => e.reason ?? 'brought the base branch into the branch',
   plan_unfinished: (e) => e.reason ?? 'left linked plan steps unfinished',
   environment_block: () => 'blocked by the environment; attempt given back',
@@ -101,7 +102,13 @@ const when = 'ml-auto text-sm text-muted';
           <span>
             {{ EVENT_TEXT[it.ev.type](it.ev) }}
             <span
-              v-if="it.ev.reason && it.ev.type !== 'sync' && it.ev.type !== 'plan_unfinished' && it.ev.type !== 'pr_merged'"
+              v-if="
+                it.ev.reason &&
+                it.ev.type !== 'sync' &&
+                it.ev.type !== 'pr' &&
+                it.ev.type !== 'plan_unfinished' &&
+                it.ev.type !== 'pr_merged'
+              "
               class="text-muted"
             >
               · {{ it.ev.reason }}</span
