@@ -7,11 +7,11 @@ import {
   type BoardMove,
   type Filters,
   applyFilters,
-  canApprove,
   emptyFilters,
   groupTasks,
   hasFilters,
   loadSetting,
+  personEvents,
   quickRetry,
   saveSetting,
 } from '../../taskView';
@@ -97,7 +97,7 @@ useHotkeys({
   Enter: () => selected.value !== null && emit('open', selected.value),
   a: () => {
     const t = selectedTask();
-    if (t && canApprove(t)) emit('act', 'approve', t.id);
+    if (t && personEvents(t).includes('approve')) emit('act', 'approve', t.id);
   },
   r: () => {
     const t = selectedTask();

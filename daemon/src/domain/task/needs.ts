@@ -1,6 +1,7 @@
 // What a blocked task's worker said it needs. A task holds it in its `needs` column. Pure: no I/O.
 
 export type NeedsKind = 'deps' | 'host' | 'edit';
+const NEEDS_KINDS: string[] = ['deps', 'host', 'edit'];
 
 /** What a blocked worker needs before it can go on: packages, network hosts, or files it may not edit. */
 export interface Needs {
@@ -21,7 +22,7 @@ export function readNeeds(json: string | null): Needs | null {
   if (!json) return null;
   try {
     const n = JSON.parse(json) as Partial<Needs>;
-    return n && typeof n.kind === 'string' && Array.isArray(n.items) ? (n as Needs) : null;
+    return n && typeof n.kind === 'string' && NEEDS_KINDS.includes(n.kind) && Array.isArray(n.items) ? (n as Needs) : null;
   } catch {
     return null;
   }

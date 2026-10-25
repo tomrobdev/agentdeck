@@ -31,18 +31,6 @@ export type TaskEvent =
   | { type: 'pr_merged' } // the daemon found the task's open PR merged on GitHub
   | { type: 'recover'; exhausted: boolean }; // the daemon restarted mid-run; exhausted = too many restarts
 
-/** Every status each status may move to. `nextStatus` results are always listed here. */
-export const TRANSITIONS: Record<TaskStatus, TaskStatus[]> = {
-  proposed: ['queued', 'cancelled'],
-  queued: ['running', 'cancelled'],
-  running: ['queued', 'done', 'blocked', 'failed', 'cancel_requested', 'cancelled'],
-  cancel_requested: ['cancelled'],
-  done: ['queued', 'blocked'],
-  blocked: ['queued', 'done', 'cancelled'],
-  failed: ['queued', 'done', 'cancelled'],
-  cancelled: ['queued'],
-};
-
 export type RuleKey =
   | 'claim'
   | 'finish:done'
@@ -88,6 +76,11 @@ export const RULES: Record<RuleKey, Partial<Record<TaskStatus, TaskStatus>>> = {
   'recover:exhausted': { running: 'failed', cancel_requested: 'cancelled' },
 };
 
+/** Every status each status may move to, read off RULES. */
+export const TRANSITIONS: Record<TaskStatus, TaskStatus[]> = Object.fromEntries(
+  TASK_STATUSES.map((from) => [from, [...new Set(Object.values(RULES).flatMap((r) => (r[from] ? [r[from]] : [])))]]),
+) as Record<TaskStatus, TaskStatus[]>;
+
 export function ruleKey(e: TaskEvent): RuleKey {
   switch (e.type) {
     case 'finish':
@@ -106,6 +99,18 @@ export function nextStatus(from: TaskStatus, event: TaskEvent): TaskStatus | und
 
 export function canApply(from: TaskStatus, event: TaskEvent): boolean {
   return nextStatus(from, event) !== undefined;
+}
+
+/** The events a person can ask for. */
+export type PersonEvent = 'approve' | 'reject' | 'retry' | 'cancel' | 'mark_done';
+const PERSON_EVENTS: PersonEvent[] = ['approve', 'reject', 'retry', 'cancel', 'mark_done'];
+
+/**
+ * What a person may do with a task in this status. A proposal is declined with `reject`, so it
+ * is never offered `cancel` (the rules would allow both).
+ */
+export function personEvents(t: Pick<Task, 'status'>): PersonEvent[] {
+  return PERSON_EVENTS.filter((type) => canApply(t.status, { type }) && !(type === 'cancel' && t.status === 'proposed'));
 }
 
 /** Every status `event` is allowed from (for guards like `WHERE status IN (...)`). */

@@ -2,12 +2,14 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   type TaskEvent,
+  type PersonEvent,
   type TaskStatus,
   TASK_STATUSES,
   TRANSITIONS,
   canApply,
   fromStatuses,
   nextStatus,
+  personEvents,
 } from '../src/domain/task/lifecycle.ts';
 
 const EVENTS: Record<string, TaskEvent> = {
@@ -60,24 +62,23 @@ for (const [name, event] of Object.entries(EVENTS)) {
   }
 }
 
-test('every transition an event can produce is declared in TRANSITIONS', () => {
-  for (const [name, event] of Object.entries(EVENTS)) {
-    for (const from of TASK_STATUSES) {
-      const to = nextStatus(from, event);
-      if (to) assert.ok(TRANSITIONS[from].includes(to), `${name}: ${from} -> ${to} missing from TRANSITIONS`);
-    }
-  }
+test('personEvents: what a person may do in every status', () => {
+  const EXPECTED: Record<TaskStatus, PersonEvent[]> = {
+    proposed: ['approve', 'reject'],
+    queued: ['cancel'],
+    running: ['cancel'],
+    cancel_requested: [],
+    done: ['retry'],
+    blocked: ['retry', 'cancel', 'mark_done'],
+    failed: ['retry', 'cancel', 'mark_done'],
+    cancelled: ['retry'],
+  };
+  for (const status of TASK_STATUSES) assert.deepEqual(personEvents({ status }), EXPECTED[status], status);
 });
 
-test('every declared transition is reachable by some event', () => {
-  for (const from of TASK_STATUSES) {
-    for (const to of TRANSITIONS[from]) {
-      assert.ok(
-        Object.values(EVENTS).some((e) => nextStatus(from, e) === to),
-        `${from} -> ${to} has no event`,
-      );
-    }
-  }
+test('TRANSITIONS lists the statuses each status can move to', () => {
+  assert.deepEqual([...TRANSITIONS.proposed].sort(), ['cancelled', 'queued']);
+  assert.deepEqual([...TRANSITIONS.running].sort(), ['blocked', 'cancel_requested', 'cancelled', 'done', 'failed', 'queued']);
 });
 
 test('a finished run after cancel was requested always ends cancelled', () => {

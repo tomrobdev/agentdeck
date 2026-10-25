@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { type Changes, type MergeResult, type TaskDetail, ago, api, describeWait } from '../../api';
 import { useHotkeys } from '../../hotkeys';
 import { type TaskTab, go, openTask } from '../../router';
-import { canApprove, canCancel, canEdit, canMarkDone, canMerge, canRetry, canReview, readNeeds, statusLabel } from '../../taskView';
+import { canEdit, canReview, personEvents, readNeeds, statusLabel } from '../../taskView';
 import Modal from '../Modal.vue';
 import SnippetPopover from '../files/SnippetPopover.vue';
 import StatusIcon from '../queue/StatusIcon.vue';
@@ -89,6 +89,7 @@ const needs = computed(() => readNeeds(props.task));
 const editingTitle = ref(false);
 const titleDraft = ref('');
 const titleEditable = computed(() => canEdit(props.task));
+const events = computed(() => personEvents(props.task));
 function editTitle() {
   if (!titleEditable.value) return;
   titleDraft.value = props.task.title;
@@ -203,7 +204,7 @@ const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel
         </div>
       </div>
       <div class="flex flex-none gap-1.5">
-        <template v-if="canApprove(task)">
+        <template v-if="events.includes('approve')">
           <button @click="emit('act', 'reject')">Reject</button>
           <button class="primary" @click="emit('act', 'approve')">✓ Approve</button>
         </template>
@@ -211,10 +212,10 @@ const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel
           <button @click="openReview('close')">Close PR</button>
           <button @click="openReview('changes')">↻ Request changes</button>
         </template>
-        <button v-else-if="canRetry(task)" @click="emit('act', 'retry')">↻ Retry</button>
-        <button v-if="canMarkDone(task)" @click="markingDone = true">✓ Mark done</button>
-        <button v-if="canMerge(task)" class="primary" @click="merging = true">Merge PR</button>
-        <button v-if="canCancel(task)" @click="emit('act', 'cancel')">{{ s === 'running' ? '■ Stop' : '✕ Cancel' }}</button>
+        <button v-else-if="events.includes('retry')" @click="emit('act', 'retry')">↻ Retry</button>
+        <button v-if="events.includes('mark_done')" @click="markingDone = true">✓ Mark done</button>
+        <button v-if="canReview(task)" class="primary" @click="merging = true">Merge PR</button>
+        <button v-if="events.includes('cancel')" @click="emit('act', 'cancel')">{{ s === 'running' ? '■ Stop' : '✕ Cancel' }}</button>
       </div>
     </header>
 

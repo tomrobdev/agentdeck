@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue';
 import type { TaskSummary } from '../../api';
 import { useHotkeys } from '../../hotkeys';
-import { type Filters, STATES, hasFilters } from '../../taskView';
+import { FILTER_STATES, type Filters, hasFilters } from '../../taskView';
 import Popover from './Popover.vue';
 
 const props = defineProps<{ tasks: TaskSummary[] }>();
@@ -10,9 +10,9 @@ const filters = defineModel<Filters>({ required: true });
 
 const search = ref<HTMLInputElement | null>(null);
 const repos = computed(() => [...new Set(props.tasks.map((t) => t.repo ?? '?'))].sort());
-const stateCounts = computed(() => Object.fromEntries(STATES.map((s) => [s.key, props.tasks.filter(s.test).length])));
+const stateCounts = computed(() => Object.fromEntries(FILTER_STATES.map((s) => [s.key, props.tasks.filter(s.test).length])));
 const repoCounts = computed(() => Object.fromEntries(repos.value.map((r) => [r, props.tasks.filter((t) => (t.repo ?? '?') === r).length])));
-const labelOf = (key: string) => STATES.find((s) => s.key === key)?.label ?? key;
+const labelOf = (key: string) => FILTER_STATES.find((s) => s.key === key)?.label ?? key;
 
 function toggle(list: 'states' | 'repos', key: string) {
   const cur = filters.value[list];
@@ -71,7 +71,11 @@ function leaveSearch() {
     <Popover>
       <template #trigger><button class="border-dashed bg-transparent px-2 py-px text-sm text-muted">+ Filter</button></template>
       <div class="px-2 pt-2 pb-0.5 text-xs tracking-[0.05em] text-muted uppercase">Status</div>
-      <label v-for="s in STATES" :key="s.key" class="flex cursor-pointer items-center gap-2 rounded-[5px] px-2 py-[3px] hover:bg-panel-2">
+      <label
+        v-for="s in FILTER_STATES"
+        :key="s.key"
+        class="flex cursor-pointer items-center gap-2 rounded-[5px] px-2 py-[3px] hover:bg-panel-2"
+      >
         <input class="m-0" type="checkbox" :checked="filters.states.includes(s.key)" @change="toggle('states', s.key)" />
         <span class="flex-1">{{ s.label }}</span
         ><span class="text-sm text-muted">{{ stateCounts[s.key] }}</span>
