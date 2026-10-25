@@ -30,6 +30,8 @@ The repo must be registered (`agentdeck repo add <path>`). Workers run in Claude
 
 - **New dependencies:** a worker can't install a new package. Add it on the task's branch yourself first, or leave it out of the task. The daemon's `setup_cmd` installs only what the lockfile already lists.
 - **Network:** tests that call a host need it in the repo's network list (`agentdeck repo set <repo> network "<hosts>"`). Ask before widening that list.
+- **`.claude/`:** Claude Code won't let a worker edit anything under `.claude/` (skills, settings), even in its worktree. Make those edits yourself, before queueing or on the task's branch afterwards, and say so in the prompt (task #37 blocked on this).
+- **Tests the sandbox breaks:** a test that needs something the sandbox refuses (such as `ps`) fails inside it. The worker reports it and finishes; AgentDeck's own test run outside the sandbox is the real check.
 
 ## Write the plan
 
