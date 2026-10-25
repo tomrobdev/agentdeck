@@ -1,14 +1,13 @@
 <script setup lang="ts">
+// The status bar along the bottom of the window: the daemon's state (click to pause or resume), slots,
+// and the usage windows. Actions and navigation are in the header (AppHeader.vue).
 import { computed } from 'vue';
 import { type Status, describeState, relTime } from '../api';
-import { needYouCount } from '../taskView';
-import { MODES, THEMES, type ThemeKey, mode, setMode, setTheme, theme } from '../theme';
 
 const props = defineProps<{ status: Status | null; offline: boolean; busy: boolean }>();
-defineEmits<{ toggle: []; newTask: []; repos: []; settings: [] }>();
+defineEmits<{ toggle: [] }>();
 
 const state = computed(() => describeState(props.status, props.offline));
-const needYou = computed(() => needYouCount(props.status));
 
 /** Meters with a marker for the budget line that matters for each window. */
 const meters = computed(() => {
@@ -29,12 +28,26 @@ const meters = computed(() => {
     return { label: '7d', pct, resets: relTime(w.resets_at), mark: allowed, markTitle: `on pace up to ${Math.round(allowed * 100)}% now` };
   });
 });
+
+const toggleTitle = computed(() => {
+  const action = props.status?.paused ? 'Resume: let new tasks start' : 'Pause: no new tasks start';
+  return state.value.title ? `${state.value.title} · ${action}` : action;
+});
 </script>
 
 <template>
-  <header class="flex items-center gap-3 border-b border-border bg-panel px-4 py-2.5">
-    <div class="text-md font-[650] tracking-[-0.01em]">AgentDeck</div>
-    <span class="pill" :class="state.cls" :title="state.title"><span class="dot" />{{ state.label }}</span>
+  <footer class="flex h-7 shrink-0 items-center gap-4 border-t border-border bg-panel px-3 text-xs tabular-nums">
+    <button
+      class="pill !py-0 text-xs"
+      :class="state.cls"
+      :disabled="offline || busy || !status"
+      :title="toggleTitle"
+      :aria-label="status?.paused ? 'Resume' : 'Pause'"
+      @click="$emit('toggle')"
+    >
+      <span class="dot" />{{ state.label }} <span aria-hidden="true">{{ status?.paused ? '▶' : '⏸' }}</span>
+    </button>
+
     <span v-if="status && !offline" class="muted" :title="status.governor.reason ?? ''">
       {{ status.running }}/{{ status.governor.max_concurrent }} slots<template
         v-if="status.governor.max_concurrent < status.max_concurrent"
@@ -43,62 +56,30 @@ const meters = computed(() => {
       >
     </span>
 
-    <span v-if="needYou && !offline" class="muted" title="Proposals, blocked tasks and PRs waiting for review">{{ needYou }} need you</span>
-
-    <div class="ml-2 flex gap-4" v-if="meters.length && !offline">
-      <div
+    <template v-if="!offline">
+      <span
         v-for="m in meters"
         :key="m.label"
-        class="flex items-center gap-1.5 tabular-nums"
+        class="flex items-center gap-1.5"
         :title="`${m.pct}% used · ${m.markTitle} · resets in ${m.resets}`"
       >
         <span class="muted">{{ m.label }}</span>
-        <div class="relative h-1.5 w-20 rounded-[3px] bg-panel-2">
-          <div
-            class="h-full rounded-[3px] transition-[width] duration-[400ms]"
-            :style="{ width: m.pct + '%' }"
+        <span class="relative inline-block h-1 w-14 rounded-sm bg-panel-2">
+          <span
+            class="absolute inset-y-0 left-0 rounded-sm transition-[width] duration-[400ms]"
             :class="m.pct >= m.mark * 100 ? 'bg-blocked' : 'bg-running'"
+            :style="{ width: m.pct + '%' }"
           />
-          <div
-            class="absolute -top-[3px] -bottom-[3px] -ml-px w-0.5 rounded-[1px] bg-text opacity-55"
-            :style="{ left: m.mark * 100 + '%' }"
-          />
-        </div>
-        <span>{{ m.pct }}%</span>
-        <span class="muted text-xs max-lg:hidden">↻ {{ m.resets }}</span>
-      </div>
-    </div>
+          <span class="absolute -top-0.5 -bottom-0.5 -ml-px w-0.5 rounded-[1px] bg-text opacity-55" :style="{ left: m.mark * 100 + '%' }" />
+        </span>
+        <span :class="{ 'text-blocked': m.pct >= m.mark * 100 }">{{ m.pct }}%</span>
+        <span class="muted max-lg:hidden">↻ {{ m.resets }}</span>
+      </span>
+    </template>
 
     <div class="spacer" />
-    <div class="flex items-center gap-1.5">
-      <select
-        class="w-auto px-1.5 py-0.5 text-sm"
-        :value="theme"
-        aria-label="Theme"
-        title="Theme"
-        @change="setTheme(($event.target as HTMLSelectElement).value as ThemeKey)"
-      >
-        <option v-for="t in THEMES" :key="t.key" :value="t.key">{{ t.label }}</option>
-      </select>
-      <div class="seg" role="group" aria-label="Mode">
-        <button
-          v-for="m in MODES"
-          :key="m.key"
-          type="button"
-          :class="{ on: mode === m.key }"
-          :aria-pressed="mode === m.key"
-          :title="m.key === 'system' ? 'Follow the system light or dark setting' : `Always ${m.key}`"
-          @click="setMode(m.key)"
-        >
-          {{ m.label }}
-        </button>
-      </div>
-    </div>
-    <button @click="$emit('settings')" :disabled="offline" title="Budget and notifications">Settings</button>
-    <button @click="$emit('repos')" :disabled="offline">Repos</button>
-    <button @click="$emit('toggle')" :disabled="offline || !status || busy">
-      {{ status?.paused ? '▶ Resume' : '⏸ Pause' }}
-    </button>
-    <button class="primary" @click="$emit('newTask')" :disabled="offline">+ New task</button>
-  </header>
+    <span v-if="status && !offline && !status.governor.allow && status.governor.reason" class="muted truncate">
+      Holding: {{ status.governor.reason }}
+    </span>
+  </footer>
 </template>

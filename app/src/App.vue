@@ -7,6 +7,7 @@ import HoldsBar from './components/queue/HoldsBar.vue';
 import ReposPanel from './components/ReposPanel.vue';
 import SettingsPanel from './components/SettingsPanel.vue';
 import StaleDaemonBar from './components/StaleDaemonBar.vue';
+import AppHeader from './components/AppHeader.vue';
 import StatusBar from './components/StatusBar.vue';
 import QueueView from './components/queue/QueueView.vue';
 import TaskPage from './components/task/TaskPage.vue';
@@ -119,15 +120,7 @@ onBeforeUnmount(() => clearInterval(timer));
 
 <template>
   <div class="flex h-screen flex-col">
-    <StatusBar
-      :status="status"
-      :offline="offline"
-      :busy="busy"
-      @toggle="togglePause"
-      @new-task="modal = 'new'"
-      @repos="modal = 'repos'"
-      @settings="modal = 'settings'"
-    />
+    <AppHeader :status="status" :offline="offline" @new-task="modal = 'new'" @repos="modal = 'repos'" @settings="modal = 'settings'" />
 
     <div v-if="offline" class="m-auto max-w-[420px] text-center">
       <h2 class="text-lg">The AgentDeck daemon isn't running</h2>
@@ -167,12 +160,17 @@ onBeforeUnmount(() => clearInterval(timer));
       </section>
     </main>
 
+    <StatusBar :status="status" :offline="offline" :busy="busy" @toggle="togglePause" />
+
     <NewTaskForm v-if="modal === 'new'" :repos="repos" @close="modal = null" @created="onCreated" @repos="modal = 'repos'" />
     <ReposPanel v-if="modal === 'repos'" :repos="repos" @close="modal = null" @changed="reloadRepos" />
 
     <SettingsPanel v-if="modal === 'settings'" :notifications="status?.notifications ?? []" @close="modal = null" @saved="refresh" />
 
-    <div v-if="toast" class="fixed bottom-4 left-1/2 z-40 max-w-[calc(100vw-32px)] -translate-x-1/2 rounded-md bg-text px-3.5 py-2 text-bg">
+    <div
+      v-if="toast"
+      class="fixed bottom-10 left-1/2 z-40 max-w-[calc(100vw-32px)] -translate-x-1/2 rounded-md bg-text px-3.5 py-2 text-bg"
+    >
       {{ toast }}
     </div>
   </div>
