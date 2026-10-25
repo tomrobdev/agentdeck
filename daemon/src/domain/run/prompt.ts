@@ -1,8 +1,8 @@
 // What a worker's claude is told and allowed. Pure: no I/O.
-import { PLAN_DIR } from '../plan/plan.ts';
+import { PLAN_DIR, parsePlanWithText } from '../plan/plan.ts';
 import { ALWAYS_DISALLOWED_TOOLS } from '../repo/tools.ts';
 import { withoutUnscopedFileTools } from './sandbox.ts';
-import type { Task } from '../task/task.ts';
+import { type Task, planStepIds } from '../task/task.ts';
 import type { Run } from './run.ts';
 
 /**
@@ -30,13 +30,56 @@ ${
 - End your final message with exactly one line: "STATUS: DONE" or "STATUS: BLOCKED: <one-line reason>".`;
 }
 
-/** `reviewNote` is what the person asked to change when they sent the task back from review. */
-export function buildPrompt(task: Task, previousRuns: Run[], reviewNote: string | null = null): string {
+/** The plan a run follows: its repo-relative path and its HTML from the task's branch, null when the file is missing. */
+export interface PromptPlan {
+  path: string;
+  html: string | null;
+}
+
+/**
+ * The block after the task's prompt that carries the plan's steps: the linked steps (`task.plan_steps`, or every step
+ * when none are named) that are not yet done or skipped, with their text and done criteria.
+ */
+export function planPromptBlock(task: Pick<Task, 'plan_steps'>, plan: PromptPlan): string {
+  const parsed = plan.html === null ? null : parsePlanWithText(plan.html);
+  if (!parsed) {
+    return `The plan ${plan.path} is not on this branch (or is not a readable plan). Work from the task above.`;
+  }
+  const ids = planStepIds(task);
+  const lines = [`--- Plan: ${plan.path} ---`, parsed.plan.title];
+  if (parsed.plan.summary) lines.push(parsed.plan.summary);
+  const steps = parsed.plan.steps
+    .map((step, i) => ({ step, text: parsed.texts[i] }))
+    .filter(
+      ({ step }) => (ids === null || (step.id !== null && ids.includes(step.id))) && step.status !== 'done' && step.status !== 'skipped',
+    );
+  if (!steps.length) {
+    lines.push('', 'Every step you were given is already done or skipped. Check the work, and finish with STATUS: DONE.');
+    return lines.join('\n');
+  }
+  for (const { step, text } of steps) {
+    lines.push('', `Step${step.id ? ` "${step.id}"` : ''}: ${step.title} (status: ${step.status})`);
+    if (text) lines.push(text);
+    if (step.done.length) lines.push('Done when:', ...step.done.map((d) => `- ${d}`));
+  }
+  lines.push(
+    '',
+    `Do only these steps. Set each one's data-status in ${plan.path} as you go, and commit the plan with the work. Mark a step you can't do blocked and say why inside the step.`,
+  );
+  return lines.join('\n');
+}
+
+/**
+ * `reviewNote` is what the person asked to change when they sent the task back from review. `plan` is the plan the task
+ * carries out, if any: its steps go after the task's prompt.
+ */
+export function buildPrompt(task: Task, previousRuns: Run[], reviewNote: string | null = null, plan: PromptPlan | null = null): string {
   const last = previousRuns.filter((r) => r.kind !== 'resolve').at(-1);
-  if (!last) return task.prompt;
+  const base = plan ? `${task.prompt}\n\n${planPromptBlock(task, plan)}` : task.prompt;
+  if (!last) return base;
   return [
     reviewNote ? `Changes requested in review:\n${reviewNote}\n` : '',
-    task.prompt,
+    base,
     '',
     `--- This is attempt ${task.attempts}. The previous attempt ended as "${last.outcome}". ---`,
     last.tests_passed === 0 ? 'The test command failed after the previous attempt.' : '',

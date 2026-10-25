@@ -1,6 +1,8 @@
 // Plans attached to a task: collected from its branch after each run, or attached by a person.
 import type { Db } from '../db/index.ts';
 import { PLAN_LIMIT, type TaskPlan, isPlanPath, parsePlan, planName } from '../domain/plan/plan.ts';
+import type { PromptPlan } from '../domain/run/prompt.ts';
+import type { Task } from '../domain/task/task.ts';
 import { ActionError } from './errors.ts';
 import { taskChanges, taskFile } from './files.ts';
 
@@ -19,6 +21,22 @@ export async function collectPlans(db: Db, id: number): Promise<TaskPlan[]> {
   }
   db.replaceBranchPlans(id, found);
   return db.plansForTask(id);
+}
+
+/**
+ * The plan a run of this task follows, read from the task's branch (which carries earlier attempts' step statuses): the
+ * linked plan, or else the one plan the branch added (a plan-first build). Null when the task follows no plan. A linked
+ * plan missing from the branch comes back with html null.
+ */
+export async function planForRun(db: Db, task: Task): Promise<PromptPlan | null> {
+  if (task.plan_path) {
+    const file = await taskFile(db, task.id, 'head', task.plan_path).catch(() => null);
+    return { path: task.plan_path, html: file && file.text !== null && !file.truncated ? file.text : null };
+  }
+  const branch = (await collectPlans(db, task.id)).filter((p) => p.source === 'branch');
+  if (branch.length !== 1) return null;
+  const html = db.planHtml(task.id, branch[0].id);
+  return html === undefined ? null : { path: branch[0].name, html };
 }
 
 /** Attach a plan written anywhere (a file, another session) to a task. Same name replaces it. */

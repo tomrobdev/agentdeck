@@ -8,7 +8,7 @@ import { lastLine, runCommand } from '../adapters/shell.ts';
 import { LOG_DIR, SETUP_TIMEOUT_MS, TEST_TIMEOUT_MS, ensureDirs } from '../config.ts';
 import type { Db } from '../db/index.ts';
 import { conflictReason, syncSummary } from '../domain/pull-request/conflict.ts';
-import { buildPrompt, claudeArgs } from '../domain/run/prompt.ts';
+import { type PromptPlan, buildPrompt, claudeArgs } from '../domain/run/prompt.ts';
 import { latestReviewNote } from '../domain/task/history.ts';
 import { type Run, type WorkerResult, firstDenial, parseStatus, resultFields } from '../domain/run/run.ts';
 import type { Task } from '../domain/task/task.ts';
@@ -16,7 +16,7 @@ import { bringInBase } from './conflicts.ts';
 import { warnStuckDependents } from './dependencies.ts';
 import { notifyLater } from './notifications.ts';
 import { pauseRepo } from './pause.ts';
-import { collectPlans } from './plans.ts';
+import { collectPlans, planForRun } from './plans.ts';
 import { openPullRequest } from './pull-requests.ts';
 import { effectiveTools, runSettings } from './tools.ts';
 
@@ -37,10 +37,17 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
   const logPath = join(LOG_DIR, `task-${task.id}-attempt-${task.attempts}.jsonl`);
   const log = createWriteStream(logPath, { flags: 'a' });
   const runId = db.startRun(task.id, task.attempts, logPath);
+  let plan: PromptPlan | null = null;
+  try {
+    plan = await planForRun(db, task);
+  } catch (err) {
+    writeEvent(log, { type: 'agentdeck_error', text: `read plan: ${(err as Error).message}` });
+  }
   const prompt = buildPrompt(
     task,
     db.runsForTask(task.id).filter((r) => r.id !== runId),
     latestReviewNote(db.eventsForTask(task.id)),
+    plan,
   );
 
   // Install dependencies before the agent starts: it isn't allowed to install them itself.
