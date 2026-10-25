@@ -26,6 +26,7 @@ export interface Task {
   plan_path: string | null; // the plan this task carries out: a repo-relative path under docs/plans/
   needs: string | null; // JSON Needs (domain/run/run.ts) the worker said it needs when it blocked; cleared when queued again
   plan_steps: string | null; // JSON array of that plan's step ids; null means every unfinished step (see planStepIds)
+  done_by: 'person' | null; // 'person' when mark_done set the status; cleared whenever the task leaves done
   created_at: string;
   updated_at: string;
 }

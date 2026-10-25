@@ -154,6 +154,8 @@ export const MIGRATIONS: Migration[] = [
   'ALTER TABLE repos ADD COLUMN archived_at TEXT;',
   // 13: what a blocked worker said it needs (docs/plans/fewer-blocks.html): JSON { kind, items }, NULL when nothing.
   'ALTER TABLE tasks ADD COLUMN needs TEXT;',
+  // 14: who said a task is done (docs/plans/manual-moves.html): 'person' when mark_done set it, NULL otherwise.
+  'ALTER TABLE tasks ADD COLUMN done_by TEXT;',
 ];
 
 /** Runs every step above the database's user_version in one transaction; returns how many ran. */

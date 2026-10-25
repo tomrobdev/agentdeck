@@ -8,7 +8,7 @@ import { EDITABLE_STATUSES, OPEN_STATUSES, type Task, type TaskSummary } from '.
 import { NOW, atomically } from './sql.ts';
 
 const SUMMARY_COLUMNS =
-  'id, repo_id, title, status, priority, model, max_turns, attempts, max_attempts, branch, worktree, blocked_reason, source, restarts, pr_url, pr_state, merge_method, after_task, plan_path, plan_steps, needs, created_at, updated_at';
+  'id, repo_id, title, status, priority, model, max_turns, attempts, max_attempts, branch, worktree, blocked_reason, source, restarts, pr_url, pr_state, merge_method, after_task, plan_path, plan_steps, needs, done_by, created_at, updated_at';
 
 /** SQL list of fixed status literals, for `status IN (…)`. */
 const statusList = (statuses: TaskStatus[]) => statuses.map((s) => `'${s}'`).join(', ');
@@ -20,10 +20,11 @@ const IN_ACTIVE_REPO = (col: string) => `${col} IN (SELECT id FROM repos WHERE a
 /**
  * SQL: tasks `d` that a dependent may build on: done, and merged unless their repo has pr_mode off.
  * A done task whose PR isn't opened yet (or failed to open) has pr_url NULL, so it must not count as met.
- * Mirrors domain/task/dependency.ts.
+ * A task a person marked done counts as met unless its PR is open. Mirrors domain/task/dependency.ts.
  */
-const DEPENDENCY_MET = `d.status = 'done' AND (d.pr_state = 'merged' OR (d.pr_url IS NULL AND d.pr_state IS NULL
-  AND EXISTS (SELECT 1 FROM repos r WHERE r.id = d.repo_id AND r.pr_mode = 'off')))`;
+const DEPENDENCY_MET = `d.status = 'done' AND (d.pr_state = 'merged'
+  OR (d.pr_url IS NULL AND d.pr_state IS NULL AND EXISTS (SELECT 1 FROM repos r WHERE r.id = d.repo_id AND r.pr_mode = 'off'))
+  OR (d.done_by = 'person' AND (d.pr_state IS NULL OR d.pr_state <> 'open')))`;
 /** SQL: the task row `t` is free to start (it has no dependency, or the dependency is met). */
 const NOT_WAITING = `(t.after_task IS NULL OR EXISTS (SELECT 1 FROM tasks d WHERE d.id = t.after_task AND ${DEPENDENCY_MET}))`;
 
@@ -276,7 +277,11 @@ export function taskStore(db: DatabaseSync) {
             sets.push('max_attempts = attempts + 1'); // one more attempt on top of those used
           else if (event.type === 'rate_limited' || environment) sets.push(give);
           else if (event.type === 'recover') sets.push('restarts = restarts + 1', ...(to === 'queued' ? [give] : []));
-          if (event.type === 'finish' && event.outcome === 'done') sets.push('blocked_reason = NULL');
+          if ((event.type === 'finish' && event.outcome === 'done') || event.type === 'mark_done' || event.type === 'pr_merged')
+            sets.push('blocked_reason = NULL');
+          if (event.type === 'mark_done' || event.type === 'pr_merged') sets.push('needs = NULL');
+          if (event.type === 'mark_done') sets.push("done_by = 'person'");
+          else if (cur.status === 'done') sets.push('done_by = NULL');
           if (to === 'queued') sets.push('needs = NULL');
           else if (event.type === 'finish' && event.outcome === 'blocked') {
             sets.push('needs = ?');

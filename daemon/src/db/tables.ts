@@ -63,6 +63,7 @@ export const tasks = sqliteTable(
     plan_path: text(),
     plan_steps: text(),
     needs: text(),
+    done_by: text(),
   },
   (table) => [index('tasks_pick').on(table.status, sql`priority DESC`, table.id)],
 );

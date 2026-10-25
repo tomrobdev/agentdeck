@@ -30,6 +30,11 @@ export function routes({ db, scheduler }: ApiContext): Route[] {
       /^\/api\/tasks\/(\d+)\/retry$/,
       ({ params: [id], body }) => (actions.retryTask(db, Number(id), body.note as string | undefined), detail(id)),
     ),
+    route('POST', /^\/api\/tasks\/(\d+)\/done$/, ({ params: [id], body }) => {
+      actions.markDone(db, Number(id), body.note as string | undefined);
+      wake();
+      return detail(id);
+    }),
     route('POST', /^\/api\/tasks\/(\d+)\/install-needs$/, async ({ params: [id] }) => {
       await actions.installNeeds(db, Number(id));
       return detail(id);

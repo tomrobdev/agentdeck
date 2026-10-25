@@ -23,6 +23,8 @@ const EVENTS: Record<string, TaskEvent> = {
   approve: { type: 'approve' },
   reject: { type: 'reject' },
   retry: { type: 'retry' },
+  mark_done: { type: 'mark_done' },
+  pr_merged: { type: 'pr_merged' },
   'recover after restart': { type: 'recover', exhausted: false },
   'recover after too many restarts': { type: 'recover', exhausted: true },
 };
@@ -41,6 +43,8 @@ const ALLOWED: Record<string, Partial<Record<TaskStatus, TaskStatus>>> = {
   approve: { proposed: 'queued' },
   reject: { proposed: 'cancelled' },
   retry: { blocked: 'queued', failed: 'queued', cancelled: 'queued', done: 'queued' },
+  mark_done: { blocked: 'done', failed: 'done' },
+  pr_merged: { blocked: 'done', failed: 'done' },
   'recover after restart': { running: 'queued', cancel_requested: 'cancelled' },
   'recover after too many restarts': { running: 'failed', cancel_requested: 'cancelled' },
 };

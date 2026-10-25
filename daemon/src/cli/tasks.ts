@@ -138,6 +138,11 @@ export const taskCommands: Record<string, Command> = {
     actions.retryTask(db, id, flags.note);
     console.log(`requeued #${id}`);
   },
+  done: ({ db, flags, rest }) => {
+    const id = taskId(rest[0]);
+    actions.markDone(db, id, flags.note);
+    console.log(`marked #${id} done`);
+  },
   'install-needs': async ({ db, flags, rest }) => {
     const id = taskId(rest[0]);
     const needs = readNeeds(db.getTask(id)?.needs ?? null);
