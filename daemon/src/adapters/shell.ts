@@ -11,6 +11,16 @@ export function runCommand(cmd: string, cwd: string, timeout: number): Promise<{
   });
 }
 
+/** Run a program with arguments, no shell in between. Never rejects: a failure or timeout is `passed: false`. */
+export function runProgram(file: string, args: string[], cwd: string, timeout: number): Promise<{ passed: boolean; output: string }> {
+  return new Promise((resolve) => {
+    execFile(file, args, { cwd, timeout, maxBuffer: 8 * 1024 * 1024 }, (err, stdout, stderr) => {
+      const output = `${stdout}${stderr}`.slice(-20_000);
+      resolve({ passed: !err, output: output || (err ? err.message : '') });
+    });
+  });
+}
+
 /** The last non-empty line of a command's output, for a one-line reason. */
 export function lastLine(output: string): string {
   return (

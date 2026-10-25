@@ -140,6 +140,20 @@ export const taskCommands: Record<string, Command> = {
     actions.retryTask(db, id, flags.note);
     console.log(`requeued #${id}`);
   },
+  'install-needs': async ({ db, flags, rest }) => {
+    const id = taskId(rest[0]);
+    const needs = readNeeds(db.getTask(id)?.needs ?? null);
+    if (needs?.kind !== 'deps') die(`#${id} has not asked for packages`);
+    console.log(`#${id} asks for: ${needs.items.join(' ')}`);
+    if (!flags.yes) {
+      const rl = createInterface({ input: process.stdin, output: process.stdout });
+      const answer = await rl.question('install them on its branch and retry? [y/N] ');
+      rl.close();
+      if (!/^y(es)?$/i.test(answer.trim())) die('not installed');
+    }
+    const { packages } = await actions.installNeeds(db, id);
+    console.log(`installed ${packages.join(' ')} on #${id}'s branch; requeued`);
+  },
   'close-pr': async ({ db, rest }) => {
     const id = taskId(rest[0]);
     await actions.closeTaskPr(db, id);
