@@ -1,8 +1,6 @@
 // How the CLI prints tasks, doctor reports, logs and times, and how it fails.
 import { readLog } from '../adapters/run-log.ts';
-import type { DoctorReport } from '../application/repos.ts';
-import type { Db } from '../db/index.ts';
-import { waitingFor } from '../application/dependencies.ts';
+import type { DoctorReport, TaskView } from '../application/actions.ts';
 import type { TaskStatus } from '../domain/task/lifecycle.ts';
 import type { Task } from '../domain/task/task.ts';
 
@@ -28,10 +26,10 @@ export function taskId(arg: string | undefined): number {
   return id;
 }
 
-/** `waiting` is looked up in `db` unless the caller already has it. */
-export function fmtTask(t: Task & { waiting?: ReturnType<typeof waitingFor>; unblocks?: number[] }, repoName: string, db?: Db): string {
+/** `waiting` and `unblocks` come from a task view (`taskDetail`, `withViews`); a plain task shows neither. */
+export function fmtTask(t: Task & { waiting?: TaskView['waiting']; unblocks?: number[] }, repoName: string): string {
   let extra = t.blocked_reason && (t.status === 'blocked' || t.status === 'failed') ? `  — ${t.blocked_reason}` : '';
-  const waiting = t.waiting !== undefined ? t.waiting : db ? waitingFor(db, t) : null;
+  const waiting = t.waiting ?? null;
   if (waiting)
     extra += waiting.stuck ? `  can't start: ${waiting.stuck} (retry #${waiting.on} or cancel this task)` : `  waiting on #${waiting.on}`;
   if (t.pr_url) extra += `  PR ${t.pr_state ?? 'open'}: ${t.pr_url}`;

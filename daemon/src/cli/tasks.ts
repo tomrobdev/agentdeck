@@ -2,9 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { createInterface } from 'node:readline/promises';
 import * as actions from '../application/actions.ts';
-import { unblocksOf, waitingFor } from '../application/dependencies.ts';
 import { removeWorktree } from '../adapters/git.ts';
-import type { SyncReport } from '../application/conflicts.ts';
 import { planProgress } from '../domain/plan/plan.ts';
 import { pickRun, readNeeds } from '../domain/run/run.ts';
 import { TASK_STATUSES } from '../domain/task/lifecycle.ts';
@@ -41,7 +39,7 @@ export const taskCommands: Record<string, Command> = {
     console.log(
       `queued task #${t.id} on ${repoName(t.repo_id)} (${t.model}, ${t.max_turns} turns max${t.after_task ? `, after #${t.after_task}` : ''})`,
     );
-    const waiting = waitingFor(db, t);
+    const { waiting } = actions.taskDetail(db, t.id);
     if (waiting?.stuck) console.log(`note: ${waiting.stuck}, so this task won't start until #${waiting.on} is retried`);
     if (db.isPaused()) console.log('note: the daemon is paused; run `agentdeck resume` to start working');
   },
@@ -70,7 +68,7 @@ export const taskCommands: Record<string, Command> = {
       .filter(Boolean);
     // One status keeps its old order, priority first; anything else lists the newest first.
     const sort = flags.sort ?? (states.length === 1 && (TASK_STATUSES as string[]).includes(states[0]) ? 'priority' : 'newest');
-    const all = db.listTasks().map((t) => ({ ...t, waiting: waitingFor(db, t), unblocks: unblocksOf(db, t) }));
+    const all = actions.withViews(db, db.listTasks());
     let tasks;
     try {
       tasks = filterTasks(all, { states, repo_id: repo?.id, search: rest.join(' '), sort });
@@ -82,8 +80,8 @@ export const taskCommands: Record<string, Command> = {
     if (tasks.length && tasks.length < all.length) console.log(`${tasks.length} of ${all.length} tasks`);
   },
   show: ({ db, rest, repoName }) => {
-    const t = db.getTask(taskId(rest[0])) ?? die('no such task');
-    console.log(fmtTask(t, repoName(t.repo_id), db));
+    const t = actions.taskDetail(db, taskId(rest[0]));
+    console.log(fmtTask(t, repoName(t.repo_id)));
     console.log(`model ${t.model}, attempts ${t.attempts}/${t.max_attempts}, max turns ${t.max_turns}`);
     if (t.branch) console.log(`branch   ${t.branch}`);
     if (t.worktree) console.log(`worktree ${t.worktree}`);
@@ -194,7 +192,7 @@ export const taskCommands: Record<string, Command> = {
   resolve: async ({ db, rest }) => {
     const id = taskId(rest[0]);
     console.log(`bringing the base branch into #${id}'s branch… (a conflict starts a claude run and can take a while)`);
-    const r: SyncReport = await callDaemon('POST', `/api/tasks/${id}/resolve`, {});
+    const r: actions.SyncReport = await callDaemon('POST', `/api/tasks/${id}/resolve`, {});
     const files = `${r.files.length} ${r.files.length === 1 ? 'file' : 'files'}`;
     const lines: Record<typeof r.outcome, string> = {
       up_to_date: `#${id} is already up to date`,
