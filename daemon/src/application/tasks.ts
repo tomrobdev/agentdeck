@@ -61,6 +61,7 @@ export async function addTask(
   const repos = db.listRepos();
   const repo = input.repo ? db.findRepo(input.repo) : repos.length === 1 ? repos[0] : undefined;
   if (!repo) throw new ActionError(input.repo ? `no repo "${input.repo}"` : 'choose a repo (more than one is registered)');
+  if (repo.archived_at) throw new ActionError(`${repo.name} is archived; unarchive it first`);
   const plan_path = typeof input.plan_path === 'string' ? input.plan_path.trim() : '';
   const steps = stepList(input.plan_steps);
   if (plan_path) await checkPlanLink(repo, plan_path, steps);

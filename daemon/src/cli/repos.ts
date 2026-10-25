@@ -33,6 +33,10 @@ export const repoCommands: Record<string, Command> = {
       if (!path) die('usage: agentdeck repo resume <repo>');
       const repo = actions.resumeRepo(db, path);
       console.log(`${repo.name}: resumed`);
+    } else if (sub === 'archive' || sub === 'unarchive') {
+      if (!path) die(`usage: agentdeck repo ${sub} <repo>`);
+      const repo = sub === 'archive' ? actions.archiveRepo(db, path) : actions.unarchiveRepo(db, path);
+      console.log(`${repo.name}: ${sub}d`);
     } else if (sub === 'set') {
       const [, name, key, value = ''] = rest;
       if (
@@ -60,7 +64,7 @@ export const repoCommands: Record<string, Command> = {
       else actions.updateRepo(db, name, { test_cmd: value });
       console.log(`${name}: ${key} ${value || '(none)'}`);
     } else if (sub === 'ls' || !sub) {
-      for (const r of db.listRepos()) {
+      for (const r of db.listRepos({ archived: !!flags.archived })) {
         const goals = actions.repoDetail(db, r.id).goals.trim() ? 'goals ✓' : 'no goals';
         console.log(
           `${r.name.padEnd(16)} ${r.path}  base=${r.base_branch}  toolchain=${r.toolchain ?? '-'}  setup=${r.setup_cmd ?? '-'}  test=${r.test_cmd ?? '-'}  pr=${r.pr_mode}  merge=${r.merge_method}  sandbox=${r.sandbox ? `on network=${parseNetwork(r.network).join(',') || '-'}` : 'OFF'}  ${goals}${r.auto_approve ? '  auto-approve' : ''}${r.paused_reason ? `  PAUSED (${r.paused_reason})` : ''}`,

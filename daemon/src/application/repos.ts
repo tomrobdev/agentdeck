@@ -102,6 +102,25 @@ export function resumeRepo(db: Db, nameOrId: string | number): Repo {
   return db.getRepo(repo.id)!;
 }
 
+/**
+ * Hide a repo and all its tasks and stop its work: nothing of it is claimed, planned or polled.
+ * Refuses while one of its tasks is running. Its tasks keep their statuses; `unarchiveRepo` brings them back.
+ */
+export function archiveRepo(db: Db, nameOrId: string | number): Repo {
+  const repo = repoOrThrow(db, nameOrId);
+  if (repo.archived_at) return repo;
+  if (db.repoHasRunning(repo.id))
+    throw new ActionError(`${repo.name} has a task running; cancel it or wait for it to finish, then archive`);
+  db.setRepoArchived(repo.id, true);
+  return db.getRepo(repo.id)!;
+}
+
+export function unarchiveRepo(db: Db, nameOrId: string | number): Repo {
+  const repo = repoOrThrow(db, nameOrId);
+  db.setRepoArchived(repo.id, false);
+  return db.getRepo(repo.id)!;
+}
+
 export interface DoctorReport {
   repo: string;
   ok: boolean;

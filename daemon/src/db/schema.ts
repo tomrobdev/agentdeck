@@ -150,6 +150,8 @@ export const MIGRATIONS: Migration[] = [
   // repo-relative under docs/plans/; plan_steps is a JSON array of step ids, NULL for every unfinished step.
   `ALTER TABLE tasks ADD COLUMN plan_path TEXT;
    ALTER TABLE tasks ADD COLUMN plan_steps TEXT;`,
+  // 12: archiving a repo (docs/plans/repo-archive.html). archived_at is when it was archived, NULL while it is active.
+  'ALTER TABLE repos ADD COLUMN archived_at TEXT;',
 ];
 
 /** Runs every step above the database's user_version in one transaction; returns how many ran. */

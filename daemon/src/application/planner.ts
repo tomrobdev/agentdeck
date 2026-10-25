@@ -29,6 +29,7 @@ export function plannerSettings(db: Db): PlannerSettings {
 
 /** Why the planner should run for this repo now, or null. */
 export function plannerDue(db: Db, repo: Repo, now = Date.now()): string | null {
+  if (repo.archived_at) return null;
   const repoState = { hasGoals: !!readGoals(repo).trim(), openTasks: db.countOpen(repo.id), planned_at: repo.planned_at };
   return plannerDueReason(plannerSettings(db), repoState, now);
 }
@@ -95,6 +96,7 @@ const planning = new Set<number>();
 export async function planNow(db: Db, nameOrId: string | number): Promise<PlanResult> {
   const repo = db.findRepo(String(nameOrId));
   if (!repo) throw new ActionError(`no repo "${nameOrId}"`);
+  if (repo.archived_at) throw new ActionError(`${repo.name} is archived; unarchive it first`);
   if (planning.has(repo.id)) throw new ActionError(`already planning ${repo.name}`);
   planning.add(repo.id);
   try {
