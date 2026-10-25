@@ -44,7 +44,9 @@ export function status(db: Db, daemon: DaemonInfo = { commit: null, started_at: 
  */
 export function restartDaemon(db: Db, request: () => void): { waiting: string | null } {
   request();
-  return { waiting: restartWait({ tasks: db.countRunning(), planner: db.countRunningPlannerRuns() }) };
+  return {
+    waiting: restartWait({ tasks: db.countRunning(), planner: db.countRunningPlannerRuns(), resolves: db.countRunningResolves() }),
+  };
 }
 
 export interface Settings {

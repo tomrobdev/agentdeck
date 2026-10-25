@@ -43,7 +43,8 @@ export class Scheduler {
   private drained: (() => void) | undefined;
   private lastHold: string | null = null;
   private lastReload: string | null = null;
-  private planning = false;
+  /** Planner runs going: the scheduler's own and the ones people asked for through the API. */
+  private planningRuns = 0;
   private readonly awake: KeepAwake;
   private lastPrRefresh = 0;
   private refreshingPrs = false;
@@ -92,6 +93,27 @@ export class Scheduler {
   /** Check the queue now instead of at the next tick, after something changed that may let a task start. */
   wake(): void {
     this.tick();
+  }
+
+  /**
+   * Count a resolve or planner run the API started: a resolve takes a slot, a plan counts as planning. Either one keeps
+   * a reload from exiting until it settles, and ticks when it does. Returns `p` itself so the caller can still await it.
+   */
+  track<T>(p: Promise<T>, kind: 'resolve' | 'plan'): Promise<T> {
+    const settled: Promise<unknown> = p
+      .catch(() => {})
+      .finally(() => {
+        if (kind === 'resolve') this.running.delete(settled);
+        else this.planningRuns--;
+        this.tick();
+      });
+    if (kind === 'resolve') this.running.add(settled);
+    else this.planningRuns++;
+    return p;
+  }
+
+  private get planning(): boolean {
+    return this.planningRuns > 0;
   }
 
   private schedule(): void {
@@ -184,15 +206,13 @@ export class Scheduler {
   private maybePlan(): void {
     const repo = this.db.listRepos().find((r) => plannerDue(this.db, r));
     if (!repo) return;
-    this.planning = true;
     this.opts.log(`planner: planning ${repo.name}`);
-    planNow(this.db, repo.id)
-      .then((r) => this.opts.log(`planner: ${repo.name}: ${r.outcome}, ${r.tasks.length} task(s)${r.note ? ` (${r.note})` : ''}`))
-      .catch((err) => this.opts.log(`planner: ${repo.name} crashed: ${err?.stack ?? err}`))
-      .finally(() => {
-        this.planning = false;
-        this.tick();
-      });
+    this.track(
+      planNow(this.db, repo.id)
+        .then((r) => this.opts.log(`planner: ${repo.name}: ${r.outcome}, ${r.tasks.length} task(s)${r.note ? ` (${r.note})` : ''}`))
+        .catch((err) => this.opts.log(`planner: ${repo.name} crashed: ${err?.stack ?? err}`)),
+      'plan',
+    );
   }
 
   /** Why we can't start new work right now (null if we can), and how many tasks may run. */

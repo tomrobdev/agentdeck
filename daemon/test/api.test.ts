@@ -228,7 +228,7 @@ test('task list returns summaries, pages with limit/before, and always includes 
 test('status reports which code the daemon runs, and restart waits while work runs', async () => {
   const info = { commit: 'abc1234def', started_at: '2026-10-19T14:02:00.000Z' };
   let requested = 0;
-  const server2 = await startApi(db, 0, () => {}, { info, requestRestart: () => requested++ });
+  const server2 = await startApi(db, 0, undefined, { info, requestRestart: () => requested++ });
   const url = `http://127.0.0.1:${(server2.address() as AddressInfo).port}`;
   try {
     assert.deepEqual((await (await fetch(`${url}/api/status`)).json()).daemon, info);

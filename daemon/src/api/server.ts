@@ -4,6 +4,7 @@ import { serviceStatus } from '../adapters/service.ts';
 import * as actions from '../application/actions.ts';
 import { unblocksOf, waitingFor } from '../application/dependencies.ts';
 import { startHolds } from '../application/queue.ts';
+import type { Scheduler } from '../application/scheduler.ts';
 import { API_ALLOWED_ORIGINS, API_PORT } from '../config.ts';
 import type { Db } from '../db/index.ts';
 import type { TaskStatus } from '../domain/task/lifecycle.ts';
@@ -41,16 +42,21 @@ function taskDetail(db: Db, id: number) {
   };
 }
 
-/** `wake` runs after a change that may let queued work start, such as a merge (the scheduler's `wake`). */
+/** What the API needs of the scheduler: `wake` after a change that may let queued work start, `track` for runs it starts. */
+export type ApiScheduler = Pick<Scheduler, 'wake' | 'track'>;
+
+const idleScheduler: ApiScheduler = { wake: () => {}, track: (p) => p };
+
 export function startApi(
   db: Db,
   port = API_PORT,
-  wake: () => void = () => {},
+  scheduler: ApiScheduler = idleScheduler,
   daemon: { info: actions.DaemonInfo; requestRestart: () => void } = {
     info: { commit: null, started_at: new Date().toISOString() },
     requestRestart: () => {},
   },
 ): Promise<Server> {
+  const wake = () => scheduler.wake();
   const routes: [string, RegExp, Handler][] = [
     ['GET', /^\/api\/status$/, () => actions.status(db, daemon.info)],
     ['POST', /^\/api\/pause$/, () => (actions.setPaused(db, true), actions.status(db, daemon.info))],
@@ -64,7 +70,7 @@ export function startApi(
     ['POST', /^\/api\/repos$/, (_q, _s, _p, b) => actions.addRepo(db, b)],
     ['GET', /^\/api\/repos\/(\d+)$/, (_q, _s, [id]) => actions.repoDetail(db, Number(id))],
     ['POST', /^\/api\/repos\/(\d+)$/, (_q, _s, [id], b) => actions.updateRepo(db, Number(id), b)],
-    ['POST', /^\/api\/repos\/(\d+)\/plan$/, (_q, _s, [id]) => actions.planNow(db, Number(id))],
+    ['POST', /^\/api\/repos\/(\d+)\/plan$/, (_q, _s, [id]) => scheduler.track(actions.planNow(db, Number(id)), 'plan')],
     ['POST', /^\/api\/repos\/(\d+)\/doctor$/, (_q, _s, [id]) => actions.doctorRepo(db, Number(id))],
     ['POST', /^\/api\/repos\/(\d+)\/resume$/, (_q, _s, [id]) => actions.resumeRepo(db, Number(id))],
     ['POST', /^\/api\/repos\/(\d+)\/archive$/, (_q, _s, [id]) => actions.archiveRepo(db, Number(id))],
@@ -125,7 +131,7 @@ export function startApi(
       'POST',
       /^\/api\/tasks\/(\d+)\/resolve$/,
       async (_q, _s, [id]) => {
-        const report = await actions.resolveTask(db, Number(id));
+        const report = await scheduler.track(actions.resolveTask(db, Number(id)), 'resolve');
         wake();
         return { ...report, task: taskDetail(db, Number(id)) };
       },
