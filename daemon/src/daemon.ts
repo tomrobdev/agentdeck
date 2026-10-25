@@ -56,7 +56,7 @@ export async function runDaemon({ db, once, log = () => {} }: DaemonOptions): Pr
       // After the API has answered: waking may exit the process at once.
       setTimeout(() => scheduler.wake(), 200);
     };
-    const api = await startApi(db, API_PORT, scheduler, { info, requestRestart }).catch((err) => {
+    const api = await startApi({ db, port: API_PORT, scheduler, daemon: { info, requestRestart } }).catch((err) => {
       if (err?.code === 'EADDRINUSE')
         throw new Error(`port ${API_PORT} is in use: another agentdeck daemon is probably running (see \`agentdeck service\`)`);
       throw err;

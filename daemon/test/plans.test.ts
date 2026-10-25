@@ -143,7 +143,7 @@ test('the store upserts by name, keeps updated_at for the same HTML, and replace
 
 // A real repo: the task's branch adds a plan, a plain HTML page and a markdown file.
 const db = openDb(join(home, 'test.db'));
-const server = await startApi(db, 0);
+const server = await startApi({ db, port: 0 });
 const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 after(() => {
   server.close();
