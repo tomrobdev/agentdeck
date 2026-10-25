@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en" data-agentdeck-plan="1">
+  <head>
+    <meta charset="utf-8" />
+    <title>One start decision, slots counted in the db</title>
+    <style>
+      body {
+        font:
+          15px/1.5 system-ui,
+          sans-serif;
+        max-width: 52rem;
+        margin: 2rem auto;
+        padding: 0 1rem;
+      }
+      section {
+        border-left: 3px solid #ccc;
+        padding: 0 1rem;
+        margin: 1.25rem 0;
+      }
+      code {
+        background: #f3f3f3;
+        padding: 0 3px;
+        border-radius: 3px;
+      }
+      table {
+        border-collapse: collapse;
+      }
+      td,
+      th {
+        border: 1px solid #ddd;
+        padding: 4px 8px;
+        vertical-align: top;
+        text-align: left;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>One start decision, slots counted in the db</h1>
+    <p data-plan-summary>
+      Whether new work may start is decided twice: <code>queueWait</code> in <code>domain/task/start.ts</code>, and
+      <code>Scheduler.gate()</code>, which re-derives paused, rate limited and the governor with its own strings and clock, kept in step
+      only by a "mirrors" comment. Slots are counted three ways: the scheduler's in-memory <code>running</code> set (tasks, the planner and
+      the conflict loop), <code>countRunning() + syncing.size</code> in <code>canStartResolve</code>, and <code>countRunning()</code> alone
+      in <code>startWaits</code>. Make the domain decide once, and count slots from the db so the daemon, the API and the CLI all see the
+      same number. Written 2026-10-25.
+    </p>
+
+    <h2>Decisions</h2>
+    <table>
+      <tr>
+        <th>Decision</th>
+        <th>Why</th>
+      </tr>
+      <tr>
+        <td>
+          <code>domain/task/start.ts</code> gets
+          <code
+            >startDecision(q: QueueState, o: { ignorePause: boolean; used: number; now: number }): { wait: QueueWait | null; free: number
+            }</code
+          >
+          and <code>describeWait(w: QueueWait): string</code> (the log and reason text the scheduler writes today). <code>free</code> is
+          <code>max(0, max_concurrent - used)</code>, and 0 whenever <code>wait</code> is set. <code>queueWait</code> becomes a private
+          helper or is replaced.
+        </td>
+        <td>One pure decision with the clock passed in, testable without a scheduler.</td>
+      </tr>
+      <tr>
+        <td>
+          A slot is taken by: a task in <code>running</code> or <code>cancel_requested</code>; a resolve run that has not ended (<code
+            >runs.kind = 'resolve' AND ended_at IS NULL</code
+          >) for a task that is not itself running; a planner run that has not ended. A clean sync of a done task takes no slot: it runs no
+          <code>claude</code>. <code>db</code> gets one query, <code>slotsUsed(): number</code>, that counts exactly this.
+        </td>
+        <td>
+          Every <code>claude</code> process holds a slot and nothing else does. The db is the one place every process can read, which makes
+          the module-level <code>syncing</code> set unnecessary for counting.
+        </td>
+      </tr>
+      <tr>
+        <td>
+          The planner keeps taking a slot, as it does today through the scheduler's <code>running</code> set. Say so in the
+          <code>startDecision</code> doc comment.
+        </td>
+        <td>No change of behaviour in this task.</td>
+      </tr>
+      <tr>
+        <td>
+          The scheduler keeps only what is its own: edge-detecting a hold to log and notify it once, and the in-memory set of promises it
+          awaits on <code>stop()</code> and in <code>once</code> mode. It no longer uses that set to count slots.
+        </td>
+        <td>Announcing a hold is the scheduler's job; deciding one is the domain's.</td>
+      </tr>
+      <tr>
+        <td>
+          The <code>syncing</code> set in <code>sync.ts</code> stays only as the per-task lock ("one sync at a time per task") and
+          <code>isSyncing</code> keeps its meaning.
+        </td>
+        <td>That lock is a different concern from slot counting.</td>
+      </tr>
+    </table>
+
+    <section data-plan-step id="decide" data-status="todo">
+      <h2>One start decision in the domain</h2>
+      <p>
+        Add <code>startDecision</code> and <code>describeWait</code> to <code>domain/task/start.ts</code> with tests for each wait kind, the
+        <code>ignorePause</code> case (run-once) and the free-slot arithmetic. Make <code>Scheduler.gate()</code>,
+        <code>canStartResolve</code> (<code>sync.ts</code>) and <code>startWaits</code>/<code>queueWaits</code> (<code>queue.ts</code>) call
+        it.
+      </p>
+      <ul data-plan-done>
+        <li>The "Mirrors the scheduler's gate" comment and the scheduler's own paused / rate-limited / governor checks are gone.</li>
+        <li>The scheduler's log lines for a hold, a rate limit and a pause read as they do today.</li>
+        <li>Domain tests cover every <code>QueueWait</code> kind and <code>free</code>.</li>
+      </ul>
+    </section>
+
+    <section data-plan-step id="slots" data-status="todo">
+      <h2>Slots counted in the db</h2>
+      <p>
+        Add <code>slotsUsed()</code> to the db (in <code>db/runs.ts</code> or <code>db/tasks.ts</code>), and use it in the scheduler's start
+        loop, <code>canStartResolve</code> and <code>startWaits</code>. Check <code>EXPLAIN QUERY PLAN</code> uses an index, as the other
+        run queries' tests do.
+      </p>
+      <ul data-plan-done>
+        <li>
+          A test: with <code>max_concurrent</code> 2, one running task and one open resolve run, no further task is claimed and
+          <code>startWaits</code> reports <code>slots 2/2</code>.
+        </li>
+        <li>A test: a running task whose sync started a resolve run counts once, not twice.</li>
+        <li><code>countRunning() + syncing.size</code> no longer appears anywhere.</li>
+      </ul>
+    </section>
+  </body>
+</html>
