@@ -1,8 +1,9 @@
 // Plans attached to a task: collected from its branch after each run, or attached by a person.
 import type { Db } from '../db/index.ts';
-import { PLAN_LIMIT, type TaskPlan, isPlanPath, parsePlan, planName } from '../domain/plan/plan.ts';
+import { PLAN_LIMIT, type TaskPlan, isPlanPath, linkedSteps, parsePlan, planName } from '../domain/plan/plan.ts';
+import type { PrPlan } from '../domain/pull-request/pr.ts';
 import type { PromptPlan } from '../domain/run/prompt.ts';
-import type { Task } from '../domain/task/task.ts';
+import { type Task, planStepIds } from '../domain/task/task.ts';
 import { ActionError } from './errors.ts';
 import { taskChanges, taskFile } from './files.ts';
 
@@ -37,6 +38,17 @@ export async function planForRun(db: Db, task: Task): Promise<PromptPlan | null>
   if (branch.length !== 1) return null;
   const html = db.planHtml(task.id, branch[0].id);
   return html === undefined ? null : { path: branch[0].name, html };
+}
+
+/**
+ * The linked plan's steps as the task's branch has them, for the PR body. Null when the task links no plan or the plan
+ * can't be read.
+ */
+export async function prPlanFor(db: Db, task: Task): Promise<PrPlan | null> {
+  if (!task.plan_path) return null;
+  const file = await taskFile(db, task.id, 'head', task.plan_path).catch(() => null);
+  const steps = file && file.text !== null && !file.truncated ? linkedSteps(file.text, planStepIds(task)) : null;
+  return steps && { path: task.plan_path, steps };
 }
 
 /** Attach a plan written anywhere (a file, another session) to a task. Same name replaces it. */

@@ -33,6 +33,7 @@ function taskDetail(db: Db, id: number) {
     repo: db.getRepo(task.repo_id)?.name ?? null,
     waiting: waitingFor(db, task),
     unblocks: unblocksOf(db, task),
+    plan_unfinished: db.planUnfinishedIds().has(id),
     hold: startHolds(db)(task),
     runs: db.runsForTask(id),
     events: db.eventsForTask(id),
@@ -78,11 +79,13 @@ export function startApi(
         const before = Number(q.get('before')) || undefined;
         const names = new Map(db.listRepos().map((r) => [r.id, r.name]));
         const holdOf = startHolds(db);
+        const unfinished = db.planUnfinishedIds();
         return db.listTaskSummaries({ status: status ?? undefined, limit, before }).map((t) => ({
           ...t,
           repo: names.get(t.repo_id) ?? null,
           waiting: waitingFor(db, t),
           unblocks: unblocksOf(db, t),
+          plan_unfinished: unfinished.has(t.id),
           hold: holdOf(t),
         }));
       },

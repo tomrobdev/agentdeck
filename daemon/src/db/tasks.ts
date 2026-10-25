@@ -221,6 +221,28 @@ export function taskStore(db: DatabaseSync) {
       });
     },
     /**
+     * Record that a run left linked plan steps unfinished: a history row, no status change. Only a running task.
+     */
+    recordPlanUnfinished(id: number, reason: string): boolean {
+      return atomically(db, () => {
+        const res = db.prepare(`UPDATE tasks SET updated_at = ${NOW} WHERE id = ? AND status = 'running'`).run(id);
+        if (!Number(res.changes)) return false;
+        recordEvent(id, 'plan_unfinished', 'running', 'running', reason);
+        return true;
+      });
+    },
+    /** Done tasks whose latest run left linked plan steps unfinished: the ids, for the list's badge. */
+    planUnfinishedIds(): Set<number> {
+      const rows = db
+        .prepare(
+          `SELECT t.id FROM tasks t WHERE t.status = 'done' AND EXISTS (
+             SELECT 1 FROM task_events e WHERE e.task_id = t.id AND e.type = 'plan_unfinished'
+               AND e.id > COALESCE((SELECT MAX(c.id) FROM task_events c WHERE c.task_id = t.id AND c.type = 'claim'), 0))`,
+        )
+        .all() as { id: number }[];
+      return new Set(rows.map((r) => r.id));
+    },
+    /**
      * The only way to change a task's status. Asks the lifecycle whether `event` is allowed from the
      * task's current status and writes the result guarded by that status, so a concurrent change
      * (say, a cancel arriving as a run finishes) is never overwritten. Returns the updated task, or

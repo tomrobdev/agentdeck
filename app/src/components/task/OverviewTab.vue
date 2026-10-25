@@ -26,6 +26,7 @@ const EVENT_TEXT: Record<string, (e: TaskEventRow) => string> = {
   cancel: (e) => (e.to_status === 'cancel_requested' ? 'asked the run to stop' : 'cancelled the task'),
   merge: () => 'merged the pull request',
   sync: (e) => e.reason ?? 'brought the base branch into the branch',
+  plan_unfinished: (e) => e.reason ?? 'left linked plan steps unfinished',
   conflict: () => 'could not resolve conflicts with the base branch; blocked',
   rate_limited: () => 'hit the usage limit; back in the queue without using an attempt',
   recover: (e) => (e.to_status === 'failed' ? 'failed after repeated daemon restarts' : 'requeued after a daemon restart'),
@@ -96,7 +97,9 @@ const when = 'ml-auto text-sm text-muted';
           <span :class="node">{{ it.ev.type === 'retry' ? '↻' : it.ev.type === 'approve' ? '✓' : '•' }}</span>
           <span>
             {{ EVENT_TEXT[it.ev.type](it.ev) }}
-            <span v-if="it.ev.reason && it.ev.type !== 'sync'" class="text-muted"> · {{ it.ev.reason }}</span>
+            <span v-if="it.ev.reason && it.ev.type !== 'sync' && it.ev.type !== 'plan_unfinished'" class="text-muted">
+              · {{ it.ev.reason }}</span
+            >
           </span>
           <span :class="when">{{ ago(it.at) }}</span>
         </template>

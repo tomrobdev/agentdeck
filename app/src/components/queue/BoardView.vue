@@ -96,6 +96,7 @@ const LABELS: Record<BoardMove, string> = {
                   .join(' ')
               }}</span
             >
+            <span v-if="t.plan_unfinished" class="chip" title="The run left linked plan steps unfinished">steps unfinished</span>
             <span v-if="t.source === 'planner'" class="chip">planner</span>
             <span class="ml-auto text-sm text-muted">{{ ago(t.updated_at) }}</span>
           </div>
