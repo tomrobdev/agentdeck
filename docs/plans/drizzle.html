@@ -114,7 +114,7 @@
       </tr>
     </table>
 
-    <section data-plan-step id="spike" data-status="todo">
+    <section data-plan-step id="spike" data-status="done">
       <h2>Spike: one store on the rc</h2>
       <p>
         On a throwaway branch (<code>spike/drizzle</code>), pin <code>drizzle-orm</code> and <code>drizzle-kit</code> to the current rc and
@@ -129,6 +129,63 @@
         <li><code>pnpm check</code> passes on the spike branch.</li>
         <li>A go or no-go, with what would change in this plan.</li>
       </ul>
+
+      <h3>Findings, 2026-10-25</h3>
+      <p>
+        Branch <code>spike/drizzle</code>, commit <code>4c043be</code>: <code>drizzle-orm</code> and <code>drizzle-kit</code>
+        <code>1.0.0-rc.5</code> (exact), Node 26.12.0, SQLite 3.54.1. <code>settings</code> and <code>repos</code> ported; all 333 daemon
+        tests pass with no test changed, and both typechecks pass.
+      </p>
+      <table>
+        <tr>
+          <th>Question</th>
+          <th>Answer</th>
+        </tr>
+        <tr>
+          <td>Sync API inside <code>atomically</code></td>
+          <td>
+            Yes. <code>.get()</code>, <code>.all()</code> and <code>.run()</code> return synchronously and are typed that way;
+            <code>.run()</code> gives <code>{ changes, lastInsertRowid }</code>. A <code>ROLLBACK TO</code> on the shared connection undoes
+            Drizzle's writes.
+          </td>
+        </tr>
+        <tr>
+          <td>Inferred types vs <code>Repo</code></td>
+          <td>
+            Match, with keys written in snake_case in <code>tables.ts</code> (no casing option needed) and
+            <code>text().$type&lt;PrMode&gt;()</code> for unions. Select with <code>getColumns(table)</code>, not by spreading the table.
+            <b>Drift found:</b> <code>repos.created_at</code> exists in the table and not in <code>Repo</code>. Dropping a column from
+            <code>tables.ts</code> fails <code>tsc</code>.
+          </td>
+        </tr>
+        <tr>
+          <td><code>drizzle-kit</code> under type stripping</td>
+          <td>
+            Works: <code>generate</code> loads <code>tables.ts</code> and its <code>.ts</code> imports from <code>domain/</code> and writes
+            correct SQL. pnpm holds back some of its install scripts ("pnpm approve"); nothing needed them.
+          </td>
+        </tr>
+        <tr>
+          <td><code>pull</code>, and a schema diff</td>
+          <td>
+            <code>pull</code> reads all 9 tables (it names fields in camelCase; rename to snake_case). Better as the drift check:
+            <code>drizzle-kit push --explain</code> against a freshly migrated database, with the node:sqlite driver, reports
+            <b>"No changes detected"</b> for the ported tables.
+          </td>
+        </tr>
+        <tr>
+          <td>Cost</td>
+          <td>
+            Per call, Drizzle against the raw store: <code>getSetting</code> 3.6 vs 2.7 µs, <code>budget()</code> 19.7 vs 9.1 µs,
+            <code>listRepos</code> 16.4 vs 17.8 µs, <code>getRepo</code> 12.9 vs 11.2 µs. Microseconds against a 5-second tick: no concern.
+          </td>
+        </tr>
+      </table>
+      <p>
+        <b>Verdict: go, still gated on 1.0 reaching <code>latest</code>.</b> Changes to this plan: the foundation step adds
+        <code>created_at</code> (and any other drift the type checks find) to the domain types, and uses <code>push --explain</code> as its
+        schema check; the tasks step's cost check becomes an absolute limit.
+      </p>
     </section>
 
     <section data-plan-step id="foundation" data-status="todo">
@@ -137,10 +194,11 @@
         Add <code>drizzle-orm</code> (runtime) and <code>drizzle-kit</code> (dev), exact versions. <code>db/tables.ts</code> defines every
         table to match the migrated schema exactly (start from <code>drizzle-kit pull</code>). <code>openDb</code> also builds
         <code>drizzle({ client })</code> on the same connection and hands it to the stores. <code>db/types-check.ts</code> asserts each
-        table's select type equals its domain type (<code>Task</code>, <code>Repo</code>, <code>Run</code>, …). A test migrates a fresh
-        database and compares <code>PRAGMA table_info</code> for every table with the Drizzle definitions.
-        <code>drizzle.config.ts</code> and a <code>pnpm db:generate</code> script that prints the SQL for a schema change. No store changes
-        yet.
+        table's select type equals its domain type (<code>Task</code>, <code>Repo</code>, <code>Run</code>, …). Fix the drift the assertions
+        find (the spike found <code>repos.created_at</code> missing from <code>Repo</code>). A <code>pnpm db:check</code> script migrates a
+        fresh scratch database and runs <code>drizzle-kit push --explain</code> against it, failing unless it reports no changes;
+        <code>pnpm check</code> runs it. <code>drizzle.config.ts</code> and a <code>pnpm db:generate</code> script that prints the SQL for a
+        schema change. No store changes yet.
       </p>
       <ul data-plan-done>
         <li><code>pnpm check</code> passes, including the crash test.</li>
@@ -188,7 +246,7 @@
       <ul data-plan-done>
         <li><code>pnpm check</code> passes with no test changed.</li>
         <li><code>node daemon/scripts/crash-test.mjs 10</code> passes.</li>
-        <li>A scheduler tick costs no more than 10% over the spike's baseline.</li>
+        <li>A scheduler tick with 100 queued tasks still takes under 5 ms.</li>
       </ul>
     </section>
 
