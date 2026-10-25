@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { MERGE_METHODS, type MergeMethod, type Repo, type RepoDetail, ago, api } from '../api';
+import { MERGE_METHODS, type MergeMethod, type Repo, type RepoDeletion, type RepoDetail, ago, api } from '../api';
 import Modal from './Modal.vue';
 
 defineProps<{ repos: Repo[] }>();
@@ -111,6 +111,74 @@ async function planNow() {
   }
 }
 
+// Archived repos
+const archived = ref<Repo[]>([]);
+const archiveError = ref('');
+const deleting = ref<{ repo: Repo; counts: RepoDeletion } | null>(null);
+const typed = ref('');
+const deleteBusy = ref(false);
+
+async function loadArchived() {
+  try {
+    archived.value = await api.archivedRepos();
+  } catch (e) {
+    archiveError.value = (e as Error).message;
+  }
+}
+loadArchived();
+
+async function archive() {
+  if (!open.value) return;
+  archiveError.value = '';
+  try {
+    await api.archiveRepo(open.value.id);
+    open.value = null;
+    emit('changed');
+    await loadArchived();
+  } catch (e) {
+    editError.value = (e as Error).message;
+  }
+}
+
+async function unarchive(r: Repo) {
+  archiveError.value = '';
+  try {
+    await api.unarchiveRepo(r.id);
+    if (deleting.value?.repo.id === r.id) deleting.value = null;
+    emit('changed');
+    await loadArchived();
+  } catch (e) {
+    archiveError.value = (e as Error).message;
+  }
+}
+
+async function askDelete(r: Repo) {
+  archiveError.value = '';
+  typed.value = '';
+  try {
+    deleting.value = { repo: r, counts: await api.repoDeletion(r.id) };
+  } catch (e) {
+    archiveError.value = (e as Error).message;
+  }
+}
+
+async function confirmDelete() {
+  const d = deleting.value;
+  if (!d || typed.value !== d.repo.name) return;
+  deleteBusy.value = true;
+  try {
+    const res = await api.deleteRepo(d.repo.id);
+    deleting.value = null;
+    if (res.leftover.length) archiveError.value = `Deleted ${res.repo}, but couldn't remove: ${res.leftover.join('; ')}`;
+    emit('changed');
+    await loadArchived();
+  } catch (e) {
+    archiveError.value = (e as Error).message;
+  } finally {
+    deleteBusy.value = false;
+  }
+}
+
 /** The repo's `network` column: a JSON array of hosts. */
 function parseHosts(json: string | undefined): string[] {
   try {
@@ -198,6 +266,14 @@ function parseHosts(json: string | undefined): string[] {
           </p>
           <p v-if="editError" class="form-error">{{ editError }}</p>
           <div class="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              :disabled="!!busy"
+              title="Hide the repo and its tasks and stop its work; you can undo this"
+              @click="archive"
+            >
+              Archive
+            </button>
             <span class="muted mr-auto text-sm">{{ editMsg }}</span>
             <button type="button" @click="planNow" :disabled="!!busy || !goals.trim()">
               {{ busy === 'plan' ? 'Planning…' : 'Save & plan now' }}
@@ -208,6 +284,38 @@ function parseHosts(json: string | undefined): string[] {
       </li>
     </ul>
     <p v-else class="muted">No repos yet.</p>
+
+    <div v-if="archived.length || archiveError" class="mb-4 flex flex-col gap-2 border-t border-border pt-3.5">
+      <h4 class="m-0">Archived</h4>
+      <ul v-if="archived.length" class="m-0 flex list-none flex-col gap-2 p-0">
+        <li v-for="r in archived" :key="r.id" class="flex flex-col gap-2 rounded-md border border-border px-2.5 py-2">
+          <div class="flex items-center gap-2">
+            <span class="font-semibold">{{ r.name }}</span>
+            <code class="muted min-w-0 truncate text-sm">{{ r.path }}</code>
+            <button class="ml-auto" @click="unarchive(r)">Unarchive</button>
+            <button class="text-failed" :disabled="deleting?.repo.id === r.id" @click="askDelete(r)">Delete</button>
+          </div>
+          <form v-if="deleting?.repo.id === r.id" class="flex flex-col gap-2" @submit.prevent="confirmDelete">
+            <p class="m-0 text-sm">
+              Delete <b>{{ r.name }}</b> for good? This removes {{ deleting.counts.tasks }} task(s), {{ deleting.counts.runs }} run(s) and
+              {{ deleting.counts.worktrees }} worktree(s) with their local branches, logs and goals file. GitHub and the repo's own folder
+              are not touched.
+            </p>
+            <label class="field">
+              <span
+                >Type <code>{{ r.name }}</code> to confirm</span
+              >
+              <input v-model="typed" autocomplete="off" />
+            </label>
+            <div class="flex justify-end gap-2">
+              <button type="button" @click="deleting = null">Cancel</button>
+              <button class="text-failed" type="submit" :disabled="deleteBusy || typed !== r.name">Delete {{ r.name }}</button>
+            </div>
+          </form>
+        </li>
+      </ul>
+      <p v-if="archiveError" class="form-error">{{ archiveError }}</p>
+    </div>
 
     <form class="flex flex-col gap-2.5 border-t border-border pt-3.5" @submit.prevent="add">
       <h4 class="m-0">Add a repo</h4>

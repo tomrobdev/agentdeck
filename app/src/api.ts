@@ -65,6 +65,15 @@ export interface RepoDetail extends Repo {
   planner_runs: PlannerRun[];
 }
 
+/** What deleting an archived repo will remove, counted. */
+export interface RepoDeletion {
+  repo: string;
+  archived: boolean;
+  tasks: number;
+  runs: number;
+  worktrees: number;
+}
+
 export interface PlanResult {
   outcome: 'proposed' | 'nothing' | 'failed' | 'rate_limited' | 'no_goals';
   tasks: Task[];
@@ -445,6 +454,12 @@ export const api = {
   plan: (id: number) => call<PlanResult>(`/api/repos/${id}/plan`, { method: 'POST' }),
   doctor: (id: number) => call<DoctorReport>(`/api/repos/${id}/doctor`, { method: 'POST' }),
   resumeRepo: (id: number) => call<Repo>(`/api/repos/${id}/resume`, { method: 'POST' }),
+  archivedRepos: () => call<Repo[]>('/api/repos?archived=1'),
+  archiveRepo: (id: number) => call<Repo>(`/api/repos/${id}/archive`, { method: 'POST' }),
+  unarchiveRepo: (id: number) => call<Repo>(`/api/repos/${id}/unarchive`, { method: 'POST' }),
+  repoDeletion: (id: number) => call<RepoDeletion>(`/api/repos/${id}/deletion`),
+  /** Local only: `leftover` names files that couldn't be removed. */
+  deleteRepo: (id: number) => call<{ repo: string; leftover: string[] }>(`/api/repos/${id}`, { method: 'DELETE' }),
   editTask: (
     id: number,
     patch: {
