@@ -17,13 +17,12 @@ import {
 } from '../domain/files/files.ts';
 import type { Repo } from '../domain/repo/repo.ts';
 import { ActionError } from './errors.ts';
+import { requireTask, requireTaskRepo } from './lookups.ts';
 
 /** The task's repo and the commit its branch is at. */
 async function resolveHead(db: Db, id: number): Promise<{ repo: Repo; head: string }> {
-  const task = db.getTask(id);
-  if (!task) throw new ActionError('no such task');
-  const repo = db.getRepo(task.repo_id);
-  if (!repo) throw new ActionError('the task has no repo');
+  const task = requireTask(db, id);
+  const repo = requireTaskRepo(db, task);
   const head = task.branch ? await branchCommit(repo.path, task.branch) : null;
   if (!head) throw new ActionError('task has no branch yet');
   return { repo, head };

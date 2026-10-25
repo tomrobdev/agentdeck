@@ -50,6 +50,11 @@ export const OPEN_STATUSES: TaskStatus[] = ['proposed', 'queued', 'running', 'ca
 export const EDITABLE_STATUSES: TaskStatus[] = ['proposed', 'queued', 'blocked', 'failed'];
 
 /** First sentence of the prompt, cut at a word boundary. */
+/** The commit message for work an agent left uncommitted in a task's worktree. */
+export function leftoversMessage(task: Pick<Task, 'id' | 'title'>): string {
+  return `agentdeck: uncommitted work from task ${task.id}\n\n${task.title}`;
+}
+
 export function defaultTitle(prompt: string, max = 72): string {
   const first = prompt.split('\n')[0].trim();
   const sentence = first.match(/^.+?[.!?](?=\s|$)/)?.[0] ?? first;

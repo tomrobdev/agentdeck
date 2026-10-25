@@ -11,6 +11,7 @@ import { EDITABLE_STATUSES, type Task, defaultTitle, planStepIds } from '../doma
 import { isSyncing } from './conflicts.ts';
 import { warnStuckDependents } from './dependencies.ts';
 import { ActionError } from './errors.ts';
+import { requireTask, requireTaskRepo } from './lookups.ts';
 import { closePullRequest } from './pull-requests.ts';
 
 /** Step ids as the CLI types them (a,b) or the API sends them (an array); null when none are named. */
@@ -103,8 +104,7 @@ export async function editTask(
     plan_steps?: string[] | string | null;
   },
 ): Promise<Task> {
-  const task = db.getTask(id);
-  if (!task) throw new ActionError('no such task');
+  const task = requireTask(db, id);
   const fields: Parameters<Db['editTask']>[1] = {};
 
   const text = (key: 'title' | 'prompt' | 'model') => {
@@ -135,9 +135,7 @@ export async function editTask(
     const steps = patch.plan_steps !== undefined ? stepList(patch.plan_steps) : given === undefined ? planStepIds(task) : null;
     if (path === null && steps) throw new ActionError('--steps needs --plan');
     if (path !== null) {
-      const repo = db.getRepo(task.repo_id);
-      if (!repo) throw new ActionError('the task has no repo');
-      await checkPlanLink(repo, path, steps);
+      await checkPlanLink(requireTaskRepo(db, task), path, steps);
     }
     fields.plan_path = path;
     fields.plan_steps = path && steps ? JSON.stringify(steps) : null;
@@ -172,8 +170,7 @@ export function rejectTask(db: Db, id: number): void {
 
 /** Another attempt. A `note` ("request changes") is kept on the timeline and goes first in the next run's prompt. */
 export function retryTask(db: Db, id: number, note?: string): void {
-  const t = db.getTask(id);
-  if (!t) throw new ActionError('no such task');
+  const t = requireTask(db, id);
   if (isSyncing(db, id)) throw new ActionError(`#${id} is being brought up to date with its base branch; try again when that is done`);
   if (note !== undefined && typeof note !== 'string') throw new ActionError('note must be text');
   // One more attempt on top of what has been used.
@@ -202,13 +199,11 @@ export function parseDepsRequest(items: string[]): { packages: string[]; dev: bo
  * worktree through the daemon, outside the worker's sandbox. On failure the task stays blocked.
  */
 export async function installNeeds(db: Db, id: number): Promise<{ packages: string[]; dev: boolean }> {
-  const task = db.getTask(id);
-  if (!task) throw new ActionError('no such task');
+  const task = requireTask(db, id);
   if (task.status !== 'blocked') throw new ActionError(`#${id} is ${task.status}, not blocked`);
   const needs = readNeeds(task.needs);
   if (needs?.kind !== 'deps') throw new ActionError(`#${id} has not asked for packages`);
-  const repo = db.getRepo(task.repo_id);
-  if (!repo) throw new ActionError('the task has no repo');
+  const repo = requireTaskRepo(db, task);
   const toolchain = repo.toolchain ?? '';
   if (!INSTALLERS.includes(toolchain))
     throw new ActionError(
@@ -236,8 +231,7 @@ export async function installNeeds(db: Db, id: number): Promise<{ packages: stri
 
 /** Close a task's open PR without merging it. Tasks waiting on it become stuck. */
 export async function closeTaskPr(db: Db, id: number): Promise<void> {
-  const t = db.getTask(id);
-  if (!t) throw new ActionError('no such task');
+  const t = requireTask(db, id);
   if (!t.pr_url || t.pr_state !== 'open') throw new ActionError(`#${id} has no open pull request`);
   try {
     await closePullRequest(db, t);

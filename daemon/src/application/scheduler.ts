@@ -11,7 +11,7 @@ import { startGate } from './gate.ts';
 import { notifyLater } from './notifications.ts';
 import { planNow, plannerDue } from './planner.ts';
 import { resolveConflicting } from './conflicts.ts';
-import { PR_CHECK_REQUESTED, PR_REFRESH_MS, refreshPrStates } from './pull-requests.ts';
+import { PR_REFRESH_MS, refreshPrStates } from './pull-requests.ts';
 import { runTask } from './worker.ts';
 
 /** After a merge, how many times to re-read PRs whose mergeability GitHub is still computing, and how far apart. */
@@ -168,7 +168,7 @@ export class Scheduler {
    */
   private maybeRefreshPrs(): void {
     if (this.opts.once || this.refreshingPrs) return;
-    const requested = Number(this.db.getSetting(PR_CHECK_REQUESTED, '0'));
+    const requested = this.db.prCheckRequested();
     const now = Date.now();
     const due =
       now - this.lastPrRefresh >= this.opts.prRefreshMs ||

@@ -1,6 +1,6 @@
 // Adapter for local git: worktrees, branches and commits.
 import { execFile, spawn } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { promisify } from 'node:util';
 import { WORKTREE_DIR } from '../config.ts';
@@ -194,6 +194,18 @@ export async function aheadOfRemote(worktree: string, branch: string): Promise<n
 /** A throwaway checkout of `ref` with no branch of its own, for checks that must not leave anything behind. */
 export async function addDetachedWorktree(repo: Pick<Repo, 'path'>, path: string, ref: string): Promise<void> {
   await git(repo.path, 'worktree', 'add', '--detach', path, ref);
+}
+
+/** A fresh directory under the daemon's own worktree dir, and the path inside it for a temporary worktree. Remove it with `removeTempDir`. */
+export function makeTempDir(repo: Pick<Repo, 'name'>, prefix: string): { dir: string; worktree: string } {
+  const parent = join(WORKTREE_DIR, repo.name);
+  mkdirSync(parent, { recursive: true });
+  const dir = mkdtempSync(join(parent, `${prefix}-`));
+  return { dir, worktree: join(dir, 'wt') };
+}
+
+export function removeTempDir(path: string): void {
+  rmSync(path, { recursive: true, force: true });
 }
 
 export async function removeWorktree(repo: Repo, path: string): Promise<void> {

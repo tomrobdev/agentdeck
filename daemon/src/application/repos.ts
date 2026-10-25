@@ -13,6 +13,7 @@ import type { Repo } from '../domain/repo/repo.ts';
 import { detectToolchain } from '../domain/repo/toolchain.ts';
 import { type Check, runDoctor } from './doctor.ts';
 import { ActionError } from './errors.ts';
+import { requireRepo } from './lookups.ts';
 import { pauseRepo } from './pause.ts';
 
 /** Register a repo. Its toolchain is detected from the root files and fills in whatever isn't given. */
@@ -41,14 +42,8 @@ export async function addRepo(
   }
 }
 
-function repoOrThrow(db: Db, nameOrId: string | number) {
-  const repo = db.findRepo(String(nameOrId));
-  if (!repo) throw new ActionError(`no repo "${nameOrId}"`);
-  return repo;
-}
-
 export function repoDetail(db: Db, nameOrId: string | number) {
-  const repo = repoOrThrow(db, nameOrId);
+  const repo = requireRepo(db, nameOrId);
   return { ...repo, goals: readGoals(repo), goals_path: goalsPath(repo), planner_runs: db.plannerRuns(repo.id, 5) };
 }
 
@@ -69,7 +64,7 @@ export function updateRepo(
     network?: string | string[];
   },
 ) {
-  const repo = repoOrThrow(db, nameOrId);
+  const repo = requireRepo(db, nameOrId);
   const network = patch.network !== undefined ? normalizeNetwork(patch.network) : undefined;
   const badHost = network?.find((d) => !/^[A-Za-z0-9*.:[\]-]+$/.test(d));
   if (badHost !== undefined) throw new ActionError(`not a host name: ${badHost}`);
@@ -98,7 +93,7 @@ export function updateRepo(
 
 /** Let a paused repo's tasks run again. */
 export function resumeRepo(db: Db, nameOrId: string | number): Repo {
-  const repo = repoOrThrow(db, nameOrId);
+  const repo = requireRepo(db, nameOrId);
   db.setRepoPaused(repo.id, null);
   return db.getRepo(repo.id)!;
 }
@@ -108,7 +103,7 @@ export function resumeRepo(db: Db, nameOrId: string | number): Repo {
  * Refuses while one of its tasks is running. Its tasks keep their statuses; `unarchiveRepo` brings them back.
  */
 export function archiveRepo(db: Db, nameOrId: string | number): Repo {
-  const repo = repoOrThrow(db, nameOrId);
+  const repo = requireRepo(db, nameOrId);
   if (repo.archived_at) return repo;
   if (db.repoHasRunning(repo.id))
     throw new ActionError(`${repo.name} has a task running; cancel it or wait for it to finish, then archive`);
@@ -117,14 +112,14 @@ export function archiveRepo(db: Db, nameOrId: string | number): Repo {
 }
 
 export function unarchiveRepo(db: Db, nameOrId: string | number): Repo {
-  const repo = repoOrThrow(db, nameOrId);
+  const repo = requireRepo(db, nameOrId);
   db.setRepoArchived(repo.id, false);
   return db.getRepo(repo.id)!;
 }
 
 /** What deleting a repo will remove, counted. */
 export function repoDeletionPreview(db: Db, nameOrId: string | number) {
-  const repo = repoOrThrow(db, nameOrId);
+  const repo = requireRepo(db, nameOrId);
   const { tasks, run_logs } = db.repoFootprint(repo.id);
   return {
     repo: repo.name,
@@ -142,7 +137,7 @@ export function repoDeletionPreview(db: Db, nameOrId: string | number) {
  * `leftover` names what couldn't be removed.
  */
 export async function deleteRepo(db: Db, nameOrId: string | number): Promise<{ repo: string; leftover: string[] }> {
-  const repo = repoOrThrow(db, nameOrId);
+  const repo = requireRepo(db, nameOrId);
   if (!repo.archived_at) throw new ActionError(`${repo.name} is not archived; archive it first, then delete`);
   const { tasks, run_logs, planner_logs } = db.repoFootprint(repo.id);
   const leftover: string[] = [];
@@ -182,7 +177,7 @@ export interface DoctorReport {
  * a pass clears any pause.
  */
 export async function doctorRepo(db: Db, nameOrId: string | number): Promise<DoctorReport> {
-  const repo = repoOrThrow(db, nameOrId);
+  const repo = requireRepo(db, nameOrId);
   const checks = await runDoctor(repo);
   const failed = checks.find((c) => !c.ok);
   if (failed) pauseRepo(db, repo, `doctor: ${failed.name}`, { replace: true });

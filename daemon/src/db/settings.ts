@@ -1,26 +1,62 @@
 // Key-value settings: pause flag, budget, concurrency, notification and planner options.
 import type { DatabaseSync } from 'node:sqlite';
 import { DEFAULTS } from '../config.ts';
+import { NOTIFY_KINDS, type NotifyKind, type NotifySettings } from '../domain/notification.ts';
+import type { PlannerSettings } from '../domain/planner/plan.ts';
 import { BUDGET_KEYS, type Budget, DEFAULT_BUDGET } from '../domain/usage/governor.ts';
 
+/** What each setting reads as until someone sets it. The daemon starts paused until someone resumes it. */
+export const SETTING_DEFAULTS = {
+  paused: '1',
+  rate_limited_until: '0',
+  pr_check_requested: '0',
+  reload_on_change: '0',
+  max_concurrent: String(DEFAULTS.maxConcurrent),
+  notify_desktop: '1',
+  notify_events: NOTIFY_KINDS.join(','),
+  ntfy_topic: '',
+  ntfy_server: 'https://ntfy.sh',
+  planner_enabled: '1',
+  planner_interval_hours: '3',
+  planner_max_tasks: '3',
+  planner_model: 'sonnet',
+  ...Object.fromEntries(BUDGET_KEYS.map((k) => [k, String(DEFAULT_BUDGET[k])])),
+} as Record<string, string>;
+
 export function settingsStore(db: DatabaseSync) {
+  const get = (key: string): string => {
+    const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key) as { value: string } | undefined;
+    return row?.value ?? SETTING_DEFAULTS[key] ?? '';
+  };
+  const set = (key: string, value: string): void => {
+    db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(key, value);
+  };
   return {
-    getSetting(key: string, fallback: string): string {
-      const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key) as { value: string } | undefined;
-      return row?.value ?? fallback;
-    },
-    setSetting(key: string, value: string): void {
-      db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(key, value);
-    },
-    isPaused(): boolean {
-      // The daemon starts paused until someone explicitly resumes it.
-      return this.getSetting('paused', '1') === '1';
-    },
-    budget(): Budget {
-      return Object.fromEntries(BUDGET_KEYS.map((k) => [k, Number(this.getSetting(k, String(DEFAULT_BUDGET[k])))])) as unknown as Budget;
-    },
-    maxConcurrent(): number {
-      return Number(this.getSetting('max_concurrent', String(DEFAULTS.maxConcurrent)));
-    },
+    /** Raw access by key, for updateSettings. Everything else uses the typed accessors below. */
+    getSetting: get,
+    setSetting: set,
+    isPaused: (): boolean => get('paused') === '1',
+    setPaused: (paused: boolean): void => set('paused', paused ? '1' : '0'),
+    /** Unix seconds until which claude is rate limited, or null when it is not (or has lifted). */
+    rateLimitedUntil: (): number | null => Number(get('rate_limited_until')) || null,
+    setRateLimitedUntil: (until: number): void => set('rate_limited_until', String(until)),
+    reloadOnChange: (): boolean => get('reload_on_change') === '1',
+    /** When a PR re-read was last asked for, in ms since the epoch. */
+    prCheckRequested: (): number => Number(get('pr_check_requested')),
+    requestPrCheck: (at = Date.now()): void => set('pr_check_requested', String(at)),
+    budget: (): Budget => Object.fromEntries(BUDGET_KEYS.map((k) => [k, Number(get(k))])) as unknown as Budget,
+    maxConcurrent: (): number => Number(get('max_concurrent')),
+    notifySettings: (): NotifySettings => ({
+      desktop: get('notify_desktop') === '1',
+      events: get('notify_events').split(',').filter(Boolean) as NotifyKind[],
+      ntfy_topic: get('ntfy_topic'),
+      ntfy_server: get('ntfy_server'),
+    }),
+    plannerSettings: (): PlannerSettings => ({
+      enabled: get('planner_enabled') === '1',
+      interval_hours: Number(get('planner_interval_hours')),
+      max_tasks: Number(get('planner_max_tasks')),
+      model: get('planner_model'),
+    }),
   };
 }

@@ -1,10 +1,30 @@
 // Runs one headless `claude -p` process with stream-json output: logs every line,
 // reports the usage windows it sees, and returns the final result event.
 import { spawn } from 'node:child_process';
-import type { WriteStream } from 'node:fs';
+import { accessSync, constants, type WriteStream } from 'node:fs';
+import { delimiter, isAbsolute, join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { claudeBin } from '../config.ts';
 import { activeChildren, killGroup } from './processes.ts';
+
+function executable(path: string): boolean {
+  try {
+    accessSync(path, constants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Where the claude binary is, or null. A bare name is looked up on PATH. */
+export function findClaude(): string | null {
+  const bin = claudeBin();
+  if (isAbsolute(bin) || bin.includes('/')) return executable(bin) ? bin : null;
+  for (const dir of (process.env.PATH ?? '').split(delimiter)) {
+    if (dir && executable(join(dir, bin))) return join(dir, bin);
+  }
+  return null;
+}
 
 export interface ClaudeResult {
   subtype?: string;

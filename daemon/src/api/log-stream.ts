@@ -3,6 +3,7 @@ import { closeSync, existsSync, openSync, readSync, statSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Db } from '../db/index.ts';
 import { parseLogLine } from '../domain/run/log.ts';
+import { pickRun } from '../domain/run/run.ts';
 
 const LOG_POLL_MS = 500;
 
@@ -14,13 +15,7 @@ export function streamLog(
   taskId: number,
   pick: { attempt?: number; run?: number } = {},
 ): void {
-  const runs = db.runsForTask(taskId);
-  // By attempt means the work run of that attempt; a resolve run is picked by its id.
-  const run = pick.run
-    ? runs.find((r) => r.id === pick.run)
-    : pick.attempt
-      ? runs.find((r) => r.attempt === pick.attempt && r.kind === 'work')
-      : runs.at(-1);
+  const run = pickRun(db.runsForTask(taskId), pick);
   res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
   if (!run) {
     res.write('event: end\ndata: {}\n\n');

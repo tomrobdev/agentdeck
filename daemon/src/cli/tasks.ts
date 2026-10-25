@@ -6,7 +6,7 @@ import { unblocksOf, waitingFor } from '../application/dependencies.ts';
 import { removeWorktree } from '../adapters/git.ts';
 import type { SyncReport } from '../application/conflicts.ts';
 import { planProgress } from '../domain/plan/plan.ts';
-import { readNeeds } from '../domain/run/run.ts';
+import { pickRun, readNeeds } from '../domain/run/run.ts';
 import { TASK_STATUSES } from '../domain/task/lifecycle.ts';
 import { filterTasks } from '../domain/task/listing.ts';
 import { planStepIds } from '../domain/task/task.ts';
@@ -108,8 +108,7 @@ export const taskCommands: Record<string, Command> = {
   },
   log: ({ db, flags, rest }) => {
     const t = db.getTask(taskId(rest[0])) ?? die('no such task');
-    const runs = db.runsForTask(t.id);
-    const run = flags.attempt ? runs.find((r) => r.attempt === Number(flags.attempt) && r.kind === 'work') : runs.at(-1);
+    const run = pickRun(db.runsForTask(t.id), { attempt: flags.attempt ? Number(flags.attempt) : undefined });
     if (!run) die('no runs yet');
     if (flags.raw) process.stdout.write(readFileSync(run.log_path, 'utf8'));
     else printLog(run.log_path);
