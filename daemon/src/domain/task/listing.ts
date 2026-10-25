@@ -1,95 +1,129 @@
-// Filtering and sorting task lists, for `agentdeck ls`. Pure: no I/O.
+// Filtering and sorting task lists: `agentdeck ls` and the dashboard's queue share it. Pure: no I/O.
+import { STATUS_GROUPS, isMerged, isReview, isStuck, isWaiting, statusGroup } from './stage.ts';
 import type { TaskStatus } from './lifecycle.ts';
-import { isMerged, isReview, isStuck, isWaiting } from './stage.ts';
 import type { TaskSummary } from './task.ts';
 
-/** A task as listed: with where it stands on its `after_task` (as waitingFor reports it) and the tasks its open PR holds up. */
+/**
+ * A task as listed: with where it stands on its `after_task` (as waitingFor reports it), the tasks its open PR holds up and, from
+ * the API, its repo's name. A daemon from before `unblocks` existed sends none, which reads as empty.
+ */
 export type ListedTask = TaskSummary & { waiting: { on: number; stuck: string | null } | null; unblocks: number[] };
+export type Listable = Pick<
+  ListedTask,
+  | 'id'
+  | 'repo_id'
+  | 'title'
+  | 'status'
+  | 'priority'
+  | 'branch'
+  | 'model'
+  | 'stop_reason'
+  | 'source'
+  | 'pr_url'
+  | 'pr_state'
+  | 'waiting'
+  | 'updated_at'
+> & { repo?: string | null; unblocks?: number[] };
 
-type Test = (t: ListedTask) => boolean;
+type Test = (t: Listable) => boolean;
 
 const is =
   (...statuses: TaskStatus[]): Test =>
   (t) =>
     statuses.includes(t.status);
 
-/** States finer than a status: a queued task may be waiting on --after or stuck, a done task may have a PR. */
-const STATES: Record<string, Test> = {
-  proposed: is('proposed'),
-  queued: is('queued'),
-  running: is('running', 'cancel_requested'),
-  done: is('done'),
-  blocked: is('blocked'),
-  failed: is('failed'),
-  cancelled: is('cancelled'),
-  waiting: isWaiting,
-  stuck: isStuck,
-  review: isReview,
-  'pr-open': isReview,
-  merged: isMerged,
-  'pr-closed': (t) => t.status === 'done' && t.pr_state === 'closed',
-  'no-pr': (t) => t.status === 'done' && !t.pr_url,
+/** States finer than a status: a queued task may be waiting on --after or stuck, a done task may have a PR. In the dashboard's order. */
+export const FILTER_STATES: { key: string; label: string; test: Test }[] = [
+  { key: 'running', label: 'Running', test: is('running', 'cancel_requested') },
+  { key: 'queued', label: 'Queued', test: is('queued') },
+  { key: 'waiting', label: 'Waiting', test: isWaiting },
+  { key: 'stuck', label: 'Stuck', test: isStuck },
+  { key: 'proposed', label: 'Proposed', test: is('proposed') },
+  { key: 'blocked', label: 'Blocked', test: is('blocked') },
+  { key: 'failed', label: 'Failed', test: is('failed') },
+  { key: 'review', label: 'Review', test: isReview },
+  { key: 'done', label: 'Done', test: is('done') },
+  { key: 'pr-open', label: 'PR open', test: isReview },
+  { key: 'merged', label: 'Merged', test: isMerged },
+  { key: 'pr-closed', label: 'PR closed', test: (t) => t.status === 'done' && t.pr_state === 'closed' },
+  { key: 'no-pr', label: 'No PR', test: (t) => t.status === 'done' && !t.pr_url },
+  { key: 'cancelled', label: 'Cancelled', test: is('cancelled') },
+];
+
+const stateTests = (keys: string[]): Test => {
+  const tests = FILTER_STATES.filter((s) => keys.includes(s.key)).map((s) => s.test);
+  return (t) => tests.some((test) => test(t));
 };
 
-/** Names for several states at once, matching the dashboard's groups. A stuck task needs you, so it isn't active. */
+/** Names for several states at once, for the CLI. A stuck task needs you, so it isn't active. */
 const GROUPS: Record<string, Test> = {
-  active: (t) => STATES.running(t) || (t.status === 'queued' && !isStuck(t)),
-  'needs-you': (t) => ['blocked', 'failed', 'stuck'].some((s) => STATES[s](t)),
+  active: (t) => stateTests(['running'])(t) || (t.status === 'queued' && !isStuck(t)),
+  'needs-you': stateTests(['blocked', 'failed', 'stuck']),
 };
 
-const STATE_NAMES = [...Object.keys(GROUPS), ...Object.keys(STATES)];
+/** What the dashboard's "need you" chip filters by: proposals to approve, blocked tasks and PRs to review. Not the `needs-you` group. */
+export const DECISION_STATES = ['proposed', 'blocked', 'review'];
 
-type Compare = (a: ListedTask, b: ListedTask) => number;
+const STATE_NAMES = [...Object.keys(GROUPS), ...FILTER_STATES.map((s) => s.key)];
 
-/** The dashboard's status groups in attention order: what needs you, review, proposals, running, queued, done (merged too), cancelled. */
-function attentionRank(t: ListedTask): number {
-  if (GROUPS['needs-you'](t)) return 0;
-  if (isReview(t)) return 1;
-  return { proposed: 2, running: 3, cancel_requested: 3, queued: 4, done: 5, cancelled: 6, blocked: 0, failed: 0 }[t.status];
-}
+type Compare = (a: Listable, b: Listable) => number;
 
-export const SORTS: Record<string, Compare> = {
-  // In review, the PRs that hold up other tasks come first.
-  attention: (a, b) =>
-    attentionRank(a) - attentionRank(b) || b.unblocks.length - a.unblocks.length || b.priority - a.priority || b.id - a.id,
-  updated: (a, b) => b.updated_at.localeCompare(a.updated_at) || b.id - a.id,
-  newest: (a, b) => b.id - a.id,
-  oldest: (a, b) => a.id - b.id,
-  priority: (a, b) => b.priority - a.priority || b.id - a.id,
-};
+/** Where a task sits in attention order: the index of its status group in STATUS_GROUPS. */
+export const attentionRank = (t: Pick<Listable, 'status' | 'pr_state' | 'waiting'>): number =>
+  STATUS_GROUPS.findIndex((g) => g.key === statusGroup(t));
+
+const unblocks = (t: Listable) => t.unblocks?.length ?? 0;
+
+export const SORT_OPTIONS: { key: string; label: string; compare: Compare }[] = [
+  {
+    key: 'attention',
+    label: 'Needs attention',
+    // In review, the PRs that hold up other tasks come first.
+    compare: (a, b) => attentionRank(a) - attentionRank(b) || unblocks(b) - unblocks(a) || b.priority - a.priority || b.id - a.id,
+  },
+  { key: 'updated', label: 'Recently updated', compare: (a, b) => b.updated_at.localeCompare(a.updated_at) || b.id - a.id },
+  { key: 'newest', label: 'Newest', compare: (a, b) => b.id - a.id },
+  { key: 'oldest', label: 'Oldest', compare: (a, b) => a.id - b.id },
+  { key: 'priority', label: 'Priority', compare: (a, b) => b.priority - a.priority || b.id - a.id },
+];
 
 export interface ListFilter {
   /** State or group names; a task matching any of them is kept. Empty keeps every task. */
   states: string[];
   repo_id?: number;
-  /** Matches `#id` or an id prefix, or text in the title, branch, model or blocked reason. */
+  /** Repo names (`?` for a task without one); a task in any of them is kept. Empty keeps every task. */
+  repos?: string[];
+  source?: string | null;
+  /** Matches `#id` or an id prefix, or text in the title, repo, branch, model or blocked reason. */
   search?: string;
   sort: string;
 }
 
 function stateTest(name: string): Test {
-  const test = GROUPS[name] ?? STATES[name];
+  const test = GROUPS[name] ?? FILTER_STATES.find((s) => s.key === name)?.test;
   if (!test) throw new Error(`unknown state "${name}" (use ${STATE_NAMES.join(', ')})`);
   return test;
 }
 
-function matchesSearch(t: ListedTask, text: string): boolean {
+function matchesSearch(t: Listable, text: string): boolean {
   const q = text.trim().toLowerCase();
   if (!q) return true;
   const id = q.replace(/^#/, '');
   if (/^\d+$/.test(id)) return String(t.id).startsWith(id) || t.title.toLowerCase().includes(q);
-  return [t.title, t.branch, t.model, t.stop_reason].some((s) => s?.toLowerCase().includes(q));
+  return [t.title, t.repo, t.branch, t.model, t.stop_reason].some((s) => s?.toLowerCase().includes(q));
 }
 
 /** The tasks that pass the filter, sorted. Throws on an unknown state or sort, naming the valid ones. */
-export function filterTasks<T extends ListedTask>(tasks: T[], filter: ListFilter): T[] {
-  const compare = SORTS[filter.sort];
-  if (!compare) throw new Error(`unknown sort "${filter.sort}" (use ${Object.keys(SORTS).join(', ')})`);
+export function filterTasks<T extends Listable>(tasks: T[], filter: ListFilter): T[] {
+  const compare = SORT_OPTIONS.find((s) => s.key === filter.sort)?.compare;
+  if (!compare) throw new Error(`unknown sort "${filter.sort}" (use ${SORT_OPTIONS.map((s) => s.key).join(', ')})`);
   const tests = filter.states.map(stateTest);
   return tasks
     .filter(
       (t) =>
         (filter.repo_id === undefined || t.repo_id === filter.repo_id) &&
+        (!filter.repos?.length || filter.repos.includes(t.repo ?? '?')) &&
+        (!filter.source || t.source === filter.source) &&
         (!tests.length || tests.some((test) => test(t))) &&
         matchesSearch(t, filter.search ?? ''),
     )

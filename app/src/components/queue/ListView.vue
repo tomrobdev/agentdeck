@@ -2,7 +2,7 @@
 import { nextTick, watch } from 'vue';
 import { ago } from '../../api';
 import { openExternal } from '../../native';
-import { type Group, type GroupBy, canApprove, quickRetry, readNeeds, statusLabel, unblocksOf } from '../../taskView';
+import { type Group, type GroupBy, personEvents, quickRetry, readNeeds, statusLabel, unblocksOf } from '../../taskView';
 import PriorityIcon from './PriorityIcon.vue';
 import StatusIcon from './StatusIcon.vue';
 
@@ -113,7 +113,9 @@ watch(
               <span v-if="show.repo" data-repo class="chip max-w-[120px] truncate">{{ t.repo }}</span>
             </span>
             <span class="flex-none gap-1" :class="t.id === selected ? 'flex' : 'hidden group-hover:flex'" @click.stop>
-              <button v-if="canApprove(t)" class="btn-mini" title="Approve (a)" @click="emit('act', 'approve', t.id)">Approve</button>
+              <button v-if="personEvents(t).includes('approve')" class="btn-mini" title="Approve (a)" @click="emit('act', 'approve', t.id)">
+                Approve
+              </button>
               <button v-if="quickRetry(t)" class="btn-mini" title="Retry (r)" @click="emit('act', 'retry', t.id)">Retry</button>
               <button v-if="t.pr_url" class="btn-mini" title="Open the pull request" @click="openExternal(t.pr_url)">PR ↗</button>
             </span>

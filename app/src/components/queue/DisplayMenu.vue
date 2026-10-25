@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { GROUP_BYS, type GroupBy, SORTS } from '../../taskView';
+import { GROUP_BYS, type GroupBy, SORT_OPTIONS } from '../../taskView';
 import type { ShowProps } from './ListView.vue';
 import Popover from './Popover.vue';
 
@@ -40,7 +40,7 @@ const PROPS: { key: keyof ShowProps; label: string }[] = [
     <div class="flex items-center justify-between gap-3 px-2 py-1">
       <span>Ordering</span>
       <select class="w-[150px] px-1.5 py-0.5" :value="display.sort" @change="set({ sort: ($event.target as HTMLSelectElement).value })">
-        <option v-for="s in SORTS" :key="s.key" :value="s.key">{{ s.label }}</option>
+        <option v-for="s in SORT_OPTIONS" :key="s.key" :value="s.key">{{ s.label }}</option>
       </select>
     </div>
     <label class="flex items-center justify-between gap-3 px-2 py-1">
