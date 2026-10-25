@@ -5,6 +5,7 @@ import { chmodSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, test } from 'node:test';
+import type { Repo } from '../src/domain/repo/repo.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-test-'));
 process.env.AGENTDECK_HOME = home;
@@ -211,8 +212,9 @@ test('governor holds queued work over the 5h cap and notifies once', async () =>
 
 test('repo add detects the toolchain; repos registered before detection get its rules on the fly', async () => {
   const { addRepo } = await import('../src/application/actions.ts');
-  const { effectiveTools } = await import('../src/application/tools.ts');
-  const { DEFAULT_ALLOWED_TOOLS } = await import('../src/domain/repo/tools.ts');
+  const { rootInfo } = await import('../src/adapters/repo-root.ts');
+  const { DEFAULT_ALLOWED_TOOLS, allowedTools } = await import('../src/domain/repo/tools.ts');
+  const effectiveTools = (repo: Repo, dir: string) => allowedTools(repo, rootInfo(dir));
   const jsRepo = (name: string) => {
     const dir = join(home, name);
     execFileSync('mkdir', ['-p', dir]);

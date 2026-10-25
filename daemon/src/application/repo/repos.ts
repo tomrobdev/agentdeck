@@ -39,7 +39,7 @@ export async function addRepo(
       path: abs,
       base_branch: base || (await currentBranch(abs)),
       test_cmd: test || detected?.test_cmd || null,
-      // Left null unless given, so the rules follow the repo's scripts as they change (application/tools.ts).
+      // Left null unless given, so the rules follow the repo's scripts as they change (domain/repo/tools.ts).
       allowed_tools: tools?.length ? tools : null,
       toolchain: detected?.toolchain ?? null,
       setup_cmd: setup || detected?.setup_cmd || null,

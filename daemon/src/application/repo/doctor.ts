@@ -19,7 +19,7 @@ import { SETUP_TIMEOUT_MS, TEST_TIMEOUT_MS, claudeBin } from '../../config.ts';
 import type { Repo } from '../../domain/repo/repo.ts';
 import { refusedCommands } from '../../domain/repo/tool-rules.ts';
 import { detectToolchain } from '../../domain/repo/toolchain.ts';
-import { effectiveTools } from '../tools.ts';
+import { allowedTools } from '../../domain/repo/tools.ts';
 
 export interface Check {
   name: string;
@@ -102,7 +102,7 @@ export async function runDoctor(repo: Repo): Promise<Check[]> {
 
     if (!repo.test_cmd) add('tool rules', true, 'no test command');
     else {
-      const refused = refusedCommands(repo.test_cmd, effectiveTools(repo, worktree ?? repo.path));
+      const refused = refusedCommands(repo.test_cmd, allowedTools(repo, rootInfo(worktree ?? repo.path)));
       add(
         'tool rules',
         refused.length === 0,

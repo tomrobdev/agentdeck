@@ -8,7 +8,14 @@ import { PLAN_LIMIT, isPlanPath, parsePlan } from '../../domain/plan/plan.ts';
 import type { Repo } from '../../domain/repo/repo.ts';
 import { readNeeds } from '../../domain/task/needs.ts';
 import { hasOpenPr } from '../../domain/task/stage.ts';
-import { archivedRepoError, maxAttemptsError, maxTurnsError, modelError, priorityError, stepsNeedPlanError } from '../../domain/task/rules.ts';
+import {
+  archivedRepoError,
+  maxAttemptsError,
+  maxTurnsError,
+  modelError,
+  priorityError,
+  stepsNeedPlanError,
+} from '../../domain/task/rules.ts';
 import { EDITABLE_STATUSES, type Task, defaultTitle, planStepIds } from '../../domain/task/task.ts';
 import { lastLine } from '../../domain/text.ts';
 import { isSyncing } from '../sync.ts';
