@@ -70,17 +70,32 @@ export function getSettings(db: Db): Settings {
   };
 }
 
+export interface SettingsPatch {
+  max_concurrent?: number;
+  budget?: Partial<Budget>;
+  notify?: Partial<NotifySettings>;
+  planner?: Partial<PlannerSettings>;
+  reload_on_change?: boolean;
+}
+
+/** The patch `agentdeck set <key> <value>` stands for. Throws ActionError for a key it does not know. */
+export function settingPatch(key: string | undefined, value: string): SettingsPatch {
+  const on = (v: string) => ['1', 'on', 'true', 'yes'].includes(v.toLowerCase());
+  if (key === 'max_concurrent') return { max_concurrent: Number(value) };
+  if (key && (BUDGET_KEYS as string[]).includes(key)) return { budget: { [key]: Number(value) } };
+  if (key === 'notify_desktop') return { notify: { desktop: on(value) } };
+  if (key === 'notify_events') return { notify: { events: value.split(',').filter(Boolean) as NotifyKind[] } };
+  if (key === 'ntfy_topic' || key === 'ntfy_server') return { notify: { [key]: value } };
+  if (key === 'reload_on_change') return { reload_on_change: on(value) };
+  if (key === 'planner_enabled') return { planner: { enabled: on(value) } };
+  if (key === 'planner_interval_hours') return { planner: { interval_hours: Number(value) } };
+  if (key === 'planner_max_tasks') return { planner: { max_tasks: Number(value) } };
+  if (key === 'planner_model') return { planner: { model: value } };
+  throw new ActionError(`unknown setting "${key}"; see agentdeck help`);
+}
+
 /** Apply a partial settings update after validating all of it. */
-export function updateSettings(
-  db: Db,
-  patch: {
-    max_concurrent?: number;
-    budget?: Partial<Budget>;
-    notify?: Partial<NotifySettings>;
-    planner?: Partial<PlannerSettings>;
-    reload_on_change?: boolean;
-  },
-): Settings {
+export function updateSettings(db: Db, patch: SettingsPatch): Settings {
   const writes: [string, string][] = [];
   const body = object(patch);
   const section = (key: string) => (body[key] === undefined ? undefined : object(body[key]));

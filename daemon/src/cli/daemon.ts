@@ -1,16 +1,9 @@
 // Daemon commands: the service, the scheduler, pause, status and settings.
-import { resolve } from 'node:path';
 import * as actions from '../application/actions.ts';
-import { startApi } from '../api/server.ts';
-import { checkoutCommit } from '../adapters/git.ts';
-import { BUDGET_KEYS } from '../domain/usage/governor.ts';
-import type { NotifyKind } from '../domain/notification.ts';
-import { Scheduler } from '../application/scheduler.ts';
 import * as service from '../adapters/service.ts';
-import { API_PORT, DB_PATH, DEFAULTS } from '../config.ts';
+import { DB_PATH } from '../config.ts';
 import { gracefulRestart } from '../application/restart.ts';
-import { reloadDecision } from '../domain/daemon/restart.ts';
-import { watchSource } from '../adapters/watch.ts';
+import { runDaemon } from '../daemon.ts';
 import { logsOptions, restartOptions, serviceAction } from './daemon-args.ts';
 import { die, relTime } from './format.ts';
 import type { Command } from './context.ts';
@@ -26,60 +19,7 @@ async function launchd<T>(fn: () => Promise<T>): Promise<T> {
 
 /** `daemon` and `run-once` share one implementation; `cmd` says which was typed. */
 const runScheduler: Command = async ({ db, cmd }) => {
-  const once = cmd === 'run-once';
-  // Read once at start: it names the code this process loaded, even if the checkout moves on later.
-  const info = { commit: await checkoutCommit(import.meta.dirname), started_at: new Date().toISOString() };
-  let restartRequested = false;
-  const changed: string[] = [];
-  let lastChangeAt: number | null = null;
-  if (!once) {
-    watchSource(resolve(import.meta.dirname, '..'), (file) => {
-      if (!changed.includes(file)) changed.push(file);
-      lastChangeAt = Date.now();
-    });
-  }
-  const reload = once
-    ? undefined
-    : {
-        check: ({ tasks, planning }: { tasks: number; planning: boolean }) =>
-          reloadDecision({
-            enabled: db.reloadOnChange(),
-            changed,
-            lastChangeAt,
-            now: Date.now(),
-            tasks,
-            planning,
-            requested: restartRequested,
-          }),
-        // launchd's KeepAlive starts the daemon again on the code now on disk.
-        exit: () => process.exit(0),
-      };
-  const scheduler = new Scheduler(db, { once, keepAwake: !once, reload });
-  for (const sig of ['SIGINT', 'SIGTERM'] as const) {
-    process.on(sig, () => {
-      console.log(`${sig}: stopping workers; their tasks will be requeued on next start`);
-      scheduler.stop();
-      process.exit(0);
-    });
-  }
-  if (!once) {
-    const requestRestart = () => {
-      restartRequested = true;
-      // After the API has answered: waking may exit the process at once.
-      setTimeout(() => scheduler.wake(), 200);
-    };
-    const api = await startApi(db, API_PORT, scheduler, { info, requestRestart }).catch((err) => {
-      if (err?.code === 'EADDRINUSE')
-        die(`port ${API_PORT} is in use: another agentdeck daemon is probably running (see \`agentdeck service\`)`);
-      throw err;
-    });
-    console.log(`api        http://127.0.0.1:${API_PORT}`);
-    process.on('exit', () => api.close());
-  }
-  console.log(
-    `agentdeck ${once ? 'run-once' : 'daemon'}: ${db.isPaused() && !once ? 'PAUSED (agentdeck resume to start)' : 'active'}, max ${db.maxConcurrent()} concurrent, tick ${DEFAULTS.tickMs / 1000}s`,
-  );
-  await scheduler.run();
+  await runDaemon({ db, once: cmd === 'run-once', log: console.log }).catch((err) => die(err instanceof Error ? err.message : String(err)));
 };
 
 export const daemonCommands: Record<string, Command> = {
@@ -137,18 +77,7 @@ export const daemonCommands: Record<string, Command> = {
   },
   set: ({ db, rest }) => {
     const [key, value = ''] = rest;
-    const on = (v: string) => ['1', 'on', 'true', 'yes'].includes(v.toLowerCase());
-    if (key === 'max_concurrent') actions.updateSettings(db, { max_concurrent: Number(value) });
-    else if ((BUDGET_KEYS as string[]).includes(key)) actions.updateSettings(db, { budget: { [key]: Number(value) } });
-    else if (key === 'notify_desktop') actions.updateSettings(db, { notify: { desktop: on(value) } });
-    else if (key === 'notify_events') actions.updateSettings(db, { notify: { events: value.split(',').filter(Boolean) as NotifyKind[] } });
-    else if (key === 'ntfy_topic' || key === 'ntfy_server') actions.updateSettings(db, { notify: { [key]: value } });
-    else if (key === 'reload_on_change') actions.updateSettings(db, { reload_on_change: on(value) });
-    else if (key === 'planner_enabled') actions.updateSettings(db, { planner: { enabled: on(value) } });
-    else if (key === 'planner_interval_hours') actions.updateSettings(db, { planner: { interval_hours: Number(value) } });
-    else if (key === 'planner_max_tasks') actions.updateSettings(db, { planner: { max_tasks: Number(value) } });
-    else if (key === 'planner_model') actions.updateSettings(db, { planner: { model: value } });
-    else die(`unknown setting "${key}"; see agentdeck help`);
+    actions.updateSettings(db, actions.settingPatch(key, value));
     console.log(`${key} = ${value}`);
   },
   settings: ({ db }) => {

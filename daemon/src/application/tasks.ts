@@ -1,7 +1,7 @@
 // Use cases for tasks: add, edit, and move them through the lifecycle on a person's request.
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { git, readFile, resolveCommit } from '../adapters/git.ts';
+import { git, readFile, removeWorktree, resolveCommit } from '../adapters/git.ts';
 import { lastLine, runProgram } from '../adapters/shell.ts';
 import type { Db } from '../db/index.ts';
 import { PLAN_LIMIT, isPlanPath, parsePlan } from '../domain/plan/plan.ts';
@@ -241,4 +241,14 @@ export async function closeTaskPr(db: Db, id: number): Promise<void> {
   } catch (err) {
     throw new ActionError(`could not close the PR: ${(err as Error).message}`);
   }
+}
+
+/** Remove a task's worktree; its branch is kept. Not while the task is running. */
+export async function removeTaskWorktree(db: Db, id: number): Promise<{ branch: string | null }> {
+  const t = requireTask(db, id);
+  if (t.status === 'running' || t.status === 'cancel_requested') throw new ActionError('task is running');
+  if (!t.worktree) throw new ActionError('task has no worktree');
+  await removeWorktree(requireTaskRepo(db, t), t.worktree);
+  db.updateTask(t.id, { worktree: null });
+  return { branch: t.branch };
 }
