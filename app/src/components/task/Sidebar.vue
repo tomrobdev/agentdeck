@@ -4,12 +4,13 @@ import { type TaskDetail, api } from '../../api';
 import { openExternal, useCopy } from '../../native';
 import { openTask } from '../../router';
 import { PRIORITY_LEVELS, canEdit, priorityLevel, statusLabel } from '../../taskView';
+import { useActions } from '../../useActions';
 import PriorityIcon from '../queue/PriorityIcon.vue';
 import StatusIcon from '../queue/StatusIcon.vue';
 
 // Task properties, GitHub-sidebar style. Priority, model and turns are editable while the task is.
 const props = defineProps<{ task: TaskDetail }>();
-const emit = defineEmits<{ changed: []; error: [msg: string] }>();
+const { run } = useActions();
 
 const editable = computed(() => canEdit(props.task));
 const editing = ref<'priority' | 'model' | 'max_turns' | null>(null);
@@ -26,12 +27,7 @@ async function save() {
   const field = editing.value;
   editing.value = null;
   if (!field || draft.value.trim() === String(props.task[field])) return;
-  try {
-    await api.editTask(props.task.id, { [field]: field === 'model' ? draft.value.trim() : Number(draft.value) });
-    emit('changed');
-  } catch (e) {
-    emit('error', (e as Error).message);
-  }
+  await run(() => api.editTask(props.task.id, { [field]: field === 'model' ? draft.value.trim() : Number(draft.value) }));
 }
 
 const levelLabel = computed(() => PRIORITY_LEVELS.find((l) => l.key === priorityLevel(props.task.priority))!.label);

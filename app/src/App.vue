@@ -13,6 +13,7 @@ import QueueView from './components/queue/QueueView.vue';
 import TaskPage from './components/task/TaskPage.vue';
 import { openTask, route } from './router';
 import { type BoardMove, needYouCount, openingTab } from './taskView';
+import { provideActions } from './useActions';
 
 const POLL_MS = 2000;
 
@@ -22,7 +23,6 @@ const repos = ref<Repo[]>([]);
 const selectedId = ref<number | null>(null);
 const detail = ref<Detail | null>(null);
 const offline = ref(false);
-const busy = ref(false);
 const toast = ref('');
 const modal = ref<'new' | 'repos' | 'settings' | null>(null);
 
@@ -58,17 +58,12 @@ async function refresh() {
   }
 }
 
-async function act(fn: () => Promise<unknown>) {
-  busy.value = true;
-  try {
-    await fn();
-    await refresh();
-  } catch (e) {
-    flash((e as Error).message);
-  } finally {
-    busy.value = false;
-  }
+// After a change the repos list may have moved too (the Repos panel adds, archives and edits them).
+async function refreshAfterAction() {
+  await refresh();
+  repos.value = await api.repos().catch(() => repos.value);
 }
+const { busy, run: act } = provideActions(refreshAfterAction, flash);
 
 /** The task whose page is open, from the route. */
 const pageId = computed(() => (route.current.name === 'task' ? route.current.id : null));
@@ -97,7 +92,6 @@ function openFromQueue(id: number) {
 }
 const resumeDaemon = () => act(() => api.resume());
 const resumeRepo = (id: number) => act(() => api.resumeRepo(id));
-const reloadRepos = async () => (repos.value = await api.repos());
 
 function onCreated(task: Detail) {
   modal.value = null;
@@ -130,20 +124,18 @@ onBeforeUnmount(() => clearInterval(timer));
     </div>
 
     <main v-else-if="pageId !== null" class="flex min-h-0 flex-1 flex-col">
-      <StaleDaemonBar :status="status" @error="flash" />
+      <StaleDaemonBar :status="status" />
       <TaskPage
         v-if="detail && route.current.name === 'task'"
         :task="detail"
         :tab="route.current.tab"
         :query="route.current.query"
         @act="(kind) => actOn(kind, detail!.id)"
-        @changed="refresh"
-        @error="flash"
       />
       <section v-else class="muted flex flex-1 flex-col items-center justify-center gap-3">Loading task #{{ pageId }}…</section>
     </main>
     <main v-else class="flex min-h-0 flex-1 flex-col">
-      <StaleDaemonBar :status="status" @error="flash" />
+      <StaleDaemonBar :status="status" />
       <WaitBar :status="status" :busy="busy" @resume="resumeDaemon" @resume-repo="resumeRepo" @settings="modal = 'settings'" />
       <QueueView
         v-if="tasks.length"
@@ -164,9 +156,9 @@ onBeforeUnmount(() => clearInterval(timer));
     <StatusBar :status="status" :offline="offline" :busy="busy" @toggle="togglePause" />
 
     <NewTaskForm v-if="modal === 'new'" :repos="repos" @close="modal = null" @created="onCreated" @repos="modal = 'repos'" />
-    <ReposPanel v-if="modal === 'repos'" :repos="repos" @close="modal = null" @changed="reloadRepos" />
+    <ReposPanel v-if="modal === 'repos'" :repos="repos" @close="modal = null" />
 
-    <SettingsPanel v-if="modal === 'settings'" :notifications="status?.notifications ?? []" @close="modal = null" @saved="refresh" />
+    <SettingsPanel v-if="modal === 'settings'" :notifications="status?.notifications ?? []" @close="modal = null" />
 
     <div
       v-if="toast"

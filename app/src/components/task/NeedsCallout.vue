@@ -2,11 +2,13 @@
 import { onMounted, ref, watch } from 'vue';
 import { type Needs, type RepoDetail, type TaskDetail, api } from '../../api';
 import { canInstallWith, depsAreDev, depsPackages, withHost } from '../../taskView';
+import { useActions } from '../../useActions';
 import Modal from '../Modal.vue';
 
 // What a blocked task's worker said it needs, with the one action that clears it.
 const props = defineProps<{ task: TaskDetail; needs: Needs }>();
-const emit = defineEmits<{ retry: []; changed: []; error: [msg: string] }>();
+const emit = defineEmits<{ retry: [] }>();
+const { busy, run: act, flash } = useActions();
 
 // Only the toolchain (deps) and the network setting (host) need the repo.
 const repo = ref<RepoDetail | null>(null);
@@ -15,28 +17,18 @@ async function loadRepo() {
   try {
     repo.value = await api.repo(props.task.repo_id);
   } catch (e) {
-    emit('error', (e as Error).message);
+    flash((e as Error).message);
   }
 }
 onMounted(loadRepo);
 watch(() => [props.task.id, props.needs.kind], loadRepo);
 
-const busy = ref(false);
 const confirmHost = ref(false);
 
 async function run(fn: () => Promise<unknown>) {
   if (busy.value) return;
-  busy.value = true;
-  try {
-    await fn();
-    confirmHost.value = false;
-    emit('changed');
-  } catch (e) {
-    confirmHost.value = false;
-    emit('error', (e as Error).message);
-  } finally {
-    busy.value = false;
-  }
+  await act(fn);
+  confirmHost.value = false;
 }
 
 const install = () => run(() => api.installNeeds(props.task.id));

@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { type NotificationRow, type NotifyKind, type ServiceStatus, type Settings, ago, api } from '../api';
+import { type SettingsForm, toSettingsForm, toSettingsPatch } from '../forms';
 import { isNative, launchAtLogin, setLaunchAtLogin } from '../native';
 import { MODES, THEMES, mode, setMode, setTheme, theme } from '../theme';
+import { useActions } from '../useActions';
 import Modal from './Modal.vue';
 
 defineProps<{ notifications: NotificationRow[] }>();
-const emit = defineEmits<{ close: []; saved: [] }>();
+const emit = defineEmits<{ close: [] }>();
+const { run } = useActions();
 
 const EVENTS: { key: NotifyKind; label: string }[] = [
   { key: 'blocked', label: 'Task blocked' },
@@ -17,46 +20,15 @@ const EVENTS: { key: NotifyKind; label: string }[] = [
   { key: 'proposed', label: 'Planner proposals' },
 ];
 
-// Edited as whole percentages, stored as 0..1.
-const form = ref<{
-  max_concurrent: number;
-  five_hour_max: number;
-  five_hour_soft: number;
-  weekly_max: number;
-  pace_slack: number;
-  desktop: boolean;
-  events: NotifyKind[];
-  ntfy_topic: string;
-  planner_enabled: boolean;
-  planner_interval_hours: number;
-  planner_max_tasks: number;
-  planner_model: string;
-  reload_on_change: boolean;
-} | null>(null);
+const form = ref<SettingsForm | null>(null);
 const service = ref<ServiceStatus | null>(null);
 const appAtLogin = ref<boolean | null>(null);
 const error = ref('');
 const saving = ref(false);
 const tested = ref('');
 
-const toPct = (x: number) => Math.round(x * 100);
-
 function load(s: Settings) {
-  form.value = {
-    max_concurrent: s.max_concurrent,
-    five_hour_max: toPct(s.budget.five_hour_max),
-    five_hour_soft: toPct(s.budget.five_hour_soft),
-    weekly_max: toPct(s.budget.weekly_max),
-    pace_slack: toPct(s.budget.pace_slack),
-    desktop: s.notify.desktop,
-    events: [...s.notify.events],
-    ntfy_topic: s.notify.ntfy_topic,
-    planner_enabled: s.planner.enabled,
-    planner_interval_hours: s.planner.interval_hours,
-    planner_max_tasks: s.planner.max_tasks,
-    planner_model: s.planner.model,
-    reload_on_change: s.reload_on_change,
-  };
+  form.value = toSettingsForm(s);
 }
 
 async function toggleAppAtLogin() {
@@ -83,38 +55,13 @@ const perDay = computed(() => (form.value ? (form.value.weekly_max / 7).toFixed(
 
 async function save(close = true) {
   if (!form.value) return;
-  const f = form.value;
+  const patch = toSettingsPatch(form.value);
   error.value = '';
   saving.value = true;
-  try {
-    load(
-      await api.updateSettings({
-        max_concurrent: f.max_concurrent,
-        reload_on_change: f.reload_on_change,
-        budget: {
-          five_hour_max: f.five_hour_max / 100,
-          five_hour_soft: f.five_hour_soft / 100,
-          weekly_max: f.weekly_max / 100,
-          pace_slack: f.pace_slack / 100,
-        },
-        notify: { desktop: f.desktop, events: f.events, ntfy_topic: f.ntfy_topic },
-        planner: {
-          enabled: f.planner_enabled,
-          interval_hours: f.planner_interval_hours,
-          max_tasks: f.planner_max_tasks,
-          model: f.planner_model,
-        },
-      }),
-    );
-    emit('saved');
-    if (close) emit('close');
-    return true;
-  } catch (e) {
-    error.value = (e as Error).message;
-    return false;
-  } finally {
-    saving.value = false;
-  }
+  const ok = await run(async () => load(await api.updateSettings(patch)));
+  saving.value = false;
+  if (ok && close) emit('close');
+  return ok;
 }
 
 async function test() {

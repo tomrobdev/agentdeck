@@ -1,74 +1,34 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
-import { type Changes, type MergeResult, type TaskDetail, ago, api, describeWait } from '../../api';
+import { computed, ref, toRef } from 'vue';
+import { type TaskDetail, ago, api, describeWait } from '../../api';
 import { useHotkeys } from '../../hotkeys';
 import { type TaskTab, go, openTask } from '../../router';
-import { canEdit, canReview, personEvents, readNeeds, statusLabel } from '../../taskView';
-import Modal from '../Modal.vue';
+import { readNeeds, statusLabel } from '../../taskView';
+import { useActions } from '../../useActions';
+import { useChanges } from '../../useChanges';
 import SnippetPopover from '../files/SnippetPopover.vue';
 import StatusIcon from '../queue/StatusIcon.vue';
 import ChangesTab from './ChangesTab.vue';
 import CodeTab from './CodeTab.vue';
-import MarkDoneDialog from './MarkDoneDialog.vue';
-import MergeDialog from './MergeDialog.vue';
 import NeedsCallout from './NeedsCallout.vue';
 import OverviewTab from './OverviewTab.vue';
 import RunsTab from './RunsTab.vue';
 import Sidebar from './Sidebar.vue';
+import TaskActions from './TaskActions.vue';
+import TaskTitle from './TaskTitle.vue';
 
 // A task laid out like a pull request: header, tabs, and a properties sidebar.
 const props = defineProps<{ task: TaskDetail; tab: TaskTab; query: Record<string, string> }>();
-const emit = defineEmits<{ act: [kind: 'approve' | 'reject' | 'retry' | 'cancel']; changed: []; error: [msg: string] }>();
+const emit = defineEmits<{ act: [kind: 'approve' | 'reject' | 'retry' | 'cancel'] }>();
+const { run } = useActions();
 
 const pageEl = ref<HTMLElement | null>(null);
 
-const resumeRepo = () => api.resumeRepo(props.task.repo_id);
+// End what this task waits for: resume the daemon or the repo.
+const resumeDaemon = () => run(() => api.resume());
+const resumeRepo = () => run(() => api.resumeRepo(props.task.repo_id));
 
-/** End what this task waits for (resume the daemon or the repo), then refresh. */
-async function clearWait(fn: () => Promise<unknown>) {
-  try {
-    await fn();
-    emit('changed');
-  } catch (e) {
-    emit('error', (e as Error).message);
-  }
-}
-const changes = ref<Changes | null>(null);
-const changesError = ref('');
-
-// Changes follow the branch: fetch on open and whenever the task moves.
-async function loadChanges() {
-  if (!props.task.branch) {
-    changes.value = null;
-    changesError.value = 'No branch yet: changes appear once the first run starts.';
-    return;
-  }
-  try {
-    const next = await api.changes(props.task.id);
-    changesError.value = '';
-    // Same commits, same changes: keep the object so nothing downstream rebuilds.
-    if (next.head === changes.value?.head && next.base === changes.value?.base) return;
-    changes.value = next;
-  } catch (e) {
-    changesError.value = (e as Error).message;
-  }
-}
-// Separate sources, so a poll that returns the same values doesn't refetch.
-watch(
-  [() => props.task.id, () => props.task.updated_at, () => props.task.branch],
-  ([id], before) => {
-    if (before && id !== before[0]) changes.value = null;
-    loadChanges();
-  },
-  { immediate: true },
-);
-
-// A running task commits without changing status, so check its branch every 10 s.
-const timer = window.setInterval(() => props.task.status === 'running' && loadChanges(), 10_000);
-onBeforeUnmount(() => clearInterval(timer));
-
-const knownPaths = computed(() => new Set(changes.value?.files.map((f) => f.path) ?? []));
-const isPath = (p: string) => knownPaths.value.has(p);
+const { changes, error: changesError, isPath, paths: knownPaths } = useChanges(toRef(props, 'task'));
 
 const TABS = computed(() => [
   { key: 'overview' as const, label: 'Overview', count: null },
@@ -85,79 +45,8 @@ const openFile = (path: string, line: number | null = null) =>
 const s = computed(() => props.task.status);
 const needs = computed(() => readNeeds(props.task));
 
-// Editing the title in place, while the task is editable.
-const editingTitle = ref(false);
-const titleDraft = ref('');
-const titleEditable = computed(() => canEdit(props.task));
-const events = computed(() => personEvents(props.task));
-function editTitle() {
-  if (!titleEditable.value) return;
-  titleDraft.value = props.task.title;
-  editingTitle.value = true;
-}
-async function saveTitle() {
-  if (!editingTitle.value) return;
-  editingTitle.value = false;
-  const t = titleDraft.value.trim();
-  if (!t || t === props.task.title) return;
-  try {
-    await api.editTask(props.task.id, { title: t });
-    emit('changed');
-  } catch (e) {
-    emit('error', (e as Error).message);
-  }
-}
-
-// Review actions on a done task's open PR. Both ask first: one sends the task back, the other closes the PR on GitHub.
-const reviewDialog = ref<'changes' | 'close' | null>(null);
-const note = ref('');
-const reviewBusy = ref(false);
-function openReview(kind: 'changes' | 'close') {
-  note.value = '';
-  reviewDialog.value = kind;
-}
-async function submitReview() {
-  const kind = reviewDialog.value;
-  if (!kind || reviewBusy.value) return;
-  if (kind === 'changes' && !note.value.trim()) return;
-  reviewBusy.value = true;
-  try {
-    await (kind === 'changes' ? api.retry(props.task.id, note.value.trim()) : api.closePr(props.task.id));
-    reviewDialog.value = null;
-    emit('changed');
-  } catch (e) {
-    reviewDialog.value = null;
-    emit('error', (e as Error).message);
-  } finally {
-    reviewBusy.value = false;
-  }
-}
-
-// Mark a blocked or failed task done by hand, with an optional note for the timeline.
-const markingDone = ref(false);
-async function submitMarkDone(doneNote: string) {
-  if (reviewBusy.value) return;
-  reviewBusy.value = true;
-  try {
-    await api.markDone(props.task.id, doneNote);
-    markingDone.value = false;
-    emit('changed');
-  } catch (e) {
-    markingDone.value = false;
-    emit('error', (e as Error).message);
-  } finally {
-    reviewBusy.value = false;
-  }
-}
-
-const merging = ref(false);
-function onMerged(result: MergeResult) {
-  merging.value = false;
-  emit('changed');
-  if (result.cleanup_error) emit('error', `Merged, but cleanup failed: ${result.cleanup_error}`);
-}
-
-useHotkeys({ Escape: () => !reviewDialog.value && !merging.value && !markingDone.value && go({ name: 'queue' }) });
+// Dialogs hold the Escape key themselves (useHotkeys skips it while one is open).
+useHotkeys({ Escape: () => go({ name: 'queue' }) });
 
 // Branch names under the title.
 const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel))] px-1.5 py-px';
@@ -169,24 +58,7 @@ const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel
     <header class="flex items-start gap-3 px-6 pt-4 pb-2">
       <button class="mt-0.5" title="Back to the queue (Esc)" @click="go({ name: 'queue' })">←</button>
       <div class="min-w-0 flex-1">
-        <h1
-          v-if="!editingTitle"
-          class="m-0 text-xl leading-[1.3] font-semibold"
-          :class="titleEditable && 'cursor-text'"
-          :title="titleEditable ? 'Click to edit' : ''"
-          @click="editTitle"
-        >
-          {{ task.title }} <span class="font-normal text-muted">#{{ task.id }}</span>
-        </h1>
-        <input
-          v-else
-          v-model="titleDraft"
-          class="text-xl font-semibold"
-          autofocus
-          @keydown.enter="saveTitle"
-          @keydown.esc.prevent="editingTitle = false"
-          @blur="saveTitle"
-        />
+        <TaskTitle :task="task" />
         <div class="mt-1.5 flex flex-wrap items-center gap-1.5 text-base">
           <span
             class="inline-flex items-center gap-[5px] rounded-full bg-[color-mix(in_srgb,var(--c)_16%,var(--panel))] px-2.5 py-0.5 font-medium whitespace-nowrap text-status text-sm"
@@ -203,24 +75,8 @@ const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel
           >
         </div>
       </div>
-      <div class="flex flex-none gap-1.5">
-        <template v-if="events.includes('approve')">
-          <button @click="emit('act', 'reject')">Reject</button>
-          <button class="primary" @click="emit('act', 'approve')">✓ Approve</button>
-        </template>
-        <template v-if="canReview(task)">
-          <button @click="openReview('close')">Close PR</button>
-          <button @click="openReview('changes')">↻ Request changes</button>
-        </template>
-        <button v-else-if="events.includes('retry')" @click="emit('act', 'retry')">↻ Retry</button>
-        <button v-if="events.includes('mark_done')" @click="markingDone = true">✓ Mark done</button>
-        <button v-if="canReview(task)" class="primary" @click="merging = true">Merge PR</button>
-        <button v-if="events.includes('cancel')" @click="emit('act', 'cancel')">{{ s === 'running' ? '■ Stop' : '✕ Cancel' }}</button>
-      </div>
+      <TaskActions :task="task" @act="(kind) => emit('act', kind)" />
     </header>
-
-    <MarkDoneDialog v-if="markingDone" :task="task" with-note :busy="reviewBusy" @close="markingDone = false" @confirm="submitMarkDone" />
-    <MergeDialog v-if="merging" :task-id="task.id" @close="merging = false" @merged="onMerged" @changed="emit('changed')" />
 
     <nav class="flex gap-0.5 border-b border-border px-6" role="tablist">
       <button
@@ -236,14 +92,7 @@ const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel
       </button>
     </nav>
 
-    <NeedsCallout
-      v-if="needs"
-      :task="task"
-      :needs="needs"
-      @retry="emit('act', 'retry')"
-      @changed="emit('changed')"
-      @error="emit('error', $event)"
-    />
+    <NeedsCallout v-if="needs" :task="task" :needs="needs" @retry="emit('act', 'retry')" />
     <div v-else-if="task.stop_reason && (s === 'blocked' || s === 'failed')" class="callout" :class="`s-${s}`">
       {{ task.stop_reason }}
     </div>
@@ -254,8 +103,8 @@ const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel
           Retry #{{ task.wait.on }} to release this task, or cancel it.
         </template>
       </span>
-      <button v-if="task.wait.kind === 'daemon-paused'" class="primary" @click="clearWait(api.resume)">▶ Resume</button>
-      <button v-else-if="task.wait.kind === 'repo-paused'" class="primary" @click="clearWait(resumeRepo)">▶ Resume {{ task.repo }}</button>
+      <button v-if="task.wait.kind === 'daemon-paused'" class="primary" @click="resumeDaemon">▶ Resume</button>
+      <button v-else-if="task.wait.kind === 'repo-paused'" class="primary" @click="resumeRepo">▶ Resume {{ task.repo }}</button>
       <button v-else-if="task.wait.kind === 'dependency'" @click="openTask(task.wait.on)">Open #{{ task.wait.on }}</button>
     </div>
     <div v-else-if="s === 'proposed'" class="callout s-proposed">
@@ -283,40 +132,7 @@ const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel
         <ChangesTab v-else-if="tab === 'changes'" :task="task" :changes="changes" :error="changesError" @open="openFile" />
         <CodeTab v-else :task="task" :query="query" :changed="knownPaths" />
       </div>
-      <Sidebar v-if="!wide" :task="task" @changed="emit('changed')" @error="emit('error', $event)" />
+      <Sidebar v-if="!wide" :task="task" />
     </div>
-
-    <Modal v-if="reviewDialog === 'changes'" title="Request changes" @close="reviewDialog = null">
-      <p class="text-muted">
-        Sends #{{ task.id }} back for another attempt on the same branch. The note goes first in the next run's prompt and shows on the
-        timeline.
-      </p>
-      <textarea
-        v-model="note"
-        class="w-full resize-y"
-        rows="5"
-        placeholder="What should change?"
-        autofocus
-        @keydown.enter.meta.prevent="submitReview"
-        @keydown.enter.ctrl.prevent="submitReview"
-      />
-      <div class="mt-3 flex justify-end gap-1.5">
-        <button @click="reviewDialog = null">Cancel</button>
-        <button class="primary" :disabled="!note.trim() || reviewBusy" @click="submitReview">Request changes</button>
-      </div>
-    </Modal>
-    <Modal v-if="reviewDialog === 'close'" title="Close pull request" @close="reviewDialog = null">
-      <p>
-        Close the pull request for #{{ task.id }} on GitHub without merging it? Tasks waiting on this one will stay stuck until it is
-        retried or they are cancelled.
-      </p>
-      <p>
-        <a :href="task.pr_url ?? ''" target="_blank" rel="noreferrer">{{ task.pr_url }}</a>
-      </p>
-      <div class="mt-3 flex justify-end gap-1.5">
-        <button @click="reviewDialog = null">Cancel</button>
-        <button class="primary" :disabled="reviewBusy" autofocus @click="submitReview">Close PR</button>
-      </div>
-    </Modal>
   </section>
 </template>

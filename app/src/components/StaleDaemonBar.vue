@@ -2,10 +2,11 @@
 import { computed, ref, watch } from 'vue';
 import { type Status, api, describeStaleDaemon } from '../api';
 import { appCommit } from '../build';
+import { useActions } from '../useActions';
 
 // Shown when the dashboard and the daemon run different commits, so a missing field is explained, not mysterious.
 const props = defineProps<{ status: Status | null }>();
-const emit = defineEmits<{ error: [message: string] }>();
+const { run } = useActions();
 
 const message = computed(() => describeStaleDaemon(props.status, appCommit.value));
 const waiting = ref<string | null>(null);
@@ -17,13 +18,11 @@ watch(message, (m) => {
 });
 
 async function restart() {
-  try {
+  await run(async () => {
     const res = await api.restartDaemon();
     asked.value = true;
     waiting.value = res.waiting;
-  } catch (e) {
-    emit('error', (e as Error).message);
-  }
+  });
 }
 </script>
 

@@ -1,55 +1,42 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { MERGE_METHODS, type MergeMethod, type Repo, type RepoDeletion, type RepoDetail, ago, api } from '../api';
+import { MERGE_METHODS, type Repo, type RepoDeletion, type RepoDetail, ago, api } from '../api';
+import { type RepoForm, toRepoForm, toRepoPatch } from '../forms';
+import { useActions } from '../useActions';
 import Modal from './Modal.vue';
 
 defineProps<{ repos: Repo[] }>();
-const emit = defineEmits<{ close: []; changed: [] }>();
+defineEmits<{ close: [] }>();
+const { run } = useActions();
 
 // Add form
 const path = ref('');
 const name = ref('');
 const test = ref('');
-const error = ref('');
 const saving = ref(false);
 
 // Per-repo editor
 const open = ref<RepoDetail | null>(null);
-const goals = ref('');
-const autoApprove = ref(false);
-const testCmd = ref('');
-const mergeMethod = ref<MergeMethod>('squash');
-const autoResolve = ref(true);
-const sandbox = ref(true);
-const network = ref('');
+const form = ref<RepoForm | null>(null);
 const editError = ref('');
 const editMsg = ref('');
 const busy = ref<'' | 'save' | 'propose'>('');
 
 async function add() {
-  error.value = '';
   saving.value = true;
-  try {
-    const repo = await api.addRepo({ path: path.value.trim(), name: name.value.trim() || undefined, test: test.value.trim() || undefined });
-    path.value = name.value = test.value = '';
-    emit('changed');
-    await edit(repo);
-  } catch (e) {
-    error.value = (e as Error).message;
-  } finally {
-    saving.value = false;
-  }
+  let repo: Repo | undefined;
+  const ok = await run(async () => {
+    repo = await api.addRepo({ path: path.value.trim(), name: name.value.trim() || undefined, test: test.value.trim() || undefined });
+  });
+  saving.value = false;
+  if (!ok || !repo) return;
+  path.value = name.value = test.value = '';
+  await edit(repo);
 }
 
 function load(d: RepoDetail) {
   open.value = d;
-  goals.value = d.goals;
-  autoApprove.value = !!d.auto_approve;
-  testCmd.value = d.test_cmd ?? '';
-  mergeMethod.value = d.merge_method;
-  autoResolve.value = !!d.auto_resolve;
-  sandbox.value = !!d.sandbox;
-  network.value = parseHosts(d.network).join(', ');
+  form.value = toRepoForm(d);
 }
 
 async function edit(r: Repo) {
@@ -63,52 +50,35 @@ async function edit(r: Repo) {
 }
 
 async function save(): Promise<boolean> {
-  if (!open.value) return false;
+  if (!open.value || !form.value) return false;
+  const id = open.value.id;
+  const f = form.value;
   editError.value = editMsg.value = '';
   busy.value = 'save';
-  try {
-    load(
-      await api.updateRepo(open.value.id, {
-        goals: goals.value,
-        auto_approve: autoApprove.value,
-        test_cmd: testCmd.value,
-        merge_method: mergeMethod.value,
-        auto_resolve: autoResolve.value,
-        sandbox: sandbox.value,
-        network: network.value.split(/[\s,]+/).filter(Boolean),
-      }),
-    );
-    editMsg.value = 'Saved';
-    emit('changed');
-    return true;
-  } catch (e) {
-    editError.value = (e as Error).message;
-    return false;
-  } finally {
-    busy.value = '';
-  }
+  const ok = await run(async () => load(await api.updateRepo(id, toRepoPatch(f))));
+  busy.value = '';
+  if (ok) editMsg.value = 'Saved';
+  return ok;
 }
 
 async function proposeNow() {
-  if (!open.value || !(await save())) return;
+  if (!open.value || !form.value || !(await save())) return;
+  const id = open.value.id;
+  const autoApprove = form.value.autoApprove;
   busy.value = 'propose';
   editMsg.value = 'Proposing tasks… this reads the repo and can take a minute.';
-  try {
-    const res = await api.propose(open.value.id);
+  const ok = await run(async () => {
+    const res = await api.propose(id);
     editMsg.value =
       res.outcome === 'proposed'
-        ? `${res.tasks.length} task(s) ${autoApprove.value ? 'queued' : 'proposed: approve them under Needs you'}.`
+        ? `${res.tasks.length} task(s) ${autoApprove ? 'queued' : 'proposed: approve them under Needs you'}.`
         : res.outcome === 'nothing'
           ? `Nothing to propose${res.note ? `: ${res.note}` : '.'}`
           : `Planner ${res.outcome}${res.note ? `: ${res.note}` : ''}`;
-    load(await api.repo(open.value.id));
-    emit('changed');
-  } catch (e) {
-    editError.value = (e as Error).message;
-    editMsg.value = '';
-  } finally {
-    busy.value = '';
-  }
+    load(await api.repo(id));
+  });
+  if (!ok) editMsg.value = '';
+  busy.value = '';
 }
 
 // Archived repos
@@ -129,27 +99,20 @@ loadArchived();
 
 async function archive() {
   if (!open.value) return;
+  const id = open.value.id;
   archiveError.value = '';
-  try {
-    await api.archiveRepo(open.value.id);
-    open.value = null;
-    emit('changed');
-    await loadArchived();
-  } catch (e) {
-    editError.value = (e as Error).message;
-  }
+  if (!(await run(() => api.archiveRepo(id)))) return;
+  open.value = null;
+  await loadArchived();
 }
 
 async function unarchive(r: Repo) {
   archiveError.value = '';
-  try {
+  const ok = await run(async () => {
     await api.unarchiveRepo(r.id);
     if (deleting.value?.repo.id === r.id) deleting.value = null;
-    emit('changed');
-    await loadArchived();
-  } catch (e) {
-    archiveError.value = (e as Error).message;
-  }
+  });
+  if (ok) await loadArchived();
 }
 
 async function askDelete(r: Repo) {
@@ -166,27 +129,13 @@ async function confirmDelete() {
   const d = deleting.value;
   if (!d || typed.value !== d.repo.name) return;
   deleteBusy.value = true;
-  try {
+  const ok = await run(async () => {
     const res = await api.deleteRepo(d.repo.id);
     deleting.value = null;
     if (res.leftover.length) archiveError.value = `Deleted ${res.repo}, but couldn't remove: ${res.leftover.join('; ')}`;
-    emit('changed');
-    await loadArchived();
-  } catch (e) {
-    archiveError.value = (e as Error).message;
-  } finally {
-    deleteBusy.value = false;
-  }
-}
-
-/** The repo's `network` column: a JSON array of hosts. */
-function parseHosts(json: string | undefined): string[] {
-  try {
-    const v = JSON.parse(json ?? '[]');
-    return Array.isArray(v) ? v.filter((d): d is string => typeof d === 'string') : [];
-  } catch {
-    return [];
-  }
+  });
+  deleteBusy.value = false;
+  if (ok) await loadArchived();
 }
 </script>
 
@@ -209,12 +158,12 @@ function parseHosts(json: string | undefined): string[] {
         </button>
         <code class="muted truncate text-sm">{{ r.path }}</code>
 
-        <form v-if="open?.id === r.id" class="mt-2.5 flex flex-col gap-2.5" @submit.prevent="save">
+        <form v-if="open?.id === r.id && form" class="mt-2.5 flex flex-col gap-2.5" @submit.prevent="save">
           <label class="field flex-1">
             <span>Goals <span class="muted">(the planner reads these when the queue runs dry)</span></span>
             <textarea
               class="resize-y font-mono text-sm"
-              v-model="goals"
+              v-model="form.goals"
               rows="9"
               placeholder="What should this repo become? Priorities first, then anything the agents must not touch."
             />
@@ -226,21 +175,21 @@ function parseHosts(json: string | undefined): string[] {
           <div class="flex gap-2.5">
             <label class="field flex-1">
               <span>Test command</span>
-              <input v-model="testCmd" placeholder="npm test" />
+              <input v-model="form.testCmd" placeholder="npm test" />
             </label>
             <label class="flex flex-none items-center gap-2 self-end pb-2">
-              <input type="checkbox" v-model="autoApprove" />
+              <input type="checkbox" v-model="form.autoApprove" />
               Auto-approve planner tasks
             </label>
           </div>
           <label class="field flex-1">
             <span>Merge method <span class="muted">(when you merge a PR from the app)</span></span>
-            <select v-model="mergeMethod">
+            <select v-model="form.mergeMethod">
               <option v-for="m in MERGE_METHODS" :key="m.key" :value="m.key">{{ m.label }} · {{ m.hint }}</option>
             </select>
           </label>
           <label class="flex flex-none items-center gap-2">
-            <input type="checkbox" v-model="autoResolve" />
+            <input type="checkbox" v-model="form.autoResolve" />
             <span
               >Resolve merge conflicts automatically
               <span class="muted"
@@ -249,15 +198,15 @@ function parseHosts(json: string | undefined): string[] {
             >
           </label>
           <label class="flex flex-none items-center gap-2">
-            <input type="checkbox" v-model="sandbox" />
+            <input type="checkbox" v-model="form.sandbox" />
             <span
               >Run the agent's shell commands in the sandbox
               <span class="muted">(confined to the worktree and the hosts below; docs/adr/0001-worker-sandbox.md)</span></span
             >
           </label>
-          <label v-if="sandbox" class="field flex-1">
+          <label v-if="form.sandbox" class="field flex-1">
             <span>Network hosts <span class="muted">(sandboxed commands may reach these; empty = none)</span></span>
-            <input v-model="network" placeholder="registry.npmjs.org, github.com" />
+            <input v-model="form.network" placeholder="registry.npmjs.org, github.com" />
           </label>
           <p v-if="open.planner_runs.length" class="muted m-0 line-clamp-2 text-sm" :title="open.planner_runs[0].note ?? ''">
             Last plan {{ ago(open.planner_runs[0].started_at) }}: {{ open.planner_runs[0].outcome ?? 'running' }}
@@ -275,7 +224,7 @@ function parseHosts(json: string | undefined): string[] {
               Archive
             </button>
             <span class="muted mr-auto text-sm">{{ editMsg }}</span>
-            <button type="button" @click="proposeNow" :disabled="!!busy || !goals.trim()">
+            <button type="button" @click="proposeNow" :disabled="!!busy || !form.goals.trim()">
               {{ busy === 'propose' ? 'Proposing…' : 'Save & propose tasks' }}
             </button>
             <button class="primary" type="submit" :disabled="!!busy">Save</button>
@@ -333,7 +282,6 @@ function parseHosts(json: string | undefined): string[] {
           <input v-model="test" placeholder="npm test" />
         </label>
       </div>
-      <p v-if="error" class="form-error">{{ error }}</p>
       <div class="flex items-center justify-end gap-2">
         <button class="primary" type="submit" :disabled="saving || !path.trim()">Add repo</button>
       </div>

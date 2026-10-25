@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { type MergeMethod, type MergePreview, type MergeResult, MERGE_METHODS, api } from '../../api';
+import { useActions } from '../../useActions';
 import Modal from '../Modal.vue';
 
 // The confirm before a merge: it writes to the base branch on GitHub and can't be undone from here.
-// Enter merges, Esc cancels (Modal).
+// Enter merges, Esc cancels (Modal). Errors show in the dialog, so it asks for the refresh, not `run`.
 const props = defineProps<{ taskId: number }>();
-const emit = defineEmits<{ close: []; merged: [result: MergeResult]; changed: [] }>();
+const emit = defineEmits<{ close: []; merged: [result: MergeResult] }>();
+const { refresh } = useActions();
 
 const preview = ref<MergePreview | null>(null);
 const loadError = ref('');
@@ -35,7 +37,7 @@ async function sync() {
   mergeError.value = syncNote.value = '';
   try {
     const res = await api.sync(props.taskId);
-    emit('changed');
+    await refresh();
     if (res.outcome === 'blocked') return emit('close'); // the task page shows why it is blocked
     const files = `${res.files.length} ${res.files.length === 1 ? 'file' : 'files'}`;
     syncNote.value =
