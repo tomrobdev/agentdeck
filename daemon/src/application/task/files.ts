@@ -1,7 +1,7 @@
 // Use cases for reading a task's code: what its branch changed, and its files at head or base.
 // All git reads run in the repo's main checkout, which shares refs with the task worktrees.
-import { branchCommit, changedFiles, commitsBetween, diffBase, filePatch, listTree, objectAt, readFile } from '../adapters/git.ts';
-import type { Db } from '../db/index.ts';
+import { branchCommit, changedFiles, commitsBetween, diffBase, filePatch, listTree, objectAt, readFile } from '../../adapters/git.ts';
+import type { Db } from '../../db/index.ts';
 import {
   type ChangedFile,
   type Changes,
@@ -14,9 +14,9 @@ import {
   capText,
   checkPath,
   isBinary,
-} from '../domain/files/files.ts';
-import type { Repo } from '../domain/repo/repo.ts';
-import { ActionError, requireTask, requireTaskRepo } from './input.ts';
+} from '../../domain/files/files.ts';
+import type { Repo } from '../../domain/repo/repo.ts';
+import { ActionError, requireTask, requireTaskRepo } from '../input.ts';
 
 /** The task's repo and the commit its branch is at. */
 async function resolveHead(db: Db, id: number): Promise<{ repo: Repo; head: string }> {

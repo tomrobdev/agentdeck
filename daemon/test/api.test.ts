@@ -15,7 +15,7 @@ process.env.AGENTDECK_CLAUDE_BIN = fake;
 
 const { openDb } = await import('../src/db/index.ts');
 const { startApi } = await import('../src/api/server.ts');
-const { Scheduler } = await import('../src/application/scheduler.ts');
+const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
 
 const db = openDb(join(home, 'test.db'));
 const server = await startApi({ db, port: 0 });

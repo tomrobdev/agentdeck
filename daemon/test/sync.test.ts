@@ -16,10 +16,10 @@ chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
 
 const { openDb } = await import('../src/db/index.ts');
-const { Scheduler } = await import('../src/application/scheduler.ts');
+const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
 const { github } = await import('../src/adapters/github.ts');
 const { startApi } = await import('../src/api/server.ts');
-const { refreshPrStates } = await import('../src/application/pull-requests.ts');
+const { refreshPrStates } = await import('../src/application/pull-request/pull-requests.ts');
 const { doneTask: doneTaskWithPr } = await import('./fixtures.ts');
 const { resolveConflicting } = await import('../src/application/sync.ts');
 const { ActionError, mergeTask, syncNow, retryTask, updateRepo } = await import('../src/application/actions.ts');

@@ -116,7 +116,7 @@ test('only a blocked task that asked for packages, on a Node toolchain', async (
 });
 
 test('nothing in the worker or scheduler installs', () => {
-  for (const file of ['worker.ts', 'scheduler.ts']) {
+  for (const file of ['run/worker.ts', 'scheduler/scheduler.ts']) {
     assert.doesNotMatch(readFileSync(join(import.meta.dirname, '../src/application', file), 'utf8'), /installNeeds/);
   }
 });

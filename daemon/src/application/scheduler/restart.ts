@@ -1,6 +1,6 @@
 // Restarting the daemon without losing work: stop claiming, wait for the runs to end, restart, then put pause back.
-import type { Db } from '../db/index.ts';
-import { restartWait } from '../domain/daemon/restart.ts';
+import type { Db } from '../../db/index.ts';
+import { restartWait } from '../../domain/daemon/restart.ts';
 
 export interface RestartDeps {
   /** Restart the launchd service. */

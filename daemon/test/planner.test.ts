@@ -15,7 +15,7 @@ chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
 
 const { openDb } = await import('../src/db/index.ts');
-const { Scheduler } = await import('../src/application/scheduler.ts');
+const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
 const actions = await import('../src/application/actions.ts');
 const { plannerDue } = await import('../src/application/planner.ts');
 const { buildPlannerPrompt } = await import('../src/domain/planner/proposals.ts');

@@ -6,12 +6,12 @@ import { BUDGET_KEYS, type Budget, validateBudget, validateSlots } from '../doma
 import { restartWait } from '../domain/daemon/restart.ts';
 import type { MergeMethod } from '../domain/pull-request/merge.ts';
 import type { PrMode } from '../domain/pull-request/pr.ts';
-import type { Settings } from '../domain/settings.ts';
+import type { Settings } from '../domain/settings/settings.ts';
 import { ActionError, flag, list, number, object, refuse, text, whole } from './input.ts';
-import { startGate } from './gate.ts';
+import { startGate } from './scheduler/gate.ts';
 import { notify } from './notifications.ts';
-import { queueWaits } from './queue.ts';
-import type { RepoPatch } from './repos.ts';
+import { queueWaits } from './scheduler/queue.ts';
+import type { RepoPatch } from './repo/repos.ts';
 
 export function setPaused(db: Db, paused: boolean): void {
   db.setPaused(paused);

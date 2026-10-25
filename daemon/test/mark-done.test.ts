@@ -13,7 +13,7 @@ const { advance, settlePr } = await import('./fixtures.ts');
 const { dependencyState } = await import('../src/domain/task/dependency.ts');
 const { TASK_STATUSES } = await import('../src/domain/task/lifecycle.ts');
 const { markDone, retryTask, ActionError } = await import('../src/application/actions.ts');
-const { dependencyOf } = await import('../src/application/dependencies.ts');
+const { dependencyOf } = await import('../src/application/task/dependencies.ts');
 type Db = ReturnType<typeof openDb>;
 type TaskStatus = (typeof TASK_STATUSES)[number];
 

@@ -8,7 +8,7 @@ import { LOG_DIR, ensureDirs } from '../config.ts';
 import type { Db } from '../db/index.ts';
 import { type ProposalResult, buildPlannerPrompt, plannerArgs, plannerDueReason, selectProposals } from '../domain/planner/proposals.ts';
 import type { Repo } from '../domain/repo/repo.ts';
-import { recordRateLimit, usageRecorder } from './claude-run.ts';
+import { recordRateLimit, usageRecorder } from './run/claude-run.ts';
 import { ActionError, requireRepo } from './input.ts';
 import { notifyLater } from './notifications.ts';
 

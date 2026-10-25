@@ -1,6 +1,6 @@
 // Yes/no checks that a repo is ready for unattended runs. Does the I/O; the decisions on tool rules are in domain/.
-import { findClaude } from '../adapters/claude.ts';
-import { ghAuth } from '../adapters/github.ts';
+import { findClaude } from '../../adapters/claude.ts';
+import { ghAuth } from '../../adapters/github.ts';
 import {
   addDetachedWorktree,
   hasOrigin,
@@ -11,15 +11,15 @@ import {
   removeTempDir,
   removeWorktree,
   startPoint,
-} from '../adapters/git.ts';
-import { rootInfo } from '../adapters/repo-root.ts';
-import { runCommand } from '../adapters/shell.ts';
-import { lastLine } from '../domain/text.ts';
-import { SETUP_TIMEOUT_MS, TEST_TIMEOUT_MS, claudeBin } from '../config.ts';
-import type { Repo } from '../domain/repo/repo.ts';
-import { refusedCommands } from '../domain/repo/tool-rules.ts';
-import { detectToolchain } from '../domain/repo/toolchain.ts';
-import { effectiveTools } from './tools.ts';
+} from '../../adapters/git.ts';
+import { rootInfo } from '../../adapters/repo-root.ts';
+import { runCommand } from '../../adapters/shell.ts';
+import { lastLine } from '../../domain/text.ts';
+import { SETUP_TIMEOUT_MS, TEST_TIMEOUT_MS, claudeBin } from '../../config.ts';
+import type { Repo } from '../../domain/repo/repo.ts';
+import { refusedCommands } from '../../domain/repo/tool-rules.ts';
+import { detectToolchain } from '../../domain/repo/toolchain.ts';
+import { allowedTools } from '../../domain/repo/tools.ts';
 
 export interface Check {
   name: string;
@@ -102,7 +102,7 @@ export async function runDoctor(repo: Repo): Promise<Check[]> {
 
     if (!repo.test_cmd) add('tool rules', true, 'no test command');
     else {
-      const refused = refusedCommands(repo.test_cmd, effectiveTools(repo, worktree ?? repo.path));
+      const refused = refusedCommands(repo.test_cmd, allowedTools(repo, rootInfo(worktree ?? repo.path)));
       add(
         'tool rules',
         refused.length === 0,

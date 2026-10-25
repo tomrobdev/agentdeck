@@ -10,9 +10,9 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { openDb } = await import('../src/db/index.ts');
 const { github } = await import('../src/adapters/github.ts');
-const { Scheduler } = await import('../src/application/scheduler.ts');
-const { refreshPrStates, closePullRequest } = await import('../src/application/pull-requests.ts');
-const { openPullRequest } = await import('../src/application/open-pr.ts');
+const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
+const { refreshPrStates, closePullRequest } = await import('../src/application/pull-request/pull-requests.ts');
+const { openPullRequest } = await import('../src/application/pull-request/open-pr.ts');
 const { finalNotification } = await import('../src/domain/notification.ts');
 const { MAX_RESTARTS } = await import('../src/domain/task/lifecycle.ts');
 
