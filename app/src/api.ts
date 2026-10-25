@@ -89,6 +89,12 @@ export interface ServiceStatus {
   state: string | null;
 }
 
+/** What a worker said it needs when it blocked (daemon domain/run/run.ts Needs). */
+export interface Needs {
+  kind: 'deps' | 'host' | 'edit';
+  items: string[];
+}
+
 /** A task as returned by the list endpoint: everything except the prompt. */
 export interface TaskSummary {
   id: number;

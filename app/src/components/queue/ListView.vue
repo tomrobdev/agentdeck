@@ -2,7 +2,7 @@
 import { nextTick, watch } from 'vue';
 import { ago } from '../../api';
 import { openExternal } from '../../native';
-import { type Group, type GroupBy, canApprove, quickRetry, statusLabel, unblocksOf } from '../../taskView';
+import { type Group, type GroupBy, canApprove, quickRetry, readNeeds, statusLabel, unblocksOf } from '../../taskView';
 import PriorityIcon from './PriorityIcon.vue';
 import StatusIcon from './StatusIcon.vue';
 
@@ -100,6 +100,7 @@ watch(
                     .join(' ')
                 }}
               </span>
+              <span v-if="readNeeds(t)" class="chip chip-blocked" title="The worker said what it needs: open the task">needs</span>
               <span v-if="t.plan_unfinished" class="chip" title="The run left linked plan steps unfinished">steps unfinished</span>
               <span v-if="t.source === 'planner'" class="chip">planner</span>
               <span v-if="t.attempts > 1" class="chip">try {{ t.attempts }}</span>

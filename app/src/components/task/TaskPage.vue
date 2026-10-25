@@ -3,13 +3,14 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { type Changes, type MergeResult, type TaskDetail, ago, api, describeHold } from '../../api';
 import { useHotkeys } from '../../hotkeys';
 import { type TaskTab, go, openTask } from '../../router';
-import { canApprove, canCancel, canEdit, canMerge, canRetry, canReview, statusLabel } from '../../taskView';
+import { canApprove, canCancel, canEdit, canMerge, canRetry, canReview, readNeeds, statusLabel } from '../../taskView';
 import Modal from '../Modal.vue';
 import SnippetPopover from '../files/SnippetPopover.vue';
 import StatusIcon from '../queue/StatusIcon.vue';
 import ChangesTab from './ChangesTab.vue';
 import CodeTab from './CodeTab.vue';
 import MergeDialog from './MergeDialog.vue';
+import NeedsCallout from './NeedsCallout.vue';
 import OverviewTab from './OverviewTab.vue';
 import RunsTab from './RunsTab.vue';
 import Sidebar from './Sidebar.vue';
@@ -81,6 +82,7 @@ const openFile = (path: string, line: number | null = null) =>
   openTask(props.task.id, 'code', { ref: 'head', path, ...(line ? { L: String(line) } : {}) });
 
 const s = computed(() => props.task.status);
+const needs = computed(() => readNeeds(props.task));
 
 // Editing the title in place, while the task is editable.
 const editingTitle = ref(false);
@@ -213,7 +215,17 @@ const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel
       </button>
     </nav>
 
-    <div v-if="task.blocked_reason && (s === 'blocked' || s === 'failed')" class="callout" :class="`s-${s}`">{{ task.blocked_reason }}</div>
+    <NeedsCallout
+      v-if="needs"
+      :task="task"
+      :needs="needs"
+      @retry="emit('act', 'retry')"
+      @changed="emit('changed')"
+      @error="emit('error', $event)"
+    />
+    <div v-else-if="task.blocked_reason && (s === 'blocked' || s === 'failed')" class="callout" :class="`s-${s}`">
+      {{ task.blocked_reason }}
+    </div>
     <div v-else-if="task.hold" class="callout flex items-center gap-3" :class="task.hold.kind === 'slots' ? 's-queued' : 's-blocked'">
       <span class="min-w-0 flex-1 wrap-anywhere">
         <strong>Not started yet.</strong> {{ describeHold(task.hold) }}.
