@@ -5,6 +5,7 @@ import { activeChildren, killGroup, reapOrphans } from '../adapters/processes.ts
 import { DEFAULTS } from '../config.ts';
 import type { Db } from '../db/index.ts';
 import { MAX_RESTARTS } from '../domain/task/lifecycle.ts';
+import { describeWait, startDecision } from '../domain/task/start.ts';
 import type { Activity, ReloadDecision } from '../domain/daemon/restart.ts';
 import { startGate } from './gate.ts';
 import { notifyLater } from './notifications.ts';
@@ -148,9 +149,9 @@ export class Scheduler {
     }
     if (reload?.pending && reload.reason !== this.lastReload) this.opts.log(reload.reason);
     this.lastReload = reload?.pending ? reload.reason : null;
-    const { reason, limit } = reload?.pending ? { reason: 'reload pending', limit: 0 } : this.gate();
+    const { reason, free } = reload?.pending ? { reason: 'reload pending', free: 0 } : this.gate();
     if (!reason) {
-      while (this.running.size < limit) {
+      for (let room = free; room > 0; room--) {
         const task = this.db.claimNextTask();
         if (!task) break;
         this.opts.log(`task ${task.id} attempt ${task.attempts}: starting "${task.title}"`);
@@ -171,7 +172,7 @@ export class Scheduler {
           });
         this.running.add(p);
       }
-      if (this.opts.autoPlan && !this.proposing && this.running.size < limit) this.maybePropose();
+      if (this.opts.autoPlan && !this.proposing && this.gate().free > 0) this.maybePropose(); // a claim above took a slot: ask again
     }
     this.maybeRefreshPrs();
     this.awake.set(this.running.size > 0 || this.proposing);
@@ -237,28 +238,23 @@ export class Scheduler {
     );
   }
 
-  /** Why we can't start new work right now (null if we can), and how many tasks may run. */
-  private gate(): { reason: string | null; limit: number } {
+  /** Why we can't start new work right now (null if we can), and how many slots are free. Announces a hold once. */
+  private gate(): { reason: string | null; free: number } {
     const g = startGate(this.db);
-    if (!this.opts.once && g.paused) return { reason: 'paused', limit: 0 };
-    const until = g.rate_limited_until;
-    if (until && until * 1000 > Date.now())
-      return { reason: `rate limited until ${new Date(until * 1000).toLocaleTimeString()}`, limit: 0 };
-
-    const d = g.governor;
-    const hold = d.allow ? null : d.reason;
+    const { wait, free } = startDecision(g, { ignorePause: this.opts.once, used: this.db.slotsUsed(), now: Date.now() / 1000 });
+    const hold = wait?.kind === 'governor' ? wait : null;
     // Announce a hold once, and only when it is actually keeping queued work waiting.
     if (hold && !this.lastHold && this.db.hasQueued()) {
-      const lifts = d.until
-        ? ` Resumes around ${new Date(d.until * 1000).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })}.`
+      const lifts = hold.until
+        ? ` Resumes around ${new Date(hold.until * 1000).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })}.`
         : '';
-      this.opts.log(`governor hold: ${hold}`);
-      notifyLater(this.db, { kind: 'hold', title: 'Holding queued work', body: `${hold}.${lifts}` });
-      this.lastHold = hold;
-    } else if (!hold && this.lastHold) {
+      this.opts.log(`governor hold: ${hold.reason}`);
+      notifyLater(this.db, { kind: 'hold', title: 'Holding queued work', body: `${hold.reason}.${lifts}` });
+      this.lastHold = hold.reason;
+    } else if (!wait && this.lastHold) {
       this.opts.log('governor: hold lifted');
       this.lastHold = null;
     }
-    return { reason: hold, limit: d.max_concurrent };
+    return { reason: wait ? describeWait(wait) : null, free };
   }
 }

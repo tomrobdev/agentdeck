@@ -29,6 +29,23 @@ export function runStore(db: DatabaseSync) {
     countRunningResolves(): number {
       return Number((db.prepare("SELECT COUNT(*) AS n FROM runs WHERE kind = 'resolve' AND ended_at IS NULL").get() as { n: number }).n);
     },
+    /**
+     * Slots in use, counted from the db so every process sees the same number: a task that is running (or being
+     * cancelled), a task not running that has an unfinished resolve run (a task whose sync started one counts once),
+     * and an unfinished planner run. A clean sync runs no claude and takes none.
+     */
+    slotsUsed(): number {
+      const row = db
+        .prepare(
+          `SELECT
+             (SELECT COUNT(*) FROM tasks WHERE status IN ('running', 'cancel_requested'))
+             + (SELECT COUNT(*) FROM tasks t WHERE t.status NOT IN ('running', 'cancel_requested')
+                  AND EXISTS (SELECT 1 FROM runs r WHERE r.task_id = t.id AND r.kind = 'resolve' AND r.ended_at IS NULL))
+             + (SELECT COUNT(*) FROM planner_runs WHERE ended_at IS NULL) AS n`,
+        )
+        .get() as { n: number };
+      return Number(row.n);
+    },
     /** Whether a resolve run of this task has not finished. */
     hasRunningResolve(task_id: number): boolean {
       return !!db.prepare("SELECT 1 FROM runs WHERE task_id = ? AND kind = 'resolve' AND ended_at IS NULL LIMIT 1").get(task_id);

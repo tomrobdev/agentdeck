@@ -20,12 +20,34 @@ export interface QueueState {
   governor: Decision;
 }
 
-/** Mirrors the scheduler's gate, except that `paused` is whatever the caller says (run-once ignores it). */
-export function queueWait(q: QueueState, now = Date.now() / 1000): QueueWait | null {
-  if (q.paused) return { kind: 'daemon-paused' };
-  if (q.rate_limited_until && q.rate_limited_until > now) return { kind: 'rate-limited', until: q.rate_limited_until };
-  if (!q.governor.allow) return { kind: 'governor', reason: q.governor.reason ?? 'usage budget', until: q.governor.until };
-  return null;
+/**
+ * May new work start, and how many slots are free? The one place this is decided: the scheduler, the sync of a done
+ * task's conflicting PR and the API's queue view all call it. `ignorePause` is run-once, which works through a paused
+ * queue. `used` is the slots in use (running tasks, open resolve runs and planner runs: the planner takes a slot);
+ * `free` is what is left of the governor's `max_concurrent`, and 0 whenever something is waited for.
+ */
+export function startDecision(
+  q: QueueState,
+  o: { ignorePause: boolean; used: number; now: number },
+): { wait: QueueWait | null; free: number } {
+  const { now } = o;
+  let wait: QueueWait | null = null;
+  if (q.paused && !o.ignorePause) wait = { kind: 'daemon-paused' };
+  else if (q.rate_limited_until && q.rate_limited_until > now) wait = { kind: 'rate-limited', until: q.rate_limited_until };
+  else if (!q.governor.allow) wait = { kind: 'governor', reason: q.governor.reason ?? 'usage budget', until: q.governor.until };
+  return { wait, free: wait ? 0 : Math.max(0, q.governor.max_concurrent - o.used) };
+}
+
+/** The line the daemon logs for a wait. */
+export function describeWait(w: QueueWait): string {
+  switch (w.kind) {
+    case 'daemon-paused':
+      return 'paused';
+    case 'rate-limited':
+      return `rate limited until ${new Date(w.until * 1000).toLocaleTimeString()}`;
+    case 'governor':
+      return w.reason;
+  }
 }
 
 /** What a queued task waits for, or null if it will start on the next tick. Mirrors claimNextTask in db/tasks.ts. */
