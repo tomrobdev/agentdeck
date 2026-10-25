@@ -1,7 +1,7 @@
 // Registered repos.
 import type { DatabaseSync } from 'node:sqlite';
 import type { Repo } from '../domain/repo/repo.ts';
-import { NOW } from './sql.ts';
+import { NOW, atomically } from './sql.ts';
 
 export function repoStore(db: DatabaseSync) {
   return {
@@ -45,6 +45,39 @@ export function repoStore(db: DatabaseSync) {
     /** Whether a task of the repo is running or has a cancel requested. */
     repoHasRunning(id: number): boolean {
       return !!db.prepare("SELECT 1 FROM tasks WHERE repo_id = ? AND status IN ('running', 'cancel_requested') LIMIT 1").get(id);
+    },
+    /** What deleting the repo takes with it: its tasks' checkouts and every log file its runs and planner runs wrote. */
+    repoFootprint(id: number): {
+      tasks: { id: number; branch: string | null; worktree: string | null }[];
+      run_logs: string[];
+      planner_logs: string[];
+    } {
+      const tasks = db.prepare('SELECT id, branch, worktree FROM tasks WHERE repo_id = ? ORDER BY id').all(id) as unknown as {
+        id: number;
+        branch: string | null;
+        worktree: string | null;
+      }[];
+      const logs = (sql: string) => (db.prepare(sql).all(id) as unknown as { log_path: string }[]).map((r) => r.log_path);
+      return {
+        tasks,
+        run_logs: logs('SELECT log_path FROM runs WHERE task_id IN (SELECT id FROM tasks WHERE repo_id = ?)'),
+        planner_logs: logs('SELECT log_path FROM planner_runs WHERE repo_id = ?'),
+      };
+    },
+    /** Delete a repo and everything of it in one transaction, children first. Only an archived repo; returns false otherwise. */
+    deleteRepo(id: number): boolean {
+      return atomically(db, () => {
+        if (!db.prepare('SELECT 1 FROM repos WHERE id = ? AND archived_at IS NOT NULL').get(id)) return false;
+        const mine = 'SELECT id FROM tasks WHERE repo_id = ?';
+        db.prepare(`DELETE FROM task_events WHERE task_id IN (${mine})`).run(id);
+        db.prepare(`DELETE FROM task_plans WHERE task_id IN (${mine})`).run(id);
+        db.prepare(`DELETE FROM runs WHERE task_id IN (${mine})`).run(id);
+        db.prepare(`DELETE FROM notifications WHERE task_id IN (${mine})`).run(id);
+        db.prepare('DELETE FROM tasks WHERE repo_id = ?').run(id);
+        db.prepare('DELETE FROM planner_runs WHERE repo_id = ?').run(id);
+        db.prepare('DELETE FROM repos WHERE id = ?').run(id);
+        return true;
+      });
     },
     updateRepo(
       id: number,

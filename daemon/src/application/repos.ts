@@ -1,10 +1,11 @@
 // Use cases for repos: register, configure, check, pause and resume.
-import { normalizeNetwork } from '../domain/run/sandbox.ts';
+import { normalizeNetwork, settingsPath } from '../domain/run/sandbox.ts';
 import { existsSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
-import { currentBranch, isGitRepo } from '../adapters/git.ts';
-import { goalsPath, readGoals, writeGoals } from '../adapters/goals.ts';
+import { deleteBranch, currentBranch, isGitRepo, pruneWorktrees, removeWorktree } from '../adapters/git.ts';
+import { deleteGoals, goalsPath, readGoals, writeGoals } from '../adapters/goals.ts';
 import { rootInfo } from '../adapters/repo-root.ts';
+import { removeFiles } from '../adapters/run-log.ts';
 import type { Db } from '../db/index.ts';
 import { MERGE_METHODS, type MergeMethod, isMergeMethod } from '../domain/pull-request/merge.ts';
 import { PR_MODES, type PrMode } from '../domain/pull-request/pr.ts';
@@ -119,6 +120,54 @@ export function unarchiveRepo(db: Db, nameOrId: string | number): Repo {
   const repo = repoOrThrow(db, nameOrId);
   db.setRepoArchived(repo.id, false);
   return db.getRepo(repo.id)!;
+}
+
+/** What deleting a repo will remove, counted. */
+export function repoDeletionPreview(db: Db, nameOrId: string | number) {
+  const repo = repoOrThrow(db, nameOrId);
+  const { tasks, run_logs } = db.repoFootprint(repo.id);
+  return {
+    repo: repo.name,
+    archived: !!repo.archived_at,
+    tasks: tasks.length,
+    runs: run_logs.length,
+    worktrees: tasks.filter((t) => t.worktree && existsSync(t.worktree)).length,
+  };
+}
+
+/**
+ * Delete an archived repo and all that belongs to it, locally: each task's worktree and branch, the rows,
+ * then the logs, settings files and goals file. Never touches GitHub, the remote or the repo's own folder.
+ * Files go after the rows, so a failure leaves files behind, never rows pointing at missing files;
+ * `leftover` names what couldn't be removed.
+ */
+export async function deleteRepo(db: Db, nameOrId: string | number): Promise<{ repo: string; leftover: string[] }> {
+  const repo = repoOrThrow(db, nameOrId);
+  if (!repo.archived_at) throw new ActionError(`${repo.name} is not archived; archive it first, then delete`);
+  const { tasks, run_logs, planner_logs } = db.repoFootprint(repo.id);
+  const leftover: string[] = [];
+  for (const t of tasks) {
+    try {
+      if (t.worktree && existsSync(t.worktree)) await removeWorktree(repo, t.worktree);
+      if (t.branch) await deleteBranch(repo.path, t.branch);
+    } catch (err) {
+      leftover.push(`task #${t.id} checkout: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+  try {
+    await pruneWorktrees(repo.path);
+  } catch {
+    // the repo's folder may be gone; nothing to prune then
+  }
+  if (!db.deleteRepo(repo.id)) throw new ActionError(`${repo.name} is not archived; archive it first, then delete`);
+  const logs = [...run_logs, ...planner_logs];
+  leftover.push(...removeFiles([...logs, ...logs.map(settingsPath)]));
+  try {
+    deleteGoals(repo);
+  } catch (err) {
+    leftover.push(`goals file: ${err instanceof Error ? err.message : String(err)}`);
+  }
+  return { repo: repo.name, leftover };
 }
 
 export interface DoctorReport {

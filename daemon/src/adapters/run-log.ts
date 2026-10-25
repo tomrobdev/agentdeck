@@ -1,5 +1,5 @@
 // Run logs on disk: claude's stream-json lines plus the daemon's own `agentdeck_*` events.
-import { type WriteStream, appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { type WriteStream, appendFileSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { type LogEntry, parseLogLine } from '../domain/run/log.ts';
 
 /** Append one daemon event to a log stream. */
@@ -24,6 +24,19 @@ export function writeSettings(path: string, settings: object): void {
 /** End a log stream and wait until it is on disk, so readers never see a finished run with a partial log. */
 export function closeLog(log: WriteStream): Promise<void> {
   return new Promise((resolve) => log.end(() => resolve()));
+}
+
+/** Delete files; one already gone is fine. Returns the paths it couldn't remove, each with the reason. */
+export function removeFiles(paths: string[]): string[] {
+  const failed: string[] = [];
+  for (const p of paths) {
+    try {
+      rmSync(p, { force: true, recursive: true });
+    } catch (err) {
+      failed.push(`${p}: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+  return failed;
 }
 
 export function readLog(path: string): LogEntry[] {
