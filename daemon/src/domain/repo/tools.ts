@@ -35,7 +35,20 @@ export const ALWAYS_DISALLOWED_TOOLS = ['Bash(git push*)', 'Bash(git remote*)', 
  * Repos registered before toolchain detection have no toolchain, so it is detected from `root`.
  */
 export function allowedTools(repo: Pick<Repo, 'allowed_tools' | 'toolchain'>, root: { files: string[]; scripts: string[] }): string[] {
-  if (repo.allowed_tools) return JSON.parse(repo.allowed_tools);
+  if (repo.allowed_tools) return parseToolRules(repo.allowed_tools);
   const toolchain = isToolchain(repo.toolchain) ? repo.toolchain : detectToolchain(root.files, root.scripts)?.toolchain;
   return [...DEFAULT_ALLOWED_TOOLS, ...(toolchain ? toolchainTools(toolchain, root.scripts) : [])];
+}
+
+/**
+ * A repo's own rules (a JSON array of strings). Unreadable rules give none rather than the defaults, which could allow
+ * more than the repo meant: the first refused command then pauses the repo and says why.
+ */
+function parseToolRules(json: string): string[] {
+  try {
+    const v: unknown = JSON.parse(json);
+    return Array.isArray(v) ? v.filter((t): t is string => typeof t === 'string') : [];
+  } catch {
+    return [];
+  }
 }

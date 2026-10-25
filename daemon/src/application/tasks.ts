@@ -7,13 +7,18 @@ import type { Db } from '../db/index.ts';
 import { PLAN_LIMIT, isPlanPath, parsePlan } from '../domain/plan/plan.ts';
 import type { Repo } from '../domain/repo/repo.ts';
 import { readNeeds } from '../domain/run/run.ts';
-import { EDITABLE_STATUSES, type Task, defaultTitle, planStepIds } from '../domain/task/task.ts';
+import { EDITABLE_STATUSES, MODELS, type Task, defaultTitle, isModel, planStepIds } from '../domain/task/task.ts';
 import { isSyncing } from './conflicts.ts';
 import { warnStuckDependents } from './dependencies.ts';
 import { ActionError } from './errors.ts';
 import { object, text, whole } from './input.ts';
 import { requireTask, requireTaskRepo } from './lookups.ts';
 import { closePullRequest } from './pull-requests.ts';
+
+/** A typo in a model name would fail the run and use up an attempt, so refuse it here. */
+function checkModel(model: string | undefined): void {
+  if (model && !isModel(model)) throw new ActionError(`model must be ${MODELS.join(', ')} or a full claude-… model id`);
+}
 
 /** Step ids as the CLI types them (a,b) or the API sends them (an array); null when none are named. */
 function stepList(value: unknown): string[] | null {
@@ -65,6 +70,7 @@ export async function addTask(
   if (!prompt) throw new ActionError('a prompt is required');
   const title = text(body, 'title', { empty: true });
   const model = text(body, 'model', { empty: true });
+  checkModel(model);
   const repoName = text(body, 'repo', { empty: true });
   const priority = whole(body, 'priority', -1000, 1000);
   const max_turns = whole(body, 'max_turns', 1, 500);
@@ -121,6 +127,7 @@ export async function editTask(
     const value = text(body, key);
     if (value !== undefined) fields[key] = value;
   }
+  checkModel(fields.model);
   for (const [key, min, max] of [
     ['priority', -1000, 1000],
     ['max_turns', 1, 500],

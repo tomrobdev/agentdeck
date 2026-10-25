@@ -1,7 +1,7 @@
 // Turning a repo's goals into task proposals: the prompt, the answer's shape, and which proposals to keep.
 // Pure: no I/O. The planner runs read-only in the repo's main checkout and answers in PLAN_SCHEMA.
 import type { Repo } from '../repo/repo.ts';
-import { OPEN_STATUSES, type Task } from '../task/task.ts';
+import { MODELS, OPEN_STATUSES, type Task } from '../task/task.ts';
 
 export interface PlannerSettings {
   enabled: boolean;
@@ -28,8 +28,6 @@ export interface PlanResult {
   skipped: string[];
   note: string | null;
 }
-
-export const MODELS = ['haiku', 'sonnet', 'opus'];
 
 /** The sections every task prompt has, in order. The delegate skill (.claude/skills/delegate) asks for the same. */
 export const PROMPT_SECTIONS = `Goal: what the task achieves, in a sentence or two.

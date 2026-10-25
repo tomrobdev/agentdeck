@@ -26,7 +26,6 @@ export interface Run {
   denials: number; // tool uses refused by the permission rules during the run
 }
 
-/** The parts of claude's final `result` event that a run records. */
 /** The run a person asked for: by id, by the work run of an attempt, or the latest. A resolve run is only picked by id. */
 export function pickRun(runs: Run[], pick: { attempt?: number; run?: number } = {}): Run | undefined {
   if (pick.run) return runs.find((r) => r.id === pick.run);
@@ -34,6 +33,7 @@ export function pickRun(runs: Run[], pick: { attempt?: number; run?: number } = 
   return runs.at(-1);
 }
 
+/** The parts of claude's final `result` event that a run records. */
 export interface ResultLike {
   session_id?: string;
   num_turns?: number;
