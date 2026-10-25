@@ -87,6 +87,7 @@ const ACTIONS: Record<BoardMove, (id: number) => Promise<unknown>> = {
   reject: api.reject,
   retry: api.retry,
   cancel: api.cancel,
+  mark_done: api.markDone,
 };
 const actOn = (kind: BoardMove, id: number) => act(() => ACTIONS[kind](id));
 /** A task in review opens on its diff, the rest on the overview. */

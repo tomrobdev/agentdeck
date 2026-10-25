@@ -1,5 +1,9 @@
 // How the queue is filtered, grouped and sorted. Mirrors daemon/src/domain/task/listing.ts (the CLI's `ls`).
 import type { Needs, Status, TaskStatus, TaskSummary } from './api';
+import { STATUS_GROUPS, type StatusGroup, isMerged, isReview, isStuck, statusGroup } from './boardMove';
+
+// The status groups, the lifecycle checks and the board's move rule live in boardMove.ts, which the daemon's tests import.
+export * from './boardMove';
 
 type Test = (t: TaskSummary) => boolean;
 
@@ -7,12 +11,7 @@ const is =
   (...statuses: TaskStatus[]): Test =>
   (t) =>
     statuses.includes(t.status);
-export const isStuck: Test = (t) => t.status === 'queued' && !!t.waiting?.stuck;
 export const isWaiting: Test = (t) => t.status === 'queued' && !!t.waiting && !t.waiting.stuck;
-/** A done task whose pull request waits on you. */
-export const isReview: Test = (t) => t.status === 'done' && t.pr_state === 'open';
-/** A done task whose pull request is merged: finished history. */
-export const isMerged: Test = (t) => t.status === 'done' && t.pr_state === 'merged';
 
 /** States to filter by, finer than a status. Same names as `agentdeck ls --status`. */
 export const STATES: { key: string; label: string; test: Test }[] = [
@@ -31,35 +30,6 @@ export const STATES: { key: string; label: string; test: Test }[] = [
   { key: 'no-pr', label: 'No PR', test: (t) => t.status === 'done' && !t.pr_url },
   { key: 'cancelled', label: 'Cancelled', test: is('cancelled') },
 ];
-
-/** Status groups, in attention order. Every task is in exactly one; a stuck task needs you, so it isn't queued. */
-export const STATUS_GROUPS = [
-  { key: 'needs-you', label: 'Needs you' },
-  { key: 'review', label: 'Review' },
-  { key: 'proposed', label: 'Proposed' },
-  { key: 'running', label: 'Running' },
-  { key: 'queued', label: 'Queued' },
-  { key: 'done', label: 'Done' },
-  { key: 'merged', label: 'Merged' },
-  { key: 'cancelled', label: 'Cancelled' },
-] as const;
-export type StatusGroup = (typeof STATUS_GROUPS)[number]['key'];
-
-export function statusGroup(t: TaskSummary): StatusGroup {
-  switch (t.status) {
-    case 'blocked':
-    case 'failed':
-      return 'needs-you';
-    case 'queued':
-      return isStuck(t) ? 'needs-you' : 'queued';
-    case 'cancel_requested':
-      return 'running';
-    case 'done':
-      return isReview(t) ? 'review' : isMerged(t) ? 'merged' : 'done';
-    default:
-      return t.status;
-  }
-}
 
 /** The tab a task opens on from the queue: a task in review is read as a diff. */
 export const openingTab = (t: TaskSummary): 'overview' | 'changes' => (isReview(t) ? 'changes' : 'overview');
@@ -184,11 +154,9 @@ export function groupTasks(tasks: TaskSummary[], by: GroupBy, sort: string): Gro
 export const EDITABLE_STATUSES: TaskStatus[] = ['proposed', 'queued', 'blocked', 'failed'];
 export const canEdit = (t: Pick<TaskSummary, 'status'>) => EDITABLE_STATUSES.includes(t.status);
 export const canApprove = (t: Pick<TaskSummary, 'status'>) => t.status === 'proposed';
-export const canRetry = (t: Pick<TaskSummary, 'status'>) => ['blocked', 'failed', 'done', 'cancelled'].includes(t.status);
 /** A done task whose PR waits on a person: they can send it back with a note, or close the PR. */
 export const canReview = (t: Pick<TaskSummary, 'status' | 'pr_url' | 'pr_state'>) =>
   t.status === 'done' && !!t.pr_url && t.pr_state === 'open';
-export const canCancel = (t: Pick<TaskSummary, 'status'>) => ['queued', 'running', 'blocked', 'failed'].includes(t.status);
 /** A done task whose PR is still open can be merged from its page (daemon application/pull-requests.ts mergeable). */
 export const canMerge = (t: Pick<TaskSummary, 'status' | 'pr_url' | 'pr_state'>) =>
   t.status === 'done' && !!t.pr_url && t.pr_state === 'open';
@@ -227,18 +195,6 @@ export function withHost(networkJson: string, host: string): string[] {
 }
 
 export const statusLabel = (s: TaskStatus) => (s === 'cancel_requested' ? 'stopping' : s);
-
-/** Board moves: which lifecycle event a drop from one status group to another means, if any. */
-export type BoardMove = 'approve' | 'reject' | 'retry' | 'cancel';
-export function boardMove(t: TaskSummary, to: StatusGroup): BoardMove | null {
-  const from = statusGroup(t);
-  if (from === to) return null;
-  if (from === 'proposed') return to === 'queued' ? 'approve' : to === 'cancelled' ? 'reject' : null;
-  if (to === 'queued' && canRetry(t)) return 'retry';
-  // A running task is stopped from its page, never by a drop.
-  if (to === 'cancelled' && canCancel(t) && t.status !== 'running') return 'cancel';
-  return null;
-}
 
 /** Per-browser view settings. Reads and writes never throw: storage can be missing or full. */
 export function loadSetting<T>(key: string, fallback: T): T {

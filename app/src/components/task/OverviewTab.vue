@@ -25,6 +25,8 @@ const EVENT_TEXT: Record<string, (e: TaskEventRow) => string> = {
   retry: (e) => (e.reason ? 'requested changes' : 'queued another attempt'),
   cancel: (e) => (e.to_status === 'cancel_requested' ? 'asked the run to stop' : 'cancelled the task'),
   merge: () => 'merged the pull request',
+  mark_done: () => 'marked done by hand',
+  pr_merged: () => 'PR merged on GitHub',
   sync: (e) => e.reason ?? 'brought the base branch into the branch',
   plan_unfinished: (e) => e.reason ?? 'left linked plan steps unfinished',
   environment_block: () => 'blocked by the environment; attempt given back',
@@ -95,10 +97,13 @@ const when = 'ml-auto text-sm text-muted';
           <span :class="when">{{ ago(it.at) }}</span>
         </template>
         <template v-else-if="it.kind === 'event'">
-          <span :class="node">{{ it.ev.type === 'retry' ? '↻' : it.ev.type === 'approve' ? '✓' : '•' }}</span>
+          <span :class="node">{{ it.ev.type === 'retry' ? '↻' : it.ev.type === 'approve' || it.ev.type === 'mark_done' ? '✓' : '•' }}</span>
           <span>
             {{ EVENT_TEXT[it.ev.type](it.ev) }}
-            <span v-if="it.ev.reason && it.ev.type !== 'sync' && it.ev.type !== 'plan_unfinished'" class="text-muted">
+            <span
+              v-if="it.ev.reason && it.ev.type !== 'sync' && it.ev.type !== 'plan_unfinished' && it.ev.type !== 'pr_merged'"
+              class="text-muted"
+            >
               · {{ it.ev.reason }}</span
             >
           </span>
