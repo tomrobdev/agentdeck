@@ -1,11 +1,10 @@
 // Use cases for the daemon as a whole: pause, status, and settings.
 import type { Db } from '../db/index.ts';
-import { NOTIFY_KINDS, type NotifyKind, type NotifySettings } from '../domain/notification.ts';
-import type { PlannerSettings } from '../domain/planner/proposals.ts';
-import { MODELS } from '../domain/task/task.ts';
-import { BUDGET_KEYS, type Budget, validateBudget } from '../domain/usage/governor.ts';
+import { type NotifyKind, type NotifySettings, notifyEventsError, ntfyServerError, ntfyTopicError } from '../domain/notification.ts';
+import { type PlannerSettings, plannerIntervalError, plannerMaxTasksError, plannerModelError } from '../domain/planner/proposals.ts';
+import { BUDGET_KEYS, type Budget, validateBudget, validateSlots } from '../domain/usage/governor.ts';
 import { restartWait } from '../domain/daemon/restart.ts';
-import { ActionError } from './errors.ts';
+import { ActionError, refuse } from './errors.ts';
 import { flag, list, number, object, text, whole } from './input.ts';
 import { startGate } from './gate.ts';
 import { notify } from './notifications.ts';
@@ -104,7 +103,7 @@ export function updateSettings(db: Db, patch: SettingsPatch): Settings {
   const reload = flag(body, 'reload_on_change');
   if (reload !== undefined) writes.push(['reload_on_change', reload ? '1' : '0']);
 
-  const maxConcurrent = whole(body, 'max_concurrent', 1, 8);
+  const maxConcurrent = whole(body, 'max_concurrent', validateSlots);
   if (maxConcurrent !== undefined) writes.push(['max_concurrent', String(maxConcurrent)]);
 
   const budget = section('budget');
@@ -125,18 +124,17 @@ export function updateSettings(db: Db, patch: SettingsPatch): Settings {
     if (desktop !== undefined) writes.push(['notify_desktop', desktop ? '1' : '0']);
     const events = list(n, 'events');
     if (events !== undefined) {
-      const bad = events.filter((e) => !NOTIFY_KINDS.includes(e as NotifyKind));
-      if (bad.length) throw new ActionError(`unknown notification events: ${bad.join(', ')}`);
+      refuse(notifyEventsError(events));
       writes.push(['notify_events', events.join(',')]);
     }
     const topic = text(n, 'ntfy_topic', { empty: true });
     if (topic !== undefined) {
-      if (topic && !/^[\w-]{1,64}$/.test(topic)) throw new ActionError('ntfy topic: letters, digits, - and _ only');
+      refuse(ntfyTopicError(topic));
       writes.push(['ntfy_topic', topic]);
     }
     const server = text(n, 'ntfy_server', { empty: true, raw: true });
     if (server !== undefined) {
-      if (!/^https?:\/\/\S+$/.test(server)) throw new ActionError('ntfy server must be an http(s) URL');
+      refuse(ntfyServerError(server));
       writes.push(['ntfy_server', server]);
     }
   }
@@ -147,18 +145,17 @@ export function updateSettings(db: Db, patch: SettingsPatch): Settings {
     if (enabled !== undefined) writes.push(['planner_enabled', enabled ? '1' : '0']);
     const hours = number(p, 'interval_hours');
     if (hours !== undefined) {
-      if (!(hours >= 0.25 && hours <= 168)) throw new ActionError('planner interval must be between 0.25 and 168 hours');
+      refuse(plannerIntervalError(hours));
       writes.push(['planner_interval_hours', String(hours)]);
     }
     const maxTasks = number(p, 'max_tasks');
     if (maxTasks !== undefined) {
-      if (!Number.isInteger(maxTasks) || maxTasks < 1 || maxTasks > 10)
-        throw new ActionError('planner max tasks must be a whole number from 1 to 10');
+      refuse(plannerMaxTasksError(maxTasks));
       writes.push(['planner_max_tasks', String(maxTasks)]);
     }
     const model = text(p, 'model', { empty: true, raw: true });
     if (model !== undefined) {
-      if (!MODELS.includes(model)) throw new ActionError(`planner model must be one of ${MODELS.join(', ')}`);
+      refuse(plannerModelError(model));
       writes.push(['planner_model', model]);
     }
   }

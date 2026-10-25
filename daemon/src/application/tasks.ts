@@ -8,19 +8,15 @@ import { PLAN_LIMIT, isPlanPath, parsePlan } from '../domain/plan/plan.ts';
 import type { Repo } from '../domain/repo/repo.ts';
 import { readNeeds } from '../domain/task/needs.ts';
 import { hasOpenPr } from '../domain/task/stage.ts';
-import { EDITABLE_STATUSES, MODELS, type Task, defaultTitle, isModel, planStepIds } from '../domain/task/task.ts';
+import { archivedRepoError, maxAttemptsError, maxTurnsError, modelError, priorityError, stepsNeedPlanError } from '../domain/task/rules.ts';
+import { EDITABLE_STATUSES, type Task, defaultTitle, planStepIds } from '../domain/task/task.ts';
 import { lastLine } from '../domain/text.ts';
 import { isSyncing } from './sync.ts';
 import { warnStuckDependents } from './dependencies.ts';
-import { ActionError } from './errors.ts';
+import { ActionError, refuse } from './errors.ts';
 import { object, text, whole } from './input.ts';
 import { requireTask, requireTaskRepo } from './lookups.ts';
 import { closePullRequest } from './pull-requests.ts';
-
-/** A typo in a model name would fail the run and use up an attempt, so refuse it here. */
-function checkModel(model: string | undefined): void {
-  if (model && !isModel(model)) throw new ActionError(`model must be ${MODELS.join(', ')} or a full claude-… model id`);
-}
 
 /** Step ids as the CLI types them (a,b) or the API sends them (an array); null when none are named. */
 function stepList(value: unknown): string[] | null {
@@ -72,22 +68,22 @@ export async function addTask(
   if (!prompt) throw new ActionError('a prompt is required');
   const title = text(body, 'title', { empty: true });
   const model = text(body, 'model', { empty: true });
-  checkModel(model);
+  refuse(modelError(model));
   const repoName = text(body, 'repo', { empty: true });
-  const priority = whole(body, 'priority', -1000, 1000);
-  const max_turns = whole(body, 'max_turns', 1, 500);
-  const max_attempts = whole(body, 'max_attempts', 1, 20);
+  const priority = whole(body, 'priority', priorityError);
+  const max_turns = whole(body, 'max_turns', maxTurnsError);
+  const max_attempts = whole(body, 'max_attempts', maxAttemptsError);
   if (body.plan_path !== undefined && typeof body.plan_path !== 'string') throw new ActionError('plan_path must be text');
   if (input.after_task !== undefined && (!Number.isInteger(input.after_task) || !db.getTask(input.after_task)))
     throw new ActionError(`--after: no task #${input.after_task}`);
   const repos = db.listRepos();
   const repo = repoName ? db.findRepo(repoName) : repos.length === 1 ? repos[0] : undefined;
   if (!repo) throw new ActionError(repoName ? `no repo "${repoName}"` : 'choose a repo (more than one is registered)');
-  if (repo.archived_at) throw new ActionError(`${repo.name} is archived; unarchive it first`);
+  refuse(archivedRepoError(repo));
   const plan_path = typeof input.plan_path === 'string' ? input.plan_path.trim() : '';
   const steps = stepList(input.plan_steps);
   if (plan_path) await checkPlanLink(repo, plan_path, steps);
-  else if (steps) throw new ActionError('--steps needs --plan');
+  else refuse(stepsNeedPlanError(null, steps));
   return db.addTask({
     repo_id: repo.id,
     title: title || defaultTitle(prompt),
@@ -129,13 +125,13 @@ export async function editTask(
     const value = text(body, key);
     if (value !== undefined) fields[key] = value;
   }
-  checkModel(fields.model);
-  for (const [key, min, max] of [
-    ['priority', -1000, 1000],
-    ['max_turns', 1, 500],
-    ['max_attempts', 1, 20],
+  refuse(modelError(fields.model));
+  for (const [key, rule] of [
+    ['priority', priorityError],
+    ['max_turns', maxTurnsError],
+    ['max_attempts', maxAttemptsError],
   ] as const) {
-    const value = whole(body, key, min, max);
+    const value = whole(body, key, rule);
     if (value !== undefined) fields[key] = value;
   }
 
@@ -145,7 +141,7 @@ export async function editTask(
     const given = typeof patch.plan_path === 'string' ? patch.plan_path.trim() : patch.plan_path;
     const path = given === undefined ? task.plan_path : given || null;
     const steps = patch.plan_steps !== undefined ? stepList(patch.plan_steps) : given === undefined ? planStepIds(task) : null;
-    if (path === null && steps) throw new ActionError('--steps needs --plan');
+    refuse(stepsNeedPlanError(path, steps));
     if (path !== null) {
       await checkPlanLink(requireTaskRepo(db, task), path, steps);
     }

@@ -8,6 +8,8 @@
 //   so a busy morning can't burn the whole week.
 // Running tasks are never interrupted; this only gates new starts.
 
+import { wholeNumberError } from '../text.ts';
+
 export interface Budget {
   five_hour_max: number;
   five_hour_soft: number;
@@ -105,3 +107,6 @@ export function validateBudget(b: Budget): string | null {
   if (b.five_hour_soft > b.five_hour_max) return 'five_hour_soft must not exceed five_hour_max';
   return null;
 }
+
+/** The slot count (`max_concurrent`) must be a whole number from 1 to 8. */
+export const validateSlots = (value: unknown): string | null => wholeNumberError('max_concurrent', value, 1, 8);

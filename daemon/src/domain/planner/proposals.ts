@@ -115,6 +115,19 @@ export function plannerDueReason(
   return 'queue is empty';
 }
 
+/** The rules for the planner's settings. Each returns the message to show, or null. */
+export function plannerIntervalError(hours: number): string | null {
+  return hours >= 0.25 && hours <= 168 ? null : 'planner interval must be between 0.25 and 168 hours';
+}
+
+export function plannerMaxTasksError(max: number): string | null {
+  return Number.isInteger(max) && max >= 1 && max <= 10 ? null : 'planner max tasks must be a whole number from 1 to 10';
+}
+
+export function plannerModelError(model: string): string | null {
+  return MODELS.includes(model) ? null : `planner model must be one of ${MODELS.join(', ')}`;
+}
+
 export interface Proposal {
   title: string;
   prompt: string;

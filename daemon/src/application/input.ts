@@ -22,13 +22,13 @@ export function textOrNull(body: Record<string, unknown>, key: string): string |
   return body[key] === null ? null : text(body, key, { empty: true });
 }
 
-/** A whole number from min to max; undefined when absent. */
-export function whole(body: Record<string, unknown>, key: string, min: number, max: number): number | undefined {
+/** A number the field's domain rule accepts (it knows the limits and the message); undefined when absent. */
+export function whole(body: Record<string, unknown>, key: string, rule: (value: unknown) => string | null): number | undefined {
   const value = body[key];
   if (value === undefined) return undefined;
-  if (typeof value !== 'number' || !Number.isInteger(value) || value < min || value > max)
-    throw new ActionError(`${key} must be a whole number from ${min} to ${max}`);
-  return value;
+  const err = rule(value);
+  if (err) throw new ActionError(err);
+  return value as number;
 }
 
 /** A finite number; undefined when absent. */
