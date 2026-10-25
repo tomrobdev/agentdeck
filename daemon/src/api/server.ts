@@ -69,6 +69,7 @@ export function startApi(
     ['POST', /^\/api\/repos\/(\d+)\/resume$/, (_q, _s, [id]) => actions.resumeRepo(db, Number(id))],
     ['POST', /^\/api\/repos\/(\d+)\/archive$/, (_q, _s, [id]) => actions.archiveRepo(db, Number(id))],
     ['POST', /^\/api\/repos\/(\d+)\/unarchive$/, (_q, _s, [id]) => actions.unarchiveRepo(db, Number(id))],
+    ['GET', /^\/api\/repos\/(\d+)\/deletion$/, (_q, _s, [id]) => actions.repoDeletionPreview(db, Number(id))],
     ['DELETE', /^\/api\/repos\/(\d+)$/, (_q, _s, [id]) => actions.deleteRepo(db, Number(id))],
     ['POST', /^\/api\/tasks\/(\d+)\/approve$/, (_q, _s, [id]) => (actions.approveTask(db, Number(id)), taskDetail(db, Number(id)))],
     ['POST', /^\/api\/tasks\/(\d+)\/reject$/, (_q, _s, [id]) => (actions.rejectTask(db, Number(id)), taskDetail(db, Number(id)))],
