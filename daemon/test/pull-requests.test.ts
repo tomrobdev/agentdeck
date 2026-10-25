@@ -287,6 +287,48 @@ test('refreshPrStates updates open PRs of done tasks and leaves a failed lookup 
   assert.ok(!lookups.includes('https://x/pull/13'));
 });
 
+test('refreshPrStates: a merged PR moves a blocked or failed task to done, a closed one leaves it, mergeability is never read', async () => {
+  const mk = (status: string, url: string) => {
+    const t = db.addTask({ repo_id: repo.id, title: `pr ${url}`, prompt: 'x' });
+    db.raw
+      .prepare("UPDATE tasks SET status = ?, blocked_reason = 'conflict', pr_url = ?, pr_state = 'open' WHERE id = ?")
+      .run(status, url, t.id);
+    return t.id;
+  };
+  const blockedMerged = mk('blocked', 'https://x/pull/30');
+  const failedMerged = mk('failed', 'https://x/pull/31');
+  const blockedClosed = mk('blocked', 'https://x/pull/32');
+  const blockedOpen = mk('blocked', 'https://x/pull/33');
+  states = { 'https://x/pull/30': 'merged', 'https://x/pull/31': 'merged', 'https://x/pull/32': 'closed' };
+  const details: string[] = [];
+  const real = github.prDetails;
+  github.prDetails = async (url, cwd) => {
+    details.push(url);
+    return real(url, cwd);
+  };
+  try {
+    const found = await refreshPrStates(db);
+    assert.deepEqual(found.conflicting, []);
+  } finally {
+    github.prDetails = real;
+  }
+  for (const id of [blockedMerged, failedMerged]) {
+    const t = db.getTask(id)!;
+    assert.equal(t.status, 'done');
+    assert.equal(t.pr_state, 'merged');
+    assert.equal(t.blocked_reason, null);
+    assert.ok(db.eventsForTask(id).some((e) => e.type === 'pr_merged'));
+  }
+  assert.equal(db.getTask(blockedClosed)!.status, 'blocked');
+  assert.equal(db.getTask(blockedClosed)!.pr_state, 'closed');
+  assert.equal(db.getTask(blockedOpen)!.status, 'blocked');
+  assert.deepEqual(
+    details.filter((u) => /pull\/3[0-3]$/.test(u)),
+    [],
+    'no mergeability lookups for tasks that are not done',
+  );
+});
+
 test('the scheduler refreshes PR states on its own, not only when work runs', async () => {
   const t = db.addTask({ repo_id: repo.id, title: 'merge me', prompt: 'x' });
   db.raw.prepare("UPDATE tasks SET status = 'done', pr_url = 'https://x/pull/20', pr_state = 'open' WHERE id = ?").run(t.id);
