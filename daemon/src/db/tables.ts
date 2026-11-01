@@ -1,6 +1,5 @@
-// The tables as Drizzle sees them, mirroring the migrated schema in schema.ts. Dev tooling only for now:
-// drizzle-kit reads this for Studio (pnpm db:studio) and the schema check (pnpm db:check). The stores still use
-// hand-written SQL until the port in docs/plans/drizzle.html. Keys are column names, as in the domain types.
+// The tables as Drizzle sees them, mirroring the migrated schema in schema.ts. The stores query through them, and
+// drizzle-kit reads this for Studio (pnpm db:studio) and the schema check (pnpm db:check). Keys are column names, as in the domain types.
 import { sql } from 'drizzle-orm';
 import { index, integer, real, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
 export const repos = sqliteTable(

@@ -287,7 +287,7 @@
       </p>
     </section>
 
-    <section data-plan-step id="rules" data-status="todo">
+    <section data-plan-step id="rules" data-status="done">
       <h2>Rules and docs</h2>
       <p>
         CLAUDE.md: "SQL lives only in <code>db/</code>" becomes "queries live only in <code>db/</code>, through Drizzle; raw
@@ -295,6 +295,10 @@
         <code>tables.ts</code> and the domain type, run <code>pnpm db:generate</code>, append its SQL as a new step, then
         <code>pnpm db:check</code>). Remove <code>raw</code> from <code>Db</code> if nothing outside <code>db/</code> needs it; the
         <code>node:sqlite</code> rule in the architecture test stays.
+      </p>
+      <p>
+        <code>raw</code> stays: nothing in <code>src/</code> uses it, but seven test files seed and inspect rows through it, and removing it
+        would mean rewriting them.
       </p>
       <ul data-plan-done>
         <li>CLAUDE.md describes the new way of adding a column, step by step.</li>
