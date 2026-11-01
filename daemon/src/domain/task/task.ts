@@ -30,6 +30,8 @@ export interface Task {
   auto_merge: number | null; // 1 or 0 overrides the repo's auto_merge; null = the repo's (domain/pull-request/auto-merge.ts)
   auto_merge_check: string | null; // JSON { verdict, reasons }: the PR refresh's latest auto-merge check while the PR is open
   auto_merge_checked_at: string | null; // when that check was made
+  pr_checks_opened: string | null; // JSON CheckCounts: the PR's checks the first time they settled after it opened
+  pr_checks_merged: string | null; // JSON CheckCounts: the PR's checks when it was merged
   created_at: string;
   updated_at: string;
 }

@@ -7,6 +7,7 @@ import {
   MERGE_METHODS,
   type MergeMethod,
   type PrDetails,
+  checksSettled,
   isMergeMethod,
   mergeCheck,
 } from '../../domain/pull-request/merge.ts';
@@ -165,7 +166,7 @@ export async function mergeOpenPr(
   } catch (err) {
     throw new ActionError(`merge failed: ${(err as Error).message}`);
   }
-  db.recordMerge(id, method, opts.reason);
+  db.recordMerge(id, method, opts.reason, pr.checks);
   // The base just moved: the repo's other open PRs may now conflict. The scheduler re-reads them at once
   // (a setting, so a merge from the CLI reaches the daemon too).
   db.requestPrCheck();
@@ -223,6 +224,7 @@ export async function refreshPrStates(db: Db, log: (msg: string) => void = () =>
       }
       if (state !== 'open' || task.status !== 'done') continue;
       const pr = await github.prDetails(task.pr_url!, cwd, { withFiles: !!repo && autoMergeOn(task, repo) });
+      if (checksSettled(pr.checks)) db.recordPrChecksOpened(task.id, pr.checks);
       // Every check is kept on the task for the views, whatever the verdict; none when auto-merge is off.
       const check = repo ? autoMergeFor(db, task, repo, pr, lastTestsPassed(db, task.id)) : null;
       db.setAutoMergeCheck(task.id, check && JSON.stringify(check));

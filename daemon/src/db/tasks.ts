@@ -21,7 +21,7 @@ import {
 import { type AnySQLiteColumn, alias } from 'drizzle-orm/sqlite-core';
 import type { DatabaseSync } from 'node:sqlite';
 import { DEFAULTS } from '../config.ts';
-import type { MergeMethod } from '../domain/pull-request/merge.ts';
+import type { CheckCounts, MergeMethod } from '../domain/pull-request/merge.ts';
 import { MAX_RESTARTS, type TaskEvent, type TaskStatus, fromStatuses, nextStatus, transition } from '../domain/task/lifecycle.ts';
 import type { Link, LinkKind } from '../domain/task/link.ts';
 import type { PrEvent, TaskEventRow, TaskEventType } from '../domain/task/history.ts';
@@ -335,6 +335,18 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       return Number(res.changes) > 0;
     },
     /**
+     * Keep a done task's open PR's checks as they were the first time they settled (`pr_checks_opened`).
+     * Written once: returns false when the PR is not open, or already has them.
+     */
+    recordPrChecksOpened(id: number, checks: CheckCounts): boolean {
+      const res = orm
+        .update(tasks)
+        .set({ pr_checks_opened: JSON.stringify(checks) })
+        .where(and(eq(tasks.id, id), eq(tasks.status, 'done'), eq(tasks.pr_state, 'open'), isNull(tasks.pr_checks_opened)))
+        .run();
+      return Number(res.changes) > 0;
+    },
+    /**
      * Record a change to a task's PR: `pr_state` (and `pr_url` when opened) and a 'pr' history row, together.
      * Guarded on the PR state the change starts from, like every task write: an opened or failed PR replaces anything
      * but an open one (and needs a done task), a close or a sighting only moves an open PR. A merge recorded in
@@ -355,7 +367,14 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         const row = orm
           .update(tasks)
           // A PR that is no longer open has no auto-merge check; a reopened one gets its first at the next refresh.
-          .set({ ...set, auto_merge_check: null, auto_merge_checked_at: null, updated_at: sql.raw(NOW) })
+          .set({
+            ...set,
+            // A newly opened PR has its own checks to record.
+            ...(e.type === 'opened' ? { pr_checks_opened: null, pr_checks_merged: null } : {}),
+            auto_merge_check: null,
+            auto_merge_checked_at: null,
+            updated_at: sql.raw(NOW),
+          })
           .where(and(eq(tasks.id, id), guard))
           .returning({ status: tasks.status })
           .get() as { status: TaskStatus } | undefined;
@@ -368,11 +387,18 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
      * Record that a done task's PR was merged: the PR state, the method and a history row, together.
      * Guarded like every task write: only a done task whose PR is open. Returns false if it was not.
      */
-    recordMerge(id: number, method: MergeMethod, reason: string): boolean {
+    recordMerge(id: number, method: MergeMethod, reason: string, checks?: CheckCounts): boolean {
       return atomically(db, () => {
         const res = orm
           .update(tasks)
-          .set({ pr_state: 'merged', merge_method: method, auto_merge_check: null, auto_merge_checked_at: null, updated_at: sql.raw(NOW) })
+          .set({
+            pr_state: 'merged',
+            merge_method: method,
+            ...(checks ? { pr_checks_merged: JSON.stringify(checks) } : {}),
+            auto_merge_check: null,
+            auto_merge_checked_at: null,
+            updated_at: sql.raw(NOW),
+          })
           .where(and(eq(tasks.id, id), eq(tasks.status, 'done'), eq(tasks.pr_state, 'open')))
           .run();
         if (!Number(res.changes)) return false;

@@ -181,6 +181,18 @@ export const MIGRATIONS: Migration[] = [
   // NULL when none; auto_merge_checked_at is when the PR refresh made it.
   `ALTER TABLE tasks ADD COLUMN auto_merge_check TEXT;
    ALTER TABLE tasks ADD COLUMN auto_merge_checked_at TEXT;`,
+  // 20: what the pilot scorecard needs and nothing kept. usage_samples is a history of usage readings, appended when a
+  // window's reading changes; pr_checks_opened / pr_checks_merged are JSON { total, failing, pending } of a PR's checks.
+  `CREATE TABLE usage_samples (
+     id INTEGER PRIMARY KEY,
+     window TEXT NOT NULL,
+     utilization REAL NOT NULL,
+     resets_at INTEGER NOT NULL,
+     observed_at TEXT NOT NULL DEFAULT (datetime('now'))
+   );
+   CREATE INDEX usage_samples_window ON usage_samples(window, id);
+   ALTER TABLE tasks ADD COLUMN pr_checks_opened TEXT;
+   ALTER TABLE tasks ADD COLUMN pr_checks_merged TEXT;`,
 ];
 
 /** Runs every step above the database's user_version in one transaction; returns how many ran. */
