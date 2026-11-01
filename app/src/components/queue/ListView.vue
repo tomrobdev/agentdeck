@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { nextTick, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { ago, describeLive } from '../../api';
 import { openExternal } from '../../platform/native';
+import RowMenu from './RowMenu.vue';
 import {
+  type BoardMove,
   type Group,
   type GroupBy,
   canReview,
@@ -36,9 +38,29 @@ const emit = defineEmits<{
   toggle: [key: string];
   select: [id: number];
   open: [id: number];
-  act: [kind: 'approve' | 'retry', id: number];
+  act: [kind: BoardMove, id: number];
   merge: [id: number];
 }>();
+
+// The row menu: right-click on a row, or the context-menu key / ⇧F10 on the selected one.
+const menu = ref<{ id: number; x: number; y: number } | null>(null);
+const menuTask = computed(() => props.groups.flatMap((g) => g.tasks).find((t) => t.id === menu.value?.id));
+function openMenu(id: number, x: number, y: number) {
+  emit('select', id);
+  menu.value = { id, x, y };
+}
+function onKey(e: KeyboardEvent) {
+  if (e.key !== 'ContextMenu' && !(e.key === 'F10' && e.shiftKey)) return;
+  if (props.selected === null || e.defaultPrevented || document.querySelector('[role="dialog"]')) return;
+  if (e.target instanceof HTMLElement && e.target.closest('input, textarea, select, [contenteditable]')) return;
+  const row = document.querySelector(`[data-task-row="${props.selected}"]`);
+  if (!row) return;
+  e.preventDefault();
+  const r = row.getBoundingClientRect();
+  openMenu(props.selected, r.left + 48, r.bottom);
+}
+onMounted(() => window.addEventListener('keydown', onKey));
+onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
 
 // Keep the selected row in view when the keyboard moves it.
 watch(
@@ -81,6 +103,7 @@ watch(
             :data-task-row="t.id"
             @click="emit('open', t.id)"
             @mouseenter="emit('select', t.id)"
+            @contextmenu.prevent="openMenu(t.id, $event.clientX, $event.clientY)"
           >
             <PriorityIcon :priority="t.priority" />
             <span class="w-[34px] flex-none font-mono text-sm text-muted tabular-nums">#{{ t.id }}</span>
@@ -145,5 +168,15 @@ watch(
         </template>
       </section>
     </template>
+    <RowMenu
+      v-if="menu && menuTask"
+      :task="menuTask"
+      :x="menu.x"
+      :y="menu.y"
+      @close="menu = null"
+      @open="emit('open', $event)"
+      @act="(kind, id) => emit('act', kind, id)"
+      @merge="emit('merge', $event)"
+    />
   </div>
 </template>

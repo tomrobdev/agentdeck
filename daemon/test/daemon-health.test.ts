@@ -8,7 +8,7 @@ process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-health-'));
 
 const h = await import('../src/domain/daemon/health.ts');
 const { SCHEMA_DIRTY, offMain, reloadState } = await import('../src/domain/daemon/restart.ts');
-const { gatherHealth } = await import('../src/application/daemon/doctor.ts');
+const { daemonReport, gatherHealth, restartNow } = await import('../src/application/daemon/doctor.ts');
 const { openDb } = await import('../src/db/index.ts');
 
 const NOW = Date.parse('2026-11-01T12:00:00Z');
@@ -246,5 +246,47 @@ test('gatherHealth reads runs and tasks from the database and their liveness fro
   const checks = h.judgeHealth(facts);
   const failed = checks.filter((c) => !c.ok).map((c) => c.name);
   assert.deepEqual(failed, ['code loaded', 'claude processes', 'running tasks', 'daemon.log']);
+  db.close();
+});
+
+test('daemonReport gives the checks, HEAD, the running tasks and the last 20 log lines', async () => {
+  const db = openDb(':memory:');
+  const repo = db.addRepo({ name: 'r', path: '/tmp/r', base_branch: 'main' });
+  const task = db.addTask({ repo_id: repo.id, title: 'busy', prompt: 'p' });
+  db.applyEvent(task.id, { type: 'claim' });
+  const lines = Array.from({ length: 30 }, (_, i) => `line ${i}`);
+  const report = await daemonReport(
+    db,
+    {
+      service: async () => running,
+      api: async () => state(),
+      head: async () => 'b'.repeat(40),
+      ahead: async () => 1,
+      alive: () => true,
+      logLines: () => [...lines, ''],
+      gh: async () => ({ ok: true, output: 'ok' }),
+      now: () => NOW,
+    },
+    4317,
+  );
+  assert.equal(report.head, 'b'.repeat(40));
+  assert.deepEqual(report.running, [{ id: task.id, title: 'busy' }]);
+  assert.equal(report.log.length, 20);
+  assert.equal(report.log.at(-1), 'line 29');
+  assert.ok(report.checks.some((c) => c.name === 'code loaded' && !c.ok));
+  db.close();
+});
+
+test('restartNow names the running tasks and restarts after the answer', async () => {
+  const db = openDb(':memory:');
+  const repo = db.addRepo({ name: 'r', path: '/tmp/r', base_branch: 'main' });
+  const task = db.addTask({ repo_id: repo.id, title: 'busy', prompt: 'p' });
+  db.applyEvent(task.id, { type: 'claim' });
+  let restarted = 0;
+  const result = restartNow(db, async () => void restarted++, 0);
+  assert.deepEqual(result, { requeued: [{ id: task.id, title: 'busy' }] });
+  assert.equal(restarted, 0);
+  await new Promise((r) => setTimeout(r, 20));
+  assert.equal(restarted, 1);
   db.close();
 });

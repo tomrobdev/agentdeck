@@ -49,6 +49,23 @@ export function ago(time: string): string {
   return `${Math.round(secs / 86400)}d ago`;
 }
 
+/** How long the daemon has run, from its ISO start time: "45s", "12m", "3h 5m", "2d 4h". */
+export function uptime(startedAt: string, now = Date.now()): string {
+  const secs = Math.max(0, Math.floor((now - Date.parse(startedAt)) / 1000));
+  if (secs < 60) return `${secs}s`;
+  const mins = Math.floor(secs / 60);
+  if (mins < 60) return `${mins}m`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ${mins % 60}m`;
+  return `${Math.floor(hours / 24)}d ${hours % 24}h`;
+}
+
+/** "#80", "#80 and #81", "#80, #81 and #82". */
+export function taskList(ids: number[]): string {
+  const tags = ids.map((id) => `#${id}`);
+  return tags.length < 2 ? tags.join('') : `${tags.slice(0, -1).join(', ')} and ${tags[tags.length - 1]}`;
+}
+
 /** How long a run took, or has taken so far: "45s", "12m", "1.4h". */
 export function runDuration(r: Run): string {
   const secs = ((r.ended_at ? parseTime(r.ended_at) : Date.now()) - parseTime(r.started_at)) / 1000;
