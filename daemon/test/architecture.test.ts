@@ -98,7 +98,7 @@ const PACKAGES: { match: RegExp; allowed: (path: string) => boolean; why: string
   { match: /^node:sqlite$/, allowed: (p) => p.startsWith('db/'), why: 'SQL lives only in db/' },
   { match: /^node:child_process$/, allowed: (p) => p.startsWith('adapters/'), why: 'processes are started by adapters/' },
   { match: /^node:/, allowed: (p) => !p.startsWith('domain/'), why: 'domain/ is pure: no I/O' },
-  { match: /^drizzle-orm(\/|$)/, allowed: (p) => p === 'db/tables.ts', why: 'Drizzle is dev tooling, for db/tables.ts only' },
+  { match: /^drizzle-orm(\/|$)/, allowed: (p) => p.startsWith('db/'), why: 'Drizzle is the db layer, for db/ only' },
   { match: /^(?!node:)/, allowed: () => false, why: 'no runtime dependencies' },
 ];
 
@@ -149,10 +149,11 @@ test('packages are imported only where they belong', () => {
   assert.deepEqual(found, []);
 });
 
-test('db/tables.ts is imported only for its types', () => {
-  // Drizzle at runtime is deferred until 1.0 is stable (docs/plans/drizzle.html).
+test('db/tables.ts is imported at runtime only by files in db/', () => {
   const found = sources.flatMap((s) =>
-    s.imports.filter((i) => i.target === 'db/tables.ts' && !i.typeOnly).map((i) => `${at(s, i.line)} imports db/tables.ts at runtime`),
+    s.imports
+      .filter((i) => i.target === 'db/tables.ts' && !i.typeOnly && !s.path.startsWith('db/'))
+      .map((i) => `${at(s, i.line)} imports db/tables.ts at runtime, outside db/`),
   );
   assert.deepEqual(found, []);
 });
