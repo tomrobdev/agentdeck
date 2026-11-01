@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import { type MergeAllResult, type TaskSummary, api } from '../../api';
+import { type MergeAllResult, type TaskSummary, api, syncLine } from '../../api';
 import { useActions } from '../../composables/useActions';
 import Modal from '../ui/Modal.vue';
 
@@ -33,6 +33,63 @@ async function start() {
   }
 }
 
+// A PR left open because it conflicts can be synced from here, one at a time, and the ones that synced merged in one go.
+// Closing the dialog doesn't stop the sync under way: the daemon finishes it and the queue shows it from the task's summary.
+interface SyncState {
+  state: 'syncing' | 'synced' | 'blocked';
+  line: string;
+}
+const syncs = ref<Record<number, SyncState>>({});
+const conflicting = computed(() => result.value?.skipped.filter((s) => s.conflicting).map((s) => s.id) ?? []);
+const unsynced = computed(() => conflicting.value.filter((id) => !syncs.value[id] || syncs.value[id].state === 'blocked'));
+const synced = computed(() => conflicting.value.filter((id) => syncs.value[id]?.state === 'synced'));
+const syncingNow = computed(() => Object.values(syncs.value).some((s) => s.state === 'syncing'));
+let closed = false;
+
+async function syncOne(id: number) {
+  syncs.value = { ...syncs.value, [id]: { state: 'syncing', line: 'Syncing…' } };
+  try {
+    const r = await api.sync(id);
+    const line = `${syncLine(r)}${r.push_error ? ` Could not push: ${r.push_error}` : ''}`;
+    const ok = (r.outcome === 'clean' || r.outcome === 'resolved' || r.outcome === 'up_to_date') && !r.push_error;
+    syncs.value = { ...syncs.value, [id]: { state: ok ? 'synced' : 'blocked', line } };
+  } catch (e) {
+    syncs.value = { ...syncs.value, [id]: { state: 'blocked', line: (e as Error).message } };
+  }
+  await refresh();
+}
+async function syncAll(ids: number[]) {
+  if (syncingNow.value) return;
+  for (const id of ids) {
+    if (closed) return;
+    await syncOne(id);
+  }
+}
+
+// The synced ones merge through the same call as the first round, and replace their entries in the result.
+async function mergeSynced() {
+  const ids = [...synced.value];
+  if (running.value || !ids.length || !result.value) return;
+  running.value = true;
+  error.value = '';
+  try {
+    const next = await api.mergeAll(ids);
+    const before = result.value;
+    result.value = {
+      merged: [...before.merged, ...next.merged],
+      skipped: [...before.skipped.filter((s) => !ids.includes(s.id)), ...next.skipped],
+    };
+    // One that conflicts again (the base moved) can be synced again.
+    for (const s of next.skipped) delete syncs.value[s.id];
+    await refresh();
+  } catch (e) {
+    error.value = (e as Error).message;
+  } finally {
+    running.value = false;
+  }
+}
+onBeforeUnmount(() => (closed = true));
+
 const close = () => (running.value ? undefined : emit('done', merged.value));
 
 // Enter merges before it starts and closes after, except on a focused button, which handles its own Enter.
@@ -62,6 +119,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
           <code class="max-w-[220px] truncate text-sm">{{ t.pr_url }}</code>
         </span>
         <span v-if="why(t.id)" class="pl-6 text-sm text-failed">{{ why(t.id) }}</span>
+        <span v-if="syncs[t.id]" class="pl-6 text-sm" :class="syncs[t.id].state === 'blocked' ? 'text-failed' : 'text-muted'">
+          {{ syncs[t.id].line }}
+        </span>
+        <span v-if="conflicting.includes(t.id) && unsynced.includes(t.id)" class="pl-6">
+          <button class="btn-mini" :disabled="running || syncingNow" @click="syncAll([t.id])">Sync</button>
+        </span>
       </li>
     </ul>
     <p v-if="!running && !result" class="muted mt-3">
@@ -69,6 +132,10 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
       and you'll see why. This can't be undone from here.
     </p>
     <p v-if="running" class="muted mt-3">Merging…</p>
+    <p v-if="unsynced.length" class="muted mt-3">
+      A PR that conflicts with the base branch can be synced from here: claude settles the conflicts, which can take a few minutes. Closing
+      this doesn't stop it.
+    </p>
     <p v-if="result" class="mt-3">
       Merged {{ merged.length }} of {{ tasks.length }}.<template v-if="started.length">
         {{ started.map((id) => `#${id}`).join(', ') }} can start.</template
@@ -80,6 +147,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
     </ul>
     <div class="mt-4 flex justify-end gap-2">
       <button :disabled="running" @click="close">{{ result ? 'Close' : 'Cancel' }}</button>
+      <button v-if="unsynced.length > 1" :disabled="running || syncingNow" @click="syncAll(unsynced)">
+        Sync the {{ unsynced.length }} conflicting
+      </button>
+      <button v-if="synced.length" class="primary" :disabled="running || syncingNow" @click="mergeSynced">
+        {{ running ? 'Merging…' : `Merge the ${synced.length} synced` }}
+      </button>
       <button v-if="!result" class="primary" :disabled="running" @click="start">
         {{ running ? 'Merging…' : `Merge ${tasks.length}` }}
       </button>

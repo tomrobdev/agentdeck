@@ -169,6 +169,9 @@ const syncing = new Set<number>();
 /** Whether a sync or resolve run is touching this task's worktree right now, in this process or the daemon's. */
 export const isSyncing = (db: Db, id: number): boolean => syncing.has(id) || db.hasRunningResolve(id);
 
+/** Whether a sync in this process holds the task's worktree (the in-process half of `isSyncing`, no query). */
+export const isSyncLocked = (id: number): boolean => syncing.has(id);
+
 export interface SyncReport {
   /** `skipped`: conflicts, but auto_resolve is off. `deferred`: the usage limit, or a cancel, stopped it. */
   outcome: 'up_to_date' | 'clean' | 'resolved' | 'blocked' | 'skipped' | 'deferred' | 'error';

@@ -62,6 +62,7 @@ export type {
   Status,
   SubmitReview,
   SyncResult,
+  SyncView,
   Task,
   TaskDetail,
   TaskSaved,

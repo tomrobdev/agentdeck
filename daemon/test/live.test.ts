@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { START_LIVE, liveView, nextLive, toolText } from '../src/domain/run/live.ts';
+import { START_LIVE, liveView, nextLive, syncView, toolText } from '../src/domain/run/live.ts';
 
 const assistant = (id: string, ...uses: { name: string; input: unknown }[]) => ({
   type: 'assistant',
@@ -36,4 +36,29 @@ test('only a running task has a live view', () => {
   });
   assert.equal(liveView({ status: 'done', max_turns: 40 }, run), null);
   assert.equal(liveView({ status: 'running', max_turns: 40 }, undefined), null);
+});
+
+test('a done task has a sync view only while a sync is under way', () => {
+  const done = { status: 'done', max_turns: 40 };
+  const run = { started_at: '2026-01-01 00:00:00', live_turns: 3, live_tool: 'Edit a.ts' };
+  assert.equal(syncView(done, 'main', false, undefined), null);
+  assert.deepEqual(syncView(done, 'main', true, undefined), {
+    base: 'main',
+    since: null,
+    resolving: false,
+    turns: 0,
+    max_turns: 40,
+    tool: null,
+  });
+  assert.deepEqual(syncView(done, 'main', true, run), {
+    base: 'main',
+    since: run.started_at,
+    resolving: true,
+    turns: 3,
+    max_turns: 40,
+    tool: 'Edit a.ts',
+  });
+  assert.equal(syncView(done, 'main', false, run)?.resolving, true);
+  assert.equal(syncView(done, null, true, undefined)?.base, 'the base branch');
+  assert.equal(syncView({ status: 'running', max_turns: 40 }, 'main', true, run), null);
 });

@@ -13,7 +13,7 @@ const emit = defineEmits<{ select: [runId: number]; path: [path: string, line: n
 const latest = computed(() => props.task.runs.at(-1)?.id ?? null);
 const chosen = computed(() => props.runId ?? latest.value);
 const run = computed(() => props.task.runs.find((r) => r.id === chosen.value));
-const live = computed(() => props.task.status === 'running' && chosen.value === latest.value);
+const live = computed(() => (props.task.status === 'running' || !!props.task.sync?.resolving) && chosen.value === latest.value);
 </script>
 
 <template>

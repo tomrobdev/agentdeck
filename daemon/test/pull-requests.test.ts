@@ -690,6 +690,11 @@ test('mergeAll merges each PR, one that lands after another once that one has, a
     'the entry has the id; the reason does not repeat it',
   );
   assert.match(res.skipped[1].reason, new RegExp(`^lands after #${outside.id}`));
+  assert.deepEqual(
+    res.skipped.map((s) => s.conflicting),
+    [true, false],
+    'only the conflict with the base branch can be settled by a sync',
+  );
   for (const id of [conflicted.id, held.id]) assert.equal(db.getTask(id)!.pr_state, 'open');
   db.applyEvent(outside.id, { type: 'cancel' });
 

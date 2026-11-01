@@ -144,30 +144,26 @@ function startResize(down: PointerEvent) {
 }
 
 // A PR in review moves on from its row: Merge (or a drop on Done) opens the merge confirm, Sync brings the base into its
-// branch. A sync that conflicts starts a resolve run, which takes minutes, so the row says it is syncing until it ends.
-const syncing = ref<number[]>([]);
+// branch. A sync that conflicts starts a resolve run, which takes minutes; the row shows the sync from the task's summary,
+// whoever started it, until it ends.
 async function sync(id: number) {
-  if (syncing.value.includes(id)) return;
-  syncing.value = [...syncing.value, id];
+  if (props.tasks.find((t) => t.id === id)?.sync) return;
   let done = '';
-  try {
-    const ok = await run(async () => {
-      const r = await api.sync(id);
-      done = `#${id}: ${syncLine(r)}${r.push_error ? ` Could not push: ${r.push_error}` : ''}`;
-    });
-    if (ok) flash(done);
-  } finally {
-    syncing.value = syncing.value.filter((s) => s !== id);
-  }
+  const ok = await run(async () => {
+    const r = await api.sync(id);
+    done = `#${id}: ${syncLine(r)}${r.push_error ? ` Could not push: ${r.push_error}` : ''}`;
+  });
+  if (ok) flash(done);
 }
 function act(kind: BoardMove | 'sync', id: number) {
+  if ((kind === 'merge' || kind === 'sync') && props.tasks.find((t) => t.id === id)?.sync) return;
   if (kind === 'merge') startMerge(id);
   else if (kind === 'sync') sync(id);
   else emit('act', kind, id);
 }
 /** "Merge all" on the Review group: the bulk merge confirm, for every PR in review that isn't syncing. */
 function mergeAll(ids: number[]) {
-  bulkMerging.value = props.tasks.filter((t) => ids.includes(t.id) && !syncing.value.includes(t.id));
+  bulkMerging.value = props.tasks.filter((t) => ids.includes(t.id) && !t.sync);
 }
 
 // Bulk selection, in the list only: `x` or shift-click picks, and the bar offers what every picked task allows.
@@ -249,7 +245,7 @@ useHotkeys({
   },
   m: () => {
     const t = selectedTask();
-    if (t && canReview(t)) startMerge(t.id);
+    if (t && canReview(t) && !t.sync) startMerge(t.id);
   },
   v: () => (display.value = { ...display.value, mode: MODES[(MODES.indexOf(display.value.mode) + 1) % MODES.length] }),
   c: () => emit('newTask'),
@@ -289,7 +285,6 @@ useHotkeys({
           :picked="picked"
           :show="display.show"
           :show-empty="display.showEmpty"
-          :syncing="syncing"
           @toggle="toggleGroup"
           @pick="pick"
           @select="selected = $event"
@@ -312,7 +307,6 @@ useHotkeys({
           :groups="groups"
           :selected="selected"
           :show="display.show"
-          :syncing="syncing"
           @select="selected = $event"
           @open="emit('open', $event)"
           @move="act"

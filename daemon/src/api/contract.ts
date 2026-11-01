@@ -155,6 +155,18 @@ export interface LiveView {
   tool: string | null;
 }
 
+/** A sync of a done task under way. `since` is null for a clean sync (no claude), else the resolve run's start, UTC `YYYY-MM-DD HH:MM:SS`. */
+export interface SyncView {
+  /** The base branch being brought in. */
+  base: string;
+  since: string | null;
+  /** A resolve run is settling conflicts. */
+  resolving: boolean;
+  turns: number;
+  max_turns: number;
+  tool: string | null;
+}
+
 /** A task as returned by the list endpoint: everything except the prompt. */
 export interface TaskSummary {
   id: number;
@@ -201,6 +213,8 @@ export interface TaskSummary {
   plan_unfinished?: boolean;
   /** For a running task: when its run started, turns so far and the last tool call. Missing from a daemon that predates it. */
   live?: LiveView | null;
+  /** For a done task: the sync under way, whoever started it. Null when none is. Missing from a daemon that predates it. */
+  sync?: SyncView | null;
   /** What a queued task waits for; null once it waits for nothing (or it isn't queued). */
   wait: StartWait | null;
   created_at: string;
@@ -502,7 +516,7 @@ export interface MergeAllRequest {
 export interface MergeAllResult {
   merged: { id: number; method: MergeMethod; unblocked: number[]; cleanup_error?: string }[];
   /** The PRs left open, each with why it couldn't merge. */
-  skipped: { id: number; reason: string }[];
+  skipped: { id: number; reason: string; conflicting: boolean }[];
 }
 
 /** What a sync of a task's branch came to (POST /api/tasks/:id/resolve). */

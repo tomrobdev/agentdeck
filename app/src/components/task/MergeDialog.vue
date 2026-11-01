@@ -26,6 +26,10 @@ watch(preview, (p) => p && (method.value = p.method), { immediate: true });
 
 const canConfirm = computed(() => !!preview.value && !preview.value.problems.length && !merging.value && !syncing.value);
 
+const SETTLE_READS = 5;
+const SETTLE_MS = 2000;
+const WAITING = ' Waiting for GitHub to see it…';
+
 // Sync the task's branch with the base branch. A conflict starts a claude run, so this can take minutes.
 async function sync() {
   syncing.value = true;
@@ -38,6 +42,14 @@ async function sync() {
     if (res.push_error) mergeError.value = `Could not push: ${res.push_error}`;
     else if (res.pushed) syncNote.value += ' Pushed; GitHub may take a moment to see it.';
     await previewQ.refetch();
+    // GitHub works out mergeability a little after a push: until it does, the preview still says the branch conflicts and
+    // Merge stays off. Read it again for a few seconds, so Merge is ready once the sync is.
+    for (let i = 0; i < SETTLE_READS && preview.value?.conflicting; i++) {
+      syncNote.value = `${syncNote.value.replace(WAITING, '')}${WAITING}`;
+      await new Promise((r) => setTimeout(r, SETTLE_MS));
+      await previewQ.refetch();
+    }
+    syncNote.value = syncNote.value.replace(WAITING, '');
   } catch (e) {
     mergeError.value = (e as Error).message;
   } finally {

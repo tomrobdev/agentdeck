@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { ago, describeLive } from '../../api';
+import { ago, describeLive, describeSync } from '../../api';
 import { openExternal } from '../../platform/native';
 import RowMenu from './RowMenu.vue';
 import {
@@ -35,8 +35,6 @@ const props = defineProps<{
   picked?: number[];
   show: ShowProps;
   showEmpty: boolean;
-  /** Tasks whose branch is being synced from the queue. */
-  syncing?: number[];
 }>();
 const emit = defineEmits<{
   toggle: [key: string];
@@ -49,8 +47,7 @@ const emit = defineEmits<{
 }>();
 
 /** The PRs a group's "Merge all" would merge: only Review has any, less the ones syncing. */
-const mergeable = (g: Group) =>
-  g.key === 'review' ? g.tasks.filter((t) => canReview(t) && !props.syncing?.includes(t.id)).map((t) => t.id) : [];
+const mergeable = (g: Group) => (g.key === 'review' ? g.tasks.filter((t) => canReview(t) && !t.sync).map((t) => t.id) : []);
 
 // The row menu: right-click on a row, or the context-menu key / ⇧F10 on the selected one.
 const menu = ref<{ id: number; x: number; y: number } | null>(null);
@@ -145,6 +142,7 @@ watch(
                 {{ t.stop_reason }}
               </span>
               <span v-else-if="t.live" class="truncate text-sm text-muted tabular-nums" data-live>{{ describeLive(t.live) }}</span>
+              <span v-else-if="t.sync" class="truncate text-sm text-accent tabular-nums" data-sync>{{ describeSync(t.sync) }}</span>
               <span v-else-if="show.reason && t.waiting?.stuck" class="truncate text-sm text-blocked group-[.s-failed]:text-failed"
                 >Can't start: {{ t.waiting.stuck }}</span
               >
@@ -177,16 +175,12 @@ watch(
               <AutoMergeMark :view="t.auto_merge_view" />
               <span v-if="show.repo" data-repo class="chip max-w-[120px] truncate">{{ t.repo }}</span>
             </span>
-            <span
-              class="flex-none gap-1"
-              :class="t.id === selected || syncing?.includes(t.id) ? 'flex' : 'hidden group-hover:flex'"
-              @click.stop
-            >
+            <span class="flex-none gap-1" :class="t.id === selected || t.sync ? 'flex' : 'hidden group-hover:flex'" @click.stop>
               <button v-if="personEvents(t).includes('approve')" class="btn-mini" title="Approve (a)" @click="emit('act', 'approve', t.id)">
                 Approve
               </button>
               <button v-if="quickRetry(t)" class="btn-mini" title="Retry (r)" @click="emit('act', 'retry', t.id)">Retry</button>
-              <button v-if="syncing?.includes(t.id)" class="btn-mini" disabled>Syncing…</button>
+              <button v-if="t.sync" class="btn-mini" disabled>Syncing…</button>
               <template v-else-if="canReview(t)">
                 <button
                   class="btn-mini"
