@@ -8,7 +8,8 @@ const ROOT = join(import.meta.dirname, '../..');
 
 /** Exceptions: `doc: path` mapped to why that path is allowed to be missing. Prefer fixing the doc. */
 const EXCEPTIONS: Record<string, string> = {
-  'docs/plan-format.md: docs/plans/x.html': 'an example of how a plan file is named, not a real file',
+  'docs/plan-format.md: 112-plans-in-agentdeck.html': 'an example of how a plan is named, not a real file',
+  'docs/plan-format.md: .agentdeck/plan.html': "the plan file, in a task's worktree while it runs",
 };
 
 /** What counts as a file name: dotted identifiers such as `repos.network` and CSS classes such as `.pill` do not. */

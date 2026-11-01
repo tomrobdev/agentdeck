@@ -14,6 +14,8 @@
 // _STAGE stages the files without committing. The words come from the task's prompt, which the resolve prompt quotes.
 //   FAKE_ANSWER   like FAKE_DONE, and answers every review comment (c1, c2…) the prompt lists; FAKE_ANSWER_FIRST answers only c1
 //   FAKE_NO_SANDBOX  if the --settings file enables the sandbox with failIfUnavailable, exits at startup like claude does
+//   FAKE_PLAN_ALL    like FAKE_DONE, and marks every step of the plan file (.agentdeck/plan.html) done, with a note in each
+//   FAKE_WRITE_PLAN  like FAKE_DONE, and writes a plan of its own to the plan file
 // Every run appends its prompt to $AGENTDECK_HOME/fake-claude-calls.log, so tests can tell it never started,
 // the --settings path it got (or "-") to $AGENTDECK_HOME/fake-claude-settings.log, and its arguments as a JSON
 // array to $AGENTDECK_HOME/fake-claude-args.log.
@@ -148,6 +150,25 @@ if (isPlanner) {
   await new Promise((r) => setTimeout(r, 30_000));
   result('slow done\nSTATUS: DONE');
 } else {
+  // The plan file AgentDeck put in the worktree. FAKE_PLAN_ALL marks every step in it done, linked or not, with a note in
+  // each step; FAKE_WRITE_PLAN writes a plan of its own there. Either way `git add -A` below must leave it out.
+  const planFile = join('.agentdeck', 'plan.html');
+  if (prompt.includes('FAKE_PLAN_ALL') && existsSync(planFile)) {
+    const html = readFileSync(planFile, 'utf8')
+      .replace(/data-status="[^"]*"/g, 'data-status="done"')
+      .replace(/<\/section>/g, `<p>noted by run ${process.pid}</p></section>`);
+    writeFileSync(planFile, html);
+  }
+  if (prompt.includes('FAKE_WRITE_PLAN')) {
+    mkdirSync('.agentdeck', { recursive: true });
+    writeFileSync(
+      planFile,
+      `<html data-agentdeck-plan="1"><head><title>Fake Plan: Two Steps!</title></head><body>
+  <section data-plan-step id="one" data-status="done"><h2>One</h2></section>
+  <section data-plan-step id="two" data-status="todo"><h2>Two</h2></section>
+</body></html>`,
+    );
+  }
   writeFileSync('fake-output.txt', `done by fake claude for: ${prompt.slice(0, 60)}\nrun ${process.pid}\n`);
   execFileSync('git', ['add', '-A']);
   execFileSync('git', ['commit', '-q', '-m', 'fake: add output']);

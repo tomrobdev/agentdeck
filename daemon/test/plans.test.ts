@@ -1,7 +1,7 @@
-// Plans: the format's parser, the store, and attaching them from a task's branch and through the API.
+// Plans: the format's parser, naming, the step merge, the store, and linking tasks to plans from the CLI and the API.
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -11,10 +11,12 @@ const home = mkdtempSync(join(tmpdir(), 'agentdeck-plans-'));
 process.env.AGENTDECK_HOME = home;
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { isPlanPath, parsePlan, planName, planProgress } = await import('../src/domain/plan/plan.ts');
+const { isOwnPlanName, mergePlanSteps, parsePlan, planFileName, planProgress, planSlug } = await import('../src/domain/plan/plan.ts');
 const { openDb } = await import('../src/db/index.ts');
 const { startApi } = await import('../src/api/server.ts');
-const { attachPlan, collectPlans } = await import('../src/application/plans.ts');
+const { attachPlan } = await import('../src/application/plans.ts');
+const { editTask, addTask } = await import('../src/application/actions.ts');
+const { planStepIds } = await import('../src/domain/task/task.ts');
 
 const PLAN = `<!doctype html>
 <html lang="en" data-agentdeck-plan="1">
@@ -72,8 +74,7 @@ test('parsePlan reads a step’s done criteria: a list, plain text, none, and no
   );
 });
 
-test('this plan’s own steps all carry done criteria', async () => {
-  const { readFileSync } = await import('node:fs');
+test('this plan’s own steps all carry done criteria', () => {
   const html = readFileSync(new URL('../../docs/plans/plan-linked-tasks.html', import.meta.url), 'utf8');
   const plan = parsePlan(html)!;
   assert.equal(plan.steps.length, 4);
@@ -87,62 +88,102 @@ test('parsePlan needs the marker on <html>, and falls back to <h1> for the title
   assert.deepEqual(bare, { version: '1', title: 'Just ✓ a heading', summary: null, steps: [] });
 });
 
-test('plan paths and names', () => {
-  assert.equal(isPlanPath('docs/plans/cache.html'), true);
-  assert.equal(isPlanPath('docs/plans/cache.md'), false);
-  assert.equal(isPlanPath('docs/cache.html'), false);
-  assert.equal(planName(''), 'plan.html');
+test('a plan is named after the task it belongs to and its title', () => {
+  assert.equal(planSlug('Plans in AgentDeck'), 'plans-in-agentdeck');
+  assert.equal(planSlug('  Speed up the & cache!! '), 'speed-up-the-cache');
+  assert.equal(planSlug('Café — crème'), 'cafe-creme');
+  assert.equal(planSlug('***'), 'plan');
+  assert.equal(planSlug('x'.repeat(80)).length, 60);
+  assert.equal(planFileName(112, 'Plans in AgentDeck'), '112-plans-in-agentdeck.html');
+  assert.equal(isOwnPlanName(112, '112-plans-in-agentdeck.html'), true);
+  assert.equal(isOwnPlanName(12, '112-plans-in-agentdeck.html'), false);
+  assert.equal(isOwnPlanName(112, 'docs/plans/cache.html'), false);
+  assert.equal(isOwnPlanName(112, 'cache.html'), false);
 });
 
-test('planName keeps the path from docs/plans/ on, and the file name for anything else', () => {
-  assert.equal(planName('/Users/me/work/docs/plans/cache.html'), 'docs/plans/cache.html');
-  assert.equal(planName('./docs/plans/cache.html'), 'docs/plans/cache.html');
-  assert.equal(planName('docs/plans/cache.html'), 'docs/plans/cache.html');
-  assert.equal(planName('/repo/docs/plans/sub/cache.html'), 'docs/plans/sub/cache.html');
-  assert.equal(planName('/Users/me/work/docs/cache.html'), 'cache.html');
-  assert.equal(planName('/tmp/mydocs/plans/cache.html'), 'cache.html');
-  assert.equal(planName('cache.html'), 'cache.html');
-  assert.equal(planName('/repo/docs/plans/'), 'plan.html');
+const steps3 = (a: string, b: string, c: string, extra = '') => `<html data-agentdeck-plan="1"><head><title>Three</title></head><body>
+  <p data-plan-summary>Summary${extra}</p>
+  <!-- <section data-plan-step id="a" data-status="skipped"><h2>Old</h2></section> -->
+  <section data-plan-step id="a" data-status="${a}"><h2>A</h2></section>
+  <section data-plan-step id="b" data-status="${b}"><h2>B</h2></section>
+  <section data-plan-step data-status="${c}"><h2>Unnamed</h2></section>
+</body></html>`;
+
+test('mergePlanSteps takes only the linked steps from the plan file', () => {
+  const stored = steps3('todo', 'todo', 'todo');
+  // The worker marked every step and changed the summary; only step a is its own.
+  const written = steps3('done', 'done', 'done', ' changed').replace('<h2>A</h2>', '<h2>A</h2><p>Note on a</p>');
+  const merged = mergePlanSteps(stored, written, ['a']);
+  assert.deepEqual(
+    parsePlan(merged)!.steps.map((s) => s.status),
+    ['done', 'todo', 'todo'],
+  );
+  assert.match(merged, /Note on a/);
+  assert.match(merged, /<p data-plan-summary>Summary<\/p>/, 'the rest stays as stored');
+  assert.match(merged, /<!-- <section data-plan-step id="a" data-status="skipped">/, 'a commented-out step is left alone');
+  // Every step: the unnamed one matches by its place among unnamed steps.
+  assert.deepEqual(
+    parsePlan(mergePlanSteps(stored, written, null))!.steps.map((s) => s.status),
+    ['done', 'done', 'done'],
+  );
+  // A file that is not a plan, or lacks the step, changes nothing.
+  assert.equal(mergePlanSteps(stored, '<html>gone</html>', null), stored);
+  assert.equal(
+    mergePlanSteps(stored, written.replace(/<section data-plan-step id="a" data-status="done">[\s\S]*?<\/section>/, ''), ['a']),
+    stored,
+  );
 });
 
-test('the store upserts by name, keeps updated_at for the same HTML, and replaces branch plans', () => {
+test('two tasks on one plan, running at once, each write back only their own steps', () => {
+  const stored = steps3('todo', 'todo', 'todo');
+  // Both runs got the same plan file and marked every step; they give it back one after the other.
+  const fromA = steps3('done', 'done', 'blocked');
+  const fromB = steps3('blocked', 'done', 'done');
+  const afterA = mergePlanSteps(stored, fromA, ['a']);
+  const afterB = mergePlanSteps(afterA, fromB, ['b']);
+  assert.deepEqual(
+    parsePlan(afterB)!.steps.map((s) => [s.id, s.status]),
+    [
+      ['a', 'done'],
+      ['b', 'done'],
+      [null, 'todo'],
+    ],
+  );
+});
+
+test('the store keeps a task’s own plan under its numbered name, replacing it in place', () => {
   const db = openDb(':memory:');
   const repo = db.addRepo({ name: 'r', path: '/tmp/r', base_branch: 'main' });
   const t = db.addTask({ repo_id: repo.id, title: 't', prompt: 'p' });
-  db.savePlan(t.id, 'mine.html', 'attached', PLAN);
-  db.replaceBranchPlans(t.id, [
-    { name: 'docs/plans/a.html', html: PLAN },
-    { name: 'docs/plans/b.html', html: PLAN },
-  ]);
-  db.raw.exec("UPDATE task_plans SET updated_at = '2000-01-01 00:00:00'");
-  db.replaceBranchPlans(t.id, [{ name: 'docs/plans/a.html', html: PLAN }]);
-  const plans = db.plansForTask(t.id);
-  assert.deepEqual(
-    plans.map((p) => [p.name, p.source, p.updated_at]),
-    [
-      ['mine.html', 'attached', '2000-01-01 00:00:00'],
-      ['docs/plans/a.html', 'branch', '2000-01-01 00:00:00'],
-    ],
-  );
-  assert.equal(plans[0].title, 'Speed up the & cache');
-  assert.equal('html' in plans[0], false);
-  assert.equal(db.planHtml(t.id, plans[0].id), PLAN);
-  assert.equal(db.planHtml(t.id + 1, plans[0].id), undefined);
+  db.savePlan(t.id, 'docs/plans/old.html', 'branch', PLAN);
+  assert.equal(db.ownPlan(t.id), undefined, 'a plan stored before plans had numbers is not the task’s own');
 
-  db.replaceBranchPlans(t.id, [{ name: 'docs/plans/a.html', html: PLAN.replace('Measure', 'Profile') }]);
-  const a = db.plansForTask(t.id)[1];
-  assert.notEqual(a.updated_at, '2000-01-01 00:00:00');
-  assert.equal(a.steps[0].title, 'Profile');
-  db.replaceBranchPlans(t.id, []);
+  const first = db.saveOwnPlan(t.id, PLAN, 'attached');
+  assert.deepEqual([first.name, first.source, first.task_id], [`${t.id}-speed-up-the-cache.html`, 'attached', t.id]);
+  db.raw.exec("UPDATE task_plans SET updated_at = '2000-01-01 00:00:00'");
+  assert.equal(db.saveOwnPlan(t.id, PLAN, 'attached').updated_at, '2000-01-01 00:00:00', 'the same HTML changes nothing');
+
+  const renamed = db.saveOwnPlan(t.id, PLAN.replace('Speed up the &amp; cache', 'Faster reads'), 'worker');
+  assert.equal(renamed.id, first.id, 'the row is kept');
+  assert.deepEqual([renamed.name, renamed.source], [`${t.id}-faster-reads.html`, 'worker']);
+  assert.notEqual(renamed.updated_at, '2000-01-01 00:00:00');
   assert.deepEqual(
     db.plansForTask(t.id).map((p) => p.name),
-    ['mine.html'],
+    ['docs/plans/old.html', `${t.id}-faster-reads.html`],
   );
+  assert.equal(db.ownPlan(t.id)!.id, first.id);
+
+  db.raw.exec("UPDATE task_plans SET updated_at = '2000-01-01 00:00:00'");
+  db.updatePlanHtml(first.id, db.ownPlan(t.id)!.html);
+  assert.equal(db.plansForTask(t.id)[1].updated_at, '2000-01-01 00:00:00');
+  db.updatePlanHtml(first.id, PLAN);
+  assert.equal(db.ownPlan(t.id)!.html, PLAN);
+  assert.equal(db.ownPlan(t.id)!.name, `${t.id}-faster-reads.html`, 'a write-back keeps the name');
   db.close();
 });
 
-// A real repo: the task's branch adds a plan, a plain HTML page and a markdown file.
-const db = openDb(join(home, 'test.db'));
+// A real repo, the API, the CLI and the use cases.
+const db = openDb(join(home, 'agentdeck.db'));
 const server = await startApi({ db, port: 0 });
 const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 after(() => {
@@ -152,24 +193,22 @@ after(() => {
 
 const repoPath = join(home, 'demo');
 const git = (...a: string[]) => execFileSync('git', a, { cwd: repoPath }).toString().trim();
-mkdirSync(join(repoPath, 'docs/plans'), { recursive: true });
+mkdirSync(repoPath, { recursive: true });
 git('init', '-q', '-b', 'main');
 git('config', 'user.email', 't@example.com');
 git('config', 'user.name', 'Tester');
 writeFileSync(join(repoPath, 'README.md'), 'hi\n');
 git('add', '-A');
 git('commit', '-q', '-m', 'init');
-git('checkout', '-q', '-b', 'agentdeck/task-1');
-writeFileSync(join(repoPath, 'docs/plans/cache.html'), PLAN);
-writeFileSync(join(repoPath, 'docs/plans/page.html'), '<html><body>not a plan</body></html>');
-writeFileSync(join(repoPath, 'docs/notes.md'), '# notes\n');
-git('add', '-A');
-git('commit', '-q', '-m', 'Plan the cache');
-git('checkout', '-q', 'main');
+const head = git('rev-parse', 'HEAD');
 
 const repo = db.addRepo({ name: 'demo', path: repoPath, base_branch: 'main' });
-const task = db.addTask({ repo_id: repo.id, title: 't', prompt: 'p' });
-db.setCheckout(task.id, { branch: 'agentdeck/task-1' });
+const otherRepo = db.addRepo({ name: 'other', path: join(home, 'other'), base_branch: 'main' });
+
+// A plan file outside the repo, its steps a and b.
+const elsewhere = mkdtempSync(join(tmpdir(), 'agentdeck-plan-file-'));
+const planFile = join(elsewhere, 'x.html');
+writeFileSync(planFile, PLAN.replace('id="s1"', 'id="a"').replace("id='s2'", "id='b'"));
 
 const call = async (path: string, json?: unknown) => {
   const res = await fetch(
@@ -179,124 +218,139 @@ const call = async (path: string, json?: unknown) => {
   return { status: res.status, body: (await res.json()) as any };
 };
 
-test('collectPlans attaches marked HTML under docs/plans/ from the branch, and the task detail lists it', async () => {
-  const plans = await collectPlans(db, task.id);
-  assert.deepEqual(
-    plans.map((p) => [p.name, p.source, p.title]),
-    [['docs/plans/cache.html', 'branch', 'Speed up the & cache']],
-  );
-  const detail = await call(`/api/tasks/${task.id}`);
-  assert.equal(detail.body.plans.length, 1);
-  assert.equal(detail.body.plans[0].steps.length, 4);
-  assert.equal(detail.body.plans[0].html, undefined);
-  const full = await call(`/api/tasks/${task.id}/plans/${plans[0].id}`);
-  assert.equal(full.status, 200);
-  assert.equal(full.body.html, PLAN);
-});
-
-test('POST /plans attaches a plan by file name and refuses HTML without the marker', async () => {
-  const ok = await call(`/api/tasks/${task.id}/plans`, { name: '/elsewhere/notes/design.html', html: PLAN });
-  assert.equal(ok.status, 200);
-  assert.equal(ok.body.name, 'design.html');
-  assert.equal(ok.body.source, 'attached');
-
-  const bad = await call(`/api/tasks/${task.id}/plans`, { name: 'x.html', html: '<html><body>hi</body></html>' });
-  assert.equal(bad.status, 400);
-  assert.match(bad.body.error, /data-agentdeck-plan/);
-  assert.equal((await call(`/api/tasks/9999/plans`, { html: PLAN })).status, 400);
-  assert.equal((await call(`/api/tasks/${task.id}/plans/9999`)).status, 400);
-
-  // Collecting again keeps the attached plan.
-  const again = await call(`/api/tasks/${task.id}/plans/collect`, {});
-  assert.deepEqual(
-    again.body.map((p: any) => p.name),
-    ['docs/plans/cache.html', 'design.html'],
-  );
-});
-
-test('a plan attached from docs/plans/ is replaced by the branch copy, leaving one plan', async () => {
-  const other = db.addTask({ repo_id: repo.id, title: 't2', prompt: 'p' });
-  db.setCheckout(other.id, { branch: 'agentdeck/task-1' });
-  const attached = attachPlan(db, other.id, {
-    name: join(repoPath, 'docs/plans/cache.html'),
-    html: PLAN.replace('done', 'todo'),
+const CLI = join(import.meta.dirname, '../src/cli.ts');
+const cli = (...args: string[]) =>
+  spawnSync(process.execPath, [CLI, ...args], {
+    encoding: 'utf8',
+    env: { ...process.env, AGENTDECK_HOME: home, AGENTDECK_TASK_ID: '', AGENTDECK_PLANNER: '' },
   });
-  assert.equal(attached.name, 'docs/plans/cache.html');
-  assert.equal(attached.source, 'attached');
 
-  const plans = await collectPlans(db, other.id);
+test('agentdeck add --plan <file> stores the plan under its numbered name, with no commit to the repo', () => {
+  const added = cli('add', 'Measure first', '--repo', 'demo', '--plan', planFile, '--steps', 'a');
+  assert.equal(added.status, 0, added.stderr);
+  const id = Number(/task #(\d+)/.exec(added.stdout)![1]);
+  const name = `${id}-speed-up-the-cache.html`;
+  assert.match(added.stdout, new RegExp(`plan +${name}`));
+
+  const t = db.getTask(id)!;
+  assert.deepEqual([t.plan_task, planStepIds(t), t.plan_path], [id, ['a'], null]);
   assert.deepEqual(
-    plans.map((p) => [p.name, p.source]),
-    [['docs/plans/cache.html', 'branch']],
+    db.plansForTask(id).map((p) => [p.name, p.source]),
+    [[name, 'attached']],
   );
-  assert.equal(plans[0].steps[0].status, 'done');
+  assert.equal(git('rev-parse', 'HEAD'), head, 'nothing was committed');
+  assert.equal(git('status', '--porcelain'), '');
+
+  const shown = cli('show', String(id));
+  assert.equal(shown.status, 0, shown.stderr);
+  assert.match(shown.stdout, new RegExp(`plan +${name} \\(steps a\\)`));
+
+  // A task number links that task's plan.
+  const follower = cli('add', 'Then cache', '--repo', 'demo', '--plan', `#${id}`, '--steps', 'b');
+  assert.equal(follower.status, 0, follower.stderr);
+  const fid = Number(/task #(\d+)/.exec(follower.stdout)![1]);
+  assert.match(follower.stdout, new RegExp(`plan +${name} \\(#${id}'s plan\\)`));
+  assert.match(cli('show', String(fid)).stdout, new RegExp(`plan +${name} \\(#${id}'s plan, steps b\\)`));
+
+  const notPlan = join(elsewhere, 'page.html');
+  writeFileSync(notPlan, '<html><body>not a plan</body></html>');
+  assert.match(cli('add', 'x', '--repo', 'demo', '--plan', notPlan).stderr, /not an AgentDeck plan/);
+  assert.match(cli('add', 'x', '--repo', 'demo', '--plan', join(elsewhere, 'missing.html')).stderr, /can't read/);
+  assert.match(
+    cli('add', 'x', '--repo', 'demo', '--plan', planFile, '--steps', 'nope').stderr,
+    /the plan has no step nope \(it has a, b\)/,
+  );
 });
 
-// Tasks linked to plan steps: the plan is read from the repo's base branch when the task is added or edited.
-const { editTask, addTask } = await import('../src/application/actions.ts');
-const { planStepIds } = await import('../src/domain/task/task.ts');
-mkdirSync(join(repoPath, 'docs/plans'), { recursive: true });
-writeFileSync(join(repoPath, 'docs/plans/linked.html'), PLAN);
-writeFileSync(join(repoPath, 'docs/plans/page.html'), '<html><body>not a plan</body></html>');
-git('add', '-A');
-git('commit', '-q', '-m', 'Plan on the base branch');
+test('add links a task to another task’s plan by number, and refuses what does not hold', async () => {
+  const owner = await addTask(db, { repo: 'demo', prompt: 'own it', plan_html: readFileSync(planFile, 'utf8') });
+  assert.equal(owner.plan_task, owner.id);
+  const name = `${owner.id}-speed-up-the-cache.html`;
 
-test('add links a task to a plan on the base branch, with and without steps', async () => {
-  const some = await addTask(db, { repo: 'demo', prompt: 'do it', plan_path: 'docs/plans/linked.html', plan_steps: 's1, s2' });
-  assert.equal(some.plan_path, 'docs/plans/linked.html');
-  assert.deepEqual(planStepIds(some), ['s1', 's2']);
+  const some = await addTask(db, { repo: 'demo', prompt: 'do b', plan_task: owner.id, plan_steps: 'b' });
+  assert.deepEqual([some.plan_task, planStepIds(some)], [owner.id, ['b']]);
+  // Following a task that follows a plan follows that plan.
+  const viaFollower = await addTask(db, { repo: 'demo', prompt: 'do a', plan_task: some.id, plan_steps: ['a'] });
+  assert.equal(viaFollower.plan_task, owner.id);
+  const every = await addTask(db, { repo: 'demo', prompt: 'do it all', plan_task: owner.id });
+  assert.deepEqual([every.plan_task, every.plan_steps], [owner.id, null]);
 
-  const every = await addTask(db, { repo: 'demo', prompt: 'do it all', plan_path: 'docs/plans/linked.html' });
-  assert.equal(every.plan_path, 'docs/plans/linked.html');
-  assert.equal(every.plan_steps, null);
-  assert.equal(planStepIds(every), null);
-
-  const viaApi = await call('/api/tasks', { repo: 'demo', prompt: 'api', plan_path: 'docs/plans/linked.html', plan_steps: ['s2'] });
-  assert.equal(viaApi.body.plan_path, 'docs/plans/linked.html');
-  assert.equal(viaApi.body.plan_steps, '["s2"]');
-
-  const plain = await addTask(db, { repo: 'demo', prompt: 'no plan' });
-  assert.deepEqual([plain.plan_path, plain.plan_steps], [null, null]);
-});
-
-test('add refuses a missing file, a file that is not a plan, an unknown step and steps without a plan', async () => {
-  const refuses = (input: Parameters<typeof addTask>[1], message: RegExp) =>
-    assert.rejects(addTask(db, { ...input, repo: 'demo', prompt: 'x' }), (err) => err instanceof Error && message.test(err.message));
-  await refuses({ prompt: 'x', plan_path: 'docs/plans/missing.html' }, /docs\/plans\/missing\.html is not on demo's base branch/);
-  await refuses({ prompt: 'x', plan_path: 'docs/plans/page.html' }, /is not an AgentDeck plan/);
-  await refuses({ prompt: 'x', plan_path: 'README.md' }, /not a plan path/);
-  await refuses({ prompt: 'x', plan_path: 'docs/plans/../README.md' }, /not a plan path/);
-  await refuses(
-    { prompt: 'x', plan_path: 'docs/plans/linked.html', plan_steps: 's1,nope,gone' },
-    /has no step nope, gone \(it has s1, s2\)/,
+  const viaApi = await call('/api/tasks', { repo: 'demo', prompt: 'api', plan_task: owner.id, plan_steps: ['a'] });
+  assert.equal(viaApi.status, 200);
+  assert.deepEqual([viaApi.body.plan_task, viaApi.body.plan_steps], [owner.id, '["a"]']);
+  // The follower's detail shows the plan it follows, read from the task it belongs to.
+  const detail = await call(`/api/tasks/${viaApi.body.id}`);
+  assert.deepEqual(
+    detail.body.plans.map((p: any) => [p.task_id, p.name]),
+    [[owner.id, name]],
   );
-  await refuses({ prompt: 'x', plan_steps: 's1' }, /--steps needs --plan/);
-  // A plan only on a task branch is not on the base branch.
-  await refuses({ prompt: 'x', plan_path: 'docs/plans/cache.html' }, /not on demo's base branch/);
+  const full = await call(`/api/tasks/${owner.id}/plans/${detail.body.plans[0].id}`);
+  assert.equal(full.body.html, readFileSync(planFile, 'utf8'));
+
+  const refuses = (input: Partial<Parameters<typeof addTask>[1]>, message: RegExp) =>
+    assert.rejects(addTask(db, { repo: 'demo', prompt: 'x', ...input }), (err) => err instanceof Error && message.test(err.message));
+  await refuses({ plan_task: owner.id, plan_steps: 'a,nope,gone' }, new RegExp(`${name} has no step nope, gone \\(it has a, b\\)`));
+  await refuses({ plan_task: 9999 }, /there is no task #9999/);
+  const plain = db.addTask({ repo_id: repo.id, title: 'plain', prompt: 'p' });
+  await refuses({ plan_task: plain.id }, new RegExp(`#${plain.id} has no plan`));
+  const elsewhereTask = db.addTask({ repo_id: otherRepo.id, title: 'other', prompt: 'p' });
+  db.saveOwnPlan(elsewhereTask.id, PLAN, 'attached');
+  await refuses({ plan_task: elsewhereTask.id }, new RegExp(`#${elsewhereTask.id} is in other, not demo`));
+  await refuses({ plan_steps: 's1' }, /--steps needs --plan/);
+  await refuses({ plan_task: 'x' as never }, /plan_task must be a task number/);
+  await refuses({ plan_task: owner.id, plan_html: PLAN }, /not both/);
+  assert.equal((await call('/api/tasks', { repo: 'demo', prompt: 'x', plan_task: '12' })).status, 400);
 });
 
 test('edit sets, changes and clears the plan link', async () => {
+  const owner = await addTask(db, { repo: 'demo', prompt: 'owner', plan_html: readFileSync(planFile, 'utf8') });
   const t = db.addTask({ repo_id: repo.id, title: 'e', prompt: 'p' });
-  const linked = await editTask(db, t.id, { plan_path: 'docs/plans/linked.html', plan_steps: ['s1'] });
-  assert.deepEqual([linked.plan_path, planStepIds(linked)], ['docs/plans/linked.html', ['s1']]);
+  const linked = await editTask(db, t.id, { plan_task: owner.id, plan_steps: ['a'] });
+  assert.deepEqual([linked.plan_task, planStepIds(linked)], [owner.id, ['a']]);
 
-  const moreSteps = await editTask(db, t.id, { plan_steps: 's1,s2' });
-  assert.deepEqual(planStepIds(moreSteps), ['s1', 's2']);
-  assert.equal((await editTask(db, t.id, { title: 'renamed' })).plan_path, 'docs/plans/linked.html', 'other edits keep the link');
+  const moreSteps = await editTask(db, t.id, { plan_steps: 'a,b' });
+  assert.deepEqual(planStepIds(moreSteps), ['a', 'b']);
+  assert.equal((await editTask(db, t.id, { title: 'renamed' })).plan_task, owner.id, 'other edits keep the link');
 
   await assert.rejects(editTask(db, t.id, { plan_steps: 'nope' }), /has no step nope/);
-  assert.deepEqual(planStepIds(db.getTask(t.id)!), ['s1', 's2'], 'a refused edit changes nothing');
+  assert.deepEqual(planStepIds(db.getTask(t.id)!), ['a', 'b'], 'a refused edit changes nothing');
 
   const everyStep = await editTask(db, t.id, { plan_steps: null });
-  assert.equal(everyStep.plan_steps, null);
-  assert.equal(everyStep.plan_path, 'docs/plans/linked.html');
+  assert.deepEqual([everyStep.plan_task, everyStep.plan_steps], [owner.id, null]);
 
-  const cleared = await editTask(db, t.id, { plan_path: '' });
-  assert.deepEqual([cleared.plan_path, cleared.plan_steps], [null, null]);
+  const cleared = await editTask(db, t.id, { plan_task: null });
+  assert.deepEqual([cleared.plan_task, cleared.plan_steps], [null, null]);
+
+  // A plan file becomes the task's own plan.
+  const own = await editTask(db, t.id, { plan_html: PLAN, plan_steps: 's2' });
+  assert.deepEqual([own.plan_task, planStepIds(own)], [t.id, ['s2']]);
+  assert.equal(db.ownPlan(t.id)!.name, `${t.id}-speed-up-the-cache.html`);
 
   const other = db.addTask({ repo_id: repo.id, title: 'o', prompt: 'p' });
   await assert.rejects(editTask(db, other.id, { plan_steps: ['s1'] }), /--steps needs --plan/);
-  const viaApi = await call(`/api/tasks/${other.id}`, { plan_path: 'docs/plans/linked.html' });
-  assert.equal(viaApi.body.plan_path, 'docs/plans/linked.html');
-  assert.equal((await call(`/api/tasks/${other.id}`, { plan_path: null })).body.plan_path, null);
+  const viaApi = await call(`/api/tasks/${other.id}`, { plan_task: owner.id });
+  assert.equal(viaApi.body.plan_task, owner.id);
+  assert.equal((await call(`/api/tasks/${other.id}`, { plan_task: null })).body.plan_task, null);
+});
+
+test('attach stores or replaces the task’s own plan under its numbered name, and refuses HTML that is not a plan', async () => {
+  const t = db.addTask({ repo_id: repo.id, title: 'attach', prompt: 'p' });
+  const ok = await call(`/api/tasks/${t.id}/plans`, { html: PLAN });
+  assert.equal(ok.status, 200);
+  assert.deepEqual([ok.body.name, ok.body.source], [`${t.id}-speed-up-the-cache.html`, 'attached']);
+
+  const again = attachPlan(db, t.id, { html: PLAN.replace('Speed up the &amp; cache', 'Cache v2') });
+  assert.equal(again.id, ok.body.id);
+  assert.equal(again.name, `${t.id}-cache-v2.html`);
+  assert.equal(db.plansForTask(t.id).length, 1);
+
+  const shown = cli('attach', String(t.id), planFile);
+  assert.equal(shown.status, 0, shown.stderr);
+  assert.match(shown.stdout, new RegExp(`#${t.id} plan: Speed up the & cache \\(${t.id}-speed-up-the-cache\\.html, 2/4 steps\\)`));
+
+  const bad = await call(`/api/tasks/${t.id}/plans`, { html: '<html><body>hi</body></html>' });
+  assert.equal(bad.status, 400);
+  assert.match(bad.body.error, /data-agentdeck-plan/);
+  assert.equal((await call(`/api/tasks/9999/plans`, { html: PLAN })).status, 400);
+  assert.equal((await call(`/api/tasks/${t.id}/plans/9999`)).status, 400);
 });

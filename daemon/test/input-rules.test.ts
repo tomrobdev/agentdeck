@@ -38,7 +38,7 @@ test('task model: an alias, a full id, or none', () => {
 
 test('steps need a plan', () => {
   assert.equal(stepsNeedPlanError(null, null), null);
-  assert.equal(stepsNeedPlanError('docs/plans/a.html', ['one']), null);
+  assert.equal(stepsNeedPlanError(12, ['one']), null);
   assert.equal(stepsNeedPlanError(null, ['one']), '--steps needs --plan');
 });
 

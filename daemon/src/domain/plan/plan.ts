@@ -19,28 +19,48 @@ export interface ParsedPlan {
   steps: PlanStep[];
 }
 
-/** Where a plan came from: a file on the task's branch, or attached with `agentdeck attach` or the API. */
-export type PlanSource = 'branch' | 'attached';
+/**
+ * Where a stored plan came from: attached by a person (`agentdeck add|edit --plan <file>`, `agentdeck attach`, the API),
+ * or written by a worker in the plan file. 'branch' plans were collected from a task's branch before plans moved into
+ * AgentDeck; they still show on their tasks.
+ */
+export type PlanSource = 'attached' | 'worker' | 'branch';
 
 /** A stored plan as the API returns it: parsed, without its HTML. */
 export interface TaskPlan extends ParsedPlan {
   id: number;
-  task_id: number;
-  name: string; // the path on the branch, or the attached file's name
+  task_id: number; // the task the plan belongs to: the one it was first attached to
+  name: string; // `<task id>-<slug>.html` (planFileName); older plans keep the name they were stored under
   source: PlanSource;
   created_at: string;
   updated_at: string;
 }
 
-/** Where agents write plans on a task's branch. */
-export const PLAN_DIR = 'docs/plans/';
+/** The folder in a task's worktree that holds AgentDeck's files for the run. Git ignores it. */
+export const PLAN_FOLDER = '.agentdeck';
+/** Where a run's plan sits in the task's worktree, for the worker to read and update. Never committed. */
+export const PLAN_FILE = `${PLAN_FOLDER}/plan.html`;
 /** Bigger plans are refused: a plan is read on every task view. */
 export const PLAN_LIMIT = 512 * 1024;
 
 const MARKER = /<html\b[^>]*\bdata-agentdeck-plan(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+)))?/i;
 
-/** Whether a branch file could be a plan: HTML under PLAN_DIR. Its content decides (parsePlan). */
-export const isPlanPath = (path: string) => path.startsWith(PLAN_DIR) && /\.html?$/i.test(path);
+/** A plan title as a file-name slug: lower case, words joined by dashes, at most 60 characters. */
+export function planSlug(title: string): string {
+  const slug = title
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return slug.slice(0, 60).replace(/-+$/, '') || 'plan';
+}
+
+/** A plan's name: the number of the task it belongs to and a slug of its title, e.g. `112-plans-in-agentdeck.html`. */
+export const planFileName = (taskId: number, title: string): string => `${taskId}-${planSlug(title)}.html`;
+
+/** Whether `name` is a name planFileName gives task `taskId`'s plan: the task's own plan, not one stored before plans had numbers. */
+export const isOwnPlanName = (taskId: number, name: string): boolean => new RegExp(`^${taskId}-[a-z0-9-]+\\.html$`).test(name);
 
 /** The plan in `html`, or null if it doesn't carry the marker on its <html> tag. */
 export function parsePlan(html: string): ParsedPlan | null {
@@ -124,15 +144,39 @@ export function unfinishedSummary(steps: PlanStep[]): string {
 }
 
 /**
- * An attached plan's name, so attaching the same file again replaces it. A file under docs/plans/
- * keeps its path from there on (the name collectPlans gives the branch's copy, which then replaces
- * it); any other file is named by its base name.
+ * The stored plan with a task's linked steps taken from the plan file a run left (`written`): each linked step's whole
+ * section (its status and any note the worker put in it) replaces the stored one. Everything else stays as stored,
+ * because sibling tasks on one plan may run at the same time and write back their own steps. `ids` null links every
+ * step. Steps match by id; steps without one match by their order among the steps without one. A `written` that is not
+ * a plan changes nothing.
  */
-export function planName(fileName: string): string {
-  const path = fileName.trim();
-  const dir = new RegExp(`(?:^|/)(${PLAN_DIR}[^/].*)$`).exec(path);
-  if (dir) return dir[1].trim();
-  return path.slice(path.lastIndexOf('/') + 1).trim() || 'plan.html';
+export function mergePlanSteps(stored: string, written: string, ids: string[] | null): string {
+  if (!parsePlan(written)) return stored;
+  const fresh = new Map(stepSections(written).map((s) => [s.key, s]));
+  let out = stored;
+  for (const step of stepSections(stored).reverse()) {
+    const linked = ids === null || (step.id !== null && ids.includes(step.id));
+    const next = linked ? fresh.get(step.key) : undefined;
+    if (next) out = out.slice(0, step.start) + written.slice(next.start, next.end) + out.slice(step.end);
+  }
+  return out;
+}
+
+/** Each step's <section> in `html`, by position, leaving out ones inside comments, scripts, styles and templates. */
+function stepSections(html: string): { key: string; id: string | null; start: number; end: number }[] {
+  // Blank out what parsePlan ignores, keeping every offset, so positions point into `html`.
+  const masked = html
+    .replace(/<!--[\s\S]*?-->/g, (m) => ' '.repeat(m.length))
+    .replace(/<(script|style|template)\b[\s\S]*?<\/\1\s*>/gi, (m) => ' '.repeat(m.length));
+  const out: { key: string; id: string | null; start: number; end: number }[] = [];
+  let unnamed = 0;
+  for (const m of masked.matchAll(/<section\b([^>]*)>[\s\S]*?<\/section\s*>/gi)) {
+    const attrs = attributes(m[1]);
+    if (!('data-plan-step' in attrs)) continue;
+    const id = attrs.id || null;
+    out.push({ key: id === null ? `#${unnamed++}` : `id:${id}`, id, start: m.index, end: m.index + m[0].length });
+  }
+  return out;
 }
 
 /** A tag's attributes, names lower-cased. A bare attribute has the value ''. */

@@ -2,7 +2,6 @@
 // VITE_AGENTDECK_API points a dev build at another daemon (e.g. one run on a copy of the database).
 import type {
   AutoMergeRequest,
-  CancelMergeRequestResult,
   AutoMergeResult,
   CancelMergeRequestResult,
   CancelResult,

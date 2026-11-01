@@ -50,12 +50,12 @@ test('linked steps by id or all, and which are unfinished', () => {
 test('the PR body lists criteria as checkboxes, and has no Plan section without a plan', () => {
   const runs = [{ attempt: 1, outcome: 'done', num_turns: 2, cost_usd: 0.1, tests_passed: 1, result_text: 'Did it.\nSTATUS: DONE' }];
   const steps = linkedSteps(plan('done', 'todo'), null)!;
-  const body = buildPrBody({ id: 7 }, runs, { path: 'docs/plans/cache.html', steps });
-  assert.match(body, /## Plan: `docs\/plans\/cache\.html`/);
+  const body = buildPrBody({ id: 7 }, runs, { name: '7-cache-plan.html', steps });
+  assert.match(body, /## Plan: `7-cache-plan\.html`/);
   assert.match(body, /\*\*Measure\*\* \(done\)\n\n- \[ \] A baseline is recorded\.\n- \[ \] Tests pass\./);
   assert.match(body, /\*\*Cache\*\* \(todo\)\n\n\| Attempt/);
   assert.ok(!buildPrBody({ id: 7 }, runs).includes('## Plan'));
-  assert.ok(!buildPrBody({ id: 7 }, runs, { path: 'docs/plans/cache.html', steps: [] }).includes('## Plan'));
+  assert.ok(!buildPrBody({ id: 7 }, runs, { name: '7-cache-plan.html', steps: [] }).includes('## Plan'));
 });
 
 test('the PR body starts with the summary and keeps the plan and runs inside one details block', () => {
@@ -63,7 +63,7 @@ test('the PR body starts with the summary and keeps the plan and runs inside one
     { attempt: 1, outcome: 'done', num_turns: 2, cost_usd: 0.1, tests_passed: 1, result_text: '## Overview\n- Did it.\nSTATUS: DONE' },
   ];
   const steps = linkedSteps(plan('done', 'todo'), null)!;
-  const body = buildPrBody({ id: 7 }, runs, { path: 'docs/plans/cache.html', steps });
+  const body = buildPrBody({ id: 7 }, runs, { name: '7-cache-plan.html', steps });
   assert.ok(body.startsWith('## Overview\n- Did it.\n'));
   const open = body.indexOf('<details><summary>Plan and runs</summary>');
   const close = body.indexOf('</details>');
@@ -79,13 +79,11 @@ db.setSetting('max_concurrent', '1');
 after(() => db.close());
 const dir = join(home, 'demo');
 const sh = (...args: string[]) => execFileSync('git', args, { cwd: dir, encoding: 'utf8' }).trim();
-mkdirSync(join(dir, 'docs/plans'), { recursive: true });
+mkdirSync(dir, { recursive: true });
 sh('init', '-q', '-b', 'main');
 sh('config', 'user.email', 'test@example.com');
 sh('config', 'user.name', 'test');
 writeFileSync(join(dir, 'README.md'), 'demo\n');
-writeFileSync(join(dir, 'docs/plans/open.html'), plan('todo', 'todo'));
-writeFileSync(join(dir, 'docs/plans/finished.html'), plan('done', 'skipped'));
 sh('add', '-A');
 sh('commit', '-q', '-m', 'init');
 const repo = db.addRepo({ name: 'demo', path: dir, base_branch: 'main', test_cmd: 'test -f fake-output.txt' });
@@ -101,7 +99,7 @@ github.createPr = async (pr) => {
 const unfinishedEvents = (id: number) => db.eventsForTask(id).filter((e) => e.type === 'plan_unfinished');
 
 test('a done run with every linked step finished records no event', async () => {
-  const t = db.addTask({ repo_id: repo.id, title: 'finished', prompt: 'FAKE_DONE x', plan_path: 'docs/plans/finished.html' });
+  const t = db.addTask({ repo_id: repo.id, title: 'finished', prompt: 'FAKE_DONE x', own_plan: plan('done', 'skipped') });
   await drain();
   assert.equal(db.getTask(t.id)!.status, 'done');
   assert.deepEqual(unfinishedEvents(t.id), []);
@@ -114,7 +112,7 @@ test('a done run with an unfinished linked step records the event and stays done
     repo_id: repo.id,
     title: 'unfinished',
     prompt: 'FAKE_DONE y',
-    plan_path: 'docs/plans/open.html',
+    own_plan: plan('todo', 'todo'),
     plan_steps: JSON.stringify(['a']),
   });
   await drain();
@@ -125,7 +123,7 @@ test('a done run with an unfinished linked step records the event and stays done
   assert.ok(db.planUnfinishedIds().has(t.id));
   // The PR lists only the linked step, its criteria as checkboxes.
   const body = bodies.at(-1)!;
-  assert.match(body, /## Plan: `docs\/plans\/open\.html`/);
+  assert.match(body, new RegExp(`## Plan: \`${t.id}-cache-plan\\.html\``));
   assert.match(body, /\*\*Measure\*\* \(todo\)/);
   assert.match(body, /- \[ \] A baseline is recorded\./);
   assert.ok(!body.includes('**Cache**'), 'step b is not linked');

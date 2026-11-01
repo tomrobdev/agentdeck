@@ -13,7 +13,8 @@ const prompt = ref('');
 const model = ref('sonnet');
 const priority = ref(0);
 const maxTurns = ref(40);
-const planPath = ref('');
+/** The task whose plan this one follows, as typed: "112" or "#112". */
+const planTask = ref('');
 const planSteps = ref('');
 const error = ref('');
 const saving = ref(false);
@@ -42,6 +43,11 @@ async function writeWithClaude() {
 async function submit() {
   if (saved.value) return emit('created', saved.value);
   error.value = '';
+  const planOn = planTask.value.trim().replace(/^#/, '');
+  if (planOn && !/^\d+$/.test(planOn)) {
+    error.value = 'Plan: give the number of the task whose plan this one follows.';
+    return;
+  }
   saving.value = true;
   try {
     const task = await api.addTask({
@@ -51,7 +57,7 @@ async function submit() {
       model: model.value,
       priority: priority.value,
       max_turns: maxTurns.value,
-      plan_path: planPath.value.trim() || undefined,
+      plan_task: planOn ? Number(planOn) : undefined,
       plan_steps: planSteps.value
         .split(',')
         .map((s) => s.trim())
@@ -116,12 +122,12 @@ async function submit() {
       </div>
       <div class="flex gap-2.5">
         <label class="field flex-1">
-          <span>Plan <span class="muted">(optional, a file on the base branch)</span></span>
-          <input v-model="planPath" placeholder="docs/plans/my-plan.html" />
+          <span>Plan <span class="muted">(optional, the task whose plan this one follows)</span></span>
+          <input v-model="planTask" placeholder="#112" inputmode="numeric" />
         </label>
         <label class="field flex-1">
           <span>Steps <span class="muted">(ids, comma-separated; blank for every unfinished step)</span></span>
-          <input v-model="planSteps" placeholder="step-a, step-b" :disabled="!planPath.trim()" />
+          <input v-model="planSteps" placeholder="step-a, step-b" :disabled="!planTask.trim()" />
         </label>
       </div>
       <p v-if="error" class="form-error">{{ error }}</p>

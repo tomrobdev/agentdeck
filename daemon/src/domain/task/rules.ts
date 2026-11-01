@@ -14,8 +14,8 @@ export function modelError(model: string | undefined): string | null {
 }
 
 /** Steps name steps of a plan, so they need one. */
-export function stepsNeedPlanError(planPath: string | null, steps: string[] | null): string | null {
-  return !planPath && steps ? '--steps needs --plan' : null;
+export function stepsNeedPlanError(planTask: number | null, steps: string[] | null): string | null {
+  return planTask === null && steps ? '--steps needs --plan' : null;
 }
 
 /** An archived repo takes no new tasks. */

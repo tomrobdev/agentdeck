@@ -13,6 +13,7 @@ import type { Task } from '../../domain/task/task.ts';
 import { type LinkView, type Waiting, dependentViews, linkViews, unblocksOf, waitingFor } from './dependencies.ts';
 import type { LinkKind } from '../../domain/task/link.ts';
 import { requireTask } from '../input.ts';
+import { plansShown } from '../plans.ts';
 import { startWaits } from '../scheduler/queue.ts';
 
 /** What the queue says about one task, beyond the task row. */
@@ -90,7 +91,7 @@ export async function taskDetail(db: Db, id: number) {
     ...withViews(db, [task], measured)[0],
     runs: db.runsForTask(id),
     events: db.eventsForTask(id),
-    plans: db.plansForTask(id),
+    plans: plansShown(db, task),
   };
 }
 

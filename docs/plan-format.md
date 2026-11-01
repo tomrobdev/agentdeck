@@ -47,14 +47,23 @@ Everything else is free HTML: tables, code, notes. Scripts don't run when the da
 
 ## Styling
 
-A plan carries no CSS. It links `docs/plans/plan.css` from the head (`<link rel="stylesheet" href="plan.css" />`) and has no `<style>` block, so plans stay small to write and to read into a worker's context. The stylesheet covers the page, headings, tables, code, `section` steps, and the classes `.wrap` with `nav.toc` (a contents list beside the page), `.lede`, `.card`, `.decision`, `.meta`, `.tag` (with `ok`, `warn` or `info`), `.grid2`, `.muted` and `ul.check`. A rule only one plan needs can go in that plan's own `<style>`.
+A plan carries no CSS. It links the shared stylesheet from the head (`<link rel="stylesheet" href="plan.css" />`) and has no `<style>` block, so plans stay small to write and to read into a worker's context. The stylesheet, `docs/plans/plan.css` in AgentDeck's own repo, covers the page, headings, tables, code, `section` steps, and the classes `.wrap` with `nav.toc` (a contents list beside the page), `.lede`, `.card`, `.decision`, `.meta`, `.tag` (with `ok`, `warn` or `info`), `.grid2`, `.muted` and `ul.check`. A rule only one plan needs can go in that plan's own `<style>`.
 
-The dashboard shows a plan in a frame where a relative link doesn't resolve, so `PlanCard.vue` swaps that link for the file's contents, bundled at build time. A plan opened as a file finds the stylesheet beside it.
+The dashboard shows a plan in a frame where a relative link doesn't resolve, so `PlanCard.vue` swaps that link for the stylesheet's contents, bundled at build time.
 
-## How a plan reaches a task
+## Where plans live
 
-- **From the task's branch.** After every run, the daemon reads the HTML files the branch added or changed under `docs/plans/` and attaches those that carry the marker. A plan deleted from the branch is detached. Workers are told the format in their system prompt (`domain/run/prompt.ts`).
-- **Attached by hand.** `agentdeck attach <task> plan.html` attaches a plan written anywhere, under its file name; attaching the same name again replaces it. A file under `docs/plans/` is named by its path from there on (`docs/plans/x.html`), the name the branch's copy gets, so once the branch has the file, its copy replaces the attached one. `agentdeck attach <task>` with no file re-reads the branch.
-- **Through the API.** `POST /api/tasks/:id/plans` with `{ "name": "plan.html", "html": "…" }`. `POST /api/tasks/:id/plans/collect` re-reads the branch.
+Plans live in AgentDeck's database, not in the repo: a plan is never committed, so plans work the same in any repo and stay out of its history. A plan belongs to the task it was first attached to and is named after it: `<task id>-<slug>.html`, the slug from the plan's title (`112-plans-in-agentdeck.html`). The CLI, the dashboard and the PR body show that name. The pages already in AgentDeck's own `docs/plans/` were written before this; they stay where they are.
 
-The task detail (`GET /api/tasks/:id`) lists the parsed plans under `plans`, without their HTML; `GET /api/tasks/:id/plans/:plan` returns `{ html }`. The parser is `parsePlan` in `daemon/src/domain/plan/plan.ts`.
+- **With a new task.** `agentdeck add "…" --plan /any/path/x.html [--steps a,b]` reads the file, checks it is a plan, stores it as the new task's plan and links the task to it. `agentdeck edit <task> --plan <file>` does the same for an existing task, replacing its plan.
+- **Following another task's plan.** `--plan <task number>` (`--plan 112`) links the task to that task's plan, which must be in the same repo; `--steps` names the steps it carries out, checked against the stored plan. The dashboard's New task form and the API (`plan_task`) take the task number. Several tasks can follow one plan, each doing its own steps.
+- **Attached by hand.** `agentdeck attach <task> plan.html` stores or replaces the task's own plan under its numbered name. Through the API: `POST /api/tasks/:id/plans` with `{ "html": "…" }`.
+- **Written by a worker.** A task with no plan that writes one (because it was asked to, or the work is big enough to need one) writes it to the plan file below, and the daemon stores it as the task's plan after the run.
+
+The task detail (`GET /api/tasks/:id`) lists the parsed plans under `plans`, without their HTML: the plan the task follows when it belongs to another task, then the task's own. `GET /api/tasks/:id/plans/:plan` returns `{ html }`, with `:id` the task the plan belongs to (its `task_id`). Plans stored before plans moved into AgentDeck keep their old names and still show. The parser is `parsePlan` in `daemon/src/domain/plan/plan.ts`.
+
+## How a run uses its plan
+
+A task follows its linked plan, or else its own plan. Before every run the daemon writes that plan to `.agentdeck/plan.html` in the task's worktree; a `.gitignore` in `.agentdeck/` makes git ignore the folder, so the file is never committed. The worker's prompt lists the linked steps that are not yet done and tells it to set each one's `data-status` in that file and never to commit it.
+
+After every run, whatever its outcome, the daemon reads the file back and saves only the task's linked steps into the stored plan: each step's whole section, with its status and any note the worker put in it (`mergePlanSteps`). The rest stays as stored, because sibling tasks on one plan may run at the same time and each writes back its own steps. A task that follows its own plan with no other task on it keeps the whole file. The PR body and the check for linked steps a done run left unfinished read the stored plan.

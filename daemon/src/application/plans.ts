@@ -1,67 +1,95 @@
-// Plans attached to a task: collected from its branch after each run, or attached by a person.
+// Plans: stored in AgentDeck per task, named after the task they belong to (`112-plans-in-agentdeck.html`). A task
+// follows its linked plan (plan_task) or else its own; each run gets it in the worktree's plan file and gives it back.
+import { readPlanFile, writePlanFile } from '../adapters/plan-file.ts';
 import type { Db } from '../db/index.ts';
-import { PLAN_LIMIT, type TaskPlan, isPlanPath, linkedSteps, parsePlan, planName } from '../domain/plan/plan.ts';
+import type { OwnPlan } from '../db/plans.ts';
+import { PLAN_LIMIT, type ParsedPlan, type TaskPlan, linkedSteps, mergePlanSteps, parsePlan } from '../domain/plan/plan.ts';
 import type { PrPlan } from '../domain/pull-request/pr.ts';
 import type { PromptPlan } from '../domain/run/prompt.ts';
 import { type Task, planStepIds } from '../domain/task/task.ts';
-import { ActionError, object, requireTask, text } from './input.ts';
-import { taskChanges, taskFile } from './task/files.ts';
+import { ActionError, object, requireTask } from './input.ts';
 
-/**
- * Read the plans the task's branch added or changed under docs/plans/ and store them, dropping
- * branch plans that are gone. HTML files without the plan marker are not plans and are skipped.
- */
-export async function collectPlans(db: Db, id: number): Promise<TaskPlan[]> {
-  const { files } = await taskChanges(db, id);
-  const found: { name: string; html: string }[] = [];
-  for (const f of files) {
-    if (f.status === 'D' || f.binary || !isPlanPath(f.path)) continue;
-    const file = await taskFile(db, id, 'head', f.path);
-    if (file.text === null || file.truncated || file.size > PLAN_LIMIT || !parsePlan(file.text)) continue;
-    found.push({ name: f.path, html: file.text });
+/** HTML a person gives as a plan: refused unless it is a plan and small enough. */
+export function readPlanInput(html: unknown): { html: string; plan: ParsedPlan } {
+  if (typeof html !== 'string' || !html.trim()) throw new ActionError('the plan is empty');
+  if (Buffer.byteLength(html) > PLAN_LIMIT) throw new ActionError(`a plan can be at most ${PLAN_LIMIT / 1024} KB`);
+  const plan = parsePlan(html);
+  if (!plan) throw new ActionError('not an AgentDeck plan: its <html> tag needs data-agentdeck-plan="1" (see docs/plan-format.md)');
+  return { html, plan };
+}
+
+/** The plan a task follows: the linked task's plan, or else its own. `steps` are the linked step ids, null for every step. */
+export function followedPlan(db: Db, task: Pick<Task, 'id' | 'plan_task' | 'plan_steps'>): (OwnPlan & { steps: string[] | null }) | null {
+  if (task.plan_task !== null) {
+    const plan = db.ownPlan(task.plan_task);
+    return plan ? { ...plan, steps: planStepIds(task) } : null;
   }
-  db.replaceBranchPlans(id, found);
-  return db.plansForTask(id);
+  const own = db.ownPlan(task.id);
+  return own ? { ...own, steps: null } : null;
+}
+
+/** The plan a run follows, for its prompt. A linked plan that is gone comes back with html null. */
+export function planForRun(db: Db, task: Task): PromptPlan | null {
+  const plan = followedPlan(db, task);
+  if (plan) return { name: plan.name, html: plan.html, steps: plan.steps };
+  return task.plan_task !== null ? { name: `#${task.plan_task}'s plan`, html: null, steps: planStepIds(task) } : null;
+}
+
+/** Put the run's plan in the worktree's plan file (or clear the file when there is none), for the worker to update. */
+export async function putPlanFile(worktree: string, plan: PromptPlan | null): Promise<void> {
+  await writePlanFile(worktree, plan?.html ?? null);
 }
 
 /**
- * The plan a run of this task follows, read from the task's branch (which carries earlier attempts' step statuses): the
- * linked plan, or else the one plan the branch added (a plan-first build). Null when the task follows no plan. A linked
- * plan missing from the branch comes back with html null.
+ * After a run, whatever its outcome: store what the worker left in the plan file. A task that follows a plan writes back
+ * only its linked steps (mergePlanSteps), since sibling tasks on that plan may be running too; one that follows its own
+ * plan with no other task on it keeps the whole file. A task with no plan that wrote one gets it as its own plan.
+ * Returns whether a plan changed.
  */
-export async function planForRun(db: Db, task: Task): Promise<PromptPlan | null> {
-  if (task.plan_path) {
-    const file = await taskFile(db, task.id, 'head', task.plan_path).catch(() => null);
-    return { path: task.plan_path, html: file && file.text !== null && !file.truncated ? file.text : null };
+export async function takePlanFile(db: Db, task: Task, worktree: string): Promise<boolean> {
+  const written = await readPlanFile(worktree);
+  // From here on no await: the read, merge and write of the stored plan happen in one go.
+  if (written === null || Buffer.byteLength(written) > PLAN_LIMIT || !parsePlan(written)) return false;
+  const plan = followedPlan(db, task);
+  if (plan) {
+    const whole = task.plan_task === null && !db.planShared(task.id);
+    const html = whole ? written : mergePlanSteps(plan.html, written, plan.steps);
+    if (html === plan.html) return false;
+    db.updatePlanHtml(plan.id, html);
+    return true;
   }
-  const branch = (await collectPlans(db, task.id)).filter((p) => p.source === 'branch');
-  if (branch.length !== 1) return null;
-  const html = db.planHtml(task.id, branch[0].id);
-  return html === undefined ? null : { path: branch[0].name, html };
+  if (task.plan_task !== null) return false; // linked to a plan that is gone: nothing to write back into
+  db.saveOwnPlan(task.id, written, 'worker');
+  return true;
 }
 
-/**
- * The linked plan's steps as the task's branch has them, for the PR body. Null when the task links no plan or the plan
- * can't be read.
- */
-export async function prPlanFor(db: Db, task: Task): Promise<PrPlan | null> {
-  if (!task.plan_path) return null;
-  const file = await taskFile(db, task.id, 'head', task.plan_path).catch(() => null);
-  const steps = file && file.text !== null && !file.truncated ? linkedSteps(file.text, planStepIds(task)) : null;
-  return steps && { path: task.plan_path, steps };
+/** The linked steps of the plan a task follows, as AgentDeck stores them. Null when it follows none. */
+export function followedSteps(db: Db, task: Task): ReturnType<typeof linkedSteps> {
+  const plan = followedPlan(db, task);
+  return plan && linkedSteps(plan.html, plan.steps);
 }
 
-/** Attach a plan written anywhere (a file, another session) to a task. Same name replaces it. */
-export function attachPlan(db: Db, id: number, input: { name?: unknown; html?: unknown }): TaskPlan {
+/** The plan a task follows and its linked steps, for the PR body. Null when it follows none. */
+export function prPlanFor(db: Db, task: Task): PrPlan | null {
+  const plan = followedPlan(db, task);
+  const steps = plan && linkedSteps(plan.html, plan.steps);
+  return plan && steps ? { name: plan.name, steps } : null;
+}
+
+/** The plans a task shows: the plan it follows when that belongs to another task, then its own, oldest first. */
+export function plansShown(db: Db, task: Pick<Task, 'id' | 'plan_task'>): TaskPlan[] {
+  const own = db.plansForTask(task.id);
+  if (task.plan_task === null || task.plan_task === task.id) return own;
+  const linked = db.ownPlan(task.plan_task);
+  const shown = linked && db.plansForTask(task.plan_task).find((p) => p.id === linked.id);
+  return shown ? [shown, ...own] : own;
+}
+
+/** Store or replace a task's own plan, under its numbered name (`<task id>-<slug>.html`). */
+export function attachPlan(db: Db, id: number, input: { html?: unknown }): TaskPlan {
   requireTask(db, id);
-  if (typeof input.html !== 'string' || !input.html.trim()) throw new ActionError('html is required');
-  if (Buffer.byteLength(input.html) > PLAN_LIMIT) throw new ActionError(`a plan can be at most ${PLAN_LIMIT / 1024} KB`);
-  if (!parsePlan(input.html)) {
-    throw new ActionError('not an AgentDeck plan: its <html> tag needs data-agentdeck-plan="1" (see docs/plan-format.md)');
-  }
-  const name = planName(text(object(input), 'name', { empty: true, raw: true }) ?? '');
-  db.savePlan(id, name, 'attached', input.html);
-  return db.plansForTask(id).find((p) => p.name === name)!;
+  const { html } = readPlanInput(object(input).html);
+  return db.saveOwnPlan(id, html, 'attached');
 }
 
 /** One plan's HTML, for the dashboard to show in full. */

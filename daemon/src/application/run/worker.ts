@@ -6,15 +6,15 @@ import { SETUP_TIMEOUT_MS, TEST_TIMEOUT_MS, ensureDirs } from '../../config.ts';
 import type { Db } from '../../db/index.ts';
 import { conflictReason, syncSummary } from '../../domain/branch/sync.ts';
 import { lastLine } from '../../domain/text.ts';
-import { linkedSteps, unfinishedSteps, unfinishedSummary } from '../../domain/plan/plan.ts';
+import { unfinishedSteps, unfinishedSummary } from '../../domain/plan/plan.ts';
 import { type PromptPlan, buildPrompt, buildResumePrompt } from '../../domain/run/prompt.ts';
 import { latestReviewNote } from '../../domain/task/history.ts';
 import { type Run, type WorkerResult, firstDenial, isEnvironmentBlock, parseStatus, resumableSession } from '../../domain/run/run.ts';
-import { type Task, leftoversMessage, planStepIds } from '../../domain/task/task.ts';
+import { type Task, leftoversMessage } from '../../domain/task/task.ts';
 import { type TaskRunEnd, openTaskRun, startTaskRun } from './claude-run.ts';
 import { syncBranch } from '../sync.ts';
 import { pauseRepo } from '../scheduler/pause.ts';
-import { collectPlans, planForRun } from '../plans.ts';
+import { followedSteps, planForRun, putPlanFile, takePlanFile } from '../plans.ts';
 import { settle } from '../task/settle.ts';
 import { recordAnswers, reviewForRun } from '../review/address.ts';
 
@@ -34,17 +34,19 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
 
   const opened = openTaskRun(db, task, 'work');
   const { runId, log } = opened;
+  const previousRuns = db.runsForTask(task.id).filter((r) => r.id !== runId);
+  // A daemon restart cut the attempt's last run off: continue its claude session (with `prompt` as the fallback).
+  const session = resumableSession(task, previousRuns);
+  // The cut-off run never gave its plan file back: keep what it got done before the file is written afresh.
+  if (session) await giveBackPlan(db, task, wt.path, log);
   let plan: PromptPlan | null = null;
   try {
-    plan = await planForRun(db, task);
+    plan = planForRun(db, task);
   } catch (err) {
     writeEvent(log, { type: 'agentdeck_error', text: `read plan: ${(err as Error).message}` });
   }
-  const previousRuns = db.runsForTask(task.id).filter((r) => r.id !== runId);
   const review = await reviewForRun(db, task, repo);
   const prompt = buildPrompt(task, previousRuns, latestReviewNote(db.eventsForTask(task.id)), plan, review?.prompt ?? null);
-  // A daemon restart cut the attempt's last run off: continue its claude session (with `prompt` as the fallback).
-  const session = resumableSession(task, previousRuns);
   const resume = session ? { session, prompt: buildResumePrompt(task) } : undefined;
 
   // Install dependencies before the agent starts: it isn't allowed to install them itself.
@@ -83,6 +85,13 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
     return finish(db, task, runId, { outcome: 'cancelled' });
   }
 
+  // The plan goes in the worktree's plan file, which git ignores, for the worker to set its steps' statuses in.
+  try {
+    await putPlanFile(wt.path, plan);
+  } catch (err) {
+    writeEvent(log, { type: 'agentdeck_error', text: `write plan file: ${(err as Error).message}` });
+  }
+
   // Written after setup: setup runs here in the daemon, outside the sandbox, so installs keep the network.
   let ran: TaskRunEnd;
   try {
@@ -99,12 +108,8 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
   } catch (err) {
     writeEvent(log, { type: 'agentdeck_error', text: `commit leftovers: ${(err as Error).message}` });
   }
-  // Plans the agent wrote on its branch are attached to the task, whatever the outcome.
-  try {
-    await collectPlans(db, task.id);
-  } catch (err) {
-    writeEvent(log, { type: 'agentdeck_error', text: `collect plans: ${(err as Error).message}` });
-  }
+  // What the worker did to the plan is stored, whatever the outcome.
+  await giveBackPlan(db, task, wt.path, log);
 
   let outcome: WorkerResult;
   if (end.kind === 'cancelled') {
@@ -133,10 +138,9 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
   }
 
   // A done run that left linked plan steps unfinished is a warning, not a change of outcome.
-  if (outcome.outcome === 'done' && task.plan_path) {
+  if (outcome.outcome === 'done' && task.plan_task !== null) {
     try {
-      const html = (await planForRun(db, task))?.html;
-      const left = unfinishedSteps((html && linkedSteps(html, planStepIds(task))) || []);
+      const left = unfinishedSteps(followedSteps(db, task) ?? []);
       if (left.length) db.recordPlanUnfinished(task.id, unfinishedSummary(left));
     } catch (err) {
       writeEvent(log, { type: 'agentdeck_error', text: `check plan steps: ${(err as Error).message}` });
@@ -154,6 +158,15 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
     pauseRepo(db, repo, `permission refused on task #${task.id}: ${firstDenial(denials)}`);
   }
   return finish(db, task, runId, outcome, runFields);
+}
+
+/** Store what a run left in the worktree's plan file (takePlanFile). A failure is logged, never fatal. */
+async function giveBackPlan(db: Db, task: Task, worktree: string, log: Parameters<typeof writeEvent>[0]): Promise<void> {
+  try {
+    await takePlanFile(db, task, worktree);
+  } catch (err) {
+    writeEvent(log, { type: 'agentdeck_error', text: `save plan file: ${(err as Error).message}` });
+  }
 }
 
 /** Record the run and move the task to its next state (including retry). */

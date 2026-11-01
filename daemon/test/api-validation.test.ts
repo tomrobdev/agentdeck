@@ -94,19 +94,21 @@ function wrongTyped(): [string, unknown][] {
     ['/api/tasks', { prompt: 'x', max_attempts: 1.5 }],
     ['/api/tasks', { prompt: 'x', builds_on: 'one' }],
     ['/api/tasks', { prompt: 'x', after: [1.5] }],
-    ['/api/tasks', { prompt: 'x', plan_path: 5 }],
-    ['/api/tasks', { prompt: 'x', plan_path: 'docs/plans/a.html', plan_steps: 5 }],
+    ['/api/tasks', { prompt: 'x', plan_task: 'docs/plans/a.html' }],
+    ['/api/tasks', { prompt: 'x', plan_task: 1.5 }],
+    ['/api/tasks', { prompt: 'x', plan_html: 5 }],
+    ['/api/tasks', { prompt: 'x', plan_steps: 5 }],
     [t, { title: 5 }],
     [t, { prompt: [] }],
     [t, { priority: '1' }],
     [t, { max_turns: null }],
-    [t, { plan_path: 5 }],
+    [t, { plan_task: 'x' }],
     [t, { plan_steps: 5 }],
     [`${t}/retry`, { note: 5 }],
     [`${t}/merge`, { method: 5 }],
     [`${t}/merge`, { delete_branch: 'yes' }],
     [`${t}/plans`, { html: 5 }],
-    [`${t}/plans`, { html: '<html data-agentdeck-plan="1"></html>', name: 5 }],
+    [`${t}/plans`, { html: '<html><body>no marker</body></html>' }],
   ];
 }
 
@@ -142,7 +144,6 @@ test('every POST route answers 400 to a body that is not a JSON object', async (
     `/api/tasks/${taskId}/merge`,
     `/api/tasks/${taskId}/resolve`,
     `/api/tasks/${taskId}/plans`,
-    `/api/tasks/${taskId}/plans/collect`,
   ];
   for (const path of routes) {
     for (const body of [[1], 'text', 5, null]) {

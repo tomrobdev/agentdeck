@@ -74,6 +74,7 @@ export const tasks = sqliteTable(
     merge_requested_at: text(),
     merge_request_method: text(),
     merge_request_check: text(),
+    plan_task: integer(),
   },
   (table) => [index('tasks_pick').on(table.status, sql`priority DESC`, table.id)],
 );

@@ -1,12 +1,21 @@
 // Plans attached to tasks: the HTML as written, parsed into steps when read.
-import { and, asc, eq, notInArray, sql } from 'drizzle-orm';
-import { type PlanSource, type TaskPlan, parsePlan } from '../domain/plan/plan.ts';
+import { and, asc, eq, ne, sql } from 'drizzle-orm';
+import { type PlanSource, type TaskPlan, isOwnPlanName, parsePlan, planFileName } from '../domain/plan/plan.ts';
 import type { Orm } from './orm.ts';
 import { NOW, atomically } from './sql.ts';
-import { taskPlans } from './tables.ts';
+import { taskPlans, tasks } from './tables.ts';
 import type { DatabaseSync } from 'node:sqlite';
 
 type PlanRow = typeof taskPlans.$inferSelect;
+
+/** A task's own plan with its HTML: the one stored under the task's numbered name. */
+export interface OwnPlan {
+  id: number;
+  task_id: number;
+  name: string;
+  source: PlanSource;
+  html: string;
+}
 
 /** A row as the API shows it. A row that no longer parses (it always did when saved) reads as untitled. */
 function toPlan({ html, ...row }: PlanRow): TaskPlan {
@@ -30,22 +39,69 @@ export function planStore(db: DatabaseSync, orm: Orm) {
       })
       .run();
 
+  /** The task's own plan, the newest if there were ever two. Plans stored before plans had numbers are not its own. */
+  const ownPlan = (task_id: number): OwnPlan | undefined =>
+    orm
+      .select({ id: taskPlans.id, task_id: taskPlans.task_id, name: taskPlans.name, source: taskPlans.source, html: taskPlans.html })
+      .from(taskPlans)
+      .where(eq(taskPlans.task_id, task_id))
+      .orderBy(asc(taskPlans.id))
+      .all()
+      .filter((p) => isOwnPlanName(task_id, p.name))
+      .map((p) => ({ ...p, source: p.source as PlanSource }))
+      .at(-1);
+
   return {
     savePlan(task_id: number, name: string, source: PlanSource, html: string): void {
       upsert(task_id, name, source, html);
     },
-    /** Make the task's branch plans exactly `plans`: upsert each, drop branch plans no longer there. */
-    replaceBranchPlans(task_id: number, plans: { name: string; html: string }[]): void {
-      atomically(db, () => {
-        for (const p of plans) upsert(task_id, p.name, 'branch', p.html);
-        const keep = plans.map((p) => p.name);
-        orm
-          .delete(taskPlans)
-          .where(
-            and(eq(taskPlans.task_id, task_id), eq(taskPlans.source, 'branch'), keep.length ? notInArray(taskPlans.name, keep) : undefined),
-          )
-          .run();
+    ownPlan,
+    /**
+     * Store `html` (a plan) as the task's own plan, under the name its title gives (planFileName), replacing the plan it
+     * had: that row keeps its id, so the dashboard's view of it follows.
+     */
+    saveOwnPlan(task_id: number, html: string, source: PlanSource): TaskPlan {
+      const name = planFileName(task_id, parsePlan(html)?.title ?? '');
+      return atomically(db, () => {
+        const old = ownPlan(task_id);
+        if (!old) upsert(task_id, name, source, html);
+        else {
+          orm
+            .delete(taskPlans)
+            .where(and(eq(taskPlans.task_id, task_id), eq(taskPlans.name, name), ne(taskPlans.id, old.id)))
+            .run();
+          if (old.name !== name || old.html !== html || old.source !== source) {
+            orm
+              .update(taskPlans)
+              .set({ name, source, html, updated_at: sql.raw(NOW) })
+              .where(eq(taskPlans.id, old.id))
+              .run();
+          }
+        }
+        return toPlan(
+          orm
+            .select()
+            .from(taskPlans)
+            .where(and(eq(taskPlans.task_id, task_id), eq(taskPlans.name, name)))
+            .get()!,
+        );
       });
+    },
+    /** Replace a stored plan's HTML, keeping its name and source. updated_at moves only when the HTML changed. */
+    updatePlanHtml(id: number, html: string): void {
+      orm
+        .update(taskPlans)
+        .set({ html, updated_at: sql.raw(NOW) })
+        .where(and(eq(taskPlans.id, id), sql`${taskPlans.html} IS NOT ${html}`))
+        .run();
+    },
+    /** Whether a task other than `task_id` follows task `task_id`'s plan. */
+    planShared(task_id: number): boolean {
+      return !!orm
+        .select({ id: tasks.id })
+        .from(tasks)
+        .where(and(eq(tasks.plan_task, task_id), ne(tasks.id, task_id)))
+        .get();
     },
     /** The task's plans, oldest first, without their HTML. */
     plansForTask(task_id: number): TaskPlan[] {

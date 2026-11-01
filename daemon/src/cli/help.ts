@@ -31,11 +31,12 @@ Tasks
   agentdeck add "<prompt>" --repo <name> [--title t] [--priority n] [--model sonnet] [--max-turns n] [--attempts n]
                       [--builds-on <tasks>]     start once those tasks (12,14) are done and merged
                       [--after <tasks>]         run at once; the PR waits to merge until those tasks have landed
-                      [--plan <path>] [--steps a,b]   carry out steps of a plan on the base branch (docs/plans/x.html);
-                                                      without --steps, every step not yet done
+                      [--plan <file|task>] [--steps a,b]   carry out steps of a plan: a plan file anywhere on disk
+                                                      (stored as this task's plan) or a task number (follow that
+                                                      task's plan, same repo); without --steps, every step not yet done
                       [--propose]               file it as a proposal that waits for \`agentdeck approve\`, like the planner's
   agentdeck edit <id> [--title t] [--prompt p] [--priority n] [--model m] [--max-turns n] [--attempts n]
-                      [--plan <path>] [--steps a,b]   change the plan link ("" clears it)
+                      [--plan <file|task>] [--steps a,b]   change the plan link ("" clears it)
                                   for proposed, queued, blocked or failed tasks
   agentdeck link <id> --builds-on <task>   or --after <task>: make a task depend on another (cycles are refused)
   agentdeck unlink <id> <task>    remove that link
@@ -45,8 +46,8 @@ Tasks
   agentdeck show <id>
   agentdeck review <id>       list the task's reviews (made in the dashboard) and their comments
   agentdeck log <id> [--attempt n] [--raw]
-  agentdeck attach <id> [plan.html]   attach a plan (docs/plan-format.md) to a task; with no file,
-                                  re-read the plans under docs/plans/ on the task's branch
+  agentdeck attach <id> <plan.html>   store or replace the task's own plan (docs/plan-format.md), named
+                                  <id>-<slug>.html after the task and the plan's title
   agentdeck approve <id>...       queue planner proposals
   agentdeck reject <id>...
   agentdeck cancel <id>
