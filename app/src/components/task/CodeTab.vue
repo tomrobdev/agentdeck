@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { type FileContent, type FileRef, type TaskDetail, api } from '../../api';
+import { useQuery, useQueryClient } from '@tanstack/vue-query';
+import { type FileRef, type TaskDetail, fileQuery, treeQuery } from '../../api';
+import { useCommits } from '../../composables/useChanges';
 import { useCopy } from '../../platform/native';
 import { isMarkdown as isMarkdownPath } from '../../lib/render';
 import { go } from '../../router';
@@ -26,12 +28,18 @@ function setQuery(patch: Record<string, string | null>, replace = false) {
   go({ name: 'task', id: taskId.value, tab: 'code', query: query as Record<string, string> }, { replace });
 }
 
-// A new loader per task and ref resets the tree.
+// What is at a commit never changes, so folders and files are keyed by it and seen again without a request.
+const queryClient = useQueryClient();
+const { head, base } = useCommits(taskId);
+const commit = computed(() => (ref_.value === 'base' ? base.value : head.value));
+
+// A new loader per task, ref and commit resets the tree.
 const loadTree = computed(() => {
   const id = taskId.value;
   const r = ref_.value;
+  const sha = commit.value;
   return async (dir: string): Promise<TreeNode[]> =>
-    (await api.tree(id, r, dir)).entries.map((e) => ({
+    (await queryClient.fetchQuery(treeQuery(id, r, dir, sha))).entries.map((e) => ({
       name: e.name,
       path: e.path,
       type: e.type,
@@ -39,24 +47,13 @@ const loadTree = computed(() => {
     }));
 });
 
-const file = ref<FileContent | null>(null);
-const error = ref('');
-const raw = ref(false);
-watch(
-  [taskId, ref_, path],
-  async () => {
-    file.value = null;
-    error.value = '';
-    raw.value = false;
-    if (!path.value) return;
-    try {
-      file.value = await api.file(taskId.value, ref_.value, path.value);
-    } catch (e) {
-      error.value = (e as Error).message;
-    }
-  },
-  { immediate: true },
+const fileQ = useQuery(
+  computed(() => ({ ...fileQuery(taskId.value, ref_.value, path.value ?? '', commit.value), enabled: !!path.value && !!commit.value })),
 );
+const file = computed(() => (path.value ? (fileQ.data.value ?? null) : null));
+const error = computed(() => (path.value ? (fileQ.error.value?.message ?? '') : ''));
+const raw = ref(false);
+watch([taskId, ref_, path], () => (raw.value = false));
 
 const isMarkdown = computed(() => !!path.value && isMarkdownPath(path.value));
 const isImage = computed(() => !!path.value && /\.(png|jpe?g|gif|webp|ico|icns)$/i.test(path.value));
@@ -74,14 +71,14 @@ const select = (r: LineRange) => setQuery({ L: r.from === r.to ? String(r.from) 
         <button :class="{ on: ref_ === 'base' }" title="Where the branch started" @click="setQuery({ ref: 'base', L: null })">Base</button>
       </div>
       <FileTree
-        v-if="task.branch"
+        v-if="task.branch && commit"
         :load="loadTree"
         :selected="path"
         :marks="ref_ === 'head' ? changed : undefined"
         :known="[...changed]"
         @select="(p) => setQuery({ path: p, L: null })"
       />
-      <p v-else class="text-muted">No branch yet.</p>
+      <p v-else class="text-muted">{{ task.branch ? 'Loading…' : 'No branch yet.' }}</p>
     </aside>
     <section class="card flex min-w-0 flex-1 flex-col">
       <p v-if="!path" class="p-6 text-muted">Pick a file. Press <kbd>t</kbd> to find one by name.</p>
