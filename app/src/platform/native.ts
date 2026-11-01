@@ -21,6 +21,26 @@ export function setTrayStatus(status: string): void {
   invoke('set_tray_status', { status }).catch(() => {});
 }
 
+/** Whether cmux is installed; false in a plain browser. */
+export async function cmuxInstalled(): Promise<boolean> {
+  if (!isNative) return false;
+  try {
+    return await invoke<boolean>('cmux_installed');
+  } catch {
+    return false;
+  }
+}
+
+/** Open a terminal from the command template: an argv list, run without a shell. `command` is the text to run in it. */
+export async function openTerminal(template: string[], opts: { title: string; cwd: string; command?: string }): Promise<void> {
+  if (!isNative) throw new Error('Terminals open from the desktop app only');
+  try {
+    await invoke('open_terminal', { template, ...opts });
+  } catch (e) {
+    throw new Error(String(e)); // Tauri rejects with the command's error string
+  }
+}
+
 /** Open a URL in the system browser; in a plain browser, a new tab. Never navigates the dashboard itself. */
 export async function openExternal(url: string): Promise<void> {
   if (!/^https?:\/\//.test(url)) return;

@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { type NotificationRow, type NotifyKind, type Settings, ago, api, serviceQuery, settingsQuery } from '../../api';
 import { type SettingsForm, toSettingsForm, toSettingsPatch } from '../../lib/forms';
+import { CMUX_TEMPLATE, saveTerminalTemplate, terminalTemplate } from '../../lib/terminal';
 import { isNative, launchAtLogin, setLaunchAtLogin } from '../../platform/native';
 import { MODES, THEMES, mode, setMode, setTheme, theme } from '../../platform/theme';
 import { useActions } from '../../composables/useActions';
@@ -27,6 +28,7 @@ const appAtLogin = ref<boolean | null>(null);
 const error = ref('');
 const saving = ref(false);
 const tested = ref('');
+const terminalCmd = ref(terminalTemplate());
 
 function load(s: Settings) {
   form.value = toSettingsForm(s);
@@ -65,6 +67,7 @@ const perDay = computed(() => (form.value ? (form.value.weekly_max / 7).toFixed(
 
 async function save(close = true) {
   if (!form.value) return;
+  saveTerminalTemplate(terminalCmd.value);
   const patch = toSettingsPatch(form.value);
   error.value = '';
   saving.value = true;
@@ -217,6 +220,22 @@ async function test() {
         <label v-if="isNative" class="flex items-center gap-2">
           <input type="checkbox" :checked="!!appAtLogin" @change="toggleAppAtLogin" /> Open this dashboard at login (in the menu bar)
         </label>
+      </section>
+
+      <section v-if="isNative" class="flex flex-col gap-2.5">
+        <h4 class="m-0">Terminal</h4>
+        <label class="field">
+          <span>Command that opens a terminal</span>
+          <input v-model="terminalCmd" class="font-mono" spellcheck="false" />
+          <small class="muted text-xs">
+            Split into arguments on spaces ("quotes" keep spaces together) and run without a shell. <code>{title}</code>,
+            <code>{cwd}</code> and <code>{command}</code> are filled in; without a command, <code>{command}</code> and the flag before it
+            are left out. cmux is found even though it is not on the app's PATH. Remembered on this computer.
+          </small>
+        </label>
+        <button type="button" class="self-start" :disabled="terminalCmd === CMUX_TEMPLATE" @click="terminalCmd = CMUX_TEMPLATE">
+          Use cmux
+        </button>
       </section>
 
       <section class="flex flex-col gap-2.5">

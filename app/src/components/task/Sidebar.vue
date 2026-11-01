@@ -5,6 +5,7 @@ import AutoMergeMark from '../ui/AutoMergeMark.vue';
 import { openExternal, useCopy } from '../../platform/native';
 import { PRIORITY_LEVELS, canEdit, priorityLevel, statusLabel } from '../../lib/taskView';
 import { useActions } from '../../composables/useActions';
+import { useTerminal } from '../../composables/useTerminal';
 import PriorityIcon from '../ui/PriorityIcon.vue';
 import StatusIcon from '../ui/StatusIcon.vue';
 
@@ -16,6 +17,12 @@ const editable = computed(() => canEdit(props.task));
 const editing = ref<'priority' | 'model' | 'max_turns' | null>(null);
 const draft = ref('');
 const { copied, copy } = useCopy();
+const terminal = useTerminal();
+
+function openWorktree() {
+  const dir = props.task.worktree;
+  if (dir) run(() => terminal.open(`#${props.task.id} ${props.task.title}`, dir));
+}
 
 function edit(field: 'priority' | 'model' | 'max_turns') {
   if (!editable.value) return;
@@ -156,6 +163,7 @@ const input = 'px-1.5 py-0.5';
       <div :class="name">Worktree</div>
       <div :class="rowMono">
         <span class="flex-1 truncate" :title="task.worktree">{{ task.worktree.split('/').slice(-2).join('/') }}</span>
+        <button v-if="terminal.available.value" class="px-1.5 py-0 text-xs" @click="openWorktree">open in {{ terminal.name() }}</button>
         <button class="px-1.5 py-0 text-xs" @click="copy(task.worktree, 'wt')">{{ copied === 'wt' ? '✓' : 'copy' }}</button>
       </div>
     </div>

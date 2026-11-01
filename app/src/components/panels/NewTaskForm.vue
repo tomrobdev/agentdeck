@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { type Repo, type TaskDetail, api } from '../../api';
+import { useTerminal } from '../../composables/useTerminal';
 import Modal from '../ui/Modal.vue';
 
 const props = defineProps<{ repos: Repo[] }>();
@@ -22,6 +23,21 @@ const warnings = ref<string[]>([]);
 const promptEl = ref<HTMLTextAreaElement | null>(null);
 
 onMounted(() => promptEl.value?.focus());
+
+const terminal = useTerminal();
+
+/** Hand the writing to Claude in a terminal at the repo; the task shows up through the change stream. */
+async function writeWithClaude() {
+  const path = props.repos.find((r) => r.name === repo.value)?.path;
+  if (!path) return;
+  error.value = '';
+  try {
+    await terminal.writeTask(repo.value, path, prompt.value);
+    emit('close');
+  } catch (e) {
+    error.value = String((e as Error)?.message ?? e);
+  }
+}
 
 async function submit() {
   if (saved.value) return emit('created', saved.value);
@@ -117,6 +133,14 @@ async function submit() {
       </div>
       <div class="flex items-center justify-end gap-2">
         <span class="muted mr-auto text-sm">⌘↩ to queue</span>
+        <button
+          v-if="!saved && terminal.available.value"
+          type="button"
+          title="Opens a terminal in the repo running claude /add-task with what you typed"
+          @click="writeWithClaude"
+        >
+          Write it with Claude
+        </button>
         <button v-if="!saved" type="button" @click="$emit('close')">Cancel</button>
         <button class="primary" type="submit" :disabled="saving || !prompt.trim()">{{ saved ? 'Open task' : 'Queue task' }}</button>
       </div>
