@@ -4,12 +4,14 @@ import type { ShowProps } from './ListView.vue';
 import Popover from '../ui/Popover.vue';
 
 export interface Display {
-  mode: 'list' | 'board';
+  mode: 'list' | 'board' | 'graph';
   groupBy: GroupBy;
   sort: string;
   show: ShowProps;
   showEmpty: boolean;
   collapsed: string[];
+  /** Graph mode: also draw chains whose every task is done and merged. Missing from a saved view that predates it. */
+  showFinished?: boolean;
 }
 
 const display = defineModel<Display>({ required: true });
@@ -30,8 +32,10 @@ const PROPS: { key: keyof ShowProps; label: string }[] = [
       <select
         class="w-[150px] px-1.5 py-0.5"
         :value="display.groupBy"
-        :disabled="display.mode === 'board'"
-        :title="display.mode === 'board' ? 'The board is always grouped by status' : ''"
+        :disabled="display.mode !== 'list'"
+        :title="
+          display.mode === 'board' ? 'The board is always grouped by status' : display.mode === 'graph' ? 'The graph is not grouped' : ''
+        "
         @change="set({ groupBy: ($event.target as HTMLSelectElement).value as GroupBy })"
       >
         <option v-for="g in GROUP_BYS" :key="g.key" :value="g.key">{{ g.label }}</option>
@@ -46,6 +50,10 @@ const PROPS: { key: keyof ShowProps; label: string }[] = [
     <label class="flex items-center justify-between gap-3 px-2 py-1">
       <span>Show empty groups</span>
       <input type="checkbox" :checked="display.showEmpty" @change="set({ showEmpty: !display.showEmpty })" />
+    </label>
+    <label class="flex items-center justify-between gap-3 px-2 py-1">
+      <span>Show finished (graph)</span>
+      <input type="checkbox" :checked="!!display.showFinished" @change="set({ showFinished: !display.showFinished })" />
     </label>
     <div class="px-2 pt-2.5 pb-1 text-xs tracking-[0.05em] text-muted uppercase">Properties</div>
     <div class="flex flex-wrap gap-1 px-2 pb-1.5">
