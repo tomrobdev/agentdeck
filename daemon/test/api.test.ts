@@ -248,3 +248,32 @@ test('status reports which code the daemon runs, and restart waits while work ru
     server2.close();
   }
 });
+
+test('GET /api/events sends the current rev, then each new one, and unsubscribes on close', async () => {
+  const subscribers = new Set<(rev: number) => void>();
+  const changes = {
+    rev: 7,
+    subscribe: (fn: (rev: number) => void) => (subscribers.add(fn), () => void subscribers.delete(fn)),
+  };
+  const server2 = await startApi({ db, port: 0, changes });
+  const url = `http://127.0.0.1:${(server2.address() as AddressInfo).port}`;
+  const ctl = new AbortController();
+  try {
+    const res = await fetch(`${url}/api/events`, { signal: ctl.signal });
+    assert.equal(res.status, 200);
+    assert.match(res.headers.get('content-type') ?? '', /^text\/event-stream/);
+    const reader = res.body!.getReader();
+    const dec = new TextDecoder();
+    assert.equal(dec.decode((await reader.read()).value), 'event: rev\ndata: {"rev":7}\n\n');
+    assert.equal(subscribers.size, 1);
+    for (const fn of subscribers) fn(8);
+    assert.equal(dec.decode((await reader.read()).value), 'event: rev\ndata: {"rev":8}\n\n');
+    ctl.abort();
+    for (let i = 0; i < 50 && subscribers.size; i++) await new Promise((r) => setTimeout(r, 20));
+    assert.equal(subscribers.size, 0);
+  } finally {
+    ctl.abort();
+    server2.closeAllConnections();
+    server2.close();
+  }
+});
