@@ -34,6 +34,9 @@ import { plannerRuns, repos, runs, taskEvents, taskLinks, tasks } from './tables
 /** Every column but the prompt, for lists. */
 const { prompt: _prompt, ...SUMMARY_COLUMNS } = getColumns(tasks);
 
+/** The columns of a task with no merge request. */
+const NO_MERGE_REQUEST = { merge_requested_at: null, merge_request_method: null, merge_request_check: null };
+
 /** The task row `t` in the claim and queue queries, which NOT_WAITING refers to by that name. */
 const t = alias(tasks, 't');
 
@@ -350,6 +353,36 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       return Number(res.changes) > 0;
     },
     /**
+     * Record a person's request to merge the task's PR once it is ready. Not a status, but guarded like the merge it asks
+     * for: only a done task whose PR is open. A new request starts without a check. Returns false if it was not.
+     */
+    requestMerge(id: number, method: MergeMethod): boolean {
+      const res = orm
+        .update(tasks)
+        .set({ merge_requested_at: sql.raw(NOW), merge_request_method: method, merge_request_check: null, updated_at: sql.raw(NOW) })
+        .where(and(eq(tasks.id, id), eq(tasks.status, 'done'), eq(tasks.pr_state, 'open')))
+        .run();
+      return Number(res.changes) > 0;
+    },
+    /** Drop a task's merge request. Returns false if it had none. */
+    clearMergeRequest(id: number): boolean {
+      const res = orm
+        .update(tasks)
+        .set({ ...NO_MERGE_REQUEST, updated_at: sql.raw(NOW) })
+        .where(and(eq(tasks.id, id), isNotNull(tasks.merge_requested_at)))
+        .run();
+      return Number(res.changes) > 0;
+    },
+    /** Keep the PR refresh's latest merge request check (JSON { verdict, reasons }) on a task that still has the request. */
+    setMergeRequestCheck(id: number, check: string): boolean {
+      const res = orm
+        .update(tasks)
+        .set({ merge_request_check: check })
+        .where(and(eq(tasks.id, id), isNotNull(tasks.merge_requested_at)))
+        .run();
+      return Number(res.changes) > 0;
+    },
+    /**
      * Keep a done task's open PR's checks as they were the first time they settled (`pr_checks_opened`).
      * Written once: returns false when the PR is not open, or already has them.
      */
@@ -388,6 +421,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
             ...(e.type === 'opened' ? { pr_checks_opened: null, pr_checks_merged: null } : {}),
             auto_merge_check: null,
             auto_merge_checked_at: null,
+            ...NO_MERGE_REQUEST,
             updated_at: sql.raw(NOW),
           })
           .where(and(eq(tasks.id, id), guard))
@@ -412,6 +446,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
             ...(checks ? { pr_checks_merged: JSON.stringify(checks) } : {}),
             auto_merge_check: null,
             auto_merge_checked_at: null,
+            ...NO_MERGE_REQUEST,
             updated_at: sql.raw(NOW),
           })
           .where(and(eq(tasks.id, id), eq(tasks.status, 'done'), eq(tasks.pr_state, 'open')))

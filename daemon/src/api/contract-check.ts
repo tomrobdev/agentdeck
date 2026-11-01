@@ -43,6 +43,9 @@ check<Fits<Out<typeof actions.mergePreview>, C.MergePreview>>();
 check<Fits<Out<typeof actions.mergeTask>, WithoutTask<C.MergeResult>>>();
 check<Fits<Out<typeof actions.mergeAll>, C.MergeAllResult>>();
 check<Fits<Out<typeof actions.setAutoMerge>, WithoutTask<C.AutoMergeResult>>>();
+check<Fits<Out<typeof actions.requestMerge>, WithoutTask<C.RequestMergeResult>>>();
+check<Fits<Out<typeof actions.cancelMergeRequest>, WithoutTask<C.CancelMergeRequestResult>>>();
+check<Fits<Out<typeof actions.requestMerges>, C.RequestMergesResult>>();
 check<Fits<Out<typeof actions.syncNow>, WithoutTask<C.SyncResult>>>();
 check<Fits<Out<typeof actions.taskChanges>, C.Changes>>();
 check<Fits<Out<typeof actions.taskDiff>, C.FilePatch>>();
@@ -64,6 +67,7 @@ check<Fits<Out<typeof actions.reopenReviewComment>, C.Review>>();
 check<Fits<DomainLogEntry, C.LogEntry>>();
 check<Fits<NonNullable<Out<typeof actions.taskViews>[number]['live']>, C.LiveView>>();
 check<Fits<NonNullable<Out<typeof actions.taskViews>[number]['sync']>, C.SyncView>>();
+check<Fits<NonNullable<Out<typeof actions.taskViews>[number]['merge_request']>, C.MergeRequestView>>();
 
 // Requests
 check<Fits<C.NewRepo, In<typeof actions.addRepo, 1>>>();
@@ -75,6 +79,8 @@ check<Fits<C.SettingsPatch, In<typeof actions.updateSettings, 1>>>();
 check<Fits<C.MergeRequest, In<typeof actions.mergeTask, 2>>>();
 check<Fits<C.MergeAllRequest, In<typeof actions.mergeAll, 1>>>();
 check<Fits<C.AutoMergeRequest, In<typeof actions.setAutoMerge, 2>>>();
+check<Fits<C.RequestMergeRequest, In<typeof actions.requestMerge, 2>>>();
+check<Fits<C.RequestMergesRequest, In<typeof actions.requestMerges, 1>>>();
 check<Fits<C.ReviewPatch, In<typeof actions.editReview, 2>>>();
 check<Fits<C.NewReviewComment, In<typeof actions.addReviewComment, 2>>>();
 check<Fits<C.ReviewCommentPatch, In<typeof actions.editReviewComment, 2>>>();
