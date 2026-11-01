@@ -5,6 +5,20 @@ import type { Orm } from './orm.ts';
 import { NOW } from './sql.ts';
 import { plannerRuns, runs } from './tables.ts';
 
+export interface PidRun {
+  kind: 'work' | 'resolve' | 'planner';
+  id: number;
+  pid: number;
+  started_at: string;
+  ended_at: string | null;
+}
+
+export interface RunningTaskRun {
+  id: number;
+  pid: number | null;
+  started_at: string | null;
+}
+
 export function runStore(orm: Orm) {
   return {
     startRun(task_id: number, attempt: number, log_path: string, kind: RunKind = 'work'): number {
@@ -62,6 +76,19 @@ export function runStore(orm: Orm) {
           .limit(1)
           .get() !== undefined
       );
+    },
+    /** Runs of any kind with a recorded pid that have not finished or finished within `days`: where a claude process may still be. */
+    pidRuns(days: number): PidRun[] {
+      const recent = (col: string) =>
+        sql.raw(`pid IS NOT NULL AND (${col} IS NULL OR ${col} > datetime('now', '-${Math.floor(days)} days'))`);
+      return orm.all(sql`SELECT kind, id, pid, started_at, ended_at FROM runs WHERE ${recent('ended_at')}
+        UNION ALL SELECT 'planner' AS kind, id, pid, started_at, ended_at FROM planner_runs WHERE ${recent('ended_at')}`) as PidRun[];
+    },
+    /** Tasks in running or being cancelled, each with the pid and start of its unfinished work run, if it has one. */
+    runningTaskRuns(): RunningTaskRun[] {
+      return orm.all(sql`SELECT t.id AS id, r.pid AS pid, r.started_at AS started_at FROM tasks t
+        LEFT JOIN runs r ON r.id = (SELECT MAX(id) FROM runs WHERE task_id = t.id AND kind = 'work' AND ended_at IS NULL)
+        WHERE t.status IN ('running', 'cancel_requested') ORDER BY t.id`) as RunningTaskRun[];
     },
     /** Claude processes recorded on runs that never finished: a previous daemon died mid-run. */
     unfinishedPids(): { pid: number; started_at: string }[] {

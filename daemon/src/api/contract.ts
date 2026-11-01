@@ -525,9 +525,32 @@ export interface NotificationRow {
   created_at: string;
 }
 
+/** Where the daemon's reload onto new code stands. */
+export interface ReloadState {
+  /** reload_on_change is on. */
+  enabled: boolean;
+  /** The code on disk is newer than the code running, and a restart is coming. */
+  pending: boolean;
+  reason: string | null;
+  /** What a pending reload waits for (running tasks, resolve runs). */
+  waiting: string | null;
+  /** Why the code on disk must not be loaded (an uncommitted migration step, a checkout off main). */
+  blocked: string | null;
+  /** Source files changed since the daemon started. */
+  changed: number;
+}
+
+/** GET /api/daemon */
+export interface DaemonState {
+  commit: string | null;
+  started_at: string;
+  pid: number;
+  reload: ReloadState;
+}
+
 export interface Status {
-  /** The code the daemon is running. Missing from a daemon that predates it. */
-  daemon?: { commit: string | null; started_at: string };
+  /** The code the daemon is running. Missing from a daemon that predates it; `pid` is missing from one that predates that. */
+  daemon?: { commit: string | null; started_at: string; pid?: number };
   paused: boolean;
   rate_limited_until: number | null;
   running: number;

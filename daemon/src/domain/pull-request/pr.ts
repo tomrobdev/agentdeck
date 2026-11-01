@@ -17,7 +17,7 @@ export interface PrRun {
 }
 
 /** The agent's final message without its trailing "STATUS: DONE" line. */
-export function finalMessage(runs: PrRun[]): string {
+export function finalMessage(runs: Pick<PrRun, 'kind' | 'result_text'>[]): string {
   const text = runs.filter((r) => r.kind !== 'resolve').at(-1)?.result_text ?? '';
   return text.replace(/\n?\s*STATUS:\s*(DONE|BLOCKED)\b.*$/i, '').trim();
 }
@@ -47,10 +47,14 @@ export function buildPrBody(task: { id: number }, runs: PrRun[], plan: PrPlan | 
   return [
     finalMessage(runs) || '(the agent left no final message)',
     '',
+    '<details><summary>Plan and runs</summary>',
+    '',
     ...(plan && plan.steps.length ? planSection(plan) : []),
     '| Attempt | Outcome | Turns | Cost | Tests |',
     '| --- | --- | --- | --- | --- |',
     ...rows,
+    '',
+    '</details>',
     '',
     `Made by AgentDeck task #${task.id}.`,
   ].join('\n');
