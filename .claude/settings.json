@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -z \"$AGENTDECK_TASK_ID$AGENTDECK_PLANNER\" ] && command -v agentdeck >/dev/null && agentdeck context --hook || true",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -z \"$AGENTDECK_TASK_ID$AGENTDECK_PLANNER\" ] && command -v agentdeck >/dev/null && agentdeck context --hook || true",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

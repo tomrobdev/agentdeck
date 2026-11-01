@@ -1,5 +1,23 @@
 // Tasks. Every status change goes through applyEvent (or claimNextTask), guarded by the current status.
-import { type SQL, and, asc, count, desc, eq, exists, getColumns, gt, inArray, isNotNull, isNull, lt, max, or, sql } from 'drizzle-orm';
+import {
+  type SQL,
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  exists,
+  getColumns,
+  gt,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  lte,
+  max,
+  or,
+  sql,
+} from 'drizzle-orm';
 import { type AnySQLiteColumn, alias } from 'drizzle-orm/sqlite-core';
 import type { DatabaseSync } from 'node:sqlite';
 import { DEFAULTS } from '../config.ts';
@@ -96,6 +114,25 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     /** A task's status changes, oldest first. Tasks from before migration step 6 have none. */
     eventsForTask(task_id: number): TaskEventRow[] {
       return orm.select().from(taskEvents).where(eq(taskEvents.task_id, task_id)).orderBy(asc(taskEvents.id)).all() as TaskEventRow[];
+    },
+    /** The newest history row's id, 0 when there is none: a cursor for `eventsAfter`. */
+    lastEventId(): number {
+      return (
+        orm
+          .select({ id: max(taskEvents.id) })
+          .from(taskEvents)
+          .get()?.id ?? 0
+      );
+    },
+    /** A repo's history rows after `after`, up to `upTo` inclusive, oldest first, each with its task's title. */
+    eventsAfter(after: number, upTo: number, repo_id: number): (TaskEventRow & { title: string })[] {
+      return orm
+        .select({ ...getColumns(taskEvents), title: tasks.title })
+        .from(taskEvents)
+        .innerJoin(tasks, eq(tasks.id, taskEvents.task_id))
+        .where(and(gt(taskEvents.id, after), lte(taskEvents.id, upTo), eq(tasks.repo_id, repo_id)))
+        .orderBy(asc(taskEvents.id))
+        .all() as (TaskEventRow & { title: string })[];
     },
     getTask(id: number): Task | undefined {
       // The cast narrows the plain string columns (status, pr_state, …); typed columns come later.

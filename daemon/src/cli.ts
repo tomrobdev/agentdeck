@@ -1,5 +1,6 @@
 // The `agentdeck` command. The launchd plist runs this file, so it stays at src/cli.ts.
 import { ActionError } from './application/actions.ts';
+import { contextCommands } from './cli/agent-context.ts';
 import { daemonCommands } from './cli/daemon.ts';
 import { die } from './cli/format.ts';
 import { HELP } from './cli/help.ts';
@@ -8,7 +9,7 @@ import { repoCommands } from './cli/repos.ts';
 import { taskCommands } from './cli/tasks.ts';
 import { openDb } from './db/index.ts';
 
-const COMMANDS: Record<string, Command> = { ...repoCommands, ...taskCommands, ...daemonCommands };
+const COMMANDS: Record<string, Command> = { ...repoCommands, ...taskCommands, ...daemonCommands, ...contextCommands };
 
 async function main(argv: string[]): Promise<void> {
   const { values: flags, positionals } = parseCommandLine(argv);

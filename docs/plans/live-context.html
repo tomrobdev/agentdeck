@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en" data-agentdeck-plan="1">
+  <head>
+    <meta charset="utf-8" />
+    <title>Live queue state in every Claude session</title>
+    <style>
+      body {
+        font:
+          15px/1.5 system-ui,
+          sans-serif;
+        max-width: 52rem;
+        margin: 2rem auto;
+        padding: 0 1rem;
+      }
+      section {
+        border-left: 3px solid #ccc;
+        padding: 0 1rem;
+        margin: 1.25rem 0;
+      }
+      code {
+        background: #f3f3f3;
+        padding: 0 3px;
+        border-radius: 3px;
+      }
+      pre {
+        background: #f3f3f3;
+        padding: 8px;
+        overflow-x: auto;
+      }
+      table {
+        border-collapse: collapse;
+      }
+      td,
+      th {
+        border: 1px solid #ddd;
+        padding: 4px 8px;
+        vertical-align: top;
+        text-align: left;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Live queue state in every Claude session</h1>
+    <p data-plan-summary>
+      A Claude session that delegates to AgentDeck reasons from the queue as it last looked, and tasks move underneath it: on 2026-11-01 it
+      proposed waiting on tasks that had already merged. Add <code>agentdeck context</code>, which prints the live state in a few lines, and
+      a hook mode that Claude Code runs on every message, printing what changed since the session's last message. The session then always
+      starts its turn from live state, without having to remember to check. Written 2026-11-01.
+    </p>
+
+    <h2>Where it starts</h2>
+    <ul>
+      <li>
+        <code>task_events</code> is a complete, ordered log: every status change, plus PR opened, merged and closed, syncs and merges, each
+        with an increasing <code>id</code>. "What changed since event N" is one query.
+      </li>
+      <li>
+        Workers run with <code>AGENTDECK_TASK_ID</code> set (<code>application/run/claude-run.ts</code>) and the planner with
+        <code>AGENTDECK_PLANNER=1</code> (<code>application/planner.ts</code>), so a hook can tell them apart from a person's session.
+      </li>
+      <li>
+        The CLI reads the database in its own process, so it works while the daemon restarts. <code>agentdeck status</code> takes about 0.13
+        s.
+      </li>
+      <li>
+        Claude Code runs <code>SessionStart</code> and <code>UserPromptSubmit</code> hooks with a JSON object on stdin
+        (<code>session_id</code>, <code>cwd</code>, <code>hook_event_name</code>); what the hook prints on stdout is added to the session's
+        context.
+      </li>
+    </ul>
+
+    <h2>Decisions</h2>
+    <table>
+      <tr>
+        <th>Decision</th>
+        <th>Why</th>
+      </tr>
+      <tr>
+        <td>A CLI command, not a shell script around <code>agentdeck ls</code>, and not an MCP server.</td>
+        <td>
+          The output is written for an agent (a header, then only what changed) and is tested like the rest. An MCP server would still have
+          to be called, which is the step that gets skipped.
+        </td>
+      </tr>
+      <tr>
+        <td>
+          The hook's cursor (the last event id the session was shown) lives in a file per session under
+          <code>~/.agentdeck/hooks/</code>, written by the CLI's hook mode. The use case takes the cursor as input and returns the next one.
+        </td>
+        <td>The database stays free of Claude-session state, and the use case stays a pure read. Files older than 7 days are removed.</td>
+      </tr>
+      <tr>
+        <td>
+          Scoped to the repo the session's <code>cwd</code> is in (the registered repo whose path is that directory or above it). Outside a
+          registered repo the hook prints nothing.
+        </td>
+        <td>A session in one repo doesn't need another repo's queue, and the hook can be installed for every repo at no cost.</td>
+      </tr>
+      <tr>
+        <td>
+          Never in the way: the hook always exits 0, prints nothing for workers and the planner, and reads only the local database and git
+          (no <code>git fetch</code>).
+        </td>
+        <td>It runs before every message. The daemon already records PR merges, so the database is current without the network.</td>
+      </tr>
+      <tr>
+        <td>
+          On <code>SessionStart</code> (start, resume, after compaction): the header and every open task. On <code>UserPromptSubmit</code>:
+          the header, and the changes and open tasks only when something changed.
+        </td>
+        <td>A quiet turn costs one line; compaction loses context, so the full picture comes back then.</td>
+      </tr>
+    </table>
+
+    <h3>Output</h3>
+    <pre>
+AgentDeck live · AgentDeck · active · 1/2 slots · governor allowing · main 86cbf0f Links: model and store
+Since your last message:
+  #71 done · PR opened · merged (auto-merged (squash))
+  #72 started · requeued (the daemon restarted 1 times while this task was running) · started
+Open:
+  ▶ #72 Links: use cases, CLI, API and merge gate
+  · #73 Links: Dependencies card (waiting on #72)
+  · #74 Links: graph view (waiting on #72)
+  ? #66 Add `agentdeck stats`: pilot scorecard measures from the db
+</pre>
+
+    <section data-plan-step id="digest" data-status="done">
+      <h2>The digest, in the domain</h2>
+      <p>
+        <code>domain/task/digest.ts</code>, pure: <code>describeEvent</code> words one <code>task_events</code> row ("started", "done", "PR
+        opened", "merged", "requeued (reason)", "blocked: reason", …) in the domain language; <code>digest</code> takes the header facts,
+        the events since the cursor and the open tasks, groups events by task in order, and returns lines, at most 12 below the header, with
+        "+N more: agentdeck ls" when cut. Reasons are cut to one line of about 80 characters.
+      </p>
+      <ul data-plan-done>
+        <li>Unit tests cover every event type, grouping, the line cap and the quiet case (no changes: the header alone).</li>
+      </ul>
+    </section>
+
+    <section data-plan-step id="read" data-status="done">
+      <h2>Reading it</h2>
+      <p>
+        <code>db/tasks.ts</code>: <code>eventsAfter(afterId, repoId, limit)</code> (with each task's title) and <code>lastEventId()</code>,
+        in Drizzle. <code>adapters/git.ts</code>: <code>headSummary(path)</code>, the branch, short commit and subject of a checkout.
+        <code>application/task/context.ts</code>: <code>liveContext(db, { repo, after, full })</code> returns the lines and the next cursor,
+        and <code>repoForPath(db, dir)</code> finds the registered repo a directory is in. Both re-exported from <code>actions.ts</code>.
+      </p>
+      <ul data-plan-done>
+        <li>A test with a fixture database: events after a cursor come back in order, scoped to one repo, and the cursor advances.</li>
+        <li><code>repoForPath</code> finds a repo from a subdirectory, and nothing for an unregistered directory.</li>
+      </ul>
+    </section>
+
+    <section data-plan-step id="command" data-status="done">
+      <h2>The command and its hook mode</h2>
+      <p>
+        <code>cli/agent-context.ts</code> (<code>cli/context.ts</code> already holds the command context):
+        <code>agentdeck context [--repo r] [--since n]</code> prints the full picture (the current directory's repo by default).
+        <code>agentdeck context --hook</code> reads the hook JSON from stdin, does nothing when <code>AGENTDECK_TASK_ID</code> or
+        <code>AGENTDECK_PLANNER</code> is set or the directory isn't a registered repo, keeps the cursor in
+        <code>~/.agentdeck/hooks/&lt;session_id&gt;.json</code>, and never exits non-zero. Listed in <code>help.ts</code>.
+      </p>
+      <ul data-plan-done>
+        <li>
+          A test runs the hook twice for one session against a temporary <code>AGENTDECK_HOME</code>: the second run prints only the header
+          when nothing changed, and the change after an event is added.
+        </li>
+        <li>With <code>AGENTDECK_TASK_ID</code> set it prints nothing and exits 0.</li>
+        <li><code>pnpm check</code> passes.</li>
+      </ul>
+    </section>
+
+    <section data-plan-step id="hook" data-status="done">
+      <h2>Install the hook</h2>
+      <p>
+        <code>.claude/settings.json</code> runs
+        <code
+          >[ -z "$AGENTDECK_TASK_ID$AGENTDECK_PLANNER" ] &amp;&amp; command -v agentdeck &gt;/dev/null &amp;&amp; agentdeck context --hook
+          || true</code
+        >
+        on <code>SessionStart</code> and <code>UserPromptSubmit</code>, with a 5-second timeout. The <code>delegate</code> skill says the
+        live state arrives with every message, and to run <code>agentdeck ls</code> again before naming a task's state when it might have
+        moved since.
+      </p>
+      <ul data-plan-done>
+        <li>A new session in this repo starts with the live state in its context.</li>
+        <li>A worker run shows no hook output in its log.</li>
+      </ul>
+    </section>
+
+    <h2>Not in this plan</h2>
+    <ul>
+      <li>Installing the hook for every repo (user settings or a Claude Code plugin with the <code>delegate</code> skill).</li>
+      <li>An MCP server for AgentDeck.</li>
+      <li>Warning when <code>agentdeck add --after</code> names a task that is already done and merged.</li>
+    </ul>
+  </body>
+</html>

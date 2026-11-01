@@ -56,6 +56,9 @@ Tasks
   agentdeck sync <id>         sync a done task's branch with the base branch (the PR gets the push); conflicts start
                                   a claude run, and if it fails the merge is undone and the task is blocked (also: resolve)
   agentdeck clean <id>          remove the task's worktree (its branch is kept)
+  agentdeck context [--repo r] [--since <event>]   the repo's live queue in a few lines, for an agent (default: this
+                                  directory's repo); --since shows what changed after that event. --hook is the
+                                  mode Claude Code's SessionStart and UserPromptSubmit hooks run (hook JSON on stdin)
 
 Daemon
   agentdeck install             run the daemon at login via launchd (restarted if it dies)

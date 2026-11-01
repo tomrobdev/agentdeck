@@ -65,6 +65,8 @@ agentdeck add "<prompt>" --repo <repo> --title "<title>" [--model sonnet] [--max
 
 To show the plan on the task's Overview before its first run, `agentdeck attach <id> docs/plans/<short-name>.html`. It's stored under its path, so the branch's copy replaces it once a run changes it.
 
+**Live state:** in a repo AgentDeck manages, a hook (`.claude/settings.json`, `agentdeck context --hook`) puts the queue's live state into every message: a header line, then what changed since your last message. Trust that over what you remember from earlier in the session, and run `agentdeck ls` again right before naming a task's state or using it with `--after`.
+
 Tell the user the task id and stop. Don't poll it: AgentDeck notifies the user, and the user reviews the PR in the dashboard. In a later session, look only when asked: `agentdeck ls --status needs-you`, `agentdeck show <id>`, `agentdeck log <id>`.
 
 ## Working with a task's worktree

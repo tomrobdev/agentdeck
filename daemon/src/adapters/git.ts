@@ -26,6 +26,17 @@ async function git(cwd: string, ...args: string[]): Promise<string> {
   return stdout.trim();
 }
 
+/** The branch, short commit and subject checked out in `cwd`, or null when it is not a git checkout. Local only: no fetch. */
+export async function headSummary(cwd: string): Promise<{ branch: string; commit: string; subject: string } | null> {
+  try {
+    const [line, branch] = await Promise.all([git(cwd, 'log', '-1', '--format=%h%x09%s'), git(cwd, 'branch', '--show-current')]);
+    const [commit, subject = ''] = line.split('\t');
+    return commit ? { branch: branch || 'detached', commit, subject } : null;
+  } catch {
+    return null;
+  }
+}
+
 /** The commit checked out in `cwd`, or null when it is not a git checkout. */
 export async function checkoutCommit(cwd: string): Promise<string | null> {
   try {
