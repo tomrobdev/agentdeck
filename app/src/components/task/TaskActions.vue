@@ -9,25 +9,17 @@ import MergeDialog from './MergeDialog.vue';
 
 // The buttons in a task page's header, and the dialogs some of them open.
 const props = defineProps<{ task: TaskDetail }>();
-const emit = defineEmits<{ act: [kind: 'approve' | 'reject' | 'retry' | 'cancel'] }>();
+const emit = defineEmits<{ act: [kind: 'approve' | 'reject' | 'retry' | 'cancel']; review: [] }>();
 const { busy, run, refresh, flash } = useActions();
 
 const events = computed(() => personEvents(props.task));
 
-// Review actions on a done task's open PR. Both ask first: one sends the task back, the other closes the PR on GitHub.
-const reviewDialog = ref<'changes' | 'close' | null>(null);
-const note = ref('');
-function openReview(kind: 'changes' | 'close') {
-  note.value = '';
-  reviewDialog.value = kind;
-}
-async function submitReview() {
-  const kind = reviewDialog.value;
-  if (!kind || busy.value) return;
-  const text = note.value.trim();
-  if (kind === 'changes' && !text) return;
-  await run(() => (kind === 'changes' ? api.retry(props.task.id, text) : api.closePr(props.task.id)));
-  reviewDialog.value = null;
+// Closing the PR asks first, because it closes it on GitHub. Request changes opens the review bar on the task page.
+const closing = ref(false);
+async function closePr() {
+  if (busy.value) return;
+  await run(() => api.closePr(props.task.id));
+  closing.value = false;
 }
 
 // Mark a blocked or failed task done by hand, with an optional note for the timeline.
@@ -53,8 +45,8 @@ async function onMerged(result: MergeResult) {
       <button class="primary" @click="emit('act', 'approve')">✓ Approve</button>
     </template>
     <template v-if="canReview(task)">
-      <button @click="openReview('close')">Close PR</button>
-      <button @click="openReview('changes')">↻ Request changes</button>
+      <button @click="closing = true">Close PR</button>
+      <button @click="emit('review')">↻ Request changes</button>
     </template>
     <button v-else-if="events.includes('retry')" @click="emit('act', 'retry')">↻ Retry</button>
     <button v-if="events.includes('mark_done')" @click="markingDone = true">✓ Mark done</button>
@@ -65,26 +57,7 @@ async function onMerged(result: MergeResult) {
   <MarkDoneDialog v-if="markingDone" :task="task" with-note :busy="busy" @close="markingDone = false" @confirm="submitMarkDone" />
   <MergeDialog v-if="merging" :task-id="task.id" @close="merging = false" @merged="onMerged" />
 
-  <Modal v-if="reviewDialog === 'changes'" title="Request changes" @close="reviewDialog = null">
-    <p class="text-muted">
-      Sends #{{ task.id }} back for another attempt on the same branch. The note goes first in the next run's prompt and shows on the
-      timeline.
-    </p>
-    <textarea
-      v-model="note"
-      class="w-full resize-y"
-      rows="5"
-      placeholder="What should change?"
-      autofocus
-      @keydown.enter.meta.prevent="submitReview"
-      @keydown.enter.ctrl.prevent="submitReview"
-    />
-    <div class="mt-3 flex justify-end gap-1.5">
-      <button @click="reviewDialog = null">Cancel</button>
-      <button class="primary" :disabled="!note.trim() || busy" @click="submitReview">Request changes</button>
-    </div>
-  </Modal>
-  <Modal v-if="reviewDialog === 'close'" title="Close pull request" @close="reviewDialog = null">
+  <Modal v-if="closing" title="Close pull request" @close="closing = false">
     <p>
       Close the pull request for #{{ task.id }} on GitHub without merging it? Tasks waiting on this one will stay stuck until it is retried
       or they are cancelled.
@@ -93,8 +66,8 @@ async function onMerged(result: MergeResult) {
       <a :href="task.pr_url ?? ''" target="_blank" rel="noreferrer">{{ task.pr_url }}</a>
     </p>
     <div class="mt-3 flex justify-end gap-1.5">
-      <button @click="reviewDialog = null">Cancel</button>
-      <button class="primary" :disabled="busy" autofocus @click="submitReview">Close PR</button>
+      <button @click="closing = false">Cancel</button>
+      <button class="primary" :disabled="busy" autofocus @click="closePr">Close PR</button>
     </div>
   </Modal>
 </template>
