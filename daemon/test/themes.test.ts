@@ -112,10 +112,10 @@ function problems(p: Vars): string[] {
   return found;
 }
 
-test('there are at least three themes, and the default is warm', () => {
+test('there are at least three themes, and the default is high contrast', () => {
   assert.ok(themes.length >= 3 && themes.length <= 4, themes.join());
-  assert.ok(themes.includes('warm'));
-  assert.match(css, /:root,\s*:root\[data-theme='warm'\]/);
+  assert.ok(themes.includes('contrast'));
+  assert.match(css, /:root,\s*:root\[data-theme='contrast'\]/);
 });
 
 test('every theme defines the same tokens in light and dark', () => {

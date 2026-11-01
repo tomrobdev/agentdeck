@@ -5,11 +5,10 @@
  * Keep the system copy identical to the dark rule: daemon/test/themes.test.ts checks that, and that every pair
  * the dashboard draws (text, status colours, code, tints) reaches WCAG AA in both modes.
  *
- * Warm is the default, and also applies before platform/theme.ts has run.
+ * High contrast is the default, and also applies before platform/theme.ts has run.
  */
 
 /* ── Warm: the original neutral greys with a terracotta accent ───────────── */
-:root,
 :root[data-theme='warm'] {
   --bg: #f6f6f4;
   --panel: #ffffff;
@@ -36,7 +35,6 @@
   --hl-type: #8b5a00;
   --hl-attr: #6c42c0;
 }
-:root:not([data-theme])[data-mode='dark'],
 :root[data-theme='warm'][data-mode='dark'] {
   --bg: #161615;
   --panel: #1f1f1d;
@@ -64,7 +62,6 @@
   --hl-attr: #c3a6ff;
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme]):not([data-mode='light']),
   :root[data-theme='warm']:not([data-mode='light']) {
     --bg: #161615;
     --panel: #1f1f1d;
@@ -258,6 +255,7 @@
 }
 
 /* ── High contrast: black on white and white on black, strong edges, 7:1 and up ── */
+:root,
 :root[data-theme='contrast'] {
   --bg: #ffffff;
   --panel: #ffffff;
@@ -284,6 +282,7 @@
   --hl-type: #5c3a00;
   --hl-attr: #4b1d99;
 }
+:root:not([data-theme])[data-mode='dark'],
 :root[data-theme='contrast'][data-mode='dark'] {
   --bg: #000000;
   --panel: #000000;
@@ -311,6 +310,7 @@
   --hl-attr: #d0b8ff;
 }
 @media (prefers-color-scheme: dark) {
+  :root:not([data-theme]):not([data-mode='light']),
   :root[data-theme='contrast']:not([data-mode='light']) {
     --bg: #000000;
     --panel: #000000;

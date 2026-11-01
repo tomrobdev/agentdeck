@@ -4,10 +4,10 @@ import { ref } from 'vue';
 import { loadSetting, saveSetting } from '../lib/storage';
 
 export const THEMES = [
-  { key: 'warm', label: 'Warm', hint: 'Neutral greys, terracotta accent (default)' },
+  { key: 'warm', label: 'Warm', hint: 'Neutral greys, terracotta accent' },
   { key: 'cool', label: 'Cool', hint: 'Blue-grey with an indigo accent, like Linear' },
   { key: 'github', label: 'GitHub', hint: 'Primer greys with the blue link accent' },
-  { key: 'contrast', label: 'High contrast', hint: 'Black and white, strong edges' },
+  { key: 'contrast', label: 'High contrast', hint: 'Black and white, strong edges (default)' },
 ] as const;
 export type ThemeKey = (typeof THEMES)[number]['key'];
 
@@ -21,8 +21,8 @@ export type ModeKey = (typeof MODES)[number]['key'];
 const pick = <T extends { key: string }>(list: readonly T[], key: unknown, fallback: T['key']) =>
   (list.find((x) => x.key === key)?.key ?? fallback) as T['key'];
 
-export const theme = ref<ThemeKey>(pick(THEMES, loadSetting<unknown>('theme', null), 'warm'));
-export const mode = ref<ModeKey>(pick(MODES, loadSetting<unknown>('mode', null), 'system'));
+export const theme = ref<ThemeKey>(pick(THEMES, loadSetting<unknown>('theme', null), 'contrast'));
+export const mode = ref<ModeKey>(pick(MODES, loadSetting<unknown>('mode', null), 'light'));
 
 function apply() {
   document.documentElement.dataset.theme = theme.value;
