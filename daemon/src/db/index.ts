@@ -28,7 +28,7 @@ export function openDb(path = DB_PATH) {
     close: () => db.close(),
     ...settingsStore(db, orm),
     ...repoStore(db, orm),
-    ...taskStore(db),
+    ...taskStore(db, orm),
     ...runStore(orm),
     ...planStore(db, orm),
     ...plannerRunStore(orm),
