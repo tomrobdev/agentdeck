@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import type { TaskSummary } from '../../api';
+import type { MergeResult, TaskSummary } from '../../api';
+import { useActions } from '../../composables/useActions';
+import MergeDialog from '../task/MergeDialog.vue';
 import { useHotkeys } from '../../composables/useHotkeys';
 import { go, route } from '../../router';
 import {
   type BoardMove,
   type Filters,
   applyFilters,
+  canReview,
   emptyFilters,
   groupTasks,
   hasFilters,
@@ -88,6 +91,22 @@ function step(by: number) {
   selected.value = list[Math.min(Math.max(i === -1 ? 0 : i + by, 0), list.length - 1)].id;
 }
 
+// The merge confirm, opened from a row's button or `m`. After a merge the selection moves to the next row.
+const { refresh, flash } = useActions();
+const merging = ref<{ id: number; next: number | null } | null>(null);
+function startMerge(id: number) {
+  const list = order.value;
+  const i = list.findIndex((t) => t.id === id);
+  merging.value = { id, next: (list[i + 1] ?? list[i - 1])?.id ?? null };
+}
+async function onMerged(result: MergeResult) {
+  const next = merging.value?.next ?? null;
+  merging.value = null;
+  selected.value = next;
+  await refresh();
+  if (result.cleanup_error) flash(`Merged, but cleanup failed: ${result.cleanup_error}`);
+}
+
 const MODES: Display['mode'][] = ['list', 'board', 'graph'];
 const selectedTask = () => props.tasks.find((x) => x.id === selected.value);
 useHotkeys({
@@ -103,6 +122,10 @@ useHotkeys({
   r: () => {
     const t = selectedTask();
     if (t && quickRetry(t)) emit('act', 'retry', t.id);
+  },
+  m: () => {
+    const t = selectedTask();
+    if (t && canReview(t)) startMerge(t.id);
   },
   v: () => (display.value = { ...display.value, mode: MODES[(MODES.indexOf(display.value.mode) + 1) % MODES.length] }),
   c: () => emit('newTask'),
@@ -143,6 +166,7 @@ useHotkeys({
       @select="selected = $event"
       @open="emit('open', $event)"
       @act="(kind, id) => emit('act', kind, id)"
+      @merge="startMerge"
     />
     <GraphView
       v-else-if="display.mode === 'graph'"
@@ -161,15 +185,17 @@ useHotkeys({
       @select="selected = $event"
       @open="emit('open', $event)"
       @move="(kind, id) => emit('act', kind, id)"
+      @merge="startMerge"
     />
     <footer class="muted flex justify-between gap-3 border-t border-border px-4 py-[5px] text-sm">
       <span
         >{{ shown.length }}<template v-if="shown.length !== tasks.length"> of {{ tasks.length }}</template> tasks</span
       >
       <span class="max-sm:hidden"
-        ><kbd>j</kbd><kbd>k</kbd> move · <kbd>↵</kbd> open · <kbd>a</kbd> approve · <kbd>r</kbd> retry · <kbd>v</kbd> list/board/graph ·
-        <kbd>c</kbd> new · <kbd>/</kbd> search</span
+        ><kbd>j</kbd><kbd>k</kbd> move · <kbd>↵</kbd> open · <kbd>a</kbd> approve · <kbd>r</kbd> retry · <kbd>m</kbd> merge ·<kbd>v</kbd>
+        list/board/graph · <kbd>c</kbd> new · <kbd>/</kbd> search</span
       >
     </footer>
+    <MergeDialog v-if="merging" :task-id="merging.id" @close="merging = null" @merged="onMerged" />
   </section>
 </template>
