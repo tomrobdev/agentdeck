@@ -163,7 +163,7 @@
       </ul>
     </section>
 
-    <section data-plan-step id="shared-parser" data-status="todo">
+    <section data-plan-step id="shared-parser" data-status="done">
       <h2>One source parser for the checks and the diagrams</h2>
       <p>
         Move the parsing in <code>architecture.test.ts</code> (reading <code>daemon/src</code>, the TypeScript AST, imports with their
@@ -177,12 +177,13 @@
       </ul>
     </section>
 
-    <section data-plan-step id="diagrams" data-status="todo">
+    <section data-plan-step id="diagrams" data-status="done">
       <h2>docs/architecture.md, generated and checked</h2>
       <p>
-        <code>daemon/scripts/docs.ts</code> (<code>pnpm docs</code>, root and daemon) rewrites the blocks between
-        <code>&lt;!-- generated:NAME --&gt;</code> and <code>&lt;!-- /generated --&gt;</code> in <code>docs/architecture.md</code>, leaving
-        everything else alone. Output is deterministic: sorted, no timestamps. Generated blocks:
+        <code>daemon/scripts/docs.ts</code> (<code>pnpm docs</code>, root and daemon; pnpm's own <code>docs</code> command takes that name,
+        so it is run as <code>pnpm run docs</code>) rewrites the blocks between <code>&lt;!-- generated:NAME --&gt;</code> and
+        <code>&lt;!-- /generated --&gt;</code> in <code>docs/architecture.md</code>, leaving everything else alone. Output is deterministic:
+        sorted, no timestamps. Generated blocks:
       </p>
       <ul>
         <li>
