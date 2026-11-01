@@ -2,7 +2,7 @@
 import { nextTick, watch } from 'vue';
 import { ago } from '../../api';
 import { openExternal } from '../../platform/native';
-import { type Group, type GroupBy, personEvents, quickRetry, readNeeds, statusLabel, unblocksOf } from '../../lib/taskView';
+import { type Group, type GroupBy, personEvents, quickRetry, readNeeds, statusLabel, unblocksOf, waitsOnText } from '../../lib/taskView';
 import PriorityIcon from '../ui/PriorityIcon.vue';
 import StatusIcon from '../ui/StatusIcon.vue';
 
@@ -91,7 +91,7 @@ watch(
               >
             </span>
             <span class="flex flex-none gap-1 max-sm:[&>:not([data-repo])]:hidden">
-              <span v-if="t.waiting && !t.waiting.stuck" class="chip">waiting #{{ t.waiting.on }}</span>
+              <span v-if="waitsOnText(t)" class="chip">{{ waitsOnText(t) }}</span>
               <span v-if="unblocksOf(t).length" class="chip chip-accent" title="Merging this PR releases them">
                 unblocks
                 {{

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { type TaskSummary, ago } from '../../api';
-import { type BoardMove, type Group, type StatusGroup, boardMove, unblocksOf } from '../../lib/taskView';
+import { type BoardMove, type Group, type StatusGroup, boardMove, unblocksOf, waitsOnText } from '../../lib/taskView';
 import MarkDoneDialog from '../task/MarkDoneDialog.vue';
 import PriorityIcon from '../ui/PriorityIcon.vue';
 import StatusIcon from '../ui/StatusIcon.vue';
@@ -98,7 +98,7 @@ const LABELS: Record<BoardMove, string> = {
             <span v-if="show.pr && t.pr_url" class="chip" :class="t.pr_state === 'merged' ? 'chip-merged' : ''"
               >PR {{ t.pr_state ?? 'open' }}</span
             >
-            <span v-if="t.waiting" class="chip">{{ t.waiting.stuck ? 'stuck' : `waiting #${t.waiting.on}` }}</span>
+            <span v-if="t.waiting" class="chip">{{ waitsOnText(t) ?? 'stuck' }}</span>
             <span v-if="unblocksOf(t).length" class="chip"
               >unblocks
               {{

@@ -12,6 +12,7 @@ import type {
   MergePreview,
   MergeRequest,
   MergeResult,
+  NewLink,
   NewRepo,
   NewTask,
   PlanHtml,
@@ -83,6 +84,9 @@ export const api = {
   tasks: () => call<TaskSummary[]>('/api/tasks'),
   task: (id: number) => call<TaskDetail>(`/api/tasks/${id}`),
   addTask: (t: NewTask) => call<TaskDetail>('/api/tasks', { method: 'POST', json: t }),
+  /** Link the task to another; refused (a cycle, itself, already linked) with the reason as the error. */
+  linkTask: (id: number, link: NewLink) => call<TaskDetail>(`/api/tasks/${id}/links`, { method: 'POST', json: link }),
+  unlinkTask: (id: number, on: number) => call<TaskDetail>(`/api/tasks/${id}/links/${on}`, { method: 'DELETE' }),
   cancel: (id: number) => call<CancelResult>(`/api/tasks/${id}/cancel`, { method: 'POST' }),
   /** `note` is "request changes": kept on the timeline and put first in the next run's prompt. */
   retry: (id: number, note?: string) => call<TaskDetail>(`/api/tasks/${id}/retry`, { method: 'POST', json: note ? { note } : {} }),

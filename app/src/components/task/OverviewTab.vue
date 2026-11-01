@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import { type Changes, type Run, type TaskDetail, type TaskEventRow, ago, fmtTokens, runDuration, totalTokens } from '../../api';
 import Markdown from '../files/Markdown.vue';
+import DependenciesCard from './DependenciesCard.vue';
 import DocumentsCard from './DocumentsCard.vue';
 import FinalMessage from './FinalMessage.vue';
 import PlanCard from './PlanCard.vue';
@@ -76,6 +77,8 @@ const when = 'ml-auto text-sm text-muted';
         {{ promptOpen ? 'Show less' : 'Show all' }}
       </button>
     </article>
+
+    <DependenciesCard :task="task" />
 
     <PlanCard v-for="p in task.plans ?? []" :key="p.id" :task-id="task.id" :plan="p" @open="(path) => emit('path', path, null)" />
 

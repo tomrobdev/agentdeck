@@ -2,7 +2,6 @@
 import { computed, ref } from 'vue';
 import { type TaskDetail, api } from '../../api';
 import { openExternal, useCopy } from '../../platform/native';
-import { openTask } from '../../router';
 import { PRIORITY_LEVELS, canEdit, priorityLevel, statusLabel } from '../../lib/taskView';
 import { useActions } from '../../composables/useActions';
 import PriorityIcon from '../ui/PriorityIcon.vue';
@@ -112,15 +111,6 @@ const input = 'px-1.5 py-0.5';
       </div>
       <button v-else :class="[rowButton, editable && rowButtonEditable]" :disabled="!editable" @click="edit('max_turns')">
         {{ task.max_turns }}
-      </button>
-    </div>
-    <div v-if="task.after_task" :class="prop">
-      <div :class="name">After</div>
-      <button :class="[rowButton, 'text-accent']" @click="openTask(task.after_task)">
-        #{{ task.after_task }}
-        <span v-if="task.waiting?.stuck" class="text-blocked">stuck</span>
-        <span v-else-if="task.waiting" class="text-muted">waiting</span>
-        <span v-else class="text-done">met</span>
       </button>
     </div>
     <div v-if="task.pr_url" :class="prop">
