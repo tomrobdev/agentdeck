@@ -312,12 +312,27 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     },
     /** Whether the daemon may merge the task's PR on its own: 1, 0, or null for the repo's setting. Not a status, so unguarded. */
     setAutoMerge(id: number, value: 0 | 1 | null): Task | undefined {
-      return orm
+      return (
+        orm
+          .update(tasks)
+          // The stored check was made for the old setting, so it goes with it.
+          .set({ auto_merge: value, auto_merge_check: null, auto_merge_checked_at: null, updated_at: sql.raw(NOW) })
+          .where(eq(tasks.id, id))
+          .returning()
+          .get() as Task | undefined
+      );
+    },
+    /**
+     * Keep the PR refresh's latest auto-merge check (JSON { verdict, reasons }) on a task, or clear it with null.
+     * Only a done task whose PR is open has one, so a merge or a close recorded meanwhile is never followed by a stale check.
+     */
+    setAutoMergeCheck(id: number, check: string | null): boolean {
+      const res = orm
         .update(tasks)
-        .set({ auto_merge: value, updated_at: sql.raw(NOW) })
-        .where(eq(tasks.id, id))
-        .returning()
-        .get() as Task | undefined;
+        .set({ auto_merge_check: check, auto_merge_checked_at: check === null ? null : sql.raw(NOW) })
+        .where(and(eq(tasks.id, id), eq(tasks.status, 'done'), eq(tasks.pr_state, 'open')))
+        .run();
+      return Number(res.changes) > 0;
     },
     /**
      * Record a change to a task's PR: `pr_state` (and `pr_url` when opened) and a 'pr' history row, together.
@@ -339,7 +354,8 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       return atomically(db, () => {
         const row = orm
           .update(tasks)
-          .set({ ...set, updated_at: sql.raw(NOW) })
+          // A PR that is no longer open has no auto-merge check; a reopened one gets its first at the next refresh.
+          .set({ ...set, auto_merge_check: null, auto_merge_checked_at: null, updated_at: sql.raw(NOW) })
           .where(and(eq(tasks.id, id), guard))
           .returning({ status: tasks.status })
           .get() as { status: TaskStatus } | undefined;
@@ -356,7 +372,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       return atomically(db, () => {
         const res = orm
           .update(tasks)
-          .set({ pr_state: 'merged', merge_method: method, updated_at: sql.raw(NOW) })
+          .set({ pr_state: 'merged', merge_method: method, auto_merge_check: null, auto_merge_checked_at: null, updated_at: sql.raw(NOW) })
           .where(and(eq(tasks.id, id), eq(tasks.status, 'done'), eq(tasks.pr_state, 'open')))
           .run();
         if (!Number(res.changes)) return false;

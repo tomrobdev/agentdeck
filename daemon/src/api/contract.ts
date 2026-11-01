@@ -179,6 +179,8 @@ export interface TaskSummary {
   done_by?: 'person' | null;
   /** 1 or 0 overrides the repo's auto_merge; null follows it. Missing from a daemon that predates it. */
   auto_merge?: number | null;
+  /** Whether the PR will merge on its own and why not. Missing from a daemon that predates it; null when the repo is gone. */
+  auto_merge_view?: AutoMergeView | null;
   /** Set for a queued task held back by a builds-on link; stuck says why its dependency won't get there on its own. */
   waiting: { on: number; stuck: string | null } | null;
   /** For a task in review: the queued tasks that wait on its PR. Missing from a daemon that predates it; read it as empty. */
@@ -368,6 +370,22 @@ export interface MergePreview {
 export interface AutoMergeCheck {
   verdict: 'merge' | 'wait' | 'never';
   reasons: string[];
+}
+
+/**
+ * What a task's auto-merge comes to. `off`: not on. `on`: on, no open PR checked yet. `merge`, `wait` and `never` are the
+ * last PR check's verdict. `label` and `reasons` are worded by the daemon; show them as they are.
+ */
+export interface AutoMergeView {
+  state: 'off' | 'on' | 'merge' | 'wait' | 'never';
+  label: string;
+  /** Why it waits or needs a person; for a branch with no open PR, how it measures against the limits now. */
+  reasons: string[];
+  /** Where on or off comes from; `planner`: off because the repo auto-approves planner proposals. */
+  source: 'task' | 'repo' | 'planner';
+  /** When the PR refresh made the check (UTC, `YYYY-MM-DD HH:MM:SS`); null when no check counts. */
+  checked_at: string | null;
+  limits: { max_lines: number; skip: string[]; tests: string };
 }
 
 /** POST /api/tasks/:id/auto-merge: true or false for this task, null to follow the repo. */

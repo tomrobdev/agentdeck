@@ -223,10 +223,12 @@ export async function refreshPrStates(db: Db, log: (msg: string) => void = () =>
       }
       if (state !== 'open' || task.status !== 'done') continue;
       const pr = await github.prDetails(task.pr_url!, cwd, { withFiles: !!repo && autoMergeOn(task, repo) });
+      // Every check is kept on the task for the views, whatever the verdict; none when auto-merge is off.
+      const check = repo ? autoMergeFor(db, task, repo, pr, lastTestsPassed(db, task.id)) : null;
+      db.setAutoMergeCheck(task.id, check && JSON.stringify(check));
       if (isConflicting(pr)) found.conflicting.push(task.id);
       else if (isMergeabilityUnknown(pr)) found.unknown++;
-      else if (repo && autoMergeFor(db, task, repo, pr, lastTestsPassed(db, task.id))?.verdict === 'merge')
-        found.mergeable.push({ id: task.id, pr });
+      else if (check?.verdict === 'merge') found.mergeable.push({ id: task.id, pr });
     } catch (err) {
       log(`task ${task.id}: could not read PR state: ${(err as Error).message}`);
     }

@@ -9,7 +9,7 @@ import { filterTasks } from '../domain/task/listing.ts';
 import { readNeeds } from '../domain/task/needs.ts';
 import { planStepIds } from '../domain/task/task.ts';
 import { callDaemon } from './daemon-client.ts';
-import { die, taskId, fmtLink, fmtTask, printLog } from './format.ts';
+import { die, taskId, fmtAutoMerge, fmtLink, fmtTask, printLog } from './format.ts';
 import type { Command } from './context.ts';
 
 /** `approve` and `reject` share one implementation; `cmd` says which was typed. */
@@ -37,7 +37,7 @@ export const taskCommands: Record<string, Command> = {
       plan_path: flags.plan,
       plan_steps: flags.steps,
     });
-    const { waiting, links } = actions.taskDetail(db, t.id);
+    const { waiting, links } = await actions.taskDetail(db, t.id);
     console.log(
       `queued task #${t.id} on ${repoName(t.repo_id)} (${t.model}, ${t.max_turns} turns max${links
         .map(fmtLink)
@@ -47,7 +47,7 @@ export const taskCommands: Record<string, Command> = {
     if (waiting?.stuck) console.log(`note: ${waiting.stuck}, so this task won't start until #${waiting.on} is retried`);
     if (db.isPaused()) console.log('note: the daemon is paused; run `agentdeck resume` to start working');
   },
-  link: ({ db, flags, rest }) => {
+  link: async ({ db, flags, rest }) => {
     const id = taskId(rest[0]);
     const kinds = [flags['builds-on'] !== undefined && ('builds_on' as const), flags.after !== undefined && ('after' as const)].filter(
       (k) => k !== false,
@@ -57,7 +57,7 @@ export const taskCommands: Record<string, Command> = {
     const on = taskId(kind === 'builds_on' ? flags['builds-on'] : flags.after);
     actions.linkTasks(db, id, { on, kind });
     console.log(`#${id} ${kind === 'builds_on' ? 'builds on' : 'lands after'} #${on}`);
-    const { waiting } = actions.taskDetail(db, id);
+    const { waiting } = await actions.taskDetail(db, id);
     if (waiting?.stuck) console.log(`note: ${waiting.stuck}, so this task won't start until #${waiting.on} is retried`);
   },
   unlink: ({ db, rest }) => {
@@ -102,10 +102,11 @@ export const taskCommands: Record<string, Command> = {
     for (const t of tasks) console.log(fmtTask(t, repoName(t.repo_id)));
     if (tasks.length && tasks.length < all.length) console.log(`${tasks.length} of ${all.length} tasks`);
   },
-  show: ({ db, rest, repoName }) => {
-    const t = actions.taskDetail(db, taskId(rest[0]));
+  show: async ({ db, rest, repoName }) => {
+    const t = await actions.taskDetail(db, taskId(rest[0]));
     console.log(fmtTask(t, repoName(t.repo_id)));
     console.log(`model ${t.model}, attempts ${t.attempts}/${t.max_attempts}, max turns ${t.max_turns}`);
+    if (t.auto_merge_view) for (const line of fmtAutoMerge(t.auto_merge_view)) console.log(line);
     if (t.links.length) console.log(`links    ${t.links.map(fmtLink).join(', ')}`);
     if (t.dependents.length)
       console.log(`needed by ${t.dependents.map((d) => `#${d.id} (${d.kind === 'builds_on' ? 'builds on it' : 'after it'})`).join(', ')}`);
@@ -131,8 +132,7 @@ export const taskCommands: Record<string, Command> = {
     }
   },
   log: ({ db, flags, rest }) => {
-    const t = actions.taskDetail(db, taskId(rest[0]));
-    const run = pickRun(t.runs, { attempt: flags.attempt ? Number(flags.attempt) : undefined });
+    const run = pickRun(db.runsForTask(taskId(rest[0])), { attempt: flags.attempt ? Number(flags.attempt) : undefined });
     if (!run) die('no runs yet');
     if (flags.raw) process.stdout.write(readFileSync(run.log_path, 'utf8'));
     else printLog(run.log_path);

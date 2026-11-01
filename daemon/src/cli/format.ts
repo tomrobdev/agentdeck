@@ -1,5 +1,6 @@
 // How the CLI prints tasks, doctor reports, logs and times, and how it fails.
 import { type DoctorReport, type TaskView, readLog } from '../application/actions.ts';
+import type { AutoMergeView } from '../domain/pull-request/auto-merge.ts';
 import type { TaskStatus } from '../domain/task/lifecycle.ts';
 import type { Task } from '../domain/task/task.ts';
 
@@ -33,7 +34,12 @@ export function fmtLink(l: TaskView['links'][number]): string {
 
 /** `waiting`, `unblocks` and `links` come from a task view (`taskDetail`, `withViews`); a plain task shows none. */
 export function fmtTask(
-  t: Task & { waiting?: TaskView['waiting']; unblocks?: number[]; links?: TaskView['links'] },
+  t: Task & {
+    waiting?: TaskView['waiting'];
+    unblocks?: number[];
+    links?: TaskView['links'];
+    auto_merge_view?: TaskView['auto_merge_view'];
+  },
   repoName: string,
 ): string {
   let extra = t.stop_reason && (t.status === 'blocked' || t.status === 'failed') ? `  — ${t.stop_reason}` : '';
@@ -41,10 +47,29 @@ export function fmtTask(
   if (waiting)
     extra += waiting.stuck ? `  can't start: ${waiting.stuck} (retry #${waiting.on} or cancel this task)` : `  waiting on #${waiting.on}`;
   if (t.pr_url) extra += `  PR ${t.pr_state ?? 'open'}: ${t.pr_url}`;
+  if (t.auto_merge_view && t.auto_merge_view.state !== 'off') extra += `  ${t.auto_merge_view.label}`;
   // A builds-on link that is still waiting is already shown as "waiting on"; show the rest.
   for (const l of t.links ?? []) if (l.kind === 'after' || l.state !== 'waiting' || !waiting) extra += `  ${fmtLink(l)}`;
   if (t.unblocks?.length) extra += `  unblocks ${t.unblocks.map((id) => `#${id}`).join(', ')}`;
   return `${STATUS_ICON[t.status]} #${String(t.id).padEnd(4)} ${t.status.padEnd(9)} p${t.priority}  ${repoName.padEnd(14)} ${t.title}${extra}`;
+}
+
+const SOURCE_WORDS = {
+  task: "this task's setting",
+  repo: "the repo's setting",
+  planner: 'off because the repo auto-approves planner proposals',
+};
+
+/** The lines `agentdeck show` prints for auto-merge: the label and its source, each reason, when it was checked, the limits. */
+export function fmtAutoMerge(v: AutoMergeView): string[] {
+  const lines = [`auto-merge ${v.label} (${SOURCE_WORDS[v.source]})`];
+  for (const reason of v.reasons) lines.push(`           - ${reason}`);
+  if (v.checked_at) lines.push(`           checked ${v.checked_at} UTC`);
+  if (v.state !== 'off')
+    lines.push(
+      `           limits: ${v.limits.max_lines.toLocaleString('en-US')} lines, not touching ${v.limits.skip.join(', ') || 'nothing'}; ${v.limits.tests}`,
+    );
+  return lines;
 }
 
 /** Print each doctor check with its reason, then the verdict. */
