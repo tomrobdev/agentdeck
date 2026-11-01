@@ -58,7 +58,7 @@
   --color-panel: var(--panel);
   --color-panel-2: var(--panel-2);
   --color-code-bg: var(--code-bg);
-  --color-border: var(--border);
+  --color-border: var(--rule, var(--border));
   --color-border-input: var(--border-input);
   --color-text: var(--text);
   --color-muted: var(--muted);
@@ -112,8 +112,8 @@
     font: inherit;
     color: inherit;
     background: var(--panel-2);
-    border: 1px solid var(--border);
-    border-radius: 6px;
+    border: 1px solid var(--rule, var(--border));
+    border-radius: var(--r-ctl, 6px);
     padding: 4px 10px;
     cursor: pointer;
     white-space: nowrap;
@@ -142,7 +142,7 @@
     color: inherit;
     background: var(--panel);
     border: 1px solid var(--border-input);
-    border-radius: 6px;
+    border-radius: var(--r-ctl, 6px);
     padding: 6px 8px;
     width: 100%;
   }
@@ -158,6 +158,29 @@
     font-family: var(--font-mono);
     font-size: 12px;
   }
+
+  /* High contrast takes the Ink shapes: 2px corners, text-coloured (black or white) rules and frame edges,
+     outlined chips, no shadows. Colour tokens stay as themes.css has them; the other themes set none of these. */
+  :root[data-theme='contrast'] {
+    --rule: var(--text);
+    --chip-mix: 100%;
+    --r-ctl: 2px;
+    --r-box: 2px;
+    --r-chip: 2px;
+    --r-kbd: 2px;
+    --radius-xs: 2px;
+    --radius-sm: 2px;
+    --radius-md: 2px;
+    --radius-lg: 2px;
+    --radius-pill: 2px;
+    --shadow-popover: 0 0 #0000;
+    --shadow-modal: 0 0 #0000;
+  }
+  :root[data-theme='contrast'] .pill {
+    padding: 1px 7px;
+    border: 1px solid currentColor;
+    background: transparent;
+  }
 }
 
 /* Repeated patterns the audit found (docs/frontend-audit.md §3), written once. */
@@ -167,8 +190,8 @@
 
 /* A bordered panel; add card-head for a header strip. */
 @utility card {
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: 1px solid var(--rule, var(--border));
+  border-radius: var(--r-box, 8px);
   background: var(--panel);
   overflow: hidden;
 }
@@ -177,7 +200,7 @@
   align-items: center;
   gap: 8px;
   background: var(--panel-2);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--rule, var(--border));
 }
 
 /* A button with no chrome, for text links and icon buttons. */
@@ -198,30 +221,30 @@
   font-size: 11.5px;
   line-height: 18px;
   padding: 0 7px;
-  border: 1px solid var(--chip-border, var(--border));
-  border-radius: 999px;
+  border: 1px solid var(--chip-border, var(--rule, var(--border)));
+  border-radius: var(--r-chip, 999px);
   color: var(--chip-c, var(--muted));
   white-space: nowrap;
 }
 @utility chip-accent {
   --chip-c: var(--accent);
-  --chip-border: color-mix(in srgb, var(--accent) 45%, transparent);
+  --chip-border: color-mix(in srgb, var(--accent) var(--chip-mix, 45%), transparent);
 }
 @utility chip-done {
   --chip-c: var(--done);
-  --chip-border: color-mix(in srgb, var(--done) 45%, transparent);
+  --chip-border: color-mix(in srgb, var(--done) var(--chip-mix, 45%), transparent);
 }
 @utility chip-merged {
   --chip-c: var(--merged);
-  --chip-border: color-mix(in srgb, var(--merged) 45%, transparent);
+  --chip-border: color-mix(in srgb, var(--merged) var(--chip-mix, 45%), transparent);
 }
 @utility chip-blocked {
   --chip-c: var(--blocked);
-  --chip-border: color-mix(in srgb, var(--blocked) 45%, transparent);
+  --chip-border: color-mix(in srgb, var(--blocked) var(--chip-mix, 45%), transparent);
 }
 @utility chip-failed {
   --chip-c: var(--failed);
-  --chip-border: color-mix(in srgb, var(--failed) 45%, transparent);
+  --chip-border: color-mix(in srgb, var(--failed) var(--chip-mix, 45%), transparent);
 }
 
 /* The small uppercase label above a group of menu options. */
@@ -260,7 +283,7 @@
 @utility callout {
   margin: 12px 24px 0;
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: var(--r-box, 8px);
   border: 1px solid color-mix(in srgb, var(--c) 40%, transparent);
   background: color-mix(in srgb, var(--c) 9%, var(--panel));
 }
@@ -268,9 +291,9 @@
 @layer components {
   kbd {
     font: 11px var(--font-mono);
-    border: 1px solid var(--border);
+    border: 1px solid var(--rule, var(--border));
     border-bottom-width: 2px;
-    border-radius: 4px;
+    border-radius: var(--r-kbd, 4px);
     padding: 0 4px;
     margin: 0 1px;
   }
@@ -332,7 +355,7 @@
     align-items: center;
     gap: 6px;
     padding: 2px 8px;
-    border-radius: 999px;
+    border-radius: var(--r-chip, 999px);
     font-size: 12px;
     background: color-mix(in srgb, var(--c, var(--muted)) 14%, transparent);
     color: var(--c, var(--muted));
@@ -394,8 +417,8 @@
   .seg {
     display: flex;
     flex: none;
-    border: 1px solid var(--border);
-    border-radius: 6px;
+    border: 1px solid var(--rule, var(--border));
+    border-radius: var(--r-ctl, 6px);
     overflow: hidden;
   }
   .seg button {
