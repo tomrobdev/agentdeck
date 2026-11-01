@@ -110,6 +110,14 @@ test('prompt lists open and recent tasks', () => {
   assert.match(prompt, /## Recently finished\n.*Add input validation/s);
 });
 
+test('the planner asks for prompts with markdown section headings', () => {
+  const prompt = buildPlannerPrompt(db.getRepo(repoId)!, 'ship it', [], 3);
+  for (const name of ['Goal', 'Context', 'Change', 'Out of scope', 'Constraints', 'Definition of done']) {
+    assert.match(prompt, new RegExp(`^## ${name}$`, 'm'));
+  }
+  assert.doesNotMatch(prompt, /^Goal:/m);
+});
+
 test('with auto-approve, the scheduler plans an empty queue and runs the tasks', async () => {
   const repoB = await actions.addRepo(db, { path: makeRepo('beta'), test: 'test -f fake-output.txt' });
   actions.updateRepo(db, repoB.id, { goals: 'make greetings', auto_approve: true });

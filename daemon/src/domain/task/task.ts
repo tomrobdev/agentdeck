@@ -47,13 +47,27 @@ export function planStepIds(task: Pick<Task, 'plan_steps'>): string[] | null {
   }
 }
 
-/** The sections every task prompt has, in order. The delegate skill (.claude/skills/delegate) asks for the same. */
-export const PROMPT_SECTIONS = `Goal: what the task achieves, in a sentence or two.
-Context: the files to start from, why it is needed, related tasks or plans.
-Change: what to do.
-Out of scope: what not to touch.
-Constraints: limits the agent must keep to, such as no new dependencies or no changes to package.json.
-Definition of done: the test command passing, plus concrete checks a reviewer can confirm.
+/**
+ * The sections every task prompt has, in order, each a markdown `##` heading. The delegate skill (.claude/skills/delegate)
+ * asks for the same. `parsePromptSections` (sections.ts) also reads the older `Goal:` form.
+ */
+export const PROMPT_SECTIONS = `## Goal
+What the task achieves, in a sentence or two.
+
+## Context
+The files to start from, why it is needed, related tasks or plans.
+
+## Change
+What to do.
+
+## Out of scope
+What not to touch.
+
+## Constraints
+Limits the agent must keep to, such as no new dependencies or no changes to package.json.
+
+## Definition of done
+The test command passing, plus concrete checks a reviewer can confirm.
 
 A task linked to a plan (agentdeck add --plan) needs only Goal, Out of scope and Constraints: the daemon puts the linked steps into the worker's prompt, and they supply Change and Definition of done.`;
 
