@@ -24,7 +24,7 @@ export function openDb(path = DB_PATH) {
   const orm = makeOrm(db);
 
   return {
-    raw: db,
+    raw: db, // for tests that seed or inspect rows directly; nothing in src/ outside db/ uses it
     close: () => db.close(),
     ...settingsStore(db, orm),
     ...repoStore(db, orm),
