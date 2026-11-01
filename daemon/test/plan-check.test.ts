@@ -54,8 +54,24 @@ test('the PR body lists criteria as checkboxes, and has no Plan section without 
   assert.match(body, /## Plan: `docs\/plans\/cache\.html`/);
   assert.match(body, /\*\*Measure\*\* \(done\)\n\n- \[ \] A baseline is recorded\.\n- \[ \] Tests pass\./);
   assert.match(body, /\*\*Cache\*\* \(todo\)\n\n\| Attempt/);
-  assert.ok(!buildPrBody({ id: 7 }, runs).includes('Plan'));
-  assert.ok(!buildPrBody({ id: 7 }, runs, { path: 'docs/plans/cache.html', steps: [] }).includes('Plan'));
+  assert.ok(!buildPrBody({ id: 7 }, runs).includes('## Plan'));
+  assert.ok(!buildPrBody({ id: 7 }, runs, { path: 'docs/plans/cache.html', steps: [] }).includes('## Plan'));
+});
+
+test('the PR body starts with the summary and keeps the plan and runs inside one details block', () => {
+  const runs = [
+    { attempt: 1, outcome: 'done', num_turns: 2, cost_usd: 0.1, tests_passed: 1, result_text: '## Overview\n- Did it.\nSTATUS: DONE' },
+  ];
+  const steps = linkedSteps(plan('done', 'todo'), null)!;
+  const body = buildPrBody({ id: 7 }, runs, { path: 'docs/plans/cache.html', steps });
+  assert.ok(body.startsWith('## Overview\n- Did it.\n'));
+  const open = body.indexOf('<details><summary>Plan and runs</summary>');
+  const close = body.indexOf('</details>');
+  assert.ok(open > 0 && close > open);
+  assert.equal(body.match(/<details>/g)?.length, 1);
+  assert.ok(body.indexOf('## Plan:') > open && body.indexOf('## Plan:') < close);
+  assert.ok(body.indexOf('| Attempt') > open && body.indexOf('| Attempt') < close);
+  assert.ok(body.trimEnd().endsWith('Made by AgentDeck task #7.') && body.indexOf('Made by') > close);
 });
 
 const db = openDb(join(home, 'test.db'));
