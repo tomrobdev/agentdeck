@@ -6,10 +6,11 @@ import { die } from './cli/format.ts';
 import { HELP } from './cli/help.ts';
 import { type Command, parseCommandLine } from './cli/context.ts';
 import { repoCommands } from './cli/repos.ts';
+import { statsCommands } from './cli/stats.ts';
 import { taskCommands } from './cli/tasks.ts';
 import { openDb } from './db/index.ts';
 
-const COMMANDS: Record<string, Command> = { ...repoCommands, ...taskCommands, ...daemonCommands, ...contextCommands };
+const COMMANDS: Record<string, Command> = { ...repoCommands, ...taskCommands, ...daemonCommands, ...contextCommands, ...statsCommands };
 
 async function main(argv: string[]): Promise<void> {
   const { values: flags, positionals } = parseCommandLine(argv);

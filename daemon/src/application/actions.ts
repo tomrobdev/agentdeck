@@ -8,6 +8,7 @@ export * from './task/files.ts';
 export { type LiveContext, liveContext, repoForPath } from './task/context.ts';
 export { attachPlan, collectPlans, planHtml } from './plans.ts';
 export { proposeNow } from './planner.ts';
+export { pilotStats } from './run/stats.ts';
 export { mergePreview, mergeTask } from './pull-request/pull-requests.ts';
 export { setAutoMerge } from './pull-request/auto-merge.ts';
 export * from './repo/repos.ts';

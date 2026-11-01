@@ -9,6 +9,7 @@ import { repoStore } from './repos.ts';
 import { runStore } from './runs.ts';
 import { migrate } from './schema.ts';
 import { settingsStore } from './settings.ts';
+import { statsStore } from './stats.ts';
 import { taskStore } from './tasks.ts';
 import { usageStore } from './usage.ts';
 
@@ -30,6 +31,7 @@ export function openDb(path = DB_PATH) {
     ...repoStore(db, orm),
     ...taskStore(db, orm),
     ...runStore(orm),
+    ...statsStore(orm),
     ...planStore(db, orm),
     ...plannerRunStore(orm),
     ...notificationStore(orm),
