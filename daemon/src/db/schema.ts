@@ -206,6 +206,21 @@ export const MIGRATIONS: Migration[] = [
      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
    );
    CREATE INDEX review_comments_review ON review_comments(review_id, id);`,
+  // 21: what a live run is doing: turns so far and the last tool call, kept from its stream while it runs.
+  `ALTER TABLE runs ADD COLUMN live_turns INTEGER NOT NULL DEFAULT 0;
+   ALTER TABLE runs ADD COLUMN live_tool TEXT;`,
+  // 22: what the pilot scorecard needs and nothing kept. usage_samples is a history of usage readings, appended when a
+  // window's reading changes; pr_checks_opened / pr_checks_merged are JSON { total, failing, pending } of a PR's checks.
+  `CREATE TABLE usage_samples (
+     id INTEGER PRIMARY KEY,
+     window TEXT NOT NULL,
+     utilization REAL NOT NULL,
+     resets_at INTEGER NOT NULL,
+     observed_at TEXT NOT NULL DEFAULT (datetime('now'))
+   );
+   CREATE INDEX usage_samples_window ON usage_samples(window, id);
+   ALTER TABLE tasks ADD COLUMN pr_checks_opened TEXT;
+   ALTER TABLE tasks ADD COLUMN pr_checks_merged TEXT;`,
 ];
 
 /** Runs every step above the database's user_version in one transaction; returns how many ran. */

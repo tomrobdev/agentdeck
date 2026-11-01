@@ -16,6 +16,7 @@ import { syncBranch } from '../sync.ts';
 import { pauseRepo } from '../scheduler/pause.ts';
 import { collectPlans, planForRun } from '../plans.ts';
 import { settle } from '../task/settle.ts';
+import { recordAnswers, reviewForRun } from '../review/address.ts';
 
 /** Run one attempt of a task that the scheduler has already claimed (status = running). */
 export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
@@ -40,7 +41,8 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
     writeEvent(log, { type: 'agentdeck_error', text: `read plan: ${(err as Error).message}` });
   }
   const previousRuns = db.runsForTask(task.id).filter((r) => r.id !== runId);
-  const prompt = buildPrompt(task, previousRuns, latestReviewNote(db.eventsForTask(task.id)), plan);
+  const review = await reviewForRun(db, task, repo);
+  const prompt = buildPrompt(task, previousRuns, latestReviewNote(db.eventsForTask(task.id)), plan, review?.prompt ?? null);
   // A daemon restart cut the attempt's last run off: continue its claude session (with `prompt` as the fallback).
   const session = resumableSession(task, previousRuns);
   const resume = session ? { session, prompt: buildResumePrompt(task) } : undefined;
@@ -113,6 +115,8 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
     outcome = { outcome: 'failed', reason: end.reason };
   } else {
     const status = parseStatus(end.result.result);
+    // The answers to the review's comments are stored whatever the status; comments with none are named in the run's summary.
+    if (review && runFields.result_text) runFields.result_text = recordAnswers(db, review.comments, runFields.result_text);
     if (status.blocked) {
       outcome = { outcome: 'blocked', reason: status.reason ?? 'agent reported blocked', ...(status.needs ? { needs: status.needs } : {}) };
     } else if (repo.test_cmd) {

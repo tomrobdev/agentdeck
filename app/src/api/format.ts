@@ -1,5 +1,5 @@
 // How the dashboard words what the daemon reports: times, durations, waits and the daemon's state.
-import type { AutoMergeCheck, Run, StartWait, Status } from './types.ts';
+import type { AutoMergeCheck, LiveView, Run, StartWait, Status } from './types.ts';
 
 /** What a queued task waits for, in a few words, for chips and callouts. */
 export function describeWait(h: StartWait): string {
@@ -70,6 +70,13 @@ export function taskList(ids: number[]): string {
 export function runDuration(r: Run): string {
   const secs = ((r.ended_at ? parseTime(r.ended_at) : Date.now()) - parseTime(r.started_at)) / 1000;
   return secs < 90 ? `${Math.round(secs)}s` : secs < 5400 ? `${Math.round(secs / 60)}m` : `${(secs / 3600).toFixed(1)}h`;
+}
+
+/** A running task's state on its row: "12m · turn 14/40 · Edit worker.ts" (the turn and tool once there are any). */
+export function describeLive(l: LiveView): string {
+  const secs = (Date.now() - parseTime(l.since)) / 1000;
+  const took = secs < 90 ? `${Math.max(0, Math.round(secs))}s` : secs < 5400 ? `${Math.round(secs / 60)}m` : `${(secs / 3600).toFixed(1)}h`;
+  return [took, l.turns ? `turn ${l.turns}/${l.max_turns}` : null, l.tool].filter(Boolean).join(' · ');
 }
 
 export function totalTokens(r: Run): number {

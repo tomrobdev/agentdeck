@@ -69,6 +69,8 @@ export const tasks = sqliteTable(
     auto_merge: integer(),
     auto_merge_check: text(),
     auto_merge_checked_at: text(),
+    pr_checks_opened: text(),
+    pr_checks_merged: text(),
   },
   (table) => [index('tasks_pick').on(table.status, sql`priority DESC`, table.id)],
 );
@@ -100,6 +102,8 @@ export const runs = sqliteTable(
     pid: integer(),
     denials: integer().default(0).notNull(),
     kind: text().default('work').notNull(),
+    live_turns: integer().default(0).notNull(),
+    live_tool: text(),
   },
   (table) => [index('runs_task').on(table.task_id, table.id)],
 );
@@ -113,6 +117,21 @@ export const usageWindows = sqliteTable('usage_windows', {
     .default(sql`datetime('now')`)
     .notNull(),
 });
+
+/** Every change of a usage window's reading, appended beside the latest in usage_windows. */
+export const usageSamples = sqliteTable(
+  'usage_samples',
+  {
+    id: integer().primaryKey(),
+    window: text().notNull(),
+    utilization: real().notNull(),
+    resets_at: integer().notNull(),
+    observed_at: text()
+      .default(sql`datetime('now')`)
+      .notNull(),
+  },
+  (table) => [index('usage_samples_window').on(table.window, table.id)],
+);
 
 export const plannerRuns = sqliteTable('planner_runs', {
   id: integer().primaryKey(),

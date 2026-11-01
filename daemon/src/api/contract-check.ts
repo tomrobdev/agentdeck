@@ -60,6 +60,7 @@ check<Fits<Out<typeof actions.answerReviewComment>, C.Review>>();
 check<Fits<Out<typeof actions.resolveReviewComment>, C.Review>>();
 check<Fits<Out<typeof actions.reopenReviewComment>, C.Review>>();
 check<Fits<DomainLogEntry, C.LogEntry>>();
+check<Fits<NonNullable<Out<typeof actions.taskViews>[number]['live']>, C.LiveView>>();
 
 // Requests
 check<Fits<C.NewRepo, In<typeof actions.addRepo, 1>>>();

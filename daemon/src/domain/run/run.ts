@@ -26,6 +26,8 @@ export interface Run {
   log_path: string;
   pid: number | null; // claude's process group while the run is live
   denials: number; // tool uses refused by the permission rules during the run
+  live_turns: number; // turns so far while the run is live (domain/run/live.ts)
+  live_tool: string | null; // the last tool call while the run is live, in a few words
 }
 
 /**
