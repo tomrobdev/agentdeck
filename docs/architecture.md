@@ -114,7 +114,7 @@ flowchart TD
   api -->|9| application
   api -->|2| config_ts
   api -->|4| db
-  api -->|3| domain
+  api -->|4| domain
   application -->|44| adapters
   application -->|8| config_ts
   application -->|30| db
@@ -389,6 +389,7 @@ stateDiagram-v2
 | GET    | `/api/service`                     | `actions.serviceStatus`                                            |
 | GET    | `/api/settings`                    | `actions.getSettings`                                              |
 | POST   | `/api/settings`                    | `actions.updateSettings`                                           |
+| GET    | `/api/stats`                       | `actions.pilotStats`                                               |
 | GET    | `/api/status`                      | `actions.status`                                                   |
 | POST   | `/api/tasks/:id/approve`           | `actions.approveTask`, `actions.taskDetail`                        |
 | POST   | `/api/tasks/:id/auto-merge`        | `actions.setAutoMerge`, `actions.taskDetail`                       |

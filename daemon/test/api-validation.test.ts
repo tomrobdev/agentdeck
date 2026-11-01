@@ -12,6 +12,7 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { openDb } = await import('../src/db/index.ts');
 const { startApi } = await import('../src/api/server.ts');
+const { pilotStats } = await import('../src/application/actions.ts');
 
 const db = openDb(join(home, 'test.db'));
 const server = await startApi({ db, port: 0 });
@@ -155,6 +156,16 @@ test('malformed JSON answers 400', async () => {
   const res = await post('/api/tasks', '{"prompt": ', true);
   assert.equal(res.status, 400);
   assert.match((await res.json()).error, /JSON/);
+});
+
+test('GET /api/stats serves what `agentdeck stats --by week --json` prints', async () => {
+  const res = await fetch(`${base}/api/stats?by=week&repo=demo`);
+  assert.equal(res.status, 200);
+  const stats = await res.json();
+  assert.deepEqual(stats, JSON.parse(JSON.stringify(pilotStats(db, { repo: 'demo', by: 'week' }))));
+  assert.deepEqual(stats.weeks, []);
+  assert.equal(stats.scorecard.by, 'week');
+  for (const bad of ['by=day', 'since=soon', 'repo=nope']) assert.equal((await fetch(`${base}/api/stats?${bad}`)).status, 400, bad);
 });
 
 test('a body over 2 MB answers 413', async () => {

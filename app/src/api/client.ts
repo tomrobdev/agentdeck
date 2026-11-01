@@ -33,6 +33,7 @@ import type {
   SyncResult,
   Settings,
   SettingsPatch,
+  Stats,
   Status,
   SubmitReview,
   TaskDetail,
@@ -77,6 +78,8 @@ export const api = {
   settings: () => call<Settings>('/api/settings'),
   updateSettings: (patch: SettingsPatch) => call<Settings>('/api/settings', { method: 'POST', json: patch }),
   testNotify: () => call<TestNotifyResult>('/api/notify/test', { method: 'POST' }),
+  /** The scorecard per week (what `agentdeck stats --by week --json` prints), for one repo name or all. */
+  stats: (repo: string | null) => call<Stats>(`/api/stats?by=week${repo ? `&repo=${encodeURIComponent(repo)}` : ''}`),
   repos: () => call<Repo[]>('/api/repos'),
   addRepo: (r: NewRepo) => call<Repo>('/api/repos', { method: 'POST', json: r }),
   repo: (id: number) => call<RepoDetail>(`/api/repos/${id}`),

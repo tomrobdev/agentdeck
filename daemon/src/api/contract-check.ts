@@ -22,6 +22,7 @@ check<Fits<Out<typeof actions.restartDaemon>, C.RestartResult>>();
 check<Fits<Out<typeof actions.daemonReport>, C.DaemonHealth>>();
 check<Fits<Out<typeof actions.restartNow>, C.RestartNowResult>>();
 check<Fits<Out<typeof actions.serviceStatus>, C.ServiceStatus>>();
+check<Fits<Out<typeof actions.pilotStats>, C.Stats>>();
 check<Fits<Out<typeof actions.getSettings>, C.Settings>>();
 check<Fits<Out<typeof actions.updateSettings>, C.Settings>>();
 check<Fits<ReturnType<Db['listRepos']>, C.Repo[]>>();

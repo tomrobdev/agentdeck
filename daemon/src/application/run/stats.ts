@@ -1,12 +1,14 @@
 // The pilot scorecard measures per repo, read from the database.
 import type { Db } from '../../db/index.ts';
-import { type Scorecard, buildScorecard } from '../../domain/run/scorecard.ts';
-import { type StatsReport, measure, measureByRepo } from '../../domain/run/stats.ts';
+import { type Scorecard, buildScorecard, measureByWeek } from '../../domain/run/scorecard.ts';
+import { type Measures, type StatsReport, measure, measureByRepo } from '../../domain/run/stats.ts';
 import { ActionError } from '../input.ts';
 
 /** The first-run measures and the rest of the scorecard (interventions, times, quota, PR checks). */
 export interface PilotReport extends StatsReport {
   scorecard: Scorecard;
+  /** The first-run measures per week, oldest first; empty unless `by` is week. */
+  weeks: { week: string; measures: Measures }[];
 }
 
 /**
@@ -29,5 +31,5 @@ export function pilotStats(db: Db, opts: { repo?: string; since?: string; by?: '
     since: opts.since,
     by: opts.by,
   });
-  return { repos, total: measure(rows), scorecard };
+  return { repos, total: measure(rows), scorecard, weeks: opts.by === 'week' ? measureByWeek(rows) : [] };
 }

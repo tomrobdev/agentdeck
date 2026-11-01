@@ -17,6 +17,15 @@ const needYou = computed(() => needYouCount(props.status));
     <div class="mr-4 flex items-center gap-1.5 text-md font-[650] tracking-[-0.01em]"><BrandMark /><span>agentdeck</span></div>
     <nav class="flex gap-1" aria-label="Main">
       <button class="nav" :class="{ on: route.current.name === 'queue' }" @click="go({ name: 'queue' })">Queue</button>
+      <button
+        class="nav"
+        :class="{ on: route.current.name === 'insights' }"
+        :disabled="offline"
+        title="The pilot scorecard over time"
+        @click="go({ name: 'insights' })"
+      >
+        Insights
+      </button>
       <button class="nav" :disabled="offline" @click="$emit('repos')">Repos</button>
       <button class="nav" :disabled="offline" title="Budget, notifications and appearance" @click="$emit('settings')">Settings</button>
     </nav>

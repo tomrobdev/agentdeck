@@ -11,6 +11,7 @@ import {
   resolveAutoMerge,
   countInterventions,
   cycleOf,
+  measureByWeek,
   median,
   parseSince,
   quotaSpends,
@@ -18,6 +19,7 @@ import {
   summarizeChecks,
   weekOf,
 } from '../src/domain/run/scorecard.ts';
+import type { StatRun } from '../src/domain/run/stats.ts';
 import { doneTask, queuedTask } from './fixtures.ts';
 
 const near = (actual: number | null | undefined, expected: number, eps = 1e-9) =>
@@ -39,6 +41,37 @@ const task = (o: Partial<ScorecardTask> = {}): ScorecardTask => ({
   pr_checks_opened: null,
   ...o,
 });
+test('measureByWeek puts a task in the week of its first run, oldest week first', () => {
+  const run = (o: Partial<StatRun>): StatRun => ({
+    repo_id: 1,
+    task_id: 1,
+    attempt: 1,
+    outcome: 'done',
+    started_at: '2026-10-05 10:00:00',
+    ended_at: '2026-10-05 10:10:00',
+    cost_usd: 1,
+    denials: 0,
+    task_status: 'done',
+    ...o,
+  });
+  const weeks = measureByWeek([
+    run({ task_id: 2, started_at: '2026-10-13 09:00:00', ended_at: '2026-10-13 09:30:00', cost_usd: 3 }),
+    run({ task_id: 1, outcome: 'failed' }),
+    // the retry begins in the next week but belongs to the week the task began in
+    run({ task_id: 1, attempt: 2, started_at: '2026-10-12 08:00:00', ended_at: '2026-10-12 08:20:00', cost_usd: 2 }),
+  ]);
+  assert.deepEqual(
+    weeks.map((w) => w.week),
+    ['2026-10-05', '2026-10-12'],
+  );
+  assert.equal(weeks[0].measures.runs, 2);
+  assert.equal(weeks[0].measures.first_run_rate, 0);
+  near(weeks[0].measures.cost_per_done_task, 3);
+  near(weeks[0].measures.minutes_per_done_task, 30);
+  assert.equal(weeks[1].measures.first_run_rate, 1);
+  near(weeks[1].measures.cost_per_done_task, 3);
+});
+
 const row = (o: Partial<ScorecardTaskRow> = {}): ScorecardTaskRow => ({
   id: 1,
   repo_id: 1,
