@@ -27,8 +27,9 @@ import TaskPage from './components/task/TaskPage.vue';
 import { openTask, route } from './router';
 import { type BoardMove, needYouCount, openingTab } from './lib/taskView';
 import { provideActions } from './composables/useActions';
+import { useChangeStream } from './composables/useChangeStream';
 
-const POLL_MS = 2000;
+const STATUS_FALLBACK_MS = 30_000;
 
 const selectedId = ref<number | null>(null);
 const toast = ref('');
@@ -42,11 +43,12 @@ function flash(msg: string) {
 /** The task whose page is open, from the route. */
 const pageId = computed(() => (route.current.name === 'task' ? route.current.id : null));
 
-// Query keeps the old object when a refetch returns the same data, so nothing below re-runs every 2 s.
-// Status also polls while the window is hidden: the tray label reads it. The page's own query does not.
-const statusQ = useQuery({ ...statusQuery(), refetchInterval: POLL_MS, refetchIntervalInBackground: true });
-const tasksQ = useQuery(computed(() => ({ ...tasksQuery(), enabled: pageId.value === null, refetchInterval: POLL_MS })));
-const taskQ = useQuery(computed(() => ({ ...taskQuery(pageId.value ?? 0), enabled: pageId.value !== null, refetchInterval: POLL_MS })));
+// The change stream refetches what is on screen. Status also refetches every 30 s, hidden or not: waits (a governor
+// hold lifting) change with time, not with a write, and the tray label reads it.
+const statusQ = useQuery({ ...statusQuery(), refetchInterval: STATUS_FALLBACK_MS, refetchIntervalInBackground: true });
+const tasksQ = useQuery(computed(() => ({ ...tasksQuery(), enabled: pageId.value === null })));
+const taskQ = useQuery(computed(() => ({ ...taskQuery(pageId.value ?? 0), enabled: pageId.value !== null })));
+useChangeStream();
 const reposQ = useQuery(reposQuery());
 
 const status = computed<Status | null>(() => statusQ.data.value ?? null);
