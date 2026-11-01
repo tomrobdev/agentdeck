@@ -1,9 +1,13 @@
 // Registered repos.
+import { and, asc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import type { DatabaseSync } from 'node:sqlite';
 import type { Repo } from '../domain/repo/repo.ts';
+import type { Orm } from './orm.ts';
 import { NOW, atomically } from './sql.ts';
+import { notifications, plannerRuns, repos, runs, taskEvents, taskPlans, tasks } from './tables.ts';
 
-export function repoStore(db: DatabaseSync) {
+export function repoStore(db: DatabaseSync, orm: Orm) {
+  const tasksOf = (repo_id: number) => orm.select({ id: tasks.id }).from(tasks).where(eq(tasks.repo_id, repo_id));
   return {
     addRepo(r: {
       name: string;
@@ -14,37 +18,56 @@ export function repoStore(db: DatabaseSync) {
       toolchain?: string | null;
       setup_cmd?: string | null;
     }): Repo {
-      const info = db
-        .prepare('INSERT INTO repos (name, path, base_branch, test_cmd, allowed_tools, toolchain, setup_cmd) VALUES (?, ?, ?, ?, ?, ?, ?)')
-        .run(
-          r.name,
-          r.path,
-          r.base_branch,
-          r.test_cmd ?? null,
-          r.allowed_tools ? JSON.stringify(r.allowed_tools) : null,
-          r.toolchain ?? null,
-          r.setup_cmd ?? null,
-        );
+      const info = orm
+        .insert(repos)
+        .values({
+          name: r.name,
+          path: r.path,
+          base_branch: r.base_branch,
+          test_cmd: r.test_cmd ?? null,
+          allowed_tools: r.allowed_tools ? JSON.stringify(r.allowed_tools) : null,
+          toolchain: r.toolchain ?? null,
+          setup_cmd: r.setup_cmd ?? null,
+        })
+        .run();
       return this.getRepo(Number(info.lastInsertRowid))!;
     },
     getRepo(id: number): Repo | undefined {
-      return db.prepare('SELECT * FROM repos WHERE id = ?').get(id) as Repo | undefined;
+      // The cast narrows the plain string columns (pr_mode, merge_method); typed columns come later.
+      return orm.select().from(repos).where(eq(repos.id, id)).get() as Repo | undefined;
     },
     findRepo(nameOrId: string): Repo | undefined {
-      return db.prepare('SELECT * FROM repos WHERE name = ? OR id = ?').get(nameOrId, Number(nameOrId) || -1) as Repo | undefined;
+      return orm
+        .select()
+        .from(repos)
+        .where(sql`${repos.name} = ${nameOrId} OR ${repos.id} = ${Number(nameOrId) || -1}`)
+        .get() as Repo | undefined;
     },
     /** Active repos, or with `{ archived: true }` only the archived ones. */
     listRepos(opts: { archived?: boolean } = {}): Repo[] {
-      const where = opts.archived ? 'archived_at IS NOT NULL' : 'archived_at IS NULL';
-      return db.prepare(`SELECT * FROM repos WHERE ${where} ORDER BY name`).all() as unknown as Repo[];
+      return orm
+        .select()
+        .from(repos)
+        .where(opts.archived ? isNotNull(repos.archived_at) : isNull(repos.archived_at))
+        .orderBy(asc(repos.name))
+        .all() as Repo[];
     },
     /** Archive (true) or unarchive (false) a repo. */
     setRepoArchived(id: number, archived: boolean): void {
-      db.prepare(`UPDATE repos SET archived_at = ${archived ? NOW : 'NULL'} WHERE id = ?`).run(id);
+      orm
+        .update(repos)
+        .set({ archived_at: archived ? sql.raw(NOW) : null })
+        .where(eq(repos.id, id))
+        .run();
     },
     /** Whether a task of the repo is running or has a cancel requested. */
     repoHasRunning(id: number): boolean {
-      return !!db.prepare("SELECT 1 FROM tasks WHERE repo_id = ? AND status IN ('running', 'cancel_requested') LIMIT 1").get(id);
+      return !!orm
+        .select({ one: sql`1` })
+        .from(tasks)
+        .where(and(eq(tasks.repo_id, id), inArray(tasks.status, ['running', 'cancel_requested'])))
+        .limit(1)
+        .get();
     },
     /** What deleting the repo takes with it: its tasks' checkouts and every log file its runs and planner runs wrote. */
     repoFootprint(id: number): {
@@ -52,30 +75,57 @@ export function repoStore(db: DatabaseSync) {
       run_logs: string[];
       planner_logs: string[];
     } {
-      const tasks = db.prepare('SELECT id, branch, worktree FROM tasks WHERE repo_id = ? ORDER BY id').all(id) as unknown as {
-        id: number;
-        branch: string | null;
-        worktree: string | null;
-      }[];
-      const logs = (sql: string) => (db.prepare(sql).all(id) as unknown as { log_path: string }[]).map((r) => r.log_path);
       return {
-        tasks,
-        run_logs: logs('SELECT log_path FROM runs WHERE task_id IN (SELECT id FROM tasks WHERE repo_id = ?)'),
-        planner_logs: logs('SELECT log_path FROM planner_runs WHERE repo_id = ?'),
+        tasks: orm
+          .select({ id: tasks.id, branch: tasks.branch, worktree: tasks.worktree })
+          .from(tasks)
+          .where(eq(tasks.repo_id, id))
+          .orderBy(asc(tasks.id))
+          .all(),
+        run_logs: orm
+          .select({ log_path: runs.log_path })
+          .from(runs)
+          .where(inArray(runs.task_id, tasksOf(id)))
+          .all()
+          .map((r) => r.log_path),
+        planner_logs: orm
+          .select({ log_path: plannerRuns.log_path })
+          .from(plannerRuns)
+          .where(eq(plannerRuns.repo_id, id))
+          .all()
+          .map((r) => r.log_path),
       };
     },
     /** Delete a repo and everything of it in one transaction, children first. Only an archived repo; returns false otherwise. */
     deleteRepo(id: number): boolean {
       return atomically(db, () => {
-        if (!db.prepare('SELECT 1 FROM repos WHERE id = ? AND archived_at IS NOT NULL').get(id)) return false;
-        const mine = 'SELECT id FROM tasks WHERE repo_id = ?';
-        db.prepare(`DELETE FROM task_events WHERE task_id IN (${mine})`).run(id);
-        db.prepare(`DELETE FROM task_plans WHERE task_id IN (${mine})`).run(id);
-        db.prepare(`DELETE FROM runs WHERE task_id IN (${mine})`).run(id);
-        db.prepare(`DELETE FROM notifications WHERE task_id IN (${mine})`).run(id);
-        db.prepare('DELETE FROM tasks WHERE repo_id = ?').run(id);
-        db.prepare('DELETE FROM planner_runs WHERE repo_id = ?').run(id);
-        db.prepare('DELETE FROM repos WHERE id = ?').run(id);
+        if (
+          !orm
+            .select({ one: sql`1` })
+            .from(repos)
+            .where(and(eq(repos.id, id), isNotNull(repos.archived_at)))
+            .get()
+        )
+          return false;
+        orm
+          .delete(taskEvents)
+          .where(inArray(taskEvents.task_id, tasksOf(id)))
+          .run();
+        orm
+          .delete(taskPlans)
+          .where(inArray(taskPlans.task_id, tasksOf(id)))
+          .run();
+        orm
+          .delete(runs)
+          .where(inArray(runs.task_id, tasksOf(id)))
+          .run();
+        orm
+          .delete(notifications)
+          .where(inArray(notifications.task_id, tasksOf(id)))
+          .run();
+        orm.delete(tasks).where(eq(tasks.repo_id, id)).run();
+        orm.delete(plannerRuns).where(eq(plannerRuns.repo_id, id)).run();
+        orm.delete(repos).where(eq(repos.id, id)).run();
         return true;
       });
     },
@@ -100,17 +150,22 @@ export function repoStore(db: DatabaseSync) {
         >
       >,
     ): void {
-      const keys = Object.keys(fields) as (keyof typeof fields)[];
-      if (!keys.length) return;
-      db.prepare(`UPDATE repos SET ${keys.map((k) => `${k} = ?`).join(', ')} WHERE id = ?`).run(...keys.map((k) => fields[k] ?? null), id);
+      if (!Object.keys(fields).length) return;
+      // undefined means "not given" to Drizzle, but this has always written a given-as-undefined key as NULL.
+      const given = Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, v ?? null]));
+      orm.update(repos).set(given).where(eq(repos.id, id)).run();
     },
     /** Pause (reason) or resume (null) a repo unconditionally. */
     setRepoPaused(id: number, reason: string | null): void {
-      db.prepare('UPDATE repos SET paused_reason = ? WHERE id = ?').run(reason, id);
+      orm.update(repos).set({ paused_reason: reason }).where(eq(repos.id, id)).run();
     },
     /** Pause a repo that isn't paused yet. Returns false if it already was, keeping the first reason. */
     pauseRepo(id: number, reason: string): boolean {
-      const res = db.prepare('UPDATE repos SET paused_reason = ? WHERE id = ? AND paused_reason IS NULL').run(reason, id);
+      const res = orm
+        .update(repos)
+        .set({ paused_reason: reason })
+        .where(and(eq(repos.id, id), isNull(repos.paused_reason)))
+        .run();
       return Number(res.changes) > 0;
     },
   };
