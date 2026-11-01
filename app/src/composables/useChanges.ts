@@ -1,45 +1,47 @@
 // A task's changes follow its branch: fetched on open and whenever the task moves.
-import { type Ref, computed, onBeforeUnmount, ref, watch } from 'vue';
-import { type Changes, type TaskDetail, api } from '../api';
+import { type Ref, computed, shallowRef, watch } from 'vue';
+import { useQuery } from '@tanstack/vue-query';
+import { type Changes, type TaskDetail, changesQuery } from '../api';
+
+/** A running task commits without changing status, so its branch is checked every 10 s. */
+const RUNNING_POLL_MS = 10_000;
 
 export function useChanges(task: Ref<TaskDetail>) {
-  const changes = ref<Changes | null>(null);
-  const error = ref('');
+  const q = useQuery(
+    computed(() => ({
+      ...changesQuery(task.value.id),
+      enabled: !!task.value.branch,
+      refetchInterval: task.value.status === 'running' ? RUNNING_POLL_MS : (false as const),
+    })),
+  );
 
-  async function load() {
-    const t = task.value;
-    if (!t.branch) {
-      changes.value = null;
-      error.value = 'No branch yet: changes appear once the first run starts.';
-      return;
-    }
-    try {
-      const next = await api.changes(t.id);
-      error.value = '';
-      // Same commits, same changes: keep the object so nothing downstream rebuilds.
-      if (next.head === changes.value?.head && next.base === changes.value?.base) return;
-      changes.value = next;
-    } catch (e) {
-      error.value = (e as Error).message;
-    }
-  }
-
-  // Separate sources, so a poll that returns the same values doesn't refetch.
+  // Same commits, same changes: keep the object so nothing downstream rebuilds.
+  const changes = shallowRef<Changes | null>(null);
   watch(
-    [() => task.value.id, () => task.value.updated_at, () => task.value.branch],
-    ([id], before) => {
-      if (before && id !== before[0]) changes.value = null;
-      load();
+    () => (task.value.branch ? q.data.value : undefined),
+    (next) => {
+      if (!next) changes.value = null;
+      else if (next.head !== changes.value?.head || next.base !== changes.value?.base) changes.value = next;
     },
     { immediate: true },
   );
 
-  // A running task commits without changing status, so check its branch every 10 s.
-  const timer = window.setInterval(() => task.value.status === 'running' && load(), 10_000);
-  onBeforeUnmount(() => clearInterval(timer));
+  // Separate sources, so a poll that returns the same values doesn't refetch.
+  watch([() => task.value.updated_at, () => task.value.branch], () => {
+    if (task.value.branch) q.refetch();
+  });
 
+  const error = computed(() =>
+    task.value.branch ? (q.error.value?.message ?? '') : 'No branch yet: changes appear once the first run starts.',
+  );
   const paths = computed(() => new Set(changes.value?.files.map((f) => f.path) ?? []));
   const isPath = (p: string) => paths.value.has(p);
 
   return { changes, error, isPath, paths };
+}
+
+/** The head and base commits of a task, read from what useChanges already fetched (this fetches nothing). */
+export function useCommits(taskId: Ref<number>) {
+  const q = useQuery(computed(() => ({ ...changesQuery(taskId.value), enabled: false })));
+  return { head: computed(() => q.data.value?.head ?? null), base: computed(() => q.data.value?.base ?? null) };
 }

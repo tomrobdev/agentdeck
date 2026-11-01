@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue';
-import { api } from '../../api';
+import { onBeforeUnmount, onMounted, ref, toRef } from 'vue';
+import { useQueryClient } from '@tanstack/vue-query';
+import { fileQuery } from '../../api';
+import { useCommits } from '../../composables/useChanges';
 import CodeView from './CodeView.vue';
 
 // Hovering a `path:line` link inside `root` shows the lines around it, read from the task branch.
@@ -8,19 +10,17 @@ const props = defineProps<{ taskId: number; root: HTMLElement | null }>();
 
 const CONTEXT = 5;
 const shown = ref<{ path: string; line: number; text: string; first: number; x: number; y: number } | null>(null);
-const cache = new Map<string, Promise<string | null>>();
 let timer: number | undefined;
+const queryClient = useQueryClient();
+const { head } = useCommits(toRef(props, 'taskId'));
 
-function fileText(path: string): Promise<string | null> {
-  if (!cache.has(path))
-    cache.set(
-      path,
-      api.file(props.taskId, 'head', path).then(
-        (f) => f.text,
-        () => null,
-      ),
-    );
-  return cache.get(path)!;
+/** The file's text at the task's head commit: the query cache keeps it, so a second hover makes no request. */
+async function fileText(path: string): Promise<string | null> {
+  try {
+    return (await queryClient.fetchQuery(fileQuery(props.taskId, 'head', path, head.value))).text;
+  } catch {
+    return null;
+  }
 }
 
 function onOver(e: MouseEvent) {

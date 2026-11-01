@@ -8,6 +8,7 @@ import {
   type TaskDetail as Detail,
   api,
   describeState,
+  isImmutable,
   isOffline,
   reposQuery,
   statusQuery,
@@ -57,7 +58,7 @@ const offline = computed(() => isOffline(statusQ.error.value));
 
 // After a change any of it may have moved (the Repos panel adds, archives and edits repos too).
 const queryClient = useQueryClient();
-const { busy, run: act } = provideActions(() => queryClient.invalidateQueries(), flash);
+const { busy, run: act } = provideActions(() => queryClient.invalidateQueries({ predicate: (q) => !isImmutable(q.queryKey) }), flash);
 
 watch(
   pageId,

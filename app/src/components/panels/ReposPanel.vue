@@ -1,6 +1,18 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { MERGE_METHODS, type Repo, type RepoDeletion, type RepoDetail, ago, api } from '../../api';
+import { computed, ref } from 'vue';
+import { useQuery, useQueryClient } from '@tanstack/vue-query';
+import {
+  MERGE_METHODS,
+  type Repo,
+  type RepoDeletion,
+  type RepoDetail,
+  ago,
+  api,
+  archivedReposQuery,
+  queryKeys,
+  repoDeletionQuery,
+  repoQuery,
+} from '../../api';
 import { type RepoForm, toRepoForm, toRepoPatch } from '../../lib/forms';
 import { useActions } from '../../composables/useActions';
 import Modal from '../ui/Modal.vue';
@@ -8,6 +20,7 @@ import Modal from '../ui/Modal.vue';
 defineProps<{ repos: Repo[] }>();
 defineEmits<{ close: [] }>();
 const { run } = useActions();
+const queryClient = useQueryClient();
 
 // Add form
 const path = ref('');
@@ -43,7 +56,7 @@ async function edit(r: Repo) {
   editError.value = editMsg.value = '';
   if (open.value?.id === r.id) return void (open.value = null);
   try {
-    load(await api.repo(r.id));
+    load(await queryClient.fetchQuery({ ...repoQuery(r.id), staleTime: 0 }));
   } catch (e) {
     editError.value = (e as Error).message;
   }
@@ -75,53 +88,46 @@ async function proposeNow() {
         : res.outcome === 'nothing'
           ? `Nothing to propose${res.note ? `: ${res.note}` : '.'}`
           : `Planner ${res.outcome}${res.note ? `: ${res.note}` : ''}`;
-    load(await api.repo(id));
+    load(await queryClient.fetchQuery({ ...repoQuery(id), staleTime: 0 }));
   });
   if (!ok) editMsg.value = '';
   busy.value = '';
 }
 
 // Archived repos
-const archived = ref<Repo[]>([]);
-const archiveError = ref('');
+// A write's refresh refetches the list; the others on screen are read on request.
+const archivedQ = useQuery(archivedReposQuery());
+const archived = computed<Repo[]>(() => archivedQ.data.value ?? []);
+const actionError = ref('');
+const archiveError = computed(() => actionError.value || archivedQ.error.value?.message || '');
 const deleting = ref<{ repo: Repo; counts: RepoDeletion } | null>(null);
 const typed = ref('');
 const deleteBusy = ref(false);
 
-async function loadArchived() {
-  try {
-    archived.value = await api.archivedRepos();
-  } catch (e) {
-    archiveError.value = (e as Error).message;
-  }
-}
-loadArchived();
-
 async function archive() {
   if (!open.value) return;
   const id = open.value.id;
-  archiveError.value = '';
+  actionError.value = '';
   if (!(await run(() => api.archiveRepo(id)))) return;
   open.value = null;
-  await loadArchived();
 }
 
 async function unarchive(r: Repo) {
-  archiveError.value = '';
-  const ok = await run(async () => {
+  actionError.value = '';
+  await run(async () => {
     await api.unarchiveRepo(r.id);
     if (deleting.value?.repo.id === r.id) deleting.value = null;
   });
-  if (ok) await loadArchived();
 }
 
+// What a delete takes with it is counted fresh when asked, never from an earlier look.
 async function askDelete(r: Repo) {
-  archiveError.value = '';
+  actionError.value = '';
   typed.value = '';
   try {
-    deleting.value = { repo: r, counts: await api.repoDeletion(r.id) };
+    deleting.value = { repo: r, counts: await queryClient.fetchQuery({ ...repoDeletionQuery(r.id), staleTime: 0 }) };
   } catch (e) {
-    archiveError.value = (e as Error).message;
+    actionError.value = (e as Error).message;
   }
 }
 
@@ -132,10 +138,10 @@ async function confirmDelete() {
   const ok = await run(async () => {
     const res = await api.deleteRepo(d.repo.id);
     deleting.value = null;
-    if (res.leftover.length) archiveError.value = `Deleted ${res.repo}, but couldn't remove: ${res.leftover.join('; ')}`;
+    if (res.leftover.length) actionError.value = `Deleted ${res.repo}, but couldn't remove: ${res.leftover.join('; ')}`;
   });
   deleteBusy.value = false;
-  if (ok) await loadArchived();
+  if (ok) queryClient.removeQueries({ queryKey: queryKeys.repo(d.repo.id) });
 }
 </script>
 

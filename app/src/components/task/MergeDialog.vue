@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import { type MergeMethod, type MergePreview, type MergeResult, MERGE_METHODS, api, autoMergeLine } from '../../api';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { useQuery } from '@tanstack/vue-query';
+import { type MergeMethod, type MergeResult, MERGE_METHODS, api, autoMergeLine, mergePreviewQuery } from '../../api';
 import { useActions } from '../../composables/useActions';
 import Modal from '../ui/Modal.vue';
 
@@ -10,8 +11,9 @@ const props = defineProps<{ taskId: number }>();
 const emit = defineEmits<{ close: []; merged: [result: MergeResult] }>();
 const { refresh } = useActions();
 
-const preview = ref<MergePreview | null>(null);
-const loadError = ref('');
+const previewQ = useQuery(mergePreviewQuery(props.taskId));
+const preview = computed(() => previewQ.data.value ?? null);
+const loadError = computed(() => previewQ.error.value?.message ?? '');
 const method = ref<MergeMethod>('squash');
 const deleteBranch = ref(true);
 const merging = ref(false);
@@ -19,15 +21,8 @@ const mergeError = ref('');
 const syncing = ref(false);
 const syncNote = ref('');
 
-async function load() {
-  try {
-    preview.value = await api.mergePreview(props.taskId);
-    method.value = preview.value.method;
-  } catch (e) {
-    loadError.value = (e as Error).message;
-  }
-}
-onMounted(load);
+// The preview's own method is the starting choice, again whenever the preview changes (after a sync).
+watch(preview, (p) => p && (method.value = p.method), { immediate: true });
 
 const canConfirm = computed(() => !!preview.value && !preview.value.problems.length && !merging.value && !syncing.value);
 
@@ -50,7 +45,7 @@ async function sync() {
             : (res.reason ?? res.outcome);
     if (res.push_error) mergeError.value = `Could not push: ${res.push_error}`;
     else if (res.pushed) syncNote.value += ' Pushed; GitHub may take a moment to see it.';
-    await load();
+    await previewQ.refetch();
   } catch (e) {
     mergeError.value = (e as Error).message;
   } finally {

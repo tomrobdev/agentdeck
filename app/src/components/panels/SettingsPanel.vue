@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
-import { type NotificationRow, type NotifyKind, type ServiceStatus, type Settings, ago, api } from '../../api';
+import { computed, onMounted, ref, watch } from 'vue';
+import { useQuery } from '@tanstack/vue-query';
+import { type NotificationRow, type NotifyKind, type Settings, ago, api, serviceQuery, settingsQuery } from '../../api';
 import { type SettingsForm, toSettingsForm, toSettingsPatch } from '../../lib/forms';
 import { isNative, launchAtLogin, setLaunchAtLogin } from '../../platform/native';
 import { MODES, THEMES, mode, setMode, setTheme, theme } from '../../platform/theme';
@@ -22,7 +23,6 @@ const EVENTS: { key: NotifyKind; label: string }[] = [
 ];
 
 const form = ref<SettingsForm | null>(null);
-const service = ref<ServiceStatus | null>(null);
 const appAtLogin = ref<boolean | null>(null);
 const error = ref('');
 const saving = ref(false);
@@ -41,10 +41,19 @@ async function toggleAppAtLogin() {
   }
 }
 
+// The form is a copy to edit: it takes the first answer, and a save replaces it. Later refetches don't touch it.
+const settingsQ = useQuery(settingsQuery());
+watch(
+  () => settingsQ.data.value,
+  (s) => s && !form.value && load(s),
+  { immediate: true },
+);
+const serviceQ = useQuery(serviceQuery());
+const service = computed(() => serviceQ.data.value ?? null);
+const failure = computed(() => error.value || settingsQ.error.value?.message || serviceQ.error.value?.message || '');
+
 onMounted(async () => {
   try {
-    load(await api.settings());
-    service.value = await api.service();
     appAtLogin.value = await launchAtLogin();
   } catch (e) {
     error.value = (e as Error).message;
@@ -79,7 +88,7 @@ async function test() {
 
 <template>
   <Modal title="Settings" @close="$emit('close')">
-    <p v-if="!form && !error" class="muted">Loading…</p>
+    <p v-if="!form && !failure" class="muted">Loading…</p>
     <form v-if="form" class="flex flex-col gap-[18px]" @submit.prevent="save()">
       <section class="flex flex-col gap-2.5">
         <h4 class="m-0">Appearance</h4>
@@ -239,7 +248,7 @@ async function test() {
         </ul>
       </section>
 
-      <p v-if="error" class="form-error">{{ error }}</p>
+      <p v-if="failure" class="form-error">{{ failure }}</p>
       <div class="flex items-center gap-2">
         <button type="button" @click="test" :disabled="saving">Save &amp; send test</button>
         <span class="muted">{{ tested }}</span>
@@ -248,6 +257,6 @@ async function test() {
         <button class="primary" type="submit" :disabled="saving">Save</button>
       </div>
     </form>
-    <p v-else-if="error" class="form-error">{{ error }}</p>
+    <p v-else-if="failure" class="form-error">{{ failure }}</p>
   </Modal>
 </template>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue';
-import { CHANGE_LABEL, type ChangedFile, type Changes, type FilePatch, type TaskDetail, ago, api } from '../../api';
+import { useQueryClient } from '@tanstack/vue-query';
+import { CHANGE_LABEL, type ChangedFile, type Changes, type FilePatch, type TaskDetail, ago, diffQuery, fileQuery } from '../../api';
 import { isMarkdown } from '../../lib/render';
 import { loadSetting, saveSetting } from '../../lib/storage';
 import DiffView from '../files/DiffView.vue';
@@ -38,7 +39,9 @@ function setViewed(f: ChangedFile, on: boolean) {
 const collapsed = reactive(new Set<string>());
 const shown = computed(() => files.value.filter((f) => !(hideViewed.value && isViewed(f))));
 
-// Patches load as their file scrolls near the view; the cache is per head commit.
+// Patches load as their file scrolls near the view. The query cache keeps them per head commit, so a patch
+// or preview seen before shows at once from it; these maps only hold what this page is showing.
+const queryClient = useQueryClient();
 type PatchState = { state: 'loading' } | { state: 'error'; error: string } | { state: 'ok'; patch: FilePatch };
 const patches = reactive(new Map<string, PatchState>());
 const preview = reactive(new Map<string, string>());
@@ -55,24 +58,31 @@ watch(
 
 async function loadPatch(path: string) {
   if (patches.has(path)) return;
+  const q = diffQuery(props.task.id, path, props.changes?.head ?? null);
+  const seen = queryClient.getQueryData(q.queryKey);
+  if (seen) return void patches.set(path, { state: 'ok', patch: seen });
+  const head = props.changes?.head;
   patches.set(path, { state: 'loading' });
   try {
-    patches.set(path, { state: 'ok', patch: await api.diff(props.task.id, path) });
+    const patch = await queryClient.fetchQuery(q);
+    if (head === props.changes?.head) patches.set(path, { state: 'ok', patch });
   } catch (e) {
-    patches.set(path, { state: 'error', error: (e as Error).message });
+    if (head === props.changes?.head) patches.set(path, { state: 'error', error: (e as Error).message });
   }
 }
 
 async function togglePreview(path: string) {
   if (previewOn.has(path)) return previewOn.delete(path);
   previewOn.add(path);
-  if (!preview.has(path)) {
-    try {
-      const f = await api.file(props.task.id, 'head', path);
-      preview.set(path, f.text ?? '_Binary file._');
-    } catch (e) {
-      preview.set(path, `Couldn't load: ${(e as Error).message}`);
-    }
+  if (preview.has(path)) return;
+  const head = props.changes?.head ?? null;
+  const q = fileQuery(props.task.id, 'head', path, head);
+  const seen = queryClient.getQueryData(q.queryKey);
+  if (seen) return void preview.set(path, seen.text ?? '_Binary file._');
+  try {
+    preview.set(path, (await queryClient.fetchQuery(q)).text ?? '_Binary file._');
+  } catch (e) {
+    preview.set(path, `Couldn't load: ${(e as Error).message}`);
   }
 }
 

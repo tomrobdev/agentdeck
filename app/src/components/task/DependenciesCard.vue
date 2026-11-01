@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { type LinkKind, type TaskDetail, type TaskLink, type TaskSummary, api } from '../../api';
+import { useQuery } from '@tanstack/vue-query';
+import { type LinkKind, type TaskDetail, type TaskLink, type TaskSummary, api, tasksQuery } from '../../api';
 import { openTask } from '../../router';
 import { statusLabel } from '../../lib/taskView';
 import { useActions } from '../../composables/useActions';
@@ -11,20 +12,16 @@ import StatusIcon from '../ui/StatusIcon.vue';
 const props = defineProps<{ task: TaskDetail }>();
 const { run } = useActions();
 
-const all = ref<TaskSummary[]>([]);
+// The task list the queue shares. Rows fall back to the bare id until it arrives (or if it fails), and a
+// change to the links refreshes it through `run`.
+const tasksQ = useQuery(tasksQuery());
+const all = computed<TaskSummary[]>(() => tasksQ.data.value ?? []);
 const byId = computed(() => new Map(all.value.map((t) => [t.id, t])));
-
-async function load() {
-  try {
-    all.value = await api.tasks();
-  } catch {
-    // Rows fall back to the bare id until the next refresh.
-  }
-}
-// Reload when the links change, or the task does.
-watch(() => [props.task.id, props.task.updated_at, JSON.stringify(props.task.links), JSON.stringify(props.task.dependents)], load, {
-  immediate: true,
-});
+// The task moved or its links did: the states shown for them may have too.
+watch(
+  () => [props.task.updated_at, JSON.stringify(props.task.links), JSON.stringify(props.task.dependents)],
+  () => tasksQ.refetch(),
+);
 
 const links = computed(() => props.task.links ?? []);
 const buildsOn = computed(() => links.value.filter((l) => l.kind === 'builds_on'));

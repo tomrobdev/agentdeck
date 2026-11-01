@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
-import { type Needs, type RepoDetail, type TaskDetail, api } from '../../api';
+import { computed, ref, watch } from 'vue';
+import { useQuery, useQueryClient } from '@tanstack/vue-query';
+import { type Needs, type TaskDetail, api, repoQuery } from '../../api';
 import { canInstallWith, depsAreDev, depsPackages, withHost } from '../../lib/taskView';
 import { useActions } from '../../composables/useActions';
 import Modal from '../ui/Modal.vue';
@@ -9,19 +10,15 @@ import Modal from '../ui/Modal.vue';
 const props = defineProps<{ task: TaskDetail; needs: Needs }>();
 const emit = defineEmits<{ retry: [] }>();
 const { busy, run: act, flash } = useActions();
+const queryClient = useQueryClient();
 
 // Only the toolchain (deps) and the network setting (host) need the repo.
-const repo = ref<RepoDetail | null>(null);
-async function loadRepo() {
-  if (props.needs.kind === 'edit') return;
-  try {
-    repo.value = await api.repo(props.task.repo_id);
-  } catch (e) {
-    flash((e as Error).message);
-  }
-}
-onMounted(loadRepo);
-watch(() => [props.task.id, props.needs.kind], loadRepo);
+const repoQ = useQuery(computed(() => ({ ...repoQuery(props.task.repo_id), enabled: props.needs.kind !== 'edit' })));
+const repo = computed(() => repoQ.data.value ?? null);
+watch(
+  () => repoQ.error.value,
+  (e) => e && flash(e.message),
+);
 
 const confirmHost = ref(false);
 
@@ -36,7 +33,7 @@ const host = () => props.needs.items[0] ?? '';
 // Allow the host on the repo, then retry the task.
 const allow = () =>
   run(async () => {
-    const r = repo.value ?? (await api.repo(props.task.repo_id));
+    const r = repo.value ?? (await queryClient.fetchQuery(repoQuery(props.task.repo_id)));
     await api.updateRepo(r.id, { network: withHost(r.network, host()) });
     await api.retry(props.task.id);
   });

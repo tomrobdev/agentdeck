@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue';
-import { type PlanStep, type TaskPlan, ago, api } from '../../api';
+import { computed, nextTick, ref } from 'vue';
+import { useQuery } from '@tanstack/vue-query';
+import { type PlanStep, type TaskPlan, ago, planHtmlQuery } from '../../api';
 import { type ModeKey, mode } from '../../platform/theme';
 
 // One plan attached to the task: its steps and how far they got, and the whole page on request.
@@ -48,36 +49,21 @@ function toggle(i: number) {
 }
 
 const full = ref(false);
-const page = ref<string | null>(null);
+// Keyed by updated_at, so a run that rewrites the page reads it again, and only while it is showing.
+const pageQ = useQuery(computed(() => ({ ...planHtmlQuery(props.taskId, props.plan.id, props.plan.updated_at), enabled: full.value })));
 // Rebuilt when the mode changes, so the open plan switches at once (the frame reloads, so it returns to the top).
-const html = computed(() => (page.value === null ? null : withBaseStyle(page.value, mode.value)));
-const error = ref('');
+const html = computed(() => (pageQ.data.value ? withBaseStyle(pageQ.data.value.html, mode.value) : null));
+const error = computed(() => (pageQ.error.value ? `Couldn't load the plan: ${pageQ.error.value.message}` : ''));
 const frame = ref<HTMLIFrameElement | null>(null);
 let scrollTo: string | null = null;
 
-async function load() {
-  try {
-    page.value = (await api.planHtml(props.taskId, props.plan.id)).html;
-    error.value = '';
-  } catch (e) {
-    error.value = `Couldn't load the plan: ${(e as Error).message}`;
-  }
-}
-// The page changed (a run rewrote it): drop the old copy, and reload it if it's showing.
-watch(
-  () => [props.plan.id, props.plan.updated_at],
-  () => {
-    page.value = null;
-    if (full.value) load();
-  },
-);
-
 async function show(stepId: string | null = null) {
+  const wasShowing = full.value;
   full.value = stepId ? true : !full.value;
   if (!full.value) return;
   scrollTo = stepId;
-  if (page.value === null) await load();
-  else await nextTick().then(onFrameLoad);
+  // A frame that is already up doesn't reload, so scroll it now; a new one scrolls when it loads.
+  if (wasShowing && html.value !== null) await nextTick().then(onFrameLoad);
 }
 
 function onFrameLoad() {
