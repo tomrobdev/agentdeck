@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { type TaskSummary, ago } from '../../api';
-import { type BoardMove, type Group, type StatusGroup, boardMove, unblocksOf, waitsOnText } from '../../lib/taskView';
+import { type BoardMove, type Group, type StatusGroup, boardMove, canReview, unblocksOf, waitsOnText } from '../../lib/taskView';
 import MarkDoneDialog from '../task/MarkDoneDialog.vue';
 import AutoMergeMark from '../ui/AutoMergeMark.vue';
 import PriorityIcon from '../ui/PriorityIcon.vue';
@@ -9,7 +9,7 @@ import StatusIcon from '../ui/StatusIcon.vue';
 
 // Columns are the status groups. A drop is allowed only where it is a real lifecycle event.
 const props = defineProps<{ groups: Group[]; selected: number | null; show: { repo: boolean; pr: boolean } }>();
-const emit = defineEmits<{ open: [id: number]; select: [id: number]; move: [kind: BoardMove, id: number] }>();
+const emit = defineEmits<{ open: [id: number]; select: [id: number]; move: [kind: BoardMove, id: number]; merge: [id: number] }>();
 
 const dragging = ref<TaskSummary | null>(null);
 const over = ref<string | null>(null);
@@ -78,7 +78,7 @@ const LABELS: Record<BoardMove, string> = {
         <article
           v-for="t in g.tasks"
           :key="t.id"
-          class="cursor-pointer rounded-md border bg-panel px-2.5 py-2"
+          class="group cursor-pointer rounded-md border bg-panel px-2.5 py-2"
           :class="[t.id === selected ? 'border-accent' : 'border-border', dragging?.id === t.id ? 'opacity-50' : '']"
           :draggable="canDrag(t)"
           :title="canDrag(t) ? '' : 'A running task can only be stopped from its page'"
@@ -112,6 +112,9 @@ const LABELS: Record<BoardMove, string> = {
             <span v-if="t.plan_unfinished" class="chip" title="The run left linked plan steps unfinished">steps unfinished</span>
             <span v-if="t.source === 'planner'" class="chip">planner</span>
             <span class="ml-auto text-sm text-muted">{{ ago(t.updated_at) }}</span>
+          </div>
+          <div v-if="canReview(t)" class="mt-1.5 gap-1" :class="t.id === selected ? 'flex' : 'hidden group-hover:flex'" @click.stop>
+            <button class="btn-mini" title="Merge (m)" @click="emit('merge', t.id)">Merge</button>
           </div>
         </article>
       </div>
