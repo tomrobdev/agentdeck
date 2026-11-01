@@ -8,8 +8,24 @@ import PriorityIcon from '../ui/PriorityIcon.vue';
 import StatusIcon from '../ui/StatusIcon.vue';
 
 // Columns are the status groups. A drop is allowed only where it is a real lifecycle event.
-const props = defineProps<{ groups: Group[]; selected: number | null; show: { repo: boolean; pr: boolean } }>();
-const emit = defineEmits<{ open: [id: number]; select: [id: number]; move: [kind: BoardMove, id: number]; merge: [id: number] }>();
+const props = defineProps<{
+  groups: Group[];
+  selected: number | null;
+  show: { repo: boolean; pr: boolean };
+  /** Tasks whose branch is being synced from the queue. */
+  syncing?: number[];
+}>();
+const emit = defineEmits<{
+  open: [id: number];
+  select: [id: number];
+  move: [kind: BoardMove, id: number];
+  merge: [id: number];
+  mergeAll: [ids: number[]];
+}>();
+
+/** The PRs the Review column's "Merge all" would merge, less the ones syncing. */
+const mergeable = (g: Group) =>
+  g.key === 'review' ? g.tasks.filter((t) => canReview(t) && !props.syncing?.includes(t.id)).map((t) => t.id) : [];
 
 const dragging = ref<TaskSummary | null>(null);
 const over = ref<string | null>(null);
@@ -18,7 +34,7 @@ const over = ref<string | null>(null);
 const moves = computed<Record<string, BoardMove | null>>(() =>
   Object.fromEntries(props.groups.map((g) => [g.key, dragging.value ? boardMove(dragging.value, g.key as StatusGroup) : null])),
 );
-const canDrag = (t: TaskSummary) => t.status !== 'running' && t.status !== 'cancel_requested';
+const canDrag = (t: TaskSummary) => t.status !== 'running' && t.status !== 'cancel_requested' && !props.syncing?.includes(t.id);
 
 function onDragStart(e: DragEvent, t: TaskSummary) {
   dragging.value = t;
@@ -52,6 +68,7 @@ const LABELS: Record<BoardMove, string> = {
   retry: 'Drop to retry',
   cancel: 'Drop to cancel',
   mark_done: 'Drop to mark done',
+  merge: 'Drop to merge',
 };
 </script>
 
@@ -69,9 +86,17 @@ const LABELS: Record<BoardMove, string> = {
       @dragleave="over === g.key && (over = null)"
       @drop.prevent="onDrop(g.key)"
     >
-      <header class="flex gap-2 px-3 pt-2.5 pb-1.5 font-semibold">
+      <header class="flex items-center gap-2 px-3 pt-2.5 pb-1.5 font-semibold">
         <span>{{ g.label }}</span>
         <span class="muted">{{ g.tasks.length }}</span>
+        <button
+          v-if="mergeable(g).length"
+          class="btn-mini ml-auto font-normal"
+          title="Merge every pull request in this column, each with its task's method"
+          @click="emit('mergeAll', mergeable(g))"
+        >
+          Merge all
+        </button>
       </header>
       <div v-if="moves[g.key]" class="px-3 pb-1.5 text-sm text-accent">{{ LABELS[moves[g.key]!] }}</div>
       <div class="flex flex-col gap-1.5 overflow-y-auto px-2 pb-2.5">
@@ -101,6 +126,7 @@ const LABELS: Record<BoardMove, string> = {
               >PR {{ t.pr_state ?? 'open' }}</span
             >
             <AutoMergeMark :view="t.auto_merge_view" />
+            <span v-if="syncing?.includes(t.id)" class="chip chip-accent">syncing…</span>
             <span v-if="t.waiting" class="chip">{{ waitsOnText(t) ?? 'stuck' }}</span>
             <span v-if="unblocksOf(t).length" class="chip"
               >unblocks

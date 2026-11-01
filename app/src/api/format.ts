@@ -1,5 +1,5 @@
 // How the dashboard words what the daemon reports: times, durations, waits and the daemon's state.
-import type { AutoMergeCheck, LiveView, Run, StartWait, Status } from './types.ts';
+import type { AutoMergeCheck, LiveView, Run, StartWait, Status, SyncResult } from './types.ts';
 
 /** What a queued task waits for, in a few words, for chips and callouts. */
 export function describeWait(h: StartWait): string {
@@ -23,6 +23,22 @@ export function describeWait(h: StartWait): string {
 export function autoMergeLine(c: AutoMergeCheck): string {
   if (c.verdict === 'merge') return 'on; merges on the next PR refresh';
   return `${c.verdict === 'wait' ? 'on; waiting: ' : 'needs you: '}${c.reasons.join('; ')}`;
+}
+
+/** What a sync of a task's branch came to, in a sentence. Where the push went is the caller's to add. */
+export function syncLine(r: Pick<SyncResult, 'outcome' | 'files' | 'reason'>): string {
+  switch (r.outcome) {
+    case 'resolved':
+      return `Resolved conflicts in ${r.files.length} ${r.files.length === 1 ? 'file' : 'files'}.`;
+    case 'clean':
+      return 'Synced with the base branch.';
+    case 'up_to_date':
+      return 'The branch is already up to date.';
+    case 'blocked':
+      return `Blocked: ${r.reason ?? 'the conflicts could not be settled'}`;
+    default:
+      return r.reason ?? r.outcome;
+  }
 }
 
 /** "Tue 14:00" style, for when a wait ends. */

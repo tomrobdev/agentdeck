@@ -21,7 +21,7 @@ import { lastLine } from '../../domain/text.ts';
 import { isSyncing } from '../sync.ts';
 import { warnStuckDependents } from './dependencies.ts';
 import { newLinks } from './links.ts';
-import { ActionError, object, refuse, requireTask, requireTaskRepo, text, whole } from '../input.ts';
+import { ActionError, flag, object, refuse, requireTask, requireTaskRepo, text, whole } from '../input.ts';
 import { closePullRequest } from '../pull-request/pull-requests.ts';
 
 /** Step ids as the CLI types them (a,b) or the API sends them (an array); null when none are named. */
@@ -70,9 +70,12 @@ export async function addTask(
     after?: number[] | string;
     plan_path?: string;
     plan_steps?: string[] | string;
+    /** File it as a proposal, waiting for a person to approve it, instead of queueing it. */
+    propose?: boolean;
   },
 ): Promise<Task> {
   const body = object(input);
+  const propose = flag(body, 'propose');
   const prompt = text(body, 'prompt', { empty: true });
   if (!prompt) throw new ActionError('a prompt is required');
   const title = text(body, 'title', { empty: true });
@@ -103,6 +106,7 @@ export async function addTask(
     links,
     plan_path: plan_path || null,
     plan_steps: plan_path && steps ? JSON.stringify(steps) : null,
+    status: propose ? 'proposed' : 'queued',
   });
 }
 

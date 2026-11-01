@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { type MergeResult, type TaskSummary, api } from '../../api';
+import { type MergeResult, type TaskSummary, api, syncLine } from '../../api';
 import { useActions } from '../../composables/useActions';
 import { type BulkAction, bulkActions, idRange } from '../../lib/bulk';
 import BulkMergeDialog from '../task/BulkMergeDialog.vue';
@@ -12,6 +12,7 @@ import { go, route } from '../../router';
 import {
   type BoardMove,
   type Filters,
+  type PersonEvent,
   applyFilters,
   canReview,
   emptyFilters,
@@ -26,10 +27,11 @@ import DisplayMenu, { type Display } from './DisplayMenu.vue';
 import FilterBar from './FilterBar.vue';
 import GraphView from './GraphView.vue';
 import ListView from './ListView.vue';
+import TaskPeek from './TaskPeek.vue';
 
 const props = defineProps<{ tasks: TaskSummary[] }>();
 const selected = defineModel<number | null>('selected', { required: true });
-const emit = defineEmits<{ open: [id: number]; act: [kind: BoardMove, id: number]; newTask: [] }>();
+const emit = defineEmits<{ open: [id: number]; act: [kind: PersonEvent, id: number]; newTask: [] }>();
 
 const display = ref<Display>(
   loadSetting<Display>('display', {
@@ -106,7 +108,7 @@ function step(by: number) {
 }
 
 // The merge confirm, opened from a row's button or `m`. After a merge the selection moves to the next row.
-const { refresh, flash } = useActions();
+const { refresh, flash, run, busy } = useActions();
 const merging = ref<{ id: number; next: number | null } | null>(null);
 function startMerge(id: number) {
   const list = order.value;
@@ -121,8 +123,54 @@ async function onMerged(result: MergeResult) {
   if (result.cleanup_error) flash(`Merged, but cleanup failed: ${result.cleanup_error}`);
 }
 
+// Space opens the selected task beside the list (list view only). The panel follows the selection; its width is remembered.
+const peek = ref(false);
+const peeking = computed(() => peek.value && display.value.mode === 'list' && selected.value !== null);
+const PEEK_MIN = 320;
+const peekWidth = ref(Math.max(PEEK_MIN, loadSetting<number>('peekWidth', 520)));
+function startResize(down: PointerEvent) {
+  const startX = down.clientX;
+  const startW = peekWidth.value;
+  const move = (e: PointerEvent) => {
+    peekWidth.value = Math.round(Math.min(Math.max(startW + startX - e.clientX, PEEK_MIN), window.innerWidth - 320));
+  };
+  const up = () => {
+    window.removeEventListener('pointermove', move);
+    window.removeEventListener('pointerup', up);
+    saveSetting('peekWidth', peekWidth.value);
+  };
+  window.addEventListener('pointermove', move);
+  window.addEventListener('pointerup', up);
+}
+
+// A PR in review moves on from its row: Merge (or a drop on Done) opens the merge confirm, Sync brings the base into its
+// branch. A sync that conflicts starts a resolve run, which takes minutes, so the row says it is syncing until it ends.
+const syncing = ref<number[]>([]);
+async function sync(id: number) {
+  if (syncing.value.includes(id)) return;
+  syncing.value = [...syncing.value, id];
+  let done = '';
+  try {
+    const ok = await run(async () => {
+      const r = await api.sync(id);
+      done = `#${id}: ${syncLine(r)}${r.push_error ? ` Could not push: ${r.push_error}` : ''}`;
+    });
+    if (ok) flash(done);
+  } finally {
+    syncing.value = syncing.value.filter((s) => s !== id);
+  }
+}
+function act(kind: BoardMove | 'sync', id: number) {
+  if (kind === 'merge') startMerge(id);
+  else if (kind === 'sync') sync(id);
+  else emit('act', kind, id);
+}
+/** "Merge all" on the Review group: the bulk merge confirm, for every PR in review that isn't syncing. */
+function mergeAll(ids: number[]) {
+  bulkMerging.value = props.tasks.filter((t) => ids.includes(t.id) && !syncing.value.includes(t.id));
+}
+
 // Bulk selection, in the list only: `x` or shift-click picks, and the bar offers what every picked task allows.
-const { run, busy } = useActions();
 const picked = ref<number[]>([]);
 const anchor = ref<number | null>(null);
 const pickedTasks = computed(() => props.tasks.filter((t) => picked.value.includes(t.id)));
@@ -180,8 +228,16 @@ useHotkeys({
   ArrowDown: () => step(1),
   k: () => step(-1),
   ArrowUp: () => step(-1),
+  ' ': () => {
+    if (display.value.mode !== 'list') return;
+    if (selected.value === null && order.value.length) selected.value = order.value[0].id;
+    peek.value = !peek.value;
+  },
   x: () => display.value.mode === 'list' && selected.value !== null && pick(selected.value, false),
-  Escape: clearPicked,
+  Escape: () => {
+    if (picked.value.length) clearPicked();
+    else if (peek.value) peek.value = false;
+  },
   Enter: () => selected.value !== null && emit('open', selected.value),
   a: () => {
     const t = selectedTask();
@@ -218,60 +274,81 @@ useHotkeys({
       <DisplayMenu v-model="display" />
     </div>
 
-    <p v-if="!shown.length && hasFilters(filters)" class="muted px-4 py-6">
-      Nothing matches these filters.
-      <button class="btn-ghost text-accent underline" @click="filters = emptyFilters()">Clear filters</button>
-    </p>
-    <ListView
-      v-else-if="display.mode === 'list'"
-      :groups="groups"
-      :group-by="display.groupBy"
-      :collapsed="display.collapsed"
-      :selected="selected"
-      :picked="picked"
-      :show="display.show"
-      :show-empty="display.showEmpty"
-      @toggle="toggleGroup"
-      @pick="pick"
-      @select="selected = $event"
-      @open="emit('open', $event)"
-      @act="(kind, id) => emit('act', kind, id)"
-      @merge="startMerge"
-    />
-    <GraphView
-      v-else-if="display.mode === 'graph'"
-      :all="tasks"
-      :shown="shown"
-      :selected="selected"
-      :show-finished="!!display.showFinished"
-      @select="selected = $event"
-      @open="emit('open', $event)"
-    />
-    <BoardView
-      v-else
-      :groups="groups"
-      :selected="selected"
-      :show="display.show"
-      @select="selected = $event"
-      @open="emit('open', $event)"
-      @move="(kind, id) => emit('act', kind, id)"
-      @merge="startMerge"
-    />
-    <BulkBar
-      v-if="picked.length && display.mode === 'list'"
-      :count="picked.length"
-      :actions="bar"
-      :busy="busy"
-      @act="bulkAct"
-      @clear="clearPicked"
-    />
+    <div class="flex min-h-0 flex-1">
+      <div class="flex min-h-0 min-w-0 flex-1 flex-col">
+        <p v-if="!shown.length && hasFilters(filters)" class="muted px-4 py-6">
+          Nothing matches these filters.
+          <button class="btn-ghost text-accent underline" @click="filters = emptyFilters()">Clear filters</button>
+        </p>
+        <ListView
+          v-else-if="display.mode === 'list'"
+          :groups="groups"
+          :group-by="display.groupBy"
+          :collapsed="display.collapsed"
+          :selected="selected"
+          :picked="picked"
+          :show="display.show"
+          :show-empty="display.showEmpty"
+          :syncing="syncing"
+          @toggle="toggleGroup"
+          @pick="pick"
+          @select="selected = $event"
+          @open="emit('open', $event)"
+          @act="act"
+          @merge="startMerge"
+          @merge-all="mergeAll"
+        />
+        <GraphView
+          v-else-if="display.mode === 'graph'"
+          :all="tasks"
+          :shown="shown"
+          :selected="selected"
+          :show-finished="!!display.showFinished"
+          @select="selected = $event"
+          @open="emit('open', $event)"
+        />
+        <BoardView
+          v-else
+          :groups="groups"
+          :selected="selected"
+          :show="display.show"
+          :syncing="syncing"
+          @select="selected = $event"
+          @open="emit('open', $event)"
+          @move="act"
+          @merge="startMerge"
+          @merge-all="mergeAll"
+        />
+        <BulkBar
+          v-if="picked.length && display.mode === 'list'"
+          :count="picked.length"
+          :actions="bar"
+          :busy="busy"
+          @act="bulkAct"
+          @clear="clearPicked"
+        />
+      </div>
+      <template v-if="peeking">
+        <div
+          class="w-1 flex-none cursor-col-resize bg-border hover:bg-accent"
+          role="separator"
+          aria-orientation="vertical"
+          title="Drag to resize"
+          @pointerdown="startResize"
+        />
+        <div class="flex min-h-0 flex-none flex-col border-l border-border" :style="{ width: `${peekWidth}px` }">
+          <TaskPeek :id="selected!" @open="emit('open', selected!)" @close="peek = false" />
+        </div>
+      </template>
+    </div>
     <footer class="muted flex justify-between gap-3 border-t border-border px-4 py-[5px] text-sm">
       <span
         >{{ shown.length }}<template v-if="shown.length !== tasks.length"> of {{ tasks.length }}</template> tasks</span
       >
       <span class="max-sm:hidden"
-        ><kbd>j</kbd><kbd>k</kbd> move · <kbd>↵</kbd> open · <kbd>a</kbd> approve · <kbd>r</kbd> retry · <kbd>m</kbd> merge ·<kbd>v</kbd>
-        list/board/graph · <kbd>x</kbd> select · <kbd>c</kbd> new · <kbd>/</kbd> search · <kbd>⌘K</kbd> commands</span
+        ><kbd>j</kbd><kbd>k</kbd> move · <kbd>␣</kbd> peek · <kbd>↵</kbd> open · <kbd>a</kbd> approve · <kbd>r</kbd> retry ·
+        <kbd>m</kbd> merge ·<kbd>v</kbd> list/board/graph · <kbd>x</kbd> select · <kbd>c</kbd> new · <kbd>/</kbd> search ·
+        <kbd>⌘K</kbd> commands</span
       >
     </footer>
     <BulkMergeDialog v-if="bulkMerging" :tasks="bulkMerging" @close="bulkMerging = null" @done="onBulkMerged" />

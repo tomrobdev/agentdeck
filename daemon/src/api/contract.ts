@@ -307,6 +307,8 @@ export interface NewTask {
   after?: number[];
   plan_path?: string;
   plan_steps?: string[];
+  /** File it as a proposal, waiting for approval, instead of queueing it. */
+  propose?: boolean;
 }
 
 /** POST /api/tasks/:id */
@@ -478,7 +480,8 @@ export interface AutoMergeResult {
 
 /** POST /api/tasks/:id/merge */
 export interface MergeRequest {
-  method: MergeMethod;
+  /** Left out: the task's method, then the repo's. */
+  method?: MergeMethod;
   delete_branch: boolean;
 }
 
@@ -488,6 +491,17 @@ export interface MergeResult {
   /** Set when the merge went through but removing the branch or worktree did not. */
   cleanup_error?: string;
   task: TaskDetail;
+}
+
+/** POST /api/tasks/merge: merge these tasks' PRs, each with its own method, deleting the branches. */
+export interface MergeAllRequest {
+  ids: number[];
+}
+
+export interface MergeAllResult {
+  merged: { id: number; method: MergeMethod; unblocked: number[]; cleanup_error?: string }[];
+  /** The PRs left open, each with why it couldn't merge. */
+  skipped: { id: number; reason: string }[];
 }
 
 /** What a sync of a task's branch came to (POST /api/tasks/:id/resolve). */

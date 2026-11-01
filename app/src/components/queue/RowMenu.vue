@@ -4,7 +4,7 @@ import { type LinkKind, type TaskSummary, api } from '../../api';
 import { useActions } from '../../composables/useActions';
 import { openExternal, useCopy } from '../../platform/native';
 import {
-  type BoardMove,
+  type PersonEvent,
   MODELS,
   PRIORITY_LEVELS,
   branchName,
@@ -17,7 +17,7 @@ import {
 
 // The menu a row opens on right-click, the context-menu key or ⇧F10: the task's usual actions and properties.
 const props = defineProps<{ task: TaskSummary; x: number; y: number }>();
-const emit = defineEmits<{ close: []; open: [id: number]; act: [kind: BoardMove, id: number]; merge: [id: number] }>();
+const emit = defineEmits<{ close: []; open: [id: number]; act: [kind: PersonEvent, id: number]; merge: [id: number] }>();
 const { run, flash } = useActions();
 const { copy } = useCopy();
 
@@ -26,7 +26,7 @@ const section = ref<'priority' | 'model' | 'link' | null>(null);
 const linkTo = ref('');
 const editable = computed(() => canEdit(props.task));
 
-const LABELS: Record<BoardMove, string> = {
+const LABELS: Record<PersonEvent, string> = {
   approve: 'Approve',
   reject: 'Reject',
   retry: 'Retry',

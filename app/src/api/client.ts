@@ -11,6 +11,7 @@ import type {
   FileContent,
   FilePatch,
   FileRef,
+  MergeAllResult,
   MergePreview,
   MergeRequest,
   MergeResult,
@@ -109,6 +110,8 @@ export const api = {
   closePr: (id: number) => call<TaskDetail>(`/api/tasks/${id}/close-pr`, { method: 'POST' }),
   mergePreview: (id: number) => call<MergePreview>(`/api/tasks/${id}/merge`),
   merge: (id: number, body: MergeRequest) => call<MergeResult>(`/api/tasks/${id}/merge`, { method: 'POST', json: body }),
+  /** Merge these tasks' PRs, each with its own method, deleting the branches; the ones left open come back with why. */
+  mergeAll: (ids: number[]) => call<MergeAllResult>('/api/tasks/merge', { method: 'POST', json: { ids } }),
   /** Let the daemon merge the task's PR on its own (true), not (false), or follow the repo (null). */
   autoMerge: (id: number, body: AutoMergeRequest) => call<AutoMergeResult>(`/api/tasks/${id}/auto-merge`, { method: 'POST', json: body }),
   /** Merge the base branch into the task's branch; a conflict starts a claude run, so this can take minutes. */
