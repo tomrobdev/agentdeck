@@ -1,33 +1,34 @@
 // Plans attached to tasks: the HTML as written, parsed into steps when read.
-import type { DatabaseSync } from 'node:sqlite';
+import { and, asc, eq, notInArray, sql } from 'drizzle-orm';
 import { type PlanSource, type TaskPlan, parsePlan } from '../domain/plan/plan.ts';
+import type { Orm } from './orm.ts';
 import { NOW, atomically } from './sql.ts';
+import { taskPlans } from './tables.ts';
+import type { DatabaseSync } from 'node:sqlite';
 
-interface PlanRow {
-  id: number;
-  task_id: number;
-  name: string;
-  source: PlanSource;
-  html: string;
-  created_at: string;
-  updated_at: string;
-}
+type PlanRow = typeof taskPlans.$inferSelect;
 
 /** A row as the API shows it. A row that no longer parses (it always did when saved) reads as untitled. */
 function toPlan({ html, ...row }: PlanRow): TaskPlan {
-  return { ...row, ...(parsePlan(html) ?? { version: '1', title: 'Untitled plan', summary: null, steps: [] }) };
+  return {
+    ...row,
+    source: row.source as PlanSource,
+    ...(parsePlan(html) ?? { version: '1', title: 'Untitled plan', summary: null, steps: [] }),
+  };
 }
 
-export function planStore(db: DatabaseSync) {
+export function planStore(db: DatabaseSync, orm: Orm) {
   /** Insert or replace by name; updated_at moves only when the HTML changed. */
   const upsert = (task_id: number, name: string, source: PlanSource, html: string) =>
-    db
-      .prepare(
-        `INSERT INTO task_plans (task_id, name, source, html) VALUES (?, ?, ?, ?)
-         ON CONFLICT (task_id, name) DO UPDATE SET source = excluded.source, html = excluded.html, updated_at = ${NOW}
-         WHERE task_plans.html IS NOT excluded.html OR task_plans.source IS NOT excluded.source`,
-      )
-      .run(task_id, name, source, html);
+    orm
+      .insert(taskPlans)
+      .values({ task_id, name, source, html })
+      .onConflictDoUpdate({
+        target: [taskPlans.task_id, taskPlans.name],
+        set: { source: sql`excluded.source`, html: sql`excluded.html`, updated_at: sql.raw(NOW) },
+        setWhere: sql`${taskPlans.html} IS NOT excluded.html OR ${taskPlans.source} IS NOT excluded.source`,
+      })
+      .run();
 
   return {
     savePlan(task_id: number, name: string, source: PlanSource, html: string): void {
@@ -38,18 +39,24 @@ export function planStore(db: DatabaseSync) {
       atomically(db, () => {
         for (const p of plans) upsert(task_id, p.name, 'branch', p.html);
         const keep = plans.map((p) => p.name);
-        db.prepare(
-          `DELETE FROM task_plans WHERE task_id = ? AND source = 'branch' AND name NOT IN (${keep.map(() => '?').join(', ')})`,
-        ).run(task_id, ...keep);
+        orm
+          .delete(taskPlans)
+          .where(
+            and(eq(taskPlans.task_id, task_id), eq(taskPlans.source, 'branch'), keep.length ? notInArray(taskPlans.name, keep) : undefined),
+          )
+          .run();
       });
     },
     /** The task's plans, oldest first, without their HTML. */
     plansForTask(task_id: number): TaskPlan[] {
-      return (db.prepare('SELECT * FROM task_plans WHERE task_id = ? ORDER BY id').all(task_id) as unknown as PlanRow[]).map(toPlan);
+      return orm.select().from(taskPlans).where(eq(taskPlans.task_id, task_id)).orderBy(asc(taskPlans.id)).all().map(toPlan);
     },
     planHtml(task_id: number, id: number): string | undefined {
-      return (db.prepare('SELECT html FROM task_plans WHERE task_id = ? AND id = ?').get(task_id, id) as { html: string } | undefined)
-        ?.html;
+      return orm
+        .select({ html: taskPlans.html })
+        .from(taskPlans)
+        .where(and(eq(taskPlans.task_id, task_id), eq(taskPlans.id, id)))
+        .get()?.html;
     },
   };
 }

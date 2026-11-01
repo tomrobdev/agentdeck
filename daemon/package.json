@@ -18,7 +18,8 @@
     "test:crash": "node scripts/crash-test.mjs",
     "test:watch": "AGENTDECK_NO_NOTIFY=1 node --test --watch test/",
     "db:studio": "drizzle-kit studio",
-    "db:check": "node scripts/db-check.ts"
+    "db:check": "node scripts/db-check.ts",
+    "db:generate": "node scripts/db-generate.ts"
   },
   "dependencies": {
     "drizzle-orm": "1.0.0-rc.5"

@@ -1,11 +1,14 @@
 // Key-value settings: pause flag, budget, concurrency, notification and planner options.
+import { eq } from 'drizzle-orm';
 import type { DatabaseSync } from 'node:sqlite';
 import { DEFAULTS } from '../config.ts';
 import { NOTIFY_KINDS, type NotifyKind, type NotifySettings } from '../domain/notification.ts';
 import type { PlannerSettings } from '../domain/planner/proposals.ts';
 import type { Settings } from '../domain/settings/settings.ts';
 import { BUDGET_KEYS, type Budget, DEFAULT_BUDGET } from '../domain/usage/governor.ts';
+import type { Orm } from './orm.ts';
 import { atomically } from './sql.ts';
+import { settings } from './tables.ts';
 
 /** What each setting reads as until someone sets it. The daemon starts paused until someone resumes it. */
 export const SETTING_DEFAULTS = {
@@ -25,15 +28,17 @@ export const SETTING_DEFAULTS = {
   ...Object.fromEntries(BUDGET_KEYS.map((k) => [k, String(DEFAULT_BUDGET[k])])),
 } as Record<string, string>;
 
-export function settingsStore(db: DatabaseSync) {
-  const get = (key: string): string => {
-    const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key) as { value: string } | undefined;
-    return row?.value ?? SETTING_DEFAULTS[key] ?? '';
-  };
+export function settingsStore(db: DatabaseSync, orm: Orm) {
+  const get = (key: string): string =>
+    orm.select({ value: settings.value }).from(settings).where(eq(settings.key, key)).get()?.value ?? SETTING_DEFAULTS[key] ?? '';
   const set = (key: string, value: string): void => {
-    db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(key, value);
+    orm.insert(settings).values({ key, value }).onConflictDoUpdate({ target: settings.key, set: { value } }).run();
   };
-  const budget = (): Budget => Object.fromEntries(BUDGET_KEYS.map((k) => [k, Number(get(k))])) as unknown as Budget;
+  const budget = (): Budget => {
+    const out = { ...DEFAULT_BUDGET };
+    for (const k of BUDGET_KEYS) out[k] = Number(get(k));
+    return out;
+  };
   const notifySettings = (): NotifySettings => ({
     desktop: get('notify_desktop') === '1',
     events: get('notify_events').split(',').filter(Boolean) as NotifyKind[],

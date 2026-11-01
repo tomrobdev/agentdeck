@@ -1,32 +1,41 @@
 // Planner runs: one row per planner claude process.
-import type { DatabaseSync } from 'node:sqlite';
+import { count, desc, eq, isNull, sql } from 'drizzle-orm';
 import type { PlannerRun } from '../domain/planner/proposals.ts';
+import type { Orm } from './orm.ts';
 import { NOW } from './sql.ts';
+import { plannerRuns, repos } from './tables.ts';
 
-export function plannerRunStore(db: DatabaseSync) {
+export function plannerRunStore(orm: Orm) {
   return {
     startPlannerRun(repo_id: number, log_path: string): number {
-      db.prepare(`UPDATE repos SET planned_at = ${NOW} WHERE id = ?`).run(repo_id);
-      return Number(db.prepare('INSERT INTO planner_runs (repo_id, log_path) VALUES (?, ?)').run(repo_id, log_path).lastInsertRowid);
+      orm
+        .update(repos)
+        .set({ planned_at: sql.raw(NOW) })
+        .where(eq(repos.id, repo_id))
+        .run();
+      return Number(orm.insert(plannerRuns).values({ repo_id, log_path }).run().lastInsertRowid);
     },
     setPlannerRunPid(id: number, pid: number): void {
-      db.prepare('UPDATE planner_runs SET pid = ? WHERE id = ?').run(pid, id);
+      orm.update(plannerRuns).set({ pid }).where(eq(plannerRuns.id, id)).run();
     },
     finishPlannerRun(id: number, outcome: string, proposed: number, note: string | null): void {
-      db.prepare(`UPDATE planner_runs SET ended_at = ${NOW}, outcome = ?, proposed = ?, note = ? WHERE id = ?`).run(
-        outcome,
-        proposed,
-        note,
-        id,
-      );
+      orm
+        .update(plannerRuns)
+        .set({ ended_at: sql.raw(NOW), outcome, proposed, note })
+        .where(eq(plannerRuns.id, id))
+        .run();
     },
     countRunningPlannerRuns(): number {
-      return Number((db.prepare('SELECT COUNT(*) AS n FROM planner_runs WHERE ended_at IS NULL').get() as { n: number }).n);
+      return orm.select({ n: count() }).from(plannerRuns).where(isNull(plannerRuns.ended_at)).get()?.n ?? 0;
     },
     plannerRuns(repo_id?: number, limit = 10): PlannerRun[] {
-      return (repo_id
-        ? db.prepare('SELECT * FROM planner_runs WHERE repo_id = ? ORDER BY id DESC LIMIT ?').all(repo_id, limit)
-        : db.prepare('SELECT * FROM planner_runs ORDER BY id DESC LIMIT ?').all(limit)) as unknown as PlannerRun[];
+      return orm
+        .select()
+        .from(plannerRuns)
+        .where(repo_id ? eq(plannerRuns.repo_id, repo_id) : undefined)
+        .orderBy(desc(plannerRuns.id))
+        .limit(limit)
+        .all();
     },
   };
 }
