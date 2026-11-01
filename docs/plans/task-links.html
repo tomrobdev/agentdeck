@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="en" data-agentdeck-plan="1">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Task links and the dependency graph</title>
+    <style>
+      :root {
+        --bg: #f6f6f4;
+        --panel: #ffffff;
+        --panel-2: #f0f0ed;
+        --border: #e2e2dd;
+        --text: #1d1d1b;
+        --muted: #6d6d68;
+        --accent: #c2622d;
+        --ok: #2e8b57;
+        --warn: #c98a10;
+        --bad: #c94141;
+        --info: #2f6fdb;
+        --code-bg: #f3f2ee;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme='light']) {
+          --bg: #161615;
+          --panel: #1f1f1d;
+          --panel-2: #272725;
+          --border: #33332f;
+          --text: #ecebe6;
+          --muted: #9a9993;
+          --accent: #e07a43;
+          --ok: #57b583;
+          --warn: #e0ab3c;
+          --bad: #e36d6d;
+          --info: #6c9bf0;
+          --code-bg: #1a1a18;
+        }
+      }
+      :root[data-theme='dark'] {
+        --bg: #161615;
+        --panel: #1f1f1d;
+        --panel-2: #272725;
+        --border: #33332f;
+        --text: #ecebe6;
+        --muted: #9a9993;
+        --accent: #e07a43;
+        --ok: #57b583;
+        --warn: #e0ab3c;
+        --bad: #e36d6d;
+        --info: #6c9bf0;
+        --code-bg: #1a1a18;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font:
+          15px/1.6 -apple-system,
+          BlinkMacSystemFont,
+          'SF Pro Text',
+          'Segoe UI',
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      .wrap {
+        display: grid;
+        grid-template-columns: 220px minmax(0, 1fr);
+        gap: 40px;
+        max-width: 1160px;
+        margin: 0 auto;
+        padding: 40px 24px 80px;
+      }
+      nav.toc {
+        position: sticky;
+        top: 24px;
+        align-self: start;
+        font-size: 13px;
+      }
+      nav.toc a {
+        display: block;
+        color: var(--muted);
+        text-decoration: none;
+        padding: 3px 0;
+      }
+      nav.toc a:hover {
+        color: var(--text);
+      }
+      nav.toc b {
+        display: block;
+        margin: 14px 0 4px;
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      h1 {
+        font-size: 30px;
+        line-height: 1.2;
+        margin: 0 0 6px;
+        letter-spacing: -0.01em;
+      }
+      h2 {
+        font-size: 21px;
+        margin: 56px 0 6px;
+        padding-top: 8px;
+        letter-spacing: -0.005em;
+      }
+      h3 {
+        font-size: 15px;
+        margin: 22px 0 6px;
+      }
+      p,
+      li {
+        max-width: 72ch;
+      }
+      .lede {
+        color: var(--muted);
+        font-size: 16px;
+        margin: 0 0 24px;
+      }
+      code,
+      pre {
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        font-size: 12.5px;
+      }
+      code {
+        background: var(--code-bg);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 0 4px;
+      }
+      pre {
+        background: var(--code-bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px 14px;
+        overflow-x: auto;
+        line-height: 1.45;
+      }
+      pre code {
+        background: none;
+        border: 0;
+        padding: 0;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 14px;
+        margin: 8px 0 4px;
+      }
+      th,
+      td {
+        text-align: left;
+        vertical-align: top;
+        padding: 7px 10px;
+        border-bottom: 1px solid var(--border);
+      }
+      th {
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 16px 18px;
+        margin: 14px 0;
+      }
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 6px 0 12px;
+      }
+      .tag {
+        font-size: 12px;
+        padding: 1px 8px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        background: var(--panel);
+      }
+      .tag.ok {
+        color: var(--ok);
+        border-color: color-mix(in srgb, var(--ok) 45%, transparent);
+      }
+      .tag.warn {
+        color: var(--warn);
+        border-color: color-mix(in srgb, var(--warn) 45%, transparent);
+      }
+      .tag.info {
+        color: var(--info);
+        border-color: color-mix(in srgb, var(--info) 45%, transparent);
+      }
+      .decision {
+        border-left: 3px solid var(--accent);
+      }
+      .decision h3 {
+        margin-top: 0;
+      }
+      .grid2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      ul.check {
+        list-style: none;
+        padding-left: 0;
+      }
+      ul.check li::before {
+        content: '☐ ';
+        color: var(--muted);
+      }
+      a {
+        color: var(--accent);
+      }
+      @media (max-width: 860px) {
+        .wrap {
+          grid-template-columns: 1fr;
+          gap: 0;
+          padding: 24px 16px 60px;
+        }
+        nav.toc {
+          position: static;
+          margin-bottom: 16px;
+        }
+        .grid2 {
+          grid-template-columns: 1fr;
+        }
+        table {
+          display: block;
+          overflow-x: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <nav class="toc">
+        <b>Plan</b>
+        <a href="#why">Why</a>
+        <a href="#today">What exists today</a>
+        <a href="#words">The words</a>
+        <a href="#rules">The rules</a>
+        <a href="#decisions">Decisions</a>
+        <b>Steps</b>
+        <a href="#model">1 · Links in the domain and the database</a>
+        <a href="#use-cases">2 · Linking, the CLI and API, the merge gate</a>
+        <a href="#panel">3 · Dependencies on the task page</a>
+        <a href="#graph">4 · The graph view</a>
+        <b>After</b>
+        <a href="#queue">How it is queued</a>
+        <a href="#open">Settled</a>
+        <a href="#later">Not in this plan</a>
+      </nav>
+
+      <main>
+        <h1>Task links and the dependency graph</h1>
+        <p class="lede" data-plan-summary>
+          Replace the single <code>after_task</code> with links: a task can depend on any number of others, and each link is one of two
+          kinds. <strong>Builds on</strong> holds the task's start until the other is done and merged (today's <code>--after</code>).
+          <strong>After</strong> lets it run at once and only holds its merge. Links refuse cycles, a stuck task makes everything that
+          builds on it stuck with the root named, and the dashboard shows each task's dependencies and a graph of the whole queue. Written
+          2026-11-01. Stacked branches come later and only change how a builds-on link runs.
+        </p>
+
+        <h2 id="why">Why</h2>
+        <p>
+          With more than one slot, linked work is serialised more than it needs to be. A task can wait on only one other, and every link
+          means "wait for the merge", even when the later task only has to land second and could run alongside. There is also no way to see
+          a chain: the dashboard shows one "After #n" row and an "unblocks" chip, and nothing for a task that waits two links away on a task
+          that failed.
+        </p>
+
+        <h2 id="today">What exists today</h2>
+        <table>
+          <tr>
+            <th>Area</th>
+            <th>Now</th>
+          </tr>
+          <tr>
+            <td>Model</td>
+            <td>
+              <code>tasks.after_task</code> (migration 5), one per task.
+              <code>dependencyState</code> (<code>domain/task/dependency.ts</code>) says none, met, waiting or stuck.
+              <code>DEPENDENCY_MET</code> and <code>NOT_WAITING</code> in <code>db/tasks.ts</code> mirror it in SQL for the claim.
+            </td>
+          </tr>
+          <tr>
+            <td>Use cases</td>
+            <td>
+              <code>application/task/dependencies.ts</code>: <code>waitingFor</code>, <code>unblocksOf</code> and
+              <code>warnStuckDependents</code> (a notification when a dependency gets stuck). <code>addTask</code> takes one
+              <code>after_task</code>, and <code>mergeTask</code> returns the tasks the merge releases.
+            </td>
+          </tr>
+          <tr>
+            <td>Surfaces</td>
+            <td>
+              <code>agentdeck add --after &lt;task&gt;</code>. The task views carry <code>waiting</code> and <code>unblocks</code>. The
+              sidebar has an After row; the list and board have an "unblocks" chip; the merge dialog lists what it unblocks.
+            </td>
+          </tr>
+          <tr>
+            <td>In flight</td>
+            <td>
+              The Drizzle port (<code>docs/plans/drizzle.html</code>, tasks #69 and #70) is rewriting <code>db/tasks.ts</code>. Step 1
+              starts after #70 merges and writes the new store in Drizzle's query builder.
+            </td>
+          </tr>
+        </table>
+
+        <h2 id="words">The words</h2>
+        <p>Added to CLAUDE.md's Domain language with this plan:</p>
+        <div class="card">
+          <p>
+            A <strong>link</strong> is one task depending on another, of one of two kinds. <strong>Builds on:</strong> B uses A's code, so B
+            starts once A is done and merged, and B's branch includes A's work; if A is rejected, B is stuck. <strong>After:</strong> B only
+            has to land after A, so B runs any time on its own branch from the base, and only its merge waits for A's. A task's links are
+            its <strong>dependencies</strong>; the tasks linked to it are its <strong>dependents</strong>. Not a task's
+            <strong>Needs</strong>, which are what a blocked worker asked for.
+          </p>
+        </div>
+        <p>
+          In code: <code>LinkKind = 'builds_on' | 'after'</code>. In the CLI: <code>--builds-on</code> and <code>--after</code>. In the UI:
+          "Builds on #12" and "After #12", solid and dashed edges.
+        </p>
+
+        <h2 id="rules">The rules</h2>
+        <table>
+          <tr>
+            <th></th>
+            <th>Builds on A</th>
+            <th>After A</th>
+          </tr>
+          <tr>
+            <td>B may start</td>
+            <td>
+              when A is <em>met</em>: done and merged, done with no PR in a <code>pr_mode off</code> repo, or marked done by a person with
+              no open PR (today's rule)
+            </td>
+            <td>at once</td>
+          </tr>
+          <tr>
+            <td>B may merge</td>
+            <td>yes (A is merged by the time B starts)</td>
+            <td>
+              when A has <em>landed or gone</em>: met as on the left, or cancelled, its PR closed, or deleted. While A could still land
+              (proposed, queued, running, blocked, failed, done with a PR not merged) B's merge waits, by hand and by auto-merge.
+            </td>
+          </tr>
+          <tr>
+            <td>A rejected (cancelled, PR closed)</td>
+            <td>B is stuck: it waits, and a person decides (retry A, unlink, or cancel B)</td>
+            <td>B carries on; its merge is free</td>
+          </tr>
+          <tr>
+            <td>A failed or blocked</td>
+            <td>B is stuck; a retry of A releases it</td>
+            <td>B's merge waits, and the merge dialog says why</td>
+          </tr>
+        </table>
+        <ul>
+          <li>B starts when <em>every</em> builds-on link is met, and merges when <em>every</em> after link has landed or gone.</li>
+          <li>
+            <strong>Stuck spreads down.</strong> B is stuck when a builds-on dependency is stuck itself, or is waiting on something stuck.
+            The reason names the root: "waits on #10 (via #12), which failed". Only builds-on links carry it; an after link never stops a
+            start.
+          </li>
+          <li>
+            <strong>No cycles,</strong> across both kinds: a cycle of after links would hold every merge in it forever. Linking refuses a
+            link that would close one, and a task can't link to itself.
+          </li>
+          <li>
+            Links between repos are allowed, as <code>after_task</code> allows today; A's own repo's <code>pr_mode</code> decides "met".
+          </li>
+        </ul>
+
+        <h2 id="decisions">Decisions</h2>
+        <table>
+          <tr>
+            <th>Decision</th>
+            <th>Why</th>
+          </tr>
+          <tr>
+            <td>A <code>task_links</code> table; <code>after_task</code> is copied into it and no longer read</td>
+            <td>
+              Many links per task need a table. The column stays (shipped migrations aren't edited, and SQLite column drops need a rebuild)
+              but nothing writes or reads it after the migration; <code>db/tables.ts</code> marks it so.
+            </td>
+          </tr>
+          <tr>
+            <td>Today's <code>--after</code> becomes <code>--builds-on</code>; <code>--after</code> now means the looser kind</td>
+            <td>
+              The words should match the Domain language. You are the only user, so the flag flips in one go rather than through an alias.
+              The delegate skill and <code>cli/help.ts</code> change with it. Old links copy over as builds on, so nothing already queued
+              changes.
+            </td>
+          </tr>
+          <tr>
+            <td>The kind is chosen when linking; builds on is the default in the dashboard's picker</td>
+            <td>
+              Only the person (or later the planner) knows whether B uses A's code. Mislabelling as after is the costly error (B runs
+              without A's code), so the safe kind is the default.
+            </td>
+          </tr>
+          <tr>
+            <td>The after gate is a merge problem, not a warning</td>
+            <td>
+              "B lands after A" should hold for a person's merge as well as auto-merge. It goes into <code>mergeFindings</code> as a new
+              kind, so the merge dialog, <code>agentdeck merge</code> and auto-merge all read it. Unlinking is the way to merge anyway.
+            </td>
+          </tr>
+          <tr>
+            <td>The graph is drawn by hand in SVG, no library</td>
+            <td>
+              A queue holds tens of tasks. A layered layout (columns by depth, order within a column by the average position of its
+              dependencies) is about 100 lines in <code>app/src/lib/</code>, is unit-testable and adds no dependency.
+              <code>elkjs</code> only if that proves messy.
+            </td>
+          </tr>
+        </table>
+
+        <section data-plan-step id="model" data-status="todo">
+          <h2>1 · Links in the domain and the database</h2>
+          <p><strong>Domain</strong> (<code>domain/task/link.ts</code>, replacing <code>dependency.ts</code>):</p>
+          <ul>
+            <li><code>LinkKind</code>, <code>Link { task_id, on, kind }</code>.</li>
+            <li>
+              <code>linkState(link, dependency)</code>: for builds on, today's met / waiting / stuck; for after, landed-or-gone / holding.
+            </li>
+            <li>
+              <code>startState(task, links, lookup)</code>: none, met, waiting on ids, or stuck with the root's reason, following builds-on
+              links down (with a visited set).
+            </li>
+            <li><code>mergeHold(links, lookup)</code>: the after links still holding the merge, each with a reason.</li>
+            <li><code>linkError(task, on, links)</code>: self link, already linked, or a cycle (reachability over both kinds).</li>
+          </ul>
+          <p><strong>Database:</strong> migration 18:</p>
+          <pre><code>-- 18: task links (docs/plans/task-links.html). kind is builds_on | after. after_task is copied in and no longer read.
+CREATE TABLE task_links (
+  task_id INTEGER NOT NULL REFERENCES tasks(id),
+  on_task INTEGER NOT NULL REFERENCES tasks(id),
+  kind TEXT NOT NULL DEFAULT 'builds_on',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (task_id, on_task)
+);
+CREATE INDEX task_links_on ON task_links(on_task);
+INSERT INTO task_links (task_id, on_task, kind) SELECT id, after_task, 'builds_on' FROM tasks WHERE after_task IS NOT NULL;</code></pre>
+          <p>
+            Store (in Drizzle, after the port): <code>linksOf(id)</code>, <code>dependentsOf(id, kind?)</code>, <code>addLink</code> and
+            <code>removeLink</code>, and the claim's "not waiting" condition over every builds-on link (<code>NOT EXISTS</code> an unmet
+            one), still mirroring the domain's met rule. Repo deletion removes the repo's tasks' links. <code>db/tables.ts</code>,
+            <code>migrations.lock</code> and the domain types follow, as for every migration.
+          </p>
+          <ul data-plan-done>
+            <li>Unit tests for every row of the rules table, stuck spreading two links down with the root named, and each cycle case.</li>
+            <li>
+              An existing <code>after_task</code> becomes a builds-on link, and a task with two builds-on links is claimed only once both
+              are met.
+            </li>
+            <li>The SQL "not waiting" rule agrees with <code>startState</code> (the claim-agreement test covers links).</li>
+            <li><code>pnpm check</code> and <code>pnpm db:check</code> pass.</li>
+          </ul>
+        </section>
+
+        <section data-plan-step id="use-cases" data-status="todo">
+          <h2>2 · Linking, the CLI and API, the merge gate</h2>
+          <ul>
+            <li>
+              <strong>Use cases</strong> (<code>application/task/links.ts</code>): <code>linkTasks(db, id, { on, kind })</code> and
+              <code>unlinkTasks(db, id, on)</code>, refusing through <code>linkError</code>. <code>addTask</code> takes
+              <code>builds_on: number[]</code> and <code>after: number[]</code>. <code>waitingFor</code> and <code>unblocksOf</code> work
+              over links, and <code>warnStuckDependents</code> names every dependent that becomes stuck, transitively.
+            </li>
+            <li>
+              <strong>Merge gate:</strong> <code>mergeFindings</code> gets a <code>lands_after</code> kind, a problem ("lands after #12,
+              which is still running"). Auto-merge maps it to wait. A merge that lands A asks for a PR re-read, so B's gate lifts on the
+              next refresh.
+            </li>
+            <li>
+              <strong>CLI:</strong> <code>agentdeck add … --builds-on 12,14 --after 9</code>;
+              <code>agentdeck link 15 --builds-on 12</code> or <code>--after 12</code>; <code>agentdeck unlink 15 12</code>.
+              <code>show</code> and <code>ls</code> print both kinds. <code>cli/help.ts</code> and the delegate skill (<code>--after</code>
+              becomes <code>--builds-on</code>) change with it.
+            </li>
+            <li>
+              <strong>API:</strong> <code>POST /api/tasks/:id/links</code> with <code>{ on, kind }</code>,
+              <code>DELETE /api/tasks/:id/links/:on</code>. The task views carry <code>links: { on, kind, state }[]</code> and
+              <code>dependents: { id, kind }[]</code>, with <code>waiting</code> and <code>unblocks</code> kept for the queue chips.
+              <code>NewTask</code> takes both lists. <code>contract-check.ts</code> covers the new use cases.
+            </li>
+          </ul>
+          <ul data-plan-done>
+            <li>Adding, linking and unlinking work from the CLI and the API, and a cycle or self link is refused with a reason.</li>
+            <li>A task after another runs at once, and its PR can't merge (dialog, CLI, auto-merge) until the other lands or is gone.</li>
+            <li>A failed task notifies once for all the tasks it leaves stuck, two links down included.</li>
+            <li><code>pnpm check</code> passes.</li>
+          </ul>
+        </section>
+
+        <section data-plan-step id="panel" data-status="todo">
+          <h2>3 · Dependencies on the task page</h2>
+          <p>
+            A Dependencies card on the task's Overview, replacing the sidebar's After row: "Builds on" and "After" lists of the task's
+            links, and "Waiting on this" for its dependents, each a row with the status icon, <code>#id</code>, title and its state (met,
+            waiting, stuck: reason, holding the merge). Rows open the task. An Add link control takes a <code>#id</code> or title search and
+            a kind (builds on by default), and each link has a remove button. The merge dialog's Unblocks line covers both kinds, and the
+            queue chips read "waits on #12, #14".
+          </p>
+          <ul data-plan-done>
+            <li>A task's links and dependents show with their state, and links can be added and removed from the card.</li>
+            <li>A refused link (cycle, self) shows its reason in the card.</li>
+            <li><code>pnpm typecheck</code> passes for the app.</li>
+          </ul>
+        </section>
+
+        <section data-plan-step id="graph" data-status="todo">
+          <h2>4 · The graph view</h2>
+          <p>
+            A third queue mode next to list and board (<code>QueueView.vue</code>, the <code>v</code> shortcut cycles through all three):
+          </p>
+          <ul>
+            <li>
+              <strong>Layout</strong> in <code>app/src/lib/graph.ts</code> (pure, unit-tested): the tasks that are linked or have dependents
+              form the graph, unlinked tasks stay out. Layer by longest path from a root, order within a layer by the mean position of its
+              dependencies, a few sweeps to cut crossings.
+            </li>
+            <li>
+              <strong>Drawing:</strong> SVG nodes as small cards (status icon, <code>#id</code>, title, repo), coloured by status; builds-on
+              edges solid, after edges dashed; a stuck task and everything it holds outlined in the blocked colour. Click opens the task,
+              hover highlights its chain up and down.
+            </li>
+            <li>
+              <strong>Filters:</strong> the queue's repo and search filters apply. Chains whose every task is done and merged hide unless
+              "Show finished" is on.
+            </li>
+          </ul>
+          <ul data-plan-done>
+            <li>Layout tests: a chain, a fan-out, a diamond and two separate graphs lay out without overlap.</li>
+            <li>The view shows a real queue's links with both edge styles, opens a task on click, and highlights a stuck subgraph.</li>
+            <li><code>pnpm typecheck</code> passes for the app.</li>
+          </ul>
+        </section>
+
+        <h2 id="queue">How it is queued</h2>
+        <table>
+          <tr>
+            <th>Task</th>
+            <th>Steps</th>
+            <th>Link</th>
+            <th>Model, turns</th>
+          </tr>
+          <tr>
+            <td>Links: model and store</td>
+            <td><code>model</code></td>
+            <td>after #70 merges (today's <code>--after</code>, a builds-on link)</td>
+            <td>sonnet, 120</td>
+          </tr>
+          <tr>
+            <td>Links: use cases, CLI, API and merge gate</td>
+            <td><code>use-cases</code></td>
+            <td>after task 1</td>
+            <td>sonnet, 120</td>
+          </tr>
+          <tr>
+            <td>Links: Dependencies card</td>
+            <td><code>panel</code></td>
+            <td>after task 2</td>
+            <td>sonnet, 60</td>
+          </tr>
+          <tr>
+            <td>Links: graph view</td>
+            <td><code>graph</code></td>
+            <td>after task 2 (parallel with task 3)</td>
+            <td>sonnet, 80</td>
+          </tr>
+        </table>
+        <p>
+          The CLAUDE.md change and this plan are committed to <code>main</code> first. The delegate skill's <code>.claude/</code> edit for
+          the flag flip is made in this session when task 2 merges, since workers can't edit <code>.claude/</code>.
+        </p>
+
+        <h2 id="open">Settled</h2>
+        <ul>
+          <li>Links between repos stay allowed, as today, but get no work of their own: nothing needs them yet.</li>
+          <li>The graph shows chains only; tasks without links stay in the list and board.</li>
+        </ul>
+
+        <h2 id="later">Not in this plan</h2>
+        <ul>
+          <li>
+            Stacked branches: a builds-on dependent starts from A's branch once A is done, with its PR on A's branch until A merges. It
+            changes only how a builds-on link runs, and waits until the time between done and merged is measured.
+          </li>
+          <li>The planner proposing links between its proposals, and approving a chain at once.</li>
+          <li>Priority flowing up to dependencies, "unblocks the most" as a claim tie-breaker, and cancel cascading to dependents.</li>
+          <li>Mapping Plane's blocked-by relations to builds-on links, with the ticket source.</li>
+        </ul>
+      </main>
+    </div>
+  </body>
+</html>
