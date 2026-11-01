@@ -325,6 +325,8 @@ stateDiagram-v2
 
 | Method | Path                           | Use case                                           |
 | ------ | ------------------------------ | -------------------------------------------------- |
+| GET    | `/api/daemon/health`           | `actions.daemonReport`                             |
+| POST   | `/api/daemon/restart-now`      | `actions.restartNow`                               |
 | POST   | `/api/daemon/restart`          | `actions.restartDaemon`                            |
 | GET    | `/api/daemon`                  | `actions.daemonState`                              |
 | GET    | `/api/events`                  |                                                    |
