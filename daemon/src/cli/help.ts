@@ -33,6 +33,7 @@ Tasks
                       [--after <tasks>]         run at once; the PR waits to merge until those tasks have landed
                       [--plan <path>] [--steps a,b]   carry out steps of a plan on the base branch (docs/plans/x.html);
                                                       without --steps, every step not yet done
+                      [--propose]               file it as a proposal that waits for \`agentdeck approve\`, like the planner's
   agentdeck edit <id> [--title t] [--prompt p] [--priority n] [--model m] [--max-turns n] [--attempts n]
                       [--plan <path>] [--steps a,b]   change the plan link ("" clears it)
                                   for proposed, queued, blocked or failed tasks

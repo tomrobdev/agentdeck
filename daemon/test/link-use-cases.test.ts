@@ -62,6 +62,24 @@ test('addTask takes builds_on and after as lists or comma text, and refuses a mi
   db.close();
 });
 
+test('addTask with propose files a proposal that keeps its links until it is approved', async () => {
+  const { db, add } = setup();
+  const a = add();
+  const t = await addTask(db, { repo: 'demo', prompt: 'x', builds_on: [a.id], propose: true });
+  assert.equal(t.status, 'proposed');
+  assert.equal(t.source, 'manual');
+  assert.equal(db.applyEvent(t.id, { type: 'approve' })?.status, 'queued');
+  assert.deepEqual(
+    (await taskDetail(db, t.id)).links.map((l) => [l.on, l.kind]),
+    [[a.id, 'builds_on']],
+  );
+  await assert.rejects(
+    () => addTask(db, { repo: 'demo', prompt: 'x', propose: 'yes' as unknown as boolean }),
+    /propose must be true or false/,
+  );
+  db.close();
+});
+
 test('a task after another runs at once', async () => {
   const { db, add } = setup();
   const a = add();

@@ -302,6 +302,8 @@ export interface NewTask {
   after?: number[];
   plan_path?: string;
   plan_steps?: string[];
+  /** File it as a proposal, waiting for approval, instead of queueing it. */
+  propose?: boolean;
 }
 
 /** POST /api/tasks/:id */

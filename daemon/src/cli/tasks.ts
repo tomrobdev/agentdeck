@@ -37,16 +37,18 @@ export const taskCommands: Record<string, Command> = {
       after: flags.after,
       plan_path: flags.plan,
       plan_steps: flags.steps,
+      propose: flags.propose,
     });
     const { waiting, links } = await actions.taskDetail(db, t.id);
     console.log(
-      `queued task #${t.id} on ${repoName(t.repo_id)} (${t.model}, ${t.max_turns} turns max${links
+      `${t.status === 'proposed' ? 'proposed' : 'queued'} task #${t.id} on ${repoName(t.repo_id)} (${t.model}, ${t.max_turns} turns max${links
         .map(fmtLink)
         .map((l) => `, ${l}`)
         .join('')})`,
     );
     if (waiting?.stuck) console.log(`note: ${waiting.stuck}, so this task won't start until #${waiting.on} is retried`);
-    if (db.isPaused()) console.log('note: the daemon is paused; run `agentdeck resume` to start working');
+    if (t.status === 'proposed') console.log(`note: it waits for \`agentdeck approve ${t.id}\` before it can run`);
+    else if (db.isPaused()) console.log('note: the daemon is paused; run `agentdeck resume` to start working');
   },
   link: async ({ db, flags, rest }) => {
     const id = taskId(rest[0]);
