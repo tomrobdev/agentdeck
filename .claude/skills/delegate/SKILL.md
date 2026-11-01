@@ -46,7 +46,7 @@ Anything bigger than a one-line change gets a plan first. Settle it with the use
 agentdeck add "<prompt>" --repo <repo> --title "<title>" [--model sonnet] [--max-turns n] [--attempts n] [--after <task>]
 ```
 
-- **Prompt:** write it in these sections, in this order, each headed by its name. The planner writes its proposals the same way (`PROMPT_SECTIONS` in `daemon/src/domain/planner/plan.ts`).
+- **Prompt:** write it in these sections, in this order, each headed by its name. The planner writes its proposals the same way (`PROMPT_SECTIONS` in `daemon/src/domain/task/task.ts`).
 
   ```
   Goal: what the task achieves, in a sentence or two.
