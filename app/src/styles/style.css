@@ -337,6 +337,10 @@
   .s-cancelled {
     --c: var(--cancelled);
   }
+  /* A run a daemon restart cut off: its task went back to the queue, and the next run resumes it. */
+  .s-interrupted {
+    --c: var(--queued);
+  }
   .s-running .dot,
   .dot.s-running {
     animation: pulse 1.4s ease-in-out infinite;

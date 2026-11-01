@@ -22,6 +22,7 @@ import { type AnySQLiteColumn, alias } from 'drizzle-orm/sqlite-core';
 import type { DatabaseSync } from 'node:sqlite';
 import { DEFAULTS } from '../config.ts';
 import type { MergeMethod } from '../domain/pull-request/merge.ts';
+import { INTERRUPTED } from '../domain/run/run.ts';
 import { MAX_RESTARTS, type TaskEvent, type TaskStatus, fromStatuses, nextStatus, transition } from '../domain/task/lifecycle.ts';
 import type { Link, LinkKind } from '../domain/task/link.ts';
 import type { PrEvent, TaskEventRow, TaskEventType } from '../domain/task/history.ts';
@@ -470,12 +471,13 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     /**
      * After a crash, anything still marked running was orphaned: put it back in the queue,
      * unless restarts keep interrupting it. Stop its claude process (`reapOrphans`) first.
+     * Its unfinished runs end `interrupted`, keeping their session, so the next run resumes it.
      * Returns how many were requeued and the ids of those failed.
      */
     recoverOrphans(): { requeued: number; failed: number[] } {
       orm
         .update(runs)
-        .set({ ended_at: sql.raw(NOW), outcome: 'failed', result_text: 'daemon restarted' })
+        .set({ ended_at: sql.raw(NOW), outcome: INTERRUPTED, result_text: 'daemon restarted' })
         .where(isNull(runs.ended_at))
         .run();
       orm
