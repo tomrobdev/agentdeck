@@ -2,6 +2,7 @@
 import { PLAN_DIR, parsePlanWithText } from '../plan/plan.ts';
 import { PR_SUMMARY_FORMAT } from '../pull-request/summary.ts';
 import { ALWAYS_DISALLOWED_TOOLS } from '../repo/tools.ts';
+import { type ReviewPrompt, reviewPromptBlock } from '../review/address.ts';
 import { withoutUnscopedFileTools } from './sandbox.ts';
 import { type Task, leftoversMessage, planStepIds } from '../task/task.ts';
 import { INTERRUPTED, type Run } from './run.ts';
@@ -31,6 +32,7 @@ ${
 - If you can't finish because the environment lacks something, say exactly what on the STATUS line instead of working around it: "STATUS: BLOCKED: NEEDS deps: <packages>", "NEEDS host: <hosts>" or "NEEDS edit: <files>" (a file you may not edit, such as one under .claude/). Never install packages yourself.
 - If you cannot finish (missing info, needs a human decision, blocked by permissions), stop and explain why.
 - When you finish with STATUS: DONE, your final message is the pull request body. Write it as ${PR_SUMMARY_FORMAT}
+  If the prompt lists review comments (c1, c2…), add one line per comment after the pull request body: "ANSWER c1: <what you did, or why not>". Each answer is a single line. AgentDeck shows it on the comment.
   Then the STATUS line. A STATUS: BLOCKED message is free-form.
 - End your final message with exactly one line: "STATUS: DONE" or "STATUS: BLOCKED: <one-line reason>".`;
 }
@@ -76,16 +78,23 @@ export function planPromptBlock(task: Pick<Task, 'plan_steps'>, plan: PromptPlan
 
 /**
  * `reviewNote` is what the person asked to change when they sent the task back from review. `plan` is the plan the task
- * carries out, if any: its steps go after the task's prompt.
+ * carries out, if any: its steps go after the task's prompt. `review` is the review being addressed, comment by comment;
+ * it takes the place of `reviewNote` (which holds the same comments, flattened).
  */
-export function buildPrompt(task: Task, previousRuns: Run[], reviewNote: string | null = null, plan: PromptPlan | null = null): string {
+export function buildPrompt(
+  task: Task,
+  previousRuns: Run[],
+  reviewNote: string | null = null,
+  plan: PromptPlan | null = null,
+  review: ReviewPrompt | null = null,
+): string {
   const last = previousRuns.filter((r) => r.kind !== 'resolve').at(-1);
   const base = plan ? `${task.prompt}\n\n${planPromptBlock(task, plan)}` : task.prompt;
   if (!last) return base;
   // A restart's run was cut off, not finished: it has no verdict or final message to pass on.
   const interrupted = last.outcome === INTERRUPTED;
   return [
-    reviewNote ? `Changes requested in review:\n${reviewNote}\n` : '',
+    review ? `${reviewPromptBlock(review)}\n` : reviewNote ? `Changes requested in review:\n${reviewNote}\n` : '',
     base,
     '',
     interrupted
