@@ -7,6 +7,7 @@ import * as daemonRoutes from './routes/daemon.ts';
 import * as filesRoutes from './routes/files.ts';
 import * as plansRoutes from './routes/plans.ts';
 import * as reposRoutes from './routes/repos.ts';
+import * as reviewsRoutes from './routes/reviews.ts';
 import * as settingsRoutes from './routes/settings.ts';
 import * as tasksRoutes from './routes/tasks.ts';
 
@@ -32,7 +33,9 @@ export function startApi(options: ApiOptions): Promise<Server> {
     changes: options.changes ?? idleChanges,
     daemon: options.daemon ?? { info: { commit: null, started_at: new Date().toISOString() }, requestRestart: () => {} },
   };
-  const routes = [daemonRoutes, settingsRoutes, reposRoutes, tasksRoutes, filesRoutes, plansRoutes].flatMap((m) => m.routes(ctx));
+  const routes = [daemonRoutes, settingsRoutes, reposRoutes, tasksRoutes, filesRoutes, plansRoutes, reviewsRoutes].flatMap((m) =>
+    m.routes(ctx),
+  );
 
   const server = createServer((req, res) => void dispatch(routes, req, res));
   return new Promise((resolve, reject) => {
