@@ -6,6 +6,7 @@ import DependenciesCard from './DependenciesCard.vue';
 import DocumentsCard from './DocumentsCard.vue';
 import FinalMessage from './FinalMessage.vue';
 import PlanCard from './PlanCard.vue';
+import PullRequestCard from './PullRequestCard.vue';
 
 // The prompt as the description, then everything that happened, oldest first: status changes
 // (task_events) and runs. Runs stand in for claim and finish events, which they describe better.
@@ -77,6 +78,8 @@ const when = 'ml-auto text-sm text-muted';
         {{ promptOpen ? 'Show less' : 'Show all' }}
       </button>
     </article>
+
+    <PullRequestCard :task="task" :is-path="isPath" @path="(p, l) => emit('path', p, l)" />
 
     <DependenciesCard :task="task" />
 

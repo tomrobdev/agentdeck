@@ -226,11 +226,18 @@ test('task list returns summaries, pages with limit/before, and always includes 
 });
 
 test('status reports which code the daemon runs, and restart waits while work runs', async () => {
-  const info = { commit: 'abc1234def', started_at: '2026-10-19T14:02:00.000Z' };
+  const info = { commit: 'abc1234def', started_at: '2026-10-19T14:02:00.000Z', pid: 4242 };
   let requested = 0;
-  const server2 = await startApi({ db, port: 0, daemon: { info, requestRestart: () => requested++ } });
+  const reloadFacts = () => ({ changed: ['a.ts'], lastChangeAt: 0, blocked: 'the checkout is on x, not main' });
+  const server2 = await startApi({ db, port: 0, daemon: { info, requestRestart: () => requested++, reloadFacts } });
   const url = `http://127.0.0.1:${(server2.address() as AddressInfo).port}`;
   try {
+    // GET /api/daemon: the loaded commit, pid and start time next to the reload state.
+    db.setSetting('reload_on_change', '1');
+    const state = await (await fetch(`${url}/api/daemon`)).json();
+    assert.deepEqual([state.commit, state.pid, state.started_at], [info.commit, 4242, info.started_at]);
+    assert.equal(state.reload.blocked, 'the checkout is on x, not main');
+    assert.equal(state.reload.changed, 1);
     assert.deepEqual((await (await fetch(`${url}/api/status`)).json()).daemon, info);
     // The default server has no checkout to name.
     assert.equal((await (await api('/api/status')).json()).daemon.commit, null);

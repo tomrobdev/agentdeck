@@ -1,4 +1,5 @@
 // The pilot scorecard's measures (docs/pilot/scorecard.md), computed from plain run rows. Pure: no I/O.
+import { INTERRUPTED } from './run.ts';
 
 /** One work run with the status of the task it belongs to. Resolve runs are never given here. */
 export interface StatRun {
@@ -62,10 +63,10 @@ export function minutesBetween(start: string, end: string): number {
   return Number.isFinite(ms) && ms > 0 ? ms / 60_000 : 0;
 }
 
-/** The measures over a set of work runs. */
+/** The measures over a set of work runs. A run a daemon restart cut off is no verdict, so it is not a first run. */
 export function measure(rows: StatRun[]): Measures {
   const taskIds = new Set(rows.map((r) => r.task_id));
-  const firstRuns = rows.filter((r) => r.attempt === 1 && r.outcome !== null);
+  const firstRuns = rows.filter((r) => r.attempt === 1 && r.outcome !== null && r.outcome !== INTERRUPTED);
   const firstDone = firstRuns.filter((r) => r.outcome === 'done').length;
   const doneIds = new Set(rows.filter((r) => r.task_status === 'done').map((r) => r.task_id));
   const ofDone = rows.filter((r) => doneIds.has(r.task_id));

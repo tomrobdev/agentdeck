@@ -2,7 +2,17 @@
 import { nextTick, watch } from 'vue';
 import { ago, describeLive } from '../../api';
 import { openExternal } from '../../platform/native';
-import { type Group, type GroupBy, personEvents, quickRetry, readNeeds, statusLabel, unblocksOf, waitsOnText } from '../../lib/taskView';
+import {
+  type Group,
+  type GroupBy,
+  canReview,
+  personEvents,
+  quickRetry,
+  readNeeds,
+  statusLabel,
+  unblocksOf,
+  waitsOnText,
+} from '../../lib/taskView';
 import AutoMergeMark from '../ui/AutoMergeMark.vue';
 import PriorityIcon from '../ui/PriorityIcon.vue';
 import StatusIcon from '../ui/StatusIcon.vue';
@@ -27,6 +37,7 @@ const emit = defineEmits<{
   select: [id: number];
   open: [id: number];
   act: [kind: 'approve' | 'retry', id: number];
+  merge: [id: number];
 }>();
 
 // Keep the selected row in view when the keyboard moves it.
@@ -120,6 +131,7 @@ watch(
                 Approve
               </button>
               <button v-if="quickRetry(t)" class="btn-mini" title="Retry (r)" @click="emit('act', 'retry', t.id)">Retry</button>
+              <button v-if="canReview(t)" class="btn-mini" title="Merge (m)" @click="emit('merge', t.id)">Merge</button>
               <button v-if="t.pr_url" class="btn-mini" title="Open the pull request" @click="openExternal(t.pr_url)">PR ↗</button>
             </span>
             <span

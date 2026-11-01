@@ -1,9 +1,9 @@
 // The sequence every task-bound claude run shares: log, run row, settings, the process, and what its end means.
 import { createWriteStream, type WriteStream } from 'node:fs';
 import { join } from 'node:path';
-import { type ClaudeResult, type UsageWindow, runClaude } from '../../adapters/claude.ts';
+import { type ClaudeResult, type ClaudeRun, type UsageWindow, runClaude } from '../../adapters/claude.ts';
 import { rootInfo } from '../../adapters/repo-root.ts';
-import { writeSettings } from '../../adapters/run-log.ts';
+import { writeEvent, writeSettings } from '../../adapters/run-log.ts';
 import { LOG_DIR, ensureDirs } from '../../config.ts';
 import type { Db } from '../../db/index.ts';
 import type { Repo } from '../../domain/repo/repo.ts';
@@ -11,8 +11,9 @@ import { allowedTools } from '../../domain/repo/tools.ts';
 import { START_LIVE, nextLive } from '../../domain/run/live.ts';
 import { claudeArgs } from '../../domain/run/prompt.ts';
 import { parseNetwork, settingsPath, workerSettings } from '../../domain/run/sandbox.ts';
-import { type Run, type RunClass, type RunKind, classifyRun, resultFields } from '../../domain/run/run.ts';
+import { type Run, type RunClass, type RunKind, classifyRun, resultFields, resumeFailed } from '../../domain/run/run.ts';
 import type { Task } from '../../domain/task/task.ts';
+import { lastLine } from '../../domain/text.ts';
 
 /**
  * Write the sandbox and file-rule settings for a claude run in `worktree` (docs/adr/0001-worker-sandbox.md)
@@ -48,40 +49,63 @@ export interface TaskRunEnd extends OpenedRun {
   fields: Partial<Run>;
 }
 
+/** A claude session to continue instead of starting afresh, and the prompt that continues it. */
+export interface ResumeRun {
+  session: string;
+  prompt: string;
+}
+
 /**
- * Run claude on a task in `worktree`: write the run settings, start the process with the cancel, pid and usage
- * callbacks, and record a rate limit. `opened` is a run the caller opened earlier (it needed the log before claude).
- * The caller decides what the end means and calls `finishRun`. Throws if the settings cannot be written.
+ * Run claude on a task in `worktree`: write the run settings, start the process with the cancel, pid, session and
+ * usage callbacks, and record a rate limit. `opened` is a run the caller opened earlier (it needed the log before
+ * claude). With `resume`, claude continues that session; if it cannot (the session is gone), a fresh claude with
+ * `prompt` takes over in the same run. The caller decides what the end means and calls `finishRun`. Throws if the
+ * settings cannot be written.
  */
 export async function startTaskRun(
   db: Db,
   task: Task,
-  opts: { kind: RunKind; repo: Repo; worktree: string; prompt: string; opened?: OpenedRun },
+  opts: { kind: RunKind; repo: Repo; worktree: string; prompt: string; opened?: OpenedRun; resume?: ResumeRun },
 ): Promise<TaskRunEnd> {
   const opened = opts.opened ?? openTaskRun(db, task, opts.kind);
   const { runId, logPath, log } = opened;
-  const { repo, worktree } = opts;
+  const { repo, worktree, resume } = opts;
   const settings = runSettings(repo, worktree, logPath);
   // Local to this run, not module state: the live state goes to the run row, where the queue reads it.
   let live = START_LIVE;
-  const run = await runClaude({
-    args: claudeArgs(task, allowedTools(repo, rootInfo(worktree)), opts.prompt, repo.test_cmd, settings),
-    cwd: worktree,
-    log,
-    env: { AGENTDECK_TASK_ID: String(task.id) },
-    shouldCancel: () => db.getTask(task.id)?.status === 'cancel_requested',
-    onSpawn: (pid) => db.setRunPid(runId, pid),
-    onUsage: usageRecorder(db),
-    onEvent: (ev) => {
-      const next = nextLive(live, ev);
-      if (next.turns === live.turns && next.tool === live.tool) return;
-      live = next;
-      db.setRunLive(runId, live.turns, live.tool);
-    },
-  });
+  const allowed = allowedTools(repo, rootInfo(worktree));
+  const start = (prompt: string, session: string | null): Promise<ClaudeRun> =>
+    runClaude({
+      args: claudeArgs(task, allowed, prompt, repo.test_cmd, settings, session),
+      cwd: worktree,
+      log,
+      env: { AGENTDECK_TASK_ID: String(task.id) },
+      shouldCancel: () => db.getTask(task.id)?.status === 'cancel_requested',
+      onSpawn: (pid) => db.setRunPid(runId, pid),
+      onSession: (id) => db.setRunSession(runId, id),
+      onUsage: usageRecorder(db),
+      onEvent: (ev) => {
+        const next = nextLive(live, ev);
+        if (next.turns === live.turns && next.tool === live.tool) return;
+        live = next;
+        db.setRunLive(runId, live.turns, live.tool);
+      },
+    });
+  let run: ClaudeRun;
+  if (resume) {
+    writeEvent(log, { type: 'agentdeck_resume', session_id: resume.session });
+    run = await start(resume.prompt, resume.session);
+    if (resumeFailed(run)) {
+      const why = run.stderr.trim() ? lastLine(run.stderr) : `claude exited with code ${run.exitCode}`;
+      writeEvent(log, { type: 'agentdeck_resume_failed', session_id: resume.session, text: `${why}; starting afresh` });
+      run = await start(opts.prompt, null);
+    }
+  } else {
+    run = await start(opts.prompt, null);
+  }
   const end = classifyRun(run);
   if (end.kind === 'rate_limited') db.setRateLimitedUntil(end.until);
-  return { ...opened, end, result: run.result, fields: resultFields(run.result, run.exitCode) };
+  return { ...opened, end, result: run.result, fields: resultFields(run.result, run.exitCode, run.sessionId) };
 }
 
 /** The `onUsage` callback that stores each usage window claude reports. */

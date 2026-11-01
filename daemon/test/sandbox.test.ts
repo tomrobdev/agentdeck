@@ -7,6 +7,7 @@ import { runSettings } from '../src/application/run/claude-run.ts';
 import type { Repo } from '../src/domain/repo/repo.ts';
 import { ALWAYS_DISALLOWED_TOOLS, DEFAULT_ALLOWED_TOOLS } from '../src/domain/repo/tools.ts';
 import { claudeArgs, workerSystemPrompt } from '../src/domain/run/prompt.ts';
+import { PR_SUMMARY_FORMAT } from '../src/domain/pull-request/summary.ts';
 import { normalizeNetwork, parseNetwork, settingsPath, workerSettings, worktreeFileRules } from '../src/domain/run/sandbox.ts';
 import type { Task } from '../src/domain/task/task.ts';
 
@@ -70,6 +71,14 @@ test('the worker prompt says sandbox-only test failures are no reason to block',
   assert.match(prompt, /not a reason to stop: fix every other failure, then finish with STATUS: DONE/);
   // Without a test command nothing reruns the tests, so a sandboxed failure can't be waved through.
   assert.doesNotMatch(workerSystemPrompt(null), /again outside it/);
+});
+
+test('the worker prompt asks for the summary format before the STATUS line', () => {
+  const prompt = workerSystemPrompt('pnpm test');
+  assert.ok(prompt.includes(PR_SUMMARY_FORMAT));
+  for (const h of ['## Overview', '## Frontend', '## Backend']) assert.ok(PR_SUMMARY_FORMAT.includes(h));
+  assert.ok(prompt.indexOf(PR_SUMMARY_FORMAT) < prompt.indexOf('End your final message with exactly one line'));
+  assert.match(prompt, /BLOCKED message is free-form/);
 });
 
 test('the settings file is written next to the run log with the repo’s sandbox settings', () => {
