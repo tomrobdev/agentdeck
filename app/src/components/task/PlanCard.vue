@@ -3,6 +3,7 @@ import { computed, nextTick, ref } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { type PlanStep, type TaskPlan, ago, planHtmlQuery } from '../../api';
 import { type ModeKey, mode } from '../../platform/theme';
+import planCss from '../../../../docs/plans/plan.css?raw';
 
 // One plan attached to the task: its steps and how far they got, and the whole page on request.
 // The page runs in a sandboxed frame with no scripts; same-origin only so we can size and scroll it.
@@ -33,11 +34,15 @@ h1 { font-size: 1.5em; } h2 { font-size: 1.15em; margin-top: 1.4em; }
 code, pre { font-family: ui-monospace, Menlo, monospace; }
 </style>`;
 }
+// A plan links plan.css, which a relative link can't reach from srcdoc: put the same file in where the link stood.
+const PLAN_CSS_LINK = /<link\b[^>]*\bhref=["']plan\.css["'][^>]*>/i;
 function withBaseStyle(page: string, m: ModeKey) {
   const style = baseStyle(m);
-  const head = /<head[^>]*>/i.exec(page);
-  if (head) return page.slice(0, head.index + head[0].length) + style + page.slice(head.index + head[0].length);
-  return page.replace(/^(\s*<!doctype[^>]*>)?/i, (doctype) => doctype + style);
+  const sheet = `<style>${planCss}</style>`;
+  const linked = PLAN_CSS_LINK.test(page) ? page.replace(PLAN_CSS_LINK, () => sheet) : page;
+  const head = /<head[^>]*>/i.exec(linked);
+  if (head) return linked.slice(0, head.index + head[0].length) + style + linked.slice(head.index + head[0].length);
+  return linked.replace(/^(\s*<!doctype[^>]*>)?/i, (doctype) => doctype + style);
 }
 
 // Steps whose done criteria are showing, by position.

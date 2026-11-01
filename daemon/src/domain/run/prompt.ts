@@ -26,6 +26,7 @@ ${
   <html data-agentdeck-plan="1">, a <title>, one <p data-plan-summary> saying what and why,
   and one <section data-plan-step id="…" data-status="todo|doing|done|blocked|skipped"> per step, its <h2> the step's title.
   A step may list its checks in <ul data-plan-done>, one <li> each.
+  Put <link rel="stylesheet" href="plan.css" /> in the <head> and add no <style> block: ${PLAN_DIR}plan.css styles every plan.
   Everything else is free HTML. Keep each step's data-status current as you work.
 - If you can't finish because the environment lacks something, say exactly what on the STATUS line instead of working around it: "STATUS: BLOCKED: NEEDS deps: <packages>", "NEEDS host: <hosts>" or "NEEDS edit: <files>" (a file you may not edit, such as one under .claude/). Never install packages yourself.
 - If you cannot finish (missing info, needs a human decision, blocked by permissions), stop and explain why.
