@@ -1,69 +1,17 @@
 // The Boundaries and Rules in CLAUDE.md, checked against the source. Each failure names the file, the line and the rule.
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { readFileSync, readdirSync } from 'node:fs';
-import { dirname, join, relative } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { join, relative } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
 import ts from 'typescript';
+import { type Source, lineOf, readSources } from '../scripts/lib/sources.ts';
 import { MIGRATIONS, migrate } from '../src/db/index.ts';
 
 const SRC = join(import.meta.dirname, '../src');
 
-interface Import {
-  spec: string;
-  /** The imported file relative to src/, or null for a package. */
-  target: string | null;
-  line: number;
-  typeOnly: boolean;
-}
-
-interface Source {
-  /** Relative to src/, e.g. `domain/task/task.ts`. */
-  path: string;
-  ast: ts.SourceFile;
-  imports: Import[];
-}
-
-function lineOf(ast: ts.SourceFile, node: ts.Node): number {
-  return ast.getLineAndCharacterOfPosition(node.getStart(ast)).line + 1;
-}
-
-const sources: Source[] = readdirSync(SRC, { recursive: true, encoding: 'utf8' })
-  .filter((f) => f.endsWith('.ts'))
-  .sort()
-  .map((path) => {
-    const ast = ts.createSourceFile(path, readFileSync(join(SRC, path), 'utf8'), ts.ScriptTarget.Latest, true);
-    return { path, ast, imports: importsOf(path, ast) };
-  });
-
-function importsOf(path: string, ast: ts.SourceFile): Import[] {
-  const out: Import[] = [];
-  const add = (node: ts.Node, spec: ts.Expression, typeOnly: boolean) => {
-    if (!ts.isStringLiteral(spec)) return;
-    const target = spec.text.startsWith('.') ? join(dirname(path), spec.text) : null;
-    out.push({ spec: spec.text, target, line: lineOf(ast, node), typeOnly });
-  };
-  const visit = (node: ts.Node) => {
-    if (ts.isImportDeclaration(node)) {
-      const clause = node.importClause;
-      const bindings = clause?.namedBindings;
-      const allTypes =
-        !!clause &&
-        (clause.isTypeOnly || (!clause.name && !!bindings && ts.isNamedImports(bindings) && bindings.elements.every((e) => e.isTypeOnly)));
-      add(node, node.moduleSpecifier, allTypes);
-    } else if (ts.isExportDeclaration(node) && node.moduleSpecifier) {
-      const clause = node.exportClause;
-      const allTypes = node.isTypeOnly || (!!clause && ts.isNamedExports(clause) && clause.elements.every((e) => e.isTypeOnly));
-      add(node, node.moduleSpecifier, allTypes);
-    } else if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword && node.arguments[0]) {
-      add(node, node.arguments[0], false);
-    }
-    ts.forEachChild(node, visit);
-  };
-  visit(ast);
-  return out;
-}
+const sources = readSources(SRC);
 
 /** The layer a file belongs to: its top folder under src/, or the file itself for `config.ts`, `daemon.ts` and `cli.ts`. */
 const layerOf = (path: string) => (path.includes('/') ? path.split('/')[0] : path);
