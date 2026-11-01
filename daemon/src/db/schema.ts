@@ -226,6 +226,9 @@ export const MIGRATIONS: Migration[] = [
   `ALTER TABLE tasks ADD COLUMN merge_requested_at TEXT;
    ALTER TABLE tasks ADD COLUMN merge_request_method TEXT;
    ALTER TABLE tasks ADD COLUMN merge_request_check TEXT;`,
+  // 24: plans live in AgentDeck, named after the task they belong to. plan_task is the task whose plan this one follows
+  // (itself when its own plan was given with --plan); plan_steps names that plan's steps. plan_path is no longer written.
+  `ALTER TABLE tasks ADD COLUMN plan_task INTEGER;`,
 ];
 
 /** Runs every step above the database's user_version in one transaction; returns how many ran. */

@@ -34,6 +34,7 @@ function task(id: number, fields: Partial<ListedTask> = {}): ListedTask {
     merge_requested_at: null,
     merge_request_method: null,
     merge_request_check: null,
+    plan_task: null,
     created_at: '2026-10-18 10:00:00',
     updated_at: '2026-10-18 10:00:00',
     waiting: null,

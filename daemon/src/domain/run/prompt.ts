@@ -1,10 +1,10 @@
 // What a worker's claude is told and allowed. Pure: no I/O.
-import { PLAN_DIR, parsePlanWithText } from '../plan/plan.ts';
+import { PLAN_FILE, parsePlanWithText } from '../plan/plan.ts';
 import { PR_SUMMARY_FORMAT } from '../pull-request/summary.ts';
 import { ALWAYS_DISALLOWED_TOOLS } from '../repo/tools.ts';
 import { type ReviewPrompt, reviewPromptBlock } from '../review/address.ts';
 import { withoutUnscopedFileTools } from './sandbox.ts';
-import { type Task, leftoversMessage, planStepIds } from '../task/task.ts';
+import { type Task, leftoversMessage } from '../task/task.ts';
 import { INTERRUPTED, type Run } from './run.ts';
 
 /**
@@ -23,11 +23,11 @@ ${
 }
 - Some commands are refused by AgentDeck's tool rules. A refusal covers only that one command: try a simpler command or another tool (Read, Glob, Grep instead of cat, find, grep), and keep working.
 - Commit your work with clear messages. Never push, never switch branches.
-- If the task asks for a plan, or is big enough to need one, write it to ${PLAN_DIR}<short-name>.html and commit it. AgentDeck reads it from these attributes:
+- If the task asks for a plan, or is big enough to need one, and the prompt gives you none, write it to ${PLAN_FILE}. AgentDeck keeps it as the task's plan after the run; git ignores that file, so never commit it or copy it elsewhere in the repo. AgentDeck reads it from these attributes:
   <html data-agentdeck-plan="1">, a <title>, one <p data-plan-summary> saying what and why,
   and one <section data-plan-step id="…" data-status="todo|doing|done|blocked|skipped"> per step, its <h2> the step's title.
   A step may list its checks in <ul data-plan-done>, one <li> each.
-  Put <link rel="stylesheet" href="plan.css" /> in the <head> and add no <style> block: ${PLAN_DIR}plan.css styles every plan.
+  Put <link rel="stylesheet" href="plan.css" /> in the <head> and add no <style> block: AgentDeck styles every plan.
   Everything else is free HTML. Keep each step's data-status current as you work.
 - If you can't finish because the environment lacks something, say exactly what on the STATUS line instead of working around it: "STATUS: BLOCKED: NEEDS deps: <packages>", "NEEDS host: <hosts>" or "NEEDS edit: <files>" (a file you may not edit, such as one under .claude/). Never install packages yourself.
 - If you cannot finish (missing info, needs a human decision, blocked by permissions), stop and explain why.
@@ -37,23 +37,28 @@ ${
 - End your final message with exactly one line: "STATUS: DONE" or "STATUS: BLOCKED: <one-line reason>".`;
 }
 
-/** The plan a run follows: its repo-relative path and its HTML from the task's branch, null when the file is missing. */
+/**
+ * The plan a run follows: its name (`112-plans-in-agentdeck.html`) and its HTML as AgentDeck stores it, null when it
+ * is gone. `steps` are the step ids the task is linked to, null for every step.
+ */
 export interface PromptPlan {
-  path: string;
+  name: string;
   html: string | null;
+  steps: string[] | null;
 }
 
 /**
- * The block after the task's prompt that carries the plan's steps: the linked steps (`task.plan_steps`, or every step
- * when none are named) that are not yet done or skipped, with their text and done criteria.
+ * The block after the task's prompt that carries the plan's steps: the linked steps (`plan.steps`, or every step when
+ * none are named) that are not yet done or skipped, with their text and done criteria. The plan itself is in
+ * PLAN_FILE, where the worker sets their statuses.
  */
-export function planPromptBlock(task: Pick<Task, 'plan_steps'>, plan: PromptPlan): string {
+export function planPromptBlock(plan: PromptPlan): string {
   const parsed = plan.html === null ? null : parsePlanWithText(plan.html);
   if (!parsed) {
-    return `The plan ${plan.path} is not on this branch (or is not a readable plan). Work from the task above.`;
+    return `The plan ${plan.name} could not be read. Work from the task above.`;
   }
-  const ids = planStepIds(task);
-  const lines = [`--- Plan: ${plan.path} ---`, parsed.plan.title];
+  const ids = plan.steps;
+  const lines = [`--- Plan: ${plan.name} (in ${PLAN_FILE}) ---`, parsed.plan.title];
   if (parsed.plan.summary) lines.push(parsed.plan.summary);
   const steps = parsed.plan.steps
     .map((step, i) => ({ step, text: parsed.texts[i] }))
@@ -71,7 +76,7 @@ export function planPromptBlock(task: Pick<Task, 'plan_steps'>, plan: PromptPlan
   }
   lines.push(
     '',
-    `Do only these steps. Set each one's data-status in ${plan.path} as you go, and commit the plan with the work. Mark a step you can't do blocked and say why inside the step.`,
+    `Do only these steps. Set each one's data-status in ${PLAN_FILE} as you go, and never commit that file: AgentDeck keeps the plan, and saves only these steps' sections from it after the run. Mark a step you can't do blocked and say why inside the step.`,
   );
   return lines.join('\n');
 }
@@ -89,7 +94,7 @@ export function buildPrompt(
   review: ReviewPrompt | null = null,
 ): string {
   const last = previousRuns.filter((r) => r.kind !== 'resolve').at(-1);
-  const base = plan ? `${task.prompt}\n\n${planPromptBlock(task, plan)}` : task.prompt;
+  const base = plan ? `${task.prompt}\n\n${planPromptBlock(plan)}` : task.prompt;
   if (!last) return base;
   // A restart's run was cut off, not finished: it has no verdict or final message to pass on.
   const interrupted = last.outcome === INTERRUPTED;

@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { createInterface } from 'node:readline/promises';
 import * as actions from '../application/actions.ts';
-import { planProgress } from '../domain/plan/plan.ts';
+import { isOwnPlanName, planProgress } from '../domain/plan/plan.ts';
 import { commentLocation } from '../domain/review/review.ts';
 import { pickRun } from '../domain/run/run.ts';
 import { TASK_STATUSES } from '../domain/task/lifecycle.ts';
@@ -13,6 +13,33 @@ import { planStepIds } from '../domain/task/task.ts';
 import { callDaemon } from './daemon-client.ts';
 import { die, taskId, fmtAutoMerge, fmtLink, fmtTask, printLog } from './format.ts';
 import type { Command } from './context.ts';
+
+/** A file's text, or exit saying why it can't be read. */
+function readText(file: string): string {
+  try {
+    return readFileSync(file, 'utf8');
+  } catch (e) {
+    return die(`can't read ${file}: ${(e as Error).message}`);
+  }
+}
+
+/**
+ * `--plan`: a task number (`112` or `#112`) links that task's plan; anything else is a plan file, read from anywhere on
+ * disk, that the task stores as its own plan. Empty clears the link (edit).
+ */
+function planFlag(value: string | undefined): { plan_task?: number | null; plan_html?: string } {
+  if (value === undefined) return {};
+  const v = value.trim();
+  if (!v) return { plan_task: null };
+  if (/^#?\d+$/.test(v)) return { plan_task: Number(v.replace('#', '')) };
+  return { plan_html: readText(v) };
+}
+
+/** The name of the plan a task follows, from the plans its detail shows. */
+function followedPlanName(t: { id: number; plan_task?: number | null; plans: { task_id: number; name: string }[] }): string | null {
+  const owner = t.plan_task ?? t.id;
+  return t.plans.find((p) => p.task_id === owner && isOwnPlanName(owner, p.name))?.name ?? null;
+}
 
 /** `approve` and `reject` share one implementation; `cmd` says which was typed. */
 const approveOrReject: Command = ({ db, cmd, rest }) => {
@@ -26,6 +53,7 @@ const approveOrReject: Command = ({ db, cmd, rest }) => {
 
 export const taskCommands: Record<string, Command> = {
   add: async ({ db, flags, rest, repoName }) => {
+    const plan = planFlag(flags.plan);
     const t = await actions.addTask(db, {
       repo: flags.repo,
       prompt: rest.join(' '),
@@ -36,17 +64,21 @@ export const taskCommands: Record<string, Command> = {
       max_attempts: flags.attempts ? Number(flags.attempts) : undefined,
       builds_on: flags['builds-on'],
       after: flags.after,
-      plan_path: flags.plan,
+      plan_task: plan.plan_task ?? undefined,
+      plan_html: plan.plan_html,
       plan_steps: flags.steps,
       propose: flags.propose,
     });
-    const { waiting, links } = await actions.taskDetail(db, t.id);
+    const detail = await actions.taskDetail(db, t.id);
+    const { waiting, links } = detail;
     console.log(
       `${t.status === 'proposed' ? 'proposed' : 'queued'} task #${t.id} on ${repoName(t.repo_id)} (${t.model}, ${t.max_turns} turns max${links
         .map(fmtLink)
         .map((l) => `, ${l}`)
         .join('')})`,
     );
+    const planName = followedPlanName(detail);
+    if (planName && t.plan_task !== null) console.log(`plan     ${planName}${t.plan_task === t.id ? '' : ` (#${t.plan_task}'s plan)`}`);
     if (waiting?.stuck) console.log(`note: ${waiting.stuck}, so this task won't start until #${waiting.on} is retried`);
     for (const w of await actions.promptWarnings(db, t.id)) console.log(`note: ${w}`);
     if (t.status === 'proposed') console.log(`note: it waits for \`agentdeck approve ${t.id}\` before it can run`);
@@ -82,7 +114,7 @@ export const taskCommands: Record<string, Command> = {
       model: flags.model,
       max_turns: num(flags['max-turns']),
       max_attempts: num(flags.attempts),
-      plan_path: flags.plan,
+      ...planFlag(flags.plan),
       plan_steps: flags.steps,
     });
     console.log(fmtTask(t, repoName(t.repo_id)));
@@ -120,14 +152,16 @@ export const taskCommands: Record<string, Command> = {
     if (t.worktree) console.log(`worktree ${t.worktree}`);
     const needs = readNeeds(t.needs);
     if (needs && t.status === 'blocked') console.log(`needs    ${needs.kind}: ${needs.items.join(' ')}`);
-    if (t.plan_path) {
+    const plan = followedPlanName(t);
+    if (plan) {
       const steps = planStepIds(t);
-      console.log(`plan     ${t.plan_path} (${steps ? `steps ${steps.join(', ')}` : 'every unfinished step'})`);
+      const whose = t.plan_task !== null && t.plan_task !== t.id ? `#${t.plan_task}'s plan, ` : '';
+      console.log(`plan     ${plan} (${whose}${steps ? `steps ${steps.join(', ')}` : 'every unfinished step'})`);
     }
     console.log(`\n${t.prompt}\n`);
-    for (const p of db.plansForTask(t.id)) {
+    for (const p of t.plans) {
       const { finished, total } = planProgress(p.steps);
-      console.log(`plan: ${p.title} (${p.name}, ${finished}/${total} steps)`);
+      console.log(`plan: ${p.title} (${p.name}${p.task_id === t.id ? '' : ` of #${p.task_id}`}, ${finished}/${total} steps)`);
     }
     for (const r of db.runsForTask(t.id)) {
       const tokens = r.input_tokens + r.output_tokens + r.cache_read_tokens + r.cache_write_tokens;
@@ -158,22 +192,12 @@ export const taskCommands: Record<string, Command> = {
     if (flags.raw) process.stdout.write(readFileSync(run.log_path, 'utf8'));
     else printLog(run.log_path);
   },
-  attach: async ({ db, rest }) => {
+  attach: ({ db, rest }) => {
+    if (rest.length !== 2) die('usage: agentdeck attach <id> <plan file>');
     const id = taskId(rest[0]);
-    const file = rest[1];
-    const read = (f: string) => {
-      try {
-        return readFileSync(f, 'utf8');
-      } catch (e) {
-        return die(`can't read ${f}: ${(e as Error).message}`);
-      }
-    };
-    const plans = file ? [actions.attachPlan(db, id, { name: file, html: read(file) })] : await actions.collectPlans(db, id);
-    if (!plans.length) console.log(`no plans on #${id}'s branch`);
-    for (const p of plans) {
-      const { finished, total } = planProgress(p.steps);
-      console.log(`#${id} plan: ${p.title} (${p.name}, ${finished}/${total} steps)`);
-    }
+    const p = actions.attachPlan(db, id, { html: readText(rest[1]) });
+    const { finished, total } = planProgress(p.steps);
+    console.log(`#${id} plan: ${p.title} (${p.name}, ${finished}/${total} steps)`);
   },
   approve: approveOrReject,
   reject: approveOrReject,

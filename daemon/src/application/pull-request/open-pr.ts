@@ -43,7 +43,7 @@ export async function openPullRequest(db: Db, task: Task): Promise<{ url?: strin
       base: repo.base_branch,
       head: task.branch,
       title: task.title,
-      body: buildPrBody(task, db.runsForTask(task.id), await prPlanFor(db, task).catch(() => null)),
+      body: buildPrBody(task, db.runsForTask(task.id), prPlanFor(db, task)),
       draft: repo.pr_mode === 'draft',
       labels: labelled ? [AUTO_MERGE_LABEL.name] : [],
     });

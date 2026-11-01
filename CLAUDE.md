@@ -19,7 +19,7 @@ Use these words in code, logs and UI.
 - **Planner:** proposes tasks from a repo's goals when its queue runs dry. What it produces are **proposals** (tasks in `proposed`), never plans.
 - **Governor:** decides whether new work may start, from the 5-hour and 7-day **usage windows**. A **hold** is a governor decision to wait, and only that. A repo or the daemon is **paused**, never held.
 - **Slot:** room for one running task (`max_concurrent`).
-- **Plan:** an HTML page attached to a task that says how it will be done, step by step (`docs/plan-format.md`). Not the planner's proposals. Write plans in `docs/plans/` in this format.
+- **Plan:** an HTML page attached to a task that says how it will be done, step by step (`docs/plan-format.md`). Not the planner's proposals. Plans live in AgentDeck, not in the repo, and are never committed: a plan belongs to the task it was first attached to and is named after it, `<task id>-<slug>.html`. Attach one with `agentdeck add --plan <file>` (any path) or `agentdeck attach`; other tasks follow it with `--plan <task number>`.
 
 ## Boundaries
 

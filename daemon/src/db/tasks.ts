@@ -22,6 +22,7 @@ import { type AnySQLiteColumn, alias } from 'drizzle-orm/sqlite-core';
 import type { DatabaseSync } from 'node:sqlite';
 import { DEFAULTS } from '../config.ts';
 import type { CheckCounts, MergeMethod } from '../domain/pull-request/merge.ts';
+import { parsePlan, planFileName } from '../domain/plan/plan.ts';
 import { INTERRUPTED } from '../domain/run/run.ts';
 import { MAX_RESTARTS, type TaskEvent, type TaskStatus, fromStatuses, nextStatus, transition } from '../domain/task/lifecycle.ts';
 import type { Link, LinkKind } from '../domain/task/link.ts';
@@ -29,7 +30,7 @@ import type { PrEvent, TaskEventRow, TaskEventType } from '../domain/task/histor
 import { EDITABLE_STATUSES, OPEN_STATUSES, type Task, type TaskSummary } from '../domain/task/task.ts';
 import type { Orm } from './orm.ts';
 import { NOW, atomically } from './sql.ts';
-import { plannerRuns, repos, runs, taskEvents, taskLinks, tasks } from './tables.ts';
+import { plannerRuns, repos, runs, taskEvents, taskLinks, taskPlans, tasks } from './tables.ts';
 
 /** Every column but the prompt, for lists. */
 const { prompt: _prompt, ...SUMMARY_COLUMNS } = getColumns(tasks);
@@ -88,8 +89,11 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       after_task?: number | null;
       /** Links the task starts with; the caller has checked them (a new task can't make a cycle). */
       links?: { on: number; kind: LinkKind }[];
-      plan_path?: string | null;
+      /** The task whose plan this one follows. */
+      plan_task?: number | null;
       plan_steps?: string | null;
+      /** A plan for the new task to own and follow (the caller has parsed it): stored under its numbered name, and linked. */
+      own_plan?: string;
     }): Task {
       const status = n.status ?? 'queued';
       const links = [...(n.links ?? [])];
@@ -109,11 +113,16 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
             status,
             source: n.source ?? 'manual',
             after_task: first, // legacy: the sidebar still shows it until it reads links; the links are what count
-            plan_path: n.plan_path ?? null,
+            plan_task: n.plan_task ?? null,
             plan_steps: n.plan_steps ?? null,
           })
           .run();
         const id = Number(info.lastInsertRowid);
+        if (n.own_plan !== undefined) {
+          const name = planFileName(id, parsePlan(n.own_plan)?.title ?? '');
+          orm.insert(taskPlans).values({ task_id: id, name, source: 'attached', html: n.own_plan }).run();
+          orm.update(tasks).set({ plan_task: id }).where(eq(tasks.id, id)).run();
+        }
         for (const l of links) orm.insert(taskLinks).values({ task_id: id, on_task: l.on, kind: l.kind }).run();
         recordEvent(id, 'created', null, status);
         return id;
@@ -304,7 +313,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
      */
     editTask(
       id: number,
-      fields: Partial<Pick<Task, 'title' | 'prompt' | 'priority' | 'model' | 'max_turns' | 'max_attempts' | 'plan_path' | 'plan_steps'>>,
+      fields: Partial<Pick<Task, 'title' | 'prompt' | 'priority' | 'model' | 'max_turns' | 'max_attempts' | 'plan_task' | 'plan_steps'>>,
     ): Task | undefined {
       if (Object.keys(fields).length === 0) return this.getTask(id);
       return atomically(db, () => {

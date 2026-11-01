@@ -8,7 +8,7 @@ export type { Check as HealthCheck } from '../domain/daemon/health.ts';
 export { ActionError } from './input.ts';
 export * from './task/files.ts';
 export { type LiveContext, liveContext, repoForPath } from './task/context.ts';
-export { attachPlan, collectPlans, planHtml } from './plans.ts';
+export { attachPlan, planHtml } from './plans.ts';
 export { proposeNow } from './planner.ts';
 export { pilotStats } from './run/stats.ts';
 export { mergeAll, mergePreview, mergeTask } from './pull-request/pull-requests.ts';

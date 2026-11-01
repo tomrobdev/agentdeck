@@ -234,7 +234,7 @@ export async function mergeOpenPr(
       url,
       cwd,
       method,
-      message: { subject: task.title, body: buildPrBody(task, db.runsForTask(id), await prPlanFor(db, task).catch(() => null)) },
+      message: { subject: task.title, body: buildPrBody(task, db.runsForTask(id), prPlanFor(db, task)) },
     });
   } catch (err) {
     throw new ActionError(`merge failed: ${(err as Error).message}`);

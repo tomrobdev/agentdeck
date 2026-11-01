@@ -52,7 +52,6 @@ check<Fits<Out<typeof actions.taskDiff>, C.FilePatch>>();
 check<Fits<Out<typeof actions.taskTree>, C.TreeListing>>();
 check<Fits<Out<typeof actions.taskFile>, C.FileContent>>();
 check<Fits<Out<typeof actions.attachPlan>, C.TaskPlan>>();
-check<Fits<Out<typeof actions.collectPlans>, C.TaskPlan[]>>();
 check<Fits<Out<typeof actions.planHtml>, C.PlanHtml>>();
 check<Fits<Out<typeof actions.taskReviews>, C.Review[]>>();
 check<Fits<Out<typeof actions.startReview>, C.Review>>();

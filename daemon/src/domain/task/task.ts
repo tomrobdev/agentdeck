@@ -23,9 +23,9 @@ export interface Task {
   pr_state: PrState | null;
   merge_method: MergeMethod | null; // how the PR was merged from the app
   after_task: number | null; // not claimed until that task is done (and its PR merged, if it has one)
-  plan_path: string | null; // the plan this task carries out: a repo-relative path under docs/plans/
+  plan_path: string | null; // legacy: the docs/plans/ file a task carried out before plans moved into AgentDeck; no longer written or read
   needs: string | null; // JSON Needs (domain/task/needs.ts) the worker said it needs when it blocked; cleared when queued again
-  plan_steps: string | null; // JSON array of that plan's step ids; null means every unfinished step (see planStepIds)
+  plan_steps: string | null; // JSON array of the linked plan's step ids; null means every unfinished step (see planStepIds)
   done_by: 'person' | null; // 'person' when mark_done set the status; cleared whenever the task leaves done
   auto_merge: number | null; // 1 or 0 overrides the repo's auto_merge; null = the repo's (domain/pull-request/auto-merge.ts)
   auto_merge_check: string | null; // JSON { verdict, reasons }: the PR refresh's latest auto-merge check while the PR is open
@@ -35,6 +35,7 @@ export interface Task {
   merge_requested_at: string | null; // when a person asked the daemon to merge the PR once it is ready; null when there is no request
   merge_request_method: MergeMethod | null; // the method that request asked for
   merge_request_check: string | null; // JSON { verdict, reasons }: the PR refresh's latest merge request check
+  plan_task: number | null; // the task whose plan this one follows (itself when its own plan was given with --plan); null follows its own plan, if any
   created_at: string;
   updated_at: string;
 }

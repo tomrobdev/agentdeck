@@ -22,15 +22,15 @@ export function finalMessage(runs: Pick<PrRun, 'kind' | 'result_text'>[]): strin
   return text.replace(/\n?\s*STATUS:\s*(DONE|BLOCKED)\b.*$/i, '').trim();
 }
 
-/** The plan a task carries out: its path and the linked steps as the branch has them. */
+/** The plan a task carries out: its name (`112-plans-in-agentdeck.html`) and the linked steps as AgentDeck stores them. */
 export interface PrPlan {
-  path: string;
+  name: string;
   steps: { title: string; status: string; done: string[] }[];
 }
 
 /** The "Plan" section: each linked step with its status, and its done criteria as a checklist for the reviewer. */
 function planSection(plan: PrPlan): string[] {
-  const out = [`## Plan: \`${plan.path}\``];
+  const out = [`## Plan: \`${plan.name}\``];
   for (const step of plan.steps) {
     out.push('', `**${step.title}** (${step.status})`);
     if (step.done.length) out.push('', ...step.done.map((d) => `- [ ] ${d}`));

@@ -21,6 +21,7 @@ flowchart LR
     processes["adapters/processes.ts"]
     shell["adapters/shell.ts"]
     runlog["adapters/run-log.ts"]
+    planfile["adapters/plan-file.ts"]
     goals["adapters/goals.ts"]
     reporoot["adapters/repo-root.ts"]
     watch["adapters/watch.ts"]
@@ -47,6 +48,7 @@ flowchart LR
   worker --> shell
   claude --> processes
   worker --> runlog
+  worker -- "the run's plan, in the worktree" --> planfile
   scheduler --> goals
   goals --> reporoot
   service --> launchd
@@ -60,6 +62,8 @@ flowchart LR
 ## One task's run
 
 `Scheduler` ticks, asks the governor (`decide`, behind `startGate`) whether new work may start, and claims the next queued task into a slot. `runTask` syncs the branch (`syncBranch`), runs claude through `runClaude`, then the repo's tests, and opens the pull request (`openPullRequest`). A repo with auto-merge on is merged by `autoMerge`; otherwise a person merges, and `refreshPrStates` finds the merged PR and moves the task on with the pr_merged event.
+
+Plans live in the database, never in the repo: a plan belongs to the task it was first attached to and is named after it (`planFileName`, as in 112-plans-in-agentdeck.html), and other tasks follow it through their plan_task link. Before claude starts, `putPlanFile` writes the plan the task follows (`followedPlan`) to the worktree's plan file (`PLAN_FILE`), in a folder git ignores. After the run, whatever its outcome, `takePlanFile` reads it back and saves only the task's linked steps into the stored plan (`mergePlanSteps`), so sibling tasks on one plan can run at once; a task with no plan that wrote one gets it as its own. The PR body (`prPlanFor`) reads the stored plan.
 
 The run stores claude's session id as soon as `runClaude` reads it off claude's first line. If the daemon restarts mid-run, the next daemon stops the orphaned claude (`reapOrphans`), ends the run as interrupted (`INTERRUPTED`) and requeues the task without using an attempt. The task's next run continues that session with `--resume` and a short prompt (`resumableSession`, `buildResumePrompt`); if claude no longer has the session, `startTaskRun` starts a fresh claude in the same run. After `MAX_RESTARTS` restarts the task fails instead.
 
@@ -110,14 +114,14 @@ flowchart TD
   db["db"]
   domain["domain"]
   adapters -->|4| config_ts
-  adapters -->|10| domain
+  adapters -->|11| domain
   api -->|9| application
   api -->|2| config_ts
   api -->|4| db
   api -->|4| domain
-  application -->|44| adapters
+  application -->|45| adapters
   application -->|8| config_ts
-  application -->|31| db
+  application -->|32| db
   application -->|121| domain
   cli_ts -->|1| application
   cli_ts -->|8| cli
@@ -134,7 +138,7 @@ flowchart TD
   daemon_ts -->|1| db
   daemon_ts -->|1| domain
   db -->|3| config_ts
-  db -->|24| domain
+  db -->|25| domain
 ```
 
 <!-- /generated -->
@@ -296,6 +300,7 @@ erDiagram
     text merge_requested_at "nullable"
     text merge_request_method "nullable"
     text merge_request_check "nullable"
+    integer plan_task "nullable"
   }
   usage_samples {
     integer id PK
@@ -412,7 +417,6 @@ stateDiagram-v2
 | GET    | `/api/tasks/:id/merge`             | `actions.mergePreview`                                             |
 | POST   | `/api/tasks/:id/merge`             | `actions.mergeTask`, `actions.taskDetail`                          |
 | GET    | `/api/tasks/:id/plans/:id2`        | `actions.planHtml`                                                 |
-| POST   | `/api/tasks/:id/plans/collect`     | `actions.collectPlans`                                             |
 | POST   | `/api/tasks/:id/plans`             | `actions.attachPlan`                                               |
 | POST   | `/api/tasks/:id/reject`            | `actions.rejectTask`, `actions.taskDetail`                         |
 | POST   | `/api/tasks/:id/resolve`           | `actions.syncNow`, `actions.taskDetail`                            |
@@ -459,30 +463,31 @@ stateDiagram-v2
 
 <!-- generated:migrations -->
 
-| Step | What it does                                                                                                                                                                                                                         |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1    | baseline. Brings a database from any earlier (unversioned) release up to date; the column additions are idempotent because old databases may already have some of them.                                                              |
-| 2    | runsForTask runs on every task view and every 500 ms per open log stream.                                                                                                                                                            |
-| 3    | repo integration. toolchain is detected at `repo add`; setup_cmd runs in each new worktree.                                                                                                                                          |
-| 4    | a repo can be paused (doctor failed, setup failed, permissions refused); runs count refused tool uses.                                                                                                                               |
-| 5    | pull requests and task dependencies. pr_mode is off \| draft \| ready; pr_state is open \| merged \| closed.                                                                                                                         |
-| 6    | task history. One row per status change, written with the change itself (db/tasks.ts).                                                                                                                                               |
-| 7    | plans attached to a task (domain/plan). One row per plan name; the HTML is parsed on read.                                                                                                                                           |
-| 8    | merging a PR from the app. merge_method is squash \| merge \| rebase: the repo's default, and the one a task was merged with.                                                                                                        |
-| 9    | keeping task branches up to date with their base. A run is a work run or a resolve run (merging the base into the branch, which uses no attempt); auto_resolve lets the daemon start a resolve run on its own.                       |
-| 10   | worker sandbox (docs/adr/0001-worker-sandbox.md). network is a JSON array of hosts sandboxed commands may reach.                                                                                                                     |
-| 11   | a task can name the plan and steps it carries out (docs/plans/plan-linked-tasks.html). plan_path is repo-relative under docs/plans/; plan_steps is a JSON array of step ids, NULL for every unfinished step.                         |
-| 12   | archiving a repo (docs/plans/repo-archive.html). archived_at is when it was archived, NULL while it is active.                                                                                                                       |
-| 13   | what a blocked worker said it needs (docs/plans/fewer-blocks.html): JSON { kind, items }, NULL when nothing.                                                                                                                         |
-| 14   | who said a task is done (docs/plans/manual-moves.html): 'person' when mark_done set it, NULL otherwise.                                                                                                                              |
-| 15   | the stop reason, named for the domain language (docs/plans/domain-model.html).                                                                                                                                                       |
-| 16   | a paused repo notifies with its own kind, `paused`, instead of `hold`. Whoever listened for `hold` keeps hearing both.                                                                                                               |
-| 17   | auto-merge (docs/plans/auto-merge.html). auto_merge_skip is a JSON array of path prefixes that need a person; a task's auto_merge is NULL (its repo's), 0 or 1.                                                                      |
-| 18   | task links (docs/plans/task-links.html). kind is builds_on \| after. after_task is copied in and no longer read.                                                                                                                     |
-| 19   | the latest auto-merge check of a done task's open PR (docs/plans/auto-merge-view.html): JSON { verdict, reasons }, NULL when none; auto_merge_checked_at is when the PR refresh made it.                                             |
-| 20   | reviews made in the dashboard (docs/plans/review-merge.html). A review is a draft until submitted_at is set; kind is comment \| request_changes. A comment's state is open \| answered \| resolved; side is old \| new.              |
-| 21   | what a live run is doing: turns so far and the last tool call, kept from its stream while it runs.                                                                                                                                   |
-| 22   | what the pilot scorecard needs and nothing kept. usage_samples is a history of usage readings, appended when a window's reading changes; pr_checks_opened / pr_checks_merged are JSON { total, failing, pending } of a PR's checks.  |
-| 23   | merge requests (docs/plans/merge-requests.html). merge_requested_at is when a person asked the daemon to merge the task's PR once it is ready (NULL: no request); merge_request_check is the last check's JSON { verdict, reasons }. |
+| Step | What it does                                                                                                                                                                                                                          |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | baseline. Brings a database from any earlier (unversioned) release up to date; the column additions are idempotent because old databases may already have some of them.                                                               |
+| 2    | runsForTask runs on every task view and every 500 ms per open log stream.                                                                                                                                                             |
+| 3    | repo integration. toolchain is detected at `repo add`; setup_cmd runs in each new worktree.                                                                                                                                           |
+| 4    | a repo can be paused (doctor failed, setup failed, permissions refused); runs count refused tool uses.                                                                                                                                |
+| 5    | pull requests and task dependencies. pr_mode is off \| draft \| ready; pr_state is open \| merged \| closed.                                                                                                                          |
+| 6    | task history. One row per status change, written with the change itself (db/tasks.ts).                                                                                                                                                |
+| 7    | plans attached to a task (domain/plan). One row per plan name; the HTML is parsed on read.                                                                                                                                            |
+| 8    | merging a PR from the app. merge_method is squash \| merge \| rebase: the repo's default, and the one a task was merged with.                                                                                                         |
+| 9    | keeping task branches up to date with their base. A run is a work run or a resolve run (merging the base into the branch, which uses no attempt); auto_resolve lets the daemon start a resolve run on its own.                        |
+| 10   | worker sandbox (docs/adr/0001-worker-sandbox.md). network is a JSON array of hosts sandboxed commands may reach.                                                                                                                      |
+| 11   | a task can name the plan and steps it carries out (docs/plans/plan-linked-tasks.html). plan_path is repo-relative under docs/plans/; plan_steps is a JSON array of step ids, NULL for every unfinished step.                          |
+| 12   | archiving a repo (docs/plans/repo-archive.html). archived_at is when it was archived, NULL while it is active.                                                                                                                        |
+| 13   | what a blocked worker said it needs (docs/plans/fewer-blocks.html): JSON { kind, items }, NULL when nothing.                                                                                                                          |
+| 14   | who said a task is done (docs/plans/manual-moves.html): 'person' when mark_done set it, NULL otherwise.                                                                                                                               |
+| 15   | the stop reason, named for the domain language (docs/plans/domain-model.html).                                                                                                                                                        |
+| 16   | a paused repo notifies with its own kind, `paused`, instead of `hold`. Whoever listened for `hold` keeps hearing both.                                                                                                                |
+| 17   | auto-merge (docs/plans/auto-merge.html). auto_merge_skip is a JSON array of path prefixes that need a person; a task's auto_merge is NULL (its repo's), 0 or 1.                                                                       |
+| 18   | task links (docs/plans/task-links.html). kind is builds_on \| after. after_task is copied in and no longer read.                                                                                                                      |
+| 19   | the latest auto-merge check of a done task's open PR (docs/plans/auto-merge-view.html): JSON { verdict, reasons }, NULL when none; auto_merge_checked_at is when the PR refresh made it.                                              |
+| 20   | reviews made in the dashboard (docs/plans/review-merge.html). A review is a draft until submitted_at is set; kind is comment \| request_changes. A comment's state is open \| answered \| resolved; side is old \| new.               |
+| 21   | what a live run is doing: turns so far and the last tool call, kept from its stream while it runs.                                                                                                                                    |
+| 22   | what the pilot scorecard needs and nothing kept. usage_samples is a history of usage readings, appended when a window's reading changes; pr_checks_opened / pr_checks_merged are JSON { total, failing, pending } of a PR's checks.   |
+| 23   | merge requests (docs/plans/merge-requests.html). merge_requested_at is when a person asked the daemon to merge the task's PR once it is ready (NULL: no request); merge_request_check is the last check's JSON { verdict, reasons }.  |
+| 24   | plans live in AgentDeck, named after the task they belong to. plan_task is the task whose plan this one follows (itself when its own plan was given with --plan); plan_steps names that plan's steps. plan_path is no longer written. |
 
 <!-- /generated -->

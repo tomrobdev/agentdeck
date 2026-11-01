@@ -53,9 +53,20 @@ function toggle(i: number) {
   open.value = next;
 }
 
+// Where the plan came from. A plan this task follows may belong to another task, the one it was first attached to.
+const SOURCE_LABEL: Record<TaskPlan['source'], string> = {
+  attached: 'attached',
+  worker: 'written by the worker',
+  branch: 'from the branch',
+};
+const origin = computed(() => (props.plan.task_id === props.taskId ? SOURCE_LABEL[props.plan.source] : `#${props.plan.task_id}'s plan`));
+
 const full = ref(false);
-// Keyed by updated_at, so a run that rewrites the page reads it again, and only while it is showing.
-const pageQ = useQuery(computed(() => ({ ...planHtmlQuery(props.taskId, props.plan.id, props.plan.updated_at), enabled: full.value })));
+// Keyed by updated_at, so a run that rewrites the page reads it again, and only while it is showing. Read from the
+// task the plan belongs to.
+const pageQ = useQuery(
+  computed(() => ({ ...planHtmlQuery(props.plan.task_id, props.plan.id, props.plan.updated_at), enabled: full.value })),
+);
 // Rebuilt when the mode changes, so the open plan switches at once (the frame reloads, so it returns to the top).
 const html = computed(() => (pageQ.data.value ? withBaseStyle(pageQ.data.value.html, mode.value) : null));
 const error = computed(() => (pageQ.error.value ? `Couldn't load the plan: ${pageQ.error.value.message}` : ''));
@@ -135,7 +146,7 @@ function onFrameLoad() {
       <button class="px-2 py-0 text-sm" @click="show()">{{ full ? 'Hide the plan' : 'Read the plan' }}</button>
       <button v-if="plan.source === 'branch'" class="px-2 py-0 text-sm" @click="emit('open', plan.name)">Open file</button>
       <span class="ml-auto text-muted">
-        <code>{{ plan.name }}</code> · {{ plan.source === 'branch' ? 'from the branch' : 'attached' }} · updated {{ ago(plan.updated_at) }}
+        <code>{{ plan.name }}</code> · {{ origin }} · updated {{ ago(plan.updated_at) }}
       </span>
     </footer>
     <div v-if="full" class="border-t border-border">

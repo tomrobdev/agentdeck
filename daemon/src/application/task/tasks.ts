@@ -1,10 +1,10 @@
 // Use cases for tasks: add, edit, and move them through the lifecycle on a person's request.
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { commitFiles, readFile, removeWorktree, resolveCommit } from '../../adapters/git.ts';
+import { commitFiles, removeWorktree } from '../../adapters/git.ts';
 import { runProgram } from '../../adapters/shell.ts';
 import type { Db } from '../../db/index.ts';
-import { PLAN_LIMIT, isPlanPath, parsePlan } from '../../domain/plan/plan.ts';
+import { type ParsedPlan, parsePlan } from '../../domain/plan/plan.ts';
 import type { Repo } from '../../domain/repo/repo.ts';
 import { INSTALL_NOTE, readNeeds } from '../../domain/task/needs.ts';
 import { hasOpenPr } from '../../domain/task/stage.ts';
@@ -23,6 +23,7 @@ import { warnStuckDependents } from './dependencies.ts';
 import { newLinks } from './links.ts';
 import { ActionError, flag, object, refuse, requireTask, requireTaskRepo, text, whole } from '../input.ts';
 import { closePullRequest } from '../pull-request/pull-requests.ts';
+import { readPlanInput } from '../plans.ts';
 
 /** Step ids as the CLI types them (a,b) or the API sends them (an array); null when none are named. */
 function stepList(value: unknown): string[] | null {
@@ -33,25 +34,45 @@ function stepList(value: unknown): string[] | null {
   return ids.length ? ids : null;
 }
 
-/**
- * Refuse a plan link that doesn't hold: the plan must be a plan file on the repo's base branch (plans are
- * committed there before their tasks are queued) and every step id must be one of its steps.
- */
-async function checkPlanLink(repo: Repo, path: string, steps: string[] | null): Promise<void> {
-  if (!isPlanPath(path) || path.split('/').includes('..'))
-    throw new ActionError(`plan: ${path} is not a plan path (an .html file under docs/plans/)`);
-  const commit = (await resolveCommit(repo.path, repo.base_branch)) ?? (await resolveCommit(repo.path, `origin/${repo.base_branch}`));
-  if (!commit) throw new ActionError(`plan: base branch "${repo.base_branch}" of ${repo.name} has no commits`);
-  const file = await readFile(repo.path, commit, path, PLAN_LIMIT + 1);
-  if (!file) throw new ActionError(`plan: ${path} is not on ${repo.name}'s base branch "${repo.base_branch}"; commit the plan there first`);
-  const plan = file.truncated || file.size > PLAN_LIMIT ? null : parsePlan(file.bytes.toString('utf8'));
-  if (!plan) throw new ActionError(`plan: ${path} is not an AgentDeck plan (see docs/plan-format.md)`);
+/** Refuse step ids that are not steps of the plan. */
+function checkSteps(name: string, plan: ParsedPlan, steps: string[] | null): void {
   const have = new Set(plan.steps.map((step) => step.id));
   const unknown = (steps ?? []).filter((id) => !have.has(id));
   if (unknown.length) {
     const ids = plan.steps.flatMap((step) => (step.id ? [step.id] : []));
-    throw new ActionError(`plan: ${path} has no step ${unknown.join(', ')} (it has ${ids.join(', ') || 'no steps with an id'})`);
+    throw new ActionError(`plan: ${name} has no step ${unknown.join(', ')} (it has ${ids.join(', ') || 'no steps with an id'})`);
   }
+}
+
+/**
+ * The task whose plan `--plan <number>` links: that task, which must be in the same repo, if it has a plan of its own;
+ * else the task whose plan it follows. Refused when there is no plan to follow.
+ */
+function planOwner(db: Db, repo: Repo, on: number): { owner: number; name: string; plan: ParsedPlan } {
+  const target = db.getTask(on);
+  if (!target) throw new ActionError(`plan: there is no task #${on}`);
+  if (target.repo_id !== repo.id) {
+    throw new ActionError(`plan: #${on} is in ${db.getRepo(target.repo_id)?.name ?? 'another repo'}, not ${repo.name}`);
+  }
+  for (const owner of [on, target.plan_task]) {
+    const own = owner === null ? undefined : db.ownPlan(owner);
+    const plan = own && parsePlan(own.html);
+    if (owner !== null && own && plan) return { owner, name: own.name, plan };
+  }
+  throw new ActionError(`plan: #${on} has no plan`);
+}
+
+/** The plan link a request asks for: a task number (`plan_task`, null to clear) or a plan's HTML (`plan_html`); undefined when it names neither. */
+function planRequest(body: Record<string, unknown>): { task: number | null } | { html: string } | undefined {
+  const { plan_task, plan_html } = body;
+  if (plan_task !== undefined && plan_html !== undefined) throw new ActionError('give a plan or a task number, not both');
+  if (plan_html !== undefined) return { html: readPlanInput(plan_html).html };
+  if (plan_task === undefined) return undefined;
+  if (plan_task === null || plan_task === '') return { task: null };
+  if (typeof plan_task !== 'number' || !Number.isInteger(plan_task) || plan_task < 1) {
+    throw new ActionError('plan_task must be a task number');
+  }
+  return { task: plan_task };
 }
 
 export async function addTask(
@@ -68,7 +89,10 @@ export async function addTask(
     builds_on?: number[] | string;
     /** Tasks this one lands after (it runs at once; only its merge waits), as ids or "12,14". */
     after?: number[] | string;
-    plan_path?: string;
+    /** The task whose plan this one follows (that task's own plan, or the one it follows), in the same repo. */
+    plan_task?: number;
+    /** A plan for the new task to own and follow, stored as `<task id>-<slug>.html`. Not with plan_task. */
+    plan_html?: string;
     plan_steps?: string[] | string;
     /** File it as a proposal, waiting for a person to approve it, instead of queueing it. */
     propose?: boolean;
@@ -85,16 +109,24 @@ export async function addTask(
   const priority = whole(body, 'priority', priorityError);
   const max_turns = whole(body, 'max_turns', maxTurnsError);
   const max_attempts = whole(body, 'max_attempts', maxAttemptsError);
-  if (body.plan_path !== undefined && typeof body.plan_path !== 'string') throw new ActionError('plan_path must be text');
+  const planAsked = planRequest(body);
   const links = newLinks(db, body);
   const repos = db.listRepos();
   const repo = repoName ? db.findRepo(repoName) : repos.length === 1 ? repos[0] : undefined;
   if (!repo) throw new ActionError(repoName ? `no repo "${repoName}"` : 'choose a repo (more than one is registered)');
   refuse(archivedRepoError(repo));
-  const plan_path = typeof input.plan_path === 'string' ? input.plan_path.trim() : '';
   const steps = stepList(input.plan_steps);
-  if (plan_path) await checkPlanLink(repo, plan_path, steps);
-  else refuse(stepsNeedPlanError(null, steps));
+  let plan_task: number | null = null;
+  let own_plan: string | undefined;
+  if (planAsked && 'html' in planAsked) {
+    checkSteps('the plan', parsePlan(planAsked.html)!, steps);
+    own_plan = planAsked.html;
+  } else if (planAsked?.task) {
+    const linked = planOwner(db, repo, planAsked.task);
+    checkSteps(linked.name, linked.plan, steps);
+    plan_task = linked.owner;
+  } else refuse(stepsNeedPlanError(null, steps));
+  const linked = plan_task !== null || own_plan !== undefined;
   return db.addTask({
     repo_id: repo.id,
     title: title || defaultTitle(prompt),
@@ -104,16 +136,18 @@ export async function addTask(
     max_turns,
     max_attempts,
     links,
-    plan_path: plan_path || null,
-    plan_steps: plan_path && steps ? JSON.stringify(steps) : null,
+    plan_task,
+    own_plan,
+    plan_steps: linked && steps ? JSON.stringify(steps) : null,
     status: propose ? 'proposed' : 'queued',
   });
 }
 
 /**
  * Change a waiting or unsuccessful task's title, prompt, priority, model, turn limit, attempt limit or plan link.
- * `plan_path` null or '' clears the link (and its steps); a new `plan_path` drops the old steps unless `plan_steps` names some;
- * `plan_steps` null or '' means every unfinished step.
+ * `plan_task` null clears the link (and its steps); a new link, by `plan_task` or `plan_html` (which becomes the task's
+ * own plan, replacing any it had), drops the old steps unless `plan_steps` names some; `plan_steps` null or '' means
+ * every unfinished step.
  */
 export async function editTask(
   db: Db,
@@ -125,7 +159,8 @@ export async function editTask(
     model?: string;
     max_turns?: number;
     max_attempts?: number;
-    plan_path?: string | null;
+    plan_task?: number | null;
+    plan_html?: string;
     plan_steps?: string[] | string | null;
   },
 ): Promise<Task> {
@@ -147,21 +182,35 @@ export async function editTask(
     if (value !== undefined) fields[key] = value;
   }
 
-  if (patch.plan_path !== undefined || patch.plan_steps !== undefined) {
-    if (patch.plan_path !== null && patch.plan_path !== undefined && typeof patch.plan_path !== 'string')
-      throw new ActionError('plan_path must be text');
-    const given = typeof patch.plan_path === 'string' ? patch.plan_path.trim() : patch.plan_path;
-    const path = given === undefined ? task.plan_path : given || null;
-    const steps = patch.plan_steps !== undefined ? stepList(patch.plan_steps) : given === undefined ? planStepIds(task) : null;
-    refuse(stepsNeedPlanError(path, steps));
-    if (path !== null) {
-      await checkPlanLink(requireTaskRepo(db, task), path, steps);
+  const planAsked = planRequest(body);
+  let ownPlan: string | undefined;
+  if (planAsked !== undefined || patch.plan_steps !== undefined) {
+    const steps = patch.plan_steps !== undefined ? stepList(patch.plan_steps) : planAsked === undefined ? planStepIds(task) : null;
+    let link: number | null;
+    if (planAsked && 'html' in planAsked) {
+      checkSteps('the plan', parsePlan(planAsked.html)!, steps);
+      link = id;
+      ownPlan = planAsked.html;
+    } else {
+      link = planAsked === undefined ? task.plan_task : planAsked.task;
+      refuse(stepsNeedPlanError(link, steps));
+      if (link !== null) {
+        const linked = planOwner(db, requireTaskRepo(db, task), link);
+        checkSteps(linked.name, linked.plan, steps);
+        link = linked.owner;
+      }
     }
-    fields.plan_path = path;
-    fields.plan_steps = path && steps ? JSON.stringify(steps) : null;
+    fields.plan_task = link;
+    fields.plan_steps = link !== null && steps ? JSON.stringify(steps) : null;
   }
 
   if (!Object.keys(fields).length) throw new ActionError('nothing to change');
+  // The task's own plan is stored first, so it is there when the task can next run; not for a task that can't be edited.
+  if (ownPlan !== undefined) {
+    if (!EDITABLE_STATUSES.includes(task.status))
+      throw new ActionError(`#${id} is ${task.status}; only ${EDITABLE_STATUSES.join(', ')} tasks can be edited`);
+    db.saveOwnPlan(id, ownPlan, 'attached');
+  }
   const edited = db.editTask(id, fields);
   if (!edited) {
     const now = db.getTask(id)?.status ?? task.status;

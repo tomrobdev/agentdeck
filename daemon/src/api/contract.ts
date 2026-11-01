@@ -189,8 +189,10 @@ export interface TaskSummary {
   /** How the PR was merged from the app. */
   merge_method: MergeMethod | null;
   after_task: number | null;
-  /** The plan this task carries out: a repo-relative path under docs/plans/. */
+  /** Legacy: the docs/plans/ file a task carried out before plans moved into AgentDeck. No longer written. */
   plan_path: string | null;
+  /** The task whose plan this one follows (itself when its own plan was given with it); null follows its own plan, if any. Missing from a daemon that predates it. */
+  plan_task?: number | null;
   /** JSON array of that plan's step ids; null means every unfinished step. Missing from a daemon that predates it. */
   plan_steps: string | null;
   /** JSON `{ kind: 'deps' | 'host' | 'edit', items: string[] }`: what the worker said it needs when it blocked. Missing from a daemon that predates it. */
@@ -287,10 +289,12 @@ export interface PlanStep {
 /** A plan attached to a task, parsed; its HTML comes from GET /api/tasks/:id/plans/:planId. */
 export interface TaskPlan {
   id: number;
+  /** The task the plan belongs to: the one it was first attached to. */
   task_id: number;
-  /** The path on the branch, or the attached file's name. */
+  /** `<task id>-<slug>.html`; plans stored before plans had numbers keep their old name (a docs/plans/ path or a file name). */
   name: string;
-  source: 'branch' | 'attached';
+  /** Attached by a person, written by a worker, or (before plans moved into AgentDeck) collected from the branch. */
+  source: 'attached' | 'worker' | 'branch';
   version: string;
   title: string;
   summary: string | null;
@@ -322,7 +326,8 @@ export interface NewTask {
   builds_on?: number[];
   /** Tasks this one lands after: it runs at once, only its merge waits. */
   after?: number[];
-  plan_path?: string;
+  /** The task whose plan this one follows: one in the same repo with a plan. */
+  plan_task?: number;
   plan_steps?: string[];
   /** File it as a proposal, waiting for approval, instead of queueing it. */
   propose?: boolean;
@@ -336,8 +341,8 @@ export interface TaskPatch {
   model?: string;
   max_turns?: number;
   max_attempts?: number;
-  /** null clears the link. */
-  plan_path?: string | null;
+  /** The task whose plan this one follows; null clears the link. */
+  plan_task?: number | null;
   /** null means every unfinished step. */
   plan_steps?: string[] | null;
 }

@@ -55,7 +55,6 @@ export type {
   RequestMergeRequest,
   RequestMergeResult,
   RequestMergesResult,
-  CancelMergeRequestResult,
   RetryRequest,
   Review,
   ReviewComment,
