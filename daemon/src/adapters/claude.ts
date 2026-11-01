@@ -78,6 +78,8 @@ export async function runClaude(opts: {
   onSpawn?: (pid: number) => void;
   /** Called for each usage window a rate_limit_event reports. */
   onUsage?: (w: UsageWindow) => void;
+  /** Called with each parsed event of the stream. */
+  onEvent?: (ev: any) => void;
   /** Called once with the session id from claude's init line, so a run a restart ends can be resumed. */
   onSession?: (sessionId: string) => void;
 }): Promise<ClaudeRun> {
@@ -117,6 +119,7 @@ export async function runClaude(opts: {
     } catch {
       return;
     }
+    opts.onEvent?.(ev);
     if (ev.type === 'system' && ev.subtype === 'init' && typeof ev.session_id === 'string' && run.sessionId === undefined) {
       run.sessionId = ev.session_id;
       opts.onSession?.(ev.session_id);

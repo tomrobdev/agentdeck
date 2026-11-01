@@ -111,14 +111,14 @@ flowchart TD
   domain["domain"]
   adapters -->|4| config_ts
   adapters -->|10| domain
-  api -->|8| application
+  api -->|9| application
   api -->|2| config_ts
   api -->|4| db
   api -->|3| domain
   application -->|42| adapters
   application -->|8| config_ts
-  application -->|27| db
-  application -->|107| domain
+  application -->|28| db
+  application -->|110| domain
   cli_ts -->|1| application
   cli_ts -->|8| cli
   cli_ts -->|1| db
@@ -126,7 +126,7 @@ flowchart TD
   cli -->|3| config_ts
   cli -->|1| daemon_ts
   cli -->|2| db
-  cli -->|13| domain
+  cli -->|14| domain
   daemon_ts -->|2| adapters
   daemon_ts -->|1| api
   daemon_ts -->|2| application
@@ -134,7 +134,7 @@ flowchart TD
   daemon_ts -->|1| db
   daemon_ts -->|1| domain
   db -->|3| config_ts
-  db -->|21| domain
+  db -->|23| domain
 ```
 
 <!-- /generated -->
@@ -189,6 +189,27 @@ erDiagram
     integer auto_merge_max_lines
     text auto_merge_skip
   }
+  review_comments {
+    integer id PK
+    integer review_id FK
+    text path
+    integer line
+    text side
+    text head_commit
+    text body
+    text answer "nullable"
+    text state
+    text created_at
+    text updated_at
+  }
+  reviews {
+    integer id PK
+    integer task_id FK
+    text kind "nullable"
+    text body
+    text created_at
+    text submitted_at "nullable"
+  }
   runs {
     integer id PK
     integer task_id FK
@@ -210,6 +231,8 @@ erDiagram
     integer pid "nullable"
     integer denials
     text kind
+    integer live_turns
+    text live_tool "nullable"
   }
   settings {
     text key PK
@@ -287,8 +310,10 @@ erDiagram
   }
   repos ||--o{ planner_runs : "repo_id"
   repos ||--o{ tasks : "repo_id"
+  reviews ||--o{ review_comments : "review_id"
   tasks |o..o{ notifications : "task_id"
   tasks |o..o{ tasks : "after_task"
+  tasks ||--o{ reviews : "task_id"
   tasks ||--o{ runs : "task_id"
   tasks ||--o{ task_links : "on_task"
   tasks ||--o{ task_links : "task_id"
@@ -332,57 +357,67 @@ stateDiagram-v2
 
 <!-- generated:routes -->
 
-| Method | Path                           | Use case                                           |
-| ------ | ------------------------------ | -------------------------------------------------- |
-| GET    | `/api/daemon/health`           | `actions.daemonReport`                             |
-| POST   | `/api/daemon/restart-now`      | `actions.restartNow`                               |
-| POST   | `/api/daemon/restart`          | `actions.restartDaemon`                            |
-| GET    | `/api/daemon`                  | `actions.daemonState`                              |
-| GET    | `/api/events`                  |                                                    |
-| POST   | `/api/notify/test`             | `actions.sendTestNotification`                     |
-| POST   | `/api/pause`                   | `actions.setPaused`, `actions.status`              |
-| POST   | `/api/repos/:id/archive`       | `actions.archiveRepo`                              |
-| GET    | `/api/repos/:id/deletion`      | `actions.repoDeletionPreview`                      |
-| POST   | `/api/repos/:id/doctor`        | `actions.doctorRepo`                               |
-| POST   | `/api/repos/:id/plan`          | `actions.proposeNow`                               |
-| POST   | `/api/repos/:id/resume`        | `actions.resumeRepo`                               |
-| POST   | `/api/repos/:id/unarchive`     | `actions.unarchiveRepo`                            |
-| DELETE | `/api/repos/:id`               | `actions.deleteRepo`                               |
-| GET    | `/api/repos/:id`               | `actions.repoDetail`                               |
-| POST   | `/api/repos/:id`               | `actions.updateRepo`                               |
-| GET    | `/api/repos`                   | `db.listRepos`                                     |
-| POST   | `/api/repos`                   | `actions.addRepo`                                  |
-| POST   | `/api/resume`                  | `actions.setPaused`, `actions.status`              |
-| GET    | `/api/service`                 | `actions.serviceStatus`                            |
-| GET    | `/api/settings`                | `actions.getSettings`                              |
-| POST   | `/api/settings`                | `actions.updateSettings`                           |
-| GET    | `/api/status`                  | `actions.status`                                   |
-| POST   | `/api/tasks/:id/approve`       | `actions.approveTask`, `actions.taskDetail`        |
-| POST   | `/api/tasks/:id/auto-merge`    | `actions.setAutoMerge`, `actions.taskDetail`       |
-| POST   | `/api/tasks/:id/cancel`        | `actions.cancelTask`                               |
-| GET    | `/api/tasks/:id/changes`       | `actions.taskChanges`                              |
-| POST   | `/api/tasks/:id/clean`         | `actions.removeTaskWorktree`, `actions.taskDetail` |
-| POST   | `/api/tasks/:id/close-pr`      | `actions.closeTaskPr`, `actions.taskDetail`        |
-| GET    | `/api/tasks/:id/diff`          | `actions.taskDiff`                                 |
-| POST   | `/api/tasks/:id/done`          | `actions.markDone`, `actions.taskDetail`           |
-| GET    | `/api/tasks/:id/file`          | `actions.taskFile`                                 |
-| POST   | `/api/tasks/:id/install-needs` | `actions.installNeeds`, `actions.taskDetail`       |
-| DELETE | `/api/tasks/:id/links/:id2`    | `actions.unlinkTasks`, `actions.taskDetail`        |
-| POST   | `/api/tasks/:id/links`         | `actions.linkTasks`, `actions.taskDetail`          |
-| GET    | `/api/tasks/:id/log`           | `streamLog`                                        |
-| GET    | `/api/tasks/:id/merge`         | `actions.mergePreview`                             |
-| POST   | `/api/tasks/:id/merge`         | `actions.mergeTask`, `actions.taskDetail`          |
-| GET    | `/api/tasks/:id/plans/:id2`    | `actions.planHtml`                                 |
-| POST   | `/api/tasks/:id/plans/collect` | `actions.collectPlans`                             |
-| POST   | `/api/tasks/:id/plans`         | `actions.attachPlan`                               |
-| POST   | `/api/tasks/:id/reject`        | `actions.rejectTask`, `actions.taskDetail`         |
-| POST   | `/api/tasks/:id/resolve`       | `actions.syncNow`, `actions.taskDetail`            |
-| POST   | `/api/tasks/:id/retry`         | `actions.retryTask`, `actions.taskDetail`          |
-| GET    | `/api/tasks/:id/tree`          | `actions.taskTree`                                 |
-| GET    | `/api/tasks/:id`               | `actions.taskDetail`                               |
-| POST   | `/api/tasks/:id`               | `actions.editTask`, `actions.taskDetail`           |
-| GET    | `/api/tasks`                   | `actions.taskViews`                                |
-| POST   | `/api/tasks`                   | `actions.addTask`, `actions.taskDetail`            |
+| Method | Path                               | Use case                                           |
+| ------ | ---------------------------------- | -------------------------------------------------- |
+| GET    | `/api/daemon/health`               | `actions.daemonReport`                             |
+| POST   | `/api/daemon/restart-now`          | `actions.restartNow`                               |
+| POST   | `/api/daemon/restart`              | `actions.restartDaemon`                            |
+| GET    | `/api/daemon`                      | `actions.daemonState`                              |
+| GET    | `/api/events`                      |                                                    |
+| POST   | `/api/notify/test`                 | `actions.sendTestNotification`                     |
+| POST   | `/api/pause`                       | `actions.setPaused`, `actions.status`              |
+| POST   | `/api/repos/:id/archive`           | `actions.archiveRepo`                              |
+| GET    | `/api/repos/:id/deletion`          | `actions.repoDeletionPreview`                      |
+| POST   | `/api/repos/:id/doctor`            | `actions.doctorRepo`                               |
+| POST   | `/api/repos/:id/plan`              | `actions.proposeNow`                               |
+| POST   | `/api/repos/:id/resume`            | `actions.resumeRepo`                               |
+| POST   | `/api/repos/:id/unarchive`         | `actions.unarchiveRepo`                            |
+| DELETE | `/api/repos/:id`                   | `actions.deleteRepo`                               |
+| GET    | `/api/repos/:id`                   | `actions.repoDetail`                               |
+| POST   | `/api/repos/:id`                   | `actions.updateRepo`                               |
+| GET    | `/api/repos`                       | `db.listRepos`                                     |
+| POST   | `/api/repos`                       | `actions.addRepo`                                  |
+| POST   | `/api/resume`                      | `actions.setPaused`, `actions.status`              |
+| POST   | `/api/review-comments/:id/answer`  | `actions.answerReviewComment`                      |
+| POST   | `/api/review-comments/:id/reopen`  | `actions.reopenReviewComment`                      |
+| POST   | `/api/review-comments/:id/resolve` | `actions.resolveReviewComment`                     |
+| DELETE | `/api/review-comments/:id`         | `actions.deleteReviewComment`                      |
+| POST   | `/api/review-comments/:id`         | `actions.editReviewComment`                        |
+| POST   | `/api/reviews/:id/comments`        | `actions.addReviewComment`                         |
+| POST   | `/api/reviews/:id/submit`          | `actions.submitReview`                             |
+| POST   | `/api/reviews/:id`                 | `actions.editReview`                               |
+| GET    | `/api/service`                     | `actions.serviceStatus`                            |
+| GET    | `/api/settings`                    | `actions.getSettings`                              |
+| POST   | `/api/settings`                    | `actions.updateSettings`                           |
+| GET    | `/api/status`                      | `actions.status`                                   |
+| POST   | `/api/tasks/:id/approve`           | `actions.approveTask`, `actions.taskDetail`        |
+| POST   | `/api/tasks/:id/auto-merge`        | `actions.setAutoMerge`, `actions.taskDetail`       |
+| POST   | `/api/tasks/:id/cancel`            | `actions.cancelTask`                               |
+| GET    | `/api/tasks/:id/changes`           | `actions.taskChanges`                              |
+| POST   | `/api/tasks/:id/clean`             | `actions.removeTaskWorktree`, `actions.taskDetail` |
+| POST   | `/api/tasks/:id/close-pr`          | `actions.closeTaskPr`, `actions.taskDetail`        |
+| GET    | `/api/tasks/:id/diff`              | `actions.taskDiff`                                 |
+| POST   | `/api/tasks/:id/done`              | `actions.markDone`, `actions.taskDetail`           |
+| GET    | `/api/tasks/:id/file`              | `actions.taskFile`                                 |
+| POST   | `/api/tasks/:id/install-needs`     | `actions.installNeeds`, `actions.taskDetail`       |
+| DELETE | `/api/tasks/:id/links/:id2`        | `actions.unlinkTasks`, `actions.taskDetail`        |
+| POST   | `/api/tasks/:id/links`             | `actions.linkTasks`, `actions.taskDetail`          |
+| GET    | `/api/tasks/:id/log`               | `streamLog`                                        |
+| GET    | `/api/tasks/:id/merge`             | `actions.mergePreview`                             |
+| POST   | `/api/tasks/:id/merge`             | `actions.mergeTask`, `actions.taskDetail`          |
+| GET    | `/api/tasks/:id/plans/:id2`        | `actions.planHtml`                                 |
+| POST   | `/api/tasks/:id/plans/collect`     | `actions.collectPlans`                             |
+| POST   | `/api/tasks/:id/plans`             | `actions.attachPlan`                               |
+| POST   | `/api/tasks/:id/reject`            | `actions.rejectTask`, `actions.taskDetail`         |
+| POST   | `/api/tasks/:id/resolve`           | `actions.syncNow`, `actions.taskDetail`            |
+| POST   | `/api/tasks/:id/retry`             | `actions.retryTask`, `actions.taskDetail`          |
+| GET    | `/api/tasks/:id/reviews`           | `actions.taskReviews`                              |
+| POST   | `/api/tasks/:id/reviews`           | `actions.startReview`                              |
+| GET    | `/api/tasks/:id/tree`              | `actions.taskTree`                                 |
+| GET    | `/api/tasks/:id`                   | `actions.taskDetail`                               |
+| POST   | `/api/tasks/:id`                   | `actions.editTask`, `actions.taskDetail`           |
+| GET    | `/api/tasks`                       | `actions.taskViews`                                |
+| POST   | `/api/tasks`                       | `actions.addTask`, `actions.taskDetail`            |
 
 <!-- /generated -->
 
@@ -437,6 +472,8 @@ stateDiagram-v2
 | 17   | auto-merge (docs/plans/auto-merge.html). auto_merge_skip is a JSON array of path prefixes that need a person; a task's auto_merge is NULL (its repo's), 0 or 1.                                                                     |
 | 18   | task links (docs/plans/task-links.html). kind is builds_on \| after. after_task is copied in and no longer read.                                                                                                                    |
 | 19   | the latest auto-merge check of a done task's open PR (docs/plans/auto-merge-view.html): JSON { verdict, reasons }, NULL when none; auto_merge_checked_at is when the PR refresh made it.                                            |
-| 20   | what the pilot scorecard needs and nothing kept. usage_samples is a history of usage readings, appended when a window's reading changes; pr_checks_opened / pr_checks_merged are JSON { total, failing, pending } of a PR's checks. |
+| 20   | reviews made in the dashboard (docs/plans/review-merge.html). A review is a draft until submitted_at is set; kind is comment \| request_changes. A comment's state is open \| answered \| resolved; side is old \| new.             |
+| 21   | what a live run is doing: turns so far and the last tool call, kept from its stream while it runs.                                                                                                                                  |
+| 22   | what the pilot scorecard needs and nothing kept. usage_samples is a history of usage readings, appended when a window's reading changes; pr_checks_opened / pr_checks_merged are JSON { total, failing, pending } of a PR's checks. |
 
 <!-- /generated -->

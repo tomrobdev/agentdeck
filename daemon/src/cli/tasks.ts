@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { createInterface } from 'node:readline/promises';
 import * as actions from '../application/actions.ts';
 import { planProgress } from '../domain/plan/plan.ts';
+import { commentLocation } from '../domain/review/review.ts';
 import { pickRun } from '../domain/run/run.ts';
 import { TASK_STATUSES } from '../domain/task/lifecycle.ts';
 import { filterTasks } from '../domain/task/listing.ts';
@@ -129,6 +130,21 @@ export const taskCommands: Record<string, Command> = {
         `${r.kind === 'resolve' ? 'conflict run' : 'run'} ${r.attempt}: ${r.outcome ?? 'running'}  turns=${r.num_turns ?? '-'}  tokens=${tokens}  tests=${r.tests_passed === null ? '-' : r.tests_passed ? 'pass' : 'fail'}  ${r.started_at}`,
       );
       if (r.result_text) console.log(`  ${r.result_text.trim().split('\n').slice(-6).join('\n  ')}`);
+    }
+  },
+  review: ({ db, rest }) => {
+    const id = taskId(rest[0]);
+    const reviews = actions.taskReviews(db, id);
+    if (!reviews.length) console.log(`no reviews on #${id}`);
+    for (const r of reviews) {
+      console.log(
+        `review ${r.id}: ${r.submitted_at ? `${r.kind === 'request_changes' ? 'changes requested' : 'comment'}, ${r.submitted_at}` : 'draft'}`,
+      );
+      if (r.body.trim()) console.log(`  ${r.body.trim().split('\n').join('\n  ')}`);
+      for (const c of r.comments) {
+        console.log(`  comment ${c.id} [${c.state}] ${commentLocation(c)} @ ${c.head_commit.slice(0, 7)}: ${c.body}`);
+        if (c.answer) console.log(`    answer: ${c.answer}`);
+      }
     }
   },
   log: ({ db, flags, rest }) => {

@@ -8,6 +8,7 @@ import { LOG_DIR, ensureDirs } from '../../config.ts';
 import type { Db } from '../../db/index.ts';
 import type { Repo } from '../../domain/repo/repo.ts';
 import { allowedTools } from '../../domain/repo/tools.ts';
+import { START_LIVE, nextLive } from '../../domain/run/live.ts';
 import { claudeArgs } from '../../domain/run/prompt.ts';
 import { parseNetwork, settingsPath, workerSettings } from '../../domain/run/sandbox.ts';
 import { type Run, type RunClass, type RunKind, classifyRun, resultFields, resumeFailed } from '../../domain/run/run.ts';
@@ -70,6 +71,8 @@ export async function startTaskRun(
   const { runId, logPath, log } = opened;
   const { repo, worktree, resume } = opts;
   const settings = runSettings(repo, worktree, logPath);
+  // Local to this run, not module state: the live state goes to the run row, where the queue reads it.
+  let live = START_LIVE;
   const allowed = allowedTools(repo, rootInfo(worktree));
   const start = (prompt: string, session: string | null): Promise<ClaudeRun> =>
     runClaude({
@@ -81,6 +84,12 @@ export async function startTaskRun(
       onSpawn: (pid) => db.setRunPid(runId, pid),
       onSession: (id) => db.setRunSession(runId, id),
       onUsage: usageRecorder(db),
+      onEvent: (ev) => {
+        const next = nextLive(live, ev);
+        if (next.turns === live.turns && next.tool === live.tool) return;
+        live = next;
+        db.setRunLive(runId, live.turns, live.tool);
+      },
     });
   let run: ClaudeRun;
   if (resume) {

@@ -19,6 +19,8 @@ const props = defineProps<{
   selected: string | null;
   /** Paths to mark with a dot, such as the files a task changed. */
   marks?: Set<string>;
+  /** Paths with open review comments, marked with a dot. */
+  commented?: Set<string>;
   /** Folders to open at the start, and whenever `selected` changes, its parents. */
   expandAll?: boolean;
   /** Extra paths the filter can find although their folders aren't loaded. */
@@ -173,6 +175,7 @@ useHotkeys({ t: () => filterBox.value?.focus() });
           <span class="w-2.5 flex-none text-2xs text-muted">{{ r.node.type === 'dir' ? (open.has(r.node.path) ? '▾' : '▸') : '' }}</span>
           <span v-if="r.node.badge" class="badge" :class="`b-${r.node.badge}`" :title="r.node.badgeTitle">{{ r.node.badge }}</span>
           <span class="flex-1 truncate" :class="r.node.type === 'dir' ? 'font-medium' : ''">{{ r.node.name }}</span>
+          <span v-if="commented?.has(r.node.path)" class="text-xs text-accent" title="Open review comments">●</span>
           <span v-if="marks?.has(r.node.path)" class="text-[8px] text-blocked" title="Changed by this task">●</span>
           <span v-if="r.node.meta" class="font-mono text-xs text-muted">{{ r.node.meta }}</span>
           <span v-if="loading.has(r.node.path)" class="muted">…</span>

@@ -27,9 +27,23 @@ export function runStore(orm: Orm) {
     setRunPid(id: number, pid: number): void {
       orm.update(runs).set({ pid }).where(eq(runs.id, id)).run();
     },
+    /** Record what a live run is doing; the write moves the change counter, which is what pushes it to the dashboard. */
+    setRunLive(id: number, live_turns: number, live_tool: string | null): void {
+      orm.update(runs).set({ live_turns, live_tool }).where(eq(runs.id, id)).run();
+    },
     /** The claude session a run is in, stored as soon as claude names it so a run a restart ends can be resumed. */
     setRunSession(id: number, session_id: string): void {
       orm.update(runs).set({ session_id }).where(eq(runs.id, id)).run();
+    },
+    /** The unfinished work run of each task that has one, by task id: when it started and what it is doing. */
+    liveRuns(): Map<number, { started_at: string; live_turns: number; live_tool: string | null }> {
+      const rows = orm
+        .select({ task_id: runs.task_id, started_at: runs.started_at, live_turns: runs.live_turns, live_tool: runs.live_tool })
+        .from(runs)
+        .where(and(eq(runs.kind, 'work'), isNull(runs.ended_at)))
+        .orderBy(asc(runs.id))
+        .all();
+      return new Map(rows.map((r) => [r.task_id, r]));
     },
     finishRun(id: number, r: Partial<Omit<Run, 'id' | 'task_id' | 'kind' | 'attempt' | 'started_at' | 'log_path'>>): void {
       // undefined means "not given" to Drizzle, but this has always written a given-as-undefined key as NULL.
