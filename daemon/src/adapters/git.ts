@@ -46,6 +46,11 @@ export async function checkoutCommit(cwd: string): Promise<string | null> {
   }
 }
 
+/** Whether `file` (absolute) differs from HEAD in the checkout containing it: modified, staged or untracked. */
+export async function hasUncommittedChanges(file: string): Promise<boolean> {
+  return (await git(dirname(file), 'status', '--porcelain', '--', file)) !== '';
+}
+
 export async function refExists(repoPath: string, ref: string): Promise<boolean> {
   try {
     await git(repoPath, 'rev-parse', '--verify', '--quiet', ref);

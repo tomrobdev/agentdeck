@@ -33,6 +33,8 @@ export interface ReloadInput {
   activity: Activity;
   /** Someone asked for a restart (the dashboard's button), whatever the setting or the files say. */
   requested?: boolean;
+  /** Why the code on disk must not be loaded (an uncommitted migration step, a checkout off main), or null. */
+  blocked?: string | null;
 }
 
 export interface ReloadDecision {
@@ -52,6 +54,7 @@ export function reloadDecision(i: ReloadInput): ReloadDecision {
       : { pending: true, exit: true, reason: 'restart requested and nothing is running; exiting so launchd starts the new code' };
   }
   if (!i.enabled || !i.changed.length) return { pending: false, exit: false, reason: '' };
+  if (i.blocked) return { pending: false, exit: false, reason: `not reloading: ${i.blocked}` };
   const last = i.changed[i.changed.length - 1];
   const what = i.changed.length === 1 ? last : `${last} and ${i.changed.length - 1} more`;
   if (wait) return { pending: true, exit: false, reason: `source changed (${what}); reloading once ${wait} finish` };
