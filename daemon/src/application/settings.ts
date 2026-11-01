@@ -3,7 +3,8 @@ import type { Db } from '../db/index.ts';
 import { type NotifyKind, type NotifySettings, notifyEventsError, ntfyServerError, ntfyTopicError } from '../domain/notification.ts';
 import { type PlannerSettings, plannerIntervalError, plannerMaxTasksError, plannerModelError } from '../domain/planner/proposals.ts';
 import { BUDGET_KEYS, type Budget, validateBudget, validateSlots } from '../domain/usage/governor.ts';
-import { restartWait } from '../domain/daemon/restart.ts';
+import type { DaemonState } from '../domain/daemon/health.ts';
+import { type ReloadInput, reloadState, restartWait } from '../domain/daemon/restart.ts';
 import type { MergeMethod } from '../domain/pull-request/merge.ts';
 import type { PrMode } from '../domain/pull-request/pr.ts';
 import type { Settings } from '../domain/settings/settings.ts';
@@ -23,9 +24,26 @@ export interface DaemonInfo {
   /** The commit of the daemon's checkout; null when it is not a git checkout. */
   commit: string | null;
   started_at: string;
+  pid: number;
 }
 
-export function status(db: Db, daemon: DaemonInfo = { commit: null, started_at: new Date(0).toISOString() }) {
+/** The facts of the daemon's reload that only its process knows (the rest comes from the database). */
+export type ReloadFacts = Pick<ReloadInput, 'changed' | 'lastChangeAt' | 'requested' | 'blocked'>;
+
+/** GET /api/daemon: the code the daemon loaded, since when and as which process, and where a reload stands. */
+export function daemonState(db: Db, info: DaemonInfo, facts: ReloadFacts): DaemonState {
+  return {
+    ...info,
+    reload: reloadState({
+      ...facts,
+      enabled: db.reloadOnChange(),
+      now: Date.now(),
+      activity: { tasks: db.countRunning(), planner: db.countRunningPlannerRuns(), resolves: db.countRunningResolves() },
+    }),
+  };
+}
+
+export function status(db: Db, daemon: DaemonInfo = { commit: null, started_at: new Date(0).toISOString(), pid: process.pid }) {
   const gate = startGate(db);
   return {
     daemon,

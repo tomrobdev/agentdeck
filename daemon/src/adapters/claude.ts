@@ -53,6 +53,8 @@ export interface ClaudeRun {
   cancelled: boolean;
   /** The end of what claude wrote to stderr, e.g. why it refused to start. */
   stderr: string;
+  /** The session claude's first `system`/`init` line named; undefined if claude stopped before it. */
+  sessionId: string | undefined;
 }
 
 const STDERR_TAIL = 4_000;
@@ -76,6 +78,8 @@ export async function runClaude(opts: {
   onSpawn?: (pid: number) => void;
   /** Called for each usage window a rate_limit_event reports. */
   onUsage?: (w: UsageWindow) => void;
+  /** Called once with the session id from claude's init line, so a run a restart ends can be resumed. */
+  onSession?: (sessionId: string) => void;
 }): Promise<ClaudeRun> {
   const { log } = opts;
   const child = spawn(claudeBin(), opts.args, {
@@ -87,7 +91,14 @@ export async function runClaude(opts: {
   activeChildren.add(child);
   if (child.pid) opts.onSpawn?.(child.pid);
 
-  const run: ClaudeRun = { result: undefined, exitCode: -1, rateLimitedUntil: undefined, cancelled: false, stderr: '' };
+  const run: ClaudeRun = {
+    result: undefined,
+    exitCode: -1,
+    rateLimitedUntil: undefined,
+    cancelled: false,
+    stderr: '',
+    sessionId: undefined,
+  };
 
   const cancelTimer = opts.shouldCancel
     ? setInterval(() => {
@@ -105,6 +116,10 @@ export async function runClaude(opts: {
       ev = JSON.parse(line);
     } catch {
       return;
+    }
+    if (ev.type === 'system' && ev.subtype === 'init' && typeof ev.session_id === 'string' && run.sessionId === undefined) {
+      run.sessionId = ev.session_id;
+      opts.onSession?.(ev.session_id);
     }
     if (ev.type === 'result') run.result = ev;
     if (ev.type === 'rate_limit_event') {

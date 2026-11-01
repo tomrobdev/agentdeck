@@ -6,27 +6,52 @@
 //   FAKE_DENIED   reports STATUS: BLOCKED with two permission_denials in the result (FAKE_DENIED_DONE: finishes, same denials)
 //   FAKE_ERROR    exits non-zero with no result
 //   FAKE_RATELIMIT emits a rejected rate_limit_event
-//   FAKE_SLOW     sleeps 30s (for cancel tests)
+//   FAKE_SLOW     sleeps 30s (for cancel tests), resumed or not
+//   FAKE_STALL    sleeps 30s in a new session; resumed, it finishes like FAKE_DONE (for restart tests)
 //   FAKE_NEEDS_SETUP  like FAKE_DONE, but blocks unless the repo's setup wrote setup-done.txt
 // A resolve run (the prompt starts "AgentDeck conflict resolution") keeps both sides of every conflict and commits the merge;
 // FAKE_RESOLVE_BLOCKED reports BLOCKED, _LEAVE says DONE with the markers still there, _ABORT aborts the merge itself,
 // _STAGE stages the files without committing. The words come from the task's prompt, which the resolve prompt quotes.
 //   FAKE_NO_SANDBOX  if the --settings file enables the sandbox with failIfUnavailable, exits at startup like claude does
 // Every run appends its prompt to $AGENTDECK_HOME/fake-claude-calls.log, so tests can tell it never started,
-// and the --settings path it got (or "-") to $AGENTDECK_HOME/fake-claude-settings.log.
+// the --settings path it got (or "-") to $AGENTDECK_HOME/fake-claude-settings.log, and its arguments as a JSON
+// array to $AGENTDECK_HOME/fake-claude-args.log.
+// Sessions: a new session is named fake-session-<pid> and its prompt kept in $AGENTDECK_HOME/fake-sessions/.
+// `--resume <id>` continues it: the init line names <id> and the kept prompt's keywords still count. A session that
+// is not kept is answered as claude answers one it no longer has: "No conversation found" on stderr, exit 1, no output.
 import { execFileSync } from 'node:child_process';
-import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const args = process.argv.slice(2);
-const prompt = args[args.indexOf('-p') + 1] ?? '';
+const given = args[args.indexOf('-p') + 1] ?? '';
 const out = (o) => process.stdout.write(JSON.stringify(o) + '\n');
 const resetsAt = Math.floor(Date.now() / 1000) + 3600;
 const settingsPath = args.includes('--settings') ? args[args.indexOf('--settings') + 1] : undefined;
-if (process.env.AGENTDECK_HOME) {
-  appendFileSync(join(process.env.AGENTDECK_HOME, 'fake-claude-calls.log'), `${prompt}\n`);
-  appendFileSync(join(process.env.AGENTDECK_HOME, 'fake-claude-settings.log'), `${settingsPath ?? '-'}\n`);
+const resume = args.includes('--resume') ? args[args.indexOf('--resume') + 1] : undefined;
+const home = process.env.AGENTDECK_HOME;
+if (home) {
+  appendFileSync(join(home, 'fake-claude-calls.log'), `${given}\n`);
+  appendFileSync(join(home, 'fake-claude-settings.log'), `${settingsPath ?? '-'}\n`);
+  appendFileSync(join(home, 'fake-claude-args.log'), `${JSON.stringify(args)}\n`);
 }
+
+const sessions = home ? join(home, 'fake-sessions') : undefined;
+let kept = '';
+if (resume !== undefined) {
+  if (!sessions || !existsSync(join(sessions, resume))) {
+    process.stderr.write(`No conversation found with session ID: ${resume}\n`);
+    process.exit(1);
+  }
+  kept = readFileSync(join(sessions, resume), 'utf8');
+}
+const session = resume ?? `fake-session-${process.pid}`;
+if (sessions && resume === undefined) {
+  mkdirSync(sessions, { recursive: true });
+  writeFileSync(join(sessions, session), given);
+}
+// What this session has been told: a resumed one remembers the task.
+const prompt = kept ? `${kept}\n${given}` : given;
 
 if (prompt.includes('FAKE_NO_SANDBOX') && settingsPath) {
   const { sandbox } = JSON.parse(readFileSync(settingsPath, 'utf8'));
@@ -36,7 +61,7 @@ if (prompt.includes('FAKE_NO_SANDBOX') && settingsPath) {
   }
 }
 
-out({ type: 'system', subtype: 'init', session_id: 'fake-session', cwd: process.cwd() });
+out({ type: 'system', subtype: 'init', session_id: session, cwd: process.cwd() });
 out({
   type: 'rate_limit_event',
   rate_limit_info: {
@@ -53,7 +78,7 @@ const result = (text, extra = {}) =>
     subtype: 'success',
     is_error: false,
     result: text,
-    session_id: 'fake-session',
+    session_id: session,
     num_turns: 3,
     total_cost_usd: 0.01,
     usage: { input_tokens: 100, output_tokens: 50, cache_read_input_tokens: 1000, cache_creation_input_tokens: 200 },
@@ -118,7 +143,7 @@ if (isPlanner) {
   result('I need to know which database to use.\nSTATUS: BLOCKED: which database?');
 } else if (prompt.includes('FAKE_NEEDS_SETUP') && !existsSync('setup-done.txt')) {
   result('setup-done.txt is missing.\nSTATUS: BLOCKED: setup did not run');
-} else if (prompt.includes('FAKE_SLOW')) {
+} else if (prompt.includes('FAKE_SLOW') || (prompt.includes('FAKE_STALL') && resume === undefined)) {
   await new Promise((r) => setTimeout(r, 30_000));
   result('slow done\nSTATUS: DONE');
 } else {

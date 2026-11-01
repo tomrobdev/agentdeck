@@ -5,6 +5,8 @@ import { join, resolve } from 'node:path';
 /** Root for all runtime state: database, run logs, worktrees. */
 // Resolved, so a relative AGENTDECK_HOME doesn't change meaning when git or a worktree runs elsewhere.
 export const HOME = resolve(process.env.AGENTDECK_HOME ?? join(homedir(), '.agentdeck'));
+/** The checkout this code runs from (this file is daemon/src/config.ts). */
+export const CHECKOUT_ROOT = resolve(import.meta.dirname, '../..');
 export const DB_PATH = join(HOME, 'agentdeck.db');
 export const LOG_DIR = join(HOME, 'logs');
 export const WORKTREE_DIR = join(HOME, 'worktrees');

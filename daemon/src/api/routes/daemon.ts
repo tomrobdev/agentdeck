@@ -19,6 +19,7 @@ export function routes({ db, daemon, changes }: ApiContext): Route[] {
       });
     }),
     route('GET', /^\/api\/status$/, () => actions.status(db, daemon.info)),
+    route('GET', /^\/api\/daemon$/, () => actions.daemonState(db, daemon.info, daemon.reloadFacts())),
     route('POST', /^\/api\/pause$/, () => (actions.setPaused(db, true), actions.status(db, daemon.info))),
     route('POST', /^\/api\/resume$/, () => (actions.setPaused(db, false), actions.status(db, daemon.info))),
     route('POST', /^\/api\/daemon\/restart$/, () => actions.restartDaemon(db, daemon.requestRestart)),

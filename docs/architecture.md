@@ -25,6 +25,8 @@ flowchart LR
     reporoot["adapters/repo-root.ts"]
     watch["adapters/watch.ts"]
     caffeinate["adapters/caffeinate.ts"]
+    daemonapi["adapters/daemon-api.ts"]
+    daemonlog["adapters/daemon-log.ts"]
   end
   sqlite[("SQLite")]
   claudecli["claude -p"]
@@ -51,11 +53,15 @@ flowchart LR
   notify --> notifications
   watch -. "source changed" .-> scheduler
   caffeinate -. "keeps the Mac awake" .-> scheduler
+  cli -- "agentdeck doctor" --> daemonapi
+  cli -- "agentdeck doctor" --> daemonlog
 ```
 
 ## One task's run
 
 `Scheduler` ticks, asks the governor (`decide`, behind `startGate`) whether new work may start, and claims the next queued task into a slot. `runTask` syncs the branch (`syncBranch`), runs claude through `runClaude`, then the repo's tests, and opens the pull request (`openPullRequest`). A repo with auto-merge on is merged by `autoMerge`; otherwise a person merges, and `refreshPrStates` finds the merged PR and moves the task on with the pr_merged event.
+
+The run stores claude's session id as soon as `runClaude` reads it off claude's first line. If the daemon restarts mid-run, the next daemon stops the orphaned claude (`reapOrphans`), ends the run as interrupted (`INTERRUPTED`) and requeues the task without using an attempt. The task's next run continues that session with `--resume` and a short prompt (`resumableSession`, `buildResumePrompt`); if claude no longer has the session, `startTaskRun` starts a fresh claude in the same run. After `MAX_RESTARTS` restarts the task fails instead.
 
 ```mermaid
 sequenceDiagram
@@ -104,15 +110,15 @@ flowchart TD
   db["db"]
   domain["domain"]
   adapters -->|4| config_ts
-  adapters -->|9| domain
+  adapters -->|10| domain
   api -->|9| application
   api -->|2| config_ts
   api -->|4| db
   api -->|3| domain
-  application -->|36| adapters
-  application -->|7| config_ts
-  application -->|27| db
-  application -->|104| domain
+  application -->|42| adapters
+  application -->|8| config_ts
+  application -->|28| db
+  application -->|108| domain
   cli_ts -->|1| application
   cli_ts -->|8| cli
   cli_ts -->|1| db
@@ -128,7 +134,7 @@ flowchart TD
   daemon_ts -->|1| db
   daemon_ts -->|1| domain
   db -->|3| config_ts
-  db -->|22| domain
+  db -->|23| domain
 ```
 
 <!-- /generated -->
@@ -343,6 +349,7 @@ stateDiagram-v2
 | Method | Path                               | Use case                                           |
 | ------ | ---------------------------------- | -------------------------------------------------- |
 | POST   | `/api/daemon/restart`              | `actions.restartDaemon`                            |
+| GET    | `/api/daemon`                      | `actions.daemonState`                              |
 | GET    | `/api/events`                      |                                                    |
 | POST   | `/api/notify/test`                 | `actions.sendTestNotification`                     |
 | POST   | `/api/pause`                       | `actions.setPaused`, `actions.status`              |

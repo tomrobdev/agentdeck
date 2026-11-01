@@ -3,7 +3,7 @@ import * as actions from '../application/actions.ts';
 import { DB_PATH } from '../config.ts';
 import { runDaemon } from '../daemon.ts';
 import { logsOptions, restartOptions, serviceAction } from './daemon-args.ts';
-import { die, relTime } from './format.ts';
+import { die, printHealth, relTime } from './format.ts';
 import type { Command } from './context.ts';
 
 /** Adapter failures are plain Errors with a message fit to print. */
@@ -64,6 +64,12 @@ export const daemonCommands: Record<string, Command> = {
   logs: async ({ flags, rest }) => {
     const { lines, follow } = logsOptions(flags, rest);
     await launchd(() => actions.tailLog(lines, follow));
+  },
+  doctor: async ({ db, flags }) => {
+    const checks = await actions.daemonHealth(db);
+    if (flags.json) console.log(JSON.stringify({ ok: checks.every((c) => c.ok), checks }, null, 2));
+    else printHealth(checks);
+    if (checks.some((c) => !c.ok)) process.exitCode = 1;
   },
   pause: ({ db }) => {
     actions.setPaused(db, true);
