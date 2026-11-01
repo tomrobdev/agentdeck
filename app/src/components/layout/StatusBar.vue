@@ -2,10 +2,24 @@
 // The status bar along the bottom of the window: the daemon's state (click to pause or resume), slots,
 // and the usage windows. Actions and navigation are in the header (AppHeader.vue).
 import { computed } from 'vue';
-import { type Status, describeState, relTime } from '../../api';
+import { type Status, type TaskSummary, api, describeState, relTime } from '../../api';
+import { useActivity } from '../../composables/useActivity';
+import { type ActivityItem, KIND_LABEL } from '../../lib/activity';
+import { useActions } from '../../composables/useActions';
+import { openTask } from '../../router';
+import Popover from '../ui/Popover.vue';
 
-const props = defineProps<{ status: Status | null; offline: boolean; busy: boolean }>();
+const props = defineProps<{ status: Status | null; tasks: TaskSummary[]; offline: boolean; busy: boolean }>();
 defineEmits<{ toggle: []; daemon: [] }>();
+
+// Everything under way, from the task list and status the window already reads.
+const activity = useActivity(
+  () => props.tasks,
+  () => props.status,
+);
+const actions = useActions();
+const open = (item: ActivityItem) => item.taskId !== null && openTask(item.taskId, item.tab);
+const cancelMerge = (item: ActivityItem) => item.taskId !== null && actions.run(() => api.cancelMerge(item.taskId!));
 
 const state = computed(() => describeState(props.status, props.offline));
 
@@ -55,6 +69,34 @@ const toggleTitle = computed(() => {
         (throttled)</template
       >
     </span>
+
+    <Popover v-if="!offline && activity.length" up>
+      <template #trigger>
+        <button class="pill !py-0 text-xs" title="What is under way" aria-label="Activity">
+          <span class="inline-block size-2.5 flex-none animate-spin rounded-full border border-running border-t-transparent" />
+          {{ activity.length }} active
+        </button>
+      </template>
+      <ul class="m-0 flex min-w-[320px] max-w-[460px] list-none flex-col gap-0.5 p-0 text-xs">
+        <li v-for="item in activity" :key="item.key" class="flex items-center gap-1 rounded hover:bg-panel-2">
+          <button
+            class="flex min-w-0 flex-1 flex-col gap-0.5 border-0 bg-transparent px-2 py-1 text-left"
+            :disabled="item.taskId === null"
+            @click="open(item)"
+          >
+            <span class="truncate">
+              <span class="muted">{{ KIND_LABEL[item.kind] }}</span>
+              <template v-if="item.taskId !== null"> #{{ item.taskId }}</template>
+              {{ item.title }}
+            </span>
+            <span class="muted truncate"
+              >{{ item.doing }}<template v-if="item.took"> · for {{ item.took }}</template></span
+            >
+          </button>
+          <button v-if="item.cancellable" class="mr-1 !py-0 text-xs" :disabled="busy" @click="cancelMerge(item)">Cancel merge</button>
+        </li>
+      </ul>
+    </Popover>
 
     <template v-if="!offline">
       <span

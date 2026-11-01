@@ -107,6 +107,12 @@ export function describeSync(s: SyncView): string {
   return `Resolving conflicts · ${describeLive({ since: s.since, turns: s.turns, max_turns: s.max_turns, tool: s.tool })}`;
 }
 
+/** A task's merge request on its row: "Merging when ready · 2 checks running", or "Merging…". */
+export function describeMergeRequest(m: MergeRequestView): string {
+  if (m.state === 'merging') return 'Merging…';
+  return ['Merging when ready', ...m.reasons].join(' · ');
+}
+
 export function totalTokens(r: Run): number {
   return r.input_tokens + r.output_tokens + r.cache_read_tokens + r.cache_write_tokens;
 }

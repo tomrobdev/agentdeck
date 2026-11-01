@@ -8,6 +8,7 @@ export type {
   AutoMergeResult,
   AutoMergeView,
   Budget,
+  CancelMergeRequestResult,
   CancelResult,
   LiveView,
   Changes,

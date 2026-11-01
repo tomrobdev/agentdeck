@@ -2,6 +2,7 @@
 // VITE_AGENTDECK_API points a dev build at another daemon (e.g. one run on a copy of the database).
 import type {
   AutoMergeRequest,
+  CancelMergeRequestResult,
   AutoMergeResult,
   CancelMergeRequestResult,
   CancelResult,
@@ -127,6 +128,8 @@ export const api = {
   cancelMergeRequest: (id: number) => call<CancelMergeRequestResult>(`/api/tasks/${id}/merge-request`, { method: 'DELETE' }),
   /** Let the daemon merge the task's PR on its own (true), not (false), or follow the repo (null). */
   autoMerge: (id: number, body: AutoMergeRequest) => call<AutoMergeResult>(`/api/tasks/${id}/auto-merge`, { method: 'POST', json: body }),
+  /** Drop the task's merge request; the PR stays open. */
+  cancelMerge: (id: number) => call<CancelMergeRequestResult>(`/api/tasks/${id}/merge-request`, { method: 'DELETE' }),
   /** Merge the base branch into the task's branch; a conflict starts a claude run, so this can take minutes. */
   sync: (id: number) => call<SyncResult>(`/api/tasks/${id}/resolve`, { method: 'POST' }),
   changes: (id: number) => call<Changes>(`/api/tasks/${id}/changes`),
