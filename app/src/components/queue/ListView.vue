@@ -29,12 +29,15 @@ const props = defineProps<{
   groupBy: GroupBy;
   collapsed: string[];
   selected: number | null;
+  /** The tasks picked for a bulk action (`x`, shift-click). */
+  picked?: number[];
   show: ShowProps;
   showEmpty: boolean;
 }>();
 const emit = defineEmits<{
   toggle: [key: string];
   select: [id: number];
+  pick: [id: number, range: boolean];
   open: [id: number];
   act: [kind: 'approve' | 'retry', id: number];
   merge: [id: number];
@@ -77,11 +80,20 @@ watch(
             :class="[
               `s-${t.status}`,
               t.id === selected ? 'bg-[color-mix(in_srgb,var(--accent)_8%,var(--panel))] shadow-[inset_2px_0_0_var(--accent)]' : '',
+              picked?.includes(t.id) ? 'bg-[color-mix(in_srgb,var(--accent)_16%,var(--panel))]' : '',
             ]"
             :data-task-row="t.id"
-            @click="emit('open', t.id)"
+            @click="$event.shiftKey ? emit('pick', t.id, true) : emit('open', t.id)"
+            @mousedown="$event.shiftKey && $event.preventDefault()"
             @mouseenter="emit('select', t.id)"
           >
+            <span
+              v-if="picked?.length"
+              class="w-3 flex-none text-accent"
+              :aria-label="picked.includes(t.id) ? 'Selected' : undefined"
+              @click.stop="emit('pick', t.id, false)"
+              >{{ picked.includes(t.id) ? '☑' : '☐' }}</span
+            >
             <PriorityIcon :priority="t.priority" />
             <span class="w-[34px] flex-none font-mono text-sm text-muted tabular-nums">#{{ t.id }}</span>
             <StatusIcon :task="t" />
