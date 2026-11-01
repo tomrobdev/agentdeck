@@ -24,7 +24,6 @@ const { latestReviewNote } = await import('../src/domain/task/history.ts');
 const { mergePreview, mergeTask } = await import('../src/application/actions.ts');
 const { mergeCheck, parsePrDetails } = await import('../src/domain/pull-request/merge.ts');
 type PrDetails = import('../src/domain/pull-request/merge.ts').PrDetails;
-const { dependencyState } = await import('../src/domain/task/dependency.ts');
 const { waitingFor } = await import('../src/application/task/dependencies.ts');
 const { cancelTask } = await import('../src/application/actions.ts');
 
@@ -383,31 +382,6 @@ test('--after rejects a task that does not exist, and a failed dependency never 
   assert.equal(claimed.id, dep.id);
   db.applyEvent(dep.id, { type: 'finish', outcome: 'blocked' }, { reason: 'stuck' });
   assert.equal(db.claimNextTask(), undefined);
-});
-
-test('dependencyState says why a task is stuck', () => {
-  const done = { status: 'done', pr_url: null, pr_state: null, pr_mode: 'off', done_by: null };
-  const after = { after_task: 5 };
-  assert.deepEqual(dependencyState({ after_task: null }, undefined), { kind: 'none' });
-  assert.deepEqual(dependencyState(after, done), { kind: 'met' });
-  assert.deepEqual(dependencyState(after, { ...done, pr_mode: 'ready' }), { kind: 'waiting', on: 5 });
-  assert.deepEqual(dependencyState(after, { ...done, pr_mode: 'draft', pr_state: 'failed' }), {
-    kind: 'stuck',
-    on: 5,
-    reason: "#5's PR could not be opened",
-  });
-  assert.deepEqual(dependencyState(after, { ...done, status: 'queued' }), { kind: 'waiting', on: 5 });
-  assert.deepEqual(dependencyState(after, { ...done, status: 'cancel_requested' }), { kind: 'waiting', on: 5 });
-  assert.deepEqual(dependencyState(after, { ...done, pr_url: 'u', pr_state: 'open' }), { kind: 'waiting', on: 5 });
-  assert.deepEqual(dependencyState(after, { ...done, pr_url: 'u', pr_state: 'closed' }), {
-    kind: 'stuck',
-    on: 5,
-    reason: "#5's PR was closed without merging",
-  });
-  assert.deepEqual(dependencyState(after, { ...done, status: 'failed' }), { kind: 'stuck', on: 5, reason: '#5 failed' });
-  assert.deepEqual(dependencyState(after, { ...done, status: 'blocked' }), { kind: 'stuck', on: 5, reason: '#5 is blocked' });
-  assert.deepEqual(dependencyState(after, { ...done, status: 'cancelled' }), { kind: 'stuck', on: 5, reason: '#5 was cancelled' });
-  assert.deepEqual(dependencyState(after, undefined), { kind: 'stuck', on: 5, reason: '#5 no longer exists' });
 });
 
 test('a dependent is not claimed while its dependency pushes and opens its PR', async () => {

@@ -17,10 +17,7 @@ export interface TaskView {
 }
 
 /** Each task with its view. Reads the repos, plans and queue state once for the whole list. */
-export function withViews<T extends Pick<Task, 'id' | 'repo_id' | 'status' | 'after_task' | 'pr_state'>>(
-  db: Db,
-  tasks: T[],
-): (T & TaskView)[] {
+export function withViews<T extends Pick<Task, 'id' | 'repo_id' | 'status' | 'pr_state'>>(db: Db, tasks: T[]): (T & TaskView)[] {
   const names = new Map(db.listRepos().map((r) => [r.id, r.name]));
   const waitOf = startWaits(db);
   const unfinished = db.planUnfinishedIds();

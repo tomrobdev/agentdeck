@@ -167,6 +167,16 @@ export const MIGRATIONS: Migration[] = [
    ALTER TABLE repos ADD COLUMN auto_merge_max_lines INTEGER NOT NULL DEFAULT 400;
    ALTER TABLE repos ADD COLUMN auto_merge_skip TEXT NOT NULL DEFAULT '[".github/"]';
    ALTER TABLE tasks ADD COLUMN auto_merge INTEGER;`,
+  // 18: task links (docs/plans/task-links.html). kind is builds_on | after. after_task is copied in and no longer read.
+  `CREATE TABLE task_links (
+     task_id INTEGER NOT NULL REFERENCES tasks(id),
+     on_task INTEGER NOT NULL REFERENCES tasks(id),
+     kind TEXT NOT NULL DEFAULT 'builds_on',
+     created_at TEXT NOT NULL DEFAULT (datetime('now')),
+     PRIMARY KEY (task_id, on_task)
+   );
+   CREATE INDEX task_links_on ON task_links(on_task);
+   INSERT INTO task_links (task_id, on_task, kind) SELECT id, after_task, 'builds_on' FROM tasks WHERE after_task IS NOT NULL;`,
 ];
 
 /** Runs every step above the database's user_version in one transaction; returns how many ran. */

@@ -5,11 +5,12 @@ import type { DatabaseSync } from 'node:sqlite';
 import { DEFAULTS } from '../config.ts';
 import type { MergeMethod } from '../domain/pull-request/merge.ts';
 import { MAX_RESTARTS, type TaskEvent, type TaskStatus, fromStatuses, nextStatus, transition } from '../domain/task/lifecycle.ts';
+import type { Link, LinkKind } from '../domain/task/link.ts';
 import type { PrEvent, TaskEventRow, TaskEventType } from '../domain/task/history.ts';
 import { EDITABLE_STATUSES, OPEN_STATUSES, type Task, type TaskSummary } from '../domain/task/task.ts';
 import type { Orm } from './orm.ts';
 import { NOW, atomically } from './sql.ts';
-import { plannerRuns, repos, runs, taskEvents, tasks } from './tables.ts';
+import { plannerRuns, repos, runs, taskEvents, taskLinks, tasks } from './tables.ts';
 
 /** Every column but the prompt, for lists. */
 const { prompt: _prompt, ...SUMMARY_COLUMNS } = getColumns(tasks);
@@ -20,13 +21,14 @@ const t = alias(tasks, 't');
 /**
  * SQL: tasks `d` that a dependent may build on: done, and merged unless their repo has pr_mode off.
  * A done task whose PR isn't opened yet (or failed to open) has pr_url NULL, so it must not count as met.
- * A task a person marked done counts as met unless its PR is open. Mirrors domain/task/dependency.ts.
+ * A task a person marked done counts as met unless its PR is open. Mirrors domain/task/link.ts.
  */
 const DEPENDENCY_MET = `d.status = 'done' AND (d.pr_state = 'merged'
   OR (d.pr_url IS NULL AND d.pr_state IS NULL AND EXISTS (SELECT 1 FROM repos r WHERE r.id = d.repo_id AND r.pr_mode = 'off'))
   OR (d.done_by = 'person' AND (d.pr_state IS NULL OR d.pr_state <> 'open')))`;
-/** SQL: the task row `t` is free to start (it has no dependency, or the dependency is met). */
-const NOT_WAITING = sql.raw(`(t.after_task IS NULL OR EXISTS (SELECT 1 FROM tasks d WHERE d.id = t.after_task AND ${DEPENDENCY_MET}))`);
+/** SQL: the task row `t` is free to start: every task it builds on is met. After links never hold a start. Mirrors startState. */
+const NOT_WAITING = sql.raw(`NOT EXISTS (SELECT 1 FROM task_links l WHERE l.task_id = t.id AND l.kind = 'builds_on'
+  AND NOT EXISTS (SELECT 1 FROM tasks d WHERE d.id = l.on_task AND ${DEPENDENCY_MET}))`);
 
 /** Unset fields are left alone by Drizzle; these writes have always stored a given-as-undefined field as NULL. */
 const given = <T extends object>(fields: T) =>
@@ -79,12 +81,13 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
             max_attempts: n.max_attempts ?? DEFAULTS.maxAttempts,
             status,
             source: n.source ?? 'manual',
-            after_task: n.after_task ?? null,
+            after_task: n.after_task ?? null, // still shown by the API until it reads links; the links are what count
             plan_path: n.plan_path ?? null,
             plan_steps: n.plan_steps ?? null,
           })
           .run();
         const id = Number(info.lastInsertRowid);
+        if (n.after_task != null) orm.insert(taskLinks).values({ task_id: id, on_task: n.after_task, kind: 'builds_on' }).run();
         recordEvent(id, 'created', null, status);
         return id;
       });
@@ -161,14 +164,41 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         .orderBy(desc(tasks.id))
         .all() as TaskSummary[];
     },
-    /** Queued tasks that wait on `id` with `--after`. */
-    dependentsOf(id: number): Task[] {
+    /** The links a task has: what it depends on. */
+    linksOf(id: number): Link[] {
       return orm
-        .select()
+        .select({ task_id: taskLinks.task_id, on: taskLinks.on_task, kind: taskLinks.kind })
+        .from(taskLinks)
+        .where(eq(taskLinks.task_id, id))
+        .orderBy(asc(taskLinks.on_task))
+        .all() as Link[];
+    },
+    /** Every link there is, for checking a new one for cycles. */
+    allLinks(): Link[] {
+      return orm.select({ task_id: taskLinks.task_id, on: taskLinks.on_task, kind: taskLinks.kind }).from(taskLinks).all() as Link[];
+    },
+    /** The tasks that depend on `id` (of one kind, if given), in any status. */
+    dependentsOf(id: number, kind?: LinkKind): Task[] {
+      return orm
+        .select(getColumns(tasks))
         .from(tasks)
-        .where(and(eq(tasks.after_task, id), eq(tasks.status, 'queued')))
+        .innerJoin(taskLinks, eq(taskLinks.task_id, tasks.id))
+        .where(and(eq(taskLinks.on_task, id), kind ? eq(taskLinks.kind, kind) : undefined))
         .orderBy(asc(tasks.id))
         .all() as Task[];
+    },
+    /** Link `link.task_id` to `link.on`. Whether that is allowed (a cycle, a duplicate) is the caller's to check with linkError. */
+    addLink(link: Link): void {
+      orm.insert(taskLinks).values({ task_id: link.task_id, on_task: link.on, kind: link.kind }).run();
+    },
+    /** Remove the link from `task_id` to `on`; false if there was none. */
+    removeLink(task_id: number, on: number): boolean {
+      return (
+        orm
+          .delete(taskLinks)
+          .where(and(eq(taskLinks.task_id, task_id), eq(taskLinks.on_task, on)))
+          .run().changes > 0
+      );
     },
     /**
      * Tasks whose pull request is still open, for the state refresh: done ones, and blocked or failed ones
@@ -190,7 +220,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     },
     /**
      * Atomically claim the next queued task of a repo that isn't paused, or undefined if none.
-     * A task with `after_task` waits until that task is done and, if it has a PR, the PR is merged.
+     * A task waits until every task it builds on is done and, if that has a PR, the PR is merged.
      */
     claimNextTask(): Task | undefined {
       const from = fromStatuses({ type: 'claim' });

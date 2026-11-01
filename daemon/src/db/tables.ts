@@ -1,7 +1,7 @@
 // The tables as Drizzle sees them, mirroring the migrated schema in schema.ts. The stores query through them, and
 // drizzle-kit reads this for Studio (pnpm db:studio) and the schema check (pnpm db:check). Keys are column names, as in the domain types.
 import { sql } from 'drizzle-orm';
-import { index, integer, real, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
+import { index, integer, primaryKey, real, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
 export const repos = sqliteTable(
   'repos',
   {
@@ -60,7 +60,7 @@ export const tasks = sqliteTable(
     restarts: integer().default(0).notNull(),
     pr_url: text(),
     pr_state: text(),
-    after_task: integer(),
+    after_task: integer(), // legacy: migration 18 copied it into task_links; nothing reads it (addTask still writes it for the API's sake)
     merge_method: text(),
     plan_path: text(),
     plan_steps: text(),
@@ -158,6 +158,23 @@ export const taskEvents = sqliteTable(
       .notNull(),
   },
   (table) => [index('task_events_task').on(table.task_id, table.id)],
+);
+
+export const taskLinks = sqliteTable(
+  'task_links',
+  {
+    task_id: integer()
+      .notNull()
+      .references(() => tasks.id),
+    on_task: integer()
+      .notNull()
+      .references(() => tasks.id),
+    kind: text().default('builds_on').notNull(),
+    created_at: text()
+      .default(sql`datetime('now')`)
+      .notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.task_id, table.on_task] }), index('task_links_on').on(table.on_task)],
 );
 
 export const taskPlans = sqliteTable('task_plans', {

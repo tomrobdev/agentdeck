@@ -1,10 +1,10 @@
 // Registered repos.
-import { and, asc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import type { DatabaseSync } from 'node:sqlite';
 import type { Repo } from '../domain/repo/repo.ts';
 import type { Orm } from './orm.ts';
 import { NOW, atomically } from './sql.ts';
-import { notifications, plannerRuns, repos, runs, taskEvents, taskPlans, tasks } from './tables.ts';
+import { notifications, plannerRuns, repos, runs, taskEvents, taskLinks, taskPlans, tasks } from './tables.ts';
 
 export function repoStore(db: DatabaseSync, orm: Orm) {
   const tasksOf = (repo_id: number) => orm.select({ id: tasks.id }).from(tasks).where(eq(tasks.repo_id, repo_id));
@@ -110,6 +110,11 @@ export function repoStore(db: DatabaseSync, orm: Orm) {
         orm
           .delete(taskEvents)
           .where(inArray(taskEvents.task_id, tasksOf(id)))
+          .run();
+        // Links to this repo's tasks from other repos' tasks go too, or those would point at nothing.
+        orm
+          .delete(taskLinks)
+          .where(or(inArray(taskLinks.task_id, tasksOf(id)), inArray(taskLinks.on_task, tasksOf(id))))
           .run();
         orm
           .delete(taskPlans)

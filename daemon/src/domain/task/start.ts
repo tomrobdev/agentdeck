@@ -1,6 +1,6 @@
 // What a queued task waits for, in the order the scheduler checks. Pure: no I/O.
 import type { Decision } from '../usage/governor.ts';
-import type { DependencyState } from './dependency.ts';
+import type { StartState } from './link.ts';
 
 /** What every queued task waits for: the daemon is paused, Claude rate-limited us, or the governor holds. */
 export type QueueWait =
@@ -56,7 +56,7 @@ export function startWait(
   ctx: {
     queue: QueueWait | null;
     repoPaused: string | null;
-    dependency: DependencyState;
+    dependency: StartState;
     running: number;
     max: number;
   },
@@ -66,7 +66,7 @@ export function startWait(
   if (ctx.repoPaused) return { kind: 'repo-paused', reason: ctx.repoPaused };
   const dep = ctx.dependency;
   if (dep.kind === 'waiting' || dep.kind === 'stuck')
-    return { kind: 'dependency', on: dep.on, stuck: dep.kind === 'stuck' ? dep.reason : null };
+    return { kind: 'dependency', on: dep.kind === 'waiting' ? dep.on[0] : dep.on, stuck: dep.kind === 'stuck' ? dep.reason : null };
   if (ctx.running >= ctx.max) return { kind: 'slots', running: ctx.running, max: ctx.max };
   return null;
 }

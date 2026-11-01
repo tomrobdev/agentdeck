@@ -49,7 +49,7 @@ test('startWait names what a queued task waits for', () => {
   assert.deepEqual(startWait({ status: 'queued' }, { ...free, queue: { kind: 'daemon-paused' }, repoPaused: 'refused' }), {
     kind: 'daemon-paused',
   });
-  assert.deepEqual(startWait({ status: 'queued' }, { ...free, repoPaused: 'refused', dependency: { kind: 'waiting', on: 3 } }), {
+  assert.deepEqual(startWait({ status: 'queued' }, { ...free, repoPaused: 'refused', dependency: { kind: 'waiting', on: [3] } }), {
     kind: 'repo-paused',
     reason: 'refused',
   });
