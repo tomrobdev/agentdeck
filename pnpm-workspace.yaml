@@ -1,3 +1,7 @@
 packages:
   - app
   - daemon
+
+# vue-demi (from @tanstack/vue-query) ships built for Vue 3; its postinstall only re-picks the Vue version.
+allowBuilds:
+  vue-demi: false

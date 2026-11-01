@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en" data-agentdeck-plan="1">
+  <head>
+    <meta charset="utf-8" />
+    <title>Live dashboard: a change stream and TanStack Query</title>
+    <style>
+      body {
+        font:
+          15px/1.5 system-ui,
+          sans-serif;
+        max-width: 52rem;
+        margin: 2rem auto;
+        padding: 0 1rem;
+      }
+      section {
+        border-left: 3px solid #ccc;
+        padding: 0 1rem;
+        margin: 1.25rem 0;
+      }
+      code {
+        background: #f3f3f3;
+        padding: 0 3px;
+        border-radius: 3px;
+      }
+      table {
+        border-collapse: collapse;
+      }
+      td,
+      th {
+        border: 1px solid #ddd;
+        padding: 4px 8px;
+        text-align: left;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Live dashboard: a change stream and TanStack Query</h1>
+    <p data-plan-summary>
+      The dashboard polls <code>/api/status</code> and the task list or task every 2 s, forever, even hidden in the tray, and diffs each
+      answer with <code>JSON.stringify</code> so nothing re-renders. Every panel fetches on its own and every action refetches everything.
+      Replace that with two pieces: the daemon tells the dashboard when the database changed (an SSE stream of a revision number, read from
+      SQLite's own change counters so CLI writes count too), and the dashboard keeps its server data in TanStack Query and refetches what is
+      on screen when the revision moves. Written 2026-11-01.
+    </p>
+
+    <h2>Tasks</h2>
+    <table>
+      <tr>
+        <th>Step</th>
+        <th>Task</th>
+        <th>Depends on</th>
+      </tr>
+      <tr>
+        <td><code>events</code></td>
+        <td>Change stream: <code>/api/events</code></td>
+        <td>none</td>
+      </tr>
+      <tr>
+        <td><code>query-core</code></td>
+        <td>Dashboard on TanStack Query: status, task list, task, repos</td>
+        <td>none</td>
+      </tr>
+      <tr>
+        <td><code>query-rest</code></td>
+        <td>The rest of the dashboard's reads on Query</td>
+        <td>builds on <code>query-core</code></td>
+      </tr>
+      <tr>
+        <td><code>stream</code></td>
+        <td>Refresh from the change stream; drop the 2 s poll</td>
+        <td>builds on <code>events</code> and <code>query-core</code></td>
+      </tr>
+    </table>
+
+    <h2>Decisions</h2>
+    <ul>
+      <li>
+        <strong>A revision, not topics.</strong> The stream sends one number that moves whenever the database changed. The dashboard has two
+        or three queries on screen at a time, so refetching all of them is simpler than tracking which table changed, and a change made by
+        the CLI can't say which table it touched anyway.
+      </li>
+      <li>
+        <strong>The revision comes from SQLite, not from the stores.</strong> <code>PRAGMA data_version</code> moves when another connection
+        commits (the CLI, another process); <code>total_changes()</code> counts rows written on the daemon's own connection. Reading both
+        every 250 ms costs two trivial queries and needs no hook in any store. An <code>UPDATE</code> that matches no row changes neither.
+      </li>
+      <li>
+        <strong>The database stays the only shared state.</strong> The watcher is an instance made in <code>daemon.ts</code> and handed to
+        the API and the scheduler, not module state.
+      </li>
+      <li>
+        <strong>The scheduler wakes on other processes' writes only</strong> (<code>data_version</code>), so a change made with the CLI
+        starts work at once instead of at the next 5 s tick. Not on its own writes: a tick writes, and waking on that would loop.
+      </li>
+      <li>
+        <strong>TanStack Query (<code>@tanstack/vue-query</code>) is the one new dependency.</strong> It is added to
+        <code>app/package.json</code> on <code>main</code> with this plan, because workers can't install packages. The reason: it replaces
+        the poll loop, the <code>keep()</code> diffing, the per-panel loading and error handling and the refetch-everything after actions
+        with one cache keyed by what was asked, and shows the cached task while it refetches instead of "Loading task #N…". No Pinia: once
+        Query holds the server data, what is left (route, modal, toast, selection) is a few refs.
+      </li>
+      <li>
+        <strong>Query keys and query options live in <code>app/src/api/queries.ts</code></strong
+        >, next to the calls they wrap, so a component asks for <code>taskQuery(id)</code>, never builds a key by hand.
+      </li>
+    </ul>
+
+    <section data-plan-step id="events" data-status="todo">
+      <h2>Change stream: <code>/api/events</code></h2>
+      <p>
+        <strong>db:</strong> a small store, <code>db/changes.ts</code>, merged into <code>Db</code> in <code>db/index.ts</code>, with
+        <code>changeCounters(): { dataVersion: number; ownChanges: number }</code> reading <code>PRAGMA data_version</code> and
+        <code>SELECT total_changes()</code> on the daemon's connection. There is no table to build on, so this is one of the places raw SQL
+        is right; say so in a comment.
+      </p>
+      <p>
+        <strong>application:</strong> <code>application/changes.ts</code> exports a class <code>ChangeWatcher</code>. Constructed with the
+        <code>Db</code>; <code>start(intervalMs = 250)</code> reads the counters on an unref'd timer and, when either moved, bumps
+        <code>rev</code> (starting at 1) and calls every subscriber with it; <code>subscribe(fn)</code> returns an unsubscribe;
+        <code>onOtherProcess(fn)</code> is called only when <code>dataVersion</code> moved; <code>stop()</code>. <code>actions.ts</code>
+        re-exports it so the API can name the type.
+      </p>
+      <p>
+        <strong>API:</strong> <code>ApiContext</code> gets <code>changes: Pick&lt;ChangeWatcher, 'rev' | 'subscribe'&gt;</code> (an idle
+        default in <code>server.ts</code>, as for the scheduler). <code>GET /api/events</code> in <code>api/routes/daemon.ts</code> answers
+        <code>text/event-stream</code>, writes <code>event: rev</code> with <code>{"rev": n}</code> at once and on every change, a
+        <code>: ping</code> comment every 25 s, and unsubscribes when the request closes. Same CORS as the rest (it goes through
+        <code>dispatch</code>, like the log stream). Add the event's shape to <code>api/contract.ts</code>.
+      </p>
+      <p>
+        <strong>Composition:</strong> <code>daemon.ts</code> makes the watcher (not in <code>once</code> mode), passes it to
+        <code>startApi</code>, wires <code>onOtherProcess(() =&gt; scheduler.wake())</code>, and stops it on exit.
+      </p>
+      <ul data-plan-done>
+        <li><code>pnpm check:fast</code> passes.</li>
+        <li>
+          Tests: a write through a second <code>DatabaseSync</code> on the same file (a CLI) moves <code>rev</code> and calls
+          <code>onOtherProcess</code>; a write through the daemon's own <code>Db</code> moves <code>rev</code> but doesn't call
+          <code>onOtherProcess</code>; with no writes, <code>rev</code> stays put across several intervals.
+        </li>
+        <li>
+          API test: <code>GET /api/events</code> answers <code>text/event-stream</code> with the current rev first, then a new rev after a
+          write; closing the request removes the subscriber.
+        </li>
+        <li><code>docs/architecture.md</code> is regenerated (<code>pnpm docs</code>) and the architecture test passes.</li>
+      </ul>
+    </section>
+
+    <section data-plan-step id="query-core" data-status="todo">
+      <h2>Dashboard on TanStack Query: status, task list, task, repos</h2>
+      <p>
+        <code>@tanstack/vue-query</code> is already in <code>app/package.json</code>. <code>main.ts</code> installs
+        <code>VueQueryPlugin</code> with one <code>QueryClient</code>: <code>retry: false</code> for <code>ApiError('offline')</code> (the
+        offline screen handles it), <code>refetchOnWindowFocus: true</code>.
+      </p>
+      <p>
+        New <code>app/src/api/queries.ts</code>: keys and <code>queryOptions</code> for <code>status</code>, <code>tasks</code>,
+        <code>task(id)</code> and <code>repos</code>, re-exported from <code>api/index.ts</code>. In <code>App.vue</code>, replace
+        <code>refresh()</code>, <code>keep()</code>, <code>lastJson</code> and the interval with <code>useQuery</code>: status always, the
+        list only on the queue, the task only on a task page, repos always. Status and the open page's query keep a 2 s
+        <code>refetchInterval</code> for now (the <code>stream</code> step removes it); status also polls in the background, because the
+        tray label (<code>setTrayStatus</code>) reads it while the window is hidden; the others don't. <code>offline</code> comes from the
+        status query's error.
+      </p>
+      <p>
+        Opening a task shows the cached task at once, if there is one, while it refetches; "Loading task #N…" only when there is none.
+        <code>useActions</code> keeps its interface; its <code>refresh</code> becomes <code>queryClient.invalidateQueries()</code>, which
+        also refetches repos, so <code>refreshAfterAction</code> goes.
+      </p>
+      <ul data-plan-done>
+        <li><code>pnpm check:fast</code> passes, and <code>pnpm --filter agentdeck-app exec vite build</code> builds.</li>
+        <li>
+          <code>keep</code>, <code>lastJson</code> and <code>POLL_MS</code>'s <code>setInterval</code> are gone from <code>App.vue</code>.
+        </li>
+        <li>Going back to a task already opened shows it with no loading screen.</li>
+        <li>Stopping the daemon still shows the offline screen, and starting it again reconnects with no reload.</li>
+      </ul>
+    </section>
+
+    <section data-plan-step id="query-rest" data-status="todo">
+      <h2>The rest of the dashboard's reads on Query</h2>
+      <p>
+        Every read that a component does on its own moves to a query in <code>api/queries.ts</code>:
+        <code>ReposPanel</code> (<code>repo</code>, <code>archivedRepos</code>, <code>repoDeletion</code>),
+        <code>SettingsPanel</code> (<code>settings</code>, <code>service</code>), <code>MergeDialog</code> (<code>mergePreview</code>),
+        <code>DependenciesCard</code> (its task list, sharing the <code>tasks</code> key), <code>NeedsCallout</code> (<code>repo</code>),
+        <code>PlanCard</code> (<code>planHtml</code>), <code>CodeTab</code>, <code>ChangesTab</code>, <code>DocumentsCard</code> and
+        <code>SnippetPopover</code> (<code>tree</code>, <code>file</code>, <code>diff</code>), and
+        <code>useChanges</code> (<code>changes</code>). Each component drops its own loading/error refs for the query's.
+      </p>
+      <p>
+        File, tree and diff reads at a commit never change: <code>staleTime: Infinity</code> for those keyed by commit.
+        <code>useChanges</code> keeps its 10 s refetch while the task is running (a run commits without touching the database) and keeps
+        returning the same object while <code>head</code> and <code>base</code> are unchanged. Writes stay on <code>useActions().run</code>;
+        no <code>useMutation</code> in this step.
+      </p>
+      <ul data-plan-done>
+        <li><code>pnpm check:fast</code> passes, and <code>pnpm --filter agentdeck-app exec vite build</code> builds.</li>
+        <li>
+          No component under <code>app/src/components/</code> calls a read in <code>api</code> directly (only
+          <code>api/queries.ts</code> does); writes and <code>logUrl</code> stay as they are.
+        </li>
+        <li>Reopening a file or diff already seen shows it at once, with no request.</li>
+      </ul>
+    </section>
+
+    <section data-plan-step id="stream" data-status="todo">
+      <h2>Refresh from the change stream; drop the 2 s poll</h2>
+      <p>
+        A composable, <code>composables/useChangeStream.ts</code>, used once in <code>App.vue</code>: an <code>EventSource</code> on
+        <code>API_BASE + '/api/events'</code>. On a <code>rev</code> event that differs from the last one, and on every (re)open (a daemon
+        restart reconnects), <code>queryClient.invalidateQueries()</code>, which refetches only the queries on screen. Closed on unmount.
+      </p>
+      <p>
+        Remove the 2 s <code>refetchInterval</code>s from <code>query-core</code>. Keep a 30 s fallback on status only, in the background
+        too: a governor hold lifting and other waits change with time, not with a write. <code>useChanges</code>' 10 s refetch while running
+        stays. The CSP in <code>tauri.conf.json</code> already allows <code>http://127.0.0.1:4317</code>; check that the stream connects in
+        the built app, not only in the browser.
+      </p>
+      <ul data-plan-done>
+        <li><code>pnpm check:fast</code> passes, and <code>pnpm --filter agentdeck-app exec vite build</code> builds.</li>
+        <li>
+          With the dashboard idle on the queue, the network panel shows the one event stream and no other request for 25 s (until the 30 s
+          status fallback).
+        </li>
+        <li><code>agentdeck add</code> from a terminal shows the new task in the queue within a second.</li>
+        <li>Restarting the daemon (<code>agentdeck restart</code>) reconnects the stream and the data with no reload.</li>
+      </ul>
+    </section>
+
+    <h2>Not in this plan</h2>
+    <ul>
+      <li>Reka UI under <code>Modal.vue</code> and <code>Popover.vue</code> (its own task).</li>
+      <li>Skipping the second setup after a clean sync (its own task).</li>
+      <li><code>useMutation</code> and optimistic board moves.</li>
+      <li>Batching the PR refresh into one <code>gh</code> call per repo.</li>
+      <li>The log tail's 500 ms file poll (<code>api/log-stream.ts</code>).</li>
+    </ul>
+  </body>
+</html>
