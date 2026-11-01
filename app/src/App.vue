@@ -1,6 +1,19 @@
 <script setup lang="ts">
-import { type Ref, computed, onBeforeUnmount, onMounted, ref, watch, watchEffect } from 'vue';
-import { ApiError, type Repo, type Status, type TaskSummary, type TaskDetail as Detail, api, describeState } from './api';
+import { computed, ref, watch, watchEffect } from 'vue';
+import { useQuery, useQueryClient } from '@tanstack/vue-query';
+import {
+  type Repo,
+  type Status,
+  type TaskSummary,
+  type TaskDetail as Detail,
+  api,
+  describeState,
+  isOffline,
+  reposQuery,
+  statusQuery,
+  taskQuery,
+  tasksQuery,
+} from './api';
 import { setTrayStatus } from './platform/native';
 import NewTaskForm from './components/panels/NewTaskForm.vue';
 import WaitBar from './components/layout/WaitBar.vue';
@@ -17,64 +30,42 @@ import { provideActions } from './composables/useActions';
 
 const POLL_MS = 2000;
 
-const status = ref<Status | null>(null);
-const tasks = ref<TaskSummary[]>([]);
-const repos = ref<Repo[]>([]);
 const selectedId = ref<number | null>(null);
-const detail = ref<Detail | null>(null);
-const offline = ref(false);
 const toast = ref('');
 const modal = ref<'new' | 'repos' | 'settings' | null>(null);
-
-let timer: number | undefined;
 
 function flash(msg: string) {
   toast.value = msg;
   setTimeout(() => (toast.value = ''), 3500);
 }
 
-// Each poll returns fresh objects. Keeping the old one when nothing changed stops every watcher and
-// computed below from re-running (and re-fetching) every 2 s.
-const lastJson = new Map<string, string>();
-function keep<T>(target: Ref<T>, key: string, next: T) {
-  const json = JSON.stringify(next);
-  if (lastJson.get(key) === json) return;
-  lastJson.set(key, json);
-  target.value = next;
-}
-
-async function refresh() {
-  try {
-    // A task page only needs that task; the queue needs the list.
-    const id = pageId.value;
-    const [s, list, task] = await Promise.all([api.status(), id === null ? api.tasks() : null, id === null ? null : api.task(id)]);
-    keep(status, 'status', s);
-    if (list) keep(tasks, 'tasks', list);
-    if (task && pageId.value === task.id) keep(detail, 'detail', task);
-    if (offline.value || !repos.value.length) repos.value = await api.repos();
-    offline.value = false;
-  } catch (e) {
-    if (e instanceof ApiError && e.message === 'offline') offline.value = true;
-  }
-}
-
-// After a change the repos list may have moved too (the Repos panel adds, archives and edits them).
-async function refreshAfterAction() {
-  await refresh();
-  repos.value = await api.repos().catch(() => repos.value);
-}
-const { busy, run: act } = provideActions(refreshAfterAction, flash);
-
 /** The task whose page is open, from the route. */
 const pageId = computed(() => (route.current.name === 'task' ? route.current.id : null));
-watch(pageId, (id) => {
-  if (id !== null) selectedId.value = id;
-  if (detail.value?.id !== id) {
-    detail.value = null;
-    lastJson.delete('detail');
-  }
-  refresh();
-});
+
+// Query keeps the old object when a refetch returns the same data, so nothing below re-runs every 2 s.
+// Status also polls while the window is hidden: the tray label reads it. The page's own query does not.
+const statusQ = useQuery({ ...statusQuery(), refetchInterval: POLL_MS, refetchIntervalInBackground: true });
+const tasksQ = useQuery(computed(() => ({ ...tasksQuery(), enabled: pageId.value === null, refetchInterval: POLL_MS })));
+const taskQ = useQuery(computed(() => ({ ...taskQuery(pageId.value ?? 0), enabled: pageId.value !== null, refetchInterval: POLL_MS })));
+const reposQ = useQuery(reposQuery());
+
+const status = computed<Status | null>(() => statusQ.data.value ?? null);
+const tasks = computed<TaskSummary[]>(() => tasksQ.data.value ?? []);
+const repos = computed<Repo[]>(() => reposQ.data.value ?? []);
+const detail = computed<Detail | null>(() => (pageId.value === null ? null : (taskQ.data.value ?? null)));
+const offline = computed(() => isOffline(statusQ.error.value));
+
+// After a change any of it may have moved (the Repos panel adds, archives and edits repos too).
+const queryClient = useQueryClient();
+const { busy, run: act } = provideActions(() => queryClient.invalidateQueries(), flash);
+
+watch(
+  pageId,
+  (id) => {
+    if (id !== null) selectedId.value = id;
+  },
+  { immediate: true },
+);
 
 const togglePause = () => act(() => (status.value?.paused ? api.resume() : api.pause()));
 const ACTIONS: Record<BoardMove, (id: number) => Promise<unknown>> = {
@@ -105,12 +96,6 @@ watchEffect(() => {
   const waiting = needYouCount(s);
   setTrayStatus(waiting ? `${label} · ${waiting} need you` : label);
 });
-
-onMounted(() => {
-  refresh();
-  timer = window.setInterval(refresh, POLL_MS);
-});
-onBeforeUnmount(() => clearInterval(timer));
 </script>
 
 <template>
