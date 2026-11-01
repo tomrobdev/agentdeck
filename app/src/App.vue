@@ -31,7 +31,7 @@ import TaskPage from './components/task/TaskPage.vue';
 import MergeDialog from './components/task/MergeDialog.vue';
 import CommandPalette from './components/ui/CommandPalette.vue';
 import { go, openTask, route } from './router';
-import { type BoardMove, needYouCount, openingTab } from './lib/taskView';
+import { type PersonEvent, needYouCount, openingTab } from './lib/taskView';
 import { paletteItems } from './lib/palette';
 import { requestedView } from './composables/useView';
 import { provideActions } from './composables/useActions';
@@ -43,9 +43,12 @@ const selectedId = ref<number | null>(null);
 const toast = ref('');
 const modal = ref<'new' | 'repos' | 'settings' | 'daemon' | null>(null);
 
+// A long message (a gh error, a sync that could not push) stays up long enough to read. A newer message replaces it.
+let toastTimer: ReturnType<typeof setTimeout> | undefined;
 function flash(msg: string) {
   toast.value = msg;
-  setTimeout(() => (toast.value = ''), 3500);
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => (toast.value = ''), Math.min(Math.max(3500, msg.length * 60), 15_000));
 }
 
 /** The task whose page is open, from the route. */
@@ -80,14 +83,14 @@ watch(
 );
 
 const togglePause = () => act(() => (status.value?.paused ? api.resume() : api.pause()));
-const ACTIONS: Record<BoardMove, (id: number) => Promise<unknown>> = {
+const ACTIONS: Record<PersonEvent, (id: number) => Promise<unknown>> = {
   approve: api.approve,
   reject: api.reject,
   retry: api.retry,
   cancel: api.cancel,
   mark_done: api.markDone,
 };
-const actOn = (kind: BoardMove, id: number) => act(() => ACTIONS[kind](id));
+const actOn = (kind: PersonEvent, id: number) => act(() => ACTIONS[kind](id));
 /** A task in review opens on its diff, the rest on the overview. */
 function openFromQueue(id: number) {
   const t = tasks.value.find((x) => x.id === id);

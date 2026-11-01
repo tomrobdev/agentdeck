@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { type MergeMethod, type MergeResult, MERGE_METHODS, api, autoMergeLine, mergePreviewQuery } from '../../api';
+import { type MergeMethod, type MergeResult, MERGE_METHODS, api, autoMergeLine, mergePreviewQuery, syncLine } from '../../api';
 import { useActions } from '../../composables/useActions';
 import Modal from '../ui/Modal.vue';
 
@@ -34,15 +34,7 @@ async function sync() {
     const res = await api.sync(props.taskId);
     await refresh();
     if (res.outcome === 'blocked') return emit('close'); // the task page shows why it is blocked
-    const files = `${res.files.length} ${res.files.length === 1 ? 'file' : 'files'}`;
-    syncNote.value =
-      res.outcome === 'resolved'
-        ? `Resolved conflicts in ${files}.`
-        : res.outcome === 'clean'
-          ? 'Synced with the base branch.'
-          : res.outcome === 'up_to_date'
-            ? 'The branch is already up to date.'
-            : (res.reason ?? res.outcome);
+    syncNote.value = syncLine(res);
     if (res.push_error) mergeError.value = `Could not push: ${res.push_error}`;
     else if (res.pushed) syncNote.value += ' Pushed; GitHub may take a moment to see it.';
     await previewQ.refetch();

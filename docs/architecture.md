@@ -126,7 +126,7 @@ flowchart TD
   cli -->|3| config_ts
   cli -->|1| daemon_ts
   cli -->|2| db
-  cli -->|14| domain
+  cli -->|15| domain
   daemon_ts -->|2| adapters
   daemon_ts -->|1| api
   daemon_ts -->|2| application
@@ -416,6 +416,7 @@ stateDiagram-v2
 | GET    | `/api/tasks/:id/tree`              | `actions.taskTree`                                 |
 | GET    | `/api/tasks/:id`                   | `actions.taskDetail`                               |
 | POST   | `/api/tasks/:id`                   | `actions.editTask`, `actions.taskDetail`           |
+| POST   | `/api/tasks/merge`                 | `actions.mergeAll`                                 |
 | GET    | `/api/tasks`                       | `actions.taskViews`                                |
 | POST   | `/api/tasks`                       | `actions.addTask`, `actions.taskDetail`            |
 

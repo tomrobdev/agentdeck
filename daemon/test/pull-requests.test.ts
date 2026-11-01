@@ -21,7 +21,7 @@ const { refreshPrStates } = await import('../src/application/pull-request/pull-r
 const { addTask, ActionError, closeTaskPr, retryTask, updateRepo } = await import('../src/application/actions.ts');
 const { buildPrompt } = await import('../src/domain/run/prompt.ts');
 const { latestReviewNote } = await import('../src/domain/task/history.ts');
-const { mergePreview, mergeTask } = await import('../src/application/actions.ts');
+const { linkTasks, mergeAll, mergePreview, mergeTask } = await import('../src/application/actions.ts');
 const { mergeCheck, parsePrDetails } = await import('../src/domain/pull-request/merge.ts');
 type PrDetails = import('../src/domain/pull-request/merge.ts').PrDetails;
 const { waitingFor } = await import('../src/application/task/dependencies.ts');
@@ -653,6 +653,48 @@ test('mergeTask refuses what cannot be merged and leaves the task as it was', as
     assert.equal(db.getTask(id)!.merge_method, null);
     assert.ok(!db.eventsForTask(id).some((e) => e.type === 'merge'));
   }
+});
+
+test('mergeAll merges each PR, one that lands after another once that one has, and says why the rest stay open', async () => {
+  const [first, later, conflicted, held] = [prTask(110), prTask(111), prTask(112), prTask(113)];
+  linkTasks(db, later.id, { on: first.id, kind: 'after' });
+  details[conflicted.url] = { ...cleanDetails, mergeable: 'CONFLICTING' };
+  const outside = db.addTask({ repo_id: repo.id, title: 'not landed', prompt: 'x' });
+  linkTasks(db, held.id, { on: outside.id, kind: 'after' });
+
+  // `later` comes first and waits for the round in which `first` merged; a repeated id merges once.
+  const res = await mergeAll(db, { ids: [later.id, conflicted.id, first.id, held.id, first.id] });
+  assert.deepEqual(
+    res.merged.map((m) => [m.id, m.method]),
+    [
+      [first.id, 'squash'],
+      [later.id, 'squash'],
+    ],
+  );
+  assert.deepEqual(
+    merging.merged.map((m) => m.url),
+    [first.url, later.url],
+  );
+  assert.deepEqual(
+    merging.deleted,
+    [`agentdeck/task-${first.id}`, `agentdeck/task-${later.id}`],
+    'the branches go, as after an auto-merge',
+  );
+  assert.deepEqual(
+    res.skipped.map((s) => s.id),
+    [conflicted.id, held.id],
+  );
+  assert.equal(
+    res.skipped[0].reason,
+    'the branch has conflicts with the base branch',
+    'the entry has the id; the reason does not repeat it',
+  );
+  assert.match(res.skipped[1].reason, new RegExp(`^lands after #${outside.id}`));
+  for (const id of [conflicted.id, held.id]) assert.equal(db.getTask(id)!.pr_state, 'open');
+  db.applyEvent(outside.id, { type: 'cancel' });
+
+  await assert.rejects(mergeAll(db, { ids: ['12'] as never }), /ids must be a list of task ids/);
+  assert.deepEqual(await mergeAll(db, { ids: [] }), { merged: [], skipped: [] });
 });
 
 test('mergeTask can delete the remote branch and remove the worktree, and reports a cleanup that fails', async () => {

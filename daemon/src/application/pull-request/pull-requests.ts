@@ -143,6 +143,44 @@ export async function mergeTask(db: Db, id: number, opts: { method?: string; del
   return mergeOpenPr(db, { task, repo, url, cwd }, pr, { method, deleteBranch, reason: `${method} merge` });
 }
 
+/** What merging a set of PRs came to: the ones merged, and why each other one was left open. */
+export interface MergeAllResult {
+  merged: ({ id: number } & MergeResult)[];
+  skipped: { id: number; reason: string }[];
+}
+
+/**
+ * Merge the open PRs of the given tasks, as a person approving them all: each with its own method (the task's, then the
+ * repo's), then the remote branch and the worktree go, as after an auto-merge. A PR that lands after another waits for a
+ * round in which that one merged, so the order the ids come in doesn't matter. One that can't merge stays as it was, with
+ * the reason mergeTask refused it. The base moves with every merge; GitHub refuses a PR that then conflicts.
+ */
+export async function mergeAll(db: Db, input: { ids: number[] }): Promise<MergeAllResult> {
+  const ids = object(input).ids;
+  if (!Array.isArray(ids) || !ids.every((id) => Number.isInteger(id) && id > 0)) throw new ActionError('ids must be a list of task ids');
+  const result: MergeAllResult = { merged: [], skipped: [] };
+  let pending = [...new Set(ids as number[])];
+  // A round with nothing merged frees no one, so the next round tries every PR left, to say why each stays open.
+  let last = false;
+  while (pending.length) {
+    const now = last ? pending : pending.filter((id) => !landsAfter(db, id).length);
+    pending = pending.filter((id) => !now.includes(id));
+    let merged = false;
+    for (const id of now) {
+      try {
+        result.merged.push({ id, ...(await mergeTask(db, id, { delete_branch: true })) });
+        merged = true;
+      } catch (err) {
+        if (!(err instanceof ActionError)) throw err;
+        // The id is on the entry, so mergeTask's "can't merge #12: " goes.
+        result.skipped.push({ id, reason: err.message.replace(`can't merge #${id}: `, '') });
+      }
+    }
+    last = !merged;
+  }
+  return result;
+}
+
 /**
  * Merge a PR that has been checked: mark a draft ready, merge, record it with `reason`, and optionally clean up.
  * Throws ActionError if gh fails; a cleanup failure after the merge is returned, not thrown.
