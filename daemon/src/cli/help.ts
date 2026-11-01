@@ -42,6 +42,7 @@ Tasks
                                   search matches #id, title, branch, model or reason; --status takes statuses,
                                   states (waiting, stuck, review, merged, pr-closed, no-pr) or groups (active, needs-you)
   agentdeck show <id>
+  agentdeck review <id>       list the task's reviews (made in the dashboard) and their comments
   agentdeck log <id> [--attempt n] [--raw]
   agentdeck attach <id> [plan.html]   attach a plan (docs/plan-format.md) to a task; with no file,
                                   re-read the plans under docs/plans/ on the task's branch

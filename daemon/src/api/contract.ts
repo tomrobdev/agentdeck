@@ -323,6 +323,66 @@ export interface MarkDoneRequest {
   note?: string;
 }
 
+/** A line comment of a review. `side` says which file `line` counts in: the base (old) or the task's head (new). */
+export interface ReviewComment {
+  id: number;
+  review_id: number;
+  path: string;
+  line: number;
+  side: 'old' | 'new';
+  /** The task's head commit the comment was made on. */
+  head_commit: string;
+  body: string;
+  /** null until answered. */
+  answer: string | null;
+  state: 'open' | 'answered' | 'resolved';
+  created_at: string;
+  updated_at: string;
+}
+
+/** A review of a task with its comments. A draft has no `submitted_at` and no `kind`. */
+export interface Review {
+  id: number;
+  task_id: number;
+  kind: 'comment' | 'request_changes' | null;
+  /** The overall note. */
+  body: string;
+  created_at: string;
+  submitted_at: string | null;
+  comments: ReviewComment[];
+}
+
+/** POST /api/reviews/:id (a draft's overall note) */
+export interface ReviewPatch {
+  body?: string;
+}
+
+/** POST /api/reviews/:id/comments */
+export interface NewReviewComment {
+  path: string;
+  line: number;
+  side: 'old' | 'new';
+  head_commit: string;
+  body: string;
+}
+
+/** POST /api/review-comments/:id (a draft comment's text) */
+export interface ReviewCommentPatch {
+  body: string;
+}
+
+/** POST /api/reviews/:id/submit: Request changes also retries the task, with the review as the reason. */
+export interface SubmitReview {
+  kind: 'comment' | 'request_changes';
+  /** Replaces the draft's overall note when given. */
+  body?: string;
+}
+
+/** POST /api/review-comments/:id/answer */
+export interface CommentAnswer {
+  answer: string;
+}
+
 /** GET /api/tasks/:id/plans/:planId */
 export interface PlanHtml {
   html: string;
