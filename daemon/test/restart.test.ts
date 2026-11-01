@@ -106,3 +106,12 @@ test('a requested restart exits once nothing is running, and waits otherwise', (
   const ready = reloadDecision(asked);
   assert.deepEqual([ready.pending, ready.exit], [true, true]);
 });
+
+test('a blocked reload neither exits nor holds back new work, unless a restart was requested', () => {
+  const change = { ...base, changed: ['db/schema.ts'], blocked: 'db/schema.ts has uncommitted changes' };
+  const idleBlocked = reloadDecision(change);
+  assert.deepEqual([idleBlocked.pending, idleBlocked.exit], [false, false]);
+  assert.match(idleBlocked.reason, /not reloading: db\/schema.ts has uncommitted changes/);
+  const asked = reloadDecision({ ...change, requested: true });
+  assert.deepEqual([asked.pending, asked.exit], [true, true]);
+});

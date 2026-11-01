@@ -2,7 +2,8 @@
 // It reports through `log` and throws what the caller should print; it never prints or exits on its own account.
 import type { Db } from './db/index.ts';
 import { startApi } from './api/server.ts';
-import { checkoutCommit } from './adapters/git.ts';
+import { join } from 'node:path';
+import { checkedOutBranch, checkoutCommit, hasUncommittedChanges } from './adapters/git.ts';
 import { watchSource } from './adapters/watch.ts';
 import { Scheduler } from './application/scheduler/scheduler.ts';
 import { API_PORT, DEFAULTS } from './config.ts';
@@ -21,10 +22,27 @@ export async function runDaemon({ db, once, log = () => {} }: DaemonOptions): Pr
   let restartRequested = false;
   const changed: string[] = [];
   let lastChangeAt: number | null = null;
+  // Why the code on disk must not be loaded, worked out when a change arrives (null: fine to load).
+  let blocked: string | null = null;
+  const refreshBlocked = async () => {
+    const [dirty, branch] = await Promise.all([
+      hasUncommittedChanges(join(import.meta.dirname, 'db', 'schema.ts')),
+      checkedOutBranch(import.meta.dirname),
+    ]);
+    const next = dirty
+      ? 'db/schema.ts has uncommitted changes'
+      : branch && branch !== 'main'
+        ? `the checkout is on ${branch}, not main`
+        : null;
+    // Once per distinct reason: the scheduler only logs pending decisions, and a block is not one.
+    if (next && next !== blocked) log(`not reloading: ${next}`);
+    blocked = next;
+  };
   if (!once) {
     watchSource(import.meta.dirname, (file) => {
       if (!changed.includes(file)) changed.push(file);
       lastChangeAt = Date.now();
+      void refreshBlocked();
     });
   }
   const reload = once
@@ -38,6 +56,7 @@ export async function runDaemon({ db, once, log = () => {} }: DaemonOptions): Pr
             now: Date.now(),
             activity,
             requested: restartRequested,
+            blocked,
           }),
         // launchd's KeepAlive starts the daemon again on the code now on disk.
         exit: () => process.exit(0),

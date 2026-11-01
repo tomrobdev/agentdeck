@@ -48,7 +48,20 @@ export async function checkoutCommit(cwd: string): Promise<string | null> {
 
 /** Whether `file` (absolute) differs from HEAD in the checkout containing it: modified, staged or untracked. */
 export async function hasUncommittedChanges(file: string): Promise<boolean> {
-  return (await git(dirname(file), 'status', '--porcelain', '--', file)) !== '';
+  try {
+    return (await git(dirname(file), 'status', '--porcelain', '--', file)) !== '';
+  } catch {
+    return false;
+  }
+}
+
+/** The branch checked out in `cwd`: 'detached' for a detached HEAD, null when it is not a git checkout. */
+export async function checkedOutBranch(cwd: string): Promise<string | null> {
+  try {
+    return (await git(cwd, 'branch', '--show-current')) || 'detached';
+  } catch {
+    return null;
+  }
 }
 
 export async function refExists(repoPath: string, ref: string): Promise<boolean> {
