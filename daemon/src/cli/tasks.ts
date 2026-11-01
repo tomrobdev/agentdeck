@@ -46,6 +46,7 @@ export const taskCommands: Record<string, Command> = {
         .join('')})`,
     );
     if (waiting?.stuck) console.log(`note: ${waiting.stuck}, so this task won't start until #${waiting.on} is retried`);
+    for (const w of await actions.promptWarnings(db, t.id)) console.log(`note: ${w}`);
     if (db.isPaused()) console.log('note: the daemon is paused; run `agentdeck resume` to start working');
   },
   link: async ({ db, flags, rest }) => {
@@ -83,6 +84,7 @@ export const taskCommands: Record<string, Command> = {
     });
     console.log(fmtTask(t, repoName(t.repo_id)));
     console.log(`model ${t.model}, attempts ${t.attempts}/${t.max_attempts}, max turns ${t.max_turns}`);
+    for (const w of await actions.promptWarnings(db, t.id)) console.log(`note: ${w}`);
   },
   ls: ({ db, flags, rest, repoName }) => {
     const repo = flags.repo === undefined ? undefined : actions.repoDetail(db, flags.repo);

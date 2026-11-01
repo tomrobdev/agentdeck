@@ -57,6 +57,7 @@ export type {
   SyncResult,
   Task,
   TaskDetail,
+  TaskSaved,
   TaskEventRow,
   TaskLink,
   TaskPatch,

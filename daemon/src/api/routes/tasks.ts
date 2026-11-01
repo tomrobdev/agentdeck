@@ -15,12 +15,12 @@ export function routes({ db, scheduler }: ApiContext): Route[] {
     }),
     route('POST', /^\/api\/tasks$/, async ({ body }) => {
       const task = await actions.addTask(db, body as Parameters<typeof actions.addTask>[1]);
-      return actions.taskDetail(db, task.id);
+      return { ...(await actions.taskDetail(db, task.id)), warnings: await actions.promptWarnings(db, task.id) };
     }),
     route('GET', /^\/api\/tasks\/(\d+)$/, ({ params: [id] }) => detail(id)),
     route('POST', /^\/api\/tasks\/(\d+)$/, async ({ params: [id], body }) => {
       await actions.editTask(db, Number(id), body);
-      return detail(id);
+      return { ...(await detail(id)), warnings: await actions.promptWarnings(db, Number(id)) };
     }),
     route('POST', /^\/api\/tasks\/(\d+)\/links$/, ({ params: [id], body }) => {
       actions.linkTasks(db, Number(id), body as Parameters<typeof actions.linkTasks>[2]);
