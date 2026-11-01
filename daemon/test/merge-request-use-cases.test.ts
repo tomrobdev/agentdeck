@@ -1,0 +1,267 @@
+// Merge requests (docs/plans/merge-requests.html): recording one, and the daemon carrying it out on its PR refresh with a fake github adapter.
+import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { after, beforeEach, test } from 'node:test';
+
+const home = mkdtempSync(join(tmpdir(), 'agentdeck-mergereq-'));
+process.env.AGENTDECK_HOME = home;
+process.env.AGENTDECK_NO_NOTIFY = '1';
+
+const { openDb } = await import('../src/db/index.ts');
+const { doneTask, queuedTask } = await import('./fixtures.ts');
+const { github } = await import('../src/adapters/github.ts');
+const { refreshPrStates } = await import('../src/application/pull-request/pull-requests.ts');
+const { autoMerge } = await import('../src/application/pull-request/auto-merge.ts');
+const { ActionError, cancelMergeRequest, linkTasks, mergePreview, requestMerge, requestMerges, taskDetail, updateRepo } =
+  await import('../src/application/actions.ts');
+type PrDetails = import('../src/domain/pull-request/merge.ts').PrDetails;
+
+const db = openDb(join(home, 'test.db'));
+after(() => db.close());
+
+const dir = join(home, 'demo');
+mkdirSync(dir, { recursive: true });
+const sh = (...args: string[]) => execFileSync('git', args, { cwd: dir, encoding: 'utf8' }).trim();
+sh('init', '-q', '-b', 'main');
+sh('config', 'user.email', 'test@example.com');
+sh('config', 'user.name', 'test');
+writeFileSync(join(dir, 'README.md'), 'demo\n');
+sh('add', '-A');
+sh('commit', '-q', '-m', 'init');
+const repo = db.addRepo({ name: 'demo', path: dir, base_branch: 'main', test_cmd: 'true' });
+
+const ready: PrDetails = {
+  draft: false,
+  mergeable: 'MERGEABLE',
+  merge_state: 'CLEAN',
+  commits: 1,
+  files: 1,
+  additions: 10,
+  deletions: 2,
+  checks: { total: 2, failing: 0, pending: 0 },
+  paths: ['src/a.ts'],
+  labels: [],
+};
+
+let details: Record<string, PrDetails>;
+let merged: { url: string; method: string }[];
+github.prState = async () => 'open';
+github.prDetails = async (url) => details[url] ?? ready;
+github.markReady = async () => {};
+github.merge = async (pr) => void merged.push({ url: pr.url, method: pr.method });
+github.deleteRemoteBranch = async () => {};
+
+beforeEach(() => {
+  details = {};
+  merged = [];
+  db.setPaused(false);
+  updateRepo(db, 'demo', { auto_merge: false, pr_mode: 'ready' });
+  for (const t of db.openPrTasks()) db.recordPr(t.id, { type: 'closed' });
+});
+
+let n = 0;
+/** A done task with an open PR whose last run passed the tests. */
+function tested() {
+  const url = `https://x/pull/${++n}`;
+  const t = doneTask(db, repo, { pr: 'open', url, branch: `agentdeck/req-${n}` });
+  db.finishRun(db.startRun(t.id, 1, join(home, `run-${t.id}.log`)), { tests_passed: 1 });
+  return { id: t.id, url };
+}
+
+const notified = (id: number) => db.recentNotifications(20).filter((x) => x.task_id === id);
+
+test('requestMerge records the request with the task method, then the repo method; the preview says what it would do', async () => {
+  const a = tested();
+  assert.deepEqual(requestMerge(db, a.id), { method: 'squash' });
+  const row = db.getTask(a.id)!;
+  assert.ok(row.merge_requested_at);
+  assert.equal(row.merge_request_method, 'squash');
+  assert.equal(row.merge_request_check, null);
+  assert.ok(db.prCheckRequested() > 0, 'asks for a PR re-read');
+  assert.equal((await taskDetail(db, a.id)).merge_request!.state, 'waiting');
+
+  assert.deepEqual(requestMerge(db, a.id, { method: 'rebase' }), { method: 'rebase' });
+  assert.equal(db.getTask(a.id)!.merge_request_method, 'rebase');
+  assert.throws(() => requestMerge(db, a.id, { method: 'fast-forward' }), ActionError);
+
+  details[a.url] = { ...ready, checks: { total: 2, failing: 0, pending: 1 } };
+  assert.deepEqual((await mergePreview(db, a.id)).request, { verdict: 'wait', reasons: ['1 check still running on GitHub'] });
+});
+
+test('requestMerge refuses a task that is not done or has no open PR', () => {
+  const queued = queuedTask(db, repo);
+  assert.throws(() => requestMerge(db, queued.id), /only a done task can be merged/);
+  const noPr = doneTask(db, repo);
+  assert.throws(() => requestMerge(db, noPr.id), /has no pull request/);
+  const closed = doneTask(db, repo, { pr: 'closed' });
+  assert.throws(() => requestMerge(db, closed.id), /PR is closed/);
+  const merged = doneTask(db, repo, { pr: 'merged' });
+  assert.throws(() => requestMerge(db, merged.id), /PR is merged/);
+  assert.throws(() => requestMerge(db, 99999), ActionError);
+  for (const t of [queued, noPr, closed, merged]) assert.equal(db.getTask(t.id)!.merge_requested_at, null);
+});
+
+test('requestMerges returns the tasks it could not request, and why', () => {
+  const a = tested();
+  const noPr = doneTask(db, repo);
+  const result = requestMerges(db, { ids: [a.id, noPr.id, a.id] });
+  assert.deepEqual(result.requested, [a.id]);
+  assert.deepEqual(result.failed, [{ id: noPr.id, reason: `#${noPr.id} has no pull request` }]);
+  assert.throws(() => requestMerges(db, { ids: 'x' as never }), ActionError);
+});
+
+test('cancelMergeRequest clears the request, and does nothing for a task without one', async () => {
+  const a = tested();
+  requestMerge(db, a.id);
+  assert.deepEqual(cancelMergeRequest(db, a.id), { cancelled: true });
+  const row = db.getTask(a.id)!;
+  assert.deepEqual([row.merge_requested_at, row.merge_request_method, row.merge_request_check], [null, null, null]);
+  assert.equal((await taskDetail(db, a.id)).merge_request, null);
+  assert.deepEqual(cancelMergeRequest(db, a.id), { cancelled: false });
+  assert.throws(() => cancelMergeRequest(db, 99999), ActionError);
+});
+
+test('a request with checks running waits, then merges once they pass, with its method', async () => {
+  const a = tested();
+  requestMerge(db, a.id, { method: 'rebase' });
+  details[a.url] = { ...ready, checks: { total: 2, failing: 0, pending: 1 } };
+
+  const first = await refreshPrStates(db);
+  assert.deepEqual(first.mergeable, []);
+  assert.equal(first.polling, 1, 'worth reading again soon');
+  assert.deepEqual(JSON.parse(db.getTask(a.id)!.merge_request_check!), { verdict: 'wait', reasons: ['1 check still running on GitHub'] });
+  assert.deepEqual((await taskDetail(db, a.id)).merge_request, {
+    state: 'waiting',
+    method: 'rebase',
+    reasons: ['1 check still running on GitHub'],
+    since: db.getTask(a.id)!.merge_requested_at,
+  });
+
+  details[a.url] = ready;
+  const second = await refreshPrStates(db);
+  assert.equal(second.polling, 0);
+  assert.deepEqual(second.mergeable, [{ id: a.id, pr: ready }]);
+  assert.equal(await autoMerge(db, second.mergeable), a.id);
+  assert.deepEqual(merged, [{ url: a.url, method: 'rebase' }]);
+  const row = db.getTask(a.id)!;
+  assert.equal(row.pr_state, 'merged');
+  assert.equal(row.merge_requested_at, null, 'recordMerge clears the request');
+  assert.equal(db.eventsForTask(a.id).at(-1)!.reason, 'requested (rebase)');
+});
+
+test('a request whose check fails is cleared with a notification', async () => {
+  const a = tested();
+  requestMerge(db, a.id);
+  details[a.url] = { ...ready, checks: { total: 3, failing: 1, pending: 0 } };
+  const found = await refreshPrStates(db);
+  assert.deepEqual(found.mergeable, []);
+  assert.equal(db.getTask(a.id)!.merge_requested_at, null);
+  const sent = notified(a.id);
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].title, `Could not merge #${a.id}`);
+  assert.equal(sent[0].body, '1 check failing on GitHub');
+});
+
+test("a request over auto-merge's line limit, without its label, merges", async () => {
+  updateRepo(db, 'demo', { auto_merge: true, auto_approve: false });
+  const a = tested();
+  const big = { ...ready, additions: 5000, deletions: 100 };
+  details[a.url] = big;
+  const auto = tested();
+  details[auto.url] = big;
+
+  // Without a request the PR is over the limit and needs a person.
+  assert.deepEqual((await refreshPrStates(db)).mergeable, []);
+  requestMerge(db, a.id);
+  const found = await refreshPrStates(db);
+  assert.deepEqual(found.mergeable, [{ id: a.id, pr: big }]);
+  assert.equal(await autoMerge(db, found.mergeable), a.id);
+  assert.deepEqual(merged, [{ url: a.url, method: 'squash' }]);
+});
+
+test('a request is ahead of auto-merges in the refresh', async () => {
+  updateRepo(db, 'demo', { auto_merge: true, auto_approve: false });
+  const auto = tested();
+  details[auto.url] = { ...ready, labels: ['agentdeck:auto-merge'] };
+  const asked = tested();
+  requestMerge(db, asked.id);
+  const found = await refreshPrStates(db);
+  assert.deepEqual(
+    found.mergeable.map((m) => m.id),
+    [asked.id, auto.id],
+  );
+});
+
+test('two requests where one lands after the other merge in that order', async () => {
+  const first = tested();
+  const second = tested();
+  linkTasks(db, second.id, { on: first.id, kind: 'after' });
+  // The later one is asked for first.
+  requestMerge(db, second.id);
+  requestMerge(db, first.id);
+
+  const one = await refreshPrStates(db);
+  assert.deepEqual(
+    one.mergeable.map((m) => m.id),
+    [first.id],
+    'the second waits for the first',
+  );
+  assert.match(JSON.parse(db.getTask(second.id)!.merge_request_check!).reasons[0], new RegExp(`lands after #${first.id}`));
+  assert.equal(await autoMerge(db, one.mergeable), first.id);
+
+  const two = await refreshPrStates(db);
+  assert.deepEqual(
+    two.mergeable.map((m) => m.id),
+    [second.id],
+  );
+  assert.equal(await autoMerge(db, two.mergeable), second.id);
+  assert.deepEqual(
+    merged.map((m) => m.url),
+    [first.url, second.url],
+  );
+});
+
+test('a conflicting request goes to be synced and stays; one whose task or PR moved on is cleared', async () => {
+  const conflicting = tested();
+  requestMerge(db, conflicting.id);
+  details[conflicting.url] = { ...ready, mergeable: 'CONFLICTING', merge_state: 'DIRTY' };
+  const found = await refreshPrStates(db);
+  assert.deepEqual(found.conflicting, [conflicting.id]);
+  assert.ok(db.getTask(conflicting.id)!.merge_requested_at, 'a conflict is waited out, not refused');
+
+  // The sync could not settle it: the task is blocked, so the request goes.
+  db.applyEvent(conflicting.id, { type: 'conflict' }, { reason: 'conflict' });
+  await refreshPrStates(db);
+  assert.equal(db.getTask(conflicting.id)!.merge_requested_at, null);
+
+  const closedOnGithub = tested();
+  requestMerge(db, closedOnGithub.id);
+  github.prState = async (url) => (url === closedOnGithub.url ? 'closed' : 'open');
+  try {
+    await refreshPrStates(db);
+  } finally {
+    github.prState = async () => 'open';
+  }
+  assert.equal(db.getTask(closedOnGithub.id)!.merge_requested_at, null);
+});
+
+test('a merge gh refuses drops the request and tells once', async () => {
+  const a = tested();
+  requestMerge(db, a.id);
+  const found = await refreshPrStates(db);
+  const real = github.merge;
+  github.merge = async () => {
+    throw new Error('base branch policy prohibits the merge');
+  };
+  try {
+    assert.equal(await autoMerge(db, found.mergeable), null);
+  } finally {
+    github.merge = real;
+  }
+  assert.equal(db.getTask(a.id)!.merge_requested_at, null);
+  assert.equal(db.getTask(a.id)!.pr_state, 'open');
+  assert.match(notified(a.id)[0].body, /base branch policy/);
+});

@@ -221,6 +221,11 @@ export const MIGRATIONS: Migration[] = [
    CREATE INDEX usage_samples_window ON usage_samples(window, id);
    ALTER TABLE tasks ADD COLUMN pr_checks_opened TEXT;
    ALTER TABLE tasks ADD COLUMN pr_checks_merged TEXT;`,
+  // 23: merge requests (docs/plans/merge-requests.html). merge_requested_at is when a person asked the daemon to merge the
+  // task's PR once it is ready (NULL: no request); merge_request_check is the last check's JSON { verdict, reasons }.
+  `ALTER TABLE tasks ADD COLUMN merge_requested_at TEXT;
+   ALTER TABLE tasks ADD COLUMN merge_request_method TEXT;
+   ALTER TABLE tasks ADD COLUMN merge_request_check TEXT;`,
 ];
 
 /** Runs every step above the database's user_version in one transaction; returns how many ran. */

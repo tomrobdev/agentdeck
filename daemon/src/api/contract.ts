@@ -201,6 +201,8 @@ export interface TaskSummary {
   auto_merge?: number | null;
   /** Whether the PR will merge on its own and why not. Missing from a daemon that predates it; null when the repo is gone. */
   auto_merge_view?: AutoMergeView | null;
+  /** The person's merge request, while the daemon is to merge the PR when it is ready; null with none. Missing from a daemon that predates it. */
+  merge_request?: MergeRequestView | null;
   /** Set for a queued task held back by a builds-on link; stuck says why its dependency won't get there on its own. */
   waiting: { on: number; stuck: string | null } | null;
   /** For a task in review: the queued tasks that wait on its PR. Missing from a daemon that predates it; read it as empty. */
@@ -456,6 +458,8 @@ export interface MergePreview {
   unblocks: { id: number; title: string }[];
   /** Whether the daemon will merge it on its own and why not yet; null when auto-merge is off. Missing from a daemon that predates it. */
   auto_merge?: AutoMergeCheck | null;
+  /** What a merge request would do now: `merge` as asked, `wait` for the PR to be ready, `never` (a person must act). Missing from a daemon that predates it. */
+  request?: AutoMergeCheck;
 }
 
 /** `merge`: the daemon merges it on its next PR refresh. `wait`: something that can still change on its own. `never`: it needs a person. */
@@ -491,6 +495,47 @@ export interface AutoMergeResult {
   /** Set when the setting was saved but the PR's label could not be changed. */
   label_error?: string;
   task: TaskDetail;
+}
+
+/**
+ * A task's merge request: a person's Merge, which the daemon carries out once the PR is ready. `waiting`: not yet, and
+ * `reasons` say what for (the last check's, worded by the daemon). `merging`: the merge is under way.
+ */
+export interface MergeRequestView {
+  state: 'waiting' | 'merging';
+  method: MergeMethod;
+  reasons: string[];
+  /** When the person asked (UTC, `YYYY-MM-DD HH:MM:SS`). */
+  since: string;
+}
+
+/** POST /api/tasks/:id/merge-request: ask the daemon to merge the PR once it is ready. */
+export interface RequestMergeRequest {
+  /** Left out: the task's method, then the repo's. */
+  method?: MergeMethod;
+}
+
+export interface RequestMergeResult {
+  method: MergeMethod;
+  task: TaskDetail;
+}
+
+/** DELETE /api/tasks/:id/merge-request */
+export interface CancelMergeRequestResult {
+  /** False when the task had no request. */
+  cancelled: boolean;
+  task: TaskDetail;
+}
+
+/** POST /api/tasks/merge-requests: request these tasks' merges, each with its own method. */
+export interface RequestMergesRequest {
+  ids: number[];
+}
+
+export interface RequestMergesResult {
+  requested: number[];
+  /** The tasks it could not ask for, each with why. */
+  failed: { id: number; reason: string }[];
 }
 
 /** POST /api/tasks/:id/merge */

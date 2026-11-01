@@ -32,6 +32,9 @@ export interface Task {
   auto_merge_checked_at: string | null; // when that check was made
   pr_checks_opened: string | null; // JSON CheckCounts: the PR's checks the first time they settled after it opened
   pr_checks_merged: string | null; // JSON CheckCounts: the PR's checks when it was merged
+  merge_requested_at: string | null; // when a person asked the daemon to merge the PR once it is ready; null when there is no request
+  merge_request_method: MergeMethod | null; // the method that request asked for
+  merge_request_check: string | null; // JSON { verdict, reasons }: the PR refresh's latest merge request check
   created_at: string;
   updated_at: string;
 }

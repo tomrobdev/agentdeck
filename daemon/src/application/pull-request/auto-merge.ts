@@ -29,12 +29,18 @@ export async function autoMerge(
     } catch {
       continue; // it moved on since the refresh read it
     }
-    const method = target.repo.merge_method;
+    // A person's merge request names its method; the rest merge as their repo does.
+    const asked = target.task.merge_requested_at ? target.task.merge_request_method : null;
+    const method = asked ?? target.repo.merge_method;
     try {
-      const res = await mergeOpenPr(db, target, pr, { method, deleteBranch: true, reason: `auto-merged (${method})` });
+      const res = await mergeOpenPr(db, target, pr, {
+        method,
+        deleteBranch: true,
+        reason: asked ? `requested (${method})` : `auto-merged (${method})`,
+      });
       told.delete(id);
       const unblocked = res.unblocked.length ? `; ${res.unblocked.map((n) => `#${n}`).join(', ')} can start` : '';
-      log(`task ${id}: auto-merged its PR (${method})${unblocked}`);
+      log(`task ${id}: ${asked ? 'merged its PR as requested' : 'auto-merged its PR'} (${method})${unblocked}`);
       if (res.cleanup_error) log(`task ${id}: cleanup after the merge incomplete: ${res.cleanup_error}`);
       notifyLater(db, {
         kind: 'merged',
@@ -45,6 +51,8 @@ export async function autoMerge(
       return id;
     } catch (err) {
       const error = (err as Error).message;
+      // A request gh refused is dropped, told once: a person can ask again.
+      if (asked) db.clearMergeRequest(id);
       if (told.get(id) === error) continue;
       told.set(id, error);
       log(`task ${id}: auto-merge failed: ${error}`);

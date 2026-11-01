@@ -70,6 +70,22 @@ export function routes({ db, scheduler }: ApiContext): Route[] {
       wake();
       return result;
     }),
+    // Ask the daemon to merge the task's PR once it is ready, or withdraw the request; the answer is at once.
+    route('POST', /^\/api\/tasks\/(\d+)\/merge-request$/, async ({ params: [id], body }) => {
+      const result = actions.requestMerge(db, Number(id), body);
+      wake();
+      return { ...result, task: await detail(id) };
+    }),
+    route('DELETE', /^\/api\/tasks\/(\d+)\/merge-request$/, async ({ params: [id] }) => {
+      const result = actions.cancelMergeRequest(db, Number(id));
+      return { ...result, task: await detail(id) };
+    }),
+    // Merge requests for every task named: the review group's "Merge all". The ones that can't be requested come back with why.
+    route('POST', /^\/api\/tasks\/merge-requests$/, ({ body }) => {
+      const result = actions.requestMerges(db, body as { ids: number[] });
+      wake();
+      return result;
+    }),
     // Let the daemon merge the task's PR on its own, or not, or follow the repo (null).
     route('POST', /^\/api\/tasks\/(\d+)\/auto-merge$/, async ({ params: [id], body }) => {
       const result = await actions.setAutoMerge(db, Number(id), body as { auto_merge: boolean | null });

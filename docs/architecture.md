@@ -117,8 +117,8 @@ flowchart TD
   api -->|4| domain
   application -->|44| adapters
   application -->|8| config_ts
-  application -->|30| db
-  application -->|118| domain
+  application -->|31| db
+  application -->|121| domain
   cli_ts -->|1| application
   cli_ts -->|8| cli
   cli_ts -->|1| db
@@ -293,6 +293,9 @@ erDiagram
     text auto_merge_checked_at "nullable"
     text pr_checks_opened "nullable"
     text pr_checks_merged "nullable"
+    text merge_requested_at "nullable"
+    text merge_request_method "nullable"
+    text merge_request_check "nullable"
   }
   usage_samples {
     integer id PK
@@ -404,6 +407,8 @@ stateDiagram-v2
 | DELETE | `/api/tasks/:id/links/:id2`        | `actions.unlinkTasks`, `actions.taskDetail`                        |
 | POST   | `/api/tasks/:id/links`             | `actions.linkTasks`, `actions.taskDetail`                          |
 | GET    | `/api/tasks/:id/log`               | `streamLog`                                                        |
+| DELETE | `/api/tasks/:id/merge-request`     | `actions.cancelMergeRequest`, `actions.taskDetail`                 |
+| POST   | `/api/tasks/:id/merge-request`     | `actions.requestMerge`, `actions.taskDetail`                       |
 | GET    | `/api/tasks/:id/merge`             | `actions.mergePreview`                                             |
 | POST   | `/api/tasks/:id/merge`             | `actions.mergeTask`, `actions.taskDetail`                          |
 | GET    | `/api/tasks/:id/plans/:id2`        | `actions.planHtml`                                                 |
@@ -417,6 +422,7 @@ stateDiagram-v2
 | GET    | `/api/tasks/:id/tree`              | `actions.taskTree`                                                 |
 | GET    | `/api/tasks/:id`                   | `actions.taskDetail`                                               |
 | POST   | `/api/tasks/:id`                   | `actions.editTask`, `actions.taskDetail`, `actions.promptWarnings` |
+| POST   | `/api/tasks/merge-requests`        | `actions.requestMerges`                                            |
 | POST   | `/api/tasks/merge`                 | `actions.mergeAll`                                                 |
 | GET    | `/api/tasks`                       | `actions.taskViews`                                                |
 | POST   | `/api/tasks`                       | `actions.addTask`, `actions.taskDetail`, `actions.promptWarnings`  |
@@ -453,29 +459,30 @@ stateDiagram-v2
 
 <!-- generated:migrations -->
 
-| Step | What it does                                                                                                                                                                                                                        |
-| ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1    | baseline. Brings a database from any earlier (unversioned) release up to date; the column additions are idempotent because old databases may already have some of them.                                                             |
-| 2    | runsForTask runs on every task view and every 500 ms per open log stream.                                                                                                                                                           |
-| 3    | repo integration. toolchain is detected at `repo add`; setup_cmd runs in each new worktree.                                                                                                                                         |
-| 4    | a repo can be paused (doctor failed, setup failed, permissions refused); runs count refused tool uses.                                                                                                                              |
-| 5    | pull requests and task dependencies. pr_mode is off \| draft \| ready; pr_state is open \| merged \| closed.                                                                                                                        |
-| 6    | task history. One row per status change, written with the change itself (db/tasks.ts).                                                                                                                                              |
-| 7    | plans attached to a task (domain/plan). One row per plan name; the HTML is parsed on read.                                                                                                                                          |
-| 8    | merging a PR from the app. merge_method is squash \| merge \| rebase: the repo's default, and the one a task was merged with.                                                                                                       |
-| 9    | keeping task branches up to date with their base. A run is a work run or a resolve run (merging the base into the branch, which uses no attempt); auto_resolve lets the daemon start a resolve run on its own.                      |
-| 10   | worker sandbox (docs/adr/0001-worker-sandbox.md). network is a JSON array of hosts sandboxed commands may reach.                                                                                                                    |
-| 11   | a task can name the plan and steps it carries out (docs/plans/plan-linked-tasks.html). plan_path is repo-relative under docs/plans/; plan_steps is a JSON array of step ids, NULL for every unfinished step.                        |
-| 12   | archiving a repo (docs/plans/repo-archive.html). archived_at is when it was archived, NULL while it is active.                                                                                                                      |
-| 13   | what a blocked worker said it needs (docs/plans/fewer-blocks.html): JSON { kind, items }, NULL when nothing.                                                                                                                        |
-| 14   | who said a task is done (docs/plans/manual-moves.html): 'person' when mark_done set it, NULL otherwise.                                                                                                                             |
-| 15   | the stop reason, named for the domain language (docs/plans/domain-model.html).                                                                                                                                                      |
-| 16   | a paused repo notifies with its own kind, `paused`, instead of `hold`. Whoever listened for `hold` keeps hearing both.                                                                                                              |
-| 17   | auto-merge (docs/plans/auto-merge.html). auto_merge_skip is a JSON array of path prefixes that need a person; a task's auto_merge is NULL (its repo's), 0 or 1.                                                                     |
-| 18   | task links (docs/plans/task-links.html). kind is builds_on \| after. after_task is copied in and no longer read.                                                                                                                    |
-| 19   | the latest auto-merge check of a done task's open PR (docs/plans/auto-merge-view.html): JSON { verdict, reasons }, NULL when none; auto_merge_checked_at is when the PR refresh made it.                                            |
-| 20   | reviews made in the dashboard (docs/plans/review-merge.html). A review is a draft until submitted_at is set; kind is comment \| request_changes. A comment's state is open \| answered \| resolved; side is old \| new.             |
-| 21   | what a live run is doing: turns so far and the last tool call, kept from its stream while it runs.                                                                                                                                  |
-| 22   | what the pilot scorecard needs and nothing kept. usage_samples is a history of usage readings, appended when a window's reading changes; pr_checks_opened / pr_checks_merged are JSON { total, failing, pending } of a PR's checks. |
+| Step | What it does                                                                                                                                                                                                                         |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1    | baseline. Brings a database from any earlier (unversioned) release up to date; the column additions are idempotent because old databases may already have some of them.                                                              |
+| 2    | runsForTask runs on every task view and every 500 ms per open log stream.                                                                                                                                                            |
+| 3    | repo integration. toolchain is detected at `repo add`; setup_cmd runs in each new worktree.                                                                                                                                          |
+| 4    | a repo can be paused (doctor failed, setup failed, permissions refused); runs count refused tool uses.                                                                                                                               |
+| 5    | pull requests and task dependencies. pr_mode is off \| draft \| ready; pr_state is open \| merged \| closed.                                                                                                                         |
+| 6    | task history. One row per status change, written with the change itself (db/tasks.ts).                                                                                                                                               |
+| 7    | plans attached to a task (domain/plan). One row per plan name; the HTML is parsed on read.                                                                                                                                           |
+| 8    | merging a PR from the app. merge_method is squash \| merge \| rebase: the repo's default, and the one a task was merged with.                                                                                                        |
+| 9    | keeping task branches up to date with their base. A run is a work run or a resolve run (merging the base into the branch, which uses no attempt); auto_resolve lets the daemon start a resolve run on its own.                       |
+| 10   | worker sandbox (docs/adr/0001-worker-sandbox.md). network is a JSON array of hosts sandboxed commands may reach.                                                                                                                     |
+| 11   | a task can name the plan and steps it carries out (docs/plans/plan-linked-tasks.html). plan_path is repo-relative under docs/plans/; plan_steps is a JSON array of step ids, NULL for every unfinished step.                         |
+| 12   | archiving a repo (docs/plans/repo-archive.html). archived_at is when it was archived, NULL while it is active.                                                                                                                       |
+| 13   | what a blocked worker said it needs (docs/plans/fewer-blocks.html): JSON { kind, items }, NULL when nothing.                                                                                                                         |
+| 14   | who said a task is done (docs/plans/manual-moves.html): 'person' when mark_done set it, NULL otherwise.                                                                                                                              |
+| 15   | the stop reason, named for the domain language (docs/plans/domain-model.html).                                                                                                                                                       |
+| 16   | a paused repo notifies with its own kind, `paused`, instead of `hold`. Whoever listened for `hold` keeps hearing both.                                                                                                               |
+| 17   | auto-merge (docs/plans/auto-merge.html). auto_merge_skip is a JSON array of path prefixes that need a person; a task's auto_merge is NULL (its repo's), 0 or 1.                                                                      |
+| 18   | task links (docs/plans/task-links.html). kind is builds_on \| after. after_task is copied in and no longer read.                                                                                                                     |
+| 19   | the latest auto-merge check of a done task's open PR (docs/plans/auto-merge-view.html): JSON { verdict, reasons }, NULL when none; auto_merge_checked_at is when the PR refresh made it.                                             |
+| 20   | reviews made in the dashboard (docs/plans/review-merge.html). A review is a draft until submitted_at is set; kind is comment \| request_changes. A comment's state is open \| answered \| resolved; side is old \| new.              |
+| 21   | what a live run is doing: turns so far and the last tool call, kept from its stream while it runs.                                                                                                                                   |
+| 22   | what the pilot scorecard needs and nothing kept. usage_samples is a history of usage readings, appended when a window's reading changes; pr_checks_opened / pr_checks_merged are JSON { total, failing, pending } of a PR's checks.  |
+| 23   | merge requests (docs/plans/merge-requests.html). merge_requested_at is when a person asked the daemon to merge the task's PR once it is ready (NULL: no request); merge_request_check is the last check's JSON { verdict, reasons }. |
 
 <!-- /generated -->

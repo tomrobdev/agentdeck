@@ -1,0 +1,111 @@
+// Merge requests (docs/plans/merge-requests.html), the pure part: what each finding means to a request, and the view of one.
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { mergeRequestCheck, mergeRequestPolls, mergeRequestView } from '../src/domain/pull-request/merge-request.ts';
+import { AUTO_MERGE_LABEL } from '../src/domain/pull-request/auto-merge.ts';
+import type { PrDetails } from '../src/domain/pull-request/merge.ts';
+
+const ready: PrDetails = {
+  draft: false,
+  mergeable: 'MERGEABLE',
+  merge_state: 'CLEAN',
+  commits: 2,
+  files: 2,
+  additions: 30,
+  deletions: 5,
+  checks: { total: 2, failing: 0, pending: 0 },
+  paths: ['src/a.ts', 'src/b.ts'],
+  labels: [],
+};
+
+const check = (
+  pr: Partial<PrDetails> = {},
+  o: { pr_state?: 'open' | 'closed' | 'merged' | null; tests?: number | null; after?: boolean } = {},
+) =>
+  mergeRequestCheck({
+    pr_state: o.pr_state === undefined ? 'open' : o.pr_state,
+    pr: { ...ready, ...pr },
+    tests_passed: o.tests === undefined ? 1 : o.tests,
+    lands_after: o.after ? [{ on: 7, reason: 'its PR is open' }] : [],
+  });
+
+test('a clean PR merges, with or without a label, tests or checks', () => {
+  assert.deepEqual(check(), { verdict: 'merge', reasons: [] });
+  assert.equal(check({}, { tests: null }).verdict, 'merge');
+  assert.equal(check({ checks: { total: 0, failing: 0, pending: 0 } }).verdict, 'merge');
+});
+
+test('pending checks, a conflict, lands after and unknown mergeability wait', () => {
+  assert.deepEqual(check({ checks: { total: 3, failing: 0, pending: 2 } }), {
+    verdict: 'wait',
+    reasons: ['2 checks still running on GitHub'],
+  });
+  assert.deepEqual(check({ mergeable: 'CONFLICTING', merge_state: 'DIRTY' }).reasons, ['the branch has conflicts with the base branch']);
+  assert.equal(check({ mergeable: 'CONFLICTING', merge_state: 'DIRTY' }).verdict, 'wait');
+  assert.deepEqual(check({}, { after: true }), { verdict: 'wait', reasons: ['lands after #7: its PR is open'] });
+  assert.deepEqual(check({ mergeable: 'UNKNOWN' }), {
+    verdict: 'wait',
+    reasons: ['GitHub is still working out whether it merges cleanly'],
+  });
+});
+
+test('required checks running make GitHub say BLOCKED; the checks are the wait, not branch protection', () => {
+  const r = check({ merge_state: 'BLOCKED', checks: { total: 2, failing: 0, pending: 1 } });
+  assert.deepEqual(r, { verdict: 'wait', reasons: ['1 check still running on GitHub'] });
+});
+
+test('a failing check, failed tests, branch protection and a closed PR are never', () => {
+  assert.deepEqual(check({ checks: { total: 2, failing: 1, pending: 0 } }), { verdict: 'never', reasons: ['1 check failing on GitHub'] });
+  assert.deepEqual(check({}, { tests: 0 }), { verdict: 'never', reasons: ['tests failed on the last run'] });
+  assert.equal(check({ merge_state: 'BLOCKED' }).verdict, 'never');
+  assert.deepEqual(check({}, { pr_state: 'closed' }), { verdict: 'never', reasons: ['the PR is closed'] });
+});
+
+test('never wins over wait: only the reasons a person must act on are listed', () => {
+  const r = check({ checks: { total: 3, failing: 1, pending: 1 } }, { after: true });
+  assert.deepEqual(r, { verdict: 'never', reasons: ['1 check failing on GitHub'] });
+});
+
+test('a draft or a branch behind the base merges', () => {
+  assert.equal(check({ draft: true, merge_state: 'DRAFT' }).verdict, 'merge');
+  assert.equal(check({ merge_state: 'BEHIND' }).verdict, 'merge');
+});
+
+test("auto-merge's limits don't count: lines, skipped paths, no label", () => {
+  const big = check({ additions: 5000, deletions: 100, paths: ['.github/workflows/ci.yml'], files: 1, labels: [] });
+  assert.deepEqual(big, { verdict: 'merge', reasons: [] });
+  assert.equal(check({ labels: [AUTO_MERGE_LABEL.name] }).verdict, 'merge');
+});
+
+test('a waiting request is read again soon only for running checks or mergeability GitHub has not worked out', () => {
+  const pending = { ...ready, checks: { total: 2, failing: 0, pending: 1 } };
+  assert.equal(mergeRequestPolls(check(pending), pending), true);
+  const unknown = { ...ready, mergeable: 'UNKNOWN' };
+  assert.equal(mergeRequestPolls(check(unknown), unknown), true);
+  assert.equal(
+    mergeRequestPolls(check({}, { after: true }), ready),
+    false,
+    'a PR it lands after changes on a merge, which asks for a re-read',
+  );
+  assert.equal(mergeRequestPolls(check(), ready), false);
+});
+
+test('mergeRequestView: none, waiting with its reasons, and merging', () => {
+  const none = { merge_requested_at: null, merge_request_method: null, merge_request_check: null };
+  assert.equal(mergeRequestView(none, false), null);
+  assert.equal(mergeRequestView(none, true), null);
+
+  const asked = { merge_requested_at: '2026-11-01 10:00:00', merge_request_method: 'rebase' as const, merge_request_check: null };
+  assert.deepEqual(mergeRequestView(asked, false), { state: 'waiting', method: 'rebase', reasons: [], since: '2026-11-01 10:00:00' });
+
+  const waiting = { ...asked, merge_request_check: JSON.stringify({ verdict: 'wait', reasons: ['2 checks still running on GitHub'] }) };
+  assert.deepEqual(mergeRequestView(waiting, false), {
+    state: 'waiting',
+    method: 'rebase',
+    reasons: ['2 checks still running on GitHub'],
+    since: '2026-11-01 10:00:00',
+  });
+  assert.deepEqual(mergeRequestView(waiting, true), { state: 'merging', method: 'rebase', reasons: [], since: '2026-11-01 10:00:00' });
+  assert.equal(mergeRequestView({ ...waiting, merge_request_check: 'not json' }, false)!.reasons.length, 0);
+  assert.equal(mergeRequestView({ ...asked, merge_request_method: null }, false)!.method, 'squash');
+});

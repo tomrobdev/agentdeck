@@ -10,7 +10,7 @@ import { notifyLater } from '../notifications.ts';
 import { proposeNow, plannerDue } from '../planner.ts';
 import { resolveConflicting } from '../sync.ts';
 import { autoMerge } from '../pull-request/auto-merge.ts';
-import { PR_REFRESH_MS, refreshPrStates } from '../pull-request/pull-requests.ts';
+import { MERGE_REQUEST_POLL_MS, PR_REFRESH_MS, refreshPrStates } from '../pull-request/pull-requests.ts';
 import { settle, settleRecovered } from '../task/settle.ts';
 import { runTask } from '../run/worker.ts';
 import type { Db } from '../../db/index.ts';
@@ -56,6 +56,8 @@ export class Scheduler {
   private handledPrCheck = Date.now();
   private recheckLeft = 0;
   private recheckAt = 0;
+  /** When to read the PRs again for a merge request waiting on running checks or on mergeability; 0 when none does. */
+  private requestPollAt = 0;
   /** The last auto-merge error told for each task, so a merge that keeps failing is told once, not every refresh. */
   private readonly autoMergeErrors = new Map<number, string>();
 
@@ -200,7 +202,8 @@ export class Scheduler {
     const due =
       now - this.lastPrRefresh >= this.opts.prRefreshMs ||
       requested > this.handledPrCheck ||
-      (this.recheckLeft > 0 && now >= this.recheckAt);
+      (this.recheckLeft > 0 && now >= this.recheckAt) ||
+      (this.requestPollAt > 0 && now >= this.requestPollAt);
     if (!due) return;
     if (requested > this.handledPrCheck) this.recheckLeft = PR_RECHECKS;
     this.handledPrCheck = Math.max(this.handledPrCheck, requested);
@@ -210,6 +213,8 @@ export class Scheduler {
       .then((found) => {
         this.recheckLeft = found.unknown ? Math.max(this.recheckLeft - 1, 0) : 0;
         this.recheckAt = Date.now() + PR_RECHECK_MS;
+        // A merge request waiting on checks is read again soon, not after the usual few minutes.
+        this.requestPollAt = found.polling ? Date.now() + MERGE_REQUEST_POLL_MS : 0;
         if (found.conflicting.length) this.resolveConflicts(found.conflicting);
         if (found.mergeable.length)
           return autoMerge(this.db, found.mergeable, { log: this.opts.log, told: this.autoMergeErrors }).then((merged) => {

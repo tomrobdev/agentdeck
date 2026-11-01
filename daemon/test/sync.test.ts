@@ -481,7 +481,7 @@ test('refreshPrStates reads mergeability: conflicting PRs are returned, unknown 
   github.prDetails = async (url, cwd) => (asked.push(url), det(url, cwd));
   try {
     const found = await refreshPrStates(db);
-    assert.deepEqual(found, { conflicting: [a.id], unknown: 1, mergeable: [] });
+    assert.deepEqual(found, { conflicting: [a.id], unknown: 1, mergeable: [], polling: 0 });
     assert.ok(!asked.includes('https://x/pull/504'), 'a merged PR has no mergeability to read');
     assert.equal(db.getTask(d.id)!.pr_state, 'merged');
   } finally {

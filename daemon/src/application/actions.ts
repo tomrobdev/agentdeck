@@ -12,6 +12,7 @@ export { attachPlan, collectPlans, planHtml } from './plans.ts';
 export { proposeNow } from './planner.ts';
 export { pilotStats } from './run/stats.ts';
 export { mergeAll, mergePreview, mergeTask } from './pull-request/pull-requests.ts';
+export { cancelMergeRequest, requestMerge, requestMerges } from './pull-request/merge-requests.ts';
 export { setAutoMerge } from './pull-request/auto-merge.ts';
 export * from './repo/repos.ts';
 export * from './review/reviews.ts';
