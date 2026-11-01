@@ -1,7 +1,20 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import { useQueryClient } from '@tanstack/vue-query';
-import { CHANGE_LABEL, type ChangedFile, type Changes, type FilePatch, type TaskDetail, ago, diffQuery, fileQuery } from '../../api';
+import {
+  CHANGE_LABEL,
+  type ChangedFile,
+  type Changes,
+  type FilePatch,
+  type NewReviewComment,
+  type TaskDetail,
+  ago,
+  api,
+  diffQuery,
+  fileQuery,
+} from '../../api';
+import { useActions } from '../../composables/useActions';
+import { useReviews } from '../../composables/useReviews';
 import { isMarkdown } from '../../lib/render';
 import { loadSetting, saveSetting } from '../../lib/storage';
 import DiffView from '../files/DiffView.vue';
@@ -12,6 +25,18 @@ import Popover from '../ui/Popover.vue';
 // What the task's branch changes against the base branch: a tree of changed files and their diffs.
 const props = defineProps<{ task: TaskDetail; changes: Changes | null; error: string }>();
 const emit = defineEmits<{ open: [path: string] }>();
+
+// Line comments go into the task's draft review (started with the first one); the review bar submits it.
+const { run } = useActions();
+const { byPath, openPaths } = useReviews(computed(() => props.task.id));
+function addComment(path: string, line: Pick<NewReviewComment, 'side' | 'line'>, body: string) {
+  const head = props.changes?.head;
+  if (!head) return Promise.resolve(false);
+  return run(async () => {
+    const review = await api.startReview(props.task.id);
+    await api.addComment(review.id, { path, ...line, head_commit: head, body });
+  });
+}
 
 const split = ref(loadSetting('diffSplit', false));
 const hideViewed = ref(false);
@@ -188,7 +213,14 @@ async function jump(path: string) {
       </div>
       <div class="flex min-h-0 flex-1 gap-4">
         <aside class="min-h-0 w-65 flex-none pb-4 max-md:hidden">
-          <FileTree :load="loadTree" :selected="current" expand-all :known="files.map((f) => f.path)" @select="jump" />
+          <FileTree
+            :load="loadTree"
+            :selected="current"
+            :commented="openPaths"
+            expand-all
+            :known="files.map((f) => f.path)"
+            @select="jump"
+          />
         </aside>
         <div class="min-w-0 flex-1 overflow-y-auto pb-6">
           <section v-for="f in shown" :key="f.path" :ref="sectionRef" class="card mb-3" :data-path="f.path">
@@ -226,7 +258,13 @@ async function jump(path: string) {
               <template v-for="p in [patches.get(f.path)]" v-else :key="f.path">
                 <p v-if="p?.state === 'error'" class="m-0 px-3.5 py-2.5 text-muted">{{ p.error }}</p>
                 <template v-else-if="p?.state === 'ok'">
-                  <DiffView :path="f.path" :patch="p.patch.patch" :split="split" />
+                  <DiffView
+                    :path="f.path"
+                    :patch="p.patch.patch"
+                    :split="split"
+                    :comments="byPath.get(f.path)"
+                    :add="(line, body) => addComment(f.path, line, body)"
+                  />
                   <p v-if="p.patch.truncated" class="m-0 px-3.5 py-2.5 text-muted">Diff too large: showing the first 256 KB.</p>
                 </template>
                 <p v-else class="m-0 px-3.5 py-2.5 text-muted">Loading…</p>

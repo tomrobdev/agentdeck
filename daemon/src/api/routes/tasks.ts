@@ -64,6 +64,12 @@ export function routes({ db, scheduler }: ApiContext): Route[] {
       wake();
       return { ...result, task: await detail(id) };
     }),
+    // Merge every PR named in one go: the review group's "Merge all". The ones that can't merge come back with why.
+    route('POST', /^\/api\/tasks\/merge$/, async ({ body }) => {
+      const result = await actions.mergeAll(db, body as { ids: number[] });
+      wake();
+      return result;
+    }),
     // Let the daemon merge the task's PR on its own, or not, or follow the repo (null).
     route('POST', /^\/api\/tasks\/(\d+)\/auto-merge$/, async ({ params: [id], body }) => {
       const result = await actions.setAutoMerge(db, Number(id), body as { auto_merge: boolean | null });

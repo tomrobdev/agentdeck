@@ -31,16 +31,26 @@ const props = defineProps<{
   groupBy: GroupBy;
   collapsed: string[];
   selected: number | null;
+  /** The tasks picked for a bulk action (`x`, shift-click). */
+  picked?: number[];
   show: ShowProps;
   showEmpty: boolean;
+  /** Tasks whose branch is being synced from the queue. */
+  syncing?: number[];
 }>();
 const emit = defineEmits<{
   toggle: [key: string];
   select: [id: number];
+  pick: [id: number, range: boolean];
   open: [id: number];
-  act: [kind: BoardMove, id: number];
+  act: [kind: BoardMove | 'sync', id: number];
   merge: [id: number];
+  mergeAll: [ids: number[]];
 }>();
+
+/** The PRs a group's "Merge all" would merge: only Review has any, less the ones syncing. */
+const mergeable = (g: Group) =>
+  g.key === 'review' ? g.tasks.filter((t) => canReview(t) && !props.syncing?.includes(t.id)).map((t) => t.id) : [];
 
 // The row menu: right-click on a row, or the context-menu key / ⇧F10 on the selected one.
 const menu = ref<{ id: number; x: number; y: number } | null>(null);
@@ -76,20 +86,29 @@ watch(
   <div class="min-h-0 flex-1 overflow-y-auto" role="list">
     <template v-for="g in groups" :key="g.key">
       <section v-if="g.tasks.length || showEmpty">
-        <button
-          v-if="groupBy !== 'none'"
-          class="sticky top-0 z-1 flex w-full items-center gap-2 rounded-none border-0 border-b bg-panel-2 px-4 py-1.5 font-semibold"
-          :aria-expanded="!collapsed.includes(g.key)"
-          @click="emit('toggle', g.key)"
-        >
-          <span
-            class="text-2xs text-muted transition-transform duration-[120ms] ease-[ease]"
-            :class="collapsed.includes(g.key) ? '-rotate-90' : ''"
-            >▾</span
+        <div v-if="groupBy !== 'none'" class="sticky top-0 z-1 flex items-center border-b border-border bg-panel-2 pr-4">
+          <button
+            class="flex min-w-0 flex-1 items-center gap-2 rounded-none border-0 bg-transparent px-4 py-1.5 font-semibold"
+            :aria-expanded="!collapsed.includes(g.key)"
+            @click="emit('toggle', g.key)"
           >
-          <span>{{ g.label }}</span>
-          <span class="font-normal text-muted">{{ g.tasks.length }}</span>
-        </button>
+            <span
+              class="text-2xs text-muted transition-transform duration-[120ms] ease-[ease]"
+              :class="collapsed.includes(g.key) ? '-rotate-90' : ''"
+              >▾</span
+            >
+            <span>{{ g.label }}</span>
+            <span class="font-normal text-muted">{{ g.tasks.length }}</span>
+          </button>
+          <button
+            v-if="mergeable(g).length"
+            class="btn-mini flex-none"
+            title="Merge every pull request in this group, each with its task's method"
+            @click="emit('mergeAll', mergeable(g))"
+          >
+            Merge all
+          </button>
+        </div>
         <template v-if="!collapsed.includes(g.key)">
           <div
             v-for="t in g.tasks"
@@ -99,12 +118,21 @@ watch(
             :class="[
               `s-${t.status}`,
               t.id === selected ? 'bg-[color-mix(in_srgb,var(--accent)_8%,var(--panel))] shadow-[inset_2px_0_0_var(--accent)]' : '',
+              picked?.includes(t.id) ? 'bg-[color-mix(in_srgb,var(--accent)_16%,var(--panel))]' : '',
             ]"
             :data-task-row="t.id"
-            @click="emit('open', t.id)"
+            @click="$event.shiftKey ? emit('pick', t.id, true) : emit('open', t.id)"
+            @mousedown="$event.shiftKey && $event.preventDefault()"
             @mouseenter="emit('select', t.id)"
             @contextmenu.prevent="openMenu(t.id, $event.clientX, $event.clientY)"
           >
+            <span
+              v-if="picked?.length"
+              class="w-3 flex-none text-accent"
+              :aria-label="picked.includes(t.id) ? 'Selected' : undefined"
+              @click.stop="emit('pick', t.id, false)"
+              >{{ picked.includes(t.id) ? '☑' : '☐' }}</span
+            >
             <PriorityIcon :priority="t.priority" />
             <span class="w-[34px] flex-none font-mono text-sm text-muted tabular-nums">#{{ t.id }}</span>
             <StatusIcon :task="t" />
@@ -149,12 +177,26 @@ watch(
               <AutoMergeMark :view="t.auto_merge_view" />
               <span v-if="show.repo" data-repo class="chip max-w-[120px] truncate">{{ t.repo }}</span>
             </span>
-            <span class="flex-none gap-1" :class="t.id === selected ? 'flex' : 'hidden group-hover:flex'" @click.stop>
+            <span
+              class="flex-none gap-1"
+              :class="t.id === selected || syncing?.includes(t.id) ? 'flex' : 'hidden group-hover:flex'"
+              @click.stop
+            >
               <button v-if="personEvents(t).includes('approve')" class="btn-mini" title="Approve (a)" @click="emit('act', 'approve', t.id)">
                 Approve
               </button>
               <button v-if="quickRetry(t)" class="btn-mini" title="Retry (r)" @click="emit('act', 'retry', t.id)">Retry</button>
-              <button v-if="canReview(t)" class="btn-mini" title="Merge (m)" @click="emit('merge', t.id)">Merge</button>
+              <button v-if="syncing?.includes(t.id)" class="btn-mini" disabled>Syncing…</button>
+              <template v-else-if="canReview(t)">
+                <button
+                  class="btn-mini"
+                  title="Sync the branch with the base branch; a conflict starts a claude run"
+                  @click="emit('act', 'sync', t.id)"
+                >
+                  Sync
+                </button>
+                <button class="btn-mini" title="Merge (m)" @click="emit('merge', t.id)">Merge</button>
+              </template>
               <button v-if="t.pr_url" class="btn-mini" title="Open the pull request" @click="openExternal(t.pr_url)">PR ↗</button>
             </span>
             <span

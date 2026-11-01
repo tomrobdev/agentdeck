@@ -12,6 +12,7 @@
 // A resolve run (the prompt starts "AgentDeck conflict resolution") keeps both sides of every conflict and commits the merge;
 // FAKE_RESOLVE_BLOCKED reports BLOCKED, _LEAVE says DONE with the markers still there, _ABORT aborts the merge itself,
 // _STAGE stages the files without committing. The words come from the task's prompt, which the resolve prompt quotes.
+//   FAKE_ANSWER   like FAKE_DONE, and answers every review comment (c1, c2…) the prompt lists; FAKE_ANSWER_FIRST answers only c1
 //   FAKE_NO_SANDBOX  if the --settings file enables the sandbox with failIfUnavailable, exits at startup like claude does
 // Every run appends its prompt to $AGENTDECK_HOME/fake-claude-calls.log, so tests can tell it never started,
 // the --settings path it got (or "-") to $AGENTDECK_HOME/fake-claude-settings.log, and its arguments as a JSON
@@ -147,9 +148,12 @@ if (isPlanner) {
   await new Promise((r) => setTimeout(r, 30_000));
   result('slow done\nSTATUS: DONE');
 } else {
-  writeFileSync('fake-output.txt', `done by fake claude for: ${prompt.slice(0, 60)}\n`);
+  writeFileSync('fake-output.txt', `done by fake claude for: ${prompt.slice(0, 60)}\nrun ${process.pid}\n`);
   execFileSync('git', ['add', '-A']);
   execFileSync('git', ['commit', '-q', '-m', 'fake: add output']);
   out({ type: 'assistant', message: { content: [{ type: 'text', text: 'Wrote fake-output.txt' }] } });
-  result('Wrote fake-output.txt and committed.\nSTATUS: DONE');
+  const labels = [...prompt.matchAll(/^(c\d+) — /gm)].map((m) => m[1]);
+  const answered = prompt.includes('FAKE_ANSWER_FIRST') ? labels.slice(0, 1) : prompt.includes('FAKE_ANSWER') ? labels : [];
+  const answers = answered.map((l) => `ANSWER ${l}: handled ${l}\n`).join('');
+  result(`Wrote fake-output.txt and committed.\n${answers}STATUS: DONE`);
 }

@@ -11,6 +11,13 @@ test('a blocked or failed task dropped on Done is marked done', () => {
   assert.equal(boardMove(task('failed'), 'done'), 'mark_done');
 });
 
+test('a task in review dropped on Done merges its PR; dropped on Queued it runs again', () => {
+  const review = task('done', { pr_state: 'open', pr_url: 'u' });
+  assert.equal(boardMove(review, 'done'), 'merge');
+  assert.equal(boardMove(review, 'queued'), 'retry');
+  assert.equal(boardMove(task('done', { pr_state: 'merged', pr_url: 'u' }), 'done'), null, 'a merged one is in Done already');
+});
+
 test('no other task moves to Done by a drop', () => {
   assert.equal(boardMove(task('queued'), 'done'), null);
   assert.equal(boardMove(task('proposed'), 'done'), null);

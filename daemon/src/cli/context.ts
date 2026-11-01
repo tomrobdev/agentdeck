@@ -32,6 +32,8 @@ export function parseCommandLine(argv: string[]) {
       method: { type: 'string' },
       yes: { type: 'boolean', short: 'y' },
       'keep-branch': { type: 'boolean' },
+      all: { type: 'boolean' },
+      propose: { type: 'boolean' },
       file: { type: 'string' },
       now: { type: 'boolean' },
       follow: { type: 'boolean', short: 'f' },

@@ -17,6 +17,7 @@ export const queryKeys = {
   daemonHealth: ['daemon', 'health'] as const,
   mergePreview: (id: number) => ['task', id, 'merge'] as const,
   planHtml: (id: number, planId: number, updatedAt: string) => ['task', id, 'plan', planId, updatedAt] as const,
+  reviews: (id: number) => ['task', id, 'reviews'] as const,
   changes: (id: number) => ['task', id, 'changes'] as const,
   // Git objects at a commit never change, so these start with 'at' and the commit (null while it is unknown).
   tree: (id: number, ref: FileRef, path: string, commit: string | null) => ['at', commit, 'tree', id, ref, path] as const,
@@ -59,3 +60,4 @@ export const fileQuery = (id: number, ref: FileRef, path: string, commit: string
   queryOptions({ queryKey: queryKeys.file(id, ref, path, commit), queryFn: () => api.file(id, ref, path), staleTime: atCommit(commit) });
 export const diffQuery = (id: number, path: string, head: string | null) =>
   queryOptions({ queryKey: queryKeys.diff(id, path, head), queryFn: () => api.diff(id, path), staleTime: atCommit(head) });
+export const reviewsQuery = (id: number) => queryOptions({ queryKey: queryKeys.reviews(id), queryFn: () => api.reviews(id) });

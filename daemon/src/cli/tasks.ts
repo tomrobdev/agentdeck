@@ -8,6 +8,7 @@ import { pickRun } from '../domain/run/run.ts';
 import { TASK_STATUSES } from '../domain/task/lifecycle.ts';
 import { filterTasks } from '../domain/task/listing.ts';
 import { readNeeds } from '../domain/task/needs.ts';
+import { isReview } from '../domain/task/stage.ts';
 import { planStepIds } from '../domain/task/task.ts';
 import { callDaemon } from './daemon-client.ts';
 import { die, taskId, fmtAutoMerge, fmtLink, fmtTask, printLog } from './format.ts';
@@ -37,16 +38,18 @@ export const taskCommands: Record<string, Command> = {
       after: flags.after,
       plan_path: flags.plan,
       plan_steps: flags.steps,
+      propose: flags.propose,
     });
     const { waiting, links } = await actions.taskDetail(db, t.id);
     console.log(
-      `queued task #${t.id} on ${repoName(t.repo_id)} (${t.model}, ${t.max_turns} turns max${links
+      `${t.status === 'proposed' ? 'proposed' : 'queued'} task #${t.id} on ${repoName(t.repo_id)} (${t.model}, ${t.max_turns} turns max${links
         .map(fmtLink)
         .map((l) => `, ${l}`)
         .join('')})`,
     );
     if (waiting?.stuck) console.log(`note: ${waiting.stuck}, so this task won't start until #${waiting.on} is retried`);
-    if (db.isPaused()) console.log('note: the daemon is paused; run `agentdeck resume` to start working');
+    if (t.status === 'proposed') console.log(`note: it waits for \`agentdeck approve ${t.id}\` before it can run`);
+    else if (db.isPaused()) console.log('note: the daemon is paused; run `agentdeck resume` to start working');
   },
   link: async ({ db, flags, rest }) => {
     const id = taskId(rest[0]);
@@ -208,6 +211,26 @@ export const taskCommands: Record<string, Command> = {
     console.log(`closed the pull request of #${id}`);
   },
   merge: async ({ db, flags, rest }) => {
+    if (flags.all) {
+      const review = db.openPrTasks().filter(isReview);
+      if (!review.length) return void console.log('no pull requests in review');
+      for (const t of review) console.log(`#${t.id}  ${t.title}`);
+      if (!flags.yes) {
+        const rl = createInterface({ input: process.stdin, output: process.stdout });
+        const answer = await rl.question(`merge ${review.length === 1 ? 'this PR' : `these ${review.length} PRs`}? [y/N] `);
+        rl.close();
+        if (!/^y(es)?$/i.test(answer.trim())) return void console.log('not merged');
+      }
+      const res = await actions.mergeAll(db, { ids: review.map((t) => t.id) });
+      for (const m of res.merged) {
+        console.log(
+          `merged #${m.id} (${m.method})${m.unblocked.length ? `; ${m.unblocked.map((n) => `#${n}`).join(', ')} can start` : ''}`,
+        );
+        if (m.cleanup_error) console.log(`  cleanup incomplete: ${m.cleanup_error}`);
+      }
+      for (const s of res.skipped) console.log(`left #${s.id}: ${s.reason}`);
+      return;
+    }
     const id = taskId(rest[0]);
     const preview = await actions.mergePreview(db, id);
     const method = flags.method ?? preview.method;

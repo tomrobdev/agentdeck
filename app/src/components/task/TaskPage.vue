@@ -1,17 +1,19 @@
 <script setup lang="ts">
-import { computed, ref, toRef } from 'vue';
+import { computed, ref, toRef, watch } from 'vue';
 import { type TaskDetail, ago, api, describeWait } from '../../api';
 import { useHotkeys } from '../../composables/useHotkeys';
 import { type TaskTab, go, openTask } from '../../router';
 import { readNeeds, statusLabel } from '../../lib/taskView';
 import { useActions } from '../../composables/useActions';
 import { useChanges } from '../../composables/useChanges';
+import { useReviews } from '../../composables/useReviews';
 import SnippetPopover from '../files/SnippetPopover.vue';
 import StatusIcon from '../ui/StatusIcon.vue';
 import ChangesTab from './ChangesTab.vue';
 import CodeTab from './CodeTab.vue';
 import NeedsCallout from './NeedsCallout.vue';
 import OverviewTab from './OverviewTab.vue';
+import ReviewBar from './ReviewBar.vue';
 import RunsTab from './RunsTab.vue';
 import Sidebar from './Sidebar.vue';
 import TaskActions from './TaskActions.vue';
@@ -29,6 +31,15 @@ const resumeDaemon = () => run(() => api.resume());
 const resumeRepo = () => run(() => api.resumeRepo(props.task.repo_id));
 
 const { changes, error: changesError, isPath, paths: knownPaths } = useChanges(toRef(props, 'task'));
+
+// The review bar shows while a draft has comments, or once Request changes was pressed.
+const { draft, pending } = useReviews(computed(() => props.task.id));
+const requesting = ref(false);
+const showReviewBar = computed(() => requesting.value || pending.value > 0);
+watch(
+  () => props.task.id,
+  () => (requesting.value = false),
+);
 
 const TABS = computed(() => [
   { key: 'overview' as const, label: 'Overview', count: null },
@@ -75,7 +86,7 @@ const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel
           >
         </div>
       </div>
-      <TaskActions :task="task" @act="(kind) => emit('act', kind)" />
+      <TaskActions :task="task" @act="(kind) => emit('act', kind)" @review="requesting = true" />
     </header>
 
     <nav class="flex gap-0.5 border-b border-border px-6" role="tablist">
@@ -91,6 +102,15 @@ const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel
         {{ t.label }} <span v-if="t.count !== null" class="ml-0.5 rounded-full bg-panel-2 px-1.5 text-xs font-medium">{{ t.count }}</span>
       </button>
     </nav>
+
+    <ReviewBar
+      v-if="showReviewBar"
+      :task-id="task.id"
+      :draft="draft"
+      :kind="requesting ? 'request_changes' : 'comment'"
+      @close="requesting = false"
+      @submitted="requesting = false"
+    />
 
     <NeedsCallout v-if="needs" :task="task" :needs="needs" @retry="emit('act', 'retry')" />
     <div v-else-if="task.stop_reason && (s === 'blocked' || s === 'failed')" class="callout" :class="`s-${s}`">

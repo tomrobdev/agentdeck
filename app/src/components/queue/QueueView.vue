@@ -1,14 +1,18 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import type { MergeResult, TaskSummary } from '../../api';
+import { type MergeResult, type TaskSummary, api, syncLine } from '../../api';
 import { useActions } from '../../composables/useActions';
+import { type BulkAction, bulkActions, idRange } from '../../lib/bulk';
+import BulkMergeDialog from '../task/BulkMergeDialog.vue';
 import MergeDialog from '../task/MergeDialog.vue';
+import BulkBar from './BulkBar.vue';
 import { useHotkeys } from '../../composables/useHotkeys';
 import { requestedView } from '../../composables/useView';
 import { go, route } from '../../router';
 import {
   type BoardMove,
   type Filters,
+  type PersonEvent,
   applyFilters,
   canReview,
   emptyFilters,
@@ -27,7 +31,7 @@ import TaskPeek from './TaskPeek.vue';
 
 const props = defineProps<{ tasks: TaskSummary[] }>();
 const selected = defineModel<number | null>('selected', { required: true });
-const emit = defineEmits<{ open: [id: number]; act: [kind: BoardMove, id: number]; newTask: [] }>();
+const emit = defineEmits<{ open: [id: number]; act: [kind: PersonEvent, id: number]; newTask: [] }>();
 
 const display = ref<Display>(
   loadSetting<Display>('display', {
@@ -104,7 +108,7 @@ function step(by: number) {
 }
 
 // The merge confirm, opened from a row's button or `m`. After a merge the selection moves to the next row.
-const { refresh, flash } = useActions();
+const { refresh, flash, run, busy } = useActions();
 const merging = ref<{ id: number; next: number | null } | null>(null);
 function startMerge(id: number) {
   const list = order.value;
@@ -139,6 +143,84 @@ function startResize(down: PointerEvent) {
   window.addEventListener('pointerup', up);
 }
 
+// A PR in review moves on from its row: Merge (or a drop on Done) opens the merge confirm, Sync brings the base into its
+// branch. A sync that conflicts starts a resolve run, which takes minutes, so the row says it is syncing until it ends.
+const syncing = ref<number[]>([]);
+async function sync(id: number) {
+  if (syncing.value.includes(id)) return;
+  syncing.value = [...syncing.value, id];
+  let done = '';
+  try {
+    const ok = await run(async () => {
+      const r = await api.sync(id);
+      done = `#${id}: ${syncLine(r)}${r.push_error ? ` Could not push: ${r.push_error}` : ''}`;
+    });
+    if (ok) flash(done);
+  } finally {
+    syncing.value = syncing.value.filter((s) => s !== id);
+  }
+}
+function act(kind: BoardMove | 'sync', id: number) {
+  if (kind === 'merge') startMerge(id);
+  else if (kind === 'sync') sync(id);
+  else emit('act', kind, id);
+}
+/** "Merge all" on the Review group: the bulk merge confirm, for every PR in review that isn't syncing. */
+function mergeAll(ids: number[]) {
+  bulkMerging.value = props.tasks.filter((t) => ids.includes(t.id) && !syncing.value.includes(t.id));
+}
+
+// Bulk selection, in the list only: `x` or shift-click picks, and the bar offers what every picked task allows.
+const picked = ref<number[]>([]);
+const anchor = ref<number | null>(null);
+const pickedTasks = computed(() => props.tasks.filter((t) => picked.value.includes(t.id)));
+const bar = computed(() => bulkActions(pickedTasks.value));
+// The tasks the bulk merge was confirmed for, fixed while it runs so a refresh can't change its list.
+const bulkMerging = ref<TaskSummary[] | null>(null);
+function pick(id: number, range: boolean) {
+  const ids = range
+    ? idRange(
+        order.value.map((t) => t.id),
+        anchor.value,
+        id,
+      )
+    : [id];
+  if (range) picked.value = [...new Set([...picked.value, ...ids])];
+  else picked.value = picked.value.includes(id) ? picked.value.filter((p) => p !== id) : [...picked.value, id];
+  anchor.value = id;
+}
+function clearPicked() {
+  picked.value = [];
+  anchor.value = null;
+}
+// Drop picks for tasks that left the list (deleted, filtered out).
+watch(order, (o) => {
+  const ids = new Set(o.map((t) => t.id));
+  if (picked.value.some((id) => !ids.has(id))) picked.value = picked.value.filter((id) => ids.has(id));
+});
+const BULK_CALLS = { approve: api.approve, reject: api.reject, retry: (id: number) => api.retry(id), cancel: api.cancel };
+async function bulkAct(action: BulkAction) {
+  if (action === 'merge') {
+    bulkMerging.value = pickedTasks.value;
+    return;
+  }
+  const tasks = pickedTasks.value;
+  const ok = await run(async () => {
+    for (const t of tasks) {
+      try {
+        await BULK_CALLS[action](t.id);
+      } catch (e) {
+        throw new Error(`#${t.id}: ${(e as Error).message}`);
+      }
+    }
+  });
+  if (ok) clearPicked();
+}
+function onBulkMerged(merged: number[]) {
+  bulkMerging.value = null;
+  picked.value = picked.value.filter((id) => !merged.includes(id));
+}
+
 const MODES: Display['mode'][] = ['list', 'board', 'graph'];
 const selectedTask = () => props.tasks.find((x) => x.id === selected.value);
 useHotkeys({
@@ -151,8 +233,10 @@ useHotkeys({
     if (selected.value === null && order.value.length) selected.value = order.value[0].id;
     peek.value = !peek.value;
   },
+  x: () => display.value.mode === 'list' && selected.value !== null && pick(selected.value, false),
   Escape: () => {
-    if (peek.value) peek.value = false;
+    if (picked.value.length) clearPicked();
+    else if (peek.value) peek.value = false;
   },
   Enter: () => selected.value !== null && emit('open', selected.value),
   a: () => {
@@ -202,13 +286,17 @@ useHotkeys({
           :group-by="display.groupBy"
           :collapsed="display.collapsed"
           :selected="selected"
+          :picked="picked"
           :show="display.show"
           :show-empty="display.showEmpty"
+          :syncing="syncing"
           @toggle="toggleGroup"
+          @pick="pick"
           @select="selected = $event"
           @open="emit('open', $event)"
-          @act="(kind, id) => emit('act', kind, id)"
+          @act="act"
           @merge="startMerge"
+          @merge-all="mergeAll"
         />
         <GraphView
           v-else-if="display.mode === 'graph'"
@@ -224,10 +312,20 @@ useHotkeys({
           :groups="groups"
           :selected="selected"
           :show="display.show"
+          :syncing="syncing"
           @select="selected = $event"
           @open="emit('open', $event)"
-          @move="(kind, id) => emit('act', kind, id)"
+          @move="act"
           @merge="startMerge"
+          @merge-all="mergeAll"
+        />
+        <BulkBar
+          v-if="picked.length && display.mode === 'list'"
+          :count="picked.length"
+          :actions="bar"
+          :busy="busy"
+          @act="bulkAct"
+          @clear="clearPicked"
         />
       </div>
       <template v-if="peeking">
@@ -249,9 +347,11 @@ useHotkeys({
       >
       <span class="max-sm:hidden"
         ><kbd>j</kbd><kbd>k</kbd> move · <kbd>␣</kbd> peek · <kbd>↵</kbd> open · <kbd>a</kbd> approve · <kbd>r</kbd> retry ·
-        <kbd>m</kbd> merge ·<kbd>v</kbd> list/board/graph · <kbd>c</kbd> new · <kbd>/</kbd> search · <kbd>⌘K</kbd> commands</span
+        <kbd>m</kbd> merge ·<kbd>v</kbd> list/board/graph · <kbd>x</kbd> select · <kbd>c</kbd> new · <kbd>/</kbd> search ·
+        <kbd>⌘K</kbd> commands</span
       >
     </footer>
+    <BulkMergeDialog v-if="bulkMerging" :tasks="bulkMerging" @close="bulkMerging = null" @done="onBulkMerged" />
     <MergeDialog v-if="merging" :task-id="merging.id" @close="merging = null" @merged="onMerged" />
   </section>
 </template>

@@ -11,11 +11,13 @@ import type {
   FileContent,
   FilePatch,
   FileRef,
+  MergeAllResult,
   MergePreview,
   MergeRequest,
   MergeResult,
   NewLink,
   NewRepo,
+  NewReviewComment,
   NewTask,
   PlanHtml,
   ProposalResult,
@@ -26,11 +28,13 @@ import type {
   RepoPatch,
   RestartNowResult,
   RestartResult,
+  Review,
   ServiceStatus,
   SyncResult,
   Settings,
   SettingsPatch,
   Status,
+  SubmitReview,
   TaskDetail,
   TaskPatch,
   TaskSummary,
@@ -105,6 +109,8 @@ export const api = {
   closePr: (id: number) => call<TaskDetail>(`/api/tasks/${id}/close-pr`, { method: 'POST' }),
   mergePreview: (id: number) => call<MergePreview>(`/api/tasks/${id}/merge`),
   merge: (id: number, body: MergeRequest) => call<MergeResult>(`/api/tasks/${id}/merge`, { method: 'POST', json: body }),
+  /** Merge these tasks' PRs, each with its own method, deleting the branches; the ones left open come back with why. */
+  mergeAll: (ids: number[]) => call<MergeAllResult>('/api/tasks/merge', { method: 'POST', json: { ids } }),
   /** Let the daemon merge the task's PR on its own (true), not (false), or follow the repo (null). */
   autoMerge: (id: number, body: AutoMergeRequest) => call<AutoMergeResult>(`/api/tasks/${id}/auto-merge`, { method: 'POST', json: body }),
   /** Merge the base branch into the task's branch; a conflict starts a claude run, so this can take minutes. */
@@ -113,6 +119,17 @@ export const api = {
   diff: (id: number, path: string) => call<FilePatch>(`/api/tasks/${id}/diff?path=${encodeURIComponent(path)}`),
   tree: (id: number, ref: FileRef, path = '') => call<TreeListing>(`/api/tasks/${id}/tree?ref=${ref}&path=${encodeURIComponent(path)}`),
   file: (id: number, ref: FileRef, path: string) => call<FileContent>(`/api/tasks/${id}/file?ref=${ref}&path=${encodeURIComponent(path)}`),
+  reviews: (id: number) => call<Review[]>(`/api/tasks/${id}/reviews`),
+  /** The task's draft review, started if it has none. */
+  startReview: (id: number) => call<Review>(`/api/tasks/${id}/reviews`, { method: 'POST' }),
+  /** Change a draft's overall note. */
+  editReview: (id: number, body: string) => call<Review>(`/api/reviews/${id}`, { method: 'POST', json: { body } }),
+  addComment: (reviewId: number, c: NewReviewComment) => call<Review>(`/api/reviews/${reviewId}/comments`, { method: 'POST', json: c }),
+  deleteComment: (id: number) => call<Review>(`/api/review-comments/${id}`, { method: 'DELETE' }),
+  /** Request changes also retries the task with the review as the reason. */
+  submitReview: (id: number, body: SubmitReview) => call<Review>(`/api/reviews/${id}/submit`, { method: 'POST', json: body }),
+  resolveComment: (id: number) => call<Review>(`/api/review-comments/${id}/resolve`, { method: 'POST' }),
+  reopenComment: (id: number) => call<Review>(`/api/review-comments/${id}/reopen`, { method: 'POST' }),
   planHtml: (id: number, planId: number) => call<PlanHtml>(`/api/tasks/${id}/plans/${planId}`),
   logUrl: (id: number, runId?: number) => `${API_BASE}/api/tasks/${id}/log${runId ? `?run=${runId}` : ''}`,
 };

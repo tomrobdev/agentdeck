@@ -17,6 +17,9 @@ export interface CheckCounts {
   pending: number;
 }
 
+/** Whether the checks have run their course: there are some, and none is pending. No checks yet may only mean CI hasn't started. */
+export const checksSettled = (checks: CheckCounts): boolean => checks.total > 0 && checks.pending === 0;
+
 /** What `gh pr view` says about a PR that decides whether and how it merges. */
 export interface PrDetails {
   draft: boolean;
