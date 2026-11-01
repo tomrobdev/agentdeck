@@ -46,7 +46,7 @@ test('addTask takes builds_on and after as lists or comma text, and refuses a mi
       [c.id, 'after'],
     ],
   );
-  const view = taskDetail(db, t.id);
+  const view = await taskDetail(db, t.id);
   assert.deepEqual(
     view.links.map((l) => [l.on, l.kind, l.state]),
     [
@@ -55,7 +55,7 @@ test('addTask takes builds_on and after as lists or comma text, and refuses a mi
       [c.id, 'after', 'holding'],
     ],
   );
-  assert.deepEqual(taskDetail(db, c.id).dependents, [{ id: t.id, kind: 'after' }]);
+  assert.deepEqual((await taskDetail(db, c.id)).dependents, [{ id: t.id, kind: 'after' }]);
   await assert.rejects(() => addTask(db, { repo: 'demo', prompt: 'x', after: [999] }), /--after: no task #999/);
   await assert.rejects(() => addTask(db, { repo: 'demo', prompt: 'x', builds_on: [999] }), /--builds-on: no task #999/);
   await assert.rejects(() => addTask(db, { repo: 'demo', prompt: 'x', builds_on: [a.id], after: [a.id] }), ActionError);
@@ -108,7 +108,7 @@ test('an after link holds the merge until the other lands, and is gone when the 
   db.close();
 });
 
-test('a failed task notifies once for every task it leaves stuck, two links down', () => {
+test('a failed task notifies once for every task it leaves stuck, two links down', async () => {
   const { db, add } = setup();
   const [root, mid, leaf, other] = [add(), add(), add(), add()];
   linkTasks(db, mid.id, { on: root.id, kind: 'builds_on' });
@@ -123,7 +123,7 @@ test('a failed task notifies once for every task it leaves stuck, two links down
   assert.match(notes[0].body, new RegExp(`#${mid.id}`));
   assert.match(notes[0].body, new RegExp(`#${leaf.id}`));
   assert.doesNotMatch(notes[0].body, new RegExp(`#${other.id} `));
-  assert.equal(taskDetail(db, leaf.id).waiting?.on, root.id);
+  assert.equal((await taskDetail(db, leaf.id)).waiting?.on, root.id);
   cancelTask(db, leaf.id);
   db.close();
 });

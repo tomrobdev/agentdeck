@@ -15,6 +15,7 @@ import {
   checkPath,
   isBinary,
 } from '../../domain/files/files.ts';
+import type { AutoMergeMeasured } from '../../domain/pull-request/auto-merge.ts';
 import type { Repo } from '../../domain/repo/repo.ts';
 import { ActionError, requireTask, requireTaskRepo } from '../input.ts';
 
@@ -79,6 +80,25 @@ export async function taskChanges(db: Db, id: number): Promise<Changes> {
   const { repo, head, base } = await taskRefs(db, id);
   const [files, commits] = await Promise.all([changedFilesCached(repo.path, base.sha, head), commitsBetween(repo.path, base.sha, head)]);
   return { base_ref: base.ref, base: base.sha, head, files, commits };
+}
+
+/**
+ * A task branch measured against the auto-merge limits: the lines it changed against the base (binary files count none)
+ * and its paths, renames by both names. Null when git can't say (no branch yet, no common history).
+ */
+export async function measureBranch(repo: Repo, branch: string): Promise<AutoMergeMeasured | null> {
+  try {
+    const head = await branchCommit(repo.path, branch);
+    const base = head && (await diffBase(repo.path, repo.base_branch, head));
+    if (!head || !base) return null;
+    const files = await changedFilesCached(repo.path, base.sha, head);
+    return {
+      lines: files.reduce((sum, f) => sum + f.additions + f.deletions, 0),
+      paths: files.flatMap((f) => (f.old_path ? [f.path, f.old_path] : [f.path])),
+    };
+  } catch {
+    return null;
+  }
 }
 
 /** The patch of one changed file, cut at PATCH_LIMIT. */

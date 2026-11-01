@@ -28,6 +28,8 @@ export interface Task {
   plan_steps: string | null; // JSON array of that plan's step ids; null means every unfinished step (see planStepIds)
   done_by: 'person' | null; // 'person' when mark_done set the status; cleared whenever the task leaves done
   auto_merge: number | null; // 1 or 0 overrides the repo's auto_merge; null = the repo's (domain/pull-request/auto-merge.ts)
+  auto_merge_check: string | null; // JSON { verdict, reasons }: the PR refresh's latest auto-merge check while the PR is open
+  auto_merge_checked_at: string | null; // when that check was made
   created_at: string;
   updated_at: string;
 }

@@ -62,18 +62,18 @@ export function routes({ db, scheduler }: ApiContext): Route[] {
     route('POST', /^\/api\/tasks\/(\d+)\/merge$/, async ({ params: [id], body }) => {
       const result = await actions.mergeTask(db, Number(id), body);
       wake();
-      return { ...result, task: detail(id) };
+      return { ...result, task: await detail(id) };
     }),
     // Let the daemon merge the task's PR on its own, or not, or follow the repo (null).
     route('POST', /^\/api\/tasks\/(\d+)\/auto-merge$/, async ({ params: [id], body }) => {
       const result = await actions.setAutoMerge(db, Number(id), body as { auto_merge: boolean | null });
-      return { ...result, task: detail(id) };
+      return { ...result, task: await detail(id) };
     }),
     // Sync the task's branch with the base, settling conflicts with a claude run. Answers when it is done.
     route('POST', /^\/api\/tasks\/(\d+)\/resolve$/, async ({ params: [id] }) => {
       const report = await scheduler.track(actions.syncNow(db, Number(id)), 'sync');
       wake();
-      return { ...report, task: detail(id) };
+      return { ...report, task: await detail(id) };
     }),
     route('GET', /^\/api\/tasks\/(\d+)\/log$/, ({ req, res, params: [id], query }) => {
       // A run by its id (resolve runs share an attempt number with a work run), or by attempt.

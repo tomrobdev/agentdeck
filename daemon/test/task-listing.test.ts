@@ -27,6 +27,8 @@ function task(id: number, fields: Partial<ListedTask> = {}): ListedTask {
     needs: null,
     done_by: null,
     auto_merge: null,
+    auto_merge_check: null,
+    auto_merge_checked_at: null,
     created_at: '2026-10-18 10:00:00',
     updated_at: '2026-10-18 10:00:00',
     waiting: null,
