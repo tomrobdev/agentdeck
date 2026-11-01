@@ -125,7 +125,8 @@ app/      Tauri 2 + Vue 3 dashboard
 `pnpm test:crash [iterations]` (default 10, about 10 s each) is a slower check, not part of `pnpm test`: it SIGKILLs the daemon at random points, restarts it, and verifies that every task ends in a final state, no worktree ever has two agents, no `claude` process is orphaned, worktrees match tasks, and attempt counts are sane. It prints a one-line summary and exits 1 on any violation.
 
 ```sh
-pnpm check                                         # format check + typecheck (app, daemon) + tests + crash test
+pnpm check:fast                                    # format check + typecheck + db:check + tests (the repo's test_cmd)
+pnpm check                                         # check:fast + crash test (CRASH_ITERATIONS, default 10); what CI runs
 pnpm format                                        # Prettier, whole repo
 pnpm check:rust                                    # cargo fmt --check + clippy on the Tauri shell
 ```

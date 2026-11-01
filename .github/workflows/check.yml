@@ -19,8 +19,6 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: git config --global user.name ci && git config --global user.email ci@example.com
-      - run: pnpm format:check
-      - run: pnpm typecheck
-      - run: pnpm test
-      # The SIGKILL crash test; skipped until the script lands (PR #7).
-      - run: if [ -f daemon/scripts/crash-test.mjs ]; then node daemon/scripts/crash-test.mjs 5; fi
+      - run: pnpm check
+        env:
+          CRASH_ITERATIONS: 5
