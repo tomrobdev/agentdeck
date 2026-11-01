@@ -596,6 +596,33 @@ export interface RestartResult {
   waiting: string | null;
 }
 
+/** A task with a live run. */
+export interface RunningTask {
+  id: number;
+  title: string;
+}
+
+/** One check of `agentdeck doctor`; a failed one names the command that fixes it. */
+export interface HealthCheck {
+  name: string;
+  ok: boolean;
+  reason: string;
+  fix: string | null;
+}
+
+/** GET /api/daemon/health: `agentdeck doctor`, the checkout's HEAD, what is running, and the last lines of the daemon log. */
+export interface DaemonHealth {
+  checks: HealthCheck[];
+  head: string | null;
+  running: RunningTask[];
+  log: string[];
+}
+
+/** POST /api/daemon/restart-now: the tasks whose run is lost and which are requeued. */
+export interface RestartNowResult {
+  requeued: RunningTask[];
+}
+
 /** POST /api/notify/test */
 export interface TestNotifyResult {
   ok: boolean;

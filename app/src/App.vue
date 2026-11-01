@@ -19,6 +19,7 @@ import { setTrayStatus } from './platform/native';
 import NewTaskForm from './components/panels/NewTaskForm.vue';
 import WaitBar from './components/layout/WaitBar.vue';
 import ReposPanel from './components/panels/ReposPanel.vue';
+import DaemonPanel from './components/panels/DaemonPanel.vue';
 import SettingsPanel from './components/panels/SettingsPanel.vue';
 import StaleDaemonBar from './components/layout/StaleDaemonBar.vue';
 import AppHeader from './components/layout/AppHeader.vue';
@@ -34,7 +35,7 @@ const STATUS_FALLBACK_MS = 30_000;
 
 const selectedId = ref<number | null>(null);
 const toast = ref('');
-const modal = ref<'new' | 'repos' | 'settings' | null>(null);
+const modal = ref<'new' | 'repos' | 'settings' | 'daemon' | null>(null);
 
 function flash(msg: string) {
   toast.value = msg;
@@ -141,12 +142,13 @@ watchEffect(() => {
       </section>
     </main>
 
-    <StatusBar :status="status" :offline="offline" :busy="busy" @toggle="togglePause" />
+    <StatusBar :status="status" :offline="offline" :busy="busy" @toggle="togglePause" @daemon="modal = 'daemon'" />
 
     <NewTaskForm v-if="modal === 'new'" :repos="repos" @close="modal = null" @created="onCreated" @repos="modal = 'repos'" />
     <ReposPanel v-if="modal === 'repos'" :repos="repos" @close="modal = null" />
 
     <SettingsPanel v-if="modal === 'settings'" :notifications="status?.notifications ?? []" @close="modal = null" />
+    <DaemonPanel v-if="modal === 'daemon'" @close="modal = null" />
 
     <div
       v-if="toast"
