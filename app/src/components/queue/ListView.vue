@@ -72,7 +72,7 @@ watch(
             @mouseenter="emit('select', t.id)"
           >
             <PriorityIcon :priority="t.priority" />
-            <span class="w-[34px] flex-none text-sm text-muted tabular-nums">#{{ t.id }}</span>
+            <span class="w-[34px] flex-none font-mono text-sm text-muted tabular-nums">#{{ t.id }}</span>
             <StatusIcon :task="t" />
             <span class="flex min-w-0 flex-1 flex-col">
               <span class="truncate font-medium">{{ t.title }}</span>

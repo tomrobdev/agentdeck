@@ -34,7 +34,7 @@ async function save() {
     :title="editable ? 'Click to edit' : ''"
     @click="edit"
   >
-    {{ task.title }} <span class="font-normal text-muted">#{{ task.id }}</span>
+    {{ task.title }} <span class="font-mono font-normal text-muted">#{{ task.id }}</span>
   </h1>
   <input
     v-else

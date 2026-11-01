@@ -4,6 +4,7 @@ import { computed } from 'vue';
 import type { Status } from '../../api';
 import { go, route } from '../../router';
 import { NEED_YOU_STATES, needYouCount } from '../../lib/taskView';
+import BrandMark from '../ui/BrandMark.vue';
 
 const props = defineProps<{ status: Status | null; offline: boolean }>();
 defineEmits<{ newTask: []; repos: []; settings: [] }>();
@@ -13,7 +14,7 @@ const needYou = computed(() => needYouCount(props.status));
 
 <template>
   <header class="flex items-center gap-1 border-b border-border bg-panel px-4 py-2">
-    <div class="mr-4 text-md font-[650] tracking-[-0.01em]">AgentDeck</div>
+    <div class="mr-4 flex items-center gap-1.5 text-md font-[650] tracking-[-0.01em]"><BrandMark /><span>agentdeck</span></div>
     <nav class="flex gap-1" aria-label="Main">
       <button class="nav" :class="{ on: route.current.name === 'queue' }" @click="go({ name: 'queue' })">Queue</button>
       <button class="nav" :disabled="offline" @click="$emit('repos')">Repos</button>

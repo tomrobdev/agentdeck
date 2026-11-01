@@ -88,7 +88,7 @@ const LABELS: Record<BoardMove, string> = {
           @mouseenter="emit('select', t.id)"
         >
           <div class="flex items-center gap-1.5">
-            <span class="text-sm text-muted">#{{ t.id }}</span>
+            <span class="font-mono text-sm text-muted">#{{ t.id }}</span>
             <PriorityIcon :priority="t.priority" />
             <div class="spacer" />
             <StatusIcon :task="t" />

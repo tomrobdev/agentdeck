@@ -93,7 +93,10 @@ const dim = (id: number) => lit.value !== null && !lit.value.has(id);
         />
         <rect width="4" :height="H" rx="2" fill="var(--c)" />
         <StatusIcon :task="byId.get(n.id)!" :size="14" :x="12" :y="9" />
-        <text x="32" y="20" font-size="12" font-weight="600" fill="var(--text)">#{{ n.id }} {{ clip(byId.get(n.id)!.title, 22) }}</text>
+        <text x="32" y="20" font-size="12" font-weight="600" fill="var(--text)">
+          <tspan font-family="var(--font-mono)">#{{ n.id }}</tspan>
+          {{ clip(byId.get(n.id)!.title, 22) }}
+        </text>
         <text x="32" y="36" font-size="11" fill="var(--muted)">{{ clip(byId.get(n.id)!.repo ?? '', 28) }}</text>
         <title>{{ byId.get(n.id)!.title }}{{ stuck.has(n.id) ? ' (stuck chain)' : '' }}</title>
       </g>
