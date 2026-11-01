@@ -1,7 +1,8 @@
 // The daemon as a whole: status, pause and resume, restart, the service and a test notification.
 import * as actions from '../../application/actions.ts';
+import { parseSince } from '../../domain/run/scorecard.ts';
 import type { ChangeEvent } from '../contract.ts';
-import { type ApiContext, type Route, route } from '../http.ts';
+import { type ApiContext, BadRequest, type Route, route } from '../http.ts';
 
 const PING_MS = 25_000;
 
@@ -19,6 +20,17 @@ export function routes({ db, daemon, changes }: ApiContext): Route[] {
       });
     }),
     route('GET', /^\/api\/status$/, () => actions.status(db, daemon.info)),
+    route('GET', /^\/api\/stats$/, ({ query }) => {
+      const since = query.get('since');
+      const by = query.get('by');
+      if (by !== null && by !== 'week') throw new BadRequest('by takes week');
+      if (since !== null && parseSince(since) === null) throw new BadRequest('since takes a date, like 2026-10-18');
+      return actions.pilotStats(db, {
+        repo: query.get('repo') || undefined,
+        since: since === null ? undefined : (parseSince(since) ?? undefined),
+        by: by === 'week' ? 'week' : undefined,
+      });
+    }),
     route('GET', /^\/api\/daemon$/, () => actions.daemonState(db, daemon.info, daemon.reloadFacts())),
     route('POST', /^\/api\/pause$/, () => (actions.setPaused(db, true), actions.status(db, daemon.info))),
     route('POST', /^\/api\/resume$/, () => (actions.setPaused(db, false), actions.status(db, daemon.info))),

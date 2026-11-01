@@ -11,6 +11,7 @@ export const queryKeys = {
   archivedRepos: ['repos', 'archived'] as const,
   repo: (id: number) => ['repo', id] as const,
   repoDeletion: (id: number) => ['repo', id, 'deletion'] as const,
+  stats: (repo: string | null) => ['stats', repo] as const,
   settings: ['settings'] as const,
   service: ['service'] as const,
   daemon: ['daemon'] as const,
@@ -38,6 +39,8 @@ export const retryQuery = (failures: number, e: unknown) => !isOffline(e) && fai
 export const statusQuery = () => queryOptions({ queryKey: queryKeys.status, queryFn: api.status });
 export const tasksQuery = () => queryOptions({ queryKey: queryKeys.tasks, queryFn: api.tasks });
 export const taskQuery = (id: number) => queryOptions({ queryKey: queryKeys.task(id), queryFn: () => api.task(id) });
+/** The Insights page's report, per week, for one repo name or all (null). */
+export const statsQuery = (repo: string | null) => queryOptions({ queryKey: queryKeys.stats(repo), queryFn: () => api.stats(repo) });
 export const reposQuery = () => queryOptions({ queryKey: queryKeys.repos, queryFn: api.repos });
 export const repoQuery = (id: number) => queryOptions({ queryKey: queryKeys.repo(id), queryFn: () => api.repo(id) });
 export const archivedReposQuery = () => queryOptions({ queryKey: queryKeys.archivedRepos, queryFn: api.archivedRepos });

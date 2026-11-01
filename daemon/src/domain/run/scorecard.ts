@@ -1,7 +1,13 @@
 // The rest of the pilot scorecard (docs/pilot/scorecard.md), computed from plain rows: interventions, time queued,
 // running and in review, quota spent and PRs green on CI. Pure: no I/O. The first-run measures are in stats.ts.
 import { INSTALL_NOTE } from '../task/needs.ts';
-import { minutesBetween } from './stats.ts';
+import { type Measures, type StatRun, measure, minutesBetween } from './stats.ts';
+
+/**
+ * The pilot's targets for the measures that have one (docs/pilot/scorecard.md): first-run success at least this share,
+ * no interventions, every PR green when opened, and at most this many points of the 7-day window spent over the pilot.
+ */
+export const SCORECARD_TARGETS = { first_run_rate: 0.8, interventions: 0, pr_green_rate: 1, quota_points: 15 } as const;
 
 /** One row of a task's history (`task_events`), with the task's repo. */
 export interface ScorecardEvent {
@@ -194,6 +200,21 @@ export function weekOf(stamp: string): string {
   const day = new Date(t);
   const sinceMonday = (day.getUTCDay() + 6) % 7;
   return new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate() - sinceMonday)).toISOString().slice(0, 10);
+}
+
+/** The first-run measures of each week with work runs, oldest first. A task goes by the week its first run began. */
+export function measureByWeek(rows: StatRun[]): { week: string; measures: Measures }[] {
+  const firstStart = new Map<number, string>();
+  for (const r of rows) {
+    const seen = firstStart.get(r.task_id);
+    if (seen === undefined || r.started_at < seen) firstStart.set(r.task_id, r.started_at);
+  }
+  const groups = new Map<string, StatRun[]>();
+  for (const r of rows) {
+    const week = weekOf(firstStart.get(r.task_id) ?? r.started_at);
+    if (week) groups.set(week, [...(groups.get(week) ?? []), r]);
+  }
+  return [...groups].map(([week, group]) => ({ week, measures: measure(group) })).sort((a, b) => a.week.localeCompare(b.week));
 }
 
 /**

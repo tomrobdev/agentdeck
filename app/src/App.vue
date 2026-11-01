@@ -26,6 +26,7 @@ import SettingsPanel from './components/panels/SettingsPanel.vue';
 import StaleDaemonBar from './components/layout/StaleDaemonBar.vue';
 import AppHeader from './components/layout/AppHeader.vue';
 import StatusBar from './components/layout/StatusBar.vue';
+import InsightsView from './components/insights/InsightsView.vue';
 import QueueView from './components/queue/QueueView.vue';
 import TaskPage from './components/task/TaskPage.vue';
 import MergeDialog from './components/task/MergeDialog.vue';
@@ -175,6 +176,9 @@ watchEffect(() => {
         @act="(kind) => actOn(kind, detail!.id)"
       />
       <section v-else class="muted flex flex-1 flex-col items-center justify-center gap-3">Loading task #{{ pageId }}…</section>
+    </main>
+    <main v-else-if="route.current.name === 'insights'" class="flex min-h-0 flex-1 flex-col">
+      <InsightsView />
     </main>
     <main v-else class="flex min-h-0 flex-1 flex-col">
       <StaleDaemonBar :status="status" />

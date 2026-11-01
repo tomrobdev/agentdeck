@@ -59,6 +59,7 @@ export type {
   Settings,
   SettingsPatch,
   StartWait,
+  Stats,
   Status,
   SubmitReview,
   SyncResult,
