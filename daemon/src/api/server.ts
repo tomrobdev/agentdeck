@@ -30,7 +30,11 @@ export function startApi(options: ApiOptions): Promise<Server> {
     db: options.db,
     scheduler: options.scheduler ?? idleScheduler,
     changes: options.changes ?? idleChanges,
-    daemon: options.daemon ?? { info: { commit: null, started_at: new Date().toISOString() }, requestRestart: () => {} },
+    daemon: options.daemon ?? {
+      info: { commit: null, started_at: new Date().toISOString(), pid: process.pid },
+      requestRestart: () => {},
+      reloadFacts: () => ({ changed: [], lastChangeAt: null }),
+    },
   };
   const routes = [daemonRoutes, settingsRoutes, reposRoutes, tasksRoutes, filesRoutes, plansRoutes].flatMap((m) => m.routes(ctx));
 

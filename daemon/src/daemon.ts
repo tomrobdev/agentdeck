@@ -8,7 +8,7 @@ import { watchSource } from './adapters/watch.ts';
 import { ChangeWatcher } from './application/changes.ts';
 import { Scheduler } from './application/scheduler/scheduler.ts';
 import { API_PORT, DEFAULTS } from './config.ts';
-import { type Activity, reloadDecision } from './domain/daemon/restart.ts';
+import { type Activity, SCHEMA_DIRTY, offMain, reloadDecision } from './domain/daemon/restart.ts';
 
 export interface DaemonOptions {
   db: Db;
@@ -19,7 +19,9 @@ export interface DaemonOptions {
 
 export async function runDaemon({ db, once, log = () => {} }: DaemonOptions): Promise<void> {
   // Read once at start: it names the code this process loaded, even if the checkout moves on later.
-  const info = { commit: await checkoutCommit(import.meta.dirname), started_at: new Date().toISOString() };
+  const info = { commit: await checkoutCommit(import.meta.dirname), started_at: new Date().toISOString(), pid: process.pid };
+  // The lines the scheduler doesn't date itself get the same `[time]` prefix, so the log can say when the daemon started and stopped.
+  const stamped = (line: string) => log(`[${new Date().toISOString()}] ${line}`);
   let restartRequested = false;
   const changed: string[] = [];
   let lastChangeAt: number | null = null;
@@ -30,11 +32,7 @@ export async function runDaemon({ db, once, log = () => {} }: DaemonOptions): Pr
       hasUncommittedChanges(join(import.meta.dirname, 'db', 'schema.ts')),
       checkedOutBranch(import.meta.dirname),
     ]);
-    const next = dirty
-      ? 'db/schema.ts has uncommitted changes'
-      : branch && branch !== 'main'
-        ? `the checkout is on ${branch}, not main`
-        : null;
+    const next = dirty ? SCHEMA_DIRTY : branch && branch !== 'main' ? offMain(branch) : null;
     // Once per distinct reason: the scheduler only logs pending decisions, and a block is not one.
     if (next && next !== blocked) log(`not reloading: ${next}`);
     blocked = next;
@@ -69,7 +67,7 @@ export async function runDaemon({ db, once, log = () => {} }: DaemonOptions): Pr
   changes?.start();
   for (const sig of ['SIGINT', 'SIGTERM'] as const) {
     process.on(sig, () => {
-      log(`${sig}: stopping workers; their tasks will be requeued on next start`);
+      stamped(`${sig}: stopping workers; their tasks will be requeued on next start`);
       changes?.stop();
       scheduler.stop();
       process.exit(0);
@@ -81,16 +79,17 @@ export async function runDaemon({ db, once, log = () => {} }: DaemonOptions): Pr
       // After the API has answered: waking may exit the process at once.
       setTimeout(() => scheduler.wake(), 200);
     };
-    const api = await startApi({ db, port: API_PORT, scheduler, changes, daemon: { info, requestRestart } }).catch((err) => {
+    const reloadFacts = () => ({ changed, lastChangeAt, requested: restartRequested, blocked });
+    const api = await startApi({ db, port: API_PORT, scheduler, changes, daemon: { info, requestRestart, reloadFacts } }).catch((err) => {
       if (err?.code === 'EADDRINUSE')
         throw new Error(`port ${API_PORT} is in use: another agentdeck daemon is probably running (see \`agentdeck service\`)`);
       throw err;
     });
-    log(`api        http://127.0.0.1:${API_PORT}`);
+    stamped(`api        http://127.0.0.1:${API_PORT}`);
     process.on('exit', () => api.close());
   }
-  log(
-    `agentdeck ${once ? 'run-once' : 'daemon'}: ${db.isPaused() && !once ? 'PAUSED (agentdeck resume to start)' : 'active'}, max ${db.maxConcurrent()} concurrent, tick ${DEFAULTS.tickMs / 1000}s`,
+  stamped(
+    `agentdeck ${once ? 'run-once' : 'daemon'} ${info.commit ? info.commit.slice(0, 7) : 'no commit'} (pid ${info.pid}): ${db.isPaused() && !once ? 'PAUSED (agentdeck resume to start)' : 'active'}, max ${db.maxConcurrent()} concurrent, tick ${DEFAULTS.tickMs / 1000}s`,
   );
   try {
     await scheduler.run();

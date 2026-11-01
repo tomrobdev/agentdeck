@@ -1,5 +1,5 @@
 // How the CLI prints tasks, doctor reports, logs and times, and how it fails.
-import { type DoctorReport, type TaskView, readLog } from '../application/actions.ts';
+import { type DoctorReport, type HealthCheck, type TaskView, readLog } from '../application/actions.ts';
 import type { AutoMergeView } from '../domain/pull-request/auto-merge.ts';
 import type { TaskStatus } from '../domain/task/lifecycle.ts';
 import type { Task } from '../domain/task/task.ts';
@@ -81,6 +81,16 @@ export function printDoctor(report: DoctorReport): DoctorReport {
       : `${report.repo}: PAUSED (${report.paused_reason}); fix the failed checks and run \`agentdeck repo doctor ${report.repo}\``,
   );
   return report;
+}
+
+/** Print each daemon check with its reason, and under each failed one the command that fixes it. */
+export function printHealth(checks: HealthCheck[]): void {
+  for (const c of checks) {
+    console.log(`${c.ok ? '✓' : '✗'} ${c.name.padEnd(17)} ${c.reason}`);
+    if (c.fix) console.log(`  → ${c.fix}`);
+  }
+  const failed = checks.filter((c) => !c.ok).length;
+  console.log(failed ? `${failed} of ${checks.length} checks failed` : 'the daemon is healthy');
 }
 
 export function relTime(unixSeconds: number): string {

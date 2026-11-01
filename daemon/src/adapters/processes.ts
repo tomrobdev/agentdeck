@@ -44,15 +44,18 @@ function leaderStartedAt(pid: number): number | null {
  * whose leader has exited is still ours: the OS doesn't reuse an id while its group exists.
  */
 export function reapOrphans(runs: { pid: number; started_at: string }[], graceMs = 5_000): number {
-  const ours = runs.filter(({ pid, started_at }) => {
-    if (!groupAlive(pid)) return false;
-    const leader = leaderStartedAt(pid);
-    return leader === null || Math.abs(leader - Date.parse(`${started_at.replace(' ', 'T')}Z`)) < 120_000;
-  });
+  const ours = runs.filter(ownsLiveGroup);
   for (const { pid } of ours) killGroup(pid, 'SIGTERM');
   const deadline = Date.now() + graceMs;
   const wait = new Int32Array(new SharedArrayBuffer(4));
   while (ours.some(({ pid }) => groupAlive(pid)) && Date.now() < deadline) Atomics.wait(wait, 0, 0, 100);
   for (const { pid } of ours) if (groupAlive(pid)) killGroup(pid, 'SIGKILL');
   return ours.length;
+}
+
+/** Whether the run's recorded process group is alive and is the run's own, not a pid reused by something else. */
+export function ownsLiveGroup({ pid, started_at }: { pid: number; started_at: string }): boolean {
+  if (!groupAlive(pid)) return false;
+  const leader = leaderStartedAt(pid);
+  return leader === null || Math.abs(leader - Date.parse(`${started_at.replace(' ', 'T')}Z`)) < 120_000;
 }
