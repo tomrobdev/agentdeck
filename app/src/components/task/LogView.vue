@@ -102,7 +102,7 @@ onBeforeUnmount(close);
           <pre class="my-1.5 max-h-65 overflow-auto whitespace-pre-wrap">{{ e.output }}</pre>
         </details>
       </template>
-      <template v-else>
+      <template v-else-if="e.kind === 'error'">
         <code class="text-failed">{{ e.text }}</code>
       </template>
     </div>

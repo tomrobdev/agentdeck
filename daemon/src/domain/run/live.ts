@@ -1,5 +1,7 @@
 // What a running task is doing right now, read from the events of its run's stream. Pure: no I/O.
 
+import { toolSummary } from './log.ts';
+
 /** What the daemon keeps of a live run: the turns so far and the last tool call in a few words. */
 export interface LiveState {
   turns: number;
@@ -61,15 +63,14 @@ export function syncView(
 
 const TOOL_TEXT_MAX = 40;
 
-const squash = (s: string): string => s.replace(/\s+/g, ' ').trim();
 const cut = (s: string, max: number): string => (s.length > max ? s.slice(0, max - 1) + '…' : s);
 
-/** A tool call in a few words: the tool, then the file's name, the command or the pattern it works on. */
+/** A tool call in a few words: the tool, then the log's summary of the call, with a file shortened to its name. */
 export function toolText(name: string, input: unknown): string {
   const i = (input && typeof input === 'object' ? input : {}) as Record<string, unknown>;
-  const str = (v: unknown): string => (typeof v === 'string' ? squash(v) : '');
-  const file = str(i.file_path) || str(i.notebook_path);
-  const detail = file ? file.split('/').pop()! : str(i.command) || str(i.pattern) || str(i.path) || str(i.description) || str(i.url);
+  const summary = toolSummary(name, input);
+  const isFile = (typeof i.file_path === 'string' && i.file_path) || (typeof i.notebook_path === 'string' && i.notebook_path);
+  const detail = isFile ? summary.split('/').pop()! : summary;
   return cut(detail ? `${name} ${detail}` : name, TOOL_TEXT_MAX);
 }
 

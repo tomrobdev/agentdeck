@@ -587,13 +587,27 @@ export interface FileContent {
   text: string | null;
 }
 
-export type LogEntry =
+export interface LogChange {
+  added: number;
+  removed: number;
+  old: string;
+  new: string;
+}
+
+export type LogEntry = {
+  /** The event's timestamp. */
+  at?: string;
+  /** The `tool_use` id of the subagent call this entry comes from. */
+  parent?: string;
+} & (
   | { kind: 'text'; text: string }
-  | { kind: 'tool'; name: string; input: string; file?: string }
+  | { kind: 'tool'; id?: string; name: string; input: string; summary: string; file?: string; change?: LogChange }
+  | { kind: 'tool_result'; id: string; ok: boolean; output: string; lines: number }
   | { kind: 'result'; subtype: string; turns: number; cost: number }
   | { kind: 'setup'; passed: boolean; cmd: string; output: string }
   | { kind: 'tests'; passed: boolean; output: string }
-  | { kind: 'error'; text: string };
+  | { kind: 'error'; text: string }
+);
 
 // ---- The daemon
 
