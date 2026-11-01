@@ -43,6 +43,7 @@ export interface AutoMergeCheck {
  */
 const UNATTENDED: Record<MergeFinding['kind'], 'never' | 'wait' | null> = {
   not_open: 'never',
+  lands_after: 'wait',
   conflict: 'wait',
   draft: null,
   behind: null,

@@ -192,7 +192,7 @@ test('a PR the daemon may merge opens with the label; one it may not opens witho
 
 test('the refresh finds a ready PR and autoMerge merges it, records who did, cleans up and releases its dependents', async () => {
   const t = tested({ title: 'Ship it alone' });
-  const later = await addTask(db, { repo: 'demo', prompt: 'after the merge', after_task: t.id });
+  const later = await addTask(db, { repo: 'demo', prompt: 'after the merge', builds_on: [t.id] });
   assert.ok(waitingFor(db, db.getTask(later.id)!));
 
   const found = await refreshPrStates(db);

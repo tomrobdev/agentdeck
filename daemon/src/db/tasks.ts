@@ -64,10 +64,15 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       status?: 'queued' | 'proposed';
       source?: 'manual' | 'planner';
       after_task?: number | null;
+      /** Links the task starts with; the caller has checked them (a new task can't make a cycle). */
+      links?: { on: number; kind: LinkKind }[];
       plan_path?: string | null;
       plan_steps?: string | null;
     }): Task {
       const status = n.status ?? 'queued';
+      const links = [...(n.links ?? [])];
+      if (n.after_task != null && !links.some((l) => l.on === n.after_task)) links.push({ on: n.after_task, kind: 'builds_on' });
+      const first = links.find((l) => l.kind === 'builds_on')?.on ?? null;
       const id = atomically(db, () => {
         const info = orm
           .insert(tasks)
@@ -81,13 +86,13 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
             max_attempts: n.max_attempts ?? DEFAULTS.maxAttempts,
             status,
             source: n.source ?? 'manual',
-            after_task: n.after_task ?? null, // still shown by the API until it reads links; the links are what count
+            after_task: first, // legacy: the sidebar still shows it until it reads links; the links are what count
             plan_path: n.plan_path ?? null,
             plan_steps: n.plan_steps ?? null,
           })
           .run();
         const id = Number(info.lastInsertRowid);
-        if (n.after_task != null) orm.insert(taskLinks).values({ task_id: id, on_task: n.after_task, kind: 'builds_on' }).run();
+        for (const l of links) orm.insert(taskLinks).values({ task_id: id, on_task: l.on, kind: l.kind }).run();
         recordEvent(id, 'created', null, status);
         return id;
       });

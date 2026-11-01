@@ -71,7 +71,7 @@ export function parsePrDetails(json: string): PrDetails {
 
 /** One fact about a PR that bears on merging it. A problem stops any merge; anything else is a warning a person may wave through. */
 export interface MergeFinding {
-  kind: 'not_open' | 'conflict' | 'draft' | 'behind' | 'blocked' | 'tests_failed' | 'checks_failing' | 'checks_pending';
+  kind: 'not_open' | 'lands_after' | 'conflict' | 'draft' | 'behind' | 'blocked' | 'tests_failed' | 'checks_failing' | 'checks_pending';
   problem: boolean;
   text: string;
 }
@@ -88,13 +88,16 @@ export interface MergeInput {
   pr: PrDetails;
   /** The last run that ran the tests: 1 passed, 0 failed, null none did. */
   tests_passed: number | null;
+  /** The tasks this one lands after that have not landed (`mergeHold`), each with why. Missing means none. */
+  lands_after?: { on: number; reason: string }[];
 }
 
 /** What about a PR's state bears on merging it, in the order the merge dialog shows it. */
-export function mergeFindings({ pr_state, pr, tests_passed }: MergeInput): MergeFinding[] {
+export function mergeFindings({ pr_state, pr, tests_passed, lands_after = [] }: MergeInput): MergeFinding[] {
   const found: MergeFinding[] = [];
   const add = (kind: MergeFinding['kind'], text: string, problem = false) => found.push({ kind, problem, text });
   if (pr_state !== 'open') add('not_open', `the PR is ${pr_state ?? 'not open'}`, true);
+  for (const hold of lands_after) add('lands_after', `lands after #${hold.on}: ${hold.reason}`, true);
   if (isConflicting(pr)) add('conflict', 'the branch has conflicts with the base branch', true);
   if (pr.draft) add('draft', 'the PR is a draft; it will be marked ready for review first');
   if (pr.merge_state === 'BEHIND') add('behind', 'the base branch has moved on since the branch was cut');

@@ -131,6 +131,22 @@ export type StartWait =
   | { kind: 'dependency'; on: number; stuck: string | null }
   | { kind: 'slots'; running: number; max: number };
 
+/** builds_on holds a task's start until the other is done and merged; after only holds its merge. */
+export type LinkKind = 'builds_on' | 'after';
+
+/** One link: the task it points at, its kind and where it stands (holding is an after link not yet landed). */
+export interface TaskLink {
+  on: number;
+  kind: LinkKind;
+  state: 'met' | 'waiting' | 'stuck' | 'holding';
+}
+
+/** POST /api/tasks/:id/links */
+export interface NewLink {
+  on: number;
+  kind: LinkKind;
+}
+
 /** A task as returned by the list endpoint: everything except the prompt. */
 export interface TaskSummary {
   id: number;
@@ -163,10 +179,14 @@ export interface TaskSummary {
   done_by?: 'person' | null;
   /** 1 or 0 overrides the repo's auto_merge; null follows it. Missing from a daemon that predates it. */
   auto_merge?: number | null;
-  /** Set for a queued task held back by after_task; stuck says why its dependency won't get there on its own. */
+  /** Set for a queued task held back by a builds-on link; stuck says why its dependency won't get there on its own. */
   waiting: { on: number; stuck: string | null } | null;
   /** For a task in review: the queued tasks that wait on its PR. Missing from a daemon that predates it; read it as empty. */
   unblocks?: number[];
+  /** What this task depends on, with where each link stands. Missing from a daemon that predates it. */
+  links?: TaskLink[];
+  /** The tasks that depend on this one. Missing from a daemon that predates it. */
+  dependents?: { id: number; kind: LinkKind }[];
   /** A done task whose latest run left linked plan steps unfinished. Missing from a daemon that predates it. */
   plan_unfinished?: boolean;
   /** What a queued task waits for; null once it waits for nothing (or it isn't queued). */
@@ -264,7 +284,10 @@ export interface NewTask {
   model?: string;
   priority?: number;
   max_turns?: number;
-  after_task?: number;
+  /** Tasks this one builds on: it starts once they are done and merged. */
+  builds_on?: number[];
+  /** Tasks this one lands after: it runs at once, only its merge waits. */
+  after?: number[];
   plan_path?: string;
   plan_steps?: string[];
 }

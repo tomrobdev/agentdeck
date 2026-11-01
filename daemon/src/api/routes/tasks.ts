@@ -22,6 +22,16 @@ export function routes({ db, scheduler }: ApiContext): Route[] {
       await actions.editTask(db, Number(id), body);
       return detail(id);
     }),
+    route('POST', /^\/api\/tasks\/(\d+)\/links$/, ({ params: [id], body }) => {
+      actions.linkTasks(db, Number(id), body as Parameters<typeof actions.linkTasks>[2]);
+      wake();
+      return detail(id);
+    }),
+    route('DELETE', /^\/api\/tasks\/(\d+)\/links\/(\d+)$/, ({ params: [id, on] }) => {
+      actions.unlinkTasks(db, Number(id), Number(on));
+      wake();
+      return detail(id);
+    }),
     route('POST', /^\/api\/tasks\/(\d+)\/approve$/, ({ params: [id] }) => (actions.approveTask(db, Number(id)), detail(id))),
     route('POST', /^\/api\/tasks\/(\d+)\/reject$/, ({ params: [id] }) => (actions.rejectTask(db, Number(id)), detail(id))),
     route('POST', /^\/api\/tasks\/(\d+)\/cancel$/, ({ params: [id] }) => ({ result: actions.cancelTask(db, Number(id)) })),

@@ -1,6 +1,14 @@
 // Tasks waiting on another through a builds-on link: why they wait, and telling a human when they're stuck.
 import type { Db } from '../../db/index.ts';
-import { type LinkTarget, type StartState, linkState, startState } from '../../domain/task/link.ts';
+import {
+  type LinkKind,
+  type LinkState,
+  type LinkTarget,
+  type StartState,
+  linkState,
+  mergeHold,
+  startState,
+} from '../../domain/task/link.ts';
 import { isReview } from '../../domain/task/stage.ts';
 import type { Task } from '../../domain/task/task.ts';
 import { notifyLater } from '../notifications.ts';
@@ -50,14 +58,27 @@ export function dependentsWaiting(db: Db, id: number): Task[] {
 
 /**
  * Call after task `id` changes in a way that may strand the tasks waiting on it (it failed, was blocked
- * or cancelled, or its PR was closed). If so, notify once, naming them. They stay queued: retrying `id`
- * releases them, so failing them would throw that plan away.
+ * or cancelled, or its PR was closed). If so, notify once, naming every queued task that can no longer start,
+ * however many builds-on links down. They stay queued: retrying `id` releases them, so failing them would
+ * throw that plan away.
  */
 export function warnStuckDependents(db: Db, id: number): void {
-  const dependents = queuedBuildingOn(db, id);
-  if (!dependents.length) return;
   const state = linkState({ on: id, kind: 'builds_on' }, targetOf(db, id));
   if (state.kind !== 'stuck') return;
+  const stuck = new Map<number, Task>();
+  const seen = new Set<number>([id]);
+  const stack = [id];
+  while (stack.length) {
+    for (const t of db.dependentsOf(stack.pop()!, 'builds_on')) {
+      if (seen.has(t.id)) continue;
+      seen.add(t.id);
+      if (t.status === 'queued') stuck.set(t.id, t);
+      // A done task has started already, so what builds on it is not held by this chain.
+      if (t.status !== 'done') stack.push(t.id);
+    }
+  }
+  const dependents = [...stuck.values()].sort((a, b) => a.id - b.id);
+  if (!dependents.length) return;
   const n = dependents.length;
   notifyLater(db, {
     kind: 'blocked',
@@ -68,4 +89,28 @@ export function warnStuckDependents(db: Db, id: number): void {
     ].join('\n'),
     task_id: id,
   });
+}
+
+/** The after links that still hold task `id`'s merge, each with why. */
+export function landsAfter(db: Db, id: number): { on: number; reason: string }[] {
+  return mergeHold(db.linksOf(id), (on) => targetOf(db, on));
+}
+
+/** A task's link as views show it: the other task, the kind and where the link stands. */
+export interface LinkView {
+  on: number;
+  kind: LinkKind;
+  state: LinkState['kind'];
+}
+
+export function linkViews(db: Db, id: number): LinkView[] {
+  return db.linksOf(id).map((l) => ({ on: l.on, kind: l.kind, state: linkState(l, targetOf(db, l.on)).kind }));
+}
+
+/** The tasks that depend on task `id`, whatever their status. */
+export function dependentViews(db: Db, id: number): { id: number; kind: LinkKind }[] {
+  return db
+    .dependentsOf(id)
+    .map((t) => ({ id: t.id, kind: db.linksOf(t.id).find((l) => l.on === id)!.kind }))
+    .sort((a, b) => a.id - b.id);
 }

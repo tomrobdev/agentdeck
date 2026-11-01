@@ -20,6 +20,7 @@ import { EDITABLE_STATUSES, type Task, defaultTitle, planStepIds } from '../../d
 import { lastLine } from '../../domain/text.ts';
 import { isSyncing } from '../sync.ts';
 import { warnStuckDependents } from './dependencies.ts';
+import { newLinks } from './links.ts';
 import { ActionError, object, refuse, requireTask, requireTaskRepo, text, whole } from '../input.ts';
 import { closePullRequest } from '../pull-request/pull-requests.ts';
 
@@ -63,7 +64,10 @@ export async function addTask(
     model?: string;
     max_turns?: number;
     max_attempts?: number;
-    after_task?: number;
+    /** Tasks this one builds on (it starts once they are done and merged), as ids or "12,14". */
+    builds_on?: number[] | string;
+    /** Tasks this one lands after (it runs at once; only its merge waits), as ids or "12,14". */
+    after?: number[] | string;
     plan_path?: string;
     plan_steps?: string[] | string;
   },
@@ -79,8 +83,7 @@ export async function addTask(
   const max_turns = whole(body, 'max_turns', maxTurnsError);
   const max_attempts = whole(body, 'max_attempts', maxAttemptsError);
   if (body.plan_path !== undefined && typeof body.plan_path !== 'string') throw new ActionError('plan_path must be text');
-  if (input.after_task !== undefined && (!Number.isInteger(input.after_task) || !db.getTask(input.after_task)))
-    throw new ActionError(`--after: no task #${input.after_task}`);
+  const links = newLinks(db, body);
   const repos = db.listRepos();
   const repo = repoName ? db.findRepo(repoName) : repos.length === 1 ? repos[0] : undefined;
   if (!repo) throw new ActionError(repoName ? `no repo "${repoName}"` : 'choose a repo (more than one is registered)');
@@ -97,7 +100,7 @@ export async function addTask(
     model: model || undefined,
     max_turns,
     max_attempts,
-    after_task: input.after_task,
+    links,
     plan_path: plan_path || null,
     plan_steps: plan_path && steps ? JSON.stringify(steps) : null,
   });

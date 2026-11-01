@@ -25,13 +25,24 @@ export function taskId(arg: string | undefined): number {
   return id;
 }
 
-/** `waiting` and `unblocks` come from a task view (`taskDetail`, `withViews`); a plain task shows neither. */
-export function fmtTask(t: Task & { waiting?: TaskView['waiting']; unblocks?: number[] }, repoName: string): string {
+/** One link in words: "builds on #12 (waiting)", "after #9 (holding its merge)". */
+export function fmtLink(l: TaskView['links'][number]): string {
+  const state = { met: 'met', waiting: 'waiting', stuck: 'stuck', holding: 'holding its merge' }[l.state];
+  return `${l.kind === 'builds_on' ? 'builds on' : 'after'} #${l.on} (${state})`;
+}
+
+/** `waiting`, `unblocks` and `links` come from a task view (`taskDetail`, `withViews`); a plain task shows none. */
+export function fmtTask(
+  t: Task & { waiting?: TaskView['waiting']; unblocks?: number[]; links?: TaskView['links'] },
+  repoName: string,
+): string {
   let extra = t.stop_reason && (t.status === 'blocked' || t.status === 'failed') ? `  — ${t.stop_reason}` : '';
   const waiting = t.waiting ?? null;
   if (waiting)
     extra += waiting.stuck ? `  can't start: ${waiting.stuck} (retry #${waiting.on} or cancel this task)` : `  waiting on #${waiting.on}`;
   if (t.pr_url) extra += `  PR ${t.pr_state ?? 'open'}: ${t.pr_url}`;
+  // A builds-on link that is still waiting is already shown as "waiting on"; show the rest.
+  for (const l of t.links ?? []) if (l.kind === 'after' || l.state !== 'waiting' || !waiting) extra += `  ${fmtLink(l)}`;
   if (t.unblocks?.length) extra += `  unblocks ${t.unblocks.map((id) => `#${id}`).join(', ')}`;
   return `${STATUS_ICON[t.status]} #${String(t.id).padEnd(4)} ${t.status.padEnd(9)} p${t.priority}  ${repoName.padEnd(14)} ${t.title}${extra}`;
 }

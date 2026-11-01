@@ -29,12 +29,15 @@ Repos
 
 Tasks
   agentdeck add "<prompt>" --repo <name> [--title t] [--priority n] [--model sonnet] [--max-turns n] [--attempts n]
-                      [--after <task>]          wait until that task is done (and its PR merged, if it has one)
+                      [--builds-on <tasks>]     start once those tasks (12,14) are done and merged
+                      [--after <tasks>]         run at once; the PR waits to merge until those tasks have landed
                       [--plan <path>] [--steps a,b]   carry out steps of a plan on the base branch (docs/plans/x.html);
                                                       without --steps, every step not yet done
   agentdeck edit <id> [--title t] [--prompt p] [--priority n] [--model m] [--max-turns n] [--attempts n]
                       [--plan <path>] [--steps a,b]   change the plan link ("" clears it)
                                   for proposed, queued, blocked or failed tasks
+  agentdeck link <id> --builds-on <task>   or --after <task>: make a task depend on another (cycles are refused)
+  agentdeck unlink <id> <task>    remove that link
   agentdeck ls [<search>] [--status s,…] [--repo r] [--sort attention|updated|newest|oldest|priority]
                                   search matches #id, title, branch, model or reason; --status takes statuses,
                                   states (waiting, stuck, review, merged, pr-closed, no-pr) or groups (active, needs-you)

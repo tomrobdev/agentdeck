@@ -9,7 +9,7 @@ import { filterTasks } from '../domain/task/listing.ts';
 import { readNeeds } from '../domain/task/needs.ts';
 import { planStepIds } from '../domain/task/task.ts';
 import { callDaemon } from './daemon-client.ts';
-import { die, taskId, fmtTask, printLog } from './format.ts';
+import { die, taskId, fmtLink, fmtTask, printLog } from './format.ts';
 import type { Command } from './context.ts';
 
 /** `approve` and `reject` share one implementation; `cmd` says which was typed. */
@@ -32,16 +32,39 @@ export const taskCommands: Record<string, Command> = {
       model: flags.model,
       max_turns: flags['max-turns'] ? Number(flags['max-turns']) : undefined,
       max_attempts: flags.attempts ? Number(flags.attempts) : undefined,
-      after_task: flags.after ? taskId(flags.after) : undefined,
+      builds_on: flags['builds-on'],
+      after: flags.after,
       plan_path: flags.plan,
       plan_steps: flags.steps,
     });
+    const { waiting, links } = actions.taskDetail(db, t.id);
     console.log(
-      `queued task #${t.id} on ${repoName(t.repo_id)} (${t.model}, ${t.max_turns} turns max${t.after_task ? `, after #${t.after_task}` : ''})`,
+      `queued task #${t.id} on ${repoName(t.repo_id)} (${t.model}, ${t.max_turns} turns max${links
+        .map(fmtLink)
+        .map((l) => `, ${l}`)
+        .join('')})`,
     );
-    const { waiting } = actions.taskDetail(db, t.id);
     if (waiting?.stuck) console.log(`note: ${waiting.stuck}, so this task won't start until #${waiting.on} is retried`);
     if (db.isPaused()) console.log('note: the daemon is paused; run `agentdeck resume` to start working');
+  },
+  link: ({ db, flags, rest }) => {
+    const id = taskId(rest[0]);
+    const kinds = [flags['builds-on'] !== undefined && ('builds_on' as const), flags.after !== undefined && ('after' as const)].filter(
+      (k) => k !== false,
+    );
+    if (kinds.length !== 1 || rest.length !== 1) die('usage: agentdeck link <id> --builds-on <task> | --after <task>');
+    const kind = kinds[0];
+    const on = taskId(kind === 'builds_on' ? flags['builds-on'] : flags.after);
+    actions.linkTasks(db, id, { on, kind });
+    console.log(`#${id} ${kind === 'builds_on' ? 'builds on' : 'lands after'} #${on}`);
+    const { waiting } = actions.taskDetail(db, id);
+    if (waiting?.stuck) console.log(`note: ${waiting.stuck}, so this task won't start until #${waiting.on} is retried`);
+  },
+  unlink: ({ db, rest }) => {
+    if (rest.length !== 2) die('usage: agentdeck unlink <id> <task>');
+    const [id, on] = [taskId(rest[0]), taskId(rest[1])];
+    actions.unlinkTasks(db, id, on);
+    console.log(`#${id} no longer depends on #${on}`);
   },
   edit: async ({ db, flags, rest, repoName }) => {
     const id = taskId(rest[0]);
@@ -83,6 +106,9 @@ export const taskCommands: Record<string, Command> = {
     const t = actions.taskDetail(db, taskId(rest[0]));
     console.log(fmtTask(t, repoName(t.repo_id)));
     console.log(`model ${t.model}, attempts ${t.attempts}/${t.max_attempts}, max turns ${t.max_turns}`);
+    if (t.links.length) console.log(`links    ${t.links.map(fmtLink).join(', ')}`);
+    if (t.dependents.length)
+      console.log(`needed by ${t.dependents.map((d) => `#${d.id} (${d.kind === 'builds_on' ? 'builds on it' : 'after it'})`).join(', ')}`);
     if (t.branch) console.log(`branch   ${t.branch}`);
     if (t.worktree) console.log(`worktree ${t.worktree}`);
     const needs = readNeeds(t.needs);

@@ -3,7 +3,8 @@ import type { Db } from '../../db/index.ts';
 import type { StartWait } from '../../domain/task/start.ts';
 import type { TaskStatus } from '../../domain/task/lifecycle.ts';
 import type { Task } from '../../domain/task/task.ts';
-import { type Waiting, unblocksOf, waitingFor } from './dependencies.ts';
+import { type LinkView, type Waiting, dependentViews, linkViews, unblocksOf, waitingFor } from './dependencies.ts';
+import type { LinkKind } from '../../domain/task/link.ts';
 import { requireTask } from '../input.ts';
 import { startWaits } from '../scheduler/queue.ts';
 
@@ -12,6 +13,8 @@ export interface TaskView {
   repo: string | null;
   waiting: Waiting | null;
   unblocks: number[];
+  links: LinkView[];
+  dependents: { id: number; kind: LinkKind }[];
   plan_unfinished: boolean;
   wait: StartWait | null;
 }
@@ -26,6 +29,8 @@ export function withViews<T extends Pick<Task, 'id' | 'repo_id' | 'status' | 'pr
     repo: names.get(t.repo_id) ?? null,
     waiting: waitingFor(db, t),
     unblocks: unblocksOf(db, t),
+    links: linkViews(db, t.id),
+    dependents: dependentViews(db, t.id),
     plan_unfinished: unfinished.has(t.id),
     wait: waitOf(t),
   }));
