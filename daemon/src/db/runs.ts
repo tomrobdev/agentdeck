@@ -27,6 +27,10 @@ export function runStore(orm: Orm) {
     setRunPid(id: number, pid: number): void {
       orm.update(runs).set({ pid }).where(eq(runs.id, id)).run();
     },
+    /** The claude session a run is in, stored as soon as claude names it so a run a restart ends can be resumed. */
+    setRunSession(id: number, session_id: string): void {
+      orm.update(runs).set({ session_id }).where(eq(runs.id, id)).run();
+    },
     finishRun(id: number, r: Partial<Omit<Run, 'id' | 'task_id' | 'kind' | 'attempt' | 'started_at' | 'log_path'>>): void {
       // undefined means "not given" to Drizzle, but this has always written a given-as-undefined key as NULL.
       const given = Object.fromEntries(Object.entries(r).map(([k, v]) => [k, v ?? null]));

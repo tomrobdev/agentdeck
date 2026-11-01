@@ -61,6 +61,17 @@ test('measure: first-run success, denials per run, cost and minutes per done tas
   assert.equal(m.minutes_per_done_task, (10 + 10 + 20) / 2);
 });
 
+test('measure: a run a daemon restart cut off is not a first run; the run that resumed it is', () => {
+  const m = measure([
+    run({ task_id: 1, outcome: 'interrupted' }), // cut off by a restart
+    run({ task_id: 1 }), // the same attempt, resumed: done
+  ]);
+  assert.equal(m.runs, 2);
+  assert.equal(m.first_runs, 1);
+  assert.equal(m.first_run_done, 1);
+  assert.equal(m.first_run_rate, 1);
+});
+
 test('measure: nothing to measure gives nulls, not NaN', () => {
   const m = measure([]);
   assert.equal(m.first_run_rate, null);

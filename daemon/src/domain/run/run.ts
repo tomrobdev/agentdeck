@@ -12,9 +12,9 @@ export interface Run {
   attempt: number; // a resolve run carries the attempt it ran beside
   started_at: string;
   ended_at: string | null;
-  outcome: string | null; // done | blocked | failed | cancelled
+  outcome: string | null; // done | blocked | failed | cancelled | rate_limited | interrupted
   exit_code: number | null;
-  session_id: string | null;
+  session_id: string | null; // stored when claude's init line names it, so a run a restart ends can be resumed
   num_turns: number | null;
   input_tokens: number;
   output_tokens: number;
@@ -26,6 +26,28 @@ export interface Run {
   log_path: string;
   pid: number | null; // claude's process group while the run is live
   denials: number; // tool uses refused by the permission rules during the run
+}
+
+/**
+ * The outcome of a run that a daemon restart ended (a SIGTERM or a crash): not a failure, and it uses no attempt.
+ * The task's next run continues its claude session (`resumableSession`).
+ */
+export const INTERRUPTED = 'interrupted';
+
+/**
+ * The claude session the task's next work run should resume, or null to start afresh. It is the session of the latest
+ * work run when a daemon restart ended that run and the task is still on its attempt (a restart gives the attempt
+ * back, so the next run carries the same number). A run a restart ended before claude named a session (say, during
+ * setup) is looked past, back to the newest interrupted run of the attempt that has one.
+ */
+export function resumableSession(task: { attempts: number }, previousRuns: Run[]): string | null {
+  const work = previousRuns.filter((r) => r.kind === 'work');
+  for (let i = work.length - 1; i >= 0; i--) {
+    const r = work[i];
+    if (r.outcome !== INTERRUPTED || r.attempt !== task.attempts) return null;
+    if (r.session_id) return r.session_id;
+  }
+  return null;
 }
 
 /** The run a person asked for: by id, by the work run of an attempt, or the latest. A resolve run is only picked by id. */
@@ -49,12 +71,15 @@ export interface ResultLike {
   };
 }
 
-/** The run row's fields that claude's exit code and final result decide. */
-export function resultFields(result: ResultLike | undefined, exitCode: number): Partial<Run> {
+/**
+ * The run row's fields that claude's exit code and final result decide. `sessionId` is the one claude's init line
+ * named, kept when there is no result, so a run that ends without one does not lose its session.
+ */
+export function resultFields(result: ResultLike | undefined, exitCode: number, sessionId?: string): Partial<Run> {
   const usage = result?.usage ?? {};
   return {
     exit_code: exitCode,
-    session_id: result?.session_id ?? null,
+    session_id: result?.session_id ?? sessionId ?? null,
     num_turns: result?.num_turns ?? null,
     input_tokens: usage.input_tokens ?? 0,
     output_tokens: usage.output_tokens ?? 0,
@@ -73,6 +98,18 @@ export interface ClaudeRunLike<R extends ResultLike = ResultLike> {
   rateLimitedUntil: number | undefined;
   cancelled: boolean;
   stderr: string;
+  /** The session claude's init line named; undefined if it stopped before. */
+  sessionId?: string;
+}
+
+/**
+ * Whether a claude started with `--resume` stopped at once because it could not resume: it ended without a result
+ * (or with an error one) and either never named a session or said the conversation was not found. The session is
+ * gone (or never existed here), so the run starts afresh instead.
+ */
+export function resumeFailed(run: ClaudeRunLike): boolean {
+  if (run.cancelled || run.rateLimitedUntil || (run.result && !run.result.is_error)) return false;
+  return !run.sessionId || /no conversation found/i.test(`${run.stderr}\n${run.result?.result ?? ''}`);
 }
 
 export type RunClass<R extends ResultLike = ResultLike> =
