@@ -94,6 +94,9 @@ export function repoStore(db: DatabaseSync) {
           | 'auto_resolve'
           | 'sandbox'
           | 'network'
+          | 'auto_merge'
+          | 'auto_merge_max_lines'
+          | 'auto_merge_skip'
         >
       >,
     ): void {

@@ -196,6 +196,14 @@ export const taskCommands: Record<string, Command> = {
     );
     if (res.cleanup_error) console.log(`cleanup incomplete: ${res.cleanup_error}`);
   },
+  'auto-merge': async ({ db, rest }) => {
+    const id = taskId(rest[0]);
+    const value = { on: true, off: false, repo: null }[rest[1] as 'on' | 'off' | 'repo'];
+    if (value === undefined) die('usage: agentdeck auto-merge <id> on|off|repo');
+    const res = await actions.setAutoMerge(db, id, { auto_merge: value });
+    console.log(`#${id}: auto-merge ${res.auto_merge ? 'on' : 'off'}${value === null ? " (the repo's setting)" : ''}`);
+    if (res.label_error) console.log(`could not change the PR's label: ${res.label_error}`);
+  },
   sync: async ({ db, rest }) => {
     const id = taskId(rest[0]);
     console.log(`syncing #${id}'s branch with the base branch… (a conflict starts a claude run and can take a while)`);

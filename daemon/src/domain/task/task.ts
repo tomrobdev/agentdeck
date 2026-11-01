@@ -27,6 +27,7 @@ export interface Task {
   needs: string | null; // JSON Needs (domain/task/needs.ts) the worker said it needs when it blocked; cleared when queued again
   plan_steps: string | null; // JSON array of that plan's step ids; null means every unfinished step (see planStepIds)
   done_by: 'person' | null; // 'person' when mark_done set the status; cleared whenever the task leaves done
+  auto_merge: number | null; // 1 or 0 overrides the repo's auto_merge; null = the repo's (domain/pull-request/auto-merge.ts)
   created_at: string;
   updated_at: string;
 }

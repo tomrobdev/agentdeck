@@ -1,19 +1,20 @@
 // The daemon's loop: claims queued tasks into free slots when the governor allows, runs the planner
-// when a queue runs dry, and refreshes open PRs.
+// when a queue runs dry, and refreshes open PRs, merging those that pass the auto-merge check.
 import { KeepAwake } from '../../adapters/caffeinate.ts';
 import { activeChildren, killGroup, reapOrphans } from '../../adapters/processes.ts';
 import { DEFAULTS } from '../../config.ts';
-import type { Db } from '../../db/index.ts';
 import { MAX_RESTARTS } from '../../domain/task/lifecycle.ts';
 import { describeWait, startDecision } from '../../domain/task/start.ts';
-import type { Activity, ReloadDecision } from '../../domain/daemon/restart.ts';
 import { startGate } from './gate.ts';
 import { notifyLater } from '../notifications.ts';
 import { proposeNow, plannerDue } from '../planner.ts';
 import { resolveConflicting } from '../sync.ts';
+import { autoMerge } from '../pull-request/auto-merge.ts';
 import { PR_REFRESH_MS, refreshPrStates } from '../pull-request/pull-requests.ts';
 import { settle, settleRecovered } from '../task/settle.ts';
 import { runTask } from '../run/worker.ts';
+import type { Db } from '../../db/index.ts';
+import type { Activity, ReloadDecision } from '../../domain/daemon/restart.ts';
 
 /** After a merge, how many times to re-read PRs whose mergeability GitHub is still computing, and how far apart. */
 const PR_RECHECKS = 6;
@@ -55,6 +56,8 @@ export class Scheduler {
   private handledPrCheck = Date.now();
   private recheckLeft = 0;
   private recheckAt = 0;
+  /** The last auto-merge error told for each task, so a merge that keeps failing is told once, not every refresh. */
+  private readonly autoMergeErrors = new Map<number, string>();
 
   constructor(db: Db, opts: SchedulerOptions = {}) {
     this.db = db;
@@ -187,7 +190,8 @@ export class Scheduler {
   /**
    * Every few minutes (not every tick), re-read the state of open PRs; a merged one releases the tasks waiting on it,
    * and a conflicting one gets the base merged in. A merge from the app or the CLI asks for a re-read at once, and
-   * while GitHub is still working out whether the other PRs conflict it is repeated every few seconds.
+   * while GitHub is still working out whether the other PRs conflict it is repeated every few seconds. PRs that pass the
+   * auto-merge check are merged before the refresh counts as finished, so two refreshes never merge at once.
    */
   private maybeRefreshPrs(): void {
     if (this.opts.once || this.refreshingPrs) return;
@@ -207,6 +211,10 @@ export class Scheduler {
         this.recheckLeft = found.unknown ? Math.max(this.recheckLeft - 1, 0) : 0;
         this.recheckAt = Date.now() + PR_RECHECK_MS;
         if (found.conflicting.length) this.resolveConflicts(found.conflicting);
+        if (found.mergeable.length)
+          return autoMerge(this.db, found.mergeable, { log: this.opts.log, told: this.autoMergeErrors }).then((merged) => {
+            if (merged) this.tick(); // the tasks waiting on it can start now
+          });
       })
       .catch((err) => this.opts.log(`pr refresh crashed: ${err?.stack ?? err}`))
       .finally(() => {

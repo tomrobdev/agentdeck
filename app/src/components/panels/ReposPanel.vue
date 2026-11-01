@@ -198,6 +198,23 @@ async function confirmDelete() {
             >
           </label>
           <label class="flex flex-none items-center gap-2">
+            <input type="checkbox" v-model="form.autoMerge" />
+            <span
+              >Merge PRs automatically
+              <span class="muted">(once tests and checks pass; planner proposals only when you approve them; turn off per task)</span></span
+            >
+          </label>
+          <div v-if="form.autoMerge" class="flex gap-3">
+            <label class="field w-28 flex-none">
+              <span>Max lines</span>
+              <input v-model.number="form.autoMergeMaxLines" type="number" min="1" />
+            </label>
+            <label class="field flex-1">
+              <span>Paths that need you <span class="muted">(prefixes)</span></span>
+              <input v-model="form.autoMergeSkip" placeholder=".github/, db/schema.ts" />
+            </label>
+          </div>
+          <label class="flex flex-none items-center gap-2">
             <input type="checkbox" v-model="form.sandbox" />
             <span
               >Run the agent's shell commands in the sandbox

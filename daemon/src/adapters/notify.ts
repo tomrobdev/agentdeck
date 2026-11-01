@@ -18,6 +18,7 @@ const NTFY_TAGS: Record<Notification['kind'], string> = {
   hold: 'hourglass',
   paused: 'pause_button',
   proposed: 'memo',
+  merged: 'twisted_rightwards_arrows',
   test: 'bell',
 };
 

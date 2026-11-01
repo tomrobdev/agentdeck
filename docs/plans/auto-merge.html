@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="en" data-agentdeck-plan="1">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Auto-merge done tasks</title>
+    <style>
+      :root {
+        --bg: #f6f6f4;
+        --panel: #ffffff;
+        --panel-2: #f0f0ed;
+        --border: #e2e2dd;
+        --text: #1d1d1b;
+        --muted: #6d6d68;
+        --accent: #c2622d;
+        --ok: #2e8b57;
+        --warn: #c98a10;
+        --bad: #c94141;
+        --info: #2f6fdb;
+        --code-bg: #f3f2ee;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme='light']) {
+          --bg: #161615;
+          --panel: #1f1f1d;
+          --panel-2: #272725;
+          --border: #33332f;
+          --text: #ecebe6;
+          --muted: #9a9993;
+          --accent: #e07a43;
+          --ok: #57b583;
+          --warn: #e0ab3c;
+          --bad: #e36d6d;
+          --info: #6c9bf0;
+          --code-bg: #1a1a18;
+        }
+      }
+      :root[data-theme='dark'] {
+        --bg: #161615;
+        --panel: #1f1f1d;
+        --panel-2: #272725;
+        --border: #33332f;
+        --text: #ecebe6;
+        --muted: #9a9993;
+        --accent: #e07a43;
+        --ok: #57b583;
+        --warn: #e0ab3c;
+        --bad: #e36d6d;
+        --info: #6c9bf0;
+        --code-bg: #1a1a18;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font:
+          15px/1.6 -apple-system,
+          BlinkMacSystemFont,
+          'SF Pro Text',
+          'Segoe UI',
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      .wrap {
+        display: grid;
+        grid-template-columns: 220px minmax(0, 1fr);
+        gap: 40px;
+        max-width: 1160px;
+        margin: 0 auto;
+        padding: 40px 24px 80px;
+      }
+      nav.toc {
+        position: sticky;
+        top: 24px;
+        align-self: start;
+        font-size: 13px;
+      }
+      nav.toc a {
+        display: block;
+        color: var(--muted);
+        text-decoration: none;
+        padding: 3px 0;
+      }
+      nav.toc a:hover {
+        color: var(--text);
+      }
+      nav.toc b {
+        display: block;
+        margin: 14px 0 4px;
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      h1 {
+        font-size: 30px;
+        line-height: 1.2;
+        margin: 0 0 6px;
+        letter-spacing: -0.01em;
+      }
+      h2 {
+        font-size: 21px;
+        margin: 56px 0 6px;
+        padding-top: 8px;
+        letter-spacing: -0.005em;
+      }
+      h3 {
+        font-size: 15px;
+        margin: 22px 0 6px;
+      }
+      p,
+      li {
+        max-width: 72ch;
+      }
+      .lede {
+        color: var(--muted);
+        font-size: 16px;
+        margin: 0 0 24px;
+      }
+      code,
+      pre {
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        font-size: 12.5px;
+      }
+      code {
+        background: var(--code-bg);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 0 4px;
+      }
+      pre {
+        background: var(--code-bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px 14px;
+        overflow-x: auto;
+        line-height: 1.45;
+      }
+      pre code {
+        background: none;
+        border: 0;
+        padding: 0;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 14px;
+        margin: 8px 0 4px;
+      }
+      th,
+      td {
+        text-align: left;
+        vertical-align: top;
+        padding: 7px 10px;
+        border-bottom: 1px solid var(--border);
+      }
+      th {
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 16px 18px;
+        margin: 14px 0;
+      }
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 6px 0 12px;
+      }
+      .tag {
+        font-size: 12px;
+        padding: 1px 8px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        background: var(--panel);
+      }
+      .tag.ok {
+        color: var(--ok);
+        border-color: color-mix(in srgb, var(--ok) 45%, transparent);
+      }
+      .tag.warn {
+        color: var(--warn);
+        border-color: color-mix(in srgb, var(--warn) 45%, transparent);
+      }
+      .tag.info {
+        color: var(--info);
+        border-color: color-mix(in srgb, var(--info) 45%, transparent);
+      }
+      .decision {
+        border-left: 3px solid var(--accent);
+      }
+      .decision h3 {
+        margin-top: 0;
+      }
+      .grid2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      ul.check {
+        list-style: none;
+        padding-left: 0;
+      }
+      ul.check li::before {
+        content: '☐ ';
+        color: var(--muted);
+      }
+      a {
+        color: var(--accent);
+      }
+      @media (max-width: 860px) {
+        .wrap {
+          grid-template-columns: 1fr;
+          gap: 0;
+          padding: 24px 16px 60px;
+        }
+        nav.toc {
+          position: static;
+          margin-bottom: 16px;
+        }
+        .grid2 {
+          grid-template-columns: 1fr;
+        }
+        table {
+          display: block;
+          overflow-x: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <nav class="toc">
+        <b>Plan</b>
+        <a href="#why">Why</a>
+        <a href="#today">What exists today</a>
+        <a href="#decisions">Decisions</a>
+        <a href="#rule">The rule</a>
+        <b>Steps</b>
+        <a href="#check">1 · The auto-merge check</a>
+        <a href="#schema">2 · Settings and schema</a>
+        <a href="#merge">3 · The daemon merges</a>
+        <a href="#label">4 · The GitHub label</a>
+        <a href="#surface">5 · CLI, API and dashboard</a>
+        <b>After</b>
+        <a href="#open">Open questions</a>
+        <a href="#later">Not in this plan</a>
+      </nav>
+
+      <main>
+        <h1>Auto-merge done tasks</h1>
+        <p class="lede" data-plan-summary>
+          Let the daemon merge a done task's PR without a person, when the repo or the task says so and a strict check passes: green CI,
+          passing tests, no conflicts, small enough, no protected paths. The daemon does the merge itself on its PR refresh, reusing
+          <code>mergeTask</code>, so it works on any repo, not only those with GitHub branch protection. The PR carries an
+          <code>agentdeck:auto-merge</code> label so GitHub shows it, and removing the label opts that PR out. Written 2026-11-01.
+        </p>
+
+        <h2 id="why">Why</h2>
+        <p>
+          Every done task waits for a person to press merge, and <code>--after</code> chains don't move until they do. For small, tested
+          changes that wait adds nothing. GitHub's own auto-merge (<code>gh pr merge --auto</code>) only works on repos with "Allow
+          auto-merge" turned on and required status checks, and not on drafts. AgentDeck has to work on any repo, so the daemon decides and
+          merges.
+        </p>
+
+        <h2 id="today">What exists today</h2>
+        <table>
+          <tr>
+            <th>Area</th>
+            <th>Now</th>
+          </tr>
+          <tr>
+            <td>Merge</td>
+            <td>
+              <code>mergeTask</code> (<code>application/pull-request/pull-requests.ts</code>) reads the PR, runs <code>mergeCheck</code>,
+              marks a draft ready, merges with the task's or repo's <code>merge_method</code>, records it, asks for a PR re-read, and can
+              delete the branch and worktree. The tasks waiting on it start on the next tick.
+            </td>
+          </tr>
+          <tr>
+            <td>Check</td>
+            <td>
+              <code>mergeCheck</code> (<code>domain/pull-request/merge.ts</code>) returns <em>problems</em> (not open, conflicting) and
+              <em>warnings</em> (draft, behind, blocked, failing tests, failing or pending checks). A person sees the warnings and decides.
+            </td>
+          </tr>
+          <tr>
+            <td>Refresh</td>
+            <td>
+              The scheduler calls <code>refreshPrStates</code> every <code>PR_REFRESH_MS</code>, and at once after a merge. It reads each
+              open PR of a done task and hands conflicting ones to <code>resolveConflicting</code>.
+            </td>
+          </tr>
+          <tr>
+            <td>Tests</td>
+            <td>
+              A work run records <code>tests_passed</code>. A sync started by the daemon or a person (<code>sync.ts</code>) runs the tests
+              after a resolve run and records them too.
+            </td>
+          </tr>
+          <tr>
+            <td>Repo flags</td>
+            <td>
+              <code>auto_approve</code> (planner proposals skip approval) and <code>auto_resolve</code> follow the same path through
+              <code>db/repos.ts</code>, <code>repo/repos.ts</code>, <code>settings.ts</code> (<code>repo set</code>),
+              <code>api/contract.ts</code> and <code>app/src/lib/forms.ts</code>. Auto-merge follows the same path.
+            </td>
+          </tr>
+        </table>
+
+        <h2 id="decisions">Decisions</h2>
+        <table>
+          <tr>
+            <th>Decision</th>
+            <th>Why</th>
+          </tr>
+          <tr>
+            <td>The daemon merges, on its PR refresh</td>
+            <td>
+              It works on any repo and reuses <code>mergeTask</code>'s merge and cleanup. It only merges while the daemon is running, which
+              is fine: nothing else moves then either.
+            </td>
+          </tr>
+          <tr>
+            <td>Off by default. Set per repo, with a per-task override</td>
+            <td>
+              Like <code>merge_method</code>. <code>tasks.auto_merge</code> is NULL (use the repo's), 0 or 1, so you can turn it on for one
+              task in a cautious repo, or off for one risky task.
+            </td>
+          </tr>
+          <tr>
+            <td>Planner proposals count only if a person approved them</td>
+            <td>
+              A <code>source = 'planner'</code> task is eligible only when the repo has <code>auto_approve</code> off, so a person queued
+              it. Otherwise no person would have seen the work before it reached the base branch. An explicit
+              <code>tasks.auto_merge = 1</code> still wins.
+            </td>
+          </tr>
+          <tr>
+            <td>Every <code>mergeCheck</code> warning blocks</td>
+            <td>
+              A person can wave a warning through. The daemon can't, so a warning means "wait" (pending checks, BEHIND) or "leave it for a
+              person" (failing checks, failing tests, protection blocking).
+            </td>
+          </tr>
+          <tr>
+            <td>Something has to have tested it</td>
+            <td>
+              The last run that ran tests must have passed. If the repo has no <code>test_cmd</code>, it needs at least one CI check, all
+              green. A repo with neither is never auto-merged, and its settings page says why.
+            </td>
+          </tr>
+          <tr>
+            <td>A sync doesn't stop it</td>
+            <td>
+              A sync started by the daemon runs the tests after a resolve run and records the result, so a branch that got a resolve run is
+              judged by those tests and by CI on the new commit.
+            </td>
+          </tr>
+          <tr>
+            <td>Limits: lines changed and protected paths</td>
+            <td>
+              <code>auto_merge_max_lines</code> (additions + deletions, default 400) and <code>auto_merge_skip</code>, path prefixes that
+              need a person (default <code>[".github/"]</code>). Prefix matching keeps <code>domain/</code> free of a glob library.
+            </td>
+          </tr>
+          <tr>
+            <td>A paused repo or daemon doesn't auto-merge</td>
+            <td>Paused means nothing moves on its own. A governor hold doesn't apply: a merge uses no quota.</td>
+          </tr>
+          <tr>
+            <td>The branch and worktree are cleaned up</td>
+            <td><code>delete_branch: true</code>. The local branch stays, as with a person's merge, so the diff can still be read.</td>
+          </tr>
+        </table>
+
+        <h2 id="rule">The rule</h2>
+        <p>A done task's open PR is auto-merged when all of these hold:</p>
+        <ol>
+          <li>
+            Auto-merge is on: <code>task.auto_merge ?? repo.auto_merge</code>, and for a planner task with <code>auto_merge</code> NULL, the
+            repo has <code>auto_approve</code> off.
+          </li>
+          <li>The PR has the <code>agentdeck:auto-merge</code> label (step 4).</li>
+          <li>
+            The PR is open and merges cleanly, with no checks failing or pending and nothing blocking it. A draft is fine (<code
+              >mergeTask</code
+            >
+            marks it ready). BEHIND is fine too: a PR that merges cleanly onto the moved base is what GitHub would merge, and a repo that
+            requires up-to-date branches makes <code>gh pr merge</code> fail, which is told once.
+          </li>
+          <li>The last tested run passed, or the repo has no <code>test_cmd</code> and the PR has at least one check.</li>
+          <li>
+            <code>additions + deletions ≤ auto_merge_max_lines</code>, and no changed file starts with a prefix in
+            <code>auto_merge_skip</code>.
+          </li>
+          <li>Neither the repo nor the daemon is paused.</li>
+        </ol>
+        <p>
+          The check returns <code>{ verdict: 'merge' | 'wait' | 'never', reasons: string[] }</code>. <em>wait</em> is for what can still
+          change on its own (checks pending, mergeability unknown, a conflict waiting for a sync, a pause). <em>never</em> is for what needs
+          a person (failing checks or tests, too big, protected path, no tests at all, no label, GitHub listing fewer files than changed).
+          The merge dialog shows the reasons.
+        </p>
+
+        <section data-plan-step id="check" data-status="done">
+          <h2>1 · The auto-merge check</h2>
+          <p>
+            <code>domain/pull-request/auto-merge.ts</code>: <code>autoMergeOn(task, repo)</code> says whether auto-merge is on, and
+            <code>autoMergeCheck</code> gives the verdict from the repo's limits and <code>test_cmd</code>, the <code>PrDetails</code>, the
+            last tested run's <code>tests_passed</code>, and why anything is paused. Extend <code>PrDetails</code> with
+            <code>paths: string[]</code> and <code>labels: string[]</code>, which <code>parsePrDetails</code> reads from
+            <code>files</code> and <code>labels</code>. Add both fields to the <code>gh pr view</code> call in
+            <code>adapters/github.ts</code>.
+          </p>
+          <ul data-plan-done>
+            <li><code>autoMergeCheck</code> is pure and unit-tested for each verdict and each reason.</li>
+            <li>A planner task under <code>auto_approve</code> gets <code>never</code> unless its own flag is 1.</li>
+            <li><code>pnpm test</code> and <code>pnpm typecheck</code> pass.</li>
+          </ul>
+        </section>
+
+        <section data-plan-step id="schema" data-status="done">
+          <h2>2 · Settings and schema</h2>
+          <p>Append migration 17:</p>
+          <pre><code>-- 17: auto-merge (docs/plans/auto-merge.html). auto_merge on a task is NULL (the repo's), 0 or 1.
+ALTER TABLE repos ADD COLUMN auto_merge INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE repos ADD COLUMN auto_merge_max_lines INTEGER NOT NULL DEFAULT 400;
+ALTER TABLE repos ADD COLUMN auto_merge_skip TEXT NOT NULL DEFAULT '[".github/"]';
+ALTER TABLE tasks ADD COLUMN auto_merge INTEGER;</code></pre>
+          <p>
+            Make the same change in <code>db/tables.ts</code>, <code>Repo</code> and <code>Task</code>, <code>db/repos.ts</code>'s updatable
+            fields, <code>repo/repos.ts</code>'s input, and <code>api/contract.ts</code>. Add the step's hash to
+            <code>daemon/test/migrations.lock</code>.
+          </p>
+          <ul data-plan-done>
+            <li><code>pnpm typecheck</code> and <code>pnpm db:check</code> pass, and the migration test is locked.</li>
+          </ul>
+        </section>
+
+        <section data-plan-step id="merge" data-status="done">
+          <h2>3 · The daemon merges</h2>
+          <p>
+            <code>refreshPrStates</code> already reads <code>prDetails</code> for every open PR of a done task. For one that isn't
+            conflicting, it also runs the check (<code>autoMergeFor</code>) and puts the task in a new
+            <code>PrRefresh.mergeable: number[]</code> list when the verdict is <code>merge</code>. The scheduler hands the list to
+            <code>autoMerge</code> in <code>pull-request/auto-merge.ts</code>, inside the refresh so two refreshes never merge at once. It
+            merges the first ready PR with the details the refresh just read, through <code>mergeOpenPr</code> (split out of
+            <code>mergeTask</code>), with the repo's method and the branch and worktree removed. One merge per refresh: it moves the base,
+            and the re-read it asks for picks up the next PR once GitHub has worked out its mergeability. <code>prDetails</code> reads the
+            changed files and labels only for tasks with auto-merge on.
+          </p>
+          <p>
+            <code>recordMerge</code> gets a reason of <code>auto-merged (squash)</code> so the task's events show who merged it. A new
+            <code>merged</code> notify kind tells the person. It is on by default for a new install; an existing one adds it to
+            <code>notify_events</code> (Settings → PR auto-merged). A merge that fails is logged and notified once per task and error.
+            <code>autoMerge</code> does all of its own telling; the scheduler keeps the last error per task in memory and passes it in, so a
+            failure doesn't notify every 3 minutes (a restart tells it once more). The <code>wait</code> and <code>never</code> verdicts
+            don't notify.
+          </p>
+          <ul data-plan-done>
+            <li>A test with a fake <code>github</code> checks that an eligible PR is merged and the waiting task starts.</li>
+            <li>An ineligible PR (failing check, too big, protected path, planner under auto_approve) is left open.</li>
+            <li>Two eligible PRs in one repo merge one after the other, never against the same stale base.</li>
+          </ul>
+        </section>
+
+        <section data-plan-step id="label" data-status="done">
+          <h2>4 · The GitHub label</h2>
+          <p>
+            When <code>openPr</code> opens a PR for a task with auto-merge on, it passes <code>--label agentdeck:auto-merge</code>. First it
+            runs <code>gh label create agentdeck:auto-merge --force</code> once per repo, which is idempotent, because
+            <code>gh pr create</code> fails on a missing label. The rule needs the label, so it fails closed: if the label can't be created
+            (permissions), the PR still opens without it and waits for a person. Removing the label on GitHub opts that PR out. The task's
+            setting stays as it was, and the merge dialog says the label is missing. Turning auto-merge on or off for one task (step 5) adds
+            or removes the label on its open PR. A PR opened before the repo turned auto-merge on gets the label that way.
+          </p>
+          <ul data-plan-done>
+            <li>A new PR in an auto-merge repo carries the label. Without it the PR is never auto-merged.</li>
+            <li>A failure to create the label doesn't stop the PR from opening.</li>
+          </ul>
+        </section>
+
+        <section data-plan-step id="surface" data-status="done">
+          <h2>5 · CLI, API and dashboard</h2>
+          <ul>
+            <li>
+              <strong>CLI:</strong> <code>agentdeck repo set &lt;repo&gt; auto_merge on|off</code>,
+              <code>auto_merge_max_lines &lt;n&gt;</code> and <code>auto_merge_skip "&lt;prefix&gt;,…"</code> in
+              <code>settings.ts</code> and <code>cli/help.ts</code>, and <code>agentdeck auto-merge &lt;id&gt; on|off|repo</code> for one
+              task.
+            </li>
+            <li>
+              <strong>API:</strong> the repo update body takes the three fields. <code>POST /api/tasks/:id/auto-merge</code> with
+              <code>{ auto_merge: true | false | null }</code> (<code>setAutoMerge</code>), since <code>editTask</code> refuses a done task.
+              The merge preview (<code>GET /api/tasks/:id/merge</code>) gets <code>auto_merge: { verdict, reasons } | null</code>, read from
+              GitHub like the rest of the preview.
+            </li>
+            <li>
+              <strong>Dashboard:</strong> an auto-merge toggle with the limits in the repo form (<code>lib/forms.ts</code>). An Auto-merge
+              select in the task sidebar (the repo's setting, on, off). The merge dialog has an Auto-merge line: "on; waiting: 2 checks
+              still running on GitHub" or "needs you: touches .github/workflows/ci.yml". A person can always merge sooner.
+            </li>
+          </ul>
+          <ul data-plan-done>
+            <li><code>api/contract-check.ts</code> passes. The repo form and task sidebar show and change the setting.</li>
+          </ul>
+        </section>
+
+        <h2 id="open">Open questions</h2>
+        <ul>
+          <li>
+            Should auto-merge wait a grace period after a task is done (say 10 minutes) so a person can look first? Cheap to add as
+            <code>auto_merge_delay</code>. Left out until it's needed.
+          </li>
+          <li>
+            The reasons only show in the merge dialog, which reads GitHub. Showing them on the task page without opening it would need the
+            refresh to store the last verdict on the task.
+          </li>
+          <li>The sidebar's "The repo's setting" doesn't say whether the repo has auto-merge on.</li>
+          <li>Is 400 lines the right default, or should it count files too?</li>
+        </ul>
+
+        <h2 id="later">Not in this plan</h2>
+        <ul>
+          <li>
+            Passing <code>gh pr merge --auto</code> too on repos with required checks, so GitHub merges without waiting for the refresh.
+          </li>
+          <li>Merge queues, and waiting on approving reviews.</li>
+          <li>Reverting an auto-merged task when the base branch's CI fails afterwards.</li>
+        </ul>
+      </main>
+    </div>
+  </body>
+</html>

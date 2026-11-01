@@ -62,6 +62,8 @@ const cleanDetails: PrDetails = {
   additions: 1,
   deletions: 0,
   checks: { total: 0, failing: 0, pending: 0 },
+  paths: ['README.md'],
+  labels: [],
 };
 let pushes: string[];
 let pushError: string | null;
@@ -479,7 +481,7 @@ test('refreshPrStates reads mergeability: conflicting PRs are returned, unknown 
   github.prDetails = async (url, cwd) => (asked.push(url), det(url, cwd));
   try {
     const found = await refreshPrStates(db);
-    assert.deepEqual(found, { conflicting: [a.id], unknown: 1 });
+    assert.deepEqual(found, { conflicting: [a.id], unknown: 1, mergeable: [] });
     assert.ok(!asked.includes('https://x/pull/504'), 'a merged PR has no mergeability to read');
     assert.equal(db.getTask(d.id)!.pr_state, 'merged');
   } finally {

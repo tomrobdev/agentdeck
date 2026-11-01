@@ -1,4 +1,5 @@
 // When the daemon may be restarted: by `agentdeck restart` (from outside) and by reload_on_change (from inside).
+import { plural } from '../text.ts';
 
 export interface Activity {
   /** Tasks with a live run. */
@@ -8,8 +9,6 @@ export interface Activity {
   /** Resolve runs still going (they belong to done tasks, so `tasks` doesn't count them). */
   resolves: number;
 }
-
-const plural = (n: number, noun: string) => `${n} ${noun}${n === 1 ? '' : 's'}`;
 
 /** What a graceful restart is waiting for, or null when nothing is active. */
 export function restartWait({ tasks, planner, resolves }: Activity): string | null {

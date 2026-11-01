@@ -20,5 +20,14 @@ export interface Repo {
   sandbox: number; // 1 = the agent's Bash commands run in Claude Code's sandbox (the default)
   archived_at: string | null; // set = hidden everywhere and its work stopped, until `repo unarchive`
   network: string; // JSON array of hosts sandboxed commands may reach, '[]' = none
+  auto_merge: number; // 1 = the daemon merges a done task's PR on its own when it passes the auto-merge check
+  auto_merge_max_lines: number; // a PR changing more lines (additions + deletions) needs a person
+  auto_merge_skip: string; // JSON array of path prefixes; a PR touching one needs a person
   created_at: string;
+}
+
+/** Why work on a repo stops on its own: the daemon's pause first, then the repo's. Null when neither is paused. */
+export function pausedReason(daemonPaused: boolean, repo: Pick<Repo, 'paused_reason'>): string | null {
+  if (daemonPaused) return 'AgentDeck is paused';
+  return repo.paused_reason ? `the repo is paused: ${repo.paused_reason}` : null;
 }

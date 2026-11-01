@@ -8,7 +8,7 @@ export type TaskStatus = 'proposed' | 'queued' | 'running' | 'done' | 'blocked' 
 export type PrMode = 'off' | 'draft' | 'ready';
 export type PrState = 'open' | 'merged' | 'closed' | 'failed';
 export type MergeMethod = 'squash' | 'merge' | 'rebase';
-export type NotifyKind = 'done' | 'blocked' | 'failed' | 'hold' | 'paused' | 'proposed';
+export type NotifyKind = 'done' | 'blocked' | 'failed' | 'hold' | 'paused' | 'proposed' | 'merged';
 /** Git refs the file endpoints accept: the task's branch, or where it forked from the base branch. */
 export type FileRef = 'head' | 'base';
 
@@ -36,6 +36,12 @@ export interface Repo {
   network: string;
   /** When the repo was archived; null while it is active. */
   archived_at: string | null;
+  /** 1 = the daemon merges a done task's PR on its own once it passes the auto-merge check. Missing from a daemon that predates it. */
+  auto_merge?: number;
+  /** A PR changing more lines needs a person. Missing from a daemon that predates it. */
+  auto_merge_max_lines?: number;
+  /** JSON array of path prefixes; a PR touching one needs a person. Missing from a daemon that predates it. */
+  auto_merge_skip?: string;
   created_at: string;
 }
 
@@ -73,6 +79,9 @@ export interface RepoPatch {
   auto_resolve?: boolean;
   sandbox?: boolean;
   network?: string[];
+  auto_merge?: boolean;
+  auto_merge_max_lines?: number;
+  auto_merge_skip?: string[];
 }
 
 export interface DoctorCheck {
@@ -152,6 +161,8 @@ export interface TaskSummary {
   needs?: string | null;
   /** 'person' when a person marked the task done by hand. Missing from a daemon that predates it. */
   done_by?: 'person' | null;
+  /** 1 or 0 overrides the repo's auto_merge; null follows it. Missing from a daemon that predates it. */
+  auto_merge?: number | null;
   /** Set for a queued task held back by after_task; stuck says why its dependency won't get there on its own. */
   waiting: { on: number; stuck: string | null } | null;
   /** For a task in review: the queued tasks that wait on its PR. Missing from a daemon that predates it; read it as empty. */
@@ -326,6 +337,27 @@ export interface MergePreview {
   conflicting: boolean;
   /** Queued tasks waiting on this one. */
   unblocks: { id: number; title: string }[];
+  /** Whether the daemon will merge it on its own and why not yet; null when auto-merge is off. Missing from a daemon that predates it. */
+  auto_merge?: AutoMergeCheck | null;
+}
+
+/** `merge`: the daemon merges it on its next PR refresh. `wait`: something that can still change on its own. `never`: it needs a person. */
+export interface AutoMergeCheck {
+  verdict: 'merge' | 'wait' | 'never';
+  reasons: string[];
+}
+
+/** POST /api/tasks/:id/auto-merge: true or false for this task, null to follow the repo. */
+export interface AutoMergeRequest {
+  auto_merge: boolean | null;
+}
+
+export interface AutoMergeResult {
+  /** Whether auto-merge is on for the task now. */
+  auto_merge: boolean;
+  /** Set when the setting was saved but the PR's label could not be changed. */
+  label_error?: string;
+  task: TaskDetail;
 }
 
 /** POST /api/tasks/:id/merge */

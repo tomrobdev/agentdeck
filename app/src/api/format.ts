@@ -1,5 +1,5 @@
 // How the dashboard words what the daemon reports: times, durations, waits and the daemon's state.
-import type { Run, StartWait, Status } from './types.ts';
+import type { AutoMergeCheck, Run, StartWait, Status } from './types.ts';
 
 /** What a queued task waits for, in a few words, for chips and callouts. */
 export function describeWait(h: StartWait): string {
@@ -17,6 +17,12 @@ export function describeWait(h: StartWait): string {
     case 'slots':
       return `Waiting for a free slot (${h.running} of ${h.max} in use)`;
   }
+}
+
+/** Whether the daemon will merge a PR on its own, in a line. */
+export function autoMergeLine(c: AutoMergeCheck): string {
+  if (c.verdict === 'merge') return 'on; merges on the next PR refresh';
+  return `${c.verdict === 'wait' ? 'on; waiting: ' : 'needs you: '}${c.reasons.join('; ')}`;
 }
 
 /** "Tue 14:00" style, for when a wait ends. */

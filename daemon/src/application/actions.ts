@@ -8,6 +8,7 @@ export * from './task/files.ts';
 export { attachPlan, collectPlans, planHtml } from './plans.ts';
 export { proposeNow } from './planner.ts';
 export { mergePreview, mergeTask } from './pull-request/pull-requests.ts';
+export { setAutoMerge } from './pull-request/auto-merge.ts';
 export * from './repo/repos.ts';
 export { gracefulRestart } from './scheduler/restart.ts';
 export type { Scheduler } from './scheduler/scheduler.ts';

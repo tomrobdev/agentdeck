@@ -8,7 +8,7 @@ import { EDITABLE_STATUSES, OPEN_STATUSES, type Task, type TaskSummary } from '.
 import { NOW, atomically } from './sql.ts';
 
 const SUMMARY_COLUMNS =
-  'id, repo_id, title, status, priority, model, max_turns, attempts, max_attempts, branch, worktree, stop_reason, source, restarts, pr_url, pr_state, merge_method, after_task, plan_path, plan_steps, needs, done_by, created_at, updated_at';
+  'id, repo_id, title, status, priority, model, max_turns, attempts, max_attempts, branch, worktree, stop_reason, source, restarts, pr_url, pr_state, merge_method, after_task, plan_path, plan_steps, needs, done_by, auto_merge, created_at, updated_at';
 
 /** SQL list of fixed status literals, for `status IN (…)`. */
 const statusList = (statuses: TaskStatus[]) => statuses.map((s) => `'${s}'`).join(', ');
@@ -204,6 +204,10 @@ export function taskStore(db: DatabaseSync) {
       if (keys.length === 0) return;
       const sets = keys.map((k) => `${k} = ?`).join(', ');
       db.prepare(`UPDATE tasks SET ${sets}, updated_at = ${NOW} WHERE id = ?`).run(...keys.map((k) => fields[k] ?? null), id);
+    },
+    /** Whether the daemon may merge the task's PR on its own: 1, 0, or null for the repo's setting. Not a status, so unguarded. */
+    setAutoMerge(id: number, value: 0 | 1 | null): Task | undefined {
+      return db.prepare(`UPDATE tasks SET auto_merge = ?, updated_at = ${NOW} WHERE id = ? RETURNING *`).get(value, id) as Task | undefined;
     },
     /**
      * Record a change to a task's PR: `pr_state` (and `pr_url` when opened) and a 'pr' history row, together.

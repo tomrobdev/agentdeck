@@ -2,6 +2,7 @@
 import { github } from '../../adapters/github.ts';
 import { appendEvent } from '../../adapters/run-log.ts';
 import type { Db } from '../../db/index.ts';
+import { AUTO_MERGE_LABEL, autoMergeOn } from '../../domain/pull-request/auto-merge.ts';
 import { buildPrBody } from '../../domain/pull-request/pr.ts';
 import { hasOpenPr } from '../../domain/task/stage.ts';
 import type { Task } from '../../domain/task/task.ts';
@@ -11,6 +12,11 @@ import { prPlanFor } from '../plans.ts';
 export function logPrEvent(db: Db, taskId: number, event: { url?: string; error?: string }): void {
   const run = db.runsForTask(taskId).at(-1);
   if (run) appendEvent(run.log_path, { type: 'agentdeck_pr', ...event });
+}
+
+/** Make sure the repo has the auto-merge label, so a PR can carry it. Throws if gh fails. */
+export function ensureAutoMergeLabel(cwd: string): Promise<void> {
+  return github.ensureLabel(cwd, AUTO_MERGE_LABEL);
 }
 
 /**
@@ -25,6 +31,13 @@ export async function openPullRequest(db: Db, task: Task): Promise<{ url?: strin
     // A task retried while its PR is still open keeps that PR; the push above updated it.
     // Once that PR is merged or closed, the new commits need a new PR.
     if (task.pr_url && hasOpenPr(task)) return { url: task.pr_url };
+    // A PR the daemon may merge carries the label. If the repo can't have it, the PR opens without it and waits for a person.
+    const labelled =
+      autoMergeOn(task, repo) &&
+      (await ensureAutoMergeLabel(repo.path).then(
+        () => true,
+        () => false,
+      ));
     const url = await github.createPr({
       cwd: task.worktree ?? repo.path,
       base: repo.base_branch,
@@ -32,6 +45,7 @@ export async function openPullRequest(db: Db, task: Task): Promise<{ url?: strin
       title: task.title,
       body: buildPrBody(task, db.runsForTask(task.id), await prPlanFor(db, task).catch(() => null)),
       draft: repo.pr_mode === 'draft',
+      labels: labelled ? [AUTO_MERGE_LABEL.name] : [],
     });
     db.recordPr(task.id, { type: 'opened', url });
     logPrEvent(db, task.id, { url });

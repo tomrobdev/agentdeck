@@ -161,6 +161,12 @@ export const MIGRATIONS: Migration[] = [
   // 16: a paused repo notifies with its own kind, `paused`, instead of `hold`. Whoever listened for `hold` keeps hearing both.
   `UPDATE settings SET value = value || ',paused'
    WHERE key = 'notify_events' AND ',' || value || ',' LIKE '%,hold,%' AND ',' || value || ',' NOT LIKE '%,paused,%';`,
+  // 17: auto-merge (docs/plans/auto-merge.html). auto_merge_skip is a JSON array of path prefixes that need a person;
+  // a task's auto_merge is NULL (its repo's), 0 or 1.
+  `ALTER TABLE repos ADD COLUMN auto_merge INTEGER NOT NULL DEFAULT 0;
+   ALTER TABLE repos ADD COLUMN auto_merge_max_lines INTEGER NOT NULL DEFAULT 400;
+   ALTER TABLE repos ADD COLUMN auto_merge_skip TEXT NOT NULL DEFAULT '[".github/"]';
+   ALTER TABLE tasks ADD COLUMN auto_merge INTEGER;`,
 ];
 
 /** Runs every step above the database's user_version in one transaction; returns how many ran. */

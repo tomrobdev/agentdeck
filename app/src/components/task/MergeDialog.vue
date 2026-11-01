@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import { type MergeMethod, type MergePreview, type MergeResult, MERGE_METHODS, api } from '../../api';
+import { type MergeMethod, type MergePreview, type MergeResult, MERGE_METHODS, api, autoMergeLine } from '../../api';
 import { useActions } from '../../composables/useActions';
 import Modal from '../ui/Modal.vue';
 
@@ -132,6 +132,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
         <dd :class="{ 'text-failed': preview.tests_passed === 0 }">{{ tests }} <span class="muted">on the last run</span></dd>
         <dt>Checks</dt>
         <dd :class="{ 'text-failed': preview.checks.failing }">{{ checks }} <span class="muted">on GitHub</span></dd>
+        <template v-if="preview.auto_merge">
+          <dt>Auto-merge</dt>
+          <dd :class="{ 'text-blocked': preview.auto_merge.verdict === 'never' }">
+            {{ autoMergeLine(preview.auto_merge) }}
+          </dd>
+        </template>
         <template v-if="preview.unblocks.length">
           <dt>Unblocks</dt>
           <dd>

@@ -3,6 +3,9 @@
 import type { ChangedFile, MergeMethod } from '../../../daemon/src/api/contract.ts';
 
 export type {
+  AutoMergeCheck,
+  AutoMergeRequest,
+  AutoMergeResult,
   Budget,
   CancelResult,
   Changes,

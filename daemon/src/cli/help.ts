@@ -1,3 +1,5 @@
+import { DEFAULT_AUTO_MERGE_MAX_LINES, DEFAULT_AUTO_MERGE_SKIP } from '../domain/pull-request/auto-merge.ts';
+
 export const HELP = `agentdeck: always-on Claude Code task queue
 
 Repos
@@ -16,6 +18,10 @@ Repos
   agentdeck repo set <repo> pr_mode off|draft|ready  push and open a PR when a task is done
   agentdeck repo set <repo> merge_method squash|merge|rebase  how the app and \`agentdeck merge\` merge a PR (default squash)
   agentdeck repo set <repo> auto_resolve on|off   start a conflict run on its own when a branch conflicts with the base (default on)
+  agentdeck repo set <repo> auto_merge on|off     merge a done task's PR on its own once checks and tests pass (default off;
+                                                  planner proposals only when auto_approve is off)
+  agentdeck repo set <repo> auto_merge_max_lines <n>  a PR changing more lines needs a person (default ${DEFAULT_AUTO_MERGE_MAX_LINES})
+  agentdeck repo set <repo> auto_merge_skip "<prefixes>"  a PR touching these paths needs a person (default "${DEFAULT_AUTO_MERGE_SKIP.join(',')}")
   agentdeck repo set <repo> sandbox on|off        run the agent's shell commands in Claude Code's sandbox (default on)
   agentdeck repo set <repo> network "<hosts>"     hosts sandboxed commands may reach, e.g. "registry.npmjs.org,github.com" ("" for none)
   agentdeck goals <repo> [--file goals.md]        show (or replace) the goals the planner works from
@@ -46,6 +52,7 @@ Tasks
   agentdeck merge <id> [--method squash|merge|rebase] [--yes] [--keep-branch]
                                   merge a done task's open PR: shows the preview, asks unless --yes, then deletes
                                   the remote branch and the worktree unless --keep-branch
+  agentdeck auto-merge <id> on|off|repo   let the daemon merge this task's PR on its own, or not, or follow the repo
   agentdeck sync <id>         sync a done task's branch with the base branch (the PR gets the push); conflicts start
                                   a claude run, and if it fails the merge is undone and the task is blocked (also: resolve)
   agentdeck clean <id>          remove the task's worktree (its branch is kept)

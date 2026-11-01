@@ -88,7 +88,7 @@ export function settingPatch(key: string | undefined, value: string): SettingsPa
 }
 
 const REPO_SETTING_USAGE =
-  'usage: agentdeck repo set <repo> auto_approve on|off | auto_resolve on|off | base_branch <branch> | test_cmd "<cmd>" | setup_cmd "<cmd>" | pr_mode off|draft|ready | merge_method squash|merge|rebase | sandbox on|off | network "<hosts>"';
+  'usage: agentdeck repo set <repo> auto_approve on|off | auto_resolve on|off | base_branch <branch> | test_cmd "<cmd>" | setup_cmd "<cmd>" | pr_mode off|draft|ready | merge_method squash|merge|rebase | sandbox on|off | network "<hosts>" | auto_merge on|off | auto_merge_max_lines <n> | auto_merge_skip "<prefixes>"';
 
 /** The patch `agentdeck repo set <repo> <key> <value>` stands for. Throws ActionError for a key it does not know. */
 export function repoSettingPatch(key: string | undefined, value: string): RepoPatch {
@@ -96,6 +96,9 @@ export function repoSettingPatch(key: string | undefined, value: string): RepoPa
   if (key === 'merge_method') return { merge_method: value as MergeMethod };
   if (key === 'auto_approve') return { auto_approve: on(value) };
   if (key === 'auto_resolve') return { auto_resolve: on(value) };
+  if (key === 'auto_merge') return { auto_merge: on(value) };
+  if (key === 'auto_merge_max_lines') return { auto_merge_max_lines: Number(value) };
+  if (key === 'auto_merge_skip') return { auto_merge_skip: value };
   if (key === 'sandbox') {
     if (![...ON, ...OFF].includes(value.toLowerCase())) throw new ActionError('usage: agentdeck repo set <repo> sandbox on|off');
     return { sandbox: on(value) };

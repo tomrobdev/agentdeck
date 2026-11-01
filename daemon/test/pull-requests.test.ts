@@ -80,6 +80,8 @@ const cleanDetails: PrDetails = {
   additions: 10,
   deletions: 4,
   checks: { total: 2, failing: 0, pending: 0 },
+  paths: ['src/a.ts', 'src/b.ts'],
+  labels: [],
 };
 let details: Record<string, PrDetails>;
 let merging: { ready: string[]; merged: { url: string; method: string; subject?: string; body?: string }[]; deleted: string[] };
@@ -558,6 +560,8 @@ test('parsePrDetails reads gh output, counting failing and pending checks', () =
       additions: 12,
       deletions: 3,
       changedFiles: 5,
+      files: [{ path: 'a.ts', additions: 1 }, { path: 'docs/b.md' }, {}],
+      labels: [{ name: 'agentdeck:auto-merge', color: 'ededed' }],
       statusCheckRollup: [
         { status: 'COMPLETED', conclusion: 'SUCCESS' },
         { status: 'COMPLETED', conclusion: 'FAILURE' },
@@ -577,6 +581,8 @@ test('parsePrDetails reads gh output, counting failing and pending checks', () =
     additions: 12,
     deletions: 3,
     checks: { total: 6, failing: 2, pending: 2 },
+    paths: ['a.ts', 'docs/b.md'],
+    labels: ['agentdeck:auto-merge'],
   });
 });
 

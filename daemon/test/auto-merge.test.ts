@@ -1,0 +1,328 @@
+// Auto-merge (docs/plans/auto-merge.html): the pure check, and the daemon merging on its PR refresh with a fake github adapter.
+import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { after, beforeEach, test } from 'node:test';
+
+const home = mkdtempSync(join(tmpdir(), 'agentdeck-automerge-'));
+process.env.AGENTDECK_HOME = home;
+process.env.AGENTDECK_NO_NOTIFY = '1';
+
+const { openDb } = await import('../src/db/index.ts');
+const { doneTask } = await import('./fixtures.ts');
+const { github } = await import('../src/adapters/github.ts');
+const { AUTO_MERGE_LABEL, autoMergeCheck, autoMergeOn, autoMergeSkip } = await import('../src/domain/pull-request/auto-merge.ts');
+const { refreshPrStates } = await import('../src/application/pull-request/pull-requests.ts');
+const { autoMerge } = await import('../src/application/pull-request/auto-merge.ts');
+const { openPullRequest } = await import('../src/application/pull-request/open-pr.ts');
+const { ActionError, addTask, mergePreview, repoSettingPatch, setAutoMerge, updateRepo } = await import('../src/application/actions.ts');
+const { waitingFor } = await import('../src/application/task/dependencies.ts');
+type PrDetails = import('../src/domain/pull-request/merge.ts').PrDetails;
+
+const db = openDb(join(home, 'test.db'));
+after(() => db.close());
+
+const dir = join(home, 'demo');
+mkdirSync(dir, { recursive: true });
+const sh = (...args: string[]) => execFileSync('git', args, { cwd: dir, encoding: 'utf8' }).trim();
+sh('init', '-q', '-b', 'main');
+sh('config', 'user.email', 'test@example.com');
+sh('config', 'user.name', 'test');
+writeFileSync(join(dir, 'README.md'), 'demo\n');
+sh('add', '-A');
+sh('commit', '-q', '-m', 'init');
+const repo = db.addRepo({ name: 'demo', path: dir, base_branch: 'main', test_cmd: 'true' });
+
+const ready: PrDetails = {
+  draft: false,
+  mergeable: 'MERGEABLE',
+  merge_state: 'CLEAN',
+  commits: 2,
+  files: 2,
+  additions: 30,
+  deletions: 5,
+  checks: { total: 2, failing: 0, pending: 0 },
+  paths: ['src/a.ts', 'src/b.ts'],
+  labels: [AUTO_MERGE_LABEL.name],
+};
+
+let details: Record<string, PrDetails>;
+let gh: { labelsMade: number; created: string[][]; labelled: { url: string; on: boolean }[]; merged: string[]; deleted: string[] };
+let mergeError: string | null;
+github.push = async () => {};
+github.createPr = async (pr) => (gh.created.push(pr.labels ?? []), `https://x/pull/new-${gh.created.length}`);
+github.ensureLabel = async () => void gh.labelsMade++;
+github.setLabel = async (url, _cwd, _label, on) => void gh.labelled.push({ url, on });
+github.prState = async () => 'open';
+github.prDetails = async (url) => details[url] ?? ready;
+github.markReady = async () => {};
+github.merge = async (pr) => {
+  if (mergeError) throw new Error(mergeError);
+  gh.merged.push(pr.url);
+};
+github.deleteRemoteBranch = async (_path, branch) => void gh.deleted.push(branch);
+
+beforeEach(() => {
+  details = {};
+  gh = { labelsMade: 0, created: [], labelled: [], merged: [], deleted: [] };
+  mergeError = null;
+  db.setPaused(false);
+  updateRepo(db, 'demo', { auto_merge: true, auto_approve: false, pr_mode: 'ready' });
+  // Earlier tests' PRs are settled so each refresh sees only its own.
+  for (const t of db.openPrTasks()) db.recordPr(t.id, { type: 'closed' });
+});
+
+let n = 0;
+/** A done task with an open PR whose last run passed the tests. */
+function tested(o: { source?: 'manual' | 'planner'; title?: string } = {}) {
+  const url = `https://x/pull/${++n}`;
+  const t = doneTask(db, repo, { pr: 'open', url, branch: `agentdeck/pr-${n}`, ...o });
+  db.finishRun(db.startRun(t.id, 1, join(home, `run-${t.id}.log`)), { tests_passed: 1 });
+  return { id: t.id, url, branch: t.branch };
+}
+
+// ---- The check
+
+const repoRow = { test_cmd: 'pnpm test', auto_merge_max_lines: 400, auto_merge_skip: '[".github/"]' };
+const check = (pr: Partial<PrDetails> = {}, o: { tests_passed?: number | null; paused?: string | null; test_cmd?: string | null } = {}) =>
+  autoMergeCheck({
+    repo: { ...repoRow, test_cmd: o.test_cmd === undefined ? repoRow.test_cmd : o.test_cmd },
+    pr_state: 'open',
+    pr: { ...ready, ...pr },
+    tests_passed: o.tests_passed === undefined ? 1 : o.tests_passed,
+    paused: o.paused ?? null,
+  });
+
+test('autoMergeOn: the task wins, else the repo; a planner proposal only when a person approved it', () => {
+  const on = { auto_merge: 1, auto_approve: 0 };
+  assert.equal(autoMergeOn({ auto_merge: null, source: 'manual' }, on), true);
+  assert.equal(autoMergeOn({ auto_merge: null, source: 'manual' }, { ...on, auto_merge: 0 }), false);
+  assert.equal(autoMergeOn({ auto_merge: 0, source: 'manual' }, on), false);
+  assert.equal(autoMergeOn({ auto_merge: 1, source: 'manual' }, { ...on, auto_merge: 0 }), true);
+  assert.equal(autoMergeOn({ auto_merge: null, source: 'planner' }, on), true, 'auto_approve off: a person queued it');
+  assert.equal(autoMergeOn({ auto_merge: null, source: 'planner' }, { ...on, auto_approve: 1 }), false);
+  assert.equal(autoMergeOn({ auto_merge: 1, source: 'planner' }, { ...on, auto_approve: 1 }), true);
+});
+
+test('autoMergeCheck: a clean, tested, labelled PR merges; a draft too', () => {
+  assert.deepEqual(check(), { verdict: 'merge', reasons: [] });
+  assert.deepEqual(check({ draft: true, merge_state: 'DRAFT' }), { verdict: 'merge', reasons: [] });
+  assert.equal(check({ checks: { total: 0, failing: 0, pending: 0 } }).verdict, 'merge', 'the tests are enough without CI');
+  assert.equal(check({}, { test_cmd: null, tests_passed: null }).verdict, 'merge', 'CI is enough without tests');
+});
+
+test('autoMergeCheck: what needs a person', () => {
+  const reasons = (pr: Partial<PrDetails>, o = {}) => check(pr, o);
+  assert.deepEqual(reasons({ labels: [] }), { verdict: 'never', reasons: [`the PR has no ${AUTO_MERGE_LABEL.name} label`] });
+  assert.deepEqual(reasons({ checks: { total: 2, failing: 1, pending: 0 } }).reasons, ['1 check failing on GitHub']);
+  assert.deepEqual(reasons({}, { tests_passed: 0 }).reasons, ['tests failed on the last run']);
+  assert.deepEqual(reasons({}, { tests_passed: null }).reasons, ['the tests have not run']);
+  assert.deepEqual(reasons({ checks: { total: 0, failing: 0, pending: 0 } }, { test_cmd: null, tests_passed: null }).reasons, [
+    'nothing tested it: the repo has no test command and the PR no checks',
+  ]);
+  assert.deepEqual(reasons({ additions: 390, deletions: 20 }).reasons, ['410 lines changed, over the limit of 400']);
+  assert.deepEqual(reasons({ paths: ['src/a.ts', '.github/workflows/ci.yml'] }).reasons, ['touches .github/workflows/ci.yml']);
+  assert.deepEqual(reasons({ files: 120, paths: ['a.ts'] }).reasons, ['GitHub listed 1 of 120 changed files']);
+  assert.deepEqual(reasons({ merge_state: 'BLOCKED' }).reasons, [
+    'GitHub says branch protection may block this merge (required reviews or checks)',
+  ]);
+  assert.equal(check({ labels: [] }, { paused: 'AgentDeck is paused' }).verdict, 'never', 'a person beats a wait');
+});
+
+test('autoMergeCheck: what can still change on its own', () => {
+  assert.deepEqual(check({ checks: { total: 2, failing: 0, pending: 1 }, merge_state: 'BLOCKED' }), {
+    verdict: 'wait',
+    reasons: ['1 check still running on GitHub'],
+  });
+  assert.deepEqual(check({ mergeable: 'UNKNOWN', merge_state: 'UNKNOWN' }).reasons, [
+    'GitHub is still working out whether it merges cleanly',
+  ]);
+  assert.deepEqual(check({ mergeable: 'CONFLICTING', merge_state: 'DIRTY' }).reasons, ['the branch has conflicts with the base branch']);
+  assert.deepEqual(check({}, { paused: 'AgentDeck is paused' }), { verdict: 'wait', reasons: ['AgentDeck is paused'] });
+});
+
+test('autoMergeSkip reads the JSON list and falls back to the default', () => {
+  assert.deepEqual(autoMergeSkip({ auto_merge_skip: '["db/", "package.json"]' }), ['db/', 'package.json']);
+  assert.deepEqual(autoMergeSkip({ auto_merge_skip: 'nonsense' }), ['.github/']);
+});
+
+// ---- Settings
+
+test('repo auto-merge settings: off by default, set from the CLI and the API, validated', () => {
+  const fresh = db.addRepo({ name: 'fresh', path: join(home, 'fresh'), base_branch: 'main' });
+  assert.deepEqual([fresh.auto_merge, fresh.auto_merge_max_lines, fresh.auto_merge_skip], [0, 400, '[".github/"]']);
+  const set = (key: string, value: string) => updateRepo(db, 'fresh', repoSettingPatch(key, value));
+  assert.equal(set('auto_merge', 'on').auto_merge, 1);
+  assert.equal(set('auto_merge_max_lines', '120').auto_merge_max_lines, 120);
+  assert.equal(set('auto_merge_skip', '.github/, db/schema.ts').auto_merge_skip, '[".github/","db/schema.ts"]');
+  assert.throws(() => set('auto_merge_max_lines', '0'), ActionError);
+  assert.throws(() => set('auto_merge_max_lines', 'lots'), ActionError);
+});
+
+// ---- Opening the PR
+
+test('a PR the daemon may merge opens with the label; one it may not opens without', async () => {
+  const on = doneTask(db, repo, { title: 'labelled', branch: 'agentdeck/labelled' });
+  await openPullRequest(db, db.getTask(on.id)!);
+  assert.deepEqual(gh.created.at(-1), [AUTO_MERGE_LABEL.name]);
+  assert.equal(gh.labelsMade, 1);
+
+  updateRepo(db, 'demo', { auto_merge: false });
+  const off = doneTask(db, repo, { title: 'plain', branch: 'agentdeck/plain' });
+  await openPullRequest(db, db.getTask(off.id)!);
+  assert.deepEqual(gh.created.at(-1), []);
+
+  updateRepo(db, 'demo', { auto_merge: true });
+  github.ensureLabel = async () => {
+    throw new Error('HTTP 403');
+  };
+  try {
+    const denied = doneTask(db, repo, { title: 'no label allowed', branch: 'agentdeck/denied' });
+    const res = await openPullRequest(db, db.getTask(denied.id)!);
+    assert.ok(res.url, 'the PR still opens');
+    assert.deepEqual(gh.created.at(-1), []);
+  } finally {
+    github.ensureLabel = async () => void gh.labelsMade++;
+  }
+});
+
+// ---- The daemon merges
+
+test('the refresh finds a ready PR and autoMerge merges it, records who did, cleans up and releases its dependents', async () => {
+  const t = tested({ title: 'Ship it alone' });
+  const later = await addTask(db, { repo: 'demo', prompt: 'after the merge', after_task: t.id });
+  assert.ok(waitingFor(db, db.getTask(later.id)!));
+
+  const found = await refreshPrStates(db);
+  assert.deepEqual(found.mergeable, [{ id: t.id, pr: ready }]);
+  assert.equal(await autoMerge(db, found.mergeable), t.id);
+  assert.deepEqual(gh.merged, [t.url]);
+  assert.deepEqual(gh.deleted, [t.branch]);
+  assert.equal(db.getTask(t.id)!.pr_state, 'merged');
+  assert.equal(db.eventsForTask(t.id).at(-1)!.reason, 'auto-merged (squash)');
+  assert.equal(waitingFor(db, db.getTask(later.id)!), null);
+  assert.deepEqual(
+    db
+      .recentNotifications(10)
+      .filter((x) => x.task_id === t.id)
+      .map((x) => x.kind),
+    ['merged'],
+  );
+  db.applyEvent(later.id, { type: 'cancel' });
+});
+
+test('the refresh leaves PRs that need a person or must wait, and the preview says why', async () => {
+  const failing = tested();
+  details[failing.url] = { ...ready, checks: { total: 2, failing: 1, pending: 0 } };
+  const big = tested();
+  details[big.url] = { ...ready, additions: 900 };
+  const workflow = tested();
+  details[workflow.url] = { ...ready, paths: ['.github/workflows/ci.yml', 'src/a.ts'] };
+  const unlabelled = tested();
+  details[unlabelled.url] = { ...ready, labels: [] };
+  const pending = tested();
+  details[pending.url] = { ...ready, checks: { total: 2, failing: 0, pending: 2 } };
+  const untested = doneTask(db, repo, { pr: 'open', url: `https://x/pull/${++n}` });
+
+  const found = await refreshPrStates(db);
+  assert.deepEqual(found.mergeable, []);
+
+  assert.deepEqual((await mergePreview(db, workflow.id)).auto_merge, { verdict: 'never', reasons: ['touches .github/workflows/ci.yml'] });
+  assert.deepEqual((await mergePreview(db, pending.id)).auto_merge, { verdict: 'wait', reasons: ['2 checks still running on GitHub'] });
+  assert.deepEqual((await mergePreview(db, untested.id)).auto_merge?.reasons, ['the tests have not run']);
+});
+
+test('a paused daemon or repo waits; a planner proposal the planner approved itself never merges', async () => {
+  const t = tested();
+  db.setPaused(true);
+  assert.deepEqual((await refreshPrStates(db)).mergeable, []);
+  assert.deepEqual((await mergePreview(db, t.id)).auto_merge, { verdict: 'wait', reasons: ['AgentDeck is paused'] });
+  db.setPaused(false);
+  db.setRepoPaused(repo.id, 'doctor failed');
+  assert.deepEqual((await mergePreview(db, t.id)).auto_merge?.reasons, ['the repo is paused: doctor failed']);
+  db.setRepoPaused(repo.id, null);
+
+  updateRepo(db, 'demo', { auto_approve: true });
+  const proposal = tested({ source: 'planner' });
+  assert.equal((await mergePreview(db, proposal.id)).auto_merge, null, 'off: no person saw it');
+  assert.deepEqual(
+    (await refreshPrStates(db)).mergeable.map((r) => r.id),
+    [t.id],
+  );
+});
+
+test('autoMerge merges one PR per call, skips one that moved on, and tells a refused merge once', async () => {
+  const gone = tested();
+  db.recordPr(gone.id, { type: 'closed' });
+  const a = tested();
+  const b = tested();
+  const candidates = [gone, a, b].map(({ id }) => ({ id, pr: ready }));
+  assert.equal(await autoMerge(db, candidates), a.id);
+  assert.deepEqual(gh.merged, [a.url], 'b waits for the re-read the merge asks for');
+
+  mergeError = 'Pull request is not mergeable: the base branch policy prohibits the merge';
+  const told = new Map<number, string>();
+  const logs: string[] = [];
+  for (let i = 0; i < 3; i++) assert.equal(await autoMerge(db, [{ id: b.id, pr: ready }], { told, log: (m) => logs.push(m) }), null);
+  assert.equal(logs.length, 1);
+  assert.match(logs[0], /base branch policy/);
+  assert.equal(db.recentNotifications(50).filter((x) => x.task_id === b.id).length, 1);
+  assert.equal(db.getTask(b.id)!.status, 'done');
+  assert.equal(db.getTask(b.id)!.pr_state, 'open');
+});
+
+// ---- A person's override
+
+test('setAutoMerge overrides the repo for one task and moves the label on its open PR', async () => {
+  const t = tested();
+  assert.deepEqual(await setAutoMerge(db, t.id, { auto_merge: false }), { auto_merge: false });
+  assert.equal(db.getTask(t.id)!.auto_merge, 0);
+  assert.deepEqual(gh.labelled, [{ url: t.url, on: false }]);
+  assert.equal((await mergePreview(db, t.id)).auto_merge, null);
+
+  updateRepo(db, 'demo', { auto_merge: false });
+  assert.deepEqual(await setAutoMerge(db, t.id, { auto_merge: true }), { auto_merge: true });
+  assert.equal(gh.labelsMade, 1, 'the label is made before it is added');
+  assert.deepEqual(gh.labelled.at(-1), { url: t.url, on: true });
+
+  assert.deepEqual(await setAutoMerge(db, t.id, { auto_merge: null }), { auto_merge: false }, "back to the repo's: off");
+  assert.equal(db.getTask(t.id)!.auto_merge, null);
+  await assert.rejects(setAutoMerge(db, t.id, { auto_merge: 'yes' as never }), ActionError);
+
+  github.setLabel = async () => {
+    throw new Error('HTTP 403');
+  };
+  try {
+    assert.deepEqual(await setAutoMerge(db, t.id, { auto_merge: true }), { auto_merge: true, label_error: 'HTTP 403' });
+    assert.equal(db.getTask(t.id)!.auto_merge, 1, 'the setting is kept');
+  } finally {
+    github.setLabel = async (url, _cwd, _label, on) => void gh.labelled.push({ url, on });
+  }
+});
+
+test('the scheduler merges a ready PR on its own refresh, and tells a merge that keeps failing once', async () => {
+  const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
+  const stuck = tested({ title: 'refused' });
+  mergeError = 'the base branch policy prohibits the merge';
+  const until = async (done: () => boolean) => {
+    const deadline = Date.now() + 5000;
+    while (!done() && Date.now() < deadline) await new Promise((r) => setTimeout(r, 20));
+  };
+  const told = () => db.recentNotifications(50).filter((x) => x.task_id === stuck.id).length;
+  const logs: string[] = [];
+  const scheduler = new Scheduler(db, { tickMs: 10, prRefreshMs: 10, autoPlan: false, log: (m) => logs.push(m) });
+  const running = scheduler.run();
+  await until(() => told() > 0);
+  await new Promise((r) => setTimeout(r, 200)); // many more refreshes
+  assert.equal(logs.filter((l) => l.includes(`task ${stuck.id}: auto-merge failed`)).length, 1);
+  assert.equal(told(), 1, 'told once, not every refresh');
+
+  mergeError = null;
+  const t = tested({ title: 'merge me' });
+  await until(() => db.getTask(t.id)!.pr_state === 'merged');
+  scheduler.stop();
+  await running;
+  assert.equal(db.getTask(t.id)!.pr_state, 'merged');
+});

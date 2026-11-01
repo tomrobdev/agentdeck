@@ -54,6 +54,11 @@ export function routes({ db, scheduler }: ApiContext): Route[] {
       wake();
       return { ...result, task: detail(id) };
     }),
+    // Let the daemon merge the task's PR on its own, or not, or follow the repo (null).
+    route('POST', /^\/api\/tasks\/(\d+)\/auto-merge$/, async ({ params: [id], body }) => {
+      const result = await actions.setAutoMerge(db, Number(id), body as { auto_merge: boolean | null });
+      return { ...result, task: detail(id) };
+    }),
     // Sync the task's branch with the base, settling conflicts with a claude run. Answers when it is done.
     route('POST', /^\/api\/tasks\/(\d+)\/resolve$/, async ({ params: [id] }) => {
       const report = await scheduler.track(actions.syncNow(db, Number(id)), 'sync');

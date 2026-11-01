@@ -29,6 +29,7 @@ export interface CreatePr {
   title: string;
   body: string;
   draft: boolean;
+  labels?: string[];
 }
 
 /** The first line of a failed command's stderr (or message), for a one-line error. */
@@ -70,6 +71,7 @@ export const github = {
       '--title',
       pr.title,
       ...(pr.draft ? ['--draft'] : []),
+      ...(pr.labels ?? []).flatMap((label) => ['--label', label]),
       '--body',
       pr.body,
     ];
@@ -78,6 +80,27 @@ export const github = {
       const url = stdout.trim().split('\n').at(-1) ?? '';
       if (!url) throw new Error('gh printed no URL');
       return url;
+    } catch (err) {
+      throw failure(err);
+    }
+  },
+
+  /** `gh label create --force`: make sure the repo has the label, so `gh pr create --label` can use it. */
+  async ensureLabel(cwd: string, label: { name: string; description: string; color: string }): Promise<void> {
+    try {
+      await exec('gh', ['label', 'create', label.name, '--force', '--description', label.description, '--color', label.color], {
+        cwd,
+        timeout: 30_000,
+      });
+    } catch (err) {
+      throw failure(err);
+    }
+  },
+
+  /** `gh pr edit <url> --add-label` or `--remove-label`. */
+  async setLabel(url: string, cwd: string, label: string, on: boolean): Promise<void> {
+    try {
+      await exec('gh', ['pr', 'edit', url, on ? '--add-label' : '--remove-label', label], { cwd, timeout: 30_000 });
     } catch (err) {
       throw failure(err);
     }
@@ -104,9 +127,12 @@ export const github = {
     }
   },
 
-  /** What `gh pr view` says about a PR that decides whether it can merge. */
-  async prDetails(url: string, cwd: string): Promise<PrDetails> {
-    const fields = 'isDraft,mergeable,mergeStateStatus,commits,additions,deletions,changedFiles,statusCheckRollup';
+  /**
+   * What `gh pr view` says about a PR that decides whether it can merge. The changed files' paths and the labels only
+   * matter to auto-merge, and `files` grows with the PR, so they are read when `withFiles` asks.
+   */
+  async prDetails(url: string, cwd: string, opts: { withFiles?: boolean } = {}): Promise<PrDetails> {
+    const fields = `isDraft,mergeable,mergeStateStatus,commits,additions,deletions,changedFiles,statusCheckRollup${opts.withFiles ? ',files,labels' : ''}`;
     try {
       const { stdout } = await exec('gh', ['pr', 'view', url, '--json', fields], { cwd, timeout: 30_000, maxBuffer: 16 * 1024 * 1024 });
       return parsePrDetails(stdout);

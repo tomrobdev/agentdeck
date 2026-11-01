@@ -1,6 +1,8 @@
 // How the repo editor and the settings form map to and from what the API sends. Pure, so the
 // panels only hold the form's state.
 import type { MergeMethod, NotifyKind, RepoDetail, RepoPatch, Settings, SettingsPatch } from '../api';
+import { DEFAULT_AUTO_MERGE_MAX_LINES, DEFAULT_AUTO_MERGE_SKIP } from '../../../daemon/src/domain/pull-request/auto-merge.ts';
+import { parseTextList } from '../../../daemon/src/domain/text.ts';
 
 export type RepoForm = {
   goals: string;
@@ -8,20 +10,17 @@ export type RepoForm = {
   testCmd: string;
   mergeMethod: MergeMethod;
   autoResolve: boolean;
+  autoMerge: boolean;
+  autoMergeMaxLines: number;
+  /** Path prefixes, comma-separated. */
+  autoMergeSkip: string;
   sandbox: boolean;
   /** Hosts, comma-separated. */
   network: string;
 };
 
-/** The repo's `network` column: a JSON array of hosts. */
-export function parseHosts(json: string | undefined): string[] {
-  try {
-    const v = JSON.parse(json ?? '[]');
-    return Array.isArray(v) ? v.filter((d): d is string => typeof d === 'string') : [];
-  } catch {
-    return [];
-  }
-}
+/** A comma-separated field as a list. */
+const splitList = (text: string) => text.split(/[\s,]+/).filter(Boolean);
 
 export function toRepoForm(d: RepoDetail): RepoForm {
   return {
@@ -30,8 +29,11 @@ export function toRepoForm(d: RepoDetail): RepoForm {
     testCmd: d.test_cmd ?? '',
     mergeMethod: d.merge_method,
     autoResolve: !!d.auto_resolve,
+    autoMerge: !!d.auto_merge,
+    autoMergeMaxLines: d.auto_merge_max_lines ?? DEFAULT_AUTO_MERGE_MAX_LINES,
+    autoMergeSkip: parseTextList(d.auto_merge_skip, DEFAULT_AUTO_MERGE_SKIP).join(', '),
     sandbox: !!d.sandbox,
-    network: parseHosts(d.network).join(', '),
+    network: parseTextList(d.network).join(', '),
   };
 }
 
@@ -42,8 +44,11 @@ export function toRepoPatch(f: RepoForm): RepoPatch {
     test_cmd: f.testCmd,
     merge_method: f.mergeMethod,
     auto_resolve: f.autoResolve,
+    auto_merge: f.autoMerge,
+    auto_merge_max_lines: f.autoMergeMaxLines,
+    auto_merge_skip: splitList(f.autoMergeSkip),
     sandbox: f.sandbox,
-    network: f.network.split(/[\s,]+/).filter(Boolean),
+    network: splitList(f.network),
   };
 }
 

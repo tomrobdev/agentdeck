@@ -1,6 +1,7 @@
 // Whether a PR can be merged, and how. Pure: no I/O.
 import { isConflicting } from './conflict.ts';
 import type { PrState } from './pr.ts';
+import { plural } from '../text.ts';
 
 /** How GitHub folds the PR into the base branch. Squash is the default: one task, one commit. */
 export type MergeMethod = 'squash' | 'merge' | 'rebase';
@@ -28,6 +29,9 @@ export interface PrDetails {
   additions: number;
   deletions: number;
   checks: CheckCounts;
+  /** The changed files' paths, and the labels; empty unless asked for (`prDetails`'s `withFiles`). */
+  paths: string[];
+  labels: string[];
 }
 
 const FAILED = new Set(['FAILURE', 'ERROR', 'TIMED_OUT', 'CANCELLED', 'STARTUP_FAILURE', 'ACTION_REQUIRED']);
@@ -45,10 +49,12 @@ export function countChecks(rollup: unknown): CheckCounts {
   return counts;
 }
 
-/** Read `gh pr view --json isDraft,mergeable,mergeStateStatus,commits,additions,deletions,changedFiles,statusCheckRollup`. */
+/** Read `gh pr view --json isDraft,mergeable,mergeStateStatus,commits,additions,deletions,changedFiles,statusCheckRollup,files,labels`. */
 export function parsePrDetails(json: string): PrDetails {
   const raw = JSON.parse(json) as Record<string, unknown>;
   const num = (v: unknown) => (typeof v === 'number' ? v : 0);
+  const names = (v: unknown, key: string) =>
+    Array.isArray(v) ? v.map((item) => (item as Record<string, unknown>)?.[key]).filter((n): n is string => typeof n === 'string') : [];
   return {
     draft: raw.isDraft === true,
     mergeable: String(raw.mergeable ?? 'UNKNOWN'),
@@ -58,7 +64,16 @@ export function parsePrDetails(json: string): PrDetails {
     additions: num(raw.additions),
     deletions: num(raw.deletions),
     checks: countChecks(raw.statusCheckRollup),
+    paths: names(raw.files, 'path'),
+    labels: names(raw.labels, 'name'),
   };
+}
+
+/** One fact about a PR that bears on merging it. A problem stops any merge; anything else is a warning a person may wave through. */
+export interface MergeFinding {
+  kind: 'not_open' | 'conflict' | 'draft' | 'behind' | 'blocked' | 'tests_failed' | 'checks_failing' | 'checks_pending';
+  problem: boolean;
+  text: string;
 }
 
 export interface MergeCheck {
@@ -68,21 +83,31 @@ export interface MergeCheck {
   warnings: string[];
 }
 
-const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+export interface MergeInput {
+  pr_state: PrState | null;
+  pr: PrDetails;
+  /** The last run that ran the tests: 1 passed, 0 failed, null none did. */
+  tests_passed: number | null;
+}
 
-/** Turn a PR's state into blocking problems and warnings. `testsPassed` is the task's last run. */
-export function mergeCheck(input: { pr_state: PrState | null; pr: PrDetails; tests_passed: number | null }): MergeCheck {
-  const { pr_state, pr, tests_passed } = input;
-  const problems: string[] = [];
-  const warnings: string[] = [];
-  if (pr_state !== 'open') problems.push(`the PR is ${pr_state ?? 'not open'}`);
-  if (isConflicting(pr)) problems.push('the branch has conflicts with the base branch');
-  if (pr.draft) warnings.push('the PR is a draft; it will be marked ready for review first');
-  if (pr.merge_state === 'BEHIND') warnings.push('the base branch has moved on since the branch was cut');
+/** What about a PR's state bears on merging it, in the order the merge dialog shows it. */
+export function mergeFindings({ pr_state, pr, tests_passed }: MergeInput): MergeFinding[] {
+  const found: MergeFinding[] = [];
+  const add = (kind: MergeFinding['kind'], text: string, problem = false) => found.push({ kind, problem, text });
+  if (pr_state !== 'open') add('not_open', `the PR is ${pr_state ?? 'not open'}`, true);
+  if (isConflicting(pr)) add('conflict', 'the branch has conflicts with the base branch', true);
+  if (pr.draft) add('draft', 'the PR is a draft; it will be marked ready for review first');
+  if (pr.merge_state === 'BEHIND') add('behind', 'the base branch has moved on since the branch was cut');
   if (pr.merge_state === 'BLOCKED' && !pr.draft)
-    warnings.push('GitHub says branch protection may block this merge (required reviews or checks)');
-  if (tests_passed === 0) warnings.push('tests failed on the last run');
-  if (pr.checks.failing) warnings.push(`${plural(pr.checks.failing, 'check')} failing on GitHub`);
-  if (pr.checks.pending) warnings.push(`${plural(pr.checks.pending, 'check')} still running on GitHub`);
-  return { problems, warnings };
+    add('blocked', 'GitHub says branch protection may block this merge (required reviews or checks)');
+  if (tests_passed === 0) add('tests_failed', 'tests failed on the last run');
+  if (pr.checks.failing) add('checks_failing', `${plural(pr.checks.failing, 'check')} failing on GitHub`);
+  if (pr.checks.pending) add('checks_pending', `${plural(pr.checks.pending, 'check')} still running on GitHub`);
+  return found;
+}
+
+/** Turn a PR's state into blocking problems and warnings. */
+export function mergeCheck(input: MergeInput): MergeCheck {
+  const found = mergeFindings(input);
+  return { problems: found.filter((f) => f.problem).map((f) => f.text), warnings: found.filter((f) => !f.problem).map((f) => f.text) };
 }

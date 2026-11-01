@@ -7,13 +7,15 @@ import { deleteGoals, goalsPath, readGoals, writeGoals } from '../../adapters/go
 import { rootInfo } from '../../adapters/repo-root.ts';
 import { removeFiles } from '../../adapters/run-log.ts';
 import type { Db } from '../../db/index.ts';
+import { autoMergeMaxLinesError } from '../../domain/pull-request/auto-merge.ts';
 import { MERGE_METHODS, type MergeMethod, isMergeMethod } from '../../domain/pull-request/merge.ts';
 import { PR_MODES, type PrMode } from '../../domain/pull-request/pr.ts';
 import type { Repo } from '../../domain/repo/repo.ts';
 import { goalsError, networkError } from '../../domain/repo/rules.ts';
 import { detectToolchain } from '../../domain/repo/toolchain.ts';
+import { textList } from '../../domain/text.ts';
 import { type Check, runDoctor } from './doctor.ts';
-import { ActionError, flag, list, object, refuse, requireRepo, text, textOrNull } from '../input.ts';
+import { ActionError, flag, list, object, refuse, requireRepo, text, textOrNull, whole } from '../input.ts';
 import { pauseRepo } from '../scheduler/pause.ts';
 
 /** Register a repo. Its toolchain is detected from the root files and fills in whatever isn't given. */
@@ -67,6 +69,10 @@ export interface RepoPatch {
   sandbox?: boolean;
   /** Hosts the agent's sandboxed commands may reach; a string is split on commas and spaces. */
   network?: string | string[];
+  auto_merge?: boolean;
+  auto_merge_max_lines?: number;
+  /** Path prefixes a PR touching needs a person; a string is split on commas and spaces. */
+  auto_merge_skip?: string | string[];
 }
 
 export function updateRepo(db: Db, nameOrId: string | number, patch: RepoPatch) {
@@ -83,6 +89,10 @@ export function updateRepo(db: Db, nameOrId: string | number, patch: RepoPatch) 
   const sandbox = flag(body, 'sandbox');
   const hosts = list(body, 'network', { split: true });
   const network = hosts && normalizeNetwork(hosts);
+  const auto_merge = flag(body, 'auto_merge');
+  const auto_merge_max_lines = whole(body, 'auto_merge_max_lines', autoMergeMaxLinesError);
+  const skip = list(body, 'auto_merge_skip', { split: true });
+  const auto_merge_skip = skip && textList(skip);
   if (network) refuse(networkError(network));
   if (pr_mode !== undefined && !PR_MODES.includes(pr_mode as PrMode))
     throw new ActionError(`pr_mode must be one of ${PR_MODES.join(', ')}`);
@@ -103,6 +113,9 @@ export function updateRepo(db: Db, nameOrId: string | number, patch: RepoPatch) 
     ...(auto_resolve !== undefined ? { auto_resolve: auto_resolve ? 1 : 0 } : {}),
     ...(sandbox !== undefined ? { sandbox: sandbox ? 1 : 0 } : {}),
     ...(network !== undefined ? { network: JSON.stringify(network) } : {}),
+    ...(auto_merge !== undefined ? { auto_merge: auto_merge ? 1 : 0 } : {}),
+    ...(auto_merge_max_lines !== undefined ? { auto_merge_max_lines } : {}),
+    ...(auto_merge_skip !== undefined ? { auto_merge_skip: JSON.stringify(auto_merge_skip) } : {}),
   });
   return repoDetail(db, repo.id);
 }

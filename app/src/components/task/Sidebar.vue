@@ -10,7 +10,7 @@ import StatusIcon from '../ui/StatusIcon.vue';
 
 // Task properties, GitHub-sidebar style. Priority, model and turns are editable while the task is.
 const props = defineProps<{ task: TaskDetail }>();
-const { run } = useActions();
+const { run, flash } = useActions();
 
 const editable = computed(() => canEdit(props.task));
 const editing = ref<'priority' | 'model' | 'max_turns' | null>(null);
@@ -28,6 +28,21 @@ async function save() {
   editing.value = null;
   if (!field || draft.value.trim() === String(props.task[field])) return;
   await run(() => api.editTask(props.task.id, { [field]: field === 'model' ? draft.value.trim() : Number(draft.value) }));
+}
+
+// Auto-merge: the task's own setting, or its repo's. Moot once the PR is merged or closed, or the task cancelled.
+const autoMergeShown = computed(() => props.task.status !== 'cancelled' && !['merged', 'closed'].includes(props.task.pr_state ?? ''));
+const AUTO_MERGE = [
+  { label: "The repo's setting", stored: null, value: null },
+  { label: 'On for this task', stored: 1, value: true },
+  { label: 'Off for this task', stored: 0, value: false },
+] as const;
+async function setAutoMerge(index: number) {
+  const { value: auto_merge } = AUTO_MERGE[index];
+  await run(async () => {
+    const res = await api.autoMerge(props.task.id, { auto_merge });
+    if (res.label_error) flash(`Saved, but the PR's label could not be changed: ${res.label_error}`);
+  });
 }
 
 const levelLabel = computed(() => PRIORITY_LEVELS.find((l) => l.key === priorityLevel(props.task.priority))!.label);
@@ -111,6 +126,16 @@ const input = 'px-1.5 py-0.5';
     <div v-if="task.pr_url" :class="prop">
       <div :class="name">Pull request</div>
       <button :class="[rowButton, 'text-accent']" @click="openExternal(task.pr_url)">{{ task.pr_state ?? 'open' }} ↗</button>
+    </div>
+    <div v-if="autoMergeShown" :class="prop">
+      <div :class="name">Auto-merge</div>
+      <select
+        class="w-full px-1.5 py-0.5"
+        aria-label="Auto-merge"
+        @change="setAutoMerge(($event.target as HTMLSelectElement).selectedIndex)"
+      >
+        <option v-for="o in AUTO_MERGE" :key="o.label" :selected="(task.auto_merge ?? null) === o.stored">{{ o.label }}</option>
+      </select>
     </div>
     <div v-if="task.branch" :class="prop">
       <div :class="name">Branch</div>

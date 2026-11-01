@@ -26,6 +26,9 @@ export const repos = sqliteTable(
     sandbox: integer().default(1).notNull(),
     network: text().default('[]').notNull(),
     archived_at: text(),
+    auto_merge: integer().default(0).notNull(),
+    auto_merge_max_lines: integer().default(400).notNull(),
+    auto_merge_skip: text().default('[".github/"]').notNull(),
   },
   (table) => [unique('repos_name_unique').on(table.name), unique('repos_path_unique').on(table.path)],
 );
@@ -64,6 +67,7 @@ export const tasks = sqliteTable(
     plan_steps: text(),
     needs: text(),
     done_by: text(),
+    auto_merge: integer(),
   },
   (table) => [index('tasks_pick').on(table.status, sql`priority DESC`, table.id)],
 );
