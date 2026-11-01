@@ -64,9 +64,9 @@ const toggleTitle = computed(() => {
         :title="`${m.pct}% used · ${m.markTitle} · resets in ${m.resets}`"
       >
         <span class="muted">{{ m.label }}</span>
-        <span class="relative inline-block h-1 w-14 rounded-sm bg-panel-2">
+        <span class="meter relative inline-block h-1 w-14 rounded-sm bg-panel-2">
           <span
-            class="absolute inset-y-0 left-0 rounded-sm transition-[width] duration-[400ms]"
+            class="meter absolute inset-y-0 left-0 rounded-sm transition-[width] duration-[400ms]"
             :class="m.pct >= m.mark * 100 ? 'bg-blocked' : 'bg-running'"
             :style="{ width: m.pct + '%' }"
           />

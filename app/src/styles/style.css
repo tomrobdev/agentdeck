@@ -176,6 +176,9 @@
     --shadow-popover: 0 0 #0000;
     --shadow-modal: 0 0 #0000;
   }
+  :root[data-theme='contrast'] .meter {
+    border-radius: 0;
+  }
   :root[data-theme='contrast'] .pill {
     padding: 1px 7px;
     border: 1px solid currentColor;

@@ -128,7 +128,7 @@ const heading = 'px-3.5 pt-2 pb-0.5 text-sm text-muted';
       <ul v-if="matches.length" class="m-0 flex list-none flex-col p-0">
         <li v-for="t in matches" :key="t.id">
           <button type="button" class="btn-ghost flex w-full items-center gap-2 py-0.5 text-left hover:text-accent" @click="add(t.id)">
-            <StatusIcon :task="t" /> <span class="text-muted">#{{ t.id }}</span> <span class="truncate">{{ t.title }}</span>
+            <StatusIcon :task="t" /> <span class="font-mono text-muted">#{{ t.id }}</span> <span class="truncate">{{ t.title }}</span>
           </button>
         </li>
       </ul>
@@ -151,7 +151,7 @@ const heading = 'px-3.5 pt-2 pb-0.5 text-sm text-muted';
         <div v-for="l in group.items" :key="l.on" :class="rowCls">
           <button :class="open" @click="openTask(l.on)">
             <StatusIcon v-if="byId.get(l.on)" :task="byId.get(l.on)!" />
-            <span class="text-muted">#{{ l.on }}</span>
+            <span class="font-mono text-muted">#{{ l.on }}</span>
             <span class="truncate">{{ byId.get(l.on)?.title ?? '' }}</span>
             <span class="ml-auto flex-none whitespace-nowrap" :class="STATE_CLASS[l.state]">{{ linkText(l) }}</span>
           </button>
@@ -167,7 +167,7 @@ const heading = 'px-3.5 pt-2 pb-0.5 text-sm text-muted';
       <div v-for="d in dependents" :key="d.id" :class="rowCls">
         <button :class="open" @click="openTask(d.id)">
           <StatusIcon v-if="byId.get(d.id)" :task="byId.get(d.id)!" />
-          <span class="text-muted">#{{ d.id }}</span>
+          <span class="font-mono text-muted">#{{ d.id }}</span>
           <span class="truncate">{{ byId.get(d.id)?.title ?? '' }}</span>
           <span class="ml-auto flex-none whitespace-nowrap text-muted">
             {{ d.kind === 'builds_on' ? 'builds on this' : 'after this' }}
