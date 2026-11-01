@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, watch, watchEffect } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch, watchEffect } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
 import {
+  type MergeResult,
   type Repo,
   type Status,
   type TaskSummary,
@@ -16,6 +17,7 @@ import {
   tasksQuery,
 } from './api';
 import { setTrayStatus } from './platform/native';
+import { mode, setMode } from './platform/theme';
 import NewTaskForm from './components/panels/NewTaskForm.vue';
 import WaitBar from './components/layout/WaitBar.vue';
 import ReposPanel from './components/panels/ReposPanel.vue';
@@ -25,8 +27,12 @@ import AppHeader from './components/layout/AppHeader.vue';
 import StatusBar from './components/layout/StatusBar.vue';
 import QueueView from './components/queue/QueueView.vue';
 import TaskPage from './components/task/TaskPage.vue';
-import { openTask, route } from './router';
+import MergeDialog from './components/task/MergeDialog.vue';
+import CommandPalette from './components/ui/CommandPalette.vue';
+import { go, openTask, route } from './router';
 import { type BoardMove, needYouCount, openingTab } from './lib/taskView';
+import { paletteItems } from './lib/palette';
+import { requestedView } from './composables/useView';
 import { provideActions } from './composables/useActions';
 import { useChangeStream } from './composables/useChangeStream';
 
@@ -47,7 +53,9 @@ const pageId = computed(() => (route.current.name === 'task' ? route.current.id 
 // The change stream refetches what is on screen. Status also refetches every 30 s, hidden or not: waits (a governor
 // hold lifting) change with time, not with a write, and the tray label reads it.
 const statusQ = useQuery({ ...statusQuery(), refetchInterval: STATUS_FALLBACK_MS, refetchIntervalInBackground: true });
-const tasksQ = useQuery(computed(() => ({ ...tasksQuery(), enabled: pageId.value === null })));
+const palette = ref(false);
+// The palette searches every task, also from a task page, which doesn't otherwise load the list.
+const tasksQ = useQuery(computed(() => ({ ...tasksQuery(), enabled: pageId.value === null || palette.value })));
 const taskQ = useQuery(computed(() => ({ ...taskQuery(pageId.value ?? 0), enabled: pageId.value !== null })));
 useChangeStream();
 const reposQ = useQuery(reposQuery());
@@ -84,6 +92,48 @@ function openFromQueue(id: number) {
   const t = tasks.value.find((x) => x.id === id);
   openTask(id, t ? openingTab(t) : 'overview');
 }
+// The command palette (⌘K). It lists the selected task's actions first; what each task allows is the daemon's rule (lib/palette.ts).
+const merging = ref<number | null>(null);
+async function onMerged(result: MergeResult) {
+  merging.value = null;
+  await queryClient.invalidateQueries({ predicate: (q) => !isImmutable(q.queryKey) });
+  if (result.cleanup_error) flash(`Merged, but cleanup failed: ${result.cleanup_error}`);
+}
+const selectedTask = computed(
+  () => tasks.value.find((t) => t.id === selectedId.value) ?? (detail.value?.id === selectedId.value ? detail.value : null),
+);
+const paletteRows = computed(() =>
+  paletteItems({
+    tasks: tasks.value,
+    selected: selectedTask.value,
+    paused: !!status.value?.paused,
+    handlers: {
+      open: openFromQueue,
+      act: actOn,
+      merge: (id) => (merging.value = id),
+      newTask: () => (modal.value = 'new'),
+      togglePause,
+      restartDaemon: () =>
+        act(async () => {
+          const res = await api.restartDaemon();
+          flash(res.waiting ? `Waiting for ${res.waiting} to finish, then the daemon restarts.` : 'Restarting the daemon…');
+        }),
+      view: (m) => {
+        requestedView.value = m;
+        go({ name: 'queue' });
+      },
+      toggleTheme: () => setMode(mode.value === 'dark' ? 'light' : 'dark'),
+    },
+  }),
+);
+function onPaletteKey(e: KeyboardEvent) {
+  if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== 'k') return;
+  e.preventDefault();
+  palette.value = !palette.value;
+}
+onMounted(() => window.addEventListener('keydown', onPaletteKey));
+onBeforeUnmount(() => window.removeEventListener('keydown', onPaletteKey));
+
 const resumeDaemon = () => act(() => api.resume());
 const resumeRepo = (id: number) => act(() => api.resumeRepo(id));
 
@@ -147,6 +197,9 @@ watchEffect(() => {
     <ReposPanel v-if="modal === 'repos'" :repos="repos" @close="modal = null" />
 
     <SettingsPanel v-if="modal === 'settings'" :notifications="status?.notifications ?? []" @close="modal = null" />
+
+    <MergeDialog v-if="merging !== null" :task-id="merging" @close="merging = null" @merged="onMerged" />
+    <CommandPalette v-if="palette" :items="paletteRows" @close="palette = false" />
 
     <div
       v-if="toast"

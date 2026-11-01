@@ -4,6 +4,7 @@ import type { MergeResult, TaskSummary } from '../../api';
 import { useActions } from '../../composables/useActions';
 import MergeDialog from '../task/MergeDialog.vue';
 import { useHotkeys } from '../../composables/useHotkeys';
+import { requestedView } from '../../composables/useView';
 import { go, route } from '../../router';
 import {
   type BoardMove,
@@ -43,6 +44,16 @@ if (loadSetting<boolean>('doneCollapsed', false) === false) {
   display.value = { ...display.value, collapsed: collapsed.includes('done') ? collapsed : [...collapsed, 'done'] };
   saveSetting('doneCollapsed', true);
 }
+// The command palette asks for a view; apply it when it arrives (also when this mounts after the palette sent it).
+watch(
+  requestedView,
+  (mode) => {
+    if (!mode) return;
+    display.value = { ...display.value, mode };
+    requestedView.value = null;
+  },
+  { immediate: true },
+);
 // The search box isn't remembered; the rest of the filters are.
 const saved = loadSetting<Omit<Filters, 'search'>>('filters', { states: [], repos: [], source: null });
 const filters = ref<Filters>({ ...emptyFilters(), ...saved, search: '' });
@@ -193,7 +204,7 @@ useHotkeys({
       >
       <span class="max-sm:hidden"
         ><kbd>j</kbd><kbd>k</kbd> move · <kbd>↵</kbd> open · <kbd>a</kbd> approve · <kbd>r</kbd> retry · <kbd>m</kbd> merge ·<kbd>v</kbd>
-        list/board/graph · <kbd>c</kbd> new · <kbd>/</kbd> search</span
+        list/board/graph · <kbd>c</kbd> new · <kbd>/</kbd> search · <kbd>⌘K</kbd> commands</span
       >
     </footer>
     <MergeDialog v-if="merging" :task-id="merging.id" @close="merging = null" @merged="onMerged" />
