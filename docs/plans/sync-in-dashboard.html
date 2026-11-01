@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en" data-agentdeck-plan="1">
+  <head>
+    <meta charset="utf-8" />
+    <title>Syncs in the dashboard</title>
+    <link rel="stylesheet" href="plan.css" />
+  </head>
+  <body>
+    <h1>Syncs in the dashboard</h1>
+    <p data-plan-summary>
+      A sync of a task in review shows in the dashboard while it runs, whoever started it: a dashboard button, <code>agentdeck sync</code>
+      or the daemon's own auto-resolve. Merging a PR that conflicts becomes one flow in the merge dialogs: sync, then merge.
+    </p>
+
+    <h2>Why</h2>
+    <p>
+      #105 and #98 conflicted with main. They were synced from the CLI, each with a resolve run of a few minutes, and the dashboard showed
+      nothing: both sat in Review saying "auto-merge waiting: the branch has conflicts" until the PR refresh read them again.
+    </p>
+    <ul>
+      <li>
+        <code>liveRuns()</code> (<code>db/runs.ts</code>) reads only <code>kind = 'work'</code> runs, and <code>liveView</code>
+        (<code>domain/run/live.ts</code>) returns null unless the task is running. A resolve run belongs to a done task, so
+        <code>TaskSummary.live</code> is null throughout.
+      </li>
+      <li>A clean sync, with no <code>claude</code>, is not visible at all.</li>
+      <li>
+        <code>QueueView.vue</code> keeps its own <code>syncing</code> list, so "Syncing…" shows only in the window whose Sync button started
+        it.
+      </li>
+      <li>
+        <code>isSyncing(db, id)</code> in <code>application/sync.ts</code> already knows both cases: the in-process lock (the daemon serves
+        the API, so it sees its own syncs) and <code>db.hasRunningResolve(id)</code>.
+      </li>
+      <li>
+        <code>BulkMergeDialog.vue</code> (Merge all and the bulk merge) lists each PR left open with its reason from <code>mergeAll</code>,
+        but a conflicting one can't be synced from there. <code>MergeDialog.vue</code> has "Sync with base" for one PR.
+      </li>
+    </ul>
+
+    <section data-plan-step id="sync-view" data-status="todo">
+      <h2>The sync view on task summaries</h2>
+      <p>
+        Give <code>TaskSummary</code> a <code>sync</code> field for a done task: null when no sync is under way. Otherwise it says when the
+        sync started, whether a resolve run is settling conflicts, and that run's live turns and last tool, worded as
+        <code>LiveView</code> is.
+      </p>
+      <ul>
+        <li>
+          Decide its shape in <code>domain/run/live.ts</code> (pure), beside <code>liveView</code>, and add it to
+          <code>api/contract.ts</code> and <code>api/contract-check.ts</code>.
+        </li>
+        <li>
+          Fill it in <code>application/task/task-views.ts</code> from <code>isSyncing</code> and the task's unfinished resolve run. Read the
+          live resolve runs with one query for the whole list, as <code>liveRuns()</code> does for work runs, not one per task.
+        </li>
+        <li>
+          Give each <code>mergeAll</code> skipped entry a <code>conflicting</code> flag, true when the refusal was a conflict with the base
+          branch. Take it from the merge findings' kind (<code>domain/pull-request/merge.ts</code>), not by matching the reason's text.
+        </li>
+      </ul>
+      <ul data-plan-done>
+        <li>A domain test covers the sync view: none, a clean sync under way, and a resolve run with its turns and tool.</li>
+        <li>A test with a db fixture shows <code>taskViews</code> giving a done task with an unfinished resolve run its sync view.</li>
+        <li>The <code>mergeAll</code> test checks <code>conflicting</code> on a conflicting PR and on one held for another reason.</li>
+      </ul>
+    </section>
+
+    <section data-plan-step id="queue" data-status="todo">
+      <h2>Show it in the queue and on the task page</h2>
+      <ul>
+        <li>
+          List rows and board cards of a task in review show its sync from the summary: "Syncing with main…", or "Resolving conflicts"
+          followed by the live part (time, turns, tool) as <code>describeLive</code> words it.
+        </li>
+        <li>
+          Replace <code>QueueView.vue</code>'s window-local <code>syncing</code> list with the summary's state. A task with a sync under way
+          keeps Merge, Sync and Merge all disabled for it, and can't be dragged.
+        </li>
+        <li>
+          A row with a resolve run under way opens on the Runs tab, as a running task does (<code>openingTab</code> in
+          <code>lib/taskView.ts</code>).
+        </li>
+        <li>
+          The task page's header says a sync is under way, and Merge waits for it. The resolve run in Runs and Overview shows as live.
+        </li>
+        <li>
+          The change stream (<code>composables/useChangeStream.ts</code>) must refresh the list while a resolve run moves, as it does for a
+          running task's live state. Check this, and fix it if it doesn't.
+        </li>
+      </ul>
+      <ul data-plan-done>
+        <li>
+          In the dashboard against a daemon, a resolve run started with <code>agentdeck sync &lt;id&gt;</code> shows on that task's row and
+          card without anything clicked in the window, and goes away when the sync ends.
+        </li>
+        <li>QueueView no longer keeps its own list of syncing tasks.</li>
+      </ul>
+    </section>
+
+    <section data-plan-step id="merge-dialogs" data-status="todo">
+      <h2>Sync from the merge dialogs</h2>
+      <ul>
+        <li>
+          In <code>BulkMergeDialog.vue</code>, after the merge, each PR left open because it conflicts (<code>conflicting</code>) gets a
+          Sync button. When there are several, one "Sync the N conflicting" button syncs them one at a time.
+        </li>
+        <li>
+          Each shows syncing, then synced or blocked with <code>syncLine</code>'s wording (<code>api/format.ts</code>). The ones that synced
+          cleanly can be merged from the same dialog in one go (<code>api.mergeAll</code>).
+        </li>
+        <li>
+          Closing the dialog doesn't stop a sync: the daemon finishes it, and the row shows it from the summary (step
+          <code>queue</code>).
+        </li>
+        <li>In <code>MergeDialog.vue</code>, check that Merge is ready once "Sync with base" comes back clean, and fix it if not.</li>
+      </ul>
+      <ul data-plan-done>
+        <li>In the dashboard, Merge all over a set that includes a conflicting PR offers Sync for it, then merges it once it synced.</li>
+        <li><code>pnpm check</code> passes.</li>
+      </ul>
+    </section>
+
+    <h2>Out of scope</h2>
+    <ul>
+      <li>How a sync or resolve run works (<code>application/sync.ts</code>), the auto-merge rules, and the scheduler's auto-resolve.</li>
+      <li>New database columns. If one turns out to be needed, follow the migration rule in CLAUDE.md.</li>
+    </ul>
+  </body>
+</html>
