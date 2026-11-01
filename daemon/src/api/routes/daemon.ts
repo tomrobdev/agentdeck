@@ -23,6 +23,8 @@ export function routes({ db, daemon, changes }: ApiContext): Route[] {
     route('POST', /^\/api\/pause$/, () => (actions.setPaused(db, true), actions.status(db, daemon.info))),
     route('POST', /^\/api\/resume$/, () => (actions.setPaused(db, false), actions.status(db, daemon.info))),
     route('POST', /^\/api\/daemon\/restart$/, () => actions.restartDaemon(db, daemon.requestRestart)),
+    route('GET', /^\/api\/daemon\/health$/, () => actions.daemonReport(db)),
+    route('POST', /^\/api\/daemon\/restart-now$/, () => actions.restartNow(db, actions.restart)),
     route('GET', /^\/api\/service$/, () => actions.serviceStatus()),
     route('POST', /^\/api\/notify\/test$/, async () => (await actions.sendTestNotification(db), { ok: true })),
   ];

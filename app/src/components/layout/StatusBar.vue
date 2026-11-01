@@ -5,7 +5,7 @@ import { computed } from 'vue';
 import { type Status, describeState, relTime } from '../../api';
 
 const props = defineProps<{ status: Status | null; offline: boolean; busy: boolean }>();
-defineEmits<{ toggle: [] }>();
+defineEmits<{ toggle: []; daemon: [] }>();
 
 const state = computed(() => describeState(props.status, props.offline));
 
@@ -81,5 +81,6 @@ const toggleTitle = computed(() => {
     <span v-if="status && !offline && !status.governor.allow && status.governor.reason" class="muted truncate">
       Holding: {{ status.governor.reason }}
     </span>
+    <button class="pill !py-0 text-xs" title="The daemon's health, and restart" @click="$emit('daemon')">Daemon</button>
   </footer>
 </template>

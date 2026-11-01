@@ -131,9 +131,8 @@ for (let i = 1; i <= N; i++) {
   const tasks = db.prepare('SELECT * FROM tasks').all();
   for (const t of tasks) {
     if (!TERMINAL.has(t.status)) fails.a_nonterminal.push(`it${i}: task ${t.id} ${t.status}`);
-    const runs = db
-      .prepare("SELECT * FROM runs WHERE task_id = ? AND (result_text IS NULL OR result_text != 'daemon restarted')")
-      .all(t.id);
+    // A run a restart cut off ends 'interrupted' and uses no attempt; the next run resumes it.
+    const runs = db.prepare("SELECT * FROM runs WHERE task_id = ? AND kind = 'work' AND outcome IS NOT 'interrupted'").all(t.id);
     if (runs.length > t.max_attempts)
       fails.b_too_many_runs.push(`it${i}: task ${t.id} ${runs.length} real runs > max_attempts ${t.max_attempts}`);
     if (t.attempts < 0 || t.attempts > t.max_attempts || (t.status === 'done' && t.attempts < 1))

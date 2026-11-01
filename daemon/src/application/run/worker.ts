@@ -7,9 +7,9 @@ import type { Db } from '../../db/index.ts';
 import { conflictReason, syncSummary } from '../../domain/branch/sync.ts';
 import { lastLine } from '../../domain/text.ts';
 import { linkedSteps, unfinishedSteps, unfinishedSummary } from '../../domain/plan/plan.ts';
-import { type PromptPlan, buildPrompt } from '../../domain/run/prompt.ts';
+import { type PromptPlan, buildPrompt, buildResumePrompt } from '../../domain/run/prompt.ts';
 import { latestReviewNote } from '../../domain/task/history.ts';
-import { type Run, type WorkerResult, firstDenial, isEnvironmentBlock, parseStatus } from '../../domain/run/run.ts';
+import { type Run, type WorkerResult, firstDenial, isEnvironmentBlock, parseStatus, resumableSession } from '../../domain/run/run.ts';
 import { type Task, leftoversMessage, planStepIds } from '../../domain/task/task.ts';
 import { type TaskRunEnd, openTaskRun, startTaskRun } from './claude-run.ts';
 import { syncBranch } from '../sync.ts';
@@ -39,12 +39,11 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
   } catch (err) {
     writeEvent(log, { type: 'agentdeck_error', text: `read plan: ${(err as Error).message}` });
   }
-  const prompt = buildPrompt(
-    task,
-    db.runsForTask(task.id).filter((r) => r.id !== runId),
-    latestReviewNote(db.eventsForTask(task.id)),
-    plan,
-  );
+  const previousRuns = db.runsForTask(task.id).filter((r) => r.id !== runId);
+  const prompt = buildPrompt(task, previousRuns, latestReviewNote(db.eventsForTask(task.id)), plan);
+  // A daemon restart cut the attempt's last run off: continue its claude session (with `prompt` as the fallback).
+  const session = resumableSession(task, previousRuns);
+  const resume = session ? { session, prompt: buildResumePrompt(task) } : undefined;
 
   // Install dependencies before the agent starts: it isn't allowed to install them itself.
   const setUp = async (): Promise<WorkerResult | null> => {
@@ -85,7 +84,7 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
   // Written after setup: setup runs here in the daemon, outside the sandbox, so installs keep the network.
   let ran: TaskRunEnd;
   try {
-    ran = await startTaskRun(db, task, { kind: 'work', repo, worktree: wt.path, prompt, opened });
+    ran = await startTaskRun(db, task, { kind: 'work', repo, worktree: wt.path, prompt, opened, resume });
   } catch (err) {
     await closeLog(log);
     return finish(db, task, runId, { outcome: 'failed', reason: `settings: ${(err as Error).message}` });

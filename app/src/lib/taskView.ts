@@ -14,11 +14,11 @@ import {
   isWaiting,
   statusGroup,
 } from '../../../daemon/src/domain/task/stage.ts';
-import { EDITABLE_STATUSES } from '../../../daemon/src/domain/task/task.ts';
+import { EDITABLE_STATUSES, MODELS } from '../../../daemon/src/domain/task/task.ts';
 
 // The board's move rule is in boardMove.ts, which the daemon's tests import.
 export { STATUS_GROUPS, type StatusGroup, hasOpenPr, isMerged, isReview, isStuck, isWaiting, statusGroup };
-export { FILTER_STATES, SORT_OPTIONS, personEvents };
+export { FILTER_STATES, MODELS, SORT_OPTIONS, personEvents };
 export * from './boardMove';
 
 /** The tab a task opens on from the queue: a task in review is read as a diff. */
@@ -38,6 +38,9 @@ export const PRIORITY_LEVELS = [
   { key: 'none', label: 'No priority', min: -Infinity },
 ] as const;
 export type PriorityLevel = (typeof PRIORITY_LEVELS)[number]['key'];
+
+/** The integer a level is set to from a menu: its lower bound, and 0 for no priority. */
+export const levelPriority = (l: (typeof PRIORITY_LEVELS)[number]): number => (Number.isFinite(l.min) ? l.min : 0);
 
 export const priorityLevel = (p: number): PriorityLevel => PRIORITY_LEVELS.find((l) => p >= l.min)!.key;
 
@@ -117,6 +120,9 @@ export function groupTasks(tasks: TaskSummary[], by: GroupBy, sort: string): Gro
       return [{ key: 'all', label: 'All tasks', tasks: sorted }];
   }
 }
+
+/** The branch a task works on: its own once it has one, else the name the daemon will give it. */
+export const branchName = (t: Pick<TaskSummary, 'id' | 'branch'>): string => t.branch ?? `agentdeck/task-${t.id}`;
 
 export const canEdit = (t: Pick<TaskSummary, 'status'>) => EDITABLE_STATUSES.includes(t.status);
 /** A done task whose PR waits on a person: they can send it back with a note, close the PR or merge it (daemon application/pull-requests.ts mergeable). */
