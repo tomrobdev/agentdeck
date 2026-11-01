@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en" data-agentdeck-plan="1">
+  <head>
+    <meta charset="utf-8" />
+    <title>See whether a task will auto-merge</title>
+    <style>
+      body {
+        font:
+          15px/1.5 system-ui,
+          sans-serif;
+        max-width: 52rem;
+        margin: 2rem auto;
+        padding: 0 1rem;
+      }
+      section {
+        border-left: 3px solid #ccc;
+        padding: 0 1rem;
+        margin: 1.25rem 0;
+      }
+      code {
+        background: #f3f3f3;
+        padding: 0 3px;
+        border-radius: 3px;
+      }
+      table {
+        border-collapse: collapse;
+      }
+      td,
+      th {
+        border: 1px solid #ddd;
+        padding: 4px 8px;
+        vertical-align: top;
+        text-align: left;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>See whether a task will auto-merge</h1>
+    <p data-plan-summary>
+      Whether a task's PR will merge on its own is worked out on every PR refresh and then thrown away unless the answer is "merge", so the
+      list shows nothing and the task page only shows the setting. Keep the latest answer on the task, and show it, with its reasons, in the
+      CLI's <code>ls</code> and <code>show</code> and the dashboard's list, board and task page. Before a PR exists, say whether auto-merge
+      is on, which limits will apply and, on the task page, how the branch measures against them now. Written 2026-11-01.
+    </p>
+
+    <h2>Where it starts</h2>
+    <ul>
+      <li>
+        <code>autoMergeOn(task, repo)</code> (<code>domain/pull-request/auto-merge.ts</code>) says whether auto-merge is on: the task's own
+        setting, else the repo's, except a planner proposal the repo auto-approves.
+      </li>
+      <li>
+        <code>autoMergeCheck</code> gives <code>{ verdict: 'merge' | 'wait' | 'never', reasons }</code> from the PR's details, the last
+        tested run and the repo's limits (<code>auto_merge_max_lines</code>, <code>auto_merge_skip</code>).
+      </li>
+      <li>
+        The PR refresh (<code>refreshPrs</code>, <code>application/pull-request/pull-requests.ts</code>) runs the check for every open PR of
+        a done task with auto-merge on, keeps the <code>merge</code> ones and drops the rest. The merge dialog runs it again live, from
+        GitHub.
+      </li>
+      <li>
+        The task page's sidebar has the auto-merge select (on, off, repo's setting). <code>agentdeck ls</code>, <code>agentdeck show</code>
+        and the dashboard's list and board say nothing about auto-merge.
+      </li>
+    </ul>
+
+    <h2>Decisions</h2>
+    <table>
+      <tr>
+        <th>Decision</th>
+        <th>Why</th>
+      </tr>
+      <tr>
+        <td>The refresh stores its latest check on the task (verdict, reasons, when). Views read it; they never ask GitHub.</td>
+        <td>
+          The CLI runs in its own process, so the database is the only place the daemon's answer can be shared. Lists stay fast and work
+          offline.
+        </td>
+      </tr>
+      <tr>
+        <td>
+          One pure function in the domain turns the setting, the stored check and the repo's limits into what every view shows: a state, a
+          short label, the reasons and where the setting comes from.
+        </td>
+        <td>The CLI and the dashboard word it the same way, and the dashboard's <code>lib/</code> doesn't copy the rules.</td>
+      </tr>
+      <tr>
+        <td>
+          The task page (and <code>agentdeck show</code>) of a task with a branch and no open PR measures the branch against the limits
+          locally: lines changed against the base and paths under a skipped prefix. Lists don't.
+        </td>
+        <td>
+          It answers "will this merge on its own?" while the task still runs, from git alone. One task at a time keeps the cost to one
+          <code>git diff --numstat</code>.
+        </td>
+      </tr>
+    </table>
+
+    <h3>The states</h3>
+    <table>
+      <tr>
+        <th>State</th>
+        <th>When</th>
+        <th>Label</th>
+      </tr>
+      <tr>
+        <td><code>off</code></td>
+        <td>Auto-merge is off for the task</td>
+        <td>auto-merge off</td>
+      </tr>
+      <tr>
+        <td><code>on</code></td>
+        <td>On, and no PR checked yet</td>
+        <td>auto-merge on</td>
+      </tr>
+      <tr>
+        <td><code>merge</code></td>
+        <td>On, and the last check said merge</td>
+        <td>will auto-merge</td>
+      </tr>
+      <tr>
+        <td><code>wait</code></td>
+        <td>On, and the last check said wait</td>
+        <td>auto-merge waiting: first reason</td>
+      </tr>
+      <tr>
+        <td><code>never</code></td>
+        <td>On, and the last check said it needs a person</td>
+        <td>needs a person to merge: first reason</td>
+      </tr>
+    </table>
+
+    <section data-plan-step id="record" data-status="todo">
+      <h2>Keep the latest check</h2>
+      <p>
+        A new migration step adds <code>tasks.auto_merge_check</code> (JSON <code>{ verdict, reasons }</code>, NULL when none) and
+        <code>tasks.auto_merge_checked_at</code>; <code>db/tables.ts</code>, the <code>Task</code> type and
+        <code>migrations.lock</code> follow. <code>refreshPrs</code> writes every check it runs, not only <code>merge</code>, guarded on the
+        task being done with its PR open. The check is cleared when the PR is merged or closed, and when auto-merge is turned off for the
+        task (<code>setAutoMerge</code>).
+      </p>
+      <ul data-plan-done>
+        <li>A test: a refresh that finds a PR over the line limit stores <code>never</code> with that reason, and merging clears it.</li>
+        <li>Turning auto-merge off for a task clears its stored check.</li>
+        <li><code>pnpm check</code> passes.</li>
+      </ul>
+    </section>
+
+    <section data-plan-step id="view" data-status="todo">
+      <h2>One view of it, from the domain</h2>
+      <p>
+        <code>autoMergeView(task, repo, measured?)</code> in <code>domain/pull-request/auto-merge.ts</code> returns
+        <code>{ state, label, reasons, source: 'task' | 'repo' | 'planner', checked_at, limits: { max_lines, skip, tests } }</code>, with
+        the states and labels above. A stored check counts only while the PR is open; <code>source</code> says where on or off came from
+        (<code>planner</code>: off because the repo auto-approves planner proposals). <code>measured</code>, when given, is the branch's
+        local diff (lines, paths) and adds reasons such as "now 1,240 lines, over the limit of 1,000" or "touches .github/workflows/x.yml".
+        <code>TaskView</code> gets <code>auto_merge</code>; <code>taskDetail</code> also measures the branch when it has no open PR.
+        <code>api/contract.ts</code> follows.
+      </p>
+      <ul data-plan-done>
+        <li>Unit tests for each state, each source, and the measured reasons.</li>
+        <li><code>pnpm typecheck</code> passes, including <code>contract-check.ts</code>.</li>
+      </ul>
+    </section>
+
+    <section data-plan-step id="cli" data-status="todo">
+      <h2>The CLI</h2>
+      <p>
+        <code>agentdeck ls</code> adds the label to a task's line when the state isn't <code>off</code>, after the PR.
+        <code>agentdeck show</code> prints an <code>auto-merge</code> line (the label and where the setting comes from), then each reason,
+        when it was checked, and the limits that apply. <code>agentdeck context</code> marks open tasks the same way.
+      </p>
+      <ul data-plan-done>
+        <li>A task with auto-merge on and a PR over the limit shows "needs a person to merge: … over the limit …" in both.</li>
+        <li><code>pnpm check</code> passes.</li>
+      </ul>
+    </section>
+
+    <section data-plan-step id="dashboard" data-status="todo">
+      <h2>The dashboard</h2>
+      <p>
+        List and board rows get a small auto-merge mark for every state but <code>off</code>, coloured by state, with the label and reasons
+        in its tooltip. The task page's sidebar shows the label and reasons under the auto-merge select, when it was checked, and the
+        limits; for a task with a branch and no open PR, the measured numbers. The words come from the API (<code>label</code>,
+        <code>reasons</code>), not from the app.
+      </p>
+      <ul data-plan-done>
+        <li>Each state is visible in the list, the board and the task page, in light and dark themes.</li>
+        <li><code>pnpm check</code> passes.</li>
+      </ul>
+    </section>
+
+    <h2>Not in this plan</h2>
+    <ul>
+      <li>Changing what auto-merge decides, or its limits.</li>
+      <li>A filter for "will auto-merge" in the queue (easy to add once the state is on the view).</li>
+    </ul>
+  </body>
+</html>
