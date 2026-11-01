@@ -14,7 +14,7 @@ A plan is one HTML page that says how a task will be done, step by step. People 
 | Status        | `data-status` on the step: `todo`, `doing`, `done`, `blocked` or `skipped` | Anything else reads as `todo`. Keep it current as the work moves.                                                      |
 | Done criteria | `<ul data-plan-done>` inside a step                                        | Optional. One `<li>` per check; without `<li>`s the element's whole text is one check. The first one in a step counts. |
 
-Everything else is free HTML: tables, code, notes, inline `<style>`. Scripts don't run when the dashboard shows the page, and comments, `<script>`, `<style>` and `<template>` are ignored when reading the marked parts. Give each step an `id` so the dashboard can jump to it. A plan can be at most 512 KB.
+Everything else is free HTML: tables, code, notes. Scripts don't run when the dashboard shows the page, and comments, `<script>`, `<style>` and `<template>` are ignored when reading the marked parts. Give each step an `id` so the dashboard can jump to it. A plan can be at most 512 KB.
 
 ## Template
 
@@ -24,6 +24,7 @@ Everything else is free HTML: tables, code, notes, inline `<style>`. Scripts don
   <head>
     <meta charset="utf-8" />
     <title>Cache repo reads</title>
+    <link rel="stylesheet" href="plan.css" />
   </head>
   <body>
     <h1>Cache repo reads</h1>
@@ -43,6 +44,12 @@ Everything else is free HTML: tables, code, notes, inline `<style>`. Scripts don
   </body>
 </html>
 ```
+
+## Styling
+
+A plan carries no CSS. It links `docs/plans/plan.css` from the head (`<link rel="stylesheet" href="plan.css" />`) and has no `<style>` block, so plans stay small to write and to read into a worker's context. The stylesheet covers the page, headings, tables, code, `section` steps, and the classes `.wrap` with `nav.toc` (a contents list beside the page), `.lede`, `.card`, `.decision`, `.meta`, `.tag` (with `ok`, `warn` or `info`), `.grid2`, `.muted` and `ul.check`. A rule only one plan needs can go in that plan's own `<style>`.
+
+The dashboard shows a plan in a frame where a relative link doesn't resolve, so `PlanCard.vue` swaps that link for the file's contents, bundled at build time. A plan opened as a file finds the stylesheet beside it.
 
 ## How a plan reaches a task
 
