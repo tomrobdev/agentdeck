@@ -23,6 +23,7 @@ import DisplayMenu, { type Display } from './DisplayMenu.vue';
 import FilterBar from './FilterBar.vue';
 import GraphView from './GraphView.vue';
 import ListView from './ListView.vue';
+import TaskPeek from './TaskPeek.vue';
 
 const props = defineProps<{ tasks: TaskSummary[] }>();
 const selected = defineModel<number | null>('selected', { required: true });
@@ -118,6 +119,26 @@ async function onMerged(result: MergeResult) {
   if (result.cleanup_error) flash(`Merged, but cleanup failed: ${result.cleanup_error}`);
 }
 
+// Space opens the selected task beside the list (list view only). The panel follows the selection; its width is remembered.
+const peek = ref(false);
+const peeking = computed(() => peek.value && display.value.mode === 'list' && selected.value !== null);
+const PEEK_MIN = 320;
+const peekWidth = ref(Math.max(PEEK_MIN, loadSetting<number>('peekWidth', 520)));
+function startResize(down: PointerEvent) {
+  const startX = down.clientX;
+  const startW = peekWidth.value;
+  const move = (e: PointerEvent) => {
+    peekWidth.value = Math.round(Math.min(Math.max(startW + startX - e.clientX, PEEK_MIN), window.innerWidth - 320));
+  };
+  const up = () => {
+    window.removeEventListener('pointermove', move);
+    window.removeEventListener('pointerup', up);
+    saveSetting('peekWidth', peekWidth.value);
+  };
+  window.addEventListener('pointermove', move);
+  window.addEventListener('pointerup', up);
+}
+
 const MODES: Display['mode'][] = ['list', 'board', 'graph'];
 const selectedTask = () => props.tasks.find((x) => x.id === selected.value);
 useHotkeys({
@@ -125,6 +146,14 @@ useHotkeys({
   ArrowDown: () => step(1),
   k: () => step(-1),
   ArrowUp: () => step(-1),
+  ' ': () => {
+    if (display.value.mode !== 'list') return;
+    if (selected.value === null && order.value.length) selected.value = order.value[0].id;
+    peek.value = !peek.value;
+  },
+  Escape: () => {
+    if (peek.value) peek.value = false;
+  },
   Enter: () => selected.value !== null && emit('open', selected.value),
   a: () => {
     const t = selectedTask();
@@ -161,50 +190,66 @@ useHotkeys({
       <DisplayMenu v-model="display" />
     </div>
 
-    <p v-if="!shown.length && hasFilters(filters)" class="muted px-4 py-6">
-      Nothing matches these filters.
-      <button class="btn-ghost text-accent underline" @click="filters = emptyFilters()">Clear filters</button>
-    </p>
-    <ListView
-      v-else-if="display.mode === 'list'"
-      :groups="groups"
-      :group-by="display.groupBy"
-      :collapsed="display.collapsed"
-      :selected="selected"
-      :show="display.show"
-      :show-empty="display.showEmpty"
-      @toggle="toggleGroup"
-      @select="selected = $event"
-      @open="emit('open', $event)"
-      @act="(kind, id) => emit('act', kind, id)"
-      @merge="startMerge"
-    />
-    <GraphView
-      v-else-if="display.mode === 'graph'"
-      :all="tasks"
-      :shown="shown"
-      :selected="selected"
-      :show-finished="!!display.showFinished"
-      @select="selected = $event"
-      @open="emit('open', $event)"
-    />
-    <BoardView
-      v-else
-      :groups="groups"
-      :selected="selected"
-      :show="display.show"
-      @select="selected = $event"
-      @open="emit('open', $event)"
-      @move="(kind, id) => emit('act', kind, id)"
-      @merge="startMerge"
-    />
+    <div class="flex min-h-0 flex-1">
+      <div class="flex min-h-0 min-w-0 flex-1 flex-col">
+        <p v-if="!shown.length && hasFilters(filters)" class="muted px-4 py-6">
+          Nothing matches these filters.
+          <button class="btn-ghost text-accent underline" @click="filters = emptyFilters()">Clear filters</button>
+        </p>
+        <ListView
+          v-else-if="display.mode === 'list'"
+          :groups="groups"
+          :group-by="display.groupBy"
+          :collapsed="display.collapsed"
+          :selected="selected"
+          :show="display.show"
+          :show-empty="display.showEmpty"
+          @toggle="toggleGroup"
+          @select="selected = $event"
+          @open="emit('open', $event)"
+          @act="(kind, id) => emit('act', kind, id)"
+          @merge="startMerge"
+        />
+        <GraphView
+          v-else-if="display.mode === 'graph'"
+          :all="tasks"
+          :shown="shown"
+          :selected="selected"
+          :show-finished="!!display.showFinished"
+          @select="selected = $event"
+          @open="emit('open', $event)"
+        />
+        <BoardView
+          v-else
+          :groups="groups"
+          :selected="selected"
+          :show="display.show"
+          @select="selected = $event"
+          @open="emit('open', $event)"
+          @move="(kind, id) => emit('act', kind, id)"
+          @merge="startMerge"
+        />
+      </div>
+      <template v-if="peeking">
+        <div
+          class="w-1 flex-none cursor-col-resize bg-border hover:bg-accent"
+          role="separator"
+          aria-orientation="vertical"
+          title="Drag to resize"
+          @pointerdown="startResize"
+        />
+        <div class="flex min-h-0 flex-none flex-col border-l border-border" :style="{ width: `${peekWidth}px` }">
+          <TaskPeek :id="selected!" @open="emit('open', selected!)" @close="peek = false" />
+        </div>
+      </template>
+    </div>
     <footer class="muted flex justify-between gap-3 border-t border-border px-4 py-[5px] text-sm">
       <span
         >{{ shown.length }}<template v-if="shown.length !== tasks.length"> of {{ tasks.length }}</template> tasks</span
       >
       <span class="max-sm:hidden"
-        ><kbd>j</kbd><kbd>k</kbd> move · <kbd>↵</kbd> open · <kbd>a</kbd> approve · <kbd>r</kbd> retry · <kbd>m</kbd> merge ·<kbd>v</kbd>
-        list/board/graph · <kbd>c</kbd> new · <kbd>/</kbd> search · <kbd>⌘K</kbd> commands</span
+        ><kbd>j</kbd><kbd>k</kbd> move · <kbd>␣</kbd> peek · <kbd>↵</kbd> open · <kbd>a</kbd> approve · <kbd>r</kbd> retry ·
+        <kbd>m</kbd> merge ·<kbd>v</kbd> list/board/graph · <kbd>c</kbd> new · <kbd>/</kbd> search · <kbd>⌘K</kbd> commands</span
       >
     </footer>
     <MergeDialog v-if="merging" :task-id="merging.id" @close="merging = null" @merged="onMerged" />
