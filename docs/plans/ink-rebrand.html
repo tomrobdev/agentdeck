@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en" data-agentdeck-plan="1">
+  <head>
+    <meta charset="utf-8" />
+    <title>Ink: the high contrast rebrand</title>
+    <style>
+      body {
+        font:
+          15px/1.5 -apple-system,
+          sans-serif;
+        max-width: 760px;
+        margin: 40px auto;
+        padding: 0 16px;
+        color: #000;
+        background: #fff;
+      }
+      code,
+      pre {
+        font:
+          13px ui-monospace,
+          'SF Mono',
+          Menlo,
+          monospace;
+      }
+      pre {
+        background: #f4f4f4;
+        border: 1px solid #000;
+        padding: 12px;
+        overflow-x: auto;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      td,
+      th {
+        border: 1px solid #000;
+        padding: 4px 8px;
+        text-align: left;
+        vertical-align: top;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Ink: the high contrast rebrand</h1>
+    <p data-plan-summary>
+      High contrast light is now the default theme (commit 58a7c88). Ink is the look that goes with it: black on white, hard edges, one blue
+      accent, and a new mark and lowercase wordmark. This plan ports the design canvas (https://claude.ai/artifact/CCSu6sVSZCjKqtR9FMvn4r)
+      into the dashboard in three steps, each its own task.
+    </p>
+
+    <h2>The look, in numbers</h2>
+    <table>
+      <tr>
+        <th>Part</th>
+        <th>Ink (high contrast)</th>
+        <th>Other themes</th>
+      </tr>
+      <tr>
+        <td>Colours</td>
+        <td>Unchanged: the contrast theme's tokens in <code>themes.css</code> already are the Ink palette.</td>
+        <td>Unchanged</td>
+      </tr>
+      <tr>
+        <td>Corner radius</td>
+        <td>2px on buttons, inputs, cards, chips, pills, the segmented control and popovers</td>
+        <td>As today (6px, 8px, 999px)</td>
+      </tr>
+      <tr>
+        <td>Row rules</td>
+        <td>1px <code>var(--text)</code> between list rows and under card heads</td>
+        <td><code>var(--border)</code></td>
+      </tr>
+      <tr>
+        <td>Frame edges</td>
+        <td>2px <code>var(--text)</code> under the header and above the status bar</td>
+        <td>1px <code>var(--border)</code></td>
+      </tr>
+      <tr>
+        <td>Status chips and pills</td>
+        <td>Outlined, 1.5px in the status colour, no tint; only running keeps a 14% tint</td>
+        <td>As today</td>
+      </tr>
+      <tr>
+        <td>Shadows</td>
+        <td>None on popovers and modals; a 2px <code>var(--text)</code> border instead</td>
+        <td>As today</td>
+      </tr>
+      <tr>
+        <td>Type</td>
+        <td colspan="2">
+          No web fonts. <code>--font-sans</code> and <code>--font-mono</code> stay the system stacks. Task <code>#ids</code>, meter
+          percentages and shas use <code>--font-mono</code> in every theme.
+        </td>
+      </tr>
+    </table>
+    <p>
+      Shape differences between themes go through custom properties set per theme in <code>themes.css</code> (for example
+      <code>--radius-ui</code>, <code>--rule</code>, <code>--edge</code>, <code>--pill-tint</code>), read by <code>style.css</code>, so a
+      theme switch still needs no rebuild. <code>daemon/test/themes.test.ts</code> requires every theme to define the same tokens in light
+      and dark, so each new token goes in every theme rule, including the system dark copies.
+    </p>
+
+    <h2>The mark</h2>
+    <p>Three stacked cards; the front one is filled, with an accent square for the task that is running.</p>
+    <pre>
+&lt;svg viewBox="0 0 56 56"&gt;
+  &lt;rect x="14" y="2" width="38" height="38" fill="var(--bg)" stroke="var(--text)" stroke-width="3"/&gt;
+  &lt;rect x="9" y="8" width="38" height="38" fill="var(--bg)" stroke="var(--text)" stroke-width="3"/&gt;
+  &lt;rect x="4" y="14" width="38" height="38" fill="var(--text)"/&gt;
+  &lt;rect x="12" y="22" width="10" height="10" fill="var(--accent)"/&gt;
+&lt;/svg&gt;</pre>
+    <p>
+      At 20px and below, drop the middle card and use stroke-width 5 on the back one, and make the accent square 12×12. The wordmark is
+      lowercase <b>agentdeck</b>, weight 800, letter-spacing −0.03em. Only the logo changes case: the window title, docs and CLI output
+      still say AgentDeck.
+    </p>
+
+    <section data-plan-step id="ink-theme" data-status="todo">
+      <h2>Ink shapes for the high contrast theme</h2>
+      <p>
+        In <code>app/src/styles/themes.css</code>, add the shape tokens above to every theme (the current values for warm, cool and github;
+        the Ink values for contrast). In <code>app/src/styles/style.css</code>, use them in the base <code>button</code> and input rules,
+        <code>card</code>, <code>card-head</code>, <code>chip</code>, <code>.pill</code>, <code>.seg</code>, <code>kbd</code> and the
+        popover and modal shadows. Use them in components only where a component hard-codes a radius, border colour or shadow that the table
+        covers (<code>components/ui/Popover.vue</code>, <code>Modal.vue</code>, the list rows in <code>components/queue/ListView.vue</code>,
+        the header and status bar edges).
+      </p>
+      <ul data-plan-done>
+        <li><code>pnpm check</code> passes, including the themes test.</li>
+        <li>
+          In the high contrast theme, light and dark, buttons, inputs, cards, chips and popovers have 2px corners, list rows are split by
+          black (white in dark) 1px rules, and popovers have no shadow.
+        </li>
+        <li>Status pills are outlined with no tint, except running.</li>
+        <li>Warm, cool and github look exactly as before.</li>
+      </ul>
+    </section>
+
+    <section data-plan-step id="ink-chrome" data-status="todo">
+      <h2>The mark and wordmark in the header, square meters, mono ids</h2>
+      <p>
+        <code>app/src/components/layout/AppHeader.vue</code>: replace the "AgentDeck" text with the 20px mark (inline SVG,
+        <code>aria-hidden</code>) and the lowercase wordmark, keeping an accessible name of "AgentDeck". The on nav item is filled with
+        <code>var(--text)</code> and <code>var(--bg)</code> text in the high contrast theme.
+        <code>app/src/components/layout/StatusBar.vue</code>: meters become square bars (outline in <code>var(--text)</code>, fill in
+        <code>var(--text)</code>, or <code>var(--blocked)</code> over the line) with the budget marker in <code>var(--accent)</code>, under
+        the high contrast theme only. Task ids in the list, board and task title (<code>ListView.vue</code>, <code>BoardView.vue</code>,
+        <code>task/TaskTitle.vue</code>) and the meters' percentages use <code>font-mono</code>.
+      </p>
+      <ul data-plan-done>
+        <li><code>pnpm check</code> passes.</li>
+        <li>
+          The header shows the mark and "agentdeck" in every theme; the mark follows the theme's text and accent colours in light and dark.
+        </li>
+        <li>A screen reader still reads the header's name as "AgentDeck".</li>
+        <li>In the high contrast theme, the 5h and 7d meters are square, with an accent-coloured budget marker.</li>
+        <li><code>#ids</code> are monospaced in the list, the board and the task title.</li>
+      </ul>
+    </section>
+
+    <section data-plan-step id="ink-icon" data-status="todo">
+      <h2>App icon from the mark</h2>
+      <p>
+        Add <code>app/src-tauri/icons/icon.svg</code>: a 1024×1024 black square with corner radius 224, and the mark centred at 600px, drawn
+        inverted (cards outlined in white over black, the front card white, the accent square <code>#0033cc</code>). Regenerate the icon set
+        from it with the Tauri CLI already in the app's dependencies (<code>pnpm --dir app tauri icon src-tauri/icons/icon.svg</code>),
+        keeping the file names <code>tauri.conf.json</code> lists.
+      </p>
+      <ul data-plan-done>
+        <li><code>pnpm check</code> passes.</li>
+        <li>
+          <code>app/src-tauri/icons/icon.svg</code> exists, and every file <code>tauri.conf.json</code> lists under <code>icon</code> is
+          regenerated from it.
+        </li>
+        <li><code>tauri.conf.json</code> is unchanged.</li>
+      </ul>
+    </section>
+  </body>
+</html>
