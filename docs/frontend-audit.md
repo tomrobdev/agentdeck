@@ -1,6 +1,6 @@
 # Front-end audit
 
-Step 1 of the plan "Front-end design: audit, themes, Tailwind". It covers `app/`: every file under `app/src/components/`, `app/src/style.css`, and the few non-component files that carry styling (`App.vue`, `render.ts`, `index.html`, `tauri.conf.json`).
+Step 1 of the plan "Front-end design: audit, themes, Tailwind". It covers `app/`: every file under `app/src/components/`, `app/src/styles/style.css`, and the few non-component files that carry styling (`App.vue`, `render.ts`, `index.html`, `app/src-tauri/tauri.conf.json`).
 
 Nothing in `app/` was changed. File references are `path:line` against the tree at the time of writing, with `app/src/` dropped from component paths.
 
@@ -21,7 +21,7 @@ Nothing in `app/` was changed. File references are `path:line` against the tree 
 | DOMPurify    | `3.4.17`                       | 3.4.17                      |
 
 - **No CSS tooling.** There is no PostCSS config, no Sass and no CSS framework. The whole design system is one global `style.css` (275 lines) plus a `<style scoped>` block in almost every SFC. `Markdown.vue:27` is the one unscoped block, because it styles `v-html` output.
-- **No router or state library.** `router.ts` and `taskView.ts` are hand-rolled. This is irrelevant to styling except that dynamic class names come from `taskView.ts` and `api.ts` (see section 6).
+- **No router or state library.** `router.ts` and `taskView.ts` are hand-rolled. This is irrelevant to styling except that dynamic class names come from `taskView.ts` and `app/src/api/format.ts` (see section 6).
 - **No component library.** Buttons, inputs, pills and popovers are all hand-styled. The code shows where Reka UI or a similar headless library would fit (`Popover.vue`, `Modal.vue`), but none is installed.
 - **Theming is OS-driven only.** Dark mode is two `@media (prefers-color-scheme: dark)` blocks (`style.css:26`, `style.css:172`). There is no `data-theme` attribute, no toggle and no stored preference.
 - **Webview CSP** (`src-tauri/tauri.conf.json:24`): `style-src 'self' 'unsafe-inline'`, `img-src 'self' data:`. Inline styles and generated CSS are allowed; remote fonts are not.
@@ -284,7 +284,7 @@ Syntax highlighting, on `--panel` (code view) and on the added-line tint (diff):
 6. **Injected HTML cannot take utilities.** `.hljs-*` (`style.css:183-231`) and `.md` (`Markdown.vue:27-114`) style `v-html` output, and `DOMPurify` strips classes it does not know. These stay as hand-written CSS in `@layer components`, reading the same tokens. The `.hljs` token colours must remain CSS variables, not utilities.
 7. **`@apply` in SFC style blocks needs `@reference`.** Each `<style>` that uses `@apply` or theme variables must start with `@reference "../style.css";` (path per file). Preferred route is utilities in the template and deleting the `<style>` block, which also removes blocker 1 for that file.
 8. **`color-mix(in srgb, …)` appears about 25 times.** Tailwind v4's opacity modifier (`bg-accent/10`) compiles to `color-mix(in oklab, …)`, which gives slightly different tints than today's srgb mixes, and it mixes with `transparent`, not with `--panel`. The existing tints are over a surface (for example `color-mix(in srgb, var(--blocked) 18%, var(--panel))`). Define the tints as tokens (`--accent-soft`, `--diff-add`, …) rather than rebuilding each one with a modifier.
-9. **Tailwind v4 baseline browser targets** are Safari 16.4+, Chrome 111+, Firefox 128+. The Tauri webview on macOS is WKWebView, so check `bundle.macOS.minimumSystemVersion` in `tauri.conf.json` (not set in the fields read for this audit) against the macOS version that ships Safari 16.4 (macOS 13.3). The app already depends on `color-mix` (Safari 16.2), so the delta is small.
+9. **Tailwind v4 baseline browser targets** are Safari 16.4+, Chrome 111+, Firefox 128+. The Tauri webview on macOS is WKWebView, so check `bundle.macOS.minimumSystemVersion` in `app/src-tauri/tauri.conf.json` (not set in the fields read for this audit) against the macOS version that ships Safari 16.4 (macOS 13.3). The app already depends on `color-mix` (Safari 16.2), so the delta is small.
 10. **Tooling compatibility must be checked, not assumed.** The app is on Vite 8. `@tailwindcss/vite` declares a peer range on Vite; confirm the installed Tailwind 4.x release accepts Vite 8 before starting. `pnpm-lock.yaml` has no Tailwind entry today. Per the project rules, adding the dependency (`tailwindcss`, `@tailwindcss/vite`) needs a stated reason; the reason is "the design system becomes tokens plus utilities instead of a scoped block per component that each redeclare the same card, chip and button". It is a build-time dependency only (`devDependencies`), so no runtime dependency is added.
 11. **The CSP is not a blocker.** `style-src 'unsafe-inline'` is already allowed and Tailwind produces one static CSS file.
 12. **Breakpoints and widths** (section 2) become `--breakpoint-*` and spacing multiples. The three media queries are `max-width`; Tailwind's variants are `min-width`. Convert, don't copy.
