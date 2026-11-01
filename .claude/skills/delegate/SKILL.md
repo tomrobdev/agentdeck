@@ -34,7 +34,7 @@ The repo must be registered (`agentdeck repo add <path>`). Workers run in Claude
 
 - **New dependencies:** a worker can't install a new package. Add it on the task's branch yourself first, or leave it out of the task. The daemon's `setup_cmd` installs only what the lockfile already lists. A worker that blocks asking for one (NEEDS deps) can be unblocked with `agentdeck install-needs <id>`.
 - **Network:** tests that call a host need it in the repo's network list (`agentdeck repo set <repo> network "<hosts>"`). Ask before widening that list.
-- **`.claude/`:** Claude Code won't let a worker edit anything under `.claude/` (skills, settings), even in its worktree, and retrying doesn't help (tasks #37, #108 and #111 blocked on it). Make those edits in a session, before queueing or on the task's branch afterwards. A task that is only `.claude/` edits is session work: do it, then reject the task.
+- **`.claude/`:** Claude Code won't let a worker edit anything under `.claude/` (skills, settings), even in its worktree, and retrying doesn't help (tasks #37, #108 and #111 blocked on it). Make those edits in a session, before queueing or on the task's branch afterwards. A task that is only `.claude/` edits is session work: do it, then reject the proposal, or mark the task done with a note (`agentdeck done <id> --note "…"`) if it already ran and blocked.
 - **Work it can't see:** task branches start from `origin/<base>`. Push what the task needs first, or link it with `--builds-on` to the task that adds it.
 - **Tests the sandbox breaks:** a test that needs something the sandbox refuses (such as `ps`) fails inside it. The worker reports it and finishes; AgentDeck's own test run outside the sandbox is the real check.
 

@@ -21,7 +21,7 @@ The reason is the line after the status. A `NEEDS` reason is what the worker ask
 
 - **NEEDS deps:** `agentdeck install-needs <id>` installs the packages on the task's branch and retries it. Check that the packages make sense first.
 - **NEEDS host:** the repo's network list (`agentdeck repo set <repo> network "<hosts>"`). Ask before widening it.
-- **NEEDS edit** of files the worker can't write, usually under `.claude/`: retrying won't help. Make the edits in this session. If that was all of the task, reject it (it was session work); if not, push the edits to its branch and retry it.
+- **NEEDS edit** of files the worker can't write, usually under `.claude/`: retrying won't help. Make the edits in this session. If that was all of the task, mark it done with a note that says where the work landed (`agentdeck done <id> --note "…"`); if not, push the edits to its branch and retry it.
 - **A conflict** with the base that a resolve run couldn't settle: settle it in the worktree (`git merge origin/<base>`, fix, test, commit, push), then `agentdeck retry <id>`, or retry with a note that names the conflicting files.
 - **Anything else:** read `agentdeck log <id>`. Then retry with a note that answers what it asked, mark it done if the work is in fact finished (`agentdeck done <id> --note "…"`), or cancel it.
 
