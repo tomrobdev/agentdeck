@@ -53,6 +53,7 @@ check<Fits<C.NewRepo, In<typeof actions.addRepo, 1>>>();
 check<Fits<C.RepoPatch, In<typeof actions.updateRepo, 2>>>();
 check<Fits<C.NewTask, In<typeof actions.addTask, 1>>>();
 check<Fits<C.TaskPatch, In<typeof actions.editTask, 2>>>();
+check<Fits<C.NewLink, In<typeof actions.linkTasks, 2>>>();
 check<Fits<C.SettingsPatch, In<typeof actions.updateSettings, 1>>>();
 check<Fits<C.MergeRequest, In<typeof actions.mergeTask, 2>>>();
 check<Fits<C.AutoMergeRequest, In<typeof actions.setAutoMerge, 2>>>();

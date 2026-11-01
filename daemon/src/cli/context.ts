@@ -20,6 +20,7 @@ export function parseCommandLine(argv: string[]) {
       'max-turns': { type: 'string' },
       attempts: { type: 'string' },
       after: { type: 'string' },
+      'builds-on': { type: 'string' },
       plan: { type: 'string' },
       steps: { type: 'string' },
       status: { type: 'string', short: 's' },

@@ -16,4 +16,5 @@ export type { Scheduler } from './scheduler/scheduler.ts';
 export * from './settings.ts';
 export * from './task/task-views.ts';
 export * from './task/tasks.ts';
+export { linkTasks, unlinkTasks } from './task/links.ts';
 export type { TaskStatus } from '../domain/task/lifecycle.ts';

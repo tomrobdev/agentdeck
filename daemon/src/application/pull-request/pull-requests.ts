@@ -18,7 +18,7 @@ import { type Repo, pausedReason } from '../../domain/repo/repo.ts';
 import type { Task } from '../../domain/task/task.ts';
 import { ActionError, flag, object, requireTask, requireTaskRepo, text } from '../input.ts';
 import { prPlanFor } from '../plans.ts';
-import { dependentsWaiting } from '../task/dependencies.ts';
+import { dependentsWaiting, landsAfter } from '../task/dependencies.ts';
 import { settle, settlePr } from '../task/settle.ts';
 
 /** How often the scheduler re-reads the state of open PRs. */
@@ -50,7 +50,7 @@ export interface MergePreview {
   warnings: string[];
   /** One of the problems is a conflict with the base branch, which a resolve run can fix. */
   conflicting: boolean;
-  /** Queued tasks waiting on this one with `--after`. */
+  /** Queued tasks that build on this one and so wait for it. */
   unblocks: { id: number; title: string }[];
   /** Whether the daemon will merge it on its own, and why not yet; null when auto-merge is off for the task. */
   auto_merge: AutoMergeCheck | null;
@@ -64,7 +64,14 @@ function lastTestsPassed(db: Db, id: number): number | null {
 /** The auto-merge check for a task's PR (read `withFiles`), or null when auto-merge is off for the task. */
 function autoMergeFor(db: Db, task: Task, repo: Repo, pr: PrDetails, tests_passed: number | null): AutoMergeCheck | null {
   if (!autoMergeOn(task, repo)) return null;
-  return autoMergeCheck({ repo, pr_state: task.pr_state, pr, tests_passed, paused: pausedReason(db.isPaused(), repo) });
+  return autoMergeCheck({
+    repo,
+    pr_state: task.pr_state,
+    pr,
+    tests_passed,
+    lands_after: landsAfter(db, task.id),
+    paused: pausedReason(db.isPaused(), repo),
+  });
 }
 
 /** The task, its repo and its open PR, or an ActionError saying why it can't be merged. */
@@ -98,7 +105,7 @@ export async function mergePreview(db: Db, id: number): Promise<MergePreview> {
     deletions: pr.deletions,
     tests_passed,
     checks: pr.checks,
-    ...mergeCheck({ pr_state: task.pr_state, pr, tests_passed }),
+    ...mergeCheck({ pr_state: task.pr_state, pr, tests_passed, lands_after: landsAfter(db, id) }),
     conflicting: isConflicting(pr),
     unblocks: dependentsWaiting(db, id).map((t) => ({ id: t.id, title: t.title })),
     auto_merge: autoMergeFor(db, task, repo, pr, tests_passed),
@@ -130,7 +137,7 @@ export async function mergeTask(db: Db, id: number, opts: { method?: string; del
   const pr = await github.prDetails(url, cwd).catch((err) => {
     throw new ActionError(`could not read the PR: ${(err as Error).message}`);
   });
-  const { problems } = mergeCheck({ pr_state: task.pr_state, pr, tests_passed: null });
+  const { problems } = mergeCheck({ pr_state: task.pr_state, pr, tests_passed: null, lands_after: landsAfter(db, id) });
   if (problems.length) throw new ActionError(`can't merge #${id}: ${problems.join('; ')}`);
   return mergeOpenPr(db, { task, repo, url, cwd }, pr, { method, deleteBranch, reason: `${method} merge` });
 }
