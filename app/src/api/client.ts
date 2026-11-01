@@ -3,6 +3,7 @@
 import type {
   AutoMergeRequest,
   AutoMergeResult,
+  CancelMergeRequestResult,
   CancelResult,
   Changes,
   DaemonHealth,
@@ -26,6 +27,9 @@ import type {
   RepoDeletion,
   RepoDetail,
   RepoPatch,
+  RequestMergeRequest,
+  RequestMergeResult,
+  RequestMergesResult,
   RestartNowResult,
   RestartResult,
   Review,
@@ -115,6 +119,12 @@ export const api = {
   merge: (id: number, body: MergeRequest) => call<MergeResult>(`/api/tasks/${id}/merge`, { method: 'POST', json: body }),
   /** Merge these tasks' PRs, each with its own method, deleting the branches; the ones left open come back with why. */
   mergeAll: (ids: number[]) => call<MergeAllResult>('/api/tasks/merge', { method: 'POST', json: { ids } }),
+  /** Ask the daemon to merge the task's PR once it is ready; the answer is at once. */
+  requestMerge: (id: number, body: RequestMergeRequest = {}) =>
+    call<RequestMergeResult>(`/api/tasks/${id}/merge-request`, { method: 'POST', json: body }),
+  /** Request these tasks' merges, each with its own method; the ones it could not request come back with why. */
+  requestMerges: (ids: number[]) => call<RequestMergesResult>('/api/tasks/merge-requests', { method: 'POST', json: { ids } }),
+  cancelMergeRequest: (id: number) => call<CancelMergeRequestResult>(`/api/tasks/${id}/merge-request`, { method: 'DELETE' }),
   /** Let the daemon merge the task's PR on its own (true), not (false), or follow the repo (null). */
   autoMerge: (id: number, body: AutoMergeRequest) => call<AutoMergeResult>(`/api/tasks/${id}/auto-merge`, { method: 'POST', json: body }),
   /** Merge the base branch into the task's branch; a conflict starts a claude run, so this can take minutes. */

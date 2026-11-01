@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { ago, describeLive, describeSync } from '../../api';
+import { ago, api, describeLive, describeMergeRequest, describeSync } from '../../api';
+import { useActions } from '../../composables/useActions';
 import { openExternal } from '../../platform/native';
 import RowMenu from './RowMenu.vue';
 import {
@@ -46,8 +47,12 @@ const emit = defineEmits<{
   mergeAll: [ids: number[]];
 }>();
 
+const { run } = useActions();
+const cancelMerge = (id: number) => run(() => api.cancelMergeRequest(id));
+
 /** The PRs a group's "Merge all" would merge: only Review has any, less the ones syncing. */
-const mergeable = (g: Group) => (g.key === 'review' ? g.tasks.filter((t) => canReview(t) && !t.sync).map((t) => t.id) : []);
+const mergeable = (g: Group) =>
+  g.key === 'review' ? g.tasks.filter((t) => canReview(t) && !t.sync && !t.merge_request).map((t) => t.id) : [];
 
 // The row menu: right-click on a row, or the context-menu key / ⇧F10 on the selected one.
 const menu = ref<{ id: number; x: number; y: number } | null>(null);
@@ -143,6 +148,9 @@ watch(
               </span>
               <span v-else-if="t.live" class="truncate text-sm text-muted tabular-nums" data-live>{{ describeLive(t.live) }}</span>
               <span v-else-if="t.sync" class="truncate text-sm text-accent tabular-nums" data-sync>{{ describeSync(t.sync) }}</span>
+              <span v-else-if="t.merge_request" class="truncate text-sm text-accent" data-merge-request>{{
+                describeMergeRequest(t.merge_request)
+              }}</span>
               <span v-else-if="show.reason && t.waiting?.stuck" class="truncate text-sm text-blocked group-[.s-failed]:text-failed"
                 >Can't start: {{ t.waiting.stuck }}</span
               >
@@ -189,7 +197,10 @@ watch(
                 >
                   Sync
                 </button>
-                <button class="btn-mini" title="Merge (m)" @click="emit('merge', t.id)">Merge</button>
+                <button v-if="t.merge_request" class="btn-mini" title="Withdraw the merge request" @click="cancelMerge(t.id)">
+                  Cancel merge
+                </button>
+                <button v-else class="btn-mini" title="Merge (m)" @click="emit('merge', t.id)">Merge</button>
               </template>
               <button v-if="t.pr_url" class="btn-mini" title="Open the pull request" @click="openExternal(t.pr_url)">PR ↗</button>
             </span>

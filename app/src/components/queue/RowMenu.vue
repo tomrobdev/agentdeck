@@ -55,6 +55,7 @@ function done(fn: () => unknown) {
   emit('close');
   return fn();
 }
+const cancelMerge = () => run(() => api.cancelMergeRequest(props.task.id));
 const setPriority = (value: number) =>
   done(() => value !== props.task.priority && run(() => api.editTask(props.task.id, { priority: value })));
 const setModel = (model: string) => done(() => model !== props.task.model && run(() => api.editTask(props.task.id, { model })));
@@ -159,9 +160,16 @@ const sub = `${item} pl-5`;
       <button v-for="e in events" :key="e" :class="item" role="menuitem" @click="done(() => emit('act', e, task.id))">
         {{ LABELS[e] }}
       </button>
-      <button v-if="canReview(task)" :class="item" role="menuitem" :disabled="!!task.sync" @click="done(() => emit('merge', task.id))">
+      <button
+        v-if="canReview(task)"
+        :class="item"
+        role="menuitem"
+        :disabled="!!task.sync || !!task.merge_request"
+        @click="done(() => emit('merge', task.id))"
+      >
         Merge…
       </button>
+      <button v-if="canReview(task) && task.merge_request" :class="item" role="menuitem" @click="done(cancelMerge)">Cancel merge</button>
     </template>
   </div>
 </template>

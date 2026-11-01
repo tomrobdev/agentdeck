@@ -1,61 +1,45 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { type MergeMethod, type MergeResult, MERGE_METHODS, api, autoMergeLine, mergePreviewQuery, syncLine } from '../../api';
+import { type MergeMethod, type MergeResult, MERGE_METHODS, api, autoMergeLine, mergePreviewQuery } from '../../api';
 import { useActions } from '../../composables/useActions';
 import Modal from '../ui/Modal.vue';
 
-// The confirm before a merge: it writes to the base branch on GitHub and can't be undone from here.
-// Enter merges, Esc cancels (Modal). Errors show in the dialog, so it asks for the refresh, not `run`.
+// The confirm before a merge: it writes to the base branch on GitHub and can't be undone from here. The button asks the
+// daemon to merge (a merge request) and the dialog closes at once; the daemon merges when the PR is ready. Only a PR whose
+// checks or tests failed merges now, on the person's say-so. Enter confirms, Esc cancels (Modal). Errors show in the dialog.
 const props = defineProps<{ taskId: number }>();
-const emit = defineEmits<{ close: []; merged: [result: MergeResult] }>();
+const emit = defineEmits<{ close: []; merged: [result: MergeResult]; requested: [] }>();
 const { refresh } = useActions();
 
 const previewQ = useQuery(mergePreviewQuery(props.taskId));
 const preview = computed(() => previewQ.data.value ?? null);
 const loadError = computed(() => previewQ.error.value?.message ?? '');
 const method = ref<MergeMethod>('squash');
-const deleteBranch = ref(true);
 const merging = ref(false);
 const mergeError = ref('');
-const syncing = ref(false);
-const syncNote = ref('');
 
-// The preview's own method is the starting choice, again whenever the preview changes (after a sync).
 watch(preview, (p) => p && (method.value = p.method), { immediate: true });
 
-const canConfirm = computed(() => !!preview.value && !preview.value.problems.length && !merging.value && !syncing.value);
-
-const SETTLE_READS = 5;
-const SETTLE_MS = 2000;
-const WAITING = ' Waiting for GitHub to see it…';
-
-// Sync the task's branch with the base branch. A conflict starts a claude run, so this can take minutes.
-async function sync() {
-  syncing.value = true;
-  mergeError.value = syncNote.value = '';
-  try {
-    const res = await api.sync(props.taskId);
-    await refresh();
-    if (res.outcome === 'blocked') return emit('close'); // the task page shows why it is blocked
-    syncNote.value = syncLine(res);
-    if (res.push_error) mergeError.value = `Could not push: ${res.push_error}`;
-    else if (res.pushed) syncNote.value += ' Pushed; GitHub may take a moment to see it.';
-    await previewQ.refetch();
-    // GitHub works out mergeability a little after a push: until it does, the preview still says the branch conflicts and
-    // Merge stays off. Read it again for a few seconds, so Merge is ready once the sync is.
-    for (let i = 0; i < SETTLE_READS && preview.value?.conflicting; i++) {
-      syncNote.value = `${syncNote.value.replace(WAITING, '')}${WAITING}`;
-      await new Promise((r) => setTimeout(r, SETTLE_MS));
-      await previewQ.refetch();
-    }
-    syncNote.value = syncNote.value.replace(WAITING, '');
-  } catch (e) {
-    mergeError.value = (e as Error).message;
-  } finally {
-    syncing.value = false;
-  }
-}
+const request = computed(() => preview.value?.request ?? null);
+// Failing checks or failed tests stop a merge request; the person can still wave them through, here and now.
+const mergeNow = computed(() => {
+  const p = preview.value;
+  if (!p) return false;
+  if (!p.request) return true; // a daemon without merge requests
+  return p.request.verdict === 'never' && (p.checks.failing > 0 || p.tests_passed === 0);
+});
+const reasons = computed(() => request.value?.reasons ?? []);
+const warnings = computed(() => (preview.value?.warnings ?? []).filter((w) => !reasons.value.includes(w)));
+const label = computed(() => (mergeNow.value ? 'Merge now' : request.value?.verdict === 'wait' ? 'Merge when ready' : 'Merge'));
+const canConfirm = computed(() => {
+  const p = preview.value;
+  if (!p || merging.value) return false;
+  return mergeNow.value ? !p.problems.length : request.value?.verdict !== 'never';
+});
+const blockers = computed(() =>
+  mergeNow.value ? (preview.value?.problems ?? []) : request.value?.verdict === 'never' ? reasons.value : [],
+);
 
 const commitsLine = computed(() => {
   const n = preview.value?.commits ?? 0;
@@ -82,7 +66,13 @@ async function merge() {
   merging.value = true;
   mergeError.value = '';
   try {
-    emit('merged', await api.merge(props.taskId, { method: method.value, delete_branch: deleteBranch.value }));
+    if (mergeNow.value) {
+      emit('merged', await api.merge(props.taskId, { method: method.value, delete_branch: true }));
+      return;
+    }
+    await api.requestMerge(props.taskId, { method: method.value });
+    await refresh();
+    emit('requested');
   } catch (e) {
     mergeError.value = (e as Error).message;
     merging.value = false;
@@ -147,40 +137,34 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
         </template>
       </dl>
 
-      <label class="flex items-start gap-2">
-        <input v-model="deleteBranch" class="mt-[3px]" type="checkbox" />
-        Delete the remote branch and the worktree <span class="muted">(the local branch stays, so the diff remains readable)</span>
-      </label>
+      <p class="muted m-0 text-sm">
+        Merging deletes the remote branch and the worktree (the local branch stays, so the diff remains readable).
+      </p>
 
       <ul
-        v-if="preview.warnings.length"
+        v-if="warnings.length"
         class="m-0 flex list-none flex-col gap-0.5 rounded-md bg-[color-mix(in_srgb,var(--blocked)_10%,var(--panel))] px-3 py-2 text-blocked"
       >
-        <li v-for="w in preview.warnings" :key="w">⚠ {{ w }}</li>
+        <li v-for="w in warnings" :key="w">⚠ {{ w }}</li>
       </ul>
       <ul
-        v-if="preview.problems.length"
+        v-if="!mergeNow && request?.verdict === 'wait'"
+        class="m-0 flex list-none flex-col gap-0.5 rounded-md bg-panel-2 px-3 py-2 text-muted"
+      >
+        <li v-for="r in reasons" :key="r">… Waits for it: {{ r }}</li>
+      </ul>
+      <ul
+        v-if="blockers.length"
         class="m-0 flex list-none flex-col gap-0.5 rounded-md bg-[color-mix(in_srgb,var(--failed)_10%,var(--panel))] px-3 py-2 text-failed"
       >
-        <li v-for="p in preview.problems" :key="p">✕ Can't merge: {{ p }}</li>
+        <li v-for="p in blockers" :key="p">✕ Can't merge: {{ p }}</li>
       </ul>
-      <div v-if="preview.conflicting" class="flex items-center gap-2.5">
-        <button :disabled="syncing || merging" @click="sync">{{ syncing ? 'Syncing…' : 'Sync with base' }}</button>
-        <span class="muted text-sm">
-          {{
-            syncing
-              ? 'Syncing the branch with the base branch; a conflict starts a claude run, which can take a few minutes.'
-              : 'Merges the base branch into the branch and has claude settle conflicts. If it cannot, the task is blocked.'
-          }}
-        </span>
-      </div>
-      <p v-if="syncNote" class="muted">{{ syncNote }}</p>
       <p v-if="mergeError" class="form-error">{{ mergeError }}</p>
     </div>
 
     <div class="mt-4 flex justify-end gap-2">
       <button @click="emit('close')">Cancel</button>
-      <button class="primary" :disabled="!canConfirm" @click="merge">{{ merging ? 'Merging…' : 'Merge' }}</button>
+      <button class="primary" :disabled="!canConfirm" @click="merge">{{ merging ? 'Working…' : label }}</button>
     </div>
   </Modal>
 </template>

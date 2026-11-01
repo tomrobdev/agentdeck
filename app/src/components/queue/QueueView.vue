@@ -122,6 +122,10 @@ async function onMerged(result: MergeResult) {
   await refresh();
   if (result.cleanup_error) flash(`Merged, but cleanup failed: ${result.cleanup_error}`);
 }
+// A requested merge leaves the PR in review until the daemon merges it, so the selection stays.
+function onRequested() {
+  merging.value = null;
+}
 
 // Space opens the selected task beside the list (list view only). The panel follows the selection; its width is remembered.
 const peek = ref(false);
@@ -156,14 +160,16 @@ async function sync(id: number) {
   if (ok) flash(done);
 }
 function act(kind: BoardMove | 'sync', id: number) {
-  if ((kind === 'merge' || kind === 'sync') && props.tasks.find((t) => t.id === id)?.sync) return;
+  const task = props.tasks.find((t) => t.id === id);
+  if ((kind === 'merge' || kind === 'sync') && task?.sync) return;
+  if (kind === 'merge' && task?.merge_request) return;
   if (kind === 'merge') startMerge(id);
   else if (kind === 'sync') sync(id);
   else emit('act', kind, id);
 }
 /** "Merge all" on the Review group: the bulk merge confirm, for every PR in review that isn't syncing. */
 function mergeAll(ids: number[]) {
-  bulkMerging.value = props.tasks.filter((t) => ids.includes(t.id) && !t.sync);
+  bulkMerging.value = props.tasks.filter((t) => ids.includes(t.id) && !t.sync && !t.merge_request);
 }
 
 // Bulk selection, in the list only: `x` or shift-click picks, and the bar offers what every picked task allows.
@@ -245,7 +251,7 @@ useHotkeys({
   },
   m: () => {
     const t = selectedTask();
-    if (t && canReview(t) && !t.sync) startMerge(t.id);
+    if (t && canReview(t) && !t.sync && !t.merge_request) startMerge(t.id);
   },
   v: () => (display.value = { ...display.value, mode: MODES[(MODES.indexOf(display.value.mode) + 1) % MODES.length] }),
   c: () => emit('newTask'),
@@ -346,6 +352,6 @@ useHotkeys({
       >
     </footer>
     <BulkMergeDialog v-if="bulkMerging" :tasks="bulkMerging" @close="bulkMerging = null" @done="onBulkMerged" />
-    <MergeDialog v-if="merging" :task-id="merging.id" @close="merging = null" @merged="onMerged" />
+    <MergeDialog v-if="merging" :task-id="merging.id" @close="merging = null" @merged="onMerged" @requested="onRequested" />
   </section>
 </template>
