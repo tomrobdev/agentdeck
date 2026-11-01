@@ -2,8 +2,8 @@
 import { PLAN_DIR, parsePlanWithText } from '../plan/plan.ts';
 import { ALWAYS_DISALLOWED_TOOLS } from '../repo/tools.ts';
 import { withoutUnscopedFileTools } from './sandbox.ts';
-import { type Task, planStepIds } from '../task/task.ts';
-import type { Run } from './run.ts';
+import { type Task, leftoversMessage, planStepIds } from '../task/task.ts';
+import { INTERRUPTED, type Run } from './run.ts';
 
 /**
  * Appended to every worker's system prompt; the worker parses the STATUS line. `testCmd` is the command
@@ -78,17 +78,38 @@ export function buildPrompt(task: Task, previousRuns: Run[], reviewNote: string 
   const last = previousRuns.filter((r) => r.kind !== 'resolve').at(-1);
   const base = plan ? `${task.prompt}\n\n${planPromptBlock(task, plan)}` : task.prompt;
   if (!last) return base;
+  // A restart's run was cut off, not finished: it has no verdict or final message to pass on.
+  const interrupted = last.outcome === INTERRUPTED;
   return [
     reviewNote ? `Changes requested in review:\n${reviewNote}\n` : '',
     base,
     '',
-    `--- This is attempt ${task.attempts}. The previous attempt ended as "${last.outcome}". ---`,
+    interrupted
+      ? `--- This is attempt ${task.attempts}. A daemon restart stopped an earlier run of it before it finished. ---`
+      : `--- This is attempt ${task.attempts}. The previous attempt ended as "${last.outcome}". ---`,
     last.tests_passed === 0 ? 'The test command failed after the previous attempt.' : '',
-    last.result_text ? `Previous final message:\n${last.result_text.slice(0, 4000)}` : '',
+    last.result_text && !interrupted ? `Previous final message:\n${last.result_text.slice(0, 4000)}` : '',
     'Your earlier commits are already on this branch. Continue from there.',
   ]
     .filter(Boolean)
     .join('\n');
+}
+
+/**
+ * The prompt of a run that resumes the claude session a daemon restart cut off (`resumableSession`). The session
+ * already holds the task and its plan; this says what happened and that the worktree may have moved on since: the
+ * sync before every run commits what was left uncommitted and may merge the base branch in.
+ */
+export function buildResumePrompt(task: Pick<Task, 'id' | 'title'>): string {
+  const leftovers = leftoversMessage(task).split('\n')[0];
+  return [
+    'AgentDeck restarted while you were working on this task, which stopped you mid-run. This is the same task and the same attempt: carry on from where you stopped.',
+    '',
+    'First check the state of the worktree, since it may differ from what you remember:',
+    '- `git status` and `git diff` for uncommitted changes.',
+    `- \`git log\`: before resuming you, AgentDeck commits whatever was left uncommitted as "${leftovers}", and may have merged the base branch in.`,
+    'Then finish the task as instructed before, and end with the STATUS line.',
+  ].join('\n');
 }
 
 /** How many commit messages of each side the resolve prompt quotes. */
@@ -145,13 +166,25 @@ export function buildResolvePrompt(task: Pick<Task, 'id' | 'title' | 'prompt'>, 
   ].join('\n');
 }
 
-/** `settings` is the run's settings file (sandbox and worktree-only file rules, domain/run/sandbox.ts). */
-export function claudeArgs(task: Task, allowed: string[], prompt: string, testCmd: string | null, settings: string): string[] {
+/**
+ * `settings` is the run's settings file (sandbox and worktree-only file rules, domain/run/sandbox.ts). `resume` is a
+ * claude session to continue (`resumableSession`); everything else, the system prompt and tool rules included, is
+ * the same as for a fresh run.
+ */
+export function claudeArgs(
+  task: Task,
+  allowed: string[],
+  prompt: string,
+  testCmd: string | null,
+  settings: string,
+  resume: string | null = null,
+): string[] {
   return [
     '--settings',
     settings,
     '-p',
     prompt,
+    ...(resume ? ['--resume', resume] : []),
     '--output-format',
     'stream-json',
     '--verbose',

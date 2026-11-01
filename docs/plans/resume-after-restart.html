@@ -55,9 +55,9 @@
         <td>A run a restart ended gets the outcome <code>interrupted</code>, not a flag beside <code>failed</code>.</td>
         <td>
           The run did not fail. Every reader of <code>outcome</code> (the next run's prompt, the PR body's run table, the first-run measure
-          in <code>agentdeck stats</code>, the dashboard, <code>agentdeck show</code>) would go on calling it a failure with a flag, and each
-          would need to learn the flag. <code>outcome</code> is free text, so a new value needs no migration; a flag would need a column.
-          <code>result_text</code> stays "daemon restarted".
+          in <code>agentdeck stats</code>, the dashboard, <code>agentdeck show</code>) would go on calling it a failure with a flag, and
+          each would need to learn the flag. <code>outcome</code> is free text, so a new value needs no migration; a flag would need a
+          column. <code>result_text</code> stays "daemon restarted".
         </td>
       </tr>
       <tr>
@@ -85,8 +85,8 @@
           <em>same</em> run row, with the normal prompt; the log records <code>agentdeck_resume_failed</code>.
         </td>
         <td>
-          The resume never started a session, so nothing was attempted; a second row would share the attempt and the log file, be counted
-          as a run by the crash test and <code>agentdeck stats</code>, and be picked by <code>pickRun</code> for the attempt.
+          The resume never started a session, so nothing was attempted; a second row would share the attempt and the log file, be counted as
+          a run by the crash test and <code>agentdeck stats</code>, and be picked by <code>pickRun</code> for the attempt.
         </td>
       </tr>
       <tr>
@@ -95,13 +95,13 @@
           <code>--append-system-prompt</code>, model and turn limit, plus <code>--resume &lt;session&gt;</code>.
         </td>
         <td>
-          The session already holds the task's prompt and plan. The worker still syncs before the run, so the prompt says that what was
-          left uncommitted may now be a commit of AgentDeck's and that the base branch may have been merged in.
+          The session already holds the task's prompt and plan. The worker still syncs before the run, so the prompt says that what was left
+          uncommitted may now be a commit of AgentDeck's and that the base branch may have been merged in.
         </td>
       </tr>
     </table>
 
-    <section data-plan-step id="session" data-status="doing">
+    <section data-plan-step id="session" data-status="done">
       <h2>Store the session id when claude names it</h2>
       <p>
         <code>runClaude</code> reads <code>session_id</code> off the <code>system</code>/<code>init</code> line, keeps it on
@@ -113,20 +113,20 @@
       </ul>
     </section>
 
-    <section data-plan-step id="interrupted" data-status="todo">
+    <section data-plan-step id="interrupted" data-status="done">
       <h2>Mark a run a restart ended as interrupted</h2>
       <p>
         <code>recoverOrphans</code> sets <code>outcome = 'interrupted'</code> (<code>INTERRUPTED</code> in <code>domain/run/run.ts</code>)
         on unfinished task runs; planner runs stay <code>failed</code>. The first-run measure leaves interrupted runs out. The dashboard
-        gives the outcome a colour (<code>.s-interrupted</code>). A fresh run after an interrupted one says so in its prompt instead of
-        "the previous attempt ended as failed". The crash test tells real runs by the outcome.
+        gives the outcome a colour (<code>.s-interrupted</code>). A fresh run after an interrupted one says so in its prompt instead of "the
+        previous attempt ended as failed". The crash test tells real runs by the outcome.
       </p>
       <ul data-plan-done>
         <li>After <code>recoverOrphans</code> the run's outcome is <code>interrupted</code> and its result text "daemon restarted".</li>
       </ul>
     </section>
 
-    <section data-plan-step id="resume" data-status="todo">
+    <section data-plan-step id="resume" data-status="done">
       <h2>Resume the interrupted session</h2>
       <p>
         <code>resumableSession</code> and <code>buildResumePrompt</code> in the domain; <code>claudeArgs</code> takes an optional session
@@ -141,18 +141,19 @@
       </ul>
     </section>
 
-    <section data-plan-step id="fallback" data-status="todo">
+    <section data-plan-step id="fallback" data-status="done">
       <h2>Fall back to a fresh run when the session is gone</h2>
       <p>
         <code>resumeFailed(run)</code> in the domain; <code>startTaskRun</code> starts a fresh claude with the normal prompt when it is
-        true. The fake claude answers <code>--resume gone-…</code> the way claude answers a missing session.
+        true. The fake claude keeps the sessions it started and answers <code>--resume</code> of any other the way claude answers a missing
+        session ("No conversation found" on stderr, exit 1, no output).
       </p>
       <ul data-plan-done>
         <li>A test: a resume of a missing session ends in a fresh run on the same branch that finishes the task, in one run row.</li>
       </ul>
     </section>
 
-    <section data-plan-step id="restarts" data-status="todo">
+    <section data-plan-step id="restarts" data-status="done">
       <h2>Repeated restarts still fail the task</h2>
       <p><code>restarts</code> and <code>MAX_RESTARTS</code> are untouched: each recovery still counts.</p>
       <ul data-plan-done>
@@ -160,11 +161,15 @@
       </ul>
     </section>
 
-    <section data-plan-step id="checks" data-status="todo">
+    <section data-plan-step id="checks" data-status="done">
       <h2>Docs and checks</h2>
+      <p>
+        <code>docs/architecture.md</code> says what a restart does to a run. In the worker's sandbox <code>ps</code> is refused, so the
+        existing <code>reapOrphans</code> test (it reads a process's start time with <code>ps</code>) fails there and only there.
+      </p>
       <ul data-plan-done>
         <li><code>pnpm check:fast</code> passes.</li>
-        <li><code>node daemon/scripts/crash-test.mjs 10</code> passes.</li>
+        <li><code>node daemon/scripts/crash-test.mjs 10</code> passes, and its logs show runs resuming after the SIGKILL.</li>
       </ul>
     </section>
   </body>

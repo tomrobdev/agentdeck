@@ -34,7 +34,15 @@ const live = computed(() => props.task.status === 'running' && chosen.value === 
         <span class="font-semibold" :title="r.kind === 'resolve' ? 'Merged the base branch into the branch; uses no attempt' : undefined">{{
           r.kind === 'resolve' ? 'Resolve conflicts' : `Run ${r.attempt}`
         }}</span>
-        <span class="text-status">{{ r.outcome ?? 'running' }}</span>
+        <span
+          class="text-status"
+          :title="
+            r.outcome === 'interrupted'
+              ? 'A daemon restart stopped this run; the next run continues it without using an attempt'
+              : undefined
+          "
+          >{{ r.outcome ?? 'running' }}</span
+        >
         <span class="flex gap-2 text-sm">
           <span :class="r.tests_passed === null ? 'text-muted' : r.tests_passed ? 'text-done' : 'text-failed'">
             tests {{ r.tests_passed === null ? '–' : r.tests_passed ? '✓' : '✗' }}
