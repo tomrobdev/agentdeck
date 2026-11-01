@@ -103,7 +103,10 @@ export function relTime(unixSeconds: number): string {
 export function printLog(path: string): void {
   for (const e of readLog(path)) {
     if (e.kind === 'text') console.log(`\n💬 ${e.text}`);
-    if (e.kind === 'tool') console.log(`🔧 ${e.name} ${e.input.slice(0, 200)}`);
+    if (e.kind === 'tool') console.log(`🔧 ${e.name} ${e.summary}`.trimEnd());
+    if (e.kind === 'tool_result' && !e.ok) {
+      for (const l of e.output.split('\n').slice(0, 3)) console.log(`   ${l}`);
+    }
     if (e.kind === 'result') console.log(`\n── result: ${e.subtype}, ${e.turns} turns, $${e.cost.toFixed(3)} equiv ──`);
     if (e.kind === 'setup') console.log(`\n── setup ${e.passed ? 'done' : 'FAILED'}: ${e.cmd} ──\n${e.output.slice(-3000)}`);
     if (e.kind === 'tests') console.log(`\n── tests ${e.passed ? 'passed' : 'FAILED'} ──\n${e.output.slice(-3000)}`);
