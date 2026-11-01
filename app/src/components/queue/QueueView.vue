@@ -17,6 +17,7 @@ import { loadSetting, saveSetting } from '../../lib/storage';
 import BoardView from './BoardView.vue';
 import DisplayMenu, { type Display } from './DisplayMenu.vue';
 import FilterBar from './FilterBar.vue';
+import GraphView from './GraphView.vue';
 import ListView from './ListView.vue';
 
 const props = defineProps<{ tasks: TaskSummary[] }>();
@@ -70,7 +71,7 @@ const groups = computed(() => {
 
 /** The rows in screen order, skipping collapsed groups: what j and k walk through. */
 const order = computed(() =>
-  display.value.mode === 'board'
+  display.value.mode !== 'list'
     ? groups.value.flatMap((g) => g.tasks)
     : groups.value.filter((g) => display.value.groupBy === 'none' || !display.value.collapsed.includes(g.key)).flatMap((g) => g.tasks),
 );
@@ -87,6 +88,7 @@ function step(by: number) {
   selected.value = list[Math.min(Math.max(i === -1 ? 0 : i + by, 0), list.length - 1)].id;
 }
 
+const MODES: Display['mode'][] = ['list', 'board', 'graph'];
 const selectedTask = () => props.tasks.find((x) => x.id === selected.value);
 useHotkeys({
   j: () => step(1),
@@ -102,7 +104,7 @@ useHotkeys({
     const t = selectedTask();
     if (t && quickRetry(t)) emit('act', 'retry', t.id);
   },
-  v: () => (display.value = { ...display.value, mode: display.value.mode === 'list' ? 'board' : 'list' }),
+  v: () => (display.value = { ...display.value, mode: MODES[(MODES.indexOf(display.value.mode) + 1) % MODES.length] }),
   c: () => emit('newTask'),
 });
 </script>
@@ -116,6 +118,9 @@ useHotkeys({
         </button>
         <button :class="{ on: display.mode === 'board' }" role="tab" title="Board (v)" @click="display = { ...display, mode: 'board' }">
           ▦ Board
+        </button>
+        <button :class="{ on: display.mode === 'graph' }" role="tab" title="Graph (v)" @click="display = { ...display, mode: 'graph' }">
+          ⑂ Graph
         </button>
       </div>
       <FilterBar v-model="filters" :tasks="tasks" />
@@ -139,6 +144,15 @@ useHotkeys({
       @open="emit('open', $event)"
       @act="(kind, id) => emit('act', kind, id)"
     />
+    <GraphView
+      v-else-if="display.mode === 'graph'"
+      :all="tasks"
+      :shown="shown"
+      :selected="selected"
+      :show-finished="!!display.showFinished"
+      @select="selected = $event"
+      @open="emit('open', $event)"
+    />
     <BoardView
       v-else
       :groups="groups"
@@ -153,7 +167,7 @@ useHotkeys({
         >{{ shown.length }}<template v-if="shown.length !== tasks.length"> of {{ tasks.length }}</template> tasks</span
       >
       <span class="max-sm:hidden"
-        ><kbd>j</kbd><kbd>k</kbd> move · <kbd>↵</kbd> open · <kbd>a</kbd> approve · <kbd>r</kbd> retry · <kbd>v</kbd> board ·
+        ><kbd>j</kbd><kbd>k</kbd> move · <kbd>↵</kbd> open · <kbd>a</kbd> approve · <kbd>r</kbd> retry · <kbd>v</kbd> list/board/graph ·
         <kbd>c</kbd> new · <kbd>/</kbd> search</span
       >
     </footer>
