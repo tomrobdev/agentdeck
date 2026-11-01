@@ -73,3 +73,28 @@ export async function gatherHealth(db: Db, probes: Probes = realProbes, port = A
 export async function daemonHealth(db: Db, probes: Probes = realProbes, port?: number): Promise<Check[]> {
   return judgeHealth(await gatherHealth(db, probes, port));
 }
+
+/** Lines of the daemon log in the report. */
+export const REPORT_LOG_LINES = 20;
+
+/** GET /api/daemon/health: the doctor's checks, the checkout's HEAD, what is running, and the end of the log. */
+export async function daemonReport(db: Db, probes: Probes = realProbes, port?: number) {
+  const facts = await gatherHealth(db, probes, port);
+  const lines = probes.logLines();
+  return {
+    checks: judgeHealth(facts),
+    head: facts.head,
+    running: db.runningTasks(),
+    log: lines ? lines.filter((l) => l !== '').slice(-REPORT_LOG_LINES) : [],
+  };
+}
+
+/**
+ * Restart the service at once (POST /api/daemon/restart-now): running tasks lose their run and are requeued.
+ * The restart starts after the API has answered, because it kills this process.
+ */
+export function restartNow(db: Db, restart: () => Promise<unknown>, delayMs = 200) {
+  const requeued = db.runningTasks();
+  setTimeout(() => void restart().catch(() => {}), delayMs).unref();
+  return { requeued };
+}

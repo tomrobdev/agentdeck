@@ -157,6 +157,15 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     countRunning(): number {
       return countWhere(inArray(tasks.status, ['running', 'cancel_requested']));
     },
+    /** The tasks with a live run, oldest first: what a restart at once would requeue. */
+    runningTasks(): { id: number; title: string }[] {
+      return orm
+        .select({ id: tasks.id, title: tasks.title })
+        .from(tasks)
+        .where(inArray(tasks.status, ['running', 'cancel_requested']))
+        .orderBy(asc(tasks.id))
+        .all();
+    },
     /** How many tasks are in each status (statuses with none are left out). */
     countByStatus(): Record<string, number> {
       const rows = orm

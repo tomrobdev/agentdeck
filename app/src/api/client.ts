@@ -5,6 +5,8 @@ import type {
   AutoMergeResult,
   CancelResult,
   Changes,
+  DaemonHealth,
+  DaemonState,
   DoctorReport,
   FileContent,
   FilePatch,
@@ -22,6 +24,7 @@ import type {
   RepoDeletion,
   RepoDetail,
   RepoPatch,
+  RestartNowResult,
   RestartResult,
   ServiceStatus,
   SyncResult,
@@ -61,6 +64,11 @@ export const api = {
   resume: () => call<Status>('/api/resume', { method: 'POST' }),
   /** Exit once nothing is running so launchd starts the daemon on the new code. `waiting` says what it waits for. */
   restartDaemon: () => call<RestartResult>('/api/daemon/restart', { method: 'POST' }),
+  /** Restart at once: the running tasks lose their run and are requeued. */
+  restartDaemonNow: () => call<RestartNowResult>('/api/daemon/restart-now', { method: 'POST' }),
+  daemonState: () => call<DaemonState>('/api/daemon'),
+  /** `agentdeck doctor`, the checkout's HEAD, what is running and the last lines of the daemon log. */
+  daemonHealth: () => call<DaemonHealth>('/api/daemon/health'),
   settings: () => call<Settings>('/api/settings'),
   updateSettings: (patch: SettingsPatch) => call<Settings>('/api/settings', { method: 'POST', json: patch }),
   testNotify: () => call<TestNotifyResult>('/api/notify/test', { method: 'POST' }),

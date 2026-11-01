@@ -13,6 +13,8 @@ export const queryKeys = {
   repoDeletion: (id: number) => ['repo', id, 'deletion'] as const,
   settings: ['settings'] as const,
   service: ['service'] as const,
+  daemon: ['daemon'] as const,
+  daemonHealth: ['daemon', 'health'] as const,
   mergePreview: (id: number) => ['task', id, 'merge'] as const,
   planHtml: (id: number, planId: number, updatedAt: string) => ['task', id, 'plan', planId, updatedAt] as const,
   changes: (id: number) => ['task', id, 'changes'] as const,
@@ -43,6 +45,8 @@ export const repoDeletionQuery = (id: number) =>
 /** Copied into a form, so a reopened panel starts from the daemon's answer, not a kept one (gcTime 0). */
 export const settingsQuery = () => queryOptions({ queryKey: queryKeys.settings, queryFn: api.settings, gcTime: 0 });
 export const serviceQuery = () => queryOptions({ queryKey: queryKeys.service, queryFn: api.service });
+export const daemonQuery = () => queryOptions({ queryKey: queryKeys.daemon, queryFn: api.daemonState });
+export const daemonHealthQuery = () => queryOptions({ queryKey: queryKeys.daemonHealth, queryFn: api.daemonHealth, gcTime: 0 });
 /** Read from GitHub just before a merge, so a reopened dialog never starts from an old copy (gcTime 0). */
 export const mergePreviewQuery = (id: number) =>
   queryOptions({ queryKey: queryKeys.mergePreview(id), queryFn: () => api.mergePreview(id), gcTime: 0 });
