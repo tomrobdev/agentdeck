@@ -1,5 +1,6 @@
 // What a worker's claude is told and allowed. Pure: no I/O.
 import { PLAN_DIR, parsePlanWithText } from '../plan/plan.ts';
+import { PR_SUMMARY_FORMAT } from '../pull-request/summary.ts';
 import { ALWAYS_DISALLOWED_TOOLS } from '../repo/tools.ts';
 import { withoutUnscopedFileTools } from './sandbox.ts';
 import { type Task, planStepIds } from '../task/task.ts';
@@ -28,6 +29,8 @@ ${
   Everything else is free HTML. Keep each step's data-status current as you work.
 - If you can't finish because the environment lacks something, say exactly what on the STATUS line instead of working around it: "STATUS: BLOCKED: NEEDS deps: <packages>", "NEEDS host: <hosts>" or "NEEDS edit: <files>" (a file you may not edit, such as one under .claude/). Never install packages yourself.
 - If you cannot finish (missing info, needs a human decision, blocked by permissions), stop and explain why.
+- When you finish with STATUS: DONE, your final message is the pull request body. Write it as ${PR_SUMMARY_FORMAT}
+  Then the STATUS line. A STATUS: BLOCKED message is free-form.
 - End your final message with exactly one line: "STATUS: DONE" or "STATUS: BLOCKED: <one-line reason>".`;
 }
 
