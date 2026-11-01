@@ -1,6 +1,7 @@
 // Tasks as the dashboard and the CLI show them: a task plus what the queue says about it.
 import type { Db } from '../../db/index.ts';
 import { type AutoMergeMeasured, type AutoMergeView, autoMergeOn, autoMergeView } from '../../domain/pull-request/auto-merge.ts';
+import { type LiveView, liveView } from '../../domain/run/live.ts';
 import { hasOpenPr } from '../../domain/task/stage.ts';
 import type { StartWait } from '../../domain/task/start.ts';
 import { measureBranch } from './files.ts';
@@ -22,10 +23,15 @@ export interface TaskView {
   wait: StartWait | null;
   /** Whether the PR will merge on its own and why not, from the check the PR refresh stored. Null when the repo is gone. */
   auto_merge_view: AutoMergeView | null;
+  /** For a running task: when its run started, turns so far and the last tool call. Null for any other task. */
+  live: LiveView | null;
 }
 
 /** The task fields a view reads. */
-type Viewed = Pick<Task, 'id' | 'repo_id' | 'status' | 'pr_state' | 'auto_merge' | 'source' | 'auto_merge_check' | 'auto_merge_checked_at'>;
+type Viewed = Pick<
+  Task,
+  'id' | 'repo_id' | 'status' | 'max_turns' | 'pr_state' | 'auto_merge' | 'source' | 'auto_merge_check' | 'auto_merge_checked_at'
+>;
 
 /**
  * Each task with its view. Reads the repos, plans and queue state once for the whole list. `measured` holds, by task id,
@@ -35,8 +41,10 @@ export function withViews<T extends Viewed>(db: Db, tasks: T[], measured: Map<nu
   const repos = new Map(db.listRepos().map((r) => [r.id, r]));
   const waitOf = startWaits(db);
   const unfinished = db.planUnfinishedIds();
+  const liveRuns = db.liveRuns();
   return tasks.map((t) => ({
     ...t,
+    live: liveView(t, liveRuns.get(t.id)),
     repo: repos.get(t.repo_id)?.name ?? null,
     auto_merge_view: repos.has(t.repo_id) ? autoMergeView(t, repos.get(t.repo_id)!, measured.get(t.id)) : null,
     waiting: waitingFor(db, t),

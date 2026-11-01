@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { type TaskSummary, ago } from '../../api';
+import { type TaskSummary, ago, describeLive } from '../../api';
 import { type BoardMove, type Group, type StatusGroup, boardMove, unblocksOf, waitsOnText } from '../../lib/taskView';
 import MarkDoneDialog from '../task/MarkDoneDialog.vue';
 import AutoMergeMark from '../ui/AutoMergeMark.vue';
@@ -94,6 +94,7 @@ const LABELS: Record<BoardMove, string> = {
             <StatusIcon :task="t" />
           </div>
           <div class="mt-1 mb-1.5 line-clamp-2 font-medium">{{ t.title }}</div>
+          <div v-if="t.live" class="mb-1.5 truncate text-sm text-muted tabular-nums" data-live>{{ describeLive(t.live) }}</div>
           <div class="flex flex-wrap items-center gap-1">
             <span v-if="show.repo" class="chip">{{ t.repo }}</span>
             <span v-if="show.pr && t.pr_url" class="chip" :class="t.pr_state === 'merged' ? 'chip-merged' : ''"

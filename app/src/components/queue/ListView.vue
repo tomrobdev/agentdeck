@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { nextTick, watch } from 'vue';
-import { ago } from '../../api';
+import { ago, describeLive } from '../../api';
 import { openExternal } from '../../platform/native';
 import { type Group, type GroupBy, personEvents, quickRetry, readNeeds, statusLabel, unblocksOf, waitsOnText } from '../../lib/taskView';
 import AutoMergeMark from '../ui/AutoMergeMark.vue';
@@ -82,6 +82,7 @@ watch(
               >
                 {{ t.stop_reason }}
               </span>
+              <span v-else-if="t.live" class="truncate text-sm text-muted tabular-nums" data-live>{{ describeLive(t.live) }}</span>
               <span v-else-if="show.reason && t.waiting?.stuck" class="truncate text-sm text-blocked group-[.s-failed]:text-failed"
                 >Can't start: {{ t.waiting.stuck }}</span
               >

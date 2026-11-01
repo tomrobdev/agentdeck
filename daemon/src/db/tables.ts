@@ -100,6 +100,8 @@ export const runs = sqliteTable(
     pid: integer(),
     denials: integer().default(0).notNull(),
     kind: text().default('work').notNull(),
+    live_turns: integer().default(0).notNull(),
+    live_tool: text(),
   },
   (table) => [index('runs_task').on(table.task_id, table.id)],
 );

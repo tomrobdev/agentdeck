@@ -112,7 +112,7 @@ flowchart TD
   application -->|36| adapters
   application -->|7| config_ts
   application -->|26| db
-  application -->|103| domain
+  application -->|105| domain
   cli_ts -->|1| application
   cli_ts -->|8| cli
   cli_ts -->|1| db
@@ -204,6 +204,8 @@ erDiagram
     integer pid "nullable"
     integer denials
     text kind
+    integer live_turns
+    text live_tool "nullable"
   }
   settings {
     text key PK
@@ -419,5 +421,6 @@ stateDiagram-v2
 | 17   | auto-merge (docs/plans/auto-merge.html). auto_merge_skip is a JSON array of path prefixes that need a person; a task's auto_merge is NULL (its repo's), 0 or 1.                                                |
 | 18   | task links (docs/plans/task-links.html). kind is builds_on \| after. after_task is copied in and no longer read.                                                                                               |
 | 19   | the latest auto-merge check of a done task's open PR (docs/plans/auto-merge-view.html): JSON { verdict, reasons }, NULL when none; auto_merge_checked_at is when the PR refresh made it.                       |
+| 20   | what a live run is doing: turns so far and the last tool call, kept from its stream while it runs.                                                                                                             |
 
 <!-- /generated -->

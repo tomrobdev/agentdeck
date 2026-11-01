@@ -47,6 +47,7 @@ check<Fits<Out<typeof actions.attachPlan>, C.TaskPlan>>();
 check<Fits<Out<typeof actions.collectPlans>, C.TaskPlan[]>>();
 check<Fits<Out<typeof actions.planHtml>, C.PlanHtml>>();
 check<Fits<DomainLogEntry, C.LogEntry>>();
+check<Fits<NonNullable<Out<typeof actions.taskViews>[number]['live']>, C.LiveView>>();
 
 // Requests
 check<Fits<C.NewRepo, In<typeof actions.addRepo, 1>>>();

@@ -181,6 +181,9 @@ export const MIGRATIONS: Migration[] = [
   // NULL when none; auto_merge_checked_at is when the PR refresh made it.
   `ALTER TABLE tasks ADD COLUMN auto_merge_check TEXT;
    ALTER TABLE tasks ADD COLUMN auto_merge_checked_at TEXT;`,
+  // 20: what a live run is doing: turns so far and the last tool call, kept from its stream while it runs.
+  `ALTER TABLE runs ADD COLUMN live_turns INTEGER NOT NULL DEFAULT 0;
+   ALTER TABLE runs ADD COLUMN live_tool TEXT;`,
 ];
 
 /** Runs every step above the database's user_version in one transaction; returns how many ran. */

@@ -8,6 +8,7 @@ import { LOG_DIR, ensureDirs } from '../../config.ts';
 import type { Db } from '../../db/index.ts';
 import type { Repo } from '../../domain/repo/repo.ts';
 import { allowedTools } from '../../domain/repo/tools.ts';
+import { START_LIVE, nextLive } from '../../domain/run/live.ts';
 import { claudeArgs } from '../../domain/run/prompt.ts';
 import { parseNetwork, settingsPath, workerSettings } from '../../domain/run/sandbox.ts';
 import { type Run, type RunClass, type RunKind, classifyRun, resultFields } from '../../domain/run/run.ts';
@@ -61,6 +62,8 @@ export async function startTaskRun(
   const { runId, logPath, log } = opened;
   const { repo, worktree } = opts;
   const settings = runSettings(repo, worktree, logPath);
+  // Local to this run, not module state: the live state goes to the run row, where the queue reads it.
+  let live = START_LIVE;
   const run = await runClaude({
     args: claudeArgs(task, allowedTools(repo, rootInfo(worktree)), opts.prompt, repo.test_cmd, settings),
     cwd: worktree,
@@ -69,6 +72,12 @@ export async function startTaskRun(
     shouldCancel: () => db.getTask(task.id)?.status === 'cancel_requested',
     onSpawn: (pid) => db.setRunPid(runId, pid),
     onUsage: usageRecorder(db),
+    onEvent: (ev) => {
+      const next = nextLive(live, ev);
+      if (next.turns === live.turns && next.tool === live.tool) return;
+      live = next;
+      db.setRunLive(runId, live.turns, live.tool);
+    },
   });
   const end = classifyRun(run);
   if (end.kind === 'rate_limited') db.setRateLimitedUntil(end.until);
