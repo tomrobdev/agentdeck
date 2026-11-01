@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en" data-agentdeck-plan="1">
+  <head>
+    <meta charset="utf-8" />
+    <title>A run's log as a transcript</title>
+    <link rel="stylesheet" href="plan.css" />
+  </head>
+  <body>
+    <h1>A run's log as a transcript</h1>
+    <p data-plan-summary>
+      The task page's Runs tab shows what claude did but never what came back, and each tool call is a cut line of raw JSON. Make the log
+      read like Claude Code's own transcript: each tool call in a few words with its output folded beneath it, claude's text as markdown,
+      and runs of file reads folded into one line.
+    </p>
+
+    <h2>Why</h2>
+    <ul>
+      <li>
+        <code>parseLogLine</code> (<code>daemon/src/domain/run/log.ts</code>) ignores <code>user</code> events, which carry every tool
+        result. A failing <code>pnpm test</code> shows as a Bash call and nothing else.
+      </li>
+      <li>
+        A tool entry's <code>input</code> is the call's JSON cut at 400 characters, so an Edit shows a slice of <code>old_string</code>, not
+        what changed.
+      </li>
+      <li>
+        <code>app/src/components/task/LogView.vue</code> shows claude's text as plain wrapped text, though <code>Markdown.vue</code> exists
+        and the run's final message already uses it.
+      </li>
+      <li>
+        The log's events carry a <code>timestamp</code>, an <code>id</code> on each <code>tool_use</code> and a <code>tool_use_id</code> on
+        each <code>tool_result</code>, and a <code>parent_tool_use_id</code> on a subagent's events. None of it reaches the view.
+      </li>
+      <li>
+        <code>toolText</code> in <code>daemon/src/domain/run/live.ts</code> already words a tool call for the live line ("Edit worker.ts").
+      </li>
+    </ul>
+
+    <section data-plan-step id="entries" data-status="todo">
+      <h2>Log entries that carry results and a summary</h2>
+      <p>Change the daemon's log entries (<code>LogEntry</code> in <code>daemon/src/domain/run/log.ts</code>, pure):</p>
+      <ul>
+        <li>
+          A <code>tool</code> entry gains <code>id</code> (the <code>tool_use</code> id) and <code>summary</code>: the call in a line, by
+          tool. Bash: the command. Read, Write, Edit, NotebookEdit: the file. Grep: the pattern and where. Glob: the pattern. WebFetch: the
+          URL. Task or Agent: its description. TodoWrite: "n todos, k done". Anything else: the first string field. Keep
+          <code>input</code> and <code>file</code> as they are.
+        </li>
+        <li>
+          An Edit, MultiEdit or Write entry gains <code>change</code>: the lines added and removed, and the old and new text, each cut at 2
+          KB, so the view can show a small diff.
+        </li>
+        <li>
+          A new <code>tool_result</code> entry for each <code>tool_result</code> block in a <code>user</code> event:
+          <code>{ kind: 'tool_result', id, ok, output, lines }</code>. <code>ok</code> is false when <code>is_error</code> is set. The
+          content may be a string or a list of blocks: join the text blocks, and write <code>[image]</code> for an image.
+          <code>output</code> is the first 4 KB; <code>lines</code> counts the whole output's lines.
+        </li>
+        <li>
+          Every entry from a claude event gains <code>at</code>, the event's <code>timestamp</code>, when it has one, and
+          <code>parent</code>, its <code>parent_tool_use_id</code>, when it comes from a subagent.
+        </li>
+        <li>
+          Word the summary in one function beside <code>parseLogLine</code>, and have <code>toolText</code> in
+          <code>daemon/src/domain/run/live.ts</code> use it, so the live line and the log say the same thing.
+        </li>
+        <li>
+          Update <code>LogEntry</code> in <code>daemon/src/api/contract.ts</code> to match (<code>daemon/src/api/contract-check.ts</code>
+          fails until it does).
+        </li>
+        <li>
+          The CLI's log (<code>printLog</code> in <code>daemon/src/cli/format.ts</code>) prints each tool's summary instead of its JSON, and
+          under a failed result its first three lines.
+        </li>
+      </ul>
+      <ul data-plan-done>
+        <li>
+          <code>daemon/test/run-log.test.ts</code> covers: a result with string content and one with text blocks and an image; an error
+          result; output cut at 4 KB with <code>lines</code> still counting all of it; the summary for each tool named above and for an
+          unknown one; <code>change</code> on an Edit; <code>at</code> and <code>parent</code> taken from the event.
+        </li>
+        <li>The existing tests in <code>daemon/test/run-log.test.ts</code> and <code>daemon/test/live.test.ts</code> still pass.</li>
+        <li><code>pnpm check</code> passes.</li>
+      </ul>
+    </section>
+
+    <section data-plan-step id="view" data-status="todo">
+      <h2>The transcript view</h2>
+      <p>
+        Rewrite <code>app/src/components/task/LogView.vue</code> as a transcript. Put the grouping (pairing each result with its call,
+        folding, nesting) in a pure helper, <code>app/src/lib/transcript.ts</code>, so the component only draws it.
+      </p>
+      <ul>
+        <li>
+          A tool call is one line: a marker, the tool's name, then its summary. The file in it stays a link that opens the file, as now.
+          While the run is live, a call with no result yet shows a small spinner.
+        </li>
+        <li>
+          Its result sits beneath it: the first line, then "▸ n lines" that unfolds the rest. A result that failed is in the failed colour
+          and starts unfolded.
+        </li>
+        <li>An Edit or Write shows <span class="tag ok">+n</span> <span class="tag warn">−n</span> and unfolds to a small diff.</li>
+        <li>
+          Claude's text renders with <code>Markdown.vue</code>, with <code>isPath</code> as <code>RunsTab.vue</code> passes it to the final
+          message.
+        </li>
+        <li>
+          Back-to-back Read, Grep, Glob and LS calls fold into one line, "Explored n files", which unfolds to the calls. A subagent's
+          entries (<code>parent</code>) fold under their Task or Agent call.
+        </li>
+        <li>Each entry shows the time since the run's first entry, from <code>at</code>, in a narrow muted gutter.</li>
+        <li>While the log streams and the reader has scrolled up, a "Jump to live" button scrolls back down and sticks there again.</li>
+        <li>
+          Setup and test output keep their fold. Turn their terminal colour codes into colour (bold and the eight basic colours) with a
+          small helper in <code>app/src/lib/</code>, no new dependency; drop any other codes.
+        </li>
+        <li>A log written before this change (no <code>id</code>, no results) still shows, one line per call.</li>
+      </ul>
+      <ul data-plan-done>
+        <li>
+          In the dashboard against a live daemon, a running task's Runs tab shows each tool call in a line with its output folded beneath. A
+          failing Bash call shows in red with its output open.
+        </li>
+        <li>A run of reads shows as "Explored n files"; claude's text shows as markdown, with code and lists rendered.</li>
+        <li>Scrolling up during a live run shows "Jump to live", and clicking it follows the log again.</li>
+        <li>An old run's log, from before the change, still shows.</li>
+        <li><code>pnpm check</code> passes.</li>
+      </ul>
+    </section>
+
+    <h2>Out of scope</h2>
+    <ul>
+      <li>A terminal emulator (xterm.js and the like): the log is structured events, not a terminal's output.</li>
+      <li>Claude's thinking blocks.</li>
+      <li>Searching or filtering the log.</li>
+      <li>
+        How the run log is written (<code>daemon/src/adapters/run-log.ts</code>) or streamed (<code>daemon/src/api/log-stream.ts</code>).
+      </li>
+    </ul>
+  </body>
+</html>

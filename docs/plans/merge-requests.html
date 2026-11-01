@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en" data-agentdeck-plan="1">
+  <head>
+    <meta charset="utf-8" />
+    <title>Merge requests and the activity list</title>
+    <link rel="stylesheet" href="plan.css" />
+  </head>
+  <body>
+    <h1>Merge requests and the activity list</h1>
+    <p data-plan-summary>
+      Merge in the dashboard stops waiting on GitHub. It records a merge request, the dialog closes at once, and the daemon merges the PR
+      when it is ready: after its checks pass, after a sync settles a conflict, after the PRs it lands after. A pill in the status bar
+      counts everything under way, and opens a list of it.
+    </p>
+
+    <h2>Why</h2>
+    <ul>
+      <li>
+        <code>app/src/components/task/MergeDialog.vue</code> and <code>app/src/components/task/BulkMergeDialog.vue</code> wait on
+        <code>api.merge</code> and <code>api.mergeAll</code>. The bulk dialog can't be closed while it merges (<code>close</code> does
+        nothing while <code>running</code>), and a PR whose checks are still running can only be merged now or later by hand.
+      </li>
+      <li>
+        The daemon already merges on its own.
+        <code>refreshPrStates</code> (<code>daemon/src/application/pull-request/pull-requests.ts</code>) reads every open PR, the scheduler
+        syncs the conflicting ones (<code>resolveConflicting</code> in <code>daemon/src/application/sync.ts</code>) and merges one ready PR
+        per refresh (<code>autoMerge</code> in <code>daemon/src/application/pull-request/auto-merge.ts</code>). A merge asks for a re-read
+        (<code>db.requestPrCheck()</code>), so the next one follows at once.
+      </li>
+      <li>
+        But auto-merge's check (<code>autoMergeCheck</code> in <code>daemon/src/domain/pull-request/auto-merge.ts</code>) stands in for a
+        person: it wants a label and stays under line limits and skipped paths. A person who pressed Merge has looked; those rules don't
+        apply to them.
+      </li>
+      <li>Nothing in the window says what is under way unless that task's row is on screen.</li>
+    </ul>
+
+    <div class="decision">
+      <p><strong>Decisions</strong></p>
+      <ul>
+        <li>
+          <strong>Merge request</strong> is the new word: a person's Merge, which the daemon carries out once the PR is ready. Not
+          "approve", which is what a person does to a proposal. Add it to the domain language in <code>CLAUDE.md</code>.
+        </li>
+        <li>
+          A merge request waits for checks still running, a conflict being synced, mergeability GitHub hasn't worked out and the PRs it
+          lands after. It is dropped, with a notification saying why, when a check fails, the last run's tests failed, branch protection
+          blocks it or the PR is no longer open. A paused daemon or repo doesn't hold it: a person asked.
+        </li>
+        <li>
+          When the dialog already shows failing checks or failed tests, its button is "Merge now" and merges at once, as today: the person
+          waves those through there and then.
+        </li>
+        <li>
+          A requested merge deletes the remote branch and the worktree, as auto-merge and Merge all do, so the dialog's checkbox goes.
+        </li>
+        <li><code>agentdeck merge</code> in the CLI keeps merging at once.</li>
+      </ul>
+    </div>
+
+    <section data-plan-step id="request" data-status="todo">
+      <h2>Record a merge request</h2>
+      <ul>
+        <li>
+          Add to <code>tasks</code>: <code>merge_requested_at</code> (UTC text, null when there is no request),
+          <code>merge_request_method</code> and <code>merge_request_check</code> (the last check's JSON, as
+          <code>auto_merge_check</code> holds auto-merge's). Follow the migration rule in <code>CLAUDE.md</code>.
+        </li>
+        <li>
+          In <code>daemon/src/domain/pull-request/merge-request.ts</code> (pure), <code>mergeRequestCheck</code>: the decisions above as a
+          verdict over <code>mergeFindings</code>, returning the same <code>AutoMergeCheck</code> shape (<code>merge</code>,
+          <code>wait</code> or <code>never</code>, with reasons). A draft or a branch behind the base is fine, as for auto-merge.
+        </li>
+        <li>
+          Use cases in <code>daemon/src/application/pull-request/merge-requests.ts</code>, exported through
+          <code>daemon/src/application/actions.ts</code>: <code>requestMerge(db, id, { method })</code> (a done task with an open PR; the
+          method defaults to the task's, then the repo's), <code>requestMerges(db, { ids })</code> for Merge all, returning the ones it
+          could not request and why, and <code>cancelMergeRequest(db, id)</code>. Requesting asks for a PR re-read
+          (<code>db.requestPrCheck()</code>).
+        </li>
+        <li>
+          <code>mergePreview</code> gains <code>request</code>: what <code>mergeRequestCheck</code> says now, so the dialog can pick its
+          button.
+        </li>
+        <li>
+          Routes beside the merge routes in <code>daemon/src/api/routes/tasks.ts</code>: <code>POST</code> and <code>DELETE</code>
+          <code>/api/tasks/:id/merge-request</code>, and <code>POST /api/tasks/merge-requests</code> with <code>{ ids }</code>. Add the
+          types to <code>daemon/src/api/contract.ts</code> and <code>daemon/src/api/contract-check.ts</code>.
+        </li>
+        <li><code>recordMerge</code> clears the request.</li>
+      </ul>
+      <ul data-plan-done>
+        <li>
+          A domain test in <code>daemon/test/merge-request.test.ts</code> gives each finding its verdict: pending checks, a conflict, lands
+          after and unknown mergeability wait; a failing check, failed tests, branch protection and a closed PR are never; a draft or a
+          branch behind the base merges; an auto-merge limit (lines, skipped paths, no label) doesn't count.
+        </li>
+        <li>
+          A test with a db fixture shows <code>requestMerge</code> refusing a task that isn't done or has no open PR, and
+          <code>cancelMergeRequest</code> clearing the request.
+        </li>
+        <li>
+          <code>pnpm db:check</code> and <code>pnpm check</code> pass, and the migration's hash is in
+          <code>daemon/test/migrations.lock</code>.
+        </li>
+      </ul>
+    </section>
+
+    <section data-plan-step id="carry-out" data-status="todo">
+      <h2>The daemon carries out merge requests</h2>
+      <ul>
+        <li>
+          In <code>refreshPrStates</code>, a task with a merge request gets <code>mergeRequestCheck</code> instead of the auto-merge check,
+          and keeps it in <code>merge_request_check</code>. <code>merge</code> puts it in <code>found.mergeable</code>, ahead of
+          auto-merges. <code>never</code> clears the request, logs it, and sends a notification ("Could not merge #12: 1 check failing") as
+          <code>autoMerge</code> does for a failed merge. A conflict goes to <code>found.conflicting</code> as now, so it is synced.
+        </li>
+        <li>A request whose task is no longer done, or whose PR is no longer open, is cleared by the refresh.</li>
+        <li>
+          <code>autoMerge</code> merges a requested PR with the request's method, recorded with the reason <code>requested (squash)</code>.
+        </li>
+        <li>
+          While a request waits on running checks or on mergeability GitHub hasn't worked out, the scheduler reads the PRs again after 30
+          seconds rather than the usual 3 minutes (<code>maybeRefreshPrs</code> in
+          <code>daemon/src/application/scheduler/scheduler.ts</code>).
+        </li>
+        <li>A lock in the merge use case says which task is merging right now, as <code>isSyncLocked</code> does for syncs.</li>
+        <li>
+          <code>TaskSummary</code> gains <code>merge_request</code>: null with no request, else
+          <code>{ state: 'waiting' | 'merging', method, reasons, since }</code>, decided in the domain and filled in
+          <code>daemon/src/application/task/task-views.ts</code> without a query per task.
+        </li>
+      </ul>
+      <ul data-plan-done>
+        <li>
+          Tests with a db fixture and a fake GitHub, in the style of <code>daemon/test/auto-merge.test.ts</code>: a request with checks
+          running waits, then merges once they pass; a request whose check fails is cleared with a notification; a request over auto-merge's
+          line limit merges; two requests where one lands after the other merge in that order.
+        </li>
+        <li>A domain test covers the <code>merge_request</code> view: none, waiting with its reasons, and merging.</li>
+        <li><code>pnpm check</code> passes.</li>
+      </ul>
+    </section>
+
+    <section data-plan-step id="dialogs" data-status="todo">
+      <h2>Merge in the dashboard requests the merge</h2>
+      <ul>
+        <li>
+          In <code>MergeDialog.vue</code>, the button requests the merge and closes the dialog at once. It reads "Merge" when the preview's
+          <code>request</code> says merge, and "Merge when ready" when it waits, with the reasons listed above it. When it says never
+          because of failing checks or failed tests, the button is "Merge now" and calls <code>api.merge</code> as today. The delete-branch
+          checkbox goes.
+        </li>
+        <li>
+          In <code>BulkMergeDialog.vue</code>, "Merge n" requests them all and closes. The tasks it could not request stay listed with why.
+          The sync buttons and "Merge the n synced" go: the daemon syncs a conflicting PR it has a request for.
+        </li>
+        <li>
+          List rows (<code>ListView.vue</code>), board cards (<code>BoardView.vue</code>) and the task header (<code>TaskActions.vue</code>)
+          show the request: "Merging when ready · 2 checks running", or "Merging…". Word it in
+          <code>app/src/api/format.ts</code>.
+        </li>
+        <li>
+          A task with a request offers "Cancel merge" in its row menu (<code>RowMenu.vue</code>) and its header, and its Merge stays
+          disabled.
+        </li>
+      </ul>
+      <ul data-plan-done>
+        <li>
+          In the dashboard against a daemon, Merge on a PR with checks running closes the dialog at once, the row says it waits for the
+          checks, and the PR merges without another click once they pass.
+        </li>
+        <li>Merge all closes at once, and the PRs merge one after another.</li>
+        <li>Cancel merge clears the request, and the row goes back to its usual state.</li>
+        <li><code>pnpm check</code> passes.</li>
+      </ul>
+    </section>
+
+    <section data-plan-step id="activity" data-status="todo">
+      <h2>The activity pill in the status bar</h2>
+      <ul>
+        <li>
+          In <code>app/src/components/layout/StatusBar.vue</code>, beside the slots: a spinner and "n active" whenever anything is under
+          way, and nothing when nothing is. It counts running tasks (<code>running</code> and <code>cancel_requested</code>), syncs
+          (<code>TaskSummary.sync</code>), merge requests (<code>TaskSummary.merge_request</code>) and planner runs.
+        </li>
+        <li>
+          The daemon doesn't tell the dashboard which planner runs are under way: add <code>planning</code> to <code>Status</code>, one
+          entry per unfinished planner run with its repo and start.
+        </li>
+        <li>
+          Clicking the pill opens a list (<code>app/src/components/ui/Popover.vue</code>): for each, its kind, <code>#id</code> and title,
+          what it is doing in the words the rows use (<code>describeLive</code>, <code>describeSync</code>, the merge request's wording),
+          and for how long. A row opens the task, on Runs for a run or a resolve run. A merge request's row has Cancel merge.
+        </li>
+        <li>
+          Build the list in a composable, <code>app/src/composables/useActivity.ts</code>, from the task list and the status the window
+          already reads; no new polling.
+        </li>
+      </ul>
+      <ul data-plan-done>
+        <li>
+          In the dashboard with one task running and one merge request waiting, the status bar shows a spinner and "2 active", and the list
+          shows both with what each is doing.
+        </li>
+        <li>Clicking the running task's row opens it on Runs. With nothing under way, the pill is gone.</li>
+        <li><code>pnpm check</code> passes.</li>
+      </ul>
+    </section>
+
+    <h2>Out of scope</h2>
+    <ul>
+      <li>The auto-merge rules, and how a sync or resolve run works.</li>
+      <li>Merge requests from the CLI; <code>agentdeck merge</code> stays as it is.</li>
+      <li>GitHub's own merge queue and auto-merge.</li>
+      <li>Interactive claude sessions outside the daemon (a terminal running <code>/add-task</code>): the daemon doesn't know of them.</li>
+    </ul>
+  </body>
+</html>
