@@ -14,6 +14,8 @@ export interface DigestTask {
   pr_state: string | null;
   stop_reason: string | null;
   waiting: { on: number; stuck: string | null } | null;
+  /** The auto-merge view's state and label (domain/pull-request/auto-merge.ts); marked on the line unless it is off. */
+  auto_merge_view?: { state: string; label: string } | null;
 }
 
 export interface DigestHeader {
@@ -106,6 +108,7 @@ function describeTask(t: DigestTask): string {
   if (t.waiting)
     extra = t.waiting.stuck ? ` (stuck on #${t.waiting.on}: ${short(t.waiting.stuck, REASON_MAX)})` : ` (waiting on #${t.waiting.on})`;
   else if ((t.status === 'blocked' || t.status === 'failed') && t.stop_reason) extra = ` — ${short(t.stop_reason, REASON_MAX)}`;
+  if (t.auto_merge_view && t.auto_merge_view.state !== 'off') extra += ` [${short(t.auto_merge_view.label, REASON_MAX)}]`;
   return `${status} #${t.id} ${short(t.title, TITLE_MAX)}${extra}`;
 }
 

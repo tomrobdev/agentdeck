@@ -6,6 +6,7 @@ export type {
   AutoMergeCheck,
   AutoMergeRequest,
   AutoMergeResult,
+  AutoMergeView,
   Budget,
   CancelResult,
   Changes,

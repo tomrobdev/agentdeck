@@ -20,6 +20,7 @@
     "db:studio": "pnpm --filter agentdeck-daemon db:studio",
     "db:check": "pnpm --filter agentdeck-daemon db:check",
     "docs": "pnpm --filter agentdeck-daemon run docs",
+    "rules": "pnpm --filter agentdeck-daemon rules",
     "db:generate": "pnpm --filter agentdeck-daemon db:generate",
     "check:rust": "pnpm --filter agentdeck-app check:rust",
     "format": "prettier --write .",

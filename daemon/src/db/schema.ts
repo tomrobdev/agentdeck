@@ -177,6 +177,10 @@ export const MIGRATIONS: Migration[] = [
    );
    CREATE INDEX task_links_on ON task_links(on_task);
    INSERT INTO task_links (task_id, on_task, kind) SELECT id, after_task, 'builds_on' FROM tasks WHERE after_task IS NOT NULL;`,
+  // 19: the latest auto-merge check of a done task's open PR (docs/plans/auto-merge-view.html): JSON { verdict, reasons },
+  // NULL when none; auto_merge_checked_at is when the PR refresh made it.
+  `ALTER TABLE tasks ADD COLUMN auto_merge_check TEXT;
+   ALTER TABLE tasks ADD COLUMN auto_merge_checked_at TEXT;`,
 ];
 
 /** Runs every step above the database's user_version in one transaction; returns how many ran. */

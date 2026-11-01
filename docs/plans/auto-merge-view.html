@@ -130,7 +130,7 @@
       </tr>
     </table>
 
-    <section data-plan-step id="record" data-status="todo">
+    <section data-plan-step id="record" data-status="done">
       <h2>Keep the latest check</h2>
       <p>
         A new migration step adds <code>tasks.auto_merge_check</code> (JSON <code>{ verdict, reasons }</code>, NULL when none) and
@@ -146,7 +146,7 @@
       </ul>
     </section>
 
-    <section data-plan-step id="view" data-status="todo">
+    <section data-plan-step id="view" data-status="done">
       <h2>One view of it, from the domain</h2>
       <p>
         <code>autoMergeView(task, repo, measured?)</code> in <code>domain/pull-request/auto-merge.ts</code> returns
@@ -163,7 +163,7 @@
       </ul>
     </section>
 
-    <section data-plan-step id="cli" data-status="todo">
+    <section data-plan-step id="cli" data-status="done">
       <h2>The CLI</h2>
       <p>
         <code>agentdeck ls</code> adds the label to a task's line when the state isn't <code>off</code>, after the PR.
@@ -176,7 +176,7 @@
       </ul>
     </section>
 
-    <section data-plan-step id="dashboard" data-status="todo">
+    <section data-plan-step id="dashboard" data-status="done">
       <h2>The dashboard</h2>
       <p>
         List and board rows get a small auto-merge mark for every state but <code>off</code>, coloured by state, with the label and reasons

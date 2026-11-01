@@ -52,7 +52,7 @@ const PACKAGES: { match: RegExp; allowed: (path: string) => boolean; why: string
 
 const at = (s: Source, line: number) => `${s.path}:${line}`;
 
-test('each layer imports only the layers below it', () => {
+test('[layers, domain-pure, adapters-io, entry-points] each layer imports only the layers below it', () => {
   const found: string[] = [];
   for (const s of sources) {
     const rule = MAY_IMPORT[layerOf(s.path)];
@@ -66,7 +66,7 @@ test('each layer imports only the layers below it', () => {
   assert.deepEqual(found, []);
 });
 
-test('api/ and cli/ reach application/ only through actions.ts', () => {
+test('[actions-only, entry-points] api/ and cli/ reach application/ only through actions.ts', () => {
   const found: string[] = [];
   for (const s of sources.filter((s) => ['api', 'cli', 'cli.ts'].includes(layerOf(s.path)))) {
     for (const i of s.imports) {
@@ -77,7 +77,7 @@ test('api/ and cli/ reach application/ only through actions.ts', () => {
   assert.deepEqual(found, []);
 });
 
-test('api/contract.ts imports nothing', () => {
+test('[contract-types] api/contract.ts imports nothing', () => {
   const contract = sources.find((s) => s.path === 'api/contract.ts')!;
   assert.deepEqual(
     contract.imports.map((i) => `${at(contract, i.line)} imports ${i.spec}`),
@@ -85,7 +85,7 @@ test('api/contract.ts imports nothing', () => {
   );
 });
 
-test('packages are imported only where they belong', () => {
+test('[domain-pure, sql-in-db, no-runtime-deps] packages are imported only where they belong', () => {
   const found: string[] = [];
   for (const s of sources) {
     for (const i of s.imports) {
@@ -97,7 +97,7 @@ test('packages are imported only where they belong', () => {
   assert.deepEqual(found, []);
 });
 
-test('db/tables.ts is imported at runtime only by files in db/', () => {
+test('[sql-in-db] db/tables.ts is imported at runtime only by files in db/', () => {
   const found = sources.flatMap((s) =>
     s.imports
       .filter((i) => i.target === 'db/tables.ts' && !i.typeOnly && !s.path.startsWith('db/'))
@@ -106,7 +106,7 @@ test('db/tables.ts is imported at runtime only by files in db/', () => {
   assert.deepEqual(found, []);
 });
 
-test('there are no import cycles', () => {
+test('[layers] there are no import cycles', () => {
   // Type-only imports are erased, so only runtime imports can form a cycle.
   const edges = new Map(sources.map((s) => [s.path, s.imports.filter((i) => i.target && !i.typeOnly).map((i) => i.target!)]));
   const cycles: string[] = [];
@@ -139,7 +139,7 @@ const AMBIENT = new Set([
   'setInterval',
 ]);
 
-test('domain/ reads no clock, randomness or environment, except as a parameter default', () => {
+test('[domain-pure] domain/ reads no clock, randomness or environment, except as a parameter default', () => {
   const found: string[] = [];
   for (const s of sources.filter((s) => s.path.startsWith('domain/'))) {
     const visit = (node: ts.Node) => {
@@ -172,7 +172,7 @@ function inParameterDefault(node: ts.Node): boolean {
   return false;
 }
 
-test('SQL runs only in db/', () => {
+test('[sql-in-db] SQL runs only in db/', () => {
   const found: string[] = [];
   for (const s of sources.filter((s) => !s.path.startsWith('db/'))) {
     const visit = (node: ts.Node) => {
@@ -200,7 +200,7 @@ function enclosingFunction(node: ts.Node): ts.FunctionLikeDeclaration | undefine
   return undefined;
 }
 
-test('a task status changes only through a guarded transition', () => {
+test('[guarded-status] a task status changes only through a guarded transition', () => {
   // Every status write is an `UPDATE … WHERE status …` in a function that asks the lifecycle for the next status.
   const found: string[] = [];
   for (const s of sources.filter((s) => s.path.startsWith('db/'))) {
@@ -224,7 +224,7 @@ test('a task status changes only through a guarded transition', () => {
   assert.deepEqual(found, []);
 });
 
-test('claude runs only from adapters/claude.ts, in its own process group', () => {
+test('[claude-process-group] claude runs only from adapters/claude.ts, in its own process group', () => {
   // So crash recovery can stop the whole process tree by its pid.
   const found: string[] = [];
   for (const s of sources) {
@@ -257,7 +257,7 @@ function schemaAfterEachStep(): string[] {
   });
 }
 
-test('shipped migration steps are unchanged', () => {
+test('[migrations-append] shipped migration steps are unchanged', () => {
   const locked = readFileSync(LOCK, 'utf8').split('\n').filter(Boolean);
   const actual = schemaAfterEachStep();
   const found: string[] = [];

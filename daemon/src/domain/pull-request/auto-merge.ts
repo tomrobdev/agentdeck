@@ -91,3 +91,86 @@ export function autoMergeCheck(
   if (reasons.wait.length) return { verdict: 'wait', reasons: reasons.wait };
   return { verdict: 'merge', reasons: [] };
 }
+
+/** What `autoMergeView` says about a task. `off`: not on. `on`: on, no PR checked yet. The rest are the last check's verdict. */
+export type AutoMergeState = 'off' | 'on' | 'merge' | 'wait' | 'never';
+
+/** A branch measured locally against the limits: the lines it changed against the base and the paths it touches. */
+export interface AutoMergeMeasured {
+  lines: number;
+  paths: string[];
+}
+
+export interface AutoMergeView {
+  state: AutoMergeState;
+  /** One short phrase for a list row: "will auto-merge", "needs a person to merge: …". */
+  label: string;
+  /** Why it waits or needs a person; for a task with no open PR, how the branch measures against the limits. */
+  reasons: string[];
+  /** Where on or off comes from: the task's own setting, its repo's, or (planner) off because the repo auto-approves proposals. */
+  source: 'task' | 'repo' | 'planner';
+  /** When the PR refresh made the check; null when no check counts. */
+  checked_at: string | null;
+  limits: { max_lines: number; skip: string[]; tests: string };
+}
+
+/** The stored check, or null when it is missing or unreadable. */
+export function readAutoMergeCheck(json: string | null): AutoMergeCheck | null {
+  if (!json) return null;
+  try {
+    const v = JSON.parse(json) as Partial<AutoMergeCheck> | null;
+    if (!v || !['merge', 'wait', 'never'].includes(v.verdict as string) || !Array.isArray(v.reasons)) return null;
+    return { verdict: v.verdict!, reasons: v.reasons.filter((r): r is string => typeof r === 'string') };
+  } catch {
+    return null;
+  }
+}
+
+const LABELS = { off: 'auto-merge off', on: 'auto-merge on', merge: 'will auto-merge' };
+
+/**
+ * What every view says about a task's auto-merge, from its setting, the check the PR refresh stored (counted only
+ * while the PR is open) and its repo's limits. `measured`, for a branch with no open PR, adds how it stands against
+ * the limits now. Pure: the CLI and the dashboard word it the same way.
+ */
+export function autoMergeView(
+  task: Pick<Task, 'auto_merge' | 'source' | 'pr_state' | 'auto_merge_check' | 'auto_merge_checked_at'>,
+  repo: Pick<Repo, 'auto_merge' | 'auto_approve' | 'test_cmd' | 'auto_merge_max_lines' | 'auto_merge_skip'>,
+  measured?: AutoMergeMeasured | null,
+): AutoMergeView {
+  const on = autoMergeOn(task, repo);
+  const source: AutoMergeView['source'] =
+    task.auto_merge !== null
+      ? 'task'
+      : !on && repo.auto_merge === 1 && task.source === 'planner' && repo.auto_approve === 1
+        ? 'planner'
+        : 'repo';
+  const skip = autoMergeSkip(repo);
+  const limits = {
+    max_lines: repo.auto_merge_max_lines,
+    skip,
+    tests: repo.test_cmd ? 'the last run must pass the tests' : 'the PR must have passing checks (the repo has no test command)',
+  };
+  if (!on) return { state: 'off', label: LABELS.off, reasons: [], source, checked_at: null, limits };
+
+  const check = task.pr_state === 'open' ? readAutoMergeCheck(task.auto_merge_check) : null;
+  if (check) {
+    const first = check.reasons[0];
+    const label =
+      check.verdict === 'merge'
+        ? LABELS.merge
+        : check.verdict === 'wait'
+          ? `auto-merge waiting${first ? `: ${first}` : ''}`
+          : `needs a person to merge${first ? `: ${first}` : ''}`;
+    return { state: check.verdict, label, reasons: check.reasons, source, checked_at: task.auto_merge_checked_at, limits };
+  }
+
+  const reasons: string[] = [];
+  if (measured) {
+    const n = (value: number) => value.toLocaleString('en-US');
+    if (measured.lines > limits.max_lines) reasons.push(`now ${n(measured.lines)} lines, over the limit of ${n(limits.max_lines)}`);
+    const held = measured.paths.filter((path) => skip.some((prefix) => path.startsWith(prefix)));
+    if (held.length) reasons.push(`touches ${held.slice(0, 3).join(', ')}${held.length > 3 ? ` and ${held.length - 3} more` : ''}`);
+  }
+  return { state: 'on', label: LABELS.on, reasons, source, checked_at: null, limits };
+}
