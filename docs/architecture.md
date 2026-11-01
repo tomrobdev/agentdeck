@@ -118,7 +118,7 @@ flowchart TD
   application -->|44| adapters
   application -->|8| config_ts
   application -->|30| db
-  application -->|117| domain
+  application -->|118| domain
   cli_ts -->|1| application
   cli_ts -->|8| cli
   cli_ts -->|1| db
@@ -126,7 +126,7 @@ flowchart TD
   cli -->|3| config_ts
   cli -->|1| daemon_ts
   cli -->|2| db
-  cli -->|15| domain
+  cli -->|16| domain
   daemon_ts -->|2| adapters
   daemon_ts -->|1| api
   daemon_ts -->|2| application
@@ -134,7 +134,7 @@ flowchart TD
   daemon_ts -->|1| db
   daemon_ts -->|1| domain
   db -->|3| config_ts
-  db -->|23| domain
+  db -->|24| domain
 ```
 
 <!-- /generated -->

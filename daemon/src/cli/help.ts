@@ -85,7 +85,9 @@ Daemon
                                   notify_desktop (on|off), notify_events (done,blocked,failed,hold,paused,proposed), ntfy_topic, ntfy_server,
                                   planner_enabled (on|off), planner_interval_hours, planner_max_tasks, planner_model,
                                   reload_on_change (on|off): restart onto new daemon/src code once nothing is running
-  agentdeck stats [--repo r] [--json]  the pilot scorecard measures per repo: tasks done on the first run (with a Wilson 95%
-                                  interval), permission denials per run, cost and minutes per done task
+  agentdeck stats [--repo r] [--since <date>] [--by week] [--json]  the pilot scorecard measures per repo: tasks done on
+                                  the first run (with a Wilson 95% interval), permission denials per run, cost and minutes per
+                                  done task, then interventions, median minutes queued, running and in review, PRs green on CI
+                                  when opened and quota spent (points of the 7-day window); --by week adds a row per week
   agentdeck notify-test           send a test notification on every enabled channel
 `;

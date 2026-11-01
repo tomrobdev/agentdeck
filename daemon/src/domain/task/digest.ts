@@ -90,6 +90,8 @@ export function describeEvent(e: Pick<TaskEventRow, 'type' | 'to_status' | 'reas
       return e.reason ? `PR merged (${short(e.reason, REASON_MAX)})` : 'PR merged';
     case 'pr':
       return e.reason?.startsWith('opened ') ? 'PR opened' : withReason('PR', e.reason);
+    case 'edit':
+      return withReason('edited', e.reason);
     case 'sync':
       return 'synced with the base branch';
     case 'plan_unfinished':

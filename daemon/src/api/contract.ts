@@ -236,6 +236,7 @@ export interface TaskEventRow {
   task_id: number;
   type:
     | 'created'
+    | 'edit'
     | 'merge'
     | 'pr'
     | 'sync'

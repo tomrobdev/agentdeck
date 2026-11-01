@@ -1,8 +1,9 @@
-// The read behind `agentdeck stats`: work runs with their task's repo and status.
+// The reads behind `agentdeck stats`: work runs with their task's repo and status, and tasks with their history.
 import { and, asc, eq } from 'drizzle-orm';
+import type { ScorecardEvent, ScorecardTaskRow } from '../domain/run/scorecard.ts';
 import type { StatRun } from '../domain/run/stats.ts';
 import type { Orm } from './orm.ts';
-import { runs, tasks } from './tables.ts';
+import { repos, runs, taskEvents, tasks } from './tables.ts';
 
 export function statsStore(orm: Orm) {
   return {
@@ -24,6 +25,46 @@ export function statsStore(orm: Orm) {
         .innerJoin(tasks, eq(tasks.id, runs.task_id))
         .where(and(eq(runs.kind, 'work'), repo_id === undefined ? undefined : eq(tasks.repo_id, repo_id)))
         .orderBy(asc(runs.id))
+        .all();
+    },
+    /** Every task, optionally of one repo, with its own auto-merge setting and its repo's. */
+    scorecardTasks(repo_id?: number): ScorecardTaskRow[] {
+      return orm
+        .select({
+          id: tasks.id,
+          repo_id: tasks.repo_id,
+          created_at: tasks.created_at,
+          auto_merge: tasks.auto_merge,
+          repo_auto_merge: repos.auto_merge,
+          pr_checks_opened: tasks.pr_checks_opened,
+        })
+        .from(tasks)
+        .innerJoin(repos, eq(repos.id, tasks.repo_id))
+        .where(repo_id === undefined ? undefined : eq(tasks.repo_id, repo_id))
+        .orderBy(asc(tasks.id))
+        .all()
+        .map(({ auto_merge, repo_auto_merge, ...task }) => ({
+          ...task,
+          auto_merge: auto_merge === null ? null : auto_merge === 1,
+          repo_auto_merge: repo_auto_merge === 1,
+        }));
+    },
+    /** Every history row of the tasks of one repo (or all), oldest first, with the task's repo. */
+    scorecardEvents(repo_id?: number): ScorecardEvent[] {
+      return orm
+        .select({
+          task_id: taskEvents.task_id,
+          repo_id: tasks.repo_id,
+          type: taskEvents.type,
+          from_status: taskEvents.from_status,
+          to_status: taskEvents.to_status,
+          reason: taskEvents.reason,
+          at: taskEvents.at,
+        })
+        .from(taskEvents)
+        .innerJoin(tasks, eq(tasks.id, taskEvents.task_id))
+        .where(repo_id === undefined ? undefined : eq(tasks.repo_id, repo_id))
+        .orderBy(asc(taskEvents.id))
         .all();
     },
   };

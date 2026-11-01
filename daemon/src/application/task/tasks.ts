@@ -6,7 +6,7 @@ import { runProgram } from '../../adapters/shell.ts';
 import type { Db } from '../../db/index.ts';
 import { PLAN_LIMIT, isPlanPath, parsePlan } from '../../domain/plan/plan.ts';
 import type { Repo } from '../../domain/repo/repo.ts';
-import { readNeeds } from '../../domain/task/needs.ts';
+import { INSTALL_NOTE, readNeeds } from '../../domain/task/needs.ts';
 import { hasOpenPr } from '../../domain/task/stage.ts';
 import {
   archivedRepoError,
@@ -255,7 +255,7 @@ export async function installNeeds(db: Db, id: number): Promise<{ packages: stri
   } catch (err) {
     throw new ActionError(`installed, but could not commit: ${lastLine((err as Error).message)}`);
   }
-  retryTask(db, id, `AgentDeck installed ${packages.join(' ')}${dev ? ' (dev)' : ''} on the branch at the person's request.`);
+  retryTask(db, id, `${INSTALL_NOTE} ${packages.join(' ')}${dev ? ' (dev)' : ''} on the branch at the person's request.`);
   return { packages, dev };
 }
 

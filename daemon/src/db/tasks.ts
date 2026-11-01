@@ -304,12 +304,17 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       fields: Partial<Pick<Task, 'title' | 'prompt' | 'priority' | 'model' | 'max_turns' | 'max_attempts' | 'plan_path' | 'plan_steps'>>,
     ): Task | undefined {
       if (Object.keys(fields).length === 0) return this.getTask(id);
-      return orm
-        .update(tasks)
-        .set({ ...given(fields), updated_at: sql.raw(NOW) })
-        .where(and(eq(tasks.id, id), inArray(tasks.status, EDITABLE_STATUSES)))
-        .returning()
-        .get() as Task | undefined;
+      return atomically(db, () => {
+        const edited = orm
+          .update(tasks)
+          .set({ ...given(fields), updated_at: sql.raw(NOW) })
+          .where(and(eq(tasks.id, id), inArray(tasks.status, EDITABLE_STATUSES)))
+          .returning()
+          .get() as Task | undefined;
+        // The status stays; the row says what was edited, and `stats` counts an edit of a queued or blocked task.
+        if (edited) recordEvent(id, 'edit', edited.status, edited.status, Object.keys(fields).join(', '));
+        return edited;
+      });
     },
     /** Where a task's work is checked out. Not a status, so unguarded. */
     setCheckout(id: number, fields: Partial<Pick<Task, 'branch' | 'worktree'>>): void {
