@@ -206,6 +206,9 @@ export const MIGRATIONS: Migration[] = [
      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
    );
    CREATE INDEX review_comments_review ON review_comments(review_id, id);`,
+  // 21: what a live run is doing: turns so far and the last tool call, kept from its stream while it runs.
+  `ALTER TABLE runs ADD COLUMN live_turns INTEGER NOT NULL DEFAULT 0;
+   ALTER TABLE runs ADD COLUMN live_tool TEXT;`,
 ];
 
 /** Runs every step above the database's user_version in one transaction; returns how many ran. */

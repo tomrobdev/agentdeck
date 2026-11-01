@@ -147,6 +147,14 @@ export interface NewLink {
   kind: LinkKind;
 }
 
+/** A running task's live state. `since` is UTC `YYYY-MM-DD HH:MM:SS`; `tool` is a few words, e.g. "Edit worker.ts". */
+export interface LiveView {
+  since: string;
+  turns: number;
+  max_turns: number;
+  tool: string | null;
+}
+
 /** A task as returned by the list endpoint: everything except the prompt. */
 export interface TaskSummary {
   id: number;
@@ -191,6 +199,8 @@ export interface TaskSummary {
   dependents?: { id: number; kind: LinkKind }[];
   /** A done task whose latest run left linked plan steps unfinished. Missing from a daemon that predates it. */
   plan_unfinished?: boolean;
+  /** For a running task: when its run started, turns so far and the last tool call. Missing from a daemon that predates it. */
+  live?: LiveView | null;
   /** What a queued task waits for; null once it waits for nothing (or it isn't queued). */
   wait: StartWait | null;
   created_at: string;

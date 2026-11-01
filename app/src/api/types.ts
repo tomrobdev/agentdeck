@@ -9,6 +9,7 @@ export type {
   AutoMergeView,
   Budget,
   CancelResult,
+  LiveView,
   Changes,
   ChangedFile,
   Commit,

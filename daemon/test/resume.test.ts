@@ -48,6 +48,8 @@ const run = (o: Partial<Run>): Run => ({
   log_path: '/tmp/log',
   pid: null,
   denials: 0,
+  live_turns: 0,
+  live_tool: null,
   ...o,
 });
 

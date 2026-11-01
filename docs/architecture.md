@@ -118,7 +118,7 @@ flowchart TD
   application -->|42| adapters
   application -->|8| config_ts
   application -->|28| db
-  application -->|108| domain
+  application -->|110| domain
   cli_ts -->|1| application
   cli_ts -->|8| cli
   cli_ts -->|1| db
@@ -231,6 +231,8 @@ erDiagram
     integer pid "nullable"
     integer denials
     text kind
+    integer live_turns
+    text live_tool "nullable"
   }
   settings {
     text key PK
@@ -462,5 +464,6 @@ stateDiagram-v2
 | 18   | task links (docs/plans/task-links.html). kind is builds_on \| after. after_task is copied in and no longer read.                                                                                                        |
 | 19   | the latest auto-merge check of a done task's open PR (docs/plans/auto-merge-view.html): JSON { verdict, reasons }, NULL when none; auto_merge_checked_at is when the PR refresh made it.                                |
 | 20   | reviews made in the dashboard (docs/plans/review-merge.html). A review is a draft until submitted_at is set; kind is comment \| request_changes. A comment's state is open \| answered \| resolved; side is old \| new. |
+| 21   | what a live run is doing: turns so far and the last tool call, kept from its stream while it runs.                                                                                                                      |
 
 <!-- /generated -->
