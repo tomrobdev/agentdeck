@@ -17,6 +17,7 @@ type WithoutTask<T> = Omit<T, 'task'>;
 
 // Responses
 check<Fits<Out<typeof actions.status>, C.Status>>();
+check<Fits<Out<typeof actions.daemonState>, C.DaemonState>>();
 check<Fits<Out<typeof actions.restartDaemon>, C.RestartResult>>();
 check<Fits<Out<typeof actions.serviceStatus>, C.ServiceStatus>>();
 check<Fits<Out<typeof actions.getSettings>, C.Settings>>();

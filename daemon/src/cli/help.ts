@@ -70,6 +70,8 @@ Daemon
   agentdeck restart [--now]     restart the service: pause new claims, wait until no task or planner run is active,
                                   restart, restore the pause state. --now restarts at once (a running task is requeued)
   agentdeck logs [-f] [-n lines]  print (or follow) ~/.agentdeck/logs/daemon.log
+  agentdeck doctor [--json]     check the daemon: service, API, loaded commit, reload, stray claude processes, the log, gh;
+                                  each failed check names the command that fixes it (exit 1 if any fails; works with the daemon down)
   agentdeck daemon              run the scheduler in the foreground
   agentdeck run-once            work the queue until empty, then exit (ignores pause)
   agentdeck pause | resume

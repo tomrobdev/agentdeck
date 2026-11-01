@@ -46,6 +46,15 @@ export async function checkoutCommit(cwd: string): Promise<string | null> {
   }
 }
 
+/** How many commits `cwd`'s HEAD has that `commit` does not, or null when either is unknown there. */
+export async function commitsAheadOf(cwd: string, commit: string): Promise<number | null> {
+  try {
+    return Number(await git(cwd, 'rev-list', '--count', `${commit}..HEAD`));
+  } catch {
+    return null;
+  }
+}
+
 /** Whether `file` (absolute) differs from HEAD in the checkout containing it: modified, staged or untracked. */
 export async function hasUncommittedChanges(file: string): Promise<boolean> {
   try {

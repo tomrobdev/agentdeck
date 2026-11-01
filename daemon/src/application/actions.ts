@@ -3,6 +3,8 @@ export { readLog } from '../adapters/run-log.ts';
 // The launchd service the daemon runs under, for the CLI's daemon commands.
 export { install, restart, serviceStatus, start, stop, tailLog, uninstall } from '../adapters/service.ts';
 export { type SyncReport, syncNow } from './sync.ts';
+export { daemonHealth } from './daemon/doctor.ts';
+export type { Check as HealthCheck } from '../domain/daemon/health.ts';
 export { ActionError } from './input.ts';
 export * from './task/files.ts';
 export { type LiveContext, liveContext, repoForPath } from './task/context.ts';

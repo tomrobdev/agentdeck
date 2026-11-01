@@ -1,6 +1,6 @@
 // The generic part of the HTTP API: reading a request, answering it, CORS, and dispatching to routes.
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { ActionError, type ChangeWatcher, type DaemonInfo, type Scheduler } from '../application/actions.ts';
+import { ActionError, type ChangeWatcher, type DaemonInfo, type ReloadFacts, type Scheduler } from '../application/actions.ts';
 import { API_ALLOWED_ORIGINS } from '../config.ts';
 import type { Db } from '../db/index.ts';
 
@@ -13,7 +13,7 @@ export interface ApiContext {
   scheduler: ApiScheduler;
   /** The change stream behind GET /api/events. */
   changes: Pick<ChangeWatcher, 'rev' | 'subscribe'>;
-  daemon: { info: DaemonInfo; requestRestart: () => void };
+  daemon: { info: DaemonInfo; requestRestart: () => void; reloadFacts: () => ReloadFacts };
 }
 
 /** Biggest request body accepted. */

@@ -46,6 +46,39 @@ export interface ReloadDecision {
   reason: string;
 }
 
+/** Why a reload is blocked, worded for the log and for `agentdeck doctor`, which tells the two apart by these. */
+export const SCHEMA_DIRTY = 'db/schema.ts has uncommitted changes';
+export const offMain = (branch: string): string => `the checkout is on ${branch}, not main`;
+
+/** The reload as the API serves it: what a person needs to know about why the daemon is on old code. */
+export interface ReloadState {
+  /** reload_on_change is on. */
+  enabled: boolean;
+  /** The code on disk is newer than the code running, and a restart is coming. */
+  pending: boolean;
+  /** What the decision said, or null when there is nothing to say. */
+  reason: string | null;
+  /** What a pending reload waits for (running tasks, resolve runs), or null. */
+  waiting: string | null;
+  /** Why the code on disk must not be loaded, or null. */
+  blocked: string | null;
+  /** How many source files changed since the daemon started. */
+  changed: number;
+}
+
+export function reloadState(i: ReloadInput): ReloadState {
+  const d = reloadDecision(i);
+  return {
+    enabled: i.enabled,
+    pending: d.pending,
+    reason: d.reason || null,
+    waiting: d.pending && !d.exit ? restartWait(i.activity) : null,
+    // A requested restart goes ahead whatever blocks a reload on change.
+    blocked: !i.requested && i.enabled && i.changed.length ? (i.blocked ?? null) : null,
+    changed: i.changed.length,
+  };
+}
+
 export function reloadDecision(i: ReloadInput): ReloadDecision {
   const wait = restartWait(i.activity);
   if (i.requested) {

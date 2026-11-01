@@ -25,6 +25,8 @@ flowchart LR
     reporoot["adapters/repo-root.ts"]
     watch["adapters/watch.ts"]
     caffeinate["adapters/caffeinate.ts"]
+    daemonapi["adapters/daemon-api.ts"]
+    daemonlog["adapters/daemon-log.ts"]
   end
   sqlite[("SQLite")]
   claudecli["claude -p"]
@@ -51,6 +53,8 @@ flowchart LR
   notify --> notifications
   watch -. "source changed" .-> scheduler
   caffeinate -. "keeps the Mac awake" .-> scheduler
+  cli -- "agentdeck doctor" --> daemonapi
+  cli -- "agentdeck doctor" --> daemonlog
 ```
 
 ## One task's run
@@ -104,15 +108,15 @@ flowchart TD
   db["db"]
   domain["domain"]
   adapters -->|4| config_ts
-  adapters -->|9| domain
+  adapters -->|10| domain
   api -->|8| application
   api -->|2| config_ts
   api -->|4| db
   api -->|3| domain
-  application -->|36| adapters
-  application -->|7| config_ts
-  application -->|26| db
-  application -->|103| domain
+  application -->|42| adapters
+  application -->|8| config_ts
+  application -->|27| db
+  application -->|106| domain
   cli_ts -->|1| application
   cli_ts -->|8| cli
   cli_ts -->|1| db
@@ -320,6 +324,7 @@ stateDiagram-v2
 | Method | Path                           | Use case                                           |
 | ------ | ------------------------------ | -------------------------------------------------- |
 | POST   | `/api/daemon/restart`          | `actions.restartDaemon`                            |
+| GET    | `/api/daemon`                  | `actions.daemonState`                              |
 | GET    | `/api/events`                  |                                                    |
 | POST   | `/api/notify/test`             | `actions.sendTestNotification`                     |
 | POST   | `/api/pause`                   | `actions.setPaused`, `actions.status`              |
