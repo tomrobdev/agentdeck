@@ -57,6 +57,7 @@ export function status(db: Db, daemon: DaemonInfo = { commit: null, started_at: 
     governor: gate.governor,
     budget: db.budget(),
     notifications: db.recentNotifications(10),
+    planning: db.unfinishedPlannerRuns(),
     ...queueWaits(db),
   };
 }

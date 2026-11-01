@@ -728,6 +728,8 @@ export interface Status {
   /** What every queued task waits for, if anything. */
   wait: QueueWait | null;
   paused_repos: { id: number; name: string; reason: string; queued: number }[];
+  /** The planner runs under way, one per unfinished run; `started_at` is UTC `YYYY-MM-DD HH:MM:SS`. Missing from a daemon that predates it. */
+  planning?: { id: number; repo_id: number; repo: string; started_at: string }[];
 }
 
 export interface Settings {

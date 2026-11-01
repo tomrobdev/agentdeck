@@ -28,6 +28,16 @@ export function plannerRunStore(orm: Orm) {
     countRunningPlannerRuns(): number {
       return orm.select({ n: count() }).from(plannerRuns).where(isNull(plannerRuns.ended_at)).get()?.n ?? 0;
     },
+    /** The planner runs under way, oldest first, with their repo's name. */
+    unfinishedPlannerRuns(): { id: number; repo_id: number; repo: string; started_at: string }[] {
+      return orm
+        .select({ id: plannerRuns.id, repo_id: plannerRuns.repo_id, repo: repos.name, started_at: plannerRuns.started_at })
+        .from(plannerRuns)
+        .innerJoin(repos, eq(repos.id, plannerRuns.repo_id))
+        .where(isNull(plannerRuns.ended_at))
+        .orderBy(plannerRuns.id)
+        .all();
+    },
     plannerRuns(repo_id?: number, limit = 10): PlannerRun[] {
       return orm
         .select()

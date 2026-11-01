@@ -59,8 +59,8 @@ const pageId = computed(() => (route.current.name === 'task' ? route.current.id 
 // hold lifting) change with time, not with a write, and the tray label reads it.
 const statusQ = useQuery({ ...statusQuery(), refetchInterval: STATUS_FALLBACK_MS, refetchIntervalInBackground: true });
 const palette = ref(false);
-// The palette searches every task, also from a task page, which doesn't otherwise load the list.
-const tasksQ = useQuery(computed(() => ({ ...tasksQuery(), enabled: pageId.value === null || palette.value })));
+// The list is read on every page: the palette searches every task and the status bar's activity list is built from it.
+const tasksQ = useQuery(tasksQuery());
 const taskQ = useQuery(computed(() => ({ ...taskQuery(pageId.value ?? 0), enabled: pageId.value !== null })));
 useChangeStream();
 const reposQ = useQuery(reposQuery());
@@ -199,7 +199,7 @@ watchEffect(() => {
       </section>
     </main>
 
-    <StatusBar :status="status" :offline="offline" :busy="busy" @toggle="togglePause" @daemon="modal = 'daemon'" />
+    <StatusBar :status="status" :tasks="tasks" :offline="offline" :busy="busy" @toggle="togglePause" @daemon="modal = 'daemon'" />
 
     <NewTaskForm v-if="modal === 'new'" :repos="repos" @close="modal = null" @created="onCreated" @repos="modal = 'repos'" />
     <ReposPanel v-if="modal === 'repos'" :repos="repos" @close="modal = null" />
