@@ -288,6 +288,11 @@ export interface TaskDetail extends Task {
   plans: TaskPlan[];
 }
 
+/** The reply to adding or editing a task: the task, and what is worth a second look in its prompt (the task is saved either way). */
+export interface TaskSaved extends TaskDetail {
+  warnings: string[];
+}
+
 /** POST /api/tasks */
 export interface NewTask {
   repo: string;

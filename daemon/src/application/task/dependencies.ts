@@ -21,7 +21,7 @@ export interface Waiting {
 }
 
 /** A task as a link's other end: its state, its repo's pr_mode and its own links. */
-function targetOf(db: Db, id: number): LinkTarget | undefined {
+export function targetOf(db: Db, id: number): LinkTarget | undefined {
   const dep = db.getTask(id);
   if (!dep) return undefined;
   return { ...dep, pr_mode: db.getRepo(dep.repo_id)?.pr_mode ?? 'off', links: db.linksOf(id) };

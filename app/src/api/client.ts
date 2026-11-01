@@ -36,6 +36,7 @@ import type {
   Status,
   SubmitReview,
   TaskDetail,
+  TaskSaved,
   TaskPatch,
   TaskSummary,
   TestNotifyResult,
@@ -89,13 +90,13 @@ export const api = {
   repoDeletion: (id: number) => call<RepoDeletion>(`/api/repos/${id}/deletion`),
   /** Local only: `leftover` names files that couldn't be removed. */
   deleteRepo: (id: number) => call<RepoDeleted>(`/api/repos/${id}`, { method: 'DELETE' }),
-  editTask: (id: number, patch: TaskPatch) => call<TaskDetail>(`/api/tasks/${id}`, { method: 'POST', json: patch }),
+  editTask: (id: number, patch: TaskPatch) => call<TaskSaved>(`/api/tasks/${id}`, { method: 'POST', json: patch }),
   approve: (id: number) => call<TaskDetail>(`/api/tasks/${id}/approve`, { method: 'POST' }),
   reject: (id: number) => call<TaskDetail>(`/api/tasks/${id}/reject`, { method: 'POST' }),
   service: () => call<ServiceStatus>('/api/service'),
   tasks: () => call<TaskSummary[]>('/api/tasks'),
   task: (id: number) => call<TaskDetail>(`/api/tasks/${id}`),
-  addTask: (t: NewTask) => call<TaskDetail>('/api/tasks', { method: 'POST', json: t }),
+  addTask: (t: NewTask) => call<TaskSaved>('/api/tasks', { method: 'POST', json: t }),
   /** Link the task to another; refused (a cycle, itself, already linked) with the reason as the error. */
   linkTask: (id: number, link: NewLink) => call<TaskDetail>(`/api/tasks/${id}/links`, { method: 'POST', json: link }),
   unlinkTask: (id: number, on: number) => call<TaskDetail>(`/api/tasks/${id}/links/${on}`, { method: 'DELETE' }),

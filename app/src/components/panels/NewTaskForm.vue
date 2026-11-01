@@ -16,11 +16,15 @@ const planPath = ref('');
 const planSteps = ref('');
 const error = ref('');
 const saving = ref(false);
+/** The task once it is queued, while its warnings are shown: the form stays open until the person has read them. */
+const saved = ref<TaskDetail | null>(null);
+const warnings = ref<string[]>([]);
 const promptEl = ref<HTMLTextAreaElement | null>(null);
 
 onMounted(() => promptEl.value?.focus());
 
 async function submit() {
+  if (saved.value) return emit('created', saved.value);
   error.value = '';
   saving.value = true;
   try {
@@ -37,7 +41,10 @@ async function submit() {
         .map((s) => s.trim())
         .filter(Boolean),
     });
-    emit('created', task);
+    if (task.warnings.length) {
+      saved.value = task;
+      warnings.value = task.warnings;
+    } else emit('created', task);
   } catch (e) {
     error.value = (e as Error).message;
   } finally {
@@ -102,10 +109,16 @@ async function submit() {
         </label>
       </div>
       <p v-if="error" class="form-error">{{ error }}</p>
+      <div v-if="warnings.length" class="text-blocked">
+        <p class="m-0">Queued, but check the prompt:</p>
+        <ul class="m-0 pl-5">
+          <li v-for="w in warnings" :key="w">{{ w }}</li>
+        </ul>
+      </div>
       <div class="flex items-center justify-end gap-2">
         <span class="muted mr-auto text-sm">⌘↩ to queue</span>
-        <button type="button" @click="$emit('close')">Cancel</button>
-        <button class="primary" type="submit" :disabled="saving || !prompt.trim()">Queue task</button>
+        <button v-if="!saved" type="button" @click="$emit('close')">Cancel</button>
+        <button class="primary" type="submit" :disabled="saving || !prompt.trim()">{{ saved ? 'Open task' : 'Queue task' }}</button>
       </div>
     </form>
   </Modal>
