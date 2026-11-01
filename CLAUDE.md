@@ -38,7 +38,7 @@ Use these words in code, logs and UI.
 `daemon/test/architecture.test.ts` checks the Boundaries above, plus the dependency, migration and process-group rules below. Each failure names the file, line and rule.
 
 - **Erasable TypeScript only.** Node runs `.ts` directly, so no enums, namespaces or constructor parameter properties.
-- **No new runtime dependencies** without a reason. Drizzle at runtime is deferred until 1.0 is stable (`docs/plans/drizzle.html`); for now it is dev tooling only: `pnpm db:studio` browses the live database, `pnpm db:check` checks `db/tables.ts` against the migrations.
+- **No new runtime dependencies** without a reason. The one there is, `drizzle-orm`, is pinned at exactly `1.0.0-rc.5` (no caret) and the stores are moving onto it (`docs/plans/drizzle.html`); use only its core query builder, not the relational query API. `pnpm db:studio` browses the live database, `pnpm db:check` checks `db/tables.ts` against the migrations.
 - **Schema changes are appended as new migration steps.** Never edit a step that has shipped. Mirror the change in `db/tables.ts` and in the domain type: `pnpm typecheck` (`db/types-check.ts`) and `pnpm db:check` fail until all three agree. Once a step is final, append the hash the test prints to `daemon/test/migrations.lock`.
 - **Every `claude` runs in its own process group** with its pid recorded on the run, so crash recovery can stop it.
 - **Keep this checkout on `main`.** The installed daemon runs its `daemon/src/cli.ts`, so switching branches here swaps the live daemon's code. Try task branches from their worktrees.

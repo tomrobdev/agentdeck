@@ -40,23 +40,32 @@
       Row types are written by hand in <code>domain/</code> and cast onto query results, column lists are strings, and partial updates are
       built clause by clause, so a new column can silently miss a type or a query. Define the tables once with Drizzle on the existing
       <code>node:sqlite</code> connection, check the domain types against them at compile time, and port the stores one at a time behind the
-      same <code>Db</code> methods, so nothing outside <code>db/</code> changes. Written 2026-10-25.
+      same <code>Db</code> methods, so nothing outside <code>db/</code> changes. Written 2026-10-25; on 2026-11-01 the port was approved on
+      <code>1.0.0-rc.5</code> instead of waiting for 1.0.
     </p>
 
     <h2>Where it starts</h2>
     <ul>
       <li>
-        <code>daemon/src/db/</code>: about 780 lines, 55 prepared statements, eight stores merged into one <code>Db</code> in
-        <code>index.ts</code>. Nothing outside <code>db/</code> uses the connection directly. 13 test files open a database.
+        <code>daemon/src/db/</code>: about 760 lines, 72 prepared statements (27 in <code>tasks.ts</code>, 19 in <code>repos.ts</code>),
+        eight stores merged into one <code>Db</code> in <code>index.ts</code>. Nothing outside <code>db/</code> uses the connection
+        directly.
       </li>
       <li>
         Migrations: an append-only array in <code>db/schema.ts</code>, counted by <code>PRAGMA user_version</code>, all pending steps in one
-        transaction. 11 steps have shipped.
+        transaction. 17 steps have shipped.
       </li>
       <li>
-        Drizzle on npm, 2026-10-25: <code>latest</code> is 0.45.4, 1.0 is at <code>rc.5</code>. The
-        <code>drizzle-orm/node-sqlite</code> driver takes our <code>DatabaseSync</code> and has a synchronous API (<code>.all()</code>,
-        <code>.get()</code>, <code>.run()</code>).
+        Already in place as dev tooling: <code>db/tables.ts</code> defines every table, <code>db/types-check.ts</code> fails
+        <code>pnpm typecheck</code> when a table and its domain type disagree, <code>pnpm db:check</code> fails when
+        <code>tables.ts</code> and the migrations disagree, and <code>drizzle.config.ts</code> points Studio at the live database.
+        <code>drizzle-orm</code> is a runtime dependency at exactly <code>1.0.0-rc.5</code>;
+        <code>daemon/test/architecture.test.ts</code> still allows it only in <code>db/tables.ts</code>.
+      </li>
+      <li>
+        Drizzle on npm, 2026-11-01: <code>latest</code> is 0.45.4, which has no <code>node-sqlite</code> driver. 1.0 has been a release
+        candidate since 2026-04-30; <code>rc.5</code> shipped 2026-10-21. The <code>drizzle-orm/node-sqlite</code> driver takes our
+        <code>DatabaseSync</code> and has a synchronous API (<code>.all()</code>, <code>.get()</code>, <code>.run()</code>).
       </li>
     </ul>
 
@@ -68,19 +77,31 @@
       </tr>
       <tr>
         <td>
-          Drizzle 1.0 with the <code>node-sqlite</code> driver, on the connection <code>openDb</code> already opens. Not better-sqlite3.
+          Drizzle 1.0 with the <code>node-sqlite</code> driver, on the connection <code>openDb</code> already opens. Not better-sqlite3, and
+          not an async ORM (Kysely, Prisma, TypeORM, MikroORM).
         </td>
         <td>
-          No native module to break on a Homebrew Node upgrade, and no second migration from 0.45 to 1.0. Drizzle and the remaining raw
-          statements share one connection, so <code>atomically</code> covers both.
+          No native module to break on a Homebrew Node upgrade. The stores are synchronous: <code>atomically</code>,
+          <code>claimNextTask</code> and <code>applyEvent</code> read and write in one synchronous step, which an async query can't join.
+          Drizzle and the remaining raw statements share one connection, so <code>atomically</code> covers both.
         </td>
       </tr>
       <tr>
         <td>
-          Gated on 1.0 reaching <code>latest</code>. Until then only the spike (step <code>spike</code>) runs, on a throwaway branch. Going
-          earlier means pinning an exact rc and changing the CLAUDE.md rule on purpose.
+          Pinned at exactly <code>1.0.0-rc.5</code>, decided 2026-11-01. Moving to 1.0 is its own step (<code>upgrade</code>), once 1.0 is
+          <code>latest</code>.
         </td>
-        <td>rc.1 changed the casing API; breaking changes are still landing. CLAUDE.md defers Drizzle until 1.0 is stable.</td>
+        <td>
+          0.45 has no <code>node-sqlite</code> driver, and 1.0 has been a release candidate for six months. The spike passed every check on
+          rc.5.
+        </td>
+      </tr>
+      <tr>
+        <td>
+          Only the core query builder: <code>select</code>, <code>insert</code>, <code>update</code>, <code>delete</code> and the
+          <code>sql</code> template. Not the relational query API (<code>orm.query.x.findMany({ with })</code>).
+        </td>
+        <td>Keeps the move from rc.5 to 1.0 small: much of the work still landing in 1.0 is on the relational API.</td>
       </tr>
       <tr>
         <td>
@@ -91,19 +112,24 @@
       </tr>
       <tr>
         <td>
-          Keep the <code>user_version</code> migration runner. New steps are still appended SQL; drizzle-kit only writes the SQL for a step
-          from the schema change, and a test checks the migrated database matches the Drizzle schema.
+          Keep the <code>user_version</code> migration runner. New steps are still appended SQL; the schema change is made in
+          <code>tables.ts</code> first and <code>pnpm db:generate</code> prints the SQL to append.
         </td>
         <td>
           The runner is proven (crash test, one transaction) and the live database needs no baseline. Switching to drizzle-kit's own
-          migrator would mean marking 11 shipped steps as applied in a database the daemon is using.
+          migrator would mean marking 17 shipped steps as applied in a database the daemon is using.
         </td>
       </tr>
       <tr>
+        <td>Keep <code>atomically</code> (savepoints on the shared connection). Don't use <code>orm.transaction()</code>.</td>
+        <td>The spike showed a <code>ROLLBACK TO</code> undoes Drizzle's writes too, and existing callers nest inside it.</td>
+      </tr>
+      <tr>
         <td>
-          The <code>Db</code> methods keep their names and signatures. Each store is ported whole, tests unchanged, one store per task.
+          The <code>Db</code> methods keep their names and signatures. Each store is ported whole, tests unchanged. Column types stay as
+          they are (flags as <code>number</code>, JSON as <code>string</code>) until step <code>typed-columns</code>.
         </td>
-        <td>Application, API and CLI code doesn't change, and each step is checked by the tests that already exist.</td>
+        <td>Application, API, CLI and dashboard code doesn't change, and each step is checked by the tests that already exist.</td>
       </tr>
       <tr>
         <td>
@@ -134,7 +160,8 @@
       <p>
         Branch <code>spike/drizzle</code>, commit <code>4c043be</code>: <code>drizzle-orm</code> and <code>drizzle-kit</code>
         <code>1.0.0-rc.5</code> (exact), Node 26.12.0, SQLite 3.54.1. <code>settings</code> and <code>repos</code> ported; all 333 daemon
-        tests pass with no test changed, and both typechecks pass.
+        tests pass with no test changed, and both typechecks pass. The branch is far behind <code>main</code>: read its
+        <code>db/orm.ts</code>, <code>db/settings.ts</code> and <code>db/repos.ts</code> for reference, don't rebase it.
       </p>
       <table>
         <tr>
@@ -182,30 +209,29 @@
         </tr>
       </table>
       <p>
-        <b>Verdict: go, still gated on 1.0 reaching <code>latest</code>.</b> Changes to this plan: the foundation step adds
-        <code>created_at</code> (and any other drift the type checks find) to the domain types, and uses <code>push --explain</code> as its
-        schema check; the tasks step's cost check becomes an absolute limit.
+        <b>Verdict: go.</b> First gated on 1.0 reaching <code>latest</code>; on 2026-11-01 the gate was dropped in favour of the exact rc.5
+        pin (see Decisions).
       </p>
     </section>
 
     <section data-plan-step id="foundation" data-status="todo">
-      <h2>Foundation: the tables, and checks against drift</h2>
+      <h2>Foundation: the Drizzle handle in openDb</h2>
       <p>
-        Add <code>drizzle-orm</code> (runtime) and <code>drizzle-kit</code> (dev), exact versions. <code>db/tables.ts</code> defines every
-        table to match the migrated schema exactly (start from <code>drizzle-kit pull</code>). <code>openDb</code> also builds
-        <code>drizzle({ client })</code> on the same connection and hands it to the stores. <code>db/types-check.ts</code> asserts each
-        table's select type equals its domain type (<code>Task</code>, <code>Repo</code>, <code>Run</code>, …). Fix the drift the assertions
-        find (the spike found <code>repos.created_at</code> missing from <code>Repo</code>). A <code>pnpm db:check</code> script migrates a
-        fresh scratch database and runs <code>drizzle-kit push --explain</code> against it, failing unless it reports no changes;
-        <code>pnpm check</code> runs it. <code>drizzle.config.ts</code> and a <code>pnpm db:generate</code> script that prints the SQL for a
-        schema change. No store changes yet.
+        The tables, the type checks and <code>db:check</code> exist already (see Where it starts). What's left:
+        <code>db/orm.ts</code> exports <code>makeOrm(client)</code> (<code>drizzle({ client })</code> from
+        <code>drizzle-orm/node-sqlite</code>) and its <code>Orm</code> type; <code>openDb</code> builds it on the connection it opens and
+        can hand it to the stores. In <code>daemon/test/architecture.test.ts</code>, <code>drizzle-orm</code> may be imported by any file in
+        <code>db/</code> and nowhere else, it stays the only package allowed besides <code>node:</code> ones, and
+        <code>db/tables.ts</code> may be imported at runtime by files in <code>db/</code> only (replacing the "imported only for its types"
+        test). Add <code>pnpm db:generate</code> (daemon and root <code>package.json</code>): migrate a scratch database like
+        <code>scripts/db-check.ts</code> does and print the SQL drizzle-kit would run to make it match <code>tables.ts</code>, exiting 0;
+        share the scratch-database code with <code>db-check.ts</code> rather than copy it. Update the comment in
+        <code>drizzle.config.ts</code>.
       </p>
       <ul data-plan-done>
         <li><code>pnpm check</code> passes, including the crash test.</li>
-        <li>
-          Removing a column from a domain type, or from <code>tables.ts</code>, fails <code>pnpm typecheck</code> or <code>pnpm test</code>.
-        </li>
-        <li><code>pnpm db:generate</code> on the unchanged schema produces no SQL.</li>
+        <li>Importing <code>drizzle-orm</code> from a file outside <code>db/</code> fails <code>pnpm test</code>.</li>
+        <li><code>pnpm db:generate</code> on the unchanged schema prints no SQL statements.</li>
       </ul>
     </section>
 
@@ -213,40 +239,45 @@
       <h2>Port the small stores</h2>
       <p>
         <code>settings</code>, <code>usage</code>, <code>notifications</code>, <code>planner-runs</code>, <code>runs</code> and
-        <code>plans</code> use the builder. Their method signatures don't change. Remove the casts they no longer need.
+        <code>plans</code> use the builder. Their method signatures don't change. Remove the casts they no longer need. Where one of their
+        tables has a domain type that <code>db/types-check.ts</code> doesn't check yet, add the check.
       </p>
       <ul data-plan-done>
         <li><code>pnpm check</code> passes with no test changed.</li>
-        <li>No <code>as unknown as</code> left in these six files.</li>
+        <li>No <code>as unknown as</code> and no <code>.prepare(</code> left in these six files.</li>
       </ul>
     </section>
 
     <section data-plan-step id="repos" data-status="todo">
       <h2>Port the repos store</h2>
       <p>
-        <code>db/repos.ts</code>: <code>updateRepo</code>'s patch becomes one <code>.set()</code>. If
-        <code>docs/plans/repo-archive.html</code> has landed, its <code>archived_at</code> filter and <code>deleteRepo</code> move too; the
-        delete stays one transaction, children first.
+        <code>db/repos.ts</code>, every method: <code>updateRepo</code>'s patch becomes one <code>.set()</code>; the
+        <code>archived_at</code> filters, <code>pauseRepo</code>'s guard (<code>paused_reason IS NULL</code>) and the auto-merge columns
+        move with the rest. <code>deleteRepo</code> stays one transaction, children first.
       </p>
       <ul data-plan-done>
         <li><code>pnpm check</code> passes with no test changed.</li>
-        <li><code>application/repos.ts</code> is unchanged.</li>
+        <li>Nothing outside <code>daemon/src/db/</code> changes.</li>
+        <li>No <code>.prepare(</code> left in <code>db/repos.ts</code>.</li>
       </ul>
     </section>
 
     <section data-plan-step id="tasks" data-status="todo">
       <h2>Port the tasks store</h2>
       <p>
-        <code>db/tasks.ts</code>: listing, summaries (the column list becomes a typed selection), counts, events, dependents, open PRs,
-        <code>recordMerge</code>/<code>recordSync</code>/<code>recordPlanUnfinished</code>, <code>recoverOrphans</code>.
-        <code>applyEvent</code> becomes <code>update(tasks).set(…).where(and(eq(id), inArray(status, fromStatuses(event))))</code>, keeping
-        its retry loop. <code>claimNextTask</code> and <code>DEPENDENCY_MET</code> may keep <code>sql</code> fragments (see Decisions). Run
-        the crash test ten times.
+        <code>db/tasks.ts</code>: listing, summaries (the <code>SUMMARY_COLUMNS</code> string becomes a typed selection), counts, events,
+        dependents, open PRs, <code>editTask</code>, <code>recordMerge</code>/<code>recordSync</code>/<code>recordPlanUnfinished</code>,
+        <code>recoverOrphans</code>. <code>applyEvent</code> becomes one <code>update(tasks).set(…).where(and(…)).returning().get()</code>
+        keeping every part of its guard (id, status, attempts and restarts) and its retry loop; its history row is still written in the same
+        <code>atomically</code> block. <code>claimNextTask</code>, <code>NOT_WAITING</code> and <code>DEPENDENCY_MET</code> may keep
+        <code>sql</code> fragments (see Decisions); <code>DEPENDENCY_MET</code> still mirrors <code>domain/task/dependency.ts</code>.
       </p>
       <ul data-plan-done>
         <li><code>pnpm check</code> passes with no test changed.</li>
-        <li><code>node daemon/scripts/crash-test.mjs 10</code> passes.</li>
-        <li>A scheduler tick with 100 queued tasks still takes under 5 ms.</li>
+        <li><code>node daemon/scripts/crash-test.mjs 10</code> passes with 0 violations.</li>
+        <li>
+          A scheduler tick with 100 queued tasks still takes under 5 ms (measure before and after; put both numbers in the PR description).
+        </li>
       </ul>
     </section>
 
@@ -254,10 +285,10 @@
       <h2>Rules and docs</h2>
       <p>
         CLAUDE.md: "SQL lives only in <code>db/</code>" becomes "queries live only in <code>db/</code>, through Drizzle; raw
-        <code>sql</code>
-        only where the builder hides a guard"; the Drizzle line in Rules is replaced by how to add a column (change
-        <code>tables.ts</code> and the domain type, run <code>pnpm db:generate</code>, append its SQL as a new step). Remove
-        <code>raw</code> from <code>Db</code> if nothing in <code>db/</code> needs it outside <code>openDb</code>.
+        <code>sql</code> only where the builder hides a guard"; the Drizzle line in Rules is replaced by how to add a column (change
+        <code>tables.ts</code> and the domain type, run <code>pnpm db:generate</code>, append its SQL as a new step, then
+        <code>pnpm db:check</code>). Remove <code>raw</code> from <code>Db</code> if nothing outside <code>db/</code> needs it; the
+        <code>node:sqlite</code> rule in the architecture test stays.
       </p>
       <ul data-plan-done>
         <li>CLAUDE.md describes the new way of adding a column, step by step.</li>
@@ -265,11 +296,57 @@
       </ul>
     </section>
 
+    <section data-plan-step id="rebuild-steps" data-status="todo">
+      <h2>Migration steps that rebuild a table</h2>
+      <p>
+        Not queued with the port. Adding a foreign key or a CHECK in SQLite needs a table rebuild (create, copy, drop, rename), which
+        drizzle-kit generates with <code>PRAGMA foreign_keys=OFF</code> around it. That pragma does nothing inside a transaction, and the
+        runner runs every step in one. Add a step kind to <code>db/schema.ts</code> that runs on its own, outside the transaction, with
+        foreign keys off, then runs <code>PRAGMA foreign_key_check</code> and fails the migration if it reports anything. Needed before
+        adding the missing foreign keys (<code>task_events</code>, <code>task_plans</code>, <code>notifications</code>,
+        <code>tasks.after_task</code>), which are their own plan.
+      </p>
+      <ul data-plan-done>
+        <li>A test rebuilds a table with child rows through the new step kind, and the rows and their references survive.</li>
+        <li>A rebuild that leaves a broken reference fails the migration and leaves <code>user_version</code> unchanged.</li>
+        <li><code>pnpm check</code> passes.</li>
+      </ul>
+    </section>
+
+    <section data-plan-step id="typed-columns" data-status="todo">
+      <h2>Typed columns</h2>
+      <p>
+        Not queued with the port. Flags become <code>integer({ mode: 'boolean' })</code> (<code>auto_approve</code>,
+        <code>auto_resolve</code>, <code>sandbox</code>, <code>auto_merge</code>) and JSON text becomes
+        <code>text({ mode: 'json' }).$type&lt;…&gt;()</code> (<code>network</code>, <code>allowed_tools</code>,
+        <code>auto_merge_skip</code>, <code>plan_steps</code>, <code>needs</code>). The stored values don't change, so no migration. The
+        domain types change with them, and so do the use cases, <code>api/contract.ts</code> and the dashboard. One group of columns per
+        task.
+      </p>
+      <ul data-plan-done>
+        <li>No <code>JSON.parse</code> or <code>JSON.stringify</code> of these columns left outside <code>db/</code>.</li>
+        <li><code>pnpm check</code> passes.</li>
+      </ul>
+    </section>
+
+    <section data-plan-step id="upgrade" data-status="todo">
+      <h2>Move to Drizzle 1.0</h2>
+      <p>
+        Once 1.0 is <code>latest</code> on npm: move <code>drizzle-orm</code> and <code>drizzle-kit</code> to the exact 1.0 version, fix
+        what its release notes break, and run the crash test.
+      </p>
+      <ul data-plan-done>
+        <li><code>pnpm check</code> passes, and <code>node daemon/scripts/crash-test.mjs 10</code> passes with 0 violations.</li>
+      </ul>
+    </section>
+
     <h2>Not in this plan</h2>
     <ul>
       <li>drizzle-kit's own migrator and migration table (see Decisions).</li>
-      <li>Generating <code>app/src/api.ts</code> from the daemon's types. The dashboard keeps its mirrored copy.</li>
-      <li>Cascading foreign keys (SQLite needs a table rebuild to add them).</li>
+      <li>
+        Generating <code>app/src/api/types.ts</code> from the daemon's types. The dashboard imports <code>api/contract.ts</code> already.
+      </li>
+      <li>Adding the missing foreign keys and CHECKs themselves (they follow <code>rebuild-steps</code>, as their own plan).</li>
       <li>Drizzle Studio, or any change to how the live database is inspected.</li>
     </ul>
   </body>

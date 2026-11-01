@@ -220,6 +220,10 @@ importers:
         version: 3.3.13(typescript@6.0.3)
 
   daemon:
+    dependencies:
+      drizzle-orm:
+        specifier: 1.0.0-rc.5
+        version: 1.0.0-rc.5
     devDependencies:
       '@types/node':
         specifier: ^24.0.0
@@ -227,9 +231,6 @@ importers:
       drizzle-kit:
         specifier: 1.0.0-rc.5
         version: 1.0.0-rc.5(drizzle-orm@1.0.0-rc.5)
-      drizzle-orm:
-        specifier: 1.0.0-rc.5
-        version: 1.0.0-rc.5
       typescript:
         specifier: ^5.9.0
         version: 5.9.3
