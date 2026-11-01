@@ -20,6 +20,7 @@
     "db:studio": "drizzle-kit studio",
     "db:check": "node scripts/db-check.ts",
     "docs": "node scripts/docs.ts",
+    "rules": "node scripts/rules.ts",
     "db:generate": "node scripts/db-generate.ts"
   },
   "dependencies": {
