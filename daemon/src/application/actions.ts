@@ -14,6 +14,7 @@ export { pilotStats } from './run/stats.ts';
 export { mergePreview, mergeTask } from './pull-request/pull-requests.ts';
 export { setAutoMerge } from './pull-request/auto-merge.ts';
 export * from './repo/repos.ts';
+export * from './review/reviews.ts';
 export { gracefulRestart } from './scheduler/restart.ts';
 export { ChangeWatcher } from './changes.ts';
 export type { Scheduler } from './scheduler/scheduler.ts';

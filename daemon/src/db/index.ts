@@ -7,6 +7,7 @@ import { makeOrm } from './orm.ts';
 import { planStore } from './plans.ts';
 import { plannerRunStore } from './planner-runs.ts';
 import { repoStore } from './repos.ts';
+import { reviewStore } from './reviews.ts';
 import { runStore } from './runs.ts';
 import { migrate } from './schema.ts';
 import { settingsStore } from './settings.ts';
@@ -32,6 +33,7 @@ export function openDb(path = DB_PATH) {
     ...settingsStore(db, orm),
     ...repoStore(db, orm),
     ...taskStore(db, orm),
+    ...reviewStore(orm),
     ...runStore(orm),
     ...statsStore(orm),
     ...planStore(db, orm),

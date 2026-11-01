@@ -194,3 +194,44 @@ export const taskPlans = sqliteTable('task_plans', {
     .default(sql`datetime('now')`)
     .notNull(),
 });
+
+export const reviews = sqliteTable(
+  'reviews',
+  {
+    id: integer().primaryKey(),
+    task_id: integer()
+      .notNull()
+      .references(() => tasks.id),
+    kind: text(),
+    body: text().default('').notNull(),
+    created_at: text()
+      .default(sql`datetime('now')`)
+      .notNull(),
+    submitted_at: text(),
+  },
+  (table) => [index('reviews_task').on(table.task_id, table.id)],
+);
+
+export const reviewComments = sqliteTable(
+  'review_comments',
+  {
+    id: integer().primaryKey(),
+    review_id: integer()
+      .notNull()
+      .references(() => reviews.id),
+    path: text().notNull(),
+    line: integer().notNull(),
+    side: text().notNull(),
+    head_commit: text().notNull(),
+    body: text().notNull(),
+    answer: text(),
+    state: text().default('open').notNull(),
+    created_at: text()
+      .default(sql`datetime('now')`)
+      .notNull(),
+    updated_at: text()
+      .default(sql`datetime('now')`)
+      .notNull(),
+  },
+  (table) => [index('review_comments_review').on(table.review_id, table.id)],
+);
