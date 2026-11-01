@@ -10,7 +10,7 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { openDb } = await import('../src/db/index.ts');
 const { advance, settlePr } = await import('./fixtures.ts');
-const { dependencyState } = await import('../src/domain/task/dependency.ts');
+const { linkState } = await import('../src/domain/task/link.ts');
 const { TASK_STATUSES } = await import('../src/domain/task/lifecycle.ts');
 const { markDone, retryTask, ActionError } = await import('../src/application/actions.ts');
 const { dependencyOf } = await import('../src/application/task/dependencies.ts');
@@ -146,7 +146,7 @@ test('the SQL and the domain agree on when a dependency is met', () => {
           advance(db, dep.id, status, { pr: pr_state, doneBy: done_by });
           const d = db.getTask(dep.id)!;
           const sqlMet = db.hasQueued() && db.claimNextTask()?.id === later.id;
-          const domainMet = dependencyState({ after_task: dep.id }, { ...d, pr_mode }).kind === 'met';
+          const domainMet = linkState({ on: dep.id, kind: 'builds_on' }, { ...d, pr_mode }).kind === 'met';
           assert.equal(sqlMet, domainMet, `${status} pr_state=${pr_state} pr_mode=${pr_mode} done_by=${done_by}`);
           assert.equal(dependencyOf(db, later).kind === 'met', domainMet);
           cases++;

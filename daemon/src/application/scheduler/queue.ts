@@ -26,7 +26,7 @@ export function queueWaits(db: Db): { wait: QueueWait | null; paused_repos: Paus
 }
 
 /** A function telling what a task waits for. Make one per request: it reads the queue state once. */
-export function startWaits(db: Db): (task: Pick<Task, 'status' | 'repo_id' | 'after_task'>) => StartWait | null {
+export function startWaits(db: Db): (task: Pick<Task, 'id' | 'status' | 'repo_id'>) => StartWait | null {
   const q = startGate(db);
   const used = db.slotsUsed();
   const queue = startDecision(q, { ignorePause: false, used, now: Date.now() / 1000 }).wait;

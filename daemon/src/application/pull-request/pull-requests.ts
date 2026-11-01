@@ -18,6 +18,7 @@ import { type Repo, pausedReason } from '../../domain/repo/repo.ts';
 import type { Task } from '../../domain/task/task.ts';
 import { ActionError, flag, object, requireTask, requireTaskRepo, text } from '../input.ts';
 import { prPlanFor } from '../plans.ts';
+import { dependentsWaiting } from '../task/dependencies.ts';
 import { settle, settlePr } from '../task/settle.ts';
 
 /** How often the scheduler re-reads the state of open PRs. */
@@ -99,7 +100,7 @@ export async function mergePreview(db: Db, id: number): Promise<MergePreview> {
     checks: pr.checks,
     ...mergeCheck({ pr_state: task.pr_state, pr, tests_passed }),
     conflicting: isConflicting(pr),
-    unblocks: db.dependentsOf(id).map((t) => ({ id: t.id, title: t.title })),
+    unblocks: dependentsWaiting(db, id).map((t) => ({ id: t.id, title: t.title })),
     auto_merge: autoMergeFor(db, task, repo, pr, tests_passed),
   };
 }
@@ -161,7 +162,7 @@ export async function mergeOpenPr(
   // The base just moved: the repo's other open PRs may now conflict. The scheduler re-reads them at once
   // (a setting, so a merge from the CLI reaches the daemon too).
   db.requestPrCheck();
-  const unblocked = db.dependentsOf(id).map((t) => t.id);
+  const unblocked = dependentsWaiting(db, id).map((t) => t.id);
 
   const result: MergeResult = { method, unblocked };
   if (deleteBranch) {

@@ -61,3 +61,49 @@ test('claimNextTask picks the first queued task, by priority then id, that has n
   assert.equal(claimed, 2 * 4);
   db.close();
 });
+
+test('claimNextTask and startState agree for tasks with several links, of either kind', () => {
+  const db = openDb(':memory:');
+  const repo = db.addRepo({ name: 'open', path: '/tmp/open', base_branch: 'main' });
+  db.updateRepo(repo.id, { pr_mode: 'off' });
+  db.setPaused(false);
+  const make = (finish?: 'done' | 'failed' | 'running') => {
+    const t = db.addTask({ repo_id: repo.id, title: 'dep', prompt: 'p' });
+    if (finish) assert.ok(db.applyEvent(t.id, { type: 'claim' }));
+    if (finish === 'done') assert.ok(db.applyEvent(t.id, { type: 'finish', outcome: 'done' }));
+    if (finish === 'failed') assert.ok(db.applyEvent(t.id, { type: 'finish', outcome: 'failed', retry: false }, { reason: 'broke' }));
+    return t.id;
+  };
+  const done = make('done');
+  const running = make('running');
+  const failed = make('failed');
+  // Queued behind a failed task: stuck by spreading, though it is itself queued.
+  const behind = db.addTask({ repo_id: repo.id, title: 'behind', prompt: 'p' });
+  db.addLink({ task_id: behind.id, on: failed, kind: 'builds_on' });
+  const ends = [done, running, failed, behind.id];
+  const combos: [number[], number[]][] = [];
+  for (const a of ends) {
+    combos.push([[a], []], [[], [a]]);
+    for (const b of ends) if (a !== b) combos.push([[a, b], []], [[a], [b]]);
+  }
+  for (const [builds, after] of combos) {
+    const t = db.addTask({ repo_id: repo.id, title: 't', prompt: 'p' });
+    for (const on of builds) db.addLink({ task_id: t.id, on, kind: 'builds_on' });
+    for (const on of after) db.addLink({ task_id: t.id, on, kind: 'after' });
+  }
+
+  let claimed = 0;
+  for (;;) {
+    const waitOf = startWaits(db);
+    const expected = db
+      .listTasks()
+      .filter((t) => t.status === 'queued' && [null, 'slots'].includes(waitOf(t)?.kind ?? null))
+      .sort((a, b) => b.priority - a.priority || a.id - b.id)[0];
+    const picked = db.claimNextTask();
+    assert.equal(picked?.id, expected?.id, `claim ${claimed}`);
+    if (!picked) break;
+    claimed++;
+  }
+  assert.ok(claimed > 0);
+  db.close();
+});
