@@ -1,6 +1,6 @@
 // How the queue is grouped and shown. What a person may do with a task, how the queue is filtered and sorted and what a blocked
 // task needs are the daemon's domain (task/lifecycle.ts, listing.ts, needs.ts, stage.ts); this file re-exports what the views use.
-import type { Needs, Status, TaskStatus, TaskSummary } from '../api';
+import type { AutoMergeView, Needs, Status, TaskStatus, TaskSummary } from '../api';
 import { personEvents } from '../../../daemon/src/domain/task/lifecycle.ts';
 import { DECISION_STATES, FILTER_STATES, SORT_OPTIONS, filterTasks } from '../../../daemon/src/domain/task/listing.ts';
 import { readNeeds as readNeedsJson } from '../../../daemon/src/domain/task/needs.ts';
@@ -42,6 +42,18 @@ export type PriorityLevel = (typeof PRIORITY_LEVELS)[number]['key'];
 export const priorityLevel = (p: number): PriorityLevel => PRIORITY_LEVELS.find((l) => p >= l.min)!.key;
 
 /** The tasks waiting on this PR. A daemon from before the field existed sends none, which reads as empty. */
+/** The chip colour for each auto-merge state: green will merge, amber waits, red needs a person, grey is on and unchecked. */
+export const AUTO_MERGE_CHIP: Record<AutoMergeView['state'], string> = {
+  off: '',
+  on: '',
+  merge: 'chip-done',
+  wait: 'chip-blocked',
+  never: 'chip-failed',
+};
+
+/** A tooltip for the auto-merge mark: the daemon's label, then its reasons, one to a line. */
+export const autoMergeTip = (v: AutoMergeView): string => [v.label, ...v.reasons].join('\n');
+
 export const unblocksOf = (t: TaskSummary): number[] => t.unblocks ?? [];
 
 /** The tasks a queued task is still waiting on through builds-on links, as "waits on #12, #14" (empty when none, or it is stuck). */

@@ -112,7 +112,7 @@ flowchart TD
   application -->|36| adapters
   application -->|7| config_ts
   application -->|24| db
-  application -->|99| domain
+  application -->|102| domain
   cli_ts -->|1| application
   cli_ts -->|7| cli
   cli_ts -->|1| db
@@ -120,7 +120,7 @@ flowchart TD
   cli -->|3| config_ts
   cli -->|1| daemon_ts
   cli -->|2| db
-  cli -->|11| domain
+  cli -->|12| domain
   daemon_ts -->|2| adapters
   daemon_ts -->|1| api
   daemon_ts -->|1| application
@@ -260,6 +260,8 @@ erDiagram
     text needs "nullable"
     text done_by "nullable"
     integer auto_merge "nullable"
+    text auto_merge_check "nullable"
+    text auto_merge_checked_at "nullable"
   }
   usage_windows {
     text window PK
@@ -415,5 +417,6 @@ stateDiagram-v2
 | 16   | a paused repo notifies with its own kind, `paused`, instead of `hold`. Whoever listened for `hold` keeps hearing both.                                                                                         |
 | 17   | auto-merge (docs/plans/auto-merge.html). auto_merge_skip is a JSON array of path prefixes that need a person; a task's auto_merge is NULL (its repo's), 0 or 1.                                                |
 | 18   | task links (docs/plans/task-links.html). kind is builds_on \| after. after_task is copied in and no longer read.                                                                                               |
+| 19   | the latest auto-merge check of a done task's open PR (docs/plans/auto-merge-view.html): JSON { verdict, reasons }, NULL when none; auto_merge_checked_at is when the PR refresh made it.                       |
 
 <!-- /generated -->

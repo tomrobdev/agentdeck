@@ -3,6 +3,7 @@ import { nextTick, watch } from 'vue';
 import { ago } from '../../api';
 import { openExternal } from '../../platform/native';
 import { type Group, type GroupBy, personEvents, quickRetry, readNeeds, statusLabel, unblocksOf, waitsOnText } from '../../lib/taskView';
+import AutoMergeMark from '../ui/AutoMergeMark.vue';
 import PriorityIcon from '../ui/PriorityIcon.vue';
 import StatusIcon from '../ui/StatusIcon.vue';
 
@@ -110,6 +111,7 @@ watch(
                 :class="t.pr_state === 'merged' ? 'chip-merged' : (t.pr_state ?? 'open') === 'open' ? 'chip-done' : ''"
                 >PR {{ t.pr_state ?? 'open' }}</span
               >
+              <AutoMergeMark :view="t.auto_merge_view" />
               <span v-if="show.repo" data-repo class="chip max-w-[120px] truncate">{{ t.repo }}</span>
             </span>
             <span class="flex-none gap-1" :class="t.id === selected ? 'flex' : 'hidden group-hover:flex'" @click.stop>
