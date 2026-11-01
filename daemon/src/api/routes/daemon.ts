@@ -1,9 +1,23 @@
 // The daemon as a whole: status, pause and resume, restart, the service and a test notification.
 import * as actions from '../../application/actions.ts';
+import type { ChangeEvent } from '../contract.ts';
 import { type ApiContext, type Route, route } from '../http.ts';
 
-export function routes({ db, daemon }: ApiContext): Route[] {
+const PING_MS = 25_000;
+
+export function routes({ db, daemon, changes }: ApiContext): Route[] {
   return [
+    route('GET', /^\/api\/events$/, ({ req, res }) => {
+      res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
+      const send = (rev: number) => res.write(`event: rev\ndata: ${JSON.stringify({ rev } satisfies ChangeEvent)}\n\n`);
+      send(changes.rev);
+      const unsubscribe = changes.subscribe(send);
+      const ping = setInterval(() => res.write(': ping\n\n'), PING_MS);
+      req.on('close', () => {
+        clearInterval(ping);
+        unsubscribe();
+      });
+    }),
     route('GET', /^\/api\/status$/, () => actions.status(db, daemon.info)),
     route('POST', /^\/api\/pause$/, () => (actions.setPaused(db, true), actions.status(db, daemon.info))),
     route('POST', /^\/api\/resume$/, () => (actions.setPaused(db, false), actions.status(db, daemon.info))),

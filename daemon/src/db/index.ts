@@ -1,6 +1,7 @@
 // The database: the only place SQL lives. One store per table group, merged into one `Db`.
 import { DatabaseSync } from 'node:sqlite';
 import { DB_PATH, ensureDirs } from '../config.ts';
+import { changeStore } from './changes.ts';
 import { notificationStore } from './notifications.ts';
 import { makeOrm } from './orm.ts';
 import { planStore } from './plans.ts';
@@ -27,6 +28,7 @@ export function openDb(path = DB_PATH) {
   return {
     raw: db, // for tests that seed or inspect rows directly; nothing in src/ outside db/ uses it
     close: () => db.close(),
+    ...changeStore(db),
     ...settingsStore(db, orm),
     ...repoStore(db, orm),
     ...taskStore(db, orm),

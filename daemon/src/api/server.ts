@@ -14,10 +14,13 @@ export type { ApiScheduler } from './http.ts';
 
 const idleScheduler: ApiScheduler = { wake: () => {}, track: (p) => p };
 
+const idleChanges: ApiContext['changes'] = { rev: 1, subscribe: () => () => {} };
+
 export interface ApiOptions {
   db: Db;
   port?: number;
   scheduler?: ApiScheduler;
+  changes?: ApiContext['changes'];
   daemon?: ApiContext['daemon'];
 }
 
@@ -26,6 +29,7 @@ export function startApi(options: ApiOptions): Promise<Server> {
   const ctx: ApiContext = {
     db: options.db,
     scheduler: options.scheduler ?? idleScheduler,
+    changes: options.changes ?? idleChanges,
     daemon: options.daemon ?? { info: { commit: null, started_at: new Date().toISOString() }, requestRestart: () => {} },
   };
   const routes = [daemonRoutes, settingsRoutes, reposRoutes, tasksRoutes, filesRoutes, plansRoutes].flatMap((m) => m.routes(ctx));

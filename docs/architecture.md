@@ -111,7 +111,7 @@ flowchart TD
   api -->|3| domain
   application -->|36| adapters
   application -->|7| config_ts
-  application -->|25| db
+  application -->|26| db
   application -->|103| domain
   cli_ts -->|1| application
   cli_ts -->|8| cli
@@ -123,7 +123,7 @@ flowchart TD
   cli -->|13| domain
   daemon_ts -->|2| adapters
   daemon_ts -->|1| api
-  daemon_ts -->|1| application
+  daemon_ts -->|2| application
   daemon_ts -->|1| config_ts
   daemon_ts -->|1| db
   daemon_ts -->|1| domain
@@ -320,6 +320,7 @@ stateDiagram-v2
 | Method | Path                           | Use case                                           |
 | ------ | ------------------------------ | -------------------------------------------------- |
 | POST   | `/api/daemon/restart`          | `actions.restartDaemon`                            |
+| GET    | `/api/events`                  |                                                    |
 | POST   | `/api/notify/test`             | `actions.sendTestNotification`                     |
 | POST   | `/api/pause`                   | `actions.setPaused`, `actions.status`              |
 | POST   | `/api/repos/:id/archive`       | `actions.archiveRepo`                              |

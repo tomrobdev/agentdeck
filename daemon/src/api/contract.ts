@@ -577,3 +577,10 @@ export interface RestartResult {
 export interface TestNotifyResult {
   ok: boolean;
 }
+
+// ---- Change stream
+
+/** The data of each `rev` event on GET /api/events: it moves whenever the database changed, whoever wrote. */
+export interface ChangeEvent {
+  rev: number;
+}

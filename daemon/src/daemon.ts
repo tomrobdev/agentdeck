@@ -5,6 +5,7 @@ import { startApi } from './api/server.ts';
 import { join } from 'node:path';
 import { checkedOutBranch, checkoutCommit, hasUncommittedChanges } from './adapters/git.ts';
 import { watchSource } from './adapters/watch.ts';
+import { ChangeWatcher } from './application/changes.ts';
 import { Scheduler } from './application/scheduler/scheduler.ts';
 import { API_PORT, DEFAULTS } from './config.ts';
 import { type Activity, reloadDecision } from './domain/daemon/restart.ts';
@@ -62,9 +63,14 @@ export async function runDaemon({ db, once, log = () => {} }: DaemonOptions): Pr
         exit: () => process.exit(0),
       };
   const scheduler = new Scheduler(db, { once, keepAwake: !once, reload });
+  // The CLI writes to the same database from its own process; its writes should reach the scheduler and the dashboard at once.
+  const changes = once ? undefined : new ChangeWatcher(db);
+  changes?.onOtherProcess(() => scheduler.wake());
+  changes?.start();
   for (const sig of ['SIGINT', 'SIGTERM'] as const) {
     process.on(sig, () => {
       log(`${sig}: stopping workers; their tasks will be requeued on next start`);
+      changes?.stop();
       scheduler.stop();
       process.exit(0);
     });
@@ -75,7 +81,7 @@ export async function runDaemon({ db, once, log = () => {} }: DaemonOptions): Pr
       // After the API has answered: waking may exit the process at once.
       setTimeout(() => scheduler.wake(), 200);
     };
-    const api = await startApi({ db, port: API_PORT, scheduler, daemon: { info, requestRestart } }).catch((err) => {
+    const api = await startApi({ db, port: API_PORT, scheduler, changes, daemon: { info, requestRestart } }).catch((err) => {
       if (err?.code === 'EADDRINUSE')
         throw new Error(`port ${API_PORT} is in use: another agentdeck daemon is probably running (see \`agentdeck service\`)`);
       throw err;
@@ -86,5 +92,9 @@ export async function runDaemon({ db, once, log = () => {} }: DaemonOptions): Pr
   log(
     `agentdeck ${once ? 'run-once' : 'daemon'}: ${db.isPaused() && !once ? 'PAUSED (agentdeck resume to start)' : 'active'}, max ${db.maxConcurrent()} concurrent, tick ${DEFAULTS.tickMs / 1000}s`,
   );
-  await scheduler.run();
+  try {
+    await scheduler.run();
+  } finally {
+    changes?.stop();
+  }
 }
