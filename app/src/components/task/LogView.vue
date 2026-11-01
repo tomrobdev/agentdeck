@@ -1,9 +1,17 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { type LogEntry, api } from '../../api';
+import { buildTranscript } from '../../lib/transcript';
+import LogItem from './LogItem.vue';
 
-const props = defineProps<{ taskId: number; runId: number | null; live: boolean; worktree?: string | null }>();
-const emit = defineEmits<{ file: [path: string] }>();
+const props = defineProps<{
+  taskId: number;
+  runId: number | null;
+  live: boolean;
+  worktree?: string | null;
+  isPath?: (p: string) => boolean;
+}>();
+const emit = defineEmits<{ file: [path: string]; path: [path: string, line: number | null] }>();
 
 /** A tool's file as a repo path: inside the worktree, made relative; outside it, null (nothing to link to). */
 function repoPath(file: string | undefined): string | null {
@@ -17,7 +25,16 @@ const entries = ref<LogEntry[]>([]);
 const streaming = ref(false);
 const box = ref<HTMLElement | null>(null);
 let source: EventSource | null = null;
-let stick = true;
+/** Whether the view follows the log's end; false once the reader scrolls up. */
+const following = ref(true);
+const items = computed(() => buildTranscript(entries.value));
+const first = computed(() => entries.value.find((e) => e.at)?.at);
+
+async function jump() {
+  following.value = true;
+  await nextTick();
+  box.value?.scrollTo({ top: box.value.scrollHeight });
+}
 
 function close() {
   source?.close();
@@ -29,12 +46,12 @@ function open() {
   close();
   entries.value = [];
   if (!props.runId) return;
-  stick = true;
+  following.value = true;
   streaming.value = true;
   source = new EventSource(api.logUrl(props.taskId, props.runId));
   source.onmessage = async (e) => {
     entries.value.push(...(JSON.parse(e.data) as LogEntry[]));
-    if (stick) {
+    if (following.value) {
       await nextTick();
       box.value?.scrollTo({ top: box.value.scrollHeight });
     }
@@ -45,7 +62,7 @@ function open() {
 
 function onScroll() {
   const el = box.value;
-  if (el) stick = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+  if (el) following.value = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
 }
 
 // Reopen when the task or run changes, or when a finished run's task starts running again.
@@ -63,49 +80,22 @@ onBeforeUnmount(close);
   <div ref="box" class="min-h-0 flex-1 overflow-y-auto rounded-md border border-border bg-code-bg py-2" @scroll="onScroll">
     <p v-if="!runId" class="px-3.5 py-1 text-muted">No runs yet. The log appears here when the task starts.</p>
     <p v-else-if="!entries.length" class="px-3.5 py-1 text-muted">{{ streaming ? 'Waiting for output…' : 'Empty log.' }}</p>
-    <div v-for="(e, i) in entries" :key="i" class="px-3.5 py-[3px]">
-      <template v-if="e.kind === 'text'">
-        <div class="py-1 whitespace-pre-wrap">{{ e.text }}</div>
-      </template>
-      <template v-else-if="e.kind === 'tool'">
-        <code class="block truncate text-muted"
-          ><b class="font-semibold text-running">{{ e.name }}</b>
-          <button
-            v-if="repoPath(e.file)"
-            class="btn-ghost mr-1 text-accent underline"
-            :title="`Open ${repoPath(e.file)}`"
-            @click="emit('file', repoPath(e.file)!)"
-          >
-            {{ repoPath(e.file) }}
-          </button>
-          {{ e.input }}</code
-        >
-      </template>
-      <template v-else-if="e.kind === 'result'">
-        <div class="mt-1.5 border-t border-dashed border-border pt-1.5 text-sm text-muted">
-          result: {{ e.subtype }} · {{ e.turns }} turns
-        </div>
-      </template>
-      <template v-else-if="e.kind === 'setup'">
-        <details :open="!e.passed">
-          <summary class="cursor-pointer" :class="e.passed ? 'text-done' : 'text-failed'">
-            Setup {{ e.passed ? 'done' : 'failed' }}: {{ e.cmd }}
-          </summary>
-          <pre class="my-1.5 max-h-65 overflow-auto whitespace-pre-wrap">{{ e.output }}</pre>
-        </details>
-      </template>
-      <template v-else-if="e.kind === 'tests'">
-        <details :open="!e.passed">
-          <summary class="cursor-pointer" :class="e.passed ? 'text-done' : 'text-failed'">
-            Tests {{ e.passed ? 'passed' : 'failed' }}
-          </summary>
-          <pre class="my-1.5 max-h-65 overflow-auto whitespace-pre-wrap">{{ e.output }}</pre>
-        </details>
-      </template>
-      <template v-else-if="e.kind === 'error'">
-        <code class="text-failed">{{ e.text }}</code>
-      </template>
-    </div>
+    <LogItem
+      :items="items"
+      :first="first"
+      :live="streaming"
+      :repo-path="repoPath"
+      :is-path="isPath"
+      @file="(p) => emit('file', p)"
+      @path="(p, l) => emit('path', p, l)"
+    />
     <p v-if="streaming && entries.length" class="px-3.5 py-1 text-sm text-running">● live</p>
+    <button
+      v-if="streaming && !following"
+      class="sticky bottom-2 mr-3 ml-auto block rounded-full border border-border bg-panel px-3 py-1 text-sm shadow"
+      @click="jump"
+    >
+      Jump to live ↓
+    </button>
   </div>
 </template>

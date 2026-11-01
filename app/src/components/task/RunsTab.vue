@@ -66,7 +66,9 @@ const live = computed(() => (props.task.status === 'running' || !!props.task.syn
       :run-id="chosen"
       :live="live"
       :worktree="task.worktree"
+      :is-path="isPath"
       @file="(p) => emit('path', p, null)"
+      @path="(p, l) => emit('path', p, l)"
     />
   </div>
 </template>
