@@ -181,6 +181,31 @@ export const MIGRATIONS: Migration[] = [
   // NULL when none; auto_merge_checked_at is when the PR refresh made it.
   `ALTER TABLE tasks ADD COLUMN auto_merge_check TEXT;
    ALTER TABLE tasks ADD COLUMN auto_merge_checked_at TEXT;`,
+  // 20: reviews made in the dashboard (docs/plans/review-merge.html). A review is a draft until submitted_at is set; kind is
+  // comment | request_changes. A comment's state is open | answered | resolved; side is old | new.
+  `CREATE TABLE reviews (
+     id INTEGER PRIMARY KEY,
+     task_id INTEGER NOT NULL REFERENCES tasks(id),
+     kind TEXT,
+     body TEXT NOT NULL DEFAULT '',
+     created_at TEXT NOT NULL DEFAULT (datetime('now')),
+     submitted_at TEXT
+   );
+   CREATE INDEX reviews_task ON reviews(task_id, id);
+   CREATE TABLE review_comments (
+     id INTEGER PRIMARY KEY,
+     review_id INTEGER NOT NULL REFERENCES reviews(id),
+     path TEXT NOT NULL,
+     line INTEGER NOT NULL,
+     side TEXT NOT NULL,
+     head_commit TEXT NOT NULL,
+     body TEXT NOT NULL,
+     answer TEXT,
+     state TEXT NOT NULL DEFAULT 'open',
+     created_at TEXT NOT NULL DEFAULT (datetime('now')),
+     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+   );
+   CREATE INDEX review_comments_review ON review_comments(review_id, id);`,
 ];
 
 /** Runs every step above the database's user_version in one transaction; returns how many ran. */
