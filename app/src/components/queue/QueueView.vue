@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import type { MergeResult, TaskSummary } from '../../api';
+import { type MergeResult, type TaskSummary, api } from '../../api';
 import { useActions } from '../../composables/useActions';
+import { type BulkAction, bulkActions, idRange } from '../../lib/bulk';
+import BulkMergeDialog from '../task/BulkMergeDialog.vue';
 import MergeDialog from '../task/MergeDialog.vue';
+import BulkBar from './BulkBar.vue';
 import { useHotkeys } from '../../composables/useHotkeys';
 import { requestedView } from '../../composables/useView';
 import { go, route } from '../../router';
@@ -118,6 +121,58 @@ async function onMerged(result: MergeResult) {
   if (result.cleanup_error) flash(`Merged, but cleanup failed: ${result.cleanup_error}`);
 }
 
+// Bulk selection, in the list only: `x` or shift-click picks, and the bar offers what every picked task allows.
+const { run, busy } = useActions();
+const picked = ref<number[]>([]);
+const anchor = ref<number | null>(null);
+const pickedTasks = computed(() => props.tasks.filter((t) => picked.value.includes(t.id)));
+const bar = computed(() => bulkActions(pickedTasks.value));
+// The tasks the bulk merge was confirmed for, fixed while it runs so a refresh can't change its list.
+const bulkMerging = ref<TaskSummary[] | null>(null);
+function pick(id: number, range: boolean) {
+  const ids = range
+    ? idRange(
+        order.value.map((t) => t.id),
+        anchor.value,
+        id,
+      )
+    : [id];
+  if (range) picked.value = [...new Set([...picked.value, ...ids])];
+  else picked.value = picked.value.includes(id) ? picked.value.filter((p) => p !== id) : [...picked.value, id];
+  anchor.value = id;
+}
+function clearPicked() {
+  picked.value = [];
+  anchor.value = null;
+}
+// Drop picks for tasks that left the list (deleted, filtered out).
+watch(order, (o) => {
+  const ids = new Set(o.map((t) => t.id));
+  if (picked.value.some((id) => !ids.has(id))) picked.value = picked.value.filter((id) => ids.has(id));
+});
+const BULK_CALLS = { approve: api.approve, reject: api.reject, retry: (id: number) => api.retry(id), cancel: api.cancel };
+async function bulkAct(action: BulkAction) {
+  if (action === 'merge') {
+    bulkMerging.value = pickedTasks.value;
+    return;
+  }
+  const tasks = pickedTasks.value;
+  const ok = await run(async () => {
+    for (const t of tasks) {
+      try {
+        await BULK_CALLS[action](t.id);
+      } catch (e) {
+        throw new Error(`#${t.id}: ${(e as Error).message}`);
+      }
+    }
+  });
+  if (ok) clearPicked();
+}
+function onBulkMerged(merged: number[]) {
+  bulkMerging.value = null;
+  picked.value = picked.value.filter((id) => !merged.includes(id));
+}
+
 const MODES: Display['mode'][] = ['list', 'board', 'graph'];
 const selectedTask = () => props.tasks.find((x) => x.id === selected.value);
 useHotkeys({
@@ -125,6 +180,8 @@ useHotkeys({
   ArrowDown: () => step(1),
   k: () => step(-1),
   ArrowUp: () => step(-1),
+  x: () => display.value.mode === 'list' && selected.value !== null && pick(selected.value, false),
+  Escape: clearPicked,
   Enter: () => selected.value !== null && emit('open', selected.value),
   a: () => {
     const t = selectedTask();
@@ -171,9 +228,11 @@ useHotkeys({
       :group-by="display.groupBy"
       :collapsed="display.collapsed"
       :selected="selected"
+      :picked="picked"
       :show="display.show"
       :show-empty="display.showEmpty"
       @toggle="toggleGroup"
+      @pick="pick"
       @select="selected = $event"
       @open="emit('open', $event)"
       @act="(kind, id) => emit('act', kind, id)"
@@ -198,15 +257,24 @@ useHotkeys({
       @move="(kind, id) => emit('act', kind, id)"
       @merge="startMerge"
     />
+    <BulkBar
+      v-if="picked.length && display.mode === 'list'"
+      :count="picked.length"
+      :actions="bar"
+      :busy="busy"
+      @act="bulkAct"
+      @clear="clearPicked"
+    />
     <footer class="muted flex justify-between gap-3 border-t border-border px-4 py-[5px] text-sm">
       <span
         >{{ shown.length }}<template v-if="shown.length !== tasks.length"> of {{ tasks.length }}</template> tasks</span
       >
       <span class="max-sm:hidden"
         ><kbd>j</kbd><kbd>k</kbd> move · <kbd>↵</kbd> open · <kbd>a</kbd> approve · <kbd>r</kbd> retry · <kbd>m</kbd> merge ·<kbd>v</kbd>
-        list/board/graph · <kbd>c</kbd> new · <kbd>/</kbd> search · <kbd>⌘K</kbd> commands</span
+        list/board/graph · <kbd>x</kbd> select · <kbd>c</kbd> new · <kbd>/</kbd> search · <kbd>⌘K</kbd> commands</span
       >
     </footer>
+    <BulkMergeDialog v-if="bulkMerging" :tasks="bulkMerging" @close="bulkMerging = null" @done="onBulkMerged" />
     <MergeDialog v-if="merging" :task-id="merging.id" @close="merging = null" @merged="onMerged" />
   </section>
 </template>
