@@ -29,6 +29,36 @@ export function liveView(
   return { since: run.started_at, turns: run.live_turns, max_turns: task.max_turns, tool: run.live_tool };
 }
 
+/** A sync of a done task under way, as the queue shows it. */
+export interface SyncView {
+  /** The base branch being brought in, or "the base branch" when the repo is gone. */
+  base: string;
+  /** When the resolve run started (UTC `YYYY-MM-DD HH:MM:SS`); null for a clean sync, which runs no claude. */
+  since: string | null;
+  /** Whether a resolve run is settling conflicts. */
+  resolving: boolean;
+  turns: number;
+  max_turns: number;
+  /** The resolve run's last tool call in a few words; null before the first one or without a run. */
+  tool: string | null;
+}
+
+/**
+ * A done task's sync view: null when no sync is under way. `locked` is a sync holding the task's worktree in this process;
+ * the unfinished resolve run, when there is one, says what claude is doing.
+ */
+export function syncView(
+  task: { status: string; max_turns: number },
+  base: string | null,
+  locked: boolean,
+  run: { started_at: string; live_turns: number; live_tool: string | null } | undefined,
+): SyncView | null {
+  if (task.status !== 'done' || (!locked && !run)) return null;
+  const branch = base ?? 'the base branch';
+  if (!run) return { base: branch, since: null, resolving: false, turns: 0, max_turns: task.max_turns, tool: null };
+  return { base: branch, since: run.started_at, resolving: true, turns: run.live_turns, max_turns: task.max_turns, tool: run.live_tool };
+}
+
 const TOOL_TEXT_MAX = 40;
 
 const squash = (s: string): string => s.replace(/\s+/g, ' ').trim();

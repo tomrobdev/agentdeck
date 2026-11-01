@@ -159,7 +159,9 @@ const sub = `${item} pl-5`;
       <button v-for="e in events" :key="e" :class="item" role="menuitem" @click="done(() => emit('act', e, task.id))">
         {{ LABELS[e] }}
       </button>
-      <button v-if="canReview(task)" :class="item" role="menuitem" @click="done(() => emit('merge', task.id))">Merge…</button>
+      <button v-if="canReview(task)" :class="item" role="menuitem" :disabled="!!task.sync" @click="done(() => emit('merge', task.id))">
+        Merge…
+      </button>
     </template>
   </div>
 </template>

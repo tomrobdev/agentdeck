@@ -21,9 +21,12 @@ export { STATUS_GROUPS, type StatusGroup, hasOpenPr, isMerged, isReview, isStuck
 export { FILTER_STATES, MODELS, SORT_OPTIONS, type PersonEvent, personEvents };
 export * from './boardMove';
 
-/** The tab a task opens on from the queue: a running task on its live log (the latest run), a task in review as a diff. */
+/**
+ * The tab a task opens on from the queue: a running task, or one with a resolve run under way, on its live log (the latest
+ * run); a task in review as a diff.
+ */
 export const openingTab = (t: TaskSummary): 'overview' | 'changes' | 'runs' =>
-  t.status === 'running' ? 'runs' : isReview(t) ? 'changes' : 'overview';
+  t.status === 'running' || t.sync?.resolving ? 'runs' : isReview(t) ? 'changes' : 'overview';
 
 /** Tasks that wait on you: proposals to approve, blocked tasks and PRs to review. The queue filter that shows them. */
 export const NEED_YOU_STATES = DECISION_STATES;

@@ -10,6 +10,7 @@ import {
   checksSettled,
   isMergeMethod,
   mergeCheck,
+  mergeFindings,
 } from '../../domain/pull-request/merge.ts';
 import { type AutoMergeCheck, autoMergeCheck, autoMergeOn } from '../../domain/pull-request/auto-merge.ts';
 import { isConflicting, isMergeabilityUnknown } from '../../domain/pull-request/conflict.ts';
@@ -75,6 +76,15 @@ function autoMergeFor(db: Db, task: Task, repo: Repo, pr: PrDetails, tests_passe
   });
 }
 
+/** A merge refused because of what the PR's state is; `conflicting` when one of the reasons is a conflict with the base branch. */
+class MergeRefused extends ActionError {
+  conflicting: boolean;
+  constructor(message: string, conflicting: boolean) {
+    super(message);
+    this.conflicting = conflicting;
+  }
+}
+
 /** The task, its repo and its open PR, or an ActionError saying why it can't be merged. */
 export function mergeable(db: Db, id: number) {
   const task = requireTask(db, id);
@@ -138,15 +148,21 @@ export async function mergeTask(db: Db, id: number, opts: { method?: string; del
   const pr = await github.prDetails(url, cwd).catch((err) => {
     throw new ActionError(`could not read the PR: ${(err as Error).message}`);
   });
-  const { problems } = mergeCheck({ pr_state: task.pr_state, pr, tests_passed: null, lands_after: landsAfter(db, id) });
-  if (problems.length) throw new ActionError(`can't merge #${id}: ${problems.join('; ')}`);
+  const found = mergeFindings({ pr_state: task.pr_state, pr, tests_passed: null, lands_after: landsAfter(db, id) });
+  const problems = found.filter((f) => f.problem);
+  if (problems.length)
+    throw new MergeRefused(
+      `can't merge #${id}: ${problems.map((f) => f.text).join('; ')}`,
+      problems.some((f) => f.kind === 'conflict'),
+    );
   return mergeOpenPr(db, { task, repo, url, cwd }, pr, { method, deleteBranch, reason: `${method} merge` });
 }
 
 /** What merging a set of PRs came to: the ones merged, and why each other one was left open. */
 export interface MergeAllResult {
   merged: ({ id: number } & MergeResult)[];
-  skipped: { id: number; reason: string }[];
+  /** `conflicting`: the PR conflicts with the base branch, so a sync may let it merge. */
+  skipped: { id: number; reason: string; conflicting: boolean }[];
 }
 
 /**
@@ -173,7 +189,11 @@ export async function mergeAll(db: Db, input: { ids: number[] }): Promise<MergeA
       } catch (err) {
         if (!(err instanceof ActionError)) throw err;
         // The id is on the entry, so mergeTask's "can't merge #12: " goes.
-        result.skipped.push({ id, reason: err.message.replace(`can't merge #${id}: `, '') });
+        result.skipped.push({
+          id,
+          reason: err.message.replace(`can't merge #${id}: `, ''),
+          conflicting: err instanceof MergeRefused && err.conflicting,
+        });
       }
     }
     last = !merged;

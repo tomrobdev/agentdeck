@@ -1,5 +1,5 @@
 // How the dashboard words what the daemon reports: times, durations, waits and the daemon's state.
-import type { AutoMergeCheck, LiveView, Run, StartWait, Status, SyncResult } from './types.ts';
+import type { AutoMergeCheck, LiveView, Run, StartWait, Status, SyncResult, SyncView } from './types.ts';
 
 /** What a queued task waits for, in a few words, for chips and callouts. */
 export function describeWait(h: StartWait): string {
@@ -93,6 +93,12 @@ export function describeLive(l: LiveView): string {
   const secs = (Date.now() - parseTime(l.since)) / 1000;
   const took = secs < 90 ? `${Math.max(0, Math.round(secs))}s` : secs < 5400 ? `${Math.round(secs / 60)}m` : `${(secs / 3600).toFixed(1)}h`;
   return [took, l.turns ? `turn ${l.turns}/${l.max_turns}` : null, l.tool].filter(Boolean).join(' · ');
+}
+
+/** A task in review whose sync is under way, on its row: "Syncing with main…", or "Resolving conflicts · 3m · turn 4/40 · Edit a.ts". */
+export function describeSync(s: SyncView): string {
+  if (!s.resolving || !s.since) return `Syncing with ${s.base}…`;
+  return `Resolving conflicts · ${describeLive({ since: s.since, turns: s.turns, max_turns: s.max_turns, tool: s.tool })}`;
 }
 
 export function totalTokens(r: Run): number {

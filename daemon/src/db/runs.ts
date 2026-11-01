@@ -45,6 +45,16 @@ export function runStore(orm: Orm) {
         .all();
       return new Map(rows.map((r) => [r.task_id, r]));
     },
+    /** The unfinished resolve run of each task that has one, by task id: when it started and what it is doing. */
+    liveResolves(): Map<number, { started_at: string; live_turns: number; live_tool: string | null }> {
+      const rows = orm
+        .select({ task_id: runs.task_id, started_at: runs.started_at, live_turns: runs.live_turns, live_tool: runs.live_tool })
+        .from(runs)
+        .where(and(eq(runs.kind, 'resolve'), isNull(runs.ended_at)))
+        .orderBy(asc(runs.id))
+        .all();
+      return new Map(rows.map((r) => [r.task_id, r]));
+    },
     finishRun(id: number, r: Partial<Omit<Run, 'id' | 'task_id' | 'kind' | 'attempt' | 'started_at' | 'log_path'>>): void {
       // undefined means "not given" to Drizzle, but this has always written a given-as-undefined key as NULL.
       const given = Object.fromEntries(Object.entries(r).map(([k, v]) => [k, v ?? null]));

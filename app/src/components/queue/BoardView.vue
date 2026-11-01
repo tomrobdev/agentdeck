@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { type TaskSummary, ago, describeLive } from '../../api';
+import { type TaskSummary, ago, describeLive, describeSync } from '../../api';
 import { type BoardMove, type Group, type StatusGroup, boardMove, canReview, unblocksOf, waitsOnText } from '../../lib/taskView';
 import MarkDoneDialog from '../task/MarkDoneDialog.vue';
 import AutoMergeMark from '../ui/AutoMergeMark.vue';
@@ -12,8 +12,6 @@ const props = defineProps<{
   groups: Group[];
   selected: number | null;
   show: { repo: boolean; pr: boolean };
-  /** Tasks whose branch is being synced from the queue. */
-  syncing?: number[];
 }>();
 const emit = defineEmits<{
   open: [id: number];
@@ -24,8 +22,7 @@ const emit = defineEmits<{
 }>();
 
 /** The PRs the Review column's "Merge all" would merge, less the ones syncing. */
-const mergeable = (g: Group) =>
-  g.key === 'review' ? g.tasks.filter((t) => canReview(t) && !props.syncing?.includes(t.id)).map((t) => t.id) : [];
+const mergeable = (g: Group) => (g.key === 'review' ? g.tasks.filter((t) => canReview(t) && !t.sync).map((t) => t.id) : []);
 
 const dragging = ref<TaskSummary | null>(null);
 const over = ref<string | null>(null);
@@ -34,7 +31,7 @@ const over = ref<string | null>(null);
 const moves = computed<Record<string, BoardMove | null>>(() =>
   Object.fromEntries(props.groups.map((g) => [g.key, dragging.value ? boardMove(dragging.value, g.key as StatusGroup) : null])),
 );
-const canDrag = (t: TaskSummary) => t.status !== 'running' && t.status !== 'cancel_requested' && !props.syncing?.includes(t.id);
+const canDrag = (t: TaskSummary) => t.status !== 'running' && t.status !== 'cancel_requested' && !t.sync;
 
 function onDragStart(e: DragEvent, t: TaskSummary) {
   dragging.value = t;
@@ -106,7 +103,13 @@ const LABELS: Record<BoardMove, string> = {
           class="group cursor-pointer rounded-md border bg-panel px-2.5 py-2"
           :class="[t.id === selected ? 'border-accent' : 'border-border', dragging?.id === t.id ? 'opacity-50' : '']"
           :draggable="canDrag(t)"
-          :title="canDrag(t) ? '' : 'A running task can only be stopped from its page'"
+          :title="
+            canDrag(t)
+              ? ''
+              : t.sync
+                ? 'A task that is syncing can be moved when that is done'
+                : 'A running task can only be stopped from its page'
+          "
           @dragstart="onDragStart($event, t)"
           @dragend="end"
           @click="emit('open', t.id)"
@@ -120,13 +123,14 @@ const LABELS: Record<BoardMove, string> = {
           </div>
           <div class="mt-1 mb-1.5 line-clamp-2 font-medium">{{ t.title }}</div>
           <div v-if="t.live" class="mb-1.5 truncate text-sm text-muted tabular-nums" data-live>{{ describeLive(t.live) }}</div>
+          <div v-else-if="t.sync" class="mb-1.5 truncate text-sm text-accent tabular-nums" data-sync>{{ describeSync(t.sync) }}</div>
           <div class="flex flex-wrap items-center gap-1">
             <span v-if="show.repo" class="chip">{{ t.repo }}</span>
             <span v-if="show.pr && t.pr_url" class="chip" :class="t.pr_state === 'merged' ? 'chip-merged' : ''"
               >PR {{ t.pr_state ?? 'open' }}</span
             >
             <AutoMergeMark :view="t.auto_merge_view" />
-            <span v-if="syncing?.includes(t.id)" class="chip chip-accent">syncing…</span>
+            <span v-if="t.sync" class="chip chip-accent">syncing…</span>
             <span v-if="t.waiting" class="chip">{{ waitsOnText(t) ?? 'stuck' }}</span>
             <span v-if="unblocksOf(t).length" class="chip"
               >unblocks
@@ -140,7 +144,12 @@ const LABELS: Record<BoardMove, string> = {
             <span v-if="t.source === 'planner'" class="chip">planner</span>
             <span class="ml-auto text-sm text-muted">{{ ago(t.updated_at) }}</span>
           </div>
-          <div v-if="canReview(t)" class="mt-1.5 gap-1" :class="t.id === selected ? 'flex' : 'hidden group-hover:flex'" @click.stop>
+          <div
+            v-if="canReview(t) && !t.sync"
+            class="mt-1.5 gap-1"
+            :class="t.id === selected ? 'flex' : 'hidden group-hover:flex'"
+            @click.stop
+          >
             <button class="btn-mini" title="Merge (m)" @click="emit('merge', t.id)">Merge</button>
           </div>
         </article>

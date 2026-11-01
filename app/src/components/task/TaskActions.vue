@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { type MergeResult, type TaskDetail, api } from '../../api';
+import { type MergeResult, type TaskDetail, api, describeSync } from '../../api';
 import { canReview, personEvents } from '../../lib/taskView';
 import { useActions } from '../../composables/useActions';
 import Modal from '../ui/Modal.vue';
@@ -50,7 +50,16 @@ async function onMerged(result: MergeResult) {
     </template>
     <button v-else-if="events.includes('retry')" @click="emit('act', 'retry')">↻ Retry</button>
     <button v-if="events.includes('mark_done')" @click="markingDone = true">✓ Mark done</button>
-    <button v-if="canReview(task)" class="primary" @click="merging = true">Merge PR</button>
+    <span v-if="task.sync" class="chip chip-accent self-center" data-sync>{{ describeSync(task.sync) }}</span>
+    <button
+      v-if="canReview(task)"
+      class="primary"
+      :disabled="!!task.sync"
+      :title="task.sync ? 'Merge waits for the sync to end' : undefined"
+      @click="merging = true"
+    >
+      Merge PR
+    </button>
     <button v-if="events.includes('cancel')" @click="emit('act', 'cancel')">{{ task.status === 'running' ? '■ Stop' : '✕ Cancel' }}</button>
   </div>
 

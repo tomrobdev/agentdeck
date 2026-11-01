@@ -62,6 +62,7 @@ check<Fits<Out<typeof actions.resolveReviewComment>, C.Review>>();
 check<Fits<Out<typeof actions.reopenReviewComment>, C.Review>>();
 check<Fits<DomainLogEntry, C.LogEntry>>();
 check<Fits<NonNullable<Out<typeof actions.taskViews>[number]['live']>, C.LiveView>>();
+check<Fits<NonNullable<Out<typeof actions.taskViews>[number]['sync']>, C.SyncView>>();
 
 // Requests
 check<Fits<C.NewRepo, In<typeof actions.addRepo, 1>>>();
