@@ -262,7 +262,7 @@
       </ul>
     </section>
 
-    <section data-plan-step id="tasks" data-status="todo">
+    <section data-plan-step id="tasks" data-status="done">
       <h2>Port the tasks store</h2>
       <p>
         <code>db/tasks.ts</code>: listing, summaries (the <code>SUMMARY_COLUMNS</code> string becomes a typed selection), counts, events,
@@ -279,6 +279,12 @@
           A scheduler tick with 100 queued tasks still takes under 5 ms (measure before and after; put both numbers in the PR description).
         </li>
       </ul>
+      <p>
+        Done 2026-11-01. The db side of a tick (gate, one claim, <code>hasQueued</code>) with 100 queued tasks: p50 0.15 ms before, 0.20 ms
+        after. <code>claimNextTask</code> and <code>hasQueued</code> are builder queries on the alias <code>t</code>, with
+        <code>NOT_WAITING</code> (and <code>DEPENDENCY_MET</code> in it) kept as raw SQL; <code>recordPr</code>'s
+        <code>IS NOT 'open'</code> guard is a <code>sql</code> fragment. Crash test: 10 iterations, 0 violations.
+      </p>
     </section>
 
     <section data-plan-step id="rules" data-status="todo">

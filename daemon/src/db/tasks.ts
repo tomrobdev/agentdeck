@@ -1,21 +1,21 @@
 // Tasks. Every status change goes through applyEvent (or claimNextTask), guarded by the current status.
+import { type SQL, and, asc, count, desc, eq, exists, getColumns, gt, inArray, isNotNull, isNull, lt, max, or, sql } from 'drizzle-orm';
+import { type AnySQLiteColumn, alias } from 'drizzle-orm/sqlite-core';
 import type { DatabaseSync } from 'node:sqlite';
 import { DEFAULTS } from '../config.ts';
 import type { MergeMethod } from '../domain/pull-request/merge.ts';
 import { MAX_RESTARTS, type TaskEvent, type TaskStatus, fromStatuses, nextStatus, transition } from '../domain/task/lifecycle.ts';
 import type { PrEvent, TaskEventRow, TaskEventType } from '../domain/task/history.ts';
 import { EDITABLE_STATUSES, OPEN_STATUSES, type Task, type TaskSummary } from '../domain/task/task.ts';
+import type { Orm } from './orm.ts';
 import { NOW, atomically } from './sql.ts';
+import { plannerRuns, repos, runs, taskEvents, tasks } from './tables.ts';
 
-const SUMMARY_COLUMNS =
-  'id, repo_id, title, status, priority, model, max_turns, attempts, max_attempts, branch, worktree, stop_reason, source, restarts, pr_url, pr_state, merge_method, after_task, plan_path, plan_steps, needs, done_by, auto_merge, created_at, updated_at';
+/** Every column but the prompt, for lists. */
+const { prompt: _prompt, ...SUMMARY_COLUMNS } = getColumns(tasks);
 
-/** SQL list of fixed status literals, for `status IN (…)`. */
-const statusList = (statuses: TaskStatus[]) => statuses.map((s) => `'${s}'`).join(', ');
-const OPEN = statusList(OPEN_STATUSES);
-
-/** SQL: the repo id column `col` belongs to a repo that isn't archived. Archived repos' tasks are left out of every list and count. */
-const IN_ACTIVE_REPO = (col: string) => `${col} IN (SELECT id FROM repos WHERE archived_at IS NULL)`;
+/** The task row `t` in the claim and queue queries, which NOT_WAITING refers to by that name. */
+const t = alias(tasks, 't');
 
 /**
  * SQL: tasks `d` that a dependent may build on: done, and merged unless their repo has pr_mode off.
@@ -26,17 +26,32 @@ const DEPENDENCY_MET = `d.status = 'done' AND (d.pr_state = 'merged'
   OR (d.pr_url IS NULL AND d.pr_state IS NULL AND EXISTS (SELECT 1 FROM repos r WHERE r.id = d.repo_id AND r.pr_mode = 'off'))
   OR (d.done_by = 'person' AND (d.pr_state IS NULL OR d.pr_state <> 'open')))`;
 /** SQL: the task row `t` is free to start (it has no dependency, or the dependency is met). */
-const NOT_WAITING = `(t.after_task IS NULL OR EXISTS (SELECT 1 FROM tasks d WHERE d.id = t.after_task AND ${DEPENDENCY_MET}))`;
+const NOT_WAITING = sql.raw(`(t.after_task IS NULL OR EXISTS (SELECT 1 FROM tasks d WHERE d.id = t.after_task AND ${DEPENDENCY_MET}))`);
 
-export function taskStore(db: DatabaseSync) {
+/** Unset fields are left alone by Drizzle; these writes have always stored a given-as-undefined field as NULL. */
+const given = <T extends object>(fields: T) =>
+  Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, v ?? null])) as { [K in keyof T]-?: Exclude<T[K], undefined> };
+
+export function taskStore(db: DatabaseSync, orm: Orm) {
+  /** The repo id column `col` belongs to a repo that isn't archived. Archived repos' tasks are left out of every list and count. */
+  const inActiveRepo = (col: AnySQLiteColumn) => inArray(col, orm.select({ id: repos.id }).from(repos).where(isNull(repos.archived_at)));
+  /** The repo id column `col` belongs to a repo work may start in: not paused and not archived. */
+  const inOpenRepo = (col: AnySQLiteColumn) =>
+    inArray(
+      col,
+      orm
+        .select({ id: repos.id })
+        .from(repos)
+        .where(and(isNull(repos.paused_reason), isNull(repos.archived_at))),
+    );
+  const countWhere = (where: SQL | undefined) => orm.select({ n: count() }).from(tasks).where(where).get()?.n ?? 0;
+
   /** Append to a task's history. Callers run it in the same `atomically` block as the status change. */
   const recordEvent = (task_id: number, type: TaskEventType, from: TaskStatus | null, to: TaskStatus, reason: string | null = null) =>
-    db
-      .prepare('INSERT INTO task_events (task_id, type, from_status, to_status, reason) VALUES (?, ?, ?, ?, ?)')
-      .run(task_id, type, from, to, reason);
+    orm.insert(taskEvents).values({ task_id, type, from_status: from, to_status: to, reason }).run();
 
   return {
-    addTask(t: {
+    addTask(n: {
       repo_id: number;
       title: string;
       prompt: string;
@@ -50,26 +65,25 @@ export function taskStore(db: DatabaseSync) {
       plan_path?: string | null;
       plan_steps?: string | null;
     }): Task {
-      const status = t.status ?? 'queued';
+      const status = n.status ?? 'queued';
       const id = atomically(db, () => {
-        const info = db
-          .prepare(
-            'INSERT INTO tasks (repo_id, title, prompt, priority, model, max_turns, max_attempts, status, source, after_task, plan_path, plan_steps) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-          )
-          .run(
-            t.repo_id,
-            t.title,
-            t.prompt,
-            t.priority ?? 0,
-            t.model ?? DEFAULTS.model,
-            t.max_turns ?? DEFAULTS.maxTurns,
-            t.max_attempts ?? DEFAULTS.maxAttempts,
+        const info = orm
+          .insert(tasks)
+          .values({
+            repo_id: n.repo_id,
+            title: n.title,
+            prompt: n.prompt,
+            priority: n.priority ?? 0,
+            model: n.model ?? DEFAULTS.model,
+            max_turns: n.max_turns ?? DEFAULTS.maxTurns,
+            max_attempts: n.max_attempts ?? DEFAULTS.maxAttempts,
             status,
-            t.source ?? 'manual',
-            t.after_task ?? null,
-            t.plan_path ?? null,
-            t.plan_steps ?? null,
-          );
+            source: n.source ?? 'manual',
+            after_task: n.after_task ?? null,
+            plan_path: n.plan_path ?? null,
+            plan_steps: n.plan_steps ?? null,
+          })
+          .run();
         const id = Number(info.lastInsertRowid);
         recordEvent(id, 'created', null, status);
         return id;
@@ -78,51 +92,47 @@ export function taskStore(db: DatabaseSync) {
     },
     /** A task's status changes, oldest first. Tasks from before migration step 6 have none. */
     eventsForTask(task_id: number): TaskEventRow[] {
-      return db.prepare('SELECT * FROM task_events WHERE task_id = ? ORDER BY id').all(task_id) as unknown as TaskEventRow[];
+      return orm.select().from(taskEvents).where(eq(taskEvents.task_id, task_id)).orderBy(asc(taskEvents.id)).all() as TaskEventRow[];
     },
     getTask(id: number): Task | undefined {
-      return db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as Task | undefined;
+      // The cast narrows the plain string columns (status, pr_state, …); typed columns come later.
+      return orm.select().from(tasks).where(eq(tasks.id, id)).get() as Task | undefined;
     },
     listTasks(): Task[] {
-      return db.prepare(`SELECT * FROM tasks WHERE ${IN_ACTIVE_REPO('repo_id')} ORDER BY id DESC`).all() as unknown as Task[];
+      return orm.select().from(tasks).where(inActiveRepo(tasks.repo_id)).orderBy(desc(tasks.id)).all() as Task[];
     },
     tasksForRepo(repo_id: number, limit = 40): Task[] {
-      return db.prepare('SELECT * FROM tasks WHERE repo_id = ? ORDER BY id DESC LIMIT ?').all(repo_id, limit) as unknown as Task[];
+      return orm.select().from(tasks).where(eq(tasks.repo_id, repo_id)).orderBy(desc(tasks.id)).limit(limit).all() as Task[];
     },
     /** Tasks of a repo that still need work or a decision; the planner waits until there are none. */
     countOpen(repo_id: number): number {
-      return (db.prepare(`SELECT COUNT(*) AS n FROM tasks WHERE repo_id = ? AND status IN (${OPEN})`).get(repo_id) as { n: number }).n;
+      return countWhere(and(eq(tasks.repo_id, repo_id), inArray(tasks.status, OPEN_STATUSES)));
     },
     countRunning(): number {
-      return (db.prepare("SELECT COUNT(*) AS n FROM tasks WHERE status IN ('running', 'cancel_requested')").get() as { n: number }).n;
+      return countWhere(inArray(tasks.status, ['running', 'cancel_requested']));
     },
     /** How many tasks are in each status (statuses with none are left out). */
     countByStatus(): Record<string, number> {
-      const rows = db.prepare(`SELECT status, COUNT(*) AS n FROM tasks WHERE ${IN_ACTIVE_REPO('repo_id')} GROUP BY status`).all() as {
-        status: string;
-        n: number;
-      }[];
+      const rows = orm
+        .select({ status: tasks.status, n: count() })
+        .from(tasks)
+        .where(inActiveRepo(tasks.repo_id))
+        .groupBy(tasks.status)
+        .all();
       return Object.fromEntries(rows.map((r) => [r.status, r.n]));
     },
     /** Done tasks whose pull request is open: the ones waiting for a review. */
     countReview(): number {
-      return (
-        db
-          .prepare(`SELECT COUNT(*) AS n FROM tasks WHERE status = 'done' AND pr_state = 'open' AND ${IN_ACTIVE_REPO('repo_id')}`)
-          .get() as {
-          n: number;
-        }
-      ).n;
+      return countWhere(and(eq(tasks.status, 'done'), eq(tasks.pr_state, 'open'), inActiveRepo(tasks.repo_id)));
     },
     /** Whether a task could be claimed: queued, not waiting on a dependency, in a repo that isn't paused. */
     hasQueued(): boolean {
-      const row = db
-        .prepare(
-          `SELECT EXISTS(SELECT 1 FROM tasks t WHERE t.status = 'queued' AND ${NOT_WAITING}
-             AND t.repo_id IN (SELECT id FROM repos WHERE paused_reason IS NULL AND archived_at IS NULL)) AS q`,
-        )
-        .get() as { q: number };
-      return row.q === 1;
+      return !!orm
+        .select({ one: sql`1` })
+        .from(t)
+        .where(and(eq(t.status, 'queued'), NOT_WAITING, inOpenRepo(t.repo_id)))
+        .limit(1)
+        .get();
     },
     /**
      * Tasks without their prompt, newest first. Returns the `limit` newest tasks older than `before`
@@ -130,31 +140,53 @@ export function taskStore(db: DatabaseSync) {
      * of the limit, so views of in-flight work stay complete. Later pages hold older tasks only.
      */
     listTaskSummaries(opts: { status?: TaskStatus; limit: number; before?: number }): TaskSummary[] {
-      const { status = null, limit, before = null } = opts;
-      return db
-        .prepare(
-          `SELECT ${SUMMARY_COLUMNS} FROM tasks
-           WHERE (? IS NULL OR status = ?) AND ${IN_ACTIVE_REPO('repo_id')}
-             AND (id IN (SELECT id FROM tasks WHERE (? IS NULL OR status = ?) AND (? IS NULL OR id < ?) ORDER BY id DESC LIMIT ?)
-                  OR (? IS NULL AND status IN (${OPEN})))
-           ORDER BY id DESC`,
+      const { status, limit, before } = opts;
+      const ofStatus = status === undefined ? undefined : eq(tasks.status, status);
+      const page = orm
+        .select({ id: tasks.id })
+        .from(tasks)
+        .where(and(ofStatus, before === undefined ? undefined : lt(tasks.id, before)))
+        .orderBy(desc(tasks.id))
+        .limit(limit);
+      return orm
+        .select(SUMMARY_COLUMNS)
+        .from(tasks)
+        .where(
+          and(
+            ofStatus,
+            inActiveRepo(tasks.repo_id),
+            or(inArray(tasks.id, page), before === undefined ? inArray(tasks.status, OPEN_STATUSES) : undefined),
+          ),
         )
-        .all(status, status, status, status, before, before, limit, before) as unknown as TaskSummary[];
+        .orderBy(desc(tasks.id))
+        .all() as TaskSummary[];
     },
     /** Queued tasks that wait on `id` with `--after`. */
     dependentsOf(id: number): Task[] {
-      return db.prepare("SELECT * FROM tasks WHERE after_task = ? AND status = 'queued' ORDER BY id").all(id) as unknown as Task[];
+      return orm
+        .select()
+        .from(tasks)
+        .where(and(eq(tasks.after_task, id), eq(tasks.status, 'queued')))
+        .orderBy(asc(tasks.id))
+        .all() as Task[];
     },
     /**
      * Tasks whose pull request is still open, for the state refresh: done ones, and blocked or failed ones
      * (a conflict blocks a done task and keeps its PR; a retry that fails keeps it too).
      */
     openPrTasks(): Task[] {
-      return db
-        .prepare(
-          `SELECT * FROM tasks WHERE status IN ('done', 'blocked', 'failed') AND pr_url IS NOT NULL AND pr_state = 'open' AND ${IN_ACTIVE_REPO('repo_id')}`,
+      return orm
+        .select()
+        .from(tasks)
+        .where(
+          and(
+            inArray(tasks.status, ['done', 'blocked', 'failed']),
+            isNotNull(tasks.pr_url),
+            eq(tasks.pr_state, 'open'),
+            inActiveRepo(tasks.repo_id),
+          ),
         )
-        .all() as unknown as Task[];
+        .all() as Task[];
     },
     /**
      * Atomically claim the next queued task of a repo that isn't paused, or undefined if none.
@@ -162,19 +194,20 @@ export function taskStore(db: DatabaseSync) {
      */
     claimNextTask(): Task | undefined {
       const from = fromStatuses({ type: 'claim' });
-      const marks = from.map(() => '?').join(', ');
       const to = nextStatus(from[0], { type: 'claim' })!;
+      const next = orm
+        .select({ id: t.id })
+        .from(t)
+        .where(and(inArray(t.status, from), NOT_WAITING, inOpenRepo(t.repo_id)))
+        .orderBy(desc(t.priority), asc(t.id))
+        .limit(1);
       return atomically(db, () => {
-        const row = db
-          .prepare(
-            `UPDATE tasks SET status = ?, attempts = attempts + 1, updated_at = ${NOW}
-             WHERE status IN (${marks})
-               AND id = (SELECT t.id FROM tasks t WHERE t.status IN (${marks}) AND ${NOT_WAITING}
-                           AND t.repo_id IN (SELECT id FROM repos WHERE paused_reason IS NULL AND archived_at IS NULL)
-                         ORDER BY t.priority DESC, t.id LIMIT 1)
-             RETURNING *`,
-          )
-          .get(to, ...from, ...from) as Task | undefined;
+        const row = orm
+          .update(tasks)
+          .set({ status: to, attempts: sql`${tasks.attempts} + 1`, updated_at: sql.raw(NOW) })
+          .where(and(inArray(tasks.status, from), eq(tasks.id, next)))
+          .returning()
+          .get() as Task | undefined;
         // A claim is allowed from one status only (queued), so that is where the task came from.
         if (row) recordEvent(row.id, 'claim', from[0], to);
         return row;
@@ -188,26 +221,31 @@ export function taskStore(db: DatabaseSync) {
       id: number,
       fields: Partial<Pick<Task, 'title' | 'prompt' | 'priority' | 'model' | 'max_turns' | 'max_attempts' | 'plan_path' | 'plan_steps'>>,
     ): Task | undefined {
-      const keys = Object.keys(fields) as (keyof typeof fields)[];
-      if (keys.length === 0) return this.getTask(id);
-      const sets = keys.map((k) => `${k} = ?`).join(', ');
-      return db
-        .prepare(
-          `UPDATE tasks SET ${sets}, updated_at = ${NOW}
-           WHERE id = ? AND status IN (${statusList(EDITABLE_STATUSES)}) RETURNING *`,
-        )
-        .get(...keys.map((k) => fields[k] ?? null), id) as Task | undefined;
+      if (Object.keys(fields).length === 0) return this.getTask(id);
+      return orm
+        .update(tasks)
+        .set({ ...given(fields), updated_at: sql.raw(NOW) })
+        .where(and(eq(tasks.id, id), inArray(tasks.status, EDITABLE_STATUSES)))
+        .returning()
+        .get() as Task | undefined;
     },
     /** Where a task's work is checked out. Not a status, so unguarded. */
     setCheckout(id: number, fields: Partial<Pick<Task, 'branch' | 'worktree'>>): void {
-      const keys = Object.keys(fields) as (keyof typeof fields)[];
-      if (keys.length === 0) return;
-      const sets = keys.map((k) => `${k} = ?`).join(', ');
-      db.prepare(`UPDATE tasks SET ${sets}, updated_at = ${NOW} WHERE id = ?`).run(...keys.map((k) => fields[k] ?? null), id);
+      if (Object.keys(fields).length === 0) return;
+      orm
+        .update(tasks)
+        .set({ ...given(fields), updated_at: sql.raw(NOW) })
+        .where(eq(tasks.id, id))
+        .run();
     },
     /** Whether the daemon may merge the task's PR on its own: 1, 0, or null for the repo's setting. Not a status, so unguarded. */
     setAutoMerge(id: number, value: 0 | 1 | null): Task | undefined {
-      return db.prepare(`UPDATE tasks SET auto_merge = ?, updated_at = ${NOW} WHERE id = ? RETURNING *`).get(value, id) as Task | undefined;
+      return orm
+        .update(tasks)
+        .set({ auto_merge: value, updated_at: sql.raw(NOW) })
+        .where(eq(tasks.id, id))
+        .returning()
+        .get() as Task | undefined;
     },
     /**
      * Record a change to a task's PR: `pr_state` (and `pr_url` when opened) and a 'pr' history row, together.
@@ -216,18 +254,23 @@ export function taskStore(db: DatabaseSync) {
      * between is therefore never undone. Returns false if the task was not in a state the change applies to.
      */
     recordPr(id: number, e: PrEvent): boolean {
-      const [set, params, guard, reason]: [string, (string | null)[], string, string] =
+      const notOpenAndDone = and(sql`${tasks.pr_state} IS NOT 'open'`, eq(tasks.status, 'done'));
+      const isOpen = eq(tasks.pr_state, 'open');
+      const [set, guard, reason]: [Partial<typeof tasks.$inferInsert>, SQL | undefined, string] =
         e.type === 'opened'
-          ? ["pr_url = ?, pr_state = 'open'", [e.url], "pr_state IS NOT 'open' AND status = 'done'", `opened ${e.url}`]
+          ? [{ pr_url: e.url, pr_state: 'open' }, notOpenAndDone, `opened ${e.url}`]
           : e.type === 'failed'
-            ? ["pr_state = 'failed'", [], "pr_state IS NOT 'open' AND status = 'done'", `could not open the PR: ${e.error}`]
+            ? [{ pr_state: 'failed' }, notOpenAndDone, `could not open the PR: ${e.error}`]
             : e.type === 'closed'
-              ? ["pr_state = 'closed'", [], "pr_state = 'open'", 'closed without merging']
-              : ['pr_state = ?', [e.state], "pr_state = 'open' AND ? <> 'open'", `PR is ${e.state}`];
+              ? [{ pr_state: 'closed' }, isOpen, 'closed without merging']
+              : [{ pr_state: e.state }, and(isOpen, sql`${e.state} <> 'open'`), `PR is ${e.state}`];
       return atomically(db, () => {
-        const row = db
-          .prepare(`UPDATE tasks SET ${set}, updated_at = ${NOW} WHERE id = ? AND ${guard} RETURNING status`)
-          .get(...params, id, ...(e.type === 'seen' ? [e.state] : [])) as { status: TaskStatus } | undefined;
+        const row = orm
+          .update(tasks)
+          .set({ ...set, updated_at: sql.raw(NOW) })
+          .where(and(eq(tasks.id, id), guard))
+          .returning({ status: tasks.status })
+          .get() as { status: TaskStatus } | undefined;
         if (!row) return false;
         recordEvent(id, 'pr', row.status, row.status, reason);
         return true;
@@ -239,12 +282,11 @@ export function taskStore(db: DatabaseSync) {
      */
     recordMerge(id: number, method: MergeMethod, reason: string): boolean {
       return atomically(db, () => {
-        const res = db
-          .prepare(
-            `UPDATE tasks SET pr_state = 'merged', merge_method = ?, updated_at = ${NOW}
-             WHERE id = ? AND status = 'done' AND pr_state = 'open'`,
-          )
-          .run(method, id);
+        const res = orm
+          .update(tasks)
+          .set({ pr_state: 'merged', merge_method: method, updated_at: sql.raw(NOW) })
+          .where(and(eq(tasks.id, id), eq(tasks.status, 'done'), eq(tasks.pr_state, 'open')))
+          .run();
         if (!Number(res.changes)) return false;
         recordEvent(id, 'merge', 'done', 'done', reason);
         return true;
@@ -256,9 +298,12 @@ export function taskStore(db: DatabaseSync) {
      */
     recordSync(id: number, reason: string): boolean {
       return atomically(db, () => {
-        const row = db
-          .prepare(`UPDATE tasks SET updated_at = ${NOW} WHERE id = ? AND status IN ('running', 'done') RETURNING status`)
-          .get(id) as { status: TaskStatus } | undefined;
+        const row = orm
+          .update(tasks)
+          .set({ updated_at: sql.raw(NOW) })
+          .where(and(eq(tasks.id, id), inArray(tasks.status, ['running', 'done'])))
+          .returning({ status: tasks.status })
+          .get() as { status: TaskStatus } | undefined;
         if (!row) return false;
         recordEvent(id, 'sync', row.status, row.status, reason);
         return true;
@@ -269,7 +314,11 @@ export function taskStore(db: DatabaseSync) {
      */
     recordPlanUnfinished(id: number, reason: string): boolean {
       return atomically(db, () => {
-        const res = db.prepare(`UPDATE tasks SET updated_at = ${NOW} WHERE id = ? AND status = 'running'`).run(id);
+        const res = orm
+          .update(tasks)
+          .set({ updated_at: sql.raw(NOW) })
+          .where(and(eq(tasks.id, id), eq(tasks.status, 'running')))
+          .run();
         if (!Number(res.changes)) return false;
         recordEvent(id, 'plan_unfinished', 'running', 'running', reason);
         return true;
@@ -277,13 +326,21 @@ export function taskStore(db: DatabaseSync) {
     },
     /** Done tasks whose latest run left linked plan steps unfinished: the ids, for the list's badge. */
     planUnfinishedIds(): Set<number> {
-      const rows = db
-        .prepare(
-          `SELECT t.id FROM tasks t WHERE t.status = 'done' AND ${IN_ACTIVE_REPO('t.repo_id')} AND EXISTS (
-             SELECT 1 FROM task_events e WHERE e.task_id = t.id AND e.type = 'plan_unfinished'
-               AND e.id > COALESCE((SELECT MAX(c.id) FROM task_events c WHERE c.task_id = t.id AND c.type = 'claim'), 0))`,
-        )
-        .all() as { id: number }[];
+      const e = alias(taskEvents, 'e');
+      const c = alias(taskEvents, 'c');
+      const lastClaim = orm
+        .select({ id: max(c.id) })
+        .from(c)
+        .where(and(eq(c.task_id, tasks.id), eq(c.type, 'claim')));
+      const unfinishedSince = orm
+        .select({ one: sql`1` })
+        .from(e)
+        .where(and(eq(e.task_id, tasks.id), eq(e.type, 'plan_unfinished'), gt(e.id, sql`COALESCE(${lastClaim}, 0)`)));
+      const rows = orm
+        .select({ id: tasks.id })
+        .from(tasks)
+        .where(and(eq(tasks.status, 'done'), inActiveRepo(tasks.repo_id), exists(unfinishedSince)))
+        .all();
       return new Set(rows.map((r) => r.id));
     },
     /**
@@ -296,19 +353,17 @@ export function taskStore(db: DatabaseSync) {
       for (let attempt = 0; attempt < 3; attempt++) {
         const cur = this.getTask(id);
         if (!cur) return undefined;
-        const t = transition(cur, event, opts);
-        if (!t) return undefined;
-        const keys = Object.keys(t.changes) as (keyof typeof t.changes)[];
-        const sets = ['status = ?', ...keys.map((k) => `${k} = ?`)];
-        const params = [t.to, ...keys.map((k) => t.changes[k] ?? null)];
+        const next = transition(cur, event, opts);
+        if (!next) return undefined;
         const row = atomically(db, () => {
           // Guarded on the status and on the counters the changes were computed from.
-          const row = db
-            .prepare(
-              `UPDATE tasks SET ${sets.join(', ')}, updated_at = ${NOW} WHERE id = ? AND status = ? AND attempts = ? AND restarts = ? RETURNING *`,
-            )
-            .get(...params, id, cur.status, cur.attempts, cur.restarts) as Task | undefined;
-          if (row) recordEvent(id, t.history, cur.status, t.to, opts.reason ?? null);
+          const row = orm
+            .update(tasks)
+            .set({ status: next.to, ...given(next.changes), updated_at: sql.raw(NOW) })
+            .where(and(eq(tasks.id, id), eq(tasks.status, cur.status), eq(tasks.attempts, cur.attempts), eq(tasks.restarts, cur.restarts)))
+            .returning()
+            .get() as Task | undefined;
+          if (row) recordEvent(id, next.history, cur.status, next.to, opts.reason ?? null);
           return row;
         });
         if (row) return row;
@@ -321,20 +376,29 @@ export function taskStore(db: DatabaseSync) {
      * Returns how many were requeued and the ids of those failed.
      */
     recoverOrphans(): { requeued: number; failed: number[] } {
-      db.prepare(`UPDATE runs SET ended_at = ${NOW}, outcome = 'failed', result_text = 'daemon restarted' WHERE ended_at IS NULL`).run();
-      db.prepare(`UPDATE planner_runs SET ended_at = ${NOW}, outcome = 'failed', note = 'daemon restarted' WHERE ended_at IS NULL`).run();
+      orm
+        .update(runs)
+        .set({ ended_at: sql.raw(NOW), outcome: 'failed', result_text: 'daemon restarted' })
+        .where(isNull(runs.ended_at))
+        .run();
+      orm
+        .update(plannerRuns)
+        .set({ ended_at: sql.raw(NOW), outcome: 'failed', note: 'daemon restarted' })
+        .where(isNull(plannerRuns.ended_at))
+        .run();
       let requeued = 0;
       const failed: number[] = [];
-      const orphans = db.prepare("SELECT id, restarts FROM tasks WHERE status IN ('running', 'cancel_requested')").all() as {
-        id: number;
-        restarts: number;
-      }[];
+      const orphans = orm
+        .select({ id: tasks.id, restarts: tasks.restarts })
+        .from(tasks)
+        .where(inArray(tasks.status, ['running', 'cancel_requested']))
+        .all();
       for (const o of orphans) {
         const exhausted = o.restarts + 1 >= MAX_RESTARTS;
         const reason = `the daemon restarted ${o.restarts + 1} times while this task was running`;
-        const t = this.applyEvent(o.id, { type: 'recover', exhausted }, { reason });
-        if (t?.status === 'queued') requeued++;
-        else if (t?.status === 'failed') failed.push(t.id);
+        const task = this.applyEvent(o.id, { type: 'recover', exhausted }, { reason });
+        if (task?.status === 'queued') requeued++;
+        else if (task?.status === 'failed') failed.push(task.id);
       }
       return { requeued, failed };
     },
