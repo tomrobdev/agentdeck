@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { type TaskSummary, ago, describeLive, describeSync } from '../../api';
+import { type TaskSummary, ago, api, describeLive, describeMergeRequest, describeSync } from '../../api';
+import { useActions } from '../../composables/useActions';
 import { type BoardMove, type Group, type StatusGroup, boardMove, canReview, unblocksOf, waitsOnText } from '../../lib/taskView';
 import MarkDoneDialog from '../task/MarkDoneDialog.vue';
 import AutoMergeMark from '../ui/AutoMergeMark.vue';
@@ -21,8 +22,12 @@ const emit = defineEmits<{
   mergeAll: [ids: number[]];
 }>();
 
+const { run } = useActions();
+const cancelMerge = (id: number) => run(() => api.cancelMergeRequest(id));
+
 /** The PRs the Review column's "Merge all" would merge, less the ones syncing. */
-const mergeable = (g: Group) => (g.key === 'review' ? g.tasks.filter((t) => canReview(t) && !t.sync).map((t) => t.id) : []);
+const mergeable = (g: Group) =>
+  g.key === 'review' ? g.tasks.filter((t) => canReview(t) && !t.sync && !t.merge_request).map((t) => t.id) : [];
 
 const dragging = ref<TaskSummary | null>(null);
 const over = ref<string | null>(null);
@@ -124,6 +129,9 @@ const LABELS: Record<BoardMove, string> = {
           <div class="mt-1 mb-1.5 line-clamp-2 font-medium">{{ t.title }}</div>
           <div v-if="t.live" class="mb-1.5 truncate text-sm text-muted tabular-nums" data-live>{{ describeLive(t.live) }}</div>
           <div v-else-if="t.sync" class="mb-1.5 truncate text-sm text-accent tabular-nums" data-sync>{{ describeSync(t.sync) }}</div>
+          <div v-else-if="t.merge_request" class="mb-1.5 truncate text-sm text-accent" data-merge-request>
+            {{ describeMergeRequest(t.merge_request) }}
+          </div>
           <div class="flex flex-wrap items-center gap-1">
             <span v-if="show.repo" class="chip">{{ t.repo }}</span>
             <span v-if="show.pr && t.pr_url" class="chip" :class="t.pr_state === 'merged' ? 'chip-merged' : ''"
@@ -150,7 +158,10 @@ const LABELS: Record<BoardMove, string> = {
             :class="t.id === selected ? 'flex' : 'hidden group-hover:flex'"
             @click.stop
           >
-            <button class="btn-mini" title="Merge (m)" @click="emit('merge', t.id)">Merge</button>
+            <button v-if="t.merge_request" class="btn-mini" title="Withdraw the merge request" @click="cancelMerge(t.id)">
+              Cancel merge
+            </button>
+            <button v-else class="btn-mini" title="Merge (m)" @click="emit('merge', t.id)">Merge</button>
           </div>
         </article>
       </div>

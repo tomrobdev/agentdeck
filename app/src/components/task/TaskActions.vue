@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { type MergeResult, type TaskDetail, api, describeSync } from '../../api';
+import { type MergeResult, type TaskDetail, api, describeMergeRequest, describeSync } from '../../api';
 import { canReview, personEvents } from '../../lib/taskView';
 import { useActions } from '../../composables/useActions';
 import Modal from '../ui/Modal.vue';
@@ -30,6 +30,8 @@ async function submitMarkDone(doneNote: string) {
   markingDone.value = false;
 }
 
+const cancelMerge = () => run(() => api.cancelMergeRequest(props.task.id));
+
 const merging = ref(false);
 async function onMerged(result: MergeResult) {
   merging.value = false;
@@ -51,11 +53,15 @@ async function onMerged(result: MergeResult) {
     <button v-else-if="events.includes('retry')" @click="emit('act', 'retry')">↻ Retry</button>
     <button v-if="events.includes('mark_done')" @click="markingDone = true">✓ Mark done</button>
     <span v-if="task.sync" class="chip chip-accent self-center" data-sync>{{ describeSync(task.sync) }}</span>
+    <span v-if="task.merge_request" class="chip chip-accent self-center" data-merge-request>{{
+      describeMergeRequest(task.merge_request)
+    }}</span>
+    <button v-if="task.merge_request" :disabled="busy" @click="cancelMerge">Cancel merge</button>
     <button
       v-if="canReview(task)"
       class="primary"
-      :disabled="!!task.sync"
-      :title="task.sync ? 'Merge waits for the sync to end' : undefined"
+      :disabled="!!task.sync || !!task.merge_request"
+      :title="task.sync ? 'Merge waits for the sync to end' : task.merge_request ? 'A merge is already requested' : undefined"
       @click="merging = true"
     >
       Merge PR
@@ -64,7 +70,7 @@ async function onMerged(result: MergeResult) {
   </div>
 
   <MarkDoneDialog v-if="markingDone" :task="task" with-note :busy="busy" @close="markingDone = false" @confirm="submitMarkDone" />
-  <MergeDialog v-if="merging" :task-id="task.id" @close="merging = false" @merged="onMerged" />
+  <MergeDialog v-if="merging" :task-id="task.id" @close="merging = false" @merged="onMerged" @requested="merging = false" />
 
   <Modal v-if="closing" title="Close pull request" @close="closing = false">
     <p>
