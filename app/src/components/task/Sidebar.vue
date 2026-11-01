@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { type TaskDetail, api } from '../../api';
+import { type TaskDetail, ago, api } from '../../api';
+import AutoMergeMark from '../ui/AutoMergeMark.vue';
 import { openExternal, useCopy } from '../../platform/native';
 import { PRIORITY_LEVELS, canEdit, priorityLevel, statusLabel } from '../../lib/taskView';
 import { useActions } from '../../composables/useActions';
@@ -43,6 +44,8 @@ async function setAutoMerge(index: number) {
     if (res.label_error) flash(`Saved, but the PR's label could not be changed: ${res.label_error}`);
   });
 }
+
+const AUTO_MERGE_TEXT = { off: 'text-muted', on: 'text-muted', merge: 'text-done', wait: 'text-blocked', never: 'text-failed' } as const;
 
 const levelLabel = computed(() => PRIORITY_LEVELS.find((l) => l.key === priorityLevel(props.task.priority))!.label);
 
@@ -126,6 +129,21 @@ const input = 'px-1.5 py-0.5';
       >
         <option v-for="o in AUTO_MERGE" :key="o.label" :selected="(task.auto_merge ?? null) === o.stored">{{ o.label }}</option>
       </select>
+      <div v-if="task.auto_merge_view" class="mt-1.5 flex flex-col gap-1 text-sm" data-auto-merge-detail>
+        <AutoMergeMark :view="task.auto_merge_view" class="self-start" />
+        <span v-if="task.auto_merge_view.state === 'off'" class="text-muted">{{ task.auto_merge_view.label }}</span>
+        <ul v-if="task.auto_merge_view.reasons.length" class="m-0 list-disc pl-4" :class="AUTO_MERGE_TEXT[task.auto_merge_view.state]">
+          <li v-for="r in task.auto_merge_view.reasons" :key="r">{{ r }}</li>
+        </ul>
+        <span v-if="task.auto_merge_view.checked_at" class="text-muted">Checked {{ ago(task.auto_merge_view.checked_at) }}</span>
+        <span class="text-muted">
+          Limits: {{ task.auto_merge_view.limits.max_lines }} lines
+          <template v-if="task.auto_merge_view.limits.skip.length">
+            · not under <span class="font-mono">{{ task.auto_merge_view.limits.skip.join(', ') }}</span>
+          </template>
+          · tests {{ task.auto_merge_view.limits.tests }}
+        </span>
+      </div>
     </div>
     <div v-if="task.branch" :class="prop">
       <div :class="name">Branch</div>

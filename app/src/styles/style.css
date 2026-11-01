@@ -219,6 +219,10 @@
   --chip-c: var(--blocked);
   --chip-border: color-mix(in srgb, var(--blocked) 45%, transparent);
 }
+@utility chip-failed {
+  --chip-c: var(--failed);
+  --chip-border: color-mix(in srgb, var(--failed) 45%, transparent);
+}
 
 /* The small uppercase label above a group of menu options. */
 @utility sec-label {
