@@ -39,6 +39,7 @@ export function parseCommandLine(argv: string[]) {
       follow: { type: 'boolean', short: 'f' },
       lines: { type: 'string', short: 'n' },
       since: { type: 'string' },
+      by: { type: 'string' },
       hook: { type: 'boolean' },
       json: { type: 'boolean' },
       help: { type: 'boolean', short: 'h' },

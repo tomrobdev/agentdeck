@@ -9,6 +9,9 @@ export interface Needs {
   items: string[];
 }
 
+/** How the note on the retry after a person's `install-needs` begins; the stats count that retry as an install, not as a note. */
+export const INSTALL_NOTE = 'AgentDeck installed';
+
 /** "NEEDS deps: a b" / "NEEDS host: h" / "NEEDS edit: path" at the start of a blocked reason. */
 export function parseNeeds(reason: string | undefined): Needs | undefined {
   const m = reason?.match(/^NEEDS\s+(deps|host|edit)\s*:\s*(.*)$/i);

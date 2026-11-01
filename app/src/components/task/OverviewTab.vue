@@ -26,6 +26,7 @@ const EVENT_TEXT: Record<string, (e: TaskEventRow) => string> = {
   reject: () => 'rejected the proposal',
   retry: (e) => (e.reason ? 'requested changes' : 'queued another attempt'),
   cancel: (e) => (e.to_status === 'cancel_requested' ? 'asked the run to stop' : 'cancelled the task'),
+  edit: (e) => (e.reason ? `edited the task (${e.reason})` : 'edited the task'),
   merge: () => 'merged the pull request',
   mark_done: () => 'marked done by hand',
   pr_merged: () => 'PR merged on GitHub',
