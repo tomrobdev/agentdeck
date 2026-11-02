@@ -1,6 +1,6 @@
 // What a running task is doing right now, read from the events of its run's stream. Pure: no I/O.
 
-import { toolSummary } from './log.ts';
+import { cut, shortFile, toolSummary } from './log.ts';
 
 /** What the daemon keeps of a live run: the turns so far and the last tool call in a few words. */
 export interface LiveState {
@@ -63,20 +63,18 @@ export function syncView(
 
 const TOOL_TEXT_MAX = 40;
 
-const cut = (s: string, max: number): string => (s.length > max ? s.slice(0, max - 1) + '…' : s);
-
 /** A tool call in a few words: the tool, then the log's summary of the call, with a file shortened to its name. */
 export function toolText(name: string, input: unknown): string {
-  const i = (input && typeof input === 'object' ? input : {}) as Record<string, unknown>;
-  const summary = toolSummary(name, input);
-  const isFile = (typeof i.file_path === 'string' && i.file_path) || (typeof i.notebook_path === 'string' && i.notebook_path);
-  const detail = isFile ? summary.split('/').pop()! : summary;
+  const detail = shortFile(toolSummary(name, input), input);
   return cut(detail ? `${name} ${detail}` : name, TOOL_TEXT_MAX);
 }
 
-/** The live state after one event of claude's stream: an assistant message is a turn, its last tool use is the tool. */
+/**
+ * The live state after one event of claude's stream: an assistant message is a turn, its last tool use is the tool.
+ * A subagent's message (it names a `parent_tool_use_id`) is neither: the live line follows the main loop.
+ */
 export function nextLive(state: LiveState, ev: any): LiveState {
-  if (ev?.type !== 'assistant') return state;
+  if (ev?.type !== 'assistant' || ev.parent_tool_use_id) return state;
   const id = typeof ev.message?.id === 'string' ? ev.message.id : null;
   const turns = id !== null && id === state.message ? state.turns : state.turns + 1;
   const uses = (Array.isArray(ev.message?.content) ? ev.message.content : []).filter((c: any) => c?.type === 'tool_use');

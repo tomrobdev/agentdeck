@@ -215,6 +215,47 @@ export function isEnvironmentBlock(b: { needs?: Needs; denials?: number; setupFa
   return !!b.needs || (b.denials ?? 0) > 0 || !!b.setupFailed;
 }
 
+/** What a run came to, for `runOutcome`. */
+export interface RunCameTo {
+  /** How claude's process ended; a `finished` one has its final message in `status`. */
+  end: { kind: 'cancelled' | 'finished' } | { kind: 'rate_limited' | 'failed'; reason: string };
+  /** The final message's status (`parseStatus`); read only for a finished run. */
+  status?: ReturnType<typeof parseStatus>;
+  /** Whether the repo's test command passed; null when it was not run (no command, or the agent reported blocked). */
+  testsPassed: boolean | null;
+  /** Commits on the branch past the base; null when not counted (only a run that could be done needs it). */
+  commitsAhead: number | null;
+  /** Tool uses the permission rules refused during the run. */
+  denials: number;
+}
+
+/**
+ * The outcome of a run and whether to pause its repo. A finished run is blocked when the agent says so, failed when the
+ * tests failed, and blocked when it is done without a commit. Refused tool uses make a block environmental, and pause
+ * the repo (the tool rules don't fit its work, so every further task would hit the same wall), unless the agent finished
+ * and only the test command failed: then the refusals didn't stop it.
+ */
+export function runOutcome(r: RunCameTo): { result: WorkerResult; pause: boolean } {
+  const result = baseOutcome(r);
+  if (result.outcome === 'blocked' && isEnvironmentBlock({ needs: result.needs, denials: r.denials })) result.environment = true;
+  const pause = r.denials > 0 && r.testsPassed !== false && (result.outcome === 'blocked' || result.outcome === 'failed');
+  return { result, pause };
+}
+
+function baseOutcome(r: RunCameTo): WorkerResult {
+  const { end } = r;
+  if (end.kind === 'cancelled') return { outcome: 'cancelled' };
+  if (end.kind === 'rate_limited') return { outcome: 'rate_limited', reason: end.reason };
+  if (end.kind === 'failed') return { outcome: 'failed', reason: end.reason };
+  const status = r.status ?? { blocked: false, declared: false };
+  if (status.blocked) {
+    return { outcome: 'blocked', reason: status.reason ?? 'agent reported blocked', ...(status.needs ? { needs: status.needs } : {}) };
+  }
+  if (r.testsPassed === false) return { outcome: 'failed', reason: 'tests failed' };
+  if (r.commitsAhead === 0) return { outcome: 'blocked', reason: 'agent finished without changing anything' };
+  return { outcome: 'done' };
+}
+
 /** Pull "STATUS: BLOCKED: reason" out of the agent's final message. */
 export function parseStatus(text: string | undefined): { blocked: boolean; reason?: string; declared: boolean; needs?: Needs } {
   const lines = (text ?? '').trim().split('\n').reverse();

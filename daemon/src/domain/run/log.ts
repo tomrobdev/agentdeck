@@ -95,7 +95,19 @@ export function toolSummary(name: string, input: unknown): string {
     }
   }
   if (!text) text = Object.values(i).map(str).find(Boolean) ?? '';
-  return text.length > SUMMARY_MAX ? text.slice(0, SUMMARY_MAX - 1) + '…' : text;
+  return cut(text, SUMMARY_MAX);
+}
+
+/** A text cut to `max` characters, ending in an ellipsis when it was longer. */
+export function cut(s: string, max: number): string {
+  return s.length > max ? s.slice(0, max - 1) + '…' : s;
+}
+
+/** A call's summary with the file it names shortened to the file's name; unchanged for a call that names no file. */
+export function shortFile(summary: string, input: unknown): string {
+  const i = (input && typeof input === 'object' ? input : {}) as Record<string, unknown>;
+  const isFile = (typeof i.file_path === 'string' && i.file_path) || (typeof i.notebook_path === 'string' && i.notebook_path);
+  return isFile ? summary.split('/').pop()! : summary;
 }
 
 /** Lines in a text: none for an empty one, and a trailing newline starts no line. */
