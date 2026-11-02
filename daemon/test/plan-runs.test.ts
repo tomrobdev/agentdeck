@@ -18,7 +18,7 @@ const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
 const { commitLeftovers, ensureWorktree } = await import('../src/adapters/git.ts');
 const { readPlanFile, writePlanFile } = await import('../src/adapters/plan-file.ts');
 const { parsePlan } = await import('../src/domain/plan/plan.ts');
-const { planForRun, putPlanFile, takePlanFile } = await import('../src/application/plans.ts');
+const { planForRun, takePlanFile } = await import('../src/application/plans.ts');
 const { LOG_DIR } = await import('../src/config.ts');
 
 const plan = `<!doctype html>
@@ -148,8 +148,8 @@ test('a plan’s owner with no --steps does not undo a step a sibling finished w
   });
   const [ownerTree, siblingTree] = [mkdtempSync(join(home, 'owner-')), mkdtempSync(join(home, 'sibling-'))];
   // Both runs start with the plan as stored.
-  await putPlanFile(ownerTree, planForRun(db, db.getTask(owner.id)!));
-  await putPlanFile(siblingTree, planForRun(db, db.getTask(sibling.id)!));
+  await writePlanFile(ownerTree, planForRun(db, db.getTask(owner.id)!)?.html ?? null);
+  await writePlanFile(siblingTree, planForRun(db, db.getTask(sibling.id)!)?.html ?? null);
   // The sibling finishes b and ends first; then the owner, which did a, ends.
   markStep(siblingTree, 'b', 'done');
   assert.equal(await takePlanFile(db, db.getTask(sibling.id)!, siblingTree), true);
@@ -168,7 +168,7 @@ test('a task given its plan with --plan <file>, no one following it, keeps a ste
   const t = db.addTask({ repo_id: repo.id, title: 'adds a step', prompt: 'p', own_plan: plan, status: 'proposed' });
   assert.equal(t.plan_task, t.id);
   const tree = mkdtempSync(join(home, 'adds-'));
-  await putPlanFile(tree, planForRun(db, t));
+  await writePlanFile(tree, planForRun(db, t)?.html ?? null);
   const file = join(tree, '.agentdeck/plan.html');
   writeFileSync(
     file,
@@ -193,7 +193,7 @@ test('the step statuses a run marked before a restart cut it off survive when it
   const wt = await ensureWorktree(repo, claimed);
   db.setCheckout(t.id, { branch: wt.branch, worktree: wt.path });
   db.startRun(t.id, claimed.attempts, join(LOG_DIR, `task-${t.id}-attempt-1.jsonl`));
-  await putPlanFile(wt.path, planForRun(db, claimed));
+  await writePlanFile(wt.path, planForRun(db, claimed)?.html ?? null);
   markStep(wt.path, 'a', 'done');
   assert.deepEqual(db.recoverOrphans(), { requeued: 1, failed: [] });
 

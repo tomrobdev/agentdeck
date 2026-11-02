@@ -189,8 +189,6 @@ export interface TaskSummary {
   /** How the PR was merged from the app. */
   merge_method: MergeMethod | null;
   after_task: number | null;
-  /** Legacy: the docs/plans/ file a task carried out before plans moved into AgentDeck. No longer written. */
-  plan_path: string | null;
   /** The task whose plan this one follows (itself when its own plan was given with it); null follows its own plan, if any. Missing from a daemon that predates it. */
   plan_task?: number | null;
   /** JSON array of that plan's step ids; null means every unfinished step. Missing from a daemon that predates it. */

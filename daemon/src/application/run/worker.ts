@@ -1,5 +1,6 @@
 // Runs one attempt of a claimed task: worktree, setup, claude, tests, then the task's next status.
 import { commitLeftovers, commitsAhead, ensureWorktree } from '../../adapters/git.ts';
+import { writePlanFile } from '../../adapters/plan-file.ts';
 import { closeLog, writeEvent } from '../../adapters/run-log.ts';
 import { runCommand } from '../../adapters/shell.ts';
 import { SETUP_TIMEOUT_MS, TEST_TIMEOUT_MS, ensureDirs } from '../../config.ts';
@@ -22,7 +23,7 @@ import { type Task, leftoversMessage } from '../../domain/task/task.ts';
 import { type TaskRunEnd, openTaskRun, startTaskRun } from './claude-run.ts';
 import { syncBranch } from '../sync.ts';
 import { pauseRepo } from '../scheduler/pause.ts';
-import { followedSteps, planForRun, putPlanFile, takePlanFile } from '../plans.ts';
+import { followedSteps, planForRun, takePlanFile } from '../plans.ts';
 import { settle } from '../task/settle.ts';
 import { recordAnswers, reviewForRun } from '../review/address.ts';
 
@@ -96,7 +97,7 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
 
   // The plan goes in the worktree's plan file, which git ignores, for the worker to set its steps' statuses in.
   try {
-    await putPlanFile(wt.path, plan);
+    await writePlanFile(wt.path, plan?.html ?? null);
   } catch (err) {
     writeEvent(log, { type: 'agentdeck_error', text: `write plan file: ${(err as Error).message}` });
   }

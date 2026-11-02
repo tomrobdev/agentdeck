@@ -203,7 +203,7 @@ test('the store keeps a task’s own plan under its numbered name, replacing it 
   const db = openDb(':memory:');
   const repo = db.addRepo({ name: 'r', path: '/tmp/r', base_branch: 'main' });
   const t = db.addTask({ repo_id: repo.id, title: 't', prompt: 'p' });
-  db.savePlan(t.id, 'docs/plans/old.html', 'branch', PLAN);
+  db.raw.prepare("INSERT INTO task_plans (task_id, name, source, html) VALUES (?, 'docs/plans/old.html', 'branch', ?)").run(t.id, PLAN);
   assert.equal(db.ownPlan(t.id), undefined, 'a plan stored before plans had numbers is not the task’s own');
 
   const first = db.saveOwnPlan(t.id, PLAN, 'attached');

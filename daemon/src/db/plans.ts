@@ -1,6 +1,6 @@
 // Plans attached to tasks: the HTML as written, parsed into steps when read.
-import { and, asc, eq, ne, notInArray, sql } from 'drizzle-orm';
-import { type PlanSource, type TaskPlan, isOwnPlanName, parsePlan, planFileName } from '../domain/plan/plan.ts';
+import { and, asc, desc, eq, ne, notInArray, sql } from 'drizzle-orm';
+import { type PlanSource, type TaskPlan, parsePlan, planFileName } from '../domain/plan/plan.ts';
 import type { Task } from '../domain/task/task.ts';
 import type { Orm } from './orm.ts';
 import { NOW, atomically } from './sql.ts';
@@ -10,52 +10,45 @@ import type { DatabaseSync } from 'node:sqlite';
 type PlanRow = typeof taskPlans.$inferSelect;
 
 /** A task's own plan with its HTML: the one stored under the task's numbered name. */
-export interface OwnPlan {
-  id: number;
-  task_id: number;
-  name: string;
-  source: PlanSource;
-  html: string;
-}
+export type OwnPlan = Omit<PlanRow, 'source'> & { source: PlanSource };
 
 /** A row as the API shows it. A row that no longer parses (it always did when saved) reads as untitled. */
-function toPlan({ html, ...row }: PlanRow): TaskPlan {
+export function toPlan({ html, ...row }: OwnPlan): TaskPlan {
   return {
     ...row,
-    source: row.source as PlanSource,
     ...(parsePlan(html) ?? { version: '1', title: 'Untitled plan', summary: null, steps: [] }),
   };
 }
 
-export function planStore(db: DatabaseSync, orm: Orm) {
-  /** Insert or replace by name; updated_at moves only when the HTML changed. */
-  const upsert = (task_id: number, name: string, source: PlanSource, html: string) =>
-    orm
-      .insert(taskPlans)
-      .values({ task_id, name, source, html })
-      .onConflictDoUpdate({
-        target: [taskPlans.task_id, taskPlans.name],
-        set: { source: sql`excluded.source`, html: sql`excluded.html`, updated_at: sql.raw(NOW) },
-        setWhere: sql`${taskPlans.html} IS NOT excluded.html OR ${taskPlans.source} IS NOT excluded.source`,
-      })
-      .run();
+/** Insert task `task_id`'s own plan under the name its title gives (planFileName). The caller makes sure it has none. */
+export function insertOwnPlan(orm: Orm, task_id: number, html: string, source: PlanSource): string {
+  const name = planFileName(task_id, parsePlan(html)?.title ?? '');
+  orm.insert(taskPlans).values({ task_id, name, source, html }).run();
+  return name;
+}
 
-  /** The task's own plan, the newest if there were ever two. Plans stored before plans had numbers are not its own. */
-  const ownPlan = (task_id: number): OwnPlan | undefined =>
-    orm
-      .select({ id: taskPlans.id, task_id: taskPlans.task_id, name: taskPlans.name, source: taskPlans.source, html: taskPlans.html })
+export function planStore(db: DatabaseSync, orm: Orm) {
+  /**
+   * The task's own plan, the newest if there were ever two: the row under its numbered name (planFileName). Plans stored
+   * before plans had numbers are not its own.
+   */
+  const ownPlan = (task_id: number): OwnPlan | undefined => {
+    const row = orm
+      .select()
       .from(taskPlans)
-      .where(eq(taskPlans.task_id, task_id))
-      .orderBy(asc(taskPlans.id))
-      .all()
-      .filter((p) => isOwnPlanName(task_id, p.name))
-      .map((p) => ({ ...p, source: p.source as PlanSource }))
-      .at(-1);
+      .where(
+        and(
+          eq(taskPlans.task_id, task_id),
+          sql`${taskPlans.name} GLOB ${`${task_id}-*.html`}`,
+          sql`substr(${taskPlans.name}, 1, length(${taskPlans.name}) - 5) NOT GLOB '*[^a-z0-9-]*'`,
+        ),
+      )
+      .orderBy(desc(taskPlans.id))
+      .get();
+    return row && { ...row, source: row.source as PlanSource };
+  };
 
   return {
-    savePlan(task_id: number, name: string, source: PlanSource, html: string): void {
-      upsert(task_id, name, source, html);
-    },
     ownPlan,
     /**
      * Store `html` (a plan) as the task's own plan, under the name its title gives (planFileName), replacing the plan it
@@ -65,7 +58,7 @@ export function planStore(db: DatabaseSync, orm: Orm) {
       const name = planFileName(task_id, parsePlan(html)?.title ?? '');
       return atomically(db, () => {
         const old = ownPlan(task_id);
-        if (!old) upsert(task_id, name, source, html);
+        if (!old) insertOwnPlan(orm, task_id, html, source);
         else {
           orm
             .delete(taskPlans)
@@ -79,13 +72,7 @@ export function planStore(db: DatabaseSync, orm: Orm) {
               .run();
           }
         }
-        return toPlan(
-          orm
-            .select()
-            .from(taskPlans)
-            .where(and(eq(taskPlans.task_id, task_id), eq(taskPlans.name, name)))
-            .get()!,
-        );
+        return toPlan(ownPlan(task_id)!);
       });
     },
     /** Replace a stored plan's HTML, keeping its name and source. updated_at moves only when the HTML changed. */
@@ -118,7 +105,13 @@ export function planStore(db: DatabaseSync, orm: Orm) {
     },
     /** The task's plans, oldest first, without their HTML. */
     plansForTask(task_id: number): TaskPlan[] {
-      return orm.select().from(taskPlans).where(eq(taskPlans.task_id, task_id)).orderBy(asc(taskPlans.id)).all().map(toPlan);
+      return orm
+        .select()
+        .from(taskPlans)
+        .where(eq(taskPlans.task_id, task_id))
+        .orderBy(asc(taskPlans.id))
+        .all()
+        .map((row) => toPlan({ ...row, source: row.source as PlanSource }));
     },
     planHtml(task_id: number, id: number): string | undefined {
       return orm

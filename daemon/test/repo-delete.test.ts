@@ -44,7 +44,7 @@ function fill(repo: ReturnType<typeof makeRepo>, opts: { worktree: boolean }) {
   writeFileSync(plog, '{}\n');
   logs.push(plog);
   db.startPlannerRun(repo.id, plog);
-  db.savePlan(task.id, 'plan.html', 'attached', '<html></html>');
+  db.raw.prepare("INSERT INTO task_plans (task_id, name, source, html) VALUES (?, 'plan.html', 'attached', '<html></html>')").run(task.id);
   db.addNotification('done', 't', 'b', task.id);
   writeGoals(repo, 'goals');
   return { task, logs, worktree: opts.worktree };
