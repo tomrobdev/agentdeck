@@ -409,7 +409,7 @@ test('attach refuses a running task: its run’s end would write the old plan ba
     db.raw.prepare('UPDATE tasks SET status = ? WHERE id = ?').run(status, t.id);
     assert.throws(
       () => attachPlan(db, t.id, { html: PLAN.replace('Speed up the &amp; cache', 'Replaced') }),
-      new RegExp(`#${t.id} is ${status}; only proposed, queued, blocked, failed tasks can be edited`),
+      new RegExp(`#${t.id} is ${status}; a plan can't be attached while it runs`),
     );
     const viaApi = await call(`/api/tasks/${t.id}/plans`, { html: PLAN });
     assert.equal(viaApi.status, 400);

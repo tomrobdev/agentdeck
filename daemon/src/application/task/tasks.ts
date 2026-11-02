@@ -218,7 +218,8 @@ export async function editTask(
   // The task's own plan is stored in the same guarded write, so a task the daemon claimed meanwhile keeps its plan.
   const edited = db.editTask(id, fields, { ownPlan });
   if (!edited) {
-    const now = db.getTask(id)?.status ?? task.status;    throw new ActionError(`#${id} is ${now}; only ${EDITABLE_STATUSES.join(', ')} tasks can be edited`);
+    const now = db.getTask(id)?.status ?? task.status;
+    throw new ActionError(`#${id} is ${now}; only ${EDITABLE_STATUSES.join(', ')} tasks can be edited`);
   }
   return edited;
 }
