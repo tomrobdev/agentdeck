@@ -30,14 +30,16 @@ An area with no ref has never been reviewed: ask where to start, by default a we
   ~/.claude/skills/review-area/area-branch.sh <area> <from> origin/main <paths…>
   ```
 
-  Write the paths out as separate words: zsh doesn't split a variable holding them. It makes the local branch `area-review/<area>`. Against main its diff is exactly the area's change, while the checkout's files are current, so reviewers read real callers. Never push it.
+  Write the paths out as separate words: zsh doesn't split a variable holding them. It makes the local branch `area-review/<area>`, one commit on top of `<from>`. Its change is the three-dot diff, `git diff main...area-review/<area>` (or `<from>..area-review/<area>`): exactly the area's change. A two-dot diff against main shows every file that changed elsewhere since `<from>`, so pass reviewers the three-dot form. The checkout's files are current, so reviewers read real callers. Never push it.
 
 ## 3. Review it three ways
 
-Start two subagents at once, each given the branch and the tasks' goals, and each told to return its report in full:
+Start two subagents at once, each given the branch, the three-dot diff command, the tasks' goals and the expected load, and each told to cite line numbers from the files on main, to change no files, and to return its report in full:
 
 - **Correctness:** `/code-review high area-review/<area>`.
-- **Senior-dev review:** `/ponytail-review` of the branch `area-review/<area>` against main: bugs, load, risky code without a test, what to cut. It needs the ponytail plugin (`/plugin install ponytail@ponytail`).
+- **Senior-dev review:** `/ponytail-review` of `area-review/<area>` against main: bugs, load, risky code without a test, what to cut. Subagents may not have the plugin's skills (it said "Unknown skill" in the first run), so tell the subagent to follow `~/.claude/plugins/marketplaces/ponytail/skills/ponytail-review/SKILL.md` by hand when the skill can't be invoked.
+
+Check the reports' line numbers before using them: a reviewer can cite lines past the end of a file.
 
 While they run, do the area pass yourself, which neither does. Read the area's files whole, not only the diff, and look for:
 
