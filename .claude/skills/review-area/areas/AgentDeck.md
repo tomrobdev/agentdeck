@@ -12,13 +12,46 @@ One heading per area, then the path prefixes it covers (a folder ends in `/`). A
 - app/src/components/task/PlanCard.vue
 - docs/plan-format.md
 
-## task
+## task-links
 
-- daemon/src/domain/task/
-- daemon/src/application/task/
-- daemon/src/db/tasks.ts
+Builds on and After links: a task's dependencies and dependents.
+
+- daemon/src/domain/task/link.ts
+- daemon/src/application/task/dependencies.ts
+- daemon/src/application/task/links.ts
+
+## task-context
+
+What a session or worker is told about a task: the agent context digest, prompt path warnings and prompt sections.
+
+- daemon/src/domain/task/digest.ts
+- daemon/src/domain/task/prompt-paths.ts
+- daemon/src/domain/task/sections.ts
+- daemon/src/application/task/context.ts
+- daemon/src/application/task/prompt-paths.ts
+
+## task-use-cases
+
+The task entity, its lifecycle, and the person-facing use cases, CLI and routes.
+
+- daemon/src/domain/task/task.ts
+- daemon/src/domain/task/lifecycle.ts
+- daemon/src/domain/task/history.ts
+- daemon/src/domain/task/listing.ts
+- daemon/src/domain/task/needs.ts
+- daemon/src/domain/task/rules.ts
+- daemon/src/domain/task/stage.ts
+- daemon/src/domain/task/start.ts
+- daemon/src/application/task/tasks.ts
+- daemon/src/application/task/task-views.ts
+- daemon/src/application/task/files.ts
+- daemon/src/application/task/settle.ts
 - daemon/src/api/routes/tasks.ts
 - daemon/src/cli/tasks.ts
+
+## task-store
+
+- daemon/src/db/tasks.ts
 
 ## run
 
