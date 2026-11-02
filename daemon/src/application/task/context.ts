@@ -7,6 +7,7 @@ import type { Db } from '../../db/index.ts';
 import type { Repo } from '../../domain/repo/repo.ts';
 import { digest } from '../../domain/task/digest.ts';
 import { filterTasks } from '../../domain/task/listing.ts';
+import { isReview } from '../../domain/task/stage.ts';
 import { status } from '../settings.ts';
 import { withViews } from './task-views.ts';
 
@@ -47,9 +48,19 @@ export function repoForPath(db: Db, dir: string): Repo | undefined {
  */
 export async function liveContext(db: Db, opts: { repo: Repo; after: number | null; full: boolean }): Promise<LiveContext> {
   const cursor = db.lastEventId();
-  const events = opts.after === null ? [] : db.eventsAfter(opts.after, cursor, opts.repo.id);
+  // A cursor above the newest event is from other ids (a repo deleted, a restored database): it is no cursor.
+  const after = opts.after !== null && opts.after > cursor ? null : opts.after;
+  const events = after === null ? [] : db.eventsAfter(after, cursor, opts.repo.id);
   const st = status(db);
-  const open = filterTasks(withViews(db, db.listTasks()), { states: OPEN_STATES, repo_id: opts.repo.id, sort: 'attention' });
+  // Only this repo's tasks that can be open get views; the views are the costly part.
+  const maybeOpen = db
+    .listTasks()
+    .filter(
+      (t) =>
+        t.repo_id === opts.repo.id &&
+        (['proposed', 'queued', 'running', 'cancel_requested', 'blocked', 'failed'].includes(t.status) || isReview(t)),
+    );
+  const open = filterTasks(withViews(db, maybeOpen), { states: OPEN_STATES, repo_id: opts.repo.id, sort: 'attention' });
   const lines = digest({
     header: {
       repo: opts.repo.name,
@@ -58,11 +69,12 @@ export async function liveContext(db: Db, opts: { repo: Repo; after: number | nu
       running: st.running,
       max_concurrent: st.max_concurrent,
       governor: st.governor,
+      rate_limited_until: st.rate_limited_until && st.rate_limited_until * 1000 > Date.now() ? st.rate_limited_until : null,
       head: await headSummary(opts.repo.path),
     },
     events,
     open,
-    full: opts.full || opts.after === null,
+    full: opts.full || after === null,
   });
   return { lines, cursor };
 }

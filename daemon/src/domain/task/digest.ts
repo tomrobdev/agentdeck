@@ -2,6 +2,8 @@
 // Pure: the caller reads the events, tasks and header facts. `agentdeck context` prints it, and Claude Code's hooks run that.
 import type { TaskEventRow } from './history.ts';
 import type { TaskStatus } from './lifecycle.ts';
+import type { PrState } from '../pull-request/pr.ts';
+import { statusGroup } from './stage.ts';
 
 /** A history row with its task's title. */
 export type DigestEvent = Pick<TaskEventRow, 'id' | 'task_id' | 'type' | 'from_status' | 'to_status' | 'reason'> & { title: string };
@@ -27,6 +29,8 @@ export interface DigestHeader {
   running: number;
   max_concurrent: number;
   governor: { allow: boolean; reason: string | null };
+  /** When a usage-limit backoff lifts (unix seconds), or null when none is in force. */
+  rate_limited_until?: number | null;
   /** The repo's checkout: branch, short commit and subject. Null when git couldn't say. */
   head: { branch: string; commit: string; subject: string } | null;
 }
@@ -43,6 +47,10 @@ export interface DigestInput {
 
 /** Lines below the header at most; the rest is counted in a last line. */
 export const DIGEST_LIMIT = 12;
+/** Lines the changes may take of those (their heading and the count of the rest included), so "Open:" always has room. */
+const EVENT_LINES = 6;
+
+const MORE = (k: number) => `  +${k} more: agentdeck ls`;
 
 const TITLE_MAX = 60;
 const REASON_MAX = 80;
@@ -57,6 +65,8 @@ const withReason = (what: string, reason: string | null) => (reason ? `${what}: 
 
 /** What one history row says happened, in the domain language. */
 export function describeEvent(e: Pick<TaskEventRow, 'type' | 'to_status' | 'reason'>): string {
+  // Whatever the trigger (a usage limit, a restart, the environment), a task that ended cancelled was cancelled.
+  if (e.to_status === 'cancelled' && e.type !== 'reject') return 'cancelled';
   switch (e.type) {
     case 'created':
       return e.to_status === 'proposed' ? 'proposed' : 'added';
@@ -85,11 +95,15 @@ export function describeEvent(e: Pick<TaskEventRow, 'type' | 'to_status' | 'reas
     case 'pr_merged':
       return 'PR merged';
     case 'merge':
-      // The reason is how: "auto-merged (squash)" from the daemon, "squash merge" from a person.
+      // The reason is how: "auto-merged (squash)" or "requested (squash)" from the daemon, "squash merge" from a person.
       if (e.reason?.startsWith('auto-merged')) return `PR ${short(e.reason, REASON_MAX)}`;
+      if (e.reason?.startsWith('requested ')) return `PR merged as ${short(e.reason, REASON_MAX)}`;
       return e.reason ? `PR merged (${short(e.reason, REASON_MAX)})` : 'PR merged';
     case 'pr':
-      return e.reason?.startsWith('opened ') ? 'PR opened' : withReason('PR', e.reason);
+      if (e.reason?.startsWith('opened ')) return 'PR opened';
+      // The daemon words a PR found changed as "PR is merged".
+      if (e.reason?.startsWith('PR is ')) return `PR ${short(e.reason.slice('PR is '.length), REASON_MAX)}`;
+      return withReason('PR', e.reason);
     case 'edit':
       return withReason('edited', e.reason);
     case 'sync':
@@ -115,10 +129,14 @@ function describeTask(t: DigestTask): string {
   return `${status} #${t.id} ${short(t.title, TITLE_MAX)}${extra}`;
 }
 
+/** A unix time as the local `HH:MM`. */
+const clock = (unix: number) => new Date(unix * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+
 function headerLine(h: DigestHeader): string {
   const parts = [`AgentDeck live · ${h.repo}`, h.paused ? 'daemon PAUSED' : 'active'];
   if (h.repo_paused) parts.push(`repo PAUSED: ${short(h.repo_paused, REASON_MAX)}`);
   parts.push(`${h.running}/${h.max_concurrent} slots`);
+  if (h.rate_limited_until) parts.push(`usage limit until ${clock(h.rate_limited_until)}`);
   parts.push(h.governor.allow ? 'governor allowing' : `governor on hold: ${short(h.governor.reason ?? '', REASON_MAX)}`);
   if (h.head) parts.push(`${h.head.branch} ${h.head.commit} ${short(h.head.subject, TITLE_MAX)}`);
   return parts.join(' · ');
@@ -137,16 +155,23 @@ export function digest(input: DigestInput, limit = DIGEST_LIMIT): string[] {
       entry.what.push(describeEvent(e));
       byTask.set(e.task_id, entry);
     }
+    const lines = [...byTask].map(([id, { title, what }]) => `  #${id} ${short(title, TITLE_MAX)}: ${what.join(' · ')}`);
     body.push('Since your last message:');
-    for (const [id, { title, what }] of byTask) body.push(`  #${id} ${short(title, TITLE_MAX)}: ${what.join(' · ')}`);
+    // The heading takes one line; if the tasks don't all fit, the last line counts the rest.
+    const room = EVENT_LINES - 1;
+    if (lines.length <= room) body.push(...lines);
+    else body.push(...lines.slice(0, room - 1), MORE(lines.length - (room - 1)));
   }
   if (input.events.length || input.full) {
     body.push(input.open.length ? 'Open:' : 'Open: nothing');
-    for (const t of input.open) body.push(`  ${describeTask(t)}`);
-  }
-  if (body.length > limit) {
-    const cut = body.length - (limit - 1);
-    body.splice(limit - 1, cut, `  +${cut} more: agentdeck ls`);
+    // Tasks waiting on the person come first, whatever order they arrived in.
+    const needsYou = (t: DigestTask) =>
+      ['needs-you', 'review', 'proposed'].includes(statusGroup({ ...t, pr_state: t.pr_state as PrState | null }));
+    const open = [...input.open.filter(needsYou), ...input.open.filter((t) => !needsYou(t))];
+    const room = Math.max(limit - body.length, 2);
+    const shown = open.length <= room ? open : open.slice(0, room - 1);
+    for (const t of shown) body.push(`  ${describeTask(t)}`);
+    if (shown.length < open.length) body.push(MORE(open.length - shown.length));
   }
   return [headerLine(input.header), ...body];
 }

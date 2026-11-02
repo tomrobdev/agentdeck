@@ -26,14 +26,17 @@ import { INTERRUPTED } from '../domain/run/run.ts';
 import { MAX_RESTARTS, type TaskEvent, type TaskStatus, fromStatuses, nextStatus, transition } from '../domain/task/lifecycle.ts';
 import type { Link, LinkKind } from '../domain/task/link.ts';
 import type { PrEvent, TaskEventRow, TaskEventType } from '../domain/task/history.ts';
-import { EDITABLE_STATUSES, OPEN_STATUSES, type Task, type TaskSummary } from '../domain/task/task.ts';
+import type { TaskPlan } from '../domain/plan/plan.ts';
+import { EDITABLE_STATUSES, OPEN_STATUSES, PLAN_ATTACHABLE_STATUSES, type Task, type TaskSummary } from '../domain/task/task.ts';
 import type { Orm } from './orm.ts';
-import { insertOwnPlan } from './plans.ts';
+import { insertOwnPlan, saveOwnPlan } from './plans.ts';
 import { NOW, atomically } from './sql.ts';
 import { plannerRuns, repos, runs, taskEvents, taskLinks, tasks } from './tables.ts';
 
+/** A task's columns: every one but the legacy `after_task`, which migration 18 copied into task_links and nothing reads. */
+const { after_task: _after_task, ...TASK_COLUMNS } = getColumns(tasks);
 /** Every column but the prompt, for lists. */
-const { prompt: _prompt, ...SUMMARY_COLUMNS } = getColumns(tasks);
+const { prompt: _prompt, ...SUMMARY_COLUMNS } = TASK_COLUMNS;
 
 /** The columns of a task with no merge request. */
 const NO_MERGE_REQUEST = { merge_requested_at: null, merge_request_method: null, merge_request_check: null };
@@ -86,6 +89,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       max_attempts?: number;
       status?: 'queued' | 'proposed';
       source?: 'manual' | 'planner';
+      /** Shorthand for one builds-on link to that task. */
       after_task?: number | null;
       /** Links the task starts with; the caller has checked them (a new task can't make a cycle). */
       links?: { on: number; kind: LinkKind }[];
@@ -98,7 +102,6 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       const status = n.status ?? 'queued';
       const links = [...(n.links ?? [])];
       if (n.after_task != null && !links.some((l) => l.on === n.after_task)) links.push({ on: n.after_task, kind: 'builds_on' });
-      const first = links.find((l) => l.kind === 'builds_on')?.on ?? null;
       const id = atomically(db, () => {
         const info = orm
           .insert(tasks)
@@ -112,7 +115,6 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
             max_attempts: n.max_attempts ?? DEFAULTS.maxAttempts,
             status,
             source: n.source ?? 'manual',
-            after_task: first, // legacy: the sidebar still shows it until it reads links; the links are what count
             plan_task: n.plan_task ?? null,
             plan_steps: n.plan_steps ?? null,
           })
@@ -153,13 +155,13 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     },
     getTask(id: number): Task | undefined {
       // The cast narrows the plain string columns (status, pr_state, …); typed columns come later.
-      return orm.select().from(tasks).where(eq(tasks.id, id)).get() as Task | undefined;
+      return orm.select(TASK_COLUMNS).from(tasks).where(eq(tasks.id, id)).get() as Task | undefined;
     },
     listTasks(): Task[] {
-      return orm.select().from(tasks).where(inActiveRepo(tasks.repo_id)).orderBy(desc(tasks.id)).all() as Task[];
+      return orm.select(TASK_COLUMNS).from(tasks).where(inActiveRepo(tasks.repo_id)).orderBy(desc(tasks.id)).all() as Task[];
     },
     tasksForRepo(repo_id: number, limit = 40): Task[] {
-      return orm.select().from(tasks).where(eq(tasks.repo_id, repo_id)).orderBy(desc(tasks.id)).limit(limit).all() as Task[];
+      return orm.select(TASK_COLUMNS).from(tasks).where(eq(tasks.repo_id, repo_id)).orderBy(desc(tasks.id)).limit(limit).all() as Task[];
     },
     /** Tasks of a repo that still need work or a decision; the planner waits until there are none. */
     countOpen(repo_id: number): number {
@@ -243,7 +245,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     /** The tasks that depend on `id` (of one kind, if given), in any status. */
     dependentsOf(id: number, kind?: LinkKind): Task[] {
       return orm
-        .select(getColumns(tasks))
+        .select(TASK_COLUMNS)
         .from(tasks)
         .innerJoin(taskLinks, eq(taskLinks.task_id, tasks.id))
         .where(and(eq(taskLinks.on_task, id), kind ? eq(taskLinks.kind, kind) : undefined))
@@ -269,7 +271,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
      */
     openPrTasks(): Task[] {
       return orm
-        .select()
+        .select(TASK_COLUMNS)
         .from(tasks)
         .where(
           and(
@@ -299,7 +301,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
           .update(tasks)
           .set({ status: to, attempts: sql`${tasks.attempts} + 1`, updated_at: sql.raw(NOW) })
           .where(and(inArray(tasks.status, from), eq(tasks.id, next)))
-          .returning()
+          .returning(TASK_COLUMNS)
           .get() as Task | undefined;
         // A claim is allowed from one status only (queued), so that is where the task came from.
         if (row) recordEvent(row.id, 'claim', from[0], to);
@@ -309,42 +311,47 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     /**
      * Change a task's editable fields. Guarded by status like every other task write: only a task
      * in EDITABLE_STATUSES can be edited. Returns the task, or undefined if it is missing or in another status.
-     * `plan` says the task's own plan was replaced too, so the edit names it.
+     * `ownPlan` (a parsed plan's HTML) becomes the task's own plan in the same write, only when the edit went through,
+     * and the edit names `plan`.
      */
     editTask(
       id: number,
       fields: Partial<Pick<Task, 'title' | 'prompt' | 'priority' | 'model' | 'max_turns' | 'max_attempts' | 'plan_task' | 'plan_steps'>>,
-      opts: { plan?: boolean } = {},
+      opts: { ownPlan?: string } = {},
     ): Task | undefined {
-      if (Object.keys(fields).length === 0) return this.getTask(id);
+      if (Object.keys(fields).length === 0 && opts.ownPlan === undefined) return this.getTask(id);
       return atomically(db, () => {
         const edited = orm
           .update(tasks)
           .set({ ...given(fields), updated_at: sql.raw(NOW) })
           .where(and(eq(tasks.id, id), inArray(tasks.status, EDITABLE_STATUSES)))
-          .returning()
+          .returning(TASK_COLUMNS)
           .get() as Task | undefined;
+        if (!edited) return undefined;
+        if (opts.ownPlan !== undefined) saveOwnPlan(db, orm, id, opts.ownPlan, 'attached');
         // The status stays; the row says what was edited, and `stats` counts an edit of a queued or blocked task.
-        const what = [...Object.keys(fields), ...(opts.plan ? ['plan'] : [])].join(', ');
-        if (edited) recordEvent(id, 'edit', edited.status, edited.status, what);
+        const what = [...Object.keys(fields), ...(opts.ownPlan !== undefined ? ['plan'] : [])].join(', ');
+        recordEvent(id, 'edit', edited.status, edited.status, what);
         return edited;
       });
     },
     /**
-     * Record that a task's own plan was attached or replaced, as an `edit` naming `plan` (a cut-off session then starts
-     * afresh: `editsSinceCutOff`). Only for a task in EDITABLE_STATUSES; returns whether it was recorded.
+     * Attach or replace a task's own plan (a parsed plan's HTML) and record it as an `edit` naming `plan`, so a cut-off
+     * session of the task or of a task following the plan starts afresh (`editsSinceCutOff`). Guarded: only a task in
+     * PLAN_ATTACHABLE_STATUSES. Returns the stored plan, or undefined if the task is missing or in another status.
      */
-    recordPlanEdit(id: number): boolean {
+    attachOwnPlan(id: number, html: string): TaskPlan | undefined {
       return atomically(db, () => {
         const row = orm
           .update(tasks)
           .set({ updated_at: sql.raw(NOW) })
-          .where(and(eq(tasks.id, id), inArray(tasks.status, EDITABLE_STATUSES)))
+          .where(and(eq(tasks.id, id), inArray(tasks.status, PLAN_ATTACHABLE_STATUSES)))
           .returning({ status: tasks.status })
           .get() as { status: TaskStatus } | undefined;
-        if (!row) return false;
+        if (!row) return undefined;
+        const saved = saveOwnPlan(db, orm, id, html, 'attached');
         recordEvent(id, 'edit', row.status, row.status, 'plan');
-        return true;
+        return saved;
       });
     },
     /** Where a task's work is checked out. Not a status, so unguarded. */
@@ -364,7 +371,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
           // The stored check was made for the old setting, so it goes with it.
           .set({ auto_merge: value, auto_merge_check: null, auto_merge_checked_at: null, updated_at: sql.raw(NOW) })
           .where(eq(tasks.id, id))
-          .returning()
+          .returning(TASK_COLUMNS)
           .get() as Task | undefined
       );
     },
@@ -401,12 +408,15 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         .run();
       return Number(res.changes) > 0;
     },
-    /** Keep the PR refresh's latest merge request check (JSON { verdict, reasons }) on a task that still has the request. */
+    /**
+     * Keep the PR refresh's latest merge request check (JSON { verdict, reasons }) on a task that still has the request.
+     * Only a done task whose PR is open, like setAutoMergeCheck: a check finished after a conflict blocked it is dropped.
+     */
     setMergeRequestCheck(id: number, check: string): boolean {
       const res = orm
         .update(tasks)
         .set({ merge_request_check: check })
-        .where(and(eq(tasks.id, id), isNotNull(tasks.merge_requested_at)))
+        .where(and(eq(tasks.id, id), isNotNull(tasks.merge_requested_at), eq(tasks.status, 'done'), eq(tasks.pr_state, 'open')))
         .run();
       return Number(res.changes) > 0;
     },
@@ -553,7 +563,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
             .update(tasks)
             .set({ status: next.to, ...given(next.changes), updated_at: sql.raw(NOW) })
             .where(and(eq(tasks.id, id), eq(tasks.status, cur.status), eq(tasks.attempts, cur.attempts), eq(tasks.restarts, cur.restarts)))
-            .returning()
+            .returning(TASK_COLUMNS)
             .get() as Task | undefined;
           if (row) recordEvent(id, next.history, cur.status, next.to, opts.reason ?? null);
           return row;
@@ -565,15 +575,17 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     /**
      * After a crash, anything still marked running was orphaned: put it back in the queue,
      * unless restarts keep interrupting it. Stop its claude process (`reapOrphans`) first.
-     * Its unfinished runs end `interrupted`, keeping their session, so the next run resumes it.
-     * Returns how many were requeued and the ids of those failed.
+     * The unfinished runs of a requeued task end `interrupted`, keeping their session, so the next run resumes it; those
+     * of a task that failed or was cancelled end so (`failed`, `cancelled`), so the run stats count them. Any other
+     * unfinished run (a done task's sync) ends `interrupted`. Returns how many were requeued and the ids of those failed.
      */
     recoverOrphans(): { requeued: number; failed: number[] } {
-      orm
-        .update(runs)
-        .set({ ended_at: sql.raw(NOW), outcome: INTERRUPTED, result_text: 'daemon restarted' })
-        .where(isNull(runs.ended_at))
-        .run();
+      const endRuns = (outcome: string, task_id?: number) =>
+        orm
+          .update(runs)
+          .set({ ended_at: sql.raw(NOW), outcome, result_text: 'daemon restarted' })
+          .where(and(isNull(runs.ended_at), task_id === undefined ? undefined : eq(runs.task_id, task_id)))
+          .run();
       orm
         .update(plannerRuns)
         .set({ ended_at: sql.raw(NOW), outcome: 'failed', note: 'daemon restarted' })
@@ -589,10 +601,14 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       for (const o of orphans) {
         const exhausted = o.restarts + 1 >= MAX_RESTARTS;
         const reason = `the daemon restarted ${o.restarts + 1} times while this task was running`;
-        const task = this.applyEvent(o.id, { type: 'recover', exhausted }, { reason });
-        if (task?.status === 'queued') requeued++;
-        else if (task?.status === 'failed') failed.push(task.id);
+        atomically(db, () => {
+          const task = this.applyEvent(o.id, { type: 'recover', exhausted }, { reason });
+          if (task?.status === 'queued') requeued++;
+          else if (task?.status === 'failed') failed.push(task.id);
+          if (task?.status === 'failed' || task?.status === 'cancelled') endRuns(task.status, task.id);
+        });
       }
+      endRuns(INTERRUPTED);
       return { requeued, failed };
     },
   };

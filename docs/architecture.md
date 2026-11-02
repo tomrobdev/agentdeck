@@ -122,7 +122,7 @@ flowchart TD
   application -->|46| adapters
   application -->|8| config_ts
   application -->|32| db
-  application -->|121| domain
+  application -->|122| domain
   cli_ts -->|1| application
   cli_ts -->|8| cli
   cli_ts -->|1| db
@@ -138,7 +138,7 @@ flowchart TD
   daemon_ts -->|1| db
   daemon_ts -->|1| domain
   db -->|3| config_ts
-  db -->|25| domain
+  db -->|26| domain
 ```
 
 <!-- /generated -->
@@ -428,7 +428,6 @@ stateDiagram-v2
 | GET    | `/api/tasks/:id`                   | `actions.taskDetail`                                               |
 | POST   | `/api/tasks/:id`                   | `actions.editTask`, `actions.taskDetail`, `actions.promptWarnings` |
 | POST   | `/api/tasks/merge-requests`        | `actions.requestMerges`                                            |
-| POST   | `/api/tasks/merge`                 | `actions.mergeAll`                                                 |
 | GET    | `/api/tasks`                       | `actions.taskViews`                                                |
 | POST   | `/api/tasks`                       | `actions.addTask`, `actions.taskDetail`, `actions.promptWarnings`  |
 

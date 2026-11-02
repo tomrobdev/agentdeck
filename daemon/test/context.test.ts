@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -35,6 +35,11 @@ test('describeEvent words each kind of history row', () => {
   assert.equal(say('finish', 'blocked', 'STATUS: BLOCKED: no tests\nmore'), 'blocked: STATUS: BLOCKED: no tests');
   assert.equal(say('finish', 'queued', 'tests failed'), 'failed, queued to retry: tests failed');
   assert.equal(say('rate_limited', 'queued'), 'queued again: usage limit');
+  assert.equal(say('rate_limited', 'cancelled'), 'cancelled');
+  assert.equal(say('recover', 'cancelled', 'x'), 'cancelled');
+  assert.equal(say('environment_block', 'cancelled', 'no network'), 'cancelled');
+  assert.equal(say('merge', 'done', 'requested (squash)'), 'PR merged as requested (squash)');
+  assert.equal(say('pr', 'done', 'PR is merged'), 'PR merged');
   assert.equal(say('recover', 'queued'), 'queued again after a daemon restart');
   assert.equal(say('recover', 'failed', 'too many restarts'), 'failed after daemon restarts: too many restarts');
   assert.equal(say('conflict', 'blocked'), 'blocked: conflict');
@@ -96,6 +101,33 @@ test('digest cuts the lines below the header at the limit and counts the rest', 
   assert.equal(lines.at(-1), '  +10 more: agentdeck ls');
 });
 
+test('digest: 30 events still leave "Open:" with the tasks that need you', () => {
+  const events = Array.from({ length: 30 }, (_, i) => ({
+    id: i + 1,
+    task_id: i + 1,
+    type: 'claim',
+    from_status: null,
+    to_status: 'running',
+    reason: null,
+    title: `T${i + 1}`,
+  })) as Parameters<typeof digest>[0]['events'];
+  const open = [
+    { id: 40, title: 'Quiet', status: 'queued' as const, pr_state: null, stop_reason: null, waiting: null },
+    { id: 41, title: 'Stuck', status: 'blocked' as const, pr_state: null, stop_reason: 'needs a key', waiting: null },
+  ];
+  const lines = digest({ header, events, open, full: false });
+  assert.ok(lines.length <= 1 + DIGEST_LIMIT);
+  assert.ok(lines.some((l) => /\+\d+ more: agentdeck ls/.test(l)));
+  assert.ok(lines.indexOf('  blocked #41 Stuck — needs a key') > lines.indexOf('Open:'));
+});
+
+test('digest: the header names a usage-limit backoff', () => {
+  const until = Math.floor(Date.now() / 1000) + 3600;
+  const [line] = digest({ header: { ...header, rate_limited_until: until }, events: [], open: [], full: false });
+  assert.match(line, /slots · usage limit until \d\d:\d\d · governor allowing/);
+  assert.doesNotMatch(line, /hold/);
+});
+
 function setup(name: string) {
   const dir = mkdtempSync(join(tmpdir(), `agentdeck-context-${name}-`));
   const db = openDb(join(dir, 'test.db'));
@@ -128,6 +160,18 @@ test('liveContext: the open tasks first, then only what changed after the cursor
   assert.ok(moved.lines.includes(`  #${a.id} First: started`));
   assert.ok(moved.lines.some((l) => l.includes(`running #${a.id} First`)));
   assert.ok(moved.cursor > start.cursor);
+});
+
+test("liveContext: a cursor above the newest event is no cursor; only this repo's open tasks show", async () => {
+  const { db, repo } = setup('stale');
+  const open = db.addTask({ repo_id: repo.id, title: 'Open one', prompt: 'p' });
+  const gone = db.addTask({ repo_id: repo.id, title: 'Cancelled one', prompt: 'p' });
+  db.applyEvent(gone.id, { type: 'cancel' });
+  const ctx = await liveContext(db, { repo, after: db.lastEventId() + 100, full: false });
+  assert.ok(ctx.lines.includes('Open:'), 'the full picture');
+  assert.ok(ctx.lines.some((l) => l.includes(`#${open.id} Open one`)));
+  assert.ok(!ctx.lines.some((l) => l.includes('Cancelled one')));
+  assert.equal(ctx.cursor, db.lastEventId());
 });
 
 test('repoForPath finds the repo from its checkout, a subdirectory or a task worktree, and nothing elsewhere', () => {
@@ -176,6 +220,15 @@ test('the hook prints the picture once per session, then only changes, and nothi
   const elsewhere = run({ ...message, cwd: tmpdir() });
   assert.equal(elsewhere.status, 0);
   assert.equal(elsewhere.stdout, '');
+
+  // A cursor file that can't be pruned (a dangling link) neither hides the digest nor stops the cursor moving.
+  symlinkSync(join(home, 'nowhere'), join(home, 'hooks', 'dangling.json'));
+  db.addTask({ repo_id: repo.id, title: 'Later task', prompt: 'p' });
+  const pruned = run(message);
+  assert.equal(pruned.status, 0, pruned.stderr);
+  assert.doesNotMatch(pruned.stderr, /ENOENT/);
+  assert.match(pruned.stdout, /Later task: added/);
+  assert.equal((JSON.parse(readFileSync(join(home, 'hooks', 's1.json'), 'utf8')) as { after: number }).after, db.lastEventId());
 
   const garbage = spawnSync(process.execPath, [CLI, 'context', '--hook'], {
     input: 'not json',

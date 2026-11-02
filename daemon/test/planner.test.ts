@@ -110,12 +110,16 @@ test('prompt lists open and recent tasks', () => {
   assert.match(prompt, /## Recently finished\n.*Add input validation/s);
 });
 
-test('the planner asks for prompts with markdown section headings', () => {
+test('the planner asks for prompts with markdown section headings, shown below its own headings', () => {
   const prompt = buildPlannerPrompt(db.getRepo(repoId)!, 'ship it', [], 3);
   for (const name of ['Goal', 'Context', 'Change', 'Out of scope', 'Constraints', 'Definition of done']) {
-    assert.match(prompt, new RegExp(`^## ${name}$`, 'm'));
+    assert.match(prompt, new RegExp(`^### ${name}$`, 'm'));
+    assert.doesNotMatch(prompt, new RegExp(`^## ${name}$`, 'm'));
   }
+  assert.match(prompt, /^## Goals$/m);
+  assert.match(prompt, /"##" heading/);
   assert.doesNotMatch(prompt, /^Goal:/m);
+  assert.doesNotMatch(prompt, /--plan/, 'the planner proposes no plans');
 });
 
 test('with auto-approve, the scheduler plans an empty queue and runs the tasks', async () => {
