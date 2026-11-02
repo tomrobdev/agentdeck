@@ -3,7 +3,7 @@ import type { Repo } from '../repo/repo.ts';
 import type { Task } from '../task/task.ts';
 import { parseTextList, wholeNumberError } from '../text.ts';
 import { isMergeabilityUnknown } from './conflict.ts';
-import { type MergeFinding, type MergeInput, mergeFindings } from './merge.ts';
+import { type MergeFinding, type MergeInput, conflictNeedsPerson, mergeFindings } from './merge.ts';
 
 /** The label a PR carries while the daemon may merge it. Removing it on GitHub opts that PR out. */
 export const AUTO_MERGE_LABEL = {
@@ -39,7 +39,8 @@ export interface AutoMergeCheck {
 /**
  * What each merge-dialog finding means when no person is there to wave it through. A draft is fine: the merge marks it
  * ready. So is BEHIND: a PR that merges cleanly onto the moved base is what GitHub would merge, and a repo that requires
- * up-to-date branches makes the merge fail, which is told once. A conflict waits for the sync the refresh starts.
+ * up-to-date branches makes the merge fail, which is told once. A conflict waits for the sync the refresh starts, unless
+ * the repo has auto_resolve off: then none starts and a person must sync the task.
  */
 const UNATTENDED: Record<MergeFinding['kind'], 'never' | 'wait' | null> = {
   not_open: 'never',
@@ -69,7 +70,8 @@ export function autoMergeCheck(
   const reasons = { never: [] as string[], wait: [] as string[] };
   for (const f of mergeFindings(input)) {
     // While required checks run GitHub says BLOCKED too; the pending checks are the wait.
-    const how = f.kind === 'blocked' && pr.checks.pending ? null : UNATTENDED[f.kind];
+    const how =
+      f.kind === 'blocked' && pr.checks.pending ? null : f.kind === 'conflict' && conflictNeedsPerson(input) ? 'never' : UNATTENDED[f.kind];
     if (how) reasons[how].push(f.text);
   }
 

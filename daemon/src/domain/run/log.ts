@@ -40,12 +40,12 @@ const CHANGE_MAX = 2048;
 const OUTPUT_MAX = 4096;
 const SUMMARY_MAX = 200;
 
-/** What the daemon's `agentdeck_sync` event (bringing the base branch in before a run) says in the log. */
+/** What the daemon's `agentdeck_sync` event (the sync with the base branch before a run) says in the log. */
 const SYNC_TEXT: Record<string, string> = {
   clean: 'Brought the base branch into the branch: clean merge.',
   resolved: 'Resolved conflicts with the base branch.',
   needs_resolution: 'The base branch conflicts with this branch, and auto-resolve is off: working on the branch as it is.',
-  error: 'Could not bring in the base branch; working on the branch as it is.',
+  error: 'Could not sync with the base branch; working on the branch as it is.',
 };
 
 /** The file a tool call names (Read, Edit, Write: file_path; Glob, Grep: path; NotebookEdit: notebook_path). */

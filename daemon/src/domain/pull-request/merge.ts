@@ -93,15 +93,27 @@ export interface MergeInput {
   tests_passed: number | null;
   /** The tasks this one lands after that have not landed (`unlandedAfter`), each with why. Missing means none. */
   lands_after?: { on: number; reason: string }[];
+  /** False when the repo has auto_resolve off: no sync starts on its own, so a conflict needs a person. Missing means on. */
+  auto_resolve?: boolean;
 }
 
+/** Whether a conflict with the base is left to a person: the repo has auto_resolve off, so the daemon never syncs it. */
+export const conflictNeedsPerson = (input: Pick<MergeInput, 'auto_resolve'>): boolean => input.auto_resolve === false;
+
 /** What about a PR's state bears on merging it, in the order the merge dialog shows it. */
-export function mergeFindings({ pr_state, pr, tests_passed, lands_after = [] }: MergeInput): MergeFinding[] {
+export function mergeFindings({ pr_state, pr, tests_passed, lands_after = [], auto_resolve }: MergeInput): MergeFinding[] {
   const found: MergeFinding[] = [];
   const add = (kind: MergeFinding['kind'], text: string, problem = false) => found.push({ kind, problem, text });
   if (pr_state !== 'open') add('not_open', `the PR is ${pr_state ?? 'not open'}`, true);
   for (const hold of lands_after) add('lands_after', `lands after #${hold.on}: ${hold.reason}`, true);
-  if (isConflicting(pr)) add('conflict', 'the branch has conflicts with the base branch', true);
+  if (isConflicting(pr))
+    add(
+      'conflict',
+      conflictNeedsPerson({ auto_resolve })
+        ? 'the branch has conflicts with the base branch, and the repo has auto_resolve off: sync the task (agentdeck sync, or Sync in the dashboard)'
+        : 'the branch has conflicts with the base branch',
+      true,
+    );
   if (pr.draft) add('draft', 'the PR is a draft; it will be marked ready for review first');
   if (pr.merge_state === 'BEHIND') add('behind', 'the base branch has moved on since the branch was cut');
   if (pr.merge_state === 'BLOCKED' && !pr.draft)

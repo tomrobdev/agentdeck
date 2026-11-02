@@ -60,6 +60,8 @@ export class Scheduler {
   private requestPollAt = 0;
   /** The last auto-merge error told for each task, so a merge that keeps failing is told once, not every refresh. */
   private readonly autoMergeErrors = new Map<number, string>();
+  /** The tasks whose conflict was told as waiting for a person's sync (auto_resolve off), so it is said once. */
+  private readonly conflictsTold = new Set<number>();
 
   constructor(db: Db, opts: SchedulerOptions = {}) {
     this.db = db;
@@ -229,7 +231,7 @@ export class Scheduler {
 
   /** Merge the base into conflicting PRs' branches in the background; counts as a running task while it works. */
   private resolveConflicts(ids: number[]): void {
-    const p = resolveConflicting(this.db, ids, this.opts.log)
+    const p = resolveConflicting(this.db, ids, this.opts.log, this.conflictsTold)
       .catch((err) => this.opts.log(`conflict resolution crashed: ${err?.stack ?? err}`))
       .finally(() => {
         this.releaseResolve(p);

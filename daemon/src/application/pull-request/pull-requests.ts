@@ -84,6 +84,7 @@ function autoMergeFor(db: Db, task: Task, repo: Repo, pr: PrDetails, tests_passe
     pr,
     tests_passed,
     lands_after: landsAfter(db, task.id),
+    auto_resolve: repo.auto_resolve === 1,
     paused: pausedReason(db.isPaused(), repo),
   });
 }
@@ -133,7 +134,7 @@ export async function mergePreview(db: Db, id: number): Promise<MergePreview> {
     conflicting: isConflicting(pr),
     unblocks: dependentsReleased(db, id).map((t) => ({ id: t.id, title: t.title })),
     auto_merge: autoMergeFor(db, task, repo, pr, tests_passed),
-    request: mergeRequestCheck({ pr_state: task.pr_state, pr, tests_passed, lands_after }),
+    request: mergeRequestCheck({ pr_state: task.pr_state, pr, tests_passed, lands_after, auto_resolve: repo.auto_resolve === 1 }),
   };
 }
 
@@ -310,7 +311,13 @@ export async function refreshPrStates(db: Db, log: (msg: string) => void = () =>
       const tests = lastTestsPassed(db, task.id);
       if (task.merge_requested_at) {
         // A person asked: the merge request's check stands in for auto-merge's.
-        const check = mergeRequestCheck({ pr_state: task.pr_state, pr, tests_passed: tests, lands_after: landsAfter(db, task.id) });
+        const check = mergeRequestCheck({
+          pr_state: task.pr_state,
+          pr,
+          tests_passed: tests,
+          lands_after: landsAfter(db, task.id),
+          auto_resolve: repo ? repo.auto_resolve === 1 : true,
+        });
         db.setAutoMergeCheck(task.id, null);
         if (check.verdict === 'never') {
           const why = check.reasons.join('; ');
