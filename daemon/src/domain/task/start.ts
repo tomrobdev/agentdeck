@@ -10,7 +10,8 @@ export type QueueWait =
 export type StartWait =
   | QueueWait
   | { kind: 'repo-paused'; reason: string }
-  | { kind: 'dependency'; on: number; stuck: string | null }
+  /** `on`: every task it builds on that is still on its way, or the one root it is stuck on (with `stuck`, the reason). */
+  | { kind: 'dependency'; on: number[]; stuck: string | null }
   | { kind: 'slots'; running: number; max: number };
 
 export interface QueueState {
@@ -65,8 +66,8 @@ export function startWait(
   if (ctx.queue) return ctx.queue;
   if (ctx.repoPaused) return { kind: 'repo-paused', reason: ctx.repoPaused };
   const dep = ctx.dependency;
-  if (dep.kind === 'waiting' || dep.kind === 'stuck')
-    return { kind: 'dependency', on: dep.kind === 'waiting' ? dep.on[0] : dep.on, stuck: dep.kind === 'stuck' ? dep.reason : null };
+  if (dep.kind === 'waiting') return { kind: 'dependency', on: dep.on, stuck: null };
+  if (dep.kind === 'stuck') return { kind: 'dependency', on: [dep.on], stuck: dep.reason };
   if (ctx.running >= ctx.max) return { kind: 'slots', running: ctx.running, max: ctx.max };
   return null;
 }

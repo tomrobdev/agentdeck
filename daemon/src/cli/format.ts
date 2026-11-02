@@ -2,6 +2,7 @@
 import { type DoctorReport, type HealthCheck, type TaskView, readLog } from '../application/actions.ts';
 import type { AutoMergeView } from '../domain/pull-request/auto-merge.ts';
 import type { TaskStatus } from '../domain/task/lifecycle.ts';
+import { parseTaskIds } from '../domain/task/ids.ts';
 import type { Task } from '../domain/task/task.ts';
 
 const STATUS_ICON: Record<TaskStatus, string> = {
@@ -26,9 +27,17 @@ export function taskId(arg: string | undefined): number {
   return id;
 }
 
-/** One link in words: "builds on #12 (waiting)", "after #9 (holding its merge)". */
+/** The task ids a list flag names (`--builds-on 12,14`); empty when the flag is not given. */
+export function taskIds(value: string | undefined, flag: string): number[] {
+  return parseTaskIds(value) ?? die(`${flag} takes task ids, like 12,14`);
+}
+
+/** "#12, #14" */
+export const idsText = (ids: number[]): string => ids.map((id) => `#${id}`).join(', ');
+
+/** One link in words: "builds on #12 (waiting)", "after #9 (not landed yet)". */
 export function fmtLink(l: TaskView['links'][number]): string {
-  const state = { met: 'met', waiting: 'waiting', stuck: 'stuck', holding: 'holding its merge' }[l.state];
+  const state = { met: 'met', waiting: 'waiting', stuck: 'stuck', unlanded: 'not landed yet' }[l.state];
   return `${l.kind === 'builds_on' ? 'builds on' : 'after'} #${l.on} (${state})`;
 }
 
@@ -45,12 +54,14 @@ export function fmtTask(
   let extra = t.stop_reason && (t.status === 'blocked' || t.status === 'failed') ? `  — ${t.stop_reason}` : '';
   const waiting = t.waiting ?? null;
   if (waiting)
-    extra += waiting.stuck ? `  can't start: ${waiting.stuck} (retry #${waiting.on} or cancel this task)` : `  waiting on #${waiting.on}`;
+    extra += waiting.stuck
+      ? `  can't start: ${waiting.stuck} (retry ${idsText(waiting.on)} or cancel this task)`
+      : `  waiting on ${idsText(waiting.on)}`;
   if (t.pr_url) extra += `  PR ${t.pr_state ?? 'open'}: ${t.pr_url}`;
   if (t.auto_merge_view && t.auto_merge_view.state !== 'off') extra += `  ${t.auto_merge_view.label}`;
   // A builds-on link that is still waiting is already shown as "waiting on"; show the rest.
   for (const l of t.links ?? []) if (l.kind === 'after' || l.state !== 'waiting' || !waiting) extra += `  ${fmtLink(l)}`;
-  if (t.unblocks?.length) extra += `  unblocks ${t.unblocks.map((id) => `#${id}`).join(', ')}`;
+  if (t.unblocks?.length) extra += `  unblocks ${idsText(t.unblocks)}`;
   return `${STATUS_ICON[t.status]} #${String(t.id).padEnd(4)} ${t.status.padEnd(9)} p${t.priority}  ${repoName.padEnd(14)} ${t.title}${extra}`;
 }
 

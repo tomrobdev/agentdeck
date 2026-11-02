@@ -66,8 +66,7 @@ export const unblocksOf = (t: TaskSummary): number[] => t.unblocks ?? [];
 /** The tasks a queued task is still waiting on through builds-on links, as "waits on #12, #14" (empty when none, or it is stuck). */
 export function waitsOnText(t: TaskSummary): string | null {
   if (!t.waiting || t.waiting.stuck) return null;
-  const ids = (t.links ?? []).filter((l) => l.kind === 'builds_on' && l.state === 'waiting').map((l) => l.on);
-  return `waits on ${(ids.length ? ids : [t.waiting.on]).map((id) => `#${id}`).join(', ')}`;
+  return `waits on ${t.waiting.on.map((id) => `#${id}`).join(', ')}`;
 }
 
 export type GroupBy = 'status' | 'repo' | 'priority' | 'none';

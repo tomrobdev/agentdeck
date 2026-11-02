@@ -15,7 +15,7 @@ export interface DigestTask {
   status: TaskStatus;
   pr_state: string | null;
   stop_reason: string | null;
-  waiting: { on: number; stuck: string | null } | null;
+  waiting: { on: number[]; stuck: string | null } | null;
   /** The auto-merge view's state and label (domain/pull-request/auto-merge.ts); marked on the line unless it is off. */
   auto_merge_view?: { state: string; label: string } | null;
 }
@@ -121,9 +121,10 @@ export function describeEvent(e: Pick<TaskEventRow, 'type' | 'to_status' | 'reas
 function describeTask(t: DigestTask): string {
   const status = t.status === 'done' && t.pr_state === 'open' ? 'in review' : t.status;
   let extra = '';
-  if (t.waiting)
-    extra = t.waiting.stuck ? ` (stuck on #${t.waiting.on}: ${short(t.waiting.stuck, REASON_MAX)})` : ` (waiting on #${t.waiting.on})`;
-  else if ((t.status === 'blocked' || t.status === 'failed') && t.stop_reason) extra = ` — ${short(t.stop_reason, REASON_MAX)}`;
+  if (t.waiting) {
+    const on = t.waiting.on.map((id) => `#${id}`).join(', ');
+    extra = t.waiting.stuck ? ` (stuck on ${on}: ${short(t.waiting.stuck, REASON_MAX)})` : ` (waiting on ${on})`;
+  } else if ((t.status === 'blocked' || t.status === 'failed') && t.stop_reason) extra = ` — ${short(t.stop_reason, REASON_MAX)}`;
   if (t.auto_merge_view && t.auto_merge_view.state !== 'off') extra += ` [${short(t.auto_merge_view.label, REASON_MAX)}]`;
   return `${status} #${t.id} ${short(t.title, TITLE_MAX)}${extra}`;
 }
@@ -136,7 +137,7 @@ function headerLine(h: DigestHeader): string {
   if (h.repo_paused) parts.push(`repo PAUSED: ${short(h.repo_paused, REASON_MAX)}`);
   parts.push(`${h.running}/${h.max_concurrent} slots`);
   if (h.rate_limited_until) parts.push(`usage limit until ${clock(h.rate_limited_until)}`);
-  parts.push(h.governor.allow ? 'governor allowing' : `governor holding: ${short(h.governor.reason ?? '', REASON_MAX)}`);
+  parts.push(h.governor.allow ? 'governor allowing' : `governor on hold: ${short(h.governor.reason ?? '', REASON_MAX)}`);
   if (h.head) parts.push(`${h.head.branch} ${h.head.commit} ${short(h.head.subject, TITLE_MAX)}`);
   return parts.join(' · ');
 }

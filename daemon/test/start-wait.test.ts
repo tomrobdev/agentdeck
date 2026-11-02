@@ -55,8 +55,13 @@ test('startWait names what a queued task waits for', () => {
   });
   assert.deepEqual(startWait({ status: 'queued' }, { ...free, dependency: { kind: 'stuck', on: 3, reason: '#3 failed' } }), {
     kind: 'dependency',
-    on: 3,
+    on: [3],
     stuck: '#3 failed',
+  });
+  assert.deepEqual(startWait({ status: 'queued' }, { ...free, dependency: { kind: 'waiting', on: [3, 4] } }), {
+    kind: 'dependency',
+    on: [3, 4],
+    stuck: null,
   });
   assert.equal(startWait({ status: 'queued' }, { ...free, dependency: { kind: 'met' } }), null);
   assert.deepEqual(startWait({ status: 'queued' }, { ...free, running: 2 }), { kind: 'slots', running: 2, max: 2 });

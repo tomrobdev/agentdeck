@@ -9,11 +9,11 @@ export function describeWait(h: StartWait): string {
     case 'rate-limited':
       return `Claude rate-limited us; resumes ${relTime(h.until)}`;
     case 'governor':
-      return `Holding for the usage budget: ${h.reason}${h.until ? `; lifts around ${when(h.until)}` : ''}`;
+      return `On hold for the usage budget: ${h.reason}${h.until ? `; lifts around ${when(h.until)}` : ''}`;
     case 'repo-paused':
       return `The repo is paused: ${h.reason.split('\n')[0]}`;
     case 'dependency':
-      return h.stuck ? `Waits for #${h.on}, which won't get there: ${h.stuck}` : `Waits for #${h.on} to finish`;
+      return h.stuck ? `Can't start: ${h.stuck}` : `Waits for ${h.on.map((id) => `#${id}`).join(', ')} to finish`;
     case 'slots':
       return `Waiting for a free slot (${h.running} of ${h.max} in use)`;
   }
@@ -137,7 +137,7 @@ export function describeState(s: Status | null, offline: boolean): { label: stri
     };
   const g = s.governor;
   if (!g.allow)
-    return { label: g.until ? `Holding · until ${when(g.until)}` : 'Holding', cls: 's-blocked', title: `Usage budget: ${g.reason}` };
+    return { label: g.until ? `On hold · until ${when(g.until)}` : 'On hold', cls: 's-blocked', title: `Usage budget: ${g.reason}` };
   if (s.running) return { label: 'Working', cls: 's-running', title: g.reason ?? '' };
   return { label: 'Idle', cls: 's-done', title: g.reason ?? '' };
 }

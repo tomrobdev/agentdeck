@@ -81,7 +81,7 @@ test('a chain that is all finished hides unless shown', () => {
     task(1, { ...done, dependents: [{ id: 2, kind: 'builds_on' }] }),
     task(2, { ...done, links: [{ on: 1, kind: 'builds_on', state: 'met' }] }),
     task(3, { dependents: [{ id: 4, kind: 'after' }] }),
-    task(4, { links: [{ on: 3, kind: 'after', state: 'holding' }] }),
+    task(4, { links: [{ on: 3, kind: 'after', state: 'unlanded' }] }),
   ];
   assert.deepEqual(ids(graphTasks(all, all, false)), [3, 4]);
   assert.equal(graphTasks(all, all, true).length, 4);
@@ -91,7 +91,7 @@ test('a stuck task, its root and everything it holds are outlined', () => {
   const all = [
     task(1, { status: 'failed', dependents: [{ id: 2, kind: 'builds_on' }] }),
     task(2, {
-      waiting: { on: 1, stuck: '#1 failed' },
+      waiting: { on: [1], stuck: '#1 failed' },
       links: [{ on: 1, kind: 'builds_on', state: 'stuck' }],
       dependents: [
         { id: 3, kind: 'builds_on' },
@@ -100,7 +100,7 @@ test('a stuck task, its root and everything it holds are outlined', () => {
     }),
     task(3, { links: [{ on: 2, kind: 'builds_on', state: 'waiting' }] }),
     task(4),
-    task(5, { links: [{ on: 2, kind: 'after', state: 'holding' }] }),
+    task(5, { links: [{ on: 2, kind: 'after', state: 'unlanded' }] }),
   ];
   assert.deepEqual([...stuckSet(all)].sort(), [1, 2, 3]);
 });

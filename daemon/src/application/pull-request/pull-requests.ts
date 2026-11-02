@@ -21,7 +21,7 @@ import { type Repo, pausedReason } from '../../domain/repo/repo.ts';
 import type { Task } from '../../domain/task/task.ts';
 import { ActionError, flag, object, requireTask, requireTaskRepo, text } from '../input.ts';
 import { prPlanFor } from '../plans.ts';
-import { dependentsWaiting, landsAfter } from '../task/dependencies.ts';
+import { dependentsReleased, landsAfter } from '../task/dependencies.ts';
 import { settle, settlePr } from '../task/settle.ts';
 import { notifyLater } from '../notifications.ts';
 
@@ -131,7 +131,7 @@ export async function mergePreview(db: Db, id: number): Promise<MergePreview> {
     checks: pr.checks,
     ...mergeCheck({ pr_state: task.pr_state, pr, tests_passed, lands_after }),
     conflicting: isConflicting(pr),
-    unblocks: dependentsWaiting(db, id).map((t) => ({ id: t.id, title: t.title })),
+    unblocks: dependentsReleased(db, id).map((t) => ({ id: t.id, title: t.title })),
     auto_merge: autoMergeFor(db, task, repo, pr, tests_passed),
     request: mergeRequestCheck({ pr_state: task.pr_state, pr, tests_passed, lands_after }),
   };
@@ -186,10 +186,8 @@ export interface MergeAllResult {
  * the reason mergeTask refused it. The base moves with every merge; GitHub refuses a PR that then conflicts.
  */
 export async function mergeAll(db: Db, input: { ids: number[] }): Promise<MergeAllResult> {
-  const ids = object(input).ids;
-  if (!Array.isArray(ids) || !ids.every((id) => Number.isInteger(id) && id > 0)) throw new ActionError('ids must be a list of task ids');
   const result: MergeAllResult = { merged: [], skipped: [] };
-  let pending = [...new Set(ids as number[])];
+  let pending = [...new Set(input.ids)];
   // A round with nothing merged frees no one, so the next round tries every PR left, to say why each stays open.
   let last = false;
   while (pending.length) {
@@ -245,7 +243,7 @@ export async function mergeOpenPr(
   // The base just moved: the repo's other open PRs may now conflict. The scheduler re-reads them at once
   // (a setting, so a merge from the CLI reaches the daemon too).
   db.requestPrCheck();
-  const unblocked = dependentsWaiting(db, id).map((t) => t.id);
+  const unblocked = dependentsReleased(db, id).map((t) => t.id);
 
   const result: MergeResult = { method, unblocked };
   if (deleteBranch) {

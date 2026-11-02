@@ -110,7 +110,6 @@ test('requestMerges returns the tasks it could not request, and why', () => {
   const result = requestMerges(db, { ids: [a.id, noPr.id, a.id] });
   assert.deepEqual(result.requested, [a.id]);
   assert.deepEqual(result.failed, [{ id: noPr.id, reason: `#${noPr.id} has no pull request` }]);
-  assert.throws(() => requestMerges(db, { ids: 'x' as never }), ActionError);
 });
 
 test('cancelMergeRequest clears the request, and does nothing for a task without one', async () => {

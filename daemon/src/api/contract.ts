@@ -128,17 +128,18 @@ export type QueueWait =
 export type StartWait =
   | QueueWait
   | { kind: 'repo-paused'; reason: string }
-  | { kind: 'dependency'; on: number; stuck: string | null }
+  /** `on`: every task it builds on still on its way, or the one it is stuck on (with `stuck`, the reason). */
+  | { kind: 'dependency'; on: number[]; stuck: string | null }
   | { kind: 'slots'; running: number; max: number };
 
-/** builds_on holds a task's start until the other is done and merged; after only holds its merge. */
+/** builds_on keeps a task from starting until the other is done and merged; after only orders its merge. */
 export type LinkKind = 'builds_on' | 'after';
 
-/** One link: the task it points at, its kind and where it stands (holding is an after link not yet landed). */
+/** One link: the task it points at, its kind and where it stands (unlanded is an after link whose other task has not landed yet). */
 export interface TaskLink {
   on: number;
   kind: LinkKind;
-  state: 'met' | 'waiting' | 'stuck' | 'holding';
+  state: 'met' | 'waiting' | 'stuck' | 'unlanded';
 }
 
 /** POST /api/tasks/:id/links */
@@ -202,9 +203,12 @@ export interface TaskSummary {
   auto_merge_view?: AutoMergeView | null;
   /** The person's merge request, while the daemon is to merge the PR when it is ready; null with none. Missing from a daemon that predates it. */
   merge_request?: MergeRequestView | null;
-  /** Set for a queued task held back by a builds-on link; stuck says why its dependency won't get there on its own. */
-  waiting: { on: number; stuck: string | null } | null;
-  /** For a task in review: the queued tasks that wait on its PR. Missing from a daemon that predates it; read it as empty. */
+  /**
+   * Set for a queued task held back by builds-on links: `on` is every task it builds on still on its way, or, with `stuck`
+   * (why it won't get there on its own), the one task it is stuck on.
+   */
+  waiting: { on: number[]; stuck: string | null } | null;
+  /** For a task in review: the queued tasks merging its PR lets start. Missing from a daemon that predates it; read it as empty. */
   unblocks?: number[];
   /** What this task depends on, with where each link stands. Missing from a daemon that predates it. */
   links?: TaskLink[];
@@ -456,7 +460,7 @@ export interface MergePreview {
   warnings: string[];
   /** One of the problems is a conflict with the base branch, which a resolve run can fix. */
   conflicting: boolean;
-  /** Queued tasks waiting on this one. */
+  /** Queued tasks that merging this one lets start (one still waiting on another task too is left out). */
   unblocks: { id: number; title: string }[];
   /** Whether the daemon will merge it on its own and why not yet; null when auto-merge is off. Missing from a daemon that predates it. */
   auto_merge?: AutoMergeCheck | null;
@@ -549,6 +553,7 @@ export interface MergeRequest {
 
 export interface MergeResult {
   method: MergeMethod;
+  /** Queued tasks the merge lets start. */
   unblocked: number[];
   /** Set when the merge went through but removing the branch or worktree did not. */
   cleanup_error?: string;

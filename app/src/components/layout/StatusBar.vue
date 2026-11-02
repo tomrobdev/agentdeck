@@ -121,7 +121,7 @@ const toggleTitle = computed(() => {
 
     <div class="spacer" />
     <span v-if="status && !offline && !status.governor.allow && status.governor.reason" class="muted truncate">
-      Holding: {{ status.governor.reason }}
+      On hold: {{ status.governor.reason }}
     </span>
     <button class="pill !py-0 text-xs" title="The daemon's health, and restart" @click="$emit('daemon')">Daemon</button>
   </footer>

@@ -120,12 +120,14 @@ const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel
       <span class="min-w-0 flex-1 wrap-anywhere">
         <strong>Not started yet.</strong> {{ describeWait(task.wait) }}.
         <template v-if="task.wait.kind === 'dependency' && task.wait.stuck">
-          Retry #{{ task.wait.on }} to release this task, or cancel it.
+          Retry #{{ task.wait.on[0] }} to release this task, or cancel it.
         </template>
       </span>
       <button v-if="task.wait.kind === 'daemon-paused'" class="primary" @click="resumeDaemon">▶ Resume</button>
       <button v-else-if="task.wait.kind === 'repo-paused'" class="primary" @click="resumeRepo">▶ Resume {{ task.repo }}</button>
-      <button v-else-if="task.wait.kind === 'dependency'" @click="openTask(task.wait.on)">Open #{{ task.wait.on }}</button>
+      <template v-else-if="task.wait.kind === 'dependency'">
+        <button v-for="on in task.wait.on" :key="on" @click="openTask(on)">Open #{{ on }}</button>
+      </template>
     </div>
     <div v-else-if="s === 'proposed'" class="callout s-proposed">
       The planner suggested this task. Read the prompt, then approve it to queue it or reject it.

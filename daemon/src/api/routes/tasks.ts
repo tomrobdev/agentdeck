@@ -1,6 +1,6 @@
 // Tasks: list, add, edit and move through the lifecycle, merge, resolve and the log tail.
 import * as actions from '../../application/actions.ts';
-import { type ApiContext, type Route, route } from '../http.ts';
+import { type ApiContext, type Route, idsField, route } from '../http.ts';
 import { streamLog } from '../log-stream.ts';
 
 export function routes({ db, scheduler }: ApiContext): Route[] {
@@ -14,7 +14,8 @@ export function routes({ db, scheduler }: ApiContext): Route[] {
       return actions.taskViews(db, { status: status ?? undefined, limit, before });
     }),
     route('POST', /^\/api\/tasks$/, async ({ body }) => {
-      const task = await actions.addTask(db, body as Parameters<typeof actions.addTask>[1]);
+      const links = { builds_on: idsField(body, 'builds_on'), after: idsField(body, 'after') };
+      const task = await actions.addTask(db, { ...body, ...links } as Parameters<typeof actions.addTask>[1]);
       return { ...(await actions.taskDetail(db, task.id)), warnings: await actions.promptWarnings(db, task.id) };
     }),
     route('GET', /^\/api\/tasks\/(\d+)$/, ({ params: [id] }) => detail(id)),
@@ -76,7 +77,7 @@ export function routes({ db, scheduler }: ApiContext): Route[] {
     }),
     // Merge requests for every task named: the review group's "Merge all". The ones that can't be requested come back with why.
     route('POST', /^\/api\/tasks\/merge-requests$/, ({ body }) => {
-      const result = actions.requestMerges(db, body as { ids: number[] });
+      const result = actions.requestMerges(db, { ids: idsField(body, 'ids', { required: true }) });
       wake();
       return result;
     }),

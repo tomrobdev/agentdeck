@@ -28,7 +28,7 @@ const buildsOn = computed(() => links.value.filter((l) => l.kind === 'builds_on'
 const after = computed(() => links.value.filter((l) => l.kind === 'after'));
 const dependents = computed(() => props.task.dependents ?? []);
 
-const STATE_CLASS = { met: 'text-done', waiting: 'text-muted', stuck: 'text-blocked', holding: 'text-blocked' } as const;
+const STATE_CLASS = { met: 'text-done', waiting: 'text-muted', stuck: 'text-blocked', unlanded: 'text-blocked' } as const;
 
 /** One link's state in words: stuck says why in terms of the other task. */
 function linkText(l: TaskLink): string {
@@ -40,8 +40,8 @@ function linkText(l: TaskLink): string {
       return other ? `waiting: ${statusLabel(other.status).toLowerCase()}` : 'waiting';
     case 'stuck':
       return other ? `stuck: ${other.stop_reason ?? statusLabel(other.status).toLowerCase()}` : 'stuck: no longer exists';
-    case 'holding':
-      return 'holding the merge';
+    case 'unlanded':
+      return 'not landed yet';
   }
 }
 

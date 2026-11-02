@@ -85,10 +85,10 @@ export async function addTask(
     model?: string;
     max_turns?: number;
     max_attempts?: number;
-    /** Tasks this one builds on (it starts once they are done and merged), as ids or "12,14". */
-    builds_on?: number[] | string;
-    /** Tasks this one lands after (it runs at once; only its merge waits), as ids or "12,14". */
-    after?: number[] | string;
+    /** Tasks this one builds on (it starts once they are done and merged). */
+    builds_on?: number[];
+    /** Tasks this one lands after (it runs at once; only its merge waits). */
+    after?: number[];
     /** The task whose plan this one follows (that task's own plan, or the one it follows), in the same repo. */
     plan_task?: number;
     /** A plan for the new task to own and follow, stored as `<task id>-<slug>.html`. Not with plan_task. */
@@ -110,7 +110,7 @@ export async function addTask(
   const max_turns = whole(body, 'max_turns', maxTurnsError);
   const max_attempts = whole(body, 'max_attempts', maxAttemptsError);
   const planAsked = planRequest(body);
-  const links = newLinks(db, body);
+  const links = newLinks(db, input);
   const repos = db.listRepos();
   const repo = repoName ? db.findRepo(repoName) : repos.length === 1 ? repos[0] : undefined;
   if (!repo) throw new ActionError(repoName ? `no repo "${repoName}"` : 'choose a repo (more than one is registered)');

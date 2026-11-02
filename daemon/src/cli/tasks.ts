@@ -11,7 +11,7 @@ import { readNeeds } from '../domain/task/needs.ts';
 import { isReview } from '../domain/task/stage.ts';
 import { planStepIds } from '../domain/task/task.ts';
 import { callDaemon } from './daemon-client.ts';
-import { die, taskId, fmtAutoMerge, fmtLink, fmtTask, printLog } from './format.ts';
+import { die, idsText, taskId, taskIds, fmtAutoMerge, fmtLink, fmtTask, printLog } from './format.ts';
 import type { Command } from './context.ts';
 
 /** A file's text, or exit saying why it can't be read. */
@@ -62,8 +62,8 @@ export const taskCommands: Record<string, Command> = {
       model: flags.model,
       max_turns: flags['max-turns'] ? Number(flags['max-turns']) : undefined,
       max_attempts: flags.attempts ? Number(flags.attempts) : undefined,
-      builds_on: flags['builds-on'],
-      after: flags.after,
+      builds_on: taskIds(flags['builds-on'], '--builds-on'),
+      after: taskIds(flags.after, '--after'),
       plan_task: plan.plan_task ?? undefined,
       plan_html: plan.plan_html,
       plan_steps: flags.steps,
@@ -79,7 +79,7 @@ export const taskCommands: Record<string, Command> = {
     );
     const planName = followedPlanName(detail);
     if (planName && t.plan_task !== null) console.log(`plan     ${planName}${t.plan_task === t.id ? '' : ` (#${t.plan_task}'s plan)`}`);
-    if (waiting?.stuck) console.log(`note: ${waiting.stuck}, so this task won't start until #${waiting.on} is retried`);
+    if (waiting?.stuck) console.log(`note: ${waiting.stuck}, so this task won't start until ${idsText(waiting.on)} is retried`);
     for (const w of await actions.promptWarnings(db, t.id)) console.log(`note: ${w}`);
     if (t.status === 'proposed') console.log(`note: it waits for \`agentdeck approve ${t.id}\` before it can run`);
     else if (db.isPaused()) console.log('note: the daemon is paused; run `agentdeck resume` to start working');
@@ -92,10 +92,17 @@ export const taskCommands: Record<string, Command> = {
     if (kinds.length !== 1 || rest.length !== 1) die('usage: agentdeck link <id> --builds-on <task> | --after <task>');
     const kind = kinds[0];
     const on = taskId(kind === 'builds_on' ? flags['builds-on'] : flags.after);
-    actions.linkTasks(db, id, { on, kind });
+    try {
+      actions.linkTasks(db, id, { on, kind });
+    } catch (e) {
+      // A builds-on link refused on a started task: the after link it suggests is one flag away.
+      if (kind === 'builds_on' && e instanceof actions.ActionError && /after link instead$/.test(e.message))
+        die(`${e.message}: agentdeck link ${id} --after ${on}`);
+      throw e;
+    }
     console.log(`#${id} ${kind === 'builds_on' ? 'builds on' : 'lands after'} #${on}`);
     const { waiting } = await actions.taskDetail(db, id);
-    if (waiting?.stuck) console.log(`note: ${waiting.stuck}, so this task won't start until #${waiting.on} is retried`);
+    if (waiting?.stuck) console.log(`note: ${waiting.stuck}, so this task won't start until ${idsText(waiting.on)} is retried`);
   },
   unlink: ({ db, rest }) => {
     if (rest.length !== 2) die('usage: agentdeck unlink <id> <task>');

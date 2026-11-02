@@ -91,7 +91,7 @@ export interface MergeInput {
   pr: PrDetails;
   /** The last run that ran the tests: 1 passed, 0 failed, null none did. */
   tests_passed: number | null;
-  /** The tasks this one lands after that have not landed (`mergeHold`), each with why. Missing means none. */
+  /** The tasks this one lands after that have not landed (`unlandedAfter`), each with why. Missing means none. */
   lands_after?: { on: number; reason: string }[];
 }
 

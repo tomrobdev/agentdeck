@@ -60,7 +60,7 @@ test('describeEvent words each kind of history row', () => {
 });
 
 test('digest: a quiet turn is the header alone; a start shows the open tasks', () => {
-  const open = [{ id: 3, title: 'Three', status: 'queued' as const, pr_state: null, stop_reason: null, waiting: { on: 2, stuck: null } }];
+  const open = [{ id: 3, title: 'Three', status: 'queued' as const, pr_state: null, stop_reason: null, waiting: { on: [2], stuck: null } }];
   const quiet = digest({ header, events: [], open, full: false });
   assert.equal(quiet.length, 1);
   assert.match(quiet[0], /^AgentDeck live · r · active · 1\/2 slots · governor allowing · main abc1234 Last commit$/);
@@ -77,7 +77,7 @@ test('digest groups changes by task, in order, and shows the open tasks with the
     open: [{ id: 9, title: 'Nine', status: 'blocked', pr_state: null, stop_reason: 'needs a key', waiting: null }],
     full: false,
   });
-  assert.match(lines[0], /repo PAUSED: doctor failed · 1\/2 slots · governor holding: 5h window at 90%/);
+  assert.match(lines[0], /repo PAUSED: doctor failed · 1\/2 slots · governor on hold: 5h window at 90%/);
   assert.deepEqual(lines.slice(1), [
     'Since your last message:',
     '  #7 Task 7: started · done',

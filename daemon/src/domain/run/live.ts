@@ -46,7 +46,7 @@ export interface SyncView {
 }
 
 /**
- * A done task's sync view: null when no sync is under way. `locked` is a sync holding the task's worktree in this process;
+ * A done task's sync view: null when no sync is under way. `locked` is a sync that has the task's worktree locked in this process;
  * the unfinished resolve run, when there is one, says what claude is doing.
  */
 export function syncView(
