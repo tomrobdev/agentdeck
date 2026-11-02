@@ -14,7 +14,7 @@ A plan is one HTML page that says how a task will be done, step by step. People 
 | Status        | `data-status` on the step: `todo`, `doing`, `done`, `blocked` or `skipped` | Anything else reads as `todo`. Keep it current as the work moves.                                                      |
 | Done criteria | `<ul data-plan-done>` inside a step                                        | Optional. One `<li>` per check; without `<li>`s the element's whole text is one check. The first one in a step counts. |
 
-Everything else is free HTML: tables, code, notes. Scripts don't run when the dashboard shows the page, and comments, `<script>`, `<style>` and `<template>` are ignored when reading the marked parts. Give each step an `id` so the dashboard can jump to it. A plan can be at most 512 KB.
+Everything else is free HTML: tables, code, notes. Scripts don't run when the dashboard shows the page, and comments, `<script>`, `<style>` and `<template>` are ignored when reading the marked parts. Every step needs an `id` of its own: tasks link steps by id, a run's work is saved back by id (below), and the dashboard jumps to a step by it. A plan can be at most 512 KB.
 
 ## Template
 
@@ -57,13 +57,23 @@ Plans live in AgentDeck's database, not in the repo: a plan is never committed, 
 
 - **With a new task.** `agentdeck add "…" --plan /any/path/x.html [--steps a,b]` reads the file, checks it is a plan, stores it as the new task's plan and links the task to it. `agentdeck edit <task> --plan <file>` does the same for an existing task, replacing its plan.
 - **Following another task's plan.** `--plan <task number>` (`--plan 112`) links the task to that task's plan, which must be in the same repo; `--steps` names the steps it carries out, checked against the stored plan. The dashboard's New task form and the API (`plan_task`) take the task number. Several tasks can follow one plan, each doing its own steps.
-- **Attached by hand.** `agentdeck attach <task> plan.html` stores or replaces the task's own plan under its numbered name. Through the API: `POST /api/tasks/:id/plans` with `{ "html": "…" }`.
+- **Attached by hand.** `agentdeck attach <task> plan.html` stores or replaces the task's own plan under its numbered name. Through the API: `POST /api/tasks/:id/plans` with `{ "html": "…" }`. Not while the task is running (or being cancelled): its run's end would write the old plan back over the new one.
+
+Replacing a plan (`attach`, `edit --plan <file>`) is refused when a task following it, and not yet done or cancelled, links a step id the new plan doesn't have; the refusal names the tasks and their missing steps. Keep the ids, or move those tasks to other steps first (`edit --steps`).
+
 - **Written by a worker.** A task with no plan that writes one (because it was asked to, or the work is big enough to need one) writes it to the plan file below, and the daemon stores it as the task's plan after the run.
 
 The task detail (`GET /api/tasks/:id`) lists the parsed plans under `plans`, without their HTML: the plan the task follows when it belongs to another task, then the task's own. `GET /api/tasks/:id/plans/:plan` returns `{ html }`, with `:id` the task the plan belongs to (its `task_id`). Plans stored before plans moved into AgentDeck keep their old names and still show. The parser is `parsePlan` in `daemon/src/domain/plan/plan.ts`.
 
 ## How a run uses its plan
 
-A task follows its linked plan, or else its own plan. Before every run the daemon writes that plan to `.agentdeck/plan.html` in the task's worktree; a `.gitignore` in `.agentdeck/` makes git ignore the folder, so the file is never committed. The worker's prompt lists the linked steps that are not yet done and tells it to set each one's `data-status` in that file and never to commit it.
+A task follows its linked plan, or else its own plan. Before every run the daemon writes that plan to `.agentdeck/plan.html` in the task's worktree, and a copy of it as given to the run to `.agentdeck/plan-given.html`; a `.gitignore` in `.agentdeck/` makes git ignore the folder, so neither file is ever committed. The worker's prompt lists the linked steps that are not yet done and tells it to set each one's `data-status` in the plan file and never to commit it.
 
-After every run, whatever its outcome, the daemon reads the file back and saves only the task's linked steps into the stored plan: each step's whole section, with its status and any note the worker put in it (`mergePlanSteps`). The rest stays as stored, because sibling tasks on one plan may run at the same time and each writes back its own steps. A task that follows its own plan with no other task on it keeps the whole file. The PR body and the check for linked steps a done run left unfinished read the stored plan.
+After every run, whatever its outcome, the daemon reads the plan file back and decides what the stored plan becomes (`planAfterRun` in `daemon/src/domain/plan/plan.ts`):
+
+- **The whole file** when the plan is the task's own (given with `--plan <file>`, attached, or written by its worker), no other task follows it, and the stored plan still equals the copy the run was given. Steps and notes the worker added anywhere in the page are kept.
+- **Otherwise only the linked steps the run changed** (`mergePlanSteps`): each linked step whose section in the plan file differs from its section in the given copy replaces the stored one, whole, with its status and any note the worker put in it. Steps the run left as it got them keep what is stored, so a sibling task on the same plan, an earlier run or a person who changed them meanwhile loses nothing; the rest of the page stays as stored. A task linked to every step (no `--steps`) counts every step. Steps match by id, so only steps with an id are saved back: a step the worker adds or moves never lands on another one.
+
+A task with no plan whose worker wrote one gets it as its own plan. After the write-back the given copy is set to what was read, so reading the same file again changes nothing.
+
+A run a daemon restart cut off never reached its end, so the next run of the task first gives its plan file back the same way, whether or not its claude session can be resumed, and only then writes the plan afresh. The PR body and the check for linked steps a done run left unfinished read the stored plan.

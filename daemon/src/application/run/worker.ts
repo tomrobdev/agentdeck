@@ -9,7 +9,15 @@ import { lastLine } from '../../domain/text.ts';
 import { unfinishedSteps, unfinishedSummary } from '../../domain/plan/plan.ts';
 import { type PromptPlan, buildPrompt, buildResumePrompt } from '../../domain/run/prompt.ts';
 import { latestReviewNote } from '../../domain/task/history.ts';
-import { type Run, type WorkerResult, firstDenial, isEnvironmentBlock, parseStatus, resumableSession } from '../../domain/run/run.ts';
+import {
+  type Run,
+  type WorkerResult,
+  cutOffByRestart,
+  firstDenial,
+  isEnvironmentBlock,
+  parseStatus,
+  resumableSession,
+} from '../../domain/run/run.ts';
 import { type Task, leftoversMessage } from '../../domain/task/task.ts';
 import { type TaskRunEnd, openTaskRun, startTaskRun } from './claude-run.ts';
 import { syncBranch } from '../sync.ts';
@@ -37,8 +45,9 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
   const previousRuns = db.runsForTask(task.id).filter((r) => r.id !== runId);
   // A daemon restart cut the attempt's last run off: continue its claude session (with `prompt` as the fallback).
   const session = resumableSession(task, previousRuns);
-  // The cut-off run never gave its plan file back: keep what it got done before the file is written afresh.
-  if (session) await giveBackPlan(db, task, wt.path, log);
+  // The cut-off run never gave its plan file back: keep what it got done before the file is written afresh, whether
+  // or not its session can be resumed.
+  if (cutOffByRestart(task, previousRuns)) await giveBackPlan(db, task, wt.path, log);
   let plan: PromptPlan | null = null;
   try {
     plan = planForRun(db, task);

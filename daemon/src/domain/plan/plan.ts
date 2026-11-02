@@ -40,6 +40,11 @@ export interface TaskPlan extends ParsedPlan {
 export const PLAN_FOLDER = '.agentdeck';
 /** Where a run's plan sits in the task's worktree, for the worker to read and update. Never committed. */
 export const PLAN_FILE = `${PLAN_FOLDER}/plan.html`;
+/**
+ * The copy of the plan a run was given, kept beside PLAN_FILE so that what the run changed can be told from what it
+ * left alone, even after a daemon restart cut the run off. The worker never touches it.
+ */
+export const PLAN_GIVEN_FILE = `${PLAN_FOLDER}/plan-given.html`;
 /** Bigger plans are refused: a plan is read on every task view. */
 export const PLAN_LIMIT = 512 * 1024;
 
@@ -144,37 +149,84 @@ export function unfinishedSummary(steps: PlanStep[]): string {
 }
 
 /**
- * The stored plan with a task's linked steps taken from the plan file a run left (`written`): each linked step's whole
- * section (its status and any note the worker put in it) replaces the stored one. Everything else stays as stored,
- * because sibling tasks on one plan may run at the same time and write back their own steps. `ids` null links every
- * step. Steps match by id; steps without one match by their order among the steps without one. A `written` that is not
- * a plan changes nothing.
+ * The stored plan with the linked steps a run changed taken from the plan file it left (`written`). `given` is the copy
+ * of the plan the run was given: a linked step whose section in `written` differs from its section in `given` was
+ * changed by the run, and its whole section (its status and any note the worker put in it) replaces the stored one.
+ * Steps the run left as it got them keep what is stored, since a sibling task or a person may have changed them since.
+ * Everything outside the linked steps stays as stored. `ids` null links every step. Only steps with an id are saved
+ * back: they match by id, so a step the worker adds, moves or leaves without an id never lands on another one. A
+ * `written` that is not a plan changes nothing.
  */
-export function mergePlanSteps(stored: string, written: string, ids: string[] | null): string {
+export function mergePlanSteps(stored: string, written: string, ids: string[] | null, given: string): string {
   if (!parsePlan(written)) return stored;
-  const fresh = new Map(stepSections(written).map((s) => [s.key, s]));
+  const fresh = sectionsById(written);
+  const before = sectionsById(given);
   let out = stored;
   for (const step of stepSections(stored).reverse()) {
-    const linked = ids === null || (step.id !== null && ids.includes(step.id));
-    const next = linked ? fresh.get(step.key) : undefined;
-    if (next) out = out.slice(0, step.start) + written.slice(next.start, next.end) + out.slice(step.end);
+    if (step.id === null || (ids !== null && !ids.includes(step.id))) continue;
+    const next = fresh.get(step.id);
+    if (!next) continue;
+    const section = written.slice(next.start, next.end);
+    const was = before.get(step.id);
+    if (was && given.slice(was.start, was.end) === section) continue;
+    out = out.slice(0, step.start) + section + out.slice(step.end);
   }
   return out;
 }
 
+/**
+ * What the stored plan becomes after a run left `written` in the plan file. The run keeps the whole file (steps and
+ * notes it added outside its linked steps too) when the plan is the task's own (`own`), no other task follows it
+ * (`followed`), and nothing changed the stored plan while it ran (`stored` still equals `given`, the copy it was
+ * given). Otherwise only the linked steps it changed are saved back (mergePlanSteps). `given` null (a run whose copy
+ * is missing) compares with the stored plan instead and never keeps the whole file.
+ */
+export function planAfterRun(run: {
+  stored: string;
+  given: string | null;
+  written: string;
+  ids: string[] | null;
+  own: boolean;
+  followed: boolean;
+}): string {
+  if (!parsePlan(run.written)) return run.stored;
+  if (run.own && !run.followed && run.given !== null && run.given === run.stored) return run.written;
+  return mergePlanSteps(run.stored, run.written, run.ids, run.given ?? run.stored);
+}
+
+/** A task that follows a plan, with the step ids it links (null for every step). */
+export interface PlanFollower {
+  id: number;
+  steps: string[] | null;
+}
+
+/** The followers that link step ids `plan` doesn't have, each with those ids. Empty when the plan keeps them all. */
+export function missingFollowedSteps(plan: ParsedPlan, followers: PlanFollower[]): { id: number; missing: string[] }[] {
+  const have = new Set(plan.steps.flatMap((s) => (s.id === null ? [] : [s.id])));
+  return followers.flatMap((f) => {
+    const missing = (f.steps ?? []).filter((id) => !have.has(id));
+    return missing.length ? [{ id: f.id, missing }] : [];
+  });
+}
+
+/** The <section> of each step that has an id in `html`, by id (the first when two share one). */
+function sectionsById(html: string): Map<string, { start: number; end: number }> {
+  const out = new Map<string, { start: number; end: number }>();
+  for (const s of stepSections(html)) if (s.id !== null && !out.has(s.id)) out.set(s.id, s);
+  return out;
+}
+
 /** Each step's <section> in `html`, by position, leaving out ones inside comments, scripts, styles and templates. */
-function stepSections(html: string): { key: string; id: string | null; start: number; end: number }[] {
+function stepSections(html: string): { id: string | null; start: number; end: number }[] {
   // Blank out what parsePlan ignores, keeping every offset, so positions point into `html`.
   const masked = html
     .replace(/<!--[\s\S]*?-->/g, (m) => ' '.repeat(m.length))
     .replace(/<(script|style|template)\b[\s\S]*?<\/\1\s*>/gi, (m) => ' '.repeat(m.length));
-  const out: { key: string; id: string | null; start: number; end: number }[] = [];
-  let unnamed = 0;
+  const out: { id: string | null; start: number; end: number }[] = [];
   for (const m of masked.matchAll(/<section\b([^>]*)>[\s\S]*?<\/section\s*>/gi)) {
     const attrs = attributes(m[1]);
     if (!('data-plan-step' in attrs)) continue;
-    const id = attrs.id || null;
-    out.push({ key: id === null ? `#${unnamed++}` : `id:${id}`, id, start: m.index, end: m.index + m[0].length });
+    out.push({ id: attrs.id || null, start: m.index, end: m.index + m[0].length });
   }
   return out;
 }
