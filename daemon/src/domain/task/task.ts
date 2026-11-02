@@ -54,9 +54,8 @@ export function planStepIds(task: Pick<Task, 'plan_steps'>): string[] | null {
 
 /**
  * The sections every task prompt has, in order, each a markdown `##` heading. The delegate skill (.claude/skills/delegate)
- * asks for the same. `parsePromptSections` (sections.ts) also reads the older `Goal:` form. A task linked to a plan
- * (agentdeck add --plan) needs only Goal, Out of scope and Constraints: the daemon puts the linked steps into the
- * worker's prompt, and they supply Change and Definition of done.
+ * asks for the same. A task linked to a plan (agentdeck add --plan) needs only Goal, Out of scope and Constraints: the
+ * daemon puts the linked steps into the worker's prompt, and they supply Change and Definition of done.
  */
 export const PROMPT_SECTIONS = `## Goal
 What the task achieves, in a sentence or two.

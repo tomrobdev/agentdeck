@@ -1,5 +1,5 @@
 // `agentdeck context`: the live queue in a few lines for an agent, and the mode Claude Code's hooks run it in.
-import { mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import * as actions from '../application/actions.ts';
 import { HOME } from '../config.ts';
@@ -47,11 +47,28 @@ function readCursor(session: string): number | null {
 
 function writeCursor(session: string, after: number): void {
   mkdirSync(HOOK_DIR, { recursive: true });
-  writeFileSync(cursorFile(session), JSON.stringify({ after }));
+  const file = cursorFile(session);
+  const temp = `${file}.${process.pid}.tmp`;
+  writeFileSync(temp, JSON.stringify({ after }));
+  renameSync(temp, file);
+}
+
+/** Remove cursor files older than a week. Each file is its own try: another session may be pruning the same one. */
+export function pruneCursors(): void {
   const old = Date.now() - HOOK_FILE_DAYS * 86_400_000;
-  for (const f of readdirSync(HOOK_DIR)) {
+  let names: string[];
+  try {
+    names = readdirSync(HOOK_DIR);
+  } catch {
+    return;
+  }
+  for (const f of names) {
     const path = join(HOOK_DIR, f);
-    if (statSync(path).mtimeMs < old) rmSync(path, { force: true });
+    try {
+      if (statSync(path).mtimeMs < old) rmSync(path, { force: true });
+    } catch {
+      // Gone already, or not ours to remove: leave it.
+    }
   }
 }
 
@@ -69,8 +86,16 @@ async function hook(db: Db): Promise<void> {
     const start = input.hook_event_name === 'SessionStart';
     const after = session && !start ? readCursor(session) : null;
     const ctx = await actions.liveContext(db, { repo, after, full: start });
-    if (session) writeCursor(session, ctx.cursor);
     console.log(ctx.lines.join('\n'));
+    // After the print, in its own try: a cursor that can't be saved shows the same events again, never none.
+    if (session) {
+      try {
+        writeCursor(session, ctx.cursor);
+        pruneCursors();
+      } catch (err) {
+        console.error(`agentdeck context: cursor not saved: ${(err as Error).message}`);
+      }
+    }
   } catch (err) {
     // A hook that fails would get in the way of every message; say why on stderr and carry on.
     console.error(`agentdeck context: ${(err as Error).message}`);

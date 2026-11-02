@@ -122,7 +122,7 @@ flowchart TD
   application -->|46| adapters
   application -->|8| config_ts
   application -->|32| db
-  application -->|121| domain
+  application -->|122| domain
   cli_ts -->|1| application
   cli_ts -->|8| cli
   cli_ts -->|1| db
