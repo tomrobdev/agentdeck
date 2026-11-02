@@ -143,6 +143,30 @@ test('autoMergeCheck: what can still change on its own', () => {
   assert.deepEqual(check({}, { paused: 'AgentDeck is paused' }), { verdict: 'wait', reasons: ['AgentDeck is paused'] });
 });
 
+test('autoMergeCheck: with auto_resolve off a conflict needs a person and names the sync; on, it still waits', () => {
+  const conflict = { mergeable: 'CONFLICTING', merge_state: 'DIRTY' };
+  const off = autoMergeCheck({
+    repo: repoRow,
+    pr_state: 'open',
+    pr: { ...ready, ...conflict },
+    tests_passed: 1,
+    paused: null,
+    auto_resolve: false,
+  });
+  assert.equal(off.verdict, 'never');
+  assert.match(off.reasons.join('\n'), /auto_resolve off.*sync/);
+  const on = autoMergeCheck({
+    repo: repoRow,
+    pr_state: 'open',
+    pr: { ...ready, ...conflict },
+    tests_passed: 1,
+    paused: null,
+    auto_resolve: true,
+  });
+  assert.deepEqual(on, check(conflict));
+  assert.equal(on.verdict, 'wait');
+});
+
 test('autoMergeSkip reads the JSON list and falls back to the default', () => {
   assert.deepEqual(autoMergeSkip({ auto_merge_skip: '["db/", "package.json"]' }), ['db/', 'package.json']);
   assert.deepEqual(autoMergeSkip({ auto_merge_skip: 'nonsense' }), ['.github/']);

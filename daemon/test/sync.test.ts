@@ -134,7 +134,7 @@ test('the domain words: conflicting PRs, timeline lines, blocked reasons', () =>
   assert.equal(syncSummary('main', 'resolved', ['a', 'b']), 'Resolved conflicts in 2 files');
   assert.equal(conflictReason('main', ['a.ts', 'b.ts'], 'tests failed'), 'conflicts with main in 2 files: a.ts, b.ts (tests failed)');
   assert.equal(conflictReason('main', ['1', '2', '3', '4', '5', '6', '7']), 'conflicts with main in 7 files: 1, 2, 3, 4, 5 and 2 more');
-  assert.equal(conflictReason('main', [], 'tests failed'), 'could not bring in main (tests failed)');
+  assert.equal(conflictReason('main', [], 'tests failed'), 'could not sync with main (tests failed)');
 });
 
 test('the resolve prompt names the files, both sides and the goal; resolve runs do not count as attempts in prompts or PR bodies', () => {
@@ -318,7 +318,7 @@ test('tests that fail on the merged result undo a clean merge and block the task
 
   const r = await syncNow(db, t.id);
   assert.equal(r.outcome, 'blocked');
-  assert.match(r.reason!, /^could not bring in main \(tests failed after merging main/);
+  assert.match(r.reason!, /^could not sync with main \(tests failed after merging main/);
   assert.equal(sh(t.wt, 'rev-parse', 'HEAD'), head);
   assert.equal(existsSync(join(t.wt, 'other6.txt')), false);
   assert.equal(db.getTask(t.id)!.status, 'blocked');
@@ -528,6 +528,32 @@ test('resolveConflicting waits for the governor: paused, rate limited, or no fre
   await resolveConflicting(db, [t.id]);
   db.setRepoPaused(repo.id, null);
   db.setSetting('paused', '1');
+});
+
+test('resolveConflicting with auto_resolve off makes no sync attempt and tells the conflict once', async () => {
+  const t = await doneTask();
+  conflictOnMain();
+  const head = sh(t.wt, 'rev-parse', 'HEAD');
+  const before = resolveCalls();
+  updateRepo(db, 'demo', { auto_resolve: false });
+  try {
+    const told = new Set<number>();
+    const log: string[] = [];
+    await resolveConflicting(db, [t.id], (m) => log.push(m), told);
+    await resolveConflicting(db, [t.id], (m) => log.push(m), told);
+    assert.equal(log.length, 1);
+    assert.match(log[0], new RegExp(`task ${t.id}: .*auto_resolve is off.*agentdeck sync ${t.id}`));
+    assert.equal(resolveCalls(), before, 'no claude run');
+    assert.equal(sh(t.wt, 'rev-parse', 'HEAD'), head, 'the branch was not touched');
+    assert.equal(sh(t.wt, 'status', '--porcelain'), '', 'no merge was tried in the worktree');
+
+    // Once the conflict is gone from the refresh it is forgotten, so a new one is told again.
+    await resolveConflicting(db, [], (m) => log.push(m), told);
+    await resolveConflicting(db, [t.id], (m) => log.push(m), told);
+    assert.equal(log.length, 2);
+  } finally {
+    updateRepo(db, 'demo', { auto_resolve: true });
+  }
 });
 
 test('merging a PR makes the scheduler re-read the open PRs at once and resolve the ones that now conflict', async () => {

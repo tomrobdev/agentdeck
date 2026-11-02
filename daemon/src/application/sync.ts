@@ -204,7 +204,7 @@ async function pushIfNeeded(
 }
 
 /**
- * Bring the base into a done task's branch: the merge, the repo's tests, and a push to its open PR; a conflict
+ * Sync a done task's branch with the base: the merge, the repo's tests, and a push to its open PR; a conflict
  * starts a resolve run. The task stays done. If the conflicts cannot be resolved, or the tests fail on the merged
  * branch, the merge is undone and the task becomes blocked with the conflicting files as the reason.
  * `manual` is a person asking (it ignores the repo's auto_resolve and throws what an automatic call only reports).
@@ -244,7 +244,7 @@ export async function syncTask(db: Db, id: number, opts: { manual: boolean }): P
       case 'cancelled':
         return { outcome: 'deferred', files: [], reason: 'cancelled', pushed: false };
       case 'error':
-        if (opts.manual) throw new ActionError(`could not bring in ${repo.base_branch}: ${res.reason}`);
+        if (opts.manual) throw new ActionError(`could not sync with ${repo.base_branch}: ${res.reason}`);
         return { outcome: 'error', files: [], reason: res.reason, pushed: false };
     }
   } finally {
@@ -261,24 +261,38 @@ export function canStartResolve(db: Db): boolean {
 }
 
 /**
- * Bring the base into the open PRs that GitHub reports as conflicting, one at a time, as far as the governor allows.
- * The rest are left for the next refresh. Never throws.
+ * Sync the open PRs that GitHub reports as conflicting with the base, one at a time, as far as the governor allows.
+ * The rest are left for the next refresh. A repo with auto_resolve off is not touched: its tasks wait for a person's
+ * sync, said once per conflict while `told` is kept between calls. Never throws.
  */
-export async function resolveConflicting(db: Db, ids: number[], log: (msg: string) => void = () => {}): Promise<void> {
+export async function resolveConflicting(
+  db: Db,
+  ids: number[],
+  log: (msg: string) => void = () => {},
+  told: Set<number> = new Set(),
+): Promise<void> {
+  for (const id of told) if (!ids.includes(id)) told.delete(id);
   for (const id of ids) {
     const task = db.getTask(id);
     const repo = task && db.getRepo(task.repo_id);
     if (!task || !repo || task.status !== 'done' || repo.paused_reason || syncing.has(id)) continue;
+    if (repo.auto_resolve !== 1) {
+      if (!told.has(id)) {
+        told.add(id);
+        log(`task ${id}: PR conflicts with ${repo.base_branch}; auto_resolve is off, so it waits for a sync (agentdeck sync ${id})`);
+      }
+      continue;
+    }
     if (!canStartResolve(db)) {
-      log(`task ${id}: PR conflicts with ${repo.base_branch}; waiting for the governor before resolving`);
+      log(`task ${id}: PR conflicts with ${repo.base_branch}; waiting for the governor before syncing`);
       return;
     }
-    log(`task ${id}: PR conflicts with ${repo.base_branch}; bringing it in`);
+    log(`task ${id}: PR conflicts with ${repo.base_branch}; syncing it with ${repo.base_branch}`);
     try {
       const r = await syncTask(db, id, { manual: false });
       log(`task ${id}: ${r.outcome}${r.reason ? ` (${r.reason})` : ''}${r.push_error ? `; push failed: ${r.push_error}` : ''}`);
     } catch (err) {
-      log(`task ${id}: could not bring in ${repo.base_branch}: ${(err as Error).message}`);
+      log(`task ${id}: could not sync with ${repo.base_branch}: ${(err as Error).message}`);
     }
   }
 }

@@ -1,4 +1,4 @@
-// How a sync (bringing the base branch into a task's branch) is worded. Pure: no I/O.
+// How a sync (merging the base branch into a task's branch) is worded. Pure: no I/O.
 
 /** How much of the base a sync brought into the branch. */
 export type SyncKind = 'clean' | 'resolved';
@@ -18,6 +18,6 @@ export function conflictReason(base: string, conflictFiles: string[], why?: stri
   const more = conflictFiles.length > LISTED_FILES ? ` and ${conflictFiles.length - LISTED_FILES} more` : '';
   const list = conflictFiles.length
     ? `conflicts with ${base} in ${files(conflictFiles.length)}: ${shown}${more}`
-    : `could not bring in ${base}`;
+    : `could not sync with ${base}`;
   return why ? `${list} (${why})` : list;
 }

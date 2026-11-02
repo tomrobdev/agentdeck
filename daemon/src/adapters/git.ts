@@ -157,7 +157,7 @@ export async function commitsAhead(worktree: string, base: string): Promise<numb
   return Number(await git(worktree, 'rev-list', '--count', 'HEAD', '--not', ...bases));
 }
 
-// Bringing the base branch into a task's branch. Always a merge, never a rebase: no force pushes, and the
+// Syncing a task's branch with the base branch. Always a merge, never a rebase: no force pushes, and the
 // squash merge of the PR hides the merge commit anyway.
 
 /** What merging a ref into a worktree did. */
