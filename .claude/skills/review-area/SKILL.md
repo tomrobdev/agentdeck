@@ -13,7 +13,7 @@ This doesn't replace a person on risky PRs: the repo's `auto_merge_skip` still h
 
 Areas are in `areas/<repo>.md` next to this file: a heading per area and the path prefixes it covers. No file for the repo yet: propose areas from its CLAUDE.md and architecture docs (slices down through the layers, one per aggregate or feature, not one per layer), agree them with the person, and write the file.
 
-An area's last review is a local ref, `refs/reviewed/<area>`. After `git fetch`, show each area's change since then:
+First bring the checkout up to date with `git pull --ff-only`, not only `git fetch`: reviewers read callers from the checkout, and a checkout behind `origin/main` gives them stale files (in the run review, it was missing a task that had just merged). An area's last review is a local ref, `refs/reviewed/<area>`. Show each area's change since then:
 
 ```sh
 git diff --shortstat refs/reviewed/<area> origin/main -- <paths…>

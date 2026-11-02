@@ -22,12 +22,29 @@ One heading per area, then the path prefixes it covers (a folder ends in `/`). A
 
 ## run
 
-- daemon/src/domain/run/
-- daemon/src/application/run/
+The run's lifecycle: the worker, the claude process, resuming, prompts, logs and the live view.
+
+- daemon/src/domain/run/run.ts
+- daemon/src/domain/run/prompt.ts
+- daemon/src/domain/run/sandbox.ts
+- daemon/src/domain/run/log.ts
+- daemon/src/domain/run/live.ts
+- daemon/src/application/run/worker.ts
+- daemon/src/application/run/claude-run.ts
 - daemon/src/adapters/claude.ts
 - daemon/src/adapters/processes.ts
 - daemon/src/adapters/run-log.ts
 - daemon/src/db/runs.ts
+
+## run-stats
+
+`agentdeck stats` and the scorecard: read-only reporting over runs.
+
+- daemon/src/domain/run/scorecard.ts
+- daemon/src/domain/run/stats.ts
+- daemon/src/application/run/stats.ts
+- daemon/src/db/stats.ts
+- daemon/src/cli/stats.ts
 
 ## scheduler
 
