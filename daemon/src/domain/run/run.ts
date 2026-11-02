@@ -37,35 +37,86 @@ export interface Run {
  */
 export const INTERRUPTED = 'interrupted';
 
-/**
- * Whether a daemon restart ended the task's latest work run and the task is still on its attempt (a restart gives the
- * attempt back, so the next run carries the same number): that run never got to its end, plan write-back included.
- */
-export function cutOffByRestart(task: { attempts: number }, previousRuns: Run[]): boolean {
-  const last = previousRuns.filter((r) => r.kind === 'work').at(-1);
-  return last !== undefined && last.outcome === INTERRUPTED && last.attempt === task.attempts;
-}
+/** The outcomes that end a run without ending its attempt: a restart or a rate limit gives the attempt back. */
+const ATTEMPT_GIVEN_BACK = [INTERRUPTED, 'rate_limited'];
 
 /**
- * The claude session the task's next work run should resume, or null to start afresh. It is the session of the latest
- * work run when that run was cut off by a restart (`cutOffByRestart`). A run a restart ended before claude named a
- * session (say, during setup) is looked past, back to the newest interrupted run of the attempt that has one.
+ * The task's latest work runs that a restart or a rate limit ended on its current attempt, newest first: the runs the
+ * attempt is still in the middle of. Empty when the latest work run ended any other way or on another attempt.
  */
-export function resumableSession(task: { attempts: number }, previousRuns: Run[]): string | null {
-  if (!cutOffByRestart(task, previousRuns)) return null;
-  const work = previousRuns.filter((r) => r.kind === 'work');
-  for (let i = work.length - 1; i >= 0; i--) {
-    const r = work[i];
-    if (r.outcome !== INTERRUPTED || r.attempt !== task.attempts) return null;
-    if (r.session_id) return r.session_id;
+function unfinishedRuns(task: { attempts: number }, previousRuns: Run[]): Run[] {
+  const out: Run[] = [];
+  for (const r of previousRuns.filter((r) => r.kind === 'work').reverse()) {
+    if (r.attempt !== task.attempts || !ATTEMPT_GIVEN_BACK.includes(r.outcome ?? '')) break;
+    out.push(r);
   }
-  return null;
+  return out;
 }
 
-/** The run a person asked for: by id, by the work run of an attempt, or the latest. A resolve run is only picked by id. */
+/**
+ * The run whose claude session the task's next work run should resume: the newest interrupted run of the current
+ * attempt (a restart gives the attempt back, so the next run carries the same number) that has a session, looking past
+ * runs a restart ended before claude named one (say, during setup) and runs a rate limit ended (a resume that was rate
+ * limited, or a sync whose resolve run was).
+ */
+function sessionRun(task: { attempts: number }, previousRuns: Run[]): Run | undefined {
+  return unfinishedRuns(task, previousRuns).find((r) => r.outcome === INTERRUPTED && r.session_id);
+}
+
+/** The claude session the task's next work run should resume (`sessionRun`), or null to start afresh. */
+export function resumableSession(task: { attempts: number }, previousRuns: Run[]): string | null {
+  return sessionRun(task, previousRuns)?.session_id ?? null;
+}
+
+/** A task's timeline entry, as far as `editsSinceCutOff` reads it. */
+export interface EditLike {
+  type: string;
+  reason: string | null;
+  at: string;
+}
+
+/** The task fields whose edit the cut-off session never saw: it holds the old prompt or plan. `plan` is a plan attached. */
+const PROMPT_FIELDS = ['prompt', 'plan_task', 'plan_steps', 'plan'];
+
+/**
+ * What a person changed that the session `resumableSession` names was never told, as field names: the task's prompt or
+ * plan link (`own`, the task's timeline) or the plan it follows (`planOwner`, the timeline of the task the plan belongs
+ * to, when that is another task), edited since the session's run ended. Non-empty means start afresh: the fresh prompt
+ * has the new prompt and plan, and the session would work from the old ones. An edit in the second the run ended
+ * counts, so a doubt starts afresh.
+ */
+export function editsSinceCutOff(
+  task: { attempts: number },
+  previousRuns: Run[],
+  edits: { own: EditLike[]; planOwner?: EditLike[] },
+): string[] {
+  const since = sessionRun(task, previousRuns)?.ended_at;
+  if (!since) return [];
+  const fields = (events: EditLike[], wanted: string[]) =>
+    events
+      .filter((e) => e.type === 'edit' && e.at >= since)
+      .flatMap((e) => (e.reason ?? '').split(',').map((f) => f.trim()))
+      .filter((f) => wanted.includes(f));
+  const changed = [...fields(edits.own, PROMPT_FIELDS), ...fields(edits.planOwner ?? [], ['plan']).map(() => 'plan')];
+  return [...new Set(changed)];
+}
+
+/**
+ * The `--max-turns` of a run that resumes a cut-off session: the task's limit less the turns the attempt's runs since
+ * its last real end used (from claude's result, else as counted live), so restarts don't stretch the limit. At least 1.
+ */
+export function resumeMaxTurns(task: { attempts: number; max_turns: number }, previousRuns: Run[]): number {
+  const used = unfinishedRuns(task, previousRuns).reduce((n, r) => n + (r.num_turns ?? r.live_turns), 0);
+  return Math.max(task.max_turns - used, 1);
+}
+
+/**
+ * The run a person asked for: by id, by attempt (its latest work run, so a resume after a restart rather than the run
+ * the restart cut off), or the latest. A resolve run is only picked by id.
+ */
 export function pickRun(runs: Run[], pick: { attempt?: number; run?: number } = {}): Run | undefined {
   if (pick.run) return runs.find((r) => r.id === pick.run);
-  if (pick.attempt) return runs.find((r) => r.attempt === pick.attempt && r.kind === 'work');
+  if (pick.attempt) return runs.findLast((r) => r.attempt === pick.attempt && r.kind === 'work');
   return runs.at(-1);
 }
 
@@ -115,13 +166,13 @@ export interface ClaudeRunLike<R extends ResultLike = ResultLike> {
 }
 
 /**
- * Whether a claude started with `--resume` stopped at once because it could not resume: it ended without a result
- * (or with an error one) and either never named a session or said the conversation was not found. The session is
- * gone (or never existed here), so the run starts afresh instead.
+ * Whether a claude started with `--resume` stopped at once because its session is gone (or never existed here): it
+ * ended without a result (or with an error one) saying the conversation was not found. Only then does the run start
+ * afresh instead; any other early exit (bad settings, say) is the run's failure, not a lost session.
  */
 export function resumeFailed(run: ClaudeRunLike): boolean {
   if (run.cancelled || run.rateLimitedUntil || (run.result && !run.result.is_error)) return false;
-  return !run.sessionId || /no conversation found/i.test(`${run.stderr}\n${run.result?.result ?? ''}`);
+  return /no conversation found/i.test(`${run.stderr}\n${run.result?.result ?? ''}`);
 }
 
 export type RunClass<R extends ResultLike = ResultLike> =

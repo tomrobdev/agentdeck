@@ -214,7 +214,7 @@ export async function editTask(
       throw new ActionError(`#${id} is ${task.status}; only ${EDITABLE_STATUSES.join(', ')} tasks can be edited`);
     db.saveOwnPlan(id, ownPlan, 'attached');
   }
-  const edited = db.editTask(id, fields);
+  const edited = db.editTask(id, fields, { plan: ownPlan !== undefined });
   if (!edited) {
     const now = db.getTask(id)?.status ?? task.status;
     throw new ActionError(`#${id} is ${now}; only ${EDITABLE_STATUSES.join(', ')} tasks can be edited`);
