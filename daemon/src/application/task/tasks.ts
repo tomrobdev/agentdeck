@@ -23,7 +23,7 @@ import { warnStuckDependents } from './dependencies.ts';
 import { newLinks } from './links.ts';
 import { ActionError, flag, object, refuse, requireTask, requireTaskRepo, text, whole } from '../input.ts';
 import { closePullRequest } from '../pull-request/pull-requests.ts';
-import { readPlanInput } from '../plans.ts';
+import { checkFollowers, readPlanInput } from '../plans.ts';
 
 /** Step ids as the CLI types them (a,b) or the API sends them (an array); null when none are named. */
 function stepList(value: unknown): string[] | null {
@@ -188,7 +188,10 @@ export async function editTask(
     const steps = patch.plan_steps !== undefined ? stepList(patch.plan_steps) : planAsked === undefined ? planStepIds(task) : null;
     let link: number | null;
     if (planAsked && 'html' in planAsked) {
-      checkSteps('the plan', parsePlan(planAsked.html)!, steps);
+      const plan = parsePlan(planAsked.html)!;
+      checkSteps('the plan', plan, steps);
+      // The task's own steps are the ones just checked; the tasks following its plan keep theirs.
+      checkFollowers(db, id, plan, id);
       link = id;
       ownPlan = planAsked.html;
     } else {

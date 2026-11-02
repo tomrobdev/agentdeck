@@ -37,12 +37,21 @@ export interface Run {
 export const INTERRUPTED = 'interrupted';
 
 /**
+ * Whether a daemon restart ended the task's latest work run and the task is still on its attempt (a restart gives the
+ * attempt back, so the next run carries the same number): that run never got to its end, plan write-back included.
+ */
+export function cutOffByRestart(task: { attempts: number }, previousRuns: Run[]): boolean {
+  const last = previousRuns.filter((r) => r.kind === 'work').at(-1);
+  return last !== undefined && last.outcome === INTERRUPTED && last.attempt === task.attempts;
+}
+
+/**
  * The claude session the task's next work run should resume, or null to start afresh. It is the session of the latest
- * work run when a daemon restart ended that run and the task is still on its attempt (a restart gives the attempt
- * back, so the next run carries the same number). A run a restart ended before claude named a session (say, during
- * setup) is looked past, back to the newest interrupted run of the attempt that has one.
+ * work run when that run was cut off by a restart (`cutOffByRestart`). A run a restart ended before claude named a
+ * session (say, during setup) is looked past, back to the newest interrupted run of the attempt that has one.
  */
 export function resumableSession(task: { attempts: number }, previousRuns: Run[]): string | null {
+  if (!cutOffByRestart(task, previousRuns)) return null;
   const work = previousRuns.filter((r) => r.kind === 'work');
   for (let i = work.length - 1; i >= 0; i--) {
     const r = work[i];

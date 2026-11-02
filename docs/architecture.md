@@ -138,7 +138,7 @@ flowchart TD
   daemon_ts -->|1| db
   daemon_ts -->|1| domain
   db -->|3| config_ts
-  db -->|25| domain
+  db -->|26| domain
 ```
 
 <!-- /generated -->

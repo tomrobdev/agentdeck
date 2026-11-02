@@ -26,6 +26,7 @@ ${
 - If the task asks for a plan, or is big enough to need one, and the prompt gives you none, write it to ${PLAN_FILE}. AgentDeck keeps it as the task's plan after the run; git ignores that file, so never commit it or copy it elsewhere in the repo. AgentDeck reads it from these attributes:
   <html data-agentdeck-plan="1">, a <title>, one <p data-plan-summary> saying what and why,
   and one <section data-plan-step id="…" data-status="todo|doing|done|blocked|skipped"> per step, its <h2> the step's title.
+  Every step needs an id of its own: AgentDeck saves steps back by id, and a step without one can be lost.
   A step may list its checks in <ul data-plan-done>, one <li> each.
   Put <link rel="stylesheet" href="plan.css" /> in the <head> and add no <style> block: AgentDeck styles every plan.
   Everything else is free HTML. Keep each step's data-status current as you work.
@@ -76,7 +77,7 @@ export function planPromptBlock(plan: PromptPlan): string {
   }
   lines.push(
     '',
-    `Do only these steps. Set each one's data-status in ${PLAN_FILE} as you go, and never commit that file: AgentDeck keeps the plan, and saves only these steps' sections from it after the run. Mark a step you can't do blocked and say why inside the step.`,
+    `Do only these steps. Set each one's data-status in ${PLAN_FILE} as you go, and never commit that file: AgentDeck keeps the plan, and saves only these steps' sections from it after the run, matched by id, so keep each step's id. Mark a step you can't do blocked and say why inside the step.`,
   );
   return lines.join('\n');
 }

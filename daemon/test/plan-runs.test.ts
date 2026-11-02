@@ -15,9 +15,11 @@ process.env.AGENTDECK_CLAUDE_BIN = fake;
 
 const { openDb } = await import('../src/db/index.ts');
 const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
-const { commitLeftovers } = await import('../src/adapters/git.ts');
+const { commitLeftovers, ensureWorktree } = await import('../src/adapters/git.ts');
 const { readPlanFile, writePlanFile } = await import('../src/adapters/plan-file.ts');
 const { parsePlan } = await import('../src/domain/plan/plan.ts');
+const { planForRun, putPlanFile, takePlanFile } = await import('../src/application/plans.ts');
+const { LOG_DIR } = await import('../src/config.ts');
 
 const plan = `<!doctype html>
 <html data-agentdeck-plan="1"><head><title>Shared plan</title></head><body>
@@ -124,4 +126,91 @@ test('a plan the worker writes is stored as the task’s own plan, named after i
   );
   assert.equal(db.getTask(t.id)!.plan_task, null, 'it follows its own plan without a link');
   assert.ok(!committed(db.getTask(t.id)!.branch!).some((f) => f.startsWith('.agentdeck')));
+});
+
+/** Set step `id`'s status in the plan file of `worktree`, as a worker does. */
+function markStep(worktree: string, id: string, status: string): void {
+  const file = join(worktree, '.agentdeck/plan.html');
+  writeFileSync(file, readFileSync(file, 'utf8').replace(new RegExp(`(id="${id}" data-status=)"[^"]*"`), `$1"${status}"`));
+}
+const statuses = (taskId: number) => parsePlan(db.ownPlan(taskId)!.html)!.steps.map((s) => [s.id, s.status]);
+
+test('a plan’s owner with no --steps does not undo a step a sibling finished while it ran', async () => {
+  // The owner was given the plan with --plan <file> and no --steps: it is linked to every step.
+  const owner = db.addTask({ repo_id: repo.id, title: 'owner', prompt: 'p', own_plan: plan, status: 'proposed' });
+  const sibling = db.addTask({
+    repo_id: repo.id,
+    title: 'sibling',
+    prompt: 'p',
+    plan_task: owner.id,
+    plan_steps: JSON.stringify(['b']),
+    status: 'proposed',
+  });
+  const [ownerTree, siblingTree] = [mkdtempSync(join(home, 'owner-')), mkdtempSync(join(home, 'sibling-'))];
+  // Both runs start with the plan as stored.
+  await putPlanFile(ownerTree, planForRun(db, db.getTask(owner.id)!));
+  await putPlanFile(siblingTree, planForRun(db, db.getTask(sibling.id)!));
+  // The sibling finishes b and ends first; then the owner, which did a, ends.
+  markStep(siblingTree, 'b', 'done');
+  assert.equal(await takePlanFile(db, db.getTask(sibling.id)!, siblingTree), true);
+  markStep(ownerTree, 'a', 'done');
+  assert.equal(await takePlanFile(db, db.getTask(owner.id)!, ownerTree), true);
+  assert.deepEqual(statuses(owner.id), [
+    ['a', 'done'],
+    ['b', 'done'],
+    ['c', 'todo'],
+  ]);
+  // Taking the same file again changes nothing.
+  assert.equal(await takePlanFile(db, db.getTask(owner.id)!, ownerTree), false);
+});
+
+test('a task given its plan with --plan <file>, no one following it, keeps a step its worker added', async () => {
+  const t = db.addTask({ repo_id: repo.id, title: 'adds a step', prompt: 'p', own_plan: plan, status: 'proposed' });
+  assert.equal(t.plan_task, t.id);
+  const tree = mkdtempSync(join(home, 'adds-'));
+  await putPlanFile(tree, planForRun(db, t));
+  const file = join(tree, '.agentdeck/plan.html');
+  writeFileSync(
+    file,
+    readFileSync(file, 'utf8').replace('</body>', '<section data-plan-step id="d" data-status="todo"><h2>D</h2></section>\n</body>'),
+  );
+  markStep(tree, 'a', 'done');
+  assert.equal(await takePlanFile(db, t, tree), true);
+  assert.deepEqual(statuses(t.id), [
+    ['a', 'done'],
+    ['b', 'todo'],
+    ['c', 'todo'],
+    ['d', 'todo'],
+  ]);
+});
+
+test('the step statuses a run marked before a restart cut it off survive when its session cannot be resumed', async () => {
+  db.setSetting('max_concurrent', '1');
+  const t = db.addTask({ repo_id: repo.id, title: 'cut off', prompt: 'FAKE_DONE after a restart', own_plan: plan });
+  // A run that a restart cut off before claude named a session, after the worker finished step a.
+  const claimed = db.claimNextTask()!;
+  assert.equal(claimed.id, t.id);
+  const wt = await ensureWorktree(repo, claimed);
+  db.setCheckout(t.id, { branch: wt.branch, worktree: wt.path });
+  db.startRun(t.id, claimed.attempts, join(LOG_DIR, `task-${t.id}-attempt-1.jsonl`));
+  await putPlanFile(wt.path, planForRun(db, claimed));
+  markStep(wt.path, 'a', 'done');
+  assert.deepEqual(db.recoverOrphans(), { requeued: 1, failed: [] });
+
+  await drain();
+  const after = db.getTask(t.id)!;
+  assert.equal(after.status, 'done', after.stop_reason ?? '');
+  assert.deepEqual(
+    db.runsForTask(t.id).map((r) => [r.outcome, r.session_id === null]),
+    [
+      ['interrupted', true],
+      ['done', false],
+    ],
+    'the cut-off run had no session to resume; the next one started afresh',
+  );
+  assert.deepEqual(statuses(t.id), [
+    ['a', 'done'],
+    ['b', 'todo'],
+    ['c', 'todo'],
+  ]);
 });
