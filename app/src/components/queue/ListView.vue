@@ -1,24 +1,14 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { ago, api, describeLive, describeMergeRequest, describeSync } from '../../api';
+import { ago, api } from '../../api';
 import { useActions } from '../../composables/useActions';
 import { openExternal } from '../../platform/native';
 import RowMenu from './RowMenu.vue';
-import {
-  type BoardMove,
-  type Group,
-  type GroupBy,
-  canReview,
-  personEvents,
-  quickRetry,
-  readNeeds,
-  statusLabel,
-  unblocksOf,
-  waitsOnText,
-} from '../../lib/taskView';
-import AutoMergeMark from '../ui/AutoMergeMark.vue';
+import { type BoardMove, type Group, type GroupBy, canReview, personEvents, quickRetry, statusLabel } from '../../lib/taskView';
 import PriorityIcon from '../ui/PriorityIcon.vue';
 import StatusIcon from '../ui/StatusIcon.vue';
+import TaskBadges from '../ui/TaskBadges.vue';
+import TaskStatusLine from '../ui/TaskStatusLine.vue';
 
 export interface ShowProps {
   repo: boolean;
@@ -140,49 +130,9 @@ watch(
             <StatusIcon :task="t" />
             <span class="flex min-w-0 flex-1 flex-col">
               <span class="truncate font-medium">{{ t.title }}</span>
-              <span
-                v-if="show.reason && t.stop_reason && (t.status === 'blocked' || t.status === 'failed')"
-                class="truncate text-sm text-blocked group-[.s-failed]:text-failed"
-              >
-                {{ t.stop_reason }}
-              </span>
-              <span v-else-if="t.live" class="truncate text-sm text-muted tabular-nums" data-live>{{ describeLive(t.live) }}</span>
-              <span v-else-if="t.sync" class="truncate text-sm text-accent tabular-nums" data-sync>{{ describeSync(t.sync) }}</span>
-              <span v-else-if="t.merge_request" class="truncate text-sm text-accent" data-merge-request>{{
-                describeMergeRequest(t.merge_request)
-              }}</span>
-              <span v-else-if="show.reason && t.waiting?.stuck" class="truncate text-sm text-blocked group-[.s-failed]:text-failed"
-                >Can't start: {{ t.waiting.stuck }}</span
-              >
-              <span
-                v-else-if="show.reason && t.wait?.kind === 'repo-paused'"
-                class="truncate text-sm text-blocked group-[.s-failed]:text-failed"
-                >Can't start: {{ t.repo }} is paused</span
-              >
+              <TaskStatusLine :task="t" :hide="show.reason ? [] : ['stopped', 'cant_start']" />
             </span>
-            <span class="flex flex-none gap-1 max-sm:[&>:not([data-repo])]:hidden">
-              <span v-if="waitsOnText(t)" class="chip">{{ waitsOnText(t) }}</span>
-              <span v-if="unblocksOf(t).length" class="chip chip-accent" title="Merging this PR releases them">
-                unblocks
-                {{
-                  unblocksOf(t)
-                    .map((id) => `#${id}`)
-                    .join(' ')
-                }}
-              </span>
-              <span v-if="readNeeds(t)" class="chip chip-blocked" title="The worker said what it needs: open the task">needs</span>
-              <span v-if="t.plan_unfinished" class="chip" title="The run left linked plan steps unfinished">steps unfinished</span>
-              <span v-if="t.source === 'planner'" class="chip">planner</span>
-              <span v-if="t.attempts > 1" class="chip">try {{ t.attempts }}</span>
-              <span
-                v-if="show.pr && t.pr_url"
-                class="chip"
-                :class="t.pr_state === 'merged' ? 'chip-merged' : (t.pr_state ?? 'open') === 'open' ? 'chip-done' : ''"
-                >PR {{ t.pr_state ?? 'open' }}</span
-              >
-              <AutoMergeMark :view="t.auto_merge_view" />
-              <span v-if="show.repo" data-repo class="chip max-w-[120px] truncate">{{ t.repo }}</span>
-            </span>
+            <TaskBadges :task="t" :repo="show.repo" :pr="show.pr" nowrap class="max-w-[45%] flex-none max-sm:hidden" />
             <span class="flex-none gap-1" :class="t.id === selected || t.sync ? 'flex' : 'hidden group-hover:flex'" @click.stop>
               <button v-if="personEvents(t).includes('approve')" class="btn-mini" title="Approve (a)" @click="emit('act', 'approve', t.id)">
                 Approve

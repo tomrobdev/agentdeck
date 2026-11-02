@@ -127,30 +127,10 @@ const LABELS: Record<BoardMove, string> = {
             <StatusIcon :task="t" />
           </div>
           <div class="mt-1 mb-1.5 line-clamp-2 font-medium">{{ t.title }}</div>
-          <div v-if="t.live" class="mb-1.5 truncate text-sm text-muted tabular-nums" data-live>{{ describeLive(t.live) }}</div>
-          <div v-else-if="t.sync" class="mb-1.5 truncate text-sm text-accent tabular-nums" data-sync>{{ describeSync(t.sync) }}</div>
-          <div v-else-if="t.merge_request" class="mb-1.5 truncate text-sm text-accent" data-merge-request>
-            {{ describeMergeRequest(t.merge_request) }}
-          </div>
-          <div class="flex flex-wrap items-center gap-1">
-            <span v-if="show.repo" class="chip">{{ t.repo }}</span>
-            <span v-if="show.pr && t.pr_url" class="chip" :class="t.pr_state === 'merged' ? 'chip-merged' : ''"
-              >PR {{ t.pr_state ?? 'open' }}</span
-            >
-            <AutoMergeMark :view="t.auto_merge_view" />
-            <span v-if="t.sync" class="chip chip-accent">syncing…</span>
-            <span v-if="t.waiting" class="chip">{{ waitsOnText(t) ?? 'stuck' }}</span>
-            <span v-if="unblocksOf(t).length" class="chip"
-              >unblocks
-              {{
-                unblocksOf(t)
-                  .map((id) => `#${id}`)
-                  .join(' ')
-              }}</span
-            >
-            <span v-if="t.plan_unfinished" class="chip" title="The run left linked plan steps unfinished">steps unfinished</span>
-            <span v-if="t.source === 'planner'" class="chip">planner</span>
-            <span class="ml-auto text-sm text-muted">{{ ago(t.updated_at) }}</span>
+          <TaskStatusLine :task="t" fit="two" class="mb-1.5" />
+          <div class="flex items-center gap-2">
+            <TaskBadges :task="t" :repo="show.repo" :pr="show.pr" />
+            <span class="ml-auto flex-none text-sm text-muted">{{ ago(t.updated_at) }}</span>
           </div>
           <div
             v-if="canReview(t) && !t.sync"
