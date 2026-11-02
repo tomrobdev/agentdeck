@@ -3,6 +3,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { ActionError, type ChangeWatcher, type DaemonInfo, type ReloadFacts, type Scheduler } from '../application/actions.ts';
 import { API_ALLOWED_ORIGINS } from '../config.ts';
 import type { Db } from '../db/index.ts';
+import { parseTaskIds } from '../domain/task/ids.ts';
 
 /** What the API needs of the scheduler: `wake` after a change that may let queued work start, `track` for runs it starts. */
 export type ApiScheduler = Pick<Scheduler, 'wake' | 'track'>;
@@ -42,6 +43,13 @@ export interface Route {
 }
 
 export const route = (method: string, path: RegExp, handle: Route['handle']): Route => ({ method, path, handle });
+
+/** The task ids in body field `key` ([12, 14]); empty when absent, unless `required`. A 400 when they aren't task ids. */
+export function idsField(body: Record<string, unknown>, key: string, opts: { required?: boolean } = {}): number[] {
+  const ids = opts.required && body[key] === undefined ? null : parseTaskIds(body[key]);
+  if (!ids) throw new BadRequest(`${key} must be a list of task ids`);
+  return ids;
+}
 
 export function send(res: ServerResponse, code: number, data: unknown): void {
   res.writeHead(code, { 'Content-Type': 'application/json' });

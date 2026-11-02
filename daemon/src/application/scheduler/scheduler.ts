@@ -39,7 +39,7 @@ export class Scheduler {
   private readonly db: Db;
   private readonly opts: Required<Omit<SchedulerOptions, 'reload'>>;
   private readonly reload: SchedulerOptions['reload'];
-  /** Everything holding a slot: task runs, and the syncs and conflict resolutions in `resolves`. */
+  /** Everything that takes a slot: task runs, and the syncs and conflict resolutions in `resolves`. */
   private readonly running = new Set<Promise<unknown>>();
   private readonly resolves = new Set<Promise<unknown>>();
   private timer: NodeJS.Timeout | undefined;
@@ -262,7 +262,7 @@ export class Scheduler {
         ? ` Resumes around ${new Date(hold.until * 1000).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })}.`
         : '';
       this.opts.log(`governor hold: ${hold.reason}`);
-      notifyLater(this.db, { kind: 'hold', title: 'Holding queued work', body: `${hold.reason}.${lifts}` });
+      notifyLater(this.db, { kind: 'hold', title: 'Queued work on hold', body: `${hold.reason}.${lifts}` });
       this.lastHold = hold.reason;
     } else if (!wait && this.lastHold) {
       this.opts.log('governor: hold lifted');

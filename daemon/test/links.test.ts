@@ -2,7 +2,20 @@ import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
 import { MIGRATIONS, migrate, openDb } from '../src/db/index.ts';
-import { type Dependency, type Link, type LinkTarget, linkError, linkState, mergeHold, startState } from '../src/domain/task/link.ts';
+import { parseTaskIds } from '../src/domain/task/ids.ts';
+import {
+  type Dependency,
+  type Link,
+  type LinkLookups,
+  type LinkTarget,
+  buildsOnError,
+  linkError,
+  linkState,
+  releasedBy,
+  startState,
+  stuckOn,
+  unlandedAfter,
+} from '../src/domain/task/link.ts';
 
 const done: Dependency = { status: 'done', pr_url: null, pr_state: null, pr_mode: 'off', done_by: null };
 const builds = { on: 5, kind: 'builds_on' } as const;
@@ -28,15 +41,21 @@ test('linkState: every row of the rules table, for builds on', () => {
   assert.deepEqual(linkState(builds, undefined), stuck('#5 no longer exists'));
 });
 
-test('linkState: an after link is met once the other landed or is gone, and otherwise holds the merge', () => {
-  const holding = (reason: string) => ({ kind: 'holding', on: 5, reason });
+test('linkState: an after link is met once the other landed, was rejected or is gone; otherwise it has not landed yet', () => {
+  const unlanded = (reason: string) => ({ kind: 'unlanded', on: 5, reason });
   assert.deepEqual(linkState(after, done), { kind: 'met' });
   assert.deepEqual(linkState(after, undefined), { kind: 'met' });
   assert.deepEqual(linkState(after, { ...done, pr_url: 'u', pr_state: 'merged' }), { kind: 'met' });
-  assert.deepEqual(linkState(after, { ...done, status: 'running' }), holding('#5 is not done yet'));
-  assert.deepEqual(linkState(after, { ...done, pr_url: 'u', pr_state: 'open' }), holding("#5's PR is not merged yet"));
-  assert.deepEqual(linkState(after, { ...done, status: 'failed' }), holding('#5 failed'));
-  assert.deepEqual(linkState(after, { ...done, pr_url: 'u', pr_state: 'closed' }), holding("#5's PR was closed without merging"));
+  // Rejected: cancelled (a rejected proposal is cancelled too) or its PR closed. It will never land, so the merge is free.
+  assert.deepEqual(linkState(after, { ...done, status: 'cancelled' }), { kind: 'met' });
+  assert.deepEqual(linkState(after, { ...done, pr_url: 'u', pr_state: 'closed' }), { kind: 'met' });
+  // Still able to land: on its way, or failed, blocked or a PR not opened, which a retry can fix.
+  assert.deepEqual(linkState(after, { ...done, status: 'proposed' }), unlanded('#5 is not done yet'));
+  assert.deepEqual(linkState(after, { ...done, status: 'running' }), unlanded('#5 is not done yet'));
+  assert.deepEqual(linkState(after, { ...done, pr_url: 'u', pr_state: 'open' }), unlanded("#5's PR is not merged yet"));
+  assert.deepEqual(linkState(after, { ...done, status: 'failed' }), unlanded('#5 failed'));
+  assert.deepEqual(linkState(after, { ...done, status: 'blocked' }), unlanded('#5 is blocked'));
+  assert.deepEqual(linkState(after, { ...done, pr_mode: 'ready', pr_state: 'failed' }), unlanded("#5's PR could not be opened"));
 });
 
 // A graph for startState: each task's standing and its own links.
@@ -68,7 +87,13 @@ test('startState: stuck spreads down builds-on links, naming the root', () => {
     5: { status: 'failed' },
   });
   const links = [link(1, 3), link(1, 2)];
-  assert.deepEqual(startState({ id: 1 }, links, lookup), { kind: 'stuck', on: 5, reason: '#5 failed' });
+  assert.deepEqual(startState({ id: 1 }, links, lookup), { kind: 'stuck', on: 5, reason: 'waits on #5 (via #2, #4), which failed' });
+  // One link down, as the plan words it.
+  assert.deepEqual(startState({ id: 1 }, [link(1, 4)], lookup), { kind: 'stuck', on: 5, reason: 'waits on #5 (via #4), which failed' });
+  assert.deepEqual(
+    startState({ id: 1 }, [link(1, 4)], world({ 4: { status: 'queued', links: [link(4, 5)] }, 5: { pr_url: 'u', pr_state: 'closed' } })),
+    { kind: 'stuck', on: 5, reason: 'waits on #5 (via #4), whose PR was closed without merging' },
+  );
   // Two stuck links: the first one's root.
   const two = world({ 2: { status: 'blocked' }, 3: { status: 'failed' } });
   assert.deepEqual(startState({ id: 1 }, [link(1, 2), link(1, 3)], two), { kind: 'stuck', on: 2, reason: '#2 is blocked' });
@@ -76,7 +101,7 @@ test('startState: stuck spreads down builds-on links, naming the root', () => {
   assert.deepEqual(startState({ id: 1 }, [link(1, 2)], world({ 2: { status: 'queued', links: [link(2, 8)] } })), {
     kind: 'stuck',
     on: 8,
-    reason: '#8 no longer exists',
+    reason: 'waits on #8 (via #2), which no longer exists',
   });
   // An after link on the way down does not spread stuck; and a done task's own links no longer matter.
   assert.deepEqual(
@@ -101,14 +126,85 @@ test('startState: a cycle that got into the data does not loop', () => {
   assert.deepEqual(startState({ id: 1 }, [link(1, 2)], lookup), { kind: 'waiting', on: [2] });
 });
 
-test('mergeHold lists the after links still holding the merge', () => {
-  const lookup = (id: number) =>
-    id === 2 ? done : id === 3 ? { ...done, status: 'running' } : id === 4 ? { ...done, status: 'failed' } : undefined;
-  assert.deepEqual(mergeHold([link(1, 2, 'after'), link(1, 3, 'after'), link(1, 4, 'after'), link(1, 9, 'after'), link(1, 3)], lookup), [
+test('unlandedAfter lists the after links whose other task has not landed', () => {
+  const statuses: Record<number, Dependency> = {
+    2: done,
+    3: { ...done, status: 'running' },
+    4: { ...done, status: 'failed' },
+    6: { ...done, status: 'cancelled' },
+  };
+  const lookup = (id: number) => statuses[id];
+  const after = [2, 3, 4, 6, 9].map((on) => link(1, on, 'after'));
+  assert.deepEqual(unlandedAfter([...after, link(1, 3)], lookup), [
     { on: 3, reason: '#3 is not done yet' },
     { on: 4, reason: '#4 failed' },
   ]);
-  assert.deepEqual(mergeHold([], lookup), []);
+  assert.deepEqual(unlandedAfter([], lookup), []);
+});
+
+// Lookups for stuckOn and releasedBy over a small graph: each task's status, PR and links.
+function graph(tasks: Record<number, Partial<Dependency> & { links?: Link[] }>): LinkLookups<{ id: number; status: string }> {
+  const all = Object.entries(tasks).map(([id, t]) => ({ id: Number(id), ...done, links: [], ...t }));
+  return {
+    buildingOn: (id) => all.filter((t) => t.links.some((l) => l.on === id && l.kind === 'builds_on')),
+    linksOf: (id) => all.find((t) => t.id === id)?.links ?? [],
+    target: (id) => all.find((t) => t.id === id),
+  };
+}
+
+test('stuckOn names the dependents stuck on a task, and not one stuck on something else on the way', () => {
+  // 2 builds on 1 (failed); 3 builds on 2; 4 builds on 5 (cancelled), which builds on 1; 6 builds on 2 and on 5.
+  const lookups = graph({
+    1: { status: 'failed' },
+    2: { status: 'queued', links: [link(2, 1)] },
+    3: { status: 'queued', links: [link(3, 2)] },
+    4: { status: 'queued', links: [link(4, 5)] },
+    5: { status: 'cancelled', links: [link(5, 1)] },
+    6: { status: 'queued', links: [link(6, 5), link(6, 2)] },
+    7: { status: 'queued', links: [link(7, 1, 'after')] },
+  });
+  assert.deepEqual(
+    stuckOn(1, lookups).map((t) => t.id),
+    [2, 3],
+  );
+  assert.deepEqual(
+    stuckOn(5, lookups).map((t) => t.id),
+    [4, 6],
+  );
+});
+
+test('releasedBy lists only the dependents merging a task leaves free to start', () => {
+  // 1 and 2 are in review; 3 builds on 1; 4 builds on 1 and 2; 5 builds on 1 and on 6 (failed); 7 is running.
+  const review = { pr_mode: 'ready', pr_url: 'u', pr_state: 'open' };
+  const lookups = graph({
+    1: review,
+    2: review,
+    3: { status: 'queued', links: [link(3, 1)] },
+    4: { status: 'queued', links: [link(4, 1), link(4, 2)] },
+    5: { status: 'queued', links: [link(5, 1), link(5, 6)] },
+    6: { status: 'failed' },
+    7: { status: 'running', links: [link(7, 1)] },
+  });
+  assert.deepEqual(
+    releasedBy(1, lookups).map((t) => t.id),
+    [3],
+  );
+  assert.deepEqual(releasedBy(2, lookups), []);
+});
+
+test('buildsOnError refuses a builds-on link once a task has started, pointing at an after link', () => {
+  assert.equal(buildsOnError(2, 'proposed', 1), null);
+  assert.equal(buildsOnError(2, 'queued', 1), null);
+  for (const status of ['running', 'done', 'blocked', 'failed', 'cancelled'])
+    assert.match(buildsOnError(2, status, 1)!, /started.*--after/);
+});
+
+test('parseTaskIds reads lists and typed text, and refuses anything else', () => {
+  assert.deepEqual(parseTaskIds(undefined), []);
+  assert.deepEqual(parseTaskIds(''), []);
+  assert.deepEqual(parseTaskIds([3, 1, 3]), [3, 1]);
+  assert.deepEqual(parseTaskIds('12,#14 15'), [12, 14, 15]);
+  for (const bad of ['12,x', [0], [1.5], ['abc'], 7, { a: 1 }]) assert.equal(parseTaskIds(bad), null);
 });
 
 test('linkError refuses a self link, a repeat and every kind of cycle', () => {

@@ -375,7 +375,7 @@ test('--after waits for the dependency PR to be merged', async () => {
 });
 
 test('--after rejects a task that does not exist, and a failed dependency never releases', async () => {
-  await assert.rejects(() => addTask(db, { repo: 'demo', prompt: 'x', builds_on: [99999] }), /no task #99999/);
+  await assert.rejects(() => addTask(db, { repo: 'demo', prompt: 'x', builds_on: [99999] }), /can't build on #99999: no such task/);
   const dep = db.addTask({ repo_id: repo.id, title: 'will fail', prompt: 'x' });
   await addTask(db, { repo: 'demo', prompt: 'never', builds_on: [dep.id] });
   const claimed = db.claimNextTask()!;
@@ -410,7 +410,7 @@ test('a dependent is not claimed while its dependency pushes and opens its PR', 
     assert.equal(db.getTask(dep.id)!.pr_url, null);
     await new Promise((r) => setTimeout(r, 150)); // several scheduler ticks
     assert.equal(db.getTask(later.id)!.status, 'queued', 'held while the PR is being opened');
-    assert.deepEqual(waitingFor(db, db.getTask(later.id)!), { on: dep.id, stuck: null });
+    assert.deepEqual(waitingFor(db, db.getTask(later.id)!), { on: [dep.id], stuck: null });
 
     release();
     const deadline = Date.now() + 5000;
@@ -435,7 +435,7 @@ test('a dependent is stuck, not released, when its dependency PR could not be op
 
   assert.equal(db.getTask(dep.id)!.status, 'done');
   assert.equal(db.getTask(later.id)!.status, 'queued');
-  assert.deepEqual(waitingFor(db, db.getTask(later.id)!), { on: dep.id, stuck: `#${dep.id}'s PR could not be opened` });
+  assert.deepEqual(waitingFor(db, db.getTask(later.id)!), { on: [dep.id], stuck: `#${dep.id}'s PR could not be opened` });
   assert.equal(db.claimNextTask(), undefined);
 });
 
@@ -455,11 +455,11 @@ test('a blocked dependency notifies once, naming the waiting task, which stays q
   assert.match(notices[0].title, /1 task can't start: #\d+ is blocked/);
   assert.match(notices[0].body, new RegExp(`#${later.id} Second step`));
   assert.match(notices[0].body, new RegExp(`Retry #${dep.id}`));
-  assert.deepEqual(waitingFor(db, db.getTask(later.id)!), { on: dep.id, stuck: `#${dep.id} is blocked` });
+  assert.deepEqual(waitingFor(db, db.getTask(later.id)!), { on: [dep.id], stuck: `#${dep.id} is blocked` });
 
   // A retry puts the dependency back on its way: no longer stuck, and done releases the dependent.
   retryTask(db, dep.id);
-  assert.deepEqual(waitingFor(db, db.getTask(later.id)!), { on: dep.id, stuck: null });
+  assert.deepEqual(waitingFor(db, db.getTask(later.id)!), { on: [dep.id], stuck: null });
   assert.equal(finishNext(), dep.id);
   assert.equal(waitingFor(db, db.getTask(later.id)!), null);
   assert.equal(finishNext(), later.id);
@@ -698,7 +698,6 @@ test('mergeAll merges each PR, one that lands after another once that one has, a
   for (const id of [conflicted.id, held.id]) assert.equal(db.getTask(id)!.pr_state, 'open');
   db.applyEvent(outside.id, { type: 'cancel' });
 
-  await assert.rejects(mergeAll(db, { ids: ['12'] as never }), /ids must be a list of task ids/);
   assert.deepEqual(await mergeAll(db, { ids: [] }), { merged: [], skipped: [] });
 });
 

@@ -111,7 +111,8 @@ export function repoStore(db: DatabaseSync, orm: Orm) {
           .delete(taskEvents)
           .where(inArray(taskEvents.task_id, tasksOf(id)))
           .run();
-        // Links to this repo's tasks from other repos' tasks go too, or those would point at nothing.
+        // Links to this repo's tasks from other repos' tasks go too, or those would point at nothing. The use case warns
+        // about the queued tasks among them that built on work never merged (buildersOnRepo), which now start without it.
         orm
           .delete(taskLinks)
           .where(or(inArray(taskLinks.task_id, tasksOf(id)), inArray(taskLinks.on_task, tasksOf(id))))

@@ -17,6 +17,7 @@ import { textList } from '../../domain/text.ts';
 import { type Check, runDoctor } from './doctor.ts';
 import { ActionError, flag, list, object, refuse, requireRepo, text, textOrNull, whole } from '../input.ts';
 import { pauseRepo } from '../scheduler/pause.ts';
+import { buildersOnRepo, warnBuildersOnDeleted } from '../task/dependencies.ts';
 
 /** Register a repo. Its toolchain is detected from the root files and fills in whatever isn't given. */
 export async function addRepo(
@@ -183,7 +184,14 @@ export async function deleteRepo(db: Db, nameOrId: string | number): Promise<{ r
   } catch {
     // the repo's folder may be gone; nothing to prune then
   }
+  // Other repos' tasks that build on this repo's unmerged tasks lose those links with it: say so, so none starts unannounced.
+  const builders = buildersOnRepo(
+    db,
+    repo.id,
+    tasks.map((t) => t.id),
+  );
   if (!db.deleteRepo(repo.id)) throw new ActionError(`${repo.name} is not archived; archive it first, then delete`);
+  warnBuildersOnDeleted(db, repo.name, builders);
   const logs = [...run_logs, ...planner_logs];
   leftover.push(...removeFiles([...logs, ...logs.map(settingsPath)]));
   try {

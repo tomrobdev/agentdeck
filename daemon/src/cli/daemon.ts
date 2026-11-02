@@ -97,7 +97,7 @@ export const daemonCommands: Record<string, Command> = {
       `planner         ${st.planner.enabled ? 'on' : 'off'}, every ${st.planner.interval_hours}h when a queue is empty, up to ${st.planner.max_tasks} tasks, ${st.planner.model}`,
     );
     console.log(
-      `\ngovernor        ${d.allow ? 'allowing work' : 'holding'}${d.reason ? `: ${d.reason}` : ''}${d.until ? ` (lifts in ${relTime(d.until)})` : ''}`,
+      `\ngovernor        ${d.allow ? 'allowing work' : 'on hold'}${d.reason ? `: ${d.reason}` : ''}${d.until ? ` (lifts in ${relTime(d.until)})` : ''}`,
     );
     if (d.weekly_allowed !== null) console.log(`weekly pace     ${Math.round(d.weekly_allowed * 100)}% of the 7d window allowed so far`);
   },

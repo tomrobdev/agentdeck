@@ -23,7 +23,7 @@ test('no other task moves to Done by a drop', () => {
   assert.equal(boardMove(task('proposed'), 'done'), null);
   assert.equal(boardMove(task('cancelled'), 'done'), null);
   assert.equal(boardMove(task('running'), 'done'), null);
-  assert.equal(boardMove(task('queued', { waiting: { on: 2, stuck: 'cancelled' } }), 'done'), null);
+  assert.equal(boardMove(task('queued', { waiting: { on: [2], stuck: 'cancelled' } }), 'done'), null);
 });
 
 test('the other moves are unchanged', () => {

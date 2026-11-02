@@ -32,10 +32,8 @@ export interface MergesRequestedResult {
 
 /** Request the merge of each task given (Merge all), each with its own method. The ones that can't be requested come back with why. */
 export function requestMerges(db: Db, input: { ids: number[] }): MergesRequestedResult {
-  const ids = object(input).ids;
-  if (!Array.isArray(ids) || !ids.every((id) => Number.isInteger(id) && id > 0)) throw new ActionError('ids must be a list of task ids');
   const result: MergesRequestedResult = { requested: [], failed: [] };
-  for (const id of new Set(ids as number[])) {
+  for (const id of new Set(input.ids)) {
     try {
       requestMerge(db, id);
       result.requested.push(id);
