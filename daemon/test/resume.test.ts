@@ -334,9 +334,10 @@ test('a task whose resumed runs keep being interrupted fails at MAX_RESTARTS', a
   assert.equal(t.attempts, 1, 'no restart used an attempt');
   assert.match(t.stop_reason!, new RegExp(`restarted ${MAX_RESTARTS} times`));
   const runs = db.runsForTask(t.id);
+  // The runs cut off while the task went back to the queue end interrupted; the last, cut off as it failed, ends failed.
   assert.deepEqual(
     runs.map((r) => [r.attempt, r.outcome]),
-    runs.map(() => [1, INTERRUPTED]),
+    runs.map((r, i) => [1, i === runs.length - 1 ? 'failed' : INTERRUPTED]),
   );
   assert.equal(new Set(runs.map((r) => r.session_id)).size, 1, 'every run continued the first session');
   assert.deepEqual(calls().slice(-MAX_RESTARTS).map(resumeOf), [null, ...Array(MAX_RESTARTS - 1).fill(cut[0].session_id)]);

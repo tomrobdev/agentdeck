@@ -14,7 +14,7 @@ import {
 } from '../domain/plan/plan.ts';
 import type { PrPlan } from '../domain/pull-request/pr.ts';
 import type { PromptPlan } from '../domain/run/prompt.ts';
-import { EDITABLE_STATUSES, type Task, planStepIds } from '../domain/task/task.ts';
+import { PLAN_ATTACHABLE_STATUSES, type Task, planStepIds } from '../domain/task/task.ts';
 import { ActionError, object, requireTask } from './input.ts';
 
 /** HTML a person gives as a plan: refused unless it is a plan and small enough. */
@@ -111,17 +111,17 @@ export function plansShown(db: Db, task: Pick<Task, 'id' | 'plan_task'>): TaskPl
 
 /**
  * Store or replace a task's own plan, under its numbered name (`<task id>-<slug>.html`). Not while the task runs: its
- * run's end would write the old plan back over it.
+ * run's end would write the old plan back over it. The store checks that in the same write as the plan and the edit
+ * it records, which tells a cut-off follower to start afresh.
  */
 export function attachPlan(db: Db, id: number, input: { html?: unknown }): TaskPlan {
   const task = requireTask(db, id);
-  if (task.status === 'running' || task.status === 'cancel_requested') {
-    throw new ActionError(`#${id} is ${task.status}; only ${EDITABLE_STATUSES.join(', ')} tasks can be edited`);
-  }
+  const notNow = (status: string) => new ActionError(`#${id} is ${status}; a plan can't be attached while it runs`);
+  if (!PLAN_ATTACHABLE_STATUSES.includes(task.status)) throw notNow(task.status);
   const { html, plan } = readPlanInput(object(input).html);
   checkFollowers(db, id, plan);
-  const saved = db.saveOwnPlan(id, html, 'attached');
-  db.recordPlanEdit(id);
+  const saved = db.attachOwnPlan(id, html);
+  if (!saved) throw notNow(db.getTask(id)?.status ?? task.status);
   return saved;
 }
 

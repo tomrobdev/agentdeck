@@ -24,8 +24,6 @@ export type {
   FileRef,
   LinkKind,
   LogEntry,
-  MergeAllRequest,
-  MergeAllResult,
   MergeMethod,
   MergePreview,
   MergeRequest,

@@ -145,7 +145,8 @@ export async function addTask(
 
 /**
  * Change a waiting or unsuccessful task's title, prompt, priority, model, turn limit, attempt limit or plan link.
- * `plan_task` null clears the link (and its steps); a new link, by `plan_task` or `plan_html` (which becomes the task's
+ * `plan_task` null clears the link to another task's plan (and its steps), refused for a task that follows its own plan,
+ * which can only be replaced; a new link, by `plan_task` or `plan_html` (which becomes the task's
  * own plan, replacing any it had), drops the old steps unless `plan_steps` names some; `plan_steps` null or '' means
  * every unfinished step.
  */
@@ -196,6 +197,12 @@ export async function editTask(
       ownPlan = planAsked.html;
     } else {
       link = planAsked === undefined ? task.plan_task : planAsked.task;
+      // A null link means "follow its own plan", so clearing it would keep the plan and widen its steps to all of them.
+      if (planAsked !== undefined && link === null && (task.plan_task ?? id) === id && db.ownPlan(id)) {
+        throw new ActionError(
+          `#${id} has a plan of its own, which can't be cleared: replace it with --plan <file>, or follow another task's plan with --plan <task number>`,
+        );
+      }
       refuse(stepsNeedPlanError(link, steps));
       if (link !== null) {
         const linked = planOwner(db, requireTaskRepo(db, task), link);
@@ -208,13 +215,8 @@ export async function editTask(
   }
 
   if (!Object.keys(fields).length) throw new ActionError('nothing to change');
-  // The task's own plan is stored first, so it is there when the task can next run; not for a task that can't be edited.
-  if (ownPlan !== undefined) {
-    if (!EDITABLE_STATUSES.includes(task.status))
-      throw new ActionError(`#${id} is ${task.status}; only ${EDITABLE_STATUSES.join(', ')} tasks can be edited`);
-    db.saveOwnPlan(id, ownPlan, 'attached');
-  }
-  const edited = db.editTask(id, fields, { plan: ownPlan !== undefined });
+  // The task's own plan is stored in the same guarded write, so a task the daemon claimed meanwhile keeps its plan.
+  const edited = db.editTask(id, fields, { ownPlan });
   if (!edited) {
     const now = db.getTask(id)?.status ?? task.status;
     throw new ActionError(`#${id} is ${now}; only ${EDITABLE_STATUSES.join(', ')} tasks can be edited`);

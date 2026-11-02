@@ -345,7 +345,7 @@ function finishNext(): number {
 test('--after holds a task until its dependency is done', async () => {
   const dep = db.addTask({ repo_id: repo.id, title: 'first', prompt: 'x', priority: -5 });
   const later = await addTask(db, { repo: 'demo', prompt: 'second', builds_on: [dep.id], priority: 10 });
-  assert.equal(later.after_task, dep.id);
+  assert.deepEqual(db.linksOf(later.id), [{ task_id: later.id, on: dep.id, kind: 'builds_on' }]);
   assert.equal(db.hasQueued(), true);
 
   // Higher priority, but waiting: the dependency is claimed first.

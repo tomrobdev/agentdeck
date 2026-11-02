@@ -4,7 +4,7 @@ import type { TaskStatus } from './lifecycle.ts';
 import type { TaskSummary } from './task.ts';
 
 /**
- * A task as listed: with where it stands on its `after_task` (as waitingFor reports it), the tasks its open PR holds up and, from
+ * A task as listed: with where it stands on its builds-on links (as waitingFor reports it), the tasks its open PR holds up and, from
  * the API, its repo's name. A daemon from before `unblocks` existed sends none, which reads as empty.
  */
 export type ListedTask = TaskSummary & { waiting: { on: number; stuck: string | null } | null; unblocks: number[] };
