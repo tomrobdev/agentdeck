@@ -26,6 +26,19 @@ test('each assistant message is a turn and the last tool use is the tool', () =>
   assert.equal(nextLive(s, { type: 'user' }), s);
 });
 
+test('a subagent message is not a turn and does not replace the main loop tool', () => {
+  const sub = (id: string, name: string) => ({ ...assistant(id, { name, input: { command: 'x' } }), parent_tool_use_id: 'toolu_1' });
+  let s = nextLive(
+    START_LIVE,
+    assistant('m1', { name: 'Agent', input: { description: 'a' } }, { name: 'Agent', input: { description: 'b' } }),
+  );
+  s = nextLive(s, sub('s1', 'Bash'));
+  s = nextLive(s, sub('s2', 'Grep'));
+  assert.deepEqual([s.turns, s.tool], [1, 'Agent b']);
+  s = nextLive(s, assistant('m2'));
+  assert.deepEqual([s.turns, s.tool], [2, 'Agent b']);
+});
+
 test('only a running task has a live view', () => {
   const run = { started_at: '2026-01-01 00:00:00', live_turns: 3, live_tool: 'Edit a.ts' };
   assert.deepEqual(liveView({ status: 'running', max_turns: 40 }, run), {

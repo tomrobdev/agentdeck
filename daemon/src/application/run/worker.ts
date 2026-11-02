@@ -19,6 +19,7 @@ import {
   parseStatus,
   resumableSession,
   resumeMaxTurns,
+  runOutcome,
 } from '../../domain/run/run.ts';
 import { type Task, leftoversMessage } from '../../domain/task/task.ts';
 import { type TaskRunEnd, openTaskRun, startTaskRun } from './claude-run.ts';
@@ -138,31 +139,24 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
   // What the worker did to the plan is stored, whatever the outcome.
   await giveBackPlan(db, task, wt.path, log);
 
-  let outcome: WorkerResult;
-  if (end.kind === 'cancelled') {
-    outcome = { outcome: 'cancelled' };
-  } else if (end.kind === 'rate_limited') {
-    outcome = { outcome: 'rate_limited', reason: end.reason };
-  } else if (end.kind === 'failed') {
-    outcome = { outcome: 'failed', reason: end.reason };
-  } else {
-    const status = parseStatus(end.result.result);
+  const denials = result?.permission_denials ?? [];
+  runFields.denials = denials.length;
+  let status: ReturnType<typeof parseStatus> | undefined;
+  let testsPassed: boolean | null = null;
+  let ahead: number | null = null;
+  if (end.kind === 'finished') {
+    status = parseStatus(end.result.result);
     // The answers to the review's comments are stored whatever the status; comments with none are named in the run's summary.
     if (review && runFields.result_text) runFields.result_text = recordAnswers(db, review.comments, runFields.result_text);
-    if (status.blocked) {
-      outcome = { outcome: 'blocked', reason: status.reason ?? 'agent reported blocked', ...(status.needs ? { needs: status.needs } : {}) };
-    } else if (repo.test_cmd) {
+    if (!status.blocked && repo.test_cmd) {
       const tests = await runCommand(repo.test_cmd, wt.path, TEST_TIMEOUT_MS);
       writeEvent(log, { type: 'agentdeck_tests', passed: tests.passed, output: tests.output });
       runFields.tests_passed = tests.passed ? 1 : 0;
-      outcome = tests.passed ? { outcome: 'done' } : { outcome: 'failed', reason: 'tests failed' };
-    } else {
-      outcome = { outcome: 'done' };
+      testsPassed = tests.passed;
     }
-    if (outcome.outcome === 'done' && (await commitsAhead(wt.path, repo.base_branch)) === 0) {
-      outcome = { outcome: 'blocked', reason: 'agent finished without changing anything' };
-    }
+    if (!status.blocked && testsPassed !== false) ahead = await commitsAhead(wt.path, repo.base_branch);
   }
+  const { result: outcome, pause } = runOutcome({ end, status, testsPassed, commitsAhead: ahead, denials: denials.length });
 
   // A done run that left linked plan steps unfinished is a warning, not a change of outcome.
   if (outcome.outcome === 'done' && task.plan_task !== null) {
@@ -175,15 +169,7 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
   }
 
   await closeLog(log);
-  // Refused tool uses mean the repo's tool rules don't fit its work: every further task would hit the same wall.
-  // Not when the agent finished and only the test command failed: the refusals didn't stop it.
-  const denials = result?.permission_denials ?? [];
-  runFields.denials = denials.length;
-  const testsFailed = runFields.tests_passed === 0;
-  if (outcome.outcome === 'blocked' && isEnvironmentBlock({ needs: outcome.needs, denials: denials.length })) outcome.environment = true;
-  if (denials.length && !testsFailed && (outcome.outcome === 'blocked' || outcome.outcome === 'failed')) {
-    pauseRepo(db, repo, `permission refused on task #${task.id}: ${firstDenial(denials)}`);
-  }
+  if (pause) pauseRepo(db, repo, `permission refused on task #${task.id}: ${firstDenial(denials)}`);
   return finish(db, task, runId, outcome, runFields);
 }
 

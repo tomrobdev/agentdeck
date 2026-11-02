@@ -1,9 +1,11 @@
 // Task runs: one row per worker claude process.
-import { and, asc, count, eq, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, asc, count, countDistinct, eq, gt, inArray, isNotNull, isNull, notInArray, or, sql } from 'drizzle-orm';
 import type { Run, RunKind } from '../domain/run/run.ts';
 import type { Orm } from './orm.ts';
 import { NOW } from './sql.ts';
-import { plannerRuns, runs } from './tables.ts';
+import { plannerRuns, runs, tasks } from './tables.ts';
+
+const RUNNING = ['running', 'cancel_requested'];
 
 export interface PidRun {
   kind: 'work' | 'resolve' | 'planner';
@@ -42,22 +44,12 @@ export function runStore(orm: Orm) {
     setRunSession(id: number, session_id: string): void {
       orm.update(runs).set({ session_id }).where(eq(runs.id, id)).run();
     },
-    /** The unfinished work run of each task that has one, by task id: when it started and what it is doing. */
-    liveRuns(): Map<number, { started_at: string; live_turns: number; live_tool: string | null }> {
+    /** The unfinished run of a kind (work or resolve) of each task that has one, by task id: when it started and what it is doing. */
+    liveRuns(kind: RunKind): Map<number, { started_at: string; live_turns: number; live_tool: string | null }> {
       const rows = orm
         .select({ task_id: runs.task_id, started_at: runs.started_at, live_turns: runs.live_turns, live_tool: runs.live_tool })
         .from(runs)
-        .where(and(eq(runs.kind, 'work'), isNull(runs.ended_at)))
-        .orderBy(asc(runs.id))
-        .all();
-      return new Map(rows.map((r) => [r.task_id, r]));
-    },
-    /** The unfinished resolve run of each task that has one, by task id: when it started and what it is doing. */
-    liveResolves(): Map<number, { started_at: string; live_turns: number; live_tool: string | null }> {
-      const rows = orm
-        .select({ task_id: runs.task_id, started_at: runs.started_at, live_turns: runs.live_turns, live_tool: runs.live_tool })
-        .from(runs)
-        .where(and(eq(runs.kind, 'resolve'), isNull(runs.ended_at)))
+        .where(and(eq(runs.kind, kind), isNull(runs.ended_at)))
         .orderBy(asc(runs.id))
         .all();
       return new Map(rows.map((r) => [r.task_id, r]));
@@ -90,12 +82,16 @@ export function runStore(orm: Orm) {
      * and an unfinished planner run. A clean sync runs no claude and takes none.
      */
     slotsUsed(): number {
-      const row = orm.get<{ n: number }>(sql`SELECT
-             (SELECT COUNT(*) FROM tasks WHERE status IN ('running', 'cancel_requested'))
-             + (SELECT COUNT(*) FROM tasks t WHERE t.status NOT IN ('running', 'cancel_requested')
-                  AND EXISTS (SELECT 1 FROM runs r WHERE r.task_id = t.id AND r.kind = 'resolve' AND r.ended_at IS NULL))
-             + (SELECT COUNT(*) FROM planner_runs WHERE ended_at IS NULL) AS n`);
-      return Number(row?.n ?? 0);
+      const running = orm.select({ n: count() }).from(tasks).where(inArray(tasks.status, RUNNING)).get()?.n ?? 0;
+      const resolving =
+        orm
+          .select({ n: countDistinct(runs.task_id) })
+          .from(runs)
+          .innerJoin(tasks, eq(tasks.id, runs.task_id))
+          .where(and(eq(runs.kind, 'resolve'), isNull(runs.ended_at), notInArray(tasks.status, RUNNING)))
+          .get()?.n ?? 0;
+      const planning = orm.select({ n: count() }).from(plannerRuns).where(isNull(plannerRuns.ended_at)).get()?.n ?? 0;
+      return running + resolving + planning;
     },
     /** Whether a resolve run of this task has not finished. */
     hasRunningResolve(task_id: number): boolean {
@@ -110,18 +106,53 @@ export function runStore(orm: Orm) {
     },
     /** Runs of any kind with a recorded pid that have not finished or finished within `days`: where a claude process may still be. */
     pidRuns(days: number): PidRun[] {
-      const recent = (col: string) =>
-        sql.raw(`pid IS NOT NULL AND (${col} IS NULL OR ${col} > datetime('now', '-${Math.floor(days)} days'))`);
+      const since = sql`datetime('now', ${`-${Math.floor(days)} days`})`;
+      const recent = (t: typeof runs | typeof plannerRuns) => and(isNotNull(t.pid), or(isNull(t.ended_at), gt(t.ended_at, since)));
       // A planner run starts its claude as it opens, so its started_at is when its pid was stored.
-      return orm.all(sql`SELECT kind, id, pid, COALESCE(pid_at, started_at) AS pid_at, ended_at FROM runs WHERE ${recent('ended_at')}
-        UNION ALL SELECT 'planner' AS kind, id, pid, started_at AS pid_at, ended_at FROM planner_runs WHERE ${recent('ended_at')}`) as PidRun[];
+      const rows = orm
+        .select({
+          kind: sql<PidRun['kind']>`${runs.kind}`.as('kind'),
+          id: runs.id,
+          pid: runs.pid,
+          pid_at: sql<string>`COALESCE(${runs.pid_at}, ${runs.started_at})`.as('pid_at'),
+          ended_at: runs.ended_at,
+        })
+        .from(runs)
+        .where(recent(runs))
+        .unionAll(
+          orm
+            .select({
+              kind: sql<PidRun['kind']>`'planner'`.as('kind'),
+              id: plannerRuns.id,
+              pid: plannerRuns.pid,
+              pid_at: sql<string>`${plannerRuns.started_at}`.as('pid_at'),
+              ended_at: plannerRuns.ended_at,
+            })
+            .from(plannerRuns)
+            .where(recent(plannerRuns)),
+        )
+        .all();
+      return rows.flatMap((r) => (r.pid === null ? [] : [{ ...r, pid: r.pid }]));
     },
     /** Tasks in running or being cancelled, each with its unfinished work run, if it has one: its pid, when that was stored, and its start. */
     runningTaskRuns(): RunningTaskRun[] {
-      return orm.all(sql`SELECT t.id AS id, r.pid AS pid, COALESCE(r.pid_at, r.started_at) AS pid_at, r.started_at AS started_at
-        FROM tasks t
-        LEFT JOIN runs r ON r.id = (SELECT MAX(id) FROM runs WHERE task_id = t.id AND kind = 'work' AND ended_at IS NULL)
-        WHERE t.status IN ('running', 'cancel_requested') ORDER BY t.id`) as RunningTaskRun[];
+      const open = orm
+        .select()
+        .from(runs)
+        .where(and(eq(runs.kind, 'work'), isNull(runs.ended_at)))
+        .orderBy(asc(runs.id))
+        .all();
+      const unfinished = new Map(open.map((r) => [r.task_id, r])); // the newest of a task's unfinished runs wins
+      return orm
+        .select({ id: tasks.id })
+        .from(tasks)
+        .where(inArray(tasks.status, RUNNING))
+        .orderBy(asc(tasks.id))
+        .all()
+        .map(({ id }) => {
+          const r = unfinished.get(id);
+          return { id, pid: r?.pid ?? null, pid_at: r ? (r.pid_at ?? r.started_at) : null, started_at: r?.started_at ?? null };
+        });
     },
     /** Claude processes recorded on runs that never finished: a previous daemon died mid-run. */
     unfinishedPids(): { pid: number; pid_at: string }[] {

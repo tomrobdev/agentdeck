@@ -60,8 +60,8 @@ export function withViews<T extends Viewed>(db: Db, tasks: T[], measured: Map<nu
   const repos = new Map(db.listRepos().map((r) => [r.id, r]));
   const waitOf = startWaits(db);
   const unfinished = db.planUnfinishedIds();
-  const liveRuns = db.liveRuns();
-  const resolves = db.liveResolves();
+  const liveRuns = db.liveRuns('work');
+  const resolves = db.liveRuns('resolve');
   return tasks.map((t) => ({
     ...t,
     live: liveView(t, liveRuns.get(t.id)),
