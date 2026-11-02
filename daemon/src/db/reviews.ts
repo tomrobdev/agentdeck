@@ -122,13 +122,7 @@ export function reviewStore(orm: Orm) {
             and(
               eq(reviewComments.id, id),
               inArray(reviewComments.state, from),
-              inArray(
-                reviewComments.review_id,
-                orm
-                  .select({ id: reviews.id })
-                  .from(reviews)
-                  .where(isNotNull(reviews.submitted_at)),
-              ),
+              inArray(reviewComments.review_id, orm.select({ id: reviews.id }).from(reviews).where(isNotNull(reviews.submitted_at))),
             ),
           )
           .run().changes > 0

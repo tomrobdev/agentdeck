@@ -15,9 +15,7 @@ export const repos = sqliteTable(
     base_branch: text().default('main').notNull(),
     test_cmd: text(),
     allowed_tools: text(),
-    created_at: text()
-      .default(NOW_DEFAULT)
-      .notNull(),
+    created_at: text().default(NOW_DEFAULT).notNull(),
     auto_approve: integer().default(0).notNull(),
     planned_at: text(),
     toolchain: text(),
@@ -54,12 +52,8 @@ export const tasks = sqliteTable(
     branch: text(),
     worktree: text(),
     stop_reason: text(),
-    created_at: text()
-      .default(NOW_DEFAULT)
-      .notNull(),
-    updated_at: text()
-      .default(NOW_DEFAULT)
-      .notNull(),
+    created_at: text().default(NOW_DEFAULT).notNull(),
+    updated_at: text().default(NOW_DEFAULT).notNull(),
     source: text().default('manual').notNull(),
     restarts: integer().default(0).notNull(),
     pr_url: text(),
@@ -92,9 +86,7 @@ export const runs = sqliteTable(
       .notNull()
       .references(() => tasks.id),
     attempt: integer().notNull(),
-    started_at: text()
-      .default(NOW_DEFAULT)
-      .notNull(),
+    started_at: text().default(NOW_DEFAULT).notNull(),
     ended_at: text(),
     outcome: text(),
     exit_code: integer(),
@@ -123,9 +115,7 @@ export const usageWindows = sqliteTable('usage_windows', {
   utilization: real().notNull(),
   resets_at: integer().notNull(),
   status: text(),
-  observed_at: text()
-    .default(NOW_DEFAULT)
-    .notNull(),
+  observed_at: text().default(NOW_DEFAULT).notNull(),
 });
 
 /** Every change of a usage window's reading, appended beside the latest in usage_windows. */
@@ -136,9 +126,7 @@ export const usageSamples = sqliteTable(
     window: text().notNull(),
     utilization: real().notNull(),
     resets_at: integer().notNull(),
-    observed_at: text()
-      .default(NOW_DEFAULT)
-      .notNull(),
+    observed_at: text().default(NOW_DEFAULT).notNull(),
   },
   (table) => [index('usage_samples_window').on(table.window, table.id)],
 );
@@ -148,9 +136,7 @@ export const plannerRuns = sqliteTable('planner_runs', {
   repo_id: integer()
     .notNull()
     .references(() => repos.id),
-  started_at: text()
-    .default(NOW_DEFAULT)
-    .notNull(),
+  started_at: text().default(NOW_DEFAULT).notNull(),
   ended_at: text(),
   outcome: text(),
   proposed: integer().default(0).notNull(),
@@ -165,9 +151,7 @@ export const notifications = sqliteTable('notifications', {
   title: text().notNull(),
   body: text().notNull(),
   task_id: integer(),
-  created_at: text()
-    .default(NOW_DEFAULT)
-    .notNull(),
+  created_at: text().default(NOW_DEFAULT).notNull(),
 });
 
 export const settings = sqliteTable('settings', {
@@ -184,9 +168,7 @@ export const taskEvents = sqliteTable(
     from_status: text(),
     to_status: text(),
     reason: text(),
-    at: text()
-      .default(NOW_DEFAULT)
-      .notNull(),
+    at: text().default(NOW_DEFAULT).notNull(),
   },
   (table) => [index('task_events_task').on(table.task_id, table.id)],
 );
@@ -201,9 +183,7 @@ export const taskLinks = sqliteTable(
       .notNull()
       .references(() => tasks.id),
     kind: text().default('builds_on').notNull(),
-    created_at: text()
-      .default(NOW_DEFAULT)
-      .notNull(),
+    created_at: text().default(NOW_DEFAULT).notNull(),
   },
   (table) => [primaryKey({ columns: [table.task_id, table.on_task] }), index('task_links_on').on(table.on_task)],
 );
@@ -214,12 +194,8 @@ export const taskPlans = sqliteTable('task_plans', {
   name: text().notNull(),
   source: text().notNull(),
   html: text().notNull(),
-  created_at: text()
-    .default(NOW_DEFAULT)
-    .notNull(),
-  updated_at: text()
-    .default(NOW_DEFAULT)
-    .notNull(),
+  created_at: text().default(NOW_DEFAULT).notNull(),
+  updated_at: text().default(NOW_DEFAULT).notNull(),
 });
 
 export const reviews = sqliteTable(
@@ -231,9 +207,7 @@ export const reviews = sqliteTable(
       .references(() => tasks.id),
     kind: text(),
     body: text().default('').notNull(),
-    created_at: text()
-      .default(NOW_DEFAULT)
-      .notNull(),
+    created_at: text().default(NOW_DEFAULT).notNull(),
     submitted_at: text(),
   },
   (table) => [index('reviews_task').on(table.task_id, table.id)],
@@ -253,12 +227,8 @@ export const reviewComments = sqliteTable(
     body: text().notNull(),
     answer: text(),
     state: text().default('open').notNull(),
-    created_at: text()
-      .default(NOW_DEFAULT)
-      .notNull(),
-    updated_at: text()
-      .default(NOW_DEFAULT)
-      .notNull(),
+    created_at: text().default(NOW_DEFAULT).notNull(),
+    updated_at: text().default(NOW_DEFAULT).notNull(),
   },
   (table) => [index('review_comments_review').on(table.review_id, table.id)],
 );

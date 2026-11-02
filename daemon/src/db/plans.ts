@@ -64,11 +64,7 @@ export function saveOwnPlan(db: DatabaseSync, orm: Orm, task_id: number, html: s
         .where(and(eq(taskPlans.task_id, task_id), eq(taskPlans.name, name), ne(taskPlans.id, old.id)))
         .run();
       if (old.name !== name || old.html !== html || old.source !== source) {
-        orm
-          .update(taskPlans)
-          .set({ name, source, html, updated_at: NOW_SQL })
-          .where(eq(taskPlans.id, old.id))
-          .run();
+        orm.update(taskPlans).set({ name, source, html, updated_at: NOW_SQL }).where(eq(taskPlans.id, old.id)).run();
       }
     }
     return toPlan(ownPlanRow(orm, task_id)!);

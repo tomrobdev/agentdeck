@@ -29,11 +29,7 @@ export function runStore(orm: Orm) {
     },
     /** Record the run's claude process group, and when it started: what `ownsLiveGroup` checks the pid against. */
     setRunPid(id: number, pid: number): void {
-      orm
-        .update(runs)
-        .set({ pid, pid_at: NOW_SQL })
-        .where(eq(runs.id, id))
-        .run();
+      orm.update(runs).set({ pid, pid_at: NOW_SQL }).where(eq(runs.id, id)).run();
     },
     /** Record what a live run is doing; the write moves the change counter, which is what pushes it to the dashboard. */
     setRunLive(id: number, live_turns: number, live_tool: string | null): void {
@@ -161,19 +157,21 @@ export function runStore(orm: Orm) {
     /** Claude processes recorded on runs that never finished: a previous daemon died mid-run. */
     unfinishedPids(): { pid: number; pid_at: string }[] {
       const unfinished = (t: typeof runs | typeof plannerRuns) => and(isNull(t.ended_at), isNotNull(t.pid));
-      return orm
-        // guard: the builder has no COALESCE; a run whose pid time was never stored started with its pid
-        .select({ pid: runs.pid, pid_at: sql<string>`COALESCE(${runs.pid_at}, ${runs.started_at})`.as('pid_at') })
-        .from(runs)
-        .where(unfinished(runs))
-        .unionAll(
-          orm
-            // guard: the union's column needs the same alias and string type as the runs side
-            .select({ pid: plannerRuns.pid, pid_at: sql<string>`${plannerRuns.started_at}`.as('pid_at') })
-            .from(plannerRuns)
-            .where(unfinished(plannerRuns)),
-        )
-        .all() as { pid: number; pid_at: string }[];
+      return (
+        orm
+          // guard: the builder has no COALESCE; a run whose pid time was never stored started with its pid
+          .select({ pid: runs.pid, pid_at: sql<string>`COALESCE(${runs.pid_at}, ${runs.started_at})`.as('pid_at') })
+          .from(runs)
+          .where(unfinished(runs))
+          .unionAll(
+            orm
+              // guard: the union's column needs the same alias and string type as the runs side
+              .select({ pid: plannerRuns.pid, pid_at: sql<string>`${plannerRuns.started_at}`.as('pid_at') })
+              .from(plannerRuns)
+              .where(unfinished(plannerRuns)),
+          )
+          .all() as { pid: number; pid_at: string }[]
+      );
     },
   };
 }

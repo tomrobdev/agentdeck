@@ -8,22 +8,14 @@ import { plannerRuns, repos } from './tables.ts';
 export function plannerRunStore(orm: Orm) {
   return {
     startPlannerRun(repo_id: number, log_path: string): number {
-      orm
-        .update(repos)
-        .set({ planned_at: NOW_SQL })
-        .where(eq(repos.id, repo_id))
-        .run();
+      orm.update(repos).set({ planned_at: NOW_SQL }).where(eq(repos.id, repo_id)).run();
       return Number(orm.insert(plannerRuns).values({ repo_id, log_path }).run().lastInsertRowid);
     },
     setPlannerRunPid(id: number, pid: number): void {
       orm.update(plannerRuns).set({ pid }).where(eq(plannerRuns.id, id)).run();
     },
     finishPlannerRun(id: number, outcome: string, proposed: number, note: string | null): void {
-      orm
-        .update(plannerRuns)
-        .set({ ended_at: NOW_SQL, outcome, proposed, note })
-        .where(eq(plannerRuns.id, id))
-        .run();
+      orm.update(plannerRuns).set({ ended_at: NOW_SQL, outcome, proposed, note }).where(eq(plannerRuns.id, id)).run();
     },
     countRunningPlannerRuns(): number {
       return orm.select({ n: count() }).from(plannerRuns).where(isNull(plannerRuns.ended_at)).get()?.n ?? 0;

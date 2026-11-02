@@ -1,7 +1,7 @@
 // The Boundaries and Rules in CLAUDE.md, checked against the source. Each failure names the file, the line and the rule.
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
@@ -185,6 +185,30 @@ test('[sql-in-db] SQL runs only in db/', () => {
   assert.deepEqual(found, []);
 });
 
+test('[sql-in-db] raw sql in db/ carries a `// guard:` comment saying what the builder cannot express', () => {
+  // The query builder is the default; a raw `sql` fragment is for what it hides or lacks, and says so on its line or the one above.
+  const found: string[] = [];
+  for (const s of sources.filter((s) => s.path.startsWith('db/'))) {
+    const lines = s.ast.text.split('\n');
+    const visit = (node: ts.Node) => {
+      const tag = ts.isTaggedTemplateExpression(node) ? node.tag : ts.isCallExpression(node) ? node.expression : null;
+      const raw =
+        !!tag &&
+        ((ts.isIdentifier(tag) && tag.text === 'sql') ||
+          (ts.isPropertyAccessExpression(tag) && ts.isIdentifier(tag.expression) && tag.expression.text === 'sql'));
+      if (raw) {
+        const line = lineOf(s.ast, node);
+        const guarded = [lines[line - 1], lines[line - 2]].some((l) => /\/\/ guard: \S.{8,}/.test(l ?? ''));
+        if (!guarded)
+          found.push(`${at(s, line)} uses raw sql without a "// guard: <what the builder can't express>" comment on it or the line above`);
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(s.ast);
+  }
+  assert.deepEqual(found, []);
+});
+
 /** The text of a string or template literal, with each `${…}` as `?`. */
 function literalText(node: ts.Node): string | null {
   if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
@@ -268,5 +292,134 @@ test('[migrations-append] shipped migration steps are unchanged', () => {
   for (let i = locked.length; i < actual.length; i++) {
     found.push(`step ${i + 1} is new: once it is final, append \`${actual[i]}\` to ${relative(process.cwd(), LOCK)}`);
   }
+  assert.deepEqual(found, []);
+});
+
+/** Module-level state in application/ that is allowed, each with why. Keys are `<file>:<name>`. */
+const ALLOWED_MODULE_STATE: Record<string, string> = {
+  'application/sync.ts:syncing': 'the sync lock: a task being synced in this process; the database is the state the processes share',
+  'application/planner.ts:proposing': 'the propose lock: a repo being planned in this process',
+  'application/pull-request/pull-requests.ts:merging': 'the merge lock: a task being merged in this process',
+  'application/task/files.ts:changedCache': 'a cache of immutable diff results: the same two commits always differ the same way',
+};
+
+const MUTATORS = /^(set|add|delete|clear|push|pop|shift|unshift|splice|sort|reverse|fill|copyWithin)$/;
+
+test('[no-module-state] application/ keeps no module-level state except a lock or a cache of immutable results', () => {
+  const found: string[] = [];
+  const used = new Set<string>();
+  for (const s of sources.filter((s) => s.path.startsWith('application/'))) {
+    const collections = new Set<string>();
+    for (const stmt of s.ast.statements) {
+      if (!ts.isVariableStatement(stmt)) continue;
+      const isLet = !(stmt.declarationList.flags & ts.NodeFlags.Const);
+      for (const d of stmt.declarationList.declarations) {
+        if (!ts.isIdentifier(d.name)) continue;
+        const key = `${s.path}:${d.name.text}`;
+        let init = d.initializer;
+        while (init && (ts.isAsExpression(init) || ts.isSatisfiesExpression(init) || ts.isParenthesizedExpression(init)))
+          init = init.expression;
+        const isCollection =
+          !!init &&
+          (ts.isArrayLiteralExpression(init) ||
+            (ts.isNewExpression(init) && ['Map', 'Set', 'WeakMap', 'WeakSet', 'Array'].includes(init.expression.getText(s.ast))));
+        if (isLet) {
+          if (ALLOWED_MODULE_STATE[key]) used.add(key);
+          else
+            found.push(
+              `${at(s, lineOf(s.ast, d))} declares module-level let ${d.name.text}: application code keeps no state between calls`,
+            );
+        } else if (isCollection) collections.add(d.name.text);
+      }
+    }
+    const changed = new Map<string, number>();
+    const visit = (node: ts.Node) => {
+      let target: ts.Expression | null = null;
+      if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) && MUTATORS.test(node.expression.name.text))
+        target = node.expression.expression;
+      else if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
+        if (ts.isElementAccessExpression(node.left)) target = node.left.expression;
+        else if (ts.isPropertyAccessExpression(node.left) && node.left.name.text === 'length') target = node.left.expression;
+      }
+      if (target && ts.isIdentifier(target) && collections.has(target.text) && !changed.has(target.text))
+        changed.set(target.text, lineOf(s.ast, node));
+      ts.forEachChild(node, visit);
+    };
+    visit(s.ast);
+    for (const [name, line] of changed) {
+      const key = `${s.path}:${name}`;
+      if (ALLOWED_MODULE_STATE[key]) used.add(key);
+      else
+        found.push(`${at(s, line)} changes module-level ${name}: application code keeps no state between calls, except a lock or a cache`);
+    }
+  }
+  for (const key of Object.keys(ALLOWED_MODULE_STATE))
+    if (!used.has(key)) found.push(`${key} is on the allow list but no longer module state`);
+  assert.deepEqual(found, []);
+});
+
+// Domain language: "hold" is the governor's word (domain/usage/, the scheduler's announcement, the `hold` notification kind).
+const HOLD = /\b(hold|holds|holding|held)\b/i;
+
+const PLAIN = 'plain English: a thing contains, keeps or presses something';
+/** Lines that may say hold: the governor's, and the plain-English senses. Paths are under daemon/src/, or app/src/ when prefixed. */
+const HOLD_ALLOWED: { file: string; line: RegExp; why: string }[] = [
+  { file: 'domain/notification.ts', line: /governor hold|'hold'/, why: 'the `hold` notification kind' },
+  { file: 'api/contract.ts', line: /'hold'/, why: 'the `hold` notification kind' },
+  { file: 'adapters/notify.ts', line: /^\s*hold:/, why: 'the `hold` notification kind' },
+  { file: 'db/schema.ts', line: /`hold`|,hold,/, why: 'migration 16 is about the `hold` notification kind' },
+  { file: 'cli/help.ts', line: /,hold,/, why: 'the `hold` notification kind in notify_events' },
+  { file: 'app/src/components/panels/SettingsPanel.vue', line: /key: 'hold'|kind === 'hold'/, why: 'the `hold` notification kind' },
+  { file: 'app/src/components/panels/SettingsPanel.vue', line: /Hold new tasks above/, why: 'the governor budget setting' },
+  { file: 'domain/task/digest.ts', line: /governor on hold/, why: 'the governor' },
+  { file: 'domain/task/start.ts', line: /governor holds/, why: 'the governor' },
+  { file: 'application/scheduler/scheduler.ts', line: /^(?!.*caffeinate)/, why: "the scheduler's hold announcement" },
+  { file: 'cli/daemon.ts', line: /on hold|HOLD:/, why: "the governor's state, shown" },
+  { file: 'app/src/api/format.ts', line: /On hold/, why: "the governor's state, shown" },
+  { file: 'app/src/components/layout/StatusBar.vue', line: /On hold/, why: "the governor's state, shown" },
+  { file: 'app/src/App.vue', line: /hold lifting/, why: "the governor's hold lifting" },
+  { file: 'domain/run/run.ts', line: /it holds the old prompt/, why: PLAIN },
+  { file: 'domain/run/prompt.ts', line: /holds the same comments|already holds the task|files hold conflict markers/, why: PLAIN },
+  { file: 'domain/task/needs.ts', line: /A task holds it/, why: PLAIN },
+  { file: 'domain/task/listing.ts', line: /PRs that hold up other/, why: PLAIN },
+  { file: 'domain/task/stage.ts', line: /Done holds every/, why: PLAIN },
+  { file: 'domain/daemon/health.ts', line: /another daemon holds port/, why: PLAIN },
+  { file: 'domain/plan/plan.ts', line: /that holds AgentDeck's files/, why: PLAIN },
+  { file: 'application/sync.ts', line: /sync in this process holds/, why: PLAIN },
+  { file: 'api/contract.ts', line: /holds the use cases to/, why: PLAIN },
+  { file: 'db/tasks.ts', line: /Later pages hold older tasks/, why: PLAIN },
+  { file: 'db/sql.ts', line: /caller already holds/, why: PLAIN },
+  { file: 'adapters/git.ts', line: /branch holds all its work|still hold conflict markers/, why: PLAIN },
+  { file: 'adapters/github.ts', line: /prompt would hold the task's slot/, why: PLAIN },
+  { file: 'app/src/composables/useHotkeys.ts', line: /modifier held/, why: PLAIN },
+  { file: 'app/src/lib/forms.ts', line: /panels only hold the form/, why: PLAIN },
+  { file: 'app/src/components/task/TaskPage.vue', line: /Dialogs hold the Escape key/, why: PLAIN },
+  { file: 'app/src/components/task/ChangesTab.vue', line: /maps only hold what/, why: PLAIN },
+  { file: 'app/src/components/queue/QueueView.vue', line: /Done now, which holds the finished history/, why: PLAIN },
+  { file: 'application/scheduler/scheduler.ts', line: /Hold a `caffeinate/, why: PLAIN },
+  { file: 'app/src/platform/native.ts', line: /`copied` holds the key/, why: PLAIN },
+];
+
+test('[domain-language] "hold" is used only for the governor, the `hold` notification kind, and plain-English senses', () => {
+  const found: string[] = [];
+  const used = new Set<(typeof HOLD_ALLOWED)[number]>();
+  const roots = [
+    { dir: SRC, prefix: '' },
+    { dir: join(import.meta.dirname, '../../app/src'), prefix: 'app/src/' },
+  ];
+  for (const { dir, prefix } of roots) {
+    for (const f of readdirSync(dir, { recursive: true, encoding: 'utf8' })) {
+      if (!/\.(ts|vue|css)$/.test(f)) continue;
+      const path = prefix + f;
+      if (path.startsWith('domain/usage/')) continue;
+      for (const [i, line] of readFileSync(join(dir, f), 'utf8').split('\n').entries()) {
+        if (!HOLD.test(line)) continue;
+        const ok = HOLD_ALLOWED.find((a) => a.file === path && a.line.test(line));
+        if (ok) used.add(ok);
+        else found.push(`${path}:${i + 1} says hold: that is the governor's word; say wait or keep (or add the sense to HOLD_ALLOWED)`);
+      }
+    }
+  }
+  for (const a of HOLD_ALLOWED) if (!used.has(a)) found.push(`${a.file} ${a.line} is on the allow list but matches no line`);
   assert.deepEqual(found, []);
 });

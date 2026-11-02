@@ -9,7 +9,6 @@ const TESTS = join(ROOT, 'daemon/test');
 /** Rules no test enforces, each with why. A new rule gets a check, or goes here with its reason. */
 export const UNCHECKED: Record<string, string> = {
   'cli-in-process': 'no test yet: whether a use case runs in the CLI process or goes to the daemon is not visible in imports',
-  'no-module-state': 'no test yet: planned as its own check (module-level state in application/)',
   'composition-root': 'no test yet: "logs through a callback and throws" is not checked',
   'dashboard-layout': 'no test yet: app/src is parsed but its folders and imports are not checked (planned)',
   'erasable-ts': 'enforced by `erasableSyntaxOnly` in tsconfig, so by `pnpm typecheck`, not by a test',

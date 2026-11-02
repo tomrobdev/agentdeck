@@ -204,7 +204,7 @@ export interface TaskSummary {
   /** The person's merge request, while the daemon is to merge the PR when it is ready; null with none. Missing from a daemon that predates it. */
   merge_request?: MergeRequestView | null;
   /**
-   * Set for a queued task held back by builds-on links: `on` is every task it builds on still on its way, or, with `stuck`
+   * Set for a queued task waiting on builds-on links: `on` is every task it builds on still on its way, or, with `stuck`
    * (why it won't get there on its own), the one task it is stuck on.
    */
   waiting: { on: number[]; stuck: string | null } | null;

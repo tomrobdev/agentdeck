@@ -76,7 +76,6 @@ const buildsOn = alias(taskLinks, 'l');
 const dep = alias(tasks, 'd');
 const depRepo = alias(repos, 'r');
 
-
 /** Unset fields are left alone by Drizzle; these writes have always stored a given-as-undefined field as NULL. */
 const given = <T extends object>(fields: T) =>
   Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, v ?? null])) as { [K in keyof T]-?: Exclude<T[K], undefined> };
