@@ -50,6 +50,7 @@ const run = (o: Partial<Run>): Run => ({
   denials: 0,
   live_turns: 0,
   live_tool: null,
+  pid_at: null,
   ...o,
 });
 

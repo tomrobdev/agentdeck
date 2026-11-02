@@ -237,6 +237,7 @@ erDiagram
     text kind
     integer live_turns
     text live_tool "nullable"
+    text pid_at "nullable"
   }
   settings {
     text key PK
@@ -489,5 +490,6 @@ stateDiagram-v2
 | 22   | what the pilot scorecard needs and nothing kept. usage_samples is a history of usage readings, appended when a window's reading changes; pr_checks_opened / pr_checks_merged are JSON { total, failing, pending } of a PR's checks.   |
 | 23   | merge requests (docs/plans/merge-requests.html). merge_requested_at is when a person asked the daemon to merge the task's PR once it is ready (NULL: no request); merge_request_check is the last check's JSON { verdict, reasons }.  |
 | 24   | plans live in AgentDeck, named after the task they belong to. plan_task is the task whose plan this one follows (itself when its own plan was given with --plan); plan_steps names that plan's steps. plan_path is no longer written. |
+| 25   | when a run's pid was stored. Its claude started then, which can be minutes after the run row (setup, a sync), so crash recovery and the doctor tell our claude from a reused pid by this time, not by started_at.                     |
 
 <!-- /generated -->
