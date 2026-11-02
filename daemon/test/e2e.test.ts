@@ -170,12 +170,39 @@ test('claude processes left by a dead daemon are stopped, with their children', 
   await new Promise((r) => setTimeout(r, 200));
 
   // A pid whose leader started at another time belongs to someone else: leave it alone.
-  assert.equal(reapOrphans([{ pid, started_at: '2020-01-01 00:00:00' }], 200), 0);
+  assert.equal(reapOrphans([{ pid, pid_at: '2020-01-01 00:00:00' }], 200), 0);
   assert.ok(alive(pid));
 
-  assert.equal(reapOrphans([{ pid, started_at: sqliteNow }], 300), 1);
+  assert.equal(reapOrphans([{ pid, pid_at: sqliteNow }], 300), 1);
   await new Promise((r) => setTimeout(r, 100));
   assert.ok(!alive(pid), 'whole process group is gone, SIGKILL after the grace period');
+});
+
+test('a claude started long after its run row opened (setup, a sync) is still the run own, and is reaped', async () => {
+  const { spawn } = await import('node:child_process');
+  const { ownsLiveGroup, reapOrphans } = await import('../src/adapters/processes.ts');
+  const { openDb } = await import('../src/db/index.ts');
+  const db = openDb(':memory:');
+  const repo = db.addRepo({ name: 'r', path: '/tmp/r', base_branch: 'main' });
+  const task = db.addTask({ repo_id: repo.id, title: 't', prompt: 'p' });
+  const runId = db.startRun(task.id, 1, '/tmp/log');
+  db.raw.prepare("UPDATE runs SET started_at = datetime('now', '-5 minutes') WHERE id = ?").run(runId);
+  const child = spawn('sh', ['-c', 'sleep 60'], { detached: true, stdio: 'ignore' });
+  child.unref();
+  db.setRunPid(runId, child.pid!);
+  try {
+    const [row] = db.unfinishedPids();
+    assert.equal(row.pid, child.pid);
+    assert.ok(ownsLiveGroup(row), JSON.stringify(row));
+    assert.equal(reapOrphans(db.unfinishedPids(), 300), 1);
+  } finally {
+    try {
+      process.kill(-child.pid!, 'SIGKILL');
+    } catch {
+      // already gone
+    }
+    db.close();
+  }
 });
 
 test('defaultTitle cuts at sentence or word boundary', async () => {

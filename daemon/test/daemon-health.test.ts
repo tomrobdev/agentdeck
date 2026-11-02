@@ -129,17 +129,40 @@ test('processes: a group that outlived its run is a stray; one of a running run 
   assert.equal(gone.fix, 'kill -TERM -- -321 -654');
 });
 
-test('tasks: running with a dead process fails; a fresh run without a pid yet does not', () => {
+test('tasks, daemon up: its own runs are healthy in setup, sync and tests; one older than the daemon with no claude is dead', () => {
+  // The daemon (state()) started 3 hours before NOW.
+  const tasks = (...t: import('../src/domain/daemon/health.ts').RunningTaskFact[]) => h.checkTasks({ now: NOW, api: state(), tasks: t });
+  const working = { id: 1, pid: 10, alive: true, runAgeSeconds: 500 };
+  const inSetup = { id: 2, pid: null, alive: false, runAgeSeconds: 600 };
+  const inTests = { id: 3, pid: 11, alive: false, runAgeSeconds: 900 };
+  const claimed = { id: 4, pid: null, alive: false, runAgeSeconds: null };
+  const healthy = tasks(working, inSetup, inTests, claimed);
+  assert.equal(healthy.ok, true, healthy.reason);
+  assert.match(healthy.reason, /4 tasks running, none left over from an earlier daemon/);
+  const leftNoPid = { id: 5, pid: null, alive: false, runAgeSeconds: 4 * 3600 };
+  const leftDead = { id: 6, pid: 12, alive: false, runAgeSeconds: 4 * 3600 };
+  const dead = tasks(working, inTests, leftNoPid, leftDead);
+  assert.equal(dead.ok, false);
+  assert.match(dead.reason, /2 tasks in running with no live claude process: #5, #6/);
+  assert.equal(dead.fix, 'agentdeck restart --now');
+  // An old run whose claude is still alive is working, whoever started it.
+  assert.equal(tasks({ id: 7, pid: 13, alive: true, runAgeSeconds: 4 * 3600 }).ok, true);
+  // A run opened in the second the daemon started is its own: run starts are stored to the second.
+  assert.equal(tasks({ id: 8, pid: null, alive: false, runAgeSeconds: 3 * 3600 + 0.5 }).ok, true);
+});
+
+test('tasks, daemon down: a dead process or a pid overdue fails; a fresh run without a pid yet does not', () => {
+  const tasks = (...t: import('../src/domain/daemon/health.ts').RunningTaskFact[]) => h.checkTasks({ now: NOW, api: null, tasks: t });
   const ok = { id: 1, pid: 10, alive: true, runAgeSeconds: 500 };
-  assert.equal(h.checkTasks({ api: state(), tasks: [ok] }).ok, true);
-  assert.equal(h.checkTasks({ api: state(), tasks: [{ id: 2, pid: null, alive: false, runAgeSeconds: 5 }] }).ok, true);
-  const dead = h.checkTasks({ api: state(), tasks: [ok, { id: 3, pid: 11, alive: false, runAgeSeconds: 500 }] });
+  assert.equal(tasks(ok).ok, true);
+  assert.match(tasks(ok).reason, /1 task running, each with a live process/);
+  assert.equal(tasks({ id: 2, pid: null, alive: false, runAgeSeconds: 5 }).ok, true);
+  const dead = tasks(ok, { id: 3, pid: 11, alive: false, runAgeSeconds: 500 });
   assert.equal(dead.ok, false);
   assert.match(dead.reason, /1 task in running with no live claude process: #3/);
-  assert.equal(dead.fix, 'agentdeck restart --now');
-  assert.equal(h.checkTasks({ api: state(), tasks: [{ id: 4, pid: null, alive: false, runAgeSeconds: 600 }] }).ok, false);
-  assert.equal(h.checkTasks({ api: state(), tasks: [{ id: 5, pid: null, alive: false, runAgeSeconds: null }] }).ok, false);
-  assert.equal(h.checkTasks({ api: null, tasks: [{ id: 5, pid: 1, alive: false, runAgeSeconds: 9 }] }).fix, 'agentdeck service start');
+  assert.equal(dead.fix, 'agentdeck service start');
+  assert.equal(tasks({ id: 4, pid: null, alive: false, runAgeSeconds: 600 }).ok, false);
+  assert.equal(tasks({ id: 5, pid: null, alive: false, runAgeSeconds: null }).ok, false);
 });
 
 test('log: errors of the last 24 hours are found, with stacks folded in and older ones left out', () => {
@@ -212,7 +235,19 @@ test('gatherHealth reads runs and tasks from the database and their liveness fro
   runOf(live.id, 222);
   db.applyEvent(dead.id, { type: 'claim' });
   runOf(dead.id, 333);
+  // Those runs were opened by an earlier daemon (state() started at 09:00); the next two by this one.
+  db.raw.prepare("UPDATE runs SET started_at = '2026-11-01 08:00:00'").run();
+  const setup = t('in setup');
+  db.applyEvent(setup.id, { type: 'claim' });
+  const setupRun = db.startRun(setup.id, 1, '/tmp/log');
+  const testing = t('in its tests');
+  db.applyEvent(testing.id, { type: 'claim' });
+  const testRun = runOf(testing.id, 444);
+  const at = db.raw.prepare('UPDATE runs SET started_at = ? WHERE id = ?');
+  at.run('2026-11-01 11:50:00', setupRun);
+  at.run('2026-11-01 11:30:00', testRun);
   const alive = new Set([111, 222]);
+  const asked: { pid: number; pid_at: string }[] = [];
   const facts = await gatherHealth(
     db,
     {
@@ -220,7 +255,10 @@ test('gatherHealth reads runs and tasks from the database and their liveness fro
       api: async () => state(),
       head: async () => 'b'.repeat(40),
       ahead: async () => 4,
-      alive: ({ pid }) => alive.has(pid),
+      alive: (r) => {
+        asked.push(r);
+        return alive.has(r.pid);
+      },
       logLines: () => ['[2026-11-01T11:59:00.000Z] task 9: worker crashed: Error: x'],
       gh: async () => ({ ok: true, output: 'ok' }),
       now: () => NOW,
@@ -236,16 +274,22 @@ test('gatherHealth reads runs and tasks from the database and their liveness fro
     ],
   );
   assert.deepEqual(
-    facts.tasks.map((x) => [x.id, x.alive]),
+    facts.tasks.map((x) => [x.id, x.pid, x.alive, x.runAgeSeconds]),
     [
-      [live.id, true],
-      [dead.id, false],
+      [live.id, 222, true, 4 * 3600],
+      [dead.id, 333, false, 4 * 3600],
+      [setup.id, null, false, 600],
+      [testing.id, 444, false, 1800],
     ],
   );
+  // Liveness is judged by when the pid was stored, not by when the run opened.
+  assert.ok(asked.length > 0);
+  for (const r of asked) assert.notEqual(r.pid_at, '2026-11-01 08:00:00', JSON.stringify(r));
   assert.equal(facts.log?.problems.length, 1);
   const checks = h.judgeHealth(facts);
   const failed = checks.filter((c) => !c.ok).map((c) => c.name);
   assert.deepEqual(failed, ['code loaded', 'claude processes', 'running tasks', 'daemon.log']);
+  assert.match(checks.find((c) => c.name === 'running tasks')!.reason, new RegExp(`no live claude process: #${dead.id}$`));
   db.close();
 });
 

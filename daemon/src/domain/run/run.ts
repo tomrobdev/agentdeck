@@ -28,6 +28,7 @@ export interface Run {
   denials: number; // tool uses refused by the permission rules during the run
   live_turns: number; // turns so far while the run is live (domain/run/live.ts)
   live_tool: string | null; // the last tool call while the run is live, in a few words
+  pid_at: string | null; // when `pid` was stored: claude started then, which can be well after `started_at` (setup, a sync)
 }
 
 /**

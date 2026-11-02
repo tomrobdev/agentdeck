@@ -229,6 +229,9 @@ export const MIGRATIONS: Migration[] = [
   // 24: plans live in AgentDeck, named after the task they belong to. plan_task is the task whose plan this one follows
   // (itself when its own plan was given with --plan); plan_steps names that plan's steps. plan_path is no longer written.
   `ALTER TABLE tasks ADD COLUMN plan_task INTEGER;`,
+  // 25: when a run's pid was stored. Its claude started then, which can be minutes after the run row (setup, a sync),
+  // so crash recovery and the doctor tell our claude from a reused pid by this time, not by started_at.
+  `ALTER TABLE runs ADD COLUMN pid_at TEXT;`,
 ];
 
 /** Runs every step above the database's user_version in one transaction; returns how many ran. */

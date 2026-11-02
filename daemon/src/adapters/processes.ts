@@ -39,11 +39,11 @@ function leaderStartedAt(pid: number): number | null {
 /**
  * Stop claude processes left behind by a daemon that died without cleaning up, before
  * their tasks are requeued; otherwise two agents end up working in the same worktree.
- * `started_at` is when the run was recorded (UTC, SQLite format). A pid whose leader started
+ * `pid_at` is when the pid was stored on the run (UTC, SQLite format). A pid whose leader started
  * at a different time has been reused by an unrelated process and is left alone. A group
  * whose leader has exited is still ours: the OS doesn't reuse an id while its group exists.
  */
-export function reapOrphans(runs: { pid: number; started_at: string }[], graceMs = 5_000): number {
+export function reapOrphans(runs: PidRecord[], graceMs = 5_000): number {
   const ours = runs.filter(ownsLiveGroup);
   for (const { pid } of ours) killGroup(pid, 'SIGTERM');
   const deadline = Date.now() + graceMs;
@@ -53,9 +53,18 @@ export function reapOrphans(runs: { pid: number; started_at: string }[], graceMs
   return ours.length;
 }
 
-/** Whether the run's recorded process group is alive and is the run's own, not a pid reused by something else. */
-export function ownsLiveGroup({ pid, started_at }: { pid: number; started_at: string }): boolean {
+/** A claude process group recorded on a run, and when it was recorded (UTC, SQLite format). */
+export interface PidRecord {
+  pid: number;
+  pid_at: string;
+}
+
+/**
+ * Whether the run's recorded process group is alive and is the run's own, not a pid reused by something else: its
+ * leader started when the pid was stored. Not the run's start, which comes before setup and the sync.
+ */
+export function ownsLiveGroup({ pid, pid_at }: PidRecord): boolean {
   if (!groupAlive(pid)) return false;
   const leader = leaderStartedAt(pid);
-  return leader === null || Math.abs(leader - Date.parse(`${started_at.replace(' ', 'T')}Z`)) < 120_000;
+  return leader === null || Math.abs(leader - Date.parse(`${pid_at.replace(' ', 'T')}Z`)) < 120_000;
 }

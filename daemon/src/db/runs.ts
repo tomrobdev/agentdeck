@@ -9,13 +9,15 @@ export interface PidRun {
   kind: 'work' | 'resolve' | 'planner';
   id: number;
   pid: number;
-  started_at: string;
+  /** When the pid was stored (the run's start for a row from before that was recorded). */
+  pid_at: string;
   ended_at: string | null;
 }
 
 export interface RunningTaskRun {
   id: number;
   pid: number | null;
+  pid_at: string | null;
   started_at: string | null;
 }
 
@@ -24,8 +26,13 @@ export function runStore(orm: Orm) {
     startRun(task_id: number, attempt: number, log_path: string, kind: RunKind = 'work'): number {
       return Number(orm.insert(runs).values({ task_id, attempt, log_path, kind }).run().lastInsertRowid);
     },
+    /** Record the run's claude process group, and when it started: what `ownsLiveGroup` checks the pid against. */
     setRunPid(id: number, pid: number): void {
-      orm.update(runs).set({ pid }).where(eq(runs.id, id)).run();
+      orm
+        .update(runs)
+        .set({ pid, pid_at: sql.raw(NOW) })
+        .where(eq(runs.id, id))
+        .run();
     },
     /** Record what a live run is doing; the write moves the change counter, which is what pushes it to the dashboard. */
     setRunLive(id: number, live_turns: number, live_tool: string | null): void {
@@ -105,24 +112,31 @@ export function runStore(orm: Orm) {
     pidRuns(days: number): PidRun[] {
       const recent = (col: string) =>
         sql.raw(`pid IS NOT NULL AND (${col} IS NULL OR ${col} > datetime('now', '-${Math.floor(days)} days'))`);
-      return orm.all(sql`SELECT kind, id, pid, started_at, ended_at FROM runs WHERE ${recent('ended_at')}
-        UNION ALL SELECT 'planner' AS kind, id, pid, started_at, ended_at FROM planner_runs WHERE ${recent('ended_at')}`) as PidRun[];
+      // A planner run starts its claude as it opens, so its started_at is when its pid was stored.
+      return orm.all(sql`SELECT kind, id, pid, COALESCE(pid_at, started_at) AS pid_at, ended_at FROM runs WHERE ${recent('ended_at')}
+        UNION ALL SELECT 'planner' AS kind, id, pid, started_at AS pid_at, ended_at FROM planner_runs WHERE ${recent('ended_at')}`) as PidRun[];
     },
-    /** Tasks in running or being cancelled, each with the pid and start of its unfinished work run, if it has one. */
+    /** Tasks in running or being cancelled, each with its unfinished work run, if it has one: its pid, when that was stored, and its start. */
     runningTaskRuns(): RunningTaskRun[] {
-      return orm.all(sql`SELECT t.id AS id, r.pid AS pid, r.started_at AS started_at FROM tasks t
+      return orm.all(sql`SELECT t.id AS id, r.pid AS pid, COALESCE(r.pid_at, r.started_at) AS pid_at, r.started_at AS started_at
+        FROM tasks t
         LEFT JOIN runs r ON r.id = (SELECT MAX(id) FROM runs WHERE task_id = t.id AND kind = 'work' AND ended_at IS NULL)
         WHERE t.status IN ('running', 'cancel_requested') ORDER BY t.id`) as RunningTaskRun[];
     },
     /** Claude processes recorded on runs that never finished: a previous daemon died mid-run. */
-    unfinishedPids(): { pid: number; started_at: string }[] {
+    unfinishedPids(): { pid: number; pid_at: string }[] {
       const unfinished = (t: typeof runs | typeof plannerRuns) => and(isNull(t.ended_at), isNotNull(t.pid));
       return orm
-        .select({ pid: runs.pid, started_at: runs.started_at })
+        .select({ pid: runs.pid, pid_at: sql<string>`COALESCE(${runs.pid_at}, ${runs.started_at})`.as('pid_at') })
         .from(runs)
         .where(unfinished(runs))
-        .unionAll(orm.select({ pid: plannerRuns.pid, started_at: plannerRuns.started_at }).from(plannerRuns).where(unfinished(plannerRuns)))
-        .all() as { pid: number; started_at: string }[];
+        .unionAll(
+          orm
+            .select({ pid: plannerRuns.pid, pid_at: sql<string>`${plannerRuns.started_at}`.as('pid_at') })
+            .from(plannerRuns)
+            .where(unfinished(plannerRuns)),
+        )
+        .all() as { pid: number; pid_at: string }[];
     },
   };
 }

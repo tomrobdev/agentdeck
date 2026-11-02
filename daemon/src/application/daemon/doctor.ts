@@ -18,7 +18,7 @@ export interface Probes {
   /** Commits the checkout's HEAD has that `commit` does not. */
   ahead: (commit: string) => Promise<number | null>;
   /** Whether the run's process group is alive and its own. */
-  alive: (run: { pid: number; started_at: string }) => boolean;
+  alive: (run: { pid: number; pid_at: string }) => boolean;
   logLines: () => string[] | null;
   gh: () => Promise<HealthFacts['gh']>;
   now: () => number;
@@ -50,7 +50,7 @@ export async function gatherHealth(db: Db, probes: Probes = realProbes, port = A
   const tasks = db.runningTaskRuns().map((t) => ({
     id: t.id,
     pid: t.pid,
-    alive: t.pid !== null && probes.alive({ pid: t.pid, started_at: t.started_at ?? '' }),
+    alive: t.pid !== null && probes.alive({ pid: t.pid, pid_at: t.pid_at ?? '' }),
     runAgeSeconds: t.started_at ? (now - sqlTime(t.started_at)) / 1000 : null,
   }));
   const lines = probes.logLines();

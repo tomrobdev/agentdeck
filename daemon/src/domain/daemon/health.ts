@@ -43,7 +43,7 @@ export interface RunningTaskFact {
   pid: number | null;
   /** Whether that process group is alive. */
   alive: boolean;
-  /** Seconds since its run started; null when it has no unfinished run. */
+  /** Seconds since its run started (the run row, before setup and the sync); null when it has no unfinished run. */
   runAgeSeconds: number | null;
 }
 
@@ -180,14 +180,24 @@ export function checkProcesses(f: Pick<HealthFacts, 'processes' | 'api'>): Check
   );
 }
 
-export function checkTasks(f: Pick<HealthFacts, 'tasks' | 'api'>): Check {
+/**
+ * Which running tasks have no claude working on them. While the daemon answers, only a run older than the daemon can
+ * be dead: the daemon is working its own runs, and one between setup and claude, in a sync or in its tests has no
+ * live claude and is fine. With the daemon down, a run is dead once its pid is overdue or its process is gone.
+ */
+export function checkTasks(f: Pick<HealthFacts, 'tasks' | 'api' | 'now'>): Check {
   const name = 'running tasks';
+  // A run's start is stored to the second; the daemon's to the millisecond.
+  const daemonAge = f.api ? (f.now - Date.parse(f.api.started_at)) / 1000 + 1 : null;
   const dead = f.tasks.filter((t) => {
+    if (daemonAge !== null && (t.runAgeSeconds === null || t.runAgeSeconds <= daemonAge)) return false;
     if (t.pid === null) return t.runAgeSeconds === null || t.runAgeSeconds > PID_GRACE_SECONDS;
     return !t.alive;
   });
-  if (!dead.length)
-    return check(name, true, f.tasks.length ? `${plural(f.tasks.length, 'task')} running, each with a live process` : 'none');
+  if (!dead.length) {
+    const each = f.api ? 'none left over from an earlier daemon' : 'each with a live process';
+    return check(name, true, f.tasks.length ? `${plural(f.tasks.length, 'task')} running, ${each}` : 'none');
+  }
   return check(
     name,
     false,
