@@ -38,6 +38,23 @@ const { after_task: _after_task, ...TASK_COLUMNS } = getColumns(tasks);
 /** Every column but the prompt, for lists. */
 const { prompt: _prompt, ...SUMMARY_COLUMNS } = TASK_COLUMNS;
 
+/** A task that depends on another, and the kind of that link. */
+export interface Dependent {
+  id: number;
+  status: TaskStatus;
+  kind: LinkKind;
+}
+
+/** A task at the end of a link: what its link states are read from. */
+export interface LinkedTask {
+  id: number;
+  status: TaskStatus;
+  pr_url: string | null;
+  pr_state: string | null;
+  done_by: string | null;
+  pr_mode: string | null;
+}
+
 /** The columns of a task with no merge request. */
 const NO_MERGE_REQUEST = { merge_requested_at: null, merge_request_method: null, merge_request_check: null };
 
@@ -242,15 +259,35 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     allLinks(): Link[] {
       return orm.select({ task_id: taskLinks.task_id, on: taskLinks.on_task, kind: taskLinks.kind }).from(taskLinks).all() as Link[];
     },
-    /** The tasks that depend on `id` (of one kind, if given), in any status. */
-    dependentsOf(id: number, kind?: LinkKind): Task[] {
+    /** The tasks that depend on `id` (of one kind, if given), in any status: each one's id, status and the kind of its link. */
+    dependentsOf(id: number, kind?: LinkKind): Dependent[] {
       return orm
-        .select(TASK_COLUMNS)
+        .select({ id: tasks.id, status: tasks.status, kind: taskLinks.kind })
         .from(tasks)
         .innerJoin(taskLinks, eq(taskLinks.task_id, tasks.id))
         .where(and(eq(taskLinks.on_task, id), kind ? eq(taskLinks.kind, kind) : undefined))
         .orderBy(asc(tasks.id))
-        .all() as Task[];
+        .all() as Dependent[];
+    },
+    /** Every task at either end of a link, with its repo's pr_mode (null when the repo is gone): what link states are read from. */
+    linkedTasks(): LinkedTask[] {
+      const ends = orm
+        .select({ id: taskLinks.task_id })
+        .from(taskLinks)
+        .union(orm.select({ id: taskLinks.on_task }).from(taskLinks));
+      return orm
+        .select({
+          id: tasks.id,
+          status: tasks.status,
+          pr_url: tasks.pr_url,
+          pr_state: tasks.pr_state,
+          done_by: tasks.done_by,
+          pr_mode: repos.pr_mode,
+        })
+        .from(tasks)
+        .leftJoin(repos, eq(repos.id, tasks.repo_id))
+        .where(inArray(tasks.id, ends))
+        .all() as LinkedTask[];
     },
     /** Link `link.task_id` to `link.on`. Whether that is allowed (a cycle, a duplicate) is the caller's to check with linkError. */
     addLink(link: Link): void {

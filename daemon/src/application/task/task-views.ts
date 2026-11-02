@@ -10,7 +10,7 @@ import type { StartWait } from '../../domain/task/start.ts';
 import { measureBranch } from './files.ts';
 import type { TaskStatus } from '../../domain/task/lifecycle.ts';
 import type { Task } from '../../domain/task/task.ts';
-import { type LinkView, type Waiting, dependentViews, linkViews, unblocksOf, waitingFor } from './dependencies.ts';
+import { type LinkView, type Waiting, dependentViews, linkViews, loadedLinks, unblocksOf, waitingFor } from './dependencies.ts';
 import type { LinkKind } from '../../domain/task/link.ts';
 import { requireTask } from '../input.ts';
 import { plansShown } from '../plans.ts';
@@ -55,12 +55,14 @@ type Viewed = Pick<
 >;
 
 /**
- * Each task with its view. Reads the repos, plans and queue state once for the whole list. `measured` holds, by task id,
- * how a branch with no open PR measures against the auto-merge limits (see `measureBranches`).
+ * Each task with its view. Reads the repos, plans, links and queue state once for the whole list, so the queries it runs
+ * don't grow with the tasks or their links. `measured` holds, by task id, how a branch with no open PR measures
+ * against the auto-merge limits (see `taskDetail`).
  */
 export function withViews<T extends Viewed>(db: Db, tasks: T[], measured: Map<number, AutoMergeMeasured> = new Map()): (T & TaskView)[] {
   const repos = new Map(db.listRepos().map((r) => [r.id, r]));
-  const waitOf = startWaits(db);
+  const links = loadedLinks(db);
+  const waitOf = startWaits(db, links);
   const unfinished = db.planUnfinishedIds();
   const liveRuns = db.liveRuns('work');
   const resolves = db.liveRuns('resolve');
@@ -72,10 +74,10 @@ export function withViews<T extends Viewed>(db: Db, tasks: T[], measured: Map<nu
     conflicting: conflictsWithBase(t),
     repo: repos.get(t.repo_id)?.name ?? null,
     auto_merge_view: repos.has(t.repo_id) ? autoMergeView(t, repos.get(t.repo_id)!, measured.get(t.id)) : null,
-    waiting: waitingFor(db, t),
-    unblocks: unblocksOf(db, t),
-    links: linkViews(db, t.id),
-    dependents: dependentViews(db, t.id),
+    waiting: waitingFor(db, t, links),
+    unblocks: unblocksOf(db, t, links),
+    links: linkViews(db, t.id, links),
+    dependents: dependentViews(db, t.id, links),
     plan_unfinished: unfinished.has(t.id),
     wait: waitOf(t),
   }));
@@ -86,7 +88,8 @@ export async function taskDetail(db: Db, id: number) {
   const task = requireTask(db, id);
   const repo = db.getRepo(task.repo_id);
   const measured = new Map<number, AutoMergeMeasured>();
-  if (repo && task.branch && !hasOpenPr(task) && task.pr_state !== 'merged' && autoMergeOn(task, repo)) {
+  // Only a done task's branch is final; measuring a running one would start git on every refetch.
+  if (repo && task.status === 'done' && task.branch && !hasOpenPr(task) && task.pr_state !== 'merged' && autoMergeOn(task, repo)) {
     const m = await measureBranch(repo, task.branch);
     if (m) measured.set(id, m);
   }
