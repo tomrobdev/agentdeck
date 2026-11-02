@@ -196,7 +196,7 @@ test('buildsOnError refuses a builds-on link once a task has started, pointing a
   assert.equal(buildsOnError(2, 'proposed', 1), null);
   assert.equal(buildsOnError(2, 'queued', 1), null);
   for (const status of ['running', 'done', 'blocked', 'failed', 'cancelled'])
-    assert.match(buildsOnError(2, status, 1)!, /started.*--after/);
+    assert.match(buildsOnError(2, status, 1)!, /started.*after link instead$/);
 });
 
 test('parseTaskIds reads lists and typed text, and refuses anything else', () => {

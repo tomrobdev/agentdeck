@@ -92,7 +92,14 @@ export const taskCommands: Record<string, Command> = {
     if (kinds.length !== 1 || rest.length !== 1) die('usage: agentdeck link <id> --builds-on <task> | --after <task>');
     const kind = kinds[0];
     const on = taskId(kind === 'builds_on' ? flags['builds-on'] : flags.after);
-    actions.linkTasks(db, id, { on, kind });
+    try {
+      actions.linkTasks(db, id, { on, kind });
+    } catch (e) {
+      // A builds-on link refused on a started task: the after link it suggests is one flag away.
+      if (kind === 'builds_on' && e instanceof actions.ActionError && /after link instead$/.test(e.message))
+        die(`${e.message}: agentdeck link ${id} --after ${on}`);
+      throw e;
+    }
     console.log(`#${id} ${kind === 'builds_on' ? 'builds on' : 'lands after'} #${on}`);
     const { waiting } = await actions.taskDetail(db, id);
     if (waiting?.stuck) console.log(`note: ${waiting.stuck}, so this task won't start until ${idsText(waiting.on)} is retried`);

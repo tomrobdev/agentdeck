@@ -196,5 +196,5 @@ export function linkError(task: number, on: number, links: Link[]): string | nul
  */
 export function buildsOnError(task: number, status: string, on: number): string | null {
   if (status === 'proposed' || status === 'queued') return null;
-  return `#${task} has started already, so it can't build on #${on}; make it an after link instead (--after)`;
+  return `#${task} has started already, so it can't build on #${on}; make it an after link instead`;
 }
