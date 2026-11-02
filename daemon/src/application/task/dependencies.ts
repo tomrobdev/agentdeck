@@ -18,7 +18,7 @@ import { isReview } from '../../domain/task/stage.ts';
 import type { Task } from '../../domain/task/task.ts';
 import { notifyLater } from '../notifications.ts';
 
-/** What a queued task that builds on others is waiting for, or null if it isn't held back. */
+/** What a queued task that builds on others is waiting for, or null if it isn't waiting. */
 export interface Waiting {
   /** Every task it builds on that is still on its way; or, when stuck, the one root it is stuck on. */
   on: number[];

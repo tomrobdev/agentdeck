@@ -105,7 +105,7 @@ export function mergeFindings({ pr_state, pr, tests_passed, lands_after = [], au
   const found: MergeFinding[] = [];
   const add = (kind: MergeFinding['kind'], text: string, problem = false) => found.push({ kind, problem, text });
   if (pr_state !== 'open') add('not_open', `the PR is ${pr_state ?? 'not open'}`, true);
-  for (const hold of lands_after) add('lands_after', `lands after #${hold.on}: ${hold.reason}`, true);
+  for (const unlanded of lands_after) add('lands_after', `lands after #${unlanded.on}: ${unlanded.reason}`, true);
   if (isConflicting(pr))
     add(
       'conflict',

@@ -1,7 +1,9 @@
 // SQL fragments shared by the stores.
+import { sql } from 'drizzle-orm';
 import type { DatabaseSync } from 'node:sqlite';
 
-export const NOW = "datetime('now')";
+// guard: SQLite's clock; the builder has no "now", and a column default does not apply to an update
+export const NOW_SQL = sql.raw("datetime('now')");
 
 let savepoints = 0;
 

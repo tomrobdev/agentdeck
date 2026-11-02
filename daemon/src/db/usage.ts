@@ -1,14 +1,14 @@
 // Latest utilization of each usage window, as reported by Claude's rate_limit_event, and the history of its changes.
-import { asc, eq, sql } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import type { Orm } from './orm.ts';
-import { NOW } from './sql.ts';
+import { NOW_SQL } from './sql.ts';
 import { usageSamples, usageWindows } from './tables.ts';
 
 export function usageStore(orm: Orm) {
   return {
     /** Keep the latest reading of a window; when its utilization or reset time changed, append it to the history too. */
     recordUsageWindow(window: string, utilization: number, resets_at: number, status: string | null): void {
-      const observed_at = sql`${sql.raw(NOW)}`;
+      const observed_at = NOW_SQL;
       const last = orm.select().from(usageWindows).where(eq(usageWindows.window, window)).get();
       if (!last || last.utilization !== utilization || last.resets_at !== resets_at)
         orm.insert(usageSamples).values({ window, utilization, resets_at, observed_at }).run();

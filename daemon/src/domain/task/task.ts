@@ -81,8 +81,11 @@ export const MODELS = ['haiku', 'sonnet', 'opus'];
 /** A model claude will accept: an alias, or a full model id such as claude-sonnet-5-5. */
 export const isModel = (model: string): boolean => MODELS.includes(model) || /^claude-[a-z0-9][a-z0-9.-]*$/.test(model);
 
+/** Statuses of a task with a live run: running, or running and asked to stop. */
+export const RUNNING_STATUSES: TaskStatus[] = ['running', 'cancel_requested'];
+
 /** Statuses whose task still needs work or a decision. */
-export const OPEN_STATUSES: TaskStatus[] = ['proposed', 'queued', 'running', 'cancel_requested'];
+export const OPEN_STATUSES: TaskStatus[] = ['proposed', 'queued', ...RUNNING_STATUSES];
 
 /** Statuses in which a task's title, prompt and limits may be edited: waiting, or finished unsuccessfully. */
 export const EDITABLE_STATUSES: TaskStatus[] = ['proposed', 'queued', 'blocked', 'failed'];

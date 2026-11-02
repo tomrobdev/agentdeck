@@ -1,8 +1,8 @@
 // Planner runs: one row per planner claude process.
-import { count, desc, eq, isNull, sql } from 'drizzle-orm';
+import { count, desc, eq, isNull } from 'drizzle-orm';
 import type { PlannerRun } from '../domain/planner/proposals.ts';
 import type { Orm } from './orm.ts';
-import { NOW } from './sql.ts';
+import { NOW_SQL } from './sql.ts';
 import { plannerRuns, repos } from './tables.ts';
 
 export function plannerRunStore(orm: Orm) {
@@ -10,7 +10,7 @@ export function plannerRunStore(orm: Orm) {
     startPlannerRun(repo_id: number, log_path: string): number {
       orm
         .update(repos)
-        .set({ planned_at: sql.raw(NOW) })
+        .set({ planned_at: NOW_SQL })
         .where(eq(repos.id, repo_id))
         .run();
       return Number(orm.insert(plannerRuns).values({ repo_id, log_path }).run().lastInsertRowid);
@@ -21,7 +21,7 @@ export function plannerRunStore(orm: Orm) {
     finishPlannerRun(id: number, outcome: string, proposed: number, note: string | null): void {
       orm
         .update(plannerRuns)
-        .set({ ended_at: sql.raw(NOW), outcome, proposed, note })
+        .set({ ended_at: NOW_SQL, outcome, proposed, note })
         .where(eq(plannerRuns.id, id))
         .run();
     },

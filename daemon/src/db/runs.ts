@@ -1,11 +1,10 @@
 // Task runs: one row per worker claude process.
 import { and, asc, count, countDistinct, eq, gt, inArray, isNotNull, isNull, notInArray, or, sql } from 'drizzle-orm';
 import type { Run, RunKind } from '../domain/run/run.ts';
+import { RUNNING_STATUSES } from '../domain/task/task.ts';
 import type { Orm } from './orm.ts';
-import { NOW } from './sql.ts';
+import { NOW_SQL } from './sql.ts';
 import { plannerRuns, runs, tasks } from './tables.ts';
-
-const RUNNING = ['running', 'cancel_requested'];
 
 export interface PidRun {
   kind: 'work' | 'resolve' | 'planner';
@@ -32,7 +31,7 @@ export function runStore(orm: Orm) {
     setRunPid(id: number, pid: number): void {
       orm
         .update(runs)
-        .set({ pid, pid_at: sql.raw(NOW) })
+        .set({ pid, pid_at: NOW_SQL })
         .where(eq(runs.id, id))
         .run();
     },
@@ -59,7 +58,7 @@ export function runStore(orm: Orm) {
       const given = Object.fromEntries(Object.entries(r).map(([k, v]) => [k, v ?? null]));
       orm
         .update(runs)
-        .set({ ...given, ended_at: sql.raw(NOW) })
+        .set({ ...given, ended_at: NOW_SQL })
         .where(eq(runs.id, id))
         .run();
     },
@@ -82,13 +81,13 @@ export function runStore(orm: Orm) {
      * and an unfinished planner run. A clean sync runs no claude and takes none.
      */
     slotsUsed(): number {
-      const running = orm.select({ n: count() }).from(tasks).where(inArray(tasks.status, RUNNING)).get()?.n ?? 0;
+      const running = orm.select({ n: count() }).from(tasks).where(inArray(tasks.status, RUNNING_STATUSES)).get()?.n ?? 0;
       const resolving =
         orm
           .select({ n: countDistinct(runs.task_id) })
           .from(runs)
           .innerJoin(tasks, eq(tasks.id, runs.task_id))
-          .where(and(eq(runs.kind, 'resolve'), isNull(runs.ended_at), notInArray(tasks.status, RUNNING)))
+          .where(and(eq(runs.kind, 'resolve'), isNull(runs.ended_at), notInArray(tasks.status, RUNNING_STATUSES)))
           .get()?.n ?? 0;
       const planning = orm.select({ n: count() }).from(plannerRuns).where(isNull(plannerRuns.ended_at)).get()?.n ?? 0;
       return running + resolving + planning;
@@ -106,14 +105,17 @@ export function runStore(orm: Orm) {
     },
     /** Runs of any kind with a recorded pid that have not finished or finished within `days`: where a claude process may still be. */
     pidRuns(days: number): PidRun[] {
+      // guard: the builder has no date arithmetic; this is the clock `days` ago, in the format timestamps are stored in
       const since = sql`datetime('now', ${`-${Math.floor(days)} days`})`;
       const recent = (t: typeof runs | typeof plannerRuns) => and(isNotNull(t.pid), or(isNull(t.ended_at), gt(t.ended_at, since)));
       // A planner run starts its claude as it opens, so its started_at is when its pid was stored.
       const rows = orm
         .select({
+          // guard: the union's column needs the planner side's kind type and an alias, which a plain column reference lacks
           kind: sql<PidRun['kind']>`${runs.kind}`.as('kind'),
           id: runs.id,
           pid: runs.pid,
+          // guard: the builder has no COALESCE; a run whose pid time was never stored started with its pid
           pid_at: sql<string>`COALESCE(${runs.pid_at}, ${runs.started_at})`.as('pid_at'),
           ended_at: runs.ended_at,
         })
@@ -122,9 +124,11 @@ export function runStore(orm: Orm) {
         .unionAll(
           orm
             .select({
+              // guard: the builder has no literal column; every row of this side is a planner run
               kind: sql<PidRun['kind']>`'planner'`.as('kind'),
               id: plannerRuns.id,
               pid: plannerRuns.pid,
+              // guard: the union's column needs the same alias and string type as the runs side
               pid_at: sql<string>`${plannerRuns.started_at}`.as('pid_at'),
               ended_at: plannerRuns.ended_at,
             })
@@ -146,7 +150,7 @@ export function runStore(orm: Orm) {
       return orm
         .select({ id: tasks.id })
         .from(tasks)
-        .where(inArray(tasks.status, RUNNING))
+        .where(inArray(tasks.status, RUNNING_STATUSES))
         .orderBy(asc(tasks.id))
         .all()
         .map(({ id }) => {
@@ -158,11 +162,13 @@ export function runStore(orm: Orm) {
     unfinishedPids(): { pid: number; pid_at: string }[] {
       const unfinished = (t: typeof runs | typeof plannerRuns) => and(isNull(t.ended_at), isNotNull(t.pid));
       return orm
+        // guard: the builder has no COALESCE; a run whose pid time was never stored started with its pid
         .select({ pid: runs.pid, pid_at: sql<string>`COALESCE(${runs.pid_at}, ${runs.started_at})`.as('pid_at') })
         .from(runs)
         .where(unfinished(runs))
         .unionAll(
           orm
+            // guard: the union's column needs the same alias and string type as the runs side
             .select({ pid: plannerRuns.pid, pid_at: sql<string>`${plannerRuns.started_at}`.as('pid_at') })
             .from(plannerRuns)
             .where(unfinished(plannerRuns)),

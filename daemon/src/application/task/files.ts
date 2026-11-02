@@ -28,12 +28,17 @@ async function resolveHead(db: Db, id: number): Promise<{ repo: Repo; head: stri
   return { repo, head };
 }
 
+/** Where the commit `head` left the repo's base branch. */
+async function baseOf(repo: Repo, head: string): Promise<{ ref: string; sha: string }> {
+  const base = await diffBase(repo.path, repo.base_branch, head);
+  if (!base) throw new ActionError(`no common history with base branch "${repo.base_branch}"`);
+  return base;
+}
+
 /** Plus where that branch left the base branch. */
 async function taskRefs(db: Db, id: number): Promise<{ repo: Repo; head: string; base: { ref: string; sha: string } }> {
   const { repo, head } = await resolveHead(db, id);
-  const base = await diffBase(repo.path, repo.base_branch, head);
-  if (!base) throw new ActionError(`no common history with base branch "${repo.base_branch}"`);
-  return { repo, head, base };
+  return { repo, head, base: await baseOf(repo, head) };
 }
 
 /** The commit a file ref names; only `base` needs the merge-base lookup. */
@@ -89,8 +94,8 @@ export async function taskChanges(db: Db, id: number): Promise<Changes> {
 export async function measureBranch(repo: Repo, branch: string): Promise<AutoMergeMeasured | null> {
   try {
     const head = await branchCommit(repo.path, branch);
-    const base = head && (await diffBase(repo.path, repo.base_branch, head));
-    if (!head || !base) return null;
+    if (!head) return null;
+    const base = await baseOf(repo, head);
     const files = await changedFilesCached(repo.path, base.sha, head);
     return {
       lines: files.reduce((sum, f) => sum + f.additions + f.deletions, 0),

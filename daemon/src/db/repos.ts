@@ -1,9 +1,10 @@
 // Registered repos.
-import { and, asc, eq, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull, isNull, or } from 'drizzle-orm';
 import type { DatabaseSync } from 'node:sqlite';
 import type { Repo } from '../domain/repo/repo.ts';
+import { RUNNING_STATUSES } from '../domain/task/task.ts';
 import type { Orm } from './orm.ts';
-import { NOW, atomically } from './sql.ts';
+import { NOW_SQL, atomically } from './sql.ts';
 import { notifications, plannerRuns, repos, runs, taskEvents, taskLinks, taskPlans, tasks } from './tables.ts';
 
 export function repoStore(db: DatabaseSync, orm: Orm) {
@@ -40,7 +41,7 @@ export function repoStore(db: DatabaseSync, orm: Orm) {
       return orm
         .select()
         .from(repos)
-        .where(sql`${repos.name} = ${nameOrId} OR ${repos.id} = ${Number(nameOrId) || -1}`)
+        .where(or(eq(repos.name, nameOrId), eq(repos.id, Number(nameOrId) || -1)))
         .get() as Repo | undefined;
     },
     /** Active repos, or with `{ archived: true }` only the archived ones. */
@@ -56,16 +57,16 @@ export function repoStore(db: DatabaseSync, orm: Orm) {
     setRepoArchived(id: number, archived: boolean): void {
       orm
         .update(repos)
-        .set({ archived_at: archived ? sql.raw(NOW) : null })
+        .set({ archived_at: archived ? NOW_SQL : null })
         .where(eq(repos.id, id))
         .run();
     },
     /** Whether a task of the repo is running or has a cancel requested. */
     repoHasRunning(id: number): boolean {
       return !!orm
-        .select({ one: sql`1` })
+        .select({ id: tasks.id })
         .from(tasks)
-        .where(and(eq(tasks.repo_id, id), inArray(tasks.status, ['running', 'cancel_requested'])))
+        .where(and(eq(tasks.repo_id, id), inArray(tasks.status, RUNNING_STATUSES)))
         .limit(1)
         .get();
     },
@@ -101,7 +102,7 @@ export function repoStore(db: DatabaseSync, orm: Orm) {
       return atomically(db, () => {
         if (
           !orm
-            .select({ one: sql`1` })
+            .select({ id: repos.id })
             .from(repos)
             .where(and(eq(repos.id, id), isNotNull(repos.archived_at)))
             .get()

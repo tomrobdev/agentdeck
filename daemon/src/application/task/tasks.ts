@@ -16,7 +16,7 @@ import {
   priorityError,
   stepsNeedPlanError,
 } from '../../domain/task/rules.ts';
-import { EDITABLE_STATUSES, type Task, defaultTitle, planStepIds } from '../../domain/task/task.ts';
+import { EDITABLE_STATUSES, RUNNING_STATUSES, type Task, defaultTitle, planStepIds } from '../../domain/task/task.ts';
 import { lastLine } from '../../domain/text.ts';
 import { isSyncing } from '../sync.ts';
 import { warnStuckDependents } from './dependencies.ts';
@@ -62,17 +62,40 @@ function planOwner(db: Db, repo: Repo, on: number): { owner: number; name: strin
   throw new ActionError(`plan: #${on} has no plan`);
 }
 
-/** The plan link a request asks for: a task number (`plan_task`, null to clear) or a plan's HTML (`plan_html`); undefined when it names neither. */
-function planRequest(body: Record<string, unknown>): { task: number | null } | { html: string } | undefined {
+/** The plan link a request asks for: a task number (`plan_task`, null to clear) or a parsed plan (`plan_html`); undefined when it names neither. */
+type PlanRequest = { task: number | null } | { html: string; plan: ParsedPlan };
+
+function planRequest(body: Record<string, unknown>): PlanRequest | undefined {
   const { plan_task, plan_html } = body;
   if (plan_task !== undefined && plan_html !== undefined) throw new ActionError('give a plan or a task number, not both');
-  if (plan_html !== undefined) return { html: readPlanInput(plan_html).html };
+  if (plan_html !== undefined) return readPlanInput(plan_html);
   if (plan_task === undefined) return undefined;
   if (plan_task === null || plan_task === '') return { task: null };
   if (typeof plan_task !== 'number' || !Number.isInteger(plan_task) || plan_task < 1) {
     throw new ActionError('plan_task must be a task number');
   }
   return { task: plan_task };
+}
+
+/**
+ * Check a plan link against its steps: a plan of its own (`ownPlan`, to be stored with the task), or the task whose plan
+ * is followed (`owner`, null for no link, which can't have steps). `repo` is read only when another task's plan is linked.
+ */
+function checkPlanLink(
+  db: Db,
+  repo: () => Repo,
+  asked: PlanRequest,
+  steps: string[] | null,
+): { ownPlan: string; plan: ParsedPlan } | { owner: number | null } {
+  if ('html' in asked) {
+    checkSteps('the plan', asked.plan, steps);
+    return { ownPlan: asked.html, plan: asked.plan };
+  }
+  refuse(stepsNeedPlanError(asked.task, steps));
+  if (asked.task === null) return { owner: null };
+  const linked = planOwner(db, repo(), asked.task);
+  checkSteps(linked.name, linked.plan, steps);
+  return { owner: linked.owner };
 }
 
 export async function addTask(
@@ -116,16 +139,9 @@ export async function addTask(
   if (!repo) throw new ActionError(repoName ? `no repo "${repoName}"` : 'choose a repo (more than one is registered)');
   refuse(archivedRepoError(repo));
   const steps = stepList(input.plan_steps);
-  let plan_task: number | null = null;
-  let own_plan: string | undefined;
-  if (planAsked && 'html' in planAsked) {
-    checkSteps('the plan', parsePlan(planAsked.html)!, steps);
-    own_plan = planAsked.html;
-  } else if (planAsked?.task) {
-    const linked = planOwner(db, repo, planAsked.task);
-    checkSteps(linked.name, linked.plan, steps);
-    plan_task = linked.owner;
-  } else refuse(stepsNeedPlanError(null, steps));
+  const checked = checkPlanLink(db, () => repo, planAsked ?? { task: null }, steps);
+  const own_plan = 'ownPlan' in checked ? checked.ownPlan : undefined;
+  const plan_task = 'owner' in checked ? checked.owner : null;
   const linked = plan_task !== null || own_plan !== undefined;
   return db.addTask({
     repo_id: repo.id,
@@ -187,29 +203,21 @@ export async function editTask(
   let ownPlan: string | undefined;
   if (planAsked !== undefined || patch.plan_steps !== undefined) {
     const steps = patch.plan_steps !== undefined ? stepList(patch.plan_steps) : planAsked === undefined ? planStepIds(task) : null;
-    let link: number | null;
-    if (planAsked && 'html' in planAsked) {
-      const plan = parsePlan(planAsked.html)!;
-      checkSteps('the plan', plan, steps);
-      // The task's own steps are the ones just checked; the tasks following its plan keep theirs.
-      checkFollowers(db, id, plan, id);
-      link = id;
-      ownPlan = planAsked.html;
-    } else {
-      link = planAsked === undefined ? task.plan_task : planAsked.task;
-      // A null link means "follow its own plan", so clearing it would keep the plan and widen its steps to all of them.
-      if (planAsked !== undefined && link === null && (task.plan_task ?? id) === id && db.ownPlan(id)) {
-        throw new ActionError(
-          `#${id} has a plan of its own, which can't be cleared: replace it with --plan <file>, or follow another task's plan with --plan <task number>`,
-        );
-      }
-      refuse(stepsNeedPlanError(link, steps));
-      if (link !== null) {
-        const linked = planOwner(db, requireTaskRepo(db, task), link);
-        checkSteps(linked.name, linked.plan, steps);
-        link = linked.owner;
-      }
+    const asked = planAsked ?? { task: task.plan_task };
+    // A null link means "follow its own plan", so clearing it would keep the plan and widen its steps to all of them.
+    if (planAsked !== undefined && 'task' in asked && asked.task === null && (task.plan_task ?? id) === id && db.ownPlan(id)) {
+      throw new ActionError(
+        `#${id} has a plan of its own, which can't be cleared: replace it with --plan <file>, or follow another task's plan with --plan <task number>`,
+      );
     }
+    const checked = checkPlanLink(db, () => requireTaskRepo(db, task), asked, steps);
+    let link: number | null;
+    if ('ownPlan' in checked) {
+      // The task's own steps are the ones just checked; the tasks following its plan keep theirs.
+      checkFollowers(db, id, checked.plan, id);
+      link = id;
+      ownPlan = checked.ownPlan;
+    } else link = checked.owner;
     fields.plan_task = link;
     fields.plan_steps = link !== null && steps ? JSON.stringify(steps) : null;
   }
@@ -327,7 +335,7 @@ export async function closeTaskPr(db: Db, id: number): Promise<void> {
 /** Remove a task's worktree; its branch is kept. Not while the task is running. */
 export async function removeTaskWorktree(db: Db, id: number): Promise<{ branch: string | null }> {
   const t = requireTask(db, id);
-  if (t.status === 'running' || t.status === 'cancel_requested') throw new ActionError('task is running');
+  if (RUNNING_STATUSES.includes(t.status)) throw new ActionError('task is running');
   if (!t.worktree) throw new ActionError('task has no worktree');
   await removeWorktree(requireTaskRepo(db, t), t.worktree);
   db.setCheckout(t.id, { worktree: null });
