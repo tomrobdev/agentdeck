@@ -14,7 +14,7 @@ agentdeck show <id>      # prompt, links, plan, each run's summary and tests
 agentdeck review <id>    # reviews and line comments made in the dashboard
 ```
 
-- The **Definition of done** is in the prompt; for a task linked to a plan, it is the linked steps' `<ul data-plan-done>` checks in `docs/plans/…` on the task's branch.
+- The **Definition of done** is in the prompt; for a task linked to a plan, it is the linked steps' `<ul data-plan-done>` checks in the plan AgentDeck stores (`agentdeck show <id>` names it; the dashboard shows it on the task's Overview).
 - Read the diff: `git -C ~/.agentdeck/worktrees/<Repo>/task-<id> diff origin/<base>...HEAD`, or `gh pr diff <url>` when the worktree is gone.
 - Check each item of the Definition of done against the diff, one by one. Note what is missing, what is out of scope, and what breaks the repo's rules (its CLAUDE.md).
 - A summary's "I didn't run the dashboard" or "one test fails in the sandbox" is a to-do for you, not a pass.

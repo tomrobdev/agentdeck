@@ -1,6 +1,6 @@
 ---
 name: write-plan
-description: Write an AgentDeck plan (an HTML page in docs/plans/ that says how work will be done, step by step) and split it into linked tasks. Use when the user says write a plan, plan this out, break this into tasks, or when work is too big for one task. For a single task, use add-task.
+description: Write an AgentDeck plan (an HTML page AgentDeck stores with a task, saying how work will be done, step by step) and split it into linked tasks. Use when the user says write a plan, plan this out, break this into tasks, or when work is too big for one task. For a single task, use add-task.
 ---
 
 # Write a plan and split it into tasks
@@ -13,7 +13,7 @@ Read the code first, then agree on the approach in this session: what changes, i
 
 ## 2. Write the page
 
-Write it to `docs/plans/<short-name>.html` in the plan format: `docs/plan-format.md` in the AgentDeck repo is the reference, `docs/plans/sync-in-dashboard.html` an example.
+Write it as a draft outside the repo, at `~/.agentdeck/drafts/<short-name>.html`, in the plan format: `docs/plan-format.md` in the AgentDeck repo is the reference, `docs/plans/sync-in-dashboard.html` an example. Plans live in AgentDeck, never in the repo: the draft is only the file you hand to `agentdeck add`, and once it is attached AgentDeck's copy is the plan.
 
 - `<html lang="en" data-agentdeck-plan="1">`, a `<title>`, and `<link rel="stylesheet" href="plan.css" />` in the head. No `<style>` block, no scripts.
 - One `<p data-plan-summary>`: what the plan does and why, in a paragraph.
@@ -28,21 +28,23 @@ Write it to `docs/plans/<short-name>.html` in the plan format: `docs/plan-format
 Check the page parses before going on:
 
 ```sh
-node -e 'import("./daemon/src/domain/plan/plan.ts").then(m => console.log(JSON.stringify(m.parsePlan(require("fs").readFileSync(process.argv[1], "utf8")), null, 1)))' docs/plans/<short-name>.html
+node -e 'import("./daemon/src/domain/plan/plan.ts").then(m => console.log(JSON.stringify(m.parsePlan(require("fs").readFileSync(process.argv[1], "utf8")), null, 1)))' ~/.agentdeck/drafts/<short-name>.html
 ```
 
-(from the AgentDeck checkout; it prints the title, summary and steps, or null when the marker is missing).
+(from the AgentDeck checkout; it prints the title, summary and steps, or null when the marker is missing). Nothing is committed: no plan goes to the base branch.
 
-## 3. Commit it to the base branch and push
+## 3. One task per group of steps
 
-Commit the plan as its own commit on the base branch, then **push it**. Task branches start from `origin/<base>`, so a plan that is only committed locally is not on the task's branch, and the worker can't read it. In the AgentDeck repo, keep the checkout on `main`.
-
-## 4. One task per group of steps
-
-Queue a task for each group of steps that should land as one PR, linked to the plan:
+Queue a task for each group of steps that should land as one PR. The first task takes the draft, which AgentDeck stores as that task's plan, named after it (`<task id>-<slug>.html`):
 
 ```sh
-agentdeck add "<prompt>" --repo <repo> --title "<title>" --plan docs/plans/<short-name>.html --steps a,b [--builds-on <task>] [--after <task>] [--model sonnet] [--max-turns n]
+agentdeck add "<prompt>" --repo <repo> --title "<title>" --plan ~/.agentdeck/drafts/<short-name>.html --steps a,b [--model sonnet] [--max-turns n]
+```
+
+The rest follow that plan by the first task's number:
+
+```sh
+agentdeck add "<prompt>" --repo <repo> --title "<title>" --plan <first task> --steps c [--builds-on <task>] [--after <task>] [--model sonnet] [--max-turns n]
 ```
 
 - **Prompt:** only Goal, Out of scope and Constraints. The linked steps supply Change and Definition of done. Write paths in full from the repo root, or `agentdeck add` warns about them.
@@ -50,6 +52,6 @@ agentdeck add "<prompt>" --repo <repo> --title "<title>" --plan docs/plans/<shor
 - **Links between the tasks:** `--builds-on` when a task needs the code of an earlier one: it starts once that one is merged, on a branch that has it. `--after` when it only has to land after it: it runs at once and only its merge waits. Prefer `--after` where the code doesn't overlap, so the tasks run side by side.
 - **Turns:** a task carrying several steps needs more than the default 40: 80 for two or three, 120 for a large port.
 
-Show the person the tasks and their links before queueing, and queue on their OK. To show the plan on a task's Overview before its first run, `agentdeck attach <id> docs/plans/<short-name>.html`. Workers set each step's `data-status` as they go; the branch's copy replaces the attached one.
+Show the person the tasks and their links before queueing, and queue on their OK. The plan shows on each task's Overview at once. Workers set their steps' `data-status` as they go, and AgentDeck saves back only each task's own steps, so tasks on one plan can run side by side. To change the plan before its tasks run, edit the draft and `agentdeck attach <first task> ~/.agentdeck/drafts/<short-name>.html`.
 
 Tell the person the task ids and stop.
