@@ -17,9 +17,7 @@ const tags = (ids: number[]) => ids.map((id) => `#${id}`).join(' ');
     class="inline-flex min-w-0 items-center gap-x-2 gap-y-1 text-sm"
     :class="nowrap ? 'flex-nowrap' : 'flex-wrap'"
   >
-    <span v-for="a in b.attention" :key="a.label" class="chip" :class="TONE_CHIP[a.tone]" :title="a.title">{{
-      a.label
-    }}</span>
+    <span v-for="a in b.attention" :key="a.label" class="chip" :class="TONE_CHIP[a.tone]" :title="a.title">{{ a.label }}</span>
     <span
       v-if="b.up.length"
       class="inline-flex gap-1 font-mono whitespace-nowrap text-muted"

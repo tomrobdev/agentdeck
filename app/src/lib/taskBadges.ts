@@ -126,7 +126,9 @@ export function taskBadges(t: Viewed, opts: BadgeOptions = {}): Badges {
     const on = am.state !== 'off';
     facts.push({
       label: `auto-merge ${on ? 'on' : 'off'}`,
-      title: [`Auto-merge is ${on ? 'on' : 'off'} for this task, whatever the repo says`, ...(on ? [am.label, ...am.reasons] : [])].join('\n'),
+      title: [`Auto-merge is ${on ? 'on' : 'off'} for this task, whatever the repo says`, ...(on ? [am.label, ...am.reasons] : [])].join(
+        '\n',
+      ),
     });
   }
   if (opts.repo && t.repo) facts.push({ label: t.repo, title: `Repo ${t.repo}` });

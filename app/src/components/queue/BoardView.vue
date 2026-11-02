@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { type TaskSummary, ago, api, describeLive, describeMergeRequest, describeSync } from '../../api';
+import { type TaskSummary, ago, api } from '../../api';
 import { useActions } from '../../composables/useActions';
-import { type BoardMove, type Group, type StatusGroup, boardMove, canReview, unblocksOf, waitsOnText } from '../../lib/taskView';
+import { type BoardMove, type Group, type StatusGroup, boardMove, canReview } from '../../lib/taskView';
 import MarkDoneDialog from '../task/MarkDoneDialog.vue';
-import AutoMergeMark from '../ui/AutoMergeMark.vue';
 import PriorityIcon from '../ui/PriorityIcon.vue';
 import StatusIcon from '../ui/StatusIcon.vue';
+import TaskBadges from '../ui/TaskBadges.vue';
+import TaskStatusLine from '../ui/TaskStatusLine.vue';
 
 // Columns are the status groups. A drop is allowed only where it is a real lifecycle event.
 const props = defineProps<{
@@ -129,7 +130,7 @@ const LABELS: Record<BoardMove, string> = {
           <div class="mt-1 mb-1.5 line-clamp-2 font-medium">{{ t.title }}</div>
           <TaskStatusLine :task="t" fit="two" class="mb-1.5" />
           <div class="flex items-center gap-2">
-            <TaskBadges :task="t" :repo="show.repo" :pr="show.pr" />
+            <TaskBadges :task="t" :repo="show.repo" :pr="show.pr" class="flex-1" />
             <span class="ml-auto flex-none text-sm text-muted">{{ ago(t.updated_at) }}</span>
           </div>
           <div
