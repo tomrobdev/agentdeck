@@ -1,6 +1,8 @@
 // Tasks waiting on another through a builds-on link: why they wait, and telling a human when they're stuck.
 import type { Db } from '../../db/index.ts';
+import type { Dependent } from '../../db/tasks.ts';
 import {
+  type Link,
   type LinkKind,
   type LinkLookups,
   type LinkState,
@@ -24,6 +26,16 @@ export interface Waiting {
   stuck: string | null;
 }
 
+/**
+ * What the link functions read: a task's links, the tasks that depend on it and a task as a link's other end. `liveLinks`
+ * reads each from the database when asked; `loadedLinks` reads them all once, for a list of tasks.
+ */
+export interface LinkIndex {
+  linksOf: (id: number) => Link[];
+  dependentsOf: (id: number) => Dependent[];
+  target: (id: number) => LinkTarget | undefined;
+}
+
 /** A task as a link's other end: its state, its repo's pr_mode and its own links. */
 export function targetOf(db: Db, id: number): LinkTarget | undefined {
   const dep = db.getTask(id);
@@ -31,37 +43,71 @@ export function targetOf(db: Db, id: number): LinkTarget | undefined {
   return { ...dep, pr_mode: db.getRepo(dep.repo_id)?.pr_mode ?? 'off', links: db.linksOf(id) };
 }
 
-/** The lookups the domain's walks over dependents read, from the database. */
-function lookups(db: Db): LinkLookups<Task> {
+/** Link lookups that each query the database when asked. */
+export function liveLinks(db: Db): LinkIndex {
+  return { linksOf: (id) => db.linksOf(id), dependentsOf: (id) => db.dependentsOf(id), target: (id) => targetOf(db, id) };
+}
+
+/** Link lookups from one read of every link and of the tasks at their ends: a fixed number of queries however many tasks and links. */
+export function loadedLinks(db: Db): LinkIndex {
+  const byTask = new Map<number, Link[]>();
+  const byOn = new Map<number, Link[]>();
+  const push = (m: Map<number, Link[]>, key: number, l: Link) => m.set(key, [...(m.get(key) ?? []), l]);
+  for (const l of db.allLinks()) {
+    push(byTask, l.task_id, l);
+    push(byOn, l.on, l);
+  }
+  for (const links of byTask.values()) links.sort((a, b) => a.on - b.on);
+  const ends = new Map(db.linkedTasks().map((t) => [t.id, t]));
+  const linksOf = (id: number) => byTask.get(id) ?? [];
   return {
-    buildingOn: (id) => db.dependentsOf(id, 'builds_on'),
-    linksOf: (id) => db.linksOf(id),
-    target: (id) => targetOf(db, id),
+    linksOf,
+    dependentsOf: (id) =>
+      (byOn.get(id) ?? [])
+        .flatMap((l) => {
+          const t = ends.get(l.task_id);
+          return t ? [{ id: t.id, status: t.status, kind: l.kind }] : [];
+        })
+        .sort((a, b) => a.id - b.id),
+    target: (id) => {
+      const t = ends.get(id);
+      return t && { ...t, pr_mode: t.pr_mode ?? 'off', links: linksOf(id) };
+    },
   };
 }
 
-/** Where a task stands with the tasks it builds on, reading each one and its repo's pr_mode. */
-export function dependencyOf(db: Db, task: Pick<Task, 'id'>): StartState {
-  return startState(task, db.linksOf(task.id), (id) => targetOf(db, id));
+/** The lookups the domain's walks over dependents read. */
+function lookups(l: LinkIndex): LinkLookups<Dependent> {
+  return { buildingOn: (id) => l.dependentsOf(id).filter((d) => d.kind === 'builds_on'), linksOf: l.linksOf, target: l.target };
 }
 
-export function waitingFor(db: Db, task: Pick<Task, 'id' | 'status'>): Waiting | null {
+/** The tasks of `refs`, in full, for their titles; one that was deleted meanwhile is left out. */
+function tasksOf(db: Db, refs: { id: number }[]): Task[] {
+  return refs.flatMap((r) => db.getTask(r.id) ?? []);
+}
+
+/** Where a task stands with the tasks it builds on, reading each one and its repo's pr_mode. */
+export function dependencyOf(db: Db, task: Pick<Task, 'id'>, links: LinkIndex = liveLinks(db)): StartState {
+  return startState(task, links.linksOf(task.id), links.target);
+}
+
+export function waitingFor(db: Db, task: Pick<Task, 'id' | 'status'>, links: LinkIndex = liveLinks(db)): Waiting | null {
   if (task.status !== 'queued') return null;
-  const state = dependencyOf(db, task);
+  const state = dependencyOf(db, task, links);
   if (state.kind === 'waiting') return { on: state.on, stuck: null };
   if (state.kind === 'stuck') return { on: [state.on], stuck: state.reason };
   return null;
 }
 
 /** The queued tasks merging this one lets start, for a task in review. */
-export function unblocksOf(db: Db, task: Pick<Task, 'id' | 'status' | 'pr_state'>): number[] {
+export function unblocksOf(db: Db, task: Pick<Task, 'id' | 'status' | 'pr_state'>, links: LinkIndex = liveLinks(db)): number[] {
   if (!isReview(task)) return [];
-  return dependentsReleased(db, task.id).map((t) => t.id);
+  return releasedBy(task.id, lookups(links)).map((t) => t.id);
 }
 
 /** The queued tasks that building on task `id` alone keeps from starting: merging `id` lets them start. */
 export function dependentsReleased(db: Db, id: number): Task[] {
-  return releasedBy(id, lookups(db));
+  return tasksOf(db, releasedBy(id, lookups(liveLinks(db))));
 }
 
 /** One notification naming queued tasks a link leaves without what they wait for: a title and closing line for `n` of them. */
@@ -88,7 +134,7 @@ const tasksWord = (n: number) => `${n} task${n === 1 ? '' : 's'}`;
 export function warnStuckDependents(db: Db, id: number): void {
   const state = linkState({ on: id, kind: 'builds_on' }, targetOf(db, id));
   if (state.kind !== 'stuck') return;
-  notifyDependents(db, stuckOn(id, lookups(db)), id, (n, them) => ({
+  notifyDependents(db, tasksOf(db, stuckOn(id, lookups(liveLinks(db)))), id, (n, them) => ({
     title: `${tasksWord(n)} can't start: ${state.reason}`,
     ending: `Retry #${id} to release ${them}, or cancel ${them}.`,
   }));
@@ -102,7 +148,10 @@ export function buildersOnRepo(db: Db, repoId: number, taskIds: number[]): Task[
   const builders = new Map<number, Task>();
   for (const on of taskIds) {
     if (linkState({ on, kind: 'builds_on' }, targetOf(db, on)).kind === 'met') continue;
-    for (const t of db.dependentsOf(on, 'builds_on')) if (t.status === 'queued' && t.repo_id !== repoId) builders.set(t.id, t);
+    for (const d of db.dependentsOf(on, 'builds_on')) {
+      const t = d.status === 'queued' ? db.getTask(d.id) : undefined;
+      if (t && t.repo_id !== repoId) builders.set(t.id, t);
+    }
   }
   return [...builders.values()].sort((a, b) => a.id - b.id);
 }
@@ -130,14 +179,11 @@ export interface LinkView {
   state: LinkState['kind'];
 }
 
-export function linkViews(db: Db, id: number): LinkView[] {
-  return db.linksOf(id).map((l) => ({ on: l.on, kind: l.kind, state: linkState(l, targetOf(db, l.on)).kind }));
+export function linkViews(db: Db, id: number, links: LinkIndex = liveLinks(db)): LinkView[] {
+  return links.linksOf(id).map((l) => ({ on: l.on, kind: l.kind, state: linkState(l, links.target(l.on)).kind }));
 }
 
-/** The tasks that depend on task `id`, whatever their status. */
-export function dependentViews(db: Db, id: number): { id: number; kind: LinkKind }[] {
-  return db
-    .dependentsOf(id)
-    .map((t) => ({ id: t.id, kind: db.linksOf(t.id).find((l) => l.on === id)!.kind }))
-    .sort((a, b) => a.id - b.id);
+/** The tasks that depend on task `id`, whatever their status, each with its link's kind. */
+export function dependentViews(db: Db, id: number, links: LinkIndex = liveLinks(db)): { id: number; kind: LinkKind }[] {
+  return links.dependentsOf(id).map((d) => ({ id: d.id, kind: d.kind }));
 }

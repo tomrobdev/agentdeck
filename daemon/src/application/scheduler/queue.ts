@@ -1,6 +1,6 @@
 // What queued tasks wait for: what holds the whole queue, and what each task waits for.
 import type { Db } from '../../db/index.ts';
-import { dependencyOf } from '../task/dependencies.ts';
+import { type LinkIndex, dependencyOf } from '../task/dependencies.ts';
 import type { Repo } from '../../domain/repo/repo.ts';
 import { type QueueWait, type StartWait, startDecision, startWait } from '../../domain/task/start.ts';
 import type { Task } from '../../domain/task/task.ts';
@@ -26,7 +26,7 @@ export function queueWaits(db: Db): { wait: QueueWait | null; paused_repos: Paus
 }
 
 /** A function telling what a task waits for. Make one per request: it reads the queue state once. */
-export function startWaits(db: Db): (task: Pick<Task, 'id' | 'status' | 'repo_id'>) => StartWait | null {
+export function startWaits(db: Db, links?: LinkIndex): (task: Pick<Task, 'id' | 'status' | 'repo_id'>) => StartWait | null {
   const q = startGate(db);
   const used = db.slotsUsed();
   const queue = startDecision(q, { ignorePause: false, used, now: Date.now() / 1000 }).wait;
@@ -35,7 +35,7 @@ export function startWaits(db: Db): (task: Pick<Task, 'id' | 'status' | 'repo_id
     startWait(task, {
       queue,
       repoPaused: repos.get(task.repo_id)?.paused_reason ?? null,
-      dependency: dependencyOf(db, task),
+      dependency: dependencyOf(db, task, links),
       running: used,
       max: q.governor.max_concurrent,
     });
