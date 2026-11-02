@@ -103,6 +103,12 @@ export async function startPoint(repoPath: string, base: string): Promise<string
   } catch {
     // offline or the base isn't on origin: use what we have
   }
+  return localStartPoint(repoPath, base);
+}
+
+/** What startPoint would pick, without fetching: origin's copy of the base when the repo has one, else the local base. */
+export async function localStartPoint(repoPath: string, base: string): Promise<string> {
+  if (!(await hasOrigin(repoPath))) return base;
   return (await refExists(repoPath, `refs/remotes/origin/${base}`)) ? `origin/${base}` : base;
 }
 
@@ -388,6 +394,11 @@ export async function objectAt(
   if (!path) return { type: 'tree', size: null };
   const [entry] = parseLsTree(await gitRead(repoPath, 'ls-tree', '-l', '-z', commit, '--', path));
   return entry && entry.path === path ? { type: entry.type, size: entry.size } : null;
+}
+
+/** Every file path at `commit`, repo-relative. */
+export async function listFiles(repoPath: string, commit: string): Promise<string[]> {
+  return (await gitRead(repoPath, 'ls-tree', '-r', '--name-only', '-z', commit)).split('\0').filter(Boolean);
 }
 
 /** One level of the folder `dir` ('' for the root) at `commit`: folders first, then by name. */

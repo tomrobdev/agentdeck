@@ -40,6 +40,16 @@ test('paths the prompt says to create are ignored', () => {
   assert.deepEqual(pathsNamedIn('Add tests in src/a.ts'), ['src/a.ts']);
 });
 
+test('only real paths are picked: dotted identifiers, fences, links, line suffixes, created paths', () => {
+  assert.deepEqual(pathsNamedIn('Read `task.prompt` and `permissions.allow`, then `package.json`.'), ['package.json']);
+  assert.deepEqual(pathsNamedIn('Run:\n```\ncat src/in-fence.ts\n```\nthen see src/after.ts'), ['src/after.ts']);
+  assert.deepEqual(pathsNamedIn('See [the plan](docs/plans/x.html#L12) and [web](https://example.com/a/b.md).'), ['docs/plans/x.html']);
+  assert.deepEqual(pathsNamedIn('Edit src/a.ts:12:5 and `src/b.ts#L3-L9`.'), ['src/a.ts', 'src/b.ts']);
+  assert.deepEqual(pathsNamedIn('Create `src/new.ts`. Then test `src/new.ts` in src/new.test.ts.'), ['src/new.test.ts']);
+  assert.deepEqual(pathsNamedIn('Add `src/a.ts` and `src/b.ts`, `src/c.ts`. Use src/b.ts.'), []);
+  assert.deepEqual(pathsNamedIn('Extract the parser into `src/parse.ts` and move helpers to `src/h.ts`; keep src/old.ts.'), ['src/old.ts']);
+});
+
 const git = (cwd: string, ...args: string[]) =>
   execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...args], { cwd, stdio: 'pipe' }).toString();
 
@@ -66,6 +76,36 @@ test('a prompt naming an uncommitted file warns, on add and on edit; a committed
   assert.deepEqual(await promptWarnings(db, t.id), []);
   await editTask(db, t.id, { prompt: 'Follow docs/missing.md' });
   assert.equal((await promptWarnings(db, t.id)).length, 1);
+});
+
+test('a path that exists only under a subfolder gets the write-it-in-full note', async () => {
+  const { db, path } = setup();
+  mkdirSync(join(path, 'daemon/src/db'), { recursive: true });
+  writeFileSync(join(path, 'daemon/src/db/schema.ts'), 'x');
+  git(path, 'add', '.');
+  git(path, 'commit', '-q', '-m', 'schema');
+  const t = await addTask(db, { repo: 'demo', prompt: 'Edit `db/schema.ts`, `db/`, and `daemon/src/db/schema.ts`, and docs/nope.md' });
+  assert.deepEqual(await promptWarnings(db, t.id), [
+    'the prompt names db/schema.ts: found as daemon/src/db/schema.ts; write it in full',
+    'the prompt names db/: found as daemon/src/db/; write it in full',
+    "the prompt names docs/nope.md, which isn't on main and no task it builds on adds it",
+  ]);
+});
+
+test('paths are checked against origin/<base>, where a worker starts: a local-only file warns', async () => {
+  const { db, path } = setup();
+  const origin = mkdtempSync(join(tmpdir(), 'agentdeck-promptpaths-origin-'));
+  git(origin, 'init', '-q', '--bare', '-b', 'main');
+  git(path, 'remote', 'add', 'origin', origin);
+  git(path, 'push', '-q', 'origin', 'main');
+  git(path, 'fetch', '-q', 'origin');
+  writeFileSync(join(path, 'docs/local.md'), 'x');
+  git(path, 'add', '.');
+  git(path, 'commit', '-q', '-m', 'local only');
+  const t = await addTask(db, { repo: 'demo', prompt: 'Follow docs/local.md and docs/committed.md' });
+  assert.deepEqual(await promptWarnings(db, t.id), [
+    "the prompt names docs/local.md, which isn't on origin/main and no task it builds on adds it",
+  ]);
 });
 
 test('a path a builds-on task adds is not a warning; a builds-on task with no branch yet may add it', async () => {

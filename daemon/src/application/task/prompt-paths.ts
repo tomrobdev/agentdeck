@@ -1,15 +1,16 @@
 // Warn when a task's prompt names a repo path that won't be there when the task runs.
-import { branchCommit, objectAt, resolveCommit } from '../../adapters/git.ts';
+import { branchCommit, listFiles, localStartPoint, resolveCommit } from '../../adapters/git.ts';
 import type { Db } from '../../db/index.ts';
 import { linkState } from '../../domain/task/link.ts';
-import { pathsNamedIn } from '../../domain/task/prompt-paths.ts';
+import { matchPath, pathsNamedIn } from '../../domain/task/prompt-paths.ts';
 import type { Task } from '../../domain/task/task.ts';
 import { targetOf } from './dependencies.ts';
 import { requireTask, requireTaskRepo } from '../input.ts';
 
 /**
- * Warnings (never errors) for each path the task's prompt names that is not on its repo's base branch and that no task
- * it builds on adds: a worker told to follow a file that isn't there blocks. A task it builds on that is not merged yet
+ * Warnings (never errors) for each path the task's prompt names that is not in the commit the worker starts from
+ * (origin's base when the repo has one) and that no task it builds on adds: a worker told to follow a file that isn't
+ * there blocks. A path found only under a subfolder gets its own note, to be written in full. A task it builds on that is not merged yet
  * counts through its branch; with no branch yet, the path "may come from it". Checks the saved task, so call it after
  * addTask or editTask. Git trouble (no base commit, an unreadable repo) means no warnings, not a failure.
  */
@@ -19,25 +20,32 @@ export async function promptWarnings(db: Db, id: number): Promise<string[]> {
   if (!paths.length) return [];
   try {
     const repo = requireTaskRepo(db, task);
-    const base = (await resolveCommit(repo.path, repo.base_branch)) ?? (await resolveCommit(repo.path, `origin/${repo.base_branch}`));
+    // The commit a worker starts from (see startPoint), not the local base: a plan committed but not pushed isn't there.
+    const ref = await localStartPoint(repo.path, repo.base_branch);
+    const base = await resolveCommit(repo.path, ref);
     if (!base) return [];
+    const baseFiles = await listFiles(repo.path, base);
     const sources = unmergedBuiltOn(db, task);
     const branchless = sources.filter((s) => !s.branch).map((s) => `#${s.id}`);
-    const commits = (
+    const branchFiles = (
       await Promise.all(
         sources.flatMap(async (s) => {
           const dep = db.getRepo(s.repo_id);
           const commit = dep && s.branch ? await branchCommit(dep.path, s.branch) : null;
-          return dep && commit ? [{ path: dep.path, commit }] : [];
+          return dep && commit ? [await listFiles(dep.path, commit)] : [];
         }),
       )
     ).flat();
     const warnings: string[] = [];
     for (const named of paths) {
-      const path = named.replace(/\/$/, ''); // a folder is looked up without its slash
-      if (await objectAt(repo.path, base, path)) continue;
-      if ((await Promise.all(commits.map((c) => objectAt(c.path, c.commit, path)))).some(Boolean)) continue;
-      const missing = `the prompt names ${named}, which isn't on ${repo.base_branch}`;
+      const onBase = matchPath(named, baseFiles);
+      if (onBase.kind === 'exact') continue;
+      if (branchFiles.some((files) => matchPath(named, files).kind === 'exact')) continue;
+      if (onBase.kind === 'under') {
+        warnings.push(`the prompt names ${named}: found as ${onBase.as}; write it in full`);
+        continue;
+      }
+      const missing = `the prompt names ${named}, which isn't on ${ref}`;
       warnings.push(
         branchless.length
           ? `${missing}; ${branchless.join(', ')}, which it builds on, ${branchless.length > 1 ? 'have' : 'has'} no branch yet and may add it`
