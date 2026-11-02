@@ -187,8 +187,10 @@ export const taskCommands: Record<string, Command> = {
     }
   },
   log: ({ db, flags, rest }) => {
-    const run = pickRun(db.runsForTask(taskId(rest[0])), { attempt: flags.attempt ? Number(flags.attempt) : undefined });
-    if (!run) die('no runs yet');
+    const id = taskId(rest[0]);
+    if (!db.getTask(id)) die(`no task #${id}`);
+    const run = pickRun(db.runsForTask(id), { attempt: flags.attempt ? Number(flags.attempt) : undefined });
+    if (!run) die(`#${id} has no runs yet`);
     if (flags.raw) process.stdout.write(readFileSync(run.log_path, 'utf8'));
     else printLog(run.log_path);
   },

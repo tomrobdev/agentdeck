@@ -6,7 +6,7 @@ import type { TaskStatus } from './lifecycle.ts';
 type Stage = {
   status: TaskStatus;
   pr_state: PrState | null;
-  /** What a queued task waits for on its `after_task`, as application/dependencies.ts waitingFor reports it. */
+  /** What a queued task waits for on its builds-on links, as application/dependencies.ts waitingFor reports it. */
   waiting?: { on: number; stuck: string | null } | null;
 };
 

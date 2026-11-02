@@ -60,7 +60,7 @@ export const tasks = sqliteTable(
     restarts: integer().default(0).notNull(),
     pr_url: text(),
     pr_state: text(),
-    after_task: integer(), // legacy: migration 18 copied it into task_links; nothing reads it (addTask still writes it for the API's sake)
+    after_task: integer(), // legacy: migration 18 copied it into task_links; nothing reads or writes it
     merge_method: text(),
     plan_path: text(),
     plan_steps: text(),

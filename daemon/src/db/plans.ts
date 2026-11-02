@@ -27,54 +27,57 @@ export function insertOwnPlan(orm: Orm, task_id: number, html: string, source: P
   return name;
 }
 
-export function planStore(db: DatabaseSync, orm: Orm) {
-  /**
-   * The task's own plan, the newest if there were ever two: the row under its numbered name (planFileName). Plans stored
-   * before plans had numbers are not its own.
-   */
-  const ownPlan = (task_id: number): OwnPlan | undefined => {
-    const row = orm
-      .select()
-      .from(taskPlans)
-      .where(
-        and(
-          eq(taskPlans.task_id, task_id),
-          sql`${taskPlans.name} GLOB ${`${task_id}-*.html`}`,
-          sql`substr(${taskPlans.name}, 1, length(${taskPlans.name}) - 5) NOT GLOB '*[^a-z0-9-]*'`,
-        ),
-      )
-      .orderBy(desc(taskPlans.id))
-      .get();
-    return row && { ...row, source: row.source as PlanSource };
-  };
+/**
+ * The task's own plan, the newest if there were ever two: the row under its numbered name (planFileName). Plans stored
+ * before plans had numbers are not its own.
+ */
+function ownPlanRow(orm: Orm, task_id: number): OwnPlan | undefined {
+  const row = orm
+    .select()
+    .from(taskPlans)
+    .where(
+      and(
+        eq(taskPlans.task_id, task_id),
+        sql`${taskPlans.name} GLOB ${`${task_id}-*.html`}`,
+        sql`substr(${taskPlans.name}, 1, length(${taskPlans.name}) - 5) NOT GLOB '*[^a-z0-9-]*'`,
+      ),
+    )
+    .orderBy(desc(taskPlans.id))
+    .get();
+  return row && { ...row, source: row.source as PlanSource };
+}
 
+/**
+ * Store `html` (a plan) as the task's own plan, under the name its title gives (planFileName), replacing the plan it
+ * had: that row keeps its id, so the dashboard's view of it follows. The task store calls it inside its guarded writes.
+ */
+export function saveOwnPlan(db: DatabaseSync, orm: Orm, task_id: number, html: string, source: PlanSource): TaskPlan {
+  const name = planFileName(task_id, parsePlan(html)?.title ?? '');
+  return atomically(db, () => {
+    const old = ownPlanRow(orm, task_id);
+    if (!old) insertOwnPlan(orm, task_id, html, source);
+    else {
+      orm
+        .delete(taskPlans)
+        .where(and(eq(taskPlans.task_id, task_id), eq(taskPlans.name, name), ne(taskPlans.id, old.id)))
+        .run();
+      if (old.name !== name || old.html !== html || old.source !== source) {
+        orm
+          .update(taskPlans)
+          .set({ name, source, html, updated_at: sql.raw(NOW) })
+          .where(eq(taskPlans.id, old.id))
+          .run();
+      }
+    }
+    return toPlan(ownPlanRow(orm, task_id)!);
+  });
+}
+
+export function planStore(db: DatabaseSync, orm: Orm) {
   return {
-    ownPlan,
-    /**
-     * Store `html` (a plan) as the task's own plan, under the name its title gives (planFileName), replacing the plan it
-     * had: that row keeps its id, so the dashboard's view of it follows.
-     */
-    saveOwnPlan(task_id: number, html: string, source: PlanSource): TaskPlan {
-      const name = planFileName(task_id, parsePlan(html)?.title ?? '');
-      return atomically(db, () => {
-        const old = ownPlan(task_id);
-        if (!old) insertOwnPlan(orm, task_id, html, source);
-        else {
-          orm
-            .delete(taskPlans)
-            .where(and(eq(taskPlans.task_id, task_id), eq(taskPlans.name, name), ne(taskPlans.id, old.id)))
-            .run();
-          if (old.name !== name || old.html !== html || old.source !== source) {
-            orm
-              .update(taskPlans)
-              .set({ name, source, html, updated_at: sql.raw(NOW) })
-              .where(eq(taskPlans.id, old.id))
-              .run();
-          }
-        }
-        return toPlan(ownPlan(task_id)!);
-      });
-    },
+    ownPlan: (task_id: number): OwnPlan | undefined => ownPlanRow(orm, task_id),
+    /** Store a plan as the task's own (`saveOwnPlan`), unguarded: for a run's worker, whose task is running. */
+    saveOwnPlan: (task_id: number, html: string, source: PlanSource): TaskPlan => saveOwnPlan(db, orm, task_id, html, source),
     /** Replace a stored plan's HTML, keeping its name and source. updated_at moves only when the HTML changed. */
     updatePlanHtml(id: number, html: string): void {
       orm

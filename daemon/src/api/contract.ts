@@ -188,7 +188,6 @@ export interface TaskSummary {
   pr_state: PrState | null;
   /** How the PR was merged from the app. */
   merge_method: MergeMethod | null;
-  after_task: number | null;
   /** The task whose plan this one follows (itself when its own plan was given with it); null follows its own plan, if any. Missing from a daemon that predates it. */
   plan_task?: number | null;
   /** JSON array of that plan's step ids; null means every unfinished step. Missing from a daemon that predates it. */
@@ -554,17 +553,6 @@ export interface MergeResult {
   /** Set when the merge went through but removing the branch or worktree did not. */
   cleanup_error?: string;
   task: TaskDetail;
-}
-
-/** POST /api/tasks/merge: merge these tasks' PRs, each with its own method, deleting the branches. */
-export interface MergeAllRequest {
-  ids: number[];
-}
-
-export interface MergeAllResult {
-  merged: { id: number; method: MergeMethod; unblocked: number[]; cleanup_error?: string }[];
-  /** The PRs left open, each with why it couldn't merge. */
-  skipped: { id: number; reason: string; conflicting: boolean }[];
 }
 
 /** What a sync of a task's branch came to (POST /api/tasks/:id/resolve). */

@@ -22,7 +22,6 @@ export interface Task {
   pr_url: string | null; // the pull request the daemon opened when the task finished
   pr_state: PrState | null;
   merge_method: MergeMethod | null; // how the PR was merged from the app
-  after_task: number | null; // not claimed until that task is done (and its PR merged, if it has one)
   plan_path: string | null; // legacy: the docs/plans/ file a task carried out before plans moved into AgentDeck; no longer written or read
   needs: string | null; // JSON Needs (domain/task/needs.ts) the worker said it needs when it blocked; cleared when queued again
   plan_steps: string | null; // JSON array of the linked plan's step ids; null means every unfinished step (see planStepIds)
@@ -55,7 +54,9 @@ export function planStepIds(task: Pick<Task, 'plan_steps'>): string[] | null {
 
 /**
  * The sections every task prompt has, in order, each a markdown `##` heading. The delegate skill (.claude/skills/delegate)
- * asks for the same. `parsePromptSections` (sections.ts) also reads the older `Goal:` form.
+ * asks for the same. `parsePromptSections` (sections.ts) also reads the older `Goal:` form. A task linked to a plan
+ * (agentdeck add --plan) needs only Goal, Out of scope and Constraints: the daemon puts the linked steps into the
+ * worker's prompt, and they supply Change and Definition of done.
  */
 export const PROMPT_SECTIONS = `## Goal
 What the task achieves, in a sentence or two.
@@ -73,9 +74,7 @@ What not to touch.
 Limits the agent must keep to, such as no new dependencies or no changes to package.json.
 
 ## Definition of done
-The test command passing, plus concrete checks a reviewer can confirm.
-
-A task linked to a plan (agentdeck add --plan) needs only Goal, Out of scope and Constraints: the daemon puts the linked steps into the worker's prompt, and they supply Change and Definition of done.`;
+The test command passing, plus concrete checks a reviewer can confirm.`;
 
 /** The model aliases claude takes; the planner chooses among these. */
 export const MODELS = ['haiku', 'sonnet', 'opus'];
@@ -88,6 +87,9 @@ export const OPEN_STATUSES: TaskStatus[] = ['proposed', 'queued', 'running', 'ca
 
 /** Statuses in which a task's title, prompt and limits may be edited: waiting, or finished unsuccessfully. */
 export const EDITABLE_STATUSES: TaskStatus[] = ['proposed', 'queued', 'blocked', 'failed'];
+
+/** Statuses in which a task's own plan may be attached or replaced: any but a live run's, whose end would write the old plan back. */
+export const PLAN_ATTACHABLE_STATUSES: TaskStatus[] = ['proposed', 'queued', 'done', 'blocked', 'failed', 'cancelled'];
 
 /** The commit message for work an agent left uncommitted in a task's worktree. */
 export function leftoversMessage(task: Pick<Task, 'id' | 'title'>): string {

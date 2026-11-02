@@ -12,7 +12,6 @@ import type {
   FileContent,
   FilePatch,
   FileRef,
-  MergeAllResult,
   MergePreview,
   MergeRequest,
   MergeResult,
@@ -118,7 +117,6 @@ export const api = {
   mergePreview: (id: number) => call<MergePreview>(`/api/tasks/${id}/merge`),
   merge: (id: number, body: MergeRequest) => call<MergeResult>(`/api/tasks/${id}/merge`, { method: 'POST', json: body }),
   /** Merge these tasks' PRs, each with its own method, deleting the branches; the ones left open come back with why. */
-  mergeAll: (ids: number[]) => call<MergeAllResult>('/api/tasks/merge', { method: 'POST', json: { ids } }),
   /** Ask the daemon to merge the task's PR once it is ready; the answer is at once. */
   requestMerge: (id: number, body: RequestMergeRequest = {}) =>
     call<RequestMergeResult>(`/api/tasks/${id}/merge-request`, { method: 'POST', json: body }),

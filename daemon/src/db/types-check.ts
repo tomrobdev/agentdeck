@@ -15,7 +15,8 @@ type Same<Row, Domain> = Equals<Shape<Row>, Shape<Domain>>;
 export const check = <T extends true>(): T => true as T;
 
 check<Same<typeof repos.$inferSelect, Repo>>();
-check<Same<typeof tasks.$inferSelect, Task>>();
+// after_task: legacy, copied into task_links by migration 18; the store never reads or writes it.
+check<Same<Omit<typeof tasks.$inferSelect, 'after_task'>, Task>>();
 check<Same<typeof runs.$inferSelect, Run>>();
 check<Same<typeof plannerRuns.$inferSelect, PlannerRun>>();
 check<Same<typeof taskEvents.$inferSelect, TaskEventRow>>();

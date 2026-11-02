@@ -67,8 +67,8 @@ Each task must be:
 Prefer the highest-value next step. Use haiku for mechanical work, sonnet by default, opus only for genuinely hard tasks.
 If nothing is worth doing right now, return an empty list and say why in "note".
 
-Write each prompt in these sections, one paragraph or list each, headed by the section name:
-${PROMPT_SECTIONS}
+Write each prompt in these sections, in this order, one paragraph or list each, each headed by its name as a "##" heading (shown one level down here):
+${PROMPT_SECTIONS.replace(/^## /gm, '### ')}
 
 ## Goals
 ${goals.trim()}
