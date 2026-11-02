@@ -309,10 +309,12 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     /**
      * Change a task's editable fields. Guarded by status like every other task write: only a task
      * in EDITABLE_STATUSES can be edited. Returns the task, or undefined if it is missing or in another status.
+     * `plan` says the task's own plan was replaced too, so the edit names it.
      */
     editTask(
       id: number,
       fields: Partial<Pick<Task, 'title' | 'prompt' | 'priority' | 'model' | 'max_turns' | 'max_attempts' | 'plan_task' | 'plan_steps'>>,
+      opts: { plan?: boolean } = {},
     ): Task | undefined {
       if (Object.keys(fields).length === 0) return this.getTask(id);
       return atomically(db, () => {
@@ -323,8 +325,26 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
           .returning()
           .get() as Task | undefined;
         // The status stays; the row says what was edited, and `stats` counts an edit of a queued or blocked task.
-        if (edited) recordEvent(id, 'edit', edited.status, edited.status, Object.keys(fields).join(', '));
+        const what = [...Object.keys(fields), ...(opts.plan ? ['plan'] : [])].join(', ');
+        if (edited) recordEvent(id, 'edit', edited.status, edited.status, what);
         return edited;
+      });
+    },
+    /**
+     * Record that a task's own plan was attached or replaced, as an `edit` naming `plan` (a cut-off session then starts
+     * afresh: `editsSinceCutOff`). Only for a task in EDITABLE_STATUSES; returns whether it was recorded.
+     */
+    recordPlanEdit(id: number): boolean {
+      return atomically(db, () => {
+        const row = orm
+          .update(tasks)
+          .set({ updated_at: sql.raw(NOW) })
+          .where(and(eq(tasks.id, id), inArray(tasks.status, EDITABLE_STATUSES)))
+          .returning({ status: tasks.status })
+          .get() as { status: TaskStatus } | undefined;
+        if (!row) return false;
+        recordEvent(id, 'edit', row.status, row.status, 'plan');
+        return true;
       });
     },
     /** Where a task's work is checked out. Not a status, so unguarded. */

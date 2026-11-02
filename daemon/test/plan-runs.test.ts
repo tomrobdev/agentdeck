@@ -20,6 +20,7 @@ const { readPlanFile, writePlanFile } = await import('../src/adapters/plan-file.
 const { parsePlan } = await import('../src/domain/plan/plan.ts');
 const { planForRun, takePlanFile } = await import('../src/application/plans.ts');
 const { LOG_DIR } = await import('../src/config.ts');
+const { MAX_RESTARTS } = await import('../src/domain/task/lifecycle.ts');
 
 const plan = `<!doctype html>
 <html data-agentdeck-plan="1"><head><title>Shared plan</title></head><body>
@@ -208,6 +209,35 @@ test('the step statuses a run marked before a restart cut it off survive when it
     ],
     'the cut-off run had no session to resume; the next one started afresh',
   );
+  assert.deepEqual(statuses(t.id), [
+    ['a', 'done'],
+    ['b', 'todo'],
+    ['c', 'todo'],
+  ]);
+});
+
+test('the step statuses a cut-off run marked survive when the restarts fail the task and a person retries it', async () => {
+  db.setSetting('max_concurrent', '1');
+  const t = db.addTask({ repo_id: repo.id, title: 'restarted out', prompt: 'FAKE_DONE after a retry', own_plan: plan });
+  // Restart after restart cuts its runs off, until the last recovery fails the task; the last run had finished step a.
+  for (let i = 0; i < MAX_RESTARTS; i++) {
+    const claimed = db.claimNextTask()!;
+    assert.equal(claimed.id, t.id);
+    const wt = await ensureWorktree(repo, claimed);
+    db.setCheckout(t.id, { branch: wt.branch, worktree: wt.path });
+    db.startRun(t.id, claimed.attempts, join(LOG_DIR, `task-${t.id}-attempt-${claimed.attempts}.jsonl`));
+    await writePlanFile(wt.path, planForRun(db, claimed)?.html ?? null);
+    if (i === MAX_RESTARTS - 1) markStep(wt.path, 'a', 'done');
+    db.recoverOrphans();
+  }
+  assert.equal(db.getTask(t.id)!.status, 'failed');
+  // The person's retry is a new attempt.
+  assert.equal(db.applyEvent(t.id, { type: 'retry' })?.status, 'queued');
+
+  await drain();
+  const after = db.getTask(t.id)!;
+  assert.equal(after.status, 'done', after.stop_reason ?? '');
+  assert.equal(after.attempts, 2);
   assert.deepEqual(statuses(t.id), [
     ['a', 'done'],
     ['b', 'todo'],

@@ -49,10 +49,11 @@ export interface TaskRunEnd extends OpenedRun {
   fields: Partial<Run>;
 }
 
-/** A claude session to continue instead of starting afresh, and the prompt that continues it. */
+/** A claude session to continue instead of starting afresh, the prompt that continues it and the turns it has left. */
 export interface ResumeRun {
   session: string;
   prompt: string;
+  maxTurns: number;
 }
 
 /**
@@ -74,9 +75,9 @@ export async function startTaskRun(
   // Local to this run, not module state: the live state goes to the run row, where the queue reads it.
   let live = START_LIVE;
   const allowed = allowedTools(repo, rootInfo(worktree));
-  const start = (prompt: string, session: string | null): Promise<ClaudeRun> =>
+  const start = (prompt: string, session: string | null, maxTurns = task.max_turns): Promise<ClaudeRun> =>
     runClaude({
-      args: claudeArgs(task, allowed, prompt, repo.test_cmd, settings, session),
+      args: claudeArgs(task, allowed, prompt, repo.test_cmd, settings, session, maxTurns),
       cwd: worktree,
       log,
       env: { AGENTDECK_TASK_ID: String(task.id) },
@@ -94,7 +95,7 @@ export async function startTaskRun(
   let run: ClaudeRun;
   if (resume) {
     writeEvent(log, { type: 'agentdeck_resume', session_id: resume.session });
-    run = await start(resume.prompt, resume.session);
+    run = await start(resume.prompt, resume.session, resume.maxTurns);
     if (resumeFailed(run)) {
       const why = run.stderr.trim() ? lastLine(run.stderr) : `claude exited with code ${run.exitCode}`;
       writeEvent(log, { type: 'agentdeck_resume_failed', session_id: resume.session, text: `${why}; starting afresh` });

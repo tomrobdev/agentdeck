@@ -94,20 +94,29 @@ export function buildPrompt(
   plan: PromptPlan | null = null,
   review: ReviewPrompt | null = null,
 ): string {
-  const last = previousRuns.filter((r) => r.kind !== 'resolve').at(-1);
+  const work = previousRuns.filter((r) => r.kind !== 'resolve');
+  const last = work.at(-1);
   const base = plan ? `${task.prompt}\n\n${planPromptBlock(plan)}` : task.prompt;
   if (!last) return base;
-  // A restart's run was cut off, not finished: it has no verdict or final message to pass on.
+  // A restart's run was cut off, not finished: it has no verdict or final message to pass on, so the verdict, tests and
+  // final message are the newest finished run's.
   const interrupted = last.outcome === INTERRUPTED;
+  const finished = work.findLast((r) => r.outcome !== INTERRUPTED);
+  const verdict = !finished
+    ? ''
+    : !interrupted
+      ? `--- This is attempt ${task.attempts}. The previous attempt ended as "${finished.outcome}". ---`
+      : finished.attempt < task.attempts
+        ? `Before that, the previous attempt ended as "${finished.outcome}".`
+        : `Before that, a run of this attempt ended as "${finished.outcome}".`;
   return [
     review ? `${reviewPromptBlock(review)}\n` : reviewNote ? `Changes requested in review:\n${reviewNote}\n` : '',
     base,
     '',
-    interrupted
-      ? `--- This is attempt ${task.attempts}. A daemon restart stopped an earlier run of it before it finished. ---`
-      : `--- This is attempt ${task.attempts}. The previous attempt ended as "${last.outcome}". ---`,
-    last.tests_passed === 0 ? 'The test command failed after the previous attempt.' : '',
-    last.result_text && !interrupted ? `Previous final message:\n${last.result_text.slice(0, 4000)}` : '',
+    interrupted ? `--- This is attempt ${task.attempts}. A daemon restart stopped an earlier run of it before it finished. ---` : '',
+    verdict,
+    finished?.tests_passed === 0 ? 'The test command failed after the previous attempt.' : '',
+    finished?.result_text ? `Previous final message:\n${finished.result_text.slice(0, 4000)}` : '',
     'Your earlier commits are already on this branch. Continue from there.',
   ]
     .filter(Boolean)
@@ -187,8 +196,8 @@ export function buildResolvePrompt(task: Pick<Task, 'id' | 'title' | 'prompt'>, 
 
 /**
  * `settings` is the run's settings file (sandbox and worktree-only file rules, domain/run/sandbox.ts). `resume` is a
- * claude session to continue (`resumableSession`); everything else, the system prompt and tool rules included, is
- * the same as for a fresh run.
+ * claude session to continue (`resumableSession`), with `maxTurns` the turns it has left (`resumeMaxTurns`); everything
+ * else, the system prompt and tool rules included, is the same as for a fresh run.
  */
 export function claudeArgs(
   task: Task,
@@ -197,6 +206,7 @@ export function claudeArgs(
   testCmd: string | null,
   settings: string,
   resume: string | null = null,
+  maxTurns: number = task.max_turns,
 ): string[] {
   return [
     '--settings',
@@ -210,7 +220,7 @@ export function claudeArgs(
     '--model',
     task.model,
     '--max-turns',
-    String(task.max_turns),
+    String(maxTurns),
     '--permission-mode',
     'dontAsk',
     // One argv entry per rule: patterns like "Bash(npm test*)" contain spaces.

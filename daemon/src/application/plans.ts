@@ -44,8 +44,8 @@ export function planForRun(db: Db, task: Task): PromptPlan | null {
 }
 
 /**
- * After a run, whatever its outcome, and before the next run of a task whose last run a restart cut off: store what the
- * worker left in the plan file. What the stored plan becomes is planAfterRun's to decide: the whole file, or only the
+ * After a run, whatever its outcome, and before every run (in case a restart cut the last one off before it got here):
+ * store what the worker left in the plan file. What the stored plan becomes is planAfterRun's to decide: the whole file, or only the
  * linked steps the run changed. A task with no plan that wrote one gets it as its own plan. What was taken is then
  * recorded as the given copy, so taking the same file again changes nothing. Returns whether a plan changed.
  */
@@ -120,7 +120,9 @@ export function attachPlan(db: Db, id: number, input: { html?: unknown }): TaskP
   }
   const { html, plan } = readPlanInput(object(input).html);
   checkFollowers(db, id, plan);
-  return db.saveOwnPlan(id, html, 'attached');
+  const saved = db.saveOwnPlan(id, html, 'attached');
+  db.recordPlanEdit(id);
+  return saved;
 }
 
 /** One plan's HTML, for the dashboard to show in full. */

@@ -21,7 +21,8 @@ const { openDb } = await import('../src/db/index.ts');
 const { DB_PATH, LOG_DIR } = await import('../src/config.ts');
 const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
 const { MAX_RESTARTS } = await import('../src/domain/task/lifecycle.ts');
-const { INTERRUPTED, resultFields, resumableSession, resumeFailed } = await import('../src/domain/run/run.ts');
+const { INTERRUPTED, editsSinceCutOff, pickRun, resultFields, resumableSession, resumeFailed, resumeMaxTurns } =
+  await import('../src/domain/run/run.ts');
 const { buildPrompt, buildResumePrompt, claudeArgs } = await import('../src/domain/run/prompt.ts');
 
 // --- The decisions, pure ---
@@ -69,9 +70,66 @@ test('resumableSession: the session of the attempt’s interrupted run, and only
   assert.equal(resumableSession(on, [run({ session_id: 's1', outcome: 'done' }), run({ session_id: null })]), null);
 });
 
-test('resumeFailed: a resume that stopped before its session started, and nothing else', () => {
+test('resumableSession looks past a rate-limited run of the attempt, back to the interrupted one', () => {
+  const on = { attempts: 1 };
+  // The resume was rate limited (or the pre-run sync's resolve run was): the session is still the one to continue.
+  assert.equal(resumableSession(on, [run({ session_id: 's1' }), run({ outcome: 'rate_limited', session_id: null })]), 's1');
+  assert.equal(resumableSession(on, [run({ session_id: 's1' }), run({ outcome: 'rate_limited', session_id: 's1' })]), 's1');
+  assert.equal(
+    resumableSession(on, [run({ session_id: 's1' }), run({ outcome: 'rate_limited' }), run({ session_id: null })]),
+    's1',
+    'a restart after the rate limit',
+  );
+  assert.equal(resumableSession(on, [run({ outcome: 'rate_limited', session_id: 's1' })]), null, 'a rate limit alone starts afresh');
+  assert.equal(resumableSession({ attempts: 2 }, [run({ session_id: 's1' }), run({ outcome: 'rate_limited', attempt: 2 })]), null);
+});
+
+test('editsSinceCutOff: a prompt or plan edited after the cut-off run ended, and nothing else', () => {
+  const on = { attempts: 1 };
+  const runs = [run({ session_id: 's1', ended_at: '2026-11-01 10:05:00' })];
+  const edit = (reason: string, at = '2026-11-01 10:06:00') => ({ type: 'edit', reason, at });
+  assert.deepEqual(editsSinceCutOff(on, runs, { own: [] }), []);
+  assert.deepEqual(editsSinceCutOff(on, runs, { own: [edit('prompt')] }), ['prompt']);
+  assert.deepEqual(editsSinceCutOff(on, runs, { own: [edit('title, prompt'), edit('plan_task, plan_steps, plan')] }), [
+    'prompt',
+    'plan_task',
+    'plan_steps',
+    'plan',
+  ]);
+  assert.deepEqual(editsSinceCutOff(on, runs, { own: [edit('title'), edit('priority, max_turns')] }), [], 'the session needs no new text');
+  assert.deepEqual(editsSinceCutOff(on, runs, { own: [edit('prompt', '2026-11-01 10:04:00')] }), [], 'the session saw it');
+  assert.deepEqual(editsSinceCutOff(on, runs, { own: [{ type: 'retry', reason: 'prompt', at: '2026-11-01 10:06:00' }] }), []);
+  // The plan it follows belongs to another task, which replaced it; that task's prompt is not this one's.
+  assert.deepEqual(editsSinceCutOff(on, runs, { own: [], planOwner: [edit('prompt'), edit('plan_task, plan')] }), ['plan']);
+  assert.deepEqual(editsSinceCutOff(on, [run({ session_id: null })], { own: [edit('prompt')] }), [], 'no session to resume');
+});
+
+test('resumeMaxTurns: the task’s limit less the turns the attempt’s cut-off runs used', () => {
+  const task50 = { attempts: 1, max_turns: 50 };
+  assert.equal(resumeMaxTurns(task50, [run({ session_id: 's1', live_turns: 45 })]), 5);
+  assert.equal(resumeMaxTurns(task50, [run({ session_id: 's1', live_turns: 20 }), run({ session_id: 's1', live_turns: 25 })]), 5);
+  assert.equal(resumeMaxTurns(task50, [run({ session_id: 's1', live_turns: 30 }), run({ outcome: 'rate_limited', num_turns: 15 })]), 5);
+  assert.equal(resumeMaxTurns(task50, [run({ session_id: 's1', live_turns: 60 })]), 1, 'at least one');
+  assert.equal(resumeMaxTurns(task50, [run({ outcome: 'failed', num_turns: 50 }), run({ attempt: 2, live_turns: 10 })]), 50);
+  const fifty = { id: 7, title: 't', prompt: 'p', attempts: 1, model: 'sonnet', max_turns: 50 } as Task;
+  const args = claudeArgs(fifty, ['Read'], 'p', null, '/s.json', 's1', resumeMaxTurns(fifty, [run({ session_id: 's1', live_turns: 45 })]));
+  assert.deepEqual(args.slice(args.indexOf('--max-turns'), args.indexOf('--max-turns') + 2), ['--max-turns', '5']);
+});
+
+test('pickRun by attempt picks the attempt’s latest work run: the resume, not the run a restart cut off', () => {
+  const cut = run({ session_id: 's1' });
+  const resumed = run({ session_id: 's1', outcome: 'done' });
+  const resolve = run({ kind: 'resolve', outcome: 'done' });
+  assert.equal(pickRun([cut, resumed, resolve], { attempt: 1 }), resumed);
+  assert.equal(pickRun([cut, resumed, resolve], { run: cut.id }), cut);
+  assert.equal(pickRun([cut, resumed, resolve]), resolve);
+});
+
+test('resumeFailed: a resume whose session claude no longer has, and nothing else', () => {
   const gone = { result: undefined, exitCode: 1, rateLimitedUntil: undefined, cancelled: false, stderr: '' };
-  assert.equal(resumeFailed(gone), true, 'no init line, no result');
+  assert.equal(resumeFailed(gone), false, 'no init line and no word of the session: the run failed');
+  assert.equal(resumeFailed({ ...gone, stderr: 'Error: Invalid settings file /s.json: Unexpected token\n' }), false, 'bad settings');
+  assert.equal(resumeFailed({ ...gone, stderr: 'No conversation found with session ID: s1\n' }), true);
   assert.equal(resumeFailed({ ...gone, sessionId: 's1', stderr: 'No conversation found with session ID: s1\n' }), true);
   assert.equal(resumeFailed({ ...gone, sessionId: 's1' }), false, 'it started: a failure of the run, not of the resume');
   const missing = { is_error: true, result: 'No conversation found with session ID: s1' };
@@ -111,6 +169,20 @@ test('the resume prompt says what happened and where to look; a fresh run after 
   assert.match(fresh, /^Goal: cache reads\./);
   assert.match(fresh, /A daemon restart stopped an earlier run of it before it finished/);
   assert.doesNotMatch(fresh, /ended as|daemon restarted/);
+});
+
+test('a fresh run after a restart still names the earlier attempt’s failed tests and final message', () => {
+  const failed = run({ attempt: 1, outcome: 'failed', tests_passed: 0, result_text: 'Added the cache.\nSTATUS: DONE', session_id: 's1' });
+  const prompt = buildPrompt({ ...task, attempts: 2 }, [failed, run({ attempt: 2, session_id: null })]);
+  assert.match(prompt, /--- This is attempt 2\. A daemon restart stopped an earlier run of it before it finished\. ---/);
+  assert.match(prompt, /Before that, the previous attempt ended as "failed"\./);
+  assert.match(prompt, /The test command failed after the previous attempt\./);
+  assert.match(prompt, /Previous final message:\nAdded the cache\./);
+  assert.doesNotMatch(prompt, /daemon restarted/, 'nothing from the interrupted run');
+  // Not interrupted: as before.
+  const retry = buildPrompt({ ...task, attempts: 2 }, [failed]);
+  assert.match(retry, /--- This is attempt 2\. The previous attempt ended as "failed"\. ---\nThe test command failed/);
+  assert.doesNotMatch(retry, /daemon restart/);
 });
 
 // --- Real restarts ---
@@ -223,6 +295,30 @@ test('a resume whose session is gone falls back to a fresh run, in the same run'
   assert.equal(runs[1].outcome, 'done');
   assert.match(readFileSync(runs[1].log_path, 'utf8'), /"type":"agentdeck_resume_failed".*No conversation found/);
   assert.equal(git(repoPath, 'rev-list', '--count', `main..${t.branch}`), '1', 'the work is on the task’s branch');
+});
+
+test('a task whose prompt was edited while it waited starts afresh instead of resuming the old session', async () => {
+  const added = db.addTask({ repo_id: repoId, title: 'edited while queued', prompt: 'FAKE_BLOCKED the old prompt' });
+  // A run a restart cut off, whose session claude still has: resumed, it would follow the old prompt and block.
+  const claimed = db.claimNextTask()!;
+  assert.equal(claimed.id, added.id);
+  const cut = db.startRun(added.id, claimed.attempts, join(LOG_DIR, `task-${added.id}-attempt-1.jsonl`));
+  mkdirSync(join(home, 'fake-sessions'), { recursive: true });
+  writeFileSync(join(home, 'fake-sessions', 'kept-session'), 'FAKE_BLOCKED the old prompt');
+  db.setRunSession(cut, 'kept-session');
+  assert.deepEqual(db.recoverOrphans(), { requeued: 1, failed: [] });
+  assert.ok(db.editTask(added.id, { prompt: 'FAKE_DONE the new prompt' }));
+
+  await drain();
+  const t = db.getTask(added.id)!;
+  assert.equal(t.status, 'done', t.stop_reason ?? '');
+  assert.equal(t.attempts, 1);
+  const last = calls().at(-1)!;
+  assert.equal(resumeOf(last), null, 'no resume of the session that holds the old prompt');
+  assert.ok(!calls().some((c) => resumeOf(c) === 'kept-session'));
+  assert.match(promptOf(last), /^FAKE_DONE the new prompt/);
+  assert.match(promptOf(last), /A daemon restart stopped an earlier run of it/);
+  assert.match(readFileSync(db.runsForTask(t.id)[1].log_path, 'utf8'), /"type":"agentdeck_resume_skipped".*edited since: prompt/);
 });
 
 test('a task whose resumed runs keep being interrupted fails at MAX_RESTARTS', async () => {

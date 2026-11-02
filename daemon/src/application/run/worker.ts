@@ -13,11 +13,12 @@ import { latestReviewNote } from '../../domain/task/history.ts';
 import {
   type Run,
   type WorkerResult,
-  cutOffByRestart,
+  editsSinceCutOff,
   firstDenial,
   isEnvironmentBlock,
   parseStatus,
   resumableSession,
+  resumeMaxTurns,
 } from '../../domain/run/run.ts';
 import { type Task, leftoversMessage } from '../../domain/task/task.ts';
 import { type TaskRunEnd, openTaskRun, startTaskRun } from './claude-run.ts';
@@ -44,11 +45,27 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
   const opened = openTaskRun(db, task, 'work');
   const { runId, log } = opened;
   const previousRuns = db.runsForTask(task.id).filter((r) => r.id !== runId);
-  // A daemon restart cut the attempt's last run off: continue its claude session (with `prompt` as the fallback).
-  const session = resumableSession(task, previousRuns);
-  // The cut-off run never gave its plan file back: keep what it got done before the file is written afresh, whether
-  // or not its session can be resumed.
-  if (cutOffByRestart(task, previousRuns)) await giveBackPlan(db, task, wt.path, log);
+  // A daemon restart cut the attempt's last run off: continue its claude session (with `prompt` as the fallback),
+  // unless the prompt or plan was edited since, which the session never saw.
+  let session = resumableSession(task, previousRuns);
+  if (session) {
+    const owner = task.plan_task !== null && task.plan_task !== task.id ? task.plan_task : null;
+    const edited = editsSinceCutOff(task, previousRuns, {
+      own: db.eventsForTask(task.id),
+      planOwner: owner === null ? [] : db.eventsForTask(owner),
+    });
+    if (edited.length) {
+      writeEvent(log, {
+        type: 'agentdeck_resume_skipped',
+        session_id: session,
+        text: `edited since: ${edited.join(', ')}; starting afresh`,
+      });
+      session = null;
+    }
+  }
+  // A run a restart cut off never gave its plan file back, even if a person ended the task since and retried it: keep
+  // what it got done before the file is written afresh. After a run that did give it back, this changes nothing.
+  await giveBackPlan(db, task, wt.path, log);
   let plan: PromptPlan | null = null;
   try {
     plan = planForRun(db, task);
@@ -57,7 +74,7 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
   }
   const review = await reviewForRun(db, task, repo);
   const prompt = buildPrompt(task, previousRuns, latestReviewNote(db.eventsForTask(task.id)), plan, review?.prompt ?? null);
-  const resume = session ? { session, prompt: buildResumePrompt(task) } : undefined;
+  const resume = session ? { session, prompt: buildResumePrompt(task), maxTurns: resumeMaxTurns(task, previousRuns) } : undefined;
 
   // Install dependencies before the agent starts: it isn't allowed to install them itself.
   const setUp = async (): Promise<WorkerResult | null> => {
