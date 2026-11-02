@@ -2,6 +2,7 @@
 import { computed, nextTick, ref } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { type PlanStep, type TaskPlan, ago, planHtmlQuery } from '../../api';
+import { planProgress } from '../../../../daemon/src/domain/plan/plan.ts';
 import { type ModeKey, mode } from '../../platform/theme';
 import planCss from '../../../../docs/plans/plan.css?raw';
 
@@ -11,8 +12,9 @@ const props = defineProps<{ taskId: number; plan: TaskPlan }>();
 const emit = defineEmits<{ open: [path: string] }>();
 
 const STEP_ICON: Record<PlanStep['status'], string> = { done: '✓', doing: '◐', todo: '○', blocked: '!', skipped: '–' };
-const finished = computed(() => props.plan.steps.filter((s) => s.status === 'done' || s.status === 'skipped').length);
-const total = computed(() => props.plan.steps.length);
+const progress = computed(() => planProgress(props.plan.steps));
+const finished = computed(() => progress.value.finished);
+const total = computed(() => progress.value.total);
 // What colour a step's icon (and "in progress" label) takes, and how its title looks, by status.
 const ICON_TONE: Record<PlanStep['status'], string> = {
   done: 'text-done',
@@ -35,11 +37,12 @@ code, pre { font-family: ui-monospace, Menlo, monospace; }
 </style>`;
 }
 // A plan links plan.css, which a relative link can't reach from srcdoc: put the same file in where the link stood.
+// Such a plan always renders light, whatever the dashboard's mode; one without it follows the mode.
 const PLAN_CSS_LINK = /<link\b[^>]*\bhref=["']plan\.css["'][^>]*>/i;
-function withBaseStyle(page: string, m: ModeKey) {
-  const style = baseStyle(m);
-  const sheet = `<style>${planCss}</style>`;
-  const linked = PLAN_CSS_LINK.test(page) ? page.replace(PLAN_CSS_LINK, () => sheet) : page;
+function withBaseStyle(page: string) {
+  const linksCss = PLAN_CSS_LINK.test(page);
+  const style = baseStyle(linksCss ? 'light' : mode.value);
+  const linked = page.replace(PLAN_CSS_LINK, () => `<style>${planCss}</style>`);
   const head = /<head[^>]*>/i.exec(linked);
   if (head) return linked.slice(0, head.index + head[0].length) + style + linked.slice(head.index + head[0].length);
   return linked.replace(/^(\s*<!doctype[^>]*>)?/i, (doctype) => doctype + style);
@@ -67,8 +70,9 @@ const full = ref(false);
 const pageQ = useQuery(
   computed(() => ({ ...planHtmlQuery(props.plan.task_id, props.plan.id, props.plan.updated_at), enabled: full.value })),
 );
-// Rebuilt when the mode changes, so the open plan switches at once (the frame reloads, so it returns to the top).
-const html = computed(() => (pageQ.data.value ? withBaseStyle(pageQ.data.value.html, mode.value) : null));
+// Rebuilt when the mode changes, but only for a plan that follows it (the frame reloads, so it returns to the top):
+// withBaseStyle reads the mode only for a plan that doesn't link plan.css.
+const html = computed(() => (pageQ.data.value ? withBaseStyle(pageQ.data.value.html) : null));
 const error = computed(() => (pageQ.error.value ? `Couldn't load the plan: ${pageQ.error.value.message}` : ''));
 const frame = ref<HTMLIFrameElement | null>(null);
 let scrollTo: string | null = null;

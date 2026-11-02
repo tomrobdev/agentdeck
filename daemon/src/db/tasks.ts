@@ -22,15 +22,15 @@ import { type AnySQLiteColumn, alias } from 'drizzle-orm/sqlite-core';
 import type { DatabaseSync } from 'node:sqlite';
 import { DEFAULTS } from '../config.ts';
 import type { CheckCounts, MergeMethod } from '../domain/pull-request/merge.ts';
-import { parsePlan, planFileName } from '../domain/plan/plan.ts';
 import { INTERRUPTED } from '../domain/run/run.ts';
 import { MAX_RESTARTS, type TaskEvent, type TaskStatus, fromStatuses, nextStatus, transition } from '../domain/task/lifecycle.ts';
 import type { Link, LinkKind } from '../domain/task/link.ts';
 import type { PrEvent, TaskEventRow, TaskEventType } from '../domain/task/history.ts';
 import { EDITABLE_STATUSES, OPEN_STATUSES, type Task, type TaskSummary } from '../domain/task/task.ts';
 import type { Orm } from './orm.ts';
+import { insertOwnPlan } from './plans.ts';
 import { NOW, atomically } from './sql.ts';
-import { plannerRuns, repos, runs, taskEvents, taskLinks, taskPlans, tasks } from './tables.ts';
+import { plannerRuns, repos, runs, taskEvents, taskLinks, tasks } from './tables.ts';
 
 /** Every column but the prompt, for lists. */
 const { prompt: _prompt, ...SUMMARY_COLUMNS } = getColumns(tasks);
@@ -119,8 +119,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
           .run();
         const id = Number(info.lastInsertRowid);
         if (n.own_plan !== undefined) {
-          const name = planFileName(id, parsePlan(n.own_plan)?.title ?? '');
-          orm.insert(taskPlans).values({ task_id: id, name, source: 'attached', html: n.own_plan }).run();
+          insertOwnPlan(orm, id, n.own_plan, 'attached');
           orm.update(tasks).set({ plan_task: id }).where(eq(tasks.id, id)).run();
         }
         for (const l of links) orm.insert(taskLinks).values({ task_id: id, on_task: l.on, kind: l.kind }).run();

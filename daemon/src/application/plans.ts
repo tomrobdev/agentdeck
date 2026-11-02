@@ -1,8 +1,8 @@
 // Plans: stored in AgentDeck per task, named after the task they belong to (`112-plans-in-agentdeck.html`). A task
 // follows its linked plan (plan_task) or else its own; each run gets it in the worktree's plan file and gives it back.
-import { readGivenPlan, readPlanFile, writeGivenPlan, writePlanFile } from '../adapters/plan-file.ts';
+import { readGivenPlan, readPlanFile, writeGivenPlan } from '../adapters/plan-file.ts';
 import type { Db } from '../db/index.ts';
-import type { OwnPlan } from '../db/plans.ts';
+import { type OwnPlan, toPlan } from '../db/plans.ts';
 import {
   PLAN_LIMIT,
   type ParsedPlan,
@@ -44,14 +44,6 @@ export function planForRun(db: Db, task: Task): PromptPlan | null {
 }
 
 /**
- * Put the run's plan in the worktree's plan file (or clear the file when there is none), for the worker to update,
- * with a copy of it as given to the run beside it.
- */
-export async function putPlanFile(worktree: string, plan: PromptPlan | null): Promise<void> {
-  await writePlanFile(worktree, plan?.html ?? null);
-}
-
-/**
  * After a run, whatever its outcome, and before the next run of a task whose last run a restart cut off: store what the
  * worker left in the plan file. What the stored plan becomes is planAfterRun's to decide: the whole file, or only the
  * linked steps the run changed. A task with no plan that wrote one gets it as its own plan. What was taken is then
@@ -59,7 +51,7 @@ export async function putPlanFile(worktree: string, plan: PromptPlan | null): Pr
  */
 export async function takePlanFile(db: Db, task: Task, worktree: string): Promise<boolean> {
   const [written, given] = await Promise.all([readPlanFile(worktree), readGivenPlan(worktree)]);
-  if (written === null || Buffer.byteLength(written) > PLAN_LIMIT || !parsePlan(written)) return false;
+  if (written === null || !parsePlan(written)) return false;
   const changed = storeWrittenPlan(db, task, written, given);
   await writeGivenPlan(worktree, written);
   return changed;
@@ -106,17 +98,15 @@ export function followedSteps(db: Db, task: Task): ReturnType<typeof linkedSteps
 /** The plan a task follows and its linked steps, for the PR body. Null when it follows none. */
 export function prPlanFor(db: Db, task: Task): PrPlan | null {
   const plan = followedPlan(db, task);
-  const steps = plan && linkedSteps(plan.html, plan.steps);
+  const steps = followedSteps(db, task);
   return plan && steps ? { name: plan.name, steps } : null;
 }
 
 /** The plans a task shows: the plan it follows when that belongs to another task, then its own, oldest first. */
 export function plansShown(db: Db, task: Pick<Task, 'id' | 'plan_task'>): TaskPlan[] {
   const own = db.plansForTask(task.id);
-  if (task.plan_task === null || task.plan_task === task.id) return own;
-  const linked = db.ownPlan(task.plan_task);
-  const shown = linked && db.plansForTask(task.plan_task).find((p) => p.id === linked.id);
-  return shown ? [shown, ...own] : own;
+  const linked = task.plan_task === null || task.plan_task === task.id ? undefined : db.ownPlan(task.plan_task);
+  return linked ? [toPlan(linked), ...own] : own;
 }
 
 /**

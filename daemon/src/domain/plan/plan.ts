@@ -78,7 +78,7 @@ export function parsePlanWithText(html: string): { plan: ParsedPlan; texts: stri
 }
 
 function readPlan(html: string): { plan: ParsedPlan; texts: string[] } | null {
-  const doc = html.replace(/<!--[\s\S]*?-->/g, '').replace(/<(script|style|template)\b[\s\S]*?<\/\1\s*>/gi, '');
+  const doc = ignoringSkipped(html);
   const marker = MARKER.exec(doc);
   if (!marker) return null;
   const version = marker[1] ?? marker[2] ?? marker[3] ?? '1';
@@ -218,17 +218,23 @@ function sectionsById(html: string): Map<string, { start: number; end: number }>
 
 /** Each step's <section> in `html`, by position, leaving out ones inside comments, scripts, styles and templates. */
 function stepSections(html: string): { id: string | null; start: number; end: number }[] {
-  // Blank out what parsePlan ignores, keeping every offset, so positions point into `html`.
-  const masked = html
-    .replace(/<!--[\s\S]*?-->/g, (m) => ' '.repeat(m.length))
-    .replace(/<(script|style|template)\b[\s\S]*?<\/\1\s*>/gi, (m) => ' '.repeat(m.length));
   const out: { id: string | null; start: number; end: number }[] = [];
-  for (const m of masked.matchAll(/<section\b([^>]*)>[\s\S]*?<\/section\s*>/gi)) {
+  for (const m of ignoringSkipped(html).matchAll(/<section\b([^>]*)>[\s\S]*?<\/section\s*>/gi)) {
     const attrs = attributes(m[1]);
     if (!('data-plan-step' in attrs)) continue;
     out.push({ id: attrs.id || null, start: m.index, end: m.index + m[0].length });
   }
   return out;
+}
+
+/**
+ * `html` with what a plan ignores (comments, scripts, styles, templates) blanked out, every offset kept, so positions
+ * found in the result point into `html`.
+ */
+function ignoringSkipped(html: string): string {
+  return html
+    .replace(/<!--[\s\S]*?-->/g, (m) => ' '.repeat(m.length))
+    .replace(/<(script|style|template)\b[\s\S]*?<\/\1\s*>/gi, (m) => ' '.repeat(m.length));
 }
 
 /** A tag's attributes, names lower-cased. A bare attribute has the value ''. */
