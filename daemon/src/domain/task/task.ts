@@ -55,7 +55,7 @@ export function planStepIds(task: Pick<Task, 'plan_steps'>): string[] | null {
 
 /**
  * The sections every task prompt has, in order, each a markdown `##` heading. The delegate skill (.claude/skills/delegate)
- * asks for the same. `parsePromptSections` (sections.ts) also reads the older `Goal:` form.
+ * asks for the same.
  */
 export const PROMPT_SECTIONS = `## Goal
 What the task achieves, in a sentence or two.
