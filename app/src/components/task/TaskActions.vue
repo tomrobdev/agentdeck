@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { type MergeResult, type TaskDetail, api, describeMergeRequest, describeSync } from '../../api';
+import { type MergeResult, type TaskDetail, api } from '../../api';
 import { canReview, personEvents } from '../../lib/taskView';
 import { useActions } from '../../composables/useActions';
 import Modal from '../ui/Modal.vue';
 import MarkDoneDialog from './MarkDoneDialog.vue';
 import MergeDialog from './MergeDialog.vue';
 
-// The buttons in a task page's header, and the dialogs some of them open.
+// The buttons at the end of a task page's tab bar, and the dialogs some of them open. A sync or a merge request is on the
+// header's status line, with Cancel merge.
 const props = defineProps<{ task: TaskDetail }>();
 const emit = defineEmits<{ act: [kind: 'approve' | 'reject' | 'retry' | 'cancel']; review: [] }>();
 const { busy, run, refresh, flash } = useActions();
@@ -30,8 +31,6 @@ async function submitMarkDone(doneNote: string) {
   markingDone.value = false;
 }
 
-const cancelMerge = () => run(() => api.cancelMergeRequest(props.task.id));
-
 const merging = ref(false);
 async function onMerged(result: MergeResult) {
   merging.value = false;
@@ -52,11 +51,6 @@ async function onMerged(result: MergeResult) {
     </template>
     <button v-else-if="events.includes('retry')" @click="emit('act', 'retry')">↻ Retry</button>
     <button v-if="events.includes('mark_done')" @click="markingDone = true">✓ Mark done</button>
-    <span v-if="task.sync" class="chip chip-accent self-center" data-sync>{{ describeSync(task.sync) }}</span>
-    <span v-if="task.merge_request" class="chip chip-accent self-center" data-merge-request>{{
-      describeMergeRequest(task.merge_request)
-    }}</span>
-    <button v-if="task.merge_request" :disabled="busy" @click="cancelMerge">Cancel merge</button>
     <button
       v-if="canReview(task)"
       class="primary"

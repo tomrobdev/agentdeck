@@ -34,6 +34,19 @@ export interface AutoMergeCheck {
   verdict: 'merge' | 'wait' | 'never';
   /** Why it waits or needs a person; empty for `merge`. */
   reasons: string[];
+  /** Set when one of the reasons is the merge finding of kind `conflict`: the branch conflicts with the base. */
+  conflict?: true;
+}
+
+/** A verdict from its reasons, marked when one of the findings was a conflict with the base. */
+export function verdictOf(reasons: { never: string[]; wait: string[] }, found: MergeFinding[]): AutoMergeCheck {
+  const check: AutoMergeCheck = reasons.never.length
+    ? { verdict: 'never', reasons: reasons.never }
+    : reasons.wait.length
+      ? { verdict: 'wait', reasons: reasons.wait }
+      : { verdict: 'merge', reasons: [] };
+  if (check.verdict !== 'merge' && found.some((f) => f.kind === 'conflict')) check.conflict = true;
+  return check;
 }
 
 /**
@@ -68,7 +81,8 @@ export function autoMergeCheck(
 ): AutoMergeCheck {
   const { repo, pr, tests_passed } = input;
   const reasons = { never: [] as string[], wait: [] as string[] };
-  for (const f of mergeFindings(input)) {
+  const found = mergeFindings(input);
+  for (const f of found) {
     // While required checks run GitHub says BLOCKED too; the pending checks are the wait.
     const how =
       f.kind === 'blocked' && pr.checks.pending ? null : f.kind === 'conflict' && conflictNeedsPerson(input) ? 'never' : UNATTENDED[f.kind];
@@ -89,10 +103,7 @@ export function autoMergeCheck(
 
   if (isMergeabilityUnknown(pr)) reasons.wait.push('GitHub is still working out whether it merges cleanly');
   if (input.paused) reasons.wait.push(input.paused);
-
-  if (reasons.never.length) return { verdict: 'never', reasons: reasons.never };
-  if (reasons.wait.length) return { verdict: 'wait', reasons: reasons.wait };
-  return { verdict: 'merge', reasons: [] };
+  return verdictOf(reasons, found);
 }
 
 /** What `autoMergeView` says about a task. `off`: not on. `on`: on, no PR checked yet. The rest are the last check's verdict. */
@@ -123,7 +134,9 @@ export function readAutoMergeCheck(json: string | null): AutoMergeCheck | null {
   try {
     const v = JSON.parse(json) as Partial<AutoMergeCheck> | null;
     if (!v || !['merge', 'wait', 'never'].includes(v.verdict as string) || !Array.isArray(v.reasons)) return null;
-    return { verdict: v.verdict!, reasons: v.reasons.filter((r): r is string => typeof r === 'string') };
+    const check: AutoMergeCheck = { verdict: v.verdict!, reasons: v.reasons.filter((r): r is string => typeof r === 'string') };
+    if (v.conflict === true) check.conflict = true;
+    return check;
   } catch {
     return null;
   }

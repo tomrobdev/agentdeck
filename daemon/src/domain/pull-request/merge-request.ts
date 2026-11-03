@@ -1,7 +1,7 @@
 // A merge request: a person's Merge, which the daemon carries out once the PR is ready (docs/plans/merge-requests.html). Pure: no I/O.
 import type { Task } from '../task/task.ts';
 import { isMergeabilityUnknown } from './conflict.ts';
-import { type AutoMergeCheck, readAutoMergeCheck } from './auto-merge.ts';
+import { type AutoMergeCheck, readAutoMergeCheck, verdictOf } from './auto-merge.ts';
 import { DEFAULT_MERGE_METHOD, type MergeFinding, type MergeInput, type MergeMethod, conflictNeedsPerson, mergeFindings } from './merge.ts';
 
 /**
@@ -24,7 +24,8 @@ const REQUESTED: Record<MergeFinding['kind'], 'never' | 'wait' | null> = {
 /** Whether a requested merge may go ahead now (`merge`), waits for something that can change on its own, or needs a person (`never`). */
 export function mergeRequestCheck(input: MergeInput): AutoMergeCheck {
   const reasons = { never: [] as string[], wait: [] as string[] };
-  for (const f of mergeFindings(input)) {
+  const found = mergeFindings(input);
+  for (const f of found) {
     // While required checks run GitHub says BLOCKED too; the pending checks are the wait.
     const how =
       f.kind === 'blocked' && input.pr.checks.pending
@@ -35,9 +36,7 @@ export function mergeRequestCheck(input: MergeInput): AutoMergeCheck {
     if (how) reasons[how].push(f.text);
   }
   if (isMergeabilityUnknown(input.pr)) reasons.wait.push('GitHub is still working out whether it merges cleanly');
-  if (reasons.never.length) return { verdict: 'never', reasons: reasons.never };
-  if (reasons.wait.length) return { verdict: 'wait', reasons: reasons.wait };
-  return { verdict: 'merge', reasons: [] };
+  return verdictOf(reasons, found);
 }
 
 /** Whether a waiting request is worth reading again soon: its checks are running, or GitHub is working out mergeability. */
@@ -52,6 +51,16 @@ export interface MergeRequestView {
   reasons: string[];
   /** When the person asked (UTC, `YYYY-MM-DD HH:MM:SS`). */
   since: string;
+}
+
+/**
+ * Whether the task's open PR conflicts with the base branch, as the last PR check found it: the merge request's check, else
+ * auto-merge's. False with neither (auto-merge off and no merge request: nothing stores a check).
+ */
+export function conflictsWithBase(task: Pick<Task, 'pr_state' | 'merge_request_check' | 'auto_merge_check'>): boolean {
+  if (task.pr_state !== 'open') return false;
+  const check = readAutoMergeCheck(task.merge_request_check) ?? readAutoMergeCheck(task.auto_merge_check);
+  return check?.conflict === true;
 }
 
 /** The task's merge request, or null when it has none. `merging`: a merge of this task is under way in this process. */

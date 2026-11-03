@@ -204,6 +204,11 @@ export interface TaskSummary {
   /** The person's merge request, while the daemon is to merge the PR when it is ready; null with none. Missing from a daemon that predates it. */
   merge_request?: MergeRequestView | null;
   /**
+   * The open PR conflicts with the base branch, as the last PR check found it (the merge request's check, else auto-merge's;
+   * false when neither stored one). Missing from a daemon that predates it.
+   */
+  conflicting?: boolean;
+  /**
    * Set for a queued task waiting on builds-on links: `on` is every task it builds on still on its way, or, with `stuck`
    * (why it won't get there on its own), the one task it is stuck on.
    */
@@ -472,6 +477,8 @@ export interface MergePreview {
 export interface AutoMergeCheck {
   verdict: 'merge' | 'wait' | 'never';
   reasons: string[];
+  /** Set when one of the reasons is a conflict with the base branch. */
+  conflict?: true;
 }
 
 /**

@@ -1,7 +1,7 @@
 // Merge requests (docs/plans/merge-requests.html), the pure part: what each finding means to a request, and the view of one.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { mergeRequestCheck, mergeRequestPolls, mergeRequestView } from '../src/domain/pull-request/merge-request.ts';
+import { conflictsWithBase, mergeRequestCheck, mergeRequestPolls, mergeRequestView } from '../src/domain/pull-request/merge-request.ts';
 import { AUTO_MERGE_LABEL } from '../src/domain/pull-request/auto-merge.ts';
 import type { PrDetails } from '../src/domain/pull-request/merge.ts';
 
@@ -108,4 +108,23 @@ test('mergeRequestView: none, waiting with its reasons, and merging', () => {
   assert.deepEqual(mergeRequestView(waiting, true), { state: 'merging', method: 'rebase', reasons: [], since: '2026-11-01 10:00:00' });
   assert.equal(mergeRequestView({ ...waiting, merge_request_check: 'not json' }, false)!.reasons.length, 0);
   assert.equal(mergeRequestView({ ...asked, merge_request_method: null }, false)!.method, 'squash');
+});
+
+test('a check marks a conflict as data, and conflictsWithBase reads it from the stored checks of an open PR', () => {
+  const dirty = { mergeable: 'CONFLICTING', merge_state: 'DIRTY' };
+  assert.equal(check(dirty).conflict, true);
+  assert.equal(check({ checks: { total: 3, failing: 0, pending: 2 } }).conflict, undefined, 'no conflict, no mark');
+  assert.equal(check().conflict, undefined);
+
+  const stored = JSON.stringify(check(dirty));
+  const task = { pr_state: 'open' as const, merge_request_check: null, auto_merge_check: null };
+  assert.equal(conflictsWithBase(task), false, 'no stored check');
+  assert.equal(conflictsWithBase({ ...task, merge_request_check: stored }), true);
+  assert.equal(conflictsWithBase({ ...task, auto_merge_check: stored }), true, "auto-merge's check counts with no merge request");
+  assert.equal(
+    conflictsWithBase({ ...task, merge_request_check: JSON.stringify(check()), auto_merge_check: stored }),
+    false,
+    "the merge request's newer check wins",
+  );
+  assert.equal(conflictsWithBase({ ...task, pr_state: 'merged', merge_request_check: stored }), false, 'only an open PR conflicts');
 });
