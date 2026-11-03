@@ -110,6 +110,15 @@ pub fn set_paused(paused: bool) -> Result<(), String> {
         .map_err(|e| e.to_string())
 }
 
+/// Restart the daemon (`POST /api/daemon/restart`); it waits for running tasks to finish first.
+pub fn restart() -> Result<(), String> {
+    agent(Some(REQUEST_TIMEOUT))
+        .post(format!("{}/api/daemon/restart", base_url()))
+        .send_empty()
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+
 /// Turns the bytes of a Server-Sent Events stream into the revisions of its `rev` events. Chunks may split anywhere,
 /// even inside a line or a character; comment lines (`: ping`) and other events are skipped.
 #[derive(Default)]

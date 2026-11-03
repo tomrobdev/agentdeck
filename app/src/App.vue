@@ -16,7 +16,7 @@ import {
   taskQuery,
   tasksQuery,
 } from './api';
-import { onOpenUrl } from './platform/native';
+import { isNative, onOpenUrl } from './platform/native';
 import { mode, setMode } from './platform/theme';
 import NewTaskForm from './components/panels/NewTaskForm.vue';
 import WaitBar from './components/layout/WaitBar.vue';
@@ -136,7 +136,9 @@ const paletteRows = computed(() =>
     },
   }),
 );
+// In the desktop app the View menu owns ⌘K (it arrives as agentdeck://palette); this handler is for the plain browser.
 function onPaletteKey(e: KeyboardEvent) {
+  if (isNative) return;
   if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== 'k') return;
   e.preventDefault();
   palette.value = !palette.value;
@@ -145,7 +147,9 @@ function onPaletteKey(e: KeyboardEvent) {
 function openLink(url: string) {
   const to = parseAppUrl(url);
   if (!to) return;
-  if (to.name === 'new') modal.value = 'new';
+  if (to.name === 'palette') palette.value = !palette.value;
+  else if (to.name === 'new') modal.value = 'new';
+  else if (to.name === 'panel') modal.value = to.panel;
   else {
     modal.value = null;
     go(to);

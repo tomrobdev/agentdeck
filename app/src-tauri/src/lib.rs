@@ -1,3 +1,4 @@
+mod app_menu;
 mod daemon_client;
 mod open;
 mod shortcuts;
@@ -36,6 +37,7 @@ pub fn run() {
             terminal::run_template
         ])
         .setup(|app| {
+            app_menu::setup(app.handle())?;
             tray::setup(app)?;
             shortcuts::register(app.handle());
             let handle = app.handle().clone();
