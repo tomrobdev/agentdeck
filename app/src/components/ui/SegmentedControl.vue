@@ -40,7 +40,7 @@ const model = defineModel<T>({ required: true });
   color: var(--text);
   font-weight: 600;
 }
-:global(:root[data-theme='contrast']) .seg-control > :deep(button[data-state='on']) {
+:root[data-theme='contrast'] .seg-control > :deep(button[data-state='on']) {
   background: var(--text);
   color: var(--bg);
 }
