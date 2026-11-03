@@ -1,18 +1,9 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
 import { useHotkeys } from '../../composables/useHotkeys';
+import type { TreeNode } from '../../lib/changedTree';
+import { fuzzyScore } from '../../lib/fuzzy';
 import Delta from '../ui/Delta.vue';
-
-/** A tree node. `meta` is shown at the row end (e.g. "bin"), `delta` as +n −n counts; `badge` before the name (A, M, D, R). */
-export interface TreeNode {
-  name: string;
-  path: string;
-  type: 'file' | 'dir';
-  badge?: string;
-  badgeTitle?: string;
-  meta?: string;
-  delta?: { add: number; del: number };
-}
 
 // A file tree that loads folders through `load`, so the same component serves the changed files
 // (all known up front) and a repo browsed one level at a time.
@@ -33,7 +24,9 @@ const emit = defineEmits<{ select: [path: string] }>();
 const children = reactive(new Map<string, TreeNode[]>());
 const open = reactive(new Set<string>());
 const loading = reactive(new Set<string>());
-const error = ref('');
+// A folder's error shows until that folder loads, or the loader changes.
+const errors = reactive(new Map<string, string>());
+const error = computed(() => errors.values().next().value ?? '');
 const filter = ref('');
 const filterBox = ref<HTMLInputElement | null>(null);
 
@@ -55,9 +48,10 @@ async function fetchDir(dir: string) {
     const list = await load(dir);
     if (load !== props.load) return; // another task or ref took over meanwhile
     children.set(dir, list);
+    errors.delete(dir);
     if (props.expandAll) for (const n of list) if (n.type === 'dir') await toggle(n.path, true);
   } catch (e) {
-    error.value = (e as Error).message;
+    if (load === props.load) errors.set(dir, (e as Error).message);
   } finally {
     loading.delete(dir);
   }
@@ -78,7 +72,7 @@ watch(
     children.clear();
     open.clear();
     pending.clear();
-    error.value = '';
+    errors.clear();
     ensure('');
     revealSelected();
   },
@@ -119,21 +113,15 @@ const rows = computed<Row[]>(() => {
 
 /** With a filter, a flat list of matching files among everything loaded or known. */
 const matches = computed(() => {
-  const q = filter.value.trim().toLowerCase();
+  const q = filter.value.trim();
   if (!q) return null;
   const files = new Set<string>(props.known ?? []);
   for (const list of children.values()) for (const n of list) if (n.type === 'file') files.add(n.path);
   return [...files]
-    .filter((p) => fuzzy(p.toLowerCase(), q))
+    .filter((p) => fuzzyScore(q, p) !== null)
     .sort((a, b) => a.length - b.length)
     .slice(0, 200);
 });
-/** Each character of q appears in order in s. */
-function fuzzy(s: string, q: string): boolean {
-  let i = 0;
-  for (const c of s) if (c === q[i]) i++;
-  return i === q.length;
-}
 
 const ROW = 'flex w-full items-center gap-[5px] rounded-sm border-none bg-transparent px-2 py-0.5 text-left text-sm whitespace-nowrap';
 const SELECTED = 'bg-[color-mix(in_srgb,var(--accent)_14%,var(--panel))]';

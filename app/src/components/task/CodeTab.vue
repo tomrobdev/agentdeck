@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
-import { type FileRef, type TaskDetail, fileQuery, treeQuery } from '../../api';
+import { type FileRef, TEXT_LIMIT, type TaskDetail, fileQuery, fileSize, treeQuery } from '../../api';
 import { useCommits } from '../../composables/useChanges';
 import { useCopy } from '../../platform/native';
 import { isMarkdown as isMarkdownPath } from '../../lib/render';
 import { go } from '../../router';
 import CodeView, { type LineRange } from '../files/CodeView.vue';
-import FileTree, { type TreeNode } from '../files/FileTree.vue';
+import type { TreeNode } from '../../lib/changedTree';
+import FileTree from '../files/FileTree.vue';
 import Markdown from '../files/Markdown.vue';
 import Chip from '../ui/Chip.vue';
 import SegmentedControl from '../ui/SegmentedControl.vue';
@@ -45,7 +46,7 @@ const loadTree = computed(() => {
       name: e.name,
       path: e.path,
       type: e.type,
-      meta: e.type === 'file' && e.size !== null && e.size > 100_000 ? `${Math.round(e.size / 1024)} KB` : undefined,
+      meta: e.type === 'file' && e.size !== null && e.size > 100_000 ? fileSize(e.size) : undefined,
     }));
 });
 
@@ -98,9 +99,7 @@ const select = (r: LineRange) => setQuery({ L: r.from === r.to ? String(r.from) 
             >
           </nav>
           <Chip v-if="changed.has(path) && ref_ === 'head'" tone="blocked" size="xs">changed</Chip>
-          <span v-if="file" class="text-sm text-muted">{{
-            file.size < 1024 ? `${file.size} B` : `${Math.round(file.size / 1024)} KB`
-          }}</span>
+          <span v-if="file" class="text-sm text-muted">{{ fileSize(file.size) }}</span>
           <div class="spacer" />
           <SegmentedControl
             v-if="isMarkdown && file?.text !== null"
@@ -133,7 +132,7 @@ const select = (r: LineRange) => setQuery({ L: r.from === r.to ? String(r.from) 
           scroll-to-range
           @select="select"
         />
-        <p v-if="file?.truncated" class="m-0 px-3.5 py-3 text-muted">File too large: showing the first 512 KB.</p>
+        <p v-if="file?.truncated" class="m-0 px-3.5 py-3 text-muted">File too large: showing the first {{ fileSize(TEXT_LIMIT) }}.</p>
       </template>
     </section>
   </div>
