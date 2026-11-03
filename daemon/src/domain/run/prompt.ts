@@ -3,6 +3,7 @@ import { PLAN_FILE, parsePlanWithText } from '../plan/plan.ts';
 import { PR_SUMMARY_FORMAT } from '../pull-request/summary.ts';
 import { ALWAYS_DISALLOWED_TOOLS } from '../repo/tools.ts';
 import { type ReviewPrompt, reviewPromptBlock } from '../review/address.ts';
+import { NEVER_APPLIED, PROTECTED_PREFIXES, editPathFor } from './protected-edits.ts';
 import { withoutUnscopedFileTools } from './sandbox.ts';
 import { type Task, leftoversMessage } from '../task/task.ts';
 import { INTERRUPTED, type Run } from './run.ts';
@@ -30,7 +31,8 @@ ${
   A step may list its checks in <ul data-plan-done>, one <li> each.
   Put <link rel="stylesheet" href="plan.css" /> in the <head> and add no <style> block: AgentDeck styles every plan.
   Everything else is free HTML. Keep each step's data-status current as you work.
-- If you can't finish because the environment lacks something, say exactly what on the STATUS line instead of working around it: "STATUS: BLOCKED: NEEDS deps: <packages>", "NEEDS host: <hosts>" or "NEEDS edit: <files>" (a file you may not edit, such as one under .claude/). Never install packages yourself.
+- You may not edit files under ${PROTECTED_PREFIXES.join(', ')}. When the task needs one changed, write the whole new file to ${editPathFor('.claude/<path>')} instead (say ${editPathFor('.claude/skills/x/SKILL.md')} for .claude/skills/x/SKILL.md: leave the dot off, since a path with a .claude folder in it is refused anywhere), name it in your final message, and carry on. AgentDeck commits it to your branch after the run, and a person reviews it before it merges. It never applies ${NEVER_APPLIED.join(', ')}: for those, block with NEEDS edit.
+- If you can't finish because the environment lacks something, say exactly what on the STATUS line instead of working around it: "STATUS: BLOCKED: NEEDS deps: <packages>", "NEEDS host: <hosts>" or "NEEDS edit: <files>" (a settings or hooks file above). Never install packages yourself.
 - If you cannot finish (missing info, needs a human decision, blocked by permissions), stop and explain why.
 - When you finish with STATUS: DONE, your final message is the pull request body. Write it as ${PR_SUMMARY_FORMAT}
   If the prompt lists review comments (c1, c2…), add one line per comment after the pull request body: "ANSWER c1: <what you did, or why not>". Each answer is a single line. AgentDeck shows it on the comment.
