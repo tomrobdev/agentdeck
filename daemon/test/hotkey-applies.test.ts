@@ -44,11 +44,16 @@ test('other keys still work on a focused button', () => {
   assert.equal(hotkeyApplies(press('Enter', [])), true);
 });
 
-test('nothing counts while a menu or dialog is open', () => {
-  page('[role="menu"]');
-  assert.equal(hotkeyApplies(press('j', [])), false);
-  page('[role="dialog"]');
-  assert.equal(hotkeyApplies(press('j', [])), false);
+test('nothing counts while a modal dialog, alert dialog, menu or listbox is open', () => {
+  for (const layer of ['[role="dialog"][aria-modal="true"]', '[role="alertdialog"]', '[role="menu"]', '[role="listbox"]']) {
+    page(layer);
+    assert.equal(hotkeyApplies(press('j', [])), false, layer);
+  }
+});
+
+test('a non-modal popover (a dialog role without aria-modal) leaves the keys on', () => {
+  page('[role="dialog"]:not([aria-modal])');
+  assert.equal(hotkeyApplies(press('j', [])), true);
 });
 
 test('typing in a field, or with a modifier, does not count', () => {

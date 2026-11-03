@@ -1,28 +1,50 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted } from 'vue';
+import { ref } from 'vue';
+import { DialogContent, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui';
 
-defineProps<{ title: string }>();
+// A modal dialog on Reka's Dialog. Callers mount it with v-if, so it is always open and a dismissal (Escape, a click on
+// the overlay, the ✕) emits `close`. Reka does the rest: Escape reaches only the top layer, focus is trapped inside and
+// returned to the trigger, and a drag that starts in the content and ends on the overlay does not close it.
+const props = defineProps<{
+  title: string;
+  /** What gets focus on open: a selector inside the dialog, or an element. Default: the first field in the body. */
+  focus?: string | HTMLElement | null;
+}>();
 const emit = defineEmits<{ close: [] }>();
 
-const onKey = (e: KeyboardEvent) => {
-  if (e.key === 'Escape') emit('close');
-};
-onMounted(() => window.addEventListener('keydown', onKey));
-onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
+const content = ref<{ $el: HTMLElement } | null>(null);
+const FIELD = 'input:not([type="hidden"]), textarea, select, [contenteditable]';
+
+function onOpenAutoFocus(e: Event) {
+  const root = content.value?.$el;
+  const target = typeof props.focus === 'string' ? root?.querySelector<HTMLElement>(props.focus) : props.focus;
+  const field = target ?? root?.querySelector<HTMLElement>(`[data-modal-body] :is(${FIELD})`);
+  // No field: leave Reka's own choice (the first focusable thing).
+  if (!field) return;
+  e.preventDefault();
+  field.focus();
+}
 </script>
 
 <template>
-  <div class="fixed inset-0 z-10 grid place-items-center bg-[rgb(0_0_0/0.35)]" @click.self="$emit('close')">
-    <div
-      class="max-h-[calc(100vh-64px)] w-[min(560px,calc(100vw-32px))] overflow-auto rounded-lg border border-border bg-panel px-5 pt-4 pb-5 shadow-modal"
-      role="dialog"
-      :aria-label="title"
-    >
-      <header class="mb-3 flex items-center">
-        <h3 class="m-0 flex-1 text-lg">{{ title }}</h3>
-        <button class="border-0 bg-transparent text-muted" @click="$emit('close')" aria-label="Close">✕</button>
-      </header>
-      <slot />
-    </div>
-  </div>
+  <DialogRoot :open="true" @update:open="(open) => !open && emit('close')">
+    <DialogPortal>
+      <DialogOverlay class="fixed inset-0 z-10 bg-[rgb(0_0_0/0.35)]" />
+      <DialogContent
+        ref="content"
+        class="fixed top-1/2 left-1/2 z-10 max-h-[calc(100vh-64px)] w-[min(560px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 overflow-auto rounded-lg border border-border bg-panel px-5 pt-4 pb-5 shadow-modal"
+        aria-modal="true"
+        :aria-describedby="undefined"
+        @open-auto-focus="onOpenAutoFocus"
+      >
+        <header class="mb-3 flex items-center">
+          <DialogTitle class="m-0 flex-1 text-lg font-semibold">{{ title }}</DialogTitle>
+          <button class="border-0 bg-transparent text-muted" aria-label="Close" @click="emit('close')">✕</button>
+        </header>
+        <div class="contents" data-modal-body>
+          <slot />
+        </div>
+      </DialogContent>
+    </DialogPortal>
+  </DialogRoot>
 </template>

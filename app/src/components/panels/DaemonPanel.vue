@@ -5,6 +5,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { api, daemonHealthQuery, daemonQuery, isOffline, taskList, uptime } from '../../api';
 import { useActions } from '../../composables/useActions';
+import ConfirmDialog from '../ui/ConfirmDialog.vue';
 import Modal from '../ui/Modal.vue';
 
 defineEmits<{ close: [] }>();
@@ -136,10 +137,13 @@ function refresh() {
     </p>
     <p v-else-if="asked && !reloadLine" class="muted m-0 mb-3" role="status">Restarting…</p>
 
-    <div
+    <ConfirmDialog
       v-if="confirming"
-      class="s-blocked mb-3 rounded-md border border-[color-mix(in_srgb,var(--c)_40%,transparent)] p-2.5"
-      role="alertdialog"
+      title="Restart the daemon"
+      confirm-label="Restart now"
+      :busy="busy"
+      @cancel="confirming = false"
+      @confirm="restartNow"
     >
       <template v-if="health?.running.length">
         Restart now? These tasks lose their run and are requeued:
@@ -148,11 +152,7 @@ function refresh() {
         </ul>
       </template>
       <template v-else>Restart now? No task is running.</template>
-      <div class="mt-2 flex gap-2">
-        <button class="primary" :disabled="busy" @click="restartNow">Restart now</button>
-        <button @click="confirming = false">Cancel</button>
-      </div>
-    </div>
+    </ConfirmDialog>
 
     <div class="flex items-center gap-2">
       <button :disabled="busy || down" @click="refresh">Refresh</button>
