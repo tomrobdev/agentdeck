@@ -38,7 +38,7 @@ import { go, openTask, route } from './router';
 import { type PersonEvent, needYouCount, openingTab } from './lib/taskView';
 import { paletteItems } from './lib/palette';
 import { requestedView } from './composables/useView';
-import { provideActions } from './composables/useActions';
+import { provideActions, trackPending } from './composables/useActions';
 import { useChangeStream } from './composables/useChangeStream';
 
 const STATUS_FALLBACK_MS = 30_000;
@@ -77,11 +77,10 @@ const offline = computed(() => isOffline(statusQ.error.value));
 
 // After a change any of it may have moved (the Repos panel adds, archives and edits repos too).
 const queryClient = useQueryClient();
-const {
-  busy,
-  run: act,
-  refresh,
-} = provideActions(() => queryClient.invalidateQueries({ predicate: (q) => !isImmutable(q.queryKey) }), flash);
+const actions = provideActions(() => queryClient.invalidateQueries({ predicate: (q) => !isImmutable(q.queryKey) }), flash);
+const { run: act, refresh } = actions;
+// Pause and the two Resume buttons share one pending state; every other button has its own.
+const { pending: pausing, run: pauseRun } = trackPending(actions);
 
 watch(
   pageId,
@@ -91,7 +90,7 @@ watch(
   { immediate: true },
 );
 
-const togglePause = () => act(() => (status.value?.paused ? api.resume() : api.pause()));
+const togglePause = () => pauseRun(() => (status.value?.paused ? api.resume() : api.pause()));
 const actOn = (kind: PersonEvent, id: number) => act(() => PERSON_CALLS[kind](id));
 /** A task in review opens on its diff, the rest on the overview. */
 function openFromQueue(id: number) {
@@ -140,8 +139,8 @@ function onPaletteKey(e: KeyboardEvent) {
 onMounted(() => window.addEventListener('keydown', onPaletteKey));
 onBeforeUnmount(() => window.removeEventListener('keydown', onPaletteKey));
 
-const resumeDaemon = () => act(() => api.resume());
-const resumeRepo = (id: number) => act(() => api.resumeRepo(id));
+const resumeDaemon = () => pauseRun(() => api.resume());
+const resumeRepo = (id: number) => pauseRun(() => api.resumeRepo(id));
 
 function onCreated(task: Detail) {
   modal.value = null;
@@ -184,7 +183,7 @@ watchEffect(() => {
       </main>
       <main v-else class="flex min-h-0 flex-1 flex-col">
         <StaleDaemonBar :status="status" />
-        <WaitBar :status="status" :busy="busy" @resume="resumeDaemon" @resume-repo="resumeRepo" @settings="modal = 'settings'" />
+        <WaitBar :status="status" :busy="pausing" @resume="resumeDaemon" @resume-repo="resumeRepo" @settings="modal = 'settings'" />
         <QueueView
           v-if="tasks.length"
           v-model:selected="selectedId"
@@ -201,7 +200,7 @@ watchEffect(() => {
         </section>
       </main>
 
-      <StatusBar :status="status" :tasks="tasks" :offline="offline" :busy="busy" @toggle="togglePause" @daemon="modal = 'daemon'" />
+      <StatusBar :status="status" :tasks="tasks" :offline="offline" :busy="pausing" @toggle="togglePause" @daemon="modal = 'daemon'" />
 
       <NewTaskForm v-if="modal === 'new'" :repos="repos" @close="modal = null" @created="onCreated" @repos="modal = 'repos'" />
       <ReposPanel v-if="modal === 'repos'" :repos="repos" @close="modal = null" />

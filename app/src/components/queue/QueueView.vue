@@ -24,7 +24,17 @@ const selected = defineModel<number | null>('selected', { required: true });
 const emit = defineEmits<{ open: [id: number]; act: [kind: PersonEvent, id: number]; newTask: [] }>();
 
 const { display, filters, shown, groups, order, toggleGroup, nextMode } = useQueueDisplay(() => props.tasks);
-const { picked, bar, bulkMerging, pick, clearPicked, bulkAct, onBulkMerged, mergeAll } = useBulkPick(() => props.tasks, order);
+const {
+  picked,
+  bar,
+  bulkMerging,
+  pending: bulkPending,
+  pick,
+  clearPicked,
+  bulkAct,
+  onBulkMerged,
+  mergeAll,
+} = useBulkPick(() => props.tasks, order);
 
 function step(by: number) {
   const list = order.value;
@@ -34,7 +44,7 @@ function step(by: number) {
 }
 
 const { merging, startMerge, onMerged, onRequested } = useMergeConfirm(order, selected);
-const { flash, run, busy } = useActions();
+const { flash, run } = useActions();
 
 // Space opens the selected task beside the list (list view only). The panel follows the selection; its width is remembered.
 const peek = ref(false);
@@ -157,7 +167,7 @@ useHotkeys({
           v-if="picked.length && display.mode === 'list'"
           :count="picked.length"
           :actions="bar"
-          :busy="busy"
+          :busy="bulkPending"
           @act="bulkAct"
           @clear="clearPicked"
         />
