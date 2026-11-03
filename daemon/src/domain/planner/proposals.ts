@@ -10,12 +10,14 @@ export interface PlannerSettings {
   model: string;
 }
 
+export type PlannerOutcome = 'proposed' | 'nothing' | 'failed' | 'rate_limited';
+
 export interface PlannerRun {
   id: number;
   repo_id: number;
   started_at: string;
   ended_at: string | null;
-  outcome: string | null; // proposed | nothing | failed | rate_limited
+  outcome: PlannerOutcome | null;
   proposed: number;
   note: string | null;
   log_path: string;
@@ -23,7 +25,7 @@ export interface PlannerRun {
 }
 
 export interface ProposalResult {
-  outcome: 'proposed' | 'nothing' | 'failed' | 'rate_limited' | 'no_goals';
+  outcome: PlannerOutcome | 'no_goals';
   tasks: Task[];
   skipped: string[];
   note: string | null;
@@ -141,12 +143,15 @@ const norm = (s: string) =>
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
 
+/** One entry of the planner's answer before it is checked: any field may be missing or of another type. */
+type RawProposal = { title?: unknown; prompt?: unknown; priority?: unknown; model?: unknown };
+
 /** Clean up the planner's raw answer: drop empty entries and anything repeating an existing title, then cap. */
 export function selectProposals(raw: unknown[], existingTitles: string[], max: number): { accepted: Proposal[]; skipped: string[] } {
   const seen = new Set(existingTitles.map(norm));
   const accepted: Proposal[] = [];
   const skipped: string[] = [];
-  for (const r of raw as any[]) {
+  for (const r of raw as (RawProposal | null | undefined)[]) {
     const title = String(r?.title ?? '')
       .trim()
       .slice(0, 100);
@@ -160,8 +165,8 @@ export function selectProposals(raw: unknown[], existingTitles: string[], max: n
     accepted.push({
       title,
       prompt,
-      priority: Math.max(0, Math.min(3, Number(r.priority) || 0)),
-      model: MODELS.includes(r.model) ? r.model : undefined,
+      priority: Math.max(0, Math.min(3, Number(r?.priority) || 0)),
+      model: typeof r?.model === 'string' && MODELS.includes(r.model) ? r.model : undefined,
     });
   }
   return { accepted, skipped };

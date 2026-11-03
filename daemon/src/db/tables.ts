@@ -1,6 +1,14 @@
 // The tables as Drizzle sees them, mirroring the migrated schema in schema.ts. The stores query through them, and
 // drizzle-kit reads this for Studio (pnpm db:studio) and the schema check (pnpm db:check). Keys are column names, as in the domain types.
 import { sql } from 'drizzle-orm';
+import type { PlannerOutcome } from '../domain/planner/proposals.ts';
+import type { MergeMethod } from '../domain/pull-request/merge.ts';
+import type { PrMode, PrState } from '../domain/pull-request/pr.ts';
+import type { RunKind, RunOutcome } from '../domain/run/run.ts';
+import type { TaskEventType } from '../domain/task/history.ts';
+import type { LinkKind } from '../domain/task/link.ts';
+import type { TaskStatus } from '../domain/task/lifecycle.ts';
+import type { TaskSource } from '../domain/task/task.ts';
 import { index, integer, primaryKey, real, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
 
 // guard: a column default is an expression SQLite evaluates on insert, which the builder can only take as raw SQL
@@ -21,8 +29,8 @@ export const repos = sqliteTable(
     toolchain: text(),
     setup_cmd: text(),
     paused_reason: text(),
-    pr_mode: text().default('off').notNull(),
-    merge_method: text().default('squash').notNull(),
+    pr_mode: text().$type<PrMode>().default('off').notNull(),
+    merge_method: text().$type<MergeMethod>().default('squash').notNull(),
     auto_resolve: integer().default(1).notNull(),
     sandbox: integer().default(1).notNull(),
     network: text().default('[]').notNull(),
@@ -43,7 +51,7 @@ export const tasks = sqliteTable(
       .references(() => repos.id),
     title: text().notNull(),
     prompt: text().notNull(),
-    status: text().default('queued').notNull(),
+    status: text().$type<TaskStatus>().default('queued').notNull(),
     priority: integer().default(0).notNull(),
     model: text().notNull(),
     max_turns: integer().notNull(),
@@ -54,23 +62,23 @@ export const tasks = sqliteTable(
     stop_reason: text(),
     created_at: text().default(NOW_DEFAULT).notNull(),
     updated_at: text().default(NOW_DEFAULT).notNull(),
-    source: text().default('manual').notNull(),
+    source: text().$type<TaskSource>().default('manual').notNull(),
     restarts: integer().default(0).notNull(),
     pr_url: text(),
-    pr_state: text(),
+    pr_state: text().$type<PrState>(),
     after_task: integer(), // legacy: migration 18 copied it into task_links; nothing reads or writes it
-    merge_method: text(),
+    merge_method: text().$type<MergeMethod>(),
     plan_path: text(),
     plan_steps: text(),
     needs: text(),
-    done_by: text(),
+    done_by: text().$type<'person'>(),
     auto_merge: integer(),
     auto_merge_check: text(),
     auto_merge_checked_at: text(),
     pr_checks_opened: text(),
     pr_checks_merged: text(),
     merge_requested_at: text(),
-    merge_request_method: text(),
+    merge_request_method: text().$type<MergeMethod>(),
     merge_request_check: text(),
     plan_task: integer(),
     pr_checks: text(),
@@ -90,7 +98,7 @@ export const runs = sqliteTable(
     attempt: integer().notNull(),
     started_at: text().default(NOW_DEFAULT).notNull(),
     ended_at: text(),
-    outcome: text(),
+    outcome: text().$type<RunOutcome>(),
     exit_code: integer(),
     session_id: text(),
     num_turns: integer(),
@@ -104,7 +112,7 @@ export const runs = sqliteTable(
     log_path: text().notNull(),
     pid: integer(),
     denials: integer().default(0).notNull(),
-    kind: text().default('work').notNull(),
+    kind: text().$type<RunKind>().default('work').notNull(),
     live_turns: integer().default(0).notNull(),
     live_tool: text(),
     pid_at: text(),
@@ -140,7 +148,7 @@ export const plannerRuns = sqliteTable('planner_runs', {
     .references(() => repos.id),
   started_at: text().default(NOW_DEFAULT).notNull(),
   ended_at: text(),
-  outcome: text(),
+  outcome: text().$type<PlannerOutcome>(),
   proposed: integer().default(0).notNull(),
   note: text(),
   log_path: text().notNull(),
@@ -166,9 +174,9 @@ export const taskEvents = sqliteTable(
   {
     id: integer().primaryKey(),
     task_id: integer().notNull(),
-    type: text().notNull(),
-    from_status: text(),
-    to_status: text(),
+    type: text().$type<TaskEventType>().notNull(),
+    from_status: text().$type<TaskStatus>(),
+    to_status: text().$type<TaskStatus>(),
     reason: text(),
     at: text().default(NOW_DEFAULT).notNull(),
   },
@@ -184,7 +192,7 @@ export const taskLinks = sqliteTable(
     on_task: integer()
       .notNull()
       .references(() => tasks.id),
-    kind: text().default('builds_on').notNull(),
+    kind: text().$type<LinkKind>().default('builds_on').notNull(),
     created_at: text().default(NOW_DEFAULT).notNull(),
   },
   (table) => [primaryKey({ columns: [table.task_id, table.on_task] }), index('task_links_on').on(table.on_task)],

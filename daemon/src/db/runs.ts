@@ -59,7 +59,7 @@ export function runStore(orm: Orm) {
         .run();
     },
     runsForTask(task_id: number): Run[] {
-      return orm.select().from(runs).where(eq(runs.task_id, task_id)).orderBy(asc(runs.id)).all() as Run[];
+      return orm.select().from(runs).where(eq(runs.task_id, task_id)).orderBy(asc(runs.id)).all();
     },
     /** Resolve runs still going, in any daemon process. */
     countRunningResolves(): number {

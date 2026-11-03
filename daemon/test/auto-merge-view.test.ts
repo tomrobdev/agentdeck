@@ -256,7 +256,7 @@ test('context marks an open task with its auto-merge label unless it is off', ()
     id,
     title: `t${id}`,
     status: 'done' as const,
-    pr_state: 'open',
+    pr_state: 'open' as const,
     stop_reason: null,
     waiting: null,
     auto_merge_view,

@@ -1,5 +1,6 @@
 // What a queued task waits for, in the order the scheduler checks. Pure: no I/O.
 import type { Decision } from '../usage/governor.ts';
+import type { TaskStatus } from './lifecycle.ts';
 import type { StartState } from './link.ts';
 
 /** What every queued task waits for: the daemon is paused, Claude rate-limited us, or the governor holds. */
@@ -67,7 +68,7 @@ export function describeWait(w: QueueWait): string {
 
 /** What a queued task waits for, or null if it will start on the next tick. Mirrors claimNextTask in db/tasks.ts. */
 export function startWait(
-  task: { status: string },
+  task: { status: TaskStatus },
   ctx: {
     queue: QueueWait | null;
     repoPaused: string | null;

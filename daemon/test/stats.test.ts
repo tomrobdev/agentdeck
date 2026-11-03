@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { ActionError, pilotStats } from '../src/application/actions.ts';
 import { openDb } from '../src/db/index.ts';
+import type { RunOutcome } from '../src/domain/run/run.ts';
 import { type StatRun, measure, minutesBetween, statsTable, wilson } from '../src/domain/run/stats.ts';
 import { blockedTask, doneTask, failedTask } from './fixtures.ts';
 
@@ -86,7 +87,7 @@ function work(
   db: ReturnType<typeof openDb>,
   task_id: number,
   attempt: number,
-  outcome: string,
+  outcome: RunOutcome,
   cost_usd: number,
   denials: number,
   minutes: number,

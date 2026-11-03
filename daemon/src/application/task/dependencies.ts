@@ -54,7 +54,7 @@ export function loadedLinks(db: Db): LinkIndex {
         .sort((a, b) => a.id - b.id),
     target: (id) => {
       const t = ends.get(id);
-      return t && { ...t, pr_mode: t.pr_mode ?? 'off', links: linksOf(id) };
+      return t && { ...t, links: linksOf(id) };
     },
   };
 }

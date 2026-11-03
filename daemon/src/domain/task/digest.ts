@@ -14,7 +14,7 @@ export interface DigestTask {
   id: number;
   title: string;
   status: TaskStatus;
-  pr_state: string | null;
+  pr_state: PrState | null;
   stop_reason: string | null;
   waiting: Waiting | null;
   /** The auto-merge view's state and label (domain/pull-request/auto-merge.ts); marked on the line unless it is off. */
@@ -166,8 +166,7 @@ export function digest(input: DigestInput, limit = DIGEST_LIMIT): string[] {
   if (input.events.length || input.full) {
     body.push(input.open.length ? 'Open:' : 'Open: nothing');
     // Tasks waiting on the person come first, whatever order they arrived in.
-    const needsYou = (t: DigestTask) =>
-      ['needs-you', 'review', 'proposed'].includes(statusGroup({ ...t, pr_state: t.pr_state as PrState | null }));
+    const needsYou = (t: DigestTask) => ['needs-you', 'review', 'proposed'].includes(statusGroup(t));
     const open = [...input.open.filter(needsYou), ...input.open.filter((t) => !needsYou(t))];
     const room = Math.max(limit - body.length, 2);
     const shown = open.length <= room ? open : open.slice(0, room - 1);
