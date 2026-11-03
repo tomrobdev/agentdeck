@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { type Changes, type Run, type TaskDetail, type TaskEventRow, ago, fmtTokens, runDuration, totalTokens } from '../../api';
+import { type Changes, type Run, type TaskDetail, type TaskEventRow, ago, fmtTokens, runDuration, runLabel, totalTokens } from '../../api';
 import Markdown from '../files/Markdown.vue';
 import DependenciesCard from './DependenciesCard.vue';
 import DocumentsCard from './DocumentsCard.vue';
@@ -127,7 +127,7 @@ const when = 'ml-auto text-sm text-muted';
           <div class="flex w-full flex-wrap items-baseline gap-1.5">
             <span :class="node" class="dot after:size-2.5 after:rounded-full after:bg-[var(--c,var(--running))]" />
             <button class="btn-ghost font-semibold hover:text-accent" @click="emit('run', it.run.id)">
-              {{ it.run.kind === 'resolve' ? 'Resolve conflicts' : `Run ${it.run.attempt}` }}
+              {{ runLabel(it.run) }}
             </button>
             <span class="font-medium text-[color:var(--c,var(--running))]">{{ it.run.outcome ?? 'running' }}</span>
             <span class="text-muted">
