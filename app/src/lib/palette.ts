@@ -17,6 +17,8 @@ export interface PaletteHandlers {
   open: (id: number) => void;
   act: (kind: 'approve' | 'retry' | 'cancel' | 'mark_done', id: number) => void;
   merge: (id: number) => void;
+  /** Copy the task's agentdeck:// link. */
+  copyLink: (id: number) => void;
   newTask: () => void;
   togglePause: () => void;
   restartDaemon: () => void;
@@ -68,6 +70,7 @@ function selectedActions(t: PaletteTask, h: PaletteHandlers): PaletteItem[] {
   if (events.includes('mark_done')) out.push(mine('mark_done', 'Mark done', () => h.act('mark_done', t.id)));
   if (events.includes('cancel')) out.push(mine('cancel', t.status === 'running' ? 'Stop' : 'Cancel', () => h.act('cancel', t.id)));
   out.push(mine('open', 'Open task', () => h.open(t.id), '↵'));
+  out.push(mine('copy-link', 'Copy link to', () => h.copyLink(t.id)));
   return out;
 }
 
