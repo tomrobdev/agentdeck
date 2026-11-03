@@ -13,14 +13,6 @@ export async function setLaunchAtLogin(on: boolean): Promise<void> {
   if (isNative) await (on ? enable() : disable());
 }
 
-let lastTray = '';
-/** Mirror the daemon's state in the tray menu and tooltip. */
-export function setTrayStatus(status: string): void {
-  if (!isNative || status === lastTray) return;
-  lastTray = status;
-  invoke('set_tray_status', { status }).catch(() => {});
-}
-
 /** Call `cb` with each agentdeck:// URL opened from outside, including one that started the app. Returns a stop function. */
 export async function onOpenUrl(cb: (url: string) => void): Promise<() => void> {
   if (!isNative) return () => {};

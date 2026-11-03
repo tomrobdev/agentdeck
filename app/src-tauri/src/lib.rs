@@ -1,3 +1,4 @@
+mod daemon_client;
 mod open;
 mod terminal;
 mod tray;
@@ -18,7 +19,6 @@ pub fn run() {
         .manage(open::PendingUrl::default())
         .invoke_handler(tauri::generate_handler![
             open::take_open_url,
-            tray::set_tray_status,
             terminal::cmux_installed,
             terminal::open_terminal
         ])

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch, watchEffect } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
 import {
   type MergeResult,
@@ -9,7 +9,6 @@ import {
   type TaskDetail as Detail,
   PERSON_CALLS,
   api,
-  describeState,
   isImmutable,
   isOffline,
   reposQuery,
@@ -17,7 +16,7 @@ import {
   taskQuery,
   tasksQuery,
 } from './api';
-import { onOpenUrl, setTrayStatus } from './platform/native';
+import { onOpenUrl } from './platform/native';
 import { mode, setMode } from './platform/theme';
 import NewTaskForm from './components/panels/NewTaskForm.vue';
 import WaitBar from './components/layout/WaitBar.vue';
@@ -35,7 +34,7 @@ import AppProvider from './components/ui/AppProvider.vue';
 import CommandPalette from './components/ui/CommandPalette.vue';
 import Toaster from './components/ui/Toaster.vue';
 import { go, openTask, parseAppUrl, route, taskUrl } from './router';
-import { type PersonEvent, needYouCount, openingTab } from './lib/taskView';
+import { type PersonEvent, openingTab } from './lib/taskView';
 import { paletteItems } from './lib/palette';
 import { requestedView } from './composables/useView';
 import { provideActions, trackPending } from './composables/useActions';
@@ -172,13 +171,6 @@ function onCreated(task: Detail) {
   openTask(task.id);
   if (status.value?.paused) flash('Queued. The daemon is paused, so press Resume to start working.');
 }
-
-watchEffect(() => {
-  const s = status.value;
-  const label = describeState(s, offline.value).label;
-  const waiting = needYouCount(s);
-  setTrayStatus(waiting ? `${label} · ${waiting} need you` : label);
-});
 </script>
 
 <template>

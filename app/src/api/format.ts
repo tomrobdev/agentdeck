@@ -180,7 +180,7 @@ export function describeStaleDaemon(s: Status | null, dashboardCommit: string | 
   return `The daemon is running older code (${d.commit.slice(0, 7)}, started ${started}). Restart it to match the dashboard.`;
 }
 
-/** One label for the daemon's state, shared by the status bar and the tray. */
+/** One label for the daemon's state, in the status bar. The tray words it the same way, in Rust (`tray_view` in `app/src-tauri/src/tray.rs`). */
 export function describeState(s: Status | null, offline: boolean): { label: string; cls: string; title: string } {
   if (offline) return { label: 'Daemon offline', cls: 's-failed', title: '' };
   if (!s) return { label: 'Connecting…', cls: 's-queued', title: '' };
