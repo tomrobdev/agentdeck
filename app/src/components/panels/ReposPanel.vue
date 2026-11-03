@@ -58,6 +58,7 @@ async function edit(r: Repo) {
   try {
     load(await queryClient.fetchQuery({ ...repoQuery(r.id), staleTime: 0 }));
   } catch (e) {
+    open.value = null;
     editError.value = (e as Error).message;
   }
 }
@@ -147,6 +148,7 @@ async function confirmDelete() {
 
 <template>
   <Modal title="Repos" @close="$emit('close')">
+    <p v-if="editError && !open" class="form-error">{{ editError }}</p>
     <ul v-if="repos.length" class="m-0 mb-4 flex list-none flex-col gap-2 p-0">
       <li
         v-for="r in repos"

@@ -326,6 +326,12 @@
   .s-failed {
     --c: var(--failed);
   }
+  .s-merged {
+    --c: var(--merged);
+  }
+  .s-checks_failed {
+    --c: var(--failed);
+  }
   .s-cancelled {
     --c: var(--cancelled);
   }

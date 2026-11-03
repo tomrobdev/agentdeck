@@ -48,6 +48,8 @@ async function submit(kind: SubmitReview['kind']) {
 // An inline comment box stops its own ⌘Enter, so one that gets here is meant for the review.
 const onKey = (e: KeyboardEvent) => {
   if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && !e.defaultPrevented) {
+    // A dialog over the bar has its own ⌘Enter action.
+    if (document.querySelector('[role=dialog], [role=alertdialog]')) return;
     e.preventDefault();
     void submit(props.kind);
   }

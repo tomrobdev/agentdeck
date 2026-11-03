@@ -24,7 +24,15 @@ const tags = (ids: number[]) => ids.map((id) => `#${id}`).join(' ');
       :title="`Builds on ${tags(b.up)}: starts once they are done and merged`"
       data-links-up
     >
-      ↑<a v-for="id in b.up" :key="id" class="cursor-pointer hover:text-text" @click.stop="openTask(id)">#{{ id }}</a>
+      ↑<button
+        v-for="id in b.up"
+        :key="id"
+        type="button"
+        class="cursor-pointer border-0 bg-transparent p-0 font-[inherit] text-inherit hover:text-text"
+        @click.stop="openTask(id)"
+      >
+        #{{ id }}
+      </button>
     </span>
     <span
       v-if="b.down.length"
@@ -32,7 +40,15 @@ const tags = (ids: number[]) => ids.map((id) => `#${id}`).join(' ');
       :title="`Merging this releases ${tags(b.down)}`"
       data-links-down
     >
-      ↓<a v-for="id in b.down" :key="id" class="cursor-pointer hover:underline" @click.stop="openTask(id)">#{{ id }}</a>
+      ↓<button
+        v-for="id in b.down"
+        :key="id"
+        type="button"
+        class="cursor-pointer border-0 bg-transparent p-0 font-[inherit] text-inherit hover:underline"
+        @click.stop="openTask(id)"
+      >
+        #{{ id }}
+      </button>
     </span>
     <span v-if="b.facts.length" class="min-w-0 truncate text-muted">
       <template v-for="(f, i) in b.facts" :key="f.label"

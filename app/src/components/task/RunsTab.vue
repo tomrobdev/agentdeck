@@ -56,7 +56,7 @@ const live = computed(() => (props.task.status === 'running' || !!props.task.syn
       </button>
     </div>
 
-    <FinalMessage v-if="run?.result_text" class="max-h-[40vh] flex-none overflow-y-auto" :open="run.outcome !== 'done'">
+    <FinalMessage v-if="run?.result_text" :key="run.id" class="max-h-[40vh] flex-none overflow-y-auto" :open="run.outcome !== 'done'">
       <Markdown :text="run.result_text" :is-path="isPath" @path="(p, l) => emit('path', p, l)" />
     </FinalMessage>
 
