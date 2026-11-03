@@ -60,7 +60,7 @@ onMounted(async () => {
   }
 });
 
-/** An alert's chip tone: a hold or a pause looks like a blocked task. */
+/** An alert's chip tone: a budget or pause alert looks like a blocked task. */
 function alertTone(kind: NotificationRow['kind']) {
   return kind === 'hold' || kind === 'paused' ? 'blocked' : kind;
 }
