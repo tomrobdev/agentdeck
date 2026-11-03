@@ -9,6 +9,7 @@ import { DAEMON_LOG, serviceStatus } from '../../adapters/service.ts';
 import { API_PORT, CHECKOUT_ROOT } from '../../config.ts';
 import type { Db } from '../../db/index.ts';
 import { type Check, type DaemonState, type HealthFacts, judgeHealth, logFacts } from '../../domain/daemon/health.ts';
+import { sqliteMs } from '../../domain/time.ts';
 
 /** Where the facts come from; tests hand in plain ones. */
 export interface Probes {
@@ -37,7 +38,6 @@ export const realProbes: Probes = {
 
 /** How far back ended runs are searched for a claude process that outlived them. */
 const RUN_DAYS = 7;
-const sqlTime = (s: string) => Date.parse(`${s.replace(' ', 'T')}Z`);
 
 export async function gatherHealth(db: Db, probes: Probes = realProbes, port = API_PORT): Promise<HealthFacts> {
   const [service, api, head, gh] = await Promise.all([probes.service(), probes.api(port), probes.head(), probes.gh()]);
@@ -51,7 +51,7 @@ export async function gatherHealth(db: Db, probes: Probes = realProbes, port = A
     id: t.id,
     pid: t.pid,
     alive: t.pid !== null && probes.alive({ pid: t.pid, pid_at: t.pid_at ?? '' }),
-    runAgeSeconds: t.started_at ? (now - sqlTime(t.started_at)) / 1000 : null,
+    runAgeSeconds: t.started_at ? (now - sqliteMs(t.started_at)) / 1000 : null,
   }));
   const lines = probes.logLines();
   return {

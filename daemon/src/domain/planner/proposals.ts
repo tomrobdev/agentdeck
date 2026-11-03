@@ -2,6 +2,7 @@
 // Pure: no I/O. The planner runs read-only in the repo's main checkout and answers in PROPOSALS_SCHEMA.
 import type { Repo } from '../repo/repo.ts';
 import { MODELS, OPEN_STATUSES, PROMPT_SECTIONS, type Task } from '../task/task.ts';
+import { sqliteMs } from '../time.ts';
 
 export interface PlannerSettings {
   enabled: boolean;
@@ -110,7 +111,7 @@ export function plannerDueReason(
 ): string | null {
   if (!s.enabled || !repo.hasGoals) return null;
   if (repo.openTasks > 0) return null;
-  const last = repo.planned_at ? Date.parse(repo.planned_at.replace(' ', 'T') + 'Z') : 0;
+  const last = repo.planned_at ? sqliteMs(repo.planned_at) : 0;
   if (now - last < s.interval_hours * 3_600_000) return null;
   return 'queue is empty';
 }

@@ -1,5 +1,6 @@
 // Reading a task's code from git: the shapes the API returns, path checks, size limits and the
 // parsing of git's -z output. Pure: no I/O. The git calls are in adapters/git.ts.
+import { sqliteUtc } from '../time.ts';
 
 /** Which commit a read is at: the task's branch, or where it left the repo's base branch. */
 export type FileRef = 'head' | 'base';
@@ -173,9 +174,6 @@ export function mergeChanges(nameStatus: string, numstat: string): ChangedFile[]
 
 /** Separators for `git log --format`: unit (field) and record. */
 export const LOG_FORMAT = '%H%x1f%s%x1f%an%x1f%aI%x1e';
-
-/** An ISO 8601 date as the API's one time format, SQLite's UTC `YYYY-MM-DD HH:MM:SS`. */
-export const sqliteUtc = (iso: string) => new Date(iso).toISOString().slice(0, 19).replace('T', ' ');
 
 export function parseLog(out: string): Commit[] {
   return out
