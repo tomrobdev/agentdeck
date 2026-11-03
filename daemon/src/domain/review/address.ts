@@ -1,4 +1,5 @@
 // How a run addresses a review: the comments as the worker is shown them, and the answers it gives back. Pure: no I/O.
+import { STATUS_TAIL } from '../text.ts';
 import { type CommentSide, type ReviewComment, type ReviewWithComments, commentLocation } from './review.ts';
 
 /** The most the review may take of a prompt, in characters. Past it, hunks are dropped and long comments cut, and the prompt says so. */
@@ -157,7 +158,7 @@ export function unansweredNote(unanswered: { comment: Pick<ReviewComment, 'path'
 
 /** A final message with `note` added before its closing STATUS line (after it, if it has none), so the STATUS line stays last. */
 export function withNote(text: string, note: string): string {
-  const m = text.match(/\n?[ \t]*STATUS:\s*(DONE|BLOCKED)\b.*$/i);
+  const m = text.match(STATUS_TAIL);
   if (!m || m.index === undefined) return `${text.trimEnd()}\n\n${note}`;
   return `${text.slice(0, m.index).trimEnd()}\n\n${note}\n${m[0].trim()}`;
 }

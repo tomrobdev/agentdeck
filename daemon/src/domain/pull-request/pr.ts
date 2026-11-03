@@ -1,4 +1,5 @@
 // What goes into a pull request. Pure: no I/O.
+import { STATUS_TAIL } from '../text.ts';
 
 /** What the daemon does when a task is done: nothing, open a draft PR, or open a ready PR. */
 export type PrMode = 'off' | 'draft' | 'ready';
@@ -19,7 +20,7 @@ export interface PrRun {
 /** The agent's final message without its trailing "STATUS: DONE" line. */
 export function finalMessage(runs: Pick<PrRun, 'kind' | 'result_text'>[]): string {
   const text = runs.filter((r) => r.kind !== 'resolve').at(-1)?.result_text ?? '';
-  return text.replace(/\n?\s*STATUS:\s*(DONE|BLOCKED)\b.*$/i, '').trim();
+  return text.replace(STATUS_TAIL, '').trim();
 }
 
 /** The plan a task carries out: its name (`112-plans-in-agentdeck.html`) and the linked steps as AgentDeck stores them. */

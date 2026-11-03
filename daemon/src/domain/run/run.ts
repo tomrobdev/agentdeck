@@ -1,5 +1,5 @@
 // The run entity and how to read a run's result. Pure: no I/O.
-import { lastLine } from '../text.ts';
+import { STATUS_WORD, lastLine } from '../text.ts';
 import { type Needs, parseNeeds } from '../task/needs.ts';
 
 /** `work` is an attempt at the task; `resolve` merges the base branch into the task's branch and never uses an attempt. */
@@ -261,11 +261,13 @@ function baseOutcome(r: RunCameTo): WorkerResult {
   return { outcome: 'done' };
 }
 
+const STATUS_LINE = new RegExp(String.raw`^${STATUS_WORD}(?::\s*(.*))?$`, 'i');
+
 /** Pull "STATUS: BLOCKED: reason" out of the agent's final message. */
 export function parseStatus(text: string | undefined): { blocked: boolean; reason?: string; declared: boolean; needs?: Needs } {
   const lines = (text ?? '').trim().split('\n').reverse();
   for (const line of lines) {
-    const m = line.trim().match(/^STATUS:\s*(DONE|BLOCKED)(?::\s*(.*))?$/i);
+    const m = line.trim().match(STATUS_LINE);
     if (m) {
       const blocked = m[1].toUpperCase() === 'BLOCKED';
       const reason = m[2]?.trim();

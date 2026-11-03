@@ -25,6 +25,12 @@ export function textList(input: string | string[]): string[] {
   return [...new Set(parts.map((s) => s.trim()).filter(Boolean))];
 }
 
+/** The start of an agent's closing STATUS line, as regex source: "STATUS: DONE" or "STATUS: BLOCKED", the word captured. */
+export const STATUS_WORD = String.raw`STATUS:\s*(DONE|BLOCKED)`;
+
+/** The agent's closing STATUS line and anything after it on that line (`withNote` and `finalMessage` cut the message there). */
+export const STATUS_TAIL = new RegExp(String.raw`\n?[ \t]*${STATUS_WORD}\b.*$`, 'i');
+
 /** The last non-empty line of a command's output, for a one-line reason. */
 export function lastLine(output: string): string {
   return (
