@@ -4,6 +4,7 @@ import { DB_PATH } from '../config.ts';
 import { runDaemon } from '../daemon.ts';
 import { logsOptions, restartOptions, serviceAction } from './daemon-args.ts';
 import { die, printHealth, relTime } from './format.ts';
+import { settingPatch } from './settings-args.ts';
 import type { Command } from './context.ts';
 
 /** Adapter failures are plain Errors with a message fit to print. */
@@ -81,7 +82,7 @@ export const daemonCommands: Record<string, Command> = {
   },
   set: ({ db, rest }) => {
     const [key, value = ''] = rest;
-    actions.updateSettings(db, actions.settingPatch(key, value));
+    actions.updateSettings(db, settingPatch(key, value));
     console.log(`${key} = ${value}`);
   },
   settings: ({ db }) => {

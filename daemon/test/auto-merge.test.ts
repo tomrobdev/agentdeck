@@ -17,7 +17,8 @@ const { AUTO_MERGE_LABEL, autoMergeCheck, autoMergeOn, autoMergeSkip } = await i
 const { refreshPrStates } = await import('../src/application/pull-request/pull-requests.ts');
 const { autoMerge } = await import('../src/application/pull-request/auto-merge.ts');
 const { openPullRequest } = await import('../src/application/pull-request/open-pr.ts');
-const { ActionError, addTask, mergePreview, repoSettingPatch, setAutoMerge, updateRepo } = await import('../src/application/actions.ts');
+const { ActionError, addTask, mergePreview, setAutoMerge, updateRepo } = await import('../src/application/actions.ts');
+const { repoSettingPatch } = await import('../src/cli/settings-args.ts');
 const { waitingFor } = await import('../src/application/task/dependencies.ts');
 type PrDetails = import('../src/domain/pull-request/merge.ts').PrDetails;
 
@@ -183,6 +184,8 @@ test('repo auto-merge settings: off by default, set from the CLI and the API, va
   assert.equal(set('auto_merge_skip', '.github/, db/schema.ts').auto_merge_skip, '[".github/","db/schema.ts"]');
   assert.throws(() => set('auto_merge_max_lines', '0'), ActionError);
   assert.throws(() => set('auto_merge_max_lines', 'lots'), ActionError);
+  assert.throws(() => set('auto_merge', 'maybe'), /on, .* or .*off.*"maybe"/);
+  assert.equal(db.findRepo('fresh')!.auto_merge, 1);
 });
 
 // ---- Opening the PR
