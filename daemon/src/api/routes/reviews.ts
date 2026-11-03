@@ -14,13 +14,7 @@ export function routes({ db }: ApiContext): Route[] {
     route('POST', /^\/api\/reviews\/(\d+)\/submit$/, ({ params: [id], body }) =>
       actions.submitReview(db, n(id), body as Parameters<typeof actions.submitReview>[2]),
     ),
-    route('POST', /^\/api\/review-comments\/(\d+)$/, ({ params: [id], body }) =>
-      actions.editReviewComment(db, n(id), body as Parameters<typeof actions.editReviewComment>[2]),
-    ),
     route('DELETE', /^\/api\/review-comments\/(\d+)$/, ({ params: [id] }) => actions.deleteReviewComment(db, n(id))),
-    route('POST', /^\/api\/review-comments\/(\d+)\/answer$/, ({ params: [id], body }) =>
-      actions.answerReviewComment(db, n(id), body as Parameters<typeof actions.answerReviewComment>[2]),
-    ),
     route('POST', /^\/api\/review-comments\/(\d+)\/resolve$/, ({ params: [id] }) => actions.resolveReviewComment(db, n(id))),
     route('POST', /^\/api\/review-comments\/(\d+)\/reopen$/, ({ params: [id] }) => actions.reopenReviewComment(db, n(id))),
   ];

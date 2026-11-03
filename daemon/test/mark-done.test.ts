@@ -13,7 +13,7 @@ const { advance, settlePr } = await import('./fixtures.ts');
 const { linkState } = await import('../src/domain/task/link.ts');
 const { TASK_STATUSES } = await import('../src/domain/task/lifecycle.ts');
 const { markDone, retryTask, ActionError } = await import('../src/application/actions.ts');
-const { dependencyOf } = await import('../src/application/task/dependencies.ts');
+const { dependencyOf, liveLinks } = await import('../src/application/task/dependencies.ts');
 type Db = ReturnType<typeof openDb>;
 type TaskStatus = (typeof TASK_STATUSES)[number];
 
@@ -148,7 +148,7 @@ test('the SQL and the domain agree on when a dependency is met', () => {
           const sqlMet = db.hasQueued() && db.claimNextTask()?.id === later.id;
           const domainMet = linkState({ on: dep.id, kind: 'builds_on' }, { ...d, pr_mode }).kind === 'met';
           assert.equal(sqlMet, domainMet, `${status} pr_state=${pr_state} pr_mode=${pr_mode} done_by=${done_by}`);
-          assert.equal(dependencyOf(db, later).kind === 'met', domainMet);
+          assert.equal(dependencyOf(later, liveLinks(db)).kind === 'met', domainMet);
           cases++;
           db.close();
         }
