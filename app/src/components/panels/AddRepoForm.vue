@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import { type Repo, api } from '../../api';
 import { useActions } from '../../composables/useActions';
+import { isNative, pickFolder } from '../../platform/native';
 
 // Registers a repo; the panel opens its editor once it is added.
 const emit = defineEmits<{ added: [repo: Repo] }>();
@@ -11,6 +12,12 @@ const path = ref('');
 const name = ref('');
 const test = ref('');
 const saving = ref(false);
+
+// Desktop app only; cancelling leaves the field as it was.
+async function choose() {
+  const picked = await pickFolder();
+  if (picked) path.value = picked;
+}
 
 async function add() {
   saving.value = true;
@@ -30,7 +37,10 @@ async function add() {
     <h4 class="m-0">Add a repo</h4>
     <label class="field flex-1">
       Path to a local git repo
-      <input v-model="path" placeholder="~/Documents/Dev/myproject" />
+      <span class="flex gap-2">
+        <input v-model="path" class="flex-1" placeholder="~/Documents/Dev/myproject" />
+        <button v-if="isNative" type="button" @click="choose">Choose…</button>
+      </span>
     </label>
     <div class="flex gap-2.5">
       <label class="field flex-1">

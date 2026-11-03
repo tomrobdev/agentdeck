@@ -1,6 +1,8 @@
 mod app_menu;
 mod daemon_client;
+mod dialogs;
 mod open;
+mod service;
 mod shortcuts;
 mod terminal;
 mod tray;
@@ -19,6 +21,7 @@ fn window_state_flags() -> StateFlags {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_autostart::init(
             MacosLauncher::LaunchAgent,
             None,
@@ -32,7 +35,9 @@ pub fn run() {
         )
         .manage(open::PendingUrl::default())
         .invoke_handler(tauri::generate_handler![
+            dialogs::pick_folder,
             open::take_open_url,
+            service::start_daemon,
             terminal::cmux_installed,
             terminal::run_template
         ])

@@ -27,6 +27,8 @@ pub struct Clock {
 pub enum Toggle {
     Pause,
     Resume,
+    /// Start the daemon through launchd; offered while it is offline.
+    Start,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -42,7 +44,7 @@ pub struct TrayView {
     pub status: String,
     pub tooltip: String,
     pub attention: Vec<AttentionItem>,
-    /// Pause or Resume; none while the daemon can't be reached.
+    /// Pause or Resume; Start while the daemon is offline; none while connecting.
     pub toggle: Option<Toggle>,
     /// The dock badge: how many tasks need a person, or none when nothing does.
     pub badge: Option<i64>,
@@ -51,7 +53,12 @@ pub struct TrayView {
 pub fn tray_view(read: &Read, clock: Clock) -> TrayView {
     let (status, attention, toggle, badge) = match read {
         Read::Connecting => ("Connecting…".to_string(), Vec::new(), None, None),
-        Read::Offline => ("Daemon offline".to_string(), Vec::new(), None, None),
+        Read::Offline => (
+            "Daemon offline".to_string(),
+            Vec::new(),
+            Some(Toggle::Start),
+            None,
+        ),
         Read::Online(s) => {
             let h = &s.headline;
             let status = match h.state {
@@ -204,6 +211,7 @@ fn build_menu(app: &AppHandle, view: &TrayView) -> tauri::Result<Menu<Wry>> {
     match view.toggle {
         Some(Toggle::Pause) => menu.append(&item("pause".into(), "Pause", true)?)?,
         Some(Toggle::Resume) => menu.append(&item("resume".into(), "Resume", true)?)?,
+        Some(Toggle::Start) => menu.append(&item("start-daemon".into(), "Start daemon", true)?)?,
         None => {}
     }
     menu.append(&item("show".into(), "Show AgentDeck", true)?)?;
@@ -236,6 +244,13 @@ fn on_menu_event(app: &AppHandle, event: MenuEvent) {
             std::thread::spawn(move || {
                 if let Err(e) = daemon_client::set_paused(paused) {
                     eprintln!("tray: couldn't {what} the daemon: {e}");
+                }
+            });
+        }
+        "start-daemon" => {
+            std::thread::spawn(|| {
+                if let Err(e) = crate::service::start() {
+                    eprintln!("tray: couldn't start the daemon: {e}");
                 }
             });
         }
@@ -365,11 +380,11 @@ mod tests {
     }
 
     #[test]
-    fn offline_and_connecting_have_no_toggle_or_badge() {
+    fn offline_offers_start_and_connecting_has_no_toggle() {
         let v = tray_view(&Read::Offline, UTC);
         assert_eq!(v.status, "Daemon offline");
         assert_eq!(v.tooltip, "AgentDeck: Daemon offline");
-        assert_eq!((v.toggle, v.badge), (None, None));
+        assert_eq!((v.toggle, v.badge), (Some(Toggle::Start), None));
         assert!(v.attention.is_empty());
         let v = tray_view(&Read::Connecting, UTC);
         assert_eq!(v.status, "Connecting…");

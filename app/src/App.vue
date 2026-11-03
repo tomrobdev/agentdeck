@@ -16,7 +16,7 @@ import {
   taskQuery,
   tasksQuery,
 } from './api';
-import { isNative, onOpenUrl } from './platform/native';
+import { isNative, onOpenUrl, startDaemon } from './platform/native';
 import { mode, setMode } from './platform/theme';
 import NewTaskForm from './components/panels/NewTaskForm.vue';
 import WaitBar from './components/layout/WaitBar.vue';
@@ -41,6 +41,8 @@ import { provideActions, trackPending } from './composables/useActions';
 import { useChangeStream } from './composables/useChangeStream';
 
 const STATUS_FALLBACK_MS = 30_000;
+// While the daemon is down, look again often, so the screen clears soon after it starts.
+const OFFLINE_POLL_MS = 3_000;
 
 const selectedId = ref<number | null>(null);
 const toast = ref<{ id: number; message: string; duration: number } | null>(null);
@@ -60,7 +62,11 @@ const pageId = computed(() => (route.current.name === 'task' ? route.current.id 
 
 // The change stream refetches what is on screen. Status also refetches every 30 s, hidden or not: waits (a governor
 // hold lifting) change with time, not with a write, and the tray label reads it.
-const statusQ = useQuery({ ...statusQuery(), refetchInterval: STATUS_FALLBACK_MS, refetchIntervalInBackground: true });
+const statusQ = useQuery({
+  ...statusQuery(),
+  refetchInterval: (q) => (isOffline(q.state.error) ? OFFLINE_POLL_MS : STATUS_FALLBACK_MS),
+  refetchIntervalInBackground: true,
+});
 const palette = ref(false);
 // The list is read on every page: the palette searches every task and the status bar's activity list is built from it.
 const tasksQ = useQuery(tasksQuery());
@@ -73,6 +79,21 @@ const tasks = computed<TaskSummary[]>(() => tasksQ.data.value ?? []);
 const repos = computed<Repo[]>(() => reposQ.data.value ?? []);
 const detail = computed<Detail | null>(() => (pageId.value === null ? null : (taskQ.data.value ?? null)));
 const offline = computed(() => isOffline(statusQ.error.value));
+const starting = ref(false);
+const startError = ref('');
+async function start() {
+  starting.value = true;
+  startError.value = '';
+  try {
+    await startDaemon();
+    // The status query refetches on its own and clears the offline screen once the daemon answers.
+    void statusQ.refetch();
+  } catch (e) {
+    startError.value = e instanceof Error ? e.message : String(e);
+  } finally {
+    starting.value = false;
+  }
+}
 
 // After a change any of it may have moved (the Repos panel adds, archives and edits repos too).
 const queryClient = useQueryClient();
@@ -184,8 +205,15 @@ function onCreated(task: Detail) {
 
       <div v-if="offline" class="m-auto max-w-[420px] text-center">
         <h2 class="text-lg">The AgentDeck daemon isn't running</h2>
-        <p class="text-muted">Start it in a terminal and this window will connect on its own:</p>
-        <pre class="rounded-md border border-border bg-code-bg p-2.5">cd daemon && npm start</pre>
+        <template v-if="isNative">
+          <p class="text-muted">Start it here and this window will connect on its own.</p>
+          <button class="primary" :disabled="starting" @click="start">{{ starting ? 'Starting…' : 'Start the daemon' }}</button>
+          <p v-if="startError" class="mt-2 text-sm" role="alert">{{ startError }}</p>
+        </template>
+        <template v-else>
+          <p class="text-muted">Start it in a terminal and this window will connect on its own:</p>
+          <pre class="rounded-md border border-border bg-code-bg p-2.5">agentdeck service start</pre>
+        </template>
       </div>
 
       <main v-else-if="pageId !== null" class="flex min-h-0 flex-1 flex-col">
