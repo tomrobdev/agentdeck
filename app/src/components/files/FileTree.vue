@@ -163,7 +163,7 @@ useHotkeys({ t: () => filterBox.value?.focus() });
         >
           <span class="flex-1 truncate">{{ p }}</span>
         </button>
-        <p v-if="!matches.length" class="muted px-2 py-1 text-sm">No loaded file matches.</p>
+        <p v-if="!matches.length" class="text-muted px-2 py-1 text-sm">No loaded file matches.</p>
       </template>
       <template v-else>
         <button
@@ -181,9 +181,9 @@ useHotkeys({ t: () => filterBox.value?.focus() });
           <span v-if="marks?.has(r.node.path)" class="text-[8px] text-blocked" title="Changed by this task">●</span>
           <span v-if="r.node.meta" class="font-mono text-xs text-muted">{{ r.node.meta }}</span>
           <Delta v-if="r.node.delta" class="text-xs" :add="r.node.delta.add" :del="r.node.delta.del" />
-          <span v-if="loading.has(r.node.path)" class="muted">…</span>
+          <span v-if="loading.has(r.node.path)" class="text-muted">…</span>
         </button>
-        <p v-if="!rows.length && !loading.size && !error" class="muted px-2 py-1 text-sm">Empty.</p>
+        <p v-if="!rows.length && !loading.size && !error" class="text-muted px-2 py-1 text-sm">Empty.</p>
       </template>
     </div>
   </div>

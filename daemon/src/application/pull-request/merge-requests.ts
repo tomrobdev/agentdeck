@@ -3,7 +3,7 @@
 import type { Db } from '../../db/index.ts';
 import { MERGE_METHODS, type MergeMethod, isMergeMethod } from '../../domain/pull-request/merge.ts';
 import { ActionError, object, requireTask, text } from '../input.ts';
-import { mergeable } from './pull-requests.ts';
+import { mergeable } from './merge.ts';
 
 export interface MergeRequestedResult {
   method: MergeMethod;

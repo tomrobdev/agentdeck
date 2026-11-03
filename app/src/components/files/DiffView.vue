@@ -78,7 +78,7 @@ const splitHunks = computed(() => hunks.value.map((h) => ({ header: h.header, ro
       <div class="text-sm font-medium text-muted">Outdated comments</div>
       <CommentThread v-for="c in outdated" :key="c.id" :comment="c" outdated />
     </div>
-    <p v-if="!hunks.length" class="muted px-3.5 py-2.5 font-sans">No line changes (mode or rename only).</p>
+    <p v-if="!hunks.length" class="text-muted px-3.5 py-2.5 font-sans">No line changes (mode or rename only).</p>
     <table v-else-if="!split">
       <tbody v-for="(h, hi) in hunks" :key="hi">
         <tr class="hunk">

@@ -84,14 +84,14 @@ const keepFocus = (e: Event) => chosen.value && e.preventDefault();
                 @select.prevent="choose(item)"
               >
                 <span class="flex-none">{{ item.label }}</span>
-                <span v-if="item.detail" class="muted min-w-0 flex-1 truncate">{{ item.detail }}</span>
+                <span v-if="item.detail" class="text-muted min-w-0 flex-1 truncate">{{ item.detail }}</span>
                 <span v-else class="flex-1" />
                 <kbd v-if="item.shortcut" class="flex-none">{{ item.shortcut }}</kbd>
               </ComboboxItem>
-              <ComboboxEmpty class="muted px-3 py-3">Nothing matches “{{ query }}”.</ComboboxEmpty>
+              <ComboboxEmpty class="text-muted px-3 py-3">Nothing matches “{{ query }}”.</ComboboxEmpty>
             </ComboboxViewport>
           </ComboboxContent>
-          <footer class="muted flex gap-3 border-t border-border px-4 py-1.5 text-sm">
+          <footer class="text-muted flex gap-3 border-t border-border px-4 py-1.5 text-sm">
             <span><kbd>↑</kbd><kbd>↓</kbd> move</span>
             <span><kbd>↵</kbd> run</span>
             <span><kbd>esc</kbd> close</span>

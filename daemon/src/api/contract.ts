@@ -433,21 +433,11 @@ export interface NewReviewComment {
   body: string;
 }
 
-/** POST /api/review-comments/:id (a draft comment's text) */
-export interface ReviewCommentPatch {
-  body: string;
-}
-
 /** POST /api/reviews/:id/submit: Request changes also retries the task, with the review as the reason. */
 export interface SubmitReview {
   kind: 'comment' | 'request_changes';
   /** Replaces the draft's overall note when given. */
   body?: string;
-}
-
-/** POST /api/review-comments/:id/answer */
-export interface CommentAnswer {
-  answer: string;
 }
 
 /** GET /api/tasks/:id/plans/:planId */
@@ -491,8 +481,10 @@ export interface MergePreview {
   unblocks: { id: number; title: string }[];
   /** Whether the daemon will merge it on its own and why not yet; null when auto-merge is off. Missing from a daemon that predates it. */
   auto_merge?: AutoMergeCheck | null;
-  /** What a merge request would do now: `merge` as asked, `wait` for the PR to be ready, `never` (a person must act). Missing from a daemon that predates it. */
-  request?: AutoMergeCheck;
+  /** What a merge request would do now: `merge` as asked, `wait` for the PR to be ready, `never` (a person must act). */
+  request: AutoMergeCheck;
+  /** Whether the dialog merges now (failing checks or failed tests, on the person's say-so) instead of asking for a merge request. */
+  merge_now: boolean;
 }
 
 /** `merge`: the daemon merges it on its next PR refresh. `wait`: something that can still change on its own. `never`: it needs a person. */

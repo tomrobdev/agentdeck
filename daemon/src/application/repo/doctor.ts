@@ -1,6 +1,6 @@
 // Yes/no checks that a repo is ready for unattended runs. Does the I/O; the decisions on tool rules are in domain/.
 import { findClaude } from '../../adapters/claude.ts';
-import { ghAuth } from '../../adapters/github.ts';
+import { github } from '../../adapters/github.ts';
 import {
   addDetachedWorktree,
   hasOrigin,
@@ -62,7 +62,7 @@ export async function runDoctor(repo: Repo): Promise<Check[]> {
   if (repo.pr_mode !== 'off') {
     const origin = await hasOrigin(repo.path);
     add('origin remote', origin, origin ? 'origin exists' : `PR mode is ${repo.pr_mode} but the repo has no origin remote`);
-    const gh = await ghAuth();
+    const gh = await github.auth();
     add('gh auth', gh.ok, gh.ok ? 'gh auth status succeeded' : `gh auth status failed: ${gh.output}`);
   }
 

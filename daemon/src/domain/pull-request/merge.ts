@@ -1,6 +1,6 @@
 // Whether a PR can be merged, and how. Pure: no I/O.
 import { isConflicting } from './conflict.ts';
-import type { PrState } from './pr.ts';
+import { type PrState, parsePrState } from './pr.ts';
 import { type CheckCounts, type PrCheck, countOf, parseChecks } from './checks.ts';
 import { plural } from '../text.ts';
 
@@ -15,6 +15,8 @@ export { type CheckCounts, checksSettled, countChecks } from './checks.ts';
 
 /** What `gh pr view` says about a PR that decides whether and how it merges. */
 export interface PrDetails {
+  /** GitHub's `state`, as the daemon names it. */
+  state: PrState;
   draft: boolean;
   /** GitHub's `mergeable`: MERGEABLE, CONFLICTING or UNKNOWN. */
   mergeable: string;
@@ -34,14 +36,17 @@ export interface PrDetails {
   labels: string[];
 }
 
-/** Read `gh pr view --json headRefOid,isDraft,mergeable,mergeStateStatus,commits,additions,deletions,changedFiles,statusCheckRollup,files,labels`. */
+/** Read `gh pr view --json state,headRefOid,isDraft,mergeable,mergeStateStatus,commits,additions,deletions,changedFiles,statusCheckRollup,files,labels`. */
 export function parsePrDetails(json: string): PrDetails {
   const raw = JSON.parse(json) as Record<string, unknown>;
+  const state = parsePrState(String(raw.state ?? ''));
+  if (!state) throw new Error(`unexpected PR state ${JSON.stringify(raw.state ?? null)}`);
   const num = (v: unknown) => (typeof v === 'number' ? v : 0);
   const names = (v: unknown, key: string) =>
     Array.isArray(v) ? v.map((item) => (item as Record<string, unknown>)?.[key]).filter((n): n is string => typeof n === 'string') : [];
   const check_list = parseChecks(raw.statusCheckRollup);
   return {
+    state,
     draft: raw.isDraft === true,
     mergeable: String(raw.mergeable ?? 'UNKNOWN'),
     merge_state: String(raw.mergeStateStatus ?? 'UNKNOWN'),

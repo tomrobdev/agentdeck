@@ -7,6 +7,7 @@ import { canInstallWith, depsRequest, readNeeds as readNeedsJson } from '../../.
 import {
   STATUS_GROUPS,
   type StatusGroup,
+  canStartMerge,
   hasOpenPr,
   isMerged,
   isReview,
@@ -15,9 +16,10 @@ import {
   statusGroup,
 } from '../../../daemon/src/domain/task/stage.ts';
 import { EDITABLE_STATUSES, MODELS } from '../../../daemon/src/domain/task/task.ts';
+import type { GroupBy } from './queueDisplay.ts';
 
 // The board's move rule is in boardMove.ts, which the daemon's tests import.
-export { STATUS_GROUPS, type StatusGroup, hasOpenPr, isMerged, isReview, isStuck, isWaiting, statusGroup };
+export { STATUS_GROUPS, type StatusGroup, canStartMerge, hasOpenPr, isMerged, isReview, isStuck, isWaiting, statusGroup };
 export { FILTER_STATES, MODELS, SORT_OPTIONS, type PersonEvent, personEvents };
 export * from './boardMove';
 
@@ -51,7 +53,7 @@ export const priorityLevel = (p: number): PriorityLevel => PRIORITY_LEVELS.find(
 /** A tooltip for the auto-merge mark: the daemon's label, then its reasons, one to a line. */
 export const autoMergeTip = (v: AutoMergeView): string => [v.label, ...v.reasons].join('\n');
 
-export type GroupBy = 'status' | 'repo' | 'priority' | 'none';
+export type { GroupBy };
 export const GROUP_BYS: { key: GroupBy; label: string }[] = [
   { key: 'status', label: 'Status' },
   { key: 'repo', label: 'Repo' },
@@ -109,10 +111,8 @@ export function groupTasks(tasks: TaskSummary[], by: GroupBy, sort: string): Gro
 export { branchName } from '../../../daemon/src/domain/branch/branch.ts';
 
 export const canEdit = (t: Pick<TaskSummary, 'status'>) => EDITABLE_STATUSES.includes(t.status);
-/** A done task whose PR waits on a person: they can send it back with a note, close the PR or merge it (daemon application/pull-requests.ts mergeable). */
-export const canReview = (t: Pick<TaskSummary, 'status' | 'pr_state'>) => t.status === 'done' && hasOpenPr(t);
 /** A done task's open PR has failing checks: they can be sent back to the worker (POST /api/tasks/:id/fix-checks). */
-export const canFixChecks = (t: Pick<TaskSummary, 'status' | 'pr_state' | 'checks'>) => canReview(t) && (t.checks?.failing ?? 0) > 0;
+export const canFixChecks = (t: Pick<TaskSummary, 'status' | 'pr_state' | 'checks'>) => isReview(t) && (t.checks?.failing ?? 0) > 0;
 /** The one-key retry in the queue is for work that went wrong, not for re-running finished work. */
 export const quickRetry = (t: Pick<TaskSummary, 'status' | 'waiting' | 'pr_state'>) =>
   personEvents(t).includes('retry') && statusGroup(t) === 'needs-you';

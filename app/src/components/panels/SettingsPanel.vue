@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { type NotificationRow, type NotifyKind, type Settings, ago, api, serviceQuery, settingsQuery } from '../../api';
+import { MODEL_LABELS, type NotificationRow, type Settings, ago, api, serviceQuery, settingsQuery } from '../../api';
 import { type SettingsForm, toSettingsForm, toSettingsPatch } from '../../lib/forms';
+import { MODELS } from '../../lib/taskView';
 import { CMUX_TEMPLATE, saveTerminalTemplate, terminalTemplate } from '../../lib/terminal';
 import { isNative, launchAtLogin, setLaunchAtLogin } from '../../platform/native';
 import { MODES, THEMES, mode, setMode, setTheme, theme } from '../../platform/theme';
 import { useActions } from '../../composables/useActions';
+import BudgetSettings from './BudgetSettings.vue';
+import NotificationSettings from './NotificationSettings.vue';
 import Chip from '../ui/Chip.vue';
 import Modal from '../ui/Modal.vue';
 import NumberInput from '../ui/NumberInput.vue';
@@ -17,17 +20,6 @@ import SegmentedControl from '../ui/SegmentedControl.vue';
 defineProps<{ notifications: NotificationRow[] }>();
 const emit = defineEmits<{ close: [] }>();
 const { run } = useActions();
-
-const EVENTS: { key: NotifyKind; label: string }[] = [
-  { key: 'blocked', label: 'Task blocked' },
-  { key: 'failed', label: 'Task failed' },
-  { key: 'done', label: 'Task done' },
-  { key: 'hold', label: 'Work held by budget' },
-  { key: 'paused', label: 'Repo paused' },
-  { key: 'proposed', label: 'Planner proposals' },
-  { key: 'merged', label: 'PR auto-merged' },
-  { key: 'checks_failed', label: 'PR checks failed' },
-];
 
 const form = ref<SettingsForm | null>(null);
 const appAtLogin = ref<boolean | null>(null);
@@ -68,8 +60,10 @@ onMounted(async () => {
   }
 });
 
-/** Plain-language summary of the weekly plan. */
-const perDay = computed(() => (form.value ? (form.value.weekly_max / 7).toFixed(1) : ''));
+/** An alert's chip tone: a budget or pause alert looks like a blocked task. */
+function alertTone(kind: NotificationRow['kind']) {
+  return kind === 'hold' || kind === 'paused' ? 'blocked' : kind;
+}
 
 async function save(close = true) {
   if (!form.value) return;
@@ -97,11 +91,11 @@ async function test() {
 
 <template>
   <Modal title="Settings" @close="$emit('close')">
-    <p v-if="!form && !failure" class="muted">Loading…</p>
+    <p v-if="!form && !failure" class="text-muted">Loading…</p>
     <form v-if="form" class="flex flex-col gap-[18px]" @submit.prevent="save()">
       <section class="flex flex-col gap-2.5">
         <h4 class="m-0">Appearance</h4>
-        <p class="muted m-0 text-sm">Applies as you pick, and is remembered on this computer.</p>
+        <p class="text-muted m-0 text-sm">Applies as you pick, and is remembered on this computer.</p>
         <RadioGroup
           cards
           label="Theme"
@@ -118,47 +112,15 @@ async function test() {
         />
       </section>
 
-      <section class="flex flex-col gap-2.5">
-        <h4 class="m-0">Usage budget</h4>
-        <p class="muted m-0 text-sm">
-          AgentDeck reads your 5-hour and 7-day usage from Claude. It never interrupts a running task; these limits only decide when new
-          tasks may start, so the rest stays free for your own Claude use.
-        </p>
-        <div class="grid grid-cols-2 gap-x-4 gap-y-3">
-          <label class="field">
-            <span>5h cap</span>
-            <span class="flex items-center gap-1.5 [&_input]:w-20"><NumberInput v-model="form.five_hour_max" />%</span>
-            <small class="muted text-xs">Hold new tasks above this.</small>
-          </label>
-          <label class="field">
-            <span>5h soft limit</span>
-            <span class="flex items-center gap-1.5 [&_input]:w-20"><NumberInput v-model="form.five_hour_soft" />%</span>
-            <small class="muted text-xs">One task at a time above this.</small>
-          </label>
-          <label class="field">
-            <span>Weekly cap</span>
-            <span class="flex items-center gap-1.5 [&_input]:w-20"><NumberInput v-model="form.weekly_max" />%</span>
-            <small class="muted text-xs">Spread evenly: about {{ perDay }}% a day.</small>
-          </label>
-          <label class="field">
-            <span>Pace slack</span>
-            <span class="flex items-center gap-1.5 [&_input]:w-20"><NumberInput v-model="form.pace_slack" />%</span>
-            <small class="muted text-xs">How far ahead of even pace it may run.</small>
-          </label>
-          <label class="field">
-            <span>Max concurrent tasks</span>
-            <NumberInput v-model="form.max_concurrent" />
-          </label>
-        </div>
-      </section>
+      <BudgetSettings :form="form" />
 
       <section class="flex flex-col gap-2.5">
         <h4 class="m-0">Planner</h4>
-        <p class="muted m-0 text-sm">
+        <p class="text-muted m-0 text-sm">
           When a repo with goals has nothing queued, the planner reads its goals and code and proposes the next tasks. Write goals under
           Repos.
         </p>
-        <Switch v-model="form.planner_enabled">Plan automatically when a queue runs dry</Switch>
+        <Switch v-model="form.planner_enabled">Propose tasks automatically when a queue runs dry</Switch>
         <div class="grid grid-cols-3 gap-x-4 gap-y-3">
           <label class="field">
             <span>At most every</span>
@@ -167,15 +129,13 @@ async function test() {
             >
           </label>
           <label class="field">
-            <span>Tasks per plan</span>
+            <span>Tasks per proposal run</span>
             <NumberInput v-model="form.planner_max_tasks" />
           </label>
           <label class="field">
             <span>Planner model</span>
             <select v-model="form.planner_model">
-              <option value="haiku">Haiku</option>
-              <option value="sonnet">Sonnet</option>
-              <option value="opus">Opus</option>
+              <option v-for="m in MODELS" :key="m" :value="m">{{ MODEL_LABELS[m] ?? m }}</option>
             </select>
           </label>
         </div>
@@ -187,12 +147,12 @@ async function test() {
           <Chip :tone="service?.state === 'running' ? 'done' : 'blocked'" variant="tint" dot>
             {{ service?.installed ? `Daemon runs at login · ${service.state ?? 'not loaded'}` : 'Daemon not installed' }}
           </Chip>
-          <small v-if="!service?.installed" class="muted text-xs"
+          <small v-if="!service?.installed" class="text-muted text-xs"
             >Run <code>agentdeck install</code> once and it starts at login and restarts if it dies.</small
           >
         </div>
         <Switch v-model="form.reload_on_change">Restart the daemon when its source changes (for developing AgentDeck)</Switch>
-        <small class="muted text-xs"
+        <small class="text-muted text-xs"
           >Once something in daemon/src changed and no task or planner run is active, it exits and launchd starts the new code.</small
         >
         <Switch v-if="isNative" :model-value="!!appAtLogin" @update:model-value="toggleAppAtLogin">
@@ -205,7 +165,7 @@ async function test() {
         <label class="field">
           <span>Command that opens a terminal</span>
           <input v-model="terminalCmd" class="font-mono" spellcheck="false" />
-          <small class="muted text-xs">
+          <small class="text-muted text-xs">
             Split into arguments on spaces ("quotes" keep spaces together) and run without a shell. <code>{title}</code>,
             <code>{cwd}</code> and <code>{command}</code> are filled in; without a command, <code>{command}</code> and the flag before it
             are left out. cmux is found even though it is not on the app's PATH. Remembered on this computer.
@@ -216,31 +176,15 @@ async function test() {
         </button>
       </section>
 
-      <section class="flex flex-col gap-2.5">
-        <h4 class="m-0">Notifications</h4>
-        <Switch v-model="form.desktop">macOS notifications</Switch>
-        <div class="flex flex-wrap gap-x-4 gap-y-1.5">
-          <label v-for="e in EVENTS" :key="e.key" class="flex items-center gap-2">
-            <input type="checkbox" :value="e.key" v-model="form.events" /> {{ e.label }}
-          </label>
-        </div>
-        <label class="field">
-          <span>ntfy topic for phone alerts <span class="muted">(optional)</span></span>
-          <input v-model="form.ntfy_topic" placeholder="e.g. agentdeck-7f3k2" />
-          <small class="muted text-xs">
-            Install the ntfy app and subscribe to the same topic. Task titles are sent to ntfy.sh, and anyone who knows the topic name can
-            read them, so pick something hard to guess.
-          </small>
-        </label>
-      </section>
+      <NotificationSettings :form="form" />
 
       <section v-if="notifications.length" class="flex flex-col gap-2.5">
         <h4 class="m-0">Recent alerts</h4>
         <ul class="m-0 flex list-none flex-col gap-1.5 p-0">
           <li v-for="n in notifications.slice(0, 5)" :key="n.id" class="flex items-center gap-2">
-            <Chip :status="n.kind === 'hold' || n.kind === 'paused' ? 'blocked' : n.kind" variant="tint">{{ n.kind }}</Chip>
+            <Chip :status="alertTone(n.kind)" variant="tint">{{ n.kind }}</Chip>
             <span class="flex-1 truncate">{{ n.title }}</span>
-            <span class="muted">{{ ago(n.created_at) }}</span>
+            <span class="text-muted">{{ ago(n.created_at) }}</span>
           </li>
         </ul>
       </section>
@@ -248,7 +192,7 @@ async function test() {
       <p v-if="failure" class="form-error">{{ failure }}</p>
       <div class="flex items-center gap-2">
         <button type="button" @click="test" :disabled="saving">Save &amp; send test</button>
-        <span class="muted">{{ tested }}</span>
+        <span class="text-muted">{{ tested }}</span>
         <span class="spacer" />
         <button type="button" @click="$emit('close')">Cancel</button>
         <button class="primary" type="submit" :disabled="saving">Save</button>

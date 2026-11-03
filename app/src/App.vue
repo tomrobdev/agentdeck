@@ -7,6 +7,7 @@ import {
   type Status,
   type TaskSummary,
   type TaskDetail as Detail,
+  PERSON_CALLS,
   api,
   describeState,
   isImmutable,
@@ -76,7 +77,11 @@ const offline = computed(() => isOffline(statusQ.error.value));
 
 // After a change any of it may have moved (the Repos panel adds, archives and edits repos too).
 const queryClient = useQueryClient();
-const { busy, run: act } = provideActions(() => queryClient.invalidateQueries({ predicate: (q) => !isImmutable(q.queryKey) }), flash);
+const {
+  busy,
+  run: act,
+  refresh,
+} = provideActions(() => queryClient.invalidateQueries({ predicate: (q) => !isImmutable(q.queryKey) }), flash);
 
 watch(
   pageId,
@@ -87,14 +92,7 @@ watch(
 );
 
 const togglePause = () => act(() => (status.value?.paused ? api.resume() : api.pause()));
-const ACTIONS: Record<PersonEvent, (id: number) => Promise<unknown>> = {
-  approve: api.approve,
-  reject: api.reject,
-  retry: api.retry,
-  cancel: api.cancel,
-  mark_done: api.markDone,
-};
-const actOn = (kind: PersonEvent, id: number) => act(() => ACTIONS[kind](id));
+const actOn = (kind: PersonEvent, id: number) => act(() => PERSON_CALLS[kind](id));
 /** A task in review opens on its diff, the rest on the overview. */
 function openFromQueue(id: number) {
   const t = tasks.value.find((x) => x.id === id);
@@ -104,7 +102,7 @@ function openFromQueue(id: number) {
 const merging = ref<number | null>(null);
 async function onMerged(result: MergeResult) {
   merging.value = null;
-  await queryClient.invalidateQueries({ predicate: (q) => !isImmutable(q.queryKey) });
+  await refresh();
   if (result.cleanup_error) flash(`Merged, but cleanup failed: ${result.cleanup_error}`);
 }
 const selectedTask = computed(
@@ -166,7 +164,7 @@ watchEffect(() => {
 
       <div v-if="offline" class="m-auto max-w-[420px] text-center">
         <h2 class="text-lg">The AgentDeck daemon isn't running</h2>
-        <p class="muted">Start it in a terminal and this window will connect on its own:</p>
+        <p class="text-muted">Start it in a terminal and this window will connect on its own:</p>
         <pre class="rounded-md border border-border bg-code-bg p-2.5">cd daemon && npm start</pre>
       </div>
 
@@ -179,7 +177,7 @@ watchEffect(() => {
           :query="route.current.query"
           @act="(kind) => actOn(kind, detail!.id)"
         />
-        <section v-else class="muted flex flex-1 flex-col items-center justify-center gap-3">Loading task #{{ pageId }}…</section>
+        <section v-else class="text-muted flex flex-1 flex-col items-center justify-center gap-3">Loading task #{{ pageId }}…</section>
       </main>
       <main v-else-if="route.current.name === 'insights'" class="flex min-h-0 flex-1 flex-col">
         <InsightsView />
@@ -195,7 +193,7 @@ watchEffect(() => {
           @act="actOn"
           @new-task="modal = 'new'"
         />
-        <section v-else class="muted flex flex-1 flex-col items-center justify-center gap-3">
+        <section v-else class="text-muted flex flex-1 flex-col items-center justify-center gap-3">
           No tasks yet.
           <button class="primary" @click="modal = repos.length ? 'new' : 'repos'">
             {{ repos.length ? 'Queue your first task' : 'Add a repo to get started' }}
@@ -211,7 +209,7 @@ watchEffect(() => {
       <SettingsPanel v-if="modal === 'settings'" :notifications="status?.notifications ?? []" @close="modal = null" />
       <DaemonPanel v-if="modal === 'daemon'" @close="modal = null" />
 
-      <MergeDialog v-if="merging !== null" :task-id="merging" @close="merging = null" @merged="onMerged" />
+      <MergeDialog v-if="merging !== null" :task-id="merging" @close="merging = null" @merged="onMerged" @requested="merging = null" />
       <CommandPalette v-if="palette" :items="paletteRows" @close="palette = false" />
 
       <Toaster :toast="toast" @close="closeToast" />

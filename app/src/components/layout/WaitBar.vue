@@ -30,7 +30,7 @@ const repos = computed(() => props.status?.paused_repos ?? []);
     >
       <span class="min-w-0 flex-1 truncate" :title="r.reason">
         <strong>{{ r.name }} is paused</strong>
-        <span class="muted"> · {{ r.queued }} queued</span>
+        <span class="text-muted"> · {{ r.queued }} queued</span>
         <span class="ml-2 font-mono text-sm">{{ r.reason.split('\n')[0] }}</span>
       </span>
       <button class="primary shrink-0" :disabled="busy" title="Let this repo's tasks run again" @click="emit('resumeRepo', r.id)">

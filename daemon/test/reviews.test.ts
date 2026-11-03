@@ -12,6 +12,7 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { openDb } = await import('../src/db/index.ts');
 const actions = await import('../src/application/actions.ts');
+const { recordAnswers } = await import('../src/application/review/address.ts');
 const { doneTask, runningTask } = await import('./fixtures.ts');
 
 function setup() {
@@ -85,7 +86,6 @@ test('a draft is built, edited and submitted as a Comment without touching the t
   const added = actions.addReviewComment(db, draft.id, comment);
   const id = added.comments[0].id;
   assert.equal(added.comments[0].state, 'open');
-  assert.equal(actions.editReviewComment(db, id, { body: 'rename it to x' }).comments[0].body, 'rename it to x');
   assert.equal(actions.deleteReviewComment(db, id).comments.length, 0);
   assert.throws(() => actions.submitReview(db, draft.id, { kind: 'comment' }), /needs a note or at least one comment/);
 
@@ -139,12 +139,13 @@ test('comments are answered, resolved and reopened after the review is submitted
 
   const state = () => actions.taskReviews(db, task.id)[0].comments[0];
   assert.throws(() => actions.reopenReviewComment(db, id), /nothing to reopen/);
-  actions.answerReviewComment(db, id, { answer: 'done in abc' });
+  recordAnswers(db, [state()], 'ANSWER c1: done in abc');
   assert.deepEqual([state().state, state().answer], ['answered', 'done in abc']);
   actions.resolveReviewComment(db, id);
   assert.equal(state().state, 'resolved');
   assert.throws(() => actions.resolveReviewComment(db, id), /can't be resolved/);
-  assert.throws(() => actions.answerReviewComment(db, id, { answer: 'x' }), /can't be answered/);
+  recordAnswers(db, [state()], 'ANSWER c1: x');
+  assert.deepEqual([state().state, state().answer], ['resolved', 'done in abc'], 'a resolved comment stays resolved');
   actions.reopenReviewComment(db, id);
   assert.equal(state().state, 'open');
 });

@@ -22,7 +22,7 @@ const activity = useActivity(
 );
 const actions = useActions();
 const open = (item: ActivityItem) => item.taskId !== null && openTask(item.taskId, item.tab);
-const cancelMerge = (item: ActivityItem) => item.taskId !== null && actions.run(() => api.cancelMerge(item.taskId!));
+const cancelMerge = (item: ActivityItem) => item.taskId !== null && actions.run(() => api.cancelMergeRequest(item.taskId!));
 
 const state = computed(() => describeState(props.status, props.offline));
 
@@ -69,7 +69,7 @@ const toggleTitle = computed(() => {
       {{ state.label }} <span aria-hidden="true">{{ status?.paused ? '▶' : '⏸' }}</span>
     </Chip>
 
-    <span v-if="status && !offline" class="muted" :title="status.governor.reason ?? ''">
+    <span v-if="status && !offline" class="text-muted" :title="status.governor.reason ?? ''">
       {{ status.running }}/{{ status.governor.max_concurrent }} slots<template
         v-if="status.governor.max_concurrent < status.max_concurrent"
       >
@@ -93,11 +93,11 @@ const toggleTitle = computed(() => {
               @click="(open(item), close())"
             >
               <span class="truncate">
-                <span class="muted">{{ KIND_LABEL[item.kind] }}</span>
+                <span class="text-muted">{{ KIND_LABEL[item.kind] }}</span>
                 <template v-if="item.taskId !== null"> #{{ item.taskId }}</template>
                 {{ item.title }}
               </span>
-              <span class="muted truncate"
+              <span class="text-muted truncate"
                 >{{ item.doing }}<template v-if="item.took"> · for {{ item.took }}</template></span
               >
             </button>
@@ -110,7 +110,7 @@ const toggleTitle = computed(() => {
     <template v-if="!offline">
       <Tooltip v-for="m in meters" :key="m.label" :text="`${m.pct}% used\n${m.markTitle}\nresets in ${m.resets}`">
         <span class="flex items-center gap-1.5" tabindex="0">
-          <span class="muted">{{ m.label }}</span>
+          <span class="text-muted">{{ m.label }}</span>
           <Progress
             :label="`${m.label} usage`"
             :value="m.pct"
@@ -123,13 +123,13 @@ const toggleTitle = computed(() => {
             />
           </Progress>
           <span :class="{ 'text-blocked': m.pct >= m.mark * 100 }">{{ m.pct }}%</span>
-          <span class="muted max-lg:hidden">↻ {{ m.resets }}</span>
+          <span class="text-muted max-lg:hidden">↻ {{ m.resets }}</span>
         </span>
       </Tooltip>
     </template>
 
     <div class="spacer" />
-    <span v-if="status && !offline && !status.governor.allow && status.governor.reason" class="muted truncate">
+    <span v-if="status && !offline && !status.governor.allow && status.governor.reason" class="text-muted truncate">
       On hold: {{ status.governor.reason }}
     </span>
     <Chip as="button" variant="tint" size="xs" title="The daemon's health, and restart" @click="$emit('daemon')">Daemon</Chip>

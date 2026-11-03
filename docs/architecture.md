@@ -389,11 +389,9 @@ stateDiagram-v2
 | GET    | `/api/repos`                       | `db.listRepos`                                                     |
 | POST   | `/api/repos`                       | `actions.addRepo`                                                  |
 | POST   | `/api/resume`                      | `actions.setPaused`, `actions.status`                              |
-| POST   | `/api/review-comments/:id/answer`  | `actions.answerReviewComment`                                      |
 | POST   | `/api/review-comments/:id/reopen`  | `actions.reopenReviewComment`                                      |
 | POST   | `/api/review-comments/:id/resolve` | `actions.resolveReviewComment`                                     |
 | DELETE | `/api/review-comments/:id`         | `actions.deleteReviewComment`                                      |
-| POST   | `/api/review-comments/:id`         | `actions.editReviewComment`                                        |
 | POST   | `/api/reviews/:id/comments`        | `actions.addReviewComment`                                         |
 | POST   | `/api/reviews/:id/submit`          | `actions.submitReview`                                             |
 | POST   | `/api/reviews/:id`                 | `actions.editReview`                                               |

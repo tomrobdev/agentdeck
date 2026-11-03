@@ -9,7 +9,7 @@ import { refuseWhileSyncing } from '../sync.ts';
 import { warnStuckDependents } from './dependencies.ts';
 import { newLinks } from './links.ts';
 import { ActionError, flag, object, refuse, requireTask, requireTaskRepo, text, whole } from '../input.ts';
-import { closePullRequest } from '../pull-request/pull-requests.ts';
+import { closePullRequest } from '../pull-request/merge.ts';
 import { checkFollowers } from '../plans.ts';
 import { checkPlanLink, planRequest, stepList } from './plan-link.ts';
 

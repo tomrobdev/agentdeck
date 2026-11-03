@@ -10,7 +10,7 @@ import { notifyLater } from '../notifications.ts';
 import { proposeNow, plannerDue } from '../planner.ts';
 import { resolveConflicting } from '../sync.ts';
 import { autoMerge } from '../pull-request/auto-merge.ts';
-import { MERGE_REQUEST_POLL_MS, PR_REFRESH_MS, refreshPrStates } from '../pull-request/pull-requests.ts';
+import { MERGE_REQUEST_POLL_MS, PR_REFRESH_MS, refreshPrStates } from '../pull-request/refresh.ts';
 import { settle, settleRecovered } from '../task/settle.ts';
 import { runTask } from '../run/worker.ts';
 import type { Db } from '../../db/index.ts';

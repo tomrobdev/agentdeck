@@ -39,6 +39,15 @@ export function mergeRequestCheck(input: MergeInput): AutoMergeCheck {
   return verdictOf(reasons, found);
 }
 
+/**
+ * Whether the merge dialog merges now instead of asking for a merge request. Failing checks or failed tests stop a request
+ * for good, so the person may wave them through, here and now; anything else goes through a request.
+ */
+export const mergesNow = (
+  check: AutoMergeCheck,
+  input: Pick<MergeInput, 'tests_passed'> & { pr: Pick<MergeInput['pr'], 'checks'> },
+): boolean => check.verdict === 'never' && (input.pr.checks.failing > 0 || input.tests_passed === 0);
+
 /** Whether a waiting request is worth reading again soon: its checks are running, or GitHub is working out mergeability. */
 export const mergeRequestPolls = (check: AutoMergeCheck, pr: Pick<MergeInput['pr'], 'checks' | 'mergeable' | 'merge_state'>): boolean =>
   check.verdict === 'wait' && (pr.checks.pending > 0 || isMergeabilityUnknown(pr));

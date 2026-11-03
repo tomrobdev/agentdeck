@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { type Repo, type TaskDetail, api } from '../../api';
+import { MODEL_HINTS, MODEL_LABELS, type Repo, type TaskDetail, api } from '../../api';
+import { MODELS } from '../../lib/taskView';
 import { useTerminal } from '../../composables/useTerminal';
 import Modal from '../ui/Modal.vue';
 import NumberInput from '../ui/NumberInput.vue';
@@ -92,7 +93,7 @@ async function submit() {
         />
       </label>
       <label class="field flex-1">
-        <span>Title <span class="muted">(optional, defaults to the first sentence)</span></span>
+        <span>Title <span class="text-muted">(optional, defaults to the first sentence)</span></span>
         <input v-model="title" />
       </label>
       <div class="flex gap-2.5">
@@ -105,9 +106,7 @@ async function submit() {
         <label class="field flex-1">
           Model
           <select v-model="model">
-            <option value="haiku">Haiku (cheap, simple)</option>
-            <option value="sonnet">Sonnet (default)</option>
-            <option value="opus">Opus (hard tasks)</option>
+            <option v-for="m in MODELS" :key="m" :value="m">{{ MODEL_LABELS[m] ?? m }} ({{ MODEL_HINTS[m] }})</option>
           </select>
         </label>
         <label class="field flex-[0_0_84px]">
@@ -121,11 +120,11 @@ async function submit() {
       </div>
       <div class="flex gap-2.5">
         <label class="field flex-1">
-          <span>Plan <span class="muted">(optional, the task whose plan this one follows)</span></span>
+          <span>Plan <span class="text-muted">(optional, the task whose plan this one follows)</span></span>
           <input v-model="planTask" placeholder="#112" inputmode="numeric" />
         </label>
         <label class="field flex-1">
-          <span>Steps <span class="muted">(ids, comma-separated; blank for every unfinished step)</span></span>
+          <span>Steps <span class="text-muted">(ids, comma-separated; blank for every unfinished step)</span></span>
           <input v-model="planSteps" placeholder="step-a, step-b" :disabled="!planTask.trim()" />
         </label>
       </div>
@@ -137,7 +136,7 @@ async function submit() {
         </ul>
       </div>
       <div class="flex items-center justify-end gap-2">
-        <span class="muted mr-auto text-sm">⌘↩ to queue</span>
+        <span class="text-muted mr-auto text-sm">⌘↩ to queue</span>
         <button
           v-if="!saved && terminal.available.value"
           type="button"

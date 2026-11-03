@@ -17,7 +17,7 @@ const { openDb } = await import('../src/db/index.ts');
 const { blockedTask, doneTask, failedTask, openPr, rerun, settlePr } = await import('./fixtures.ts');
 const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
 const { github } = await import('../src/adapters/github.ts');
-const { refreshPrStates } = await import('../src/application/pull-request/pull-requests.ts');
+const { refreshPrStates } = await import('../src/application/pull-request/refresh.ts');
 const { addTask, ActionError, closeTaskPr, retryTask, updateRepo } = await import('../src/application/actions.ts');
 const { buildPrompt } = await import('../src/domain/run/prompt.ts');
 const { latestReviewNote } = await import('../src/domain/task/history.ts');
@@ -63,7 +63,6 @@ github.createPr = async (pr) => {
   calls.create.push(pr);
   return `https://github.com/acme/demo/pull/${calls.create.length}`;
 };
-github.prState = async (url) => states[url] ?? 'open';
 let closed: string[];
 let closeError: string | null;
 github.closePr = async (url) => {
@@ -73,6 +72,7 @@ github.closePr = async (url) => {
 
 // Merging: what GitHub says about each PR, and what the daemon asked it to do.
 const cleanDetails: PrDetails = {
+  state: 'open',
   draft: false,
   mergeable: 'MERGEABLE',
   merge_state: 'CLEAN',
@@ -87,7 +87,7 @@ const cleanDetails: PrDetails = {
 let details: Record<string, PrDetails>;
 let merging: { ready: string[]; merged: { url: string; method: string; subject?: string; body?: string }[]; deleted: string[] };
 let mergeError: string | null;
-github.prDetails = async (url) => details[url] ?? cleanDetails;
+github.prDetails = async (url) => ({ ...(details[url] ?? cleanDetails), state: states[url] ?? 'open' });
 github.markReady = async (url) => void merging.ready.push(url);
 github.merge = async (pr) => {
   if (mergeError) throw new Error(mergeError);
@@ -269,17 +269,22 @@ test('refreshPrStates updates open PRs of done tasks and leaves a failed lookup 
   const noPr = mk(null, null);
   states = { 'https://x/pull/10': 'merged', 'https://x/pull/13': 'merged' };
   const lookups: string[] = [];
-  const real = github.prState;
-  github.prState = async (url, cwd) => {
+  const real = github.prDetails;
+  github.prDetails = async (url, cwd, opts) => {
     lookups.push(url);
     if (url.endsWith('/12')) throw new Error('network down');
-    return real(url, cwd);
+    return real(url, cwd, opts);
   };
   try {
     await refreshPrStates(db);
   } finally {
-    github.prState = real;
+    github.prDetails = real;
   }
+  assert.deepEqual(
+    lookups.filter((u) => u.startsWith('https://x/')).toSorted(),
+    ['https://x/pull/10', 'https://x/pull/11', 'https://x/pull/12'],
+    'one gh read per open PR',
+  );
   assert.equal(db.getTask(merged)!.pr_state, 'merged');
   assert.equal(db.getTask(stillOpen)!.pr_state, 'open');
   assert.equal(db.getTask(broken)!.pr_state, 'open');
@@ -288,7 +293,7 @@ test('refreshPrStates updates open PRs of done tasks and leaves a failed lookup 
   assert.ok(!lookups.includes('https://x/pull/13'));
 });
 
-test('refreshPrStates: a merged PR moves a blocked or failed task to done, a closed one leaves it, mergeability is never read', async () => {
+test('refreshPrStates: a merged PR moves a blocked or failed task to done, a closed one leaves it, each PR is read once', async () => {
   const mk = (make: typeof blockedTask, url: string) => make(db, repo, { title: `pr ${url}`, pr: 'open', url }).id;
   const blockedMerged = mk(blockedTask, 'https://x/pull/30');
   const failedMerged = mk(failedTask, 'https://x/pull/31');
@@ -318,9 +323,9 @@ test('refreshPrStates: a merged PR moves a blocked or failed task to done, a clo
   assert.equal(db.getTask(blockedClosed)!.pr_state, 'closed');
   assert.equal(db.getTask(blockedOpen)!.status, 'blocked');
   assert.deepEqual(
-    details.filter((u) => /pull\/3[0-3]$/.test(u)),
-    [],
-    'no mergeability lookups for tasks that are not done',
+    details.filter((u) => /pull\/3[0-3]$/.test(u)).toSorted(),
+    ['https://x/pull/30', 'https://x/pull/31', 'https://x/pull/32', 'https://x/pull/33'],
+    'one gh read per open PR, none for its mergeability',
   );
 });
 
@@ -529,6 +534,7 @@ test('mergeCheck: blocking problems and warnings', () => {
 test('parsePrDetails reads gh output, counting failing and pending checks', () => {
   const d = parsePrDetails(
     JSON.stringify({
+      state: 'OPEN',
       isDraft: true,
       mergeable: 'MERGEABLE',
       mergeStateStatus: 'BEHIND',
@@ -550,6 +556,7 @@ test('parsePrDetails reads gh output, counting failing and pending checks', () =
   );
   const { check_list, head, ...rest } = d;
   assert.deepEqual(rest, {
+    state: 'open',
     draft: true,
     mergeable: 'MERGEABLE',
     merge_state: 'BEHIND',

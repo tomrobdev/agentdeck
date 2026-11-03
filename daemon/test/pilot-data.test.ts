@@ -13,7 +13,8 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 const { openDb } = await import('../src/db/index.ts');
 const { doneTask } = await import('./fixtures.ts');
 const { github } = await import('../src/adapters/github.ts');
-const { mergeTask, refreshPrStates } = await import('../src/application/pull-request/pull-requests.ts');
+const { mergeTask } = await import('../src/application/pull-request/merge.ts');
+const { refreshPrStates } = await import('../src/application/pull-request/refresh.ts');
 type PrDetails = import('../src/domain/pull-request/merge.ts').PrDetails;
 
 const db = openDb(join(home, 'test.db'));
@@ -57,6 +58,7 @@ test('a usage reading that changed appends a sample; an unchanged one does not',
 });
 
 const pending: PrDetails = {
+  state: 'open',
   draft: false,
   mergeable: 'MERGEABLE',
   merge_state: 'CLEAN',
@@ -72,7 +74,6 @@ const pending: PrDetails = {
 test("a PR's checks are stored once they settle, kept as first seen, and the merge stores its own", async () => {
   const t = doneTask(db, repo, { pr: 'open', url: 'https://x/pull/1', branch: 'agentdeck/checks' });
   let current = pending;
-  github.prState = async () => 'open';
   github.prDetails = async () => current;
   github.markReady = async () => {};
   github.merge = async () => {};
