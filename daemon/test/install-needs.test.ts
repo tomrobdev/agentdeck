@@ -100,6 +100,17 @@ test('a failed install keeps the task blocked and says why', async () => {
   assert.equal(db.getTask(id)!.status, 'blocked');
 });
 
+test('a task cancelled while its install runs stays cancelled, and the person is told', async () => {
+  const { id } = await blockedFor(['added']);
+  // installNeeds runs up to the package manager synchronously, so this cancel lands while the install runs.
+  const running = installNeeds(db, id);
+  assert.ok(db.applyEvent(id, { type: 'cancel' }));
+  await assert.rejects(running, /is now cancelled, so it was not retried/);
+  const t = db.getTask(id)!;
+  assert.equal(t.status, 'cancelled');
+  assert.doesNotMatch(db.eventsForTask(id).at(-1)!.reason ?? '', /installed added/, 'no retry followed the cancel');
+});
+
 test('only a blocked task that asked for packages, on a Node toolchain', async () => {
   const host = await blockedFor(['example.com'], 'host');
   await assert.rejects(installNeeds(db, host.id), /has not asked for packages/);

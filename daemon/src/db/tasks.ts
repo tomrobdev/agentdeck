@@ -649,12 +649,19 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
      * The only way to change a task's status. Asks the lifecycle whether `event` is allowed from the
      * task's current status and writes the result guarded by that status, so a concurrent change
      * (say, a cancel arriving as a run finishes) is never overwritten. Returns the updated task, or
-     * undefined if the task is missing or the event isn't allowed.
+     * undefined if the task is missing or the event isn't allowed. `onlyFrom` narrows it further: the write also
+     * requires the task to be in one of those statuses, so a caller that checked a status before a long wait
+     * does not undo a change made meanwhile.
      */
-    applyEvent(id: number, event: TaskEvent, opts: { reason?: string | null; needs?: string | null } = {}): Task | undefined {
+    applyEvent(
+      id: number,
+      event: TaskEvent,
+      opts: { reason?: string | null; needs?: string | null; onlyFrom?: TaskStatus[] } = {},
+    ): Task | undefined {
       for (let attempt = 0; attempt < 3; attempt++) {
         const cur = this.getTask(id);
         if (!cur) return undefined;
+        if (opts.onlyFrom && !opts.onlyFrom.includes(cur.status)) return undefined;
         const next = transition(cur, event, opts);
         if (!next) return undefined;
         const row = atomically(db, () => {

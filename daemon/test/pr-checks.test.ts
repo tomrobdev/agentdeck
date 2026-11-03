@@ -221,6 +221,24 @@ test('fixChecks retries the task with a note naming each failing check and holdi
   assert.match(note, /### ci\/circleci \(https:\/\/circleci\.com\/gh\/acme\/demo\/7\)\nNot a GitHub Actions check/);
 });
 
+test('fixChecks does not requeue a task whose PR was merged while the checks were read', async () => {
+  const url = 'https://github.com/acme/demo/pull/9';
+  const t = doneTask(db, repo, { title: 'Merged meanwhile', pr: 'open', url });
+  details[url] = failingDetails;
+  const read = github.prDetails;
+  github.prDetails = async (u, cwd) => {
+    const d = await read(u, cwd);
+    assert.ok(db.recordPr(t.id, { type: 'seen', state: 'merged' }));
+    return d;
+  };
+  try {
+    await assert.rejects(fixChecks(db, t.id), /no longer open/);
+  } finally {
+    github.prDetails = read;
+  }
+  assert.equal(db.getTask(t.id)!.status, 'done');
+});
+
 test('fixChecks is refused with no failing check, without an open PR, or when the task is not done', async () => {
   const url = 'https://github.com/acme/demo/pull/3';
   const passing = doneTask(db, repo, { title: 'All green', pr: 'open', url });
