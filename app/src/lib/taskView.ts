@@ -16,6 +16,7 @@ import {
   statusGroup,
 } from '../../../daemon/src/domain/task/stage.ts';
 import { EDITABLE_STATUSES, MODELS } from '../../../daemon/src/domain/task/task.ts';
+import type { GroupBy } from './queueDisplay.ts';
 
 // The board's move rule is in boardMove.ts, which the daemon's tests import.
 export { STATUS_GROUPS, type StatusGroup, canStartMerge, hasOpenPr, isMerged, isReview, isStuck, isWaiting, statusGroup };
@@ -52,7 +53,7 @@ export const priorityLevel = (p: number): PriorityLevel => PRIORITY_LEVELS.find(
 /** A tooltip for the auto-merge mark: the daemon's label, then its reasons, one to a line. */
 export const autoMergeTip = (v: AutoMergeView): string => [v.label, ...v.reasons].join('\n');
 
-export type GroupBy = 'status' | 'repo' | 'priority' | 'none';
+export type { GroupBy };
 export const GROUP_BYS: { key: GroupBy; label: string }[] = [
   { key: 'status', label: 'Status' },
   { key: 'repo', label: 'Repo' },

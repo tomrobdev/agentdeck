@@ -13,7 +13,8 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 const { openDb } = await import('../src/db/index.ts');
 const { doneTask } = await import('./fixtures.ts');
 const { github } = await import('../src/adapters/github.ts');
-const { mergeTask, refreshPrStates } = await import('../src/application/pull-request/pull-requests.ts');
+const { mergeTask } = await import('../src/application/pull-request/merge.ts');
+const { refreshPrStates } = await import('../src/application/pull-request/refresh.ts');
 type PrDetails = import('../src/domain/pull-request/merge.ts').PrDetails;
 
 const db = openDb(join(home, 'test.db'));

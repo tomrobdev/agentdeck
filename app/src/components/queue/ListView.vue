@@ -11,13 +11,7 @@ import PriorityIcon from '../ui/PriorityIcon.vue';
 import StatusIcon from '../ui/StatusIcon.vue';
 import TaskBadges from '../ui/TaskBadges.vue';
 import TaskStatusLine from '../ui/TaskStatusLine.vue';
-
-export interface ShowProps {
-  repo: boolean;
-  pr: boolean;
-  time: boolean;
-  reason: boolean;
-}
+import type { ShowProps } from '../../lib/queueDisplay';
 
 const props = defineProps<{
   groups: Group[];
