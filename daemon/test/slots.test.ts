@@ -33,7 +33,7 @@ test('a running task and an open resolve run fill two slots: nothing else is cla
 
   assert.equal(db.slotsUsed(), 2);
   assert.equal(canStartResolve(db), false);
-  assert.deepEqual(startWaits(db)(db.getTask(queued.id)!), { kind: 'slots', running: 2, max: 2 });
+  assert.deepEqual(startWaits(db)(db.getTask(queued.id)!, { kind: 'none' }), { kind: 'slots', running: 2, max: 2 });
   db.close();
 });
 
