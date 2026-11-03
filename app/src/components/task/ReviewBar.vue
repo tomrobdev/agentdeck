@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { type Review, type SubmitReview, api } from '../../api';
-import { useActions } from '../../composables/useActions';
+import { useAction } from '../../composables/useActions';
 
 // The bar a draft review lives in: how many comments are pending, an overall note, and Submit as Comment or Request changes.
 // ⌘Enter submits as `kind`, which is Request changes when the bar was opened from that button.
 const props = defineProps<{ taskId: number; draft: Review | null; kind: SubmitReview['kind'] }>();
 const emit = defineEmits<{ close: []; submitted: [] }>();
-const { busy, run } = useActions();
+const { pending, run } = useAction();
 
 const note = ref(props.draft?.body ?? '');
 watch(
@@ -16,10 +16,10 @@ watch(
 );
 
 const count = () => props.draft?.comments.length ?? 0;
-const canSubmit = () => !busy.value && (note.value.trim() !== '' || count() > 0);
+const canSubmit = () => !pending.value && (note.value.trim() !== '' || count() > 0);
 
 /**
- * Keep the note across a reload: save it when the field loses focus. Not through `run`: its busy flag would disable
+ * Keep the note across a reload: save it when the field loses focus. Not through `run`: its pending flag would disable
  * Submit between the mousedown that blurs the field and the click, and the click would be lost. Submit sends the
  * note itself, so a failed save here loses nothing; the next blur tries again.
  */

@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue';
 import { type MergeResult, type TaskDetail, api } from '../../api';
 import { canFixChecks, canStartMerge, isReview, personEvents } from '../../lib/taskView';
-import { useActions } from '../../composables/useActions';
+import { useAction, useActions } from '../../composables/useActions';
 import ConfirmDialog from '../ui/ConfirmDialog.vue';
 import MarkDoneDialog from './MarkDoneDialog.vue';
 import MergeDialog from './MergeDialog.vue';
@@ -11,28 +11,29 @@ import MergeDialog from './MergeDialog.vue';
 // header's status line, with Cancel merge.
 const props = defineProps<{ task: TaskDetail }>();
 const emit = defineEmits<{ act: [kind: 'approve' | 'reject' | 'retry' | 'cancel']; review: [] }>();
-const { busy, run, refresh, flash } = useActions();
+const { refresh, flash } = useActions();
+const { pending, run } = useAction();
 
 const events = computed(() => personEvents(props.task));
 
 // Closing the PR asks first, because it closes it on GitHub. Request changes opens the review bar on the task page.
 const closing = ref(false);
 async function closePr() {
-  if (busy.value) return;
+  if (pending.value) return;
   await run(() => api.closePr(props.task.id));
   closing.value = false;
 }
 
 // Send the PR's failing checks back to the worker; a refusal is flashed with the API's wording.
 async function fixChecks() {
-  if (busy.value) return;
+  if (pending.value) return;
   await run(() => api.fixChecks(props.task.id));
 }
 
 // Mark a blocked or failed task done by hand, with an optional note for the timeline.
 const markingDone = ref(false);
 async function submitMarkDone(doneNote: string) {
-  if (busy.value) return;
+  if (pending.value) return;
   await run(() => api.markDone(props.task.id, doneNote));
   markingDone.value = false;
 }
@@ -56,7 +57,7 @@ async function onMerged(result: MergeResult) {
       <button @click="emit('review')">↻ Request changes</button>
     </template>
     <button v-else-if="events.includes('retry')" @click="emit('act', 'retry')">↻ Retry</button>
-    <button v-if="canFixChecks(task)" :disabled="busy" @click="fixChecks">Fix failing checks</button>
+    <button v-if="canFixChecks(task)" :disabled="pending" @click="fixChecks">Fix failing checks</button>
     <button v-if="events.includes('mark_done')" @click="markingDone = true">✓ Mark done</button>
     <button
       v-if="isReview(task)"
@@ -70,7 +71,7 @@ async function onMerged(result: MergeResult) {
     <button v-if="events.includes('cancel')" @click="emit('act', 'cancel')">{{ task.status === 'running' ? '■ Stop' : '✕ Cancel' }}</button>
   </div>
 
-  <MarkDoneDialog v-if="markingDone" :task="task" with-note :busy="busy" @close="markingDone = false" @confirm="submitMarkDone" />
+  <MarkDoneDialog v-if="markingDone" :task="task" with-note :busy="pending" @close="markingDone = false" @confirm="submitMarkDone" />
   <MergeDialog v-if="merging" :task-id="task.id" @close="merging = false" @merged="onMerged" @requested="merging = false" />
 
   <ConfirmDialog
@@ -78,7 +79,7 @@ async function onMerged(result: MergeResult) {
     title="Close pull request"
     confirm-label="Close PR"
     focus="cancel"
-    :busy="busy"
+    :busy="pending"
     @cancel="closing = false"
     @confirm="closePr"
   >

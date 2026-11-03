@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import { type PrCheck, type TaskDetail, api, checkDuration } from '../../api';
 import { finalMessage } from '../../../../daemon/src/domain/pull-request/pr.ts';
 import { canFixChecks } from '../../lib/taskView';
-import { useActions } from '../../composables/useActions';
+import { useAction } from '../../composables/useActions';
 import { openExternal } from '../../platform/native';
 import Markdown from '../files/Markdown.vue';
 import Tooltip from '../ui/Tooltip.vue';
@@ -11,7 +11,7 @@ import Tooltip from '../ui/Tooltip.vue';
 // The pull request as it was opened: its state and link, its checks, and the summary the worker ended with (the PR body's first part).
 const props = defineProps<{ task: TaskDetail; isPath?: (p: string) => boolean }>();
 const emit = defineEmits<{ path: [path: string, line: number | null] }>();
-const { busy, run } = useActions();
+const { pending, run } = useAction();
 
 const summary = computed(() => finalMessage(props.task.runs));
 
@@ -34,7 +34,7 @@ const checks = computed(() =>
 const fixable = computed(() => canFixChecks(props.task));
 
 async function fixChecks() {
-  if (busy.value) return;
+  if (pending.value) return;
   await run(() => api.fixChecks(props.task.id));
 }
 </script>
@@ -49,7 +49,7 @@ async function fixChecks() {
     <section v-if="checks.length" class="border-b border-border px-3.5 py-2.5" data-checks>
       <div class="mb-1.5 flex items-center gap-1.5">
         <b>Checks</b>
-        <button v-if="fixable" class="ml-auto" :disabled="busy" @click="fixChecks">Fix failing checks</button>
+        <button v-if="fixable" class="ml-auto" :disabled="pending" @click="fixChecks">Fix failing checks</button>
       </div>
       <ul class="m-0 flex list-none flex-col gap-1 p-0">
         <li v-for="c in checks" :key="c.name" class="flex items-center gap-2" :data-check-state="c.state">
