@@ -9,6 +9,10 @@ import { type Needs, parseNeeds } from '../task/needs.ts';
  */
 export type RunKind = 'work' | 'resolve' | 'unblock';
 
+/** A run's name in the dashboard: "Run 2", or "Resolve conflicts" for the resolve run of a sync. */
+export const runLabel = (run: Pick<Run, 'kind' | 'attempt'>): string =>
+  run.kind === 'resolve' ? 'Resolve conflicts' : `Run ${run.attempt}`;
+
 /** How a run ended: a worker's result, or `interrupted` when a daemon restart ended it. */
 export type RunOutcome = Outcome | typeof INTERRUPTED;
 

@@ -6,6 +6,12 @@ export function wholeNumberError(field: string, value: unknown, min: number, max
   return `${field} must be a whole number from ${min} to ${max}`;
 }
 
+/** The first line of a text, cut to `max` characters. */
+export function short(text: string, max: number): string {
+  const line = text.trim().split('\n')[0] ?? '';
+  return line.length > max ? `${line.slice(0, max - 1)}…` : line;
+}
+
 /** "1 check", "3 checks". */
 export const plural = (n: number, one: string, many = `${one}s`): string => `${n} ${n === 1 ? one : many}`;
 

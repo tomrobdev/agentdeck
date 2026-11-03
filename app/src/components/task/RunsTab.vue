@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { runLabel } from '../../../../daemon/src/domain/run/run.ts';
 import { type TaskDetail, ago, fmtTokens, runDuration, totalTokens } from '../../api';
 import LogView from './LogView.vue';
 import Markdown from '../files/Markdown.vue';
@@ -40,8 +41,8 @@ const live = computed(() => (props.task.status === 'running' || !!props.task.syn
           <span class="dot" />
           <span
             class="font-semibold"
-            :title="r.kind === 'resolve' ? 'Merged the base branch into the branch; uses no attempt' : undefined"
-            >{{ r.kind === 'resolve' ? 'Resolve conflicts' : `Run ${r.attempt}` }}</span
+            :title="r.kind === 'resolve' ? 'Synced the base branch into the branch; uses no attempt' : undefined"
+            >{{ runLabel(r) }}</span
           >
           <span
             class="text-status"
