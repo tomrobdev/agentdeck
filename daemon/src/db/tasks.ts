@@ -470,6 +470,18 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       return Number(res.changes) > 0;
     },
     /**
+     * Keep the PR refresh's latest checks (JSON StoredChecks) on a task. Only a done task whose PR is open, like
+     * setAutoMergeCheck: checks read while a merge or a close was recorded are dropped. Returns false if it was not.
+     */
+    setPrChecks(id: number, checks: string): boolean {
+      const res = orm
+        .update(tasks)
+        .set({ pr_checks: checks })
+        .where(and(eq(tasks.id, id), eq(tasks.status, 'done'), eq(tasks.pr_state, 'open')))
+        .run();
+      return Number(res.changes) > 0;
+    },
+    /**
      * Record a change to a task's PR: `pr_state` (and `pr_url` when opened) and a 'pr' history row, together.
      * Guarded on the PR state the change starts from, like every task write: an opened or failed PR replaces anything
      * but an open one (and needs a done task), a close or a sighting only moves an open PR. A merge recorded in
@@ -493,7 +505,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
           .set({
             ...set,
             // A newly opened PR has its own checks to record.
-            ...(e.type === 'opened' ? { pr_checks_opened: null, pr_checks_merged: null } : {}),
+            ...(e.type === 'opened' ? { pr_checks_opened: null, pr_checks_merged: null, pr_checks: null } : {}),
             auto_merge_check: null,
             auto_merge_checked_at: null,
             ...NO_MERGE_REQUEST,

@@ -232,6 +232,9 @@ export const MIGRATIONS: Migration[] = [
   // 25: when a run's pid was stored. Its claude started then, which can be minutes after the run row (setup, a sync),
   // so crash recovery and the doctor tell our claude from a reused pid by this time, not by started_at.
   `ALTER TABLE runs ADD COLUMN pid_at TEXT;`,
+  // 26: an open PR's latest checks, one by one (domain/pull-request/checks.ts StoredChecks): JSON { read_at, head, checks,
+  // notified }, written by the PR refresh; notified says a person was told they fail. NULL until the PR's checks are read.
+  `ALTER TABLE tasks ADD COLUMN pr_checks TEXT;`,
 ];
 
 /** Runs every step above the database's user_version in one transaction; returns how many ran. */

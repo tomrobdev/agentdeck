@@ -21,6 +21,7 @@ const EVENTS: { key: NotifyKind; label: string }[] = [
   { key: 'paused', label: 'Repo paused' },
   { key: 'proposed', label: 'Planner proposals' },
   { key: 'merged', label: 'PR auto-merged' },
+  { key: 'checks_failed', label: 'PR checks failed' },
 ];
 
 const form = ref<SettingsForm | null>(null);

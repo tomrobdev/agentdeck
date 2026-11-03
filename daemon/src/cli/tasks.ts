@@ -11,7 +11,7 @@ import { readNeeds } from '../domain/task/needs.ts';
 import { isReview } from '../domain/task/stage.ts';
 import { planStepIds } from '../domain/task/task.ts';
 import { callDaemon } from './daemon-client.ts';
-import { die, idsText, taskId, taskIds, fmtAutoMerge, fmtLink, fmtTask, printLog } from './format.ts';
+import { die, idsText, taskId, taskIds, fmtAutoMerge, fmtChecks, fmtLink, fmtTask, printLog } from './format.ts';
 import type { Command } from './context.ts';
 
 /** A file's text, or exit saying why it can't be read. */
@@ -152,6 +152,7 @@ export const taskCommands: Record<string, Command> = {
     console.log(fmtTask(t, repoName(t.repo_id)));
     console.log(`model ${t.model}, attempts ${t.attempts}/${t.max_attempts}, max turns ${t.max_turns}`);
     if (t.auto_merge_view) for (const line of fmtAutoMerge(t.auto_merge_view)) console.log(line);
+    if (t.checks) console.log(fmtChecks(t.checks, t.status === 'done' ? t.id : undefined));
     if (t.links.length) console.log(`links    ${t.links.map(fmtLink).join(', ')}`);
     if (t.dependents.length)
       console.log(`needed by ${t.dependents.map((d) => `#${d.id} (${d.kind === 'builds_on' ? 'builds on it' : 'after it'})`).join(', ')}`);
@@ -239,6 +240,13 @@ export const taskCommands: Record<string, Command> = {
     }
     const { packages } = await actions.installNeeds(db, id);
     console.log(`installed ${packages.join(' ')} on #${id}'s branch; requeued`);
+  },
+  'fix-checks': async ({ db, rest }) => {
+    const id = taskId(rest[0]);
+    const { checks } = await actions.fixChecks(db, id);
+    console.log(
+      `requeued #${id} to fix ${checks.length === 1 ? 'the failing check' : `${checks.length} failing checks`}: ${checks.join(', ')}`,
+    );
   },
   'close-pr': async ({ db, rest }) => {
     const id = taskId(rest[0]);

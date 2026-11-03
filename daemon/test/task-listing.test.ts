@@ -28,6 +28,7 @@ function task(id: number, fields: Partial<ListedTask> = {}): ListedTask {
     auto_merge: null,
     auto_merge_check: null,
     auto_merge_checked_at: null,
+    pr_checks: null,
     pr_checks_opened: null,
     pr_checks_merged: null,
     merge_requested_at: null,

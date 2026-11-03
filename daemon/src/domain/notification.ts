@@ -1,9 +1,9 @@
-// Alerts for things that need a human: task finished, blocked, failed, proposals, a governor hold, a pause or an
-// auto-merge. Pure: no I/O.
+// Alerts for things that need a human: task finished, blocked, failed, proposals, a governor hold, a pause, an
+// auto-merge or a PR's checks failing. Pure: no I/O.
 import type { Task } from './task/task.ts';
 
-export type NotifyKind = 'done' | 'blocked' | 'failed' | 'hold' | 'paused' | 'proposed' | 'merged';
-export const NOTIFY_KINDS: NotifyKind[] = ['done', 'blocked', 'failed', 'hold', 'paused', 'proposed', 'merged'];
+export type NotifyKind = 'done' | 'blocked' | 'failed' | 'hold' | 'paused' | 'proposed' | 'merged' | 'checks_failed';
+export const NOTIFY_KINDS: NotifyKind[] = ['done', 'blocked', 'failed', 'hold', 'paused', 'proposed', 'merged', 'checks_failed'];
 
 /** The rules for the notification settings. Each returns the message to show, or null. */
 export function notifyEventsError(events: string[]): string | null {

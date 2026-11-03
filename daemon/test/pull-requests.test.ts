@@ -546,7 +546,8 @@ test('parsePrDetails reads gh output, counting failing and pending checks', () =
       ],
     }),
   );
-  assert.deepEqual(d, {
+  const { check_list, head, ...rest } = d;
+  assert.deepEqual(rest, {
     draft: true,
     mergeable: 'MERGEABLE',
     merge_state: 'BEHIND',
@@ -558,6 +559,11 @@ test('parsePrDetails reads gh output, counting failing and pending checks', () =
     paths: ['a.ts', 'docs/b.md'],
     labels: ['agentdeck:auto-merge'],
   });
+  assert.deepEqual(
+    check_list?.map((c) => c.state),
+    ['pass', 'fail', 'pending', 'fail', 'pending', 'skipped'],
+  );
+  assert.equal(head, null, 'no headRefOid in the output');
 });
 
 test('repo merge_method defaults to squash and rejects unknown values', () => {

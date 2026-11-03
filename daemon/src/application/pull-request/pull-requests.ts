@@ -13,6 +13,7 @@ import {
   mergeFindings,
 } from '../../domain/pull-request/merge.ts';
 import { type AutoMergeCheck, autoMergeCheck, autoMergeOn } from '../../domain/pull-request/auto-merge.ts';
+import { checksFailedNotification, nextChecks, readStoredChecks } from '../../domain/pull-request/checks.ts';
 import { isConflicting, isMergeabilityUnknown } from '../../domain/pull-request/conflict.ts';
 import { mergeRequestCheck, mergeRequestPolls } from '../../domain/pull-request/merge-request.ts';
 import { buildPrBody } from '../../domain/pull-request/pr.ts';
@@ -261,7 +262,18 @@ export async function mergeOpenPr(
   return result;
 }
 
-/** The setting that asks the scheduler to re-read the open PRs now (a person's merge changed the base). */
+/**
+ * Keep a done task's open PR's checks on the task, and tell a person when they newly fail (`nextChecks` says when).
+ * Nothing is told when the write was refused: the PR merged or closed meanwhile.
+ */
+function keepChecks(db: Db, task: Task, pr: PrDetails): void {
+  const { stored, notify } = nextChecks(readStoredChecks(task.pr_checks), {
+    head: pr.head ?? null,
+    checks: pr.check_list ?? [],
+    read_at: new Date().toISOString(),
+  });
+  if (db.setPrChecks(task.id, JSON.stringify(stored)) && notify) notifyLater(db, checksFailedNotification(task, stored.checks));
+}
 
 /** What a refresh found out about the open PRs beyond their state. */
 export interface PrRefresh {
@@ -308,6 +320,7 @@ export async function refreshPrStates(db: Db, log: (msg: string) => void = () =>
       }
       const pr = await github.prDetails(task.pr_url!, cwd, { withFiles: !!repo && autoMergeOn(task, repo) });
       if (checksSettled(pr.checks)) db.recordPrChecksOpened(task.id, pr.checks);
+      keepChecks(db, task, pr);
       const tests = lastTestsPassed(db, task.id);
       if (task.merge_requested_at) {
         // A person asked: the merge request's check stands in for auto-merge's.

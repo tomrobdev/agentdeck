@@ -54,6 +54,7 @@ Tasks
   agentdeck retry <id> [--note "…"]   another attempt; the note goes first in its prompt (changes requested in review)
   agentdeck done <id> [--note "…"]   mark a blocked or failed task done (you finished the work); tasks waiting on it start
   agentdeck install-needs <id> [--yes]   install the packages a blocked task asked for (NEEDS deps) on its branch, then retry
+  agentdeck fix-checks <id>    retry a done task whose PR checks fail, with each failing check and its log tail in the note
   agentdeck close-pr <id>      close the task's open pull request without merging
   agentdeck merge <id> [--method squash|merge|rebase] [--yes] [--keep-branch]
                                   merge a done task's open PR: shows the preview, asks unless --yes, then deletes
