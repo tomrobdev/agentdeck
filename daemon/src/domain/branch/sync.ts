@@ -21,3 +21,8 @@ export function conflictReason(base: string, conflictFiles: string[], why?: stri
     : `could not sync with ${base}`;
   return why ? `${list} (${why})` : list;
 }
+
+/** Whether a stop reason is a conflict's (`conflictReason`): a sync that could not be settled. */
+export function isConflictReason(reason: string | null | undefined): boolean {
+  return /^(conflicts with \S+ in \d+ files?: |could not sync with )/.test(reason ?? '');
+}

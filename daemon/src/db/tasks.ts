@@ -127,6 +127,14 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         .where(and(eq(buildsOn.task_id, t.id), eq(buildsOn.kind, 'builds_on'), notExists(unmet))),
     );
   };
+  /** The task row `t` has no unblock run going: a person's retry during one waits for it to stop before a claim. */
+  const notUnblocking = () =>
+    notExists(
+      orm
+        .select({ id: runs.id })
+        .from(runs)
+        .where(and(eq(runs.task_id, t.id), eq(runs.kind, 'unblock'), isNull(runs.ended_at))),
+    );
   const countWhere = (where: SQL | undefined) => orm.select({ n: count() }).from(tasks).where(where).get()?.n ?? 0;
 
   /** Append to a task's history. Callers run it in the same `atomically` block as the status change. */
@@ -263,9 +271,42 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       return !!orm
         .select({ id: t.id })
         .from(t)
-        .where(and(eq(t.status, 'queued'), notWaiting(), inOpenRepo(t.repo_id)))
+        .where(and(eq(t.status, 'queued'), notWaiting(), notUnblocking(), inOpenRepo(t.repo_id)))
         .limit(1)
         .get();
+    },
+    /**
+     * Blocked tasks in repos that have auto_unblock on and may start work (not paused, not archived), by priority then
+     * age: the ones an unblock run may be for. Whether one may start is `unblockable`'s to say.
+     */
+    unblockCandidates(): Task[] {
+      const unblocking = orm
+        .select({ id: repos.id })
+        .from(repos)
+        .where(and(eq(repos.auto_unblock, 1), isNull(repos.paused_reason), isNull(repos.archived_at)));
+      return orm
+        .select(TASK_COLUMNS)
+        .from(tasks)
+        .where(and(eq(tasks.status, 'blocked'), inArray(tasks.repo_id, unblocking)))
+        .orderBy(desc(tasks.priority), asc(tasks.id))
+        .all() as Task[];
+    },
+    /**
+     * Leave an unblock run's question (JSON UnblockQuestion) on a blocked task, with an `unblock_ask` history row whose
+     * reason is the question. Guarded like every task write: only a blocked task, so a retry or a cancel made while the
+     * run went is never undone. Returns false if the task was not blocked.
+     */
+    recordQuestion(id: number, question: string, reason: string): boolean {
+      return atomically(db, () => {
+        const res = orm
+          .update(tasks)
+          .set({ question, updated_at: NOW_SQL })
+          .where(and(eq(tasks.id, id), eq(tasks.status, 'blocked')))
+          .run();
+        if (!Number(res.changes)) return false;
+        recordEvent(id, 'unblock_ask', 'blocked', 'blocked', reason);
+        return true;
+      });
     },
     /**
      * Tasks without their prompt, newest first. Returns the `limit` newest tasks older than `before`
@@ -378,7 +419,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       const next = orm
         .select({ id: t.id })
         .from(t)
-        .where(and(inArray(t.status, from), notWaiting(), inOpenRepo(t.repo_id)))
+        .where(and(inArray(t.status, from), notWaiting(), notUnblocking(), inOpenRepo(t.repo_id)))
         .orderBy(desc(t.priority), asc(t.id))
         .limit(1);
       return atomically(db, () => {
@@ -694,7 +735,8 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
      * unless restarts keep interrupting it. Stop its claude process (`reapOrphans`) first.
      * The unfinished runs of a requeued task end `interrupted`, keeping their session, so the next run resumes it; those
      * of a task that failed or was cancelled end so (`failed`, `cancelled`), so the run stats count them. Any other
-     * unfinished run (a done task's sync) ends `interrupted`. Returns how many were requeued and the ids of those failed.
+     * unfinished run (a done task's resolve run, a blocked task's unblock run) ends `interrupted`. Returns how many were
+     * requeued and the ids of those failed.
      */
     recoverOrphans(): { requeued: number; failed: number[] } {
       // Syncs run only in the daemon, so any marker left over belongs to a sync that died with it.

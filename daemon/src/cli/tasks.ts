@@ -8,6 +8,7 @@ import { pickRun } from '../domain/run/run.ts';
 import { TASK_STATUSES } from '../domain/task/lifecycle.ts';
 import { filterTasks } from '../domain/task/listing.ts';
 import { readNeeds } from '../domain/task/needs.ts';
+import { readQuestion } from '../domain/run/unblock.ts';
 import { isReview } from '../domain/task/stage.ts';
 import { planStepIds } from '../domain/task/task.ts';
 import { callDaemon } from './daemon-client.ts';
@@ -160,6 +161,11 @@ export const taskCommands: Record<string, Command> = {
     if (t.worktree) console.log(`worktree ${t.worktree}`);
     const needs = readNeeds(t.needs);
     if (needs && t.status === 'blocked') console.log(`needs    ${needs.kind}: ${needs.items.join(' ')}`);
+    const question = readQuestion(t.question);
+    if (question && t.status === 'blocked') {
+      console.log(`question ${question.question}`);
+      for (const o of question.options) console.log(`         - ${o}`);
+    }
     const plan = followedPlanName(t);
     if (plan) {
       const steps = planStepIds(t);
@@ -174,7 +180,7 @@ export const taskCommands: Record<string, Command> = {
     for (const r of db.runsForTask(t.id)) {
       const tokens = r.input_tokens + r.output_tokens + r.cache_read_tokens + r.cache_write_tokens;
       console.log(
-        `${r.kind === 'resolve' ? 'conflict run' : 'run'} ${r.attempt}: ${r.outcome ?? 'running'}  turns=${r.num_turns ?? '-'}  tokens=${tokens}  tests=${r.tests_passed === null ? '-' : r.tests_passed ? 'pass' : 'fail'}  ${r.started_at}`,
+        `${r.kind === 'resolve' ? 'conflict run' : r.kind === 'unblock' ? 'unblock run' : 'run'} ${r.attempt}: ${r.outcome ?? 'running'}  turns=${r.num_turns ?? '-'}  tokens=${tokens}  tests=${r.tests_passed === null ? '-' : r.tests_passed ? 'pass' : 'fail'}  ${r.started_at}`,
       );
       if (r.result_text) console.log(`  ${r.result_text.trim().split('\n').slice(-6).join('\n  ')}`);
     }

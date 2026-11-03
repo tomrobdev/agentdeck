@@ -34,10 +34,10 @@ export interface OpenedRun {
   ended?: boolean;
 }
 
-/** Open the log and the run row. A work run is named by its attempt, a resolve run by the time it started. */
+/** Open the log and the run row. A work run is named by its attempt, a resolve or unblock run by its kind and the time it started. */
 export function openTaskRun(db: Db, task: Task, kind: RunKind): OpenedRun {
   ensureDirs();
-  const name = kind === 'work' ? `attempt-${task.attempts}` : `resolve-${Date.now()}`;
+  const name = kind === 'work' ? `attempt-${task.attempts}` : `${kind}-${Date.now()}`;
   const logPath = join(LOG_DIR, `task-${task.id}-${name}.jsonl`);
   const log = createWriteStream(logPath, { flags: 'a' });
   const runId = db.startRun(task.id, task.attempts, logPath, kind);
@@ -74,12 +74,23 @@ export interface ResumeRun {
  * usage callbacks, and record a rate limit. `opened` is a run the caller opened earlier (it needed the log before
  * claude). With `resume`, claude continues that session; if it cannot (the session is gone), a fresh claude with
  * `prompt` takes over in the same run. The caller decides what the end means and calls `finishRun`. Throws if the
- * settings cannot be written.
+ * settings cannot be written. `maxTurns` and `systemPrompt` replace the task's and the worker's (an unblock run's are
+ * its own). A work or resolve run stops when a person cancels the task; an unblock run, whose task is blocked, stops
+ * as soon as the task is anything else (a person retried, cancelled or marked it done).
  */
 export async function startTaskRun(
   db: Db,
   task: Task,
-  opts: { kind: RunKind; repo: Repo; worktree: string; prompt: string; opened?: OpenedRun; resume?: ResumeRun },
+  opts: {
+    kind: RunKind;
+    repo: Repo;
+    worktree: string;
+    prompt: string;
+    opened?: OpenedRun;
+    resume?: ResumeRun;
+    maxTurns?: number;
+    systemPrompt?: string;
+  },
 ): Promise<TaskRunEnd> {
   const opened = opts.opened ?? openTaskRun(db, task, opts.kind);
   const { runId, logPath, log } = opened;
@@ -88,13 +99,15 @@ export async function startTaskRun(
   // Local to this run, not module state: the live state goes to the run row, where the queue reads it.
   let live = START_LIVE;
   const allowed = allowedTools(repo, rootInfo(worktree));
-  const start = (prompt: string, session: string | null, maxTurns = task.max_turns): Promise<ClaudeRun> =>
+  const cancelled =
+    opts.kind === 'unblock' ? () => db.getTask(task.id)?.status !== 'blocked' : () => db.getTask(task.id)?.status === 'cancel_requested';
+  const start = (prompt: string, session: string | null, maxTurns = opts.maxTurns ?? task.max_turns): Promise<ClaudeRun> =>
     runClaude({
-      args: claudeArgs(task, allowed, prompt, repo.test_cmd, settings, session, maxTurns),
+      args: claudeArgs(task, allowed, prompt, repo.test_cmd, settings, session, maxTurns, opts.systemPrompt),
       cwd: worktree,
       log,
       env: { AGENTDECK_TASK_ID: String(task.id) },
-      shouldCancel: () => db.getTask(task.id)?.status === 'cancel_requested',
+      shouldCancel: cancelled,
       onSpawn: (pid) => db.setRunPid(runId, pid),
       onSession: (id) => db.setRunSession(runId, id),
       onUsage: usageRecorder(db),

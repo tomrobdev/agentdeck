@@ -7,9 +7,11 @@ import type { TaskEvent, TaskStatus } from './lifecycle.ts';
  * brought into the task's branch (the status stays as it was), `pr` when its pull request was opened, failed to open, was closed
  * or was seen merged or closed on GitHub (likewise), `plan_unfinished` when a done run left linked plan steps
  * unfinished (a warning, the status stays as it was), `environment_block` when a run blocked because of the environment and
- * its attempt was given back, otherwise the lifecycle event that changed its status.
+ * its attempt was given back, `unblock_ask` when an unblock run left a blocked task blocked with a question (the status
+ * stays as it was; the reason is the question), otherwise the lifecycle event that changed its status.
  */
-export type TaskEventType = 'created' | 'edit' | 'merge' | 'pr' | 'sync' | 'plan_unfinished' | 'environment_block' | TaskEvent['type'];
+export type TaskEventType =
+  'created' | 'edit' | 'merge' | 'pr' | 'sync' | 'plan_unfinished' | 'environment_block' | 'unblock_ask' | TaskEvent['type'];
 
 /** What happened to a task's pull request. `seen` is what GitHub says about an open one. */
 export type PrEvent =
@@ -25,7 +27,10 @@ export interface TaskEventRow {
   at: string;
 }
 
-/** The note on the task's latest retry ("changes requested in review"), or null if that retry had none. */
+/**
+ * The note on the task's latest retry ("changes requested in review"), or null if that retry had none. A retry by an
+ * unblock run counts: its note starts with UNBLOCK_NOTE (domain/run/unblock.ts).
+ */
 export function latestReviewNote(events: Pick<TaskEventRow, 'type' | 'reason'>[]): string | null {
-  return events.findLast((e) => e.type === 'retry')?.reason ?? null;
+  return events.findLast((e) => e.type === 'retry' || e.type === 'unblock_retry')?.reason ?? null;
 }

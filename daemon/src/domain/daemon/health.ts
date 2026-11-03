@@ -29,7 +29,7 @@ export interface ServiceFacts {
 
 /** A claude process group recorded on a run, found alive. */
 export interface ProcessFact {
-  kind: 'work' | 'resolve' | 'planner';
+  kind: 'work' | 'resolve' | 'unblock' | 'planner';
   run: number;
   pid: number;
   /** The run has a finished-at time. */
@@ -164,7 +164,7 @@ export function checkReload(f: Pick<HealthFacts, 'service' | 'api' | 'checkout'>
   return check(name, true, reload.enabled ? 'none pending' : 'none pending (reload_on_change is off)');
 }
 
-const KIND_NAME = { work: 'run', resolve: 'resolve run', planner: 'planner run' } as const;
+const KIND_NAME = { work: 'run', resolve: 'resolve run', unblock: 'unblock run', planner: 'planner run' } as const;
 
 export function checkProcesses(f: Pick<HealthFacts, 'processes' | 'api'>): Check {
   const name = 'claude processes';

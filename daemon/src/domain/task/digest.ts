@@ -91,6 +91,10 @@ export function describeEvent(e: Pick<TaskEventRow, 'type' | 'to_status' | 'reas
       return 'rejected';
     case 'retry':
       return withReason('retried', e.reason);
+    case 'unblock_retry':
+      return 'unblock run: retried with a note';
+    case 'unblock_ask':
+      return 'unblock run: asked a question';
     case 'mark_done':
       return 'marked done by a person';
     case 'pr_merged':

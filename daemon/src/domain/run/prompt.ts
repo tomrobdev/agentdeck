@@ -6,6 +6,7 @@ import { type ReviewPrompt, reviewPromptBlock } from '../review/address.ts';
 import { withoutUnscopedFileTools } from './sandbox.ts';
 import { type Task, leftoversMessage } from '../task/task.ts';
 import { INTERRUPTED, type Run } from './run.ts';
+import { UNBLOCK_NOTE } from './unblock.ts';
 
 /**
  * Appended to every worker's system prompt; the worker parses the STATUS line. `testCmd` is the command
@@ -94,7 +95,7 @@ export function buildPrompt(
   plan: PromptPlan | null = null,
   review: ReviewPrompt | null = null,
 ): string {
-  const work = previousRuns.filter((r) => r.kind !== 'resolve');
+  const work = previousRuns.filter((r) => r.kind === 'work');
   const last = work.at(-1);
   const base = plan ? `${task.prompt}\n\n${planPromptBlock(plan)}` : task.prompt;
   if (!last) return base;
@@ -109,8 +110,11 @@ export function buildPrompt(
       : finished.attempt < task.attempts
         ? `Before that, the previous attempt ended as "${finished.outcome}".`
         : `Before that, a run of this attempt ended as "${finished.outcome}".`;
+  // An unblock run's note names itself (UNBLOCK_NOTE); a person's is what they asked to change.
+  const note =
+    reviewNote === null ? '' : reviewNote.startsWith(UNBLOCK_NOTE) ? `${reviewNote}\n` : `Changes requested in review:\n${reviewNote}\n`;
   return [
-    review ? `${reviewPromptBlock(review)}\n` : reviewNote ? `Changes requested in review:\n${reviewNote}\n` : '',
+    review ? `${reviewPromptBlock(review)}\n` : note,
     base,
     '',
     interrupted ? `--- This is attempt ${task.attempts}. A daemon restart stopped an earlier run of it before it finished. ---` : '',
@@ -197,7 +201,8 @@ export function buildResolvePrompt(task: Pick<Task, 'id' | 'title' | 'prompt'>, 
 /**
  * `settings` is the run's settings file (sandbox and worktree-only file rules, domain/run/sandbox.ts). `resume` is a
  * claude session to continue (`resumableSession`), with `maxTurns` the turns it has left (`resumeMaxTurns`); everything
- * else, the system prompt and tool rules included, is the same as for a fresh run.
+ * else, the system prompt and tool rules included, is the same as for a fresh run. `systemPrompt` is the worker's unless
+ * the run is another kind (an unblock run ends with UNBLOCK lines, not a STATUS line).
  */
 export function claudeArgs(
   task: Task,
@@ -207,6 +212,7 @@ export function claudeArgs(
   settings: string,
   resume: string | null = null,
   maxTurns: number = task.max_turns,
+  systemPrompt: string = workerSystemPrompt(testCmd),
 ): string[] {
   return [
     '--settings',
@@ -231,6 +237,6 @@ export function claudeArgs(
     '--disallowedTools',
     ...ALWAYS_DISALLOWED_TOOLS,
     '--append-system-prompt',
-    workerSystemPrompt(testCmd),
+    systemPrompt,
   ];
 }

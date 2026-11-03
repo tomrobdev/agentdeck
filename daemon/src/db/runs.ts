@@ -6,8 +6,11 @@ import type { Orm } from './orm.ts';
 import { NOW_SQL } from './sql.ts';
 import { plannerRuns, runs, tasks } from './tables.ts';
 
+/** The run kinds that run beside a task's status rather than as it: a resolve run (of a done task) and an unblock run (of a blocked one). */
+const SIDE_KINDS: RunKind[] = ['resolve', 'unblock'];
+
 export interface PidRun {
-  kind: 'work' | 'resolve' | 'planner';
+  kind: RunKind | 'planner';
   id: number;
   pid: number;
   /** When the pid was stored (the run's start for a row from before that was recorded). */
@@ -23,6 +26,13 @@ export interface RunningTaskRun {
 }
 
 export function runStore(orm: Orm) {
+  /** Unfinished runs of one kind. */
+  const runningOf = (kind: RunKind) =>
+    orm
+      .select({ n: count() })
+      .from(runs)
+      .where(and(eq(runs.kind, kind), isNull(runs.ended_at)))
+      .get()?.n ?? 0;
   return {
     startRun(task_id: number, attempt: number, log_path: string, kind: RunKind = 'work'): number {
       return Number(orm.insert(runs).values({ task_id, attempt, log_path, kind }).run().lastInsertRowid);
@@ -63,30 +73,28 @@ export function runStore(orm: Orm) {
     },
     /** Resolve runs still going, in any daemon process. */
     countRunningResolves(): number {
-      return (
-        orm
-          .select({ n: count() })
-          .from(runs)
-          .where(and(eq(runs.kind, 'resolve'), isNull(runs.ended_at)))
-          .get()?.n ?? 0
-      );
+      return runningOf('resolve');
+    },
+    /** Unblock runs still going, in any daemon process. */
+    countRunningUnblocks(): number {
+      return runningOf('unblock');
     },
     /**
      * Slots in use, counted from the db so every process sees the same number: a task that is running (or being
-     * cancelled), a task not running that has an unfinished resolve run (a task whose sync started one counts once),
-     * and an unfinished planner run. A clean sync runs no claude and takes none.
+     * cancelled), a task not running that has an unfinished resolve or unblock run (a task whose sync started one
+     * counts once), and an unfinished planner run. A clean sync runs no claude and takes none.
      */
     slotsUsed(): number {
       const running = orm.select({ n: count() }).from(tasks).where(inArray(tasks.status, RUNNING_STATUSES)).get()?.n ?? 0;
-      const resolving =
+      const beside =
         orm
           .select({ n: countDistinct(runs.task_id) })
           .from(runs)
           .innerJoin(tasks, eq(tasks.id, runs.task_id))
-          .where(and(eq(runs.kind, 'resolve'), isNull(runs.ended_at), notInArray(tasks.status, RUNNING_STATUSES)))
+          .where(and(inArray(runs.kind, SIDE_KINDS), isNull(runs.ended_at), notInArray(tasks.status, RUNNING_STATUSES)))
           .get()?.n ?? 0;
       const planning = orm.select({ n: count() }).from(plannerRuns).where(isNull(plannerRuns.ended_at)).get()?.n ?? 0;
-      return running + resolving + planning;
+      return running + beside + planning;
     },
     /** Whether a resolve run of this task has not finished. */
     hasRunningResolve(task_id: number): boolean {
