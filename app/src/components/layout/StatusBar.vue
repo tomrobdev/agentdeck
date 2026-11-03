@@ -7,6 +7,7 @@ import { useActivity } from '../../composables/useActivity';
 import { type ActivityItem, KIND_LABEL } from '../../lib/activity';
 import { useActions } from '../../composables/useActions';
 import { openTask } from '../../router';
+import Chip from '../ui/Chip.vue';
 import Popover from '../ui/Popover.vue';
 
 const props = defineProps<{ status: Status | null; tasks: TaskSummary[]; offline: boolean; busy: boolean }>();
@@ -51,16 +52,20 @@ const toggleTitle = computed(() => {
 
 <template>
   <footer class="flex h-7 shrink-0 items-center gap-4 border-t border-border bg-panel px-3 text-xs tabular-nums">
-    <button
-      class="pill !py-0 text-xs"
-      :class="state.cls"
+    <Chip
+      as="button"
+      :status="state.cls.slice(2)"
+      variant="tint"
+      size="xs"
+      dot
       :disabled="offline || busy || !status"
       :title="toggleTitle"
       :aria-label="status?.paused ? 'Resume' : 'Pause'"
+      :aria-pressed="!!status?.paused"
       @click="$emit('toggle')"
     >
-      <span class="dot" />{{ state.label }} <span aria-hidden="true">{{ status?.paused ? '▶' : '⏸' }}</span>
-    </button>
+      {{ state.label }} <span aria-hidden="true">{{ status?.paused ? '▶' : '⏸' }}</span>
+    </Chip>
 
     <span v-if="status && !offline" class="muted" :title="status.governor.reason ?? ''">
       {{ status.running }}/{{ status.governor.max_concurrent }} slots<template
@@ -72,10 +77,10 @@ const toggleTitle = computed(() => {
 
     <Popover v-if="!offline && activity.length" up>
       <template #trigger>
-        <button class="pill !py-0 text-xs" title="What is under way" aria-label="Activity">
+        <Chip as="button" variant="tint" size="xs" title="What is under way" aria-label="Activity">
           <span class="inline-block size-2.5 flex-none animate-spin rounded-full border border-running border-t-transparent" />
           {{ activity.length }} active
-        </button>
+        </Chip>
       </template>
       <ul class="m-0 flex min-w-[320px] max-w-[460px] list-none flex-col gap-0.5 p-0 text-xs">
         <li v-for="item in activity" :key="item.key" class="flex items-center gap-1 rounded hover:bg-panel-2">
@@ -123,6 +128,6 @@ const toggleTitle = computed(() => {
     <span v-if="status && !offline && !status.governor.allow && status.governor.reason" class="muted truncate">
       On hold: {{ status.governor.reason }}
     </span>
-    <button class="pill !py-0 text-xs" title="The daemon's health, and restart" @click="$emit('daemon')">Daemon</button>
+    <Chip as="button" variant="tint" size="xs" title="The daemon's health, and restart" @click="$emit('daemon')">Daemon</Chip>
   </footer>
 </template>

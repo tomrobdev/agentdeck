@@ -8,6 +8,7 @@ import { useActions } from '../../composables/useActions';
 import { useChanges } from '../../composables/useChanges';
 import { useReviews } from '../../composables/useReviews';
 import SnippetPopover from '../files/SnippetPopover.vue';
+import Chip from '../ui/Chip.vue';
 import StatusPill from '../ui/StatusPill.vue';
 import TaskBadges from '../ui/TaskBadges.vue';
 import TaskStatusLine from '../ui/TaskStatusLine.vue';
@@ -106,7 +107,7 @@ const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel
           :class="tab === t.key ? 'border-accent font-semibold text-text' : 'border-transparent text-muted'"
           @click="openTask(task.id, t.key)"
         >
-          {{ t.label }} <span v-if="t.count !== null" class="ml-0.5 rounded-full bg-panel-2 px-1.5 text-xs font-medium">{{ t.count }}</span>
+          {{ t.label }} <Chip v-if="t.count !== null" variant="tint" size="xs" class="ml-0.5 font-medium">{{ t.count }}</Chip>
         </button>
       </nav>
       <div class="ml-auto self-center py-1 pl-3">

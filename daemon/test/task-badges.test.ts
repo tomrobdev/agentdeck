@@ -3,7 +3,22 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { AutoMergeView, TaskSummary } from '../src/api/contract.ts';
-import { statusLine, statusText, taskBadges } from '../../app/src/lib/taskBadges.ts';
+import { AUTO_MERGE_CHIP, TONE_CHIP, statusLine, statusText, taskBadges } from '../../app/src/lib/taskBadges.ts';
+import { TONES, statusTone } from '../../app/src/lib/tone.ts';
+
+test('the chip maps give tone names, not class strings', () => {
+  for (const tone of [...Object.values(TONE_CHIP), ...Object.values(AUTO_MERGE_CHIP)]) assert.ok(TONES.includes(tone), tone);
+  assert.deepEqual(TONE_CHIP, { blocked: 'blocked', failed: 'failed' });
+  assert.equal(AUTO_MERGE_CHIP.merge, 'done');
+  assert.equal(AUTO_MERGE_CHIP.wait, 'blocked');
+  assert.equal(AUTO_MERGE_CHIP.never, 'failed');
+});
+
+test('a task status maps to a tone, and an unknown one is muted', () => {
+  assert.equal(statusTone('cancel_requested'), 'running');
+  assert.equal(statusTone('checks_failed'), 'failed');
+  assert.equal(statusTone('nonsense'), 'muted');
+});
 
 const task = (extra: Partial<TaskSummary> = {}): TaskSummary => ({
   id: 1,

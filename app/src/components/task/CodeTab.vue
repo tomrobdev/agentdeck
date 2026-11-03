@@ -9,6 +9,8 @@ import { go } from '../../router';
 import CodeView, { type LineRange } from '../files/CodeView.vue';
 import FileTree, { type TreeNode } from '../files/FileTree.vue';
 import Markdown from '../files/Markdown.vue';
+import Chip from '../ui/Chip.vue';
+import SegmentedControl from '../ui/SegmentedControl.vue';
 
 // Browse the task's branch (or its base) from git, with line links: #/tasks/16/code?ref=head&path=…&L=10-20
 const props = defineProps<{ task: TaskDetail; query: Record<string, string>; changed: Set<string> }>();
@@ -66,10 +68,15 @@ const select = (r: LineRange) => setQuery({ L: r.from === r.to ? String(r.from) 
 <template>
   <div class="flex min-h-0 flex-1 gap-4 pb-4">
     <aside class="flex min-h-0 w-70 flex-none flex-col gap-2 max-md:hidden">
-      <div class="seg *:flex-1">
-        <button :class="{ on: ref_ === 'head' }" :title="task.branch ?? ''" @click="setQuery({ ref: 'head', L: null })">Task branch</button>
-        <button :class="{ on: ref_ === 'base' }" title="Where the branch started" @click="setQuery({ ref: 'base', L: null })">Base</button>
-      </div>
+      <SegmentedControl
+        label="Version"
+        :options="[
+          { value: 'head', label: 'Task branch', title: task.branch ?? '' },
+          { value: 'base', label: 'Base', title: 'Where the branch started' },
+        ]"
+        :model-value="ref_"
+        @update:model-value="(v) => setQuery({ ref: v, L: null })"
+      />
       <FileTree
         v-if="task.branch && commit"
         :load="loadTree"
@@ -90,19 +97,21 @@ const select = (r: LineRange) => setQuery({ L: r.from === r.to ? String(r.from) 
               ><span v-else>{{ c }}</span></span
             >
           </nav>
-          <span
-            v-if="changed.has(path) && ref_ === 'head'"
-            class="rounded-full border border-[color-mix(in_srgb,var(--blocked)_45%,transparent)] px-1.5 text-xs text-blocked"
-            >changed</span
-          >
+          <Chip v-if="changed.has(path) && ref_ === 'head'" tone="blocked" size="xs">changed</Chip>
           <span v-if="file" class="text-sm text-muted">{{
             file.size < 1024 ? `${file.size} B` : `${Math.round(file.size / 1024)} KB`
           }}</span>
           <div class="spacer" />
-          <div v-if="isMarkdown && file?.text !== null" class="seg">
-            <button :class="{ on: !raw }" @click="raw = false">Preview</button>
-            <button :class="{ on: raw }" @click="raw = true">Code</button>
-          </div>
+          <SegmentedControl
+            v-if="isMarkdown && file?.text !== null"
+            label="Markdown view"
+            :options="[
+              { value: 'preview', label: 'Preview' },
+              { value: 'code', label: 'Code' },
+            ]"
+            :model-value="raw ? 'code' : 'preview'"
+            @update:model-value="(v) => (raw = v === 'code')"
+          />
           <button class="btn-mini" @click="copy(path, 'path')">{{ copied === 'path' ? 'Copied' : 'Copy path' }}</button>
           <button v-if="file?.text" class="btn-mini" @click="copy(file.text, 'text')">{{ copied === 'text' ? 'Copied' : 'Copy' }}</button>
           <button v-if="worktreePath" class="btn-mini" title="Copies the file's path in the worktree" @click="copy(worktreePath, 'wt')">

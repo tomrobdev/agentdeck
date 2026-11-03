@@ -7,7 +7,9 @@ import { CMUX_TEMPLATE, saveTerminalTemplate, terminalTemplate } from '../../lib
 import { isNative, launchAtLogin, setLaunchAtLogin } from '../../platform/native';
 import { MODES, THEMES, mode, setMode, setTheme, theme } from '../../platform/theme';
 import { useActions } from '../../composables/useActions';
+import Chip from '../ui/Chip.vue';
 import Modal from '../ui/Modal.vue';
+import SegmentedControl from '../ui/SegmentedControl.vue';
 
 defineProps<{ notifications: NotificationRow[] }>();
 const emit = defineEmits<{ close: [] }>();
@@ -111,18 +113,13 @@ async function test() {
             >
           </label>
         </div>
-        <div class="seg self-start" role="group" aria-label="Mode">
-          <button
-            v-for="m in MODES"
-            :key="m.key"
-            type="button"
-            :class="{ on: mode === m.key }"
-            :aria-pressed="mode === m.key"
-            @click="setMode(m.key)"
-          >
-            {{ m.label }}
-          </button>
-        </div>
+        <SegmentedControl
+          class="self-start"
+          label="Mode"
+          :options="MODES.map((m) => ({ value: m.key, label: m.label }))"
+          :model-value="mode"
+          @update:model-value="setMode"
+        />
       </section>
 
       <section class="flex flex-col gap-2.5">
@@ -201,11 +198,9 @@ async function test() {
       <section class="flex flex-col gap-2.5">
         <h4 class="m-0">Always on</h4>
         <div class="flex flex-col items-start gap-1.5">
-          <span class="pill" :class="service?.state === 'running' ? 's-done' : 's-blocked'">
-            <span class="dot" />{{
-              service?.installed ? `Daemon runs at login · ${service.state ?? 'not loaded'}` : 'Daemon not installed'
-            }}
-          </span>
+          <Chip :tone="service?.state === 'running' ? 'done' : 'blocked'" variant="tint" dot>
+            {{ service?.installed ? `Daemon runs at login · ${service.state ?? 'not loaded'}` : 'Daemon not installed' }}
+          </Chip>
           <small v-if="!service?.installed" class="muted text-xs"
             >Run <code>agentdeck install</code> once and it starts at login and restarts if it dies.</small
           >
@@ -259,7 +254,7 @@ async function test() {
         <h4 class="m-0">Recent alerts</h4>
         <ul class="m-0 flex list-none flex-col gap-1.5 p-0">
           <li v-for="n in notifications.slice(0, 5)" :key="n.id" class="flex items-center gap-2">
-            <span class="pill" :class="`s-${n.kind === 'hold' || n.kind === 'paused' ? 'blocked' : n.kind}`">{{ n.kind }}</span>
+            <Chip :status="n.kind === 'hold' || n.kind === 'paused' ? 'blocked' : n.kind" variant="tint">{{ n.kind }}</Chip>
             <span class="flex-1 truncate">{{ n.title }}</span>
             <span class="muted">{{ ago(n.created_at) }}</span>
           </li>

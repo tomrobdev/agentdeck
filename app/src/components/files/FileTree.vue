@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
 import { useHotkeys } from '../../composables/useHotkeys';
+import Delta from '../ui/Delta.vue';
 
-/** A tree node. `meta` is shown at the row end (e.g. "+24 −3"); `badge` before the name (A, M, D, R). */
+/** A tree node. `meta` is shown at the row end (e.g. "bin"), `delta` as +n −n counts; `badge` before the name (A, M, D, R). */
 export interface TreeNode {
   name: string;
   path: string;
@@ -10,6 +11,7 @@ export interface TreeNode {
   badge?: string;
   badgeTitle?: string;
   meta?: string;
+  delta?: { add: number; del: number };
 }
 
 // A file tree that loads folders through `load`, so the same component serves the changed files
@@ -178,6 +180,7 @@ useHotkeys({ t: () => filterBox.value?.focus() });
           <span v-if="commented?.has(r.node.path)" class="text-xs text-accent" title="Open review comments">●</span>
           <span v-if="marks?.has(r.node.path)" class="text-[8px] text-blocked" title="Changed by this task">●</span>
           <span v-if="r.node.meta" class="font-mono text-xs text-muted">{{ r.node.meta }}</span>
+          <Delta v-if="r.node.delta" class="text-xs" :add="r.node.delta.add" :del="r.node.delta.del" />
           <span v-if="loading.has(r.node.path)" class="muted">…</span>
         </button>
         <p v-if="!rows.length && !loading.size && !error" class="muted px-2 py-1 text-sm">Empty.</p>

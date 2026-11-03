@@ -20,7 +20,9 @@ import { loadSetting, saveSetting } from '../../lib/storage';
 import DiffView from '../files/DiffView.vue';
 import FileTree, { type TreeNode } from '../files/FileTree.vue';
 import Markdown from '../files/Markdown.vue';
+import Delta from '../ui/Delta.vue';
 import Popover from '../ui/Popover.vue';
+import SegmentedControl from '../ui/SegmentedControl.vue';
 
 // What the task's branch changes against the base branch: a tree of changed files and their diffs.
 const props = defineProps<{ task: TaskDetail; changes: Changes | null; error: string }>();
@@ -175,7 +177,8 @@ const loadTree = computed(() => {
         type: 'file',
         badge: f.status,
         badgeTitle: CHANGE_LABEL[f.status],
-        meta: f.binary ? 'bin' : `+${f.additions} −${f.deletions}`,
+        meta: f.binary ? 'bin' : undefined,
+        delta: f.binary ? undefined : { add: f.additions, del: f.deletions },
       });
     }
     return out;
@@ -205,8 +208,7 @@ async function jump(path: string) {
     <template v-else>
       <div class="flex items-center gap-2 pb-2.5">
         <b>{{ files.length }} {{ files.length === 1 ? 'file' : 'files' }}</b>
-        <span class="font-mono text-sm leading-[normal] text-done">+{{ totals.add }}</span
-        ><span class="font-mono text-sm leading-[normal] text-failed">−{{ totals.del }}</span>
+        <Delta class="text-sm" :add="totals.add" :del="totals.del" />
         <Popover>
           <template #trigger
             ><button class="btn-mini">
@@ -221,10 +223,15 @@ async function jump(path: string) {
         </Popover>
         <div class="spacer" />
         <label class="check"><input v-model="hideViewed" type="checkbox" /> Hide viewed</label>
-        <div class="seg">
-          <button :class="{ on: !split }" @click="split = false">Unified</button>
-          <button :class="{ on: split }" @click="split = true">Split</button>
-        </div>
+        <SegmentedControl
+          label="Diff layout"
+          :options="[
+            { value: 'unified', label: 'Unified' },
+            { value: 'split', label: 'Split' },
+          ]"
+          :model-value="split ? 'split' : 'unified'"
+          @update:model-value="(v) => (split = v === 'split')"
+        />
       </div>
       <div class="flex items-start gap-4">
         <!-- The page scrolls as one; the tree sticks beside the diffs at the scroller's height (TaskPage makes it a size container). -->
@@ -264,8 +271,7 @@ async function jump(path: string) {
               <span class="truncate font-mono text-sm leading-[normal]">
                 <template v-if="f.old_path">{{ f.old_path }} → </template>{{ f.path }}
               </span>
-              <span class="font-mono text-sm leading-[normal] text-done">+{{ f.additions }}</span
-              ><span class="font-mono text-sm leading-[normal] text-failed">−{{ f.deletions }}</span>
+              <Delta class="text-sm" :add="f.additions" :del="f.deletions" />
               <div class="spacer" />
               <button
                 v-if="isMarkdown(f.path) && f.status !== 'D'"

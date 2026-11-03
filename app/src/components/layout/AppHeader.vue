@@ -5,6 +5,7 @@ import type { Status } from '../../api';
 import { go, route } from '../../router';
 import { NEED_YOU_STATES, needYouCount } from '../../lib/taskView';
 import BrandMark from '../ui/BrandMark.vue';
+import Chip from '../ui/Chip.vue';
 
 const props = defineProps<{ status: Status | null; offline: boolean }>();
 defineEmits<{ newTask: []; repos: []; settings: [] }>();
@@ -36,7 +37,7 @@ const needYou = computed(() => needYouCount(props.status));
       title="Proposals, blocked tasks and PRs waiting for review"
       @click="go({ name: 'queue', states: NEED_YOU_STATES })"
     >
-      <span class="rounded-full bg-accent px-1.5 text-xs text-accent-fg">{{ needYou }}</span> need you
+      <Chip tone="accent" variant="solid" size="xs">{{ needYou }}</Chip> need you
     </button>
     <button class="primary" :disabled="offline" @click="$emit('newTask')">+ New task</button>
   </header>

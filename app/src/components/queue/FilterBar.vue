@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import type { TaskSummary } from '../../api';
 import { useHotkeys } from '../../composables/useHotkeys';
 import { FILTER_STATES, type Filters, hasFilters } from '../../lib/taskView';
+import Chip from '../ui/Chip.vue';
 import Popover from '../ui/Popover.vue';
 
 const props = defineProps<{ tasks: TaskSummary[] }>();
@@ -29,45 +30,15 @@ function leaveSearch() {
 
 <template>
   <div class="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-    <span
-      v-if="filters.states.length"
-      class="inline-flex max-w-[320px] items-center gap-1 truncate rounded-sm border border-border bg-panel py-px pr-0.5 pl-2 text-sm"
-    >
-      <span class="muted">Status is</span> {{ filters.states.map(labelOf).join(', ') }}
-      <button
-        class="rounded-sm border-0 bg-transparent px-[5px] py-0 text-muted"
-        aria-label="Remove status filter"
-        @click="set({ states: [] })"
-      >
-        ×
-      </button>
-    </span>
-    <span
-      v-if="filters.repos.length"
-      class="inline-flex max-w-[320px] items-center gap-1 truncate rounded-sm border border-border bg-panel py-px pr-0.5 pl-2 text-sm"
-    >
-      <span class="muted">Repo is</span> {{ filters.repos.join(', ') }}
-      <button
-        class="rounded-sm border-0 bg-transparent px-[5px] py-0 text-muted"
-        aria-label="Remove repo filter"
-        @click="set({ repos: [] })"
-      >
-        ×
-      </button>
-    </span>
-    <span
-      v-if="filters.source"
-      class="inline-flex max-w-[320px] items-center gap-1 truncate rounded-sm border border-border bg-panel py-px pr-0.5 pl-2 text-sm"
-    >
-      <span class="muted">Source is</span> {{ filters.source }}
-      <button
-        class="rounded-sm border-0 bg-transparent px-[5px] py-0 text-muted"
-        aria-label="Remove source filter"
-        @click="set({ source: null })"
-      >
-        ×
-      </button>
-    </span>
+    <Chip v-if="filters.states.length" removable remove-label="Remove status filter" class="max-w-[320px]" @remove="set({ states: [] })">
+      <span class="truncate"><span class="muted">Status is</span> {{ filters.states.map(labelOf).join(', ') }}</span>
+    </Chip>
+    <Chip v-if="filters.repos.length" removable remove-label="Remove repo filter" class="max-w-[320px]" @remove="set({ repos: [] })">
+      <span class="truncate"><span class="muted">Repo is</span> {{ filters.repos.join(', ') }}</span>
+    </Chip>
+    <Chip v-if="filters.source" removable remove-label="Remove source filter" class="max-w-[320px]" @remove="set({ source: null })">
+      <span class="truncate"><span class="muted">Source is</span> {{ filters.source }}</span>
+    </Chip>
     <Popover>
       <template #trigger><button class="border-dashed bg-transparent px-2 py-px text-sm text-muted">+ Filter</button></template>
       <div class="px-2 pt-2 pb-0.5 text-xs tracking-[0.05em] text-muted uppercase">Status</div>

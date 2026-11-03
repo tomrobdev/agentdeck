@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import type { TaskSummary } from '../../api';
 import { openTask } from '../../router';
 import { TONE_CHIP, taskBadges } from '../../lib/taskBadges';
+import Chip from './Chip.vue';
 
 // A task's attention chips, links and facts, the same in every view (rules in lib/taskBadges.ts). A link opens its task.
 // `nowrap` keeps them on one line, the facts truncated, for a list row.
@@ -17,7 +18,7 @@ const tags = (ids: number[]) => ids.map((id) => `#${id}`).join(' ');
     class="inline-flex min-w-0 items-center gap-x-2 gap-y-1 text-sm"
     :class="nowrap ? 'flex-nowrap' : 'flex-wrap'"
   >
-    <span v-for="a in b.attention" :key="a.label" class="chip" :class="TONE_CHIP[a.tone]" :title="a.title">{{ a.label }}</span>
+    <Chip v-for="a in b.attention" :key="a.label" :tone="TONE_CHIP[a.tone]" :title="a.title">{{ a.label }}</Chip>
     <span
       v-if="b.up.length"
       class="inline-flex gap-1 font-mono whitespace-nowrap text-muted"
