@@ -27,6 +27,16 @@ export async function onOpenUrl(cb: (url: string) => void): Promise<() => void> 
   return stop;
 }
 
+/** Start the daemon through launchd. Throws with the reason (the service isn't installed, launchctl failed). */
+export async function startDaemon(): Promise<void> {
+  if (!isNative) throw new Error('The daemon starts from the desktop app only');
+  try {
+    await invoke('start_daemon');
+  } catch (e) {
+    throw new Error(String(e)); // Tauri rejects with the command's error string
+  }
+}
+
 /** Whether cmux is installed; false in a plain browser. */
 export async function cmuxInstalled(): Promise<boolean> {
   if (!isNative) return false;
@@ -34,6 +44,16 @@ export async function cmuxInstalled(): Promise<boolean> {
     return await invoke<boolean>('cmux_installed');
   } catch {
     return false;
+  }
+}
+
+/** Show the macOS folder picker: the chosen path, or null when cancelled or in a plain browser. */
+export async function pickFolder(): Promise<string | null> {
+  if (!isNative) return null;
+  try {
+    return await invoke<string | null>('pick_folder');
+  } catch {
+    return null;
   }
 }
 
