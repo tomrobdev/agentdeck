@@ -8,14 +8,12 @@ import {
   eq,
   exists,
   getColumns,
-  gt,
   inArray,
   isNotNull,
   isNull,
   lt,
-  lte,
-  max,
   ne,
+  not,
   notExists,
   or,
   sql,
@@ -26,8 +24,8 @@ import { DEFAULTS } from '../config.ts';
 import type { CheckCounts, MergeMethod } from '../domain/pull-request/merge.ts';
 import { INTERRUPTED } from '../domain/run/run.ts';
 import { MAX_RESTARTS, type TaskEvent, type TaskStatus, fromStatuses, nextStatus, transition } from '../domain/task/lifecycle.ts';
-import type { Link, LinkKind } from '../domain/task/link.ts';
-import type { PrEvent, TaskEventRow, TaskEventType } from '../domain/task/history.ts';
+import type { LinkKind } from '../domain/task/link.ts';
+import type { PrEvent } from '../domain/task/history.ts';
 import type { TaskPlan } from '../domain/plan/plan.ts';
 import {
   EDITABLE_STATUSES,
@@ -39,30 +37,20 @@ import {
 } from '../domain/task/task.ts';
 import type { Orm } from './orm.ts';
 import { insertOwnPlan, saveOwnPlan } from './plans.ts';
-import { NOW_SQL, atomically } from './sql.ts';
-import { plannerRuns, repos, runs, taskEvents, taskLinks, tasks } from './tables.ts';
+import { NOW_SQL, atomically, changed, inActiveRepo as inActiveRepoOf } from './sql.ts';
+import { plannerRuns, repos, runs, taskLinks, tasks } from './tables.ts';
+import { recordEvent } from './task-events.ts';
+import { insertLinks } from './task-links.ts';
 
 /** A task's columns: every one but the legacy `after_task`, which migration 18 copied into task_links and nothing reads. */
 const { after_task: _after_task, ...TASK_COLUMNS } = getColumns(tasks);
 /** Every column but the prompt, for lists. */
 const { prompt: _prompt, ...SUMMARY_COLUMNS } = TASK_COLUMNS;
 
-/** A task that depends on another, and the kind of that link. */
-export interface Dependent {
-  id: number;
-  status: TaskStatus;
-  kind: LinkKind;
-}
-
-/** A task at the end of a link: what its link states are read from. */
-export interface LinkedTask {
-  id: number;
-  status: TaskStatus;
-  pr_url: string | null;
-  pr_state: string | null;
-  done_by: string | null;
-  pr_mode: string | null;
-}
+/** A task whose PR is open. */
+const prOpen = eq(tasks.pr_state, 'open');
+/** A task whose PR is open and which is done: in review. Writes to a PR's checks and requests only apply to such a task. */
+const inReview = and(eq(tasks.status, 'done'), prOpen);
 
 /** The columns of a task with no merge request. */
 const NO_MERGE_REQUEST = { merge_requested_at: null, merge_request_method: null, merge_request_check: null };
@@ -81,8 +69,7 @@ const given = <T extends object>(fields: T) =>
   Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, v ?? null])) as { [K in keyof T]-?: Exclude<T[K], undefined> };
 
 export function taskStore(db: DatabaseSync, orm: Orm) {
-  /** The repo id column `col` belongs to a repo that isn't archived. Archived repos' tasks are left out of every list and count. */
-  const inActiveRepo = (col: AnySQLiteColumn) => inArray(col, orm.select({ id: repos.id }).from(repos).where(isNull(repos.archived_at)));
+  const inActiveRepo = (col: AnySQLiteColumn) => inActiveRepoOf(orm, col);
   /** The repo id column `col` belongs to a repo work may start in: not paused and not archived. */
   const inOpenRepo = (col: AnySQLiteColumn) =>
     inArray(
@@ -129,9 +116,61 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
   };
   const countWhere = (where: SQL | undefined) => orm.select({ n: count() }).from(tasks).where(where).get()?.n ?? 0;
 
-  /** Append to a task's history. Callers run it in the same `atomically` block as the status change. */
-  const recordEvent = (task_id: number, type: TaskEventType, from: TaskStatus | null, to: TaskStatus, reason: string | null = null) =>
-    orm.insert(taskEvents).values({ task_id, type, from_status: from, to_status: to, reason }).run();
+  const getTask = (id: number): Task | undefined =>
+    // The cast narrows the plain string columns (status, pr_state, …); typed columns come later.
+    orm.select(TASK_COLUMNS).from(tasks).where(eq(tasks.id, id)).get() as Task | undefined;
+
+  /**
+   * Touch a task that is in one of `statuses` and record a history row of `type` for it, which leaves the status as it is.
+   * Returns false if the task is missing or in another status.
+   */
+  const noteEvent = (id: number, statuses: TaskStatus[], type: 'sync' | 'plan_unfinished', reason: string): boolean =>
+    atomically(db, () => {
+      const row = orm
+        .update(tasks)
+        .set({ updated_at: NOW_SQL })
+        .where(and(eq(tasks.id, id), inArray(tasks.status, statuses)))
+        .returning({ status: tasks.status })
+        .get() as { status: TaskStatus } | undefined;
+      if (!row) return false;
+      recordEvent(orm, id, type, row.status, row.status, reason);
+      return true;
+    });
+
+  /**
+   * The only way to change a task's status. Asks the lifecycle whether `event` is allowed from the
+   * task's current status and writes the result guarded by that status, so a concurrent change
+   * (say, a cancel arriving as a run finishes) is never overwritten. Returns the updated task, or
+   * undefined if the task is missing or the event isn't allowed. `onlyFrom` narrows it further: the write also
+   * requires the task to be in one of those statuses, so a caller that checked a status before a long wait
+   * does not undo a change made meanwhile.
+   */
+  const applyEvent = (
+    id: number,
+    event: TaskEvent,
+    opts: { reason?: string | null; needs?: string | null; onlyFrom?: TaskStatus[] } = {},
+  ): Task | undefined => {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const cur = getTask(id);
+      if (!cur) return undefined;
+      if (opts.onlyFrom && !opts.onlyFrom.includes(cur.status)) return undefined;
+      const next = transition(cur, event, opts);
+      if (!next) return undefined;
+      const row = atomically(db, () => {
+        // Guarded on the status and on the counters the changes were computed from.
+        const row = orm
+          .update(tasks)
+          .set({ status: next.to, ...given(next.changes), updated_at: NOW_SQL })
+          .where(and(eq(tasks.id, id), eq(tasks.status, cur.status), eq(tasks.attempts, cur.attempts), eq(tasks.restarts, cur.restarts)))
+          .returning(TASK_COLUMNS)
+          .get() as Task | undefined;
+        if (row) recordEvent(orm, id, next.history, cur.status, next.to, opts.reason ?? null);
+        return row;
+      });
+      if (row) return row;
+    }
+    return undefined;
+  };
 
   return {
     addTask(n: {
@@ -144,8 +183,6 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       max_attempts?: number;
       status?: 'queued' | 'proposed';
       source?: 'manual' | 'planner';
-      /** Shorthand for one builds-on link to that task. */
-      after_task?: number | null;
       /** Links the task starts with; the caller has checked them (a new task can't make a cycle). */
       links?: { on: number; kind: LinkKind }[];
       /** The task whose plan this one follows. */
@@ -155,8 +192,6 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       own_plan?: string;
     }): Task {
       const status = n.status ?? 'queued';
-      const links = [...(n.links ?? [])];
-      if (n.after_task != null && !links.some((l) => l.on === n.after_task)) links.push({ on: n.after_task, kind: 'builds_on' });
       const id = atomically(db, () => {
         const info = orm
           .insert(tasks)
@@ -179,39 +214,14 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
           insertOwnPlan(orm, id, n.own_plan, 'attached');
           orm.update(tasks).set({ plan_task: id }).where(eq(tasks.id, id)).run();
         }
-        for (const l of links) orm.insert(taskLinks).values({ task_id: id, on_task: l.on, kind: l.kind }).run();
-        recordEvent(id, 'created', null, status);
+        insertLinks(orm, id, n.links ?? []);
+        recordEvent(orm, id, 'created', null, status);
         return id;
       });
-      return this.getTask(id)!;
+      return getTask(id)!;
     },
-    /** A task's status changes, oldest first. Tasks from before migration step 6 have none. */
-    eventsForTask(task_id: number): TaskEventRow[] {
-      return orm.select().from(taskEvents).where(eq(taskEvents.task_id, task_id)).orderBy(asc(taskEvents.id)).all() as TaskEventRow[];
-    },
-    /** The newest history row's id, 0 when there is none: a cursor for `eventsAfter`. */
-    lastEventId(): number {
-      return (
-        orm
-          .select({ id: max(taskEvents.id) })
-          .from(taskEvents)
-          .get()?.id ?? 0
-      );
-    },
-    /** A repo's history rows after `after`, up to `upTo` inclusive, oldest first, each with its task's title. */
-    eventsAfter(after: number, upTo: number, repo_id: number): (TaskEventRow & { title: string })[] {
-      return orm
-        .select({ ...getColumns(taskEvents), title: tasks.title })
-        .from(taskEvents)
-        .innerJoin(tasks, eq(tasks.id, taskEvents.task_id))
-        .where(and(gt(taskEvents.id, after), lte(taskEvents.id, upTo), eq(tasks.repo_id, repo_id)))
-        .orderBy(asc(taskEvents.id))
-        .all() as (TaskEventRow & { title: string })[];
-    },
-    getTask(id: number): Task | undefined {
-      // The cast narrows the plain string columns (status, pr_state, …); typed columns come later.
-      return orm.select(TASK_COLUMNS).from(tasks).where(eq(tasks.id, id)).get() as Task | undefined;
-    },
+    getTask,
+    applyEvent,
     listTasks(): Task[] {
       return orm.select(TASK_COLUMNS).from(tasks).where(inActiveRepo(tasks.repo_id)).orderBy(desc(tasks.id)).all() as Task[];
     },
@@ -256,7 +266,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     },
     /** Done tasks whose pull request is open: the ones waiting for a review. */
     countReview(): number {
-      return countWhere(and(eq(tasks.status, 'done'), eq(tasks.pr_state, 'open'), inActiveRepo(tasks.repo_id)));
+      return countWhere(and(inReview, inActiveRepo(tasks.repo_id)));
     },
     /** Whether a task could be claimed: queued, not waiting on a dependency, in a repo that isn't paused. */
     hasQueued(): boolean {
@@ -278,7 +288,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       const page = orm
         .select({ id: tasks.id })
         .from(tasks)
-        .where(and(ofStatus, before === undefined ? undefined : lt(tasks.id, before)))
+        .where(and(ofStatus, inActiveRepo(tasks.repo_id), before === undefined ? undefined : lt(tasks.id, before)))
         .orderBy(desc(tasks.id))
         .limit(limit);
       return orm
@@ -294,62 +304,6 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         .orderBy(desc(tasks.id))
         .all() as TaskSummary[];
     },
-    /** The links a task has: what it depends on. */
-    linksOf(id: number): Link[] {
-      return orm
-        .select({ task_id: taskLinks.task_id, on: taskLinks.on_task, kind: taskLinks.kind })
-        .from(taskLinks)
-        .where(eq(taskLinks.task_id, id))
-        .orderBy(asc(taskLinks.on_task))
-        .all() as Link[];
-    },
-    /** Every link there is, for checking a new one for cycles. */
-    allLinks(): Link[] {
-      return orm.select({ task_id: taskLinks.task_id, on: taskLinks.on_task, kind: taskLinks.kind }).from(taskLinks).all() as Link[];
-    },
-    /** The tasks that depend on `id` (of one kind, if given), in any status: each one's id, status and the kind of its link. */
-    dependentsOf(id: number, kind?: LinkKind): Dependent[] {
-      return orm
-        .select({ id: tasks.id, status: tasks.status, kind: taskLinks.kind })
-        .from(tasks)
-        .innerJoin(taskLinks, eq(taskLinks.task_id, tasks.id))
-        .where(and(eq(taskLinks.on_task, id), kind ? eq(taskLinks.kind, kind) : undefined))
-        .orderBy(asc(tasks.id))
-        .all() as Dependent[];
-    },
-    /** Every task at either end of a link, with its repo's pr_mode (null when the repo is gone): what link states are read from. */
-    linkedTasks(): LinkedTask[] {
-      const ends = orm
-        .select({ id: taskLinks.task_id })
-        .from(taskLinks)
-        .union(orm.select({ id: taskLinks.on_task }).from(taskLinks));
-      return orm
-        .select({
-          id: tasks.id,
-          status: tasks.status,
-          pr_url: tasks.pr_url,
-          pr_state: tasks.pr_state,
-          done_by: tasks.done_by,
-          pr_mode: repos.pr_mode,
-        })
-        .from(tasks)
-        .leftJoin(repos, eq(repos.id, tasks.repo_id))
-        .where(inArray(tasks.id, ends))
-        .all() as LinkedTask[];
-    },
-    /** Link `link.task_id` to `link.on`. Whether that is allowed (a cycle, a duplicate) is the caller's to check with linkError. */
-    addLink(link: Link): void {
-      orm.insert(taskLinks).values({ task_id: link.task_id, on_task: link.on, kind: link.kind }).run();
-    },
-    /** Remove the link from `task_id` to `on`; false if there was none. */
-    removeLink(task_id: number, on: number): boolean {
-      return (
-        orm
-          .delete(taskLinks)
-          .where(and(eq(taskLinks.task_id, task_id), eq(taskLinks.on_task, on)))
-          .run().changes > 0
-      );
-    },
     /**
      * Tasks whose pull request is still open, for the state refresh: done ones, and blocked or failed ones
      * (a conflict blocks a done task and keeps its PR; a retry that fails keeps it too).
@@ -358,14 +312,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       return orm
         .select(TASK_COLUMNS)
         .from(tasks)
-        .where(
-          and(
-            inArray(tasks.status, ['done', 'blocked', 'failed']),
-            isNotNull(tasks.pr_url),
-            eq(tasks.pr_state, 'open'),
-            inActiveRepo(tasks.repo_id),
-          ),
-        )
+        .where(and(inArray(tasks.status, ['done', 'blocked', 'failed']), isNotNull(tasks.pr_url), prOpen, inActiveRepo(tasks.repo_id)))
         .all() as Task[];
     },
     /**
@@ -390,7 +337,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
           .returning(TASK_COLUMNS)
           .get() as Task | undefined;
         // A claim is allowed from one status only (queued), so that is where the task came from.
-        if (row) recordEvent(row.id, 'claim', from[0], to);
+        if (row) recordEvent(orm, row.id, 'claim', from[0], to);
         return row;
       });
     },
@@ -405,7 +352,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       fields: Partial<Pick<Task, 'title' | 'prompt' | 'priority' | 'model' | 'max_turns' | 'max_attempts' | 'plan_task' | 'plan_steps'>>,
       opts: { ownPlan?: string } = {},
     ): Task | undefined {
-      if (Object.keys(fields).length === 0 && opts.ownPlan === undefined) return this.getTask(id);
+      if (Object.keys(fields).length === 0 && opts.ownPlan === undefined) return getTask(id);
       return atomically(db, () => {
         const edited = orm
           .update(tasks)
@@ -417,7 +364,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         if (opts.ownPlan !== undefined) saveOwnPlan(db, orm, id, opts.ownPlan, 'attached');
         // The status stays; the row says what was edited, and `stats` counts an edit of a queued or blocked task.
         const what = [...Object.keys(fields), ...(opts.ownPlan !== undefined ? ['plan'] : [])].join(', ');
-        recordEvent(id, 'edit', edited.status, edited.status, what);
+        recordEvent(orm, id, 'edit', edited.status, edited.status, what);
         return edited;
       });
     },
@@ -436,7 +383,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
           .get() as { status: TaskStatus } | undefined;
         if (!row) return undefined;
         const saved = saveOwnPlan(db, orm, id, html, 'attached');
-        recordEvent(id, 'edit', row.status, row.status, 'plan');
+        recordEvent(orm, id, 'edit', row.status, row.status, 'plan');
         return saved;
       });
     },
@@ -482,9 +429,9 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       const res = orm
         .update(tasks)
         .set({ auto_merge_check: check, auto_merge_checked_at: check === null ? null : NOW_SQL })
-        .where(and(eq(tasks.id, id), eq(tasks.status, 'done'), eq(tasks.pr_state, 'open')))
+        .where(and(eq(tasks.id, id), inReview))
         .run();
-      return Number(res.changes) > 0;
+      return changed(res);
     },
     /**
      * Record a person's request to merge the task's PR once it is ready. Not a status, but guarded like the merge it asks
@@ -494,9 +441,9 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       const res = orm
         .update(tasks)
         .set({ merge_requested_at: NOW_SQL, merge_request_method: method, merge_request_check: null, updated_at: NOW_SQL })
-        .where(and(eq(tasks.id, id), eq(tasks.status, 'done'), eq(tasks.pr_state, 'open')))
+        .where(and(eq(tasks.id, id), inReview))
         .run();
-      return Number(res.changes) > 0;
+      return changed(res);
     },
     /** Drop a task's merge request. Returns false if it had none. */
     clearMergeRequest(id: number): boolean {
@@ -505,7 +452,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         .set({ ...NO_MERGE_REQUEST, updated_at: NOW_SQL })
         .where(and(eq(tasks.id, id), isNotNull(tasks.merge_requested_at)))
         .run();
-      return Number(res.changes) > 0;
+      return changed(res);
     },
     /**
      * Keep the PR refresh's latest merge request check (JSON { verdict, reasons }) on a task that still has the request.
@@ -515,9 +462,9 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       const res = orm
         .update(tasks)
         .set({ merge_request_check: check })
-        .where(and(eq(tasks.id, id), isNotNull(tasks.merge_requested_at), eq(tasks.status, 'done'), eq(tasks.pr_state, 'open')))
+        .where(and(eq(tasks.id, id), isNotNull(tasks.merge_requested_at), inReview))
         .run();
-      return Number(res.changes) > 0;
+      return changed(res);
     },
     /**
      * Keep a done task's open PR's checks as they were the first time they settled (`pr_checks_opened`).
@@ -527,9 +474,9 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       const res = orm
         .update(tasks)
         .set({ pr_checks_opened: JSON.stringify(checks) })
-        .where(and(eq(tasks.id, id), eq(tasks.status, 'done'), eq(tasks.pr_state, 'open'), isNull(tasks.pr_checks_opened)))
+        .where(and(eq(tasks.id, id), inReview, isNull(tasks.pr_checks_opened)))
         .run();
-      return Number(res.changes) > 0;
+      return changed(res);
     },
     /**
      * Keep the PR refresh's latest checks (JSON StoredChecks) on a task. Only a done task whose PR is open, like
@@ -539,9 +486,9 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       const res = orm
         .update(tasks)
         .set({ pr_checks: checks })
-        .where(and(eq(tasks.id, id), eq(tasks.status, 'done'), eq(tasks.pr_state, 'open')))
+        .where(and(eq(tasks.id, id), inReview))
         .run();
-      return Number(res.changes) > 0;
+      return changed(res);
     },
     /**
      * Record a change to a task's PR: `pr_state` (and `pr_url` when opened) and a 'pr' history row, together.
@@ -550,8 +497,8 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
      * between is therefore never undone. Returns false if the task was not in a state the change applies to.
      */
     recordPr(id: number, e: PrEvent): boolean {
-      const notOpenAndDone = and(or(isNull(tasks.pr_state), ne(tasks.pr_state, 'open')), eq(tasks.status, 'done'));
-      const isOpen = eq(tasks.pr_state, 'open');
+      const notOpenAndDone = and(or(isNull(tasks.pr_state), not(prOpen)), eq(tasks.status, 'done'));
+      const isOpen = prOpen;
       const [set, guard, reason]: [Partial<typeof tasks.$inferInsert>, SQL | undefined, string] =
         e.type === 'opened'
           ? [{ pr_url: e.url, pr_state: 'open' }, notOpenAndDone, `opened ${e.url}`]
@@ -576,7 +523,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
           .returning({ status: tasks.status })
           .get() as { status: TaskStatus } | undefined;
         if (!row) return false;
-        recordEvent(id, 'pr', row.status, row.status, reason);
+        recordEvent(orm, id, 'pr', row.status, row.status, reason);
         return true;
       });
     },
@@ -596,10 +543,10 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
             ...NO_MERGE_REQUEST,
             updated_at: NOW_SQL,
           })
-          .where(and(eq(tasks.id, id), eq(tasks.status, 'done'), eq(tasks.pr_state, 'open')))
+          .where(and(eq(tasks.id, id), inReview))
           .run();
-        if (!Number(res.changes)) return false;
-        recordEvent(id, 'merge', 'done', 'done', reason);
+        if (!changed(res)) return false;
+        recordEvent(orm, id, 'merge', 'done', 'done', reason);
         return true;
       });
     },
@@ -608,86 +555,13 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
      * Guarded like every task write: only a running or done task. Returns false if it was not.
      */
     recordSync(id: number, reason: string): boolean {
-      return atomically(db, () => {
-        const row = orm
-          .update(tasks)
-          .set({ updated_at: NOW_SQL })
-          .where(and(eq(tasks.id, id), inArray(tasks.status, ['running', 'done'])))
-          .returning({ status: tasks.status })
-          .get() as { status: TaskStatus } | undefined;
-        if (!row) return false;
-        recordEvent(id, 'sync', row.status, row.status, reason);
-        return true;
-      });
+      return noteEvent(id, ['running', 'done'], 'sync', reason);
     },
     /**
      * Record that a run left linked plan steps unfinished: a history row, no status change. Only a running task.
      */
     recordPlanUnfinished(id: number, reason: string): boolean {
-      return atomically(db, () => {
-        const res = orm
-          .update(tasks)
-          .set({ updated_at: NOW_SQL })
-          .where(and(eq(tasks.id, id), eq(tasks.status, 'running')))
-          .run();
-        if (!Number(res.changes)) return false;
-        recordEvent(id, 'plan_unfinished', 'running', 'running', reason);
-        return true;
-      });
-    },
-    /** Done tasks whose latest run left linked plan steps unfinished: the ids, for the list's badge. */
-    planUnfinishedIds(): Set<number> {
-      const e = alias(taskEvents, 'e');
-      const c = alias(taskEvents, 'c');
-      const lastClaim = orm
-        .select({ id: max(c.id) })
-        .from(c)
-        .where(and(eq(c.task_id, tasks.id), eq(c.type, 'claim')));
-      const unfinishedSince = orm
-        .select({ id: e.id })
-        .from(e)
-        // guard: the builder has no COALESCE; a task never claimed has no claim row, so the cursor is 0
-        .where(and(eq(e.task_id, tasks.id), eq(e.type, 'plan_unfinished'), gt(e.id, sql`COALESCE(${lastClaim}, 0)`)));
-      const rows = orm
-        .select({ id: tasks.id })
-        .from(tasks)
-        .where(and(eq(tasks.status, 'done'), inActiveRepo(tasks.repo_id), exists(unfinishedSince)))
-        .all();
-      return new Set(rows.map((r) => r.id));
-    },
-    /**
-     * The only way to change a task's status. Asks the lifecycle whether `event` is allowed from the
-     * task's current status and writes the result guarded by that status, so a concurrent change
-     * (say, a cancel arriving as a run finishes) is never overwritten. Returns the updated task, or
-     * undefined if the task is missing or the event isn't allowed. `onlyFrom` narrows it further: the write also
-     * requires the task to be in one of those statuses, so a caller that checked a status before a long wait
-     * does not undo a change made meanwhile.
-     */
-    applyEvent(
-      id: number,
-      event: TaskEvent,
-      opts: { reason?: string | null; needs?: string | null; onlyFrom?: TaskStatus[] } = {},
-    ): Task | undefined {
-      for (let attempt = 0; attempt < 3; attempt++) {
-        const cur = this.getTask(id);
-        if (!cur) return undefined;
-        if (opts.onlyFrom && !opts.onlyFrom.includes(cur.status)) return undefined;
-        const next = transition(cur, event, opts);
-        if (!next) return undefined;
-        const row = atomically(db, () => {
-          // Guarded on the status and on the counters the changes were computed from.
-          const row = orm
-            .update(tasks)
-            .set({ status: next.to, ...given(next.changes), updated_at: NOW_SQL })
-            .where(and(eq(tasks.id, id), eq(tasks.status, cur.status), eq(tasks.attempts, cur.attempts), eq(tasks.restarts, cur.restarts)))
-            .returning(TASK_COLUMNS)
-            .get() as Task | undefined;
-          if (row) recordEvent(id, next.history, cur.status, next.to, opts.reason ?? null);
-          return row;
-        });
-        if (row) return row;
-      }
-      return undefined;
+      return noteEvent(id, ['running'], 'plan_unfinished', reason);
     },
     /**
      * After a crash, anything still marked running was orphaned: put it back in the queue,
@@ -721,7 +595,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         const exhausted = o.restarts + 1 >= MAX_RESTARTS;
         const reason = `the daemon restarted ${o.restarts + 1} times while this task was running`;
         atomically(db, () => {
-          const task = this.applyEvent(o.id, { type: 'recover', exhausted }, { reason });
+          const task = applyEvent(o.id, { type: 'recover', exhausted }, { reason });
           if (task?.status === 'queued') requeued++;
           else if (task?.status === 'failed') failed.push(task.id);
           if (task?.status === 'failed' || task?.status === 'cancelled') endRuns(task.status, task.id);
