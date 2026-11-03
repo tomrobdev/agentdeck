@@ -48,15 +48,6 @@ export const levelPriority = (l: (typeof PRIORITY_LEVELS)[number]): number => (N
 
 export const priorityLevel = (p: number): PriorityLevel => PRIORITY_LEVELS.find((l) => p >= l.min)!.key;
 
-/** The chip colour for each auto-merge state: green will merge, amber waits, red needs a person, grey is on and unchecked. */
-export const AUTO_MERGE_CHIP: Record<AutoMergeView['state'], string> = {
-  off: '',
-  on: '',
-  merge: 'chip-done',
-  wait: 'chip-blocked',
-  never: 'chip-failed',
-};
-
 /** A tooltip for the auto-merge mark: the daemon's label, then its reasons, one to a line. */
 export const autoMergeTip = (v: AutoMergeView): string => [v.label, ...v.reasons].join('\n');
 

@@ -27,6 +27,7 @@ import DisplayMenu, { type Display } from './DisplayMenu.vue';
 import FilterBar from './FilterBar.vue';
 import GraphView from './GraphView.vue';
 import ListView from './ListView.vue';
+import SegmentedControl from '../ui/SegmentedControl.vue';
 import TaskPeek from './TaskPeek.vue';
 
 const props = defineProps<{ tasks: TaskSummary[] }>();
@@ -261,17 +262,16 @@ useHotkeys({
 <template>
   <section class="flex min-h-0 flex-1 flex-col bg-panel">
     <div class="flex items-center gap-2.5 border-b border-border px-4 py-2 max-sm:flex-wrap">
-      <div class="seg" role="tablist">
-        <button :class="{ on: display.mode === 'list' }" role="tab" title="List (v)" @click="display = { ...display, mode: 'list' }">
-          ≡ List
-        </button>
-        <button :class="{ on: display.mode === 'board' }" role="tab" title="Board (v)" @click="display = { ...display, mode: 'board' }">
-          ▦ Board
-        </button>
-        <button :class="{ on: display.mode === 'graph' }" role="tab" title="Graph (v)" @click="display = { ...display, mode: 'graph' }">
-          ⑂ Graph
-        </button>
-      </div>
+      <SegmentedControl
+        label="View"
+        :options="[
+          { value: 'list', label: '≡ List', title: 'List (v)' },
+          { value: 'board', label: '▦ Board', title: 'Board (v)' },
+          { value: 'graph', label: '⑂ Graph', title: 'Graph (v)' },
+        ]"
+        :model-value="display.mode"
+        @update:model-value="(mode) => (display = { ...display, mode })"
+      />
       <FilterBar v-model="filters" :tasks="tasks" />
       <DisplayMenu v-model="display" />
     </div>

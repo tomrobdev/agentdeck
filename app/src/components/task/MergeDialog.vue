@@ -3,6 +3,8 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { type MergeMethod, type MergeResult, MERGE_METHODS, api, autoMergeLine, mergePreviewQuery } from '../../api';
 import { useActions } from '../../composables/useActions';
+import Chip from '../ui/Chip.vue';
+import Delta from '../ui/Delta.vue';
 import Modal from '../ui/Modal.vue';
 
 // The confirm before a merge: it writes to the base branch on GitHub and can't be undone from here. The button asks the
@@ -114,8 +116,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
         <dd>{{ commitsLine }}</dd>
         <dt>Changes</dt>
         <dd>
-          {{ preview.files }} {{ preview.files === 1 ? 'file' : 'files' }} <span class="text-done">+{{ preview.additions }}</span>
-          <span class="text-failed">−{{ preview.deletions }}</span>
+          {{ preview.files }} {{ preview.files === 1 ? 'file' : 'files' }} <Delta :add="preview.additions" :del="preview.deletions" />
         </dd>
         <dt>Tests</dt>
         <dd :class="{ 'text-failed': preview.tests_passed === 0 }">{{ tests }} <span class="muted">on the last run</span></dd>
@@ -130,8 +131,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
         <template v-if="preview.unblocks.length">
           <dt>Unblocks</dt>
           <dd>
-            <span v-for="t in preview.unblocks" :key="t.id" class="max-w-full truncate rounded-pill bg-panel-2 px-2" :title="t.title"
-              >#{{ t.id }} {{ t.title }}</span
+            <Chip v-for="t in preview.unblocks" :key="t.id" variant="tint" class="mr-1 truncate" :title="t.title"
+              >#{{ t.id }} {{ t.title }}</Chip
             >
           </dd>
         </template>

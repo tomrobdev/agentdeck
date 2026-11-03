@@ -6,10 +6,11 @@
 // - facts: muted text, joined by " · ".
 // Free of the dashboard's other modules so the daemon's tests can import it (daemon/test/task-badges.test.ts). What the
 // daemon decides (needs, a conflict, auto-merge, merge requests) comes from the API; this only picks and words it.
-import type { TaskSummary } from '../../../daemon/src/api/contract.ts';
+import type { AutoMergeView, TaskSummary } from '../../../daemon/src/api/contract.ts';
 import { readNeeds } from '../../../daemon/src/domain/task/needs.ts';
 import { isReview } from '../../../daemon/src/domain/task/stage.ts';
 import { describeLive, describeMergeRequest, describeSync, describeWait } from '../api/format.ts';
+import type { Tone as ChipTone } from './tone.ts';
 
 export type Tone = 'muted' | 'accent' | 'done' | 'blocked' | 'failed';
 
@@ -168,5 +169,14 @@ export const TONE_TEXT: Record<Tone, string> = {
   failed: 'text-failed',
 };
 
-/** The chip colour for each attention tone. */
-export const TONE_CHIP: Record<AttentionChip['tone'], string> = { blocked: 'chip-blocked', failed: 'chip-failed' };
+/** The chip tone for each auto-merge state: green will merge, amber waits, red needs a person, grey is on and unchecked. */
+export const AUTO_MERGE_CHIP: Record<AutoMergeView['state'], ChipTone> = {
+  off: 'muted',
+  on: 'muted',
+  merge: 'done',
+  wait: 'blocked',
+  never: 'failed',
+};
+
+/** The chip tone for each attention tone. */
+export const TONE_CHIP: Record<AttentionChip['tone'], ChipTone> = { blocked: 'blocked', failed: 'failed' };

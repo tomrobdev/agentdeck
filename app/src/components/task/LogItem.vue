@@ -2,6 +2,7 @@
 import { type CallItem, type Item, changeLines, firstLine, offsetLabel, pending } from '../../lib/transcript';
 import { parseAnsi } from '../../lib/ansi';
 import Markdown from '../files/Markdown.vue';
+import Delta from '../ui/Delta.vue';
 import LogItem from './LogItem.vue';
 
 // One transcript item and, under a subagent call, its own items.
@@ -65,10 +66,7 @@ const isSubagent = (c: CallItem) => c.call.name === 'Task' || c.call.name === 'A
             {{ repoPath(item.call.file) }}
           </button>
           <span class="truncate">{{ repoPath(item.call.file) ? '' : item.call.summary || item.call.input }}</span>
-          <span v-if="item.call.change" class="flex-none text-xs"
-            ><span class="text-done">+{{ item.call.change.added }}</span>
-            <span class="text-failed">−{{ item.call.change.removed }}</span></span
-          >
+          <Delta v-if="item.call.change" class="text-xs" :add="item.call.change.added" :del="item.call.change.removed" />
         </code>
         <details v-if="item.call.change" class="ml-4">
           <summary class="cursor-pointer text-sm text-muted">▸ diff</summary>

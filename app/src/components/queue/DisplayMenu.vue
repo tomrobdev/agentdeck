@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { GROUP_BYS, type GroupBy, SORT_OPTIONS } from '../../lib/taskView';
 import type { ShowProps } from './ListView.vue';
+import ChipToggle from '../ui/ChipToggle.vue';
 import Popover from '../ui/Popover.vue';
 
 export interface Display {
@@ -57,20 +58,14 @@ const PROPS: { key: keyof ShowProps; label: string }[] = [
     </label>
     <div class="px-2 pt-2.5 pb-1 text-xs tracking-[0.05em] text-muted uppercase">Properties</div>
     <div class="flex flex-wrap gap-1 px-2 pb-1.5">
-      <button
+      <ChipToggle
         v-for="p in PROPS"
         :key="p.key"
-        class="rounded-pill px-2 py-px text-sm"
-        :class="
-          display.show[p.key]
-            ? 'border-accent bg-[color-mix(in_srgb,var(--accent)_12%,var(--panel))] text-text'
-            : 'bg-transparent text-muted'
-        "
-        :aria-pressed="display.show[p.key]"
-        @click="set({ show: { ...display.show, [p.key]: !display.show[p.key] } })"
+        :model-value="display.show[p.key]"
+        @update:model-value="(on) => set({ show: { ...display.show, [p.key]: on } })"
       >
         {{ p.label }}
-      </button>
+      </ChipToggle>
     </div>
   </Popover>
 </template>
