@@ -11,8 +11,8 @@ import {
   api,
   isImmutable,
   isOffline,
+  liveStatusQuery,
   reposQuery,
-  statusQuery,
   taskQuery,
   tasksQuery,
 } from './api';
@@ -40,10 +40,6 @@ import { requestedView } from './composables/useView';
 import { provideActions, trackPending } from './composables/useActions';
 import { useChangeStream } from './composables/useChangeStream';
 
-const STATUS_FALLBACK_MS = 30_000;
-// While the daemon is down, look again often, so the screen clears soon after it starts.
-const OFFLINE_POLL_MS = 3_000;
-
 const selectedId = ref<number | null>(null);
 const toast = ref<{ id: number; message: string; duration: number } | null>(null);
 const modal = ref<'new' | 'repos' | 'settings' | 'daemon' | null>(null);
@@ -60,13 +56,8 @@ const closeToast = (id: number) => {
 /** The task whose page is open, from the route. */
 const pageId = computed(() => (route.current.name === 'task' ? route.current.id : null));
 
-// The change stream refetches what is on screen. Status also refetches every 30 s, hidden or not: waits (a governor
-// hold lifting) change with time, not with a write, and the tray label reads it.
-const statusQ = useQuery({
-  ...statusQuery(),
-  refetchInterval: (q) => (isOffline(q.state.error) ? OFFLINE_POLL_MS : STATUS_FALLBACK_MS),
-  refetchIntervalInBackground: true,
-});
+// The change stream refetches what is on screen; status also refetches on a timer (liveStatusQuery).
+const statusQ = useQuery(liveStatusQuery());
 const palette = ref(false);
 // The list is read on every page: the palette searches every task and the status bar's activity list is built from it.
 const tasksQ = useQuery(tasksQuery());

@@ -1,5 +1,5 @@
 //! The tray icon, its menu and the dock badge, kept up to date from what `daemon_client` reads, so they stay fresh while
-//! the window is hidden. `tray_view` words the read; it decides nothing: the state and what needs a person come from the
+//! the window is hidden. A left-click on the icon opens the tray window (`tray_window`), a right-click this menu. `tray_view` words the read; it decides nothing: the state and what needs a person come from the
 //! daemon's headline, and the words follow `describeState` in `app/src/api/format.ts`.
 
 use crate::daemon_client::{self, AttentionWhy, HeadlineState, Read};
@@ -7,7 +7,7 @@ use crate::open::open_in_dashboard;
 use tauri::{
     App, AppHandle, Manager, Wry,
     menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem},
-    tray::TrayIconBuilder,
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
 };
 
 const TRAY_ID: &str = "main";
@@ -272,8 +272,21 @@ pub fn setup(app: &mut App) -> tauri::Result<impl FnMut(&Read) + Send + 'static>
         .icon(app.default_window_icon().unwrap().clone())
         .tooltip(&view.tooltip)
         .menu(&build_menu(app.handle(), &view)?)
-        .show_menu_on_left_click(true)
+        // A left-click opens the tray window; the menu is a right-click.
+        .show_menu_on_left_click(false)
         .on_menu_event(on_menu_event)
+        .on_tray_icon_event(|tray, event| {
+            tauri_plugin_positioner::on_tray_event(tray.app_handle(), &event);
+            if let TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                rect,
+                ..
+            } = event
+            {
+                crate::tray_window::toggle(tray.app_handle(), rect);
+            }
+        })
         .build(app)?;
     let handle = app.handle().clone();
     let mut last = view;

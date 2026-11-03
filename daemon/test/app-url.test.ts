@@ -4,7 +4,14 @@ import { test } from 'node:test';
 
 // router.ts reads the page's hash when it loads; give it a bare one.
 Object.assign(globalThis, { location: { hash: '' }, window: { addEventListener() {} } });
-const { parseAppUrl, taskUrl } = await import('../../app/src/router.ts');
+const { hashFor, parseAppUrl, parseHash, taskUrl } = await import('../../app/src/router.ts');
+
+test('#/tray is the tray window, and round-trips', () => {
+  assert.deepEqual(parseHash('#/tray'), { name: 'tray' });
+  assert.equal(hashFor({ name: 'tray' }), '#/tray');
+  // Not a link from outside: an agentdeck:// URL never opens the tray view in the main window.
+  assert.equal(parseAppUrl('agentdeck://tray'), null);
+});
 
 test('a task link opens that task, on the overview unless a tab is named', () => {
   assert.deepEqual(parseAppUrl('agentdeck://tasks/181'), { name: 'task', id: 181, tab: 'overview', query: {} });
