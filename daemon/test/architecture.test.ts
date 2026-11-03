@@ -380,7 +380,7 @@ const HOLD_ALLOWED: { file: string; line: RegExp; why: string }[] = [
   { file: 'cli/daemon.ts', line: /on hold|HOLD:/, why: "the governor's state, shown" },
   { file: 'app/src/api/format.ts', line: /On hold/, why: "the governor's state, shown" },
   { file: 'app/src/components/layout/StatusBar.vue', line: /On hold/, why: "the governor's state, shown" },
-  { file: 'app/src/App.vue', line: /hold lifting/, why: "the governor's hold lifting" },
+  { file: 'app/src/api/queries.ts', line: /hold lifting/, why: "the governor's hold lifting" },
   { file: 'domain/run/run.ts', line: /it holds the old prompt/, why: PLAIN },
   { file: 'domain/run/prompt.ts', line: /holds the same comments|already holds the task|files hold conflict markers/, why: PLAIN },
   { file: 'domain/task/needs.ts', line: /A task holds it/, why: PLAIN },

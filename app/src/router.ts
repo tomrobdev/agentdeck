@@ -1,17 +1,21 @@
 // Hash routes: `#/` is the queue (`#/?states=a,b` opens it filtered to those states), `#/tasks/16/<tab>?path=…&L=10-20` a
-// task page. No router dependency.
+// task page, `#/tray` the small window under the tray icon (its own root, see main.ts). No router dependency.
 import { reactive } from 'vue';
 
 export type TaskTab = 'overview' | 'runs' | 'changes' | 'code';
 const TASK_TABS: TaskTab[] = ['overview', 'runs', 'changes', 'code'];
 
 export type Route =
-  { name: 'queue'; states?: string[] } | { name: 'insights' } | { name: 'task'; id: number; tab: TaskTab; query: Record<string, string> };
+  | { name: 'queue'; states?: string[] }
+  | { name: 'insights' }
+  | { name: 'tray' }
+  | { name: 'task'; id: number; tab: TaskTab; query: Record<string, string> };
 
 export function parseHash(hash: string): Route {
   const [path, qs = ''] = hash.replace(/^#/, '').split('?');
   const m = path.match(/^\/tasks\/(\d+)(?:\/(\w+))?\/?$/);
   if (path === '/insights') return { name: 'insights' };
+  if (path === '/tray') return { name: 'tray' };
   if (!m) {
     const states = new URLSearchParams(qs).get('states')?.split(',').filter(Boolean);
     return states?.length ? { name: 'queue', states } : { name: 'queue' };
@@ -39,8 +43,9 @@ export function parseAppUrl(url: string): Route | { name: 'new' } | null {
 /** The link that opens a task from outside the dashboard. */
 export const taskUrl = (id: number) => `agentdeck://tasks/${id}`;
 
-function hashFor(route: Route): string {
+export function hashFor(route: Route): string {
   if (route.name === 'insights') return '#/insights';
+  if (route.name === 'tray') return '#/tray';
   if (route.name === 'queue') return route.states?.length ? `#/?states=${route.states.join(',')}` : '#/';
   const qs = new URLSearchParams(route.query).toString();
   return `#/tasks/${route.id}/${route.tab}${qs ? `?${qs}` : ''}`;

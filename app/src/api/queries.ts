@@ -37,6 +37,19 @@ export const isOffline = (e: unknown) => e instanceof ApiError && e.message === 
 export const retryQuery = (failures: number, e: unknown) => !isOffline(e) && failures < 2;
 
 export const statusQuery = () => queryOptions({ queryKey: queryKeys.status, queryFn: api.status });
+const STATUS_FALLBACK_MS = 30_000;
+// While the daemon is down, look again often, so the screen clears soon after it starts.
+const OFFLINE_POLL_MS = 3_000;
+/**
+ * Status as a window keeps it on screen. The change stream refetches it after writes; it also refetches every 30 s, hidden
+ * or not, as waits (a governor hold lifting) change with time, not with a write.
+ */
+export const liveStatusQuery = () =>
+  queryOptions({
+    ...statusQuery(),
+    refetchInterval: (q) => (isOffline(q.state.error) ? OFFLINE_POLL_MS : STATUS_FALLBACK_MS),
+    refetchIntervalInBackground: true,
+  });
 export const tasksQuery = () => queryOptions({ queryKey: queryKeys.tasks, queryFn: api.tasks });
 export const taskQuery = (id: number) => queryOptions({ queryKey: queryKeys.task(id), queryFn: () => api.task(id) });
 /** The Insights page's report, per week, for one repo name or all (null). */

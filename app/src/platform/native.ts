@@ -27,6 +27,11 @@ export async function onOpenUrl(cb: (url: string) => void): Promise<() => void> 
   return stop;
 }
 
+/** From the tray window: open an agentdeck:// URL in the main window, and hide the tray window. */
+export async function openFromTray(url: string): Promise<void> {
+  if (isNative) await invoke('open_from_tray', { url });
+}
+
 /** Start the daemon through launchd. Throws with the reason (the service isn't installed, launchctl failed). */
 export async function startDaemon(): Promise<void> {
   if (!isNative) throw new Error('The daemon starts from the desktop app only');

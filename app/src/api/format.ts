@@ -44,6 +44,13 @@ export const NOTIFY_LABELS: Record<NotifyKind, string> = {
   checks_failed: 'PR checks failed',
 };
 
+/** Why a task in the headline's `attention` needs a person, in a word or two. The tray menu words it the same way (`why_label` in `app/src-tauri/src/tray.rs`). */
+export const ATTENTION_LABELS: Record<Status['headline']['attention'][number]['why'], string> = {
+  blocked: 'blocked',
+  review: 'in review',
+  proposed: 'proposed',
+};
+
 /** What each model is called, and when to pick it. */
 export const MODEL_LABELS: Record<string, string> = { haiku: 'Haiku', sonnet: 'Sonnet', opus: 'Opus' };
 export const MODEL_HINTS: Record<string, string> = { haiku: 'cheap, simple', sonnet: 'default', opus: 'hard tasks' };

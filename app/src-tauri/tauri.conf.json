@@ -18,6 +18,20 @@
         "height": 800,
         "minWidth": 820,
         "minHeight": 520
+      },
+      {
+        "label": "tray",
+        "title": "AgentDeck",
+        "url": "index.html#/tray",
+        "width": 360,
+        "height": 480,
+        "resizable": false,
+        "decorations": false,
+        "visible": false,
+        "skipTaskbar": true,
+        "alwaysOnTop": true,
+        "visibleOnAllWorkspaces": true,
+        "acceptFirstMouse": true
       }
     ],
     "security": {

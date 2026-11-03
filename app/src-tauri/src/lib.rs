@@ -5,6 +5,7 @@ mod service;
 mod shortcuts;
 mod terminal;
 mod tray;
+mod tray_window;
 
 use tauri::{Manager, WindowEvent};
 use tauri_plugin_autostart::MacosLauncher;
@@ -30,15 +31,20 @@ pub fn run() {
         .plugin(
             tauri_plugin_window_state::Builder::default()
                 .with_state_flags(window_state_flags())
+                // The tray window is placed under the icon each time it opens.
+                .with_denylist(&[tray_window::LABEL])
                 .build(),
         )
+        .plugin(tauri_plugin_positioner::init())
         .manage(open::PendingUrl::default())
+        .manage(tray_window::LastBlur::default())
         .invoke_handler(tauri::generate_handler![
             dialogs::pick_folder,
             open::take_open_url,
             service::start_daemon,
             terminal::cmux_installed,
-            terminal::run_template
+            terminal::run_template,
+            tray_window::open_from_tray
         ])
         .setup(|app| {
             tray::setup(app)?;
@@ -51,14 +57,19 @@ pub fn run() {
             });
             Ok(())
         })
-        // Closing the window hides it to the tray; the daemon keeps working either way.
-        .on_window_event(|window, event| {
-            if let WindowEvent::CloseRequested { api, .. } = event {
+        // Closing a window hides it to the tray; the daemon keeps working either way.
+        .on_window_event(|window, event| match event {
+            WindowEvent::CloseRequested { api, .. } => {
                 // Hiding is not quitting, so save the size and position now.
                 let _ = window.app_handle().save_window_state(window_state_flags());
                 let _ = window.hide();
                 api.prevent_close();
             }
+            // Clicking anywhere else closes the tray window.
+            WindowEvent::Focused(false) if window.label() == tray_window::LABEL => {
+                tray_window::on_blur(window.app_handle());
+            }
+            _ => {}
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
