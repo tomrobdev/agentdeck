@@ -168,11 +168,21 @@ async function checkResolution(worktree: string, before: string, files: string[]
   return '';
 }
 
-/** The branch merge is the daemon's only write to a done task's worktree: one at a time per task. */
+/** The lock against two syncs of one task in the daemon (the database's marker is what other processes read). */
 const syncing = new Set<number>();
 
-/** Whether a sync or resolve run is touching this task's worktree right now, in this process or the daemon's. */
-export const isSyncing = (db: Db, id: number): boolean => syncing.has(id) || db.hasRunningResolve(id);
+/** Whether a sync of this task's branch is running, in any process: the marker the daemon keeps in the database. */
+export const isSyncing = (db: Db, id: number): boolean => db.hasSyncMarker(id);
+
+/** Run `fn` with the task's sync marked in the database, so the CLI sees it too; the mark is cleared however `fn` ends. */
+export async function markSyncing<T>(db: Db, id: number, fn: () => Promise<T>): Promise<T> {
+  db.setSyncing(id, true);
+  try {
+    return await fn();
+  } finally {
+    db.setSyncing(id, false);
+  }
+}
 
 /** Whether a sync in this process holds the task's worktree (the in-process half of `isSyncing`, no query). */
 export const isSyncLocked = (id: number): boolean => syncing.has(id);
@@ -217,43 +227,48 @@ async function pushIfNeeded(
 export async function syncTask(db: Db, id: number, opts: { manual: boolean }): Promise<SyncReport> {
   const task = requireTask(db, id);
   const repo = requireTaskRepo(db, task);
-  if (task.status !== 'done') throw new ActionError(`#${id} is ${task.status}; only a done task's branch is brought up to date this way`);
+  if (task.status !== 'done') throw new ActionError(`#${id} is ${task.status}; only a done task's branch is synced this way`);
   if (!task.branch) throw new ActionError(`#${id} has no branch`);
-  if (syncing.has(id)) throw new ActionError(`#${id} is already being brought up to date`);
+  if (syncing.has(id)) throw new ActionError(`#${id} is already syncing`);
 
   syncing.add(id);
   try {
-    const wt = await ensureWorktree(repo, task);
-    if (wt.path !== task.worktree) db.setCheckout(id, { worktree: wt.path });
-    const res = await syncBranch(db, task, repo, wt.path, { allowResolve: opts.manual || repo.auto_resolve === 1, runTests: true });
-    switch (res.kind) {
-      case 'up_to_date':
-      case 'clean':
-      case 'resolved': {
-        const changed = res.kind !== 'up_to_date';
-        if (res.kind !== 'up_to_date') {
-          db.recordSync(id, syncSummary(repo.base_branch, res.kind, res.kind === 'resolved' ? res.files : []));
-        }
-        const push = await pushIfNeeded(db, task, repo, wt.path, changed);
-        return { outcome: res.kind, files: res.kind === 'resolved' ? res.files : [], pushed: push.pushed, push_error: push.error };
-      }
-      case 'needs_resolution':
-        return { outcome: 'skipped', files: res.files, reason: 'the repo has auto_resolve off', pushed: false };
-      case 'failed': {
-        const reason = conflictReason(repo.base_branch, res.files, res.reason);
-        await settle(db, id, { type: 'conflict' }, { reason });
-        return { outcome: 'blocked', files: res.files, reason, pushed: false };
-      }
-      case 'rate_limited':
-        return { outcome: 'deferred', files: [], reason: res.reason, pushed: false };
-      case 'cancelled':
-        return { outcome: 'deferred', files: [], reason: 'cancelled', pushed: false };
-      case 'error':
-        if (opts.manual) throw new ActionError(`could not sync with ${repo.base_branch}: ${res.reason}`);
-        return { outcome: 'error', files: [], reason: res.reason, pushed: false };
-    }
+    return await markSyncing(db, id, () => syncMarked(db, task, repo, opts));
   } finally {
     syncing.delete(id);
+  }
+}
+
+async function syncMarked(db: Db, task: Task, repo: Repo, opts: { manual: boolean }): Promise<SyncReport> {
+  const id = task.id;
+  const wt = await ensureWorktree(repo, task);
+  if (wt.path !== task.worktree) db.setCheckout(id, { worktree: wt.path });
+  const res = await syncBranch(db, task, repo, wt.path, { allowResolve: opts.manual || repo.auto_resolve === 1, runTests: true });
+  switch (res.kind) {
+    case 'up_to_date':
+    case 'clean':
+    case 'resolved': {
+      const changed = res.kind !== 'up_to_date';
+      if (res.kind !== 'up_to_date') {
+        db.recordSync(id, syncSummary(repo.base_branch, res.kind, res.kind === 'resolved' ? res.files : []));
+      }
+      const push = await pushIfNeeded(db, task, repo, wt.path, changed);
+      return { outcome: res.kind, files: res.kind === 'resolved' ? res.files : [], pushed: push.pushed, push_error: push.error };
+    }
+    case 'needs_resolution':
+      return { outcome: 'skipped', files: res.files, reason: 'the repo has auto_resolve off', pushed: false };
+    case 'failed': {
+      const reason = conflictReason(repo.base_branch, res.files, res.reason);
+      await settle(db, id, { type: 'conflict' }, { reason });
+      return { outcome: 'blocked', files: res.files, reason, pushed: false };
+    }
+    case 'rate_limited':
+      return { outcome: 'deferred', files: [], reason: res.reason, pushed: false };
+    case 'cancelled':
+      return { outcome: 'deferred', files: [], reason: 'cancelled', pushed: false };
+    case 'error':
+      if (opts.manual) throw new ActionError(`could not sync with ${repo.base_branch}: ${res.reason}`);
+      return { outcome: 'error', files: [], reason: res.reason, pushed: false };
   }
 }
 

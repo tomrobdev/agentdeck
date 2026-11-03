@@ -303,6 +303,7 @@ erDiagram
     text merge_request_check "nullable"
     integer plan_task "nullable"
     text pr_checks "nullable"
+    text syncing_since "nullable"
   }
   usage_samples {
     integer id PK
@@ -493,5 +494,6 @@ stateDiagram-v2
 | 24   | plans live in AgentDeck, named after the task they belong to. plan_task is the task whose plan this one follows (itself when its own plan was given with --plan); plan_steps names that plan's steps. plan_path is no longer written.     |
 | 25   | when a run's pid was stored. Its claude started then, which can be minutes after the run row (setup, a sync), so crash recovery and the doctor tell our claude from a reused pid by this time, not by started_at.                         |
 | 26   | an open PR's latest checks, one by one (domain/pull-request/checks.ts StoredChecks): JSON { read_at, head, checks, notified }, written by the PR refresh; notified says a person was told they fail. NULL until the PR's checks are read. |
+| 27   | when a sync of the task's branch began (NULL when none is running). Syncs run in the daemon only, so the CLI reads this to see one; the daemon clears every marker on start.                                                              |
 
 <!-- /generated -->

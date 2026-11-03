@@ -24,7 +24,7 @@ import {
 import { type Task, leftoversMessage } from '../../domain/task/task.ts';
 import { type OpenedRun, type TaskRunEnd, endTaskRun, openTaskRun, startTaskRun } from './claude-run.ts';
 import type { Repo } from '../../domain/repo/repo.ts';
-import { syncBranch } from '../sync.ts';
+import { markSyncing, syncBranch } from '../sync.ts';
 import { pauseRepo } from '../scheduler/pause.ts';
 import { followedSteps, planForRun, takePlanFile } from '../plans.ts';
 import { settle } from '../task/settle.ts';
@@ -106,7 +106,9 @@ async function runOpened(db: Db, task: Task, repo: Repo, wt: { branch: string; p
   if (setupFailure) return setupFailure;
 
   // Sync the branch with the latest base, on retries too, so the agent builds on current code.
-  const synced = await syncBranch(db, task, repo, wt.path, { allowResolve: repo.auto_resolve === 1, runTests: false });
+  const synced = await markSyncing(db, task.id, () =>
+    syncBranch(db, task, repo, wt.path, { allowResolve: repo.auto_resolve === 1, runTests: false }),
+  );
   writeEvent(log, { type: 'agentdeck_sync', ...synced });
   if (synced.kind === 'clean' || synced.kind === 'resolved') {
     db.recordSync(task.id, syncSummary(repo.base_branch, synced.kind, synced.kind === 'resolved' ? synced.files : []));
