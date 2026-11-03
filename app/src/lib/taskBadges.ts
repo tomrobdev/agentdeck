@@ -60,6 +60,7 @@ type Viewed = Pick<
   | 'max_attempts'
   | 'source'
   | 'pr_state'
+  | 'checks'
   | 'needs'
   | 'auto_merge_view'
   | 'merge_request'
@@ -112,6 +113,16 @@ export function taskBadges(t: Viewed, opts: BadgeOptions = {}): Badges {
     attention.push({ label: 'conflicts', title: 'The PR conflicts with the base branch: sync the task to settle it', tone: 'failed' });
   else if (am?.state === 'never' && !t.merge_request)
     attention.push({ label: "won't auto-merge", title: [am.label, ...am.reasons].join('\n'), tone: 'failed' });
+  const checks = t.pr_state === 'open' ? t.checks : null;
+  if (checks && checks.total > 0 && checks.failing > 0) {
+    const n = checks.failing;
+    const running = checks.pending ? `; ${checks.pending} still running` : '';
+    attention.push({
+      label: `✗ ${n} ${n === 1 ? 'check' : 'checks'} failing`,
+      title: `Failing: ${checks.failing_names.join(', ')}${running}`,
+      tone: 'failed',
+    });
+  }
   if (t.plan_unfinished) attention.push({ label: 'steps unfinished', title: 'The run left linked plan steps unfinished', tone: 'blocked' });
 
   // A daemon from before links existed only says what a queued task waits on.
@@ -120,6 +131,14 @@ export function taskBadges(t: Viewed, opts: BadgeOptions = {}): Badges {
   const facts: Fact[] = [];
   if (t.attempts > 1) facts.push({ label: `try ${t.attempts}`, title: `Attempt ${t.attempts} of ${t.max_attempts}` });
   if (t.source === 'planner') facts.push({ label: 'planner', title: 'Proposed by the planner' });
+  if (checks && checks.total > 0 && checks.failing === 0) {
+    if (checks.pending)
+      facts.push({
+        label: `● checks ${checks.total - checks.pending}/${checks.total}`,
+        title: `${checks.pending} of ${checks.total} checks still running`,
+      });
+    else facts.push({ label: '✓ checks', title: `All ${checks.total} checks passed` });
+  }
   if (opts.pr !== false && (t.pr_state === 'merged' || t.pr_state === 'closed'))
     facts.push({ label: `PR ${t.pr_state}`, title: `The pull request is ${t.pr_state}` });
   if (am?.source === 'task') {

@@ -165,3 +165,41 @@ test('facts: planner, a merged or closed PR (not an open one), and the repo when
     ['needs deps', 'steps unfinished'],
   );
 });
+
+test('checks: running and passed are muted facts, failing is an attention chip, none is no badge', () => {
+  const sum = (extra: Partial<NonNullable<TaskSummary['checks']>>) => ({
+    total: 5,
+    failing: 0,
+    pending: 0,
+    failing_names: [],
+    read_at: '2026-11-01 10:00:00',
+    ...extra,
+  });
+  const labels = (t: TaskSummary) => taskBadges(t).facts.map((f) => f.label);
+
+  const running = taskBadges(review({ checks: sum({ pending: 2 }) }));
+  assert.deepEqual(running.attention, []);
+  assert.deepEqual(
+    running.facts.map((f) => f.label),
+    ['● checks 3/5'],
+  );
+
+  const passed = taskBadges(review({ checks: sum({}) }));
+  assert.deepEqual(passed.attention, []);
+  assert.deepEqual(
+    passed.facts.map((f) => f.label),
+    ['✓ checks'],
+  );
+
+  const one = taskBadges(review({ checks: sum({ failing: 1, failing_names: ['lint'] }) }));
+  assert.equal(one.attention[0]?.label, '✗ 1 check failing');
+  assert.match(one.attention[0]?.title ?? '', /lint/);
+  assert.deepEqual(one.facts, []);
+  const two = taskBadges(review({ checks: sum({ failing: 2, pending: 1, failing_names: ['lint', 'test'] }) }));
+  assert.equal(two.attention[0]?.label, '✗ 2 checks failing');
+  assert.match(two.attention[0]?.title ?? '', /lint, test/);
+
+  assert.deepEqual(labels(review({ checks: null })), []);
+  assert.deepEqual(labels(review({})), []);
+  assert.deepEqual(labels(review({ pr_state: 'merged', checks: sum({}) })), ['PR merged']);
+});
