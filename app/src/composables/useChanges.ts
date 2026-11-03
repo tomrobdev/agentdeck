@@ -1,4 +1,5 @@
-// A task's changes follow its branch: fetched on open and whenever the task moves.
+// A task's changes follow its branch: fetched on open, and again whenever the database changes (the change stream
+// invalidates them) or the first branch appears (`enabled`).
 import { type Ref, computed, shallowRef, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { type Changes, type TaskDetail, changesQuery } from '../api';
@@ -25,11 +26,6 @@ export function useChanges(task: Ref<TaskDetail>) {
     },
     { immediate: true },
   );
-
-  // Separate sources, so a poll that returns the same values doesn't refetch.
-  watch([() => task.value.updated_at, () => task.value.branch], () => {
-    if (task.value.branch) q.refetch();
-  });
 
   const error = computed(() =>
     task.value.branch ? (q.error.value?.message ?? '') : 'No branch yet: changes appear once the first run starts.',

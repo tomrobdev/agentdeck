@@ -21,8 +21,25 @@ import type { Task } from '../domain/task/task.ts';
 
 const exec = promisify(execFile);
 
+/** How long fetching the base branch may take before a task starts from what is already there. */
+const FETCH_TIMEOUT_MS = 60_000;
+
 async function git(cwd: string, ...args: string[]): Promise<string> {
   const { stdout } = await exec('git', args, { cwd, maxBuffer: 16 * 1024 * 1024 });
+  return stdout.trim();
+}
+
+/**
+ * A git command that talks to a remote. It must never wait for a person: the daemon runs without a
+ * terminal, and a credential prompt would keep the task's slot forever. So prompts are off and it times out.
+ */
+export async function gitRemote(cwd: string, timeoutMs: number, ...args: string[]): Promise<string> {
+  const { stdout } = await exec('git', args, {
+    cwd,
+    timeout: timeoutMs,
+    maxBuffer: 16 * 1024 * 1024,
+    env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+  });
   return stdout.trim();
 }
 
@@ -99,7 +116,7 @@ export async function hasOrigin(repoPath: string): Promise<boolean> {
 export async function startPoint(repoPath: string, base: string): Promise<string> {
   if (!(await hasOrigin(repoPath))) return base;
   try {
-    await git(repoPath, 'fetch', '--quiet', 'origin', base);
+    await gitRemote(repoPath, FETCH_TIMEOUT_MS, 'fetch', '--quiet', 'origin', base);
   } catch {
     // offline or the base isn't on origin: use what we have
   }

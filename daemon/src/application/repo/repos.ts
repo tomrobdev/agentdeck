@@ -161,8 +161,8 @@ export function repoDeletionPreview(db: Db, nameOrId: string | number) {
 }
 
 /**
- * Delete an archived repo and all that belongs to it, locally: each task's worktree and branch, the rows,
- * then the logs, settings files and goals file. Never touches GitHub, the remote or the repo's own folder.
+ * Delete an archived repo and all that belongs to it, locally: the rows, then each task's worktree and branch,
+ * the logs, settings files and goals file. Never touches GitHub, the remote or the repo's own folder.
  * Files go after the rows, so a failure leaves files behind, never rows pointing at missing files;
  * `leftover` names what couldn't be removed.
  */
@@ -170,6 +170,14 @@ export async function deleteRepo(db: Db, nameOrId: string | number): Promise<{ r
   const repo = requireRepo(db, nameOrId);
   if (!repo.archived_at) throw new ActionError(`${repo.name} is not archived; archive it first, then delete`);
   const { tasks, run_logs, planner_logs } = db.repoFootprint(repo.id);
+  // Other repos' tasks that build on this repo's unmerged tasks lose those links with it: say so, so none starts unannounced.
+  const builders = buildersOnRepo(
+    db,
+    repo.id,
+    tasks.map((t) => t.id),
+  );
+  if (!db.deleteRepo(repo.id)) throw new ActionError(`${repo.name} is not archived; archive it first, then delete`);
+  warnBuildersOnDeleted(db, repo.name, builders);
   const leftover: string[] = [];
   for (const t of tasks) {
     try {
@@ -184,14 +192,6 @@ export async function deleteRepo(db: Db, nameOrId: string | number): Promise<{ r
   } catch {
     // the repo's folder may be gone; nothing to prune then
   }
-  // Other repos' tasks that build on this repo's unmerged tasks lose those links with it: say so, so none starts unannounced.
-  const builders = buildersOnRepo(
-    db,
-    repo.id,
-    tasks.map((t) => t.id),
-  );
-  if (!db.deleteRepo(repo.id)) throw new ActionError(`${repo.name} is not archived; archive it first, then delete`);
-  warnBuildersOnDeleted(db, repo.name, builders);
   const logs = [...run_logs, ...planner_logs];
   leftover.push(...removeFiles([...logs, ...logs.map(settingsPath)]));
   try {

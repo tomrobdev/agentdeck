@@ -390,7 +390,6 @@ const HOLD_ALLOWED: { file: string; line: RegExp; why: string }[] = [
   { file: 'db/tasks.ts', line: /Later pages hold older tasks/, why: PLAIN },
   { file: 'db/sql.ts', line: /caller already holds/, why: PLAIN },
   { file: 'adapters/git.ts', line: /branch holds all its work|still hold conflict markers/, why: PLAIN },
-  { file: 'adapters/github.ts', line: /prompt would hold the task's slot/, why: PLAIN },
   { file: 'app/src/composables/useHotkeys.ts', line: /modifier held/, why: PLAIN },
   { file: 'app/src/lib/forms.ts', line: /panels only hold the form/, why: PLAIN },
   { file: 'app/src/components/task/TaskPage.vue', line: /Dialogs hold the Escape key/, why: PLAIN },

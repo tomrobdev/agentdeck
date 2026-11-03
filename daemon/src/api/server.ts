@@ -41,7 +41,12 @@ export function startApi(options: ApiOptions): Promise<Server> {
     m.routes(ctx),
   );
 
-  const server = createServer((req, res) => void dispatch(routes, req, res));
+  const server = createServer((req, res) =>
+    dispatch(routes, req, res).catch((err) => {
+      console.error(err);
+      res.destroy();
+    }),
+  );
   return new Promise((resolve, reject) => {
     server.once('error', reject);
     server.listen(options.port ?? API_PORT, '127.0.0.1', () => resolve(server));

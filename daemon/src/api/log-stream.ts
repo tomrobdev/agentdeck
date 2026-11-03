@@ -24,7 +24,21 @@ export function streamLog(
 
   let offset = 0;
   let partial = '';
+  // Runs from a timer, so a throw here (EMFILE, a log removed under us) would be uncaught and stop the daemon:
+  // end the stream instead.
   const pump = () => {
+    try {
+      tail();
+    } catch (err) {
+      clearInterval(timer);
+      console.error(err);
+      if (!res.writableEnded) {
+        res.write('event: end\ndata: {}\n\n');
+        res.end();
+      }
+    }
+  };
+  const tail = () => {
     if (existsSync(run.log_path)) {
       const size = statSync(run.log_path).size;
       if (size > offset) {

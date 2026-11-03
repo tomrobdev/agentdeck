@@ -5,22 +5,9 @@ import { promisify } from 'node:util';
 import { type MergeMethod, type PrDetails, parsePrDetails } from '../domain/pull-request/merge.ts';
 import { type PrState, parsePrState } from '../domain/pull-request/pr.ts';
 import { lastLine } from '../domain/text.ts';
+import { gitRemote } from './git.ts';
 
 const exec = promisify(execFile);
-
-/**
- * A git command that talks to a remote. It must never wait for a person: the daemon runs without a
- * terminal, and a credential prompt would hold the task's slot forever. So prompts are off and it times out.
- */
-async function gitRemote(cwd: string, timeoutMs: number, ...args: string[]): Promise<string> {
-  const { stdout } = await exec('git', args, {
-    cwd,
-    timeout: timeoutMs,
-    maxBuffer: 16 * 1024 * 1024,
-    env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
-  });
-  return stdout.trim();
-}
 
 export interface CreatePr {
   cwd: string; // the task's worktree

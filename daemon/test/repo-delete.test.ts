@@ -46,6 +46,8 @@ function fill(repo: ReturnType<typeof makeRepo>, opts: { worktree: boolean }) {
   db.startPlannerRun(repo.id, plog);
   db.raw.prepare("INSERT INTO task_plans (task_id, name, source, html) VALUES (?, 'plan.html', 'attached', '<html></html>')").run(task.id);
   db.addNotification('done', 't', 'b', task.id);
+  const review = db.createReview(task.id);
+  db.addComment({ review_id: review.id, path: 'a.txt', line: 1, side: 'new', head_commit: 'abc', body: 'fix' });
   writeGoals(repo, 'goals');
   return { task, logs, worktree: opts.worktree };
 }
@@ -58,6 +60,8 @@ const rowsFor = (repoId: number) =>
     'SELECT COUNT(*) n FROM task_events WHERE task_id IN (SELECT id FROM tasks WHERE repo_id = ?)',
     'SELECT COUNT(*) n FROM task_plans WHERE task_id IN (SELECT id FROM tasks WHERE repo_id = ?)',
     'SELECT COUNT(*) n FROM notifications WHERE task_id IN (SELECT id FROM tasks WHERE repo_id = ?)',
+    'SELECT COUNT(*) n FROM reviews WHERE task_id IN (SELECT id FROM tasks WHERE repo_id = ?)',
+    'SELECT COUNT(*) n FROM review_comments WHERE review_id IN (SELECT r.id FROM reviews r JOIN tasks t ON t.id = r.task_id WHERE t.repo_id = ?)',
     'SELECT COUNT(*) n FROM planner_runs WHERE repo_id = ?',
     'SELECT COUNT(*) n FROM repos WHERE id = ?',
   ].map((sql) => count(sql, repoId));
@@ -86,7 +90,7 @@ test('deleting an archived repo leaves no rows, worktree, branch or files, and s
 
   const res = await actions.deleteRepo(db, 'gone');
   assert.deepEqual(res.leftover, []);
-  assert.deepEqual(rowsFor(gone.id), [0, 0, 0, 0, 0, 0, 0]);
+  assert.deepEqual(rowsFor(gone.id), [0, 0, 0, 0, 0, 0, 0, 0, 0]);
   assert.equal(existsSync(worktree), false);
   assert.equal(git(gone.path, 'branch', '--list', branch), '');
   assert.equal(git(gone.path, 'worktree', 'list').split('\n').length, 1);
@@ -104,5 +108,5 @@ test('a missing worktree, branch or log does not stop it', async () => {
   actions.archiveRepo(db, 'hollow');
   const res = await actions.deleteRepo(db, 'hollow');
   assert.deepEqual(res.leftover, []);
-  assert.deepEqual(rowsFor(repo.id), [0, 0, 0, 0, 0, 0, 0]);
+  assert.deepEqual(rowsFor(repo.id), [0, 0, 0, 0, 0, 0, 0, 0, 0]);
 });

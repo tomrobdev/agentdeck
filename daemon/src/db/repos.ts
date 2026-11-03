@@ -5,7 +5,7 @@ import type { Repo } from '../domain/repo/repo.ts';
 import { RUNNING_STATUSES } from '../domain/task/task.ts';
 import type { Orm } from './orm.ts';
 import { NOW_SQL, atomically } from './sql.ts';
-import { notifications, plannerRuns, repos, runs, taskEvents, taskLinks, taskPlans, tasks } from './tables.ts';
+import { notifications, plannerRuns, repos, reviewComments, reviews, runs, taskEvents, taskLinks, taskPlans, tasks } from './tables.ts';
 
 export function repoStore(db: DatabaseSync, orm: Orm) {
   const tasksOf = (repo_id: number) => orm.select({ id: tasks.id }).from(tasks).where(eq(tasks.repo_id, repo_id));
@@ -121,6 +121,15 @@ export function repoStore(db: DatabaseSync, orm: Orm) {
         orm
           .delete(taskPlans)
           .where(inArray(taskPlans.task_id, tasksOf(id)))
+          .run();
+        const reviewsOf = orm
+          .select({ id: reviews.id })
+          .from(reviews)
+          .where(inArray(reviews.task_id, tasksOf(id)));
+        orm.delete(reviewComments).where(inArray(reviewComments.review_id, reviewsOf)).run();
+        orm
+          .delete(reviews)
+          .where(inArray(reviews.task_id, tasksOf(id)))
           .run();
         orm
           .delete(runs)

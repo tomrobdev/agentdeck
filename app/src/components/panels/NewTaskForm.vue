@@ -42,6 +42,8 @@ async function writeWithClaude() {
 
 async function submit() {
   if (saved.value) return emit('created', saved.value);
+  // ⌘Enter reaches here without the button's :disabled, so the same guard: no second task while one is saving.
+  if (saving.value || !prompt.value.trim()) return;
   error.value = '';
   const planOn = planTask.value.trim().replace(/^#/, '');
   if (planOn && !/^\d+$/.test(planOn)) {

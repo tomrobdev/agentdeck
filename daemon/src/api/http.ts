@@ -103,6 +103,11 @@ export async function dispatch(routes: Route[], req: IncomingMessage, res: Serve
       const out = await r.handle({ req, res, params: m.slice(1), body, query: queryOf(req) });
       if (out !== undefined) send(res, 200, out);
     } catch (err) {
+      // A handler that already started its own answer (a stream) can't be sent an error body.
+      if (res.headersSent) {
+        console.error(err);
+        return void res.destroy();
+      }
       if (err instanceof PayloadTooLarge) send(res, 413, { error: err.message });
       else if (err instanceof ActionError || err instanceof BadRequest) send(res, 400, { error: err.message });
       else {

@@ -98,6 +98,18 @@ test('log stream replays a finished run and ends', async () => {
   assert.match(body, /event: end/);
 });
 
+test('a log that cannot be read ends the stream instead of stopping the daemon', async () => {
+  // A directory where the log should be: it exists and has a size, but reading it throws (EISDIR).
+  const unreadable = join(home, 'unreadable-log');
+  mkdirSync(unreadable);
+  const runId = db.startRun(1, 1, unreadable);
+  const body = await (await api(`/api/tasks/1/log?run=${runId}`)).text();
+  assert.match(body, /event: end/);
+  db.finishRun(runId, { outcome: 'failed' });
+  const st = await api('/api/status');
+  assert.equal(st.status, 200, 'the daemon still answers');
+});
+
 test('cancel and retry', async () => {
   const done = await api('/api/tasks/1/cancel', { method: 'POST' });
   assert.equal(done.status, 400, 'done tasks cannot be cancelled');

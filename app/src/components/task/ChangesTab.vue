@@ -76,7 +76,11 @@ watch(
   () => {
     patches.clear();
     preview.clear();
+    previewOn.clear();
     for (const f of files.value) if (isViewed(f)) collapsed.add(f.path);
+    // The sections stay (keyed by path), and observing a section already observed reports nothing, so the ones on
+    // screen would stay "Loading…": observe them afresh, which reports each one's visibility again.
+    void nextTick(reobserve);
   },
   { immediate: true },
 );
@@ -117,9 +121,20 @@ const observer = new IntersectionObserver(
   },
   { rootMargin: '600px 0px' },
 );
+const sections = new Set<HTMLElement>();
 const sectionRef = (el: unknown) => {
-  if (el instanceof HTMLElement) observer.observe(el);
+  if (el instanceof HTMLElement && !sections.has(el)) {
+    sections.add(el);
+    observer.observe(el);
+  }
 };
+function reobserve() {
+  observer.disconnect();
+  for (const el of sections) {
+    if (el.isConnected) observer.observe(el);
+    else sections.delete(el);
+  }
+}
 onBeforeUnmount(() => observer.disconnect());
 
 // The changed paths as a tree, with single-child folders joined ("daemon/src").
