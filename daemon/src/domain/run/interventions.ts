@@ -1,4 +1,5 @@
 // What counts as an intervention in the pilot scorecard (docs/pilot/scorecard.md). Pure: no I/O.
+import { isAutoMergeReason } from '../task/history.ts';
 import { INSTALL_NOTE } from '../task/needs.ts';
 import type { ScorecardEvent, ScorecardTask } from './scorecard.ts';
 
@@ -46,8 +47,7 @@ export const INTERVENTIONS: Intervention[] = [
   {
     kind: 'manual_merge',
     why: 'auto-merge was on, yet the person merged the PR by hand',
-    is: (e, task) =>
-      e.type === 'merge' && task.auto_merge_from !== null && e.at >= task.auto_merge_from && !(e.reason ?? '').startsWith('auto-merged'),
+    is: (e, task) => e.type === 'merge' && task.auto_merge_from !== null && e.at >= task.auto_merge_from && !isAutoMergeReason(e.reason),
   },
 ];
 

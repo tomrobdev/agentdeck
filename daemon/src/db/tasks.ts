@@ -25,7 +25,7 @@ import type { CheckCounts, MergeMethod } from '../domain/pull-request/merge.ts';
 import { INTERRUPTED, type RunOutcome } from '../domain/run/run.ts';
 import { MAX_RESTARTS, type TaskEvent, type TaskStatus, fromStatuses, nextStatus, transition } from '../domain/task/lifecycle.ts';
 import type { LinkKind } from '../domain/task/link.ts';
-import type { PrEvent } from '../domain/task/history.ts';
+import { type PrEvent, prEventReason } from '../domain/task/history.ts';
 import type { TaskPlan } from '../domain/plan/plan.ts';
 import {
   EDITABLE_STATUSES,
@@ -538,14 +538,15 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     recordPr(id: number, e: PrEvent): boolean {
       const notOpenAndDone = and(or(isNull(tasks.pr_state), not(prOpen)), eq(tasks.status, 'done'));
       const isOpen = prOpen;
-      const [set, guard, reason]: [Partial<typeof tasks.$inferInsert>, SQL | undefined, string] =
+      const reason = prEventReason(e);
+      const [set, guard]: [Partial<typeof tasks.$inferInsert>, SQL | undefined] =
         e.type === 'opened'
-          ? [{ pr_url: e.url, pr_state: 'open' }, notOpenAndDone, `opened ${e.url}`]
+          ? [{ pr_url: e.url, pr_state: 'open' }, notOpenAndDone]
           : e.type === 'failed'
-            ? [{ pr_state: 'failed' }, notOpenAndDone, `could not open the PR: ${e.error}`]
+            ? [{ pr_state: 'failed' }, notOpenAndDone]
             : e.type === 'closed'
-              ? [{ pr_state: 'closed' }, isOpen, 'closed without merging']
-              : [{ pr_state: e.state }, and(isOpen, ne(tasks.pr_state, e.state)), `PR is ${e.state}`];
+              ? [{ pr_state: 'closed' }, isOpen]
+              : [{ pr_state: e.state }, and(isOpen, ne(tasks.pr_state, e.state))];
       return atomically(db, () => {
         const row = orm
           .update(tasks)
