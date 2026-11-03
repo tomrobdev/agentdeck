@@ -154,6 +154,12 @@ export function updateSettings(db: Db, patch: SettingsPatch): Settings {
   return getSettings(db);
 }
 
+/** POST /api/app/seen: the desktop app is running, so it shows desktop notifications for the next 90 s. Says whether they are on. */
+export function appSeen(db: Db, now = Date.now()): { desktop: boolean } {
+  db.setAppSeenAt(now);
+  return { desktop: db.notifySettings().desktop };
+}
+
 export function sendTestNotification(db: Db): Promise<void> {
   return notify(db, { kind: 'test', title: 'Test notification', body: 'Notifications from AgentDeck are working.' });
 }

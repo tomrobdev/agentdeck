@@ -373,6 +373,7 @@ stateDiagram-v2
 
 | Method | Path                               | Use case                                                           |
 | ------ | ---------------------------------- | ------------------------------------------------------------------ |
+| POST   | `/api/app/seen`                    | `actions.appSeen`                                                  |
 | GET    | `/api/daemon/health`               | `actions.daemonReport`                                             |
 | POST   | `/api/daemon/restart-now`          | `actions.restartNow`                                               |
 | POST   | `/api/daemon/restart`              | `actions.restartDaemon`                                            |
@@ -441,25 +442,26 @@ stateDiagram-v2
 
 <!-- generated:settings -->
 
-| Setting                  | Default                                                         | Meaning                                                                                          |
-| ------------------------ | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `five_hour_max`          | `0.85`                                                          | Governor: no new work above this share of the 5-hour window                                      |
-| `five_hour_soft`         | `0.6`                                                           | Governor: one task at a time above this share of the 5-hour window                               |
-| `max_concurrent`         | `2`                                                             | Slots: how many tasks may run at once                                                            |
-| `notify_desktop`         | `1`                                                             | Show desktop notifications                                                                       |
-| `notify_events`          | `done,blocked,failed,hold,paused,proposed,merged,checks_failed` | The notification kinds to send, comma-separated                                                  |
-| `ntfy_server`            | `https://ntfy.sh`                                               | The ntfy server                                                                                  |
-| `ntfy_topic`             | (empty)                                                         | The ntfy topic to push notifications to; empty for none                                          |
-| `pace_slack`             | `0.1`                                                           | Governor: how far ahead of the even weekly pace spending may run                                 |
-| `paused`                 | `1`                                                             | The daemon starts no new work while this is 1; it starts paused until someone resumes it         |
-| `planner_enabled`        | `1`                                                             | Let the planner propose tasks when a repo's queue runs dry                                       |
-| `planner_interval_hours` | `3`                                                             | The fewest hours between two planner runs on a repo                                              |
-| `planner_max_tasks`      | `3`                                                             | The most proposals one planner run keeps                                                         |
-| `planner_model`          | `sonnet`                                                        | The model the planner runs with                                                                  |
-| `pr_check_requested`     | `0`                                                             | Set to 1 to have the scheduler check open pull requests on its next tick                         |
-| `rate_limited_until`     | `0`                                                             | Unix seconds until which a run that hit the usage limit keeps new work from starting; 0 for none |
-| `reload_on_change`       | `0`                                                             | Restart the daemon onto new code when daemon/src changes and nothing is running                  |
-| `weekly_max`             | `0.8`                                                           | Governor: the share of the 7-day window the weekly allowance grows to                            |
+| Setting                  | Default                                                         | Meaning                                                                                                                                           |
+| ------------------------ | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `app_seen_at`            | `0`                                                             | When the desktop app last said it is running (ms since the epoch); within 90 s of it the app shows desktop notifications and osascript is skipped |
+| `five_hour_max`          | `0.85`                                                          | Governor: no new work above this share of the 5-hour window                                                                                       |
+| `five_hour_soft`         | `0.6`                                                           | Governor: one task at a time above this share of the 5-hour window                                                                                |
+| `max_concurrent`         | `2`                                                             | Slots: how many tasks may run at once                                                                                                             |
+| `notify_desktop`         | `1`                                                             | Show desktop notifications                                                                                                                        |
+| `notify_events`          | `done,blocked,failed,hold,paused,proposed,merged,checks_failed` | The notification kinds to send, comma-separated                                                                                                   |
+| `ntfy_server`            | `https://ntfy.sh`                                               | The ntfy server                                                                                                                                   |
+| `ntfy_topic`             | (empty)                                                         | The ntfy topic to push notifications to; empty for none                                                                                           |
+| `pace_slack`             | `0.1`                                                           | Governor: how far ahead of the even weekly pace spending may run                                                                                  |
+| `paused`                 | `1`                                                             | The daemon starts no new work while this is 1; it starts paused until someone resumes it                                                          |
+| `planner_enabled`        | `1`                                                             | Let the planner propose tasks when a repo's queue runs dry                                                                                        |
+| `planner_interval_hours` | `3`                                                             | The fewest hours between two planner runs on a repo                                                                                               |
+| `planner_max_tasks`      | `3`                                                             | The most proposals one planner run keeps                                                                                                          |
+| `planner_model`          | `sonnet`                                                        | The model the planner runs with                                                                                                                   |
+| `pr_check_requested`     | `0`                                                             | Set to 1 to have the scheduler check open pull requests on its next tick                                                                          |
+| `rate_limited_until`     | `0`                                                             | Unix seconds until which a run that hit the usage limit keeps new work from starting; 0 for none                                                  |
+| `reload_on_change`       | `0`                                                             | Restart the daemon onto new code when daemon/src changes and nothing is running                                                                   |
+| `weekly_max`             | `0.8`                                                           | Governor: the share of the 7-day window the weekly allowance grows to                                                                             |
 
 <!-- /generated -->
 

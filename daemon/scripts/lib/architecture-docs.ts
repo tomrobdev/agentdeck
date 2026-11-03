@@ -17,6 +17,8 @@ const SETTING_MEANINGS: Record<string, string> = {
   paused: 'The daemon starts no new work while this is 1; it starts paused until someone resumes it',
   rate_limited_until: 'Unix seconds until which a run that hit the usage limit keeps new work from starting; 0 for none',
   pr_check_requested: 'Set to 1 to have the scheduler check open pull requests on its next tick',
+  app_seen_at:
+    'When the desktop app last said it is running (ms since the epoch); within 90 s of it the app shows desktop notifications and osascript is skipped',
   reload_on_change: 'Restart the daemon onto new code when daemon/src changes and nothing is running',
   max_concurrent: 'Slots: how many tasks may run at once',
   notify_desktop: 'Show desktop notifications',

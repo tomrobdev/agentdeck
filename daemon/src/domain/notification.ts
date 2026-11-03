@@ -34,6 +34,17 @@ export interface NotifySettings {
   ntfy_server: string;
 }
 
+/** How long after the desktop app last said it is running it still shows desktop notifications itself. It says so every 30 s. */
+export const APP_SEEN_WINDOW_MS = 90_000;
+
+/**
+ * Whether the desktop app shows desktop notifications, in place of osascript: it does when it was seen in the last 90 s.
+ * `appSeenAt` and `now` are ms since the epoch; `appSeenAt` is null when the app was never seen.
+ */
+export function appDelivers(appSeenAt: number | null, now: number): boolean {
+  return appSeenAt !== null && now - appSeenAt < APP_SEEN_WINDOW_MS;
+}
+
 /** What a person is told when a task ends done, blocked or failed; null for any other status. `pr` is what opening its PR came to. */
 export function finalNotification(
   task: Pick<Task, 'id' | 'title' | 'status' | 'branch' | 'stop_reason'>,

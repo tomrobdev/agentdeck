@@ -834,6 +834,12 @@ export interface TestNotifyResult {
   ok: boolean;
 }
 
+/** POST /api/app/seen: the desktop app says it is running, and shows desktop notifications for the next 90 s. */
+export interface AppSeenResult {
+  /** Desktop notifications are on. */
+  desktop: boolean;
+}
+
 // ---- Insights
 
 /** A Wilson 95% interval. */
