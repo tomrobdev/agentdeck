@@ -78,16 +78,6 @@ export function addReviewComment(
   return requireReview(db, reviewId);
 }
 
-/** Change the text of a draft's comment. */
-export function editReviewComment(db: Db, commentId: number, input: { body: string }): ReviewWithComments {
-  const review = reviewOf(db, commentId);
-  refuse(draftError(review));
-  const body = text(object(input), 'body');
-  if (!body) throw new ActionError('body is required');
-  db.editComment(commentId, body);
-  return requireReview(db, review.id);
-}
-
 /** Delete a draft's comment. */
 export function deleteReviewComment(db: Db, commentId: number): ReviewWithComments {
   const review = reviewOf(db, commentId);
@@ -122,13 +112,6 @@ function moveComment(db: Db, commentId: number, action: CommentAction, answer?: 
   const to = nextCommentState(comment.state, action) as NonNullable<ReturnType<typeof nextCommentState>>;
   if (!db.moveComment(commentId, commentStatesFor(action), to, answer)) throw new ActionError(`the comment is no longer ${comment.state}`);
   return requireReview(db, review.id);
-}
-
-/** Answer a comment: it becomes `answered` until someone resolves it. */
-export function answerReviewComment(db: Db, commentId: number, input: { answer: string }): ReviewWithComments {
-  const answer = text(object(input), 'answer');
-  if (!answer) throw new ActionError('answer is required');
-  return moveComment(db, commentId, 'answer', answer);
 }
 
 export const resolveReviewComment = (db: Db, commentId: number): ReviewWithComments => moveComment(db, commentId, 'resolve');
