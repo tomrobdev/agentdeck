@@ -128,7 +128,7 @@ app/      Tauri 2 + Vue 3 dashboard
 pnpm check:fast                                    # format check + typecheck + db:check + tests (the repo's test_cmd)
 pnpm check                                         # check:fast + crash test (CRASH_ITERATIONS, default 10); what CI runs
 pnpm format                                        # Prettier, whole repo
-pnpm check:rust                                    # cargo fmt, clippy and test on the Tauri shell (offline)
+pnpm check:rust                                    # cargo fmt, clippy and test on the Tauri shell (offline; not in CI, which has no crate cache or Tauri system libraries)
 ```
 
 ## Milestones
