@@ -181,7 +181,7 @@ async function jump(path: string) {
 </script>
 
 <template>
-  <div class="flex min-h-0 flex-1 flex-col">
+  <div class="flex flex-col">
     <p v-if="error" class="py-2 text-muted">{{ error }}</p>
     <p v-else-if="!changes" class="py-2 text-muted">Loading changes…</p>
     <p v-else-if="!files.length" class="py-2 text-muted">
@@ -211,8 +211,9 @@ async function jump(path: string) {
           <button :class="{ on: split }" @click="split = true">Split</button>
         </div>
       </div>
-      <div class="flex min-h-0 flex-1 gap-4">
-        <aside class="min-h-0 w-65 flex-none pb-4 max-md:hidden">
+      <div class="flex items-start gap-4">
+        <!-- The page scrolls as one; the tree sticks beside the diffs at the scroller's height (TaskPage makes it a size container). -->
+        <aside class="sticky top-0 h-[calc(100cqh-1.5rem)] min-h-0 w-65 flex-none pb-4 max-md:hidden">
           <FileTree
             :load="loadTree"
             :selected="current"
@@ -222,14 +223,27 @@ async function jump(path: string) {
             @select="jump"
           />
         </aside>
-        <div class="min-w-0 flex-1 overflow-y-auto pb-6">
+        <div class="min-w-0 flex-1">
           <section v-for="f in shown" :key="f.path" :ref="sectionRef" class="card mb-3" :data-path="f.path">
             <header class="card-head sticky top-0 z-[1] px-2.5 py-1.5">
               <button
-                class="border-0 bg-transparent px-1 py-0 text-muted"
+                class="grid size-7 flex-none place-items-center rounded border-0 bg-transparent p-0 text-muted hover:bg-panel-2 hover:text-text"
+                :title="collapsed.has(f.path) ? 'Expand' : 'Collapse'"
+                :aria-expanded="!collapsed.has(f.path)"
                 @click="collapsed.has(f.path) ? collapsed.delete(f.path) : collapsed.add(f.path)"
               >
-                {{ collapsed.has(f.path) ? '▸' : '▾' }}
+                <svg
+                  viewBox="0 0 16 16"
+                  class="size-4 transition-transform"
+                  :class="collapsed.has(f.path) && '-rotate-90'"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M4 6l4 4 4-4" />
+                </svg>
               </button>
               <span class="badge" :class="`b-${f.status}`" :title="CHANGE_LABEL[f.status]">{{ f.status }}</span>
               <span class="truncate font-mono text-sm leading-[normal]">

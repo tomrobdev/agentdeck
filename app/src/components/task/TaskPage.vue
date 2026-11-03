@@ -141,7 +141,12 @@ const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel
       The planner suggested this task. Read the prompt, then approve it to queue it or reject it.
     </div>
 
-    <div class="flex min-h-0 flex-1 gap-7 px-6 pt-4 max-md:flex-col" :class="wide ? 'overflow-hidden pb-0' : 'overflow-y-auto pb-6'">
+    <div
+      class="flex min-h-0 flex-1 gap-7 px-6 pt-4 max-md:flex-col"
+      :class="
+        tab === 'code' ? 'overflow-hidden pb-0' : tab === 'changes' ? 'overflow-y-auto pb-6 [container-type:size]' : 'overflow-y-auto pb-6'
+      "
+    >
       <div class="flex min-w-0 flex-1 flex-col">
         <OverviewTab
           v-if="tab === 'overview'"

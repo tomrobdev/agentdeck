@@ -107,6 +107,13 @@ const splitHunks = computed(() => hunks.value.map((h) => ({ header: h.header, ro
       </tbody>
     </table>
     <table v-else>
+      <!-- A fixed table takes its widths from the first row, a hunk header with a 3-column cell: name them here. -->
+      <colgroup>
+        <col class="no-col" />
+        <col />
+        <col class="no-col" />
+        <col />
+      </colgroup>
       <tbody v-for="(h, hi) in splitHunks" :key="hi">
         <tr class="hunk">
           <td class="no" />
@@ -161,15 +168,15 @@ td {
   user-select: none;
   white-space: nowrap;
 }
-.split .no {
-  width: 48px;
+.no-col {
+  width: 64px;
 }
 .code {
   white-space: pre;
 }
 .split .code {
   white-space: pre-wrap;
-  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 .sign {
   display: inline-block;
