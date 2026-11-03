@@ -23,6 +23,7 @@ export type { Scheduler } from './scheduler/scheduler.ts';
 export * from './settings.ts';
 export * from './task/task-views.ts';
 export * from './task/tasks.ts';
+export { installNeeds } from './task/install-needs.ts';
 export { promptWarnings } from './task/prompt-paths.ts';
 export { linkTasks, unlinkTasks } from './task/links.ts';
 export type { TaskStatus } from '../domain/task/lifecycle.ts';
