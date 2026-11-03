@@ -3,6 +3,7 @@
 import type { AutoMergeView, Needs, Status, TaskStatus, TaskSummary } from '../api';
 import { type PersonEvent, personEvents } from '../../../daemon/src/domain/task/lifecycle.ts';
 import { DECISION_STATES, FILTER_STATES, SORT_OPTIONS, filterTasks } from '../../../daemon/src/domain/task/listing.ts';
+import { type UnblockQuestion, readQuestion } from '../../../daemon/src/domain/run/unblock.ts';
 import { canInstallWith, depsRequest, readNeeds as readNeedsJson } from '../../../daemon/src/domain/task/needs.ts';
 import {
   STATUS_GROUPS,
@@ -120,6 +121,13 @@ export const quickRetry = (t: Pick<TaskSummary, 'status' | 'waiting' | 'pr_state
 /** What a blocked task's worker said it needs; null for any other task or an unreadable value. */
 export const readNeeds = (t: Pick<TaskSummary, 'status' | 'needs'>): Needs | null =>
   t.status === 'blocked' ? readNeedsJson(t.needs ?? null) : null;
+
+/** What an unblock run asked about a blocked task; null for any other task or an unreadable value. */
+export const readTaskQuestion = (t: Pick<TaskSummary, 'status' | 'question'>): UnblockQuestion | null =>
+  t.status === 'blocked' ? readQuestion(t.question ?? null) : null;
+
+/** The retry note for an option a person picked from an unblock run's question. */
+export const answerNote = (q: UnblockQuestion, option: string): string => `${q.question} ${option}`;
 
 /** The package names of a deps request, without its `--dev` flag. */
 export const depsPackages = (n: Needs) => depsRequest(n.items).packages;

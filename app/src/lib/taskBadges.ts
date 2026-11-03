@@ -7,6 +7,7 @@
 // Free of the dashboard's other modules so the daemon's tests can import it (daemon/test/task-badges.test.ts). What the
 // daemon decides (needs, a conflict, auto-merge, merge requests) comes from the API; this only picks and words it.
 import type { AutoMergeView, TaskSummary } from '../../../daemon/src/api/contract.ts';
+import { readQuestion } from '../../../daemon/src/domain/run/unblock.ts';
 import { readNeeds } from '../../../daemon/src/domain/task/needs.ts';
 import { isReview } from '../../../daemon/src/domain/task/stage.ts';
 import { describeLive, describeMergeRequest, describeSync, describeWait } from '../api/format.ts';
@@ -63,6 +64,7 @@ type Viewed = Pick<
   | 'pr_state'
   | 'checks'
   | 'needs'
+  | 'question'
   | 'auto_merge_view'
   | 'merge_request'
   | 'conflicting'
@@ -109,6 +111,8 @@ export function taskBadges(t: Viewed, opts: BadgeOptions = {}): Badges {
   const attention: AttentionChip[] = [];
   const needs = t.status === 'blocked' ? readNeeds(t.needs ?? null) : null;
   if (needs) attention.push({ label: `needs ${needs.kind}`, title: `The worker asked for: ${needs.items.join(' ')}`, tone: 'blocked' });
+  if (t.status === 'blocked' && readQuestion(t.question ?? null))
+    attention.push({ label: 'asks you', title: 'An unblock run left a question for you on the task page', tone: 'blocked' });
   const am = t.auto_merge_view;
   if (t.conflicting && t.pr_state === 'open')
     attention.push({ label: 'conflicts', title: 'The PR conflicts with the base branch: sync the task to settle it', tone: 'failed' });
