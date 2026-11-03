@@ -6,6 +6,7 @@ import { canFixChecks } from '../../lib/taskView';
 import { useActions } from '../../composables/useActions';
 import { openExternal } from '../../platform/native';
 import Markdown from '../files/Markdown.vue';
+import Tooltip from '../ui/Tooltip.vue';
 
 // The pull request as it was opened: its state and link, its checks, and the summary the worker ended with (the PR body's first part).
 const props = defineProps<{ task: TaskDetail; isPath?: (p: string) => boolean }>();
@@ -52,7 +53,11 @@ async function fixChecks() {
       </div>
       <ul class="m-0 flex list-none flex-col gap-1 p-0">
         <li v-for="c in checks" :key="c.name" class="flex items-center gap-2" :data-check-state="c.state">
-          <span class="w-4 flex-none text-center" :class="ICON[c.state].cls" :title="ICON[c.state].label">{{ ICON[c.state].icon }}</span>
+          <Tooltip :text="`${c.name}\n${ICON[c.state].label}`">
+            <span class="w-4 flex-none text-center" :class="ICON[c.state].cls" tabindex="0" :aria-label="ICON[c.state].label">{{
+              ICON[c.state].icon
+            }}</span>
+          </Tooltip>
           <span class="min-w-0 flex-1 truncate" :title="c.name">{{ c.name }}</span>
           <span class="flex-none text-muted">{{ checkDuration(c) }}</span>
           <button v-if="c.url" class="btn-ghost flex-none text-accent" @click="openExternal(c.url)">↗</button>
