@@ -19,6 +19,8 @@ import Accordion from '../ui/Accordion.vue';
 import AccordionItem from '../ui/AccordionItem.vue';
 import AccordionTrigger from '../ui/AccordionTrigger.vue';
 import Modal from '../ui/Modal.vue';
+import NumberInput from '../ui/NumberInput.vue';
+import Switch from '../ui/Switch.vue';
 
 const props = defineProps<{ repos: Repo[] }>();
 defineEmits<{ close: [] }>();
@@ -206,10 +208,7 @@ async function confirmDelete() {
               <span>Test command</span>
               <input v-model="form.testCmd" placeholder="npm test" />
             </label>
-            <label class="flex flex-none items-center gap-2 self-end pb-2">
-              <input type="checkbox" v-model="form.autoApprove" />
-              Auto-approve planner tasks
-            </label>
+            <Switch v-model="form.autoApprove" class="flex-none self-end pb-2">Auto-approve planner tasks</Switch>
           </div>
           <label class="field flex-1">
             <span>Merge method <span class="muted">(when you merge a PR from the app)</span></span>
@@ -217,39 +216,36 @@ async function confirmDelete() {
               <option v-for="m in MERGE_METHODS" :key="m.key" :value="m.key">{{ m.label }} · {{ m.hint }}</option>
             </select>
           </label>
-          <label class="flex flex-none items-center gap-2">
-            <input type="checkbox" v-model="form.autoResolve" />
+          <Switch v-model="form.autoResolve" class="flex-none">
             <span
               >Resolve merge conflicts automatically
               <span class="muted"
                 >(a claude run when a branch or an open PR conflicts with the base; clean merges always happen)</span
               ></span
             >
-          </label>
-          <label class="flex flex-none items-center gap-2">
-            <input type="checkbox" v-model="form.autoMerge" />
+          </Switch>
+          <Switch v-model="form.autoMerge" class="flex-none">
             <span
               >Merge PRs automatically
               <span class="muted">(once tests and checks pass; planner proposals only when you approve them; turn off per task)</span></span
             >
-          </label>
+          </Switch>
           <div v-if="form.autoMerge" class="flex gap-3">
             <label class="field w-28 flex-none">
               <span>Max lines</span>
-              <input v-model.number="form.autoMergeMaxLines" type="number" min="1" />
+              <NumberInput v-model="form.autoMergeMaxLines" />
             </label>
             <label class="field flex-1">
               <span>Paths that need you <span class="muted">(prefixes)</span></span>
               <input v-model="form.autoMergeSkip" placeholder=".github/, db/schema.ts" />
             </label>
           </div>
-          <label class="flex flex-none items-center gap-2">
-            <input type="checkbox" v-model="form.sandbox" />
+          <Switch v-model="form.sandbox" class="flex-none">
             <span
               >Run the agent's shell commands in the sandbox
               <span class="muted">(confined to the worktree and the hosts below; docs/adr/0001-worker-sandbox.md)</span></span
             >
-          </label>
+          </Switch>
           <label v-if="form.sandbox" class="field flex-1">
             <span>Network hosts <span class="muted">(sandboxed commands may reach these; empty = none)</span></span>
             <input v-model="form.network" placeholder="registry.npmjs.org, github.com" />

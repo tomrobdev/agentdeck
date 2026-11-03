@@ -5,6 +5,8 @@ import { type LinkKind, type TaskDetail, type TaskLink, type TaskSummary, api, t
 import { openTask } from '../../router';
 import { statusLabel } from '../../lib/taskView';
 import { useActions } from '../../composables/useActions';
+import Combobox from '../ui/Combobox.vue';
+import SegmentedControl from '../ui/SegmentedControl.vue';
 import StatusIcon from '../ui/StatusIcon.vue';
 
 // What this task depends on (builds on, after) and what depends on it, each with where it stands.
@@ -116,22 +118,31 @@ const heading = 'px-3.5 pt-2 pb-0.5 text-sm text-muted';
     </header>
 
     <form v-if="adding" class="flex flex-col gap-1.5 border-b border-border px-3.5 py-2" @submit.prevent="submit">
-      <div class="flex items-center gap-1.5">
-        <input v-model="query" class="min-w-0 flex-1 px-1.5 py-0.5" placeholder="#id or title" autofocus aria-label="Task to link" />
-        <select v-model="kind" class="px-1.5 py-0.5" aria-label="Kind of link">
-          <option value="builds_on">Builds on</option>
-          <option value="after">After</option>
-        </select>
+      <div class="flex items-start gap-1.5">
+        <Combobox
+          v-model:search="query"
+          label="Task to link"
+          placeholder="#id or title"
+          :options="matches.map((t) => ({ value: t.id, label: `#${t.id} ${t.title}` }))"
+          @pick="add"
+        >
+          <template #option="{ option }">
+            <StatusIcon v-if="byId.get(option.value)" :task="byId.get(option.value)!" />
+            <span class="font-mono text-muted">#{{ option.value }}</span>
+            <span class="truncate">{{ byId.get(option.value)?.title }}</span>
+          </template>
+        </Combobox>
+        <SegmentedControl
+          v-model="kind"
+          label="Kind of link"
+          :options="[
+            { value: 'builds_on', label: 'Builds on' },
+            { value: 'after', label: 'After' },
+          ]"
+        />
         <button type="submit" class="px-2 py-0.5">Link</button>
         <button type="button" class="px-2 py-0.5" @click="adding = false">Cancel</button>
       </div>
-      <ul v-if="matches.length" class="m-0 flex list-none flex-col p-0">
-        <li v-for="t in matches" :key="t.id">
-          <button type="button" class="btn-ghost flex w-full items-center gap-2 py-0.5 text-left hover:text-accent" @click="add(t.id)">
-            <StatusIcon :task="t" /> <span class="font-mono text-muted">#{{ t.id }}</span> <span class="truncate">{{ t.title }}</span>
-          </button>
-        </li>
-      </ul>
     </form>
     <p v-if="error" class="m-0 px-3.5 py-2 text-blocked" role="alert">{{ error }}</p>
 

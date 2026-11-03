@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, nextTick } from 'vue';
 import { type TaskDetail, ago, api } from '../../api';
 import AutoMergeMark from '../ui/AutoMergeMark.vue';
 import { openExternal, useCopy } from '../../platform/native';
 import { PRIORITY_LEVELS, canEdit, priorityLevel, statusLabel } from '../../lib/taskView';
 import { useActions } from '../../composables/useActions';
 import { useTerminal } from '../../composables/useTerminal';
+import InlineEdit from '../ui/InlineEdit.vue';
 import PriorityIcon from '../ui/PriorityIcon.vue';
 import StatusIcon from '../ui/StatusIcon.vue';
 
@@ -14,8 +15,6 @@ const props = defineProps<{ task: TaskDetail }>();
 const { run, flash } = useActions();
 
 const editable = computed(() => canEdit(props.task));
-const editing = ref<'priority' | 'model' | 'max_turns' | null>(null);
-const draft = ref('');
 const { copied, copy } = useCopy();
 const terminal = useTerminal();
 
@@ -24,17 +23,11 @@ function openWorktree() {
   if (dir) run(() => terminal.open(`#${props.task.id} ${props.task.title}`, dir));
 }
 
-function edit(field: 'priority' | 'model' | 'max_turns') {
-  if (!editable.value) return;
-  editing.value = field;
-  draft.value = String(props.task[field]);
-}
-
-async function save() {
-  const field = editing.value;
-  editing.value = null;
-  if (!field || draft.value.trim() === String(props.task[field])) return;
-  await run(() => api.editTask(props.task.id, { [field]: field === 'model' ? draft.value.trim() : Number(draft.value) }));
+// An edit is saved from the field's own value; a refused one leaves the task unchanged, so the saved value shows again.
+async function save(field: 'priority' | 'model' | 'max_turns', text: string) {
+  const value = text.trim();
+  if (value === String(props.task[field])) return;
+  await run(() => api.editTask(props.task.id, { [field]: field === 'model' ? value : Number(value) }));
 }
 
 // Auto-merge: the task's own setting, or its repo's. Moot once the PR is merged or closed, or the task cancelled.
@@ -44,12 +37,16 @@ const AUTO_MERGE = [
   { label: 'On for this task', stored: 1, value: true },
   { label: 'Off for this task', stored: 0, value: false },
 ] as const;
-async function setAutoMerge(index: number) {
-  const { value: auto_merge } = AUTO_MERGE[index];
+const savedAutoMerge = computed(() => AUTO_MERGE.findIndex((o) => o.stored === (props.task.auto_merge ?? null)));
+// The select shows the saved value: after a save that failed it goes back to it, instead of keeping the refused choice.
+async function setAutoMerge(select: HTMLSelectElement) {
+  const { value: auto_merge } = AUTO_MERGE[select.selectedIndex];
   await run(async () => {
     const res = await api.autoMerge(props.task.id, { auto_merge });
     if (res.label_error) flash(`Saved, but the PR's label could not be changed: ${res.label_error}`);
   });
+  await nextTick();
+  select.selectedIndex = savedAutoMerge.value;
 }
 
 const AUTO_MERGE_TEXT = { off: 'text-muted', on: 'text-muted', merge: 'text-done', wait: 'text-blocked', never: 'text-failed' } as const;
@@ -74,20 +71,20 @@ const input = 'px-1.5 py-0.5';
     </div>
     <div :class="prop">
       <div :class="name">Priority</div>
-      <div v-if="editing === 'priority'" :class="row">
-        <input
-          v-model="draft"
-          :class="input"
-          type="number"
-          autofocus
-          @keydown.enter="save"
-          @keydown.esc.stop="editing = null"
-          @blur="save"
-        />
-      </div>
-      <button v-else :class="[rowButton, editable && rowButtonEditable]" :disabled="!editable" @click="edit('priority')">
+      <InlineEdit
+        v-if="editable"
+        label="Priority"
+        type="number"
+        :value="String(task.priority)"
+        :preview-class="`${rowButton} ${rowButtonEditable} cursor-pointer`"
+        :input-class="input"
+        @submit="(v) => save('priority', v)"
+      >
         <PriorityIcon :priority="task.priority" /> {{ levelLabel }} <span class="text-muted">{{ task.priority }}</span>
-      </button>
+      </InlineEdit>
+      <div v-else :class="row">
+        <PriorityIcon :priority="task.priority" /> {{ levelLabel }} <span class="text-muted">{{ task.priority }}</span>
+      </div>
     </div>
     <div :class="prop">
       <div :class="name">Repo</div>
@@ -95,12 +92,15 @@ const input = 'px-1.5 py-0.5';
     </div>
     <div :class="prop">
       <div :class="name">Model</div>
-      <div v-if="editing === 'model'" :class="row">
-        <input v-model="draft" :class="input" autofocus @keydown.enter="save" @keydown.esc.stop="editing = null" @blur="save" />
-      </div>
-      <button v-else :class="[rowButton, editable && rowButtonEditable]" :disabled="!editable" @click="edit('model')">
-        {{ task.model }}
-      </button>
+      <InlineEdit
+        v-if="editable"
+        label="Model"
+        :value="task.model"
+        :preview-class="`${rowButton} ${rowButtonEditable} cursor-pointer`"
+        :input-class="input"
+        @submit="(v) => save('model', v)"
+      />
+      <div v-else :class="row">{{ task.model }}</div>
     </div>
     <div :class="prop">
       <div :class="name">Attempts</div>
@@ -108,20 +108,16 @@ const input = 'px-1.5 py-0.5';
     </div>
     <div :class="prop">
       <div :class="name">Max turns</div>
-      <div v-if="editing === 'max_turns'" :class="row">
-        <input
-          v-model="draft"
-          :class="input"
-          type="number"
-          autofocus
-          @keydown.enter="save"
-          @keydown.esc.stop="editing = null"
-          @blur="save"
-        />
-      </div>
-      <button v-else :class="[rowButton, editable && rowButtonEditable]" :disabled="!editable" @click="edit('max_turns')">
-        {{ task.max_turns }}
-      </button>
+      <InlineEdit
+        v-if="editable"
+        label="Max turns"
+        type="number"
+        :value="String(task.max_turns)"
+        :preview-class="`${rowButton} ${rowButtonEditable} cursor-pointer`"
+        :input-class="input"
+        @submit="(v) => save('max_turns', v)"
+      />
+      <div v-else :class="row">{{ task.max_turns }}</div>
     </div>
     <div v-if="task.pr_url" :class="prop">
       <div :class="name">Pull request</div>
@@ -132,9 +128,10 @@ const input = 'px-1.5 py-0.5';
       <select
         class="w-full px-1.5 py-0.5"
         aria-label="Auto-merge"
-        @change="setAutoMerge(($event.target as HTMLSelectElement).selectedIndex)"
+        :value="savedAutoMerge"
+        @change="setAutoMerge($event.target as HTMLSelectElement)"
       >
-        <option v-for="o in AUTO_MERGE" :key="o.label" :selected="(task.auto_merge ?? null) === o.stored">{{ o.label }}</option>
+        <option v-for="(o, i) in AUTO_MERGE" :key="o.label" :value="i">{{ o.label }}</option>
       </select>
       <div v-if="task.auto_merge_view" class="mt-1.5 flex flex-col gap-1 text-sm" data-auto-merge-detail>
         <AutoMergeMark :view="task.auto_merge_view" class="self-start" />
