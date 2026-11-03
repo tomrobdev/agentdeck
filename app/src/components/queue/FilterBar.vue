@@ -4,7 +4,11 @@ import type { TaskSummary } from '../../api';
 import { useHotkeys } from '../../composables/useHotkeys';
 import { FILTER_STATES, type Filters, hasFilters } from '../../lib/taskView';
 import Chip from '../ui/Chip.vue';
-import Popover from '../ui/Popover.vue';
+import Menu from '../ui/Menu.vue';
+import MenuCheckboxItem from '../ui/MenuCheckboxItem.vue';
+import MenuLabel from '../ui/MenuLabel.vue';
+import MenuRadioGroup from '../ui/MenuRadioGroup.vue';
+import MenuRadioItem from '../ui/MenuRadioItem.vue';
 
 const props = defineProps<{ tasks: TaskSummary[] }>();
 const filters = defineModel<Filters>({ required: true });
@@ -39,36 +43,32 @@ function leaveSearch() {
     <Chip v-if="filters.source" removable remove-label="Remove source filter" class="max-w-[320px]" @remove="set({ source: null })">
       <span class="truncate"><span class="muted">Source is</span> {{ filters.source }}</span>
     </Chip>
-    <Popover>
+    <Menu label="Add a filter">
       <template #trigger><button class="border-dashed bg-transparent px-2 py-px text-sm text-muted">+ Filter</button></template>
-      <div class="px-2 pt-2 pb-0.5 text-xs tracking-[0.05em] text-muted uppercase">Status</div>
-      <label
+      <MenuLabel>Status</MenuLabel>
+      <MenuCheckboxItem
         v-for="s in FILTER_STATES"
         :key="s.key"
-        class="flex cursor-pointer items-center gap-2 rounded-[5px] px-2 py-[3px] hover:bg-panel-2"
+        :checked="filters.states.includes(s.key)"
+        @update:checked="toggle('states', s.key)"
       >
-        <input class="m-0" type="checkbox" :checked="filters.states.includes(s.key)" @change="toggle('states', s.key)" />
         <span class="flex-1">{{ s.label }}</span
         ><span class="text-sm text-muted">{{ stateCounts[s.key] }}</span>
-      </label>
+      </MenuCheckboxItem>
       <template v-if="repos.length > 1">
-        <div class="px-2 pt-2 pb-0.5 text-xs tracking-[0.05em] text-muted uppercase">Repo</div>
-        <label v-for="r in repos" :key="r" class="flex cursor-pointer items-center gap-2 rounded-[5px] px-2 py-[3px] hover:bg-panel-2">
-          <input class="m-0" type="checkbox" :checked="filters.repos.includes(r)" @change="toggle('repos', r)" />
+        <MenuLabel>Repo</MenuLabel>
+        <MenuCheckboxItem v-for="r in repos" :key="r" :checked="filters.repos.includes(r)" @update:checked="toggle('repos', r)">
           <span class="flex-1">{{ r }}</span
           ><span class="text-sm text-muted">{{ repoCounts[r] }}</span>
-        </label>
+        </MenuCheckboxItem>
       </template>
-      <div class="px-2 pt-2 pb-0.5 text-xs tracking-[0.05em] text-muted uppercase">Source</div>
-      <label
-        v-for="src in ['manual', 'planner'] as const"
-        :key="src"
-        class="flex cursor-pointer items-center gap-2 rounded-[5px] px-2 py-[3px] hover:bg-panel-2"
-      >
-        <input class="m-0" type="radio" :checked="filters.source === src" @change="set({ source: src })" />
-        <span class="flex-1">{{ src === 'manual' ? 'Added by you' : 'Planner' }}</span>
-      </label>
-    </Popover>
+      <MenuLabel>Source</MenuLabel>
+      <MenuRadioGroup :model-value="filters.source ?? ''" @update:model-value="set({ source: $event as 'manual' | 'planner' })">
+        <MenuRadioItem v-for="src in ['manual', 'planner'] as const" :key="src" :value="src" keep-open>
+          <span class="flex-1">{{ src === 'manual' ? 'Added by you' : 'Planner' }}</span>
+        </MenuRadioItem>
+      </MenuRadioGroup>
+    </Menu>
     <button
       v-if="hasFilters(filters)"
       class="border-0 bg-transparent px-2 py-px text-sm text-muted"
