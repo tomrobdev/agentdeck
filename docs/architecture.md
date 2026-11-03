@@ -1,6 +1,6 @@
 # Architecture
 
-A map of AgentDeck's code. The blocks between `<!-- generated:NAME -->` and `<!-- /generated -->` are written by `pnpm run docs` from the code, and `pnpm test` fails when they are stale. The two sections written by hand are checked too: every file in `daemon/src/adapters/` must be named in the system context, and every identifier in backticks in them must be exported from `daemon/src`. The rules the layers follow are in CLAUDE.md.
+A map of AgentDeck's code. The blocks between `<!-- generated:NAME -->` and `<!-- /generated -->` are written by `pnpm docs:gen` from the code (Claude's edit hook runs it after each edit under `daemon/src`), and `pnpm test` fails when they are stale. The two sections written by hand are checked too: every file in `daemon/src/adapters/` must be named in the system context, and every identifier in backticks in them must be exported from `daemon/src`. The rules the layers follow are in CLAUDE.md.
 
 ## System context
 
@@ -98,7 +98,7 @@ sequenceDiagram
 
 ## Layers
 
-Imports between the layers of `daemon/src`, with the number of imports on each edge.
+Which layers of `daemon/src` import which.
 
 <!-- generated:layers -->
 
@@ -113,32 +113,32 @@ flowchart TD
   daemon_ts["daemon.ts"]
   db["db"]
   domain["domain"]
-  adapters -->|4| config_ts
-  adapters -->|11| domain
-  api -->|9| application
-  api -->|2| config_ts
-  api -->|4| db
-  api -->|5| domain
-  application -->|47| adapters
-  application -->|8| config_ts
-  application -->|34| db
-  application -->|127| domain
-  cli_ts -->|1| application
-  cli_ts -->|8| cli
-  cli_ts -->|1| db
-  cli -->|7| application
-  cli -->|3| config_ts
-  cli -->|1| daemon_ts
-  cli -->|2| db
-  cli -->|18| domain
-  daemon_ts -->|2| adapters
-  daemon_ts -->|1| api
-  daemon_ts -->|2| application
-  daemon_ts -->|1| config_ts
-  daemon_ts -->|1| db
-  daemon_ts -->|1| domain
-  db -->|3| config_ts
-  db -->|28| domain
+  adapters --> config_ts
+  adapters --> domain
+  api --> application
+  api --> config_ts
+  api --> db
+  api --> domain
+  application --> adapters
+  application --> config_ts
+  application --> db
+  application --> domain
+  cli_ts --> application
+  cli_ts --> cli
+  cli_ts --> db
+  cli --> application
+  cli --> config_ts
+  cli --> daemon_ts
+  cli --> db
+  cli --> domain
+  daemon_ts --> adapters
+  daemon_ts --> api
+  daemon_ts --> application
+  daemon_ts --> config_ts
+  daemon_ts --> db
+  daemon_ts --> domain
+  db --> config_ts
+  db --> domain
 ```
 
 <!-- /generated -->

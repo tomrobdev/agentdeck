@@ -1,4 +1,5 @@
-// pnpm run docs: rewrites the generated blocks of docs/architecture.md from the code.
+// pnpm docs:gen: rewrites the generated blocks of docs/architecture.md from the code. The edit hook
+// (scripts/edit-hook.mjs) runs it after every Claude edit under daemon/src, so it rarely needs running by hand.
 import { writeFileSync } from 'node:fs';
 import { DOCS_PATH, readDocs, renderDocs } from './lib/architecture-docs.ts';
 

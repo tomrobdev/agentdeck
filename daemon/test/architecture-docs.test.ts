@@ -10,7 +10,7 @@ const SRC = join(import.meta.dirname, '../src');
 
 test('docs/architecture.md matches the code', () => {
   const docs = readDocs();
-  assert.ok(renderDocs(docs) === docs, 'docs/architecture.md is stale: run `pnpm run docs` and commit the result');
+  assert.ok(renderDocs(docs) === docs, 'docs/architecture.md is stale: run `pnpm docs:gen` and commit the result');
 });
 
 test('docs: generating twice changes nothing', () => {

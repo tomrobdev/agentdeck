@@ -66,7 +66,8 @@ function layers(sources: Source[]): string {
   return mermaid([
     'flowchart TD',
     ...[...names].sort().map((n) => `  ${ident(n)}["${n}"]`),
-    ...edges.map((e) => `  ${ident(e.from)} -->|${e.n}| ${ident(e.to)}`),
+    // No counts on the edges: they changed with almost every PR and said little.
+    ...edges.map((e) => `  ${ident(e.from)} --> ${ident(e.to)}`),
   ]);
 }
 

@@ -28,7 +28,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/prettier-hook.mjs\"",
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/edit-hook.mjs\"",
             "timeout": 20
           }
         ]
