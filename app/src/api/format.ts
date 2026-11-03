@@ -116,6 +116,18 @@ export function taskList(ids: number[]): string {
   return tags.length < 2 ? tags.join('') : `${tags.slice(0, -1).join(', ')} and ${tags[tags.length - 1]}`;
 }
 
+/** A run's name: "Run 2", or the kind of run that uses no attempt. */
+export function runLabel(r: Pick<Run, 'kind' | 'attempt'>): string {
+  return r.kind === 'resolve' ? 'Resolve conflicts' : r.kind === 'unblock' ? 'Unblock run' : `Run ${r.attempt}`;
+}
+
+/** What a run that uses no attempt did, for a tooltip; undefined for a work run. */
+export function runHint(r: Pick<Run, 'kind'>): string | undefined {
+  if (r.kind === 'resolve') return 'Merged the base branch into the branch; uses no attempt';
+  if (r.kind === 'unblock') return 'Read why the task blocked, then retried it with a note or asked you; uses no attempt';
+  return undefined;
+}
+
 /** How long a run took, or has taken so far: "45s", "12m", "1.4h". */
 export function runDuration(r: Run): string {
   const secs = ((r.ended_at ? parseTime(r.ended_at) : Date.now()) - parseTime(r.started_at)) / 1000;

@@ -3,7 +3,7 @@ import { computed, ref, toRef, watch } from 'vue';
 import { type TaskDetail, ago, api, describeWait } from '../../api';
 import { useHotkeys } from '../../composables/useHotkeys';
 import { type TaskTab, go, openTask } from '../../router';
-import { readNeeds } from '../../lib/taskView';
+import { readNeeds, readTaskQuestion } from '../../lib/taskView';
 import { useActions } from '../../composables/useActions';
 import { useChanges } from '../../composables/useChanges';
 import { useReviews } from '../../composables/useReviews';
@@ -15,6 +15,7 @@ import TaskStatusLine from '../ui/TaskStatusLine.vue';
 import ChangesTab from './ChangesTab.vue';
 import CodeTab from './CodeTab.vue';
 import NeedsCallout from './NeedsCallout.vue';
+import QuestionCallout from './QuestionCallout.vue';
 import OverviewTab from './OverviewTab.vue';
 import ReviewBar from './ReviewBar.vue';
 import RunsTab from './RunsTab.vue';
@@ -58,6 +59,7 @@ const openFile = (path: string, line: number | null = null) =>
 
 const s = computed(() => props.task.status);
 const needs = computed(() => readNeeds(props.task));
+const question = computed(() => readTaskQuestion(props.task));
 
 // Dialogs hold the Escape key themselves (useHotkeys skips it while one is open).
 useHotkeys({ Escape: () => go({ name: 'queue' }) });
@@ -112,7 +114,8 @@ const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel
       @submitted="requesting = false"
     />
 
-    <NeedsCallout v-if="needs" :task="task" :needs="needs" @retry="emit('act', 'retry')" />
+    <QuestionCallout v-if="question" :task="task" :question="question" />
+    <NeedsCallout v-else-if="needs" :task="task" :needs="needs" @retry="emit('act', 'retry')" />
     <div v-else-if="task.wait" class="callout flex items-center gap-3" :class="task.wait.kind === 'slots' ? 's-queued' : 's-blocked'">
       <span class="min-w-0 flex-1 wrap-anywhere">
         <strong>Not started yet.</strong> {{ describeWait(task.wait) }}.
