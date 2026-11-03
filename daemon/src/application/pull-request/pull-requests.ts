@@ -15,7 +15,7 @@ import {
 import { type AutoMergeCheck, autoMergeCheck, autoMergeOn } from '../../domain/pull-request/auto-merge.ts';
 import { checksFailedNotification, nextChecks, readStoredChecks } from '../../domain/pull-request/checks.ts';
 import { isConflicting, isMergeabilityUnknown } from '../../domain/pull-request/conflict.ts';
-import { mergeRequestCheck, mergeRequestPolls } from '../../domain/pull-request/merge-request.ts';
+import { mergeRequestCheck, mergeRequestPolls, mergesNow } from '../../domain/pull-request/merge-request.ts';
 import { buildPrBody } from '../../domain/pull-request/pr.ts';
 import { hasOpenPr } from '../../domain/task/stage.ts';
 import { type Repo, pausedReason } from '../../domain/repo/repo.ts';
@@ -72,6 +72,8 @@ export interface MergePreview {
   auto_merge: AutoMergeCheck | null;
   /** What a merge request would do now: `merge` it as asked, `wait` for the PR to be ready, or `never` (a person must act). */
   request: AutoMergeCheck;
+  /** Whether the dialog merges now (failing checks or failed tests, on the person's say-so) instead of asking for a merge request. */
+  merge_now: boolean;
 }
 
 /** The last run that ran the tests: 1 passed, 0 failed, null when none did. */
@@ -122,6 +124,7 @@ export async function mergePreview(db: Db, id: number): Promise<MergePreview> {
   });
   const tests_passed = lastTestsPassed(db, id);
   const lands_after = landsAfter(db, id);
+  const request = mergeRequestCheck({ pr_state: task.pr_state, pr, tests_passed, lands_after, auto_resolve: repo.auto_resolve === 1 });
   return {
     title: task.title,
     pr_url: url,
@@ -139,7 +142,8 @@ export async function mergePreview(db: Db, id: number): Promise<MergePreview> {
     conflicting: isConflicting(pr),
     unblocks: dependentsReleased(db, id).map((t) => ({ id: t.id, title: t.title })),
     auto_merge: autoMergeFor(db, task, repo, pr, tests_passed),
-    request: mergeRequestCheck({ pr_state: task.pr_state, pr, tests_passed, lands_after, auto_resolve: repo.auto_resolve === 1 }),
+    request,
+    merge_now: mergesNow(request, { pr, tests_passed }),
   };
 }
 

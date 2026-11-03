@@ -481,8 +481,10 @@ export interface MergePreview {
   unblocks: { id: number; title: string }[];
   /** Whether the daemon will merge it on its own and why not yet; null when auto-merge is off. Missing from a daemon that predates it. */
   auto_merge?: AutoMergeCheck | null;
-  /** What a merge request would do now: `merge` as asked, `wait` for the PR to be ready, `never` (a person must act). Missing from a daemon that predates it. */
-  request?: AutoMergeCheck;
+  /** What a merge request would do now: `merge` as asked, `wait` for the PR to be ready, `never` (a person must act). */
+  request: AutoMergeCheck;
+  /** Whether the dialog merges now (failing checks or failed tests, on the person's say-so) instead of asking for a merge request. */
+  merge_now: boolean;
 }
 
 /** `merge`: the daemon merges it on its next PR refresh. `wait`: something that can still change on its own. `never`: it needs a person. */

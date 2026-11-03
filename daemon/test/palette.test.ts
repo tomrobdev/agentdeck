@@ -107,6 +107,18 @@ test('the selected task offers only what its status allows', () => {
   assert.ok(!labels(task(5, 'done', { pr_state: 'open' })).includes('Retry #5'), 'a task in review is sent back with a note instead');
 });
 
+test('a task in review that is syncing or has a merge request offers no Merge', () => {
+  const labels = (t: PaletteTask) =>
+    rows(t, [t])
+      .filter((i) => i.forSelected)
+      .map((i) => i.label);
+  const syncing = task(6, 'done', { pr_state: 'open', sync: { since: null, resolving: false } });
+  const requested = task(7, 'done', { pr_state: 'open', merge_request: { state: 'waiting', method: 'squash', reasons: [], since: 'x' } });
+  assert.ok(!labels(syncing).includes('Merge #6'));
+  assert.ok(!labels(requested).includes('Merge #7'));
+  assert.ok(!labels(syncing).includes('Retry #6'), 'still in review, so still no plain retry');
+});
+
 test('commands are listed, and the daemon toggle follows its state', () => {
   const all = (paused: boolean) => paletteItems({ tasks: [], selected: null, paused, handlers }).map((i) => i.label);
   assert.ok(all(false).includes('Pause the daemon'));
