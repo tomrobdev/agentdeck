@@ -3,7 +3,9 @@
 // Behaviour is picked by a keyword in the prompt:
 //   FAKE_DONE     writes a file, commits it, reports STATUS: DONE
 //   FAKE_BLOCKED  reports STATUS: BLOCKED
-//   FAKE_DENIED   reports STATUS: BLOCKED with two permission_denials in the result (FAKE_DENIED_DONE: finishes, same denials)
+//   FAKE_DENIED   reports STATUS: BLOCKED with two permission_denials in the result (FAKE_DENIED_DONE: finishes, same denials;
+//                 FAKE_DENIED_NEEDS: blocks with NEEDS edit, same denials)
+//   FAKE_PROTECTED_EDIT  like FAKE_DONE, and writes protected edits to .agentdeck/edits/ (.claude/…, claude/… and src/…)
 //   FAKE_ERROR    exits non-zero with no result
 //   FAKE_RATELIMIT emits a rejected rate_limit_event
 //   FAKE_SLOW     sleeps 30s (for cancel tests), resumed or not
@@ -145,7 +147,9 @@ if (isPlanner) {
     { tool_name: 'Bash', tool_use_id: 'toolu_1', tool_input: { command: 'npx prettier --write .' } },
     { tool_name: 'Bash', tool_use_id: 'toolu_2', tool_input: { command: 'python3 fix.py' } },
   ];
-  if (prompt.includes('FAKE_DENIED_DONE')) {
+  if (prompt.includes('FAKE_DENIED_NEEDS')) {
+    result('Claude Code refused the settings file.\nSTATUS: BLOCKED: NEEDS edit: .claude/settings.json', { permission_denials });
+  } else if (prompt.includes('FAKE_DENIED_DONE')) {
     writeFileSync('fake-output.txt', 'done despite a refusal\n');
     execFileSync('git', ['add', '-A']);
     execFileSync('git', ['commit', '-q', '-m', 'fake: add output']);
@@ -182,6 +186,15 @@ if (isPlanner) {
   <section data-plan-step id="two" data-status="todo"><h2>Two</h2></section>
 </body></html>`,
     );
+  }
+  if (prompt.includes('FAKE_PROTECTED_EDIT')) {
+    const edit = (path, text) => {
+      mkdirSync(join('.agentdeck/edits', path, '..'), { recursive: true });
+      writeFileSync(join('.agentdeck/edits', path), text);
+    };
+    edit('.claude/skills/x/SKILL.md', '# x\nnew skill\n');
+    edit('claude/skills/y/SKILL.md', '# y\nwritten without the dot\n');
+    edit('src/outside.ts', 'export const outside = 1;\n');
   }
   writeFileSync('fake-output.txt', `done by fake claude for: ${prompt.slice(0, 60)}\nrun ${process.pid}\n`);
   execFileSync('git', ['add', '-A']);

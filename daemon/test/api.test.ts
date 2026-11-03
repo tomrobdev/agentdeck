@@ -262,7 +262,7 @@ test('status reports which code the daemon runs, and restart waits while work ru
     const busy = await (await fetch(`${url}/api/daemon/restart`, { method: 'POST' })).json();
     assert.deepEqual(busy, { waiting: '1 planner run' });
     assert.equal(requested, 2);
-    db.finishPlannerRun(planner, 'ok', 0, null);
+    db.finishPlannerRun(planner, 'nothing', 0, null);
   } finally {
     server2.close();
   }

@@ -3,6 +3,9 @@ import type { MergeMethod } from '../pull-request/merge.ts';
 import type { PrState } from '../pull-request/pr.ts';
 import type { TaskStatus } from './lifecycle.ts';
 
+/** Who made a task: a person, or the planner proposing it. */
+export type TaskSource = 'manual' | 'planner';
+
 export interface Task {
   id: number;
   repo_id: number;
@@ -17,7 +20,7 @@ export interface Task {
   branch: string | null;
   worktree: string | null;
   stop_reason: string | null;
-  source: string; // manual | planner
+  source: TaskSource;
   restarts: number; // times a daemon restart requeued this task mid-run
   pr_url: string | null; // the pull request the daemon opened when the task finished
   pr_state: PrState | null;

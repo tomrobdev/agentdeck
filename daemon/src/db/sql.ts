@@ -1,9 +1,19 @@
 // SQL fragments shared by the stores.
-import { sql } from 'drizzle-orm';
+import { inArray, isNull, sql } from 'drizzle-orm';
+import type { AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
 import type { DatabaseSync } from 'node:sqlite';
+import type { Orm } from './orm.ts';
+import { repos } from './tables.ts';
 
 // guard: SQLite's clock; the builder has no "now", and a column default does not apply to an update
 export const NOW_SQL = sql.raw("datetime('now')");
+
+/** Whether a write changed any row. */
+export const changed = (res: { changes: number | bigint }) => Number(res.changes) > 0;
+
+/** The repo id column `col` belongs to a repo that isn't archived. Archived repos' tasks are left out of every list and count. */
+export const inActiveRepo = (orm: Orm, col: AnySQLiteColumn) =>
+  inArray(col, orm.select({ id: repos.id }).from(repos).where(isNull(repos.archived_at)));
 
 let savepoints = 0;
 

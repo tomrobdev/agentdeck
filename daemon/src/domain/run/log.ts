@@ -209,6 +209,11 @@ function parseEvent(ev: any): LogEntry[] {
       return SYNC_TEXT[ev.kind] ? [{ kind: 'text' as const, text: SYNC_TEXT[ev.kind] }] : [];
     case 'agentdeck_unblock':
       return typeof ev.text === 'string' ? [{ kind: 'text', text: ev.text }] : [];
+    case 'agentdeck_protected_edits':
+      return [
+        ...(ev.applied?.length ? [{ kind: 'text' as const, text: `Applied protected edits: ${ev.applied.join(', ')}` }] : []),
+        ...(ev.refused ?? []).map((r: any) => ({ kind: 'error' as const, text: `Refused protected edit ${r.path}: ${r.reason}` })),
+      ];
     case 'agentdeck_stderr':
     case 'agentdeck_error':
       return [{ kind: 'error', text: String(ev.text).trim() }];

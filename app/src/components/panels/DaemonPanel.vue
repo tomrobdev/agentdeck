@@ -4,12 +4,12 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { api, daemonHealthQuery, daemonQuery, isOffline, taskList, uptime } from '../../api';
-import { useActions } from '../../composables/useActions';
+import { useAction } from '../../composables/useActions';
 import ConfirmDialog from '../ui/ConfirmDialog.vue';
 import Modal from '../ui/Modal.vue';
 
 defineEmits<{ close: [] }>();
-const { run, busy } = useActions();
+const { run, pending } = useAction();
 
 const POLL_MS = 3000;
 const stateQ = useQuery({ ...daemonQuery(), refetchInterval: POLL_MS });
@@ -141,7 +141,7 @@ function refresh() {
       v-if="confirming"
       title="Restart the daemon"
       confirm-label="Restart now"
-      :busy="busy"
+      :busy="pending"
       @cancel="confirming = false"
       @confirm="restartNow"
     >
@@ -155,12 +155,12 @@ function refresh() {
     </ConfirmDialog>
 
     <div class="flex items-center gap-2">
-      <button :disabled="busy || down" @click="refresh">Refresh</button>
+      <button :disabled="pending || down" @click="refresh">Refresh</button>
       <div class="spacer" />
-      <button :disabled="busy || down || asked" :title="'Pause new work, wait for running tasks, then restart'" @click="restartWhenIdle">
+      <button :disabled="pending || down || asked" :title="'Pause new work, wait for running tasks, then restart'" @click="restartWhenIdle">
         {{ asked ? 'Waiting…' : 'Restart when idle' }}
       </button>
-      <button :disabled="busy || down || confirming" @click="askRestartNow">Restart now…</button>
+      <button :disabled="pending || down || confirming" @click="askRestartNow">Restart now…</button>
     </div>
   </Modal>
 </template>

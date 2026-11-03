@@ -3,10 +3,10 @@ import { type Ref, computed, ref, watch } from 'vue';
 import { PERSON_CALLS, type TaskSummary } from '../api';
 import { type BulkAction, bulkActions, idRange } from '../lib/bulk';
 import { canStartMerge } from '../lib/taskView';
-import { useActions } from './useActions';
+import { useAction } from './useActions';
 
 export function useBulkPick(tasks: () => TaskSummary[], order: Ref<TaskSummary[]>) {
-  const { run } = useActions();
+  const { run, pending } = useAction();
   const picked = ref<number[]>([]);
   const anchor = ref<number | null>(null);
   const pickedTasks = computed(() => tasks().filter((t) => picked.value.includes(t.id)));
@@ -60,5 +60,5 @@ export function useBulkPick(tasks: () => TaskSummary[], order: Ref<TaskSummary[]
     bulkMerging.value = tasks().filter((t) => ids.includes(t.id) && canStartMerge(t));
   }
 
-  return { picked, bar, bulkMerging, pick, clearPicked, bulkAct, onBulkMerged, mergeAll };
+  return { picked, bar, bulkMerging, pending, pick, clearPicked, bulkAct, onBulkMerged, mergeAll };
 }

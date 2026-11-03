@@ -194,6 +194,8 @@ test('autoMergeView: a measured branch adds how it stands against the limits', (
   assert.deepEqual(autoMergeView(taskRow(), repoRow, { lines: 1000, paths: ['src/a.ts'] }).reasons, [], 'at the limit is fine');
   const many = autoMergeView(taskRow(), repoRow, { lines: 5, paths: ['.github/a', '.github/b', '.github/c', '.github/d', '.github/e'] });
   assert.deepEqual(many.reasons, ['touches .github/a, .github/b, .github/c and 2 more']);
+  const skill = autoMergeView(taskRow(), { ...repoRow, auto_merge_skip: '[]' }, { lines: 5, paths: ['.claude/skills/x/SKILL.md'] });
+  assert.deepEqual(skill.reasons, ['changes .claude/skills/x/SKILL.md: files under .claude/ steer every later agent']);
   assert.deepEqual(
     autoMergeView(taskRow(), { ...repoRow, auto_merge: 0 }, { lines: 5000, paths: [] }).reasons,
     [],
@@ -256,7 +258,7 @@ test('context marks an open task with its auto-merge label unless it is off', ()
     id,
     title: `t${id}`,
     status: 'done' as const,
-    pr_state: 'open',
+    pr_state: 'open' as const,
     stop_reason: null,
     waiting: null,
     auto_merge_view,

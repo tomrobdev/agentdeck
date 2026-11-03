@@ -1,6 +1,7 @@
 // Runs one attempt of a claimed task: worktree, setup, claude, tests, then the task's next status.
 import { commitLeftovers, commitsAhead, ensureWorktree } from '../../adapters/git.ts';
 import { writePlanFile } from '../../adapters/plan-file.ts';
+import { applyProtectedEdits } from '../../adapters/protected-edits.ts';
 import { writeEvent } from '../../adapters/run-log.ts';
 import { runCommand } from '../../adapters/shell.ts';
 import { SETUP_TIMEOUT_MS, TEST_TIMEOUT_MS, ensureDirs } from '../../config.ts';
@@ -144,6 +145,13 @@ async function runOpened(db: Db, task: Task, repo: Repo, wt: { branch: string; p
     await commitLeftovers(wt.path, leftoversMessage(task));
   } catch (err) {
     writeEvent(log, { type: 'agentdeck_error', text: `commit leftovers: ${(err as Error).message}` });
+  }
+  // Files the worker may not edit itself (under .claude/) and wrote to the edits folder instead: committed before the tests.
+  try {
+    const edits = await applyProtectedEdits(wt.path);
+    if (edits.applied.length || edits.refused.length) writeEvent(log, { type: 'agentdeck_protected_edits', ...edits });
+  } catch (err) {
+    writeEvent(log, { type: 'agentdeck_error', text: `apply protected edits: ${(err as Error).message}` });
   }
   // What the worker did to the plan is stored, whatever the outcome.
   await giveBackPlan(db, task, wt.path, log);

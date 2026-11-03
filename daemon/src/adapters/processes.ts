@@ -1,5 +1,6 @@
 // Process groups of claude runs: stopping them on shutdown, and after a crash.
 import { type ChildProcess, execFileSync } from 'node:child_process';
+import { sqliteMs } from '../domain/time.ts';
 
 /** Live claude processes, so the daemon can stop them on shutdown. */
 export const activeChildren = new Set<ChildProcess>();
@@ -66,5 +67,5 @@ export interface PidRecord {
 export function ownsLiveGroup({ pid, pid_at }: PidRecord): boolean {
   if (!groupAlive(pid)) return false;
   const leader = leaderStartedAt(pid);
-  return leader === null || Math.abs(leader - Date.parse(`${pid_at.replace(' ', 'T')}Z`)) < 120_000;
+  return leader === null || Math.abs(leader - sqliteMs(pid_at)) < 120_000;
 }

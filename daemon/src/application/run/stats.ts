@@ -1,7 +1,7 @@
 // The pilot scorecard measures per repo, read from the database.
 import type { Db } from '../../db/index.ts';
-import { type Scorecard, buildScorecard, measureByWeek } from '../../domain/run/scorecard.ts';
-import { type Measures, type StatsReport, measure, measureByRepo } from '../../domain/run/stats.ts';
+import { type Scorecard, buildScorecard } from '../../domain/run/scorecard.ts';
+import { type Measures, type StatsReport, measure, measureByRepo, measureByWeek } from '../../domain/run/stats.ts';
 import { ActionError } from '../input.ts';
 
 /** The first-run measures and the rest of the scorecard (interventions, times, quota, PR checks). */
@@ -19,15 +19,16 @@ export function pilotStats(db: Db, opts: { repo?: string; since?: string; by?: '
   const only = opts.repo === undefined ? undefined : db.findRepo(opts.repo);
   if (opts.repo !== undefined && !only) throw new ActionError(`no repo "${opts.repo}"`);
   const rows = db.statRuns(only?.id).filter((r) => opts.since === undefined || r.started_at >= opts.since);
+  const repoName = (id: number) => db.getRepo(id)?.name ?? `repo${id}`;
   const repos = [...measureByRepo(rows)]
-    .map(([id, measures]) => ({ repo: db.getRepo(id)?.name ?? `repo${id}`, measures }))
+    .map(([id, measures]) => ({ repo: repoName(id), measures }))
     .sort((a, b) => a.repo.localeCompare(b.repo));
   if (only && !repos.length) repos.push({ repo: only.name, measures: measure([]) });
   const scorecard = buildScorecard({
     tasks: db.scorecardTasks(only?.id),
     events: db.scorecardEvents(only?.id),
     samples: db.usageSamples('seven_day'),
-    repoName: (id) => db.getRepo(id)?.name ?? `repo${id}`,
+    repoName,
     since: opts.since,
     by: opts.by,
   });

@@ -51,7 +51,7 @@ export interface PlannerRun {
   id: number;
   started_at: string;
   ended_at: string | null;
-  outcome: string | null;
+  outcome: 'proposed' | 'nothing' | 'failed' | 'rate_limited' | null;
   proposed: number;
   note: string | null;
 }
@@ -204,8 +204,7 @@ export interface TaskSummary {
   branch: string | null;
   worktree: string | null;
   stop_reason: string | null;
-  /** manual | planner */
-  source: string;
+  source: 'manual' | 'planner';
   pr_url: string | null;
   pr_state: PrState | null;
   /** How the PR was merged from the app. */
@@ -268,7 +267,7 @@ export interface Run {
   attempt: number;
   started_at: string;
   ended_at: string | null;
-  outcome: string | null;
+  outcome: 'done' | 'blocked' | 'failed' | 'cancelled' | 'rate_limited' | 'interrupted' | null;
   num_turns: number | null;
   input_tokens: number;
   output_tokens: number;

@@ -6,6 +6,7 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from '
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
+import type { RunKind, RunOutcome } from '../src/domain/run/run.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-unblock-'));
 process.env.AGENTDECK_HOME = home;
@@ -35,7 +36,7 @@ const blocked = (o: { needs?: string | null; stop_reason?: string | null } = {})
   stop_reason: 'which database?',
   ...o,
 });
-const run = (kind: 'work' | 'resolve' | 'unblock', outcome: string | null = 'done') => ({ kind, outcome });
+const run = (kind: RunKind, outcome: RunOutcome | null = 'done') => ({ kind, outcome });
 
 test('unblockable: off by default, and only for a blocked task', () => {
   const db = openDb(':memory:');

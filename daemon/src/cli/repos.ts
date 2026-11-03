@@ -1,11 +1,10 @@
 // Repo commands: register, configure and check repos, goals and the planner.
 import { readFileSync } from 'node:fs';
-import { createInterface } from 'node:readline/promises';
 import * as actions from '../application/actions.ts';
 import type { ProposalResult } from '../domain/planner/proposals.ts';
 import { parseNetwork } from '../domain/run/sandbox.ts';
 import { callDaemon } from './daemon-client.ts';
-import { die, fmtTask, printDoctor } from './format.ts';
+import { confirm, die, fmtTask, printDoctor } from './format.ts';
 import { repoSettingPatch } from './settings-args.ts';
 import type { Command } from './context.ts';
 
@@ -61,12 +60,7 @@ export const repoCommands: Record<string, Command> = {
           `${p.repo}: will delete ${p.tasks} tasks, ${p.runs} runs and ${p.worktrees} worktrees, with their logs and the goals file.`,
         );
         console.log('Nothing on GitHub or the remote is touched; open PRs stay open.');
-        if (!flags.yes) {
-          const rl = createInterface({ input: process.stdin, output: process.stdout });
-          const answer = await rl.question(`delete ${p.repo} for good? [y/N] `);
-          rl.close();
-          if (!/^y(es)?$/i.test(answer.trim())) return void console.log('not deleted');
-        }
+        if (!flags.yes && !(await confirm(`delete ${p.repo} for good?`))) return void console.log('not deleted');
       }
       const res = await actions.deleteRepo(db, path);
       console.log(`${res.repo}: deleted`);

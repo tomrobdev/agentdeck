@@ -175,7 +175,7 @@ test('stuckOn names the dependents stuck on a task, and not one stuck on somethi
 
 test('releasedBy lists only the dependents merging a task leaves free to start', () => {
   // 1 and 2 are in review; 3 builds on 1; 4 builds on 1 and 2; 5 builds on 1 and on 6 (failed); 7 is running.
-  const review = { pr_mode: 'ready', pr_url: 'u', pr_state: 'open' };
+  const review = { pr_mode: 'ready', pr_url: 'u', pr_state: 'open' } as const;
   const lookups = graph({
     1: review,
     2: review,
@@ -247,7 +247,13 @@ test('migration 18 turns an existing after_task into a builds-on link', () => {
 test('the store lists links and dependents, and addTask turns after_task into one builds-on link', () => {
   const db = openDb(':memory:');
   const repo = db.addRepo({ name: 'r', path: '/tmp/r', base_branch: 'main' });
-  const add = (after_task?: number) => db.addTask({ repo_id: repo.id, title: 't', prompt: 'p', after_task });
+  const add = (after_task?: number) =>
+    db.addTask({
+      repo_id: repo.id,
+      title: 't',
+      prompt: 'p',
+      links: after_task === undefined ? [] : [{ on: after_task, kind: 'builds_on' }],
+    });
   const a = add();
   const b = add(a.id);
   const c = add();

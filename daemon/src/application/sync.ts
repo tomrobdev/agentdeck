@@ -23,7 +23,7 @@ import type { Db } from '../db/index.ts';
 import { conflictReason, syncSummary } from '../domain/branch/sync.ts';
 import type { Repo } from '../domain/repo/repo.ts';
 import { buildResolvePrompt } from '../domain/run/prompt.ts';
-import { type Run, parseStatus } from '../domain/run/run.ts';
+import { type Outcome, type Run, parseStatus } from '../domain/run/run.ts';
 import { lastLine } from '../domain/text.ts';
 import { hasOpenPr } from '../domain/task/stage.ts';
 import { type Task, leftoversMessage } from '../domain/task/task.ts';
@@ -109,7 +109,7 @@ async function resolveConflicts(
   const { log } = opened;
   let fields: Partial<Run> = {};
 
-  let outcome: 'done' | 'blocked' | 'failed' | 'cancelled' | 'rate_limited';
+  let outcome: Outcome;
   let reason = '';
   try {
     // Throws if the run cannot start (no settings, no worktree): the row still ends below, failed.

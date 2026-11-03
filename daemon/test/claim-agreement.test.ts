@@ -44,7 +44,13 @@ test('claimNextTask picks the first queued task, by priority then id, that has n
   for (const priority of [0, 5, 0, 5])
     for (const [repo_id] of [[open.id], [paused.id]])
       for (const after_task of Object.values(deps)) {
-        const t = db.addTask({ repo_id, title: 't', prompt: 'p', priority, after_task });
+        const t = db.addTask({
+          repo_id,
+          title: 't',
+          prompt: 'p',
+          priority,
+          links: after_task == null ? [] : [{ on: after_task, kind: 'builds_on' }],
+        });
         assert.equal(t.status, 'queued');
       }
 

@@ -12,6 +12,8 @@ import { runStore } from './runs.ts';
 import { migrate } from './schema.ts';
 import { settingsStore } from './settings.ts';
 import { statsStore } from './stats.ts';
+import { taskEventStore } from './task-events.ts';
+import { taskLinkStore } from './task-links.ts';
 import { taskStore } from './tasks.ts';
 import { usageStore } from './usage.ts';
 
@@ -33,6 +35,8 @@ export function openDb(path = DB_PATH) {
     ...settingsStore(db, orm),
     ...repoStore(db, orm),
     ...taskStore(db, orm),
+    ...taskLinkStore(orm),
+    ...taskEventStore(orm),
     ...reviewStore(orm),
     ...runStore(orm),
     ...statsStore(orm),
