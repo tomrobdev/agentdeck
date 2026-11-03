@@ -8,7 +8,7 @@ export type TaskStatus = 'proposed' | 'queued' | 'running' | 'done' | 'blocked' 
 export type PrMode = 'off' | 'draft' | 'ready';
 export type PrState = 'open' | 'merged' | 'closed' | 'failed';
 export type MergeMethod = 'squash' | 'merge' | 'rebase';
-export type NotifyKind = 'done' | 'blocked' | 'failed' | 'hold' | 'paused' | 'proposed' | 'merged';
+export type NotifyKind = 'done' | 'blocked' | 'failed' | 'hold' | 'paused' | 'proposed' | 'merged' | 'checks_failed';
 /** Git refs the file endpoints accept: the task's branch, or where it forked from the base branch. */
 export type FileRef = 'head' | 'base';
 
@@ -168,6 +168,24 @@ export interface SyncView {
   tool: string | null;
 }
 
+/** One check on a PR's head commit: a GitHub check run or a commit status. NEUTRAL and SKIPPED conclusions are `skipped`. */
+export interface PrCheck {
+  name: string;
+  state: 'pass' | 'fail' | 'pending' | 'skipped';
+  url: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+}
+
+/** An open PR's checks in a line's worth: counted, with the failing ones' names. `read_at` is when the PR refresh read them. */
+export interface ChecksSummary {
+  total: number;
+  failing: number;
+  pending: number;
+  failing_names: string[];
+  read_at: string;
+}
+
 /** A task as returned by the list endpoint: everything except the prompt. */
 export interface TaskSummary {
   id: number;
@@ -225,6 +243,8 @@ export interface TaskSummary {
   live?: LiveView | null;
   /** For a done task: the sync under way, whoever started it. Null when none is. Missing from a daemon that predates it. */
   sync?: SyncView | null;
+  /** The open PR's checks; null when there is no open PR or it has no checks. Missing from a daemon that predates it. */
+  checks?: ChecksSummary | null;
   /** What a queued task waits for; null once it waits for nothing (or it isn't queued). */
   wait: StartWait | null;
   created_at: string;
@@ -310,6 +330,8 @@ export interface TaskPlan {
 }
 
 export interface TaskDetail extends Task {
+  /** The PR's latest checks, one by one, and when they were read; null when none were read. Missing from a daemon that predates it. */
+  check_list?: { read_at: string; checks: PrCheck[] } | null;
   runs: Run[];
   events: TaskEventRow[];
   plans: TaskPlan[];
@@ -549,6 +571,13 @@ export interface RequestMergesResult {
   requested: number[];
   /** The tasks it could not ask for, each with why. */
   failed: { id: number; reason: string }[];
+}
+
+/** POST /api/tasks/:id/fix-checks: the task is retried with its PR's failing checks, and their logs, in the note. */
+export interface FixChecksResult {
+  /** The failing checks sent to the worker, by name. */
+  checks: string[];
+  task: TaskDetail;
 }
 
 /** POST /api/tasks/:id/merge */

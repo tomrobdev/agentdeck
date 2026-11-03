@@ -119,10 +119,10 @@ flowchart TD
   api -->|2| config_ts
   api -->|4| db
   api -->|5| domain
-  application -->|46| adapters
+  application -->|47| adapters
   application -->|8| config_ts
-  application -->|33| db
-  application -->|123| domain
+  application -->|34| db
+  application -->|127| domain
   cli_ts -->|1| application
   cli_ts -->|8| cli
   cli_ts -->|1| db
@@ -130,7 +130,7 @@ flowchart TD
   cli -->|3| config_ts
   cli -->|1| daemon_ts
   cli -->|2| db
-  cli -->|17| domain
+  cli -->|18| domain
   daemon_ts -->|2| adapters
   daemon_ts -->|1| api
   daemon_ts -->|2| application
@@ -302,6 +302,7 @@ erDiagram
     text merge_request_method "nullable"
     text merge_request_check "nullable"
     integer plan_task "nullable"
+    text pr_checks "nullable"
   }
   usage_samples {
     integer id PK
@@ -409,6 +410,7 @@ stateDiagram-v2
 | GET    | `/api/tasks/:id/diff`              | `actions.taskDiff`                                                 |
 | POST   | `/api/tasks/:id/done`              | `actions.markDone`, `actions.taskDetail`                           |
 | GET    | `/api/tasks/:id/file`              | `actions.taskFile`                                                 |
+| POST   | `/api/tasks/:id/fix-checks`        | `actions.fixChecks`, `actions.taskDetail`                          |
 | POST   | `/api/tasks/:id/install-needs`     | `actions.installNeeds`, `actions.taskDetail`                       |
 | DELETE | `/api/tasks/:id/links/:id2`        | `actions.unlinkTasks`, `actions.taskDetail`                        |
 | POST   | `/api/tasks/:id/links`             | `actions.linkTasks`, `actions.taskDetail`                          |
@@ -437,25 +439,25 @@ stateDiagram-v2
 
 <!-- generated:settings -->
 
-| Setting                  | Default                                           | Meaning                                                                                          |
-| ------------------------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `five_hour_max`          | `0.85`                                            | Governor: no new work above this share of the 5-hour window                                      |
-| `five_hour_soft`         | `0.6`                                             | Governor: one task at a time above this share of the 5-hour window                               |
-| `max_concurrent`         | `2`                                               | Slots: how many tasks may run at once                                                            |
-| `notify_desktop`         | `1`                                               | Show desktop notifications                                                                       |
-| `notify_events`          | `done,blocked,failed,hold,paused,proposed,merged` | The notification kinds to send, comma-separated                                                  |
-| `ntfy_server`            | `https://ntfy.sh`                                 | The ntfy server                                                                                  |
-| `ntfy_topic`             | (empty)                                           | The ntfy topic to push notifications to; empty for none                                          |
-| `pace_slack`             | `0.1`                                             | Governor: how far ahead of the even weekly pace spending may run                                 |
-| `paused`                 | `1`                                               | The daemon starts no new work while this is 1; it starts paused until someone resumes it         |
-| `planner_enabled`        | `1`                                               | Let the planner propose tasks when a repo's queue runs dry                                       |
-| `planner_interval_hours` | `3`                                               | The fewest hours between two planner runs on a repo                                              |
-| `planner_max_tasks`      | `3`                                               | The most proposals one planner run keeps                                                         |
-| `planner_model`          | `sonnet`                                          | The model the planner runs with                                                                  |
-| `pr_check_requested`     | `0`                                               | Set to 1 to have the scheduler check open pull requests on its next tick                         |
-| `rate_limited_until`     | `0`                                               | Unix seconds until which a run that hit the usage limit keeps new work from starting; 0 for none |
-| `reload_on_change`       | `0`                                               | Restart the daemon onto new code when daemon/src changes and nothing is running                  |
-| `weekly_max`             | `0.8`                                             | Governor: the share of the 7-day window the weekly allowance grows to                            |
+| Setting                  | Default                                                         | Meaning                                                                                          |
+| ------------------------ | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `five_hour_max`          | `0.85`                                                          | Governor: no new work above this share of the 5-hour window                                      |
+| `five_hour_soft`         | `0.6`                                                           | Governor: one task at a time above this share of the 5-hour window                               |
+| `max_concurrent`         | `2`                                                             | Slots: how many tasks may run at once                                                            |
+| `notify_desktop`         | `1`                                                             | Show desktop notifications                                                                       |
+| `notify_events`          | `done,blocked,failed,hold,paused,proposed,merged,checks_failed` | The notification kinds to send, comma-separated                                                  |
+| `ntfy_server`            | `https://ntfy.sh`                                               | The ntfy server                                                                                  |
+| `ntfy_topic`             | (empty)                                                         | The ntfy topic to push notifications to; empty for none                                          |
+| `pace_slack`             | `0.1`                                                           | Governor: how far ahead of the even weekly pace spending may run                                 |
+| `paused`                 | `1`                                                             | The daemon starts no new work while this is 1; it starts paused until someone resumes it         |
+| `planner_enabled`        | `1`                                                             | Let the planner propose tasks when a repo's queue runs dry                                       |
+| `planner_interval_hours` | `3`                                                             | The fewest hours between two planner runs on a repo                                              |
+| `planner_max_tasks`      | `3`                                                             | The most proposals one planner run keeps                                                         |
+| `planner_model`          | `sonnet`                                                        | The model the planner runs with                                                                  |
+| `pr_check_requested`     | `0`                                                             | Set to 1 to have the scheduler check open pull requests on its next tick                         |
+| `rate_limited_until`     | `0`                                                             | Unix seconds until which a run that hit the usage limit keeps new work from starting; 0 for none |
+| `reload_on_change`       | `0`                                                             | Restart the daemon onto new code when daemon/src changes and nothing is running                  |
+| `weekly_max`             | `0.8`                                                           | Governor: the share of the 7-day window the weekly allowance grows to                            |
 
 <!-- /generated -->
 
@@ -463,32 +465,33 @@ stateDiagram-v2
 
 <!-- generated:migrations -->
 
-| Step | What it does                                                                                                                                                                                                                          |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1    | baseline. Brings a database from any earlier (unversioned) release up to date; the column additions are idempotent because old databases may already have some of them.                                                               |
-| 2    | runsForTask runs on every task view and every 500 ms per open log stream.                                                                                                                                                             |
-| 3    | repo integration. toolchain is detected at `repo add`; setup_cmd runs in each new worktree.                                                                                                                                           |
-| 4    | a repo can be paused (doctor failed, setup failed, permissions refused); runs count refused tool uses.                                                                                                                                |
-| 5    | pull requests and task dependencies. pr_mode is off \| draft \| ready; pr_state is open \| merged \| closed.                                                                                                                          |
-| 6    | task history. One row per status change, written with the change itself (db/tasks.ts).                                                                                                                                                |
-| 7    | plans attached to a task (domain/plan). One row per plan name; the HTML is parsed on read.                                                                                                                                            |
-| 8    | merging a PR from the app. merge_method is squash \| merge \| rebase: the repo's default, and the one a task was merged with.                                                                                                         |
-| 9    | keeping task branches up to date with their base. A run is a work run or a resolve run (merging the base into the branch, which uses no attempt); auto_resolve lets the daemon start a resolve run on its own.                        |
-| 10   | worker sandbox (docs/adr/0001-worker-sandbox.md). network is a JSON array of hosts sandboxed commands may reach.                                                                                                                      |
-| 11   | a task can name the plan and steps it carries out (docs/plans/plan-linked-tasks.html). plan_path is repo-relative under docs/plans/; plan_steps is a JSON array of step ids, NULL for every unfinished step.                          |
-| 12   | archiving a repo (docs/plans/repo-archive.html). archived_at is when it was archived, NULL while it is active.                                                                                                                        |
-| 13   | what a blocked worker said it needs (docs/plans/fewer-blocks.html): JSON { kind, items }, NULL when nothing.                                                                                                                          |
-| 14   | who said a task is done (docs/plans/manual-moves.html): 'person' when mark_done set it, NULL otherwise.                                                                                                                               |
-| 15   | the stop reason, named for the domain language (docs/plans/domain-model.html).                                                                                                                                                        |
-| 16   | a paused repo notifies with its own kind, `paused`, instead of `hold`. Whoever listened for `hold` keeps hearing both.                                                                                                                |
-| 17   | auto-merge (docs/plans/auto-merge.html). auto_merge_skip is a JSON array of path prefixes that need a person; a task's auto_merge is NULL (its repo's), 0 or 1.                                                                       |
-| 18   | task links (docs/plans/task-links.html). kind is builds_on \| after. after_task is copied in and no longer read.                                                                                                                      |
-| 19   | the latest auto-merge check of a done task's open PR (docs/plans/auto-merge-view.html): JSON { verdict, reasons }, NULL when none; auto_merge_checked_at is when the PR refresh made it.                                              |
-| 20   | reviews made in the dashboard (docs/plans/review-merge.html). A review is a draft until submitted_at is set; kind is comment \| request_changes. A comment's state is open \| answered \| resolved; side is old \| new.               |
-| 21   | what a live run is doing: turns so far and the last tool call, kept from its stream while it runs.                                                                                                                                    |
-| 22   | what the pilot scorecard needs and nothing kept. usage_samples is a history of usage readings, appended when a window's reading changes; pr_checks_opened / pr_checks_merged are JSON { total, failing, pending } of a PR's checks.   |
-| 23   | merge requests (docs/plans/merge-requests.html). merge_requested_at is when a person asked the daemon to merge the task's PR once it is ready (NULL: no request); merge_request_check is the last check's JSON { verdict, reasons }.  |
-| 24   | plans live in AgentDeck, named after the task they belong to. plan_task is the task whose plan this one follows (itself when its own plan was given with --plan); plan_steps names that plan's steps. plan_path is no longer written. |
-| 25   | when a run's pid was stored. Its claude started then, which can be minutes after the run row (setup, a sync), so crash recovery and the doctor tell our claude from a reused pid by this time, not by started_at.                     |
+| Step | What it does                                                                                                                                                                                                                              |
+| ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | baseline. Brings a database from any earlier (unversioned) release up to date; the column additions are idempotent because old databases may already have some of them.                                                                   |
+| 2    | runsForTask runs on every task view and every 500 ms per open log stream.                                                                                                                                                                 |
+| 3    | repo integration. toolchain is detected at `repo add`; setup_cmd runs in each new worktree.                                                                                                                                               |
+| 4    | a repo can be paused (doctor failed, setup failed, permissions refused); runs count refused tool uses.                                                                                                                                    |
+| 5    | pull requests and task dependencies. pr_mode is off \| draft \| ready; pr_state is open \| merged \| closed.                                                                                                                              |
+| 6    | task history. One row per status change, written with the change itself (db/tasks.ts).                                                                                                                                                    |
+| 7    | plans attached to a task (domain/plan). One row per plan name; the HTML is parsed on read.                                                                                                                                                |
+| 8    | merging a PR from the app. merge_method is squash \| merge \| rebase: the repo's default, and the one a task was merged with.                                                                                                             |
+| 9    | keeping task branches up to date with their base. A run is a work run or a resolve run (merging the base into the branch, which uses no attempt); auto_resolve lets the daemon start a resolve run on its own.                            |
+| 10   | worker sandbox (docs/adr/0001-worker-sandbox.md). network is a JSON array of hosts sandboxed commands may reach.                                                                                                                          |
+| 11   | a task can name the plan and steps it carries out (docs/plans/plan-linked-tasks.html). plan_path is repo-relative under docs/plans/; plan_steps is a JSON array of step ids, NULL for every unfinished step.                              |
+| 12   | archiving a repo (docs/plans/repo-archive.html). archived_at is when it was archived, NULL while it is active.                                                                                                                            |
+| 13   | what a blocked worker said it needs (docs/plans/fewer-blocks.html): JSON { kind, items }, NULL when nothing.                                                                                                                              |
+| 14   | who said a task is done (docs/plans/manual-moves.html): 'person' when mark_done set it, NULL otherwise.                                                                                                                                   |
+| 15   | the stop reason, named for the domain language (docs/plans/domain-model.html).                                                                                                                                                            |
+| 16   | a paused repo notifies with its own kind, `paused`, instead of `hold`. Whoever listened for `hold` keeps hearing both.                                                                                                                    |
+| 17   | auto-merge (docs/plans/auto-merge.html). auto_merge_skip is a JSON array of path prefixes that need a person; a task's auto_merge is NULL (its repo's), 0 or 1.                                                                           |
+| 18   | task links (docs/plans/task-links.html). kind is builds_on \| after. after_task is copied in and no longer read.                                                                                                                          |
+| 19   | the latest auto-merge check of a done task's open PR (docs/plans/auto-merge-view.html): JSON { verdict, reasons }, NULL when none; auto_merge_checked_at is when the PR refresh made it.                                                  |
+| 20   | reviews made in the dashboard (docs/plans/review-merge.html). A review is a draft until submitted_at is set; kind is comment \| request_changes. A comment's state is open \| answered \| resolved; side is old \| new.                   |
+| 21   | what a live run is doing: turns so far and the last tool call, kept from its stream while it runs.                                                                                                                                        |
+| 22   | what the pilot scorecard needs and nothing kept. usage_samples is a history of usage readings, appended when a window's reading changes; pr_checks_opened / pr_checks_merged are JSON { total, failing, pending } of a PR's checks.       |
+| 23   | merge requests (docs/plans/merge-requests.html). merge_requested_at is when a person asked the daemon to merge the task's PR once it is ready (NULL: no request); merge_request_check is the last check's JSON { verdict, reasons }.      |
+| 24   | plans live in AgentDeck, named after the task they belong to. plan_task is the task whose plan this one follows (itself when its own plan was given with --plan); plan_steps names that plan's steps. plan_path is no longer written.     |
+| 25   | when a run's pid was stored. Its claude started then, which can be minutes after the run row (setup, a sync), so crash recovery and the doctor tell our claude from a reused pid by this time, not by started_at.                         |
+| 26   | an open PR's latest checks, one by one (domain/pull-request/checks.ts StoredChecks): JSON { read_at, head, checks, notified }, written by the PR refresh; notified says a person was told they fail. NULL until the PR's checks are read. |
 
 <!-- /generated -->

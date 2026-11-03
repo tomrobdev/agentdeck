@@ -1,6 +1,7 @@
 // How the CLI prints tasks, doctor reports, logs and times, and how it fails.
 import { type DoctorReport, type HealthCheck, type TaskView, readLog } from '../application/actions.ts';
 import type { AutoMergeView } from '../domain/pull-request/auto-merge.ts';
+import type { ChecksSummary } from '../domain/pull-request/checks.ts';
 import type { TaskStatus } from '../domain/task/lifecycle.ts';
 import { parseTaskIds } from '../domain/task/ids.ts';
 import type { Task } from '../domain/task/task.ts';
@@ -81,6 +82,14 @@ export function fmtAutoMerge(v: AutoMergeView): string[] {
       `           limits: ${v.limits.max_lines.toLocaleString('en-US')} lines, not touching ${v.limits.skip.join(', ') || 'nothing'}; ${v.limits.tests}`,
     );
   return lines;
+}
+
+/** The line `agentdeck show` prints for the open PR's checks: "checks   2 of 5 failing: lint, test (agentdeck fix-checks 12)". */
+export function fmtChecks(c: ChecksSummary, id?: number): string {
+  const running = c.pending ? `, ${c.pending} running` : '';
+  if (!c.failing) return `checks   ${c.total} on the PR, none failing${running}`;
+  const fix = id === undefined ? '' : `  (agentdeck fix-checks ${id})`;
+  return `checks   ${c.failing} of ${c.total} failing: ${c.failing_names.join(', ')}${running}${fix}`;
 }
 
 /** Print each doctor check with its reason, then the verdict. */

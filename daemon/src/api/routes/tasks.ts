@@ -50,6 +50,12 @@ export function routes({ db, scheduler }: ApiContext): Route[] {
       await actions.installNeeds(db, Number(id));
       return detail(id);
     }),
+    // Retry a done task with its PR's failing checks (and their logs) in the note.
+    route('POST', /^\/api\/tasks\/(\d+)\/fix-checks$/, async ({ params: [id] }) => {
+      const result = await actions.fixChecks(db, Number(id));
+      wake();
+      return { ...result, task: await detail(id) };
+    }),
     route('POST', /^\/api\/tasks\/(\d+)\/close-pr$/, async ({ params: [id] }) => {
       await actions.closeTaskPr(db, Number(id));
       return detail(id);

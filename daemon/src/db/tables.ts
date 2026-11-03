@@ -73,6 +73,7 @@ export const tasks = sqliteTable(
     merge_request_method: text(),
     merge_request_check: text(),
     plan_task: integer(),
+    pr_checks: text(),
   },
   // guard: an index column in descending order, which the index builder takes only as raw SQL
   (table) => [index('tasks_pick').on(table.status, sql`priority DESC`, table.id)],
