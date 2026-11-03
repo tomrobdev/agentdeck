@@ -12,7 +12,7 @@ const propose: Command = async ({ db, rest, repoName }) => {
   if (!rest[0]) die('usage: agentdeck propose <repo>');
   console.log(`proposing tasks for ${rest[0]}…`);
   const repo = actions.repoDetail(db, rest[0]);
-  const res: ProposalResult = await callDaemon('POST', `/api/repos/${repo.id}/plan`, {});
+  const res: ProposalResult = await callDaemon('POST', `/api/repos/${repo.id}/propose`, {});
   console.log(`${res.outcome}${res.note ? `: ${res.note}` : ''}`);
   for (const t of res.tasks) console.log(fmtTask(t, repoName(t.repo_id)));
   for (const t of res.skipped) console.log(`  skipped (duplicate or over the cap): ${t}`);

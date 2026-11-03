@@ -89,7 +89,7 @@ export const api = {
   addRepo: (r: NewRepo) => call<Repo>('/api/repos', { method: 'POST', json: r }),
   repo: (id: number) => call<RepoDetail>(`/api/repos/${id}`),
   updateRepo: (id: number, patch: RepoPatch) => call<RepoDetail>(`/api/repos/${id}`, { method: 'POST', json: patch }),
-  propose: (id: number) => call<ProposalResult>(`/api/repos/${id}/plan`, { method: 'POST' }),
+  propose: (id: number) => call<ProposalResult>(`/api/repos/${id}/propose`, { method: 'POST' }),
   doctor: (id: number) => call<DoctorReport>(`/api/repos/${id}/doctor`, { method: 'POST' }),
   resumeRepo: (id: number) => call<Repo>(`/api/repos/${id}/resume`, { method: 'POST' }),
   archivedRepos: () => call<Repo[]>('/api/repos?archived=1'),
@@ -126,11 +126,10 @@ export const api = {
     call<RequestMergeResult>(`/api/tasks/${id}/merge-request`, { method: 'POST', json: body }),
   /** Request these tasks' merges, each with its own method; the ones it could not request come back with why. */
   requestMerges: (ids: number[]) => call<RequestMergesResult>('/api/tasks/merge-requests', { method: 'POST', json: { ids } }),
+  /** Drop the task's merge request; the PR stays open. */
   cancelMergeRequest: (id: number) => call<CancelMergeRequestResult>(`/api/tasks/${id}/merge-request`, { method: 'DELETE' }),
   /** Let the daemon merge the task's PR on its own (true), not (false), or follow the repo (null). */
   autoMerge: (id: number, body: AutoMergeRequest) => call<AutoMergeResult>(`/api/tasks/${id}/auto-merge`, { method: 'POST', json: body }),
-  /** Drop the task's merge request; the PR stays open. */
-  cancelMerge: (id: number) => call<CancelMergeRequestResult>(`/api/tasks/${id}/merge-request`, { method: 'DELETE' }),
   /** Merge the base branch into the task's branch; a conflict starts a claude run, so this can take minutes. */
   sync: (id: number) => call<SyncResult>(`/api/tasks/${id}/sync`, { method: 'POST' }),
   changes: (id: number) => call<Changes>(`/api/tasks/${id}/changes`),

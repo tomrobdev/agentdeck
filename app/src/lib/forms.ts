@@ -1,7 +1,7 @@
 // How the repo editor and the settings form map to and from what the API sends. Pure, so the
 // panels only hold the form's state.
 import type { MergeMethod, NotifyKind, RepoDetail, RepoPatch, Settings, SettingsPatch } from '../api';
-import { DEFAULT_AUTO_MERGE_MAX_LINES, DEFAULT_AUTO_MERGE_SKIP } from '../../../daemon/src/domain/pull-request/auto-merge.ts';
+import { DEFAULT_AUTO_MERGE_SKIP } from '../../../daemon/src/domain/pull-request/auto-merge.ts';
 import { NOTIFY_KINDS } from '../../../daemon/src/domain/notification.ts';
 import { parseTextList, textList } from '../../../daemon/src/domain/text.ts';
 
@@ -30,7 +30,7 @@ export function toRepoForm(d: RepoDetail): RepoForm {
     mergeMethod: d.merge_method,
     autoResolve: !!d.auto_resolve,
     autoMerge: !!d.auto_merge,
-    autoMergeMaxLines: d.auto_merge_max_lines ?? DEFAULT_AUTO_MERGE_MAX_LINES,
+    autoMergeMaxLines: d.auto_merge_max_lines,
     autoMergeSkip: parseTextList(d.auto_merge_skip, DEFAULT_AUTO_MERGE_SKIP).join(', '),
     sandbox: !!d.sandbox,
     network: parseTextList(d.network).join(', '),

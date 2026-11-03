@@ -12,8 +12,6 @@ import * as reviewsRoutes from './routes/reviews.ts';
 import * as settingsRoutes from './routes/settings.ts';
 import * as tasksRoutes from './routes/tasks.ts';
 
-export type { ApiScheduler } from './http.ts';
-
 const idleScheduler: ApiScheduler = { wake: () => {}, track: (p) => p };
 
 const idleChanges: ApiContext['changes'] = { rev: 1, subscribe: () => () => {} };

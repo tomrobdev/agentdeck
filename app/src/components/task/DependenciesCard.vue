@@ -25,10 +25,10 @@ watch(
   () => tasksQ.refetch(),
 );
 
-const links = computed(() => props.task.links ?? []);
+const links = computed(() => props.task.links);
 const buildsOn = computed(() => links.value.filter((l) => l.kind === 'builds_on'));
 const after = computed(() => links.value.filter((l) => l.kind === 'after'));
-const dependents = computed(() => props.task.dependents ?? []);
+const dependents = computed(() => props.task.dependents);
 
 const STATE_CLASS = { met: 'text-done', waiting: 'text-muted', stuck: 'text-blocked', unlanded: 'text-blocked' } as const;
 

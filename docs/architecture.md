@@ -382,7 +382,7 @@ stateDiagram-v2
 | POST   | `/api/repos/:id/archive`           | `actions.archiveRepo`                                              |
 | GET    | `/api/repos/:id/deletion`          | `actions.repoDeletionPreview`                                      |
 | POST   | `/api/repos/:id/doctor`            | `actions.doctorRepo`                                               |
-| POST   | `/api/repos/:id/plan`              | `actions.proposeNow`                                               |
+| POST   | `/api/repos/:id/propose`           | `actions.proposeNow`                                               |
 | POST   | `/api/repos/:id/resume`            | `actions.resumeRepo`                                               |
 | POST   | `/api/repos/:id/unarchive`         | `actions.unarchiveRepo`                                            |
 | DELETE | `/api/repos/:id`                   | `actions.deleteRepo`                                               |

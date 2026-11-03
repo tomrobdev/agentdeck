@@ -1,13 +1,17 @@
 // Tasks: list, add, edit and move through the lifecycle, sync and the log tail.
 import * as actions from '../../application/actions.ts';
-import { type ApiContext, type Route, idsField, route } from '../http.ts';
+import { TASK_STATUSES } from '../../domain/task/lifecycle.ts';
+import { type ApiContext, BadRequest, type Route, idsField, route } from '../http.ts';
 import { streamLog } from '../log-stream.ts';
 
 export function routes({ db, scheduler }: ApiContext): Route[] {
   const detail = (id: string) => actions.taskDetail(db, Number(id));
   return [
     route('GET', /^\/api\/tasks$/, ({ query }) => {
-      const status = query.get('status') as actions.TaskStatus | null;
+      const param = query.get('status');
+      if (param !== null && !(TASK_STATUSES as string[]).includes(param))
+        throw new BadRequest(`status takes one of ${TASK_STATUSES.join(', ')}`);
+      const status = param as actions.TaskStatus | null;
       const limit = Math.min(Math.max(Math.floor(Number(query.get('limit'))) || 200, 1), 1000);
       const before = Number(query.get('before')) || undefined;
       return actions.taskViews(db, { status: status ?? undefined, limit, before });

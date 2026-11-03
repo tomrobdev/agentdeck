@@ -119,7 +119,7 @@ export const quickRetry = (t: Pick<TaskSummary, 'status' | 'waiting' | 'pr_state
 
 /** What a blocked task's worker said it needs; null for any other task or an unreadable value. */
 export const readNeeds = (t: Pick<TaskSummary, 'status' | 'needs'>): Needs | null =>
-  t.status === 'blocked' ? readNeedsJson(t.needs ?? null) : null;
+  t.status === 'blocked' ? readNeedsJson(t.needs) : null;
 
 /** The package names of a deps request, without its `--dev` flag. */
 export const depsPackages = (n: Needs) => depsRequest(n.items).packages;
