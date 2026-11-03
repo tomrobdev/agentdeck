@@ -30,6 +30,7 @@ import InsightsView from './components/insights/InsightsView.vue';
 import QueueView from './components/queue/QueueView.vue';
 import TaskPage from './components/task/TaskPage.vue';
 import MergeDialog from './components/task/MergeDialog.vue';
+import AppProvider from './components/ui/AppProvider.vue';
 import CommandPalette from './components/ui/CommandPalette.vue';
 import { go, openTask, route } from './router';
 import { type PersonEvent, needYouCount, openingTab } from './lib/taskView';
@@ -157,64 +158,66 @@ watchEffect(() => {
 </script>
 
 <template>
-  <div class="flex h-screen flex-col">
-    <AppHeader :status="status" :offline="offline" @new-task="modal = 'new'" @repos="modal = 'repos'" @settings="modal = 'settings'" />
+  <AppProvider>
+    <div class="flex h-screen flex-col">
+      <AppHeader :status="status" :offline="offline" @new-task="modal = 'new'" @repos="modal = 'repos'" @settings="modal = 'settings'" />
 
-    <div v-if="offline" class="m-auto max-w-[420px] text-center">
-      <h2 class="text-lg">The AgentDeck daemon isn't running</h2>
-      <p class="muted">Start it in a terminal and this window will connect on its own:</p>
-      <pre class="rounded-md border border-border bg-code-bg p-2.5">cd daemon && npm start</pre>
+      <div v-if="offline" class="m-auto max-w-[420px] text-center">
+        <h2 class="text-lg">The AgentDeck daemon isn't running</h2>
+        <p class="muted">Start it in a terminal and this window will connect on its own:</p>
+        <pre class="rounded-md border border-border bg-code-bg p-2.5">cd daemon && npm start</pre>
+      </div>
+
+      <main v-else-if="pageId !== null" class="flex min-h-0 flex-1 flex-col">
+        <StaleDaemonBar :status="status" />
+        <TaskPage
+          v-if="detail && route.current.name === 'task'"
+          :task="detail"
+          :tab="route.current.tab"
+          :query="route.current.query"
+          @act="(kind) => actOn(kind, detail!.id)"
+        />
+        <section v-else class="muted flex flex-1 flex-col items-center justify-center gap-3">Loading task #{{ pageId }}…</section>
+      </main>
+      <main v-else-if="route.current.name === 'insights'" class="flex min-h-0 flex-1 flex-col">
+        <InsightsView />
+      </main>
+      <main v-else class="flex min-h-0 flex-1 flex-col">
+        <StaleDaemonBar :status="status" />
+        <WaitBar :status="status" :busy="busy" @resume="resumeDaemon" @resume-repo="resumeRepo" @settings="modal = 'settings'" />
+        <QueueView
+          v-if="tasks.length"
+          v-model:selected="selectedId"
+          :tasks="tasks"
+          @open="openFromQueue"
+          @act="actOn"
+          @new-task="modal = 'new'"
+        />
+        <section v-else class="muted flex flex-1 flex-col items-center justify-center gap-3">
+          No tasks yet.
+          <button class="primary" @click="modal = repos.length ? 'new' : 'repos'">
+            {{ repos.length ? 'Queue your first task' : 'Add a repo to get started' }}
+          </button>
+        </section>
+      </main>
+
+      <StatusBar :status="status" :tasks="tasks" :offline="offline" :busy="busy" @toggle="togglePause" @daemon="modal = 'daemon'" />
+
+      <NewTaskForm v-if="modal === 'new'" :repos="repos" @close="modal = null" @created="onCreated" @repos="modal = 'repos'" />
+      <ReposPanel v-if="modal === 'repos'" :repos="repos" @close="modal = null" />
+
+      <SettingsPanel v-if="modal === 'settings'" :notifications="status?.notifications ?? []" @close="modal = null" />
+      <DaemonPanel v-if="modal === 'daemon'" @close="modal = null" />
+
+      <MergeDialog v-if="merging !== null" :task-id="merging" @close="merging = null" @merged="onMerged" />
+      <CommandPalette v-if="palette" :items="paletteRows" @close="palette = false" />
+
+      <div
+        v-if="toast"
+        class="fixed bottom-10 left-1/2 z-40 max-w-[calc(100vw-32px)] -translate-x-1/2 rounded-md bg-text px-3.5 py-2 text-bg"
+      >
+        {{ toast }}
+      </div>
     </div>
-
-    <main v-else-if="pageId !== null" class="flex min-h-0 flex-1 flex-col">
-      <StaleDaemonBar :status="status" />
-      <TaskPage
-        v-if="detail && route.current.name === 'task'"
-        :task="detail"
-        :tab="route.current.tab"
-        :query="route.current.query"
-        @act="(kind) => actOn(kind, detail!.id)"
-      />
-      <section v-else class="muted flex flex-1 flex-col items-center justify-center gap-3">Loading task #{{ pageId }}…</section>
-    </main>
-    <main v-else-if="route.current.name === 'insights'" class="flex min-h-0 flex-1 flex-col">
-      <InsightsView />
-    </main>
-    <main v-else class="flex min-h-0 flex-1 flex-col">
-      <StaleDaemonBar :status="status" />
-      <WaitBar :status="status" :busy="busy" @resume="resumeDaemon" @resume-repo="resumeRepo" @settings="modal = 'settings'" />
-      <QueueView
-        v-if="tasks.length"
-        v-model:selected="selectedId"
-        :tasks="tasks"
-        @open="openFromQueue"
-        @act="actOn"
-        @new-task="modal = 'new'"
-      />
-      <section v-else class="muted flex flex-1 flex-col items-center justify-center gap-3">
-        No tasks yet.
-        <button class="primary" @click="modal = repos.length ? 'new' : 'repos'">
-          {{ repos.length ? 'Queue your first task' : 'Add a repo to get started' }}
-        </button>
-      </section>
-    </main>
-
-    <StatusBar :status="status" :tasks="tasks" :offline="offline" :busy="busy" @toggle="togglePause" @daemon="modal = 'daemon'" />
-
-    <NewTaskForm v-if="modal === 'new'" :repos="repos" @close="modal = null" @created="onCreated" @repos="modal = 'repos'" />
-    <ReposPanel v-if="modal === 'repos'" :repos="repos" @close="modal = null" />
-
-    <SettingsPanel v-if="modal === 'settings'" :notifications="status?.notifications ?? []" @close="modal = null" />
-    <DaemonPanel v-if="modal === 'daemon'" @close="modal = null" />
-
-    <MergeDialog v-if="merging !== null" :task-id="merging" @close="merging = null" @merged="onMerged" />
-    <CommandPalette v-if="palette" :items="paletteRows" @close="palette = false" />
-
-    <div
-      v-if="toast"
-      class="fixed bottom-10 left-1/2 z-40 max-w-[calc(100vw-32px)] -translate-x-1/2 rounded-md bg-text px-3.5 py-2 text-bg"
-    >
-      {{ toast }}
-    </div>
-  </div>
+  </AppProvider>
 </template>
