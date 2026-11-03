@@ -78,6 +78,17 @@ export function flag(body: Record<string, unknown>, key: string): boolean | unde
   return value;
 }
 
+const ON_WORDS = ['1', 'on', 'true', 'yes'];
+const OFF_WORDS = ['0', 'off', 'false', 'no'];
+
+/** An on/off word typed by a person (`on`, `off`, and the synonyms the help lists); anything else is refused. */
+export function onOff(key: string, value: string): boolean {
+  const word = value.trim().toLowerCase();
+  if (ON_WORDS.includes(word)) return true;
+  if (OFF_WORDS.includes(word)) return false;
+  throw new ActionError(`${key} takes ${ON_WORDS.join(', ')} or ${OFF_WORDS.join(', ')}, got "${value}"`);
+}
+
 /** A list of text; undefined when absent. A comma-or-space separated string is accepted when `split` is set. */
 export function list(body: Record<string, unknown>, key: string, opts: { split?: boolean } = {}): string[] | undefined {
   const value = body[key];

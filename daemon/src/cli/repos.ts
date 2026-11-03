@@ -6,6 +6,7 @@ import type { ProposalResult } from '../domain/planner/proposals.ts';
 import { parseNetwork } from '../domain/run/sandbox.ts';
 import { callDaemon } from './daemon-client.ts';
 import { die, fmtTask, printDoctor } from './format.ts';
+import { repoSettingPatch } from './settings-args.ts';
 import type { Command } from './context.ts';
 
 const propose: Command = async ({ db, rest, repoName }) => {
@@ -73,7 +74,7 @@ export const repoCommands: Record<string, Command> = {
     } else if (sub === 'set') {
       const [, name, key, value = ''] = rest;
       // No repo name means no key either, so the patch is what says how to use the command.
-      const patch = actions.repoSettingPatch(name && key, value);
+      const patch = repoSettingPatch(name && key, value);
       actions.updateRepo(db, name, patch);
       console.log(`${name}: ${key} ${value || '(none)'}`);
     } else if (sub === 'ls' || !sub) {
