@@ -1,10 +1,12 @@
 // The live state of a repo's queue in a few lines, for an agent: what changed since it last looked, and what is open.
 // Pure: the caller reads the events, tasks and header facts. `agentdeck context` prints it, and Claude Code's hooks run that.
-import { type TaskEventRow, isAutoMergeReason, isPrOpenedReason, isRequestedMergeReason, prSeenState } from './history.ts';
+import { describeEvent } from './event-text.ts';
+import type { TaskEventRow } from './history.ts';
 import type { TaskStatus } from './lifecycle.ts';
 import type { PrState } from '../pull-request/pr.ts';
 import { statusGroup } from './stage.ts';
 import type { Waiting } from './start.ts';
+import { short } from '../text.ts';
 
 /** A history row with its task's title. */
 export type DigestEvent = Pick<TaskEventRow, 'id' | 'task_id' | 'type' | 'from_status' | 'to_status' | 'reason'> & { title: string };
@@ -56,73 +58,8 @@ const MORE = (k: number) => `  +${k} more: agentdeck ls`;
 const TITLE_MAX = 60;
 const REASON_MAX = 80;
 
-/** The first line of a text, cut to `max` characters. */
-function short(text: string, max: number): string {
-  const line = text.trim().split('\n')[0] ?? '';
-  return line.length > max ? `${line.slice(0, max - 1)}…` : line;
-}
-
-const withReason = (what: string, reason: string | null) => (reason ? `${what}: ${short(reason, REASON_MAX)}` : what);
-
-/** What one history row says happened, in the domain language. */
-export function describeEvent(e: Pick<TaskEventRow, 'type' | 'to_status' | 'reason'>): string {
-  // Whatever the trigger (a usage limit, a restart, the environment), a task that ended cancelled was cancelled.
-  if (e.to_status === 'cancelled' && e.type !== 'reject') return 'cancelled';
-  switch (e.type) {
-    case 'created':
-      return e.to_status === 'proposed' ? 'proposed' : 'added';
-    case 'claim':
-      return 'started';
-    case 'finish':
-      if (e.to_status === 'queued') return withReason('failed, queued to retry', e.reason);
-      if (e.to_status === 'blocked' || e.to_status === 'failed') return withReason(e.to_status, e.reason);
-      return e.to_status ?? 'finished';
-    case 'rate_limited':
-      return 'queued again: usage limit';
-    case 'recover':
-      return e.to_status === 'queued' ? 'queued again after a daemon restart' : withReason('failed after daemon restarts', e.reason);
-    case 'conflict':
-      return withReason('blocked: conflict', e.reason);
-    case 'cancel':
-      return e.to_status === 'cancel_requested' ? 'cancel requested' : 'cancelled';
-    case 'approve':
-      return 'approved';
-    case 'reject':
-      return 'rejected';
-    case 'retry':
-      return withReason('retried', e.reason);
-    case 'unblock_retry':
-      return 'unblock run: retried with a note';
-    case 'unblock_ask':
-      return 'unblock run: asked a question';
-    case 'mark_done':
-      return 'marked done by a person';
-    case 'pr_merged':
-      return 'PR merged';
-    case 'merge':
-      // The reason is how: "auto-merged (squash)" or "requested (squash)" from the daemon, "squash merge" from a person.
-      if (e.reason && isAutoMergeReason(e.reason)) return `PR ${short(e.reason, REASON_MAX)}`;
-      if (e.reason && isRequestedMergeReason(e.reason)) return `PR merged as ${short(e.reason, REASON_MAX)}`;
-      return e.reason ? `PR merged (${short(e.reason, REASON_MAX)})` : 'PR merged';
-    case 'pr': {
-      if (isPrOpenedReason(e.reason)) return 'PR opened';
-      // The daemon words a PR found changed as "PR is merged".
-      const seen = prSeenState(e.reason);
-      if (seen !== null) return `PR ${short(seen, REASON_MAX)}`;
-      return withReason('PR', e.reason);
-    }
-    case 'edit':
-      return withReason('edited', e.reason);
-    case 'sync':
-      return 'synced with the base branch';
-    case 'plan_unfinished':
-      return 'left plan steps unfinished';
-    case 'environment_block':
-      return withReason('blocked by the environment', e.reason);
-    default:
-      return e.type;
-  }
-}
+// What one history row says happened lives in event-text.ts; the digest words rows for an agent and keeps the old name.
+export { describeEvent };
 
 /** One open task: its status, title, and why it waits or stopped. */
 function describeTask(t: DigestTask): string {
@@ -159,7 +96,7 @@ export function digest(input: DigestInput, limit = DIGEST_LIMIT): string[] {
     const byTask = new Map<number, { title: string; what: string[] }>();
     for (const e of input.events) {
       const entry = byTask.get(e.task_id) ?? { title: e.title, what: [] };
-      entry.what.push(describeEvent(e));
+      entry.what.push(describeEvent(e, 'agent'));
       byTask.set(e.task_id, entry);
     }
     const lines = [...byTask].map(([id, { title, what }]) => `  #${id} ${short(title, TITLE_MAX)}: ${what.join(' · ')}`);
