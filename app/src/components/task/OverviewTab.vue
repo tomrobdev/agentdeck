@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { runLabel } from '../../../../daemon/src/domain/run/run.ts';
 import { type PersonEventText, describeEvent } from '../../../../daemon/src/domain/task/event-text.ts';
-import { type Changes, type Run, type TaskDetail, type TaskEventRow, ago, fmtTokens, runDuration, totalTokens } from '../../api';
+import { type Changes, type Run, type TaskDetail, type TaskEventRow, ago, fmtTokens, runDuration, runLabel, totalTokens } from '../../api';
 import Markdown from '../files/Markdown.vue';
 import DependenciesCard from './DependenciesCard.vue';
 import DocumentsCard from './DocumentsCard.vue';
