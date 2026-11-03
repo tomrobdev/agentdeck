@@ -21,7 +21,12 @@ function setup(pr_mode: 'off' | 'ready' = 'off') {
   const repo = db.addRepo({ name: 'demo', path: '/tmp/demo', base_branch: 'main' });
   db.raw.prepare('UPDATE repos SET pr_mode = ? WHERE id = ?').run(pr_mode, repo.id);
   const add = (after_task: number | null = null) =>
-    db.addTask({ repo_id: repo.id, title: `task ${after_task ?? 'a'}`, prompt: 'p', after_task });
+    db.addTask({
+      repo_id: repo.id,
+      title: `task ${after_task ?? 'a'}`,
+      prompt: 'p',
+      links: after_task == null ? [] : [{ on: after_task, kind: 'builds_on' }],
+    });
   return { db, repo, add };
 }
 

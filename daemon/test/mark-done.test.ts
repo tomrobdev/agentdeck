@@ -20,7 +20,13 @@ type TaskStatus = (typeof TASK_STATUSES)[number];
 function setup() {
   const db = openDb(':memory:');
   const repo = db.addRepo({ name: 'r', path: '/tmp/r', base_branch: 'main' });
-  const add = (after_task?: number) => db.addTask({ repo_id: repo.id, title: 't', prompt: 'p', after_task });
+  const add = (after_task?: number) =>
+    db.addTask({
+      repo_id: repo.id,
+      title: 't',
+      prompt: 'p',
+      links: after_task === undefined ? [] : [{ on: after_task, kind: 'builds_on' }],
+    });
   return { db, repo, add };
 }
 

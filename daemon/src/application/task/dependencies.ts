@@ -1,6 +1,6 @@
 // Tasks waiting on another through a builds-on link: why they wait, and telling a human when they're stuck.
 import type { Db } from '../../db/index.ts';
-import type { Dependent } from '../../db/tasks.ts';
+import type { Dependent } from '../../db/task-links.ts';
 import {
   type Link,
   type LinkKind,

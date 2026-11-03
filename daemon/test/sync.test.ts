@@ -276,7 +276,7 @@ for (const [flag, why] of [
     conflictOnMain();
     const head = sh(t.wt, 'rev-parse', 'HEAD');
     const attempts = db.getTask(t.id)!.attempts;
-    const dependent = db.addTask({ repo_id: repo.id, title: 'waits', prompt: 'x', after_task: t.id });
+    const dependent = db.addTask({ repo_id: repo.id, title: 'waits', prompt: 'x', links: [{ on: t.id, kind: 'builds_on' }] });
 
     const r = await syncNow(db, t.id);
     assert.equal(r.outcome, 'blocked');
