@@ -250,8 +250,8 @@ fn on_menu_event(app: &AppHandle, event: MenuEvent) {
     }
 }
 
-/// Build the tray icon and its menu, then keep both and the dock badge up to date from the daemon.
-pub fn setup(app: &mut App) -> tauri::Result<()> {
+/// Build the tray icon and its menu. Returns what keeps both and the dock badge up to date from each read of the daemon.
+pub fn setup(app: &mut App) -> tauri::Result<impl FnMut(&Read) + Send + 'static> {
     let view = tray_view(&Read::Connecting, clock());
     TrayIconBuilder::with_id(TRAY_ID)
         .icon(app.default_window_icon().unwrap().clone())
@@ -262,8 +262,8 @@ pub fn setup(app: &mut App) -> tauri::Result<()> {
         .build(app)?;
     let handle = app.handle().clone();
     let mut last = view;
-    daemon_client::watch(move |read| {
-        let view = tray_view(&read, clock());
+    Ok(move |read: &Read| {
+        let view = tray_view(read, clock());
         if view == last {
             return;
         }
@@ -271,8 +271,7 @@ pub fn setup(app: &mut App) -> tauri::Result<()> {
             eprintln!("tray: couldn't update: {e}");
         }
         last = view;
-    });
-    Ok(())
+    })
 }
 
 #[cfg(test)]
@@ -298,6 +297,7 @@ mod tests {
             paused: false,
             running: 0,
             max_concurrent: 3,
+            notifications: Vec::new(),
         }
     }
 

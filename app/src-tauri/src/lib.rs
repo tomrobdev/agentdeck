@@ -1,4 +1,5 @@
 mod daemon_client;
+mod notifications;
 mod open;
 mod shortcuts;
 mod terminal;
@@ -36,7 +37,12 @@ pub fn run() {
             terminal::run_template
         ])
         .setup(|app| {
-            tray::setup(app)?;
+            let mut tray = tray::setup(app)?;
+            let mut notifications = notifications::setup(app.handle());
+            daemon_client::watch(move |read| {
+                tray(&read);
+                notifications(&read);
+            });
             shortcuts::register(app.handle());
             let handle = app.handle().clone();
             app.deep_link().on_open_url(move |event| {

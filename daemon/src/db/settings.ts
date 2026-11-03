@@ -15,6 +15,7 @@ export const SETTING_DEFAULTS = {
   paused: '1',
   rate_limited_until: '0',
   pr_check_requested: '0',
+  app_seen_at: '0',
   reload_on_change: '0',
   max_concurrent: String(DEFAULTS.maxConcurrent),
   notify_desktop: '1',
@@ -86,6 +87,9 @@ export function settingsStore(db: DatabaseSync, orm: Orm) {
     /** When a PR re-read was last asked for, in ms since the epoch. */
     prCheckRequested: (): number => Number(get('pr_check_requested')),
     requestPrCheck: (at = Date.now()): void => set('pr_check_requested', String(at)),
+    /** When the desktop app last said it is running, in ms since the epoch; null when it never did. */
+    appSeenAt: (): number | null => Number(get('app_seen_at')) || null,
+    setAppSeenAt: (at: number): void => set('app_seen_at', String(at)),
     budget,
     maxConcurrent: (): number => Number(get('max_concurrent')),
     notifySettings,

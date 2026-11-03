@@ -1,4 +1,4 @@
-// The daemon as a whole: the change stream, status, stats, pause and resume, restart, health, the service and a test notification.
+// The daemon as a whole: the change stream, status, stats, pause and resume, restart, health, the service, a test notification and the desktop app saying it is running.
 import * as actions from '../../application/actions.ts';
 import { parseSince } from '../../domain/run/scorecard.ts';
 import type * as C from '../contract.ts';
@@ -40,5 +40,6 @@ export function routes({ db, daemon, changes }: ApiContext): Route[] {
     route<C.RestartNowResult>('POST', /^\/api\/daemon\/restart-now$/, () => actions.restartNow(db, actions.restart)),
     route<C.ServiceStatus>('GET', /^\/api\/service$/, () => actions.serviceStatus()),
     route<C.TestNotifyResult>('POST', /^\/api\/notify\/test$/, async () => (await actions.sendTestNotification(db), { ok: true })),
+    route<C.AppSeenResult>('POST', /^\/api\/app\/seen$/, () => actions.appSeen(db)),
   ];
 }
