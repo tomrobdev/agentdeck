@@ -1,6 +1,7 @@
 // Bulk selection, in the list only: `x` or shift-click picks, and the bar offers what every picked task allows.
 import { type Ref, computed, ref, watch } from 'vue';
 import { PERSON_CALLS, type TaskSummary } from '../api';
+import { errorMessage } from '../../../daemon/src/domain/text.ts';
 import { type BulkAction, bulkActions, idRange } from '../lib/bulk';
 import { canStartMerge } from '../lib/taskView';
 import { useAction } from './useActions';
@@ -45,7 +46,7 @@ export function useBulkPick(tasks: () => TaskSummary[], order: Ref<TaskSummary[]
         try {
           await PERSON_CALLS[action](t.id);
         } catch (e) {
-          throw new Error(`#${t.id}: ${(e as Error).message}`);
+          throw new Error(`#${t.id}: ${errorMessage(e)}`);
         }
       }
     });

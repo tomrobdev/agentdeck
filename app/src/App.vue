@@ -171,6 +171,7 @@ watchEffect(() => {
         <StaleDaemonBar :status="status" />
         <TaskPage
           v-if="detail && route.current.name === 'task'"
+          :key="detail.id"
           :task="detail"
           :tab="route.current.tab"
           :query="route.current.query"

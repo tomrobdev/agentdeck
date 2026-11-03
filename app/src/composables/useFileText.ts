@@ -4,6 +4,7 @@
 import { type MaybeRefOrGetter, reactive, toValue, watch } from 'vue';
 import { useQueryClient } from '@tanstack/vue-query';
 import { fileQuery } from '../api';
+import { errorMessage } from '../../../daemon/src/domain/text.ts';
 
 export function useFileText(taskId: MaybeRefOrGetter<number>, head: MaybeRefOrGetter<string | null>) {
   const queryClient = useQueryClient();
@@ -22,7 +23,7 @@ export function useFileText(taskId: MaybeRefOrGetter<number>, head: MaybeRefOrGe
     try {
       shown = (await queryClient.fetchQuery(q)).text ?? '_Binary file._';
     } catch (e) {
-      shown = `Couldn't load: ${(e as Error).message}`;
+      shown = `Couldn't load: ${errorMessage(e)}`;
     }
     if (id === toValue(taskId) && at === toValue(head)) text.set(path, shown);
   }

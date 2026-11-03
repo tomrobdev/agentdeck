@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { type LinkKind, type TaskDetail, type TaskLink, type TaskSummary, api, tasksQuery } from '../../api';
+import { errorMessage } from '../../../../daemon/src/domain/text.ts';
 import { openTask } from '../../router';
 import { statusLabel } from '../../lib/taskView';
 import { useActions } from '../../composables/useActions';
@@ -79,7 +80,7 @@ async function add(on: number) {
   try {
     await api.linkTask(props.task.id, { on, kind: kind.value });
   } catch (e) {
-    error.value = (e as Error).message;
+    error.value = errorMessage(e);
     return;
   }
   adding.value = false;
@@ -99,7 +100,7 @@ async function remove(on: number) {
   try {
     await api.unlinkTask(props.task.id, on);
   } catch (e) {
-    error.value = (e as Error).message;
+    error.value = errorMessage(e);
     return;
   }
   await run(async () => {});

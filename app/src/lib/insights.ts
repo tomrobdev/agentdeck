@@ -2,6 +2,7 @@
 // Pure: the targets and the week a stamp falls in are the daemon's (domain/run/scorecard.ts, domain/time.ts).
 import type { Stats } from '../../../daemon/src/api/contract.ts';
 import { SCORECARD_TARGETS } from '../../../daemon/src/domain/run/scorecard.ts';
+import { plural } from '../../../daemon/src/domain/text.ts';
 import { sqliteUtc, weekOf } from '../../../daemon/src/domain/time.ts';
 
 export type MeasureKey = 'first_run' | 'interventions' | 'cost' | 'minutes' | 'review' | 'quota' | 'ci';
@@ -111,7 +112,7 @@ export function seriesOf(stats: Stats, now: Date = new Date()): Series[] {
     },
     interventions: (w) => {
       const m = card.get(w)?.measures.interventions;
-      return { value: m ? m.total : null, detail: m ? `on ${m.tasks} task${m.tasks === 1 ? '' : 's'}` : null };
+      return { value: m ? m.total : null, detail: m ? `on ${plural(m.tasks, 'task')}` : null };
     },
     cost: (w) => {
       const m = runs.get(w);

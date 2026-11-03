@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import type { TaskSummary } from '../../api';
 import { DEFAULT_SIZE, chainOf, edgesOf, graphTasks, layoutGraph, stuckSet } from '../../lib/graph';
+import { cut } from '../../../../daemon/src/domain/text.ts';
 import StatusIcon from '../ui/StatusIcon.vue';
 
 // Linked tasks as a layered graph: builds-on edges solid, after edges dashed, a stuck chain outlined in the blocked colour.
@@ -36,7 +37,6 @@ function path(from: number, to: number): string {
   return `M${x1},${y1} C${x1 + dx},${y1} ${x2 - dx},${y2} ${x2},${y2}`;
 }
 const edgeStuck = (from: number, to: number, kind: string) => kind === 'builds_on' && stuck.value.has(from) && stuck.value.has(to);
-const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 const dim = (id: number) => lit.value !== null && !lit.value.has(id);
 </script>
 
@@ -96,9 +96,9 @@ const dim = (id: number) => lit.value !== null && !lit.value.has(id);
         <StatusIcon :task="byId.get(n.id)!" :size="14" :x="12" :y="9" />
         <text x="32" y="20" font-size="12" font-weight="600" fill="var(--text)">
           <tspan font-family="var(--font-mono)">#{{ n.id }}</tspan>
-          {{ clip(byId.get(n.id)!.title, 22) }}
+          {{ cut(byId.get(n.id)!.title, 22) }}
         </text>
-        <text x="32" y="36" font-size="11" fill="var(--muted)">{{ clip(byId.get(n.id)!.repo ?? '', 28) }}</text>
+        <text x="32" y="36" font-size="11" fill="var(--muted)">{{ cut(byId.get(n.id)!.repo ?? '', 28) }}</text>
         <title>{{ byId.get(n.id)!.title }}{{ stuck.has(n.id) ? ' (stuck chain)' : '' }}</title>
       </g>
     </svg>

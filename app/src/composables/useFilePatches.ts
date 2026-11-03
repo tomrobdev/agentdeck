@@ -3,6 +3,7 @@
 import { type Ref, nextTick, onBeforeUnmount, reactive, watch } from 'vue';
 import { useQueryClient } from '@tanstack/vue-query';
 import { type FilePatch, diffQuery } from '../api';
+import { errorMessage } from '../../../daemon/src/domain/text.ts';
 
 export type PatchState = { state: 'loading' } | { state: 'error'; error: string } | { state: 'ok'; patch: FilePatch };
 
@@ -21,7 +22,7 @@ export function useFilePatches(taskId: Ref<number>, head: Ref<string | null>) {
       const patch = await queryClient.fetchQuery(q);
       if (at === head.value) patches.set(path, { state: 'ok', patch });
     } catch (e) {
-      if (at === head.value) patches.set(path, { state: 'error', error: (e as Error).message });
+      if (at === head.value) patches.set(path, { state: 'error', error: errorMessage(e) });
     }
   }
 

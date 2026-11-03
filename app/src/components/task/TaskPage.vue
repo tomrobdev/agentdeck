@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, toRef, watch } from 'vue';
 import { type TaskDetail, ago, api, describeWait } from '../../api';
+import { plural } from '../../../../daemon/src/domain/text.ts';
 import { useHotkeys } from '../../composables/useHotkeys';
 import { type TaskTab, go, openTask } from '../../router';
 import { readNeeds, readTaskQuestion } from '../../lib/taskView';
@@ -89,7 +90,7 @@ const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel
             <span>→</span>
             <code :class="code" class="flex-none">{{ base }}</code>
           </span>
-          <span class="whitespace-nowrap">{{ task.runs.length }} {{ task.runs.length === 1 ? 'run' : 'runs' }}</span>
+          <span class="whitespace-nowrap">{{ plural(task.runs.length, 'run') }}</span>
           <span class="whitespace-nowrap">{{ task.source === 'planner' ? 'proposed' : 'created' }} {{ ago(task.created_at) }}</span>
           <TaskBadges :task="task" />
         </div>

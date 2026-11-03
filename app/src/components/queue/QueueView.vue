@@ -49,8 +49,8 @@ const { flash, run } = useActions();
 // Space opens the selected task beside the list (list view only). The panel follows the selection; its width is remembered.
 const peek = ref(false);
 
-// A PR in review moves on from its row: Merge (or a drop on Done) opens the merge confirm, Sync brings the base into its
-// branch. A sync that conflicts starts a resolve run, which takes minutes; the row shows the sync from the task's summary,
+// A PR in review moves on from its row: Merge (or a drop on Done) opens the merge confirm, Sync brings its branch up to the
+// base branch. A sync that conflicts starts a resolve run, which takes minutes; the row shows the sync from the task's summary,
 // whoever started it, until it ends.
 async function sync(id: number) {
   if (props.tasks.find((t) => t.id === id)?.sync) return;

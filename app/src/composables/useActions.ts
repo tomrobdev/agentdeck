@@ -1,6 +1,7 @@
 // What every button that changes something does the same way: run it, refresh the page's data after
 // it worked, and flash the error if it didn't. App creates this once; components `useActions()` it.
 import { type InjectionKey, type Ref, computed, inject, provide, ref } from 'vue';
+import { errorMessage } from '../../../daemon/src/domain/text.ts';
 
 export type RunOptions = {
   done?: string;
@@ -28,7 +29,7 @@ export function createActions(refresh: () => Promise<unknown>, flash: (msg: stri
       if (opts.done) flash(opts.done);
       return true;
     } catch (e) {
-      flash((e as Error).message);
+      flash(errorMessage(e));
       return false;
     } finally {
       if (pending) pending.value--;

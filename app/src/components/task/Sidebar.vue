@@ -6,9 +6,10 @@ import { openExternal, useCopy } from '../../platform/native';
 import { PRIORITY_LEVELS, canEdit, priorityLevel, statusLabel } from '../../lib/taskView';
 import { useActions } from '../../composables/useActions';
 import { useTerminal } from '../../composables/useTerminal';
-import InlineEdit from '../ui/InlineEdit.vue';
 import PriorityIcon from '../ui/PriorityIcon.vue';
 import StatusIcon from '../ui/StatusIcon.vue';
+import EditableProp from './EditableProp.vue';
+import { name, prop, row, rowButton, rowMono } from './sidebarStyle';
 
 // Task properties, GitHub-sidebar style. Priority, model and turns are editable while the task is.
 const props = defineProps<{ task: TaskDetail }>();
@@ -24,9 +25,12 @@ function openWorktree() {
 }
 
 // An edit is saved from the field's own value; a refused one leaves the task unchanged, so the saved value shows again.
+const FIELD_NAMES = { priority: 'Priority', model: 'Model', max_turns: 'Max turns' } as const;
 async function save(field: 'priority' | 'model' | 'max_turns', text: string) {
   const value = text.trim();
   if (value === String(props.task[field])) return;
+  // An empty field would be sent as 0 (Number('') is 0): refuse it, and the saved value shows again.
+  if (!value) return flash(`${FIELD_NAMES[field]} can't be empty.`);
   await run(() => api.editTask(props.task.id, { [field]: field === 'model' ? value : Number(value) }));
 }
 
@@ -52,15 +56,6 @@ async function setAutoMerge(select: HTMLSelectElement) {
 const AUTO_MERGE_TEXT = { off: 'text-muted', on: 'text-muted', merge: 'text-done', wait: 'text-blocked', never: 'text-failed' } as const;
 
 const levelLabel = computed(() => PRIORITY_LEVELS.find((l) => l.key === priorityLevel(props.task.priority))!.label);
-
-// One property: a name over a value. The value is a row, or a button that looks like one and shows a border on hover when it can be edited.
-const prop = 'border-b border-border py-2';
-const name = 'mb-[3px] text-sm text-muted';
-const row = 'flex min-h-6 min-w-0 items-center gap-1.5';
-const rowButton = `${row} -ml-1.5 w-[calc(100%+6px)] border border-transparent bg-transparent px-1.5 py-0 text-left disabled:opacity-100`;
-const rowButtonEditable = 'hover:border-border hover:bg-panel-2';
-const rowMono = `${row} font-mono text-sm leading-[normal]`;
-const input = 'px-1.5 py-0.5';
 </script>
 
 <template>
@@ -69,56 +64,25 @@ const input = 'px-1.5 py-0.5';
       <div :class="name">Status</div>
       <div :class="row"><StatusIcon :task="task" /> {{ statusLabel(task.status) }}</div>
     </div>
-    <div :class="prop">
-      <div :class="name">Priority</div>
-      <InlineEdit
-        v-if="editable"
-        label="Priority"
-        type="number"
-        :value="String(task.priority)"
-        :preview-class="`${rowButton} ${rowButtonEditable} cursor-pointer`"
-        :input-class="input"
-        @submit="(v) => save('priority', v)"
-      >
-        <PriorityIcon :priority="task.priority" /> {{ levelLabel }} <span class="text-muted">{{ task.priority }}</span>
-      </InlineEdit>
-      <div v-else :class="row">
-        <PriorityIcon :priority="task.priority" /> {{ levelLabel }} <span class="text-muted">{{ task.priority }}</span>
-      </div>
-    </div>
+    <EditableProp label="Priority" type="number" :value="String(task.priority)" :editable="editable" @submit="(v) => save('priority', v)">
+      <PriorityIcon :priority="task.priority" /> {{ levelLabel }} <span class="text-muted">{{ task.priority }}</span>
+    </EditableProp>
     <div :class="prop">
       <div :class="name">Repo</div>
       <div :class="row">{{ task.repo }}</div>
     </div>
-    <div :class="prop">
-      <div :class="name">Model</div>
-      <InlineEdit
-        v-if="editable"
-        label="Model"
-        :value="task.model"
-        :preview-class="`${rowButton} ${rowButtonEditable} cursor-pointer`"
-        :input-class="input"
-        @submit="(v) => save('model', v)"
-      />
-      <div v-else :class="row">{{ task.model }}</div>
-    </div>
+    <EditableProp label="Model" :value="task.model" :editable="editable" @submit="(v) => save('model', v)" />
     <div :class="prop">
       <div :class="name">Attempts</div>
       <div :class="row">{{ task.attempts }} / {{ task.max_attempts }}</div>
     </div>
-    <div :class="prop">
-      <div :class="name">Max turns</div>
-      <InlineEdit
-        v-if="editable"
-        label="Max turns"
-        type="number"
-        :value="String(task.max_turns)"
-        :preview-class="`${rowButton} ${rowButtonEditable} cursor-pointer`"
-        :input-class="input"
-        @submit="(v) => save('max_turns', v)"
-      />
-      <div v-else :class="row">{{ task.max_turns }}</div>
-    </div>
+    <EditableProp
+      label="Max turns"
+      type="number"
+      :value="String(task.max_turns)"
+      :editable="editable"
+      @submit="(v) => save('max_turns', v)"
+    />
     <div v-if="task.pr_url" :class="prop">
       <div :class="name">Pull request</div>
       <button :class="[rowButton, 'text-accent']" @click="openExternal(task.pr_url)">{{ task.pr_state ?? 'open' }} ↗</button>

@@ -3,6 +3,7 @@ import { computed, nextTick, ref } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { type PlanStep, type TaskPlan, ago, planHtmlQuery } from '../../api';
 import { planProgress } from '../../../../daemon/src/domain/plan/plan.ts';
+import { plural } from '../../../../daemon/src/domain/text.ts';
 import { mode } from '../../platform/theme';
 import { withBaseStyle } from '../../lib/planPage';
 import planCss from '../../../../docs/plans/plan.css?raw';
@@ -111,7 +112,7 @@ function onFrameLoad() {
             s.status === 'doing' ? 'in progress' : 'blocked'
           }}</span>
           <DisclosureTrigger v-if="s.done.length" class="btn-ghost ml-auto text-sm text-muted hover:text-accent">
-            {{ open ? '▾' : '▸' }} {{ s.done.length }} {{ s.done.length === 1 ? 'check' : 'checks' }}
+            {{ open ? '▾' : '▸' }} {{ plural(s.done.length, 'check') }}
           </DisclosureTrigger>
         </div>
         <DisclosureContent>

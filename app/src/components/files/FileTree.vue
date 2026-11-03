@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
+import { errorMessage } from '../../../../daemon/src/domain/text.ts';
 import { useHotkeys } from '../../composables/useHotkeys';
 import type { TreeNode } from '../../lib/changedTree';
 import { fuzzyScore } from '../../lib/fuzzy';
@@ -51,7 +52,7 @@ async function fetchDir(dir: string) {
     errors.delete(dir);
     if (props.expandAll) for (const n of list) if (n.type === 'dir') await toggle(n.path, true);
   } catch (e) {
-    if (load === props.load) errors.set(dir, (e as Error).message);
+    if (load === props.load) errors.set(dir, errorMessage(e));
   } finally {
     loading.delete(dir);
   }
