@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { type MergeMethod, type MergeResult, MERGE_METHODS, api, autoMergeLine, mergePreviewQuery } from '../../api';
 import { useActions } from '../../composables/useActions';
-import Modal from '../ui/Modal.vue';
+import ConfirmDialog from '../ui/ConfirmDialog.vue';
+import RadioGroup from '../ui/RadioGroup.vue';
 
 // The confirm before a merge: it writes to the base branch on GitHub and can't be undone from here. The button asks the
 // daemon to merge (a merge request) and the dialog closes at once; the daemon merges when the PR is ready. Only a PR whose
-// checks or tests failed merges now, on the person's say-so. Enter confirms, Esc cancels (Modal). Errors show in the dialog.
+// checks or tests failed merges now, on the person's say-so. The dialog focuses the confirm button, so Enter confirms; Esc cancels. Errors show in the dialog.
 const props = defineProps<{ taskId: number }>();
 const emit = defineEmits<{ close: []; merged: [result: MergeResult]; requested: [] }>();
 const { refresh } = useActions();
@@ -78,20 +79,17 @@ async function merge() {
     merging.value = false;
   }
 }
-
-// Enter confirms, except where it already means something: a button or a menu.
-const onKey = (e: KeyboardEvent) => {
-  if (e.key !== 'Enter' || e.defaultPrevented || e.isComposing) return;
-  if (e.target instanceof HTMLElement && e.target.closest('button, select, a')) return;
-  e.preventDefault();
-  merge();
-};
-onMounted(() => window.addEventListener('keydown', onKey));
-onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
 </script>
 
 <template>
-  <Modal title="Merge pull request" @close="emit('close')">
+  <ConfirmDialog
+    title="Merge pull request"
+    :confirm-label="merging ? 'Working…' : label"
+    :confirm-disabled="!canConfirm"
+    :busy="merging"
+    @cancel="emit('close')"
+    @confirm="merge"
+  >
     <p v-if="loadError" class="form-error">{{ loadError }}</p>
     <p v-else-if="!preview" class="muted">Reading the pull request from GitHub…</p>
     <div v-else class="flex flex-col gap-2.5">
@@ -105,10 +103,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
       >
         <dt>Method</dt>
         <dd>
-          <select v-model="method" aria-label="Merge method">
-            <option v-for="m in MERGE_METHODS" :key="m.key" :value="m.key">{{ m.label }}</option>
-          </select>
-          <span class="muted">{{ MERGE_METHODS.find((m) => m.key === method)?.hint }}</span>
+          <RadioGroup v-model="method" label="Merge method" :options="MERGE_METHODS" />
         </dd>
         <dt>Commits</dt>
         <dd>{{ commitsLine }}</dd>
@@ -161,10 +156,5 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
       </ul>
       <p v-if="mergeError" class="form-error">{{ mergeError }}</p>
     </div>
-
-    <div class="mt-4 flex justify-end gap-2">
-      <button @click="emit('close')">Cancel</button>
-      <button class="primary" :disabled="!canConfirm" @click="merge">{{ merging ? 'Working…' : label }}</button>
-    </div>
-  </Modal>
+  </ConfirmDialog>
 </template>
