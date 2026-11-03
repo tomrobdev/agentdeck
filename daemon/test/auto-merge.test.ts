@@ -14,10 +14,11 @@ const { openDb } = await import('../src/db/index.ts');
 const { doneTask } = await import('./fixtures.ts');
 const { github } = await import('../src/adapters/github.ts');
 const { AUTO_MERGE_LABEL, autoMergeCheck, autoMergeOn, autoMergeSkip } = await import('../src/domain/pull-request/auto-merge.ts');
-const { refreshPrStates } = await import('../src/application/pull-request/pull-requests.ts');
+const { isMergeLocked, refreshPrStates } = await import('../src/application/pull-request/pull-requests.ts');
 const { autoMerge } = await import('../src/application/pull-request/auto-merge.ts');
 const { openPullRequest } = await import('../src/application/pull-request/open-pr.ts');
-const { ActionError, addTask, mergePreview, setAutoMerge, updateRepo } = await import('../src/application/actions.ts');
+const { ActionError, addTask, mergePreview, mergeTask, setAutoMerge, syncNow, updateRepo } = await import('../src/application/actions.ts');
+const { resolveConflicting } = await import('../src/application/sync.ts');
 const { repoSettingPatch } = await import('../src/cli/settings-args.ts');
 const { waitingFor } = await import('../src/application/task/dependencies.ts');
 type PrDetails = import('../src/domain/pull-request/merge.ts').PrDetails;
@@ -298,6 +299,53 @@ test('autoMerge merges one PR per call, skips one that moved on, and tells a ref
   assert.equal(db.recentNotifications(50).filter((x) => x.task_id === b.id).length, 1);
   assert.equal(db.getTask(b.id)!.status, 'done');
   assert.equal(db.getTask(b.id)!.pr_state, 'open');
+});
+
+test('a merge and a sync never touch one task at once', async () => {
+  const a = tested();
+  db.setSyncing(a.id, true);
+  await assert.rejects(mergeTask(db, a.id), /syncing/);
+  assert.equal(await autoMerge(db, [{ id: a.id, pr: ready }]), null);
+  assert.deepEqual(gh.merged, []);
+  assert.equal(db.recentNotifications(50).filter((x) => x.task_id === a.id).length, 0);
+  db.setSyncing(a.id, false);
+
+  // A merge under way refuses a sync and is skipped by the conflict syncs.
+  const b = tested();
+  let release!: () => void;
+  const held = new Promise<void>((r) => (release = r));
+  const merge = github.merge;
+  github.merge = async (pr) => {
+    await held;
+    return merge(pr);
+  };
+  try {
+    const merging = mergeTask(db, b.id);
+    while (!isMergeLocked(b.id)) await new Promise((r) => setImmediate(r));
+    await assert.rejects(syncNow(db, b.id), /being merged/);
+    await assert.rejects(mergeTask(db, b.id), /already being merged/);
+    const logs: string[] = [];
+    await resolveConflicting(db, [b.id], (m) => logs.push(m));
+    assert.deepEqual(logs, []);
+    release();
+    await merging;
+  } finally {
+    github.merge = merge;
+  }
+  assert.deepEqual(gh.merged, [b.url]);
+});
+
+test('a gh merge failure on a PR that is already merged sends no "Could not merge"', async () => {
+  const a = tested();
+  mergeError = 'Pull request is already merged';
+  const prState = github.prState;
+  github.prState = async () => 'merged';
+  try {
+    assert.equal(await autoMerge(db, [{ id: a.id, pr: ready }]), null);
+  } finally {
+    github.prState = prState;
+  }
+  assert.equal(db.recentNotifications(50).filter((x) => x.task_id === a.id).length, 0);
 });
 
 // ---- A person's override

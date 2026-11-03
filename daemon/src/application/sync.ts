@@ -32,6 +32,7 @@ import { endTaskRun, openTaskRun, startTaskRun } from './run/claude-run.ts';
 import { ActionError, requireTask, requireTaskRepo } from './input.ts';
 import { startGate } from './scheduler/gate.ts';
 import { logPrEvent } from './pull-request/open-pr.ts';
+import { isMergeLocked } from './pull-request/merge-lock.ts';
 import { settle } from './task/settle.ts';
 
 /** What a sync of a task's branch came to. A merge that did not stick is already undone. */
@@ -229,7 +230,8 @@ export async function syncTask(db: Db, id: number, opts: { manual: boolean }): P
   const repo = requireTaskRepo(db, task);
   if (task.status !== 'done') throw new ActionError(`#${id} is ${task.status}; only a done task's branch is synced this way`);
   if (!task.branch) throw new ActionError(`#${id} has no branch`);
-  if (syncing.has(id)) throw new ActionError(`#${id} is already syncing`);
+  if (syncing.has(id) || db.hasSyncMarker(id)) throw new ActionError(`#${id} is already syncing`);
+  if (isMergeLocked(id)) throw new ActionError(`#${id} is being merged; try again when that is done`);
 
   syncing.add(id);
   try {
@@ -295,7 +297,7 @@ export async function resolveConflicting(
   for (const id of ids) {
     const task = db.getTask(id);
     const repo = task && db.getRepo(task.repo_id);
-    if (!task || !repo || task.status !== 'done' || repo.paused_reason || syncing.has(id)) continue;
+    if (!task || !repo || task.status !== 'done' || repo.paused_reason || isSyncing(db, id) || isMergeLocked(id)) continue;
     if (repo.auto_resolve !== 1) {
       if (!told.has(id)) {
         told.add(id);
