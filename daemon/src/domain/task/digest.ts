@@ -1,6 +1,6 @@
 // The live state of a repo's queue in a few lines, for an agent: what changed since it last looked, and what is open.
 // Pure: the caller reads the events, tasks and header facts. `agentdeck context` prints it, and Claude Code's hooks run that.
-import type { TaskEventRow } from './history.ts';
+import { type TaskEventRow, isAutoMergeReason, isPrOpenedReason, isRequestedMergeReason, prSeenState } from './history.ts';
 import type { TaskStatus } from './lifecycle.ts';
 import type { PrState } from '../pull-request/pr.ts';
 import { statusGroup } from './stage.ts';
@@ -14,7 +14,7 @@ export interface DigestTask {
   id: number;
   title: string;
   status: TaskStatus;
-  pr_state: string | null;
+  pr_state: PrState | null;
   stop_reason: string | null;
   waiting: Waiting | null;
   /** The auto-merge view's state and label (domain/pull-request/auto-merge.ts); marked on the line unless it is off. */
@@ -91,20 +91,26 @@ export function describeEvent(e: Pick<TaskEventRow, 'type' | 'to_status' | 'reas
       return 'rejected';
     case 'retry':
       return withReason('retried', e.reason);
+    case 'unblock_retry':
+      return 'unblock run: retried with a note';
+    case 'unblock_ask':
+      return 'unblock run: asked a question';
     case 'mark_done':
       return 'marked done by a person';
     case 'pr_merged':
       return 'PR merged';
     case 'merge':
       // The reason is how: "auto-merged (squash)" or "requested (squash)" from the daemon, "squash merge" from a person.
-      if (e.reason?.startsWith('auto-merged')) return `PR ${short(e.reason, REASON_MAX)}`;
-      if (e.reason?.startsWith('requested ')) return `PR merged as ${short(e.reason, REASON_MAX)}`;
+      if (e.reason && isAutoMergeReason(e.reason)) return `PR ${short(e.reason, REASON_MAX)}`;
+      if (e.reason && isRequestedMergeReason(e.reason)) return `PR merged as ${short(e.reason, REASON_MAX)}`;
       return e.reason ? `PR merged (${short(e.reason, REASON_MAX)})` : 'PR merged';
-    case 'pr':
-      if (e.reason?.startsWith('opened ')) return 'PR opened';
+    case 'pr': {
+      if (isPrOpenedReason(e.reason)) return 'PR opened';
       // The daemon words a PR found changed as "PR is merged".
-      if (e.reason?.startsWith('PR is ')) return `PR ${short(e.reason.slice('PR is '.length), REASON_MAX)}`;
+      const seen = prSeenState(e.reason);
+      if (seen !== null) return `PR ${short(seen, REASON_MAX)}`;
       return withReason('PR', e.reason);
+    }
     case 'edit':
       return withReason('edited', e.reason);
     case 'sync':
@@ -166,8 +172,7 @@ export function digest(input: DigestInput, limit = DIGEST_LIMIT): string[] {
   if (input.events.length || input.full) {
     body.push(input.open.length ? 'Open:' : 'Open: nothing');
     // Tasks waiting on the person come first, whatever order they arrived in.
-    const needsYou = (t: DigestTask) =>
-      ['needs-you', 'review', 'proposed'].includes(statusGroup({ ...t, pr_state: t.pr_state as PrState | null }));
+    const needsYou = (t: DigestTask) => ['needs-you', 'review', 'proposed'].includes(statusGroup(t));
     const open = [...input.open.filter(needsYou), ...input.open.filter((t) => !needsYou(t))];
     const room = Math.max(limit - body.length, 2);
     const shown = open.length <= room ? open : open.slice(0, room - 1);

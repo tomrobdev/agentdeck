@@ -238,6 +238,10 @@ export const MIGRATIONS: Migration[] = [
   // 27: when a sync of the task's branch began (NULL when none is running). Syncs run in the daemon only, so the CLI
   // reads this to see one; the daemon clears every marker on start.
   `ALTER TABLE tasks ADD COLUMN syncing_since TEXT;`,
+  // 28: unblock runs (domain/run/unblock.ts). auto_unblock lets the daemon start one on its own when a task blocks (off by
+  // default); question is the JSON { question, options } one left on a blocked task, cleared when the task is queued again.
+  `ALTER TABLE repos ADD COLUMN auto_unblock INTEGER NOT NULL DEFAULT 0;
+   ALTER TABLE tasks ADD COLUMN question TEXT;`,
 ];
 
 /** Runs every step above the database's user_version in one transaction; returns how many ran. */

@@ -104,6 +104,14 @@ async function archive() {
         <span class="text-muted">(a claude run when a branch or an open PR conflicts with the base; clean merges always happen)</span></span
       >
     </Switch>
+    <Switch v-model="form.autoUnblock" class="flex-none">
+      <span
+        >Unblock runs
+        <span class="text-muted"
+          >(a short claude run when a task blocks: it retries with a note, or asks you a question with options)</span
+        ></span
+      >
+    </Switch>
     <Switch v-model="form.autoMerge" class="flex-none">
       <span
         >Merge PRs automatically

@@ -29,6 +29,8 @@ export interface Repo {
   merge_method: MergeMethod;
   /** 1 = the daemon starts a resolve run on its own when a branch conflicts with the base. */
   auto_resolve: number;
+  /** 1 = the daemon starts an unblock run on its own when a task blocks (off by default). Missing from a daemon that predates it. */
+  auto_unblock?: number;
   /** 1 = the agent's shell commands run in Claude Code's sandbox. */
   sandbox: number;
   /** JSON array of hosts sandboxed commands may reach. */
@@ -48,7 +50,7 @@ export interface PlannerRun {
   id: number;
   started_at: string;
   ended_at: string | null;
-  outcome: string | null;
+  outcome: 'proposed' | 'nothing' | 'failed' | 'rate_limited' | null;
   proposed: number;
   note: string | null;
 }
@@ -76,6 +78,7 @@ export interface RepoPatch {
   pr_mode?: PrMode;
   merge_method?: MergeMethod;
   auto_resolve?: boolean;
+  auto_unblock?: boolean;
   sandbox?: boolean;
   network?: string[];
   auto_merge?: boolean;
@@ -200,8 +203,7 @@ export interface TaskSummary {
   branch: string | null;
   worktree: string | null;
   stop_reason: string | null;
-  /** manual | planner */
-  source: string;
+  source: 'manual' | 'planner';
   pr_url: string | null;
   pr_state: PrState | null;
   /** How the PR was merged from the app. */
@@ -212,6 +214,8 @@ export interface TaskSummary {
   plan_steps: string | null;
   /** JSON `{ kind: 'deps' | 'host' | 'edit', items: string[] }`: what the worker said it needs when it blocked. */
   needs: string | null;
+  /** JSON `{ question: string, options: string[] }`: what an unblock run asked a person about the block. */
+  question: string | null;
   /** 'person' when a person marked the task done by hand. */
   done_by: 'person' | null;
   /** 1 or 0 overrides the repo's auto_merge; null follows it. */
@@ -256,13 +260,13 @@ export interface Task extends TaskSummary {
 
 export interface Run {
   id: number;
-  /** A resolve run merges the base branch into the task's branch and uses no attempt. */
-  kind: 'work' | 'resolve';
+  /** A resolve run merges the base branch into the task's branch, an unblock run reads why a blocked task stopped; neither uses an attempt. */
+  kind: 'work' | 'resolve' | 'unblock';
   /** A resolve run carries the attempt it ran beside, so pick runs by id. */
   attempt: number;
   started_at: string;
   ended_at: string | null;
-  outcome: string | null;
+  outcome: 'done' | 'blocked' | 'failed' | 'cancelled' | 'rate_limited' | 'interrupted' | null;
   num_turns: number | null;
   input_tokens: number;
   output_tokens: number;
@@ -285,6 +289,7 @@ export interface TaskEventRow {
     | 'sync'
     | 'plan_unfinished'
     | 'environment_block'
+    | 'unblock_ask'
     | 'claim'
     | 'finish'
     | 'rate_limited'
@@ -293,6 +298,7 @@ export interface TaskEventRow {
     | 'approve'
     | 'reject'
     | 'retry'
+    | 'unblock_retry'
     | 'mark_done'
     | 'pr_merged'
     | 'recover';

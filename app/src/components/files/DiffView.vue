@@ -91,7 +91,6 @@ const splitHunks = computed(() => hunks.value.map((h) => ({ header: h.header, ro
               <button v-if="add" class="plus" title="Comment on this line" @click="composeAt(l)">+</button>{{ l.old ?? '' }}
             </td>
             <td class="no">{{ l.new ?? '' }}</td>
-            <!-- eslint-disable-next-line vue/no-v-html -- escaped by highlight.js -->
             <td class="code">
               <span class="sign">{{ l.type === 'add' ? '+' : l.type === 'del' ? '−' : ' ' }}</span
               ><span v-html="html.get(l)" />
@@ -125,13 +124,11 @@ const splitHunks = computed(() => hunks.value.map((h) => ({ header: h.header, ro
               <button v-if="add && r.left" class="plus" title="Comment on this line" @click="composeAt(r.left)">+</button
               >{{ r.left?.old ?? '' }}
             </td>
-            <!-- eslint-disable-next-line vue/no-v-html -- escaped by highlight.js -->
             <td class="code half" :class="r.left ? r.left.type : 'blank'"><span v-if="r.left" v-html="html.get(r.left)" /></td>
             <td class="no" :class="r.right?.type">
               <button v-if="add && r.right" class="plus" title="Comment on this line" @click="composeAt(r.right)">+</button
               >{{ r.right?.new ?? '' }}
             </td>
-            <!-- eslint-disable-next-line vue/no-v-html -- escaped by highlight.js -->
             <td class="code half" :class="r.right ? r.right.type : 'blank'"><span v-if="r.right" v-html="html.get(r.right)" /></td>
           </tr>
           <tr v-if="commentsOn(...rowLines(r)).length || composingOn(...rowLines(r))" class="thread">

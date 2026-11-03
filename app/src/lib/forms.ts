@@ -13,6 +13,7 @@ export type RepoForm = {
   testCmd: string;
   mergeMethod: MergeMethod;
   autoResolve: boolean;
+  autoUnblock: boolean;
   autoMerge: boolean;
   autoMergeMaxLines: number;
   /** Path prefixes, comma-separated. */
@@ -29,6 +30,7 @@ export function toRepoForm(d: RepoDetail): RepoForm {
     testCmd: d.test_cmd ?? '',
     mergeMethod: d.merge_method,
     autoResolve: !!d.auto_resolve,
+    autoUnblock: !!d.auto_unblock,
     autoMerge: !!d.auto_merge,
     autoMergeMaxLines: d.auto_merge_max_lines,
     autoMergeSkip: parseTextList(d.auto_merge_skip, DEFAULT_AUTO_MERGE_SKIP).join(', '),
@@ -44,6 +46,7 @@ export function toRepoPatch(f: RepoForm): RepoPatch {
     test_cmd: f.testCmd,
     merge_method: f.mergeMethod,
     auto_resolve: f.autoResolve,
+    auto_unblock: f.autoUnblock,
     auto_merge: f.autoMerge,
     auto_merge_max_lines: f.autoMergeMaxLines,
     auto_merge_skip: textList(f.autoMergeSkip),

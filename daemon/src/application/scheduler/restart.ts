@@ -4,7 +4,12 @@ import { type Activity, restartWait } from '../../domain/daemon/restart.ts';
 
 /** What the daemon is running now: tasks, planner runs and resolve runs. */
 export function runningActivity(db: Db): Activity {
-  return { tasks: db.countRunning(), planner: db.countRunningPlannerRuns(), resolves: db.countRunningResolves() };
+  return {
+    tasks: db.countRunning(),
+    planner: db.countRunningPlannerRuns(),
+    resolves: db.countRunningResolves(),
+    unblocks: db.countRunningUnblocks(),
+  };
 }
 
 export interface RestartDeps {

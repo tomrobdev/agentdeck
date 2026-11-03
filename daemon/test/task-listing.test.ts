@@ -24,6 +24,7 @@ function task(id: number, fields: Partial<ListedTask> = {}): ListedTask {
     plan_path: null,
     plan_steps: null,
     needs: null,
+    question: null,
     done_by: null,
     auto_merge: null,
     auto_merge_check: null,

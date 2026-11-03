@@ -4,6 +4,7 @@ import { github } from '../../adapters/github.ts';
 import type { Db } from '../../db/index.ts';
 import { AUTO_MERGE_LABEL, autoMergeOn } from '../../domain/pull-request/auto-merge.ts';
 import type { PrDetails } from '../../domain/pull-request/merge.ts';
+import { mergeReason } from '../../domain/task/history.ts';
 import { hasOpenPr } from '../../domain/task/stage.ts';
 import { ActionError, object, requireTask, requireTaskRepo } from '../input.ts';
 import { notifyLater } from '../notifications.ts';
@@ -38,7 +39,7 @@ export async function autoMerge(
         method,
         deleteBranch: true,
         log,
-        reason: asked ? `requested (${method})` : `auto-merged (${method})`,
+        reason: mergeReason(asked ? 'request' : 'auto', method),
       });
       told.delete(id);
       const unblocked = res.unblocked.length ? `; ${res.unblocked.map((n) => `#${n}`).join(', ')} can start` : '';

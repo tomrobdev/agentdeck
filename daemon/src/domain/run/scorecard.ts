@@ -1,6 +1,7 @@
 // The rest of the pilot scorecard (docs/pilot/scorecard.md), computed from plain rows: interventions, time queued,
 // running and in review, quota spent and PRs green on CI. Pure: no I/O. The first-run measures are in stats.ts.
 import { type QuotaSample, quotaSpends } from '../usage/quota.ts';
+import { isAutoMergeReason } from '../task/history.ts';
 import { median, minutesBetween, sqliteMs, weekOf } from '../time.ts';
 import { type InterventionCount, INTERVENTION_KINDS, countInterventions } from './interventions.ts';
 import { num, pct, table } from './report-text.ts';
@@ -137,7 +138,7 @@ export function scorecardMeasures(
 export function resolveAutoMerge(rows: ScorecardTaskRow[], events: ScorecardEvent[]): ScorecardTask[] {
   const firstAuto = new Map<number, string>();
   for (const e of events) {
-    if (e.type !== 'merge' || !(e.reason ?? '').startsWith('auto-merged')) continue;
+    if (e.type !== 'merge' || !isAutoMergeReason(e.reason)) continue;
     const first = firstAuto.get(e.repo_id);
     if (first === undefined || e.at < first) firstAuto.set(e.repo_id, e.at);
   }

@@ -3,6 +3,9 @@ import type { MergeMethod } from '../pull-request/merge.ts';
 import type { PrState } from '../pull-request/pr.ts';
 import type { TaskStatus } from './lifecycle.ts';
 
+/** Who made a task: a person, or the planner proposing it. */
+export type TaskSource = 'manual' | 'planner';
+
 export interface Task {
   id: number;
   repo_id: number;
@@ -17,13 +20,14 @@ export interface Task {
   branch: string | null;
   worktree: string | null;
   stop_reason: string | null;
-  source: string; // manual | planner
+  source: TaskSource;
   restarts: number; // times a daemon restart requeued this task mid-run
   pr_url: string | null; // the pull request the daemon opened when the task finished
   pr_state: PrState | null;
   merge_method: MergeMethod | null; // how the PR was merged from the app
   plan_path: string | null; // legacy: the docs/plans/ file a task carried out before plans moved into AgentDeck; no longer written or read
   needs: string | null; // JSON Needs (domain/task/needs.ts) the worker said it needs when it blocked; cleared when queued again
+  question: string | null; // JSON UnblockQuestion (domain/run/unblock.ts) an unblock run left on the blocked task; cleared with `needs`
   plan_steps: string | null; // JSON array of the linked plan's step ids; null means every unfinished step (see planStepIds)
   done_by: 'person' | null; // 'person' when mark_done set the status; cleared whenever the task leaves done
   auto_merge: number | null; // 1 or 0 overrides the repo's auto_merge; null = the repo's (domain/pull-request/auto-merge.ts)

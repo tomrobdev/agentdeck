@@ -15,6 +15,9 @@
 // A resolve run (the prompt starts "AgentDeck conflict resolution") keeps both sides of every conflict and commits the merge;
 // FAKE_RESOLVE_BLOCKED reports BLOCKED, _LEAVE says DONE with the markers still there, _ABORT aborts the merge itself,
 // _STAGE stages the files without committing. The words come from the task's prompt, which the resolve prompt quotes.
+// An unblock run (the prompt starts "AgentDeck unblock run") retries with a note naming FAKE_UNBLOCKED, which a
+// FAKE_BLOCKED task's next run takes as leave to finish like FAKE_DONE; FAKE_UNBLOCK_ASK asks a question with two
+// options instead, and FAKE_UNBLOCK_GARBAGE ends without an UNBLOCK line. Those words come from the task's prompt too.
 //   FAKE_ANSWER   like FAKE_DONE, and answers every review comment (c1, c2…) the prompt lists; FAKE_ANSWER_FIRST answers only c1
 //   FAKE_NO_SANDBOX  if the --settings file enables the sandbox with failIfUnavailable, exits at startup like claude does
 //   FAKE_PLAN_ALL    like FAKE_DONE, and marks every step of the plan file (.agentdeck/plan.html) done, with a note in each
@@ -127,6 +130,14 @@ if (isPlanner) {
     if (!prompt.includes('FAKE_RESOLVE_STAGE')) git('commit', '-q', '--no-edit');
     result(`Resolved ${files.length} file(s).\nSTATUS: DONE`);
   }
+} else if (prompt.startsWith('AgentDeck unblock run')) {
+  if (prompt.includes('FAKE_UNBLOCK_ASK')) {
+    result('Nothing in the repo says which database.\nUNBLOCK: ASK: Which database should it use?\n- sqlite\n- postgres');
+  } else if (prompt.includes('FAKE_UNBLOCK_GARBAGE')) {
+    result('I looked around.\nNot sure what to make of it.');
+  } else {
+    result('The README names the database.\nUNBLOCK: RETRY: use sqlite, as the README says (FAKE_UNBLOCKED)');
+  }
 } else if (prompt.includes('FAKE_ERROR')) {
   process.stderr.write('fake failure\n');
   process.exit(1);
@@ -149,7 +160,7 @@ if (isPlanner) {
 } else if (prompt.includes('FAKE_RATELIMIT')) {
   result('rate limited', { is_error: true, subtype: 'error_during_execution', api_error_status: 429 });
   process.exit(1);
-} else if (prompt.includes('FAKE_BLOCKED')) {
+} else if (prompt.includes('FAKE_BLOCKED') && !prompt.includes('FAKE_UNBLOCKED')) {
   result('I need to know which database to use.\nSTATUS: BLOCKED: which database?');
 } else if (prompt.includes('FAKE_NEEDS_SETUP') && !existsSync('setup-done.txt')) {
   result('setup-done.txt is missing.\nSTATUS: BLOCKED: setup did not run');

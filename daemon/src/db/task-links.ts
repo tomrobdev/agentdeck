@@ -1,7 +1,7 @@
 // Task links: what a task depends on, and what depends on it.
 import { and, asc, eq, inArray } from 'drizzle-orm';
 import type { TaskStatus } from '../domain/task/lifecycle.ts';
-import type { Link, LinkKind } from '../domain/task/link.ts';
+import type { Dependency, Link, LinkKind } from '../domain/task/link.ts';
 import type { Orm } from './orm.ts';
 import { changed } from './sql.ts';
 import { repos, taskLinks, tasks } from './tables.ts';
@@ -14,14 +14,7 @@ export interface Dependent {
 }
 
 /** A task at the end of a link: what its link states are read from. */
-export interface LinkedTask {
-  id: number;
-  status: TaskStatus;
-  pr_url: string | null;
-  pr_state: string | null;
-  done_by: string | null;
-  pr_mode: string | null;
-}
+export type LinkedTask = Dependency & { id: number };
 
 /** A link's columns, named as the domain's `Link`. */
 const LINK_COLUMNS = { task_id: taskLinks.task_id, on: taskLinks.on_task, kind: taskLinks.kind };
@@ -35,11 +28,11 @@ export function taskLinkStore(orm: Orm) {
   return {
     /** The links a task has: what it depends on. */
     linksOf(id: number): Link[] {
-      return orm.select(LINK_COLUMNS).from(taskLinks).where(eq(taskLinks.task_id, id)).orderBy(asc(taskLinks.on_task)).all() as Link[];
+      return orm.select(LINK_COLUMNS).from(taskLinks).where(eq(taskLinks.task_id, id)).orderBy(asc(taskLinks.on_task)).all();
     },
     /** Every link there is, for checking a new one for cycles. */
     allLinks(): Link[] {
-      return orm.select(LINK_COLUMNS).from(taskLinks).all() as Link[];
+      return orm.select(LINK_COLUMNS).from(taskLinks).all();
     },
     /** The tasks that depend on `id` (of one kind, if given), in any status: each one's id, status and the kind of its link. */
     dependentsOf(id: number, kind?: LinkKind): Dependent[] {
@@ -49,7 +42,7 @@ export function taskLinkStore(orm: Orm) {
         .innerJoin(taskLinks, eq(taskLinks.task_id, tasks.id))
         .where(and(eq(taskLinks.on_task, id), kind ? eq(taskLinks.kind, kind) : undefined))
         .orderBy(asc(tasks.id))
-        .all() as Dependent[];
+        .all();
     },
     /** Every task at either end of a link, with its repo's pr_mode (null when the repo is gone): what link states are read from. */
     linkedTasks(): LinkedTask[] {
@@ -69,7 +62,8 @@ export function taskLinkStore(orm: Orm) {
         .from(tasks)
         .leftJoin(repos, eq(repos.id, tasks.repo_id))
         .where(inArray(tasks.id, ends))
-        .all() as LinkedTask[];
+        .all()
+        .map((t) => ({ ...t, pr_mode: t.pr_mode ?? 'off' }));
     },
     /** Link `link.task_id` to `link.on`. Whether that is allowed (a cycle, a duplicate) is the caller's to check with linkError. */
     addLink(link: Link): void {

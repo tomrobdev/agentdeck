@@ -133,3 +133,28 @@ test('eventsForTask uses the task_events_task index', () => {
   assert.match(plan.map((p) => p.detail).join('\n'), /INDEX task_events_task/);
   db.close();
 });
+
+test('PR and merge event reasons are written and read through the history functions, byte for byte', async () => {
+  const { prEventReason, mergeReason, isAutoMergeReason, isRequestedMergeReason, isPrOpenedReason, prSeenState } =
+    await import('../src/domain/task/history.ts');
+  assert.equal(prEventReason({ type: 'opened', url: 'https://x/pull/1' }), 'opened https://x/pull/1');
+  assert.equal(prEventReason({ type: 'failed', error: 'gh broke' }), 'could not open the PR: gh broke');
+  assert.equal(prEventReason({ type: 'closed' }), 'closed without merging');
+  assert.equal(prEventReason({ type: 'seen', state: 'merged' }), 'PR is merged');
+  assert.equal(mergeReason('auto', 'squash'), 'auto-merged (squash)');
+  assert.equal(mergeReason('request', 'rebase'), 'requested (rebase)');
+  assert.equal(mergeReason('person', 'merge'), 'merge merge');
+  assert.equal(mergeReason('person', 'squash'), 'squash merge');
+
+  assert.equal(isAutoMergeReason(mergeReason('auto', 'squash')), true);
+  assert.equal(isAutoMergeReason(mergeReason('request', 'squash')), false);
+  assert.equal(isAutoMergeReason(mergeReason('person', 'squash')), false);
+  assert.equal(isAutoMergeReason(null), false);
+  assert.equal(isRequestedMergeReason(mergeReason('request', 'squash')), true);
+  assert.equal(isRequestedMergeReason(mergeReason('auto', 'squash')), false);
+  assert.equal(isPrOpenedReason(prEventReason({ type: 'opened', url: 'u' })), true);
+  assert.equal(isPrOpenedReason('closed without merging'), false);
+  assert.equal(prSeenState(prEventReason({ type: 'seen', state: 'closed' })), 'closed');
+  assert.equal(prSeenState('closed without merging'), null);
+  assert.equal(prSeenState(null), null);
+});

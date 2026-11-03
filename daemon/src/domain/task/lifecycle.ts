@@ -27,6 +27,7 @@ export type TaskEvent =
   | { type: 'approve' } // accept a planner proposal
   | { type: 'reject' } // decline a planner proposal
   | { type: 'retry' } // a human asks for another attempt
+  | { type: 'unblock_retry' } // an unblock run sent a blocked task back with a note; its attempts stay as they are
   | { type: 'mark_done' } // a person finished or landed the work themselves
   | { type: 'pr_merged' } // the daemon found the task's open PR merged on GitHub
   | { type: 'recover'; exhausted: boolean }; // the daemon restarted mid-run; exhausted = too many restarts
@@ -44,6 +45,7 @@ export type RuleKey =
   | 'approve'
   | 'reject'
   | 'retry'
+  | 'unblock_retry'
   | 'mark_done'
   | 'pr_merged'
   | 'recover'
@@ -70,6 +72,7 @@ export const RULES: Record<RuleKey, Partial<Record<TaskStatus, TaskStatus>>> = {
   approve: { proposed: 'queued' },
   reject: { proposed: 'cancelled' },
   retry: { blocked: 'queued', failed: 'queued', cancelled: 'queued', done: 'queued' },
+  unblock_retry: { blocked: 'queued' },
   mark_done: { blocked: 'done', failed: 'done' },
   pr_merged: { blocked: 'done', failed: 'done' },
   recover: { running: 'queued', cancel_requested: 'cancelled' },
@@ -128,6 +131,8 @@ export interface TaskChanges {
   restarts?: number;
   stop_reason?: string | null;
   needs?: string | null;
+  /** Goes with `needs`: what a block left for a person, cleared or replaced whenever `needs` is. */
+  question?: string | null;
   done_by?: 'person' | null;
 }
 
@@ -171,6 +176,8 @@ export function transition(
   else if (task.status === 'done') changes.done_by = null;
   if (to === 'queued') changes.needs = null;
   else if (event.type === 'finish' && event.outcome === 'blocked') changes.needs = opts.needs ?? null;
+  // An unblock run's question answers one block: a new block, a retry or an end makes it stale.
+  if ('needs' in changes) changes.question = null;
   if (
     (event.type === 'finish' && (event.outcome === 'blocked' || event.outcome === 'failed')) ||
     (event.type === 'recover' && to === 'failed') ||

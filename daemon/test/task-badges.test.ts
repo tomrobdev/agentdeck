@@ -41,6 +41,7 @@ const task = (extra: Partial<TaskSummary> = {}): TaskSummary => ({
   plan_task: null,
   plan_steps: null,
   needs: null,
+  question: null,
   done_by: null,
   auto_merge: null,
   auto_merge_view: null,
