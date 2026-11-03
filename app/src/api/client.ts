@@ -13,6 +13,7 @@ import type {
   FileContent,
   FilePatch,
   FileRef,
+  MarkDoneRequest,
   MergePreview,
   MergeRequest,
   MergeResult,
@@ -29,10 +30,13 @@ import type {
   RepoPatch,
   RequestMergeRequest,
   RequestMergeResult,
+  RequestMergesRequest,
   RequestMergesResult,
   RestartNowResult,
   RestartResult,
+  RetryRequest,
   Review,
+  ReviewPatch,
   ServiceStatus,
   SyncResult,
   Settings,
@@ -110,9 +114,11 @@ export const api = {
   unlinkTask: (id: number, on: number) => call<TaskDetail>(`/api/tasks/${id}/links/${on}`, { method: 'DELETE' }),
   cancel: (id: number) => call<CancelResult>(`/api/tasks/${id}/cancel`, { method: 'POST' }),
   /** `note` is "request changes": kept on the timeline and put first in the next run's prompt. */
-  retry: (id: number, note?: string) => call<TaskDetail>(`/api/tasks/${id}/retry`, { method: 'POST', json: note ? { note } : {} }),
+  retry: (id: number, note?: string) =>
+    call<TaskDetail>(`/api/tasks/${id}/retry`, { method: 'POST', json: (note ? { note } : {}) satisfies RetryRequest }),
   /** A person finished a blocked or failed task themselves; `note` is kept on the timeline. */
-  markDone: (id: number, note?: string) => call<TaskDetail>(`/api/tasks/${id}/done`, { method: 'POST', json: note ? { note } : {} }),
+  markDone: (id: number, note?: string) =>
+    call<TaskDetail>(`/api/tasks/${id}/done`, { method: 'POST', json: (note ? { note } : {}) satisfies MarkDoneRequest }),
   /** Install the packages a blocked task asked for (NEEDS deps) on its branch, then retry it. */
   installNeeds: (id: number) => call<TaskDetail>(`/api/tasks/${id}/install-needs`, { method: 'POST' }),
   closePr: (id: number) => call<TaskDetail>(`/api/tasks/${id}/close-pr`, { method: 'POST' }),
@@ -125,7 +131,8 @@ export const api = {
   requestMerge: (id: number, body: RequestMergeRequest = {}) =>
     call<RequestMergeResult>(`/api/tasks/${id}/merge-request`, { method: 'POST', json: body }),
   /** Request these tasks' merges, each with its own method; the ones it could not request come back with why. */
-  requestMerges: (ids: number[]) => call<RequestMergesResult>('/api/tasks/merge-requests', { method: 'POST', json: { ids } }),
+  requestMerges: (ids: number[]) =>
+    call<RequestMergesResult>('/api/tasks/merge-requests', { method: 'POST', json: { ids } satisfies RequestMergesRequest }),
   /** Drop the task's merge request; the PR stays open. */
   cancelMergeRequest: (id: number) => call<CancelMergeRequestResult>(`/api/tasks/${id}/merge-request`, { method: 'DELETE' }),
   /** Let the daemon merge the task's PR on its own (true), not (false), or follow the repo (null). */
@@ -140,7 +147,7 @@ export const api = {
   /** The task's draft review, started if it has none. */
   startReview: (id: number) => call<Review>(`/api/tasks/${id}/reviews`, { method: 'POST' }),
   /** Change a draft's overall note. */
-  editReview: (id: number, body: string) => call<Review>(`/api/reviews/${id}`, { method: 'POST', json: { body } }),
+  editReview: (id: number, body: string) => call<Review>(`/api/reviews/${id}`, { method: 'POST', json: { body } satisfies ReviewPatch }),
   addComment: (reviewId: number, c: NewReviewComment) => call<Review>(`/api/reviews/${reviewId}/comments`, { method: 'POST', json: c }),
   deleteComment: (id: number) => call<Review>(`/api/review-comments/${id}`, { method: 'DELETE' }),
   /** Request changes also retries the task with the review as the reason. */
