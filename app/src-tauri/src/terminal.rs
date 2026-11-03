@@ -109,7 +109,12 @@ mod tests {
 
     #[test]
     fn drops_command_with_its_flag_when_there_is_none() {
-        let out = fill_template(&args(&["term", "--exec", "{command}", "x"]), "t", "/w", None);
+        let out = fill_template(
+            &args(&["term", "--exec", "{command}", "x"]),
+            "t",
+            "/w",
+            None,
+        );
         assert_eq!(out, args(&["term", "x"]));
     }
 
