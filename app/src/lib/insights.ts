@@ -148,3 +148,6 @@ export function weekLabel(week: string): string {
   const d = new Date(`${week}T00:00:00Z`);
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
 }
+
+/** Whether any series has a value in any week; false when there is nothing to chart. */
+export const hasData = (series: Series[]): boolean => series.some((s) => s.points.some((p) => p.value !== null));

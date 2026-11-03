@@ -8,7 +8,7 @@ export const PR_MODES: PrMode[] = ['off', 'draft', 'ready'];
 export type PrState = 'open' | 'merged' | 'closed' | 'failed';
 
 export interface PrRun {
-  kind?: string; // 'resolve' runs are listed but never supply the final message
+  kind?: string; // 'resolve' and 'unblock' runs are listed but never supply the final message; missing means 'work'
   attempt: number;
   outcome: string | null;
   num_turns: number | null;
@@ -19,7 +19,7 @@ export interface PrRun {
 
 /** The agent's final message without its trailing "STATUS: DONE" line. */
 export function finalMessage(runs: Pick<PrRun, 'kind' | 'result_text'>[]): string {
-  const text = runs.filter((r) => r.kind !== 'resolve').at(-1)?.result_text ?? '';
+  const text = runs.filter((r) => (r.kind ?? 'work') === 'work').at(-1)?.result_text ?? '';
   return text.replace(STATUS_TAIL, '').trim();
 }
 
@@ -43,7 +43,8 @@ function planSection(plan: PrPlan): string[] {
 export function buildPrBody(task: { id: number }, runs: PrRun[], plan: PrPlan | null = null): string {
   const rows = runs.map((r) => {
     const tests = r.tests_passed === null ? '-' : r.tests_passed ? 'pass' : 'fail';
-    return `| ${r.attempt}${r.kind === 'resolve' ? ' (conflicts)' : ''} | ${r.outcome ?? '-'} | ${r.num_turns ?? '-'} | $${r.cost_usd.toFixed(2)} | ${tests} |`;
+    const kind = r.kind === 'resolve' ? ' (conflicts)' : r.kind === 'unblock' ? ' (unblock)' : '';
+    return `| ${r.attempt}${kind} | ${r.outcome ?? '-'} | ${r.num_turns ?? '-'} | $${r.cost_usd.toFixed(2)} | ${tests} |`;
   });
   return [
     finalMessage(runs) || '(the agent left no final message)',

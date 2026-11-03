@@ -68,3 +68,8 @@ export function syncResultOf(
       return { kind: 'failed', files: conflictFiles, reason };
   }
 }
+
+/** Whether a stop reason is a conflict's (`conflictReason`): a sync that could not be settled. */
+export function isConflictReason(reason: string | null | undefined): boolean {
+  return /^(conflicts with \S+ in \d+ files?: |could not sync with )/.test(reason ?? '');
+}

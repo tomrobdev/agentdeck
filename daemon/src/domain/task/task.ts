@@ -27,6 +27,7 @@ export interface Task {
   merge_method: MergeMethod | null; // how the PR was merged from the app
   plan_path: string | null; // legacy: the docs/plans/ file a task carried out before plans moved into AgentDeck; no longer written or read
   needs: string | null; // JSON Needs (domain/task/needs.ts) the worker said it needs when it blocked; cleared when queued again
+  question: string | null; // JSON UnblockQuestion (domain/run/unblock.ts) an unblock run left on the blocked task; cleared with `needs`
   plan_steps: string | null; // JSON array of the linked plan's step ids; null means every unfinished step (see planStepIds)
   done_by: 'person' | null; // 'person' when mark_done set the status; cleared whenever the task leaves done
   auto_merge: number | null; // 1 or 0 overrides the repo's auto_merge; null = the repo's (domain/pull-request/auto-merge.ts)

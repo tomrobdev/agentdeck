@@ -2,8 +2,12 @@
 import { STATUS_WORD, lastLine } from '../text.ts';
 import { type Needs, parseNeeds } from '../task/needs.ts';
 
-/** `work` is an attempt at the task; `resolve` merges the base branch into the task's branch and never uses an attempt. */
-export type RunKind = 'work' | 'resolve';
+/**
+ * `work` is an attempt at the task; `resolve` merges the base branch into the task's branch and never uses an attempt;
+ * `unblock` reads why a blocked task stopped and retries it with a note or asks a question (domain/run/unblock.ts), and
+ * never uses an attempt either.
+ */
+export type RunKind = 'work' | 'resolve' | 'unblock';
 
 /** How a run ended: a worker's result, or `interrupted` when a daemon restart ended it. */
 export type RunOutcome = Outcome | typeof INTERRUPTED;
@@ -12,7 +16,7 @@ export interface Run {
   id: number;
   task_id: number;
   kind: RunKind;
-  attempt: number; // a resolve run carries the attempt it ran beside
+  attempt: number; // a resolve or unblock run carries the attempt it ran beside
   started_at: string;
   ended_at: string | null;
   outcome: RunOutcome | null;
@@ -115,7 +119,7 @@ export function resumeMaxTurns(task: { attempts: number; max_turns: number }, pr
 
 /**
  * The run a person asked for: by id, by attempt (its latest work run, so a resume after a restart rather than the run
- * the restart cut off), or the latest. A resolve run is only picked by id.
+ * the restart cut off), or the latest. A resolve or unblock run is only picked by id.
  */
 export function pickRun(runs: Run[], pick: { attempt?: number; run?: number } = {}): Run | undefined {
   if (pick.run) return runs.find((r) => r.id === pick.run);
@@ -212,6 +216,15 @@ export interface WorkerResult {
   /** For a blocked run: the environment is to blame, so the attempt is given back. */
   environment?: boolean;
 }
+
+/** How the stop reason of a task whose setup command failed begins. */
+const SETUP_FAILED = 'setup failed: ';
+
+/** The stop reason when the repo's setup command failed in the worktree: its output's last line. */
+export const setupFailedReason = (output: string): string => `${SETUP_FAILED}${lastLine(output)}`;
+
+/** Whether a stop reason says the setup command failed (`setupFailedReason`). */
+export const isSetupFailure = (reason: string | null | undefined): boolean => (reason ?? '').startsWith(SETUP_FAILED);
 
 /** A block the environment caused, not the task: the worker named a need, tool uses were refused, or setup failed. */
 export function isEnvironmentBlock(b: { needs?: Needs; denials?: number; setupFailed?: boolean }): boolean {

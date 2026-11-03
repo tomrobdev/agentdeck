@@ -158,6 +158,7 @@ export function repoStore(db: DatabaseSync, orm: Orm) {
           | 'pr_mode'
           | 'merge_method'
           | 'auto_resolve'
+          | 'auto_unblock'
           | 'sandbox'
           | 'network'
           | 'auto_merge'

@@ -25,7 +25,7 @@ import type { CheckCounts, MergeMethod } from '../domain/pull-request/merge.ts';
 import { INTERRUPTED, type RunOutcome } from '../domain/run/run.ts';
 import { MAX_RESTARTS, type TaskEvent, type TaskStatus, fromStatuses, nextStatus, transition } from '../domain/task/lifecycle.ts';
 import type { LinkKind } from '../domain/task/link.ts';
-import type { PrEvent } from '../domain/task/history.ts';
+import { type PrEvent, prEventReason } from '../domain/task/history.ts';
 import type { TaskPlan } from '../domain/plan/plan.ts';
 import {
   EDITABLE_STATUSES,
@@ -114,6 +114,14 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         .where(and(eq(buildsOn.task_id, t.id), eq(buildsOn.kind, 'builds_on'), notExists(unmet))),
     );
   };
+  /** The task row `t` has no unblock run going: a person's retry during one waits for it to stop before a claim. */
+  const notUnblocking = () =>
+    notExists(
+      orm
+        .select({ id: runs.id })
+        .from(runs)
+        .where(and(eq(runs.task_id, t.id), eq(runs.kind, 'unblock'), isNull(runs.ended_at))),
+    );
   const countWhere = (where: SQL | undefined) => orm.select({ n: count() }).from(tasks).where(where).get()?.n ?? 0;
 
   const getTask = (id: number): Task | undefined => orm.select(TASK_COLUMNS).from(tasks).where(eq(tasks.id, id)).get();
@@ -271,9 +279,42 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       return !!orm
         .select({ id: t.id })
         .from(t)
-        .where(and(eq(t.status, 'queued'), notWaiting(), inOpenRepo(t.repo_id)))
+        .where(and(eq(t.status, 'queued'), notWaiting(), notUnblocking(), inOpenRepo(t.repo_id)))
         .limit(1)
         .get();
+    },
+    /**
+     * Blocked tasks in repos that have auto_unblock on and may start work (not paused, not archived), by priority then
+     * age: the ones an unblock run may be for. Whether one may start is `unblockable`'s to say.
+     */
+    unblockCandidates(): Task[] {
+      const unblocking = orm
+        .select({ id: repos.id })
+        .from(repos)
+        .where(and(eq(repos.auto_unblock, 1), isNull(repos.paused_reason), isNull(repos.archived_at)));
+      return orm
+        .select(TASK_COLUMNS)
+        .from(tasks)
+        .where(and(eq(tasks.status, 'blocked'), inArray(tasks.repo_id, unblocking)))
+        .orderBy(desc(tasks.priority), asc(tasks.id))
+        .all() as Task[];
+    },
+    /**
+     * Leave an unblock run's question (JSON UnblockQuestion) on a blocked task, with an `unblock_ask` history row whose
+     * reason is the question. Guarded like every task write: only a blocked task, so a retry or a cancel made while the
+     * run went is never undone. Returns false if the task was not blocked.
+     */
+    recordQuestion(id: number, question: string, reason: string): boolean {
+      return atomically(db, () => {
+        const res = orm
+          .update(tasks)
+          .set({ question, updated_at: NOW_SQL })
+          .where(and(eq(tasks.id, id), eq(tasks.status, 'blocked')))
+          .run();
+        if (!Number(res.changes)) return false;
+        recordEvent(orm, id, 'unblock_ask', 'blocked', 'blocked', reason);
+        return true;
+      });
     },
     /**
      * Tasks without their prompt, newest first. Returns the `limit` newest tasks older than `before`
@@ -323,7 +364,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       const next = orm
         .select({ id: t.id })
         .from(t)
-        .where(and(inArray(t.status, from), notWaiting(), inOpenRepo(t.repo_id)))
+        .where(and(inArray(t.status, from), notWaiting(), notUnblocking(), inOpenRepo(t.repo_id)))
         .orderBy(desc(t.priority), asc(t.id))
         .limit(1);
       return atomically(db, () => {
@@ -497,14 +538,15 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     recordPr(id: number, e: PrEvent): boolean {
       const notOpenAndDone = and(or(isNull(tasks.pr_state), not(prOpen)), eq(tasks.status, 'done'));
       const isOpen = prOpen;
-      const [set, guard, reason]: [Partial<typeof tasks.$inferInsert>, SQL | undefined, string] =
+      const reason = prEventReason(e);
+      const [set, guard]: [Partial<typeof tasks.$inferInsert>, SQL | undefined] =
         e.type === 'opened'
-          ? [{ pr_url: e.url, pr_state: 'open' }, notOpenAndDone, `opened ${e.url}`]
+          ? [{ pr_url: e.url, pr_state: 'open' }, notOpenAndDone]
           : e.type === 'failed'
-            ? [{ pr_state: 'failed' }, notOpenAndDone, `could not open the PR: ${e.error}`]
+            ? [{ pr_state: 'failed' }, notOpenAndDone]
             : e.type === 'closed'
-              ? [{ pr_state: 'closed' }, isOpen, 'closed without merging']
-              : [{ pr_state: e.state }, and(isOpen, ne(tasks.pr_state, e.state)), `PR is ${e.state}`];
+              ? [{ pr_state: 'closed' }, isOpen]
+              : [{ pr_state: e.state }, and(isOpen, ne(tasks.pr_state, e.state))];
       return atomically(db, () => {
         const row = orm
           .update(tasks)
@@ -566,7 +608,8 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
      * unless restarts keep interrupting it. Stop its claude process (`reapOrphans`) first.
      * The unfinished runs of a requeued task end `interrupted`, keeping their session, so the next run resumes it; those
      * of a task that failed or was cancelled end so (`failed`, `cancelled`), so the run stats count them. Any other
-     * unfinished run (a done task's sync) ends `interrupted`. Returns how many were requeued and the ids of those failed.
+     * unfinished run (a done task's resolve run, a blocked task's unblock run) ends `interrupted`. Returns how many were
+     * requeued and the ids of those failed.
      */
     recoverOrphans(): { requeued: number; failed: number[] } {
       // Syncs run only in the daemon, so any marker left over belongs to a sync that died with it.

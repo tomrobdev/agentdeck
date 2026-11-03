@@ -38,6 +38,7 @@ export const repos = sqliteTable(
     auto_merge: integer().default(0).notNull(),
     auto_merge_max_lines: integer().default(400).notNull(),
     auto_merge_skip: text().default('[".github/"]').notNull(),
+    auto_unblock: integer().default(0).notNull(),
   },
   (table) => [unique('repos_name_unique').on(table.name), unique('repos_path_unique').on(table.path)],
 );
@@ -83,6 +84,7 @@ export const tasks = sqliteTable(
     plan_task: integer(),
     pr_checks: text(),
     syncing_since: text(),
+    question: text(),
   },
   // guard: an index column in descending order, which the index builder takes only as raw SQL
   (table) => [index('tasks_pick').on(table.status, sql`priority DESC`, table.id)],
