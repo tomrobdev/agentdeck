@@ -10,14 +10,14 @@ export interface MergeRequestedResult {
 }
 
 /**
- * Ask the daemon to merge a done task's open PR once it is ready. The method defaults to the task's, then the repo's.
+ * Ask the daemon to merge a done task's open PR once it is ready. The method defaults to the repo's.
  * Asking again replaces the request. The scheduler reads the PRs again at once. Throws ActionError if the task is not
  * done or has no open PR.
  */
 export function requestMerge(db: Db, id: number, opts: { method?: string } = {}): MergeRequestedResult {
   const given = text(object(opts), 'method', { empty: true, raw: true });
   const { task, repo } = mergeable(db, id);
-  const method = given ?? task.merge_method ?? repo.merge_method;
+  const method = given ?? repo.merge_method;
   if (!isMergeMethod(method)) throw new ActionError(`method must be one of ${MERGE_METHODS.join(', ')}`);
   if (!db.requestMerge(id, method)) throw new ActionError(`#${id} is no longer a done task with an open PR`);
   db.requestPrCheck();

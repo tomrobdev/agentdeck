@@ -635,6 +635,19 @@ test('mergeTask uses the method asked for, then the repo default; a draft is mar
   updateRepo(db, 'demo', { merge_method: 'squash' });
 });
 
+test('a task merged with rebase, retried and given a new PR, previews and merges with the repo method', async () => {
+  const t = prTask(150);
+  await mergeTask(db, t.id, { method: 'rebase' });
+  assert.equal(db.getTask(t.id)!.merge_method, 'rebase');
+
+  const again = `https://github.com/acme/demo/pull/151`;
+  assert.ok(db.recordPr(t.id, { type: 'opened', url: again }));
+  assert.equal((await mergePreview(db, t.id)).method, 'squash', 'the old method is not the default');
+  const before = merging.merged.length;
+  assert.equal((await mergeTask(db, t.id)).method, 'squash');
+  assert.equal(merging.merged[before].method, 'squash');
+});
+
 test('mergeTask refuses what cannot be merged and leaves the task as it was', async () => {
   const conflicted = prTask(104);
   details[conflicted.url] = { ...cleanDetails, mergeable: 'CONFLICTING' };
