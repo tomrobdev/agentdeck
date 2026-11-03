@@ -3,7 +3,8 @@ import { computed, nextTick, ref } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { type PlanStep, type TaskPlan, ago, planHtmlQuery } from '../../api';
 import { planProgress } from '../../../../daemon/src/domain/plan/plan.ts';
-import { type ModeKey, mode } from '../../platform/theme';
+import { mode } from '../../platform/theme';
+import { withBaseStyle } from '../../lib/planPage';
 import planCss from '../../../../docs/plans/plan.css?raw';
 import Disclosure from '../ui/Disclosure.vue';
 import DisclosureContent from '../ui/DisclosureContent.vue';
@@ -29,29 +30,6 @@ const ICON_TONE: Record<PlanStep['status'], string> = {
 };
 const STEP_TONE: Record<PlanStep['status'], string> = { done: '', doing: '', todo: '', blocked: '', skipped: 'text-muted line-through' };
 
-// Readable defaults for a plan that brings no styles of its own. Put first in <head>, so a plan's own CSS wins.
-// The dashboard's mode decides the colour scheme: a plan follows the system only when the dashboard does.
-function baseStyle(m: ModeKey) {
-  const scheme = m === 'system' ? 'light dark' : m;
-  return `<style>
-:root { color-scheme: ${scheme}; }
-body { margin: 0; padding: 16px 20px; background: Canvas; color: CanvasText; font: 14px/1.6 -apple-system, BlinkMacSystemFont, sans-serif; }
-h1 { font-size: 1.5em; } h2 { font-size: 1.15em; margin-top: 1.4em; }
-code, pre { font-family: ui-monospace, Menlo, monospace; }
-</style>`;
-}
-// A plan links plan.css, which a relative link can't reach from srcdoc: put the same file in where the link stood.
-// Such a plan always renders light, whatever the dashboard's mode; one without it follows the mode.
-const PLAN_CSS_LINK = /<link\b[^>]*\bhref=["']plan\.css["'][^>]*>/i;
-function withBaseStyle(page: string) {
-  const linksCss = PLAN_CSS_LINK.test(page);
-  const style = baseStyle(linksCss ? 'light' : mode.value);
-  const linked = page.replace(PLAN_CSS_LINK, () => `<style>${planCss}</style>`);
-  const head = /<head[^>]*>/i.exec(linked);
-  if (head) return linked.slice(0, head.index + head[0].length) + style + linked.slice(head.index + head[0].length);
-  return linked.replace(/^(\s*<!doctype[^>]*>)?/i, (doctype) => doctype + style);
-}
-
 // Where the plan came from. A plan this task follows may belong to another task, the one it was first attached to.
 const SOURCE_LABEL: Record<TaskPlan['source'], string> = {
   attached: 'attached',
@@ -68,7 +46,7 @@ const pageQ = useQuery(
 );
 // Rebuilt when the mode changes, but only for a plan that follows it (the frame reloads, so it returns to the top):
 // withBaseStyle reads the mode only for a plan that doesn't link plan.css.
-const html = computed(() => (pageQ.data.value ? withBaseStyle(pageQ.data.value.html) : null));
+const html = computed(() => (pageQ.data.value ? withBaseStyle(pageQ.data.value.html, mode.value, planCss) : null));
 const error = computed(() => (pageQ.error.value ? `Couldn't load the plan: ${pageQ.error.value.message}` : ''));
 const frame = ref<HTMLIFrameElement | null>(null);
 let scrollTo: string | null = null;

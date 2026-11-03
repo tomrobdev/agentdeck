@@ -7,7 +7,6 @@ export interface AnsiSegment {
   color: number | null;
 }
 
-// eslint-disable-next-line no-control-regex
 const ESCAPE = /\u001b\[([0-9;]*)([A-Za-z])|\u001b[^[]?/g;
 
 export function parseAnsi(text: string): AnsiSegment[] {

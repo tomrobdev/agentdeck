@@ -60,7 +60,6 @@ watch(
       >
         {{ i + 1 + offset }}
       </button>
-      <!-- eslint-disable-next-line vue/no-v-html -- escaped by highlight.js -->
       <span class="pr-4 whitespace-pre" v-html="h || ' '" />
     </div>
   </div>

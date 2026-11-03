@@ -20,7 +20,6 @@ function onClick(e: MouseEvent) {
 </script>
 
 <template>
-  <!-- eslint-disable-next-line vue/no-v-html -- sanitised by DOMPurify in markdownHtml -->
   <div class="md" @click="onClick" v-html="html" />
 </template>
 
