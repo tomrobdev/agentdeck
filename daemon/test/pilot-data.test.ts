@@ -57,6 +57,7 @@ test('a usage reading that changed appends a sample; an unchanged one does not',
 });
 
 const pending: PrDetails = {
+  state: 'open',
   draft: false,
   mergeable: 'MERGEABLE',
   merge_state: 'CLEAN',
@@ -72,7 +73,6 @@ const pending: PrDetails = {
 test("a PR's checks are stored once they settle, kept as first seen, and the merge stores its own", async () => {
   const t = doneTask(db, repo, { pr: 'open', url: 'https://x/pull/1', branch: 'agentdeck/checks' });
   let current = pending;
-  github.prState = async () => 'open';
   github.prDetails = async () => current;
   github.markReady = async () => {};
   github.merge = async () => {};

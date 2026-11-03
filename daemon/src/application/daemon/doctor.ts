@@ -3,7 +3,7 @@
 import { fetchDaemonState } from '../../adapters/daemon-api.ts';
 import { readLogTail } from '../../adapters/daemon-log.ts';
 import { checkoutCommit, commitsAheadOf } from '../../adapters/git.ts';
-import { ghAuth } from '../../adapters/github.ts';
+import { github } from '../../adapters/github.ts';
 import { ownsLiveGroup } from '../../adapters/processes.ts';
 import { DAEMON_LOG, serviceStatus } from '../../adapters/service.ts';
 import { API_PORT, CHECKOUT_ROOT } from '../../config.ts';
@@ -31,7 +31,7 @@ export const realProbes: Probes = {
   ahead: (commit) => commitsAheadOf(CHECKOUT_ROOT, commit),
   alive: ownsLiveGroup,
   logLines: () => readLogTail(DAEMON_LOG),
-  gh: ghAuth,
+  gh: () => github.auth(),
   now: Date.now,
 };
 

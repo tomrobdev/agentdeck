@@ -6,6 +6,7 @@ import { AUTO_MERGE_LABEL } from '../src/domain/pull-request/auto-merge.ts';
 import type { PrDetails } from '../src/domain/pull-request/merge.ts';
 
 const ready: PrDetails = {
+  state: 'open',
   draft: false,
   mergeable: 'MERGEABLE',
   merge_state: 'CLEAN',

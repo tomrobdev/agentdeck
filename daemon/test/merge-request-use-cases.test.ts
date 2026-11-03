@@ -34,6 +34,7 @@ sh('commit', '-q', '-m', 'init');
 const repo = db.addRepo({ name: 'demo', path: dir, base_branch: 'main', test_cmd: 'true' });
 
 const ready: PrDetails = {
+  state: 'open',
   draft: false,
   mergeable: 'MERGEABLE',
   merge_state: 'CLEAN',
@@ -48,8 +49,8 @@ const ready: PrDetails = {
 
 let details: Record<string, PrDetails>;
 let merged: { url: string; method: string }[];
-github.prState = async () => 'open';
-github.prDetails = async (url) => details[url] ?? ready;
+let closedUrl: string | null = null; // the PR GitHub reports as closed
+github.prDetails = async (url) => ({ ...(details[url] ?? ready), state: url === closedUrl ? 'closed' : 'open' });
 github.markReady = async () => {};
 github.merge = async (pr) => void merged.push({ url: pr.url, method: pr.method });
 github.deleteRemoteBranch = async () => {};
@@ -238,11 +239,11 @@ test('a conflicting request goes to be synced and stays; one whose task or PR mo
 
   const closedOnGithub = tested();
   requestMerge(db, closedOnGithub.id);
-  github.prState = async (url) => (url === closedOnGithub.url ? 'closed' : 'open');
+  closedUrl = closedOnGithub.url;
   try {
     await refreshPrStates(db);
   } finally {
-    github.prState = async () => 'open';
+    closedUrl = null;
   }
   assert.equal(db.getTask(closedOnGithub.id)!.merge_requested_at, null);
 });
