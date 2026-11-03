@@ -422,10 +422,10 @@ stateDiagram-v2
 | GET    | `/api/tasks/:id/plans/:id2`        | `actions.planHtml`                                                 |
 | POST   | `/api/tasks/:id/plans`             | `actions.attachPlan`                                               |
 | POST   | `/api/tasks/:id/reject`            | `actions.rejectTask`, `actions.taskDetail`                         |
-| POST   | `/api/tasks/:id/resolve`           | `actions.syncNow`, `actions.taskDetail`                            |
 | POST   | `/api/tasks/:id/retry`             | `actions.retryTask`, `actions.taskDetail`                          |
 | GET    | `/api/tasks/:id/reviews`           | `actions.taskReviews`                                              |
 | POST   | `/api/tasks/:id/reviews`           | `actions.startReview`                                              |
+| POST   | `/api/tasks/:id/sync`              | `actions.syncNow`, `actions.taskDetail`                            |
 | GET    | `/api/tasks/:id/tree`              | `actions.taskTree`                                                 |
 | GET    | `/api/tasks/:id`                   | `actions.taskDetail`                                               |
 | POST   | `/api/tasks/:id`                   | `actions.editTask`, `actions.taskDetail`, `actions.promptWarnings` |

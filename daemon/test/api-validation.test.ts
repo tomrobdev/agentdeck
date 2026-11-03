@@ -143,7 +143,7 @@ test('every POST route answers 400 to a body that is not a JSON object', async (
     `/api/tasks/${taskId}/close-pr`,
     `/api/tasks/${taskId}/fix-checks`,
     `/api/tasks/${taskId}/merge`,
-    `/api/tasks/${taskId}/resolve`,
+    `/api/tasks/${taskId}/sync`,
     `/api/tasks/${taskId}/plans`,
   ];
   for (const path of routes) {
