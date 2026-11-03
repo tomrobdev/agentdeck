@@ -1,6 +1,5 @@
 // Task commands: add, edit, inspect and move tasks.
 import { readFileSync } from 'node:fs';
-import { createInterface } from 'node:readline/promises';
 import * as actions from '../application/actions.ts';
 import { isOwnPlanName, planProgress } from '../domain/plan/plan.ts';
 import { commentLocation } from '../domain/review/review.ts';
@@ -8,10 +7,9 @@ import { pickRun } from '../domain/run/run.ts';
 import { TASK_STATUSES } from '../domain/task/lifecycle.ts';
 import { filterTasks } from '../domain/task/listing.ts';
 import { readNeeds } from '../domain/task/needs.ts';
-import { isReview } from '../domain/task/stage.ts';
 import { planStepIds } from '../domain/task/task.ts';
 import { callDaemon } from './daemon-client.ts';
-import { die, idsText, taskId, taskIds, fmtAutoMerge, fmtChecks, fmtLink, fmtTask, printLog } from './format.ts';
+import { confirm, die, idsText, taskId, taskIds, fmtAutoMerge, fmtChecks, fmtLink, fmtTask, printLog } from './format.ts';
 import type { Command } from './context.ts';
 
 /** A file's text, or exit saying why it can't be read. */
@@ -231,86 +229,10 @@ export const taskCommands: Record<string, Command> = {
     const needs = readNeeds(db.getTask(id)?.needs ?? null);
     if (needs?.kind === 'deps') {
       console.log(`#${id} asks for: ${needs.items.join(' ')}`);
-      if (!flags.yes) {
-        const rl = createInterface({ input: process.stdin, output: process.stdout });
-        const answer = await rl.question('install them on its branch and retry? [y/N] ');
-        rl.close();
-        if (!/^y(es)?$/i.test(answer.trim())) die('not installed');
-      }
+      if (!flags.yes && !(await confirm('install them on its branch and retry?'))) die('not installed');
     }
     const { packages } = await actions.installNeeds(db, id);
     console.log(`installed ${packages.join(' ')} on #${id}'s branch; requeued`);
-  },
-  'fix-checks': async ({ db, rest }) => {
-    const id = taskId(rest[0]);
-    const { checks } = await actions.fixChecks(db, id);
-    console.log(
-      `requeued #${id} to fix ${checks.length === 1 ? 'the failing check' : `${checks.length} failing checks`}: ${checks.join(', ')}`,
-    );
-  },
-  'close-pr': async ({ db, rest }) => {
-    const id = taskId(rest[0]);
-    await actions.closeTaskPr(db, id);
-    console.log(`closed the pull request of #${id}`);
-  },
-  merge: async ({ db, flags, rest }) => {
-    if (flags.all) {
-      const review = db.openPrTasks().filter(isReview);
-      if (!review.length) return void console.log('no pull requests in review');
-      for (const t of review) console.log(`#${t.id}  ${t.title}`);
-      if (!flags.yes) {
-        const rl = createInterface({ input: process.stdin, output: process.stdout });
-        const answer = await rl.question(`merge ${review.length === 1 ? 'this PR' : `these ${review.length} PRs`}? [y/N] `);
-        rl.close();
-        if (!/^y(es)?$/i.test(answer.trim())) return void console.log('not merged');
-      }
-      const res = await actions.mergeAll(db, { ids: review.map((t) => t.id) });
-      for (const m of res.merged) {
-        console.log(
-          `merged #${m.id} (${m.method})${m.unblocked.length ? `; ${m.unblocked.map((n) => `#${n}`).join(', ')} can start` : ''}`,
-        );
-        if (m.cleanup_error) console.log(`  cleanup incomplete: ${m.cleanup_error}`);
-      }
-      for (const s of res.skipped) console.log(`left #${s.id}: ${s.reason}`);
-      return;
-    }
-    const id = taskId(rest[0]);
-    const preview = await actions.mergePreview(db, id);
-    const method = flags.method ?? preview.method;
-    const { commits, files, additions, deletions, checks } = preview;
-    console.log(`${preview.title}  #${id}`);
-    console.log(`${preview.pr_url}`);
-    console.log(
-      `${preview.branch ?? '?'} → ${preview.base}, ${method}${method === 'squash' ? ` (${commits} → 1 commit)` : `, ${commits} commits`}`,
-    );
-    console.log(`${files} files, +${additions} −${deletions}`);
-    const tests = preview.tests_passed === null ? 'not run' : preview.tests_passed ? 'passed' : 'FAILED';
-    console.log(
-      `tests ${tests}; GitHub checks: ${checks.total ? `${checks.total} (${checks.failing} failing, ${checks.pending} running)` : 'none'}`,
-    );
-    if (preview.unblocks.length) console.log(`unblocks ${preview.unblocks.map((t) => `#${t.id}`).join(', ')}`);
-    for (const w of preview.warnings) console.log(`warning: ${w}`);
-    for (const p of preview.problems) console.log(`problem: ${p}`);
-    if (preview.problems.length) die(`can't merge #${id}`);
-    if (!flags.yes) {
-      const rl = createInterface({ input: process.stdin, output: process.stdout });
-      const answer = await rl.question(`merge into ${preview.base} with ${method}? [y/N] `);
-      rl.close();
-      if (!/^y(es)?$/i.test(answer.trim())) return void console.log('not merged');
-    }
-    const res = await actions.mergeTask(db, id, { method, delete_branch: !flags['keep-branch'] });
-    console.log(
-      `merged #${id} (${res.method})${res.unblocked.length ? `; ${res.unblocked.map((n) => `#${n}`).join(', ')} can start` : ''}`,
-    );
-    if (res.cleanup_error) console.log(`cleanup incomplete: ${res.cleanup_error}`);
-  },
-  'auto-merge': async ({ db, rest }) => {
-    const id = taskId(rest[0]);
-    const value = { on: true, off: false, repo: null }[rest[1] as 'on' | 'off' | 'repo'];
-    if (value === undefined) die('usage: agentdeck auto-merge <id> on|off|repo');
-    const res = await actions.setAutoMerge(db, id, { auto_merge: value });
-    console.log(`#${id}: auto-merge ${res.auto_merge ? 'on' : 'off'}${value === null ? " (the repo's setting)" : ''}`);
-    if (res.label_error) console.log(`could not change the PR's label: ${res.label_error}`);
   },
   sync: async ({ db, rest }) => {
     const id = taskId(rest[0]);
