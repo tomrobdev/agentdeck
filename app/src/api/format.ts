@@ -1,5 +1,16 @@
 // How the dashboard words what the daemon reports: times, durations, waits and the daemon's state.
-import type { AutoMergeCheck, LiveView, PrCheck, MergeRequestView, Run, StartWait, Status, SyncResult, SyncView } from './types.ts';
+import type {
+  AutoMergeCheck,
+  LiveView,
+  NotifyKind,
+  PrCheck,
+  MergeRequestView,
+  Run,
+  StartWait,
+  Status,
+  SyncResult,
+  SyncView,
+} from './types.ts';
 
 /** What a queued task waits for, in a few words, for chips and callouts. */
 export function describeWait(h: StartWait): string {
@@ -18,6 +29,22 @@ export function describeWait(h: StartWait): string {
       return `Waiting for a free slot (${h.running} of ${h.max} in use)`;
   }
 }
+
+/** What each notification kind is called in the settings. */
+export const NOTIFY_LABELS: Record<NotifyKind, string> = {
+  blocked: 'Task blocked',
+  failed: 'Task failed',
+  done: 'Task done',
+  hold: 'Work held by budget',
+  paused: 'Repo paused',
+  proposed: 'Planner proposals',
+  merged: 'PR auto-merged',
+  checks_failed: 'PR checks failed',
+};
+
+/** What each model is called, and when to pick it. */
+export const MODEL_LABELS: Record<string, string> = { haiku: 'Haiku', sonnet: 'Sonnet', opus: 'Opus' };
+export const MODEL_HINTS: Record<string, string> = { haiku: 'cheap, simple', sonnet: 'default', opus: 'hard tasks' };
 
 /** Whether the daemon will merge a PR on its own, in a line. */
 export function autoMergeLine(c: AutoMergeCheck): string {
