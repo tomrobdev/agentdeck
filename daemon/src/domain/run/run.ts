@@ -1,5 +1,5 @@
 // The run entity and how to read a run's result. Pure: no I/O.
-import { lastLine } from '../text.ts';
+import { STATUS_WORD, lastLine } from '../text.ts';
 import { type Needs, parseNeeds } from '../task/needs.ts';
 
 /**
@@ -8,6 +8,10 @@ import { type Needs, parseNeeds } from '../task/needs.ts';
  * never uses an attempt either.
  */
 export type RunKind = 'work' | 'resolve' | 'unblock';
+
+/** A run's name in the dashboard: "Run 2", or "Resolve conflicts" for the resolve run of a sync. */
+export const runLabel = (run: Pick<Run, 'kind' | 'attempt'>): string =>
+  run.kind === 'resolve' ? 'Resolve conflicts' : `Run ${run.attempt}`;
 
 /** How a run ended: a worker's result, or `interrupted` when a daemon restart ended it. */
 export type RunOutcome = Outcome | typeof INTERRUPTED;
@@ -274,11 +278,13 @@ function baseOutcome(r: RunCameTo): WorkerResult {
   return { outcome: 'done' };
 }
 
+const STATUS_LINE = new RegExp(String.raw`^${STATUS_WORD}(?::\s*(.*))?$`, 'i');
+
 /** Pull "STATUS: BLOCKED: reason" out of the agent's final message. */
 export function parseStatus(text: string | undefined): { blocked: boolean; reason?: string; declared: boolean; needs?: Needs } {
   const lines = (text ?? '').trim().split('\n').reverse();
   for (const line of lines) {
-    const m = line.trim().match(/^STATUS:\s*(DONE|BLOCKED)(?::\s*(.*))?$/i);
+    const m = line.trim().match(STATUS_LINE);
     if (m) {
       const blocked = m[1].toUpperCase() === 'BLOCKED';
       const reason = m[2]?.trim();
