@@ -83,21 +83,6 @@ export function reviewStore(orm: Orm) {
     addComment(c: Pick<ReviewComment, 'review_id' | 'path' | 'line' | 'side' | 'head_commit' | 'body'>): ReviewComment {
       return toComment(orm.insert(reviewComments).values(c).returning().get());
     },
-    /** Change the text of a comment in a draft. False when it is gone or its review is submitted. */
-    editComment(id: number, body: string): boolean {
-      return (
-        orm
-          .update(reviewComments)
-          .set({ body, updated_at: NOW_SQL })
-          .where(
-            and(
-              eq(reviewComments.id, id),
-              inArray(reviewComments.review_id, orm.select({ id: reviews.id }).from(reviews).where(isNull(reviews.submitted_at))),
-            ),
-          )
-          .run().changes > 0
-      );
-    },
     /** Delete a comment of a draft. False when it is gone or its review is submitted. */
     deleteComment(id: number): boolean {
       return (

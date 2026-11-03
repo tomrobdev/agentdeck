@@ -15,7 +15,7 @@ const { openDb } = await import('../src/db/index.ts');
 const { doneTask } = await import('./fixtures.ts');
 const { github } = await import('../src/adapters/github.ts');
 const { AUTO_MERGE_LABEL, autoMergeView } = await import('../src/domain/pull-request/auto-merge.ts');
-const { refreshPrStates } = await import('../src/application/pull-request/pull-requests.ts');
+const { refreshPrStates } = await import('../src/application/pull-request/refresh.ts');
 const { autoMerge } = await import('../src/application/pull-request/auto-merge.ts');
 const { setAutoMerge, taskDetail, updateRepo } = await import('../src/application/actions.ts');
 const { measureBranch } = await import('../src/application/task/files.ts');
@@ -39,6 +39,7 @@ sh('commit', '-q', '-m', 'init');
 const repo = db.addRepo({ name: 'demo', path: dir, base_branch: 'main', test_cmd: 'true' });
 
 const ready: PrDetails = {
+  state: 'open',
   draft: false,
   mergeable: 'MERGEABLE',
   merge_state: 'CLEAN',
@@ -52,7 +53,6 @@ const ready: PrDetails = {
 };
 
 let details: Record<string, PrDetails>;
-github.prState = async () => 'open';
 github.prDetails = async (url) => details[url] ?? ready;
 github.markReady = async () => {};
 github.merge = async () => {};

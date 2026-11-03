@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { api } from '../../api';
 import type { ShownComment } from '../../composables/useReviews';
-import { useActions } from '../../composables/useActions';
+import { useAction } from '../../composables/useActions';
 import Chip from '../ui/Chip.vue';
 
 // One review comment under its diff line: its text, the answer it got and its state.
 const props = defineProps<{ comment: ShownComment; outdated?: boolean }>();
-const { busy, run } = useActions();
+const { pending, run } = useAction();
 const remove = () => run(() => api.deleteComment(props.comment.id));
 const resolve = () => run(() => api.resolveComment(props.comment.id));
 const reopen = () => run(() => api.reopenComment(props.comment.id));
@@ -21,9 +21,9 @@ const reopen = () => run(() => api.reopenComment(props.comment.id));
       <span v-if="outdated" class="font-mono text-xs">{{ comment.side === 'old' ? 'old ' : '' }}line {{ comment.line }}</span>
       <Chip v-if="outdated" variant="tint" size="xs">Outdated</Chip>
       <div class="spacer" />
-      <button v-if="comment.draft" class="btn-mini" :disabled="busy" @click="remove">Delete</button>
-      <button v-else-if="comment.state !== 'resolved'" class="btn-mini" :disabled="busy" @click="resolve">Resolve</button>
-      <button v-if="!comment.draft && comment.state !== 'open'" class="btn-mini" :disabled="busy" @click="reopen">Reopen</button>
+      <button v-if="comment.draft" class="btn-mini" :disabled="pending" @click="remove">Delete</button>
+      <button v-else-if="comment.state !== 'resolved'" class="btn-mini" :disabled="pending" @click="resolve">Resolve</button>
+      <button v-if="!comment.draft && comment.state !== 'open'" class="btn-mini" :disabled="pending" @click="reopen">Reopen</button>
     </div>
     <div class="wrap-anywhere whitespace-pre-wrap">{{ comment.body }}</div>
     <div v-if="comment.answer" class="mt-2 border-l-2 border-accent pl-2.5">

@@ -11,8 +11,10 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 const { openDb } = await import('../src/db/index.ts');
 const { github } = await import('../src/adapters/github.ts');
 const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
-const { refreshPrStates, closePullRequest } = await import('../src/application/pull-request/pull-requests.ts');
+const { closePullRequest } = await import('../src/application/pull-request/merge.ts');
+const { refreshPrStates } = await import('../src/application/pull-request/refresh.ts');
 const { openPullRequest } = await import('../src/application/pull-request/open-pr.ts');
+const { parsePrDetails } = await import('../src/domain/pull-request/merge.ts');
 const { finalNotification } = await import('../src/domain/notification.ts');
 const { MAX_RESTARTS } = await import('../src/domain/task/lifecycle.ts');
 
@@ -122,12 +124,9 @@ test('a refresh does not undo a merge recorded while it waited on GitHub', async
     db.claimNextTask();
     db.applyEvent(task.id, { type: 'finish', outcome: 'done' });
     db.recordPr(task.id, { type: 'opened', url: 'https://x/pull/9' });
-    github.prState = async () => {
-      db.recordMerge(task.id, 'squash', 'squash merge');
-      return seen;
-    };
     github.prDetails = async () => {
-      throw new Error('not read');
+      db.recordMerge(task.id, 'squash', 'squash merge');
+      return parsePrDetails(JSON.stringify({ state: seen.toUpperCase() }));
     };
     await refreshPrStates(db);
     assert.equal(db.getTask(task.id)!.pr_state, 'merged', `GitHub said ${seen}`);
@@ -145,7 +144,7 @@ test('a PR merged on GitHub settles a blocked task as done, notifying and openin
   db.applyEvent(task.id, { type: 'conflict' }, { reason: 'conflicts' });
   let created = 0;
   github.createPr = async () => String(++created);
-  github.prState = async () => 'merged';
+  github.prDetails = async () => parsePrDetails(JSON.stringify({ state: 'MERGED' }));
   await refreshPrStates(db);
   const t = db.getTask(task.id)!;
   assert.deepEqual([t.status, t.pr_state], ['done', 'merged']);

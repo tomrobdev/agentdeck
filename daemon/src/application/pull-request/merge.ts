@@ -1,43 +1,35 @@
-// Pull requests: open one when a task finishes, and keep the state of open ones fresh.
+// Merging a done task's PR, as a person asked or on its own, and closing one.
 import { removeWorktree } from '../../adapters/git.ts';
 import { github } from '../../adapters/github.ts';
 import type { Db } from '../../db/index.ts';
 import {
-  type CheckCounts,
   MERGE_METHODS,
   type MergeMethod,
   type PrDetails,
-  checksSettled,
   isMergeMethod,
   mergeCheck,
   mergeFindings,
 } from '../../domain/pull-request/merge.ts';
-import { type AutoMergeCheck, autoMergeCheck, autoMergeOn } from '../../domain/pull-request/auto-merge.ts';
-import { checksFailedNotification, nextChecks, readStoredChecks } from '../../domain/pull-request/checks.ts';
-import { isConflicting, isMergeabilityUnknown } from '../../domain/pull-request/conflict.ts';
-import { mergeRequestCheck, mergeRequestPolls } from '../../domain/pull-request/merge-request.ts';
+import { type AutoMergeCheck, autoMergeOn } from '../../domain/pull-request/auto-merge.ts';
+import type { CheckCounts } from '../../domain/pull-request/checks.ts';
+import { isConflicting } from '../../domain/pull-request/conflict.ts';
+import { mergeRequestCheck, mergesNow } from '../../domain/pull-request/merge-request.ts';
 import { buildPrBody } from '../../domain/pull-request/pr.ts';
 import { hasOpenPr } from '../../domain/task/stage.ts';
-import { type Repo, pausedReason } from '../../domain/repo/repo.ts';
 import type { Task } from '../../domain/task/task.ts';
 import { ActionError, flag, object, requireTask, requireTaskRepo, text } from '../input.ts';
 import { prPlanFor } from '../plans.ts';
 import { dependentsReleased, landsAfter } from '../task/dependencies.ts';
-import { settle, settlePr } from '../task/settle.ts';
-import { notifyLater } from '../notifications.ts';
+import { settlePr } from '../task/settle.ts';
 import { isSyncing } from '../sync.ts';
 import { isMergeLocked, lockMerge, unlockMerge } from './merge-lock.ts';
-
-/** How often the scheduler re-reads the state of open PRs. */
-export const PR_REFRESH_MS = 3 * 60_000;
-/** How often it re-reads them while a merge request waits on running checks or on GitHub's mergeability. */
-export const MERGE_REQUEST_POLL_MS = 30_000;
+import { autoMergeFor, lastTestsPassed, prCwd } from './refresh.ts';
 
 export { isMergeLocked };
 
 /** Close a task's PR on GitHub and record it. Throws if `gh` fails. */
 export async function closePullRequest(db: Db, task: Task): Promise<void> {
-  await github.closePr(task.pr_url!, task.worktree ?? db.getRepo(task.repo_id)?.path ?? process.cwd());
+  await github.closePr(task.pr_url!, prCwd(db, task));
   settlePr(db, task.id, { type: 'closed' });
 }
 
@@ -67,32 +59,17 @@ export interface MergePreview {
   auto_merge: AutoMergeCheck | null;
   /** What a merge request would do now: `merge` it as asked, `wait` for the PR to be ready, or `never` (a person must act). */
   request: AutoMergeCheck;
+  /** Whether the dialog merges now (failing checks or failed tests, on the person's say-so) instead of asking for a merge request. */
+  merge_now: boolean;
 }
 
-/** The last run that ran the tests: 1 passed, 0 failed, null when none did. */
-function lastTestsPassed(db: Db, id: number): number | null {
-  return db.runsForTask(id).findLast((r) => r.tests_passed !== null)?.tests_passed ?? null;
-}
-
-/** The auto-merge check for a task's PR (read `withFiles`), or null when auto-merge is off for the task. */
-function autoMergeFor(db: Db, task: Task, repo: Repo, pr: PrDetails, tests_passed: number | null): AutoMergeCheck | null {
-  if (!autoMergeOn(task, repo)) return null;
-  return autoMergeCheck({
-    repo,
-    pr_state: task.pr_state,
-    pr,
-    tests_passed,
-    lands_after: landsAfter(db, task.id),
-    auto_resolve: repo.auto_resolve === 1,
-    paused: pausedReason(db.isPaused(), repo),
-  });
-}
-
-/** A merge refused because of what the PR's state is; `conflicting` when one of the reasons is a conflict with the base branch. */
+/** A merge refused because of what the PR's state is, with the `reasons`; `conflicting` when one of them is a conflict with the base branch. */
 class MergeRefused extends ActionError {
+  reasons: string[];
   conflicting: boolean;
-  constructor(message: string, conflicting: boolean) {
-    super(message);
+  constructor(id: number, reasons: string[], conflicting: boolean) {
+    super(`can't merge #${id}: ${reasons.join('; ')}`);
+    this.reasons = reasons;
     this.conflicting = conflicting;
   }
 }
@@ -117,6 +94,7 @@ export async function mergePreview(db: Db, id: number): Promise<MergePreview> {
   });
   const tests_passed = lastTestsPassed(db, id);
   const lands_after = landsAfter(db, id);
+  const request = mergeRequestCheck({ pr_state: task.pr_state, pr, tests_passed, lands_after, auto_resolve: repo.auto_resolve === 1 });
   return {
     title: task.title,
     pr_url: url,
@@ -134,7 +112,8 @@ export async function mergePreview(db: Db, id: number): Promise<MergePreview> {
     conflicting: isConflicting(pr),
     unblocks: dependentsReleased(db, id).map((t) => ({ id: t.id, title: t.title })),
     auto_merge: autoMergeFor(db, task, repo, pr, tests_passed),
-    request: mergeRequestCheck({ pr_state: task.pr_state, pr, tests_passed, lands_after, auto_resolve: repo.auto_resolve === 1 }),
+    request,
+    merge_now: mergesNow(request, { pr, tests_passed }),
   };
 }
 
@@ -167,7 +146,8 @@ export async function mergeTask(db: Db, id: number, opts: { method?: string; del
   const problems = found.filter((f) => f.problem);
   if (problems.length)
     throw new MergeRefused(
-      `can't merge #${id}: ${problems.map((f) => f.text).join('; ')}`,
+      id,
+      problems.map((f) => f.text),
       problems.some((f) => f.kind === 'conflict'),
     );
   return mergeOpenPr(db, { task, repo, url, cwd }, pr, { method, deleteBranch, reason: `${method} merge` });
@@ -200,12 +180,9 @@ export async function mergeAll(db: Db, input: { ids: number[] }): Promise<MergeA
         merged = true;
       } catch (err) {
         if (!(err instanceof ActionError)) throw err;
-        // The id is on the entry, so mergeTask's "can't merge #12: " goes.
-        result.skipped.push({
-          id,
-          reason: err.message.replace(`can't merge #${id}: `, ''),
-          conflicting: err instanceof MergeRefused && err.conflicting,
-        });
+        // The id is on the entry, so a refusal gives its reasons without mergeTask's "can't merge #12: ".
+        const refused = err instanceof MergeRefused ? err : null;
+        result.skipped.push({ id, reason: refused ? refused.reasons.join('; ') : err.message, conflicting: refused?.conflicting ?? false });
       }
     }
     last = !merged;
@@ -264,101 +241,4 @@ export async function mergeOpenPr(
     if (errors.length) result.cleanup_error = errors.join('; ');
   }
   return result;
-}
-
-/**
- * Keep a done task's open PR's checks on the task, and tell a person when they newly fail (`nextChecks` says when).
- * Nothing is told when the write was refused: the PR merged or closed meanwhile.
- */
-function keepChecks(db: Db, task: Task, pr: PrDetails): void {
-  const { stored, notify } = nextChecks(readStoredChecks(task.pr_checks), {
-    head: pr.head ?? null,
-    checks: pr.check_list ?? [],
-    read_at: new Date().toISOString(),
-  });
-  if (db.setPrChecks(task.id, JSON.stringify(stored)) && notify) notifyLater(db, checksFailedNotification(task, stored.checks));
-}
-
-/** What a refresh found out about the open PRs beyond their state. */
-export interface PrRefresh {
-  /** Tasks whose open PR GitHub says conflicts with the base. */
-  conflicting: number[];
-  /** Open PRs whose mergeability GitHub has not worked out yet (it does so lazily, after the base moves). */
-  unknown: number;
-  /** Tasks whose PR is ready to merge now (merge requests first, then auto-merges), with what GitHub said about it. */
-  mergeable: { id: number; pr: PrDetails }[];
-  /** Merge requests waiting on running checks or on mergeability GitHub hasn't worked out: worth reading again soon. */
-  polling: number;
-}
-
-/**
- * Re-read the state of every open PR of a done task, and whether it still merges cleanly. A blocked or failed task
- * whose PR was merged becomes done; its mergeability is not read. A failed lookup leaves that task as it was. Resolving the conflicts it finds is the caller's call (`resolveConflicting`).
- */
-export async function refreshPrStates(db: Db, log: (msg: string) => void = () => {}): Promise<PrRefresh> {
-  const found: PrRefresh = { conflicting: [], unknown: 0, mergeable: [], polling: 0 };
-  const requested: PrRefresh['mergeable'] = [];
-  const dropRequest = (id: number, why: string) => {
-    if (db.clearMergeRequest(id)) log(`task ${id}: merge request dropped: ${why}`);
-  };
-  for (const task of db.openPrTasks()) {
-    try {
-      const repo = db.getRepo(task.repo_id);
-      const cwd = task.worktree ?? repo?.path ?? process.cwd();
-      const state = await github.prState(task.pr_url!, cwd);
-      if (state !== task.pr_state) {
-        // Guarded on the PR still being open: a merge recorded while GitHub was being asked stays.
-        const applied = state === 'closed' ? settlePr(db, task.id, { type: 'closed' }) : db.recordPr(task.id, { type: 'seen', state });
-        if (applied) log(`task ${task.id}: PR is ${state}`);
-        if (
-          applied &&
-          state === 'merged' &&
-          task.status !== 'done' &&
-          (await settle(db, task.id, { type: 'pr_merged' }, { reason: 'PR merged on GitHub' }))
-        )
-          log(`task ${task.id}: PR merged, task is done`);
-      }
-      if (state !== 'open' || task.status !== 'done') {
-        if (task.merge_requested_at) dropRequest(task.id, state !== 'open' ? `the PR is ${state}` : `the task is ${task.status}`);
-        continue;
-      }
-      const pr = await github.prDetails(task.pr_url!, cwd, { withFiles: !!repo && autoMergeOn(task, repo) });
-      if (checksSettled(pr.checks)) db.recordPrChecksOpened(task.id, pr.checks);
-      keepChecks(db, task, pr);
-      const tests = lastTestsPassed(db, task.id);
-      if (task.merge_requested_at) {
-        // A person asked: the merge request's check stands in for auto-merge's.
-        const check = mergeRequestCheck({
-          pr_state: task.pr_state,
-          pr,
-          tests_passed: tests,
-          lands_after: landsAfter(db, task.id),
-          auto_resolve: repo ? repo.auto_resolve === 1 : true,
-        });
-        db.setAutoMergeCheck(task.id, null);
-        if (check.verdict === 'never') {
-          const why = check.reasons.join('; ');
-          dropRequest(task.id, why);
-          notifyLater(db, { kind: 'merged', title: `Could not merge #${task.id}`, body: why, task_id: task.id });
-          continue;
-        }
-        db.setMergeRequestCheck(task.id, JSON.stringify(check));
-        if (mergeRequestPolls(check, pr)) found.polling++;
-        if (isConflicting(pr)) found.conflicting.push(task.id);
-        else if (isMergeabilityUnknown(pr)) found.unknown++;
-        else if (check.verdict === 'merge') requested.push({ id: task.id, pr });
-        continue;
-      }
-      // Every check is kept on the task for the views, whatever the verdict; none when auto-merge is off.
-      const check = repo ? autoMergeFor(db, task, repo, pr, tests) : null;
-      db.setAutoMergeCheck(task.id, check && JSON.stringify(check));
-      if (isConflicting(pr)) found.conflicting.push(task.id);
-      else if (isMergeabilityUnknown(pr)) found.unknown++;
-      else if (check?.verdict === 'merge') found.mergeable.push({ id: task.id, pr });
-    } catch (err) {
-      log(`task ${task.id}: could not read PR state: ${(err as Error).message}`);
-    }
-  }
-  found.mergeable.unshift(...requested);
-  return found;
 }

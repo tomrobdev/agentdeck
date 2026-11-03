@@ -9,7 +9,8 @@ import {
   PRIORITY_LEVELS,
   branchName,
   canEdit,
-  canReview,
+  canStartMerge,
+  isReview,
   levelPriority,
   personEvents,
   priorityLevel,
@@ -42,7 +43,7 @@ const LABELS: Record<PersonEvent, string> = {
   mark_done: 'Mark done',
 };
 // A done task with an open PR is sent back with a note from its page, so Retry is not offered here.
-const events = computed(() => personEvents(props.task).filter((e) => !(e === 'retry' && canReview(props.task))));
+const events = computed(() => personEvents(props.task).filter((e) => !(e === 'retry' && isReview(props.task))));
 
 function done(fn: () => unknown) {
   emit('close');
@@ -106,13 +107,11 @@ async function link(kind: LinkKind, e?: Event) {
     <MenuItem @select="copyText(branchName(task), 'branch name')">Copy branch name</MenuItem>
     <MenuItem @select="copyText(`#${task.id}`, `#${task.id}`)">Copy #{{ task.id }}</MenuItem>
 
-    <template v-if="events.length || canReview(task)">
+    <template v-if="events.length || isReview(task)">
       <MenuSeparator />
       <MenuItem v-for="e in events" :key="e" @select="done(() => emit('act', e, task.id))">{{ LABELS[e] }}</MenuItem>
-      <MenuItem v-if="canReview(task)" :disabled="!!task.sync || !!task.merge_request" @select="done(() => emit('merge', task.id))">
-        Merge…
-      </MenuItem>
-      <MenuItem v-if="canReview(task) && task.merge_request" @select="done(cancelMerge)">Cancel merge</MenuItem>
+      <MenuItem v-if="isReview(task)" :disabled="!canStartMerge(task)" @select="done(() => emit('merge', task.id))"> Merge… </MenuItem>
+      <MenuItem v-if="isReview(task) && task.merge_request" @select="done(cancelMerge)">Cancel merge</MenuItem>
     </template>
   </Menu>
 </template>

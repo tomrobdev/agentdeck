@@ -11,7 +11,7 @@ export { type LiveContext, liveContext, repoForPath } from './task/context.ts';
 export { attachPlan, planHtml } from './plans.ts';
 export { proposeNow } from './planner.ts';
 export { pilotStats } from './run/stats.ts';
-export { mergeAll, mergePreview, mergeTask } from './pull-request/pull-requests.ts';
+export { mergeAll, mergePreview, mergeTask } from './pull-request/merge.ts';
 export { cancelMergeRequest, requestMerge, requestMerges } from './pull-request/merge-requests.ts';
 export { setAutoMerge } from './pull-request/auto-merge.ts';
 export { type FixChecksResult, fixChecks } from './pull-request/fix-checks.ts';

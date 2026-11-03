@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { type TaskSummary, api } from '../../api';
-import { useActions } from '../../composables/useActions';
+import { useAction } from '../../composables/useActions';
 import { type StatusLine, TONE_TEXT, statusLine } from '../../lib/taskBadges';
 
 // A task's status line, the same in every view (rules in lib/taskBadges.ts). `fit`: how it fits its space, on one line
@@ -14,7 +14,7 @@ const props = withDefaults(
     hide: () => [],
   },
 );
-const { busy, run } = useActions();
+const { pending, run } = useAction();
 
 const l = computed(() => {
   const found = statusLine(props.task);
@@ -27,7 +27,9 @@ const cancelMerge = () => run(() => api.cancelMergeRequest(props.task.id));
 <template>
   <div v-if="l && cancel && l.cancelMerge" class="flex items-center gap-2 text-sm" :class="TONE_TEXT[l.tone]" :data-status-line="l.kind">
     <span class="min-w-0" :class="FIT[fit]" :title="l.title">{{ l.text }}</span>
-    <button class="btn-mini flex-none" :disabled="busy" title="Withdraw the merge request" @click.stop="cancelMerge">Cancel merge</button>
+    <button class="btn-mini flex-none" :disabled="pending" title="Withdraw the merge request" @click.stop="cancelMerge">
+      Cancel merge
+    </button>
   </div>
   <div
     v-else-if="l"

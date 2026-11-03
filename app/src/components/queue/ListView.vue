@@ -1,22 +1,17 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { ago, api } from '../../api';
-import { useActions } from '../../composables/useActions';
+import { ago } from '../../api';
+import { mergeAllIds } from '../../lib/bulk';
 import { openExternal } from '../../platform/native';
+import MergeButtons from './MergeButtons.vue';
 import RowMenu from './RowMenu.vue';
-import { type BoardMove, type Group, type GroupBy, canReview, personEvents, quickRetry, statusLabel } from '../../lib/taskView';
+import { type BoardMove, type Group, type GroupBy, personEvents, quickRetry, statusLabel } from '../../lib/taskView';
 import Checkbox from '../ui/Checkbox.vue';
 import PriorityIcon from '../ui/PriorityIcon.vue';
 import StatusIcon from '../ui/StatusIcon.vue';
 import TaskBadges from '../ui/TaskBadges.vue';
 import TaskStatusLine from '../ui/TaskStatusLine.vue';
-
-export interface ShowProps {
-  repo: boolean;
-  pr: boolean;
-  time: boolean;
-  reason: boolean;
-}
+import type { ShowProps } from '../../lib/queueDisplay';
 
 const props = defineProps<{
   groups: Group[];
@@ -37,13 +32,6 @@ const emit = defineEmits<{
   merge: [id: number];
   mergeAll: [ids: number[]];
 }>();
-
-const { run } = useActions();
-const cancelMerge = (id: number) => run(() => api.cancelMergeRequest(id));
-
-/** The PRs a group's "Merge all" would merge: only Review has any, less the ones syncing. */
-const mergeable = (g: Group) =>
-  g.key === 'review' ? g.tasks.filter((t) => canReview(t) && !t.sync && !t.merge_request).map((t) => t.id) : [];
 
 // The row menu: right-click on a row, or the context-menu key / ⇧F10 on the selected one.
 const menu = ref<{ id: number; x: number; y: number } | null>(null);
@@ -94,10 +82,10 @@ watch(
             <span class="font-normal text-muted">{{ g.tasks.length }}</span>
           </button>
           <button
-            v-if="mergeable(g).length"
+            v-if="mergeAllIds(g).length"
             class="btn-mini flex-none"
             title="Merge every pull request in this group, each with its task's method"
-            @click="emit('mergeAll', mergeable(g))"
+            @click="emit('mergeAll', mergeAllIds(g))"
           >
             Merge all
           </button>
@@ -139,20 +127,7 @@ watch(
                 Approve
               </button>
               <button v-if="quickRetry(t)" class="btn-mini" title="Retry (r)" @click="emit('act', 'retry', t.id)">Retry</button>
-              <button v-if="t.sync" class="btn-mini" disabled>Syncing…</button>
-              <template v-else-if="canReview(t)">
-                <button
-                  class="btn-mini"
-                  title="Sync the branch with the base branch; a conflict starts a claude run"
-                  @click="emit('act', 'sync', t.id)"
-                >
-                  Sync
-                </button>
-                <button v-if="t.merge_request" class="btn-mini" title="Withdraw the merge request" @click="cancelMerge(t.id)">
-                  Cancel merge
-                </button>
-                <button v-else class="btn-mini" title="Merge (m)" @click="emit('merge', t.id)">Merge</button>
-              </template>
+              <MergeButtons :task="t" sync @sync="emit('act', 'sync', $event)" @merge="emit('merge', $event)" />
               <button v-if="t.pr_url" class="btn-mini" title="Open the pull request" @click="openExternal(t.pr_url)">PR ↗</button>
             </span>
             <span

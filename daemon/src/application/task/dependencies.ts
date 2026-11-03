@@ -1,10 +1,9 @@
 // Tasks waiting on another through a builds-on link: why they wait, and telling a human when they're stuck.
 import type { Db } from '../../db/index.ts';
-import type { Dependent } from '../../db/tasks.ts';
 import {
   type Link,
+  type LinkIndex,
   type LinkKind,
-  type LinkLookups,
   type LinkState,
   type LinkTarget,
   type StartState,
@@ -15,26 +14,10 @@ import {
   unlandedAfter,
 } from '../../domain/task/link.ts';
 import { isReview } from '../../domain/task/stage.ts';
+import { type Waiting, waitingOf } from '../../domain/task/start.ts';
 import type { Task } from '../../domain/task/task.ts';
+import { plural } from '../../domain/text.ts';
 import { notifyLater } from '../notifications.ts';
-
-/** What a queued task that builds on others is waiting for, or null if it isn't waiting. */
-export interface Waiting {
-  /** Every task it builds on that is still on its way; or, when stuck, the one root it is stuck on. */
-  on: number[];
-  /** Set when what it waits for won't get there on its own; null while it is on its way. */
-  stuck: string | null;
-}
-
-/**
- * What the link functions read: a task's links, the tasks that depend on it and a task as a link's other end. `liveLinks`
- * reads each from the database when asked; `loadedLinks` reads them all once, for a list of tasks.
- */
-export interface LinkIndex {
-  linksOf: (id: number) => Link[];
-  dependentsOf: (id: number) => Dependent[];
-  target: (id: number) => LinkTarget | undefined;
-}
 
 /** A task as a link's other end: its state, its repo's pr_mode and its own links. */
 export function targetOf(db: Db, id: number): LinkTarget | undefined {
@@ -76,38 +59,30 @@ export function loadedLinks(db: Db): LinkIndex {
   };
 }
 
-/** The lookups the domain's walks over dependents read. */
-function lookups(l: LinkIndex): LinkLookups<Dependent> {
-  return { buildingOn: (id) => l.dependentsOf(id).filter((d) => d.kind === 'builds_on'), linksOf: l.linksOf, target: l.target };
-}
-
 /** The tasks of `refs`, in full, for their titles; one that was deleted meanwhile is left out. */
 function tasksOf(db: Db, refs: { id: number }[]): Task[] {
   return refs.flatMap((r) => db.getTask(r.id) ?? []);
 }
 
 /** Where a task stands with the tasks it builds on, reading each one and its repo's pr_mode. */
-export function dependencyOf(db: Db, task: Pick<Task, 'id'>, links: LinkIndex = liveLinks(db)): StartState {
+export function dependencyOf(task: Pick<Task, 'id'>, links: LinkIndex): StartState {
   return startState(task, links.linksOf(task.id), links.target);
 }
 
-export function waitingFor(db: Db, task: Pick<Task, 'id' | 'status'>, links: LinkIndex = liveLinks(db)): Waiting | null {
-  if (task.status !== 'queued') return null;
-  const state = dependencyOf(db, task, links);
-  if (state.kind === 'waiting') return { on: state.on, stuck: null };
-  if (state.kind === 'stuck') return { on: [state.on], stuck: state.reason };
-  return null;
+/** What a queued task in start state `dependency` waits for on its builds-on links; null for any other task. */
+export function waitingFor(task: Pick<Task, 'status'>, dependency: StartState): Waiting | null {
+  return task.status === 'queued' ? waitingOf(dependency) : null;
 }
 
 /** The queued tasks merging this one lets start, for a task in review. */
-export function unblocksOf(db: Db, task: Pick<Task, 'id' | 'status' | 'pr_state'>, links: LinkIndex = liveLinks(db)): number[] {
+export function unblocksOf(task: Pick<Task, 'id' | 'status' | 'pr_state'>, links: LinkIndex): number[] {
   if (!isReview(task)) return [];
-  return releasedBy(task.id, lookups(links)).map((t) => t.id);
+  return releasedBy(task.id, links).map((t) => t.id);
 }
 
 /** The queued tasks that building on task `id` alone keeps from starting: merging `id` lets them start. */
 export function dependentsReleased(db: Db, id: number): Task[] {
-  return tasksOf(db, releasedBy(id, lookups(liveLinks(db))));
+  return tasksOf(db, releasedBy(id, liveLinks(db)));
 }
 
 /** One notification naming queued tasks a link leaves without what they wait for: a title and closing line for `n` of them. */
@@ -123,8 +98,6 @@ function notifyDependents(
   notifyLater(db, { kind: 'blocked', title, body: [...tasks.map((t) => `• #${t.id} ${t.title}`), ending].join('\n'), task_id });
 }
 
-const tasksWord = (n: number) => `${n} task${n === 1 ? '' : 's'}`;
-
 /**
  * Call after task `id` changes in a way that may strand the tasks waiting on it (it failed, was blocked
  * or cancelled, or its PR was closed). If so, notify once, naming every queued task that can no longer start
@@ -134,8 +107,8 @@ const tasksWord = (n: number) => `${n} task${n === 1 ? '' : 's'}`;
 export function warnStuckDependents(db: Db, id: number): void {
   const state = linkState({ on: id, kind: 'builds_on' }, targetOf(db, id));
   if (state.kind !== 'stuck') return;
-  notifyDependents(db, tasksOf(db, stuckOn(id, lookups(liveLinks(db)))), id, (n, them) => ({
-    title: `${tasksWord(n)} can't start: ${state.reason}`,
+  notifyDependents(db, tasksOf(db, stuckOn(id, liveLinks(db))), id, (n, them) => ({
+    title: `${plural(n, 'task')} can't start: ${state.reason}`,
     ending: `Retry #${id} to release ${them}, or cancel ${them}.`,
   }));
 }
@@ -159,7 +132,7 @@ export function buildersOnRepo(db: Db, repoId: number, taskIds: number[]): Task[
 /** Notify once about the tasks `buildersOnRepo` found, now that repo `repo` is deleted and they start without that work. */
 export function warnBuildersOnDeleted(db: Db, repo: string, tasks: Task[]): void {
   notifyDependents(db, tasks, null, (n) => ({
-    title: `${tasksWord(n)} lost what ${n === 1 ? 'it builds' : 'they build'} on: ${repo} was deleted`,
+    title: `${plural(n, 'task')} lost what ${n === 1 ? 'it builds' : 'they build'} on: ${repo} was deleted`,
     ending:
       n === 1
         ? 'It starts without that work, which was never merged: cancel it if it needs that work.'
@@ -179,11 +152,11 @@ export interface LinkView {
   state: LinkState['kind'];
 }
 
-export function linkViews(db: Db, id: number, links: LinkIndex = liveLinks(db)): LinkView[] {
+export function linkViews(id: number, links: LinkIndex): LinkView[] {
   return links.linksOf(id).map((l) => ({ on: l.on, kind: l.kind, state: linkState(l, links.target(l.on)).kind }));
 }
 
 /** The tasks that depend on task `id`, whatever their status, each with its link's kind. */
-export function dependentViews(db: Db, id: number, links: LinkIndex = liveLinks(db)): { id: number; kind: LinkKind }[] {
+export function dependentViews(id: number, links: LinkIndex): { id: number; kind: LinkKind }[] {
   return links.dependentsOf(id).map((d) => ({ id: d.id, kind: d.kind }));
 }

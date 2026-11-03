@@ -4,13 +4,13 @@ import { KeepAwake } from '../../adapters/caffeinate.ts';
 import { activeChildren, killGroup, reapOrphans } from '../../adapters/processes.ts';
 import { DEFAULTS } from '../../config.ts';
 import { MAX_RESTARTS } from '../../domain/task/lifecycle.ts';
-import { describeWait, startDecision } from '../../domain/task/start.ts';
-import { startGate } from './gate.ts';
+import { describeWait } from '../../domain/task/start.ts';
+import { queueWait } from './gate.ts';
 import { notifyLater } from '../notifications.ts';
 import { proposeNow, plannerDue } from '../planner.ts';
 import { resolveConflicting } from '../sync.ts';
 import { autoMerge } from '../pull-request/auto-merge.ts';
-import { MERGE_REQUEST_POLL_MS, PR_REFRESH_MS, refreshPrStates } from '../pull-request/pull-requests.ts';
+import { MERGE_REQUEST_POLL_MS, PR_REFRESH_MS, refreshPrStates } from '../pull-request/refresh.ts';
 import { settle, settleRecovered } from '../task/settle.ts';
 import { runTask } from '../run/worker.ts';
 import type { Db } from '../../db/index.ts';
@@ -255,8 +255,7 @@ export class Scheduler {
 
   /** Why we can't start new work right now (null if we can), and how many slots are free. Announces a hold once. */
   private gate(): { reason: string | null; free: number } {
-    const g = startGate(this.db);
-    const { wait, free } = startDecision(g, { ignorePause: this.opts.once, used: this.db.slotsUsed(), now: Date.now() / 1000 });
+    const { wait, free } = queueWait(this.db, this.opts.once);
     const hold = wait?.kind === 'governor' ? wait : null;
     // Announce a hold once, and only when it is actually keeping queued work waiting.
     if (hold && !this.lastHold && this.db.hasQueued()) {

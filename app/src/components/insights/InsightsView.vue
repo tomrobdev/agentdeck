@@ -21,7 +21,7 @@ const empty = computed(() => cards.value.length === 0);
   <section class="flex min-h-0 flex-1 flex-col overflow-auto p-4">
     <div class="mb-4 flex items-center gap-3">
       <h1 class="m-0 text-xl">Insights</h1>
-      <span class="muted">Week of {{ weekLabel(week) }} against the pilot's targets</span>
+      <span class="text-muted">Week of {{ weekLabel(week) }} against the pilot's targets</span>
       <div class="spacer" />
       <label class="flex items-center gap-2"
         >Repo
@@ -32,9 +32,9 @@ const empty = computed(() => cards.value.length === 0);
       </label>
     </div>
 
-    <p v-if="statsQ.error.value" class="muted">Couldn't load the numbers: {{ statsQ.error.value.message }}</p>
-    <p v-else-if="statsQ.isPending.value" class="muted">Loading…</p>
-    <p v-else-if="empty" class="muted">No runs yet{{ repo ? ` in ${repo}` : '' }}, so there is nothing to chart.</p>
+    <p v-if="statsQ.error.value" class="text-muted">Couldn't load the numbers: {{ statsQ.error.value.message }}</p>
+    <p v-else-if="statsQ.isPending.value" class="text-muted">Loading…</p>
+    <p v-else-if="empty" class="text-muted">No runs yet{{ repo ? ` in ${repo}` : '' }}, so there is nothing to chart.</p>
     <div v-else class="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3">
       <article v-for="s in cards" :key="s.measure.key" class="rounded-md border border-border bg-panel p-3">
         <header class="flex items-baseline justify-between gap-2">
@@ -43,9 +43,9 @@ const empty = computed(() => cards.value.length === 0);
         </header>
         <p class="m-0 mt-1 text-xl font-[650]">
           {{ nowOf(s)?.value == null ? '–' : s.measure.format(nowOf(s)!.value!) }}
-          <small v-if="nowOf(s)?.detail" class="muted text-sm font-normal">{{ nowOf(s)!.detail }}</small>
+          <small v-if="nowOf(s)?.detail" class="text-muted text-sm font-normal">{{ nowOf(s)!.detail }}</small>
         </p>
-        <p class="muted m-0 mb-2 text-sm">
+        <p class="text-muted m-0 mb-2 text-sm">
           {{ s.measure.hint }}<template v-if="s.measure.target"> · target {{ s.measure.target.text }}</template
           ><template v-if="s.total !== null"> · {{ s.measure.format(s.total) }} in all weeks</template>
         </p>

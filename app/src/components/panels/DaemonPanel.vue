@@ -4,12 +4,12 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { api, daemonHealthQuery, daemonQuery, isOffline, taskList, uptime } from '../../api';
-import { useActions } from '../../composables/useActions';
+import { useAction } from '../../composables/useActions';
 import ConfirmDialog from '../ui/ConfirmDialog.vue';
 import Modal from '../ui/Modal.vue';
 
 defineEmits<{ close: [] }>();
-const { run, busy } = useActions();
+const { run, pending } = useAction();
 
 const POLL_MS = 3000;
 const stateQ = useQuery({ ...daemonQuery(), refetchInterval: POLL_MS });
@@ -94,19 +94,19 @@ function refresh() {
     <p v-else-if="stateQ.error.value" class="m-0 mb-3 text-failed" role="alert">{{ stateQ.error.value.message }}</p>
 
     <dl v-if="state" class="m-0 mb-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
-      <dt class="muted">Code</dt>
+      <dt class="text-muted">Code</dt>
       <dd class="m-0" :class="{ 'text-blocked': commits.stale }">{{ commits.text }}</dd>
-      <dt class="muted">Uptime</dt>
+      <dt class="text-muted">Uptime</dt>
       <dd class="m-0 tabular-nums">
-        {{ uptime(state.started_at, now) }} <span class="muted">· pid {{ state.pid }}</span>
+        {{ uptime(state.started_at, now) }} <span class="text-muted">· pid {{ state.pid }}</span>
       </dd>
-      <dt class="muted">Reload</dt>
+      <dt class="text-muted">Reload</dt>
       <dd class="m-0">
         <template v-if="reloadLine">{{ reloadLine }}</template>
         <template v-else-if="state.reload.blocked">
           <span class="text-blocked">Blocked: {{ state.reload.blocked }}</span>
         </template>
-        <span v-else class="muted">{{ state.reload.enabled ? 'Nothing pending.' : 'Off (reload_on_change).' }}</span>
+        <span v-else class="text-muted">{{ state.reload.enabled ? 'Nothing pending.' : 'Off (reload_on_change).' }}</span>
       </dd>
     </dl>
 
@@ -122,26 +122,26 @@ function refresh() {
         </li>
       </ul>
     </section>
-    <p v-else-if="health" class="muted m-0 mb-3">All {{ health.checks.length }} checks pass.</p>
+    <p v-else-if="health" class="text-muted m-0 mb-3">All {{ health.checks.length }} checks pass.</p>
 
     <section class="mb-3">
       <h4 class="m-0 mb-1">Log</h4>
       <pre v-if="health?.log.length" class="m-0 max-h-56 overflow-auto rounded-md border border-border bg-code-bg p-2 text-xs">{{
         health.log.join('\n')
       }}</pre>
-      <p v-else class="muted m-0">{{ healthQ.isPending.value ? 'Loading…' : 'The log is empty.' }}</p>
+      <p v-else class="text-muted m-0">{{ healthQ.isPending.value ? 'Loading…' : 'The log is empty.' }}</p>
     </section>
 
     <p v-if="requeued.length" class="m-0 mb-3" role="status">
       Restarting at once. {{ taskList(requeued.map((t) => t.id)) }} {{ requeued.length === 1 ? 'is' : 'are' }} requeued.
     </p>
-    <p v-else-if="asked && !reloadLine" class="muted m-0 mb-3" role="status">Restarting…</p>
+    <p v-else-if="asked && !reloadLine" class="text-muted m-0 mb-3" role="status">Restarting…</p>
 
     <ConfirmDialog
       v-if="confirming"
       title="Restart the daemon"
       confirm-label="Restart now"
-      :busy="busy"
+      :busy="pending"
       @cancel="confirming = false"
       @confirm="restartNow"
     >
@@ -155,12 +155,12 @@ function refresh() {
     </ConfirmDialog>
 
     <div class="flex items-center gap-2">
-      <button :disabled="busy || down" @click="refresh">Refresh</button>
+      <button :disabled="pending || down" @click="refresh">Refresh</button>
       <div class="spacer" />
-      <button :disabled="busy || down || asked" :title="'Pause new work, wait for running tasks, then restart'" @click="restartWhenIdle">
+      <button :disabled="pending || down || asked" :title="'Pause new work, wait for running tasks, then restart'" @click="restartWhenIdle">
         {{ asked ? 'Waiting…' : 'Restart when idle' }}
       </button>
-      <button :disabled="busy || down || confirming" @click="askRestartNow">Restart now…</button>
+      <button :disabled="pending || down || confirming" @click="askRestartNow">Restart now…</button>
     </div>
   </Modal>
 </template>

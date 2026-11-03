@@ -14,7 +14,7 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 const { openDb } = await import('../src/db/index.ts');
 const { doneTask, queuedTask } = await import('./fixtures.ts');
 const { github } = await import('../src/adapters/github.ts');
-const { refreshPrStates } = await import('../src/application/pull-request/pull-requests.ts');
+const { refreshPrStates } = await import('../src/application/pull-request/refresh.ts');
 const { ActionError, fixChecks, taskDetail, taskViews } = await import('../src/application/actions.ts');
 const { latestReviewNote } = await import('../src/domain/task/history.ts');
 const { parsePrDetails } = await import('../src/domain/pull-request/merge.ts');
@@ -118,7 +118,7 @@ test('check runs that share a name are told apart by their workflow', () => {
 });
 
 test('parsePrDetails keeps each check and the head commit', () => {
-  const d = parsePrDetails(JSON.stringify({ headRefOid: 'abc123', statusCheckRollup: ROLLUP }));
+  const d = parsePrDetails(JSON.stringify({ state: 'OPEN', headRefOid: 'abc123', statusCheckRollup: ROLLUP }));
   assert.equal(d.head, 'abc123');
   assert.deepEqual(d.checks, { total: 5, failing: 2, pending: 1 });
   assert.equal(d.check_list?.length, 5);
@@ -160,11 +160,10 @@ test('actionsRun finds the run and job in an Actions link; logTail keeps the las
 
 // The real adapter would call GitHub.
 const failingDetails: PrDetails = parsePrDetails(
-  JSON.stringify({ headRefOid: 'abc123', mergeable: 'MERGEABLE', mergeStateStatus: 'UNSTABLE', statusCheckRollup: ROLLUP }),
+  JSON.stringify({ state: 'OPEN', headRefOid: 'abc123', mergeable: 'MERGEABLE', mergeStateStatus: 'UNSTABLE', statusCheckRollup: ROLLUP }),
 );
 let details: Record<string, PrDetails>;
 let logs: { run: string; job: string | null }[];
-github.prState = async () => 'open';
 github.prDetails = async (url) => details[url] ?? { ...failingDetails, checks: { total: 0, failing: 0, pending: 0 }, check_list: [] };
 github.failedLog = async (_cwd, run, job) => {
   logs.push({ run, job: job ?? null });
