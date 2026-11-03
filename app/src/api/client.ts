@@ -47,6 +47,7 @@ import type {
   TestNotifyResult,
   TreeListing,
 } from './types.ts';
+import type { PersonEvent } from '../../../daemon/src/domain/task/lifecycle.ts';
 
 export const API_BASE: string = import.meta.env.VITE_AGENTDECK_API ?? 'http://127.0.0.1:4317';
 
@@ -149,4 +150,13 @@ export const api = {
   reopenComment: (id: number) => call<Review>(`/api/review-comments/${id}/reopen`, { method: 'POST' }),
   planHtml: (id: number, planId: number) => call<PlanHtml>(`/api/tasks/${id}/plans/${planId}`),
   logUrl: (id: number, runId?: number) => `${API_BASE}/api/tasks/${id}/log${runId ? `?run=${runId}` : ''}`,
+};
+
+/** The call behind each thing a person may do to a task, for the row buttons, the hotkeys, the palette and the bulk bar. */
+export const PERSON_CALLS: Record<PersonEvent, (id: number) => Promise<unknown>> = {
+  approve: api.approve,
+  reject: api.reject,
+  retry: (id) => api.retry(id),
+  cancel: api.cancel,
+  mark_done: (id) => api.markDone(id),
 };

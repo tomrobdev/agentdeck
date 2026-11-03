@@ -7,6 +7,7 @@ import {
   type Status,
   type TaskSummary,
   type TaskDetail as Detail,
+  PERSON_CALLS,
   api,
   describeState,
   isImmutable,
@@ -91,14 +92,7 @@ watch(
 );
 
 const togglePause = () => act(() => (status.value?.paused ? api.resume() : api.pause()));
-const ACTIONS: Record<PersonEvent, (id: number) => Promise<unknown>> = {
-  approve: api.approve,
-  reject: api.reject,
-  retry: api.retry,
-  cancel: api.cancel,
-  mark_done: api.markDone,
-};
-const actOn = (kind: PersonEvent, id: number) => act(() => ACTIONS[kind](id));
+const actOn = (kind: PersonEvent, id: number) => act(() => PERSON_CALLS[kind](id));
 /** A task in review opens on its diff, the rest on the overview. */
 function openFromQueue(id: number) {
   const t = tasks.value.find((x) => x.id === id);
