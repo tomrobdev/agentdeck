@@ -46,6 +46,10 @@ export async function fixChecks(db: Db, id: number): Promise<FixChecksResult> {
       }
     }),
   );
-  retryTask(db, id, fixChecksNote(failed));
+  // The reads took a while: a PR merged or closed meanwhile, or a task that left done, is not requeued.
+  const now = requireTask(db, id);
+  if (now.status !== 'done' || !hasOpenPr(now))
+    throw new ActionError(`#${id} changed while its checks were read; its PR is no longer open`);
+  retryTask(db, id, fixChecksNote(failed), ['done']);
   return { checks: failed.map((c) => c.name) };
 }

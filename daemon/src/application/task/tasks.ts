@@ -6,6 +6,7 @@ import { runProgram } from '../../adapters/shell.ts';
 import type { Db } from '../../db/index.ts';
 import { type ParsedPlan, parsePlan } from '../../domain/plan/plan.ts';
 import type { Repo } from '../../domain/repo/repo.ts';
+import type { TaskStatus } from '../../domain/task/lifecycle.ts';
 import { INSTALL_NOTE, readNeeds } from '../../domain/task/needs.ts';
 import { hasOpenPr } from '../../domain/task/stage.ts';
 import {
@@ -251,12 +252,13 @@ export function rejectTask(db: Db, id: number): void {
 }
 
 /** Another attempt. A `note` ("request changes") is kept on the timeline and goes first in the next run's prompt. */
-export function retryTask(db: Db, id: number, note?: string): void {
+export function retryTask(db: Db, id: number, note?: string, onlyFrom?: TaskStatus[]): void {
   const t = requireTask(db, id);
   if (isSyncing(db, id)) throw new ActionError(`#${id} is being brought up to date with its base branch; try again when that is done`);
   if (note !== undefined && typeof note !== 'string') throw new ActionError('note must be text');
   // One more attempt on top of what has been used.
-  if (!db.applyEvent(id, { type: 'retry' }, { reason: note?.trim() || null })) throw new ActionError(`#${id} is ${t.status}`);
+  if (!db.applyEvent(id, { type: 'retry' }, { reason: note?.trim() || null, onlyFrom }))
+    throw new ActionError(`#${id} is ${db.getTask(id)?.status ?? t.status}`);
 }
 
 /**
@@ -317,7 +319,11 @@ export async function installNeeds(db: Db, id: number): Promise<{ packages: stri
   } catch (err) {
     throw new ActionError(`installed, but could not commit: ${lastLine((err as Error).message)}`);
   }
-  retryTask(db, id, `${INSTALL_NOTE} ${packages.join(' ')}${dev ? ' (dev)' : ''} on the branch at the person's request.`);
+  // The install took a while: a cancel or mark-done meanwhile stays.
+  const now = db.getTask(id)?.status;
+  if (now !== 'blocked')
+    throw new ActionError(`installed ${packages.join(' ')}, but #${id} is now ${now ?? 'gone'}, so it was not retried`);
+  retryTask(db, id, `${INSTALL_NOTE} ${packages.join(' ')}${dev ? ' (dev)' : ''} on the branch at the person's request.`, ['blocked']);
   return { packages, dev };
 }
 
