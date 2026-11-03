@@ -3,13 +3,14 @@ import { computed, ref, watch } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
 import { type Needs, type TaskDetail, api, repoQuery } from '../../api';
 import { canInstallWith, depsAreDev, depsPackages, withHost } from '../../lib/taskView';
-import { useActions } from '../../composables/useActions';
+import { useAction, useActions } from '../../composables/useActions';
 import ConfirmDialog from '../ui/ConfirmDialog.vue';
 
 // What a blocked task's worker said it needs, with the one action that clears it.
 const props = defineProps<{ task: TaskDetail; needs: Needs }>();
 const emit = defineEmits<{ retry: [] }>();
-const { busy, run: act, flash } = useActions();
+const { flash } = useActions();
+const { pending, run: act } = useAction();
 const queryClient = useQueryClient();
 
 // Only the toolchain (deps) and the network setting (host) need the repo.
@@ -23,7 +24,7 @@ watch(
 const confirmHost = ref(false);
 
 async function run(fn: () => Promise<unknown>) {
-  if (busy.value) return;
+  if (pending.value) return;
   await act(fn);
   confirmHost.value = false;
 }
@@ -60,19 +61,19 @@ const allow = () =>
       </div>
     </div>
     <template v-if="needs.kind === 'deps'">
-      <button v-if="repo && canInstallWith(repo.toolchain)" class="primary" :disabled="busy" @click="install">Install and retry</button>
-      <button v-else-if="repo" :disabled="busy" @click="emit('retry')">Install them on the branch, then Retry</button>
+      <button v-if="repo && canInstallWith(repo.toolchain)" class="primary" :disabled="pending" @click="install">Install and retry</button>
+      <button v-else-if="repo" :disabled="pending" @click="emit('retry')">Install them on the branch, then Retry</button>
     </template>
-    <button v-else-if="needs.kind === 'host'" class="primary" :disabled="busy" @click="confirmHost = true">
+    <button v-else-if="needs.kind === 'host'" class="primary" :disabled="pending" @click="confirmHost = true">
       Allow for {{ task.repo }} and retry
     </button>
-    <button v-else :disabled="busy" @click="emit('retry')">↻ Retry</button>
+    <button v-else :disabled="pending" @click="emit('retry')">↻ Retry</button>
 
     <ConfirmDialog
       v-if="confirmHost"
       title="Allow network access"
       :confirm-label="`Allow ${host()} for ${task.repo}`"
-      :busy="busy"
+      :busy="pending"
       @cancel="confirmHost = false"
       @confirm="allow"
     >

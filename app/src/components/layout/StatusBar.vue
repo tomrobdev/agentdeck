@@ -5,7 +5,7 @@ import { computed } from 'vue';
 import { type Status, type TaskSummary, api, describeState, relTime } from '../../api';
 import { useActivity } from '../../composables/useActivity';
 import { type ActivityItem, KIND_LABEL } from '../../lib/activity';
-import { useActions } from '../../composables/useActions';
+import { useAction } from '../../composables/useActions';
 import { openTask } from '../../router';
 import Chip from '../ui/Chip.vue';
 import Popover from '../ui/Popover.vue';
@@ -20,9 +20,9 @@ const activity = useActivity(
   () => props.tasks,
   () => props.status,
 );
-const actions = useActions();
+const { pending: cancelling, run } = useAction();
 const open = (item: ActivityItem) => item.taskId !== null && openTask(item.taskId, item.tab);
-const cancelMerge = (item: ActivityItem) => item.taskId !== null && actions.run(() => api.cancelMergeRequest(item.taskId!));
+const cancelMerge = (item: ActivityItem) => item.taskId !== null && run(() => api.cancelMergeRequest(item.taskId!));
 
 const state = computed(() => describeState(props.status, props.offline));
 
@@ -101,7 +101,9 @@ const toggleTitle = computed(() => {
                 >{{ item.doing }}<template v-if="item.took"> · for {{ item.took }}</template></span
               >
             </button>
-            <button v-if="item.cancellable" class="mr-1 !py-0 text-xs" :disabled="busy" @click="cancelMerge(item)">Cancel merge</button>
+            <button v-if="item.cancellable" class="mr-1 !py-0 text-xs" :disabled="cancelling" @click="cancelMerge(item)">
+              Cancel merge
+            </button>
           </li>
         </ul>
       </template>
