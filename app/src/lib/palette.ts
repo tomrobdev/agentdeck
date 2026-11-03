@@ -1,12 +1,15 @@
 // What the command palette lists and in which order. What a person may do with a task is the daemon's personEvents and the
-// stage.ts review rule; this file only turns that into rows. Pure, so the daemon's tests can import it
+// stage.ts review and merge rules; this file only turns that into rows. Pure, so the daemon's tests can import it
 // (daemon/test/palette.test.ts).
 import type { TaskSummary } from '../../../daemon/src/api/contract.ts';
 import { personEvents } from '../../../daemon/src/domain/task/lifecycle.ts';
-import { isReview as canReview } from '../../../daemon/src/domain/task/stage.ts';
+import { canStartMerge, isReview } from '../../../daemon/src/domain/task/stage.ts';
 import { rank } from './fuzzy.ts';
 
-export type PaletteTask = Pick<TaskSummary, 'id' | 'title' | 'status' | 'pr_state'> & { repo?: string | null; branch?: string | null };
+export type PaletteTask = Pick<TaskSummary, 'id' | 'title' | 'status' | 'pr_state' | 'sync' | 'merge_request'> & {
+  repo?: string | null;
+  branch?: string | null;
+};
 export type ViewMode = 'list' | 'board' | 'graph';
 
 /** What the palette can do. The app supplies these; the palette never calls the API itself. */
@@ -58,10 +61,10 @@ function selectedActions(t: PaletteTask, h: PaletteHandlers): PaletteItem[] {
     run,
   });
   const out: PaletteItem[] = [];
-  if (canReview(t)) out.push(mine('merge', 'Merge', () => h.merge(t.id), 'm'));
+  if (canStartMerge(t)) out.push(mine('merge', 'Merge', () => h.merge(t.id), 'm'));
   if (events.includes('approve')) out.push(mine('approve', 'Approve', () => h.act('approve', t.id), 'a'));
   // A task in review is sent back with a note, from its page; a plain retry is for work that went wrong.
-  if (events.includes('retry') && !canReview(t)) out.push(mine('retry', 'Retry', () => h.act('retry', t.id), 'r'));
+  if (events.includes('retry') && !isReview(t)) out.push(mine('retry', 'Retry', () => h.act('retry', t.id), 'r'));
   if (events.includes('mark_done')) out.push(mine('mark_done', 'Mark done', () => h.act('mark_done', t.id)));
   if (events.includes('cancel')) out.push(mine('cancel', t.status === 'running' ? 'Stop' : 'Cancel', () => h.act('cancel', t.id)));
   out.push(mine('open', 'Open task', () => h.open(t.id), '↵'));

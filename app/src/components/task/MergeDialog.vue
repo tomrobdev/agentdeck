@@ -9,8 +9,8 @@ import Delta from '../ui/Delta.vue';
 import RadioGroup from '../ui/RadioGroup.vue';
 
 // The confirm before a merge: it writes to the base branch on GitHub and can't be undone from here. The button asks the
-// daemon to merge (a merge request) and the dialog closes at once; the daemon merges when the PR is ready. Only a PR whose
-// checks or tests failed merges now, on the person's say-so. The dialog focuses the confirm button, so Enter confirms; Esc cancels. Errors show in the dialog.
+// daemon to merge (a merge request) and the dialog closes at once; the daemon merges when the PR is ready. Whether it merges
+// now instead (failing checks or failed tests, on the person's say-so) is the daemon's merge_now. The dialog focuses the confirm button, so Enter confirms; Esc cancels. Errors show in the dialog.
 const props = defineProps<{ taskId: number }>();
 const emit = defineEmits<{ close: []; merged: [result: MergeResult]; requested: [] }>();
 const { refresh } = useActions();
@@ -25,13 +25,7 @@ const mergeError = ref('');
 watch(preview, (p) => p && (method.value = p.method), { immediate: true });
 
 const request = computed(() => preview.value?.request ?? null);
-// Failing checks or failed tests stop a merge request; the person can still wave them through, here and now.
-const mergeNow = computed(() => {
-  const p = preview.value;
-  if (!p) return false;
-  if (!p.request) return true; // a daemon without merge requests
-  return p.request.verdict === 'never' && (p.checks.failing > 0 || p.tests_passed === 0);
-});
+const mergeNow = computed(() => preview.value?.merge_now ?? false);
 const reasons = computed(() => request.value?.reasons ?? []);
 const warnings = computed(() => (preview.value?.warnings ?? []).filter((w) => !reasons.value.includes(w)));
 const label = computed(() => (mergeNow.value ? 'Merge now' : request.value?.verdict === 'wait' ? 'Merge when ready' : 'Merge'));

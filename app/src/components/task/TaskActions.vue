@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { type MergeResult, type TaskDetail, api } from '../../api';
-import { canFixChecks, canReview, personEvents } from '../../lib/taskView';
+import { canFixChecks, canStartMerge, isReview, personEvents } from '../../lib/taskView';
 import { useActions } from '../../composables/useActions';
 import ConfirmDialog from '../ui/ConfirmDialog.vue';
 import MarkDoneDialog from './MarkDoneDialog.vue';
@@ -51,7 +51,7 @@ async function onMerged(result: MergeResult) {
       <button @click="emit('act', 'reject')">Reject</button>
       <button class="primary" @click="emit('act', 'approve')">✓ Approve</button>
     </template>
-    <template v-if="canReview(task)">
+    <template v-if="isReview(task)">
       <button @click="closing = true">Close PR</button>
       <button @click="emit('review')">↻ Request changes</button>
     </template>
@@ -59,9 +59,9 @@ async function onMerged(result: MergeResult) {
     <button v-if="canFixChecks(task)" :disabled="busy" @click="fixChecks">Fix failing checks</button>
     <button v-if="events.includes('mark_done')" @click="markingDone = true">✓ Mark done</button>
     <button
-      v-if="canReview(task)"
+      v-if="isReview(task)"
       class="primary"
-      :disabled="!!task.sync || !!task.merge_request"
+      :disabled="!canStartMerge(task)"
       :title="task.sync ? 'Merge waits for the sync to end' : task.merge_request ? 'A merge is already requested' : undefined"
       @click="merging = true"
     >

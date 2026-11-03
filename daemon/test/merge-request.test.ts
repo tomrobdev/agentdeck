@@ -1,7 +1,13 @@
 // Merge requests (docs/plans/merge-requests.html), the pure part: what each finding means to a request, and the view of one.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { conflictsWithBase, mergeRequestCheck, mergeRequestPolls, mergeRequestView } from '../src/domain/pull-request/merge-request.ts';
+import {
+  conflictsWithBase,
+  mergeRequestCheck,
+  mergeRequestPolls,
+  mergeRequestView,
+  mergesNow,
+} from '../src/domain/pull-request/merge-request.ts';
 import { AUTO_MERGE_LABEL } from '../src/domain/pull-request/auto-merge.ts';
 import type { PrDetails } from '../src/domain/pull-request/merge.ts';
 
@@ -128,4 +134,16 @@ test('a check marks a conflict as data, and conflictsWithBase reads it from the 
     "the merge request's newer check wins",
   );
   assert.equal(conflictsWithBase({ ...task, pr_state: 'merged', merge_request_check: stored }), false, 'only an open PR conflicts');
+});
+
+test("mergesNow: only failing checks or failed tests merge now, on the person's say-so; the rest goes through a request", () => {
+  const now = (pr: Partial<PrDetails> = {}, o: { tests?: number | null; after?: boolean } = {}) =>
+    mergesNow(check(pr, o), { pr: { ...ready, ...pr }, tests_passed: o.tests === undefined ? 1 : o.tests });
+  assert.equal(now({ checks: { total: 2, failing: 1, pending: 0 } }), true, 'a failing check');
+  assert.equal(now({}, { tests: 0 }), true, 'failed tests');
+  assert.equal(now(), false, 'a clean PR is a request that merges');
+  assert.equal(now({ checks: { total: 2, failing: 0, pending: 1 } }), false, 'running checks are a request that waits');
+  assert.equal(now({}, { after: true }), false, 'lands after is a request that waits');
+  assert.equal(now({}, { tests: null }), false, 'tests not run');
+  assert.equal(now({ merge_state: 'BLOCKED' }), false, 'branch protection alone: never, but nothing to wave through');
 });

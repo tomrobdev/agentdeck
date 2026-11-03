@@ -22,7 +22,7 @@ const activity = useActivity(
 );
 const actions = useActions();
 const open = (item: ActivityItem) => item.taskId !== null && openTask(item.taskId, item.tab);
-const cancelMerge = (item: ActivityItem) => item.taskId !== null && actions.run(() => api.cancelMerge(item.taskId!));
+const cancelMerge = (item: ActivityItem) => item.taskId !== null && actions.run(() => api.cancelMergeRequest(item.taskId!));
 
 const state = computed(() => describeState(props.status, props.offline));
 

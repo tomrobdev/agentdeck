@@ -3,7 +3,7 @@
 import type { MergeMethod, NotifyKind, RepoDetail, RepoPatch, Settings, SettingsPatch } from '../api';
 import { DEFAULT_AUTO_MERGE_MAX_LINES, DEFAULT_AUTO_MERGE_SKIP } from '../../../daemon/src/domain/pull-request/auto-merge.ts';
 import { NOTIFY_KINDS } from '../../../daemon/src/domain/notification.ts';
-import { parseTextList } from '../../../daemon/src/domain/text.ts';
+import { parseTextList, textList } from '../../../daemon/src/domain/text.ts';
 
 export { NOTIFY_KINDS };
 
@@ -21,9 +21,6 @@ export type RepoForm = {
   /** Hosts, comma-separated. */
   network: string;
 };
-
-/** A comma-separated field as a list. */
-const splitList = (text: string) => text.split(/[\s,]+/).filter(Boolean);
 
 export function toRepoForm(d: RepoDetail): RepoForm {
   return {
@@ -49,9 +46,9 @@ export function toRepoPatch(f: RepoForm): RepoPatch {
     auto_resolve: f.autoResolve,
     auto_merge: f.autoMerge,
     auto_merge_max_lines: f.autoMergeMaxLines,
-    auto_merge_skip: splitList(f.autoMergeSkip),
+    auto_merge_skip: textList(f.autoMergeSkip),
     sandbox: f.sandbox,
-    network: splitList(f.network),
+    network: textList(f.network),
   };
 }
 

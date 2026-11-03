@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { type TaskSummary, ago, api } from '../../api';
-import { useActions } from '../../composables/useActions';
-import { type BoardMove, type Group, type StatusGroup, boardMove, canReview } from '../../lib/taskView';
+import { type TaskSummary, ago } from '../../api';
+import { mergeAllIds } from '../../lib/bulk';
+import { type BoardMove, type Group, type StatusGroup, boardMove, isReview } from '../../lib/taskView';
 import MarkDoneDialog from '../task/MarkDoneDialog.vue';
+import MergeButtons from './MergeButtons.vue';
 import PriorityIcon from '../ui/PriorityIcon.vue';
 import StatusIcon from '../ui/StatusIcon.vue';
 import TaskBadges from '../ui/TaskBadges.vue';
@@ -22,13 +23,6 @@ const emit = defineEmits<{
   merge: [id: number];
   mergeAll: [ids: number[]];
 }>();
-
-const { run } = useActions();
-const cancelMerge = (id: number) => run(() => api.cancelMergeRequest(id));
-
-/** The PRs the Review column's "Merge all" would merge, less the ones syncing. */
-const mergeable = (g: Group) =>
-  g.key === 'review' ? g.tasks.filter((t) => canReview(t) && !t.sync && !t.merge_request).map((t) => t.id) : [];
 
 const dragging = ref<TaskSummary | null>(null);
 const over = ref<string | null>(null);
@@ -93,10 +87,10 @@ const LABELS: Record<BoardMove, string> = {
         <span>{{ g.label }}</span>
         <span class="text-muted">{{ g.tasks.length }}</span>
         <button
-          v-if="mergeable(g).length"
+          v-if="mergeAllIds(g).length"
           class="btn-mini ml-auto font-normal"
           title="Merge every pull request in this column, each with its task's method"
-          @click="emit('mergeAll', mergeable(g))"
+          @click="emit('mergeAll', mergeAllIds(g))"
         >
           Merge all
         </button>
@@ -134,15 +128,12 @@ const LABELS: Record<BoardMove, string> = {
             <span class="ml-auto flex-none text-sm text-muted">{{ ago(t.updated_at) }}</span>
           </div>
           <div
-            v-if="canReview(t) && !t.sync"
+            v-if="isReview(t) && !t.sync"
             class="mt-1.5 gap-1"
             :class="t.id === selected ? 'flex' : 'hidden group-hover:flex'"
             @click.stop
           >
-            <button v-if="t.merge_request" class="btn-mini" title="Withdraw the merge request" @click="cancelMerge(t.id)">
-              Cancel merge
-            </button>
-            <button v-else class="btn-mini" title="Merge (m)" @click="emit('merge', t.id)">Merge</button>
+            <MergeButtons :task="t" @merge="emit('merge', $event)" />
           </div>
         </article>
       </div>
