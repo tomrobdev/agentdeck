@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { type Status, describeWait } from '../../api';
+import { oneLine, plural } from '../../../../daemon/src/domain/text.ts';
 
 // What queued tasks wait for, each with the action that ends the wait. Empty when nothing keeps work waiting.
 const props = defineProps<{ status: Status | null; busy: boolean }>();
@@ -18,7 +19,7 @@ const repos = computed(() => props.status?.paused_repos ?? []);
       class="s-blocked flex items-center gap-3 rounded-md border border-[color-mix(in_srgb,var(--c)_40%,transparent)] bg-[color-mix(in_srgb,var(--c)_9%,var(--panel))] px-3 py-2"
     >
       <span class="min-w-0 flex-1 truncate"
-        ><strong>{{ queued }} queued {{ queued === 1 ? 'task' : 'tasks' }} can't start.</strong> {{ describeWait(wait) }}.</span
+        ><strong>{{ plural(queued, 'queued task') }} can't start.</strong> {{ describeWait(wait) }}.</span
       >
       <button v-if="wait.kind === 'daemon-paused'" class="primary shrink-0" :disabled="busy" @click="emit('resume')">▶ Resume</button>
       <button v-else-if="wait.kind === 'governor'" class="shrink-0" @click="emit('settings')">Usage settings</button>
@@ -31,7 +32,7 @@ const repos = computed(() => props.status?.paused_repos ?? []);
       <span class="min-w-0 flex-1 truncate" :title="r.reason">
         <strong>{{ r.name }} is paused</strong>
         <span class="text-muted"> · {{ r.queued }} queued</span>
-        <span class="ml-2 font-mono text-sm">{{ r.reason.split('\n')[0] }}</span>
+        <span class="ml-2 font-mono text-sm">{{ oneLine(r.reason) }}</span>
       </span>
       <button class="primary shrink-0" :disabled="busy" title="Let this repo's tasks run again" @click="emit('resumeRepo', r.id)">
         ▶ Resume {{ r.name }}

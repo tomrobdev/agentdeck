@@ -11,6 +11,7 @@ import type {
   SyncResult,
   SyncView,
 } from './types.ts';
+import { oneLine, plural } from '../../../daemon/src/domain/text.ts';
 import { sqliteMs } from '../../../daemon/src/domain/time.ts';
 
 /** What a queued task waits for, in a few words, for chips and callouts. */
@@ -23,7 +24,7 @@ export function describeWait(h: StartWait): string {
     case 'governor':
       return `On hold for the usage budget: ${h.reason}${h.until ? `; lifts around ${when(h.until)}` : ''}`;
     case 'repo-paused':
-      return `The repo is paused: ${h.reason.split('\n')[0]}`;
+      return `The repo is paused: ${oneLine(h.reason)}`;
     case 'dependency':
       return h.stuck ? `Can't start: ${h.stuck}` : `Waits for ${h.on.map((id) => `#${id}`).join(', ')} to finish`;
     case 'slots':
@@ -63,11 +64,11 @@ export function describeMergeRequest(r: MergeRequestView): string {
 export function syncLine(r: Pick<SyncResult, 'outcome' | 'files' | 'reason'>): string {
   switch (r.outcome) {
     case 'resolved':
-      return `Resolved conflicts in ${r.files.length} ${r.files.length === 1 ? 'file' : 'files'}.`;
+      return `Resolved conflicts in ${plural(r.files.length, 'file')}.`;
     case 'clean':
       return 'Synced with the base branch.';
     case 'up_to_date':
-      return 'The branch is already up to date.';
+      return 'The branch is already synced with the base branch.';
     case 'blocked':
       return `Blocked: ${r.reason ?? 'the conflicts could not be settled'}`;
     default:
@@ -169,11 +170,6 @@ export function fmtTokens(n: number): string {
 /** A size in bytes: "812 B", "14 KB". */
 export function fileSize(bytes: number): string {
   return bytes < 1024 ? `${bytes} B` : `${Math.round(bytes / 1024)} KB`;
-}
-
-/** "1 file", "3 files". */
-export function plural(n: number, one: string, many = `${one}s`): string {
-  return `${n} ${n === 1 ? one : many}`;
 }
 
 /** The banner text when the daemon runs a different commit than the dashboard, else null. Unknown commits never warn. */

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { type RequestMergesResult, type TaskSummary, api } from '../../api';
+import { errorMessage, plural } from '../../../../daemon/src/domain/text.ts';
 import { useActions } from '../../composables/useActions';
 import ConfirmDialog from '../ui/ConfirmDialog.vue';
 
@@ -27,7 +28,7 @@ async function start() {
     if (!res.failed.length) return emit('done', res.requested);
     result.value = res;
   } catch (e) {
-    error.value = (e as Error).message;
+    error.value = errorMessage(e);
   } finally {
     running.value = false;
   }
@@ -38,7 +39,7 @@ const close = () => (running.value ? undefined : emit('done', requested.value));
 
 <template>
   <ConfirmDialog
-    :title="`Merge ${tasks.length} ${tasks.length === 1 ? 'pull request' : 'pull requests'}`"
+    :title="`Merge ${plural(tasks.length, 'pull request')}`"
     :confirm-label="running ? 'Working…' : result ? 'Close' : `Merge ${tasks.length}`"
     :hide-cancel="!!result"
     :busy="running"

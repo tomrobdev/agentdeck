@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { type MergeMethod, type MergeResult, MERGE_METHODS, api, autoMergeLine, mergePreviewQuery } from '../../api';
+import { errorMessage, plural } from '../../../../daemon/src/domain/text.ts';
 import { useActions } from '../../composables/useActions';
 import Chip from '../ui/Chip.vue';
 import ConfirmDialog from '../ui/ConfirmDialog.vue';
@@ -40,7 +41,7 @@ const blockers = computed(() =>
 
 const commitsLine = computed(() => {
   const n = preview.value?.commits ?? 0;
-  const commits = `${n} ${n === 1 ? 'commit' : 'commits'}`;
+  const commits = plural(n, 'commit');
   return method.value === 'squash' ? `${commits} → 1` : commits;
 });
 
@@ -71,7 +72,7 @@ async function merge() {
     await refresh();
     emit('requested');
   } catch (e) {
-    mergeError.value = (e as Error).message;
+    mergeError.value = errorMessage(e);
     merging.value = false;
   }
 }
@@ -104,9 +105,7 @@ async function merge() {
         <dt>Commits</dt>
         <dd>{{ commitsLine }}</dd>
         <dt>Changes</dt>
-        <dd>
-          {{ preview.files }} {{ preview.files === 1 ? 'file' : 'files' }} <Delta :add="preview.additions" :del="preview.deletions" />
-        </dd>
+        <dd>{{ plural(preview.files, 'file') }} <Delta :add="preview.additions" :del="preview.deletions" /></dd>
         <dt>Tests</dt>
         <dd :class="{ 'text-failed': preview.tests_passed === 0 }">{{ tests }} <span class="text-muted">on the last run</span></dd>
         <dt>Checks</dt>

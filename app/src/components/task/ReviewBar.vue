@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { type Review, type SubmitReview, api } from '../../api';
+import { plural } from '../../../../daemon/src/domain/text.ts';
 import { useAction } from '../../composables/useActions';
 
 // The bar a draft review lives in: how many comments are pending, an overall note, and Submit as Comment or Request changes.
@@ -62,7 +63,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
   <div class="mx-6 mt-3 flex flex-none flex-col gap-2 rounded-md border border-accent bg-panel px-3.5 py-2.5" aria-label="Review">
     <div class="flex items-center gap-2">
       <b>Review</b>
-      <span class="text-muted">{{ count() }} {{ count() === 1 ? 'comment' : 'comments' }} pending</span>
+      <span class="text-muted">{{ plural(count(), 'comment') }} pending</span>
       <div class="spacer" />
       <button v-if="!count()" class="border-0 bg-transparent text-muted" aria-label="Close" @click="emit('close')">✕</button>
     </div>

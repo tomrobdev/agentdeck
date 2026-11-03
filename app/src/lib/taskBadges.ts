@@ -10,6 +10,7 @@ import type { AutoMergeView, TaskSummary } from '../../../daemon/src/api/contrac
 import { readQuestion } from '../../../daemon/src/domain/run/unblock.ts';
 import { readNeeds } from '../../../daemon/src/domain/task/needs.ts';
 import { isReview } from '../../../daemon/src/domain/task/stage.ts';
+import { plural } from '../../../daemon/src/domain/text.ts';
 import { describeLive, describeMergeRequest, describeSync, describeWait } from '../api/format.ts';
 import type { Tone as ChipTone } from './tone.ts';
 
@@ -123,7 +124,7 @@ export function taskBadges(t: Viewed, opts: BadgeOptions = {}): Badges {
     const n = checks.failing;
     const running = checks.pending ? `; ${checks.pending} still running` : '';
     attention.push({
-      label: `✗ ${n} ${n === 1 ? 'check' : 'checks'} failing`,
+      label: `✗ ${plural(n, 'check')} failing`,
       title: `Failing: ${checks.failing_names.join(', ')}${running}`,
       tone: 'failed',
     });

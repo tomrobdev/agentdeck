@@ -3,7 +3,7 @@ import { computed, ref } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
 import { type Repo, type RepoDeletion, api, archivedReposQuery, queryKeys, repoDeletionQuery } from '../../api';
 import { useActions } from '../../composables/useActions';
-import { plural } from '../../../../daemon/src/domain/text.ts';
+import { errorMessage, plural } from '../../../../daemon/src/domain/text.ts';
 
 // The archived repos, to unarchive or delete for good.
 const { run } = useActions();
@@ -33,7 +33,7 @@ async function askDelete(r: Repo) {
   try {
     deleting.value = { repo: r, counts: await queryClient.fetchQuery({ ...repoDeletionQuery(r.id), staleTime: 0 }) };
   } catch (e) {
-    actionError.value = (e as Error).message;
+    actionError.value = errorMessage(e);
   }
 }
 

@@ -17,6 +17,7 @@ import {
   statusGroup,
 } from '../../../daemon/src/domain/task/stage.ts';
 import { EDITABLE_STATUSES, MODELS } from '../../../daemon/src/domain/task/task.ts';
+import { parseTextList } from '../../../daemon/src/domain/text.ts';
 import type { GroupBy } from './queueDisplay.ts';
 
 // The board's move rule is in boardMove.ts, which the daemon's tests import.
@@ -137,13 +138,7 @@ export { canInstallWith };
 
 /** A repo's network setting with a host added once. */
 export function withHost(networkJson: string, host: string): string[] {
-  let hosts: string[] = [];
-  try {
-    const parsed: unknown = JSON.parse(networkJson);
-    if (Array.isArray(parsed)) hosts = parsed.filter((h): h is string => typeof h === 'string');
-  } catch {
-    // an unreadable setting counts as none
-  }
+  const hosts = parseTextList(networkJson);
   return hosts.includes(host) ? hosts : [...hosts, host];
 }
 

@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { MODEL_LABELS, type NotificationRow, type Settings, ago, api, serviceQuery, settingsQuery } from '../../api';
+import { errorMessage } from '../../../../daemon/src/domain/text.ts';
 import { type SettingsForm, toSettingsForm, toSettingsPatch } from '../../lib/forms';
 import { MODELS } from '../../lib/taskView';
 import { CMUX_TEMPLATE, saveTerminalTemplate, terminalTemplate } from '../../lib/terminal';
@@ -37,7 +38,7 @@ async function toggleAppAtLogin() {
     await setLaunchAtLogin(!appAtLogin.value);
     appAtLogin.value = await launchAtLogin();
   } catch (e) {
-    error.value = (e as Error).message;
+    error.value = errorMessage(e);
   }
 }
 
@@ -56,7 +57,7 @@ onMounted(async () => {
   try {
     appAtLogin.value = await launchAtLogin();
   } catch (e) {
-    error.value = (e as Error).message;
+    error.value = errorMessage(e);
   }
 });
 
@@ -84,7 +85,7 @@ async function test() {
     await api.testNotify();
     tested.value = 'Sent';
   } catch (e) {
-    tested.value = (e as Error).message;
+    tested.value = errorMessage(e);
   }
 }
 </script>

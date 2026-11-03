@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { MODEL_HINTS, MODEL_LABELS, type Repo, type TaskDetail, api } from '../../api';
+import { errorMessage, textList } from '../../../../daemon/src/domain/text.ts';
 import { MODELS } from '../../lib/taskView';
 import { useTerminal } from '../../composables/useTerminal';
 import Modal from '../ui/Modal.vue';
@@ -35,7 +36,7 @@ async function writeWithClaude() {
     await terminal.writeTask(repo.value, path, prompt.value);
     emit('close');
   } catch (e) {
-    error.value = String((e as Error)?.message ?? e);
+    error.value = errorMessage(e);
   }
 }
 
@@ -59,17 +60,14 @@ async function submit() {
       priority: priority.value,
       max_turns: maxTurns.value,
       plan_task: planOn ? Number(planOn) : undefined,
-      plan_steps: planSteps.value
-        .split(',')
-        .map((s) => s.trim())
-        .filter(Boolean),
+      plan_steps: textList(planSteps.value),
     });
     if (task.warnings.length) {
       saved.value = task;
       warnings.value = task.warnings;
     } else emit('created', task);
   } catch (e) {
-    error.value = (e as Error).message;
+    error.value = errorMessage(e);
   } finally {
     saving.value = false;
   }
