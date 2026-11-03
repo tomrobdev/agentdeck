@@ -76,7 +76,11 @@ const offline = computed(() => isOffline(statusQ.error.value));
 
 // After a change any of it may have moved (the Repos panel adds, archives and edits repos too).
 const queryClient = useQueryClient();
-const { busy, run: act } = provideActions(() => queryClient.invalidateQueries({ predicate: (q) => !isImmutable(q.queryKey) }), flash);
+const {
+  busy,
+  run: act,
+  refresh,
+} = provideActions(() => queryClient.invalidateQueries({ predicate: (q) => !isImmutable(q.queryKey) }), flash);
 
 watch(
   pageId,
@@ -104,7 +108,7 @@ function openFromQueue(id: number) {
 const merging = ref<number | null>(null);
 async function onMerged(result: MergeResult) {
   merging.value = null;
-  await queryClient.invalidateQueries({ predicate: (q) => !isImmutable(q.queryKey) });
+  await refresh();
   if (result.cleanup_error) flash(`Merged, but cleanup failed: ${result.cleanup_error}`);
 }
 const selectedTask = computed(
@@ -211,7 +215,7 @@ watchEffect(() => {
       <SettingsPanel v-if="modal === 'settings'" :notifications="status?.notifications ?? []" @close="modal = null" />
       <DaemonPanel v-if="modal === 'daemon'" @close="modal = null" />
 
-      <MergeDialog v-if="merging !== null" :task-id="merging" @close="merging = null" @merged="onMerged" />
+      <MergeDialog v-if="merging !== null" :task-id="merging" @close="merging = null" @merged="onMerged" @requested="merging = null" />
       <CommandPalette v-if="palette" :items="paletteRows" @close="palette = false" />
 
       <Toaster :toast="toast" @close="closeToast" />

@@ -14,7 +14,7 @@ import {
   type Filters,
   type PersonEvent,
   applyFilters,
-  canReview,
+  canStartMerge,
   emptyFilters,
   groupTasks,
   hasFilters,
@@ -162,15 +162,14 @@ async function sync(id: number) {
 }
 function act(kind: BoardMove | 'sync', id: number) {
   const task = props.tasks.find((t) => t.id === id);
-  if ((kind === 'merge' || kind === 'sync') && task?.sync) return;
-  if (kind === 'merge' && task?.merge_request) return;
-  if (kind === 'merge') startMerge(id);
-  else if (kind === 'sync') sync(id);
+  if (kind === 'merge') {
+    if (task && canStartMerge(task)) startMerge(id);
+  } else if (kind === 'sync') sync(id);
   else emit('act', kind, id);
 }
-/** "Merge all" on the Review group: the bulk merge confirm, for every PR in review that isn't syncing. */
+/** "Merge all" on the Review group: the bulk merge confirm, for every PR in review that may start a merge. */
 function mergeAll(ids: number[]) {
-  bulkMerging.value = props.tasks.filter((t) => ids.includes(t.id) && !t.sync && !t.merge_request);
+  bulkMerging.value = props.tasks.filter((t) => ids.includes(t.id) && canStartMerge(t));
 }
 
 // Bulk selection, in the list only: `x` or shift-click picks, and the bar offers what every picked task allows.
@@ -252,7 +251,7 @@ useHotkeys({
   },
   m: () => {
     const t = selectedTask();
-    if (t && canReview(t) && !t.sync && !t.merge_request) startMerge(t.id);
+    if (t && canStartMerge(t)) startMerge(t.id);
   },
   v: () => (display.value = { ...display.value, mode: MODES[(MODES.indexOf(display.value.mode) + 1) % MODES.length] }),
   c: () => emit('newTask'),
