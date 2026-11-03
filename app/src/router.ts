@@ -22,14 +22,21 @@ export function parseHash(hash: string): Route {
 
 /**
  * Where an `agentdeck://` link goes: `tasks/<id>` and `tasks/<id>/<tab>` a task page, `new` the New task form, an empty
- * path or `queue` the queue. Anything else (another scheme, a non-numeric id, an unknown tab) is null.
+ * path or `queue` the queue, `insights` the scorecard, `settings`, `repos` and `daemon` their panels, `palette` the command
+ * palette. Anything else (another scheme, a non-numeric id, an unknown tab) is null.
  */
-export function parseAppUrl(url: string): Route | { name: 'new' } | null {
+export type AppLink = Route | { name: 'new' } | { name: 'palette' } | { name: 'panel'; panel: 'settings' | 'repos' | 'daemon' };
+
+export function parseAppUrl(url: string): AppLink | null {
   const m = url.trim().match(/^agentdeck:\/\/([^?#]*)(?:[?#].*)?$/i);
   if (!m) return null;
   const parts = m[1].split('/').filter(Boolean);
   if (parts.length === 0 || (parts.length === 1 && parts[0] === 'queue')) return { name: 'queue' };
   if (parts.length === 1 && parts[0] === 'new') return { name: 'new' };
+  if (parts.length === 1 && parts[0] === 'insights') return { name: 'insights' };
+  if (parts.length === 1 && parts[0] === 'palette') return { name: 'palette' };
+  if (parts.length === 1 && (parts[0] === 'settings' || parts[0] === 'repos' || parts[0] === 'daemon'))
+    return { name: 'panel', panel: parts[0] };
   if (parts[0] !== 'tasks' || parts.length > 3 || !/^\d+$/.test(parts[1] ?? '')) return null;
   const tab = parts[2] ?? 'overview';
   if (!(TASK_TABS as string[]).includes(tab)) return null;

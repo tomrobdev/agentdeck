@@ -285,6 +285,9 @@ pub fn setup(app: &mut App) -> tauri::Result<impl FnMut(&Read) + Send + 'static>
         if let Err(e) = show(&handle, &view) {
             eprintln!("tray: couldn't update: {e}");
         }
+        if let Err(e) = crate::app_menu::update(&handle, view.toggle) {
+            eprintln!("menu: couldn't update: {e}");
+        }
         last = view;
     })
 }

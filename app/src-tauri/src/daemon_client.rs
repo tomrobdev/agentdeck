@@ -122,6 +122,15 @@ pub fn set_paused(paused: bool) -> Result<(), String> {
         .map_err(|e| e.to_string())
 }
 
+/// Restart the daemon (`POST /api/daemon/restart`); it waits for running tasks to finish first.
+pub fn restart() -> Result<(), String> {
+    agent(Some(REQUEST_TIMEOUT))
+        .post(format!("{}/api/daemon/restart", base_url()))
+        .send_empty()
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+
 /// Tell the daemon the app is running (`POST /api/app/seen`), so for the next 90 s it leaves desktop notifications
 /// to the app. Answers whether desktop notifications are on.
 pub fn app_seen() -> Result<bool, String> {

@@ -18,6 +18,12 @@ test('new opens the form, and an empty link or queue opens the queue', () => {
   assert.deepEqual(parseAppUrl('agentdeck://queue'), { name: 'queue' });
 });
 
+test('the menu links open the scorecard, the palette and the panels', () => {
+  assert.deepEqual(parseAppUrl('agentdeck://insights'), { name: 'insights' });
+  assert.deepEqual(parseAppUrl('agentdeck://palette'), { name: 'palette' });
+  for (const panel of ['settings', 'repos', 'daemon']) assert.deepEqual(parseAppUrl(`agentdeck://${panel}`), { name: 'panel', panel });
+});
+
 test('anything else is ignored', () => {
   for (const url of [
     'https://tasks/181',
@@ -26,7 +32,9 @@ test('anything else is ignored', () => {
     'agentdeck://tasks/',
     'agentdeck://tasks/181/nope',
     'agentdeck://tasks/181/changes/extra',
-    'agentdeck://settings',
+    'agentdeck://settings/extra',
+    'agentdeck://insights/1',
+    'agentdeck://palette/x',
     'agentdeck://new/extra',
     '',
   ]) {

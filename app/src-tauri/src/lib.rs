@@ -1,3 +1,4 @@
+mod app_menu;
 mod daemon_client;
 mod dialogs;
 mod notifications;
@@ -42,6 +43,7 @@ pub fn run() {
             terminal::run_template
         ])
         .setup(|app| {
+            app_menu::setup(app.handle())?;
             let mut tray = tray::setup(app)?;
             let mut notifications = notifications::setup(app.handle());
             daemon_client::watch(move |read| {
