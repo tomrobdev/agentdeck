@@ -210,6 +210,15 @@ test('a clean merge is committed, tested and pushed without a claude run', async
   assert.deepEqual(pushes, [t.branch], 'and nothing to push');
 });
 
+test('a sync with no base ref ends as an error, not up to date', async () => {
+  const t = await doneTask();
+  const { syncBranch } = await import('../src/application/sync.ts');
+  const task = db.getTask(t.id)!;
+  const res = await syncBranch(db, task, { ...repo, base_branch: 'no-such-branch' }, t.wt, { allowResolve: false, runTests: false });
+  assert.equal(res.kind, 'error');
+  assert.match(res.kind === 'error' ? res.reason : '', /no-such-branch/);
+});
+
 test('a conflict starts a resolve run that keeps both sides; the task stays done and no attempt is used', async () => {
   const t = await doneTask();
   conflictOnMain();
