@@ -368,7 +368,6 @@ const HOLD_ALLOWED: { file: string; line: RegExp; why: string }[] = [
   { file: 'api/contract.ts', line: /'hold'/, why: 'the `hold` notification kind' },
   { file: 'adapters/notify.ts', line: /^\s*hold:/, why: 'the `hold` notification kind' },
   { file: 'db/schema.ts', line: /`hold`|,hold,/, why: 'migration 16 is about the `hold` notification kind' },
-  { file: 'cli/help.ts', line: /,hold,/, why: 'the `hold` notification kind in notify_events' },
   { file: 'app/src/components/panels/SettingsPanel.vue', line: /kind === 'hold'/, why: 'the `hold` notification kind' },
   { file: 'app/src/api/format.ts', line: /^\s*hold: /, why: 'the `hold` notification kind' },
   { file: 'app/src/components/panels/BudgetSettings.vue', line: /Hold new tasks above/, why: 'the governor budget setting' },

@@ -4,7 +4,7 @@ import { request } from 'node:http';
 import { API_PORT } from '../config.ts';
 import { die } from './format.ts';
 
-export function callDaemon<T = any>(method: string, path: string, body?: unknown, port = API_PORT): Promise<T> {
+export function callDaemon<T>(method: string, path: string, body?: unknown, port = API_PORT): Promise<T> {
   return new Promise<T>((resolve) => {
     const payload = body === undefined ? undefined : JSON.stringify(body);
     const req = request(
