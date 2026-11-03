@@ -128,7 +128,7 @@ test('every POST route answers 400 to a body that is not a JSON object', async (
     '/api/notify/test',
     '/api/repos',
     `/api/repos/${repoId}`,
-    `/api/repos/${repoId}/plan`,
+    `/api/repos/${repoId}/propose`,
     `/api/repos/${repoId}/doctor`,
     `/api/repos/${repoId}/resume`,
     `/api/repos/${repoId}/archive`,

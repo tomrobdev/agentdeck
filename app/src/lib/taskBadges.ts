@@ -109,9 +109,9 @@ export function statusLine(t: Viewed): StatusLine | null {
 /** A task's attention chips, links and facts. */
 export function taskBadges(t: Viewed, opts: BadgeOptions = {}): Badges {
   const attention: AttentionChip[] = [];
-  const needs = t.status === 'blocked' ? readNeeds(t.needs ?? null) : null;
+  const needs = t.status === 'blocked' ? readNeeds(t.needs) : null;
   if (needs) attention.push({ label: `needs ${needs.kind}`, title: `The worker asked for: ${needs.items.join(' ')}`, tone: 'blocked' });
-  if (t.status === 'blocked' && readQuestion(t.question ?? null))
+  if (t.status === 'blocked' && readQuestion(t.question))
     attention.push({ label: 'asks you', title: 'An unblock run left a question for you on the task page', tone: 'blocked' });
   const am = t.auto_merge_view;
   if (t.conflicting && t.pr_state === 'open')
@@ -130,8 +130,7 @@ export function taskBadges(t: Viewed, opts: BadgeOptions = {}): Badges {
   }
   if (t.plan_unfinished) attention.push({ label: 'steps unfinished', title: 'The run left linked plan steps unfinished', tone: 'blocked' });
 
-  // A daemon from before links existed only says what a queued task waits on.
-  const up = t.links ? t.links.filter((l) => l.kind === 'builds_on' && l.state !== 'met').map((l) => l.on) : (t.waiting?.on ?? []);
+  const up = t.links.filter((l) => l.kind === 'builds_on' && l.state !== 'met').map((l) => l.on);
 
   const facts: Fact[] = [];
   if (t.attempts > 1) facts.push({ label: `try ${t.attempts}`, title: `Attempt ${t.attempts} of ${t.max_attempts}` });
@@ -157,7 +156,7 @@ export function taskBadges(t: Viewed, opts: BadgeOptions = {}): Badges {
   }
   if (opts.repo && t.repo) facts.push({ label: t.repo, title: `Repo ${t.repo}` });
 
-  return { attention, up, down: t.unblocks ?? [], facts };
+  return { attention, up, down: t.unblocks, facts };
 }
 
 /** The word on a task's status pill: a done task whose PR is open is in review; a cancel under way is stopping. */

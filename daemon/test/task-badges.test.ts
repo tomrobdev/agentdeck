@@ -38,8 +38,23 @@ const task = (extra: Partial<TaskSummary> = {}): TaskSummary => ({
   pr_url: null,
   pr_state: null,
   merge_method: null,
+  plan_task: null,
   plan_steps: null,
+  needs: null,
+  question: null,
+  done_by: null,
+  auto_merge: null,
+  auto_merge_view: null,
+  merge_request: null,
+  conflicting: false,
   waiting: null,
+  unblocks: [],
+  links: [],
+  dependents: [],
+  plan_unfinished: false,
+  live: null,
+  sync: null,
+  checks: null,
   wait: null,
   created_at: '2026-11-01 10:00:00',
   updated_at: '2026-11-01 10:00:00',
@@ -138,7 +153,6 @@ test('a queued task built on two unmerged tasks shows ↑ both', () => {
   });
   assert.deepEqual(taskBadges(t).up, [3, 4]);
   assert.equal(statusLine(t), null, 'waiting on its way is not a sentence');
-  assert.deepEqual(taskBadges(task({ waiting: { on: [3], stuck: null } })).up, [3], 'a daemon without links says what it waits on');
 });
 
 test('the status line goes in order: live run, sync, merge request, stop reason, can’t start, auto-merge', () => {

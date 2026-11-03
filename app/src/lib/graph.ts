@@ -40,7 +40,7 @@ const SWEEPS = 4;
 /** Every link between the given tasks, as edges from the dependency to the dependent. Links to tasks not given are left out. */
 export function edgesOf(tasks: Pick<TaskSummary, 'id' | 'links'>[]): GraphEdge[] {
   const ids = new Set(tasks.map((t) => t.id));
-  return tasks.flatMap((t) => (t.links ?? []).filter((l) => ids.has(l.on)).map((l) => ({ from: l.on, to: t.id, kind: l.kind })));
+  return tasks.flatMap((t) => t.links.filter((l) => ids.has(l.on)).map((l) => ({ from: l.on, to: t.id, kind: l.kind })));
 }
 
 /** The tasks that form the graph: those with links or dependents. Unlinked tasks stay out. */
@@ -83,7 +83,7 @@ export function stuckSet(tasks: TaskSummary[]): Set<number> {
     if (!isStuck(t)) continue;
     mark(t.id);
     // The root: the dependency whose own state won't get better. It is the one a person has to act on.
-    for (const l of t.links ?? []) if (l.kind === 'builds_on' && l.state === 'stuck') set.add(l.on);
+    for (const l of t.links) if (l.kind === 'builds_on' && l.state === 'stuck') set.add(l.on);
   }
   return set;
 }

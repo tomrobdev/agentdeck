@@ -18,7 +18,7 @@ export interface ApiContext {
 }
 
 /** Biggest request body accepted. */
-export const MAX_BODY_BYTES = 2 * 1024 * 1024;
+const MAX_BODY_BYTES = 2 * 1024 * 1024;
 
 /** A request the client got wrong: answered 400. */
 export class BadRequest extends Error {}

@@ -1,4 +1,4 @@
-// The daemon as a whole: status, pause and resume, restart, the service and a test notification.
+// The daemon as a whole: the change stream, status, stats, pause and resume, restart, health, the service and a test notification.
 import * as actions from '../../application/actions.ts';
 import { parseSince } from '../../domain/run/scorecard.ts';
 import type { ChangeEvent } from '../contract.ts';
