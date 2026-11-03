@@ -8,7 +8,7 @@ import { hasOpenPr } from '../../domain/task/stage.ts';
 import { ActionError, object, requireTask, requireTaskRepo } from '../input.ts';
 import { notifyLater } from '../notifications.ts';
 import { ensureAutoMergeLabel } from './open-pr.ts';
-import { mergeable, mergeOpenPr } from './pull-requests.ts';
+import { isMergeLocked, mergeable, mergeOpenPr } from './pull-requests.ts';
 
 /**
  * Merge the first PR the refresh found ready, with what GitHub said about it moments ago. One merge per refresh: it
@@ -23,6 +23,7 @@ export async function autoMerge(
 ): Promise<number | null> {
   const { log = () => {}, told = new Map<number, string>() } = report;
   for (const { id, pr } of ready) {
+    if (isMergeLocked(id)) continue; // another merge of it is under way
     let target: ReturnType<typeof mergeable>;
     try {
       target = mergeable(db, id);
@@ -54,6 +55,8 @@ export async function autoMerge(
       const error = (err as Error).message;
       // A request gh refused is dropped, told once: a person can ask again.
       if (asked) db.clearMergeRequest(id);
+      // A merge made meanwhile (a CLI merge in another process) is no failure: say nothing.
+      if ((await github.prState(target.url, target.cwd).catch(() => null)) === 'merged') continue;
       if (told.get(id) === error) continue;
       told.set(id, error);
       log(`task ${id}: auto-merge failed: ${error}`);

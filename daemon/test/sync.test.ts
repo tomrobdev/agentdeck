@@ -325,6 +325,24 @@ test('tests that fail on the merged result undo a clean merge and block the task
   assert.deepEqual(pushes, []);
 });
 
+test('an undone merge removes the untracked files the tests wrote, so the next commit does not contain them', async () => {
+  const t = await doneTask();
+  advanceMain('other7.txt', 'unrelated\n', 'Add other7.txt');
+  updateRepo(db, 'demo', { test_cmd: 'echo output > test-output.txt && false' });
+  const head = sh(t.wt, 'rev-parse', 'HEAD');
+
+  const r = await syncNow(db, t.id);
+  assert.equal(r.outcome, 'blocked');
+  assert.equal(sh(t.wt, 'rev-parse', 'HEAD'), head);
+  assert.equal(existsSync(join(t.wt, 'test-output.txt')), false);
+  clean(t.wt);
+
+  writeFileSync(join(t.wt, 'later.txt'), 'later\n');
+  sh(t.wt, 'add', '-A');
+  sh(t.wt, 'commit', '-q', '-m', 'Later change');
+  assert.deepEqual(sh(t.wt, 'show', '--name-only', '--format=', 'HEAD').split('\n'), ['later.txt']);
+});
+
 test('tests that fail after a resolve run undo the merge and block the task', async () => {
   const t = await doneTask();
   conflictOnMain();

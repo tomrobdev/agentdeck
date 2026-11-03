@@ -1,6 +1,11 @@
 // Restarting the daemon without losing work: stop claiming, wait for the runs to end, restart, then put pause back.
 import type { Db } from '../../db/index.ts';
-import { restartWait } from '../../domain/daemon/restart.ts';
+import { type Activity, restartWait } from '../../domain/daemon/restart.ts';
+
+/** What the daemon is running now: tasks, planner runs and resolve runs. */
+export function runningActivity(db: Db): Activity {
+  return { tasks: db.countRunning(), planner: db.countRunningPlannerRuns(), resolves: db.countRunningResolves() };
+}
 
 export interface RestartDeps {
   /** Restart the launchd service. */
@@ -28,11 +33,7 @@ export async function gracefulRestart(db: Db, deps: RestartDeps): Promise<{ wait
     let last: string | null = null;
     while (idle < 2) {
       if (deps.aborted?.()) throw new Error('interrupted; nothing was restarted');
-      const wait = restartWait({
-        tasks: db.countRunning(),
-        planner: db.countRunningPlannerRuns(),
-        resolves: db.countRunningResolves(),
-      });
+      const wait = restartWait(runningActivity(db));
       if (!wait) {
         idle++;
       } else {

@@ -439,6 +439,19 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         .where(eq(tasks.id, id))
         .run();
     },
+    /** Mark a sync of the task's branch as running (`syncing_since`), or clear the mark. Not a status, so unguarded. */
+    setSyncing(id: number, on: boolean): void {
+      orm
+        .update(tasks)
+        .set({ syncing_since: on ? NOW_SQL : null })
+        .where(eq(tasks.id, id))
+        .run();
+    },
+    /** Whether a sync of the task's branch is marked as running, by any process. */
+    hasSyncMarker(id: number): boolean {
+      const row = orm.select({ since: tasks.syncing_since }).from(tasks).where(eq(tasks.id, id)).get();
+      return row?.since != null;
+    },
     /** Whether the daemon may merge the task's PR on its own: 1, 0, or null for the repo's setting. Not a status, so unguarded. */
     setAutoMerge(id: number, value: 0 | 1 | null): Task | undefined {
       return (
@@ -636,12 +649,19 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
      * The only way to change a task's status. Asks the lifecycle whether `event` is allowed from the
      * task's current status and writes the result guarded by that status, so a concurrent change
      * (say, a cancel arriving as a run finishes) is never overwritten. Returns the updated task, or
-     * undefined if the task is missing or the event isn't allowed.
+     * undefined if the task is missing or the event isn't allowed. `onlyFrom` narrows it further: the write also
+     * requires the task to be in one of those statuses, so a caller that checked a status before a long wait
+     * does not undo a change made meanwhile.
      */
-    applyEvent(id: number, event: TaskEvent, opts: { reason?: string | null; needs?: string | null } = {}): Task | undefined {
+    applyEvent(
+      id: number,
+      event: TaskEvent,
+      opts: { reason?: string | null; needs?: string | null; onlyFrom?: TaskStatus[] } = {},
+    ): Task | undefined {
       for (let attempt = 0; attempt < 3; attempt++) {
         const cur = this.getTask(id);
         if (!cur) return undefined;
+        if (opts.onlyFrom && !opts.onlyFrom.includes(cur.status)) return undefined;
         const next = transition(cur, event, opts);
         if (!next) return undefined;
         const row = atomically(db, () => {
@@ -667,6 +687,8 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
      * unfinished run (a done task's sync) ends `interrupted`. Returns how many were requeued and the ids of those failed.
      */
     recoverOrphans(): { requeued: number; failed: number[] } {
+      // Syncs run only in the daemon, so any marker left over belongs to a sync that died with it.
+      orm.update(tasks).set({ syncing_since: null }).where(isNotNull(tasks.syncing_since)).run();
       const endRuns = (outcome: string, task_id?: number) =>
         orm
           .update(runs)

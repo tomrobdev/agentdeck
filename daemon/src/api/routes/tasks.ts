@@ -4,7 +4,6 @@ import { type ApiContext, type Route, idsField, route } from '../http.ts';
 import { streamLog } from '../log-stream.ts';
 
 export function routes({ db, scheduler }: ApiContext): Route[] {
-  const wake = () => scheduler.wake();
   const detail = (id: string) => actions.taskDetail(db, Number(id));
   return [
     route('GET', /^\/api\/tasks$/, ({ query }) => {
@@ -25,12 +24,10 @@ export function routes({ db, scheduler }: ApiContext): Route[] {
     }),
     route('POST', /^\/api\/tasks\/(\d+)\/links$/, ({ params: [id], body }) => {
       actions.linkTasks(db, Number(id), body as Parameters<typeof actions.linkTasks>[2]);
-      wake();
       return detail(id);
     }),
     route('DELETE', /^\/api\/tasks\/(\d+)\/links\/(\d+)$/, ({ params: [id, on] }) => {
       actions.unlinkTasks(db, Number(id), Number(on));
-      wake();
       return detail(id);
     }),
     route('POST', /^\/api\/tasks\/(\d+)\/approve$/, ({ params: [id] }) => (actions.approveTask(db, Number(id)), detail(id))),
@@ -43,7 +40,6 @@ export function routes({ db, scheduler }: ApiContext): Route[] {
     ),
     route('POST', /^\/api\/tasks\/(\d+)\/done$/, ({ params: [id], body }) => {
       actions.markDone(db, Number(id), body.note as string | undefined);
-      wake();
       return detail(id);
     }),
     route('POST', /^\/api\/tasks\/(\d+)\/install-needs$/, async ({ params: [id] }) => {
@@ -53,7 +49,6 @@ export function routes({ db, scheduler }: ApiContext): Route[] {
     // Retry a done task with its PR's failing checks (and their logs) in the note.
     route('POST', /^\/api\/tasks\/(\d+)\/fix-checks$/, async ({ params: [id] }) => {
       const result = await actions.fixChecks(db, Number(id));
-      wake();
       return { ...result, task: await detail(id) };
     }),
     route('POST', /^\/api\/tasks\/(\d+)\/close-pr$/, async ({ params: [id] }) => {
@@ -64,17 +59,15 @@ export function routes({ db, scheduler }: ApiContext): Route[] {
       await actions.removeTaskWorktree(db, Number(id));
       return detail(id);
     }),
-    // Merge the task's PR. GET is the preview the confirm dialog shows; POST merges and wakes the scheduler so dependents start now.
+    // Merge the task's PR. GET is the preview the confirm dialog shows; POST merges.
     route('GET', /^\/api\/tasks\/(\d+)\/merge$/, ({ params: [id] }) => actions.mergePreview(db, Number(id))),
     route('POST', /^\/api\/tasks\/(\d+)\/merge$/, async ({ params: [id], body }) => {
       const result = await actions.mergeTask(db, Number(id), body);
-      wake();
       return { ...result, task: await detail(id) };
     }),
     // Ask the daemon to merge the task's PR once it is ready, or withdraw the request; the answer is at once.
     route('POST', /^\/api\/tasks\/(\d+)\/merge-request$/, async ({ params: [id], body }) => {
       const result = actions.requestMerge(db, Number(id), body);
-      wake();
       return { ...result, task: await detail(id) };
     }),
     route('DELETE', /^\/api\/tasks\/(\d+)\/merge-request$/, async ({ params: [id] }) => {
@@ -84,7 +77,6 @@ export function routes({ db, scheduler }: ApiContext): Route[] {
     // Merge requests for every task named: the review group's "Merge all". The ones that can't be requested come back with why.
     route('POST', /^\/api\/tasks\/merge-requests$/, ({ body }) => {
       const result = actions.requestMerges(db, { ids: idsField(body, 'ids', { required: true }) });
-      wake();
       return result;
     }),
     // Let the daemon merge the task's PR on its own, or not, or follow the repo (null).
@@ -95,7 +87,6 @@ export function routes({ db, scheduler }: ApiContext): Route[] {
     // Sync the task's branch with the base, settling conflicts with a claude run. Answers when it is done.
     route('POST', /^\/api\/tasks\/(\d+)\/sync$/, async ({ params: [id] }) => {
       const report = await scheduler.track(actions.syncNow(db, Number(id)), 'sync');
-      wake();
       return { ...report, task: await detail(id) };
     }),
     route('GET', /^\/api\/tasks\/(\d+)\/log$/, ({ req, res, params: [id], query }) => {

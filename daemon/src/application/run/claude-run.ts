@@ -3,7 +3,7 @@ import { createWriteStream, type WriteStream } from 'node:fs';
 import { join } from 'node:path';
 import { type ClaudeResult, type ClaudeRun, type UsageWindow, runClaude } from '../../adapters/claude.ts';
 import { rootInfo } from '../../adapters/repo-root.ts';
-import { writeEvent, writeSettings } from '../../adapters/run-log.ts';
+import { closeLog, writeEvent, writeSettings } from '../../adapters/run-log.ts';
 import { LOG_DIR, ensureDirs } from '../../config.ts';
 import type { Db } from '../../db/index.ts';
 import type { Repo } from '../../domain/repo/repo.ts';
@@ -11,7 +11,7 @@ import { allowedTools } from '../../domain/repo/tools.ts';
 import { START_LIVE, nextLive } from '../../domain/run/live.ts';
 import { claudeArgs } from '../../domain/run/prompt.ts';
 import { parseNetwork, settingsPath, workerSettings } from '../../domain/run/sandbox.ts';
-import { type Run, type RunClass, type RunKind, classifyRun, resultFields, resumeFailed } from '../../domain/run/run.ts';
+import { type Outcome, type Run, type RunClass, type RunKind, classifyRun, resultFields, resumeFailed } from '../../domain/run/run.ts';
 import type { Task } from '../../domain/task/task.ts';
 import { lastLine } from '../../domain/text.ts';
 
@@ -30,6 +30,8 @@ export interface OpenedRun {
   runId: number;
   logPath: string;
   log: WriteStream;
+  /** Set by `endTaskRun`: the row is finished and the log closed, and neither happens again. */
+  ended?: boolean;
 }
 
 /** Open the log and the run row. A work run is named by its attempt, a resolve run by the time it started. */
@@ -40,6 +42,17 @@ export function openTaskRun(db: Db, task: Task, kind: RunKind): OpenedRun {
   const log = createWriteStream(logPath, { flags: 'a' });
   const runId = db.startRun(task.id, task.attempts, logPath, kind);
   return { runId, logPath, log };
+}
+
+/**
+ * End an opened run: close its log, then finish its row with `outcome` (and `reason` as its result text when `fields`
+ * has none). The one way a work or resolve run ends. A run already ended is left as it is, so a row is never finished twice.
+ */
+export async function endTaskRun(db: Db, opened: OpenedRun, outcome: Outcome, reason?: string, fields: Partial<Run> = {}): Promise<void> {
+  if (opened.ended) return;
+  opened.ended = true;
+  await closeLog(opened.log);
+  db.finishRun(opened.runId, { ...fields, outcome, ...(reason && !fields.result_text ? { result_text: reason } : {}) });
 }
 
 /** What a task run came to. `fields` are the run row's columns that claude's exit decides. */
