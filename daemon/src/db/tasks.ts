@@ -254,6 +254,16 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         .all();
       return Object.fromEntries(rows.map((r) => [r.status, r.n]));
     },
+    /** How many queued tasks each repo has (repos with none are left out). */
+    countQueuedByRepo(): Map<number, number> {
+      const rows = orm
+        .select({ repo_id: tasks.repo_id, n: count() })
+        .from(tasks)
+        .where(and(eq(tasks.status, 'queued'), inActiveRepo(tasks.repo_id)))
+        .groupBy(tasks.repo_id)
+        .all();
+      return new Map(rows.map((r) => [r.repo_id, r.n]));
+    },
     /** Done tasks whose pull request is open: the ones waiting for a review. */
     countReview(): number {
       return countWhere(and(inReview, inActiveRepo(tasks.repo_id)));

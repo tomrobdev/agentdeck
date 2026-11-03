@@ -4,6 +4,7 @@ import type { TaskEventRow } from './history.ts';
 import type { TaskStatus } from './lifecycle.ts';
 import type { PrState } from '../pull-request/pr.ts';
 import { statusGroup } from './stage.ts';
+import type { Waiting } from './start.ts';
 
 /** A history row with its task's title. */
 export type DigestEvent = Pick<TaskEventRow, 'id' | 'task_id' | 'type' | 'from_status' | 'to_status' | 'reason'> & { title: string };
@@ -15,7 +16,7 @@ export interface DigestTask {
   status: TaskStatus;
   pr_state: string | null;
   stop_reason: string | null;
-  waiting: { on: number[]; stuck: string | null } | null;
+  waiting: Waiting | null;
   /** The auto-merge view's state and label (domain/pull-request/auto-merge.ts); marked on the line unless it is off. */
   auto_merge_view?: { state: string; label: string } | null;
 }

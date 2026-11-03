@@ -6,12 +6,26 @@ import type { StartState } from './link.ts';
 export type QueueWait =
   { kind: 'daemon-paused' } | { kind: 'rate-limited'; until: number } | { kind: 'governor'; reason: string; until: number | null };
 
+/** What a queued task that builds on others is waiting for, or null if it isn't waiting. */
+export interface Waiting {
+  /** Every task it builds on that is still on its way; or, when stuck, the one root it is stuck on. */
+  on: number[];
+  /** Set when what it waits for won't get there on its own; null while it is on its way. */
+  stuck: string | null;
+}
+
+/** What a start state leaves a task waiting for on its builds-on links, or null when it waits for none of them. */
+export function waitingOf(state: StartState): Waiting | null {
+  if (state.kind === 'waiting') return { on: state.on, stuck: null };
+  if (state.kind === 'stuck') return { on: [state.on], stuck: state.reason };
+  return null;
+}
+
 /** What one queued task waits for. A task that waits for nothing starts on the scheduler's next tick. */
 export type StartWait =
   | QueueWait
   | { kind: 'repo-paused'; reason: string }
-  /** `on`: every task it builds on that is still on its way, or the one root it is stuck on (with `stuck`, the reason). */
-  | { kind: 'dependency'; on: number[]; stuck: string | null }
+  | ({ kind: 'dependency' } & Waiting)
   | { kind: 'slots'; running: number; max: number };
 
 export interface QueueState {
@@ -65,9 +79,8 @@ export function startWait(
   if (task.status !== 'queued') return null;
   if (ctx.queue) return ctx.queue;
   if (ctx.repoPaused) return { kind: 'repo-paused', reason: ctx.repoPaused };
-  const dep = ctx.dependency;
-  if (dep.kind === 'waiting') return { kind: 'dependency', on: dep.on, stuck: null };
-  if (dep.kind === 'stuck') return { kind: 'dependency', on: [dep.on], stuck: dep.reason };
+  const waiting = waitingOf(ctx.dependency);
+  if (waiting) return { kind: 'dependency', ...waiting };
   if (ctx.running >= ctx.max) return { kind: 'slots', running: ctx.running, max: ctx.max };
   return null;
 }

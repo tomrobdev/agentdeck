@@ -25,12 +25,11 @@ import type { Repo } from '../domain/repo/repo.ts';
 import { buildResolvePrompt } from '../domain/run/prompt.ts';
 import { type Run, parseStatus } from '../domain/run/run.ts';
 import { lastLine } from '../domain/text.ts';
-import { startDecision } from '../domain/task/start.ts';
 import { hasOpenPr } from '../domain/task/stage.ts';
 import { type Task, leftoversMessage } from '../domain/task/task.ts';
 import { endTaskRun, openTaskRun, startTaskRun } from './run/claude-run.ts';
 import { ActionError, requireTask, requireTaskRepo } from './input.ts';
-import { startGate } from './scheduler/gate.ts';
+import { queueWait } from './scheduler/gate.ts';
 import { logPrEvent } from './pull-request/open-pr.ts';
 import { isMergeLocked } from './pull-request/merge-lock.ts';
 import { settle } from './task/settle.ts';
@@ -175,6 +174,11 @@ const syncing = new Set<number>();
 /** Whether a sync of this task's branch is running, in any process: the marker the daemon keeps in the database. */
 export const isSyncing = (db: Db, id: number): boolean => db.hasSyncMarker(id);
 
+/** Refuse a change to a task while a sync of its branch is running. */
+export function refuseWhileSyncing(db: Db, id: number): void {
+  if (isSyncing(db, id)) throw new ActionError(`#${id} is syncing with its base branch; try again when that is done`);
+}
+
 /** Run `fn` with the task's sync marked in the database, so the CLI sees it too; the mark is cleared however `fn` ends. */
 export async function markSyncing<T>(db: Db, id: number, fn: () => Promise<T>): Promise<T> {
   db.setSyncing(id, true);
@@ -279,7 +283,7 @@ export const syncNow = (db: Db, id: number): Promise<SyncReport> => syncTask(db,
 
 /** Whether the governor lets a conflict run start now: not paused, not rate limited, inside the usage windows, a slot free. */
 export function canStartResolve(db: Db): boolean {
-  return startDecision(startGate(db), { ignorePause: false, used: db.slotsUsed(), now: Date.now() / 1000 }).free > 0;
+  return queueWait(db).free > 0;
 }
 
 /**

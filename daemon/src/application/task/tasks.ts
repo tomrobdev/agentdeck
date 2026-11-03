@@ -1,103 +1,17 @@
 // Use cases for tasks: add, edit, and move them through the lifecycle on a person's request.
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
-import { commitFiles, removeWorktree } from '../../adapters/git.ts';
-import { runProgram } from '../../adapters/shell.ts';
+import { removeWorktree } from '../../adapters/git.ts';
 import type { Db } from '../../db/index.ts';
-import { type ParsedPlan, parsePlan } from '../../domain/plan/plan.ts';
-import type { Repo } from '../../domain/repo/repo.ts';
 import type { TaskStatus } from '../../domain/task/lifecycle.ts';
-import { INSTALL_NOTE, readNeeds } from '../../domain/task/needs.ts';
 import { hasOpenPr } from '../../domain/task/stage.ts';
-import {
-  archivedRepoError,
-  maxAttemptsError,
-  maxTurnsError,
-  modelError,
-  priorityError,
-  stepsNeedPlanError,
-} from '../../domain/task/rules.ts';
+import { archivedRepoError, maxAttemptsError, maxTurnsError, modelError, priorityError } from '../../domain/task/rules.ts';
 import { EDITABLE_STATUSES, RUNNING_STATUSES, type Task, defaultTitle, planStepIds } from '../../domain/task/task.ts';
-import { lastLine } from '../../domain/text.ts';
-import { isSyncing } from '../sync.ts';
+import { refuseWhileSyncing } from '../sync.ts';
 import { warnStuckDependents } from './dependencies.ts';
 import { newLinks } from './links.ts';
 import { ActionError, flag, object, refuse, requireTask, requireTaskRepo, text, whole } from '../input.ts';
 import { closePullRequest } from '../pull-request/pull-requests.ts';
-import { checkFollowers, readPlanInput } from '../plans.ts';
-
-/** Step ids as the CLI types them (a,b) or the API sends them (an array); null when none are named. */
-function stepList(value: unknown): string[] | null {
-  if (value === undefined || value === null) return null;
-  const list = typeof value === 'string' ? value.split(',') : value;
-  if (!Array.isArray(list) || list.some((id) => typeof id !== 'string')) throw new ActionError('plan_steps must be a list of step ids');
-  const ids = [...new Set(list.map((id: string) => id.trim()).filter(Boolean))];
-  return ids.length ? ids : null;
-}
-
-/** Refuse step ids that are not steps of the plan. */
-function checkSteps(name: string, plan: ParsedPlan, steps: string[] | null): void {
-  const have = new Set(plan.steps.map((step) => step.id));
-  const unknown = (steps ?? []).filter((id) => !have.has(id));
-  if (unknown.length) {
-    const ids = plan.steps.flatMap((step) => (step.id ? [step.id] : []));
-    throw new ActionError(`plan: ${name} has no step ${unknown.join(', ')} (it has ${ids.join(', ') || 'no steps with an id'})`);
-  }
-}
-
-/**
- * The task whose plan `--plan <number>` links: that task, which must be in the same repo, if it has a plan of its own;
- * else the task whose plan it follows. Refused when there is no plan to follow.
- */
-function planOwner(db: Db, repo: Repo, on: number): { owner: number; name: string; plan: ParsedPlan } {
-  const target = db.getTask(on);
-  if (!target) throw new ActionError(`plan: there is no task #${on}`);
-  if (target.repo_id !== repo.id) {
-    throw new ActionError(`plan: #${on} is in ${db.getRepo(target.repo_id)?.name ?? 'another repo'}, not ${repo.name}`);
-  }
-  for (const owner of [on, target.plan_task]) {
-    const own = owner === null ? undefined : db.ownPlan(owner);
-    const plan = own && parsePlan(own.html);
-    if (owner !== null && own && plan) return { owner, name: own.name, plan };
-  }
-  throw new ActionError(`plan: #${on} has no plan`);
-}
-
-/** The plan link a request asks for: a task number (`plan_task`, null to clear) or a parsed plan (`plan_html`); undefined when it names neither. */
-type PlanRequest = { task: number | null } | { html: string; plan: ParsedPlan };
-
-function planRequest(body: Record<string, unknown>): PlanRequest | undefined {
-  const { plan_task, plan_html } = body;
-  if (plan_task !== undefined && plan_html !== undefined) throw new ActionError('give a plan or a task number, not both');
-  if (plan_html !== undefined) return readPlanInput(plan_html);
-  if (plan_task === undefined) return undefined;
-  if (plan_task === null || plan_task === '') return { task: null };
-  if (typeof plan_task !== 'number' || !Number.isInteger(plan_task) || plan_task < 1) {
-    throw new ActionError('plan_task must be a task number');
-  }
-  return { task: plan_task };
-}
-
-/**
- * Check a plan link against its steps: a plan of its own (`ownPlan`, to be stored with the task), or the task whose plan
- * is followed (`owner`, null for no link, which can't have steps). `repo` is read only when another task's plan is linked.
- */
-function checkPlanLink(
-  db: Db,
-  repo: () => Repo,
-  asked: PlanRequest,
-  steps: string[] | null,
-): { ownPlan: string; plan: ParsedPlan } | { owner: number | null } {
-  if ('html' in asked) {
-    checkSteps('the plan', asked.plan, steps);
-    return { ownPlan: asked.html, plan: asked.plan };
-  }
-  refuse(stepsNeedPlanError(asked.task, steps));
-  if (asked.task === null) return { owner: null };
-  const linked = planOwner(db, repo(), asked.task);
-  checkSteps(linked.name, linked.plan, steps);
-  return { owner: linked.owner };
-}
+import { checkFollowers } from '../plans.ts';
+import { checkPlanLink, planRequest, stepList } from './plan-link.ts';
 
 export async function addTask(
   db: Db,
@@ -254,7 +168,7 @@ export function rejectTask(db: Db, id: number): void {
 /** Another attempt. A `note` ("request changes") is kept on the timeline and goes first in the next run's prompt. */
 export function retryTask(db: Db, id: number, note?: string, onlyFrom?: TaskStatus[]): void {
   const t = requireTask(db, id);
-  if (isSyncing(db, id)) throw new ActionError(`#${id} is syncing with its base branch; try again when that is done`);
+  refuseWhileSyncing(db, id);
   if (note !== undefined && typeof note !== 'string') throw new ActionError('note must be text');
   // One more attempt on top of what has been used.
   if (!db.applyEvent(id, { type: 'retry' }, { reason: note?.trim() || null, onlyFrom }))
@@ -272,61 +186,6 @@ export function markDone(db: Db, id: number, note?: string): void {
     throw new ActionError(`#${id} is ${db.getTask(id)?.status ?? t.status}; only blocked or failed tasks can be marked done`);
 }
 
-const INSTALLERS = ['pnpm', 'yarn', 'npm'];
-const LOCKFILES: Record<string, string> = { pnpm: 'pnpm-lock.yaml', yarn: 'yarn.lock', npm: 'package-lock.json' };
-const INSTALL_TIMEOUT_MS = 10 * 60_000;
-/** An npm package spec: `name`, `@scope/name` or either with `@version-or-tag`. No shell metacharacters, no leading dash. */
-const PACKAGE_SPEC = /^(@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*(@[A-Za-z0-9][A-Za-z0-9._^~*+-]*)?$/;
-
-/** The packages a deps request names and whether they go in devDependencies (`--dev` or `-D` among the items). */
-export function parseDepsRequest(items: string[]): { packages: string[]; dev: boolean } {
-  const dev = items.some((i) => i === '--dev' || i === '-D');
-  const packages = items.filter((i) => i !== '--dev' && i !== '-D');
-  if (!packages.length) throw new ActionError('the request names no packages');
-  const bad = packages.filter((p) => !PACKAGE_SPEC.test(p));
-  if (bad.length) throw new ActionError(`not a valid package name: ${bad.join(' ')}`);
-  return { packages, dev };
-}
-
-/**
- * Install the packages a blocked task asked for (NEEDS deps) on its branch, then retry it. Only a person's request
- * gets here (the API and the CLI); the worker and scheduler never call it. The package manager runs in the task's
- * worktree through the daemon, outside the worker's sandbox. On failure the task stays blocked.
- */
-export async function installNeeds(db: Db, id: number): Promise<{ packages: string[]; dev: boolean }> {
-  const task = requireTask(db, id);
-  if (task.status !== 'blocked') throw new ActionError(`#${id} is ${task.status}, not blocked`);
-  const needs = readNeeds(task.needs);
-  if (needs?.kind !== 'deps') throw new ActionError(`#${id} has not asked for packages`);
-  const repo = requireTaskRepo(db, task);
-  const toolchain = repo.toolchain ?? '';
-  if (!INSTALLERS.includes(toolchain))
-    throw new ActionError(
-      `${repo.name} uses ${toolchain || 'no detected toolchain'}: install ${needs.items.join(' ')} on the branch yourself, then retry`,
-    );
-  const { packages, dev } = parseDepsRequest(needs.items);
-  if (!task.worktree || !existsSync(task.worktree)) throw new ActionError(`#${id} has no worktree to install into`);
-  if (isSyncing(db, id)) throw new ActionError(`#${id} is syncing with its base branch; try again when that is done`);
-
-  const args = toolchain === 'npm' ? ['install', dev ? '--save-dev' : '--save', ...packages] : ['add', ...(dev ? ['-D'] : []), ...packages];
-  const result = await runProgram(toolchain, args, task.worktree, INSTALL_TIMEOUT_MS);
-  if (!result.passed) {
-    throw new ActionError(`${toolchain} ${args[0]} failed: ${lastLine(result.output)}`);
-  }
-  const files = ['package.json', LOCKFILES[toolchain]].filter((f) => existsSync(join(task.worktree!, f)));
-  try {
-    await commitFiles(task.worktree, files, `agentdeck: add ${packages.join(' ')} for task #${id}`);
-  } catch (err) {
-    throw new ActionError(`installed, but could not commit: ${lastLine((err as Error).message)}`);
-  }
-  // The install took a while: a cancel or mark-done meanwhile stays.
-  const now = db.getTask(id)?.status;
-  if (now !== 'blocked')
-    throw new ActionError(`installed ${packages.join(' ')}, but #${id} is now ${now ?? 'gone'}, so it was not retried`);
-  retryTask(db, id, `${INSTALL_NOTE} ${packages.join(' ')}${dev ? ' (dev)' : ''} on the branch at the person's request.`, ['blocked']);
-  return { packages, dev };
-}
-
 /** Close a task's open PR without merging it. Tasks waiting on it become stuck. */
 export async function closeTaskPr(db: Db, id: number): Promise<void> {
   const t = requireTask(db, id);
@@ -338,12 +197,13 @@ export async function closeTaskPr(db: Db, id: number): Promise<void> {
   }
 }
 
-/** Remove a task's worktree; its branch is kept. Not while the task is running. */
+/** Remove a task's worktree; its branch is kept. Not while the task is running, or queued (it is about to run in it). */
 export async function removeTaskWorktree(db: Db, id: number): Promise<{ branch: string | null }> {
   const t = requireTask(db, id);
   if (RUNNING_STATUSES.includes(t.status)) throw new ActionError('task is running');
+  if (t.status === 'queued') throw new ActionError('task is queued');
   if (!t.worktree) throw new ActionError('task has no worktree');
-  if (isSyncing(db, id)) throw new ActionError(`#${id} is syncing with its base branch; try again when that is done`);
+  refuseWhileSyncing(db, id);
   await removeWorktree(requireTaskRepo(db, t), t.worktree);
   db.setCheckout(t.id, { worktree: null });
   return { branch: t.branch };

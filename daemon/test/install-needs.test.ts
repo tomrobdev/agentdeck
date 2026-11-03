@@ -27,7 +27,7 @@ process.env.PATH = `${bin}:${process.env.PATH}`;
 
 const { openDb } = await import('../src/db/index.ts');
 const { ensureWorktree } = await import('../src/adapters/git.ts');
-const { ActionError, installNeeds, parseDepsRequest } = await import('../src/application/actions.ts');
+const { installNeeds } = await import('../src/application/actions.ts');
 
 const sh = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
 const dir = join(home, 'demo');
@@ -57,13 +57,6 @@ async function blockedFor(items: string[], kind = 'deps') {
 }
 
 test('names are validated: a shell metacharacter is refused', async () => {
-  assert.deepEqual(parseDepsRequest(['tailwindcss', '@tailwindcss/vite', 'left-pad@1.3.0', '--dev']), {
-    packages: ['tailwindcss', '@tailwindcss/vite', 'left-pad@1.3.0'],
-    dev: true,
-  });
-  for (const bad of ['a;rm', '$(id)', 'x|y', '-g', 'a b`c`', '../evil', 'a&&b']) {
-    assert.throws(() => parseDepsRequest(['ok', bad]), ActionError, bad);
-  }
   const { id, path } = await blockedFor(['left-pad', 'x;touch pwned']);
   await assert.rejects(installNeeds(db, id), /not a valid package name/);
   assert.equal(db.getTask(id)!.status, 'blocked');

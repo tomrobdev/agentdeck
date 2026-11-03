@@ -9,7 +9,8 @@ process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-needs-'));
 
 const { openDb } = await import('../src/db/index.ts');
 const { isEnvironmentBlock, parseStatus } = await import('../src/domain/run/run.ts');
-const { readNeeds } = await import('../src/domain/task/needs.ts');
+const { canInstallWith, depsRequest, depsRequestError, installArgs, readNeeds } = await import('../src/domain/task/needs.ts');
+const { branchName } = await import('../src/domain/branch/branch.ts');
 const { workerSystemPrompt } = await import('../src/domain/run/prompt.ts');
 
 test('each NEEDS form parses', () => {
@@ -33,6 +34,42 @@ test('a plain BLOCKED reason has no needs', () => {
   assert.equal(s.reason, 'need creds');
   assert.equal(parseStatus('STATUS: BLOCKED: NEEDS something').needs, undefined);
   assert.equal(parseStatus('STATUS: DONE').needs, undefined);
+});
+
+test('depsRequest splits the --dev flag from the packages', () => {
+  assert.deepEqual(depsRequest(['tailwindcss', '@tailwindcss/vite', 'left-pad@1.3.0', '--dev']), {
+    packages: ['tailwindcss', '@tailwindcss/vite', 'left-pad@1.3.0'],
+    dev: true,
+  });
+  assert.deepEqual(depsRequest(['-D', 'x']), { packages: ['x'], dev: true });
+  assert.deepEqual(depsRequest(['x']), { packages: ['x'], dev: false });
+});
+
+test('depsRequestError refuses no packages and anything that is not a package spec', () => {
+  assert.equal(depsRequestError(['tailwindcss', '@tailwindcss/vite', 'left-pad@1.3.0', '--dev']), null);
+  assert.equal(depsRequestError([]), 'the request names no packages');
+  assert.equal(depsRequestError(['--dev']), 'the request names no packages');
+  for (const bad of ['a;rm', '$(id)', 'x|y', '-g', 'a b`c`', '../evil', 'a&&b']) {
+    assert.equal(depsRequestError(['ok', bad]), `not a valid package name: ${bad}`, bad);
+  }
+});
+
+test('installArgs: npm installs, pnpm and yarn add', () => {
+  assert.deepEqual(installArgs('npm', ['a', 'b'], false), ['install', '--save', 'a', 'b']);
+  assert.deepEqual(installArgs('npm', ['a'], true), ['install', '--save-dev', 'a']);
+  assert.deepEqual(installArgs('pnpm', ['a'], true), ['add', '-D', 'a']);
+  assert.deepEqual(installArgs('yarn', ['a'], false), ['add', 'a']);
+});
+
+test('canInstallWith: the JS package managers only', () => {
+  assert.equal(canInstallWith('pnpm'), true);
+  assert.equal(canInstallWith('cargo'), false);
+  assert.equal(canInstallWith(null), false);
+});
+
+test('branchName: the task’s own branch, else the one the daemon will give it', () => {
+  assert.equal(branchName({ id: 7, branch: null }), 'agentdeck/task-7');
+  assert.equal(branchName({ id: 7, branch: 'feature/x' }), 'feature/x');
 });
 
 test('the worker prompt describes the NEEDS forms', () => {
