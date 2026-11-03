@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { type MergeResult, type TaskDetail, api } from '../../api';
-import { canReview, personEvents } from '../../lib/taskView';
+import { canFixChecks, canReview, personEvents } from '../../lib/taskView';
 import { useActions } from '../../composables/useActions';
 import Modal from '../ui/Modal.vue';
 import MarkDoneDialog from './MarkDoneDialog.vue';
@@ -21,6 +21,12 @@ async function closePr() {
   if (busy.value) return;
   await run(() => api.closePr(props.task.id));
   closing.value = false;
+}
+
+// Send the PR's failing checks back to the worker; a refusal is flashed with the API's wording.
+async function fixChecks() {
+  if (busy.value) return;
+  await run(() => api.fixChecks(props.task.id));
 }
 
 // Mark a blocked or failed task done by hand, with an optional note for the timeline.
@@ -50,6 +56,7 @@ async function onMerged(result: MergeResult) {
       <button @click="emit('review')">↻ Request changes</button>
     </template>
     <button v-else-if="events.includes('retry')" @click="emit('act', 'retry')">↻ Retry</button>
+    <button v-if="canFixChecks(task)" :disabled="busy" @click="fixChecks">Fix failing checks</button>
     <button v-if="events.includes('mark_done')" @click="markingDone = true">✓ Mark done</button>
     <button
       v-if="canReview(task)"

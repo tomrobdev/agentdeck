@@ -6,6 +6,7 @@ import type {
   CancelMergeRequestResult,
   CancelResult,
   Changes,
+  FixChecksResult,
   DaemonHealth,
   DaemonState,
   DoctorReport,
@@ -114,6 +115,8 @@ export const api = {
   /** Install the packages a blocked task asked for (NEEDS deps) on its branch, then retry it. */
   installNeeds: (id: number) => call<TaskDetail>(`/api/tasks/${id}/install-needs`, { method: 'POST' }),
   closePr: (id: number) => call<TaskDetail>(`/api/tasks/${id}/close-pr`, { method: 'POST' }),
+  /** Retry the task with its PR's failing checks, and their logs, in the note; refused with the reason as the error. */
+  fixChecks: (id: number) => call<FixChecksResult>(`/api/tasks/${id}/fix-checks`, { method: 'POST' }),
   mergePreview: (id: number) => call<MergePreview>(`/api/tasks/${id}/merge`),
   merge: (id: number, body: MergeRequest) => call<MergeResult>(`/api/tasks/${id}/merge`, { method: 'POST', json: body }),
   /** Merge these tasks' PRs, each with its own method, deleting the branches; the ones left open come back with why. */

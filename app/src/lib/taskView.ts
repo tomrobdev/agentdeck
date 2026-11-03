@@ -121,6 +121,8 @@ export const branchName = (t: Pick<TaskSummary, 'id' | 'branch'>): string => t.b
 export const canEdit = (t: Pick<TaskSummary, 'status'>) => EDITABLE_STATUSES.includes(t.status);
 /** A done task whose PR waits on a person: they can send it back with a note, close the PR or merge it (daemon application/pull-requests.ts mergeable). */
 export const canReview = (t: Pick<TaskSummary, 'status' | 'pr_state'>) => t.status === 'done' && hasOpenPr(t);
+/** A done task's open PR has failing checks: they can be sent back to the worker (POST /api/tasks/:id/fix-checks). */
+export const canFixChecks = (t: Pick<TaskSummary, 'status' | 'pr_state' | 'checks'>) => canReview(t) && (t.checks?.failing ?? 0) > 0;
 /** The one-key retry in the queue is for work that went wrong, not for re-running finished work. */
 export const quickRetry = (t: Pick<TaskSummary, 'status' | 'waiting' | 'pr_state'>) =>
   personEvents(t).includes('retry') && statusGroup(t) === 'needs-you';
