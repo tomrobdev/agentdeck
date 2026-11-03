@@ -5,6 +5,10 @@ import { type PlanStep, type TaskPlan, ago, planHtmlQuery } from '../../api';
 import { planProgress } from '../../../../daemon/src/domain/plan/plan.ts';
 import { type ModeKey, mode } from '../../platform/theme';
 import planCss from '../../../../docs/plans/plan.css?raw';
+import Disclosure from '../ui/Disclosure.vue';
+import DisclosureContent from '../ui/DisclosureContent.vue';
+import DisclosureTrigger from '../ui/DisclosureTrigger.vue';
+import Progress from '../ui/Progress.vue';
 
 // One plan attached to the task: its steps and how far they got, and the whole page on request.
 // The page runs in a sandboxed frame with no scripts; same-origin only so we can size and scroll it.
@@ -48,14 +52,6 @@ function withBaseStyle(page: string) {
   return linked.replace(/^(\s*<!doctype[^>]*>)?/i, (doctype) => doctype + style);
 }
 
-// Steps whose done criteria are showing, by position.
-const open = ref(new Set<number>());
-function toggle(i: number) {
-  const next = new Set(open.value);
-  if (!next.delete(i)) next.add(i);
-  open.value = next;
-}
-
 // Where the plan came from. A plan this task follows may belong to another task, the one it was first attached to.
 const SOURCE_LABEL: Record<TaskPlan['source'], string> = {
   attached: 'attached',
@@ -77,10 +73,10 @@ const error = computed(() => (pageQ.error.value ? `Couldn't load the plan: ${pag
 const frame = ref<HTMLIFrameElement | null>(null);
 let scrollTo: string | null = null;
 
-async function show(stepId: string | null = null) {
+// Show the whole plan, scrolled to a step. (The Read the plan button opens and closes it by itself.)
+async function show(stepId: string) {
   const wasShowing = full.value;
-  full.value = stepId ? true : !full.value;
-  if (!full.value) return;
+  full.value = true;
   scrollTo = stepId;
   // A frame that is already up doesn't reload, so scroll it now; a new one scrolls when it loads.
   if (wasShowing && html.value !== null) await nextTick().then(onFrameLoad);
@@ -99,7 +95,7 @@ function onFrameLoad() {
 </script>
 
 <template>
-  <article class="card">
+  <Disclosure v-model:open="full" as="article" class="card">
     <header class="card-head items-baseline px-3.5 py-2">
       <b>Plan</b>
       <span class="min-w-0 flex-1 truncate">{{ plan.title }}</span>
@@ -108,15 +104,19 @@ function onFrameLoad() {
         class="flex items-center gap-1.5 text-sm text-muted tabular-nums"
         :title="`${finished} of ${total} steps done or skipped`"
       >
-        <span class="h-1.5 w-20 overflow-hidden rounded-[3px] bg-border"
-          ><span class="block h-full bg-done" :style="{ width: `${(100 * finished) / total}%` }"
-        /></span>
+        <Progress
+          label="Steps done or skipped"
+          :value="finished"
+          :max="total"
+          indicator-class="bg-done"
+          class="h-1.5 w-20 overflow-hidden rounded-[3px] bg-border"
+        />
         {{ finished }}/{{ total }}
       </span>
     </header>
     <p v-if="plan.summary" class="m-0 px-3.5 pt-2.5">{{ plan.summary }}</p>
     <ol v-if="plan.steps.length" class="m-0 list-none px-3.5 py-2">
-      <li v-for="(s, i) in plan.steps" :key="i" class="py-[3px]">
+      <Disclosure v-for="(s, i) in plan.steps" :key="i" v-slot="{ open }" as="li" class="py-[3px]">
         <div class="flex items-baseline gap-2">
           <span class="w-3.5 text-center font-semibold" :class="ICON_TONE[s.status]" :title="s.status">{{ STEP_ICON[s.status] }}</span>
           <button
@@ -132,28 +132,25 @@ function onFrameLoad() {
           <span v-if="s.status === 'doing' || s.status === 'blocked'" class="text-sm" :class="ICON_TONE[s.status]">{{
             s.status === 'doing' ? 'in progress' : 'blocked'
           }}</span>
-          <button
-            v-if="s.done.length"
-            class="btn-ghost ml-auto text-sm text-muted hover:text-accent"
-            :aria-expanded="open.has(i)"
-            @click="toggle(i)"
-          >
-            {{ open.has(i) ? '▾' : '▸' }} {{ s.done.length }} {{ s.done.length === 1 ? 'check' : 'checks' }}
-          </button>
+          <DisclosureTrigger v-if="s.done.length" class="btn-ghost ml-auto text-sm text-muted hover:text-accent">
+            {{ open ? '▾' : '▸' }} {{ s.done.length }} {{ s.done.length === 1 ? 'check' : 'checks' }}
+          </DisclosureTrigger>
         </div>
-        <ul v-if="open.has(i)" class="m-0 list-none py-1 pl-[22px] text-sm text-muted">
-          <li v-for="(c, j) in s.done" :key="j" class="py-px">☐ {{ c }}</li>
-        </ul>
-      </li>
+        <DisclosureContent>
+          <ul class="m-0 list-none py-1 pl-[22px] text-sm text-muted">
+            <li v-for="(c, j) in s.done" :key="j" class="py-px">☐ {{ c }}</li>
+          </ul>
+        </DisclosureContent>
+      </Disclosure>
     </ol>
     <footer class="flex flex-wrap items-center gap-2 border-t border-border px-3.5 py-2 text-sm">
-      <button class="px-2 py-0 text-sm" @click="show()">{{ full ? 'Hide the plan' : 'Read the plan' }}</button>
+      <DisclosureTrigger class="px-2 py-0 text-sm">{{ full ? 'Hide the plan' : 'Read the plan' }}</DisclosureTrigger>
       <button v-if="plan.source === 'branch'" class="px-2 py-0 text-sm" @click="emit('open', plan.name)">Open file</button>
       <span class="ml-auto text-muted">
         <code>{{ plan.name }}</code> · {{ origin }} · updated {{ ago(plan.updated_at) }}
       </span>
     </footer>
-    <div v-if="full" class="border-t border-border">
+    <DisclosureContent class="border-t border-border">
       <p v-if="error" class="px-3.5 py-2 text-muted">{{ error }}</p>
       <p v-else-if="html === null" class="px-3.5 py-2 text-muted">Loading…</p>
       <iframe
@@ -165,6 +162,6 @@ function onFrameLoad() {
         :title="plan.title"
         @load="onFrameLoad"
       />
-    </div>
-  </article>
+    </DisclosureContent>
+  </Disclosure>
 </template>

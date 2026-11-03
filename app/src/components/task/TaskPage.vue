@@ -8,8 +8,8 @@ import { useActions } from '../../composables/useActions';
 import { useChanges } from '../../composables/useChanges';
 import { useReviews } from '../../composables/useReviews';
 import SnippetPopover from '../files/SnippetPopover.vue';
-import Chip from '../ui/Chip.vue';
 import StatusPill from '../ui/StatusPill.vue';
+import TabBar from '../ui/TabBar.vue';
 import TaskBadges from '../ui/TaskBadges.vue';
 import TaskStatusLine from '../ui/TaskStatusLine.vue';
 import ChangesTab from './ChangesTab.vue';
@@ -97,19 +97,7 @@ const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel
 
     <!-- The tabs, and the task's actions at the end of the bar. -->
     <div class="flex items-end border-b border-border px-6">
-      <nav class="flex min-w-0 gap-0.5" role="tablist">
-        <button
-          v-for="t in TABS"
-          :key="t.key"
-          class="-mb-px rounded-none border-0 border-b-2 bg-transparent px-3 py-2"
-          role="tab"
-          :aria-selected="tab === t.key"
-          :class="tab === t.key ? 'border-accent font-semibold text-text' : 'border-transparent text-muted'"
-          @click="openTask(task.id, t.key)"
-        >
-          {{ t.label }} <Chip v-if="t.count !== null" variant="tint" size="xs" class="ml-0.5 font-medium">{{ t.count }}</Chip>
-        </button>
-      </nav>
+      <TabBar class="min-w-0" label="Task" :tabs="TABS" :model-value="tab" @update:model-value="(key) => openTask(task.id, key)" />
       <div class="ml-auto self-center py-1 pl-3">
         <TaskActions :task="task" @act="(kind) => emit('act', kind)" @review="requesting = true" />
       </div>

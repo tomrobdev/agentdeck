@@ -5,6 +5,7 @@ import { useActions } from '../../composables/useActions';
 import { openExternal } from '../../platform/native';
 import RowMenu from './RowMenu.vue';
 import { type BoardMove, type Group, type GroupBy, canReview, personEvents, quickRetry, statusLabel } from '../../lib/taskView';
+import Checkbox from '../ui/Checkbox.vue';
 import PriorityIcon from '../ui/PriorityIcon.vue';
 import StatusIcon from '../ui/StatusIcon.vue';
 import TaskBadges from '../ui/TaskBadges.vue';
@@ -118,13 +119,13 @@ watch(
             @mouseenter="emit('select', t.id)"
             @contextmenu.prevent="openMenu(t.id, $event.clientX, $event.clientY)"
           >
-            <span
+            <Checkbox
               v-if="picked?.length"
-              class="w-3 flex-none text-accent"
-              :aria-label="picked.includes(t.id) ? 'Selected' : undefined"
-              @click.stop="emit('pick', t.id, false)"
-              >{{ picked.includes(t.id) ? '☑' : '☐' }}</span
-            >
+              :label="`Pick #${t.id}`"
+              :model-value="picked.includes(t.id)"
+              @click.stop
+              @update:model-value="emit('pick', t.id, false)"
+            />
             <PriorityIcon :priority="t.priority" />
             <span class="w-[34px] flex-none font-mono text-sm text-muted tabular-nums">#{{ t.id }}</span>
             <StatusIcon :task="t" />
