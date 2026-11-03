@@ -3,6 +3,7 @@ import { removeWorktree } from '../../adapters/git.ts';
 import type { Db } from '../../db/index.ts';
 import type { TaskStatus } from '../../domain/task/lifecycle.ts';
 import { hasOpenPr } from '../../domain/task/stage.ts';
+import { errorMessage } from '../../domain/text.ts';
 import { archivedRepoError, maxAttemptsError, maxTurnsError, modelError, priorityError } from '../../domain/task/rules.ts';
 import { EDITABLE_STATUSES, RUNNING_STATUSES, type Task, defaultTitle, planStepIds } from '../../domain/task/task.ts';
 import { refuseWhileSyncing } from '../sync.ts';
@@ -193,7 +194,7 @@ export async function closeTaskPr(db: Db, id: number): Promise<void> {
   try {
     await closePullRequest(db, t);
   } catch (err) {
-    throw new ActionError(`could not close the PR: ${(err as Error).message}`);
+    throw new ActionError(`could not close the PR: ${errorMessage(err)}`);
   }
 }
 

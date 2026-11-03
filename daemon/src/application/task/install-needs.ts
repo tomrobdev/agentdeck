@@ -5,7 +5,7 @@ import { commitFiles } from '../../adapters/git.ts';
 import { runProgram } from '../../adapters/shell.ts';
 import type { Db } from '../../db/index.ts';
 import { INSTALL_NOTE, LOCKFILES, canInstallWith, depsRequest, depsRequestError, installArgs, readNeeds } from '../../domain/task/needs.ts';
-import { lastLine } from '../../domain/text.ts';
+import { errorMessage, lastLine } from '../../domain/text.ts';
 import { ActionError, refuse, requireTask, requireTaskRepo } from '../input.ts';
 import { refuseWhileSyncing } from '../sync.ts';
 import { retryTask } from './tasks.ts';
@@ -42,7 +42,7 @@ export async function installNeeds(db: Db, id: number): Promise<{ packages: stri
   try {
     await commitFiles(task.worktree, files, `agentdeck: add ${packages.join(' ')} for task #${id}`);
   } catch (err) {
-    throw new ActionError(`installed, but could not commit: ${lastLine((err as Error).message)}`);
+    throw new ActionError(`installed, but could not commit: ${lastLine(errorMessage(err))}`);
   }
   // The install took a while: a cancel or mark-done meanwhile stays.
   const now = db.getTask(id)?.status;

@@ -8,6 +8,7 @@ import { isConflicting, isMergeabilityUnknown } from '../../domain/pull-request/
 import { mergeRequestCheck, mergeRequestPolls } from '../../domain/pull-request/merge-request.ts';
 import { type Repo, pausedReason } from '../../domain/repo/repo.ts';
 import type { Task } from '../../domain/task/task.ts';
+import { errorMessage } from '../../domain/text.ts';
 import { landsAfter } from '../task/dependencies.ts';
 import { settle, settlePr } from '../task/settle.ts';
 import { notifyLater } from '../notifications.ts';
@@ -159,7 +160,7 @@ export async function refreshPrStates(db: Db, log: (msg: string) => void = () =>
       else if (one.place === 'unknown') found.unknown++;
       else if (one.place === 'mergeable') (one.requested ? requested : found.mergeable).push({ id: task.id, pr: one.pr });
     } catch (err) {
-      log(`task ${task.id}: could not read PR state: ${(err as Error).message}`);
+      log(`task ${task.id}: could not read PR state: ${errorMessage(err)}`);
     }
   }
   found.mergeable.unshift(...requested);

@@ -129,7 +129,7 @@ test('the domain words: conflicting PRs, timeline lines, blocked reasons', () =>
   assert.equal(isConflicting({ mergeable: 'MERGEABLE', merge_state: 'BEHIND' }), false);
   assert.equal(isMergeabilityUnknown({ mergeable: 'UNKNOWN', merge_state: 'UNKNOWN' }), true);
   assert.equal(isMergeabilityUnknown({ mergeable: 'UNKNOWN', merge_state: 'DIRTY' }), false);
-  assert.equal(syncSummary('main', 'clean', []), 'Brought in main: clean');
+  assert.equal(syncSummary('main', 'clean', []), 'Synced with main: clean');
   assert.equal(syncSummary('main', 'resolved', ['a']), 'Resolved conflicts in 1 file');
   assert.equal(syncSummary('main', 'resolved', ['a', 'b']), 'Resolved conflicts in 2 files');
   assert.equal(conflictReason('main', ['a.ts', 'b.ts'], 'tests failed'), 'conflicts with main in 2 files: a.ts, b.ts (tests failed)');
@@ -200,7 +200,7 @@ test('a clean merge is committed, tested and pushed without a claude run', async
   assert.deepEqual(kinds(t.id), ['work'], 'no run for a clean merge');
   assert.equal(db.getTask(t.id)!.status, 'done');
   assert.equal(syncEvents(t.id).length, 1);
-  assert.equal(syncEvents(t.id)[0].reason, 'Brought in main: clean');
+  assert.equal(syncEvents(t.id)[0].reason, 'Synced with main: clean');
   assert.equal(parents(t.wt), 2, 'a merge commit, not a rebase');
   clean(t.wt);
 
@@ -412,7 +412,7 @@ test('a push that fails is reported and retried next time; the task stays done',
   assert.match(readFileSync(db.runsForTask(t.id).at(-1)!.log_path, 'utf8'), /"type":"agentdeck_pr","error":"remote: Permission denied/);
 });
 
-test('only a done task can be brought up to date by hand', async () => {
+test('only a done task can be synced by hand', async () => {
   const queued = db.addTask({ repo_id: repo.id, title: 'queued', prompt: 'x' });
   await assert.rejects(syncNow(db, queued.id), /only a done task/);
   await assert.rejects(syncNow(db, 999999), ActionError);
@@ -429,7 +429,7 @@ test('every run starts from the latest base, retries included', async () => {
   const task = db.getTask(t.id)!;
   assert.equal(task.status, 'done');
   assert.equal(readFileSync(join(t.wt, 'other4.txt'), 'utf8'), 'unrelated\n', 'the agent started from a branch that had it');
-  assert.equal(syncEvents(t.id)[0].reason, 'Brought in main: clean');
+  assert.equal(syncEvents(t.id)[0].reason, 'Synced with main: clean');
   assert.equal(resolveCalls(), resolvesBefore);
   const log = readFileSync(db.runsForTask(t.id).at(-1)!.log_path, 'utf8');
   assert.match(log, /"type":"agentdeck_sync","kind":"clean"/);

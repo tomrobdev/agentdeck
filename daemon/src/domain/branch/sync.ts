@@ -1,7 +1,8 @@
 // How a sync (merging the base branch into a task's branch) is worded, and how a resolve run's end settles it. Pure: no I/O.
 import { type RunClass, parseStatus } from '../run/run.ts';
+import { plural } from '../text.ts';
 
-/** How much of the base a sync brought into the branch. */
+/** How a sync that changed the branch went. */
 type SyncKind = 'clean' | 'resolved';
 
 /** What a sync of a task's branch came to. A merge that did not stick is already undone. */
@@ -18,11 +19,11 @@ export type SyncResult =
   /** Git itself failed (no base ref, a lock, …). */
   | { kind: 'error'; reason: string };
 
-const fileCount = (n: number) => `${n} ${n === 1 ? 'file' : 'files'}`;
+const fileCount = (n: number) => plural(n, 'file');
 
-/** The task timeline's line for a sync that changed the branch: "Brought in main: clean". */
+/** The task timeline's line for a sync that changed the branch: "Synced with main: clean". */
 export function syncSummary(base: string, kind: SyncKind, conflictFiles: string[]): string {
-  return kind === 'clean' ? `Brought in ${base}: clean` : `Resolved conflicts in ${fileCount(conflictFiles.length)}`;
+  return kind === 'clean' ? `Synced with ${base}: clean` : `Resolved conflicts in ${fileCount(conflictFiles.length)}`;
 }
 
 const LISTED_FILES = 5;

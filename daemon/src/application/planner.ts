@@ -13,6 +13,9 @@ import { recordRateLimit, usageRecorder } from './run/claude-run.ts';
 import { ActionError, requireRepo } from './input.ts';
 import { notifyLater } from './notifications.ts';
 
+/** How many of a repo's latest tasks the planner is shown, so it does not propose them again. */
+const EXISTING_TASKS_SHOWN = 100;
+
 /** Why the planner should run for this repo now, or null. */
 export function plannerDue(db: Db, repo: Repo, now = Date.now()): string | null {
   if (repo.archived_at) return null;
@@ -43,7 +46,7 @@ export async function propose(db: Db, repo: Repo): Promise<ProposalResult> {
 
 async function planRepo(db: Db, repo: Repo, goals: string, runId: number, log: WriteStream): Promise<ProposalResult> {
   const s = db.plannerSettings();
-  const existing = db.tasksForRepo(repo.id, 100);
+  const existing = db.tasksForRepo(repo.id, EXISTING_TASKS_SHOWN);
 
   const run = await runClaude({
     args: plannerArgs(buildPlannerPrompt(repo, goals, existing, s.max_tasks), s.model),

@@ -6,6 +6,7 @@ import { AUTO_MERGE_LABEL, autoMergeOn } from '../../domain/pull-request/auto-me
 import { buildPrBody } from '../../domain/pull-request/pr.ts';
 import { hasOpenPr } from '../../domain/task/stage.ts';
 import type { Task } from '../../domain/task/task.ts';
+import { errorMessage } from '../../domain/text.ts';
 import { prPlanFor } from '../plans.ts';
 
 /** Record a PR event on the task's latest run log, where `agentdeck log` and the dashboard show it. */
@@ -51,7 +52,7 @@ export async function openPullRequest(db: Db, task: Task): Promise<{ url?: strin
     logPrEvent(db, task.id, { url });
     return { url };
   } catch (err) {
-    const error = (err as Error).message;
+    const error = errorMessage(err);
     // Tell dependents the PR won't appear on its own. A PR that is already open stays open.
     db.recordPr(task.id, { type: 'failed', error });
     logPrEvent(db, task.id, { error });

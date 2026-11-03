@@ -18,6 +18,7 @@ import { buildPrBody } from '../../domain/pull-request/pr.ts';
 import { mergeReason } from '../../domain/task/history.ts';
 import { hasOpenPr } from '../../domain/task/stage.ts';
 import type { Task } from '../../domain/task/task.ts';
+import { errorMessage } from '../../domain/text.ts';
 import { ActionError, flag, object, requireTask, requireTaskRepo, text } from '../input.ts';
 import { prPlanFor } from '../plans.ts';
 import { dependentsReleased, landsAfter } from '../task/dependencies.ts';
@@ -91,7 +92,7 @@ export function mergeable(db: Db, id: number) {
 export async function mergePreview(db: Db, id: number): Promise<MergePreview> {
   const { task, repo, url, cwd } = mergeable(db, id);
   const pr = await github.prDetails(url, cwd, { withFiles: autoMergeOn(task, repo) }).catch((err) => {
-    throw new ActionError(`could not read the PR: ${(err as Error).message}`);
+    throw new ActionError(`could not read the PR: ${errorMessage(err)}`);
   });
   const tests_passed = lastTestsPassed(db, id);
   const lands_after = landsAfter(db, id);
@@ -141,7 +142,7 @@ export async function mergeTask(db: Db, id: number, opts: { method?: string; del
   if (!isMergeMethod(method)) throw new ActionError(`method must be one of ${MERGE_METHODS.join(', ')}`);
 
   const pr = await github.prDetails(url, cwd).catch((err) => {
-    throw new ActionError(`could not read the PR: ${(err as Error).message}`);
+    throw new ActionError(`could not read the PR: ${errorMessage(err)}`);
   });
   const found = mergeFindings({ pr_state: task.pr_state, pr, tests_passed: null, lands_after: landsAfter(db, id) });
   const problems = found.filter((f) => f.problem);
@@ -217,7 +218,7 @@ export async function mergeOpenPr(
       message: { subject: task.title, body: buildPrBody(task, db.runsForTask(id), prPlanFor(db, task)) },
     });
   } catch (err) {
-    throw new ActionError(`merge failed: ${(err as Error).message}`);
+    throw new ActionError(`merge failed: ${errorMessage(err)}`);
   } finally {
     unlockMerge(id);
   }
@@ -233,11 +234,11 @@ export async function mergeOpenPr(
   if (deleteBranch) {
     const errors: string[] = [];
     if (task.branch)
-      await github.deleteRemoteBranch(repo.path, task.branch).catch((err) => errors.push(`remote branch: ${(err as Error).message}`));
+      await github.deleteRemoteBranch(repo.path, task.branch).catch((err) => errors.push(`remote branch: ${errorMessage(err)}`));
     if (task.worktree)
       await removeWorktree(repo, task.worktree).then(
         () => db.setCheckout(id, { worktree: null }),
-        (err) => errors.push(`worktree: ${(err as Error).message}`),
+        (err) => errors.push(`worktree: ${errorMessage(err)}`),
       );
     if (errors.length) result.cleanup_error = errors.join('; ');
   }

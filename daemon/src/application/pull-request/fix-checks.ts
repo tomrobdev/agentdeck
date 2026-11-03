@@ -3,6 +3,7 @@ import { github } from '../../adapters/github.ts';
 import type { Db } from '../../db/index.ts';
 import { type FailedCheck, LOG_TAIL_BYTES, actionsRun, failingChecks, fixChecksNote, logTail } from '../../domain/pull-request/checks.ts';
 import { hasOpenPr } from '../../domain/task/stage.ts';
+import { errorMessage } from '../../domain/text.ts';
 import { ActionError, requireTask, requireTaskRepo } from '../input.ts';
 import { retryTask } from '../task/tasks.ts';
 
@@ -23,7 +24,7 @@ export async function fixChecks(db: Db, id: number): Promise<FixChecksResult> {
   if (!task.pr_url || !hasOpenPr(task)) throw new ActionError(`#${id} has no open pull request`);
   const repo = requireTaskRepo(db, task);
   const pr = await github.prDetails(task.pr_url, repo.path).catch((err) => {
-    throw new ActionError(`could not read the PR: ${(err as Error).message}`);
+    throw new ActionError(`could not read the PR: ${errorMessage(err)}`);
   });
   const failing = failingChecks(pr.check_list ?? []);
   if (!failing.length) throw new ActionError(`no check is failing on #${id}'s PR`);
@@ -42,7 +43,7 @@ export async function fixChecks(db: Db, id: number): Promise<FixChecksResult> {
         const log = logTail(await logs.get(key)!, undefined, budget);
         return log ? { name: c.name, url: c.url, log } : { name: c.name, url: c.url, log_error: 'gh printed no failed steps' };
       } catch (err) {
-        return { name: c.name, url: c.url, log_error: (err as Error).message };
+        return { name: c.name, url: c.url, log_error: errorMessage(err) };
       }
     }),
   );

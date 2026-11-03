@@ -15,6 +15,7 @@ import {
 } from '../../domain/run/unblock.ts';
 import { latestReviewNote } from '../../domain/task/history.ts';
 import { type Task, leftoversMessage } from '../../domain/task/task.ts';
+import { errorMessage } from '../../domain/text.ts';
 import { type OpenedRun, endTaskRun, openTaskRun, startTaskRun } from './claude-run.ts';
 import { planForRun } from '../plans.ts';
 import { settle } from '../task/settle.ts';
@@ -42,7 +43,7 @@ export async function runUnblock(db: Db, task: Task): Promise<UnblockReport> {
   try {
     return await runOpened(db, task, opened);
   } catch (err) {
-    const reason = (err as Error).message;
+    const reason = errorMessage(err);
     await endTaskRun(db, opened, 'failed', reason);
     return { outcome: 'failed', reason };
   }
@@ -59,7 +60,7 @@ async function runOpened(db: Db, task: Task, opened: OpenedRun): Promise<Unblock
   try {
     plan = planForRun(db, task);
   } catch (err) {
-    writeEvent(log, { type: 'agentdeck_error', text: `read plan: ${(err as Error).message}` });
+    writeEvent(log, { type: 'agentdeck_error', text: `read plan: ${errorMessage(err)}` });
   }
   const lastWork = db.runsForTask(task.id).findLast((r) => r.kind === 'work');
   const prompt = buildUnblockPrompt(task, {
@@ -81,7 +82,7 @@ async function runOpened(db: Db, task: Task, opened: OpenedRun): Promise<Unblock
   try {
     await commitLeftovers(wt.path, leftoversMessage(task));
   } catch (err) {
-    writeEvent(log, { type: 'agentdeck_error', text: `commit leftovers: ${(err as Error).message}` });
+    writeEvent(log, { type: 'agentdeck_error', text: `commit leftovers: ${errorMessage(err)}` });
   }
 
   const { end, fields } = ran;

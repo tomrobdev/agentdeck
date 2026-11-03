@@ -1,4 +1,4 @@
-// Keeps task branches up to date with their base branch and resolves merge conflicts.
+// Syncs task branches with their base branch; a conflict starts a resolve run.
 // The daemon does the git work in the task's worktree (agents cannot fetch); only a real conflict starts a claude run.
 import {
   abortMerge,
@@ -24,7 +24,7 @@ import { type SyncResult, conflictReason, resolveOutcome, syncResultOf, syncSumm
 import type { Repo } from '../domain/repo/repo.ts';
 import { buildResolvePrompt } from '../domain/run/prompt.ts';
 import type { Outcome, Run } from '../domain/run/run.ts';
-import { lastLine } from '../domain/text.ts';
+import { errorMessage, lastLine } from '../domain/text.ts';
 import { hasOpenPr } from '../domain/task/stage.ts';
 import { type Task, leftoversMessage } from '../domain/task/task.ts';
 import { endTaskRun, openTaskRun, startTaskRun } from './run/claude-run.ts';
@@ -80,7 +80,7 @@ export async function syncBranch(db: Db, task: Task, repo: Repo, worktree: strin
     return await resolveConflicts(db, task, repo, worktree, before, merge.files, opts.runTests);
   } catch (err) {
     if (before) await abortMerge(worktree, before).catch(() => {});
-    return { kind: 'error', reason: (err as Error).message };
+    return { kind: 'error', reason: errorMessage(err) };
   }
 }
 
@@ -121,7 +121,7 @@ async function resolveConflicts(
     }
   } catch (err) {
     outcome = 'failed';
-    reason = (err as Error).message;
+    reason = errorMessage(err);
   }
 
   if (outcome !== 'done') await abortMerge(worktree, before).catch(() => {});
@@ -190,7 +190,7 @@ async function pushIfNeeded(
     await github.push(repo.path, task.branch);
     return { pushed: true };
   } catch (err) {
-    const error = (err as Error).message;
+    const error = errorMessage(err);
     logPrEvent(db, task.id, { error });
     return { pushed: false, error };
   }
@@ -254,7 +254,7 @@ async function syncMarked(db: Db, task: Task, repo: Repo, opts: { manual: boolea
 /** A person asked (`agentdeck sync`, the dashboard's sync button): the repo's auto_resolve does not apply. */
 export const syncNow = (db: Db, id: number): Promise<SyncReport> => syncTask(db, id, { manual: true });
 
-/** Whether the governor lets a conflict run start now: not paused, not rate limited, inside the usage windows, a slot free. */
+/** Whether the governor lets a resolve run start now: not paused, not rate limited, inside the usage windows, a slot free. */
 export function canStartResolve(db: Db): boolean {
   return queueWait(db).free > 0;
 }
@@ -291,7 +291,7 @@ export async function resolveConflicting(
       const r = await syncTask(db, id, { manual: false });
       log(`task ${id}: ${r.outcome}${r.reason ? ` (${r.reason})` : ''}${r.push_error ? `; push failed: ${r.push_error}` : ''}`);
     } catch (err) {
-      log(`task ${id}: could not sync with ${repo.base_branch}: ${(err as Error).message}`);
+      log(`task ${id}: could not sync with ${repo.base_branch}: ${errorMessage(err)}`);
     }
   }
 }

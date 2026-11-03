@@ -9,6 +9,7 @@ import { filterTasks } from '../domain/task/listing.ts';
 import { readNeeds } from '../domain/task/needs.ts';
 import { readQuestion } from '../domain/run/unblock.ts';
 import { planStepIds } from '../domain/task/task.ts';
+import { errorMessage, plural } from '../domain/text.ts';
 import { callDaemon } from './daemon-client.ts';
 import { confirm, die, idsText, taskId, taskIds, fmtAutoMerge, fmtChecks, fmtLink, fmtTask, printLog } from './format.ts';
 import type { Command } from './context.ts';
@@ -18,7 +19,7 @@ function readText(file: string): string {
   try {
     return readFileSync(file, 'utf8');
   } catch (e) {
-    return die(`can't read ${file}: ${(e as Error).message}`);
+    return die(`can't read ${file}: ${errorMessage(e)}`);
   }
 }
 
@@ -140,7 +141,7 @@ export const taskCommands: Record<string, Command> = {
     try {
       tasks = filterTasks(all, { states, repo_id: repo?.id, search: rest.join(' '), sort });
     } catch (e) {
-      die((e as Error).message);
+      die(errorMessage(e));
     }
     if (!tasks.length) console.log(all.length ? 'no matching tasks' : 'no tasks');
     for (const t of tasks) console.log(fmtTask(t, repoName(t.repo_id)));
@@ -244,10 +245,10 @@ export const taskCommands: Record<string, Command> = {
     const id = taskId(rest[0]);
     console.log(`syncing #${id}'s branch with the base branch… (a conflict starts a claude run and can take a while)`);
     const r: actions.SyncReport = await callDaemon('POST', `/api/tasks/${id}/sync`, {});
-    const files = `${r.files.length} ${r.files.length === 1 ? 'file' : 'files'}`;
+    const files = plural(r.files.length, 'file');
     const lines: Record<typeof r.outcome, string> = {
-      up_to_date: `#${id} is already up to date`,
-      clean: `#${id}: brought in the base branch, no conflicts`,
+      up_to_date: `#${id} is already in sync with the base branch`,
+      clean: `#${id}: synced with the base branch, no conflicts`,
       resolved: `#${id}: resolved conflicts in ${files}: ${r.files.join(', ')}`,
       blocked: `#${id} is now blocked: ${r.reason}`,
       skipped: `#${id} conflicts in ${files} (${r.files.join(', ')}), but ${r.reason}`,

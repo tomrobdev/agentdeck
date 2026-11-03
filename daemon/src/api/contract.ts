@@ -160,7 +160,7 @@ export interface LiveView {
 
 /** A sync of a done task under way. `since` is null for a clean sync (no claude), else the resolve run's start, UTC `YYYY-MM-DD HH:MM:SS`. */
 export interface SyncView {
-  /** The base branch being brought in. */
+  /** The base branch being synced with. */
   base: string;
   since: string | null;
   /** A resolve run is settling conflicts. */
