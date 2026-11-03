@@ -21,7 +21,7 @@ const latestRun = computed(() => task.value?.runs.at(-1)?.id ?? null);
 
 <template>
   <aside class="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-y-auto bg-bg p-4" aria-label="Task preview">
-    <p v-if="!task" class="muted">Loading task #{{ id }}…</p>
+    <p v-if="!task" class="text-muted">Loading task #{{ id }}…</p>
     <template v-else>
       <header class="flex items-start gap-2">
         <div class="min-w-0 flex-1">

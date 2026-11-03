@@ -93,11 +93,11 @@ async function merge() {
     @confirm="merge"
   >
     <p v-if="loadError" class="form-error">{{ loadError }}</p>
-    <p v-else-if="!preview" class="muted">Reading the pull request from GitHub…</p>
+    <p v-else-if="!preview" class="text-muted">Reading the pull request from GitHub…</p>
     <div v-else class="flex flex-col gap-2.5">
       <p class="m-0 font-semibold">{{ preview.title }}</p>
       <p class="m-0">
-        <code>{{ preview.branch ?? '?' }}</code> <span class="muted">→</span> <code>{{ preview.base }}</code>
+        <code>{{ preview.branch ?? '?' }}</code> <span class="text-muted">→</span> <code>{{ preview.base }}</code>
       </p>
 
       <dl
@@ -114,9 +114,9 @@ async function merge() {
           {{ preview.files }} {{ preview.files === 1 ? 'file' : 'files' }} <Delta :add="preview.additions" :del="preview.deletions" />
         </dd>
         <dt>Tests</dt>
-        <dd :class="{ 'text-failed': preview.tests_passed === 0 }">{{ tests }} <span class="muted">on the last run</span></dd>
+        <dd :class="{ 'text-failed': preview.tests_passed === 0 }">{{ tests }} <span class="text-muted">on the last run</span></dd>
         <dt>Checks</dt>
-        <dd :class="{ 'text-failed': preview.checks.failing }">{{ checks }} <span class="muted">on GitHub</span></dd>
+        <dd :class="{ 'text-failed': preview.checks.failing }">{{ checks }} <span class="text-muted">on GitHub</span></dd>
         <template v-if="preview.auto_merge">
           <dt>Auto-merge</dt>
           <dd :class="{ 'text-blocked': preview.auto_merge.verdict === 'never' }">
@@ -133,7 +133,7 @@ async function merge() {
         </template>
       </dl>
 
-      <p class="muted m-0 text-sm">
+      <p class="text-muted m-0 text-sm">
         Merging deletes the remote branch and the worktree (the local branch stays, so the diff remains readable).
       </p>
 

@@ -264,10 +264,6 @@
     margin: 0 1px;
   }
 
-  .muted {
-    color: var(--muted);
-  }
-
   .dot {
     display: inline-block;
     width: 8px;

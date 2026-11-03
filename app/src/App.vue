@@ -166,7 +166,7 @@ watchEffect(() => {
 
       <div v-if="offline" class="m-auto max-w-[420px] text-center">
         <h2 class="text-lg">The AgentDeck daemon isn't running</h2>
-        <p class="muted">Start it in a terminal and this window will connect on its own:</p>
+        <p class="text-muted">Start it in a terminal and this window will connect on its own:</p>
         <pre class="rounded-md border border-border bg-code-bg p-2.5">cd daemon && npm start</pre>
       </div>
 
@@ -179,7 +179,7 @@ watchEffect(() => {
           :query="route.current.query"
           @act="(kind) => actOn(kind, detail!.id)"
         />
-        <section v-else class="muted flex flex-1 flex-col items-center justify-center gap-3">Loading task #{{ pageId }}…</section>
+        <section v-else class="text-muted flex flex-1 flex-col items-center justify-center gap-3">Loading task #{{ pageId }}…</section>
       </main>
       <main v-else-if="route.current.name === 'insights'" class="flex min-h-0 flex-1 flex-col">
         <InsightsView />
@@ -195,7 +195,7 @@ watchEffect(() => {
           @act="actOn"
           @new-task="modal = 'new'"
         />
-        <section v-else class="muted flex flex-1 flex-col items-center justify-center gap-3">
+        <section v-else class="text-muted flex flex-1 flex-col items-center justify-center gap-3">
           No tasks yet.
           <button class="primary" @click="modal = repos.length ? 'new' : 'repos'">
             {{ repos.length ? 'Queue your first task' : 'Add a repo to get started' }}

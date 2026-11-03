@@ -11,7 +11,7 @@ const LABELS: Record<BulkAction, string> = { approve: 'Approve', reject: 'Reject
   <div class="flex items-center gap-2 border-t border-border bg-panel-2 px-4 py-2" role="toolbar" aria-label="Selected tasks">
     <span class="font-semibold">{{ count }} selected</span>
     <button v-for="a in actions" :key="a" class="btn-mini" :disabled="busy" @click="emit('act', a)">{{ LABELS[a] }}</button>
-    <span v-if="!actions.length" class="muted text-sm">No action fits all of them</span>
+    <span v-if="!actions.length" class="text-muted text-sm">No action fits all of them</span>
     <span class="flex-1" />
     <button class="btn-mini" title="Clear (Esc)" @click="emit('clear')">Clear</button>
   </div>
