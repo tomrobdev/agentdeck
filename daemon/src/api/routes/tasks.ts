@@ -93,7 +93,7 @@ export function routes({ db, scheduler }: ApiContext): Route[] {
       return { ...result, task: await detail(id) };
     }),
     // Sync the task's branch with the base, settling conflicts with a claude run. Answers when it is done.
-    route('POST', /^\/api\/tasks\/(\d+)\/resolve$/, async ({ params: [id] }) => {
+    route('POST', /^\/api\/tasks\/(\d+)\/sync$/, async ({ params: [id] }) => {
       const report = await scheduler.track(actions.syncNow(db, Number(id)), 'sync');
       wake();
       return { ...report, task: await detail(id) };

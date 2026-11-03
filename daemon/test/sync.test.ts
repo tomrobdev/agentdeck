@@ -586,11 +586,11 @@ test('merging a PR makes the scheduler re-read the open PRs at once and resolve 
   assert.ok(pushes.includes(other.branch));
 });
 
-test('POST /api/tasks/:id/resolve brings in the base and returns the task', async () => {
+test('POST /api/tasks/:id/sync syncs with the base and returns the task', async () => {
   const base = `http://127.0.0.1:${(api.address() as AddressInfo).port}`;
   const t = await doneTask();
   conflictOnMain();
-  const res = await fetch(`${base}/api/tasks/${t.id}/resolve`, { method: 'POST' });
+  const res = await fetch(`${base}/api/tasks/${t.id}/sync`, { method: 'POST' });
   assert.equal(res.status, 200);
   const body = await res.json();
   assert.equal(body.outcome, 'resolved');
@@ -602,7 +602,7 @@ test('POST /api/tasks/:id/resolve brings in the base and returns the task', asyn
   );
 
   const queued = db.addTask({ repo_id: repo.id, title: 'q', prompt: 'x' });
-  const bad = await fetch(`${base}/api/tasks/${queued.id}/resolve`, { method: 'POST' });
+  const bad = await fetch(`${base}/api/tasks/${queued.id}/sync`, { method: 'POST' });
   assert.equal(bad.status, 400);
   db.applyEvent(queued.id, { type: 'cancel' });
 });

@@ -596,7 +596,7 @@ export interface MergeResult {
   task: TaskDetail;
 }
 
-/** What a sync of a task's branch came to (POST /api/tasks/:id/resolve). */
+/** What a sync of a task's branch came to (POST /api/tasks/:id/sync). */
 export interface SyncResult {
   /** `skipped`: conflicts, but auto_resolve is off. `deferred`: the usage limit or a cancel stopped it. */
   outcome: 'up_to_date' | 'clean' | 'resolved' | 'blocked' | 'skipped' | 'deferred' | 'error';

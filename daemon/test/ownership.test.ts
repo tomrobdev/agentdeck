@@ -85,7 +85,7 @@ test('callDaemon against a stopped port dies saying the daemon is not running', 
     // Port 1 is never listening; the refusal comes back as an error event, whose handler dies.
     const outcome = await new Promise<string>((resolve) => {
       process.exit = ((code?: number) => resolve(`exit ${code}`)) as never;
-      callDaemon('POST', '/api/tasks/1/resolve', {}, 1).then(() => resolve('answered'));
+      callDaemon('POST', '/api/tasks/1/sync', {}, 1).then(() => resolve('answered'));
     });
     assert.equal(outcome, 'exit 1');
     assert.match(printed.join('\n'), /the daemon is not running; start it with `agentdeck service start`/);

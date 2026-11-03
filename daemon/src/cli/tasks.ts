@@ -315,7 +315,7 @@ export const taskCommands: Record<string, Command> = {
   sync: async ({ db, rest }) => {
     const id = taskId(rest[0]);
     console.log(`syncing #${id}'s branch with the base branch… (a conflict starts a claude run and can take a while)`);
-    const r: actions.SyncReport = await callDaemon('POST', `/api/tasks/${id}/resolve`, {});
+    const r: actions.SyncReport = await callDaemon('POST', `/api/tasks/${id}/sync`, {});
     const files = `${r.files.length} ${r.files.length === 1 ? 'file' : 'files'}`;
     const lines: Record<typeof r.outcome, string> = {
       up_to_date: `#${id} is already up to date`,
