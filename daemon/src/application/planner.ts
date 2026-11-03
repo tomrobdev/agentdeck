@@ -1,5 +1,5 @@
 // Runs the planner: turns a repo's goals file into task proposals (see domain/planner/proposals.ts).
-import { createWriteStream } from 'node:fs';
+import { type WriteStream, createWriteStream } from 'node:fs';
 import { join } from 'node:path';
 import { runClaude } from '../adapters/claude.ts';
 import { goalsPath, readGoals } from '../adapters/goals.ts';
@@ -8,6 +8,7 @@ import { LOG_DIR, ensureDirs } from '../config.ts';
 import type { Db } from '../db/index.ts';
 import { type ProposalResult, buildPlannerPrompt, plannerArgs, plannerDueReason, selectProposals } from '../domain/planner/proposals.ts';
 import type { Repo } from '../domain/repo/repo.ts';
+import { lastLine, plural } from '../domain/text.ts';
 import { recordRateLimit, usageRecorder } from './run/claude-run.ts';
 import { ActionError, requireRepo } from './input.ts';
 import { notifyLater } from './notifications.ts';
@@ -24,10 +25,24 @@ export async function propose(db: Db, repo: Repo): Promise<ProposalResult> {
   if (!goals.trim()) return { outcome: 'no_goals', tasks: [], skipped: [], note: `write goals in ${goalsPath(repo)} first` };
 
   ensureDirs();
-  const s = db.plannerSettings();
   const logPath = join(LOG_DIR, `proposals-${repo.name}-${Date.now()}.jsonl`);
   const log = createWriteStream(logPath, { flags: 'a' });
+  // A stream with no 'error' listener crashes the daemon when its file cannot be written.
+  log.on('error', () => {});
   const runId = db.startPlannerRun(repo.id, logPath);
+  try {
+    return await planRepo(db, repo, goals, runId, log);
+  } catch (err) {
+    // Whatever threw, the row must end: an open one takes a slot until the next daemon start.
+    db.finishPlannerRun(runId, 'failed', 0, `planner crashed: ${lastLine(String(err))}`);
+    throw err;
+  } finally {
+    await closeLog(log).catch(() => {});
+  }
+}
+
+async function planRepo(db: Db, repo: Repo, goals: string, runId: number, log: WriteStream): Promise<ProposalResult> {
+  const s = db.plannerSettings();
   const existing = db.tasksForRepo(repo.id, 100);
 
   const run = await runClaude({
@@ -38,7 +53,6 @@ export async function propose(db: Db, repo: Repo): Promise<ProposalResult> {
     onSpawn: (pid) => db.setPlannerRunPid(runId, pid),
     onUsage: usageRecorder(db),
   });
-  await closeLog(log);
 
   if (run.rateLimitedUntil) {
     recordRateLimit(db, run.rateLimitedUntil);
@@ -67,8 +81,8 @@ export async function propose(db: Db, repo: Repo): Promise<ProposalResult> {
     notifyLater(db, {
       kind: 'proposed',
       title: repo.auto_approve
-        ? `Planner queued ${created.length} task(s) in ${repo.name}`
-        : `${created.length} task(s) to approve in ${repo.name}`,
+        ? `Planner queued ${plural(created.length, 'task')} in ${repo.name}`
+        : `${plural(created.length, 'task')} to approve in ${repo.name}`,
       body: created.map((t) => `• ${t.title}`).join('\n'),
     });
   }

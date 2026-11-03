@@ -6,6 +6,14 @@ export const GOALS_LIMIT = 20_000;
 export const goalsError = (goals: string): string | null =>
   goals.length > GOALS_LIMIT ? `goals are limited to ${GOALS_LIMIT.toLocaleString('en-US')} characters` : null;
 
+/** A repo's name becomes a file name (goals, planner log) and is looked up by name or id, so it must be plain and not read as an id. */
+export function repoNameError(name: string): string | null {
+  if (!/^[A-Za-z0-9._-]+$/.test(name)) return `repo name may only use letters, digits, . _ - (got ${name})`;
+  if (/^[.-]/.test(name)) return `repo name must not start with a dot or dash (got ${name})`;
+  if (/^\d+$/.test(name)) return `repo name must not be all digits, it would read as an id (got ${name})`;
+  return null;
+}
+
 /** The first entry of a network allowlist that is not a host name (a wildcard, port or bracketed address is fine). */
 export function networkError(hosts: string[]): string | null {
   const bad = hosts.find((host) => !/^[A-Za-z0-9*.:[\]-]+$/.test(host));
