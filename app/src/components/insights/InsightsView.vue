@@ -4,17 +4,18 @@
 import { computed, ref } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { reposQuery, statsQuery } from '../../api';
-import { seriesOf, thisWeek, weekLabel } from '../../lib/insights';
+import { hasData, seriesOf, thisWeek, weekLabel } from '../../lib/insights';
 import TrendChart from './TrendChart.vue';
 
 const repo = ref<string | null>(null);
 const reposQ = useQuery(reposQuery());
 const statsQ = useQuery(computed(() => statsQuery(repo.value)));
 
-const cards = computed(() => (statsQ.data.value ? seriesOf(statsQ.data.value) : []));
 const week = thisWeek();
-const nowOf = (s: (typeof cards.value)[number]) => s.points.find((p) => p.week === week) ?? null;
-const empty = computed(() => cards.value.length === 0);
+const cards = computed(() =>
+  (statsQ.data.value ? seriesOf(statsQ.data.value) : []).map((s) => ({ series: s, now: s.points.find((p) => p.week === week) ?? null })),
+);
+const empty = computed(() => !hasData(cards.value.map((c) => c.series)));
 </script>
 
 <template>
@@ -36,14 +37,14 @@ const empty = computed(() => cards.value.length === 0);
     <p v-else-if="statsQ.isPending.value" class="text-muted">Loading…</p>
     <p v-else-if="empty" class="text-muted">No runs yet{{ repo ? ` in ${repo}` : '' }}, so there is nothing to chart.</p>
     <div v-else class="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3">
-      <article v-for="s in cards" :key="s.measure.key" class="rounded-md border border-border bg-panel p-3">
+      <article v-for="{ series: s, now } in cards" :key="s.measure.key" class="rounded-md border border-border bg-panel p-3">
         <header class="flex items-baseline justify-between gap-2">
           <h2 class="m-0 text-md">{{ s.measure.label }}</h2>
           <span v-if="s.met !== null" class="verdict" :class="s.met ? 'met' : 'missed'">{{ s.met ? 'On target' : 'Off target' }}</span>
         </header>
         <p class="m-0 mt-1 text-xl font-[650]">
-          {{ nowOf(s)?.value == null ? '–' : s.measure.format(nowOf(s)!.value!) }}
-          <small v-if="nowOf(s)?.detail" class="text-muted text-sm font-normal">{{ nowOf(s)!.detail }}</small>
+          {{ now?.value == null ? '–' : s.measure.format(now.value) }}
+          <small v-if="now?.detail" class="text-muted text-sm font-normal">{{ now.detail }}</small>
         </p>
         <p class="text-muted m-0 mb-2 text-sm">
           {{ s.measure.hint }}<template v-if="s.measure.target"> · target {{ s.measure.target.text }}</template
