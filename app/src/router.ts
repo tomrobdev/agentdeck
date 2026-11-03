@@ -20,6 +20,25 @@ export function parseHash(hash: string): Route {
   return { name: 'task', id: Number(m[1]), tab, query: Object.fromEntries(new URLSearchParams(qs)) };
 }
 
+/**
+ * Where an `agentdeck://` link goes: `tasks/<id>` and `tasks/<id>/<tab>` a task page, `new` the New task form, an empty
+ * path or `queue` the queue. Anything else (another scheme, a non-numeric id, an unknown tab) is null.
+ */
+export function parseAppUrl(url: string): Route | { name: 'new' } | null {
+  const m = url.trim().match(/^agentdeck:\/\/([^?#]*)(?:[?#].*)?$/i);
+  if (!m) return null;
+  const parts = m[1].split('/').filter(Boolean);
+  if (parts.length === 0 || (parts.length === 1 && parts[0] === 'queue')) return { name: 'queue' };
+  if (parts.length === 1 && parts[0] === 'new') return { name: 'new' };
+  if (parts[0] !== 'tasks' || parts.length > 3 || !/^\d+$/.test(parts[1] ?? '')) return null;
+  const tab = parts[2] ?? 'overview';
+  if (!(TASK_TABS as string[]).includes(tab)) return null;
+  return { name: 'task', id: Number(parts[1]), tab: tab as TaskTab, query: {} };
+}
+
+/** The link that opens a task from outside the dashboard. */
+export const taskUrl = (id: number) => `agentdeck://tasks/${id}`;
+
 function hashFor(route: Route): string {
   if (route.name === 'insights') return '#/insights';
   if (route.name === 'queue') return route.states?.length ? `#/?states=${route.states.join(',')}` : '#/';

@@ -21,6 +21,20 @@ export function setTrayStatus(status: string): void {
   invoke('set_tray_status', { status }).catch(() => {});
 }
 
+/** Call `cb` with each agentdeck:// URL opened from outside, including one that started the app. Returns a stop function. */
+export async function onOpenUrl(cb: (url: string) => void): Promise<() => void> {
+  if (!isNative) return () => {};
+  const { listen } = await import('@tauri-apps/api/event');
+  // The shell keeps the URL until it is taken, so an event and the startup check never route it twice.
+  const take = async () => {
+    const url = await invoke<string | null>('take_open_url').catch(() => null);
+    if (url) cb(url);
+  };
+  const stop = await listen<string>('open-url', take);
+  await take();
+  return stop;
+}
+
 /** Whether cmux is installed; false in a plain browser. */
 export async function cmuxInstalled(): Promise<boolean> {
   if (!isNative) return false;

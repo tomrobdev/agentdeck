@@ -1,9 +1,11 @@
 mod dialogs;
+mod open;
 mod terminal;
 mod tray;
 
 use tauri::WindowEvent;
 use tauri_plugin_autostart::MacosLauncher;
+use tauri_plugin_deep_link::DeepLinkExt;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -14,14 +16,23 @@ pub fn run() {
             MacosLauncher::LaunchAgent,
             None,
         ))
+        .plugin(tauri_plugin_deep_link::init())
+        .manage(open::PendingUrl::default())
         .invoke_handler(tauri::generate_handler![
             dialogs::pick_folder,
+            open::take_open_url,
             tray::set_tray_status,
             terminal::cmux_installed,
             terminal::open_terminal
         ])
         .setup(|app| {
             tray::setup(app)?;
+            let handle = app.handle().clone();
+            app.deep_link().on_open_url(move |event| {
+                for url in event.urls() {
+                    open::open_in_dashboard(&handle, url.as_str());
+                }
+            });
             Ok(())
         })
         // Closing the window hides it to the tray; the daemon keeps working either way.

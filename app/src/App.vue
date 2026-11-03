@@ -17,7 +17,7 @@ import {
   taskQuery,
   tasksQuery,
 } from './api';
-import { setTrayStatus } from './platform/native';
+import { onOpenUrl, setTrayStatus } from './platform/native';
 import { mode, setMode } from './platform/theme';
 import NewTaskForm from './components/panels/NewTaskForm.vue';
 import WaitBar from './components/layout/WaitBar.vue';
@@ -34,7 +34,7 @@ import MergeDialog from './components/task/MergeDialog.vue';
 import AppProvider from './components/ui/AppProvider.vue';
 import CommandPalette from './components/ui/CommandPalette.vue';
 import Toaster from './components/ui/Toaster.vue';
-import { go, openTask, route } from './router';
+import { go, openTask, parseAppUrl, route, taskUrl } from './router';
 import { type PersonEvent, needYouCount, openingTab } from './lib/taskView';
 import { paletteItems } from './lib/palette';
 import { requestedView } from './composables/useView';
@@ -116,6 +116,12 @@ const paletteRows = computed(() =>
       open: openFromQueue,
       act: actOn,
       merge: (id) => (merging.value = id),
+      copyLink: (id) => {
+        navigator.clipboard.writeText(taskUrl(id)).then(
+          () => flash(`Copied ${taskUrl(id)}`),
+          () => flash('Could not copy the link'),
+        );
+      },
       newTask: () => (modal.value = 'new'),
       togglePause,
       restartDaemon: () =>
@@ -136,8 +142,27 @@ function onPaletteKey(e: KeyboardEvent) {
   e.preventDefault();
   palette.value = !palette.value;
 }
-onMounted(() => window.addEventListener('keydown', onPaletteKey));
-onBeforeUnmount(() => window.removeEventListener('keydown', onPaletteKey));
+// An agentdeck:// link opened from outside (the shell's open_in_dashboard) routes here, or opens the form.
+function openLink(url: string) {
+  const to = parseAppUrl(url);
+  if (!to) return;
+  if (to.name === 'new') modal.value = 'new';
+  else {
+    modal.value = null;
+    go(to);
+  }
+}
+let stopOpenUrl = () => {};
+let unmounted = false;
+onMounted(() => {
+  window.addEventListener('keydown', onPaletteKey);
+  onOpenUrl(openLink).then((stop) => (unmounted ? stop() : (stopOpenUrl = stop)));
+});
+onBeforeUnmount(() => {
+  unmounted = true;
+  stopOpenUrl();
+  window.removeEventListener('keydown', onPaletteKey);
+});
 
 const resumeDaemon = () => pauseRun(() => api.resume());
 const resumeRepo = (id: number) => pauseRun(() => api.resumeRepo(id));
