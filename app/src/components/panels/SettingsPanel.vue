@@ -96,9 +96,7 @@ async function test() {
     <form v-if="form" class="flex flex-col gap-[18px]" @submit.prevent="save()">
       <section class="flex flex-col gap-2.5">
         <h4 class="m-0">Appearance</h4>
-        <p class="muted m-0 text-sm">
-          Applies as you pick, and is remembered on this computer. The status bar has the same choice for quick comparing.
-        </p>
+        <p class="muted m-0 text-sm">Applies as you pick, and is remembered on this computer.</p>
         <div class="grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="Theme">
           <label
             v-for="t in THEMES"

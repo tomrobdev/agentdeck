@@ -87,14 +87,14 @@ function refresh() {
 
 <template>
   <Modal title="Daemon" @close="$emit('close')">
-    <p v-if="down" class="s-blocked m-0 mb-3" role="status">
+    <p v-if="down" class="m-0 mb-3 text-blocked" role="status">
       The daemon isn't answering. If it was just restarted, this fills in when it is back.
     </p>
-    <p v-else-if="stateQ.error.value" class="s-failed m-0 mb-3" role="alert">{{ stateQ.error.value.message }}</p>
+    <p v-else-if="stateQ.error.value" class="m-0 mb-3 text-failed" role="alert">{{ stateQ.error.value.message }}</p>
 
     <dl v-if="state" class="m-0 mb-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
       <dt class="muted">Code</dt>
-      <dd class="m-0" :class="{ 's-blocked': commits.stale }">{{ commits.text }}</dd>
+      <dd class="m-0" :class="{ 'text-blocked': commits.stale }">{{ commits.text }}</dd>
       <dt class="muted">Uptime</dt>
       <dd class="m-0 tabular-nums">
         {{ uptime(state.started_at, now) }} <span class="muted">· pid {{ state.pid }}</span>
@@ -103,7 +103,7 @@ function refresh() {
       <dd class="m-0">
         <template v-if="reloadLine">{{ reloadLine }}</template>
         <template v-else-if="state.reload.blocked">
-          <span class="s-blocked">Blocked: {{ state.reload.blocked }}</span>
+          <span class="text-blocked">Blocked: {{ state.reload.blocked }}</span>
         </template>
         <span v-else class="muted">{{ state.reload.enabled ? 'Nothing pending.' : 'Off (reload_on_change).' }}</span>
       </dd>
