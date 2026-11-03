@@ -48,7 +48,6 @@ export const levelPriority = (l: (typeof PRIORITY_LEVELS)[number]): number => (N
 
 export const priorityLevel = (p: number): PriorityLevel => PRIORITY_LEVELS.find((l) => p >= l.min)!.key;
 
-/** The tasks waiting on this PR. A daemon from before the field existed sends none, which reads as empty. */
 /** The chip colour for each auto-merge state: green will merge, amber waits, red needs a person, grey is on and unchecked. */
 export const AUTO_MERGE_CHIP: Record<AutoMergeView['state'], string> = {
   off: '',
@@ -60,14 +59,6 @@ export const AUTO_MERGE_CHIP: Record<AutoMergeView['state'], string> = {
 
 /** A tooltip for the auto-merge mark: the daemon's label, then its reasons, one to a line. */
 export const autoMergeTip = (v: AutoMergeView): string => [v.label, ...v.reasons].join('\n');
-
-export const unblocksOf = (t: TaskSummary): number[] => t.unblocks ?? [];
-
-/** The tasks a queued task is still waiting on through builds-on links, as "waits on #12, #14" (empty when none, or it is stuck). */
-export function waitsOnText(t: TaskSummary): string | null {
-  if (!t.waiting || t.waiting.stuck) return null;
-  return `waits on ${t.waiting.on.map((id) => `#${id}`).join(', ')}`;
-}
 
 export type GroupBy = 'status' | 'repo' | 'priority' | 'none';
 export const GROUP_BYS: { key: GroupBy; label: string }[] = [

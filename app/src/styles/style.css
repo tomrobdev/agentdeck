@@ -218,7 +218,7 @@
   font-size: 12px;
 }
 
-/* A small outline pill, muted by default; chip-accent, chip-done, chip-merged and chip-blocked colour it. */
+/* A small outline pill, muted by default, for what a person must act on; chip-done, chip-blocked and chip-failed colour it. */
 @utility chip {
   display: inline-block;
   font-size: 11.5px;
@@ -229,17 +229,9 @@
   color: var(--chip-c, var(--muted));
   white-space: nowrap;
 }
-@utility chip-accent {
-  --chip-c: var(--accent);
-  --chip-border: color-mix(in srgb, var(--accent) var(--chip-mix, 45%), transparent);
-}
 @utility chip-done {
   --chip-c: var(--done);
   --chip-border: color-mix(in srgb, var(--done) var(--chip-mix, 45%), transparent);
-}
-@utility chip-merged {
-  --chip-c: var(--merged);
-  --chip-border: color-mix(in srgb, var(--merged) var(--chip-mix, 45%), transparent);
 }
 @utility chip-blocked {
   --chip-c: var(--blocked);

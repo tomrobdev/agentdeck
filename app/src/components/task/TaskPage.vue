@@ -3,12 +3,14 @@ import { computed, ref, toRef, watch } from 'vue';
 import { type TaskDetail, ago, api, describeWait } from '../../api';
 import { useHotkeys } from '../../composables/useHotkeys';
 import { type TaskTab, go, openTask } from '../../router';
-import { readNeeds, statusLabel } from '../../lib/taskView';
+import { readNeeds } from '../../lib/taskView';
 import { useActions } from '../../composables/useActions';
 import { useChanges } from '../../composables/useChanges';
 import { useReviews } from '../../composables/useReviews';
 import SnippetPopover from '../files/SnippetPopover.vue';
-import StatusIcon from '../ui/StatusIcon.vue';
+import StatusPill from '../ui/StatusPill.vue';
+import TaskBadges from '../ui/TaskBadges.vue';
+import TaskStatusLine from '../ui/TaskStatusLine.vue';
 import ChangesTab from './ChangesTab.vue';
 import CodeTab from './CodeTab.vue';
 import NeedsCallout from './NeedsCallout.vue';
@@ -60,48 +62,57 @@ const needs = computed(() => readNeeds(props.task));
 useHotkeys({ Escape: () => go({ name: 'queue' }) });
 
 // Branch names under the title.
+const base = computed(() => changes.value?.base_ref ?? 'base');
 const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel))] px-1.5 py-px';
 </script>
 
 <template>
   <section ref="pageEl" class="flex min-h-0 flex-1 flex-col bg-bg">
     <SnippetPopover v-if="pageEl" :task-id="task.id" :root="pageEl" />
-    <header class="flex items-start gap-3 px-6 pt-4 pb-2">
+    <!-- Row 1 the number and title, full width; row 2 the status, branch and facts; row 3 the status line. -->
+    <header class="flex items-start gap-3 px-6 pt-4 pb-3">
       <button class="mt-0.5" title="Back to the queue (Esc)" @click="go({ name: 'queue' })">←</button>
       <div class="min-w-0 flex-1">
         <TaskTitle :task="task" />
-        <div class="mt-1.5 flex flex-wrap items-center gap-1.5 text-base">
+        <div class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
+          <StatusPill :task="task" />
           <span
-            class="inline-flex items-center gap-[5px] rounded-full bg-[color-mix(in_srgb,var(--c)_16%,var(--panel))] px-2.5 py-0.5 font-medium whitespace-nowrap text-status text-sm"
-            :class="`s-${task.status}`"
-            ><StatusIcon :task="task" :size="12" /> {{ statusLabel(s) }}</span
+            v-if="task.branch"
+            class="inline-flex max-w-full min-w-0 items-center gap-1 whitespace-nowrap"
+            :title="`${task.branch} → ${base}`"
+            data-branch
           >
-          <template v-if="task.branch">
-            <code :class="code">{{ task.branch }}</code> <span class="text-muted">→</span>
-            <code :class="code">{{ changes?.base_ref ?? 'base' }}</code>
-          </template>
-          <span class="text-muted">· {{ task.runs.length }} {{ task.runs.length === 1 ? 'run' : 'runs' }}</span>
-          <span class="text-muted"
-            >· {{ task.source === 'planner' ? 'proposed by the planner' : 'created' }} {{ ago(task.created_at) }}</span
-          >
+            <code :class="code" class="min-w-0 truncate">{{ task.branch }}</code>
+            <span>→</span>
+            <code :class="code" class="flex-none">{{ base }}</code>
+          </span>
+          <span class="whitespace-nowrap">{{ task.runs.length }} {{ task.runs.length === 1 ? 'run' : 'runs' }}</span>
+          <span class="whitespace-nowrap">{{ task.source === 'planner' ? 'proposed' : 'created' }} {{ ago(task.created_at) }}</span>
+          <TaskBadges :task="task" />
         </div>
+        <TaskStatusLine :task="task" fit="full" cancel class="mt-1.5" />
       </div>
-      <TaskActions :task="task" @act="(kind) => emit('act', kind)" @review="requesting = true" />
     </header>
 
-    <nav class="flex gap-0.5 border-b border-border px-6" role="tablist">
-      <button
-        v-for="t in TABS"
-        :key="t.key"
-        class="-mb-px rounded-none border-0 border-b-2 bg-transparent px-3 py-2"
-        role="tab"
-        :aria-selected="tab === t.key"
-        :class="tab === t.key ? 'border-accent font-semibold text-text' : 'border-transparent text-muted'"
-        @click="openTask(task.id, t.key)"
-      >
-        {{ t.label }} <span v-if="t.count !== null" class="ml-0.5 rounded-full bg-panel-2 px-1.5 text-xs font-medium">{{ t.count }}</span>
-      </button>
-    </nav>
+    <!-- The tabs, and the task's actions at the end of the bar. -->
+    <div class="flex items-end border-b border-border px-6">
+      <nav class="flex min-w-0 gap-0.5" role="tablist">
+        <button
+          v-for="t in TABS"
+          :key="t.key"
+          class="-mb-px rounded-none border-0 border-b-2 bg-transparent px-3 py-2"
+          role="tab"
+          :aria-selected="tab === t.key"
+          :class="tab === t.key ? 'border-accent font-semibold text-text' : 'border-transparent text-muted'"
+          @click="openTask(task.id, t.key)"
+        >
+          {{ t.label }} <span v-if="t.count !== null" class="ml-0.5 rounded-full bg-panel-2 px-1.5 text-xs font-medium">{{ t.count }}</span>
+        </button>
+      </nav>
+      <div class="ml-auto self-center py-1 pl-3">
+        <TaskActions :task="task" @act="(kind) => emit('act', kind)" @review="requesting = true" />
+      </div>
+    </div>
 
     <ReviewBar
       v-if="showReviewBar"
@@ -113,9 +124,6 @@ const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel
     />
 
     <NeedsCallout v-if="needs" :task="task" :needs="needs" @retry="emit('act', 'retry')" />
-    <div v-else-if="task.stop_reason && (s === 'blocked' || s === 'failed')" class="callout" :class="`s-${s}`">
-      {{ task.stop_reason }}
-    </div>
     <div v-else-if="task.wait" class="callout flex items-center gap-3" :class="task.wait.kind === 'slots' ? 's-queued' : 's-blocked'">
       <span class="min-w-0 flex-1 wrap-anywhere">
         <strong>Not started yet.</strong> {{ describeWait(task.wait) }}.

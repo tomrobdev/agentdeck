@@ -244,7 +244,9 @@ export const taskCommands: Record<string, Command> = {
   'fix-checks': async ({ db, rest }) => {
     const id = taskId(rest[0]);
     const { checks } = await actions.fixChecks(db, id);
-    console.log(`requeued #${id} to fix ${checks.length === 1 ? 'the failing check' : `${checks.length} failing checks`}: ${checks.join(', ')}`);
+    console.log(
+      `requeued #${id} to fix ${checks.length === 1 ? 'the failing check' : `${checks.length} failing checks`}: ${checks.join(', ')}`,
+    );
   },
   'close-pr': async ({ db, rest }) => {
     const id = taskId(rest[0]);
