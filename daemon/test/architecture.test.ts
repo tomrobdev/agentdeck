@@ -365,7 +365,10 @@ const PLAIN = 'plain English: a thing contains, keeps or presses something';
 /** Lines that may say hold: the governor's, and the plain-English senses. Paths are under daemon/src/, or app/src/ when prefixed. */
 const HOLD_ALLOWED: { file: string; line: RegExp; why: string }[] = [
   { file: 'domain/notification.ts', line: /governor hold|'hold'/, why: 'the `hold` notification kind' },
-  { file: 'api/contract.ts', line: /'hold'/, why: 'the `hold` notification kind' },
+  { file: 'api/contract.ts', line: /'hold'/, why: 'the `hold` notification kind, and the headline state' },
+  { file: 'api/contract.ts', line: /rate limit or a hold ends/, why: "the governor's hold" },
+  { file: 'domain/daemon/headline.ts', line: /'hold'|a hold ends/, why: "the governor's hold, as a headline state" },
+  { file: 'app/src/api/format.ts', line: /case 'hold':/, why: "the governor's hold, as a headline state" },
   { file: 'adapters/notify.ts', line: /^\s*hold:/, why: 'the `hold` notification kind' },
   { file: 'db/schema.ts', line: /`hold`|,hold,/, why: 'migration 16 is about the `hold` notification kind' },
   { file: 'app/src/components/panels/SettingsPanel.vue', line: /kind === 'hold'/, why: 'the `hold` notification kind' },
