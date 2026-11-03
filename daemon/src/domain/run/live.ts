@@ -1,6 +1,7 @@
 // What a running task is doing right now, read from the events of its run's stream. Pure: no I/O.
 
-import { cut, shortFile, toolSummary } from './log.ts';
+import { cut } from '../text.ts';
+import { shortFile, toolSummary } from './log.ts';
 
 /** What the daemon keeps of a live run: the turns so far and the last tool call in a few words. */
 export interface LiveState {
@@ -33,7 +34,7 @@ export function liveView(
 
 /** A sync of a done task under way, as the queue shows it. */
 export interface SyncView {
-  /** The base branch being brought in, or "the base branch" when the repo is gone. */
+  /** The base branch being synced with, or "the base branch" when the repo is gone. */
   base: string;
   /** When the resolve run started (UTC `YYYY-MM-DD HH:MM:SS`); null for a clean sync, which runs no claude. */
   since: string | null;

@@ -1,19 +1,8 @@
 <script setup lang="ts">
 import { GROUP_BYS, type GroupBy, SORT_OPTIONS } from '../../lib/taskView';
-import type { ShowProps } from './ListView.vue';
+import type { Display, ShowProps } from '../../lib/queueDisplay';
 import ChipToggle from '../ui/ChipToggle.vue';
 import Popover from '../ui/Popover.vue';
-
-export interface Display {
-  mode: 'list' | 'board' | 'graph';
-  groupBy: GroupBy;
-  sort: string;
-  show: ShowProps;
-  showEmpty: boolean;
-  collapsed: string[];
-  /** Graph mode: also draw chains whose every task is done and merged. Missing from a saved view that predates it. */
-  showFinished?: boolean;
-}
 
 const display = defineModel<Display>({ required: true });
 const set = (patch: Partial<Display>) => (display.value = { ...display.value, ...patch });

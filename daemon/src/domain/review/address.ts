@@ -1,5 +1,6 @@
 // How a run addresses a review: the comments as the worker is shown them, and the answers it gives back. Pure: no I/O.
-import { type CommentSide, type ReviewComment, type ReviewWithComments, commentLocation } from './review.ts';
+import { STATUS_TAIL, cut, plural } from '../text.ts';
+import { type CommentSide, type ReviewComment, type ReviewWithComments, commentLocation, submittedRequests } from './review.ts';
 
 /** The most the review may take of a prompt, in characters. Past it, hunks are dropped and long comments cut, and the prompt says so. */
 export const REVIEW_PROMPT_BUDGET = 16000;
@@ -14,15 +15,8 @@ export const commentLabel = (index: number): string => `c${index + 1}`;
 
 /** The overall note of the latest submitted Request changes review ('' when there is none). */
 export function latestRequestNote(reviews: ReviewWithComments[]): string {
-  return (
-    reviews
-      .filter((r) => r.kind === 'request_changes' && r.submitted_at !== null)
-      .at(-1)
-      ?.body.trim() ?? ''
-  );
+  return submittedRequests(reviews).at(-1)?.body.trim() ?? '';
 }
-
-const cut = (s: string, max: number): string => (s.length > max ? `${s.slice(0, max)}…` : s);
 
 /**
  * The lines of a unified diff within `radius` of line `line` on `side`, with the header of the hunk they are in.
@@ -108,8 +102,8 @@ export function reviewPromptBlock(review: ReviewPrompt): string {
     return entry;
   });
   const left = [
-    droppedHunks ? `the diff of ${droppedHunks} comment${droppedHunks === 1 ? '' : 's'}` : '',
-    cutComments ? `the text of ${cutComments} comment${cutComments === 1 ? '' : 's'} (cut short)` : '',
+    droppedHunks ? `the diff of ${plural(droppedHunks, 'comment')}` : '',
+    cutComments ? `the text of ${plural(cutComments, 'comment')} (cut short)` : '',
   ].filter(Boolean);
   return [
     REVIEW_PROMPT_INTRO,
@@ -157,7 +151,7 @@ export function unansweredNote(unanswered: { comment: Pick<ReviewComment, 'path'
 
 /** A final message with `note` added before its closing STATUS line (after it, if it has none), so the STATUS line stays last. */
 export function withNote(text: string, note: string): string {
-  const m = text.match(/\n?[ \t]*STATUS:\s*(DONE|BLOCKED)\b.*$/i);
+  const m = text.match(STATUS_TAIL);
   if (!m || m.index === undefined) return `${text.trimEnd()}\n\n${note}`;
   return `${text.slice(0, m.index).trimEnd()}\n\n${note}\n${m[0].trim()}`;
 }

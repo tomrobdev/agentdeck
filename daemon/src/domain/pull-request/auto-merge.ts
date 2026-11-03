@@ -1,6 +1,7 @@
 // Whether the daemon may merge a done task's PR without a person (docs/plans/auto-merge.html). Pure: no I/O.
 import type { Repo } from '../repo/repo.ts';
 import type { Task } from '../task/task.ts';
+import { PROTECTED_PREFIXES, isProtectedPath } from '../run/protected-edits.ts';
 import { parseTextList, wholeNumberError } from '../text.ts';
 import { isMergeabilityUnknown } from './conflict.ts';
 import { type MergeFinding, type MergeInput, conflictNeedsPerson, mergeFindings } from './merge.ts';
@@ -26,6 +27,23 @@ export function autoMergeOn(task: Pick<Task, 'auto_merge' | 'source'>, repo: Pic
 /** The path prefixes in a repo's `auto_merge_skip`; a bad value reads as the default. */
 export const autoMergeSkip = (repo: Pick<Repo, 'auto_merge_skip'>): string[] =>
   parseTextList(repo.auto_merge_skip, DEFAULT_AUTO_MERGE_SKIP);
+
+const someOf = (paths: string[]) => `${paths.slice(0, 3).join(', ')}${paths.length > 3 ? ` and ${paths.length - 3} more` : ''}`;
+
+/**
+ * Why changed `paths` keep a PR from auto-merging: protected files (under .claude/, whatever the repo's skip list says),
+ * which instruct every later agent, and the repo's `auto_merge_skip` prefixes. Empty when none are touched.
+ */
+export function pathReasons(paths: string[], skip: string[]): string[] {
+  const protectedPaths = paths.filter(isProtectedPath);
+  const skipped = paths.filter((path) => !isProtectedPath(path) && skip.some((prefix) => path.startsWith(prefix)));
+  return [
+    ...(protectedPaths.length
+      ? [`changes ${someOf(protectedPaths)}: files under ${PROTECTED_PREFIXES.join(', ')} steer every later agent`]
+      : []),
+    ...(skipped.length ? [`touches ${someOf(skipped)}`] : []),
+  ];
+}
 
 export const autoMergeMaxLinesError = (value: unknown): string | null => wholeNumberError('auto_merge_max_lines', value, 1, 100_000);
 
@@ -96,10 +114,7 @@ export function autoMergeCheck(
   const lines = pr.additions + pr.deletions;
   if (lines > repo.auto_merge_max_lines) reasons.never.push(`${lines} lines changed, over the limit of ${repo.auto_merge_max_lines}`);
   if (pr.paths.length < pr.files) reasons.never.push(`GitHub listed ${pr.paths.length} of ${pr.files} changed files`);
-  const skip = autoMergeSkip(repo);
-  const skipped = pr.paths.filter((path) => skip.some((prefix) => path.startsWith(prefix)));
-  if (skipped.length)
-    reasons.never.push(`touches ${skipped.slice(0, 3).join(', ')}${skipped.length > 3 ? ` and ${skipped.length - 3} more` : ''}`);
+  reasons.never.push(...pathReasons(pr.paths, autoMergeSkip(repo)));
 
   if (isMergeabilityUnknown(pr)) reasons.wait.push('GitHub is still working out whether it merges cleanly');
   if (input.paused) reasons.wait.push(input.paused);
@@ -185,9 +200,7 @@ export function autoMergeView(
   if (measured) {
     const n = (value: number) => value.toLocaleString('en-US');
     if (measured.lines > limits.max_lines) reasons.push(`now ${n(measured.lines)} lines, over the limit of ${n(limits.max_lines)}`);
-    const skipped = measured.paths.filter((path) => skip.some((prefix) => path.startsWith(prefix)));
-    if (skipped.length)
-      reasons.push(`touches ${skipped.slice(0, 3).join(', ')}${skipped.length > 3 ? ` and ${skipped.length - 3} more` : ''}`);
+    reasons.push(...pathReasons(measured.paths, skip));
   }
   return { state: 'on', label: LABELS.on, reasons, source, checked_at: null, limits };
 }

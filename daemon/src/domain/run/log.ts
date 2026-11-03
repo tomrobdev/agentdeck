@@ -1,4 +1,5 @@
 // A run's stream-json log reduced to what a person wants to read. Pure: no I/O.
+import { cut, oneLine } from '../text.ts';
 
 /** An edit in numbers and a little text, for a small diff. */
 export interface LogChange {
@@ -42,8 +43,8 @@ const SUMMARY_MAX = 200;
 
 /** What the daemon's `agentdeck_sync` event (the sync with the base branch before a run) says in the log. */
 const SYNC_TEXT: Record<string, string> = {
-  clean: 'Brought the base branch into the branch: clean merge.',
-  resolved: 'Resolved conflicts with the base branch.',
+  clean: 'Synced the branch with the base branch: clean merge.',
+  resolved: 'Synced the branch with the base branch: resolved the conflicts.',
   needs_resolution: 'The base branch conflicts with this branch, and auto-resolve is off: working on the branch as it is.',
   error: 'Could not sync with the base branch; working on the branch as it is.',
 };
@@ -53,8 +54,6 @@ function toolFile(input: any): string | undefined {
   const file = input?.file_path ?? input?.path ?? input?.notebook_path;
   return typeof file === 'string' && file ? file : undefined;
 }
-
-const oneLine = (s: string): string => s.replace(/\s+/g, ' ').trim();
 
 /** The call in a line, by tool; what the log and the live line both say. Empty when the input has nothing to say. */
 export function toolSummary(name: string, input: unknown): string {
@@ -96,11 +95,6 @@ export function toolSummary(name: string, input: unknown): string {
   }
   if (!text) text = Object.values(i).map(str).find(Boolean) ?? '';
   return cut(text, SUMMARY_MAX);
-}
-
-/** A text cut to `max` characters, ending in an ellipsis when it was longer. */
-export function cut(s: string, max: number): string {
-  return s.length > max ? s.slice(0, max - 1) + '…' : s;
 }
 
 /** A call's summary with the file it names shortened to the file's name; unchanged for a call that names no file. */
@@ -207,6 +201,13 @@ function parseEvent(ev: any): LogEntry[] {
       return [ev.error ? { kind: 'error', text: `pull request: ${ev.error}` } : { kind: 'text', text: `Opened pull request ${ev.url}` }];
     case 'agentdeck_sync':
       return SYNC_TEXT[ev.kind] ? [{ kind: 'text' as const, text: SYNC_TEXT[ev.kind] }] : [];
+    case 'agentdeck_unblock':
+      return typeof ev.text === 'string' ? [{ kind: 'text', text: ev.text }] : [];
+    case 'agentdeck_protected_edits':
+      return [
+        ...(ev.applied?.length ? [{ kind: 'text' as const, text: `Applied protected edits: ${ev.applied.join(', ')}` }] : []),
+        ...(ev.refused ?? []).map((r: any) => ({ kind: 'error' as const, text: `Refused protected edit ${r.path}: ${r.reason}` })),
+      ];
     case 'agentdeck_stderr':
     case 'agentdeck_error':
       return [{ kind: 'error', text: String(ev.text).trim() }];

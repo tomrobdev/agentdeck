@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, wri
 import { join } from 'node:path';
 import * as actions from '../application/actions.ts';
 import { HOME } from '../config.ts';
+import { errorMessage } from '../domain/text.ts';
 import type { Db } from '../db/index.ts';
 import type { Command } from './context.ts';
 import { die } from './format.ts';
@@ -93,12 +94,12 @@ async function hook(db: Db): Promise<void> {
         writeCursor(session, ctx.cursor);
         pruneCursors();
       } catch (err) {
-        console.error(`agentdeck context: cursor not saved: ${(err as Error).message}`);
+        console.error(`agentdeck context: cursor not saved: ${errorMessage(err)}`);
       }
     }
   } catch (err) {
     // A hook that fails would get in the way of every message; say why on stderr and carry on.
-    console.error(`agentdeck context: ${(err as Error).message}`);
+    console.error(`agentdeck context: ${errorMessage(err)}`);
   }
 }
 

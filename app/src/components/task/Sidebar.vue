@@ -37,7 +37,7 @@ const AUTO_MERGE = [
   { label: 'On for this task', stored: 1, value: true },
   { label: 'Off for this task', stored: 0, value: false },
 ] as const;
-const savedAutoMerge = computed(() => AUTO_MERGE.findIndex((o) => o.stored === (props.task.auto_merge ?? null)));
+const savedAutoMerge = computed(() => AUTO_MERGE.findIndex((o) => o.stored === props.task.auto_merge));
 // The select shows the saved value: after a save that failed it goes back to it, instead of keeping the refused choice.
 async function setAutoMerge(select: HTMLSelectElement) {
   const { value: auto_merge } = AUTO_MERGE[select.selectedIndex];

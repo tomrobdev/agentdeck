@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { type Repo, type TaskDetail, api } from '../../api';
+import { MODEL_HINTS, MODEL_LABELS, type Repo, type TaskDetail, api } from '../../api';
+import { MODELS } from '../../lib/taskView';
 import { useTerminal } from '../../composables/useTerminal';
 import Modal from '../ui/Modal.vue';
 import NumberInput from '../ui/NumberInput.vue';
@@ -105,9 +106,7 @@ async function submit() {
         <label class="field flex-1">
           Model
           <select v-model="model">
-            <option value="haiku">Haiku (cheap, simple)</option>
-            <option value="sonnet">Sonnet (default)</option>
-            <option value="opus">Opus (hard tasks)</option>
+            <option v-for="m in MODELS" :key="m" :value="m">{{ MODEL_LABELS[m] ?? m }} ({{ MODEL_HINTS[m] }})</option>
           </select>
         </label>
         <label class="field flex-[0_0_84px]">

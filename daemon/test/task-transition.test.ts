@@ -46,7 +46,7 @@ const CASES: Case[] = [
     event: { type: 'finish', outcome: 'blocked' },
     opts: { reason: 'no network', needs: 'host: x' },
     to: 'blocked',
-    changes: { needs: 'host: x', stop_reason: 'no network' },
+    changes: { needs: 'host: x', question: null, stop_reason: 'no network' },
     history: 'finish',
   },
   {
@@ -55,7 +55,7 @@ const CASES: Case[] = [
     event: { type: 'finish', outcome: 'blocked' },
     opts: { reason: 'stuck' },
     to: 'blocked',
-    changes: { needs: null, stop_reason: 'stuck' },
+    changes: { needs: null, question: null, stop_reason: 'stuck' },
     history: 'finish',
   },
   {
@@ -65,7 +65,7 @@ const CASES: Case[] = [
     opts: { reason: 'no git' },
     task: { attempts: 2 },
     to: 'blocked',
-    changes: { attempts: 1, needs: null, stop_reason: 'no git' },
+    changes: { attempts: 1, needs: null, question: null, stop_reason: 'no git' },
     history: 'environment_block',
   },
   {
@@ -91,7 +91,7 @@ const CASES: Case[] = [
     event: { type: 'finish', outcome: 'failed', retry: true },
     opts: { reason: 'tests fail' },
     to: 'queued',
-    changes: { needs: null, stop_reason: 'tests fail' },
+    changes: { needs: null, question: null, stop_reason: 'tests fail' },
     history: 'finish',
   },
   {
@@ -100,7 +100,7 @@ const CASES: Case[] = [
     event: { type: 'rate_limited' },
     task: { attempts: 1 },
     to: 'queued',
-    changes: { attempts: 0, needs: null },
+    changes: { attempts: 0, needs: null, question: null },
     history: 'rate_limited',
   },
   {
@@ -109,7 +109,7 @@ const CASES: Case[] = [
     event: { type: 'rate_limited' },
     task: { attempts: 0 },
     to: 'queued',
-    changes: { attempts: 0, needs: null },
+    changes: { attempts: 0, needs: null, question: null },
     history: 'rate_limited',
   },
   {
@@ -128,7 +128,7 @@ const CASES: Case[] = [
     from: 'proposed',
     event: { type: 'approve' },
     to: 'queued',
-    changes: { needs: null },
+    changes: { needs: null, question: null },
     history: 'approve',
   },
   { name: 'reject', from: 'proposed', event: { type: 'reject' }, to: 'cancelled', changes: {}, history: 'reject' },
@@ -138,7 +138,7 @@ const CASES: Case[] = [
     event: { type: 'retry' },
     task: { attempts: 3 },
     to: 'queued',
-    changes: { max_attempts: 4, needs: null },
+    changes: { max_attempts: 4, needs: null, question: null },
     history: 'retry',
   },
   {
@@ -147,15 +147,25 @@ const CASES: Case[] = [
     event: { type: 'retry' },
     task: { attempts: 1 },
     to: 'queued',
-    changes: { max_attempts: 2, done_by: null, needs: null },
+    changes: { max_attempts: 2, done_by: null, needs: null, question: null },
     history: 'retry',
+  },
+  {
+    name: 'unblock_retry queues a blocked task without touching its attempts',
+    from: 'blocked',
+    event: { type: 'unblock_retry' },
+    opts: { reason: 'Unblock run: use sqlite' },
+    task: { attempts: 1 },
+    to: 'queued',
+    changes: { needs: null, question: null },
+    history: 'unblock_retry',
   },
   {
     name: 'mark_done',
     from: 'blocked',
     event: { type: 'mark_done' },
     to: 'done',
-    changes: { stop_reason: null, needs: null, done_by: 'person' },
+    changes: { stop_reason: null, needs: null, question: null, done_by: 'person' },
     history: 'mark_done',
   },
   {
@@ -163,7 +173,7 @@ const CASES: Case[] = [
     from: 'failed',
     event: { type: 'pr_merged' },
     to: 'done',
-    changes: { stop_reason: null, needs: null },
+    changes: { stop_reason: null, needs: null, question: null },
     history: 'pr_merged',
   },
   {
@@ -172,7 +182,7 @@ const CASES: Case[] = [
     event: { type: 'recover', exhausted: false },
     task: { attempts: 2, restarts: 1 },
     to: 'queued',
-    changes: { restarts: 2, attempts: 1, needs: null },
+    changes: { restarts: 2, attempts: 1, needs: null, question: null },
     history: 'recover',
   },
   {

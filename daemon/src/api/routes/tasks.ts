@@ -1,91 +1,62 @@
-// Tasks: list, add, edit and move through the lifecycle, merge, resolve and the log tail.
+// Tasks: list, add, edit and move through the lifecycle, sync and the log tail.
 import * as actions from '../../application/actions.ts';
-import { type ApiContext, type Route, idsField, route } from '../http.ts';
+import { TASK_STATUSES } from '../../domain/task/lifecycle.ts';
+import type * as C from '../contract.ts';
+import { type ApiContext, BadRequest, type Route, idsField, route } from '../http.ts';
 import { streamLog } from '../log-stream.ts';
 
 export function routes({ db, scheduler }: ApiContext): Route[] {
   const detail = (id: string) => actions.taskDetail(db, Number(id));
   return [
-    route('GET', /^\/api\/tasks$/, ({ query }) => {
-      const status = query.get('status') as actions.TaskStatus | null;
+    route<C.TaskSummary[]>('GET', /^\/api\/tasks$/, ({ query }) => {
+      const param = query.get('status');
+      if (param !== null && !(TASK_STATUSES as string[]).includes(param))
+        throw new BadRequest(`status takes one of ${TASK_STATUSES.join(', ')}`);
+      const status = param as actions.TaskStatus | null;
       const limit = Math.min(Math.max(Math.floor(Number(query.get('limit'))) || 200, 1), 1000);
       const before = Number(query.get('before')) || undefined;
       return actions.taskViews(db, { status: status ?? undefined, limit, before });
     }),
-    route('POST', /^\/api\/tasks$/, async ({ body }) => {
+    route<C.TaskSaved>('POST', /^\/api\/tasks$/, async ({ body }) => {
       const links = { builds_on: idsField(body, 'builds_on'), after: idsField(body, 'after') };
       const task = await actions.addTask(db, { ...body, ...links } as Parameters<typeof actions.addTask>[1]);
       return { ...(await actions.taskDetail(db, task.id)), warnings: await actions.promptWarnings(db, task.id) };
     }),
-    route('GET', /^\/api\/tasks\/(\d+)$/, ({ params: [id] }) => detail(id)),
-    route('POST', /^\/api\/tasks\/(\d+)$/, async ({ params: [id], body }) => {
+    route<C.TaskDetail>('GET', /^\/api\/tasks\/(\d+)$/, ({ params: [id] }) => detail(id)),
+    route<C.TaskSaved>('POST', /^\/api\/tasks\/(\d+)$/, async ({ params: [id], body }) => {
       await actions.editTask(db, Number(id), body);
       return { ...(await detail(id)), warnings: await actions.promptWarnings(db, Number(id)) };
     }),
-    route('POST', /^\/api\/tasks\/(\d+)\/links$/, ({ params: [id], body }) => {
+    route<C.TaskDetail>('POST', /^\/api\/tasks\/(\d+)\/links$/, ({ params: [id], body }) => {
       actions.linkTasks(db, Number(id), body as Parameters<typeof actions.linkTasks>[2]);
       return detail(id);
     }),
-    route('DELETE', /^\/api\/tasks\/(\d+)\/links\/(\d+)$/, ({ params: [id, on] }) => {
+    route<C.TaskDetail>('DELETE', /^\/api\/tasks\/(\d+)\/links\/(\d+)$/, ({ params: [id, on] }) => {
       actions.unlinkTasks(db, Number(id), Number(on));
       return detail(id);
     }),
-    route('POST', /^\/api\/tasks\/(\d+)\/approve$/, ({ params: [id] }) => (actions.approveTask(db, Number(id)), detail(id))),
-    route('POST', /^\/api\/tasks\/(\d+)\/reject$/, ({ params: [id] }) => (actions.rejectTask(db, Number(id)), detail(id))),
-    route('POST', /^\/api\/tasks\/(\d+)\/cancel$/, ({ params: [id] }) => ({ result: actions.cancelTask(db, Number(id)) })),
-    route(
+    route<C.TaskDetail>('POST', /^\/api\/tasks\/(\d+)\/approve$/, ({ params: [id] }) => (actions.approveTask(db, Number(id)), detail(id))),
+    route<C.TaskDetail>('POST', /^\/api\/tasks\/(\d+)\/reject$/, ({ params: [id] }) => (actions.rejectTask(db, Number(id)), detail(id))),
+    route<C.CancelResult>('POST', /^\/api\/tasks\/(\d+)\/cancel$/, ({ params: [id] }) => ({ result: actions.cancelTask(db, Number(id)) })),
+    route<C.TaskDetail>(
       'POST',
       /^\/api\/tasks\/(\d+)\/retry$/,
       ({ params: [id], body }) => (actions.retryTask(db, Number(id), body.note as string | undefined), detail(id)),
     ),
-    route('POST', /^\/api\/tasks\/(\d+)\/done$/, ({ params: [id], body }) => {
+    route<C.TaskDetail>('POST', /^\/api\/tasks\/(\d+)\/done$/, ({ params: [id], body }) => {
       actions.markDone(db, Number(id), body.note as string | undefined);
       return detail(id);
     }),
-    route('POST', /^\/api\/tasks\/(\d+)\/install-needs$/, async ({ params: [id] }) => {
+    route<C.TaskDetail>('POST', /^\/api\/tasks\/(\d+)\/install-needs$/, async ({ params: [id] }) => {
       await actions.installNeeds(db, Number(id));
       return detail(id);
     }),
-    // Retry a done task with its PR's failing checks (and their logs) in the note.
-    route('POST', /^\/api\/tasks\/(\d+)\/fix-checks$/, async ({ params: [id] }) => {
-      const result = await actions.fixChecks(db, Number(id));
-      return { ...result, task: await detail(id) };
-    }),
-    route('POST', /^\/api\/tasks\/(\d+)\/close-pr$/, async ({ params: [id] }) => {
-      await actions.closeTaskPr(db, Number(id));
-      return detail(id);
-    }),
-    route('POST', /^\/api\/tasks\/(\d+)\/clean$/, async ({ params: [id] }) => {
+    route<C.TaskDetail>('POST', /^\/api\/tasks\/(\d+)\/clean$/, async ({ params: [id] }) => {
       await actions.removeTaskWorktree(db, Number(id));
       return detail(id);
     }),
-    // Merge the task's PR. GET is the preview the confirm dialog shows; POST merges.
-    route('GET', /^\/api\/tasks\/(\d+)\/merge$/, ({ params: [id] }) => actions.mergePreview(db, Number(id))),
-    route('POST', /^\/api\/tasks\/(\d+)\/merge$/, async ({ params: [id], body }) => {
-      const result = await actions.mergeTask(db, Number(id), body);
-      return { ...result, task: await detail(id) };
-    }),
-    // Ask the daemon to merge the task's PR once it is ready, or withdraw the request; the answer is at once.
-    route('POST', /^\/api\/tasks\/(\d+)\/merge-request$/, async ({ params: [id], body }) => {
-      const result = actions.requestMerge(db, Number(id), body);
-      return { ...result, task: await detail(id) };
-    }),
-    route('DELETE', /^\/api\/tasks\/(\d+)\/merge-request$/, async ({ params: [id] }) => {
-      const result = actions.cancelMergeRequest(db, Number(id));
-      return { ...result, task: await detail(id) };
-    }),
-    // Merge requests for every task named: the review group's "Merge all". The ones that can't be requested come back with why.
-    route('POST', /^\/api\/tasks\/merge-requests$/, ({ body }) => {
-      const result = actions.requestMerges(db, { ids: idsField(body, 'ids', { required: true }) });
-      return result;
-    }),
-    // Let the daemon merge the task's PR on its own, or not, or follow the repo (null).
-    route('POST', /^\/api\/tasks\/(\d+)\/auto-merge$/, async ({ params: [id], body }) => {
-      const result = await actions.setAutoMerge(db, Number(id), body as { auto_merge: boolean | null });
-      return { ...result, task: await detail(id) };
-    }),
     // Sync the task's branch with the base, settling conflicts with a claude run. Answers when it is done.
-    route('POST', /^\/api\/tasks\/(\d+)\/sync$/, async ({ params: [id] }) => {
+    route<C.SyncResult>('POST', /^\/api\/tasks\/(\d+)\/sync$/, async ({ params: [id] }) => {
       const report = await scheduler.track(actions.syncNow(db, Number(id)), 'sync');
       return { ...report, task: await detail(id) };
     }),

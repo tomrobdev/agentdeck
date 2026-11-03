@@ -18,7 +18,7 @@ export interface ApiContext {
 }
 
 /** Biggest request body accepted. */
-export const MAX_BODY_BYTES = 2 * 1024 * 1024;
+const MAX_BODY_BYTES = 2 * 1024 * 1024;
 
 /** A request the client got wrong: answered 400. */
 export class BadRequest extends Error {}
@@ -42,7 +42,16 @@ export interface Route {
   handle: (call: Call) => unknown | Promise<unknown>;
 }
 
-export const route = (method: string, path: RegExp, handle: Route['handle']): Route => ({ method, path, handle });
+/**
+ * A route answering with the contract type `T` (`route<C.TaskDetail>(…)`), so a handler that drifts from it fails
+ * `pnpm typecheck`. `T` is never inferred from the handler: a route that doesn't name it may only return undefined, as a
+ * stream does.
+ */
+export const route = <T = never>(
+  method: string,
+  path: RegExp,
+  handle: (call: Call) => NoInfer<T> | Promise<NoInfer<T>> | undefined,
+): Route => ({ method, path, handle });
 
 /** The task ids in body field `key` ([12, 14]); empty when absent, unless `required`. A 400 when they aren't task ids. */
 export function idsField(body: Record<string, unknown>, key: string, opts: { required?: boolean } = {}): number[] {

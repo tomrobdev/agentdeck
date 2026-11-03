@@ -70,6 +70,7 @@ export interface RepoPatch {
   pr_mode?: PrMode;
   merge_method?: MergeMethod;
   auto_resolve?: boolean;
+  auto_unblock?: boolean;
   sandbox?: boolean;
   /** Hosts the agent's sandboxed commands may reach; a string is split on commas and spaces. */
   network?: string | string[];
@@ -90,6 +91,7 @@ export function updateRepo(db: Db, nameOrId: string | number, patch: RepoPatch) 
   const pr_mode = text(body, 'pr_mode', { empty: true, raw: true });
   const merge_method = text(body, 'merge_method', { empty: true, raw: true });
   const auto_resolve = flag(body, 'auto_resolve');
+  const auto_unblock = flag(body, 'auto_unblock');
   const sandbox = flag(body, 'sandbox');
   const hosts = list(body, 'network', { split: true });
   const network = hosts && normalizeNetwork(hosts);
@@ -115,6 +117,7 @@ export function updateRepo(db: Db, nameOrId: string | number, patch: RepoPatch) 
     ...(pr_mode !== undefined ? { pr_mode: pr_mode as PrMode } : {}),
     ...(merge_method !== undefined ? { merge_method: merge_method as MergeMethod } : {}),
     ...(auto_resolve !== undefined ? { auto_resolve: auto_resolve ? 1 : 0 } : {}),
+    ...(auto_unblock !== undefined ? { auto_unblock: auto_unblock ? 1 : 0 } : {}),
     ...(sandbox !== undefined ? { sandbox: sandbox ? 1 : 0 } : {}),
     ...(network !== undefined ? { network: JSON.stringify(network) } : {}),
     ...(auto_merge !== undefined ? { auto_merge: auto_merge ? 1 : 0 } : {}),

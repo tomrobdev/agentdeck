@@ -1,3 +1,4 @@
+import { NOTIFY_KINDS } from '../domain/notification.ts';
 import { DEFAULT_AUTO_MERGE_MAX_LINES, DEFAULT_AUTO_MERGE_SKIP } from '../domain/pull-request/auto-merge.ts';
 
 export const HELP = `agentdeck: always-on Claude Code task queue
@@ -17,7 +18,9 @@ Repos
   agentdeck repo set <repo> setup_cmd "<cmd>"     run in each worktree before claude ("" for none)
   agentdeck repo set <repo> pr_mode off|draft|ready  push and open a PR when a task is done
   agentdeck repo set <repo> merge_method squash|merge|rebase  how the app and \`agentdeck merge\` merge a PR (default squash)
-  agentdeck repo set <repo> auto_resolve on|off   start a conflict run on its own when a branch conflicts with the base (default on)
+  agentdeck repo set <repo> auto_resolve on|off   start a resolve run on its own when a branch conflicts with the base (default on)
+  agentdeck repo set <repo> auto_unblock on|off   start a short unblock run on its own when a task blocks: it retries the task
+                                                  with a note or leaves it blocked with a question; uses no attempt (default off)
   agentdeck repo set <repo> auto_merge on|off     merge a done task's PR on its own once checks and tests pass (default off;
                                                   planner proposals only when auto_approve is off)
   agentdeck repo set <repo> auto_merge_max_lines <n>  a PR changing more lines needs a person (default ${DEFAULT_AUTO_MERGE_MAX_LINES})
@@ -84,7 +87,7 @@ Daemon
   agentdeck status
   agentdeck settings              show concurrency, usage budget and notification settings
   agentdeck set <key> <value>     max_concurrent, five_hour_max, five_hour_soft, weekly_max, pace_slack (0..1),
-                                  notify_desktop (on|off), notify_events (done,blocked,failed,hold,paused,proposed), ntfy_topic, ntfy_server,
+                                  notify_desktop (on|off), notify_events (${NOTIFY_KINDS.join(',')}), ntfy_topic, ntfy_server,
                                   planner_enabled (on|off), planner_interval_hours, planner_max_tasks, planner_model,
                                   reload_on_change (on|off): restart onto new daemon/src code once nothing is running
   agentdeck stats [--repo r] [--since <date>] [--by week] [--json]  the pilot scorecard measures per repo: tasks done on

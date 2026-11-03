@@ -94,7 +94,7 @@ const toneName = computed(() => (props.status ? statusTone(props.status) : props
   color: var(--bg);
 }
 /* High contrast: every variant is an outline in the tone, on no fill. */
-:global(:root[data-theme='contrast']) .ui-chip {
+:root[data-theme='contrast'] .ui-chip {
   background: transparent;
   border-color: var(--tone);
   color: var(--tone);

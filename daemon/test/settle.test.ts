@@ -11,7 +11,8 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 const { openDb } = await import('../src/db/index.ts');
 const { github } = await import('../src/adapters/github.ts');
 const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
-const { refreshPrStates, closePullRequest } = await import('../src/application/pull-request/pull-requests.ts');
+const { closePullRequest } = await import('../src/application/pull-request/merge.ts');
+const { refreshPrStates } = await import('../src/application/pull-request/refresh.ts');
 const { openPullRequest } = await import('../src/application/pull-request/open-pr.ts');
 const { parsePrDetails } = await import('../src/domain/pull-request/merge.ts');
 const { finalNotification } = await import('../src/domain/notification.ts');
@@ -22,7 +23,12 @@ function setup(pr_mode: 'off' | 'ready' = 'off') {
   const repo = db.addRepo({ name: 'demo', path: '/tmp/demo', base_branch: 'main' });
   db.raw.prepare('UPDATE repos SET pr_mode = ? WHERE id = ?').run(pr_mode, repo.id);
   const add = (after_task: number | null = null) =>
-    db.addTask({ repo_id: repo.id, title: `task ${after_task ?? 'a'}`, prompt: 'p', after_task });
+    db.addTask({
+      repo_id: repo.id,
+      title: `task ${after_task ?? 'a'}`,
+      prompt: 'p',
+      links: after_task == null ? [] : [{ on: after_task, kind: 'builds_on' }],
+    });
   return { db, repo, add };
 }
 

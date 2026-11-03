@@ -1,7 +1,10 @@
 // The rest of the pilot scorecard (docs/pilot/scorecard.md), computed from plain rows: interventions, time queued,
 // running and in review, quota spent and PRs green on CI. Pure: no I/O. The first-run measures are in stats.ts.
-import { INSTALL_NOTE } from '../task/needs.ts';
-import { type Measures, type StatRun, measure, minutesBetween } from './stats.ts';
+import { type QuotaSample, quotaSpends } from '../usage/quota.ts';
+import { isAutoMergeReason } from '../task/history.ts';
+import { median, minutesBetween, sqliteMs, weekOf } from '../time.ts';
+import { type InterventionCount, INTERVENTION_KINDS, countInterventions } from './interventions.ts';
+import { num, pct, table } from './report-text.ts';
 
 /**
  * The pilot's targets for the measures that have one (docs/pilot/scorecard.md): first-run success at least this share,
@@ -40,99 +43,6 @@ export interface ScorecardTask extends Omit<ScorecardTaskRow, 'auto_merge' | 're
    * setting existed must not count), never (null) otherwise.
    */
   auto_merge_from: string | null;
-}
-
-/** A reading of the 7-day window, as kept in `usage_samples`: utilization is 0..1. */
-export interface QuotaSample {
-  utilization: number;
-  resets_at: number;
-  observed_at: string;
-}
-
-/**
- * An intervention is something a person did that changed how a task turned out, which the pilot wants to bring to
- * zero. Each kind says why it counts. Approving or rejecting a proposal is how the planner is meant to be used, and
- * a plain retry (no note) only asks again, so neither is here.
- */
-export interface Intervention {
-  kind: string;
-  why: string;
-  is(e: ScorecardEvent, task: ScorecardTask): boolean;
-}
-
-const retried = (e: ScorecardEvent) => e.type === 'retry';
-const noted = (e: ScorecardEvent) => (e.reason?.trim() ?? '') !== '';
-const installed = (e: ScorecardEvent) => retried(e) && (e.reason ?? '').startsWith(INSTALL_NOTE);
-
-export const INTERVENTIONS: Intervention[] = [
-  {
-    kind: 'retry_with_note',
-    why: 'the person told the worker what to do differently, so the first attempt was not enough',
-    is: (e) => retried(e) && noted(e) && !installed(e),
-  },
-  {
-    kind: 'mark_done',
-    why: 'the person finished or landed the work themselves',
-    is: (e) => e.type === 'mark_done',
-  },
-  {
-    kind: 'install_needs',
-    why: 'the worker could not install packages itself and a person did it for it (recorded as a retry with that note)',
-    is: installed,
-  },
-  {
-    kind: 'cancel',
-    why: 'the person stopped work that was going wrong or no longer wanted',
-    is: (e) => e.type === 'cancel',
-  },
-  {
-    kind: 'edit',
-    why: 'the person rewrote a task that was waiting or stuck to get a different outcome (edits to a proposal or a failed task are left out)',
-    is: (e) => e.type === 'edit' && (e.from_status === 'queued' || e.from_status === 'blocked'),
-  },
-  {
-    kind: 'manual_merge',
-    why: 'auto-merge was on, yet the person merged the PR by hand',
-    is: (e, task) =>
-      e.type === 'merge' && task.auto_merge_from !== null && e.at >= task.auto_merge_from && !(e.reason ?? '').startsWith('auto-merged'),
-  },
-];
-
-export const INTERVENTION_KINDS = INTERVENTIONS.map((i) => i.kind);
-
-/** The intervention kind of an event, or null if a person's event of that kind does not count. */
-export function interventionKind(e: ScorecardEvent, task: ScorecardTask): string | null {
-  return INTERVENTIONS.find((i) => i.is(e, task))?.kind ?? null;
-}
-
-export interface InterventionCount {
-  total: number;
-  /** Distinct tasks that had at least one. */
-  tasks: number;
-  by_kind: Record<string, number>;
-}
-
-export function countInterventions(events: ScorecardEvent[], tasks: Map<number, ScorecardTask>): InterventionCount {
-  const by_kind = Object.fromEntries(INTERVENTION_KINDS.map((k) => [k, 0]));
-  const hit = new Set<number>();
-  let total = 0;
-  for (const e of events) {
-    const task = tasks.get(e.task_id);
-    const kind = task ? interventionKind(e, task) : null;
-    if (!kind) continue;
-    by_kind[kind]++;
-    total++;
-    hit.add(e.task_id);
-  }
-  return { total, tasks: hit.size, by_kind };
-}
-
-/** The middle value (the mean of the two middle ones for an even count), or null for none. */
-export function median(values: number[]): number | null {
-  if (!values.length) return null;
-  const s = [...values].sort((a, b) => a - b);
-  const mid = s.length >> 1;
-  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
 }
 
 export interface CycleMinutes {
@@ -193,44 +103,6 @@ export function summarizeChecks(tasks: ScorecardTask[]): ChecksSummary {
   return { recorded: verdicts.length, green, rate: verdicts.length ? green / verdicts.length : null };
 }
 
-/** The Monday (UTC) of the week a sqlite stamp falls in, as "YYYY-MM-DD". "" for an unreadable stamp. */
-export function weekOf(stamp: string): string {
-  const t = Date.parse(`${stamp.replace(' ', 'T')}Z`);
-  if (!Number.isFinite(t)) return '';
-  const day = new Date(t);
-  const sinceMonday = (day.getUTCDay() + 6) % 7;
-  return new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate() - sinceMonday)).toISOString().slice(0, 10);
-}
-
-/** The first-run measures of each week with work runs, oldest first. A task goes by the week its first run began. */
-export function measureByWeek(rows: StatRun[]): { week: string; measures: Measures }[] {
-  const firstStart = new Map<number, string>();
-  for (const r of rows) {
-    const seen = firstStart.get(r.task_id);
-    if (seen === undefined || r.started_at < seen) firstStart.set(r.task_id, r.started_at);
-  }
-  const groups = new Map<string, StatRun[]>();
-  for (const r of rows) {
-    const week = weekOf(firstStart.get(r.task_id) ?? r.started_at);
-    if (week) groups.set(week, [...(groups.get(week) ?? []), r]);
-  }
-  return [...groups].map(([week, group]) => ({ week, measures: measure(group) })).sort((a, b) => a.week.localeCompare(b.week));
-}
-
-/**
- * Percentage points of the 7-day window spent between readings, each with the time it was seen. A reading higher than the
- * one before adds the difference. A lower one means the window reset, so everything it shows was spent since. The first
- * reading is only a baseline: what came before it was not seen.
- */
-export function quotaSpends(samples: QuotaSample[]): { at: string; points: number }[] {
-  return samples.flatMap((s, i) => {
-    if (i === 0) return [];
-    const before = samples[i - 1].utilization;
-    const points = (s.utilization >= before ? s.utilization - before : s.utilization) * 100;
-    return points > 0 ? [{ at: s.observed_at, points }] : [];
-  });
-}
-
 export interface ScorecardMeasures {
   interventions: InterventionCount;
   /** Tasks the three medians below are over. */
@@ -266,7 +138,7 @@ export function scorecardMeasures(
 export function resolveAutoMerge(rows: ScorecardTaskRow[], events: ScorecardEvent[]): ScorecardTask[] {
   const firstAuto = new Map<number, string>();
   for (const e of events) {
-    if (e.type !== 'merge' || !(e.reason ?? '').startsWith('auto-merged')) continue;
+    if (e.type !== 'merge' || !isAutoMergeReason(e.reason)) continue;
     const first = firstAuto.get(e.repo_id);
     if (first === undefined || e.at < first) firstAuto.set(e.repo_id, e.at);
   }
@@ -367,24 +239,8 @@ export function parseSince(text: string): string | null {
   const m = text.trim().match(/^(\d{4}-\d{2}-\d{2})(?:[ T](\d{2}:\d{2})(?::(\d{2}))?)?$/);
   if (!m) return null;
   const stamp = `${m[1]} ${m[2] ?? '00:00'}:${m[3] ?? '00'}`;
-  const t = new Date(`${stamp.replace(' ', 'T')}Z`);
+  const t = new Date(sqliteMs(stamp));
   return Number.isNaN(t.getTime()) || t.toISOString().slice(0, 10) !== m[1] ? null : stamp;
-}
-
-const num = (v: number | null, digits = 1) => (v === null ? '–' : v.toFixed(digits));
-const pct = (v: number | null) => (v === null ? '–' : `${(v * 100).toFixed(0)}%`);
-
-function table(head: string[], rows: string[][]): string {
-  const lines = [head, ...rows];
-  const widths = head.map((_, i) => Math.max(...lines.map((l) => l[i].length)));
-  return lines
-    .map((l) =>
-      l
-        .map((c, i) => (i === 0 ? c.padEnd(widths[i]) : c.padStart(widths[i])))
-        .join('  ')
-        .trimEnd(),
-    )
-    .join('\n');
 }
 
 const cells = (name: string, m: ScorecardMeasures, quota?: number): string[] => [

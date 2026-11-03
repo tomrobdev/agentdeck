@@ -1,8 +1,11 @@
 // How the repo editor and the settings form map to and from what the API sends. Pure, so the
 // panels only hold the form's state.
 import type { MergeMethod, NotifyKind, RepoDetail, RepoPatch, Settings, SettingsPatch } from '../api';
-import { DEFAULT_AUTO_MERGE_MAX_LINES, DEFAULT_AUTO_MERGE_SKIP } from '../../../daemon/src/domain/pull-request/auto-merge.ts';
-import { parseTextList } from '../../../daemon/src/domain/text.ts';
+import { DEFAULT_AUTO_MERGE_SKIP } from '../../../daemon/src/domain/pull-request/auto-merge.ts';
+import { NOTIFY_KINDS } from '../../../daemon/src/domain/notification.ts';
+import { parseTextList, textList } from '../../../daemon/src/domain/text.ts';
+
+export { NOTIFY_KINDS };
 
 export type RepoForm = {
   goals: string;
@@ -10,6 +13,7 @@ export type RepoForm = {
   testCmd: string;
   mergeMethod: MergeMethod;
   autoResolve: boolean;
+  autoUnblock: boolean;
   autoMerge: boolean;
   autoMergeMaxLines: number;
   /** Path prefixes, comma-separated. */
@@ -19,9 +23,6 @@ export type RepoForm = {
   network: string;
 };
 
-/** A comma-separated field as a list. */
-const splitList = (text: string) => text.split(/[\s,]+/).filter(Boolean);
-
 export function toRepoForm(d: RepoDetail): RepoForm {
   return {
     goals: d.goals,
@@ -29,8 +30,9 @@ export function toRepoForm(d: RepoDetail): RepoForm {
     testCmd: d.test_cmd ?? '',
     mergeMethod: d.merge_method,
     autoResolve: !!d.auto_resolve,
+    autoUnblock: !!d.auto_unblock,
     autoMerge: !!d.auto_merge,
-    autoMergeMaxLines: d.auto_merge_max_lines ?? DEFAULT_AUTO_MERGE_MAX_LINES,
+    autoMergeMaxLines: d.auto_merge_max_lines,
     autoMergeSkip: parseTextList(d.auto_merge_skip, DEFAULT_AUTO_MERGE_SKIP).join(', '),
     sandbox: !!d.sandbox,
     network: parseTextList(d.network).join(', '),
@@ -44,11 +46,12 @@ export function toRepoPatch(f: RepoForm): RepoPatch {
     test_cmd: f.testCmd,
     merge_method: f.mergeMethod,
     auto_resolve: f.autoResolve,
+    auto_unblock: f.autoUnblock,
     auto_merge: f.autoMerge,
     auto_merge_max_lines: f.autoMergeMaxLines,
-    auto_merge_skip: splitList(f.autoMergeSkip),
+    auto_merge_skip: textList(f.autoMergeSkip),
     sandbox: f.sandbox,
-    network: splitList(f.network),
+    network: textList(f.network),
   };
 }
 

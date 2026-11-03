@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { type Changes, type Run, type TaskDetail, type TaskEventRow, ago, fmtTokens, runDuration, totalTokens } from '../../api';
+import { type PersonEventText, describeEvent } from '../../../../daemon/src/domain/task/event-text.ts';
+import { type Changes, type Run, type TaskDetail, type TaskEventRow, ago, fmtTokens, runDuration, runLabel, totalTokens } from '../../api';
 import Markdown from '../files/Markdown.vue';
 import DependenciesCard from './DependenciesCard.vue';
 import DocumentsCard from './DocumentsCard.vue';
@@ -17,36 +18,24 @@ const promptOpen = ref(false);
 const longPrompt = computed(() => props.task.prompt.length > 900 || props.task.prompt.split('\n').length > 18);
 
 type Item =
-  | { kind: 'event'; at: string; ev: TaskEventRow }
-  | { kind: 'created'; at: string }
-  | { kind: 'run'; at: string; run: Run; latest: boolean };
+  | { kind: 'event'; key: string; at: string; ev: TaskEventRow; said: PersonEventText; icon: string }
+  | { kind: 'created'; key: string; at: string }
+  | { kind: 'run'; key: string; at: string; run: Run; latest: boolean };
 
-const EVENT_TEXT: Record<string, (e: TaskEventRow) => string> = {
-  approve: () => 'approved the proposal',
-  reject: () => 'rejected the proposal',
-  retry: (e) => (e.reason ? 'requested changes' : 'queued another attempt'),
-  cancel: (e) => (e.to_status === 'cancel_requested' ? 'asked the run to stop' : 'cancelled the task'),
-  edit: (e) => (e.reason ? `edited the task (${e.reason})` : 'edited the task'),
-  merge: () => 'merged the pull request',
-  mark_done: () => 'marked done by hand',
-  pr_merged: () => 'PR merged on GitHub',
-  pr: (e) => (e.reason ? `pull request ${e.reason}` : 'pull request changed'),
-  sync: (e) => e.reason ?? 'brought the base branch into the branch',
-  plan_unfinished: (e) => e.reason ?? 'left linked plan steps unfinished',
-  environment_block: () => 'blocked by the environment; attempt given back',
-  conflict: () => 'could not resolve conflicts with the base branch; blocked',
-  rate_limited: () => 'hit the usage limit; back in the queue without using an attempt',
-  recover: (e) => (e.to_status === 'failed' ? 'failed after repeated daemon restarts' : 'requeued after a daemon restart'),
-};
+// The marker on the line for the events that have one of their own.
+const EVENT_ICON: Record<string, string> = { retry: '↻', approve: '✓', mark_done: '✓' };
 
 const items = computed<Item[]>(() => {
   const events = props.task.events ?? [];
   const out: Item[] = [];
   const created = events.find((e) => e.type === 'created');
-  out.push({ kind: 'created', at: created?.at ?? props.task.created_at });
-  for (const ev of events) if (EVENT_TEXT[ev.type]) out.push({ kind: 'event', at: ev.at, ev });
+  out.push({ kind: 'created', key: 'created', at: created?.at ?? props.task.created_at });
+  for (const ev of events) {
+    const said = describeEvent(ev, 'person');
+    if (said) out.push({ kind: 'event', key: `event-${ev.id}`, at: ev.at, ev, said, icon: EVENT_ICON[ev.type] ?? '•' });
+  }
   const last = props.task.runs.at(-1)?.id;
-  for (const run of props.task.runs) out.push({ kind: 'run', at: run.started_at, run, latest: run.id === last });
+  for (const run of props.task.runs) out.push({ kind: 'run', key: `run-${run.id}`, at: run.started_at, run, latest: run.id === last });
   return out.sort((a, b) => a.at.localeCompare(b.at));
 });
 
@@ -96,7 +85,7 @@ const when = 'ml-auto text-sm text-muted';
     />
 
     <ol class="my-0 ml-3 list-none border-l-2 border-border pl-2.5">
-      <li v-for="(it, i) in items" :key="i" :class="[item, it.kind === 'run' && outcomeClass(it.run)]">
+      <li v-for="it in items" :key="it.key" :class="[item, it.kind === 'run' && outcomeClass(it.run)]">
         <template v-if="it.kind === 'created'">
           <span :class="node">○</span>
           <span
@@ -105,21 +94,10 @@ const when = 'ml-auto text-sm text-muted';
           <span :class="when">{{ ago(it.at) }}</span>
         </template>
         <template v-else-if="it.kind === 'event'">
-          <span :class="node">{{ it.ev.type === 'retry' ? '↻' : it.ev.type === 'approve' || it.ev.type === 'mark_done' ? '✓' : '•' }}</span>
+          <span :class="node">{{ it.icon }}</span>
           <span>
-            {{ EVENT_TEXT[it.ev.type](it.ev) }}
-            <span
-              v-if="
-                it.ev.reason &&
-                it.ev.type !== 'sync' &&
-                it.ev.type !== 'pr' &&
-                it.ev.type !== 'plan_unfinished' &&
-                it.ev.type !== 'pr_merged'
-              "
-              class="text-muted"
-            >
-              · {{ it.ev.reason }}</span
-            >
+            {{ it.said.text }}
+            <span v-if="it.said.reason" class="text-muted"> · {{ it.said.reason }}</span>
           </span>
           <span :class="when">{{ ago(it.at) }}</span>
         </template>
@@ -127,7 +105,7 @@ const when = 'ml-auto text-sm text-muted';
           <div class="flex w-full flex-wrap items-baseline gap-1.5">
             <span :class="node" class="dot after:size-2.5 after:rounded-full after:bg-[var(--c,var(--running))]" />
             <button class="btn-ghost font-semibold hover:text-accent" @click="emit('run', it.run.id)">
-              {{ it.run.kind === 'resolve' ? 'Resolve conflicts' : `Run ${it.run.attempt}` }}
+              {{ runLabel(it.run) }}
             </button>
             <span class="font-medium text-[color:var(--c,var(--running))]">{{ it.run.outcome ?? 'running' }}</span>
             <span class="text-muted">

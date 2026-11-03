@@ -73,6 +73,8 @@ test('add repo and task, then read it back', async () => {
     list.map((t: any) => t.id),
     [task.id],
   );
+  assert.equal((await api('/api/tasks?status=nonsense')).status, 400);
+  assert.equal((await api(`/api/repos/${repo.id}/plan`, { method: 'POST', json: {} })).status, 404, 'the planner route is /propose');
 });
 
 test('rejects browser requests from other origins', async () => {
@@ -262,7 +264,7 @@ test('status reports which code the daemon runs, and restart waits while work ru
     const busy = await (await fetch(`${url}/api/daemon/restart`, { method: 'POST' })).json();
     assert.deepEqual(busy, { waiting: '1 planner run' });
     assert.equal(requested, 2);
-    db.finishPlannerRun(planner, 'ok', 0, null);
+    db.finishPlannerRun(planner, 'nothing', 0, null);
   } finally {
     server2.close();
   }

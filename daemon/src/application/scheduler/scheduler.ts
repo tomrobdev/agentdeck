@@ -10,9 +10,10 @@ import { notifyLater } from '../notifications.ts';
 import { proposeNow, plannerDue } from '../planner.ts';
 import { resolveConflicting } from '../sync.ts';
 import { autoMerge } from '../pull-request/auto-merge.ts';
-import { MERGE_REQUEST_POLL_MS, PR_REFRESH_MS, refreshPrStates } from '../pull-request/pull-requests.ts';
+import { MERGE_REQUEST_POLL_MS, PR_REFRESH_MS, refreshPrStates } from '../pull-request/refresh.ts';
 import { settle, settleRecovered } from '../task/settle.ts';
 import { runTask } from '../run/worker.ts';
+import { nextUnblockable, runUnblock } from '../run/unblock.ts';
 import type { Db } from '../../db/index.ts';
 import type { Activity, ReloadDecision } from '../../domain/daemon/restart.ts';
 
@@ -39,9 +40,10 @@ export class Scheduler {
   private readonly db: Db;
   private readonly opts: Required<Omit<SchedulerOptions, 'reload'>>;
   private readonly reload: SchedulerOptions['reload'];
-  /** Everything that takes a slot: task runs, and the syncs and conflict resolutions in `resolves`. */
+  /** Everything that takes a slot: task runs, the syncs and conflict resolutions in `resolves`, and the unblock runs in `unblocks`. */
   private readonly running = new Set<Promise<unknown>>();
   private readonly resolves = new Set<Promise<unknown>>();
+  private readonly unblocks = new Set<Promise<unknown>>();
   private timer: NodeJS.Timeout | undefined;
   private stopped = false;
   private drained: (() => void) | undefined;
@@ -138,7 +140,12 @@ export class Scheduler {
 
   /** What is going on that a restart would have to wait for. */
   private get activity(): Activity {
-    return { tasks: this.running.size - this.resolves.size, resolves: this.resolves.size, planner: this.proposingRuns };
+    return {
+      tasks: this.running.size - this.resolves.size - this.unblocks.size,
+      resolves: this.resolves.size,
+      unblocks: this.unblocks.size,
+      planner: this.proposingRuns,
+    };
   }
 
   private schedule(): void {
@@ -179,6 +186,7 @@ export class Scheduler {
           });
         this.running.add(p);
       }
+      this.maybeUnblock(); // after the claims: queued work comes first
       if (this.opts.autoPlan && !this.proposing && this.gate().free > 0) this.maybePropose(); // a claim above took a slot: ask again
     }
     this.maybeRefreshPrs();
@@ -238,6 +246,28 @@ export class Scheduler {
         this.tick();
       });
     this.holdResolve(p);
+  }
+
+  /**
+   * Start unblock runs for blocked tasks whose repo has auto_unblock on (`nextUnblockable`), as far as the free slots go.
+   * Each takes a slot until it ends, and ticks when it does: a retried task can be claimed at once.
+   */
+  private maybeUnblock(): void {
+    for (let room = this.gate().free; room > 0; room--) {
+      const task = nextUnblockable(this.db);
+      if (!task) return;
+      this.opts.log(`task ${task.id}: unblock run: reading why it blocked`);
+      const p: Promise<unknown> = runUnblock(this.db, task)
+        .then((r) => this.opts.log(`task ${task.id}: unblock run: ${r.outcome}${r.reason ? ` (${r.reason})` : ''}`))
+        .catch((err) => this.opts.log(`task ${task.id}: unblock run crashed: ${err?.stack ?? err}`))
+        .finally(() => {
+          this.running.delete(p);
+          this.unblocks.delete(p);
+          this.tick();
+        });
+      this.running.add(p);
+      this.unblocks.add(p);
+    }
   }
 
   /** Run the planner for the first repo whose queue has run dry. One planner at a time. */

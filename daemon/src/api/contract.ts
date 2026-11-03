@@ -1,6 +1,5 @@
 // The HTTP API's request and response types: what the dashboard imports (app/src/api/types.ts) and what contract-check.ts
 // holds the use cases to. It imports nothing, so the app can read it without the daemon's modules or node types.
-// Fields marked "missing from a daemon that predates it" are optional so a newer dashboard still reads an older daemon.
 
 // ---- Vocabulary
 
@@ -30,18 +29,20 @@ export interface Repo {
   merge_method: MergeMethod;
   /** 1 = the daemon starts a resolve run on its own when a branch conflicts with the base. */
   auto_resolve: number;
+  /** 1 = the daemon starts an unblock run on its own when a task blocks (off by default). Missing from a daemon that predates it. */
+  auto_unblock?: number;
   /** 1 = the agent's shell commands run in Claude Code's sandbox. */
   sandbox: number;
   /** JSON array of hosts sandboxed commands may reach. */
   network: string;
   /** When the repo was archived; null while it is active. */
   archived_at: string | null;
-  /** 1 = the daemon merges a done task's PR on its own once it passes the auto-merge check. Missing from a daemon that predates it. */
-  auto_merge?: number;
-  /** A PR changing more lines needs a person. Missing from a daemon that predates it. */
-  auto_merge_max_lines?: number;
-  /** JSON array of path prefixes; a PR touching one needs a person. Missing from a daemon that predates it. */
-  auto_merge_skip?: string;
+  /** 1 = the daemon merges a done task's PR on its own once it passes the auto-merge check. */
+  auto_merge: number;
+  /** A PR changing more lines needs a person. */
+  auto_merge_max_lines: number;
+  /** JSON array of path prefixes; a PR touching one needs a person. */
+  auto_merge_skip: string;
   created_at: string;
 }
 
@@ -49,7 +50,7 @@ export interface PlannerRun {
   id: number;
   started_at: string;
   ended_at: string | null;
-  outcome: string | null;
+  outcome: 'proposed' | 'nothing' | 'failed' | 'rate_limited' | null;
   proposed: number;
   note: string | null;
 }
@@ -77,6 +78,7 @@ export interface RepoPatch {
   pr_mode?: PrMode;
   merge_method?: MergeMethod;
   auto_resolve?: boolean;
+  auto_unblock?: boolean;
   sandbox?: boolean;
   network?: string[];
   auto_merge?: boolean;
@@ -158,7 +160,7 @@ export interface LiveView {
 
 /** A sync of a done task under way. `since` is null for a clean sync (no claude), else the resolve run's start, UTC `YYYY-MM-DD HH:MM:SS`. */
 export interface SyncView {
-  /** The base branch being brought in. */
+  /** The base branch being synced with. */
   base: string;
   since: string | null;
   /** A resolve run is settling conflicts. */
@@ -201,50 +203,51 @@ export interface TaskSummary {
   branch: string | null;
   worktree: string | null;
   stop_reason: string | null;
-  /** manual | planner */
-  source: string;
+  source: 'manual' | 'planner';
   pr_url: string | null;
   pr_state: PrState | null;
   /** How the PR was merged from the app. */
   merge_method: MergeMethod | null;
-  /** The task whose plan this one follows (itself when its own plan was given with it); null follows its own plan, if any. Missing from a daemon that predates it. */
-  plan_task?: number | null;
-  /** JSON array of that plan's step ids; null means every unfinished step. Missing from a daemon that predates it. */
+  /** The task whose plan this one follows (itself when its own plan was given with it); null follows its own plan, if any. */
+  plan_task: number | null;
+  /** JSON array of that plan's step ids; null means every unfinished step. */
   plan_steps: string | null;
-  /** JSON `{ kind: 'deps' | 'host' | 'edit', items: string[] }`: what the worker said it needs when it blocked. Missing from a daemon that predates it. */
-  needs?: string | null;
-  /** 'person' when a person marked the task done by hand. Missing from a daemon that predates it. */
-  done_by?: 'person' | null;
-  /** 1 or 0 overrides the repo's auto_merge; null follows it. Missing from a daemon that predates it. */
-  auto_merge?: number | null;
-  /** Whether the PR will merge on its own and why not. Missing from a daemon that predates it; null when the repo is gone. */
-  auto_merge_view?: AutoMergeView | null;
-  /** The person's merge request, while the daemon is to merge the PR when it is ready; null with none. Missing from a daemon that predates it. */
-  merge_request?: MergeRequestView | null;
+  /** JSON `{ kind: 'deps' | 'host' | 'edit', items: string[] }`: what the worker said it needs when it blocked. */
+  needs: string | null;
+  /** JSON `{ question: string, options: string[] }`: what an unblock run asked a person about the block. */
+  question: string | null;
+  /** 'person' when a person marked the task done by hand. */
+  done_by: 'person' | null;
+  /** 1 or 0 overrides the repo's auto_merge; null follows it. */
+  auto_merge: number | null;
+  /** Whether the PR will merge on its own and why not. Null when the repo is gone. */
+  auto_merge_view: AutoMergeView | null;
+  /** The person's merge request, while the daemon is to merge the PR when it is ready; null with none. */
+  merge_request: MergeRequestView | null;
   /**
    * The open PR conflicts with the base branch, as the last PR check found it (the merge request's check, else auto-merge's;
-   * false when neither stored one). Missing from a daemon that predates it.
+   * false when neither stored one).
    */
-  conflicting?: boolean;
+  conflicting: boolean;
   /**
    * Set for a queued task waiting on builds-on links: `on` is every task it builds on still on its way, or, with `stuck`
    * (why it won't get there on its own), the one task it is stuck on.
    */
   waiting: { on: number[]; stuck: string | null } | null;
-  /** For a task in review: the queued tasks merging its PR lets start. Missing from a daemon that predates it; read it as empty. */
-  unblocks?: number[];
-  /** What this task depends on, with where each link stands. Missing from a daemon that predates it. */
-  links?: TaskLink[];
-  /** The tasks that depend on this one. Missing from a daemon that predates it. */
-  dependents?: { id: number; kind: LinkKind }[];
-  /** A done task whose latest run left linked plan steps unfinished. Missing from a daemon that predates it. */
-  plan_unfinished?: boolean;
-  /** For a running task: when its run started, turns so far and the last tool call. Missing from a daemon that predates it. */
-  live?: LiveView | null;
-  /** For a done task: the sync under way, whoever started it. Null when none is. Missing from a daemon that predates it. */
-  sync?: SyncView | null;
-  /** The open PR's checks; null when there is no open PR or it has no checks. Missing from a daemon that predates it. */
-  checks?: ChecksSummary | null;
+  /** For a task in review: the queued tasks merging its PR lets start. */
+  unblocks: number[];
+  /** What this task depends on, with where each link stands. */
+  links: TaskLink[];
+  /** The tasks that depend on this one. */
+  dependents: { id: number; kind: LinkKind }[];
+  /** A done task whose latest run left linked plan steps unfinished. */
+  plan_unfinished: boolean;
+  /** For a running task: when its run started, turns so far and the last tool call. */
+  live: LiveView | null;
+  /** For a done task: the sync under way, whoever started it. Null when none is. */
+  sync: SyncView | null;
+  /** The open PR's checks; null when there is no open PR or it has no checks. */
+  checks: ChecksSummary | null;
   /** What a queued task waits for; null once it waits for nothing (or it isn't queued). */
   wait: StartWait | null;
   created_at: string;
@@ -257,13 +260,13 @@ export interface Task extends TaskSummary {
 
 export interface Run {
   id: number;
-  /** A resolve run merges the base branch into the task's branch and uses no attempt. */
-  kind: 'work' | 'resolve';
+  /** A resolve run merges the base branch into the task's branch, an unblock run reads why a blocked task stopped; neither uses an attempt. */
+  kind: 'work' | 'resolve' | 'unblock';
   /** A resolve run carries the attempt it ran beside, so pick runs by id. */
   attempt: number;
   started_at: string;
   ended_at: string | null;
-  outcome: string | null;
+  outcome: 'done' | 'blocked' | 'failed' | 'cancelled' | 'rate_limited' | 'interrupted' | null;
   num_turns: number | null;
   input_tokens: number;
   output_tokens: number;
@@ -286,6 +289,7 @@ export interface TaskEventRow {
     | 'sync'
     | 'plan_unfinished'
     | 'environment_block'
+    | 'unblock_ask'
     | 'claim'
     | 'finish'
     | 'rate_limited'
@@ -294,6 +298,7 @@ export interface TaskEventRow {
     | 'approve'
     | 'reject'
     | 'retry'
+    | 'unblock_retry'
     | 'mark_done'
     | 'pr_merged'
     | 'recover';
@@ -330,8 +335,8 @@ export interface TaskPlan {
 }
 
 export interface TaskDetail extends Task {
-  /** The PR's latest checks, one by one, and when they were read; null when none were read. Missing from a daemon that predates it. */
-  check_list?: { read_at: string; checks: PrCheck[] } | null;
+  /** The PR's latest checks, one by one, and when they were read; null when none were read. */
+  check_list: { read_at: string; checks: PrCheck[] } | null;
   runs: Run[];
   events: TaskEventRow[];
   plans: TaskPlan[];
@@ -479,10 +484,12 @@ export interface MergePreview {
   conflicting: boolean;
   /** Queued tasks that merging this one lets start (one still waiting on another task too is left out). */
   unblocks: { id: number; title: string }[];
-  /** Whether the daemon will merge it on its own and why not yet; null when auto-merge is off. Missing from a daemon that predates it. */
-  auto_merge?: AutoMergeCheck | null;
-  /** What a merge request would do now: `merge` as asked, `wait` for the PR to be ready, `never` (a person must act). Missing from a daemon that predates it. */
-  request?: AutoMergeCheck;
+  /** Whether the daemon will merge it on its own and why not yet; null when auto-merge is off. */
+  auto_merge: AutoMergeCheck | null;
+  /** What a merge request would do now: `merge` as asked, `wait` for the PR to be ready, `never` (a person must act). */
+  request: AutoMergeCheck;
+  /** Whether the dialog merges now (failing checks or failed tests, on the person's say-so) instead of asking for a merge request. */
+  merge_now: boolean;
 }
 
 /** `merge`: the daemon merges it on its next PR refresh. `wait`: something that can still change on its own. `never`: it needs a person. */
@@ -734,8 +741,8 @@ export interface DaemonState {
 }
 
 export interface Status {
-  /** The code the daemon is running. Missing from a daemon that predates it; `pid` is missing from one that predates that. */
-  daemon?: { commit: string | null; started_at: string; pid?: number };
+  /** The code the daemon is running. */
+  daemon: { commit: string | null; started_at: string; pid: number };
   paused: boolean;
   rate_limited_until: number | null;
   running: number;
@@ -750,7 +757,7 @@ export interface Status {
   /** What every queued task waits for, if anything. */
   wait: QueueWait | null;
   paused_repos: { id: number; name: string; reason: string; queued: number }[];
-  /** The planner runs under way, one per unfinished run; `started_at` is UTC `YYYY-MM-DD HH:MM:SS`. Missing from a daemon that predates it. */
+  /** The planner runs under way, one per unfinished run; `started_at` is UTC `YYYY-MM-DD HH:MM:SS`. */
   planning?: { id: number; repo_id: number; repo: string; started_at: string }[];
 }
 

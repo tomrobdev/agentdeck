@@ -13,6 +13,7 @@ import type {
   FileContent,
   FilePatch,
   FileRef,
+  MarkDoneRequest,
   MergePreview,
   MergeRequest,
   MergeResult,
@@ -29,10 +30,13 @@ import type {
   RepoPatch,
   RequestMergeRequest,
   RequestMergeResult,
+  RequestMergesRequest,
   RequestMergesResult,
   RestartNowResult,
   RestartResult,
+  RetryRequest,
   Review,
+  ReviewPatch,
   ServiceStatus,
   SyncResult,
   Settings,
@@ -47,6 +51,7 @@ import type {
   TestNotifyResult,
   TreeListing,
 } from './types.ts';
+import type { PersonEvent } from '../../../daemon/src/domain/task/lifecycle.ts';
 
 export const API_BASE: string = import.meta.env.VITE_AGENTDECK_API ?? 'http://127.0.0.1:4317';
 
@@ -88,7 +93,7 @@ export const api = {
   addRepo: (r: NewRepo) => call<Repo>('/api/repos', { method: 'POST', json: r }),
   repo: (id: number) => call<RepoDetail>(`/api/repos/${id}`),
   updateRepo: (id: number, patch: RepoPatch) => call<RepoDetail>(`/api/repos/${id}`, { method: 'POST', json: patch }),
-  propose: (id: number) => call<ProposalResult>(`/api/repos/${id}/plan`, { method: 'POST' }),
+  propose: (id: number) => call<ProposalResult>(`/api/repos/${id}/propose`, { method: 'POST' }),
   doctor: (id: number) => call<DoctorReport>(`/api/repos/${id}/doctor`, { method: 'POST' }),
   resumeRepo: (id: number) => call<Repo>(`/api/repos/${id}/resume`, { method: 'POST' }),
   archivedRepos: () => call<Repo[]>('/api/repos?archived=1'),
@@ -109,9 +114,11 @@ export const api = {
   unlinkTask: (id: number, on: number) => call<TaskDetail>(`/api/tasks/${id}/links/${on}`, { method: 'DELETE' }),
   cancel: (id: number) => call<CancelResult>(`/api/tasks/${id}/cancel`, { method: 'POST' }),
   /** `note` is "request changes": kept on the timeline and put first in the next run's prompt. */
-  retry: (id: number, note?: string) => call<TaskDetail>(`/api/tasks/${id}/retry`, { method: 'POST', json: note ? { note } : {} }),
+  retry: (id: number, note?: string) =>
+    call<TaskDetail>(`/api/tasks/${id}/retry`, { method: 'POST', json: (note ? { note } : {}) satisfies RetryRequest }),
   /** A person finished a blocked or failed task themselves; `note` is kept on the timeline. */
-  markDone: (id: number, note?: string) => call<TaskDetail>(`/api/tasks/${id}/done`, { method: 'POST', json: note ? { note } : {} }),
+  markDone: (id: number, note?: string) =>
+    call<TaskDetail>(`/api/tasks/${id}/done`, { method: 'POST', json: (note ? { note } : {}) satisfies MarkDoneRequest }),
   /** Install the packages a blocked task asked for (NEEDS deps) on its branch, then retry it. */
   installNeeds: (id: number) => call<TaskDetail>(`/api/tasks/${id}/install-needs`, { method: 'POST' }),
   closePr: (id: number) => call<TaskDetail>(`/api/tasks/${id}/close-pr`, { method: 'POST' }),
@@ -124,12 +131,12 @@ export const api = {
   requestMerge: (id: number, body: RequestMergeRequest = {}) =>
     call<RequestMergeResult>(`/api/tasks/${id}/merge-request`, { method: 'POST', json: body }),
   /** Request these tasks' merges, each with its own method; the ones it could not request come back with why. */
-  requestMerges: (ids: number[]) => call<RequestMergesResult>('/api/tasks/merge-requests', { method: 'POST', json: { ids } }),
+  requestMerges: (ids: number[]) =>
+    call<RequestMergesResult>('/api/tasks/merge-requests', { method: 'POST', json: { ids } satisfies RequestMergesRequest }),
+  /** Drop the task's merge request; the PR stays open. */
   cancelMergeRequest: (id: number) => call<CancelMergeRequestResult>(`/api/tasks/${id}/merge-request`, { method: 'DELETE' }),
   /** Let the daemon merge the task's PR on its own (true), not (false), or follow the repo (null). */
   autoMerge: (id: number, body: AutoMergeRequest) => call<AutoMergeResult>(`/api/tasks/${id}/auto-merge`, { method: 'POST', json: body }),
-  /** Drop the task's merge request; the PR stays open. */
-  cancelMerge: (id: number) => call<CancelMergeRequestResult>(`/api/tasks/${id}/merge-request`, { method: 'DELETE' }),
   /** Merge the base branch into the task's branch; a conflict starts a claude run, so this can take minutes. */
   sync: (id: number) => call<SyncResult>(`/api/tasks/${id}/sync`, { method: 'POST' }),
   changes: (id: number) => call<Changes>(`/api/tasks/${id}/changes`),
@@ -140,7 +147,7 @@ export const api = {
   /** The task's draft review, started if it has none. */
   startReview: (id: number) => call<Review>(`/api/tasks/${id}/reviews`, { method: 'POST' }),
   /** Change a draft's overall note. */
-  editReview: (id: number, body: string) => call<Review>(`/api/reviews/${id}`, { method: 'POST', json: { body } }),
+  editReview: (id: number, body: string) => call<Review>(`/api/reviews/${id}`, { method: 'POST', json: { body } satisfies ReviewPatch }),
   addComment: (reviewId: number, c: NewReviewComment) => call<Review>(`/api/reviews/${reviewId}/comments`, { method: 'POST', json: c }),
   deleteComment: (id: number) => call<Review>(`/api/review-comments/${id}`, { method: 'DELETE' }),
   /** Request changes also retries the task with the review as the reason. */
@@ -149,4 +156,13 @@ export const api = {
   reopenComment: (id: number) => call<Review>(`/api/review-comments/${id}/reopen`, { method: 'POST' }),
   planHtml: (id: number, planId: number) => call<PlanHtml>(`/api/tasks/${id}/plans/${planId}`),
   logUrl: (id: number, runId?: number) => `${API_BASE}/api/tasks/${id}/log${runId ? `?run=${runId}` : ''}`,
+};
+
+/** The call behind each thing a person may do to a task, for the row buttons, the hotkeys, the palette and the bulk bar. */
+export const PERSON_CALLS: Record<PersonEvent, (id: number) => Promise<unknown>> = {
+  approve: api.approve,
+  reject: api.reject,
+  retry: (id) => api.retry(id),
+  cancel: api.cancel,
+  mark_done: (id) => api.markDone(id),
 };

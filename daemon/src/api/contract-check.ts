@@ -1,7 +1,7 @@
-// Each use case's return type must be assignable to the contract type the dashboard reads, and each request type the
-// dashboard sends to the parameter the use case takes, so a change on one side that the other doesn't follow fails
-// `pnpm typecheck`. The contract may name fewer fields than the use case returns.
-import type { Db } from '../db/index.ts';
+// Each route names the contract type it answers with (route<T> in http.ts), so a use case whose return type drifts from
+// what the dashboard reads fails `pnpm typecheck` there. This file checks the rest: each request type the dashboard sends
+// must fit the parameter the use case takes, and the parts of a response checked on their own so a drift is reported
+// where it is. The contract may name fewer fields than the use case returns.
 import type { LogEntry as DomainLogEntry } from '../domain/run/log.ts';
 import * as actions from '../application/actions.ts';
 import type * as C from './contract.ts';
@@ -12,54 +12,8 @@ type Out<F extends (...args: never[]) => unknown> = Awaited<ReturnType<F>>;
 type In<F extends (...args: never[]) => unknown, N extends number> = Parameters<F>[N];
 export const check = <_T extends true>(): true => true;
 type Fits<Actual, Contract> = [Actual] extends [Contract] ? true : false;
-/** Without the `task` that the route adds. */
-type WithoutTask<T> = Omit<T, 'task'>;
 
-// Responses
-check<Fits<Out<typeof actions.status>, C.Status>>();
-check<Fits<Out<typeof actions.daemonState>, C.DaemonState>>();
-check<Fits<Out<typeof actions.restartDaemon>, C.RestartResult>>();
-check<Fits<Out<typeof actions.daemonReport>, C.DaemonHealth>>();
-check<Fits<Out<typeof actions.restartNow>, C.RestartNowResult>>();
-check<Fits<Out<typeof actions.serviceStatus>, C.ServiceStatus>>();
-check<Fits<Out<typeof actions.pilotStats>, C.Stats>>();
-check<Fits<Out<typeof actions.getSettings>, C.Settings>>();
-check<Fits<Out<typeof actions.updateSettings>, C.Settings>>();
-check<Fits<ReturnType<Db['listRepos']>, C.Repo[]>>();
-check<Fits<Out<typeof actions.addRepo>, C.Repo>>();
-check<Fits<Out<typeof actions.repoDetail>, C.RepoDetail>>();
-check<Fits<Out<typeof actions.updateRepo>, C.RepoDetail>>();
-check<Fits<Out<typeof actions.resumeRepo>, C.Repo>>();
-check<Fits<Out<typeof actions.archiveRepo>, C.Repo>>();
-check<Fits<Out<typeof actions.unarchiveRepo>, C.Repo>>();
-check<Fits<Out<typeof actions.doctorRepo>, C.DoctorReport>>();
-check<Fits<Out<typeof actions.repoDeletionPreview>, C.RepoDeletion>>();
-check<Fits<Out<typeof actions.deleteRepo>, C.RepoDeleted>>();
-check<Fits<Out<typeof actions.proposeNow>, C.ProposalResult>>();
-check<Fits<Out<typeof actions.taskViews>[number], C.TaskSummary>>();
-check<Fits<Out<typeof actions.taskDetail>, C.TaskDetail>>();
-check<Fits<Out<typeof actions.cancelTask>, C.CancelResult['result']>>();
-check<Fits<Out<typeof actions.mergePreview>, C.MergePreview>>();
-check<Fits<Out<typeof actions.mergeTask>, WithoutTask<C.MergeResult>>>();
-check<Fits<Out<typeof actions.setAutoMerge>, WithoutTask<C.AutoMergeResult>>>();
-check<Fits<Out<typeof actions.requestMerge>, WithoutTask<C.RequestMergeResult>>>();
-check<Fits<Out<typeof actions.cancelMergeRequest>, WithoutTask<C.CancelMergeRequestResult>>>();
-check<Fits<Out<typeof actions.requestMerges>, C.RequestMergesResult>>();
-check<Fits<Out<typeof actions.syncNow>, WithoutTask<C.SyncResult>>>();
-check<Fits<Out<typeof actions.taskChanges>, C.Changes>>();
-check<Fits<Out<typeof actions.taskDiff>, C.FilePatch>>();
-check<Fits<Out<typeof actions.taskTree>, C.TreeListing>>();
-check<Fits<Out<typeof actions.taskFile>, C.FileContent>>();
-check<Fits<Out<typeof actions.attachPlan>, C.TaskPlan>>();
-check<Fits<Out<typeof actions.planHtml>, C.PlanHtml>>();
-check<Fits<Out<typeof actions.taskReviews>, C.Review[]>>();
-check<Fits<Out<typeof actions.startReview>, C.Review>>();
-check<Fits<Out<typeof actions.editReview>, C.Review>>();
-check<Fits<Out<typeof actions.addReviewComment>, C.Review>>();
-check<Fits<Out<typeof actions.deleteReviewComment>, C.Review>>();
-check<Fits<Out<typeof actions.submitReview>, C.Review>>();
-check<Fits<Out<typeof actions.resolveReviewComment>, C.Review>>();
-check<Fits<Out<typeof actions.reopenReviewComment>, C.Review>>();
+// Parts of responses
 check<Fits<DomainLogEntry, C.LogEntry>>();
 check<Fits<NonNullable<Out<typeof actions.taskViews>[number]['live']>, C.LiveView>>();
 check<Fits<NonNullable<Out<typeof actions.taskViews>[number]['sync']>, C.SyncView>>();
@@ -67,7 +21,6 @@ check<Fits<NonNullable<Out<typeof actions.taskViews>[number]['merge_request']>, 
 check<Fits<Out<typeof actions.taskViews>[number]['conflicting'], NonNullable<C.TaskSummary['conflicting']>>>();
 check<Fits<NonNullable<Out<typeof actions.taskViews>[number]['checks']>, C.ChecksSummary>>();
 check<Fits<NonNullable<Out<typeof actions.taskDetail>['check_list']>['checks'][number], C.PrCheck>>();
-check<Fits<Out<typeof actions.fixChecks>, WithoutTask<C.FixChecksResult>>>();
 
 // Requests
 check<Fits<C.NewRepo, In<typeof actions.addRepo, 1>>>();

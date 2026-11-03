@@ -1,4 +1,5 @@
 // How the CLI prints tasks, doctor reports, logs and times, and how it fails.
+import { createInterface } from 'node:readline/promises';
 import { type DoctorReport, type HealthCheck, type TaskView, readLog } from '../application/actions.ts';
 import type { AutoMergeView } from '../domain/pull-request/auto-merge.ts';
 import type { ChecksSummary } from '../domain/pull-request/checks.ts';
@@ -20,6 +21,14 @@ const STATUS_ICON: Record<TaskStatus, string> = {
 export function die(msg: string): never {
   console.error(`agentdeck: ${msg}`);
   process.exit(1);
+}
+
+/** Asks `question [y/N] ` on the terminal; true only for y or yes. */
+export async function confirm(question: string): Promise<boolean> {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  const answer = await rl.question(`${question} [y/N] `);
+  rl.close();
+  return /^y(es)?$/i.test(answer.trim());
 }
 
 export function taskId(arg: string | undefined): number {

@@ -14,7 +14,8 @@ const { openDb } = await import('../src/db/index.ts');
 const { doneTask } = await import('./fixtures.ts');
 const { github } = await import('../src/adapters/github.ts');
 const { AUTO_MERGE_LABEL, autoMergeCheck, autoMergeOn, autoMergeSkip } = await import('../src/domain/pull-request/auto-merge.ts');
-const { isMergeLocked, refreshPrStates } = await import('../src/application/pull-request/pull-requests.ts');
+const { isMergeLocked } = await import('../src/application/pull-request/merge.ts');
+const { refreshPrStates } = await import('../src/application/pull-request/refresh.ts');
 const { autoMerge } = await import('../src/application/pull-request/auto-merge.ts');
 const { openPullRequest } = await import('../src/application/pull-request/open-pr.ts');
 const { ActionError, addTask, mergePreview, mergeTask, setAutoMerge, syncNow, updateRepo } = await import('../src/application/actions.ts');
@@ -133,6 +134,23 @@ test('autoMergeCheck: what needs a person', () => {
     'GitHub says branch protection may block this merge (required reviews or checks)',
   ]);
   assert.equal(check({ labels: [] }, { paused: 'AgentDeck is paused' }).verdict, 'never', 'a person beats a wait');
+});
+
+test('autoMergeCheck: a PR touching .claude/ needs a person, even with an empty skip list', () => {
+  const paths = ['src/a.ts', '.claude/skills/x/SKILL.md'];
+  const why = 'changes .claude/skills/x/SKILL.md: files under .claude/ steer every later agent';
+  for (const auto_merge_skip of ['[]', '[".github/"]', '[".claude/"]']) {
+    const verdict = autoMergeCheck({
+      repo: { ...repoRow, auto_merge_skip },
+      pr_state: 'open',
+      pr: { ...ready, paths },
+      tests_passed: 1,
+      paused: null,
+    });
+    assert.deepEqual(verdict, { verdict: 'never', reasons: [why] }, auto_merge_skip);
+  }
+  // Both: the protected reason first, then the repo's own skip list.
+  assert.deepEqual(check({ paths: [...paths, '.github/ci.yml'] }).reasons, [why, 'touches .github/ci.yml']);
 });
 
 test('autoMergeCheck: what can still change on its own', () => {

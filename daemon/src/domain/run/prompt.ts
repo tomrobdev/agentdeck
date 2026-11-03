@@ -3,9 +3,11 @@ import { PLAN_FILE, parsePlanWithText } from '../plan/plan.ts';
 import { PR_SUMMARY_FORMAT } from '../pull-request/summary.ts';
 import { ALWAYS_DISALLOWED_TOOLS } from '../repo/tools.ts';
 import { type ReviewPrompt, reviewPromptBlock } from '../review/address.ts';
+import { NEVER_APPLIED, PROTECTED_PREFIXES, editPathFor } from './protected-edits.ts';
 import { withoutUnscopedFileTools } from './sandbox.ts';
 import { type Task, leftoversMessage } from '../task/task.ts';
 import { INTERRUPTED, type Run } from './run.ts';
+import { UNBLOCK_NOTE } from './unblock.ts';
 
 /**
  * Appended to every worker's system prompt; the worker parses the STATUS line. `testCmd` is the command
@@ -30,7 +32,8 @@ ${
   A step may list its checks in <ul data-plan-done>, one <li> each.
   Put <link rel="stylesheet" href="plan.css" /> in the <head> and add no <style> block: AgentDeck styles every plan.
   Everything else is free HTML. Keep each step's data-status current as you work.
-- If you can't finish because the environment lacks something, say exactly what on the STATUS line instead of working around it: "STATUS: BLOCKED: NEEDS deps: <packages>", "NEEDS host: <hosts>" or "NEEDS edit: <files>" (a file you may not edit, such as one under .claude/). Never install packages yourself.
+- You may not edit files under ${PROTECTED_PREFIXES.join(', ')}. When the task needs one changed, write the whole new file to ${editPathFor('.claude/<path>')} instead (say ${editPathFor('.claude/skills/x/SKILL.md')} for .claude/skills/x/SKILL.md: leave the dot off, since a path with a .claude folder in it is refused anywhere), name it in your final message, and carry on. AgentDeck commits it to your branch after the run, and a person reviews it before it merges. It never applies ${NEVER_APPLIED.join(', ')}: for those, block with NEEDS edit.
+- If you can't finish because the environment lacks something, say exactly what on the STATUS line instead of working around it: "STATUS: BLOCKED: NEEDS deps: <packages>", "NEEDS host: <hosts>" or "NEEDS edit: <files>" (a settings or hooks file above). Never install packages yourself.
 - If you cannot finish (missing info, needs a human decision, blocked by permissions), stop and explain why.
 - When you finish with STATUS: DONE, your final message is the pull request body. Write it as ${PR_SUMMARY_FORMAT}
   If the prompt lists review comments (c1, c2…), add one line per comment after the pull request body: "ANSWER c1: <what you did, or why not>". Each answer is a single line. AgentDeck shows it on the comment.
@@ -94,7 +97,7 @@ export function buildPrompt(
   plan: PromptPlan | null = null,
   review: ReviewPrompt | null = null,
 ): string {
-  const work = previousRuns.filter((r) => r.kind !== 'resolve');
+  const work = previousRuns.filter((r) => r.kind === 'work');
   const last = work.at(-1);
   const base = plan ? `${task.prompt}\n\n${planPromptBlock(plan)}` : task.prompt;
   if (!last) return base;
@@ -109,8 +112,11 @@ export function buildPrompt(
       : finished.attempt < task.attempts
         ? `Before that, the previous attempt ended as "${finished.outcome}".`
         : `Before that, a run of this attempt ended as "${finished.outcome}".`;
+  // An unblock run's note names itself (UNBLOCK_NOTE); a person's is what they asked to change.
+  const note =
+    reviewNote === null ? '' : reviewNote.startsWith(UNBLOCK_NOTE) ? `${reviewNote}\n` : `Changes requested in review:\n${reviewNote}\n`;
   return [
-    review ? `${reviewPromptBlock(review)}\n` : reviewNote ? `Changes requested in review:\n${reviewNote}\n` : '',
+    review ? `${reviewPromptBlock(review)}\n` : note,
     base,
     '',
     interrupted ? `--- This is attempt ${task.attempts}. A daemon restart stopped an earlier run of it before it finished. ---` : '',
@@ -197,7 +203,8 @@ export function buildResolvePrompt(task: Pick<Task, 'id' | 'title' | 'prompt'>, 
 /**
  * `settings` is the run's settings file (sandbox and worktree-only file rules, domain/run/sandbox.ts). `resume` is a
  * claude session to continue (`resumableSession`), with `maxTurns` the turns it has left (`resumeMaxTurns`); everything
- * else, the system prompt and tool rules included, is the same as for a fresh run.
+ * else, the system prompt and tool rules included, is the same as for a fresh run. `systemPrompt` is the worker's unless
+ * the run is another kind (an unblock run ends with UNBLOCK lines, not a STATUS line).
  */
 export function claudeArgs(
   task: Task,
@@ -207,6 +214,7 @@ export function claudeArgs(
   settings: string,
   resume: string | null = null,
   maxTurns: number = task.max_turns,
+  systemPrompt: string = workerSystemPrompt(testCmd),
 ): string[] {
   return [
     '--settings',
@@ -231,6 +239,6 @@ export function claudeArgs(
     '--disallowedTools',
     ...ALWAYS_DISALLOWED_TOOLS,
     '--append-system-prompt',
-    workerSystemPrompt(testCmd),
+    systemPrompt,
   ];
 }

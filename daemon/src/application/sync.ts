@@ -1,4 +1,4 @@
-// Keeps task branches up to date with their base branch and resolves merge conflicts.
+// Syncs task branches with their base branch; a conflict starts a resolve run.
 // The daemon does the git work in the task's worktree (agents cannot fetch); only a real conflict starts a claude run.
 import {
   abortMerge,
@@ -20,11 +20,11 @@ import { writeEvent } from '../adapters/run-log.ts';
 import { runCommand } from '../adapters/shell.ts';
 import { TEST_TIMEOUT_MS } from '../config.ts';
 import type { Db } from '../db/index.ts';
-import { conflictReason, syncSummary } from '../domain/branch/sync.ts';
+import { type SyncResult, conflictReason, resolveOutcome, syncResultOf, syncSummary } from '../domain/branch/sync.ts';
 import type { Repo } from '../domain/repo/repo.ts';
 import { buildResolvePrompt } from '../domain/run/prompt.ts';
-import { type Run, parseStatus } from '../domain/run/run.ts';
-import { lastLine } from '../domain/text.ts';
+import type { Outcome, Run } from '../domain/run/run.ts';
+import { errorMessage, lastLine } from '../domain/text.ts';
 import { hasOpenPr } from '../domain/task/stage.ts';
 import { type Task, leftoversMessage } from '../domain/task/task.ts';
 import { endTaskRun, openTaskRun, startTaskRun } from './run/claude-run.ts';
@@ -33,20 +33,6 @@ import { queueWait } from './scheduler/gate.ts';
 import { logPrEvent } from './pull-request/open-pr.ts';
 import { isMergeLocked } from './pull-request/merge-lock.ts';
 import { settle } from './task/settle.ts';
-
-/** What a sync of a task's branch came to. A merge that did not stick is already undone. */
-export type SyncResult =
-  | { kind: 'up_to_date' }
-  | { kind: 'clean' }
-  | { kind: 'resolved'; files: string[] }
-  /** Conflicts, and no resolve run was allowed. */
-  | { kind: 'needs_resolution'; files: string[] }
-  /** The resolve run could not fix the conflicts, or the tests failed on the result. */
-  | { kind: 'failed'; files: string[]; reason: string }
-  | { kind: 'rate_limited'; reason: string }
-  | { kind: 'cancelled' }
-  /** Git itself failed (no base ref, a lock, …). */
-  | { kind: 'error'; reason: string };
 
 interface SyncOptions {
   /** A resolve run may start when the merge conflicts. */
@@ -68,7 +54,11 @@ export async function syncBranch(db: Db, task: Task, repo: Repo, worktree: strin
     if (await mergeInProgress(worktree)) await abortMerge(worktree, await headCommit(worktree));
     await commitLeftovers(worktree, leftoversMessage(task));
     const ref = await startPoint(repo.path, repo.base_branch);
-    if (!(await refExists(worktree, ref))) return { kind: 'up_to_date' };
+    if (!(await refExists(worktree, ref))) {
+      const reason = `there is no ${ref} to sync with`;
+      console.error(`task ${task.id}: ${reason}`);
+      return { kind: 'error', reason };
+    }
 
     before = await headCommit(worktree);
     const merge = await mergeRef(worktree, ref);
@@ -90,7 +80,7 @@ export async function syncBranch(db: Db, task: Task, repo: Repo, worktree: strin
     return await resolveConflicts(db, task, repo, worktree, before, merge.files, opts.runTests);
   } catch (err) {
     if (before) await abortMerge(worktree, before).catch(() => {});
-    return { kind: 'error', reason: (err as Error).message };
+    return { kind: 'error', reason: errorMessage(err) };
   }
 }
 
@@ -109,24 +99,16 @@ async function resolveConflicts(
   const { log } = opened;
   let fields: Partial<Run> = {};
 
-  let outcome: 'done' | 'blocked' | 'failed' | 'cancelled' | 'rate_limited';
+  let outcome: Outcome;
   let reason = '';
   try {
     // Throws if the run cannot start (no settings, no worktree): the row still ends below, failed.
     const ran = await startTaskRun(db, task, { kind: 'resolve', repo, worktree, prompt, opened });
-    const { end } = ran;
     fields = ran.fields;
-    if (end.kind === 'cancelled') {
-      outcome = 'cancelled';
-    } else if (end.kind === 'rate_limited') {
-      outcome = 'rate_limited';
-      reason = end.reason;
-    } else if (end.kind === 'failed') {
-      outcome = 'failed';
-      reason = end.reason;
-    } else if (parseStatus(end.result.result).blocked) {
-      outcome = 'blocked';
-      reason = parseStatus(end.result.result).reason ?? 'the agent could not resolve the conflicts';
+    const settled = resolveOutcome(ran.end);
+    if (settled.outcome !== 'check') {
+      outcome = settled.outcome;
+      reason = 'reason' in settled ? settled.reason : '';
     } else {
       reason = await checkResolution(worktree, before, files, task);
       if (!reason && runTests && repo.test_cmd) {
@@ -139,22 +121,13 @@ async function resolveConflicts(
     }
   } catch (err) {
     outcome = 'failed';
-    reason = (err as Error).message;
+    reason = errorMessage(err);
   }
 
   if (outcome !== 'done') await abortMerge(worktree, before).catch(() => {});
   await endTaskRun(db, opened, outcome, reason, fields);
 
-  switch (outcome) {
-    case 'done':
-      return { kind: 'resolved', files };
-    case 'cancelled':
-      return { kind: 'cancelled' };
-    case 'rate_limited':
-      return { kind: 'rate_limited', reason };
-    default:
-      return { kind: 'failed', files, reason };
-  }
+  return syncResultOf(outcome, files, reason);
 }
 
 /** After a resolve run said it was done: conclude the merge and say what is wrong with it, or '' when nothing is. */
@@ -217,7 +190,7 @@ async function pushIfNeeded(
     await github.push(repo.path, task.branch);
     return { pushed: true };
   } catch (err) {
-    const error = (err as Error).message;
+    const error = errorMessage(err);
     logPrEvent(db, task.id, { error });
     return { pushed: false, error };
   }
@@ -281,7 +254,7 @@ async function syncMarked(db: Db, task: Task, repo: Repo, opts: { manual: boolea
 /** A person asked (`agentdeck sync`, the dashboard's sync button): the repo's auto_resolve does not apply. */
 export const syncNow = (db: Db, id: number): Promise<SyncReport> => syncTask(db, id, { manual: true });
 
-/** Whether the governor lets a conflict run start now: not paused, not rate limited, inside the usage windows, a slot free. */
+/** Whether the governor lets a resolve run start now: not paused, not rate limited, inside the usage windows, a slot free. */
 export function canStartResolve(db: Db): boolean {
   return queueWait(db).free > 0;
 }
@@ -318,7 +291,7 @@ export async function resolveConflicting(
       const r = await syncTask(db, id, { manual: false });
       log(`task ${id}: ${r.outcome}${r.reason ? ` (${r.reason})` : ''}${r.push_error ? `; push failed: ${r.push_error}` : ''}`);
     } catch (err) {
-      log(`task ${id}: could not sync with ${repo.base_branch}: ${(err as Error).message}`);
+      log(`task ${id}: could not sync with ${repo.base_branch}: ${errorMessage(err)}`);
     }
   }
 }

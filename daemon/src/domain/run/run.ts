@@ -1,18 +1,29 @@
 // The run entity and how to read a run's result. Pure: no I/O.
-import { lastLine } from '../text.ts';
+import { STATUS_WORD, lastLine, oneLine } from '../text.ts';
 import { type Needs, parseNeeds } from '../task/needs.ts';
 
-/** `work` is an attempt at the task; `resolve` merges the base branch into the task's branch and never uses an attempt. */
-export type RunKind = 'work' | 'resolve';
+/**
+ * `work` is an attempt at the task; `resolve` merges the base branch into the task's branch and never uses an attempt;
+ * `unblock` reads why a blocked task stopped and retries it with a note or asks a question (domain/run/unblock.ts), and
+ * never uses an attempt either.
+ */
+export type RunKind = 'work' | 'resolve' | 'unblock';
+
+/** A run's name in the dashboard: "Run 2", or "Resolve conflicts" for the resolve run of a sync. */
+export const runLabel = (run: Pick<Run, 'kind' | 'attempt'>): string =>
+  run.kind === 'resolve' ? 'Resolve conflicts' : `Run ${run.attempt}`;
+
+/** How a run ended: a worker's result, or `interrupted` when a daemon restart ended it. */
+export type RunOutcome = Outcome | typeof INTERRUPTED;
 
 export interface Run {
   id: number;
   task_id: number;
   kind: RunKind;
-  attempt: number; // a resolve run carries the attempt it ran beside
+  attempt: number; // a resolve or unblock run carries the attempt it ran beside
   started_at: string;
   ended_at: string | null;
-  outcome: string | null; // done | blocked | failed | cancelled | rate_limited | interrupted
+  outcome: RunOutcome | null;
   exit_code: number | null;
   session_id: string | null; // stored when claude's init line names it, so a run a restart ends can be resumed
   num_turns: number | null;
@@ -112,7 +123,7 @@ export function resumeMaxTurns(task: { attempts: number; max_turns: number }, pr
 
 /**
  * The run a person asked for: by id, by attempt (its latest work run, so a resume after a restart rather than the run
- * the restart cut off), or the latest. A resolve run is only picked by id.
+ * the restart cut off), or the latest. A resolve or unblock run is only picked by id.
  */
 export function pickRun(runs: Run[], pick: { attempt?: number; run?: number } = {}): Run | undefined {
   if (pick.run) return runs.find((r) => r.id === pick.run);
@@ -210,6 +221,15 @@ export interface WorkerResult {
   environment?: boolean;
 }
 
+/** How the stop reason of a task whose setup command failed begins. */
+const SETUP_FAILED = 'setup failed: ';
+
+/** The stop reason when the repo's setup command failed in the worktree: its output's last line. */
+export const setupFailedReason = (output: string): string => `${SETUP_FAILED}${lastLine(output)}`;
+
+/** Whether a stop reason says the setup command failed (`setupFailedReason`). */
+export const isSetupFailure = (reason: string | null | undefined): boolean => (reason ?? '').startsWith(SETUP_FAILED);
+
 /** A block the environment caused, not the task: the worker named a need, tool uses were refused, or setup failed. */
 export function isEnvironmentBlock(b: { needs?: Needs; denials?: number; setupFailed?: boolean }): boolean {
   return !!b.needs || (b.denials ?? 0) > 0 || !!b.setupFailed;
@@ -233,12 +253,14 @@ export interface RunCameTo {
  * The outcome of a run and whether to pause its repo. A finished run is blocked when the agent says so, failed when the
  * tests failed, and blocked when it is done without a commit. Refused tool uses make a block environmental, and pause
  * the repo (the tool rules don't fit its work, so every further task would hit the same wall), unless the agent finished
- * and only the test command failed: then the refusals didn't stop it.
+ * and only the test command failed: then the refusals didn't stop it. A block the worker reported as a need (`NEEDS …`)
+ * never pauses: the refusal was expected, the task says what it needs, and the repo's other tasks are not stuck on it.
  */
 export function runOutcome(r: RunCameTo): { result: WorkerResult; pause: boolean } {
   const result = baseOutcome(r);
   if (result.outcome === 'blocked' && isEnvironmentBlock({ needs: result.needs, denials: r.denials })) result.environment = true;
-  const pause = r.denials > 0 && r.testsPassed !== false && (result.outcome === 'blocked' || result.outcome === 'failed');
+  const reported = result.outcome === 'blocked' && !!result.needs;
+  const pause = r.denials > 0 && r.testsPassed !== false && !reported && (result.outcome === 'blocked' || result.outcome === 'failed');
   return { result, pause };
 }
 
@@ -256,11 +278,13 @@ function baseOutcome(r: RunCameTo): WorkerResult {
   return { outcome: 'done' };
 }
 
+const STATUS_LINE = new RegExp(String.raw`^${STATUS_WORD}(?::\s*(.*))?$`, 'i');
+
 /** Pull "STATUS: BLOCKED: reason" out of the agent's final message. */
 export function parseStatus(text: string | undefined): { blocked: boolean; reason?: string; declared: boolean; needs?: Needs } {
   const lines = (text ?? '').trim().split('\n').reverse();
   for (const line of lines) {
-    const m = line.trim().match(/^STATUS:\s*(DONE|BLOCKED)(?::\s*(.*))?$/i);
+    const m = line.trim().match(STATUS_LINE);
     if (m) {
       const blocked = m[1].toUpperCase() === 'BLOCKED';
       const reason = m[2]?.trim();
@@ -275,5 +299,5 @@ export function parseStatus(text: string | undefined): { blocked: boolean; reaso
 export function firstDenial(denials: { tool_name?: string; tool_input?: { command?: unknown } }[]): string {
   const d = denials[0];
   const command = typeof d?.tool_input?.command === 'string' ? d.tool_input.command : (d?.tool_name ?? 'unknown tool');
-  return command.replace(/\s+/g, ' ').trim().slice(0, 200);
+  return oneLine(command).slice(0, 200);
 }

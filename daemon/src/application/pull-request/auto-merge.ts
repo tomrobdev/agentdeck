@@ -4,11 +4,13 @@ import { github } from '../../adapters/github.ts';
 import type { Db } from '../../db/index.ts';
 import { AUTO_MERGE_LABEL, autoMergeOn } from '../../domain/pull-request/auto-merge.ts';
 import type { PrDetails } from '../../domain/pull-request/merge.ts';
+import { mergeReason } from '../../domain/task/history.ts';
 import { hasOpenPr } from '../../domain/task/stage.ts';
+import { errorMessage } from '../../domain/text.ts';
 import { ActionError, object, requireTask, requireTaskRepo } from '../input.ts';
 import { notifyLater } from '../notifications.ts';
 import { ensureAutoMergeLabel } from './open-pr.ts';
-import { isMergeLocked, mergeable, mergeOpenPr } from './pull-requests.ts';
+import { isMergeLocked, mergeable, mergeOpenPr } from './merge.ts';
 
 /**
  * Merge the first PR the refresh found ready, with what GitHub said about it moments ago. One merge per refresh: it
@@ -38,7 +40,7 @@ export async function autoMerge(
         method,
         deleteBranch: true,
         log,
-        reason: asked ? `requested (${method})` : `auto-merged (${method})`,
+        reason: mergeReason(asked ? 'request' : 'auto', method),
       });
       told.delete(id);
       const unblocked = res.unblocked.length ? `; ${res.unblocked.map((n) => `#${n}`).join(', ')} can start` : '';
@@ -52,7 +54,7 @@ export async function autoMerge(
       });
       return id;
     } catch (err) {
-      const error = (err as Error).message;
+      const error = errorMessage(err);
       // A request gh refused is dropped, told once: a person can ask again.
       if (asked) db.clearMergeRequest(id);
       // A merge made meanwhile (a CLI merge in another process) is no failure: say nothing.
@@ -88,6 +90,6 @@ export async function setAutoMerge(
     db.requestPrCheck();
     return { auto_merge: on };
   } catch (err) {
-    return { auto_merge: on, label_error: (err as Error).message };
+    return { auto_merge: on, label_error: errorMessage(err) };
   }
 }

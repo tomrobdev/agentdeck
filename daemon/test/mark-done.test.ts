@@ -20,7 +20,13 @@ type TaskStatus = (typeof TASK_STATUSES)[number];
 function setup() {
   const db = openDb(':memory:');
   const repo = db.addRepo({ name: 'r', path: '/tmp/r', base_branch: 'main' });
-  const add = (after_task?: number) => db.addTask({ repo_id: repo.id, title: 't', prompt: 'p', after_task });
+  const add = (after_task?: number) =>
+    db.addTask({
+      repo_id: repo.id,
+      title: 't',
+      prompt: 'p',
+      links: after_task === undefined ? [] : [{ on: after_task, kind: 'builds_on' }],
+    });
   return { db, repo, add };
 }
 
@@ -136,10 +142,10 @@ test('the SQL and the domain agree on when a dependency is met', () => {
   let cases = 0;
   for (const status of STATUSES)
     for (const pr_state of PR_STATES)
-      for (const pr_mode of ['off', 'draft'])
+      for (const pr_mode of ['off', 'draft'] as const)
         for (const done_by of [null, 'person'] as const) {
           const { db, repo, add } = setup();
-          db.updateRepo(repo.id, { pr_mode: pr_mode as 'off' | 'draft' });
+          db.updateRepo(repo.id, { pr_mode });
           const dep = add();
           const later = add(dep.id);
           // Put the dependency in the state under test; `later` stays queued behind it.

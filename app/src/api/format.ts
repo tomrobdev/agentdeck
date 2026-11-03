@@ -1,5 +1,17 @@
 // How the dashboard words what the daemon reports: times, durations, waits and the daemon's state.
-import type { AutoMergeCheck, LiveView, PrCheck, MergeRequestView, Run, StartWait, Status, SyncResult, SyncView } from './types.ts';
+import type {
+  AutoMergeCheck,
+  LiveView,
+  NotifyKind,
+  PrCheck,
+  MergeRequestView,
+  Run,
+  StartWait,
+  Status,
+  SyncResult,
+  SyncView,
+} from './types.ts';
+import { sqliteMs } from '../../../daemon/src/domain/time.ts';
 
 /** What a queued task waits for, in a few words, for chips and callouts. */
 export function describeWait(h: StartWait): string {
@@ -18,6 +30,22 @@ export function describeWait(h: StartWait): string {
       return `Waiting for a free slot (${h.running} of ${h.max} in use)`;
   }
 }
+
+/** What each notification kind is called in the settings. */
+export const NOTIFY_LABELS: Record<NotifyKind, string> = {
+  blocked: 'Task blocked',
+  failed: 'Task failed',
+  done: 'Task done',
+  hold: 'Work held by budget',
+  paused: 'Repo paused',
+  proposed: 'Planner proposals',
+  merged: 'PR auto-merged',
+  checks_failed: 'PR checks failed',
+};
+
+/** What each model is called, and when to pick it. */
+export const MODEL_LABELS: Record<string, string> = { haiku: 'Haiku', sonnet: 'Sonnet', opus: 'Opus' };
+export const MODEL_HINTS: Record<string, string> = { haiku: 'cheap, simple', sonnet: 'default', opus: 'hard tasks' };
 
 /** Whether the daemon will merge a PR on its own, in a line. */
 export function autoMergeLine(c: AutoMergeCheck): string {
@@ -60,7 +88,7 @@ export function relTime(unixSeconds: number): string {
 
 /** Every time from the daemon is SQLite's UTC `YYYY-MM-DD HH:MM:SS`, with no zone marker. */
 export function parseTime(s: string): number {
-  return Date.parse(s.replace(' ', 'T') + 'Z');
+  return sqliteMs(s);
 }
 
 export function ago(time: string): string {
@@ -86,6 +114,18 @@ export function uptime(startedAt: string, now = Date.now()): string {
 export function taskList(ids: number[]): string {
   const tags = ids.map((id) => `#${id}`);
   return tags.length < 2 ? tags.join('') : `${tags.slice(0, -1).join(', ')} and ${tags[tags.length - 1]}`;
+}
+
+/** A run's name: "Run 2", or the kind of run that uses no attempt. */
+export function runLabel(r: Pick<Run, 'kind' | 'attempt'>): string {
+  return r.kind === 'resolve' ? 'Resolve conflicts' : r.kind === 'unblock' ? 'Unblock run' : `Run ${r.attempt}`;
+}
+
+/** What a run that uses no attempt did, for a tooltip; undefined for a work run. */
+export function runHint(r: Pick<Run, 'kind'>): string | undefined {
+  if (r.kind === 'resolve') return 'Merged the base branch into the branch; uses no attempt';
+  if (r.kind === 'unblock') return 'Read why the task blocked, then retried it with a note or asked you; uses no attempt';
+  return undefined;
 }
 
 /** How long a run took, or has taken so far: "45s", "12m", "1.4h". */
