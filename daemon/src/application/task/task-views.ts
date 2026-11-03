@@ -1,6 +1,7 @@
 // Tasks as the dashboard and the CLI show them: a task plus what the queue says about it.
 import type { Db } from '../../db/index.ts';
 import { type AutoMergeMeasured, type AutoMergeView, autoMergeOn, autoMergeView } from '../../domain/pull-request/auto-merge.ts';
+import { type ChecksSummary, type PrCheck, checksSummary, readStoredChecks } from '../../domain/pull-request/checks.ts';
 import { type MergeRequestView, mergeRequestView } from '../../domain/pull-request/merge-request.ts';
 import { isMergeLocked } from '../pull-request/pull-requests.ts';
 import { type LiveView, type SyncView, liveView, syncView } from '../../domain/run/live.ts';
@@ -33,6 +34,8 @@ export interface TaskView {
   live: LiveView | null;
   /** For a done task: the sync under way (a clean one, or a resolve run settling conflicts). Null when none is. */
   sync: SyncView | null;
+  /** The open PR's checks, counted, with the failing ones' names. Null when there is no open PR or it has no checks. */
+  checks: ChecksSummary | null;
 }
 
 /** The task fields a view reads. */
@@ -50,6 +53,7 @@ type Viewed = Pick<
   | 'merge_requested_at'
   | 'merge_request_method'
   | 'merge_request_check'
+  | 'pr_checks'
 >;
 
 /**
@@ -69,6 +73,7 @@ export function withViews<T extends Viewed>(db: Db, tasks: T[], measured: Map<nu
     live: liveView(t, liveRuns.get(t.id)),
     sync: syncView(t, repos.get(t.repo_id)?.base_branch ?? null, isSyncLocked(t.id), resolves.get(t.id)),
     merge_request: mergeRequestView(t, isMergeLocked(t.id)),
+    checks: checksSummary(t),
     repo: repos.get(t.repo_id)?.name ?? null,
     auto_merge_view: repos.has(t.repo_id) ? autoMergeView(t, repos.get(t.repo_id)!, measured.get(t.id)) : null,
     waiting: waitingFor(db, t, links),
@@ -92,13 +97,20 @@ export async function taskDetail(db: Db, id: number) {
   }
   return {
     ...withViews(db, [task], measured)[0],
+    check_list: checkList(task.pr_checks),
     runs: db.runsForTask(id),
     events: db.eventsForTask(id),
     plans: plansShown(db, task),
   };
 }
 
-/** Task summaries (no prompt), newest first, each with its view. */
+/** The PR's latest checks, one by one, and when they were read; null when none were read. */
+function checkList(json: string | null): { read_at: string; checks: PrCheck[] } | null {
+  const stored = readStoredChecks(json);
+  return stored && { read_at: stored.read_at, checks: stored.checks };
+}
+
+/** Task summaries (no prompt), newest first, each with its view. The checks are summed up in `checks`, so their list stays out. */
 export function taskViews(db: Db, filter: { status?: TaskStatus; limit: number; before?: number }) {
-  return withViews(db, db.listTaskSummaries(filter));
+  return withViews(db, db.listTaskSummaries(filter)).map(({ pr_checks: _pr_checks, ...t }) => t);
 }

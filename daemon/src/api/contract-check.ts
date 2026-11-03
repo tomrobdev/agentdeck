@@ -66,6 +66,9 @@ check<Fits<DomainLogEntry, C.LogEntry>>();
 check<Fits<NonNullable<Out<typeof actions.taskViews>[number]['live']>, C.LiveView>>();
 check<Fits<NonNullable<Out<typeof actions.taskViews>[number]['sync']>, C.SyncView>>();
 check<Fits<NonNullable<Out<typeof actions.taskViews>[number]['merge_request']>, C.MergeRequestView>>();
+check<Fits<NonNullable<Out<typeof actions.taskViews>[number]['checks']>, C.ChecksSummary>>();
+check<Fits<NonNullable<Out<typeof actions.taskDetail>['check_list']>['checks'][number], C.PrCheck>>();
+check<Fits<Out<typeof actions.fixChecks>, WithoutTask<C.FixChecksResult>>>();
 
 // Requests
 check<Fits<C.NewRepo, In<typeof actions.addRepo, 1>>>();

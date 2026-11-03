@@ -132,10 +132,27 @@ export const github = {
    * matter to auto-merge, and `files` grows with the PR, so they are read when `withFiles` asks.
    */
   async prDetails(url: string, cwd: string, opts: { withFiles?: boolean } = {}): Promise<PrDetails> {
-    const fields = `isDraft,mergeable,mergeStateStatus,commits,additions,deletions,changedFiles,statusCheckRollup${opts.withFiles ? ',files,labels' : ''}`;
+    const fields = `headRefOid,isDraft,mergeable,mergeStateStatus,commits,additions,deletions,changedFiles,statusCheckRollup${opts.withFiles ? ',files,labels' : ''}`;
     try {
       const { stdout } = await exec('gh', ['pr', 'view', url, '--json', fields], { cwd, timeout: 30_000, maxBuffer: 16 * 1024 * 1024 });
       return parsePrDetails(stdout);
+    } catch (err) {
+      throw failure(err);
+    }
+  },
+
+  /**
+   * `gh run view <run-id> --log-failed`: the log of a GitHub Actions run's failed steps, each line prefixed with its job
+   * and step. With `job`, only that job's (`--job`), so each failing check gets its own log.
+   */
+  async failedLog(cwd: string, run: string, job: string | null = null): Promise<string> {
+    try {
+      const { stdout } = await exec('gh', ['run', 'view', run, ...(job ? ['--job', job] : []), '--log-failed'], {
+        cwd,
+        timeout: 60_000,
+        maxBuffer: 64 * 1024 * 1024,
+      });
+      return stdout;
     } catch (err) {
       throw failure(err);
     }

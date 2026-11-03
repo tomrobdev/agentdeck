@@ -14,6 +14,7 @@ export { pilotStats } from './run/stats.ts';
 export { mergeAll, mergePreview, mergeTask } from './pull-request/pull-requests.ts';
 export { cancelMergeRequest, requestMerge, requestMerges } from './pull-request/merge-requests.ts';
 export { setAutoMerge } from './pull-request/auto-merge.ts';
+export { type FixChecksResult, fixChecks } from './pull-request/fix-checks.ts';
 export * from './repo/repos.ts';
 export * from './review/reviews.ts';
 export { gracefulRestart } from './scheduler/restart.ts';

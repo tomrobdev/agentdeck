@@ -1,6 +1,7 @@
 // Whether a PR can be merged, and how. Pure: no I/O.
 import { isConflicting } from './conflict.ts';
 import type { PrState } from './pr.ts';
+import { type CheckCounts, type PrCheck, countOf, parseChecks } from './checks.ts';
 import { plural } from '../text.ts';
 
 /** How GitHub folds the PR into the base branch. Squash is the default: one task, one commit. */
@@ -10,15 +11,7 @@ export const DEFAULT_MERGE_METHOD: MergeMethod = 'squash';
 
 export const isMergeMethod = (value: unknown): value is MergeMethod => MERGE_METHODS.includes(value as MergeMethod);
 
-/** What GitHub reports about a PR's checks. */
-export interface CheckCounts {
-  total: number;
-  failing: number;
-  pending: number;
-}
-
-/** Whether the checks have run their course: there are some, and none is pending. No checks yet may only mean CI hasn't started. */
-export const checksSettled = (checks: CheckCounts): boolean => checks.total > 0 && checks.pending === 0;
+export { type CheckCounts, checksSettled, countChecks } from './checks.ts';
 
 /** What `gh pr view` says about a PR that decides whether and how it merges. */
 export interface PrDetails {
@@ -32,32 +25,22 @@ export interface PrDetails {
   additions: number;
   deletions: number;
   checks: CheckCounts;
+  /** Each check, as `checks` counts them. Missing where a caller made the details up. */
+  check_list?: PrCheck[];
+  /** The PR's head commit (`headRefOid`); null when GitHub didn't say. */
+  head?: string | null;
   /** The changed files' paths, and the labels; empty unless asked for (`prDetails`'s `withFiles`). */
   paths: string[];
   labels: string[];
 }
 
-const FAILED = new Set(['FAILURE', 'ERROR', 'TIMED_OUT', 'CANCELLED', 'STARTUP_FAILURE', 'ACTION_REQUIRED']);
-const PENDING = new Set(['PENDING', 'EXPECTED', 'QUEUED', 'IN_PROGRESS', 'WAITING', 'REQUESTED']);
-
-/** Count `statusCheckRollup` entries: check runs have `status` and `conclusion`, commit statuses have `state`. */
-export function countChecks(rollup: unknown): CheckCounts {
-  const items = Array.isArray(rollup) ? (rollup as Record<string, unknown>[]) : [];
-  const counts: CheckCounts = { total: items.length, failing: 0, pending: 0 };
-  for (const item of items) {
-    const verdict = String(item.conclusion || item.state || item.status || '').toUpperCase();
-    if (FAILED.has(verdict)) counts.failing++;
-    else if (PENDING.has(verdict)) counts.pending++;
-  }
-  return counts;
-}
-
-/** Read `gh pr view --json isDraft,mergeable,mergeStateStatus,commits,additions,deletions,changedFiles,statusCheckRollup,files,labels`. */
+/** Read `gh pr view --json headRefOid,isDraft,mergeable,mergeStateStatus,commits,additions,deletions,changedFiles,statusCheckRollup,files,labels`. */
 export function parsePrDetails(json: string): PrDetails {
   const raw = JSON.parse(json) as Record<string, unknown>;
   const num = (v: unknown) => (typeof v === 'number' ? v : 0);
   const names = (v: unknown, key: string) =>
     Array.isArray(v) ? v.map((item) => (item as Record<string, unknown>)?.[key]).filter((n): n is string => typeof n === 'string') : [];
+  const check_list = parseChecks(raw.statusCheckRollup);
   return {
     draft: raw.isDraft === true,
     mergeable: String(raw.mergeable ?? 'UNKNOWN'),
@@ -66,7 +49,9 @@ export function parsePrDetails(json: string): PrDetails {
     files: num(raw.changedFiles),
     additions: num(raw.additions),
     deletions: num(raw.deletions),
-    checks: countChecks(raw.statusCheckRollup),
+    checks: countOf(check_list),
+    check_list,
+    head: typeof raw.headRefOid === 'string' && raw.headRefOid ? raw.headRefOid : null,
     paths: names(raw.files, 'path'),
     labels: names(raw.labels, 'name'),
   };
