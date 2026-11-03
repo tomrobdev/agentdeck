@@ -3,7 +3,7 @@ import { computed, ref } from 'vue';
 import { type MergeResult, type TaskDetail, api } from '../../api';
 import { canFixChecks, canReview, personEvents } from '../../lib/taskView';
 import { useActions } from '../../composables/useActions';
-import Modal from '../ui/Modal.vue';
+import ConfirmDialog from '../ui/ConfirmDialog.vue';
 import MarkDoneDialog from './MarkDoneDialog.vue';
 import MergeDialog from './MergeDialog.vue';
 
@@ -73,7 +73,15 @@ async function onMerged(result: MergeResult) {
   <MarkDoneDialog v-if="markingDone" :task="task" with-note :busy="busy" @close="markingDone = false" @confirm="submitMarkDone" />
   <MergeDialog v-if="merging" :task-id="task.id" @close="merging = false" @merged="onMerged" @requested="merging = false" />
 
-  <Modal v-if="closing" title="Close pull request" @close="closing = false">
+  <ConfirmDialog
+    v-if="closing"
+    title="Close pull request"
+    confirm-label="Close PR"
+    focus="cancel"
+    :busy="busy"
+    @cancel="closing = false"
+    @confirm="closePr"
+  >
     <p>
       Close the pull request for #{{ task.id }} on GitHub without merging it? Tasks waiting on this one will stay stuck until it is retried
       or they are cancelled.
@@ -81,9 +89,5 @@ async function onMerged(result: MergeResult) {
     <p>
       <a :href="task.pr_url ?? ''" target="_blank" rel="noreferrer">{{ task.pr_url }}</a>
     </p>
-    <div class="mt-3 flex justify-end gap-1.5">
-      <button @click="closing = false">Cancel</button>
-      <button class="primary" :disabled="busy" autofocus @click="closePr">Close PR</button>
-    </div>
-  </Modal>
+  </ConfirmDialog>
 </template>

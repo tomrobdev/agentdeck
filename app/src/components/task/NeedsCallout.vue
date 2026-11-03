@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/vue-query';
 import { type Needs, type TaskDetail, api, repoQuery } from '../../api';
 import { canInstallWith, depsAreDev, depsPackages, withHost } from '../../lib/taskView';
 import { useActions } from '../../composables/useActions';
-import Modal from '../ui/Modal.vue';
+import ConfirmDialog from '../ui/ConfirmDialog.vue';
 
 // What a blocked task's worker said it needs, with the one action that clears it.
 const props = defineProps<{ task: TaskDetail; needs: Needs }>();
@@ -68,16 +68,19 @@ const allow = () =>
     </button>
     <button v-else :disabled="busy" @click="emit('retry')">↻ Retry</button>
 
-    <Modal v-if="confirmHost" title="Allow network access" @close="confirmHost = false">
+    <ConfirmDialog
+      v-if="confirmHost"
+      title="Allow network access"
+      :confirm-label="`Allow ${host()} for ${task.repo}`"
+      :busy="busy"
+      @cancel="confirmHost = false"
+      @confirm="allow"
+    >
       <p>
         Let sandboxed commands in <strong>{{ task.repo }}</strong> reach <code>{{ host() }}</code
         >? This changes the repo's network setting, so every future worker of {{ task.repo }} can reach it too. #{{ task.id }} is retried
         afterwards.
       </p>
-      <div class="mt-3 flex justify-end gap-1.5">
-        <button @click="confirmHost = false">Cancel</button>
-        <button class="primary" :disabled="busy" autofocus @click="allow">Allow {{ host() }} for {{ task.repo }}</button>
-      </div>
-    </Modal>
+    </ConfirmDialog>
   </div>
 </template>
