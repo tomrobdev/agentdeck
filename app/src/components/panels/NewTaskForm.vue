@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { ref } from 'vue';
 import { type Repo, type TaskDetail, api } from '../../api';
 import { useTerminal } from '../../composables/useTerminal';
 import Modal from '../ui/Modal.vue';
@@ -21,9 +21,6 @@ const saving = ref(false);
 /** The task once it is queued, while its warnings are shown: the form stays open until the person has read them. */
 const saved = ref<TaskDetail | null>(null);
 const warnings = ref<string[]>([]);
-const promptEl = ref<HTMLTextAreaElement | null>(null);
-
-onMounted(() => promptEl.value?.focus());
 
 const terminal = useTerminal();
 
@@ -78,7 +75,7 @@ async function submit() {
 </script>
 
 <template>
-  <Modal title="New task" @close="$emit('close')">
+  <Modal title="New task" focus="textarea" @close="$emit('close')">
     <div v-if="!repos.length">
       <p class="mt-0">Register a repo first. Tasks run in a worktree of a git repository.</p>
       <button class="primary" @click="$emit('repos')">Add a repo</button>
@@ -88,7 +85,6 @@ async function submit() {
         What should the agent do?
         <textarea
           class="resize-y"
-          ref="promptEl"
           v-model="prompt"
           rows="7"
           placeholder="Small, testable, with a clear definition of done. e.g. Add a slugify(s) helper to src/strings.js with tests for edge cases."
