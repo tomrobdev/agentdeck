@@ -1,13 +1,10 @@
-// Single-key shortcuts. Each component lists its keys; this owns when a key counts: not while typing
-// in a field, not with a modifier held, and not while a dialog is open over the page.
+// Single-key shortcuts. Each component lists its keys; `hotkeyApplies` owns when a key counts.
 import { onBeforeUnmount, onMounted } from 'vue';
-
-const isTyping = (e: KeyboardEvent) => e.target instanceof HTMLElement && !!e.target.closest('input, textarea, select, [contenteditable]');
+import { hotkeyApplies } from '../lib/hotkeyApplies';
 
 export function useHotkeys(keys: Record<string, () => unknown>): void {
   function onKey(e: KeyboardEvent) {
-    if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey || isTyping(e)) return;
-    if (document.querySelector('[role="dialog"]')) return;
+    if (!hotkeyApplies(e)) return;
     const fn = keys[e.key];
     if (!fn) return;
     e.preventDefault();

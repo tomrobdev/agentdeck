@@ -79,7 +79,8 @@ const dim = (id: number) => lit.value !== null && !lit.value.has(id);
         tabindex="0"
         role="button"
         @click="(emit('select', n.id), emit('open', n.id))"
-        @keydown.enter="emit('open', n.id)"
+        @focus="emit('select', n.id)"
+        @keydown.enter.prevent="emit('open', n.id)"
         @mouseenter="hover = n.id"
         @mouseleave="hover = null"
       >
