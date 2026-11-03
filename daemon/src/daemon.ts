@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { checkedOutBranch, checkoutCommit, hasUncommittedChanges } from './adapters/git.ts';
 import { watchSource } from './adapters/watch.ts';
 import { ChangeWatcher } from './application/changes.ts';
+import { reloadBlock } from './application/daemon/reload-block.ts';
 import { Scheduler } from './application/scheduler/scheduler.ts';
 import { API_PORT, DEFAULTS } from './config.ts';
 import { type Activity, SCHEMA_DIRTY, offMain, reloadDecision } from './domain/daemon/restart.ts';
@@ -26,37 +27,40 @@ export async function runDaemon({ db, once, log = () => {} }: DaemonOptions): Pr
   const changed: string[] = [];
   let lastChangeAt: number | null = null;
   // Why the code on disk must not be loaded, worked out when a change arrives (null: fine to load).
-  let blocked: string | null = null;
-  const refreshBlocked = async () => {
-    const [dirty, branch] = await Promise.all([
-      hasUncommittedChanges(join(import.meta.dirname, 'db', 'schema.ts')),
-      checkedOutBranch(import.meta.dirname),
-    ]);
-    const next = dirty ? SCHEMA_DIRTY : branch && branch !== 'main' ? offMain(branch) : null;
+  const block = reloadBlock(
+    async () => {
+      const [dirty, branch] = await Promise.all([
+        hasUncommittedChanges(join(import.meta.dirname, 'db', 'schema.ts')),
+        checkedOutBranch(import.meta.dirname),
+      ]);
+      return dirty ? SCHEMA_DIRTY : branch && branch !== 'main' ? offMain(branch) : null;
+    },
     // Once per distinct reason: the scheduler only logs pending decisions, and a block is not one.
-    if (next && next !== blocked) log(`not reloading: ${next}`);
-    blocked = next;
-  };
+    { onNew: (next) => log(`not reloading: ${next}`) },
+  );
   if (!once) {
     watchSource(import.meta.dirname, (file) => {
       if (!changed.includes(file)) changed.push(file);
       lastChangeAt = Date.now();
-      void refreshBlocked();
+      void block.refresh().catch(() => {});
     });
   }
   const reload = once
     ? undefined
     : {
-        check: (activity: Activity) =>
-          reloadDecision({
+        check: (activity: Activity) => {
+          // A commit changes no file, so look again while blocked.
+          block.recheck();
+          return reloadDecision({
             enabled: db.reloadOnChange(),
             changed,
             lastChangeAt,
             now: Date.now(),
             activity,
             requested: restartRequested,
-            blocked,
-          }),
+            blocked: block.reason,
+          });
+        },
         // launchd's KeepAlive starts the daemon again on the code now on disk.
         exit: () => process.exit(0),
       };
@@ -79,7 +83,7 @@ export async function runDaemon({ db, once, log = () => {} }: DaemonOptions): Pr
       // After the API has answered: waking may exit the process at once.
       setTimeout(() => scheduler.wake(), 200);
     };
-    const reloadFacts = () => ({ changed, lastChangeAt, requested: restartRequested, blocked });
+    const reloadFacts = () => ({ changed, lastChangeAt, requested: restartRequested, blocked: block.reason });
     const api = await startApi({ db, port: API_PORT, scheduler, changes, daemon: { info, requestRestart, reloadFacts } }).catch((err) => {
       if (err?.code === 'EADDRINUSE')
         throw new Error(`port ${API_PORT} is in use: another agentdeck daemon is probably running (see \`agentdeck service\`)`);
