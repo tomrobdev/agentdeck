@@ -41,7 +41,7 @@ export function repoStore(db: DatabaseSync, orm: Orm) {
       return orm
         .select()
         .from(repos)
-        .where(or(eq(repos.name, nameOrId), eq(repos.id, Number(nameOrId) || -1)))
+        .where(or(eq(repos.name, nameOrId), eq(repos.id, /^\d+$/.test(nameOrId) ? Number(nameOrId) : -1)))
         .get() as Repo | undefined;
     },
     /** Active repos, or with `{ archived: true }` only the archived ones. */

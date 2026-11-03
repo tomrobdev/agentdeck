@@ -11,7 +11,7 @@ import { autoMergeMaxLinesError } from '../../domain/pull-request/auto-merge.ts'
 import { MERGE_METHODS, type MergeMethod, isMergeMethod } from '../../domain/pull-request/merge.ts';
 import { PR_MODES, type PrMode } from '../../domain/pull-request/pr.ts';
 import type { Repo } from '../../domain/repo/repo.ts';
-import { goalsError, networkError } from '../../domain/repo/rules.ts';
+import { goalsError, networkError, repoNameError } from '../../domain/repo/rules.ts';
 import { detectToolchain } from '../../domain/repo/toolchain.ts';
 import { textList } from '../../domain/text.ts';
 import { type Check, runDoctor } from './doctor.ts';
@@ -34,11 +34,14 @@ export async function addRepo(
   const tools = body.tools === null ? undefined : list(body, 'tools');
   const abs = resolve(path.replace(/^~(?=\/|$)/, process.env.HOME ?? '~'));
   if (!existsSync(abs) || !(await isGitRepo(abs))) throw new ActionError(`${abs} is not a git repository`);
+  const repoName = name || basename(abs);
+  const nameError = repoNameError(repoName);
+  if (nameError) throw new ActionError(nameError);
   const { files, scripts } = rootInfo(abs);
   const detected = detectToolchain(files, scripts);
   try {
     return db.addRepo({
-      name: name || basename(abs),
+      name: repoName,
       path: abs,
       base_branch: base || (await currentBranch(abs)),
       test_cmd: test || detected?.test_cmd || null,

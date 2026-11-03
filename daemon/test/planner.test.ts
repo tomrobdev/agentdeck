@@ -103,6 +103,34 @@ test('an empty plan is recorded as nothing', async () => {
   assert.equal(db.plannerRuns(repoId)[0].outcome, 'nothing');
 });
 
+test('a planner run that throws still ends its row', async () => {
+  actions.updateRepo(db, repoId, { goals: 'FAKE_PLAN_EMPTY' });
+  const real = db.tasksForRepo;
+  db.tasksForRepo = () => {
+    throw new Error('boom');
+  };
+  try {
+    await assert.rejects(actions.proposeNow(db, repoId), /boom/);
+  } finally {
+    db.tasksForRepo = real;
+  }
+  const [run] = db.plannerRuns(repoId);
+  assert.equal(run.outcome, 'failed');
+  assert.ok(run.ended_at);
+  assert.match(run.note ?? '', /boom/);
+  assert.equal(db.countRunningPlannerRuns(), 0);
+});
+
+test('repo names that escape the goals folder or read as an id are refused', async () => {
+  for (const name of ['../x', 'a/b', '5', '.hidden', '-x']) {
+    await assert.rejects(actions.addRepo(db, { path: makeRepo(`n${Math.random().toString(36).slice(2)}`), name }), /repo name/);
+  }
+  const five = db.addRepo({ name: 'five', path: '/tmp/five', base_branch: 'main' });
+  assert.equal(db.findRepo(String(five.id))?.id, five.id);
+  assert.equal(db.findRepo(`0x${five.id.toString(16)}`), undefined);
+  assert.equal(db.findRepo(`${five.id}e0`), undefined);
+});
+
 test('prompt lists open and recent tasks', () => {
   const repo = db.getRepo(repoId)!;
   const prompt = buildPlannerPrompt(repo, 'ship it', db.tasksForRepo(repoId), 3);
