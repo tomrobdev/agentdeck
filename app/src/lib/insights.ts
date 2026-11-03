@@ -1,7 +1,8 @@
 // The Insights page's numbers: each scorecard measure as a value per week, set against the pilot's target.
-// Pure: the targets and the week a stamp falls in are the daemon's (domain/run/scorecard.ts).
+// Pure: the targets and the week a stamp falls in are the daemon's (domain/run/scorecard.ts, domain/time.ts).
 import type { Stats } from '../../../daemon/src/api/contract.ts';
-import { SCORECARD_TARGETS, weekOf } from '../../../daemon/src/domain/run/scorecard.ts';
+import { SCORECARD_TARGETS } from '../../../daemon/src/domain/run/scorecard.ts';
+import { sqliteUtc, weekOf } from '../../../daemon/src/domain/time.ts';
 
 export type MeasureKey = 'first_run' | 'interventions' | 'cost' | 'minutes' | 'review' | 'quota' | 'ci';
 
@@ -91,7 +92,7 @@ function weeksBetween(first: string, last: string): string[] {
 }
 
 /** The Monday of the week `now` falls in. */
-export const thisWeek = (now: Date = new Date()): string => weekOf(now.toISOString().replace('T', ' ').slice(0, 19));
+export const thisWeek = (now: Date = new Date()): string => weekOf(sqliteUtc(now.toISOString()));
 
 const ratio = (done: number, of: number, what: string) => (of ? `${done} of ${of} ${what}` : null);
 

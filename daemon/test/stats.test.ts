@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { ActionError, pilotStats } from '../src/application/actions.ts';
 import { openDb } from '../src/db/index.ts';
 import type { RunOutcome } from '../src/domain/run/run.ts';
-import { type StatRun, measure, minutesBetween, statsTable, wilson } from '../src/domain/run/stats.ts';
+import { type StatRun, measure, statsTable, wilson } from '../src/domain/run/stats.ts';
 import { blockedTask, doneTask, failedTask } from './fixtures.ts';
 
 const near = (actual: number | undefined, expected: number, eps = 1e-3) =>
@@ -20,11 +20,6 @@ test('wilson: hand-checked intervals', () => {
   assert.equal(wilson(0, 5)?.low, 0);
   near(wilson(0, 5)?.high, 0.4345);
   assert.equal(wilson(0, 0), null);
-});
-
-test('minutesBetween reads sqlite timestamps', () => {
-  assert.equal(minutesBetween('2026-10-01 10:00:00', '2026-10-01 10:12:30'), 12.5);
-  assert.equal(minutesBetween('nonsense', '2026-10-01 10:00:00'), 0);
 });
 
 const run = (o: Partial<StatRun>): StatRun => ({
