@@ -9,17 +9,14 @@ import {
   buildScorecard,
   checksGreen,
   resolveAutoMerge,
-  countInterventions,
   cycleOf,
-  measureByWeek,
-  median,
   parseSince,
-  quotaSpends,
   scorecardText,
   summarizeChecks,
-  weekOf,
 } from '../src/domain/run/scorecard.ts';
-import type { StatRun } from '../src/domain/run/stats.ts';
+import { countInterventions } from '../src/domain/run/interventions.ts';
+import { type StatRun, measureByWeek } from '../src/domain/run/stats.ts';
+import { quotaSpends } from '../src/domain/usage/quota.ts';
 import { doneTask, queuedTask } from './fixtures.ts';
 
 const near = (actual: number | null | undefined, expected: number, eps = 1e-9) =>
@@ -80,14 +77,6 @@ const row = (o: Partial<ScorecardTaskRow> = {}): ScorecardTaskRow => ({
   repo_auto_merge: false,
   pr_checks_opened: null,
   ...o,
-});
-
-test('median: the middle value, or the mean of the two middle ones', () => {
-  assert.equal(median([]), null);
-  assert.equal(median([7]), 7);
-  assert.equal(median([30, 10, 20]), 20);
-  assert.equal(median([120, 30]), 75);
-  assert.equal(median([1, 2, 3, 10]), 2.5);
 });
 
 test('countInterventions: only a person event that changes the outcome counts', () => {
@@ -173,14 +162,6 @@ test('PR checks: green is some checks, none failing or pending', () => {
   ]);
   assert.deepEqual(s, { recorded: 4, green: 3, rate: 0.75 });
   assert.deepEqual(summarizeChecks([]), { recorded: 0, green: 0, rate: null });
-});
-
-test('weekOf: the Monday of the week, in UTC', () => {
-  assert.equal(weekOf('2026-10-05 10:00:00'), '2026-10-05'); // a Monday
-  assert.equal(weekOf('2026-10-11 23:59:59'), '2026-10-05'); // the Sunday after
-  assert.equal(weekOf('2026-10-12 00:00:00'), '2026-10-12');
-  assert.equal(weekOf('2026-10-04 12:00:00'), '2026-09-28'); // the Sunday before
-  assert.equal(weekOf('nonsense'), '');
 });
 
 test('quotaSpends: rises add up, a reset counts what the new window shows', () => {

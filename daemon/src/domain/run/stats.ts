@@ -1,4 +1,6 @@
 // The pilot scorecard's measures (docs/pilot/scorecard.md), computed from plain run rows. Pure: no I/O.
+import { minutesBetween, weekOf } from '../time.ts';
+import { num, pct, table } from './report-text.ts';
 import { INTERRUPTED } from './run.ts';
 
 /** One work run with the status of the task it belongs to. Resolve runs are never given here. */
@@ -57,12 +59,6 @@ export function wilson(successes: number, n: number, z = Z_95): Interval | null 
   return { low: Math.max(0, center - half), high: Math.min(1, center + half) };
 }
 
-/** Minutes between two sqlite `datetime('now')` stamps (UTC, "YYYY-MM-DD HH:MM:SS"). 0 for an unreadable pair. */
-export function minutesBetween(start: string, end: string): number {
-  const ms = Date.parse(`${end.replace(' ', 'T')}Z`) - Date.parse(`${start.replace(' ', 'T')}Z`);
-  return Number.isFinite(ms) && ms > 0 ? ms / 60_000 : 0;
-}
-
 /** The measures over a set of work runs. A run a daemon restart cut off is no verdict, so it is not a first run. */
 export function measure(rows: StatRun[]): Measures {
   const taskIds = new Set(rows.map((r) => r.task_id));
@@ -100,8 +96,6 @@ export interface StatsReport {
   total: Measures;
 }
 
-const pct = (v: number) => `${(v * 100).toFixed(0)}%`;
-
 /** "80% (n=10, 49–94%)", or "–" with no finished first run. */
 export function fmtFirstRun(m: Measures): string {
   if (m.first_run_rate === null || !m.first_run_interval) return '–';
@@ -109,10 +103,24 @@ export function fmtFirstRun(m: Measures): string {
   return `${pct(m.first_run_rate)} (${m.first_run_done}/${m.first_runs}, 95% ${pct(low)}–${pct(high)})`;
 }
 
+/** The first-run measures of each week with work runs, oldest first. A task goes by the week its first run began. */
+export function measureByWeek(rows: StatRun[]): { week: string; measures: Measures }[] {
+  const firstStart = new Map<number, string>();
+  for (const r of rows) {
+    const seen = firstStart.get(r.task_id);
+    if (seen === undefined || r.started_at < seen) firstStart.set(r.task_id, r.started_at);
+  }
+  const groups = new Map<string, StatRun[]>();
+  for (const r of rows) {
+    const week = weekOf(firstStart.get(r.task_id) ?? r.started_at);
+    if (week) groups.set(week, [...(groups.get(week) ?? []), r]);
+  }
+  return [...groups].map(([week, group]) => ({ week, measures: measure(group) })).sort((a, b) => a.week.localeCompare(b.week));
+}
+
 /** The report as an aligned table, one row per repo and a total row. */
 export function statsTable(report: StatsReport): string {
   const head = ['repo', 'tasks', 'runs', 'first run done', 'denials/run', 'cost/done task', 'min/done task'];
-  const num = (v: number | null, digits: number, prefix = '') => (v === null ? '–' : `${prefix}${v.toFixed(digits)}`);
   const row = (name: string, m: Measures) => [
     name,
     String(m.tasks),
@@ -122,14 +130,5 @@ export function statsTable(report: StatsReport): string {
     num(m.cost_per_done_task, 2, '$'),
     num(m.minutes_per_done_task, 1),
   ];
-  const lines = [head, ...report.repos.map((r) => row(r.repo, r.measures)), row('total', report.total)];
-  const widths = head.map((_, i) => Math.max(...lines.map((l) => l[i].length)));
-  return lines
-    .map((l) =>
-      l
-        .map((c, i) => (i === 0 ? c.padEnd(widths[i]) : c.padStart(widths[i])))
-        .join('  ')
-        .trimEnd(),
-    )
-    .join('\n');
+  return table(head, [...report.repos.map((r) => row(r.repo, r.measures)), row('total', report.total)]);
 }

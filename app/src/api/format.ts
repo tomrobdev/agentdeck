@@ -1,5 +1,6 @@
 // How the dashboard words what the daemon reports: times, durations, waits and the daemon's state.
 import type { AutoMergeCheck, LiveView, PrCheck, MergeRequestView, Run, StartWait, Status, SyncResult, SyncView } from './types.ts';
+import { sqliteMs } from '../../../daemon/src/domain/time.ts';
 
 /** What a queued task waits for, in a few words, for chips and callouts. */
 export function describeWait(h: StartWait): string {
@@ -60,7 +61,7 @@ export function relTime(unixSeconds: number): string {
 
 /** Every time from the daemon is SQLite's UTC `YYYY-MM-DD HH:MM:SS`, with no zone marker. */
 export function parseTime(s: string): number {
-  return Date.parse(s.replace(' ', 'T') + 'Z');
+  return sqliteMs(s);
 }
 
 export function ago(time: string): string {
