@@ -9,6 +9,9 @@ import { MODES, THEMES, mode, setMode, setTheme, theme } from '../../platform/th
 import { useActions } from '../../composables/useActions';
 import Chip from '../ui/Chip.vue';
 import Modal from '../ui/Modal.vue';
+import NumberInput from '../ui/NumberInput.vue';
+import RadioGroup from '../ui/RadioGroup.vue';
+import Switch from '../ui/Switch.vue';
 import SegmentedControl from '../ui/SegmentedControl.vue';
 
 defineProps<{ notifications: NotificationRow[] }>();
@@ -99,20 +102,13 @@ async function test() {
       <section class="flex flex-col gap-2.5">
         <h4 class="m-0">Appearance</h4>
         <p class="muted m-0 text-sm">Applies as you pick, and is remembered on this computer.</p>
-        <div class="grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="Theme">
-          <label
-            v-for="t in THEMES"
-            :key="t.key"
-            class="flex cursor-pointer items-center gap-2 rounded-sm border px-2 py-1.5"
-            :class="theme === t.key ? 'border-accent' : 'border-border'"
-          >
-            <input type="radio" name="theme" :value="t.key" :checked="theme === t.key" @change="setTheme(t.key)" />
-            <span
-              ><b>{{ t.label }}</b
-              ><small class="muted text-xs"> {{ t.hint }}</small></span
-            >
-          </label>
-        </div>
+        <RadioGroup
+          cards
+          label="Theme"
+          :options="THEMES.map((t) => ({ key: t.key, label: t.label, hint: t.hint }))"
+          :model-value="theme"
+          @update:model-value="setTheme"
+        />
         <SegmentedControl
           class="self-start"
           label="Mode"
@@ -131,35 +127,27 @@ async function test() {
         <div class="grid grid-cols-2 gap-x-4 gap-y-3">
           <label class="field">
             <span>5h cap</span>
-            <span class="flex items-center gap-1.5 [&_input]:w-20"
-              ><input type="number" min="1" max="100" v-model.number="form.five_hour_max" />%</span
-            >
+            <span class="flex items-center gap-1.5 [&_input]:w-20"><NumberInput v-model="form.five_hour_max" />%</span>
             <small class="muted text-xs">Hold new tasks above this.</small>
           </label>
           <label class="field">
             <span>5h soft limit</span>
-            <span class="flex items-center gap-1.5 [&_input]:w-20"
-              ><input type="number" min="1" max="100" v-model.number="form.five_hour_soft" />%</span
-            >
+            <span class="flex items-center gap-1.5 [&_input]:w-20"><NumberInput v-model="form.five_hour_soft" />%</span>
             <small class="muted text-xs">One task at a time above this.</small>
           </label>
           <label class="field">
             <span>Weekly cap</span>
-            <span class="flex items-center gap-1.5 [&_input]:w-20"
-              ><input type="number" min="1" max="100" v-model.number="form.weekly_max" />%</span
-            >
+            <span class="flex items-center gap-1.5 [&_input]:w-20"><NumberInput v-model="form.weekly_max" />%</span>
             <small class="muted text-xs">Spread evenly: about {{ perDay }}% a day.</small>
           </label>
           <label class="field">
             <span>Pace slack</span>
-            <span class="flex items-center gap-1.5 [&_input]:w-20"
-              ><input type="number" min="0" max="100" v-model.number="form.pace_slack" />%</span
-            >
+            <span class="flex items-center gap-1.5 [&_input]:w-20"><NumberInput v-model="form.pace_slack" />%</span>
             <small class="muted text-xs">How far ahead of even pace it may run.</small>
           </label>
           <label class="field">
             <span>Max concurrent tasks</span>
-            <input type="number" min="1" max="8" v-model.number="form.max_concurrent" />
+            <NumberInput v-model="form.max_concurrent" />
           </label>
         </div>
       </section>
@@ -170,19 +158,17 @@ async function test() {
           When a repo with goals has nothing queued, the planner reads its goals and code and proposes the next tasks. Write goals under
           Repos.
         </p>
-        <label class="flex items-center gap-2"
-          ><input type="checkbox" v-model="form.planner_enabled" /> Plan automatically when a queue runs dry</label
-        >
+        <Switch v-model="form.planner_enabled">Plan automatically when a queue runs dry</Switch>
         <div class="grid grid-cols-3 gap-x-4 gap-y-3">
           <label class="field">
             <span>At most every</span>
             <span class="flex items-center gap-1.5 [&_input]:w-20"
-              ><input type="number" min="0.25" step="0.25" v-model.number="form.planner_interval_hours" />hours</span
+              ><NumberInput v-model="form.planner_interval_hours" :step="0.25" />hours</span
             >
           </label>
           <label class="field">
             <span>Tasks per plan</span>
-            <input type="number" min="1" max="10" v-model.number="form.planner_max_tasks" />
+            <NumberInput v-model="form.planner_max_tasks" />
           </label>
           <label class="field">
             <span>Planner model</span>
@@ -205,15 +191,13 @@ async function test() {
             >Run <code>agentdeck install</code> once and it starts at login and restarts if it dies.</small
           >
         </div>
-        <label class="flex items-center gap-2">
-          <input type="checkbox" v-model="form.reload_on_change" /> Restart the daemon when its source changes (for developing AgentDeck)
-        </label>
+        <Switch v-model="form.reload_on_change">Restart the daemon when its source changes (for developing AgentDeck)</Switch>
         <small class="muted text-xs"
           >Once something in daemon/src changed and no task or planner run is active, it exits and launchd starts the new code.</small
         >
-        <label v-if="isNative" class="flex items-center gap-2">
-          <input type="checkbox" :checked="!!appAtLogin" @change="toggleAppAtLogin" /> Open this dashboard at login (in the menu bar)
-        </label>
+        <Switch v-if="isNative" :model-value="!!appAtLogin" @update:model-value="toggleAppAtLogin">
+          Open this dashboard at login (in the menu bar)
+        </Switch>
       </section>
 
       <section v-if="isNative" class="flex flex-col gap-2.5">
@@ -234,7 +218,7 @@ async function test() {
 
       <section class="flex flex-col gap-2.5">
         <h4 class="m-0">Notifications</h4>
-        <label class="flex items-center gap-2"><input type="checkbox" v-model="form.desktop" /> macOS notifications</label>
+        <Switch v-model="form.desktop">macOS notifications</Switch>
         <div class="flex flex-wrap gap-x-4 gap-y-1.5">
           <label v-for="e in EVENTS" :key="e.key" class="flex items-center gap-2">
             <input type="checkbox" :value="e.key" v-model="form.events" /> {{ e.label }}

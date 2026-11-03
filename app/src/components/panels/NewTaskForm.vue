@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { type Repo, type TaskDetail, api } from '../../api';
 import { useTerminal } from '../../composables/useTerminal';
 import Modal from '../ui/Modal.vue';
+import NumberInput from '../ui/NumberInput.vue';
 
 const props = defineProps<{ repos: Repo[] }>();
 const emit = defineEmits<{ close: []; created: [task: TaskDetail]; repos: [] }>();
@@ -111,11 +112,11 @@ async function submit() {
         </label>
         <label class="field flex-[0_0_84px]">
           Priority
-          <input type="number" v-model.number="priority" />
+          <NumberInput v-model="priority" />
         </label>
         <label class="field flex-[0_0_84px]">
           Max turns
-          <input type="number" v-model.number="maxTurns" min="1" />
+          <NumberInput v-model="maxTurns" />
         </label>
       </div>
       <div class="flex gap-2.5">
