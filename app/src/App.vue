@@ -32,6 +32,7 @@ import TaskPage from './components/task/TaskPage.vue';
 import MergeDialog from './components/task/MergeDialog.vue';
 import AppProvider from './components/ui/AppProvider.vue';
 import CommandPalette from './components/ui/CommandPalette.vue';
+import Toaster from './components/ui/Toaster.vue';
 import { go, openTask, route } from './router';
 import { type PersonEvent, needYouCount, openingTab } from './lib/taskView';
 import { paletteItems } from './lib/palette';
@@ -42,16 +43,17 @@ import { useChangeStream } from './composables/useChangeStream';
 const STATUS_FALLBACK_MS = 30_000;
 
 const selectedId = ref<number | null>(null);
-const toast = ref('');
+const toast = ref<{ id: number; message: string; duration: number } | null>(null);
 const modal = ref<'new' | 'repos' | 'settings' | 'daemon' | null>(null);
 
 // A long message (a gh error, a sync that could not push) stays up long enough to read. A newer message replaces it.
-let toastTimer: ReturnType<typeof setTimeout> | undefined;
+let toastId = 0;
 function flash(msg: string) {
-  toast.value = msg;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => (toast.value = ''), Math.min(Math.max(3500, msg.length * 60), 15_000));
+  toast.value = { id: ++toastId, message: msg, duration: Math.min(Math.max(3500, msg.length * 60), 15_000) };
 }
+const closeToast = (id: number) => {
+  if (toast.value?.id === id) toast.value = null;
+};
 
 /** The task whose page is open, from the route. */
 const pageId = computed(() => (route.current.name === 'task' ? route.current.id : null));
@@ -212,12 +214,7 @@ watchEffect(() => {
       <MergeDialog v-if="merging !== null" :task-id="merging" @close="merging = null" @merged="onMerged" />
       <CommandPalette v-if="palette" :items="paletteRows" @close="palette = false" />
 
-      <div
-        v-if="toast"
-        class="fixed bottom-10 left-1/2 z-40 max-w-[calc(100vw-32px)] -translate-x-1/2 rounded-md bg-text px-3.5 py-2 text-bg"
-      >
-        {{ toast }}
-      </div>
+      <Toaster :toast="toast" @close="closeToast" />
     </div>
   </AppProvider>
 </template>
