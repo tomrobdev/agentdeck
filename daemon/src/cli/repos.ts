@@ -88,7 +88,6 @@ export const repoCommands: Record<string, Command> = {
     console.log(r.goals.trim() || '(empty: write the outcomes you want, priorities, and what not to touch)');
   },
   propose,
+  // `plan` is the old name of `propose`.
+  plan: propose,
 };
-
-// `plan` is the old name of `propose`.
-repoCommands.plan = propose;

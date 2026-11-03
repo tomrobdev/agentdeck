@@ -1,24 +1,9 @@
 // The `agentdeck` command. The launchd plist runs this file, so it stays at src/cli.ts.
-import { ActionError } from './application/actions.ts';
-import { contextCommands } from './cli/agent-context.ts';
-import { daemonCommands } from './cli/daemon.ts';
+import { COMMANDS } from './cli/commands.ts';
 import { die } from './cli/format.ts';
 import { HELP } from './cli/help.ts';
-import { type Command, parseCommandLine } from './cli/context.ts';
-import { prCommands } from './cli/pull-requests.ts';
-import { repoCommands } from './cli/repos.ts';
-import { statsCommands } from './cli/stats.ts';
-import { taskCommands } from './cli/tasks.ts';
+import { parseCommandLine } from './cli/context.ts';
 import { openDb } from './db/index.ts';
-
-const COMMANDS: Record<string, Command> = {
-  ...repoCommands,
-  ...taskCommands,
-  ...prCommands,
-  ...daemonCommands,
-  ...contextCommands,
-  ...statsCommands,
-};
 
 async function main(argv: string[]): Promise<void> {
   const { values: flags, positionals } = parseCommandLine(argv);
@@ -36,6 +21,7 @@ async function main(argv: string[]): Promise<void> {
 try {
   await main(process.argv.slice(2));
 } catch (err) {
-  if (err instanceof ActionError) die(err.message);
-  throw err;
+  if (process.env.AGENTDECK_DEBUG) console.error(err);
+  // One line for any Error; the stack only with AGENTDECK_DEBUG.
+  die(err instanceof Error ? err.message.split('\n')[0] : String(err));
 }

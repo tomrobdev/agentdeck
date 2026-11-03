@@ -125,7 +125,6 @@ flowchart TD
   application --> config_ts
   application --> db
   application --> domain
-  cli_ts --> application
   cli_ts --> cli
   cli_ts --> db
   cli --> application
