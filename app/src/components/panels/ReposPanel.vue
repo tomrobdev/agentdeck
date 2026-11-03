@@ -15,9 +15,12 @@ import {
 } from '../../api';
 import { type RepoForm, toRepoForm, toRepoPatch } from '../../lib/forms';
 import { useActions } from '../../composables/useActions';
+import Accordion from '../ui/Accordion.vue';
+import AccordionItem from '../ui/AccordionItem.vue';
+import AccordionTrigger from '../ui/AccordionTrigger.vue';
 import Modal from '../ui/Modal.vue';
 
-defineProps<{ repos: Repo[] }>();
+const props = defineProps<{ repos: Repo[] }>();
 defineEmits<{ close: [] }>();
 const { run } = useActions();
 const queryClient = useQueryClient();
@@ -52,9 +55,16 @@ function load(d: RepoDetail) {
   form.value = toRepoForm(d);
 }
 
+// The accordion opens one repo's editor, or closes it.
+function toggle(id: string | undefined) {
+  const r = id ? props.repos.find((x) => String(x.id) === id) : undefined;
+  if (r) return void edit(r);
+  open.value = null;
+  editError.value = editMsg.value = '';
+}
+
 async function edit(r: Repo) {
   editError.value = editMsg.value = '';
-  if (open.value?.id === r.id) return void (open.value = null);
   try {
     load(await queryClient.fetchQuery({ ...repoQuery(r.id), staleTime: 0 }));
   } catch (e) {
@@ -149,22 +159,33 @@ async function confirmDelete() {
 <template>
   <Modal title="Repos" @close="$emit('close')">
     <p v-if="editError && !open" class="form-error">{{ editError }}</p>
-    <ul v-if="repos.length" class="m-0 mb-4 flex list-none flex-col gap-2 p-0">
-      <li
+    <Accordion
+      v-if="repos.length"
+      as="ul"
+      class="m-0 mb-4 flex list-none flex-col gap-2 p-0"
+      :model-value="open ? String(open.id) : undefined"
+      @update:model-value="toggle"
+    >
+      <AccordionItem
         v-for="r in repos"
         :key="r.id"
+        as="li"
+        :value="String(r.id)"
         class="flex flex-col gap-0.5 rounded-md border px-2.5 py-2"
+        header-class="flex flex-col gap-0.5"
         :class="open?.id === r.id ? 'border-accent' : 'border-border'"
       >
-        <button class="btn-ghost flex items-baseline gap-2 text-left" @click="edit(r)">
-          <span class="font-semibold">{{ r.name }}</span>
-          <span v-if="r.paused_reason" class="min-w-0 truncate text-sm text-blocked" :title="r.paused_reason"
-            >paused · {{ r.paused_reason }}</span
-          >
-          <span class="muted">base {{ r.base_branch }}<template v-if="r.auto_approve"> · auto-approve</template></span>
-          <span class="muted ml-auto">{{ open?.id === r.id ? '▾' : '▸' }}</span>
-        </button>
-        <code class="muted truncate text-sm">{{ r.path }}</code>
+        <template #header>
+          <AccordionTrigger class="btn-ghost flex items-baseline gap-2 text-left">
+            <span class="font-semibold">{{ r.name }}</span>
+            <span v-if="r.paused_reason" class="min-w-0 truncate text-sm text-blocked" :title="r.paused_reason"
+              >paused · {{ r.paused_reason }}</span
+            >
+            <span class="muted">base {{ r.base_branch }}<template v-if="r.auto_approve"> · auto-approve</template></span>
+            <span class="muted ml-auto">{{ open?.id === r.id ? '▾' : '▸' }}</span>
+          </AccordionTrigger>
+          <code class="muted truncate text-sm">{{ r.path }}</code>
+        </template>
 
         <form v-if="open?.id === r.id && form" class="mt-2.5 flex flex-col gap-2.5" @submit.prevent="save">
           <label class="field flex-1">
@@ -255,8 +276,8 @@ async function confirmDelete() {
             <button class="primary" type="submit" :disabled="!!busy">Save</button>
           </div>
         </form>
-      </li>
-    </ul>
+      </AccordionItem>
+    </Accordion>
     <p v-else class="muted">No repos yet.</p>
 
     <div v-if="archived.length || archiveError" class="mb-4 flex flex-col gap-2 border-t border-border pt-3.5">

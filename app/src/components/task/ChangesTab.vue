@@ -20,7 +20,11 @@ import { loadSetting, saveSetting } from '../../lib/storage';
 import DiffView from '../files/DiffView.vue';
 import FileTree, { type TreeNode } from '../files/FileTree.vue';
 import Markdown from '../files/Markdown.vue';
+import Checkbox from '../ui/Checkbox.vue';
 import Delta from '../ui/Delta.vue';
+import Disclosure from '../ui/Disclosure.vue';
+import DisclosureContent from '../ui/DisclosureContent.vue';
+import DisclosureTrigger from '../ui/DisclosureTrigger.vue';
 import Popover from '../ui/Popover.vue';
 import SegmentedControl from '../ui/SegmentedControl.vue';
 
@@ -124,7 +128,9 @@ const observer = new IntersectionObserver(
   { rootMargin: '600px 0px' },
 );
 const sections = new Set<HTMLElement>();
-const sectionRef = (el: unknown) => {
+const sectionRef = (ref: unknown) => {
+  // A component's ref is its instance; the section is its root element.
+  const el = ref instanceof HTMLElement ? ref : (ref as { $el?: unknown } | null)?.$el;
   if (el instanceof HTMLElement && !sections.has(el)) {
     sections.add(el);
     observer.observe(el);
@@ -222,7 +228,7 @@ async function jump(path: string) {
           </div>
         </Popover>
         <div class="spacer" />
-        <label class="check"><input v-model="hideViewed" type="checkbox" /> Hide viewed</label>
+        <Checkbox v-model="hideViewed">Hide viewed</Checkbox>
         <SegmentedControl
           label="Diff layout"
           :options="[
@@ -246,13 +252,19 @@ async function jump(path: string) {
           />
         </aside>
         <div class="min-w-0 flex-1">
-          <section v-for="f in shown" :key="f.path" :ref="sectionRef" class="card mb-3" :data-path="f.path">
+          <Disclosure
+            v-for="f in shown"
+            :key="f.path"
+            :ref="sectionRef"
+            class="card mb-3"
+            :data-path="f.path"
+            :open="!collapsed.has(f.path)"
+            @update:open="(o) => (o ? collapsed.delete(f.path) : collapsed.add(f.path))"
+          >
             <header class="card-head sticky top-0 z-[1] px-2.5 py-1.5">
-              <button
+              <DisclosureTrigger
                 class="grid size-7 flex-none place-items-center rounded border-0 bg-transparent p-0 text-muted hover:bg-panel-2 hover:text-text"
                 :title="collapsed.has(f.path) ? 'Expand' : 'Collapse'"
-                :aria-expanded="!collapsed.has(f.path)"
-                @click="collapsed.has(f.path) ? collapsed.delete(f.path) : collapsed.add(f.path)"
               >
                 <svg
                   viewBox="0 0 16 16"
@@ -266,7 +278,7 @@ async function jump(path: string) {
                 >
                   <path d="M4 6l4 4 4-4" />
                 </svg>
-              </button>
+              </DisclosureTrigger>
               <span class="badge" :class="`b-${f.status}`" :title="CHANGE_LABEL[f.status]">{{ f.status }}</span>
               <span class="truncate font-mono text-sm leading-[normal]">
                 <template v-if="f.old_path">{{ f.old_path }} → </template>{{ f.path }}
@@ -282,9 +294,9 @@ async function jump(path: string) {
                 Preview
               </button>
               <button v-if="f.status !== 'D'" class="btn-mini" title="Open the whole file" @click="emit('open', f.path)">View file</button>
-              <label class="check"><input type="checkbox" :checked="isViewed(f)" @change="setViewed(f, !isViewed(f))" /> Viewed</label>
+              <Checkbox :model-value="isViewed(f)" @update:model-value="(v) => setViewed(f, v)">Viewed</Checkbox>
             </header>
-            <template v-if="!collapsed.has(f.path)">
+            <DisclosureContent>
               <div v-if="previewOn.has(f.path)" class="px-4.5 py-3.5">
                 <Markdown v-if="preview.has(f.path)" :text="preview.get(f.path)!" />
                 <p v-else class="text-muted">Loading…</p>
@@ -304,8 +316,8 @@ async function jump(path: string) {
                 </template>
                 <p v-else class="m-0 px-3.5 py-2.5 text-muted">Loading…</p>
               </template>
-            </template>
-          </section>
+            </DisclosureContent>
+          </Disclosure>
           <p v-if="!shown.length" class="py-2 text-muted">Every file is marked viewed.</p>
         </div>
       </div>

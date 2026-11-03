@@ -9,6 +9,7 @@ import { useActions } from '../../composables/useActions';
 import { openTask } from '../../router';
 import Chip from '../ui/Chip.vue';
 import Popover from '../ui/Popover.vue';
+import Progress from '../ui/Progress.vue';
 
 const props = defineProps<{ status: Status | null; tasks: TaskSummary[]; offline: boolean; busy: boolean }>();
 defineEmits<{ toggle: []; daemon: [] }>();
@@ -111,14 +112,14 @@ const toggleTitle = computed(() => {
         :title="`${m.pct}% used · ${m.markTitle} · resets in ${m.resets}`"
       >
         <span class="muted">{{ m.label }}</span>
-        <span class="meter relative inline-block h-1 w-14 rounded-sm bg-panel-2">
-          <span
-            class="meter absolute inset-y-0 left-0 rounded-sm transition-[width] duration-[400ms]"
-            :class="m.pct >= m.mark * 100 ? 'bg-blocked' : 'bg-running'"
-            :style="{ width: m.pct + '%' }"
-          />
+        <Progress
+          :label="`${m.label} usage`"
+          :value="m.pct"
+          class="meter relative inline-block h-1 w-14 rounded-sm bg-panel-2"
+          :indicator-class="`meter absolute inset-y-0 left-0 rounded-sm transition-[width] duration-[400ms] ${m.pct >= m.mark * 100 ? 'bg-blocked' : 'bg-running'}`"
+        >
           <span class="absolute -top-0.5 -bottom-0.5 -ml-px w-0.5 rounded-[1px] bg-text opacity-55" :style="{ left: m.mark * 100 + '%' }" />
-        </span>
+        </Progress>
         <span :class="{ 'text-blocked': m.pct >= m.mark * 100 }">{{ m.pct }}%</span>
         <span class="muted max-lg:hidden">↻ {{ m.resets }}</span>
       </span>
