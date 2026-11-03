@@ -5,7 +5,14 @@ import { MODEL_LABELS, type NotificationRow, type Settings, ago, api, serviceQue
 import { errorMessage } from '../../../../daemon/src/domain/text.ts';
 import { type SettingsForm, toSettingsForm, toSettingsPatch } from '../../lib/forms';
 import { MODELS } from '../../lib/taskView';
-import { CMUX_TEMPLATE, saveTerminalTemplate, terminalTemplate } from '../../lib/terminal';
+import {
+  CMUX_TEMPLATE,
+  EDITOR_PRESETS,
+  editorTemplate,
+  saveEditorTemplate,
+  saveTerminalTemplate,
+  terminalTemplate,
+} from '../../lib/terminal';
 import { isNative, launchAtLogin, setLaunchAtLogin } from '../../platform/native';
 import { MODES, THEMES, mode, setMode, setTheme, theme } from '../../platform/theme';
 import { useActions } from '../../composables/useActions';
@@ -28,6 +35,7 @@ const error = ref('');
 const saving = ref(false);
 const tested = ref('');
 const terminalCmd = ref(terminalTemplate());
+const editorCmd = ref(editorTemplate());
 
 function load(s: Settings) {
   form.value = toSettingsForm(s);
@@ -69,6 +77,7 @@ function alertTone(kind: NotificationRow['kind']) {
 async function save(close = true) {
   if (!form.value) return;
   saveTerminalTemplate(terminalCmd.value);
+  saveEditorTemplate(editorCmd.value);
   const patch = toSettingsPatch(form.value);
   error.value = '';
   saving.value = true;
@@ -175,6 +184,29 @@ async function test() {
         <button type="button" class="self-start" :disabled="terminalCmd === CMUX_TEMPLATE" @click="terminalCmd = CMUX_TEMPLATE">
           Use cmux
         </button>
+      </section>
+
+      <section v-if="isNative" class="flex flex-col gap-2.5">
+        <h4 class="m-0">Editor</h4>
+        <label class="field">
+          <span>Command that opens a task's worktree in your editor</span>
+          <input v-model="editorCmd" class="font-mono" spellcheck="false" placeholder="not set" />
+          <small class="text-muted text-xs">
+            Run like the terminal command, with <code>{cwd}</code> filled in. Leave it empty and the task's "open in editor" button is
+            hidden. Remembered on this computer.
+          </small>
+        </label>
+        <div class="flex flex-wrap gap-2">
+          <button
+            v-for="p in EDITOR_PRESETS"
+            :key="p.name"
+            type="button"
+            :disabled="editorCmd === p.template"
+            @click="editorCmd = p.template"
+          >
+            {{ p.name }}
+          </button>
+        </div>
       </section>
 
       <NotificationSettings :form="form" />

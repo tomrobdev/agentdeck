@@ -31,3 +31,23 @@ export function saveTerminalTemplate(text: string): void {
 export function terminalArgv(): string[] {
   return splitArgs(terminalTemplate());
 }
+
+/** Editor presets for Settings: {cwd} is the folder to open. There is no default. */
+export const EDITOR_PRESETS = [
+  { name: 'VS Code', template: 'code {cwd}' },
+  { name: 'Cursor', template: 'cursor {cwd}' },
+  { name: 'Zed', template: 'zed {cwd}' },
+] as const;
+
+/** The editor command template; empty until one is set. */
+export function editorTemplate(): string {
+  return loadSetting('editor', '');
+}
+
+export function saveEditorTemplate(text: string): void {
+  saveSetting('editor', text.trim());
+}
+
+export function editorArgv(): string[] {
+  return splitArgs(editorTemplate());
+}
