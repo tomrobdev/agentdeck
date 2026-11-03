@@ -433,21 +433,11 @@ export interface NewReviewComment {
   body: string;
 }
 
-/** POST /api/review-comments/:id (a draft comment's text) */
-export interface ReviewCommentPatch {
-  body: string;
-}
-
 /** POST /api/reviews/:id/submit: Request changes also retries the task, with the review as the reason. */
 export interface SubmitReview {
   kind: 'comment' | 'request_changes';
   /** Replaces the draft's overall note when given. */
   body?: string;
-}
-
-/** POST /api/review-comments/:id/answer */
-export interface CommentAnswer {
-  answer: string;
 }
 
 /** GET /api/tasks/:id/plans/:planId */
