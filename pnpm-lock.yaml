@@ -167,7 +167,7 @@ importers:
   .:
     devDependencies:
       prettier:
-        specifier: ^3.9.10
+        specifier: 3.9.10
         version: 3.9.10
 
   app:
