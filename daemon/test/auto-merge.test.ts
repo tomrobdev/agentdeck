@@ -20,7 +20,9 @@ const { openPullRequest } = await import('../src/application/pull-request/open-p
 const { ActionError, addTask, mergePreview, mergeTask, setAutoMerge, syncNow, updateRepo } = await import('../src/application/actions.ts');
 const { resolveConflicting } = await import('../src/application/sync.ts');
 const { repoSettingPatch } = await import('../src/cli/settings-args.ts');
-const { waitingFor } = await import('../src/application/task/dependencies.ts');
+const { dependencyOf, liveLinks, waitingFor } = await import('../src/application/task/dependencies.ts');
+/** What a task waits for on its builds-on links, read from the database now. */
+const waiting = (t: import('../src/domain/task/task.ts').Task) => waitingFor(t, dependencyOf(t, liveLinks(db)));
 type PrDetails = import('../src/domain/pull-request/merge.ts').PrDetails;
 
 const db = openDb(join(home, 'test.db'));
@@ -221,7 +223,7 @@ test('a PR the daemon may merge opens with the label; one it may not opens witho
 test('the refresh finds a ready PR and autoMerge merges it, records who did, cleans up and releases its dependents', async () => {
   const t = tested({ title: 'Ship it alone' });
   const later = await addTask(db, { repo: 'demo', prompt: 'after the merge', builds_on: [t.id] });
-  assert.ok(waitingFor(db, db.getTask(later.id)!));
+  assert.ok(waiting(db.getTask(later.id)!));
 
   const found = await refreshPrStates(db);
   assert.deepEqual(found.mergeable, [{ id: t.id, pr: ready }]);
@@ -230,7 +232,7 @@ test('the refresh finds a ready PR and autoMerge merges it, records who did, cle
   assert.deepEqual(gh.deleted, [t.branch]);
   assert.equal(db.getTask(t.id)!.pr_state, 'merged');
   assert.equal(db.eventsForTask(t.id).at(-1)!.reason, 'auto-merged (squash)');
-  assert.equal(waitingFor(db, db.getTask(later.id)!), null);
+  assert.equal(waiting(db.getTask(later.id)!), null);
   assert.deepEqual(
     db
       .recentNotifications(10)

@@ -24,7 +24,9 @@ const { latestReviewNote } = await import('../src/domain/task/history.ts');
 const { linkTasks, mergeAll, mergePreview, mergeTask } = await import('../src/application/actions.ts');
 const { mergeCheck, parsePrDetails } = await import('../src/domain/pull-request/merge.ts');
 type PrDetails = import('../src/domain/pull-request/merge.ts').PrDetails;
-const { waitingFor } = await import('../src/application/task/dependencies.ts');
+const { dependencyOf, liveLinks, waitingFor } = await import('../src/application/task/dependencies.ts');
+/** What a task waits for on its builds-on links, read from the database now. */
+const waiting = (t: import('../src/domain/task/task.ts').Task) => waitingFor(t, dependencyOf(t, liveLinks(db)));
 const { cancelTask } = await import('../src/application/actions.ts');
 
 const db = openDb(join(home, 'test.db'));
@@ -415,7 +417,7 @@ test('a dependent is not claimed while its dependency pushes and opens its PR', 
     assert.equal(db.getTask(dep.id)!.pr_url, null);
     await new Promise((r) => setTimeout(r, 150)); // several scheduler ticks
     assert.equal(db.getTask(later.id)!.status, 'queued', 'held while the PR is being opened');
-    assert.deepEqual(waitingFor(db, db.getTask(later.id)!), { on: [dep.id], stuck: null });
+    assert.deepEqual(waiting(db.getTask(later.id)!), { on: [dep.id], stuck: null });
 
     release();
     const deadline = Date.now() + 5000;
@@ -440,7 +442,7 @@ test('a dependent is stuck, not released, when its dependency PR could not be op
 
   assert.equal(db.getTask(dep.id)!.status, 'done');
   assert.equal(db.getTask(later.id)!.status, 'queued');
-  assert.deepEqual(waitingFor(db, db.getTask(later.id)!), { on: [dep.id], stuck: `#${dep.id}'s PR could not be opened` });
+  assert.deepEqual(waiting(db.getTask(later.id)!), { on: [dep.id], stuck: `#${dep.id}'s PR could not be opened` });
   assert.equal(db.claimNextTask(), undefined);
 });
 
@@ -460,13 +462,13 @@ test('a blocked dependency notifies once, naming the waiting task, which stays q
   assert.match(notices[0].title, /1 task can't start: #\d+ is blocked/);
   assert.match(notices[0].body, new RegExp(`#${later.id} Second step`));
   assert.match(notices[0].body, new RegExp(`Retry #${dep.id}`));
-  assert.deepEqual(waitingFor(db, db.getTask(later.id)!), { on: [dep.id], stuck: `#${dep.id} is blocked` });
+  assert.deepEqual(waiting(db.getTask(later.id)!), { on: [dep.id], stuck: `#${dep.id} is blocked` });
 
   // A retry puts the dependency back on its way: no longer stuck, and done releases the dependent.
   retryTask(db, dep.id);
-  assert.deepEqual(waitingFor(db, db.getTask(later.id)!), { on: [dep.id], stuck: null });
+  assert.deepEqual(waiting(db.getTask(later.id)!), { on: [dep.id], stuck: null });
   assert.equal(finishNext(), dep.id);
-  assert.equal(waitingFor(db, db.getTask(later.id)!), null);
+  assert.equal(waiting(db.getTask(later.id)!), null);
   assert.equal(finishNext(), later.id);
 });
 
@@ -499,7 +501,7 @@ test('a dependency PR closed without merging notifies when the refresh sees it',
   states = { 'https://x/pull/40': 'closed' };
   await refreshPrStates(db);
   assert.match(stuckNotices(dep.id)[0].title, /PR was closed without merging/);
-  assert.equal(waitingFor(db, db.getTask(later.id)!)?.stuck, `#${dep.id}'s PR was closed without merging`);
+  assert.equal(waiting(db.getTask(later.id)!)?.stuck, `#${dep.id}'s PR was closed without merging`);
   db.applyEvent(later.id, { type: 'cancel' });
 });
 
@@ -602,7 +604,7 @@ test('mergePreview shows the PR, the repo default method and the tasks the merge
 test('mergeTask squashes by default, records it, and releases the tasks waiting on the PR', async () => {
   const t = prTask(101, 'Ship it');
   const later = await addTask(db, { repo: 'demo', prompt: 'after the merge', builds_on: [t.id] });
-  assert.ok(waitingFor(db, db.getTask(later.id)!), 'waits while the PR is open');
+  assert.ok(waiting(db.getTask(later.id)!), 'waits while the PR is open');
 
   const res = await mergeTask(db, t.id);
   assert.deepEqual(res, { method: 'squash', unblocked: [later.id] });
@@ -620,7 +622,7 @@ test('mergeTask squashes by default, records it, and releases the tasks waiting 
   assert.equal(after.merge_method, 'squash');
   const event = db.eventsForTask(t.id).at(-1)!;
   assert.deepEqual([event.type, event.from_status, event.to_status, event.reason], ['merge', 'done', 'done', 'squash merge']);
-  assert.equal(waitingFor(db, db.getTask(later.id)!), null, 'merged releases the dependent at once');
+  assert.equal(waiting(db.getTask(later.id)!), null, 'merged releases the dependent at once');
   db.applyEvent(later.id, { type: 'cancel' });
 
   await assert.rejects(mergeTask(db, t.id), /PR is merged/, 'a second merge is refused');

@@ -10,7 +10,8 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { openDb } = await import('../src/db/index.ts');
 const { taskDetail, taskViews } = await import('../src/application/actions.ts');
-const { dependentViews } = await import('../src/application/task/dependencies.ts');
+const { dependentViews, liveLinks, loadedLinks } = await import('../src/application/task/dependencies.ts');
+const { withViews } = await import('../src/application/task/task-views.ts');
 const { doneTask, runningTask } = await import('./fixtures.ts');
 
 type TestDb = ReturnType<typeof openDb>;
@@ -57,6 +58,26 @@ test('the task list runs the same statements however many tasks and links there 
   assert.ok(counts[1] < 30, `${counts[1]} statements`);
 });
 
+test("the list works out each task's start state once, for both its waiting and its wait", () => {
+  const db = chained(4);
+  db.setPaused(false);
+  const index = loadedLinks(db);
+  const reads = new Map<number, number>();
+  const links = {
+    ...index,
+    linksOf: (id: number) => {
+      reads.set(id, (reads.get(id) ?? 0) + 1);
+      return index.linksOf(id);
+    },
+  };
+  const views = withViews(db, db.listTasks(), links);
+  // None is in review, so a task's own links are read twice: once for its start state, once for its link list.
+  for (const v of views) assert.equal(reads.get(v.id), 2, `#${v.id}'s links read ${reads.get(v.id)} times`);
+  const [, , , last] = views.sort((a, b) => a.id - b.id);
+  assert.deepEqual(last.waiting, { on: [views[2].id], stuck: null });
+  assert.deepEqual(last.wait, { kind: 'dependency', on: [views[2].id], stuck: null });
+});
+
 test('the list shows the links, dependents and waits it always did', () => {
   const db = chained(4);
   const [d, c, b, a] = taskViews(db, { limit: 10 });
@@ -83,7 +104,7 @@ test("a dependent's link removed between reads doesn't throw", () => {
     db.removeLink(id, a.id);
     return [];
   };
-  assert.deepEqual(dependentViews(db, a.id), [{ id: b.id, kind: 'builds_on' }]);
+  assert.deepEqual(dependentViews(a.id, liveLinks(db)), [{ id: b.id, kind: 'builds_on' }]);
   assert.doesNotThrow(() => taskViews(db, { limit: 10 }));
 });
 

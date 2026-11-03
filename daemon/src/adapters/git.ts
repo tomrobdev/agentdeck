@@ -16,6 +16,7 @@ import {
   parseLsTree,
   treeEntries,
 } from '../domain/files/files.ts';
+import { branchName } from '../domain/branch/branch.ts';
 import type { Repo } from '../domain/repo/repo.ts';
 import type { Task } from '../domain/task/task.ts';
 
@@ -129,16 +130,12 @@ export async function localStartPoint(repoPath: string, base: string): Promise<s
   return (await refExists(repoPath, `refs/remotes/origin/${base}`)) ? `origin/${base}` : base;
 }
 
-export function branchFor(task: Pick<Task, 'id'>): string {
-  return `agentdeck/task-${task.id}`;
-}
-
 /**
  * Give the task its own worktree on its own branch. Retries reuse the same
  * worktree and branch, so a second attempt builds on the first.
  */
 export async function ensureWorktree(repo: Repo, task: Task): Promise<{ branch: string; path: string }> {
-  const branch = task.branch ?? branchFor(task);
+  const branch = branchName(task);
   const path = task.worktree ?? join(WORKTREE_DIR, repo.name, `task-${task.id}`);
   if (existsSync(path)) return { branch, path };
 

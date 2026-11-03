@@ -3,7 +3,7 @@
 import type { AutoMergeView, Needs, Status, TaskStatus, TaskSummary } from '../api';
 import { type PersonEvent, personEvents } from '../../../daemon/src/domain/task/lifecycle.ts';
 import { DECISION_STATES, FILTER_STATES, SORT_OPTIONS, filterTasks } from '../../../daemon/src/domain/task/listing.ts';
-import { readNeeds as readNeedsJson } from '../../../daemon/src/domain/task/needs.ts';
+import { canInstallWith, depsRequest, readNeeds as readNeedsJson } from '../../../daemon/src/domain/task/needs.ts';
 import {
   STATUS_GROUPS,
   type StatusGroup,
@@ -106,8 +106,7 @@ export function groupTasks(tasks: TaskSummary[], by: GroupBy, sort: string): Gro
   }
 }
 
-/** The branch a task works on: its own once it has one, else the name the daemon will give it. */
-export const branchName = (t: Pick<TaskSummary, 'id' | 'branch'>): string => t.branch ?? `agentdeck/task-${t.id}`;
+export { branchName } from '../../../daemon/src/domain/branch/branch.ts';
 
 export const canEdit = (t: Pick<TaskSummary, 'status'>) => EDITABLE_STATUSES.includes(t.status);
 /** A done task whose PR waits on a person: they can send it back with a note, close the PR or merge it (daemon application/pull-requests.ts mergeable). */
@@ -122,12 +121,11 @@ export const quickRetry = (t: Pick<TaskSummary, 'status' | 'waiting' | 'pr_state
 export const readNeeds = (t: Pick<TaskSummary, 'status' | 'needs'>): Needs | null =>
   t.status === 'blocked' ? readNeedsJson(t.needs ?? null) : null;
 
-/** The package names of a deps request, without its `--dev` flag (daemon application/tasks.ts parseDepsRequest). */
-export const depsPackages = (n: Needs) => n.items.filter((i) => i !== '--dev' && i !== '-D');
-export const depsAreDev = (n: Needs) => n.items.some((i) => i === '--dev' || i === '-D');
+/** The package names of a deps request, without its `--dev` flag. */
+export const depsPackages = (n: Needs) => depsRequest(n.items).packages;
+export const depsAreDev = (n: Needs) => depsRequest(n.items).dev;
 
-/** Package managers the daemon installs with (application/tasks.ts INSTALLERS). */
-export const canInstallWith = (toolchain: string | null) => ['pnpm', 'yarn', 'npm'].includes(toolchain ?? '');
+export { canInstallWith };
 
 /** A repo's network setting with a host added once. */
 export function withHost(networkJson: string, host: string): string[] {

@@ -6,7 +6,7 @@ import { parseTaskIds } from '../src/domain/task/ids.ts';
 import {
   type Dependency,
   type Link,
-  type LinkLookups,
+  type LinkIndex,
   type LinkTarget,
   buildsOnError,
   linkError,
@@ -142,11 +142,11 @@ test('unlandedAfter lists the after links whose other task has not landed', () =
   assert.deepEqual(unlandedAfter([], lookup), []);
 });
 
-// Lookups for stuckOn and releasedBy over a small graph: each task's status, PR and links.
-function graph(tasks: Record<number, Partial<Dependency> & { links?: Link[] }>): LinkLookups<{ id: number; status: string }> {
+// A link index for stuckOn and releasedBy over a small graph: each task's status, PR and links.
+function graph(tasks: Record<number, Partial<Dependency> & { links?: Link[] }>): LinkIndex {
   const all = Object.entries(tasks).map(([id, t]) => ({ id: Number(id), ...done, links: [], ...t }));
   return {
-    buildingOn: (id) => all.filter((t) => t.links.some((l) => l.on === id && l.kind === 'builds_on')),
+    dependentsOf: (id) => all.flatMap((t) => t.links.filter((l) => l.on === id).map((l) => ({ id: t.id, status: t.status, kind: l.kind }))),
     linksOf: (id) => all.find((t) => t.id === id)?.links ?? [],
     target: (id) => all.find((t) => t.id === id),
   };
