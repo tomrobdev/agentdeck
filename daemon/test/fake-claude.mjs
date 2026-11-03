@@ -7,7 +7,8 @@
 //   FAKE_ERROR    exits non-zero with no result
 //   FAKE_RATELIMIT emits a rejected rate_limit_event
 //   FAKE_SLOW     sleeps 30s (for cancel tests), resumed or not
-//   FAKE_STALL    sleeps 30s in a new session; resumed, it finishes like FAKE_DONE (for restart tests)
+//   FAKE_IGNORE_TERM  ignores SIGTERM (use with FAKE_SLOW), so a cancel needs SIGKILL
+//   FAKE_STALL   sleeps 30s in a new session; resumed, it finishes like FAKE_DONE (for restart tests)
 //   FAKE_NEEDS_SETUP  like FAKE_DONE, but blocks unless the repo's setup wrote setup-done.txt
 // A resolve run (the prompt starts "AgentDeck conflict resolution") keeps both sides of every conflict and commits the merge;
 // FAKE_RESOLVE_BLOCKED reports BLOCKED, _LEAVE says DONE with the markers still there, _ABORT aborts the merge itself,
@@ -55,6 +56,8 @@ if (sessions && resume === undefined) {
 }
 // What this session has been told: a resumed one remembers the task.
 const prompt = kept ? `${kept}\n${given}` : given;
+
+if (prompt.includes('FAKE_IGNORE_TERM')) process.on('SIGTERM', () => {}); // only SIGKILL stops it
 
 if (prompt.includes('FAKE_NO_SANDBOX') && settingsPath) {
   const { sandbox } = JSON.parse(readFileSync(settingsPath, 'utf8'));
