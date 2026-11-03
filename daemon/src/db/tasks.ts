@@ -22,7 +22,7 @@ import { type AnySQLiteColumn, alias } from 'drizzle-orm/sqlite-core';
 import type { DatabaseSync } from 'node:sqlite';
 import { DEFAULTS } from '../config.ts';
 import type { CheckCounts, MergeMethod } from '../domain/pull-request/merge.ts';
-import { INTERRUPTED } from '../domain/run/run.ts';
+import { INTERRUPTED, type RunOutcome } from '../domain/run/run.ts';
 import { MAX_RESTARTS, type TaskEvent, type TaskStatus, fromStatuses, nextStatus, transition } from '../domain/task/lifecycle.ts';
 import type { LinkKind } from '../domain/task/link.ts';
 import type { PrEvent } from '../domain/task/history.ts';
@@ -116,9 +116,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
   };
   const countWhere = (where: SQL | undefined) => orm.select({ n: count() }).from(tasks).where(where).get()?.n ?? 0;
 
-  const getTask = (id: number): Task | undefined =>
-    // The cast narrows the plain string columns (status, pr_state, …); typed columns come later.
-    orm.select(TASK_COLUMNS).from(tasks).where(eq(tasks.id, id)).get() as Task | undefined;
+  const getTask = (id: number): Task | undefined => orm.select(TASK_COLUMNS).from(tasks).where(eq(tasks.id, id)).get();
 
   /**
    * Touch a task that is in one of `statuses` and record a history row of `type` for it, which leaves the status as it is.
@@ -163,7 +161,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
           .set({ status: next.to, ...given(next.changes), updated_at: NOW_SQL })
           .where(and(eq(tasks.id, id), eq(tasks.status, cur.status), eq(tasks.attempts, cur.attempts), eq(tasks.restarts, cur.restarts)))
           .returning(TASK_COLUMNS)
-          .get() as Task | undefined;
+          .get();
         if (row) recordEvent(orm, id, next.history, cur.status, next.to, opts.reason ?? null);
         return row;
       });
@@ -223,10 +221,10 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     getTask,
     applyEvent,
     listTasks(): Task[] {
-      return orm.select(TASK_COLUMNS).from(tasks).where(inActiveRepo(tasks.repo_id)).orderBy(desc(tasks.id)).all() as Task[];
+      return orm.select(TASK_COLUMNS).from(tasks).where(inActiveRepo(tasks.repo_id)).orderBy(desc(tasks.id)).all();
     },
     tasksForRepo(repo_id: number, limit = 40): Task[] {
-      return orm.select(TASK_COLUMNS).from(tasks).where(eq(tasks.repo_id, repo_id)).orderBy(desc(tasks.id)).limit(limit).all() as Task[];
+      return orm.select(TASK_COLUMNS).from(tasks).where(eq(tasks.repo_id, repo_id)).orderBy(desc(tasks.id)).limit(limit).all();
     },
     /** Tasks of a repo that still need work or a decision; the planner waits until there are none. */
     countOpen(repo_id: number): number {
@@ -313,7 +311,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         .select(TASK_COLUMNS)
         .from(tasks)
         .where(and(inArray(tasks.status, ['done', 'blocked', 'failed']), isNotNull(tasks.pr_url), prOpen, inActiveRepo(tasks.repo_id)))
-        .all() as Task[];
+        .all();
     },
     /**
      * Atomically claim the next queued task of a repo that isn't paused, or undefined if none.
@@ -335,7 +333,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
           .set({ status: to, attempts: sql`${tasks.attempts} + 1`, updated_at: NOW_SQL })
           .where(and(inArray(tasks.status, from), eq(tasks.id, next)))
           .returning(TASK_COLUMNS)
-          .get() as Task | undefined;
+          .get();
         // A claim is allowed from one status only (queued), so that is where the task came from.
         if (row) recordEvent(orm, row.id, 'claim', from[0], to);
         return row;
@@ -359,7 +357,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
           .set({ ...given(fields), updated_at: NOW_SQL })
           .where(and(eq(tasks.id, id), inArray(tasks.status, EDITABLE_STATUSES)))
           .returning(TASK_COLUMNS)
-          .get() as Task | undefined;
+          .get();
         if (!edited) return undefined;
         if (opts.ownPlan !== undefined) saveOwnPlan(db, orm, id, opts.ownPlan, 'attached');
         // The status stays; the row says what was edited, and `stats` counts an edit of a queued or blocked task.
@@ -418,7 +416,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
           .set({ auto_merge: value, ...NO_AUTO_MERGE_CHECK, updated_at: NOW_SQL })
           .where(eq(tasks.id, id))
           .returning(TASK_COLUMNS)
-          .get() as Task | undefined
+          .get()
       );
     },
     /**
@@ -573,7 +571,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     recoverOrphans(): { requeued: number; failed: number[] } {
       // Syncs run only in the daemon, so any marker left over belongs to a sync that died with it.
       orm.update(tasks).set({ syncing_since: null }).where(isNotNull(tasks.syncing_since)).run();
-      const endRuns = (outcome: string, task_id?: number) =>
+      const endRuns = (outcome: RunOutcome, task_id?: number) =>
         orm
           .update(runs)
           .set({ ended_at: NOW_SQL, outcome, result_text: 'daemon restarted' })

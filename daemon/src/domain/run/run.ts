@@ -5,6 +5,9 @@ import { type Needs, parseNeeds } from '../task/needs.ts';
 /** `work` is an attempt at the task; `resolve` merges the base branch into the task's branch and never uses an attempt. */
 export type RunKind = 'work' | 'resolve';
 
+/** How a run ended: a worker's result, or `interrupted` when a daemon restart ended it. */
+export type RunOutcome = Outcome | typeof INTERRUPTED;
+
 export interface Run {
   id: number;
   task_id: number;
@@ -12,7 +15,7 @@ export interface Run {
   attempt: number; // a resolve run carries the attempt it ran beside
   started_at: string;
   ended_at: string | null;
-  outcome: string | null; // done | blocked | failed | cancelled | rate_limited | interrupted
+  outcome: RunOutcome | null;
   exit_code: number | null;
   session_id: string | null; // stored when claude's init line names it, so a run a restart ends can be resumed
   num_turns: number | null;

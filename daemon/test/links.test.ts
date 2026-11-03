@@ -175,7 +175,7 @@ test('stuckOn names the dependents stuck on a task, and not one stuck on somethi
 
 test('releasedBy lists only the dependents merging a task leaves free to start', () => {
   // 1 and 2 are in review; 3 builds on 1; 4 builds on 1 and 2; 5 builds on 1 and on 6 (failed); 7 is running.
-  const review = { pr_mode: 'ready', pr_url: 'u', pr_state: 'open' };
+  const review = { pr_mode: 'ready', pr_url: 'u', pr_state: 'open' } as const;
   const lookups = graph({
     1: review,
     2: review,

@@ -23,7 +23,7 @@ export function taskEventStore(orm: Orm) {
   return {
     /** A task's status changes, oldest first. Tasks from before migration step 6 have none. */
     eventsForTask(task_id: number): TaskEventRow[] {
-      return orm.select().from(taskEvents).where(eq(taskEvents.task_id, task_id)).orderBy(asc(taskEvents.id)).all() as TaskEventRow[];
+      return orm.select().from(taskEvents).where(eq(taskEvents.task_id, task_id)).orderBy(asc(taskEvents.id)).all();
     },
     /** The newest history row's id, 0 when there is none: a cursor for `eventsAfter`. */
     lastEventId(): number {
