@@ -392,7 +392,7 @@ const HOLD_ALLOWED: { file: string; line: RegExp; why: string }[] = [
   { file: 'adapters/git.ts', line: /branch holds all its work|still hold conflict markers/, why: PLAIN },
   { file: 'app/src/lib/forms.ts', line: /panels only hold the form/, why: PLAIN },
   { file: 'app/src/components/task/TaskPage.vue', line: /Dialogs hold the Escape key/, why: PLAIN },
-  { file: 'app/src/components/task/ChangesTab.vue', line: /maps only hold what/, why: PLAIN },
+  { file: 'app/src/composables/useFilePatches.ts', line: /only hold what/, why: PLAIN },
   { file: 'app/src/lib/queueDisplay.ts', line: /Done now, which holds the finished history/, why: PLAIN },
   { file: 'application/scheduler/scheduler.ts', line: /Hold a `caffeinate/, why: PLAIN },
   { file: 'app/src/platform/native.ts', line: /`copied` holds the key/, why: PLAIN },

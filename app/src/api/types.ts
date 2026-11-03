@@ -1,6 +1,6 @@
 // The daemon's API types come from one contract (daemon/src/api/contract.ts), which the daemon checks against its use cases.
 // What is declared here is the dashboard's own.
-import type { ChangedFile, MergeMethod } from '../../../daemon/src/api/contract.ts';
+import type { MergeMethod } from '../../../daemon/src/api/contract.ts';
 
 export type {
   AutoMergeCheck,
@@ -94,4 +94,5 @@ export const MERGE_METHODS: { key: MergeMethod; label: string; hint: string }[] 
   { key: 'rebase', label: 'Rebase and merge', hint: 'Replays every commit on the base branch' },
 ];
 
-export const CHANGE_LABEL: Record<ChangedFile['status'], string> = { A: 'added', M: 'modified', D: 'deleted', R: 'renamed' };
+/** Where the daemon cuts a patch and a file's text. */
+export { PATCH_LIMIT, TEXT_LIMIT } from '../../../daemon/src/domain/files/files.ts';

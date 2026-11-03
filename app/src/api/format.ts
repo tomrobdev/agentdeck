@@ -166,6 +166,16 @@ export function fmtTokens(n: number): string {
   return n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1000 ? `${Math.round(n / 1000)}k` : String(n);
 }
 
+/** A size in bytes: "812 B", "14 KB". */
+export function fileSize(bytes: number): string {
+  return bytes < 1024 ? `${bytes} B` : `${Math.round(bytes / 1024)} KB`;
+}
+
+/** "1 file", "3 files". */
+export function plural(n: number, one: string, many = `${one}s`): string {
+  return `${n} ${n === 1 ? one : many}`;
+}
+
 /** The banner text when the daemon runs a different commit than the dashboard, else null. Unknown commits never warn. */
 export function describeStaleDaemon(s: Status | null, dashboardCommit: string | null): string | null {
   const d = s?.daemon;
