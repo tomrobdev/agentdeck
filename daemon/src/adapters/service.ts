@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir, userInfo } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { promisify } from 'node:util';
-import { HOME, LOG_DIR, ensureDirs } from '../config.ts';
+import { HOME, LOG_DIR, ensureDirs, rustDirs } from '../config.ts';
 
 const exec = promisify(execFile);
 
@@ -23,6 +23,7 @@ export function servicePath(): string {
     join(homedir(), '.local/bin'),
     '/opt/homebrew/bin',
     '/usr/local/bin',
+    ...rustDirs(),
     '/usr/bin',
     '/bin',
     '/usr/sbin',

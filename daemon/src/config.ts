@@ -37,6 +37,24 @@ export function claudeBin(): string {
   return 'claude';
 }
 
+/** Where rustup puts cargo: its shims in the home directory, or Homebrew's rustup. */
+export const RUST_DIRS = [join(homedir(), '.cargo/bin'), '/opt/homebrew/opt/rustup/bin'];
+
+/** The rustup directories that exist, so a PATH never names one that isn't there. */
+export function rustDirs(exists: (path: string) => boolean = existsSync): string[] {
+  return RUST_DIRS.filter((dir) => exists(dir));
+}
+
+/** `env` with the existing rustup directories added to the end of its PATH, unless already on it. */
+export function withToolchainPath(
+  env: Record<string, string | undefined> = process.env,
+  exists: (path: string) => boolean = existsSync,
+): Record<string, string | undefined> {
+  const dirs = (env.PATH ?? '').split(':').filter(Boolean);
+  for (const dir of rustDirs(exists)) if (!dirs.includes(dir)) dirs.push(dir);
+  return { ...env, PATH: dirs.join(':') };
+}
+
 export const DEFAULTS = {
   maxConcurrent: 2,
   maxTurns: 40,
