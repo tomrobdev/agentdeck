@@ -439,6 +439,19 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         .where(eq(tasks.id, id))
         .run();
     },
+    /** Mark a sync of the task's branch as running (`syncing_since`), or clear the mark. Not a status, so unguarded. */
+    setSyncing(id: number, on: boolean): void {
+      orm
+        .update(tasks)
+        .set({ syncing_since: on ? NOW_SQL : null })
+        .where(eq(tasks.id, id))
+        .run();
+    },
+    /** Whether a sync of the task's branch is marked as running, by any process. */
+    hasSyncMarker(id: number): boolean {
+      const row = orm.select({ since: tasks.syncing_since }).from(tasks).where(eq(tasks.id, id)).get();
+      return row?.since != null;
+    },
     /** Whether the daemon may merge the task's PR on its own: 1, 0, or null for the repo's setting. Not a status, so unguarded. */
     setAutoMerge(id: number, value: 0 | 1 | null): Task | undefined {
       return (
@@ -667,6 +680,8 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
      * unfinished run (a done task's sync) ends `interrupted`. Returns how many were requeued and the ids of those failed.
      */
     recoverOrphans(): { requeued: number; failed: number[] } {
+      // Syncs run only in the daemon, so any marker left over belongs to a sync that died with it.
+      orm.update(tasks).set({ syncing_since: null }).where(isNotNull(tasks.syncing_since)).run();
       const endRuns = (outcome: string, task_id?: number) =>
         orm
           .update(runs)

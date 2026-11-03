@@ -253,7 +253,7 @@ export function rejectTask(db: Db, id: number): void {
 /** Another attempt. A `note` ("request changes") is kept on the timeline and goes first in the next run's prompt. */
 export function retryTask(db: Db, id: number, note?: string): void {
   const t = requireTask(db, id);
-  if (isSyncing(db, id)) throw new ActionError(`#${id} is being brought up to date with its base branch; try again when that is done`);
+  if (isSyncing(db, id)) throw new ActionError(`#${id} is syncing with its base branch; try again when that is done`);
   if (note !== undefined && typeof note !== 'string') throw new ActionError('note must be text');
   // One more attempt on top of what has been used.
   if (!db.applyEvent(id, { type: 'retry' }, { reason: note?.trim() || null })) throw new ActionError(`#${id} is ${t.status}`);
@@ -304,7 +304,7 @@ export async function installNeeds(db: Db, id: number): Promise<{ packages: stri
     );
   const { packages, dev } = parseDepsRequest(needs.items);
   if (!task.worktree || !existsSync(task.worktree)) throw new ActionError(`#${id} has no worktree to install into`);
-  if (isSyncing(db, id)) throw new ActionError(`#${id} is being brought up to date with its base branch; try again when that is done`);
+  if (isSyncing(db, id)) throw new ActionError(`#${id} is syncing with its base branch; try again when that is done`);
 
   const args = toolchain === 'npm' ? ['install', dev ? '--save-dev' : '--save', ...packages] : ['add', ...(dev ? ['-D'] : []), ...packages];
   const result = await runProgram(toolchain, args, task.worktree, INSTALL_TIMEOUT_MS);
@@ -337,6 +337,7 @@ export async function removeTaskWorktree(db: Db, id: number): Promise<{ branch: 
   const t = requireTask(db, id);
   if (RUNNING_STATUSES.includes(t.status)) throw new ActionError('task is running');
   if (!t.worktree) throw new ActionError('task has no worktree');
+  if (isSyncing(db, id)) throw new ActionError(`#${id} is syncing with its base branch; try again when that is done`);
   await removeWorktree(requireTaskRepo(db, t), t.worktree);
   db.setCheckout(t.id, { worktree: null });
   return { branch: t.branch };

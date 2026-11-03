@@ -34,6 +34,7 @@ export interface Task {
   merge_requested_at: string | null; // when a person asked the daemon to merge the PR once it is ready; null when there is no request
   merge_request_method: MergeMethod | null; // the method that request asked for
   merge_request_check: string | null; // JSON { verdict, reasons }: the PR refresh's latest merge request check
+  syncing_since: string | null; // when a sync of the branch began; NULL when none is running
   pr_checks: string | null; // JSON StoredChecks (domain/pull-request/checks.ts): the open PR's latest checks, one by one, and when they were read
   plan_task: number | null; // the task whose plan this one follows (itself when its own plan was given with --plan); null follows its own plan, if any
   created_at: string;

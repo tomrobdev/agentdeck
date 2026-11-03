@@ -235,6 +235,9 @@ export const MIGRATIONS: Migration[] = [
   // 26: an open PR's latest checks, one by one (domain/pull-request/checks.ts StoredChecks): JSON { read_at, head, checks,
   // notified }, written by the PR refresh; notified says a person was told they fail. NULL until the PR's checks are read.
   `ALTER TABLE tasks ADD COLUMN pr_checks TEXT;`,
+  // 27: when a sync of the task's branch began (NULL when none is running). Syncs run in the daemon only, so the CLI
+  // reads this to see one; the daemon clears every marker on start.
+  `ALTER TABLE tasks ADD COLUMN syncing_since TEXT;`,
 ];
 
 /** Runs every step above the database's user_version in one transaction; returns how many ran. */
