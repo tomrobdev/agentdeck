@@ -1,40 +1,27 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { ref } from 'vue';
+import { PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka-ui';
 
-// A menu anchored under its trigger. Closes on an outside click or Escape.
+// A panel anchored to its trigger. It flips to the other side and shifts to stay on screen, closes on an outside click or
+// Escape, and the trigger carries aria-expanded. The default slot gets `close` for content that should dismiss it (a chosen row).
+// Non-modal: single-key hotkeys stay live under it (lib/hotkeyApplies.ts).
 defineProps<{ align?: 'left' | 'right'; up?: boolean }>();
 const open = ref(false);
-const root = ref<HTMLElement | null>(null);
-
-function onDoc(e: MouseEvent) {
-  if (open.value && root.value && !root.value.contains(e.target as Node)) open.value = false;
-}
-function onKey(e: KeyboardEvent) {
-  if (open.value && e.key === 'Escape') {
-    e.stopPropagation();
-    open.value = false;
-  }
-}
-onMounted(() => {
-  document.addEventListener('mousedown', onDoc);
-  document.addEventListener('keydown', onKey, true);
-});
-onBeforeUnmount(() => {
-  document.removeEventListener('mousedown', onDoc);
-  document.removeEventListener('keydown', onKey, true);
-});
 </script>
 
 <template>
-  <div ref="root" class="relative">
-    <span @click="open = !open"><slot name="trigger" :open="open" /></span>
-    <div
-      v-if="open"
-      class="absolute z-20 max-h-[70vh] min-w-[220px] overflow-y-auto rounded-md border border-border bg-panel p-1.5 shadow-popover"
-      :class="[align === 'right' ? 'right-0' : 'left-0', up ? 'bottom-[calc(100%+4px)]' : 'top-[calc(100%+4px)]']"
-      role="menu"
-    >
-      <slot />
-    </div>
-  </div>
+  <PopoverRoot v-model:open="open">
+    <PopoverTrigger as-child><slot name="trigger" :open="open" /></PopoverTrigger>
+    <PopoverPortal>
+      <PopoverContent
+        :side="up ? 'top' : 'bottom'"
+        :align="align === 'right' ? 'end' : 'start'"
+        :side-offset="4"
+        :collision-padding="8"
+        class="z-30 max-h-[min(70vh,var(--reka-popover-content-available-height))] min-w-[220px] overflow-y-auto rounded-md border border-border bg-panel p-1.5 shadow-popover"
+      >
+        <slot :close="() => (open = false)" />
+      </PopoverContent>
+    </PopoverPortal>
+  </PopoverRoot>
 </template>
