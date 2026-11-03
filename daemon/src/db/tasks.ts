@@ -35,6 +35,7 @@ import {
   type Task,
   type TaskSummary,
 } from '../domain/task/task.ts';
+import type { AttentionCandidate, AttentionWhy } from '../domain/daemon/headline.ts';
 import type { Orm } from './orm.ts';
 import { insertOwnPlan, saveOwnPlan } from './plans.ts';
 import { NOW_SQL, atomically, changed, inActiveRepo as inActiveRepoOf } from './sql.ts';
@@ -273,6 +274,23 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     /** Done tasks whose pull request is open: the ones waiting for a review. */
     countReview(): number {
       return countWhere(and(inReview, inActiveRepo(tasks.repo_id)));
+    },
+    /**
+     * The tasks that wait on a person: blocked, in review, proposed, in active repos. One query: blocked first, then
+     * review, then proposed, each by priority then id, at most `limit`.
+     */
+    attentionTasks(limit: number): AttentionCandidate[] {
+      // guard: the builder has no CASE; one query orders blocked, review and proposed tasks and labels each
+      const why = sql<AttentionWhy>`CASE WHEN ${tasks.status} = 'blocked' THEN 'blocked' WHEN ${tasks.status} = 'proposed' THEN 'proposed' ELSE 'review' END`;
+      // guard: the builder has no CASE; this ranks the three kinds in the order they are listed
+      const rank = sql`CASE WHEN ${tasks.status} = 'blocked' THEN 0 WHEN ${tasks.status} = 'done' THEN 1 ELSE 2 END`;
+      return orm
+        .select({ id: tasks.id, title: tasks.title, priority: tasks.priority, why })
+        .from(tasks)
+        .where(and(or(inArray(tasks.status, ['blocked', 'proposed']), inReview), inActiveRepo(tasks.repo_id)))
+        .orderBy(rank, desc(tasks.priority), asc(tasks.id))
+        .limit(limit)
+        .all();
     },
     /** Whether a task could be claimed: queued, not waiting on a dependency, in a repo that isn't paused. */
     hasQueued(): boolean {

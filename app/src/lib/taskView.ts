@@ -34,8 +34,7 @@ export const openingTab = (t: TaskSummary): 'overview' | 'changes' | 'runs' =>
 
 /** Tasks that wait on you: proposals to approve, blocked tasks and PRs to review. The queue filter that shows them. */
 export const NEED_YOU_STATES = DECISION_STATES;
-export const needYouCount = (s: Pick<Status, 'counts' | 'review'> | null | undefined): number =>
-  (s?.counts.proposed ?? 0) + (s?.counts.blocked ?? 0) + (s?.review ?? 0);
+export const needYouCount = (s: Pick<Status, 'headline'> | null | undefined): number => s?.headline.need_you ?? 0;
 
 /** Priority stays an integer (the scheduler orders by it); the UI shows it as one of five levels. */
 export const PRIORITY_LEVELS = [

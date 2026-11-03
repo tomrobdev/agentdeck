@@ -184,17 +184,22 @@ export function describeStaleDaemon(s: Status | null, dashboardCommit: string | 
 export function describeState(s: Status | null, offline: boolean): { label: string; cls: string; title: string } {
   if (offline) return { label: 'Daemon offline', cls: 's-failed', title: '' };
   if (!s) return { label: 'Connecting…', cls: 's-queued', title: '' };
-  if (s.paused) return { label: 'Paused', cls: 's-blocked', title: 'No new tasks start until you resume' };
-  const limited = s.rate_limited_until && s.rate_limited_until * 1000 > Date.now() ? s.rate_limited_until : null;
-  if (limited)
-    return {
-      label: `Rate limited · ${relTime(limited)}`,
-      cls: 's-blocked',
-      title: 'Claude rejected a request; waiting for the window to reset',
-    };
+  const { state, until } = s.headline;
   const g = s.governor;
-  if (!g.allow)
-    return { label: g.until ? `On hold · until ${when(g.until)}` : 'On hold', cls: 's-blocked', title: `Usage budget: ${g.reason}` };
-  if (s.running) return { label: 'Working', cls: 's-running', title: g.reason ?? '' };
-  return { label: 'Idle', cls: 's-done', title: g.reason ?? '' };
+  switch (state) {
+    case 'paused':
+      return { label: 'Paused', cls: 's-blocked', title: 'No new tasks start until you resume' };
+    case 'rate_limited':
+      return {
+        label: `Rate limited · ${until ? relTime(until) : ''}`,
+        cls: 's-blocked',
+        title: 'Claude rejected a request; waiting for the window to reset',
+      };
+    case 'hold':
+      return { label: until ? `On hold · until ${when(until)}` : 'On hold', cls: 's-blocked', title: `Usage budget: ${g.reason}` };
+    case 'working':
+      return { label: 'Working', cls: 's-running', title: g.reason ?? '' };
+    default:
+      return { label: 'Idle', cls: 's-done', title: g.reason ?? '' };
+  }
 }

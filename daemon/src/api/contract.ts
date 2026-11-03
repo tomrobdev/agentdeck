@@ -740,6 +740,16 @@ export interface DaemonState {
   reload: ReloadState;
 }
 
+export interface Headline {
+  state: 'paused' | 'rate_limited' | 'hold' | 'working' | 'idle';
+  /** When a rate limit or a hold ends (unix seconds); null otherwise. */
+  until: number | null;
+  /** Proposed tasks, blocked tasks and done tasks in review. */
+  need_you: number;
+  /** Up to five of those tasks: blocked first, then review, then proposed, each by priority. */
+  attention: { id: number; title: string; why: 'blocked' | 'review' | 'proposed' }[];
+}
+
 export interface Status {
   /** The code the daemon is running. */
   daemon: { commit: string | null; started_at: string; pid: number };
@@ -750,6 +760,8 @@ export interface Status {
   counts: Partial<Record<TaskStatus, number>>;
   /** Done tasks whose PR is open. */
   review: number;
+  /** The state headline and what needs a person, decided by the daemon: the dashboard and the tray read it as it is. */
+  headline: Headline;
   usage: UsageWindow[];
   governor: Decision;
   budget: Budget;

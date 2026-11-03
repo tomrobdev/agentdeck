@@ -3,6 +3,7 @@ import type { Db } from '../db/index.ts';
 import { type NotifyKind, type NotifySettings, notifyEventsError, ntfyServerError, ntfyTopicError } from '../domain/notification.ts';
 import { type PlannerSettings, plannerIntervalError, plannerMaxTasksError, plannerModelError } from '../domain/planner/proposals.ts';
 import { BUDGET_KEYS, type Budget, validateBudget, validateSlots } from '../domain/usage/governor.ts';
+import { ATTENTION_LIMIT, headline } from '../domain/daemon/headline.ts';
 import type { DaemonState } from '../domain/daemon/health.ts';
 import { type ReloadInput, reloadState, restartWait } from '../domain/daemon/restart.ts';
 import type { Settings } from '../domain/settings/settings.ts';
@@ -43,14 +44,27 @@ export function daemonState(db: Db, info: DaemonInfo, facts: ReloadFacts): Daemo
 
 export function status(db: Db, daemon: DaemonInfo = { commit: null, started_at: new Date(0).toISOString(), pid: process.pid }) {
   const gate = startGate(db);
+  const counts = db.countByStatus();
+  const review = db.countReview();
   return {
     daemon,
     paused: gate.paused,
     rate_limited_until: gate.rate_limited_until,
     running: db.countRunning(),
     max_concurrent: db.maxConcurrent(),
-    counts: db.countByStatus(),
-    review: db.countReview(),
+    counts,
+    review,
+    headline: headline(
+      {
+        paused: gate.paused,
+        rate_limited_until: gate.rate_limited_until,
+        governor: gate.governor,
+        running: db.countRunning(),
+        need_you: { proposed: counts.proposed ?? 0, blocked: counts.blocked ?? 0, review },
+        attention: db.attentionTasks(ATTENTION_LIMIT),
+      },
+      Date.now() / 1000,
+    ),
     usage: db.usageWindows(),
     governor: gate.governor,
     budget: db.budget(),
