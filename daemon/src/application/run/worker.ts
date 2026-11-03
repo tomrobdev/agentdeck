@@ -7,7 +7,6 @@ import { runCommand } from '../../adapters/shell.ts';
 import { SETUP_TIMEOUT_MS, TEST_TIMEOUT_MS, ensureDirs } from '../../config.ts';
 import type { Db } from '../../db/index.ts';
 import { conflictReason, syncSummary } from '../../domain/branch/sync.ts';
-import { lastLine } from '../../domain/text.ts';
 import { unfinishedSteps, unfinishedSummary } from '../../domain/plan/plan.ts';
 import { type PromptPlan, buildPrompt, buildResumePrompt } from '../../domain/run/prompt.ts';
 import { latestReviewNote } from '../../domain/task/history.ts';
@@ -21,6 +20,7 @@ import {
   resumableSession,
   resumeMaxTurns,
   runOutcome,
+  setupFailedReason,
 } from '../../domain/run/run.ts';
 import { type Task, leftoversMessage } from '../../domain/task/task.ts';
 import { type OpenedRun, type TaskRunEnd, endTaskRun, openTaskRun, startTaskRun } from './claude-run.ts';
@@ -99,7 +99,7 @@ async function runOpened(db: Db, task: Task, repo: Repo, wt: { branch: string; p
     pauseRepo(db, repo, `setup failed on task #${task.id}`);
     return finish(db, task, opened, {
       outcome: 'blocked',
-      reason: `setup failed: ${lastLine(setup.output)}`,
+      reason: setupFailedReason(setup.output),
       environment: isEnvironmentBlock({ setupFailed: true }),
     });
   };
