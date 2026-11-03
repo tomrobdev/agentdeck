@@ -175,6 +175,11 @@ const syncing = new Set<number>();
 /** Whether a sync of this task's branch is running, in any process: the marker the daemon keeps in the database. */
 export const isSyncing = (db: Db, id: number): boolean => db.hasSyncMarker(id);
 
+/** Refuse a change to a task while a sync of its branch is running. */
+export function refuseWhileSyncing(db: Db, id: number): void {
+  if (isSyncing(db, id)) throw new ActionError(`#${id} is syncing with its base branch; try again when that is done`);
+}
+
 /** Run `fn` with the task's sync marked in the database, so the CLI sees it too; the mark is cleared however `fn` ends. */
 export async function markSyncing<T>(db: Db, id: number, fn: () => Promise<T>): Promise<T> {
   db.setSyncing(id, true);
