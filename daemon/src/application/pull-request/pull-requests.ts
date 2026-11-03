@@ -123,7 +123,7 @@ export async function mergePreview(db: Db, id: number): Promise<MergePreview> {
     pr_url: url,
     branch: task.branch,
     base: repo.base_branch,
-    method: task.merge_method ?? repo.merge_method,
+    method: repo.merge_method,
     draft: pr.draft,
     commits: pr.commits,
     files: pr.files,
@@ -158,7 +158,7 @@ export async function mergeTask(db: Db, id: number, opts: { method?: string; del
   const given = text(body, 'method', { empty: true, raw: true });
   const deleteBranch = flag(body, 'delete_branch') === true;
   const { task, repo, url, cwd } = mergeable(db, id);
-  const method = given ?? task.merge_method ?? repo.merge_method;
+  const method = given ?? repo.merge_method;
   if (!isMergeMethod(method)) throw new ActionError(`method must be one of ${MERGE_METHODS.join(', ')}`);
 
   const pr = await github.prDetails(url, cwd).catch((err) => {
@@ -182,8 +182,7 @@ export interface MergeAllResult {
 }
 
 /**
- * Merge the open PRs of the given tasks, as a person approving them all: each with its own method (the task's, then the
- * repo's), then the remote branch and the worktree go, as after an auto-merge. A PR that lands after another waits for a
+ * Merge the open PRs of the given tasks, as a person approving them all: each with the repo's method, then the remote branch and the worktree go, as after an auto-merge. A PR that lands after another waits for a
  * round in which that one merged, so the order the ids come in doesn't matter. One that can't merge stays as it was, with
  * the reason mergeTask refused it. The base moves with every merge; GitHub refuses a PR that then conflicts.
  */
@@ -223,10 +222,10 @@ export async function mergeOpenPr(
   db: Db,
   { task, repo, url, cwd }: ReturnType<typeof mergeable>,
   pr: PrDetails,
-  opts: { method: MergeMethod; deleteBranch: boolean; reason: string },
+  opts: { method: MergeMethod; deleteBranch: boolean; reason: string; log?: (msg: string) => void },
 ): Promise<MergeResult> {
   const { id } = task;
-  const { method, deleteBranch } = opts;
+  const { method, deleteBranch, log = (msg) => console.log(`[${new Date().toISOString()}] ${msg}`) } = opts;
   merging.add(id);
   try {
     if (pr.draft) await github.markReady(url, cwd);
@@ -241,7 +240,9 @@ export async function mergeOpenPr(
   } finally {
     merging.delete(id);
   }
-  db.recordMerge(id, method, opts.reason, pr.checks);
+  // False when a refresh in another process already recorded the PR as merged: say so, so the merge leaves a trace.
+  if (!db.recordMerge(id, method, opts.reason, pr.checks))
+    log(`task ${id}: merged its PR (${method}), but the merge was already recorded or the task has moved on`);
   // The base just moved: the repo's other open PRs may now conflict. The scheduler re-reads them at once
   // (a setting, so a merge from the CLI reaches the daemon too).
   db.requestPrCheck();

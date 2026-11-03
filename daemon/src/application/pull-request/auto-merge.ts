@@ -36,6 +36,7 @@ export async function autoMerge(
       const res = await mergeOpenPr(db, target, pr, {
         method,
         deleteBranch: true,
+        log,
         reason: asked ? `requested (${method})` : `auto-merged (${method})`,
       });
       told.delete(id);
