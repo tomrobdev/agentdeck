@@ -299,7 +299,7 @@ test('[migrations-append] shipped migration steps are unchanged', () => {
 const ALLOWED_MODULE_STATE: Record<string, string> = {
   'application/sync.ts:syncing': 'the sync lock: a task being synced in this process; the database is the state the processes share',
   'application/planner.ts:proposing': 'the propose lock: a repo being planned in this process',
-  'application/pull-request/pull-requests.ts:merging': 'the merge lock: a task being merged in this process',
+  'application/pull-request/merge-lock.ts:merging': 'the merge lock: a task being merged in this process',
   'application/task/files.ts:changedCache': 'a cache of immutable diff results: the same two commits always differ the same way',
 };
 

@@ -25,17 +25,15 @@ import { prPlanFor } from '../plans.ts';
 import { dependentsReleased, landsAfter } from '../task/dependencies.ts';
 import { settle, settlePr } from '../task/settle.ts';
 import { notifyLater } from '../notifications.ts';
+import { isSyncing } from '../sync.ts';
+import { isMergeLocked, lockMerge, unlockMerge } from './merge-lock.ts';
 
 /** How often the scheduler re-reads the state of open PRs. */
 export const PR_REFRESH_MS = 3 * 60_000;
 /** How often it re-reads them while a merge request waits on running checks or on GitHub's mergeability. */
 export const MERGE_REQUEST_POLL_MS = 30_000;
 
-/** The tasks whose PR this process is merging right now (the lock, as `syncing` is for syncs). */
-const merging = new Set<number>();
-
-/** Whether a merge of this task's PR is under way in this process. */
-export const isMergeLocked = (id: number): boolean => merging.has(id);
+export { isMergeLocked };
 
 /** Close a task's PR on GitHub and record it. Throws if `gh` fails. */
 export async function closePullRequest(db: Db, task: Task): Promise<void> {
@@ -106,6 +104,7 @@ export function mergeable(db: Db, id: number) {
   if (task.status !== 'done') throw new ActionError(`#${id} is ${task.status}; only a done task can be merged`);
   if (!task.pr_url) throw new ActionError(`#${id} has no pull request`);
   if (!hasOpenPr(task)) throw new ActionError(`#${id}'s PR is ${task.pr_state ?? 'not open'}`);
+  if (isSyncing(db, id)) throw new ActionError(`#${id} is syncing with its base branch; try again when that is done`);
   // gh reads the PR by its URL, so any directory of the repo will do; the worktree may be gone.
   return { task, repo, url: task.pr_url, cwd: repo.path };
 }
@@ -227,7 +226,11 @@ export async function mergeOpenPr(
 ): Promise<MergeResult> {
   const { id } = task;
   const { method, deleteBranch } = opts;
-  merging.add(id);
+  if (!lockMerge(id)) throw new ActionError(`#${id} is already being merged`);
+  if (isSyncing(db, id)) {
+    unlockMerge(id);
+    throw new ActionError(`#${id} is syncing with its base branch; try again when that is done`);
+  }
   try {
     if (pr.draft) await github.markReady(url, cwd);
     await github.merge({
@@ -239,7 +242,7 @@ export async function mergeOpenPr(
   } catch (err) {
     throw new ActionError(`merge failed: ${(err as Error).message}`);
   } finally {
-    merging.delete(id);
+    unlockMerge(id);
   }
   db.recordMerge(id, method, opts.reason, pr.checks);
   // The base just moved: the repo's other open PRs may now conflict. The scheduler re-reads them at once
