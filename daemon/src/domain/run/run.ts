@@ -1,5 +1,5 @@
 // The run entity and how to read a run's result. Pure: no I/O.
-import { STATUS_WORD, lastLine } from '../text.ts';
+import { STATUS_WORD, lastLine, oneLine } from '../text.ts';
 import { type Needs, parseNeeds } from '../task/needs.ts';
 
 /**
@@ -299,5 +299,5 @@ export function parseStatus(text: string | undefined): { blocked: boolean; reaso
 export function firstDenial(denials: { tool_name?: string; tool_input?: { command?: unknown } }[]): string {
   const d = denials[0];
   const command = typeof d?.tool_input?.command === 'string' ? d.tool_input.command : (d?.tool_name ?? 'unknown tool');
-  return command.replace(/\s+/g, ' ').trim().slice(0, 200);
+  return oneLine(command).slice(0, 200);
 }

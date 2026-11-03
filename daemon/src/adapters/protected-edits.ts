@@ -4,6 +4,7 @@ import type { Dirent } from 'node:fs';
 import { lstat, mkdir, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, isAbsolute } from 'node:path';
 import { EDITS_FOLDER, EDIT_LIMIT, protectedEditTarget, protectedEditsMessage } from '../domain/run/protected-edits.ts';
+import { errorMessage } from '../domain/text.ts';
 import { commitFiles } from './git.ts';
 
 export interface AppliedEdits {
@@ -52,7 +53,7 @@ export async function applyProtectedEdits(worktree: string): Promise<AppliedEdit
         await writeFile(dest, text);
         out.applied.push(target.target);
       } catch (err) {
-        refuse((err as Error).message);
+        refuse(errorMessage(err));
       }
     }
     if (out.applied.length) await commitFiles(worktree, out.applied, protectedEditsMessage(out.applied));

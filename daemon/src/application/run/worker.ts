@@ -23,6 +23,7 @@ import {
   setupFailedReason,
 } from '../../domain/run/run.ts';
 import { type Task, leftoversMessage } from '../../domain/task/task.ts';
+import { errorMessage } from '../../domain/text.ts';
 import { type OpenedRun, type TaskRunEnd, endTaskRun, openTaskRun, startTaskRun } from './claude-run.ts';
 import type { Repo } from '../../domain/repo/repo.ts';
 import { markSyncing, syncBranch } from '../sync.ts';
@@ -41,7 +42,7 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
   try {
     wt = await ensureWorktree(repo, task);
   } catch (err) {
-    return finish(db, task, null, { outcome: 'failed', reason: `worktree: ${(err as Error).message}` });
+    return finish(db, task, null, { outcome: 'failed', reason: `worktree: ${errorMessage(err)}` });
   }
   db.setCheckout(task.id, { branch: wt.branch, worktree: wt.path });
 
@@ -50,7 +51,7 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
     return await runOpened(db, task, repo, wt, opened);
   } catch (err) {
     // Whatever threw, the row ends failed (a no-op if it already ended) and the scheduler settles the task.
-    await endTaskRun(db, opened, 'failed', (err as Error).message);
+    await endTaskRun(db, opened, 'failed', errorMessage(err));
     throw err;
   }
 }
@@ -84,7 +85,7 @@ async function runOpened(db: Db, task: Task, repo: Repo, wt: { branch: string; p
   try {
     plan = planForRun(db, task);
   } catch (err) {
-    writeEvent(log, { type: 'agentdeck_error', text: `read plan: ${(err as Error).message}` });
+    writeEvent(log, { type: 'agentdeck_error', text: `read plan: ${errorMessage(err)}` });
   }
   const review = await reviewForRun(db, task, repo);
   const prompt = buildPrompt(task, previousRuns, latestReviewNote(db.eventsForTask(task.id)), plan, review?.prompt ?? null);
@@ -128,7 +129,7 @@ async function runOpened(db: Db, task: Task, repo: Repo, wt: { branch: string; p
   try {
     await writePlanFile(wt.path, plan?.html ?? null);
   } catch (err) {
-    writeEvent(log, { type: 'agentdeck_error', text: `write plan file: ${(err as Error).message}` });
+    writeEvent(log, { type: 'agentdeck_error', text: `write plan file: ${errorMessage(err)}` });
   }
 
   // Written after setup: setup runs here in the daemon, outside the sandbox, so installs keep the network.
@@ -136,7 +137,7 @@ async function runOpened(db: Db, task: Task, repo: Repo, wt: { branch: string; p
   try {
     ran = await startTaskRun(db, task, { kind: 'work', repo, worktree: wt.path, prompt, opened, resume });
   } catch (err) {
-    return finish(db, task, opened, { outcome: 'failed', reason: `settings:${(err as Error).message}` });
+    return finish(db, task, opened, { outcome: 'failed', reason: `settings:${errorMessage(err)}` });
   }
   const { result, end } = ran;
   const runFields: Partial<Run> = ran.fields;
@@ -144,14 +145,14 @@ async function runOpened(db: Db, task: Task, repo: Repo, wt: { branch: string; p
   try {
     await commitLeftovers(wt.path, leftoversMessage(task));
   } catch (err) {
-    writeEvent(log, { type: 'agentdeck_error', text: `commit leftovers: ${(err as Error).message}` });
+    writeEvent(log, { type: 'agentdeck_error', text: `commit leftovers: ${errorMessage(err)}` });
   }
   // Files the worker may not edit itself (under .claude/) and wrote to the edits folder instead: committed before the tests.
   try {
     const edits = await applyProtectedEdits(wt.path);
     if (edits.applied.length || edits.refused.length) writeEvent(log, { type: 'agentdeck_protected_edits', ...edits });
   } catch (err) {
-    writeEvent(log, { type: 'agentdeck_error', text: `apply protected edits: ${(err as Error).message}` });
+    writeEvent(log, { type: 'agentdeck_error', text: `apply protected edits: ${errorMessage(err)}` });
   }
   // What the worker did to the plan is stored, whatever the outcome.
   await giveBackPlan(db, task, wt.path, log);
@@ -181,7 +182,7 @@ async function runOpened(db: Db, task: Task, repo: Repo, wt: { branch: string; p
       const left = unfinishedSteps(followedSteps(db, task) ?? []);
       if (left.length) db.recordPlanUnfinished(task.id, unfinishedSummary(left));
     } catch (err) {
-      writeEvent(log, { type: 'agentdeck_error', text: `check plan steps: ${(err as Error).message}` });
+      writeEvent(log, { type: 'agentdeck_error', text: `check plan steps: ${errorMessage(err)}` });
     }
   }
 
@@ -194,7 +195,7 @@ async function giveBackPlan(db: Db, task: Task, worktree: string, log: Parameter
   try {
     await takePlanFile(db, task, worktree);
   } catch (err) {
-    writeEvent(log, { type: 'agentdeck_error', text: `save plan file: ${(err as Error).message}` });
+    writeEvent(log, { type: 'agentdeck_error', text: `save plan file: ${errorMessage(err)}` });
   }
 }
 

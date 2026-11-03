@@ -591,7 +591,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       });
     },
     /**
-     * Record that the base branch was brought into a task's branch: a history row, no status change.
+     * Record a sync that changed a task's branch: a history row, no status change.
      * Guarded like every task write: only a running or done task. Returns false if it was not.
      */
     recordSync(id: number, reason: string): boolean {

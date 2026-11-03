@@ -12,6 +12,19 @@ export function short(text: string, max: number): string {
   return line.length > max ? `${line.slice(0, max - 1)}…` : line;
 }
 
+/** A text on one line: runs of whitespace become one space, the ends trimmed. */
+export const oneLine = (s: string): string => s.replace(/\s+/g, ' ').trim();
+
+/** A text cut to `max` characters, ending in an ellipsis when it was longer. */
+export function cut(s: string, max: number): string {
+  return s.length > max ? `${s.slice(0, max - 1)}…` : s;
+}
+
+/** The message of a caught value: an Error's message, else the value as text. */
+export function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
 /** "1 check", "3 checks". */
 export const plural = (n: number, one: string, many = `${one}s`): string => `${n} ${n === 1 ? one : many}`;
 

@@ -14,7 +14,7 @@ import {
 } from '../../adapters/git.ts';
 import { rootInfo } from '../../adapters/repo-root.ts';
 import { runCommand } from '../../adapters/shell.ts';
-import { lastLine } from '../../domain/text.ts';
+import { errorMessage, lastLine } from '../../domain/text.ts';
 import { SETUP_TIMEOUT_MS, TEST_TIMEOUT_MS, claudeBin } from '../../config.ts';
 import type { Repo } from '../../domain/repo/repo.ts';
 import { refusedCommands } from '../../domain/repo/tool-rules.ts';
@@ -75,7 +75,7 @@ export async function runDoctor(repo: Repo): Promise<Check[]> {
         await addDetachedWorktree(repo, path, await startPoint(repo.path, repo.base_branch));
         worktree = path;
       } catch (err) {
-        add('worktree', false, `could not check out ${repo.base_branch}: ${lastLine((err as Error).message)}`);
+        add('worktree', false, `could not check out ${repo.base_branch}: ${lastLine(errorMessage(err))}`);
       }
     }
     const notRun = !baseOk ? `not run: base branch ${repo.base_branch} is missing` : 'not run: no worktree';

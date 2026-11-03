@@ -93,10 +93,14 @@ export function emptyReviewError(body: string, comments: number): string | null 
   return body.trim() || comments > 0 ? null : 'a review needs a note or at least one comment';
 }
 
+/** The submitted Request changes reviews, in the order given. */
+export function submittedRequests(reviews: ReviewWithComments[]): ReviewWithComments[] {
+  return reviews.filter((r) => r.kind === 'request_changes' && r.submitted_at !== null);
+}
+
 /** The comments a run of the task must address: the open ones in submitted request_changes reviews, oldest first. */
 export function commentsToAddress(reviews: ReviewWithComments[]): ReviewComment[] {
-  return reviews
-    .filter((r) => r.kind === 'request_changes' && r.submitted_at !== null)
+  return submittedRequests(reviews)
     .flatMap((r) => r.comments)
     .filter((c) => c.state === 'open')
     .sort((a, b) => a.id - b.id);

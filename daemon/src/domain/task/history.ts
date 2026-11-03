@@ -4,8 +4,8 @@ import type { PrState } from '../pull-request/pr.ts';
 import type { TaskEvent, TaskStatus } from './lifecycle.ts';
 
 /**
- * `created` when the task was added, `edit` when a person changed its fields (the status stays as it was), `merge` when its PR was merged from the app and `sync` when the base branch was
- * brought into the task's branch (the status stays as it was), `pr` when its pull request was opened, failed to open, was closed
+ * `created` when the task was added, `edit` when a person changed its fields (the status stays as it was), `merge` when its PR was merged from the app and `sync` when a sync
+ * changed the task's branch (the status stays as it was), `pr` when its pull request was opened, failed to open, was closed
  * or was seen merged or closed on GitHub (likewise), `plan_unfinished` when a done run left linked plan steps
  * unfinished (a warning, the status stays as it was), `environment_block` when a run blocked because of the environment and
  * its attempt was given back, `unblock_ask` when an unblock run left a blocked task blocked with a question (the status
