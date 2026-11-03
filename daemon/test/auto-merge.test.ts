@@ -40,6 +40,7 @@ sh('commit', '-q', '-m', 'init');
 const repo = db.addRepo({ name: 'demo', path: dir, base_branch: 'main', test_cmd: 'true' });
 
 const ready: PrDetails = {
+  state: 'open',
   draft: false,
   mergeable: 'MERGEABLE',
   merge_state: 'CLEAN',
@@ -59,7 +60,6 @@ github.push = async () => {};
 github.createPr = async (pr) => (gh.created.push(pr.labels ?? []), `https://x/pull/new-${gh.created.length}`);
 github.ensureLabel = async () => void gh.labelsMade++;
 github.setLabel = async (url, _cwd, _label, on) => void gh.labelled.push({ url, on });
-github.prState = async () => 'open';
 github.prDetails = async (url) => details[url] ?? ready;
 github.markReady = async () => {};
 github.merge = async (pr) => {
@@ -340,12 +340,12 @@ test('a merge and a sync never touch one task at once', async () => {
 test('a gh merge failure on a PR that is already merged sends no "Could not merge"', async () => {
   const a = tested();
   mergeError = 'Pull request is already merged';
-  const prState = github.prState;
-  github.prState = async () => 'merged';
+  const prDetails = github.prDetails;
+  github.prDetails = async () => ({ ...ready, state: 'merged' });
   try {
     assert.equal(await autoMerge(db, [{ id: a.id, pr: ready }]), null);
   } finally {
-    github.prState = prState;
+    github.prDetails = prDetails;
   }
   assert.equal(db.recentNotifications(50).filter((x) => x.task_id === a.id).length, 0);
 });

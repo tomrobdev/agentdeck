@@ -35,9 +35,14 @@ export const MERGE_REQUEST_POLL_MS = 30_000;
 
 export { isMergeLocked };
 
+/** Where `gh` runs for a task's PR. It reads the PR by its URL, so the repo's path will do; the worktree may be gone. */
+export function prCwd(db: Db, task: Task): string {
+  return db.getRepo(task.repo_id)?.path ?? process.cwd();
+}
+
 /** Close a task's PR on GitHub and record it. Throws if `gh` fails. */
 export async function closePullRequest(db: Db, task: Task): Promise<void> {
-  await github.closePr(task.pr_url!, task.worktree ?? db.getRepo(task.repo_id)?.path ?? process.cwd());
+  await github.closePr(task.pr_url!, prCwd(db, task));
   settlePr(db, task.id, { type: 'closed' });
 }
 
@@ -304,8 +309,8 @@ export async function refreshPrStates(db: Db, log: (msg: string) => void = () =>
   for (const task of db.openPrTasks()) {
     try {
       const repo = db.getRepo(task.repo_id);
-      const cwd = task.worktree ?? repo?.path ?? process.cwd();
-      const state = await github.prState(task.pr_url!, cwd);
+      const pr = await github.prDetails(task.pr_url!, prCwd(db, task), { withFiles: !!repo && autoMergeOn(task, repo) });
+      const state = pr.state;
       if (state !== task.pr_state) {
         // Guarded on the PR still being open: a merge recorded while GitHub was being asked stays.
         const applied = state === 'closed' ? settlePr(db, task.id, { type: 'closed' }) : db.recordPr(task.id, { type: 'seen', state });
@@ -322,7 +327,6 @@ export async function refreshPrStates(db: Db, log: (msg: string) => void = () =>
         if (task.merge_requested_at) dropRequest(task.id, state !== 'open' ? `the PR is ${state}` : `the task is ${task.status}`);
         continue;
       }
-      const pr = await github.prDetails(task.pr_url!, cwd, { withFiles: !!repo && autoMergeOn(task, repo) });
       if (checksSettled(pr.checks)) db.recordPrChecksOpened(task.id, pr.checks);
       keepChecks(db, task, pr);
       const tests = lastTestsPassed(db, task.id);

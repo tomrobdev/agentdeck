@@ -23,6 +23,7 @@ function setup() {
 }
 
 const pr = {
+  state: 'open' as const,
   draft: false,
   mergeable: 'MERGEABLE',
   merge_state: 'CLEAN',

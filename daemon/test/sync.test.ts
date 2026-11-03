@@ -54,6 +54,7 @@ const TEST_CMD = 'test -f fake-output.txt';
 const repo = db.addRepo({ name: 'demo', path: dir, base_branch: 'main', test_cmd: TEST_CMD });
 
 const cleanDetails: PrDetails = {
+  state: 'open',
   draft: false,
   mergeable: 'MERGEABLE',
   merge_state: 'CLEAN',
@@ -74,7 +75,6 @@ github.push = async (_repoPath, branch) => {
   pushes.push(branch);
 };
 github.createPr = async () => `https://github.com/acme/demo/pull/${++prCount}`;
-github.prState = async () => 'open';
 github.prDetails = async (url) => details[url] ?? cleanDetails;
 github.merge = async () => {};
 
@@ -493,17 +493,17 @@ test('refreshPrStates reads mergeability: conflicting PRs are returned, unknown 
   details['https://x/pull/502'] = { ...cleanDetails, mergeable: 'UNKNOWN', merge_state: 'UNKNOWN' };
   details['https://x/pull/504'] = { ...cleanDetails, mergeable: 'CONFLICTING' };
   const asked: string[] = [];
-  const state = github.prState;
   const det = github.prDetails;
-  github.prState = async (url) => (url.endsWith('504') ? 'merged' : 'open');
-  github.prDetails = async (url, cwd) => (asked.push(url), det(url, cwd));
+  github.prDetails = async (url, cwd, opts) => (
+    asked.push(url),
+    { ...(await det(url, cwd, opts)), state: url.endsWith('504') ? 'merged' : 'open' }
+  );
   try {
     const found = await refreshPrStates(db);
     assert.deepEqual(found, { conflicting: [a.id], unknown: 1, mergeable: [], polling: 0 });
-    assert.ok(!asked.includes('https://x/pull/504'), 'a merged PR has no mergeability to read');
+    assert.equal(asked.filter((u) => u === 'https://x/pull/504').length, 1, 'a merged PR is read once, and its mergeability is not used');
     assert.equal(db.getTask(d.id)!.pr_state, 'merged');
   } finally {
-    github.prState = state;
     github.prDetails = det;
     // Out of the way of the tests after this one: a done task is cancelled by retrying it first.
     for (const x of [a, b, c, d]) {

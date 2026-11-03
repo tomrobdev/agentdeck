@@ -39,6 +39,7 @@ sh('commit', '-q', '-m', 'init');
 const repo = db.addRepo({ name: 'demo', path: dir, base_branch: 'main', test_cmd: 'true' });
 
 const ready: PrDetails = {
+  state: 'open',
   draft: false,
   mergeable: 'MERGEABLE',
   merge_state: 'CLEAN',
@@ -52,7 +53,6 @@ const ready: PrDetails = {
 };
 
 let details: Record<string, PrDetails>;
-github.prState = async () => 'open';
 github.prDetails = async (url) => details[url] ?? ready;
 github.markReady = async () => {};
 github.merge = async () => {};
