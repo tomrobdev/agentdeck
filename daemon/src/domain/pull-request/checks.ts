@@ -44,6 +44,11 @@ const PENDING = new Set(['PENDING', 'EXPECTED', 'QUEUED', 'IN_PROGRESS', 'WAITIN
 const SKIPPED = new Set(['NEUTRAL', 'SKIPPED']);
 
 const str = (v: unknown): string | null => (typeof v === 'string' && v ? v : null);
+/** A check's time; GitHub gives a check run that hasn't started or finished the zero time, 0001-01-01. */
+const time = (v: unknown): string | null => {
+  const s = str(v);
+  return s && !s.startsWith('0001-') ? s : null;
+};
 
 function stateOf(item: Record<string, unknown>): CheckState {
   const verdict = String(item.conclusion || item.state || item.status || '').toUpperCase();
@@ -70,8 +75,8 @@ export function parseChecks(rollup: unknown): PrCheck[] {
       name: workflow && (seen.get(name) ?? 0) > 1 ? `${workflow} / ${name}` : name,
       state: stateOf(item),
       url: str(item.detailsUrl) ?? str(item.targetUrl),
-      started_at: str(item.startedAt),
-      completed_at: str(item.completedAt),
+      started_at: time(item.startedAt),
+      completed_at: time(item.completedAt),
     };
   });
 }
