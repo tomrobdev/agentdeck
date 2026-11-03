@@ -41,7 +41,7 @@ export const daemonCommands: Record<string, Command> = {
       console.log(`service stopped; the plist is kept (\`agentdeck service start\` brings it back, \`agentdeck uninstall\` removes it)`);
     } else {
       const st = await actions.serviceStatus();
-      console.log(`installed${st.installed ? st.plist : 'no'}`);
+      console.log(`installed  ${st.installed ? st.plist : 'no'}`);
       console.log(`loaded     ${st.loaded ? `${st.state ?? '?'}${st.pid ? `, pid ${st.pid}` : ''}` : 'no'}`);
       console.log(`program    ${st.program}`);
     }

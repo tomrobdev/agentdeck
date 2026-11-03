@@ -84,12 +84,17 @@ export async function serviceStatus(): Promise<ServiceStatus> {
   }
 }
 
+/**
+ * Unload the service and wait until launchd has let it go: launchd stops the daemon after `bootout` returns, and a
+ * `bootstrap` before then fails with "Bootstrap failed: 5: Input/output error".
+ */
 async function bootout(): Promise<void> {
   try {
     await exec('launchctl', ['bootout', `${domain()}/${LABEL}`]);
   } catch {
     // not loaded
   }
+  for (let i = 0; i < 50 && (await serviceStatus()).loaded; i++) await new Promise((r) => setTimeout(r, 100));
 }
 
 export const DAEMON_LOG = join(LOG_DIR, 'daemon.log');
@@ -115,7 +120,7 @@ export async function start(): Promise<ServiceStatus> {
 /** Unload the service so the daemon stops, keeping the plist (it starts again at login or with `service start`). */
 export async function stop(): Promise<void> {
   if (!(await serviceStatus()).loaded) throw new Error('the service is not running');
-  await exec('launchctl', ['bootout', `${domain()}/${LABEL}`]);
+  await bootout();
 }
 
 /** Kill the daemon and let launchd start it again on whatever code is on disk. */
