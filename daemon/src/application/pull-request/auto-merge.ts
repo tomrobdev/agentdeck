@@ -8,7 +8,7 @@ import { hasOpenPr } from '../../domain/task/stage.ts';
 import { ActionError, object, requireTask, requireTaskRepo } from '../input.ts';
 import { notifyLater } from '../notifications.ts';
 import { ensureAutoMergeLabel } from './open-pr.ts';
-import { isMergeLocked, mergeable, mergeOpenPr } from './pull-requests.ts';
+import { isMergeLocked, mergeable, mergeOpenPr } from './merge.ts';
 
 /**
  * Merge the first PR the refresh found ready, with what GitHub said about it moments ago. One merge per refresh: it

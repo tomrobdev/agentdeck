@@ -3,7 +3,7 @@ import type { Db } from '../../db/index.ts';
 import { type AutoMergeView, autoMergeOn, autoMergeView } from '../../domain/pull-request/auto-merge.ts';
 import { type ChecksSummary, type PrCheck, checksSummary, readStoredChecks } from '../../domain/pull-request/checks.ts';
 import { type MergeRequestView, conflictsWithBase, mergeRequestView } from '../../domain/pull-request/merge-request.ts';
-import { isMergeLocked } from '../pull-request/pull-requests.ts';
+import { isMergeLocked } from '../pull-request/merge.ts';
 import { type LiveView, type SyncView, liveView, syncView } from '../../domain/run/live.ts';
 import { isSyncLocked } from '../sync.ts';
 import { hasOpenPr } from '../../domain/task/stage.ts';
