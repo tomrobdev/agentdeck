@@ -52,6 +52,15 @@ pub struct Headline {
     pub attention: Vec<AttentionTask>,
 }
 
+/// A sent notification, as `NotificationRow` in `daemon/src/api/contract.ts`.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct NotificationRow {
+    pub id: i64,
+    pub title: String,
+    pub body: String,
+    pub task_id: Option<i64>,
+}
+
 /// The part of `Status` (GET /api/status) the shell reads.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct Status {
@@ -59,6 +68,9 @@ pub struct Status {
     pub paused: bool,
     pub running: i64,
     pub max_concurrent: i64,
+    /// The newest notifications, newest first.
+    #[serde(default)]
+    pub notifications: Vec<NotificationRow>,
 }
 
 /// What the shell last read of the daemon.
@@ -116,6 +128,25 @@ pub fn restart() -> Result<(), String> {
         .post(format!("{}/api/daemon/restart", base_url()))
         .send_empty()
         .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+
+/// Tell the daemon the app is running (`POST /api/app/seen`), so for the next 90 s it leaves desktop notifications
+/// to the app. Answers whether desktop notifications are on.
+pub fn app_seen() -> Result<bool, String> {
+    #[derive(Deserialize)]
+    struct AppSeen {
+        desktop: bool,
+    }
+    let body = agent(Some(REQUEST_TIMEOUT))
+        .post(format!("{}/api/app/seen", base_url()))
+        .send_empty()
+        .map_err(|e| e.to_string())?
+        .body_mut()
+        .read_to_string()
+        .map_err(|e| e.to_string())?;
+    serde_json::from_str::<AppSeen>(&body)
+        .map(|seen| seen.desktop)
         .map_err(|e| e.to_string())
 }
 
@@ -293,7 +324,9 @@ mod tests {
         let body = r#"{
             "daemon": { "commit": "abc", "started_at": "2026-11-03 10:00:00", "pid": 1 },
             "paused": false, "rate_limited_until": null, "running": 2, "max_concurrent": 3,
-            "counts": { "queued": 4 }, "review": 1, "usage": [], "notifications": [],
+            "counts": { "queued": 4 }, "review": 1, "usage": [],
+            "notifications": [{ "id": 9, "kind": "done", "title": "Task 3 done: Tray", "body": "Ready.",
+              "task_id": 3, "created_at": "2026-11-03 10:00:00" }],
             "headline": { "state": "hold", "until": 1762180200, "need_you": 2,
               "attention": [{ "id": 181, "title": "Shared text helpers", "why": "blocked" }] }
         }"#;
@@ -302,6 +335,7 @@ mod tests {
         assert_eq!(status.headline.until, Some(1762180200));
         assert_eq!(status.headline.attention[0].why, AttentionWhy::Blocked);
         assert_eq!((status.running, status.max_concurrent), (2, 3));
+        assert_eq!(status.notifications[0].task_id, Some(3));
     }
 
     #[test]
