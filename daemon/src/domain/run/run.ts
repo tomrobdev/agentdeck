@@ -233,12 +233,14 @@ export interface RunCameTo {
  * The outcome of a run and whether to pause its repo. A finished run is blocked when the agent says so, failed when the
  * tests failed, and blocked when it is done without a commit. Refused tool uses make a block environmental, and pause
  * the repo (the tool rules don't fit its work, so every further task would hit the same wall), unless the agent finished
- * and only the test command failed: then the refusals didn't stop it.
+ * and only the test command failed: then the refusals didn't stop it. A block the worker reported as a need (`NEEDS …`)
+ * never pauses: the refusal was expected, the task says what it needs, and the repo's other tasks are not stuck on it.
  */
 export function runOutcome(r: RunCameTo): { result: WorkerResult; pause: boolean } {
   const result = baseOutcome(r);
   if (result.outcome === 'blocked' && isEnvironmentBlock({ needs: result.needs, denials: r.denials })) result.environment = true;
-  const pause = r.denials > 0 && r.testsPassed !== false && (result.outcome === 'blocked' || result.outcome === 'failed');
+  const reported = result.outcome === 'blocked' && !!result.needs;
+  const pause = r.denials > 0 && r.testsPassed !== false && !reported && (result.outcome === 'blocked' || result.outcome === 'failed');
   return { result, pause };
 }
 

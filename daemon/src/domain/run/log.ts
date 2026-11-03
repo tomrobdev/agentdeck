@@ -207,6 +207,11 @@ function parseEvent(ev: any): LogEntry[] {
       return [ev.error ? { kind: 'error', text: `pull request: ${ev.error}` } : { kind: 'text', text: `Opened pull request ${ev.url}` }];
     case 'agentdeck_sync':
       return SYNC_TEXT[ev.kind] ? [{ kind: 'text' as const, text: SYNC_TEXT[ev.kind] }] : [];
+    case 'agentdeck_protected_edits':
+      return [
+        ...(ev.applied?.length ? [{ kind: 'text' as const, text: `Applied protected edits: ${ev.applied.join(', ')}` }] : []),
+        ...(ev.refused ?? []).map((r: any) => ({ kind: 'error' as const, text: `Refused protected edit ${r.path}: ${r.reason}` })),
+      ];
     case 'agentdeck_stderr':
     case 'agentdeck_error':
       return [{ kind: 'error', text: String(ev.text).trim() }];

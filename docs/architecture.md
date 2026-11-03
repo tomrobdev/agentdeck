@@ -22,6 +22,7 @@ flowchart LR
     shell["adapters/shell.ts"]
     runlog["adapters/run-log.ts"]
     planfile["adapters/plan-file.ts"]
+    protectededits["adapters/protected-edits.ts"]
     goals["adapters/goals.ts"]
     reporoot["adapters/repo-root.ts"]
     watch["adapters/watch.ts"]
@@ -49,6 +50,7 @@ flowchart LR
   claude --> processes
   worker --> runlog
   worker -- "the run's plan, in the worktree" --> planfile
+  worker -- "edits under .claude/ the worker wrote out" --> protectededits --> git
   scheduler --> goals
   goals --> reporoot
   service --> launchd

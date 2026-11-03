@@ -18,6 +18,22 @@ test('a blocked run with refused tool uses is the environment, and pauses the re
   assert.equal(r.pause, true);
 });
 
+test('a block the worker reported as a need does not pause the repo, refusals or not', () => {
+  const needs = runOutcome({
+    ...finished,
+    status: parseStatus('STATUS: BLOCKED: NEEDS edit: .claude/settings.json'),
+    commitsAhead: null,
+    denials: 1,
+  });
+  assert.equal(needs.result.outcome, 'blocked');
+  assert.equal(needs.result.environment, true);
+  assert.deepEqual(needs.result.needs, { kind: 'edit', items: ['.claude/settings.json'] });
+  assert.equal(needs.pause, false);
+  // A refusal with no need named still pauses: nobody said what was wrong.
+  const unnamed = runOutcome({ ...finished, status: parseStatus('STATUS: BLOCKED: could not write'), commitsAhead: null, denials: 1 });
+  assert.equal(unnamed.pause, true);
+});
+
 test('failed tests with refused tool uses fail the run without pausing', () => {
   const r = runOutcome({ ...finished, status: parseStatus('STATUS: DONE'), testsPassed: false, commitsAhead: null, denials: 3 });
   assert.deepEqual(r.result, { outcome: 'failed', reason: 'tests failed' });

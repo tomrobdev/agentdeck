@@ -136,6 +136,23 @@ test('autoMergeCheck: what needs a person', () => {
   assert.equal(check({ labels: [] }, { paused: 'AgentDeck is paused' }).verdict, 'never', 'a person beats a wait');
 });
 
+test('autoMergeCheck: a PR touching .claude/ needs a person, even with an empty skip list', () => {
+  const paths = ['src/a.ts', '.claude/skills/x/SKILL.md'];
+  const why = 'changes .claude/skills/x/SKILL.md: files under .claude/ steer every later agent';
+  for (const auto_merge_skip of ['[]', '[".github/"]', '[".claude/"]']) {
+    const verdict = autoMergeCheck({
+      repo: { ...repoRow, auto_merge_skip },
+      pr_state: 'open',
+      pr: { ...ready, paths },
+      tests_passed: 1,
+      paused: null,
+    });
+    assert.deepEqual(verdict, { verdict: 'never', reasons: [why] }, auto_merge_skip);
+  }
+  // Both: the protected reason first, then the repo's own skip list.
+  assert.deepEqual(check({ paths: [...paths, '.github/ci.yml'] }).reasons, [why, 'touches .github/ci.yml']);
+});
+
 test('autoMergeCheck: what can still change on its own', () => {
   assert.deepEqual(check({ checks: { total: 2, failing: 0, pending: 1 }, merge_state: 'BLOCKED' }), {
     verdict: 'wait',
