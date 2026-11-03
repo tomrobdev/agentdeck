@@ -2,7 +2,10 @@
 // panels only hold the form's state.
 import type { MergeMethod, NotifyKind, RepoDetail, RepoPatch, Settings, SettingsPatch } from '../api';
 import { DEFAULT_AUTO_MERGE_MAX_LINES, DEFAULT_AUTO_MERGE_SKIP } from '../../../daemon/src/domain/pull-request/auto-merge.ts';
+import { NOTIFY_KINDS } from '../../../daemon/src/domain/notification.ts';
 import { parseTextList, textList } from '../../../daemon/src/domain/text.ts';
+
+export { NOTIFY_KINDS };
 
 export type RepoForm = {
   goals: string;
