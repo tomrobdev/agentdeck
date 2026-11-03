@@ -185,3 +185,18 @@ test('launchd plist runs this daemon with a usable PATH', () => {
   assert.ok(servicePath().split(':').includes('/opt/homebrew/bin'));
   assert.match(plist, new RegExp(`<key>AGENTDECK_HOME</key><string>${home}</string>`), 'custom home is passed through');
 });
+
+test("the plist carries the installing shell's SDKROOT and DEVELOPER_DIR, and leaves out unset ones", () => {
+  const saved = { SDKROOT: process.env.SDKROOT, DEVELOPER_DIR: process.env.DEVELOPER_DIR };
+  try {
+    process.env.SDKROOT = '/sdks/MacOSX26.5.sdk';
+    delete process.env.DEVELOPER_DIR;
+    const plist = renderPlist();
+    assert.match(plist, /<key>SDKROOT<\/key><string>\/sdks\/MacOSX26\.5\.sdk<\/string>/);
+    assert.doesNotMatch(plist, /DEVELOPER_DIR/);
+  } finally {
+    for (const [k, v] of Object.entries(saved))
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+  }
+});
