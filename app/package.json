@@ -10,8 +10,7 @@
     "typecheck": "vue-tsc --noEmit",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build --bundles app",
-    "check:rust": "cargo fmt --manifest-path src-tauri/Cargo.toml --check && cargo clippy --manifest-path src-tauri/Cargo.toml"
+    "tauri:build": "tauri build --bundles app"
   },
   "dependencies": {
     "@tanstack/vue-query": "^5.105.0",

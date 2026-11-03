@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process';
 import { accessSync, constants, type WriteStream } from 'node:fs';
 import { delimiter, isAbsolute, join } from 'node:path';
 import { createInterface } from 'node:readline';
-import { claudeBin } from '../config.ts';
+import { claudeBin, withToolchainPath } from '../config.ts';
 import { activeChildren, killGroup } from './processes.ts';
 
 function executable(path: string): boolean {
@@ -90,7 +90,7 @@ export async function runClaude(opts: {
   const { log } = opts;
   const child = spawn(claudeBin(), opts.args, {
     cwd: opts.cwd,
-    env: { ...process.env, ...opts.env },
+    env: withToolchainPath({ ...process.env, ...opts.env }) as NodeJS.ProcessEnv,
     stdio: ['ignore', 'pipe', 'pipe'],
     detached: true, // own process group, so the whole tree can be stopped together
   });

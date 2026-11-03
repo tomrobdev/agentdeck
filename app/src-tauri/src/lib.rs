@@ -36,7 +36,12 @@ fn cmux_installed() -> bool {
 
 /// Fill a template's placeholders. An argument holding `{command}` is dropped, with the flag before
 /// it, when there is no command to run.
-fn fill_template(template: &[String], title: &str, cwd: &str, command: Option<&str>) -> Vec<String> {
+fn fill_template(
+    template: &[String],
+    title: &str,
+    cwd: &str,
+    command: Option<&str>,
+) -> Vec<String> {
     let mut out: Vec<String> = Vec::new();
     for arg in template {
         let mut arg = arg.clone();
@@ -48,7 +53,10 @@ fn fill_template(template: &[String], title: &str, cwd: &str, command: Option<&s
                 continue;
             };
             // Fill {command} last, so a placeholder typed inside the command stays as typed.
-            arg = arg.replace("{title}", title).replace("{cwd}", cwd).replace("{command}", cmd);
+            arg = arg
+                .replace("{title}", title)
+                .replace("{cwd}", cwd)
+                .replace("{command}", cmd);
         } else {
             arg = arg.replace("{title}", title).replace("{cwd}", cwd);
         }
@@ -103,7 +111,11 @@ pub fn run() {
             MacosLauncher::LaunchAgent,
             None,
         ))
-        .invoke_handler(tauri::generate_handler![set_tray_status, cmux_installed, open_terminal])
+        .invoke_handler(tauri::generate_handler![
+            set_tray_status,
+            cmux_installed,
+            open_terminal
+        ])
         .setup(|app| {
             let status = MenuItem::with_id(app, "status", "Connecting…", false, None::<&str>)?;
             let show = MenuItem::with_id(app, "show", "Show AgentDeck", true, None::<&str>)?;

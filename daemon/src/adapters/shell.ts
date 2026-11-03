@@ -1,5 +1,6 @@
 // Runs a repo's own commands (setup, tests) through the shell.
 import { spawn } from 'node:child_process';
+import { withToolchainPath } from '../config.ts';
 
 const TAIL_BYTES = 20_000;
 
@@ -41,7 +42,12 @@ export function runProgram(file: string, args: string[], cwd: string, timeout: n
     let pid: number | undefined;
     let timer: NodeJS.Timeout;
     try {
-      const child = spawn(file, args, { cwd, detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
+      const child = spawn(file, args, {
+        cwd,
+        env: withToolchainPath() as NodeJS.ProcessEnv,
+        detached: true,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
       pid = child.pid;
       timer = setTimeout(() => {
         timedOut = true;
