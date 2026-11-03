@@ -2,7 +2,8 @@
 import { computed, nextTick } from 'vue';
 import { type TaskDetail, ago, api } from '../../api';
 import AutoMergeMark from '../ui/AutoMergeMark.vue';
-import { openExternal, useCopy } from '../../platform/native';
+import { isNative, openExternal, revealInFinder, runTemplate, useCopy } from '../../platform/native';
+import { editorArgv, editorTemplate } from '../../lib/terminal';
 import { PRIORITY_LEVELS, canEdit, priorityLevel, statusLabel } from '../../lib/taskView';
 import { useActions } from '../../composables/useActions';
 import { useTerminal } from '../../composables/useTerminal';
@@ -22,6 +23,18 @@ const terminal = useTerminal();
 function openWorktree() {
   const dir = props.task.worktree;
   if (dir) run(() => terminal.open(`#${props.task.id} ${props.task.title}`, dir));
+}
+
+function revealWorktree() {
+  const dir = props.task.worktree;
+  if (dir) run(() => revealInFinder(dir));
+}
+
+// The editor template is read when drawn, so a change in Settings shows without a reload.
+const editorSet = () => isNative && !!editorTemplate();
+function openInEditor() {
+  const dir = props.task.worktree;
+  if (dir) run(() => runTemplate(editorArgv(), { cwd: dir }));
 }
 
 // An edit is saved from the field's own value; a refused one leaves the task unchanged, so the saved value shows again.
@@ -125,6 +138,8 @@ const levelLabel = computed(() => PRIORITY_LEVELS.find((l) => l.key === priority
       <div :class="rowMono">
         <span class="flex-1 truncate" :title="task.worktree">{{ task.worktree.split('/').slice(-2).join('/') }}</span>
         <button v-if="terminal.available.value" class="px-1.5 py-0 text-xs" @click="openWorktree">open in {{ terminal.name() }}</button>
+        <button v-if="isNative" class="px-1.5 py-0 text-xs" @click="revealWorktree">reveal</button>
+        <button v-if="editorSet()" class="px-1.5 py-0 text-xs" @click="openInEditor">open in editor</button>
         <button class="px-1.5 py-0 text-xs" @click="copy(task.worktree, 'wt')">{{ copied === 'wt' ? '✓' : 'copy' }}</button>
       </div>
     </div>
