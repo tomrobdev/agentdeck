@@ -97,8 +97,9 @@ export function autoMergeCheck(
   if (lines > repo.auto_merge_max_lines) reasons.never.push(`${lines} lines changed, over the limit of ${repo.auto_merge_max_lines}`);
   if (pr.paths.length < pr.files) reasons.never.push(`GitHub listed ${pr.paths.length} of ${pr.files} changed files`);
   const skip = autoMergeSkip(repo);
-  const held = pr.paths.filter((path) => skip.some((prefix) => path.startsWith(prefix)));
-  if (held.length) reasons.never.push(`touches ${held.slice(0, 3).join(', ')}${held.length > 3 ? ` and ${held.length - 3} more` : ''}`);
+  const skipped = pr.paths.filter((path) => skip.some((prefix) => path.startsWith(prefix)));
+  if (skipped.length)
+    reasons.never.push(`touches ${skipped.slice(0, 3).join(', ')}${skipped.length > 3 ? ` and ${skipped.length - 3} more` : ''}`);
 
   if (isMergeabilityUnknown(pr)) reasons.wait.push('GitHub is still working out whether it merges cleanly');
   if (input.paused) reasons.wait.push(input.paused);
@@ -184,8 +185,9 @@ export function autoMergeView(
   if (measured) {
     const n = (value: number) => value.toLocaleString('en-US');
     if (measured.lines > limits.max_lines) reasons.push(`now ${n(measured.lines)} lines, over the limit of ${n(limits.max_lines)}`);
-    const held = measured.paths.filter((path) => skip.some((prefix) => path.startsWith(prefix)));
-    if (held.length) reasons.push(`touches ${held.slice(0, 3).join(', ')}${held.length > 3 ? ` and ${held.length - 3} more` : ''}`);
+    const skipped = measured.paths.filter((path) => skip.some((prefix) => path.startsWith(prefix)));
+    if (skipped.length)
+      reasons.push(`touches ${skipped.slice(0, 3).join(', ')}${skipped.length > 3 ? ` and ${skipped.length - 3} more` : ''}`);
   }
   return { state: 'on', label: LABELS.on, reasons, source, checked_at: null, limits };
 }

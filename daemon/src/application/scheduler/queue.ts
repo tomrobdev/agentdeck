@@ -1,4 +1,4 @@
-// What queued tasks wait for: what holds the whole queue, and what each task waits for.
+// What queued tasks wait for: what stops the whole queue, and what each task waits for.
 import type { Db } from '../../db/index.ts';
 import { type LinkIndex, dependencyOf } from '../task/dependencies.ts';
 import type { Repo } from '../../domain/repo/repo.ts';
@@ -13,7 +13,7 @@ export interface PausedRepo {
   queued: number;
 }
 
-/** What the whole queue waits for, and the repos that are paused (with how many queued tasks each holds back). */
+/** What the whole queue waits for, and the repos that are paused (with how many queued tasks each has waiting). */
 export function queueWaits(db: Db): { wait: QueueWait | null; paused_repos: PausedRepo[] } {
   const queued = db.listTaskSummaries({ status: 'queued', limit: 1000 });
   return {

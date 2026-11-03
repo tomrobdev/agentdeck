@@ -95,25 +95,29 @@ export function startState(task: { id: number }, links: Link[], lookup: (id: num
   if (own.length === 0) return { kind: 'none' };
   const visited = new Set<number>([task.id]);
   /** The stuck root at or below `on`, following builds-on links down through tasks that are not done; `via` is the way down. */
-  const root = (on: number, via: number[]): { on: number; reason: string } | null => {
-    const dep = lookup(on);
-    const s = standing(on, dep);
+  const root = (on: number, via: number[], dep: LinkTarget | undefined, s: Standing): { on: number; reason: string } | null => {
     if (s.kind === 'stuck')
       return { on, reason: via.length ? `waits on #${on} (via ${via.map((v) => `#${v}`).join(', ')}), ${s.which}` : s.reason };
-    if (s.kind === 'met' || !dep || dep.status === 'done' || visited.has(on)) return null;
+    // A task that is gone is stuck, so the walk is at a task that exists from here.
+    const target = dep!;
+    if (s.kind === 'met' || target.status === 'done' || visited.has(on)) return null;
     visited.add(on);
-    for (const next of dep.links) {
+    for (const next of target.links) {
       if (next.kind !== 'builds_on') continue;
-      const r = root(next.on, [...via, on]);
+      const nextDep = lookup(next.on);
+      const r = root(next.on, [...via, on], nextDep, standing(next.on, nextDep));
       if (r) return r;
     }
     return null;
   };
+  const waiting: number[] = [];
   for (const link of own) {
-    const r = root(link.on, []);
+    const dep = lookup(link.on);
+    const s = standing(link.on, dep);
+    const r = root(link.on, [], dep, s);
     if (r) return { kind: 'stuck', ...r };
+    if (s.kind === 'waiting') waiting.push(link.on);
   }
-  const waiting = own.filter((l) => standing(l.on, lookup(l.on)).kind === 'waiting').map((l) => l.on);
   return waiting.length ? { kind: 'waiting', on: waiting } : { kind: 'met' };
 }
 

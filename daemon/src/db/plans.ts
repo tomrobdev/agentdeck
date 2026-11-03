@@ -3,7 +3,7 @@ import { and, asc, desc, eq, ne, notInArray, sql } from 'drizzle-orm';
 import { type PlanSource, type TaskPlan, parsePlan, planFileName } from '../domain/plan/plan.ts';
 import type { Task } from '../domain/task/task.ts';
 import type { Orm } from './orm.ts';
-import { NOW, atomically } from './sql.ts';
+import { NOW_SQL, atomically } from './sql.ts';
 import { taskPlans, tasks } from './tables.ts';
 import type { DatabaseSync } from 'node:sqlite';
 
@@ -38,7 +38,9 @@ function ownPlanRow(orm: Orm, task_id: number): OwnPlan | undefined {
     .where(
       and(
         eq(taskPlans.task_id, task_id),
+        // guard: the builder has no GLOB; a LIKE would treat `_` and `%` in a name as wildcards
         sql`${taskPlans.name} GLOB ${`${task_id}-*.html`}`,
+        // guard: the builder has no GLOB or substr; the name between the number and `.html` has only a-z, 0-9 and `-`
         sql`substr(${taskPlans.name}, 1, length(${taskPlans.name}) - 5) NOT GLOB '*[^a-z0-9-]*'`,
       ),
     )
@@ -62,11 +64,7 @@ export function saveOwnPlan(db: DatabaseSync, orm: Orm, task_id: number, html: s
         .where(and(eq(taskPlans.task_id, task_id), eq(taskPlans.name, name), ne(taskPlans.id, old.id)))
         .run();
       if (old.name !== name || old.html !== html || old.source !== source) {
-        orm
-          .update(taskPlans)
-          .set({ name, source, html, updated_at: sql.raw(NOW) })
-          .where(eq(taskPlans.id, old.id))
-          .run();
+        orm.update(taskPlans).set({ name, source, html, updated_at: NOW_SQL }).where(eq(taskPlans.id, old.id)).run();
       }
     }
     return toPlan(ownPlanRow(orm, task_id)!);
@@ -82,8 +80,8 @@ export function planStore(db: DatabaseSync, orm: Orm) {
     updatePlanHtml(id: number, html: string): void {
       orm
         .update(taskPlans)
-        .set({ html, updated_at: sql.raw(NOW) })
-        .where(and(eq(taskPlans.id, id), sql`${taskPlans.html} IS NOT ${html}`))
+        .set({ html, updated_at: NOW_SQL })
+        .where(and(eq(taskPlans.id, id), ne(taskPlans.html, html)))
         .run();
     },
     /** Whether a task other than `task_id` follows task `task_id`'s plan. */

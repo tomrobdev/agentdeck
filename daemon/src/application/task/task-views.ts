@@ -1,6 +1,6 @@
 // Tasks as the dashboard and the CLI show them: a task plus what the queue says about it.
 import type { Db } from '../../db/index.ts';
-import { type AutoMergeMeasured, type AutoMergeView, autoMergeOn, autoMergeView } from '../../domain/pull-request/auto-merge.ts';
+import { type AutoMergeView, autoMergeOn, autoMergeView } from '../../domain/pull-request/auto-merge.ts';
 import { type ChecksSummary, type PrCheck, checksSummary, readStoredChecks } from '../../domain/pull-request/checks.ts';
 import { type MergeRequestView, conflictsWithBase, mergeRequestView } from '../../domain/pull-request/merge-request.ts';
 import { isMergeLocked } from '../pull-request/pull-requests.ts';
@@ -60,10 +60,9 @@ type Viewed = Pick<
 
 /**
  * Each task with its view. Reads the repos, plans, links and queue state once for the whole list, so the queries it runs
- * don't grow with the tasks or their links. `measured` holds, by task id, how a branch with no open PR measures
- * against the auto-merge limits (see `taskDetail`).
+ * don't grow with the tasks or their links.
  */
-export function withViews<T extends Viewed>(db: Db, tasks: T[], measured: Map<number, AutoMergeMeasured> = new Map()): (T & TaskView)[] {
+export function withViews<T extends Viewed>(db: Db, tasks: T[]): (T & TaskView)[] {
   const repos = new Map(db.listRepos().map((r) => [r.id, r]));
   const links = loadedLinks(db);
   const waitOf = startWaits(db, links);
@@ -78,7 +77,7 @@ export function withViews<T extends Viewed>(db: Db, tasks: T[], measured: Map<nu
     checks: checksSummary(t),
     conflicting: conflictsWithBase(t),
     repo: repos.get(t.repo_id)?.name ?? null,
-    auto_merge_view: repos.has(t.repo_id) ? autoMergeView(t, repos.get(t.repo_id)!, measured.get(t.id)) : null,
+    auto_merge_view: repos.has(t.repo_id) ? autoMergeView(t, repos.get(t.repo_id)!) : null,
     waiting: waitingFor(db, t, links),
     unblocks: unblocksOf(db, t, links),
     links: linkViews(db, t.id, links),
@@ -92,14 +91,14 @@ export function withViews<T extends Viewed>(db: Db, tasks: T[], measured: Map<nu
 export async function taskDetail(db: Db, id: number) {
   const task = requireTask(db, id);
   const repo = db.getRepo(task.repo_id);
-  const measured = new Map<number, AutoMergeMeasured>();
+  const [view] = withViews(db, [task]);
   // Only a done task's branch is final; measuring a running one would start git on every refetch.
   if (repo && task.status === 'done' && task.branch && !hasOpenPr(task) && task.pr_state !== 'merged' && autoMergeOn(task, repo)) {
-    const m = await measureBranch(repo, task.branch);
-    if (m) measured.set(id, m);
+    const measured = await measureBranch(repo, task.branch);
+    if (measured) view.auto_merge_view = autoMergeView(task, repo, measured);
   }
   return {
-    ...withViews(db, [task], measured)[0],
+    ...view,
     check_list: checkList(task.pr_checks),
     runs: db.runsForTask(id),
     events: db.eventsForTask(id),

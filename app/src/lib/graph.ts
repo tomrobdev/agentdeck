@@ -70,18 +70,18 @@ export function graphTasks(all: TaskSummary[], shown: TaskSummary[], showFinishe
   return linked.filter((t) => alive.has(find(t.id)));
 }
 
-/** The tasks a stuck task holds, and the stuck roots under them: outlined in the blocked colour. */
+/** The tasks a stuck task keeps from starting, and the stuck roots under them: outlined in the blocked colour. */
 export function stuckSet(tasks: TaskSummary[]): Set<number> {
   const byId = new Map(tasks.map((t) => [t.id, t]));
   const set = new Set<number>();
-  const hold = (id: number) => {
+  const mark = (id: number) => {
     if (set.has(id)) return;
     set.add(id);
-    for (const d of byId.get(id)?.dependents ?? []) if (d.kind === 'builds_on') hold(d.id);
+    for (const d of byId.get(id)?.dependents ?? []) if (d.kind === 'builds_on') mark(d.id);
   };
   for (const t of tasks) {
     if (!isStuck(t)) continue;
-    hold(t.id);
+    mark(t.id);
     // The root: the dependency whose own state won't get better. It is the one a person has to act on.
     for (const l of t.links ?? []) if (l.kind === 'builds_on' && l.state === 'stuck') set.add(l.on);
   }

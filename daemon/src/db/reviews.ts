@@ -1,8 +1,8 @@
 // Reviews and their comments. A draft is edited freely; a submitted review changes only in its comments' states.
-import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
 import type { CommentSide, CommentState, Review, ReviewComment, ReviewKind, ReviewWithComments } from '../domain/review/review.ts';
 import type { Orm } from './orm.ts';
-import { NOW } from './sql.ts';
+import { NOW_SQL } from './sql.ts';
 import { reviewComments, reviews } from './tables.ts';
 
 type ReviewRow = typeof reviews.$inferSelect;
@@ -71,7 +71,7 @@ export function reviewStore(orm: Orm) {
       return (
         orm
           .update(reviews)
-          .set({ kind, body, submitted_at: sql.raw(NOW) })
+          .set({ kind, body, submitted_at: NOW_SQL })
           .where(and(eq(reviews.id, id), isNull(reviews.submitted_at)))
           .run().changes > 0
       );
@@ -88,7 +88,7 @@ export function reviewStore(orm: Orm) {
       return (
         orm
           .update(reviewComments)
-          .set({ body, updated_at: sql.raw(NOW) })
+          .set({ body, updated_at: NOW_SQL })
           .where(
             and(
               eq(reviewComments.id, id),
@@ -117,18 +117,12 @@ export function reviewStore(orm: Orm) {
       return (
         orm
           .update(reviewComments)
-          .set({ state: to, updated_at: sql.raw(NOW), ...(answer === undefined ? {} : { answer }) })
+          .set({ state: to, updated_at: NOW_SQL, ...(answer === undefined ? {} : { answer }) })
           .where(
             and(
               eq(reviewComments.id, id),
               inArray(reviewComments.state, from),
-              inArray(
-                reviewComments.review_id,
-                orm
-                  .select({ id: reviews.id })
-                  .from(reviews)
-                  .where(sql`${reviews.submitted_at} IS NOT NULL`),
-              ),
+              inArray(reviewComments.review_id, orm.select({ id: reviews.id }).from(reviews).where(isNotNull(reviews.submitted_at))),
             ),
           )
           .run().changes > 0

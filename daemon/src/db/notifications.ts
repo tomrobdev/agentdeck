@@ -10,6 +10,7 @@ export function notificationStore(orm: Orm) {
       orm.insert(notifications).values({ kind, title, body, task_id }).run();
       orm
         .delete(notifications)
+        // guard: the builder has no arithmetic on a subquery; this keeps the newest 200 rows
         .where(lte(notifications.id, sql`(SELECT MAX(id) - 200 FROM notifications)`))
         .run();
     },

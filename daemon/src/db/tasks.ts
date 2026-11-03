@@ -15,6 +15,8 @@ import {
   lt,
   lte,
   max,
+  ne,
+  notExists,
   or,
   sql,
 } from 'drizzle-orm';
@@ -27,10 +29,17 @@ import { MAX_RESTARTS, type TaskEvent, type TaskStatus, fromStatuses, nextStatus
 import type { Link, LinkKind } from '../domain/task/link.ts';
 import type { PrEvent, TaskEventRow, TaskEventType } from '../domain/task/history.ts';
 import type { TaskPlan } from '../domain/plan/plan.ts';
-import { EDITABLE_STATUSES, OPEN_STATUSES, PLAN_ATTACHABLE_STATUSES, type Task, type TaskSummary } from '../domain/task/task.ts';
+import {
+  EDITABLE_STATUSES,
+  OPEN_STATUSES,
+  PLAN_ATTACHABLE_STATUSES,
+  RUNNING_STATUSES,
+  type Task,
+  type TaskSummary,
+} from '../domain/task/task.ts';
 import type { Orm } from './orm.ts';
 import { insertOwnPlan, saveOwnPlan } from './plans.ts';
-import { NOW, atomically } from './sql.ts';
+import { NOW_SQL, atomically } from './sql.ts';
 import { plannerRuns, repos, runs, taskEvents, taskLinks, tasks } from './tables.ts';
 
 /** A task's columns: every one but the legacy `after_task`, which migration 18 copied into task_links and nothing reads. */
@@ -57,21 +66,15 @@ export interface LinkedTask {
 
 /** The columns of a task with no merge request. */
 const NO_MERGE_REQUEST = { merge_requested_at: null, merge_request_method: null, merge_request_check: null };
+/** The columns of a task with no auto-merge check. */
+const NO_AUTO_MERGE_CHECK = { auto_merge_check: null, auto_merge_checked_at: null };
 
-/** The task row `t` in the claim and queue queries, which NOT_WAITING refers to by that name. */
+/** The task row `t` in the claim and queue queries, which NOT_WAITING refers to. */
 const t = alias(tasks, 't');
-
-/**
- * SQL: tasks `d` that a dependent may build on: done, and merged unless their repo has pr_mode off.
- * A done task whose PR isn't opened yet (or failed to open) has pr_url NULL, so it must not count as met.
- * A task a person marked done counts as met unless its PR is open. Mirrors domain/task/link.ts.
- */
-const DEPENDENCY_MET = `d.status = 'done' AND (d.pr_state = 'merged'
-  OR (d.pr_url IS NULL AND d.pr_state IS NULL AND EXISTS (SELECT 1 FROM repos r WHERE r.id = d.repo_id AND r.pr_mode = 'off'))
-  OR (d.done_by = 'person' AND (d.pr_state IS NULL OR d.pr_state <> 'open')))`;
-/** SQL: the task row `t` is free to start: every task it builds on is met. After links never hold a start. Mirrors startState. */
-const NOT_WAITING = sql.raw(`NOT EXISTS (SELECT 1 FROM task_links l WHERE l.task_id = t.id AND l.kind = 'builds_on'
-  AND NOT EXISTS (SELECT 1 FROM tasks d WHERE d.id = l.on_task AND ${DEPENDENCY_MET}))`);
+/** A builds-on link of `t`, the task `d` it builds on, and `d`'s repo `r`: what NOT_WAITING looks through. */
+const buildsOn = alias(taskLinks, 'l');
+const dep = alias(tasks, 'd');
+const depRepo = alias(repos, 'r');
 
 /** Unset fields are left alone by Drizzle; these writes have always stored a given-as-undefined field as NULL. */
 const given = <T extends object>(fields: T) =>
@@ -89,6 +92,41 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         .from(repos)
         .where(and(isNull(repos.paused_reason), isNull(repos.archived_at))),
     );
+  /**
+   * The task row `t` is free to start: every task it builds on is met, that is done, and merged unless its repo has pr_mode off.
+   * A done task whose PR isn't opened yet (or failed to open) has pr_url NULL, so it must not count as met.
+   * A task a person marked done counts as met unless its PR is open. After links never stop a start.
+   * Mirrors startState and domain/task/link.ts.
+   */
+  const notWaiting = () => {
+    const met = and(
+      eq(dep.status, 'done'),
+      or(
+        eq(dep.pr_state, 'merged'),
+        and(
+          isNull(dep.pr_url),
+          isNull(dep.pr_state),
+          exists(
+            orm
+              .select({ id: depRepo.id })
+              .from(depRepo)
+              .where(and(eq(depRepo.id, dep.repo_id), eq(depRepo.pr_mode, 'off'))),
+          ),
+        ),
+        and(eq(dep.done_by, 'person'), or(isNull(dep.pr_state), ne(dep.pr_state, 'open'))),
+      ),
+    );
+    const unmet = orm
+      .select({ id: dep.id })
+      .from(dep)
+      .where(and(eq(dep.id, buildsOn.on_task), met));
+    return notExists(
+      orm
+        .select({ task_id: buildsOn.task_id })
+        .from(buildsOn)
+        .where(and(eq(buildsOn.task_id, t.id), eq(buildsOn.kind, 'builds_on'), notExists(unmet))),
+    );
+  };
   const countWhere = (where: SQL | undefined) => orm.select({ n: count() }).from(tasks).where(where).get()?.n ?? 0;
 
   /** Append to a task's history. Callers run it in the same `atomically` block as the status change. */
@@ -185,14 +223,14 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       return countWhere(and(eq(tasks.repo_id, repo_id), inArray(tasks.status, OPEN_STATUSES)));
     },
     countRunning(): number {
-      return countWhere(inArray(tasks.status, ['running', 'cancel_requested']));
+      return countWhere(inArray(tasks.status, RUNNING_STATUSES));
     },
     /** The tasks with a live run, oldest first: what a restart at once would requeue. */
     runningTasks(): { id: number; title: string }[] {
       return orm
         .select({ id: tasks.id, title: tasks.title })
         .from(tasks)
-        .where(inArray(tasks.status, ['running', 'cancel_requested']))
+        .where(inArray(tasks.status, RUNNING_STATUSES))
         .orderBy(asc(tasks.id))
         .all();
     },
@@ -213,9 +251,9 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     /** Whether a task could be claimed: queued, not waiting on a dependency, in a repo that isn't paused. */
     hasQueued(): boolean {
       return !!orm
-        .select({ one: sql`1` })
+        .select({ id: t.id })
         .from(t)
-        .where(and(eq(t.status, 'queued'), NOT_WAITING, inOpenRepo(t.repo_id)))
+        .where(and(eq(t.status, 'queued'), notWaiting(), inOpenRepo(t.repo_id)))
         .limit(1)
         .get();
     },
@@ -330,13 +368,14 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       const next = orm
         .select({ id: t.id })
         .from(t)
-        .where(and(inArray(t.status, from), NOT_WAITING, inOpenRepo(t.repo_id)))
+        .where(and(inArray(t.status, from), notWaiting(), inOpenRepo(t.repo_id)))
         .orderBy(desc(t.priority), asc(t.id))
         .limit(1);
       return atomically(db, () => {
         const row = orm
           .update(tasks)
-          .set({ status: to, attempts: sql`${tasks.attempts} + 1`, updated_at: sql.raw(NOW) })
+          // guard: the builder has no column arithmetic, and the attempt must count in the same guarded write as the claim
+          .set({ status: to, attempts: sql`${tasks.attempts} + 1`, updated_at: NOW_SQL })
           .where(and(inArray(tasks.status, from), eq(tasks.id, next)))
           .returning(TASK_COLUMNS)
           .get() as Task | undefined;
@@ -360,7 +399,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       return atomically(db, () => {
         const edited = orm
           .update(tasks)
-          .set({ ...given(fields), updated_at: sql.raw(NOW) })
+          .set({ ...given(fields), updated_at: NOW_SQL })
           .where(and(eq(tasks.id, id), inArray(tasks.status, EDITABLE_STATUSES)))
           .returning(TASK_COLUMNS)
           .get() as Task | undefined;
@@ -381,7 +420,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       return atomically(db, () => {
         const row = orm
           .update(tasks)
-          .set({ updated_at: sql.raw(NOW) })
+          .set({ updated_at: NOW_SQL })
           .where(and(eq(tasks.id, id), inArray(tasks.status, PLAN_ATTACHABLE_STATUSES)))
           .returning({ status: tasks.status })
           .get() as { status: TaskStatus } | undefined;
@@ -396,7 +435,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       if (Object.keys(fields).length === 0) return;
       orm
         .update(tasks)
-        .set({ ...given(fields), updated_at: sql.raw(NOW) })
+        .set({ ...given(fields), updated_at: NOW_SQL })
         .where(eq(tasks.id, id))
         .run();
     },
@@ -406,7 +445,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         orm
           .update(tasks)
           // The stored check was made for the old setting, so it goes with it.
-          .set({ auto_merge: value, auto_merge_check: null, auto_merge_checked_at: null, updated_at: sql.raw(NOW) })
+          .set({ auto_merge: value, ...NO_AUTO_MERGE_CHECK, updated_at: NOW_SQL })
           .where(eq(tasks.id, id))
           .returning(TASK_COLUMNS)
           .get() as Task | undefined
@@ -419,7 +458,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     setAutoMergeCheck(id: number, check: string | null): boolean {
       const res = orm
         .update(tasks)
-        .set({ auto_merge_check: check, auto_merge_checked_at: check === null ? null : sql.raw(NOW) })
+        .set({ auto_merge_check: check, auto_merge_checked_at: check === null ? null : NOW_SQL })
         .where(and(eq(tasks.id, id), eq(tasks.status, 'done'), eq(tasks.pr_state, 'open')))
         .run();
       return Number(res.changes) > 0;
@@ -431,7 +470,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     requestMerge(id: number, method: MergeMethod): boolean {
       const res = orm
         .update(tasks)
-        .set({ merge_requested_at: sql.raw(NOW), merge_request_method: method, merge_request_check: null, updated_at: sql.raw(NOW) })
+        .set({ merge_requested_at: NOW_SQL, merge_request_method: method, merge_request_check: null, updated_at: NOW_SQL })
         .where(and(eq(tasks.id, id), eq(tasks.status, 'done'), eq(tasks.pr_state, 'open')))
         .run();
       return Number(res.changes) > 0;
@@ -440,7 +479,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     clearMergeRequest(id: number): boolean {
       const res = orm
         .update(tasks)
-        .set({ ...NO_MERGE_REQUEST, updated_at: sql.raw(NOW) })
+        .set({ ...NO_MERGE_REQUEST, updated_at: NOW_SQL })
         .where(and(eq(tasks.id, id), isNotNull(tasks.merge_requested_at)))
         .run();
       return Number(res.changes) > 0;
@@ -488,7 +527,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
      * between is therefore never undone. Returns false if the task was not in a state the change applies to.
      */
     recordPr(id: number, e: PrEvent): boolean {
-      const notOpenAndDone = and(sql`${tasks.pr_state} IS NOT 'open'`, eq(tasks.status, 'done'));
+      const notOpenAndDone = and(or(isNull(tasks.pr_state), ne(tasks.pr_state, 'open')), eq(tasks.status, 'done'));
       const isOpen = eq(tasks.pr_state, 'open');
       const [set, guard, reason]: [Partial<typeof tasks.$inferInsert>, SQL | undefined, string] =
         e.type === 'opened'
@@ -497,7 +536,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
             ? [{ pr_state: 'failed' }, notOpenAndDone, `could not open the PR: ${e.error}`]
             : e.type === 'closed'
               ? [{ pr_state: 'closed' }, isOpen, 'closed without merging']
-              : [{ pr_state: e.state }, and(isOpen, sql`${e.state} <> 'open'`), `PR is ${e.state}`];
+              : [{ pr_state: e.state }, and(isOpen, ne(tasks.pr_state, e.state)), `PR is ${e.state}`];
       return atomically(db, () => {
         const row = orm
           .update(tasks)
@@ -506,10 +545,9 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
             ...set,
             // A newly opened PR has its own checks to record.
             ...(e.type === 'opened' ? { pr_checks_opened: null, pr_checks_merged: null, pr_checks: null } : {}),
-            auto_merge_check: null,
-            auto_merge_checked_at: null,
+            ...NO_AUTO_MERGE_CHECK,
             ...NO_MERGE_REQUEST,
-            updated_at: sql.raw(NOW),
+            updated_at: NOW_SQL,
           })
           .where(and(eq(tasks.id, id), guard))
           .returning({ status: tasks.status })
@@ -531,10 +569,9 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
             pr_state: 'merged',
             merge_method: method,
             ...(checks ? { pr_checks_merged: JSON.stringify(checks) } : {}),
-            auto_merge_check: null,
-            auto_merge_checked_at: null,
+            ...NO_AUTO_MERGE_CHECK,
             ...NO_MERGE_REQUEST,
-            updated_at: sql.raw(NOW),
+            updated_at: NOW_SQL,
           })
           .where(and(eq(tasks.id, id), eq(tasks.status, 'done'), eq(tasks.pr_state, 'open')))
           .run();
@@ -551,7 +588,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       return atomically(db, () => {
         const row = orm
           .update(tasks)
-          .set({ updated_at: sql.raw(NOW) })
+          .set({ updated_at: NOW_SQL })
           .where(and(eq(tasks.id, id), inArray(tasks.status, ['running', 'done'])))
           .returning({ status: tasks.status })
           .get() as { status: TaskStatus } | undefined;
@@ -567,7 +604,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       return atomically(db, () => {
         const res = orm
           .update(tasks)
-          .set({ updated_at: sql.raw(NOW) })
+          .set({ updated_at: NOW_SQL })
           .where(and(eq(tasks.id, id), eq(tasks.status, 'running')))
           .run();
         if (!Number(res.changes)) return false;
@@ -584,8 +621,9 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         .from(c)
         .where(and(eq(c.task_id, tasks.id), eq(c.type, 'claim')));
       const unfinishedSince = orm
-        .select({ one: sql`1` })
+        .select({ id: e.id })
         .from(e)
+        // guard: the builder has no COALESCE; a task never claimed has no claim row, so the cursor is 0
         .where(and(eq(e.task_id, tasks.id), eq(e.type, 'plan_unfinished'), gt(e.id, sql`COALESCE(${lastClaim}, 0)`)));
       const rows = orm
         .select({ id: tasks.id })
@@ -610,7 +648,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
           // Guarded on the status and on the counters the changes were computed from.
           const row = orm
             .update(tasks)
-            .set({ status: next.to, ...given(next.changes), updated_at: sql.raw(NOW) })
+            .set({ status: next.to, ...given(next.changes), updated_at: NOW_SQL })
             .where(and(eq(tasks.id, id), eq(tasks.status, cur.status), eq(tasks.attempts, cur.attempts), eq(tasks.restarts, cur.restarts)))
             .returning(TASK_COLUMNS)
             .get() as Task | undefined;
@@ -632,12 +670,12 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       const endRuns = (outcome: string, task_id?: number) =>
         orm
           .update(runs)
-          .set({ ended_at: sql.raw(NOW), outcome, result_text: 'daemon restarted' })
+          .set({ ended_at: NOW_SQL, outcome, result_text: 'daemon restarted' })
           .where(and(isNull(runs.ended_at), task_id === undefined ? undefined : eq(runs.task_id, task_id)))
           .run();
       orm
         .update(plannerRuns)
-        .set({ ended_at: sql.raw(NOW), outcome: 'failed', note: 'daemon restarted' })
+        .set({ ended_at: NOW_SQL, outcome: 'failed', note: 'daemon restarted' })
         .where(isNull(plannerRuns.ended_at))
         .run();
       let requeued = 0;
@@ -645,7 +683,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       const orphans = orm
         .select({ id: tasks.id, restarts: tasks.restarts })
         .from(tasks)
-        .where(inArray(tasks.status, ['running', 'cancel_requested']))
+        .where(inArray(tasks.status, RUNNING_STATUSES))
         .all();
       for (const o of orphans) {
         const exhausted = o.restarts + 1 >= MAX_RESTARTS;

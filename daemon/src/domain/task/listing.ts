@@ -1,7 +1,7 @@
 // Filtering and sorting task lists: `agentdeck ls` and the dashboard's queue share it. Pure: no I/O.
 import { STATUS_GROUPS, isMerged, isReview, isStuck, isWaiting, statusGroup } from './stage.ts';
 import type { TaskStatus } from './lifecycle.ts';
-import type { TaskSummary } from './task.ts';
+import { RUNNING_STATUSES, type TaskSummary } from './task.ts';
 
 /**
  * A task as listed: with where it stands on its builds-on links (as waitingFor reports it), the tasks merging its open PR lets
@@ -34,7 +34,7 @@ const is =
 
 /** States finer than a status: a queued task may be waiting on --after or stuck, a done task may have a PR. In the dashboard's order. */
 export const FILTER_STATES: { key: string; label: string; test: Test }[] = [
-  { key: 'running', label: 'Running', test: is('running', 'cancel_requested') },
+  { key: 'running', label: 'Running', test: is(...RUNNING_STATUSES) },
   { key: 'queued', label: 'Queued', test: is('queued') },
   { key: 'waiting', label: 'Waiting', test: isWaiting },
   { key: 'stuck', label: 'Stuck', test: isStuck },
