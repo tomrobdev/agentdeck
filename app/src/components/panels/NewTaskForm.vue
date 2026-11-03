@@ -92,7 +92,7 @@ async function submit() {
         />
       </label>
       <label class="field flex-1">
-        <span>Title <span class="muted">(optional, defaults to the first sentence)</span></span>
+        <span>Title <span class="text-muted">(optional, defaults to the first sentence)</span></span>
         <input v-model="title" />
       </label>
       <div class="flex gap-2.5">
@@ -121,11 +121,11 @@ async function submit() {
       </div>
       <div class="flex gap-2.5">
         <label class="field flex-1">
-          <span>Plan <span class="muted">(optional, the task whose plan this one follows)</span></span>
+          <span>Plan <span class="text-muted">(optional, the task whose plan this one follows)</span></span>
           <input v-model="planTask" placeholder="#112" inputmode="numeric" />
         </label>
         <label class="field flex-1">
-          <span>Steps <span class="muted">(ids, comma-separated; blank for every unfinished step)</span></span>
+          <span>Steps <span class="text-muted">(ids, comma-separated; blank for every unfinished step)</span></span>
           <input v-model="planSteps" placeholder="step-a, step-b" :disabled="!planTask.trim()" />
         </label>
       </div>
@@ -137,7 +137,7 @@ async function submit() {
         </ul>
       </div>
       <div class="flex items-center justify-end gap-2">
-        <span class="muted mr-auto text-sm">⌘↩ to queue</span>
+        <span class="text-muted mr-auto text-sm">⌘↩ to queue</span>
         <button
           v-if="!saved && terminal.available.value"
           type="button"

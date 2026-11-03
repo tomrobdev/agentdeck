@@ -49,7 +49,7 @@ const last = computed(() => props.series.points[props.series.points.length - 1]?
         <title>{{ d.title }}</title>
       </circle>
     </svg>
-    <figcaption class="muted flex justify-between text-2xs">
+    <figcaption class="text-muted flex justify-between text-2xs">
       <span>{{ first ? weekLabel(first) : '' }}</span>
       <span>{{ last ? weekLabel(last) : '' }}</span>
     </figcaption>

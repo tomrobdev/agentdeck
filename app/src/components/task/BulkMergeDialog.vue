@@ -59,7 +59,7 @@ const close = () => (running.value ? undefined : emit('done', requested.value));
         <span v-if="why(t.id)" class="pl-6 text-sm text-failed">{{ why(t.id) }}</span>
       </li>
     </ul>
-    <p v-if="!result" class="muted mt-3">
+    <p v-if="!result" class="text-muted mt-3">
       The daemon merges them one after another, each with its task's method, deleting its branch. One that is not ready waits for its checks
       or its sync; one that lands after another waits for it. This can't be undone from here.
     </p>

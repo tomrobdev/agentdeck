@@ -91,7 +91,7 @@ const LABELS: Record<BoardMove, string> = {
     >
       <header class="flex items-center gap-2 px-3 pt-2.5 pb-1.5 font-semibold">
         <span>{{ g.label }}</span>
-        <span class="muted">{{ g.tasks.length }}</span>
+        <span class="text-muted">{{ g.tasks.length }}</span>
         <button
           v-if="mergeable(g).length"
           class="btn-mini ml-auto font-normal"

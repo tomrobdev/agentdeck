@@ -41,7 +41,7 @@ const dim = (id: number) => lit.value !== null && !lit.value.has(id);
 </script>
 
 <template>
-  <p v-if="!tasks.length" class="muted px-4 py-6">
+  <p v-if="!tasks.length" class="text-muted px-4 py-6">
     No linked tasks to draw. Link a task to another from its card; tasks with no links stay out of the graph.
   </p>
   <div v-else class="min-h-0 flex-1 overflow-auto px-2 py-2">

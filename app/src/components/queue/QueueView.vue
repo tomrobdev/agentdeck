@@ -278,7 +278,7 @@ useHotkeys({
 
     <div class="flex min-h-0 flex-1">
       <div class="flex min-h-0 min-w-0 flex-1 flex-col">
-        <p v-if="!shown.length && hasFilters(filters)" class="muted px-4 py-6">
+        <p v-if="!shown.length && hasFilters(filters)" class="text-muted px-4 py-6">
           Nothing matches these filters.
           <button class="btn-ghost text-accent underline" @click="filters = emptyFilters()">Clear filters</button>
         </p>
@@ -341,7 +341,7 @@ useHotkeys({
         </div>
       </template>
     </div>
-    <footer class="muted flex justify-between gap-3 border-t border-border px-4 py-[5px] text-sm">
+    <footer class="text-muted flex justify-between gap-3 border-t border-border px-4 py-[5px] text-sm">
       <span
         >{{ shown.length }}<template v-if="shown.length !== tasks.length"> of {{ tasks.length }}</template> tasks</span
       >

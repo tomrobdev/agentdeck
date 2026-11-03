@@ -27,11 +27,11 @@ const model = defineModel<K>({ required: true });
       />
       <span v-if="cards">
         <b>{{ o.label }}</b
-        ><small v-if="o.hint" class="muted text-xs"> {{ o.hint }}</small>
+        ><small v-if="o.hint" class="text-muted text-xs"> {{ o.hint }}</small>
       </span>
       <span v-else class="flex flex-col">
         <span>{{ o.label }}</span>
-        <span v-if="o.hint" class="muted text-sm">{{ o.hint }}</span>
+        <span v-if="o.hint" class="text-muted text-sm">{{ o.hint }}</span>
       </span>
     </label>
   </RadioGroupRoot>

@@ -35,13 +35,13 @@ function leaveSearch() {
 <template>
   <div class="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
     <Chip v-if="filters.states.length" removable remove-label="Remove status filter" class="max-w-[320px]" @remove="set({ states: [] })">
-      <span class="truncate"><span class="muted">Status is</span> {{ filters.states.map(labelOf).join(', ') }}</span>
+      <span class="truncate"><span class="text-muted">Status is</span> {{ filters.states.map(labelOf).join(', ') }}</span>
     </Chip>
     <Chip v-if="filters.repos.length" removable remove-label="Remove repo filter" class="max-w-[320px]" @remove="set({ repos: [] })">
-      <span class="truncate"><span class="muted">Repo is</span> {{ filters.repos.join(', ') }}</span>
+      <span class="truncate"><span class="text-muted">Repo is</span> {{ filters.repos.join(', ') }}</span>
     </Chip>
     <Chip v-if="filters.source" removable remove-label="Remove source filter" class="max-w-[320px]" @remove="set({ source: null })">
-      <span class="truncate"><span class="muted">Source is</span> {{ filters.source }}</span>
+      <span class="truncate"><span class="text-muted">Source is</span> {{ filters.source }}</span>
     </Chip>
     <Menu label="Add a filter">
       <template #trigger><button class="border-dashed bg-transparent px-2 py-px text-sm text-muted">+ Filter</button></template>
