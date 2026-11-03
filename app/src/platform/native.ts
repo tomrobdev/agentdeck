@@ -31,14 +31,21 @@ export async function cmuxInstalled(): Promise<boolean> {
   }
 }
 
-/** Open a terminal from the command template: an argv list, run without a shell. `command` is the text to run in it. */
-export async function openTerminal(template: string[], opts: { title: string; cwd: string; command?: string }): Promise<void> {
-  if (!isNative) throw new Error('Terminals open from the desktop app only');
+/** Run a command template (a terminal's, an editor's): an argv list, run without a shell. `command` is the text to run in a terminal. */
+export async function runTemplate(template: string[], opts: { title?: string; cwd: string; command?: string }): Promise<void> {
+  if (!isNative) throw new Error('This opens from the desktop app only');
   try {
-    await invoke('open_terminal', { template, ...opts });
+    await invoke('run_template', { template, ...opts });
   } catch (e) {
     throw new Error(String(e)); // Tauri rejects with the command's error string
   }
+}
+
+/** Show a folder in Finder. */
+export async function revealInFinder(path: string): Promise<void> {
+  if (!isNative) throw new Error('Finder opens from the desktop app only');
+  const { revealItemInDir } = await import('@tauri-apps/plugin-opener');
+  await revealItemInDir(path);
 }
 
 /** Open a URL in the system browser; in a plain browser, a new tab. Never navigates the dashboard itself. */

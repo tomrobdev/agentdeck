@@ -37,22 +37,23 @@ fn fill_template(
     out
 }
 
-/// Open a terminal from a command template, as an argv list: the program, then its arguments, with
-/// `{title}`, `{cwd}` and `{command}` filled in. Nothing goes through a shell. `cmux` is found at
-/// its install path when it is not on PATH.
+/// Run a command template (a terminal's, an editor's) as an argv list: the program, then its
+/// arguments, with `{title}`, `{cwd}` and `{command}` filled in. Nothing goes through a shell.
+/// `cmux` is found at its install path when it is not on PATH.
 #[tauri::command]
-pub async fn open_terminal(
+pub async fn run_template(
     template: Vec<String>,
-    title: String,
+    title: Option<String>,
     cwd: String,
     command: Option<String>,
 ) -> Result<(), String> {
+    let title = title.unwrap_or_default();
     if !std::path::Path::new(&cwd).is_dir() {
         return Err(format!("{cwd} is not a directory"));
     }
     let mut argv = fill_template(&template, &title, &cwd, command.as_deref());
     if argv.is_empty() {
-        return Err("The terminal command is empty".into());
+        return Err("The command is empty".into());
     }
     let mut program = argv.remove(0);
     if program == "cmux" && cmux_installed() {
@@ -81,6 +82,12 @@ mod tests {
 
     fn args(items: &[&str]) -> Vec<String> {
         items.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn fills_cwd_for_an_editor_template() {
+        let out = fill_template(&args(&["code", "{cwd}"]), "", "/work/tree", None);
+        assert_eq!(out, args(&["code", "/work/tree"]));
     }
 
     #[test]

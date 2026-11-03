@@ -15,7 +15,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             tray::set_tray_status,
             terminal::cmux_installed,
-            terminal::open_terminal
+            terminal::run_template
         ])
         .setup(|app| {
             tray::setup(app)?;
