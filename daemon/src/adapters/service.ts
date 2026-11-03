@@ -32,9 +32,17 @@ export function servicePath(): string {
   return [...new Set(dirs)].join(':');
 }
 
+/**
+ * Toolchain choices a person makes in their shell profile, which launchd never reads. Carried from the shell that
+ * installs the service, so workers build the way that shell does (a pinned SDKROOT, for example, when the newest
+ * macOS SDK doesn't link).
+ */
+export const SHELL_TOOLCHAIN_VARS = ['SDKROOT', 'DEVELOPER_DIR'];
+
 export function renderPlist(): string {
   const env: Record<string, string> = { PATH: servicePath(), HOME: homedir() };
   if (process.env.AGENTDECK_HOME) env.AGENTDECK_HOME = HOME;
+  for (const name of SHELL_TOOLCHAIN_VARS) if (process.env[name]) env[name] = process.env[name];
   const log = DAEMON_LOG;
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
