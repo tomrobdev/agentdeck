@@ -1,3 +1,4 @@
+mod dialogs;
 mod terminal;
 mod tray;
 
@@ -8,11 +9,13 @@ use tauri_plugin_autostart::MacosLauncher;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_autostart::init(
             MacosLauncher::LaunchAgent,
             None,
         ))
         .invoke_handler(tauri::generate_handler![
+            dialogs::pick_folder,
             tray::set_tray_status,
             terminal::cmux_installed,
             terminal::open_terminal

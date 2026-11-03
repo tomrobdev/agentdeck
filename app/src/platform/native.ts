@@ -31,6 +31,16 @@ export async function cmuxInstalled(): Promise<boolean> {
   }
 }
 
+/** Show the macOS folder picker: the chosen path, or null when cancelled or in a plain browser. */
+export async function pickFolder(): Promise<string | null> {
+  if (!isNative) return null;
+  try {
+    return await invoke<string | null>('pick_folder');
+  } catch {
+    return null;
+  }
+}
+
 /** Open a terminal from the command template: an argv list, run without a shell. `command` is the text to run in it. */
 export async function openTerminal(template: string[], opts: { title: string; cwd: string; command?: string }): Promise<void> {
   if (!isNative) throw new Error('Terminals open from the desktop app only');
