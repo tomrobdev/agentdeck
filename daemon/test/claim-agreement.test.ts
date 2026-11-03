@@ -10,6 +10,14 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { openDb } = await import('../src/db/index.ts');
 const { startWaits } = await import('../src/application/scheduler/queue.ts');
+const { dependencyOf, liveLinks } = await import('../src/application/task/dependencies.ts');
+
+/** What each task waits for, from the queue state and links as they are now. */
+function waits(db: ReturnType<typeof openDb>) {
+  const waitOf = startWaits(db);
+  const links = liveLinks(db);
+  return (t: import('../src/domain/task/task.ts').Task) => waitOf(t, dependencyOf(t, links));
+}
 
 test('claimNextTask picks the first queued task, by priority then id, that has no startWait', () => {
   const db = openDb(':memory:');
@@ -42,7 +50,7 @@ test('claimNextTask picks the first queued task, by priority then id, that has n
 
   let claimed = 0;
   for (;;) {
-    const waitOf = startWaits(db);
+    const waitOf = waits(db);
     const queued = db.listTasks().filter((t) => t.status === 'queued');
     // The slot limit is the scheduler's to check, not the claim's.
     const expected = queued
@@ -94,7 +102,7 @@ test('claimNextTask and startState agree for tasks with several links, of either
 
   let claimed = 0;
   for (;;) {
-    const waitOf = startWaits(db);
+    const waitOf = waits(db);
     const expected = db
       .listTasks()
       .filter((t) => t.status === 'queued' && [null, 'slots'].includes(waitOf(t)?.kind ?? null))

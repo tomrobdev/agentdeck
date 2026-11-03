@@ -25,12 +25,11 @@ import type { Repo } from '../domain/repo/repo.ts';
 import { buildResolvePrompt } from '../domain/run/prompt.ts';
 import { type Run, parseStatus } from '../domain/run/run.ts';
 import { lastLine } from '../domain/text.ts';
-import { startDecision } from '../domain/task/start.ts';
 import { hasOpenPr } from '../domain/task/stage.ts';
 import { type Task, leftoversMessage } from '../domain/task/task.ts';
 import { endTaskRun, openTaskRun, startTaskRun } from './run/claude-run.ts';
 import { ActionError, requireTask, requireTaskRepo } from './input.ts';
-import { startGate } from './scheduler/gate.ts';
+import { queueWait } from './scheduler/gate.ts';
 import { logPrEvent } from './pull-request/open-pr.ts';
 import { isMergeLocked } from './pull-request/merge-lock.ts';
 import { settle } from './task/settle.ts';
@@ -279,7 +278,7 @@ export const syncNow = (db: Db, id: number): Promise<SyncReport> => syncTask(db,
 
 /** Whether the governor lets a conflict run start now: not paused, not rate limited, inside the usage windows, a slot free. */
 export function canStartResolve(db: Db): boolean {
-  return startDecision(startGate(db), { ignorePause: false, used: db.slotsUsed(), now: Date.now() / 1000 }).free > 0;
+  return queueWait(db).free > 0;
 }
 
 /**

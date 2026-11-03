@@ -2,12 +2,13 @@
 // The one definition: the CLI's listing and the dashboard (which imports this file) both use it.
 import type { PrState } from '../pull-request/pr.ts';
 import type { TaskStatus } from './lifecycle.ts';
+import type { Waiting } from './start.ts';
 
 type Stage = {
   status: TaskStatus;
   pr_state: PrState | null;
   /** What a queued task waits for on its builds-on links, as application/task/dependencies.ts waitingFor reports it. */
-  waiting?: { on: number[]; stuck: string | null } | null;
+  waiting?: Waiting | null;
 };
 
 /** Whether a task's pull request is open. The only place that spells out what open means. */

@@ -132,24 +132,34 @@ export function unlandedAfter(links: Link[], lookup: (id: number) => Dependency 
   return unlanded;
 }
 
-/** What the walks over dependents read: a task's dependents through builds-on links, its own links, and it as a link target. */
-export interface LinkLookups<T extends { id: number; status: string }> {
-  buildingOn: (id: number) => T[];
+/**
+ * What the link functions read: a task's links, the tasks that depend on it (through links of either kind) and a task as a
+ * link's other end. application/task/dependencies.ts builds one that queries the database when asked, and one from a
+ * single read of every link, for a list of tasks.
+ */
+export interface LinkIndex {
   linksOf: (id: number) => Link[];
+  dependentsOf: (id: number) => { id: number; status: string; kind: LinkKind }[];
   target: (id: number) => LinkTarget | undefined;
 }
+
+/** A task that builds on another: one of LinkIndex's dependents through a builds-on link. */
+type Builder = { id: number; status: string };
+
+/** The tasks that depend on task `id` through a builds-on link. */
+const buildingOn = (id: number, l: LinkIndex): Builder[] => l.dependentsOf(id).filter((d) => d.kind === 'builds_on');
 
 /**
  * The queued tasks that can't start because of task `id`, however many builds-on links down: those whose own start
  * state is stuck on `id`, so retrying `id` releases them. One stuck on something else on the way (a cancelled task
  * between them) is left out: retrying `id` would not release it. The walk stops at done tasks, which started already.
  */
-export function stuckOn<T extends { id: number; status: string }>(id: number, l: LinkLookups<T>): T[] {
-  const stuck: T[] = [];
+export function stuckOn(id: number, l: LinkIndex): Builder[] {
+  const stuck: Builder[] = [];
   const seen = new Set<number>([id]);
   const stack = [id];
   while (stack.length) {
-    for (const t of l.buildingOn(stack.pop()!)) {
+    for (const t of buildingOn(stack.pop()!, l)) {
       if (seen.has(t.id)) continue;
       seen.add(t.id);
       if (t.status === 'queued') {
@@ -166,12 +176,12 @@ export function stuckOn<T extends { id: number; status: string }>(id: number, l:
  * The queued tasks that build on task `id` and that merging `id` leaves free to start. One that also waits on another
  * task it builds on, or is stuck on one, is left out.
  */
-export function releasedBy<T extends { id: number; status: string }>(id: number, l: LinkLookups<T>): T[] {
+export function releasedBy(id: number, l: LinkIndex): Builder[] {
   const merged = (on: number): LinkTarget | undefined => {
     const t = l.target(on);
     return on === id && t ? { ...t, status: 'done', pr_state: 'merged' } : t;
   };
-  return l.buildingOn(id).filter((t) => t.status === 'queued' && startState(t, l.linksOf(t.id), merged).kind === 'met');
+  return buildingOn(id, l).filter((t) => t.status === 'queued' && startState(t, l.linksOf(t.id), merged).kind === 'met');
 }
 
 /**
