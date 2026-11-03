@@ -1,7 +1,7 @@
 // Runs one attempt of a claimed task: worktree, setup, claude, tests, then the task's next status.
 import { commitLeftovers, commitsAhead, ensureWorktree } from '../../adapters/git.ts';
 import { writePlanFile } from '../../adapters/plan-file.ts';
-import { closeLog, writeEvent } from '../../adapters/run-log.ts';
+import { writeEvent } from '../../adapters/run-log.ts';
 import { runCommand } from '../../adapters/shell.ts';
 import { SETUP_TIMEOUT_MS, TEST_TIMEOUT_MS, ensureDirs } from '../../config.ts';
 import type { Db } from '../../db/index.ts';
@@ -22,7 +22,8 @@ import {
   runOutcome,
 } from '../../domain/run/run.ts';
 import { type Task, leftoversMessage } from '../../domain/task/task.ts';
-import { type TaskRunEnd, openTaskRun, startTaskRun } from './claude-run.ts';
+import { type OpenedRun, type TaskRunEnd, endTaskRun, openTaskRun, startTaskRun } from './claude-run.ts';
+import type { Repo } from '../../domain/repo/repo.ts';
 import { markSyncing, syncBranch } from '../sync.ts';
 import { pauseRepo } from '../scheduler/pause.ts';
 import { followedSteps, planForRun, takePlanFile } from '../plans.ts';
@@ -44,6 +45,17 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
   db.setCheckout(task.id, { branch: wt.branch, worktree: wt.path });
 
   const opened = openTaskRun(db, task, 'work');
+  try {
+    return await runOpened(db, task, repo, wt, opened);
+  } catch (err) {
+    // Whatever threw, the row ends failed (a no-op if it already ended) and the scheduler settles the task.
+    await endTaskRun(db, opened, 'failed', (err as Error).message);
+    throw err;
+  }
+}
+
+/** The attempt's run once its row is open: everything up to the outcome, which `finish` records. */
+async function runOpened(db: Db, task: Task, repo: Repo, wt: { branch: string; path: string }, opened: OpenedRun): Promise<WorkerResult> {
   const { runId, log } = opened;
   const previousRuns = db.runsForTask(task.id).filter((r) => r.id !== runId);
   // A daemon restart cut the attempt's last run off: continue its claude session (with `prompt` as the fallback),
@@ -83,9 +95,8 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
     const setup = await runCommand(repo.setup_cmd, wt.path, SETUP_TIMEOUT_MS);
     writeEvent(log, { type: 'agentdeck_setup', cmd: repo.setup_cmd, passed: setup.passed, output: setup.output });
     if (setup.passed) return null;
-    await closeLog(log);
     pauseRepo(db, repo, `setup failed on task #${task.id}`);
-    return finish(db, task, runId, {
+    return finish(db, task, opened, {
       outcome: 'blocked',
       reason: `setup failed: ${lastLine(setup.output)}`,
       environment: isEnvironmentBlock({ setupFailed: true }),
@@ -105,14 +116,11 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
     const resetupFailure = await setUp();
     if (resetupFailure) return resetupFailure;
   } else if (synced.kind === 'failed') {
-    await closeLog(log);
-    return finish(db, task, runId, { outcome: 'blocked', reason: conflictReason(repo.base_branch, synced.files, synced.reason) });
+    return finish(db, task, opened, { outcome: 'blocked', reason: conflictReason(repo.base_branch, synced.files, synced.reason) });
   } else if (synced.kind === 'rate_limited') {
-    await closeLog(log);
-    return finish(db, task, runId, { outcome: 'rate_limited', reason: synced.reason });
+    return finish(db, task, opened, { outcome: 'rate_limited', reason: synced.reason });
   } else if (synced.kind === 'cancelled') {
-    await closeLog(log);
-    return finish(db, task, runId, { outcome: 'cancelled' });
+    return finish(db, task, opened, { outcome: 'cancelled' });
   }
 
   // The plan goes in the worktree's plan file, which git ignores, for the worker to set its steps' statuses in.
@@ -127,8 +135,7 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
   try {
     ran = await startTaskRun(db, task, { kind: 'work', repo, worktree: wt.path, prompt, opened, resume });
   } catch (err) {
-    await closeLog(log);
-    return finish(db, task, runId, { outcome: 'failed', reason: `settings: ${(err as Error).message}` });
+    return finish(db, task, opened, { outcome: 'failed', reason: `settings:${(err as Error).message}` });
   }
   const { result, end } = ran;
   const runFields: Partial<Run> = ran.fields;
@@ -170,9 +177,8 @@ export async function runTask(db: Db, task: Task): Promise<WorkerResult> {
     }
   }
 
-  await closeLog(log);
   if (pause) pauseRepo(db, repo, `permission refused on task #${task.id}: ${firstDenial(denials)}`);
-  return finish(db, task, runId, outcome, runFields);
+  return finish(db, task, opened, outcome, runFields);
 }
 
 /** Store what a run left in the worktree's plan file (takePlanFile). A failure is logged, never fatal. */
@@ -184,15 +190,15 @@ async function giveBackPlan(db: Db, task: Task, worktree: string, log: Parameter
   }
 }
 
-/** Record the run and move the task to its next state (including retry). */
-async function finish(db: Db, task: Task, runId: number | null, res: WorkerResult, runFields: Partial<Run> = {}): Promise<WorkerResult> {
-  if (runId !== null) {
-    db.finishRun(runId, {
-      ...runFields,
-      outcome: res.outcome,
-      ...(res.reason && !runFields.result_text ? { result_text: res.reason } : {}),
-    });
-  }
+/** End the run (when there is one) and move the task to its next state (including retry). */
+async function finish(
+  db: Db,
+  task: Task,
+  opened: OpenedRun | null,
+  res: WorkerResult,
+  runFields: Partial<Run> = {},
+): Promise<WorkerResult> {
+  if (opened) await endTaskRun(db, opened, res.outcome, res.reason, runFields);
   // If cancel was requested while the run was ending, the lifecycle makes every outcome end 'cancelled'.
   const reason = { reason: res.reason ?? null };
   switch (res.outcome) {

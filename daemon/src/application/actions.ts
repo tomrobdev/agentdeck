@@ -5,7 +5,7 @@ export { install, restart, serviceStatus, start, stop, tailLog, uninstall } from
 export { type SyncReport, syncNow } from './sync.ts';
 export { daemonHealth, daemonReport, restartNow } from './daemon/doctor.ts';
 export type { Check as HealthCheck } from '../domain/daemon/health.ts';
-export { ActionError } from './input.ts';
+export { ActionError, onOff } from './input.ts';
 export * from './task/files.ts';
 export { type LiveContext, liveContext, repoForPath } from './task/context.ts';
 export { attachPlan, planHtml } from './plans.ts';

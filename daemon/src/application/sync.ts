@@ -16,19 +16,19 @@ import {
   startPoint,
 } from '../adapters/git.ts';
 import { github } from '../adapters/github.ts';
-import { closeLog, writeEvent } from '../adapters/run-log.ts';
+import { writeEvent } from '../adapters/run-log.ts';
 import { runCommand } from '../adapters/shell.ts';
 import { TEST_TIMEOUT_MS } from '../config.ts';
 import type { Db } from '../db/index.ts';
 import { conflictReason, syncSummary } from '../domain/branch/sync.ts';
 import type { Repo } from '../domain/repo/repo.ts';
 import { buildResolvePrompt } from '../domain/run/prompt.ts';
-import { parseStatus } from '../domain/run/run.ts';
+import { type Run, parseStatus } from '../domain/run/run.ts';
 import { lastLine } from '../domain/text.ts';
 import { startDecision } from '../domain/task/start.ts';
 import { hasOpenPr } from '../domain/task/stage.ts';
 import { type Task, leftoversMessage } from '../domain/task/task.ts';
-import { startTaskRun } from './run/claude-run.ts';
+import { endTaskRun, openTaskRun, startTaskRun } from './run/claude-run.ts';
 import { ActionError, requireTask, requireTaskRepo } from './input.ts';
 import { startGate } from './scheduler/gate.ts';
 import { logPrEvent } from './pull-request/open-pr.ts';
@@ -105,11 +105,17 @@ async function resolveConflicts(
   runTests: boolean,
 ): Promise<SyncResult> {
   const prompt = buildResolvePrompt(task, { base: repo.base_branch, files, ...(await mergeSides(worktree)), testCmd: repo.test_cmd });
-  const { runId, log, end, fields } = await startTaskRun(db, task, { kind: 'resolve', repo, worktree, prompt });
+  const opened = openTaskRun(db, task, 'resolve');
+  const { log } = opened;
+  let fields: Partial<Run> = {};
 
   let outcome: 'done' | 'blocked' | 'failed' | 'cancelled' | 'rate_limited';
   let reason = '';
   try {
+    // Throws if the run cannot start (no settings, no worktree): the row still ends below, failed.
+    const ran = await startTaskRun(db, task, { kind: 'resolve', repo, worktree, prompt, opened });
+    const { end } = ran;
+    fields = ran.fields;
     if (end.kind === 'cancelled') {
       outcome = 'cancelled';
     } else if (end.kind === 'rate_limited') {
@@ -137,8 +143,7 @@ async function resolveConflicts(
   }
 
   if (outcome !== 'done') await abortMerge(worktree, before).catch(() => {});
-  await closeLog(log);
-  db.finishRun(runId, { ...fields, outcome, ...(reason && !fields.result_text ? { result_text: reason } : {}) });
+  await endTaskRun(db, opened, outcome, reason, fields);
 
   switch (outcome) {
     case 'done':

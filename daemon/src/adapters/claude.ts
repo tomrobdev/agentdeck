@@ -60,6 +60,8 @@ export interface ClaudeRun {
 const STDERR_TAIL = 4_000;
 
 const CANCEL_POLL_MS = 2_000;
+/** After a cancel's SIGTERM, how long the process group has to exit before SIGKILL. */
+export const CANCEL_GRACE_MS = 10_000;
 
 export interface UsageWindow {
   window: string;
@@ -74,6 +76,8 @@ export async function runClaude(opts: {
   log: WriteStream;
   env?: Record<string, string>;
   shouldCancel?: () => boolean;
+  /** How long a cancelled group may take to exit after SIGTERM before it gets SIGKILL. */
+  cancelGraceMs?: number;
   /** Called with the pid (= process group id) so it can be recorded for crash recovery. */
   onSpawn?: (pid: number) => void;
   /** Called for each usage window a rate_limit_event reports. */
@@ -102,11 +106,14 @@ export async function runClaude(opts: {
     sessionId: undefined,
   };
 
+  let killTimer: NodeJS.Timeout | undefined;
   const cancelTimer = opts.shouldCancel
     ? setInterval(() => {
         if (!run.cancelled && opts.shouldCancel!()) {
           run.cancelled = true;
           killGroup(child.pid);
+          // A group that ignores SIGTERM would keep the task in cancel_requested, so follow with SIGKILL.
+          killTimer = setTimeout(() => killGroup(child.pid, 'SIGKILL'), opts.cancelGraceMs ?? CANCEL_GRACE_MS);
         }
       }, CANCEL_POLL_MS)
     : undefined;
@@ -146,6 +153,7 @@ export async function runClaude(opts: {
     child.on('close', (code) => resolve(code ?? -1));
   });
   clearInterval(cancelTimer);
+  clearTimeout(killTimer); // the group is gone: its id may be reused
   activeChildren.delete(child);
 
   if (run.result?.api_error_status === 429 && !run.rateLimitedUntil) run.rateLimitedUntil = Math.floor(Date.now() / 1000) + 15 * 60;

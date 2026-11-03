@@ -208,10 +208,15 @@ export async function mergeRef(worktree: string, ref: string): Promise<MergeOutc
   return (await headCommit(worktree)) === before ? { kind: 'up_to_date' } : { kind: 'merged' };
 }
 
-/** Undo a merge: abort it if it is in progress, and put the branch back at `head` if it moved. */
+/**
+ * Undo a merge: abort it if it is in progress, and put the branch back at `head` if it moved. Untracked
+ * files go too (what a resolve run or the tests left), so they are never committed onto the branch later;
+ * ignored files stay. Safe because leftovers are committed before every merge.
+ */
 export async function abortMerge(worktree: string, head: string): Promise<void> {
   if (await mergeInProgress(worktree)) await git(worktree, 'merge', '--abort');
   if ((await headCommit(worktree)) !== head) await git(worktree, 'reset', '--hard', head);
+  await git(worktree, 'clean', '-fd');
 }
 
 /** Of `files`, those that still hold conflict markers in the worktree. */
