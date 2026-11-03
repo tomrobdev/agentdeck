@@ -73,7 +73,7 @@ test('graceful restart pauses, waits for the runs, restarts and restores the pau
     log: (m) => events.push(m),
     pollMs: 0,
     sleep: async () => {
-      if (++polls === 2) db.finishPlannerRun(planner, 'ok', 0, null);
+      if (++polls === 2) db.finishPlannerRun(planner, 'nothing', 0, null);
     },
   });
   assert.match(events[0], /waiting for 1 planner run/);

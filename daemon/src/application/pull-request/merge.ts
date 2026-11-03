@@ -15,6 +15,7 @@ import type { CheckCounts } from '../../domain/pull-request/checks.ts';
 import { isConflicting } from '../../domain/pull-request/conflict.ts';
 import { mergeRequestCheck, mergesNow } from '../../domain/pull-request/merge-request.ts';
 import { buildPrBody } from '../../domain/pull-request/pr.ts';
+import { mergeReason } from '../../domain/task/history.ts';
 import { hasOpenPr } from '../../domain/task/stage.ts';
 import type { Task } from '../../domain/task/task.ts';
 import { ActionError, flag, object, requireTask, requireTaskRepo, text } from '../input.ts';
@@ -150,7 +151,7 @@ export async function mergeTask(db: Db, id: number, opts: { method?: string; del
       problems.map((f) => f.text),
       problems.some((f) => f.kind === 'conflict'),
     );
-  return mergeOpenPr(db, { task, repo, url, cwd }, pr, { method, deleteBranch, reason: `${method} merge` });
+  return mergeOpenPr(db, { task, repo, url, cwd }, pr, { method, deleteBranch, reason: mergeReason('person', method) });
 }
 
 /** What merging a set of PRs came to: the ones merged, and why each other one was left open. */

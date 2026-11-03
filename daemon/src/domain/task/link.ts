@@ -3,6 +3,9 @@
 // - builds_on: the task uses the other's code, so it starts once the other is done and merged.
 // - after: the task runs on its own and only its merge waits for the other's.
 
+import type { PrMode } from '../pull-request/pr.ts';
+import type { Task } from './task.ts';
+
 export type LinkKind = 'builds_on' | 'after';
 
 /** `task_id` depends on `on`. */
@@ -13,7 +16,7 @@ export interface Link {
 }
 
 /** `pr_mode` is that of the dependency's repo: a done task in a repo that opens PRs isn't met until its PR is merged. */
-export type Dependency = { status: string; pr_url: string | null; pr_state: string | null; pr_mode: string; done_by: string | null };
+export type Dependency = Pick<Task, 'status' | 'pr_url' | 'pr_state' | 'done_by'> & { pr_mode: PrMode };
 
 /** A dependency, and the links it has itself (stuck spreads down its builds-on links). */
 export type LinkTarget = Dependency & { links: Link[] };

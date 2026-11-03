@@ -26,7 +26,7 @@ export function settingPatch(key: string | undefined, value: string): SettingsPa
   throw new ActionError(`unknown setting "${key}"; see agentdeck help`);
 }
 
-const REPO_SETTING_USAGE = `usage: agentdeck repo set <repo> auto_approve on|off | auto_resolve on|off | base_branch <branch> | test_cmd "<cmd>" | setup_cmd "<cmd>" | pr_mode ${PR_MODES.join('|')} | merge_method ${MERGE_METHODS.join('|')} | sandbox on|off | network "<hosts>" | auto_merge on|off | auto_merge_max_lines <n> | auto_merge_skip "<prefixes>"`;
+const REPO_SETTING_USAGE = `usage: agentdeck repo set <repo> auto_approve on|off | auto_resolve on|off | auto_unblock on|off | base_branch <branch> | test_cmd "<cmd>" | setup_cmd "<cmd>" | pr_mode ${PR_MODES.join('|')} | merge_method ${MERGE_METHODS.join('|')} | sandbox on|off | network "<hosts>" | auto_merge on|off | auto_merge_max_lines <n> | auto_merge_skip "<prefixes>"`;
 
 /** The patch `agentdeck repo set <repo> <key> <value>` stands for. Throws ActionError for a key it does not know. */
 export function repoSettingPatch(key: string | undefined, value: string): RepoPatch {
@@ -34,6 +34,7 @@ export function repoSettingPatch(key: string | undefined, value: string): RepoPa
   if (key === 'merge_method') return { merge_method: value as MergeMethod };
   if (key === 'auto_approve') return { auto_approve: onOff(key, value) };
   if (key === 'auto_resolve') return { auto_resolve: onOff(key, value) };
+  if (key === 'auto_unblock') return { auto_unblock: onOff(key, value) };
   if (key === 'auto_merge') return { auto_merge: onOff(key, value) };
   if (key === 'auto_merge_max_lines') return { auto_merge_max_lines: Number(value) };
   if (key === 'auto_merge_skip') return { auto_merge_skip: value };
