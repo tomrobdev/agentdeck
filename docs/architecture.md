@@ -146,4 +146,5 @@ sequenceDiagram
 - [Adapters](reference/adapters.md): what each file in `daemon/src/adapters/` does.
 - [Context map](reference/context-map.md): the folders under `domain/` and the imports between them.
 - [Adapter use](reference/adapter-use.md): which adapters each area of `application/` imports.
+- [Migration progress](reference/progress.md): what is left of the move to a domain model.
 - [Runs](reference/runs.md): plans in a run, and resuming a cut-off run.
