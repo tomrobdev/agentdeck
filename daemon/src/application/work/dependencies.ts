@@ -18,7 +18,7 @@ import { isReview, stageOf } from '../../domain/work/stage.ts';
 import { type Waiting, waitingOf } from '../../domain/work/start.ts';
 import type { Task } from '../../domain/work/task.ts';
 import { plural } from '../../domain/shared/text.ts';
-import { notifyLater } from '../notifications.ts';
+import { notifyLater } from '../operations/notifications.ts';
 
 /** A task as a link's other end: its state, its repo's pr_mode and its own links. */
 export function targetOf(db: Db, id: TaskId): LinkTarget | undefined {

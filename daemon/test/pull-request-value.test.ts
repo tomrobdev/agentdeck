@@ -148,10 +148,10 @@ test('a task read from the database has pr beside its flat fields, and the API s
   db.close();
 });
 
-test('no file in domain/pull-request imports Task', () => {
-  const dir = join(import.meta.dirname, '../src/domain/pull-request');
-  for (const file of readdirSync(dir)) {
+test('the pull request value in domain/landing/pr.ts does not import Task', () => {
+  const dir = join(import.meta.dirname, '../src/domain/landing');
+  for (const file of ['pr.ts']) {
     const text = readFileSync(join(dir, file), 'utf8');
-    assert.doesNotMatch(text, /from '\.\.\/task\//, `${file} imports from domain/task`);
+    assert.doesNotMatch(text, /from '\.\.\/work\/task/, `${file} imports Task`);
   }
 });

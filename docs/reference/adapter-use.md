@@ -4,17 +4,13 @@
 
 Each area of `application/` and the adapters it imports, with the number of imports where there is more than one.
 
-| Area                           | Adapters imported                                                                                             |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------- |
-| `application/actions.ts`       | `run-log.ts`, `service.ts`                                                                                    |
-| `application/daemon`           | `daemon-api.ts`, `daemon-log.ts`, `git.ts`, `github.ts`, `processes.ts`, `service.ts`                         |
-| `application/notifications.ts` | `notify.ts`                                                                                                   |
-| `application/planner.ts`       | `claude.ts`, `goals.ts`, `run-log.ts`                                                                         |
-| `application/plans.ts`         | `plan-file.ts`                                                                                                |
-| `application/pull-request`     | `git.ts`, `github.ts` (5), `run-log.ts`                                                                       |
-| `application/repo`             | `claude.ts`, `git.ts` (2), `github.ts`, `goals.ts`, `repo-root.ts` (2), `run-log.ts`, `shell.ts`              |
-| `application/review`           | `git.ts`                                                                                                      |
-| `application/run`              | `claude.ts`, `git.ts` (2), `plan-file.ts`, `protected-edits.ts`, `repo-root.ts`, `run-log.ts` (3), `shell.ts` |
-| `application/scheduler`        | `caffeinate.ts`, `processes.ts`                                                                               |
-| `application/sync.ts`          | `git.ts`, `github.ts`, `run-log.ts`, `shell.ts`                                                               |
-| `application/task`             | `git.ts` (5), `shell.ts`                                                                                      |
+| Area                     | Adapters imported                                                                                             |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| `application/actions.ts` | `run-log.ts`, `service.ts`                                                                                    |
+| `application/landing`    | `git.ts` (3), `github.ts` (6), `run-log.ts` (2), `shell.ts`                                                   |
+| `application/operations` | `daemon-api.ts`, `daemon-log.ts`, `git.ts`, `github.ts`, `notify.ts`, `processes.ts`, `service.ts`            |
+| `application/proposals`  | `claude.ts`, `goals.ts`, `run-log.ts`                                                                         |
+| `application/repos`      | `claude.ts`, `git.ts` (2), `github.ts`, `goals.ts`, `repo-root.ts` (2), `run-log.ts`, `shell.ts`              |
+| `application/runs`       | `claude.ts`, `git.ts` (2), `plan-file.ts`, `protected-edits.ts`, `repo-root.ts`, `run-log.ts` (3), `shell.ts` |
+| `application/scheduler`  | `caffeinate.ts`, `processes.ts`                                                                               |
+| `application/work`       | `git.ts` (5), `plan-file.ts`, `shell.ts`                                                                      |

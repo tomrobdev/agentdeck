@@ -7,7 +7,7 @@ import { AUTO_MERGE_LABEL, autoMergeOn } from '../../domain/landing/auto-merge.t
 import { buildPrBody, openPrUrl } from '../../domain/landing/pr.ts';
 import type { Task } from '../../domain/work/task.ts';
 import { errorMessage } from '../../domain/shared/text.ts';
-import { prPlanFor } from '../plans.ts';
+import { prPlanFor } from '../work/plans.ts';
 
 /** Record a PR event on the task's latest run log, where `agentdeck log` and the dashboard show it. */
 export function logPrEvent(db: Db, taskId: TaskId, event: { url?: string; error?: string }): void {

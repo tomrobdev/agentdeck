@@ -10,7 +10,7 @@ const home = mkdtempSync(join(tmpdir(), 'agentdeck-changes-'));
 process.env.AGENTDECK_HOME = home;
 
 const { openDb } = await import('../src/db/index.ts');
-const { ChangeWatcher } = await import('../src/application/changes.ts');
+const { ChangeWatcher } = await import('../src/application/operations/changes.ts');
 
 const file = join(home, 'test.db');
 const db = openDb(file);

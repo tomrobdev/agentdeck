@@ -27,11 +27,11 @@ import { type Task, leftoversMessage } from '../../domain/work/task.ts';
 import { errorMessage } from '../../domain/shared/text.ts';
 import { type OpenedRun, type TaskRunEnd, endTaskRun, openTaskRun, startTaskRun } from './claude-run.ts';
 import type { Repo } from '../../domain/repos/repo.ts';
-import { markSyncing, syncBranch } from '../sync.ts';
-import { pauseRepo } from '../scheduler/pause.ts';
-import { followedSteps, planForRun, takePlanFile } from '../plans.ts';
-import { settle } from '../task/settle.ts';
-import { recordAnswers, reviewForRun } from '../review/address.ts';
+import { markSyncing, syncBranch } from '../landing/sync.ts';
+import { pauseRepo } from '../repos/pause.ts';
+import { followedSteps, planForRun, takePlanFile } from '../work/plans.ts';
+import { settle } from '../settle.ts';
+import { recordAnswers, reviewForRun } from '../landing/address.ts';
 
 /** Run one attempt of a task that the scheduler has already claimed (status = running). */
 export async function runTask(db: Db, task: Task): Promise<WorkerResult> {

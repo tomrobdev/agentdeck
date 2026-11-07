@@ -14,26 +14,26 @@ import {
   mergeSides,
   refExists,
   startPoint,
-} from '../adapters/git.ts';
-import { github } from '../adapters/github.ts';
-import { writeEvent } from '../adapters/run-log.ts';
-import { runCommand } from '../adapters/shell.ts';
-import { TEST_TIMEOUT_MS } from '../config.ts';
-import type { Db } from '../db/index.ts';
-import type { TaskId } from '../domain/shared/id.ts';
-import { type SyncResult, conflictReason, resolveOutcome, syncResultOf, syncSummary } from '../domain/landing/sync.ts';
-import type { Repo } from '../domain/repos/repo.ts';
-import { buildResolvePrompt } from '../domain/runs/prompt.ts';
-import type { Outcome, Run } from '../domain/runs/run.ts';
-import { errorMessage, lastLine } from '../domain/shared/text.ts';
-import { openPrUrl } from '../domain/landing/pr.ts';
-import { type Task, leftoversMessage } from '../domain/work/task.ts';
-import { endTaskRun, openTaskRun, startTaskRun } from './run/claude-run.ts';
-import { ActionError, requireTask, requireTaskRepo } from './input.ts';
-import { queueWait } from './scheduler/gate.ts';
-import { logPrEvent } from './pull-request/open-pr.ts';
-import { isMergeLocked } from './pull-request/merge-lock.ts';
-import { settle } from './task/settle.ts';
+} from '../../adapters/git.ts';
+import { github } from '../../adapters/github.ts';
+import { writeEvent } from '../../adapters/run-log.ts';
+import { runCommand } from '../../adapters/shell.ts';
+import { TEST_TIMEOUT_MS } from '../../config.ts';
+import type { Db } from '../../db/index.ts';
+import type { TaskId } from '../../domain/shared/id.ts';
+import { type SyncResult, conflictReason, resolveOutcome, syncResultOf, syncSummary } from '../../domain/landing/sync.ts';
+import type { Repo } from '../../domain/repos/repo.ts';
+import { buildResolvePrompt } from '../../domain/runs/prompt.ts';
+import type { Outcome, Run } from '../../domain/runs/run.ts';
+import { errorMessage, lastLine } from '../../domain/shared/text.ts';
+import { openPrUrl } from '../../domain/landing/pr.ts';
+import { type Task, leftoversMessage } from '../../domain/work/task.ts';
+import { endTaskRun, openTaskRun, startTaskRun } from '../runs/claude-run.ts';
+import { ActionError, requireTask, requireTaskRepo } from '../input.ts';
+import { queueWait } from '../capacity/gate.ts';
+import { logPrEvent } from './open-pr.ts';
+import { isMergeLocked } from './merge-lock.ts';
+import { settle } from '../settle.ts';
 
 interface SyncOptions {
   /** A resolve run may start when the merge conflicts. */

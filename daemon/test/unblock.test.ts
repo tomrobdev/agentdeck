@@ -20,7 +20,7 @@ process.env.AGENTDECK_CLAUDE_BIN = fake;
 
 const { openDb } = await import('../src/db/index.ts');
 const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
-const { nextUnblockable, runUnblock } = await import('../src/application/run/unblock.ts');
+const { nextUnblockable, runUnblock } = await import('../src/application/runs/unblock.ts');
 const { updateRepo } = await import('../src/application/actions.ts');
 const { repoSettingPatch } = await import('../src/cli/settings-args.ts');
 const { restartWait } = await import('../src/domain/operations/restart.ts');

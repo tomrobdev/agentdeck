@@ -10,7 +10,7 @@ process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-notifications
 delete process.env.AGENTDECK_NO_NOTIFY;
 
 const { appDelivers } = await import('../src/domain/operations/notification.ts');
-const { notify } = await import('../src/application/notifications.ts');
+const { notify } = await import('../src/application/operations/notifications.ts');
 const { appSeen } = await import('../src/application/actions.ts');
 const { openDb } = await import('../src/db/index.ts');
 

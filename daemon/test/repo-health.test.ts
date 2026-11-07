@@ -18,7 +18,7 @@ process.env.AGENTDECK_CLAUDE_BIN = fake;
 const { openDb } = await import('../src/db/index.ts');
 const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
 const { doctorRepo, editTask, resumeRepo, ActionError } = await import('../src/application/actions.ts');
-const { runDoctor } = await import('../src/application/repo/doctor.ts');
+const { runDoctor } = await import('../src/application/repos/doctor.ts');
 
 const db = openDb(join(home, 'test.db'));
 db.setSetting('max_concurrent', '1');

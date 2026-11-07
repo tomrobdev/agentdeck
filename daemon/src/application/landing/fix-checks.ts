@@ -6,7 +6,7 @@ import { type FailedCheck, LOG_TAIL_BYTES, actionsRun, failingChecks, fixChecksN
 import { openPrUrl } from '../../domain/landing/pr.ts';
 import { errorMessage } from '../../domain/shared/text.ts';
 import { ActionError, requireTask, requireTaskRepo } from '../input.ts';
-import { retryTask } from '../task/tasks.ts';
+import { retryTask } from '../work/tasks.ts';
 
 export interface FixChecksResult {
   /** The failing checks sent to the worker, by name. */

@@ -10,9 +10,9 @@ import { mergeRequestCheck, mergeRequestPolls } from '../../domain/landing/merge
 import { type Repo, pausedReason } from '../../domain/repos/repo.ts';
 import type { Task } from '../../domain/work/task.ts';
 import { errorMessage } from '../../domain/shared/text.ts';
-import { landsAfter } from '../task/dependencies.ts';
-import { settle, settlePr } from '../task/settle.ts';
-import { notifyLater } from '../notifications.ts';
+import { landsAfter } from '../work/dependencies.ts';
+import { settle, settlePr } from '../settle.ts';
+import { notifyLater } from '../operations/notifications.ts';
 
 /** How often the scheduler re-reads the state of open PRs. */
 export const PR_REFRESH_MS = 3 * 60_000;

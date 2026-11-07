@@ -8,7 +8,7 @@ import type { TaskId } from '../../domain/shared/id.ts';
 import { INSTALL_NOTE, LOCKFILES, canInstallWith, depsRequest, depsRequestError, installArgs } from '../../domain/work/needs.ts';
 import { errorMessage, lastLine } from '../../domain/shared/text.ts';
 import { ActionError, refuse, requireTask, requireTaskRepo } from '../input.ts';
-import { refuseWhileSyncing } from '../sync.ts';
+import { refuseWhileSyncing } from '../landing/sync.ts';
 import { retryTask } from './tasks.ts';
 
 const INSTALL_TIMEOUT_MS = 10 * 60_000;

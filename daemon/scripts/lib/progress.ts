@@ -15,7 +15,7 @@ export const CYCLE_LAYERS = ['domain', 'application'];
 export const ALLOWED_FOLDER_CYCLES: Record<string, string[]> = {
   domain: ['domain/landing, domain/operations, domain/proposals, domain/repos, domain/runs, domain/work'],
   application: [
-    'application, application/pull-request, application/repo, application/review, application/run, application/scheduler, application/task',
+    'application, application/insights, application/landing, application/operations, application/proposals, application/repos, application/runs, application/scheduler, application/work',
   ],
 };
 

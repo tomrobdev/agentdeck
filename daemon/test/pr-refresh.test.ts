@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-pr-refresh-'));
-const { classify } = await import('../src/application/pull-request/refresh.ts');
+const { classify } = await import('../src/application/landing/refresh.ts');
 
 const clean = { mergeable: 'MERGEABLE', merge_state: 'CLEAN' };
 const conflicting = { mergeable: 'CONFLICTING', merge_state: 'DIRTY' };

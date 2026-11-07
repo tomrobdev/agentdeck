@@ -5,7 +5,7 @@ import { type ParsedPlan, parsePlan } from '../../domain/work/plan.ts';
 import type { Repo } from '../../domain/repos/repo.ts';
 import { stepsNeedPlanError } from '../../domain/work/rules.ts';
 import { ActionError, refuse } from '../input.ts';
-import { readPlanInput } from '../plans.ts';
+import { readPlanInput } from './plans.ts';
 
 /** Step ids as the CLI types them (a,b) or the API sends them (an array); null when none are named. */
 export function stepList(value: unknown): string[] | null {

@@ -15,8 +15,8 @@ process.env.AGENTDECK_CLAUDE_BIN = fake;
 
 const { openDb } = await import('../src/db/index.ts');
 const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
-const { syncBranch } = await import('../src/application/sync.ts');
-const { endTaskRun, openTaskRun } = await import('../src/application/run/claude-run.ts');
+const { syncBranch } = await import('../src/application/landing/sync.ts');
+const { endTaskRun, openTaskRun } = await import('../src/application/runs/claude-run.ts');
 const { updateRepo } = await import('../src/application/actions.ts');
 const { LOG_DIR } = await import('../src/config.ts');
 

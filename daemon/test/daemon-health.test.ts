@@ -14,7 +14,7 @@ process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-health-'));
 
 const h = await import('../src/domain/operations/health.ts');
 const { SCHEMA_DIRTY, offMain, reloadState } = await import('../src/domain/operations/restart.ts');
-const { daemonReport, gatherHealth, restartNow } = await import('../src/application/daemon/doctor.ts');
+const { daemonReport, gatherHealth, restartNow } = await import('../src/application/operations/doctor.ts');
 const { openDb } = await import('../src/db/index.ts');
 
 const NOW = Date.parse('2026-11-01T12:00:00Z');

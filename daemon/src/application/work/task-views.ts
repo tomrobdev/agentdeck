@@ -4,9 +4,9 @@ import type { TaskId } from '../../domain/shared/id.ts';
 import { type AutoMergeView, autoMergeOn, autoMergeView } from '../../domain/landing/auto-merge.ts';
 import { type ChecksSummary, checksSummary } from '../../domain/landing/checks.ts';
 import { type MergeRequestView, conflictsWithBase, mergeRequestView } from '../../domain/landing/merge-request.ts';
-import { isMergeLocked } from '../pull-request/merge.ts';
+import { isMergeLocked } from '../landing/merge.ts';
 import { type LiveView, type SyncView, liveView, syncView } from '../../domain/runs/translate/live.ts';
-import { isSyncLocked } from '../sync.ts';
+import { isSyncLocked } from '../landing/sync.ts';
 import { openPrUrl } from '../../domain/landing/pr.ts';
 import type { StartWait, Waiting } from '../../domain/work/start.ts';
 import { measureBranch } from './files.ts';
@@ -15,8 +15,8 @@ import type { Task } from '../../domain/work/task.ts';
 import { type LinkView, dependencyOf, dependentViews, linkViews, loadedLinks, unblocksOf, waitingFor } from './dependencies.ts';
 import type { LinkIndex, LinkKind } from '../../domain/work/link.ts';
 import { requireTask } from '../input.ts';
-import { plansShown } from '../plans.ts';
-import { startWaits } from '../scheduler/queue.ts';
+import { plansShown } from './plans.ts';
+import { startWaits } from './queue.ts';
 
 /** What the queue says about one task, beyond the task row. */
 export interface TaskView {

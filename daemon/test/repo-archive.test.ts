@@ -11,7 +11,7 @@ process.env.AGENTDECK_HOME = home;
 const { openDb } = await import('../src/db/index.ts');
 const { openPr } = await import('./fixtures.ts');
 const actions = await import('../src/application/actions.ts');
-const { plannerDue } = await import('../src/application/planner.ts');
+const { plannerDue } = await import('../src/application/proposals/planner.ts');
 const db = openDb(join(home, 'test.db'));
 
 after(() => db.close());

@@ -1,7 +1,7 @@
 // A repo's flags are booleans and its JSON columns arrays: read by `toRepo`, written by `repoColumns`, and flattened for the API by `repoView`.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { repoView } from '../src/application/repo/repo-view.ts';
+import { repoView } from '../src/application/repos/repo-view.ts';
 import { repoColumns, toRepo } from '../src/db/mappers.ts';
 import { openDb } from '../src/db/index.ts';
 

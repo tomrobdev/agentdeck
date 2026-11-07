@@ -10,8 +10,8 @@ process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-claim-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { openDb } = await import('../src/db/index.ts');
-const { startWaits } = await import('../src/application/scheduler/queue.ts');
-const { dependencyOf, liveLinks } = await import('../src/application/task/dependencies.ts');
+const { startWaits } = await import('../src/application/work/queue.ts');
+const { dependencyOf, liveLinks } = await import('../src/application/work/dependencies.ts');
 
 /** What each task waits for, from the queue state and links as they are now. */
 function waits(db: ReturnType<typeof openDb>) {

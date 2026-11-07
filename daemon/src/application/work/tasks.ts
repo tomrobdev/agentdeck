@@ -8,12 +8,12 @@ import { errorMessage } from '../../domain/shared/text.ts';
 import { archivedRepoError, maxAttemptsError, maxTurnsError, modelError, priorityError } from '../../domain/work/rules.ts';
 import { planOwnerOf } from '../../domain/work/plan-link.ts';
 import { EDITABLE_STATUSES, RUNNING_STATUSES, type Task, defaultTitle } from '../../domain/work/task.ts';
-import { refuseWhileSyncing } from '../sync.ts';
+import { refuseWhileSyncing } from '../landing/sync.ts';
 import { warnStuckDependents } from './dependencies.ts';
 import { newLinks } from './links.ts';
 import { ActionError, flag, object, refuse, requireTask, requireTaskRepo, text, whole } from '../input.ts';
-import { closePullRequest } from '../pull-request/merge.ts';
-import { checkFollowers } from '../plans.ts';
+import { closePullRequest } from '../landing/merge.ts';
+import { checkFollowers } from './plans.ts';
 import { checkPlanLink, planRequest, stepList } from './plan-link.ts';
 
 export async function addTask(
