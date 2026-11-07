@@ -5,7 +5,7 @@ import type { Db } from '../../db/index.ts';
 import { AUTO_MERGE_LABEL, autoMergeOn } from '../../domain/pull-request/auto-merge.ts';
 import type { PrDetails } from '../../domain/pull-request/merge.ts';
 import { mergeReason } from '../../domain/task/history.ts';
-import { hasOpenPr } from '../../domain/task/stage.ts';
+import { openPrUrl } from '../../domain/pull-request/pr.ts';
 import { errorMessage } from '../../domain/text.ts';
 import { ActionError, object, requireTask, requireTaskRepo } from '../input.ts';
 import { notifyLater } from '../notifications.ts';
@@ -33,7 +33,8 @@ export async function autoMerge(
       continue; // it moved on since the refresh read it
     }
     // A person's merge request names its method; the rest merge as their repo does.
-    const asked = target.task.merge_requested_at ? target.task.merge_request_method : null;
+    const request = target.task.pr?.merge_request;
+    const asked = request ? request.method : null;
     const method = asked ?? target.repo.merge_method;
     try {
       const res = await mergeOpenPr(db, target, pr, {
@@ -83,10 +84,11 @@ export async function setAutoMerge(
   const task = db.setAutoMerge(id, value)!;
   const repo = requireTaskRepo(db, task);
   const on = autoMergeOn(task, repo);
-  if (!task.pr_url || !hasOpenPr(task)) return { auto_merge: on };
+  const url = openPrUrl(task.pr);
+  if (!url) return { auto_merge: on };
   try {
     if (on) await ensureAutoMergeLabel(repo.path);
-    await github.setLabel(task.pr_url, repo.path, AUTO_MERGE_LABEL.name, on);
+    await github.setLabel(url, repo.path, AUTO_MERGE_LABEL.name, on);
     db.requestPrCheck();
     return { auto_merge: on };
   } catch (err) {

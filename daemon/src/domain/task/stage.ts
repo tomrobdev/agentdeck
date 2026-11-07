@@ -11,6 +11,13 @@ type Stage = {
   waiting?: Waiting | null;
 };
 
+/** A task's stage fields from its pull request value: the predicates below read the flat `pr_state` the dashboard receives. */
+export const stageOf = (t: { status: TaskStatus; pr: { state: PrState } | null; waiting?: Waiting | null }) => ({
+  status: t.status,
+  pr_state: t.pr?.state ?? null,
+  waiting: t.waiting,
+});
+
 /** Whether a task's pull request is open. The only place that spells out what open means. */
 export const hasOpenPr = (t: Pick<Stage, 'pr_state'>) => t.pr_state === 'open';
 /** A done task whose pull request waits on you. */

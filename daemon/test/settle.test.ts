@@ -97,17 +97,17 @@ test('opening, failing and closing a PR each add one pr row to the history', asy
   github.createPr = async () => 'https://x/pull/7';
   assert.deepEqual(await openPullRequest(db, db.getTask(task.id)!), { url: 'https://x/pull/7' });
   assert.equal(prRows(db, task.id).length, 1);
-  assert.equal(db.getTask(task.id)!.pr_state, 'open');
+  assert.equal(db.getTask(task.id)!.pr?.state, 'open');
 
   await closePullRequest(db, db.getTask(task.id)!);
   assert.equal(prRows(db, task.id).length, 2);
-  assert.equal(db.getTask(task.id)!.pr_state, 'closed');
+  assert.equal(db.getTask(task.id)!.pr?.state, 'closed');
 
   github.createPr = async () => {
     throw new Error('gh broke');
   };
   assert.deepEqual(await openPullRequest(db, db.getTask(task.id)!), { error: 'gh broke' });
-  assert.equal(db.getTask(task.id)!.pr_state, 'failed');
+  assert.equal(db.getTask(task.id)!.pr?.state, 'failed');
 
   const rows = prRows(db, task.id);
   assert.equal(rows.length, 3);
@@ -134,7 +134,7 @@ test('a refresh does not undo a merge recorded while it waited on GitHub', async
       return parsePrDetails(JSON.stringify({ state: seen.toUpperCase() }));
     };
     await refreshPrStates(db);
-    assert.equal(db.getTask(task.id)!.pr_state, 'merged', `GitHub said ${seen}`);
+    assert.equal(db.getTask(task.id)!.pr?.state, 'merged', `GitHub said ${seen}`);
     assert.equal(prRows(db, task.id).length, 1, 'only the opening is recorded');
     db.close();
   }
@@ -152,7 +152,7 @@ test('a PR merged on GitHub settles a blocked task as done, notifying and openin
   github.prDetails = async () => parsePrDetails(JSON.stringify({ state: 'MERGED' }));
   await refreshPrStates(db);
   const t = db.getTask(task.id)!;
-  assert.deepEqual([t.status, t.pr_state], ['done', 'merged']);
+  assert.deepEqual([t.status, t.pr?.state], ['done', 'merged']);
   assert.equal(created, 0);
   assert.equal(notes(db, 'done', task.id).length, 1);
   db.close();

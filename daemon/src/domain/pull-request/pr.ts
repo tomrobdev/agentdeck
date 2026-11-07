@@ -48,6 +48,9 @@ export interface FailedPullRequest extends PrRecord {
 /** A task's pull request. A task with no PR yet has null, not a value. */
 export type PullRequest = OpenedPullRequest | FailedPullRequest;
 
+/** The url of a task's PR while it is open; null with none or in any other state. */
+export const openPrUrl = (pr: PullRequest | null): string | null => (pr?.state === 'open' ? pr.url : null);
+
 /** A PR as flat fields, the shape of its columns on a task. */
 export interface PrFields {
   pr_url: string | null;

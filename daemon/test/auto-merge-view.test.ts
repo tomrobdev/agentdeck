@@ -86,39 +86,39 @@ test('a refresh stores the check it ran, never or merge alike; merging, closing 
 
   await refreshPrStates(db);
   const stored = db.getTask(big.id)!;
-  assert.deepEqual(stored.auto_merge_check, { verdict: 'never', reasons: ['905 lines changed, over the limit of 400'] });
-  assert.ok(stored.auto_merge_checked_at);
-  assert.equal(db.getTask(fine.id)!.auto_merge_check?.verdict, 'merge');
+  assert.deepEqual(stored.pr!.auto_merge_check, { verdict: 'never', reasons: ['905 lines changed, over the limit of 400'] });
+  assert.ok(stored.pr!.auto_merge_checked_at);
+  assert.equal(db.getTask(fine.id)!.pr!.auto_merge_check?.verdict, 'merge');
 
   // A later refresh replaces it.
   details[big.url] = { ...ready, additions: 10 };
   await refreshPrStates(db);
-  assert.equal(db.getTask(big.id)!.auto_merge_check?.verdict, 'merge');
+  assert.equal(db.getTask(big.id)!.pr!.auto_merge_check?.verdict, 'merge');
 
   // Merging clears it.
   assert.equal(await autoMerge(db, [{ id: fine.id, pr: ready }]), fine.id);
-  assert.equal(db.getTask(fine.id)!.pr_state, 'merged');
-  assert.deepEqual([db.getTask(fine.id)!.auto_merge_check, db.getTask(fine.id)!.auto_merge_checked_at], [null, null]);
+  assert.equal(db.getTask(fine.id)!.pr!.state, 'merged');
+  assert.deepEqual([db.getTask(fine.id)!.pr!.auto_merge_check, db.getTask(fine.id)!.pr!.auto_merge_checked_at], [null, null]);
 
   // So does closing the PR.
   db.recordPr(closed.id, { type: 'closed' });
-  assert.equal(db.getTask(closed.id)!.auto_merge_check, null);
+  assert.equal(db.getTask(closed.id)!.pr!.auto_merge_check, null);
 
   // A check is not written for a PR that was merged meanwhile.
   assert.equal(db.setAutoMergeCheck(fine.id, { verdict: 'merge', reasons: [] }), false);
-  assert.equal(db.getTask(fine.id)!.auto_merge_check, null);
+  assert.equal(db.getTask(fine.id)!.pr!.auto_merge_check, null);
 
   // Turning auto-merge off for the task clears it.
-  assert.ok(db.getTask(big.id)!.auto_merge_check);
+  assert.ok(db.getTask(big.id)!.pr!.auto_merge_check);
   await setAutoMerge(db, big.id, { auto_merge: false });
-  assert.deepEqual([db.getTask(big.id)!.auto_merge_check, db.getTask(big.id)!.auto_merge_checked_at], [null, null]);
+  assert.deepEqual([db.getTask(big.id)!.pr!.auto_merge_check, db.getTask(big.id)!.pr!.auto_merge_checked_at], [null, null]);
 });
 
 test('a refresh stores no check for a task with auto-merge off', async () => {
   const t = tested();
   await setAutoMerge(db, t.id, { auto_merge: false });
   await refreshPrStates(db);
-  assert.equal(db.getTask(t.id)!.auto_merge_check, null);
+  assert.equal(db.getTask(t.id)!.pr!.auto_merge_check, null);
 });
 
 // ---- The view

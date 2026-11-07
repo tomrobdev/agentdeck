@@ -5,7 +5,7 @@ import { isOwnPlanName, planProgress } from '../domain/plan/plan.ts';
 import { commentLocation } from '../domain/review/review.ts';
 import { pickRun } from '../domain/run/run.ts';
 import { TASK_STATUSES } from '../domain/task/lifecycle.ts';
-import { filterTasks } from '../domain/task/listing.ts';
+import { filterTasks, listable } from '../domain/task/listing.ts';
 import { errorMessage, plural } from '../domain/text.ts';
 import { callDaemon } from './daemon-client.ts';
 import { confirm, die, idsText, taskId, taskIds, fmtAutoMerge, fmtChecks, fmtLink, fmtTask, printLog } from './format.ts';
@@ -133,7 +133,7 @@ export const taskCommands: Record<string, Command> = {
       .filter(Boolean);
     // One status keeps its old order, priority first; anything else lists the newest first.
     const sort = flags.sort ?? (states.length === 1 && (TASK_STATUSES as string[]).includes(states[0]) ? 'priority' : 'newest');
-    const all = actions.withViews(db, db.listTasks());
+    const all = actions.withViews(db, db.listTasks()).map(listable);
     let tasks;
     try {
       tasks = filterTasks(all, { states, repo_id: repo?.id, search: rest.join(' '), sort });

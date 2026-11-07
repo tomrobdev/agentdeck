@@ -25,7 +25,7 @@ test('stored checks read as values, and stored() turns them back for the API', (
   const t = db.addTask({ repo_id: repo.id, title: 't', prompt: 'p' });
   const row = { ...db.getTask(t.id)!, pr_checks: '{"read_at":"x","checks":[]}', pr_checks_opened: 'bad' };
   const task = toTask(row as never);
-  assert.deepEqual(task.pr_checks, { read_at: 'x', head: null, checks: [], notified: false });
-  assert.equal(task.pr_checks_opened, null);
+  assert.deepEqual(task.pr?.checks.latest, { read_at: 'x', head: null, checks: [], notified: false });
+  assert.equal(task.pr?.checks.opened, null);
   assert.equal(stored({ pr_checks_merged: { total: 1, failing: 0, pending: 0 } }).pr_checks_merged, '{"total":1,"failing":0,"pending":0}');
 });

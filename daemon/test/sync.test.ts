@@ -93,7 +93,7 @@ async function doneTask(extra = ''): Promise<{ id: number; wt: string; branch: s
   await drain();
   const t = db.getTask(task.id)!;
   assert.equal(t.status, 'done');
-  assert.equal(t.pr_state, 'open');
+  assert.equal(t.pr?.state, 'open');
   writeFileSync(join(t.worktree!, 'shared.txt'), lines(`task change ${n}`));
   sh(t.worktree!, 'commit', '-q', '-am', `Task ${n} changes line two`);
   pushes = [];
@@ -511,7 +511,7 @@ test('refreshPrStates reads mergeability: conflicting PRs are returned, unknown 
     const found = await refreshPrStates(db);
     assert.deepEqual(found, { conflicting: [a.id], unknown: 1, mergeable: [], polling: 0 });
     assert.equal(asked.filter((u) => u === 'https://x/pull/504').length, 1, 'a merged PR is read once, and its mergeability is not used');
-    assert.equal(db.getTask(d.id)!.pr_state, 'merged');
+    assert.equal(db.getTask(d.id)!.pr?.state, 'merged');
   } finally {
     github.prDetails = det;
     // Out of the way of the tests after this one: a done task is cancelled by retrying it first.
@@ -588,7 +588,7 @@ test('merging a PR makes the scheduler re-read the open PRs at once and resolve 
   const other = await doneTask();
   advanceMain('other5.txt', 'unrelated\n', 'Add other5.txt');
   conflictOnMain();
-  const otherUrl = db.getTask(other.id)!.pr_url!;
+  const otherUrl = db.getTask(other.id)!.pr!.url!;
   details[otherUrl] = { ...cleanDetails, mergeable: 'CONFLICTING', merge_state: 'DIRTY' };
   db.setSetting('paused', '0');
 
@@ -638,7 +638,7 @@ test('the merge preview says when the conflict is something a resolve run can fi
   const { mergePreview } = await import('../src/application/actions.ts');
   const t = await doneTask();
   assert.equal((await mergePreview(db, t.id)).conflicting, false);
-  details[db.getTask(t.id)!.pr_url!] = { ...cleanDetails, mergeable: 'CONFLICTING' };
+  details[db.getTask(t.id)!.pr!.url!] = { ...cleanDetails, mergeable: 'CONFLICTING' };
   const p = await mergePreview(db, t.id);
   assert.equal(p.conflicting, true);
   assert.match(p.problems[0], /conflicts/);

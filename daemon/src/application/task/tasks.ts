@@ -2,7 +2,7 @@
 import { removeWorktree } from '../../adapters/git.ts';
 import type { Db } from '../../db/index.ts';
 import type { TaskStatus } from '../../domain/task/lifecycle.ts';
-import { hasOpenPr } from '../../domain/task/stage.ts';
+import { openPrUrl } from '../../domain/pull-request/pr.ts';
 import { errorMessage } from '../../domain/text.ts';
 import { archivedRepoError, maxAttemptsError, maxTurnsError, modelError, priorityError } from '../../domain/task/rules.ts';
 import { EDITABLE_STATUSES, RUNNING_STATUSES, type Task, defaultTitle } from '../../domain/task/task.ts';
@@ -190,7 +190,7 @@ export function markDone(db: Db, id: number, note?: string): void {
 /** Close a task's open PR without merging it. Tasks waiting on it become stuck. */
 export async function closeTaskPr(db: Db, id: number): Promise<void> {
   const t = requireTask(db, id);
-  if (!t.pr_url || !hasOpenPr(t)) throw new ActionError(`#${id} has no open pull request`);
+  if (!openPrUrl(t.pr)) throw new ActionError(`#${id} has no open pull request`);
   try {
     await closePullRequest(db, t);
   } catch (err) {

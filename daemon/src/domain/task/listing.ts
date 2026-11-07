@@ -1,4 +1,5 @@
 // Filtering and sorting task lists: `agentdeck ls` and the dashboard's queue share it. Pure: no I/O.
+import type { PrState, PullRequest } from '../pull-request/pr.ts';
 import { STATUS_GROUPS, isMerged, isReview, isStuck, isWaiting, statusGroup } from './stage.ts';
 import type { TaskStatus } from './lifecycle.ts';
 import type { Waiting } from './start.ts';
@@ -11,20 +12,15 @@ import { RUNNING_STATUSES, type TaskSummary } from './task.ts';
 export type ListedTask = TaskSummary & { waiting: Waiting | null; unblocks: number[] };
 export type Listable = Pick<
   ListedTask,
-  | 'id'
-  | 'repo_id'
-  | 'title'
-  | 'status'
-  | 'priority'
-  | 'branch'
-  | 'model'
-  | 'stop_reason'
-  | 'source'
-  | 'pr_url'
-  | 'pr_state'
-  | 'waiting'
-  | 'updated_at'
-> & { repo?: string | null; unblocks?: number[] };
+  'id' | 'repo_id' | 'title' | 'status' | 'priority' | 'branch' | 'model' | 'stop_reason' | 'source' | 'waiting' | 'updated_at'
+> & { pr_url: string | null; pr_state: PrState | null; repo?: string | null; unblocks?: number[] };
+
+/** A task with its pull request as the flat fields a list reads (the API's shape). */
+export const listable = <T extends { pr: PullRequest | null }>(t: T) => ({
+  ...t,
+  pr_url: t.pr?.url ?? null,
+  pr_state: t.pr?.state ?? null,
+});
 
 type Test = (t: Listable) => boolean;
 

@@ -81,24 +81,24 @@ test("a PR's checks are stored once they settle, kept as first seen, and the mer
 
   // Still running: nothing stored. No checks at all might only be CI not started: nothing stored.
   await refreshPrStates(db);
-  assert.equal(db.getTask(t.id)!.pr_checks_opened, null);
+  assert.equal(db.getTask(t.id)!.pr!.checks.opened, null);
   current = { ...pending, checks: { total: 0, failing: 0, pending: 0 } };
   await refreshPrStates(db);
-  assert.equal(db.getTask(t.id)!.pr_checks_opened, null);
+  assert.equal(db.getTask(t.id)!.pr!.checks.opened, null);
 
   current = { ...pending, checks: { total: 3, failing: 1, pending: 0 } };
   await refreshPrStates(db);
-  assert.deepEqual(db.getTask(t.id)!.pr_checks_opened, { total: 3, failing: 1, pending: 0 });
+  assert.deepEqual(db.getTask(t.id)!.pr!.checks.opened, { total: 3, failing: 1, pending: 0 });
 
   // A later result does not replace the first settled one.
   current = { ...pending, checks: { total: 3, failing: 0, pending: 0 } };
   await refreshPrStates(db);
-  assert.deepEqual(db.getTask(t.id)!.pr_checks_opened, { total: 3, failing: 1, pending: 0 });
-  assert.equal(db.getTask(t.id)!.pr_checks_merged, null);
+  assert.deepEqual(db.getTask(t.id)!.pr!.checks.opened, { total: 3, failing: 1, pending: 0 });
+  assert.equal(db.getTask(t.id)!.pr!.checks.merged, null);
 
   await mergeTask(db, t.id, { method: 'squash' });
   const merged = db.getTask(t.id)!;
-  assert.equal(merged.pr_state, 'merged');
-  assert.deepEqual(merged.pr_checks_merged, { total: 3, failing: 0, pending: 0 });
-  assert.deepEqual(merged.pr_checks_opened, { total: 3, failing: 1, pending: 0 });
+  assert.equal(merged.pr!.state, 'merged');
+  assert.deepEqual(merged.pr!.checks.merged, { total: 3, failing: 0, pending: 0 });
+  assert.deepEqual(merged.pr!.checks.opened, { total: 3, failing: 1, pending: 0 });
 });

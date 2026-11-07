@@ -143,5 +143,5 @@ test('a merge request check finished after a conflict blocked the task is droppe
   assert.ok(db.applyEvent(t.id, { type: 'conflict' }, { reason: 'conflict' }));
 
   assert.equal(db.setMergeRequestCheck(t.id, { verdict: 'merge', reasons: [] }), false);
-  assert.equal(db.getTask(t.id)!.merge_request_check?.verdict, 'wait', 'the blocked task keeps the check it had');
+  assert.equal(db.getTask(t.id)!.pr?.merge_request?.check?.verdict, 'wait', 'the blocked task keeps the check it had');
 });

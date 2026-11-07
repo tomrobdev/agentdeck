@@ -137,7 +137,7 @@ test('a task read from the database has pr beside its flat fields, and the API s
   const t = doneTask(db, repo);
   assert.equal(db.getTask(t.id)!.pr, null);
   db.recordPr(t.id, { type: 'failed', error: 'no remote' });
-  assert.deepEqual([db.getTask(t.id)!.pr_state, db.getTask(t.id)!.pr?.state], ['failed', 'failed']);
+  assert.equal(db.getTask(t.id)!.pr?.state, 'failed');
   db.recordPr(t.id, { type: 'opened', url: URL });
   assert.deepEqual([db.getTask(t.id)!.pr?.state, db.getTask(t.id)!.pr?.url], ['open', URL]);
 

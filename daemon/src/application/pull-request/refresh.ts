@@ -33,7 +33,7 @@ export function autoMergeFor(db: Db, task: Task, repo: Repo, pr: PrDetails, test
   if (!autoMergeOn(task, repo)) return null;
   return autoMergeCheck({
     repo,
-    pr_state: task.pr_state,
+    pr_state: task.pr?.state ?? null,
     pr,
     tests_passed,
     lands_after: landsAfter(db, task.id),
@@ -47,7 +47,7 @@ export function autoMergeFor(db: Db, task: Task, repo: Repo, pr: PrDetails, test
  * Nothing is told when the write was refused: the PR merged or closed meanwhile.
  */
 function keepChecks(db: Db, task: Task, pr: PrDetails): void {
-  const { stored, notify } = nextChecks(task.pr_checks, {
+  const { stored, notify } = nextChecks(task.pr?.checks.latest ?? null, {
     head: pr.head ?? null,
     checks: pr.check_list ?? [],
     read_at: new Date().toISOString(),
@@ -98,9 +98,9 @@ function dropRequest(db: Db, id: number, why: string, log: (msg: string) => void
  */
 async function refreshOne(db: Db, task: Task, log: (msg: string) => void): Promise<PrFound | null> {
   const repo = db.getRepo(task.repo_id);
-  const pr = await github.prDetails(task.pr_url!, prCwd(db, task), { withFiles: !!repo && autoMergeOn(task, repo) });
+  const pr = await github.prDetails(task.pr!.url!, prCwd(db, task), { withFiles: !!repo && autoMergeOn(task, repo) });
   const state = pr.state;
-  if (state !== task.pr_state) {
+  if (state !== task.pr?.state) {
     // Guarded on the PR still being open: a merge recorded while GitHub was being asked stays.
     const applied = state === 'closed' ? settlePr(db, task.id, { type: 'closed' }) : db.recordPr(task.id, { type: 'seen', state });
     if (applied) log(`task ${task.id}: PR is ${state}`);
@@ -113,16 +113,16 @@ async function refreshOne(db: Db, task: Task, log: (msg: string) => void): Promi
       log(`task ${task.id}: PR merged, task is done`);
   }
   if (state !== 'open' || task.status !== 'done') {
-    if (task.merge_requested_at) dropRequest(db, task.id, state !== 'open' ? `the PR is ${state}` : `the task is ${task.status}`, log);
+    if (task.pr?.merge_request) dropRequest(db, task.id, state !== 'open' ? `the PR is ${state}` : `the task is ${task.status}`, log);
     return null;
   }
   if (checksSettled(pr.checks)) db.recordPrChecksOpened(task.id, pr.checks);
   keepChecks(db, task, pr);
   const tests = lastTestsPassed(db, task.id);
-  if (task.merge_requested_at) {
+  if (task.pr?.merge_request) {
     // A person asked: the merge request's check stands in for auto-merge's.
     const check = mergeRequestCheck({
-      pr_state: task.pr_state,
+      pr_state: task.pr.state,
       pr,
       tests_passed: tests,
       lands_after: landsAfter(db, task.id),

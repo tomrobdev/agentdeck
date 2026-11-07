@@ -67,7 +67,7 @@ export function fmtTask(
     extra += waiting.stuck
       ? `  can't start: ${waiting.stuck} (retry ${idsText(waiting.on)} or cancel this task)`
       : `  waiting on ${idsText(waiting.on)}`;
-  if (t.pr_url) extra += `  PR ${t.pr_state ?? 'open'}: ${t.pr_url}`;
+  if (t.pr?.url) extra += `  PR ${t.pr.state}: ${t.pr.url}`;
   if (t.auto_merge_view && t.auto_merge_view.state !== 'off') extra += `  ${t.auto_merge_view.label}`;
   // A builds-on link that is still waiting is already shown as "waiting on"; show the rest.
   for (const l of t.links ?? []) if (l.kind === 'after' || l.state !== 'waiting' || !waiting) extra += `  ${fmtLink(l)}`;

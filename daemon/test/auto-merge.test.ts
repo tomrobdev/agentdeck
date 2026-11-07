@@ -243,7 +243,7 @@ test('the refresh finds a ready PR and autoMerge merges it, records who did, cle
   assert.equal(await autoMerge(db, found.mergeable), t.id);
   assert.deepEqual(gh.merged, [t.url]);
   assert.deepEqual(gh.deleted, [t.branch]);
-  assert.equal(db.getTask(t.id)!.pr_state, 'merged');
+  assert.equal(db.getTask(t.id)!.pr?.state, 'merged');
   assert.equal(db.eventsForTask(t.id).at(-1)!.reason, 'auto-merged (squash)');
   assert.equal(waiting(db.getTask(later.id)!), null);
   assert.deepEqual(
@@ -313,7 +313,7 @@ test('autoMerge merges one PR per call, skips one that moved on, and tells a ref
   assert.match(logs[0], /base branch policy/);
   assert.equal(db.recentNotifications(50).filter((x) => x.task_id === b.id).length, 1);
   assert.equal(db.getTask(b.id)!.status, 'done');
-  assert.equal(db.getTask(b.id)!.pr_state, 'open');
+  assert.equal(db.getTask(b.id)!.pr?.state, 'open');
 });
 
 test('a merge and a sync never touch one task at once', async () => {
@@ -411,8 +411,8 @@ test('the scheduler merges a ready PR on its own refresh, and tells a merge that
 
   mergeError = null;
   const t = tested({ title: 'merge me' });
-  await until(() => db.getTask(t.id)!.pr_state === 'merged');
+  await until(() => db.getTask(t.id)!.pr?.state === 'merged');
   scheduler.stop();
   await running;
-  assert.equal(db.getTask(t.id)!.pr_state, 'merged');
+  assert.equal(db.getTask(t.id)!.pr?.state, 'merged');
 });

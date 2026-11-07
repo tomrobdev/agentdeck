@@ -78,14 +78,14 @@ test('requestMerge records the request with the task method, then the repo metho
   const a = tested();
   assert.deepEqual(requestMerge(db, a.id), { method: 'squash' });
   const row = db.getTask(a.id)!;
-  assert.ok(row.merge_requested_at);
-  assert.equal(row.merge_request_method, 'squash');
-  assert.equal(row.merge_request_check, null);
+  assert.ok(row.pr!.merge_request?.requested_at);
+  assert.equal(row.pr!.merge_request?.method, 'squash');
+  assert.equal(row.pr!.merge_request?.check, null);
   assert.ok(db.prCheckRequested() > 0, 'asks for a PR re-read');
   assert.equal((await taskDetail(db, a.id)).merge_request!.state, 'waiting');
 
   assert.deepEqual(requestMerge(db, a.id, { method: 'rebase' }), { method: 'rebase' });
-  assert.equal(db.getTask(a.id)!.merge_request_method, 'rebase');
+  assert.equal(db.getTask(a.id)!.pr!.merge_request?.method, 'rebase');
   assert.throws(() => requestMerge(db, a.id, { method: 'fast-forward' }), ActionError);
 
   details[a.url] = { ...ready, checks: { total: 2, failing: 0, pending: 1 } };
@@ -102,7 +102,7 @@ test('requestMerge refuses a task that is not done or has no open PR', () => {
   const merged = doneTask(db, repo, { pr: 'merged' });
   assert.throws(() => requestMerge(db, merged.id), /PR is merged/);
   assert.throws(() => requestMerge(db, 99999), ActionError);
-  for (const t of [queued, noPr, closed, merged]) assert.equal(db.getTask(t.id)!.merge_requested_at, null);
+  for (const t of [queued, noPr, closed, merged]) assert.equal(db.getTask(t.id)!.pr?.merge_request ?? null, null);
 });
 
 test('requestMerges returns the tasks it could not request, and why', () => {
@@ -118,7 +118,7 @@ test('cancelMergeRequest clears the request, and does nothing for a task without
   requestMerge(db, a.id);
   assert.deepEqual(cancelMergeRequest(db, a.id), { cancelled: true });
   const row = db.getTask(a.id)!;
-  assert.deepEqual([row.merge_requested_at, row.merge_request_method, row.merge_request_check], [null, null, null]);
+  assert.equal(row.pr!.merge_request, null);
   assert.equal((await taskDetail(db, a.id)).merge_request, null);
   assert.deepEqual(cancelMergeRequest(db, a.id), { cancelled: false });
   assert.throws(() => cancelMergeRequest(db, 99999), ActionError);
@@ -132,12 +132,12 @@ test('a request with checks running waits, then merges once they pass, with its 
   const first = await refreshPrStates(db);
   assert.deepEqual(first.mergeable, []);
   assert.equal(first.polling, 1, 'worth reading again soon');
-  assert.deepEqual(db.getTask(a.id)!.merge_request_check, { verdict: 'wait', reasons: ['1 check still running on GitHub'] });
+  assert.deepEqual(db.getTask(a.id)!.pr!.merge_request?.check, { verdict: 'wait', reasons: ['1 check still running on GitHub'] });
   assert.deepEqual((await taskDetail(db, a.id)).merge_request, {
     state: 'waiting',
     method: 'rebase',
     reasons: ['1 check still running on GitHub'],
-    since: db.getTask(a.id)!.merge_requested_at,
+    since: db.getTask(a.id)!.pr!.merge_request!.requested_at,
   });
 
   details[a.url] = ready;
@@ -147,8 +147,8 @@ test('a request with checks running waits, then merges once they pass, with its 
   assert.equal(await autoMerge(db, second.mergeable), a.id);
   assert.deepEqual(merged, [{ url: a.url, method: 'rebase' }]);
   const row = db.getTask(a.id)!;
-  assert.equal(row.pr_state, 'merged');
-  assert.equal(row.merge_requested_at, null, 'recordMerge clears the request');
+  assert.equal(row.pr?.state, 'merged');
+  assert.equal(row.pr?.merge_request, null, 'recordMerge clears the request');
   assert.equal(db.eventsForTask(a.id).at(-1)!.reason, 'requested (rebase)');
 });
 
@@ -158,7 +158,7 @@ test('a request whose check fails is cleared with a notification', async () => {
   details[a.url] = { ...ready, checks: { total: 3, failing: 1, pending: 0 } };
   const found = await refreshPrStates(db);
   assert.deepEqual(found.mergeable, []);
-  assert.equal(db.getTask(a.id)!.merge_requested_at, null);
+  assert.equal(db.getTask(a.id)!.pr?.merge_request ?? null, null);
   const sent = notified(a.id);
   assert.equal(sent.length, 1);
   assert.equal(sent[0].title, `Could not merge #${a.id}`);
@@ -209,7 +209,7 @@ test('two requests where one lands after the other merge in that order', async (
     [first.id],
     'the second waits for the first',
   );
-  assert.match(db.getTask(second.id)!.merge_request_check!.reasons[0], new RegExp(`lands after #${first.id}`));
+  assert.match(db.getTask(second.id)!.pr!.merge_request!.check!.reasons[0], new RegExp(`lands after #${first.id}`));
   assert.equal(await autoMerge(db, one.mergeable), first.id);
 
   const two = await refreshPrStates(db);
@@ -230,12 +230,12 @@ test('a conflicting request goes to be synced and stays; one whose task or PR mo
   details[conflicting.url] = { ...ready, mergeable: 'CONFLICTING', merge_state: 'DIRTY' };
   const found = await refreshPrStates(db);
   assert.deepEqual(found.conflicting, [conflicting.id]);
-  assert.ok(db.getTask(conflicting.id)!.merge_requested_at, 'a conflict is waited out, not refused');
+  assert.ok(db.getTask(conflicting.id)!.pr!.merge_request, 'a conflict is waited out, not refused');
 
   // The sync could not settle it: the task is blocked, so the request goes.
   db.applyEvent(conflicting.id, { type: 'conflict' }, { reason: 'conflict' });
   await refreshPrStates(db);
-  assert.equal(db.getTask(conflicting.id)!.merge_requested_at, null);
+  assert.equal(db.getTask(conflicting.id)!.pr?.merge_request ?? null, null);
 
   const closedOnGithub = tested();
   requestMerge(db, closedOnGithub.id);
@@ -245,7 +245,7 @@ test('a conflicting request goes to be synced and stays; one whose task or PR mo
   } finally {
     closedUrl = null;
   }
-  assert.equal(db.getTask(closedOnGithub.id)!.merge_requested_at, null);
+  assert.equal(db.getTask(closedOnGithub.id)!.pr?.merge_request ?? null, null);
 });
 
 test('a merge gh refuses drops the request and tells once', async () => {
@@ -261,7 +261,7 @@ test('a merge gh refuses drops the request and tells once', async () => {
   } finally {
     github.merge = real;
   }
-  assert.equal(db.getTask(a.id)!.merge_requested_at, null);
-  assert.equal(db.getTask(a.id)!.pr_state, 'open');
+  assert.equal(db.getTask(a.id)!.pr?.merge_request ?? null, null);
+  assert.equal(db.getTask(a.id)!.pr?.state, 'open');
   assert.match(notified(a.id)[0].body, /base branch policy/);
 });
