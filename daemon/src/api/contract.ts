@@ -21,7 +21,7 @@ export interface Repo {
   test_cmd: string | null;
   allowed_tools: string | null;
   auto_approve: number;
-  planned_at: string | null;
+  proposed_at: string | null;
   toolchain: string | null;
   setup_cmd: string | null;
   paused_reason: string | null;
