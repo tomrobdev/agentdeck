@@ -1,10 +1,11 @@
 //! The macOS menu bar. Items that open something send an `agentdeck://` URL through `open_in_dashboard`, so the dashboard
-//! decides what each means (`parseAppUrl`); Pause, Resume and Restart call the daemon, as the tray does. The Edit menu is
+//! decides what each means (`parseAppUrl`); Pause, Resume, Start and Restart act on the daemon, as the tray does. The Edit menu is
 //! the predefined one: without it ⌘C and ⌘V stop working in the web view. ⌘K lives here too, so in the desktop app the
 //! dashboard's own key handler stays off and a press can't toggle the palette twice.
 
 use crate::daemon_client;
 use crate::open::open_in_dashboard;
+use crate::service;
 use crate::tray::Toggle;
 use std::sync::Mutex;
 use tauri::{
@@ -49,7 +50,7 @@ const LINKS: [Link; 8] = [
     ("show", "Show AgentDeck", "agentdeck://", None),
 ];
 
-/// The Pause/Resume item and what the last status read made it.
+/// The Pause/Resume/Start item and what the last status read made it.
 struct PauseItem(MenuItem<Wry>, Mutex<Option<Toggle>>);
 
 /// The link a menu id opens, if it is a link.
@@ -57,11 +58,12 @@ fn url_for(id: &str) -> Option<&'static str> {
     LINKS.iter().find(|l| l.0 == id).map(|l| l.2)
 }
 
-/// The Pause/Resume item's label and whether it works, for the last read: it is off while the daemon can't be reached.
+/// The item's label and whether it works, for the last read: Start while the daemon is offline, off until the first read.
 fn pause_item(toggle: Option<Toggle>) -> (&'static str, bool) {
     match toggle {
         Some(Toggle::Resume) => ("Resume", true),
         Some(Toggle::Pause) => ("Pause", true),
+        Some(Toggle::Start) => ("Start", true),
         None => ("Pause", false),
     }
 }
@@ -159,6 +161,7 @@ fn on_menu_event(app: &AppHandle, event: MenuEvent) {
             match toggle {
                 Some(Toggle::Resume) => ("resume", || daemon_client::set_paused(false)),
                 Some(Toggle::Pause) => ("pause", || daemon_client::set_paused(true)),
+                Some(Toggle::Start) => ("start", service::start),
                 None => return,
             }
         }
@@ -182,7 +185,7 @@ pub fn setup(app: &AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
-/// Word the Daemon menu's Pause/Resume item after the last status read.
+/// Word the Daemon menu's Pause/Resume/Start item after the last status read.
 pub fn update(app: &AppHandle, toggle: Option<Toggle>) -> tauri::Result<()> {
     if let Some(item) = app.try_state::<PauseItem>() {
         let (text, enabled) = pause_item(toggle);
@@ -219,6 +222,7 @@ mod tests {
     fn the_toggle_follows_the_last_read() {
         assert_eq!(pause_item(Some(Toggle::Pause)), ("Pause", true));
         assert_eq!(pause_item(Some(Toggle::Resume)), ("Resume", true));
+        assert_eq!(pause_item(Some(Toggle::Start)), ("Start", true));
         assert_eq!(pause_item(None), ("Pause", false));
     }
 }
