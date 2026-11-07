@@ -2,7 +2,6 @@
 import { readFileSync } from 'node:fs';
 import * as actions from '../application/actions.ts';
 import type { ProposalResult } from '../domain/planner/proposals.ts';
-import { parseNetwork } from '../domain/run/sandbox.ts';
 import { callDaemon } from './daemon-client.ts';
 import { confirm, die, fmtTask, printDoctor } from './format.ts';
 import { repoSettingPatch } from './settings-args.ts';
@@ -75,7 +74,7 @@ export const repoCommands: Record<string, Command> = {
       for (const r of db.listRepos({ archived: !!flags.archived })) {
         const goals = actions.repoDetail(db, r.id).goals.trim() ? 'goals ✓' : 'no goals';
         console.log(
-          `${r.name.padEnd(16)} ${r.path}  base=${r.base_branch}  toolchain=${r.toolchain ?? '-'}  setup=${r.setup_cmd ?? '-'}  test=${r.test_cmd ?? '-'}  pr=${r.pr_mode}  merge=${r.merge_method}  sandbox=${r.sandbox ? `on network=${parseNetwork(r.network).join(',') || '-'}` : 'OFF'}  ${goals}${r.auto_approve ? '  auto-approve' : ''}${r.paused_reason ? `  PAUSED (${r.paused_reason})` : ''}`,
+          `${r.name.padEnd(16)} ${r.path}  base=${r.base_branch}  toolchain=${r.toolchain ?? '-'}  setup=${r.setup_cmd ?? '-'}  test=${r.test_cmd ?? '-'}  pr=${r.pr_mode}  merge=${r.merge_method}  sandbox=${r.sandbox ? `on network=${r.network.join(',') || '-'}` : 'OFF'}  ${goals}${r.auto_approve ? '  auto-approve' : ''}${r.paused_reason ? `  PAUSED (${r.paused_reason})` : ''}`,
         );
       }
     } else die(`unknown repo command: ${sub}`);

@@ -96,7 +96,7 @@ export async function mergePreview(db: Db, id: number): Promise<MergePreview> {
   });
   const tests_passed = lastTestsPassed(db, id);
   const lands_after = landsAfter(db, id);
-  const request = mergeRequestCheck({ pr_state: task.pr_state, pr, tests_passed, lands_after, auto_resolve: repo.auto_resolve === 1 });
+  const request = mergeRequestCheck({ pr_state: task.pr_state, pr, tests_passed, lands_after, auto_resolve: repo.auto_resolve });
   return {
     title: task.title,
     pr_url: url,

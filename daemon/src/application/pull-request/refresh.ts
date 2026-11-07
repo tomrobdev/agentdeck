@@ -37,7 +37,7 @@ export function autoMergeFor(db: Db, task: Task, repo: Repo, pr: PrDetails, test
     pr,
     tests_passed,
     lands_after: landsAfter(db, task.id),
-    auto_resolve: repo.auto_resolve === 1,
+    auto_resolve: repo.auto_resolve,
     paused: pausedReason(db.isPaused(), repo),
   });
 }
@@ -126,7 +126,7 @@ async function refreshOne(db: Db, task: Task, log: (msg: string) => void): Promi
       pr,
       tests_passed: tests,
       lands_after: landsAfter(db, task.id),
-      auto_resolve: repo ? repo.auto_resolve === 1 : true,
+      auto_resolve: repo ? repo.auto_resolve : true,
     });
     db.setAutoMergeCheck(task.id, null);
     if (check.verdict === 'never') {

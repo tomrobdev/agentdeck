@@ -10,7 +10,7 @@ import type { Repo } from '../../domain/repo/repo.ts';
 import { allowedTools } from '../../domain/repo/tools.ts';
 import { START_LIVE, nextLive } from '../../domain/run/live.ts';
 import { claudeArgs } from '../../domain/run/prompt.ts';
-import { parseNetwork, settingsPath, workerSettings } from '../../domain/run/sandbox.ts';
+import { settingsPath, workerSettings } from '../../domain/run/sandbox.ts';
 import { type Outcome, type Run, type RunClass, type RunKind, classifyRun, resultFields, resumeFailed } from '../../domain/run/run.ts';
 import type { Task } from '../../domain/task/task.ts';
 import { lastLine } from '../../domain/text.ts';
@@ -21,7 +21,7 @@ import { lastLine } from '../../domain/text.ts';
  */
 export function runSettings(repo: Repo, worktree: string, logPath: string): string {
   const path = settingsPath(logPath);
-  writeSettings(path, workerSettings({ worktree, sandbox: repo.sandbox !== 0, network: parseNetwork(repo.network) }));
+  writeSettings(path, workerSettings({ worktree, sandbox: repo.sandbox, network: repo.network }));
   return path;
 }
 
