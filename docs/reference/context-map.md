@@ -47,6 +47,7 @@ flowchart LR
   domain_settings -.-> domain_usage
   domain_task -->|cycle| domain
   domain_task -.->|cycle| domain_pull_request
+  domain_task -.->|cycle| domain_run
   domain_task -.->|cycle| domain_usage
   domain_usage -->|cycle| domain
 ```

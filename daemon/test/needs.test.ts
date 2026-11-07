@@ -9,7 +9,7 @@ process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-needs-'));
 
 const { openDb } = await import('../src/db/index.ts');
 const { isEnvironmentBlock, parseStatus } = await import('../src/domain/run/run.ts');
-const { canInstallWith, depsRequest, depsRequestError, installArgs, readNeeds } = await import('../src/domain/task/needs.ts');
+const { canInstallWith, depsRequest, depsRequestError, installArgs } = await import('../src/domain/task/needs.ts');
 const { branchName } = await import('../src/domain/branch/branch.ts');
 const { workerSystemPrompt } = await import('../src/domain/run/prompt.ts');
 
@@ -89,16 +89,44 @@ function blockedTask(environment: boolean) {
   const t = db.addTask({ repo_id: repo.id, title: 't', prompt: 'p' });
   db.claimNextTask();
   assert.equal(db.getTask(t.id)!.attempts, 1);
-  const needs = JSON.stringify({ kind: 'deps', items: ['left-pad'] });
+  const needs = { kind: 'deps' as const, items: ['left-pad'] };
   const after = db.applyEvent(t.id, { type: 'finish', outcome: 'blocked', environment }, { reason: 'NEEDS deps: left-pad', needs })!;
   return { db, id: t.id, after };
 }
+
+test('stored needs, question and plan steps are read in the mapper; malformed JSON reads as null', () => {
+  const db = openDb(':memory:');
+  const repo = db.addRepo({ name: 'r', path: '/tmp/r-mapper', base_branch: 'main' });
+  const t = db.addTask({ repo_id: repo.id, title: 't', prompt: 'p' });
+  const store = (needs: string | null, question: string | null, plan_steps: string | null) =>
+    db.raw.prepare('UPDATE tasks SET needs = ?, question = ?, plan_steps = ? WHERE id = ?').run(needs, question, plan_steps, t.id);
+
+  store('{"kind":"deps","items":["zod"]}', '{"question":"Which?","options":["a",1]}', '["a",2,"b"]');
+  const read = db.getTask(t.id)!;
+  assert.deepEqual(read.needs, { kind: 'deps', items: ['zod'] });
+  assert.deepEqual(read.question, { question: 'Which?', options: ['a', '1'] });
+  assert.deepEqual(read.plan_steps, ['a', 'b']);
+
+  for (const bad of ['not json', '{"kind":"nope","items":[]}', '{"kind":"deps"}', '42', '']) {
+    store(bad, bad, bad);
+    const task = db.getTask(t.id)!;
+    assert.deepEqual([task.needs, task.question, task.plan_steps], [null, null, null], bad);
+  }
+  store(null, null, null);
+  assert.deepEqual([db.getTask(t.id)!.needs, db.getTask(t.id)!.question, db.getTask(t.id)!.plan_steps], [null, null, null]);
+
+  db.raw.prepare('UPDATE tasks SET auto_merge = ? WHERE id = ?').run(1, t.id);
+  assert.equal(db.getTask(t.id)!.auto_merge, true);
+  db.raw.prepare('UPDATE tasks SET auto_merge = ? WHERE id = ?').run(0, t.id);
+  assert.equal(db.getTask(t.id)!.auto_merge, false);
+  db.close();
+});
 
 test('an environment block gives the attempt back and records the needs', () => {
   const { db, id, after } = blockedTask(true);
   assert.equal(after.status, 'blocked');
   assert.equal(after.attempts, 0);
-  assert.deepEqual(readNeeds(after.needs), { kind: 'deps', items: ['left-pad'] });
+  assert.deepEqual(after.needs, { kind: 'deps', items: ['left-pad'] });
   assert.equal(db.eventsForTask(id).at(-1)!.type, 'environment_block');
   // Queued again: the needs are cleared.
   assert.equal(db.applyEvent(id, { type: 'retry' })!.needs, null);

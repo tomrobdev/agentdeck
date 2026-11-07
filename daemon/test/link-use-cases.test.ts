@@ -116,24 +116,24 @@ test('an after link holds the merge until the other lands, and is gone when the 
   linkTasks(db, b.id, { on: a.id, kind: 'after' });
   assert.equal(landsAfter(db, b.id).length, 1);
 
-  const held = mergeCheck({ pr_state: 'open', pr, tests_passed: 1, lands_after: landsAfter(db, b.id) });
+  const held = mergeCheck({ pr_state: 'open', pr, tests_passed: true, lands_after: landsAfter(db, b.id) });
   assert.deepEqual(held.problems, [`lands after #${a.id}: #${a.id} is not done yet`]);
   const repo = { test_cmd: 'x', auto_merge_max_lines: 400, auto_merge_skip: [] };
-  const auto = autoMergeCheck({ pr_state: 'open', pr, tests_passed: 1, lands_after: landsAfter(db, b.id), repo, paused: null });
+  const auto = autoMergeCheck({ pr_state: 'open', pr, tests_passed: true, lands_after: landsAfter(db, b.id), repo, paused: null });
   assert.equal(auto.verdict, 'wait');
 
   db.applyEvent(a.id, { type: 'claim' });
   db.applyEvent(a.id, { type: 'finish', outcome: 'done' });
   assert.deepEqual(landsAfter(db, b.id), [], 'done in a repo without PRs has landed');
-  assert.deepEqual(mergeCheck({ pr_state: 'open', pr, tests_passed: 1, lands_after: landsAfter(db, b.id) }).problems, []);
-  assert.equal(autoMergeCheck({ pr_state: 'open', pr, tests_passed: 1, lands_after: [], repo, paused: null }).verdict, 'merge');
+  assert.deepEqual(mergeCheck({ pr_state: 'open', pr, tests_passed: true, lands_after: landsAfter(db, b.id) }).problems, []);
+  assert.equal(autoMergeCheck({ pr_state: 'open', pr, tests_passed: true, lands_after: [], repo, paused: null }).verdict, 'merge');
   db.close();
 });
 
 test('an after link frees the merge when the other is cancelled, a proposal rejected, or its PR closed', () => {
   const { db, repo, add } = setup();
   db.updateRepo(repo.id, { pr_mode: 'ready' });
-  const merges = (id: number) => mergeCheck({ pr_state: 'open', pr, tests_passed: 1, lands_after: landsAfter(db, id) }).problems;
+  const merges = (id: number) => mergeCheck({ pr_state: 'open', pr, tests_passed: true, lands_after: landsAfter(db, id) }).problems;
 
   const [cancelled, b1] = [add(), add()];
   linkTasks(db, b1.id, { on: cancelled.id, kind: 'after' });

@@ -515,15 +515,15 @@ function prTask(n: number, title = `merge ${n}`) {
 
 test('mergeCheck: blocking problems and warnings', () => {
   const pr = { ...cleanDetails };
-  assert.deepEqual(mergeCheck({ pr_state: 'open', pr, tests_passed: 1 }), { problems: [], warnings: [] });
-  assert.deepEqual(mergeCheck({ pr_state: 'merged', pr, tests_passed: 1 }).problems, ['the PR is merged']);
-  assert.match(mergeCheck({ pr_state: 'open', pr: { ...pr, mergeable: 'CONFLICTING' }, tests_passed: 1 }).problems[0], /conflicts/);
-  assert.match(mergeCheck({ pr_state: 'open', pr: { ...pr, merge_state: 'DIRTY' }, tests_passed: 1 }).problems[0], /conflicts/);
+  assert.deepEqual(mergeCheck({ pr_state: 'open', pr, tests_passed: true }), { problems: [], warnings: [] });
+  assert.deepEqual(mergeCheck({ pr_state: 'merged', pr, tests_passed: true }).problems, ['the PR is merged']);
+  assert.match(mergeCheck({ pr_state: 'open', pr: { ...pr, mergeable: 'CONFLICTING' }, tests_passed: true }).problems[0], /conflicts/);
+  assert.match(mergeCheck({ pr_state: 'open', pr: { ...pr, merge_state: 'DIRTY' }, tests_passed: true }).problems[0], /conflicts/);
 
   const warned = mergeCheck({
     pr_state: 'open',
     pr: { ...pr, draft: true, merge_state: 'BEHIND', checks: { total: 4, failing: 1, pending: 2 } },
-    tests_passed: 0,
+    tests_passed: false,
   });
   assert.deepEqual(warned.problems, []);
   assert.equal(warned.warnings.length, 5);

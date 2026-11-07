@@ -13,7 +13,7 @@ export interface PrRun {
   outcome: string | null;
   num_turns: number | null;
   cost_usd: number;
-  tests_passed: number | null;
+  tests_passed: boolean | null;
   result_text: string | null;
 }
 

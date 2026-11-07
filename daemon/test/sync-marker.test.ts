@@ -38,7 +38,7 @@ test('retry, install-needs and worktree removal refuse while another process has
   db.applyEvent(
     blocked.id,
     { type: 'finish', outcome: 'blocked', environment: true },
-    { reason: 'NEEDS', needs: JSON.stringify({ kind: 'deps', items: ['left-pad'] }) },
+    { reason: 'NEEDS', needs: { kind: 'deps', items: ['left-pad'] } },
   );
   db.setSyncing(blocked.id, true);
   await assert.rejects(installNeeds(db, blocked.id), /syncing/);

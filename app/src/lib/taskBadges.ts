@@ -7,12 +7,11 @@
 // Free of the dashboard's other modules so the daemon's tests can import it (daemon/test/task-badges.test.ts). What the
 // daemon decides (needs, a conflict, auto-merge, merge requests) comes from the API; this only picks and words it.
 import type { AutoMergeView, TaskSummary } from '../../../daemon/src/api/contract.ts';
-import { readQuestion } from '../../../daemon/src/domain/run/unblock.ts';
-import { readNeeds } from '../../../daemon/src/domain/task/needs.ts';
 import { isReview } from '../../../daemon/src/domain/task/stage.ts';
 import { plural } from '../../../daemon/src/domain/text.ts';
 import { describeLive, describeMergeRequest, describeSync, describeWait } from '../api/format.ts';
 import type { Tone as ChipTone } from './tone.ts';
+import { needsOf, questionOf } from './wire.ts';
 
 export type Tone = 'muted' | 'accent' | 'done' | 'blocked' | 'failed';
 
@@ -110,9 +109,9 @@ export function statusLine(t: Viewed): StatusLine | null {
 /** A task's attention chips, links and facts. */
 export function taskBadges(t: Viewed, opts: BadgeOptions = {}): Badges {
   const attention: AttentionChip[] = [];
-  const needs = t.status === 'blocked' ? readNeeds(t.needs) : null;
+  const needs = t.status === 'blocked' ? needsOf(t.needs) : null;
   if (needs) attention.push({ label: `needs ${needs.kind}`, title: `The worker asked for: ${needs.items.join(' ')}`, tone: 'blocked' });
-  if (t.status === 'blocked' && readQuestion(t.question))
+  if (t.status === 'blocked' && questionOf(t.question))
     attention.push({ label: 'asks you', title: 'An unblock run left a question for you on the task page', tone: 'blocked' });
   const am = t.auto_merge_view;
   if (t.conflicting && t.pr_state === 'open')

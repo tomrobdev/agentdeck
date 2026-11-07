@@ -71,7 +71,7 @@ let n = 0;
 function tested() {
   const url = `https://x/pull/${++n}`;
   const t = doneTask(db, repo, { pr: 'open', url, branch: `agentdeck/view-${n}` });
-  db.finishRun(db.startRun(t.id, 1, join(home, `run-${t.id}.log`)), { tests_passed: 1 });
+  db.finishRun(db.startRun(t.id, 1, join(home, `run-${t.id}.log`)), { tests_passed: true });
   return { id: t.id, url };
 }
 
@@ -167,9 +167,9 @@ test('autoMergeView: a stored check counts only while the PR is open, and an unr
 });
 
 test('autoMergeView: where on or off comes from, and what the limits say about the tests', () => {
-  assert.equal(autoMergeView(taskRow({ auto_merge: 1 }), { ...repoRow, auto_merge: false }).source, 'task');
-  assert.equal(autoMergeView(taskRow({ auto_merge: 0 }), repoRow).state, 'off');
-  assert.equal(autoMergeView(taskRow({ auto_merge: 0 }), repoRow).source, 'task');
+  assert.equal(autoMergeView(taskRow({ auto_merge: true }), { ...repoRow, auto_merge: false }).source, 'task');
+  assert.equal(autoMergeView(taskRow({ auto_merge: false }), repoRow).state, 'off');
+  assert.equal(autoMergeView(taskRow({ auto_merge: false }), repoRow).source, 'task');
   assert.equal(autoMergeView(taskRow(), repoRow).source, 'repo');
   assert.equal(autoMergeView(taskRow({ source: 'planner' }), repoRow).source, 'repo', 'a person approved it');
 
@@ -177,7 +177,7 @@ test('autoMergeView: where on or off comes from, and what the limits say about t
   assert.deepEqual([planner.state, planner.source], ['off', 'planner']);
   assert.equal(autoMergeView(taskRow({ source: 'planner' }), { ...repoRow, auto_approve: true, auto_merge: false }).source, 'repo');
   assert.equal(
-    autoMergeView(taskRow({ source: 'planner', auto_merge: 1 }), { ...repoRow, auto_approve: true }).state,
+    autoMergeView(taskRow({ source: 'planner', auto_merge: true }), { ...repoRow, auto_approve: true }).state,
     'on',
     'its own setting wins',
   );

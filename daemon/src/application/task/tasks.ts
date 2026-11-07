@@ -5,7 +5,7 @@ import type { TaskStatus } from '../../domain/task/lifecycle.ts';
 import { hasOpenPr } from '../../domain/task/stage.ts';
 import { errorMessage } from '../../domain/text.ts';
 import { archivedRepoError, maxAttemptsError, maxTurnsError, modelError, priorityError } from '../../domain/task/rules.ts';
-import { EDITABLE_STATUSES, RUNNING_STATUSES, type Task, defaultTitle, planStepIds } from '../../domain/task/task.ts';
+import { EDITABLE_STATUSES, RUNNING_STATUSES, type Task, defaultTitle } from '../../domain/task/task.ts';
 import { refuseWhileSyncing } from '../sync.ts';
 import { warnStuckDependents } from './dependencies.ts';
 import { newLinks } from './links.ts';
@@ -70,7 +70,7 @@ export async function addTask(
     links,
     plan_task,
     own_plan,
-    plan_steps: linked && steps ? JSON.stringify(steps) : null,
+    plan_steps: linked && steps ? steps : null,
     status: propose ? 'proposed' : 'queued',
   });
 }
@@ -118,7 +118,7 @@ export async function editTask(
   const planAsked = planRequest(body);
   let ownPlan: string | undefined;
   if (planAsked !== undefined || patch.plan_steps !== undefined) {
-    const steps = patch.plan_steps !== undefined ? stepList(patch.plan_steps) : planAsked === undefined ? planStepIds(task) : null;
+    const steps = patch.plan_steps !== undefined ? stepList(patch.plan_steps) : planAsked === undefined ? task.plan_steps : null;
     const asked = planAsked ?? { task: task.plan_task };
     // A null link means "follow its own plan", so clearing it would keep the plan and widen its steps to all of them.
     if (planAsked !== undefined && 'task' in asked && asked.task === null && (task.plan_task ?? id) === id && db.ownPlan(id)) {
@@ -135,7 +135,7 @@ export async function editTask(
       ownPlan = checked.ownPlan;
     } else link = checked.owner;
     fields.plan_task = link;
-    fields.plan_steps = link !== null && steps ? JSON.stringify(steps) : null;
+    fields.plan_steps = link !== null && steps ? steps : null;
   }
 
   if (!Object.keys(fields).length) throw new ActionError('nothing to change');

@@ -52,16 +52,11 @@ export function checkFolderCycles(
  * the field its real type, parsing it in `db/mappers.ts`. Never add one. Phase 2 of the plan empties it.
  */
 export const ROW_SHAPED_FIELDS = [
-  'Run.tests_passed',
-  'Task.auto_merge',
   'Task.auto_merge_check',
   'Task.merge_request_check',
-  'Task.needs',
-  'Task.plan_steps',
   'Task.pr_checks',
   'Task.pr_checks_merged',
   'Task.pr_checks_opened',
-  'Task.question',
 ];
 
 /** The row-shaped fields `sources` have that are not allowed, and the allowed entries that are no longer row-shaped. */

@@ -48,7 +48,7 @@ test('linked steps by id or all, and which are unfinished', () => {
 });
 
 test('the PR body lists criteria as checkboxes, and has no Plan section without a plan', () => {
-  const runs = [{ attempt: 1, outcome: 'done', num_turns: 2, cost_usd: 0.1, tests_passed: 1, result_text: 'Did it.\nSTATUS: DONE' }];
+  const runs = [{ attempt: 1, outcome: 'done', num_turns: 2, cost_usd: 0.1, tests_passed: true, result_text: 'Did it.\nSTATUS: DONE' }];
   const steps = linkedSteps(plan('done', 'todo'), null)!;
   const body = buildPrBody({ id: 7 }, runs, { name: '7-cache-plan.html', steps });
   assert.match(body, /## Plan: `7-cache-plan\.html`/);
@@ -60,7 +60,7 @@ test('the PR body lists criteria as checkboxes, and has no Plan section without 
 
 test('the PR body starts with the summary and keeps the plan and runs inside one details block', () => {
   const runs = [
-    { attempt: 1, outcome: 'done', num_turns: 2, cost_usd: 0.1, tests_passed: 1, result_text: '## Overview\n- Did it.\nSTATUS: DONE' },
+    { attempt: 1, outcome: 'done', num_turns: 2, cost_usd: 0.1, tests_passed: true, result_text: '## Overview\n- Did it.\nSTATUS: DONE' },
   ];
   const steps = linkedSteps(plan('done', 'todo'), null)!;
   const body = buildPrBody({ id: 7 }, runs, { name: '7-cache-plan.html', steps });
@@ -113,7 +113,7 @@ test('a done run with an unfinished linked step records the event and stays done
     title: 'unfinished',
     prompt: 'FAKE_DONE y',
     own_plan: plan('todo', 'todo'),
-    plan_steps: JSON.stringify(['a']),
+    plan_steps: ['a'],
   });
   await drain();
   assert.equal(db.getTask(t.id)!.status, 'done');

@@ -20,7 +20,7 @@ export const DEFAULT_AUTO_MERGE_SKIP = ['.github/'];
  * setting when a person approved it (the repo has auto_approve off), so no work reaches the base unseen.
  */
 export function autoMergeOn(task: Pick<Task, 'auto_merge' | 'source'>, repo: Pick<Repo, 'auto_merge' | 'auto_approve'>): boolean {
-  if (task.auto_merge !== null) return task.auto_merge === 1;
+  if (task.auto_merge !== null) return task.auto_merge;
   return repo.auto_merge && (task.source !== 'planner' || !repo.auto_approve);
 }
 

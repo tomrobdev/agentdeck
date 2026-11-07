@@ -114,7 +114,7 @@ async function resolveConflicts(
       if (!reason && runTests && repo.test_cmd) {
         const tests = await runCommand(repo.test_cmd, worktree, TEST_TIMEOUT_MS);
         writeEvent(log, { type: 'agentdeck_tests', passed: tests.passed, output: tests.output });
-        fields.tests_passed = tests.passed ? 1 : 0;
+        fields.tests_passed = tests.passed;
         if (!tests.passed) reason = `tests failed: ${lastLine(tests.output)}`;
       }
       outcome = reason ? 'failed' : 'done';

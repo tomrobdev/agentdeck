@@ -10,12 +10,13 @@ import {
   transition,
 } from '../src/domain/task/lifecycle.ts';
 import type { TaskEventType } from '../src/domain/task/history.ts';
+import type { Needs } from '../src/domain/task/needs.ts';
 
 interface Case {
   name: string;
   from: TaskStatus;
   event: TaskEvent;
-  opts?: { reason?: string | null; needs?: string | null };
+  opts?: { reason?: string | null; needs?: Needs | null };
   task?: { attempts?: number; restarts?: number };
   to: TaskStatus;
   changes: TaskChanges;
@@ -44,9 +45,9 @@ const CASES: Case[] = [
     name: 'finish:blocked sets the stop reason and needs',
     from: 'running',
     event: { type: 'finish', outcome: 'blocked' },
-    opts: { reason: 'no network', needs: 'host: x' },
+    opts: { reason: 'no network', needs: { kind: 'host', items: ['x'] } },
     to: 'blocked',
-    changes: { needs: 'host: x', question: null, stop_reason: 'no network' },
+    changes: { needs: { kind: 'host', items: ['x'] }, question: null, stop_reason: 'no network' },
     history: 'finish',
   },
   {
@@ -211,7 +212,7 @@ const CASES: Case[] = [
     name: `${name} from cancel_requested: the cancel wins`,
     from: 'cancel_requested',
     event,
-    opts: { reason: 'r', needs: 'n' },
+    opts: { reason: 'r', needs: { kind: 'host', items: ['n'] } },
     task: { attempts: 2, restarts: 1 },
     to: 'cancelled',
     changes: {},

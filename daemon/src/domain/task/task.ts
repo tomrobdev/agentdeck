@@ -1,7 +1,9 @@
 // The task entity. Pure: no I/O.
 import type { MergeMethod } from '../pull-request/merge.ts';
 import type { PrState } from '../pull-request/pr.ts';
+import type { UnblockQuestion } from '../run/unblock.ts';
 import type { TaskStatus } from './lifecycle.ts';
+import type { Needs } from './needs.ts';
 
 /** Who made a task: a person, or the planner proposing it. */
 export type TaskSource = 'manual' | 'planner';
@@ -25,11 +27,11 @@ export interface Task {
   pr_url: string | null; // the pull request the daemon opened when the task finished
   pr_state: PrState | null;
   merge_method: MergeMethod | null; // how the PR was merged from the app
-  needs: string | null; // JSON Needs (domain/task/needs.ts) the worker said it needs when it blocked; cleared when queued again
-  question: string | null; // JSON UnblockQuestion (domain/run/unblock.ts) an unblock run left on the blocked task; cleared with `needs`
-  plan_steps: string | null; // JSON array of the linked plan's step ids; null means every unfinished step (see planStepIds)
+  needs: Needs | null; // what the worker said it needs when it blocked; cleared when queued again
+  question: UnblockQuestion | null; // what an unblock run left on the blocked task; cleared with `needs`
+  plan_steps: string[] | null; // the linked plan's step ids; null means every unfinished step
   done_by: 'person' | null; // 'person' when mark_done set the status; cleared whenever the task leaves done
-  auto_merge: number | null; // 1 or 0 overrides the repo's auto_merge; null = the repo's (domain/pull-request/auto-merge.ts)
+  auto_merge: boolean | null; // overrides the repo's auto_merge; null = the repo's (domain/pull-request/auto-merge.ts)
   auto_merge_check: string | null; // JSON { verdict, reasons }: the PR refresh's latest auto-merge check while the PR is open
   auto_merge_checked_at: string | null; // when that check was made
   pr_checks_opened: string | null; // JSON CheckCounts: the PR's checks the first time they settled after it opened
@@ -45,17 +47,6 @@ export interface Task {
 }
 
 export type TaskSummary = Omit<Task, 'prompt'>;
-
-/** The step ids in a task's `plan_steps`, or null when it names none (every unfinished step). */
-export function planStepIds(task: Pick<Task, 'plan_steps'>): string[] | null {
-  if (task.plan_steps === null) return null;
-  try {
-    const ids: unknown = JSON.parse(task.plan_steps);
-    return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string') : null;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * The sections every task prompt has, in order, each a markdown `##` heading. The delegate skill (.claude/skills/delegate)

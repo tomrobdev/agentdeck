@@ -428,7 +428,7 @@ One fact about a PR that bears on merging it. A problem stops any merge; anythin
 | --------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
 | `pr_state`      | `PrState \| null`                                |                                                                                                                      |
 | `pr`            | `PrDetails`                                      |                                                                                                                      |
-| `tests_passed`  | `number \| null`                                 | The last run that ran the tests: 1 passed, 0 failed, null none did.                                                  |
+| `tests_passed`  | `boolean \| null`                                | Whether the last run that ran the tests passed them; null when none did.                                             |
 | `lands_after?`  | `{ on: number; reason: string; }[] \| undefined` | The tasks this one lands after that have not landed (`unlandedAfter`), each with why. Missing means none.            |
 | `auto_resolve?` | `boolean \| undefined`                           | False when the repo has auto_resolve off: no sync starts on its own, so a conflict needs a person. Missing means on. |
 
@@ -502,7 +502,7 @@ The plan a task carries out: its name (`112-plans-in-agentdeck.html`) and the li
 | `outcome`      | `string \| null`      |                                                                                                  |
 | `num_turns`    | `number \| null`      |                                                                                                  |
 | `cost_usd`     | `number`              |                                                                                                  |
-| `tests_passed` | `number \| null`      |                                                                                                  |
+| `tests_passed` | `boolean \| null`     |                                                                                                  |
 | `result_text`  | `string \| null`      |                                                                                                  |
 
 ### StoredChecks
@@ -792,7 +792,7 @@ The parts of claude's final `result` event that a run records.
 | `cache_read_tokens`  | `number`             |                                                                                                  |
 | `cache_write_tokens` | `number`             |                                                                                                  |
 | `cost_usd`           | `number`             |                                                                                                  |
-| `tests_passed`       | `number \| null`     | 1, 0, or null when no test command                                                               |
+| `tests_passed`       | `boolean \| null`    | null when no test command                                                                        |
 | `result_text`        | `string \| null`     |                                                                                                  |
 | `log_path`           | `string`             |                                                                                                  |
 | `pid`                | `number \| null`     | claude's process group while the run is live                                                     |
@@ -931,7 +931,7 @@ A sync of a done task under way, as the queue shows it.
 
 ### UnblockQuestion
 
-What an unblock run left on a task it did not retry (the task's `question` column, as JSON).
+What an unblock run left on a task it did not retry (the task's `question`).
 
 | Field      | Type       | Comment |
 | ---------- | ---------- | ------- |
@@ -1098,44 +1098,44 @@ A dependency, and the links it has itself (stuck spreads down its builds-on link
 
 A task as listed: with where it stands on its builds-on links (as waitingFor reports it), the tasks merging its open PR lets start and, from the API, its repo's name. A daemon from before `unblocks` existed sends none, which reads as empty.
 
-| Field                   | Type                  | Comment                                                                                                                  |
-| ----------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `branch`                | `string \| null`      |                                                                                                                          |
-| `auto_merge`            | `number \| null`      | 1 or 0 overrides the repo's auto_merge; null = the repo's (domain/pull-request/auto-merge.ts)                            |
-| `id`                    | `number`              |                                                                                                                          |
-| `repo_id`               | `number`              |                                                                                                                          |
-| `created_at`            | `string`              |                                                                                                                          |
-| `pr_checks_opened`      | `string \| null`      | JSON CheckCounts: the PR's checks the first time they settled after it opened                                            |
-| `status`                | `TaskStatus`          |                                                                                                                          |
-| `attempts`              | `number`              |                                                                                                                          |
-| `restarts`              | `number`              | times a daemon restart requeued this task mid-run                                                                        |
-| `pr_url`                | `string \| null`      | the pull request the daemon opened when the task finished                                                                |
-| `pr_state`              | `PrState \| null`     |                                                                                                                          |
-| `done_by`               | `"person" \| null`    | 'person' when mark_done set the status; cleared whenever the task leaves done                                            |
-| `title`                 | `string`              |                                                                                                                          |
-| `priority`              | `number`              |                                                                                                                          |
-| `model`                 | `string`              |                                                                                                                          |
-| `max_turns`             | `number`              |                                                                                                                          |
-| `max_attempts`          | `number`              |                                                                                                                          |
-| `worktree`              | `string \| null`      |                                                                                                                          |
-| `stop_reason`           | `string \| null`      |                                                                                                                          |
-| `source`                | `TaskSource`          |                                                                                                                          |
-| `merge_method`          | `MergeMethod \| null` | how the PR was merged from the app                                                                                       |
-| `needs`                 | `string \| null`      | JSON Needs (domain/task/needs.ts) the worker said it needs when it blocked; cleared when queued again                    |
-| `question`              | `string \| null`      | JSON UnblockQuestion (domain/run/unblock.ts) an unblock run left on the blocked task; cleared with `needs`               |
-| `plan_steps`            | `string \| null`      | JSON array of the linked plan's step ids; null means every unfinished step (see planStepIds)                             |
-| `auto_merge_check`      | `string \| null`      | JSON { verdict, reasons }: the PR refresh's latest auto-merge check while the PR is open                                 |
-| `auto_merge_checked_at` | `string \| null`      | when that check was made                                                                                                 |
-| `pr_checks_merged`      | `string \| null`      | JSON CheckCounts: the PR's checks when it was merged                                                                     |
-| `merge_requested_at`    | `string \| null`      | when a person asked the daemon to merge the PR once it is ready; null when there is no request                           |
-| `merge_request_method`  | `MergeMethod \| null` | the method that request asked for                                                                                        |
-| `merge_request_check`   | `string \| null`      | JSON { verdict, reasons }: the PR refresh's latest merge request check                                                   |
-| `syncing_since`         | `string \| null`      | when a sync of the branch began; NULL when none is running                                                               |
-| `pr_checks`             | `string \| null`      | JSON StoredChecks (domain/pull-request/checks.ts): the open PR's latest checks, one by one, and when they were read      |
-| `plan_task`             | `number \| null`      | the task whose plan this one follows (itself when its own plan was given with --plan); null follows its own plan, if any |
-| `updated_at`            | `string`              |                                                                                                                          |
-| `waiting`               | `Waiting \| null`     |                                                                                                                          |
-| `unblocks`              | `number[]`            |                                                                                                                          |
+| Field                   | Type                      | Comment                                                                                                                  |
+| ----------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `branch`                | `string \| null`          |                                                                                                                          |
+| `auto_merge`            | `boolean \| null`         | overrides the repo's auto_merge; null = the repo's (domain/pull-request/auto-merge.ts)                                   |
+| `id`                    | `number`                  |                                                                                                                          |
+| `repo_id`               | `number`                  |                                                                                                                          |
+| `created_at`            | `string`                  |                                                                                                                          |
+| `pr_checks_opened`      | `string \| null`          | JSON CheckCounts: the PR's checks the first time they settled after it opened                                            |
+| `status`                | `TaskStatus`              |                                                                                                                          |
+| `attempts`              | `number`                  |                                                                                                                          |
+| `restarts`              | `number`                  | times a daemon restart requeued this task mid-run                                                                        |
+| `pr_url`                | `string \| null`          | the pull request the daemon opened when the task finished                                                                |
+| `pr_state`              | `PrState \| null`         |                                                                                                                          |
+| `done_by`               | `"person" \| null`        | 'person' when mark_done set the status; cleared whenever the task leaves done                                            |
+| `title`                 | `string`                  |                                                                                                                          |
+| `priority`              | `number`                  |                                                                                                                          |
+| `model`                 | `string`                  |                                                                                                                          |
+| `max_turns`             | `number`                  |                                                                                                                          |
+| `max_attempts`          | `number`                  |                                                                                                                          |
+| `worktree`              | `string \| null`          |                                                                                                                          |
+| `stop_reason`           | `string \| null`          |                                                                                                                          |
+| `source`                | `TaskSource`              |                                                                                                                          |
+| `merge_method`          | `MergeMethod \| null`     | how the PR was merged from the app                                                                                       |
+| `needs`                 | `Needs \| null`           | what the worker said it needs when it blocked; cleared when queued again                                                 |
+| `question`              | `UnblockQuestion \| null` | what an unblock run left on the blocked task; cleared with `needs`                                                       |
+| `plan_steps`            | `string[] \| null`        | the linked plan's step ids; null means every unfinished step                                                             |
+| `auto_merge_check`      | `string \| null`          | JSON { verdict, reasons }: the PR refresh's latest auto-merge check while the PR is open                                 |
+| `auto_merge_checked_at` | `string \| null`          | when that check was made                                                                                                 |
+| `pr_checks_merged`      | `string \| null`          | JSON CheckCounts: the PR's checks when it was merged                                                                     |
+| `merge_requested_at`    | `string \| null`          | when a person asked the daemon to merge the PR once it is ready; null when there is no request                           |
+| `merge_request_method`  | `MergeMethod \| null`     | the method that request asked for                                                                                        |
+| `merge_request_check`   | `string \| null`          | JSON { verdict, reasons }: the PR refresh's latest merge request check                                                   |
+| `syncing_since`         | `string \| null`          | when a sync of the branch began; NULL when none is running                                                               |
+| `pr_checks`             | `string \| null`          | JSON StoredChecks (domain/pull-request/checks.ts): the open PR's latest checks, one by one, and when they were read      |
+| `plan_task`             | `number \| null`          | the task whose plan this one follows (itself when its own plan was given with --plan); null follows its own plan, if any |
+| `updated_at`            | `string`                  |                                                                                                                          |
+| `waiting`               | `Waiting \| null`         |                                                                                                                          |
+| `unblocks`              | `number[]`                |                                                                                                                          |
 
 ### Needs
 
@@ -1165,57 +1165,57 @@ What the timeline shows for a row: the sentence, and the reason to show muted be
 
 ### Task
 
-| Field                   | Type                  | Comment                                                                                                                  |
-| ----------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `id`                    | `number`              |                                                                                                                          |
-| `repo_id`               | `number`              |                                                                                                                          |
-| `title`                 | `string`              |                                                                                                                          |
-| `prompt`                | `string`              |                                                                                                                          |
-| `status`                | `TaskStatus`          |                                                                                                                          |
-| `priority`              | `number`              |                                                                                                                          |
-| `model`                 | `string`              |                                                                                                                          |
-| `max_turns`             | `number`              |                                                                                                                          |
-| `attempts`              | `number`              |                                                                                                                          |
-| `max_attempts`          | `number`              |                                                                                                                          |
-| `branch`                | `string \| null`      |                                                                                                                          |
-| `worktree`              | `string \| null`      |                                                                                                                          |
-| `stop_reason`           | `string \| null`      |                                                                                                                          |
-| `source`                | `TaskSource`          |                                                                                                                          |
-| `restarts`              | `number`              | times a daemon restart requeued this task mid-run                                                                        |
-| `pr_url`                | `string \| null`      | the pull request the daemon opened when the task finished                                                                |
-| `pr_state`              | `PrState \| null`     |                                                                                                                          |
-| `merge_method`          | `MergeMethod \| null` | how the PR was merged from the app                                                                                       |
-| `needs`                 | `string \| null`      | JSON Needs (domain/task/needs.ts) the worker said it needs when it blocked; cleared when queued again                    |
-| `question`              | `string \| null`      | JSON UnblockQuestion (domain/run/unblock.ts) an unblock run left on the blocked task; cleared with `needs`               |
-| `plan_steps`            | `string \| null`      | JSON array of the linked plan's step ids; null means every unfinished step (see planStepIds)                             |
-| `done_by`               | `"person" \| null`    | 'person' when mark_done set the status; cleared whenever the task leaves done                                            |
-| `auto_merge`            | `number \| null`      | 1 or 0 overrides the repo's auto_merge; null = the repo's (domain/pull-request/auto-merge.ts)                            |
-| `auto_merge_check`      | `string \| null`      | JSON { verdict, reasons }: the PR refresh's latest auto-merge check while the PR is open                                 |
-| `auto_merge_checked_at` | `string \| null`      | when that check was made                                                                                                 |
-| `pr_checks_opened`      | `string \| null`      | JSON CheckCounts: the PR's checks the first time they settled after it opened                                            |
-| `pr_checks_merged`      | `string \| null`      | JSON CheckCounts: the PR's checks when it was merged                                                                     |
-| `merge_requested_at`    | `string \| null`      | when a person asked the daemon to merge the PR once it is ready; null when there is no request                           |
-| `merge_request_method`  | `MergeMethod \| null` | the method that request asked for                                                                                        |
-| `merge_request_check`   | `string \| null`      | JSON { verdict, reasons }: the PR refresh's latest merge request check                                                   |
-| `syncing_since`         | `string \| null`      | when a sync of the branch began; NULL when none is running                                                               |
-| `pr_checks`             | `string \| null`      | JSON StoredChecks (domain/pull-request/checks.ts): the open PR's latest checks, one by one, and when they were read      |
-| `plan_task`             | `number \| null`      | the task whose plan this one follows (itself when its own plan was given with --plan); null follows its own plan, if any |
-| `created_at`            | `string`              |                                                                                                                          |
-| `updated_at`            | `string`              |                                                                                                                          |
+| Field                   | Type                      | Comment                                                                                                                  |
+| ----------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `id`                    | `number`                  |                                                                                                                          |
+| `repo_id`               | `number`                  |                                                                                                                          |
+| `title`                 | `string`                  |                                                                                                                          |
+| `prompt`                | `string`                  |                                                                                                                          |
+| `status`                | `TaskStatus`              |                                                                                                                          |
+| `priority`              | `number`                  |                                                                                                                          |
+| `model`                 | `string`                  |                                                                                                                          |
+| `max_turns`             | `number`                  |                                                                                                                          |
+| `attempts`              | `number`                  |                                                                                                                          |
+| `max_attempts`          | `number`                  |                                                                                                                          |
+| `branch`                | `string \| null`          |                                                                                                                          |
+| `worktree`              | `string \| null`          |                                                                                                                          |
+| `stop_reason`           | `string \| null`          |                                                                                                                          |
+| `source`                | `TaskSource`              |                                                                                                                          |
+| `restarts`              | `number`                  | times a daemon restart requeued this task mid-run                                                                        |
+| `pr_url`                | `string \| null`          | the pull request the daemon opened when the task finished                                                                |
+| `pr_state`              | `PrState \| null`         |                                                                                                                          |
+| `merge_method`          | `MergeMethod \| null`     | how the PR was merged from the app                                                                                       |
+| `needs`                 | `Needs \| null`           | what the worker said it needs when it blocked; cleared when queued again                                                 |
+| `question`              | `UnblockQuestion \| null` | what an unblock run left on the blocked task; cleared with `needs`                                                       |
+| `plan_steps`            | `string[] \| null`        | the linked plan's step ids; null means every unfinished step                                                             |
+| `done_by`               | `"person" \| null`        | 'person' when mark_done set the status; cleared whenever the task leaves done                                            |
+| `auto_merge`            | `boolean \| null`         | overrides the repo's auto_merge; null = the repo's (domain/pull-request/auto-merge.ts)                                   |
+| `auto_merge_check`      | `string \| null`          | JSON { verdict, reasons }: the PR refresh's latest auto-merge check while the PR is open                                 |
+| `auto_merge_checked_at` | `string \| null`          | when that check was made                                                                                                 |
+| `pr_checks_opened`      | `string \| null`          | JSON CheckCounts: the PR's checks the first time they settled after it opened                                            |
+| `pr_checks_merged`      | `string \| null`          | JSON CheckCounts: the PR's checks when it was merged                                                                     |
+| `merge_requested_at`    | `string \| null`          | when a person asked the daemon to merge the PR once it is ready; null when there is no request                           |
+| `merge_request_method`  | `MergeMethod \| null`     | the method that request asked for                                                                                        |
+| `merge_request_check`   | `string \| null`          | JSON { verdict, reasons }: the PR refresh's latest merge request check                                                   |
+| `syncing_since`         | `string \| null`          | when a sync of the branch began; NULL when none is running                                                               |
+| `pr_checks`             | `string \| null`          | JSON StoredChecks (domain/pull-request/checks.ts): the open PR's latest checks, one by one, and when they were read      |
+| `plan_task`             | `number \| null`          | the task whose plan this one follows (itself when its own plan was given with --plan); null follows its own plan, if any |
+| `created_at`            | `string`                  |                                                                                                                          |
+| `updated_at`            | `string`                  |                                                                                                                          |
 
 ### TaskChanges
 
 The fields an event sets, with their new values. A field not listed is left as it is.
 
-| Field           | Type                            | Comment                                                                                     |
-| --------------- | ------------------------------- | ------------------------------------------------------------------------------------------- |
-| `attempts?`     | `number \| undefined`           |                                                                                             |
-| `max_attempts?` | `number \| undefined`           |                                                                                             |
-| `restarts?`     | `number \| undefined`           |                                                                                             |
-| `stop_reason?`  | `string \| null \| undefined`   |                                                                                             |
-| `needs?`        | `string \| null \| undefined`   |                                                                                             |
-| `question?`     | `string \| null \| undefined`   | Goes with `needs`: what a block left for a person, cleared or replaced whenever `needs` is. |
-| `done_by?`      | `"person" \| null \| undefined` |                                                                                             |
+| Field           | Type                                   | Comment                                                                                     |
+| --------------- | -------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `attempts?`     | `number \| undefined`                  |                                                                                             |
+| `max_attempts?` | `number \| undefined`                  |                                                                                             |
+| `restarts?`     | `number \| undefined`                  |                                                                                             |
+| `stop_reason?`  | `string \| null \| undefined`          |                                                                                             |
+| `needs?`        | `Needs \| null \| undefined`           |                                                                                             |
+| `question?`     | `UnblockQuestion \| null \| undefined` | Goes with `needs`: what a block left for a person, cleared or replaced whenever `needs` is. |
+| `done_by?`      | `"person" \| null \| undefined`        |                                                                                             |
 
 ### TaskEventRow
 
@@ -1231,42 +1231,42 @@ The fields an event sets, with their new values. A field not listed is left as i
 
 ### TaskSummary
 
-| Field                   | Type                  | Comment                                                                                                                  |
-| ----------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `branch`                | `string \| null`      |                                                                                                                          |
-| `auto_merge`            | `number \| null`      | 1 or 0 overrides the repo's auto_merge; null = the repo's (domain/pull-request/auto-merge.ts)                            |
-| `id`                    | `number`              |                                                                                                                          |
-| `repo_id`               | `number`              |                                                                                                                          |
-| `created_at`            | `string`              |                                                                                                                          |
-| `pr_checks_opened`      | `string \| null`      | JSON CheckCounts: the PR's checks the first time they settled after it opened                                            |
-| `status`                | `TaskStatus`          |                                                                                                                          |
-| `attempts`              | `number`              |                                                                                                                          |
-| `restarts`              | `number`              | times a daemon restart requeued this task mid-run                                                                        |
-| `pr_url`                | `string \| null`      | the pull request the daemon opened when the task finished                                                                |
-| `pr_state`              | `PrState \| null`     |                                                                                                                          |
-| `done_by`               | `"person" \| null`    | 'person' when mark_done set the status; cleared whenever the task leaves done                                            |
-| `title`                 | `string`              |                                                                                                                          |
-| `priority`              | `number`              |                                                                                                                          |
-| `model`                 | `string`              |                                                                                                                          |
-| `max_turns`             | `number`              |                                                                                                                          |
-| `max_attempts`          | `number`              |                                                                                                                          |
-| `worktree`              | `string \| null`      |                                                                                                                          |
-| `stop_reason`           | `string \| null`      |                                                                                                                          |
-| `source`                | `TaskSource`          |                                                                                                                          |
-| `merge_method`          | `MergeMethod \| null` | how the PR was merged from the app                                                                                       |
-| `needs`                 | `string \| null`      | JSON Needs (domain/task/needs.ts) the worker said it needs when it blocked; cleared when queued again                    |
-| `question`              | `string \| null`      | JSON UnblockQuestion (domain/run/unblock.ts) an unblock run left on the blocked task; cleared with `needs`               |
-| `plan_steps`            | `string \| null`      | JSON array of the linked plan's step ids; null means every unfinished step (see planStepIds)                             |
-| `auto_merge_check`      | `string \| null`      | JSON { verdict, reasons }: the PR refresh's latest auto-merge check while the PR is open                                 |
-| `auto_merge_checked_at` | `string \| null`      | when that check was made                                                                                                 |
-| `pr_checks_merged`      | `string \| null`      | JSON CheckCounts: the PR's checks when it was merged                                                                     |
-| `merge_requested_at`    | `string \| null`      | when a person asked the daemon to merge the PR once it is ready; null when there is no request                           |
-| `merge_request_method`  | `MergeMethod \| null` | the method that request asked for                                                                                        |
-| `merge_request_check`   | `string \| null`      | JSON { verdict, reasons }: the PR refresh's latest merge request check                                                   |
-| `syncing_since`         | `string \| null`      | when a sync of the branch began; NULL when none is running                                                               |
-| `pr_checks`             | `string \| null`      | JSON StoredChecks (domain/pull-request/checks.ts): the open PR's latest checks, one by one, and when they were read      |
-| `plan_task`             | `number \| null`      | the task whose plan this one follows (itself when its own plan was given with --plan); null follows its own plan, if any |
-| `updated_at`            | `string`              |                                                                                                                          |
+| Field                   | Type                      | Comment                                                                                                                  |
+| ----------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `branch`                | `string \| null`          |                                                                                                                          |
+| `auto_merge`            | `boolean \| null`         | overrides the repo's auto_merge; null = the repo's (domain/pull-request/auto-merge.ts)                                   |
+| `id`                    | `number`                  |                                                                                                                          |
+| `repo_id`               | `number`                  |                                                                                                                          |
+| `created_at`            | `string`                  |                                                                                                                          |
+| `pr_checks_opened`      | `string \| null`          | JSON CheckCounts: the PR's checks the first time they settled after it opened                                            |
+| `status`                | `TaskStatus`              |                                                                                                                          |
+| `attempts`              | `number`                  |                                                                                                                          |
+| `restarts`              | `number`                  | times a daemon restart requeued this task mid-run                                                                        |
+| `pr_url`                | `string \| null`          | the pull request the daemon opened when the task finished                                                                |
+| `pr_state`              | `PrState \| null`         |                                                                                                                          |
+| `done_by`               | `"person" \| null`        | 'person' when mark_done set the status; cleared whenever the task leaves done                                            |
+| `title`                 | `string`                  |                                                                                                                          |
+| `priority`              | `number`                  |                                                                                                                          |
+| `model`                 | `string`                  |                                                                                                                          |
+| `max_turns`             | `number`                  |                                                                                                                          |
+| `max_attempts`          | `number`                  |                                                                                                                          |
+| `worktree`              | `string \| null`          |                                                                                                                          |
+| `stop_reason`           | `string \| null`          |                                                                                                                          |
+| `source`                | `TaskSource`              |                                                                                                                          |
+| `merge_method`          | `MergeMethod \| null`     | how the PR was merged from the app                                                                                       |
+| `needs`                 | `Needs \| null`           | what the worker said it needs when it blocked; cleared when queued again                                                 |
+| `question`              | `UnblockQuestion \| null` | what an unblock run left on the blocked task; cleared with `needs`                                                       |
+| `plan_steps`            | `string[] \| null`        | the linked plan's step ids; null means every unfinished step                                                             |
+| `auto_merge_check`      | `string \| null`          | JSON { verdict, reasons }: the PR refresh's latest auto-merge check while the PR is open                                 |
+| `auto_merge_checked_at` | `string \| null`          | when that check was made                                                                                                 |
+| `pr_checks_merged`      | `string \| null`          | JSON CheckCounts: the PR's checks when it was merged                                                                     |
+| `merge_requested_at`    | `string \| null`          | when a person asked the daemon to merge the PR once it is ready; null when there is no request                           |
+| `merge_request_method`  | `MergeMethod \| null`     | the method that request asked for                                                                                        |
+| `merge_request_check`   | `string \| null`          | JSON { verdict, reasons }: the PR refresh's latest merge request check                                                   |
+| `syncing_since`         | `string \| null`          | when a sync of the branch began; NULL when none is running                                                               |
+| `pr_checks`             | `string \| null`          | JSON StoredChecks (domain/pull-request/checks.ts): the open PR's latest checks, one by one, and when they were read      |
+| `plan_task`             | `number \| null`          | the task whose plan this one follows (itself when its own plan was given with --plan); null follows its own plan, if any |
+| `updated_at`            | `string`                  |                                                                                                                          |
 
 ### Transition
 

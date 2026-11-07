@@ -6,9 +6,6 @@ import { commentLocation } from '../domain/review/review.ts';
 import { pickRun } from '../domain/run/run.ts';
 import { TASK_STATUSES } from '../domain/task/lifecycle.ts';
 import { filterTasks } from '../domain/task/listing.ts';
-import { readNeeds } from '../domain/task/needs.ts';
-import { readQuestion } from '../domain/run/unblock.ts';
-import { planStepIds } from '../domain/task/task.ts';
 import { errorMessage, plural } from '../domain/text.ts';
 import { callDaemon } from './daemon-client.ts';
 import { confirm, die, idsText, taskId, taskIds, fmtAutoMerge, fmtChecks, fmtLink, fmtTask, printLog } from './format.ts';
@@ -158,16 +155,15 @@ export const taskCommands: Record<string, Command> = {
       console.log(`needed by ${t.dependents.map((d) => `#${d.id} (${d.kind === 'builds_on' ? 'builds on it' : 'after it'})`).join(', ')}`);
     if (t.branch) console.log(`branch   ${t.branch}`);
     if (t.worktree) console.log(`worktree ${t.worktree}`);
-    const needs = readNeeds(t.needs);
+    const { needs, question } = t;
     if (needs && t.status === 'blocked') console.log(`needs    ${needs.kind}: ${needs.items.join(' ')}`);
-    const question = readQuestion(t.question);
     if (question && t.status === 'blocked') {
       console.log(`question ${question.question}`);
       for (const o of question.options) console.log(`         - ${o}`);
     }
     const plan = followedPlanName(t);
     if (plan) {
-      const steps = planStepIds(t);
+      const steps = t.plan_steps;
       const whose = t.plan_task !== null && t.plan_task !== t.id ? `#${t.plan_task}'s plan, ` : '';
       console.log(`plan     ${plan} (${whose}${steps ? `steps ${steps.join(', ')}` : 'every unfinished step'})`);
     }
@@ -233,7 +229,7 @@ export const taskCommands: Record<string, Command> = {
   'install-needs': async ({ db, flags, rest }) => {
     const id = taskId(rest[0]);
     // Without a package request there is nothing to confirm: installNeeds says why.
-    const needs = readNeeds(db.getTask(id)?.needs ?? null);
+    const needs = db.getTask(id)?.needs;
     if (needs?.kind === 'deps') {
       console.log(`#${id} asks for: ${needs.items.join(' ')}`);
       if (!flags.yes && !(await confirm('install them on its branch and retry?'))) die('not installed');

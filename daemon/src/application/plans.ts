@@ -14,7 +14,7 @@ import {
 } from '../domain/plan/plan.ts';
 import type { PrPlan } from '../domain/pull-request/pr.ts';
 import type { PromptPlan } from '../domain/run/prompt.ts';
-import { PLAN_ATTACHABLE_STATUSES, type Task, planStepIds } from '../domain/task/task.ts';
+import { PLAN_ATTACHABLE_STATUSES, type Task } from '../domain/task/task.ts';
 import { ActionError, object, requireTask } from './input.ts';
 
 /** HTML a person gives as a plan: refused unless it is a plan and small enough. */
@@ -30,7 +30,7 @@ export function readPlanInput(html: unknown): { html: string; plan: ParsedPlan }
 export function followedPlan(db: Db, task: Pick<Task, 'id' | 'plan_task' | 'plan_steps'>): (OwnPlan & { steps: string[] | null }) | null {
   if (task.plan_task !== null) {
     const plan = db.ownPlan(task.plan_task);
-    return plan ? { ...plan, steps: planStepIds(task) } : null;
+    return plan ? { ...plan, steps: task.plan_steps } : null;
   }
   const own = db.ownPlan(task.id);
   return own ? { ...own, steps: null } : null;
@@ -40,7 +40,7 @@ export function followedPlan(db: Db, task: Pick<Task, 'id' | 'plan_task' | 'plan
 export function planForRun(db: Db, task: Task): PromptPlan | null {
   const plan = followedPlan(db, task);
   if (plan) return { name: plan.name, html: plan.html, steps: plan.steps };
-  return task.plan_task !== null ? { name: `#${task.plan_task}'s plan`, html: null, steps: planStepIds(task) } : null;
+  return task.plan_task !== null ? { name: `#${task.plan_task}'s plan`, html: null, steps: task.plan_steps } : null;
 }
 
 /**
@@ -81,7 +81,7 @@ export function checkFollowers(db: Db, owner: number, plan: ParsedPlan, skip?: n
   const followers = db
     .planFollowers(owner)
     .filter((f) => f.id !== skip)
-    .map((f) => ({ id: f.id, steps: planStepIds(f) }));
+    .map((f) => ({ id: f.id, steps: f.plan_steps }));
   const missing = missingFollowedSteps(plan, followers);
   if (missing.length) {
     const list = missing.map((m) => `#${m.id} (${m.missing.join(', ')})`).join(', ');

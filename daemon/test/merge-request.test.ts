@@ -27,12 +27,12 @@ const ready: PrDetails = {
 
 const check = (
   pr: Partial<PrDetails> = {},
-  o: { pr_state?: 'open' | 'closed' | 'merged' | null; tests?: number | null; after?: boolean } = {},
+  o: { pr_state?: 'open' | 'closed' | 'merged' | null; tests?: boolean | null; after?: boolean } = {},
 ) =>
   mergeRequestCheck({
     pr_state: o.pr_state === undefined ? 'open' : o.pr_state,
     pr: { ...ready, ...pr },
-    tests_passed: o.tests === undefined ? 1 : o.tests,
+    tests_passed: o.tests === undefined ? true : o.tests,
     lands_after: o.after ? [{ on: 7, reason: 'its PR is open' }] : [],
   });
 
@@ -63,7 +63,7 @@ test('required checks running make GitHub say BLOCKED; the checks are the wait, 
 
 test('a failing check, failed tests, branch protection and a closed PR are never', () => {
   assert.deepEqual(check({ checks: { total: 2, failing: 1, pending: 0 } }), { verdict: 'never', reasons: ['1 check failing on GitHub'] });
-  assert.deepEqual(check({}, { tests: 0 }), { verdict: 'never', reasons: ['tests failed on the last run'] });
+  assert.deepEqual(check({}, { tests: false }), { verdict: 'never', reasons: ['tests failed on the last run'] });
   assert.equal(check({ merge_state: 'BLOCKED' }).verdict, 'never');
   assert.deepEqual(check({}, { pr_state: 'closed' }), { verdict: 'never', reasons: ['the PR is closed'] });
 });
@@ -137,10 +137,10 @@ test('a check marks a conflict as data, and conflictsWithBase reads it from the 
 });
 
 test("mergesNow: only failing checks or failed tests merge now, on the person's say-so; the rest goes through a request", () => {
-  const now = (pr: Partial<PrDetails> = {}, o: { tests?: number | null; after?: boolean } = {}) =>
-    mergesNow(check(pr, o), { pr: { ...ready, ...pr }, tests_passed: o.tests === undefined ? 1 : o.tests });
+  const now = (pr: Partial<PrDetails> = {}, o: { tests?: boolean | null; after?: boolean } = {}) =>
+    mergesNow(check(pr, o), { pr: { ...ready, ...pr }, tests_passed: o.tests === undefined ? true : o.tests });
   assert.equal(now({ checks: { total: 2, failing: 1, pending: 0 } }), true, 'a failing check');
-  assert.equal(now({}, { tests: 0 }), true, 'failed tests');
+  assert.equal(now({}, { tests: false }), true, 'failed tests');
   assert.equal(now(), false, 'a clean PR is a request that merges');
   assert.equal(now({ checks: { total: 2, failing: 0, pending: 1 } }), false, 'running checks are a request that waits');
   assert.equal(now({}, { after: true }), false, 'lands after is a request that waits');

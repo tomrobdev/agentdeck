@@ -169,7 +169,7 @@ async function runOpened(db: Db, task: Task, repo: Repo, wt: { branch: string; p
     if (!status.blocked && repo.test_cmd) {
       const tests = await runCommand(repo.test_cmd, wt.path, TEST_TIMEOUT_MS);
       writeEvent(log, { type: 'agentdeck_tests', passed: tests.passed, output: tests.output });
-      runFields.tests_passed = tests.passed ? 1 : 0;
+      runFields.tests_passed = tests.passed;
       testsPassed = tests.passed;
     }
     if (!status.blocked && testsPassed !== false) ahead = await commitsAhead(wt.path, repo.base_branch);
@@ -221,7 +221,7 @@ async function finish(
         db,
         task.id,
         { type: 'finish', outcome: 'blocked', environment: res.environment === true },
-        { ...reason, needs: res.needs ? JSON.stringify(res.needs) : null },
+        { ...reason, needs: res.needs ?? null },
       );
       break;
     case 'rate_limited':

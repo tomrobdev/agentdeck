@@ -3,8 +3,8 @@
 import type { AutoMergeView, Needs, Status, TaskStatus, TaskSummary } from '../api';
 import { type PersonEvent, personEvents } from '../../../daemon/src/domain/task/lifecycle.ts';
 import { DECISION_STATES, FILTER_STATES, SORT_OPTIONS, filterTasks } from '../../../daemon/src/domain/task/listing.ts';
-import { type UnblockQuestion, readQuestion } from '../../../daemon/src/domain/run/unblock.ts';
-import { canInstallWith, depsRequest, readNeeds as readNeedsJson } from '../../../daemon/src/domain/task/needs.ts';
+import type { UnblockQuestion } from '../../../daemon/src/domain/run/unblock.ts';
+import { canInstallWith, depsRequest } from '../../../daemon/src/domain/task/needs.ts';
 import {
   STATUS_GROUPS,
   type StatusGroup,
@@ -19,6 +19,7 @@ import {
 import { EDITABLE_STATUSES, MODELS } from '../../../daemon/src/domain/task/task.ts';
 import { parseTextList } from '../../../daemon/src/domain/text.ts';
 import type { GroupBy } from './queueDisplay.ts';
+import { needsOf, questionOf } from './wire.ts';
 
 // The board's move rule is in boardMove.ts, which the daemon's tests import.
 export { STATUS_GROUPS, type StatusGroup, canStartMerge, hasOpenPr, isMerged, isReview, isStuck, isWaiting, statusGroup };
@@ -119,12 +120,11 @@ export const quickRetry = (t: Pick<TaskSummary, 'status' | 'waiting' | 'pr_state
   personEvents(t).includes('retry') && statusGroup(t) === 'needs-you';
 
 /** What a blocked task's worker said it needs; null for any other task or an unreadable value. */
-export const readNeeds = (t: Pick<TaskSummary, 'status' | 'needs'>): Needs | null =>
-  t.status === 'blocked' ? readNeedsJson(t.needs) : null;
+export const readNeeds = (t: Pick<TaskSummary, 'status' | 'needs'>): Needs | null => (t.status === 'blocked' ? needsOf(t.needs) : null);
 
 /** What an unblock run asked about a blocked task; null for any other task or an unreadable value. */
 export const readTaskQuestion = (t: Pick<TaskSummary, 'status' | 'question'>): UnblockQuestion | null =>
-  t.status === 'blocked' ? readQuestion(t.question) : null;
+  t.status === 'blocked' ? questionOf(t.question) : null;
 
 /** The retry note for an option a person picked from an unblock run's question. */
 export const answerNote = (q: UnblockQuestion, option: string): string => `${q.question} ${option}`;

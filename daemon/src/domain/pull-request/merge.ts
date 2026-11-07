@@ -79,8 +79,8 @@ export interface MergeCheck {
 export interface MergeInput {
   pr_state: PrState | null;
   pr: PrDetails;
-  /** The last run that ran the tests: 1 passed, 0 failed, null none did. */
-  tests_passed: number | null;
+  /** Whether the last run that ran the tests passed them; null when none did. */
+  tests_passed: boolean | null;
   /** The tasks this one lands after that have not landed (`unlandedAfter`), each with why. Missing means none. */
   lands_after?: { on: number; reason: string }[];
   /** False when the repo has auto_resolve off: no sync starts on its own, so a conflict needs a person. Missing means on. */
@@ -108,7 +108,7 @@ export function mergeFindings({ pr_state, pr, tests_passed, lands_after = [], au
   if (pr.merge_state === 'BEHIND') add('behind', 'the base branch has moved on since the branch was cut');
   if (pr.merge_state === 'BLOCKED' && !pr.draft)
     add('blocked', 'GitHub says branch protection may block this merge (required reviews or checks)');
-  if (tests_passed === 0) add('tests_failed', 'tests failed on the last run');
+  if (tests_passed === false) add('tests_failed', 'tests failed on the last run');
   if (pr.checks.failing) add('checks_failing', `${plural(pr.checks.failing, 'check')} failing on GitHub`);
   if (pr.checks.pending) add('checks_pending', `${plural(pr.checks.pending, 'check')} still running on GitHub`);
   return found;

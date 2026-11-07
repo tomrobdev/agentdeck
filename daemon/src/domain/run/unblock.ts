@@ -3,7 +3,6 @@
 import { isConflictReason } from '../branch/sync.ts';
 import { parsePlanWithText } from '../plan/plan.ts';
 import type { Repo } from '../repo/repo.ts';
-import { readNeeds } from '../task/needs.ts';
 import type { Task } from '../task/task.ts';
 import { lastLine } from '../text.ts';
 import type { PromptPlan } from './prompt.ts';
@@ -18,7 +17,7 @@ export const UNBLOCK_MAX_TURNS = 30;
 /** The most options a question carries. */
 export const MAX_OPTIONS = 4;
 
-/** What an unblock run left on a task it did not retry (the task's `question` column, as JSON). */
+/** What an unblock run left on a task it did not retry (the task's `question`). */
 export interface UnblockQuestion {
   question: string;
   options: string[];
@@ -35,7 +34,7 @@ export type UnblockDecision = { retry: string } | { ask: UnblockQuestion };
  * command that failed, or a conflict. An unblock run never installs, never widens the network and never syncs.
  */
 export function onlyAPersonSettles(task: Pick<Task, 'needs' | 'stop_reason'>): boolean {
-  const needs = readNeeds(task.needs);
+  const { needs } = task;
   if (needs && (needs.kind === 'deps' || needs.kind === 'host')) return true;
   return isSetupFailure(task.stop_reason) || isConflictReason(task.stop_reason);
 }
@@ -154,17 +153,4 @@ export function unblockDecision(answer: UnblockAnswer, task: Pick<Task, 'attempt
   if ('ask' in answer) return { ask: { question: answer.ask, options: answer.options } };
   if (task.attempts < task.max_attempts) return { retry: `${UNBLOCK_NOTE}${answer.retry}` };
   return { ask: { question: `The task has no attempts left. Retry it with this note? ${answer.retry}`, options: [] } };
-}
-
-/** A task's `question` column (JSON UnblockQuestion), or null when it has none or it is unreadable. */
-export function readQuestion(json: string | null): UnblockQuestion | null {
-  if (!json) return null;
-  try {
-    const q = JSON.parse(json) as Partial<UnblockQuestion>;
-    return q && typeof q.question === 'string' && Array.isArray(q.options)
-      ? { question: q.question, options: q.options.map(String) }
-      : null;
-  } catch {
-    return null;
-  }
 }
