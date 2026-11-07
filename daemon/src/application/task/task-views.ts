@@ -81,8 +81,9 @@ export async function taskDetail(db: Db, id: number) {
   const repo = db.getRepo(task.repo_id);
   const [view] = withViews(db, [task]);
   // Only a done task's branch is final; measuring a running one would start git on every refetch.
-  if (repo && task.status === 'done' && task.branch && !openPrUrl(task.pr) && task.pr?.state !== 'merged' && autoMergeOn(task, repo)) {
-    const measured = await measureBranch(repo, task.branch);
+  const branch = task.checkout?.branch;
+  if (repo && task.status === 'done' && branch && !openPrUrl(task.pr) && task.pr?.state !== 'merged' && autoMergeOn(task, repo)) {
+    const measured = await measureBranch(repo, branch);
     if (measured) view.auto_merge_view = autoMergeView(task, repo, measured);
   }
   return {

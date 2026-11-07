@@ -5,6 +5,7 @@ import type { TaskStatus } from '../../domain/task/lifecycle.ts';
 import { openPrUrl } from '../../domain/pull-request/pr.ts';
 import { errorMessage } from '../../domain/text.ts';
 import { archivedRepoError, maxAttemptsError, maxTurnsError, modelError, priorityError } from '../../domain/task/rules.ts';
+import { planOwnerOf } from '../../domain/task/plan-link.ts';
 import { EDITABLE_STATUSES, RUNNING_STATUSES, type Task, defaultTitle } from '../../domain/task/task.ts';
 import { refuseWhileSyncing } from '../sync.ts';
 import { warnStuckDependents } from './dependencies.ts';
@@ -57,8 +58,8 @@ export async function addTask(
   const steps = stepList(input.plan_steps);
   const checked = checkPlanLink(db, () => repo, planAsked ?? { task: null }, steps);
   const own_plan = 'ownPlan' in checked ? checked.ownPlan : undefined;
-  const plan_task = 'owner' in checked ? checked.owner : null;
-  const linked = plan_task !== null || own_plan !== undefined;
+  const owner = 'owner' in checked ? checked.owner : null;
+  const linked = owner !== null || own_plan !== undefined;
   return db.addTask({
     repo_id: repo.id,
     title: title || defaultTitle(prompt),
@@ -68,7 +69,7 @@ export async function addTask(
     max_turns,
     max_attempts,
     links,
-    plan_task,
+    plan_task: owner,
     own_plan,
     plan_steps: linked && steps ? steps : null,
     status: propose ? 'proposed' : 'queued',
@@ -118,10 +119,10 @@ export async function editTask(
   const planAsked = planRequest(body);
   let ownPlan: string | undefined;
   if (planAsked !== undefined || patch.plan_steps !== undefined) {
-    const steps = patch.plan_steps !== undefined ? stepList(patch.plan_steps) : planAsked === undefined ? task.plan_steps : null;
-    const asked = planAsked ?? { task: task.plan_task };
+    const steps = patch.plan_steps !== undefined ? stepList(patch.plan_steps) : planAsked === undefined ? (task.plan?.steps ?? null) : null;
+    const asked = planAsked ?? { task: task.plan?.task ?? null };
     // A null link means "follow its own plan", so clearing it would keep the plan and widen its steps to all of them.
-    if (planAsked !== undefined && 'task' in asked && asked.task === null && (task.plan_task ?? id) === id && db.ownPlan(id)) {
+    if (planAsked !== undefined && 'task' in asked && asked.task === null && planOwnerOf(task) === id && db.ownPlan(id)) {
       throw new ActionError(
         `#${id} has a plan of its own, which can't be cleared: replace it with --plan <file>, or follow another task's plan with --plan <task number>`,
       );
@@ -203,9 +204,10 @@ export async function removeTaskWorktree(db: Db, id: number): Promise<{ branch: 
   const t = requireTask(db, id);
   if (RUNNING_STATUSES.includes(t.status)) throw new ActionError('task is running');
   if (t.status === 'queued') throw new ActionError('task is queued');
-  if (!t.worktree) throw new ActionError('task has no worktree');
+  const worktree = t.checkout?.worktree;
+  if (!worktree) throw new ActionError('task has no worktree');
   refuseWhileSyncing(db, id);
-  await removeWorktree(requireTaskRepo(db, t), t.worktree);
+  await removeWorktree(requireTaskRepo(db, t), worktree);
   db.setCheckout(t.id, { worktree: null });
-  return { branch: t.branch };
+  return { branch: t.checkout?.branch ?? null };
 }

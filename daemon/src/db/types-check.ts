@@ -10,8 +10,11 @@ import type { TaskEventRow, TaskEventType } from '../domain/task/history.ts';
 import type { TaskStatus } from '../domain/task/lifecycle.ts';
 import type { LinkKind } from '../domain/task/link.ts';
 import type { Task, TaskSource } from '../domain/task/task.ts';
-import type { LegacyTaskColumn, PrColumn, TaskRow, toRepo, toRun, toTask, toTaskSummary } from './mappers.ts';
+import type { CheckoutColumn, LegacyTaskColumn, PlanColumn, PrColumn, TaskRow, toRepo, toRun, toTask, toTaskSummary } from './mappers.ts';
 import type { plannerRuns, repos, reviewComments, reviews, runs, taskEvents, taskLinks, tasks } from './tables.ts';
+
+/** The task columns the mapper folds into `pr`, `checkout` and `plan`. */
+type FoldedColumn = PrColumn | CheckoutColumn | PlanColumn;
 
 type Equals<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
 /** Compares the keys and whether each is nullable; unions such as PrMode narrow string columns. */
@@ -31,8 +34,8 @@ type Maps<Row, Mapper extends (row: never) => unknown, Unread extends keyof Row 
       : false
     : false;
 
-check<Maps<typeof tasks.$inferSelect, typeof toTask, LegacyTaskColumn, PrColumn>>();
-check<Maps<Omit<typeof tasks.$inferSelect, 'prompt'>, typeof toTaskSummary, LegacyTaskColumn, PrColumn>>();
+check<Maps<typeof tasks.$inferSelect, typeof toTask, LegacyTaskColumn, FoldedColumn>>();
+check<Maps<Omit<typeof tasks.$inferSelect, 'prompt'>, typeof toTaskSummary, LegacyTaskColumn, FoldedColumn>>();
 check<Maps<typeof repos.$inferSelect, typeof toRepo>>();
 check<Maps<typeof runs.$inferSelect, typeof toRun>>();
 
@@ -40,7 +43,7 @@ check<Maps<typeof runs.$inferSelect, typeof toRun>>();
 type WithNewColumn = TaskRow & { new_column: string | null };
 check<Equals<Maps<WithNewColumn, typeof toTask>, false>>();
 check<Equals<Maps<WithNewColumn, (row: WithNewColumn) => Task>, false>>();
-check<Maps<WithNewColumn, (row: WithNewColumn) => Task, never, PrColumn | 'new_column'>>();
+check<Maps<WithNewColumn, (row: WithNewColumn) => Task, never, FoldedColumn | 'new_column'>>();
 
 check<Same<typeof plannerRuns.$inferSelect, PlannerRun>>();
 check<Same<typeof taskEvents.$inferSelect, TaskEventRow>>();

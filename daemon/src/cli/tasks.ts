@@ -6,6 +6,7 @@ import { commentLocation } from '../domain/review/review.ts';
 import { pickRun } from '../domain/run/run.ts';
 import { TASK_STATUSES } from '../domain/task/lifecycle.ts';
 import { filterTasks, listable } from '../domain/task/listing.ts';
+import { type PlanLink, hasPlanLink, otherPlanOwner, planOwnerOf } from '../domain/task/plan-link.ts';
 import { errorMessage, plural } from '../domain/text.ts';
 import { callDaemon } from './daemon-client.ts';
 import { confirm, die, idsText, taskId, taskIds, fmtAutoMerge, fmtChecks, fmtLink, fmtTask, printLog } from './format.ts';
@@ -33,8 +34,8 @@ function planFlag(value: string | undefined): { plan_task?: number | null; plan_
 }
 
 /** The name of the plan a task follows, from the plans its detail shows. */
-function followedPlanName(t: { id: number; plan_task?: number | null; plans: { task_id: number; name: string }[] }): string | null {
-  const owner = t.plan_task ?? t.id;
+function followedPlanName(t: { id: number; plan: PlanLink | null; plans: { task_id: number; name: string }[] }): string | null {
+  const owner = planOwnerOf(t);
   return t.plans.find((p) => p.task_id === owner && isOwnPlanName(owner, p.name))?.name ?? null;
 }
 
@@ -75,7 +76,10 @@ export const taskCommands: Record<string, Command> = {
         .join('')})`,
     );
     const planName = followedPlanName(detail);
-    if (planName && t.plan_task !== null) console.log(`plan     ${planName}${t.plan_task === t.id ? '' : ` (#${t.plan_task}'s plan)`}`);
+    if (planName && hasPlanLink(t)) {
+      const other = otherPlanOwner(t);
+      console.log(`plan     ${planName}${other === null ? '' : ` (#${other}'s plan)`}`);
+    }
     if (waiting?.stuck) console.log(`note: ${waiting.stuck}, so this task won't start until ${idsText(waiting.on)} is retried`);
     for (const w of await actions.promptWarnings(db, t.id)) console.log(`note: ${w}`);
     if (t.status === 'proposed') console.log(`note: it waits for \`agentdeck approve ${t.id}\` before it can run`);
@@ -153,8 +157,8 @@ export const taskCommands: Record<string, Command> = {
     if (t.links.length) console.log(`links    ${t.links.map(fmtLink).join(', ')}`);
     if (t.dependents.length)
       console.log(`needed by ${t.dependents.map((d) => `#${d.id} (${d.kind === 'builds_on' ? 'builds on it' : 'after it'})`).join(', ')}`);
-    if (t.branch) console.log(`branch   ${t.branch}`);
-    if (t.worktree) console.log(`worktree ${t.worktree}`);
+    if (t.checkout?.branch) console.log(`branch   ${t.checkout.branch}`);
+    if (t.checkout?.worktree) console.log(`worktree ${t.checkout.worktree}`);
     const { needs, question } = t;
     if (needs && t.status === 'blocked') console.log(`needs    ${needs.kind}: ${needs.items.join(' ')}`);
     if (question && t.status === 'blocked') {
@@ -163,8 +167,9 @@ export const taskCommands: Record<string, Command> = {
     }
     const plan = followedPlanName(t);
     if (plan) {
-      const steps = t.plan_steps;
-      const whose = t.plan_task !== null && t.plan_task !== t.id ? `#${t.plan_task}'s plan, ` : '';
+      const steps = t.plan?.steps ?? null;
+      const other = otherPlanOwner(t);
+      const whose = other !== null ? `#${other}'s plan, ` : '';
       console.log(`plan     ${plan} (${whose}${steps ? `steps ${steps.join(', ')}` : 'every unfinished step'})`);
     }
     console.log(`\n${t.prompt}\n`);

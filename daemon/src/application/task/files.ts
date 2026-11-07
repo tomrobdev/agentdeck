@@ -23,7 +23,7 @@ import { ActionError, requireTask, requireTaskRepo } from '../input.ts';
 async function resolveHead(db: Db, id: number): Promise<{ repo: Repo; head: string }> {
   const task = requireTask(db, id);
   const repo = requireTaskRepo(db, task);
-  const head = task.branch ? await branchCommit(repo.path, task.branch) : null;
+  const head = task.checkout?.branch ? await branchCommit(repo.path, task.checkout.branch) : null;
   if (!head) throw new ActionError('task has no branch yet');
   return { repo, head };
 }

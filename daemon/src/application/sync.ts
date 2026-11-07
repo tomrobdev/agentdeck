@@ -183,11 +183,12 @@ async function pushIfNeeded(
   worktree: string,
   changed: boolean,
 ): Promise<{ pushed: boolean; error?: string }> {
-  if (!task.branch || !openPrUrl(task.pr)) return { pushed: false };
+  const branch = task.checkout?.branch;
+  if (!branch || !openPrUrl(task.pr)) return { pushed: false };
   try {
     // A branch that was merged but not pushed (the push failed last time) still needs pushing.
-    if (!changed && !(await aheadOfRemote(worktree, task.branch))) return { pushed: false };
-    await github.push(repo.path, task.branch);
+    if (!changed && !(await aheadOfRemote(worktree, branch))) return { pushed: false };
+    await github.push(repo.path, branch);
     return { pushed: true };
   } catch (err) {
     const error = errorMessage(err);
@@ -206,7 +207,7 @@ export async function syncTask(db: Db, id: number, opts: { manual: boolean }): P
   const task = requireTask(db, id);
   const repo = requireTaskRepo(db, task);
   if (task.status !== 'done') throw new ActionError(`#${id} is ${task.status}; only a done task's branch is synced this way`);
-  if (!task.branch) throw new ActionError(`#${id} has no branch`);
+  if (!task.checkout?.branch) throw new ActionError(`#${id} has no branch`);
   if (syncing.has(id) || db.hasSyncMarker(id)) throw new ActionError(`#${id} is already syncing`);
   if (isMergeLocked(id)) throw new ActionError(`#${id} is being merged; try again when that is done`);
 
@@ -221,7 +222,7 @@ export async function syncTask(db: Db, id: number, opts: { manual: boolean }): P
 async function syncMarked(db: Db, task: Task, repo: Repo, opts: { manual: boolean }): Promise<SyncReport> {
   const id = task.id;
   const wt = await ensureWorktree(repo, task);
-  if (wt.path !== task.worktree) db.setCheckout(id, { worktree: wt.path });
+  if (wt.path !== task.checkout?.worktree) db.setCheckout(id, { worktree: wt.path });
   const res = await syncBranch(db, task, repo, wt.path, { allowResolve: opts.manual || repo.auto_resolve, runTests: true });
   switch (res.kind) {
     case 'up_to_date':

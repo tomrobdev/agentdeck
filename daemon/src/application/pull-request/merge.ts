@@ -101,7 +101,7 @@ export async function mergePreview(db: Db, id: number): Promise<MergePreview> {
   return {
     title: task.title,
     pr_url: url,
-    branch: task.branch,
+    branch: task.checkout?.branch ?? null,
     base: repo.base_branch,
     method: repo.merge_method,
     draft: pr.draft,
@@ -234,10 +234,10 @@ export async function mergeOpenPr(
   const result: MergeResult = { method, unblocked };
   if (deleteBranch) {
     const errors: string[] = [];
-    if (task.branch)
-      await github.deleteRemoteBranch(repo.path, task.branch).catch((err) => errors.push(`remote branch: ${errorMessage(err)}`));
-    if (task.worktree)
-      await removeWorktree(repo, task.worktree).then(
+    const { branch, worktree } = task.checkout ?? { branch: null, worktree: null };
+    if (branch) await github.deleteRemoteBranch(repo.path, branch).catch((err) => errors.push(`remote branch: ${errorMessage(err)}`));
+    if (worktree)
+      await removeWorktree(repo, worktree).then(
         () => db.setCheckout(id, { worktree: null }),
         (err) => errors.push(`worktree: ${errorMessage(err)}`),
       );

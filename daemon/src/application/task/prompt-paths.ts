@@ -26,12 +26,12 @@ export async function promptWarnings(db: Db, id: number): Promise<string[]> {
     if (!base) return [];
     const baseFiles = await listFiles(repo.path, base);
     const sources = unmergedBuiltOn(db, task);
-    const branchless = sources.filter((s) => !s.branch).map((s) => `#${s.id}`);
+    const branchless = sources.filter((s) => !s.checkout?.branch).map((s) => `#${s.id}`);
     const branchFiles = (
       await Promise.all(
         sources.flatMap(async (s) => {
           const dep = db.getRepo(s.repo_id);
-          const commit = dep && s.branch ? await branchCommit(dep.path, s.branch) : null;
+          const commit = dep && s.checkout?.branch ? await branchCommit(dep.path, s.checkout.branch) : null;
           return dep && commit ? [await listFiles(dep.path, commit)] : [];
         }),
       )

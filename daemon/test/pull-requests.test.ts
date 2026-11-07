@@ -127,7 +127,7 @@ test('a done task in a draft repo is pushed and opened as a draft PR', async () 
   assert.equal(pr.base, 'main');
   assert.equal(pr.head, `agentdeck/task-${t.id}`);
   assert.equal(pr.draft, true);
-  assert.equal(pr.cwd, t.worktree);
+  assert.equal(pr.cwd, t.checkout?.worktree);
   assert.ok(pr.body.startsWith('Wrote fake-output.txt and committed.'), pr.body);
   assert.ok(!pr.body.includes('STATUS:'), 'the status line is not part of the description');
   assert.match(pr.body, /\| Attempt \| Outcome \| Turns \| Cost \| Tests \|/);
@@ -403,7 +403,7 @@ test('a dependent is not claimed while its dependency pushes and opens its PR', 
   const pushStarted = new Promise<void>((r) => (pushing = r));
   const realPush = github.push;
   github.push = async (repoPath, branch) => {
-    if (branch === dep.branch || branch === `agentdeck/task-${dep.id}`) {
+    if (branch === dep.checkout?.branch || branch === `agentdeck/task-${dep.id}`) {
       pushing();
       await gate;
     }
@@ -734,15 +734,15 @@ test('mergeTask can delete the remote branch and remove the worktree, and report
   const task = db.addTask({ repo_id: repo.id, title: 'Clean up after', prompt: 'FAKE_DONE cleanup' });
   await drain();
   const t = db.getTask(task.id)!;
-  assert.ok(t.worktree && t.pr?.url);
+  assert.ok(t.checkout?.worktree && t.pr?.url);
 
   const res = await mergeTask(db, t.id, { delete_branch: true });
   assert.equal(res.cleanup_error, undefined);
-  assert.deepEqual(merging.deleted, [t.branch]);
+  assert.deepEqual(merging.deleted, [t.checkout.branch]);
   const after = db.getTask(t.id)!;
-  assert.equal(after.worktree, null);
-  assert.equal(after.branch, t.branch, 'the local branch stays, so the diff can still be read');
-  assert.equal(sh(dir, 'branch', '--list', t.branch!), t.branch);
+  assert.equal(after.checkout?.worktree, null);
+  assert.equal(after.checkout?.branch, t.checkout.branch, 'the local branch stays, so the diff can still be read');
+  assert.equal(sh(dir, 'branch', '--list', t.checkout.branch!), t.checkout.branch);
 
   const other = prTask(106);
   github.deleteRemoteBranch = async () => {

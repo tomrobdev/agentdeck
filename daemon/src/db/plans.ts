@@ -1,7 +1,7 @@
 // Plans attached to tasks: the HTML as written, parsed into steps when read.
 import { and, asc, desc, eq, ne, notInArray, sql } from 'drizzle-orm';
 import { type PlanSource, type TaskPlan, parsePlan, planFileName } from '../domain/plan/plan.ts';
-import type { Task } from '../domain/task/task.ts';
+import type { PlanFollower } from '../domain/task/plan-link.ts';
 import { readSteps } from './mappers.ts';
 import type { Orm } from './orm.ts';
 import { NOW_SQL, atomically } from './sql.ts';
@@ -95,16 +95,16 @@ export function planStore(db: DatabaseSync, orm: Orm) {
     },
     /**
      * The tasks that follow task `task_id`'s plan (itself too when it was given its plan with --plan) and may still run
-     * on it: not done or cancelled. Oldest first, with their `plan_steps`.
+     * on it: not done or cancelled. Oldest first, with their plan links.
      */
-    planFollowers(task_id: number): Pick<Task, 'id' | 'plan_steps'>[] {
+    planFollowers(task_id: number): PlanFollower[] {
       return orm
         .select({ id: tasks.id, plan_steps: tasks.plan_steps })
         .from(tasks)
         .where(and(eq(tasks.plan_task, task_id), notInArray(tasks.status, ['done', 'cancelled'])))
         .orderBy(asc(tasks.id))
         .all()
-        .map((f) => ({ id: f.id, plan_steps: readSteps(f.plan_steps) }));
+        .map((f) => ({ id: f.id, plan: { task: task_id, steps: readSteps(f.plan_steps) } }));
     },
     /** The task's plans, oldest first, without their HTML. */
     plansForTask(task_id: number): TaskPlan[] {

@@ -136,7 +136,7 @@ export async function localStartPoint(repoPath: string, base: string): Promise<s
  */
 export async function ensureWorktree(repo: Repo, task: Task): Promise<{ branch: string; path: string }> {
   const branch = branchName(task);
-  const path = task.worktree ?? join(WORKTREE_DIR, repo.name, `task-${task.id}`);
+  const path = task.checkout?.worktree ?? join(WORKTREE_DIR, repo.name, `task-${task.id}`);
   if (existsSync(path)) return { branch, path };
 
   mkdirSync(dirname(path), { recursive: true });

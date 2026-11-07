@@ -148,7 +148,7 @@ test('a run whose final message answers the comments moves them to answered; the
   await drain();
   const done = db.getTask(task.id)!;
   assert.equal(done.status, 'done');
-  const head = sh('rev-parse', done.branch!);
+  const head = sh('rev-parse', done.checkout!.branch!);
 
   const review = (comments: { path: string; line: number; body: string }[]) => {
     const draft = actions.startReview(db, task.id);

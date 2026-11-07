@@ -397,7 +397,10 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
      */
     editTask(
       id: number,
-      fields: Partial<Pick<Task, 'title' | 'prompt' | 'priority' | 'model' | 'max_turns' | 'max_attempts' | 'plan_task' | 'plan_steps'>>,
+      fields: Partial<Pick<Task, 'title' | 'prompt' | 'priority' | 'model' | 'max_turns' | 'max_attempts'>> & {
+        plan_task?: number | null;
+        plan_steps?: string[] | null;
+      },
       opts: { ownPlan?: string } = {},
     ): Task | undefined {
       if (Object.keys(fields).length === 0 && opts.ownPlan === undefined) return getTask(id);
@@ -439,7 +442,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       });
     },
     /** Where a task's work is checked out. Not a status, so unguarded. */
-    setCheckout(id: number, fields: Partial<Pick<Task, 'branch' | 'worktree'>>): void {
+    setCheckout(id: number, fields: { branch?: string | null; worktree?: string | null }): void {
       if (Object.keys(fields).length === 0) return;
       orm
         .update(tasks)

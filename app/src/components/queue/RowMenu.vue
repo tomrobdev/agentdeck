@@ -104,7 +104,7 @@ async function link(kind: LinkKind, e?: Event) {
     </MenuSub>
 
     <MenuSeparator />
-    <MenuItem @select="copyText(branchName(task), 'branch name')">Copy branch name</MenuItem>
+    <MenuItem @select="copyText(branchName({ id: task.id, checkout: { branch: task.branch } }), 'branch name')">Copy branch name</MenuItem>
     <MenuItem @select="copyText(`#${task.id}`, `#${task.id}`)">Copy #{{ task.id }}</MenuItem>
 
     <template v-if="events.length || isReview(task)">

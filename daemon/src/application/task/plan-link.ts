@@ -35,7 +35,7 @@ function planOwner(db: Db, repo: Repo, on: number): { owner: number; name: strin
   if (target.repo_id !== repo.id) {
     throw new ActionError(`plan: #${on} is in ${db.getRepo(target.repo_id)?.name ?? 'another repo'}, not ${repo.name}`);
   }
-  for (const owner of [on, target.plan_task]) {
+  for (const owner of [on, target.plan?.task ?? null]) {
     const own = owner === null ? undefined : db.ownPlan(owner);
     const plan = own && parsePlan(own.html);
     if (owner !== null && own && plan) return { owner, name: own.name, plan };

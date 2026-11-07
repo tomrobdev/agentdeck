@@ -30,17 +30,18 @@ export async function installNeeds(db: Db, id: number): Promise<{ packages: stri
     );
   refuse(depsRequestError(needs.items));
   const { packages, dev } = depsRequest(needs.items);
-  if (!task.worktree || !existsSync(task.worktree)) throw new ActionError(`#${id} has no worktree to install into`);
+  const worktree = task.checkout?.worktree;
+  if (!worktree || !existsSync(worktree)) throw new ActionError(`#${id} has no worktree to install into`);
   refuseWhileSyncing(db, id);
 
   const args = installArgs(toolchain, packages, dev);
-  const result = await runProgram(toolchain, args, task.worktree, INSTALL_TIMEOUT_MS);
+  const result = await runProgram(toolchain, args, worktree, INSTALL_TIMEOUT_MS);
   if (!result.passed) {
     throw new ActionError(`${toolchain} ${args[0]} failed: ${lastLine(result.output)}`);
   }
-  const files = ['package.json', LOCKFILES[toolchain]].filter((f) => existsSync(join(task.worktree!, f)));
+  const files = ['package.json', LOCKFILES[toolchain]].filter((f) => existsSync(join(worktree, f)));
   try {
-    await commitFiles(task.worktree, files, `agentdeck: add ${packages.join(' ')} for task #${id}`);
+    await commitFiles(worktree, files, `agentdeck: add ${packages.join(' ')} for task #${id}`);
   } catch (err) {
     throw new ActionError(`installed, but could not commit: ${lastLine(errorMessage(err))}`);
   }

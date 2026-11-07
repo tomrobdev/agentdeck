@@ -30,7 +30,7 @@ test('retry, install-needs and worktree removal refuse while another process has
   assert.ok(isSyncing(db, done.id));
   assert.throws(() => retryTask(db, done.id), /syncing/);
   await assert.rejects(removeTaskWorktree(db, done.id), /syncing/);
-  assert.equal(db.getTask(done.id)!.worktree, dir, 'the worktree is still recorded');
+  assert.equal(db.getTask(done.id)!.checkout?.worktree, dir, 'the worktree is still recorded');
 
   const blocked = db.addTask({ repo_id: repo.id, title: 'blocked', prompt: 'p' });
   db.setCheckout(blocked.id, { worktree: dir });
@@ -55,7 +55,7 @@ test('recoverOrphans clears a marker left by a daemon that died mid-sync', () =>
   const t = doneTask(db, repo, { title: 'done' });
   db.setSyncing(t.id, true);
   db.recoverOrphans();
-  assert.equal(db.getTask(t.id)!.syncing_since, null);
+  assert.equal(db.getTask(t.id)!.checkout?.syncing_since ?? null, null);
   assert.ok(!isSyncing(db, t.id));
 });
 

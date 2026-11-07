@@ -22,6 +22,7 @@ import {
   runOutcome,
   setupFailedReason,
 } from '../../domain/run/run.ts';
+import { hasPlanLink, otherPlanOwner } from '../../domain/task/plan-link.ts';
 import { type Task, leftoversMessage } from '../../domain/task/task.ts';
 import { errorMessage } from '../../domain/text.ts';
 import { type OpenedRun, type TaskRunEnd, endTaskRun, openTaskRun, startTaskRun } from './claude-run.ts';
@@ -64,7 +65,7 @@ async function runOpened(db: Db, task: Task, repo: Repo, wt: { branch: string; p
   // unless the prompt or plan was edited since, which the session never saw.
   let session = resumableSession(task, previousRuns);
   if (session) {
-    const owner = task.plan_task !== null && task.plan_task !== task.id ? task.plan_task : null;
+    const owner = otherPlanOwner(task);
     const edited = editsSinceCutOff(task, previousRuns, {
       own: db.eventsForTask(task.id),
       planOwner: owner === null ? [] : db.eventsForTask(owner),
@@ -177,7 +178,7 @@ async function runOpened(db: Db, task: Task, repo: Repo, wt: { branch: string; p
   const { result: outcome, pause } = runOutcome({ end, status, testsPassed, commitsAhead: ahead, denials: denials.length });
 
   // A done run that left linked plan steps unfinished is a warning, not a change of outcome.
-  if (outcome.outcome === 'done' && task.plan_task !== null) {
+  if (outcome.outcome === 'done' && hasPlanLink(task)) {
     try {
       const left = unfinishedSteps(followedSteps(db, task) ?? []);
       if (left.length) db.recordPlanUnfinished(task.id, unfinishedSummary(left));

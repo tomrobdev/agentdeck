@@ -52,9 +52,9 @@ test('done task: worktree, branch, commit, tests, usage recorded', async () => {
 
   const t = db.getTask(task.id)!;
   assert.equal(t.status, 'done');
-  assert.equal(t.branch, `agentdeck/task-${t.id}`);
-  assert.ok(existsSync(join(t.worktree!, 'fake-output.txt')));
-  assert.equal(sh(repoPath, 'rev-list', '--count', `main..${t.branch}`), '1');
+  assert.equal(t.checkout?.branch, `agentdeck/task-${t.id}`);
+  assert.ok(existsSync(join(t.checkout!.worktree!, 'fake-output.txt')));
+  assert.equal(sh(repoPath, 'rev-list', '--count', `main..${t.checkout?.branch}`), '1');
   assert.equal(sh(repoPath, 'rev-parse', '--abbrev-ref', 'HEAD'), 'main', 'main checkout untouched');
 
   const [run] = db.runsForTask(t.id);
@@ -292,7 +292,7 @@ test('setup runs in the worktree before claude starts', async () => {
     await drain();
     const t = db.getTask(task.id)!;
     assert.equal(t.status, 'done', t.stop_reason ?? '');
-    assert.ok(existsSync(join(t.worktree!, 'setup-done.txt')));
+    assert.ok(existsSync(join(t.checkout!.worktree!, 'setup-done.txt')));
     const log = readFileSync(db.runsForTask(t.id)[0].log_path, 'utf8').split('\n');
     const setupAt = log.findIndex((l) => l.includes('"type":"agentdeck_setup"'));
     const claudeAt = log.findIndex((l) => l.includes('"type":"system"'));
@@ -339,7 +339,7 @@ test('each run gets a sandbox settings file outside its worktree', async () => {
     assert.equal(t.status, 'done', t.stop_reason ?? '');
     const path = settingsCalls().at(-1)!;
     assert.equal(path, join(LOG_DIR, `task-${t.id}-attempt-1.settings.json`));
-    assert.ok(!path.startsWith(t.worktree!), 'the agent cannot edit its own settings');
+    assert.ok(!path.startsWith(t.checkout!.worktree!), 'the agent cannot edit its own settings');
     const settings = JSON.parse(readFileSync(path, 'utf8'));
     assert.deepEqual(settings.sandbox, {
       enabled: true,
@@ -347,7 +347,7 @@ test('each run gets a sandbox settings file outside its worktree', async () => {
       allowUnsandboxedCommands: false,
       network: { allowedDomains: ['registry.npmjs.org', 'github.com'], strictAllowlist: true, allowLocalBinding: true },
     });
-    assert.deepEqual(settings.permissions.allow, [`Edit(/${t.worktree}/**)`]);
+    assert.deepEqual(settings.permissions.allow, [`Edit(/${t.checkout?.worktree}/**)`]);
 
     updateRepo(db, 1, { sandbox: false });
     const off = db.addTask({ repo_id: 1, title: 'unsandboxed', prompt: 'FAKE_DONE without the sandbox' });
@@ -404,8 +404,8 @@ test('a new worktree starts from origin/<base> when origin is ahead of the local
 
   const t = db.getTask(task.id)!;
   assert.equal(t.status, 'done', t.stop_reason ?? '');
-  assert.ok(existsSync(join(t.worktree!, 'upstream.txt')), 'worktree has origin’s commit');
-  sh(local, 'merge-base', '--is-ancestor', upstreamHead, t.branch!);
-  assert.equal(sh(local, 'rev-list', '--count', `origin/main..${t.branch}`), '1', 'only the agent’s commit on top');
+  assert.ok(existsSync(join(t.checkout!.worktree!, 'upstream.txt')), 'worktree has origin’s commit');
+  sh(local, 'merge-base', '--is-ancestor', upstreamHead, t.checkout!.branch!);
+  assert.equal(sh(local, 'rev-list', '--count', `origin/main..${t.checkout?.branch}`), '1', 'only the agent’s commit on top');
   assert.notEqual(sh(local, 'rev-parse', 'main'), upstreamHead, 'local main is left alone');
 });

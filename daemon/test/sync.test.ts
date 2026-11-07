@@ -94,10 +94,11 @@ async function doneTask(extra = ''): Promise<{ id: number; wt: string; branch: s
   const t = db.getTask(task.id)!;
   assert.equal(t.status, 'done');
   assert.equal(t.pr?.state, 'open');
-  writeFileSync(join(t.worktree!, 'shared.txt'), lines(`task change ${n}`));
-  sh(t.worktree!, 'commit', '-q', '-am', `Task ${n} changes line two`);
+  const { worktree, branch } = t.checkout!;
+  writeFileSync(join(worktree!, 'shared.txt'), lines(`task change ${n}`));
+  sh(worktree!, 'commit', '-q', '-am', `Task ${n} changes line two`);
   pushes = [];
-  return { id: t.id, wt: t.worktree!, branch: t.branch! };
+  return { id: t.id, wt: worktree!, branch: branch! };
 }
 
 /** A commit on main, as if another PR had been merged. */

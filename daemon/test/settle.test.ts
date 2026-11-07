@@ -73,7 +73,12 @@ test('a task failed by crash recovery gets a notification', async () => {
 });
 
 test('finalNotification words done, blocked and failed, and nothing else', () => {
-  const t = { id: 3, title: 'Do it', branch: 'agentdeck/task-3', stop_reason: 'tests failed' };
+  const t = {
+    id: 3,
+    title: 'Do it',
+    checkout: { branch: 'agentdeck/task-3', worktree: null, syncing_since: null },
+    stop_reason: 'tests failed',
+  };
   assert.deepEqual(finalNotification({ ...t, status: 'done' }, 'demo', { url: 'https://x/pull/1' }), {
     kind: 'done',
     title: '#3 done: Do it',
