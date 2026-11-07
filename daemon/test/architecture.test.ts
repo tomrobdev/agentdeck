@@ -6,40 +6,13 @@ import { join, relative } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
 import ts from 'typescript';
+import { LAYERS, layerOf, mayImport } from '../scripts/lib/layers.ts';
 import { type Source, lineOf, readSources } from '../scripts/lib/sources.ts';
 import { MIGRATIONS, migrate } from '../src/db/index.ts';
 
 const SRC = join(import.meta.dirname, '../src');
 
 const sources = readSources(SRC);
-
-/** The layer a file belongs to: its top folder under src/, or the file itself for `config.ts`, `daemon.ts` and `cli.ts`. */
-const layerOf = (path: string) => (path.includes('/') ? path.split('/')[0] : path);
-
-/** Which layers each layer may import, and why. Imports point down the list in CLAUDE.md's Boundaries. */
-const MAY_IMPORT: Record<string, { layers: string[]; why: string }> = {
-  domain: { layers: ['domain'], why: 'domain/ is pure and imports no other layer' },
-  'config.ts': { layers: [], why: 'config.ts is read by every layer and imports none' },
-  db: { layers: ['db', 'domain', 'config.ts'], why: 'db/ holds the SQL and knows only the domain' },
-  adapters: {
-    layers: ['adapters', 'domain', 'config.ts'],
-    why: 'adapters import domain/ and config.ts only; they report through callbacks',
-  },
-  application: {
-    layers: ['application', 'adapters', 'db', 'domain', 'config.ts'],
-    why: 'application/ is never imported by db/ or adapters/',
-  },
-  api: { layers: ['api', 'application', 'db', 'domain', 'config.ts'], why: 'entry points reach adapters through application/' },
-  cli: {
-    layers: ['cli', 'api', 'application', 'db', 'domain', 'config.ts', 'daemon.ts'],
-    why: 'entry points reach adapters through application/',
-  },
-  'daemon.ts': {
-    layers: ['api', 'application', 'adapters', 'db', 'domain', 'config.ts'],
-    why: 'the composition root does not use the CLI',
-  },
-  'cli.ts': { layers: ['cli', 'application', 'db', 'config.ts'], why: 'cli.ts only dispatches to cli/' },
-};
 
 /** Packages, and the only files that may import them. */
 const PACKAGES: { match: RegExp; allowed: (path: string) => boolean; why: string }[] = [
@@ -55,12 +28,11 @@ const at = (s: Source, line: number) => `${s.path}:${line}`;
 test('[layers, domain-pure, adapters-io, entry-points] each layer imports only the layers below it', () => {
   const found: string[] = [];
   for (const s of sources) {
-    const rule = MAY_IMPORT[layerOf(s.path)];
-    assert.ok(rule, `${s.path} is in no known layer; add it to MAY_IMPORT`);
+    const rule = LAYERS[layerOf(s.path)];
+    assert.ok(rule, `${s.path} is in no known layer; add it to LAYERS (scripts/lib/layers.ts)`);
     for (const i of s.imports) {
       if (!i.target) continue;
-      const to = layerOf(i.target);
-      if (to !== layerOf(s.path) && !rule.layers.includes(to)) found.push(`${at(s, i.line)} imports ${i.target}: ${rule.why}`);
+      if (!mayImport(layerOf(s.path), layerOf(i.target))) found.push(`${at(s, i.line)} imports ${i.target}: ${rule.why}`);
     }
   }
   assert.deepEqual(found, []);

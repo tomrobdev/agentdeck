@@ -1,6 +1,7 @@
 // Claude Code PostToolUse hook (.claude/settings.json), after each Edit or Write:
 // 1. format the changed file with the repo's Prettier, so sessions and workers write formatted code as they go;
-// 2. when it is under daemon/src (or is the docs generator), regenerate docs/architecture.md's generated blocks
+// 2. when it is under daemon/src (or is the docs generator or the layers), regenerate docs/architecture.md's generated
+//    block and the files of docs/reference/
 //    (`pnpm docs:gen`, about 0.25s), so the architecture test never finds them stale.
 // Quiet, and never fails the edit: a file mid-edit that doesn't parse yet is left for `pnpm check` to catch.
 import { execFileSync } from 'node:child_process';
@@ -26,7 +27,10 @@ try {
     // Prettier skips what .prettierignore names and what it can't parse.
     if (existsSync(prettier)) run(prettier, ['--write', '--ignore-unknown', '--log-level', 'silent', file], root);
     const docs = join(root, 'daemon', 'scripts', 'docs.ts');
-    if ((rel.startsWith('daemon/src/') || rel === 'daemon/scripts/lib/architecture-docs.ts') && existsSync(docs))
+    if (
+      (rel.startsWith('daemon/src/') || rel === 'daemon/scripts/lib/architecture-docs.ts' || rel === 'daemon/scripts/lib/layers.ts') &&
+      existsSync(docs)
+    )
       run(process.execPath, [docs], join(root, 'daemon'));
   }
 } catch {
