@@ -21,7 +21,6 @@ function task(id: number, fields: Partial<ListedTask> = {}): ListedTask {
     pr_url: null,
     pr_state: null,
     merge_method: null,
-    plan_path: null,
     plan_steps: null,
     needs: null,
     question: null,

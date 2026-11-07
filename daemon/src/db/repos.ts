@@ -3,6 +3,7 @@ import { and, asc, eq, inArray, isNotNull, isNull, or } from 'drizzle-orm';
 import type { DatabaseSync } from 'node:sqlite';
 import type { Repo } from '../domain/repo/repo.ts';
 import { RUNNING_STATUSES } from '../domain/task/task.ts';
+import { mapFound, toRepo } from './mappers.ts';
 import type { Orm } from './orm.ts';
 import { NOW_SQL, atomically } from './sql.ts';
 import { notifications, plannerRuns, repos, reviewComments, reviews, runs, taskEvents, taskLinks, taskPlans, tasks } from './tables.ts';
@@ -34,15 +35,17 @@ export function repoStore(db: DatabaseSync, orm: Orm) {
       return this.getRepo(Number(info.lastInsertRowid))!;
     },
     getRepo(id: number): Repo | undefined {
-      // The cast narrows the plain string columns (pr_mode, merge_method); typed columns come later.
-      return orm.select().from(repos).where(eq(repos.id, id)).get() as Repo | undefined;
+      return mapFound(orm.select().from(repos).where(eq(repos.id, id)).get(), toRepo);
     },
     findRepo(nameOrId: string): Repo | undefined {
-      return orm
-        .select()
-        .from(repos)
-        .where(or(eq(repos.name, nameOrId), eq(repos.id, /^\d+$/.test(nameOrId) ? Number(nameOrId) : -1)))
-        .get() as Repo | undefined;
+      return mapFound(
+        orm
+          .select()
+          .from(repos)
+          .where(or(eq(repos.name, nameOrId), eq(repos.id, /^\d+$/.test(nameOrId) ? Number(nameOrId) : -1)))
+          .get(),
+        toRepo,
+      );
     },
     /** Active repos, or with `{ archived: true }` only the archived ones. */
     listRepos(opts: { archived?: boolean } = {}): Repo[] {
@@ -51,7 +54,8 @@ export function repoStore(db: DatabaseSync, orm: Orm) {
         .from(repos)
         .where(opts.archived ? isNotNull(repos.archived_at) : isNull(repos.archived_at))
         .orderBy(asc(repos.name))
-        .all() as Repo[];
+        .all()
+        .map(toRepo);
     },
     /** Archive (true) or unarchive (false) a repo. */
     setRepoArchived(id: number, archived: boolean): void {

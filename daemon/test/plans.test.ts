@@ -281,7 +281,9 @@ test('agentdeck add --plan <file> stores the plan under its numbered name, with 
   assert.match(added.stdout, new RegExp(`plan +${name}`));
 
   const t = db.getTask(id)!;
-  assert.deepEqual([t.plan_task, planStepIds(t), t.plan_path], [id, ['a'], null]);
+  assert.deepEqual([t.plan_task, planStepIds(t)], [id, ['a']]);
+  const row = db.raw.prepare('SELECT plan_path FROM tasks WHERE id = ?').get(id) as { plan_path: string | null };
+  assert.equal(row.plan_path, null, 'the legacy column is not written');
   assert.deepEqual(
     db.plansForTask(id).map((p) => [p.name, p.source]),
     [[name, 'attached']],

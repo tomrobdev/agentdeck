@@ -2,6 +2,7 @@
 import { and, asc, count, countDistinct, eq, gt, inArray, isNotNull, isNull, notInArray, or, sql } from 'drizzle-orm';
 import type { Run, RunKind } from '../domain/run/run.ts';
 import { RUNNING_STATUSES } from '../domain/task/task.ts';
+import { toRun } from './mappers.ts';
 import type { Orm } from './orm.ts';
 import { NOW_SQL } from './sql.ts';
 import { plannerRuns, runs, tasks } from './tables.ts';
@@ -69,7 +70,7 @@ export function runStore(orm: Orm) {
         .run();
     },
     runsForTask(task_id: number): Run[] {
-      return orm.select().from(runs).where(eq(runs.task_id, task_id)).orderBy(asc(runs.id)).all();
+      return orm.select().from(runs).where(eq(runs.task_id, task_id)).orderBy(asc(runs.id)).all().map(toRun);
     },
     /** Resolve runs still going, in any daemon process. */
     countRunningResolves(): number {
@@ -145,7 +146,7 @@ export function runStore(orm: Orm) {
     /** Tasks in running or being cancelled, each with its unfinished work run, if it has one: its pid, when that was stored, and its start. */
     runningTaskRuns(): RunningTaskRun[] {
       const open = orm
-        .select()
+        .select({ task_id: runs.task_id, pid: runs.pid, pid_at: runs.pid_at, started_at: runs.started_at })
         .from(runs)
         .where(and(eq(runs.kind, 'work'), isNull(runs.ended_at)))
         .orderBy(asc(runs.id))

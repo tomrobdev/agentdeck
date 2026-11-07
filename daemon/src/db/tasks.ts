@@ -1,23 +1,5 @@
 // Tasks. Every status change goes through applyEvent (or claimNextTask), guarded by the current status.
-import {
-  type SQL,
-  and,
-  asc,
-  count,
-  desc,
-  eq,
-  exists,
-  getColumns,
-  inArray,
-  isNotNull,
-  isNull,
-  lt,
-  ne,
-  not,
-  notExists,
-  or,
-  sql,
-} from 'drizzle-orm';
+import { type SQL, and, asc, count, desc, eq, exists, inArray, isNotNull, isNull, lt, ne, not, notExists, or, sql } from 'drizzle-orm';
 import { type AnySQLiteColumn, alias } from 'drizzle-orm/sqlite-core';
 import type { DatabaseSync } from 'node:sqlite';
 import { DEFAULTS } from '../config.ts';
@@ -36,17 +18,13 @@ import {
   type TaskSummary,
 } from '../domain/task/task.ts';
 import type { AttentionCandidate, AttentionWhy } from '../domain/daemon/headline.ts';
+import { SUMMARY_COLUMNS, TASK_COLUMNS, mapFound, toTask, toTaskSummary } from './mappers.ts';
 import type { Orm } from './orm.ts';
 import { insertOwnPlan, saveOwnPlan } from './plans.ts';
 import { NOW_SQL, atomically, changed, inActiveRepo as inActiveRepoOf } from './sql.ts';
 import { plannerRuns, repos, runs, taskLinks, tasks } from './tables.ts';
 import { recordEvent } from './task-events.ts';
 import { insertLinks } from './task-links.ts';
-
-/** A task's columns: every one but the legacy `after_task`, which migration 18 copied into task_links and nothing reads. */
-const { after_task: _after_task, ...TASK_COLUMNS } = getColumns(tasks);
-/** Every column but the prompt, for lists. */
-const { prompt: _prompt, ...SUMMARY_COLUMNS } = TASK_COLUMNS;
 
 /** A task whose PR is open. */
 const prOpen = eq(tasks.pr_state, 'open');
@@ -125,7 +103,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     );
   const countWhere = (where: SQL | undefined) => orm.select({ n: count() }).from(tasks).where(where).get()?.n ?? 0;
 
-  const getTask = (id: number): Task | undefined => orm.select(TASK_COLUMNS).from(tasks).where(eq(tasks.id, id)).get();
+  const getTask = (id: number): Task | undefined => mapFound(orm.select(TASK_COLUMNS).from(tasks).where(eq(tasks.id, id)).get(), toTask);
 
   /**
    * Touch a task that is in one of `statuses` and record a history row of `type` for it, which leaves the status as it is.
@@ -165,12 +143,15 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       if (!next) return undefined;
       const row = atomically(db, () => {
         // Guarded on the status and on the counters the changes were computed from.
-        const row = orm
-          .update(tasks)
-          .set({ status: next.to, ...given(next.changes), updated_at: NOW_SQL })
-          .where(and(eq(tasks.id, id), eq(tasks.status, cur.status), eq(tasks.attempts, cur.attempts), eq(tasks.restarts, cur.restarts)))
-          .returning(TASK_COLUMNS)
-          .get();
+        const row = mapFound(
+          orm
+            .update(tasks)
+            .set({ status: next.to, ...given(next.changes), updated_at: NOW_SQL })
+            .where(and(eq(tasks.id, id), eq(tasks.status, cur.status), eq(tasks.attempts, cur.attempts), eq(tasks.restarts, cur.restarts)))
+            .returning(TASK_COLUMNS)
+            .get(),
+          toTask,
+        );
         if (row) recordEvent(orm, id, next.history, cur.status, next.to, opts.reason ?? null);
         return row;
       });
@@ -230,10 +211,10 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     getTask,
     applyEvent,
     listTasks(): Task[] {
-      return orm.select(TASK_COLUMNS).from(tasks).where(inActiveRepo(tasks.repo_id)).orderBy(desc(tasks.id)).all();
+      return orm.select(TASK_COLUMNS).from(tasks).where(inActiveRepo(tasks.repo_id)).orderBy(desc(tasks.id)).all().map(toTask);
     },
     tasksForRepo(repo_id: number, limit = 40): Task[] {
-      return orm.select(TASK_COLUMNS).from(tasks).where(eq(tasks.repo_id, repo_id)).orderBy(desc(tasks.id)).limit(limit).all();
+      return orm.select(TASK_COLUMNS).from(tasks).where(eq(tasks.repo_id, repo_id)).orderBy(desc(tasks.id)).limit(limit).all().map(toTask);
     },
     /** Tasks of a repo that still need work or a decision; the planner waits until there are none. */
     countOpen(repo_id: number): number {
@@ -315,7 +296,8 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         .from(tasks)
         .where(and(eq(tasks.status, 'blocked'), inArray(tasks.repo_id, unblocking)))
         .orderBy(desc(tasks.priority), asc(tasks.id))
-        .all() as Task[];
+        .all()
+        .map(toTask);
     },
     /**
      * Leave an unblock run's question (JSON UnblockQuestion) on a blocked task, with an `unblock_ask` history row whose
@@ -359,7 +341,8 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
           ),
         )
         .orderBy(desc(tasks.id))
-        .all() as TaskSummary[];
+        .all()
+        .map(toTaskSummary);
     },
     /**
      * Tasks whose pull request is still open, for the state refresh: done ones, and blocked or failed ones
@@ -370,7 +353,8 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         .select(TASK_COLUMNS)
         .from(tasks)
         .where(and(inArray(tasks.status, ['done', 'blocked', 'failed']), isNotNull(tasks.pr_url), prOpen, inActiveRepo(tasks.repo_id)))
-        .all();
+        .all()
+        .map(toTask);
     },
     /**
      * Atomically claim the next queued task of a repo that isn't paused, or undefined if none.
@@ -386,13 +370,16 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         .orderBy(desc(t.priority), asc(t.id))
         .limit(1);
       return atomically(db, () => {
-        const row = orm
-          .update(tasks)
-          // guard: the builder has no column arithmetic, and the attempt must count in the same guarded write as the claim
-          .set({ status: to, attempts: sql`${tasks.attempts} + 1`, updated_at: NOW_SQL })
-          .where(and(inArray(tasks.status, from), eq(tasks.id, next)))
-          .returning(TASK_COLUMNS)
-          .get();
+        const row = mapFound(
+          orm
+            .update(tasks)
+            // guard: the builder has no column arithmetic, and the attempt must count in the same guarded write as the claim
+            .set({ status: to, attempts: sql`${tasks.attempts} + 1`, updated_at: NOW_SQL })
+            .where(and(inArray(tasks.status, from), eq(tasks.id, next)))
+            .returning(TASK_COLUMNS)
+            .get(),
+          toTask,
+        );
         // A claim is allowed from one status only (queued), so that is where the task came from.
         if (row) recordEvent(orm, row.id, 'claim', from[0], to);
         return row;
@@ -411,12 +398,15 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     ): Task | undefined {
       if (Object.keys(fields).length === 0 && opts.ownPlan === undefined) return getTask(id);
       return atomically(db, () => {
-        const edited = orm
-          .update(tasks)
-          .set({ ...given(fields), updated_at: NOW_SQL })
-          .where(and(eq(tasks.id, id), inArray(tasks.status, EDITABLE_STATUSES)))
-          .returning(TASK_COLUMNS)
-          .get();
+        const edited = mapFound(
+          orm
+            .update(tasks)
+            .set({ ...given(fields), updated_at: NOW_SQL })
+            .where(and(eq(tasks.id, id), inArray(tasks.status, EDITABLE_STATUSES)))
+            .returning(TASK_COLUMNS)
+            .get(),
+          toTask,
+        );
         if (!edited) return undefined;
         if (opts.ownPlan !== undefined) saveOwnPlan(db, orm, id, opts.ownPlan, 'attached');
         // The status stays; the row says what was edited, and `stats` counts an edit of a queued or blocked task.
@@ -468,14 +458,15 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     },
     /** Whether the daemon may merge the task's PR on its own: 1, 0, or null for the repo's setting. Not a status, so unguarded. */
     setAutoMerge(id: number, value: 0 | 1 | null): Task | undefined {
-      return (
+      return mapFound(
         orm
           .update(tasks)
           // The stored check was made for the old setting, so it goes with it.
           .set({ auto_merge: value, ...NO_AUTO_MERGE_CHECK, updated_at: NOW_SQL })
           .where(eq(tasks.id, id))
           .returning(TASK_COLUMNS)
-          .get()
+          .get(),
+        toTask,
       );
     },
     /**

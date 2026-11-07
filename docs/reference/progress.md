@@ -19,6 +19,7 @@ Each list can only shrink: an entry that stops applying fails `pnpm test`.
 | List                                              | Entries |
 | ------------------------------------------------- | ------- |
 | ALLOWED_FOLDER_CYCLES (`scripts/lib/progress.ts`) | 2       |
+| ROW_SHAPED_FIELDS (`scripts/lib/progress.ts`)     | 18      |
 | UNCHECKED rules (`scripts/lib/rules.ts`)          | 5       |
 
 ## Folder cycles
