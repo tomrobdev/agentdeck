@@ -376,7 +376,11 @@ const HOLD_ALLOWED: { file: string; line: RegExp; why: string }[] = [
   { file: 'app/src/components/panels/BudgetSettings.vue', line: /Hold new tasks above/, why: 'the governor budget setting' },
   { file: 'domain/task/digest.ts', line: /governor on hold/, why: 'the governor' },
   { file: 'domain/task/start.ts', line: /governor holds/, why: 'the governor' },
-  { file: 'application/scheduler/scheduler.ts', line: /^(?!.*caffeinate)/, why: "the scheduler's hold announcement" },
+  {
+    file: 'application/scheduler/scheduler.ts',
+    line: /a hold once|const hold = |\bhold( &&|\.\w)|governor hold|kind: 'hold'|hold lifted/,
+    why: "the scheduler's hold announcement",
+  },
   { file: 'cli/daemon.ts', line: /on hold|HOLD:/, why: "the governor's state, shown" },
   { file: 'app/src/api/format.ts', line: /On hold/, why: "the governor's state, shown" },
   { file: 'app/src/components/layout/StatusBar.vue', line: /On hold/, why: "the governor's state, shown" },

@@ -54,9 +54,9 @@ test('planner is due only with goals, an empty queue, and after the interval', (
   assert.equal(plannerDue(db, repo), null, 'open work exists');
   db.applyEvent(t.id, { type: 'cancel' });
 
-  db.updateRepo(repoId, { planned_at: new Date().toISOString().slice(0, 19).replace('T', ' ') });
+  db.updateRepo(repoId, { proposed_at: new Date().toISOString().slice(0, 19).replace('T', ' ') });
   assert.equal(plannerDue(db, db.getRepo(repoId)!), null, 'planned recently');
-  db.updateRepo(repoId, { planned_at: null });
+  db.updateRepo(repoId, { proposed_at: null });
 });
 
 test('proposing tasks yields capped, de-duplicated tasks that wait for approval', async () => {
@@ -78,7 +78,7 @@ test('proposing tasks yields capped, de-duplicated tasks that wait for approval'
   assert.equal(run.outcome, 'proposed');
   assert.equal(run.proposed, 2);
   assert.equal(run.note, 'looked at src/');
-  assert.ok(db.getRepo(repoId)!.planned_at);
+  assert.ok(db.getRepo(repoId)!.proposed_at);
   assert.equal(db.recentNotifications(1)[0].kind, 'proposed');
 
   // The scheduler never picks up proposals.
@@ -155,7 +155,7 @@ test('with auto-approve, the scheduler plans an empty queue and runs the tasks',
   actions.updateRepo(db, repoB.id, { goals: 'make greetings', auto_approve: true });
   actions.updateSettings(db, { planner: { max_tasks: 1 } });
 
-  await new Scheduler(db, { once: true, autoPlan: true, tickMs: 50, log: () => {} }).run();
+  await new Scheduler(db, { once: true, autoPropose: true, tickMs: 50, log: () => {} }).run();
 
   const tasks = db.tasksForRepo(repoB.id);
   assert.equal(tasks.length, 1);

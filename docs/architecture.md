@@ -180,7 +180,7 @@ erDiagram
     text allowed_tools "nullable"
     text created_at
     integer auto_approve
-    text planned_at "nullable"
+    text proposed_at "nullable"
     text toolchain "nullable"
     text setup_cmd "nullable"
     text paused_reason "nullable"
@@ -499,5 +499,6 @@ stateDiagram-v2
 | 26   | an open PR's latest checks, one by one (domain/pull-request/checks.ts StoredChecks): JSON { read_at, head, checks, notified }, written by the PR refresh; notified says a person was told they fail. NULL until the PR's checks are read.  |
 | 27   | when a sync of the task's branch began (NULL when none is running). Syncs run in the daemon only, so the CLI reads this to see one; the daemon clears every marker on start.                                                               |
 | 28   | unblock runs (domain/run/unblock.ts). auto_unblock lets the daemon start one on its own when a task blocks (off by default); question is the JSON { question, options } one left on a blocked task, cleared when the task is queued again. |
+| 29   | the planner's last run is when the repo last had tasks proposed, so planned_at is now proposed_at.                                                                                                                                         |
 
 <!-- /generated -->
