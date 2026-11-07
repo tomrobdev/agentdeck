@@ -3,8 +3,7 @@ import { github } from '../../adapters/github.ts';
 import { appendEvent } from '../../adapters/run-log.ts';
 import type { Db } from '../../db/index.ts';
 import { AUTO_MERGE_LABEL, autoMergeOn } from '../../domain/pull-request/auto-merge.ts';
-import { buildPrBody } from '../../domain/pull-request/pr.ts';
-import { hasOpenPr } from '../../domain/task/stage.ts';
+import { buildPrBody, openPrUrl } from '../../domain/pull-request/pr.ts';
 import type { Task } from '../../domain/task/task.ts';
 import { errorMessage } from '../../domain/text.ts';
 import { prPlanFor } from '../plans.ts';
@@ -31,7 +30,8 @@ export async function openPullRequest(db: Db, task: Task): Promise<{ url?: strin
     await github.push(repo.path, task.branch);
     // A task retried while its PR is still open keeps that PR; the push above updated it.
     // Once that PR is merged or closed, the new commits need a new PR.
-    if (task.pr_url && hasOpenPr(task)) return { url: task.pr_url };
+    const open = openPrUrl(task.pr);
+    if (open) return { url: open };
     // A PR the daemon may merge carries the label. If the repo can't have it, the PR opens without it and waits for a person.
     const labelled =
       autoMergeOn(task, repo) &&

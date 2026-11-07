@@ -3,7 +3,7 @@
 // - builds_on: the task uses the other's code, so it starts once the other is done and merged.
 // - after: the task runs on its own and only its merge waits for the other's.
 
-import type { PrMode } from '../pull-request/pr.ts';
+import type { PrMode, PullRequest } from '../pull-request/pr.ts';
 import type { Task } from './task.ts';
 
 export type LinkKind = 'builds_on' | 'after';
@@ -16,7 +16,7 @@ export interface Link {
 }
 
 /** `pr_mode` is that of the dependency's repo: a done task in a repo that opens PRs isn't met until its PR is merged. */
-export type Dependency = Pick<Task, 'status' | 'pr_url' | 'pr_state' | 'done_by'> & { pr_mode: PrMode };
+export type Dependency = Pick<Task, 'status' | 'done_by'> & { pr: Pick<PullRequest, 'state'> | null; pr_mode: PrMode };
 
 /** A dependency, and the links it has itself (stuck spreads down its builds-on links). */
 export type LinkTarget = Dependency & { links: Link[] };
@@ -35,12 +35,13 @@ function standing(on: number, dependency: Dependency | undefined): Standing {
   switch (dependency.status) {
     case 'done':
       // Done and merged; or done in a repo that opens no PRs; or a person said so and its PR is not open.
-      if (dependency.pr_state === 'merged') return { kind: 'met' };
-      if (dependency.pr_url === null && dependency.pr_state === null && dependency.pr_mode === 'off') return { kind: 'met' };
-      if (dependency.done_by === 'person' && dependency.pr_state !== 'open') return { kind: 'met' };
-      if (dependency.pr_state === 'closed') return stuck(`${id}'s PR was closed without merging`, 'whose PR was closed without merging');
-      if (dependency.pr_state === 'failed') return stuck(`${id}'s PR could not be opened`, 'whose PR could not be opened');
-      if (dependency.pr_state === 'open') return { kind: 'waiting', on, reason: `${id}'s PR is not merged yet` };
+      const state = dependency.pr?.state ?? null;
+      if (state === 'merged') return { kind: 'met' };
+      if (state === null && dependency.pr_mode === 'off') return { kind: 'met' };
+      if (dependency.done_by === 'person' && state !== 'open') return { kind: 'met' };
+      if (state === 'closed') return stuck(`${id}'s PR was closed without merging`, 'whose PR was closed without merging');
+      if (state === 'failed') return stuck(`${id}'s PR could not be opened`, 'whose PR could not be opened');
+      if (state === 'open') return { kind: 'waiting', on, reason: `${id}'s PR is not merged yet` };
       return { kind: 'waiting', on, reason: `${id}'s PR is not opened yet` };
     case 'failed':
       return stuck(`${id} failed`, 'which failed');
@@ -56,7 +57,7 @@ function standing(on: number, dependency: Dependency | undefined): Standing {
 /** Whether the other task of an after link was rejected or is gone, so it will never land: cancelled, its PR closed, or deleted. */
 function neverLands(dependency: Dependency | undefined): boolean {
   if (!dependency) return true;
-  return dependency.status === 'cancelled' || (dependency.status === 'done' && dependency.pr_state === 'closed');
+  return dependency.status === 'cancelled' || (dependency.status === 'done' && dependency.pr?.state === 'closed');
 }
 
 /**
@@ -182,7 +183,7 @@ export function stuckOn(id: number, l: LinkIndex): Builder[] {
 export function releasedBy(id: number, l: LinkIndex): Builder[] {
   const merged = (on: number): LinkTarget | undefined => {
     const t = l.target(on);
-    return on === id && t ? { ...t, status: 'done', pr_state: 'merged' } : t;
+    return on === id && t ? { ...t, status: 'done', pr: { state: 'merged' } } : t;
   };
   return buildingOn(id, l).filter((t) => t.status === 'queued' && startState(t, l.linksOf(t.id), merged).kind === 'met');
 }

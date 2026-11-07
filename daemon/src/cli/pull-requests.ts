@@ -1,6 +1,6 @@
 // Pull request commands: fix failing checks, close, merge and auto-merge.
 import * as actions from '../application/actions.ts';
-import { isReview } from '../domain/task/stage.ts';
+import { isReview, stageOf } from '../domain/task/stage.ts';
 import { confirm, die, taskId } from './format.ts';
 import type { Command } from './context.ts';
 
@@ -19,7 +19,7 @@ export const prCommands: Record<string, Command> = {
   },
   merge: async ({ db, flags, rest }) => {
     if (flags.all) {
-      const review = db.openPrTasks().filter(isReview);
+      const review = db.openPrTasks().filter((t) => isReview(stageOf(t)));
       if (!review.length) return void console.log('no pull requests in review');
       for (const t of review) console.log(`#${t.id}  ${t.title}`);
       if (!flags.yes && !(await confirm(`merge ${review.length === 1 ? 'this PR' : `these ${review.length} PRs`}?`))) {

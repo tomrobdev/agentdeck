@@ -1,8 +1,5 @@
 // The task entity. Pure: no I/O.
-import type { AutoMergeCheck } from '../pull-request/auto-merge.ts';
-import type { CheckCounts, StoredChecks } from '../pull-request/checks.ts';
-import type { MergeMethod } from '../pull-request/merge.ts';
-import type { PrState, PullRequest } from '../pull-request/pr.ts';
+import type { PullRequest } from '../pull-request/pr.ts';
 import type { UnblockQuestion } from '../run/unblock.ts';
 import type { TaskStatus } from './lifecycle.ts';
 import type { Needs } from './needs.ts';
@@ -26,24 +23,13 @@ export interface Task {
   stop_reason: string | null;
   source: TaskSource;
   restarts: number; // times a daemon restart requeued this task mid-run
-  pr: PullRequest | null; // the task's pull request, as one value; the flat PR fields below say the same until their readers move to it
-  pr_url: string | null; // the pull request the daemon opened when the task finished
-  pr_state: PrState | null;
-  merge_method: MergeMethod | null; // how the PR was merged from the app
+  pr: PullRequest | null; // the task's pull request, as one value
   needs: Needs | null; // what the worker said it needs when it blocked; cleared when queued again
   question: UnblockQuestion | null; // what an unblock run left on the blocked task; cleared with `needs`
   plan_steps: string[] | null; // the linked plan's step ids; null means every unfinished step
   done_by: 'person' | null; // 'person' when mark_done set the status; cleared whenever the task leaves done
   auto_merge: boolean | null; // overrides the repo's auto_merge; null = the repo's (domain/pull-request/auto-merge.ts)
-  auto_merge_check: AutoMergeCheck | null; // the PR refresh's latest auto-merge check while the PR is open
-  auto_merge_checked_at: string | null; // when that check was made
-  pr_checks_opened: CheckCounts | null; // the PR's checks the first time they settled after it opened
-  pr_checks_merged: CheckCounts | null; // the PR's checks when it was merged
-  merge_requested_at: string | null; // when a person asked the daemon to merge the PR once it is ready; null when there is no request
-  merge_request_method: MergeMethod | null; // the method that request asked for
-  merge_request_check: AutoMergeCheck | null; // the PR refresh's latest merge request check
   syncing_since: string | null; // when a sync of the branch began; NULL when none is running
-  pr_checks: StoredChecks | null; // the open PR's latest checks, one by one, and when they were read
   plan_task: number | null; // the task whose plan this one follows (itself when its own plan was given with --plan); null follows its own plan, if any
   created_at: string;
   updated_at: string;

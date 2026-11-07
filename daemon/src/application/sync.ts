@@ -25,7 +25,7 @@ import type { Repo } from '../domain/repo/repo.ts';
 import { buildResolvePrompt } from '../domain/run/prompt.ts';
 import type { Outcome, Run } from '../domain/run/run.ts';
 import { errorMessage, lastLine } from '../domain/text.ts';
-import { hasOpenPr } from '../domain/task/stage.ts';
+import { openPrUrl } from '../domain/pull-request/pr.ts';
 import { type Task, leftoversMessage } from '../domain/task/task.ts';
 import { endTaskRun, openTaskRun, startTaskRun } from './run/claude-run.ts';
 import { ActionError, requireTask, requireTaskRepo } from './input.ts';
@@ -183,7 +183,7 @@ async function pushIfNeeded(
   worktree: string,
   changed: boolean,
 ): Promise<{ pushed: boolean; error?: string }> {
-  if (!task.branch || !task.pr_url || !hasOpenPr(task)) return { pushed: false };
+  if (!task.branch || !openPrUrl(task.pr)) return { pushed: false };
   try {
     // A branch that was merged but not pushed (the push failed last time) still needs pushing.
     if (!changed && !(await aheadOfRemote(worktree, task.branch))) return { pushed: false };

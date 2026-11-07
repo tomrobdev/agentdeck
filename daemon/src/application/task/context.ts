@@ -6,8 +6,8 @@ import { WORKTREE_DIR } from '../../config.ts';
 import type { Db } from '../../db/index.ts';
 import type { Repo } from '../../domain/repo/repo.ts';
 import { digest } from '../../domain/task/digest.ts';
-import { filterTasks } from '../../domain/task/listing.ts';
-import { isReview } from '../../domain/task/stage.ts';
+import { filterTasks, listable } from '../../domain/task/listing.ts';
+import { isReview, stageOf } from '../../domain/task/stage.ts';
 import { OPEN_STATUSES } from '../../domain/task/task.ts';
 import { status } from '../settings.ts';
 import { withViews } from './task-views.ts';
@@ -56,8 +56,8 @@ export async function liveContext(db: Db, opts: { repo: Repo; after: number | nu
   // Only this repo's tasks that can be open get views; the views are the costly part.
   const maybeOpen = db
     .listTasks()
-    .filter((t) => t.repo_id === opts.repo.id && ([...OPEN_STATUSES, 'blocked', 'failed'].includes(t.status) || isReview(t)));
-  const open = filterTasks(withViews(db, maybeOpen), { states: OPEN_STATES, repo_id: opts.repo.id, sort: 'attention' });
+    .filter((t) => t.repo_id === opts.repo.id && ([...OPEN_STATUSES, 'blocked', 'failed'].includes(t.status) || isReview(stageOf(t))));
+  const open = filterTasks(withViews(db, maybeOpen).map(listable), { states: OPEN_STATES, repo_id: opts.repo.id, sort: 'attention' });
   const lines = digest({
     header: {
       repo: opts.repo.name,

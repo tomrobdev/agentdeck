@@ -3,7 +3,7 @@
 import { getColumns } from 'drizzle-orm';
 import { type AutoMergeCheck, DEFAULT_AUTO_MERGE_SKIP } from '../domain/pull-request/auto-merge.ts';
 import type { CheckCounts, StoredChecks } from '../domain/pull-request/checks.ts';
-import { pullRequestOf } from '../domain/pull-request/pr.ts';
+import { type PrFields, pullRequestOf } from '../domain/pull-request/pr.ts';
 import type { Repo } from '../domain/repo/repo.ts';
 import type { Run } from '../domain/run/run.ts';
 import type { UnblockQuestion } from '../domain/run/unblock.ts';
@@ -78,27 +78,46 @@ export function readCounts(json: string | null): CheckCounts | null {
   return { total: c.total, failing: c.failing, pending: c.pending };
 }
 
+/** The task columns the pull request is made of: a task has them as `pr`, not as fields. */
+export type PrColumn = keyof PrFields;
+
+/** A row without the pull request's columns. */
+function withoutPrColumns<R extends TaskSummaryRow>(row: R): Omit<R, PrColumn> {
+  const {
+    pr_url: _url,
+    pr_state: _state,
+    merge_method: _method,
+    auto_merge_check: _check,
+    auto_merge_checked_at: _checked_at,
+    pr_checks: _checks,
+    pr_checks_opened: _opened,
+    pr_checks_merged: _merged,
+    merge_requested_at: _requested_at,
+    merge_request_method: _request_method,
+    merge_request_check: _request_check,
+    ...rest
+  } = row;
+  return rest;
+}
+
 /** The task columns that carry a value, as the domain type has them, and the pull request they make up. */
-const taskValues = (row: TaskRow) => {
-  const prValues = {
+const taskValues = (row: TaskSummaryRow) => ({
+  needs: readNeeds(row.needs),
+  question: readQuestion(row.question),
+  plan_steps: readSteps(row.plan_steps),
+  auto_merge: row.auto_merge === null ? null : row.auto_merge === 1,
+  pr: pullRequestOf({
+    ...row,
     auto_merge_check: readCheck(row.auto_merge_check),
     merge_request_check: readCheck(row.merge_request_check),
     pr_checks: readStoredChecks(row.pr_checks),
     pr_checks_opened: readCounts(row.pr_checks_opened),
     pr_checks_merged: readCounts(row.pr_checks_merged),
-  };
-  return {
-    needs: readNeeds(row.needs),
-    question: readQuestion(row.question),
-    plan_steps: readSteps(row.plan_steps),
-    auto_merge: row.auto_merge === null ? null : row.auto_merge === 1,
-    ...prValues,
-    pr: pullRequestOf({ ...row, ...prValues }),
-  };
-};
+  }),
+});
 
-export const toTask = (row: TaskRow): Task => ({ ...row, ...taskValues(row) });
-export const toTaskSummary = (row: TaskSummaryRow): TaskSummary => ({ ...row, ...taskValues(row as TaskRow) });
+export const toTask = (row: TaskRow): Task => ({ ...withoutPrColumns(row), ...taskValues(row) });
+export const toTaskSummary = (row: TaskSummaryRow): TaskSummary => ({ ...withoutPrColumns(row), ...taskValues(row) });
 /**
  * A repo's row as a `Repo`: the flags are booleans and the JSON columns arrays. A malformed list reads as its default, which for the
  * repo's own tool rules is none (not the generic defaults, which could allow more than the repo meant).

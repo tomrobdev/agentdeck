@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { type ListedTask, filterTasks } from '../src/domain/task/listing.ts';
+import { type Listable, filterTasks } from '../src/domain/task/listing.ts';
 
-function task(id: number, fields: Partial<ListedTask> = {}): ListedTask {
+function task(id: number, fields: Partial<Listable> = {}): Listable {
   return {
     id,
     repo_id: 1,
@@ -10,34 +10,11 @@ function task(id: number, fields: Partial<ListedTask> = {}): ListedTask {
     status: 'queued',
     priority: 0,
     model: 'sonnet',
-    max_turns: 40,
-    attempts: 0,
-    max_attempts: 2,
     branch: null,
-    worktree: null,
     stop_reason: null,
     source: 'manual',
-    restarts: 0,
-    pr: null,
     pr_url: null,
     pr_state: null,
-    merge_method: null,
-    plan_steps: null,
-    needs: null,
-    question: null,
-    done_by: null,
-    auto_merge: null,
-    auto_merge_check: null,
-    auto_merge_checked_at: null,
-    pr_checks: null,
-    syncing_since: null,
-    pr_checks_opened: null,
-    pr_checks_merged: null,
-    merge_requested_at: null,
-    merge_request_method: null,
-    merge_request_check: null,
-    plan_task: null,
-    created_at: '2026-10-18 10:00:00',
     updated_at: '2026-10-18 10:00:00',
     waiting: null,
     unblocks: [],

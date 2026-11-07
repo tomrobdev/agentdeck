@@ -1059,13 +1059,12 @@ What an unblock run left on a task it did not retry (the task's `question`).
 
 `pr_mode` is that of the dependency's repo: a done task in a repo that opens PRs isn't met until its PR is merged.
 
-| Field      | Type               | Comment                                                                       |
-| ---------- | ------------------ | ----------------------------------------------------------------------------- |
-| `status`   | `TaskStatus`       |                                                                               |
-| `pr_url`   | `string \| null`   | the pull request the daemon opened when the task finished                     |
-| `pr_state` | `PrState \| null`  |                                                                               |
-| `done_by`  | `"person" \| null` | 'person' when mark_done set the status; cleared whenever the task leaves done |
-| `pr_mode`  | `PrMode`           |                                                                               |
+| Field     | Type                                 | Comment                                                                       |
+| --------- | ------------------------------------ | ----------------------------------------------------------------------------- |
+| `status`  | `TaskStatus`                         |                                                                               |
+| `done_by` | `"person" \| null`                   | 'person' when mark_done set the status; cleared whenever the task leaves done |
+| `pr`      | `Pick<PullRequest, "state"> \| null` |                                                                               |
+| `pr_mode` | `PrMode`                             |                                                                               |
 
 ### DigestEvent
 
@@ -1141,14 +1140,13 @@ What the link functions read: a task's links, the tasks that depend on it (throu
 
 A dependency, and the links it has itself (stuck spreads down its builds-on links).
 
-| Field      | Type               | Comment                                                                       |
-| ---------- | ------------------ | ----------------------------------------------------------------------------- |
-| `status`   | `TaskStatus`       |                                                                               |
-| `pr_url`   | `string \| null`   | the pull request the daemon opened when the task finished                     |
-| `pr_state` | `PrState \| null`  |                                                                               |
-| `done_by`  | `"person" \| null` | 'person' when mark_done set the status; cleared whenever the task leaves done |
-| `pr_mode`  | `PrMode`           |                                                                               |
-| `links`    | `Link[]`           |                                                                               |
+| Field     | Type                                 | Comment                                                                       |
+| --------- | ------------------------------------ | ----------------------------------------------------------------------------- |
+| `status`  | `TaskStatus`                         |                                                                               |
+| `done_by` | `"person" \| null`                   | 'person' when mark_done set the status; cleared whenever the task leaves done |
+| `pr`      | `Pick<PullRequest, "state"> \| null` |                                                                               |
+| `pr_mode` | `PrMode`                             |                                                                               |
+| `links`   | `Link[]`                             |                                                                               |
 
 ### ListFilter
 
@@ -1163,67 +1161,56 @@ A dependency, and the links it has itself (stuck spreads down its builds-on link
 
 ### Listable
 
-| Field         | Type                          | Comment                                                   |
-| ------------- | ----------------------------- | --------------------------------------------------------- |
-| `branch`      | `string \| null`              |                                                           |
-| `waiting`     | `Waiting \| null`             |                                                           |
-| `id`          | `number`                      |                                                           |
-| `repo_id`     | `number`                      |                                                           |
-| `status`      | `TaskStatus`                  |                                                           |
-| `pr_url`      | `string \| null`              | the pull request the daemon opened when the task finished |
-| `pr_state`    | `PrState \| null`             |                                                           |
-| `title`       | `string`                      |                                                           |
-| `priority`    | `number`                      |                                                           |
-| `model`       | `string`                      |                                                           |
-| `stop_reason` | `string \| null`              |                                                           |
-| `source`      | `TaskSource`                  |                                                           |
-| `updated_at`  | `string`                      |                                                           |
-| `repo?`       | `string \| null \| undefined` |                                                           |
-| `unblocks?`   | `number[] \| undefined`       |                                                           |
+| Field         | Type                          | Comment |
+| ------------- | ----------------------------- | ------- |
+| `branch`      | `string \| null`              |         |
+| `waiting`     | `Waiting \| null`             |         |
+| `id`          | `number`                      |         |
+| `repo_id`     | `number`                      |         |
+| `status`      | `TaskStatus`                  |         |
+| `title`       | `string`                      |         |
+| `priority`    | `number`                      |         |
+| `model`       | `string`                      |         |
+| `stop_reason` | `string \| null`              |         |
+| `source`      | `TaskSource`                  |         |
+| `updated_at`  | `string`                      |         |
+| `pr_url`      | `string \| null`              |         |
+| `pr_state`    | `PrState \| null`             |         |
+| `repo?`       | `string \| null \| undefined` |         |
+| `unblocks?`   | `number[] \| undefined`       |         |
 
 ### ListedTask
 
 A task as listed: with where it stands on its builds-on links (as waitingFor reports it), the tasks merging its open PR lets start and, from the API, its repo's name. A daemon from before `unblocks` existed sends none, which reads as empty.
 
-| Field                   | Type                      | Comment                                                                                                                  |
-| ----------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `branch`                | `string \| null`          |                                                                                                                          |
-| `auto_merge`            | `boolean \| null`         | overrides the repo's auto_merge; null = the repo's (domain/pull-request/auto-merge.ts)                                   |
-| `id`                    | `number`                  |                                                                                                                          |
-| `repo_id`               | `number`                  |                                                                                                                          |
-| `created_at`            | `string`                  |                                                                                                                          |
-| `pr_checks_opened`      | `CheckCounts \| null`     | the PR's checks the first time they settled after it opened                                                              |
-| `pr`                    | `PullRequest \| null`     | the task's pull request, as one value; the flat PR fields below say the same until their readers move to it              |
-| `status`                | `TaskStatus`              |                                                                                                                          |
-| `attempts`              | `number`                  |                                                                                                                          |
-| `restarts`              | `number`                  | times a daemon restart requeued this task mid-run                                                                        |
-| `pr_url`                | `string \| null`          | the pull request the daemon opened when the task finished                                                                |
-| `pr_state`              | `PrState \| null`         |                                                                                                                          |
-| `done_by`               | `"person" \| null`        | 'person' when mark_done set the status; cleared whenever the task leaves done                                            |
-| `title`                 | `string`                  |                                                                                                                          |
-| `priority`              | `number`                  |                                                                                                                          |
-| `model`                 | `string`                  |                                                                                                                          |
-| `max_turns`             | `number`                  |                                                                                                                          |
-| `max_attempts`          | `number`                  |                                                                                                                          |
-| `worktree`              | `string \| null`          |                                                                                                                          |
-| `stop_reason`           | `string \| null`          |                                                                                                                          |
-| `source`                | `TaskSource`              |                                                                                                                          |
-| `merge_method`          | `MergeMethod \| null`     | how the PR was merged from the app                                                                                       |
-| `needs`                 | `Needs \| null`           | what the worker said it needs when it blocked; cleared when queued again                                                 |
-| `question`              | `UnblockQuestion \| null` | what an unblock run left on the blocked task; cleared with `needs`                                                       |
-| `plan_steps`            | `string[] \| null`        | the linked plan's step ids; null means every unfinished step                                                             |
-| `auto_merge_check`      | `AutoMergeCheck \| null`  | the PR refresh's latest auto-merge check while the PR is open                                                            |
-| `auto_merge_checked_at` | `string \| null`          | when that check was made                                                                                                 |
-| `pr_checks_merged`      | `CheckCounts \| null`     | the PR's checks when it was merged                                                                                       |
-| `merge_requested_at`    | `string \| null`          | when a person asked the daemon to merge the PR once it is ready; null when there is no request                           |
-| `merge_request_method`  | `MergeMethod \| null`     | the method that request asked for                                                                                        |
-| `merge_request_check`   | `AutoMergeCheck \| null`  | the PR refresh's latest merge request check                                                                              |
-| `syncing_since`         | `string \| null`          | when a sync of the branch began; NULL when none is running                                                               |
-| `pr_checks`             | `StoredChecks \| null`    | the open PR's latest checks, one by one, and when they were read                                                         |
-| `plan_task`             | `number \| null`          | the task whose plan this one follows (itself when its own plan was given with --plan); null follows its own plan, if any |
-| `updated_at`            | `string`                  |                                                                                                                          |
-| `waiting`               | `Waiting \| null`         |                                                                                                                          |
-| `unblocks`              | `number[]`                |                                                                                                                          |
+| Field           | Type                      | Comment                                                                                                                  |
+| --------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `branch`        | `string \| null`          |                                                                                                                          |
+| `auto_merge`    | `boolean \| null`         | overrides the repo's auto_merge; null = the repo's (domain/pull-request/auto-merge.ts)                                   |
+| `id`            | `number`                  |                                                                                                                          |
+| `repo_id`       | `number`                  |                                                                                                                          |
+| `created_at`    | `string`                  |                                                                                                                          |
+| `pr`            | `PullRequest \| null`     | the task's pull request, as one value                                                                                    |
+| `status`        | `TaskStatus`              |                                                                                                                          |
+| `attempts`      | `number`                  |                                                                                                                          |
+| `restarts`      | `number`                  | times a daemon restart requeued this task mid-run                                                                        |
+| `done_by`       | `"person" \| null`        | 'person' when mark_done set the status; cleared whenever the task leaves done                                            |
+| `title`         | `string`                  |                                                                                                                          |
+| `priority`      | `number`                  |                                                                                                                          |
+| `model`         | `string`                  |                                                                                                                          |
+| `max_turns`     | `number`                  |                                                                                                                          |
+| `max_attempts`  | `number`                  |                                                                                                                          |
+| `worktree`      | `string \| null`          |                                                                                                                          |
+| `stop_reason`   | `string \| null`          |                                                                                                                          |
+| `source`        | `TaskSource`              |                                                                                                                          |
+| `needs`         | `Needs \| null`           | what the worker said it needs when it blocked; cleared when queued again                                                 |
+| `question`      | `UnblockQuestion \| null` | what an unblock run left on the blocked task; cleared with `needs`                                                       |
+| `plan_steps`    | `string[] \| null`        | the linked plan's step ids; null means every unfinished step                                                             |
+| `syncing_since` | `string \| null`          | when a sync of the branch began; NULL when none is running                                                               |
+| `plan_task`     | `number \| null`          | the task whose plan this one follows (itself when its own plan was given with --plan); null follows its own plan, if any |
+| `updated_at`    | `string`                  |                                                                                                                          |
+| `waiting`       | `Waiting \| null`         |                                                                                                                          |
+| `unblocks`      | `number[]`                |                                                                                                                          |
 
 ### Needs
 
@@ -1253,44 +1240,33 @@ What the timeline shows for a row: the sentence, and the reason to show muted be
 
 ### Task
 
-| Field                   | Type                      | Comment                                                                                                                  |
-| ----------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `id`                    | `number`                  |                                                                                                                          |
-| `repo_id`               | `number`                  |                                                                                                                          |
-| `title`                 | `string`                  |                                                                                                                          |
-| `prompt`                | `string`                  |                                                                                                                          |
-| `status`                | `TaskStatus`              |                                                                                                                          |
-| `priority`              | `number`                  |                                                                                                                          |
-| `model`                 | `string`                  |                                                                                                                          |
-| `max_turns`             | `number`                  |                                                                                                                          |
-| `attempts`              | `number`                  |                                                                                                                          |
-| `max_attempts`          | `number`                  |                                                                                                                          |
-| `branch`                | `string \| null`          |                                                                                                                          |
-| `worktree`              | `string \| null`          |                                                                                                                          |
-| `stop_reason`           | `string \| null`          |                                                                                                                          |
-| `source`                | `TaskSource`              |                                                                                                                          |
-| `restarts`              | `number`                  | times a daemon restart requeued this task mid-run                                                                        |
-| `pr`                    | `PullRequest \| null`     | the task's pull request, as one value; the flat PR fields below say the same until their readers move to it              |
-| `pr_url`                | `string \| null`          | the pull request the daemon opened when the task finished                                                                |
-| `pr_state`              | `PrState \| null`         |                                                                                                                          |
-| `merge_method`          | `MergeMethod \| null`     | how the PR was merged from the app                                                                                       |
-| `needs`                 | `Needs \| null`           | what the worker said it needs when it blocked; cleared when queued again                                                 |
-| `question`              | `UnblockQuestion \| null` | what an unblock run left on the blocked task; cleared with `needs`                                                       |
-| `plan_steps`            | `string[] \| null`        | the linked plan's step ids; null means every unfinished step                                                             |
-| `done_by`               | `"person" \| null`        | 'person' when mark_done set the status; cleared whenever the task leaves done                                            |
-| `auto_merge`            | `boolean \| null`         | overrides the repo's auto_merge; null = the repo's (domain/pull-request/auto-merge.ts)                                   |
-| `auto_merge_check`      | `AutoMergeCheck \| null`  | the PR refresh's latest auto-merge check while the PR is open                                                            |
-| `auto_merge_checked_at` | `string \| null`          | when that check was made                                                                                                 |
-| `pr_checks_opened`      | `CheckCounts \| null`     | the PR's checks the first time they settled after it opened                                                              |
-| `pr_checks_merged`      | `CheckCounts \| null`     | the PR's checks when it was merged                                                                                       |
-| `merge_requested_at`    | `string \| null`          | when a person asked the daemon to merge the PR once it is ready; null when there is no request                           |
-| `merge_request_method`  | `MergeMethod \| null`     | the method that request asked for                                                                                        |
-| `merge_request_check`   | `AutoMergeCheck \| null`  | the PR refresh's latest merge request check                                                                              |
-| `syncing_since`         | `string \| null`          | when a sync of the branch began; NULL when none is running                                                               |
-| `pr_checks`             | `StoredChecks \| null`    | the open PR's latest checks, one by one, and when they were read                                                         |
-| `plan_task`             | `number \| null`          | the task whose plan this one follows (itself when its own plan was given with --plan); null follows its own plan, if any |
-| `created_at`            | `string`                  |                                                                                                                          |
-| `updated_at`            | `string`                  |                                                                                                                          |
+| Field           | Type                      | Comment                                                                                                                  |
+| --------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `id`            | `number`                  |                                                                                                                          |
+| `repo_id`       | `number`                  |                                                                                                                          |
+| `title`         | `string`                  |                                                                                                                          |
+| `prompt`        | `string`                  |                                                                                                                          |
+| `status`        | `TaskStatus`              |                                                                                                                          |
+| `priority`      | `number`                  |                                                                                                                          |
+| `model`         | `string`                  |                                                                                                                          |
+| `max_turns`     | `number`                  |                                                                                                                          |
+| `attempts`      | `number`                  |                                                                                                                          |
+| `max_attempts`  | `number`                  |                                                                                                                          |
+| `branch`        | `string \| null`          |                                                                                                                          |
+| `worktree`      | `string \| null`          |                                                                                                                          |
+| `stop_reason`   | `string \| null`          |                                                                                                                          |
+| `source`        | `TaskSource`              |                                                                                                                          |
+| `restarts`      | `number`                  | times a daemon restart requeued this task mid-run                                                                        |
+| `pr`            | `PullRequest \| null`     | the task's pull request, as one value                                                                                    |
+| `needs`         | `Needs \| null`           | what the worker said it needs when it blocked; cleared when queued again                                                 |
+| `question`      | `UnblockQuestion \| null` | what an unblock run left on the blocked task; cleared with `needs`                                                       |
+| `plan_steps`    | `string[] \| null`        | the linked plan's step ids; null means every unfinished step                                                             |
+| `done_by`       | `"person" \| null`        | 'person' when mark_done set the status; cleared whenever the task leaves done                                            |
+| `auto_merge`    | `boolean \| null`         | overrides the repo's auto_merge; null = the repo's (domain/pull-request/auto-merge.ts)                                   |
+| `syncing_since` | `string \| null`          | when a sync of the branch began; NULL when none is running                                                               |
+| `plan_task`     | `number \| null`          | the task whose plan this one follows (itself when its own plan was given with --plan); null follows its own plan, if any |
+| `created_at`    | `string`                  |                                                                                                                          |
+| `updated_at`    | `string`                  |                                                                                                                          |
 
 ### TaskChanges
 
@@ -1320,43 +1296,32 @@ The fields an event sets, with their new values. A field not listed is left as i
 
 ### TaskSummary
 
-| Field                   | Type                      | Comment                                                                                                                  |
-| ----------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `branch`                | `string \| null`          |                                                                                                                          |
-| `auto_merge`            | `boolean \| null`         | overrides the repo's auto_merge; null = the repo's (domain/pull-request/auto-merge.ts)                                   |
-| `id`                    | `number`                  |                                                                                                                          |
-| `repo_id`               | `number`                  |                                                                                                                          |
-| `created_at`            | `string`                  |                                                                                                                          |
-| `pr_checks_opened`      | `CheckCounts \| null`     | the PR's checks the first time they settled after it opened                                                              |
-| `pr`                    | `PullRequest \| null`     | the task's pull request, as one value; the flat PR fields below say the same until their readers move to it              |
-| `status`                | `TaskStatus`              |                                                                                                                          |
-| `attempts`              | `number`                  |                                                                                                                          |
-| `restarts`              | `number`                  | times a daemon restart requeued this task mid-run                                                                        |
-| `pr_url`                | `string \| null`          | the pull request the daemon opened when the task finished                                                                |
-| `pr_state`              | `PrState \| null`         |                                                                                                                          |
-| `done_by`               | `"person" \| null`        | 'person' when mark_done set the status; cleared whenever the task leaves done                                            |
-| `title`                 | `string`                  |                                                                                                                          |
-| `priority`              | `number`                  |                                                                                                                          |
-| `model`                 | `string`                  |                                                                                                                          |
-| `max_turns`             | `number`                  |                                                                                                                          |
-| `max_attempts`          | `number`                  |                                                                                                                          |
-| `worktree`              | `string \| null`          |                                                                                                                          |
-| `stop_reason`           | `string \| null`          |                                                                                                                          |
-| `source`                | `TaskSource`              |                                                                                                                          |
-| `merge_method`          | `MergeMethod \| null`     | how the PR was merged from the app                                                                                       |
-| `needs`                 | `Needs \| null`           | what the worker said it needs when it blocked; cleared when queued again                                                 |
-| `question`              | `UnblockQuestion \| null` | what an unblock run left on the blocked task; cleared with `needs`                                                       |
-| `plan_steps`            | `string[] \| null`        | the linked plan's step ids; null means every unfinished step                                                             |
-| `auto_merge_check`      | `AutoMergeCheck \| null`  | the PR refresh's latest auto-merge check while the PR is open                                                            |
-| `auto_merge_checked_at` | `string \| null`          | when that check was made                                                                                                 |
-| `pr_checks_merged`      | `CheckCounts \| null`     | the PR's checks when it was merged                                                                                       |
-| `merge_requested_at`    | `string \| null`          | when a person asked the daemon to merge the PR once it is ready; null when there is no request                           |
-| `merge_request_method`  | `MergeMethod \| null`     | the method that request asked for                                                                                        |
-| `merge_request_check`   | `AutoMergeCheck \| null`  | the PR refresh's latest merge request check                                                                              |
-| `syncing_since`         | `string \| null`          | when a sync of the branch began; NULL when none is running                                                               |
-| `pr_checks`             | `StoredChecks \| null`    | the open PR's latest checks, one by one, and when they were read                                                         |
-| `plan_task`             | `number \| null`          | the task whose plan this one follows (itself when its own plan was given with --plan); null follows its own plan, if any |
-| `updated_at`            | `string`                  |                                                                                                                          |
+| Field           | Type                      | Comment                                                                                                                  |
+| --------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `branch`        | `string \| null`          |                                                                                                                          |
+| `auto_merge`    | `boolean \| null`         | overrides the repo's auto_merge; null = the repo's (domain/pull-request/auto-merge.ts)                                   |
+| `id`            | `number`                  |                                                                                                                          |
+| `repo_id`       | `number`                  |                                                                                                                          |
+| `created_at`    | `string`                  |                                                                                                                          |
+| `pr`            | `PullRequest \| null`     | the task's pull request, as one value                                                                                    |
+| `status`        | `TaskStatus`              |                                                                                                                          |
+| `attempts`      | `number`                  |                                                                                                                          |
+| `restarts`      | `number`                  | times a daemon restart requeued this task mid-run                                                                        |
+| `done_by`       | `"person" \| null`        | 'person' when mark_done set the status; cleared whenever the task leaves done                                            |
+| `title`         | `string`                  |                                                                                                                          |
+| `priority`      | `number`                  |                                                                                                                          |
+| `model`         | `string`                  |                                                                                                                          |
+| `max_turns`     | `number`                  |                                                                                                                          |
+| `max_attempts`  | `number`                  |                                                                                                                          |
+| `worktree`      | `string \| null`          |                                                                                                                          |
+| `stop_reason`   | `string \| null`          |                                                                                                                          |
+| `source`        | `TaskSource`              |                                                                                                                          |
+| `needs`         | `Needs \| null`           | what the worker said it needs when it blocked; cleared when queued again                                                 |
+| `question`      | `UnblockQuestion \| null` | what an unblock run left on the blocked task; cleared with `needs`                                                       |
+| `plan_steps`    | `string[] \| null`        | the linked plan's step ids; null means every unfinished step                                                             |
+| `syncing_since` | `string \| null`          | when a sync of the branch began; NULL when none is running                                                               |
+| `plan_task`     | `number \| null`          | the task whose plan this one follows (itself when its own plan was given with --plan); null follows its own plan, if any |
+| `updated_at`    | `string`                  |                                                                                                                          |
 
 ### Transition
 

@@ -6,7 +6,7 @@ import { type MergeRequestView, conflictsWithBase, mergeRequestView } from '../.
 import { isMergeLocked } from '../pull-request/merge.ts';
 import { type LiveView, type SyncView, liveView, syncView } from '../../domain/run/live.ts';
 import { isSyncLocked } from '../sync.ts';
-import { hasOpenPr } from '../../domain/task/stage.ts';
+import { openPrUrl } from '../../domain/pull-request/pr.ts';
 import type { StartWait, Waiting } from '../../domain/task/start.ts';
 import { measureBranch } from './files.ts';
 import type { TaskStatus } from '../../domain/task/lifecycle.ts';
@@ -41,7 +41,7 @@ export interface TaskView {
 }
 
 /** The task fields a view reads. */
-type Viewed = Pick<Task, 'id' | 'repo_id' | 'status' | 'max_turns' | 'pr_state' | 'auto_merge' | 'source' | 'pr'>;
+type Viewed = Pick<Task, 'id' | 'repo_id' | 'status' | 'max_turns' | 'auto_merge' | 'source' | 'pr'>;
 
 /**
  * Each task with its view. Reads the repos, plans, links and queue state once for the whole list, so the queries it runs
@@ -81,13 +81,13 @@ export async function taskDetail(db: Db, id: number) {
   const repo = db.getRepo(task.repo_id);
   const [view] = withViews(db, [task]);
   // Only a done task's branch is final; measuring a running one would start git on every refetch.
-  if (repo && task.status === 'done' && task.branch && !hasOpenPr(task) && task.pr_state !== 'merged' && autoMergeOn(task, repo)) {
+  if (repo && task.status === 'done' && task.branch && !openPrUrl(task.pr) && task.pr?.state !== 'merged' && autoMergeOn(task, repo)) {
     const measured = await measureBranch(repo, task.branch);
     if (measured) view.auto_merge_view = autoMergeView(task, repo, measured);
   }
   return {
     ...view,
-    check_list: task.pr_checks && { read_at: task.pr_checks.read_at, checks: task.pr_checks.checks },
+    check_list: task.pr?.checks.latest ? { read_at: task.pr.checks.latest.read_at, checks: task.pr.checks.latest.checks } : null,
     runs: db.runsForTask(id),
     events: db.eventsForTask(id),
     plans: plansShown(db, task),
@@ -96,5 +96,5 @@ export async function taskDetail(db: Db, id: number) {
 
 /** Task summaries (no prompt), newest first, each with its view. The checks are summed up in `checks`, so their list stays out. */
 export function taskViews(db: Db, filter: { status?: TaskStatus; limit: number; before?: number }) {
-  return withViews(db, db.listTaskSummaries(filter)).map(({ pr_checks: _pr_checks, ...t }) => t);
+  return withViews(db, db.listTaskSummaries(filter));
 }

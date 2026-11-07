@@ -13,7 +13,7 @@ import {
   stuckOn,
   unlandedAfter,
 } from '../../domain/task/link.ts';
-import { isReview } from '../../domain/task/stage.ts';
+import { isReview, stageOf } from '../../domain/task/stage.ts';
 import { type Waiting, waitingOf } from '../../domain/task/start.ts';
 import type { Task } from '../../domain/task/task.ts';
 import { plural } from '../../domain/text.ts';
@@ -75,8 +75,8 @@ export function waitingFor(task: Pick<Task, 'status'>, dependency: StartState): 
 }
 
 /** The queued tasks merging this one lets start, for a task in review. */
-export function unblocksOf(task: Pick<Task, 'id' | 'status' | 'pr_state'>, links: LinkIndex): number[] {
-  if (!isReview(task)) return [];
+export function unblocksOf(task: Pick<Task, 'id' | 'status' | 'pr'>, links: LinkIndex): number[] {
+  if (!isReview(stageOf(task))) return [];
   return releasedBy(task.id, links).map((t) => t.id);
 }
 

@@ -54,7 +54,6 @@ export function taskLinkStore(orm: Orm) {
         .select({
           id: tasks.id,
           status: tasks.status,
-          pr_url: tasks.pr_url,
           pr_state: tasks.pr_state,
           done_by: tasks.done_by,
           pr_mode: repos.pr_mode,
@@ -63,7 +62,7 @@ export function taskLinkStore(orm: Orm) {
         .leftJoin(repos, eq(repos.id, tasks.repo_id))
         .where(inArray(tasks.id, ends))
         .all()
-        .map((t) => ({ ...t, pr_mode: t.pr_mode ?? 'off' }));
+        .map(({ pr_state, ...t }) => ({ ...t, pr: pr_state && { state: pr_state }, pr_mode: t.pr_mode ?? 'off' }));
     },
     /** Link `link.task_id` to `link.on`. Whether that is allowed (a cycle, a duplicate) is the caller's to check with linkError. */
     addLink(link: Link): void {

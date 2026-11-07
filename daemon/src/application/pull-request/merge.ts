@@ -15,9 +15,8 @@ import { type AutoMergeCheck, autoMergeOn } from '../../domain/pull-request/auto
 import type { CheckCounts } from '../../domain/pull-request/checks.ts';
 import { isConflicting } from '../../domain/pull-request/conflict.ts';
 import { mergeRequestCheck, mergesNow } from '../../domain/pull-request/merge-request.ts';
-import { buildPrBody } from '../../domain/pull-request/pr.ts';
+import { buildPrBody, openPrUrl } from '../../domain/pull-request/pr.ts';
 import { mergeReason } from '../../domain/task/history.ts';
-import { hasOpenPr } from '../../domain/task/stage.ts';
 import type { Task } from '../../domain/task/task.ts';
 import { errorMessage } from '../../domain/text.ts';
 import { ActionError, flag, object, requireTask, requireTaskRepo, text } from '../input.ts';
@@ -32,7 +31,7 @@ export { isMergeLocked };
 
 /** Close a task's PR on GitHub and record it. Throws if `gh` fails. */
 export async function closePullRequest(db: Db, task: Task): Promise<void> {
-  await github.closePr(task.pr_url!, prCwd(db, task));
+  await github.closePr(task.pr!.url!, prCwd(db, task));
   settlePr(db, task.id, { type: 'closed' });
 }
 
@@ -82,11 +81,12 @@ export function mergeable(db: Db, id: number) {
   const task = requireTask(db, id);
   const repo = requireTaskRepo(db, task);
   if (task.status !== 'done') throw new ActionError(`#${id} is ${task.status}; only a done task can be merged`);
-  if (!task.pr_url) throw new ActionError(`#${id} has no pull request`);
-  if (!hasOpenPr(task)) throw new ActionError(`#${id}'s PR is ${task.pr_state ?? 'not open'}`);
+  if (!task.pr?.url) throw new ActionError(`#${id} has no pull request`);
+  const url = openPrUrl(task.pr);
+  if (!url) throw new ActionError(`#${id}'s PR is ${task.pr.state}`);
   if (isSyncing(db, id)) throw new ActionError(`#${id} is syncing with its base branch; try again when that is done`);
   // gh reads the PR by its URL, so any directory of the repo will do; the worktree may be gone.
-  return { task, repo, url: task.pr_url, cwd: repo.path };
+  return { task, repo, url, cwd: repo.path };
 }
 
 /** Read the PR from GitHub and say what merging it would do. */
@@ -97,7 +97,7 @@ export async function mergePreview(db: Db, id: number): Promise<MergePreview> {
   });
   const tests_passed = lastTestsPassed(db, id);
   const lands_after = landsAfter(db, id);
-  const request = mergeRequestCheck({ pr_state: task.pr_state, pr, tests_passed, lands_after, auto_resolve: repo.auto_resolve });
+  const request = mergeRequestCheck({ pr_state: task.pr?.state ?? null, pr, tests_passed, lands_after, auto_resolve: repo.auto_resolve });
   return {
     title: task.title,
     pr_url: url,
@@ -111,7 +111,7 @@ export async function mergePreview(db: Db, id: number): Promise<MergePreview> {
     deletions: pr.deletions,
     tests_passed: stored({ tests_passed }).tests_passed, // the API keeps 1, 0 or null
     checks: pr.checks,
-    ...mergeCheck({ pr_state: task.pr_state, pr, tests_passed, lands_after }),
+    ...mergeCheck({ pr_state: task.pr?.state ?? null, pr, tests_passed, lands_after }),
     conflicting: isConflicting(pr),
     unblocks: dependentsReleased(db, id).map((t) => ({ id: t.id, title: t.title })),
     auto_merge: autoMergeFor(db, task, repo, pr, tests_passed),
@@ -145,7 +145,7 @@ export async function mergeTask(db: Db, id: number, opts: { method?: string; del
   const pr = await github.prDetails(url, cwd).catch((err) => {
     throw new ActionError(`could not read the PR: ${errorMessage(err)}`);
   });
-  const found = mergeFindings({ pr_state: task.pr_state, pr, tests_passed: null, lands_after: landsAfter(db, id) });
+  const found = mergeFindings({ pr_state: task.pr?.state ?? null, pr, tests_passed: null, lands_after: landsAfter(db, id) });
   const problems = found.filter((f) => f.problem);
   if (problems.length)
     throw new MergeRefused(
