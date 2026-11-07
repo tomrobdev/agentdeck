@@ -1,6 +1,6 @@
 // A repo as the API and the dashboard see it: the flat shape of its columns (flags as 1 or 0, lists as JSON text), so neither changes
 // with the domain's `Repo`.
-import type { Repo } from '../../domain/repo/repo.ts';
+import type { Repo } from '../../domain/repos/repo.ts';
 
 export interface RepoView extends Omit<
   Repo,

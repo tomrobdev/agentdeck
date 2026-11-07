@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, toRef, watch } from 'vue';
 import { type TaskDetail, ago, api, describeWait } from '../../api';
-import { plural } from '../../../../daemon/src/domain/text.ts';
+import { plural } from '../../../../daemon/src/domain/shared/text.ts';
 import { useHotkeys } from '../../composables/useHotkeys';
 import { type TaskTab, go, openTask } from '../../router';
 import { readNeeds, readTaskQuestion } from '../../lib/taskView';

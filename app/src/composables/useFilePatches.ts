@@ -3,7 +3,7 @@
 import { type Ref, nextTick, onBeforeUnmount, reactive, watch } from 'vue';
 import { useQueryClient } from '@tanstack/vue-query';
 import { type FilePatch, diffQuery } from '../api';
-import { errorMessage } from '../../../daemon/src/domain/text.ts';
+import { errorMessage } from '../../../daemon/src/domain/shared/text.ts';
 
 export type PatchState = { state: 'loading' } | { state: 'error'; error: string } | { state: 'ok'; patch: FilePatch };
 

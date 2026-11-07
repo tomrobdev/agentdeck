@@ -5,8 +5,8 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileS
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
-import type { TaskId } from '../src/domain/id/id.ts';
-import { stopReasonOf } from '../src/domain/task/task.ts';
+import type { TaskId } from '../src/domain/shared/id.ts';
+import { stopReasonOf } from '../src/domain/work/task.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-planruns-'));
 process.env.AGENTDECK_HOME = home;
@@ -19,10 +19,10 @@ const { openDb } = await import('../src/db/index.ts');
 const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
 const { commitLeftovers, ensureWorktree } = await import('../src/adapters/git.ts');
 const { readPlanFile, writePlanFile } = await import('../src/adapters/plan-file.ts');
-const { parsePlan } = await import('../src/domain/plan/plan.ts');
+const { parsePlan } = await import('../src/domain/work/plan.ts');
 const { planForRun, takePlanFile } = await import('../src/application/plans.ts');
 const { LOG_DIR } = await import('../src/config.ts');
-const { MAX_RESTARTS } = await import('../src/domain/task/lifecycle.ts');
+const { MAX_RESTARTS } = await import('../src/domain/work/lifecycle.ts');
 
 const plan = `<!doctype html>
 <html data-agentdeck-plan="1"><head><title>Shared plan</title></head><body>

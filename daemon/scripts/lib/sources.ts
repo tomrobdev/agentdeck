@@ -13,7 +13,7 @@ export interface Import {
 }
 
 export interface Source {
-  /** Relative to the source root, e.g. `domain/task/task.ts`. */
+  /** Relative to the source root, e.g. `domain/work/task.ts`. */
   path: string;
   ast: ts.SourceFile;
   imports: Import[];

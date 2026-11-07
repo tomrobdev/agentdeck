@@ -15,17 +15,17 @@ type Allowed = { file: string; line: RegExp; why: string };
 
 /** Lines that may say an avoid-word. Paths are under daemon/src/, or app/src/ when prefixed. */
 const ALLOWED: Allowed[] = [
-  { file: 'domain/notification.ts', line: /governor hold|'hold'/, why: 'the `hold` notification kind' },
+  { file: 'domain/operations/notification.ts', line: /governor hold|'hold'/, why: 'the `hold` notification kind' },
   { file: 'api/contract.ts', line: /rate limit or a hold ends/, why: "the governor's hold" },
-  { file: 'domain/daemon/headline.ts', line: /'hold'|a hold ends/, why: "the governor's hold, as a headline state" },
+  { file: 'domain/operations/headline.ts', line: /'hold'|a hold ends/, why: "the governor's hold, as a headline state" },
   { file: 'app/src/api/format.ts', line: /case 'hold':/, why: "the governor's hold, as a headline state" },
   { file: 'adapters/notify.ts', line: /^\s*hold:/, why: 'the `hold` notification kind' },
   { file: 'db/schema.ts', line: /`hold`|,hold,/, why: 'migration 16 is about the `hold` notification kind' },
   { file: 'app/src/components/panels/SettingsPanel.vue', line: /kind === 'hold'/, why: 'the `hold` notification kind' },
   { file: 'app/src/api/format.ts', line: /^\s*hold: /, why: 'the `hold` notification kind' },
   { file: 'app/src/components/panels/BudgetSettings.vue', line: /Hold new tasks above/, why: 'the governor budget setting' },
-  { file: 'domain/task/digest.ts', line: /governor on hold/, why: 'the governor' },
-  { file: 'domain/task/start.ts', line: /governor holds/, why: 'the governor' },
+  { file: 'domain/work/read/digest.ts', line: /governor on hold/, why: 'the governor' },
+  { file: 'domain/work/start.ts', line: /governor holds/, why: 'the governor' },
   {
     file: 'application/scheduler/scheduler.ts',
     line: /a hold once|const hold = |\bhold( &&|\.\w)|governor hold|kind: 'hold'|hold lifted/,
@@ -35,13 +35,13 @@ const ALLOWED: Allowed[] = [
   { file: 'app/src/api/format.ts', line: /On hold/, why: "the governor's state, shown" },
   { file: 'app/src/components/layout/StatusBar.vue', line: /On hold/, why: "the governor's state, shown" },
   { file: 'app/src/api/queries.ts', line: /hold lifting/, why: "the governor's hold lifting" },
-  { file: 'domain/run/run.ts', line: /it holds the old prompt/, why: PLAIN },
-  { file: 'domain/run/prompt.ts', line: /holds the same comments|already holds the task|files hold conflict markers/, why: PLAIN },
-  { file: 'domain/task/needs.ts', line: /A task holds it/, why: PLAIN },
-  { file: 'domain/task/listing.ts', line: /PRs that hold up other/, why: PLAIN },
-  { file: 'domain/task/stage.ts', line: /Done holds every/, why: PLAIN },
-  { file: 'domain/daemon/health.ts', line: /another daemon holds port/, why: PLAIN },
-  { file: 'domain/plan/plan.ts', line: /that holds AgentDeck's files/, why: PLAIN },
+  { file: 'domain/runs/run.ts', line: /it holds the old prompt/, why: PLAIN },
+  { file: 'domain/runs/prompt.ts', line: /holds the same comments|already holds the task|files hold conflict markers/, why: PLAIN },
+  { file: 'domain/work/needs.ts', line: /A task holds it/, why: PLAIN },
+  { file: 'domain/work/read/listing.ts', line: /PRs that hold up other/, why: PLAIN },
+  { file: 'domain/work/stage.ts', line: /Done holds every/, why: PLAIN },
+  { file: 'domain/operations/health.ts', line: /another daemon holds port/, why: PLAIN },
+  { file: 'domain/work/plan.ts', line: /that holds AgentDeck's files/, why: PLAIN },
   { file: 'application/sync.ts', line: /sync in this process holds/, why: PLAIN },
   { file: 'api/contract.ts', line: /holds the use cases to/, why: PLAIN },
   { file: 'db/tasks.ts', line: /Later pages hold older tasks/, why: PLAIN },
@@ -53,7 +53,7 @@ const ALLOWED: Allowed[] = [
   { file: 'app/src/lib/queueDisplay.ts', line: /Done now, which holds the finished history/, why: PLAIN },
   { file: 'application/scheduler/scheduler.ts', line: /Hold a `caffeinate/, why: PLAIN },
   { file: 'app/src/platform/native.ts', line: /`copied` holds the key/, why: PLAIN },
-  { file: 'domain/pull-request/checks.ts', line: /\bjobs?\b/i, why: JOB },
+  { file: 'domain/landing/checks.ts', line: /\bjobs?\b/i, why: JOB },
   { file: 'application/pull-request/fix-checks.ts', line: /\bjobs?\b/i, why: JOB },
   { file: 'adapters/github.ts', line: /\bjobs?\b/i, why: JOB },
   { file: 'application/notifications.ts', line: /\bjobs\b/, why: OTHER_JOB },
@@ -65,7 +65,7 @@ function scan(files: Map<string, string>, words: string[], allowed: Allowed[]) {
   const found: string[] = [];
   const used = new Set<Allowed>();
   for (const [path, text] of files) {
-    if (path.startsWith('domain/usage/')) continue; // the governor's own module
+    if (path.startsWith('domain/capacity/')) continue; // the governor's own module
     for (const l of avoidedLines(text, words)) {
       const ok = allowed.find((a) => a.file === path && a.line.test(l.text));
       if (ok) used.add(ok);

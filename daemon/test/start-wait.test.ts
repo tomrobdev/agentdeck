@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { describeWait, startDecision, startWait } from '../src/domain/task/start.ts';
-import type { Decision } from '../src/domain/usage/governor.ts';
+import { describeWait, startDecision, startWait } from '../src/domain/work/start.ts';
+import type { Decision } from '../src/domain/capacity/governor.ts';
 import { asTaskId } from './fixtures.ts';
 
 const allow: Decision = { allow: true, max_concurrent: 2, reason: null, until: null, weekly_allowed: null };

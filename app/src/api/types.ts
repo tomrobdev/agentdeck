@@ -95,4 +95,4 @@ export const MERGE_METHODS: { key: MergeMethod; label: string; hint: string }[] 
 ];
 
 /** Where the daemon cuts a patch and a file's text. */
-export { PATCH_LIMIT, TEXT_LIMIT } from '../../../daemon/src/domain/files/files.ts';
+export { PATCH_LIMIT, TEXT_LIMIT } from '../../../daemon/src/domain/work/read/files.ts';

@@ -3,15 +3,15 @@ import { type SQL, and, asc, count, desc, eq, exists, inArray, isNotNull, isNull
 import { type AnySQLiteColumn, alias } from 'drizzle-orm/sqlite-core';
 import type { DatabaseSync } from 'node:sqlite';
 import { DEFAULTS } from '../config.ts';
-import { type RepoId, type TaskId, asTaskId } from '../domain/id/id.ts';
-import type { AutoMergeCheck } from '../domain/pull-request/auto-merge.ts';
-import type { StoredChecks } from '../domain/pull-request/checks.ts';
-import type { CheckCounts, MergeMethod } from '../domain/pull-request/merge.ts';
-import { INTERRUPTED, type RunOutcome } from '../domain/run/run.ts';
-import { MAX_RESTARTS, type TaskEvent, type TaskStatus, fromStatuses, nextStatus, transition } from '../domain/task/lifecycle.ts';
-import type { LinkKind } from '../domain/task/link.ts';
-import { type PrEvent, prEventReason } from '../domain/task/history.ts';
-import type { TaskPlan } from '../domain/plan/plan.ts';
+import { type RepoId, type TaskId, asTaskId } from '../domain/shared/id.ts';
+import type { AutoMergeCheck } from '../domain/landing/auto-merge.ts';
+import type { StoredChecks } from '../domain/landing/checks.ts';
+import type { CheckCounts, MergeMethod } from '../domain/landing/merge.ts';
+import { INTERRUPTED, type RunOutcome } from '../domain/runs/run.ts';
+import { MAX_RESTARTS, type TaskEvent, type TaskStatus, fromStatuses, nextStatus, transition } from '../domain/work/lifecycle.ts';
+import type { LinkKind } from '../domain/work/link.ts';
+import { type PrEvent, prEventReason } from '../domain/work/history.ts';
+import type { TaskPlan } from '../domain/work/plan.ts';
 import {
   type BlockedTask,
   EDITABLE_STATUSES,
@@ -21,10 +21,10 @@ import {
   type Task,
   type TaskSummary,
   isBlocked,
-} from '../domain/task/task.ts';
-import type { AttentionCandidate, AttentionWhy } from '../domain/daemon/headline.ts';
-import type { UnblockQuestion } from '../domain/run/unblock.ts';
-import type { Needs } from '../domain/task/needs.ts';
+} from '../domain/work/task.ts';
+import type { AttentionCandidate, AttentionWhy } from '../domain/operations/headline.ts';
+import type { UnblockQuestion } from '../domain/runs/unblock.ts';
+import type { Needs } from '../domain/work/needs.ts';
 import { SUMMARY_COLUMNS, TASK_COLUMNS, mapFound, stateColumns, stored, toTask, toTaskSummary } from './mappers.ts';
 import type { Orm } from './orm.ts';
 import { insertOwnPlan, saveOwnPlan } from './plans.ts';
@@ -69,7 +69,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
    * The task row `t` is free to start: every task it builds on is met, that is done, and merged unless its repo has pr_mode off.
    * A done task whose PR isn't opened yet (or failed to open) has pr_url NULL, so it must not count as met.
    * A task a person marked done counts as met unless its PR is open. After links never stop a start.
-   * Mirrors startState and domain/task/link.ts.
+   * Mirrors startState and domain/work/link.ts.
    */
   const notWaiting = () => {
     const met = and(

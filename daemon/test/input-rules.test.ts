@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { notifyEventsError, ntfyServerError, ntfyTopicError } from '../src/domain/notification.ts';
-import { plannerIntervalError, plannerMaxTasksError, plannerModelError } from '../src/domain/planner/proposals.ts';
-import { goalsError, networkError } from '../src/domain/repo/rules.ts';
+import { notifyEventsError, ntfyServerError, ntfyTopicError } from '../src/domain/operations/notification.ts';
+import { plannerIntervalError, plannerMaxTasksError, plannerModelError } from '../src/domain/proposals/proposals.ts';
+import { goalsError, networkError } from '../src/domain/repos/rules.ts';
 import {
   archivedRepoError,
   maxAttemptsError,
@@ -10,8 +10,8 @@ import {
   modelError,
   priorityError,
   stepsNeedPlanError,
-} from '../src/domain/task/rules.ts';
-import { validateSlots } from '../src/domain/usage/governor.ts';
+} from '../src/domain/work/rules.ts';
+import { validateSlots } from '../src/domain/capacity/governor.ts';
 
 test('priority, turn and attempt limits', () => {
   assert.equal(priorityError(-1000), null);

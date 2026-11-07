@@ -1,6 +1,6 @@
 // What building the task list and a task's detail costs: queries that don't grow with the tasks, and no git for a running task.
 import assert from 'node:assert/strict';
-import type { TaskId } from '../src/domain/id/id.ts';
+import type { TaskId } from '../src/domain/shared/id.ts';
 import { chmodSync, existsSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';

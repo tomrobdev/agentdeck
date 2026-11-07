@@ -16,12 +16,12 @@ const { doneTask, queuedTask } = await import('./fixtures.ts');
 const { github } = await import('../src/adapters/github.ts');
 const { refreshPrStates } = await import('../src/application/pull-request/refresh.ts');
 const { ActionError, fixChecks, taskDetail, taskViews } = await import('../src/application/actions.ts');
-const { latestReviewNote } = await import('../src/domain/task/history.ts');
-const { parsePrDetails } = await import('../src/domain/pull-request/merge.ts');
-const { actionsRun, countChecks, logTail, nextChecks, parseChecks } = await import('../src/domain/pull-request/checks.ts');
+const { latestReviewNote } = await import('../src/domain/work/history.ts');
+const { parsePrDetails } = await import('../src/domain/landing/merge.ts');
+const { actionsRun, countChecks, logTail, nextChecks, parseChecks } = await import('../src/domain/landing/checks.ts');
 const { fmtChecks } = await import('../src/cli/format.ts');
-type PrDetails = import('../src/domain/pull-request/merge.ts').PrDetails;
-type PrCheck = import('../src/domain/pull-request/checks.ts').PrCheck;
+type PrDetails = import('../src/domain/landing/merge.ts').PrDetails;
+type PrCheck = import('../src/domain/landing/checks.ts').PrCheck;
 
 const db = openDb(join(home, 'test.db'));
 after(() => db.close());

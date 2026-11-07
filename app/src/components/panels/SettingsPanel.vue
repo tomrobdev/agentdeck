@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { MODEL_LABELS, type NotificationRow, type Settings, ago, api, serviceQuery, settingsQuery } from '../../api';
-import { errorMessage } from '../../../../daemon/src/domain/text.ts';
+import { errorMessage } from '../../../../daemon/src/domain/shared/text.ts';
 import { type SettingsForm, toSettingsForm, toSettingsPatch } from '../../lib/forms';
 import { MODELS } from '../../lib/taskView';
 import {

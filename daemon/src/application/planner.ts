@@ -1,4 +1,4 @@
-// Runs the planner: turns a repo's goals file into task proposals (see domain/planner/proposals.ts).
+// Runs the planner: turns a repo's goals file into task proposals (see domain/proposals/proposals.ts).
 import { type WriteStream, createWriteStream } from 'node:fs';
 import { join } from 'node:path';
 import { runClaude } from '../adapters/claude.ts';
@@ -6,10 +6,10 @@ import { goalsPath, readGoals } from '../adapters/goals.ts';
 import { closeLog } from '../adapters/run-log.ts';
 import { LOG_DIR, ensureDirs } from '../config.ts';
 import type { Db } from '../db/index.ts';
-import type { PlannerRunId, RepoId } from '../domain/id/id.ts';
-import { type ProposalResult, buildPlannerPrompt, plannerArgs, plannerDueReason, selectProposals } from '../domain/planner/proposals.ts';
-import type { Repo } from '../domain/repo/repo.ts';
-import { lastLine, plural } from '../domain/text.ts';
+import type { PlannerRunId, RepoId } from '../domain/shared/id.ts';
+import { type ProposalResult, buildPlannerPrompt, plannerArgs, plannerDueReason, selectProposals } from '../domain/proposals/proposals.ts';
+import type { Repo } from '../domain/repos/repo.ts';
+import { lastLine, plural } from '../domain/shared/text.ts';
 import { recordRateLimit, usageRecorder } from './run/claude-run.ts';
 import { ActionError, requireRepo } from './input.ts';
 import { notifyLater } from './notifications.ts';

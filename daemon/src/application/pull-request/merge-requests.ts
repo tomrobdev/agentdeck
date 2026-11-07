@@ -1,8 +1,8 @@
 // Merge requests: a person's Merge, recorded on the task and carried out by the daemon once the PR is ready
 // (docs/plans/merge-requests.html; the carrying out is `refreshPrStates` and `autoMerge`).
 import type { Db } from '../../db/index.ts';
-import type { TaskId } from '../../domain/id/id.ts';
-import { MERGE_METHODS, type MergeMethod, isMergeMethod } from '../../domain/pull-request/merge.ts';
+import type { TaskId } from '../../domain/shared/id.ts';
+import { MERGE_METHODS, type MergeMethod, isMergeMethod } from '../../domain/landing/merge.ts';
 import { ActionError, object, requireTask, text } from '../input.ts';
 import { mergeable } from './merge.ts';
 

@@ -1,6 +1,6 @@
 // Run logs on disk: claude's stream-json lines plus the daemon's own `agentdeck_*` events.
 import { type WriteStream, appendFileSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { type LogEntry, parseLogLine } from '../domain/run/log.ts';
+import { type LogEntry, parseLogLine } from '../domain/runs/translate/log.ts';
 
 /** Append one daemon event to a log stream. */
 export function writeEvent(log: WriteStream, event: { type: string } & Record<string, unknown>): void {
@@ -16,7 +16,7 @@ export function appendEvent(path: string, event: { type: string } & Record<strin
   }
 }
 
-/** Write a run's Claude Code settings file (domain/run/sandbox.ts) next to its log. */
+/** Write a run's Claude Code settings file (domain/runs/translate/sandbox.ts) next to its log. */
 export function writeSettings(path: string, settings: object): void {
   writeFileSync(path, JSON.stringify(settings, null, 2) + '\n');
 }

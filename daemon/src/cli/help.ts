@@ -1,5 +1,5 @@
-import { NOTIFY_KINDS } from '../domain/notification.ts';
-import { DEFAULT_AUTO_MERGE_MAX_LINES, DEFAULT_AUTO_MERGE_SKIP } from '../domain/pull-request/auto-merge.ts';
+import { NOTIFY_KINDS } from '../domain/operations/notification.ts';
+import { DEFAULT_AUTO_MERGE_MAX_LINES, DEFAULT_AUTO_MERGE_SKIP } from '../domain/landing/auto-merge.ts';
 
 export const HELP = `agentdeck: always-on Claude Code task queue
 

@@ -1,6 +1,6 @@
 //! The shell's one reader of the daemon: it listens to `GET /api/events` and reads `GET /api/status` on each new revision,
 //! and at least every 30 s. It decodes only the fields the shell uses; what they mean is decided in the daemon
-//! (`daemon/src/domain/daemon/headline.ts`). Plain HTTP on localhost, so ureq runs with no TLS and no proxy.
+//! (`daemon/src/domain/operations/headline.ts`). Plain HTTP on localhost, so ureq runs with no TLS and no proxy.
 
 use serde::Deserialize;
 use std::io::Read as _;

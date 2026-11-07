@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { type MergeMethod, type MergeResult, MERGE_METHODS, api, autoMergeLine, mergePreviewQuery } from '../../api';
-import { errorMessage, plural } from '../../../../daemon/src/domain/text.ts';
+import { errorMessage, plural } from '../../../../daemon/src/domain/shared/text.ts';
 import { useActions } from '../../composables/useActions';
 import Chip from '../ui/Chip.vue';
 import ConfirmDialog from '../ui/ConfirmDialog.vue';

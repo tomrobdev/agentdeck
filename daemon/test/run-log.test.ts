@@ -1,7 +1,7 @@
 // domain/run/log: tool entries carry the file they name, uncut.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { parseLogLine } from '../src/domain/run/log.ts';
+import { parseLogLine } from '../src/domain/runs/translate/log.ts';
 
 const toolUse = (name: string, input: unknown) =>
   JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', name, input }] } });

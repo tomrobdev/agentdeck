@@ -1,10 +1,10 @@
 // A run addressing a review: what the worker is shown of it, and what its answers do to the comments afterwards.
 import { diffBase, filePatch } from '../../adapters/git.ts';
 import type { Db } from '../../db/index.ts';
-import { type ReviewPrompt, hunkAround, latestRequestNote, matchAnswers, unansweredNote, withNote } from '../../domain/review/address.ts';
-import { type ReviewComment, commentStatesFor, commentsToAddress } from '../../domain/review/review.ts';
-import type { Repo } from '../../domain/repo/repo.ts';
-import type { Task } from '../../domain/task/task.ts';
+import { type ReviewPrompt, hunkAround, latestRequestNote, matchAnswers, unansweredNote, withNote } from '../../domain/landing/address.ts';
+import { type ReviewComment, commentStatesFor, commentsToAddress } from '../../domain/landing/review.ts';
+import type { Repo } from '../../domain/repos/repo.ts';
+import type { Task } from '../../domain/work/task.ts';
 
 /** The review a run of the task addresses: the open comments of its Request changes reviews with their diff hunks, or null when there are none. */
 export async function reviewForRun(

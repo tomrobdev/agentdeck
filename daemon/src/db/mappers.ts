@@ -1,16 +1,16 @@
 // From a row to its domain type: the one place a store's reads of tasks, repos and runs go through, so the domain type need not equal
 // its row. `types-check.ts` checks each row against its mapper, and rule:models-not-rows checks the stores use them.
 import { getColumns } from 'drizzle-orm';
-import { type AutoMergeCheck, DEFAULT_AUTO_MERGE_SKIP } from '../domain/pull-request/auto-merge.ts';
-import type { CheckCounts, StoredChecks } from '../domain/pull-request/checks.ts';
-import { type PrFields, pullRequestOf } from '../domain/pull-request/pr.ts';
-import { type Checkout, checkoutOf } from '../domain/task/checkout.ts';
-import type { Repo } from '../domain/repo/repo.ts';
-import type { Run } from '../domain/run/run.ts';
-import type { UnblockQuestion } from '../domain/run/unblock.ts';
-import { type Needs, isNeeds } from '../domain/task/needs.ts';
-import { type StateFields, type Task, type TaskState, type TaskSummary, stateFields } from '../domain/task/task.ts';
-import { parseTextList } from '../domain/text.ts';
+import { type AutoMergeCheck, DEFAULT_AUTO_MERGE_SKIP } from '../domain/landing/auto-merge.ts';
+import type { CheckCounts, StoredChecks } from '../domain/landing/checks.ts';
+import { type PrFields, pullRequestOf } from '../domain/landing/pr.ts';
+import { type Checkout, checkoutOf } from '../domain/work/checkout.ts';
+import type { Repo } from '../domain/repos/repo.ts';
+import type { Run } from '../domain/runs/run.ts';
+import type { UnblockQuestion } from '../domain/runs/unblock.ts';
+import { type Needs, isNeeds } from '../domain/work/needs.ts';
+import { type StateFields, type Task, type TaskState, type TaskSummary, stateFields } from '../domain/work/task.ts';
+import { parseTextList } from '../domain/shared/text.ts';
 import { repos, runs, tasks } from './tables.ts';
 
 /** Legacy task columns, which nothing reads or writes: `after_task` went to task_links in migration 18, and `plan_path` stopped being written in 24. */

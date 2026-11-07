@@ -1,8 +1,8 @@
 // Task links: what a task depends on, and what depends on it.
 import { and, asc, eq, inArray } from 'drizzle-orm';
-import type { TaskId } from '../domain/id/id.ts';
-import type { TaskStatus } from '../domain/task/lifecycle.ts';
-import type { Dependency, Link, LinkKind } from '../domain/task/link.ts';
+import type { TaskId } from '../domain/shared/id.ts';
+import type { TaskStatus } from '../domain/work/lifecycle.ts';
+import type { Dependency, Link, LinkKind } from '../domain/work/link.ts';
 import type { Orm } from './orm.ts';
 import { changed } from './sql.ts';
 import { repos, taskLinks, tasks } from './tables.ts';

@@ -5,8 +5,8 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from '
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { asTaskId } from '../src/domain/id/id.ts';
-import { stateFields } from '../src/domain/task/task.ts';
+import { asTaskId } from '../src/domain/shared/id.ts';
+import { stateFields } from '../src/domain/work/task.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-install-'));
 process.env.AGENTDECK_HOME = home;

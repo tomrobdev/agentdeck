@@ -1,5 +1,5 @@
 // `agentdeck doctor`: gathers the facts about the daemon (launchd, the API, git, the processes of runs, the log, gh) and
-// has domain/daemon/health.ts judge them. It runs in the CLI's own process, so it works with the daemon down.
+// has domain/operations/health.ts judge them. It runs in the CLI's own process, so it works with the daemon down.
 import { fetchDaemonState } from '../../adapters/daemon-api.ts';
 import { readLogTail } from '../../adapters/daemon-log.ts';
 import { checkoutCommit, commitsAheadOf } from '../../adapters/git.ts';
@@ -8,8 +8,8 @@ import { ownsLiveGroup } from '../../adapters/processes.ts';
 import { DAEMON_LOG, serviceStatus } from '../../adapters/service.ts';
 import { API_PORT, CHECKOUT_ROOT } from '../../config.ts';
 import type { Db } from '../../db/index.ts';
-import { type Check, type DaemonState, type HealthFacts, judgeHealth, logFacts } from '../../domain/daemon/health.ts';
-import { sqliteMs } from '../../domain/time.ts';
+import { type Check, type DaemonState, type HealthFacts, judgeHealth, logFacts } from '../../domain/operations/health.ts';
+import { sqliteMs } from '../../domain/shared/time.ts';
 
 /** Where the facts come from; tests hand in plain ones. */
 export interface Probes {

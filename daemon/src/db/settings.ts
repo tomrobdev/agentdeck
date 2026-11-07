@@ -2,10 +2,10 @@
 import { eq } from 'drizzle-orm';
 import type { DatabaseSync } from 'node:sqlite';
 import { DEFAULTS } from '../config.ts';
-import { NOTIFY_KINDS, type NotifyKind, type NotifySettings } from '../domain/notification.ts';
-import type { PlannerSettings } from '../domain/planner/proposals.ts';
-import type { Settings } from '../domain/settings/settings.ts';
-import { BUDGET_KEYS, type Budget, DEFAULT_BUDGET } from '../domain/usage/governor.ts';
+import { NOTIFY_KINDS, type NotifyKind, type NotifySettings } from '../domain/operations/notification.ts';
+import type { PlannerSettings } from '../domain/proposals/proposals.ts';
+import type { Settings } from '../domain/operations/settings.ts';
+import { BUDGET_KEYS, type Budget, DEFAULT_BUDGET } from '../domain/capacity/governor.ts';
 import type { Orm } from './orm.ts';
 import { atomically } from './sql.ts';
 import { settings } from './tables.ts';

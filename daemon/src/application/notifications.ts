@@ -2,7 +2,7 @@
 // Sent from the daemon so they arrive even when the dashboard is closed.
 import { desktop, ntfy } from '../adapters/notify.ts';
 import type { Db } from '../db/index.ts';
-import { type Notification, appDelivers } from '../domain/notification.ts';
+import { type Notification, appDelivers } from '../domain/operations/notification.ts';
 
 /** The ways out a notification can take besides the database. Tests pass their own. */
 export interface Channels {

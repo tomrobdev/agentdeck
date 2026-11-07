@@ -2,8 +2,8 @@
 // stage.ts review and merge rules; this file only turns that into rows. Pure, so the daemon's tests can import it
 // (daemon/test/palette.test.ts).
 import type { TaskSummary } from '../../../daemon/src/api/contract.ts';
-import { personEvents } from '../../../daemon/src/domain/task/lifecycle.ts';
-import { canStartMerge, isReview } from '../../../daemon/src/domain/task/stage.ts';
+import { personEvents } from '../../../daemon/src/domain/work/lifecycle.ts';
+import { canStartMerge, isReview } from '../../../daemon/src/domain/work/stage.ts';
 import { rank } from './fuzzy.ts';
 
 export type PaletteTask = Pick<TaskSummary, 'id' | 'title' | 'status' | 'pr_state' | 'sync' | 'merge_request'> & {

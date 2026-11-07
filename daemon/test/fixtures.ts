@@ -1,11 +1,11 @@
 // Tasks in a given state, built the way the daemon builds them: through claim, applyEvent, recordPr and recordMerge.
 // A state a fixture cannot reach through those calls fails an assertion here, so tests cannot depend on one.
 import assert from 'node:assert/strict';
-import type { RepoId, TaskId } from '../src/domain/id/id.ts';
+import type { RepoId, TaskId } from '../src/domain/shared/id.ts';
 import type { openDb } from '../src/db/index.ts';
 
 // A test makes an id from a number with these.
-export { asPlannerRunId, asRepoId, asReviewId, asRunId, asTaskId } from '../src/domain/id/id.ts';
+export { asPlannerRunId, asRepoId, asReviewId, asRunId, asTaskId } from '../src/domain/shared/id.ts';
 
 type Db = ReturnType<typeof openDb>;
 type Task = NonNullable<ReturnType<Db['getTask']>>;

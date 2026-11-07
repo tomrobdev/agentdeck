@@ -4,14 +4,14 @@ import { mkdirSync, mkdtempSync, readFileSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { asTaskId } from '../src/domain/id/id.ts';
+import { asTaskId } from '../src/domain/shared/id.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-context-'));
 process.env.AGENTDECK_HOME = home;
 
 const { openDb } = await import('../src/db/index.ts');
 const { liveContext, repoForPath } = await import('../src/application/actions.ts');
-const { DIGEST_LIMIT, describeEvent, digest } = await import('../src/domain/task/digest.ts');
+const { DIGEST_LIMIT, describeEvent, digest } = await import('../src/domain/work/read/digest.ts');
 const { WORKTREE_DIR } = await import('../src/config.ts');
 
 const CLI = join(import.meta.dirname, '../src/cli.ts');

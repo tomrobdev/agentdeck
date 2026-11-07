@@ -2,7 +2,7 @@
 import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { GOALS_DIR, ensureDirs } from '../config.ts';
-import type { Repo } from '../domain/repo/repo.ts';
+import type { Repo } from '../domain/repos/repo.ts';
 
 export function goalsPath(repo: Pick<Repo, 'name'>): string {
   return join(GOALS_DIR, `${repo.name}.md`);

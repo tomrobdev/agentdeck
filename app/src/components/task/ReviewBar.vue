@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { type Review, type SubmitReview, api } from '../../api';
-import { plural } from '../../../../daemon/src/domain/text.ts';
+import { plural } from '../../../../daemon/src/domain/shared/text.ts';
 import { useAction } from '../../composables/useActions';
 
 // The bar a draft review lives in: how many comments are pending, an overall note, and Submit as Comment or Request changes.

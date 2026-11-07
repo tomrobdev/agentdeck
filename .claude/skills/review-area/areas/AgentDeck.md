@@ -4,7 +4,7 @@ One heading per area, then the path prefixes it covers (a folder ends in `/`). A
 
 ## plan
 
-- daemon/src/domain/plan/
+- daemon/src/domain/work/plan.ts
 - daemon/src/application/plans.ts
 - daemon/src/adapters/plan-file.ts
 - daemon/src/db/plans.ts
@@ -16,7 +16,7 @@ One heading per area, then the path prefixes it covers (a folder ends in `/`). A
 
 Builds on and After links: a task's dependencies and dependents.
 
-- daemon/src/domain/task/link.ts
+- daemon/src/domain/work/link.ts
 - daemon/src/application/task/dependencies.ts
 - daemon/src/application/task/links.ts
 
@@ -24,9 +24,9 @@ Builds on and After links: a task's dependencies and dependents.
 
 What a session or worker is told about a task: the agent context digest, prompt path warnings and prompt sections.
 
-- daemon/src/domain/task/digest.ts
-- daemon/src/domain/task/prompt-paths.ts
-- daemon/src/domain/task/sections.ts
+- daemon/src/domain/work/read/digest.ts
+- daemon/src/domain/work/prompt-paths.ts
+- daemon/src/domain/work/sections.ts
 - daemon/src/application/task/context.ts
 - daemon/src/application/task/prompt-paths.ts
 
@@ -34,14 +34,14 @@ What a session or worker is told about a task: the agent context digest, prompt 
 
 The task entity, its lifecycle, and the person-facing use cases, CLI and routes.
 
-- daemon/src/domain/task/task.ts
-- daemon/src/domain/task/lifecycle.ts
-- daemon/src/domain/task/history.ts
-- daemon/src/domain/task/listing.ts
-- daemon/src/domain/task/needs.ts
-- daemon/src/domain/task/rules.ts
-- daemon/src/domain/task/stage.ts
-- daemon/src/domain/task/start.ts
+- daemon/src/domain/work/task.ts
+- daemon/src/domain/work/lifecycle.ts
+- daemon/src/domain/work/history.ts
+- daemon/src/domain/work/read/listing.ts
+- daemon/src/domain/work/needs.ts
+- daemon/src/domain/work/rules.ts
+- daemon/src/domain/work/stage.ts
+- daemon/src/domain/work/start.ts
 - daemon/src/application/task/tasks.ts
 - daemon/src/application/task/task-views.ts
 - daemon/src/application/task/files.ts
@@ -57,11 +57,11 @@ The task entity, its lifecycle, and the person-facing use cases, CLI and routes.
 
 The run's lifecycle: the worker, the claude process, resuming, prompts, logs and the live view.
 
-- daemon/src/domain/run/run.ts
-- daemon/src/domain/run/prompt.ts
-- daemon/src/domain/run/sandbox.ts
-- daemon/src/domain/run/log.ts
-- daemon/src/domain/run/live.ts
+- daemon/src/domain/runs/run.ts
+- daemon/src/domain/runs/prompt.ts
+- daemon/src/domain/runs/translate/sandbox.ts
+- daemon/src/domain/runs/translate/log.ts
+- daemon/src/domain/runs/translate/live.ts
 - daemon/src/application/run/worker.ts
 - daemon/src/application/run/claude-run.ts
 - daemon/src/adapters/claude.ts
@@ -73,8 +73,8 @@ The run's lifecycle: the worker, the claude process, resuming, prompts, logs and
 
 `agentdeck stats` and the scorecard: read-only reporting over runs.
 
-- daemon/src/domain/run/scorecard.ts
-- daemon/src/domain/run/stats.ts
+- daemon/src/domain/insights/scorecard.ts
+- daemon/src/domain/insights/stats.ts
 - daemon/src/application/run/stats.ts
 - daemon/src/db/stats.ts
 - daemon/src/cli/stats.ts
@@ -82,34 +82,42 @@ The run's lifecycle: the worker, the claude process, resuming, prompts, logs and
 ## scheduler
 
 - daemon/src/application/scheduler/
-- daemon/src/domain/usage/
+- daemon/src/domain/capacity/
 - daemon/src/db/usage.ts
 - daemon/src/daemon.ts
 
 ## sync
 
 - daemon/src/application/sync.ts
-- daemon/src/domain/branch/
+- daemon/src/domain/landing/branch.ts
+- daemon/src/domain/landing/sync.ts
 - daemon/src/adapters/git.ts
 
 ## pull-request
 
-- daemon/src/domain/pull-request/
+- daemon/src/domain/landing/auto-merge.ts
+- daemon/src/domain/landing/checks.ts
+- daemon/src/domain/landing/conflict.ts
+- daemon/src/domain/landing/merge-request.ts
+- daemon/src/domain/landing/merge.ts
+- daemon/src/domain/landing/pr.ts
+- daemon/src/domain/landing/summary.ts
 - daemon/src/application/pull-request/
 - daemon/src/adapters/github.ts
 
 ## review
 
-- daemon/src/domain/review/
+- daemon/src/domain/landing/review.ts
+- daemon/src/domain/landing/address.ts
 - daemon/src/application/review/
 - daemon/src/db/reviews.ts
 - daemon/src/api/routes/reviews.ts
 
 ## planner-and-repos
 
-- daemon/src/domain/planner/
+- daemon/src/domain/proposals/
 - daemon/src/application/planner.ts
-- daemon/src/domain/repo/
+- daemon/src/domain/repos/
 - daemon/src/application/repo/
 - daemon/src/db/repos.ts
 - daemon/src/db/planner-runs.ts

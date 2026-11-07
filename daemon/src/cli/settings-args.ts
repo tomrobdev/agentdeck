@@ -1,9 +1,9 @@
 // Argument handling for `agentdeck set` and `agentdeck repo set`: the key and value a person typed become a typed patch.
 import { ActionError, type RepoPatch, type SettingsPatch, onOff } from '../application/actions.ts';
-import type { NotifyKind } from '../domain/notification.ts';
-import { MERGE_METHODS, type MergeMethod } from '../domain/pull-request/merge.ts';
-import { PR_MODES, type PrMode } from '../domain/pull-request/pr.ts';
-import { BUDGET_KEYS } from '../domain/usage/governor.ts';
+import type { NotifyKind } from '../domain/operations/notification.ts';
+import { MERGE_METHODS, type MergeMethod } from '../domain/landing/merge.ts';
+import { PR_MODES, type PrMode } from '../domain/landing/pr.ts';
+import { BUDGET_KEYS } from '../domain/capacity/governor.ts';
 
 /** The patch `agentdeck set <key> <value>` stands for. Throws ActionError for a key it does not know. */
 export function settingPatch(key: string | undefined, value: string): SettingsPatch {

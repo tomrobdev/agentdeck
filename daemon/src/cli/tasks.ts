@@ -1,14 +1,14 @@
 // Task commands: add, edit, inspect and move tasks.
 import { readFileSync } from 'node:fs';
 import * as actions from '../application/actions.ts';
-import { type TaskId, asTaskId, parseId } from '../domain/id/id.ts';
-import { isOwnPlanName, planProgress } from '../domain/plan/plan.ts';
-import { commentLocation } from '../domain/review/review.ts';
-import { pickRun } from '../domain/run/run.ts';
-import { TASK_STATUSES } from '../domain/task/lifecycle.ts';
-import { filterTasks, listable } from '../domain/task/listing.ts';
-import { type PlanLink, hasPlanLink, otherPlanOwner, planOwnerOf } from '../domain/task/plan-link.ts';
-import { errorMessage, plural } from '../domain/text.ts';
+import { type TaskId, asTaskId, parseId } from '../domain/shared/id.ts';
+import { isOwnPlanName, planProgress } from '../domain/work/plan.ts';
+import { commentLocation } from '../domain/landing/review.ts';
+import { pickRun } from '../domain/runs/run.ts';
+import { TASK_STATUSES } from '../domain/work/lifecycle.ts';
+import { filterTasks, listable } from '../domain/work/read/listing.ts';
+import { type PlanLink, hasPlanLink, otherPlanOwner, planOwnerOf } from '../domain/work/plan-link.ts';
+import { errorMessage, plural } from '../domain/shared/text.ts';
 import { callDaemon } from './daemon-client.ts';
 import { confirm, die, idsText, taskId, taskIds, fmtAutoMerge, fmtChecks, fmtLink, fmtTask, printLog } from './format.ts';
 import type { Command } from './context.ts';

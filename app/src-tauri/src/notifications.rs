@@ -1,6 +1,6 @@
 //! Shows the daemon's notifications as AgentDeck's own while the app runs. The app tells the daemon every 30 s that it
 //! is running (`POST /api/app/seen`), and for 90 s after each time the daemon leaves desktop notifications to it
-//! (`appDelivers` in `daemon/src/domain/notification.ts`). The daemon still records every notification, and this file
+//! (`appDelivers` in `daemon/src/domain/operations/notification.ts`). The daemon still records every notification, and this file
 //! shows the rows it hasn't seen yet. A click opens the notification's task in the dashboard.
 
 use crate::daemon_client::{self, NotificationRow, Read};

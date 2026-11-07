@@ -3,23 +3,16 @@ import { removeWorktree } from '../../adapters/git.ts';
 import { github } from '../../adapters/github.ts';
 import type { Db } from '../../db/index.ts';
 import { stored } from '../../db/mappers.ts';
-import {
-  MERGE_METHODS,
-  type MergeMethod,
-  type PrDetails,
-  isMergeMethod,
-  mergeCheck,
-  mergeFindings,
-} from '../../domain/pull-request/merge.ts';
-import { type AutoMergeCheck, autoMergeOn } from '../../domain/pull-request/auto-merge.ts';
-import type { CheckCounts } from '../../domain/pull-request/checks.ts';
-import { isConflicting } from '../../domain/pull-request/conflict.ts';
-import { mergeRequestCheck, mergesNow } from '../../domain/pull-request/merge-request.ts';
-import { buildPrBody, openPrUrl } from '../../domain/pull-request/pr.ts';
-import { mergeReason } from '../../domain/task/history.ts';
-import type { TaskId } from '../../domain/id/id.ts';
-import type { Task } from '../../domain/task/task.ts';
-import { errorMessage } from '../../domain/text.ts';
+import { MERGE_METHODS, type MergeMethod, type PrDetails, isMergeMethod, mergeCheck, mergeFindings } from '../../domain/landing/merge.ts';
+import { type AutoMergeCheck, autoMergeOn } from '../../domain/landing/auto-merge.ts';
+import type { CheckCounts } from '../../domain/landing/checks.ts';
+import { isConflicting } from '../../domain/landing/conflict.ts';
+import { mergeRequestCheck, mergesNow } from '../../domain/landing/merge-request.ts';
+import { buildPrBody, openPrUrl } from '../../domain/landing/pr.ts';
+import { mergeReason } from '../../domain/work/history.ts';
+import type { TaskId } from '../../domain/shared/id.ts';
+import type { Task } from '../../domain/work/task.ts';
+import { errorMessage } from '../../domain/shared/text.ts';
 import { ActionError, flag, object, requireTask, requireTaskRepo, text } from '../input.ts';
 import { prPlanFor } from '../plans.ts';
 import { dependentsReleased, landsAfter } from '../task/dependencies.ts';

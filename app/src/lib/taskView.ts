@@ -1,10 +1,10 @@
 // How the queue is grouped and shown. What a person may do with a task, how the queue is filtered and sorted and what a blocked
 // task needs are the daemon's domain (task/lifecycle.ts, listing.ts, needs.ts, stage.ts); this file re-exports what the views use.
 import type { AutoMergeView, Needs, Status, TaskStatus, TaskSummary } from '../api';
-import { type PersonEvent, personEvents } from '../../../daemon/src/domain/task/lifecycle.ts';
-import { DECISION_STATES, FILTER_STATES, SORT_OPTIONS, filterTasks } from '../../../daemon/src/domain/task/listing.ts';
-import type { UnblockQuestion } from '../../../daemon/src/domain/run/unblock.ts';
-import { canInstallWith, depsRequest } from '../../../daemon/src/domain/task/needs.ts';
+import { type PersonEvent, personEvents } from '../../../daemon/src/domain/work/lifecycle.ts';
+import { DECISION_STATES, FILTER_STATES, SORT_OPTIONS, filterTasks } from '../../../daemon/src/domain/work/read/listing.ts';
+import type { UnblockQuestion } from '../../../daemon/src/domain/runs/unblock.ts';
+import { canInstallWith, depsRequest } from '../../../daemon/src/domain/work/needs.ts';
 import {
   STATUS_GROUPS,
   type StatusGroup,
@@ -15,9 +15,9 @@ import {
   isStuck,
   isWaiting,
   statusGroup,
-} from '../../../daemon/src/domain/task/stage.ts';
-import { EDITABLE_STATUSES, MODELS } from '../../../daemon/src/domain/task/task.ts';
-import { parseTextList } from '../../../daemon/src/domain/text.ts';
+} from '../../../daemon/src/domain/work/stage.ts';
+import { EDITABLE_STATUSES, MODELS } from '../../../daemon/src/domain/work/task.ts';
+import { parseTextList } from '../../../daemon/src/domain/shared/text.ts';
 import type { GroupBy } from './queueDisplay.ts';
 import { needsOf, questionOf } from './wire.ts';
 
@@ -110,7 +110,7 @@ export function groupTasks(tasks: TaskSummary[], by: GroupBy, sort: string): Gro
   }
 }
 
-export { branchName } from '../../../daemon/src/domain/branch/branch.ts';
+export { branchName } from '../../../daemon/src/domain/landing/branch.ts';
 
 export const canEdit = (t: Pick<TaskSummary, 'status'>) => EDITABLE_STATUSES.includes(t.status);
 /** A done task's open PR has failing checks: they can be sent back to the worker (POST /api/tasks/:id/fix-checks). */

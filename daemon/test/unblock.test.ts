@@ -6,10 +6,10 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from '
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
-import { asTaskId } from '../src/domain/id/id.ts';
-import type { RunKind, RunOutcome } from '../src/domain/run/run.ts';
-import type { Needs } from '../src/domain/task/needs.ts';
-import { type TaskState, stateFields } from '../src/domain/task/task.ts';
+import { asTaskId } from '../src/domain/shared/id.ts';
+import type { RunKind, RunOutcome } from '../src/domain/runs/run.ts';
+import type { Needs } from '../src/domain/work/needs.ts';
+import { type TaskState, stateFields } from '../src/domain/work/task.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-unblock-'));
 process.env.AGENTDECK_HOME = home;
@@ -23,11 +23,11 @@ const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
 const { nextUnblockable, runUnblock } = await import('../src/application/run/unblock.ts');
 const { updateRepo } = await import('../src/application/actions.ts');
 const { repoSettingPatch } = await import('../src/cli/settings-args.ts');
-const { restartWait } = await import('../src/domain/daemon/restart.ts');
-const { describeEvent } = await import('../src/domain/task/digest.ts');
-const { conflictReason } = await import('../src/domain/branch/sync.ts');
-const { setupFailedReason } = await import('../src/domain/run/run.ts');
-const { UNBLOCK_NOTE, buildUnblockPrompt, parseUnblock, unblockDecision, unblockable } = await import('../src/domain/run/unblock.ts');
+const { restartWait } = await import('../src/domain/operations/restart.ts');
+const { describeEvent } = await import('../src/domain/work/read/digest.ts');
+const { conflictReason } = await import('../src/domain/landing/sync.ts');
+const { setupFailedReason } = await import('../src/domain/runs/run.ts');
+const { UNBLOCK_NOTE, buildUnblockPrompt, parseUnblock, unblockDecision, unblockable } = await import('../src/domain/runs/unblock.ts');
 
 // ---- unblockable
 

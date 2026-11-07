@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { asTaskId } from '../src/domain/id/id.ts';
-import { type AttentionCandidate, type HeadlineFacts, headline } from '../src/domain/daemon/headline.ts';
+import { asTaskId } from '../src/domain/shared/id.ts';
+import { type AttentionCandidate, type HeadlineFacts, headline } from '../src/domain/operations/headline.ts';
 
 const NOW = 1_800_000_000;
 const facts = (over: Partial<HeadlineFacts> = {}): HeadlineFacts => ({

@@ -11,7 +11,7 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { openDb } = await import('../src/db/index.ts');
 const { addTask, editTask, promptWarnings } = await import('../src/application/actions.ts');
-const { pathsNamedIn } = await import('../src/domain/task/prompt-paths.ts');
+const { pathsNamedIn } = await import('../src/domain/work/prompt-paths.ts');
 
 test('paths in backticks and bare paths are picked, once each', () => {
   assert.deepEqual(pathsNamedIn('Follow `docs/plans/ink-rebrand.html` and read src/domain/ first. See `package.json`.'), [

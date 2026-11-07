@@ -3,9 +3,9 @@
 import { KeepAwake } from '../../adapters/caffeinate.ts';
 import { activeChildren, killGroup, reapOrphans } from '../../adapters/processes.ts';
 import { DEFAULTS } from '../../config.ts';
-import type { TaskId } from '../../domain/id/id.ts';
-import { MAX_RESTARTS } from '../../domain/task/lifecycle.ts';
-import { describeWait } from '../../domain/task/start.ts';
+import type { TaskId } from '../../domain/shared/id.ts';
+import { MAX_RESTARTS } from '../../domain/work/lifecycle.ts';
+import { describeWait } from '../../domain/work/start.ts';
 import { queueWait } from './gate.ts';
 import { notifyLater } from '../notifications.ts';
 import { proposeNow, plannerDue } from '../planner.ts';
@@ -16,7 +16,7 @@ import { settle, settleRecovered } from '../task/settle.ts';
 import { runTask } from '../run/worker.ts';
 import { nextUnblockable, runUnblock } from '../run/unblock.ts';
 import type { Db } from '../../db/index.ts';
-import type { Activity, ReloadDecision } from '../../domain/daemon/restart.ts';
+import type { Activity, ReloadDecision } from '../../domain/operations/restart.ts';
 
 /** After a merge, how many times to re-read PRs whose mergeability GitHub is still computing, and how far apart. */
 const PR_RECHECKS = 6;

@@ -6,61 +6,46 @@ The folders under `domain/` and the imports between them. A solid arrow is a run
 
 ```mermaid
 flowchart LR
-  domain["domain"]
-  domain_branch["domain/branch"]
-  domain_daemon["domain/daemon"]
-  domain_files["domain/files"]
-  domain_id["domain/id"]
-  domain_plan["domain/plan"]
-  domain_planner["domain/planner"]
-  domain_pull_request["domain/pull-request"]
-  domain_repo["domain/repo"]
-  domain_review["domain/review"]
-  domain_run["domain/run"]
-  domain_settings["domain/settings"]
-  domain_task["domain/task"]
-  domain_usage["domain/usage"]
-  domain -.-> domain_id
-  domain -.->|cycle| domain_task
-  domain_branch -->|cycle| domain
-  domain_branch -->|cycle| domain_run
-  domain_branch -.->|cycle| domain_task
-  domain_daemon --> domain
-  domain_daemon -.-> domain_id
-  domain_files --> domain
-  domain_plan -.-> domain_id
-  domain_planner --> domain
-  domain_planner -.-> domain_id
-  domain_planner -.-> domain_repo
-  domain_planner --> domain_task
-  domain_pull_request -->|cycle| domain
-  domain_pull_request -.-> domain_id
-  domain_pull_request -.->|cycle| domain_repo
-  domain_pull_request -->|cycle| domain_run
-  domain_repo -.-> domain_id
-  domain_repo -.->|cycle| domain_pull_request
-  domain_review -->|cycle| domain
-  domain_review -.-> domain_id
-  domain_run -->|cycle| domain
-  domain_run -->|cycle| domain_branch
-  domain_run -.-> domain_id
-  domain_run --> domain_plan
-  domain_run -->|cycle| domain_pull_request
-  domain_run -->|cycle| domain_repo
-  domain_run -->|cycle| domain_review
-  domain_run -->|cycle| domain_task
-  domain_run -->|cycle| domain_usage
-  domain_settings -.-> domain
-  domain_settings -.-> domain_planner
-  domain_settings -.-> domain_usage
-  domain_task -->|cycle| domain
-  domain_task --> domain_id
-  domain_task -.->|cycle| domain_pull_request
-  domain_task -.->|cycle| domain_run
-  domain_task -.->|cycle| domain_usage
-  domain_usage -->|cycle| domain
+  domain_capacity["domain/capacity"]
+  domain_insights["domain/insights"]
+  domain_landing["domain/landing"]
+  domain_operations["domain/operations"]
+  domain_proposals["domain/proposals"]
+  domain_repos["domain/repos"]
+  domain_runs["domain/runs"]
+  domain_shared["domain/shared"]
+  domain_work["domain/work"]
+  domain_capacity --> domain_shared
+  domain_insights --> domain_capacity
+  domain_insights -.-> domain_landing
+  domain_insights --> domain_runs
+  domain_insights --> domain_shared
+  domain_insights --> domain_work
+  domain_landing -.->|cycle| domain_operations
+  domain_landing -->|cycle| domain_repos
+  domain_landing -->|cycle| domain_runs
+  domain_landing --> domain_shared
+  domain_landing -.->|cycle| domain_work
+  domain_operations -.-> domain_capacity
+  domain_operations -.->|cycle| domain_proposals
+  domain_operations --> domain_shared
+  domain_operations -.->|cycle| domain_work
+  domain_proposals -.->|cycle| domain_repos
+  domain_proposals --> domain_shared
+  domain_proposals -->|cycle| domain_work
+  domain_repos -.->|cycle| domain_landing
+  domain_repos -.-> domain_shared
+  domain_repos -->|cycle| domain_work
+  domain_runs -->|cycle| domain_landing
+  domain_runs -->|cycle| domain_repos
+  domain_runs --> domain_shared
+  domain_runs -->|cycle| domain_work
+  domain_work -.-> domain_capacity
+  domain_work -.->|cycle| domain_landing
+  domain_work -.->|cycle| domain_runs
+  domain_work --> domain_shared
 ```
 
 Cycles:
 
-- `domain` ↔ `domain/branch` ↔ `domain/pull-request` ↔ `domain/repo` ↔ `domain/review` ↔ `domain/run` ↔ `domain/task` ↔ `domain/usage`
+- `domain/landing` ↔ `domain/operations` ↔ `domain/proposals` ↔ `domain/repos` ↔ `domain/runs` ↔ `domain/work`

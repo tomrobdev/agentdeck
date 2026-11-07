@@ -1,6 +1,6 @@
 // Merge requests (docs/plans/merge-requests.html): recording one, and the daemon carrying it out on its PR refresh with a fake github adapter.
 import assert from 'node:assert/strict';
-import { asTaskId } from '../src/domain/id/id.ts';
+import { asTaskId } from '../src/domain/shared/id.ts';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -18,7 +18,7 @@ const { refreshPrStates } = await import('../src/application/pull-request/refres
 const { autoMerge } = await import('../src/application/pull-request/auto-merge.ts');
 const { ActionError, cancelMergeRequest, linkTasks, mergePreview, requestMerge, requestMerges, taskDetail, updateRepo } =
   await import('../src/application/actions.ts');
-type PrDetails = import('../src/domain/pull-request/merge.ts').PrDetails;
+type PrDetails = import('../src/domain/landing/merge.ts').PrDetails;
 
 const db = openDb(join(home, 'test.db'));
 after(() => db.close());

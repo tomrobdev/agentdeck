@@ -2,12 +2,12 @@
 // (docs/plans/auto-merge.html), and a person turns it on or off for one task.
 import { github } from '../../adapters/github.ts';
 import type { Db } from '../../db/index.ts';
-import type { TaskId } from '../../domain/id/id.ts';
-import { AUTO_MERGE_LABEL, autoMergeOn } from '../../domain/pull-request/auto-merge.ts';
-import type { PrDetails } from '../../domain/pull-request/merge.ts';
-import { mergeReason } from '../../domain/task/history.ts';
-import { openPrUrl } from '../../domain/pull-request/pr.ts';
-import { errorMessage } from '../../domain/text.ts';
+import type { TaskId } from '../../domain/shared/id.ts';
+import { AUTO_MERGE_LABEL, autoMergeOn } from '../../domain/landing/auto-merge.ts';
+import type { PrDetails } from '../../domain/landing/merge.ts';
+import { mergeReason } from '../../domain/work/history.ts';
+import { openPrUrl } from '../../domain/landing/pr.ts';
+import { errorMessage } from '../../domain/shared/text.ts';
 import { ActionError, object, requireTask, requireTaskRepo } from '../input.ts';
 import { notifyLater } from '../notifications.ts';
 import { ensureAutoMergeLabel } from './open-pr.ts';
