@@ -22,7 +22,7 @@ export type Dependency = Pick<Task, 'status' | 'pr_url' | 'pr_state' | 'done_by'
 export type LinkTarget = Dependency & { links: Link[] };
 
 /**
- * Where a link's other task stands. Mirrors DEPENDENCY_MET in db/tasks.ts. A stuck one carries its reason twice: as a
+ * Where a link's other task stands. Mirrors `notWaiting` in db/tasks.ts. A stuck one carries its reason twice: as a
  * sentence ("#10 failed") and as the clause that follows a mention of it ("which failed"), for a chained reason.
  */
 type Standing =
@@ -88,7 +88,7 @@ export function linkState(link: Pick<Link, 'on' | 'kind'>, dependency: Dependenc
  * - stuck: something it builds on, or something that builds on in turn and so on down, won't get there on its own.
  *   `on` is that root and `reason` is its reason: "#10 failed" when it builds on #10 itself, "waits on #10 (via #12),
  *   which failed" when the root is further down. A human has to act; retrying the root releases the chain.
- * Mirrors NOT_WAITING in db/tasks.ts.
+ * Mirrors `notWaiting` in db/tasks.ts.
  */
 export type StartState =
   { kind: 'none' } | { kind: 'met' } | { kind: 'waiting'; on: number[] } | { kind: 'stuck'; on: number; reason: string };

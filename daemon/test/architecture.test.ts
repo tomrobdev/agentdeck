@@ -185,6 +185,18 @@ test('[sql-in-db] SQL runs only in db/', () => {
   assert.deepEqual(found, []);
 });
 
+test('[sql-in-db] nothing outside db/ uses db.raw', () => {
+  assert.deepEqual(findRawHandleUse('const n = db.raw.prepare("x");'), [1]);
+  assert.deepEqual(findRawHandleUse('const n = deps.db.raw;'), [1]);
+  assert.deepEqual(findRawHandleUse('const n = sql.raw("x"); const m = flags.raw;'), []);
+  const found = sources
+    .filter((s) => !s.path.startsWith('db/'))
+    .flatMap((s) =>
+      findRawHandleUse(s.ast.text).map((line) => `${at(s, line)} uses db.raw: the handle is for tests; SQL lives only in db/`),
+    );
+  assert.deepEqual(found, []);
+});
+
 test('[sql-in-db] raw sql in db/ carries a `// guard:` comment saying what the builder cannot express', () => {
   // The query builder is the default; a raw `sql` fragment is for what it hides or lacks, and says so on its line or the one above.
   const found: string[] = [];
@@ -216,36 +228,114 @@ function literalText(node: ts.Node): string | null {
   return null;
 }
 
-/** The method or function a node is in, looking past the arrow functions inside it. */
-function enclosingFunction(node: ts.Node): ts.FunctionLikeDeclaration | undefined {
+/** The function a node is in, looking past the arrow functions inside it, named by its method, declaration or `const`. */
+function enclosingFunction(node: ts.Node): { name: string; body: ts.Node } | undefined {
   for (let n = node.parent; n; n = n.parent) {
-    if (ts.isMethodDeclaration(n) || ts.isFunctionDeclaration(n)) return n;
+    if ((ts.isMethodDeclaration(n) || ts.isFunctionDeclaration(n)) && n.body) return { name: n.name?.getText() ?? '', body: n.body };
+    if ((ts.isArrowFunction(n) || ts.isFunctionExpression(n)) && ts.isVariableDeclaration(n.parent) && ts.isIdentifier(n.parent.name))
+      return { name: n.parent.name.text, body: n.body };
   }
   return undefined;
 }
 
-test('[guarded-status] a task status changes only through a guarded transition', () => {
-  // Every status write is an `UPDATE … WHERE status …` in a function that asks the lifecycle for the next status.
-  const found: string[] = [];
-  for (const s of sources.filter((s) => s.path.startsWith('db/'))) {
-    const visit = (node: ts.Node) => {
-      const text = literalText(node);
-      if (text !== null) {
-        const update = /UPDATE\s+tasks\s+SET\b([^]*?)(\bWHERE\b|$)/i.exec(text);
-        const writes = update ? /(^|,)\s*status\s*=/i.test(update[1]) : /^\s*status\s*=/i.test(text);
-        if (writes) {
-          const where = `${at(s, lineOf(s.ast, node))} writes a task status`;
-          const fn = enclosingFunction(node);
-          if (!/\b(nextStatus|transition)\(/.test(fn?.body?.getText(s.ast) ?? ''))
-            found.push(`${where} without asking the lifecycle (domain/task/lifecycle.ts)`);
-          if (update && !/\bWHERE\b[^]*\bstatus\s*(IN\s*\(|=)/i.test(text)) found.push(`${where} without a WHERE on the status`);
-        }
+/** The only functions that may write a task's status. */
+const STATUS_WRITERS = ['applyEvent', 'claimNextTask'];
+
+interface StatusWrite {
+  line: number;
+  /** The builder's `.update(tasks).set({ status … })`, or a raw SQL string that sets the status. */
+  kind: 'builder' | 'raw';
+  /** What is wrong with it; empty when it is a guarded write by an allowed function. */
+  problems: string[];
+}
+
+/** Every write of a task's status in a source string, and what is wrong with each. */
+function findStatusWrites(source: string): StatusWrite[] {
+  const ast = ts.createSourceFile('sample.ts', source, ts.ScriptTarget.Latest, true);
+  const writes: StatusWrite[] = [];
+  const check = (node: ts.Node, kind: StatusWrite['kind'], guarded: boolean) => {
+    const problems: string[] = [];
+    const fn = enclosingFunction(node);
+    if (!fn || !STATUS_WRITERS.includes(fn.name)) problems.push(`is in ${fn?.name || 'no function'}, not ${STATUS_WRITERS.join(' or ')}`);
+    else if (!/\b(nextStatus|transition)\(/.test(fn.body.getText(ast)))
+      problems.push('does not ask the lifecycle (domain/task/lifecycle.ts)');
+    if (!guarded) problems.push('has no WHERE on the status');
+    writes.push({ line: lineOf(ast, node), kind, problems });
+  };
+  const visit = (node: ts.Node) => {
+    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) && node.expression.name.text === 'set') {
+      const [fields] = node.arguments;
+      const setsStatus =
+        !!fields &&
+        ts.isObjectLiteralExpression(fields) &&
+        fields.properties.some(
+          (p) => (ts.isPropertyAssignment(p) || ts.isShorthandPropertyAssignment(p)) && p.name.getText(ast) === 'status',
+        );
+      let updatesTasks = false;
+      for (let r: ts.Expression = node.expression.expression; ts.isCallExpression(r) && ts.isPropertyAccessExpression(r.expression);) {
+        if (r.expression.name.text === 'update' && r.arguments[0]?.getText(ast) === 'tasks') updatesTasks = true;
+        r = r.expression.expression;
       }
-      ts.forEachChild(node, visit);
-    };
-    visit(s.ast);
+      if (setsStatus && updatesTasks) {
+        // The calls chained after .set(…): the .where(…) must name the status column.
+        let guarded = false;
+        for (let n: ts.Node = node; ts.isPropertyAccessExpression(n.parent) && ts.isCallExpression(n.parent.parent); n = n.parent.parent) {
+          const [arg] = n.parent.parent.arguments;
+          if (n.parent.name.text === 'where' && arg && /\bstatus\b/.test(arg.getText(ast))) guarded = true;
+        }
+        check(node, 'builder', guarded);
+      }
+    }
+    const text = literalText(node);
+    if (text !== null) {
+      const update = /UPDATE\s+tasks\s+SET\b([^]*?)(\bWHERE\b|$)/i.exec(text);
+      const writesStatus = update ? /(^|,)\s*status\s*=/i.test(update[1]) : /^\s*status\s*=/i.test(text);
+      if (writesStatus) check(node, 'raw', !update || /\bWHERE\b[^]*\bstatus\s*(IN\s*\(|=)/i.test(text));
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(ast);
+  return writes;
+}
+
+/** Every `db.raw` (the handle for tests) in a source string: nothing outside db/ may use it. */
+function findRawHandleUse(source: string): number[] {
+  const ast = ts.createSourceFile('sample.ts', source, ts.ScriptTarget.Latest, true);
+  const lines: number[] = [];
+  const visit = (node: ts.Node) => {
+    if (ts.isPropertyAccessExpression(node) && node.name.text === 'raw' && /(^|\.)db$/.test(node.expression.getText(ast)))
+      lines.push(lineOf(ast, node));
+    ts.forEachChild(node, visit);
+  };
+  visit(ast);
+  return lines;
+}
+
+const UNGUARDED = `const applyEvent = () => { transition(); orm.update(tasks).set({ status: 'done' }).where(eq(tasks.id, 1)).run(); };`;
+const GUARDED = `const applyEvent = () => { transition(); orm.update(tasks).set({ status: to }).where(and(eq(tasks.id, 1), eq(tasks.status, 'queued'))).run(); };`;
+
+test('[guarded-status] the finder reports an unguarded builder write, a write outside the allowed functions, and a raw SQL write', () => {
+  assert.deepEqual(findStatusWrites(GUARDED), [{ line: 1, kind: 'builder', problems: [] }]);
+  assert.deepEqual(findStatusWrites(UNGUARDED)[0].problems, ['has no WHERE on the status']);
+  const elsewhere = findStatusWrites(GUARDED.replace('applyEvent', 'cancelAll'));
+  assert.match(elsewhere[0].problems[0], /is in cancelAll, not applyEvent or claimNextTask/);
+  const raw = findStatusWrites('function claimNextTask() { nextStatus(); db.prepare("UPDATE tasks SET status = \'x\' WHERE id = 1"); }');
+  assert.deepEqual(raw[0], { line: 1, kind: 'raw', problems: ['has no WHERE on the status'] });
+  assert.deepEqual(findStatusWrites('orm.update(tasks).set({ title: x }).where(eq(tasks.id, 1)); orm.update(runs).set({ status: x })'), []);
+});
+
+test('[guarded-status] a task status changes only through a guarded transition', () => {
+  // Every status write is in applyEvent or claimNextTask, guarded on the status, and asks the lifecycle for the next status.
+  const found: string[] = [];
+  let count = 0;
+  for (const s of sources.filter((s) => s.path.startsWith('db/'))) {
+    for (const w of findStatusWrites(s.ast.text)) {
+      count++;
+      for (const p of w.problems) found.push(`${at(s, w.line)} writes a task status and ${p}`);
+    }
   }
   assert.deepEqual(found, []);
+  assert.equal(count, STATUS_WRITERS.length, 'the finder should see exactly the status writes of applyEvent and claimNextTask');
 });
 
 test('[claude-process-group] claude runs only from adapters/claude.ts, in its own process group', () => {

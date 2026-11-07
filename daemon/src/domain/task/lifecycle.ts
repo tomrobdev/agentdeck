@@ -1,5 +1,5 @@
 // The task state machine, as data. Pure: no I/O, so it can be tested exhaustively.
-// db.applyEvent (db/tasks.ts) is the only thing that writes a status, and it asks this module first.
+// applyEvent and claimNextTask (db/tasks.ts) are the only things that write a status, and each asks this module first.
 import type { TaskEventType } from './history.ts';
 import type { Task } from './task.ts';
 
