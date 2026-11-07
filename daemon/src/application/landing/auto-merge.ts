@@ -9,7 +9,7 @@ import { mergeReason } from '../../domain/work/history.ts';
 import { openPrUrl } from '../../domain/landing/pr.ts';
 import { errorMessage } from '../../domain/shared/text.ts';
 import { ActionError, object, requireTask, requireTaskRepo } from '../input.ts';
-import { notifyLater } from '../notifications.ts';
+import { notifyLater } from '../operations/notifications.ts';
 import { ensureAutoMergeLabel } from './open-pr.ts';
 import { isMergeLocked, mergeable, mergeOpenPr } from './merge.ts';
 

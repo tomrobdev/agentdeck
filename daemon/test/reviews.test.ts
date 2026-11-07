@@ -13,7 +13,7 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { openDb } = await import('../src/db/index.ts');
 const actions = await import('../src/application/actions.ts');
-const { recordAnswers } = await import('../src/application/review/address.ts');
+const { recordAnswers } = await import('../src/application/landing/address.ts');
 const { doneTask, runningTask } = await import('./fixtures.ts');
 
 function setup() {

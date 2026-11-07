@@ -1,23 +1,23 @@
 // Use cases for the daemon as a whole: pause, status, and settings.
-import type { Db } from '../db/index.ts';
+import type { Db } from '../../db/index.ts';
 import {
   type NotifyKind,
   type NotifySettings,
   notifyEventsError,
   ntfyServerError,
   ntfyTopicError,
-} from '../domain/operations/notification.ts';
-import { type PlannerSettings, plannerIntervalError, plannerMaxTasksError, plannerModelError } from '../domain/proposals/proposals.ts';
-import { BUDGET_KEYS, type Budget, validateBudget, validateSlots } from '../domain/capacity/governor.ts';
-import { ATTENTION_LIMIT, headline } from '../domain/operations/headline.ts';
-import type { DaemonState } from '../domain/operations/health.ts';
-import { type ReloadInput, reloadState, restartWait } from '../domain/operations/restart.ts';
-import type { Settings } from '../domain/operations/settings.ts';
-import { flag, list, number, object, refuse, text, whole } from './input.ts';
-import { startGate } from './scheduler/gate.ts';
+} from '../../domain/operations/notification.ts';
+import { type PlannerSettings, plannerIntervalError, plannerMaxTasksError, plannerModelError } from '../../domain/proposals/proposals.ts';
+import { BUDGET_KEYS, type Budget, validateBudget, validateSlots } from '../../domain/capacity/governor.ts';
+import { ATTENTION_LIMIT, headline } from '../../domain/operations/headline.ts';
+import type { DaemonState } from '../../domain/operations/health.ts';
+import { type ReloadInput, reloadState, restartWait } from '../../domain/operations/restart.ts';
+import type { Settings } from '../../domain/operations/settings.ts';
+import { flag, list, number, object, refuse, text, whole } from '../input.ts';
+import { startGate } from '../capacity/gate.ts';
 import { notify } from './notifications.ts';
-import { queueWaits } from './scheduler/queue.ts';
-import { runningActivity } from './scheduler/restart.ts';
+import { queueWaits } from '../work/queue.ts';
+import { runningActivity } from './restart.ts';
 
 export function setPaused(db: Db, paused: boolean): void {
   db.setPaused(paused);

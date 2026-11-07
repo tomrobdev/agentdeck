@@ -14,10 +14,10 @@ import type { TaskId } from '../../domain/shared/id.ts';
 import type { Task } from '../../domain/work/task.ts';
 import { errorMessage } from '../../domain/shared/text.ts';
 import { ActionError, flag, object, requireTask, requireTaskRepo, text } from '../input.ts';
-import { prPlanFor } from '../plans.ts';
-import { dependentsReleased, landsAfter } from '../task/dependencies.ts';
-import { settlePr } from '../task/settle.ts';
-import { isSyncing } from '../sync.ts';
+import { prPlanFor } from '../work/plans.ts';
+import { dependentsReleased, landsAfter } from '../work/dependencies.ts';
+import { settlePr } from '../settle.ts';
+import { isSyncing } from './sync.ts';
 import { isMergeLocked, lockMerge, unlockMerge } from './merge-lock.ts';
 import { autoMergeFor, lastTestsPassed, prCwd } from './refresh.ts';
 

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { RECHECK_BLOCKED_MS, reloadBlock } from '../src/application/daemon/reload-block.ts';
+import { RECHECK_BLOCKED_MS, reloadBlock } from '../src/application/operations/reload-block.ts';
 
 const settle = () => new Promise((r) => setImmediate(r));
 

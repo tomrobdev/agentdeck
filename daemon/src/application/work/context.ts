@@ -9,7 +9,7 @@ import { digest } from '../../domain/work/read/digest.ts';
 import { filterTasks, listable } from '../../domain/work/read/listing.ts';
 import { isReview, stageOf } from '../../domain/work/stage.ts';
 import { OPEN_STATUSES } from '../../domain/work/task.ts';
-import { status } from '../settings.ts';
+import { status } from '../operations/settings.ts';
 import { withViews } from './task-views.ts';
 
 /** What the session is shown, and the cursor to pass as `after` next time. */

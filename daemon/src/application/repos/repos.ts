@@ -17,8 +17,8 @@ import { textList } from '../../domain/shared/text.ts';
 import { type Check, runDoctor } from './doctor.ts';
 import { repoView } from './repo-view.ts';
 import { ActionError, flag, list, object, refuse, requireRepo, text, textOrNull, whole } from '../input.ts';
-import { pauseRepo } from '../scheduler/pause.ts';
-import { buildersOnRepo, warnBuildersOnDeleted } from '../task/dependencies.ts';
+import { pauseRepo } from './pause.ts';
+import { buildersOnRepo, warnBuildersOnDeleted } from '../work/dependencies.ts';
 
 /** Register a repo. Its toolchain is detected from the root files and fills in whatever isn't given. */
 export async function addRepo(

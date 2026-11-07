@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { runSettings } from '../src/application/run/claude-run.ts';
+import { runSettings } from '../src/application/runs/claude-run.ts';
 import type { Repo } from '../src/domain/repos/repo.ts';
 import { ALWAYS_DISALLOWED_TOOLS, DEFAULT_ALLOWED_TOOLS } from '../src/domain/repos/tools.ts';
 import { claudeArgs, workerSystemPrompt } from '../src/domain/runs/prompt.ts';

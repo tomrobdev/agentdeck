@@ -42,7 +42,7 @@ const ALLOWED: Allowed[] = [
   { file: 'domain/work/stage.ts', line: /Done holds every/, why: PLAIN },
   { file: 'domain/operations/health.ts', line: /another daemon holds port/, why: PLAIN },
   { file: 'domain/work/plan.ts', line: /that holds AgentDeck's files/, why: PLAIN },
-  { file: 'application/sync.ts', line: /sync in this process holds/, why: PLAIN },
+  { file: 'application/landing/sync.ts', line: /sync in this process holds/, why: PLAIN },
   { file: 'api/contract.ts', line: /holds the use cases to/, why: PLAIN },
   { file: 'db/tasks.ts', line: /Later pages hold older tasks/, why: PLAIN },
   { file: 'db/sql.ts', line: /caller already holds/, why: PLAIN },
@@ -54,9 +54,9 @@ const ALLOWED: Allowed[] = [
   { file: 'application/scheduler/scheduler.ts', line: /Hold a `caffeinate/, why: PLAIN },
   { file: 'app/src/platform/native.ts', line: /`copied` holds the key/, why: PLAIN },
   { file: 'domain/landing/checks.ts', line: /\bjobs?\b/i, why: JOB },
-  { file: 'application/pull-request/fix-checks.ts', line: /\bjobs?\b/i, why: JOB },
+  { file: 'application/landing/fix-checks.ts', line: /\bjobs?\b/i, why: JOB },
   { file: 'adapters/github.ts', line: /\bjobs?\b/i, why: JOB },
-  { file: 'application/notifications.ts', line: /\bjobs\b/, why: OTHER_JOB },
+  { file: 'application/operations/notifications.ts', line: /\bjobs\b/, why: OTHER_JOB },
   { file: 'adapters/notify.ts', line: /caller's job/, why: OTHER_JOB },
 ];
 

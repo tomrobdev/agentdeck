@@ -10,7 +10,7 @@ How far the move to a domain model has come, counted from the code. Each number 
 | JSON fields left in domain entities (stored as strings) | 0     |                                           |
 | Runtime imports of adapters from `application/`         | 52    |                                           |
 | Store calls (`db.…`) in `api/` and `cli/`               | 13    |                                           |
-| Folder cycles in `domain/` and `application/`           | 2     | domain: 6 folders; application: 7 folders |
+| Folder cycles in `domain/` and `application/`           | 2     | domain: 6 folders; application: 9 folders |
 
 ## Shrinking lists
 
@@ -27,4 +27,4 @@ Each list can only shrink: an entry that stops applying fails `pnpm test`.
 Folders that import each other, counting runtime and type-only imports (`rule:folder-cycles`).
 
 - `domain/`: `domain/landing`, `domain/operations`, `domain/proposals`, `domain/repos`, `domain/runs`, `domain/work`
-- `application/`: `application`, `application/pull-request`, `application/repo`, `application/review`, `application/run`, `application/scheduler`, `application/task`
+- `application/`: `application`, `application/insights`, `application/landing`, `application/operations`, `application/proposals`, `application/repos`, `application/runs`, `application/scheduler`, `application/work`

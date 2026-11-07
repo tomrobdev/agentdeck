@@ -1,8 +1,8 @@
 // Plans: stored in AgentDeck per task, named after the task they belong to (`112-plans-in-agentdeck.html`). A task
 // follows its linked plan (plan_task) or else its own; each run gets it in the worktree's plan file and gives it back.
-import { readGivenPlan, readPlanFile, writeGivenPlan } from '../adapters/plan-file.ts';
-import type { Db } from '../db/index.ts';
-import { type OwnPlan, toPlan } from '../db/plans.ts';
+import { readGivenPlan, readPlanFile, writeGivenPlan } from '../../adapters/plan-file.ts';
+import type { Db } from '../../db/index.ts';
+import { type OwnPlan, toPlan } from '../../db/plans.ts';
 import {
   PLAN_LIMIT,
   type ParsedPlan,
@@ -11,13 +11,13 @@ import {
   missingFollowedSteps,
   parsePlan,
   planAfterRun,
-} from '../domain/work/plan.ts';
-import type { TaskId } from '../domain/shared/id.ts';
-import type { PrPlan } from '../domain/landing/pr.ts';
-import type { PromptPlan } from '../domain/runs/prompt.ts';
-import { hasPlanLink, otherPlanOwner } from '../domain/work/plan-link.ts';
-import { PLAN_ATTACHABLE_STATUSES, type Task } from '../domain/work/task.ts';
-import { ActionError, object, requireTask } from './input.ts';
+} from '../../domain/work/plan.ts';
+import type { TaskId } from '../../domain/shared/id.ts';
+import type { PrPlan } from '../../domain/landing/pr.ts';
+import type { PromptPlan } from '../../domain/runs/prompt.ts';
+import { hasPlanLink, otherPlanOwner } from '../../domain/work/plan-link.ts';
+import { PLAN_ATTACHABLE_STATUSES, type Task } from '../../domain/work/task.ts';
+import { ActionError, object, requireTask } from '../input.ts';
 
 /** HTML a person gives as a plan: refused unless it is a plan and small enough. */
 export function readPlanInput(html: unknown): { html: string; plan: ParsedPlan } {

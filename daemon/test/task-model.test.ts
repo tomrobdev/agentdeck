@@ -8,7 +8,7 @@ import { test } from 'node:test';
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-model-'));
 
 const { openDb } = await import('../src/db/index.ts');
-const { addTask, editTask } = await import('../src/application/task/tasks.ts');
+const { addTask, editTask } = await import('../src/application/work/tasks.ts');
 const { isModel } = await import('../src/domain/work/task.ts');
 const { allowedTools } = await import('../src/domain/repos/tools.ts');
 

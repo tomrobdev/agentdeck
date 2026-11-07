@@ -19,14 +19,14 @@ const { openDb } = await import('../src/db/index.ts');
 const { blockedTask, doneTask, failedTask, openPr, rerun, settlePr } = await import('./fixtures.ts');
 const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
 const { github } = await import('../src/adapters/github.ts');
-const { refreshPrStates } = await import('../src/application/pull-request/refresh.ts');
+const { refreshPrStates } = await import('../src/application/landing/refresh.ts');
 const { addTask, ActionError, closeTaskPr, retryTask, updateRepo } = await import('../src/application/actions.ts');
 const { buildPrompt } = await import('../src/domain/runs/prompt.ts');
 const { latestReviewNote } = await import('../src/domain/work/history.ts');
 const { linkTasks, mergeAll, mergePreview, mergeTask } = await import('../src/application/actions.ts');
 const { mergeCheck, parsePrDetails } = await import('../src/domain/landing/merge.ts');
 type PrDetails = import('../src/domain/landing/merge.ts').PrDetails;
-const { dependencyOf, liveLinks, waitingFor } = await import('../src/application/task/dependencies.ts');
+const { dependencyOf, liveLinks, waitingFor } = await import('../src/application/work/dependencies.ts');
 /** What a task waits for on its builds-on links, read from the database now. */
 const waiting = (t: import('../src/domain/work/task.ts').Task) => waitingFor(t, dependencyOf(t, liveLinks(db)));
 const { cancelTask } = await import('../src/application/actions.ts');

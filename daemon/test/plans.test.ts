@@ -16,7 +16,7 @@ const { isOwnPlanName, mergePlanSteps, parsePlan, planAfterRun, planFileName, pl
   await import('../src/domain/work/plan.ts');
 const { openDb } = await import('../src/db/index.ts');
 const { startApi } = await import('../src/api/server.ts');
-const { attachPlan } = await import('../src/application/plans.ts');
+const { attachPlan } = await import('../src/application/work/plans.ts');
 const { editTask, addTask } = await import('../src/application/actions.ts');
 
 const PLAN = `<!doctype html>

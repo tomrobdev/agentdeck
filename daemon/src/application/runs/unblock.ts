@@ -18,8 +18,8 @@ import { latestReviewNote } from '../../domain/work/history.ts';
 import { type BlockedTask, leftoversMessage } from '../../domain/work/task.ts';
 import { errorMessage } from '../../domain/shared/text.ts';
 import { type OpenedRun, endTaskRun, openTaskRun, startTaskRun } from './claude-run.ts';
-import { planForRun } from '../plans.ts';
-import { settle } from '../task/settle.ts';
+import { planForRun } from '../work/plans.ts';
+import { settle } from '../settle.ts';
 
 /** What an unblock run came to. `stale`: the task stopped being blocked while it ran, so nothing was changed. */
 export interface UnblockReport {
