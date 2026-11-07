@@ -51,7 +51,7 @@ export function unblockable(
   lastRuns: Pick<Run, 'kind' | 'outcome'>[],
   repo: Pick<Repo, 'auto_unblock'>,
 ): boolean {
-  if (repo.auto_unblock !== 1 || task.status !== 'blocked' || onlyAPersonSettles(task)) return false;
+  if (!repo.auto_unblock || task.status !== 'blocked' || onlyAPersonSettles(task)) return false;
   const since = lastRuns.slice(lastRuns.findLastIndex((r) => r.kind === 'work') + 1);
   return !since.some((r) => r.kind === 'unblock' && r.outcome !== 'rate_limited');
 }

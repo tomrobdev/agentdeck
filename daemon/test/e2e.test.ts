@@ -273,7 +273,7 @@ test('repo add detects the toolchain; repos registered before detection get its 
     setup: 'true',
     tools: ['Read'],
   });
-  assert.deepEqual([given.test_cmd, given.setup_cmd, given.allowed_tools], ['make check', 'true', '["Read"]']);
+  assert.deepEqual([given.test_cmd, given.setup_cmd, given.allowed_tools], ['make check', 'true', ['Read']]);
 
   const legacy = { ...repo, allowed_tools: null, toolchain: null };
   assert.deepEqual(effectiveTools(legacy, js), tools);
@@ -329,8 +329,8 @@ test('each run gets a sandbox settings file outside its worktree', async () => {
   const { updateRepo } = await import('../src/application/actions.ts');
   const { LOG_DIR } = await import('../src/config.ts');
   db.setRepoPaused(1, null); // the failing setup above paused it
-  assert.equal(db.getRepo(1)!.sandbox, 1, 'sandbox is on by default');
-  assert.equal(db.getRepo(1)!.network, '[]', 'no hosts by default');
+  assert.equal(db.getRepo(1)!.sandbox, true, 'sandbox is on by default');
+  assert.deepEqual(db.getRepo(1)!.network, [], 'no hosts by default');
   updateRepo(db, 1, { network: 'registry.npmjs.org, github.com' });
   try {
     const task = db.addTask({ repo_id: 1, title: 'sandboxed', prompt: 'FAKE_DONE in the sandbox' });
@@ -371,7 +371,7 @@ test('a sandbox that cannot start fails the run with claude’s reason', async (
 test('repo network rejects things that are not host names', async () => {
   const { ActionError, updateRepo } = await import('../src/application/actions.ts');
   assert.throws(() => updateRepo(db, 1, { network: 'a.com, http://b.com/x' }), ActionError);
-  assert.equal(db.getRepo(1)!.network, '[]');
+  assert.deepEqual(db.getRepo(1)!.network, []);
 });
 
 test('a new worktree starts from origin/<base> when origin is ahead of the local base', async () => {

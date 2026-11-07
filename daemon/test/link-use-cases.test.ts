@@ -118,7 +118,7 @@ test('an after link holds the merge until the other lands, and is gone when the 
 
   const held = mergeCheck({ pr_state: 'open', pr, tests_passed: 1, lands_after: landsAfter(db, b.id) });
   assert.deepEqual(held.problems, [`lands after #${a.id}: #${a.id} is not done yet`]);
-  const repo = { test_cmd: 'x', auto_merge_max_lines: 400, auto_merge_skip: '' };
+  const repo = { test_cmd: 'x', auto_merge_max_lines: 400, auto_merge_skip: [] };
   const auto = autoMergeCheck({ pr_state: 'open', pr, tests_passed: 1, lands_after: landsAfter(db, b.id), repo, paused: null });
   assert.equal(auto.verdict, 'wait');
 

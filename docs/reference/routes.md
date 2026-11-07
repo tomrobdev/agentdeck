@@ -14,17 +14,17 @@ The dashboard's routes, and the use case each calls.
 | GET    | `/api/events`                      |                                                                    |
 | POST   | `/api/notify/test`                 | `actions.sendTestNotification`                                     |
 | POST   | `/api/pause`                       | `actions.setPaused`, `actions.status`                              |
-| POST   | `/api/repos/:id/archive`           | `actions.archiveRepo`                                              |
+| POST   | `/api/repos/:id/archive`           | `actions.repoView`, `actions.archiveRepo`                          |
 | GET    | `/api/repos/:id/deletion`          | `actions.repoDeletionPreview`                                      |
 | POST   | `/api/repos/:id/doctor`            | `actions.doctorRepo`                                               |
 | POST   | `/api/repos/:id/propose`           | `actions.proposeNow`                                               |
-| POST   | `/api/repos/:id/resume`            | `actions.resumeRepo`                                               |
-| POST   | `/api/repos/:id/unarchive`         | `actions.unarchiveRepo`                                            |
+| POST   | `/api/repos/:id/resume`            | `actions.repoView`, `actions.resumeRepo`                           |
+| POST   | `/api/repos/:id/unarchive`         | `actions.repoView`, `actions.unarchiveRepo`                        |
 | DELETE | `/api/repos/:id`                   | `actions.deleteRepo`                                               |
 | GET    | `/api/repos/:id`                   | `actions.repoDetail`                                               |
 | POST   | `/api/repos/:id`                   | `actions.updateRepo`                                               |
 | GET    | `/api/repos`                       | `db.listRepos`                                                     |
-| POST   | `/api/repos`                       | `actions.addRepo`                                                  |
+| POST   | `/api/repos`                       | `actions.repoView`, `actions.addRepo`                              |
 | POST   | `/api/resume`                      | `actions.setPaused`, `actions.status`                              |
 | POST   | `/api/review-comments/:id/reopen`  | `actions.reopenReviewComment`                                      |
 | POST   | `/api/review-comments/:id/resolve` | `actions.resolveReviewComment`                                     |

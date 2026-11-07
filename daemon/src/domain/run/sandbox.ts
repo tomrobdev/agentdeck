@@ -1,6 +1,6 @@
 // The Claude Code settings each worker run gets with `--settings`. Pure: no I/O.
 // See docs/adr/0001-worker-sandbox.md for why the Bash sandbox is on and what it covers.
-import { parseTextList, textList } from '../text.ts';
+import { textList } from '../text.ts';
 
 export interface WorkerSettings {
   sandbox: {
@@ -54,11 +54,6 @@ export function withoutUnscopedFileTools(allowed: string[]): string[] {
 /** Where a run's settings file goes: next to its log, outside the worktree so the agent can't rewrite it. */
 export function settingsPath(logPath: string): string {
   return logPath.replace(/\.jsonl$/, '') + '.settings.json';
-}
-
-/** Parse a repo's `network` column: a JSON array of hosts; anything else means no hosts. */
-export function parseNetwork(json: string | null | undefined): string[] {
-  return parseTextList(json);
 }
 
 /** A host list from user input: comma or space separated, blanks dropped, duplicates removed. */

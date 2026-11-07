@@ -15,6 +15,7 @@ import { goalsError, networkError, repoNameError } from '../../domain/repo/rules
 import { detectToolchain } from '../../domain/repo/toolchain.ts';
 import { textList } from '../../domain/text.ts';
 import { type Check, runDoctor } from './doctor.ts';
+import { repoView } from './repo-view.ts';
 import { ActionError, flag, list, object, refuse, requireRepo, text, textOrNull, whole } from '../input.ts';
 import { pauseRepo } from '../scheduler/pause.ts';
 import { buildersOnRepo, warnBuildersOnDeleted } from '../task/dependencies.ts';
@@ -58,7 +59,7 @@ export async function addRepo(
 
 export function repoDetail(db: Db, nameOrId: string | number) {
   const repo = requireRepo(db, nameOrId);
-  return { ...repo, goals: readGoals(repo), goals_path: goalsPath(repo), planner_runs: db.plannerRuns(repo.id, 5) };
+  return { ...repoView(repo), goals: readGoals(repo), goals_path: goalsPath(repo), planner_runs: db.plannerRuns(repo.id, 5) };
 }
 
 export interface RepoPatch {
@@ -110,19 +111,19 @@ export function updateRepo(db: Db, nameOrId: string | number, patch: RepoPatch) 
     writeGoals(repo, goals);
   }
   db.updateRepo(repo.id, {
-    ...(auto_approve !== undefined ? { auto_approve: auto_approve ? 1 : 0 } : {}),
+    ...(auto_approve !== undefined ? { auto_approve } : {}),
     ...(test_cmd !== undefined ? { test_cmd: test_cmd?.trim() || null } : {}),
     ...(setup_cmd !== undefined ? { setup_cmd: setup_cmd?.trim() || null } : {}),
     ...(base_branch !== undefined ? { base_branch } : {}),
     ...(pr_mode !== undefined ? { pr_mode: pr_mode as PrMode } : {}),
     ...(merge_method !== undefined ? { merge_method: merge_method as MergeMethod } : {}),
-    ...(auto_resolve !== undefined ? { auto_resolve: auto_resolve ? 1 : 0 } : {}),
-    ...(auto_unblock !== undefined ? { auto_unblock: auto_unblock ? 1 : 0 } : {}),
-    ...(sandbox !== undefined ? { sandbox: sandbox ? 1 : 0 } : {}),
-    ...(network !== undefined ? { network: JSON.stringify(network) } : {}),
-    ...(auto_merge !== undefined ? { auto_merge: auto_merge ? 1 : 0 } : {}),
+    ...(auto_resolve !== undefined ? { auto_resolve } : {}),
+    ...(auto_unblock !== undefined ? { auto_unblock } : {}),
+    ...(sandbox !== undefined ? { sandbox } : {}),
+    ...(network !== undefined ? { network } : {}),
+    ...(auto_merge !== undefined ? { auto_merge } : {}),
     ...(auto_merge_max_lines !== undefined ? { auto_merge_max_lines } : {}),
-    ...(auto_merge_skip !== undefined ? { auto_merge_skip: JSON.stringify(auto_merge_skip) } : {}),
+    ...(auto_merge_skip !== undefined ? { auto_merge_skip } : {}),
   });
   return repoDetail(db, repo.id);
 }

@@ -27,9 +27,8 @@ test('adding or editing a task refuses a model claude would reject', async () =>
   assert.equal((await editTask(db, t.id, { model: 'claude-sonnet-5-5' })).model, 'claude-sonnet-5-5');
 });
 
-test("a repo's unreadable tool rules allow nothing, not the defaults", () => {
+test("a repo's own tool rules replace the defaults", () => {
   const root = { files: ['package.json'], scripts: ['test'] };
-  assert.deepEqual(allowedTools({ allowed_tools: '["Read","Bash(make*)"]', toolchain: null }, root), ['Read', 'Bash(make*)']);
-  assert.deepEqual(allowedTools({ allowed_tools: 'not json', toolchain: null }, root), []);
-  assert.deepEqual(allowedTools({ allowed_tools: '{"Read":true}', toolchain: null }, root), []);
+  assert.deepEqual(allowedTools({ allowed_tools: ['Read', 'Bash(make*)'], toolchain: null }, root), ['Read', 'Bash(make*)']);
+  assert.deepEqual(allowedTools({ allowed_tools: [], toolchain: null }, root), []);
 });

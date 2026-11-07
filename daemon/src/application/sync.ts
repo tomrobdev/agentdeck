@@ -222,7 +222,7 @@ async function syncMarked(db: Db, task: Task, repo: Repo, opts: { manual: boolea
   const id = task.id;
   const wt = await ensureWorktree(repo, task);
   if (wt.path !== task.worktree) db.setCheckout(id, { worktree: wt.path });
-  const res = await syncBranch(db, task, repo, wt.path, { allowResolve: opts.manual || repo.auto_resolve === 1, runTests: true });
+  const res = await syncBranch(db, task, repo, wt.path, { allowResolve: opts.manual || repo.auto_resolve, runTests: true });
   switch (res.kind) {
     case 'up_to_date':
     case 'clean':
@@ -275,7 +275,7 @@ export async function resolveConflicting(
     const task = db.getTask(id);
     const repo = task && db.getRepo(task.repo_id);
     if (!task || !repo || task.status !== 'done' || repo.paused_reason || isSyncing(db, id) || isMergeLocked(id)) continue;
-    if (repo.auto_resolve !== 1) {
+    if (!repo.auto_resolve) {
       if (!told.has(id)) {
         told.add(id);
         log(`task ${id}: PR conflicts with ${repo.base_branch}; auto_resolve is off, so it waits for a sync (agentdeck sync ${id})`);

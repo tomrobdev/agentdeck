@@ -172,7 +172,7 @@ test('old databases gain the new columns', () => {
     INSERT INTO repos (name, path) VALUES ('legacy', '/tmp/legacy');`);
   old.close();
   const migrated = openDb(path);
-  assert.equal(migrated.findRepo('legacy')!.auto_approve, 0);
+  assert.equal(migrated.findRepo('legacy')!.auto_approve, false);
   migrated.close();
 });
 

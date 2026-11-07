@@ -2,7 +2,7 @@
 import type { Repo } from '../repo/repo.ts';
 import type { Task } from '../task/task.ts';
 import { PROTECTED_PREFIXES, isProtectedPath } from '../run/protected-edits.ts';
-import { parseTextList, wholeNumberError } from '../text.ts';
+import { wholeNumberError } from '../text.ts';
 import { isMergeabilityUnknown } from './conflict.ts';
 import { type MergeFinding, type MergeInput, conflictNeedsPerson, mergeFindings } from './merge.ts';
 
@@ -21,12 +21,8 @@ export const DEFAULT_AUTO_MERGE_SKIP = ['.github/'];
  */
 export function autoMergeOn(task: Pick<Task, 'auto_merge' | 'source'>, repo: Pick<Repo, 'auto_merge' | 'auto_approve'>): boolean {
   if (task.auto_merge !== null) return task.auto_merge === 1;
-  return repo.auto_merge === 1 && (task.source !== 'planner' || repo.auto_approve !== 1);
+  return repo.auto_merge && (task.source !== 'planner' || !repo.auto_approve);
 }
-
-/** The path prefixes in a repo's `auto_merge_skip`; a bad value reads as the default. */
-export const autoMergeSkip = (repo: Pick<Repo, 'auto_merge_skip'>): string[] =>
-  parseTextList(repo.auto_merge_skip, DEFAULT_AUTO_MERGE_SKIP);
 
 const someOf = (paths: string[]) => `${paths.slice(0, 3).join(', ')}${paths.length > 3 ? ` and ${paths.length - 3} more` : ''}`;
 
@@ -114,7 +110,7 @@ export function autoMergeCheck(
   const lines = pr.additions + pr.deletions;
   if (lines > repo.auto_merge_max_lines) reasons.never.push(`${lines} lines changed, over the limit of ${repo.auto_merge_max_lines}`);
   if (pr.paths.length < pr.files) reasons.never.push(`GitHub listed ${pr.paths.length} of ${pr.files} changed files`);
-  reasons.never.push(...pathReasons(pr.paths, autoMergeSkip(repo)));
+  reasons.never.push(...pathReasons(pr.paths, repo.auto_merge_skip));
 
   if (isMergeabilityUnknown(pr)) reasons.wait.push('GitHub is still working out whether it merges cleanly');
   if (input.paused) reasons.wait.push(input.paused);
@@ -171,12 +167,8 @@ export function autoMergeView(
 ): AutoMergeView {
   const on = autoMergeOn(task, repo);
   const source: AutoMergeView['source'] =
-    task.auto_merge !== null
-      ? 'task'
-      : !on && repo.auto_merge === 1 && task.source === 'planner' && repo.auto_approve === 1
-        ? 'planner'
-        : 'repo';
-  const skip = autoMergeSkip(repo);
+    task.auto_merge !== null ? 'task' : !on && repo.auto_merge && task.source === 'planner' && repo.auto_approve ? 'planner' : 'repo';
+  const skip = repo.auto_merge_skip;
   const limits = {
     max_lines: repo.auto_merge_max_lines,
     skip,

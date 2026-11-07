@@ -13,7 +13,7 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 const { openDb } = await import('../src/db/index.ts');
 const { doneTask } = await import('./fixtures.ts');
 const { github } = await import('../src/adapters/github.ts');
-const { AUTO_MERGE_LABEL, autoMergeCheck, autoMergeOn, autoMergeSkip } = await import('../src/domain/pull-request/auto-merge.ts');
+const { AUTO_MERGE_LABEL, autoMergeCheck, autoMergeOn } = await import('../src/domain/pull-request/auto-merge.ts');
 const { isMergeLocked } = await import('../src/application/pull-request/merge.ts');
 const { refreshPrStates } = await import('../src/application/pull-request/refresh.ts');
 const { autoMerge } = await import('../src/application/pull-request/auto-merge.ts');
@@ -90,7 +90,7 @@ function tested(o: { source?: 'manual' | 'planner'; title?: string } = {}) {
 
 // ---- The check
 
-const repoRow = { test_cmd: 'pnpm test', auto_merge_max_lines: 400, auto_merge_skip: '[".github/"]' };
+const repoRow = { test_cmd: 'pnpm test', auto_merge_max_lines: 400, auto_merge_skip: ['.github/'] };
 const check = (pr: Partial<PrDetails> = {}, o: { tests_passed?: number | null; paused?: string | null; test_cmd?: string | null } = {}) =>
   autoMergeCheck({
     repo: { ...repoRow, test_cmd: o.test_cmd === undefined ? repoRow.test_cmd : o.test_cmd },
@@ -101,14 +101,14 @@ const check = (pr: Partial<PrDetails> = {}, o: { tests_passed?: number | null; p
   });
 
 test('autoMergeOn: the task wins, else the repo; a planner proposal only when a person approved it', () => {
-  const on = { auto_merge: 1, auto_approve: 0 };
+  const on = { auto_merge: true, auto_approve: false };
   assert.equal(autoMergeOn({ auto_merge: null, source: 'manual' }, on), true);
-  assert.equal(autoMergeOn({ auto_merge: null, source: 'manual' }, { ...on, auto_merge: 0 }), false);
+  assert.equal(autoMergeOn({ auto_merge: null, source: 'manual' }, { ...on, auto_merge: false }), false);
   assert.equal(autoMergeOn({ auto_merge: 0, source: 'manual' }, on), false);
-  assert.equal(autoMergeOn({ auto_merge: 1, source: 'manual' }, { ...on, auto_merge: 0 }), true);
+  assert.equal(autoMergeOn({ auto_merge: 1, source: 'manual' }, { ...on, auto_merge: false }), true);
   assert.equal(autoMergeOn({ auto_merge: null, source: 'planner' }, on), true, 'auto_approve off: a person queued it');
-  assert.equal(autoMergeOn({ auto_merge: null, source: 'planner' }, { ...on, auto_approve: 1 }), false);
-  assert.equal(autoMergeOn({ auto_merge: 1, source: 'planner' }, { ...on, auto_approve: 1 }), true);
+  assert.equal(autoMergeOn({ auto_merge: null, source: 'planner' }, { ...on, auto_approve: true }), false);
+  assert.equal(autoMergeOn({ auto_merge: 1, source: 'planner' }, { ...on, auto_approve: true }), true);
 });
 
 test('autoMergeCheck: a clean, tested, labelled PR merges; a draft too', () => {
@@ -139,7 +139,7 @@ test('autoMergeCheck: what needs a person', () => {
 test('autoMergeCheck: a PR touching .claude/ needs a person, even with an empty skip list', () => {
   const paths = ['src/a.ts', '.claude/skills/x/SKILL.md'];
   const why = 'changes .claude/skills/x/SKILL.md: files under .claude/ steer every later agent';
-  for (const auto_merge_skip of ['[]', '[".github/"]', '[".claude/"]']) {
+  for (const auto_merge_skip of [[], ['.github/'], ['.claude/']]) {
     const verdict = autoMergeCheck({
       repo: { ...repoRow, auto_merge_skip },
       pr_state: 'open',
@@ -147,7 +147,7 @@ test('autoMergeCheck: a PR touching .claude/ needs a person, even with an empty 
       tests_passed: 1,
       paused: null,
     });
-    assert.deepEqual(verdict, { verdict: 'never', reasons: [why] }, auto_merge_skip);
+    assert.deepEqual(verdict, { verdict: 'never', reasons: [why] }, auto_merge_skip.join());
   }
   // Both: the protected reason first, then the repo's own skip list.
   assert.deepEqual(check({ paths: [...paths, '.github/ci.yml'] }).reasons, [why, 'touches .github/ci.yml']);
@@ -189,16 +189,11 @@ test('autoMergeCheck: with auto_resolve off a conflict needs a person and names 
   assert.equal(on.verdict, 'wait');
 });
 
-test('autoMergeSkip reads the JSON list and falls back to the default', () => {
-  assert.deepEqual(autoMergeSkip({ auto_merge_skip: '["db/", "package.json"]' }), ['db/', 'package.json']);
-  assert.deepEqual(autoMergeSkip({ auto_merge_skip: 'nonsense' }), ['.github/']);
-});
-
 // ---- Settings
 
 test('repo auto-merge settings: off by default, set from the CLI and the API, validated', () => {
   const fresh = db.addRepo({ name: 'fresh', path: join(home, 'fresh'), base_branch: 'main' });
-  assert.deepEqual([fresh.auto_merge, fresh.auto_merge_max_lines, fresh.auto_merge_skip], [0, 400, '[".github/"]']);
+  assert.deepEqual([fresh.auto_merge, fresh.auto_merge_max_lines, fresh.auto_merge_skip], [false, 400, ['.github/']]);
   const set = (key: string, value: string) => updateRepo(db, 'fresh', repoSettingPatch(key, value));
   assert.equal(set('auto_merge', 'on').auto_merge, 1);
   assert.equal(set('auto_merge_max_lines', '120').auto_merge_max_lines, 120);
@@ -206,7 +201,7 @@ test('repo auto-merge settings: off by default, set from the CLI and the API, va
   assert.throws(() => set('auto_merge_max_lines', '0'), ActionError);
   assert.throws(() => set('auto_merge_max_lines', 'lots'), ActionError);
   assert.throws(() => set('auto_merge', 'maybe'), /on, .* or .*off.*"maybe"/);
-  assert.equal(db.findRepo('fresh')!.auto_merge, 1);
+  assert.equal(db.findRepo('fresh')!.auto_merge, true);
 });
 
 // ---- Opening the PR
