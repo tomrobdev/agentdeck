@@ -25,7 +25,7 @@ export interface ContextMap {
 }
 
 /** The strongly connected groups of more than one node (Tarjan), sorted. */
-function cyclesOf(nodes: string[], next: Map<string, Set<string>>): string[][] {
+export function cyclesOf(nodes: string[], next: Map<string, Set<string>>): string[][] {
   const index = new Map<string, number>();
   const low = new Map<string, number>();
   const stack: string[] = [];
@@ -124,4 +124,41 @@ export function adapterUse(sources: Source[]): AdapterUse[] {
       area,
       adapters: [...counts].sort(([a], [b]) => (a < b ? -1 : 1)).map(([adapter, imports]) => ({ adapter, imports })),
     }));
+}
+
+/** The folder of a file under `layer` (`domain`, `application`): `domain/task`, or the layer itself for a file directly in it. */
+export function folderOf(path: string, layer: string): string | null {
+  const parts = path.split('/');
+  if (parts[0] !== layer) return null;
+  return parts.length > 2 ? `${layer}/${parts[1]}` : layer;
+}
+
+export interface FolderCycle {
+  /** The folders that import each other in a ring, sorted. */
+  folders: string[];
+  /** The imports between those folders, runtime and type-only, one per import. */
+  imports: { from: string; to: string; file: string; line: number; typeOnly: boolean }[];
+}
+
+/** The groups of folders of one layer that import each other, counting runtime and type-only imports, with the imports that tie them. */
+export function folderCycles(sources: Source[], layer: string): FolderCycle[] {
+  const nodes = new Set<string>();
+  const next = new Map<string, Set<string>>();
+  const ties: FolderCycle['imports'] = [];
+  for (const s of sources) {
+    const from = folderOf(s.path, layer);
+    if (!from) continue;
+    nodes.add(from);
+    for (const i of s.imports) {
+      const to = i.target && folderOf(i.target, layer);
+      if (!to || to === from) continue;
+      nodes.add(to);
+      next.set(from, (next.get(from) ?? new Set()).add(to));
+      ties.push({ from, to, file: s.path, line: i.line, typeOnly: i.typeOnly });
+    }
+  }
+  return cyclesOf([...nodes].sort(), next).map((folders) => ({
+    folders,
+    imports: ties.filter((t) => folders.includes(t.from) && folders.includes(t.to)),
+  }));
 }

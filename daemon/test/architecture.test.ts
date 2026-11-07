@@ -7,7 +7,8 @@ import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
 import ts from 'typescript';
 import { LAYERS, layerOf, mayImport } from '../scripts/lib/layers.ts';
-import { type Source, lineOf, readSources } from '../scripts/lib/sources.ts';
+import { checkFolderCycles } from '../scripts/lib/progress.ts';
+import { type Source, lineOf, parseSource, readSources } from '../scripts/lib/sources.ts';
 import { MIGRATIONS, migrate } from '../src/db/index.ts';
 
 const SRC = join(import.meta.dirname, '../src');
@@ -98,6 +99,28 @@ test('[layers] there are no import cycles', () => {
   };
   for (const path of edges.keys()) if (!state.has(path)) visit(path);
   assert.deepEqual(cycles, []);
+});
+
+test('[folder-cycles] domain/ and application/ folders form no cycle beyond the allowed ones, and no allowed entry is stale', () => {
+  const { found, stale } = checkFolderCycles(sources);
+  assert.deepEqual([...found, ...stale], []);
+});
+
+test('[folder-cycles] a sample with a new folder cycle fails, naming the folders and files; a stale entry fails too', () => {
+  const sample = [
+    parseSource('domain/a/a.ts', "import { b } from '../b/b.ts';\nexport const a = b;\n"),
+    parseSource('domain/b/b.ts', "import type { a } from '../a/a.ts';\nexport const b = 1 as typeof a;\n"),
+    parseSource('domain/c/c.ts', "import { a } from '../a/a.ts';\nexport const c = a;\n"),
+  ];
+  const fresh = checkFolderCycles(sample, {});
+  assert.equal(fresh.found.length, 1);
+  assert.match(fresh.found[0], /domain\/a, domain\/b/);
+  assert.match(fresh.found[0], /domain\/a\/a\.ts:1/);
+  assert.match(fresh.found[0], /domain\/b\/b\.ts:1/);
+  assert.deepEqual(checkFolderCycles(sample, { domain: ['domain/a, domain/b'] }), { found: [], stale: [] });
+  const stale = checkFolderCycles([sample[0], sample[2]], { domain: ['domain/a, domain/b'] });
+  assert.equal(stale.stale.length, 1);
+  assert.match(stale.stale[0], /no longer a cycle/);
 });
 
 /** Globals that read the clock, randomness, the environment or the outside world. */
