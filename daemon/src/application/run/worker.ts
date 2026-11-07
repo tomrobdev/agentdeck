@@ -109,7 +109,7 @@ async function runOpened(db: Db, task: Task, repo: Repo, wt: { branch: string; p
 
   // Sync the branch with the latest base, on retries too, so the agent builds on current code.
   const synced = await markSyncing(db, task.id, () =>
-    syncBranch(db, task, repo, wt.path, { allowResolve: repo.auto_resolve === 1, runTests: false }),
+    syncBranch(db, task, repo, wt.path, { allowResolve: repo.auto_resolve, runTests: false }),
   );
   writeEvent(log, { type: 'agentdeck_sync', ...synced });
   if (synced.kind === 'clean' || synced.kind === 'resolved') {

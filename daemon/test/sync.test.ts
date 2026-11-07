@@ -115,7 +115,7 @@ const parents = (wt: string) => sh(wt, 'rev-list', '--parents', '-n', '1', 'HEAD
 const clean = (wt: string) => assert.equal(sh(wt, 'status', '--porcelain'), '');
 
 test('a migration adds auto_resolve (on) and the run kind (work)', () => {
-  assert.equal(repo.auto_resolve, 1);
+  assert.equal(repo.auto_resolve, true);
   const t = db.addTask({ repo_id: repo.id, title: 'kind', prompt: 'x' });
   const runId = db.startRun(t.id, 1, join(home, 'k.jsonl'));
   assert.equal(db.runsForTask(t.id)[0].kind, 'work');

@@ -122,7 +122,7 @@ test('a refresh stores no check for a task with auto-merge off', async () => {
 
 // ---- The view
 
-const repoRow = { auto_merge: 1, auto_approve: 0, test_cmd: 'pnpm test', auto_merge_max_lines: 1000, auto_merge_skip: '[".github/"]' };
+const repoRow = { auto_merge: true, auto_approve: false, test_cmd: 'pnpm test', auto_merge_max_lines: 1000, auto_merge_skip: ['.github/'] };
 const taskRow = (
   o: Partial<Task> = {},
 ): Pick<Task, 'auto_merge' | 'source' | 'pr_state' | 'auto_merge_check' | 'auto_merge_checked_at'> => ({
@@ -137,7 +137,7 @@ const checked = (verdict: string, reasons: string[], o: Partial<Task> = {}) =>
   taskRow({ pr_state: 'open', auto_merge_check: JSON.stringify({ verdict, reasons }), auto_merge_checked_at: '2026-11-01 09:00:00', ...o });
 
 test('autoMergeView: each state with its label and reasons', () => {
-  assert.deepEqual(autoMergeView(taskRow(), { ...repoRow, auto_merge: 0 }), {
+  assert.deepEqual(autoMergeView(taskRow(), { ...repoRow, auto_merge: false }), {
     state: 'off',
     label: 'auto-merge off',
     reasons: [],
@@ -167,23 +167,23 @@ test('autoMergeView: a stored check counts only while the PR is open, and an unr
 });
 
 test('autoMergeView: where on or off comes from, and what the limits say about the tests', () => {
-  assert.equal(autoMergeView(taskRow({ auto_merge: true }), { ...repoRow, auto_merge: 0 }).source, 'task');
+  assert.equal(autoMergeView(taskRow({ auto_merge: true }), { ...repoRow, auto_merge: false }).source, 'task');
   assert.equal(autoMergeView(taskRow({ auto_merge: false }), repoRow).state, 'off');
   assert.equal(autoMergeView(taskRow({ auto_merge: false }), repoRow).source, 'task');
   assert.equal(autoMergeView(taskRow(), repoRow).source, 'repo');
   assert.equal(autoMergeView(taskRow({ source: 'planner' }), repoRow).source, 'repo', 'a person approved it');
 
-  const planner = autoMergeView(taskRow({ source: 'planner' }), { ...repoRow, auto_approve: 1 });
+  const planner = autoMergeView(taskRow({ source: 'planner' }), { ...repoRow, auto_approve: true });
   assert.deepEqual([planner.state, planner.source], ['off', 'planner']);
-  assert.equal(autoMergeView(taskRow({ source: 'planner' }), { ...repoRow, auto_approve: 1, auto_merge: 0 }).source, 'repo');
+  assert.equal(autoMergeView(taskRow({ source: 'planner' }), { ...repoRow, auto_approve: true, auto_merge: false }).source, 'repo');
   assert.equal(
-    autoMergeView(taskRow({ source: 'planner', auto_merge: true }), { ...repoRow, auto_approve: 1 }).state,
+    autoMergeView(taskRow({ source: 'planner', auto_merge: true }), { ...repoRow, auto_approve: true }).state,
     'on',
     'its own setting wins',
   );
 
   assert.match(autoMergeView(taskRow(), { ...repoRow, test_cmd: null }).limits.tests, /no test command/);
-  assert.deepEqual(autoMergeView(taskRow(), { ...repoRow, auto_merge_skip: '["db/", "a.ts"]' }).limits.skip, ['db/', 'a.ts']);
+  assert.deepEqual(autoMergeView(taskRow(), { ...repoRow, auto_merge_skip: ['db/', 'a.ts'] }).limits.skip, ['db/', 'a.ts']);
 });
 
 test('autoMergeView: a measured branch adds how it stands against the limits', () => {
@@ -194,10 +194,10 @@ test('autoMergeView: a measured branch adds how it stands against the limits', (
   assert.deepEqual(autoMergeView(taskRow(), repoRow, { lines: 1000, paths: ['src/a.ts'] }).reasons, [], 'at the limit is fine');
   const many = autoMergeView(taskRow(), repoRow, { lines: 5, paths: ['.github/a', '.github/b', '.github/c', '.github/d', '.github/e'] });
   assert.deepEqual(many.reasons, ['touches .github/a, .github/b, .github/c and 2 more']);
-  const skill = autoMergeView(taskRow(), { ...repoRow, auto_merge_skip: '[]' }, { lines: 5, paths: ['.claude/skills/x/SKILL.md'] });
+  const skill = autoMergeView(taskRow(), { ...repoRow, auto_merge_skip: [] }, { lines: 5, paths: ['.claude/skills/x/SKILL.md'] });
   assert.deepEqual(skill.reasons, ['changes .claude/skills/x/SKILL.md: files under .claude/ steer every later agent']);
   assert.deepEqual(
-    autoMergeView(taskRow(), { ...repoRow, auto_merge: 0 }, { lines: 5000, paths: [] }).reasons,
+    autoMergeView(taskRow(), { ...repoRow, auto_merge: false }, { lines: 5000, paths: [] }).reasons,
     [],
     'off: nothing to measure',
   );

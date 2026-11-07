@@ -3,7 +3,7 @@ import { and, asc, eq, inArray, isNotNull, isNull, or } from 'drizzle-orm';
 import type { DatabaseSync } from 'node:sqlite';
 import type { Repo } from '../domain/repo/repo.ts';
 import { RUNNING_STATUSES } from '../domain/task/task.ts';
-import { mapFound, toRepo } from './mappers.ts';
+import { mapFound, repoColumns, toRepo } from './mappers.ts';
 import type { Orm } from './orm.ts';
 import { NOW_SQL, atomically } from './sql.ts';
 import { notifications, plannerRuns, repos, reviewComments, reviews, runs, taskEvents, taskLinks, taskPlans, tasks } from './tables.ts';
@@ -27,7 +27,7 @@ export function repoStore(db: DatabaseSync, orm: Orm) {
           path: r.path,
           base_branch: r.base_branch,
           test_cmd: r.test_cmd ?? null,
-          allowed_tools: r.allowed_tools ? JSON.stringify(r.allowed_tools) : null,
+          ...repoColumns({ allowed_tools: r.allowed_tools?.length ? r.allowed_tools : null }),
           toolchain: r.toolchain ?? null,
           setup_cmd: r.setup_cmd ?? null,
         })
@@ -172,9 +172,7 @@ export function repoStore(db: DatabaseSync, orm: Orm) {
       >,
     ): void {
       if (!Object.keys(fields).length) return;
-      // undefined means "not given" to Drizzle, but this has always written a given-as-undefined key as NULL.
-      const given = Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, v ?? null]));
-      orm.update(repos).set(given).where(eq(repos.id, id)).run();
+      orm.update(repos).set(repoColumns(fields)).where(eq(repos.id, id)).run();
     },
     /** Pause (reason) or resume (null) a repo unconditionally. */
     setRepoPaused(id: number, reason: string | null): void {

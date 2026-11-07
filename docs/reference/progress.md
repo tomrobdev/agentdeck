@@ -4,13 +4,13 @@
 
 How far the move to a domain model has come, counted from the code. Each number should fall to zero.
 
-| Measure                                                 | Count | Where                                                                                                                                                                                 |
-| ------------------------------------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Flags left in domain entities (stored as numbers)       | 5     | `Repo.auto_approve`, `Repo.auto_merge`, `Repo.auto_resolve`, `Repo.auto_unblock`, `Repo.sandbox`                                                                                      |
-| JSON fields left in domain entities (stored as strings) | 8     | `Repo.allowed_tools`, `Repo.auto_merge_skip`, `Repo.network`, `Task.auto_merge_check`, `Task.merge_request_check`, `Task.pr_checks`, `Task.pr_checks_merged`, `Task.pr_checks_opened` |
-| Runtime imports of adapters from `application/`         | 52    |                                                                                                                                                                                       |
-| Store calls (`db.…`) in `api/` and `cli/`               | 13    |                                                                                                                                                                                       |
-| Folder cycles in `domain/` and `application/`           | 2     | domain: 8 folders; application: 7 folders                                                                                                                                             |
+| Measure                                                 | Count | Where                                                                                                                   |
+| ------------------------------------------------------- | ----- | ----------------------------------------------------------------------------------------------------------------------- |
+| Flags left in domain entities (stored as numbers)       | 0     |                                                                                                                         |
+| JSON fields left in domain entities (stored as strings) | 5     | `Task.auto_merge_check`, `Task.merge_request_check`, `Task.pr_checks`, `Task.pr_checks_merged`, `Task.pr_checks_opened` |
+| Runtime imports of adapters from `application/`         | 52    |                                                                                                                         |
+| Store calls (`db.…`) in `api/` and `cli/`               | 13    |                                                                                                                         |
+| Folder cycles in `domain/` and `application/`           | 2     | domain: 8 folders; application: 7 folders                                                                               |
 
 ## Shrinking lists
 
@@ -19,7 +19,7 @@ Each list can only shrink: an entry that stops applying fails `pnpm test`.
 | List                                              | Entries |
 | ------------------------------------------------- | ------- |
 | ALLOWED_FOLDER_CYCLES (`scripts/lib/progress.ts`) | 2       |
-| ROW_SHAPED_FIELDS (`scripts/lib/progress.ts`)     | 13      |
+| ROW_SHAPED_FIELDS (`scripts/lib/progress.ts`)     | 5       |
 | UNCHECKED rules (`scripts/lib/rules.ts`)          | 5       |
 
 ## Folder cycles

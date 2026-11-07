@@ -8,7 +8,7 @@ import type { Repo } from '../src/domain/repo/repo.ts';
 import { ALWAYS_DISALLOWED_TOOLS, DEFAULT_ALLOWED_TOOLS } from '../src/domain/repo/tools.ts';
 import { claudeArgs, workerSystemPrompt } from '../src/domain/run/prompt.ts';
 import { PR_SUMMARY_FORMAT } from '../src/domain/pull-request/summary.ts';
-import { normalizeNetwork, parseNetwork, settingsPath, workerSettings, worktreeFileRules } from '../src/domain/run/sandbox.ts';
+import { normalizeNetwork, settingsPath, workerSettings, worktreeFileRules } from '../src/domain/run/sandbox.ts';
 import type { Task } from '../src/domain/task/task.ts';
 
 const wt = '/Users/me/.agentdeck/worktrees/demo/task-7';
@@ -44,11 +44,7 @@ test('sandbox off: disabled, file tools still limited to the worktree', () => {
   });
 });
 
-test('network lists parse and normalize', () => {
-  assert.deepEqual(parseNetwork('["a.com","b.org"]'), ['a.com', 'b.org']);
-  assert.deepEqual(parseNetwork(null), []);
-  assert.deepEqual(parseNetwork('not json'), []);
-  assert.deepEqual(parseNetwork('{"a":1}'), []);
+test('network lists normalize', () => {
   assert.deepEqual(normalizeNetwork(' a.com, b.org  a.com '), ['a.com', 'b.org']);
   assert.deepEqual(normalizeNetwork(''), []);
 });
@@ -85,10 +81,10 @@ test('the settings file is written next to the run log with the repo’s sandbox
   const dir = mkdtempSync(join(tmpdir(), 'agentdeck-sandbox-'));
   const log = join(dir, 'task-3-attempt-2.jsonl');
   assert.equal(settingsPath(log), join(dir, 'task-3-attempt-2.settings.json'));
-  const repo = { sandbox: 1, network: '["registry.npmjs.org"]' } as Repo;
+  const repo = { sandbox: true, network: ['registry.npmjs.org'] } as Repo;
 
   const on = JSON.parse(readFileSync(runSettings(repo, wt, log), 'utf8'));
   assert.deepEqual(on, workerSettings({ worktree: wt, sandbox: true, network: ['registry.npmjs.org'] }));
-  const off = JSON.parse(readFileSync(runSettings({ ...repo, sandbox: 0 }, wt, log), 'utf8'));
+  const off = JSON.parse(readFileSync(runSettings({ ...repo, sandbox: false }, wt, log), 'utf8'));
   assert.deepEqual(off.sandbox, { enabled: false });
 });

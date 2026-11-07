@@ -29,7 +29,7 @@ const { UNBLOCK_NOTE, buildUnblockPrompt, parseUnblock, unblockDecision, unblock
 
 // ---- unblockable
 
-const ON = { auto_unblock: 1 };
+const ON = { auto_unblock: true };
 const blocked = (o: { needs?: Needs | null; stop_reason?: string | null } = {}) => ({
   status: 'blocked' as const,
   needs: null,
@@ -41,7 +41,7 @@ const run = (kind: RunKind, outcome: RunOutcome | null = 'done') => ({ kind, out
 test('unblockable: off by default, and only for a blocked task', () => {
   const db = openDb(':memory:');
   const repo = db.addRepo({ name: 'r', path: '/tmp/r-default', base_branch: 'main' });
-  assert.equal(repo.auto_unblock, 0, 'auto_unblock is off for a new repo');
+  assert.equal(repo.auto_unblock, false, 'auto_unblock is off for a new repo');
   assert.equal(unblockable(blocked(), [run('work', 'blocked')], repo), false);
   assert.equal(unblockable(blocked(), [run('work', 'blocked')], ON), true);
   for (const status of ['queued', 'running', 'done', 'failed', 'cancelled'] as const)

@@ -52,14 +52,6 @@ export function checkFolderCycles(
  * the field its real type, parsing it in `db/mappers.ts`. Never add one. Phase 2 of the plan empties it.
  */
 export const ROW_SHAPED_FIELDS = [
-  'Repo.allowed_tools',
-  'Repo.auto_approve',
-  'Repo.auto_merge',
-  'Repo.auto_merge_skip',
-  'Repo.auto_resolve',
-  'Repo.auto_unblock',
-  'Repo.network',
-  'Repo.sandbox',
   'Task.auto_merge_check',
   'Task.merge_request_check',
   'Task.pr_checks',

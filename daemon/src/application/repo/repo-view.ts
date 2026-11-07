@@ -1,0 +1,33 @@
+// A repo as the API and the dashboard see it: the flat shape of its columns (flags as 1 or 0, lists as JSON text), so neither changes
+// with the domain's `Repo`.
+import type { Repo } from '../../domain/repo/repo.ts';
+
+export interface RepoView extends Omit<
+  Repo,
+  'allowed_tools' | 'auto_approve' | 'auto_resolve' | 'auto_unblock' | 'sandbox' | 'network' | 'auto_merge' | 'auto_merge_skip'
+> {
+  allowed_tools: string | null;
+  auto_approve: number;
+  auto_resolve: number;
+  auto_unblock: number;
+  sandbox: number;
+  network: string;
+  auto_merge: number;
+  auto_merge_skip: string;
+}
+
+const bit = (on: boolean): number => (on ? 1 : 0);
+
+export function repoView(repo: Repo): RepoView {
+  return {
+    ...repo,
+    allowed_tools: repo.allowed_tools && JSON.stringify(repo.allowed_tools),
+    auto_approve: bit(repo.auto_approve),
+    auto_resolve: bit(repo.auto_resolve),
+    auto_unblock: bit(repo.auto_unblock),
+    sandbox: bit(repo.sandbox),
+    network: JSON.stringify(repo.network),
+    auto_merge: bit(repo.auto_merge),
+    auto_merge_skip: JSON.stringify(repo.auto_merge_skip),
+  };
+}

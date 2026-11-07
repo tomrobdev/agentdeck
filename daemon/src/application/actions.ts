@@ -16,6 +16,7 @@ export { cancelMergeRequest, requestMerge, requestMerges } from './pull-request/
 export { setAutoMerge } from './pull-request/auto-merge.ts';
 export { type FixChecksResult, fixChecks } from './pull-request/fix-checks.ts';
 export * from './repo/repos.ts';
+export { repoView } from './repo/repo-view.ts';
 export * from './review/reviews.ts';
 export { gracefulRestart } from './scheduler/restart.ts';
 export { ChangeWatcher } from './changes.ts';
