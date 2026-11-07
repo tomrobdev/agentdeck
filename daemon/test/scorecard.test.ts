@@ -148,16 +148,15 @@ test('cycleOf: queued, running and review minutes from a task history', () => {
 });
 
 test('PR checks: green is some checks, none failing or pending', () => {
-  assert.equal(checksGreen('{"total":3,"failing":0,"pending":0}'), true);
-  assert.equal(checksGreen('{"total":3,"failing":1,"pending":0}'), false);
-  assert.equal(checksGreen('{"total":3,"failing":0,"pending":1}'), false);
-  assert.equal(checksGreen('{"total":0,"failing":0,"pending":0}'), false);
-  assert.equal(checksGreen('nonsense'), null);
+  assert.equal(checksGreen({ total: 3, failing: 0, pending: 0 }), true);
+  assert.equal(checksGreen({ total: 3, failing: 1, pending: 0 }), false);
+  assert.equal(checksGreen({ total: 3, failing: 0, pending: 1 }), false);
+  assert.equal(checksGreen({ total: 0, failing: 0, pending: 0 }), false);
   const s = summarizeChecks([
-    task({ pr_checks_opened: '{"total":2,"failing":0,"pending":0}' }),
-    task({ pr_checks_opened: '{"total":2,"failing":1,"pending":0}' }),
-    task({ pr_checks_opened: '{"total":5,"failing":0,"pending":0}' }),
-    task({ pr_checks_opened: '{"total":1,"failing":0,"pending":0}' }),
+    task({ pr_checks_opened: { total: 2, failing: 0, pending: 0 } }),
+    task({ pr_checks_opened: { total: 2, failing: 1, pending: 0 } }),
+    task({ pr_checks_opened: { total: 5, failing: 0, pending: 0 } }),
+    task({ pr_checks_opened: { total: 1, failing: 0, pending: 0 } }),
     task({ pr_checks_opened: null }), // never recorded: left out
   ]);
   assert.deepEqual(s, { recorded: 4, green: 3, rate: 0.75 });
@@ -212,9 +211,9 @@ test('buildScorecard: per repo, per week, with --since', () => {
   // Task 1 (repo 1, week 1): queued 10, ran 30, review 120, checks green. Task 2 (repo 1, week 1): queued 30, ran 60, no PR.
   // Task 3 (repo 2, week 2): queued 20, ran 90, review 30, checks failing.
   const tasks = [
-    row({ id: 1, repo_id: 1, created_at: '2026-10-05 10:00:00', pr_checks_opened: '{"total":2,"failing":0,"pending":0}' }),
+    row({ id: 1, repo_id: 1, created_at: '2026-10-05 10:00:00', pr_checks_opened: { total: 2, failing: 0, pending: 0 } }),
     row({ id: 2, repo_id: 1, created_at: '2026-10-06 10:00:00' }),
-    row({ id: 3, repo_id: 2, created_at: '2026-10-12 10:00:00', pr_checks_opened: '{"total":2,"failing":1,"pending":0}' }),
+    row({ id: 3, repo_id: 2, created_at: '2026-10-12 10:00:00', pr_checks_opened: { total: 2, failing: 1, pending: 0 } }),
   ];
   const life = (id: number, repo_id: number, day: string, queued: number, ran: number, review?: number): ScorecardEvent[] => {
     const at = (m: number) => new Date(Date.parse(`${day}T10:00:00Z`) + m * 60_000).toISOString().slice(0, 19).replace('T', ' ');

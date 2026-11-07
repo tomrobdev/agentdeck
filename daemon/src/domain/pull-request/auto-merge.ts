@@ -139,20 +139,6 @@ export interface AutoMergeView {
   limits: { max_lines: number; skip: string[]; tests: string };
 }
 
-/** The stored check, or null when it is missing or unreadable. */
-export function readAutoMergeCheck(json: string | null): AutoMergeCheck | null {
-  if (!json) return null;
-  try {
-    const v = JSON.parse(json) as Partial<AutoMergeCheck> | null;
-    if (!v || !['merge', 'wait', 'never'].includes(v.verdict as string) || !Array.isArray(v.reasons)) return null;
-    const check: AutoMergeCheck = { verdict: v.verdict!, reasons: v.reasons.filter((r): r is string => typeof r === 'string') };
-    if (v.conflict === true) check.conflict = true;
-    return check;
-  } catch {
-    return null;
-  }
-}
-
 const LABELS = { off: 'auto-merge off', on: 'auto-merge on', merge: 'will auto-merge' };
 
 /**
@@ -176,7 +162,7 @@ export function autoMergeView(
   };
   if (!on) return { state: 'off', label: LABELS.off, reasons: [], source, checked_at: null, limits };
 
-  const check = task.pr_state === 'open' ? readAutoMergeCheck(task.auto_merge_check) : null;
+  const check = task.pr_state === 'open' ? task.auto_merge_check : null;
   if (check) {
     const first = check.reasons[0];
     const label =

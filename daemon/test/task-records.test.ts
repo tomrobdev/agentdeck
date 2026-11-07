@@ -139,9 +139,9 @@ test('a merge request check finished after a conflict blocked the task is droppe
   const { db, repo } = setup();
   const t = doneTask(db, repo, { pr: 'open' });
   assert.ok(db.requestMerge(t.id, 'squash'));
-  assert.ok(db.setMergeRequestCheck(t.id, JSON.stringify({ verdict: 'wait', reasons: ['checks pending'] })));
+  assert.ok(db.setMergeRequestCheck(t.id, { verdict: 'wait', reasons: ['checks pending'] }));
   assert.ok(db.applyEvent(t.id, { type: 'conflict' }, { reason: 'conflict' }));
 
-  assert.equal(db.setMergeRequestCheck(t.id, JSON.stringify({ verdict: 'merge', reasons: [] })), false);
-  assert.equal(JSON.parse(db.getTask(t.id)!.merge_request_check!).verdict, 'wait', 'the blocked task keeps the check it had');
+  assert.equal(db.setMergeRequestCheck(t.id, { verdict: 'merge', reasons: [] }), false);
+  assert.equal(db.getTask(t.id)!.merge_request_check?.verdict, 'wait', 'the blocked task keeps the check it had');
 });

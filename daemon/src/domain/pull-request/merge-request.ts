@@ -1,7 +1,7 @@
 // A merge request: a person's Merge, which the daemon carries out once the PR is ready (docs/plans/merge-requests.html). Pure: no I/O.
 import type { Task } from '../task/task.ts';
 import { isMergeabilityUnknown } from './conflict.ts';
-import { type AutoMergeCheck, readAutoMergeCheck, verdictOf } from './auto-merge.ts';
+import { type AutoMergeCheck, verdictOf } from './auto-merge.ts';
 import { DEFAULT_MERGE_METHOD, type MergeFinding, type MergeInput, type MergeMethod, conflictNeedsPerson, mergeFindings } from './merge.ts';
 
 /**
@@ -68,7 +68,7 @@ export interface MergeRequestView {
  */
 export function conflictsWithBase(task: Pick<Task, 'pr_state' | 'merge_request_check' | 'auto_merge_check'>): boolean {
   if (task.pr_state !== 'open') return false;
-  const check = readAutoMergeCheck(task.merge_request_check) ?? readAutoMergeCheck(task.auto_merge_check);
+  const check = task.merge_request_check ?? task.auto_merge_check;
   return check?.conflict === true;
 }
 
@@ -78,7 +78,7 @@ export function mergeRequestView(
   merging: boolean,
 ): MergeRequestView | null {
   if (!task.merge_requested_at) return null;
-  const reasons = merging ? [] : (readAutoMergeCheck(task.merge_request_check)?.reasons ?? []);
+  const reasons = merging ? [] : (task.merge_request_check?.reasons ?? []);
   return {
     state: merging ? 'merging' : 'waiting',
     method: task.merge_request_method ?? DEFAULT_MERGE_METHOD,

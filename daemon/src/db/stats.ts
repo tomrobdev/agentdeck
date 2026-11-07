@@ -2,6 +2,7 @@
 import { and, asc, eq } from 'drizzle-orm';
 import type { ScorecardEvent, ScorecardTaskRow } from '../domain/run/scorecard.ts';
 import type { StatRun } from '../domain/run/stats.ts';
+import { readCounts } from './mappers.ts';
 import type { Orm } from './orm.ts';
 import { repos, runs, taskEvents, tasks } from './tables.ts';
 
@@ -43,8 +44,9 @@ export function statsStore(orm: Orm) {
         .where(repo_id === undefined ? undefined : eq(tasks.repo_id, repo_id))
         .orderBy(asc(tasks.id))
         .all()
-        .map(({ auto_merge, repo_auto_merge, ...task }) => ({
+        .map(({ auto_merge, repo_auto_merge, pr_checks_opened, ...task }) => ({
           ...task,
+          pr_checks_opened: readCounts(pr_checks_opened),
           auto_merge: auto_merge === null ? null : auto_merge === 1,
           repo_auto_merge: repo_auto_merge === 1,
         }));

@@ -1,4 +1,6 @@
 // The task entity. Pure: no I/O.
+import type { AutoMergeCheck } from '../pull-request/auto-merge.ts';
+import type { CheckCounts, StoredChecks } from '../pull-request/checks.ts';
 import type { MergeMethod } from '../pull-request/merge.ts';
 import type { PrState } from '../pull-request/pr.ts';
 import type { UnblockQuestion } from '../run/unblock.ts';
@@ -32,15 +34,15 @@ export interface Task {
   plan_steps: string[] | null; // the linked plan's step ids; null means every unfinished step
   done_by: 'person' | null; // 'person' when mark_done set the status; cleared whenever the task leaves done
   auto_merge: boolean | null; // overrides the repo's auto_merge; null = the repo's (domain/pull-request/auto-merge.ts)
-  auto_merge_check: string | null; // JSON { verdict, reasons }: the PR refresh's latest auto-merge check while the PR is open
+  auto_merge_check: AutoMergeCheck | null; // the PR refresh's latest auto-merge check while the PR is open
   auto_merge_checked_at: string | null; // when that check was made
-  pr_checks_opened: string | null; // JSON CheckCounts: the PR's checks the first time they settled after it opened
-  pr_checks_merged: string | null; // JSON CheckCounts: the PR's checks when it was merged
+  pr_checks_opened: CheckCounts | null; // the PR's checks the first time they settled after it opened
+  pr_checks_merged: CheckCounts | null; // the PR's checks when it was merged
   merge_requested_at: string | null; // when a person asked the daemon to merge the PR once it is ready; null when there is no request
   merge_request_method: MergeMethod | null; // the method that request asked for
-  merge_request_check: string | null; // JSON { verdict, reasons }: the PR refresh's latest merge request check
+  merge_request_check: AutoMergeCheck | null; // the PR refresh's latest merge request check
   syncing_since: string | null; // when a sync of the branch began; NULL when none is running
-  pr_checks: string | null; // JSON StoredChecks (domain/pull-request/checks.ts): the open PR's latest checks, one by one, and when they were read
+  pr_checks: StoredChecks | null; // the open PR's latest checks, one by one, and when they were read
   plan_task: number | null; // the task whose plan this one follows (itself when its own plan was given with --plan); null follows its own plan, if any
   created_at: string;
   updated_at: string;

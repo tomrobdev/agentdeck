@@ -51,13 +51,7 @@ export function checkFolderCycles(
  * list only shrinks: a new one fails the test, and so does an entry that no longer is one, so remove an entry in the change that gives
  * the field its real type, parsing it in `db/mappers.ts`. Never add one. Phase 2 of the plan empties it.
  */
-export const ROW_SHAPED_FIELDS = [
-  'Task.auto_merge_check',
-  'Task.merge_request_check',
-  'Task.pr_checks',
-  'Task.pr_checks_merged',
-  'Task.pr_checks_opened',
-];
+export const ROW_SHAPED_FIELDS: string[] = [];
 
 /** The row-shaped fields `sources` have that are not allowed, and the allowed entries that are no longer row-shaped. */
 export function checkRowShapedFields(sources: Source[], allowed: string[] = ROW_SHAPED_FIELDS): { found: string[]; stale: string[] } {

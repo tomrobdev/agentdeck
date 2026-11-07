@@ -88,17 +88,17 @@ test("a PR's checks are stored once they settle, kept as first seen, and the mer
 
   current = { ...pending, checks: { total: 3, failing: 1, pending: 0 } };
   await refreshPrStates(db);
-  assert.deepEqual(JSON.parse(db.getTask(t.id)!.pr_checks_opened!), { total: 3, failing: 1, pending: 0 });
+  assert.deepEqual(db.getTask(t.id)!.pr_checks_opened, { total: 3, failing: 1, pending: 0 });
 
   // A later result does not replace the first settled one.
   current = { ...pending, checks: { total: 3, failing: 0, pending: 0 } };
   await refreshPrStates(db);
-  assert.deepEqual(JSON.parse(db.getTask(t.id)!.pr_checks_opened!), { total: 3, failing: 1, pending: 0 });
+  assert.deepEqual(db.getTask(t.id)!.pr_checks_opened, { total: 3, failing: 1, pending: 0 });
   assert.equal(db.getTask(t.id)!.pr_checks_merged, null);
 
   await mergeTask(db, t.id, { method: 'squash' });
   const merged = db.getTask(t.id)!;
   assert.equal(merged.pr_state, 'merged');
-  assert.deepEqual(JSON.parse(merged.pr_checks_merged!), { total: 3, failing: 0, pending: 0 });
-  assert.deepEqual(JSON.parse(merged.pr_checks_opened!), { total: 3, failing: 1, pending: 0 });
+  assert.deepEqual(merged.pr_checks_merged, { total: 3, failing: 0, pending: 0 });
+  assert.deepEqual(merged.pr_checks_opened, { total: 3, failing: 1, pending: 0 });
 });

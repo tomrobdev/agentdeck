@@ -1,7 +1,7 @@
 // Tasks as the dashboard and the CLI show them: a task plus what the queue says about it.
 import type { Db } from '../../db/index.ts';
 import { type AutoMergeView, autoMergeOn, autoMergeView } from '../../domain/pull-request/auto-merge.ts';
-import { type ChecksSummary, type PrCheck, checksSummary, readStoredChecks } from '../../domain/pull-request/checks.ts';
+import { type ChecksSummary, checksSummary } from '../../domain/pull-request/checks.ts';
 import { type MergeRequestView, conflictsWithBase, mergeRequestView } from '../../domain/pull-request/merge-request.ts';
 import { isMergeLocked } from '../pull-request/merge.ts';
 import { type LiveView, type SyncView, liveView, syncView } from '../../domain/run/live.ts';
@@ -102,17 +102,11 @@ export async function taskDetail(db: Db, id: number) {
   }
   return {
     ...view,
-    check_list: checkList(task.pr_checks),
+    check_list: task.pr_checks && { read_at: task.pr_checks.read_at, checks: task.pr_checks.checks },
     runs: db.runsForTask(id),
     events: db.eventsForTask(id),
     plans: plansShown(db, task),
   };
-}
-
-/** The PR's latest checks, one by one, and when they were read; null when none were read. */
-function checkList(json: string | null): { read_at: string; checks: PrCheck[] } | null {
-  const stored = readStoredChecks(json);
-  return stored && { read_at: stored.read_at, checks: stored.checks };
 }
 
 /** Task summaries (no prompt), newest first, each with its view. The checks are summed up in `checks`, so their list stays out. */
