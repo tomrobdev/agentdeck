@@ -4,7 +4,8 @@
 // - after: the task runs on its own and only its merge waits for the other's.
 
 import type { PrMode, PullRequest } from '../pull-request/pr.ts';
-import type { Task } from './task.ts';
+import type { TaskStatus } from './lifecycle.ts';
+import type { DoneState } from './task.ts';
 
 export type LinkKind = 'builds_on' | 'after';
 
@@ -15,8 +16,11 @@ export interface Link {
   kind: LinkKind;
 }
 
+/** A dependency's status, and who finished it if it is done: all a link reads of a task's state. */
+type DependencyState = DoneState | { status: Exclude<TaskStatus, 'done'> };
+
 /** `pr_mode` is that of the dependency's repo: a done task in a repo that opens PRs isn't met until its PR is merged. */
-export type Dependency = Pick<Task, 'status' | 'done_by'> & { pr: Pick<PullRequest, 'state'> | null; pr_mode: PrMode };
+export type Dependency = DependencyState & { pr: Pick<PullRequest, 'state'> | null; pr_mode: PrMode };
 
 /** A dependency, and the links it has itself (stuck spreads down its builds-on links). */
 export type LinkTarget = Dependency & { links: Link[] };
@@ -183,7 +187,7 @@ export function stuckOn(id: number, l: LinkIndex): Builder[] {
 export function releasedBy(id: number, l: LinkIndex): Builder[] {
   const merged = (on: number): LinkTarget | undefined => {
     const t = l.target(on);
-    return on === id && t ? { ...t, status: 'done', pr: { state: 'merged' } } : t;
+    return on === id && t ? { ...t, status: 'done', done_by: null, pr: { state: 'merged' } } : t;
   };
   return buildingOn(id, l).filter((t) => t.status === 'queued' && startState(t, l.linksOf(t.id), merged).kind === 'met');
 }

@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
 import { MIGRATIONS, migrate, openDb } from '../src/db/index.ts';
+import { stopReasonOf } from '../src/domain/task/task.ts';
 
 function tmpPath(): { path: string; cleanup: () => void } {
   const dir = mkdtempSync(join(tmpdir(), 'agentdeck-mig-'));
@@ -139,7 +140,7 @@ test('a stored blocked_reason survives as stop_reason', () => {
 
     const db = openDb(t.path);
     try {
-      assert.equal(db.getTask(1)!.stop_reason, 'which database?');
+      assert.equal(stopReasonOf(db.getTask(1)!), 'which database?');
     } finally {
       db.close();
     }

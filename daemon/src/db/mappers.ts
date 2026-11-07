@@ -9,7 +9,7 @@ import type { Repo } from '../domain/repo/repo.ts';
 import type { Run } from '../domain/run/run.ts';
 import type { UnblockQuestion } from '../domain/run/unblock.ts';
 import { type Needs, isNeeds } from '../domain/task/needs.ts';
-import type { Task, TaskSummary } from '../domain/task/task.ts';
+import { type StateFields, type Task, type TaskState, type TaskSummary, stateFields } from '../domain/task/task.ts';
 import { parseTextList } from '../domain/text.ts';
 import { repos, runs, tasks } from './tables.ts';
 
@@ -88,9 +88,17 @@ export type CheckoutColumn = keyof Checkout;
 /** The task columns the plan link is made of: a task has them as `plan`. */
 export type PlanColumn = 'plan_task' | 'plan_steps';
 
-/** A row without the columns that make up its pull request, checkout and plan link. */
-function withoutValueColumns<R extends TaskSummaryRow>(row: R): Omit<R, PrColumn | CheckoutColumn | PlanColumn> {
+/** The task columns only some statuses carry: a task has them in its state, and no other status reads them. */
+export type StateColumn = keyof StateFields;
+
+/** A row without the columns that make up its pull request, checkout, plan link and state. */
+function withoutValueColumns<R extends TaskSummaryRow>(row: R): Omit<R, PrColumn | CheckoutColumn | PlanColumn | StateColumn | 'status'> {
   const {
+    status: _status,
+    stop_reason: _stop_reason,
+    needs: _needs,
+    question: _question,
+    done_by: _done_by,
     branch: _branch,
     worktree: _worktree,
     syncing_since: _syncing_since,
@@ -112,10 +120,30 @@ function withoutValueColumns<R extends TaskSummaryRow>(row: R): Omit<R, PrColumn
   return rest;
 }
 
+/**
+ * The state a row is in: its status and the columns that status carries. A column of another status is ignored, so a row an older
+ * daemon left with one (needs and a question on a cancelled task) reads like any other.
+ */
+function taskState(row: Pick<TaskSummaryRow, 'status' | StateColumn>): TaskState {
+  const { status, stop_reason } = row;
+  switch (status) {
+    case 'done':
+      return { status, done_by: row.done_by };
+    case 'blocked':
+      return { status, stop_reason, needs: readNeeds(row.needs), question: readQuestion(row.question) };
+    case 'failed':
+    case 'cancelled':
+      return { status, stop_reason };
+    default:
+      return { status };
+  }
+}
+
+/** The columns a task's state is stored in: the way back from `taskState`, with the columns of the other statuses cleared. */
+export const stateColumns = (state: TaskState) => stored(stateFields(state));
+
 /** The task columns that carry a value, as the domain type has them, and the pull request they make up. */
 const taskValues = (row: TaskSummaryRow) => ({
-  needs: readNeeds(row.needs),
-  question: readQuestion(row.question),
   checkout: checkoutOf({ branch: row.branch, worktree: row.worktree, syncing_since: row.syncing_since }),
   plan: row.plan_task === null ? null : { task: row.plan_task, steps: readSteps(row.plan_steps) },
   auto_merge: row.auto_merge === null ? null : row.auto_merge === 1,
@@ -129,8 +157,8 @@ const taskValues = (row: TaskSummaryRow) => ({
   }),
 });
 
-export const toTask = (row: TaskRow): Task => ({ ...withoutValueColumns(row), ...taskValues(row) });
-export const toTaskSummary = (row: TaskSummaryRow): TaskSummary => ({ ...withoutValueColumns(row), ...taskValues(row) });
+export const toTask = (row: TaskRow): Task => ({ ...withoutValueColumns(row), ...taskValues(row), ...taskState(row) });
+export const toTaskSummary = (row: TaskSummaryRow): TaskSummary => ({ ...withoutValueColumns(row), ...taskValues(row), ...taskState(row) });
 /**
  * A repo's row as a `Repo`: the flags are booleans and the JSON columns arrays. A malformed list reads as its default, which for the
  * repo's own tool rules is none (not the generic defaults, which could allow more than the repo meant).

@@ -159,11 +159,13 @@ export const taskCommands: Record<string, Command> = {
       console.log(`needed by ${t.dependents.map((d) => `#${d.id} (${d.kind === 'builds_on' ? 'builds on it' : 'after it'})`).join(', ')}`);
     if (t.checkout?.branch) console.log(`branch   ${t.checkout.branch}`);
     if (t.checkout?.worktree) console.log(`worktree ${t.checkout.worktree}`);
-    const { needs, question } = t;
-    if (needs && t.status === 'blocked') console.log(`needs    ${needs.kind}: ${needs.items.join(' ')}`);
-    if (question && t.status === 'blocked') {
-      console.log(`question ${question.question}`);
-      for (const o of question.options) console.log(`         - ${o}`);
+    if (t.status === 'blocked') {
+      const { needs, question } = t;
+      if (needs) console.log(`needs    ${needs.kind}: ${needs.items.join(' ')}`);
+      if (question) {
+        console.log(`question ${question.question}`);
+        for (const o of question.options) console.log(`         - ${o}`);
+      }
     }
     const plan = followedPlanName(t);
     if (plan) {
@@ -234,7 +236,8 @@ export const taskCommands: Record<string, Command> = {
   'install-needs': async ({ db, flags, rest }) => {
     const id = taskId(rest[0]);
     // Without a package request there is nothing to confirm: installNeeds says why.
-    const needs = db.getTask(id)?.needs;
+    const task = db.getTask(id);
+    const needs = task?.status === 'blocked' ? task.needs : null;
     if (needs?.kind === 'deps') {
       console.log(`#${id} asks for: ${needs.items.join(' ')}`);
       if (!flags.yes && !(await confirm('install them on its branch and retry?'))) die('not installed');

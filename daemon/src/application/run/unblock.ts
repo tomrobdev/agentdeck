@@ -14,7 +14,7 @@ import {
   unblockable,
 } from '../../domain/run/unblock.ts';
 import { latestReviewNote } from '../../domain/task/history.ts';
-import { type Task, leftoversMessage } from '../../domain/task/task.ts';
+import { type BlockedTask, leftoversMessage } from '../../domain/task/task.ts';
 import { errorMessage } from '../../domain/text.ts';
 import { type OpenedRun, endTaskRun, openTaskRun, startTaskRun } from './claude-run.ts';
 import { planForRun } from '../plans.ts';
@@ -27,7 +27,7 @@ export interface UnblockReport {
 }
 
 /** The blocked task an unblock run should start for next (`unblockable`), or undefined when none may. */
-export function nextUnblockable(db: Db): Task | undefined {
+export function nextUnblockable(db: Db): BlockedTask | undefined {
   return db.unblockCandidates().find((t) => {
     const repo = db.getRepo(t.repo_id);
     return repo !== undefined && unblockable(t, db.runsForTask(t.id), repo);
@@ -38,7 +38,7 @@ export function nextUnblockable(db: Db): Task | undefined {
  * Run an unblock run for a blocked task. The run row opens before anything is awaited, so a second look for the next
  * task (`nextUnblockable`) already sees it. Never throws: a failure ends the row failed and leaves the task as it was.
  */
-export async function runUnblock(db: Db, task: Task): Promise<UnblockReport> {
+export async function runUnblock(db: Db, task: BlockedTask): Promise<UnblockReport> {
   const opened = openTaskRun(db, task, 'unblock');
   try {
     return await runOpened(db, task, opened);
@@ -49,7 +49,7 @@ export async function runUnblock(db: Db, task: Task): Promise<UnblockReport> {
   }
 }
 
-async function runOpened(db: Db, task: Task, opened: OpenedRun): Promise<UnblockReport> {
+async function runOpened(db: Db, task: BlockedTask, opened: OpenedRun): Promise<UnblockReport> {
   const { log } = opened;
   const repo = db.getRepo(task.repo_id);
   if (!repo) throw new Error(`repo ${task.repo_id} not found`);

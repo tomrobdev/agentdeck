@@ -12,17 +12,19 @@ import type { LinkKind } from '../domain/task/link.ts';
 import { type PrEvent, prEventReason } from '../domain/task/history.ts';
 import type { TaskPlan } from '../domain/plan/plan.ts';
 import {
+  type BlockedTask,
   EDITABLE_STATUSES,
   OPEN_STATUSES,
   PLAN_ATTACHABLE_STATUSES,
   RUNNING_STATUSES,
   type Task,
   type TaskSummary,
+  isBlocked,
 } from '../domain/task/task.ts';
 import type { AttentionCandidate, AttentionWhy } from '../domain/daemon/headline.ts';
 import type { UnblockQuestion } from '../domain/run/unblock.ts';
 import type { Needs } from '../domain/task/needs.ts';
-import { SUMMARY_COLUMNS, TASK_COLUMNS, mapFound, stored, toTask, toTaskSummary } from './mappers.ts';
+import { SUMMARY_COLUMNS, TASK_COLUMNS, mapFound, stateColumns, stored, toTask, toTaskSummary } from './mappers.ts';
 import type { Orm } from './orm.ts';
 import { insertOwnPlan, saveOwnPlan } from './plans.ts';
 import { NOW_SQL, atomically, changed, inActiveRepo as inActiveRepoOf } from './sql.ts';
@@ -150,13 +152,13 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         const row = mapFound(
           orm
             .update(tasks)
-            .set({ status: next.to, ...given(stored(next.changes)), updated_at: NOW_SQL })
+            .set({ status: next.state.status, ...stateColumns(next.state), ...next.counters, updated_at: NOW_SQL })
             .where(and(eq(tasks.id, id), eq(tasks.status, cur.status), eq(tasks.attempts, cur.attempts), eq(tasks.restarts, cur.restarts)))
             .returning(TASK_COLUMNS)
             .get(),
           toTask,
         );
-        if (row) recordEvent(orm, id, next.history, cur.status, next.to, opts.reason ?? null);
+        if (row) recordEvent(orm, id, next.history, cur.status, next.state.status, opts.reason ?? null);
         return row;
       });
       if (row) return row;
@@ -290,7 +292,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
      * Blocked tasks in repos that have auto_unblock on and may start work (not paused, not archived), by priority then
      * age: the ones an unblock run may be for. Whether one may start is `unblockable`'s to say.
      */
-    unblockCandidates(): Task[] {
+    unblockCandidates(): BlockedTask[] {
       const unblocking = orm
         .select({ id: repos.id })
         .from(repos)
@@ -301,7 +303,8 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         .where(and(eq(tasks.status, 'blocked'), inArray(tasks.repo_id, unblocking)))
         .orderBy(desc(tasks.priority), asc(tasks.id))
         .all()
-        .map(toTask);
+        .map(toTask)
+        .filter(isBlocked);
     },
     /**
      * Leave an unblock run's question on a blocked task, with an `unblock_ask` history row whose

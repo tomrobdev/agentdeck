@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, test } from 'node:test';
 import type { Run } from '../src/domain/run/run.ts';
-import type { Task } from '../src/domain/task/task.ts';
+import { type Task, stopReasonOf } from '../src/domain/task/task.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-resume-'));
 process.env.AGENTDECK_HOME = home;
@@ -258,7 +258,7 @@ test('a restart mid-run: the next run resumes the session and uses no attempt', 
 
   await drain();
   const t = db.getTask(added.id)!;
-  assert.equal(t.status, 'done', t.stop_reason ?? '');
+  assert.equal(t.status, 'done', stopReasonOf(t) ?? '');
   assert.equal(t.attempts, 1, 'the restart used no attempt');
   assert.equal(t.restarts, 1);
   const runs = db.runsForTask(t.id);
@@ -290,7 +290,7 @@ test('a resume whose session is gone falls back to a fresh run, in the same run'
 
   await drain();
   const t = db.getTask(added.id)!;
-  assert.equal(t.status, 'done', t.stop_reason ?? '');
+  assert.equal(t.status, 'done', stopReasonOf(t) ?? '');
   assert.equal(t.attempts, 1);
   const runs = db.runsForTask(t.id);
   assert.equal(runs.length, 2, 'the fresh claude runs in the run that tried to resume');
@@ -318,7 +318,7 @@ test('a task whose prompt was edited while it waited starts afresh instead of re
 
   await drain();
   const t = db.getTask(added.id)!;
-  assert.equal(t.status, 'done', t.stop_reason ?? '');
+  assert.equal(t.status, 'done', stopReasonOf(t) ?? '');
   assert.equal(t.attempts, 1);
   const last = calls().at(-1)!;
   assert.equal(resumeOf(last), null, 'no resume of the session that holds the old prompt');

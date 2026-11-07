@@ -5,6 +5,7 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileS
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
+import { stopReasonOf } from '../src/domain/task/task.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-planruns-'));
 process.env.AGENTDECK_HOME = home;
@@ -200,7 +201,7 @@ test('the step statuses a run marked before a restart cut it off survive when it
 
   await drain();
   const after = db.getTask(t.id)!;
-  assert.equal(after.status, 'done', after.stop_reason ?? '');
+  assert.equal(after.status, 'done', stopReasonOf(after) ?? '');
   assert.deepEqual(
     db.runsForTask(t.id).map((r) => [r.outcome, r.session_id === null]),
     [
@@ -236,7 +237,7 @@ test('the step statuses a cut-off run marked survive when the restarts fail the 
 
   await drain();
   const after = db.getTask(t.id)!;
-  assert.equal(after.status, 'done', after.stop_reason ?? '');
+  assert.equal(after.status, 'done', stopReasonOf(after) ?? '');
   assert.equal(after.attempts, 2);
   assert.deepEqual(statuses(t.id), [
     ['a', 'done'],

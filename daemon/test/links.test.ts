@@ -148,7 +148,7 @@ function graph(tasks: Record<number, Partial<Dependency> & { links?: Link[] }>):
   return {
     dependentsOf: (id) => all.flatMap((t) => t.links.filter((l) => l.on === id).map((l) => ({ id: t.id, status: t.status, kind: l.kind }))),
     linksOf: (id) => all.find((t) => t.id === id)?.links ?? [],
-    target: (id) => all.find((t) => t.id === id),
+    target: (id) => all.find((t) => t.id === id) as LinkTarget | undefined,
   };
 }
 

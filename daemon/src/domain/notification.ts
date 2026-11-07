@@ -1,6 +1,6 @@
 // Alerts for things that need a human: task finished, blocked, failed, proposals, a governor hold, a pause, an
 // auto-merge or a PR's checks failing. Pure: no I/O.
-import type { Task } from './task/task.ts';
+import type { Task, TaskState } from './task/task.ts';
 
 export type NotifyKind = 'done' | 'blocked' | 'failed' | 'hold' | 'paused' | 'proposed' | 'merged' | 'checks_failed';
 export const NOTIFY_KINDS: NotifyKind[] = ['done', 'blocked', 'failed', 'hold', 'paused', 'proposed', 'merged', 'checks_failed'];
@@ -47,7 +47,7 @@ export function appDelivers(appSeenAt: number | null, now: number): boolean {
 
 /** What a person is told when a task ends done, blocked or failed; null for any other status. `pr` is what opening its PR came to. */
 export function finalNotification(
-  task: Pick<Task, 'id' | 'title' | 'status' | 'checkout' | 'stop_reason'>,
+  task: Pick<Task, 'id' | 'title' | 'checkout'> & TaskState,
   repoName: string,
   pr: { url?: string; error?: string } = {},
 ): Notification | null {

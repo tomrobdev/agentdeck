@@ -3,7 +3,7 @@
 import { isConflictReason } from '../branch/sync.ts';
 import { parsePlanWithText } from '../plan/plan.ts';
 import type { Repo } from '../repo/repo.ts';
-import type { Task } from '../task/task.ts';
+import type { BlockedTask, Task, TaskState } from '../task/task.ts';
 import { lastLine } from '../text.ts';
 import type { PromptPlan } from './prompt.ts';
 import { type Run, isSetupFailure } from './run.ts';
@@ -33,7 +33,7 @@ export type UnblockDecision = { retry: string } | { ask: UnblockQuestion };
  * Whether only a person can settle the block: packages or hosts the worker named (NEEDS deps, NEEDS host), a setup
  * command that failed, or a conflict. An unblock run never installs, never widens the network and never syncs.
  */
-export function onlyAPersonSettles(task: Pick<Task, 'needs' | 'stop_reason'>): boolean {
+export function onlyAPersonSettles(task: Pick<BlockedTask, 'needs' | 'stop_reason'>): boolean {
   const { needs } = task;
   if (needs && (needs.kind === 'deps' || needs.kind === 'host')) return true;
   return isSetupFailure(task.stop_reason) || isConflictReason(task.stop_reason);
@@ -45,11 +45,7 @@ export function onlyAPersonSettles(task: Pick<Task, 'needs' | 'stop_reason'>): b
  * still going counts). A block ends a work run, so the runs since the block are those after its newest work run. An
  * unblock run a rate limit stopped never read the block, so it does not count.
  */
-export function unblockable(
-  task: Pick<Task, 'status' | 'needs' | 'stop_reason'>,
-  lastRuns: Pick<Run, 'kind' | 'outcome'>[],
-  repo: Pick<Repo, 'auto_unblock'>,
-): boolean {
+export function unblockable(task: TaskState, lastRuns: Pick<Run, 'kind' | 'outcome'>[], repo: Pick<Repo, 'auto_unblock'>): boolean {
   if (!repo.auto_unblock || task.status !== 'blocked' || onlyAPersonSettles(task)) return false;
   const since = lastRuns.slice(lastRuns.findLastIndex((r) => r.kind === 'work') + 1);
   return !since.some((r) => r.kind === 'unblock' && r.outcome !== 'rate_limited');
@@ -92,7 +88,7 @@ export interface UnblockContext {
  * The prompt of an unblock run: the task's prompt and plan steps, why it stopped, the last run's final message and the
  * review notes, then what the run may do and the lines it must end with.
  */
-export function buildUnblockPrompt(task: Pick<Task, 'id' | 'title' | 'prompt' | 'stop_reason'>, ctx: UnblockContext): string {
+export function buildUnblockPrompt(task: Pick<BlockedTask, 'id' | 'title' | 'prompt' | 'stop_reason'>, ctx: UnblockContext): string {
   return [
     `AgentDeck unblock run for task #${task.id}: "${task.title}".`,
     '',
