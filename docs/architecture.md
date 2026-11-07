@@ -144,4 +144,6 @@ sequenceDiagram
 - [Settings](reference/settings.md): each setting, its default and meaning.
 - [Migrations](reference/migrations.md): the steps of `db/schema.ts`.
 - [Adapters](reference/adapters.md): what each file in `daemon/src/adapters/` does.
+- [Context map](reference/context-map.md): the folders under `domain/` and the imports between them.
+- [Adapter use](reference/adapter-use.md): which adapters each area of `application/` imports.
 - [Runs](reference/runs.md): plans in a run, and resuming a cut-off run.

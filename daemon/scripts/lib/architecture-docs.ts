@@ -8,6 +8,7 @@ import { SETTING_DEFAULTS } from '../../src/db/settings.ts';
 import { LAYERS, layerOf, mayImport } from './layers.ts';
 import * as tables from '../../src/db/tables.ts';
 import { RULES, TASK_STATUSES, type TaskStatus } from '../../src/domain/task/lifecycle.ts';
+import { adapterUse, contextMap } from './graphs.ts';
 import { type Source, readSources } from './sources.ts';
 
 const SRC = join(import.meta.dirname, '../../src');
@@ -100,6 +101,30 @@ function adapters(sources: Source[]): string {
     .filter((s) => s.path.startsWith('adapters/'))
     .map((s) => [`\`${s.path}\``, firstSentence(s) || '(no leading comment)']);
   return table(['Adapter', 'What it does'], rows);
+}
+
+/** The context map: a mermaid graph (solid arrow runtime, dotted type-only, `cycle` label on a cycle's edges) and the cycles in a list. */
+export function contextMapBody(sources: Source[]): string {
+  const map = contextMap(sources);
+  const lines = map.edges.map((e) => {
+    const arrow = e.typeOnly ? '-.->' : '-->';
+    return `  ${ident(e.from)} ${arrow}${e.inCycle ? '|cycle|' : ''} ${ident(e.to)}`;
+  });
+  const cycles = map.cycles.length
+    ? `Cycles:\n\n${map.cycles.map((c) => `- ${c.map((n) => `\`${n}\``).join(' ↔ ')}`).join('\n')}`
+    : 'No cycles.';
+  return [mermaid(['flowchart LR', ...map.contexts.map((c) => `  ${ident(c)}["${c}"]`), ...lines]), cycles].join('\n\n');
+}
+
+/** The adapter-use table: each application/ area and the adapters it imports. */
+export function adapterUseBody(sources: Source[]): string {
+  return table(
+    ['Area', 'Adapters imported'],
+    adapterUse(sources).map((u) => [
+      `\`application/${u.area}\``,
+      u.adapters.map((a) => `\`${a.adapter}\`${a.imports > 1 ? ` (${a.imports})` : ''}`).join(', '),
+    ]),
+  );
 }
 
 function dataModel(): string {
@@ -287,6 +312,16 @@ export function generateReference(): Record<string, string> {
     'routes.md': file('HTTP API', "The dashboard's routes, and the use case each calls.", routes()),
     'settings.md': file('Settings', 'The rows of the settings table, with their defaults.', settings()),
     'migrations.md': file('Migrations', 'The steps of `db/schema.ts`, in order.', migrations(sources)),
+    'context-map.md': file(
+      'Context map',
+      'The folders under `domain/` and the imports between them. A solid arrow is a runtime import, a dotted one is type-only; an edge inside a cycle is labelled `cycle`.',
+      contextMapBody(sources),
+    ),
+    'adapter-use.md': file(
+      'Adapter use',
+      'Each area of `application/` and the adapters it imports, with the number of imports where there is more than one.',
+      adapterUseBody(sources),
+    ),
     'adapters.md': file('Adapters', 'The files of `daemon/src/adapters/`, each the I/O of one outside system.', adapters(sources)),
   };
 }
