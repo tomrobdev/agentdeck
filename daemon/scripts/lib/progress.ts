@@ -12,12 +12,7 @@ export const CYCLE_LAYERS = ['domain', 'application'];
  * the test, and so does an entry that is no longer a cycle, so remove an entry (or cut it down to the smaller cycle that is left) in
  * the change that breaks it. Never add one. Breaking them is Phase 3 of the plan.
  */
-export const ALLOWED_FOLDER_CYCLES: Record<string, string[]> = {
-  domain: ['domain/landing, domain/operations, domain/proposals, domain/repos, domain/runs, domain/work'],
-  application: [
-    'application, application/insights, application/landing, application/operations, application/proposals, application/repos, application/runs, application/scheduler, application/work',
-  ],
-};
+export const ALLOWED_FOLDER_CYCLES: Record<string, string[]> = {};
 
 export const cycleKey = (c: FolderCycle) => c.folders.join(', ');
 

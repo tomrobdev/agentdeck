@@ -2,6 +2,7 @@
 // The format (docs/plan-format.md) marks the parts a program reads with data attributes, so the
 // page stays free-form HTML for a person and parses here with a few patterns. Pure: no I/O.
 import type { TaskId } from '../shared/id.ts';
+import { AGENTDECK_FOLDER } from '../repos/repo.ts';
 
 export type PlanStepStatus = 'todo' | 'doing' | 'done' | 'blocked' | 'skipped';
 export const PLAN_STEP_STATUSES: PlanStepStatus[] = ['todo', 'doing', 'done', 'blocked', 'skipped'];
@@ -37,15 +38,13 @@ export interface TaskPlan extends ParsedPlan {
   updated_at: string;
 }
 
-/** The folder in a task's worktree that holds AgentDeck's files for the run. Git ignores it. */
-export const PLAN_FOLDER = '.agentdeck';
 /** Where a run's plan sits in the task's worktree, for the worker to read and update. Never committed. */
-export const PLAN_FILE = `${PLAN_FOLDER}/plan.html`;
+export const PLAN_FILE = `${AGENTDECK_FOLDER}/plan.html`;
 /**
  * The copy of the plan a run was given, kept beside PLAN_FILE so that what the run changed can be told from what it
  * left alone, even after a daemon restart cut the run off. The worker never touches it.
  */
-export const PLAN_GIVEN_FILE = `${PLAN_FOLDER}/plan-given.html`;
+export const PLAN_GIVEN_FILE = `${AGENTDECK_FOLDER}/plan-given.html`;
 /** Bigger plans are refused: a plan is read on every task view. */
 export const PLAN_LIMIT = 512 * 1024;
 

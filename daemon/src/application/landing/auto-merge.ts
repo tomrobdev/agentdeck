@@ -8,10 +8,11 @@ import type { PrDetails } from '../../domain/landing/merge.ts';
 import { mergeReason } from '../../domain/work/history.ts';
 import { openPrUrl } from '../../domain/landing/pr.ts';
 import { errorMessage } from '../../domain/shared/text.ts';
-import { ActionError, object, requireTask, requireTaskRepo } from '../input.ts';
+import { ActionError, object, requireTask, requireTaskRepo } from '../shared/input.ts';
 import { notifyLater } from '../operations/notifications.ts';
+import { isMergeLocked } from '../work/checkout-locks.ts';
 import { ensureAutoMergeLabel } from './open-pr.ts';
-import { isMergeLocked, mergeable, mergeOpenPr } from './merge.ts';
+import { mergeable, mergeOpenPr } from './merge.ts';
 
 /**
  * Merge the first PR the refresh found ready, with what GitHub said about it moments ago. One merge per refresh: it

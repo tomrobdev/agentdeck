@@ -8,15 +8,13 @@ import { rootInfo } from '../../adapters/repo-root.ts';
 import { removeFiles } from '../../adapters/run-log.ts';
 import type { Db } from '../../db/index.ts';
 import { autoMergeMaxLinesError } from '../../domain/landing/auto-merge.ts';
-import { MERGE_METHODS, type MergeMethod, isMergeMethod } from '../../domain/landing/merge.ts';
-import { PR_MODES, type PrMode } from '../../domain/landing/pr.ts';
-import type { Repo } from '../../domain/repos/repo.ts';
+import { MERGE_METHODS, type MergeMethod, PR_MODES, type PrMode, type Repo, isMergeMethod } from '../../domain/repos/repo.ts';
 import { goalsError, networkError, repoNameError } from '../../domain/repos/rules.ts';
 import { detectToolchain } from '../../domain/repos/toolchain.ts';
 import { textList } from '../../domain/shared/text.ts';
 import { type Check, runDoctor } from './doctor.ts';
 import { repoView } from './repo-view.ts';
-import { ActionError, flag, list, object, refuse, requireRepo, text, textOrNull, whole } from '../input.ts';
+import { ActionError, flag, list, object, refuse, requireRepo, text, textOrNull, whole } from '../shared/input.ts';
 import { pauseRepo } from './pause.ts';
 import { buildersOnRepo, warnBuildersOnDeleted } from '../work/dependencies.ts';
 

@@ -4,14 +4,15 @@ import type { Db } from '../../db/index.ts';
 import type { TaskId } from '../../domain/shared/id.ts';
 import type { PrDetails } from '../../domain/landing/merge.ts';
 import { type AutoMergeCheck, autoMergeCheck, autoMergeOn } from '../../domain/landing/auto-merge.ts';
-import { checksFailedNotification, checksSettled, nextChecks } from '../../domain/landing/checks.ts';
+import { checksSettled, nextChecks } from '../../domain/landing/checks.ts';
+import { checksFailedNotification } from '../../domain/operations/notification.ts';
 import { isConflicting, isMergeabilityUnknown } from '../../domain/landing/conflict.ts';
 import { mergeRequestCheck, mergeRequestPolls } from '../../domain/landing/merge-request.ts';
 import { type Repo, pausedReason } from '../../domain/repos/repo.ts';
 import type { Task } from '../../domain/work/task.ts';
 import { errorMessage } from '../../domain/shared/text.ts';
 import { landsAfter } from '../work/dependencies.ts';
-import { settle, settlePr } from '../settle.ts';
+import { settle, settlePr } from './settle.ts';
 import { notifyLater } from '../operations/notifications.ts';
 
 /** How often the scheduler re-reads the state of open PRs. */

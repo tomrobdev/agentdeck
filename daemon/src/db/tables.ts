@@ -3,8 +3,8 @@
 import { sql } from 'drizzle-orm';
 import type { PlannerRunId, RepoId, ReviewId, RunId, TaskId } from '../domain/shared/id.ts';
 import type { PlannerOutcome } from '../domain/proposals/proposals.ts';
-import type { MergeMethod } from '../domain/landing/merge.ts';
-import type { PrMode, PrState } from '../domain/landing/pr.ts';
+import type { MergeMethod, PrMode } from '../domain/repos/repo.ts';
+import type { PrState } from '../domain/landing/pr.ts';
 import type { RunKind, RunOutcome } from '../domain/runs/run.ts';
 import type { TaskEventType } from '../domain/work/history.ts';
 import type { LinkKind } from '../domain/work/link.ts';

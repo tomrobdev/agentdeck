@@ -2,11 +2,8 @@
 import { STATUS_TAIL } from '../shared/text.ts';
 import type { AutoMergeCheck } from './auto-merge.ts';
 import type { CheckCounts, StoredChecks } from './checks.ts';
-import type { MergeMethod } from './merge.ts';
+import type { MergeMethod } from '../repos/repo.ts';
 
-/** What the daemon does when a task is done: nothing, open a draft PR, or open a ready PR. */
-export type PrMode = 'off' | 'draft' | 'ready';
-export const PR_MODES: PrMode[] = ['off', 'draft', 'ready'];
 /** `failed` is the daemon's own: the task finished but its PR could not be opened (`FailedPullRequest`). */
 export type PrState = 'open' | 'merged' | 'closed' | 'failed';
 

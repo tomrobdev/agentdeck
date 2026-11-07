@@ -18,7 +18,7 @@ import {
 } from '../../domain/work/read/files.ts';
 import type { AutoMergeMeasured } from '../../domain/landing/auto-merge.ts';
 import type { Repo } from '../../domain/repos/repo.ts';
-import { ActionError, requireTask, requireTaskRepo } from '../input.ts';
+import { ActionError, requireTask, requireTaskRepo } from '../shared/input.ts';
 
 /** The task's repo and the commit its branch is at. */
 async function resolveHead(db: Db, id: TaskId): Promise<{ repo: Repo; head: string }> {

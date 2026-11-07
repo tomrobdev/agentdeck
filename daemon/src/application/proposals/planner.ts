@@ -17,7 +17,7 @@ import {
 import type { Repo } from '../../domain/repos/repo.ts';
 import { lastLine, plural } from '../../domain/shared/text.ts';
 import { recordRateLimit, usageRecorder } from '../runs/claude-run.ts';
-import { ActionError, requireRepo } from '../input.ts';
+import { ActionError, requireRepo } from '../shared/input.ts';
 import { notifyLater } from '../operations/notifications.ts';
 
 /** How many of a repo's latest tasks the planner is shown, so it does not propose them again. */

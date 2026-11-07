@@ -15,12 +15,12 @@ const { openDb } = await import('../src/db/index.ts');
 const { doneTask } = await import('./fixtures.ts');
 const { github } = await import('../src/adapters/github.ts');
 const { AUTO_MERGE_LABEL, autoMergeCheck, autoMergeOn } = await import('../src/domain/landing/auto-merge.ts');
-const { isMergeLocked } = await import('../src/application/landing/merge.ts');
+const { isMergeLocked } = await import('../src/application/work/checkout-locks.ts');
 const { refreshPrStates } = await import('../src/application/landing/refresh.ts');
 const { autoMerge } = await import('../src/application/landing/auto-merge.ts');
 const { openPullRequest } = await import('../src/application/landing/open-pr.ts');
 const { ActionError, addTask, mergePreview, mergeTask, setAutoMerge, syncNow, updateRepo } = await import('../src/application/actions.ts');
-const { resolveConflicting } = await import('../src/application/landing/sync.ts');
+const { resolveConflicting } = await import('../src/application/runs/sync.ts');
 const { repoSettingPatch } = await import('../src/cli/settings-args.ts');
 const { dependencyOf, liveLinks, waitingFor } = await import('../src/application/work/dependencies.ts');
 /** What a task waits for on its builds-on links, read from the database now. */

@@ -17,7 +17,7 @@ import type { PrPlan } from '../../domain/landing/pr.ts';
 import type { PromptPlan } from '../../domain/runs/prompt.ts';
 import { hasPlanLink, otherPlanOwner } from '../../domain/work/plan-link.ts';
 import { PLAN_ATTACHABLE_STATUSES, type Task } from '../../domain/work/task.ts';
-import { ActionError, object, requireTask } from '../input.ts';
+import { ActionError, object, requireTask } from '../shared/input.ts';
 
 /** HTML a person gives as a plan: refused unless it is a plan and small enough. */
 export function readPlanInput(html: unknown): { html: string; plan: ParsedPlan } {

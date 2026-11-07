@@ -2,7 +2,7 @@
 import type { Db } from '../../db/index.ts';
 import { type TaskId, parseId } from '../../domain/shared/id.ts';
 import { type Link, type LinkKind, buildsOnError, linkError } from '../../domain/work/link.ts';
-import { ActionError, object, refuse, requireTask } from '../input.ts';
+import { ActionError, object, refuse, requireTask } from '../shared/input.ts';
 
 const KINDS: LinkKind[] = ['builds_on', 'after'];
 

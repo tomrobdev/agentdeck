@@ -5,7 +5,7 @@ import type { Repo } from '../../domain/repos/repo.ts';
 import type { StartState } from '../../domain/work/link.ts';
 import { type QueueWait, type StartWait, startWait } from '../../domain/work/start.ts';
 import type { Task } from '../../domain/work/task.ts';
-import { queueWait } from '../capacity/gate.ts';
+import { queueWait } from './gate.ts';
 
 export interface PausedRepo {
   id: RepoId;

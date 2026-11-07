@@ -27,10 +27,11 @@ import { type Task, leftoversMessage } from '../../domain/work/task.ts';
 import { errorMessage } from '../../domain/shared/text.ts';
 import { type OpenedRun, type TaskRunEnd, endTaskRun, openTaskRun, startTaskRun } from './claude-run.ts';
 import type { Repo } from '../../domain/repos/repo.ts';
-import { markSyncing, syncBranch } from '../landing/sync.ts';
+import { syncBranch } from './sync.ts';
 import { pauseRepo } from '../repos/pause.ts';
+import { markSyncing } from '../work/checkout-locks.ts';
 import { followedSteps, planForRun, takePlanFile } from '../work/plans.ts';
-import { settle } from '../settle.ts';
+import { settle } from '../landing/settle.ts';
 import { recordAnswers, reviewForRun } from '../landing/address.ts';
 
 /** Run one attempt of a task that the scheduler has already claimed (status = running). */

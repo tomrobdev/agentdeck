@@ -4,7 +4,8 @@
 // - after: the task runs on its own and only its merge waits for the other's.
 
 import type { TaskId } from '../shared/id.ts';
-import type { PrMode, PullRequest } from '../landing/pr.ts';
+import type { PullRequest } from '../landing/pr.ts';
+import type { PrMode } from '../repos/repo.ts';
 import type { TaskStatus } from './lifecycle.ts';
 import type { DoneState } from './task.ts';
 

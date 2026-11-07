@@ -2,8 +2,8 @@
 // (docs/plans/merge-requests.html; the carrying out is `refreshPrStates` and `autoMerge`).
 import type { Db } from '../../db/index.ts';
 import type { TaskId } from '../../domain/shared/id.ts';
-import { MERGE_METHODS, type MergeMethod, isMergeMethod } from '../../domain/landing/merge.ts';
-import { ActionError, object, requireTask, text } from '../input.ts';
+import { MERGE_METHODS, type MergeMethod, isMergeMethod } from '../../domain/repos/repo.ts';
+import { ActionError, object, requireTask, text } from '../shared/input.ts';
 import { mergeable } from './merge.ts';
 
 export interface MergeRequestedResult {

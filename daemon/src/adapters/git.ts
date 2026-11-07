@@ -16,7 +16,7 @@ import {
   parseLsTree,
   treeEntries,
 } from '../domain/work/read/files.ts';
-import { branchName } from '../domain/landing/branch.ts';
+import { branchName } from '../domain/work/branch.ts';
 import type { Repo } from '../domain/repos/repo.ts';
 import type { Task } from '../domain/work/task.ts';
 

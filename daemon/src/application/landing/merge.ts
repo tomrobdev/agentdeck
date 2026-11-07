@@ -3,7 +3,8 @@ import { removeWorktree } from '../../adapters/git.ts';
 import { github } from '../../adapters/github.ts';
 import type { Db } from '../../db/index.ts';
 import { stored } from '../../db/mappers.ts';
-import { MERGE_METHODS, type MergeMethod, type PrDetails, isMergeMethod, mergeCheck, mergeFindings } from '../../domain/landing/merge.ts';
+import { type PrDetails, mergeCheck, mergeFindings } from '../../domain/landing/merge.ts';
+import { MERGE_METHODS, type MergeMethod, isMergeMethod } from '../../domain/repos/repo.ts';
 import { type AutoMergeCheck, autoMergeOn } from '../../domain/landing/auto-merge.ts';
 import type { CheckCounts } from '../../domain/landing/checks.ts';
 import { isConflicting } from '../../domain/landing/conflict.ts';
@@ -13,20 +14,28 @@ import { mergeReason } from '../../domain/work/history.ts';
 import type { TaskId } from '../../domain/shared/id.ts';
 import type { Task } from '../../domain/work/task.ts';
 import { errorMessage } from '../../domain/shared/text.ts';
-import { ActionError, flag, object, requireTask, requireTaskRepo, text } from '../input.ts';
+import { ActionError, flag, object, requireTask, requireTaskRepo, text } from '../shared/input.ts';
 import { prPlanFor } from '../work/plans.ts';
 import { dependentsReleased, landsAfter } from '../work/dependencies.ts';
-import { settlePr } from '../settle.ts';
-import { isSyncing } from './sync.ts';
-import { isMergeLocked, lockMerge, unlockMerge } from './merge-lock.ts';
+import { isMergeLocked, isSyncing, lockMerge, unlockMerge } from '../work/checkout-locks.ts';
+import { settlePr } from './settle.ts';
 import { autoMergeFor, lastTestsPassed, prCwd } from './refresh.ts';
-
-export { isMergeLocked };
 
 /** Close a task's PR on GitHub and record it. Throws if `gh` fails. */
 export async function closePullRequest(db: Db, task: Task): Promise<void> {
   await github.closePr(task.pr!.url!, prCwd(db, task));
   settlePr(db, task.id, { type: 'closed' });
+}
+
+/** Close a task's open PR without merging it. Tasks waiting on it become stuck. */
+export async function closeTaskPr(db: Db, id: TaskId): Promise<void> {
+  const t = requireTask(db, id);
+  if (!openPrUrl(t.pr)) throw new ActionError(`#${id} has no open pull request`);
+  try {
+    await closePullRequest(db, t);
+  } catch (err) {
+    throw new ActionError(`could not close the PR: ${errorMessage(err)}`);
+  }
 }
 
 /** What a person sees before merging a task's PR: the PR, what the merge does and what it releases. */

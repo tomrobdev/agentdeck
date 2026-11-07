@@ -3,8 +3,7 @@
 import type { AutoMergeView, Needs, Status, TaskStatus, TaskSummary } from '../api';
 import { type PersonEvent, personEvents } from '../../../daemon/src/domain/work/lifecycle.ts';
 import { DECISION_STATES, FILTER_STATES, SORT_OPTIONS, filterTasks } from '../../../daemon/src/domain/work/read/listing.ts';
-import type { UnblockQuestion } from '../../../daemon/src/domain/runs/unblock.ts';
-import { canInstallWith, depsRequest } from '../../../daemon/src/domain/work/needs.ts';
+import { type UnblockQuestion, canInstallWith, depsRequest } from '../../../daemon/src/domain/work/needs.ts';
 import {
   STATUS_GROUPS,
   type StatusGroup,
@@ -110,7 +109,7 @@ export function groupTasks(tasks: TaskSummary[], by: GroupBy, sort: string): Gro
   }
 }
 
-export { branchName } from '../../../daemon/src/domain/landing/branch.ts';
+export { branchName } from '../../../daemon/src/domain/work/branch.ts';
 
 export const canEdit = (t: Pick<TaskSummary, 'status'>) => EDITABLE_STATUSES.includes(t.status);
 /** A done task's open PR has failing checks: they can be sent back to the worker (POST /api/tasks/:id/fix-checks). */
