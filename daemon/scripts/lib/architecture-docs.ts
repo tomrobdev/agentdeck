@@ -9,6 +9,7 @@ import { LAYERS, layerOf, mayImport } from './layers.ts';
 import * as tables from '../../src/db/tables.ts';
 import { RULES, TASK_STATUSES, type TaskStatus } from '../../src/domain/task/lifecycle.ts';
 import { adapterUse, contextMap } from './graphs.ts';
+import { modelsBody, stateMachinesBody, useCasesBody } from './model-docs.ts';
 import { progress } from './progress.ts';
 import { UNCHECKED } from './rules.ts';
 import { type Source, readSources } from './sources.ts';
@@ -358,6 +359,17 @@ export function generateReference(): Record<string, string> {
       'Each area of `application/` and the adapters it imports, with the number of imports where there is more than one.',
       adapterUseBody(sources),
     ),
+    'models.md': file(
+      'Models',
+      'The exported interfaces and object types of `domain/`, grouped by folder, with their fields as the type checker reads them.',
+      modelsBody(),
+    ),
+    'use-cases.md': file(
+      'Use cases',
+      'Every export of `application/actions.ts`, the module the CLI and the API call, with its input and output and the adapters the file that declares it imports.',
+      useCasesBody(),
+    ),
+    'state-machines.md': file('State machines', 'Each state machine of `domain/`, read from its rule table.', stateMachinesBody()),
     'progress.md': file(
       'Migration progress',
       'How far the move to a domain model has come, counted from the code. Each number should fall to zero.',

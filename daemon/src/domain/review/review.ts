@@ -47,7 +47,7 @@ export const isDraft = (review: Pick<Review, 'submitted_at'>): boolean => review
 export type CommentAction = 'answer' | 'resolve' | 'reopen';
 
 /** Where each action may start and where it leads. Anything not listed is refused. */
-const COMMENT_MOVES: Record<CommentAction, Partial<Record<CommentState, CommentState>>> = {
+export const COMMENT_MOVES: Record<CommentAction, Partial<Record<CommentState, CommentState>>> = {
   answer: { open: 'answered', answered: 'answered' },
   resolve: { open: 'resolved', answered: 'resolved' },
   reopen: { answered: 'open', resolved: 'open' },

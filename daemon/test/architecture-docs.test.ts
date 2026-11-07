@@ -4,6 +4,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { REFERENCE_DIR, generateReference, readDocs, renderDocs, section } from '../scripts/lib/architecture-docs.ts';
+import { NOT_YET_TABLES, STATE_MACHINES, readModels, readStateTypes, readUseCases } from '../scripts/lib/model-docs.ts';
 import { exportedNames, readSources } from '../scripts/lib/sources.ts';
 
 const SRC = join(import.meta.dirname, '../src');
@@ -70,4 +71,33 @@ test('docs: identifiers in backticks in the hand-written sections are exported f
     }
   }
   assert.deepEqual(unknown, [], 'not exported from daemon/src; rename it in the docs');
+});
+
+test('docs/reference/models.md lists every field of Task', () => {
+  // The catalogue is read from the type, so a field added without `pnpm docs:gen` also makes the file stale (above).
+  const task = readModels().find((m) => m.name === 'Task');
+  assert.ok(task);
+  const models = readFileSync(join(REFERENCE_DIR, 'models.md'), 'utf8');
+  for (const f of task.fields) assert.ok(models.includes(`\`${f.name}\``), `docs/reference/models.md does not list Task.${f.name}: ${fix}`);
+});
+
+test('docs/reference/use-cases.md lists every export of actions.ts', async () => {
+  const actions = await import('../src/application/actions.ts');
+  const doc = readFileSync(join(REFERENCE_DIR, 'use-cases.md'), 'utf8');
+  const names = [...new Set([...Object.keys(actions), ...readUseCases().map((u) => u.name)])];
+  const missing = names.filter((n) => !doc.includes(`\`${n}\``));
+  assert.deepEqual(missing, [], `these exports of application/actions.ts are not in docs/reference/use-cases.md: ${fix}`);
+});
+
+test('[state-as-data] every rule table in domain/ is listed by the generator, and every state type has one or a reason', () => {
+  const { states, tables } = readStateTypes();
+  const listed = STATE_MACHINES.map((m) => `${m.source.file}:${m.source.constant}`);
+  const unlisted = tables.map((t) => `${t.file}:${t.constant}`).filter((t) => !listed.includes(t));
+  assert.deepEqual(unlisted, [], 'add these rule tables to STATE_MACHINES in daemon/scripts/lib/model-docs.ts');
+  const missing = listed.filter((l) => !tables.some((t) => `${t.file}:${t.constant}` === l));
+  assert.deepEqual(missing, [], 'STATE_MACHINES names rule tables that are not in domain/');
+  const undecided = states.filter((s) => !(s in NOT_YET_TABLES));
+  assert.deepEqual(undecided, [], 'a state type needs a rule table in STATE_MACHINES, or an entry in NOT_YET_TABLES with its reason');
+  const stale = Object.keys(NOT_YET_TABLES).filter((s) => !states.includes(s));
+  assert.deepEqual(stale, [], 'NOT_YET_TABLES names state types that no longer exist');
 });
