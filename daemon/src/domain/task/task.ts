@@ -2,7 +2,7 @@
 import type { AutoMergeCheck } from '../pull-request/auto-merge.ts';
 import type { CheckCounts, StoredChecks } from '../pull-request/checks.ts';
 import type { MergeMethod } from '../pull-request/merge.ts';
-import type { PrState } from '../pull-request/pr.ts';
+import type { PrState, PullRequest } from '../pull-request/pr.ts';
 import type { UnblockQuestion } from '../run/unblock.ts';
 import type { TaskStatus } from './lifecycle.ts';
 import type { Needs } from './needs.ts';
@@ -26,6 +26,7 @@ export interface Task {
   stop_reason: string | null;
   source: TaskSource;
   restarts: number; // times a daemon restart requeued this task mid-run
+  pr: PullRequest | null; // the task's pull request, as one value; the flat PR fields below say the same until their readers move to it
   pr_url: string | null; // the pull request the daemon opened when the task finished
   pr_state: PrState | null;
   merge_method: MergeMethod | null; // how the PR was merged from the app

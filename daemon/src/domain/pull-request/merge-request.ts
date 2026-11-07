@@ -1,8 +1,8 @@
 // A merge request: a person's Merge, which the daemon carries out once the PR is ready (docs/plans/merge-requests.html). Pure: no I/O.
-import type { Task } from '../task/task.ts';
 import { isMergeabilityUnknown } from './conflict.ts';
 import { type AutoMergeCheck, verdictOf } from './auto-merge.ts';
 import { DEFAULT_MERGE_METHOD, type MergeFinding, type MergeInput, type MergeMethod, conflictNeedsPerson, mergeFindings } from './merge.ts';
+import type { PullRequest } from './pr.ts';
 
 /**
  * What each merge-dialog finding means to a merge request. A person asked, so the auto-merge rules (label, line limit,
@@ -63,26 +63,24 @@ export interface MergeRequestView {
 }
 
 /**
- * Whether the task's open PR conflicts with the base branch, as the last PR check found it: the merge request's check, else
+ * Whether this PR is open and conflicts with the base branch, as the last PR check found it: the merge request's check, else
  * auto-merge's. False with neither (auto-merge off and no merge request: nothing stores a check).
  */
-export function conflictsWithBase(task: Pick<Task, 'pr_state' | 'merge_request_check' | 'auto_merge_check'>): boolean {
-  if (task.pr_state !== 'open') return false;
-  const check = task.merge_request_check ?? task.auto_merge_check;
+export function conflictsWithBase(pr: PullRequest | null): boolean {
+  if (pr?.state !== 'open') return false;
+  const check = pr.merge_request?.check ?? pr.auto_merge_check;
   return check?.conflict === true;
 }
 
-/** The task's merge request, or null when it has none. `merging`: a merge of this task is under way in this process. */
-export function mergeRequestView(
-  task: Pick<Task, 'merge_requested_at' | 'merge_request_method' | 'merge_request_check'>,
-  merging: boolean,
-): MergeRequestView | null {
-  if (!task.merge_requested_at) return null;
-  const reasons = merging ? [] : (task.merge_request_check?.reasons ?? []);
+/** This PR's merge request, or null when it has none. `merging`: a merge of this task is under way in this process. */
+export function mergeRequestView(pr: PullRequest | null, merging: boolean): MergeRequestView | null {
+  const request = pr?.merge_request;
+  if (!request) return null;
+  const reasons = merging ? [] : (request.check?.reasons ?? []);
   return {
     state: merging ? 'merging' : 'waiting',
-    method: task.merge_request_method ?? DEFAULT_MERGE_METHOD,
+    method: request.method ?? DEFAULT_MERGE_METHOD,
     reasons,
-    since: task.merge_requested_at,
+    since: request.requested_at,
   };
 }

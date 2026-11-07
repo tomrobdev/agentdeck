@@ -361,6 +361,15 @@ A branch measured locally against the limits: the lines it changed against the b
 | `lines` | `number`   |         |
 | `paths` | `string[]` |         |
 
+### AutoMergeSetting
+
+What a task says about its own auto-merge: its setting (null follows the repo) and who made it.
+
+| Field        | Type              | Comment |
+| ------------ | ----------------- | ------- |
+| `auto_merge` | `boolean \| null` |         |
+| `source`     | `string`          |         |
+
 ### AutoMergeView
 
 | Field        | Type                                                    | Comment                                                                                                                    |
@@ -405,6 +414,20 @@ One failing check as the worker hears it: its name and link, and its log's tail 
 | `log?`       | `string \| undefined` | The tail of the failed steps' log (GitHub Actions only). |
 | `log_error?` | `string \| undefined` | Why the log could not be read.                           |
 
+### FailedPullRequest
+
+The task finished but its PR could not be opened. `url` is the PR an earlier attempt opened, which is closed or merged; null with none.
+
+| Field                   | Type                     | Comment                                                       |
+| ----------------------- | ------------------------ | ------------------------------------------------------------- |
+| `state`                 | `"failed"`               |                                                               |
+| `url`                   | `string \| null`         |                                                               |
+| `merge_method`          | `MergeMethod \| null`    | how the PR was merged from the app                            |
+| `checks`                | `PrChecks`               |                                                               |
+| `auto_merge_check`      | `AutoMergeCheck \| null` | the PR refresh's latest auto-merge check while the PR is open |
+| `auto_merge_checked_at` | `string \| null`         | when that check was made                                      |
+| `merge_request`         | `PrMergeRequest \| null` |                                                               |
+
 ### MergeCheck
 
 | Field      | Type       | Comment                                                     |
@@ -443,6 +466,20 @@ What a view says about a task's merge request: waiting for the PR to be ready, o
 | `reasons` | `string[]`               | Why it waits, from the last check; empty before the first check and while merging. |
 | `since`   | `string`                 | When the person asked (UTC, `YYYY-MM-DD HH:MM:SS`).                                |
 
+### OpenedPullRequest
+
+A PR that exists on GitHub.
+
+| Field                   | Type                             | Comment                                                       |
+| ----------------------- | -------------------------------- | ------------------------------------------------------------- |
+| `state`                 | `"merged" \| "open" \| "closed"` |                                                               |
+| `url`                   | `string`                         |                                                               |
+| `merge_method`          | `MergeMethod \| null`            | how the PR was merged from the app                            |
+| `checks`                | `PrChecks`                       |                                                               |
+| `auto_merge_check`      | `AutoMergeCheck \| null`         | the PR refresh's latest auto-merge check while the PR is open |
+| `auto_merge_checked_at` | `string \| null`                 | when that check was made                                      |
+| `merge_request`         | `PrMergeRequest \| null`         |                                                               |
+
 ### PrCheck
 
 One check on a PR's head commit: a GitHub check run (Actions or an app) or a commit status.
@@ -454,6 +491,16 @@ One check on a PR's head commit: a GitHub check run (Actions or an app) or a com
 | `url`          | `string \| null` | The check's page: a check run's `detailsUrl`, a status's `targetUrl`. |
 | `started_at`   | `string \| null` |                                                                       |
 | `completed_at` | `string \| null` |                                                                       |
+
+### PrChecks
+
+A PR's checks: the latest ones read, and the counts kept from when they first settled and from when it merged.
+
+| Field    | Type                   | Comment |
+| -------- | ---------------------- | ------- |
+| `latest` | `StoredChecks \| null` |         |
+| `opened` | `CheckCounts \| null`  |         |
+| `merged` | `CheckCounts \| null`  |         |
 
 ### PrDetails
 
@@ -475,6 +522,34 @@ What `gh pr view` says about a PR that decides whether and how it merges.
 | `paths`       | `string[]`                    | The changed files' paths, and the labels; empty unless asked for (`prDetails`'s `withFiles`). |
 | `labels`      | `string[]`                    |                                                                                               |
 
+### PrFields
+
+A PR as flat fields, the shape of its columns on a task.
+
+| Field                   | Type                     | Comment |
+| ----------------------- | ------------------------ | ------- |
+| `pr_url`                | `string \| null`         |         |
+| `pr_state`              | `PrState \| null`        |         |
+| `merge_method`          | `MergeMethod \| null`    |         |
+| `auto_merge_check`      | `AutoMergeCheck \| null` |         |
+| `auto_merge_checked_at` | `string \| null`         |         |
+| `pr_checks`             | `StoredChecks \| null`   |         |
+| `pr_checks_opened`      | `CheckCounts \| null`    |         |
+| `pr_checks_merged`      | `CheckCounts \| null`    |         |
+| `merge_requested_at`    | `string \| null`         |         |
+| `merge_request_method`  | `MergeMethod \| null`    |         |
+| `merge_request_check`   | `AutoMergeCheck \| null` |         |
+
+### PrMergeRequest
+
+A person's merge request on a PR: when they asked, the method they asked for, and the last check of it.
+
+| Field          | Type                     | Comment |
+| -------------- | ------------------------ | ------- |
+| `requested_at` | `string`                 |         |
+| `method`       | `MergeMethod \| null`    |         |
+| `check`        | `AutoMergeCheck \| null` |         |
+
 ### PrMergeability
 
 What GitHub says about a PR's mergeability.
@@ -492,6 +567,18 @@ The plan a task carries out: its name (`112-plans-in-agentdeck.html`) and the li
 | ------- | ------------------------------------------------------ | ------- |
 | `name`  | `string`                                               |         |
 | `steps` | `{ title: string; status: string; done: string[]; }[]` |         |
+
+### PrRecord
+
+What a task keeps about its PR in any state.
+
+| Field                   | Type                     | Comment                                                       |
+| ----------------------- | ------------------------ | ------------------------------------------------------------- |
+| `merge_method`          | `MergeMethod \| null`    | how the PR was merged from the app                            |
+| `checks`                | `PrChecks`               |                                                               |
+| `auto_merge_check`      | `AutoMergeCheck \| null` | the PR refresh's latest auto-merge check while the PR is open |
+| `auto_merge_checked_at` | `string \| null`         | when that check was made                                      |
+| `merge_request`         | `PrMergeRequest \| null` |                                                               |
 
 ### PrRun
 
@@ -1106,6 +1193,7 @@ A task as listed: with where it stands on its builds-on links (as waitingFor rep
 | `repo_id`               | `number`                  |                                                                                                                          |
 | `created_at`            | `string`                  |                                                                                                                          |
 | `pr_checks_opened`      | `CheckCounts \| null`     | the PR's checks the first time they settled after it opened                                                              |
+| `pr`                    | `PullRequest \| null`     | the task's pull request, as one value; the flat PR fields below say the same until their readers move to it              |
 | `status`                | `TaskStatus`              |                                                                                                                          |
 | `attempts`              | `number`                  |                                                                                                                          |
 | `restarts`              | `number`                  | times a daemon restart requeued this task mid-run                                                                        |
@@ -1182,6 +1270,7 @@ What the timeline shows for a row: the sentence, and the reason to show muted be
 | `stop_reason`           | `string \| null`          |                                                                                                                          |
 | `source`                | `TaskSource`              |                                                                                                                          |
 | `restarts`              | `number`                  | times a daemon restart requeued this task mid-run                                                                        |
+| `pr`                    | `PullRequest \| null`     | the task's pull request, as one value; the flat PR fields below say the same until their readers move to it              |
 | `pr_url`                | `string \| null`          | the pull request the daemon opened when the task finished                                                                |
 | `pr_state`              | `PrState \| null`         |                                                                                                                          |
 | `merge_method`          | `MergeMethod \| null`     | how the PR was merged from the app                                                                                       |
@@ -1239,6 +1328,7 @@ The fields an event sets, with their new values. A field not listed is left as i
 | `repo_id`               | `number`                  |                                                                                                                          |
 | `created_at`            | `string`                  |                                                                                                                          |
 | `pr_checks_opened`      | `CheckCounts \| null`     | the PR's checks the first time they settled after it opened                                                              |
+| `pr`                    | `PullRequest \| null`     | the task's pull request, as one value; the flat PR fields below say the same until their readers move to it              |
 | `status`                | `TaskStatus`              |                                                                                                                          |
 | `attempts`              | `number`                  |                                                                                                                          |
 | `restarts`              | `number`                  | times a daemon restart requeued this task mid-run                                                                        |

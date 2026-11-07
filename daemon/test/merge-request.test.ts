@@ -10,6 +10,10 @@ import {
 } from '../src/domain/pull-request/merge-request.ts';
 import { AUTO_MERGE_LABEL } from '../src/domain/pull-request/auto-merge.ts';
 import type { PrDetails } from '../src/domain/pull-request/merge.ts';
+import { type PrFields, prFields, pullRequestOf } from '../src/domain/pull-request/pr.ts';
+
+/** An open PR with these flat fields. */
+const openPr = (o: Partial<PrFields> = {}) => pullRequestOf({ ...prFields(null), pr_url: 'https://x/pull/1', pr_state: 'open', ...o });
 
 const ready: PrDetails = {
   state: 'open',
@@ -98,14 +102,19 @@ test('a waiting request is read again soon only for running checks or mergeabili
 });
 
 test('mergeRequestView: none, waiting with its reasons, and merging', () => {
-  const none = { merge_requested_at: null, merge_request_method: null, merge_request_check: null };
-  assert.equal(mergeRequestView(none, false), null);
-  assert.equal(mergeRequestView(none, true), null);
+  assert.equal(mergeRequestView(null, false), null, 'no PR');
+  assert.equal(mergeRequestView(openPr(), false), null);
+  assert.equal(mergeRequestView(openPr(), true), null);
 
-  const asked = { merge_requested_at: '2026-11-01 10:00:00', merge_request_method: 'rebase' as const, merge_request_check: null };
-  assert.deepEqual(mergeRequestView(asked, false), { state: 'waiting', method: 'rebase', reasons: [], since: '2026-11-01 10:00:00' });
+  const asked = { merge_requested_at: '2026-11-01 10:00:00', merge_request_method: 'rebase' as const };
+  assert.deepEqual(mergeRequestView(openPr(asked), false), {
+    state: 'waiting',
+    method: 'rebase',
+    reasons: [],
+    since: '2026-11-01 10:00:00',
+  });
 
-  const waiting = { ...asked, merge_request_check: { verdict: 'wait' as const, reasons: ['2 checks still running on GitHub'] } };
+  const waiting = openPr({ ...asked, merge_request_check: { verdict: 'wait', reasons: ['2 checks still running on GitHub'] } });
   assert.deepEqual(mergeRequestView(waiting, false), {
     state: 'waiting',
     method: 'rebase',
@@ -113,8 +122,8 @@ test('mergeRequestView: none, waiting with its reasons, and merging', () => {
     since: '2026-11-01 10:00:00',
   });
   assert.deepEqual(mergeRequestView(waiting, true), { state: 'merging', method: 'rebase', reasons: [], since: '2026-11-01 10:00:00' });
-  assert.equal(mergeRequestView({ ...waiting, merge_request_check: null }, false)!.reasons.length, 0);
-  assert.equal(mergeRequestView({ ...asked, merge_request_method: null }, false)!.method, 'squash');
+  assert.equal(mergeRequestView(openPr({ ...asked, merge_request_check: null }), false)!.reasons.length, 0);
+  assert.equal(mergeRequestView(openPr({ ...asked, merge_request_method: null }), false)!.method, 'squash');
 });
 
 test('a check marks a conflict as data, and conflictsWithBase reads it from the stored checks of an open PR', () => {
@@ -124,16 +133,21 @@ test('a check marks a conflict as data, and conflictsWithBase reads it from the 
   assert.equal(check().conflict, undefined);
 
   const stored = check(dirty);
-  const task = { pr_state: 'open' as const, merge_request_check: null, auto_merge_check: null };
-  assert.equal(conflictsWithBase(task), false, 'no stored check');
-  assert.equal(conflictsWithBase({ ...task, merge_request_check: stored }), true);
-  assert.equal(conflictsWithBase({ ...task, auto_merge_check: stored }), true, "auto-merge's check counts with no merge request");
+  const requested = { merge_requested_at: '2026-11-01 10:00:00' };
+  assert.equal(conflictsWithBase(null), false, 'no PR');
+  assert.equal(conflictsWithBase(openPr()), false, 'no stored check');
+  assert.equal(conflictsWithBase(openPr({ ...requested, merge_request_check: stored })), true);
+  assert.equal(conflictsWithBase(openPr({ auto_merge_check: stored })), true, "auto-merge's check counts with no merge request");
   assert.equal(
-    conflictsWithBase({ ...task, merge_request_check: check(), auto_merge_check: stored }),
+    conflictsWithBase(openPr({ ...requested, merge_request_check: check(), auto_merge_check: stored })),
     false,
     "the merge request's newer check wins",
   );
-  assert.equal(conflictsWithBase({ ...task, pr_state: 'merged', merge_request_check: stored }), false, 'only an open PR conflicts');
+  assert.equal(
+    conflictsWithBase(openPr({ ...requested, pr_state: 'merged', merge_request_check: stored })),
+    false,
+    'only an open PR conflicts',
+  );
 });
 
 test("mergesNow: only failing checks or failed tests merge now, on the person's say-so; the rest goes through a request", () => {

@@ -1,11 +1,105 @@
-// What goes into a pull request. Pure: no I/O.
+// A task's pull request as a value, and what goes into one. Pure: no I/O.
 import { STATUS_TAIL } from '../text.ts';
+import type { AutoMergeCheck } from './auto-merge.ts';
+import type { CheckCounts, StoredChecks } from './checks.ts';
+import type { MergeMethod } from './merge.ts';
 
 /** What the daemon does when a task is done: nothing, open a draft PR, or open a ready PR. */
 export type PrMode = 'off' | 'draft' | 'ready';
 export const PR_MODES: PrMode[] = ['off', 'draft', 'ready'];
-/** `failed` is the daemon's own: the task finished but its PR could not be opened (there is no pr_url). */
+/** `failed` is the daemon's own: the task finished but its PR could not be opened (`FailedPullRequest`). */
 export type PrState = 'open' | 'merged' | 'closed' | 'failed';
+
+/** A PR's checks: the latest ones read, and the counts kept from when they first settled and from when it merged. */
+export interface PrChecks {
+  latest: StoredChecks | null;
+  opened: CheckCounts | null;
+  merged: CheckCounts | null;
+}
+
+/** A person's merge request on a PR: when they asked, the method they asked for, and the last check of it. */
+export interface PrMergeRequest {
+  requested_at: string;
+  method: MergeMethod | null;
+  check: AutoMergeCheck | null;
+}
+
+/** What a task keeps about its PR in any state. */
+export interface PrRecord {
+  merge_method: MergeMethod | null; // how the PR was merged from the app
+  checks: PrChecks;
+  auto_merge_check: AutoMergeCheck | null; // the PR refresh's latest auto-merge check while the PR is open
+  auto_merge_checked_at: string | null; // when that check was made
+  merge_request: PrMergeRequest | null;
+}
+
+/** A PR that exists on GitHub. */
+export interface OpenedPullRequest extends PrRecord {
+  state: Exclude<PrState, 'failed'>;
+  url: string;
+}
+
+/** The task finished but its PR could not be opened. `url` is the PR an earlier attempt opened, which is closed or merged; null with none. */
+export interface FailedPullRequest extends PrRecord {
+  state: 'failed';
+  url: string | null;
+}
+
+/** A task's pull request. A task with no PR yet has null, not a value. */
+export type PullRequest = OpenedPullRequest | FailedPullRequest;
+
+/** A PR as flat fields, the shape of its columns on a task. */
+export interface PrFields {
+  pr_url: string | null;
+  pr_state: PrState | null;
+  merge_method: MergeMethod | null;
+  auto_merge_check: AutoMergeCheck | null;
+  auto_merge_checked_at: string | null;
+  pr_checks: StoredChecks | null;
+  pr_checks_opened: CheckCounts | null;
+  pr_checks_merged: CheckCounts | null;
+  merge_requested_at: string | null;
+  merge_request_method: MergeMethod | null;
+  merge_request_check: AutoMergeCheck | null;
+}
+
+/**
+ * The PR that flat fields describe. No state means no PR, and a PR on GitHub needs its url: fields that say otherwise are half-written
+ * and read as none, as a malformed stored value does. So does a merge request's method or check with no time it was asked for.
+ */
+export function pullRequestOf(fields: PrFields): PullRequest | null {
+  const { pr_state: state, pr_url: url } = fields;
+  if (state === null) return null;
+  const record: PrRecord = {
+    merge_method: fields.merge_method,
+    checks: { latest: fields.pr_checks, opened: fields.pr_checks_opened, merged: fields.pr_checks_merged },
+    auto_merge_check: fields.auto_merge_check,
+    auto_merge_checked_at: fields.auto_merge_checked_at,
+    merge_request:
+      fields.merge_requested_at === null
+        ? null
+        : { requested_at: fields.merge_requested_at, method: fields.merge_request_method, check: fields.merge_request_check },
+  };
+  if (state === 'failed') return { ...record, state, url };
+  return url === null ? null : { ...record, state, url };
+}
+
+/** A PR as flat fields: the way back from `pullRequestOf`. */
+export function prFields(pr: PullRequest | null): PrFields {
+  return {
+    pr_url: pr?.url ?? null,
+    pr_state: pr?.state ?? null,
+    merge_method: pr?.merge_method ?? null,
+    auto_merge_check: pr?.auto_merge_check ?? null,
+    auto_merge_checked_at: pr?.auto_merge_checked_at ?? null,
+    pr_checks: pr?.checks.latest ?? null,
+    pr_checks_opened: pr?.checks.opened ?? null,
+    pr_checks_merged: pr?.checks.merged ?? null,
+    merge_requested_at: pr?.merge_request?.requested_at ?? null,
+    merge_request_method: pr?.merge_request?.method ?? null,
+    merge_request_check: pr?.merge_request?.check ?? null,
+  };
+}
 
 export interface PrRun {
   kind?: string; // 'resolve' and 'unblock' runs are listed but never supply the final message; missing means 'work'

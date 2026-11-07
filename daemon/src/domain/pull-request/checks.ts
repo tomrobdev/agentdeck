@@ -2,6 +2,7 @@
 // is told they failed, and the note that sends the failures back to the worker. Pure: no I/O.
 import type { Notification } from '../notification.ts';
 import { plural } from '../text.ts';
+import type { PullRequest } from './pr.ts';
 
 /** How one check stands. NEUTRAL and SKIPPED conclusions are `skipped`; anything not failing or pending passed. */
 export type CheckState = 'pass' | 'fail' | 'pending' | 'skipped';
@@ -115,9 +116,9 @@ export function nextChecks(
 }
 
 /** The checks summary a task view shows: null when the PR isn't open or has no checks. */
-export function checksSummary(task: { pr_state: string | null; pr_checks: StoredChecks | null }): ChecksSummary | null {
-  if (task.pr_state !== 'open') return null;
-  const stored = task.pr_checks;
+export function checksSummary(pr: PullRequest | null): ChecksSummary | null {
+  if (pr?.state !== 'open') return null;
+  const stored = pr.checks.latest;
   if (!stored?.checks.length) return null;
   return { ...countOf(stored.checks), failing_names: failingChecks(stored.checks).map((c) => c.name), read_at: stored.read_at };
 }
