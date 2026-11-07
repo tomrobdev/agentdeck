@@ -10,6 +10,8 @@ import * as tables from '../../src/db/tables.ts';
 import { RULES, TASK_STATUSES, type TaskStatus } from '../../src/domain/task/lifecycle.ts';
 import { adapterUse, contextMap } from './graphs.ts';
 import { modelsBody, stateMachinesBody, useCasesBody } from './model-docs.ts';
+import { progress } from './progress.ts';
+import { UNCHECKED } from './rules.ts';
 import { type Source, readSources } from './sources.ts';
 
 const SRC = join(import.meta.dirname, '../../src');
@@ -126,6 +128,40 @@ export function adapterUseBody(sources: Source[]): string {
       u.adapters.map((a) => `\`${a.adapter}\`${a.imports > 1 ? ` (${a.imports})` : ''}`).join(', '),
     ]),
   );
+}
+
+/** The progress page: what is left of the DDD migration, counted by `progress()`. */
+export function progressBody(sources: Source[]): string {
+  const p = progress(sources);
+  const lists = [...p.lists, { name: 'UNCHECKED rules (`scripts/lib/rules.ts`)', size: Object.keys(UNCHECKED).length }];
+  const rows: string[][] = [
+    ['Flags left in domain entities (stored as numbers)', String(p.flags.length), p.flags.map((f) => `\`${f}\``).join(', ')],
+    [
+      'JSON fields left in domain entities (stored as strings)',
+      String(p.jsonFields.length),
+      p.jsonFields.map((f) => `\`${f}\``).join(', '),
+    ],
+    ['Runtime imports of adapters from `application/`', String(p.adapterImports.length), ''],
+    ['Store calls (`db.…`) in `api/` and `cli/`', String(p.storeCalls.length), ''],
+    [
+      'Folder cycles in `domain/` and `application/`',
+      String(p.cycles.length),
+      p.cycles.map((c) => `${c.layer}: ${c.folders.length} folders`).join('; '),
+    ],
+  ];
+  const cycleLines = p.cycles.map((c) => `- \`${c.layer}/\`: ${c.folders.map((f) => `\`${f}\``).join(', ')}`);
+  return [
+    table(['Measure', 'Count', 'Where'], rows),
+    '## Shrinking lists',
+    'Each list can only shrink: an entry that stops applying fails `pnpm test`.',
+    table(
+      ['List', 'Entries'],
+      lists.map((l) => [l.name, String(l.size)]),
+    ),
+    '## Folder cycles',
+    'Folders that import each other, counting runtime and type-only imports (`rule:folder-cycles`).',
+    cycleLines.length ? cycleLines.join('\n') : 'None.',
+  ].join('\n\n');
 }
 
 function dataModel(): string {
@@ -334,6 +370,11 @@ export function generateReference(): Record<string, string> {
       useCasesBody(),
     ),
     'state-machines.md': file('State machines', 'Each state machine of `domain/`, read from its rule table.', stateMachinesBody()),
+    'progress.md': file(
+      'Migration progress',
+      'How far the move to a domain model has come, counted from the code. Each number should fall to zero.',
+      progressBody(sources),
+    ),
     'adapters.md': file('Adapters', 'The files of `daemon/src/adapters/`, each the I/O of one outside system.', adapters(sources)),
   };
 }
