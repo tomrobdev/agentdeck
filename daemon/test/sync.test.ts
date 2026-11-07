@@ -166,7 +166,7 @@ test('the resolve prompt names the files, both sides and the goal; resolve runs 
     outcome: 'done',
     num_turns: 3,
     cost_usd: 0.01,
-    tests_passed: 1,
+    tests_passed: true,
     result_text: 'Did the work.\nSTATUS: DONE',
   };
   const resolve = {
@@ -245,7 +245,7 @@ test('a conflict starts a resolve run that keeps both sides; the task stays done
   assert.deepEqual(kinds(t.id), ['work', 'resolve']);
   assert.equal(runs[1].outcome, 'done');
   assert.equal(runs[1].attempt, attempts);
-  assert.equal(runs[1].tests_passed, 1, 'the daemon ran the repo tests on the result');
+  assert.equal(runs[1].tests_passed, true, 'the daemon ran the repo tests on the result');
   assert.ok(runs[1].ended_at && runs[1].log_path !== runs[0].log_path);
   assert.equal(syncEvents(t.id)[0].reason, 'Resolved conflicts in 1 file');
 
@@ -366,7 +366,7 @@ test('tests that fail after a resolve run undo the merge and block the task', as
   assert.equal(readFileSync(join(t.wt, 'shared.txt'), 'utf8'), lines(`task change ${n}`));
   const run = db.runsForTask(t.id).at(-1)!;
   assert.equal(run.kind, 'resolve');
-  assert.equal(run.tests_passed, 0);
+  assert.equal(run.tests_passed, false);
   assert.equal(run.outcome, 'failed');
   assert.equal(db.getTask(t.id)!.status, 'blocked');
 });

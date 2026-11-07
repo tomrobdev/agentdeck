@@ -68,7 +68,7 @@ let n = 0;
 function tested() {
   const url = `https://x/pull/${++n}`;
   const t = doneTask(db, repo, { pr: 'open', url, branch: `agentdeck/req-${n}` });
-  db.finishRun(db.startRun(t.id, 1, join(home, `run-${t.id}.log`)), { tests_passed: 1 });
+  db.finishRun(db.startRun(t.id, 1, join(home, `run-${t.id}.log`)), { tests_passed: true });
   return { id: t.id, url };
 }
 

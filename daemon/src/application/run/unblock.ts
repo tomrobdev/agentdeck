@@ -110,6 +110,6 @@ async function settleUnblock(db: Db, id: number, decision: UnblockDecision): Pro
     const task = await settle(db, id, { type: 'unblock_retry' }, { reason: decision.retry });
     return task ? { outcome: 'retried', reason: decision.retry } : { outcome: 'stale' };
   }
-  const asked = db.recordQuestion(id, JSON.stringify(decision.ask), decision.ask.question);
+  const asked = db.recordQuestion(id, decision.ask, decision.ask.question);
   return asked ? { outcome: 'asked', reason: decision.ask.question } : { outcome: 'stale' };
 }

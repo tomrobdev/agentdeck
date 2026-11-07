@@ -59,7 +59,7 @@ test('done task: worktree, branch, commit, tests, usage recorded', async () => {
 
   const [run] = db.runsForTask(t.id);
   assert.equal(run.outcome, 'done');
-  assert.equal(run.tests_passed, 1);
+  assert.equal(run.tests_passed, true);
   assert.equal(run.output_tokens, 50);
   assert.match(readFileSync(run.log_path, 'utf8'), /"type":"result"/);
 

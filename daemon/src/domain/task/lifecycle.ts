@@ -1,6 +1,8 @@
 // The task state machine, as data. Pure: no I/O, so it can be tested exhaustively.
 // applyEvent and claimNextTask (db/tasks.ts) are the only things that write a status, and each asks this module first.
+import type { UnblockQuestion } from '../run/unblock.ts';
 import type { TaskEventType } from './history.ts';
+import type { Needs } from './needs.ts';
 import type { Task } from './task.ts';
 
 export type TaskStatus =
@@ -130,9 +132,9 @@ export interface TaskChanges {
   max_attempts?: number;
   restarts?: number;
   stop_reason?: string | null;
-  needs?: string | null;
+  needs?: Needs | null;
   /** Goes with `needs`: what a block left for a person, cleared or replaced whenever `needs` is. */
-  question?: string | null;
+  question?: UnblockQuestion | null;
   done_by?: 'person' | null;
 }
 
@@ -151,7 +153,7 @@ export interface Transition {
 export function transition(
   task: TransitionTask,
   event: TaskEvent,
-  opts: { reason?: string | null; needs?: string | null } = {},
+  opts: { reason?: string | null; needs?: Needs | null } = {},
 ): Transition | null {
   const to = nextStatus(task.status, event);
   if (!to) return null;

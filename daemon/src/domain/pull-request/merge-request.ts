@@ -46,7 +46,7 @@ export function mergeRequestCheck(input: MergeInput): AutoMergeCheck {
 export const mergesNow = (
   check: AutoMergeCheck,
   input: Pick<MergeInput, 'tests_passed'> & { pr: Pick<MergeInput['pr'], 'checks'> },
-): boolean => check.verdict === 'never' && (input.pr.checks.failing > 0 || input.tests_passed === 0);
+): boolean => check.verdict === 'never' && (input.pr.checks.failing > 0 || input.tests_passed === false);
 
 /** Whether a waiting request is worth reading again soon: its checks are running, or GitHub is working out mergeability. */
 export const mergeRequestPolls = (check: AutoMergeCheck, pr: Pick<MergeInput['pr'], 'checks' | 'mergeable' | 'merge_state'>): boolean =>

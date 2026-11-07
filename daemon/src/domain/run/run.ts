@@ -32,7 +32,7 @@ export interface Run {
   cache_read_tokens: number;
   cache_write_tokens: number;
   cost_usd: number;
-  tests_passed: number | null; // 1, 0, or null when no test command
+  tests_passed: boolean | null; // null when no test command
   result_text: string | null;
   log_path: string;
   pid: number | null; // claude's process group while the run is live

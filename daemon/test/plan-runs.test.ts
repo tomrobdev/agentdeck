@@ -70,13 +70,13 @@ const committed = (branch: string) => git(dir, 'ls-tree', '-r', '--name-only', b
 test('two tasks on one plan each write back only their own steps', async () => {
   db.setSetting('max_concurrent', '2');
   // The worker marks every step of the plan file done, linked or not, with a note in each.
-  const owner = db.addTask({ repo_id: repo.id, title: 'a', prompt: 'FAKE_PLAN_ALL a', own_plan: plan, plan_steps: JSON.stringify(['a']) });
+  const owner = db.addTask({ repo_id: repo.id, title: 'a', prompt: 'FAKE_PLAN_ALL a', own_plan: plan, plan_steps: ['a'] });
   const sibling = db.addTask({
     repo_id: repo.id,
     title: 'b',
     prompt: 'FAKE_PLAN_ALL b',
     plan_task: owner.id,
-    plan_steps: JSON.stringify(['b']),
+    plan_steps: ['b'],
   });
   await drain();
   assert.equal(db.getTask(owner.id)!.status, 'done');
@@ -144,7 +144,7 @@ test('a plan’s owner with no --steps does not undo a step a sibling finished w
     title: 'sibling',
     prompt: 'p',
     plan_task: owner.id,
-    plan_steps: JSON.stringify(['b']),
+    plan_steps: ['b'],
     status: 'proposed',
   });
   const [ownerTree, siblingTree] = [mkdtempSync(join(home, 'owner-')), mkdtempSync(join(home, 'sibling-'))];

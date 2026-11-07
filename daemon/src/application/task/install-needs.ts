@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { commitFiles } from '../../adapters/git.ts';
 import { runProgram } from '../../adapters/shell.ts';
 import type { Db } from '../../db/index.ts';
-import { INSTALL_NOTE, LOCKFILES, canInstallWith, depsRequest, depsRequestError, installArgs, readNeeds } from '../../domain/task/needs.ts';
+import { INSTALL_NOTE, LOCKFILES, canInstallWith, depsRequest, depsRequestError, installArgs } from '../../domain/task/needs.ts';
 import { errorMessage, lastLine } from '../../domain/text.ts';
 import { ActionError, refuse, requireTask, requireTaskRepo } from '../input.ts';
 import { refuseWhileSyncing } from '../sync.ts';
@@ -20,7 +20,7 @@ const INSTALL_TIMEOUT_MS = 10 * 60_000;
 export async function installNeeds(db: Db, id: number): Promise<{ packages: string[]; dev: boolean }> {
   const task = requireTask(db, id);
   if (task.status !== 'blocked') throw new ActionError(`#${id} is ${task.status}, not blocked`);
-  const needs = readNeeds(task.needs);
+  const { needs } = task;
   if (needs?.kind !== 'deps') throw new ActionError(`#${id} has not asked for packages`);
   const repo = requireTaskRepo(db, task);
   const toolchain = repo.toolchain ?? '';

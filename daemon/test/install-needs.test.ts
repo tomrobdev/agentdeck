@@ -43,16 +43,12 @@ const db = openDb(':memory:');
 const repo = db.addRepo({ name: 'demo', path: dir, base_branch: 'main', toolchain: 'pnpm' });
 
 /** A task blocked asking for `items`, with a worktree. */
-async function blockedFor(items: string[], kind = 'deps') {
+async function blockedFor(items: string[], kind: 'deps' | 'host' | 'edit' = 'deps') {
   const t = db.addTask({ repo_id: repo.id, title: 't', prompt: 'p' });
   const { branch, path } = await ensureWorktree(repo, t);
   db.setCheckout(t.id, { branch, worktree: path });
   db.claimNextTask();
-  db.applyEvent(
-    t.id,
-    { type: 'finish', outcome: 'blocked', environment: true },
-    { reason: 'NEEDS', needs: JSON.stringify({ kind, items }) },
-  );
+  db.applyEvent(t.id, { type: 'finish', outcome: 'blocked', environment: true }, { reason: 'NEEDS', needs: { kind, items } });
   return { id: t.id, path };
 }
 
@@ -113,7 +109,7 @@ test('only a blocked task that asked for packages, on a Node toolchain', async (
   db.applyEvent(
     t.id,
     { type: 'finish', outcome: 'blocked', environment: true },
-    { reason: 'NEEDS', needs: JSON.stringify({ kind: 'deps', items: ['serde'] }) },
+    { reason: 'NEEDS', needs: { kind: 'deps', items: ['serde'] } },
   );
   await assert.rejects(installNeeds(db, t.id), /install serde on the branch yourself/);
   await assert.rejects(installNeeds(db, 9999), /no such task/);

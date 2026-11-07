@@ -2,9 +2,10 @@
 import * as actions from '../../application/actions.ts';
 import type * as C from '../contract.ts';
 import { type ApiContext, type Route, idsField, route } from '../http.ts';
+import * as wire from '../wire.ts';
 
 export function routes({ db }: ApiContext): Route[] {
-  const detail = (id: string) => actions.taskDetail(db, Number(id));
+  const detail = (id: string) => wire.taskDetail(db, Number(id));
   return [
     // Retry a done task with its PR's failing checks (and their logs) in the note.
     route<C.FixChecksResult>('POST', /^\/api\/tasks\/(\d+)\/fix-checks$/, async ({ params: [id] }) => {

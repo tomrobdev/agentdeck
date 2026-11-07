@@ -121,7 +121,7 @@ export function buildPrompt(
     '',
     interrupted ? `--- This is attempt ${task.attempts}. A daemon restart stopped an earlier run of it before it finished. ---` : '',
     verdict,
-    finished?.tests_passed === 0 ? 'The test command failed after the previous attempt.' : '',
+    finished?.tests_passed === false ? 'The test command failed after the previous attempt.' : '',
     finished?.result_text ? `Previous final message:\n${finished.result_text.slice(0, 4000)}` : '',
     'Your earlier commits are already on this branch. Continue from there.',
   ]

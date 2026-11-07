@@ -3,6 +3,7 @@ import type { Db } from '../../db/index.ts';
 import { finalNotification } from '../../domain/notification.ts';
 import type { PrEvent } from '../../domain/task/history.ts';
 import type { TaskEvent } from '../../domain/task/lifecycle.ts';
+import type { Needs } from '../../domain/task/needs.ts';
 import type { Task } from '../../domain/task/task.ts';
 import { warnStuckDependents } from './dependencies.ts';
 import { notifyLater } from '../notifications.ts';
@@ -19,7 +20,7 @@ export async function settle(
   db: Db,
   id: number,
   event: TaskEvent,
-  fields: { reason?: string | null; needs?: string | null } = {},
+  fields: { reason?: string | null; needs?: Needs | null } = {},
 ): Promise<Task | undefined> {
   if (!db.applyEvent(id, event, fields)) return undefined;
   return afterSettled(db, id, event.type !== 'pr_merged');

@@ -23,13 +23,13 @@ export function prCwd(db: Db, task: Task): string {
   return db.getRepo(task.repo_id)?.path ?? process.cwd();
 }
 
-/** The last run that ran the tests: 1 passed, 0 failed, null when none did. */
-export function lastTestsPassed(db: Db, id: number): number | null {
+/** Whether the last run that ran the tests passed them; null when none did. */
+export function lastTestsPassed(db: Db, id: number): boolean | null {
   return db.runsForTask(id).findLast((r) => r.tests_passed !== null)?.tests_passed ?? null;
 }
 
 /** The auto-merge check for a task's PR (read `withFiles`), or null when auto-merge is off for the task. */
-export function autoMergeFor(db: Db, task: Task, repo: Repo, pr: PrDetails, tests_passed: number | null): AutoMergeCheck | null {
+export function autoMergeFor(db: Db, task: Task, repo: Repo, pr: PrDetails, tests_passed: boolean | null): AutoMergeCheck | null {
   if (!autoMergeOn(task, repo)) return null;
   return autoMergeCheck({
     repo,

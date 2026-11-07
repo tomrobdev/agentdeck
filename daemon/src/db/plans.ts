@@ -2,6 +2,7 @@
 import { and, asc, desc, eq, ne, notInArray, sql } from 'drizzle-orm';
 import { type PlanSource, type TaskPlan, parsePlan, planFileName } from '../domain/plan/plan.ts';
 import type { Task } from '../domain/task/task.ts';
+import { readSteps } from './mappers.ts';
 import type { Orm } from './orm.ts';
 import { NOW_SQL, atomically } from './sql.ts';
 import { taskPlans, tasks } from './tables.ts';
@@ -102,7 +103,8 @@ export function planStore(db: DatabaseSync, orm: Orm) {
         .from(tasks)
         .where(and(eq(tasks.plan_task, task_id), notInArray(tasks.status, ['done', 'cancelled'])))
         .orderBy(asc(tasks.id))
-        .all();
+        .all()
+        .map((f) => ({ id: f.id, plan_steps: readSteps(f.plan_steps) }));
     },
     /** The task's plans, oldest first, without their HTML. */
     plansForTask(task_id: number): TaskPlan[] {

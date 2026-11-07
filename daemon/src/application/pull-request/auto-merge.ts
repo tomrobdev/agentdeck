@@ -80,7 +80,7 @@ export async function setAutoMerge(
   const value = object(patch).auto_merge;
   if (value !== null && typeof value !== 'boolean') throw new ActionError('auto_merge must be true, false or null');
   requireTask(db, id);
-  const task = db.setAutoMerge(id, value === null ? null : value ? 1 : 0)!;
+  const task = db.setAutoMerge(id, value)!;
   const repo = requireTaskRepo(db, task);
   const on = autoMergeOn(task, repo);
   if (!task.pr_url || !hasOpenPr(task)) return { auto_merge: on };

@@ -2,7 +2,7 @@
 import { and, asc, count, countDistinct, eq, gt, inArray, isNotNull, isNull, notInArray, or, sql } from 'drizzle-orm';
 import type { Run, RunKind } from '../domain/run/run.ts';
 import { RUNNING_STATUSES } from '../domain/task/task.ts';
-import { toRun } from './mappers.ts';
+import { stored, toRun } from './mappers.ts';
 import type { Orm } from './orm.ts';
 import { NOW_SQL } from './sql.ts';
 import { plannerRuns, runs, tasks } from './tables.ts';
@@ -62,7 +62,7 @@ export function runStore(orm: Orm) {
     },
     finishRun(id: number, r: Partial<Omit<Run, 'id' | 'task_id' | 'kind' | 'attempt' | 'started_at' | 'log_path'>>): void {
       // undefined means "not given" to Drizzle, but this has always written a given-as-undefined key as NULL.
-      const given = Object.fromEntries(Object.entries(r).map(([k, v]) => [k, v ?? null]));
+      const given = Object.fromEntries(Object.entries(stored(r)).map(([k, v]) => [k, v ?? null]));
       orm
         .update(runs)
         .set({ ...given, ended_at: NOW_SQL })

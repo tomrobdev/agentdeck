@@ -1,4 +1,4 @@
-// What a blocked task's worker said it needs. A task holds it in its `needs` column. Pure: no I/O.
+// What a blocked task's worker said it needs. A task holds it in its `needs`. Pure: no I/O.
 
 export type NeedsKind = 'deps' | 'host' | 'edit';
 const NEEDS_KINDS: string[] = ['deps', 'host', 'edit'];
@@ -20,16 +20,11 @@ export function parseNeeds(reason: string | undefined): Needs | undefined {
   return items.length ? { kind: m[1].toLowerCase() as NeedsKind, items } : undefined;
 }
 
-/** A task's `needs` column (JSON), or null when it has none or it is unreadable. */
-export function readNeeds(json: string | null): Needs | null {
-  if (!json) return null;
-  try {
-    const n = JSON.parse(json) as Partial<Needs>;
-    return n && typeof n.kind === 'string' && NEEDS_KINDS.includes(n.kind) && Array.isArray(n.items) ? (n as Needs) : null;
-  } catch {
-    return null;
-  }
-}
+/** Whether a stored value is a `Needs`: a known kind and a list of items. */
+export const isNeeds = (n: unknown): n is Needs => {
+  const v = n as Partial<Needs> | null;
+  return !!v && typeof v.kind === 'string' && NEEDS_KINDS.includes(v.kind) && Array.isArray(v.items);
+};
 
 /** Package managers the daemon installs with on a person's request, each with the lockfile it writes. */
 export const INSTALLERS = ['pnpm', 'yarn', 'npm'];

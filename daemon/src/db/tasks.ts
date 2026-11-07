@@ -18,7 +18,9 @@ import {
   type TaskSummary,
 } from '../domain/task/task.ts';
 import type { AttentionCandidate, AttentionWhy } from '../domain/daemon/headline.ts';
-import { SUMMARY_COLUMNS, TASK_COLUMNS, mapFound, toTask, toTaskSummary } from './mappers.ts';
+import type { UnblockQuestion } from '../domain/run/unblock.ts';
+import type { Needs } from '../domain/task/needs.ts';
+import { SUMMARY_COLUMNS, TASK_COLUMNS, mapFound, stored, toTask, toTaskSummary } from './mappers.ts';
 import type { Orm } from './orm.ts';
 import { insertOwnPlan, saveOwnPlan } from './plans.ts';
 import { NOW_SQL, atomically, changed, inActiveRepo as inActiveRepoOf } from './sql.ts';
@@ -133,7 +135,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
   const applyEvent = (
     id: number,
     event: TaskEvent,
-    opts: { reason?: string | null; needs?: string | null; onlyFrom?: TaskStatus[] } = {},
+    opts: { reason?: string | null; needs?: Needs | null; onlyFrom?: TaskStatus[] } = {},
   ): Task | undefined => {
     for (let attempt = 0; attempt < 3; attempt++) {
       const cur = getTask(id);
@@ -146,7 +148,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         const row = mapFound(
           orm
             .update(tasks)
-            .set({ status: next.to, ...given(next.changes), updated_at: NOW_SQL })
+            .set({ status: next.to, ...given(stored(next.changes)), updated_at: NOW_SQL })
             .where(and(eq(tasks.id, id), eq(tasks.status, cur.status), eq(tasks.attempts, cur.attempts), eq(tasks.restarts, cur.restarts)))
             .returning(TASK_COLUMNS)
             .get(),
@@ -175,7 +177,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       links?: { on: number; kind: LinkKind }[];
       /** The task whose plan this one follows. */
       plan_task?: number | null;
-      plan_steps?: string | null;
+      plan_steps?: string[] | null;
       /** A plan for the new task to own and follow (the caller has parsed it): stored under its numbered name, and linked. */
       own_plan?: string;
     }): Task {
@@ -194,7 +196,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
             status,
             source: n.source ?? 'manual',
             plan_task: n.plan_task ?? null,
-            plan_steps: n.plan_steps ?? null,
+            plan_steps: stored({ plan_steps: n.plan_steps ?? null }).plan_steps,
           })
           .run();
         const id = Number(info.lastInsertRowid);
@@ -300,15 +302,15 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         .map(toTask);
     },
     /**
-     * Leave an unblock run's question (JSON UnblockQuestion) on a blocked task, with an `unblock_ask` history row whose
+     * Leave an unblock run's question on a blocked task, with an `unblock_ask` history row whose
      * reason is the question. Guarded like every task write: only a blocked task, so a retry or a cancel made while the
      * run went is never undone. Returns false if the task was not blocked.
      */
-    recordQuestion(id: number, question: string, reason: string): boolean {
+    recordQuestion(id: number, question: UnblockQuestion, reason: string): boolean {
       return atomically(db, () => {
         const res = orm
           .update(tasks)
-          .set({ question, updated_at: NOW_SQL })
+          .set({ ...stored({ question }), updated_at: NOW_SQL })
           .where(and(eq(tasks.id, id), eq(tasks.status, 'blocked')))
           .run();
         if (!Number(res.changes)) return false;
@@ -401,7 +403,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         const edited = mapFound(
           orm
             .update(tasks)
-            .set({ ...given(fields), updated_at: NOW_SQL })
+            .set({ ...given(stored(fields)), updated_at: NOW_SQL })
             .where(and(eq(tasks.id, id), inArray(tasks.status, EDITABLE_STATUSES)))
             .returning(TASK_COLUMNS)
             .get(),
@@ -456,13 +458,13 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       const row = orm.select({ since: tasks.syncing_since }).from(tasks).where(eq(tasks.id, id)).get();
       return row?.since != null;
     },
-    /** Whether the daemon may merge the task's PR on its own: 1, 0, or null for the repo's setting. Not a status, so unguarded. */
-    setAutoMerge(id: number, value: 0 | 1 | null): Task | undefined {
+    /** Whether the daemon may merge the task's PR on its own: true, false, or null for the repo's setting. Not a status, so unguarded. */
+    setAutoMerge(id: number, value: boolean | null): Task | undefined {
       return mapFound(
         orm
           .update(tasks)
           // The stored check was made for the old setting, so it goes with it.
-          .set({ auto_merge: value, ...NO_AUTO_MERGE_CHECK, updated_at: NOW_SQL })
+          .set({ ...stored({ auto_merge: value }), ...NO_AUTO_MERGE_CHECK, updated_at: NOW_SQL })
           .where(eq(tasks.id, id))
           .returning(TASK_COLUMNS)
           .get(),

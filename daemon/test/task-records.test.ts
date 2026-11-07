@@ -36,9 +36,9 @@ test('clearing the plan of a task that owns one is refused, saying how to replac
   }
   const after = db.getTask(t.id)!;
   assert.equal(after.plan_task, t.id, 'it still follows its own plan');
-  assert.equal(after.plan_steps, '["a"]', 'its steps are not widened to every step');
+  assert.deepEqual(after.plan_steps, ['a'], 'its steps are not widened to every step');
   await editTask(db, t.id, { plan_steps: 'b' });
-  assert.equal(db.getTask(t.id)!.plan_steps, '["b"]', '--steps still works');
+  assert.deepEqual(db.getTask(t.id)!.plan_steps, ['b'], '--steps still works');
 });
 
 test('a claim between the edit check and the save leaves the plan unchanged', async () => {

@@ -84,19 +84,19 @@ let n = 0;
 function tested(o: { source?: 'manual' | 'planner'; title?: string } = {}) {
   const url = `https://x/pull/${++n}`;
   const t = doneTask(db, repo, { pr: 'open', url, branch: `agentdeck/pr-${n}`, ...o });
-  db.finishRun(db.startRun(t.id, 1, join(home, `run-${t.id}.log`)), { tests_passed: 1 });
+  db.finishRun(db.startRun(t.id, 1, join(home, `run-${t.id}.log`)), { tests_passed: true });
   return { id: t.id, url, branch: t.branch };
 }
 
 // ---- The check
 
 const repoRow = { test_cmd: 'pnpm test', auto_merge_max_lines: 400, auto_merge_skip: '[".github/"]' };
-const check = (pr: Partial<PrDetails> = {}, o: { tests_passed?: number | null; paused?: string | null; test_cmd?: string | null } = {}) =>
+const check = (pr: Partial<PrDetails> = {}, o: { tests_passed?: boolean | null; paused?: string | null; test_cmd?: string | null } = {}) =>
   autoMergeCheck({
     repo: { ...repoRow, test_cmd: o.test_cmd === undefined ? repoRow.test_cmd : o.test_cmd },
     pr_state: 'open',
     pr: { ...ready, ...pr },
-    tests_passed: o.tests_passed === undefined ? 1 : o.tests_passed,
+    tests_passed: o.tests_passed === undefined ? true : o.tests_passed,
     paused: o.paused ?? null,
   });
 
@@ -104,11 +104,11 @@ test('autoMergeOn: the task wins, else the repo; a planner proposal only when a 
   const on = { auto_merge: 1, auto_approve: 0 };
   assert.equal(autoMergeOn({ auto_merge: null, source: 'manual' }, on), true);
   assert.equal(autoMergeOn({ auto_merge: null, source: 'manual' }, { ...on, auto_merge: 0 }), false);
-  assert.equal(autoMergeOn({ auto_merge: 0, source: 'manual' }, on), false);
-  assert.equal(autoMergeOn({ auto_merge: 1, source: 'manual' }, { ...on, auto_merge: 0 }), true);
+  assert.equal(autoMergeOn({ auto_merge: false, source: 'manual' }, on), false);
+  assert.equal(autoMergeOn({ auto_merge: true, source: 'manual' }, { ...on, auto_merge: 0 }), true);
   assert.equal(autoMergeOn({ auto_merge: null, source: 'planner' }, on), true, 'auto_approve off: a person queued it');
   assert.equal(autoMergeOn({ auto_merge: null, source: 'planner' }, { ...on, auto_approve: 1 }), false);
-  assert.equal(autoMergeOn({ auto_merge: 1, source: 'planner' }, { ...on, auto_approve: 1 }), true);
+  assert.equal(autoMergeOn({ auto_merge: true, source: 'planner' }, { ...on, auto_approve: 1 }), true);
 });
 
 test('autoMergeCheck: a clean, tested, labelled PR merges; a draft too', () => {
@@ -122,7 +122,7 @@ test('autoMergeCheck: what needs a person', () => {
   const reasons = (pr: Partial<PrDetails>, o = {}) => check(pr, o);
   assert.deepEqual(reasons({ labels: [] }), { verdict: 'never', reasons: [`the PR has no ${AUTO_MERGE_LABEL.name} label`] });
   assert.deepEqual(reasons({ checks: { total: 2, failing: 1, pending: 0 } }).reasons, ['1 check failing on GitHub']);
-  assert.deepEqual(reasons({}, { tests_passed: 0 }).reasons, ['tests failed on the last run']);
+  assert.deepEqual(reasons({}, { tests_passed: false }).reasons, ['tests failed on the last run']);
   assert.deepEqual(reasons({}, { tests_passed: null }).reasons, ['the tests have not run']);
   assert.deepEqual(reasons({ checks: { total: 0, failing: 0, pending: 0 } }, { test_cmd: null, tests_passed: null }).reasons, [
     'nothing tested it: the repo has no test command and the PR no checks',
@@ -144,7 +144,7 @@ test('autoMergeCheck: a PR touching .claude/ needs a person, even with an empty 
       repo: { ...repoRow, auto_merge_skip },
       pr_state: 'open',
       pr: { ...ready, paths },
-      tests_passed: 1,
+      tests_passed: true,
       paused: null,
     });
     assert.deepEqual(verdict, { verdict: 'never', reasons: [why] }, auto_merge_skip);
@@ -171,7 +171,7 @@ test('autoMergeCheck: with auto_resolve off a conflict needs a person and names 
     repo: repoRow,
     pr_state: 'open',
     pr: { ...ready, ...conflict },
-    tests_passed: 1,
+    tests_passed: true,
     paused: null,
     auto_resolve: false,
   });
@@ -181,7 +181,7 @@ test('autoMergeCheck: with auto_resolve off a conflict needs a person and names 
     repo: repoRow,
     pr_state: 'open',
     pr: { ...ready, ...conflict },
-    tests_passed: 1,
+    tests_passed: true,
     paused: null,
     auto_resolve: true,
   });
@@ -373,7 +373,7 @@ test('a gh merge failure on a PR that is already merged sends no "Could not merg
 test('setAutoMerge overrides the repo for one task and moves the label on its open PR', async () => {
   const t = tested();
   assert.deepEqual(await setAutoMerge(db, t.id, { auto_merge: false }), { auto_merge: false });
-  assert.equal(db.getTask(t.id)!.auto_merge, 0);
+  assert.equal(db.getTask(t.id)!.auto_merge, false);
   assert.deepEqual(gh.labelled, [{ url: t.url, on: false }]);
   assert.equal((await mergePreview(db, t.id)).auto_merge, null);
 
@@ -391,7 +391,7 @@ test('setAutoMerge overrides the repo for one task and moves the label on its op
   };
   try {
     assert.deepEqual(await setAutoMerge(db, t.id, { auto_merge: true }), { auto_merge: true, label_error: 'HTTP 403' });
-    assert.equal(db.getTask(t.id)!.auto_merge, 1, 'the setting is kept');
+    assert.equal(db.getTask(t.id)!.auto_merge, true, 'the setting is kept');
   } finally {
     github.setLabel = async (url, _cwd, _label, on) => void gh.labelled.push({ url, on });
   }

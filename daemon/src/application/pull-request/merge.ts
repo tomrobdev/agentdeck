@@ -2,6 +2,7 @@
 import { removeWorktree } from '../../adapters/git.ts';
 import { github } from '../../adapters/github.ts';
 import type { Db } from '../../db/index.ts';
+import { stored } from '../../db/mappers.ts';
 import {
   MERGE_METHODS,
   type MergeMethod,
@@ -108,7 +109,7 @@ export async function mergePreview(db: Db, id: number): Promise<MergePreview> {
     files: pr.files,
     additions: pr.additions,
     deletions: pr.deletions,
-    tests_passed,
+    tests_passed: stored({ tests_passed }).tests_passed, // the API keeps 1, 0 or null
     checks: pr.checks,
     ...mergeCheck({ pr_state: task.pr_state, pr, tests_passed, lands_after }),
     conflicting: isConflicting(pr),

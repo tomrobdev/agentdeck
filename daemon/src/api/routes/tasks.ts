@@ -4,9 +4,10 @@ import { TASK_STATUSES } from '../../domain/task/lifecycle.ts';
 import type * as C from '../contract.ts';
 import { type ApiContext, BadRequest, type Route, idsField, route } from '../http.ts';
 import { streamLog } from '../log-stream.ts';
+import * as wire from '../wire.ts';
 
 export function routes({ db, scheduler }: ApiContext): Route[] {
-  const detail = (id: string) => actions.taskDetail(db, Number(id));
+  const detail = (id: string) => wire.taskDetail(db, Number(id));
   return [
     route<C.TaskSummary[]>('GET', /^\/api\/tasks$/, ({ query }) => {
       const param = query.get('status');
@@ -15,12 +16,12 @@ export function routes({ db, scheduler }: ApiContext): Route[] {
       const status = param as actions.TaskStatus | null;
       const limit = Math.min(Math.max(Math.floor(Number(query.get('limit'))) || 200, 1), 1000);
       const before = Number(query.get('before')) || undefined;
-      return actions.taskViews(db, { status: status ?? undefined, limit, before });
+      return wire.taskViews(db, { status: status ?? undefined, limit, before });
     }),
     route<C.TaskSaved>('POST', /^\/api\/tasks$/, async ({ body }) => {
       const links = { builds_on: idsField(body, 'builds_on'), after: idsField(body, 'after') };
       const task = await actions.addTask(db, { ...body, ...links } as Parameters<typeof actions.addTask>[1]);
-      return { ...(await actions.taskDetail(db, task.id)), warnings: await actions.promptWarnings(db, task.id) };
+      return { ...(await wire.taskDetail(db, task.id)), warnings: await actions.promptWarnings(db, task.id) };
     }),
     route<C.TaskDetail>('GET', /^\/api\/tasks\/(\d+)$/, ({ params: [id] }) => detail(id)),
     route<C.TaskSaved>('POST', /^\/api\/tasks\/(\d+)$/, async ({ params: [id], body }) => {

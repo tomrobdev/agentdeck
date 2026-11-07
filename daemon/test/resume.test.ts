@@ -173,7 +173,13 @@ test('the resume prompt says what happened and where to look; a fresh run after 
 });
 
 test('a fresh run after a restart still names the earlier attempt’s failed tests and final message', () => {
-  const failed = run({ attempt: 1, outcome: 'failed', tests_passed: 0, result_text: 'Added the cache.\nSTATUS: DONE', session_id: 's1' });
+  const failed = run({
+    attempt: 1,
+    outcome: 'failed',
+    tests_passed: false,
+    result_text: 'Added the cache.\nSTATUS: DONE',
+    session_id: 's1',
+  });
   const prompt = buildPrompt({ ...task, attempts: 2 }, [failed, run({ attempt: 2, session_id: null })]);
   assert.match(prompt, /--- This is attempt 2\. A daemon restart stopped an earlier run of it before it finished\. ---/);
   assert.match(prompt, /Before that, the previous attempt ended as "failed"\./);
