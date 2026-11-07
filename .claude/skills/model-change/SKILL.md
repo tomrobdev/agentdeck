@@ -7,9 +7,9 @@ description: Change AgentDeck's domain model end to end: a new or changed field 
 
 Follow the steps in order; `pnpm typecheck` and `pnpm db:check` fail until the pieces agree.
 
-1. **Type.** Add the field to the aggregate's type in `daemon/src/domain/<aggregate>/`, and the decision that uses it as a pure function there. Say it in the words of CLAUDE.md's Domain language.
+1. **Type.** Add the field to the aggregate's type in `daemon/src/domain/<aggregate>/`, and the decision that uses it as a pure function there. Say it in the words of `GLOSSARY.md`.
 2. **Table.** Add the column to its table in `daemon/src/db/tables.ts`. Where a store maps a row to a richer type, change that mapper too. `daemon/src/db/types-check.ts` fails typecheck when a row and its domain type differ.
-3. **Migration.** Run `pnpm db:generate`, which prints the SQL, and append it as a new step in `daemon/src/db/schema.ts`. Never edit a shipped step. Run `pnpm db:check`.
+3. **Migration.** Run `pnpm db:generate`, which prints the SQL, and append it as a new step in `daemon/src/db/schema.ts`. Never edit a shipped step, and only add: a rename or drop breaks a daemon still running older code, so add a column and stop reading the old one. Run `pnpm db:check`.
 4. **Store.** Use the column in the store's queries. A status change stays a guarded `UPDATE … WHERE status IN (…)` through `applyEvent`.
 5. **Contract.** If the dashboard needs it, add it to `daemon/src/api/contract.ts` (flat, imports only types from `domain/`). `daemon/src/api/contract-check.ts` checks request types against the use cases. Dashboard code imports them through `app/src/api/types.ts`.
 6. **Generated docs.** Run `pnpm docs:gen` (the edit hook does it after edits under `daemon/src`) so `docs/architecture.md` is not stale.

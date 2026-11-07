@@ -382,6 +382,32 @@ test('[migrations-append] shipped migration steps are unchanged', () => {
   assert.deepEqual(found, []);
 });
 
+/** The last step that renames or drops. Step 29's rename crashed the running daemon's worker for task 204. */
+const LAST_BREAKING_STEP = 29;
+
+/** The 1-based numbers of the steps after `after` that rename or drop. A function step is judged by its source. */
+const breakingSteps = (steps: readonly unknown[], after: number): number[] =>
+  steps.flatMap((step, i) => (i >= after && /\b(RENAME|DROP)\b/i.test(String(step)) ? [i + 1] : []));
+
+test('[migrations-append] a new migration step only adds', () => {
+  // Any process migrates when it opens the database, so the CLI on freshly pulled code migrates while a daemon on older code runs.
+  const found = breakingSteps(MIGRATIONS, LAST_BREAKING_STEP).map(
+    (n) => `step ${n} renames or drops: a daemon still on older code would fail its queries. Add a column and stop reading the old one`,
+  );
+  assert.deepEqual(found, []);
+});
+
+test('[migrations-append] the additive check finds renames and drops, in SQL and in function steps', () => {
+  const steps = [
+    'ALTER TABLE a RENAME COLUMN b TO c;',
+    'ALTER TABLE a ADD COLUMN d TEXT;',
+    'alter table a drop column d;',
+    () => 'DROP TABLE a',
+  ];
+  assert.deepEqual(breakingSteps(steps, 0), [1, 3, 4]);
+  assert.deepEqual(breakingSteps(steps, 1), [3, 4]);
+});
+
 /** Module-level state in application/ that is allowed, each with why. Keys are `<file>:<name>`. */
 const ALLOWED_MODULE_STATE: Record<string, string> = {
   'application/sync.ts:syncing': 'the sync lock: a task being synced in this process; the database is the state the processes share',
