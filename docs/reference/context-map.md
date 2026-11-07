@@ -10,6 +10,7 @@ flowchart LR
   domain_branch["domain/branch"]
   domain_daemon["domain/daemon"]
   domain_files["domain/files"]
+  domain_id["domain/id"]
   domain_plan["domain/plan"]
   domain_planner["domain/planner"]
   domain_pull_request["domain/pull-request"]
@@ -19,22 +20,30 @@ flowchart LR
   domain_settings["domain/settings"]
   domain_task["domain/task"]
   domain_usage["domain/usage"]
+  domain -.-> domain_id
   domain -.->|cycle| domain_task
   domain_branch -->|cycle| domain
   domain_branch -->|cycle| domain_run
   domain_branch -.->|cycle| domain_task
   domain_daemon --> domain
+  domain_daemon -.-> domain_id
   domain_files --> domain
+  domain_plan -.-> domain_id
   domain_planner --> domain
+  domain_planner -.-> domain_id
   domain_planner -.-> domain_repo
   domain_planner --> domain_task
   domain_pull_request -->|cycle| domain
+  domain_pull_request -.-> domain_id
   domain_pull_request -.->|cycle| domain_repo
   domain_pull_request -->|cycle| domain_run
+  domain_repo -.-> domain_id
   domain_repo -.->|cycle| domain_pull_request
   domain_review -->|cycle| domain
+  domain_review -.-> domain_id
   domain_run -->|cycle| domain
   domain_run -->|cycle| domain_branch
+  domain_run -.-> domain_id
   domain_run --> domain_plan
   domain_run -->|cycle| domain_pull_request
   domain_run -->|cycle| domain_repo
@@ -45,6 +54,7 @@ flowchart LR
   domain_settings -.-> domain_planner
   domain_settings -.-> domain_usage
   domain_task -->|cycle| domain
+  domain_task --> domain_id
   domain_task -.->|cycle| domain_pull_request
   domain_task -.->|cycle| domain_run
   domain_task -.->|cycle| domain_usage

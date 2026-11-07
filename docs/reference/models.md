@@ -13,7 +13,7 @@ The exported interfaces and object types of `domain/`, grouped by folder, with t
 | `kind`     | `NotifyKind \| "test"`        |         |
 | `title`    | `string`                      |         |
 | `body`     | `string`                      |         |
-| `task_id?` | `number \| null \| undefined` |         |
+| `task_id?` | `TaskId \| null \| undefined` |         |
 
 ### NotifySettings
 
@@ -42,7 +42,7 @@ An attention candidate: a task that needs a person, with the priority it is orde
 | Field      | Type           | Comment |
 | ---------- | -------------- | ------- |
 | `priority` | `number`       |         |
-| `id`       | `number`       |         |
+| `id`       | `TaskId`       |         |
 | `title`    | `string`       |         |
 | `why`      | `AttentionWhy` |         |
 
@@ -50,7 +50,7 @@ An attention candidate: a task that needs a person, with the priority it is orde
 
 | Field   | Type           | Comment |
 | ------- | -------------- | ------- |
-| `id`    | `number`       |         |
+| `id`    | `TaskId`       |         |
 | `title` | `string`       |         |
 | `why`   | `AttentionWhy` |         |
 
@@ -169,7 +169,7 @@ A task in running (or being cancelled) and the process of its unfinished run, if
 
 | Field           | Type             | Comment                                                                                                     |
 | --------------- | ---------------- | ----------------------------------------------------------------------------------------------------------- |
-| `id`            | `number`         |                                                                                                             |
+| `id`            | `TaskId`         |                                                                                                             |
 | `pid`           | `number \| null` | The recorded pid of its unfinished run; null when there is none or none was recorded yet.                   |
 | `alive`         | `boolean`        | Whether that process group is alive.                                                                        |
 | `runAgeSeconds` | `number \| null` | Seconds since its run started (the run row, before setup and the sync); null when it has no unfinished run. |
@@ -289,7 +289,7 @@ A stored plan as the API returns it: parsed, without its HTML.
 | Field        | Type             | Comment                                                                                  |
 | ------------ | ---------------- | ---------------------------------------------------------------------------------------- |
 | `id`         | `number`         |                                                                                          |
-| `task_id`    | `number`         | the task the plan belongs to: the one it was first attached to                           |
+| `task_id`    | `TaskId`         | the task the plan belongs to: the one it was first attached to                           |
 | `name`       | `string`         | `<task id>-<slug>.html` (planFileName); older plans keep the name they were stored under |
 | `source`     | `PlanSource`     |                                                                                          |
 | `created_at` | `string`         |                                                                                          |
@@ -305,8 +305,8 @@ A stored plan as the API returns it: parsed, without its HTML.
 
 | Field        | Type                     | Comment                                                              |
 | ------------ | ------------------------ | -------------------------------------------------------------------- |
-| `id`         | `number`                 |                                                                      |
-| `repo_id`    | `number`                 |                                                                      |
+| `id`         | `PlannerRunId`           |                                                                      |
+| `repo_id`    | `RepoId`                 |                                                                      |
 | `started_at` | `string`                 |                                                                      |
 | `ended_at`   | `string \| null`         |                                                                      |
 | `outcome`    | `PlannerOutcome \| null` |                                                                      |
@@ -377,7 +377,7 @@ What a task says about its own auto-merge: its setting (null follows the repo) a
 | `state`      | `AutoMergeState`                                        |                                                                                                                            |
 | `label`      | `string`                                                | One short phrase for a list row: "will auto-merge", "needs a person to merge: …".                                          |
 | `reasons`    | `string[]`                                              | Why it waits or needs a person; for a task with no open PR, how the branch measures against the limits.                    |
-| `source`     | `"planner" \| "task" \| "repo"`                         | Where on or off comes from: the task's own setting, its repo's, or (planner) off because the repo auto-approves proposals. |
+| `source`     | `"task" \| "planner" \| "repo"`                         | Where on or off comes from: the task's own setting, its repo's, or (planner) off because the repo auto-approves proposals. |
 | `checked_at` | `string \| null`                                        | When the PR refresh made the check; null when no check counts.                                                             |
 | `limits`     | `{ max_lines: number; skip: string[]; tests: string; }` |                                                                                                                            |
 
@@ -609,7 +609,7 @@ What the PR refresh keeps on a task (`tasks.pr_checks`): the latest checks and w
 
 | Field                  | Type               | Comment                                                                                                 |
 | ---------------------- | ------------------ | ------------------------------------------------------------------------------------------------------- |
-| `id`                   | `number`           |                                                                                                         |
+| `id`                   | `RepoId`           |                                                                                                         |
 | `name`                 | `string`           |                                                                                                         |
 | `path`                 | `string`           |                                                                                                         |
 | `base_branch`          | `string`           |                                                                                                         |
@@ -658,8 +658,8 @@ One review of a task. A draft has no `submitted_at` and no `kind` yet.
 
 | Field          | Type                                     | Comment           |
 | -------------- | ---------------------------------------- | ----------------- |
-| `id`           | `number`                                 |                   |
-| `task_id`      | `number`                                 |                   |
+| `id`           | `ReviewId`                               |                   |
+| `task_id`      | `TaskId`                                 |                   |
 | `kind`         | `"comment" \| "request_changes" \| null` |                   |
 | `body`         | `string`                                 | The overall note. |
 | `created_at`   | `string`                                 |                   |
@@ -672,7 +672,7 @@ A line comment on the task's diff.
 | Field         | Type                                 | Comment                                                     |
 | ------------- | ------------------------------------ | ----------------------------------------------------------- |
 | `id`          | `number`                             |                                                             |
-| `review_id`   | `number`                             |                                                             |
+| `review_id`   | `ReviewId`                           |                                                             |
 | `path`        | `string`                             |                                                             |
 | `line`        | `number`                             |                                                             |
 | `side`        | `"old" \| "new"`                     |                                                             |
@@ -698,8 +698,8 @@ A review with its comments, oldest first.
 
 | Field          | Type                                     | Comment           |
 | -------------- | ---------------------------------------- | ----------------- |
-| `id`           | `number`                                 |                   |
-| `task_id`      | `number`                                 |                   |
+| `id`           | `ReviewId`                               |                   |
+| `task_id`      | `TaskId`                                 |                   |
 | `kind`         | `"comment" \| "request_changes" \| null` |                   |
 | `body`         | `string`                                 | The overall note. |
 | `created_at`   | `string`                                 |                   |
@@ -864,8 +864,8 @@ The parts of claude's final `result` event that a run records.
 
 | Field                | Type                 | Comment                                                                                          |
 | -------------------- | -------------------- | ------------------------------------------------------------------------------------------------ |
-| `id`                 | `number`             |                                                                                                  |
-| `task_id`            | `number`             |                                                                                                  |
+| `id`                 | `RunId`              |                                                                                                  |
+| `task_id`            | `TaskId`             |                                                                                                  |
 | `kind`               | `RunKind`            |                                                                                                  |
 | `attempt`            | `number`             | a resolve or unblock run carries the attempt it ran beside                                       |
 | `started_at`         | `string`             |                                                                                                  |
@@ -917,8 +917,8 @@ One row of a task's history (`task_events`), with the task's repo.
 
 | Field         | Type             | Comment |
 | ------------- | ---------------- | ------- |
-| `task_id`     | `number`         |         |
-| `repo_id`     | `number`         |         |
+| `task_id`     | `TaskId`         |         |
+| `repo_id`     | `RepoId`         |         |
 | `type`        | `string`         |         |
 | `from_status` | `string \| null` |         |
 | `to_status`   | `string \| null` |         |
@@ -932,7 +932,7 @@ One row of a task's history (`task_events`), with the task's repo.
 | `tasks`    | `ScorecardTaskRow[]`     |                                                                                                       |
 | `events`   | `ScorecardEvent[]`       |                                                                                                       |
 | `samples`  | `QuotaSample[]`          |                                                                                                       |
-| `repoName` | `(id: number) => string` |                                                                                                       |
+| `repoName` | `(id: RepoId) => string` |                                                                                                       |
 | `since?`   | `string \| undefined`    | Only tasks created, interventions made and quota seen at or after this stamp ("YYYY-MM-DD HH:MM:SS"). |
 | `by?`      | `"week" \| undefined`    |                                                                                                       |
 
@@ -954,8 +954,8 @@ A task with auto-merge made into the time it is known to have been on.
 | Field              | Type                  | Comment                                                                                                                                                                                                                                                                                     |
 | ------------------ | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `auto_merge_from`  | `string \| null`      | When auto-merge was known to be on for the task: always ('') if the task turned it on itself, from the repo's first auto-merge if the repo has it on (the database keeps only the setting as it is now, so a merge from before the setting existed must not count), never (null) otherwise. |
-| `id`               | `number`              |                                                                                                                                                                                                                                                                                             |
-| `repo_id`          | `number`              |                                                                                                                                                                                                                                                                                             |
+| `id`               | `TaskId`              |                                                                                                                                                                                                                                                                                             |
+| `repo_id`          | `RepoId`              |                                                                                                                                                                                                                                                                                             |
 | `created_at`       | `string`              |                                                                                                                                                                                                                                                                                             |
 | `pr_checks_opened` | `CheckCounts \| null` | The PR's checks the first time they settled after it opened; null if never recorded (or unreadable).                                                                                                                                                                                        |
 
@@ -965,8 +965,8 @@ The fields of a task the scorecard reads, as the database has them.
 
 | Field              | Type                  | Comment                                                                                              |
 | ------------------ | --------------------- | ---------------------------------------------------------------------------------------------------- |
-| `id`               | `number`              |                                                                                                      |
-| `repo_id`          | `number`              |                                                                                                      |
+| `id`               | `TaskId`              |                                                                                                      |
+| `repo_id`          | `RepoId`              |                                                                                                      |
 | `created_at`       | `string`              |                                                                                                      |
 | `auto_merge`       | `boolean \| null`     | The task's own auto-merge setting; null follows the repo.                                            |
 | `repo_auto_merge`  | `boolean`             |                                                                                                      |
@@ -978,8 +978,8 @@ One work run with the status of the task it belongs to. Resolve runs are never g
 
 | Field         | Type             | Comment                             |
 | ------------- | ---------------- | ----------------------------------- |
-| `repo_id`     | `number`         |                                     |
-| `task_id`     | `number`         |                                     |
+| `repo_id`     | `RepoId`         |                                     |
+| `task_id`     | `TaskId`         |                                     |
 | `attempt`     | `number`         |                                     |
 | `outcome`     | `string \| null` | null while the run has not finished |
 | `started_at`  | `string`         |                                     |
@@ -1070,8 +1070,8 @@ A task stopped until something changes.
 
 | Field          | Type                      | Comment                                                                                                       |
 | -------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `id`           | `number`                  |                                                                                                               |
-| `repo_id`      | `number`                  |                                                                                                               |
+| `id`           | `TaskId`                  |                                                                                                               |
+| `repo_id`      | `RepoId`                  |                                                                                                               |
 | `title`        | `string`                  |                                                                                                               |
 | `prompt`       | `string`                  |                                                                                                               |
 | `priority`     | `number`                  |                                                                                                               |
@@ -1128,7 +1128,7 @@ A history row with its task's title.
 | Field         | Type                 | Comment            |
 | ------------- | -------------------- | ------------------ |
 | `id`          | `number`             |                    |
-| `task_id`     | `number`             |                    |
+| `task_id`     | `TaskId`             |                    |
 | `type`        | `TaskEventType`      |                    |
 | `from_status` | `TaskStatus \| null` | null for 'created' |
 | `to_status`   | `TaskStatus \| null` |                    |
@@ -1163,7 +1163,7 @@ An open task as the digest shows it.
 
 | Field              | Type                                                     | Comment                                                                                                         |
 | ------------------ | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `id`               | `number`                                                 |                                                                                                                 |
+| `id`               | `TaskId`                                                 |                                                                                                                 |
 | `title`            | `string`                                                 |                                                                                                                 |
 | `status`           | `TaskStatus`                                             |                                                                                                                 |
 | `pr_state`         | `PrState \| null`                                        |                                                                                                                 |
@@ -1195,8 +1195,8 @@ A task that ran out of attempts.
 
 | Field     | Type       | Comment |
 | --------- | ---------- | ------- |
-| `task_id` | `number`   |         |
-| `on`      | `number`   |         |
+| `task_id` | `TaskId`   |         |
+| `on`      | `TaskId`   |         |
 | `kind`    | `LinkKind` |         |
 
 ### LinkIndex
@@ -1205,9 +1205,9 @@ What the link functions read: a task's links, the tasks that depend on it (throu
 
 | Field          | Type                                                                | Comment |
 | -------------- | ------------------------------------------------------------------- | ------- |
-| `linksOf`      | `(id: number) => Link[]`                                            |         |
-| `dependentsOf` | `(id: number) => { id: number; status: string; kind: LinkKind; }[]` |         |
-| `target`       | `(id: number) => LinkTarget \| undefined`                           |         |
+| `linksOf`      | `(id: TaskId) => Link[]`                                            |         |
+| `dependentsOf` | `(id: TaskId) => { id: TaskId; status: string; kind: LinkKind; }[]` |         |
+| `target`       | `(id: TaskId) => LinkTarget \| undefined`                           |         |
 
 ### LinkTarget
 
@@ -1225,7 +1225,7 @@ A dependency, and the links it has itself (stuck spreads down its builds-on link
 | Field      | Type                          | Comment                                                                                         |
 | ---------- | ----------------------------- | ----------------------------------------------------------------------------------------------- |
 | `states`   | `string[]`                    | State or group names; a task matching any of them is kept. Empty keeps every task.              |
-| `repo_id?` | `number \| undefined`         |                                                                                                 |
+| `repo_id?` | `RepoId \| undefined`         |                                                                                                 |
 | `repos?`   | `string[] \| undefined`       | Repo names (`?` for a task without one); a task in any of them is kept. Empty keeps every task. |
 | `source?`  | `string \| null \| undefined` |                                                                                                 |
 | `search?`  | `string \| undefined`         | Matches `#id` or an id prefix, or text in the title, repo, branch, model or blocked reason.     |
@@ -1236,8 +1236,8 @@ A dependency, and the links it has itself (stuck spreads down its builds-on link
 | Field         | Type                                                                                                          | Comment |
 | ------------- | ------------------------------------------------------------------------------------------------------------- | ------- |
 | `waiting`     | `Waiting \| null`                                                                                             |         |
-| `id`          | `number`                                                                                                      |         |
-| `repo_id`     | `number`                                                                                                      |         |
+| `id`          | `TaskId`                                                                                                      |         |
+| `repo_id`     | `RepoId`                                                                                                      |         |
 | `title`       | `string`                                                                                                      |         |
 | `priority`    | `number`                                                                                                      |         |
 | `model`       | `string`                                                                                                      |         |
@@ -1258,8 +1258,8 @@ A task as listed: with where it stands on its builds-on links (as waitingFor rep
 | Field          | Type                                                                                                          | Comment                                                                                                       |
 | -------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | `auto_merge`   | `boolean \| null`                                                                                             | overrides the repo's auto_merge; null = the repo's (domain/pull-request/auto-merge.ts)                        |
-| `id`           | `number`                                                                                                      |                                                                                                               |
-| `repo_id`      | `number`                                                                                                      |                                                                                                               |
+| `id`           | `TaskId`                                                                                                      |                                                                                                               |
+| `repo_id`      | `RepoId`                                                                                                      |                                                                                                               |
 | `created_at`   | `string`                                                                                                      |                                                                                                               |
 | `pr`           | `PullRequest \| null`                                                                                         | the task's pull request, as one value                                                                         |
 | `attempts`     | `number`                                                                                                      |                                                                                                               |
@@ -1309,7 +1309,7 @@ A task as far as its plan goes.
 
 | Field  | Type               | Comment |
 | ------ | ------------------ | ------- |
-| `id`   | `number`           |         |
+| `id`   | `TaskId`           |         |
 | `plan` | `PlanLink \| null` |         |
 
 ### PlanLink
@@ -1318,7 +1318,7 @@ A task's link to a plan: the task whose plan it follows (itself when its own pla
 
 | Field   | Type               | Comment |
 | ------- | ------------------ | ------- |
-| `task`  | `number`           |         |
+| `task`  | `TaskId`           |         |
 | `steps` | `string[] \| null` |         |
 
 ### QueueState
@@ -1344,8 +1344,8 @@ The fields a state carries, each null where its status has none: how the columns
 
 | Field          | Type                                                                                                          | Comment                                                                                                       |
 | -------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `id`           | `number`                                                                                                      |                                                                                                               |
-| `repo_id`      | `number`                                                                                                      |                                                                                                               |
+| `id`           | `TaskId`                                                                                                      |                                                                                                               |
+| `repo_id`      | `RepoId`                                                                                                      |                                                                                                               |
 | `title`        | `string`                                                                                                      |                                                                                                               |
 | `prompt`       | `string`                                                                                                      |                                                                                                               |
 | `priority`     | `number`                                                                                                      |                                                                                                               |
@@ -1369,8 +1369,8 @@ What every task has, whatever its status.
 
 | Field          | Type                  | Comment                                                                                                       |
 | -------------- | --------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `id`           | `number`              |                                                                                                               |
-| `repo_id`      | `number`              |                                                                                                               |
+| `id`           | `TaskId`              |                                                                                                               |
+| `repo_id`      | `RepoId`              |                                                                                                               |
 | `title`        | `string`              |                                                                                                               |
 | `prompt`       | `string`              |                                                                                                               |
 | `priority`     | `number`              |                                                                                                               |
@@ -1402,7 +1402,7 @@ The counters an event sets, with their new values. A counter not listed is left 
 | Field         | Type                 | Comment            |
 | ------------- | -------------------- | ------------------ |
 | `id`          | `number`             |                    |
-| `task_id`     | `number`             |                    |
+| `task_id`     | `TaskId`             |                    |
 | `type`        | `TaskEventType`      |                    |
 | `from_status` | `TaskStatus \| null` | null for 'created' |
 | `to_status`   | `TaskStatus \| null` |                    |
@@ -1414,8 +1414,8 @@ The counters an event sets, with their new values. A counter not listed is left 
 | Field          | Type                                                                                                          | Comment                                                                                                       |
 | -------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | `auto_merge`   | `boolean \| null`                                                                                             | overrides the repo's auto_merge; null = the repo's (domain/pull-request/auto-merge.ts)                        |
-| `id`           | `number`                                                                                                      |                                                                                                               |
-| `repo_id`      | `number`                                                                                                      |                                                                                                               |
+| `id`           | `TaskId`                                                                                                      |                                                                                                               |
+| `repo_id`      | `RepoId`                                                                                                      |                                                                                                               |
 | `created_at`   | `string`                                                                                                      |                                                                                                               |
 | `pr`           | `PullRequest \| null`                                                                                         | the task's pull request, as one value                                                                         |
 | `attempts`     | `number`                                                                                                      |                                                                                                               |
@@ -1464,7 +1464,7 @@ What a queued task that builds on others is waiting for, or null if it isn't wai
 
 | Field   | Type             | Comment                                                                                        |
 | ------- | ---------------- | ---------------------------------------------------------------------------------------------- |
-| `on`    | `number[]`       | Every task it builds on that is still on its way; or, when stuck, the one root it is stuck on. |
+| `on`    | `TaskId[]`       | Every task it builds on that is still on its way; or, when stuck, the one root it is stuck on. |
 | `stuck` | `string \| null` | Set when what it waits for won't get there on its own; null while it is on its way.            |
 
 ## `domain/usage/`
