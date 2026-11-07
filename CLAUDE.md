@@ -6,20 +6,9 @@ macOS daemon that works through a queue of coding tasks with `claude -p`, one gi
 
 `pnpm test` · `pnpm typecheck` · `pnpm format` · `pnpm check:fast` (`format:check`, `typecheck`, `db:check`, `test`) · `pnpm check` (`check:fast`, then the SIGKILL crash test, `CRASH_ITERATIONS` runs, default 10) · `pnpm docs:gen` (generate the architecture docs) · `pnpm rules` (print each rule with its checks) · `pnpm check:rust` (fmt, clippy and tests of `app/src-tauri`; not part of `pnpm check`, CI runs it via `.github/workflows/rust.yml` whenever `app/src-tauri` changes) · `node daemon/scripts/crash-test.mjs 10` (the crash test alone)
 
-## Domain language
+@GLOSSARY.md
 
-Use these words in code, logs and UI.
-
-- **Repo:** a registered git repo with a base branch, a test command and goals.
-- **Task:** one unit of work on a repo. It moves through statuses: `proposed → queued → running → done | blocked | failed | cancelled`. A cancel during a run goes through `cancel_requested`.
-- **Stop reason:** why a task ended blocked or failed, in a line.
-- **Link:** one task depending on another, of one of two kinds. **Builds on:** B uses A's code, so B starts once A is done and merged, and B's branch includes A's work; if A is rejected, B is stuck. **After:** B only has to land after A, so B runs any time on its own branch from the base, and only its merge waits for A's. A task's links are its **dependencies**; the tasks linked to it are its **dependents**. Not a task's **Needs**, which are what a blocked worker asked for.
-- **Run:** one attempt at a task, one `claude` process. A task has at most `max_attempts` runs, and a retry continues on the same branch. A **resolve run** (`kind = 'resolve'`) is another kind: the `claude` part of a sync, settling its conflicts. It uses no attempt. An **unblock run** (`kind = 'unblock'`, `domain/run/unblock.ts`) is the third: in a repo with `auto_unblock` on, a short run that reads why a task blocked and either retries it with a note or leaves it blocked with a **question** and options. It uses no attempt, takes a slot, and is not a resolve run.
-- **Sync:** bringing the base branch into a task's branch: before every run, and for a done task when its PR conflicts or a person asks. A clean merge needs no `claude`; conflicts start a resolve run. A **conflict** is a sync that could not be settled: the merge is undone and the task is blocked. Say sync, not "bring in" or "resolve", for the whole of it.
-- **Planner:** proposes tasks from a repo's goals when its queue runs dry. What it produces are **proposals** (tasks in `proposed`), never plans.
-- **Governor:** decides whether new work may start, from the 5-hour and 7-day **usage windows**. A **hold** is a governor decision to wait, and only that. A repo or the daemon is **paused**, never held.
-- **Slot:** room for one running task (`max_concurrent`).
-- **Plan:** an HTML page attached to a task that says how it will be done, step by step (`docs/plan-format.md`). Not the planner's proposals. Plans live in AgentDeck, not in the repo, and are never committed: a plan belongs to the task it was first attached to and is named after it, `<task id>-<slug>.html`. Attach one with `agentdeck add --plan <file>` (any path) or `agentdeck attach`; other tasks follow it with `--plan <task number>`.
+Use the words in the glossary in code, logs and UI. Plans are named `<task id>-<slug>.html` (`docs/plan-format.md`); attach one with `agentdeck add --plan <file>` (any path) or `agentdeck attach`, and other tasks follow it with `--plan <task number>`.
 
 ## Boundaries
 
@@ -42,7 +31,7 @@ Use these words in code, logs and UI.
 - **Erasable TypeScript only.** Node runs `.ts` directly, so no enums, namespaces or constructor parameter properties. <!-- rule:erasable-ts -->
 - **No new runtime dependencies** without a reason. The one there is, `drizzle-orm`, is pinned at exactly `1.0.0-rc.5` (no caret) (`docs/plans/drizzle.html`); use only its core query builder, not the relational query API. `pnpm db:studio` browses the live database. <!-- rule:no-runtime-deps -->
 - **Schema changes are appended as new migration steps.** Never edit a step that has shipped. To add a column: (1) add it to its table in `db/tables.ts` and to the domain type; (2) run `pnpm db:generate`, which prints the SQL that makes a migrated database match `tables.ts`; (3) append that SQL as a new step in `db/schema.ts`; (4) run `pnpm db:check` and `pnpm typecheck` (`db/types-check.ts`), which fail until `tables.ts`, the migrations and the domain type agree; (5) use the column in the store's queries; (6) once the step is final, append the hash the test prints to `daemon/test/migrations.lock`. <!-- rule:migrations-append -->
-- **Hold is the governor's word.** In code, logs and UI, "hold" (hold, holds, held, holding) means a governor decision to wait (`domain/usage/`, the scheduler's announcement, the `hold` notification kind); anywhere else say wait or keep. Plain-English senses ("a file holds data") are listed in the check. <!-- rule:domain-language -->
+- **Use the glossary's words.** An `_Avoid_:` word in `GLOSSARY.md` appears nowhere in `daemon/src` or `app/src`. "Hold" (hold, holds, held, holding) is the governor's word alone (`domain/usage/`, the scheduler's announcement, the `hold` notification kind); a repo or the daemon is paused, and anywhere else say wait or keep. Other uses are on the check's allow-list, each with its reason. <!-- rule:vocabulary -->
 - **Every `claude` runs in its own process group** with its pid recorded on the run, so crash recovery can stop it. <!-- rule:claude-process-group -->
 - **Keep this checkout on `main`.** The installed daemon runs its `daemon/src/cli.ts`, so switching branches here swaps the live daemon's code. Try task branches from their worktrees. <!-- rule:main-checkout -->
 - **Delegating to AgentDeck:** when to queue a task instead of doing it here, how to write it, and how to work in a task's worktree are in the `delegate` skill (`.claude/skills/delegate/SKILL.md`). <!-- rule:delegate-skill -->
