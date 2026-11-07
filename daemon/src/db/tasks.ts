@@ -58,9 +58,9 @@ const NO_MERGE_REQUEST = { merge_requested_at: null, merge_request_method: null,
 /** The columns of a task with no auto-merge check. */
 const NO_AUTO_MERGE_CHECK = { auto_merge_check: null, auto_merge_checked_at: null };
 
-/** The task row `t` in the claim and queue queries, which NOT_WAITING refers to. */
+/** The task row `t` in the claim and queue queries, which `notWaiting` refers to. */
 const t = alias(tasks, 't');
-/** A builds-on link of `t`, the task `d` it builds on, and `d`'s repo `r`: what NOT_WAITING looks through. */
+/** A builds-on link of `t`, the task `d` it builds on, and `d`'s repo `r`: what `notWaiting` looks through. */
 const buildsOn = alias(taskLinks, 'l');
 const dep = alias(tasks, 'd');
 const depRepo = alias(repos, 'r');
