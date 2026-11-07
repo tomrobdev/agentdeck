@@ -61,7 +61,7 @@ export function fmtTask(
   },
   repoName: string,
 ): string {
-  let extra = t.stop_reason && (t.status === 'blocked' || t.status === 'failed') ? `  — ${t.stop_reason}` : '';
+  let extra = (t.status === 'blocked' || t.status === 'failed') && t.stop_reason ? `  — ${t.stop_reason}` : '';
   const waiting = t.waiting ?? null;
   if (waiting)
     extra += waiting.stuck

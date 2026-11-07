@@ -1,9 +1,8 @@
 // The task state machine, as data. Pure: no I/O, so it can be tested exhaustively.
 // applyEvent and claimNextTask (db/tasks.ts) are the only things that write a status, and each asks this module first.
-import type { UnblockQuestion } from '../run/unblock.ts';
 import type { TaskEventType } from './history.ts';
 import type { Needs } from './needs.ts';
-import type { Task } from './task.ts';
+import { type TaskCore, type TaskState, stopReasonOf } from './task.ts';
 
 export type TaskStatus =
   | 'proposed' // suggested by the planner, waiting for approval
@@ -114,7 +113,7 @@ const PERSON_EVENTS: PersonEvent[] = ['approve', 'reject', 'retry', 'cancel', 'm
  * What a person may do with a task in this status. A proposal is declined with `reject`, so it
  * is never offered `cancel` (the rules would allow both).
  */
-export function personEvents(t: Pick<Task, 'status'>): PersonEvent[] {
+export function personEvents(t: { status: TaskStatus }): PersonEvent[] {
   return PERSON_EVENTS.filter((type) => canApply(t.status, { type }) && !(type === 'cancel' && t.status === 'proposed'));
 }
 
@@ -123,72 +122,74 @@ export function fromStatuses(event: TaskEvent): TaskStatus[] {
   return Object.keys(RULES[ruleKey(event)]) as TaskStatus[];
 }
 
-/** The fields of a task that `transition` reads. */
-export type TransitionTask = Pick<Task, 'status' | 'attempts' | 'restarts'>;
+/** What `transition` reads of a task. */
+export type TransitionTask = TaskState & Pick<TaskCore, 'attempts' | 'restarts'>;
 
-/** The fields an event sets, with their new values. A field not listed is left as it is. */
-export interface TaskChanges {
+/** The counters an event sets, with their new values. A counter not listed is left as it is. */
+export interface TaskCounters {
   attempts?: number;
   max_attempts?: number;
   restarts?: number;
-  stop_reason?: string | null;
-  needs?: Needs | null;
-  /** Goes with `needs`: what a block left for a person, cleared or replaced whenever `needs` is. */
-  question?: UnblockQuestion | null;
-  done_by?: 'person' | null;
 }
 
 export interface Transition {
-  to: TaskStatus;
-  changes: TaskChanges;
+  /** The status the event leads to, and all the task carries in it. */
+  state: TaskState;
+  counters: TaskCounters;
   /** The timeline type to record: the event's, or `environment_block` for a block the environment caused. */
   history: TaskEventType;
 }
 
 /**
- * What `event` does to `task`: the status it leads to, the new value of every field it sets and the
- * history type; null if the event isn't allowed from the task's status. A cancelled outcome (the cancel
- * wins from `cancel_requested`) changes no field.
+ * The state a task moves to. A retry, a landing or a new block leaves nothing behind (the timeline keeps the history): an unblock
+ * run's question answers one block, and a stop reason one stop. A cancel keeps the stop reason of the block or failure it ended.
  */
-export function transition(
-  task: TransitionTask,
-  event: TaskEvent,
-  opts: { reason?: string | null; needs?: Needs | null } = {},
-): Transition | null {
+function nextState(from: TaskState, to: TaskStatus, event: TaskEvent, opts: TransitionOptions): TaskState {
+  const reason = opts.reason ?? null;
+  switch (to) {
+    case 'done':
+      return { status: to, done_by: event.type === 'mark_done' ? 'person' : null };
+    case 'blocked':
+      return { status: to, stop_reason: reason, needs: event.type === 'finish' ? (opts.needs ?? null) : null, question: null };
+    case 'failed':
+      return { status: to, stop_reason: reason };
+    case 'cancelled':
+      return { status: to, stop_reason: stopReasonOf(from) };
+    default:
+      return { status: to };
+  }
+}
+
+/** What a run or a person says about an event: why the task stopped, and what its worker needs. */
+export interface TransitionOptions {
+  reason?: string | null;
+  needs?: Needs | null;
+}
+
+/**
+ * What `event` does to `task`: the state it leads to, the new value of every counter it sets and the
+ * history type; null if the event isn't allowed from the task's status. A cancelled outcome (the cancel
+ * wins from `cancel_requested`) changes no counter.
+ */
+export function transition(task: TransitionTask, event: TaskEvent, opts: TransitionOptions = {}): Transition | null {
   const to = nextStatus(task.status, event);
   if (!to) return null;
   const environment = event.type === 'finish' && event.outcome === 'blocked' && event.environment === true;
   const history: TaskEventType = environment ? 'environment_block' : event.type;
-  const changes: TaskChanges = {};
-  if (to === 'cancelled') return { to, changes, history };
+  const state = nextState(task, to, event, opts);
+  const counters: TaskCounters = {};
+  if (to === 'cancelled') return { state, counters, history };
 
   const given = Math.max(task.attempts - 1, 0); // the attempt given back
-  if (event.type === 'claim') changes.attempts = task.attempts + 1;
+  if (event.type === 'claim') counters.attempts = task.attempts + 1;
   else if (event.type === 'retry')
-    changes.max_attempts = task.attempts + 1; // one more attempt on top of those used
-  else if (event.type === 'rate_limited' || environment) changes.attempts = given;
+    counters.max_attempts = task.attempts + 1; // one more attempt on top of those used
+  else if (event.type === 'rate_limited' || environment) counters.attempts = given;
   else if (event.type === 'recover') {
-    changes.restarts = task.restarts + 1;
-    if (to === 'queued') changes.attempts = given;
+    counters.restarts = task.restarts + 1;
+    if (to === 'queued') counters.attempts = given;
   }
-  if ((event.type === 'finish' && event.outcome === 'done') || event.type === 'mark_done' || event.type === 'pr_merged')
-    changes.stop_reason = null;
-  if (event.type === 'mark_done' || event.type === 'pr_merged') changes.needs = null;
-  if (event.type === 'mark_done') changes.done_by = 'person';
-  else if (task.status === 'done') changes.done_by = null;
-  if (to === 'queued') {
-    changes.needs = null;
-    changes.stop_reason = null; // the timeline keeps the history
-  } else if (event.type === 'finish' && event.outcome === 'blocked') changes.needs = opts.needs ?? null;
-  // An unblock run's question answers one block: a new block, a retry or an end makes it stale.
-  if ('needs' in changes) changes.question = null;
-  if (
-    (event.type === 'finish' && (event.outcome === 'blocked' || (event.outcome === 'failed' && to !== 'queued'))) ||
-    (event.type === 'recover' && to === 'failed') ||
-    event.type === 'conflict'
-  )
-    changes.stop_reason = opts.reason ?? null;
-  return { to, changes, history };
+  return { state, counters, history };
 }
 
 /** A task requeued by this many daemon restarts is failed instead, in case the task itself kills the daemon. */

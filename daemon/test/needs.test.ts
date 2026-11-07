@@ -4,6 +4,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import { stateFields } from '../src/domain/task/task.ts';
 
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-needs-'));
 
@@ -98,6 +99,8 @@ test('stored needs, question and plan steps are read in the mapper; malformed JS
   const db = openDb(':memory:');
   const repo = db.addRepo({ name: 'r', path: '/tmp/r-mapper', base_branch: 'main' });
   const t = db.addTask({ repo_id: repo.id, title: 't', prompt: 'p' });
+  assert.ok(db.applyEvent(t.id, { type: 'claim' }));
+  assert.ok(db.applyEvent(t.id, { type: 'finish', outcome: 'blocked' }, { reason: 'stuck' }));
   const store = (needs: string | null, question: string | null, plan_steps: string | null) =>
     db.raw
       .prepare('UPDATE tasks SET needs = ?, question = ?, plan_steps = ?, plan_task = ? WHERE id = ?')
@@ -105,17 +108,18 @@ test('stored needs, question and plan steps are read in the mapper; malformed JS
 
   store('{"kind":"deps","items":["zod"]}', '{"question":"Which?","options":["a",1]}', '["a",2,"b"]');
   const read = db.getTask(t.id)!;
-  assert.deepEqual(read.needs, { kind: 'deps', items: ['zod'] });
-  assert.deepEqual(read.question, { question: 'Which?', options: ['a', '1'] });
+  assert.deepEqual(stateFields(read).needs, { kind: 'deps', items: ['zod'] });
+  assert.deepEqual(stateFields(read).question, { question: 'Which?', options: ['a', '1'] });
   assert.deepEqual(read.plan, { task: t.id, steps: ['a', 'b'] });
 
   for (const bad of ['not json', '{"kind":"nope","items":[]}', '{"kind":"deps"}', '42', '']) {
     store(bad, bad, bad);
     const task = db.getTask(t.id)!;
-    assert.deepEqual([task.needs, task.question, task.plan?.steps], [null, null, null], bad);
+    assert.deepEqual([stateFields(task).needs, stateFields(task).question, task.plan?.steps], [null, null, null], bad);
   }
   store(null, null, null);
-  assert.deepEqual([db.getTask(t.id)!.needs, db.getTask(t.id)!.question, db.getTask(t.id)!.plan?.steps], [null, null, null]);
+  const cleared = db.getTask(t.id)!;
+  assert.deepEqual([stateFields(cleared).needs, stateFields(cleared).question, cleared.plan?.steps], [null, null, null]);
 
   db.raw.prepare('UPDATE tasks SET auto_merge = ? WHERE id = ?').run(1, t.id);
   assert.equal(db.getTask(t.id)!.auto_merge, true);
@@ -131,7 +135,7 @@ test('an environment block gives the attempt back and records the needs', () => 
   assert.deepEqual(after.needs, { kind: 'deps', items: ['left-pad'] });
   assert.equal(db.eventsForTask(id).at(-1)!.type, 'environment_block');
   // Queued again: the needs are cleared.
-  assert.equal(db.applyEvent(id, { type: 'retry' })!.needs, null);
+  assert.equal(stateFields(db.applyEvent(id, { type: 'retry' })!).needs, null);
   db.close();
 });
 

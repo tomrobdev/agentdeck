@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import { openDb } from '../src/db/index.ts';
 import { type TaskEvent, transition } from '../src/domain/task/lifecycle.ts';
 import { buildPlannerPrompt } from '../src/domain/planner/proposals.ts';
+import { type TaskState, stopReasonOf } from '../src/domain/task/task.ts';
 
 function setup() {
   const db = openDb(':memory:');
@@ -28,23 +29,24 @@ for (const [name, event, from] of TO_QUEUED) {
     if (from === 'blocked') assert.ok(db.applyEvent(id, { type: 'finish', outcome: 'blocked' }, { reason: 'old reason' }));
     const before = db.getTask(id)!;
     assert.equal(before.status, from);
-    assert.equal(before.stop_reason, from === 'blocked' ? 'old reason' : null);
+    assert.equal(stopReasonOf(before), from === 'blocked' ? 'old reason' : null);
 
     assert.ok(db.applyEvent(id, event, { reason: 'why it was queued again' }));
     const after = db.getTask(id)!;
     assert.equal(after.status, 'queued');
-    assert.equal(after.stop_reason, null);
+    assert.equal(stopReasonOf(after), null);
     const row = db.eventsForTask(id).at(-1)!;
     assert.equal(row.to_status, 'queued');
     assert.equal(row.reason, 'why it was queued again');
   });
 }
 
-test('transition sets stop_reason to null whenever it leads to queued', () => {
+test('transition leaves no stop reason whenever it leads to queued', () => {
   for (const [name, event, from] of TO_QUEUED) {
-    const t = transition({ status: from, attempts: 1, restarts: 0 }, event);
-    assert.equal(t?.to, 'queued', name);
-    assert.equal(t?.changes.stop_reason, null, name);
+    const state: TaskState =
+      from === 'running' ? { status: from } : { status: from, stop_reason: 'old reason', needs: null, question: null };
+    const t = transition({ ...state, attempts: 1, restarts: 0 }, event);
+    assert.deepEqual(t?.state, { status: 'queued' }, name);
   }
 });
 

@@ -9,12 +9,32 @@ import type { RunKind, RunOutcome } from '../domain/run/run.ts';
 import type { TaskEventRow, TaskEventType } from '../domain/task/history.ts';
 import type { TaskStatus } from '../domain/task/lifecycle.ts';
 import type { LinkKind } from '../domain/task/link.ts';
-import type { Task, TaskSource } from '../domain/task/task.ts';
-import type { CheckoutColumn, LegacyTaskColumn, PlanColumn, PrColumn, TaskRow, toRepo, toRun, toTask, toTaskSummary } from './mappers.ts';
+import type {
+  BlockedState,
+  CancelledState,
+  DoneState,
+  FailedState,
+  StateFields,
+  Task,
+  TaskSource,
+  TaskState,
+} from '../domain/task/task.ts';
+import type {
+  CheckoutColumn,
+  LegacyTaskColumn,
+  PlanColumn,
+  PrColumn,
+  StateColumn,
+  TaskRow,
+  toRepo,
+  toRun,
+  toTask,
+  toTaskSummary,
+} from './mappers.ts';
 import type { plannerRuns, repos, reviewComments, reviews, runs, taskEvents, taskLinks, tasks } from './tables.ts';
 
-/** The task columns the mapper folds into `pr`, `checkout` and `plan`. */
-type FoldedColumn = PrColumn | CheckoutColumn | PlanColumn;
+/** The task columns the mapper folds into `pr`, `checkout`, `plan` and the task's state, which a `Task` has only once narrowed. */
+type FoldedColumn = PrColumn | CheckoutColumn | PlanColumn | StateColumn;
 
 type Equals<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
 /** Compares the keys and whether each is nullable; unions such as PrMode narrow string columns. */
@@ -55,7 +75,7 @@ check<Equals<TaskRow['status'], TaskStatus>>();
 check<Equals<TaskRow['source'], TaskSource>>();
 check<Equals<TaskRow['pr_state'], PrState | null>>();
 check<Equals<TaskRow['merge_method'], MergeMethod | null>>();
-check<Equals<TaskRow['done_by'], Task['done_by']>>();
+check<Equals<TaskRow['done_by'], DoneState['done_by']>>();
 check<Equals<TaskRow['merge_request_method'], MergeMethod | null>>();
 check<Equals<(typeof runs.$inferSelect)['outcome'], RunOutcome | null>>();
 check<Equals<(typeof runs.$inferSelect)['kind'], RunKind>>();
@@ -66,3 +86,37 @@ check<Equals<(typeof taskEvents.$inferSelect)['from_status'], TaskStatus | null>
 check<Equals<(typeof taskEvents.$inferSelect)['to_status'], TaskStatus | null>>();
 check<Equals<(typeof repos.$inferSelect)['pr_mode'], PrMode>>();
 check<Equals<(typeof repos.$inferSelect)['merge_method'], MergeMethod>>();
+
+// A task's state has every status and nothing else, and each field it carries is the column's own.
+check<Equals<TaskState['status'], TaskStatus>>();
+check<
+  Equals<
+    keyof StateFields,
+    Exclude<keyof TaskRow & (keyof BlockedState | keyof CancelledState | keyof DoneState | keyof FailedState), 'status'>
+  >
+>();
+
+// A field of a status can't be read until the task is narrowed to that status.
+export const narrowed = (task: Task) => {
+  // @ts-expect-error needs is only on a blocked task
+  void task.needs;
+  // @ts-expect-error a question is only on a blocked task
+  void task.question;
+  // @ts-expect-error a stop reason is only on a blocked, failed or cancelled task
+  void task.stop_reason;
+  // @ts-expect-error done_by is only on a done task
+  void task.done_by;
+  if (task.status === 'failed' || task.status === 'cancelled') {
+    // @ts-expect-error a failed or cancelled task carries a stop reason, not needs
+    void task.needs;
+    return task.stop_reason;
+  }
+  if (task.status === 'done') {
+    // @ts-expect-error a done task has no stop reason
+    void task.stop_reason;
+    return task.done_by;
+  }
+  if (task.status === 'blocked') return [task.stop_reason, task.needs, task.question];
+  // @ts-expect-error a task waiting or running carries nothing about how it ended
+  return task.stop_reason;
+};

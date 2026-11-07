@@ -232,6 +232,7 @@ export const NOT_YET_TABLES: Record<string, string> = {
   PlanStepStatus: 'set from the plan page by a person or worker; any step may take any status',
   ChangeStatus: 'a git file change letter, read from git',
   TaskStatus: 'the states of the Task lifecycle table',
+  TaskState: 'the states of the Task lifecycle table, with what a task carries in each',
   CommentState: 'the states of the Review comment table',
 };
 
@@ -271,7 +272,7 @@ export function stateMachinesBody(): string {
     table(
       ['State type', 'Why'],
       Object.entries(NOT_YET_TABLES)
-        .filter(([name]) => !['TaskStatus', 'CommentState'].includes(name))
+        .filter(([name]) => !['TaskStatus', 'TaskState', 'CommentState'].includes(name))
         .sort((a, b) => cmp(a[0], b[0]))
         .map(([name, why]) => [code(name), why]),
     ),

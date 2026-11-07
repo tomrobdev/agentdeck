@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, test } from 'node:test';
 import type { Repo } from '../src/domain/repo/repo.ts';
+import { stopReasonOf } from '../src/domain/task/task.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-test-'));
 process.env.AGENTDECK_HOME = home;
@@ -291,7 +292,7 @@ test('setup runs in the worktree before claude starts', async () => {
     const task = db.addTask({ repo_id: 1, title: 'needs deps', prompt: 'FAKE_NEEDS_SETUP go' });
     await drain();
     const t = db.getTask(task.id)!;
-    assert.equal(t.status, 'done', t.stop_reason ?? '');
+    assert.equal(t.status, 'done', stopReasonOf(t) ?? '');
     assert.ok(existsSync(join(t.checkout!.worktree!, 'setup-done.txt')));
     const log = readFileSync(db.runsForTask(t.id)[0].log_path, 'utf8').split('\n');
     const setupAt = log.findIndex((l) => l.includes('"type":"agentdeck_setup"'));
@@ -336,7 +337,7 @@ test('each run gets a sandbox settings file outside its worktree', async () => {
     const task = db.addTask({ repo_id: 1, title: 'sandboxed', prompt: 'FAKE_DONE in the sandbox' });
     await drain();
     const t = db.getTask(task.id)!;
-    assert.equal(t.status, 'done', t.stop_reason ?? '');
+    assert.equal(t.status, 'done', stopReasonOf(t) ?? '');
     const path = settingsCalls().at(-1)!;
     assert.equal(path, join(LOG_DIR, `task-${t.id}-attempt-1.settings.json`));
     assert.ok(!path.startsWith(t.checkout!.worktree!), 'the agent cannot edit its own settings');
@@ -403,7 +404,7 @@ test('a new worktree starts from origin/<base> when origin is ahead of the local
   await drain();
 
   const t = db.getTask(task.id)!;
-  assert.equal(t.status, 'done', t.stop_reason ?? '');
+  assert.equal(t.status, 'done', stopReasonOf(t) ?? '');
   assert.ok(existsSync(join(t.checkout!.worktree!, 'upstream.txt')), 'worktree has origin’s commit');
   sh(local, 'merge-base', '--is-ancestor', upstreamHead, t.checkout!.branch!);
   assert.equal(sh(local, 'rev-list', '--count', `origin/main..${t.checkout?.branch}`), '1', 'only the agent’s commit on top');

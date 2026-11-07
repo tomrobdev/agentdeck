@@ -5,6 +5,7 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from '
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, beforeEach, test } from 'node:test';
+import { stopReasonOf } from '../src/domain/task/task.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-pr-'));
 process.env.AGENTDECK_HOME = home;
@@ -316,7 +317,7 @@ test('refreshPrStates: a merged PR moves a blocked or failed task to done, a clo
     const t = db.getTask(id)!;
     assert.equal(t.status, 'done');
     assert.equal(t.pr?.state, 'merged');
-    assert.equal(t.stop_reason, null);
+    assert.equal(stopReasonOf(t), null);
     assert.ok(db.eventsForTask(id).some((e) => e.type === 'pr_merged'));
   }
   assert.equal(db.getTask(blockedClosed)!.status, 'blocked');

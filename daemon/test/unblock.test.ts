@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import { after, test } from 'node:test';
 import type { RunKind, RunOutcome } from '../src/domain/run/run.ts';
 import type { Needs } from '../src/domain/task/needs.ts';
+import { type TaskState, stateFields } from '../src/domain/task/task.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-unblock-'));
 process.env.AGENTDECK_HOME = home;
@@ -33,6 +34,7 @@ const ON = { auto_unblock: true };
 const blocked = (o: { needs?: Needs | null; stop_reason?: string | null } = {}) => ({
   status: 'blocked' as const,
   needs: null,
+  question: null,
   stop_reason: 'which database?',
   ...o,
 });
@@ -44,8 +46,14 @@ test('unblockable: off by default, and only for a blocked task', () => {
   assert.equal(repo.auto_unblock, false, 'auto_unblock is off for a new repo');
   assert.equal(unblockable(blocked(), [run('work', 'blocked')], repo), false);
   assert.equal(unblockable(blocked(), [run('work', 'blocked')], ON), true);
-  for (const status of ['queued', 'running', 'done', 'failed', 'cancelled'] as const)
-    assert.equal(unblockable({ ...blocked(), status }, [run('work', 'blocked')], ON), false, status);
+  const others: TaskState[] = [
+    { status: 'queued' },
+    { status: 'running' },
+    { status: 'done', done_by: null },
+    { status: 'failed', stop_reason: 'which database?' },
+    { status: 'cancelled', stop_reason: 'which database?' },
+  ];
+  for (const state of others) assert.equal(unblockable(state, [run('work', 'blocked')], ON), false, state.status);
   db.close();
 });
 
@@ -292,7 +300,7 @@ test('an unblock run that asks leaves the question and its options; a retry clea
   assert.equal(t.attempts, 1);
   assert.deepEqual(t.question, { question: 'Which database should it use?', options: ['sqlite', 'postgres'] });
 
-  assert.equal(db.applyEvent(task.id, { type: 'retry' })?.question, null);
+  assert.equal(stateFields(db.applyEvent(task.id, { type: 'retry' })!).question, null);
   assert.ok(db.applyEvent(task.id, { type: 'cancel' }));
 });
 

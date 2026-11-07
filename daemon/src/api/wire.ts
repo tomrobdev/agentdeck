@@ -7,16 +7,14 @@ import { stored } from '../db/mappers.ts';
 import { type PullRequest, prFields } from '../domain/pull-request/pr.ts';
 import type { Checkout } from '../domain/task/checkout.ts';
 import type { PlanLink } from '../domain/task/plan-link.ts';
+import { type TaskState, stateFields } from '../domain/task/task.ts';
 
-/** A task's fields in the API's shape: stored as their columns are, with its pull request, checkout and plan link flat. */
-const flat = <T extends { pr: PullRequest | null; checkout: Checkout | null; plan: PlanLink | null }>({
-  pr,
-  checkout,
-  plan,
-  ...fields
-}: T) =>
-  stored({
+/** A task's fields in the API's shape: stored as their columns are, with its state, pull request, checkout and plan link flat. */
+const flat = <T extends TaskState & { pr: PullRequest | null; checkout: Checkout | null; plan: PlanLink | null }>(task: T) => {
+  const { pr, checkout, plan, ...fields } = task;
+  return stored({
     ...fields,
+    ...stateFields(task),
     ...prFields(pr),
     branch: checkout?.branch ?? null,
     worktree: checkout?.worktree ?? null,
@@ -24,6 +22,7 @@ const flat = <T extends { pr: PullRequest | null; checkout: Checkout | null; pla
     plan_task: plan?.task ?? null,
     plan_steps: plan?.steps ?? null,
   });
+};
 
 /** One task with its view, runs, events and plans, in the API's shape. */
 export async function taskDetail(db: Db, id: number) {

@@ -70,7 +70,7 @@ export function checkRowShapedFields(sources: Source[], allowed: string[] = ROW_
 }
 
 /** The entity types whose fields the page counts. */
-const ENTITIES = ['Repo', 'Task', 'Run', 'PlannerRun'];
+const ENTITIES = ['Repo', 'Task', 'TaskCore', 'BlockedState', 'FailedState', 'CancelledState', 'DoneState', 'Run', 'PlannerRun'];
 
 /** A field comment that says the field is a flag (`1 = …`, `1 or 0`, `1, 0, or null`) or a JSON document. */
 const FLAG = /^\/\/\s*(1 =|1 or 0|1, 0)/;

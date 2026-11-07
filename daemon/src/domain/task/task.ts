@@ -9,32 +9,84 @@ import type { PlanLink } from './plan-link.ts';
 /** Who made a task: a person, or the planner proposing it. */
 export type TaskSource = 'manual' | 'planner';
 
-export interface Task {
+/** What every task has, whatever its status. */
+export interface TaskCore {
   id: number;
   repo_id: number;
   title: string;
   prompt: string;
-  status: TaskStatus;
   priority: number;
   model: string;
   max_turns: number;
   attempts: number;
   max_attempts: number;
   checkout: Checkout | null; // the branch and worktree the work is on, and a running sync
-  stop_reason: string | null;
   source: TaskSource;
   restarts: number; // times a daemon restart requeued this task mid-run
   pr: PullRequest | null; // the task's pull request, as one value
-  needs: Needs | null; // what the worker said it needs when it blocked; cleared when queued again
-  question: UnblockQuestion | null; // what an unblock run left on the blocked task; cleared with `needs`
   plan: PlanLink | null; // the plan this task follows and its linked steps (domain/task/plan-link.ts); null follows its own plan, if any
-  done_by: 'person' | null; // 'person' when mark_done set the status; cleared whenever the task leaves done
   auto_merge: boolean | null; // overrides the repo's auto_merge; null = the repo's (domain/pull-request/auto-merge.ts)
   created_at: string;
   updated_at: string;
 }
 
-export type TaskSummary = Omit<Task, 'prompt'>;
+/** A task waiting to run or running: it carries nothing about how it ended. */
+export interface OpenState {
+  status: 'proposed' | 'queued' | 'running' | 'cancel_requested';
+}
+
+/** A finished task, and whether a person finished it. */
+export interface DoneState {
+  status: 'done';
+  done_by: 'person' | null; // 'person' when mark_done set the status
+}
+
+/** A task stopped until something changes. */
+export interface BlockedState {
+  status: 'blocked';
+  stop_reason: string | null;
+  needs: Needs | null; // what the worker said it needs when it blocked
+  question: UnblockQuestion | null; // what an unblock run left on the task
+}
+
+/** A task that ran out of attempts. */
+export interface FailedState {
+  status: 'failed';
+  stop_reason: string | null;
+}
+
+/** A cancelled task, with the stop reason it had if it was blocked or failed when cancelled. */
+export interface CancelledState {
+  status: 'cancelled';
+  stop_reason: string | null;
+}
+
+/** A task's status and what it carries in that status: the fields of another status can't be set, nor read until the status is narrowed. */
+export type TaskState = OpenState | DoneState | BlockedState | FailedState | CancelledState;
+
+export type Task = TaskCore & TaskState;
+export type BlockedTask = TaskCore & BlockedState;
+export type TaskSummary = Omit<TaskCore, 'prompt'> & TaskState;
+
+export const isBlocked = (task: Task): task is BlockedTask => task.status === 'blocked';
+
+/** A task's stop reason, for code that reports on a task of any status. Only a blocked, failed or cancelled task has one. */
+export const stopReasonOf = (state: TaskState): string | null => ('stop_reason' in state ? state.stop_reason : null);
+
+/** The fields a state carries, each null where its status has none: how the columns and the API, which are flat, store them. */
+export interface StateFields {
+  stop_reason: string | null;
+  needs: Needs | null;
+  question: UnblockQuestion | null;
+  done_by: 'person' | null;
+}
+
+export const stateFields = (state: TaskState): StateFields => ({
+  stop_reason: stopReasonOf(state),
+  needs: state.status === 'blocked' ? state.needs : null,
+  question: state.status === 'blocked' ? state.question : null,
+  done_by: state.status === 'done' ? state.done_by : null,
+});
 
 /**
  * The sections every task prompt has, in order, each a markdown `##` heading. The delegate skill (.claude/skills/delegate)

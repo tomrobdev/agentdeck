@@ -77,16 +77,15 @@ test('finalNotification words done, blocked and failed, and nothing else', () =>
     id: 3,
     title: 'Do it',
     checkout: { branch: 'agentdeck/task-3', worktree: null, syncing_since: null },
-    stop_reason: 'tests failed',
   };
-  assert.deepEqual(finalNotification({ ...t, status: 'done' }, 'demo', { url: 'https://x/pull/1' }), {
+  assert.deepEqual(finalNotification({ ...t, status: 'done', done_by: null }, 'demo', { url: 'https://x/pull/1' }), {
     kind: 'done',
     title: '#3 done: Do it',
     body: 'Ready to review on agentdeck/task-3 in demo. PR: https://x/pull/1',
     task_id: 3,
   });
-  assert.equal(finalNotification({ ...t, status: 'failed' }, 'demo')?.body, 'tests failed (demo)');
-  assert.match(finalNotification({ ...t, status: 'done' }, '', { error: 'no gh' })!.body, /Could not open a PR: no gh$/);
+  assert.equal(finalNotification({ ...t, status: 'failed', stop_reason: 'tests failed' }, 'demo')?.body, 'tests failed (demo)');
+  assert.match(finalNotification({ ...t, status: 'done', done_by: null }, '', { error: 'no gh' })!.body, /Could not open a PR: no gh$/);
   assert.equal(finalNotification({ ...t, status: 'queued' }, 'demo'), null);
 });
 

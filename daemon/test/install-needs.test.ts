@@ -5,6 +5,7 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from '
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import { stateFields } from '../src/domain/task/task.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-install-'));
 process.env.AGENTDECK_HOME = home;
@@ -73,7 +74,7 @@ test('installs, commits only the manifest and lockfile, and queues the task with
   assert.match(sh(path, 'status', '--porcelain'), /stray\.txt/, 'other files are left uncommitted');
   const t = db.getTask(id)!;
   assert.equal(t.status, 'queued');
-  assert.equal(t.needs, null);
+  assert.equal(stateFields(t).needs, null);
   assert.match(db.eventsForTask(id).at(-1)!.reason ?? '', /installed added/);
   db.applyEvent(id, { type: 'cancel' }); // so a later claimNextTask finds only its own task
 });

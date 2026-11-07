@@ -4,6 +4,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import { stateFields } from '../src/domain/task/task.ts';
 
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-markdone-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
@@ -68,8 +69,8 @@ test('mark_done moves blocked and failed tasks to done, clears the reason and ne
     assert.equal(done.status, 'done');
     assert.equal(done.attempts, before.attempts);
     assert.equal(done.max_attempts, before.max_attempts);
-    assert.equal(done.stop_reason, null);
-    assert.equal(done.needs, null);
+    assert.equal(stateFields(done).stop_reason, null);
+    assert.equal(stateFields(done).needs, null);
     assert.equal(done.done_by, 'person');
     const last = db.eventsForTask(t.id).at(-1)!;
     assert.deepEqual([last.type, last.from_status, last.to_status, last.reason], ['mark_done', from, 'done', 'landed by hand']);
@@ -84,7 +85,7 @@ test('mark_done is refused from every other status', () => {
     bring(db, t.id, from);
     assert.equal(db.applyEvent(t.id, { type: 'mark_done' }), undefined, from);
     assert.equal(db.getTask(t.id)!.status, from);
-    assert.equal(db.getTask(t.id)!.done_by, null);
+    assert.equal(stateFields(db.getTask(t.id)!).done_by, null);
     db.close();
   }
 });
@@ -94,15 +95,15 @@ test('done_by is cleared when the task leaves done', () => {
   const t = add();
   bring(db, t.id, 'failed');
   db.applyEvent(t.id, { type: 'mark_done' });
-  assert.equal(db.getTask(t.id)!.done_by, 'person');
+  assert.equal(stateFields(db.getTask(t.id)!).done_by, 'person');
   const retried = db.applyEvent(t.id, { type: 'retry' })!;
   assert.equal(retried.status, 'queued');
-  assert.equal(retried.done_by, null);
+  assert.equal(stateFields(retried).done_by, null);
 
   const c = add();
   bring(db, c.id, 'blocked');
   db.applyEvent(c.id, { type: 'mark_done' });
-  assert.equal(db.applyEvent(c.id, { type: 'conflict' })!.done_by, null, 'a conflict blocks it again');
+  assert.equal(stateFields(db.applyEvent(c.id, { type: 'conflict' })!).done_by, null, 'a conflict blocks it again');
   db.close();
 });
 
@@ -112,7 +113,7 @@ test('pr_merged also moves blocked and failed tasks to done, without done_by', (
   bring(db, t.id, 'blocked');
   const done = db.applyEvent(t.id, { type: 'pr_merged' })!;
   assert.equal(done.status, 'done');
-  assert.equal(done.stop_reason, null);
+  assert.equal(stateFields(done).stop_reason, null);
   assert.equal(done.done_by, null);
   db.close();
 });
@@ -131,7 +132,7 @@ test('markDone names the status when it is refused, and keeps the note', () => {
   assert.equal(db.getTask(b.id)!.status, 'done');
   assert.equal(db.eventsForTask(b.id).at(-1)!.reason, 'merged it myself');
   retryTask(db, b.id);
-  assert.equal(db.getTask(b.id)!.done_by, null);
+  assert.equal(stateFields(db.getTask(b.id)!).done_by, null);
   db.close();
 });
 

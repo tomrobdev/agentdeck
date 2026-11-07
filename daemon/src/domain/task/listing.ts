@@ -4,7 +4,7 @@ import type { Checkout } from './checkout.ts';
 import { STATUS_GROUPS, isMerged, isReview, isStuck, isWaiting, statusGroup } from './stage.ts';
 import type { TaskStatus } from './lifecycle.ts';
 import type { Waiting } from './start.ts';
-import { RUNNING_STATUSES, type TaskSummary } from './task.ts';
+import { RUNNING_STATUSES, type TaskState, type TaskSummary, stopReasonOf } from './task.ts';
 
 /**
  * A task as listed: with where it stands on its builds-on links (as waitingFor reports it), the tasks merging its open PR lets
@@ -13,12 +13,20 @@ import { RUNNING_STATUSES, type TaskSummary } from './task.ts';
 export type ListedTask = TaskSummary & { waiting: Waiting | null; unblocks: number[] };
 export type Listable = Pick<
   ListedTask,
-  'id' | 'repo_id' | 'title' | 'status' | 'priority' | 'model' | 'stop_reason' | 'source' | 'waiting' | 'updated_at'
-> & { pr_url: string | null; pr_state: PrState | null; branch: string | null; repo?: string | null; unblocks?: number[] };
+  'id' | 'repo_id' | 'title' | 'status' | 'priority' | 'model' | 'source' | 'waiting' | 'updated_at'
+> & {
+  stop_reason: string | null;
+  pr_url: string | null;
+  pr_state: PrState | null;
+  branch: string | null;
+  repo?: string | null;
+  unblocks?: number[];
+};
 
-/** A task with its pull request and branch as the flat fields a list reads (the API's shape). */
-export const listable = <T extends { pr: PullRequest | null; checkout: Checkout | null }>(t: T) => ({
+/** A task with its stop reason, pull request and branch as the flat fields a list reads (the API's shape). */
+export const listable = <T extends TaskState & { pr: PullRequest | null; checkout: Checkout | null }>(t: T) => ({
   ...t,
+  stop_reason: stopReasonOf(t),
   branch: t.checkout?.branch ?? null,
   pr_url: t.pr?.url ?? null,
   pr_state: t.pr?.state ?? null,
