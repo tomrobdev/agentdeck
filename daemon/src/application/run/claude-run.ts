@@ -6,6 +6,7 @@ import { rootInfo } from '../../adapters/repo-root.ts';
 import { closeLog, writeEvent, writeSettings } from '../../adapters/run-log.ts';
 import { LOG_DIR, ensureDirs } from '../../config.ts';
 import type { Db } from '../../db/index.ts';
+import type { RunId } from '../../domain/id/id.ts';
 import type { Repo } from '../../domain/repo/repo.ts';
 import { allowedTools } from '../../domain/repo/tools.ts';
 import { START_LIVE, nextLive } from '../../domain/run/live.ts';
@@ -27,7 +28,7 @@ export function runSettings(repo: Repo, worktree: string, logPath: string): stri
 
 /** A run row and its log, before claude starts. */
 export interface OpenedRun {
-  runId: number;
+  runId: RunId;
   logPath: string;
   log: WriteStream;
   /** Set by `endTaskRun`: the row is finished and the log closed, and neither happens again. */

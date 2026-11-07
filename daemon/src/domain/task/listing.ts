@@ -1,4 +1,5 @@
 // Filtering and sorting task lists: `agentdeck ls` and the dashboard's queue share it. Pure: no I/O.
+import type { RepoId } from '../id/id.ts';
 import type { PrState, PullRequest } from '../pull-request/pr.ts';
 import type { Checkout } from './checkout.ts';
 import { STATUS_GROUPS, isMerged, isReview, isStuck, isWaiting, statusGroup } from './stage.ts';
@@ -97,7 +98,7 @@ export const SORT_OPTIONS: { key: string; label: string; compare: Compare }[] = 
 export interface ListFilter {
   /** State or group names; a task matching any of them is kept. Empty keeps every task. */
   states: string[];
-  repo_id?: number;
+  repo_id?: RepoId;
   /** Repo names (`?` for a task without one); a task in any of them is kept. Empty keeps every task. */
   repos?: string[];
   source?: string | null;

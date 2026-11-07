@@ -6,6 +6,7 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, test } from 'node:test';
+import type { TaskId } from '../src/domain/id/id.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-files-'));
 process.env.AGENTDECK_HOME = home;
@@ -25,9 +26,9 @@ const get = async (path: string) => {
   return { status: res.status, body: (await res.json()) as any };
 };
 
-let taskId = 0;
-let noBranchId = 0;
-let goneBranchId = 0;
+let taskId: TaskId;
+let noBranchId: TaskId;
+let goneBranchId: TaskId;
 let mergeBaseSha = '';
 const BIG = 'x'.repeat(99) + '\n'; // 100 bytes a line
 

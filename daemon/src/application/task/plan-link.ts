@@ -1,5 +1,6 @@
 // The plan link a task request asks for: its steps, the plan it follows, and the checks on both.
 import type { Db } from '../../db/index.ts';
+import { type TaskId, parseId } from '../../domain/id/id.ts';
 import { type ParsedPlan, parsePlan } from '../../domain/plan/plan.ts';
 import type { Repo } from '../../domain/repo/repo.ts';
 import { stepsNeedPlanError } from '../../domain/task/rules.ts';
@@ -29,7 +30,7 @@ function checkSteps(name: string, plan: ParsedPlan, steps: string[] | null): voi
  * The task whose plan `--plan <number>` links: that task, which must be in the same repo, if it has a plan of its own;
  * else the task whose plan it follows. Refused when there is no plan to follow.
  */
-function planOwner(db: Db, repo: Repo, on: number): { owner: number; name: string; plan: ParsedPlan } {
+function planOwner(db: Db, repo: Repo, on: TaskId): { owner: TaskId; name: string; plan: ParsedPlan } {
   const target = db.getTask(on);
   if (!target) throw new ActionError(`plan: there is no task #${on}`);
   if (target.repo_id !== repo.id) {
@@ -44,7 +45,7 @@ function planOwner(db: Db, repo: Repo, on: number): { owner: number; name: strin
 }
 
 /** The plan link a request asks for: a task number (`plan_task`, null to clear) or a parsed plan (`plan_html`); undefined when it names neither. */
-export type PlanRequest = { task: number | null } | { html: string; plan: ParsedPlan };
+export type PlanRequest = { task: TaskId | null } | { html: string; plan: ParsedPlan };
 
 export function planRequest(body: Record<string, unknown>): PlanRequest | undefined {
   const { plan_task, plan_html } = body;
@@ -52,10 +53,9 @@ export function planRequest(body: Record<string, unknown>): PlanRequest | undefi
   if (plan_html !== undefined) return readPlanInput(plan_html);
   if (plan_task === undefined) return undefined;
   if (plan_task === null || plan_task === '') return { task: null };
-  if (typeof plan_task !== 'number' || !Number.isInteger(plan_task) || plan_task < 1) {
-    throw new ActionError('plan_task must be a task number');
-  }
-  return { task: plan_task };
+  const task = typeof plan_task === 'number' ? parseId<TaskId>(plan_task) : null;
+  if (task === null) throw new ActionError('plan_task must be a task number');
+  return { task };
 }
 
 /**
@@ -67,7 +67,7 @@ export function checkPlanLink(
   repo: () => Repo,
   asked: PlanRequest,
   steps: string[] | null,
-): { ownPlan: string; plan: ParsedPlan } | { owner: number | null } {
+): { ownPlan: string; plan: ParsedPlan } | { owner: TaskId | null } {
   if ('html' in asked) {
     checkSteps('the plan', asked.plan, steps);
     return { ownPlan: asked.html, plan: asked.plan };

@@ -1,4 +1,5 @@
 // What a queued task waits for, in the order the scheduler checks. Pure: no I/O.
+import type { TaskId } from '../id/id.ts';
 import type { Decision } from '../usage/governor.ts';
 import type { TaskStatus } from './lifecycle.ts';
 import type { StartState } from './link.ts';
@@ -10,7 +11,7 @@ export type QueueWait =
 /** What a queued task that builds on others is waiting for, or null if it isn't waiting. */
 export interface Waiting {
   /** Every task it builds on that is still on its way; or, when stuck, the one root it is stuck on. */
-  on: number[];
+  on: TaskId[];
   /** Set when what it waits for won't get there on its own; null while it is on its way. */
   stuck: string | null;
 }

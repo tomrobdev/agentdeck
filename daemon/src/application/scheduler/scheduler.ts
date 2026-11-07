@@ -3,6 +3,7 @@
 import { KeepAwake } from '../../adapters/caffeinate.ts';
 import { activeChildren, killGroup, reapOrphans } from '../../adapters/processes.ts';
 import { DEFAULTS } from '../../config.ts';
+import type { TaskId } from '../../domain/id/id.ts';
 import { MAX_RESTARTS } from '../../domain/task/lifecycle.ts';
 import { describeWait } from '../../domain/task/start.ts';
 import { queueWait } from './gate.ts';
@@ -61,9 +62,9 @@ export class Scheduler {
   /** When to read the PRs again for a merge request waiting on running checks or on mergeability; 0 when none does. */
   private requestPollAt = 0;
   /** The last auto-merge error told for each task, so a merge that keeps failing is told once, not every refresh. */
-  private readonly autoMergeErrors = new Map<number, string>();
+  private readonly autoMergeErrors = new Map<TaskId, string>();
   /** The tasks whose conflict was told as waiting for a person's sync (auto_resolve off), so it is said once. */
-  private readonly conflictsTold = new Set<number>();
+  private readonly conflictsTold = new Set<TaskId>();
 
   constructor(db: Db, opts: SchedulerOptions = {}) {
     this.db = db;
@@ -238,7 +239,7 @@ export class Scheduler {
   }
 
   /** Merge the base into conflicting PRs' branches in the background; counts as a running task while it works. */
-  private resolveConflicts(ids: number[]): void {
+  private resolveConflicts(ids: TaskId[]): void {
     const p = resolveConflicting(this.db, ids, this.opts.log, this.conflictsTold)
       .catch((err) => this.opts.log(`conflict resolution crashed: ${err?.stack ?? err}`))
       .finally(() => {

@@ -14,7 +14,7 @@ const { nodeWidth: W, nodeHeight: H } = DEFAULT_SIZE;
 const hover = ref<number | null>(null);
 
 const tasks = computed(() => graphTasks(props.all, props.shown, props.showFinished));
-const byId = computed(() => new Map(tasks.value.map((t) => [t.id, t])));
+const byId = computed(() => new Map<number, TaskSummary>(tasks.value.map((t) => [t.id, t])));
 const layout = computed(() =>
   layoutGraph(
     tasks.value.map((t) => t.id),

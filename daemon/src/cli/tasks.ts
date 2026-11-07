@@ -1,6 +1,7 @@
 // Task commands: add, edit, inspect and move tasks.
 import { readFileSync } from 'node:fs';
 import * as actions from '../application/actions.ts';
+import { type TaskId, asTaskId, parseId } from '../domain/id/id.ts';
 import { isOwnPlanName, planProgress } from '../domain/plan/plan.ts';
 import { commentLocation } from '../domain/review/review.ts';
 import { pickRun } from '../domain/run/run.ts';
@@ -25,16 +26,18 @@ function readText(file: string): string {
  * `--plan`: a task number (`112` or `#112`) links that task's plan; anything else is a plan file, read from anywhere on
  * disk, that the task stores as its own plan. Empty clears the link (edit).
  */
-function planFlag(value: string | undefined): { plan_task?: number | null; plan_html?: string } {
+function planFlag(value: string | undefined): { plan_task?: TaskId | null; plan_html?: string } {
   if (value === undefined) return {};
   const v = value.trim();
   if (!v) return { plan_task: null };
-  if (/^#?\d+$/.test(v)) return { plan_task: Number(v.replace('#', '')) };
+  const task = parseId<TaskId>(v);
+  if (task !== null) return { plan_task: task };
+  if (/^#?\d+$/.test(v)) return { plan_task: asTaskId(Number(v.replace('#', ''))) };
   return { plan_html: readText(v) };
 }
 
 /** The name of the plan a task follows, from the plans its detail shows. */
-function followedPlanName(t: { id: number; plan: PlanLink | null; plans: { task_id: number; name: string }[] }): string | null {
+function followedPlanName(t: { id: TaskId; plan: PlanLink | null; plans: { task_id: TaskId; name: string }[] }): string | null {
   const owner = planOwnerOf(t);
   return t.plans.find((p) => p.task_id === owner && isOwnPlanName(owner, p.name))?.name ?? null;
 }

@@ -1,5 +1,6 @@
 // The pilot scorecard measures per repo, read from the database.
 import type { Db } from '../../db/index.ts';
+import type { RepoId } from '../../domain/id/id.ts';
 import { type Scorecard, buildScorecard } from '../../domain/run/scorecard.ts';
 import { type Measures, type StatsReport, measure, measureByRepo, measureByWeek } from '../../domain/run/stats.ts';
 import { ActionError } from '../input.ts';
@@ -19,7 +20,7 @@ export function pilotStats(db: Db, opts: { repo?: string; since?: string; by?: '
   const only = opts.repo === undefined ? undefined : db.findRepo(opts.repo);
   if (opts.repo !== undefined && !only) throw new ActionError(`no repo "${opts.repo}"`);
   const rows = db.statRuns(only?.id).filter((r) => opts.since === undefined || r.started_at >= opts.since);
-  const repoName = (id: number) => db.getRepo(id)?.name ?? `repo${id}`;
+  const repoName = (id: RepoId) => db.getRepo(id)?.name ?? `repo${id}`;
   const repos = [...measureByRepo(rows)]
     .map(([id, measures]) => ({ repo: repoName(id), measures }))
     .sort((a, b) => a.repo.localeCompare(b.repo));

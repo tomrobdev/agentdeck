@@ -1,12 +1,13 @@
 // Which plan a task follows: its own, another task's, or none. Plain values, no database.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { asTaskId } from './fixtures.ts';
 import { checkoutOf } from '../src/domain/task/checkout.ts';
 import { hasPlanLink, otherPlanOwner, planOwnerOf } from '../src/domain/task/plan-link.ts';
 
-const own = { id: 5, plan: { task: 5, steps: ['a'] } };
-const following = { id: 6, plan: { task: 5, steps: null } };
-const none = { id: 7, plan: null };
+const own = { id: asTaskId(5), plan: { task: asTaskId(5), steps: ['a'] } };
+const following = { id: asTaskId(6), plan: { task: asTaskId(5), steps: null } };
+const none = { id: asTaskId(7), plan: null };
 
 test('planOwnerOf: the task whose plan this one follows, else itself', () => {
   assert.equal(planOwnerOf(own), 5);

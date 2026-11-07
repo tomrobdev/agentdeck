@@ -12,6 +12,7 @@ import {
   parsePlan,
   planAfterRun,
 } from '../domain/plan/plan.ts';
+import type { TaskId } from '../domain/id/id.ts';
 import type { PrPlan } from '../domain/pull-request/pr.ts';
 import type { PromptPlan } from '../domain/run/prompt.ts';
 import { hasPlanLink, otherPlanOwner } from '../domain/task/plan-link.ts';
@@ -78,7 +79,7 @@ function storeWrittenPlan(db: Db, task: Task, written: string, given: string | n
  * step id the new plan doesn't have: that task would be left with no steps to do. `skip` leaves out a task whose
  * steps are checked on their own.
  */
-export function checkFollowers(db: Db, owner: number, plan: ParsedPlan, skip?: number): void {
+export function checkFollowers(db: Db, owner: TaskId, plan: ParsedPlan, skip?: TaskId): void {
   const followers = db
     .planFollowers(owner)
     .filter((f) => f.id !== skip)
@@ -116,7 +117,7 @@ export function plansShown(db: Db, task: Pick<Task, 'id' | 'plan'>): TaskPlan[] 
  * run's end would write the old plan back over it. The store checks that in the same write as the plan and the edit
  * it records, which tells a cut-off follower to start afresh.
  */
-export function attachPlan(db: Db, id: number, input: { html?: unknown }): TaskPlan {
+export function attachPlan(db: Db, id: TaskId, input: { html?: unknown }): TaskPlan {
   const task = requireTask(db, id);
   const notNow = (status: string) => new ActionError(`#${id} is ${status}; a plan can't be attached while it runs`);
   if (!PLAN_ATTACHABLE_STATUSES.includes(task.status)) throw notNow(task.status);
@@ -128,7 +129,7 @@ export function attachPlan(db: Db, id: number, input: { html?: unknown }): TaskP
 }
 
 /** One plan's HTML, for the dashboard to show in full. */
-export function planHtml(db: Db, id: number, planId: number): { html: string } {
+export function planHtml(db: Db, id: TaskId, planId: number): { html: string } {
   const html = db.planHtml(id, planId);
   if (html === undefined) throw new ActionError('no such plan');
   return { html };

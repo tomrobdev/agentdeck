@@ -2,7 +2,7 @@
 import { COMMANDS } from './cli/commands.ts';
 import { die } from './cli/format.ts';
 import { HELP } from './cli/help.ts';
-import { parseCommandLine } from './cli/context.ts';
+import { type CommandContext, parseCommandLine } from './cli/context.ts';
 import { openDb } from './db/index.ts';
 
 async function main(argv: string[]): Promise<void> {
@@ -13,7 +13,7 @@ async function main(argv: string[]): Promise<void> {
   if (!command) die(`unknown command "${cmd}"\n\n${HELP}`);
 
   const db = openDb();
-  const repoName = (id: number) => db.getRepo(id)?.name ?? `repo${id}`;
+  const repoName: CommandContext['repoName'] = (id) => db.getRepo(id)?.name ?? `repo${id}`;
   await command({ db, cmd, rest, flags, repoName });
   db.close();
 }

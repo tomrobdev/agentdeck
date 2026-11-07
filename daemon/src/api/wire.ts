@@ -4,6 +4,7 @@
 import * as actions from '../application/actions.ts';
 import type { Db } from '../db/index.ts';
 import { stored } from '../db/mappers.ts';
+import type { TaskId } from '../domain/id/id.ts';
 import { type PullRequest, prFields } from '../domain/pull-request/pr.ts';
 import type { Checkout } from '../domain/task/checkout.ts';
 import type { PlanLink } from '../domain/task/plan-link.ts';
@@ -25,7 +26,7 @@ const flat = <T extends TaskState & { pr: PullRequest | null; checkout: Checkout
 };
 
 /** One task with its view, runs, events and plans, in the API's shape. */
-export async function taskDetail(db: Db, id: number) {
+export async function taskDetail(db: Db, id: TaskId) {
   const detail = await actions.taskDetail(db, id);
   return { ...flat(detail), runs: detail.runs.map(stored) };
 }

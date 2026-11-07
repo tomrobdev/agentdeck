@@ -20,6 +20,7 @@ import { writeEvent } from '../adapters/run-log.ts';
 import { runCommand } from '../adapters/shell.ts';
 import { TEST_TIMEOUT_MS } from '../config.ts';
 import type { Db } from '../db/index.ts';
+import type { TaskId } from '../domain/id/id.ts';
 import { type SyncResult, conflictReason, resolveOutcome, syncResultOf, syncSummary } from '../domain/branch/sync.ts';
 import type { Repo } from '../domain/repo/repo.ts';
 import { buildResolvePrompt } from '../domain/run/prompt.ts';
@@ -142,18 +143,18 @@ async function checkResolution(worktree: string, before: string, files: string[]
 }
 
 /** The lock against two syncs of one task in the daemon (the database's marker is what other processes read). */
-const syncing = new Set<number>();
+const syncing = new Set<TaskId>();
 
 /** Whether a sync of this task's branch is running, in any process: the marker the daemon keeps in the database. */
-export const isSyncing = (db: Db, id: number): boolean => db.hasSyncMarker(id);
+export const isSyncing = (db: Db, id: TaskId): boolean => db.hasSyncMarker(id);
 
 /** Refuse a change to a task while a sync of its branch is running. */
-export function refuseWhileSyncing(db: Db, id: number): void {
+export function refuseWhileSyncing(db: Db, id: TaskId): void {
   if (isSyncing(db, id)) throw new ActionError(`#${id} is syncing with its base branch; try again when that is done`);
 }
 
 /** Run `fn` with the task's sync marked in the database, so the CLI sees it too; the mark is cleared however `fn` ends. */
-export async function markSyncing<T>(db: Db, id: number, fn: () => Promise<T>): Promise<T> {
+export async function markSyncing<T>(db: Db, id: TaskId, fn: () => Promise<T>): Promise<T> {
   db.setSyncing(id, true);
   try {
     return await fn();
@@ -163,7 +164,7 @@ export async function markSyncing<T>(db: Db, id: number, fn: () => Promise<T>): 
 }
 
 /** Whether a sync in this process holds the task's worktree (the in-process half of `isSyncing`, no query). */
-export const isSyncLocked = (id: number): boolean => syncing.has(id);
+export const isSyncLocked = (id: TaskId): boolean => syncing.has(id);
 
 export interface SyncReport {
   /** `skipped`: conflicts, but auto_resolve is off. `deferred`: the usage limit, or a cancel, stopped it. */
@@ -203,7 +204,7 @@ async function pushIfNeeded(
  * branch, the merge is undone and the task becomes blocked with the conflicting files as the reason.
  * `manual` is a person asking (it ignores the repo's auto_resolve and throws what an automatic call only reports).
  */
-export async function syncTask(db: Db, id: number, opts: { manual: boolean }): Promise<SyncReport> {
+export async function syncTask(db: Db, id: TaskId, opts: { manual: boolean }): Promise<SyncReport> {
   const task = requireTask(db, id);
   const repo = requireTaskRepo(db, task);
   if (task.status !== 'done') throw new ActionError(`#${id} is ${task.status}; only a done task's branch is synced this way`);
@@ -253,7 +254,7 @@ async function syncMarked(db: Db, task: Task, repo: Repo, opts: { manual: boolea
 }
 
 /** A person asked (`agentdeck sync`, the dashboard's sync button): the repo's auto_resolve does not apply. */
-export const syncNow = (db: Db, id: number): Promise<SyncReport> => syncTask(db, id, { manual: true });
+export const syncNow = (db: Db, id: TaskId): Promise<SyncReport> => syncTask(db, id, { manual: true });
 
 /** Whether the governor lets a resolve run start now: not paused, not rate limited, inside the usage windows, a slot free. */
 export function canStartResolve(db: Db): boolean {
@@ -267,9 +268,9 @@ export function canStartResolve(db: Db): boolean {
  */
 export async function resolveConflicting(
   db: Db,
-  ids: number[],
+  ids: TaskId[],
   log: (msg: string) => void = () => {},
-  told: Set<number> = new Set(),
+  told: Set<TaskId> = new Set(),
 ): Promise<void> {
   for (const id of told) if (!ids.includes(id)) told.delete(id);
   for (const id of ids) {

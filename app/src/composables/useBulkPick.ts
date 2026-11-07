@@ -32,7 +32,7 @@ export function useBulkPick(tasks: () => TaskSummary[], order: Ref<TaskSummary[]
   }
   // Drop picks for tasks that left the list (deleted, filtered out).
   watch(order, (o) => {
-    const ids = new Set(o.map((t) => t.id));
+    const ids = new Set<number>(o.map((t) => t.id));
     if (picked.value.some((id) => !ids.has(id))) picked.value = picked.value.filter((id) => ids.has(id));
   });
   async function bulkAct(action: BulkAction) {

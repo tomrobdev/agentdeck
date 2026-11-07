@@ -1,5 +1,6 @@
 // The live state of a repo's queue in a few lines, for an agent: what changed since it last looked, and what is open.
 // Pure: the caller reads the events, tasks and header facts. `agentdeck context` prints it, and Claude Code's hooks run that.
+import type { TaskId } from '../id/id.ts';
 import { describeEvent } from './event-text.ts';
 import type { TaskEventRow } from './history.ts';
 import type { TaskStatus } from './lifecycle.ts';
@@ -13,7 +14,7 @@ export type DigestEvent = Pick<TaskEventRow, 'id' | 'task_id' | 'type' | 'from_s
 
 /** An open task as the digest shows it. */
 export interface DigestTask {
-  id: number;
+  id: TaskId;
   title: string;
   status: TaskStatus;
   pr_state: PrState | null;

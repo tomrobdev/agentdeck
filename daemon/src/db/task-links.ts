@@ -1,5 +1,6 @@
 // Task links: what a task depends on, and what depends on it.
 import { and, asc, eq, inArray } from 'drizzle-orm';
+import type { TaskId } from '../domain/id/id.ts';
 import type { TaskStatus } from '../domain/task/lifecycle.ts';
 import type { Dependency, Link, LinkKind } from '../domain/task/link.ts';
 import type { Orm } from './orm.ts';
@@ -8,26 +9,26 @@ import { repos, taskLinks, tasks } from './tables.ts';
 
 /** A task that depends on another, and the kind of that link. */
 export interface Dependent {
-  id: number;
+  id: TaskId;
   status: TaskStatus;
   kind: LinkKind;
 }
 
 /** A task at the end of a link: what its link states are read from. */
-export type LinkedTask = Dependency & { id: number };
+export type LinkedTask = Dependency & { id: TaskId };
 
 /** A link's columns, named as the domain's `Link`. */
 const LINK_COLUMNS = { task_id: taskLinks.task_id, on: taskLinks.on_task, kind: taskLinks.kind };
 
 /** Link task `id` to each of `links`. Whether that is allowed (a cycle, a duplicate) is the caller's to check with linkError. */
-export function insertLinks(orm: Orm, id: number, links: { on: number; kind: LinkKind }[]): void {
+export function insertLinks(orm: Orm, id: TaskId, links: { on: TaskId; kind: LinkKind }[]): void {
   for (const l of links) orm.insert(taskLinks).values({ task_id: id, on_task: l.on, kind: l.kind }).run();
 }
 
 export function taskLinkStore(orm: Orm) {
   return {
     /** The links a task has: what it depends on. */
-    linksOf(id: number): Link[] {
+    linksOf(id: TaskId): Link[] {
       return orm.select(LINK_COLUMNS).from(taskLinks).where(eq(taskLinks.task_id, id)).orderBy(asc(taskLinks.on_task)).all();
     },
     /** Every link there is, for checking a new one for cycles. */
@@ -35,7 +36,7 @@ export function taskLinkStore(orm: Orm) {
       return orm.select(LINK_COLUMNS).from(taskLinks).all();
     },
     /** The tasks that depend on `id` (of one kind, if given), in any status: each one's id, status and the kind of its link. */
-    dependentsOf(id: number, kind?: LinkKind): Dependent[] {
+    dependentsOf(id: TaskId, kind?: LinkKind): Dependent[] {
       return orm
         .select({ id: tasks.id, status: tasks.status, kind: taskLinks.kind })
         .from(tasks)
@@ -69,7 +70,7 @@ export function taskLinkStore(orm: Orm) {
       insertLinks(orm, link.task_id, [link]);
     },
     /** Remove the link from `task_id` to `on`; false if there was none. */
-    removeLink(task_id: number, on: number): boolean {
+    removeLink(task_id: TaskId, on: TaskId): boolean {
       return changed(
         orm
           .delete(taskLinks)

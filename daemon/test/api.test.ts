@@ -5,6 +5,7 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, test } from 'node:test';
+import { asTaskId } from '../src/domain/id/id.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-api-'));
 process.env.AGENTDECK_HOME = home;
@@ -104,7 +105,7 @@ test('a log that cannot be read ends the stream instead of stopping the daemon',
   // A directory where the log should be: it exists and has a size, but reading it throws (EISDIR).
   const unreadable = join(home, 'unreadable-log');
   mkdirSync(unreadable);
-  const runId = db.startRun(1, 1, unreadable);
+  const runId = db.startRun(asTaskId(1), 1, unreadable);
   const body = await (await api(`/api/tasks/1/log?run=${runId}`)).text();
   assert.match(body, /event: end/);
   db.finishRun(runId, { outcome: 'failed' });

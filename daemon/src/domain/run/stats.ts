@@ -1,12 +1,13 @@
 // The pilot scorecard's measures (docs/pilot/scorecard.md), computed from plain run rows. Pure: no I/O.
+import type { RepoId, TaskId } from '../id/id.ts';
 import { minutesBetween, weekOf } from '../time.ts';
 import { num, pct, table } from './report-text.ts';
 import { INTERRUPTED } from './run.ts';
 
 /** One work run with the status of the task it belongs to. Resolve runs are never given here. */
 export interface StatRun {
-  repo_id: number;
-  task_id: number;
+  repo_id: RepoId;
+  task_id: TaskId;
   attempt: number;
   outcome: string | null; // null while the run has not finished
   started_at: string;
@@ -85,8 +86,8 @@ export function measure(rows: StatRun[]): Measures {
 }
 
 /** The measures of each repo that has work runs, by repo id. */
-export function measureByRepo(rows: StatRun[]): Map<number, Measures> {
-  const groups = new Map<number, StatRun[]>();
+export function measureByRepo(rows: StatRun[]): Map<RepoId, Measures> {
+  const groups = new Map<RepoId, StatRun[]>();
   for (const r of rows) groups.set(r.repo_id, [...(groups.get(r.repo_id) ?? []), r]);
   return new Map([...groups].map(([id, g]) => [id, measure(g)]));
 }

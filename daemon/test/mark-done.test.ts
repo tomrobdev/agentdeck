@@ -4,7 +4,9 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import type { TaskId } from '../src/domain/id/id.ts';
 import { stateFields } from '../src/domain/task/task.ts';
+import { asTaskId } from './fixtures.ts';
 
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-markdone-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
@@ -26,13 +28,13 @@ function setup() {
       repo_id: repo.id,
       title: 't',
       prompt: 'p',
-      links: after_task === undefined ? [] : [{ on: after_task, kind: 'builds_on' }],
+      links: after_task === undefined ? [] : [{ on: asTaskId(after_task), kind: 'builds_on' }],
     });
   return { db, repo, add };
 }
 
 /** Move a queued task to `status` through its events. */
-function bring(db: Db, id: number, status: TaskStatus): void {
+function bring(db: Db, id: TaskId, status: TaskStatus): void {
   const claim = () => assert.ok(db.applyEvent(id, { type: 'claim' }));
   switch (status) {
     case 'queued':
@@ -125,7 +127,7 @@ test('markDone names the status when it is refused, and keeps the note', () => {
     () => markDone(db, q.id),
     (e: Error) => e instanceof ActionError && /#\d+ is queued/.test(e.message),
   );
-  assert.throws(() => markDone(db, 999), ActionError);
+  assert.throws(() => markDone(db, asTaskId(999)), ActionError);
   const b = add();
   bring(db, b.id, 'blocked');
   markDone(db, b.id, '  merged it myself ');

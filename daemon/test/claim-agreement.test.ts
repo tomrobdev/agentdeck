@@ -4,6 +4,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import type { TaskId } from '../src/domain/id/id.ts';
 
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-claim-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
@@ -95,7 +96,7 @@ test('claimNextTask and startState agree for tasks with several links, of either
   const behind = db.addTask({ repo_id: repo.id, title: 'behind', prompt: 'p' });
   db.addLink({ task_id: behind.id, on: failed, kind: 'builds_on' });
   const ends = [done, running, failed, behind.id];
-  const combos: [number[], number[]][] = [];
+  const combos: [TaskId[], TaskId[]][] = [];
   for (const a of ends) {
     combos.push([[a], []], [[], [a]]);
     for (const b of ends) if (a !== b) combos.push([[a, b], []], [[a], [b]]);

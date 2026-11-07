@@ -1,6 +1,7 @@
 // Warn when a task's prompt names a repo path that won't be there when the task runs.
 import { branchCommit, listFiles, localStartPoint, resolveCommit } from '../../adapters/git.ts';
 import type { Db } from '../../db/index.ts';
+import type { TaskId } from '../../domain/id/id.ts';
 import { linkState } from '../../domain/task/link.ts';
 import { matchPath, pathsNamedIn } from '../../domain/task/prompt-paths.ts';
 import type { Task } from '../../domain/task/task.ts';
@@ -14,7 +15,7 @@ import { requireTask, requireTaskRepo } from '../input.ts';
  * counts through its branch; with no branch yet, the path "may come from it". Checks the saved task, so call it after
  * addTask or editTask. Git trouble (no base commit, an unreadable repo) means no warnings, not a failure.
  */
-export async function promptWarnings(db: Db, id: number): Promise<string[]> {
+export async function promptWarnings(db: Db, id: TaskId): Promise<string[]> {
   const task = requireTask(db, id);
   const paths = pathsNamedIn(task.prompt);
   if (!paths.length) return [];
@@ -60,7 +61,7 @@ export async function promptWarnings(db: Db, id: number): Promise<string[]> {
 
 /** The tasks the task builds on, directly or down the chain, whose work is not on the base branch yet. */
 function unmergedBuiltOn(db: Db, task: Task): Task[] {
-  const seen = new Set<number>([task.id]);
+  const seen = new Set<TaskId>([task.id]);
   const found: Task[] = [];
   const queue = [task.id];
   for (let next = queue.shift(); next !== undefined; next = queue.shift()) {

@@ -3,6 +3,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { ActionError, type ChangeWatcher, type DaemonInfo, type ReloadFacts, type Scheduler } from '../application/actions.ts';
 import { API_ALLOWED_ORIGINS } from '../config.ts';
 import type { Db } from '../db/index.ts';
+import { type RepoId, type ReviewId, type TaskId, parseId } from '../domain/id/id.ts';
 import { parseTaskIds } from '../domain/task/ids.ts';
 
 /** What the API needs of the scheduler: `wake` after a change that may let queued work start, `track` for runs it starts. */
@@ -54,10 +55,31 @@ export const route = <T = never>(
 ): Route => ({ method, path, handle });
 
 /** The task ids in body field `key` ([12, 14]); empty when absent, unless `required`. A 400 when they aren't task ids. */
-export function idsField(body: Record<string, unknown>, key: string, opts: { required?: boolean } = {}): number[] {
+export function idsField(body: Record<string, unknown>, key: string, opts: { required?: boolean } = {}): TaskId[] {
   const ids = opts.required && body[key] === undefined ? null : parseTaskIds(body[key]);
   if (!ids) throw new BadRequest(`${key} must be a list of task ids`);
   return ids;
+}
+
+/** A task id captured from a path (`(\d+)`): the one place a route turns the text into an id. A 400 when it isn't one (0, say). */
+export function taskIdParam(text: string): TaskId {
+  const id = parseId<TaskId>(text);
+  if (id === null) throw new BadRequest(`${text} is not a task id`);
+  return id;
+}
+
+/** A repo id captured from a path. */
+export function repoIdParam(text: string): RepoId {
+  const id = parseId<RepoId>(text);
+  if (id === null) throw new BadRequest(`${text} is not a repo id`);
+  return id;
+}
+
+/** A review id captured from a path. */
+export function reviewIdParam(text: string): ReviewId {
+  const id = parseId<ReviewId>(text);
+  if (id === null) throw new BadRequest(`${text} is not a review id`);
+  return id;
 }
 
 export function send(res: ServerResponse, code: number, data: unknown): void {

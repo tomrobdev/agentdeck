@@ -1,4 +1,5 @@
 // The run entity and how to read a run's result. Pure: no I/O.
+import type { RunId, TaskId } from '../id/id.ts';
 import { STATUS_WORD, lastLine, oneLine } from '../text.ts';
 import { type Needs, parseNeeds } from '../task/needs.ts';
 
@@ -17,8 +18,8 @@ export const runLabel = (run: Pick<Run, 'kind' | 'attempt'>): string =>
 export type RunOutcome = Outcome | typeof INTERRUPTED;
 
 export interface Run {
-  id: number;
-  task_id: number;
+  id: RunId;
+  task_id: TaskId;
   kind: RunKind;
   attempt: number; // a resolve or unblock run carries the attempt it ran beside
   started_at: string;

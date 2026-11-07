@@ -1,5 +1,6 @@
 // Plans attached to tasks: the HTML as written, parsed into steps when read.
 import { and, asc, desc, eq, ne, notInArray, sql } from 'drizzle-orm';
+import type { TaskId } from '../domain/id/id.ts';
 import { type PlanSource, type TaskPlan, parsePlan, planFileName } from '../domain/plan/plan.ts';
 import type { PlanFollower } from '../domain/task/plan-link.ts';
 import { readSteps } from './mappers.ts';
@@ -22,7 +23,7 @@ export function toPlan({ html, ...row }: OwnPlan): TaskPlan {
 }
 
 /** Insert task `task_id`'s own plan under the name its title gives (planFileName). The caller makes sure it has none. */
-export function insertOwnPlan(orm: Orm, task_id: number, html: string, source: PlanSource): string {
+export function insertOwnPlan(orm: Orm, task_id: TaskId, html: string, source: PlanSource): string {
   const name = planFileName(task_id, parsePlan(html)?.title ?? '');
   orm.insert(taskPlans).values({ task_id, name, source, html }).run();
   return name;
@@ -32,7 +33,7 @@ export function insertOwnPlan(orm: Orm, task_id: number, html: string, source: P
  * The task's own plan, the newest if there were ever two: the row under its numbered name (planFileName). Plans stored
  * before plans had numbers are not its own.
  */
-function ownPlanRow(orm: Orm, task_id: number): OwnPlan | undefined {
+function ownPlanRow(orm: Orm, task_id: TaskId): OwnPlan | undefined {
   const row = orm
     .select()
     .from(taskPlans)
@@ -54,7 +55,7 @@ function ownPlanRow(orm: Orm, task_id: number): OwnPlan | undefined {
  * Store `html` (a plan) as the task's own plan, under the name its title gives (planFileName), replacing the plan it
  * had: that row keeps its id, so the dashboard's view of it follows. The task store calls it inside its guarded writes.
  */
-export function saveOwnPlan(db: DatabaseSync, orm: Orm, task_id: number, html: string, source: PlanSource): TaskPlan {
+export function saveOwnPlan(db: DatabaseSync, orm: Orm, task_id: TaskId, html: string, source: PlanSource): TaskPlan {
   const name = planFileName(task_id, parsePlan(html)?.title ?? '');
   return atomically(db, () => {
     const old = ownPlanRow(orm, task_id);
@@ -74,9 +75,9 @@ export function saveOwnPlan(db: DatabaseSync, orm: Orm, task_id: number, html: s
 
 export function planStore(db: DatabaseSync, orm: Orm) {
   return {
-    ownPlan: (task_id: number): OwnPlan | undefined => ownPlanRow(orm, task_id),
+    ownPlan: (task_id: TaskId): OwnPlan | undefined => ownPlanRow(orm, task_id),
     /** Store a plan as the task's own (`saveOwnPlan`), unguarded: for a run's worker, whose task is running. */
-    saveOwnPlan: (task_id: number, html: string, source: PlanSource): TaskPlan => saveOwnPlan(db, orm, task_id, html, source),
+    saveOwnPlan: (task_id: TaskId, html: string, source: PlanSource): TaskPlan => saveOwnPlan(db, orm, task_id, html, source),
     /** Replace a stored plan's HTML, keeping its name and source. updated_at moves only when the HTML changed. */
     updatePlanHtml(id: number, html: string): void {
       orm
@@ -86,7 +87,7 @@ export function planStore(db: DatabaseSync, orm: Orm) {
         .run();
     },
     /** Whether a task other than `task_id` follows task `task_id`'s plan. */
-    planShared(task_id: number): boolean {
+    planShared(task_id: TaskId): boolean {
       return !!orm
         .select({ id: tasks.id })
         .from(tasks)
@@ -97,7 +98,7 @@ export function planStore(db: DatabaseSync, orm: Orm) {
      * The tasks that follow task `task_id`'s plan (itself too when it was given its plan with --plan) and may still run
      * on it: not done or cancelled. Oldest first, with their plan links.
      */
-    planFollowers(task_id: number): PlanFollower[] {
+    planFollowers(task_id: TaskId): PlanFollower[] {
       return orm
         .select({ id: tasks.id, plan_steps: tasks.plan_steps })
         .from(tasks)
@@ -107,7 +108,7 @@ export function planStore(db: DatabaseSync, orm: Orm) {
         .map((f) => ({ id: f.id, plan: { task: task_id, steps: readSteps(f.plan_steps) } }));
     },
     /** The task's plans, oldest first, without their HTML. */
-    plansForTask(task_id: number): TaskPlan[] {
+    plansForTask(task_id: TaskId): TaskPlan[] {
       return orm
         .select()
         .from(taskPlans)
@@ -116,7 +117,7 @@ export function planStore(db: DatabaseSync, orm: Orm) {
         .all()
         .map((row) => toPlan({ ...row, source: row.source as PlanSource }));
     },
-    planHtml(task_id: number, id: number): string | undefined {
+    planHtml(task_id: TaskId, id: number): string | undefined {
       return orm
         .select({ html: taskPlans.html })
         .from(taskPlans)

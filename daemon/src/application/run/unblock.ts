@@ -3,6 +3,7 @@
 import { commitLeftovers, ensureWorktree } from '../../adapters/git.ts';
 import { writeEvent } from '../../adapters/run-log.ts';
 import type { Db } from '../../db/index.ts';
+import type { TaskId } from '../../domain/id/id.ts';
 import type { PromptPlan } from '../../domain/run/prompt.ts';
 import {
   UNBLOCK_MAX_TURNS,
@@ -105,7 +106,7 @@ async function runOpened(db: Db, task: BlockedTask, opened: OpenedRun): Promise<
 }
 
 /** Queue the task again with the note, or leave the question on it; neither happens if it is no longer blocked. */
-async function settleUnblock(db: Db, id: number, decision: UnblockDecision): Promise<UnblockReport> {
+async function settleUnblock(db: Db, id: TaskId, decision: UnblockDecision): Promise<UnblockReport> {
   if ('retry' in decision) {
     const task = await settle(db, id, { type: 'unblock_retry' }, { reason: decision.retry });
     return task ? { outcome: 'retried', reason: decision.retry } : { outcome: 'stale' };

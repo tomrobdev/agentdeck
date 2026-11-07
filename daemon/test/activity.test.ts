@@ -3,11 +3,12 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { activityItems } from '../../app/src/lib/activity.ts';
 import type { Status, TaskSummary } from '../../app/src/api/types.ts';
+import { asTaskId } from './fixtures.ts';
 
 const NOW = Date.parse('2026-11-01T12:10:00Z');
 
-function task(over: Partial<TaskSummary>): TaskSummary {
-  return { id: 1, title: 'A task', status: 'done', live: null, sync: null, merge_request: null, ...over } as TaskSummary;
+function task({ id = 1, ...over }: Omit<Partial<TaskSummary>, 'id'> & { id?: number }): TaskSummary {
+  return { id: asTaskId(id), title: 'A task', status: 'done', live: null, sync: null, merge_request: null, ...over } as TaskSummary;
 }
 
 test('nothing under way gives an empty list', () => {

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
 import { MIGRATIONS, migrate, openDb } from '../src/db/index.ts';
+import { asTaskId } from './fixtures.ts';
 import { parseTaskIds } from '../src/domain/task/ids.ts';
 import {
   type Dependency,
@@ -18,8 +19,12 @@ import {
 } from '../src/domain/task/link.ts';
 
 const done: Dependency = { status: 'done', pr: null, pr_mode: 'off', done_by: null };
-const builds = { on: 5, kind: 'builds_on' } as const;
-const after = { on: 5, kind: 'after' } as const;
+const t1 = asTaskId(1);
+const builds = { on: asTaskId(5), kind: 'builds_on' } as const;
+const after = { on: asTaskId(5), kind: 'after' } as const;
+// linkError and buildsOnError over plain numbers, as the tests write them.
+const linkErr = (task: number, on: number, links: Link[]) => linkError(asTaskId(task), asTaskId(on), links);
+const buildsErr = (id: number, status: string, on: number) => buildsOnError(asTaskId(id), status, asTaskId(on));
 
 test('linkState: every row of the rules table, for builds on', () => {
   const stuck = (reason: string) => ({ kind: 'stuck', on: 5, reason });
@@ -65,17 +70,21 @@ const world =
     const t = tasks[id];
     return t && { ...done, links: [], ...t };
   };
-const link = (task_id: number, on: number, kind: Link['kind'] = 'builds_on'): Link => ({ task_id, on, kind });
+const link = (task_id: number, on: number, kind: Link['kind'] = 'builds_on'): Link => ({
+  task_id: asTaskId(task_id),
+  on: asTaskId(on),
+  kind,
+});
 
 test('startState: none, met, waiting on every unmet link', () => {
   const lookup = world({ 2: {}, 3: { status: 'running' }, 4: { status: 'queued' } });
-  assert.deepEqual(startState({ id: 1 }, [], lookup), { kind: 'none' });
-  assert.deepEqual(startState({ id: 1 }, [link(1, 2, 'after')], lookup), { kind: 'none' });
-  assert.deepEqual(startState({ id: 1 }, [link(1, 2)], lookup), { kind: 'met' });
-  assert.deepEqual(startState({ id: 1 }, [link(1, 2), link(1, 3), link(1, 4)], lookup), { kind: 'waiting', on: [3, 4] });
+  assert.deepEqual(startState({ id: t1 }, [], lookup), { kind: 'none' });
+  assert.deepEqual(startState({ id: t1 }, [link(1, 2, 'after')], lookup), { kind: 'none' });
+  assert.deepEqual(startState({ id: t1 }, [link(1, 2)], lookup), { kind: 'met' });
+  assert.deepEqual(startState({ id: t1 }, [link(1, 2), link(1, 3), link(1, 4)], lookup), { kind: 'waiting', on: [3, 4] });
   // An after link never holds a start, even on a task that failed.
-  assert.deepEqual(startState({ id: 1 }, [link(1, 2), link(1, 3, 'after')], lookup), { kind: 'met' });
-  assert.deepEqual(startState({ id: 1 }, [link(1, 2), link(1, 9, 'after')], lookup), { kind: 'met' });
+  assert.deepEqual(startState({ id: t1 }, [link(1, 2), link(1, 3, 'after')], lookup), { kind: 'met' });
+  assert.deepEqual(startState({ id: t1 }, [link(1, 2), link(1, 9, 'after')], lookup), { kind: 'met' });
 });
 
 test('startState: stuck spreads down builds-on links, naming the root', () => {
@@ -87,31 +96,31 @@ test('startState: stuck spreads down builds-on links, naming the root', () => {
     5: { status: 'failed' },
   });
   const links = [link(1, 3), link(1, 2)];
-  assert.deepEqual(startState({ id: 1 }, links, lookup), { kind: 'stuck', on: 5, reason: 'waits on #5 (via #2, #4), which failed' });
+  assert.deepEqual(startState({ id: t1 }, links, lookup), { kind: 'stuck', on: 5, reason: 'waits on #5 (via #2, #4), which failed' });
   // One link down, as the plan words it.
-  assert.deepEqual(startState({ id: 1 }, [link(1, 4)], lookup), { kind: 'stuck', on: 5, reason: 'waits on #5 (via #4), which failed' });
+  assert.deepEqual(startState({ id: t1 }, [link(1, 4)], lookup), { kind: 'stuck', on: 5, reason: 'waits on #5 (via #4), which failed' });
   assert.deepEqual(
-    startState({ id: 1 }, [link(1, 4)], world({ 4: { status: 'queued', links: [link(4, 5)] }, 5: { pr: { state: 'closed' } } })),
+    startState({ id: t1 }, [link(1, 4)], world({ 4: { status: 'queued', links: [link(4, 5)] }, 5: { pr: { state: 'closed' } } })),
     { kind: 'stuck', on: 5, reason: 'waits on #5 (via #4), whose PR was closed without merging' },
   );
   // Two stuck links: the first one's root.
   const two = world({ 2: { status: 'blocked' }, 3: { status: 'failed' } });
-  assert.deepEqual(startState({ id: 1 }, [link(1, 2), link(1, 3)], two), { kind: 'stuck', on: 2, reason: '#2 is blocked' });
+  assert.deepEqual(startState({ id: t1 }, [link(1, 2), link(1, 3)], two), { kind: 'stuck', on: 2, reason: '#2 is blocked' });
   // A root that is gone is named too.
-  assert.deepEqual(startState({ id: 1 }, [link(1, 2)], world({ 2: { status: 'queued', links: [link(2, 8)] } })), {
+  assert.deepEqual(startState({ id: t1 }, [link(1, 2)], world({ 2: { status: 'queued', links: [link(2, 8)] } })), {
     kind: 'stuck',
     on: 8,
     reason: 'waits on #8 (via #2), which no longer exists',
   });
   // An after link on the way down does not spread stuck; and a done task's own links no longer matter.
   assert.deepEqual(
-    startState({ id: 1 }, [link(1, 2)], world({ 2: { status: 'queued', links: [link(2, 5, 'after')] }, 5: { status: 'failed' } })),
+    startState({ id: t1 }, [link(1, 2)], world({ 2: { status: 'queued', links: [link(2, 5, 'after')] }, 5: { status: 'failed' } })),
     {
       kind: 'waiting',
       on: [2],
     },
   );
-  assert.deepEqual(startState({ id: 1 }, [link(1, 2)], world({ 2: { pr_mode: 'ready', links: [link(2, 5)] }, 5: { status: 'failed' } })), {
+  assert.deepEqual(startState({ id: t1 }, [link(1, 2)], world({ 2: { pr_mode: 'ready', links: [link(2, 5)] }, 5: { status: 'failed' } })), {
     kind: 'waiting',
     on: [2],
   });
@@ -123,7 +132,7 @@ test('startState: a cycle that got into the data does not loop', () => {
     2: { status: 'queued', links: [link(2, 3)] },
     3: { status: 'queued', links: [link(3, 2), link(3, 1)] },
   });
-  assert.deepEqual(startState({ id: 1 }, [link(1, 2)], lookup), { kind: 'waiting', on: [2] });
+  assert.deepEqual(startState({ id: t1 }, [link(1, 2)], lookup), { kind: 'waiting', on: [2] });
 });
 
 test('unlandedAfter lists the after links whose other task has not landed', () => {
@@ -144,7 +153,7 @@ test('unlandedAfter lists the after links whose other task has not landed', () =
 
 // A link index for stuckOn and releasedBy over a small graph: each task's status, PR and links.
 function graph(tasks: Record<number, Partial<Dependency> & { links?: Link[] }>): LinkIndex {
-  const all = Object.entries(tasks).map(([id, t]) => ({ id: Number(id), ...done, links: [], ...t }));
+  const all = Object.entries(tasks).map(([id, t]) => ({ id: asTaskId(Number(id)), ...done, links: [], ...t }));
   return {
     dependentsOf: (id) => all.flatMap((t) => t.links.filter((l) => l.on === id).map((l) => ({ id: t.id, status: t.status, kind: l.kind }))),
     linksOf: (id) => all.find((t) => t.id === id)?.links ?? [],
@@ -164,11 +173,11 @@ test('stuckOn names the dependents stuck on a task, and not one stuck on somethi
     7: { status: 'queued', links: [link(7, 1, 'after')] },
   });
   assert.deepEqual(
-    stuckOn(1, lookups).map((t) => t.id),
+    stuckOn(t1, lookups).map((t) => t.id),
     [2, 3],
   );
   assert.deepEqual(
-    stuckOn(5, lookups).map((t) => t.id),
+    stuckOn(asTaskId(5), lookups).map((t) => t.id),
     [4, 6],
   );
 });
@@ -186,17 +195,17 @@ test('releasedBy lists only the dependents merging a task leaves free to start',
     7: { status: 'running', links: [link(7, 1)] },
   });
   assert.deepEqual(
-    releasedBy(1, lookups).map((t) => t.id),
+    releasedBy(t1, lookups).map((t) => t.id),
     [3],
   );
-  assert.deepEqual(releasedBy(2, lookups), []);
+  assert.deepEqual(releasedBy(asTaskId(2), lookups), []);
 });
 
 test('buildsOnError refuses a builds-on link once a task has started, pointing at an after link', () => {
-  assert.equal(buildsOnError(2, 'proposed', 1), null);
-  assert.equal(buildsOnError(2, 'queued', 1), null);
+  assert.equal(buildsErr(2, 'proposed', 1), null);
+  assert.equal(buildsErr(2, 'queued', 1), null);
   for (const status of ['running', 'done', 'blocked', 'failed', 'cancelled'])
-    assert.match(buildsOnError(2, status, 1)!, /started.*after link instead$/);
+    assert.match(buildsErr(2, status, 1)!, /started.*after link instead$/);
 });
 
 test('parseTaskIds reads lists and typed text, and refuses anything else', () => {
@@ -208,18 +217,18 @@ test('parseTaskIds reads lists and typed text, and refuses anything else', () =>
 });
 
 test('linkError refuses a self link, a repeat and every kind of cycle', () => {
-  assert.match(linkError(1, 1, [])!, /itself/);
-  assert.equal(linkError(1, 2, []), null);
-  assert.match(linkError(1, 2, [link(1, 2, 'after')])!, /already linked/);
-  assert.match(linkError(1, 2, [link(1, 2)])!, /already linked/);
+  assert.match(linkErr(1, 1, [])!, /itself/);
+  assert.equal(linkErr(1, 2, []), null);
+  assert.match(linkErr(1, 2, [link(1, 2, 'after')])!, /already linked/);
+  assert.match(linkErr(1, 2, [link(1, 2)])!, /already linked/);
   // Direct: 2 already depends on 1.
-  assert.match(linkError(1, 2, [link(2, 1)])!, /cycle/);
+  assert.match(linkErr(1, 2, [link(2, 1)])!, /cycle/);
   // Through a chain, of either kind and mixed.
-  assert.match(linkError(1, 2, [link(2, 3), link(3, 1)])!, /cycle/);
-  assert.match(linkError(1, 2, [link(2, 3, 'after'), link(3, 4), link(4, 1, 'after')])!, /cycle/);
+  assert.match(linkErr(1, 2, [link(2, 3), link(3, 1)])!, /cycle/);
+  assert.match(linkErr(1, 2, [link(2, 3, 'after'), link(3, 4), link(4, 1, 'after')])!, /cycle/);
   // Not a cycle: a diamond, and an unrelated branch.
-  assert.equal(linkError(1, 2, [link(1, 3), link(3, 4), link(2, 4)]), null);
-  assert.equal(linkError(1, 2, [link(2, 3), link(4, 1)]), null);
+  assert.equal(linkErr(1, 2, [link(1, 3), link(3, 4), link(2, 4)]), null);
+  assert.equal(linkErr(1, 2, [link(2, 3), link(4, 1)]), null);
 });
 
 test('migration 18 turns an existing after_task into a builds-on link', () => {
@@ -252,7 +261,7 @@ test('the store lists links and dependents, and addTask turns after_task into on
       repo_id: repo.id,
       title: 't',
       prompt: 'p',
-      links: after_task === undefined ? [] : [{ on: after_task, kind: 'builds_on' }],
+      links: after_task === undefined ? [] : [{ on: asTaskId(after_task), kind: 'builds_on' }],
     });
   const a = add();
   const b = add(a.id);

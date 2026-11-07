@@ -1,6 +1,7 @@
 // Registered repos.
 import { and, asc, eq, inArray, isNotNull, isNull, or } from 'drizzle-orm';
 import type { DatabaseSync } from 'node:sqlite';
+import { type RepoId, type TaskId, asRepoId } from '../domain/id/id.ts';
 import type { Repo } from '../domain/repo/repo.ts';
 import { RUNNING_STATUSES } from '../domain/task/task.ts';
 import { mapFound, repoColumns, toRepo } from './mappers.ts';
@@ -9,7 +10,7 @@ import { NOW_SQL, atomically } from './sql.ts';
 import { notifications, plannerRuns, repos, reviewComments, reviews, runs, taskEvents, taskLinks, taskPlans, tasks } from './tables.ts';
 
 export function repoStore(db: DatabaseSync, orm: Orm) {
-  const tasksOf = (repo_id: number) => orm.select({ id: tasks.id }).from(tasks).where(eq(tasks.repo_id, repo_id));
+  const tasksOf = (repo_id: RepoId) => orm.select({ id: tasks.id }).from(tasks).where(eq(tasks.repo_id, repo_id));
   return {
     addRepo(r: {
       name: string;
@@ -32,9 +33,9 @@ export function repoStore(db: DatabaseSync, orm: Orm) {
           setup_cmd: r.setup_cmd ?? null,
         })
         .run();
-      return this.getRepo(Number(info.lastInsertRowid))!;
+      return this.getRepo(asRepoId(Number(info.lastInsertRowid)))!;
     },
-    getRepo(id: number): Repo | undefined {
+    getRepo(id: RepoId): Repo | undefined {
       return mapFound(orm.select().from(repos).where(eq(repos.id, id)).get(), toRepo);
     },
     findRepo(nameOrId: string): Repo | undefined {
@@ -42,7 +43,7 @@ export function repoStore(db: DatabaseSync, orm: Orm) {
         orm
           .select()
           .from(repos)
-          .where(or(eq(repos.name, nameOrId), eq(repos.id, /^\d+$/.test(nameOrId) ? Number(nameOrId) : -1)))
+          .where(or(eq(repos.name, nameOrId), eq(repos.id, /^\d+$/.test(nameOrId) ? asRepoId(Number(nameOrId)) : asRepoId(-1))))
           .get(),
         toRepo,
       );
@@ -58,7 +59,7 @@ export function repoStore(db: DatabaseSync, orm: Orm) {
         .map(toRepo);
     },
     /** Archive (true) or unarchive (false) a repo. */
-    setRepoArchived(id: number, archived: boolean): void {
+    setRepoArchived(id: RepoId, archived: boolean): void {
       orm
         .update(repos)
         .set({ archived_at: archived ? NOW_SQL : null })
@@ -66,7 +67,7 @@ export function repoStore(db: DatabaseSync, orm: Orm) {
         .run();
     },
     /** Whether a task of the repo is running or has a cancel requested. */
-    repoHasRunning(id: number): boolean {
+    repoHasRunning(id: RepoId): boolean {
       return !!orm
         .select({ id: tasks.id })
         .from(tasks)
@@ -75,8 +76,8 @@ export function repoStore(db: DatabaseSync, orm: Orm) {
         .get();
     },
     /** What deleting the repo takes with it: its tasks' checkouts and every log file its runs and planner runs wrote. */
-    repoFootprint(id: number): {
-      tasks: { id: number; branch: string | null; worktree: string | null }[];
+    repoFootprint(id: RepoId): {
+      tasks: { id: TaskId; branch: string | null; worktree: string | null }[];
       run_logs: string[];
       planner_logs: string[];
     } {
@@ -102,7 +103,7 @@ export function repoStore(db: DatabaseSync, orm: Orm) {
       };
     },
     /** Delete a repo and everything of it in one transaction, children first. Only an archived repo; returns false otherwise. */
-    deleteRepo(id: number): boolean {
+    deleteRepo(id: RepoId): boolean {
       return atomically(db, () => {
         if (
           !orm
@@ -150,7 +151,7 @@ export function repoStore(db: DatabaseSync, orm: Orm) {
       });
     },
     updateRepo(
-      id: number,
+      id: RepoId,
       fields: Partial<
         Pick<
           Repo,
@@ -175,11 +176,11 @@ export function repoStore(db: DatabaseSync, orm: Orm) {
       orm.update(repos).set(repoColumns(fields)).where(eq(repos.id, id)).run();
     },
     /** Pause (reason) or resume (null) a repo unconditionally. */
-    setRepoPaused(id: number, reason: string | null): void {
+    setRepoPaused(id: RepoId, reason: string | null): void {
       orm.update(repos).set({ paused_reason: reason }).where(eq(repos.id, id)).run();
     },
     /** Pause a repo that isn't paused yet. Returns false if it already was, keeping the first reason. */
-    pauseRepo(id: number, reason: string): boolean {
+    pauseRepo(id: RepoId, reason: string): boolean {
       const res = orm
         .update(repos)
         .set({ paused_reason: reason })

@@ -1,4 +1,5 @@
 // A task's history: one row per status change. Pure: no I/O.
+import type { TaskId } from '../id/id.ts';
 import type { MergeMethod } from '../pull-request/merge.ts';
 import type { PrState } from '../pull-request/pr.ts';
 import type { TaskEvent, TaskStatus } from './lifecycle.ts';
@@ -66,7 +67,7 @@ export const isRequestedMergeReason = (reason: string | null): boolean => !!reas
 
 export interface TaskEventRow {
   id: number;
-  task_id: number;
+  task_id: TaskId;
   type: TaskEventType;
   from_status: TaskStatus | null; // null for 'created'
   to_status: TaskStatus | null;

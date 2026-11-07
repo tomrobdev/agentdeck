@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { after, before, test } from 'node:test';
+import { asRepoId } from './fixtures.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-planner-'));
 process.env.AGENTDECK_HOME = home;
@@ -36,7 +37,7 @@ function makeRepo(name: string) {
   return path;
 }
 
-let repoId = 0;
+let repoId = asRepoId(0);
 before(async () => {
   repoId = (await actions.addRepo(db, { path: makeRepo('alpha') })).id;
 });

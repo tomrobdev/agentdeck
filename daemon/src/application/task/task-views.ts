@@ -1,5 +1,6 @@
 // Tasks as the dashboard and the CLI show them: a task plus what the queue says about it.
 import type { Db } from '../../db/index.ts';
+import type { TaskId } from '../../domain/id/id.ts';
 import { type AutoMergeView, autoMergeOn, autoMergeView } from '../../domain/pull-request/auto-merge.ts';
 import { type ChecksSummary, checksSummary } from '../../domain/pull-request/checks.ts';
 import { type MergeRequestView, conflictsWithBase, mergeRequestView } from '../../domain/pull-request/merge-request.ts';
@@ -21,9 +22,9 @@ import { startWaits } from '../scheduler/queue.ts';
 export interface TaskView {
   repo: string | null;
   waiting: Waiting | null;
-  unblocks: number[];
+  unblocks: TaskId[];
   links: LinkView[];
-  dependents: { id: number; kind: LinkKind }[];
+  dependents: { id: TaskId; kind: LinkKind }[];
   plan_unfinished: boolean;
   wait: StartWait | null;
   /** Whether the PR will merge on its own and why not, from the check the PR refresh stored. Null when the repo is gone. */
@@ -76,7 +77,7 @@ export function withViews<T extends Viewed>(db: Db, tasks: T[], links: LinkIndex
 }
 
 /** One task with its view, runs, events and plans. A branch with no open PR is measured against the auto-merge limits. */
-export async function taskDetail(db: Db, id: number) {
+export async function taskDetail(db: Db, id: TaskId) {
   const task = requireTask(db, id);
   const repo = db.getRepo(task.repo_id);
   const [view] = withViews(db, [task]);
@@ -96,6 +97,6 @@ export async function taskDetail(db: Db, id: number) {
 }
 
 /** Task summaries (no prompt), newest first, each with its view. The checks are summed up in `checks`, so their list stays out. */
-export function taskViews(db: Db, filter: { status?: TaskStatus; limit: number; before?: number }) {
+export function taskViews(db: Db, filter: { status?: TaskStatus; limit: number; before?: TaskId }) {
   return withViews(db, db.listTaskSummaries(filter));
 }

@@ -6,6 +6,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, beforeEach, test } from 'node:test';
+import { asTaskId } from '../src/domain/id/id.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-amview-'));
 process.env.AGENTDECK_HOME = home;
@@ -261,7 +262,7 @@ test('context marks an open task with its auto-merge label unless it is off', ()
     head: null,
   };
   const task = (id: number, auto_merge_view: { state: string; label: string } | null) => ({
-    id,
+    id: asTaskId(id),
     title: `t${id}`,
     status: 'done' as const,
     pr_state: 'open' as const,

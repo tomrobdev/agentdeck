@@ -4,6 +4,8 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import type { TaskId } from '../src/domain/id/id.ts';
+import { asTaskId } from './fixtures.ts';
 
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-events-'));
 
@@ -17,11 +19,11 @@ function setup() {
   return { db, add };
 }
 
-const last = (db: Db, id: number) => {
+const last = (db: Db, id: TaskId) => {
   const events = db.eventsForTask(id);
   return events[events.length - 1];
 };
-const brief = (db: Db, id: number) => db.eventsForTask(id).map((e) => [e.type, e.from_status, e.to_status, e.reason]);
+const brief = (db: Db, id: TaskId) => db.eventsForTask(id).map((e) => [e.type, e.from_status, e.to_status, e.reason]);
 
 test('addTask records created with the initial status', () => {
   const { db, add } = setup();
@@ -48,7 +50,7 @@ test('claimNextTask records claim from queued to running', () => {
 
 test('each lifecycle event records its type, from and to status and reason', () => {
   const { db, add } = setup();
-  const cases: [string, () => number, Parameters<Db['applyEvent']>[1], string, string, string | null][] = [];
+  const cases: [string, () => TaskId, Parameters<Db['applyEvent']>[1], string, string, string | null][] = [];
   const running = () => {
     const t = add();
     db.applyEvent(t.id, { type: 'claim' });
@@ -90,9 +92,9 @@ test('a refused event records nothing', () => {
   const t = add();
   assert.equal(db.applyEvent(t.id, { type: 'approve' }), undefined);
   assert.equal(db.applyEvent(t.id, { type: 'finish', outcome: 'done' }), undefined);
-  assert.equal(db.applyEvent(9999, { type: 'cancel' }), undefined);
+  assert.equal(db.applyEvent(asTaskId(9999), { type: 'cancel' }), undefined);
   assert.deepEqual(brief(db, t.id), [['created', null, 'queued', null]]);
-  assert.equal(db.eventsForTask(9999).length, 0);
+  assert.equal(db.eventsForTask(asTaskId(9999)).length, 0);
   db.close();
 });
 

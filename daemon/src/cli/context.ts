@@ -1,6 +1,7 @@
 // What every CLI command gets: the parsed command line and the database.
 import { parseArgs } from 'node:util';
 import type { Db } from '../db/index.ts';
+import type { RepoId } from '../domain/id/id.ts';
 
 export function parseCommandLine(argv: string[]) {
   return parseArgs({
@@ -54,7 +55,7 @@ export interface CommandContext {
   /** Positional arguments after the command name. */
   rest: string[];
   flags: ReturnType<typeof parseCommandLine>['values'];
-  repoName: (id: number) => string;
+  repoName: (id: RepoId) => string;
 }
 
 export type Command = (ctx: CommandContext) => void | Promise<void>;

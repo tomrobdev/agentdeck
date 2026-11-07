@@ -1,6 +1,7 @@
 // Send a PR's failing checks back to the worker: the failed steps' logs go into a retry's note.
 import { github } from '../../adapters/github.ts';
 import type { Db } from '../../db/index.ts';
+import type { TaskId } from '../../domain/id/id.ts';
 import { type FailedCheck, LOG_TAIL_BYTES, actionsRun, failingChecks, fixChecksNote, logTail } from '../../domain/pull-request/checks.ts';
 import { openPrUrl } from '../../domain/pull-request/pr.ts';
 import { errorMessage } from '../../domain/text.ts';
@@ -18,7 +19,7 @@ export interface FixChecksResult {
  * on the same branch, and the PR updates when it is done. Refused when the task isn't done with an open PR, or no
  * check is failing.
  */
-export async function fixChecks(db: Db, id: number): Promise<FixChecksResult> {
+export async function fixChecks(db: Db, id: TaskId): Promise<FixChecksResult> {
   const task = requireTask(db, id);
   if (task.status !== 'done') throw new ActionError(`#${id} is ${task.status}; only a done task's checks can be sent back`);
   const url = openPrUrl(task.pr);

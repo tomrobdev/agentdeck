@@ -50,7 +50,7 @@ The dashboard's routes, and the use case each calls.
 | POST   | `/api/tasks/:id/install-needs`     | `actions.installNeeds`                       |
 | DELETE | `/api/tasks/:id/links/:id2`        | `actions.unlinkTasks`                        |
 | POST   | `/api/tasks/:id/links`             | `actions.linkTasks`                          |
-| GET    | `/api/tasks/:id/log`               | `streamLog`                                  |
+| GET    | `/api/tasks/:id/log`               | `streamLog`, `taskIdParam`                   |
 | DELETE | `/api/tasks/:id/merge-request`     | `actions.cancelMergeRequest`                 |
 | POST   | `/api/tasks/:id/merge-request`     | `actions.requestMerge`                       |
 | GET    | `/api/tasks/:id/merge`             | `actions.mergePreview`                       |
@@ -63,8 +63,8 @@ The dashboard's routes, and the use case each calls.
 | POST   | `/api/tasks/:id/reviews`           | `actions.startReview`                        |
 | POST   | `/api/tasks/:id/sync`              | `actions.syncNow`                            |
 | GET    | `/api/tasks/:id/tree`              | `actions.taskTree`                           |
-| GET    | `/api/tasks/:id`                   |                                              |
+| GET    | `/api/tasks/:id`                   | `taskIdParam`                                |
 | POST   | `/api/tasks/:id`                   | `actions.editTask`, `actions.promptWarnings` |
 | POST   | `/api/tasks/merge-requests`        | `actions.requestMerges`                      |
-| GET    | `/api/tasks`                       |                                              |
+| GET    | `/api/tasks`                       | `asTaskId`                                   |
 | POST   | `/api/tasks`                       | `actions.addTask`, `actions.promptWarnings`  |

@@ -4,6 +4,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import { asReviewId, asTaskId } from '../src/domain/id/id.ts';
 import { commentsToAddress, nextCommentState, reviewReason } from '../src/domain/review/review.ts';
 import type { ReviewComment, ReviewWithComments } from '../src/domain/review/review.ts';
 
@@ -25,7 +26,7 @@ const comment = { path: 'src/a.ts', line: 3, side: 'new', head_commit: 'abc1234d
 
 const c = (id: number, state: ReviewComment['state']): ReviewComment => ({
   id,
-  review_id: 1,
+  review_id: asReviewId(1),
   path: 'a.ts',
   line: id,
   side: 'new',
@@ -51,8 +52,8 @@ test('a comment moves open → answered → resolved, and reopens', () => {
 
 test('a run must address the open comments of submitted request_changes reviews only', () => {
   const review = (id: number, kind: 'comment' | 'request_changes', submitted: boolean, comments: ReviewComment[]): ReviewWithComments => ({
-    id,
-    task_id: 1,
+    id: asReviewId(id),
+    task_id: asTaskId(1),
     kind: submitted ? kind : null,
     body: '',
     created_at: '',
@@ -153,7 +154,7 @@ test('comments are answered, resolved and reopened after the review is submitted
 test('bad input is refused', () => {
   const { db, repo } = setup();
   const task = doneTask(db, repo);
-  assert.throws(() => actions.startReview(db, 999), /no such task/);
+  assert.throws(() => actions.startReview(db, asTaskId(999)), /no such task/);
   const draft = actions.startReview(db, task.id);
   assert.throws(() => actions.addReviewComment(db, draft.id, { ...comment, side: 'left' }), /side must be/);
   assert.throws(() => actions.addReviewComment(db, draft.id, { ...comment, line: 0 }), /line must be/);

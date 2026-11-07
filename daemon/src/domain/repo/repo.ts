@@ -1,9 +1,10 @@
 // The repo entity. Pure: no I/O.
+import type { RepoId } from '../id/id.ts';
 import type { MergeMethod } from '../pull-request/merge.ts';
 import type { PrMode } from '../pull-request/pr.ts';
 
 export interface Repo {
-  id: number;
+  id: RepoId;
   name: string;
   path: string;
   base_branch: string;

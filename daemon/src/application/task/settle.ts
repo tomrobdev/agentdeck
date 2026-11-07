@@ -1,5 +1,6 @@
 // Settling a task: the daemon's own events that end a run or a wait, applied together with what follows them.
 import type { Db } from '../../db/index.ts';
+import type { TaskId } from '../../domain/id/id.ts';
 import { finalNotification } from '../../domain/notification.ts';
 import type { PrEvent } from '../../domain/task/history.ts';
 import type { TaskEvent } from '../../domain/task/lifecycle.ts';
@@ -18,7 +19,7 @@ import { openPullRequest } from '../pull-request/open-pr.ts';
  */
 export async function settle(
   db: Db,
-  id: number,
+  id: TaskId,
   event: TaskEvent,
   fields: { reason?: string | null; needs?: Needs | null } = {},
 ): Promise<Task | undefined> {
@@ -27,18 +28,18 @@ export async function settle(
 }
 
 /** For tasks the database already moved itself (crash recovery): the effects of their new status. */
-export async function settleRecovered(db: Db, ids: number[]): Promise<void> {
+export async function settleRecovered(db: Db, ids: TaskId[]): Promise<void> {
   for (const id of ids) await afterSettled(db, id, false);
 }
 
 /** A PR's state changed. A closed or failed PR may strand the tasks waiting on its merge. Returns whether it applied. */
-export function settlePr(db: Db, id: number, event: PrEvent): boolean {
+export function settlePr(db: Db, id: TaskId, event: PrEvent): boolean {
   if (!db.recordPr(id, event)) return false;
   warnStuckDependents(db, id);
   return true;
 }
 
-async function afterSettled(db: Db, id: number, openPr: boolean): Promise<Task | undefined> {
+async function afterSettled(db: Db, id: TaskId, openPr: boolean): Promise<Task | undefined> {
   const task = db.getTask(id);
   if (!task) return undefined;
   // The daemon opens the PR (agents cannot push). Whatever happens, the task stays done.

@@ -2,6 +2,7 @@
 // (docs/plans/auto-merge.html), and a person turns it on or off for one task.
 import { github } from '../../adapters/github.ts';
 import type { Db } from '../../db/index.ts';
+import type { TaskId } from '../../domain/id/id.ts';
 import { AUTO_MERGE_LABEL, autoMergeOn } from '../../domain/pull-request/auto-merge.ts';
 import type { PrDetails } from '../../domain/pull-request/merge.ts';
 import { mergeReason } from '../../domain/task/history.ts';
@@ -20,10 +21,10 @@ import { isMergeLocked, mergeable, mergeOpenPr } from './merge.ts';
  */
 export async function autoMerge(
   db: Db,
-  ready: { id: number; pr: PrDetails }[],
-  report: { log?: (msg: string) => void; told?: Map<number, string> } = {},
-): Promise<number | null> {
-  const { log = () => {}, told = new Map<number, string>() } = report;
+  ready: { id: TaskId; pr: PrDetails }[],
+  report: { log?: (msg: string) => void; told?: Map<TaskId, string> } = {},
+): Promise<TaskId | null> {
+  const { log = () => {}, told = new Map<TaskId, string>() } = report;
   for (const { id, pr } of ready) {
     if (isMergeLocked(id)) continue; // another merge of it is under way
     let target: ReturnType<typeof mergeable>;
@@ -75,7 +76,7 @@ export async function autoMerge(
  */
 export async function setAutoMerge(
   db: Db,
-  id: number,
+  id: TaskId,
   patch: { auto_merge: boolean | null },
 ): Promise<{ auto_merge: boolean; label_error?: string }> {
   const value = object(patch).auto_merge;

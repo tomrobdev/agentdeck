@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
 import { MIGRATIONS, migrate, openDb } from '../src/db/index.ts';
+import { asTaskId } from '../src/domain/id/id.ts';
 import { stopReasonOf } from '../src/domain/task/task.ts';
 
 function tmpPath(): { path: string; cleanup: () => void } {
@@ -140,7 +141,7 @@ test('a stored blocked_reason survives as stop_reason', () => {
 
     const db = openDb(t.path);
     try {
-      assert.equal(stopReasonOf(db.getTask(1)!), 'which database?');
+      assert.equal(stopReasonOf(db.getTask(asTaskId(1))!), 'which database?');
     } finally {
       db.close();
     }

@@ -7,7 +7,9 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileS
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, test } from 'node:test';
+import type { TaskId } from '../src/domain/id/id.ts';
 import type { Run } from '../src/domain/run/run.ts';
+import { asRepoId, asRunId, asTaskId } from './fixtures.ts';
 import { type Task, stopReasonOf } from '../src/domain/task/task.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-resume-'));
@@ -29,8 +31,8 @@ const { buildPrompt, buildResumePrompt, claudeArgs } = await import('../src/doma
 
 let ids = 0;
 const run = (o: Partial<Run>): Run => ({
-  id: ++ids,
-  task_id: 1,
+  id: asRunId(++ids),
+  task_id: asTaskId(1),
   kind: 'work',
   attempt: 1,
   started_at: '2026-11-01 10:00:00',
@@ -197,7 +199,7 @@ test('a fresh run after a restart still names the earlier attempt’s failed tes
 const CLI = join(import.meta.dirname, '../src/cli.ts');
 const db = openDb(DB_PATH);
 const repoPath = join(home, 'demo');
-let repoId = 0;
+let repoId = asRepoId(0);
 const git = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
 
 before(() => {
@@ -229,7 +231,7 @@ const resumeOf = (args: string[]) => (args.includes('--resume') ? args[args.inde
  * Start a daemon (`run-once`) in its own process and wait until the task has a run newer than `afterRun` that claude
  * has named a session for and that has not ended; then stop the daemon as launchd does, with SIGTERM. Returns the run.
  */
-async function restartMidRun(taskId: number, afterRun = 0): Promise<Run> {
+async function restartMidRun(taskId: TaskId, afterRun = 0): Promise<Run> {
   const daemon = spawn(process.execPath, [CLI, 'run-once'], { env: process.env, stdio: ['ignore', 'pipe', 'pipe'] });
   let output = '';
   daemon.stdout.on('data', (b) => (output += b));

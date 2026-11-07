@@ -1,4 +1,5 @@
 // The task entity. Pure: no I/O.
+import type { RepoId, TaskId } from '../id/id.ts';
 import type { PullRequest } from '../pull-request/pr.ts';
 import type { UnblockQuestion } from '../run/unblock.ts';
 import type { Checkout } from './checkout.ts';
@@ -11,8 +12,8 @@ export type TaskSource = 'manual' | 'planner';
 
 /** What every task has, whatever its status. */
 export interface TaskCore {
-  id: number;
-  repo_id: number;
+  id: TaskId;
+  repo_id: RepoId;
   title: string;
   prompt: string;
   priority: number;

@@ -1,5 +1,6 @@
 // Reviews and their comments. A draft is edited freely; a submitted review changes only in its comments' states.
 import { and, asc, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
+import type { ReviewId, TaskId } from '../domain/id/id.ts';
 import type { CommentSide, CommentState, Review, ReviewComment, ReviewKind, ReviewWithComments } from '../domain/review/review.ts';
 import type { Orm } from './orm.ts';
 import { NOW_SQL } from './sql.ts';
@@ -12,20 +13,20 @@ const toReview = (row: ReviewRow): Review => ({ ...row, kind: row.kind as Review
 const toComment = (row: CommentRow): ReviewComment => ({ ...row, side: row.side as CommentSide, state: row.state as CommentState });
 
 export function reviewStore(orm: Orm) {
-  const commentsOf = (review_id: number): ReviewComment[] =>
+  const commentsOf = (review_id: ReviewId): ReviewComment[] =>
     orm.select().from(reviewComments).where(eq(reviewComments.review_id, review_id)).orderBy(asc(reviewComments.id)).all().map(toComment);
 
   return {
     /** A new draft for the task. */
-    createReview(task_id: number): Review {
+    createReview(task_id: TaskId): Review {
       return toReview(orm.insert(reviews).values({ task_id }).returning().get());
     },
-    getReview(id: number): Review | undefined {
+    getReview(id: ReviewId): Review | undefined {
       const row = orm.select().from(reviews).where(eq(reviews.id, id)).get();
       return row && toReview(row);
     },
     /** The task's draft, if it has one. */
-    draftReviewFor(task_id: number): Review | undefined {
+    draftReviewFor(task_id: TaskId): Review | undefined {
       const row = orm
         .select()
         .from(reviews)
@@ -35,7 +36,7 @@ export function reviewStore(orm: Orm) {
       return row && toReview(row);
     },
     /** The task's reviews with their comments, oldest first. */
-    reviewsForTask(task_id: number): ReviewWithComments[] {
+    reviewsForTask(task_id: TaskId): ReviewWithComments[] {
       const rows = orm.select().from(reviews).where(eq(reviews.task_id, task_id)).orderBy(asc(reviews.id)).all();
       if (!rows.length) return [];
       const comments = orm
@@ -52,12 +53,12 @@ export function reviewStore(orm: Orm) {
         .map(toComment);
       return rows.map((r) => ({ ...toReview(r), comments: comments.filter((c) => c.review_id === r.id) }));
     },
-    reviewWithComments(id: number): ReviewWithComments | undefined {
+    reviewWithComments(id: ReviewId): ReviewWithComments | undefined {
       const review = this.getReview(id);
       return review && { ...review, comments: commentsOf(id) };
     },
     /** Change a draft's overall note. False when the review is not a draft. */
-    setReviewBody(id: number, body: string): boolean {
+    setReviewBody(id: ReviewId, body: string): boolean {
       return (
         orm
           .update(reviews)
@@ -67,7 +68,7 @@ export function reviewStore(orm: Orm) {
       );
     },
     /** Submit a draft with its kind and overall note. False when the review is not a draft. */
-    submitReview(id: number, kind: ReviewKind, body: string): boolean {
+    submitReview(id: ReviewId, kind: ReviewKind, body: string): boolean {
       return (
         orm
           .update(reviews)

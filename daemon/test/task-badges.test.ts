@@ -5,6 +5,7 @@ import { test } from 'node:test';
 import type { AutoMergeView, TaskSummary } from '../src/api/contract.ts';
 import { AUTO_MERGE_CHIP, TONE_CHIP, statusLine, statusText, taskBadges } from '../../app/src/lib/taskBadges.ts';
 import { TONES, statusTone } from '../../app/src/lib/tone.ts';
+import { asRepoId, asTaskId } from './fixtures.ts';
 
 test('the chip maps give tone names, not class strings', () => {
   for (const tone of [...Object.values(TONE_CHIP), ...Object.values(AUTO_MERGE_CHIP)]) assert.ok(TONES.includes(tone), tone);
@@ -21,8 +22,8 @@ test('a task status maps to a tone, and an unknown one is muted', () => {
 });
 
 const task = (extra: Partial<TaskSummary> = {}): TaskSummary => ({
-  id: 1,
-  repo_id: 1,
+  id: asTaskId(1),
+  repo_id: asRepoId(1),
   repo: 'agentdeck',
   title: 'A task',
   status: 'queued',
@@ -80,7 +81,7 @@ test('a PR in review with a waiting merge request and a conflict: a status line,
     attempts: 2,
     merge_request: { state: 'waiting', method: 'squash', reasons: [conflict], since: '2026-11-01 10:00:00' },
     conflicting: true,
-    unblocks: [7, 9],
+    unblocks: [asTaskId(7), asTaskId(9)],
     auto_merge_view: autoMerge(),
   });
   const l = statusLine(t);
@@ -144,12 +145,12 @@ test("auto-merge that needs a person is a won't auto-merge chip, unless a merge 
 test('a queued task built on two unmerged tasks shows ↑ both', () => {
   const t = task({
     links: [
-      { on: 3, kind: 'builds_on', state: 'waiting' },
-      { on: 4, kind: 'builds_on', state: 'waiting' },
-      { on: 2, kind: 'builds_on', state: 'met' },
-      { on: 5, kind: 'after', state: 'unlanded' },
+      { on: asTaskId(3), kind: 'builds_on', state: 'waiting' },
+      { on: asTaskId(4), kind: 'builds_on', state: 'waiting' },
+      { on: asTaskId(2), kind: 'builds_on', state: 'met' },
+      { on: asTaskId(5), kind: 'after', state: 'unlanded' },
     ],
-    waiting: { on: [3, 4], stuck: null },
+    waiting: { on: [asTaskId(3), asTaskId(4)], stuck: null },
   });
   assert.deepEqual(taskBadges(t).up, [3, 4]);
   assert.equal(statusLine(t), null, 'waiting on its way is not a sentence');
@@ -170,7 +171,7 @@ test('the status line goes in order: live run, sync, merge request, stop reason,
     ],
     ['tests failed', 'failed'],
   );
-  assert.equal(statusLine(task({ waiting: { on: [3], stuck: '#3 was cancelled' } }))?.text, "Can't start: #3 was cancelled");
+  assert.equal(statusLine(task({ waiting: { on: [asTaskId(3)], stuck: '#3 was cancelled' } }))?.text, "Can't start: #3 was cancelled");
   assert.equal(statusLine(task({ wait: { kind: 'repo-paused', reason: 'by hand' } }))?.text, "Can't start: agentdeck is paused");
   assert.equal(statusLine(task({ wait: { kind: 'daemon-paused' } as TaskSummary['wait'] }))?.text, "Can't start: AgentDeck is paused");
   assert.equal(statusLine(task({ wait: { kind: 'slots', running: 2, max: 2 } })), null, 'a full slot is no sentence');

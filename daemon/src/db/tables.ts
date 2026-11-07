@@ -1,6 +1,7 @@
 // The tables as Drizzle sees them, mirroring the migrated schema in schema.ts. The stores query through them, and
 // drizzle-kit reads this for Studio (pnpm db:studio) and the schema check (pnpm db:check). Keys are column names, as in the domain types.
 import { sql } from 'drizzle-orm';
+import type { PlannerRunId, RepoId, ReviewId, RunId, TaskId } from '../domain/id/id.ts';
 import type { PlannerOutcome } from '../domain/planner/proposals.ts';
 import type { MergeMethod } from '../domain/pull-request/merge.ts';
 import type { PrMode, PrState } from '../domain/pull-request/pr.ts';
@@ -17,7 +18,7 @@ const NOW_DEFAULT = sql`datetime('now')`;
 export const repos = sqliteTable(
   'repos',
   {
-    id: integer().primaryKey(),
+    id: integer().$type<RepoId>().primaryKey(),
     name: text().notNull(),
     path: text().notNull(),
     base_branch: text().default('main').notNull(),
@@ -46,8 +47,9 @@ export const repos = sqliteTable(
 export const tasks = sqliteTable(
   'tasks',
   {
-    id: integer().primaryKey(),
+    id: integer().$type<TaskId>().primaryKey(),
     repo_id: integer()
+      .$type<RepoId>()
       .notNull()
       .references(() => repos.id),
     title: text().notNull(),
@@ -81,7 +83,7 @@ export const tasks = sqliteTable(
     merge_requested_at: text(),
     merge_request_method: text().$type<MergeMethod>(),
     merge_request_check: text(),
-    plan_task: integer(),
+    plan_task: integer().$type<TaskId>(),
     pr_checks: text(),
     syncing_since: text(),
     question: text(),
@@ -93,8 +95,9 @@ export const tasks = sqliteTable(
 export const runs = sqliteTable(
   'runs',
   {
-    id: integer().primaryKey(),
+    id: integer().$type<RunId>().primaryKey(),
     task_id: integer()
+      .$type<TaskId>()
       .notNull()
       .references(() => tasks.id),
     attempt: integer().notNull(),
@@ -144,8 +147,9 @@ export const usageSamples = sqliteTable(
 );
 
 export const plannerRuns = sqliteTable('planner_runs', {
-  id: integer().primaryKey(),
+  id: integer().$type<PlannerRunId>().primaryKey(),
   repo_id: integer()
+    .$type<RepoId>()
     .notNull()
     .references(() => repos.id),
   started_at: text().default(NOW_DEFAULT).notNull(),
@@ -162,7 +166,7 @@ export const notifications = sqliteTable('notifications', {
   kind: text().notNull(),
   title: text().notNull(),
   body: text().notNull(),
-  task_id: integer(),
+  task_id: integer().$type<TaskId>(),
   created_at: text().default(NOW_DEFAULT).notNull(),
 });
 
@@ -175,7 +179,7 @@ export const taskEvents = sqliteTable(
   'task_events',
   {
     id: integer().primaryKey(),
-    task_id: integer().notNull(),
+    task_id: integer().$type<TaskId>().notNull(),
     type: text().$type<TaskEventType>().notNull(),
     from_status: text().$type<TaskStatus>(),
     to_status: text().$type<TaskStatus>(),
@@ -189,9 +193,11 @@ export const taskLinks = sqliteTable(
   'task_links',
   {
     task_id: integer()
+      .$type<TaskId>()
       .notNull()
       .references(() => tasks.id),
     on_task: integer()
+      .$type<TaskId>()
       .notNull()
       .references(() => tasks.id),
     kind: text().$type<LinkKind>().default('builds_on').notNull(),
@@ -202,7 +208,7 @@ export const taskLinks = sqliteTable(
 
 export const taskPlans = sqliteTable('task_plans', {
   id: integer().primaryKey(),
-  task_id: integer().notNull(),
+  task_id: integer().$type<TaskId>().notNull(),
   name: text().notNull(),
   source: text().notNull(),
   html: text().notNull(),
@@ -213,8 +219,9 @@ export const taskPlans = sqliteTable('task_plans', {
 export const reviews = sqliteTable(
   'reviews',
   {
-    id: integer().primaryKey(),
+    id: integer().$type<ReviewId>().primaryKey(),
     task_id: integer()
+      .$type<TaskId>()
       .notNull()
       .references(() => tasks.id),
     kind: text(),
@@ -230,6 +237,7 @@ export const reviewComments = sqliteTable(
   {
     id: integer().primaryKey(),
     review_id: integer()
+      .$type<ReviewId>()
       .notNull()
       .references(() => reviews.id),
     path: text().notNull(),

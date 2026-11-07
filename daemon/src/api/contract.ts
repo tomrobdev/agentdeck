@@ -1,6 +1,7 @@
 // The HTTP API's request and response types: what the dashboard imports (app/src/api/types.ts) and what contract-check.ts
 // holds the use cases to. It imports only types, and only from domain/, so the app can read it without node types.
 import type { ChangeStatus, FileRef } from '../domain/files/files.ts';
+import type { PlannerRunId, RepoId, ReviewId, RunId, TaskId } from '../domain/id/id.ts';
 import type { NotifyKind } from '../domain/notification.ts';
 import type { PlanSource, PlanStepStatus } from '../domain/plan/plan.ts';
 import type { PlannerOutcome } from '../domain/planner/proposals.ts';
@@ -23,7 +24,7 @@ export type { AutoMergeState, FileRef, LinkKind, MergeMethod, NotifyKind, PrMode
 // ---- Repos
 
 export interface Repo {
-  id: number;
+  id: RepoId;
   name: string;
   path: string;
   base_branch: string;
@@ -56,7 +57,7 @@ export interface Repo {
 }
 
 export interface PlannerRun {
-  id: number;
+  id: PlannerRunId;
   started_at: string;
   ended_at: string | null;
   outcome: PlannerOutcome | null;
@@ -140,19 +141,19 @@ export type StartWait =
   | QueueWait
   | { kind: 'repo-paused'; reason: string }
   /** `on`: every task it builds on still on its way, or the one it is stuck on (with `stuck`, the reason). */
-  | { kind: 'dependency'; on: number[]; stuck: string | null }
+  | { kind: 'dependency'; on: TaskId[]; stuck: string | null }
   | { kind: 'slots'; running: number; max: number };
 
 /** One link: the task it points at, its kind and where it stands (unlanded is an after link whose other task has not landed yet). */
 export interface TaskLink {
-  on: number;
+  on: TaskId;
   kind: LinkKind;
   state: 'met' | 'waiting' | 'stuck' | 'unlanded';
 }
 
 /** POST /api/tasks/:id/links */
 export interface NewLink {
-  on: number;
+  on: TaskId;
   kind: LinkKind;
 }
 
@@ -196,8 +197,8 @@ export interface ChecksSummary {
 
 /** A task as returned by the list endpoint: everything except the prompt. */
 export interface TaskSummary {
-  id: number;
-  repo_id: number;
+  id: TaskId;
+  repo_id: RepoId;
   repo: string | null;
   title: string;
   status: TaskStatus;
@@ -215,7 +216,7 @@ export interface TaskSummary {
   /** How the PR was merged from the app. */
   merge_method: MergeMethod | null;
   /** The task whose plan this one follows (itself when its own plan was given with it); null follows its own plan, if any. */
-  plan_task: number | null;
+  plan_task: TaskId | null;
   /** JSON array of that plan's step ids; null means every unfinished step. */
   plan_steps: string | null;
   /** JSON `{ kind: 'deps' | 'host' | 'edit', items: string[] }`: what the worker said it needs when it blocked. */
@@ -239,13 +240,13 @@ export interface TaskSummary {
    * Set for a queued task waiting on builds-on links: `on` is every task it builds on still on its way, or, with `stuck`
    * (why it won't get there on its own), the one task it is stuck on.
    */
-  waiting: { on: number[]; stuck: string | null } | null;
+  waiting: { on: TaskId[]; stuck: string | null } | null;
   /** For a task in review: the queued tasks merging its PR lets start. */
-  unblocks: number[];
+  unblocks: TaskId[];
   /** What this task depends on, with where each link stands. */
   links: TaskLink[];
   /** The tasks that depend on this one. */
-  dependents: { id: number; kind: LinkKind }[];
+  dependents: { id: TaskId; kind: LinkKind }[];
   /** A done task whose latest run left linked plan steps unfinished. */
   plan_unfinished: boolean;
   /** For a running task: when its run started, turns so far and the last tool call. */
@@ -265,7 +266,7 @@ export interface Task extends TaskSummary {
 }
 
 export interface Run {
-  id: number;
+  id: RunId;
   /** A resolve run merges the base branch into the task's branch, an unblock run reads why a blocked task stopped; neither uses an attempt. */
   kind: RunKind;
   /** A resolve run carries the attempt it ran beside, so pick runs by id. */
@@ -286,7 +287,7 @@ export interface Run {
 /** One status change in a task's history. Tasks from before migration step 6 have none. */
 export interface TaskEventRow {
   id: number;
-  task_id: number;
+  task_id: TaskId;
   type:
     | 'created'
     | 'edit'
@@ -327,7 +328,7 @@ export interface PlanStep {
 export interface TaskPlan {
   id: number;
   /** The task the plan belongs to: the one it was first attached to. */
-  task_id: number;
+  task_id: TaskId;
   /** `<task id>-<slug>.html`; plans stored before plans had numbers keep their old name (a docs/plans/ path or a file name). */
   name: string;
   /** Attached by a person, written by a worker, or (before plans moved into AgentDeck) collected from the branch. */
@@ -362,11 +363,11 @@ export interface NewTask {
   priority?: number;
   max_turns?: number;
   /** Tasks this one builds on: it starts once they are done and merged. */
-  builds_on?: number[];
+  builds_on?: TaskId[];
   /** Tasks this one lands after: it runs at once, only its merge waits. */
-  after?: number[];
+  after?: TaskId[];
   /** The task whose plan this one follows: one in the same repo with a plan. */
-  plan_task?: number;
+  plan_task?: TaskId;
   plan_steps?: string[];
   /** File it as a proposal, waiting for approval, instead of queueing it. */
   propose?: boolean;
@@ -381,7 +382,7 @@ export interface TaskPatch {
   max_turns?: number;
   max_attempts?: number;
   /** The task whose plan this one follows; null clears the link. */
-  plan_task?: number | null;
+  plan_task?: TaskId | null;
   /** null means every unfinished step. */
   plan_steps?: string[] | null;
 }
@@ -404,7 +405,7 @@ export interface MarkDoneRequest {
 /** A line comment of a review. `side` says which file `line` counts in: the base (old) or the task's head (new). */
 export interface ReviewComment {
   id: number;
-  review_id: number;
+  review_id: ReviewId;
   path: string;
   line: number;
   side: 'old' | 'new';
@@ -420,8 +421,8 @@ export interface ReviewComment {
 
 /** A review of a task with its comments. A draft has no `submitted_at` and no `kind`. */
 export interface Review {
-  id: number;
-  task_id: number;
+  id: ReviewId;
+  task_id: TaskId;
   kind: 'comment' | 'request_changes' | null;
   /** The overall note. */
   body: string;
@@ -489,7 +490,7 @@ export interface MergePreview {
   /** One of the problems is a conflict with the base branch, which a resolve run can fix. */
   conflicting: boolean;
   /** Queued tasks that merging this one lets start (one still waiting on another task too is left out). */
-  unblocks: { id: number; title: string }[];
+  unblocks: { id: TaskId; title: string }[];
   /** Whether the daemon will merge it on its own and why not yet; null when auto-merge is off. */
   auto_merge: AutoMergeCheck | null;
   /** What a merge request would do now: `merge` as asked, `wait` for the PR to be ready, `never` (a person must act). */
@@ -567,13 +568,13 @@ export interface CancelMergeRequestResult {
 
 /** POST /api/tasks/merge-requests: request these tasks' merges, each with its own method. */
 export interface RequestMergesRequest {
-  ids: number[];
+  ids: TaskId[];
 }
 
 export interface RequestMergesResult {
   requested: number[];
   /** The tasks it could not ask for, each with why. */
-  failed: { id: number; reason: string }[];
+  failed: { id: TaskId; reason: string }[];
 }
 
 /** POST /api/tasks/:id/fix-checks: the task is retried with its PR's failing checks, and their logs, in the note. */
@@ -719,7 +720,7 @@ export interface NotificationRow {
   kind: NotifyKind | 'test';
   title: string;
   body: string;
-  task_id: number | null;
+  task_id: TaskId | null;
   created_at: string;
 }
 
@@ -753,7 +754,7 @@ export interface Headline {
   /** Proposed tasks, blocked tasks and done tasks in review. */
   need_you: number;
   /** Up to five of those tasks: blocked first, then review, then proposed, each by priority. */
-  attention: { id: number; title: string; why: AttentionWhy }[];
+  attention: { id: TaskId; title: string; why: AttentionWhy }[];
 }
 
 export interface Status {
@@ -774,9 +775,9 @@ export interface Status {
   notifications: NotificationRow[];
   /** What every queued task waits for, if anything. */
   wait: QueueWait | null;
-  paused_repos: { id: number; name: string; reason: string; queued: number }[];
+  paused_repos: { id: RepoId; name: string; reason: string; queued: number }[];
   /** The planner runs under way, one per unfinished run; `started_at` is UTC `YYYY-MM-DD HH:MM:SS`. */
-  planning?: { id: number; repo_id: number; repo: string; started_at: string }[];
+  planning?: { id: PlannerRunId; repo_id: RepoId; repo: string; started_at: string }[];
 }
 
 export interface Settings {
@@ -810,7 +811,7 @@ export interface RestartResult {
 
 /** A task with a live run. */
 export interface RunningTask {
-  id: number;
+  id: TaskId;
   title: string;
 }
 

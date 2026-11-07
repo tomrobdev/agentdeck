@@ -1,5 +1,6 @@
 // Reviews made in the dashboard: a draft a person builds up, then submits as a comment or a request for changes.
 // Pure rules for how a comment's state moves and which comments a run must address. Nothing here comes from or goes to GitHub.
+import type { ReviewId, TaskId } from '../id/id.ts';
 
 export const REVIEW_KINDS = ['comment', 'request_changes'] as const;
 export type ReviewKind = (typeof REVIEW_KINDS)[number];
@@ -13,8 +14,8 @@ export type CommentState = (typeof COMMENT_STATES)[number];
 
 /** One review of a task. A draft has no `submitted_at` and no `kind` yet. */
 export interface Review {
-  id: number;
-  task_id: number;
+  id: ReviewId;
+  task_id: TaskId;
   kind: ReviewKind | null;
   /** The overall note. */
   body: string;
@@ -25,7 +26,7 @@ export interface Review {
 /** A line comment on the task's diff. */
 export interface ReviewComment {
   id: number;
-  review_id: number;
+  review_id: ReviewId;
   path: string;
   line: number;
   side: CommentSide;

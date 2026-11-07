@@ -4,6 +4,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import { asTaskId } from '../src/domain/id/id.ts';
 import { stateFields } from '../src/domain/task/task.ts';
 
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-needs-'));
@@ -69,8 +70,8 @@ test('canInstallWith: the JS package managers only', () => {
 });
 
 test('branchName: the task’s own branch, else the one the daemon will give it', () => {
-  assert.equal(branchName({ id: 7, checkout: null }), 'agentdeck/task-7');
-  assert.equal(branchName({ id: 7, checkout: { branch: 'feature/x' } }), 'feature/x');
+  assert.equal(branchName({ id: asTaskId(7), checkout: null }), 'agentdeck/task-7');
+  assert.equal(branchName({ id: asTaskId(7), checkout: { branch: 'feature/x' } }), 'feature/x');
 });
 
 test('the worker prompt describes the NEEDS forms', () => {

@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { asRepoId, asTaskId } from './fixtures.ts';
 import { type Listable, filterTasks } from '../src/domain/task/listing.ts';
 
 function task(id: number, fields: Partial<Listable> = {}): Listable {
   return {
-    id,
-    repo_id: 1,
+    id: asTaskId(id),
+    repo_id: asRepoId(1),
     title: `task ${id}`,
     status: 'queued',
     priority: 0,
@@ -25,9 +26,9 @@ function task(id: number, fields: Partial<Listable> = {}): Listable {
 const TASKS = [
   task(1, { status: 'done', pr_url: 'https://x/1', pr_state: 'merged', updated_at: '2026-10-18 12:00:00' }),
   task(2, { status: 'done', updated_at: '2026-10-18 09:00:00' }),
-  task(3, { status: 'blocked', stop_reason: 'permission refused', repo_id: 2 }),
-  task(4, { status: 'queued', priority: 5, waiting: { on: [3], stuck: '#3 is blocked' } }),
-  task(5, { status: 'queued', waiting: { on: [6], stuck: null } }),
+  task(3, { status: 'blocked', stop_reason: 'permission refused', repo_id: asRepoId(2) }),
+  task(4, { status: 'queued', priority: 5, waiting: { on: [asTaskId(3)], stuck: '#3 is blocked' } }),
+  task(5, { status: 'queued', waiting: { on: [asTaskId(6)], stuck: null } }),
   task(6, { status: 'running', title: 'Run workers in the sandbox', branch: 'agentdeck/task-6' }),
   task(7, { status: 'cancel_requested' }),
   task(8, { status: 'proposed', priority: 9 }),
@@ -57,7 +58,7 @@ test('groups match the dashboard: a stuck task needs you and is not active', () 
 });
 
 test('repo and search narrow the list', () => {
-  assert.deepEqual(ids({ repo_id: 2 }), [3]);
+  assert.deepEqual(ids({ repo_id: asRepoId(2) }), [3]);
   assert.deepEqual(ids({ search: 'SANDBOX' }), [6]);
   assert.deepEqual(ids({ search: 'agentdeck/task' }), [6], 'branch');
   assert.deepEqual(ids({ search: 'permission' }), [3], 'blocked reason');

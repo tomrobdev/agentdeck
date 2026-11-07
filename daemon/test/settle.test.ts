@@ -4,6 +4,8 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import type { TaskId } from '../src/domain/id/id.ts';
+import { asTaskId } from './fixtures.ts';
 
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-settle-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
@@ -27,14 +29,14 @@ function setup(pr_mode: 'off' | 'ready' = 'off') {
       repo_id: repo.id,
       title: `task ${after_task ?? 'a'}`,
       prompt: 'p',
-      links: after_task == null ? [] : [{ on: after_task, kind: 'builds_on' }],
+      links: after_task == null ? [] : [{ on: asTaskId(after_task), kind: 'builds_on' }],
     });
   return { db, repo, add };
 }
 
-const notes = (db: ReturnType<typeof openDb>, kind: string, id: number) =>
+const notes = (db: ReturnType<typeof openDb>, kind: string, id: TaskId) =>
   db.recentNotifications(50).filter((n) => n.kind === kind && n.task_id === id);
-const prRows = (db: ReturnType<typeof openDb>, id: number) => db.eventsForTask(id).filter((e) => e.type === 'pr');
+const prRows = (db: ReturnType<typeof openDb>, id: TaskId) => db.eventsForTask(id).filter((e) => e.type === 'pr');
 
 test('a worker that throws leaves its task failed, notified, and its dependents warned', async () => {
   const { db, add } = setup();
@@ -74,7 +76,7 @@ test('a task failed by crash recovery gets a notification', async () => {
 
 test('finalNotification words done, blocked and failed, and nothing else', () => {
   const t = {
-    id: 3,
+    id: asTaskId(3),
     title: 'Do it',
     checkout: { branch: 'agentdeck/task-3', worktree: null, syncing_since: null },
   };

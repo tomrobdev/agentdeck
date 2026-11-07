@@ -51,7 +51,17 @@ import type {
   TestNotifyResult,
   TreeListing,
 } from './types.ts';
+import { asTaskId } from '../../../daemon/src/domain/id/id.ts';
 import type { PersonEvent } from '../../../daemon/src/domain/task/lifecycle.ts';
+
+// The dashboard keeps ids as numbers (from the URL, from typing); a request body brands them here, where they enter the API.
+type NewTaskInput = Omit<NewTask, 'builds_on' | 'after' | 'plan_task'> & { builds_on?: number[]; after?: number[]; plan_task?: number };
+const brandNewTask = ({ builds_on, after, plan_task, ...rest }: NewTaskInput): NewTask => ({
+  ...rest,
+  ...(builds_on && { builds_on: builds_on.map(asTaskId) }),
+  ...(after && { after: after.map(asTaskId) }),
+  ...(plan_task !== undefined && { plan_task: asTaskId(plan_task) }),
+});
 
 export const API_BASE: string = import.meta.env.VITE_AGENTDECK_API ?? 'http://127.0.0.1:4317';
 
@@ -108,9 +118,10 @@ export const api = {
   service: () => call<ServiceStatus>('/api/service'),
   tasks: () => call<TaskSummary[]>('/api/tasks'),
   task: (id: number) => call<TaskDetail>(`/api/tasks/${id}`),
-  addTask: (t: NewTask) => call<TaskSaved>('/api/tasks', { method: 'POST', json: t }),
+  addTask: (t: NewTaskInput) => call<TaskSaved>('/api/tasks', { method: 'POST', json: brandNewTask(t) }),
   /** Link the task to another; refused (a cycle, itself, already linked) with the reason as the error. */
-  linkTask: (id: number, link: NewLink) => call<TaskDetail>(`/api/tasks/${id}/links`, { method: 'POST', json: link }),
+  linkTask: (id: number, link: Omit<NewLink, 'on'> & { on: number }) =>
+    call<TaskDetail>(`/api/tasks/${id}/links`, { method: 'POST', json: { ...link, on: asTaskId(link.on) } satisfies NewLink }),
   unlinkTask: (id: number, on: number) => call<TaskDetail>(`/api/tasks/${id}/links/${on}`, { method: 'DELETE' }),
   cancel: (id: number) => call<CancelResult>(`/api/tasks/${id}/cancel`, { method: 'POST' }),
   /** `note` is "request changes": kept on the timeline and put first in the next run's prompt. */
@@ -132,7 +143,10 @@ export const api = {
     call<RequestMergeResult>(`/api/tasks/${id}/merge-request`, { method: 'POST', json: body }),
   /** Request these tasks' merges, each with its own method; the ones it could not request come back with why. */
   requestMerges: (ids: number[]) =>
-    call<RequestMergesResult>('/api/tasks/merge-requests', { method: 'POST', json: { ids } satisfies RequestMergesRequest }),
+    call<RequestMergesResult>('/api/tasks/merge-requests', {
+      method: 'POST',
+      json: { ids: ids.map(asTaskId) } satisfies RequestMergesRequest,
+    }),
   /** Drop the task's merge request; the PR stays open. */
   cancelMergeRequest: (id: number) => call<CancelMergeRequestResult>(`/api/tasks/${id}/merge-request`, { method: 'DELETE' }),
   /** Let the daemon merge the task's PR on its own (true), not (false), or follow the repo (null). */

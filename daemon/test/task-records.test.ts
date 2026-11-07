@@ -1,6 +1,7 @@
 // The task area review of 2026-11-02: editing a task's plan is guarded and clears only what it says, a plan attached to
 // a done owner reaches a cut-off follower, and the store keeps runs, links and merge checks true.
 import assert from 'node:assert/strict';
+import type { TaskId } from '../src/domain/id/id.ts';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -48,7 +49,7 @@ test('a claim between the edit check and the save leaves the plan unchanged', as
   const racing = new Proxy(db, {
     get(target, key: keyof Db) {
       if (key === 'planFollowers')
-        return (id: number) => {
+        return (id: TaskId) => {
           target.claimNextTask();
           return target.planFollowers(id);
         };
@@ -99,7 +100,7 @@ test('a recovered task that fails or is cancelled has its runs end so; a requeue
   db.applyEvent(cancelling.id, { type: 'cancel' });
 
   assert.deepEqual(db.recoverOrphans(), { requeued: 1, failed: [failing.id] });
-  const outcome = (id: number) => db.runsForTask(id).map((r) => [r.outcome, r.ended_at !== null]);
+  const outcome = (id: TaskId) => db.runsForTask(id).map((r) => [r.outcome, r.ended_at !== null]);
   assert.deepEqual(outcome(requeued.id), [['interrupted', true]]);
   assert.deepEqual(outcome(failing.id), [['failed', true]]);
   assert.deepEqual(outcome(cancelling.id), [['cancelled', true]]);
