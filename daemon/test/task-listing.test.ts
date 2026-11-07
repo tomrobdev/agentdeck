@@ -18,6 +18,7 @@ function task(id: number, fields: Partial<ListedTask> = {}): ListedTask {
     stop_reason: null,
     source: 'manual',
     restarts: 0,
+    pr: null,
     pr_url: null,
     pr_state: null,
     merge_method: null,

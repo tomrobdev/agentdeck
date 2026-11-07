@@ -31,7 +31,6 @@ flowchart LR
   domain_pull_request -->|cycle| domain
   domain_pull_request -.->|cycle| domain_repo
   domain_pull_request -->|cycle| domain_run
-  domain_pull_request -.->|cycle| domain_task
   domain_repo -.->|cycle| domain_pull_request
   domain_review -->|cycle| domain
   domain_run -->|cycle| domain

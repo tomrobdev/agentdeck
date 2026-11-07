@@ -1,10 +1,10 @@
 // Whether the daemon may merge a done task's PR without a person (docs/plans/auto-merge.html). Pure: no I/O.
 import type { Repo } from '../repo/repo.ts';
-import type { Task } from '../task/task.ts';
 import { PROTECTED_PREFIXES, isProtectedPath } from '../run/protected-edits.ts';
 import { wholeNumberError } from '../text.ts';
 import { isMergeabilityUnknown } from './conflict.ts';
 import { type MergeFinding, type MergeInput, conflictNeedsPerson, mergeFindings } from './merge.ts';
+import type { PullRequest } from './pr.ts';
 
 /** The label a PR carries while the daemon may merge it. Removing it on GitHub opts that PR out. */
 export const AUTO_MERGE_LABEL = {
@@ -15,11 +15,17 @@ export const AUTO_MERGE_LABEL = {
 export const DEFAULT_AUTO_MERGE_MAX_LINES = 400;
 export const DEFAULT_AUTO_MERGE_SKIP = ['.github/'];
 
+/** What a task says about its own auto-merge: its setting (null follows the repo) and who made it. */
+export interface AutoMergeSetting {
+  auto_merge: boolean | null;
+  source: string;
+}
+
 /**
  * Whether auto-merge is on for a task: its own setting, else its repo's. A planner proposal only takes the repo's
  * setting when a person approved it (the repo has auto_approve off), so no work reaches the base unseen.
  */
-export function autoMergeOn(task: Pick<Task, 'auto_merge' | 'source'>, repo: Pick<Repo, 'auto_merge' | 'auto_approve'>): boolean {
+export function autoMergeOn(task: AutoMergeSetting, repo: Pick<Repo, 'auto_merge' | 'auto_approve'>): boolean {
   if (task.auto_merge !== null) return task.auto_merge;
   return repo.auto_merge && (task.source !== 'planner' || !repo.auto_approve);
 }
@@ -147,7 +153,7 @@ const LABELS = { off: 'auto-merge off', on: 'auto-merge on', merge: 'will auto-m
  * the limits now. Pure: the CLI and the dashboard word it the same way.
  */
 export function autoMergeView(
-  task: Pick<Task, 'auto_merge' | 'source' | 'pr_state' | 'auto_merge_check' | 'auto_merge_checked_at'>,
+  task: AutoMergeSetting & { pr: PullRequest | null },
   repo: Pick<Repo, 'auto_merge' | 'auto_approve' | 'test_cmd' | 'auto_merge_max_lines' | 'auto_merge_skip'>,
   measured?: AutoMergeMeasured | null,
 ): AutoMergeView {
@@ -162,8 +168,9 @@ export function autoMergeView(
   };
   if (!on) return { state: 'off', label: LABELS.off, reasons: [], source, checked_at: null, limits };
 
-  const check = task.pr_state === 'open' ? task.auto_merge_check : null;
-  if (check) {
+  const open = task.pr?.state === 'open' ? task.pr : null;
+  const check = open?.auto_merge_check;
+  if (open && check) {
     const first = check.reasons[0];
     const label =
       check.verdict === 'merge'
@@ -171,7 +178,7 @@ export function autoMergeView(
         : check.verdict === 'wait'
           ? `auto-merge waiting${first ? `: ${first}` : ''}`
           : `needs a person to merge${first ? `: ${first}` : ''}`;
-    return { state: check.verdict, label, reasons: check.reasons, source, checked_at: task.auto_merge_checked_at, limits };
+    return { state: check.verdict, label, reasons: check.reasons, source, checked_at: open.auto_merge_checked_at, limits };
   }
 
   const reasons: string[] = [];

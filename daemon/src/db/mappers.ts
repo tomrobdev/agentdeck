@@ -3,6 +3,7 @@
 import { getColumns } from 'drizzle-orm';
 import { type AutoMergeCheck, DEFAULT_AUTO_MERGE_SKIP } from '../domain/pull-request/auto-merge.ts';
 import type { CheckCounts, StoredChecks } from '../domain/pull-request/checks.ts';
+import { pullRequestOf } from '../domain/pull-request/pr.ts';
 import type { Repo } from '../domain/repo/repo.ts';
 import type { Run } from '../domain/run/run.ts';
 import type { UnblockQuestion } from '../domain/run/unblock.ts';
@@ -77,18 +78,24 @@ export function readCounts(json: string | null): CheckCounts | null {
   return { total: c.total, failing: c.failing, pending: c.pending };
 }
 
-/** The task columns that carry a value, as the domain type has them. */
-const taskValues = (row: TaskRow) => ({
-  needs: readNeeds(row.needs),
-  question: readQuestion(row.question),
-  plan_steps: readSteps(row.plan_steps),
-  auto_merge: row.auto_merge === null ? null : row.auto_merge === 1,
-  auto_merge_check: readCheck(row.auto_merge_check),
-  merge_request_check: readCheck(row.merge_request_check),
-  pr_checks: readStoredChecks(row.pr_checks),
-  pr_checks_opened: readCounts(row.pr_checks_opened),
-  pr_checks_merged: readCounts(row.pr_checks_merged),
-});
+/** The task columns that carry a value, as the domain type has them, and the pull request they make up. */
+const taskValues = (row: TaskRow) => {
+  const prValues = {
+    auto_merge_check: readCheck(row.auto_merge_check),
+    merge_request_check: readCheck(row.merge_request_check),
+    pr_checks: readStoredChecks(row.pr_checks),
+    pr_checks_opened: readCounts(row.pr_checks_opened),
+    pr_checks_merged: readCounts(row.pr_checks_merged),
+  };
+  return {
+    needs: readNeeds(row.needs),
+    question: readQuestion(row.question),
+    plan_steps: readSteps(row.plan_steps),
+    auto_merge: row.auto_merge === null ? null : row.auto_merge === 1,
+    ...prValues,
+    pr: pullRequestOf({ ...row, ...prValues }),
+  };
+};
 
 export const toTask = (row: TaskRow): Task => ({ ...row, ...taskValues(row) });
 export const toTaskSummary = (row: TaskSummaryRow): TaskSummary => ({ ...row, ...taskValues(row as TaskRow) });

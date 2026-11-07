@@ -41,22 +41,7 @@ export interface TaskView {
 }
 
 /** The task fields a view reads. */
-type Viewed = Pick<
-  Task,
-  | 'id'
-  | 'repo_id'
-  | 'status'
-  | 'max_turns'
-  | 'pr_state'
-  | 'auto_merge'
-  | 'source'
-  | 'auto_merge_check'
-  | 'auto_merge_checked_at'
-  | 'merge_requested_at'
-  | 'merge_request_method'
-  | 'merge_request_check'
-  | 'pr_checks'
->;
+type Viewed = Pick<Task, 'id' | 'repo_id' | 'status' | 'max_turns' | 'pr_state' | 'auto_merge' | 'source' | 'pr'>;
 
 /**
  * Each task with its view. Reads the repos, plans, links and queue state once for the whole list, so the queries it runs
@@ -75,9 +60,9 @@ export function withViews<T extends Viewed>(db: Db, tasks: T[], links: LinkIndex
       ...t,
       live: liveView(t, liveRuns.get(t.id)),
       sync: syncView(t, repo?.base_branch ?? null, isSyncLocked(t.id), resolves.get(t.id)),
-      merge_request: mergeRequestView(t, isMergeLocked(t.id)),
-      checks: checksSummary(t),
-      conflicting: conflictsWithBase(t),
+      merge_request: mergeRequestView(t.pr, isMergeLocked(t.id)),
+      checks: checksSummary(t.pr),
+      conflicting: conflictsWithBase(t.pr),
       repo: repo?.name ?? null,
       auto_merge_view: repo ? autoMergeView(t, repo) : null,
       waiting: waitingFor(t, dependency),

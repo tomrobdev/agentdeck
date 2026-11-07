@@ -15,6 +15,7 @@ const { openDb } = await import('../src/db/index.ts');
 const { doneTask } = await import('./fixtures.ts');
 const { github } = await import('../src/adapters/github.ts');
 const { AUTO_MERGE_LABEL, autoMergeView } = await import('../src/domain/pull-request/auto-merge.ts');
+const { prFields, pullRequestOf } = await import('../src/domain/pull-request/pr.ts');
 const { refreshPrStates } = await import('../src/application/pull-request/refresh.ts');
 const { autoMerge } = await import('../src/application/pull-request/auto-merge.ts');
 const { setAutoMerge, taskDetail, updateRepo } = await import('../src/application/actions.ts');
@@ -123,18 +124,24 @@ test('a refresh stores no check for a task with auto-merge off', async () => {
 // ---- The view
 
 const repoRow = { auto_merge: true, auto_approve: false, test_cmd: 'pnpm test', auto_merge_max_lines: 1000, auto_merge_skip: ['.github/'] };
-const taskRow = (
-  o: Partial<Task> = {},
-): Pick<Task, 'auto_merge' | 'source' | 'pr_state' | 'auto_merge_check' | 'auto_merge_checked_at'> => ({
+const taskRow = (o: Partial<Task> = {}): Pick<Task, 'auto_merge' | 'source' | 'pr'> => ({
   auto_merge: null,
   source: 'manual',
-  pr_state: null,
-  auto_merge_check: null,
-  auto_merge_checked_at: null,
+  pr: null,
   ...o,
 });
-const checked = (verdict: 'merge' | 'wait' | 'never', reasons: string[], o: Partial<Task> = {}) =>
-  taskRow({ pr_state: 'open', auto_merge_check: { verdict, reasons }, auto_merge_checked_at: '2026-11-01 09:00:00', ...o });
+type PrFields = import('../src/domain/pull-request/pr.ts').PrFields;
+const checked = (verdict: 'merge' | 'wait' | 'never', reasons: string[], o: Partial<PrFields> = {}) =>
+  taskRow({
+    pr: pullRequestOf({
+      ...prFields(null),
+      pr_url: 'https://x/pull/1',
+      pr_state: 'open',
+      auto_merge_check: { verdict, reasons },
+      auto_merge_checked_at: '2026-11-01 09:00:00',
+      ...o,
+    }),
+  });
 
 test('autoMergeView: each state with its label and reasons', () => {
   assert.deepEqual(autoMergeView(taskRow(), { ...repoRow, auto_merge: false }), {
