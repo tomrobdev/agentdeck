@@ -407,7 +407,7 @@ test('the scheduler merges a ready PR on its own refresh, and tells a merge that
   };
   const told = () => db.recentNotifications(50).filter((x) => x.task_id === stuck.id).length;
   const logs: string[] = [];
-  const scheduler = new Scheduler(db, { tickMs: 10, prRefreshMs: 10, autoPlan: false, log: (m) => logs.push(m) });
+  const scheduler = new Scheduler(db, { tickMs: 10, prRefreshMs: 10, autoPropose: false, log: (m) => logs.push(m) });
   const running = scheduler.run();
   await until(() => told() > 0);
   await new Promise((r) => setTimeout(r, 200)); // many more refreshes

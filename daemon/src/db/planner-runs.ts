@@ -8,7 +8,7 @@ import { plannerRuns, repos } from './tables.ts';
 export function plannerRunStore(orm: Orm) {
   return {
     startPlannerRun(repo_id: number, log_path: string): number {
-      orm.update(repos).set({ planned_at: NOW_SQL }).where(eq(repos.id, repo_id)).run();
+      orm.update(repos).set({ proposed_at: NOW_SQL }).where(eq(repos.id, repo_id)).run();
       return Number(orm.insert(plannerRuns).values({ repo_id, log_path }).run().lastInsertRowid);
     },
     setPlannerRunPid(id: number, pid: number): void {

@@ -1,5 +1,5 @@
 // The task state machine, as data. Pure: no I/O, so it can be tested exhaustively.
-// db.applyEvent (db/tasks.ts) is the only thing that writes a status, and it asks this module first.
+// applyEvent and claimNextTask (db/tasks.ts) are the only things that write a status, and each asks this module first.
 import type { TaskEventType } from './history.ts';
 import type { Task } from './task.ts';
 
@@ -174,12 +174,14 @@ export function transition(
   if (event.type === 'mark_done' || event.type === 'pr_merged') changes.needs = null;
   if (event.type === 'mark_done') changes.done_by = 'person';
   else if (task.status === 'done') changes.done_by = null;
-  if (to === 'queued') changes.needs = null;
-  else if (event.type === 'finish' && event.outcome === 'blocked') changes.needs = opts.needs ?? null;
+  if (to === 'queued') {
+    changes.needs = null;
+    changes.stop_reason = null; // the timeline keeps the history
+  } else if (event.type === 'finish' && event.outcome === 'blocked') changes.needs = opts.needs ?? null;
   // An unblock run's question answers one block: a new block, a retry or an end makes it stale.
   if ('needs' in changes) changes.question = null;
   if (
-    (event.type === 'finish' && (event.outcome === 'blocked' || event.outcome === 'failed')) ||
+    (event.type === 'finish' && (event.outcome === 'blocked' || (event.outcome === 'failed' && to !== 'queued'))) ||
     (event.type === 'recover' && to === 'failed') ||
     event.type === 'conflict'
   )

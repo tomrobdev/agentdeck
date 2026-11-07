@@ -26,7 +26,7 @@ export interface SchedulerOptions {
   /** Ignore the paused flag and exit once the queue is drained (for tests and `run-once`). */
   once?: boolean;
   /** Propose new tasks from repo goals when a queue runs dry (off in once mode by default). */
-  autoPlan?: boolean;
+  autoPropose?: boolean;
   /** Hold a `caffeinate -i` assertion while work is running (macOS). */
   keepAwake?: boolean;
   /** How often to refresh the state of open PRs (off in once mode). */
@@ -70,7 +70,7 @@ export class Scheduler {
     this.opts = {
       tickMs: DEFAULTS.tickMs,
       once: false,
-      autoPlan: !opts.once,
+      autoPropose: !opts.once,
       keepAwake: false,
       prRefreshMs: PR_REFRESH_MS,
       log: (m) => console.log(`[${new Date().toISOString()}] ${m}`),
@@ -115,21 +115,21 @@ export class Scheduler {
     const settled: Promise<unknown> = p
       .catch(() => {})
       .finally(() => {
-        if (kind === 'sync') this.releaseResolve(settled);
+        if (kind === 'sync') this.freeSyncSlot(settled);
         else this.proposingRuns--;
         this.tick();
       });
-    if (kind === 'sync') this.holdResolve(settled);
+    if (kind === 'sync') this.takeSyncSlot(settled);
     else this.proposingRuns++;
     return p;
   }
 
-  private holdResolve(p: Promise<unknown>): void {
+  private takeSyncSlot(p: Promise<unknown>): void {
     this.running.add(p);
     this.resolves.add(p);
   }
 
-  private releaseResolve(p: Promise<unknown>): void {
+  private freeSyncSlot(p: Promise<unknown>): void {
     this.running.delete(p);
     this.resolves.delete(p);
   }
@@ -187,7 +187,7 @@ export class Scheduler {
         this.running.add(p);
       }
       this.maybeUnblock(); // after the claims: queued work comes first
-      if (this.opts.autoPlan && !this.proposing && this.gate().free > 0) this.maybePropose(); // a claim above took a slot: ask again
+      if (this.opts.autoPropose && !this.proposing && this.gate().free > 0) this.maybePropose(); // a claim above took a slot: ask again
     }
     this.maybeRefreshPrs();
     this.awake.set(this.running.size > 0 || this.proposing);
@@ -242,10 +242,10 @@ export class Scheduler {
     const p = resolveConflicting(this.db, ids, this.opts.log, this.conflictsTold)
       .catch((err) => this.opts.log(`conflict resolution crashed: ${err?.stack ?? err}`))
       .finally(() => {
-        this.releaseResolve(p);
+        this.freeSyncSlot(p);
         this.tick();
       });
-    this.holdResolve(p);
+    this.takeSyncSlot(p);
   }
 
   /**

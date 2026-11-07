@@ -91,7 +91,7 @@ const CASES: Case[] = [
     event: { type: 'finish', outcome: 'failed', retry: true },
     opts: { reason: 'tests fail' },
     to: 'queued',
-    changes: { needs: null, question: null, stop_reason: 'tests fail' },
+    changes: { needs: null, question: null, stop_reason: null },
     history: 'finish',
   },
   {
@@ -100,7 +100,7 @@ const CASES: Case[] = [
     event: { type: 'rate_limited' },
     task: { attempts: 1 },
     to: 'queued',
-    changes: { attempts: 0, needs: null, question: null },
+    changes: { attempts: 0, needs: null, stop_reason: null, question: null },
     history: 'rate_limited',
   },
   {
@@ -109,7 +109,7 @@ const CASES: Case[] = [
     event: { type: 'rate_limited' },
     task: { attempts: 0 },
     to: 'queued',
-    changes: { attempts: 0, needs: null, question: null },
+    changes: { attempts: 0, needs: null, stop_reason: null, question: null },
     history: 'rate_limited',
   },
   {
@@ -128,7 +128,7 @@ const CASES: Case[] = [
     from: 'proposed',
     event: { type: 'approve' },
     to: 'queued',
-    changes: { needs: null, question: null },
+    changes: { needs: null, stop_reason: null, question: null },
     history: 'approve',
   },
   { name: 'reject', from: 'proposed', event: { type: 'reject' }, to: 'cancelled', changes: {}, history: 'reject' },
@@ -138,7 +138,7 @@ const CASES: Case[] = [
     event: { type: 'retry' },
     task: { attempts: 3 },
     to: 'queued',
-    changes: { max_attempts: 4, needs: null, question: null },
+    changes: { max_attempts: 4, needs: null, stop_reason: null, question: null },
     history: 'retry',
   },
   {
@@ -147,7 +147,7 @@ const CASES: Case[] = [
     event: { type: 'retry' },
     task: { attempts: 1 },
     to: 'queued',
-    changes: { max_attempts: 2, done_by: null, needs: null, question: null },
+    changes: { max_attempts: 2, done_by: null, needs: null, stop_reason: null, question: null },
     history: 'retry',
   },
   {
@@ -157,7 +157,7 @@ const CASES: Case[] = [
     opts: { reason: 'Unblock run: use sqlite' },
     task: { attempts: 1 },
     to: 'queued',
-    changes: { needs: null, question: null },
+    changes: { needs: null, stop_reason: null, question: null },
     history: 'unblock_retry',
   },
   {
@@ -182,7 +182,7 @@ const CASES: Case[] = [
     event: { type: 'recover', exhausted: false },
     task: { attempts: 2, restarts: 1 },
     to: 'queued',
-    changes: { restarts: 2, attempts: 1, needs: null, question: null },
+    changes: { restarts: 2, attempts: 1, needs: null, stop_reason: null, question: null },
     history: 'recover',
   },
   {

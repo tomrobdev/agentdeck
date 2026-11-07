@@ -105,15 +105,15 @@ export function plannerArgs(prompt: string, model: string): string[] {
   ];
 }
 
-/** Why the planner should run for a repo now, or null. `planned_at` is SQLite UTC. */
+/** Why the planner should run for a repo now, or null. `proposed_at` is SQLite UTC. */
 export function plannerDueReason(
   s: PlannerSettings,
-  repo: { hasGoals: boolean; openTasks: number; planned_at: string | null },
+  repo: { hasGoals: boolean; openTasks: number; proposed_at: string | null },
   now: number,
 ): string | null {
   if (!s.enabled || !repo.hasGoals) return null;
   if (repo.openTasks > 0) return null;
-  const last = repo.planned_at ? sqliteMs(repo.planned_at) : 0;
+  const last = repo.proposed_at ? sqliteMs(repo.proposed_at) : 0;
   if (now - last < s.interval_hours * 3_600_000) return null;
   return 'queue is empty';
 }
