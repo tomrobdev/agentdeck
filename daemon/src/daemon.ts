@@ -9,7 +9,7 @@ import { ChangeWatcher } from './application/changes.ts';
 import { reloadBlock } from './application/daemon/reload-block.ts';
 import { Scheduler } from './application/scheduler/scheduler.ts';
 import { API_PORT, DEFAULTS } from './config.ts';
-import { type Activity, SCHEMA_DIRTY, offMain, reloadDecision } from './domain/daemon/restart.ts';
+import { type Activity, SCHEMA_DIRTY, offMain, reloadDecision } from './domain/operations/restart.ts';
 
 export interface DaemonOptions {
   db: Db;

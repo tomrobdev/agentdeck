@@ -1,13 +1,13 @@
 // Use cases for tasks: add, edit, and move them through the lifecycle on a person's request.
 import { removeWorktree } from '../../adapters/git.ts';
 import type { Db } from '../../db/index.ts';
-import type { TaskId } from '../../domain/id/id.ts';
-import type { TaskStatus } from '../../domain/task/lifecycle.ts';
-import { openPrUrl } from '../../domain/pull-request/pr.ts';
-import { errorMessage } from '../../domain/text.ts';
-import { archivedRepoError, maxAttemptsError, maxTurnsError, modelError, priorityError } from '../../domain/task/rules.ts';
-import { planOwnerOf } from '../../domain/task/plan-link.ts';
-import { EDITABLE_STATUSES, RUNNING_STATUSES, type Task, defaultTitle } from '../../domain/task/task.ts';
+import type { TaskId } from '../../domain/shared/id.ts';
+import type { TaskStatus } from '../../domain/work/lifecycle.ts';
+import { openPrUrl } from '../../domain/landing/pr.ts';
+import { errorMessage } from '../../domain/shared/text.ts';
+import { archivedRepoError, maxAttemptsError, maxTurnsError, modelError, priorityError } from '../../domain/work/rules.ts';
+import { planOwnerOf } from '../../domain/work/plan-link.ts';
+import { EDITABLE_STATUSES, RUNNING_STATUSES, type Task, defaultTitle } from '../../domain/work/task.ts';
 import { refuseWhileSyncing } from '../sync.ts';
 import { warnStuckDependents } from './dependencies.ts';
 import { newLinks } from './links.ts';

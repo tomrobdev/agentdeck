@@ -1,8 +1,8 @@
 // Task runs: one row per worker claude process.
 import { and, asc, count, countDistinct, eq, gt, inArray, isNotNull, isNull, notInArray, or, sql } from 'drizzle-orm';
-import type { PlannerRunId, RunId, TaskId } from '../domain/id/id.ts';
-import type { Run, RunKind } from '../domain/run/run.ts';
-import { RUNNING_STATUSES } from '../domain/task/task.ts';
+import type { PlannerRunId, RunId, TaskId } from '../domain/shared/id.ts';
+import type { Run, RunKind } from '../domain/runs/run.ts';
+import { RUNNING_STATUSES } from '../domain/work/task.ts';
 import { stored, toRun } from './mappers.ts';
 import type { Orm } from './orm.ts';
 import { NOW_SQL } from './sql.ts';

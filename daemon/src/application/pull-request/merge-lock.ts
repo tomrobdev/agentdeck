@@ -1,5 +1,5 @@
 // The lock on merging a task's PR in this process (a sync's lock is in `sync.ts`). Apart so both can read it without a cycle.
-import type { TaskId } from '../../domain/id/id.ts';
+import type { TaskId } from '../../domain/shared/id.ts';
 
 /** The tasks whose PR this process is merging right now. */
 const merging = new Set<TaskId>();

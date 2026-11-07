@@ -5,7 +5,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, beforeEach, test } from 'node:test';
-import type { TaskId } from '../src/domain/id/id.ts';
+import type { TaskId } from '../src/domain/shared/id.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-automerge-'));
 process.env.AGENTDECK_HOME = home;
@@ -14,7 +14,7 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 const { openDb } = await import('../src/db/index.ts');
 const { doneTask } = await import('./fixtures.ts');
 const { github } = await import('../src/adapters/github.ts');
-const { AUTO_MERGE_LABEL, autoMergeCheck, autoMergeOn } = await import('../src/domain/pull-request/auto-merge.ts');
+const { AUTO_MERGE_LABEL, autoMergeCheck, autoMergeOn } = await import('../src/domain/landing/auto-merge.ts');
 const { isMergeLocked } = await import('../src/application/pull-request/merge.ts');
 const { refreshPrStates } = await import('../src/application/pull-request/refresh.ts');
 const { autoMerge } = await import('../src/application/pull-request/auto-merge.ts');
@@ -24,8 +24,8 @@ const { resolveConflicting } = await import('../src/application/sync.ts');
 const { repoSettingPatch } = await import('../src/cli/settings-args.ts');
 const { dependencyOf, liveLinks, waitingFor } = await import('../src/application/task/dependencies.ts');
 /** What a task waits for on its builds-on links, read from the database now. */
-const waiting = (t: import('../src/domain/task/task.ts').Task) => waitingFor(t, dependencyOf(t, liveLinks(db)));
-type PrDetails = import('../src/domain/pull-request/merge.ts').PrDetails;
+const waiting = (t: import('../src/domain/work/task.ts').Task) => waitingFor(t, dependencyOf(t, liveLinks(db)));
+type PrDetails = import('../src/domain/landing/merge.ts').PrDetails;
 
 const db = openDb(join(home, 'test.db'));
 after(() => db.close());

@@ -7,7 +7,7 @@ import ts from 'typescript';
 import { SETTING_DEFAULTS } from '../../src/db/settings.ts';
 import { LAYERS, layerOf, mayImport } from './layers.ts';
 import * as tables from '../../src/db/tables.ts';
-import { RULES, TASK_STATUSES, type TaskStatus } from '../../src/domain/task/lifecycle.ts';
+import { RULES, TASK_STATUSES, type TaskStatus } from '../../src/domain/work/lifecycle.ts';
 import { adapterUse, contextMap } from './graphs.ts';
 import { modelsBody, stateMachinesBody, useCasesBody } from './model-docs.ts';
 import { progress } from './progress.ts';

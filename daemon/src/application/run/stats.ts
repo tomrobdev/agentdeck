@@ -1,8 +1,8 @@
 // The pilot scorecard measures per repo, read from the database.
 import type { Db } from '../../db/index.ts';
-import type { RepoId } from '../../domain/id/id.ts';
-import { type Scorecard, buildScorecard } from '../../domain/run/scorecard.ts';
-import { type Measures, type StatsReport, measure, measureByRepo, measureByWeek } from '../../domain/run/stats.ts';
+import type { RepoId } from '../../domain/shared/id.ts';
+import { type Scorecard, buildScorecard } from '../../domain/insights/scorecard.ts';
+import { type Measures, type StatsReport, measure, measureByRepo, measureByWeek } from '../../domain/insights/stats.ts';
 import { ActionError } from '../input.ts';
 
 /** The first-run measures and the rest of the scorecard (interventions, times, quota, PR checks). */

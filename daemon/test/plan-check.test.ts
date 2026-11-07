@@ -1,6 +1,6 @@
 // Linked plan steps a run leaves unfinished: a warning event, a badge flag, and a checklist in the PR body.
 import assert from 'node:assert/strict';
-import type { TaskId } from '../src/domain/id/id.ts';
+import type { TaskId } from '../src/domain/shared/id.ts';
 import { execFileSync } from 'node:child_process';
 import { chmodSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -18,8 +18,8 @@ const { openDb } = await import('../src/db/index.ts');
 const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
 const { github } = await import('../src/adapters/github.ts');
 const { updateRepo } = await import('../src/application/actions.ts');
-const { linkedSteps, unfinishedSteps, unfinishedSummary } = await import('../src/domain/plan/plan.ts');
-const { buildPrBody } = await import('../src/domain/pull-request/pr.ts');
+const { linkedSteps, unfinishedSteps, unfinishedSummary } = await import('../src/domain/work/plan.ts');
+const { buildPrBody } = await import('../src/domain/landing/pr.ts');
 
 const plan = (a: string, b: string) => `<!doctype html>
 <html data-agentdeck-plan="1"><head><title>Cache plan</title></head><body>

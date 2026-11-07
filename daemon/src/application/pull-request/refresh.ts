@@ -1,15 +1,15 @@
 // The PR refresh: keep the state of open PRs fresh, and say which ones conflict or are ready to merge.
 import { github } from '../../adapters/github.ts';
 import type { Db } from '../../db/index.ts';
-import type { TaskId } from '../../domain/id/id.ts';
-import type { PrDetails } from '../../domain/pull-request/merge.ts';
-import { type AutoMergeCheck, autoMergeCheck, autoMergeOn } from '../../domain/pull-request/auto-merge.ts';
-import { checksFailedNotification, checksSettled, nextChecks } from '../../domain/pull-request/checks.ts';
-import { isConflicting, isMergeabilityUnknown } from '../../domain/pull-request/conflict.ts';
-import { mergeRequestCheck, mergeRequestPolls } from '../../domain/pull-request/merge-request.ts';
-import { type Repo, pausedReason } from '../../domain/repo/repo.ts';
-import type { Task } from '../../domain/task/task.ts';
-import { errorMessage } from '../../domain/text.ts';
+import type { TaskId } from '../../domain/shared/id.ts';
+import type { PrDetails } from '../../domain/landing/merge.ts';
+import { type AutoMergeCheck, autoMergeCheck, autoMergeOn } from '../../domain/landing/auto-merge.ts';
+import { checksFailedNotification, checksSettled, nextChecks } from '../../domain/landing/checks.ts';
+import { isConflicting, isMergeabilityUnknown } from '../../domain/landing/conflict.ts';
+import { mergeRequestCheck, mergeRequestPolls } from '../../domain/landing/merge-request.ts';
+import { type Repo, pausedReason } from '../../domain/repos/repo.ts';
+import type { Task } from '../../domain/work/task.ts';
+import { errorMessage } from '../../domain/shared/text.ts';
 import { landsAfter } from '../task/dependencies.ts';
 import { settle, settlePr } from '../task/settle.ts';
 import { notifyLater } from '../notifications.ts';

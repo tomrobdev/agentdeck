@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
-import { errorMessage } from '../../../../daemon/src/domain/text.ts';
+import { errorMessage } from '../../../../daemon/src/domain/shared/text.ts';
 import { useHotkeys } from '../../composables/useHotkeys';
 import type { TreeNode } from '../../lib/changedTree';
 import { fuzzyScore } from '../../lib/fuzzy';

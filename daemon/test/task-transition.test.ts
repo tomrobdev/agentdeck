@@ -8,10 +8,10 @@ import {
   type TaskStatus,
   ruleKey,
   transition,
-} from '../src/domain/task/lifecycle.ts';
-import type { TaskEventType } from '../src/domain/task/history.ts';
-import type { Needs } from '../src/domain/task/needs.ts';
-import type { TaskState } from '../src/domain/task/task.ts';
+} from '../src/domain/work/lifecycle.ts';
+import type { TaskEventType } from '../src/domain/work/history.ts';
+import type { Needs } from '../src/domain/work/needs.ts';
+import type { TaskState } from '../src/domain/work/task.ts';
 
 interface Case {
   name: string;

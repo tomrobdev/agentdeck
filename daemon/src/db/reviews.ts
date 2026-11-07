@@ -1,7 +1,7 @@
 // Reviews and their comments. A draft is edited freely; a submitted review changes only in its comments' states.
 import { and, asc, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
-import type { ReviewId, TaskId } from '../domain/id/id.ts';
-import type { CommentSide, CommentState, Review, ReviewComment, ReviewKind, ReviewWithComments } from '../domain/review/review.ts';
+import type { ReviewId, TaskId } from '../domain/shared/id.ts';
+import type { CommentSide, CommentState, Review, ReviewComment, ReviewKind, ReviewWithComments } from '../domain/landing/review.ts';
 import type { Orm } from './orm.ts';
 import { NOW_SQL } from './sql.ts';
 import { reviewComments, reviews } from './tables.ts';

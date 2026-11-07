@@ -10,7 +10,7 @@ import {
   fromStatuses,
   nextStatus,
   personEvents,
-} from '../src/domain/task/lifecycle.ts';
+} from '../src/domain/work/lifecycle.ts';
 
 const EVENTS: Record<string, TaskEvent> = {
   claim: { type: 'claim' },

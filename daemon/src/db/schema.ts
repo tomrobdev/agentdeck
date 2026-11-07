@@ -232,13 +232,13 @@ export const MIGRATIONS: Migration[] = [
   // 25: when a run's pid was stored. Its claude started then, which can be minutes after the run row (setup, a sync),
   // so crash recovery and the doctor tell our claude from a reused pid by this time, not by started_at.
   `ALTER TABLE runs ADD COLUMN pid_at TEXT;`,
-  // 26: an open PR's latest checks, one by one (domain/pull-request/checks.ts StoredChecks): JSON { read_at, head, checks,
+  // 26: an open PR's latest checks, one by one (domain/landing/checks.ts StoredChecks): JSON { read_at, head, checks,
   // notified }, written by the PR refresh; notified says a person was told they fail. NULL until the PR's checks are read.
   `ALTER TABLE tasks ADD COLUMN pr_checks TEXT;`,
   // 27: when a sync of the task's branch began (NULL when none is running). Syncs run in the daemon only, so the CLI
   // reads this to see one; the daemon clears every marker on start.
   `ALTER TABLE tasks ADD COLUMN syncing_since TEXT;`,
-  // 28: unblock runs (domain/run/unblock.ts). auto_unblock lets the daemon start one on its own when a task blocks (off by
+  // 28: unblock runs (domain/runs/unblock.ts). auto_unblock lets the daemon start one on its own when a task blocks (off by
   // default); question is the JSON { question, options } one left on a blocked task, cleared when the task is queued again.
   `ALTER TABLE repos ADD COLUMN auto_unblock INTEGER NOT NULL DEFAULT 0;
    ALTER TABLE tasks ADD COLUMN question TEXT;`,

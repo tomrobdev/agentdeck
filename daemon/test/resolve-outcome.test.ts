@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { resolveOutcome, syncResultOf } from '../src/domain/branch/sync.ts';
+import { resolveOutcome, syncResultOf } from '../src/domain/landing/sync.ts';
 
 const finished = (result: string) => ({ kind: 'finished' as const, result: { result } });
 

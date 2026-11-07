@@ -13,7 +13,7 @@ export const CYCLE_LAYERS = ['domain', 'application'];
  * the change that breaks it. Never add one. Breaking them is Phase 3 of the plan.
  */
 export const ALLOWED_FOLDER_CYCLES: Record<string, string[]> = {
-  domain: ['domain, domain/branch, domain/pull-request, domain/repo, domain/review, domain/run, domain/task, domain/usage'],
+  domain: ['domain/landing, domain/operations, domain/proposals, domain/repos, domain/runs, domain/work'],
   application: [
     'application, application/pull-request, application/repo, application/review, application/run, application/scheduler, application/task',
   ],

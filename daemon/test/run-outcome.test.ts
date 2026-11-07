@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseStatus, runOutcome } from '../src/domain/run/run.ts';
+import { parseStatus, runOutcome } from '../src/domain/runs/run.ts';
 
 const finished = { end: { kind: 'finished' } as const, testsPassed: null, commitsAhead: 1, denials: 0 };
 

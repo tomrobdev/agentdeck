@@ -4,9 +4,9 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { asReviewId, asTaskId } from '../src/domain/id/id.ts';
-import { commentsToAddress, nextCommentState, reviewReason } from '../src/domain/review/review.ts';
-import type { ReviewComment, ReviewWithComments } from '../src/domain/review/review.ts';
+import { asReviewId, asTaskId } from '../src/domain/shared/id.ts';
+import { commentsToAddress, nextCommentState, reviewReason } from '../src/domain/landing/review.ts';
+import type { ReviewComment, ReviewWithComments } from '../src/domain/landing/review.ts';
 
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-reviews-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';

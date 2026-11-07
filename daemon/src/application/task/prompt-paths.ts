@@ -1,10 +1,10 @@
 // Warn when a task's prompt names a repo path that won't be there when the task runs.
 import { branchCommit, listFiles, localStartPoint, resolveCommit } from '../../adapters/git.ts';
 import type { Db } from '../../db/index.ts';
-import type { TaskId } from '../../domain/id/id.ts';
-import { linkState } from '../../domain/task/link.ts';
-import { matchPath, pathsNamedIn } from '../../domain/task/prompt-paths.ts';
-import type { Task } from '../../domain/task/task.ts';
+import type { TaskId } from '../../domain/shared/id.ts';
+import { linkState } from '../../domain/work/link.ts';
+import { matchPath, pathsNamedIn } from '../../domain/work/prompt-paths.ts';
+import type { Task } from '../../domain/work/task.ts';
 import { targetOf } from './dependencies.ts';
 import { requireTask, requireTaskRepo } from '../input.ts';
 

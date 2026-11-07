@@ -4,7 +4,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import type { TaskId } from '../src/domain/id/id.ts';
+import type { TaskId } from '../src/domain/shared/id.ts';
 
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-claim-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
@@ -17,7 +17,7 @@ const { dependencyOf, liveLinks } = await import('../src/application/task/depend
 function waits(db: ReturnType<typeof openDb>) {
   const waitOf = startWaits(db);
   const links = liveLinks(db);
-  return (t: import('../src/domain/task/task.ts').Task) => waitOf(t, dependencyOf(t, links));
+  return (t: import('../src/domain/work/task.ts').Task) => waitOf(t, dependencyOf(t, links));
 }
 
 test('claimNextTask picks the first queued task, by priority then id, that has no startWait', () => {

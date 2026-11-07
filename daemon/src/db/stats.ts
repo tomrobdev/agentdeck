@@ -1,8 +1,8 @@
 // The reads behind `agentdeck stats`: work runs with their task's repo and status, and tasks with their history.
 import { and, asc, eq } from 'drizzle-orm';
-import type { RepoId } from '../domain/id/id.ts';
-import type { ScorecardEvent, ScorecardTaskRow } from '../domain/run/scorecard.ts';
-import type { StatRun } from '../domain/run/stats.ts';
+import type { RepoId } from '../domain/shared/id.ts';
+import type { ScorecardEvent, ScorecardTaskRow } from '../domain/insights/scorecard.ts';
+import type { StatRun } from '../domain/insights/stats.ts';
 import { readCounts } from './mappers.ts';
 import type { Orm } from './orm.ts';
 import { repos, runs, taskEvents, tasks } from './tables.ts';

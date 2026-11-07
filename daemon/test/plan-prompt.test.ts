@@ -1,8 +1,8 @@
-// The linked plan steps in a worker's prompt (domain/run/prompt.ts).
+// The linked plan steps in a worker's prompt (domain/runs/prompt.ts).
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { parsePlanWithText } from '../src/domain/plan/plan.ts';
-import { buildPrompt, planPromptBlock, workerSystemPrompt } from '../src/domain/run/prompt.ts';
+import { parsePlanWithText } from '../src/domain/work/plan.ts';
+import { buildPrompt, planPromptBlock, workerSystemPrompt } from '../src/domain/runs/prompt.ts';
 
 const plan = (statuses: [string, string, string]) => `<!doctype html>
 <html data-agentdeck-plan="1"><head><title>Cache plan</title></head><body>

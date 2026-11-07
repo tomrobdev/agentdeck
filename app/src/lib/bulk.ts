@@ -2,8 +2,8 @@
 // with one task is the daemon's (personEvents, canStartMerge); this only intersects.
 // Free of the dashboard's other modules so the daemon's tests can import it (daemon/test/bulk-actions.test.ts).
 import type { TaskSummary } from '../../../daemon/src/api/contract.ts';
-import { personEvents } from '../../../daemon/src/domain/task/lifecycle.ts';
-import { canStartMerge } from '../../../daemon/src/domain/task/stage.ts';
+import { personEvents } from '../../../daemon/src/domain/work/lifecycle.ts';
+import { canStartMerge } from '../../../daemon/src/domain/work/stage.ts';
 
 export type BulkAction = 'approve' | 'reject' | 'retry' | 'merge' | 'cancel';
 export const BULK_ACTIONS: BulkAction[] = ['approve', 'reject', 'retry', 'merge', 'cancel'];

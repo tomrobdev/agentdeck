@@ -12,7 +12,7 @@ import {
   parseNameStatus,
   parseNumstat,
   treeEntries,
-} from '../src/domain/files/files.ts';
+} from '../src/domain/work/read/files.ts';
 
 test('checkPath accepts repo-relative paths and drops trailing slashes', () => {
   assert.deepEqual(checkPath('a.txt'), { ok: true, path: 'a.txt' });

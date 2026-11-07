@@ -1,15 +1,15 @@
 // The tables as Drizzle sees them, mirroring the migrated schema in schema.ts. The stores query through them, and
 // drizzle-kit reads this for Studio (pnpm db:studio) and the schema check (pnpm db:check). Keys are column names, as in the domain types.
 import { sql } from 'drizzle-orm';
-import type { PlannerRunId, RepoId, ReviewId, RunId, TaskId } from '../domain/id/id.ts';
-import type { PlannerOutcome } from '../domain/planner/proposals.ts';
-import type { MergeMethod } from '../domain/pull-request/merge.ts';
-import type { PrMode, PrState } from '../domain/pull-request/pr.ts';
-import type { RunKind, RunOutcome } from '../domain/run/run.ts';
-import type { TaskEventType } from '../domain/task/history.ts';
-import type { LinkKind } from '../domain/task/link.ts';
-import type { TaskStatus } from '../domain/task/lifecycle.ts';
-import type { TaskSource } from '../domain/task/task.ts';
+import type { PlannerRunId, RepoId, ReviewId, RunId, TaskId } from '../domain/shared/id.ts';
+import type { PlannerOutcome } from '../domain/proposals/proposals.ts';
+import type { MergeMethod } from '../domain/landing/merge.ts';
+import type { PrMode, PrState } from '../domain/landing/pr.ts';
+import type { RunKind, RunOutcome } from '../domain/runs/run.ts';
+import type { TaskEventType } from '../domain/work/history.ts';
+import type { LinkKind } from '../domain/work/link.ts';
+import type { TaskStatus } from '../domain/work/lifecycle.ts';
+import type { TaskSource } from '../domain/work/task.ts';
 import { index, integer, primaryKey, real, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
 
 // guard: a column default is an expression SQLite evaluates on insert, which the builder can only take as raw SQL

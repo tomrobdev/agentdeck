@@ -13,10 +13,10 @@ import {
   parseSince,
   scorecardText,
   summarizeChecks,
-} from '../src/domain/run/scorecard.ts';
-import { countInterventions } from '../src/domain/run/interventions.ts';
-import { type StatRun, measureByWeek } from '../src/domain/run/stats.ts';
-import { quotaSpends } from '../src/domain/usage/quota.ts';
+} from '../src/domain/insights/scorecard.ts';
+import { countInterventions } from '../src/domain/insights/interventions.ts';
+import { type StatRun, measureByWeek } from '../src/domain/insights/stats.ts';
+import { quotaSpends } from '../src/domain/capacity/quota.ts';
 import { asRepoId, asTaskId, doneTask, queuedTask } from './fixtures.ts';
 
 const near = (actual: number | null | undefined, expected: number, eps = 1e-9) =>

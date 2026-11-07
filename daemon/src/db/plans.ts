@@ -1,8 +1,8 @@
 // Plans attached to tasks: the HTML as written, parsed into steps when read.
 import { and, asc, desc, eq, ne, notInArray, sql } from 'drizzle-orm';
-import type { TaskId } from '../domain/id/id.ts';
-import { type PlanSource, type TaskPlan, parsePlan, planFileName } from '../domain/plan/plan.ts';
-import type { PlanFollower } from '../domain/task/plan-link.ts';
+import type { TaskId } from '../domain/shared/id.ts';
+import { type PlanSource, type TaskPlan, parsePlan, planFileName } from '../domain/work/plan.ts';
+import type { PlanFollower } from '../domain/work/plan-link.ts';
 import { readSteps } from './mappers.ts';
 import type { Orm } from './orm.ts';
 import { NOW_SQL, atomically } from './sql.ts';

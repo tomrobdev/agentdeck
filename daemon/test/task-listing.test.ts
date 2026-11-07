@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { asRepoId, asTaskId } from './fixtures.ts';
-import { type Listable, filterTasks } from '../src/domain/task/listing.ts';
+import { type Listable, filterTasks } from '../src/domain/work/read/listing.ts';
 
 function task(id: number, fields: Partial<Listable> = {}): Listable {
   return {

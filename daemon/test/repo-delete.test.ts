@@ -13,7 +13,7 @@ const { openDb } = await import('../src/db/index.ts');
 const actions = await import('../src/application/actions.ts');
 const { ensureWorktree } = await import('../src/adapters/git.ts');
 const { writeGoals, goalsPath } = await import('../src/adapters/goals.ts');
-const { settingsPath } = await import('../src/domain/run/sandbox.ts');
+const { settingsPath } = await import('../src/domain/runs/translate/sandbox.ts');
 const db = openDb(join(home, 'test.db'));
 
 after(() => db.close());

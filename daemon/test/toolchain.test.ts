@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { detectToolchain } from '../src/domain/repo/toolchain.ts';
+import { detectToolchain } from '../src/domain/repos/toolchain.ts';
 
 const JS_SCRIPTS = ['build', 'test', 'typecheck'];
 

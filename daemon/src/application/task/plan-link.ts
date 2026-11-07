@@ -1,9 +1,9 @@
 // The plan link a task request asks for: its steps, the plan it follows, and the checks on both.
 import type { Db } from '../../db/index.ts';
-import { type TaskId, parseId } from '../../domain/id/id.ts';
-import { type ParsedPlan, parsePlan } from '../../domain/plan/plan.ts';
-import type { Repo } from '../../domain/repo/repo.ts';
-import { stepsNeedPlanError } from '../../domain/task/rules.ts';
+import { type TaskId, parseId } from '../../domain/shared/id.ts';
+import { type ParsedPlan, parsePlan } from '../../domain/work/plan.ts';
+import type { Repo } from '../../domain/repos/repo.ts';
+import { stepsNeedPlanError } from '../../domain/work/rules.ts';
 import { ActionError, refuse } from '../input.ts';
 import { readPlanInput } from '../plans.ts';
 

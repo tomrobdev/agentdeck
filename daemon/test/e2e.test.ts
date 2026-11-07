@@ -5,9 +5,9 @@ import { chmodSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, test } from 'node:test';
-import type { Repo } from '../src/domain/repo/repo.ts';
+import type { Repo } from '../src/domain/repos/repo.ts';
 import { asRepoId } from './fixtures.ts';
-import { stopReasonOf } from '../src/domain/task/task.ts';
+import { stopReasonOf } from '../src/domain/work/task.ts';
 
 const REPO = asRepoId(1); // the one repo this file registers
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-test-'));
@@ -19,7 +19,7 @@ process.env.AGENTDECK_CLAUDE_BIN = fake;
 
 const { openDb } = await import('../src/db/index.ts');
 const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
-const { parseStatus } = await import('../src/domain/run/run.ts');
+const { parseStatus } = await import('../src/domain/runs/run.ts');
 
 const repoPath = join(home, 'demo');
 const db = openDb(join(home, 'test.db'));
@@ -141,7 +141,7 @@ test('orphaned running tasks are requeued on start', () => {
 });
 
 test('a task interrupted by repeated restarts fails instead of looping', async () => {
-  const { MAX_RESTARTS } = await import('../src/domain/task/lifecycle.ts');
+  const { MAX_RESTARTS } = await import('../src/domain/work/lifecycle.ts');
   const task = db.addTask({ repo_id: REPO, title: 'poison', prompt: 'x' });
   for (let i = 1; i < MAX_RESTARTS; i++) {
     db.claimNextTask();
@@ -209,7 +209,7 @@ test('a claude started long after its run row opened (setup, a sync) is still th
 });
 
 test('defaultTitle cuts at sentence or word boundary', async () => {
-  const { defaultTitle } = await import('../src/domain/task/task.ts');
+  const { defaultTitle } = await import('../src/domain/work/task.ts');
   assert.equal(defaultTitle('Fix the login bug. Then add tests.'), 'Fix the login bug');
   const long = defaultTitle(
     'Add a truncate(s, n) function to src/strings.js that shortens s to at most n characters, ending with an ellipsis',
@@ -243,7 +243,7 @@ test('governor holds queued work over the 5h cap and notifies once', async () =>
 test('repo add detects the toolchain; repos registered before detection get its rules on the fly', async () => {
   const { addRepo } = await import('../src/application/actions.ts');
   const { rootInfo } = await import('../src/adapters/repo-root.ts');
-  const { DEFAULT_ALLOWED_TOOLS, allowedTools } = await import('../src/domain/repo/tools.ts');
+  const { DEFAULT_ALLOWED_TOOLS, allowedTools } = await import('../src/domain/repos/tools.ts');
   const effectiveTools = (repo: Repo, dir: string) => allowedTools(repo, rootInfo(dir));
   const jsRepo = (name: string) => {
     const dir = join(home, name);

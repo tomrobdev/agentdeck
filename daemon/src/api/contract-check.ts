@@ -2,7 +2,7 @@
 // what the dashboard reads fails `pnpm typecheck` there. This file checks the rest: each request type the dashboard sends
 // must fit the parameter the use case takes, and the parts of a response checked on their own so a drift is reported
 // where it is. The contract may name fewer fields than the use case returns.
-import type { LogEntry as DomainLogEntry } from '../domain/run/log.ts';
+import type { LogEntry as DomainLogEntry } from '../domain/runs/translate/log.ts';
 import * as actions from '../application/actions.ts';
 import type * as C from './contract.ts';
 

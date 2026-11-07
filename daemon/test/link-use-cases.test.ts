@@ -1,6 +1,6 @@
 // Linking and unlinking, adding with links, the merge gate for after links and the one warning for a stuck chain.
 import assert from 'node:assert/strict';
-import { type TaskId, asTaskId } from '../src/domain/id/id.ts';
+import { type TaskId, asTaskId } from '../src/domain/shared/id.ts';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -13,8 +13,8 @@ const { openDb } = await import('../src/db/index.ts');
 const { ActionError, addTask, linkTasks, unlinkTasks, taskDetail, cancelTask, deleteRepo } = await import('../src/application/actions.ts');
 const { doneTask, failedTask, queuedTask, runningTask, settlePr } = await import('./fixtures.ts');
 const { landsAfter, warnStuckDependents } = await import('../src/application/task/dependencies.ts');
-const { mergeCheck } = await import('../src/domain/pull-request/merge.ts');
-const { autoMergeCheck } = await import('../src/domain/pull-request/auto-merge.ts');
+const { mergeCheck } = await import('../src/domain/landing/merge.ts');
+const { autoMergeCheck } = await import('../src/domain/landing/auto-merge.ts');
 
 function setup() {
   const db = openDb(':memory:');

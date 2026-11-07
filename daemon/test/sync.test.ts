@@ -7,7 +7,7 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, beforeEach, test } from 'node:test';
-import { type TaskId, asTaskId } from '../src/domain/id/id.ts';
+import { type TaskId, asTaskId } from '../src/domain/shared/id.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-conflicts-'));
 process.env.AGENTDECK_HOME = home;
@@ -24,11 +24,11 @@ const { refreshPrStates } = await import('../src/application/pull-request/refres
 const { doneTask: doneTaskWithPr } = await import('./fixtures.ts');
 const { resolveConflicting } = await import('../src/application/sync.ts');
 const { ActionError, mergeTask, syncNow, retryTask, updateRepo } = await import('../src/application/actions.ts');
-const { isConflicting, isMergeabilityUnknown } = await import('../src/domain/pull-request/conflict.ts');
-const { conflictReason, syncSummary } = await import('../src/domain/branch/sync.ts');
-const { buildPrBody } = await import('../src/domain/pull-request/pr.ts');
-const { buildPrompt, buildResolvePrompt } = await import('../src/domain/run/prompt.ts');
-type PrDetails = import('../src/domain/pull-request/merge.ts').PrDetails;
+const { isConflicting, isMergeabilityUnknown } = await import('../src/domain/landing/conflict.ts');
+const { conflictReason, syncSummary } = await import('../src/domain/landing/sync.ts');
+const { buildPrBody } = await import('../src/domain/landing/pr.ts');
+const { buildPrompt, buildResolvePrompt } = await import('../src/domain/runs/prompt.ts');
+type PrDetails = import('../src/domain/landing/merge.ts').PrDetails;
 
 const db = openDb(join(home, 'test.db'));
 db.setSetting('max_concurrent', '1');

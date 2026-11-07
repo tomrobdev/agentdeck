@@ -1,7 +1,7 @@
 // The task area review of 2026-11-02: editing a task's plan is guarded and clears only what it says, a plan attached to
 // a done owner reaches a cut-off follower, and the store keeps runs, links and merge checks true.
 import assert from 'node:assert/strict';
-import type { TaskId } from '../src/domain/id/id.ts';
+import type { TaskId } from '../src/domain/shared/id.ts';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -12,8 +12,8 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { openDb } = await import('../src/db/index.ts');
 const { addTask, attachPlan, editTask, linkTasks, taskDetail, taskViews, unlinkTasks } = await import('../src/application/actions.ts');
-const { editsSinceCutOff } = await import('../src/domain/run/run.ts');
-const { MAX_RESTARTS } = await import('../src/domain/task/lifecycle.ts');
+const { editsSinceCutOff } = await import('../src/domain/runs/run.ts');
+const { MAX_RESTARTS } = await import('../src/domain/work/lifecycle.ts');
 const { advance, doneTask } = await import('./fixtures.ts');
 
 type Db = ReturnType<typeof openDb>;

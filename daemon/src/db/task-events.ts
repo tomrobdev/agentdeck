@@ -1,9 +1,9 @@
 // Task history: one row per status change, written with the change itself.
 import { and, asc, eq, exists, getColumns, gt, lte, max, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
-import type { RepoId, TaskId } from '../domain/id/id.ts';
-import type { TaskEventRow, TaskEventType } from '../domain/task/history.ts';
-import type { TaskStatus } from '../domain/task/lifecycle.ts';
+import type { RepoId, TaskId } from '../domain/shared/id.ts';
+import type { TaskEventRow, TaskEventType } from '../domain/work/history.ts';
+import type { TaskStatus } from '../domain/work/lifecycle.ts';
 import type { Orm } from './orm.ts';
 import { inActiveRepo } from './sql.ts';
 import { taskEvents, tasks } from './tables.ts';

@@ -18,9 +18,9 @@ const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
 const { applyProtectedEdits } = await import('../src/adapters/protected-edits.ts');
 const { writePlanFile } = await import('../src/adapters/plan-file.ts');
 const { EDITS_FOLDER, editPathFor, isProtectedPath, protectedEditTarget, protectedEditsMessage } =
-  await import('../src/domain/run/protected-edits.ts');
-const { workerSystemPrompt } = await import('../src/domain/run/prompt.ts');
-const { parseLogLine } = await import('../src/domain/run/log.ts');
+  await import('../src/domain/repos/protected-edits.ts');
+const { workerSystemPrompt } = await import('../src/domain/runs/prompt.ts');
+const { parseLogLine } = await import('../src/domain/runs/translate/log.ts');
 
 const git = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
 function newRepo(name: string): string {

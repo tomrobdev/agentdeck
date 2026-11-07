@@ -6,7 +6,7 @@ Each state machine of `domain/`, read from its rule table.
 
 ## Task lifecycle
 
-The rule table is `RULES` in `domain/task/lifecycle.ts`. States: `proposed`, `queued`, `running`, `done`, `blocked`, `failed`, `cancel_requested`, `cancelled`.
+The rule table is `RULES` in `domain/work/lifecycle.ts`. States: `proposed`, `queued`, `running`, `done`, `blocked`, `failed`, `cancel_requested`, `cancelled`.
 
 ```mermaid
 stateDiagram-v2
@@ -54,7 +54,7 @@ stateDiagram-v2
 
 ## Review comment
 
-The rule table is `COMMENT_MOVES` in `domain/review/review.ts`. States: `open`, `answered`, `resolved`.
+The rule table is `COMMENT_MOVES` in `domain/landing/review.ts`. States: `open`, `answered`, `resolved`.
 
 ```mermaid
 stateDiagram-v2
@@ -76,14 +76,14 @@ stateDiagram-v2
 
 State types in `domain/` that no rule table drives, and why.
 
-| State type         | Why                                                                                                                           |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| `AutoMergeState`   | a verdict computed from the pull request each time, not a state with moves                                                    |
-| `ChangeStatus`     | a git file change letter, read from git                                                                                       |
-| `CheckState`       | a value read from GitHub for each check, not a state a thing moves through                                                    |
-| `HeadlineState`    | computed from the daemon and queue each time, not a state with moves                                                          |
-| `LinkState`        | computed from the linked task each time, not a state with moves                                                               |
-| `MergeRequestView` | a merge request is set, cleared and read as columns (domain/pull-request/merge-request.ts), not a state type with a table yet |
-| `PlanStepStatus`   | set from the plan page by a person or worker; any step may take any status                                                    |
-| `PrState`          | a pull request moves by what GitHub reports (domain/pull-request/pr.ts), not by an event table yet                            |
-| `StartState`       | computed from a task's links each time, not a state with moves                                                                |
+| State type         | Why                                                                                                                      |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| `AutoMergeState`   | a verdict computed from the pull request each time, not a state with moves                                               |
+| `ChangeStatus`     | a git file change letter, read from git                                                                                  |
+| `CheckState`       | a value read from GitHub for each check, not a state a thing moves through                                               |
+| `HeadlineState`    | computed from the daemon and queue each time, not a state with moves                                                     |
+| `LinkState`        | computed from the linked task each time, not a state with moves                                                          |
+| `MergeRequestView` | a merge request is set, cleared and read as columns (domain/landing/merge-request.ts), not a state type with a table yet |
+| `PlanStepStatus`   | set from the plan page by a person or worker; any step may take any status                                               |
+| `PrState`          | a pull request moves by what GitHub reports (domain/landing/pr.ts), not by an event table yet                            |
+| `StartState`       | computed from a task's links each time, not a state with moves                                                           |

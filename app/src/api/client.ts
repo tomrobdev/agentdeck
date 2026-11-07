@@ -51,8 +51,8 @@ import type {
   TestNotifyResult,
   TreeListing,
 } from './types.ts';
-import { asTaskId } from '../../../daemon/src/domain/id/id.ts';
-import type { PersonEvent } from '../../../daemon/src/domain/task/lifecycle.ts';
+import { asTaskId } from '../../../daemon/src/domain/shared/id.ts';
+import type { PersonEvent } from '../../../daemon/src/domain/work/lifecycle.ts';
 
 // The dashboard keeps ids as numbers (from the URL, from typing); a request body brands them here, where they enter the API.
 type NewTaskInput = Omit<NewTask, 'builds_on' | 'after' | 'plan_task'> & { builds_on?: number[]; after?: number[]; plan_task?: number };

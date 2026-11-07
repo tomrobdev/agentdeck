@@ -1,14 +1,14 @@
 // Tables against their domain types, as Drizzle infers each row from tables.ts, so a column added to one and not the other fails
 // `pnpm typecheck`. Tasks, repos and runs are read through a mapper (mappers.ts), so each row is checked against its mapper; the other
 // tables' rows must still equal their domain type. Columns a domain type leaves out on purpose are named in the Omit.
-import type { PlannerOutcome, PlannerRun } from '../domain/planner/proposals.ts';
-import type { MergeMethod } from '../domain/pull-request/merge.ts';
-import type { PrMode, PrState } from '../domain/pull-request/pr.ts';
-import type { Review, ReviewComment } from '../domain/review/review.ts';
-import type { RunKind, RunOutcome } from '../domain/run/run.ts';
-import type { TaskEventRow, TaskEventType } from '../domain/task/history.ts';
-import type { TaskStatus } from '../domain/task/lifecycle.ts';
-import type { LinkKind } from '../domain/task/link.ts';
+import type { PlannerOutcome, PlannerRun } from '../domain/proposals/proposals.ts';
+import type { MergeMethod } from '../domain/landing/merge.ts';
+import type { PrMode, PrState } from '../domain/landing/pr.ts';
+import type { Review, ReviewComment } from '../domain/landing/review.ts';
+import type { RunKind, RunOutcome } from '../domain/runs/run.ts';
+import type { TaskEventRow, TaskEventType } from '../domain/work/history.ts';
+import type { TaskStatus } from '../domain/work/lifecycle.ts';
+import type { LinkKind } from '../domain/work/link.ts';
 import type {
   BlockedState,
   CancelledState,
@@ -18,7 +18,7 @@ import type {
   Task,
   TaskSource,
   TaskState,
-} from '../domain/task/task.ts';
+} from '../domain/work/task.ts';
 import type {
   CheckoutColumn,
   LegacyTaskColumn,

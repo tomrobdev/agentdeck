@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { MODEL_HINTS, MODEL_LABELS, type Repo, type TaskDetail, api } from '../../api';
-import { errorMessage, textList } from '../../../../daemon/src/domain/text.ts';
+import { errorMessage, textList } from '../../../../daemon/src/domain/shared/text.ts';
 import { MODELS } from '../../lib/taskView';
 import { useTerminal } from '../../composables/useTerminal';
 import Modal from '../ui/Modal.vue';

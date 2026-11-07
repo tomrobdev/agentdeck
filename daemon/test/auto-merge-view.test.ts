@@ -6,7 +6,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, beforeEach, test } from 'node:test';
-import { asTaskId } from '../src/domain/id/id.ts';
+import { asTaskId } from '../src/domain/shared/id.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-amview-'));
 process.env.AGENTDECK_HOME = home;
@@ -15,16 +15,16 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 const { openDb } = await import('../src/db/index.ts');
 const { doneTask } = await import('./fixtures.ts');
 const { github } = await import('../src/adapters/github.ts');
-const { AUTO_MERGE_LABEL, autoMergeView } = await import('../src/domain/pull-request/auto-merge.ts');
-const { prFields, pullRequestOf } = await import('../src/domain/pull-request/pr.ts');
+const { AUTO_MERGE_LABEL, autoMergeView } = await import('../src/domain/landing/auto-merge.ts');
+const { prFields, pullRequestOf } = await import('../src/domain/landing/pr.ts');
 const { refreshPrStates } = await import('../src/application/pull-request/refresh.ts');
 const { autoMerge } = await import('../src/application/pull-request/auto-merge.ts');
 const { setAutoMerge, taskDetail, updateRepo } = await import('../src/application/actions.ts');
 const { measureBranch } = await import('../src/application/task/files.ts');
-const { digest } = await import('../src/domain/task/digest.ts');
+const { digest } = await import('../src/domain/work/read/digest.ts');
 const { fmtAutoMerge, fmtTask } = await import('../src/cli/format.ts');
-type PrDetails = import('../src/domain/pull-request/merge.ts').PrDetails;
-type Task = import('../src/domain/task/task.ts').Task;
+type PrDetails = import('../src/domain/landing/merge.ts').PrDetails;
+type Task = import('../src/domain/work/task.ts').Task;
 
 const db = openDb(join(home, 'test.db'));
 after(() => db.close());
@@ -131,7 +131,7 @@ const taskRow = (o: Partial<Task> = {}): Pick<Task, 'auto_merge' | 'source' | 'p
   pr: null,
   ...o,
 });
-type PrFields = import('../src/domain/pull-request/pr.ts').PrFields;
+type PrFields = import('../src/domain/landing/pr.ts').PrFields;
 const checked = (verdict: 'merge' | 'wait' | 'never', reasons: string[], o: Partial<PrFields> = {}) =>
   taskRow({
     pr: pullRequestOf({

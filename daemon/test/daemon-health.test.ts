@@ -3,8 +3,8 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import type { RunningTaskFact } from '../src/domain/daemon/health.ts';
-import { type TaskId, asTaskId } from '../src/domain/id/id.ts';
+import type { RunningTaskFact } from '../src/domain/operations/health.ts';
+import { type TaskId, asTaskId } from '../src/domain/shared/id.ts';
 
 /** A running task's facts with its id as a plain number, which `withTaskId` makes an id. */
 type LooseTaskFact = Omit<RunningTaskFact, 'id'> & { id: number };
@@ -12,22 +12,22 @@ const withTaskId = (f: LooseTaskFact): RunningTaskFact => ({ ...f, id: asTaskId(
 
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-health-'));
 
-const h = await import('../src/domain/daemon/health.ts');
-const { SCHEMA_DIRTY, offMain, reloadState } = await import('../src/domain/daemon/restart.ts');
+const h = await import('../src/domain/operations/health.ts');
+const { SCHEMA_DIRTY, offMain, reloadState } = await import('../src/domain/operations/restart.ts');
 const { daemonReport, gatherHealth, restartNow } = await import('../src/application/daemon/doctor.ts');
 const { openDb } = await import('../src/db/index.ts');
 
 const NOW = Date.parse('2026-11-01T12:00:00Z');
 const running = { installed: true, loaded: true, pid: 100, state: 'running' };
 const idleReload = { enabled: true, pending: false, reason: null, waiting: null, blocked: null, changed: 0 };
-const state = (over: Partial<import('../src/domain/daemon/health.ts').DaemonState> = {}) => ({
+const state = (over: Partial<import('../src/domain/operations/health.ts').DaemonState> = {}) => ({
   commit: 'a'.repeat(40),
   started_at: '2026-11-01T09:00:00Z',
   pid: 100,
   reload: idleReload,
   ...over,
 });
-const facts = (over: Partial<import('../src/domain/daemon/health.ts').HealthFacts> = {}) => ({
+const facts = (over: Partial<import('../src/domain/operations/health.ts').HealthFacts> = {}) => ({
   now: NOW,
   service: running,
   port: 4317,

@@ -7,8 +7,8 @@
 // Free of the dashboard's other modules so the daemon's tests can import it (daemon/test/task-badges.test.ts). What the
 // daemon decides (needs, a conflict, auto-merge, merge requests) comes from the API; this only picks and words it.
 import type { AutoMergeView, TaskSummary } from '../../../daemon/src/api/contract.ts';
-import { isReview } from '../../../daemon/src/domain/task/stage.ts';
-import { plural } from '../../../daemon/src/domain/text.ts';
+import { isReview } from '../../../daemon/src/domain/work/stage.ts';
+import { plural } from '../../../daemon/src/domain/shared/text.ts';
 import { describeLive, describeMergeRequest, describeSync, describeWait } from '../api/format.ts';
 import type { Tone as ChipTone } from './tone.ts';
 import { needsOf, questionOf } from './wire.ts';

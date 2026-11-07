@@ -1,5 +1,5 @@
 // Use cases for repos: register, configure, check, pause and resume.
-import { normalizeNetwork, settingsPath } from '../../domain/run/sandbox.ts';
+import { normalizeNetwork, settingsPath } from '../../domain/runs/translate/sandbox.ts';
 import { existsSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
 import { deleteBranch, currentBranch, isGitRepo, pruneWorktrees, removeWorktree } from '../../adapters/git.ts';
@@ -7,13 +7,13 @@ import { deleteGoals, goalsPath, readGoals, writeGoals } from '../../adapters/go
 import { rootInfo } from '../../adapters/repo-root.ts';
 import { removeFiles } from '../../adapters/run-log.ts';
 import type { Db } from '../../db/index.ts';
-import { autoMergeMaxLinesError } from '../../domain/pull-request/auto-merge.ts';
-import { MERGE_METHODS, type MergeMethod, isMergeMethod } from '../../domain/pull-request/merge.ts';
-import { PR_MODES, type PrMode } from '../../domain/pull-request/pr.ts';
-import type { Repo } from '../../domain/repo/repo.ts';
-import { goalsError, networkError, repoNameError } from '../../domain/repo/rules.ts';
-import { detectToolchain } from '../../domain/repo/toolchain.ts';
-import { textList } from '../../domain/text.ts';
+import { autoMergeMaxLinesError } from '../../domain/landing/auto-merge.ts';
+import { MERGE_METHODS, type MergeMethod, isMergeMethod } from '../../domain/landing/merge.ts';
+import { PR_MODES, type PrMode } from '../../domain/landing/pr.ts';
+import type { Repo } from '../../domain/repos/repo.ts';
+import { goalsError, networkError, repoNameError } from '../../domain/repos/rules.ts';
+import { detectToolchain } from '../../domain/repos/toolchain.ts';
+import { textList } from '../../domain/shared/text.ts';
 import { type Check, runDoctor } from './doctor.ts';
 import { repoView } from './repo-view.ts';
 import { ActionError, flag, list, object, refuse, requireRepo, text, textOrNull, whole } from '../input.ts';
@@ -46,7 +46,7 @@ export async function addRepo(
       path: abs,
       base_branch: base || (await currentBranch(abs)),
       test_cmd: test || detected?.test_cmd || null,
-      // Left null unless given, so the rules follow the repo's scripts as they change (domain/repo/tools.ts).
+      // Left null unless given, so the rules follow the repo's scripts as they change (domain/repos/tools.ts).
       allowed_tools: tools?.length ? tools : null,
       toolchain: detected?.toolchain ?? null,
       setup_cmd: setup || detected?.setup_cmd || null,

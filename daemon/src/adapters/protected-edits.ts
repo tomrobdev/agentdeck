@@ -1,10 +1,10 @@
-// Protected edits in a task's worktree (domain/run/protected-edits.ts): what a worker wrote to the edits folder, copied
+// Protected edits in a task's worktree (domain/repos/protected-edits.ts): what a worker wrote to the edits folder, copied
 // to its place, committed on the task's branch, and the folder cleared.
 import type { Dirent } from 'node:fs';
 import { lstat, mkdir, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, isAbsolute } from 'node:path';
-import { EDITS_FOLDER, EDIT_LIMIT, protectedEditTarget, protectedEditsMessage } from '../domain/run/protected-edits.ts';
-import { errorMessage } from '../domain/text.ts';
+import { EDITS_FOLDER, EDIT_LIMIT, protectedEditTarget, protectedEditsMessage } from '../domain/repos/protected-edits.ts';
+import { errorMessage } from '../domain/shared/text.ts';
 import { commitFiles } from './git.ts';
 
 export interface AppliedEdits {

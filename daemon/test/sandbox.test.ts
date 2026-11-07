@@ -4,12 +4,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { runSettings } from '../src/application/run/claude-run.ts';
-import type { Repo } from '../src/domain/repo/repo.ts';
-import { ALWAYS_DISALLOWED_TOOLS, DEFAULT_ALLOWED_TOOLS } from '../src/domain/repo/tools.ts';
-import { claudeArgs, workerSystemPrompt } from '../src/domain/run/prompt.ts';
-import { PR_SUMMARY_FORMAT } from '../src/domain/pull-request/summary.ts';
-import { normalizeNetwork, settingsPath, workerSettings, worktreeFileRules } from '../src/domain/run/sandbox.ts';
-import type { Task } from '../src/domain/task/task.ts';
+import type { Repo } from '../src/domain/repos/repo.ts';
+import { ALWAYS_DISALLOWED_TOOLS, DEFAULT_ALLOWED_TOOLS } from '../src/domain/repos/tools.ts';
+import { claudeArgs, workerSystemPrompt } from '../src/domain/runs/prompt.ts';
+import { PR_SUMMARY_FORMAT } from '../src/domain/landing/summary.ts';
+import { normalizeNetwork, settingsPath, workerSettings, worktreeFileRules } from '../src/domain/runs/translate/sandbox.ts';
+import type { Task } from '../src/domain/work/task.ts';
 
 const wt = '/Users/me/.agentdeck/worktrees/demo/task-7';
 

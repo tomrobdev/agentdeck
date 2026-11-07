@@ -1,9 +1,9 @@
 // Registered repos.
 import { and, asc, eq, inArray, isNotNull, isNull, or } from 'drizzle-orm';
 import type { DatabaseSync } from 'node:sqlite';
-import { type RepoId, type TaskId, asRepoId } from '../domain/id/id.ts';
-import type { Repo } from '../domain/repo/repo.ts';
-import { RUNNING_STATUSES } from '../domain/task/task.ts';
+import { type RepoId, type TaskId, asRepoId } from '../domain/shared/id.ts';
+import type { Repo } from '../domain/repos/repo.ts';
+import { RUNNING_STATUSES } from '../domain/work/task.ts';
 import { mapFound, repoColumns, toRepo } from './mappers.ts';
 import type { Orm } from './orm.ts';
 import { NOW_SQL, atomically } from './sql.ts';

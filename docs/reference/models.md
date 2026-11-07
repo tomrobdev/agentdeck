@@ -4,345 +4,200 @@
 
 The exported interfaces and object types of `domain/`, grouped by folder, with their fields as the type checker reads them.
 
-## `domain/`
-
-### Notification
-
-| Field      | Type                          | Comment |
-| ---------- | ----------------------------- | ------- |
-| `kind`     | `NotifyKind \| "test"`        |         |
-| `title`    | `string`                      |         |
-| `body`     | `string`                      |         |
-| `task_id?` | `TaskId \| null \| undefined` |         |
-
-### NotifySettings
-
-| Field         | Type           | Comment |
-| ------------- | -------------- | ------- |
-| `desktop`     | `boolean`      |         |
-| `events`      | `NotifyKind[]` |         |
-| `ntfy_topic`  | `string`       |         |
-| `ntfy_server` | `string`       |         |
-
-## `domain/daemon/`
-
-### Activity
-
-| Field       | Type                  | Comment                                                                                                     |
-| ----------- | --------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `tasks`     | `number`              | Tasks with a live run.                                                                                      |
-| `planner`   | `number`              | Planner runs still going.                                                                                   |
-| `resolves`  | `number`              | Resolve runs still going (they belong to done tasks, so `tasks` doesn't count them).                        |
-| `unblocks?` | `number \| undefined` | Unblock runs still going (they belong to blocked tasks, so `tasks` doesn't count them). Missing means none. |
-
-### AttentionCandidate
-
-An attention candidate: a task that needs a person, with the priority it is ordered by.
-
-| Field      | Type           | Comment |
-| ---------- | -------------- | ------- |
-| `priority` | `number`       |         |
-| `id`       | `TaskId`       |         |
-| `title`    | `string`       |         |
-| `why`      | `AttentionWhy` |         |
-
-### AttentionTask
-
-| Field   | Type           | Comment |
-| ------- | -------------- | ------- |
-| `id`    | `TaskId`       |         |
-| `title` | `string`       |         |
-| `why`   | `AttentionWhy` |         |
-
-### Check
-
-| Field    | Type             | Comment                                      |
-| -------- | ---------------- | -------------------------------------------- |
-| `name`   | `string`         |                                              |
-| `ok`     | `boolean`        |                                              |
-| `reason` | `string`         |                                              |
-| `fix`    | `string \| null` | For a failed check: a command that fixes it. |
-
-### DaemonState
-
-What the daemon says about itself on GET /api/daemon.
-
-| Field        | Type             | Comment                                                                           |
-| ------------ | ---------------- | --------------------------------------------------------------------------------- |
-| `commit`     | `string \| null` | The commit of the checkout the daemon loaded; null when it is not a git checkout. |
-| `started_at` | `string`         |                                                                                   |
-| `pid`        | `number`         |                                                                                   |
-| `reload`     | `ReloadState`    |                                                                                   |
-
-### Headline
-
-| Field       | Type              | Comment                                                                                             |
-| ----------- | ----------------- | --------------------------------------------------------------------------------------------------- |
-| `state`     | `HeadlineState`   |                                                                                                     |
-| `until`     | `number \| null`  | When a rate limit or a hold ends (unix seconds); null for any other state, or when it is not known. |
-| `need_you`  | `number`          |                                                                                                     |
-| `attention` | `AttentionTask[]` |                                                                                                     |
-
-### HeadlineFacts
-
-| Field                | Type                                                     | Comment                                                                              |
-| -------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `paused`             | `boolean`                                                |                                                                                      |
-| `rate_limited_until` | `number \| null`                                         | Unix seconds; may have passed already.                                               |
-| `governor`           | `{ allow: boolean; until: number \| null; }`             | The governor's decision: whether new work may start, and until when it waits if not. |
-| `running`            | `number`                                                 |                                                                                      |
-| `need_you`           | `{ proposed: number; blocked: number; review: number; }` | Proposed, blocked and in-review tasks.                                               |
-| `attention`          | `AttentionCandidate[]`                                   | Tasks that need a person; any number, in any order.                                  |
-
-### HealthFacts
-
-| Field       | Type                               | Comment                                                                                          |
-| ----------- | ---------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `now`       | `number`                           |                                                                                                  |
-| `service`   | `ServiceFacts`                     |                                                                                                  |
-| `port`      | `number`                           |                                                                                                  |
-| `api`       | `DaemonState \| null`              | The daemon's answer, or null when the API is not reachable.                                      |
-| `head`      | `string \| null`                   | HEAD of the checkout the CLI runs from, and how many commits it is ahead of the daemon's commit. |
-| `behind`    | `number \| null`                   |                                                                                                  |
-| `checkout`  | `string`                           | The checkout's path, for the fix commands.                                                       |
-| `processes` | `ProcessFact[]`                    |                                                                                                  |
-| `tasks`     | `RunningTaskFact[]`                |                                                                                                  |
-| `log`       | `LogFacts \| null`                 | null when there is no log file.                                                                  |
-| `gh`        | `{ ok: boolean; output: string; }` |                                                                                                  |
-
-### LogFacts
-
-Problems found in the daemon log.
-
-| Field      | Type                                      | Comment                                                  |
-| ---------- | ----------------------------------------- | -------------------------------------------------------- |
-| `problems` | `{ at: number; line: string; }[]`         | Lines of the last 24 hours that look like errors.        |
-| `lastStop` | `{ at: number; signal: string; } \| null` | The latest SIGTERM or SIGINT line, if it carries a time. |
-
-### ProcessFact
-
-A claude process group recorded on a run, found alive.
-
-| Field   | Type                                            | Comment                         |
-| ------- | ----------------------------------------------- | ------------------------------- |
-| `kind`  | `"work" \| "resolve" \| "unblock" \| "planner"` |                                 |
-| `run`   | `number`                                        |                                 |
-| `pid`   | `number`                                        |                                 |
-| `ended` | `boolean`                                       | The run has a finished-at time. |
-
-### ReloadDecision
-
-| Field     | Type      | Comment                                                                     |
-| --------- | --------- | --------------------------------------------------------------------------- |
-| `pending` | `boolean` | New work should not start: the code on disk is newer than the code running. |
-| `exit`    | `boolean` | Exit now so launchd starts the new code.                                    |
-| `reason`  | `string`  | Why, for the log.                                                           |
-
-### ReloadInput
-
-| Field          | Type                          | Comment                                                                                                |
-| -------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `enabled`      | `boolean`                     |                                                                                                        |
-| `changed`      | `readonly string[]`           | Files changed since the daemon started (newest last).                                                  |
-| `lastChangeAt` | `number \| null`              | When the latest change happened, ms since the epoch.                                                   |
-| `now`          | `number`                      |                                                                                                        |
-| `activity`     | `Activity`                    | What is running now.                                                                                   |
-| `requested?`   | `boolean \| undefined`        | Someone asked for a restart (the dashboard's button), whatever the setting or the files say.           |
-| `blocked?`     | `string \| null \| undefined` | Why the code on disk must not be loaded (an uncommitted migration step, a checkout off main), or null. |
-
-### ReloadState
-
-The reload as the API serves it: what a person needs to know about why the daemon is on old code.
-
-| Field     | Type             | Comment                                                                   |
-| --------- | ---------------- | ------------------------------------------------------------------------- |
-| `enabled` | `boolean`        | reload_on_change is on.                                                   |
-| `pending` | `boolean`        | The code on disk is newer than the code running, and a restart is coming. |
-| `reason`  | `string \| null` | What the decision said, or null when there is nothing to say.             |
-| `waiting` | `string \| null` | What a pending reload waits for (running tasks, resolve runs), or null.   |
-| `blocked` | `string \| null` | Why the code on disk must not be loaded, or null.                         |
-| `changed` | `number`         | How many source files changed since the daemon started.                   |
-
-### RunningTaskFact
-
-A task in running (or being cancelled) and the process of its unfinished run, if any.
-
-| Field           | Type             | Comment                                                                                                     |
-| --------------- | ---------------- | ----------------------------------------------------------------------------------------------------------- |
-| `id`            | `TaskId`         |                                                                                                             |
-| `pid`           | `number \| null` | The recorded pid of its unfinished run; null when there is none or none was recorded yet.                   |
-| `alive`         | `boolean`        | Whether that process group is alive.                                                                        |
-| `runAgeSeconds` | `number \| null` | Seconds since its run started (the run row, before setup and the sync); null when it has no unfinished run. |
-
-### ServiceFacts
-
-| Field       | Type             | Comment |
-| ----------- | ---------------- | ------- |
-| `installed` | `boolean`        |         |
-| `loaded`    | `boolean`        |         |
-| `pid`       | `number \| null` |         |
-| `state`     | `string \| null` |         |
-
-## `domain/files/`
-
-### ChangedFile
-
-| Field       | Type             | Comment         |
-| ----------- | ---------------- | --------------- |
-| `path`      | `string`         |                 |
-| `old_path`  | `string \| null` | set for renames |
-| `status`    | `ChangeStatus`   |                 |
-| `additions` | `number`         |                 |
-| `deletions` | `number`         |                 |
-| `binary`    | `boolean`        |                 |
-
-### Changes
-
-| Field      | Type            | Comment                                                                     |
-| ---------- | --------------- | --------------------------------------------------------------------------- |
-| `base_ref` | `string`        | the base branch ref the merge base was taken with, e.g. main or origin/main |
-| `base`     | `string`        |                                                                             |
-| `head`     | `string`        |                                                                             |
-| `files`    | `ChangedFile[]` |                                                                             |
-| `commits`  | `Commit[]`      | newest first                                                                |
-
-### Commit
-
-| Field     | Type     | Comment                   |
-| --------- | -------- | ------------------------- |
-| `sha`     | `string` |                           |
-| `subject` | `string` |                           |
-| `author`  | `string` |                           |
-| `at`      | `string` | ISO 8601, the author date |
-
-### FileContent
-
-| Field       | Type             | Comment          |
-| ----------- | ---------------- | ---------------- |
-| `path`      | `string`         |                  |
-| `ref`       | `FileRef`        |                  |
-| `sha`       | `string`         | the commit       |
-| `size`      | `number`         |                  |
-| `binary`    | `boolean`        |                  |
-| `truncated` | `boolean`        |                  |
-| `text`      | `string \| null` | null when binary |
-
-### FilePatch
-
-| Field       | Type      | Comment |
-| ----------- | --------- | ------- |
-| `path`      | `string`  |         |
-| `patch`     | `string`  |         |
-| `truncated` | `boolean` |         |
-
-### Tree
-
-| Field     | Type          | Comment                     |
-| --------- | ------------- | --------------------------- |
-| `ref`     | `FileRef`     |                             |
-| `sha`     | `string`      | the commit                  |
-| `path`    | `string`      | the folder, '' for the root |
-| `entries` | `TreeEntry[]` |                             |
-
-### TreeEntry
-
-| Field  | Type              | Comment          |
-| ------ | ----------------- | ---------------- |
-| `name` | `string`          |                  |
-| `path` | `string`          |                  |
-| `type` | `"file" \| "dir"` |                  |
-| `size` | `number \| null`  | bytes, for files |
-
-## `domain/plan/`
-
-### ParsedPlan
-
-| Field     | Type             | Comment |
-| --------- | ---------------- | ------- |
-| `version` | `string`         |         |
-| `title`   | `string`         |         |
-| `summary` | `string \| null` |         |
-| `steps`   | `PlanStep[]`     |         |
-
-### PlanFollower
-
-A task that follows a plan, with the step ids it links (null for every step).
-
-| Field   | Type               | Comment |
-| ------- | ------------------ | ------- |
-| `id`    | `number`           |         |
-| `steps` | `string[] \| null` |         |
-
-### PlanStep
-
-| Field    | Type             | Comment                                                                |
-| -------- | ---------------- | ---------------------------------------------------------------------- |
-| `id`     | `string \| null` | the section's id, for linking into the page                            |
-| `title`  | `string`         |                                                                        |
-| `status` | `PlanStepStatus` |                                                                        |
-| `done`   | `string[]`       | the done criteria, one per <li> of the step's [data-plan-done] element |
-
-### TaskPlan
-
-A stored plan as the API returns it: parsed, without its HTML.
-
-| Field        | Type             | Comment                                                                                  |
-| ------------ | ---------------- | ---------------------------------------------------------------------------------------- |
-| `id`         | `number`         |                                                                                          |
-| `task_id`    | `TaskId`         | the task the plan belongs to: the one it was first attached to                           |
-| `name`       | `string`         | `<task id>-<slug>.html` (planFileName); older plans keep the name they were stored under |
-| `source`     | `PlanSource`     |                                                                                          |
-| `created_at` | `string`         |                                                                                          |
-| `updated_at` | `string`         |                                                                                          |
-| `version`    | `string`         |                                                                                          |
-| `title`      | `string`         |                                                                                          |
-| `summary`    | `string \| null` |                                                                                          |
-| `steps`      | `PlanStep[]`     |                                                                                          |
-
-## `domain/planner/`
-
-### PlannerRun
-
-| Field        | Type                     | Comment                                                              |
-| ------------ | ------------------------ | -------------------------------------------------------------------- |
-| `id`         | `PlannerRunId`           |                                                                      |
-| `repo_id`    | `RepoId`                 |                                                                      |
-| `started_at` | `string`                 |                                                                      |
-| `ended_at`   | `string \| null`         |                                                                      |
-| `outcome`    | `PlannerOutcome \| null` |                                                                      |
-| `proposed`   | `number`                 |                                                                      |
-| `note`       | `string \| null`         |                                                                      |
-| `log_path`   | `string`                 |                                                                      |
-| `pid`        | `number \| null`         | the planner's claude process group while it runs, for crash recovery |
-
-### PlannerSettings
-
-| Field            | Type      | Comment |
-| ---------------- | --------- | ------- |
-| `enabled`        | `boolean` |         |
-| `interval_hours` | `number`  |         |
-| `max_tasks`      | `number`  |         |
-| `model`          | `string`  |         |
-
-### Proposal
-
-| Field      | Type                  | Comment |
-| ---------- | --------------------- | ------- |
-| `title`    | `string`              |         |
-| `prompt`   | `string`              |         |
-| `priority` | `number`              |         |
-| `model`    | `string \| undefined` |         |
-
-### ProposalResult
-
-| Field     | Type                           | Comment |
-| --------- | ------------------------------ | ------- |
-| `outcome` | `PlannerOutcome \| "no_goals"` |         |
-| `tasks`   | `Task[]`                       |         |
-| `skipped` | `string[]`                     |         |
-| `note`    | `string \| null`               |         |
-
-## `domain/pull-request/`
+## `domain/capacity/`
+
+### Budget
+
+| Field            | Type     | Comment |
+| ---------------- | -------- | ------- |
+| `five_hour_max`  | `number` |         |
+| `five_hour_soft` | `number` |         |
+| `weekly_max`     | `number` |         |
+| `pace_slack`     | `number` |         |
+
+### Decision
+
+| Field            | Type             | Comment                                                             |
+| ---------------- | ---------------- | ------------------------------------------------------------------- |
+| `allow`          | `boolean`        |                                                                     |
+| `max_concurrent` | `number`         |                                                                     |
+| `reason`         | `string \| null` | Why work is held or throttled; null when running freely.            |
+| `until`          | `number \| null` | When a hold is expected to lift (unix seconds).                     |
+| `weekly_allowed` | `number \| null` | Weekly pacing: how much of the 7d window the plan allows right now. |
+
+### QuotaSample
+
+A reading of the 7-day window, as kept in `usage_samples`: utilization is 0..1.
+
+| Field         | Type     | Comment |
+| ------------- | -------- | ------- |
+| `utilization` | `number` |         |
+| `resets_at`   | `number` |         |
+| `observed_at` | `string` |         |
+
+### WindowObs
+
+| Field         | Type     | Comment |
+| ------------- | -------- | ------- |
+| `window`      | `string` |         |
+| `utilization` | `number` |         |
+| `resets_at`   | `number` |         |
+
+## `domain/insights/`
+
+### ChecksSummary
+
+| Field      | Type             | Comment                                                       |
+| ---------- | ---------------- | ------------------------------------------------------------- |
+| `recorded` | `number`         | PRs whose checks were recorded when they opened.              |
+| `green`    | `number`         | Of those, the PRs with checks, none failing and none pending. |
+| `rate`     | `number \| null` | green / recorded, or null with none recorded.                 |
+
+### CycleMinutes
+
+| Field     | Type             | Comment                                                                             |
+| --------- | ---------------- | ----------------------------------------------------------------------------------- |
+| `queued`  | `number \| null` | From the task being queued (added, or approved from a proposal) to its first claim. |
+| `running` | `number \| null` | Claim to the end of the run, summed over the task's runs; null if no run ended.     |
+| `review`  | `number \| null` | From the first run that finished done to the PR's merge; null if it was not merged. |
+
+### Interval
+
+| Field  | Type     | Comment |
+| ------ | -------- | ------- |
+| `low`  | `number` |         |
+| `high` | `number` |         |
+
+### Intervention
+
+An intervention is something a person did that changed how a task turned out, which the pilot wants to bring to zero. Each kind says why it counts. Approving or rejecting a proposal is how the planner is meant to be used, and a plain retry (no note) only asks again, so neither is here.
+
+| Field  | Type                                                  | Comment |
+| ------ | ----------------------------------------------------- | ------- |
+| `kind` | `string`                                              |         |
+| `why`  | `string`                                              |         |
+| `is`   | `(e: ScorecardEvent, task: ScorecardTask) => boolean` |         |
+
+### InterventionCount
+
+| Field     | Type                     | Comment                               |
+| --------- | ------------------------ | ------------------------------------- |
+| `total`   | `number`                 |                                       |
+| `tasks`   | `number`                 | Distinct tasks that had at least one. |
+| `by_kind` | `Record<string, number>` |                                       |
+
+### Measures
+
+| Field                   | Type               | Comment                                                                                     |
+| ----------------------- | ------------------ | ------------------------------------------------------------------------------------------- |
+| `tasks`                 | `number`           | Tasks with at least one work run.                                                           |
+| `runs`                  | `number`           | Work runs, finished or not.                                                                 |
+| `first_runs`            | `number`           | Tasks whose first run (attempt 1) has finished.                                             |
+| `first_run_done`        | `number`           | Of those, the tasks whose first run ended done.                                             |
+| `first_run_rate`        | `number \| null`   | first_run_done / first_runs, or null with no finished first run.                            |
+| `first_run_interval`    | `Interval \| null` | Wilson 95% interval of the rate, or null with no finished first run.                        |
+| `denials`               | `number`           | Tool uses the permission rules refused, over all work runs.                                 |
+| `denials_per_run`       | `number \| null`   | denials / runs, or null with no runs.                                                       |
+| `done_tasks`            | `number`           | Tasks now done.                                                                             |
+| `cost_per_done_task`    | `number \| null`   | Cost of every work run of the done tasks, over their number; null with no done task.        |
+| `minutes_per_done_task` | `number \| null`   | Minutes of finished work runs of the done tasks, over their number; null with no done task. |
+
+### Scorecard
+
+| Field          | Type                                                                     | Comment                                                                    |
+| -------------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| `since`        | `string \| null`                                                         |                                                                            |
+| `by`           | `"week" \| null`                                                         |                                                                            |
+| `repos`        | `{ repo: string; measures: ScorecardMeasures; }[]`                       |                                                                            |
+| `total`        | `ScorecardMeasures`                                                      |                                                                            |
+| `quota_points` | `number`                                                                 | Percentage points of the 7-day window spent.                               |
+| `weeks`        | `{ week: string; measures: ScorecardMeasures; quota_points: number; }[]` | One per week with anything in it, oldest first; empty unless `by` is week. |
+
+### ScorecardEvent
+
+One row of a task's history (`task_events`), with the task's repo.
+
+| Field         | Type             | Comment |
+| ------------- | ---------------- | ------- |
+| `task_id`     | `TaskId`         |         |
+| `repo_id`     | `RepoId`         |         |
+| `type`        | `string`         |         |
+| `from_status` | `string \| null` |         |
+| `to_status`   | `string \| null` |         |
+| `reason`      | `string \| null` |         |
+| `at`          | `string`         |         |
+
+### ScorecardInput
+
+| Field      | Type                     | Comment                                                                                               |
+| ---------- | ------------------------ | ----------------------------------------------------------------------------------------------------- |
+| `tasks`    | `ScorecardTaskRow[]`     |                                                                                                       |
+| `events`   | `ScorecardEvent[]`       |                                                                                                       |
+| `samples`  | `QuotaSample[]`          |                                                                                                       |
+| `repoName` | `(id: RepoId) => string` |                                                                                                       |
+| `since?`   | `string \| undefined`    | Only tasks created, interventions made and quota seen at or after this stamp ("YYYY-MM-DD HH:MM:SS"). |
+| `by?`      | `"week" \| undefined`    |                                                                                                       |
+
+### ScorecardMeasures
+
+| Field             | Type                | Comment                                 |
+| ----------------- | ------------------- | --------------------------------------- |
+| `interventions`   | `InterventionCount` |                                         |
+| `tasks`           | `number`            | Tasks the three medians below are over. |
+| `queued_minutes`  | `number \| null`    |                                         |
+| `running_minutes` | `number \| null`    |                                         |
+| `review_minutes`  | `number \| null`    |                                         |
+| `pr_checks`       | `ChecksSummary`     |                                         |
+
+### ScorecardTask
+
+A task with auto-merge made into the time it is known to have been on.
+
+| Field              | Type                  | Comment                                                                                                                                                                                                                                                                                     |
+| ------------------ | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `auto_merge_from`  | `string \| null`      | When auto-merge was known to be on for the task: always ('') if the task turned it on itself, from the repo's first auto-merge if the repo has it on (the database keeps only the setting as it is now, so a merge from before the setting existed must not count), never (null) otherwise. |
+| `id`               | `TaskId`              |                                                                                                                                                                                                                                                                                             |
+| `repo_id`          | `RepoId`              |                                                                                                                                                                                                                                                                                             |
+| `created_at`       | `string`              |                                                                                                                                                                                                                                                                                             |
+| `pr_checks_opened` | `CheckCounts \| null` | The PR's checks the first time they settled after it opened; null if never recorded (or unreadable).                                                                                                                                                                                        |
+
+### ScorecardTaskRow
+
+The fields of a task the scorecard reads, as the database has them.
+
+| Field              | Type                  | Comment                                                                                              |
+| ------------------ | --------------------- | ---------------------------------------------------------------------------------------------------- |
+| `id`               | `TaskId`              |                                                                                                      |
+| `repo_id`          | `RepoId`              |                                                                                                      |
+| `created_at`       | `string`              |                                                                                                      |
+| `auto_merge`       | `boolean \| null`     | The task's own auto-merge setting; null follows the repo.                                            |
+| `repo_auto_merge`  | `boolean`             |                                                                                                      |
+| `pr_checks_opened` | `CheckCounts \| null` | The PR's checks the first time they settled after it opened; null if never recorded (or unreadable). |
+
+### StatRun
+
+One work run with the status of the task it belongs to. Resolve runs are never given here.
+
+| Field         | Type             | Comment                             |
+| ------------- | ---------------- | ----------------------------------- |
+| `repo_id`     | `RepoId`         |                                     |
+| `task_id`     | `TaskId`         |                                     |
+| `attempt`     | `number`         |                                     |
+| `outcome`     | `string \| null` | null while the run has not finished |
+| `started_at`  | `string`         |                                     |
+| `ended_at`    | `string \| null` |                                     |
+| `cost_usd`    | `number`         |                                     |
+| `denials`     | `number`         |                                     |
+| `task_status` | `string`         |                                     |
+
+### StatsReport
+
+| Field   | Type                                      | Comment |
+| ------- | ----------------------------------------- | ------- |
+| `repos` | `{ repo: string; measures: Measures; }[]` |         |
+| `total` | `Measures`                                |         |
+
+## `domain/landing/`
 
 ### AutoMergeCheck
 
@@ -377,7 +232,7 @@ What a task says about its own auto-merge: its setting (null follows the repo) a
 | `state`      | `AutoMergeState`                                        |                                                                                                                            |
 | `label`      | `string`                                                | One short phrase for a list row: "will auto-merge", "needs a person to merge: …".                                          |
 | `reasons`    | `string[]`                                              | Why it waits or needs a person; for a task with no open PR, how the branch measures against the limits.                    |
-| `source`     | `"task" \| "planner" \| "repo"`                         | Where on or off comes from: the task's own setting, its repo's, or (planner) off because the repo auto-approves proposals. |
+| `source`     | `"task" \| "repo" \| "planner"`                         | Where on or off comes from: the task's own setting, its repo's, or (planner) off because the repo auto-approves proposals. |
 | `checked_at` | `string \| null`                                        | When the PR refresh made the check; null when no check counts.                                                             |
 | `limits`     | `{ max_lines: number; skip: string[]; tests: string; }` |                                                                                                                            |
 
@@ -402,6 +257,15 @@ A task's checks in a line's worth: the counts and the failing checks' names.
 | `total`         | `number`   |         |
 | `failing`       | `number`   |         |
 | `pending`       | `number`   |         |
+
+### CommentInView
+
+A comment and the diff around it at the commit it was made on (null when that can't be shown).
+
+| Field     | Type                                                        | Comment |
+| --------- | ----------------------------------------------------------- | ------- |
+| `comment` | `Pick<ReviewComment, "path" \| "line" \| "side" \| "body">` |         |
+| `hunk`    | `string \| null`                                            |         |
 
 ### FailedCheck
 
@@ -441,7 +305,7 @@ One fact about a PR that bears on merging it. A problem stops any merge; anythin
 
 | Field     | Type                                                                                                                                      | Comment |
 | --------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| `kind`    | `"blocked" \| "not_open" \| "lands_after" \| "conflict" \| "draft" \| "behind" \| "tests_failed" \| "checks_failing" \| "checks_pending"` |         |
+| `kind`    | `"not_open" \| "lands_after" \| "conflict" \| "draft" \| "behind" \| "blocked" \| "tests_failed" \| "checks_failing" \| "checks_pending"` |         |
 | `problem` | `boolean`                                                                                                                                 |         |
 | `text`    | `string`                                                                                                                                  |         |
 
@@ -472,7 +336,7 @@ A PR that exists on GitHub.
 
 | Field                   | Type                             | Comment                                                       |
 | ----------------------- | -------------------------------- | ------------------------------------------------------------- |
-| `state`                 | `"merged" \| "open" \| "closed"` |                                                               |
+| `state`                 | `"open" \| "merged" \| "closed"` |                                                               |
 | `url`                   | `string`                         |                                                               |
 | `merge_method`          | `MergeMethod \| null`            | how the PR was merged from the app                            |
 | `checks`                | `PrChecks`                       |                                                               |
@@ -592,66 +456,6 @@ What a task keeps about its PR in any state.
 | `tests_passed` | `boolean \| null`     |                                                                                                  |
 | `result_text`  | `string \| null`      |                                                                                                  |
 
-### StoredChecks
-
-What the PR refresh keeps on a task (`tasks.pr_checks`): the latest checks and when they were read.
-
-| Field      | Type             | Comment                                                                                       |
-| ---------- | ---------------- | --------------------------------------------------------------------------------------------- |
-| `read_at`  | `string`         |                                                                                               |
-| `head`     | `string \| null` | The PR's head commit the checks ran on; null when GitHub didn't say.                          |
-| `checks`   | `PrCheck[]`      |                                                                                               |
-| `notified` | `boolean`        | Whether a person was told these checks fail. Stays set until they pass or a new commit comes. |
-
-## `domain/repo/`
-
-### Repo
-
-| Field                  | Type               | Comment                                                                                                 |
-| ---------------------- | ------------------ | ------------------------------------------------------------------------------------------------------- |
-| `id`                   | `RepoId`           |                                                                                                         |
-| `name`                 | `string`           |                                                                                                         |
-| `path`                 | `string`           |                                                                                                         |
-| `base_branch`          | `string`           |                                                                                                         |
-| `test_cmd`             | `string \| null`   |                                                                                                         |
-| `allowed_tools`        | `string[] \| null` | Tool rules the repo set itself; null = the generic defaults plus the toolchain's rules.                 |
-| `auto_approve`         | `boolean`          | Planner tasks skip approval.                                                                            |
-| `proposed_at`          | `string \| null`   |                                                                                                         |
-| `toolchain`            | `string \| null`   | pnpm \| yarn \| npm \| cargo \| uv \| go, null = not detected                                           |
-| `setup_cmd`            | `string \| null`   | run in each worktree before claude                                                                      |
-| `paused_reason`        | `string \| null`   | set = no task of this repo is claimed until `repo resume` or a passing doctor                           |
-| `pr_mode`              | `PrMode`           |                                                                                                         |
-| `merge_method`         | `MergeMethod`      | how a PR is merged from the app unless the person picks another                                         |
-| `auto_resolve`         | `boolean`          | The daemon starts a resolve run on its own when a branch conflicts with the base.                       |
-| `auto_unblock`         | `boolean`          | The daemon starts an unblock run on its own when a task blocks (domain/run/unblock.ts); off by default. |
-| `sandbox`              | `boolean`          | The agent's Bash commands run in Claude Code's sandbox (the default).                                   |
-| `archived_at`          | `string \| null`   | set = hidden everywhere and its work stopped, until `repo unarchive`                                    |
-| `network`              | `string[]`         | Hosts sandboxed commands may reach; none = empty.                                                       |
-| `auto_merge`           | `boolean`          | The daemon merges a done task's PR on its own when it passes the auto-merge check.                      |
-| `auto_merge_max_lines` | `number`           | a PR changing more lines (additions + deletions) needs a person                                         |
-| `auto_merge_skip`      | `string[]`         | Path prefixes; a PR touching one needs a person.                                                        |
-| `created_at`           | `string`           |                                                                                                         |
-
-### ToolchainInfo
-
-| Field       | Type             | Comment                                                                |
-| ----------- | ---------------- | ---------------------------------------------------------------------- |
-| `toolchain` | `Toolchain`      |                                                                        |
-| `setup_cmd` | `string`         |                                                                        |
-| `test_cmd`  | `string \| null` | null when a JS repo has no test script                                 |
-| `tools`     | `string[]`       | Bash rules for this toolchain only; the generic rules live in tools.ts |
-
-## `domain/review/`
-
-### CommentInView
-
-A comment and the diff around it at the commit it was made on (null when that can't be shown).
-
-| Field     | Type                                                        | Comment |
-| --------- | ----------------------------------------------------------- | ------- |
-| `comment` | `Pick<ReviewComment, "path" \| "line" \| "side" \| "body">` |         |
-| `hunk`    | `string \| null`                                            |         |
-
 ### Review
 
 One review of a task. A draft has no `submitted_at` and no `kind` yet.
@@ -706,15 +510,286 @@ A review with its comments, oldest first.
 | `submitted_at` | `string \| null`                         |                   |
 | `comments`     | `ReviewComment[]`                        |                   |
 
-## `domain/run/`
+### StoredChecks
 
-### ChecksSummary
+What the PR refresh keeps on a task (`tasks.pr_checks`): the latest checks and when they were read.
 
-| Field      | Type             | Comment                                                       |
-| ---------- | ---------------- | ------------------------------------------------------------- |
-| `recorded` | `number`         | PRs whose checks were recorded when they opened.              |
-| `green`    | `number`         | Of those, the PRs with checks, none failing and none pending. |
-| `rate`     | `number \| null` | green / recorded, or null with none recorded.                 |
+| Field      | Type             | Comment                                                                                       |
+| ---------- | ---------------- | --------------------------------------------------------------------------------------------- |
+| `read_at`  | `string`         |                                                                                               |
+| `head`     | `string \| null` | The PR's head commit the checks ran on; null when GitHub didn't say.                          |
+| `checks`   | `PrCheck[]`      |                                                                                               |
+| `notified` | `boolean`        | Whether a person was told these checks fail. Stays set until they pass or a new commit comes. |
+
+## `domain/operations/`
+
+### Activity
+
+| Field       | Type                  | Comment                                                                                                     |
+| ----------- | --------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `tasks`     | `number`              | Tasks with a live run.                                                                                      |
+| `planner`   | `number`              | Planner runs still going.                                                                                   |
+| `resolves`  | `number`              | Resolve runs still going (they belong to done tasks, so `tasks` doesn't count them).                        |
+| `unblocks?` | `number \| undefined` | Unblock runs still going (they belong to blocked tasks, so `tasks` doesn't count them). Missing means none. |
+
+### AttentionCandidate
+
+An attention candidate: a task that needs a person, with the priority it is ordered by.
+
+| Field      | Type           | Comment |
+| ---------- | -------------- | ------- |
+| `priority` | `number`       |         |
+| `id`       | `TaskId`       |         |
+| `title`    | `string`       |         |
+| `why`      | `AttentionWhy` |         |
+
+### AttentionTask
+
+| Field   | Type           | Comment |
+| ------- | -------------- | ------- |
+| `id`    | `TaskId`       |         |
+| `title` | `string`       |         |
+| `why`   | `AttentionWhy` |         |
+
+### Check
+
+| Field    | Type             | Comment                                      |
+| -------- | ---------------- | -------------------------------------------- |
+| `name`   | `string`         |                                              |
+| `ok`     | `boolean`        |                                              |
+| `reason` | `string`         |                                              |
+| `fix`    | `string \| null` | For a failed check: a command that fixes it. |
+
+### DaemonState
+
+What the daemon says about itself on GET /api/daemon.
+
+| Field        | Type             | Comment                                                                           |
+| ------------ | ---------------- | --------------------------------------------------------------------------------- |
+| `commit`     | `string \| null` | The commit of the checkout the daemon loaded; null when it is not a git checkout. |
+| `started_at` | `string`         |                                                                                   |
+| `pid`        | `number`         |                                                                                   |
+| `reload`     | `ReloadState`    |                                                                                   |
+
+### Headline
+
+| Field       | Type              | Comment                                                                                             |
+| ----------- | ----------------- | --------------------------------------------------------------------------------------------------- |
+| `state`     | `HeadlineState`   |                                                                                                     |
+| `until`     | `number \| null`  | When a rate limit or a hold ends (unix seconds); null for any other state, or when it is not known. |
+| `need_you`  | `number`          |                                                                                                     |
+| `attention` | `AttentionTask[]` |                                                                                                     |
+
+### HeadlineFacts
+
+| Field                | Type                                                     | Comment                                                                              |
+| -------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `paused`             | `boolean`                                                |                                                                                      |
+| `rate_limited_until` | `number \| null`                                         | Unix seconds; may have passed already.                                               |
+| `governor`           | `{ allow: boolean; until: number \| null; }`             | The governor's decision: whether new work may start, and until when it waits if not. |
+| `running`            | `number`                                                 |                                                                                      |
+| `need_you`           | `{ proposed: number; blocked: number; review: number; }` | Proposed, blocked and in-review tasks.                                               |
+| `attention`          | `AttentionCandidate[]`                                   | Tasks that need a person; any number, in any order.                                  |
+
+### HealthFacts
+
+| Field       | Type                               | Comment                                                                                          |
+| ----------- | ---------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `now`       | `number`                           |                                                                                                  |
+| `service`   | `ServiceFacts`                     |                                                                                                  |
+| `port`      | `number`                           |                                                                                                  |
+| `api`       | `DaemonState \| null`              | The daemon's answer, or null when the API is not reachable.                                      |
+| `head`      | `string \| null`                   | HEAD of the checkout the CLI runs from, and how many commits it is ahead of the daemon's commit. |
+| `behind`    | `number \| null`                   |                                                                                                  |
+| `checkout`  | `string`                           | The checkout's path, for the fix commands.                                                       |
+| `processes` | `ProcessFact[]`                    |                                                                                                  |
+| `tasks`     | `RunningTaskFact[]`                |                                                                                                  |
+| `log`       | `LogFacts \| null`                 | null when there is no log file.                                                                  |
+| `gh`        | `{ ok: boolean; output: string; }` |                                                                                                  |
+
+### LogFacts
+
+Problems found in the daemon log.
+
+| Field      | Type                                      | Comment                                                  |
+| ---------- | ----------------------------------------- | -------------------------------------------------------- |
+| `problems` | `{ at: number; line: string; }[]`         | Lines of the last 24 hours that look like errors.        |
+| `lastStop` | `{ at: number; signal: string; } \| null` | The latest SIGTERM or SIGINT line, if it carries a time. |
+
+### Notification
+
+| Field      | Type                          | Comment |
+| ---------- | ----------------------------- | ------- |
+| `kind`     | `NotifyKind \| "test"`        |         |
+| `title`    | `string`                      |         |
+| `body`     | `string`                      |         |
+| `task_id?` | `TaskId \| null \| undefined` |         |
+
+### NotifySettings
+
+| Field         | Type           | Comment |
+| ------------- | -------------- | ------- |
+| `desktop`     | `boolean`      |         |
+| `events`      | `NotifyKind[]` |         |
+| `ntfy_topic`  | `string`       |         |
+| `ntfy_server` | `string`       |         |
+
+### ProcessFact
+
+A claude process group recorded on a run, found alive.
+
+| Field   | Type                                            | Comment                         |
+| ------- | ----------------------------------------------- | ------------------------------- |
+| `kind`  | `"planner" \| "work" \| "resolve" \| "unblock"` |                                 |
+| `run`   | `number`                                        |                                 |
+| `pid`   | `number`                                        |                                 |
+| `ended` | `boolean`                                       | The run has a finished-at time. |
+
+### ReloadDecision
+
+| Field     | Type      | Comment                                                                     |
+| --------- | --------- | --------------------------------------------------------------------------- |
+| `pending` | `boolean` | New work should not start: the code on disk is newer than the code running. |
+| `exit`    | `boolean` | Exit now so launchd starts the new code.                                    |
+| `reason`  | `string`  | Why, for the log.                                                           |
+
+### ReloadInput
+
+| Field          | Type                          | Comment                                                                                                |
+| -------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `enabled`      | `boolean`                     |                                                                                                        |
+| `changed`      | `readonly string[]`           | Files changed since the daemon started (newest last).                                                  |
+| `lastChangeAt` | `number \| null`              | When the latest change happened, ms since the epoch.                                                   |
+| `now`          | `number`                      |                                                                                                        |
+| `activity`     | `Activity`                    | What is running now.                                                                                   |
+| `requested?`   | `boolean \| undefined`        | Someone asked for a restart (the dashboard's button), whatever the setting or the files say.           |
+| `blocked?`     | `string \| null \| undefined` | Why the code on disk must not be loaded (an uncommitted migration step, a checkout off main), or null. |
+
+### ReloadState
+
+The reload as the API serves it: what a person needs to know about why the daemon is on old code.
+
+| Field     | Type             | Comment                                                                   |
+| --------- | ---------------- | ------------------------------------------------------------------------- |
+| `enabled` | `boolean`        | reload_on_change is on.                                                   |
+| `pending` | `boolean`        | The code on disk is newer than the code running, and a restart is coming. |
+| `reason`  | `string \| null` | What the decision said, or null when there is nothing to say.             |
+| `waiting` | `string \| null` | What a pending reload waits for (running tasks, resolve runs), or null.   |
+| `blocked` | `string \| null` | Why the code on disk must not be loaded, or null.                         |
+| `changed` | `number`         | How many source files changed since the daemon started.                   |
+
+### RunningTaskFact
+
+A task in running (or being cancelled) and the process of its unfinished run, if any.
+
+| Field           | Type             | Comment                                                                                                     |
+| --------------- | ---------------- | ----------------------------------------------------------------------------------------------------------- |
+| `id`            | `TaskId`         |                                                                                                             |
+| `pid`           | `number \| null` | The recorded pid of its unfinished run; null when there is none or none was recorded yet.                   |
+| `alive`         | `boolean`        | Whether that process group is alive.                                                                        |
+| `runAgeSeconds` | `number \| null` | Seconds since its run started (the run row, before setup and the sync); null when it has no unfinished run. |
+
+### ServiceFacts
+
+| Field       | Type             | Comment |
+| ----------- | ---------------- | ------- |
+| `installed` | `boolean`        |         |
+| `loaded`    | `boolean`        |         |
+| `pid`       | `number \| null` |         |
+| `state`     | `string \| null` |         |
+
+### Settings
+
+| Field              | Type              | Comment                                                                          |
+| ------------------ | ----------------- | -------------------------------------------------------------------------------- |
+| `max_concurrent`   | `number`          |                                                                                  |
+| `budget`           | `Budget`          |                                                                                  |
+| `notify`           | `NotifySettings`  |                                                                                  |
+| `planner`          | `PlannerSettings` |                                                                                  |
+| `reload_on_change` | `boolean`         | Restart the daemon onto new code when daemon/src changes and nothing is running. |
+
+## `domain/proposals/`
+
+### PlannerRun
+
+| Field        | Type                     | Comment                                                              |
+| ------------ | ------------------------ | -------------------------------------------------------------------- |
+| `id`         | `PlannerRunId`           |                                                                      |
+| `repo_id`    | `RepoId`                 |                                                                      |
+| `started_at` | `string`                 |                                                                      |
+| `ended_at`   | `string \| null`         |                                                                      |
+| `outcome`    | `PlannerOutcome \| null` |                                                                      |
+| `proposed`   | `number`                 |                                                                      |
+| `note`       | `string \| null`         |                                                                      |
+| `log_path`   | `string`                 |                                                                      |
+| `pid`        | `number \| null`         | the planner's claude process group while it runs, for crash recovery |
+
+### PlannerSettings
+
+| Field            | Type      | Comment |
+| ---------------- | --------- | ------- |
+| `enabled`        | `boolean` |         |
+| `interval_hours` | `number`  |         |
+| `max_tasks`      | `number`  |         |
+| `model`          | `string`  |         |
+
+### Proposal
+
+| Field      | Type                  | Comment |
+| ---------- | --------------------- | ------- |
+| `title`    | `string`              |         |
+| `prompt`   | `string`              |         |
+| `priority` | `number`              |         |
+| `model`    | `string \| undefined` |         |
+
+### ProposalResult
+
+| Field     | Type                           | Comment |
+| --------- | ------------------------------ | ------- |
+| `outcome` | `PlannerOutcome \| "no_goals"` |         |
+| `tasks`   | `Task[]`                       |         |
+| `skipped` | `string[]`                     |         |
+| `note`    | `string \| null`               |         |
+
+## `domain/repos/`
+
+### Repo
+
+| Field                  | Type               | Comment                                                                                                  |
+| ---------------------- | ------------------ | -------------------------------------------------------------------------------------------------------- |
+| `id`                   | `RepoId`           |                                                                                                          |
+| `name`                 | `string`           |                                                                                                          |
+| `path`                 | `string`           |                                                                                                          |
+| `base_branch`          | `string`           |                                                                                                          |
+| `test_cmd`             | `string \| null`   |                                                                                                          |
+| `allowed_tools`        | `string[] \| null` | Tool rules the repo set itself; null = the generic defaults plus the toolchain's rules.                  |
+| `auto_approve`         | `boolean`          | Planner tasks skip approval.                                                                             |
+| `proposed_at`          | `string \| null`   |                                                                                                          |
+| `toolchain`            | `string \| null`   | pnpm \| yarn \| npm \| cargo \| uv \| go, null = not detected                                            |
+| `setup_cmd`            | `string \| null`   | run in each worktree before claude                                                                       |
+| `paused_reason`        | `string \| null`   | set = no task of this repo is claimed until `repo resume` or a passing doctor                            |
+| `pr_mode`              | `PrMode`           |                                                                                                          |
+| `merge_method`         | `MergeMethod`      | how a PR is merged from the app unless the person picks another                                          |
+| `auto_resolve`         | `boolean`          | The daemon starts a resolve run on its own when a branch conflicts with the base.                        |
+| `auto_unblock`         | `boolean`          | The daemon starts an unblock run on its own when a task blocks (domain/runs/unblock.ts); off by default. |
+| `sandbox`              | `boolean`          | The agent's Bash commands run in Claude Code's sandbox (the default).                                    |
+| `archived_at`          | `string \| null`   | set = hidden everywhere and its work stopped, until `repo unarchive`                                     |
+| `network`              | `string[]`         | Hosts sandboxed commands may reach; none = empty.                                                        |
+| `auto_merge`           | `boolean`          | The daemon merges a done task's PR on its own when it passes the auto-merge check.                       |
+| `auto_merge_max_lines` | `number`           | a PR changing more lines (additions + deletions) needs a person                                          |
+| `auto_merge_skip`      | `string[]`         | Path prefixes; a PR touching one needs a person.                                                         |
+| `created_at`           | `string`           |                                                                                                          |
+
+### ToolchainInfo
+
+| Field       | Type             | Comment                                                                |
+| ----------- | ---------------- | ---------------------------------------------------------------------- |
+| `toolchain` | `Toolchain`      |                                                                        |
+| `setup_cmd` | `string`         |                                                                        |
+| `test_cmd`  | `string \| null` | null when a JS repo has no test script                                 |
+| `tools`     | `string[]`       | Bash rules for this toolchain only; the generic rules live in tools.ts |
+
+## `domain/runs/`
 
 ### ClaudeRunLike
 
@@ -729,14 +804,6 @@ What a finished `claude` process left behind (the adapter's `ClaudeRun`).
 | `stderr`           | `string`                                                                                 |                                                                       |
 | `sessionId?`       | `string \| undefined`                                                                    | The session claude's init line named; undefined if it stopped before. |
 
-### CycleMinutes
-
-| Field     | Type             | Comment                                                                             |
-| --------- | ---------------- | ----------------------------------------------------------------------------------- |
-| `queued`  | `number \| null` | From the task being queued (added, or approved from a proposal) to its first claim. |
-| `running` | `number \| null` | Claim to the end of the run, summed over the task's runs; null if no run ended.     |
-| `review`  | `number \| null` | From the first run that finished done to the PR's merge; null if it was not merged. |
-
 ### EditLike
 
 A task's timeline entry, as far as `editsSinceCutOff` reads it.
@@ -746,31 +813,6 @@ A task's timeline entry, as far as `editsSinceCutOff` reads it.
 | `type`   | `string`         |         |
 | `reason` | `string \| null` |         |
 | `at`     | `string`         |         |
-
-### Interval
-
-| Field  | Type     | Comment |
-| ------ | -------- | ------- |
-| `low`  | `number` |         |
-| `high` | `number` |         |
-
-### Intervention
-
-An intervention is something a person did that changed how a task turned out, which the pilot wants to bring to zero. Each kind says why it counts. Approving or rejecting a proposal is how the planner is meant to be used, and a plain retry (no note) only asks again, so neither is here.
-
-| Field  | Type                                                  | Comment |
-| ------ | ----------------------------------------------------- | ------- |
-| `kind` | `string`                                              |         |
-| `why`  | `string`                                              |         |
-| `is`   | `(e: ScorecardEvent, task: ScorecardTask) => boolean` |         |
-
-### InterventionCount
-
-| Field     | Type                     | Comment                               |
-| --------- | ------------------------ | ------------------------------------- |
-| `total`   | `number`                 |                                       |
-| `tasks`   | `number`                 | Distinct tasks that had at least one. |
-| `by_kind` | `Record<string, number>` |                                       |
 
 ### LiveState
 
@@ -811,22 +853,6 @@ An edit in numbers and a little text, for a small diff.
 | `at?`     | `string \| undefined`                                                            | The event's timestamp.                                        |
 | `parent?` | `string \| undefined`                                                            | The `tool_use` id of the subagent call this entry comes from. |
 | `kind`    | `"text" \| "tool" \| "tool_result" \| "result" \| "setup" \| "tests" \| "error"` |                                                               |
-
-### Measures
-
-| Field                   | Type               | Comment                                                                                     |
-| ----------------------- | ------------------ | ------------------------------------------------------------------------------------------- |
-| `tasks`                 | `number`           | Tasks with at least one work run.                                                           |
-| `runs`                  | `number`           | Work runs, finished or not.                                                                 |
-| `first_runs`            | `number`           | Tasks whose first run (attempt 1) has finished.                                             |
-| `first_run_done`        | `number`           | Of those, the tasks whose first run ended done.                                             |
-| `first_run_rate`        | `number \| null`   | first_run_done / first_runs, or null with no finished first run.                            |
-| `first_run_interval`    | `Interval \| null` | Wilson 95% interval of the rate, or null with no finished first run.                        |
-| `denials`               | `number`           | Tool uses the permission rules refused, over all work runs.                                 |
-| `denials_per_run`       | `number \| null`   | denials / runs, or null with no runs.                                                       |
-| `done_tasks`            | `number`           | Tasks now done.                                                                             |
-| `cost_per_done_task`    | `number \| null`   | Cost of every work run of the done tasks, over their number; null with no done task.        |
-| `minutes_per_done_task` | `number \| null`   | Minutes of finished work runs of the done tasks, over their number; null with no done task. |
 
 ### PromptPlan
 
@@ -884,7 +910,7 @@ The parts of claude's final `result` event that a run records.
 | `log_path`           | `string`             |                                                                                                  |
 | `pid`                | `number \| null`     | claude's process group while the run is live                                                     |
 | `denials`            | `number`             | tool uses refused by the permission rules during the run                                         |
-| `live_turns`         | `number`             | turns so far while the run is live (domain/run/live.ts)                                          |
+| `live_turns`         | `number`             | turns so far while the run is live (domain/runs/translate/live.ts)                               |
 | `live_tool`          | `string \| null`     | the last tool call while the run is live, in a few words                                         |
 | `pid_at`             | `string \| null`     | when `pid` was stored: claude started then, which can be well after `started_at` (setup, a sync) |
 
@@ -894,106 +920,11 @@ What a run came to, for `runOutcome`.
 
 | Field          | Type                                                                                                              | Comment                                                                                                       |
 | -------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `end`          | `{ kind: "cancelled" \| "finished"; } \| { kind: "rate_limited" \| "failed"; reason: string; }`                   | How claude's process ended; a `finished` one has its final message in `status`.                               |
+| `end`          | `{ kind: "cancelled" \| "finished"; } \| { kind: "failed" \| "rate_limited"; reason: string; }`                   | How claude's process ended; a `finished` one has its final message in `status`.                               |
 | `status?`      | `{ blocked: boolean; reason?: string \| undefined; declared: boolean; needs?: Needs \| undefined; } \| undefined` | The final message's status (`parseStatus`); read only for a finished run.                                     |
 | `testsPassed`  | `boolean \| null`                                                                                                 | Whether the repo's test command passed; null when it was not run (no command, or the agent reported blocked). |
 | `commitsAhead` | `number \| null`                                                                                                  | Commits on the branch past the base; null when not counted (only a run that could be done needs it).          |
 | `denials`      | `number`                                                                                                          | Tool uses the permission rules refused during the run.                                                        |
-
-### Scorecard
-
-| Field          | Type                                                                     | Comment                                                                    |
-| -------------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
-| `since`        | `string \| null`                                                         |                                                                            |
-| `by`           | `"week" \| null`                                                         |                                                                            |
-| `repos`        | `{ repo: string; measures: ScorecardMeasures; }[]`                       |                                                                            |
-| `total`        | `ScorecardMeasures`                                                      |                                                                            |
-| `quota_points` | `number`                                                                 | Percentage points of the 7-day window spent.                               |
-| `weeks`        | `{ week: string; measures: ScorecardMeasures; quota_points: number; }[]` | One per week with anything in it, oldest first; empty unless `by` is week. |
-
-### ScorecardEvent
-
-One row of a task's history (`task_events`), with the task's repo.
-
-| Field         | Type             | Comment |
-| ------------- | ---------------- | ------- |
-| `task_id`     | `TaskId`         |         |
-| `repo_id`     | `RepoId`         |         |
-| `type`        | `string`         |         |
-| `from_status` | `string \| null` |         |
-| `to_status`   | `string \| null` |         |
-| `reason`      | `string \| null` |         |
-| `at`          | `string`         |         |
-
-### ScorecardInput
-
-| Field      | Type                     | Comment                                                                                               |
-| ---------- | ------------------------ | ----------------------------------------------------------------------------------------------------- |
-| `tasks`    | `ScorecardTaskRow[]`     |                                                                                                       |
-| `events`   | `ScorecardEvent[]`       |                                                                                                       |
-| `samples`  | `QuotaSample[]`          |                                                                                                       |
-| `repoName` | `(id: RepoId) => string` |                                                                                                       |
-| `since?`   | `string \| undefined`    | Only tasks created, interventions made and quota seen at or after this stamp ("YYYY-MM-DD HH:MM:SS"). |
-| `by?`      | `"week" \| undefined`    |                                                                                                       |
-
-### ScorecardMeasures
-
-| Field             | Type                | Comment                                 |
-| ----------------- | ------------------- | --------------------------------------- |
-| `interventions`   | `InterventionCount` |                                         |
-| `tasks`           | `number`            | Tasks the three medians below are over. |
-| `queued_minutes`  | `number \| null`    |                                         |
-| `running_minutes` | `number \| null`    |                                         |
-| `review_minutes`  | `number \| null`    |                                         |
-| `pr_checks`       | `ChecksSummary`     |                                         |
-
-### ScorecardTask
-
-A task with auto-merge made into the time it is known to have been on.
-
-| Field              | Type                  | Comment                                                                                                                                                                                                                                                                                     |
-| ------------------ | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `auto_merge_from`  | `string \| null`      | When auto-merge was known to be on for the task: always ('') if the task turned it on itself, from the repo's first auto-merge if the repo has it on (the database keeps only the setting as it is now, so a merge from before the setting existed must not count), never (null) otherwise. |
-| `id`               | `TaskId`              |                                                                                                                                                                                                                                                                                             |
-| `repo_id`          | `RepoId`              |                                                                                                                                                                                                                                                                                             |
-| `created_at`       | `string`              |                                                                                                                                                                                                                                                                                             |
-| `pr_checks_opened` | `CheckCounts \| null` | The PR's checks the first time they settled after it opened; null if never recorded (or unreadable).                                                                                                                                                                                        |
-
-### ScorecardTaskRow
-
-The fields of a task the scorecard reads, as the database has them.
-
-| Field              | Type                  | Comment                                                                                              |
-| ------------------ | --------------------- | ---------------------------------------------------------------------------------------------------- |
-| `id`               | `TaskId`              |                                                                                                      |
-| `repo_id`          | `RepoId`              |                                                                                                      |
-| `created_at`       | `string`              |                                                                                                      |
-| `auto_merge`       | `boolean \| null`     | The task's own auto-merge setting; null follows the repo.                                            |
-| `repo_auto_merge`  | `boolean`             |                                                                                                      |
-| `pr_checks_opened` | `CheckCounts \| null` | The PR's checks the first time they settled after it opened; null if never recorded (or unreadable). |
-
-### StatRun
-
-One work run with the status of the task it belongs to. Resolve runs are never given here.
-
-| Field         | Type             | Comment                             |
-| ------------- | ---------------- | ----------------------------------- |
-| `repo_id`     | `RepoId`         |                                     |
-| `task_id`     | `TaskId`         |                                     |
-| `attempt`     | `number`         |                                     |
-| `outcome`     | `string \| null` | null while the run has not finished |
-| `started_at`  | `string`         |                                     |
-| `ended_at`    | `string \| null` |                                     |
-| `cost_usd`    | `number`         |                                     |
-| `denials`     | `number`         |                                     |
-| `task_status` | `string`         |                                     |
-
-### StatsReport
-
-| Field   | Type                                      | Comment |
-| ------- | ----------------------------------------- | ------- |
-| `repos` | `{ repo: string; measures: Measures; }[]` |         |
-| `total` | `Measures`                                |         |
 
 ### SyncView
 
@@ -1041,19 +972,7 @@ What an unblock run left on a task it did not retry (the task's `question`).
 | `sandbox`     | `{ enabled: boolean; failIfUnavailable?: boolean \| undefined; allowUnsandboxedCommands?: boolean \| undefined; network?: { allowedDomains: string[]; strictAllowlist: boolean; allowLocalBinding: boolean; } \| undefined; }` |         |
 | `permissions` | `{ allow: string[]; }`                                                                                                                                                                                                         |         |
 
-## `domain/settings/`
-
-### Settings
-
-| Field              | Type              | Comment                                                                          |
-| ------------------ | ----------------- | -------------------------------------------------------------------------------- |
-| `max_concurrent`   | `number`          |                                                                                  |
-| `budget`           | `Budget`          |                                                                                  |
-| `notify`           | `NotifySettings`  |                                                                                  |
-| `planner`          | `PlannerSettings` |                                                                                  |
-| `reload_on_change` | `boolean`         | Restart the daemon onto new code when daemon/src changes and nothing is running. |
-
-## `domain/task/`
+## `domain/work/`
 
 ### BlockedState
 
@@ -1083,8 +1002,8 @@ A task stopped until something changes.
 | `source`       | `TaskSource`              |                                                                                                               |
 | `restarts`     | `number`                  | times a daemon restart requeued this task mid-run                                                             |
 | `pr`           | `PullRequest \| null`     | the task's pull request, as one value                                                                         |
-| `plan`         | `PlanLink \| null`        | the plan this task follows and its linked steps (domain/task/plan-link.ts); null follows its own plan, if any |
-| `auto_merge`   | `boolean \| null`         | overrides the repo's auto_merge; null = the repo's (domain/pull-request/auto-merge.ts)                        |
+| `plan`         | `PlanLink \| null`        | the plan this task follows and its linked steps (domain/work/plan-link.ts); null follows its own plan, if any |
+| `auto_merge`   | `boolean \| null`         | overrides the repo's auto_merge; null = the repo's (domain/landing/auto-merge.ts)                             |
 | `created_at`   | `string`                  |                                                                                                               |
 | `updated_at`   | `string`                  |                                                                                                               |
 | `status`       | `"blocked"`               |                                                                                                               |
@@ -1101,6 +1020,27 @@ A cancelled task, with the stop reason it had if it was blocked or failed when c
 | `status`      | `"cancelled"`    |         |
 | `stop_reason` | `string \| null` |         |
 
+### ChangedFile
+
+| Field       | Type             | Comment         |
+| ----------- | ---------------- | --------------- |
+| `path`      | `string`         |                 |
+| `old_path`  | `string \| null` | set for renames |
+| `status`    | `ChangeStatus`   |                 |
+| `additions` | `number`         |                 |
+| `deletions` | `number`         |                 |
+| `binary`    | `boolean`        |                 |
+
+### Changes
+
+| Field      | Type            | Comment                                                                     |
+| ---------- | --------------- | --------------------------------------------------------------------------- |
+| `base_ref` | `string`        | the base branch ref the merge base was taken with, e.g. main or origin/main |
+| `base`     | `string`        |                                                                             |
+| `head`     | `string`        |                                                                             |
+| `files`    | `ChangedFile[]` |                                                                             |
+| `commits`  | `Commit[]`      | newest first                                                                |
+
 ### Checkout
 
 A task's checkout: its branch and worktree, and when a sync of the branch began. A task with none of them has null.
@@ -1111,13 +1051,22 @@ A task's checkout: its branch and worktree, and when a sync of the branch began.
 | `worktree`      | `string \| null` |                                                            |
 | `syncing_since` | `string \| null` | when a sync of the branch began; null when none is running |
 
+### Commit
+
+| Field     | Type     | Comment                   |
+| --------- | -------- | ------------------------- |
+| `sha`     | `string` |                           |
+| `subject` | `string` |                           |
+| `author`  | `string` |                           |
+| `at`      | `string` | ISO 8601, the author date |
+
 ### Dependency
 
 `pr_mode` is that of the dependency's repo: a done task in a repo that opens PRs isn't met until its PR is merged.
 
 | Field     | Type                                                                                                          | Comment |
 | --------- | ------------------------------------------------------------------------------------------------------------- | ------- |
-| `status`  | `"blocked" \| "proposed" \| "done" \| "failed" \| "cancelled" \| "queued" \| "running" \| "cancel_requested"` |         |
+| `status`  | `"failed" \| "blocked" \| "proposed" \| "done" \| "cancelled" \| "queued" \| "running" \| "cancel_requested"` |         |
 | `pr`      | `Pick<PullRequest, "state"> \| null`                                                                          |         |
 | `pr_mode` | `PrMode`                                                                                                      |         |
 
@@ -1128,8 +1077,8 @@ A history row with its task's title.
 | Field         | Type                 | Comment            |
 | ------------- | -------------------- | ------------------ |
 | `id`          | `number`             |                    |
-| `task_id`     | `TaskId`             |                    |
 | `type`        | `TaskEventType`      |                    |
+| `task_id`     | `TaskId`             |                    |
 | `from_status` | `TaskStatus \| null` | null for 'created' |
 | `to_status`   | `TaskStatus \| null` |                    |
 | `reason`      | `string \| null`     |                    |
@@ -1161,15 +1110,15 @@ A history row with its task's title.
 
 An open task as the digest shows it.
 
-| Field              | Type                                                     | Comment                                                                                                         |
-| ------------------ | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `id`               | `TaskId`                                                 |                                                                                                                 |
-| `title`            | `string`                                                 |                                                                                                                 |
-| `status`           | `TaskStatus`                                             |                                                                                                                 |
-| `pr_state`         | `PrState \| null`                                        |                                                                                                                 |
-| `stop_reason`      | `string \| null`                                         |                                                                                                                 |
-| `waiting`          | `Waiting \| null`                                        |                                                                                                                 |
-| `auto_merge_view?` | `{ state: string; label: string; } \| null \| undefined` | The auto-merge view's state and label (domain/pull-request/auto-merge.ts); marked on the line unless it is off. |
+| Field              | Type                                                     | Comment                                                                                                    |
+| ------------------ | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `id`               | `TaskId`                                                 |                                                                                                            |
+| `title`            | `string`                                                 |                                                                                                            |
+| `status`           | `TaskStatus`                                             |                                                                                                            |
+| `pr_state`         | `PrState \| null`                                        |                                                                                                            |
+| `stop_reason`      | `string \| null`                                         |                                                                                                            |
+| `waiting`          | `Waiting \| null`                                        |                                                                                                            |
+| `auto_merge_view?` | `{ state: string; label: string; } \| null \| undefined` | The auto-merge view's state and label (domain/landing/auto-merge.ts); marked on the line unless it is off. |
 
 ### DoneState
 
@@ -1188,6 +1137,26 @@ A task that ran out of attempts.
 | ------------- | ---------------- | ------- |
 | `status`      | `"failed"`       |         |
 | `stop_reason` | `string \| null` |         |
+
+### FileContent
+
+| Field       | Type             | Comment          |
+| ----------- | ---------------- | ---------------- |
+| `path`      | `string`         |                  |
+| `ref`       | `FileRef`        |                  |
+| `sha`       | `string`         | the commit       |
+| `size`      | `number`         |                  |
+| `binary`    | `boolean`        |                  |
+| `truncated` | `boolean`        |                  |
+| `text`      | `string \| null` | null when binary |
+
+### FilePatch
+
+| Field       | Type      | Comment |
+| ----------- | --------- | ------- |
+| `path`      | `string`  |         |
+| `patch`     | `string`  |         |
+| `truncated` | `boolean` |         |
 
 ### Link
 
@@ -1215,7 +1184,7 @@ A dependency, and the links it has itself (stuck spreads down its builds-on link
 
 | Field     | Type                                                                                                          | Comment |
 | --------- | ------------------------------------------------------------------------------------------------------------- | ------- |
-| `status`  | `"blocked" \| "proposed" \| "done" \| "failed" \| "cancelled" \| "queued" \| "running" \| "cancel_requested"` |         |
+| `status`  | `"failed" \| "blocked" \| "proposed" \| "done" \| "cancelled" \| "queued" \| "running" \| "cancel_requested"` |         |
 | `pr`      | `Pick<PullRequest, "state"> \| null`                                                                          |         |
 | `pr_mode` | `PrMode`                                                                                                      |         |
 | `links`   | `Link[]`                                                                                                      |         |
@@ -1235,15 +1204,15 @@ A dependency, and the links it has itself (stuck spreads down its builds-on link
 
 | Field         | Type                                                                                                          | Comment |
 | ------------- | ------------------------------------------------------------------------------------------------------------- | ------- |
-| `waiting`     | `Waiting \| null`                                                                                             |         |
 | `id`          | `TaskId`                                                                                                      |         |
 | `repo_id`     | `RepoId`                                                                                                      |         |
+| `waiting`     | `Waiting \| null`                                                                                             |         |
 | `title`       | `string`                                                                                                      |         |
 | `priority`    | `number`                                                                                                      |         |
 | `model`       | `string`                                                                                                      |         |
 | `source`      | `TaskSource`                                                                                                  |         |
 | `updated_at`  | `string`                                                                                                      |         |
-| `status`      | `"blocked" \| "proposed" \| "done" \| "failed" \| "cancelled" \| "queued" \| "running" \| "cancel_requested"` |         |
+| `status`      | `"failed" \| "blocked" \| "proposed" \| "done" \| "cancelled" \| "queued" \| "running" \| "cancel_requested"` |         |
 | `stop_reason` | `string \| null`                                                                                              |         |
 | `pr_url`      | `string \| null`                                                                                              |         |
 | `pr_state`    | `PrState \| null`                                                                                             |         |
@@ -1257,7 +1226,7 @@ A task as listed: with where it stands on its builds-on links (as waitingFor rep
 
 | Field          | Type                                                                                                          | Comment                                                                                                       |
 | -------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `auto_merge`   | `boolean \| null`                                                                                             | overrides the repo's auto_merge; null = the repo's (domain/pull-request/auto-merge.ts)                        |
+| `auto_merge`   | `boolean \| null`                                                                                             | overrides the repo's auto_merge; null = the repo's (domain/landing/auto-merge.ts)                             |
 | `id`           | `TaskId`                                                                                                      |                                                                                                               |
 | `repo_id`      | `RepoId`                                                                                                      |                                                                                                               |
 | `created_at`   | `string`                                                                                                      |                                                                                                               |
@@ -1271,9 +1240,9 @@ A task as listed: with where it stands on its builds-on links (as waitingFor rep
 | `max_attempts` | `number`                                                                                                      |                                                                                                               |
 | `checkout`     | `Checkout \| null`                                                                                            | the branch and worktree the work is on, and a running sync                                                    |
 | `source`       | `TaskSource`                                                                                                  |                                                                                                               |
-| `plan`         | `PlanLink \| null`                                                                                            | the plan this task follows and its linked steps (domain/task/plan-link.ts); null follows its own plan, if any |
+| `plan`         | `PlanLink \| null`                                                                                            | the plan this task follows and its linked steps (domain/work/plan-link.ts); null follows its own plan, if any |
 | `updated_at`   | `string`                                                                                                      |                                                                                                               |
-| `status`       | `"blocked" \| "proposed" \| "done" \| "failed" \| "cancelled" \| "queued" \| "running" \| "cancel_requested"` |                                                                                                               |
+| `status`       | `"failed" \| "blocked" \| "proposed" \| "done" \| "cancelled" \| "queued" \| "running" \| "cancel_requested"` |                                                                                                               |
 | `waiting`      | `Waiting \| null`                                                                                             |                                                                                                               |
 | `unblocks`     | `number[]`                                                                                                    |                                                                                                               |
 
@@ -1294,6 +1263,15 @@ A task waiting to run or running: it carries nothing about how it ended.
 | -------- | ----------------------------------------------------------- | ------- |
 | `status` | `"proposed" \| "queued" \| "running" \| "cancel_requested"` |         |
 
+### ParsedPlan
+
+| Field     | Type             | Comment |
+| --------- | ---------------- | ------- |
+| `version` | `string`         |         |
+| `title`   | `string`         |         |
+| `summary` | `string \| null` |         |
+| `steps`   | `PlanStep[]`     |         |
+
 ### PersonEventText
 
 What the timeline shows for a row: the sentence, and the reason to show muted beside it.
@@ -1312,6 +1290,15 @@ A task as far as its plan goes.
 | `id`   | `TaskId`           |         |
 | `plan` | `PlanLink \| null` |         |
 
+### PlanFollower
+
+A task that follows a plan, with the step ids it links (null for every step).
+
+| Field   | Type               | Comment |
+| ------- | ------------------ | ------- |
+| `id`    | `number`           |         |
+| `steps` | `string[] \| null` |         |
+
 ### PlanLink
 
 A task's link to a plan: the task whose plan it follows (itself when its own plan was given with --plan) and the linked step ids, null for every unfinished step. A task with no link has null, and follows its own plan, if it has one.
@@ -1320,6 +1307,15 @@ A task's link to a plan: the task whose plan it follows (itself when its own pla
 | ------- | ------------------ | ------- |
 | `task`  | `TaskId`           |         |
 | `steps` | `string[] \| null` |         |
+
+### PlanStep
+
+| Field    | Type             | Comment                                                                |
+| -------- | ---------------- | ---------------------------------------------------------------------- |
+| `id`     | `string \| null` | the section's id, for linking into the page                            |
+| `title`  | `string`         |                                                                        |
+| `status` | `PlanStepStatus` |                                                                        |
+| `done`   | `string[]`       | the done criteria, one per <li> of the step's [data-plan-done] element |
 
 ### QueueState
 
@@ -1357,11 +1353,11 @@ The fields a state carries, each null where its status has none: how the columns
 | `source`       | `TaskSource`                                                                                                  |                                                                                                               |
 | `restarts`     | `number`                                                                                                      | times a daemon restart requeued this task mid-run                                                             |
 | `pr`           | `PullRequest \| null`                                                                                         | the task's pull request, as one value                                                                         |
-| `plan`         | `PlanLink \| null`                                                                                            | the plan this task follows and its linked steps (domain/task/plan-link.ts); null follows its own plan, if any |
-| `auto_merge`   | `boolean \| null`                                                                                             | overrides the repo's auto_merge; null = the repo's (domain/pull-request/auto-merge.ts)                        |
+| `plan`         | `PlanLink \| null`                                                                                            | the plan this task follows and its linked steps (domain/work/plan-link.ts); null follows its own plan, if any |
+| `auto_merge`   | `boolean \| null`                                                                                             | overrides the repo's auto_merge; null = the repo's (domain/landing/auto-merge.ts)                             |
 | `created_at`   | `string`                                                                                                      |                                                                                                               |
 | `updated_at`   | `string`                                                                                                      |                                                                                                               |
-| `status`       | `"blocked" \| "proposed" \| "done" \| "failed" \| "cancelled" \| "queued" \| "running" \| "cancel_requested"` |                                                                                                               |
+| `status`       | `"failed" \| "blocked" \| "proposed" \| "done" \| "cancelled" \| "queued" \| "running" \| "cancel_requested"` |                                                                                                               |
 
 ### TaskCore
 
@@ -1382,8 +1378,8 @@ What every task has, whatever its status.
 | `source`       | `TaskSource`          |                                                                                                               |
 | `restarts`     | `number`              | times a daemon restart requeued this task mid-run                                                             |
 | `pr`           | `PullRequest \| null` | the task's pull request, as one value                                                                         |
-| `plan`         | `PlanLink \| null`    | the plan this task follows and its linked steps (domain/task/plan-link.ts); null follows its own plan, if any |
-| `auto_merge`   | `boolean \| null`     | overrides the repo's auto_merge; null = the repo's (domain/pull-request/auto-merge.ts)                        |
+| `plan`         | `PlanLink \| null`    | the plan this task follows and its linked steps (domain/work/plan-link.ts); null follows its own plan, if any |
+| `auto_merge`   | `boolean \| null`     | overrides the repo's auto_merge; null = the repo's (domain/landing/auto-merge.ts)                             |
 | `created_at`   | `string`              |                                                                                                               |
 | `updated_at`   | `string`              |                                                                                                               |
 
@@ -1409,11 +1405,28 @@ The counters an event sets, with their new values. A counter not listed is left 
 | `reason`      | `string \| null`     |                    |
 | `at`          | `string`             |                    |
 
+### TaskPlan
+
+A stored plan as the API returns it: parsed, without its HTML.
+
+| Field        | Type             | Comment                                                                                  |
+| ------------ | ---------------- | ---------------------------------------------------------------------------------------- |
+| `id`         | `number`         |                                                                                          |
+| `task_id`    | `TaskId`         | the task the plan belongs to: the one it was first attached to                           |
+| `name`       | `string`         | `<task id>-<slug>.html` (planFileName); older plans keep the name they were stored under |
+| `source`     | `PlanSource`     |                                                                                          |
+| `created_at` | `string`         |                                                                                          |
+| `updated_at` | `string`         |                                                                                          |
+| `version`    | `string`         |                                                                                          |
+| `title`      | `string`         |                                                                                          |
+| `summary`    | `string \| null` |                                                                                          |
+| `steps`      | `PlanStep[]`     |                                                                                          |
+
 ### TaskSummary
 
 | Field          | Type                                                                                                          | Comment                                                                                                       |
 | -------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `auto_merge`   | `boolean \| null`                                                                                             | overrides the repo's auto_merge; null = the repo's (domain/pull-request/auto-merge.ts)                        |
+| `auto_merge`   | `boolean \| null`                                                                                             | overrides the repo's auto_merge; null = the repo's (domain/landing/auto-merge.ts)                             |
 | `id`           | `TaskId`                                                                                                      |                                                                                                               |
 | `repo_id`      | `RepoId`                                                                                                      |                                                                                                               |
 | `created_at`   | `string`                                                                                                      |                                                                                                               |
@@ -1427,9 +1440,9 @@ The counters an event sets, with their new values. A counter not listed is left 
 | `max_attempts` | `number`                                                                                                      |                                                                                                               |
 | `checkout`     | `Checkout \| null`                                                                                            | the branch and worktree the work is on, and a running sync                                                    |
 | `source`       | `TaskSource`                                                                                                  |                                                                                                               |
-| `plan`         | `PlanLink \| null`                                                                                            | the plan this task follows and its linked steps (domain/task/plan-link.ts); null follows its own plan, if any |
+| `plan`         | `PlanLink \| null`                                                                                            | the plan this task follows and its linked steps (domain/work/plan-link.ts); null follows its own plan, if any |
 | `updated_at`   | `string`                                                                                                      |                                                                                                               |
-| `status`       | `"blocked" \| "proposed" \| "done" \| "failed" \| "cancelled" \| "queued" \| "running" \| "cancel_requested"` |                                                                                                               |
+| `status`       | `"failed" \| "blocked" \| "proposed" \| "done" \| "cancelled" \| "queued" \| "running" \| "cancel_requested"` |                                                                                                               |
 
 ### Transition
 
@@ -1454,9 +1467,27 @@ What `transition` reads of a task.
 
 | Field      | Type                                                                                                          | Comment                                           |
 | ---------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
-| `status`   | `"blocked" \| "proposed" \| "done" \| "failed" \| "cancelled" \| "queued" \| "running" \| "cancel_requested"` |                                                   |
+| `status`   | `"failed" \| "blocked" \| "proposed" \| "done" \| "cancelled" \| "queued" \| "running" \| "cancel_requested"` |                                                   |
 | `attempts` | `number`                                                                                                      |                                                   |
 | `restarts` | `number`                                                                                                      | times a daemon restart requeued this task mid-run |
+
+### Tree
+
+| Field     | Type          | Comment                     |
+| --------- | ------------- | --------------------------- |
+| `ref`     | `FileRef`     |                             |
+| `sha`     | `string`      | the commit                  |
+| `path`    | `string`      | the folder, '' for the root |
+| `entries` | `TreeEntry[]` |                             |
+
+### TreeEntry
+
+| Field  | Type              | Comment          |
+| ------ | ----------------- | ---------------- |
+| `name` | `string`          |                  |
+| `path` | `string`          |                  |
+| `type` | `"file" \| "dir"` |                  |
+| `size` | `number \| null`  | bytes, for files |
 
 ### Waiting
 
@@ -1466,42 +1497,3 @@ What a queued task that builds on others is waiting for, or null if it isn't wai
 | ------- | ---------------- | ---------------------------------------------------------------------------------------------- |
 | `on`    | `TaskId[]`       | Every task it builds on that is still on its way; or, when stuck, the one root it is stuck on. |
 | `stuck` | `string \| null` | Set when what it waits for won't get there on its own; null while it is on its way.            |
-
-## `domain/usage/`
-
-### Budget
-
-| Field            | Type     | Comment |
-| ---------------- | -------- | ------- |
-| `five_hour_max`  | `number` |         |
-| `five_hour_soft` | `number` |         |
-| `weekly_max`     | `number` |         |
-| `pace_slack`     | `number` |         |
-
-### Decision
-
-| Field            | Type             | Comment                                                             |
-| ---------------- | ---------------- | ------------------------------------------------------------------- |
-| `allow`          | `boolean`        |                                                                     |
-| `max_concurrent` | `number`         |                                                                     |
-| `reason`         | `string \| null` | Why work is held or throttled; null when running freely.            |
-| `until`          | `number \| null` | When a hold is expected to lift (unix seconds).                     |
-| `weekly_allowed` | `number \| null` | Weekly pacing: how much of the 7d window the plan allows right now. |
-
-### QuotaSample
-
-A reading of the 7-day window, as kept in `usage_samples`: utilization is 0..1.
-
-| Field         | Type     | Comment |
-| ------------- | -------- | ------- |
-| `utilization` | `number` |         |
-| `resets_at`   | `number` |         |
-| `observed_at` | `string` |         |
-
-### WindowObs
-
-| Field         | Type     | Comment |
-| ------------- | -------- | ------- |
-| `window`      | `string` |         |
-| `utilization` | `number` |         |
-| `resets_at`   | `number` |         |

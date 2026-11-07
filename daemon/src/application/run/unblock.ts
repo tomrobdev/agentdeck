@@ -1,10 +1,10 @@
 // The unblock run of a blocked task: claude reads why the task stopped, then the daemon queues it again with the run's
-// note or leaves it blocked with the run's question. It takes a slot and uses no attempt (domain/run/unblock.ts).
+// note or leaves it blocked with the run's question. It takes a slot and uses no attempt (domain/runs/unblock.ts).
 import { commitLeftovers, ensureWorktree } from '../../adapters/git.ts';
 import { writeEvent } from '../../adapters/run-log.ts';
 import type { Db } from '../../db/index.ts';
-import type { TaskId } from '../../domain/id/id.ts';
-import type { PromptPlan } from '../../domain/run/prompt.ts';
+import type { TaskId } from '../../domain/shared/id.ts';
+import type { PromptPlan } from '../../domain/runs/prompt.ts';
 import {
   UNBLOCK_MAX_TURNS,
   type UnblockDecision,
@@ -13,10 +13,10 @@ import {
   unblockDecision,
   unblockSystemPrompt,
   unblockable,
-} from '../../domain/run/unblock.ts';
-import { latestReviewNote } from '../../domain/task/history.ts';
-import { type BlockedTask, leftoversMessage } from '../../domain/task/task.ts';
-import { errorMessage } from '../../domain/text.ts';
+} from '../../domain/runs/unblock.ts';
+import { latestReviewNote } from '../../domain/work/history.ts';
+import { type BlockedTask, leftoversMessage } from '../../domain/work/task.ts';
+import { errorMessage } from '../../domain/shared/text.ts';
 import { type OpenedRun, endTaskRun, openTaskRun, startTaskRun } from './claude-run.ts';
 import { planForRun } from '../plans.ts';
 import { settle } from '../task/settle.ts';

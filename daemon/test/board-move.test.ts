@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { boardMove } from '../../app/src/lib/boardMove.ts';
-import { statusGroup } from '../src/domain/task/stage.ts';
+import { statusGroup } from '../src/domain/work/stage.ts';
 
 const task = (status: string, extra: Record<string, unknown> = {}) => ({ id: 1, status, pr_state: null, waiting: null, ...extra }) as never;
 

@@ -4,7 +4,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import type { TaskId } from '../src/domain/id/id.ts';
+import type { TaskId } from '../src/domain/shared/id.ts';
 import { asTaskId } from './fixtures.ts';
 
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-settle-'));
@@ -16,9 +16,9 @@ const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
 const { closePullRequest } = await import('../src/application/pull-request/merge.ts');
 const { refreshPrStates } = await import('../src/application/pull-request/refresh.ts');
 const { openPullRequest } = await import('../src/application/pull-request/open-pr.ts');
-const { parsePrDetails } = await import('../src/domain/pull-request/merge.ts');
-const { finalNotification } = await import('../src/domain/notification.ts');
-const { MAX_RESTARTS } = await import('../src/domain/task/lifecycle.ts');
+const { parsePrDetails } = await import('../src/domain/landing/merge.ts');
+const { finalNotification } = await import('../src/domain/operations/notification.ts');
+const { MAX_RESTARTS } = await import('../src/domain/work/lifecycle.ts');
 
 function setup(pr_mode: 'off' | 'ready' = 'off') {
   const db = openDb(':memory:');

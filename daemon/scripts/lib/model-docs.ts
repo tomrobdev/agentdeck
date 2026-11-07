@@ -3,8 +3,8 @@
 // Deterministic: sorted, no absolute paths.
 import { join } from 'node:path';
 import ts from 'typescript';
-import { COMMENT_MOVES, COMMENT_STATES } from '../../src/domain/review/review.ts';
-import { RULES, TASK_STATUSES } from '../../src/domain/task/lifecycle.ts';
+import { COMMENT_MOVES, COMMENT_STATES } from '../../src/domain/landing/review.ts';
+import { RULES, TASK_STATUSES } from '../../src/domain/work/lifecycle.ts';
 import { type Source, readSources } from './sources.ts';
 
 const SRC = join(import.meta.dirname, '../../src');
@@ -205,14 +205,14 @@ export interface StateMachine {
 export const STATE_MACHINES: StateMachine[] = [
   {
     name: 'Task lifecycle',
-    source: { file: 'domain/task/lifecycle.ts', constant: 'RULES' },
+    source: { file: 'domain/work/lifecycle.ts', constant: 'RULES' },
     moves: 'event',
     states: TASK_STATUSES,
     rules: RULES,
   },
   {
     name: 'Review comment',
-    source: { file: 'domain/review/review.ts', constant: 'COMMENT_MOVES' },
+    source: { file: 'domain/landing/review.ts', constant: 'COMMENT_MOVES' },
     moves: 'action',
     states: COMMENT_STATES,
     rules: COMMENT_MOVES,
@@ -221,9 +221,9 @@ export const STATE_MACHINES: StateMachine[] = [
 
 /** State types in domain/ that no rule table drives, each with why. A state that becomes a table moves to STATE_MACHINES. */
 export const NOT_YET_TABLES: Record<string, string> = {
-  PrState: 'a pull request moves by what GitHub reports (domain/pull-request/pr.ts), not by an event table yet',
+  PrState: 'a pull request moves by what GitHub reports (domain/landing/pr.ts), not by an event table yet',
   MergeRequestView:
-    'a merge request is set, cleared and read as columns (domain/pull-request/merge-request.ts), not a state type with a table yet',
+    'a merge request is set, cleared and read as columns (domain/landing/merge-request.ts), not a state type with a table yet',
   CheckState: 'a value read from GitHub for each check, not a state a thing moves through',
   AutoMergeState: 'a verdict computed from the pull request each time, not a state with moves',
   HeadlineState: 'computed from the daemon and queue each time, not a state with moves',

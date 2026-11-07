@@ -154,7 +154,7 @@ test('[domain-pure] domain/ reads no clock, randomness or environment, except as
 });
 
 /** The parsers of outside formats in domain/ that may call JSON.parse: claude's log, GitHub's answers, and a stored list a repo's setting reads. A stored column is parsed in db/mappers.ts. */
-const OUTSIDE_JSON = ['domain/run/log.ts', 'domain/pull-request/merge.ts', 'domain/text.ts'];
+const OUTSIDE_JSON = ['domain/runs/translate/log.ts', 'domain/landing/merge.ts', 'domain/shared/text.ts'];
 
 test('[domain-pure] domain/ calls JSON.parse only in the parsers of outside formats', () => {
   const found = sources
@@ -269,7 +269,7 @@ function findStatusWrites(source: string): StatusWrite[] {
     const fn = enclosingFunction(node);
     if (!fn || !STATUS_WRITERS.includes(fn.name)) problems.push(`is in ${fn?.name || 'no function'}, not ${STATUS_WRITERS.join(' or ')}`);
     else if (!/\b(nextStatus|transition)\(/.test(fn.body.getText(ast)))
-      problems.push('does not ask the lifecycle (domain/task/lifecycle.ts)');
+      problems.push('does not ask the lifecycle (domain/work/lifecycle.ts)');
     if (!guarded) problems.push('has no WHERE on the status');
     writes.push({ line: lineOf(ast, node), kind, problems });
   };
@@ -483,7 +483,7 @@ test('[models-not-rows] domain entities have no flags or JSON documents beyond t
 
 test('[models-not-rows] a sample with a new row-shaped field fails; a stale entry fails too', () => {
   const sample = [
-    parseSource('domain/task/task.ts', 'export interface Task {\n  a: number; // 1 = on\n  b: string; // JSON list\n  c: string;\n}\n'),
+    parseSource('domain/work/task.ts', 'export interface Task {\n  a: number; // 1 = on\n  b: string; // JSON list\n  c: string;\n}\n'),
   ];
   assert.deepEqual(checkRowShapedFields(sample, ['Task.a', 'Task.b']), { found: [], stale: [] });
   const fresh = checkRowShapedFields(sample, ['Task.a']);

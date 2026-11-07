@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { type TaskDetail, api } from '../../api';
-import type { UnblockQuestion } from '../../../../daemon/src/domain/run/unblock.ts';
+import type { UnblockQuestion } from '../../../../daemon/src/domain/runs/unblock.ts';
 import { answerNote } from '../../lib/taskView';
 import { useAction } from '../../composables/useActions';
 

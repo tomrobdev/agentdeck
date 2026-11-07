@@ -14,12 +14,12 @@ import {
 } from '../../adapters/git.ts';
 import { rootInfo } from '../../adapters/repo-root.ts';
 import { runCommand } from '../../adapters/shell.ts';
-import { errorMessage, lastLine } from '../../domain/text.ts';
+import { errorMessage, lastLine } from '../../domain/shared/text.ts';
 import { SETUP_TIMEOUT_MS, TEST_TIMEOUT_MS, claudeBin } from '../../config.ts';
-import type { Repo } from '../../domain/repo/repo.ts';
-import { refusedCommands } from '../../domain/repo/tool-rules.ts';
-import { detectToolchain } from '../../domain/repo/toolchain.ts';
-import { allowedTools } from '../../domain/repo/tools.ts';
+import type { Repo } from '../../domain/repos/repo.ts';
+import { refusedCommands } from '../../domain/repos/tool-rules.ts';
+import { detectToolchain } from '../../domain/repos/toolchain.ts';
+import { allowedTools } from '../../domain/repos/tools.ts';
 
 export interface Check {
   name: string;

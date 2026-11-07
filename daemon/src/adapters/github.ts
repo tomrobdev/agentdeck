@@ -2,8 +2,8 @@
 // agents cannot push. Tests replace the members of `github` to fake the network.
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { type MergeMethod, type PrDetails, parsePrDetails } from '../domain/pull-request/merge.ts';
-import { lastLine } from '../domain/text.ts';
+import { type MergeMethod, type PrDetails, parsePrDetails } from '../domain/landing/merge.ts';
+import { lastLine } from '../domain/shared/text.ts';
 import { gitRemote } from './git.ts';
 
 const exec = promisify(execFile);
