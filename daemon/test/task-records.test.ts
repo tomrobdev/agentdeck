@@ -125,6 +125,16 @@ test('link and unlink leave no stale after_task in the API', async () => {
   assert.equal(row.after_task, null, 'nor writes it');
 });
 
+test('a legacy plan_path stays in its column, out of the store and the API', async () => {
+  const { db, repo } = setup();
+  const t = db.addTask({ repo_id: repo.id, title: 't', prompt: 'p' });
+  db.raw.prepare('UPDATE tasks SET plan_path = ? WHERE id = ?').run('docs/plans/old.html', t.id);
+  assert.ok(!('plan_path' in db.getTask(t.id)!), 'the store reads no plan_path');
+  assert.ok(!('plan_path' in db.listTaskSummaries({ limit: 10 })[0]), 'nor in a summary');
+  assert.ok(!('plan_path' in (await taskDetail(db, t.id))), 'the detail has no plan_path');
+  for (const view of taskViews(db, { limit: 10 })) assert.ok(!('plan_path' in view), `#${view.id} is listed without plan_path`);
+});
+
 test('a merge request check finished after a conflict blocked the task is dropped', () => {
   const { db, repo } = setup();
   const t = doneTask(db, repo, { pr: 'open' });

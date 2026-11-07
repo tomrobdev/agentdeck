@@ -7,7 +7,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
 import ts from 'typescript';
 import { LAYERS, layerOf, mayImport } from '../scripts/lib/layers.ts';
-import { checkFolderCycles } from '../scripts/lib/progress.ts';
+import { checkFolderCycles, checkRowShapedFields } from '../scripts/lib/progress.ts';
 import { type Source, lineOf, parseSource, readSources } from '../scripts/lib/sources.ts';
 import { MIGRATIONS, migrate } from '../src/db/index.ts';
 
@@ -333,6 +333,151 @@ test('[guarded-status] a task status changes only through a guarded transition',
   }
   assert.deepEqual(found, []);
   assert.equal(count, STATUS_WRITERS.length, 'the finder should see exactly the status writes of applyEvent and claimNextTask');
+});
+
+/** The tables whose rows reach the domain only through a mapper, and those mappers. */
+const MAPPED_TABLES = ['tasks', 'repos', 'runs'];
+const MAPPERS = ['toTask', 'toTaskSummary', 'toRepo', 'toRun'];
+/** The query builder's calls that name a table. */
+const TABLE_CALLS = ['from', 'innerJoin', 'leftJoin', 'rightJoin', 'fullJoin', 'crossJoin', 'update', 'insert', 'delete'];
+
+interface RowRead {
+  line: number;
+  tables: string[];
+  mapped: boolean;
+}
+
+/**
+ * Every read of a whole row of a mapped table in a source string: a `select` or `returning` with no columns, with a named set of them
+ * (`TASK_COLUMNS`), or spreading one in, and any raw `SELECT *`. It is mapped when its chain goes on `.map(toTask)`, or its result is the
+ * argument of a mapper or of `mapFound(…, toTask)`. A selection that lists its columns is a projection, not a row.
+ */
+function findRowReads(source: string): RowRead[] {
+  const ast = ts.createSourceFile('sample.ts', source, ts.ScriptTarget.Latest, true);
+  const aliases = new Map<string, string>();
+  const collectAliases = (node: ts.Node) => {
+    if (ts.isVariableDeclaration(node) && node.initializer && ts.isCallExpression(node.initializer)) {
+      const { expression, arguments: args } = node.initializer;
+      if (expression.getText(ast) === 'alias' && args[0]) aliases.set(node.name.getText(ast), args[0].getText(ast));
+    }
+    ts.forEachChild(node, collectAliases);
+  };
+  collectAliases(ast);
+  const tableOf = (node: ts.Node | undefined) => {
+    const text = node?.getText(ast) ?? '';
+    return aliases.get(text) ?? text;
+  };
+  const method = (call: ts.CallExpression) => (ts.isPropertyAccessExpression(call.expression) ? call.expression.name.text : '');
+  const isMapper = (node: ts.Node | undefined) => !!node && MAPPERS.includes(node.getText(ast));
+
+  /** The calls before and after `call` in its chain, in order, and the last of them. */
+  const chainOf = (call: ts.CallExpression) => {
+    const calls = [call];
+    for (let r = call.expression; ts.isPropertyAccessExpression(r) && ts.isCallExpression(r.expression); r = r.expression.expression)
+      calls.unshift(r.expression);
+    let last = call;
+    while (ts.isPropertyAccessExpression(last.parent) && ts.isCallExpression(last.parent.parent)) {
+      last = last.parent.parent;
+      calls.push(last);
+    }
+    return { calls, last };
+  };
+
+  const reads: RowRead[] = [];
+  const visit = (node: ts.Node) => {
+    if (ts.isCallExpression(node) && ['select', 'selectDistinct', 'returning'].includes(method(node))) {
+      const { calls, last } = chainOf(node);
+      const inChain = calls.filter((c) => TABLE_CALLS.includes(method(c))).map((c) => tableOf(c.arguments[0]));
+      const [columns] = node.arguments;
+      const whole =
+        !columns || !ts.isObjectLiteralExpression(columns)
+          ? inChain
+          : columns.properties.filter(ts.isSpreadAssignment).flatMap(({ expression: e }) =>
+              // `...getColumns(taskEvents)` is that table's row; any other spread could be anything in the chain.
+              ts.isCallExpression(e) && e.expression.getText(ast) === 'getColumns' ? [tableOf(e.arguments[0])] : inChain,
+            );
+      const tables = [...new Set(whole)].filter((t) => MAPPED_TABLES.includes(t));
+      if (tables.length) {
+        const around = last.parent;
+        const mapped =
+          calls.some((c) => method(c) === 'map' && isMapper(c.arguments[0])) ||
+          (ts.isCallExpression(around) &&
+            around.expression !== last &&
+            (isMapper(around.expression) || (around.expression.getText(ast) === 'mapFound' && isMapper(around.arguments[1]))));
+        reads.push({ line: lineOf(ast, node), tables, mapped });
+      }
+    }
+    const raw = literalText(node)?.match(new RegExp(String.raw`\bSELECT\s+(\w+\.)?\*\s+FROM\s+(${MAPPED_TABLES.join('|')}|\?)`, 'i'));
+    if (raw) reads.push({ line: lineOf(ast, node), tables: [raw[2]], mapped: false });
+    ts.forEachChild(node, visit);
+  };
+  visit(ast);
+  return reads;
+}
+
+test('[models-not-rows] the finder tells a mapped read from an unmapped one, and a row from a projection', () => {
+  const read = (source: string) => findRowReads(source).map((r) => [r.tables, r.mapped]);
+  for (const unmapped of [
+    'orm.select().from(tasks).get();',
+    'orm.select(TASK_COLUMNS).from(tasks).all() as Task[];',
+    'orm.select({ ...getColumns(tasks) }).from(tasks).all();',
+    'orm.select({ ...TASK_COLUMNS, n: count() }).from(tasks).all();',
+    'orm.update(tasks).set({ title }).where(x).returning().get();',
+    'const t = alias(tasks, "t"); orm.select().from(t).get();',
+    'orm.select().from(taskEvents).innerJoin(tasks, x).all();',
+    'const row = orm.select(TASK_COLUMNS).from(tasks).get(); use(row);',
+    'orm.select().from(tasks).all().map((r) => r.id);',
+    'first(orm.select().from(tasks).get(), toTask);',
+    'db.prepare("SELECT * FROM tasks");',
+    'sql`SELECT t.* FROM ${tasks} t`;',
+  ])
+    assert.equal(read(unmapped)[0]?.[1], false, unmapped);
+  for (const mapped of [
+    'orm.select().from(repos).all().map(toRepo);',
+    'orm.select(SUMMARY_COLUMNS).from(tasks).all().map(toTaskSummary);',
+    'mapFound(orm.select().from(repos).get(), toRepo);',
+    'toRun(orm.insert(runs).values(v).returning().get());',
+    'mapFound(orm.update(tasks).set(v).returning(TASK_COLUMNS).get(), toTask);',
+  ])
+    assert.equal(read(mapped)[0]?.[1], true, mapped);
+  for (const notARow of [
+    'orm.select({ id: tasks.id }).from(tasks).all();',
+    'orm.update(tasks).set(v).returning({ status: tasks.status }).get();',
+    'orm.select().from(reviews).all();',
+    'orm.select({ ...getColumns(taskEvents), title: tasks.title }).from(taskEvents).innerJoin(tasks, x).all();',
+    'db.prepare("SELECT id FROM tasks");',
+  ])
+    assert.deepEqual(read(notARow), [], notARow);
+});
+
+test('[models-not-rows] no store returns a whole row of tasks, repos or runs unmapped', () => {
+  const reads = sources.filter((s) => s.path.startsWith('db/')).map((s) => ({ s, found: findRowReads(s.ast.text) }));
+  const unmapped = reads.flatMap(({ s, found }) =>
+    found
+      .filter((r) => !r.mapped)
+      .map((r) => `${at(s, r.line)} reads a whole row of ${r.tables.join(', ')} unmapped: go through db/mappers.ts, or list the columns`),
+  );
+  assert.deepEqual(unmapped, []);
+  const seen = new Set(reads.flatMap(({ found }) => found.flatMap((r) => r.tables)));
+  assert.deepEqual([...seen].sort(), [...MAPPED_TABLES].sort(), 'the finder should see the real reads of each mapped table');
+});
+
+test('[models-not-rows] domain entities have no flags or JSON documents beyond the shrinking list, and no entry is stale', () => {
+  const { found, stale } = checkRowShapedFields(sources);
+  assert.deepEqual([...found, ...stale], []);
+});
+
+test('[models-not-rows] a sample with a new row-shaped field fails; a stale entry fails too', () => {
+  const sample = [
+    parseSource('domain/task/task.ts', 'export interface Task {\n  a: number; // 1 = on\n  b: string; // JSON list\n  c: string;\n}\n'),
+  ];
+  assert.deepEqual(checkRowShapedFields(sample, ['Task.a', 'Task.b']), { found: [], stale: [] });
+  const fresh = checkRowShapedFields(sample, ['Task.a']);
+  assert.equal(fresh.found.length, 1);
+  assert.match(fresh.found[0], /^Task\.b /);
+  const stale = checkRowShapedFields(sample, ['Task.a', 'Task.b', 'Task.c']);
+  assert.equal(stale.stale.length, 1);
+  assert.match(stale.stale[0], /^Task\.c is on ROW_SHAPED_FIELDS/);
 });
 
 test('[claude-process-group] claude runs only from adapters/claude.ts, in its own process group', () => {

@@ -46,6 +46,48 @@ export function checkFolderCycles(
   return { found, stale };
 }
 
+/**
+ * The entity fields still shaped by their row: flags stored as numbers and JSON documents stored as strings (rule:models-not-rows). The
+ * list only shrinks: a new one fails the test, and so does an entry that no longer is one, so remove an entry in the change that gives
+ * the field its real type, parsing it in `db/mappers.ts`. Never add one. Phase 2 of the plan empties it.
+ */
+export const ROW_SHAPED_FIELDS = [
+  'Repo.allowed_tools',
+  'Repo.auto_approve',
+  'Repo.auto_merge',
+  'Repo.auto_merge_skip',
+  'Repo.auto_resolve',
+  'Repo.auto_unblock',
+  'Repo.network',
+  'Repo.sandbox',
+  'Run.tests_passed',
+  'Task.auto_merge',
+  'Task.auto_merge_check',
+  'Task.merge_request_check',
+  'Task.needs',
+  'Task.plan_steps',
+  'Task.pr_checks',
+  'Task.pr_checks_merged',
+  'Task.pr_checks_opened',
+  'Task.question',
+];
+
+/** The row-shaped fields `sources` have that are not allowed, and the allowed entries that are no longer row-shaped. */
+export function checkRowShapedFields(sources: Source[], allowed: string[] = ROW_SHAPED_FIELDS): { found: string[]; stale: string[] } {
+  const { flags, jsonFields } = entityFields(sources);
+  const fields = [...flags, ...jsonFields];
+  return {
+    found: fields
+      .filter((f) => !allowed.includes(f))
+      .map(
+        (f) => `${f} is a flag or a JSON document stored as its column is: give the domain type a real value, and read it in db/mappers.ts`,
+      ),
+    stale: allowed
+      .filter((f) => !fields.includes(f))
+      .map((f) => `${f} is on ROW_SHAPED_FIELDS but is no longer a flag or a JSON document: remove the entry`),
+  };
+}
+
 /** The entity types whose fields the page counts. */
 const ENTITIES = ['Repo', 'Task', 'Run', 'PlannerRun'];
 
@@ -117,6 +159,9 @@ export function progress(sources: Source[]): Progress {
     adapterImports,
     storeCalls: calls,
     cycles,
-    lists: [{ name: 'ALLOWED_FOLDER_CYCLES (`scripts/lib/progress.ts`)', size: Object.values(ALLOWED_FOLDER_CYCLES).flat().length }],
+    lists: [
+      { name: 'ALLOWED_FOLDER_CYCLES (`scripts/lib/progress.ts`)', size: Object.values(ALLOWED_FOLDER_CYCLES).flat().length },
+      { name: 'ROW_SHAPED_FIELDS (`scripts/lib/progress.ts`)', size: ROW_SHAPED_FIELDS.length },
+    ],
   };
 }

@@ -69,7 +69,7 @@ export const tasks = sqliteTable(
     pr_state: text().$type<PrState>(),
     after_task: integer(), // legacy: migration 18 copied it into task_links; nothing reads or writes it
     merge_method: text().$type<MergeMethod>(),
-    plan_path: text(),
+    plan_path: text(), // legacy: no longer written since migration 24, and nothing reads it
     plan_steps: text(),
     needs: text(),
     done_by: text().$type<'person'>(),

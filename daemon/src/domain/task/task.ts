@@ -25,7 +25,6 @@ export interface Task {
   pr_url: string | null; // the pull request the daemon opened when the task finished
   pr_state: PrState | null;
   merge_method: MergeMethod | null; // how the PR was merged from the app
-  plan_path: string | null; // legacy: the docs/plans/ file a task carried out before plans moved into AgentDeck; no longer written or read
   needs: string | null; // JSON Needs (domain/task/needs.ts) the worker said it needs when it blocked; cleared when queued again
   question: string | null; // JSON UnblockQuestion (domain/run/unblock.ts) an unblock run left on the blocked task; cleared with `needs`
   plan_steps: string | null; // JSON array of the linked plan's step ids; null means every unfinished step (see planStepIds)
