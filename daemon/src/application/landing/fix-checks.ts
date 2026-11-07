@@ -5,7 +5,7 @@ import type { TaskId } from '../../domain/shared/id.ts';
 import { type FailedCheck, LOG_TAIL_BYTES, actionsRun, failingChecks, fixChecksNote, logTail } from '../../domain/landing/checks.ts';
 import { openPrUrl } from '../../domain/landing/pr.ts';
 import { errorMessage } from '../../domain/shared/text.ts';
-import { ActionError, requireTask, requireTaskRepo } from '../input.ts';
+import { ActionError, requireTask, requireTaskRepo } from '../shared/input.ts';
 import { retryTask } from '../work/tasks.ts';
 
 export interface FixChecksResult {

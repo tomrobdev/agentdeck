@@ -3,16 +3,13 @@ import { removeWorktree } from '../../adapters/git.ts';
 import type { Db } from '../../db/index.ts';
 import type { TaskId } from '../../domain/shared/id.ts';
 import type { TaskStatus } from '../../domain/work/lifecycle.ts';
-import { openPrUrl } from '../../domain/landing/pr.ts';
-import { errorMessage } from '../../domain/shared/text.ts';
 import { archivedRepoError, maxAttemptsError, maxTurnsError, modelError, priorityError } from '../../domain/work/rules.ts';
 import { planOwnerOf } from '../../domain/work/plan-link.ts';
 import { EDITABLE_STATUSES, RUNNING_STATUSES, type Task, defaultTitle } from '../../domain/work/task.ts';
-import { refuseWhileSyncing } from '../landing/sync.ts';
+import { refuseWhileSyncing } from './checkout-locks.ts';
 import { warnStuckDependents } from './dependencies.ts';
 import { newLinks } from './links.ts';
-import { ActionError, flag, object, refuse, requireTask, requireTaskRepo, text, whole } from '../input.ts';
-import { closePullRequest } from '../landing/merge.ts';
+import { ActionError, flag, object, refuse, requireTask, requireTaskRepo, text, whole } from '../shared/input.ts';
 import { checkFollowers } from './plans.ts';
 import { checkPlanLink, planRequest, stepList } from './plan-link.ts';
 
@@ -187,17 +184,6 @@ export function markDone(db: Db, id: TaskId, note?: string): void {
   if (note !== undefined && typeof note !== 'string') throw new ActionError('note must be text');
   if (!db.applyEvent(id, { type: 'mark_done' }, { reason: note?.trim() || null }))
     throw new ActionError(`#${id} is ${db.getTask(id)?.status ?? t.status}; only blocked or failed tasks can be marked done`);
-}
-
-/** Close a task's open PR without merging it. Tasks waiting on it become stuck. */
-export async function closeTaskPr(db: Db, id: TaskId): Promise<void> {
-  const t = requireTask(db, id);
-  if (!openPrUrl(t.pr)) throw new ActionError(`#${id} has no open pull request`);
-  try {
-    await closePullRequest(db, t);
-  } catch (err) {
-    throw new ActionError(`could not close the PR: ${errorMessage(err)}`);
-  }
 }
 
 /** Remove a task's worktree; its branch is kept. Not while the task is running, or queued (it is about to run in it). */

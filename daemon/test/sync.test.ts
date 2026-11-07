@@ -22,7 +22,7 @@ const { github } = await import('../src/adapters/github.ts');
 const { startApi } = await import('../src/api/server.ts');
 const { refreshPrStates } = await import('../src/application/landing/refresh.ts');
 const { doneTask: doneTaskWithPr } = await import('./fixtures.ts');
-const { resolveConflicting } = await import('../src/application/landing/sync.ts');
+const { resolveConflicting } = await import('../src/application/runs/sync.ts');
 const { ActionError, mergeTask, syncNow, retryTask, updateRepo } = await import('../src/application/actions.ts');
 const { isConflicting, isMergeabilityUnknown } = await import('../src/domain/landing/conflict.ts');
 const { conflictReason, syncSummary } = await import('../src/domain/landing/sync.ts');
@@ -214,7 +214,7 @@ test('a clean merge is committed, tested and pushed without a claude run', async
 
 test('a sync with no base ref ends as an error, not up to date', async () => {
   const t = await doneTask();
-  const { syncBranch } = await import('../src/application/landing/sync.ts');
+  const { syncBranch } = await import('../src/application/runs/sync.ts');
   const task = db.getTask(t.id)!;
   const res = await syncBranch(db, task, { ...repo, base_branch: 'no-such-branch' }, t.wt, { allowResolve: false, runTests: false });
   assert.equal(res.kind, 'error');
@@ -398,7 +398,7 @@ test('auto_resolve off: clean merges still happen, conflicts wait for a person',
 
 /** What the scheduler's automatic path does for a task. */
 const syncAuto = async (id: TaskId) => {
-  const { syncTask } = await import('../src/application/landing/sync.ts');
+  const { syncTask } = await import('../src/application/runs/sync.ts');
   return syncTask(db, id, { manual: false });
 };
 

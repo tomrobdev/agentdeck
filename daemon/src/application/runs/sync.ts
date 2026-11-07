@@ -21,19 +21,20 @@ import { runCommand } from '../../adapters/shell.ts';
 import { TEST_TIMEOUT_MS } from '../../config.ts';
 import type { Db } from '../../db/index.ts';
 import type { TaskId } from '../../domain/shared/id.ts';
-import { type SyncResult, conflictReason, resolveOutcome, syncResultOf, syncSummary } from '../../domain/landing/sync.ts';
+import { type SyncResult, conflictReason, syncResultOf, syncSummary } from '../../domain/landing/sync.ts';
 import type { Repo } from '../../domain/repos/repo.ts';
 import { buildResolvePrompt } from '../../domain/runs/prompt.ts';
+import { resolveOutcome } from '../../domain/runs/resolve.ts';
 import type { Outcome, Run } from '../../domain/runs/run.ts';
 import { errorMessage, lastLine } from '../../domain/shared/text.ts';
 import { openPrUrl } from '../../domain/landing/pr.ts';
 import { type Task, leftoversMessage } from '../../domain/work/task.ts';
-import { endTaskRun, openTaskRun, startTaskRun } from '../runs/claude-run.ts';
-import { ActionError, requireTask, requireTaskRepo } from '../input.ts';
+import { endTaskRun, openTaskRun, startTaskRun } from './claude-run.ts';
+import { ActionError, requireTask, requireTaskRepo } from '../shared/input.ts';
 import { queueWait } from '../capacity/gate.ts';
-import { logPrEvent } from './open-pr.ts';
-import { isMergeLocked } from './merge-lock.ts';
-import { settle } from '../settle.ts';
+import { logPrEvent } from '../landing/open-pr.ts';
+import { settle } from '../landing/settle.ts';
+import { isMergeLocked, isSyncLocked, isSyncing, lockSync, markSyncing, unlockSync } from '../work/checkout-locks.ts';
 
 interface SyncOptions {
   /** A resolve run may start when the merge conflicts. */
@@ -142,30 +143,6 @@ async function checkResolution(worktree: string, before: string, files: string[]
   return '';
 }
 
-/** The lock against two syncs of one task in the daemon (the database's marker is what other processes read). */
-const syncing = new Set<TaskId>();
-
-/** Whether a sync of this task's branch is running, in any process: the marker the daemon keeps in the database. */
-export const isSyncing = (db: Db, id: TaskId): boolean => db.hasSyncMarker(id);
-
-/** Refuse a change to a task while a sync of its branch is running. */
-export function refuseWhileSyncing(db: Db, id: TaskId): void {
-  if (isSyncing(db, id)) throw new ActionError(`#${id} is syncing with its base branch; try again when that is done`);
-}
-
-/** Run `fn` with the task's sync marked in the database, so the CLI sees it too; the mark is cleared however `fn` ends. */
-export async function markSyncing<T>(db: Db, id: TaskId, fn: () => Promise<T>): Promise<T> {
-  db.setSyncing(id, true);
-  try {
-    return await fn();
-  } finally {
-    db.setSyncing(id, false);
-  }
-}
-
-/** Whether a sync in this process holds the task's worktree (the in-process half of `isSyncing`, no query). */
-export const isSyncLocked = (id: TaskId): boolean => syncing.has(id);
-
 export interface SyncReport {
   /** `skipped`: conflicts, but auto_resolve is off. `deferred`: the usage limit, or a cancel, stopped it. */
   outcome: 'up_to_date' | 'clean' | 'resolved' | 'blocked' | 'skipped' | 'deferred' | 'error';
@@ -209,14 +186,14 @@ export async function syncTask(db: Db, id: TaskId, opts: { manual: boolean }): P
   const repo = requireTaskRepo(db, task);
   if (task.status !== 'done') throw new ActionError(`#${id} is ${task.status}; only a done task's branch is synced this way`);
   if (!task.checkout?.branch) throw new ActionError(`#${id} has no branch`);
-  if (syncing.has(id) || db.hasSyncMarker(id)) throw new ActionError(`#${id} is already syncing`);
+  if (isSyncLocked(id) || db.hasSyncMarker(id)) throw new ActionError(`#${id} is already syncing`);
   if (isMergeLocked(id)) throw new ActionError(`#${id} is being merged; try again when that is done`);
 
-  syncing.add(id);
+  lockSync(id);
   try {
     return await markSyncing(db, id, () => syncMarked(db, task, repo, opts));
   } finally {
-    syncing.delete(id);
+    unlockSync(id);
   }
 }
 

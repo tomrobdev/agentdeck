@@ -1,4 +1,11 @@
-// What a blocked task's worker said it needs. A task holds it in its `needs`. Pure: no I/O.
+// What a blocked task's worker said it needs, and what an unblock run asked a person. A task keeps them in its `needs` and
+// its `question`. Pure: no I/O.
+
+/** What an unblock run left on a task it did not retry (the task's `question`). */
+export interface UnblockQuestion {
+  question: string;
+  options: string[];
+}
 
 export type NeedsKind = 'deps' | 'host' | 'edit';
 const NEEDS_KINDS: string[] = ['deps', 'host', 'edit'];

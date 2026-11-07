@@ -1,10 +1,9 @@
 // The task entity. Pure: no I/O.
 import type { RepoId, TaskId } from '../shared/id.ts';
 import type { PullRequest } from '../landing/pr.ts';
-import type { UnblockQuestion } from '../runs/unblock.ts';
 import type { Checkout } from './checkout.ts';
 import type { TaskStatus } from './lifecycle.ts';
-import type { Needs } from './needs.ts';
+import type { Needs, UnblockQuestion } from './needs.ts';
 import type { PlanLink } from './plan-link.ts';
 
 /** Who made a task: a person, or the planner proposing it. */

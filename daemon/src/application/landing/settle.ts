@@ -1,14 +1,14 @@
 // Settling a task: the daemon's own events that end a run or a wait, applied together with what follows them.
-import type { Db } from '../db/index.ts';
-import type { TaskId } from '../domain/shared/id.ts';
-import { finalNotification } from '../domain/operations/notification.ts';
-import type { PrEvent } from '../domain/work/history.ts';
-import type { TaskEvent } from '../domain/work/lifecycle.ts';
-import type { Needs } from '../domain/work/needs.ts';
-import type { Task } from '../domain/work/task.ts';
-import { warnStuckDependents } from './work/dependencies.ts';
-import { notifyLater } from './operations/notifications.ts';
-import { openPullRequest } from './landing/open-pr.ts';
+import type { Db } from '../../db/index.ts';
+import type { TaskId } from '../../domain/shared/id.ts';
+import { finalNotification } from '../../domain/operations/notification.ts';
+import type { PrEvent } from '../../domain/work/history.ts';
+import type { TaskEvent } from '../../domain/work/lifecycle.ts';
+import type { Needs } from '../../domain/work/needs.ts';
+import type { Task } from '../../domain/work/task.ts';
+import { warnStuckDependents } from '../work/dependencies.ts';
+import { notifyLater } from '../operations/notifications.ts';
+import { openPullRequest } from './open-pr.ts';
 
 /**
  * Apply `event` to task `id` and everything that follows its new status: done opens the PR (unless the PR

@@ -1,7 +1,7 @@
 // Protected edits: files a worker may not edit itself (under .claude/), which it writes out to the worktree's edits
 // folder for the daemon to commit after the run. A person still reviews them: a PR touching a protected path is never
 // auto-merged (domain/landing/auto-merge.ts). Pure: no I/O.
-import { PLAN_FOLDER } from '../work/plan.ts';
+import { AGENTDECK_FOLDER } from './repo.ts';
 
 /** The path prefixes a worker may not edit. Their files instruct every later agent, so a person merges them. */
 export const PROTECTED_PREFIXES = ['.claude/'];
@@ -13,8 +13,8 @@ export const PROTECTED_PREFIXES = ['.claude/'];
  */
 export const NEVER_APPLIED = ['.claude/settings.json', '.claude/settings.local.json', '.claude/hooks/'];
 
-/** The folder in a task's worktree where a worker writes protected edits. Git ignores it (it is in PLAN_FOLDER). */
-export const EDITS_FOLDER = `${PLAN_FOLDER}/edits`;
+/** The folder in a task's worktree where a worker writes protected edits. Git ignores it (it is in AGENTDECK_FOLDER). */
+export const EDITS_FOLDER = `${AGENTDECK_FOLDER}/edits`;
 
 /** A protected edit bigger than this is refused: these are skills and docs, not data. */
 export const EDIT_LIMIT = 1024 * 1024;

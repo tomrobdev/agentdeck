@@ -3,11 +3,12 @@
 // it, so `git add -A` (commitLeftovers) never commits them.
 import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { PLAN_FILE, PLAN_FOLDER, PLAN_GIVEN_FILE, PLAN_LIMIT } from '../domain/work/plan.ts';
+import { AGENTDECK_FOLDER } from '../domain/repos/repo.ts';
+import { PLAN_FILE, PLAN_GIVEN_FILE, PLAN_LIMIT } from '../domain/work/plan.ts';
 
 /** Make the plan folder, ignored by git. Run before every run, plan or not. */
 async function ensurePlanFolder(worktree: string): Promise<void> {
-  const dir = join(worktree, PLAN_FOLDER);
+  const dir = join(worktree, AGENTDECK_FOLDER);
   await mkdir(dir, { recursive: true });
   await writeFile(join(dir, '.gitignore'), '# AgentDeck: the run plan file. Never committed.\n*\n');
 }

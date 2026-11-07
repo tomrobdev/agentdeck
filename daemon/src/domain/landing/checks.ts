@@ -1,7 +1,5 @@
-// A PR's checks on GitHub, one by one: what `statusCheckRollup` says about each, what is kept on the task, when a person
-// is told they failed, and the note that sends the failures back to the worker. Pure: no I/O.
-import type { TaskId } from '../shared/id.ts';
-import type { Notification } from '../operations/notification.ts';
+// A PR's checks on GitHub, one by one: what `statusCheckRollup` says about each, what is kept on the task, and the note that
+// sends the failures back to the worker. What a person is told when they fail is in domain/operations/notification.ts. Pure: no I/O.
 import { plural } from '../shared/text.ts';
 import type { PullRequest } from './pr.ts';
 
@@ -125,17 +123,6 @@ export function checksSummary(pr: PullRequest | null): ChecksSummary | null {
 }
 
 export const failingChecks = (checks: PrCheck[]): PrCheck[] => checks.filter((c) => c.state === 'fail');
-
-/** What a person is told when a PR's checks fail. */
-export function checksFailedNotification(task: { id: TaskId; title: string }, checks: PrCheck[]): Notification {
-  const failing = failingChecks(checks).map((c) => c.name);
-  return {
-    kind: 'checks_failed',
-    title: `Checks failed on #${task.id}`,
-    body: `${plural(failing.length, 'check')} failing on ${task.title}: ${failing.join(', ')}`,
-    task_id: task.id,
-  };
-}
 
 /** The GitHub Actions run (and job) a check's link points at, or null for a check that isn't from Actions. */
 export function actionsRun(url: string | null): { run: string; job: string | null } | null {

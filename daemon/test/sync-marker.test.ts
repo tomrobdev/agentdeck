@@ -11,7 +11,7 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { openDb } = await import('../src/db/index.ts');
 const { installNeeds, removeTaskWorktree, retryTask, syncNow } = await import('../src/application/actions.ts');
-const { isSyncing, markSyncing } = await import('../src/application/landing/sync.ts');
+const { isSyncing, markSyncing } = await import('../src/application/work/checkout-locks.ts');
 const { doneTask } = await import('./fixtures.ts');
 
 function setup() {

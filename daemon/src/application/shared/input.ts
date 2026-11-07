@@ -1,10 +1,10 @@
 // What a use case needs to read a request: ActionError and the rules that raise it, finding the task or repo a person
 // named (the one place these messages are worded), and checks on the fields of a request body. A wrong type is the
 // caller's mistake, so each throws ActionError (a 400).
-import type { Db } from '../db/index.ts';
-import type { TaskId } from '../domain/shared/id.ts';
-import type { Repo } from '../domain/repos/repo.ts';
-import type { Task } from '../domain/work/task.ts';
+import type { Db } from '../../db/index.ts';
+import type { TaskId } from '../../domain/shared/id.ts';
+import type { Repo } from '../../domain/repos/repo.ts';
+import type { Task } from '../../domain/work/task.ts';
 
 /** Bad input to a use case. The CLI prints it; the API answers 400. */
 export class ActionError extends Error {}

@@ -4,13 +4,6 @@ import { type PrState, parsePrState } from './pr.ts';
 import { type CheckCounts, type PrCheck, countOf, parseChecks } from './checks.ts';
 import { plural } from '../shared/text.ts';
 
-/** How GitHub folds the PR into the base branch. Squash is the default: one task, one commit. */
-export type MergeMethod = 'squash' | 'merge' | 'rebase';
-export const MERGE_METHODS: MergeMethod[] = ['squash', 'merge', 'rebase'];
-export const DEFAULT_MERGE_METHOD: MergeMethod = 'squash';
-
-export const isMergeMethod = (value: unknown): value is MergeMethod => MERGE_METHODS.includes(value as MergeMethod);
-
 export { type CheckCounts, checksSettled, countChecks } from './checks.ts';
 
 /** What `gh pr view` says about a PR that decides whether and how it merges. */

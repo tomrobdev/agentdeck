@@ -4,13 +4,13 @@
 
 How far the move to a domain model has come, counted from the code. Each number should fall to zero.
 
-| Measure                                                 | Count | Where                                     |
-| ------------------------------------------------------- | ----- | ----------------------------------------- |
-| Flags left in domain entities (stored as numbers)       | 0     |                                           |
-| JSON fields left in domain entities (stored as strings) | 0     |                                           |
-| Runtime imports of adapters from `application/`         | 52    |                                           |
-| Store calls (`db.…`) in `api/` and `cli/`               | 13    |                                           |
-| Folder cycles in `domain/` and `application/`           | 2     | domain: 6 folders; application: 9 folders |
+| Measure                                                 | Count | Where |
+| ------------------------------------------------------- | ----- | ----- |
+| Flags left in domain entities (stored as numbers)       | 0     |       |
+| JSON fields left in domain entities (stored as strings) | 0     |       |
+| Runtime imports of adapters from `application/`         | 52    |       |
+| Store calls (`db.…`) in `api/` and `cli/`               | 13    |       |
+| Folder cycles in `domain/` and `application/`           | 0     |       |
 
 ## Shrinking lists
 
@@ -18,7 +18,7 @@ Each list can only shrink: an entry that stops applying fails `pnpm test`.
 
 | List                                              | Entries |
 | ------------------------------------------------- | ------- |
-| ALLOWED_FOLDER_CYCLES (`scripts/lib/progress.ts`) | 2       |
+| ALLOWED_FOLDER_CYCLES (`scripts/lib/progress.ts`) | 0       |
 | ROW_SHAPED_FIELDS (`scripts/lib/progress.ts`)     | 0       |
 | UNCHECKED rules (`scripts/lib/rules.ts`)          | 5       |
 
@@ -26,5 +26,4 @@ Each list can only shrink: an entry that stops applying fails `pnpm test`.
 
 Folders that import each other, counting runtime and type-only imports (`rule:folder-cycles`).
 
-- `domain/`: `domain/landing`, `domain/operations`, `domain/proposals`, `domain/repos`, `domain/runs`, `domain/work`
-- `application/`: `application`, `application/insights`, `application/landing`, `application/operations`, `application/proposals`, `application/repos`, `application/runs`, `application/scheduler`, `application/work`
+None.

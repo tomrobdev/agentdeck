@@ -569,10 +569,10 @@ test('[migrations-append] the additive check finds renames and drops, in SQL and
 
 /** Module-level state in application/ that is allowed, each with why. Keys are `<file>:<name>`. */
 const ALLOWED_MODULE_STATE: Record<string, string> = {
-  'application/landing/sync.ts:syncing':
+  'application/work/checkout-locks.ts:syncing':
     'the sync lock: a task being synced in this process; the database is the state the processes share',
   'application/proposals/planner.ts:proposing': 'the propose lock: a repo being planned in this process',
-  'application/landing/merge-lock.ts:merging': 'the merge lock: a task being merged in this process',
+  'application/work/checkout-locks.ts:merging': 'the merge lock: a task being merged in this process',
   'application/work/files.ts:changedCache': 'a cache of immutable diff results: the same two commits always differ the same way',
 };
 

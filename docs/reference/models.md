@@ -947,15 +947,6 @@ A sync of a done task under way, as the queue shows it.
 | `lastMessage` | `string \| null`     | The final message of the task's last work run.            |
 | `reviewNote`  | `string \| null`     | The note on the task's latest retry (`latestReviewNote`). |
 
-### UnblockQuestion
-
-What an unblock run left on a task it did not retry (the task's `question`).
-
-| Field      | Type       | Comment |
-| ---------- | ---------- | ------- |
-| `question` | `string`   |         |
-| `options`  | `string[]` |         |
-
 ### WorkerResult
 
 | Field          | Type                   | Comment                                                                       |
@@ -1488,6 +1479,15 @@ What `transition` reads of a task.
 | `path` | `string`          |                  |
 | `type` | `"file" \| "dir"` |                  |
 | `size` | `number \| null`  | bytes, for files |
+
+### UnblockQuestion
+
+What an unblock run left on a task it did not retry (the task's `question`).
+
+| Field      | Type       | Comment |
+| ---------- | ---------- | ------- |
+| `question` | `string`   |         |
+| `options`  | `string[]` |         |
 
 ### Waiting
 

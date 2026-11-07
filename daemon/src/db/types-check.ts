@@ -2,8 +2,8 @@
 // `pnpm typecheck`. Tasks, repos and runs are read through a mapper (mappers.ts), so each row is checked against its mapper; the other
 // tables' rows must still equal their domain type. Columns a domain type leaves out on purpose are named in the Omit.
 import type { PlannerOutcome, PlannerRun } from '../domain/proposals/proposals.ts';
-import type { MergeMethod } from '../domain/landing/merge.ts';
-import type { PrMode, PrState } from '../domain/landing/pr.ts';
+import type { MergeMethod, PrMode } from '../domain/repos/repo.ts';
+import type { PrState } from '../domain/landing/pr.ts';
 import type { Review, ReviewComment } from '../domain/landing/review.ts';
 import type { RunKind, RunOutcome } from '../domain/runs/run.ts';
 import type { TaskEventRow, TaskEventType } from '../domain/work/history.ts';

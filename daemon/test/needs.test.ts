@@ -12,7 +12,7 @@ process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-needs-'));
 const { openDb } = await import('../src/db/index.ts');
 const { isEnvironmentBlock, parseStatus } = await import('../src/domain/runs/run.ts');
 const { canInstallWith, depsRequest, depsRequestError, installArgs } = await import('../src/domain/work/needs.ts');
-const { branchName } = await import('../src/domain/landing/branch.ts');
+const { branchName } = await import('../src/domain/work/branch.ts');
 const { workerSystemPrompt } = await import('../src/domain/runs/prompt.ts');
 
 test('each NEEDS form parses', () => {

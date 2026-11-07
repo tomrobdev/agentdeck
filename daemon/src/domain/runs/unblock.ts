@@ -3,6 +3,7 @@
 import { isConflictReason } from '../landing/sync.ts';
 import { parsePlanWithText } from '../work/plan.ts';
 import type { Repo } from '../repos/repo.ts';
+import type { UnblockQuestion } from '../work/needs.ts';
 import type { BlockedTask, Task, TaskState } from '../work/task.ts';
 import { lastLine } from '../shared/text.ts';
 import type { PromptPlan } from './prompt.ts';
@@ -16,12 +17,6 @@ export const UNBLOCK_MAX_TURNS = 30;
 
 /** The most options a question carries. */
 export const MAX_OPTIONS = 4;
-
-/** What an unblock run left on a task it did not retry (the task's `question`). */
-export interface UnblockQuestion {
-  question: string;
-  options: string[];
-}
 
 /** What an unblock run's final message says: retry with a note, or ask a person. */
 export type UnblockAnswer = { retry: string } | { ask: string; options: string[] };

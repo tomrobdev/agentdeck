@@ -1,7 +1,6 @@
 // What the API sends as JSON text in a task: the dashboard reads it here. The daemon's domain has these as values (the mapper in
 // db/mappers.ts parses them); the API keeps the stored shape. Pure, so the daemon's tests can import it with taskBadges.ts.
-import type { UnblockQuestion } from '../../../daemon/src/domain/runs/unblock.ts';
-import { type Needs, isNeeds } from '../../../daemon/src/domain/work/needs.ts';
+import { type Needs, type UnblockQuestion, isNeeds } from '../../../daemon/src/domain/work/needs.ts';
 
 function parse(json: string | null): unknown {
   if (!json) return null;

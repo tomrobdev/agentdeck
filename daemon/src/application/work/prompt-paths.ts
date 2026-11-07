@@ -6,7 +6,7 @@ import { linkState } from '../../domain/work/link.ts';
 import { matchPath, pathsNamedIn } from '../../domain/work/prompt-paths.ts';
 import type { Task } from '../../domain/work/task.ts';
 import { targetOf } from './dependencies.ts';
-import { requireTask, requireTaskRepo } from '../input.ts';
+import { requireTask, requireTaskRepo } from '../shared/input.ts';
 
 /**
  * Warnings (never errors) for each path the task's prompt names that is not in the commit the worker starts from

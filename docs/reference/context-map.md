@@ -21,31 +21,25 @@ flowchart LR
   domain_insights --> domain_runs
   domain_insights --> domain_shared
   domain_insights --> domain_work
-  domain_landing -.->|cycle| domain_operations
-  domain_landing -->|cycle| domain_repos
-  domain_landing -->|cycle| domain_runs
+  domain_landing --> domain_repos
   domain_landing --> domain_shared
-  domain_landing -.->|cycle| domain_work
   domain_operations -.-> domain_capacity
-  domain_operations -.->|cycle| domain_proposals
+  domain_operations --> domain_landing
+  domain_operations -.-> domain_proposals
   domain_operations --> domain_shared
-  domain_operations -.->|cycle| domain_work
-  domain_proposals -.->|cycle| domain_repos
+  domain_operations -.-> domain_work
+  domain_proposals -.-> domain_repos
   domain_proposals --> domain_shared
-  domain_proposals -->|cycle| domain_work
-  domain_repos -.->|cycle| domain_landing
+  domain_proposals --> domain_work
   domain_repos -.-> domain_shared
-  domain_repos -->|cycle| domain_work
-  domain_runs -->|cycle| domain_landing
-  domain_runs -->|cycle| domain_repos
+  domain_runs --> domain_landing
+  domain_runs --> domain_repos
   domain_runs --> domain_shared
-  domain_runs -->|cycle| domain_work
+  domain_runs --> domain_work
   domain_work -.-> domain_capacity
-  domain_work -.->|cycle| domain_landing
-  domain_work -.->|cycle| domain_runs
+  domain_work -.-> domain_landing
+  domain_work --> domain_repos
   domain_work --> domain_shared
 ```
 
-Cycles:
-
-- `domain/landing` ↔ `domain/operations` ↔ `domain/proposals` ↔ `domain/repos` ↔ `domain/runs` ↔ `domain/work`
+No cycles.

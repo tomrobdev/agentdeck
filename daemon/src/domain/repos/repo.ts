@@ -1,7 +1,19 @@
 // The repo entity. Pure: no I/O.
 import type { RepoId } from '../shared/id.ts';
-import type { MergeMethod } from '../landing/merge.ts';
-import type { PrMode } from '../landing/pr.ts';
+
+/** What the daemon does when a task is done: nothing, open a draft PR, or open a ready PR. */
+export type PrMode = 'off' | 'draft' | 'ready';
+export const PR_MODES: PrMode[] = ['off', 'draft', 'ready'];
+
+/** How GitHub folds the PR into the base branch. Squash is the default: one task, one commit. */
+export type MergeMethod = 'squash' | 'merge' | 'rebase';
+export const MERGE_METHODS: MergeMethod[] = ['squash', 'merge', 'rebase'];
+export const DEFAULT_MERGE_METHOD: MergeMethod = 'squash';
+
+export const isMergeMethod = (value: unknown): value is MergeMethod => MERGE_METHODS.includes(value as MergeMethod);
+
+/** The folder in a task's worktree where AgentDeck keeps its files for the run: its plan and its protected edits. Git ignores it. */
+export const AGENTDECK_FOLDER = '.agentdeck';
 
 export interface Repo {
   id: RepoId;

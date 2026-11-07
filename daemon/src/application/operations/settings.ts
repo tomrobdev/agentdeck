@@ -13,10 +13,10 @@ import { ATTENTION_LIMIT, headline } from '../../domain/operations/headline.ts';
 import type { DaemonState } from '../../domain/operations/health.ts';
 import { type ReloadInput, reloadState, restartWait } from '../../domain/operations/restart.ts';
 import type { Settings } from '../../domain/operations/settings.ts';
-import { flag, list, number, object, refuse, text, whole } from '../input.ts';
+import { flag, list, number, object, refuse, text, whole } from '../shared/input.ts';
 import { startGate } from '../capacity/gate.ts';
 import { notify } from './notifications.ts';
-import { queueWaits } from '../work/queue.ts';
+import { queueWaits } from '../capacity/queue.ts';
 import { runningActivity } from './restart.ts';
 
 export function setPaused(db: Db, paused: boolean): void {

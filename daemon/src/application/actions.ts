@@ -2,16 +2,16 @@
 export { readLog } from '../adapters/run-log.ts';
 // The launchd service the daemon runs under, for the CLI's daemon commands.
 export { install, restart, serviceStatus, start, stop, tailLog, uninstall } from '../adapters/service.ts';
-export { type SyncReport, syncNow } from './landing/sync.ts';
+export { type SyncReport, syncNow } from './runs/sync.ts';
 export { daemonHealth, daemonReport, restartNow } from './operations/doctor.ts';
 export type { Check as HealthCheck } from '../domain/operations/health.ts';
-export { ActionError, onOff } from './input.ts';
+export { ActionError, onOff } from './shared/input.ts';
 export * from './work/files.ts';
 export { type LiveContext, liveContext, repoForPath } from './work/context.ts';
 export { attachPlan, planHtml } from './work/plans.ts';
 export { proposeNow } from './proposals/planner.ts';
 export { pilotStats } from './insights/stats.ts';
-export { mergeAll, mergePreview, mergeTask } from './landing/merge.ts';
+export { closeTaskPr, mergeAll, mergePreview, mergeTask } from './landing/merge.ts';
 export { cancelMergeRequest, requestMerge, requestMerges } from './landing/merge-requests.ts';
 export { setAutoMerge } from './landing/auto-merge.ts';
 export { type FixChecksResult, fixChecks } from './landing/fix-checks.ts';

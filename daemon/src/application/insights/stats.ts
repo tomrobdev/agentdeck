@@ -3,7 +3,7 @@ import type { Db } from '../../db/index.ts';
 import type { RepoId } from '../../domain/shared/id.ts';
 import { type Scorecard, buildScorecard } from '../../domain/insights/scorecard.ts';
 import { type Measures, type StatsReport, measure, measureByRepo, measureByWeek } from '../../domain/insights/stats.ts';
-import { ActionError } from '../input.ts';
+import { ActionError } from '../shared/input.ts';
 
 /** The first-run measures and the rest of the scorecard (interventions, times, quota, PR checks). */
 export interface PilotReport extends StatsReport {

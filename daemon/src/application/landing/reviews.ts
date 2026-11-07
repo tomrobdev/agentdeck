@@ -17,7 +17,7 @@ import {
   reviewKindError,
   reviewReason,
 } from '../../domain/landing/review.ts';
-import { ActionError, number, object, refuse, requireTask, text } from '../input.ts';
+import { ActionError, number, object, refuse, requireTask, text } from '../shared/input.ts';
 import { retryTask } from '../work/tasks.ts';
 
 function requireReview(db: Db, id: ReviewId): ReviewWithComments {

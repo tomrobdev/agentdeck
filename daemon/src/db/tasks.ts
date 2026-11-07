@@ -6,7 +6,8 @@ import { DEFAULTS } from '../config.ts';
 import { type RepoId, type TaskId, asTaskId } from '../domain/shared/id.ts';
 import type { AutoMergeCheck } from '../domain/landing/auto-merge.ts';
 import type { StoredChecks } from '../domain/landing/checks.ts';
-import type { CheckCounts, MergeMethod } from '../domain/landing/merge.ts';
+import type { CheckCounts } from '../domain/landing/merge.ts';
+import type { MergeMethod } from '../domain/repos/repo.ts';
 import { INTERRUPTED, type RunOutcome } from '../domain/runs/run.ts';
 import { MAX_RESTARTS, type TaskEvent, type TaskStatus, fromStatuses, nextStatus, transition } from '../domain/work/lifecycle.ts';
 import type { LinkKind } from '../domain/work/link.ts';
@@ -23,8 +24,7 @@ import {
   isBlocked,
 } from '../domain/work/task.ts';
 import type { AttentionCandidate, AttentionWhy } from '../domain/operations/headline.ts';
-import type { UnblockQuestion } from '../domain/runs/unblock.ts';
-import type { Needs } from '../domain/work/needs.ts';
+import type { Needs, UnblockQuestion } from '../domain/work/needs.ts';
 import { SUMMARY_COLUMNS, TASK_COLUMNS, mapFound, stateColumns, stored, toTask, toTaskSummary } from './mappers.ts';
 import type { Orm } from './orm.ts';
 import { insertOwnPlan, saveOwnPlan } from './plans.ts';
