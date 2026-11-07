@@ -17,6 +17,7 @@ import { isConflicting } from '../../domain/pull-request/conflict.ts';
 import { mergeRequestCheck, mergesNow } from '../../domain/pull-request/merge-request.ts';
 import { buildPrBody, openPrUrl } from '../../domain/pull-request/pr.ts';
 import { mergeReason } from '../../domain/task/history.ts';
+import type { TaskId } from '../../domain/id/id.ts';
 import type { Task } from '../../domain/task/task.ts';
 import { errorMessage } from '../../domain/text.ts';
 import { ActionError, flag, object, requireTask, requireTaskRepo, text } from '../input.ts';
@@ -56,7 +57,7 @@ export interface MergePreview {
   /** One of the problems is a conflict with the base branch, which a resolve run can fix. */
   conflicting: boolean;
   /** Queued tasks that build on this one and so wait for it. */
-  unblocks: { id: number; title: string }[];
+  unblocks: { id: TaskId; title: string }[];
   /** Whether the daemon will merge it on its own, and why not yet; null when auto-merge is off for the task. */
   auto_merge: AutoMergeCheck | null;
   /** What a merge request would do now: `merge` it as asked, `wait` for the PR to be ready, or `never` (a person must act). */
@@ -69,7 +70,7 @@ export interface MergePreview {
 class MergeRefused extends ActionError {
   reasons: string[];
   conflicting: boolean;
-  constructor(id: number, reasons: string[], conflicting: boolean) {
+  constructor(id: TaskId, reasons: string[], conflicting: boolean) {
     super(`can't merge #${id}: ${reasons.join('; ')}`);
     this.reasons = reasons;
     this.conflicting = conflicting;
@@ -77,7 +78,7 @@ class MergeRefused extends ActionError {
 }
 
 /** The task, its repo and its open PR, or an ActionError saying why it can't be merged. */
-export function mergeable(db: Db, id: number) {
+export function mergeable(db: Db, id: TaskId) {
   const task = requireTask(db, id);
   const repo = requireTaskRepo(db, task);
   if (task.status !== 'done') throw new ActionError(`#${id} is ${task.status}; only a done task can be merged`);
@@ -90,7 +91,7 @@ export function mergeable(db: Db, id: number) {
 }
 
 /** Read the PR from GitHub and say what merging it would do. */
-export async function mergePreview(db: Db, id: number): Promise<MergePreview> {
+export async function mergePreview(db: Db, id: TaskId): Promise<MergePreview> {
   const { task, repo, url, cwd } = mergeable(db, id);
   const pr = await github.prDetails(url, cwd, { withFiles: autoMergeOn(task, repo) }).catch((err) => {
     throw new ActionError(`could not read the PR: ${errorMessage(err)}`);
@@ -123,7 +124,7 @@ export async function mergePreview(db: Db, id: number): Promise<MergePreview> {
 export interface MergeResult {
   method: MergeMethod;
   /** Tasks that were waiting on this PR and are free to start. */
-  unblocked: number[];
+  unblocked: TaskId[];
   /** Set when the merge went through but removing the branch or worktree did not. */
   cleanup_error?: string;
 }
@@ -134,7 +135,7 @@ export interface MergeResult {
  * The tasks waiting on it start on the scheduler's next tick. Throws ActionError if the PR can't be merged;
  * a cleanup failure after the merge is returned, not thrown.
  */
-export async function mergeTask(db: Db, id: number, opts: { method?: string; delete_branch?: boolean } = {}): Promise<MergeResult> {
+export async function mergeTask(db: Db, id: TaskId, opts: { method?: string; delete_branch?: boolean } = {}): Promise<MergeResult> {
   const body = object(opts);
   const given = text(body, 'method', { empty: true, raw: true });
   const deleteBranch = flag(body, 'delete_branch') === true;
@@ -158,9 +159,9 @@ export async function mergeTask(db: Db, id: number, opts: { method?: string; del
 
 /** What merging a set of PRs came to: the ones merged, and why each other one was left open. */
 export interface MergeAllResult {
-  merged: ({ id: number } & MergeResult)[];
+  merged: ({ id: TaskId } & MergeResult)[];
   /** `conflicting`: the PR conflicts with the base branch, so a sync may let it merge. */
-  skipped: { id: number; reason: string; conflicting: boolean }[];
+  skipped: { id: TaskId; reason: string; conflicting: boolean }[];
 }
 
 /**
@@ -168,7 +169,7 @@ export interface MergeAllResult {
  * round in which that one merged, so the order the ids come in doesn't matter. One that can't merge stays as it was, with
  * the reason mergeTask refused it. The base moves with every merge; GitHub refuses a PR that then conflicts.
  */
-export async function mergeAll(db: Db, input: { ids: number[] }): Promise<MergeAllResult> {
+export async function mergeAll(db: Db, input: { ids: TaskId[] }): Promise<MergeAllResult> {
   const result: MergeAllResult = { merged: [], skipped: [] };
   let pending = [...new Set(input.ids)];
   // A round with nothing merged frees no one, so the next round tries every PR left, to say why each stays open.

@@ -1,5 +1,6 @@
 // The daemon's headline: what state it is in, and what needs a person. Decided once here, so the dashboard and the tray
 // read it instead of each deciding. Pure: `now` is a parameter (unix seconds).
+import type { TaskId } from '../id/id.ts';
 
 export type HeadlineState = 'paused' | 'rate_limited' | 'hold' | 'working' | 'idle';
 /** Why a task needs a person, in the order the attention list shows them. */
@@ -9,7 +10,7 @@ export const ATTENTION_ORDER: AttentionWhy[] = ['blocked', 'review', 'proposed']
 export const ATTENTION_LIMIT = 5;
 
 export interface AttentionTask {
-  id: number;
+  id: TaskId;
   title: string;
   why: AttentionWhy;
 }

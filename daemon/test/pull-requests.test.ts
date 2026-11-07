@@ -5,6 +5,7 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from '
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, beforeEach, test } from 'node:test';
+import { asTaskId } from '../src/domain/id/id.ts';
 import { stopReasonOf } from '../src/domain/task/task.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-pr-'));
@@ -383,7 +384,10 @@ test('--after waits for the dependency PR to be merged', async () => {
 });
 
 test('--after rejects a task that does not exist, and a failed dependency never releases', async () => {
-  await assert.rejects(() => addTask(db, { repo: 'demo', prompt: 'x', builds_on: [99999] }), /can't build on #99999: no such task/);
+  await assert.rejects(
+    () => addTask(db, { repo: 'demo', prompt: 'x', builds_on: [asTaskId(99999)] }),
+    /can't build on #99999: no such task/,
+  );
   const dep = db.addTask({ repo_id: repo.id, title: 'will fail', prompt: 'x' });
   await addTask(db, { repo: 'demo', prompt: 'never', builds_on: [dep.id] });
   const claimed = db.claimNextTask()!;
@@ -674,7 +678,7 @@ test('mergeTask refuses what cannot be merged and leaves the task as it was', as
   db.applyEvent(queued.id, { type: 'cancel' });
   const noPr = doneTask(db, repo, { title: 'no pr' });
   await assert.rejects(mergeTask(db, noPr.id), /has no pull request/);
-  await assert.rejects(mergeTask(db, 999999), /no such task/);
+  await assert.rejects(mergeTask(db, asTaskId(999999)), /no such task/);
 
   assert.equal(merging.merged.length, 0);
   for (const id of [conflicted.id, t.id]) {

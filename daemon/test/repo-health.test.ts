@@ -5,6 +5,7 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, writeFileSy
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
+import { type TaskId, asTaskId } from '../src/domain/id/id.ts';
 import type { TaskEvent } from '../src/domain/task/lifecycle.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-health-'));
@@ -276,14 +277,14 @@ test('edit changes the fields of a proposed, queued, blocked or failed task', as
 test('edit refuses other statuses, unknown tasks, empty edits and invalid values', async () => {
   const r = repo('edit-refusals');
   const task = db.addTask({ repo_id: r.id, title: 't', prompt: 'p' });
-  const refuses = (id: number, patch: Parameters<typeof editTask>[2], message: RegExp) =>
+  const refuses = (id: TaskId, patch: Parameters<typeof editTask>[2], message: RegExp) =>
     assert.rejects(
       () => editTask(db, id, patch),
       (err) => err instanceof ActionError && message.test(err.message),
       JSON.stringify(patch),
     );
 
-  await refuses(9999, { title: 'x' }, /no such task/);
+  await refuses(asTaskId(9999), { title: 'x' }, /no such task/);
   await refuses(task.id, {}, /nothing to change/);
   await refuses(task.id, { title: '  ' }, /title cannot be empty/);
   await refuses(task.id, { prompt: '' }, /prompt cannot be empty/);

@@ -1,5 +1,6 @@
 // What queued tasks wait for: what stops the whole queue, and what each task waits for.
 import type { Db } from '../../db/index.ts';
+import type { RepoId } from '../../domain/id/id.ts';
 import type { Repo } from '../../domain/repo/repo.ts';
 import type { StartState } from '../../domain/task/link.ts';
 import { type QueueWait, type StartWait, startWait } from '../../domain/task/start.ts';
@@ -7,7 +8,7 @@ import type { Task } from '../../domain/task/task.ts';
 import { queueWait } from './gate.ts';
 
 export interface PausedRepo {
-  id: number;
+  id: RepoId;
   name: string;
   reason: string;
   queued: number;
@@ -31,7 +32,7 @@ export function queueWaits(db: Db): { wait: QueueWait | null; paused_repos: Paus
  */
 export function startWaits(db: Db): (task: Pick<Task, 'status' | 'repo_id'>, dependency: StartState) => StartWait | null {
   const { wait: queue, used, max } = queueWait(db);
-  const repos = new Map<number, Repo>(db.listRepos().map((r) => [r.id, r]));
+  const repos = new Map<RepoId, Repo>(db.listRepos().map((r) => [r.id, r]));
   return (task, dependency) =>
     startWait(task, { queue, repoPaused: repos.get(task.repo_id)?.paused_reason ?? null, dependency, running: used, max });
 }

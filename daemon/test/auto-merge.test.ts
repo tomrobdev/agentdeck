@@ -5,6 +5,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, beforeEach, test } from 'node:test';
+import type { TaskId } from '../src/domain/id/id.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-automerge-'));
 process.env.AGENTDECK_HOME = home;
@@ -306,7 +307,7 @@ test('autoMerge merges one PR per call, skips one that moved on, and tells a ref
   assert.deepEqual(gh.merged, [a.url], 'b waits for the re-read the merge asks for');
 
   mergeError = 'Pull request is not mergeable: the base branch policy prohibits the merge';
-  const told = new Map<number, string>();
+  const told = new Map<TaskId, string>();
   const logs: string[] = [];
   for (let i = 0; i < 3; i++) assert.equal(await autoMerge(db, [{ id: b.id, pr: ready }], { told, log: (m) => logs.push(m) }), null);
   assert.equal(logs.length, 1);

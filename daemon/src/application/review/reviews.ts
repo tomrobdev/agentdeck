@@ -1,6 +1,7 @@
 // Use cases for reviews: a person builds a draft of line comments and an overall note on a task, submits it as a Comment or
 // as Request changes, and comments are answered and resolved. Reviews live only in AgentDeck.
 import type { Db } from '../../db/index.ts';
+import type { ReviewId, TaskId } from '../../domain/id/id.ts';
 import {
   type CommentAction,
   type ReviewComment,
@@ -19,7 +20,7 @@ import {
 import { ActionError, number, object, refuse, requireTask, text } from '../input.ts';
 import { retryTask } from '../task/tasks.ts';
 
-function requireReview(db: Db, id: number): ReviewWithComments {
+function requireReview(db: Db, id: ReviewId): ReviewWithComments {
   const review = db.reviewWithComments(id);
   if (!review) throw new ActionError('no such review');
   return review;
@@ -35,20 +36,20 @@ function requireComment(db: Db, id: number): ReviewComment {
 const reviewOf = (db: Db, commentId: number): ReviewWithComments => requireReview(db, requireComment(db, commentId).review_id);
 
 /** A task's reviews with their comments, oldest first. */
-export function taskReviews(db: Db, taskId: number): ReviewWithComments[] {
+export function taskReviews(db: Db, taskId: TaskId): ReviewWithComments[] {
   requireTask(db, taskId);
   return db.reviewsForTask(taskId);
 }
 
 /** The task's draft review, started if it has none. A task has at most one draft. */
-export function startReview(db: Db, taskId: number): ReviewWithComments {
+export function startReview(db: Db, taskId: TaskId): ReviewWithComments {
   requireTask(db, taskId);
   const draft = db.draftReviewFor(taskId) ?? db.createReview(taskId);
   return requireReview(db, draft.id);
 }
 
 /** Change a draft's overall note. */
-export function editReview(db: Db, id: number, input: { body?: string }): ReviewWithComments {
+export function editReview(db: Db, id: ReviewId, input: { body?: string }): ReviewWithComments {
   const review = requireReview(db, id);
   refuse(draftError(review));
   const body = text(object(input), 'body', { empty: true, raw: true });
@@ -59,7 +60,7 @@ export function editReview(db: Db, id: number, input: { body?: string }): Review
 /** Add a line comment to a draft. `head_commit` is the task's head commit the diff was read at. */
 export function addReviewComment(
   db: Db,
-  reviewId: number,
+  reviewId: ReviewId,
   input: { path: string; line: number; side: string; head_commit: string; body: string },
 ): ReviewWithComments {
   const review = requireReview(db, reviewId);
@@ -90,7 +91,7 @@ export function deleteReviewComment(db: Db, commentId: number): ReviewWithCommen
  * Submit a draft as a Comment or as Request changes. Request changes also sends the task the retry event with the
  * review as its reason (so a done task moves back to queued); if the task can't be retried the review stays a draft.
  */
-export function submitReview(db: Db, id: number, input: { kind: string; body?: string }): ReviewWithComments {
+export function submitReview(db: Db, id: ReviewId, input: { kind: string; body?: string }): ReviewWithComments {
   const review = requireReview(db, id);
   refuse(draftError(review));
   const fields = object(input);

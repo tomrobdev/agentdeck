@@ -1,5 +1,6 @@
 // Is the daemon healthy? Judges facts gathered elsewhere (launchd, the API, git, ps, the log) into one verdict per check,
 // and for each failure the command that fixes it. Pure: `application/daemon/doctor.ts` gathers the facts.
+import type { TaskId } from '../id/id.ts';
 import { plural } from '../text.ts';
 import { type ReloadState, SCHEMA_DIRTY } from './restart.ts';
 
@@ -38,7 +39,7 @@ export interface ProcessFact {
 
 /** A task in running (or being cancelled) and the process of its unfinished run, if any. */
 export interface RunningTaskFact {
-  id: number;
+  id: TaskId;
   /** The recorded pid of its unfinished run; null when there is none or none was recorded yet. */
   pid: number | null;
   /** Whether that process group is alive. */

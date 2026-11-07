@@ -17,22 +17,22 @@ import {
 import { countInterventions } from '../src/domain/run/interventions.ts';
 import { type StatRun, measureByWeek } from '../src/domain/run/stats.ts';
 import { quotaSpends } from '../src/domain/usage/quota.ts';
-import { doneTask, queuedTask } from './fixtures.ts';
+import { asRepoId, asTaskId, doneTask, queuedTask } from './fixtures.ts';
 
 const near = (actual: number | null | undefined, expected: number, eps = 1e-9) =>
   assert.ok(actual !== undefined && actual !== null && Math.abs(actual - expected) < eps, `${actual} is not ${expected}`);
 
 const ev = (o: Partial<ScorecardEvent> & { type: string; at: string }): ScorecardEvent => ({
-  task_id: 1,
-  repo_id: 1,
+  task_id: asTaskId(1),
+  repo_id: asRepoId(1),
   from_status: null,
   to_status: null,
   reason: null,
   ...o,
 });
 const task = (o: Partial<ScorecardTask> = {}): ScorecardTask => ({
-  id: 1,
-  repo_id: 1,
+  id: asTaskId(1),
+  repo_id: asRepoId(1),
   created_at: '2026-10-05 10:00:00',
   auto_merge_from: null,
   pr_checks_opened: null,
@@ -40,8 +40,8 @@ const task = (o: Partial<ScorecardTask> = {}): ScorecardTask => ({
 });
 test('measureByWeek puts a task in the week of its first run, oldest week first', () => {
   const run = (o: Partial<StatRun>): StatRun => ({
-    repo_id: 1,
-    task_id: 1,
+    repo_id: asRepoId(1),
+    task_id: asTaskId(1),
     attempt: 1,
     outcome: 'done',
     started_at: '2026-10-05 10:00:00',
@@ -52,10 +52,10 @@ test('measureByWeek puts a task in the week of its first run, oldest week first'
     ...o,
   });
   const weeks = measureByWeek([
-    run({ task_id: 2, started_at: '2026-10-13 09:00:00', ended_at: '2026-10-13 09:30:00', cost_usd: 3 }),
-    run({ task_id: 1, outcome: 'failed' }),
+    run({ task_id: asTaskId(2), started_at: '2026-10-13 09:00:00', ended_at: '2026-10-13 09:30:00', cost_usd: 3 }),
+    run({ task_id: asTaskId(1), outcome: 'failed' }),
     // the retry begins in the next week but belongs to the week the task began in
-    run({ task_id: 1, attempt: 2, started_at: '2026-10-12 08:00:00', ended_at: '2026-10-12 08:20:00', cost_usd: 2 }),
+    run({ task_id: asTaskId(1), attempt: 2, started_at: '2026-10-12 08:00:00', ended_at: '2026-10-12 08:20:00', cost_usd: 2 }),
   ]);
   assert.deepEqual(
     weeks.map((w) => w.week),
@@ -70,8 +70,8 @@ test('measureByWeek puts a task in the week of its first run, oldest week first'
 });
 
 const row = (o: Partial<ScorecardTaskRow> = {}): ScorecardTaskRow => ({
-  id: 1,
-  repo_id: 1,
+  id: asTaskId(1),
+  repo_id: asRepoId(1),
   created_at: '2026-10-05 10:00:00',
   auto_merge: null,
   repo_auto_merge: false,
@@ -81,9 +81,9 @@ const row = (o: Partial<ScorecardTaskRow> = {}): ScorecardTaskRow => ({
 
 test('countInterventions: only a person event that changes the outcome counts', () => {
   const tasks = new Map([
-    [1, task({ id: 1, auto_merge_from: '' })],
-    [2, task({ id: 2 })],
-    [3, task({ id: 3, auto_merge_from: '2026-10-06 00:00:00' })], // auto-merge known to be on from the 6th
+    [1, task({ id: asTaskId(1), auto_merge_from: '' })],
+    [2, task({ id: asTaskId(2) })],
+    [3, task({ id: asTaskId(3), auto_merge_from: '2026-10-06 00:00:00' })], // auto-merge known to be on from the 6th
   ]);
   const at = '2026-10-05 12:00:00';
   const c = countInterventions(
@@ -100,12 +100,12 @@ test('countInterventions: only a person event that changes the outcome counts', 
       ev({ type: 'edit', from_status: 'failed', to_status: 'failed', at }),
       ev({ type: 'merge', reason: 'squash merge', at }), // auto-merge on for task 1: by hand counts
       ev({ type: 'merge', reason: 'auto-merged (squash)', at }), // the daemon did it
-      ev({ type: 'merge', reason: 'squash merge', task_id: 2, at }), // auto-merge off for task 2: normal
-      ev({ type: 'merge', reason: 'squash merge', task_id: 3, at }), // before auto-merge was known to be on: normal
-      ev({ type: 'merge', reason: 'squash merge', task_id: 3, at: '2026-10-07 09:00:00' }), // after: by hand counts
+      ev({ type: 'merge', reason: 'squash merge', task_id: asTaskId(2), at }), // auto-merge off for task 2: normal
+      ev({ type: 'merge', reason: 'squash merge', task_id: asTaskId(3), at }), // before auto-merge was known to be on: normal
+      ev({ type: 'merge', reason: 'squash merge', task_id: asTaskId(3), at: '2026-10-07 09:00:00' }), // after: by hand counts
       ev({ type: 'approve', from_status: 'proposed', to_status: 'queued', at }),
       ev({ type: 'claim', at }),
-      ev({ type: 'retry', reason: 'orphan', task_id: 99, at }), // a task not in the set
+      ev({ type: 'retry', reason: 'orphan', task_id: asTaskId(99), at }), // a task not in the set
     ],
     tasks,
   );
@@ -185,16 +185,16 @@ test('quotaSpends: rises add up, a reset counts what the new window shows', () =
 
 test("resolveAutoMerge: auto-merge is known to be on from the repo's first merge by the daemon", () => {
   const events = [
-    ev({ repo_id: 1, type: 'merge', reason: 'squash merge', at: '2026-10-01 10:00:00' }), // by hand, before the setting was used
-    ev({ repo_id: 1, type: 'merge', reason: 'auto-merged (squash)', at: '2026-10-08 10:00:00' }),
-    ev({ repo_id: 1, type: 'merge', reason: 'auto-merged (squash)', at: '2026-10-06 10:00:00' }), // the earliest
+    ev({ repo_id: asRepoId(1), type: 'merge', reason: 'squash merge', at: '2026-10-01 10:00:00' }), // by hand, before the setting was used
+    ev({ repo_id: asRepoId(1), type: 'merge', reason: 'auto-merged (squash)', at: '2026-10-08 10:00:00' }),
+    ev({ repo_id: asRepoId(1), type: 'merge', reason: 'auto-merged (squash)', at: '2026-10-06 10:00:00' }), // the earliest
   ];
   const from = (o: Partial<ScorecardTaskRow>) => resolveAutoMerge([row(o)], events)[0].auto_merge_from;
   assert.equal(from({ repo_auto_merge: true }), '2026-10-06 10:00:00');
   assert.equal(from({ repo_auto_merge: true, auto_merge: false }), null); // the task opted out
   assert.equal(from({ repo_auto_merge: false, auto_merge: true }), ''); // the task opted in: always
   assert.equal(from({ repo_auto_merge: false }), null);
-  assert.equal(from({ repo_id: 2, repo_auto_merge: true }), null); // on, but nothing merged by the daemon yet
+  assert.equal(from({ repo_id: asRepoId(2), repo_auto_merge: true }), null); // on, but nothing merged by the daemon yet
 });
 
 test('parseSince: a date, or a date and time, as a sqlite stamp', () => {
@@ -211,27 +211,67 @@ test('buildScorecard: per repo, per week, with --since', () => {
   // Task 1 (repo 1, week 1): queued 10, ran 30, review 120, checks green. Task 2 (repo 1, week 1): queued 30, ran 60, no PR.
   // Task 3 (repo 2, week 2): queued 20, ran 90, review 30, checks failing.
   const tasks = [
-    row({ id: 1, repo_id: 1, created_at: '2026-10-05 10:00:00', pr_checks_opened: { total: 2, failing: 0, pending: 0 } }),
-    row({ id: 2, repo_id: 1, created_at: '2026-10-06 10:00:00' }),
-    row({ id: 3, repo_id: 2, created_at: '2026-10-12 10:00:00', pr_checks_opened: { total: 2, failing: 1, pending: 0 } }),
+    row({
+      id: asTaskId(1),
+      repo_id: asRepoId(1),
+      created_at: '2026-10-05 10:00:00',
+      pr_checks_opened: { total: 2, failing: 0, pending: 0 },
+    }),
+    row({ id: asTaskId(2), repo_id: asRepoId(1), created_at: '2026-10-06 10:00:00' }),
+    row({
+      id: asTaskId(3),
+      repo_id: asRepoId(2),
+      created_at: '2026-10-12 10:00:00',
+      pr_checks_opened: { total: 2, failing: 1, pending: 0 },
+    }),
   ];
   const life = (id: number, repo_id: number, day: string, queued: number, ran: number, review?: number): ScorecardEvent[] => {
     const at = (m: number) => new Date(Date.parse(`${day}T10:00:00Z`) + m * 60_000).toISOString().slice(0, 19).replace('T', ' ');
     return [
-      ev({ task_id: id, repo_id, type: 'created', to_status: 'queued', at: at(0) }),
-      ev({ task_id: id, repo_id, type: 'claim', from_status: 'queued', to_status: 'running', at: at(queued) }),
-      ev({ task_id: id, repo_id, type: 'finish', from_status: 'running', to_status: 'done', at: at(queued + ran) }),
+      ev({ task_id: asTaskId(id), repo_id: asRepoId(repo_id), type: 'created', to_status: 'queued', at: at(0) }),
+      ev({ task_id: asTaskId(id), repo_id: asRepoId(repo_id), type: 'claim', from_status: 'queued', to_status: 'running', at: at(queued) }),
+      ev({
+        task_id: asTaskId(id),
+        repo_id: asRepoId(repo_id),
+        type: 'finish',
+        from_status: 'running',
+        to_status: 'done',
+        at: at(queued + ran),
+      }),
       ...(review === undefined
         ? []
-        : [ev({ task_id: id, repo_id, type: 'merge', from_status: 'done', to_status: 'done', at: at(queued + ran + review) })]),
+        : [
+            ev({
+              task_id: asTaskId(id),
+              repo_id: asRepoId(repo_id),
+              type: 'merge',
+              from_status: 'done',
+              to_status: 'done',
+              at: at(queued + ran + review),
+            }),
+          ]),
     ];
   };
   const events = [
     ...life(1, 1, '2026-10-05', 10, 30, 120),
     ...life(2, 1, '2026-10-06', 30, 60),
     ...life(3, 2, '2026-10-12', 20, 90, 30),
-    ev({ task_id: 2, repo_id: 1, type: 'mark_done', from_status: 'blocked', to_status: 'done', at: '2026-10-07 09:00:00' }),
-    ev({ task_id: 3, repo_id: 2, type: 'cancel', from_status: 'queued', to_status: 'cancelled', at: '2026-10-13 09:00:00' }),
+    ev({
+      task_id: asTaskId(2),
+      repo_id: asRepoId(1),
+      type: 'mark_done',
+      from_status: 'blocked',
+      to_status: 'done',
+      at: '2026-10-07 09:00:00',
+    }),
+    ev({
+      task_id: asTaskId(3),
+      repo_id: asRepoId(2),
+      type: 'cancel',
+      from_status: 'queued',
+      to_status: 'cancelled',
+      at: '2026-10-13 09:00:00',
+    }),
   ];
   const samples = [
     { utilization: 0.1, resets_at: 1, observed_at: '2026-10-05 09:00:00' },

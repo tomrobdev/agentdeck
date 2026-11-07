@@ -19,7 +19,7 @@ const { run } = useActions();
 // change to the links refreshes it through `run`.
 const tasksQ = useQuery(tasksQuery());
 const all = computed<TaskSummary[]>(() => tasksQ.data.value ?? []);
-const byId = computed(() => new Map(all.value.map((t) => [t.id, t])));
+const byId = computed(() => new Map<number, TaskSummary>(all.value.map((t) => [t.id, t])));
 // The task moved or its links did: the states shown for them may have too.
 watch(
   () => [props.task.updated_at, JSON.stringify(props.task.links), JSON.stringify(props.task.dependents)],

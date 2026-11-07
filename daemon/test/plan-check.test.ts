@@ -1,5 +1,6 @@
 // Linked plan steps a run leaves unfinished: a warning event, a badge flag, and a checklist in the PR body.
 import assert from 'node:assert/strict';
+import type { TaskId } from '../src/domain/id/id.ts';
 import { execFileSync } from 'node:child_process';
 import { chmodSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -96,7 +97,7 @@ github.createPr = async (pr) => {
   return `https://github.com/acme/demo/pull/${bodies.length}`;
 };
 
-const unfinishedEvents = (id: number) => db.eventsForTask(id).filter((e) => e.type === 'plan_unfinished');
+const unfinishedEvents = (id: TaskId) => db.eventsForTask(id).filter((e) => e.type === 'plan_unfinished');
 
 test('a done run with every linked step finished records no event', async () => {
   const t = db.addTask({ repo_id: repo.id, title: 'finished', prompt: 'FAKE_DONE x', own_plan: plan('done', 'skipped') });

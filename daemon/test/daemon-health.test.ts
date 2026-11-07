@@ -3,6 +3,12 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import type { RunningTaskFact } from '../src/domain/daemon/health.ts';
+import { type TaskId, asTaskId } from '../src/domain/id/id.ts';
+
+/** A running task's facts with its id as a plain number, which `withTaskId` makes an id. */
+type LooseTaskFact = Omit<RunningTaskFact, 'id'> & { id: number };
+const withTaskId = (f: LooseTaskFact): RunningTaskFact => ({ ...f, id: asTaskId(f.id) });
 
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-health-'));
 
@@ -131,7 +137,7 @@ test('processes: a group that outlived its run is a stray; one of a running run 
 
 test('tasks, daemon up: its own runs are healthy in setup, sync and tests; one older than the daemon with no claude is dead', () => {
   // The daemon (state()) started 3 hours before NOW.
-  const tasks = (...t: import('../src/domain/daemon/health.ts').RunningTaskFact[]) => h.checkTasks({ now: NOW, api: state(), tasks: t });
+  const tasks = (...t: LooseTaskFact[]) => h.checkTasks({ now: NOW, api: state(), tasks: t.map(withTaskId) });
   const working = { id: 1, pid: 10, alive: true, runAgeSeconds: 500 };
   const inSetup = { id: 2, pid: null, alive: false, runAgeSeconds: 600 };
   const inTests = { id: 3, pid: 11, alive: false, runAgeSeconds: 900 };
@@ -152,7 +158,7 @@ test('tasks, daemon up: its own runs are healthy in setup, sync and tests; one o
 });
 
 test('tasks, daemon down: a dead process or a pid overdue fails; a fresh run without a pid yet does not', () => {
-  const tasks = (...t: import('../src/domain/daemon/health.ts').RunningTaskFact[]) => h.checkTasks({ now: NOW, api: null, tasks: t });
+  const tasks = (...t: LooseTaskFact[]) => h.checkTasks({ now: NOW, api: null, tasks: t.map(withTaskId) });
   const ok = { id: 1, pid: 10, alive: true, runAgeSeconds: 500 };
   assert.equal(tasks(ok).ok, true);
   assert.match(tasks(ok).reason, /1 task running, each with a live process/);
@@ -224,7 +230,7 @@ test('gatherHealth reads runs and tasks from the database and their liveness fro
   const finished = t('finished');
   const live = t('live');
   const dead = t('dead');
-  const runOf = (task: number, pid: number) => {
+  const runOf = (task: TaskId, pid: number) => {
     const id = db.startRun(task, 1, '/tmp/log');
     db.setRunPid(id, pid);
     return id;

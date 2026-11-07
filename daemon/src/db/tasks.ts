@@ -3,6 +3,7 @@ import { type SQL, and, asc, count, desc, eq, exists, inArray, isNotNull, isNull
 import { type AnySQLiteColumn, alias } from 'drizzle-orm/sqlite-core';
 import type { DatabaseSync } from 'node:sqlite';
 import { DEFAULTS } from '../config.ts';
+import { type RepoId, type TaskId, asTaskId } from '../domain/id/id.ts';
 import type { AutoMergeCheck } from '../domain/pull-request/auto-merge.ts';
 import type { StoredChecks } from '../domain/pull-request/checks.ts';
 import type { CheckCounts, MergeMethod } from '../domain/pull-request/merge.ts';
@@ -109,13 +110,13 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     );
   const countWhere = (where: SQL | undefined) => orm.select({ n: count() }).from(tasks).where(where).get()?.n ?? 0;
 
-  const getTask = (id: number): Task | undefined => mapFound(orm.select(TASK_COLUMNS).from(tasks).where(eq(tasks.id, id)).get(), toTask);
+  const getTask = (id: TaskId): Task | undefined => mapFound(orm.select(TASK_COLUMNS).from(tasks).where(eq(tasks.id, id)).get(), toTask);
 
   /**
    * Touch a task that is in one of `statuses` and record a history row of `type` for it, which leaves the status as it is.
    * Returns false if the task is missing or in another status.
    */
-  const noteEvent = (id: number, statuses: TaskStatus[], type: 'sync' | 'plan_unfinished', reason: string): boolean =>
+  const noteEvent = (id: TaskId, statuses: TaskStatus[], type: 'sync' | 'plan_unfinished', reason: string): boolean =>
     atomically(db, () => {
       const row = orm
         .update(tasks)
@@ -137,7 +138,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
    * does not undo a change made meanwhile.
    */
   const applyEvent = (
-    id: number,
+    id: TaskId,
     event: TaskEvent,
     opts: { reason?: string | null; needs?: Needs | null; onlyFrom?: TaskStatus[] } = {},
   ): Task | undefined => {
@@ -168,7 +169,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
 
   return {
     addTask(n: {
-      repo_id: number;
+      repo_id: RepoId;
       title: string;
       prompt: string;
       priority?: number;
@@ -178,9 +179,9 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       status?: 'queued' | 'proposed';
       source?: 'manual' | 'planner';
       /** Links the task starts with; the caller has checked them (a new task can't make a cycle). */
-      links?: { on: number; kind: LinkKind }[];
+      links?: { on: TaskId; kind: LinkKind }[];
       /** The task whose plan this one follows. */
-      plan_task?: number | null;
+      plan_task?: TaskId | null;
       plan_steps?: string[] | null;
       /** A plan for the new task to own and follow (the caller has parsed it): stored under its numbered name, and linked. */
       own_plan?: string;
@@ -203,7 +204,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
             plan_steps: stored({ plan_steps: n.plan_steps ?? null }).plan_steps,
           })
           .run();
-        const id = Number(info.lastInsertRowid);
+        const id = asTaskId(Number(info.lastInsertRowid));
         if (n.own_plan !== undefined) {
           insertOwnPlan(orm, id, n.own_plan, 'attached');
           orm.update(tasks).set({ plan_task: id }).where(eq(tasks.id, id)).run();
@@ -219,18 +220,18 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     listTasks(): Task[] {
       return orm.select(TASK_COLUMNS).from(tasks).where(inActiveRepo(tasks.repo_id)).orderBy(desc(tasks.id)).all().map(toTask);
     },
-    tasksForRepo(repo_id: number, limit = 40): Task[] {
+    tasksForRepo(repo_id: RepoId, limit = 40): Task[] {
       return orm.select(TASK_COLUMNS).from(tasks).where(eq(tasks.repo_id, repo_id)).orderBy(desc(tasks.id)).limit(limit).all().map(toTask);
     },
     /** Tasks of a repo that still need work or a decision; the planner waits until there are none. */
-    countOpen(repo_id: number): number {
+    countOpen(repo_id: RepoId): number {
       return countWhere(and(eq(tasks.repo_id, repo_id), inArray(tasks.status, OPEN_STATUSES)));
     },
     countRunning(): number {
       return countWhere(inArray(tasks.status, RUNNING_STATUSES));
     },
     /** The tasks with a live run, oldest first: what a restart at once would requeue. */
-    runningTasks(): { id: number; title: string }[] {
+    runningTasks(): { id: TaskId; title: string }[] {
       return orm
         .select({ id: tasks.id, title: tasks.title })
         .from(tasks)
@@ -311,7 +312,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
      * reason is the question. Guarded like every task write: only a blocked task, so a retry or a cancel made while the
      * run went is never undone. Returns false if the task was not blocked.
      */
-    recordQuestion(id: number, question: UnblockQuestion, reason: string): boolean {
+    recordQuestion(id: TaskId, question: UnblockQuestion, reason: string): boolean {
       return atomically(db, () => {
         const res = orm
           .update(tasks)
@@ -328,7 +329,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
      * (all tasks when omitted). On the first page (no `before`) every active task is included on top
      * of the limit, so views of in-flight work stay complete. Later pages hold older tasks only.
      */
-    listTaskSummaries(opts: { status?: TaskStatus; limit: number; before?: number }): TaskSummary[] {
+    listTaskSummaries(opts: { status?: TaskStatus; limit: number; before?: TaskId }): TaskSummary[] {
       const { status, limit, before } = opts;
       const ofStatus = status === undefined ? undefined : eq(tasks.status, status);
       const page = orm
@@ -399,9 +400,9 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
      * and the edit names `plan`.
      */
     editTask(
-      id: number,
+      id: TaskId,
       fields: Partial<Pick<Task, 'title' | 'prompt' | 'priority' | 'model' | 'max_turns' | 'max_attempts'>> & {
-        plan_task?: number | null;
+        plan_task?: TaskId | null;
         plan_steps?: string[] | null;
       },
       opts: { ownPlan?: string } = {},
@@ -430,7 +431,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
      * session of the task or of a task following the plan starts afresh (`editsSinceCutOff`). Guarded: only a task in
      * PLAN_ATTACHABLE_STATUSES. Returns the stored plan, or undefined if the task is missing or in another status.
      */
-    attachOwnPlan(id: number, html: string): TaskPlan | undefined {
+    attachOwnPlan(id: TaskId, html: string): TaskPlan | undefined {
       return atomically(db, () => {
         const row = orm
           .update(tasks)
@@ -445,7 +446,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       });
     },
     /** Where a task's work is checked out. Not a status, so unguarded. */
-    setCheckout(id: number, fields: { branch?: string | null; worktree?: string | null }): void {
+    setCheckout(id: TaskId, fields: { branch?: string | null; worktree?: string | null }): void {
       if (Object.keys(fields).length === 0) return;
       orm
         .update(tasks)
@@ -454,7 +455,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         .run();
     },
     /** Mark a sync of the task's branch as running (`syncing_since`), or clear the mark. Not a status, so unguarded. */
-    setSyncing(id: number, on: boolean): void {
+    setSyncing(id: TaskId, on: boolean): void {
       orm
         .update(tasks)
         .set({ syncing_since: on ? NOW_SQL : null })
@@ -462,12 +463,12 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         .run();
     },
     /** Whether a sync of the task's branch is marked as running, by any process. */
-    hasSyncMarker(id: number): boolean {
+    hasSyncMarker(id: TaskId): boolean {
       const row = orm.select({ since: tasks.syncing_since }).from(tasks).where(eq(tasks.id, id)).get();
       return row?.since != null;
     },
     /** Whether the daemon may merge the task's PR on its own: true, false, or null for the repo's setting. Not a status, so unguarded. */
-    setAutoMerge(id: number, value: boolean | null): Task | undefined {
+    setAutoMerge(id: TaskId, value: boolean | null): Task | undefined {
       return mapFound(
         orm
           .update(tasks)
@@ -483,7 +484,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
      * Keep the PR refresh's latest auto-merge check (JSON { verdict, reasons }) on a task, or clear it with null.
      * Only a done task whose PR is open has one, so a merge or a close recorded meanwhile is never followed by a stale check.
      */
-    setAutoMergeCheck(id: number, check: AutoMergeCheck | null): boolean {
+    setAutoMergeCheck(id: TaskId, check: AutoMergeCheck | null): boolean {
       const res = orm
         .update(tasks)
         .set({ auto_merge_check: check && JSON.stringify(check), auto_merge_checked_at: check === null ? null : NOW_SQL })
@@ -495,7 +496,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
      * Record a person's request to merge the task's PR once it is ready. Not a status, but guarded like the merge it asks
      * for: only a done task whose PR is open. A new request starts without a check. Returns false if it was not.
      */
-    requestMerge(id: number, method: MergeMethod): boolean {
+    requestMerge(id: TaskId, method: MergeMethod): boolean {
       const res = orm
         .update(tasks)
         .set({ merge_requested_at: NOW_SQL, merge_request_method: method, merge_request_check: null, updated_at: NOW_SQL })
@@ -504,7 +505,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       return changed(res);
     },
     /** Drop a task's merge request. Returns false if it had none. */
-    clearMergeRequest(id: number): boolean {
+    clearMergeRequest(id: TaskId): boolean {
       const res = orm
         .update(tasks)
         .set({ ...NO_MERGE_REQUEST, updated_at: NOW_SQL })
@@ -516,7 +517,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
      * Keep the PR refresh's latest merge request check (JSON { verdict, reasons }) on a task that still has the request.
      * Only a done task whose PR is open, like setAutoMergeCheck: a check finished after a conflict blocked it is dropped.
      */
-    setMergeRequestCheck(id: number, check: AutoMergeCheck): boolean {
+    setMergeRequestCheck(id: TaskId, check: AutoMergeCheck): boolean {
       const res = orm
         .update(tasks)
         .set({ merge_request_check: JSON.stringify(check) })
@@ -528,7 +529,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
      * Keep a done task's open PR's checks as they were the first time they settled (`pr_checks_opened`).
      * Written once: returns false when the PR is not open, or already has them.
      */
-    recordPrChecksOpened(id: number, checks: CheckCounts): boolean {
+    recordPrChecksOpened(id: TaskId, checks: CheckCounts): boolean {
       const res = orm
         .update(tasks)
         .set({ pr_checks_opened: JSON.stringify(checks) })
@@ -540,7 +541,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
      * Keep the PR refresh's latest checks (JSON StoredChecks) on a task. Only a done task whose PR is open, like
      * setAutoMergeCheck: checks read while a merge or a close was recorded are dropped. Returns false if it was not.
      */
-    setPrChecks(id: number, checks: StoredChecks): boolean {
+    setPrChecks(id: TaskId, checks: StoredChecks): boolean {
       const res = orm
         .update(tasks)
         .set({ pr_checks: JSON.stringify(checks) })
@@ -554,7 +555,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
      * but an open one (and needs a done task), a close or a sighting only moves an open PR. A merge recorded in
      * between is therefore never undone. Returns false if the task was not in a state the change applies to.
      */
-    recordPr(id: number, e: PrEvent): boolean {
+    recordPr(id: TaskId, e: PrEvent): boolean {
       const notOpenAndDone = and(or(isNull(tasks.pr_state), not(prOpen)), eq(tasks.status, 'done'));
       const isOpen = prOpen;
       const reason = prEventReason(e);
@@ -590,7 +591,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
      * Record that a done task's PR was merged: the PR state, the method and a history row, together.
      * Guarded like every task write: only a done task whose PR is open. Returns false if it was not.
      */
-    recordMerge(id: number, method: MergeMethod, reason: string, checks?: CheckCounts): boolean {
+    recordMerge(id: TaskId, method: MergeMethod, reason: string, checks?: CheckCounts): boolean {
       return atomically(db, () => {
         const res = orm
           .update(tasks)
@@ -613,13 +614,13 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
      * Record a sync that changed a task's branch: a history row, no status change.
      * Guarded like every task write: only a running or done task. Returns false if it was not.
      */
-    recordSync(id: number, reason: string): boolean {
+    recordSync(id: TaskId, reason: string): boolean {
       return noteEvent(id, ['running', 'done'], 'sync', reason);
     },
     /**
      * Record that a run left linked plan steps unfinished: a history row, no status change. Only a running task.
      */
-    recordPlanUnfinished(id: number, reason: string): boolean {
+    recordPlanUnfinished(id: TaskId, reason: string): boolean {
       return noteEvent(id, ['running'], 'plan_unfinished', reason);
     },
     /**
@@ -630,10 +631,10 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
      * unfinished run (a done task's resolve run, a blocked task's unblock run) ends `interrupted`. Returns how many were
      * requeued and the ids of those failed.
      */
-    recoverOrphans(): { requeued: number; failed: number[] } {
+    recoverOrphans(): { requeued: number; failed: TaskId[] } {
       // Syncs run only in the daemon, so any marker left over belongs to a sync that died with it.
       orm.update(tasks).set({ syncing_since: null }).where(isNotNull(tasks.syncing_since)).run();
-      const endRuns = (outcome: RunOutcome, task_id?: number) =>
+      const endRuns = (outcome: RunOutcome, task_id?: TaskId) =>
         orm
           .update(runs)
           .set({ ended_at: NOW_SQL, outcome, result_text: 'daemon restarted' })
@@ -645,7 +646,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         .where(isNull(plannerRuns.ended_at))
         .run();
       let requeued = 0;
-      const failed: number[] = [];
+      const failed: TaskId[] = [];
       const orphans = orm
         .select({ id: tasks.id, restarts: tasks.restarts })
         .from(tasks)

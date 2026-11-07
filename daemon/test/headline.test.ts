@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { asTaskId } from '../src/domain/id/id.ts';
 import { type AttentionCandidate, type HeadlineFacts, headline } from '../src/domain/daemon/headline.ts';
 
 const NOW = 1_800_000_000;
@@ -44,7 +45,12 @@ test('need_you adds proposed, blocked and review', () => {
 });
 
 test('attention: blocked, then review, then proposed, each by priority then id, at most five', () => {
-  const c = (id: number, why: AttentionCandidate['why'], priority = 0): AttentionCandidate => ({ id, title: `t${id}`, why, priority });
+  const c = (id: number, why: AttentionCandidate['why'], priority = 0): AttentionCandidate => ({
+    id: asTaskId(id),
+    title: `t${id}`,
+    why,
+    priority,
+  });
   const attention = [
     c(1, 'proposed', 90),
     c(2, 'review', 10),

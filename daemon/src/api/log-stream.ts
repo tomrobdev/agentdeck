@@ -2,6 +2,7 @@
 import { closeSync, existsSync, openSync, readSync, statSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Db } from '../db/index.ts';
+import type { TaskId } from '../domain/id/id.ts';
 import { parseLogLine } from '../domain/run/log.ts';
 import { pickRun } from '../domain/run/run.ts';
 
@@ -12,7 +13,7 @@ export function streamLog(
   db: Db,
   req: IncomingMessage,
   res: ServerResponse,
-  taskId: number,
+  taskId: TaskId,
   pick: { attempt?: number; run?: number } = {},
 ): void {
   const run = pickRun(db.runsForTask(taskId), pick);

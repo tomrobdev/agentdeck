@@ -72,7 +72,7 @@ export function graphTasks(all: TaskSummary[], shown: TaskSummary[], showFinishe
 
 /** The tasks a stuck task keeps from starting, and the stuck roots under them: outlined in the blocked colour. */
 export function stuckSet(tasks: TaskSummary[]): Set<number> {
-  const byId = new Map(tasks.map((t) => [t.id, t]));
+  const byId = new Map<number, TaskSummary>(tasks.map((t) => [t.id, t]));
   const set = new Set<number>();
   const mark = (id: number) => {
     if (set.has(id)) return;

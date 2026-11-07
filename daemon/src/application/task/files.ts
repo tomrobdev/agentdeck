@@ -2,6 +2,7 @@
 // All git reads run in the repo's main checkout, which shares refs with the task worktrees.
 import { branchCommit, changedFiles, commitsBetween, diffBase, filePatch, listTree, objectAt, readFile } from '../../adapters/git.ts';
 import type { Db } from '../../db/index.ts';
+import type { TaskId } from '../../domain/id/id.ts';
 import {
   type ChangedFile,
   type Changes,
@@ -20,7 +21,7 @@ import type { Repo } from '../../domain/repo/repo.ts';
 import { ActionError, requireTask, requireTaskRepo } from '../input.ts';
 
 /** The task's repo and the commit its branch is at. */
-async function resolveHead(db: Db, id: number): Promise<{ repo: Repo; head: string }> {
+async function resolveHead(db: Db, id: TaskId): Promise<{ repo: Repo; head: string }> {
   const task = requireTask(db, id);
   const repo = requireTaskRepo(db, task);
   const head = task.checkout?.branch ? await branchCommit(repo.path, task.checkout.branch) : null;
@@ -36,13 +37,13 @@ async function baseOf(repo: Repo, head: string): Promise<{ ref: string; sha: str
 }
 
 /** Plus where that branch left the base branch. */
-async function taskRefs(db: Db, id: number): Promise<{ repo: Repo; head: string; base: { ref: string; sha: string } }> {
+async function taskRefs(db: Db, id: TaskId): Promise<{ repo: Repo; head: string; base: { ref: string; sha: string } }> {
   const { repo, head } = await resolveHead(db, id);
   return { repo, head, base: await baseOf(repo, head) };
 }
 
 /** The commit a file ref names; only `base` needs the merge-base lookup. */
-async function resolveRef(db: Db, id: number, ref: FileRef): Promise<{ repo: Repo; sha: string }> {
+async function resolveRef(db: Db, id: TaskId, ref: FileRef): Promise<{ repo: Repo; sha: string }> {
   if (ref === 'head') {
     const { repo, head } = await resolveHead(db, id);
     return { repo, sha: head };
@@ -81,7 +82,7 @@ export function parseFileRef(input: string | null | undefined): FileRef {
   return input as FileRef;
 }
 
-export async function taskChanges(db: Db, id: number): Promise<Changes> {
+export async function taskChanges(db: Db, id: TaskId): Promise<Changes> {
   const { repo, head, base } = await taskRefs(db, id);
   const [files, commits] = await Promise.all([changedFilesCached(repo.path, base.sha, head), commitsBetween(repo.path, base.sha, head)]);
   return { base_ref: base.ref, base: base.sha, head, files, commits };
@@ -107,7 +108,7 @@ export async function measureBranch(repo: Repo, branch: string): Promise<AutoMer
 }
 
 /** The patch of one changed file, cut at PATCH_LIMIT. */
-export async function taskDiff(db: Db, id: number, rawPath: string | null): Promise<FilePatch> {
+export async function taskDiff(db: Db, id: TaskId, rawPath: string | null): Promise<FilePatch> {
   const p = path(rawPath);
   const { repo, head, base } = await taskRefs(db, id);
   const file = (await changedFilesCached(repo.path, base.sha, head)).find((f) => f.path === p);
@@ -117,7 +118,7 @@ export async function taskDiff(db: Db, id: number, rawPath: string | null): Prom
 }
 
 /** One level of a folder at head or base, folders first. */
-export async function taskTree(db: Db, id: number, rawRef: string | null, rawPath: string | null): Promise<Tree> {
+export async function taskTree(db: Db, id: TaskId, rawRef: string | null, rawPath: string | null): Promise<Tree> {
   const ref = parseFileRef(rawRef);
   const dir = path(rawPath, { allowRoot: true });
   const { repo, sha } = await resolveRef(db, id, ref);
@@ -126,7 +127,7 @@ export async function taskTree(db: Db, id: number, rawRef: string | null, rawPat
 }
 
 /** A file at head or base. Text is cut at TEXT_LIMIT; a binary file has no text. */
-export async function taskFile(db: Db, id: number, rawRef: string | null, rawPath: string | null): Promise<FileContent> {
+export async function taskFile(db: Db, id: TaskId, rawRef: string | null, rawPath: string | null): Promise<FileContent> {
   const ref = parseFileRef(rawRef);
   const p = path(rawPath);
   const { repo, sha } = await resolveRef(db, id, ref);

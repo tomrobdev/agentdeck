@@ -1,5 +1,6 @@
 // The rest of the pilot scorecard (docs/pilot/scorecard.md), computed from plain rows: interventions, time queued,
 // running and in review, quota spent and PRs green on CI. Pure: no I/O. The first-run measures are in stats.ts.
+import type { RepoId, TaskId } from '../id/id.ts';
 import type { CheckCounts } from '../pull-request/checks.ts';
 import { type QuotaSample, quotaSpends } from '../usage/quota.ts';
 import { isAutoMergeReason } from '../task/history.ts';
@@ -15,8 +16,8 @@ export const SCORECARD_TARGETS = { first_run_rate: 0.8, interventions: 0, pr_gre
 
 /** One row of a task's history (`task_events`), with the task's repo. */
 export interface ScorecardEvent {
-  task_id: number;
-  repo_id: number;
+  task_id: TaskId;
+  repo_id: RepoId;
   type: string;
   from_status: string | null;
   to_status: string | null;
@@ -26,8 +27,8 @@ export interface ScorecardEvent {
 
 /** The fields of a task the scorecard reads, as the database has them. */
 export interface ScorecardTaskRow {
-  id: number;
-  repo_id: number;
+  id: TaskId;
+  repo_id: RepoId;
   created_at: string;
   /** The task's own auto-merge setting; null follows the repo. */
   auto_merge: boolean | null;
@@ -145,7 +146,7 @@ export interface ScorecardInput {
   tasks: ScorecardTaskRow[];
   events: ScorecardEvent[];
   samples: QuotaSample[];
-  repoName: (id: number) => string;
+  repoName: (id: RepoId) => string;
   /** Only tasks created, interventions made and quota seen at or after this stamp ("YYYY-MM-DD HH:MM:SS"). */
   since?: string;
   by?: 'week';

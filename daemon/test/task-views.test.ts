@@ -1,5 +1,6 @@
 // What building the task list and a task's detail costs: queries that don't grow with the tasks, and no git for a running task.
 import assert from 'node:assert/strict';
+import type { TaskId } from '../src/domain/id/id.ts';
 import { chmodSync, existsSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -37,7 +38,7 @@ function statements(db: TestDb, fn: () => void): number {
 function chained(n: number) {
   const db = openDb(':memory:');
   const repo = db.addRepo({ name: 'demo', path: '/tmp/demo', base_branch: 'main' });
-  const ids: number[] = [];
+  const ids: TaskId[] = [];
   for (let i = 0; i < n; i++) {
     const t = db.addTask({ repo_id: repo.id, title: `t${i}`, prompt: 'p' });
     if (i >= 1) db.addLink({ task_id: t.id, on: ids[i - 1], kind: 'builds_on' });
@@ -62,10 +63,10 @@ test("the list works out each task's start state once, for both its waiting and 
   const db = chained(4);
   db.setPaused(false);
   const index = loadedLinks(db);
-  const reads = new Map<number, number>();
+  const reads = new Map<TaskId, number>();
   const links = {
     ...index,
-    linksOf: (id: number) => {
+    linksOf: (id: TaskId) => {
       reads.set(id, (reads.get(id) ?? 0) + 1);
       return index.linksOf(id);
     },

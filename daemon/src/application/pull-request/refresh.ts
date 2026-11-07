@@ -1,6 +1,7 @@
 // The PR refresh: keep the state of open PRs fresh, and say which ones conflict or are ready to merge.
 import { github } from '../../adapters/github.ts';
 import type { Db } from '../../db/index.ts';
+import type { TaskId } from '../../domain/id/id.ts';
 import type { PrDetails } from '../../domain/pull-request/merge.ts';
 import { type AutoMergeCheck, autoMergeCheck, autoMergeOn } from '../../domain/pull-request/auto-merge.ts';
 import { checksFailedNotification, checksSettled, nextChecks } from '../../domain/pull-request/checks.ts';
@@ -24,7 +25,7 @@ export function prCwd(db: Db, task: Task): string {
 }
 
 /** Whether the last run that ran the tests passed them; null when none did. */
-export function lastTestsPassed(db: Db, id: number): boolean | null {
+export function lastTestsPassed(db: Db, id: TaskId): boolean | null {
   return db.runsForTask(id).findLast((r) => r.tests_passed !== null)?.tests_passed ?? null;
 }
 
@@ -58,11 +59,11 @@ function keepChecks(db: Db, task: Task, pr: PrDetails): void {
 /** What a refresh found out about the open PRs beyond their state. */
 export interface PrRefresh {
   /** Tasks whose open PR GitHub says conflicts with the base. */
-  conflicting: number[];
+  conflicting: TaskId[];
   /** Open PRs whose mergeability GitHub has not worked out yet (it does so lazily, after the base moves). */
   unknown: number;
   /** Tasks whose PR is ready to merge now (merge requests first, then auto-merges), with what GitHub said about it. */
-  mergeable: { id: number; pr: PrDetails }[];
+  mergeable: { id: TaskId; pr: PrDetails }[];
   /** Merge requests waiting on running checks or on mergeability GitHub hasn't worked out: worth reading again soon. */
   polling: number;
 }
@@ -88,7 +89,7 @@ interface PrFound {
   polling: boolean;
 }
 
-function dropRequest(db: Db, id: number, why: string, log: (msg: string) => void): void {
+function dropRequest(db: Db, id: TaskId, why: string, log: (msg: string) => void): void {
   if (db.clearMergeRequest(id)) log(`task ${id}: merge request dropped: ${why}`);
 }
 

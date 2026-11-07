@@ -3,6 +3,7 @@
 // - builds_on: the task uses the other's code, so it starts once the other is done and merged.
 // - after: the task runs on its own and only its merge waits for the other's.
 
+import type { TaskId } from '../id/id.ts';
 import type { PrMode, PullRequest } from '../pull-request/pr.ts';
 import type { TaskStatus } from './lifecycle.ts';
 import type { DoneState } from './task.ts';
@@ -11,8 +12,8 @@ export type LinkKind = 'builds_on' | 'after';
 
 /** `task_id` depends on `on`. */
 export interface Link {
-  task_id: number;
-  on: number;
+  task_id: TaskId;
+  on: TaskId;
   kind: LinkKind;
 }
 
@@ -30,9 +31,9 @@ export type LinkTarget = Dependency & { links: Link[] };
  * sentence ("#10 failed") and as the clause that follows a mention of it ("which failed"), for a chained reason.
  */
 type Standing =
-  { kind: 'met' } | { kind: 'waiting'; on: number; reason: string } | { kind: 'stuck'; on: number; reason: string; which: string };
+  { kind: 'met' } | { kind: 'waiting'; on: TaskId; reason: string } | { kind: 'stuck'; on: TaskId; reason: string; which: string };
 
-function standing(on: number, dependency: Dependency | undefined): Standing {
+function standing(on: TaskId, dependency: Dependency | undefined): Standing {
   const id = `#${on}`;
   const stuck = (reason: string, which: string): Standing => ({ kind: 'stuck', on, reason, which });
   if (!dependency) return stuck(`${id} no longer exists`, 'which no longer exists');
@@ -74,9 +75,9 @@ function neverLands(dependency: Dependency | undefined): boolean {
  */
 export type LinkState =
   | { kind: 'met' }
-  | { kind: 'waiting'; on: number; reason: string }
-  | { kind: 'stuck'; on: number; reason: string }
-  | { kind: 'unlanded'; on: number; reason: string };
+  | { kind: 'waiting'; on: TaskId; reason: string }
+  | { kind: 'stuck'; on: TaskId; reason: string }
+  | { kind: 'unlanded'; on: TaskId; reason: string };
 
 export function linkState(link: Pick<Link, 'on' | 'kind'>, dependency: Dependency | undefined): LinkState {
   const s = standing(link.on, dependency);
@@ -96,14 +97,14 @@ export function linkState(link: Pick<Link, 'on' | 'kind'>, dependency: Dependenc
  * Mirrors `notWaiting` in db/tasks.ts.
  */
 export type StartState =
-  { kind: 'none' } | { kind: 'met' } | { kind: 'waiting'; on: number[] } | { kind: 'stuck'; on: number; reason: string };
+  { kind: 'none' } | { kind: 'met' } | { kind: 'waiting'; on: TaskId[] } | { kind: 'stuck'; on: TaskId; reason: string };
 
-export function startState(task: { id: number }, links: Link[], lookup: (id: number) => LinkTarget | undefined): StartState {
+export function startState(task: { id: TaskId }, links: Link[], lookup: (id: TaskId) => LinkTarget | undefined): StartState {
   const own = links.filter((l) => l.task_id === task.id && l.kind === 'builds_on');
   if (own.length === 0) return { kind: 'none' };
-  const visited = new Set<number>([task.id]);
+  const visited = new Set<TaskId>([task.id]);
   /** The stuck root at or below `on`, following builds-on links down through tasks that are not done; `via` is the way down. */
-  const root = (on: number, via: number[], dep: LinkTarget | undefined, s: Standing): { on: number; reason: string } | null => {
+  const root = (on: TaskId, via: TaskId[], dep: LinkTarget | undefined, s: Standing): { on: TaskId; reason: string } | null => {
     if (s.kind === 'stuck')
       return { on, reason: via.length ? `waits on #${on} (via ${via.map((v) => `#${v}`).join(', ')}), ${s.which}` : s.reason };
     // A task that is gone is stuck, so the walk is at a task that exists from here.
@@ -118,7 +119,7 @@ export function startState(task: { id: number }, links: Link[], lookup: (id: num
     }
     return null;
   };
-  const waiting: number[] = [];
+  const waiting: TaskId[] = [];
   for (const link of own) {
     const dep = lookup(link.on);
     const s = standing(link.on, dep);
@@ -130,8 +131,8 @@ export function startState(task: { id: number }, links: Link[], lookup: (id: num
 }
 
 /** The after links whose other task has not landed yet, each with why: the task's merge waits for them. */
-export function unlandedAfter(links: Link[], lookup: (id: number) => Dependency | undefined): { on: number; reason: string }[] {
-  const unlanded: { on: number; reason: string }[] = [];
+export function unlandedAfter(links: Link[], lookup: (id: TaskId) => Dependency | undefined): { on: TaskId; reason: string }[] {
+  const unlanded: { on: TaskId; reason: string }[] = [];
   for (const link of links) {
     if (link.kind !== 'after') continue;
     const s = linkState(link, lookup(link.on));
@@ -146,25 +147,25 @@ export function unlandedAfter(links: Link[], lookup: (id: number) => Dependency 
  * single read of every link, for a list of tasks.
  */
 export interface LinkIndex {
-  linksOf: (id: number) => Link[];
-  dependentsOf: (id: number) => { id: number; status: string; kind: LinkKind }[];
-  target: (id: number) => LinkTarget | undefined;
+  linksOf: (id: TaskId) => Link[];
+  dependentsOf: (id: TaskId) => { id: TaskId; status: string; kind: LinkKind }[];
+  target: (id: TaskId) => LinkTarget | undefined;
 }
 
 /** A task that builds on another: one of LinkIndex's dependents through a builds-on link. */
-type Builder = { id: number; status: string };
+type Builder = { id: TaskId; status: string };
 
 /** The tasks that depend on task `id` through a builds-on link. */
-const buildingOn = (id: number, l: LinkIndex): Builder[] => l.dependentsOf(id).filter((d) => d.kind === 'builds_on');
+const buildingOn = (id: TaskId, l: LinkIndex): Builder[] => l.dependentsOf(id).filter((d) => d.kind === 'builds_on');
 
 /**
  * The queued tasks that can't start because of task `id`, however many builds-on links down: those whose own start
  * state is stuck on `id`, so retrying `id` releases them. One stuck on something else on the way (a cancelled task
  * between them) is left out: retrying `id` would not release it. The walk stops at done tasks, which started already.
  */
-export function stuckOn(id: number, l: LinkIndex): Builder[] {
+export function stuckOn(id: TaskId, l: LinkIndex): Builder[] {
   const stuck: Builder[] = [];
-  const seen = new Set<number>([id]);
+  const seen = new Set<TaskId>([id]);
   const stack = [id];
   while (stack.length) {
     for (const t of buildingOn(stack.pop()!, l)) {
@@ -184,8 +185,8 @@ export function stuckOn(id: number, l: LinkIndex): Builder[] {
  * The queued tasks that build on task `id` and that merging `id` leaves free to start. One that also waits on another
  * task it builds on, or is stuck on one, is left out.
  */
-export function releasedBy(id: number, l: LinkIndex): Builder[] {
-  const merged = (on: number): LinkTarget | undefined => {
+export function releasedBy(id: TaskId, l: LinkIndex): Builder[] {
+  const merged = (on: TaskId): LinkTarget | undefined => {
     const t = l.target(on);
     return on === id && t ? { ...t, status: 'done', done_by: null, pr: { state: 'merged' } } : t;
   };
@@ -196,10 +197,10 @@ export function releasedBy(id: number, l: LinkIndex): Builder[] {
  * Why `task` may not get a link to `on`, or null if it may. `links` is every link there is: a link to `on` makes a
  * cycle when `on` already reaches `task` through links of either kind.
  */
-export function linkError(task: number, on: number, links: Link[]): string | null {
+export function linkError(task: TaskId, on: TaskId, links: Link[]): string | null {
   if (task === on) return `#${task} can't depend on itself`;
   if (links.some((l) => l.task_id === task && l.on === on)) return `#${task} is already linked to #${on}`;
-  const seen = new Set<number>();
+  const seen = new Set<TaskId>();
   const stack = [on];
   while (stack.length) {
     const at = stack.pop()!;
@@ -216,7 +217,7 @@ export function linkError(task: number, on: number, links: Link[]): string | nul
  * once it has started (running, done, or stopped after a run) a builds-on link would gate nothing; an after link still
  * orders its merge.
  */
-export function buildsOnError(task: number, status: string, on: number): string | null {
+export function buildsOnError(task: TaskId, status: string, on: TaskId): string | null {
   if (status === 'proposed' || status === 'queued') return null;
   return `#${task} has started already, so it can't build on #${on}; make it an after link instead`;
 }

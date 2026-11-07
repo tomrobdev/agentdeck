@@ -1,5 +1,6 @@
 // Merge requests (docs/plans/merge-requests.html): recording one, and the daemon carrying it out on its PR refresh with a fake github adapter.
 import assert from 'node:assert/strict';
+import { asTaskId } from '../src/domain/id/id.ts';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -101,7 +102,7 @@ test('requestMerge refuses a task that is not done or has no open PR', () => {
   assert.throws(() => requestMerge(db, closed.id), /PR is closed/);
   const merged = doneTask(db, repo, { pr: 'merged' });
   assert.throws(() => requestMerge(db, merged.id), /PR is merged/);
-  assert.throws(() => requestMerge(db, 99999), ActionError);
+  assert.throws(() => requestMerge(db, asTaskId(99999)), ActionError);
   for (const t of [queued, noPr, closed, merged]) assert.equal(db.getTask(t.id)!.pr?.merge_request ?? null, null);
 });
 
@@ -121,7 +122,7 @@ test('cancelMergeRequest clears the request, and does nothing for a task without
   assert.equal(row.pr!.merge_request, null);
   assert.equal((await taskDetail(db, a.id)).merge_request, null);
   assert.deepEqual(cancelMergeRequest(db, a.id), { cancelled: false });
-  assert.throws(() => cancelMergeRequest(db, 99999), ActionError);
+  assert.throws(() => cancelMergeRequest(db, asTaskId(99999)), ActionError);
 });
 
 test('a request with checks running waits, then merges once they pass, with its method', async () => {

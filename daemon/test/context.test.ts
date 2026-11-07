@@ -4,6 +4,7 @@ import { mkdirSync, mkdtempSync, readFileSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import { asTaskId } from '../src/domain/id/id.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-context-'));
 process.env.AGENTDECK_HOME = home;
@@ -60,7 +61,16 @@ test('describeEvent words each kind of history row', () => {
 });
 
 test('digest: a quiet turn is the header alone; a start shows the open tasks', () => {
-  const open = [{ id: 3, title: 'Three', status: 'queued' as const, pr_state: null, stop_reason: null, waiting: { on: [2], stuck: null } }];
+  const open = [
+    {
+      id: asTaskId(3),
+      title: 'Three',
+      status: 'queued' as const,
+      pr_state: null,
+      stop_reason: null,
+      waiting: { on: [asTaskId(2)], stuck: null },
+    },
+  ];
   const quiet = digest({ header, events: [], open, full: false });
   assert.equal(quiet.length, 1);
   assert.match(quiet[0], /^AgentDeck live · r · active · 1\/2 slots · governor allowing · main abc1234 Last commit$/);
@@ -74,7 +84,7 @@ test('digest groups changes by task, in order, and shows the open tasks with the
   const lines = digest({
     header: { ...header, governor: { allow: false, reason: '5h window at 90%' }, repo_paused: 'doctor failed' },
     events: [ev(1, 7, 'claim', 'running'), ev(2, 8, 'created', 'queued'), ev(3, 7, 'finish', 'done')],
-    open: [{ id: 9, title: 'Nine', status: 'blocked', pr_state: null, stop_reason: 'needs a key', waiting: null }],
+    open: [{ id: asTaskId(9), title: 'Nine', status: 'blocked', pr_state: null, stop_reason: 'needs a key', waiting: null }],
     full: false,
   });
   assert.match(lines[0], /repo PAUSED: doctor failed · 1\/2 slots · governor on hold: 5h window at 90%/);
@@ -89,7 +99,7 @@ test('digest groups changes by task, in order, and shows the open tasks with the
 
 test('digest cuts the lines below the header at the limit and counts the rest', () => {
   const open = Array.from({ length: 20 }, (_, i) => ({
-    id: i + 1,
+    id: asTaskId(i + 1),
     title: `T${i + 1}`,
     status: 'queued' as const,
     pr_state: null,
@@ -112,8 +122,8 @@ test('digest: 30 events still leave "Open:" with the tasks that need you', () =>
     title: `T${i + 1}`,
   })) as Parameters<typeof digest>[0]['events'];
   const open = [
-    { id: 40, title: 'Quiet', status: 'queued' as const, pr_state: null, stop_reason: null, waiting: null },
-    { id: 41, title: 'Stuck', status: 'blocked' as const, pr_state: null, stop_reason: 'needs a key', waiting: null },
+    { id: asTaskId(40), title: 'Quiet', status: 'queued' as const, pr_state: null, stop_reason: null, waiting: null },
+    { id: asTaskId(41), title: 'Stuck', status: 'blocked' as const, pr_state: null, stop_reason: 'needs a key', waiting: null },
   ];
   const lines = digest({ header, events, open, full: false });
   assert.ok(lines.length <= 1 + DIGEST_LIMIT);

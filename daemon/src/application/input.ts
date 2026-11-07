@@ -2,6 +2,7 @@
 // named (the one place these messages are worded), and checks on the fields of a request body. A wrong type is the
 // caller's mistake, so each throws ActionError (a 400).
 import type { Db } from '../db/index.ts';
+import type { TaskId } from '../domain/id/id.ts';
 import type { Repo } from '../domain/repo/repo.ts';
 import type { Task } from '../domain/task/task.ts';
 
@@ -13,7 +14,7 @@ export function refuse(message: string | null): void {
   if (message) throw new ActionError(message);
 }
 
-export function requireTask(db: Db, id: number): Task {
+export function requireTask(db: Db, id: TaskId): Task {
   const task = db.getTask(id);
   if (!task) throw new ActionError('no such task');
   return task;

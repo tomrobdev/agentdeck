@@ -6,6 +6,7 @@ import { goalsPath, readGoals } from '../adapters/goals.ts';
 import { closeLog } from '../adapters/run-log.ts';
 import { LOG_DIR, ensureDirs } from '../config.ts';
 import type { Db } from '../db/index.ts';
+import type { PlannerRunId, RepoId } from '../domain/id/id.ts';
 import { type ProposalResult, buildPlannerPrompt, plannerArgs, plannerDueReason, selectProposals } from '../domain/planner/proposals.ts';
 import type { Repo } from '../domain/repo/repo.ts';
 import { lastLine, plural } from '../domain/text.ts';
@@ -44,7 +45,7 @@ export async function propose(db: Db, repo: Repo): Promise<ProposalResult> {
   }
 }
 
-async function planRepo(db: Db, repo: Repo, goals: string, runId: number, log: WriteStream): Promise<ProposalResult> {
+async function planRepo(db: Db, repo: Repo, goals: string, runId: PlannerRunId, log: WriteStream): Promise<ProposalResult> {
   const s = db.plannerSettings();
   const existing = db.tasksForRepo(repo.id, EXISTING_TASKS_SHOWN);
 
@@ -92,7 +93,7 @@ async function planRepo(db: Db, repo: Repo, goals: string, runId: number, log: W
   return { outcome: created.length ? 'proposed' : 'nothing', tasks: created, skipped, note };
 }
 
-const proposing = new Set<number>();
+const proposing = new Set<RepoId>();
 
 /** Run the planner for one repo now, regardless of its schedule. */
 export async function proposeNow(db: Db, nameOrId: string | number): Promise<ProposalResult> {

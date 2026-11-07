@@ -1,5 +1,6 @@
 // Turning a repo's goals into task proposals: the prompt, the answer's shape, and which proposals to keep.
 // Pure: no I/O. The planner runs read-only in the repo's main checkout and answers in PROPOSALS_SCHEMA.
+import type { PlannerRunId, RepoId } from '../id/id.ts';
 import type { Repo } from '../repo/repo.ts';
 import { MODELS, OPEN_STATUSES, PROMPT_SECTIONS, type Task, stopReasonOf } from '../task/task.ts';
 import { sqliteMs } from '../time.ts';
@@ -14,8 +15,8 @@ export interface PlannerSettings {
 export type PlannerOutcome = 'proposed' | 'nothing' | 'failed' | 'rate_limited';
 
 export interface PlannerRun {
-  id: number;
-  repo_id: number;
+  id: PlannerRunId;
+  repo_id: RepoId;
   started_at: string;
   ended_at: string | null;
   outcome: PlannerOutcome | null;

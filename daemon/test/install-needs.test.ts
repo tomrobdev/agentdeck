@@ -5,6 +5,7 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from '
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import { asTaskId } from '../src/domain/id/id.ts';
 import { stateFields } from '../src/domain/task/task.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-install-'));
@@ -113,7 +114,7 @@ test('only a blocked task that asked for packages, on a Node toolchain', async (
     { reason: 'NEEDS', needs: { kind: 'deps', items: ['serde'] } },
   );
   await assert.rejects(installNeeds(db, t.id), /install serde on the branch yourself/);
-  await assert.rejects(installNeeds(db, 9999), /no such task/);
+  await assert.rejects(installNeeds(db, asTaskId(9999)), /no such task/);
 });
 
 test('nothing in the worker or scheduler installs', () => {

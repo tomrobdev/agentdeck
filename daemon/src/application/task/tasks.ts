@@ -1,6 +1,7 @@
 // Use cases for tasks: add, edit, and move them through the lifecycle on a person's request.
 import { removeWorktree } from '../../adapters/git.ts';
 import type { Db } from '../../db/index.ts';
+import type { TaskId } from '../../domain/id/id.ts';
 import type { TaskStatus } from '../../domain/task/lifecycle.ts';
 import { openPrUrl } from '../../domain/pull-request/pr.ts';
 import { errorMessage } from '../../domain/text.ts';
@@ -26,11 +27,11 @@ export async function addTask(
     max_turns?: number;
     max_attempts?: number;
     /** Tasks this one builds on (it starts once they are done and merged). */
-    builds_on?: number[];
+    builds_on?: TaskId[];
     /** Tasks this one lands after (it runs at once; only its merge waits). */
-    after?: number[];
+    after?: TaskId[];
     /** The task whose plan this one follows (that task's own plan, or the one it follows), in the same repo. */
-    plan_task?: number;
+    plan_task?: TaskId;
     /** A plan for the new task to own and follow, stored as `<task id>-<slug>.html`. Not with plan_task. */
     plan_html?: string;
     plan_steps?: string[] | string;
@@ -85,7 +86,7 @@ export async function addTask(
  */
 export async function editTask(
   db: Db,
-  id: number,
+  id: TaskId,
   patch: {
     title?: string;
     prompt?: string;
@@ -93,7 +94,7 @@ export async function editTask(
     model?: string;
     max_turns?: number;
     max_attempts?: number;
-    plan_task?: number | null;
+    plan_task?: TaskId | null;
     plan_html?: string;
     plan_steps?: string[] | string | null;
   },
@@ -128,7 +129,7 @@ export async function editTask(
       );
     }
     const checked = checkPlanLink(db, () => requireTaskRepo(db, task), asked, steps);
-    let link: number | null;
+    let link: TaskId | null;
     if ('ownPlan' in checked) {
       // The task's own steps are the ones just checked; the tasks following its plan keep theirs.
       checkFollowers(db, id, checked.plan, id);
@@ -150,7 +151,7 @@ export async function editTask(
 }
 
 /** Returns 'cancelled' for idle tasks, 'stopping' when a running worker has been asked to stop. */
-export function cancelTask(db: Db, id: number): 'cancelled' | 'stopping' {
+export function cancelTask(db: Db, id: TaskId): 'cancelled' | 'stopping' {
   const t = db.applyEvent(id, { type: 'cancel' });
   if (!t) throw new ActionError(`#${id} can't be cancelled from its current state`);
   warnStuckDependents(db, id);
@@ -158,17 +159,17 @@ export function cancelTask(db: Db, id: number): 'cancelled' | 'stopping' {
 }
 
 /** Accept a planner proposal into the queue. */
-export function approveTask(db: Db, id: number): void {
+export function approveTask(db: Db, id: TaskId): void {
   if (!db.applyEvent(id, { type: 'approve' })) throw new ActionError(`#${id} is not a proposal`);
 }
 
-export function rejectTask(db: Db, id: number): void {
+export function rejectTask(db: Db, id: TaskId): void {
   if (!db.applyEvent(id, { type: 'reject' })) throw new ActionError(`#${id} is not a proposal`);
   warnStuckDependents(db, id);
 }
 
 /** Another attempt. A `note` ("request changes") is kept on the timeline and goes first in the next run's prompt. */
-export function retryTask(db: Db, id: number, note?: string, onlyFrom?: TaskStatus[]): void {
+export function retryTask(db: Db, id: TaskId, note?: string, onlyFrom?: TaskStatus[]): void {
   const t = requireTask(db, id);
   refuseWhileSyncing(db, id);
   if (note !== undefined && typeof note !== 'string') throw new ActionError('note must be text');
@@ -181,7 +182,7 @@ export function retryTask(db: Db, id: number, note?: string, onlyFrom?: TaskStat
  * A person finished or landed a blocked or failed task's work themselves. The optional `note` goes on the timeline.
  * Done releases the tasks waiting on it (unless its PR is open: they wait for the merge), so no warnStuckDependents.
  */
-export function markDone(db: Db, id: number, note?: string): void {
+export function markDone(db: Db, id: TaskId, note?: string): void {
   const t = requireTask(db, id);
   if (note !== undefined && typeof note !== 'string') throw new ActionError('note must be text');
   if (!db.applyEvent(id, { type: 'mark_done' }, { reason: note?.trim() || null }))
@@ -189,7 +190,7 @@ export function markDone(db: Db, id: number, note?: string): void {
 }
 
 /** Close a task's open PR without merging it. Tasks waiting on it become stuck. */
-export async function closeTaskPr(db: Db, id: number): Promise<void> {
+export async function closeTaskPr(db: Db, id: TaskId): Promise<void> {
   const t = requireTask(db, id);
   if (!openPrUrl(t.pr)) throw new ActionError(`#${id} has no open pull request`);
   try {
@@ -200,7 +201,7 @@ export async function closeTaskPr(db: Db, id: number): Promise<void> {
 }
 
 /** Remove a task's worktree; its branch is kept. Not while the task is running, or queued (it is about to run in it). */
-export async function removeTaskWorktree(db: Db, id: number): Promise<{ branch: string | null }> {
+export async function removeTaskWorktree(db: Db, id: TaskId): Promise<{ branch: string | null }> {
   const t = requireTask(db, id);
   if (RUNNING_STATUSES.includes(t.status)) throw new ActionError('task is running');
   if (t.status === 'queued') throw new ActionError('task is queued');

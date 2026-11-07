@@ -1,5 +1,6 @@
 // The reads behind `agentdeck stats`: work runs with their task's repo and status, and tasks with their history.
 import { and, asc, eq } from 'drizzle-orm';
+import type { RepoId } from '../domain/id/id.ts';
 import type { ScorecardEvent, ScorecardTaskRow } from '../domain/run/scorecard.ts';
 import type { StatRun } from '../domain/run/stats.ts';
 import { readCounts } from './mappers.ts';
@@ -9,7 +10,7 @@ import { repos, runs, taskEvents, tasks } from './tables.ts';
 export function statsStore(orm: Orm) {
   return {
     /** Every work run (resolve runs use no attempt), optionally of one repo, oldest first. */
-    statRuns(repo_id?: number): StatRun[] {
+    statRuns(repo_id?: RepoId): StatRun[] {
       return orm
         .select({
           repo_id: tasks.repo_id,
@@ -29,7 +30,7 @@ export function statsStore(orm: Orm) {
         .all();
     },
     /** Every task, optionally of one repo, with its own auto-merge setting and its repo's. */
-    scorecardTasks(repo_id?: number): ScorecardTaskRow[] {
+    scorecardTasks(repo_id?: RepoId): ScorecardTaskRow[] {
       return orm
         .select({
           id: tasks.id,
@@ -52,7 +53,7 @@ export function statsStore(orm: Orm) {
         }));
     },
     /** Every history row of the tasks of one repo (or all), oldest first, with the task's repo. */
-    scorecardEvents(repo_id?: number): ScorecardEvent[] {
+    scorecardEvents(repo_id?: RepoId): ScorecardEvent[] {
       return orm
         .select({
           task_id: taskEvents.task_id,

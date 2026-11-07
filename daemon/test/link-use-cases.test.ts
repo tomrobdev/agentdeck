@@ -1,5 +1,6 @@
 // Linking and unlinking, adding with links, the merge gate for after links and the one warning for a stuck chain.
 import assert from 'node:assert/strict';
+import { type TaskId, asTaskId } from '../src/domain/id/id.ts';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -60,8 +61,14 @@ test('addTask takes builds_on and after as id lists, and refuses a missing task 
   // The view names every task it builds on that is still on its way.
   assert.deepEqual(view.waiting, { on: [a.id, b.id], stuck: null });
   assert.deepEqual((await taskDetail(db, c.id)).dependents, [{ id: t.id, kind: 'after' }]);
-  await assert.rejects(() => addTask(db, { repo: 'demo', prompt: 'x', after: [999] }), /^Error: can't land after #999: no such task$/);
-  await assert.rejects(() => addTask(db, { repo: 'demo', prompt: 'x', builds_on: [999] }), /^Error: can't build on #999: no such task$/);
+  await assert.rejects(
+    () => addTask(db, { repo: 'demo', prompt: 'x', after: [asTaskId(999)] }),
+    /^Error: can't land after #999: no such task$/,
+  );
+  await assert.rejects(
+    () => addTask(db, { repo: 'demo', prompt: 'x', builds_on: [asTaskId(999)] }),
+    /^Error: can't build on #999: no such task$/,
+  );
   await assert.rejects(() => addTask(db, { repo: 'demo', prompt: 'x', builds_on: [a.id], after: [a.id] }), ActionError);
   db.close();
 });
@@ -101,7 +108,7 @@ test('linkTasks and unlinkTasks; a self link, a repeat and a cycle are refused w
   assert.throws(() => linkTasks(db, a.id, { on: a.id, kind: 'after' }), /can't depend on itself/);
   assert.throws(() => linkTasks(db, b.id, { on: a.id, kind: 'after' }), /already linked/);
   assert.throws(() => linkTasks(db, a.id, { on: c.id, kind: 'builds_on' }), /would make a cycle/);
-  assert.throws(() => linkTasks(db, a.id, { on: 999, kind: 'after' }), /no task #999/);
+  assert.throws(() => linkTasks(db, a.id, { on: asTaskId(999), kind: 'after' }), /no task #999/);
   assert.throws(() => linkTasks(db, a.id, { on: b.id, kind: 'sideways' as never }), /kind must be/);
   unlinkTasks(db, b.id, a.id);
   assert.deepEqual(db.linksOf(b.id), []);
@@ -133,7 +140,7 @@ test('an after link holds the merge until the other lands, and is gone when the 
 test('an after link frees the merge when the other is cancelled, a proposal rejected, or its PR closed', () => {
   const { db, repo, add } = setup();
   db.updateRepo(repo.id, { pr_mode: 'ready' });
-  const merges = (id: number) => mergeCheck({ pr_state: 'open', pr, tests_passed: true, lands_after: landsAfter(db, id) }).problems;
+  const merges = (id: TaskId) => mergeCheck({ pr_state: 'open', pr, tests_passed: true, lands_after: landsAfter(db, id) }).problems;
 
   const [cancelled, b1] = [add(), add()];
   linkTasks(db, b1.id, { on: cancelled.id, kind: 'after' });

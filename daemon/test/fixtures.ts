@@ -1,7 +1,11 @@
 // Tasks in a given state, built the way the daemon builds them: through claim, applyEvent, recordPr and recordMerge.
 // A state a fixture cannot reach through those calls fails an assertion here, so tests cannot depend on one.
 import assert from 'node:assert/strict';
+import type { RepoId, TaskId } from '../src/domain/id/id.ts';
 import type { openDb } from '../src/db/index.ts';
+
+// A test makes an id from a number with these.
+export { asPlannerRunId, asRepoId, asReviewId, asRunId, asTaskId } from '../src/domain/id/id.ts';
 
 type Db = ReturnType<typeof openDb>;
 type Task = NonNullable<ReturnType<Db['getTask']>>;
@@ -22,11 +26,11 @@ export interface Outcome {
 
 let urls = 0;
 
-const apply = (db: Db, id: number, event: Parameters<Db['applyEvent']>[1], reason?: string) =>
+const apply = (db: Db, id: TaskId, event: Parameters<Db['applyEvent']>[1], reason?: string) =>
   assert.ok(db.applyEvent(id, event, reason ? { reason } : undefined), `${event.type} was refused for #${id}`);
 
 /** Record a PR on a done task. open: recordPr opened. merged: opened, then seen merged. closed: opened, then closed. failed: recordPr failed. */
-function recordPrOn(db: Db, id: number, pr: PrState, url = `https://x/pull/${++urls}`): void {
+function recordPrOn(db: Db, id: TaskId, pr: PrState, url = `https://x/pull/${++urls}`): void {
   const record = (e: Parameters<Db['recordPr']>[1]) => assert.ok(db.recordPr(id, e), `${e.type} was refused for #${id}`);
   if (pr === 'failed') return record({ type: 'failed', error: 'gh: not authenticated' });
   record({ type: 'opened', url });
@@ -40,7 +44,7 @@ function recordPrOn(db: Db, id: number, pr: PrState, url = `https://x/pull/${++u
  * and then leaves done the way a task with a PR does: blocked by conflict; queued, running, failed or cancelled by retry.
  * With `doneBy: 'person'` a done task goes through conflict and mark_done.
  */
-export function advance(db: Db, id: number, status: TaskStatus, o: Outcome = {}): Task {
+export function advance(db: Db, id: TaskId, status: TaskStatus, o: Outcome = {}): Task {
   const pr = o.pr ?? null;
   const done = o.doneBy === 'person';
   if (status === 'proposed') assert.fail('a proposal is added as one, not advanced to');
@@ -68,52 +72,52 @@ export function advance(db: Db, id: number, status: TaskStatus, o: Outcome = {})
   return db.getTask(id)!;
 }
 
-function taskIn(db: Db, repo: { id: number }, status: TaskStatus, o: Outcome & NewTask): Task {
+function taskIn(db: Db, repo: { id: RepoId }, status: TaskStatus, o: Outcome & NewTask): Task {
   const { pr, url, branch, doneBy, ...fields } = o;
   const t = db.addTask({ repo_id: repo.id, title: 'task', prompt: 'x', ...fields });
   return advance(db, t.id, status, { pr, url, branch, doneBy });
 }
 
 /** A queued task. Events: none, `addTask` queues it. */
-export const queuedTask = (db: Db, repo: { id: number }, o: NewTask = {}) => taskIn(db, repo, 'queued', o);
+export const queuedTask = (db: Db, repo: { id: RepoId }, o: NewTask = {}) => taskIn(db, repo, 'queued', o);
 
 /** A running task. Events: claim. */
-export const runningTask = (db: Db, repo: { id: number }, o: Outcome & NewTask = {}) => taskIn(db, repo, 'running', o);
+export const runningTask = (db: Db, repo: { id: RepoId }, o: Outcome & NewTask = {}) => taskIn(db, repo, 'running', o);
 
 /**
  * A done task, with a PR in the state `pr` says (none by default). Events: claim, finish done; then recordPr
  * opened (and seen merged, or closed) or failed; with `doneBy: 'person'` conflict and mark_done.
  */
-export const doneTask = (db: Db, repo: { id: number }, o: Outcome & NewTask = {}) => taskIn(db, repo, 'done', o);
+export const doneTask = (db: Db, repo: { id: RepoId }, o: Outcome & NewTask = {}) => taskIn(db, repo, 'done', o);
 
 /**
  * A blocked task. Events: claim, finish blocked. With a PR it is a done task whose branch conflicts:
  * claim, finish done, recordPr, conflict, so the PR stays on it.
  */
-export const blockedTask = (db: Db, repo: { id: number }, o: Outcome & NewTask = {}) => taskIn(db, repo, 'blocked', o);
+export const blockedTask = (db: Db, repo: { id: RepoId }, o: Outcome & NewTask = {}) => taskIn(db, repo, 'blocked', o);
 
 /**
  * A failed task. Events: claim, finish failed. With a PR it is a retry that failed: claim, finish done, recordPr,
  * retry, claim, finish failed, so the PR stays on it.
  */
-export const failedTask = (db: Db, repo: { id: number }, o: Outcome & NewTask = {}) => taskIn(db, repo, 'failed', o);
+export const failedTask = (db: Db, repo: { id: RepoId }, o: Outcome & NewTask = {}) => taskIn(db, repo, 'failed', o);
 
 /** A cancelled task. Events: cancel. With a PR: claim, finish done, recordPr, retry, cancel. */
-export const cancelledTask = (db: Db, repo: { id: number }, o: Outcome & NewTask = {}) => taskIn(db, repo, 'cancelled', o);
+export const cancelledTask = (db: Db, repo: { id: RepoId }, o: Outcome & NewTask = {}) => taskIn(db, repo, 'cancelled', o);
 
 /** A done task opens a PR. Events: recordPr opened (a new url when it had a closed or failed PR). */
-export function openPr(db: Db, id: number, url = `https://x/pull/${++urls}`): void {
+export function openPr(db: Db, id: TaskId, url = `https://x/pull/${++urls}`): void {
   assert.ok(db.recordPr(id, { type: 'opened', url }), `opened was refused for #${id}`);
 }
 
 /** The open PR of a task is merged or closed. Events: recordPr seen merged, or recordPr closed. */
-export function settlePr(db: Db, id: number, state: 'merged' | 'closed'): void {
+export function settlePr(db: Db, id: TaskId, state: 'merged' | 'closed'): void {
   const e = state === 'merged' ? ({ type: 'seen', state } as const) : ({ type: 'closed' } as const);
   assert.ok(db.recordPr(id, e), `${state} was refused for #${id}: its PR is not open`);
 }
 
 /** A done task runs again and is done again, as after a retry. Events: retry, claim, finish done. */
-export function rerun(db: Db, id: number): void {
+export function rerun(db: Db, id: TaskId): void {
   apply(db, id, { type: 'retry' });
   apply(db, id, { type: 'claim' });
   apply(db, id, { type: 'finish', outcome: 'done' });

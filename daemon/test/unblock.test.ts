@@ -6,6 +6,7 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from '
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
+import { asTaskId } from '../src/domain/id/id.ts';
 import type { RunKind, RunOutcome } from '../src/domain/run/run.ts';
 import type { Needs } from '../src/domain/task/needs.ts';
 import { type TaskState, stateFields } from '../src/domain/task/task.ts';
@@ -123,7 +124,7 @@ test('unblockDecision: a retry needs attempts left; otherwise it asks', () => {
 
 test('buildUnblockPrompt: the task, why it stopped, the last message and the review note', () => {
   const prompt = buildUnblockPrompt(
-    { id: 7, title: 'Pick a db', prompt: 'Add storage.', stop_reason: 'which database?' },
+    { id: asTaskId(7), title: 'Pick a db', prompt: 'Add storage.', stop_reason: 'which database?' },
     { plan: null, lastMessage: 'I need to know which database.', reviewNote: 'keep it small' },
   );
   assert.ok(prompt.startsWith('AgentDeck unblock run for task #7'));

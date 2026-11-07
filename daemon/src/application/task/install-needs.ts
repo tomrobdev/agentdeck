@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { commitFiles } from '../../adapters/git.ts';
 import { runProgram } from '../../adapters/shell.ts';
 import type { Db } from '../../db/index.ts';
+import type { TaskId } from '../../domain/id/id.ts';
 import { INSTALL_NOTE, LOCKFILES, canInstallWith, depsRequest, depsRequestError, installArgs } from '../../domain/task/needs.ts';
 import { errorMessage, lastLine } from '../../domain/text.ts';
 import { ActionError, refuse, requireTask, requireTaskRepo } from '../input.ts';
@@ -17,7 +18,7 @@ const INSTALL_TIMEOUT_MS = 10 * 60_000;
  * gets here (the API and the CLI); the worker and scheduler never call it. The package manager runs in the task's
  * worktree through the daemon, outside the worker's sandbox. On failure the task stays blocked.
  */
-export async function installNeeds(db: Db, id: number): Promise<{ packages: string[]; dev: boolean }> {
+export async function installNeeds(db: Db, id: TaskId): Promise<{ packages: string[]; dev: boolean }> {
   const task = requireTask(db, id);
   if (task.status !== 'blocked') throw new ActionError(`#${id} is ${task.status}, not blocked`);
   const { needs } = task;

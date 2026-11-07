@@ -1,6 +1,7 @@
 // A plan: an HTML document that says how a task will be done, step by step, attached to the task.
 // The format (docs/plan-format.md) marks the parts a program reads with data attributes, so the
 // page stays free-form HTML for a person and parses here with a few patterns. Pure: no I/O.
+import type { TaskId } from '../id/id.ts';
 
 export type PlanStepStatus = 'todo' | 'doing' | 'done' | 'blocked' | 'skipped';
 export const PLAN_STEP_STATUSES: PlanStepStatus[] = ['todo', 'doing', 'done', 'blocked', 'skipped'];
@@ -29,7 +30,7 @@ export type PlanSource = 'attached' | 'worker' | 'branch';
 /** A stored plan as the API returns it: parsed, without its HTML. */
 export interface TaskPlan extends ParsedPlan {
   id: number;
-  task_id: number; // the task the plan belongs to: the one it was first attached to
+  task_id: TaskId; // the task the plan belongs to: the one it was first attached to
   name: string; // `<task id>-<slug>.html` (planFileName); older plans keep the name they were stored under
   source: PlanSource;
   created_at: string;

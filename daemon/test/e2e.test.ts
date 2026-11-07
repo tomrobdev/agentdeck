@@ -6,8 +6,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, test } from 'node:test';
 import type { Repo } from '../src/domain/repo/repo.ts';
+import { asRepoId } from './fixtures.ts';
 import { stopReasonOf } from '../src/domain/task/task.ts';
 
+const REPO = asRepoId(1); // the one repo this file registers
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-test-'));
 process.env.AGENTDECK_HOME = home;
 process.env.AGENTDECK_NO_NOTIFY = '1';
@@ -69,7 +71,7 @@ test('done task: worktree, branch, commit, tests, usage recorded', async () => {
 });
 
 test('blocked task keeps the reason', async () => {
-  const task = db.addTask({ repo_id: 1, title: 'ask', prompt: 'FAKE_BLOCKED' });
+  const task = db.addTask({ repo_id: REPO, title: 'ask', prompt: 'FAKE_BLOCKED' });
   await drain();
   const t = db.getTask(task.id)!;
   assert.equal(t.status, 'blocked');
@@ -77,7 +79,7 @@ test('blocked task keeps the reason', async () => {
 });
 
 test('failing task retries up to max_attempts', async () => {
-  const task = db.addTask({ repo_id: 1, title: 'boom', prompt: 'FAKE_ERROR', max_attempts: 2 });
+  const task = db.addTask({ repo_id: REPO, title: 'boom', prompt: 'FAKE_ERROR', max_attempts: 2 });
   await drain();
   const t = db.getTask(task.id)!;
   assert.equal(t.status, 'failed');
@@ -86,7 +88,7 @@ test('failing task retries up to max_attempts', async () => {
 });
 
 test('rate limit requeues without spending an attempt and holds the queue', async () => {
-  const task = db.addTask({ repo_id: 1, title: 'limited', prompt: 'FAKE_RATELIMIT' });
+  const task = db.addTask({ repo_id: REPO, title: 'limited', prompt: 'FAKE_RATELIMIT' });
   await drain();
   const t = db.getTask(task.id)!;
   assert.equal(t.status, 'queued');
@@ -97,7 +99,7 @@ test('rate limit requeues without spending an attempt and holds the queue', asyn
 });
 
 test('cancel stops a running task', async () => {
-  const task = db.addTask({ repo_id: 1, title: 'slow', prompt: 'FAKE_SLOW' });
+  const task = db.addTask({ repo_id: REPO, title: 'slow', prompt: 'FAKE_SLOW' });
   const done = drain();
   while (db.getTask(task.id)!.status !== 'running') await new Promise((r) => setTimeout(r, 20));
   assert.equal(db.applyEvent(task.id, { type: 'cancel' })?.status, 'cancel_requested');
@@ -108,9 +110,9 @@ test('cancel stops a running task', async () => {
 test('a cancel requested while the run is finishing wins over done', async () => {
   // The run succeeds, then the repo's test command runs; cancel lands while it does.
   const marker = join(home, 'tests-started');
-  db.updateRepo(1, { test_cmd: `touch ${marker} && sleep 1 && test -f fake-output.txt` });
+  db.updateRepo(REPO, { test_cmd: `touch ${marker} && sleep 1 && test -f fake-output.txt` });
   try {
-    const task = db.addTask({ repo_id: 1, title: 'finishing', prompt: 'FAKE_DONE almost there' });
+    const task = db.addTask({ repo_id: REPO, title: 'finishing', prompt: 'FAKE_DONE almost there' });
     const done = drain();
     while (!existsSync(marker)) await new Promise((r) => setTimeout(r, 20));
     assert.equal(db.getTask(task.id)!.status, 'running');
@@ -123,12 +125,12 @@ test('a cancel requested while the run is finishing wins over done', async () =>
     assert.equal(db.runsForTask(t.id)[0].outcome, 'done', 'the run keeps its real outcome');
     assert.equal(db.recentNotifications(1)[0]?.task_id === task.id, false, 'no "ready to review" for a cancelled task');
   } finally {
-    db.updateRepo(1, { test_cmd: 'test -f fake-output.txt' });
+    db.updateRepo(REPO, { test_cmd: 'test -f fake-output.txt' });
   }
 });
 
 test('orphaned running tasks are requeued on start', () => {
-  const task = db.addTask({ repo_id: 1, title: 'orphan', prompt: 'x' });
+  const task = db.addTask({ repo_id: REPO, title: 'orphan', prompt: 'x' });
   db.claimNextTask();
   assert.deepEqual(db.recoverOrphans(), { requeued: 1, failed: [] });
   const t = db.getTask(task.id)!;
@@ -140,7 +142,7 @@ test('orphaned running tasks are requeued on start', () => {
 
 test('a task interrupted by repeated restarts fails instead of looping', async () => {
   const { MAX_RESTARTS } = await import('../src/domain/task/lifecycle.ts');
-  const task = db.addTask({ repo_id: 1, title: 'poison', prompt: 'x' });
+  const task = db.addTask({ repo_id: REPO, title: 'poison', prompt: 'x' });
   for (let i = 1; i < MAX_RESTARTS; i++) {
     db.claimNextTask();
     assert.deepEqual(db.recoverOrphans(), { requeued: 1, failed: [] });
@@ -226,7 +228,7 @@ test('governor holds queued work over the 5h cap and notifies once', async () =>
   const now = Math.floor(Date.now() / 1000);
   db.recordUsageWindow('five_hour', 0.9, now + 3600, 'allowed');
   const before = db.recentNotifications(50).filter((n) => n.kind === 'hold').length;
-  const task = db.addTask({ repo_id: 1, title: 'held', prompt: 'FAKE_DONE' });
+  const task = db.addTask({ repo_id: REPO, title: 'held', prompt: 'FAKE_DONE' });
   await drain(); // once mode stops when held
   assert.equal(db.getTask(task.id)!.status, 'queued');
   const holds = db.recentNotifications(50).filter((n) => n.kind === 'hold');
@@ -287,9 +289,9 @@ const claudeCalls = () => {
 };
 
 test('setup runs in the worktree before claude starts', async () => {
-  db.updateRepo(1, { setup_cmd: 'echo installing && echo ready > setup-done.txt' });
+  db.updateRepo(REPO, { setup_cmd: 'echo installing && echo ready > setup-done.txt' });
   try {
-    const task = db.addTask({ repo_id: 1, title: 'needs deps', prompt: 'FAKE_NEEDS_SETUP go' });
+    const task = db.addTask({ repo_id: REPO, title: 'needs deps', prompt: 'FAKE_NEEDS_SETUP go' });
     await drain();
     const t = db.getTask(task.id)!;
     assert.equal(t.status, 'done', stopReasonOf(t) ?? '');
@@ -301,14 +303,14 @@ test('setup runs in the worktree before claude starts', async () => {
     assert.match(log[setupAt], /"passed":true/);
     assert.match(log[setupAt], /installing/);
   } finally {
-    db.updateRepo(1, { setup_cmd: null });
+    db.updateRepo(REPO, { setup_cmd: null });
   }
 });
 
 test('a failing setup blocks the task without starting claude', async () => {
-  db.updateRepo(1, { setup_cmd: 'echo fetching deps && echo "ERR_PNPM_OFFLINE no network" >&2 && exit 3' });
+  db.updateRepo(REPO, { setup_cmd: 'echo fetching deps && echo "ERR_PNPM_OFFLINE no network" >&2 && exit 3' });
   try {
-    const task = db.addTask({ repo_id: 1, title: 'offline', prompt: 'FAKE_DONE never-runs-marker' });
+    const task = db.addTask({ repo_id: REPO, title: 'offline', prompt: 'FAKE_DONE never-runs-marker' });
     await drain();
     const t = db.getTask(task.id)!;
     assert.equal(t.status, 'blocked');
@@ -320,7 +322,7 @@ test('a failing setup blocks the task without starting claude', async () => {
     assert.doesNotMatch(claudeCalls(), /never-runs-marker/);
     assert.match(readFileSync(run.log_path, 'utf8'), /"type":"agentdeck_setup".*"passed":false/);
   } finally {
-    db.updateRepo(1, { setup_cmd: null });
+    db.updateRepo(REPO, { setup_cmd: null });
   }
 });
 
@@ -329,12 +331,12 @@ const settingsCalls = () => readFileSync(join(home, 'fake-claude-settings.log'),
 test('each run gets a sandbox settings file outside its worktree', async () => {
   const { updateRepo } = await import('../src/application/actions.ts');
   const { LOG_DIR } = await import('../src/config.ts');
-  db.setRepoPaused(1, null); // the failing setup above paused it
-  assert.equal(db.getRepo(1)!.sandbox, true, 'sandbox is on by default');
-  assert.deepEqual(db.getRepo(1)!.network, [], 'no hosts by default');
-  updateRepo(db, 1, { network: 'registry.npmjs.org, github.com' });
+  db.setRepoPaused(REPO, null); // the failing setup above paused it
+  assert.equal(db.getRepo(REPO)!.sandbox, true, 'sandbox is on by default');
+  assert.deepEqual(db.getRepo(REPO)!.network, [], 'no hosts by default');
+  updateRepo(db, REPO, { network: 'registry.npmjs.org, github.com' });
   try {
-    const task = db.addTask({ repo_id: 1, title: 'sandboxed', prompt: 'FAKE_DONE in the sandbox' });
+    const task = db.addTask({ repo_id: REPO, title: 'sandboxed', prompt: 'FAKE_DONE in the sandbox' });
     await drain();
     const t = db.getTask(task.id)!;
     assert.equal(t.status, 'done', stopReasonOf(t) ?? '');
@@ -350,18 +352,18 @@ test('each run gets a sandbox settings file outside its worktree', async () => {
     });
     assert.deepEqual(settings.permissions.allow, [`Edit(/${t.checkout?.worktree}/**)`]);
 
-    updateRepo(db, 1, { sandbox: false });
-    const off = db.addTask({ repo_id: 1, title: 'unsandboxed', prompt: 'FAKE_DONE without the sandbox' });
+    updateRepo(db, REPO, { sandbox: false });
+    const off = db.addTask({ repo_id: REPO, title: 'unsandboxed', prompt: 'FAKE_DONE without the sandbox' });
     await drain();
     assert.equal(db.getTask(off.id)!.status, 'done');
     assert.deepEqual(JSON.parse(readFileSync(settingsCalls().at(-1)!, 'utf8')).sandbox, { enabled: false });
   } finally {
-    updateRepo(db, 1, { sandbox: true, network: '' });
+    updateRepo(db, REPO, { sandbox: true, network: '' });
   }
 });
 
 test('a sandbox that cannot start fails the run with claude’s reason', async () => {
-  const task = db.addTask({ repo_id: 1, title: 'no sandbox', prompt: 'FAKE_NO_SANDBOX', max_attempts: 1 });
+  const task = db.addTask({ repo_id: REPO, title: 'no sandbox', prompt: 'FAKE_NO_SANDBOX', max_attempts: 1 });
   await drain();
   const t = db.getTask(task.id)!;
   assert.equal(t.status, 'failed');
@@ -371,8 +373,8 @@ test('a sandbox that cannot start fails the run with claude’s reason', async (
 
 test('repo network rejects things that are not host names', async () => {
   const { ActionError, updateRepo } = await import('../src/application/actions.ts');
-  assert.throws(() => updateRepo(db, 1, { network: 'a.com, http://b.com/x' }), ActionError);
-  assert.deepEqual(db.getRepo(1)!.network, []);
+  assert.throws(() => updateRepo(db, REPO, { network: 'a.com, http://b.com/x' }), ActionError);
+  assert.deepEqual(db.getRepo(REPO)!.network, []);
 });
 
 test('a new worktree starts from origin/<base> when origin is ahead of the local base', async () => {

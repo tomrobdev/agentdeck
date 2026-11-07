@@ -7,6 +7,7 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, beforeEach, test } from 'node:test';
+import { type TaskId, asTaskId } from '../src/domain/id/id.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-conflicts-'));
 process.env.AGENTDECK_HOME = home;
@@ -87,7 +88,7 @@ beforeEach(() => {
 
 let n = 0;
 /** A done task with an open PR whose branch changes shared.txt, the way an agent's work would. */
-async function doneTask(extra = ''): Promise<{ id: number; wt: string; branch: string }> {
+async function doneTask(extra = ''): Promise<{ id: TaskId; wt: string; branch: string }> {
   n++;
   const task = db.addTask({ repo_id: repo.id, title: `Task ${n}`, prompt: `FAKE_DONE ${extra}`.trim() });
   await drain();
@@ -108,8 +109,8 @@ function advanceMain(file: string, content: string, message: string): void {
   sh(dir, 'commit', '-q', '-m', message);
 }
 const conflictOnMain = () => advanceMain('shared.txt', lines(`main change ${n}`), `Main changes line two (${n})`);
-const syncEvents = (id: number) => db.eventsForTask(id).filter((e) => e.type === 'sync');
-const kinds = (id: number) => db.runsForTask(id).map((r) => r.kind);
+const syncEvents = (id: TaskId) => db.eventsForTask(id).filter((e) => e.type === 'sync');
+const kinds = (id: TaskId) => db.runsForTask(id).map((r) => r.kind);
 const claudeLog = () => readFileSync(join(home, 'fake-claude-calls.log'), 'utf8');
 const resolveCalls = () => (claudeLog().match(/^AgentDeck conflict resolution/gm) ?? []).length;
 const parents = (wt: string) => sh(wt, 'rev-list', '--parents', '-n', '1', 'HEAD').split(' ').length - 1;
@@ -139,7 +140,7 @@ test('the domain words: conflicting PRs, timeline lines, blocked reasons', () =>
 });
 
 test('the resolve prompt names the files, both sides and the goal; resolve runs do not count as attempts in prompts or PR bodies', () => {
-  const task = { id: 7, title: 'Add a flag', prompt: 'Add the --force flag to the CLI.' };
+  const task = { id: asTaskId(7), title: 'Add a flag', prompt: 'Add the --force flag to the CLI.' };
   const p = buildResolvePrompt(task, {
     base: 'main',
     files: ['src/cli.ts', 'README.md'],
@@ -396,7 +397,7 @@ test('auto_resolve off: clean merges still happen, conflicts wait for a person',
 });
 
 /** What the scheduler's automatic path does for a task. */
-const syncAuto = async (id: number) => {
+const syncAuto = async (id: TaskId) => {
   const { syncTask } = await import('../src/application/sync.ts');
   return syncTask(db, id, { manual: false });
 };
@@ -416,7 +417,7 @@ test('a push that fails is reported and retried next time; the task stays done',
 test('only a done task can be synced by hand', async () => {
   const queued = db.addTask({ repo_id: repo.id, title: 'queued', prompt: 'x' });
   await assert.rejects(syncNow(db, queued.id), /only a done task/);
-  await assert.rejects(syncNow(db, 999999), ActionError);
+  await assert.rejects(syncNow(db, asTaskId(999999)), ActionError);
   db.applyEvent(queued.id, { type: 'cancel' });
 });
 
@@ -565,7 +566,7 @@ test('resolveConflicting with auto_resolve off makes no sync attempt and tells t
   const before = resolveCalls();
   updateRepo(db, 'demo', { auto_resolve: false });
   try {
-    const told = new Set<number>();
+    const told = new Set<TaskId>();
     const log: string[] = [];
     await resolveConflicting(db, [t.id], (m) => log.push(m), told);
     await resolveConflicting(db, [t.id], (m) => log.push(m), told);

@@ -5,6 +5,7 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileS
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
+import type { TaskId } from '../src/domain/id/id.ts';
 import { stopReasonOf } from '../src/domain/task/task.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-planruns-'));
@@ -135,7 +136,7 @@ function markStep(worktree: string, id: string, status: string): void {
   const file = join(worktree, '.agentdeck/plan.html');
   writeFileSync(file, readFileSync(file, 'utf8').replace(new RegExp(`(id="${id}" data-status=)"[^"]*"`), `$1"${status}"`));
 }
-const statuses = (taskId: number) => parsePlan(db.ownPlan(taskId)!.html)!.steps.map((s) => [s.id, s.status]);
+const statuses = (taskId: TaskId) => parsePlan(db.ownPlan(taskId)!.html)!.steps.map((s) => [s.id, s.status]);
 
 test('a plan’s owner with no --steps does not undo a step a sibling finished while it ran', async () => {
   // The owner was given the plan with --plan <file> and no --steps: it is linked to every step.

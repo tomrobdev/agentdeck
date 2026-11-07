@@ -1,5 +1,6 @@
 // A PR's checks on GitHub, one by one: what `statusCheckRollup` says about each, what is kept on the task, when a person
 // is told they failed, and the note that sends the failures back to the worker. Pure: no I/O.
+import type { TaskId } from '../id/id.ts';
 import type { Notification } from '../notification.ts';
 import { plural } from '../text.ts';
 import type { PullRequest } from './pr.ts';
@@ -126,7 +127,7 @@ export function checksSummary(pr: PullRequest | null): ChecksSummary | null {
 export const failingChecks = (checks: PrCheck[]): PrCheck[] => checks.filter((c) => c.state === 'fail');
 
 /** What a person is told when a PR's checks fail. */
-export function checksFailedNotification(task: { id: number; title: string }, checks: PrCheck[]): Notification {
+export function checksFailedNotification(task: { id: TaskId; title: string }, checks: PrCheck[]): Notification {
   const failing = failingChecks(checks).map((c) => c.name);
   return {
     kind: 'checks_failed',

@@ -1,5 +1,6 @@
 // Task runs: one row per worker claude process.
 import { and, asc, count, countDistinct, eq, gt, inArray, isNotNull, isNull, notInArray, or, sql } from 'drizzle-orm';
+import type { PlannerRunId, RunId, TaskId } from '../domain/id/id.ts';
 import type { Run, RunKind } from '../domain/run/run.ts';
 import { RUNNING_STATUSES } from '../domain/task/task.ts';
 import { stored, toRun } from './mappers.ts';
@@ -12,7 +13,7 @@ const SIDE_KINDS: RunKind[] = ['resolve', 'unblock'];
 
 export interface PidRun {
   kind: RunKind | 'planner';
-  id: number;
+  id: RunId | PlannerRunId;
   pid: number;
   /** When the pid was stored (the run's start for a row from before that was recorded). */
   pid_at: string;
@@ -20,7 +21,7 @@ export interface PidRun {
 }
 
 export interface RunningTaskRun {
-  id: number;
+  id: TaskId;
   pid: number | null;
   pid_at: string | null;
   started_at: string | null;
@@ -35,23 +36,23 @@ export function runStore(orm: Orm) {
       .where(and(eq(runs.kind, kind), isNull(runs.ended_at)))
       .get()?.n ?? 0;
   return {
-    startRun(task_id: number, attempt: number, log_path: string, kind: RunKind = 'work'): number {
-      return Number(orm.insert(runs).values({ task_id, attempt, log_path, kind }).run().lastInsertRowid);
+    startRun(task_id: TaskId, attempt: number, log_path: string, kind: RunKind = 'work'): RunId {
+      return Number(orm.insert(runs).values({ task_id, attempt, log_path, kind }).run().lastInsertRowid) as RunId;
     },
     /** Record the run's claude process group, and when it started: what `ownsLiveGroup` checks the pid against. */
-    setRunPid(id: number, pid: number): void {
+    setRunPid(id: RunId, pid: number): void {
       orm.update(runs).set({ pid, pid_at: NOW_SQL }).where(eq(runs.id, id)).run();
     },
     /** Record what a live run is doing; the write moves the change counter, which is what pushes it to the dashboard. */
-    setRunLive(id: number, live_turns: number, live_tool: string | null): void {
+    setRunLive(id: RunId, live_turns: number, live_tool: string | null): void {
       orm.update(runs).set({ live_turns, live_tool }).where(eq(runs.id, id)).run();
     },
     /** The claude session a run is in, stored as soon as claude names it so a run a restart ends can be resumed. */
-    setRunSession(id: number, session_id: string): void {
+    setRunSession(id: RunId, session_id: string): void {
       orm.update(runs).set({ session_id }).where(eq(runs.id, id)).run();
     },
     /** The unfinished run of a kind (work or resolve) of each task that has one, by task id: when it started and what it is doing. */
-    liveRuns(kind: RunKind): Map<number, { started_at: string; live_turns: number; live_tool: string | null }> {
+    liveRuns(kind: RunKind): Map<TaskId, { started_at: string; live_turns: number; live_tool: string | null }> {
       const rows = orm
         .select({ task_id: runs.task_id, started_at: runs.started_at, live_turns: runs.live_turns, live_tool: runs.live_tool })
         .from(runs)
@@ -60,7 +61,7 @@ export function runStore(orm: Orm) {
         .all();
       return new Map(rows.map((r) => [r.task_id, r]));
     },
-    finishRun(id: number, r: Partial<Omit<Run, 'id' | 'task_id' | 'kind' | 'attempt' | 'started_at' | 'log_path'>>): void {
+    finishRun(id: RunId, r: Partial<Omit<Run, 'id' | 'task_id' | 'kind' | 'attempt' | 'started_at' | 'log_path'>>): void {
       // undefined means "not given" to Drizzle, but this has always written a given-as-undefined key as NULL.
       const given = Object.fromEntries(Object.entries(stored(r)).map(([k, v]) => [k, v ?? null]));
       orm
@@ -69,7 +70,7 @@ export function runStore(orm: Orm) {
         .where(eq(runs.id, id))
         .run();
     },
-    runsForTask(task_id: number): Run[] {
+    runsForTask(task_id: TaskId): Run[] {
       return orm.select().from(runs).where(eq(runs.task_id, task_id)).orderBy(asc(runs.id)).all().map(toRun);
     },
     /** Resolve runs still going, in any daemon process. */
@@ -98,7 +99,7 @@ export function runStore(orm: Orm) {
       return running + beside + planning;
     },
     /** Whether a resolve run of this task has not finished. */
-    hasRunningResolve(task_id: number): boolean {
+    hasRunningResolve(task_id: TaskId): boolean {
       return (
         orm
           .select({ id: runs.id })
@@ -131,7 +132,7 @@ export function runStore(orm: Orm) {
             .select({
               // guard: the builder has no literal column; every row of this side is a planner run
               kind: sql<PidRun['kind']>`'planner'`.as('kind'),
-              id: plannerRuns.id,
+              id: plannerRuns.id as unknown as typeof runs.id, // a union's columns share one type; PidRun.id says it is either
               pid: plannerRuns.pid,
               // guard: the union's column needs the same alias and string type as the runs side
               pid_at: sql<string>`${plannerRuns.started_at}`.as('pid_at'),

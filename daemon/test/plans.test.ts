@@ -1,5 +1,6 @@
 // Plans: the format's parser, naming, the step merge, the store, and linking tasks to plans from the CLI and the API.
 import assert from 'node:assert/strict';
+import { asTaskId } from '../src/domain/id/id.ts';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import type { AddressInfo } from 'node:net';
@@ -277,7 +278,7 @@ const cli = (...args: string[]) =>
 test('agentdeck add --plan <file> stores the plan under its numbered name, with no commit to the repo', () => {
   const added = cli('add', 'Measure first', '--repo', 'demo', '--plan', planFile, '--steps', 'a');
   assert.equal(added.status, 0, added.stderr);
-  const id = Number(/task #(\d+)/.exec(added.stdout)![1]);
+  const id = asTaskId(Number(/task #(\d+)/.exec(added.stdout)![1]));
   const name = `${id}-speed-up-the-cache.html`;
   assert.match(added.stdout, new RegExp(`plan +${name}`));
 
@@ -341,7 +342,7 @@ test('add links a task to another task’s plan by number, and refuses what does
   const refuses = (input: Partial<Parameters<typeof addTask>[1]>, message: RegExp) =>
     assert.rejects(addTask(db, { repo: 'demo', prompt: 'x', ...input }), (err) => err instanceof Error && message.test(err.message));
   await refuses({ plan_task: owner.id, plan_steps: 'a,nope,gone' }, new RegExp(`${name} has no step nope, gone \\(it has a, b\\)`));
-  await refuses({ plan_task: 9999 }, /there is no task #9999/);
+  await refuses({ plan_task: asTaskId(9999) }, /there is no task #9999/);
   const plain = db.addTask({ repo_id: repo.id, title: 'plain', prompt: 'p' });
   await refuses({ plan_task: plain.id }, new RegExp(`#${plain.id} has no plan`));
   const elsewhereTask = db.addTask({ repo_id: otherRepo.id, title: 'other', prompt: 'p' });

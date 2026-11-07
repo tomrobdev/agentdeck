@@ -2,9 +2,10 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { ActionError, pilotStats } from '../src/application/actions.ts';
 import { openDb } from '../src/db/index.ts';
+import type { TaskId } from '../src/domain/id/id.ts';
 import type { RunOutcome } from '../src/domain/run/run.ts';
 import { type StatRun, measure, statsTable, wilson } from '../src/domain/run/stats.ts';
-import { blockedTask, doneTask, failedTask } from './fixtures.ts';
+import { asRepoId, asTaskId, blockedTask, doneTask, failedTask } from './fixtures.ts';
 
 const near = (actual: number | undefined, expected: number, eps = 1e-3) =>
   assert.ok(actual !== undefined && Math.abs(actual - expected) < eps, `${actual} is not ${expected}`);
@@ -23,8 +24,8 @@ test('wilson: hand-checked intervals', () => {
 });
 
 const run = (o: Partial<StatRun>): StatRun => ({
-  repo_id: 1,
-  task_id: 1,
+  repo_id: asRepoId(1),
+  task_id: asTaskId(1),
   attempt: 1,
   outcome: 'done',
   started_at: '2026-10-01 10:00:00',
@@ -37,11 +38,11 @@ const run = (o: Partial<StatRun>): StatRun => ({
 
 test('measure: first-run success, denials per run, cost and minutes per done task', () => {
   const m = measure([
-    run({ task_id: 1, cost_usd: 1, denials: 0 }), // done first time
-    run({ task_id: 2, attempt: 1, outcome: 'failed', cost_usd: 0.5, denials: 2 }), // failed, then
-    run({ task_id: 2, attempt: 2, cost_usd: 1.5, ended_at: '2026-10-01 10:20:00' }), // done on the retry
-    run({ task_id: 3, outcome: 'blocked', task_status: 'blocked', cost_usd: 9, denials: 1 }),
-    run({ task_id: 4, outcome: null, ended_at: null, task_status: 'running' }), // unfinished: not a first run yet
+    run({ task_id: asTaskId(1), cost_usd: 1, denials: 0 }), // done first time
+    run({ task_id: asTaskId(2), attempt: 1, outcome: 'failed', cost_usd: 0.5, denials: 2 }), // failed, then
+    run({ task_id: asTaskId(2), attempt: 2, cost_usd: 1.5, ended_at: '2026-10-01 10:20:00' }), // done on the retry
+    run({ task_id: asTaskId(3), outcome: 'blocked', task_status: 'blocked', cost_usd: 9, denials: 1 }),
+    run({ task_id: asTaskId(4), outcome: null, ended_at: null, task_status: 'running' }), // unfinished: not a first run yet
   ]);
   assert.equal(m.tasks, 4);
   assert.equal(m.runs, 5);
@@ -59,8 +60,8 @@ test('measure: first-run success, denials per run, cost and minutes per done tas
 
 test('measure: a run a daemon restart cut off is not a first run; the run that resumed it is', () => {
   const m = measure([
-    run({ task_id: 1, outcome: 'interrupted' }), // cut off by a restart
-    run({ task_id: 1 }), // the same attempt, resumed: done
+    run({ task_id: asTaskId(1), outcome: 'interrupted' }), // cut off by a restart
+    run({ task_id: asTaskId(1) }), // the same attempt, resumed: done
   ]);
   assert.equal(m.runs, 2);
   assert.equal(m.first_runs, 1);
@@ -80,7 +81,7 @@ test('measure: nothing to measure gives nulls, not NaN', () => {
 /** A finished work run with the numbers a test checks. */
 function work(
   db: ReturnType<typeof openDb>,
-  task_id: number,
+  task_id: TaskId,
   attempt: number,
   outcome: RunOutcome,
   cost_usd: number,

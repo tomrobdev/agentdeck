@@ -1,9 +1,15 @@
 // The queue's graph layout. The dashboard has no test runner, so its pure layout is tested here.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { DEFAULT_SIZE, type GraphEdge, chainOf, graphTasks, layoutGraph, stuckSet } from '../../app/src/lib/graph.ts';
+import { DEFAULT_SIZE, type GraphEdge, chainOf, graphTasks, layoutGraph as layout, stuckSet } from '../../app/src/lib/graph.ts';
+import { asTaskId } from './fixtures.ts';
 
-const e = (from: number, to: number, kind: 'builds_on' | 'after' = 'builds_on'): GraphEdge => ({ from, to, kind });
+const e = (from: number, to: number, kind: 'builds_on' | 'after' = 'builds_on'): GraphEdge => ({
+  from: asTaskId(from),
+  to: asTaskId(to),
+  kind,
+});
+const layoutGraph = (ids: number[], edges: GraphEdge[]) => layout(ids.map(asTaskId), edges);
 
 function noOverlap(l: ReturnType<typeof layoutGraph>) {
   const { nodeWidth: w, nodeHeight: h } = DEFAULT_SIZE;
@@ -107,5 +113,5 @@ test('a stuck task, its root and everything it holds are outlined', () => {
 
 test('hovering a task highlights its chain up and down', () => {
   const edges = [e(1, 2), e(2, 3), e(2, 4, 'after'), e(5, 6)];
-  assert.deepEqual([...chainOf(2, edges)].sort(), [1, 2, 3, 4]);
+  assert.deepEqual([...chainOf(asTaskId(2), edges)].sort(), [1, 2, 3, 4]);
 });

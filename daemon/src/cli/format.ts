@@ -1,6 +1,7 @@
 // How the CLI prints tasks, doctor reports, logs and times, and how it fails.
 import { createInterface } from 'node:readline/promises';
 import { type DoctorReport, type HealthCheck, type TaskView, readLog } from '../application/actions.ts';
+import { type TaskId, asTaskId } from '../domain/id/id.ts';
 import type { AutoMergeView } from '../domain/pull-request/auto-merge.ts';
 import type { ChecksSummary } from '../domain/pull-request/checks.ts';
 import type { TaskStatus } from '../domain/task/lifecycle.ts';
@@ -31,19 +32,19 @@ export async function confirm(question: string): Promise<boolean> {
   return /^y(es)?$/i.test(answer.trim());
 }
 
-export function taskId(arg: string | undefined): number {
+export function taskId(arg: string | undefined): TaskId {
   const id = Number(arg);
   if (!Number.isInteger(id) || id <= 0) die('expected a task id');
-  return id;
+  return asTaskId(id);
 }
 
 /** The task ids a list flag names (`--builds-on 12,14`); empty when the flag is not given. */
-export function taskIds(value: string | undefined, flag: string): number[] {
+export function taskIds(value: string | undefined, flag: string): TaskId[] {
   return parseTaskIds(value) ?? die(`${flag} takes task ids, like 12,14`);
 }
 
 /** "#12, #14" */
-export const idsText = (ids: number[]): string => ids.map((id) => `#${id}`).join(', ');
+export const idsText = (ids: TaskId[]): string => ids.map((id) => `#${id}`).join(', ');
 
 /** One link in words: "builds on #12 (waiting)", "after #9 (not landed yet)". */
 export function fmtLink(l: TaskView['links'][number]): string {
@@ -55,7 +56,7 @@ export function fmtLink(l: TaskView['links'][number]): string {
 export function fmtTask(
   t: Task & {
     waiting?: TaskView['waiting'];
-    unblocks?: number[];
+    unblocks?: TaskId[];
     links?: TaskView['links'];
     auto_merge_view?: TaskView['auto_merge_view'];
   },
@@ -94,7 +95,7 @@ export function fmtAutoMerge(v: AutoMergeView): string[] {
 }
 
 /** The line `agentdeck show` prints for the open PR's checks: "checks   2 of 5 failing: lint, test (agentdeck fix-checks 12)". */
-export function fmtChecks(c: ChecksSummary, id?: number): string {
+export function fmtChecks(c: ChecksSummary, id?: TaskId): string {
   const running = c.pending ? `, ${c.pending} running` : '';
   if (!c.failing) return `checks   ${c.total} on the PR, none failing${running}`;
   const fix = id === undefined ? '' : `  (agentdeck fix-checks ${id})`;

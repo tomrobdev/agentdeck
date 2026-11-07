@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { describeWait, startDecision, startWait } from '../src/domain/task/start.ts';
 import type { Decision } from '../src/domain/usage/governor.ts';
+import { asTaskId } from './fixtures.ts';
 
 const allow: Decision = { allow: true, max_concurrent: 2, reason: null, until: null, weekly_allowed: null };
 const held: Decision = { ...allow, allow: false, reason: '5h window at 92%', until: 2000 };
@@ -49,16 +50,19 @@ test('startWait names what a queued task waits for', () => {
   assert.deepEqual(startWait({ status: 'queued' }, { ...free, queue: { kind: 'daemon-paused' }, repoPaused: 'refused' }), {
     kind: 'daemon-paused',
   });
-  assert.deepEqual(startWait({ status: 'queued' }, { ...free, repoPaused: 'refused', dependency: { kind: 'waiting', on: [3] } }), {
-    kind: 'repo-paused',
-    reason: 'refused',
-  });
-  assert.deepEqual(startWait({ status: 'queued' }, { ...free, dependency: { kind: 'stuck', on: 3, reason: '#3 failed' } }), {
+  assert.deepEqual(
+    startWait({ status: 'queued' }, { ...free, repoPaused: 'refused', dependency: { kind: 'waiting', on: [asTaskId(3)] } }),
+    {
+      kind: 'repo-paused',
+      reason: 'refused',
+    },
+  );
+  assert.deepEqual(startWait({ status: 'queued' }, { ...free, dependency: { kind: 'stuck', on: asTaskId(3), reason: '#3 failed' } }), {
     kind: 'dependency',
     on: [3],
     stuck: '#3 failed',
   });
-  assert.deepEqual(startWait({ status: 'queued' }, { ...free, dependency: { kind: 'waiting', on: [3, 4] } }), {
+  assert.deepEqual(startWait({ status: 'queued' }, { ...free, dependency: { kind: 'waiting', on: [asTaskId(3), asTaskId(4)] } }), {
     kind: 'dependency',
     on: [3, 4],
     stuck: null,

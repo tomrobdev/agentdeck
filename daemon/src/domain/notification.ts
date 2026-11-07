@@ -1,5 +1,6 @@
 // Alerts for things that need a human: task finished, blocked, failed, proposals, a governor hold, a pause, an
 // auto-merge or a PR's checks failing. Pure: no I/O.
+import type { TaskId } from './id/id.ts';
 import type { Task, TaskState } from './task/task.ts';
 
 export type NotifyKind = 'done' | 'blocked' | 'failed' | 'hold' | 'paused' | 'proposed' | 'merged' | 'checks_failed';
@@ -24,7 +25,7 @@ export interface Notification {
   kind: NotifyKind | 'test';
   title: string;
   body: string;
-  task_id?: number | null;
+  task_id?: TaskId | null;
 }
 
 export interface NotifySettings {
