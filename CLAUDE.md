@@ -4,7 +4,7 @@ macOS daemon that works through a queue of coding tasks with `claude -p`, one gi
 
 ## Commands
 
-`pnpm test` · `pnpm typecheck` · `pnpm format` · `pnpm check:fast` (`format:check`, `typecheck`, `db:check`, `test`) · `pnpm check` (`check:fast`, then the SIGKILL crash test, `CRASH_ITERATIONS` runs, default 10) · `pnpm docs:gen` (generate the architecture docs) · `pnpm rules` (print each rule with its checks) · `pnpm check:rust` (fmt, clippy and tests of `app/src-tauri`) · `node daemon/scripts/crash-test.mjs 10` (the crash test alone)
+`pnpm test` · `pnpm typecheck` · `pnpm format` · `pnpm check:fast` (`format:check`, `typecheck`, `db:check`, `test`) · `pnpm check` (`check:fast`, then the SIGKILL crash test, `CRASH_ITERATIONS` runs, default 10) · `pnpm docs:gen` (generate the architecture docs) · `pnpm rules` (print each rule with its checks) · `pnpm check:rust` (fmt, clippy and tests of `app/src-tauri`; not part of `pnpm check`, CI runs it via `.github/workflows/rust.yml` whenever `app/src-tauri` changes) · `node daemon/scripts/crash-test.mjs 10` (the crash test alone)
 
 ## Domain language
 
