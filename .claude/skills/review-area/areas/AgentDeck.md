@@ -45,7 +45,7 @@ The task entity, its lifecycle, and the person-facing use cases, CLI and routes.
 - daemon/src/application/task/tasks.ts
 - daemon/src/application/task/task-views.ts
 - daemon/src/application/task/files.ts
-- daemon/src/application/task/settle.ts
+- daemon/src/application/landing/settle.ts
 - daemon/src/api/routes/tasks.ts
 - daemon/src/cli/tasks.ts
 
@@ -88,9 +88,11 @@ The run's lifecycle: the worker, the claude process, resuming, prompts, logs and
 
 ## sync
 
-- daemon/src/application/sync.ts
-- daemon/src/domain/landing/branch.ts
+- daemon/src/application/runs/sync.ts
+- daemon/src/application/work/checkout-locks.ts
+- daemon/src/domain/work/branch.ts
 - daemon/src/domain/landing/sync.ts
+- daemon/src/domain/runs/resolve.ts
 - daemon/src/adapters/git.ts
 
 ## pull-request
