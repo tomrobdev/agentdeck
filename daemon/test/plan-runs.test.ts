@@ -104,7 +104,7 @@ test('two tasks on one plan each write back only their own steps', async () => {
   const calls = readFileSync(join(home, 'fake-claude-calls.log'), 'utf8');
   assert.match(calls, new RegExp(`--- Plan: ${owner.id}-shared-plan\\.html \\(in \\.agentdeck/plan\\.html\\) ---`));
   for (const t of [owner, sibling]) {
-    const files = committed(db.getTask(t.id)!.branch!);
+    const files = committed(db.getTask(t.id)!.checkout!.branch!);
     assert.ok(files.includes('fake-output.txt'));
     assert.ok(!files.some((f) => f.startsWith('.agentdeck')), `#${t.id}'s branch has no plan file`);
   }
@@ -125,8 +125,8 @@ test('a plan the worker writes is stored as the task’s own plan, named after i
     plans.map((p) => [p.name, p.source, p.title]),
     [[`${t.id}-fake-plan-two-steps.html`, 'worker', 'Fake Plan: Two Steps!']],
   );
-  assert.equal(db.getTask(t.id)!.plan_task, null, 'it follows its own plan without a link');
-  assert.ok(!committed(db.getTask(t.id)!.branch!).some((f) => f.startsWith('.agentdeck')));
+  assert.equal(db.getTask(t.id)!.plan, null, 'it follows its own plan without a link');
+  assert.ok(!committed(db.getTask(t.id)!.checkout!.branch!).some((f) => f.startsWith('.agentdeck')));
 });
 
 /** Set step `id`'s status in the plan file of `worktree`, as a worker does. */
@@ -167,7 +167,7 @@ test('a plan’s owner with no --steps does not undo a step a sibling finished w
 
 test('a task given its plan with --plan <file>, no one following it, keeps a step its worker added', async () => {
   const t = db.addTask({ repo_id: repo.id, title: 'adds a step', prompt: 'p', own_plan: plan, status: 'proposed' });
-  assert.equal(t.plan_task, t.id);
+  assert.equal(t.plan?.task, t.id);
   const tree = mkdtempSync(join(home, 'adds-'));
   await writePlanFile(tree, planForRun(db, t)?.html ?? null);
   const file = join(tree, '.agentdeck/plan.html');

@@ -251,6 +251,8 @@ const head = git('rev-parse', 'HEAD');
 
 const repo = db.addRepo({ name: 'demo', path: repoPath, base_branch: 'main' });
 const otherRepo = db.addRepo({ name: 'other', path: join(home, 'other'), base_branch: 'main' });
+/** A task's plan link as [task, steps]. */
+const link = (t: { plan: { task: number; steps: string[] | null } | null }) => [t.plan?.task ?? null, t.plan?.steps ?? null];
 
 // A plan file outside the repo, its steps a and b.
 const elsewhere = mkdtempSync(join(tmpdir(), 'agentdeck-plan-file-'));
@@ -280,7 +282,7 @@ test('agentdeck add --plan <file> stores the plan under its numbered name, with 
   assert.match(added.stdout, new RegExp(`plan +${name}`));
 
   const t = db.getTask(id)!;
-  assert.deepEqual([t.plan_task, t.plan_steps], [id, ['a']]);
+  assert.deepEqual(link(t), [id, ['a']]);
   const row = db.raw.prepare('SELECT plan_path FROM tasks WHERE id = ?').get(id) as { plan_path: string | null };
   assert.equal(row.plan_path, null, 'the legacy column is not written');
   assert.deepEqual(
@@ -313,16 +315,16 @@ test('agentdeck add --plan <file> stores the plan under its numbered name, with 
 
 test('add links a task to another task’s plan by number, and refuses what does not hold', async () => {
   const owner = await addTask(db, { repo: 'demo', prompt: 'own it', plan_html: readFileSync(planFile, 'utf8') });
-  assert.equal(owner.plan_task, owner.id);
+  assert.equal(owner.plan?.task, owner.id);
   const name = `${owner.id}-speed-up-the-cache.html`;
 
   const some = await addTask(db, { repo: 'demo', prompt: 'do b', plan_task: owner.id, plan_steps: 'b' });
-  assert.deepEqual([some.plan_task, some.plan_steps], [owner.id, ['b']]);
+  assert.deepEqual(link(some), [owner.id, ['b']]);
   // Following a task that follows a plan follows that plan.
   const viaFollower = await addTask(db, { repo: 'demo', prompt: 'do a', plan_task: some.id, plan_steps: ['a'] });
-  assert.equal(viaFollower.plan_task, owner.id);
+  assert.equal(viaFollower.plan?.task, owner.id);
   const every = await addTask(db, { repo: 'demo', prompt: 'do it all', plan_task: owner.id });
-  assert.deepEqual([every.plan_task, every.plan_steps], [owner.id, null]);
+  assert.deepEqual(link(every), [owner.id, null]);
 
   const viaApi = await call('/api/tasks', { repo: 'demo', prompt: 'api', plan_task: owner.id, plan_steps: ['a'] });
   assert.equal(viaApi.status, 200);
@@ -355,24 +357,24 @@ test('edit sets, changes and clears the plan link', async () => {
   const owner = await addTask(db, { repo: 'demo', prompt: 'owner', plan_html: readFileSync(planFile, 'utf8') });
   const t = db.addTask({ repo_id: repo.id, title: 'e', prompt: 'p' });
   const linked = await editTask(db, t.id, { plan_task: owner.id, plan_steps: ['a'] });
-  assert.deepEqual([linked.plan_task, linked.plan_steps], [owner.id, ['a']]);
+  assert.deepEqual(link(linked), [owner.id, ['a']]);
 
   const moreSteps = await editTask(db, t.id, { plan_steps: 'a,b' });
-  assert.deepEqual(moreSteps.plan_steps, ['a', 'b']);
-  assert.equal((await editTask(db, t.id, { title: 'renamed' })).plan_task, owner.id, 'other edits keep the link');
+  assert.deepEqual(moreSteps.plan?.steps, ['a', 'b']);
+  assert.equal((await editTask(db, t.id, { title: 'renamed' })).plan?.task, owner.id, 'other edits keep the link');
 
   await assert.rejects(editTask(db, t.id, { plan_steps: 'nope' }), /has no step nope/);
-  assert.deepEqual(db.getTask(t.id)!.plan_steps, ['a', 'b'], 'a refused edit changes nothing');
+  assert.deepEqual(db.getTask(t.id)!.plan?.steps, ['a', 'b'], 'a refused edit changes nothing');
 
   const everyStep = await editTask(db, t.id, { plan_steps: null });
-  assert.deepEqual([everyStep.plan_task, everyStep.plan_steps], [owner.id, null]);
+  assert.deepEqual(link(everyStep), [owner.id, null]);
 
   const cleared = await editTask(db, t.id, { plan_task: null });
-  assert.deepEqual([cleared.plan_task, cleared.plan_steps], [null, null]);
+  assert.deepEqual(link(cleared), [null, null]);
 
   // A plan file becomes the task's own plan.
   const own = await editTask(db, t.id, { plan_html: PLAN, plan_steps: 's2' });
-  assert.deepEqual([own.plan_task, own.plan_steps], [t.id, ['s2']]);
+  assert.deepEqual(link(own), [t.id, ['s2']]);
   assert.equal(db.ownPlan(t.id)!.name, `${t.id}-speed-up-the-cache.html`);
 
   const other = db.addTask({ repo_id: repo.id, title: 'o', prompt: 'p' });

@@ -14,6 +14,7 @@ import {
 } from '../domain/plan/plan.ts';
 import type { PrPlan } from '../domain/pull-request/pr.ts';
 import type { PromptPlan } from '../domain/run/prompt.ts';
+import { hasPlanLink, otherPlanOwner } from '../domain/task/plan-link.ts';
 import { PLAN_ATTACHABLE_STATUSES, type Task } from '../domain/task/task.ts';
 import { ActionError, object, requireTask } from './input.ts';
 
@@ -27,10 +28,10 @@ export function readPlanInput(html: unknown): { html: string; plan: ParsedPlan }
 }
 
 /** The plan a task follows: the linked task's plan, or else its own. `steps` are the linked step ids, null for every step. */
-export function followedPlan(db: Db, task: Pick<Task, 'id' | 'plan_task' | 'plan_steps'>): (OwnPlan & { steps: string[] | null }) | null {
-  if (task.plan_task !== null) {
-    const plan = db.ownPlan(task.plan_task);
-    return plan ? { ...plan, steps: task.plan_steps } : null;
+export function followedPlan(db: Db, task: Pick<Task, 'id' | 'plan'>): (OwnPlan & { steps: string[] | null }) | null {
+  if (task.plan !== null) {
+    const plan = db.ownPlan(task.plan.task);
+    return plan ? { ...plan, steps: task.plan.steps } : null;
   }
   const own = db.ownPlan(task.id);
   return own ? { ...own, steps: null } : null;
@@ -40,7 +41,7 @@ export function followedPlan(db: Db, task: Pick<Task, 'id' | 'plan_task' | 'plan
 export function planForRun(db: Db, task: Task): PromptPlan | null {
   const plan = followedPlan(db, task);
   if (plan) return { name: plan.name, html: plan.html, steps: plan.steps };
-  return task.plan_task !== null ? { name: `#${task.plan_task}'s plan`, html: null, steps: task.plan_steps } : null;
+  return task.plan !== null ? { name: `#${task.plan.task}'s plan`, html: null, steps: task.plan.steps } : null;
 }
 
 /**
@@ -61,13 +62,13 @@ export async function takePlanFile(db: Db, task: Task, worktree: string): Promis
 function storeWrittenPlan(db: Db, task: Task, written: string, given: string | null): boolean {
   const plan = followedPlan(db, task);
   if (plan) {
-    const own = task.plan_task === null || task.plan_task === task.id;
+    const own = otherPlanOwner(task) === null;
     const html = planAfterRun({ stored: plan.html, given, written, ids: plan.steps, own, followed: own && db.planShared(task.id) });
     if (html === plan.html) return false;
     db.updatePlanHtml(plan.id, html);
     return true;
   }
-  if (task.plan_task !== null) return false; // linked to a plan that is gone: nothing to write back into
+  if (hasPlanLink(task)) return false; // linked to a plan that is gone: nothing to write back into
   db.saveOwnPlan(task.id, written, 'worker');
   return true;
 }
@@ -81,7 +82,7 @@ export function checkFollowers(db: Db, owner: number, plan: ParsedPlan, skip?: n
   const followers = db
     .planFollowers(owner)
     .filter((f) => f.id !== skip)
-    .map((f) => ({ id: f.id, steps: f.plan_steps }));
+    .map((f) => ({ id: f.id, steps: f.plan?.steps ?? null }));
   const missing = missingFollowedSteps(plan, followers);
   if (missing.length) {
     const list = missing.map((m) => `#${m.id} (${m.missing.join(', ')})`).join(', ');
@@ -103,9 +104,10 @@ export function prPlanFor(db: Db, task: Task): PrPlan | null {
 }
 
 /** The plans a task shows: the plan it follows when that belongs to another task, then its own, oldest first. */
-export function plansShown(db: Db, task: Pick<Task, 'id' | 'plan_task'>): TaskPlan[] {
+export function plansShown(db: Db, task: Pick<Task, 'id' | 'plan'>): TaskPlan[] {
   const own = db.plansForTask(task.id);
-  const linked = task.plan_task === null || task.plan_task === task.id ? undefined : db.ownPlan(task.plan_task);
+  const owner = otherPlanOwner(task);
+  const linked = owner === null ? undefined : db.ownPlan(owner);
   return linked ? [toPlan(linked), ...own] : own;
 }
 

@@ -54,7 +54,7 @@ async function runOpened(db: Db, task: Task, opened: OpenedRun): Promise<Unblock
   const repo = db.getRepo(task.repo_id);
   if (!repo) throw new Error(`repo ${task.repo_id} not found`);
   const wt = await ensureWorktree(repo, task);
-  if (wt.path !== task.worktree) db.setCheckout(task.id, { branch: wt.branch, worktree: wt.path });
+  if (wt.path !== task.checkout?.worktree) db.setCheckout(task.id, { branch: wt.branch, worktree: wt.path });
 
   let plan: PromptPlan | null = null;
   try {

@@ -1,8 +1,10 @@
 // The task entity. Pure: no I/O.
 import type { PullRequest } from '../pull-request/pr.ts';
 import type { UnblockQuestion } from '../run/unblock.ts';
+import type { Checkout } from './checkout.ts';
 import type { TaskStatus } from './lifecycle.ts';
 import type { Needs } from './needs.ts';
+import type { PlanLink } from './plan-link.ts';
 
 /** Who made a task: a person, or the planner proposing it. */
 export type TaskSource = 'manual' | 'planner';
@@ -18,19 +20,16 @@ export interface Task {
   max_turns: number;
   attempts: number;
   max_attempts: number;
-  branch: string | null;
-  worktree: string | null;
+  checkout: Checkout | null; // the branch and worktree the work is on, and a running sync
   stop_reason: string | null;
   source: TaskSource;
   restarts: number; // times a daemon restart requeued this task mid-run
   pr: PullRequest | null; // the task's pull request, as one value
   needs: Needs | null; // what the worker said it needs when it blocked; cleared when queued again
   question: UnblockQuestion | null; // what an unblock run left on the blocked task; cleared with `needs`
-  plan_steps: string[] | null; // the linked plan's step ids; null means every unfinished step
+  plan: PlanLink | null; // the plan this task follows and its linked steps (domain/task/plan-link.ts); null follows its own plan, if any
   done_by: 'person' | null; // 'person' when mark_done set the status; cleared whenever the task leaves done
   auto_merge: boolean | null; // overrides the repo's auto_merge; null = the repo's (domain/pull-request/auto-merge.ts)
-  syncing_since: string | null; // when a sync of the branch began; NULL when none is running
-  plan_task: number | null; // the task whose plan this one follows (itself when its own plan was given with --plan); null follows its own plan, if any
   created_at: string;
   updated_at: string;
 }

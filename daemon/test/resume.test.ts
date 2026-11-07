@@ -276,7 +276,7 @@ test('a restart mid-run: the next run resumes the session and uses no attempt', 
     args.filter((_, i) => i !== args.indexOf('-p') + 1).filter((a) => a !== '--resume' && a !== cut.session_id);
   assert.deepEqual(rest(resumed), rest(fresh));
   assert.match(readFileSync(second.log_path, 'utf8'), /"type":"agentdeck_resume","session_id":"fake-session-\d+"/);
-  assert.ok(existsSync(join(t.worktree!, 'fake-output.txt')));
+  assert.ok(existsSync(join(t.checkout!.worktree!, 'fake-output.txt')));
 });
 
 test('a resume whose session is gone falls back to a fresh run, in the same run', async () => {
@@ -301,7 +301,7 @@ test('a resume whose session is gone falls back to a fresh run, in the same run'
   assert.match(runs[1].session_id!, /^fake-session-\d+$/, 'the run keeps the fresh session');
   assert.equal(runs[1].outcome, 'done');
   assert.match(readFileSync(runs[1].log_path, 'utf8'), /"type":"agentdeck_resume_failed".*No conversation found/);
-  assert.equal(git(repoPath, 'rev-list', '--count', `main..${t.branch}`), '1', 'the work is on the task’s branch');
+  assert.equal(git(repoPath, 'rev-list', '--count', `main..${t.checkout?.branch}`), '1', 'the work is on the task’s branch');
 });
 
 test('a task whose prompt was edited while it waited starts afresh instead of resuming the old session', async () => {

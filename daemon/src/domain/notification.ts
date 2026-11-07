@@ -47,7 +47,7 @@ export function appDelivers(appSeenAt: number | null, now: number): boolean {
 
 /** What a person is told when a task ends done, blocked or failed; null for any other status. `pr` is what opening its PR came to. */
 export function finalNotification(
-  task: Pick<Task, 'id' | 'title' | 'status' | 'branch' | 'stop_reason'>,
+  task: Pick<Task, 'id' | 'title' | 'status' | 'checkout' | 'stop_reason'>,
   repoName: string,
   pr: { url?: string; error?: string } = {},
 ): Notification | null {
@@ -55,7 +55,7 @@ export function finalNotification(
   if (status !== 'done' && status !== 'blocked' && status !== 'failed') return null;
   let body =
     status === 'done'
-      ? `Ready to review on ${task.branch ?? 'its branch'}${repoName ? ` in ${repoName}` : ''}.`
+      ? `Ready to review on ${task.checkout?.branch ?? 'its branch'}${repoName ? ` in ${repoName}` : ''}.`
       : `${task.stop_reason ?? status}${repoName ? ` (${repoName})` : ''}`;
   if (pr.url) body = `${body} PR: ${pr.url}`;
   if (pr.error) body = `${body} Could not open a PR: ${pr.error}`;

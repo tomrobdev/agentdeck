@@ -85,7 +85,7 @@ function tested(o: { source?: 'manual' | 'planner'; title?: string } = {}) {
   const url = `https://x/pull/${++n}`;
   const t = doneTask(db, repo, { pr: 'open', url, branch: `agentdeck/pr-${n}`, ...o });
   db.finishRun(db.startRun(t.id, 1, join(home, `run-${t.id}.log`)), { tests_passed: true });
-  return { id: t.id, url, branch: t.branch };
+  return { id: t.id, url, branch: t.checkout?.branch };
 }
 
 // ---- The check

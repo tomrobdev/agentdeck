@@ -135,14 +135,14 @@ test('a run whose worker wrote protected edits ends with them committed on the b
 
   const task = db.getTask(t.id)!;
   assert.equal(task.status, 'done', 'the tests ran after the edits were applied');
-  const files = git(dir, 'ls-tree', '-r', '--name-only', task.branch!).split('\n');
+  const files = git(dir, 'ls-tree', '-r', '--name-only', task.checkout!.branch!).split('\n');
   assert.ok(files.includes('.claude/skills/x/SKILL.md'));
   assert.ok(files.includes('.claude/skills/y/SKILL.md'));
   assert.ok(!files.includes('src/outside.ts'));
   assert.ok(!files.some((f) => f.startsWith('.agentdeck')));
-  assert.equal(git(dir, 'show', `${task.branch}:.claude/skills/x/SKILL.md`), '# x\nnew skill');
-  assert.ok(!existsSync(join(task.worktree!, EDITS_FOLDER)));
-  assert.ok(!existsSync(join(task.worktree!, 'src/outside.ts')));
+  assert.equal(git(dir, 'show', `${task.checkout?.branch}:.claude/skills/x/SKILL.md`), '# x\nnew skill');
+  assert.ok(!existsSync(join(task.checkout!.worktree!, EDITS_FOLDER)));
+  assert.ok(!existsSync(join(task.checkout!.worktree!, 'src/outside.ts')));
 
   const run = db.runsForTask(t.id)[0];
   const event = readFileSync(run.log_path, 'utf8')

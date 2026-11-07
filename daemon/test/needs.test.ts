@@ -68,8 +68,8 @@ test('canInstallWith: the JS package managers only', () => {
 });
 
 test('branchName: the task’s own branch, else the one the daemon will give it', () => {
-  assert.equal(branchName({ id: 7, branch: null }), 'agentdeck/task-7');
-  assert.equal(branchName({ id: 7, branch: 'feature/x' }), 'feature/x');
+  assert.equal(branchName({ id: 7, checkout: null }), 'agentdeck/task-7');
+  assert.equal(branchName({ id: 7, checkout: { branch: 'feature/x' } }), 'feature/x');
 });
 
 test('the worker prompt describes the NEEDS forms', () => {
@@ -99,21 +99,23 @@ test('stored needs, question and plan steps are read in the mapper; malformed JS
   const repo = db.addRepo({ name: 'r', path: '/tmp/r-mapper', base_branch: 'main' });
   const t = db.addTask({ repo_id: repo.id, title: 't', prompt: 'p' });
   const store = (needs: string | null, question: string | null, plan_steps: string | null) =>
-    db.raw.prepare('UPDATE tasks SET needs = ?, question = ?, plan_steps = ? WHERE id = ?').run(needs, question, plan_steps, t.id);
+    db.raw
+      .prepare('UPDATE tasks SET needs = ?, question = ?, plan_steps = ?, plan_task = ? WHERE id = ?')
+      .run(needs, question, plan_steps, t.id, t.id);
 
   store('{"kind":"deps","items":["zod"]}', '{"question":"Which?","options":["a",1]}', '["a",2,"b"]');
   const read = db.getTask(t.id)!;
   assert.deepEqual(read.needs, { kind: 'deps', items: ['zod'] });
   assert.deepEqual(read.question, { question: 'Which?', options: ['a', '1'] });
-  assert.deepEqual(read.plan_steps, ['a', 'b']);
+  assert.deepEqual(read.plan, { task: t.id, steps: ['a', 'b'] });
 
   for (const bad of ['not json', '{"kind":"nope","items":[]}', '{"kind":"deps"}', '42', '']) {
     store(bad, bad, bad);
     const task = db.getTask(t.id)!;
-    assert.deepEqual([task.needs, task.question, task.plan_steps], [null, null, null], bad);
+    assert.deepEqual([task.needs, task.question, task.plan?.steps], [null, null, null], bad);
   }
   store(null, null, null);
-  assert.deepEqual([db.getTask(t.id)!.needs, db.getTask(t.id)!.question, db.getTask(t.id)!.plan_steps], [null, null, null]);
+  assert.deepEqual([db.getTask(t.id)!.needs, db.getTask(t.id)!.question, db.getTask(t.id)!.plan?.steps], [null, null, null]);
 
   db.raw.prepare('UPDATE tasks SET auto_merge = ? WHERE id = ?').run(1, t.id);
   assert.equal(db.getTask(t.id)!.auto_merge, true);

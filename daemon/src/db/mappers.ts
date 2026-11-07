@@ -4,6 +4,7 @@ import { getColumns } from 'drizzle-orm';
 import { type AutoMergeCheck, DEFAULT_AUTO_MERGE_SKIP } from '../domain/pull-request/auto-merge.ts';
 import type { CheckCounts, StoredChecks } from '../domain/pull-request/checks.ts';
 import { type PrFields, pullRequestOf } from '../domain/pull-request/pr.ts';
+import { type Checkout, checkoutOf } from '../domain/task/checkout.ts';
 import type { Repo } from '../domain/repo/repo.ts';
 import type { Run } from '../domain/run/run.ts';
 import type { UnblockQuestion } from '../domain/run/unblock.ts';
@@ -81,9 +82,20 @@ export function readCounts(json: string | null): CheckCounts | null {
 /** The task columns the pull request is made of: a task has them as `pr`, not as fields. */
 export type PrColumn = keyof PrFields;
 
-/** A row without the pull request's columns. */
-function withoutPrColumns<R extends TaskSummaryRow>(row: R): Omit<R, PrColumn> {
+/** The task columns the checkout is made of: a task has them as `checkout`. */
+export type CheckoutColumn = keyof Checkout;
+
+/** The task columns the plan link is made of: a task has them as `plan`. */
+export type PlanColumn = 'plan_task' | 'plan_steps';
+
+/** A row without the columns that make up its pull request, checkout and plan link. */
+function withoutValueColumns<R extends TaskSummaryRow>(row: R): Omit<R, PrColumn | CheckoutColumn | PlanColumn> {
   const {
+    branch: _branch,
+    worktree: _worktree,
+    syncing_since: _syncing_since,
+    plan_task: _plan_task,
+    plan_steps: _plan_steps,
     pr_url: _url,
     pr_state: _state,
     merge_method: _method,
@@ -104,7 +116,8 @@ function withoutPrColumns<R extends TaskSummaryRow>(row: R): Omit<R, PrColumn> {
 const taskValues = (row: TaskSummaryRow) => ({
   needs: readNeeds(row.needs),
   question: readQuestion(row.question),
-  plan_steps: readSteps(row.plan_steps),
+  checkout: checkoutOf({ branch: row.branch, worktree: row.worktree, syncing_since: row.syncing_since }),
+  plan: row.plan_task === null ? null : { task: row.plan_task, steps: readSteps(row.plan_steps) },
   auto_merge: row.auto_merge === null ? null : row.auto_merge === 1,
   pr: pullRequestOf({
     ...row,
@@ -116,8 +129,8 @@ const taskValues = (row: TaskSummaryRow) => ({
   }),
 });
 
-export const toTask = (row: TaskRow): Task => ({ ...withoutPrColumns(row), ...taskValues(row) });
-export const toTaskSummary = (row: TaskSummaryRow): TaskSummary => ({ ...withoutPrColumns(row), ...taskValues(row) });
+export const toTask = (row: TaskRow): Task => ({ ...withoutValueColumns(row), ...taskValues(row) });
+export const toTaskSummary = (row: TaskSummaryRow): TaskSummary => ({ ...withoutValueColumns(row), ...taskValues(row) });
 /**
  * A repo's row as a `Repo`: the flags are booleans and the JSON columns arrays. A malformed list reads as its default, which for the
  * repo's own tool rules is none (not the generic defaults, which could allow more than the repo meant).

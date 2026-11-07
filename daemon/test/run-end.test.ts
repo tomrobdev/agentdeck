@@ -59,8 +59,9 @@ test('a resolve run that cannot start ends failed and frees its slot', async () 
   await drain();
   const t = db.getTask(task.id)!;
   assert.equal(t.status, 'done');
-  writeFileSync(join(t.worktree!, 'shared.txt'), 'one\ntask\nthree\n');
-  sh(t.worktree!, 'commit', '-q', '-am', 'task change');
+  const worktree = t.checkout!.worktree!;
+  writeFileSync(join(worktree, 'shared.txt'), 'one\ntask\nthree\n');
+  sh(worktree, 'commit', '-q', '-am', 'task change');
   writeFileSync(join(dir, 'shared.txt'), 'one\nmain\nthree\n');
   sh(dir, 'commit', '-q', '-am', 'main change');
 
@@ -70,7 +71,7 @@ test('a resolve run that cannot start ends failed and frees its slot', async () 
   mkdirSync(join(LOG_DIR, `task-${t.id}-resolve-424242.settings.json`), { recursive: true });
   let result;
   try {
-    result = await syncBranch(db, t, repo, t.worktree!, { allowResolve: true, runTests: false });
+    result = await syncBranch(db, t, repo, worktree, { allowResolve: true, runTests: false });
   } finally {
     Date.now = realNow;
   }
@@ -81,7 +82,7 @@ test('a resolve run that cannot start ends failed and frees its slot', async () 
   assert.equal(resolve[0].outcome, 'failed');
   assert.equal(db.slotsUsed(), 0);
   assert.equal(db.hasRunningResolve(t.id), false);
-  assert.equal(sh(t.worktree!, 'status', '--porcelain'), '', 'the merge was undone');
+  assert.equal(sh(worktree, 'status', '--porcelain'), '', 'the merge was undone');
 });
 
 test('a run row is never finished twice', async () => {

@@ -25,9 +25,10 @@ export function ensureAutoMergeLabel(cwd: string): Promise<void> {
  */
 export async function openPullRequest(db: Db, task: Task): Promise<{ url?: string; error?: string }> {
   const repo = db.getRepo(task.repo_id);
-  if (!repo || repo.pr_mode === 'off' || !task.branch) return {};
+  const branch = task.checkout?.branch;
+  if (!repo || repo.pr_mode === 'off' || !branch) return {};
   try {
-    await github.push(repo.path, task.branch);
+    await github.push(repo.path, branch);
     // A task retried while its PR is still open keeps that PR; the push above updated it.
     // Once that PR is merged or closed, the new commits need a new PR.
     const open = openPrUrl(task.pr);
@@ -40,9 +41,9 @@ export async function openPullRequest(db: Db, task: Task): Promise<{ url?: strin
         () => false,
       ));
     const url = await github.createPr({
-      cwd: task.worktree ?? repo.path,
+      cwd: task.checkout?.worktree ?? repo.path,
       base: repo.base_branch,
-      head: task.branch,
+      head: branch,
       title: task.title,
       body: buildPrBody(task, db.runsForTask(task.id), prPlanFor(db, task)),
       draft: repo.pr_mode === 'draft',
