@@ -34,7 +34,7 @@ erDiagram
     text allowed_tools "nullable"
     text created_at
     integer auto_approve
-    text planned_at "nullable"
+    text proposed_at "nullable"
     text toolchain "nullable"
     text setup_cmd "nullable"
     text paused_reason "nullable"

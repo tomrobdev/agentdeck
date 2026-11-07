@@ -153,7 +153,7 @@ export function repoStore(db: DatabaseSync, orm: Orm) {
           | 'auto_approve'
           | 'test_cmd'
           | 'setup_cmd'
-          | 'planned_at'
+          | 'proposed_at'
           | 'base_branch'
           | 'pr_mode'
           | 'merge_method'

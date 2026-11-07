@@ -20,7 +20,7 @@ function reloading() {
   const scheduler = new Scheduler(db, {
     tickMs: 60_000,
     prRefreshMs: Number.MAX_SAFE_INTEGER,
-    autoPlan: false,
+    autoPropose: false,
     log: () => {},
     reload: { check: (busy) => reloadDecision({ ...base, activity: busy }), exit: () => void exited++ },
   });

@@ -49,12 +49,14 @@ test('[actions-only, entry-points] api/ and cli/ reach application/ only through
   assert.deepEqual(found, []);
 });
 
-test('[contract-types] api/contract.ts imports nothing', () => {
+test('[contract-types] api/contract.ts imports only types, only from domain/', () => {
   const contract = sources.find((s) => s.path === 'api/contract.ts')!;
-  assert.deepEqual(
-    contract.imports.map((i) => `${at(contract, i.line)} imports ${i.spec}`),
-    [],
-  );
+  const found = contract.imports.flatMap((i) => {
+    if (!i.typeOnly) return [`${at(contract, i.line)} imports ${i.spec} as a value: the contract imports types only`];
+    if (!i.target?.startsWith('domain/')) return [`${at(contract, i.line)} imports ${i.spec}: the contract imports only from domain/`];
+    return [];
+  });
+  assert.deepEqual(found, []);
 });
 
 test('[domain-pure, sql-in-db, no-runtime-deps] packages are imported only where they belong', () => {
@@ -427,7 +429,6 @@ const PLAIN = 'plain English: a thing contains, keeps or presses something';
 /** Lines that may say hold: the governor's, and the plain-English senses. Paths are under daemon/src/, or app/src/ when prefixed. */
 const HOLD_ALLOWED: { file: string; line: RegExp; why: string }[] = [
   { file: 'domain/notification.ts', line: /governor hold|'hold'/, why: 'the `hold` notification kind' },
-  { file: 'api/contract.ts', line: /'hold'/, why: 'the `hold` notification kind, and the headline state' },
   { file: 'api/contract.ts', line: /rate limit or a hold ends/, why: "the governor's hold" },
   { file: 'domain/daemon/headline.ts', line: /'hold'|a hold ends/, why: "the governor's hold, as a headline state" },
   { file: 'app/src/api/format.ts', line: /case 'hold':/, why: "the governor's hold, as a headline state" },
@@ -438,7 +439,11 @@ const HOLD_ALLOWED: { file: string; line: RegExp; why: string }[] = [
   { file: 'app/src/components/panels/BudgetSettings.vue', line: /Hold new tasks above/, why: 'the governor budget setting' },
   { file: 'domain/task/digest.ts', line: /governor on hold/, why: 'the governor' },
   { file: 'domain/task/start.ts', line: /governor holds/, why: 'the governor' },
-  { file: 'application/scheduler/scheduler.ts', line: /^(?!.*caffeinate)/, why: "the scheduler's hold announcement" },
+  {
+    file: 'application/scheduler/scheduler.ts',
+    line: /a hold once|const hold = |\bhold( &&|\.\w)|governor hold|kind: 'hold'|hold lifted/,
+    why: "the scheduler's hold announcement",
+  },
   { file: 'cli/daemon.ts', line: /on hold|HOLD:/, why: "the governor's state, shown" },
   { file: 'app/src/api/format.ts', line: /On hold/, why: "the governor's state, shown" },
   { file: 'app/src/components/layout/StatusBar.vue', line: /On hold/, why: "the governor's state, shown" },

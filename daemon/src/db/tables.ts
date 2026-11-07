@@ -25,7 +25,7 @@ export const repos = sqliteTable(
     allowed_tools: text(),
     created_at: text().default(NOW_DEFAULT).notNull(),
     auto_approve: integer().default(0).notNull(),
-    planned_at: text(),
+    proposed_at: text(),
     toolchain: text(),
     setup_cmd: text(),
     paused_reason: text(),

@@ -19,7 +19,7 @@ const EXISTING_TASKS_SHOWN = 100;
 /** Why the planner should run for this repo now, or null. */
 export function plannerDue(db: Db, repo: Repo, now = Date.now()): string | null {
   if (repo.archived_at) return null;
-  const repoState = { hasGoals: !!readGoals(repo).trim(), openTasks: db.countOpen(repo.id), planned_at: repo.planned_at };
+  const repoState = { hasGoals: !!readGoals(repo).trim(), openTasks: db.countOpen(repo.id), proposed_at: repo.proposed_at };
   return plannerDueReason(db.plannerSettings(), repoState, now);
 }
 
