@@ -1,0 +1,44 @@
+name: rust
+
+# Compiles and tests the Tauri app's Rust code. Only runs when it changes, because macOS minutes cost more.
+on:
+  pull_request:
+    paths:
+      - 'app/src-tauri/**'
+      - '.github/workflows/rust.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'app/src-tauri/**'
+      - '.github/workflows/rust.yml'
+
+jobs:
+  rust:
+    # macOS only: mac-notification-sys isn't limited to a target in Cargo.toml, and the app is macOS only.
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            app/src-tauri/target
+          key: rust-${{ runner.os }}-${{ hashFiles('app/src-tauri/Cargo.lock') }}
+          restore-keys: rust-${{ runner.os }}-
+      # check:rust runs with --offline, so fetch the crates first.
+      - run: cargo fetch --locked
+        working-directory: app/src-tauri
+      # tauri::generate_context! needs app/dist, which git ignores. An empty folder is enough to compile.
+      - run: mkdir -p app/dist
+      - run: pnpm check:rust

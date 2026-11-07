@@ -4,7 +4,7 @@ macOS daemon that works through a queue of coding tasks with `claude -p`, one gi
 
 ## Commands
 
-`pnpm test` · `pnpm typecheck` · `pnpm format` · `pnpm check` (all three) · `node daemon/scripts/crash-test.mjs 10` (SIGKILL crash test)
+`pnpm test` · `pnpm typecheck` · `pnpm format` · `pnpm check` (all three) · `node daemon/scripts/crash-test.mjs 10` (SIGKILL crash test) · `pnpm check:rust` (cargo fmt, clippy and test for `app/src-tauri`; not part of `pnpm check`, CI runs it via `.github/workflows/rust.yml` whenever `app/src-tauri` changes)
 
 ## Domain language
 
