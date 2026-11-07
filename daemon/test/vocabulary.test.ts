@@ -16,7 +16,6 @@ type Allowed = { file: string; line: RegExp; why: string };
 /** Lines that may say an avoid-word. Paths are under daemon/src/, or app/src/ when prefixed. */
 const ALLOWED: Allowed[] = [
   { file: 'domain/notification.ts', line: /governor hold|'hold'/, why: 'the `hold` notification kind' },
-  { file: 'api/contract.ts', line: /'hold'/, why: 'the `hold` notification kind, and the headline state' },
   { file: 'api/contract.ts', line: /rate limit or a hold ends/, why: "the governor's hold" },
   { file: 'domain/daemon/headline.ts', line: /'hold'|a hold ends/, why: "the governor's hold, as a headline state" },
   { file: 'app/src/api/format.ts', line: /case 'hold':/, why: "the governor's hold, as a headline state" },

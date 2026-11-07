@@ -77,12 +77,14 @@ test('[actions-only, entry-points] api/ and cli/ reach application/ only through
   assert.deepEqual(found, []);
 });
 
-test('[contract-types] api/contract.ts imports nothing', () => {
+test('[contract-types] api/contract.ts imports only types, only from domain/', () => {
   const contract = sources.find((s) => s.path === 'api/contract.ts')!;
-  assert.deepEqual(
-    contract.imports.map((i) => `${at(contract, i.line)} imports ${i.spec}`),
-    [],
-  );
+  const found = contract.imports.flatMap((i) => {
+    if (!i.typeOnly) return [`${at(contract, i.line)} imports ${i.spec} as a value: the contract imports types only`];
+    if (!i.target?.startsWith('domain/')) return [`${at(contract, i.line)} imports ${i.spec}: the contract imports only from domain/`];
+    return [];
+  });
+  assert.deepEqual(found, []);
 });
 
 test('[domain-pure, sql-in-db, no-runtime-deps] packages are imported only where they belong', () => {
