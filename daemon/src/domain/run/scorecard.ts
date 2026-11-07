@@ -1,5 +1,6 @@
 // The rest of the pilot scorecard (docs/pilot/scorecard.md), computed from plain rows: interventions, time queued,
 // running and in review, quota spent and PRs green on CI. Pure: no I/O. The first-run measures are in stats.ts.
+import type { CheckCounts } from '../pull-request/checks.ts';
 import { type QuotaSample, quotaSpends } from '../usage/quota.ts';
 import { isAutoMergeReason } from '../task/history.ts';
 import { median, minutesBetween, sqliteMs, weekOf } from '../time.ts';
@@ -31,8 +32,8 @@ export interface ScorecardTaskRow {
   /** The task's own auto-merge setting; null follows the repo. */
   auto_merge: boolean | null;
   repo_auto_merge: boolean;
-  /** JSON CheckCounts: the PR's checks the first time they settled after it opened; null if never recorded. */
-  pr_checks_opened: string | null;
+  /** The PR's checks the first time they settled after it opened; null if never recorded (or unreadable). */
+  pr_checks_opened: CheckCounts | null;
 }
 
 /** A task with auto-merge made into the time it is known to have been on. */
@@ -87,18 +88,10 @@ export interface ChecksSummary {
 }
 
 /** Whether a PR's recorded checks were green: there were some, and none failed or was pending. */
-export function checksGreen(json: string): boolean | null {
-  try {
-    const c = JSON.parse(json) as { total?: unknown; failing?: unknown; pending?: unknown };
-    if (typeof c.total !== 'number' || typeof c.failing !== 'number' || typeof c.pending !== 'number') return null;
-    return c.total > 0 && c.failing === 0 && c.pending === 0;
-  } catch {
-    return null;
-  }
-}
+export const checksGreen = (c: CheckCounts): boolean => c.total > 0 && c.failing === 0 && c.pending === 0;
 
 export function summarizeChecks(tasks: ScorecardTask[]): ChecksSummary {
-  const verdicts = tasks.flatMap((t) => (t.pr_checks_opened === null ? [] : [checksGreen(t.pr_checks_opened)])).filter((v) => v !== null);
+  const verdicts = tasks.flatMap((t) => (t.pr_checks_opened === null ? [] : [checksGreen(t.pr_checks_opened)]));
   const green = verdicts.filter(Boolean).length;
   return { recorded: verdicts.length, green, rate: verdicts.length ? green / verdicts.length : null };
 }

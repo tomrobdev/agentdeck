@@ -153,6 +153,20 @@ test('[domain-pure] domain/ reads no clock, randomness or environment, except as
   assert.deepEqual(found, []);
 });
 
+/** The parsers of outside formats in domain/ that may call JSON.parse: claude's log, GitHub's answers, and a stored list a repo's setting reads. A stored column is parsed in db/mappers.ts. */
+const OUTSIDE_JSON = ['domain/run/log.ts', 'domain/pull-request/merge.ts', 'domain/text.ts'];
+
+test('[domain-pure] domain/ calls JSON.parse only in the parsers of outside formats', () => {
+  const found = sources
+    .filter((s) => s.path.startsWith('domain/') && !OUTSIDE_JSON.includes(s.path))
+    .filter((s) => s.ast.text.includes('JSON.parse'))
+    .map(
+      (s) =>
+        `${s.path} calls JSON.parse: parse a stored column in db/mappers.ts, or list the file on OUTSIDE_JSON if it reads an outside format`,
+    );
+  assert.deepEqual(found, []);
+});
+
 /** An identifier that refers to a variable, not a property name or a declaration. */
 function isFreeReference(node: ts.Identifier): boolean {
   const p = node.parent;

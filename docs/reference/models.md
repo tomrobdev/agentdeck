@@ -507,7 +507,7 @@ The plan a task carries out: its name (`112-plans-in-agentdeck.html`) and the li
 
 ### StoredChecks
 
-What the PR refresh keeps on a task (`tasks.pr_checks`, JSON): the latest checks and when they were read.
+What the PR refresh keeps on a task (`tasks.pr_checks`): the latest checks and when they were read.
 
 | Field      | Type             | Comment                                                                                       |
 | ---------- | ---------------- | --------------------------------------------------------------------------------------------- |
@@ -864,26 +864,26 @@ One row of a task's history (`task_events`), with the task's repo.
 
 A task with auto-merge made into the time it is known to have been on.
 
-| Field              | Type             | Comment                                                                                                                                                                                                                                                                                     |
-| ------------------ | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `auto_merge_from`  | `string \| null` | When auto-merge was known to be on for the task: always ('') if the task turned it on itself, from the repo's first auto-merge if the repo has it on (the database keeps only the setting as it is now, so a merge from before the setting existed must not count), never (null) otherwise. |
-| `id`               | `number`         |                                                                                                                                                                                                                                                                                             |
-| `repo_id`          | `number`         |                                                                                                                                                                                                                                                                                             |
-| `created_at`       | `string`         |                                                                                                                                                                                                                                                                                             |
-| `pr_checks_opened` | `string \| null` | JSON CheckCounts: the PR's checks the first time they settled after it opened; null if never recorded.                                                                                                                                                                                      |
+| Field              | Type                  | Comment                                                                                                                                                                                                                                                                                     |
+| ------------------ | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `auto_merge_from`  | `string \| null`      | When auto-merge was known to be on for the task: always ('') if the task turned it on itself, from the repo's first auto-merge if the repo has it on (the database keeps only the setting as it is now, so a merge from before the setting existed must not count), never (null) otherwise. |
+| `id`               | `number`              |                                                                                                                                                                                                                                                                                             |
+| `repo_id`          | `number`              |                                                                                                                                                                                                                                                                                             |
+| `created_at`       | `string`              |                                                                                                                                                                                                                                                                                             |
+| `pr_checks_opened` | `CheckCounts \| null` | The PR's checks the first time they settled after it opened; null if never recorded (or unreadable).                                                                                                                                                                                        |
 
 ### ScorecardTaskRow
 
 The fields of a task the scorecard reads, as the database has them.
 
-| Field              | Type              | Comment                                                                                                |
-| ------------------ | ----------------- | ------------------------------------------------------------------------------------------------------ |
-| `id`               | `number`          |                                                                                                        |
-| `repo_id`          | `number`          |                                                                                                        |
-| `created_at`       | `string`          |                                                                                                        |
-| `auto_merge`       | `boolean \| null` | The task's own auto-merge setting; null follows the repo.                                              |
-| `repo_auto_merge`  | `boolean`         |                                                                                                        |
-| `pr_checks_opened` | `string \| null`  | JSON CheckCounts: the PR's checks the first time they settled after it opened; null if never recorded. |
+| Field              | Type                  | Comment                                                                                              |
+| ------------------ | --------------------- | ---------------------------------------------------------------------------------------------------- |
+| `id`               | `number`              |                                                                                                      |
+| `repo_id`          | `number`              |                                                                                                      |
+| `created_at`       | `string`              |                                                                                                      |
+| `auto_merge`       | `boolean \| null`     | The task's own auto-merge setting; null follows the repo.                                            |
+| `repo_auto_merge`  | `boolean`             |                                                                                                      |
+| `pr_checks_opened` | `CheckCounts \| null` | The PR's checks the first time they settled after it opened; null if never recorded (or unreadable). |
 
 ### StatRun
 
@@ -1105,7 +1105,7 @@ A task as listed: with where it stands on its builds-on links (as waitingFor rep
 | `id`                    | `number`                  |                                                                                                                          |
 | `repo_id`               | `number`                  |                                                                                                                          |
 | `created_at`            | `string`                  |                                                                                                                          |
-| `pr_checks_opened`      | `string \| null`          | JSON CheckCounts: the PR's checks the first time they settled after it opened                                            |
+| `pr_checks_opened`      | `CheckCounts \| null`     | the PR's checks the first time they settled after it opened                                                              |
 | `status`                | `TaskStatus`              |                                                                                                                          |
 | `attempts`              | `number`                  |                                                                                                                          |
 | `restarts`              | `number`                  | times a daemon restart requeued this task mid-run                                                                        |
@@ -1124,14 +1124,14 @@ A task as listed: with where it stands on its builds-on links (as waitingFor rep
 | `needs`                 | `Needs \| null`           | what the worker said it needs when it blocked; cleared when queued again                                                 |
 | `question`              | `UnblockQuestion \| null` | what an unblock run left on the blocked task; cleared with `needs`                                                       |
 | `plan_steps`            | `string[] \| null`        | the linked plan's step ids; null means every unfinished step                                                             |
-| `auto_merge_check`      | `string \| null`          | JSON { verdict, reasons }: the PR refresh's latest auto-merge check while the PR is open                                 |
+| `auto_merge_check`      | `AutoMergeCheck \| null`  | the PR refresh's latest auto-merge check while the PR is open                                                            |
 | `auto_merge_checked_at` | `string \| null`          | when that check was made                                                                                                 |
-| `pr_checks_merged`      | `string \| null`          | JSON CheckCounts: the PR's checks when it was merged                                                                     |
+| `pr_checks_merged`      | `CheckCounts \| null`     | the PR's checks when it was merged                                                                                       |
 | `merge_requested_at`    | `string \| null`          | when a person asked the daemon to merge the PR once it is ready; null when there is no request                           |
 | `merge_request_method`  | `MergeMethod \| null`     | the method that request asked for                                                                                        |
-| `merge_request_check`   | `string \| null`          | JSON { verdict, reasons }: the PR refresh's latest merge request check                                                   |
+| `merge_request_check`   | `AutoMergeCheck \| null`  | the PR refresh's latest merge request check                                                                              |
 | `syncing_since`         | `string \| null`          | when a sync of the branch began; NULL when none is running                                                               |
-| `pr_checks`             | `string \| null`          | JSON StoredChecks (domain/pull-request/checks.ts): the open PR's latest checks, one by one, and when they were read      |
+| `pr_checks`             | `StoredChecks \| null`    | the open PR's latest checks, one by one, and when they were read                                                         |
 | `plan_task`             | `number \| null`          | the task whose plan this one follows (itself when its own plan was given with --plan); null follows its own plan, if any |
 | `updated_at`            | `string`                  |                                                                                                                          |
 | `waiting`               | `Waiting \| null`         |                                                                                                                          |
@@ -1190,15 +1190,15 @@ What the timeline shows for a row: the sentence, and the reason to show muted be
 | `plan_steps`            | `string[] \| null`        | the linked plan's step ids; null means every unfinished step                                                             |
 | `done_by`               | `"person" \| null`        | 'person' when mark_done set the status; cleared whenever the task leaves done                                            |
 | `auto_merge`            | `boolean \| null`         | overrides the repo's auto_merge; null = the repo's (domain/pull-request/auto-merge.ts)                                   |
-| `auto_merge_check`      | `string \| null`          | JSON { verdict, reasons }: the PR refresh's latest auto-merge check while the PR is open                                 |
+| `auto_merge_check`      | `AutoMergeCheck \| null`  | the PR refresh's latest auto-merge check while the PR is open                                                            |
 | `auto_merge_checked_at` | `string \| null`          | when that check was made                                                                                                 |
-| `pr_checks_opened`      | `string \| null`          | JSON CheckCounts: the PR's checks the first time they settled after it opened                                            |
-| `pr_checks_merged`      | `string \| null`          | JSON CheckCounts: the PR's checks when it was merged                                                                     |
+| `pr_checks_opened`      | `CheckCounts \| null`     | the PR's checks the first time they settled after it opened                                                              |
+| `pr_checks_merged`      | `CheckCounts \| null`     | the PR's checks when it was merged                                                                                       |
 | `merge_requested_at`    | `string \| null`          | when a person asked the daemon to merge the PR once it is ready; null when there is no request                           |
 | `merge_request_method`  | `MergeMethod \| null`     | the method that request asked for                                                                                        |
-| `merge_request_check`   | `string \| null`          | JSON { verdict, reasons }: the PR refresh's latest merge request check                                                   |
+| `merge_request_check`   | `AutoMergeCheck \| null`  | the PR refresh's latest merge request check                                                                              |
 | `syncing_since`         | `string \| null`          | when a sync of the branch began; NULL when none is running                                                               |
-| `pr_checks`             | `string \| null`          | JSON StoredChecks (domain/pull-request/checks.ts): the open PR's latest checks, one by one, and when they were read      |
+| `pr_checks`             | `StoredChecks \| null`    | the open PR's latest checks, one by one, and when they were read                                                         |
 | `plan_task`             | `number \| null`          | the task whose plan this one follows (itself when its own plan was given with --plan); null follows its own plan, if any |
 | `created_at`            | `string`                  |                                                                                                                          |
 | `updated_at`            | `string`                  |                                                                                                                          |
@@ -1238,7 +1238,7 @@ The fields an event sets, with their new values. A field not listed is left as i
 | `id`                    | `number`                  |                                                                                                                          |
 | `repo_id`               | `number`                  |                                                                                                                          |
 | `created_at`            | `string`                  |                                                                                                                          |
-| `pr_checks_opened`      | `string \| null`          | JSON CheckCounts: the PR's checks the first time they settled after it opened                                            |
+| `pr_checks_opened`      | `CheckCounts \| null`     | the PR's checks the first time they settled after it opened                                                              |
 | `status`                | `TaskStatus`              |                                                                                                                          |
 | `attempts`              | `number`                  |                                                                                                                          |
 | `restarts`              | `number`                  | times a daemon restart requeued this task mid-run                                                                        |
@@ -1257,14 +1257,14 @@ The fields an event sets, with their new values. A field not listed is left as i
 | `needs`                 | `Needs \| null`           | what the worker said it needs when it blocked; cleared when queued again                                                 |
 | `question`              | `UnblockQuestion \| null` | what an unblock run left on the blocked task; cleared with `needs`                                                       |
 | `plan_steps`            | `string[] \| null`        | the linked plan's step ids; null means every unfinished step                                                             |
-| `auto_merge_check`      | `string \| null`          | JSON { verdict, reasons }: the PR refresh's latest auto-merge check while the PR is open                                 |
+| `auto_merge_check`      | `AutoMergeCheck \| null`  | the PR refresh's latest auto-merge check while the PR is open                                                            |
 | `auto_merge_checked_at` | `string \| null`          | when that check was made                                                                                                 |
-| `pr_checks_merged`      | `string \| null`          | JSON CheckCounts: the PR's checks when it was merged                                                                     |
+| `pr_checks_merged`      | `CheckCounts \| null`     | the PR's checks when it was merged                                                                                       |
 | `merge_requested_at`    | `string \| null`          | when a person asked the daemon to merge the PR once it is ready; null when there is no request                           |
 | `merge_request_method`  | `MergeMethod \| null`     | the method that request asked for                                                                                        |
-| `merge_request_check`   | `string \| null`          | JSON { verdict, reasons }: the PR refresh's latest merge request check                                                   |
+| `merge_request_check`   | `AutoMergeCheck \| null`  | the PR refresh's latest merge request check                                                                              |
 | `syncing_since`         | `string \| null`          | when a sync of the branch began; NULL when none is running                                                               |
-| `pr_checks`             | `string \| null`          | JSON StoredChecks (domain/pull-request/checks.ts): the open PR's latest checks, one by one, and when they were read      |
+| `pr_checks`             | `StoredChecks \| null`    | the open PR's latest checks, one by one, and when they were read                                                         |
 | `plan_task`             | `number \| null`          | the task whose plan this one follows (itself when its own plan was given with --plan); null follows its own plan, if any |
 | `updated_at`            | `string`                  |                                                                                                                          |
 

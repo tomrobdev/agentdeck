@@ -3,7 +3,7 @@ import { github } from '../../adapters/github.ts';
 import type { Db } from '../../db/index.ts';
 import type { PrDetails } from '../../domain/pull-request/merge.ts';
 import { type AutoMergeCheck, autoMergeCheck, autoMergeOn } from '../../domain/pull-request/auto-merge.ts';
-import { checksFailedNotification, checksSettled, nextChecks, readStoredChecks } from '../../domain/pull-request/checks.ts';
+import { checksFailedNotification, checksSettled, nextChecks } from '../../domain/pull-request/checks.ts';
 import { isConflicting, isMergeabilityUnknown } from '../../domain/pull-request/conflict.ts';
 import { mergeRequestCheck, mergeRequestPolls } from '../../domain/pull-request/merge-request.ts';
 import { type Repo, pausedReason } from '../../domain/repo/repo.ts';
@@ -47,12 +47,12 @@ export function autoMergeFor(db: Db, task: Task, repo: Repo, pr: PrDetails, test
  * Nothing is told when the write was refused: the PR merged or closed meanwhile.
  */
 function keepChecks(db: Db, task: Task, pr: PrDetails): void {
-  const { stored, notify } = nextChecks(readStoredChecks(task.pr_checks), {
+  const { stored, notify } = nextChecks(task.pr_checks, {
     head: pr.head ?? null,
     checks: pr.check_list ?? [],
     read_at: new Date().toISOString(),
   });
-  if (db.setPrChecks(task.id, JSON.stringify(stored)) && notify) notifyLater(db, checksFailedNotification(task, stored.checks));
+  if (db.setPrChecks(task.id, stored) && notify) notifyLater(db, checksFailedNotification(task, stored.checks));
 }
 
 /** What a refresh found out about the open PRs beyond their state. */
@@ -135,12 +135,12 @@ async function refreshOne(db: Db, task: Task, log: (msg: string) => void): Promi
       notifyLater(db, { kind: 'merged', title: `Could not merge #${task.id}`, body: why, task_id: task.id });
       return null;
     }
-    db.setMergeRequestCheck(task.id, JSON.stringify(check));
+    db.setMergeRequestCheck(task.id, check);
     return { pr, place: classify(pr, check.verdict), requested: true, polling: mergeRequestPolls(check, pr) };
   }
   // Every check is kept on the task for the views, whatever the verdict; none when auto-merge is off.
   const check = repo ? autoMergeFor(db, task, repo, pr, tests) : null;
-  db.setAutoMergeCheck(task.id, check && JSON.stringify(check));
+  db.setAutoMergeCheck(task.id, check);
   return { pr, place: classify(pr, check?.verdict ?? null), requested: false, polling: false };
 }
 

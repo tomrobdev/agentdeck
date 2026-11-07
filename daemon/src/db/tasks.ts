@@ -3,6 +3,8 @@ import { type SQL, and, asc, count, desc, eq, exists, inArray, isNotNull, isNull
 import { type AnySQLiteColumn, alias } from 'drizzle-orm/sqlite-core';
 import type { DatabaseSync } from 'node:sqlite';
 import { DEFAULTS } from '../config.ts';
+import type { AutoMergeCheck } from '../domain/pull-request/auto-merge.ts';
+import type { StoredChecks } from '../domain/pull-request/checks.ts';
 import type { CheckCounts, MergeMethod } from '../domain/pull-request/merge.ts';
 import { INTERRUPTED, type RunOutcome } from '../domain/run/run.ts';
 import { MAX_RESTARTS, type TaskEvent, type TaskStatus, fromStatuses, nextStatus, transition } from '../domain/task/lifecycle.ts';
@@ -475,10 +477,10 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
      * Keep the PR refresh's latest auto-merge check (JSON { verdict, reasons }) on a task, or clear it with null.
      * Only a done task whose PR is open has one, so a merge or a close recorded meanwhile is never followed by a stale check.
      */
-    setAutoMergeCheck(id: number, check: string | null): boolean {
+    setAutoMergeCheck(id: number, check: AutoMergeCheck | null): boolean {
       const res = orm
         .update(tasks)
-        .set({ auto_merge_check: check, auto_merge_checked_at: check === null ? null : NOW_SQL })
+        .set({ auto_merge_check: check && JSON.stringify(check), auto_merge_checked_at: check === null ? null : NOW_SQL })
         .where(and(eq(tasks.id, id), inReview))
         .run();
       return changed(res);
@@ -508,10 +510,10 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
      * Keep the PR refresh's latest merge request check (JSON { verdict, reasons }) on a task that still has the request.
      * Only a done task whose PR is open, like setAutoMergeCheck: a check finished after a conflict blocked it is dropped.
      */
-    setMergeRequestCheck(id: number, check: string): boolean {
+    setMergeRequestCheck(id: number, check: AutoMergeCheck): boolean {
       const res = orm
         .update(tasks)
-        .set({ merge_request_check: check })
+        .set({ merge_request_check: JSON.stringify(check) })
         .where(and(eq(tasks.id, id), isNotNull(tasks.merge_requested_at), inReview))
         .run();
       return changed(res);
@@ -532,10 +534,10 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
      * Keep the PR refresh's latest checks (JSON StoredChecks) on a task. Only a done task whose PR is open, like
      * setAutoMergeCheck: checks read while a merge or a close was recorded are dropped. Returns false if it was not.
      */
-    setPrChecks(id: number, checks: string): boolean {
+    setPrChecks(id: number, checks: StoredChecks): boolean {
       const res = orm
         .update(tasks)
-        .set({ pr_checks: checks })
+        .set({ pr_checks: JSON.stringify(checks) })
         .where(and(eq(tasks.id, id), inReview))
         .run();
       return changed(res);

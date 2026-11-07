@@ -23,7 +23,7 @@ export interface CheckCounts {
   pending: number;
 }
 
-/** What the PR refresh keeps on a task (`tasks.pr_checks`, JSON): the latest checks and when they were read. */
+/** What the PR refresh keeps on a task (`tasks.pr_checks`): the latest checks and when they were read. */
 export interface StoredChecks {
   read_at: string;
   /** The PR's head commit the checks ran on; null when GitHub didn't say. */
@@ -99,18 +99,6 @@ export const checksSettled = (checks: CheckCounts): boolean => checks.total > 0 
 /** Whether the checks all passed: settled, and none failing. */
 const checksPassed = (checks: CheckCounts): boolean => checksSettled(checks) && checks.failing === 0;
 
-/** The stored checks of a task (`tasks.pr_checks`), or null when there are none or the JSON is not what was stored. */
-export function readStoredChecks(json: string | null): StoredChecks | null {
-  if (!json) return null;
-  try {
-    const raw = JSON.parse(json) as Partial<StoredChecks>;
-    if (!raw || !Array.isArray(raw.checks) || typeof raw.read_at !== 'string') return null;
-    return { read_at: raw.read_at, head: raw.head ?? null, checks: raw.checks, notified: raw.notified === true };
-  } catch {
-    return null;
-  }
-}
-
 /**
  * What a PR refresh keeps, and whether to tell a person the checks failed. A person hears once when the checks go from
  * not failing to failing, and again only after they all passed or a new commit came (a re-run still failing says nothing).
@@ -127,9 +115,9 @@ export function nextChecks(
 }
 
 /** The checks summary a task view shows: null when the PR isn't open or has no checks. */
-export function checksSummary(task: { pr_state: string | null; pr_checks: string | null }): ChecksSummary | null {
+export function checksSummary(task: { pr_state: string | null; pr_checks: StoredChecks | null }): ChecksSummary | null {
   if (task.pr_state !== 'open') return null;
-  const stored = readStoredChecks(task.pr_checks);
+  const stored = task.pr_checks;
   if (!stored?.checks.length) return null;
   return { ...countOf(stored.checks), failing_names: failingChecks(stored.checks).map((c) => c.name), read_at: stored.read_at };
 }

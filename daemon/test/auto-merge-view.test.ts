@@ -85,14 +85,14 @@ test('a refresh stores the check it ran, never or merge alike; merging, closing 
 
   await refreshPrStates(db);
   const stored = db.getTask(big.id)!;
-  assert.deepEqual(JSON.parse(stored.auto_merge_check!), { verdict: 'never', reasons: ['905 lines changed, over the limit of 400'] });
+  assert.deepEqual(stored.auto_merge_check, { verdict: 'never', reasons: ['905 lines changed, over the limit of 400'] });
   assert.ok(stored.auto_merge_checked_at);
-  assert.equal(JSON.parse(db.getTask(fine.id)!.auto_merge_check!).verdict, 'merge');
+  assert.equal(db.getTask(fine.id)!.auto_merge_check?.verdict, 'merge');
 
   // A later refresh replaces it.
   details[big.url] = { ...ready, additions: 10 };
   await refreshPrStates(db);
-  assert.equal(JSON.parse(db.getTask(big.id)!.auto_merge_check!).verdict, 'merge');
+  assert.equal(db.getTask(big.id)!.auto_merge_check?.verdict, 'merge');
 
   // Merging clears it.
   assert.equal(await autoMerge(db, [{ id: fine.id, pr: ready }]), fine.id);
@@ -104,7 +104,7 @@ test('a refresh stores the check it ran, never or merge alike; merging, closing 
   assert.equal(db.getTask(closed.id)!.auto_merge_check, null);
 
   // A check is not written for a PR that was merged meanwhile.
-  assert.equal(db.setAutoMergeCheck(fine.id, '{"verdict":"merge","reasons":[]}'), false);
+  assert.equal(db.setAutoMergeCheck(fine.id, { verdict: 'merge', reasons: [] }), false);
   assert.equal(db.getTask(fine.id)!.auto_merge_check, null);
 
   // Turning auto-merge off for the task clears it.
@@ -133,8 +133,8 @@ const taskRow = (
   auto_merge_checked_at: null,
   ...o,
 });
-const checked = (verdict: string, reasons: string[], o: Partial<Task> = {}) =>
-  taskRow({ pr_state: 'open', auto_merge_check: JSON.stringify({ verdict, reasons }), auto_merge_checked_at: '2026-11-01 09:00:00', ...o });
+const checked = (verdict: 'merge' | 'wait' | 'never', reasons: string[], o: Partial<Task> = {}) =>
+  taskRow({ pr_state: 'open', auto_merge_check: { verdict, reasons }, auto_merge_checked_at: '2026-11-01 09:00:00', ...o });
 
 test('autoMergeView: each state with its label and reasons', () => {
   assert.deepEqual(autoMergeView(taskRow(), { ...repoRow, auto_merge: false }), {
@@ -162,8 +162,7 @@ test('autoMergeView: each state with its label and reasons', () => {
 test('autoMergeView: a stored check counts only while the PR is open, and an unreadable one counts for nothing', () => {
   for (const pr_state of ['merged', 'closed', null] as const)
     assert.equal(autoMergeView(checked('never', ['x'], { pr_state }), repoRow).state, 'on');
-  assert.equal(autoMergeView(checked('never', ['x'], { auto_merge_check: 'not json' }), repoRow).state, 'on');
-  assert.equal(autoMergeView(checked('never', ['x'], { auto_merge_check: '{"verdict":"maybe","reasons":[]}' }), repoRow).state, 'on');
+  assert.equal(autoMergeView(checked('never', ['x'], { auto_merge_check: null }), repoRow).state, 'on');
 });
 
 test('autoMergeView: where on or off comes from, and what the limits say about the tests', () => {

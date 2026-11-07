@@ -1,7 +1,8 @@
 // From a row to its domain type: the one place a store's reads of tasks, repos and runs go through, so the domain type need not equal
 // its row. `types-check.ts` checks each row against its mapper, and rule:models-not-rows checks the stores use them.
 import { getColumns } from 'drizzle-orm';
-import { DEFAULT_AUTO_MERGE_SKIP } from '../domain/pull-request/auto-merge.ts';
+import { type AutoMergeCheck, DEFAULT_AUTO_MERGE_SKIP } from '../domain/pull-request/auto-merge.ts';
+import type { CheckCounts, StoredChecks } from '../domain/pull-request/checks.ts';
 import type { Repo } from '../domain/repo/repo.ts';
 import type { Run } from '../domain/run/run.ts';
 import type { UnblockQuestion } from '../domain/run/unblock.ts';
@@ -53,12 +54,40 @@ export function readSteps(json: string | null): string[] | null {
   return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string') : null;
 }
 
+/** A stored auto-merge or merge request check: null when there is none or it is malformed. */
+export function readCheck(json: string | null): AutoMergeCheck | null {
+  const v = parseJson(json) as Partial<AutoMergeCheck> | null | undefined;
+  if (!v || !['merge', 'wait', 'never'].includes(v.verdict as string) || !Array.isArray(v.reasons)) return null;
+  const check: AutoMergeCheck = { verdict: v.verdict!, reasons: v.reasons.filter((r): r is string => typeof r === 'string') };
+  if (v.conflict === true) check.conflict = true;
+  return check;
+}
+
+/** A stored `pr_checks` column: null when there is none or it is malformed. */
+function readStoredChecks(json: string | null): StoredChecks | null {
+  const raw = parseJson(json) as Partial<StoredChecks> | null | undefined;
+  if (!raw || !Array.isArray(raw.checks) || typeof raw.read_at !== 'string') return null;
+  return { read_at: raw.read_at, head: raw.head ?? null, checks: raw.checks, notified: raw.notified === true };
+}
+
+/** A stored count of a PR's checks (`pr_checks_opened`, `pr_checks_merged`): null when there is none or it is malformed. */
+export function readCounts(json: string | null): CheckCounts | null {
+  const c = parseJson(json) as Partial<CheckCounts> | null | undefined;
+  if (!c || typeof c.total !== 'number' || typeof c.failing !== 'number' || typeof c.pending !== 'number') return null;
+  return { total: c.total, failing: c.failing, pending: c.pending };
+}
+
 /** The task columns that carry a value, as the domain type has them. */
 const taskValues = (row: TaskRow) => ({
   needs: readNeeds(row.needs),
   question: readQuestion(row.question),
   plan_steps: readSteps(row.plan_steps),
   auto_merge: row.auto_merge === null ? null : row.auto_merge === 1,
+  auto_merge_check: readCheck(row.auto_merge_check),
+  merge_request_check: readCheck(row.merge_request_check),
+  pr_checks: readStoredChecks(row.pr_checks),
+  pr_checks_opened: readCounts(row.pr_checks_opened),
+  pr_checks_merged: readCounts(row.pr_checks_merged),
 });
 
 export const toTask = (row: TaskRow): Task => ({ ...row, ...taskValues(row) });
@@ -99,9 +128,23 @@ export function repoColumns(fields: Partial<Repo>): Partial<RepoRow> {
 }
 export const toRun = (row: RunRow): Run => ({ ...row, tests_passed: row.tests_passed === null ? null : row.tests_passed === 1 });
 
+/** The task fields stored as JSON text. */
+const JSON_FIELDS = [
+  'needs',
+  'question',
+  'plan_steps',
+  'auto_merge_check',
+  'merge_request_check',
+  'pr_checks',
+  'pr_checks_opened',
+  'pr_checks_merged',
+];
+type JsonField =
+  'needs' | 'question' | 'plan_steps' | 'auto_merge_check' | 'merge_request_check' | 'pr_checks' | 'pr_checks_opened' | 'pr_checks_merged';
+
 /** A task or run value as its column stores it: the type of `T` with its parsed fields turned back. */
 export type Stored<T> = {
-  [K in keyof T]: K extends 'needs' | 'question' | 'plan_steps'
+  [K in keyof T]: K extends JsonField
     ? Extract<T[K], null | undefined> | string
     : K extends 'auto_merge' | 'tests_passed'
       ? Extract<T[K], null | undefined> | number
@@ -115,7 +158,7 @@ export type Stored<T> = {
 export function stored<T extends object>(fields: T): Stored<T> {
   const f = fields as Record<string, unknown>;
   const out: Record<string, unknown> = { ...f };
-  for (const key of ['needs', 'question', 'plan_steps']) if (key in f) out[key] = f[key] == null ? null : JSON.stringify(f[key]);
+  for (const key of JSON_FIELDS) if (key in f) out[key] = f[key] == null ? null : JSON.stringify(f[key]);
   for (const key of ['auto_merge', 'tests_passed']) if (key in f) out[key] = f[key] == null ? null : f[key] ? 1 : 0;
   return out as Stored<T>;
 }
