@@ -1,15 +1,24 @@
 // The HTTP API's request and response types: what the dashboard imports (app/src/api/types.ts) and what contract-check.ts
-// holds the use cases to. It imports nothing, so the app can read it without the daemon's modules or node types.
+// holds the use cases to. It imports only types, and only from domain/, so the app can read it without node types.
+import type { ChangeStatus, FileRef } from '../domain/files/files.ts';
+import type { NotifyKind } from '../domain/notification.ts';
+import type { PlanSource, PlanStepStatus } from '../domain/plan/plan.ts';
+import type { PlannerOutcome } from '../domain/planner/proposals.ts';
+import type { AutoMergeState } from '../domain/pull-request/auto-merge.ts';
+import type { CheckState } from '../domain/pull-request/checks.ts';
+import type { MergeMethod } from '../domain/pull-request/merge.ts';
+import type { PrMode, PrState } from '../domain/pull-request/pr.ts';
+import type { RunKind } from '../domain/run/run.ts';
+import type { HeadlineState, AttentionWhy } from '../domain/daemon/headline.ts';
+import type { LinkKind } from '../domain/task/link.ts';
+import type { TaskStatus } from '../domain/task/lifecycle.ts';
+import type { NeedsKind } from '../domain/task/needs.ts';
+import type { TaskSource } from '../domain/task/task.ts';
 
 // ---- Vocabulary
 
-export type TaskStatus = 'proposed' | 'queued' | 'running' | 'done' | 'blocked' | 'failed' | 'cancel_requested' | 'cancelled';
-export type PrMode = 'off' | 'draft' | 'ready';
-export type PrState = 'open' | 'merged' | 'closed' | 'failed';
-export type MergeMethod = 'squash' | 'merge' | 'rebase';
-export type NotifyKind = 'done' | 'blocked' | 'failed' | 'hold' | 'paused' | 'proposed' | 'merged' | 'checks_failed';
-/** Git refs the file endpoints accept: the task's branch, or where it forked from the base branch. */
-export type FileRef = 'head' | 'base';
+// The domain's words, shared as they are.
+export type { AutoMergeState, FileRef, LinkKind, MergeMethod, NotifyKind, PrMode, PrState, TaskStatus };
 
 // ---- Repos
 
@@ -50,7 +59,7 @@ export interface PlannerRun {
   id: number;
   started_at: string;
   ended_at: string | null;
-  outcome: 'proposed' | 'nothing' | 'failed' | 'rate_limited' | null;
+  outcome: PlannerOutcome | null;
   proposed: number;
   note: string | null;
 }
@@ -118,7 +127,7 @@ export interface RepoDeleted {
 
 /** What a worker said it needs when it blocked. */
 export interface Needs {
-  kind: 'deps' | 'host' | 'edit';
+  kind: NeedsKind;
   items: string[];
 }
 
@@ -133,9 +142,6 @@ export type StartWait =
   /** `on`: every task it builds on still on its way, or the one it is stuck on (with `stuck`, the reason). */
   | { kind: 'dependency'; on: number[]; stuck: string | null }
   | { kind: 'slots'; running: number; max: number };
-
-/** builds_on keeps a task from starting until the other is done and merged; after only orders its merge. */
-export type LinkKind = 'builds_on' | 'after';
 
 /** One link: the task it points at, its kind and where it stands (unlanded is an after link whose other task has not landed yet). */
 export interface TaskLink {
@@ -173,7 +179,7 @@ export interface SyncView {
 /** One check on a PR's head commit: a GitHub check run or a commit status. NEUTRAL and SKIPPED conclusions are `skipped`. */
 export interface PrCheck {
   name: string;
-  state: 'pass' | 'fail' | 'pending' | 'skipped';
+  state: CheckState;
   url: string | null;
   started_at: string | null;
   completed_at: string | null;
@@ -203,7 +209,7 @@ export interface TaskSummary {
   branch: string | null;
   worktree: string | null;
   stop_reason: string | null;
-  source: 'manual' | 'planner';
+  source: TaskSource;
   pr_url: string | null;
   pr_state: PrState | null;
   /** How the PR was merged from the app. */
@@ -261,7 +267,7 @@ export interface Task extends TaskSummary {
 export interface Run {
   id: number;
   /** A resolve run merges the base branch into the task's branch, an unblock run reads why a blocked task stopped; neither uses an attempt. */
-  kind: 'work' | 'resolve' | 'unblock';
+  kind: RunKind;
   /** A resolve run carries the attempt it ran beside, so pick runs by id. */
   attempt: number;
   started_at: string;
@@ -312,7 +318,7 @@ export interface TaskEventRow {
 export interface PlanStep {
   id: string | null;
   title: string;
-  status: 'todo' | 'doing' | 'done' | 'blocked' | 'skipped';
+  status: PlanStepStatus;
   /** The done criteria, from the step's `<ul data-plan-done>`. */
   done: string[];
 }
@@ -325,7 +331,7 @@ export interface TaskPlan {
   /** `<task id>-<slug>.html`; plans stored before plans had numbers keep their old name (a docs/plans/ path or a file name). */
   name: string;
   /** Attached by a person, written by a worker, or (before plans moved into AgentDeck) collected from the branch. */
-  source: 'attached' | 'worker' | 'branch';
+  source: PlanSource;
   version: string;
   title: string;
   summary: string | null;
@@ -452,7 +458,7 @@ export interface PlanHtml {
 
 /** POST /api/repos/:id/plan */
 export interface ProposalResult {
-  outcome: 'proposed' | 'nothing' | 'failed' | 'rate_limited' | 'no_goals';
+  outcome: PlannerOutcome | 'no_goals';
   /** The proposals as stored, without the queue's view of them. */
   tasks: Pick<Task, 'id' | 'title' | 'prompt' | 'status'>[];
   skipped: string[];
@@ -505,7 +511,7 @@ export interface AutoMergeCheck {
  * last PR check's verdict. `label` and `reasons` are worded by the daemon; show them as they are.
  */
 export interface AutoMergeView {
-  state: 'off' | 'on' | 'merge' | 'wait' | 'never';
+  state: AutoMergeState;
   label: string;
   /** Why it waits or needs a person; for a branch with no open PR, how it measures against the limits now. */
   reasons: string[];
@@ -610,7 +616,7 @@ export interface SyncResult {
 export interface ChangedFile {
   path: string;
   old_path: string | null;
-  status: 'A' | 'M' | 'D' | 'R';
+  status: ChangeStatus;
   additions: number;
   deletions: number;
   binary: boolean;
@@ -741,13 +747,13 @@ export interface DaemonState {
 }
 
 export interface Headline {
-  state: 'paused' | 'rate_limited' | 'hold' | 'working' | 'idle';
+  state: HeadlineState;
   /** When a rate limit or a hold ends (unix seconds); null otherwise. */
   until: number | null;
   /** Proposed tasks, blocked tasks and done tasks in review. */
   need_you: number;
   /** Up to five of those tasks: blocked first, then review, then proposed, each by priority. */
-  attention: { id: number; title: string; why: 'blocked' | 'review' | 'proposed' }[];
+  attention: { id: number; title: string; why: AttentionWhy }[];
 }
 
 export interface Status {
