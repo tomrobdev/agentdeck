@@ -3,6 +3,7 @@
 import type { TaskId } from '../shared/index.ts';
 import { plural } from '../shared/index.ts';
 import { type ReloadState, SCHEMA_DIRTY } from './restart.ts';
+import { type ReviewDue, checkReviews } from './review-due.ts';
 
 /** What the daemon says about itself on GET /api/daemon. */
 export interface DaemonState {
@@ -27,8 +28,10 @@ export interface Check {
   name: string;
   ok: boolean;
   reason: string;
-  /** For a failed check: a command that fixes it. */
+  /** For a failed check, or a warning: a command that fixes it. */
   fix: string | null;
+  /** Passed, but something a person should look at (an area review due); never a failure. */
+  warning?: boolean;
 }
 
 export interface ServiceFacts {
@@ -82,6 +85,8 @@ export interface HealthFacts {
   /** null when there is no log file. */
   log: LogFacts | null;
   gh: { ok: boolean; output: string };
+  /** The repos due for an area review. */
+  reviews: ReviewDue[];
 }
 
 /** A run recorded as started: its pid may not be written yet this long after. */
@@ -265,5 +270,5 @@ export function checkGh(gh: HealthFacts['gh']): Check {
 
 /** Every check, in the order they are shown. */
 export function judgeHealth(f: HealthFacts): Check[] {
-  return [checkService(f.service), checkApi(f), checkCode(f), checkReload(f), checkProcesses(f), checkTasks(f), checkLog(f), checkGh(f.gh)];
+  return [checkService(f.service), checkApi(f), checkCode(f), checkReload(f), checkProcesses(f), checkTasks(f), checkLog(f), checkGh(f.gh), checkReviews(f.reviews)];
 }

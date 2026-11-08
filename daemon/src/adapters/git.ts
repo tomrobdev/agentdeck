@@ -17,6 +17,7 @@ import {
   treeEntries,
 } from '../domain/work/index.ts';
 import { branchName } from '../domain/work/index.ts';
+import type { ReviewFacts } from '../domain/operations/index.ts';
 import type { Repo } from '../domain/repos/index.ts';
 import type { Task } from '../domain/work/index.ts';
 
@@ -397,6 +398,42 @@ export async function filePatch(
   const { bytes } = await gitCapped(repoPath, PATCH_LIMIT, ['diff', ...DIFF_FLAGS, '-M', base, head, '--', ...paths]);
   const { text, truncated } = capText(bytes, PATCH_LIMIT, { wholeLines: true });
   return { patch: text, truncated };
+}
+
+/** The empty tree, what a diff of a repo's whole history starts from. */
+const EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
+
+/** A time (ms since the epoch) as a date git reads exactly, in UTC. */
+const gitDate = (ms: number) => `${new Date(ms).toISOString().slice(0, 19)} +0000`;
+
+/**
+ * The repo's area review marks (refs/reviewed/<area>, the review-area skill's), and the commits and lines (added plus
+ * deleted) merged into the base since the oldest one; with no mark, since `since` (ms), the base as it was then. The
+ * base is origin's copy when there is one, else the local one; nothing is fetched. Null when there is no base.
+ */
+export async function reviewFacts(repoPath: string, base: string, since: number): Promise<ReviewFacts | null> {
+  const tip = await resolveCommit(repoPath, await localStartPoint(repoPath, base));
+  if (!tip) return null;
+  // refs/reviewed/* has no reflog, so a mark's age is the commit date of the commit it points at: the base as reviewed.
+  const listed = await git(
+    repoPath,
+    'for-each-ref',
+    '--format=%(refname:lstrip=2)%09%(objectname)%09%(committerdate:unix)',
+    'refs/reviewed/',
+  );
+  const marks = listed
+    .split('\n')
+    .map((line) => line.split('\t'))
+    .map(([area, sha, at]) => ({ area, sha, at: Number(at) * 1000 }))
+    .filter((m) => m.area && m.at > 0);
+  const oldest = marks.reduce<(typeof marks)[number] | null>((o, m) => (!o || m.at < o.at ? m : o), null);
+  const from = oldest?.sha ?? ((await git(repoPath, 'rev-list', '-1', `--before=${gitDate(since)}`, tip)) || null);
+  const [count, stat] = await Promise.all([
+    git(repoPath, 'rev-list', '--count', from ? `${from}..${tip}` : tip),
+    gitRead(repoPath, 'diff', ...DIFF_FLAGS, '--shortstat', from ?? EMPTY_TREE, tip, '--'),
+  ]);
+  const lines = [...stat.matchAll(/(\d+) (?:insertion|deletion)/g)].reduce((sum, m) => sum + Number(m[1]), 0);
+  return { marks: marks.map(({ area, at }) => ({ area, at })), commits: Number(count), lines };
 }
 
 /** Commits reachable from `head` but not `base`, newest first. */

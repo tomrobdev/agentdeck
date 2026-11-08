@@ -10,7 +10,7 @@ import type { CheckState } from '../domain/landing/index.ts';
 import type { MergeMethod, PrMode, ToolRulesSource } from '../domain/repos/index.ts';
 import type { PrRetry, PrState } from '../domain/landing/index.ts';
 import type { RunKind } from '../domain/runs/index.ts';
-import type { HeadlineState, AttentionWhy } from '../domain/operations/index.ts';
+import type { HeadlineState, AttentionWhy, RepoReviewDue } from '../domain/operations/index.ts';
 import type { LinkKind } from '../domain/work/index.ts';
 import type { TaskStatus } from '../domain/work/index.ts';
 import type { NeedsKind } from '../domain/work/index.ts';
@@ -811,6 +811,8 @@ export interface Headline {
   need_you: number;
   /** Up to five of those tasks: blocked first, then review, then proposed, each by priority. */
   attention: { id: TaskId; title: string; why: AttentionWhy }[];
+  /** The repos due for an area review, each with its line ("area review due: 9 days, 115 commits since the last"). */
+  review_due: RepoReviewDue[];
 }
 
 export interface Status {
@@ -846,6 +848,8 @@ export interface Settings {
   /** The model resolve and unblock runs use, in place of their task's. */
   support_model: string;
   reload_on_change: boolean;
+  /** A repo is due for an area review when its oldest mark is older than `days`, or more than `lines` lines merged since it. */
+  review_due: { days: number; lines: number };
 }
 
 /** POST /api/settings */
@@ -857,6 +861,7 @@ export interface SettingsPatch {
   default_model?: string;
   support_model?: string;
   reload_on_change?: boolean;
+  review_due?: Partial<Settings['review_due']>;
 }
 
 export interface ServiceStatus {
@@ -877,12 +882,14 @@ export interface RunningTask {
   title: string;
 }
 
-/** One check of `agentdeck doctor`; a failed one names the command that fixes it. */
+/** One check of `agentdeck doctor`; a failed one, or a warning, names the command that fixes it. */
 export interface HealthCheck {
   name: string;
   ok: boolean;
   reason: string;
   fix: string | null;
+  /** Passed, but a person should look (an area review due); never a failure. */
+  warning?: boolean;
 }
 
 /** GET /api/daemon/health: `agentdeck doctor`, the checkout's HEAD, what is running, and the last lines of the daemon log. */

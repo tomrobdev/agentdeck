@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // The daemon's health, opened from the status bar: the commit it loaded against HEAD, uptime, a reload that is
-// pending or blocked, the failing checks of `agentdeck doctor` with their fix, and the end of the log.
+// pending or blocked, the failing checks of `agentdeck doctor` with their fix, its warnings, and the end of the log.
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { api, daemonHealthQuery, daemonQuery, isOffline, taskList, uptime } from '../../api';
@@ -59,6 +59,7 @@ const reloadLine = computed(() => {
     : `Restarts after ${r.waiting} finish.`;
 });
 const failing = computed(() => (health.value?.checks ?? []).filter((c) => !c.ok));
+const warnings = computed(() => (health.value?.checks ?? []).filter((c) => c.ok && c.warning));
 
 async function restartWhenIdle() {
   await run(async () => {
@@ -123,6 +124,17 @@ function refresh() {
       </ul>
     </section>
     <p v-else-if="health" class="text-muted m-0 mb-3">All {{ health.checks.length }} checks pass.</p>
+
+    <section v-if="warnings.length" class="mb-3">
+      <h4 class="m-0 mb-1">Warnings</h4>
+      <ul class="m-0 list-none p-0">
+        <li v-for="c in warnings" :key="c.name" class="mb-1.5">
+          <b>{{ c.name }}</b
+          >: {{ c.reason }}
+          <div v-if="c.fix" class="text-muted">{{ c.fix }}</div>
+        </li>
+      </ul>
+    </section>
 
     <section class="mb-3">
       <h4 class="m-0 mb-1">Log</h4>

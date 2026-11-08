@@ -40,6 +40,7 @@ import {
   removeTempDir,
   removeWorktree,
   resolveCommit,
+  reviewFacts,
   startPoint,
 } from './git.ts';
 import { readGivenPlan, readPlanFile, writeGivenPlan, writePlanFile } from './plan-file.ts';
@@ -104,6 +105,8 @@ export const workspace = {
   commitsAhead: (cwd: string, base: string) => commitsAhead(cwd, base),
 
   unpushedCommits: (worktree: string, branch: string) => aheadOfRemote(worktree, branch),
+
+  reviewFacts: (repoPath: string, base: string, since: number) => reviewFacts(repoPath, base, since),
 
   runCommand: (command: string | string[], cwd: string, timeoutMs: number) =>
     typeof command === 'string' ? runCommand(command, cwd, timeoutMs) : runProgram(command[0], command.slice(1), cwd, timeoutMs),

@@ -2,6 +2,7 @@
 import type { NotifySettings } from './notification.ts';
 import type { PlannerSettings } from '../proposals/index.ts';
 import type { Budget } from '../capacity/index.ts';
+import type { ReviewDueSettings } from './review-due.ts';
 
 export interface Settings {
   max_concurrent: number;
@@ -14,4 +15,6 @@ export interface Settings {
   support_model: string;
   /** Restart the daemon onto new code when daemon/src changes and nothing is running. */
   reload_on_change: boolean;
+  /** When a repo is due for an area review (review_due_days, review_due_lines). */
+  review_due: ReviewDueSettings;
 }

@@ -14,7 +14,7 @@ import type {
   ReviewWithComments,
   StoredChecks,
 } from '../../domain/landing/index.ts';
-import type { AttentionCandidate, Notification, NotifySettings, Settings } from '../../domain/operations/index.ts';
+import type { AttentionCandidate, Notification, NotifySettings, ReviewDue, Settings } from '../../domain/operations/index.ts';
 import type { PlannerOutcome, PlannerRun, PlannerSettings } from '../../domain/proposals/index.ts';
 import type { MergeMethod, Repo } from '../../domain/repos/index.ts';
 import type { PidRun, Run, RunKind, RunningTaskRun } from '../../domain/runs/index.ts';
@@ -277,6 +277,12 @@ export interface SettingsRepository {
   plannerSettings(): PlannerSettings;
   /** The default_model and support_model settings. */
   modelSettings(): Pick<Settings, 'default_model' | 'support_model'>;
+  /** The repos due for an area review, as the daemon's last check found them, for the headline. */
+  reviewsDue(): ReviewDue[];
+  setReviewsDue(dues: ReviewDue[]): void;
+  /** When a person was last told the repo is due for an area review (ms since the epoch); null when never. */
+  reviewDueToldAt(repo: RepoId): number | null;
+  setReviewDueToldAt(repo: RepoId, at: number): void;
 }
 
 export interface ChangeRepository {
