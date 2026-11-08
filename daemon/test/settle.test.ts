@@ -36,7 +36,7 @@ function setup(pr_mode: 'off' | 'ready' = 'off') {
 
 const notes = (db: ReturnType<typeof openDb>, kind: string, id: TaskId) =>
   db.recentNotifications(50).filter((n) => n.kind === kind && n.task_id === id);
-const prRows = (db: ReturnType<typeof openDb>, id: TaskId) => db.eventsForTask(id).filter((e) => e.type === 'pr');
+const prRows = (db: ReturnType<typeof openDb>, id: TaskId) => db.eventsForTask(id).filter((e) => e.type === 'pr' || e.type === 'pr_closed');
 
 test('a worker that throws leaves its task failed, notified, and its dependents warned', async () => {
   const { db, add } = setup();

@@ -352,6 +352,7 @@ export interface TaskEventRow {
     | 'edit'
     | 'merge'
     | 'pr'
+    | 'pr_closed'
     | 'sync'
     | 'plan_unfinished'
     | 'environment_block'

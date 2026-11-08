@@ -14,7 +14,7 @@ import type { StartWait, Waiting } from '../../domain/work/index.ts';
 import { measureBranch } from './files.ts';
 import type { TaskStatus } from '../../domain/work/index.ts';
 import type { Task } from '../../domain/work/index.ts';
-import { loadedLinks } from './dependencies.ts';
+import { liveLinks, loadedLinks } from './dependencies.ts';
 import { type LinkView, dependentViews, linkViews, startState, unblocksOf, waitingFor } from '../../domain/work/index.ts';
 import type { LinkIndex, LinkKind } from '../../domain/work/index.ts';
 import { requireTask } from '../shared/input.ts';
@@ -104,7 +104,7 @@ function summaryOf(app: App, run: Run, task: Task, repo: Repo | undefined): RunS
 export async function taskDetail(app: App, id: TaskId) {
   const task = requireTask(app, id);
   const repo = app.getRepo(task.repo_id);
-  const [view] = withViews(app, [task]);
+  const [view] = withViews(app, [task], liveLinks(app)); // one task: read its links, not all of them
   // Only a done task's branch is final; measuring a running one would start git on every refetch.
   const branch = task.checkout?.branch;
   if (repo && task.status === 'done' && branch && !openPrUrl(task.pr) && task.pr?.state !== 'merged' && autoMergeOn(task, repo)) {

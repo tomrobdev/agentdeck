@@ -24,7 +24,8 @@ export const FOLLOW_UPS: Record<DomainEventType, FollowUp[]> = {
   TaskStarted: [],
   TaskQueued: [],
   TaskFinished: ['open_pr', 'warn_dependents', 'notify'],
-  TaskPrMerged: ['warn_dependents', 'notify'], // it has a PR: that is how it got here
+  TaskPrMerged: ['notify'], // a task with a merged PR is met, so it strands no one
+  TaskPrClosed: ['warn_dependents'], // a closed PR is never merged: the tasks that build on it are stuck until it is retried
   TaskMarkedDone: [],
   TaskBlocked: ['warn_dependents', 'notify'],
   TaskFailed: ['warn_dependents', 'notify'],
@@ -32,9 +33,9 @@ export const FOLLOW_UPS: Record<DomainEventType, FollowUp[]> = {
   TaskCancelled: ['warn_dependents'],
 };
 
-/** What follows `events`, each follow-up once, in `FOLLOW_UP_ORDER`. */
-export function followUpsOf(events: Pick<DomainEvent, 'type'>[]): FollowUp[] {
-  const wanted = new Set(events.flatMap((e) => FOLLOW_UPS[e.type]));
+/** What follows `event`, in `FOLLOW_UP_ORDER`. */
+export function followUpsOf(event: Pick<DomainEvent, 'type'>): FollowUp[] {
+  const wanted = new Set(FOLLOW_UPS[event.type]);
   return FOLLOW_UP_ORDER.filter((f) => wanted.has(f));
 }
 
@@ -44,5 +45,5 @@ export function followUpsOf(events: Pick<DomainEvent, 'type'>[]): FollowUp[] {
  */
 export function followUpsOfRow(row: { type: TaskEventType; to_status: TaskStatus | null }): FollowUp[] {
   const type = domainEventOfRow(row);
-  return type ? followUpsOf([{ type }]) : [];
+  return type ? followUpsOf({ type }) : [];
 }

@@ -84,6 +84,6 @@ test('review is a done task whose PR is open', () => {
 });
 
 test('an unknown state or sort says which names are valid', () => {
-  assert.throws(() => ids({ states: ['stalled'] }), /unknown state "stalled" \(use active, needs-you, running/);
+  assert.throws(() => ids({ states: ['stalled'] }), /unknown state "stalled" \(use active, needs-you, pr-open, running/);
   assert.throws(() => ids({ sort: 'random' }), /unknown sort "random" \(use attention, updated/);
 });
