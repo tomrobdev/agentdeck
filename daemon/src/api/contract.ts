@@ -19,7 +19,7 @@ import type { TaskSource } from '../domain/work/index.ts';
 // ---- Vocabulary
 
 // The domain's words, shared as they are.
-export type { AutoMergeState, FileRef, LinkKind, MergeMethod, NotifyKind, PrMode, PrState, TaskStatus };
+export type { AutoMergeState, FileRef, LinkKind, MergeMethod, NotifyKind, PrMode, PrRetry, PrState, TaskStatus };
 
 // ---- Repos
 

@@ -11,6 +11,7 @@ import { type Repo, pausedReason } from '../../domain/repos/index.ts';
 import type { Task } from '../../domain/work/index.ts';
 import { errorMessage } from '../../domain/shared/index.ts';
 import { landsAfter } from '../work/dependencies.ts';
+import { measureBranch } from '../work/files.ts';
 import { settle, settlePr } from './settle.ts';
 import { notifyLater } from '../operations/notifications.ts';
 
@@ -29,10 +30,23 @@ export function lastTestsPassed(app: App, id: TaskId): boolean | null {
   return app.runsForTask(id).findLast((r) => r.tests_passed !== null)?.tests_passed ?? null;
 }
 
-/** The auto-merge check for a task's PR (read `withFiles`), or null when auto-merge is off for the task. */
-export function autoMergeFor(app: App, task: Task, repo: Repo, pr: PrDetails, tests_passed: boolean | null): AutoMergeCheck | null {
+/**
+ * The auto-merge check for a task's PR (read `withFiles`), or null when auto-merge is off for the task. Its size is counted
+ * from git (`git diff --numstat` against the base in the repo's checkout) when the local branch is at the PR's head, since
+ * GitHub's file list stops at 100; from GitHub's numbers otherwise.
+ */
+export async function autoMergeFor(
+  app: App,
+  task: Task,
+  repo: Repo,
+  pr: PrDetails,
+  tests_passed: boolean | null,
+): Promise<AutoMergeCheck | null> {
   if (!autoMergeOn(task, repo)) return null;
+  const branch = task.checkout?.branch;
+  const measured = branch && pr.head ? await measureBranch(app, repo, branch, pr.head) : null;
   return autoMergeCheck({
+    measured,
     repo,
     pr_state: task.pr?.state ?? null,
     pr,
@@ -140,7 +154,7 @@ async function refreshOne(app: App, task: Task, log: (msg: string) => void): Pro
     return { pr, place: classify(pr, check.verdict), requested: true, polling: mergeRequestPolls(check, pr) };
   }
   // Every check is kept on the task for the views, whatever the verdict; none when auto-merge is off.
-  const check = repo ? autoMergeFor(app, task, repo, pr, tests) : null;
+  const check = repo ? await autoMergeFor(app, task, repo, pr, tests) : null;
   app.setAutoMergeCheck(task.id, check);
   return { pr, place: classify(pr, check?.verdict ?? null), requested: false, polling: false };
 }

@@ -229,6 +229,60 @@ test('measureBranch counts the lines and paths a branch changed against the base
   assert.deepEqual([view.state, view.reasons], ['on', ['touches .github/ci.yml']]);
 });
 
+test('a PR with 150 changed files is measured in full from git, and auto-merges under the line limit', async () => {
+  sh('checkout', '-q', '-b', 'agentdeck/wide');
+  mkdirSync(join(dir, 'wide'), { recursive: true });
+  const paths = Array.from({ length: 150 }, (_, i) => `wide/f${String(i).padStart(3, '0')}.ts`);
+  for (const p of paths) writeFileSync(join(dir, p), 'x\n');
+  sh('add', '-A');
+  sh('commit', '-q', '-m', 'wide');
+  const head = sh('rev-parse', 'HEAD');
+  sh('checkout', '-q', 'main');
+
+  const url = `https://x/pull/${++n}`;
+  const t = doneTask(db, repo, { pr: 'open', url, branch: 'agentdeck/wide' });
+  db.finishRun(db.startRun(t.id, 1, join(home, `run-${t.id}.log`)), { tests_passed: true });
+  // GitHub's file list stops at 100 of the 150.
+  const listed: PrDetails = { ...ready, files: 150, additions: 150, deletions: 0, paths: paths.slice(0, 100), head };
+
+  details[url] = { ...listed, head: '0'.repeat(40) };
+  await refreshPrStates(db);
+  assert.deepEqual(
+    db.getTask(t.id)!.pr!.auto_merge_check?.reasons,
+    ['GitHub listed 100 of 150 changed files'],
+    'a local branch at another commit than the PR is not measured: GitHub says',
+  );
+
+  details[url] = listed;
+  const found = await refreshPrStates(db);
+  assert.equal(db.getTask(t.id)!.pr!.auto_merge_check?.verdict, 'merge');
+  assert.deepEqual(db.getTask(t.id)!.pr!.auto_merge_check?.reasons, []);
+  assert.deepEqual(
+    found.mergeable.map((m) => m.id),
+    [t.id],
+  );
+  assert.equal(await autoMerge(db, found.mergeable), t.id);
+  assert.equal(db.getTask(t.id)!.pr!.state, 'merged');
+
+  // Measured from git, every path counts against the skip list, not only the first 100 GitHub listed.
+  sh('checkout', '-q', '-b', 'agentdeck/wide-ci');
+  mkdirSync(join(dir, '.github'), { recursive: true });
+  mkdirSync(join(dir, 'wide'), { recursive: true });
+  for (const p of paths) writeFileSync(join(dir, p), 'y\n');
+  writeFileSync(join(dir, '.github/zz.yml'), 'z\n');
+  sh('add', '-A');
+  sh('commit', '-q', '-m', 'wide ci');
+  const ciHead = sh('rev-parse', 'HEAD');
+  sh('checkout', '-q', 'main');
+  const ciUrl = `https://x/pull/${++n}`;
+  const ci = doneTask(db, repo, { pr: 'open', url: ciUrl, branch: 'agentdeck/wide-ci' });
+  db.finishRun(db.startRun(ci.id, 1, join(home, `run-${ci.id}.log`)), { tests_passed: true });
+  details[ciUrl] = { ...listed, head: ciHead };
+  await refreshPrStates(db);
+  assert.equal(db.getTask(ci.id)!.pr!.auto_merge_check?.verdict, 'never');
+  assert.deepEqual(db.getTask(ci.id)!.pr!.auto_merge_check?.reasons.at(-1), 'touches .github/zz.yml');
+});
+
 // ---- The CLI
 
 test('ls and show say a task with a PR over the limit needs a person to merge', async () => {
