@@ -16,6 +16,7 @@
     "typecheck": "tsc",
     "test": "AGENTDECK_NO_NOTIFY=1 node --test test/",
     "test:crash": "node scripts/crash-test.mjs",
+    "coverage": "node scripts/coverage.ts",
     "test:watch": "AGENTDECK_NO_NOTIFY=1 node --test --watch test/",
     "db:studio": "drizzle-kit studio",
     "db:check": "node scripts/db-check.ts",
