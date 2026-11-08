@@ -8,8 +8,8 @@ const KINDS: LinkKind[] = ['builds_on', 'after'];
 
 /** Why a task may not be built on, from the `pr_mode` of its repo, or null. */
 function buildsOnTargetError(app: App, target: { id: TaskId; repo_id: RepoId }): string | null {
-  const repo = app.getRepo(target.repo_id);
-  return repo ? buildsOnRepoError(target.id, repo) : null;
+  // A task's repo exists: deleting a repo deletes its tasks.
+  return buildsOnRepoError(target.id, app.getRepo(target.repo_id)!);
 }
 
 /** The links a new task asks for, checked: every task exists and none is named under both kinds. The entry points parse the ids. */
