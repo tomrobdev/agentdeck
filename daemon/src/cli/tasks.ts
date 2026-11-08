@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import * as actions from '../application/actions.ts';
 import { type TaskId, asTaskId, parseId } from '../domain/shared/index.ts';
-import { isOwnPlanName, planProgress } from '../domain/work/index.ts';
+import { isOwnPlanName, modelSourceText, planProgress } from '../domain/work/index.ts';
 import { commentLocation } from '../domain/landing/index.ts';
 import { pickRun } from '../domain/runs/index.ts';
 import { TASK_STATUSES } from '../domain/work/index.ts';
@@ -72,8 +72,9 @@ export const taskCommands: Record<string, Command> = {
     });
     const detail = await actions.taskDetail(db, t.id);
     const { waiting, links } = detail;
+    const source = modelSourceText(t.model_source);
     console.log(
-      `${t.status === 'proposed' ? 'proposed' : 'queued'} task #${t.id} on ${repoName(t.repo_id)} (${t.model}, ${t.max_turns} turns max${links
+      `${t.status === 'proposed' ? 'proposed' : 'queued'} task #${t.id} on ${repoName(t.repo_id)} (${t.model}${source ? `: ${source}` : ''}, ${t.max_turns} turns max${links
         .map(fmtLink)
         .map((l) => `, ${l}`)
         .join('')})`,

@@ -25,7 +25,9 @@ const { followUpPending } = await import('../src/application/landing/settle.ts')
 const { addTask, ActionError, closeTaskPr, retryTask, updateRepo } = await import('../src/application/actions.ts');
 const { buildPrompt } = await import('../src/domain/runs/prompt.ts');
 const { latestReviewNote } = await import('../src/domain/work/history.ts');
-const { linkTasks, mergeAll, mergePreview, mergeTask } = await import('../src/application/actions.ts');
+const { mergePreview, mergeTask } = await import('../src/application/actions.ts');
+const { testApp } = await import('./fixtures.ts');
+const { prCommands } = await import('../src/cli/pull-requests.ts');
 const { mergeCheck, parsePrDetails } = await import('../src/domain/landing/merge.ts');
 type PrDetails = import('../src/domain/landing/merge.ts').PrDetails;
 const { dependencyOf, liveLinks, waitingFor } = await import('../src/application/work/dependencies.ts');
@@ -85,6 +87,7 @@ const cleanDetails: PrDetails = {
   additions: 10,
   deletions: 4,
   checks: { total: 2, failing: 0, pending: 0 },
+  head: 'head-1',
   paths: ['src/a.ts', 'src/b.ts'],
   labels: [],
 };
@@ -693,50 +696,93 @@ test('mergeTask refuses what cannot be merged and leaves the task as it was', as
   }
 });
 
-test('mergeAll merges each PR, one that lands after another once that one has, and says why the rest stay open', async () => {
-  const [first, later, conflicted, held] = [prTask(110), prTask(111), prTask(112), prTask(113)];
-  linkTasks(db, later.id, { on: first.id, kind: 'after' });
-  details[conflicted.url] = { ...cleanDetails, mergeable: 'CONFLICTING' };
-  const outside = db.addTask({ repo_id: repo.id, title: 'not landed', prompt: 'x' });
-  linkTasks(db, held.id, { on: outside.id, kind: 'after' });
+/** Run a pull request command against the test app and return what it printed. */
+async function prCli(cmd: string, rest: string[], flags: Record<string, string | boolean>): Promise<string[]> {
+  const out: string[] = [];
+  const { log } = console;
+  console.log = (m: unknown) => void out.push(String(m));
+  try {
+    await prCommands[cmd]({ db, cmd, rest, flags, repoName: () => 'demo' } as never);
+  } finally {
+    console.log = log;
+  }
+  return out;
+}
 
-  // `later` comes first and waits for the round in which `first` merged; a repeated id merges once.
-  const res = await mergeAll(db, { ids: [later.id, conflicted.id, first.id, held.id, first.id] });
-  assert.deepEqual(
-    res.merged.map((m) => [m.id, m.method]),
-    [
-      [first.id, 'squash'],
-      [later.id, 'squash'],
-    ],
-  );
-  assert.deepEqual(
-    merging.merged.map((m) => m.url),
-    [first.url, later.url],
-  );
-  assert.deepEqual(
-    merging.deleted,
-    [`agentdeck/task-${first.id}`, `agentdeck/task-${later.id}`],
-    'the branches go, as after an auto-merge',
-  );
-  assert.deepEqual(
-    res.skipped.map((s) => s.id),
-    [conflicted.id, held.id],
-  );
-  assert.equal(
-    res.skipped[0].reason,
-    'the branch has conflicts with the base branch',
-    'the entry has the id; the reason does not repeat it',
-  );
-  assert.match(res.skipped[1].reason, new RegExp(`^lands after #${outside.id}`));
-  assert.deepEqual(
-    res.skipped.map((s) => s.conflicting),
-    [true, false],
-    'only the conflict with the base branch can be settled by a sync',
-  );
-  for (const id of [conflicted.id, held.id]) assert.equal(db.getTask(id)!.pr?.state, 'open');
-  db.applyEvent(outside.id, { type: 'cancel' });
+/** Run `agentdeck merge --all --yes` against the test app with `daemon` answering or not, and return what it printed. */
+async function mergeAllCli(daemon: boolean): Promise<string[]> {
+  const service = db.service;
+  testApp(db, { service: { ...service, daemonState: async () => (daemon ? ({} as never) : null) } });
+  try {
+    return await prCli('merge', [], { all: true, yes: true });
+  } finally {
+    testApp(db, { service });
+  }
+}
 
-  assert.deepEqual(await mergeAll(db, { ids: [] }), { merged: [], skipped: [] });
+test('merge <id> --yes prints the preview and its warnings, then merges with the method asked for', async () => {
+  const t = prTask(120);
+  details[t.url] = { ...cleanDetails, checks: { total: 2, failing: 0, pending: 1 } };
+  const out = await prCli('merge', [String(t.id)], { yes: true, method: 'rebase', 'keep-branch': true });
+  assert.equal(out[0], `merge 120  #${t.id}`);
+  assert.ok(out.includes(`agentdeck/task-${t.id} → main, rebase, 3 commits`), out.join('\n'));
+  assert.ok(out.includes('2 files, +10 −4'), out.join('\n'));
+  assert.ok(out.includes('tests not run; GitHub checks: 2 (0 failing, 1 running)'), out.join('\n'));
+  assert.ok(
+    out.some((l) => l.startsWith('warning: ')),
+    out.join('\n'),
+  );
+  assert.equal(out.at(-1), `merged #${t.id} (rebase)`);
+  assert.deepEqual(merging.deleted, [], '--keep-branch keeps the remote branch');
+
+  const squashed = prTask(121);
+  details[squashed.url] = { ...cleanDetails, checks: { total: 0, failing: 0, pending: 0 } };
+  const plain = await prCli('merge', [String(squashed.id)], { yes: true });
+  assert.ok(plain.includes(`agentdeck/task-${squashed.id} → main, squash (3 → 1 commit)`), plain.join('\n'));
+  assert.ok(plain.includes('tests not run; GitHub checks: none'), plain.join('\n'));
+  assert.equal(plain.at(-1), `merged #${squashed.id} (squash)`);
+  assert.deepEqual(merging.deleted, [`agentdeck/task-${squashed.id}`]);
+});
+
+test('auto-merge <id> on|off|repo sets the task, and says when the label could not change', async () => {
+  const t = prTask(122);
+  const { ensureLabel, setLabel } = github;
+  github.ensureLabel = async () => {};
+  github.setLabel = async () => {};
+  try {
+    assert.deepEqual(await prCli('auto-merge', [String(t.id), 'on'], {}), [`#${t.id}: auto-merge on`]);
+    assert.deepEqual(await prCli('auto-merge', [String(t.id), 'repo'], {}), [`#${t.id}: auto-merge off (the repo's setting)`]);
+    github.setLabel = async () => {
+      throw new Error('HTTP 403');
+    };
+    assert.deepEqual(await prCli('auto-merge', [String(t.id), 'on'], {}), [
+      `#${t.id}: auto-merge on`,
+      "could not change the PR's label: HTTP 403",
+    ]);
+  } finally {
+    Object.assign(github, { ensureLabel, setLabel });
+  }
+});
+
+test('merge --all requests the merges as Merge all does, and leaves a PR with failing checks open with why', async () => {
+  for (const t of db.openPrTasks()) db.recordPr(t.id, { type: 'closed' }); // earlier tests' PRs are not in review
+  const [clean, failing, running] = [prTask(110), prTask(111), prTask(112)];
+  details[failing.url] = { ...cleanDetails, checks: { total: 2, failing: 1, pending: 0 } };
+  details[running.url] = { ...cleanDetails, checks: { total: 2, failing: 0, pending: 1 } };
+
+  const out = await mergeAllCli(false);
+  assert.deepEqual(merging.merged, [], 'the CLI merges nothing itself: the daemon carries the requests out');
+  assert.ok(db.getTask(clean.id)!.pr?.merge_request);
+  assert.ok(db.getTask(running.id)!.pr?.merge_request, 'running checks are waited for');
+  assert.equal(db.getTask(failing.id)!.pr?.merge_request ?? null, null, 'failing checks are not requested');
+  assert.equal(db.getTask(failing.id)!.pr?.state, 'open');
+  assert.ok(out.includes(`requested the merge of #${clean.id}`), out.join('\n'));
+  assert.ok(out.includes(`requested the merge of #${running.id}; waits: 1 check still running on GitHub`), out.join('\n'));
+  assert.ok(out.includes(`left #${failing.id}: 1 check failing on GitHub`), out.join('\n'));
+  assert.match(out.at(-1)!, /the daemon is not running: the requests wait until it starts/);
+
+  for (const t of [clean, running]) db.clearMergeRequest(t.id);
+  assert.ok(!(await mergeAllCli(true)).some((l) => l.includes('not running')), 'a running daemon is not mentioned');
 });
 
 test('mergeTask can delete the remote branch and remove the worktree, and reports a cleanup that fails', async () => {

@@ -56,6 +56,8 @@ const run = (o: Partial<Run>): Run => ({
   live_turns: 0,
   live_tool: null,
   pid_at: null,
+  model: 'sonnet',
+  model_id: null,
   ...o,
 });
 

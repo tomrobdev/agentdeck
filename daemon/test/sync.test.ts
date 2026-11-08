@@ -65,6 +65,7 @@ const cleanDetails: PrDetails = {
   additions: 1,
   deletions: 0,
   checks: { total: 0, failing: 0, pending: 0 },
+  head: 'head-1',
   paths: ['README.md'],
   labels: [],
 };

@@ -99,6 +99,8 @@ export const daemonCommands: Record<string, Command> = {
     console.log(
       `planner         ${st.planner.enabled ? 'on' : 'off'}, every ${st.planner.interval_hours}h when a queue is empty, up to ${st.planner.max_tasks} tasks, ${st.planner.model}`,
     );
+    console.log(`default_model   ${st.default_model}`);
+    console.log(`support_model   ${st.support_model} (resolve and unblock runs)`);
     console.log(
       `\ngovernor        ${d.allow ? 'allowing work' : 'on hold'}${d.reason ? `: ${d.reason}` : ''}${d.until ? ` (lifts in ${relTime(d.until)})` : ''}`,
     );

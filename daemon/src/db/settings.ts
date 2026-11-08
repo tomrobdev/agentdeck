@@ -1,9 +1,11 @@
-// Key-value settings: pause flag, budget, concurrency, notification and planner options.
+// Key-value settings: pause flag, budget, concurrency, notification, planner and model options.
 import { eq } from 'drizzle-orm';
 import type { DatabaseSync } from 'node:sqlite';
 import { DEFAULTS } from '../config.ts';
 import { NOTIFY_KINDS, type NotifyKind, type NotifySettings } from '../domain/operations/index.ts';
 import type { PlannerSettings } from '../domain/proposals/index.ts';
+import { DEFAULT_SUPPORT_MODEL } from '../domain/runs/index.ts';
+import { DEFAULT_MODEL } from '../domain/work/index.ts';
 import type { Settings } from '../domain/operations/index.ts';
 import { BUDGET_KEYS, type Budget, DEFAULT_BUDGET } from '../domain/capacity/index.ts';
 import type { Orm } from './orm.ts';
@@ -25,7 +27,9 @@ export const SETTING_DEFAULTS = {
   planner_enabled: '1',
   planner_interval_hours: '3',
   planner_max_tasks: '3',
-  planner_model: 'sonnet',
+  planner_model: DEFAULT_MODEL,
+  default_model: DEFAULT_MODEL,
+  support_model: DEFAULT_SUPPORT_MODEL,
   ...Object.fromEntries(BUDGET_KEYS.map((k) => [k, String(DEFAULT_BUDGET[k])])),
 } as Record<string, string>;
 
@@ -52,6 +56,10 @@ export function settingsStore(db: DatabaseSync, orm: Orm) {
     max_tasks: Number(get('planner_max_tasks')),
     model: get('planner_model'),
   });
+  const modelSettings = (): Pick<Settings, 'default_model' | 'support_model'> => ({
+    default_model: get('default_model'),
+    support_model: get('support_model'),
+  });
   return {
     /** Raw write by key, for flags the daemon keeps for itself. The person's settings go through writeSettings. */
     setSetting: set,
@@ -61,6 +69,7 @@ export function settingsStore(db: DatabaseSync, orm: Orm) {
       budget: budget(),
       notify: notifySettings(),
       planner: plannerSettings(),
+      ...modelSettings(),
       reload_on_change: get('reload_on_change') === '1',
     }),
     /** Store all of `s` in one transaction. */
@@ -76,6 +85,8 @@ export function settingsStore(db: DatabaseSync, orm: Orm) {
         set('planner_interval_hours', String(s.planner.interval_hours));
         set('planner_max_tasks', String(s.planner.max_tasks));
         set('planner_model', s.planner.model);
+        set('default_model', s.default_model);
+        set('support_model', s.support_model);
         set('reload_on_change', s.reload_on_change ? '1' : '0');
       }),
     isPaused: (): boolean => get('paused') === '1',
@@ -94,5 +105,6 @@ export function settingsStore(db: DatabaseSync, orm: Orm) {
     maxConcurrent: (): number => Number(get('max_concurrent')),
     notifySettings,
     plannerSettings,
+    modelSettings,
   };
 }

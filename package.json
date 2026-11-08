@@ -27,7 +27,7 @@
     "check:rust:changed": "if git diff --quiet origin/main -- app/src-tauri; then echo 'nothing to check: app/src-tauri is unchanged from origin/main'; else pnpm check:rust; fi",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check:fast": "pnpm format:check && pnpm typecheck && pnpm db:check && pnpm test",
+    "check:fast": "pnpm format:check && pnpm typecheck && pnpm db:check && pnpm coverage",
     "check": "pnpm check:fast && node daemon/scripts/crash-test.mjs \"${CRASH_ITERATIONS:-10}\"",
     "check:task": "node scripts/check-task.mjs",
     "check:stack": "node scripts/check-stack.mjs"

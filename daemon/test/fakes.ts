@@ -24,6 +24,8 @@ export function fakeAgent(work: (session: AgentSession) => void | Promise<void> 
       sessions.push(session);
       const id = `fake-session-${sessions.length}`;
       session.onSession?.(id);
+      const model = session.args.includes('--model') ? session.args[session.args.indexOf('--model') + 1] : undefined;
+      if (model) session.onModel?.(model.startsWith('claude-') ? model : `claude-${model}-5-5`);
       await work(session);
       const end: ClaudeResult = {
         subtype: 'success',
@@ -77,7 +79,7 @@ export interface FakeCodeHost extends CodeHost {
   branchPrs: Record<string, BranchPr[]>;
   created: CreatePr[];
   pushed: { repoPath: string; branch: string }[];
-  merged: { url: string; method: string }[];
+  merged: { url: string; method: string; head: string }[];
   closed: string[];
   deletedBranches: string[];
 }
@@ -104,7 +106,7 @@ export function fakeCodeHost(): FakeCodeHost {
     prDetails: async (url) => host.details[url] ?? READY_PR,
     failedLog: async () => '',
     markReady: async () => {},
-    merge: async (pr) => void host.merged.push({ url: pr.url, method: pr.method }),
+    merge: async (pr) => void host.merged.push({ url: pr.url, method: pr.method, head: pr.head }),
     deleteRemoteBranch: async (_repoPath, branch) => void host.deletedBranches.push(branch),
   };
   return host;

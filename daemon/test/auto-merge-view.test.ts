@@ -50,6 +50,7 @@ const ready: PrDetails = {
   additions: 30,
   deletions: 5,
   checks: { total: 2, failing: 0, pending: 0 },
+  head: 'head-1',
   paths: ['src/a.ts', 'src/b.ts'],
   labels: [AUTO_MERGE_LABEL.name],
 };
@@ -97,7 +98,7 @@ test('a refresh stores the check it ran, never or merge alike; merging, closing 
   assert.equal(db.getTask(big.id)!.pr!.auto_merge_check?.verdict, 'merge');
 
   // Merging clears it.
-  assert.equal(await autoMerge(db, [{ id: fine.id, pr: ready }]), fine.id);
+  assert.equal(await autoMerge(db, [{ id: fine.id, pr: ready, requested: false }]), fine.id);
   assert.equal(db.getTask(fine.id)!.pr!.state, 'merged');
   assert.deepEqual([db.getTask(fine.id)!.pr!.auto_merge_check, db.getTask(fine.id)!.pr!.auto_merge_checked_at], [null, null]);
 

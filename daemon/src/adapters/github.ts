@@ -129,13 +129,23 @@ export const github = {
   },
 
   /**
-   * `gh pr merge` with the given method. A squash gets `message` as its commit (subject and body).
+   * `gh pr merge` with the given method, pinned to `head` (`--match-head-commit`): a push after the PR was judged makes
+   * GitHub refuse it. A squash gets `message` as its commit (subject and body).
    * The branch is left alone (`deleteRemoteBranch` removes it afterwards), since gh would
    * also try to delete the local branch, which the task's worktree has checked out.
    */
-  async merge(pr: { url: string; cwd: string; method: MergeMethod; message?: { subject: string; body: string } }): Promise<void> {
+  async merge(pr: {
+    url: string;
+    cwd: string;
+    method: MergeMethod;
+    head: string;
+    message?: { subject: string; body: string };
+  }): Promise<void> {
     const message = pr.method === 'squash' && pr.message ? ['--subject', pr.message.subject, '--body', pr.message.body] : [];
-    await gh(['pr', 'merge', pr.url, `--${pr.method}`, ...message], { cwd: pr.cwd, timeoutMs: LONG_GH_TIMEOUT_MS });
+    await gh(['pr', 'merge', pr.url, `--${pr.method}`, '--match-head-commit', pr.head, ...message], {
+      cwd: pr.cwd,
+      timeoutMs: LONG_GH_TIMEOUT_MS,
+    });
   },
 
   /** `git push origin --delete <branch>`. */

@@ -38,20 +38,21 @@ node -e 'import("./daemon/src/domain/work/plan.ts").then(m => console.log(JSON.s
 Queue a task for each group of steps that should land as one PR. The first task takes the draft, which AgentDeck stores as that task's plan, named after it (`<task id>-<slug>.html`):
 
 ```sh
-agentdeck add "<prompt>" --repo <repo> --title "<title>" --plan ~/.agentdeck/drafts/<short-name>.html --steps a,b [--model sonnet] [--max-turns n]
+agentdeck add "<prompt>" --repo <repo> --title "<title>" --plan ~/.agentdeck/drafts/<short-name>.html --steps a,b --model <sonnet|opus> [--max-turns n]
 ```
 
 The rest follow that plan by the first task's number:
 
 ```sh
-agentdeck add "<prompt>" --repo <repo> --title "<title>" --plan <first task> --steps c [--builds-on <task>] [--after <task>] [--model sonnet] [--max-turns n]
+agentdeck add "<prompt>" --repo <repo> --title "<title>" --plan <first task> --steps c [--builds-on <task>] [--after <task>] --model <sonnet|opus> [--max-turns n]
 ```
 
 - **Prompt:** only Goal, Out of scope and Constraints. The linked steps supply Change and Definition of done. Write paths in full from the repo root, or `agentdeck add` warns about them.
 - **`--steps`:** the step ids for this task. Without it, every step not yet done or skipped.
+- **Model:** choose one per task, from its steps. The rule: `opus` for subtle design, a wide change or a step a reviewer would struggle to check (a migration, a state machine, concurrency); `sonnet` for a well-specified change of a few files; `haiku` only for mechanical work. Show the choice with the task. Without `--model` the task takes the repo's model, else the `default_model` setting.
 - **Links between the tasks:** `--builds-on` when a task needs the code of an earlier one: it starts once that one is merged, on a branch that has it. `--after` when it only has to land after it: it runs at once and only its merge waits. Prefer `--after` where the code doesn't overlap, so the tasks run side by side.
 - **Turns:** a task carrying several steps needs more than the default 40: 80 for two or three, 120 for a large port.
 
-Show the person the tasks and their links before queueing, and queue on their OK. The plan shows on each task's Overview at once. Workers set their steps' `data-status` as they go, and AgentDeck saves back only each task's own steps, so tasks on one plan can run side by side. To change the plan before its tasks run, edit the draft and `agentdeck attach <first task> ~/.agentdeck/drafts/<short-name>.html`.
+Show the person the tasks, their models and their links before queueing, and queue on their OK. The plan shows on each task's Overview at once. Workers set their steps' `data-status` as they go, and AgentDeck saves back only each task's own steps, so tasks on one plan can run side by side. To change the plan before its tasks run, edit the draft and `agentdeck attach <first task> ~/.agentdeck/drafts/<short-name>.html`.
 
 Tell the person the task ids and stop.

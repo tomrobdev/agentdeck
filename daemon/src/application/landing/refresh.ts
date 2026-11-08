@@ -70,14 +70,21 @@ function keepChecks(app: App, task: Task, pr: PrDetails): void {
   if (app.setPrChecks(task.id, stored) && notify) notifyLater(app, checksFailedNotification(task, stored.checks));
 }
 
+/** A PR the refresh found ready to merge, with what GitHub said about it, and why: a person's merge request, or auto-merge. */
+export interface ReadyPr {
+  id: TaskId;
+  pr: PrDetails;
+  requested: boolean;
+}
+
 /** What a refresh found out about the open PRs beyond their state. */
 export interface PrRefresh {
   /** Tasks whose open PR GitHub says conflicts with the base. */
   conflicting: TaskId[];
   /** Open PRs whose mergeability GitHub has not worked out yet (it does so lazily, after the base moves). */
   unknown: number;
-  /** Tasks whose PR is ready to merge now (merge requests first, then auto-merges), with what GitHub said about it. */
-  mergeable: { id: TaskId; pr: PrDetails }[];
+  /** Tasks whose PR is ready to merge now (merge requests first, then auto-merges). */
+  mergeable: ReadyPr[];
   /** Merge requests waiting on running checks or on mergeability GitHub hasn't worked out: worth reading again soon. */
   polling: number;
 }
@@ -103,8 +110,11 @@ interface PrFound {
   polling: boolean;
 }
 
-function dropRequest(app: App, id: TaskId, why: string, log: (msg: string) => void): void {
-  if (app.clearMergeRequest(id)) log(`task ${id}: merge request dropped: ${why}`);
+/** Drop a task's merge request; false when there was none left to drop (a person withdrew it meanwhile). */
+function dropRequest(app: App, id: TaskId, why: string, log: (msg: string) => void): boolean {
+  if (!app.clearMergeRequest(id)) return false;
+  log(`task ${id}: merge request dropped: ${why}`);
+  return true;
 }
 
 /**
@@ -146,8 +156,8 @@ async function refreshOne(app: App, task: Task, log: (msg: string) => void): Pro
     app.setAutoMergeCheck(task.id, null);
     if (check.verdict === 'never') {
       const why = check.reasons.join('; ');
-      dropRequest(app, task.id, why, log);
-      notifyLater(app, { kind: 'merged', title: `Could not merge #${task.id}`, body: why, task_id: task.id });
+      if (dropRequest(app, task.id, why, log))
+        notifyLater(app, { kind: 'merged', title: `Could not merge #${task.id}`, body: why, task_id: task.id });
       return null;
     }
     app.setMergeRequestCheck(task.id, check);
@@ -173,7 +183,8 @@ export async function refreshPrStates(app: App, log: (msg: string) => void = () 
       if (one.polling) found.polling++;
       if (one.place === 'conflicting') found.conflicting.push(task.id);
       else if (one.place === 'unknown') found.unknown++;
-      else if (one.place === 'mergeable') (one.requested ? requested : found.mergeable).push({ id: task.id, pr: one.pr });
+      else if (one.place === 'mergeable')
+        (one.requested ? requested : found.mergeable).push({ id: task.id, pr: one.pr, requested: one.requested });
     } catch (err) {
       log(`task ${task.id}: could not read PR state: ${errorMessage(err)}`);
     }

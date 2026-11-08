@@ -48,6 +48,7 @@ erDiagram
     integer auto_merge_max_lines
     text auto_merge_skip
     integer auto_unblock
+    text model "nullable"
   }
   review_comments {
     integer id PK
@@ -94,6 +95,8 @@ erDiagram
     integer live_turns
     text live_tool "nullable"
     text pid_at "nullable"
+    text model "nullable"
+    text model_id "nullable"
   }
   settings {
     text key PK
