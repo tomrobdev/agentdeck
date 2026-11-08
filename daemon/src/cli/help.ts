@@ -27,6 +27,8 @@ Repos
   agentdeck repo set <repo> auto_merge_skip "<prefixes>"  a PR touching these paths needs a person (default "${DEFAULT_AUTO_MERGE_SKIP.join(',')}")
   agentdeck repo set <repo> sandbox on|off        run the agent's shell commands in Claude Code's sandbox (default on)
   agentdeck repo set <repo> network "<hosts>"     hosts sandboxed commands may reach, e.g. "registry.npmjs.org,github.com" ("" for none)
+  agentdeck repo set <repo> tools "<rules>"       replace the tool rules workers run with, comma-separated, e.g. "Read,Edit,Bash(make *)"
+                                                  ("" goes back to the defaults plus the rules detected from its toolchain)
   agentdeck goals <repo> [--file goals.md]        show (or replace) the goals the planner works from
   agentdeck propose <repo>                        run the planner now (also: repo propose, plan)
 

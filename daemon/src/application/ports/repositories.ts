@@ -95,6 +95,7 @@ export type RepoUpdate = Partial<
     | 'auto_merge'
     | 'auto_merge_max_lines'
     | 'auto_merge_skip'
+    | 'allowed_tools'
   >
 >;
 
