@@ -88,7 +88,10 @@ test('a refresh stores the check it ran, never or merge alike; merging, closing 
 
   await refreshPrStates(db);
   const stored = db.getTask(big.id)!;
-  assert.deepEqual(stored.pr!.auto_merge_check, { verdict: 'never', reasons: ['905 lines changed, over the limit of 400'] });
+  assert.deepEqual(stored.pr!.auto_merge_check, {
+    verdict: 'never',
+    reasons: [{ kind: 'too_many_lines', text: '905 lines changed, over the limit of 400' }],
+  });
   assert.ok(stored.pr!.auto_merge_checked_at);
   assert.equal(db.getTask(fine.id)!.pr!.auto_merge_check?.verdict, 'merge');
 
@@ -139,7 +142,7 @@ const checked = (verdict: 'merge' | 'wait' | 'never', reasons: string[], o: Part
       ...prFields(null),
       pr_url: 'https://x/pull/1',
       pr_state: 'open',
-      auto_merge_check: { verdict, reasons },
+      auto_merge_check: { verdict, reasons: reasons.map((text) => ({ kind: 'other' as const, text })) },
       auto_merge_checked_at: '2026-11-01 09:00:00',
       ...o,
     }),
@@ -249,7 +252,7 @@ test('a PR with 150 changed files is measured in full from git, and auto-merges 
   details[url] = { ...listed, head: '0'.repeat(40) };
   await refreshPrStates(db);
   assert.deepEqual(
-    db.getTask(t.id)!.pr!.auto_merge_check?.reasons,
+    db.getTask(t.id)!.pr!.auto_merge_check?.reasons.map((r) => r.text),
     ['GitHub listed 100 of 150 changed files'],
     'a local branch at another commit than the PR is not measured: GitHub says',
   );
@@ -281,7 +284,7 @@ test('a PR with 150 changed files is measured in full from git, and auto-merges 
   details[ciUrl] = { ...listed, head: ciHead };
   await refreshPrStates(db);
   assert.equal(db.getTask(ci.id)!.pr!.auto_merge_check?.verdict, 'never');
-  assert.deepEqual(db.getTask(ci.id)!.pr!.auto_merge_check?.reasons.at(-1), 'touches .github/zz.yml');
+  assert.deepEqual(db.getTask(ci.id)!.pr!.auto_merge_check?.reasons.at(-1)?.text, 'touches .github/zz.yml');
 });
 
 // ---- The CLI

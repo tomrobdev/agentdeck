@@ -6,11 +6,24 @@ import { stored } from '../src/domain/shared/index.ts';
 import { openDb } from '../src/db/index.ts';
 
 test('readCheck: a stored check is a verdict with its reasons, and anything else is none', () => {
-  assert.deepEqual(readCheck('{"verdict":"wait","reasons":["x",3]}'), { verdict: 'wait', reasons: ['x'] });
+  const pending = { kind: 'checks_pending', text: '1 check still running on GitHub' };
+  assert.deepEqual(readCheck(JSON.stringify({ verdict: 'wait', reasons: [pending, { kind: 'x' }, 3] })), {
+    verdict: 'wait',
+    reasons: [pending],
+  });
   assert.deepEqual(readCheck('{"verdict":"never","reasons":[],"conflict":true}'), { verdict: 'never', reasons: [], conflict: true });
   assert.equal(readCheck('{"verdict":"maybe","reasons":[]}'), null);
   assert.equal(readCheck('not json'), null);
   assert.equal(readCheck(null), null);
+});
+
+test('readCheck: a check stored before reasons had kinds reads its plain-string reasons as kind other', () => {
+  assert.deepEqual(readCheck('{"verdict":"wait","reasons":["x",3]}'), { verdict: 'wait', reasons: [{ kind: 'other', text: 'x' }] });
+  assert.deepEqual(readCheck('{"verdict":"never","reasons":["the branch has conflicts with the base branch"],"conflict":true}'), {
+    verdict: 'never',
+    reasons: [{ kind: 'other', text: 'the branch has conflicts with the base branch' }],
+    conflict: true,
+  });
 });
 
 test('readCounts: stored check counts need all three numbers', () => {

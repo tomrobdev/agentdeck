@@ -1,6 +1,6 @@
 // A task's pull request as a value, and what goes into one. Pure: no I/O.
 import { STATUS_TAIL } from '../shared/index.ts';
-import type { AutoMergeCheck } from './auto-merge.ts';
+import type { AutoMergeCheck } from './merge.ts';
 import type { CheckCounts, StoredChecks } from './checks.ts';
 import type { MergeMethod } from '../repos/index.ts';
 

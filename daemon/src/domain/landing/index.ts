@@ -10,7 +10,7 @@ export {
   autoMergeOn,
   autoMergeView,
 } from './auto-merge.ts';
-export type { AutoMergeCheck, AutoMergeMeasured, AutoMergeState, AutoMergeView } from './auto-merge.ts';
+export type { AutoMergeFacts, AutoMergeMeasured, AutoMergeState, AutoMergeView } from './auto-merge.ts';
 export {
   EXCERPT_BYTES,
   LOG_TAIL_BYTES,
@@ -31,11 +31,13 @@ export {
   withoutFailure,
 } from './checks.ts';
 export type { CheckCounts, CheckState, ChecksSummary, FailedCheck, JobStep, PrCheck, StoredChecks } from './checks.ts';
-export { isConflicting, isMergeabilityUnknown } from './conflict.ts';
-export { conflictsWithBase, mergeRequestCheck, mergeRequestPolls, mergeRequestView, mergesNow } from './merge-request.ts';
+export { isConflicting } from './conflict.ts';
+export { conflictsWithBase, mergeRequestCheck, mergeRequestView, mergesNow } from './merge-request.ts';
 export type { MergeRequestView } from './merge-request.ts';
-export { mergeCheck, mergeFailure, mergeFindings, parseBranchPrs, parseJobSteps, parsePrDetails } from './merge.ts';
-export type { BranchPr, CreatePr, MergeFailure, PrDetails } from './merge.ts';
+export { mergeCheck, mergeFailure, mergeFindings, parseBranchPrs, parseJobSteps, parsePrDetails, verdictView } from './merge.ts';
+export type { AutoMergeCheck, BranchPr, CreatePr, MergeFailure, MergeInput, MergeReason, MergeVerdictView, PrDetails } from './merge.ts';
+export { refreshVerdict } from './refresh.ts';
+export type { PrPlace } from './refresh.ts';
 export { buildPrBody, existingPr, finalMessage, isPrExistsError, openPrUrl, prFields, pullRequestOf } from './pr.ts';
 export { PR_OPEN_RETRIES, prNeedsPerson, prRetry } from './pr-retry.ts';
 export type { PrOpenFailures, PrRetry } from './pr-retry.ts';

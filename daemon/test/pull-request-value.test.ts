@@ -11,8 +11,12 @@ import { checksSummary } from '../src/domain/landing/checks.ts';
 import { type PrFields, type PrState, type PullRequest, prFields, pullRequestOf } from '../src/domain/landing/pr.ts';
 import { doneTask } from './fixtures.ts';
 
-const check = { verdict: 'wait' as const, reasons: ['2 checks still running on GitHub'] };
-const conflict = { verdict: 'never' as const, reasons: ['the branch has conflicts with the base branch'], conflict: true as const };
+const check = { verdict: 'wait' as const, reasons: [{ kind: 'checks_pending' as const, text: '2 checks still running on GitHub' }] };
+const conflict = {
+  verdict: 'never' as const,
+  reasons: [{ kind: 'conflict' as const, text: 'the branch has conflicts with the base branch' }],
+  conflict: true as const,
+};
 const latest = {
   read_at: '2026-11-01 09:00:00',
   head: 'abc',

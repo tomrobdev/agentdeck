@@ -9,7 +9,7 @@ import {
   mergesNow,
 } from '../src/domain/landing/merge-request.ts';
 import { AUTO_MERGE_LABEL } from '../src/domain/landing/auto-merge.ts';
-import type { PrDetails } from '../src/domain/landing/merge.ts';
+import { type PrDetails, verdictView } from '../src/domain/landing/merge.ts';
 import { type PrFields, prFields, pullRequestOf } from '../src/domain/landing/pr.ts';
 
 /** An open PR with these flat fields. */
@@ -29,16 +29,37 @@ const ready: PrDetails = {
   labels: [],
 };
 
-const check = (
-  pr: Partial<PrDetails> = {},
-  o: { pr_state?: 'open' | 'closed' | 'merged' | null; tests?: boolean | null; after?: boolean } = {},
-) =>
+type Options = { pr_state?: 'open' | 'closed' | 'merged' | null; tests?: boolean | null; after?: boolean; auto_resolve?: boolean };
+/** The check as stored, its reasons with their kinds. */
+const raw = (pr: Partial<PrDetails> = {}, o: Options = {}) =>
   mergeRequestCheck({
     pr_state: o.pr_state === undefined ? 'open' : o.pr_state,
     pr: { ...ready, ...pr },
     tests_passed: o.tests === undefined ? true : o.tests,
     lands_after: o.after ? [{ on: 7, reason: 'its PR is open' }] : [],
+    ...(o.auto_resolve === undefined ? {} : { auto_resolve: o.auto_resolve }),
   });
+/** The check as a person reads it: its reasons' texts. */
+const check = (pr: Partial<PrDetails> = {}, o: Options = {}) => verdictView(raw(pr, o));
+
+test('each reason says what it is about', () => {
+  const kinds = (pr: Partial<PrDetails>, o: Options = {}) => raw(pr, o).reasons.map((r) => r.kind);
+  assert.deepEqual(kinds({ checks: { total: 3, failing: 0, pending: 2 } }, { after: true }), ['lands_after', 'checks_pending']);
+  assert.deepEqual(kinds({ mergeable: 'UNKNOWN' }), ['mergeability_unknown']);
+  assert.deepEqual(kinds({ mergeable: 'CONFLICTING', merge_state: 'DIRTY' }), ['conflict']);
+  assert.deepEqual(kinds({ checks: { total: 2, failing: 1, pending: 0 } }, { tests: false, pr_state: 'closed' }), [
+    'not_open',
+    'tests_failed',
+    'checks_failing',
+  ]);
+});
+
+test('with auto_resolve off a conflict needs a person and names the sync', () => {
+  const off = check({ mergeable: 'CONFLICTING', merge_state: 'DIRTY' }, { auto_resolve: false });
+  assert.equal(off.verdict, 'never');
+  assert.match(off.reasons.join('\n'), /auto_resolve off.*sync/);
+  assert.equal(off.conflict, true);
+});
 
 test('a clean PR merges, with or without a label, tests or checks', () => {
   assert.deepEqual(check(), { verdict: 'merge', reasons: [] });
@@ -90,15 +111,15 @@ test("auto-merge's limits don't count: lines, skipped paths, no label", () => {
 
 test('a waiting request is read again soon only for running checks or mergeability GitHub has not worked out', () => {
   const pending = { ...ready, checks: { total: 2, failing: 0, pending: 1 } };
-  assert.equal(mergeRequestPolls(check(pending), pending), true);
+  assert.equal(mergeRequestPolls(raw(pending), pending), true);
   const unknown = { ...ready, mergeable: 'UNKNOWN' };
-  assert.equal(mergeRequestPolls(check(unknown), unknown), true);
+  assert.equal(mergeRequestPolls(raw(unknown), unknown), true);
   assert.equal(
-    mergeRequestPolls(check({}, { after: true }), ready),
+    mergeRequestPolls(raw({}, { after: true }), ready),
     false,
     'a PR it lands after changes on a merge, which asks for a re-read',
   );
-  assert.equal(mergeRequestPolls(check(), ready), false);
+  assert.equal(mergeRequestPolls(raw(), ready), false);
 });
 
 test('mergeRequestView: none, waiting with its reasons, and merging', () => {
@@ -114,7 +135,7 @@ test('mergeRequestView: none, waiting with its reasons, and merging', () => {
     since: '2026-11-01 10:00:00',
   });
 
-  const waiting = openPr({ ...asked, merge_request_check: { verdict: 'wait', reasons: ['2 checks still running on GitHub'] } });
+  const waiting = openPr({ ...asked, merge_request_check: raw({ checks: { total: 3, failing: 0, pending: 2 } }) });
   assert.deepEqual(mergeRequestView(waiting, false), {
     state: 'waiting',
     method: 'rebase',
@@ -132,14 +153,14 @@ test('a check marks a conflict as data, and conflictsWithBase reads it from the 
   assert.equal(check({ checks: { total: 3, failing: 0, pending: 2 } }).conflict, undefined, 'no conflict, no mark');
   assert.equal(check().conflict, undefined);
 
-  const stored = check(dirty);
+  const stored = raw(dirty);
   const requested = { merge_requested_at: '2026-11-01 10:00:00' };
   assert.equal(conflictsWithBase(null), false, 'no PR');
   assert.equal(conflictsWithBase(openPr()), false, 'no stored check');
   assert.equal(conflictsWithBase(openPr({ ...requested, merge_request_check: stored })), true);
   assert.equal(conflictsWithBase(openPr({ auto_merge_check: stored })), true, "auto-merge's check counts with no merge request");
   assert.equal(
-    conflictsWithBase(openPr({ ...requested, merge_request_check: check(), auto_merge_check: stored })),
+    conflictsWithBase(openPr({ ...requested, merge_request_check: raw(), auto_merge_check: stored })),
     false,
     "the merge request's newer check wins",
   );
@@ -152,7 +173,7 @@ test('a check marks a conflict as data, and conflictsWithBase reads it from the 
 
 test("mergesNow: only failing checks or failed tests merge now, on the person's say-so; the rest goes through a request", () => {
   const now = (pr: Partial<PrDetails> = {}, o: { tests?: boolean | null; after?: boolean } = {}) =>
-    mergesNow(check(pr, o), { pr: { ...ready, ...pr }, tests_passed: o.tests === undefined ? true : o.tests });
+    mergesNow(raw(pr, o), { pr: { ...ready, ...pr }, tests_passed: o.tests === undefined ? true : o.tests });
   assert.equal(now({ checks: { total: 2, failing: 1, pending: 0 } }), true, 'a failing check');
   assert.equal(now({}, { tests: false }), true, 'failed tests');
   assert.equal(now(), false, 'a clean PR is a request that merges');

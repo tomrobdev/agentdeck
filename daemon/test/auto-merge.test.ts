@@ -15,7 +15,8 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 const { openDb } = await import('./open-db.ts');
 const { doneTask, testApp, waitFor } = await import('./fixtures.ts');
 const { READY_PR, fakeCodeHost } = await import('./fakes.ts');
-const { mergeFailure } = await import('../src/domain/landing/merge.ts');
+const { mergeFailure, verdictView } = await import('../src/domain/landing/merge.ts');
+const { mergeRequestCheck } = await import('../src/domain/landing/merge-request.ts');
 const { cancelMergeRequest, requestMerge } = await import('../src/application/actions.ts');
 const { github } = await import('../src/adapters/github.ts');
 const { AUTO_MERGE_LABEL, autoMergeCheck, autoMergeOn } = await import('../src/domain/landing/auto-merge.ts');
@@ -107,7 +108,9 @@ function tested(o: { source?: 'manual' | 'planner'; title?: string } = {}) {
 // ---- The check
 
 const repoRow = { test_cmd: 'pnpm test', auto_merge_max_lines: 400, auto_merge_skip: ['.github/'] };
-const check = (pr: Partial<PrDetails> = {}, o: { tests_passed?: boolean | null; paused?: string | null; test_cmd?: string | null } = {}) =>
+type CheckOptions = { tests_passed?: boolean | null; paused?: string | null; test_cmd?: string | null };
+/** The check as stored, its reasons with their kinds. */
+const raw = (pr: Partial<PrDetails> = {}, o: CheckOptions = {}) =>
   autoMergeCheck({
     repo: { ...repoRow, test_cmd: o.test_cmd === undefined ? repoRow.test_cmd : o.test_cmd },
     pr_state: 'open',
@@ -115,6 +118,8 @@ const check = (pr: Partial<PrDetails> = {}, o: { tests_passed?: boolean | null; 
     tests_passed: o.tests_passed === undefined ? true : o.tests_passed,
     paused: o.paused ?? null,
   });
+/** The check as a person reads it: its reasons' texts. */
+const check = (pr: Partial<PrDetails> = {}, o: CheckOptions = {}) => verdictView(raw(pr, o));
 
 test('autoMergeOn: the task wins, else the repo; a planner proposal only when a person approved it', () => {
   const on = { auto_merge: true, auto_approve: false };
@@ -184,13 +189,15 @@ test('autoMergeCheck: a PR touching .claude/ needs a person, even with an empty 
   const paths = ['src/a.ts', '.claude/skills/x/SKILL.md'];
   const why = 'changes .claude/skills/x/SKILL.md: files under .claude/ steer every later agent';
   for (const auto_merge_skip of [[], ['.github/'], ['.claude/']]) {
-    const verdict = autoMergeCheck({
-      repo: { ...repoRow, auto_merge_skip },
-      pr_state: 'open',
-      pr: { ...ready, paths },
-      tests_passed: true,
-      paused: null,
-    });
+    const verdict = verdictView(
+      autoMergeCheck({
+        repo: { ...repoRow, auto_merge_skip },
+        pr_state: 'open',
+        pr: { ...ready, paths },
+        tests_passed: true,
+        paused: null,
+      }),
+    );
     assert.deepEqual(verdict, { verdict: 'never', reasons: [why] }, auto_merge_skip.join());
   }
   // Both: the protected reason first, then the repo's own skip list.
@@ -211,14 +218,16 @@ test('autoMergeCheck: what can still change on its own', () => {
 
 test('autoMergeCheck: with auto_resolve off a conflict needs a person and names the sync; on, it still waits', () => {
   const conflict = { mergeable: 'CONFLICTING', merge_state: 'DIRTY' };
-  const off = autoMergeCheck({
-    repo: repoRow,
-    pr_state: 'open',
-    pr: { ...ready, ...conflict },
-    tests_passed: true,
-    paused: null,
-    auto_resolve: false,
-  });
+  const off = verdictView(
+    autoMergeCheck({
+      repo: repoRow,
+      pr_state: 'open',
+      pr: { ...ready, ...conflict },
+      tests_passed: true,
+      paused: null,
+      auto_resolve: false,
+    }),
+  );
   assert.equal(off.verdict, 'never');
   assert.match(off.reasons.join('\n'), /auto_resolve off.*sync/);
   const on = autoMergeCheck({
@@ -229,8 +238,44 @@ test('autoMergeCheck: with auto_resolve off a conflict needs a person and names 
     paused: null,
     auto_resolve: true,
   });
-  assert.deepEqual(on, check(conflict));
+  assert.deepEqual(on, raw(conflict));
   assert.equal(on.verdict, 'wait');
+});
+
+test('autoMergeCheck: the findings come first, then what only auto-merge asks, in order, each with its kind', () => {
+  const never = raw(
+    {
+      labels: [],
+      checks: { total: 2, failing: 1, pending: 0 },
+      additions: 500,
+      files: 120,
+      paths: ['.claude/x.md', '.github/ci.yml'],
+    },
+    { tests_passed: null },
+  );
+  assert.deepEqual(
+    never.reasons.map((r) => r.kind),
+    ['checks_failing', 'no_label', 'tests_not_run', 'too_many_lines', 'files_unlisted', 'protected_paths', 'skipped_paths'],
+  );
+  assert.deepEqual(
+    raw({ checks: { total: 0, failing: 0, pending: 0 } }, { test_cmd: null, tests_passed: null }).reasons[0].kind,
+    'untested',
+  );
+  const wait = raw({ checks: { total: 2, failing: 0, pending: 1 }, mergeable: 'UNKNOWN' }, { paused: 'AgentDeck is paused' });
+  assert.deepEqual(
+    wait.reasons.map((r) => r.kind),
+    ['checks_pending', 'mergeability_unknown', 'paused'],
+  );
+});
+
+test('a merge request reads the findings as auto-merge does, without what only auto-merge asks', () => {
+  const pr = { ...ready, labels: [], additions: 5000, checks: { total: 2, failing: 0, pending: 1 } };
+  const input = { pr_state: 'open' as const, pr, tests_passed: true };
+  assert.deepEqual(mergeRequestCheck(input), {
+    verdict: 'wait',
+    reasons: [{ kind: 'checks_pending', text: '1 check still running on GitHub' }],
+  });
+  assert.equal(autoMergeCheck({ ...input, repo: repoRow, paused: null }).verdict, 'never');
 });
 
 // ---- Settings

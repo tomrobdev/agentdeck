@@ -645,4 +645,19 @@ test('the merge preview says when the conflict is something a resolve run can fi
   const p = await mergePreview(db, t.id);
   assert.equal(p.conflicting, true);
   assert.match(p.problems[0], /conflicts/);
+  assert.doesNotMatch(p.problems[0], /auto_resolve/, 'with auto_resolve on, a resolve run fixes it');
+});
+
+test("with auto_resolve off, the merge preview's problems name the sync, as its merge request does", async () => {
+  const { mergePreview } = await import('../src/application/actions.ts');
+  const t = await doneTask();
+  details[db.getTask(t.id)!.pr!.url!] = { ...cleanDetails, mergeable: 'CONFLICTING' };
+  updateRepo(db, 'demo', { auto_resolve: false });
+  try {
+    const p = await mergePreview(db, t.id);
+    assert.match(p.problems[0], /auto_resolve off: sync the task/);
+    assert.deepEqual(p.problems, p.request.reasons, 'one answer words the conflict one way');
+  } finally {
+    updateRepo(db, 'demo', { auto_resolve: true });
+  }
 });
