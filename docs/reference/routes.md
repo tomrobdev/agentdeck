@@ -58,6 +58,7 @@ The dashboard's routes, and the use case each calls.
 | POST   | `/api/tasks/:id/open-pr`           | `actions.openTaskPr`                           |
 | GET    | `/api/tasks/:id/plans/:id2`        | `actions.planHtml`                             |
 | POST   | `/api/tasks/:id/plans`             | `actions.attachPlan`                           |
+| GET    | `/api/tasks/:id/proposal-check`    | `actions.proposalCheck`                        |
 | POST   | `/api/tasks/:id/reject`            | `actions.rejectTask`                           |
 | POST   | `/api/tasks/:id/retry`             | `actions.retryTask`                            |
 | GET    | `/api/tasks/:id/reviews`           | `actions.taskReviews`                          |

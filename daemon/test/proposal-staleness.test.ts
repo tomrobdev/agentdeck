@@ -19,7 +19,7 @@ const { blockedTask } = await import('./fixtures.ts');
 
 const commit = (sha: string, paths: string[]) => ({ sha, subject: `change ${sha}`, at: '2026-11-01 10:00:00', paths });
 
-test('[staleness] the commits since the add, and the named paths they changed, in the order named', () => {
+test('the commits since the add, and the named paths they changed, in the order named', () => {
   const rows: { name: string; named: string[]; commits: ReturnType<typeof commit>[]; want: { commits: number; changed: string[] } }[] = [
     { name: 'fresh: nothing since', named: ['src/a.ts'], commits: [], want: { commits: 0, changed: [] } },
     {
@@ -53,7 +53,7 @@ test('[staleness] the commits since the add, and the named paths they changed, i
   );
 });
 
-test('[staleness] the line says how far the base moved and how many named files changed; nothing for a fresh one', () => {
+test('the line says how far the base moved and how many named files changed; nothing for a fresh one', () => {
   const s = (commits: number, changed: number) => ({
     ref: 'main',
     base: 'abc',
@@ -66,7 +66,7 @@ test('[staleness] the line says how far the base moved and how many named files 
   assert.equal(proposalCheckLine({ staleness: null, notes: ['x'], overlaps: [] }), null);
 });
 
-test('[staleness] git log -z --name-only output parses into commits with their paths, dates as UTC', () => {
+test('git log -z --name-only output parses into commits with their paths, dates as UTC', () => {
   const out =
     '\x1eaaa\x1fsecond\x1f2026-11-01T12:00:00+02:00\0\ndocs/x.md\0src/a.ts\0\x1ebbb\x1ffirst\x1f2026-10-31T09:00:00Z\0\nsrc/b.ts\0';
   assert.deepEqual(parseBaseLog(out), [
@@ -90,7 +90,7 @@ function commitAt(path: string, ms: number, message: string) {
   git(path, { GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date }, 'commit', '-q', '-m', message);
 }
 
-test('[staleness] a commit after the add that changes a named file counts; created_at is read as UTC', async () => {
+test('a commit after the add that changes a named file counts; created_at is read as UTC', async () => {
   // A zone west of UTC: read as local time, created_at would come 8 hours late, after the commit below.
   const tz = process.env.TZ;
   process.env.TZ = 'Etc/GMT+8';
@@ -103,7 +103,7 @@ test('[staleness] a commit after the add that changes a named file counts; creat
     commitAt(path, Date.parse('2020-01-01T00:00:00Z'), 'init');
     const db = openDb(':memory:');
     const repo = db.addRepo({ name: 'demo', path, base_branch: 'main' });
-    const t = await addTask(db, { repo: 'demo', prompt: 'Change `src/a.ts`, and read src/b.ts.', status: 'proposed' });
+    const t = await addTask(db, { repo: 'demo', prompt: 'Change `src/a.ts`, and read src/b.ts.', propose: true });
 
     const fresh = await proposalCheck(db, t.id);
     assert.equal(fresh.staleness?.commits, 0, 'nothing on the base since the add');
@@ -133,22 +133,22 @@ test('[staleness] a commit after the add that changes a named file counts; creat
   }
 });
 
-test('[staleness] a repo git cannot read has an empty check, not an error', async () => {
+test('a repo git cannot read has an empty check, not an error', async () => {
   const db = openDb(':memory:');
   const path = mkdtempSync(join(tmpdir(), 'agentdeck-staleness-nogit-'));
   db.addRepo({ name: 'nogit', path, base_branch: 'main' });
-  const t = await addTask(db, { repo: 'nogit', prompt: 'Change `src/a.ts`', status: 'proposed' });
+  const t = await addTask(db, { repo: 'nogit', prompt: 'Change `src/a.ts`', propose: true });
   assert.deepEqual(await proposalCheck(db, t.id), { staleness: null, notes: [], overlaps: [] });
 });
 
-test('[staleness] agentdeck show prints the same line for a proposal, with the files and the commits that changed them', async () => {
+test('agentdeck show prints the same line for a proposal, with the files and the commits that changed them', async () => {
   const path = mkdtempSync(join(tmpdir(), 'agentdeck-staleness-cli-'));
   git(path, {}, 'init', '-q', '-b', 'main');
   writeFileSync(join(path, 'notes.md'), 'n');
   commitAt(path, Date.parse('2020-01-01T00:00:00Z'), 'init');
   const db = openDb(join(home, 'agentdeck.db'));
   db.addRepo({ name: 'cli-demo', path, base_branch: 'main' });
-  const t = await addTask(db, { repo: 'cli-demo', prompt: 'Follow `notes.md`.', status: 'proposed' });
+  const t = await addTask(db, { repo: 'cli-demo', prompt: 'Follow `notes.md`.', propose: true });
   writeFileSync(join(path, 'notes.md'), 'n2');
   commitAt(path, sqliteMs(t.created_at) + 3600_000, 'rewrite the notes');
   const line = proposalCheckLine(await proposalCheck(db, t.id));

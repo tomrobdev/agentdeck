@@ -24,7 +24,7 @@ const candidate = (id: number, paths: string[], linked = false) => ({
   linked,
 });
 
-test('[overlap] paths meet when they are the same file, or a file in a named folder; the file is what they share', () => {
+test('paths meet when they are the same file, or a file in a named folder; the file is what they share', () => {
   const got = overlaps(
     ['src/a.ts', 'docs/'],
     [
@@ -44,7 +44,7 @@ test('[overlap] paths meet when they are the same file, or a file in a named fol
   );
 });
 
-test('[overlap] open tasks count: proposed, queued, running, and done with an open PR', () => {
+test('open tasks count: proposed, queued, running, and done with an open PR', () => {
   const t = (status: 'proposed' | 'queued' | 'running' | 'done' | 'blocked' | 'cancelled', pr: 'open' | 'merged' | null = null) => ({
     status,
     pr: pr ? { state: pr } : null,
@@ -57,7 +57,7 @@ test('[overlap] open tasks count: proposed, queued, running, and done with an op
   );
 });
 
-test('[overlap] the line names the tasks not linked yet', () => {
+test('the line names the tasks not linked yet', () => {
   const check = (linked: boolean) => ({
     staleness: null,
     notes: [],
@@ -82,15 +82,15 @@ function gitRepo(): string {
   return path;
 }
 
-test('[overlap] named against named, named against changed, a link marked, another repo ignored', async () => {
+test('named against named, named against changed, a link marked, another repo ignored', async () => {
   const db = openDb(':memory:');
   const path = gitRepo();
   const repo = db.addRepo({ name: 'demo', path, base_branch: 'main' });
   const other = db.addRepo({ name: 'other', path: gitRepo(), base_branch: 'main' });
 
-  const p = await addTask(db, { repo: 'demo', prompt: 'Change `src/a.ts` and `src/b.ts`.', status: 'proposed' });
+  const p = await addTask(db, { repo: 'demo', prompt: 'Change `src/a.ts` and `src/b.ts`.', propose: true });
   // Two proposals approved together warn about each other.
-  const q = await addTask(db, { repo: 'demo', prompt: 'Rename things in `src/a.ts`.', status: 'proposed' });
+  const q = await addTask(db, { repo: 'demo', prompt: 'Rename things in `src/a.ts`.', propose: true });
   // A running task whose prompt names nothing, but whose branch changed src/b.ts.
   const branch = 'agentdeck/changes-b';
   git(path, 'checkout', '-q', '-b', branch);
@@ -102,7 +102,7 @@ test('[overlap] named against named, named against changed, a link marked, anoth
   const linked = doneTask(db, repo, { prompt: 'Fix `src/a.ts`.', pr: 'open' });
   db.addLink({ task_id: p.id, on: linked.id, kind: 'after' });
   // Ignored: another repo's proposal on the same path, and this repo's merged task.
-  await addTask(db, { repo: other.name, prompt: 'Change `src/a.ts`.', status: 'proposed' });
+  await addTask(db, { repo: other.name, prompt: 'Change `src/a.ts`.', propose: true });
   doneTask(db, repo, { prompt: 'Old `src/a.ts` work.', pr: 'merged' });
 
   const check = await proposalCheck(db, p.id);

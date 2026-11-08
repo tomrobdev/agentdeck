@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/vue-query';
 import { taskQuery } from '../../api';
 import { readNeeds } from '../../lib/taskView';
 import LogView from '../task/LogView.vue';
+import ProposalCheckCard from '../task/ProposalCheckCard.vue';
 import PullRequestCard from '../task/PullRequestCard.vue';
 import StatusPill from '../ui/StatusPill.vue';
 import TaskBadges from '../ui/TaskBadges.vue';
@@ -38,6 +39,8 @@ const latestRun = computed(() => task.value?.runs.at(-1)?.id ?? null);
       </header>
 
       <div v-if="needs" class="callout s-blocked">Needs {{ needs.kind }}: {{ needs.items.join(' ') }}</div>
+
+      <ProposalCheckCard :task="task" />
 
       <PullRequestCard :task="task" />
 

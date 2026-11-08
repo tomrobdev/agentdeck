@@ -27,13 +27,16 @@ Builds on and After links: a task's dependencies and dependents.
 
 ## task-context
 
-What a session or worker is told about a task: the agent context digest, prompt path warnings and prompt sections.
+What a session or worker is told about a task: the agent context digest, prompt path warnings, the proposal check and prompt sections.
 
 - daemon/src/domain/work/read/digest.ts
 - daemon/src/domain/work/read/event-text.ts
 - daemon/src/domain/work/prompt-paths.ts
+- daemon/src/domain/work/proposal-check.ts
 - daemon/src/application/work/context.ts
 - daemon/src/application/work/prompt-paths.ts
+- daemon/src/application/work/proposal-check.ts
+- app/src/components/task/ProposalCheckCard.vue
 - daemon/src/cli/context.ts
 - daemon/src/cli/agent-context.ts
 

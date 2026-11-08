@@ -20,6 +20,7 @@ export const queryKeys = {
   planHtml: (id: number, planId: number, updatedAt: string) => ['task', id, 'plan', planId, updatedAt] as const,
   reviews: (id: number) => ['task', id, 'reviews'] as const,
   changes: (id: number) => ['task', id, 'changes'] as const,
+  proposalCheck: (id: number) => ['task', id, 'proposal-check'] as const,
   // Git objects at a commit never change, so these start with 'at' and the commit (null while it is unknown).
   tree: (id: number, ref: FileRef, path: string, commit: string | null) => ['at', commit, 'tree', id, ref, path] as const,
   file: (id: number, ref: FileRef, path: string, commit: string | null) => ['at', commit, 'file', id, ref, path] as const,
@@ -70,6 +71,9 @@ export const mergePreviewQuery = (id: number) =>
 export const planHtmlQuery = (id: number, planId: number, updatedAt: string) =>
   queryOptions({ queryKey: queryKeys.planHtml(id, planId, updatedAt), queryFn: () => api.planHtml(id, planId) });
 export const changesQuery = (id: number) => queryOptions({ queryKey: queryKeys.changes(id), queryFn: () => api.changes(id) });
+/** Read only while a proposed or queued task is shown: it reads git, so it is never part of the task's detail. */
+export const proposalCheckQuery = (id: number) =>
+  queryOptions({ queryKey: queryKeys.proposalCheck(id), queryFn: () => api.proposalCheck(id) });
 export const treeQuery = (id: number, ref: FileRef, path: string, commit: string | null) =>
   queryOptions({ queryKey: queryKeys.tree(id, ref, path, commit), queryFn: () => api.tree(id, ref, path), staleTime: atCommit(commit) });
 export const fileQuery = (id: number, ref: FileRef, path: string, commit: string | null) =>
