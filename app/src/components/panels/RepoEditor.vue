@@ -19,6 +19,14 @@ const id = props.repo.id;
 const q = useQuery(repoQuery(id));
 const detail = computed(() => q.data.value);
 const lastPlannerRun = computed(() => detail.value?.planner_runs[0]);
+// What the saved repo runs with, which the form's edits change only once saved.
+const toolsInUse = computed(() => {
+  const d = detail.value;
+  if (!d?.tools_source) return '';
+  return d.tools_source === 'own'
+    ? 'In use: the repo’s own rules.'
+    : `In use: the defaults plus the rules detected from its toolchain (${d.toolchain ?? 'none found'}).`;
+});
 
 // Copied into the form once, from the read made on opening; later refetches leave the edits alone.
 const form = ref<RepoForm | null>(null);
@@ -137,6 +145,17 @@ async function archive() {
     <label v-if="form.sandbox" class="field flex-1">
       <span>Network hosts <span class="text-muted">(sandboxed commands may reach these; empty = none)</span></span>
       <input v-model="form.network" placeholder="registry.npmjs.org, github.com" />
+    </label>
+    <label class="field flex-1">
+      <span>Tool rules <span class="text-muted">(one per line; they replace the detected rules, and empty goes back to them)</span></span>
+      <textarea
+        class="resize-y font-mono text-sm"
+        v-model="form.tools"
+        rows="3"
+        placeholder="Read&#10;Edit&#10;Bash(make *)"
+        data-testid="repo-tools"
+      />
+      <small class="text-muted text-xs">{{ toolsInUse }}</small>
     </label>
     <p v-if="lastPlannerRun" class="text-muted m-0 line-clamp-2 text-sm" :title="lastPlannerRun.note ?? ''">
       Last proposals {{ ago(lastPlannerRun.started_at) }}: {{ lastPlannerRun.outcome ?? 'running' }}
