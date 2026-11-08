@@ -18,10 +18,23 @@ export const inActiveRepo = (orm: Orm, col: AnySQLiteColumn) =>
 let savepoints = 0;
 
 /**
- * Run `fn` as one unit: all its writes land, or none do. A SAVEPOINT rather than BEGIN, so it
- * composes with a transaction the caller already holds.
+ * Run `fn` as one unit: all its writes land, or none do. Outside a transaction it begins one with the write lock
+ * (`BEGIN IMMEDIATE`): a deferred one that reads and then writes fails at once with "database is locked" when another
+ * process wrote in between, without waiting out busy_timeout, which the CLI and the daemon writing together hit.
+ * Inside a transaction the caller already holds, a SAVEPOINT, so it composes.
  */
 export function atomically<T>(db: DatabaseSync, fn: () => T): T {
+  if (!db.isTransaction) {
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      const out = fn();
+      db.exec('COMMIT');
+      return out;
+    } catch (err) {
+      db.exec('ROLLBACK');
+      throw err;
+    }
+  }
   const name = `sp_${++savepoints}`;
   db.exec(`SAVEPOINT ${name}`);
   try {

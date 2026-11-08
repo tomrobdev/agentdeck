@@ -15,6 +15,7 @@ import {
   capText,
   checkPath,
   isBinary,
+  sincePoints,
 } from '../../domain/work/index.ts';
 import type { AutoMergeMeasured } from '../../domain/landing/index.ts';
 import type { Repo } from '../../domain/repos/index.ts';
@@ -85,10 +86,55 @@ export function parseFileRef(input: string | null | undefined): FileRef {
   return input as FileRef;
 }
 
-export async function taskChanges(app: App, id: TaskId): Promise<Changes> {
+/** A whole commit id from a client, or null when there is none; anything else is refused. */
+export function parseSince(input: string | null | undefined): string | null {
+  if (input === null || input === undefined || input === '') return null;
+  if (!/^[0-9a-f]{40}([0-9a-f]{24})?$/.test(input)) throw new ActionError('since must be a whole commit id');
+  return input;
+}
+
+/** A merge of a commit and the base, by commit pair: immutable, and asked for once per file the diff view shows. */
+const mergeCache = new Map<string, Promise<string | null>>();
+const MERGE_CACHE_SIZE = 16;
+function mergeCached(app: App, repoPath: string, ours: string, theirs: string): Promise<string | null> {
+  const key = `${repoPath}\0${ours}\0${theirs}`;
+  let hit = mergeCache.get(key);
+  if (hit) mergeCache.delete(key);
+  else hit = app.workspace.mergeCommit(repoPath, ours, theirs).catch((err) => (mergeCache.delete(key), Promise.reject(err)));
+  mergeCache.set(key, hit);
+  if (mergeCache.size > MERGE_CACHE_SIZE) mergeCache.delete(mergeCache.keys().next().value!);
+  return hit;
+}
+
+/**
+ * Where the diff since `since` starts. It must be a commit on the task's branch. The head is compared with `since` and the
+ * base the head already has merged together, so the base changes a sync brought in stay out (the base tip would show the
+ * base commits not synced yet, reversed). When that merge conflicts, it is `since` alone and the base changes may show.
+ */
+async function sinceFrom(
+  app: App,
+  repo: Repo,
+  base: string,
+  head: string,
+  since: string,
+): Promise<{ from: string; base_may_show: boolean; branch: { files: ChangedFile[]; commits: Commit[] } }> {
+  const branch = await compareCached(app, repo.path, base, head);
+  if (!branch.commits.some((c) => c.sha === since)) throw new ActionError(`${since.slice(0, 7)} is not a commit on this task's branch`);
+  const merged = await mergeCached(app, repo.path, since, base);
+  return merged ? { from: merged, base_may_show: false, branch } : { from: since, base_may_show: true, branch };
+}
+
+/** The task's changes against the base, or since a commit on its branch (`since`), with the commits it can be shown since. */
+export async function taskChanges(app: App, id: TaskId, rawSince?: string | null): Promise<Changes> {
+  const since = parseSince(rawSince);
   const { repo, head, base } = await taskRefs(app, id);
-  const { files, commits } = await compareCached(app, repo.path, base.sha, head);
-  return { base_ref: base.ref, base: base.sha, head, files, commits };
+  const branch = await compareCached(app, repo.path, base.sha, head);
+  const since_points = sincePoints(branch.commits, app.runsForTask(id), app.reviewsForTask(id), head);
+  const changes = { base_ref: base.ref, base: base.sha, head, since_points };
+  if (!since) return { ...changes, since: null, base_may_show: false, ...branch };
+  const { from, base_may_show } = await sinceFrom(app, repo, base.sha, head, since);
+  const { files, commits } = await compareCached(app, repo.path, from, head);
+  return { ...changes, since, base_may_show, files, commits };
 }
 
 /**
@@ -111,13 +157,15 @@ export async function measureBranch(app: App, repo: Repo, branch: string, at?: s
   }
 }
 
-/** The patch of one changed file, cut at PATCH_LIMIT. */
-export async function taskDiff(app: App, id: TaskId, rawPath: string | null): Promise<FilePatch> {
+/** The patch of one changed file, against the base or since a commit on the branch (as taskChanges), cut at PATCH_LIMIT. */
+export async function taskDiff(app: App, id: TaskId, rawPath: string | null, rawSince?: string | null): Promise<FilePatch> {
   const p = path(rawPath);
+  const since = parseSince(rawSince);
   const { repo, head, base } = await taskRefs(app, id);
-  const file = (await changedFilesCached(app, repo.path, base.sha, head)).find((f) => f.path === p);
-  if (!file) throw new ActionError(`${p} is not changed on this task's branch`);
-  const { patch, truncated } = await app.workspace.filePatch(repo.path, base.sha, head, file.old_path ? [file.old_path, p] : [p]);
+  const from = since ? (await sinceFrom(app, repo, base.sha, head, since)).from : base.sha;
+  const file = (await changedFilesCached(app, repo.path, from, head)).find((f) => f.path === p);
+  if (!file) throw new ActionError(`${p} is not changed on this task's branch${since ? ` since ${since.slice(0, 7)}` : ''}`);
+  const { patch, truncated } = await app.workspace.filePatch(repo.path, from, head, file.old_path ? [file.old_path, p] : [p]);
   return { path: p, patch, truncated };
 }
 

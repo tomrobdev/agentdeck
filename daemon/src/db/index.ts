@@ -24,7 +24,8 @@ export type Db = ReturnType<typeof openDb>;
 export function openDb(path = DB_PATH) {
   if (path === DB_PATH) ensureDirs();
   const db = new DatabaseSync(path);
-  db.exec('PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000; PRAGMA foreign_keys = ON;');
+  // busy_timeout first, so switching to WAL waits on another process too.
+  db.exec('PRAGMA busy_timeout = 5000; PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
   migrate(db);
   const orm = makeOrm(db);
 

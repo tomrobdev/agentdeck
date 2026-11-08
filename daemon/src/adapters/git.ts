@@ -382,6 +382,41 @@ export async function diffBase(repoPath: string, base: string, head: string): Pr
   return (await isAncestor(repoPath, local.sha, remote.sha)) ? remote : local;
 }
 
+/**
+ * Who makes mergeCommit's commits, at a fixed time, so the same merge is always the same commit and needs no git identity.
+ * The commits are on no ref: git's gc removes them in time.
+ */
+const MERGE_ENV = {
+  ...READ_ENV,
+  GIT_AUTHOR_NAME: 'AgentDeck',
+  GIT_AUTHOR_EMAIL: 'agentdeck@localhost',
+  GIT_AUTHOR_DATE: '@0 +0000',
+  GIT_COMMITTER_NAME: 'AgentDeck',
+  GIT_COMMITTER_EMAIL: 'agentdeck@localhost',
+  GIT_COMMITTER_DATE: '@0 +0000',
+};
+
+/**
+ * `ours` and `theirs` merged, as a commit with both as parents, made from git objects alone (`git merge-tree --write-tree`,
+ * then `commit-tree`): no checkout or ref changes. `ours` itself when it already has `theirs`. Null when they conflict.
+ */
+export async function mergeCommit(repoPath: string, ours: string, theirs: string): Promise<string | null> {
+  if (await isAncestor(repoPath, theirs, ours)) return ours;
+  let tree: string;
+  try {
+    const { stdout } = await exec('git', ['merge-tree', '--write-tree', '--no-messages', ours, theirs], { cwd: repoPath, env: MERGE_ENV });
+    tree = stdout.split('\n')[0].trim();
+  } catch (err) {
+    if ((err as { code?: unknown }).code === 1) return null; // conflicts
+    throw err;
+  }
+  const { stdout } = await exec('git', ['commit-tree', tree, '-p', ours, '-p', theirs, '-m', 'Merge for a diff'], {
+    cwd: repoPath,
+    env: MERGE_ENV,
+  });
+  return stdout.trim();
+}
+
 /** Run git with `input` on its stdin and return its output. */
 function gitWithInput(cwd: string, input: string, args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {

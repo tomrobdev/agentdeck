@@ -1,6 +1,7 @@
 // Reading a task's code from git: the shapes the API returns, path checks, size limits and the
 // parsing of git's -z output. Pure: no I/O. The git calls are in adapters/git.ts.
 import { sqliteUtc } from '../../shared/index.ts';
+import type { SincePoint } from './since.ts';
 
 /** Which commit a read is at: the task's branch, or where it left the repo's base branch. */
 export type FileRef = 'head' | 'base';
@@ -21,7 +22,8 @@ export interface Commit {
   sha: string;
   subject: string;
   author: string;
-  at: string; // ISO 8601, the author date
+  at: string; // SQLite UTC, the author date
+  committed_at: string; // SQLite UTC, the committer date: when the commit was made on this branch (a rebase or amend moves it)
 }
 
 export interface TreeEntry {
@@ -35,8 +37,17 @@ export interface Changes {
   base_ref: string; // the base branch ref the merge base was taken with, e.g. main or origin/main
   base: string;
   head: string;
+  /** The commit on the branch the changes are shown since; null for the changes against the base. */
+  since: string | null;
+  /**
+   * With `since`: true when merging the base into it conflicted, so the diff is from `since` alone and the base changes a
+   * sync brought in may show. False otherwise.
+   */
+  base_may_show: boolean;
   files: ChangedFile[];
   commits: Commit[]; // newest first
+  /** The commits the changes can be shown since (sincePoints), whatever `since` is. */
+  since_points: SincePoint[];
 }
 
 export interface FilePatch {
@@ -173,7 +184,7 @@ export function mergeChanges(nameStatus: string, numstat: string): ChangedFile[]
 }
 
 /** Separators for `git log --format`: unit (field) and record. */
-export const LOG_FORMAT = '%H%x1f%s%x1f%an%x1f%aI%x1e';
+export const LOG_FORMAT = '%H%x1f%s%x1f%an%x1f%aI%x1f%cI%x1e';
 
 export function parseLog(out: string): Commit[] {
   return out
@@ -181,8 +192,8 @@ export function parseLog(out: string): Commit[] {
     .map((r) => r.replace(/^\n/, ''))
     .filter((r) => r.trim())
     .map((r) => {
-      const [sha, subject, author, iso] = r.split('\x1f');
-      return { sha, subject, author, at: sqliteUtc(iso) };
+      const [sha, subject, author, authored, committed] = r.split('\x1f');
+      return { sha, subject, author, at: sqliteUtc(authored), committed_at: sqliteUtc(committed ?? authored) };
     });
 }
 
