@@ -53,7 +53,7 @@ const live = computed(() => (props.task.status === 'running' || !!props.task.syn
             <span :class="r.tests_passed === null ? 'text-muted' : r.tests_passed ? 'text-done' : 'text-failed'">
               tests {{ r.tests_passed === null ? '–' : r.tests_passed ? '✓' : '✗' }}
             </span>
-            <span v-if="r.denials" class="text-failed">{{ r.denials }} refused</span>
+            <span v-if="r.denials" class="text-blocked">{{ r.denials }} refused</span>
           </span>
           <span class="ml-auto text-sm text-muted">
             <template v-if="r.model"

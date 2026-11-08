@@ -69,6 +69,9 @@
   --color-done: var(--done);
   --color-blocked: var(--blocked);
   --color-failed: var(--failed);
+  --color-tool-read: var(--tool-read);
+  --color-tool-edit: var(--tool-edit);
+  --color-tool-cmd: var(--tool-cmd);
   --color-cancelled: var(--cancelled);
   --color-merged: var(--merged);
   /* The colour of the status being drawn, set by the .s-* classes. */
@@ -391,5 +394,24 @@
   }
   .b-R {
     color: var(--running);
+  }
+
+  /* A disclosure in the run log: one chevron that turns when it opens, no native marker. */
+  .disclose {
+    list-style: none;
+    cursor: pointer;
+  }
+  .disclose::-webkit-details-marker {
+    display: none;
+  }
+  .disclose > .chev {
+    display: inline-block;
+    transition: transform 0.1s;
+  }
+  details[open] > .disclose > .chev {
+    transform: rotate(90deg);
+  }
+  details[open] > .disclose > .when-closed {
+    display: none;
   }
 }
