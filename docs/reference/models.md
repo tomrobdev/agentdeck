@@ -437,6 +437,16 @@ What GitHub says about a PR's mergeability.
 | `mergeable`   | `string` | GitHub's `mergeable`: MERGEABLE, CONFLICTING or UNKNOWN (it is computed lazily). |
 | `merge_state` | `string` | GitHub's `mergeStateStatus`: CLEAN, BEHIND, DIRTY, …                             |
 
+### PrOpenFailures
+
+The failed opens of a task's PR since it last finished done: how many, the last one's error, and when it failed (SQLite UTC).
+
+| Field   | Type     | Comment |
+| ------- | -------- | ------- |
+| `count` | `number` |         |
+| `error` | `string` |         |
+| `at`    | `string` |         |
+
 ### PrPlan
 
 The plan a task carries out: its name (`112-plans-in-agentdeck.html`) and the linked steps as AgentDeck stores them.
@@ -457,6 +467,17 @@ What a task keeps about its PR in any state.
 | `auto_merge_check`      | `AutoMergeCheck \| null` | the PR refresh's latest auto-merge check while the PR is open |
 | `auto_merge_checked_at` | `string \| null`         | when that check was made                                      |
 | `merge_request`         | `PrMergeRequest \| null` |                                                               |
+
+### PrRetry
+
+Where opening a failed PR again stands. `due`: the PR refresh opens it now. `wait`: it does at `next_at`. `person`: the retries are used up, so a person must open it, and `error` is why.
+
+| Field      | Type                          | Comment                                                                           |
+| ---------- | ----------------------------- | --------------------------------------------------------------------------------- |
+| `state`    | `"wait" \| "due" \| "person"` |                                                                                   |
+| `failures` | `number`                      | How many times it failed to open, the first open when the task finished included. |
+| `error`    | `string`                      | The last failure's error.                                                         |
+| `next_at`  | `string \| null`              | When the next retry is due (SQLite UTC); null when a person must open it.         |
 
 ### PrRun
 
@@ -1504,7 +1525,7 @@ The fields of a task a write sets, named as its columns are; the store stores th
 | `merge_request_method?`  | `MergeMethod \| null \| undefined`     |         |
 | `merge_request_check?`   | `AutoMergeCheck \| null \| undefined`  |         |
 | `pr_url?`                | `string \| undefined`                  |         |
-| `pr_state?`              | `PrState \| undefined`                 |         |
+| `pr_state?`              | `PrState \| null \| undefined`         |         |
 | `pr_checks?`             | `StoredChecks \| null \| undefined`    |         |
 | `pr_checks_opened?`      | `CheckCounts \| null \| undefined`     |         |
 | `pr_checks_merged?`      | `CheckCounts \| null \| undefined`     |         |
@@ -1597,11 +1618,12 @@ A stored plan as the API returns it: parsed, without its HTML.
 
 ### Transition
 
-| Field      | Type            | Comment                                                                           |
-| ---------- | --------------- | --------------------------------------------------------------------------------- |
-| `state`    | `TaskState`     | The status the event leads to, and all the task carries in it.                    |
-| `counters` | `TaskCounters`  |                                                                                   |
-| `events`   | `DomainEvent[]` | What happened, for the timeline and the follow-ups: one event, the status change. |
+| Field      | Type            | Comment                                                                                             |
+| ---------- | --------------- | --------------------------------------------------------------------------------------------------- |
+| `state`    | `TaskState`     | The status the event leads to, and all the task carries in it.                                      |
+| `counters` | `TaskCounters`  |                                                                                                     |
+| `changes`  | `TaskChanges`   | What the change does to the task's PR, written with it (`statusChangePrChanges` in task-writes.ts). |
+| `events`   | `DomainEvent[]` | What happened, for the timeline and the follow-ups: one event, the status change.                   |
 
 ### TransitionOptions
 
@@ -1622,6 +1644,7 @@ What `transition` reads of a task.
 | `id`       | `TaskId`                                                                                                      |                                                   |
 | `attempts` | `number`                                                                                                      |                                                   |
 | `restarts` | `number`                                                                                                      | times a daemon restart requeued this task mid-run |
+| `pr`       | `Pick<PullRequest, "state"> \| null`                                                                          |                                                   |
 
 ### Tree
 

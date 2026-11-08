@@ -1,11 +1,15 @@
-// Opening a task's pull request when it finishes done.
+// Opening a task's pull request: when it finishes done, again on the PR refresh after it failed to, and when a person asks.
 import type { App } from '../ports/app.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import { AUTO_MERGE_LABEL, autoMergeOn } from '../../domain/landing/index.ts';
 import { buildPrBody, openPrUrl } from '../../domain/landing/index.ts';
-import type { Task } from '../../domain/work/index.ts';
+import type { PrRetry } from '../../domain/landing/index.ts';
+import { prNeedsPersonNotification } from '../../domain/operations/index.ts';
+import { type Task, prRetryFor } from '../../domain/work/index.ts';
 import { errorMessage } from '../../domain/shared/index.ts';
 import { prPlanFor } from '../work/plans.ts';
+import { notifyLater } from '../operations/notifications.ts';
+import { ActionError, requireTask, requireTaskRepo } from '../shared/input.ts';
 
 /** Record a PR event on the task's latest run log, where `agentdeck log` and the dashboard show it. */
 export function logPrEvent(app: App, taskId: TaskId, event: { url?: string; error?: string }): void {
@@ -58,4 +62,60 @@ export async function openPullRequest(app: App, task: Task): Promise<{ url?: str
     logPrEvent(app, task.id, { error });
     return { error };
   }
+}
+
+/**
+ * For a done task whose PR failed to open, in a repo with a PR mode: whether the PR refresh opens it again at `now`, from the
+ * failures its history records since it finished. Null for any other task.
+ */
+function prRetryOf(app: App, task: Task, now: number): PrRetry | null {
+  return prRetryFor(task, app.getRepo(task.repo_id), app.eventsForTask(task.id), now);
+}
+
+/**
+ * On the PR refresh: open again each done task's PR that failed to open, once its wait is over (`prRetry`: at most
+ * PR_OPEN_RETRIES times, each wait twice the last). When the last retry fails, a person is told, with its error; the task
+ * then needs a person (`agentdeck open-pr`). A PR that failed to open before the task finished is not counted: a task that
+ * finishes again opens its PR as its follow-up. Returns how many opened.
+ */
+export async function retryFailedPrs(app: App, log: (msg: string) => void = () => {}, now: number = Date.now()): Promise<number> {
+  let opened = 0;
+  for (const task of app.failedPrTasks()) {
+    const retry = prRetryOf(app, task, now);
+    if (retry?.state !== 'due') continue;
+    const { url, error } = await openPullRequest(app, task);
+    if (url) {
+      opened++;
+      log(`task ${task.id}: PR opened after ${retry.failures} failed ${retry.failures === 1 ? 'try' : 'tries'}: ${url}`);
+      continue;
+    }
+    if (!error) continue;
+    const after = prRetryOf(app, task, now);
+    log(`task ${task.id}: could not open the PR again: ${error}`);
+    if (after?.state === 'person') notifyLater(app, prNeedsPersonNotification(task, after.failures, after.error));
+  }
+  return opened;
+}
+
+/** What a person's `open-pr` came to: the PR's url. */
+export interface OpenTaskPrResult {
+  url: string;
+}
+
+/**
+ * A person opens a done task's PR: one that failed to open (whether or not the PR refresh still retries it), never opened, or
+ * was closed. Pushes the branch first, as when the task finished. Refused when the repo's PR mode is off, the PR is open or
+ * merged, or the task has no branch; a failure is recorded on the task like any other and comes back as the error.
+ */
+export async function openTaskPr(app: App, id: TaskId): Promise<OpenTaskPrResult> {
+  const task = requireTask(app, id);
+  if (task.status !== 'done') throw new ActionError(`#${id} is ${task.status}; only a done task's PR can be opened`);
+  const repo = requireTaskRepo(app, task);
+  if (repo.pr_mode === 'off') throw new ActionError(`${repo.name}'s PR mode is off: agentdeck repo set ${repo.name} pr_mode ready`);
+  if (task.pr?.state === 'open') throw new ActionError(`#${id}'s PR is open already: ${task.pr.url}`);
+  if (task.pr?.state === 'merged') throw new ActionError(`#${id}'s PR is merged`);
+  if (!task.checkout?.branch) throw new ActionError(`#${id} has no branch`);
+  const { url, error } = await openPullRequest(app, task);
+  if (!url) throw new ActionError(`could not open the PR: ${error ?? 'unknown error'}`);
+  return { url };
 }

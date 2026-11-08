@@ -10,6 +10,7 @@ export {
   finalNotification,
   notifyEventsError,
   ntfyServerError,
+  prNeedsPersonNotification,
   ntfyTopicError,
 } from './notification.ts';
 export type { Notification, NotifyKind, NotifySettings } from './notification.ts';

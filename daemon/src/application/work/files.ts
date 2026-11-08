@@ -93,12 +93,13 @@ export async function taskChanges(app: App, id: TaskId): Promise<Changes> {
 
 /**
  * A task branch measured against the auto-merge limits: the lines it changed against the base (binary files count none)
- * and its paths, renames by both names. Null when git can't say (no branch yet, no common history).
+ * and its paths, renames by both names, from `git diff --numstat` in the repo's checkout. Null when git can't say (no branch
+ * yet, no common history), or when `at` is given and the branch is at another commit (the PR's head is not the local branch's).
  */
-export async function measureBranch(app: App, repo: Repo, branch: string): Promise<AutoMergeMeasured | null> {
+export async function measureBranch(app: App, repo: Repo, branch: string, at?: string | null): Promise<AutoMergeMeasured | null> {
   try {
     const head = await app.workspace.branchHead(repo.path, branch);
-    if (!head) return null;
+    if (!head || (at && head !== at)) return null;
     const base = await baseOf(app, repo, head);
     const files = await changedFilesCached(app, repo.path, base.sha, head);
     return {

@@ -91,13 +91,17 @@ const UNATTENDED: Record<MergeFinding['kind'], 'never' | 'wait' | null> = {
 /**
  * Whether the daemon may merge this PR now, for a task with auto-merge on: the merge dialog's findings (above), plus what
  * only auto-merge asks. Something must have tested it: the last tested run passed, or the repo has no test command and
- * a CI check ran on the PR (passed or failed; skipped and neutral ones tested nothing). It must carry the label, stay under the repo's limits, and nothing may be paused.
+ * a CI check ran on the PR (passed or failed; skipped and neutral ones tested nothing). It must carry the label, stay
+ * under the repo's limits, and nothing may be paused. The size is `measured` from git when the branch could be measured
+ * at the PR's head; otherwise it is GitHub's, whose file list stops at 100, so a longer one needs a person.
  */
 export function autoMergeCheck(
   input: MergeInput & {
     repo: Pick<Repo, 'test_cmd' | 'auto_merge_max_lines' | 'auto_merge_skip'>;
     /** Why the daemon or the repo is paused; null when neither is. */
     paused: string | null;
+    /** The branch measured locally (`git diff --numstat` against the base); null or missing when it couldn't be. */
+    measured?: AutoMergeMeasured | null;
   },
 ): AutoMergeCheck {
   const { repo, pr, tests_passed } = input;
@@ -115,10 +119,12 @@ export function autoMergeCheck(
   // A check that ran counts, not one skipped or neutral; one still running is the wait its finding says.
   if (!repo.test_cmd && tests_passed === null && !checksRan(pr) && !pr.checks.pending)
     reasons.never.push('nothing tested it: the repo has no test command and no check ran on the PR');
-  const lines = pr.additions + pr.deletions;
+  const { measured } = input;
+  const lines = measured ? measured.lines : pr.additions + pr.deletions;
+  const paths = measured ? measured.paths : pr.paths;
   if (lines > repo.auto_merge_max_lines) reasons.never.push(`${lines} lines changed, over the limit of ${repo.auto_merge_max_lines}`);
-  if (pr.paths.length < pr.files) reasons.never.push(`GitHub listed ${pr.paths.length} of ${pr.files} changed files`);
-  reasons.never.push(...pathReasons(pr.paths, repo.auto_merge_skip));
+  if (!measured && pr.paths.length < pr.files) reasons.never.push(`GitHub listed ${pr.paths.length} of ${pr.files} changed files`);
+  reasons.never.push(...pathReasons(paths, repo.auto_merge_skip));
 
   if (isMergeabilityUnknown(pr)) reasons.wait.push('GitHub is still working out whether it merges cleanly');
   if (input.paused) reasons.wait.push(input.paused);

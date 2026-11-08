@@ -37,7 +37,7 @@ flowchart LR
   domain_runs --> domain_shared
   domain_runs --> domain_work
   domain_work -.-> domain_capacity
-  domain_work -.-> domain_landing
+  domain_work --> domain_landing
   domain_work --> domain_repos
   domain_work --> domain_shared
 ```

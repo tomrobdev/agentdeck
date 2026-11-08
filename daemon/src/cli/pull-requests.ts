@@ -1,4 +1,4 @@
-// Pull request commands: fix failing checks, close, merge and auto-merge.
+// Pull request commands: fix failing checks, open, close, merge and auto-merge.
 import * as actions from '../application/actions.ts';
 import { isReview, stageOf } from '../domain/work/index.ts';
 import { confirm, die, taskId } from './format.ts';
@@ -11,6 +11,11 @@ export const prCommands: Record<string, Command> = {
     console.log(
       `requeued #${id} to fix ${checks.length === 1 ? 'the failing check' : `${checks.length} failing checks`}: ${checks.join(', ')}`,
     );
+  },
+  'open-pr': async ({ db, rest }) => {
+    const id = taskId(rest[0]);
+    const { url } = await actions.openTaskPr(db, id);
+    console.log(`opened the pull request of #${id}: ${url}`);
   },
   'close-pr': async ({ db, rest }) => {
     const id = taskId(rest[0]);

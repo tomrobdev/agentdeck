@@ -112,7 +112,7 @@ export async function mergePreview(app: App, id: TaskId): Promise<MergePreview> 
     ...mergeCheck({ pr_state: task.pr?.state ?? null, pr, tests_passed, lands_after }),
     conflicting: isConflicting(pr),
     unblocks: dependentsReleased(app, id).map((t) => ({ id: t.id, title: t.title })),
-    auto_merge: autoMergeFor(app, task, repo, pr, tests_passed),
+    auto_merge: await autoMergeFor(app, task, repo, pr, tests_passed),
     request,
     merge_now: mergesNow(request, { pr, tests_passed }),
   };

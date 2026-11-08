@@ -65,6 +65,16 @@ export function finalNotification(
   return { kind: status, title: `#${task.id} ${status}: ${task.title}`, body, task_id: task.id };
 }
 
+/** What a person is told when the PR refresh has used up its retries of a PR that won't open: the last error, and how to try again. */
+export function prNeedsPersonNotification(task: { id: TaskId; title: string }, failures: number, error: string): Notification {
+  return {
+    kind: 'done',
+    title: `Could not open the PR of #${task.id}`,
+    body: `${plural(failures, 'try', 'tries')} failed on ${task.title}: ${error}. Open it with agentdeck open-pr ${task.id}.`,
+    task_id: task.id,
+  };
+}
+
 /** What a person is told when a PR's checks fail. */
 export function checksFailedNotification(task: { id: TaskId; title: string }, checks: PrCheck[]): Notification {
   const failing = failingChecks(checks).map((c) => c.name);

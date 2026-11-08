@@ -125,6 +125,7 @@ export interface TaskRepository {
   recordQuestion(id: TaskId, question: UnblockQuestion, reason: string): boolean;
   listTaskSummaries(opts: { status?: TaskStatus; limit: number; before?: TaskId }): TaskSummary[];
   openPrTasks(): Task[];
+  failedPrTasks(): Task[];
   claimNextTask(): Task | undefined;
   editTask(id: TaskId, fields: TaskEdit, opts?: { ownPlan?: string }): Task | undefined;
   attachOwnPlan(id: TaskId, html: string): TaskPlan | undefined;

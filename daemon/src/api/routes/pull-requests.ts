@@ -1,4 +1,4 @@
-// Pull requests: fix checks, close, merge (now, requested or automatic).
+// Pull requests: fix checks, open, close, merge (now, requested or automatic).
 import * as actions from '../../application/actions.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import type * as C from '../contract.ts';
@@ -12,6 +12,12 @@ export function routes({ db }: ApiContext): Route[] {
     route<C.FixChecksResult>('POST', /^\/api\/tasks\/(\d+)\/fix-checks$/, async ({ params: [text] }) => {
       const id = taskIdParam(text);
       const result = await actions.fixChecks(db, id);
+      return { ...result, task: await detail(id) };
+    }),
+    // Open a done task's PR by hand: one that failed to open, never opened, or was closed.
+    route<C.OpenPrResult>('POST', /^\/api\/tasks\/(\d+)\/open-pr$/, async ({ params: [text] }) => {
+      const id = taskIdParam(text);
+      const result = await actions.openTaskPr(db, id);
       return { ...result, task: await detail(id) };
     }),
     route<C.TaskDetail>('POST', /^\/api\/tasks\/(\d+)\/close-pr$/, async ({ params: [text] }) => {
