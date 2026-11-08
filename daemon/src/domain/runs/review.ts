@@ -1,7 +1,7 @@
 // The review run: a claude run that reads a done task's changes against its Goal, Definition of done and linked plan
 // steps, and answers with a summary and findings in REVIEW_ANSWER_SCHEMA. It uses no attempt, and it stores its own
 // review (by a review run), never a person's draft. Pure: no I/O.
-import { COMMENT_SIDES, type CommentSide, type ReviewKind, reviewReason } from '../landing/index.ts';
+import { BLOCKING_PREFIX, COMMENT_SIDES, type CommentSide, type ReviewKind, countedReviewRuns, reviewReason } from '../landing/index.ts';
 import type { Repo } from '../repos/index.ts';
 import { parsePlanWithText } from '../work/index.ts';
 import type { Task, TaskEventRow } from '../work/index.ts';
@@ -33,7 +33,7 @@ export function reviewable(
   diffHash: string | null,
 ): boolean {
   if (!repo.auto_review || task.status !== 'done' || task.pr?.state !== 'open' || !diffHash) return false;
-  return !runs.some((r) => r.kind === 'review' && r.diff_hash === diffHash && r.outcome !== 'rate_limited' && r.outcome !== 'interrupted');
+  return countedReviewRuns(runs, diffHash).length === 0;
 }
 
 /** What follows a review run's answer: the review it stores, and the note to retry the task with, null for none. */
@@ -250,7 +250,7 @@ export function reviewRecord(answer: ReviewAnswer): ReviewRecord {
       path: f.path,
       line: f.line,
       side: f.side,
-      body: f.blocking ? `Blocking: ${f.body}` : f.body,
+      body: f.blocking ? `${BLOCKING_PREFIX}${f.body}` : f.body,
     })),
   };
 }

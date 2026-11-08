@@ -143,6 +143,7 @@ Pull requests, checks, merge requests, merging and auto-merge.
 ## review
 
 - daemon/src/domain/landing/review.ts
+- daemon/src/domain/landing/review-gate.ts
 - daemon/src/domain/landing/address.ts
 - daemon/src/application/landing/reviews.ts
 - daemon/src/application/landing/address.ts

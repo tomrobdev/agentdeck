@@ -128,7 +128,14 @@ test('a refresh stores no check for a task with auto-merge off', async () => {
 
 // ---- The view
 
-const repoRow = { auto_merge: true, auto_approve: false, test_cmd: 'pnpm test', auto_merge_max_lines: 1000, auto_merge_skip: ['.github/'] };
+const repoRow = {
+  auto_merge: true,
+  auto_approve: false,
+  test_cmd: 'pnpm test',
+  auto_merge_max_lines: 1000,
+  auto_merge_skip: ['.github/'],
+  auto_review: false,
+};
 const taskRow = (o: Partial<Task> = {}): Pick<Task, 'auto_merge' | 'source' | 'pr'> => ({
   auto_merge: null,
   source: 'manual',
@@ -155,8 +162,13 @@ test('autoMergeView: each state with its label and reasons', () => {
     reasons: [],
     source: 'repo',
     checked_at: null,
-    limits: { max_lines: 1000, skip: ['.github/'], tests: 'the last run must pass the tests' },
+    limits: { max_lines: 1000, skip: ['.github/'], tests: 'the last run must pass the tests', review: null },
   });
+  assert.equal(
+    autoMergeView(taskRow(), { ...repoRow, auto_review: true }).limits.review,
+    'a review run must read the changes and find nothing blocking, unless a person reviewed them',
+    'with auto_review on the limits name the review run',
+  );
   const on = autoMergeView(taskRow(), repoRow);
   assert.deepEqual([on.state, on.label, on.reasons, on.checked_at], ['on', 'auto-merge on', [], null]);
 

@@ -105,14 +105,20 @@ export interface ScorecardMeasures {
   running_minutes: number | null;
   review_minutes: number | null;
   pr_checks: ChecksSummary;
+  /** The review runs of the group, by when they started. */
+  review_runs: ReviewRunMeasures;
 }
 
-/** The measures over tasks and the events that belong to the same group. Each median skips tasks without that time. */
-export function scorecardMeasures(
+/**
+ * The measures over tasks and the events that belong to the same group, with its review runs' measures. Each median
+ * skips tasks without that time.
+ */
+function scorecardMeasures(
   byTask: Map<number, ScorecardTask>,
   tasks: ScorecardTask[],
   events: ScorecardEvent[],
   interventionEvents: ScorecardEvent[],
+  review_runs: ReviewRunMeasures,
 ): ScorecardMeasures {
   const eventsOf = new Map<number, ScorecardEvent[]>();
   for (const e of events) eventsOf.set(e.task_id, [...(eventsOf.get(e.task_id) ?? []), e]);
@@ -125,6 +131,7 @@ export function scorecardMeasures(
     running_minutes: med((c) => c.running),
     review_minutes: med((c) => c.review),
     pr_checks: summarizeChecks(tasks),
+    review_runs,
   };
 }
 
@@ -146,8 +153,14 @@ export interface ScorecardInput {
   tasks: ScorecardTaskRow[];
   events: ScorecardEvent[];
   samples: QuotaSample[];
+  /** The review runs, and the reviews they left (`by` review_run); missing means none. */
+  review_runs?: ScorecardReviewRun[];
+  run_reviews?: ScorecardRunReview[];
   repoName: (id: RepoId) => string;
-  /** Only tasks created, interventions made and quota seen at or after this stamp ("YYYY-MM-DD HH:MM:SS"). */
+  /**
+   * Only tasks created, interventions made, review runs started and quota seen at or after this stamp
+   * ("YYYY-MM-DD HH:MM:SS").
+   */
   since?: string;
   by?: 'week';
 }

@@ -586,7 +586,11 @@ export interface AutoMergeView {
   source: 'task' | 'repo' | 'planner';
   /** When the PR refresh made the check (UTC, `YYYY-MM-DD HH:MM:SS`); null when no check counts. */
   checked_at: string | null;
-  limits: { max_lines: number; skip: string[]; tests: string };
+  /**
+   * `review`: what the review gate asks, in a repo with auto_review on; null when it is off. Missing from a daemon that
+   * predates it.
+   */
+  limits: { max_lines: number; skip: string[]; tests: string; review?: string | null };
 }
 
 /** POST /api/tasks/:id/auto-merge: true or false for this task, null to follow the repo. */

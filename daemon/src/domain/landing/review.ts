@@ -20,6 +20,9 @@ export interface ReviewedDiff {
   diff_hash: string | null;
 }
 
+/** How a review run's line comment begins when its finding blocks the merge (`reviewRecord` in domain/runs/review.ts). */
+export const BLOCKING_PREFIX = 'Blocking: ';
+
 export const COMMENT_SIDES = ['old', 'new'] as const;
 /** Which side of the diff a comment's line number counts on: the base file (old) or the task's head (new). */
 export type CommentSide = (typeof COMMENT_SIDES)[number];

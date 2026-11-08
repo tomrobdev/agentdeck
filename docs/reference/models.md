@@ -121,6 +121,16 @@ The first-run measures of the work runs of one model, and the interventions on t
 | `measures`      | `Measures` |         |
 | `interventions` | `number`   |         |
 
+### ReviewRunMeasures
+
+| Field              | Type     | Comment                                                                                                      |
+| ------------------ | -------- | ------------------------------------------------------------------------------------------------------------ |
+| `runs`             | `number` | Review runs that ended, other than those a rate limit or a restart stopped (another starts in their place).  |
+| `clean`            | `number` | Of those, the ones whose review found nothing blocking.                                                      |
+| `asked_changes`    | `number` | Of those, the ones whose review asked for changes.                                                           |
+| `merged_unchanged` | `number` | Of those that asked for changes, the ones a person then merged unchanged: no work run and no retry after it. |
+| `no_review`        | `number` | Of those, the ones that left no review: they failed, answered garbage or were stopped.                       |
+
 ### Scorecard
 
 | Field          | Type                                                                     | Comment                                                                    |
@@ -148,25 +158,50 @@ One row of a task's history (`task_events`), with the task's repo.
 
 ### ScorecardInput
 
-| Field      | Type                     | Comment                                                                                               |
-| ---------- | ------------------------ | ----------------------------------------------------------------------------------------------------- |
-| `tasks`    | `ScorecardTaskRow[]`     |                                                                                                       |
-| `events`   | `ScorecardEvent[]`       |                                                                                                       |
-| `samples`  | `QuotaSample[]`          |                                                                                                       |
-| `repoName` | `(id: RepoId) => string` |                                                                                                       |
-| `since?`   | `string \| undefined`    | Only tasks created, interventions made and quota seen at or after this stamp ("YYYY-MM-DD HH:MM:SS"). |
-| `by?`      | `"week" \| undefined`    |                                                                                                       |
+| Field          | Type                                | Comment                                                                                                                    |
+| -------------- | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `tasks`        | `ScorecardTaskRow[]`                |                                                                                                                            |
+| `events`       | `ScorecardEvent[]`                  |                                                                                                                            |
+| `samples`      | `QuotaSample[]`                     |                                                                                                                            |
+| `review_runs?` | `ScorecardReviewRun[] \| undefined` | The review runs, and the reviews they left (`by` review_run); missing means none.                                          |
+| `run_reviews?` | `ScorecardRunReview[] \| undefined` |                                                                                                                            |
+| `repoName`     | `(id: RepoId) => string`            |                                                                                                                            |
+| `since?`       | `string \| undefined`               | Only tasks created, interventions made, review runs started and quota seen at or after this stamp ("YYYY-MM-DD HH:MM:SS"). |
+| `by?`          | `"week" \| undefined`               |                                                                                                                            |
 
 ### ScorecardMeasures
 
-| Field             | Type                | Comment                                 |
-| ----------------- | ------------------- | --------------------------------------- |
-| `interventions`   | `InterventionCount` |                                         |
-| `tasks`           | `number`            | Tasks the three medians below are over. |
-| `queued_minutes`  | `number \| null`    |                                         |
-| `running_minutes` | `number \| null`    |                                         |
-| `review_minutes`  | `number \| null`    |                                         |
-| `pr_checks`       | `ChecksSummary`     |                                         |
+| Field             | Type                | Comment                                             |
+| ----------------- | ------------------- | --------------------------------------------------- |
+| `interventions`   | `InterventionCount` |                                                     |
+| `tasks`           | `number`            | Tasks the three medians below are over.             |
+| `queued_minutes`  | `number \| null`    |                                                     |
+| `running_minutes` | `number \| null`    |                                                     |
+| `review_minutes`  | `number \| null`    |                                                     |
+| `pr_checks`       | `ChecksSummary`     |                                                     |
+| `review_runs`     | `ReviewRunMeasures` | The review runs of the group, by when they started. |
+
+### ScorecardReviewRun
+
+A review run, with its task's repo, as the scorecard reads it.
+
+| Field        | Type             | Comment                                             |
+| ------------ | ---------------- | --------------------------------------------------- |
+| `task_id`    | `TaskId`         |                                                     |
+| `repo_id`    | `RepoId`         |                                                     |
+| `diff_hash`  | `string \| null` | The patch-id of the changes it was started to read. |
+| `outcome`    | `string \| null` | How it ended; null while it runs.                   |
+| `started_at` | `string`         |                                                     |
+
+### ScorecardRunReview
+
+A submitted review a review run left: the changes it read and what it said.
+
+| Field       | Type             | Comment |
+| ----------- | ---------------- | ------- |
+| `task_id`   | `TaskId`         |         |
+| `diff_hash` | `string \| null` |         |
+| `kind`      | `string \| null` |         |
 
 ### ScorecardTask
 
@@ -233,11 +268,12 @@ Whether a merge goes ahead, waits or needs a person, and why: auto-merge's check
 
 What only auto-merge's check reads, beside the merge input: the repo's limits, a pause, and the branch as measured.
 
-| Field       | Type                                                                    | Comment                                                                                                   |
-| ----------- | ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `repo`      | `Pick<Repo, "test_cmd" \| "auto_merge_max_lines" \| "auto_merge_skip">` |                                                                                                           |
-| `paused`    | `string \| null`                                                        | Why the daemon or the repo is paused; null when neither is.                                               |
-| `measured?` | `AutoMergeMeasured \| null \| undefined`                                | The branch measured locally (`git diff --numstat` against the base); null or missing when it couldn't be. |
+| Field       | Type                                                                    | Comment                                                                                                                                                                                      |
+| ----------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `repo`      | `Pick<Repo, "test_cmd" \| "auto_merge_max_lines" \| "auto_merge_skip">` |                                                                                                                                                                                              |
+| `paused`    | `string \| null`                                                        | Why the daemon or the repo is paused; null when neither is.                                                                                                                                  |
+| `measured?` | `AutoMergeMeasured \| null \| undefined`                                | The branch measured locally (`git diff --numstat` against the base); null or missing when it couldn't be.                                                                                    |
+| `review?`   | `ReviewFacts \| null \| undefined`                                      | What the review gate reads (`reviewGate`), in a repo with auto_review on; null or missing when it is off. Only auto-merge waits on review runs: a person's merge and a merge request do not. |
 
 ### AutoMergeMeasured
 
@@ -259,14 +295,14 @@ What a task says about its own auto-merge: its setting (null follows the repo) a
 
 ### AutoMergeView
 
-| Field        | Type                                                    | Comment                                                                                                                    |
-| ------------ | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `state`      | `AutoMergeState`                                        |                                                                                                                            |
-| `label`      | `string`                                                | One short phrase for a list row: "will auto-merge", "needs a person to merge: …".                                          |
-| `reasons`    | `string[]`                                              | Why it waits or needs a person; for a task with no open PR, how the branch measures against the limits.                    |
-| `source`     | `"task" \| "repo" \| "planner"`                         | Where on or off comes from: the task's own setting, its repo's, or (planner) off because the repo auto-approves proposals. |
-| `checked_at` | `string \| null`                                        | When the PR refresh made the check; null when no check counts.                                                             |
-| `limits`     | `{ max_lines: number; skip: string[]; tests: string; }` |                                                                                                                            |
+| Field        | Type                                                                            | Comment                                                                                                                    |
+| ------------ | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `state`      | `AutoMergeState`                                                                |                                                                                                                            |
+| `label`      | `string`                                                                        | One short phrase for a list row: "will auto-merge", "needs a person to merge: …".                                          |
+| `reasons`    | `string[]`                                                                      | Why it waits or needs a person; for a task with no open PR, how the branch measures against the limits.                    |
+| `source`     | `"task" \| "repo" \| "planner"`                                                 | Where on or off comes from: the task's own setting, its repo's, or (planner) off because the repo auto-approves proposals. |
+| `checked_at` | `string \| null`                                                                | When the PR refresh made the check; null when no check counts.                                                             |
+| `limits`     | `{ max_lines: number; skip: string[]; tests: string; review: string \| null; }` | `review`: what the review gate asks, in a repo with auto_review on; null when it is off.                                   |
 
 ### BranchPr
 
@@ -632,6 +668,16 @@ A line comment on the task's diff.
 | `created_at`  | `string`                             |                                                             |
 | `updated_at`  | `string`                             |                                                             |
 
+### ReviewFacts
+
+What the review gate reads about a done task's PR.
+
+| Field       | Type                   | Comment                                                                                                           |
+| ----------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `diff_hash` | `string \| null`       | The patch-id of the PR's changes against the base at its head (`diffHash`); null when it could not be worked out. |
+| `reviews`   | `ReviewWithComments[]` | The task's reviews, oldest first.                                                                                 |
+| `runs`      | `ReviewRunRead[]`      | The task's runs; only its review runs are read.                                                                   |
+
 ### ReviewPrompt
 
 What the worker is shown of the review it addresses.
@@ -641,6 +687,16 @@ What the worker is shown of the review it addresses.
 | `comments`  | `CommentInView[]`      |                                                                                                                   |
 | `note`      | `string`               | The review's overall note.                                                                                        |
 | `ownRetry?` | `boolean \| undefined` | Whether the task's latest retry is this review's own (`isReviewRetry`): its note is then the review block itself. |
+
+### ReviewRunRead
+
+A run of the task as the gate reads it: its kind, the changes it was started to read, and how it ended (null while it runs).
+
+| Field       | Type             | Comment |
+| ----------- | ---------------- | ------- |
+| `kind`      | `string`         |         |
+| `diff_hash` | `string \| null` |         |
+| `outcome`   | `string \| null` |         |
 
 ### ReviewWithComments
 

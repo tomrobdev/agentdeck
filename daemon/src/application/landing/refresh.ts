@@ -1,7 +1,7 @@
 // The PR refresh: keep the state of open PRs fresh, and say which ones conflict or are ready to merge.
 import type { App } from '../ports/app.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
-import type { AutoMergeFacts, MergeInput, PrCheck, PrDetails, PrPlace } from '../../domain/landing/index.ts';
+import type { AutoMergeFacts, MergeInput, PrCheck, PrDetails, PrPlace, ReviewFacts } from '../../domain/landing/index.ts';
 import { type AutoMergeCheck, autoMergeCheck, autoMergeOn, refreshVerdict } from '../../domain/landing/index.ts';
 import { carryFailures, checksSettled, nextChecks } from '../../domain/landing/index.ts';
 import { readFailure } from './check-failures.ts';
@@ -52,8 +52,20 @@ export function mergeInputFor(app: App, task: Task, repo: Repo | undefined, pr: 
 async function autoMergeFacts(app: App, task: Task, repo: Repo, pr: PrDetails): Promise<AutoMergeFacts | null> {
   if (!autoMergeOn(task, repo)) return null;
   const branch = task.checkout?.branch;
-  const measured = branch && pr.head ? await measureBranch(app, repo, branch, pr.head) : null;
-  return { repo, paused: pausedReason(app.isPaused(), repo), measured };
+  const [measured, review] = await Promise.all([
+    branch && pr.head ? measureBranch(app, repo, branch, pr.head) : null,
+    repo.auto_review ? reviewFacts(app, task, repo, pr) : null,
+  ]);
+  return { repo, paused: pausedReason(app.isPaused(), repo), measured, review };
+}
+
+/**
+ * What the review gate reads about a task's PR: the patch-id of its changes at the PR's head, as the review run and a
+ * submitted review store it, with the task's reviews and runs. The patch-id is null when git can't work it out there.
+ */
+async function reviewFacts(app: App, task: Task, repo: Repo, pr: PrDetails): Promise<ReviewFacts> {
+  const diff_hash = pr.head ? await app.workspace.diffHash(repo.path, repo.base_branch, pr.head).catch(() => null) : null;
+  return { diff_hash, reviews: app.reviewsForTask(task.id), runs: app.runsForTask(task.id) };
 }
 
 /** The auto-merge check for a task's PR, from its merge input (`mergeInputFor`), or null when auto-merge is off for the task. */
