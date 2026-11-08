@@ -88,7 +88,8 @@ export function planPromptBlock(plan: PromptPlan): string {
 /**
  * `reviewNote` is what the person asked to change when they sent the task back from review. `plan` is the plan the task
  * carries out, if any: its steps go after the task's prompt. `review` is the review being addressed, comment by comment;
- * it takes the place of `reviewNote` (which holds the same comments, flattened).
+ * it takes the place of `reviewNote` only when that is the review's own retry (`ownRetry`, which holds the same comments,
+ * flattened); a later retry's note goes under it.
  */
 export function buildPrompt(
   task: Task,
@@ -116,7 +117,9 @@ export function buildPrompt(
   const note =
     reviewNote === null ? '' : reviewNote.startsWith(UNBLOCK_NOTE) ? `${reviewNote}\n` : `Changes requested in review:\n${reviewNote}\n`;
   return [
-    review ? `${reviewPromptBlock(review)}\n` : note,
+    review ? `${reviewPromptBlock(review)}\n` : '',
+    // The review's own retry note is the review block; any other note (Fix checks, an unblock run) goes under it.
+    review?.ownRetry ? '' : note,
     base,
     '',
     interrupted ? `--- This is attempt ${task.attempts}. A daemon restart stopped an earlier run of it before it finished. ---` : '',
