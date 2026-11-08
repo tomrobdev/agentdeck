@@ -129,7 +129,7 @@ export function commentLocation(c: Pick<ReviewComment, 'path' | 'line' | 'side'>
 }
 
 /** The reason a Request changes review gives the retry event: the overall note, then each comment. */
-export function reviewReason(body: string, comments: ReviewComment[]): string {
+export function reviewReason(body: string, comments: Pick<ReviewComment, 'path' | 'line' | 'side' | 'body'>[]): string {
   const lines = comments.map((c) => `- ${commentLocation(c)}: ${c.body}`);
   return [body.trim(), lines.join('\n')].filter(Boolean).join('\n\n');
 }
