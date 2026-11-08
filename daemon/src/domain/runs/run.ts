@@ -2,6 +2,7 @@
 import type { PlannerRunId, RunId, TaskId } from '../shared/index.ts';
 import { STATUS_WORD, lastLine, oneLine } from '../shared/index.ts';
 import { type Needs, parseNeeds } from '../work/index.ts';
+import type { RunEnd, RunSummary } from './translate/summary.ts';
 
 /**
  * `work` is an attempt at the task; `resolve` merges the base branch into the task's branch and never uses an attempt;
@@ -69,6 +70,13 @@ export interface Run {
    * even when the run fails or answers nothing usable, so the diff is known to have had its review run. Null for other kinds.
    */
   diff_hash: string | null;
+  /**
+   * How a failed or blocked work run's claude ended (`runEndOf`), kept when the run ends because its log is not kept for
+   * good; null for a run that ended any other way and for one from before this was recorded, which reads as unknown.
+   */
+  run_end: RunEnd | null;
+  /** Whether the last test run of that run failed; null with no test run, and for a run with no `run_end`. */
+  last_test_failed: boolean | null;
 }
 
 /** The support model's default: the model resolve and unblock runs use unless the support_model setting says otherwise. */
@@ -397,3 +405,9 @@ export function firstDenial(denials: { tool_name?: string; tool_input?: { comman
   const command = typeof d?.tool_input?.command === 'string' ? d.tool_input.command : (d?.tool_name ?? 'unknown tool');
   return oneLine(command).slice(0, 200);
 }
+
+/** What a failed or blocked work run's summary says about how it ended, to keep on its row. */
+export const runEndOf = (summary: Pick<RunSummary, 'end' | 'last_test'>): Pick<Run, 'run_end' | 'last_test_failed'> => ({
+  run_end: summary.end,
+  last_test_failed: summary.last_test === null ? null : summary.last_test === 'failed',
+});

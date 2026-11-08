@@ -1,6 +1,6 @@
 // `agentdeck stats`: the pilot scorecard measures per repo, and per week or per model.
 import * as actions from '../application/actions.ts';
-import { modelsTable, parseSince, scorecardText } from '../domain/insights/index.ts';
+import { failuresTable, modelsTable, parseSince, scorecardText } from '../domain/insights/index.ts';
 import { statsTable } from '../domain/insights/index.ts';
 import type { Command } from './context.ts';
 import { die } from './format.ts';
@@ -12,6 +12,7 @@ export const statsCommands: Record<string, Command> = {
     const by = flags.by as 'week' | 'model' | undefined;
     const report = actions.pilotStats(db, { repo: flags.repo, since, by });
     if (flags.json) return void console.log(JSON.stringify(report, null, 2));
+    if (flags.failures) return void console.log(failuresTable(report.failures));
     const parts = [statsTable(report), ...(by === 'model' ? [modelsTable(report.models)] : []), scorecardText(report.scorecard)];
     console.log(parts.join('\n\n'));
   },

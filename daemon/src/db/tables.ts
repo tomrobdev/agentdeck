@@ -5,7 +5,7 @@ import type { PlannerRunId, RepoId, ReviewId, RunId, TaskId } from '../domain/sh
 import type { PlannerOutcome } from '../domain/proposals/index.ts';
 import type { MergeMethod, PrMode } from '../domain/repos/index.ts';
 import type { PrState, ReviewAuthor } from '../domain/landing/index.ts';
-import type { RunKind, RunOutcome } from '../domain/runs/index.ts';
+import type { RunEnd, RunKind, RunOutcome } from '../domain/runs/index.ts';
 import type { TaskEventType } from '../domain/work/index.ts';
 import type { LinkKind } from '../domain/work/index.ts';
 import type { TaskStatus } from '../domain/work/index.ts';
@@ -126,6 +126,8 @@ export const runs = sqliteTable(
     model: text(),
     model_id: text(),
     diff_hash: text(),
+    run_end: text().$type<RunEnd>(),
+    last_test_failed: integer(),
   },
   (table) => [index('runs_task').on(table.task_id, table.id)],
 );

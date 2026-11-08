@@ -267,6 +267,10 @@ export const MIGRATIONS: Migration[] = [
   // does not take the setting's default, so the kind is added to it, unless a person turned every kind off.
   `UPDATE settings SET value = value || ',review_due'
    WHERE key = 'notify_events' AND value <> '' AND ',' || value || ',' NOT LIKE '%,review_due,%';`,
+  // 34: how a failed or blocked work run ended (domain/runs/translate/summary.ts's RunEnd) and whether its last test run
+  // failed, kept on the row because the log is not (a removed repo's logs are deleted). Older runs read as unknown.
+  `ALTER TABLE runs ADD COLUMN run_end TEXT;
+   ALTER TABLE runs ADD COLUMN last_test_failed INTEGER;`,
 ];
 
 /** Runs every step above the database's user_version in one transaction; returns how many ran. */

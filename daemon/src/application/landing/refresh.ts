@@ -3,7 +3,7 @@ import type { App } from '../ports/app.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import type { AutoMergeFacts, MergeInput, PrCheck, PrDetails, PrPlace } from '../../domain/landing/index.ts';
 import { type AutoMergeCheck, autoMergeCheck, autoMergeOn, refreshVerdict } from '../../domain/landing/index.ts';
-import { carryFailures, checksSettled, nextChecks } from '../../domain/landing/index.ts';
+import { carryFailures, checksSettled, countOfKept, nextChecks } from '../../domain/landing/index.ts';
 import { readFailure } from './check-failures.ts';
 import { checksFailedNotification, mergeFailedNotification } from '../../domain/operations/index.ts';
 import { type Repo, pausedReason } from '../../domain/repos/index.ts';
@@ -138,9 +138,9 @@ async function refreshOne(app: App, task: Task, log: (msg: string) => void): Pro
     if (task.pr?.merge_request) dropRequest(app, task.id, state !== 'open' ? `the PR is ${state}` : `the task is ${task.status}`, log);
     return null;
   }
-  if (checksSettled(pr.checks)) app.recordPrChecksOpened(task.id, pr.checks);
-  // The checks kept carry why each failing one failed, so the merge's reasons can say it.
+  // The checks kept carry why each failing one failed, so the merge's reasons can say it, and so do the counts kept.
   const kept = await keepChecks(app, task, pr);
+  if (checksSettled(pr.checks)) app.recordPrChecksOpened(task.id, pr.check_list ? countOfKept(kept) : pr.checks);
   const judged = pr.check_list ? { ...pr, check_list: kept } : pr;
   // A person asked: the merge request's check stands in for auto-merge's, so the branch is not measured.
   const requested = !!task.pr?.merge_request;
