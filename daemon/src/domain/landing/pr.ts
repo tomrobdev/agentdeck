@@ -48,6 +48,18 @@ export type PullRequest = OpenedPullRequest | FailedPullRequest;
 /** The url of a task's PR while it is open; null with none or in any other state. */
 export const openPrUrl = (pr: PullRequest | null): string | null => (pr?.state === 'open' ? pr.url : null);
 
+/**
+ * Whether `gh pr create` failed because the branch has an open PR already (gh: 'a pull request for branch "x" into branch "y"
+ * already exists'): a daemon stopped between opening it and recording it, or the task moved on while it opened.
+ */
+export const isPrExistsError = (error: string): boolean => /a pull request for branch .+ already exists/i.test(error);
+
+/**
+ * Which of a branch's PRs (`prs`, newest first, as gh lists them) is the one `gh pr create` found: the open one, since gh only
+ * refuses while one is open; else the newest, which was closed or merged since. Null when the branch has none.
+ */
+export const existingPr = <P extends { state: PrState }>(prs: P[]): P | null => prs.find((p) => p.state === 'open') ?? prs[0] ?? null;
+
 /** A PR as flat fields, the shape of its columns on a task. */
 export interface PrFields {
   pr_url: string | null;

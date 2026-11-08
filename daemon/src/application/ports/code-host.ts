@@ -1,6 +1,6 @@
 // The CodeHost port: pull requests and the pushes that go with them. The real adapter is adapters/github.ts
 // (compose.ts); tests use the in-memory fake in test/fakes.ts.
-import type { CreatePr, PrDetails } from '../../domain/landing/index.ts';
+import type { BranchPr, CreatePr, PrDetails } from '../../domain/landing/index.ts';
 import type { MergeMethod } from '../../domain/repos/index.ts';
 
 export interface CodeHost {
@@ -10,6 +10,8 @@ export interface CodeHost {
   push(repoPath: string, branch: string): Promise<void>;
   /** Open a pull request; returns its URL. */
   createPr(pr: CreatePr): Promise<string>;
+  /** The PRs of a branch in any state, newest first. */
+  prsForBranch(cwd: string, branch: string): Promise<BranchPr[]>;
   ensureLabel(cwd: string, label: { name: string; description: string; color: string }): Promise<void>;
   setLabel(url: string, cwd: string, label: string, on: boolean): Promise<void>;
   closePr(url: string, cwd: string): Promise<void>;
