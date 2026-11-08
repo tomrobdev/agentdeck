@@ -68,6 +68,17 @@ export interface ReviewPrompt {
   comments: CommentInView[];
   /** The review's overall note. */
   note: string;
+  /** Whether the task's latest retry is this review's own (`isReviewRetry`): its note is then the review block itself. */
+  ownRetry?: boolean;
+}
+
+/**
+ * Whether the latest retry (`retryAt`, null when there is none) is the one the latest submitted Request changes review
+ * made: the review was submitted at or after it. A later retry, such as Fix checks or an unblock run, has its own note.
+ */
+export function isReviewRetry(reviews: ReviewWithComments[], retryAt: string | null): boolean {
+  const submitted = submittedRequests(reviews).at(-1)?.submitted_at;
+  return !!submitted && retryAt !== null && submitted >= retryAt;
 }
 
 export const REVIEW_PROMPT_INTRO =
