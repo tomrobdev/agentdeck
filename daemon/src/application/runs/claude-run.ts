@@ -14,10 +14,13 @@ import {
   type Run,
   type RunClass,
   type RunKind,
+  type SummaryContext,
   classifyRun,
   resultFields,
   resumeFailed,
+  runEndOf,
   runModel,
+  runSummary,
 } from '../../domain/runs/index.ts';
 import type { Task } from '../../domain/work/index.ts';
 import { lastLine } from '../../domain/shared/index.ts';
@@ -62,11 +65,29 @@ export function openTaskRun(app: App, task: Task, kind: RunKind, diffHash: strin
  * End an opened run: close its log, then finish its row with `outcome` (and `reason` as its result text when `fields`
  * has none). The one way a work or resolve run ends. A run already ended is left as it is, so a row is never finished twice.
  */
-export async function endTaskRun(app: App, opened: OpenedRun, outcome: Outcome, reason?: string, fields: Partial<Run> = {}): Promise<void> {
+export async function endTaskRun(
+  app: App,
+  opened: OpenedRun,
+  outcome: Outcome,
+  reason?: string,
+  fields: Partial<Run> = {},
+  summary?: SummaryContext,
+): Promise<void> {
   if (opened.ended) return;
   opened.ended = true;
   await app.runLog.close(opened.log);
-  app.finishRun(opened.runId, { ...fields, outcome, ...(reason && !fields.result_text ? { result_text: reason } : {}) });
+  // A failed or blocked work run keeps how it ended (`runEndOf`), read from its closed log; a log read that fails keeps nothing.
+  const events = summary && (outcome === 'failed' || outcome === 'blocked') ? readEvents(app, opened.logPath) : [];
+  const ended = events.length && summary ? runEndOf(runSummary(events, summary)) : {};
+  app.finishRun(opened.runId, { ...fields, ...ended, outcome, ...(reason && !fields.result_text ? { result_text: reason } : {}) });
+}
+
+function readEvents(app: App, path: string): unknown[] {
+  try {
+    return app.runLog.events(path);
+  } catch {
+    return [];
+  }
 }
 
 /** What a task run came to. `fields` are the run row's columns that claude's exit decides. */

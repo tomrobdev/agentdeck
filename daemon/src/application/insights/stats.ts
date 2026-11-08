@@ -3,6 +3,7 @@ import type { App } from '../ports/app.ts';
 import type { RepoId } from '../../domain/shared/index.ts';
 import { type Scorecard, buildScorecard } from '../../domain/insights/index.ts';
 import { type Measures, type StatsReport, measure, measureByRepo, measureByWeek } from '../../domain/insights/index.ts';
+import { type FailureReport, failureReport } from '../../domain/insights/index.ts';
 import { type ModelMeasures, measureByModel } from '../../domain/insights/index.ts';
 import { ActionError } from '../shared/input.ts';
 
@@ -13,6 +14,8 @@ export interface PilotReport extends StatsReport {
   weeks: { week: string; measures: Measures }[];
   /** The measures per model the work runs ran on, with runs of unknown model last; empty unless `by` is model. */
   models: ModelMeasures[];
+  /** What failures are made of per week and repo, and the top causes: CI failures by step, failed runs by how they ended. */
+  failures: FailureReport;
 }
 
 /**
@@ -46,5 +49,6 @@ export function pilotStats(app: App, opts: { repo?: string; since?: string; by?:
     scorecard,
     weeks: opts.by === 'week' ? measureByWeek(rows) : [],
     models: opts.by === 'model' ? measureByModel({ runs: all, tasks, events, since: opts.since }) : [],
+    failures: failureReport({ runs: all, tasks, repoName, since: opts.since }),
   };
 }
