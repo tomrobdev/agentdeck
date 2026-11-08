@@ -36,6 +36,7 @@ const {
   toggleGroup: togglePicks,
   clearPicked,
   bulkAct,
+  bulkEdit,
   onBulkMerged,
   mergeAll,
 } = useBulkPick(() => props.tasks, shown);
@@ -176,7 +177,16 @@ useHotkeys({
           @merge="startMerge"
           @merge-all="mergeAll"
         />
-        <BulkBar v-if="picked.length" :count="picked.length" :actions="bar" :busy="bulkPending" @act="bulkAct" @clear="clearPicked" />
+        <BulkBar
+          v-if="picked.length"
+          :count="picked.length"
+          :actions="bar"
+          :busy="bulkPending"
+          :others="tasks.filter((t) => !picked.includes(t.id))"
+          @act="bulkAct"
+          @edit="bulkEdit"
+          @clear="clearPicked"
+        />
       </div>
       <PeekPane
         v-if="peek && display.mode === 'list' && selected !== null"

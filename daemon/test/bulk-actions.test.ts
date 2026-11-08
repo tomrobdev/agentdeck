@@ -4,11 +4,13 @@ import { test } from 'node:test';
 import {
   buildsOnChain,
   bulkActions,
+  bulkEditMessage,
   bulkMessage,
   idRange,
   keepPicked,
   mergeAllIds,
   pickAll,
+  planBulkEdit,
   summarizeBulk,
   toggleGroupPicks,
 } from '../../app/src/lib/bulk.ts';
@@ -107,4 +109,43 @@ test('a shift-click range runs either way and falls back to the one row', () => 
   assert.deepEqual(idRange([1, 2, 3, 4], 2, 4), [2, 3, 4]);
   assert.deepEqual(idRange([1, 2, 3, 4], 4, 2), [2, 3, 4]);
   assert.deepEqual(idRange([1, 2, 3, 4], null, 3), [3]);
+});
+
+test('priority and model are left out of tasks that are not editable, with the reason', () => {
+  const picked = [task('proposed', { id: 1 }), task('queued', { id: 2 }), task('running', { id: 3 }), task('done', { id: 4 })];
+  const plan = planBulkEdit(picked, 'priority');
+  assert.deepEqual(plan.allowed, [1, 2]);
+  assert.deepEqual(
+    plan.left.map((l) => l.id),
+    [3, 4],
+  );
+  assert.match(plan.left[0].reason, /is running; only proposed, queued, blocked, failed/);
+  assert.deepEqual(planBulkEdit(picked, 'model').allowed, [1, 2]);
+});
+
+test('a builds-on link goes only on a task that has not started, and never on itself', () => {
+  const picked = [task('proposed', { id: 1 }), task('queued', { id: 2 }), task('blocked', { id: 3 }), task('queued', { id: 9 })];
+  const plan = planBulkEdit(picked, 'builds_on', 9);
+  assert.deepEqual(plan.allowed, [1, 2]);
+  assert.deepEqual(
+    plan.left.map((l) => l.id),
+    [3, 9],
+  );
+  assert.deepEqual(planBulkEdit(picked, 'after', 9).allowed, [1, 2, 3]);
+});
+
+test('auto-merge is left out of a cancelled task and of one whose PR is merged or closed', () => {
+  const picked = [task('done', { id: 1, pr_state: 'open' }), task('done', { id: 2, pr_state: 'merged' }), task('cancelled', { id: 3 })];
+  const plan = planBulkEdit(picked, 'auto_merge');
+  assert.deepEqual(plan.allowed, [1]);
+  assert.deepEqual(
+    plan.left.map((l) => l.id),
+    [2, 3],
+  );
+});
+
+test('a bulk edit names what it changed, what failed and what it left out', () => {
+  const results = [{ id: 1 }, { id: 2, error: 'linking #2 to #9 would make a cycle' }];
+  const msg = bulkEditMessage('builds_on', results, [{ id: 3, reason: 'has started' }], '#9');
+  assert.equal(msg, '1 now build on #9 · #2 failed: linking #2 to #9 would make a cycle · #3 left out: has started');
 });

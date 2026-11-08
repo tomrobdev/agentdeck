@@ -3,7 +3,8 @@
 // Free of the dashboard's other modules so the daemon's tests can import it (daemon/test/bulk-actions.test.ts).
 import type { TaskSummary } from '../../../daemon/src/api/contract.ts';
 import { personEvents } from '../../../daemon/src/domain/work/index.ts';
-import { canStartMerge } from '../../../daemon/src/domain/work/index.ts';
+import { EDITABLE_STATUSES, buildsOnError, canStartMerge } from '../../../daemon/src/domain/work/index.ts';
+import { asTaskId } from '../../../daemon/src/domain/shared/index.ts';
 
 export type BulkAction = 'approve' | 'reject' | 'retry' | 'merge' | 'cancel';
 export const BULK_ACTIONS: BulkAction[] = ['approve', 'reject', 'retry', 'merge', 'cancel'];
@@ -90,4 +91,67 @@ export function keepPicked(picked: number[], shown: number[]): number[] {
 /** A group's ids picked as one: all of them when any is not picked yet, else none of them (the group header's checkbox). */
 export function toggleGroupPicks(picked: number[], group: number[]): number[] {
   return group.every((id) => picked.includes(id)) ? picked.filter((id) => !group.includes(id)) : pickAll(picked, group);
+}
+
+/** An edit the bar's menu makes to every picked task. */
+export type BulkEdit = 'priority' | 'model' | 'auto_merge' | 'builds_on' | 'after';
+
+const EDIT_WORD: Record<BulkEdit, string> = {
+  priority: 'priority set',
+  model: 'model set',
+  auto_merge: 'auto-merge set',
+  builds_on: 'now build on',
+  after: 'now after',
+};
+
+/** A picked task an edit leaves out, and why. */
+export interface BulkLeftOut {
+  id: number;
+  reason: string;
+}
+
+type Editable = Pick<TaskSummary, 'id' | 'status' | 'pr_state'>;
+
+/**
+ * Why `task` doesn't allow `edit`, or null. Priority and model only on a task in EDITABLE_STATUSES; a builds-on link only on
+ * a task that has not started (`buildsOnError`); auto-merge is moot once the PR is merged or closed or the task cancelled.
+ * `on` is the task a link points at: a task is never linked to itself.
+ */
+export function editRefusal(task: Editable, edit: BulkEdit, on?: number): string | null {
+  switch (edit) {
+    case 'priority':
+    case 'model':
+      return EDITABLE_STATUSES.includes(task.status) ? null : `is ${task.status}; only ${EDITABLE_STATUSES.join(', ')} tasks can be edited`;
+    case 'auto_merge':
+      if (task.status === 'cancelled') return 'is cancelled';
+      return task.pr_state === 'merged' || task.pr_state === 'closed' ? `has its PR ${task.pr_state}` : null;
+    case 'builds_on':
+      if (on === task.id) return "can't build on itself";
+      return (
+        buildsOnError(asTaskId(task.id), task.status, asTaskId(on ?? 0)) && 'has started already, so it can only go after another task'
+      );
+    case 'after':
+      return on === task.id ? "can't go after itself" : null;
+  }
+}
+
+/** The picked tasks that allow `edit` (in order), and those it leaves out with the reason. */
+export function planBulkEdit(tasks: Editable[], edit: BulkEdit, on?: number): { allowed: number[]; left: BulkLeftOut[] } {
+  const allowed: number[] = [];
+  const left: BulkLeftOut[] = [];
+  for (const t of tasks) {
+    const reason = editRefusal(t, edit, on);
+    if (reason === null) allowed.push(t.id);
+    else left.push({ id: t.id, reason });
+  }
+  return { allowed, left };
+}
+
+/** The toast after a bulk edit: the sum, each failure with its reason, then the tasks left out and why. */
+export function bulkEditMessage(edit: BulkEdit, results: BulkResult[], left: BulkLeftOut[], detail = ''): string {
+  const ok = results.filter((r) => r.error === undefined).length;
+  const failures = results.filter((r) => r.error !== undefined).map((r) => `#${r.id} failed: ${r.error}`);
+  const word = `${EDIT_WORD[edit]}${detail ? ` ${detail}` : ''}`;
+  const skipped = left.map((l) => `#${l.id} left out: ${l.reason}`);
+  return [ok ? `${ok} ${word}` : '', ...failures, ...skipped].filter(Boolean).join(' · ') || `0 ${word}`;
 }
