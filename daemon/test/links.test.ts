@@ -10,8 +10,10 @@ import {
   type LinkIndex,
   type LinkTarget,
   buildsOnError,
+  buildsOnRepoError,
   linkError,
   linkState,
+  prModeOffError,
   releasedBy,
   startState,
   stuckOn,
@@ -200,6 +202,20 @@ test('releasedBy lists only the dependents merging a task leaves free to start',
     [3],
   );
   assert.deepEqual(releasedBy(asTaskId(2), lookups), []);
+});
+
+test('buildsOnRepoError refuses a builds-on link into a repo with pr_mode off; prModeOffError names the unmet tasks', () => {
+  assert.equal(buildsOnRepoError(asTaskId(5), { name: 'demo', pr_mode: 'ready' }), null);
+  assert.match(buildsOnRepoError(asTaskId(5), { name: 'demo', pr_mode: 'off' }) ?? '', /#5 is in demo, which opens no PRs/);
+  assert.equal(prModeOffError('demo', []), null);
+  assert.equal(
+    prModeOffError('demo', [asTaskId(3)]),
+    "demo can't stop opening PRs while #3 builds on a task that is not merged yet: wait for it to start, or cancel it",
+  );
+  assert.equal(
+    prModeOffError('demo', [asTaskId(3), asTaskId(4)]),
+    "demo can't stop opening PRs while #3, #4 build on a task that is not merged yet: wait for them to start, or cancel them",
+  );
 });
 
 test('buildsOnError refuses a builds-on link once a task has started, pointing at an after link', () => {
