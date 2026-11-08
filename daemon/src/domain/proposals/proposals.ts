@@ -100,6 +100,8 @@ export function plannerArgs(prompt: string, model: string): string[] {
     '15',
     '--permission-mode',
     'dontAsk',
+    // No MCP servers or connectors from the person's own config.
+    '--strict-mcp-config',
     '--allowedTools',
     ...PLANNER_TOOLS,
     '--disallowedTools',
