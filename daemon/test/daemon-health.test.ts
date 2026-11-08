@@ -16,6 +16,7 @@ const h = await import('../src/domain/operations/health.ts');
 const { SCHEMA_DIRTY, offMain, reloadState } = await import('../src/domain/operations/restart.ts');
 const { daemonReport, gatherHealth, restartNow } = await import('../src/application/operations/doctor.ts');
 const { openDb } = await import('./open-db.ts');
+const { waitFor } = await import('./fixtures.ts');
 
 const NOW = Date.parse('2026-11-01T12:00:00Z');
 const running = { installed: true, loaded: true, pid: 100, state: 'running' };
@@ -336,7 +337,7 @@ test('restartNow names the running tasks and restarts after the answer', async (
   const result = restartNow(db, async () => void restarted++, 0);
   assert.deepEqual(result, { requeued: [{ id: task.id, title: 'busy' }] });
   assert.equal(restarted, 0);
-  await new Promise((r) => setTimeout(r, 20));
+  await waitFor(() => restarted > 0, { what: 'the restart' });
   assert.equal(restarted, 1);
   db.close();
 });

@@ -5,6 +5,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, beforeEach, test } from 'node:test';
+import { setTimeout as sleep } from 'node:timers/promises';
 import type { TaskId } from '../src/domain/shared/id.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-automerge-'));
@@ -12,7 +13,7 @@ process.env.AGENTDECK_HOME = home;
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { openDb } = await import('./open-db.ts');
-const { doneTask } = await import('./fixtures.ts');
+const { doneTask, waitFor } = await import('./fixtures.ts');
 const { github } = await import('../src/adapters/github.ts');
 const { AUTO_MERGE_LABEL, autoMergeCheck, autoMergeOn } = await import('../src/domain/landing/auto-merge.ts');
 const { isMergeLocked } = await import('../src/application/work/checkout-locks.ts');
@@ -337,7 +338,7 @@ test('a merge and a sync never touch one task at once', async () => {
   };
   try {
     const merging = mergeTask(db, b.id);
-    while (!isMergeLocked(b.id)) await new Promise((r) => setImmediate(r));
+    await waitFor(() => isMergeLocked(b.id), { what: `the merge of #${b.id} to take its lock` });
     await assert.rejects(syncNow(db, b.id), /being merged/);
     await assert.rejects(mergeTask(db, b.id), /already being merged/);
     const logs: string[] = [];
@@ -397,23 +398,23 @@ test('the scheduler merges a ready PR on its own refresh, and tells a merge that
   const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
   const stuck = tested({ title: 'refused' });
   mergeError = 'the base branch policy prohibits the merge';
-  const until = async (done: () => boolean) => {
-    const deadline = Date.now() + 5000;
-    while (!done() && Date.now() < deadline) await new Promise((r) => setTimeout(r, 20));
-  };
   const told = () => db.recentNotifications(50).filter((x) => x.task_id === stuck.id).length;
   const logs: string[] = [];
   const scheduler = new Scheduler(db, { tickMs: 10, prRefreshMs: 10, autoPropose: false, log: (m) => logs.push(m) });
   const running = scheduler.run();
-  await until(() => told() > 0);
-  await new Promise((r) => setTimeout(r, 200)); // many more refreshes
-  assert.equal(logs.filter((l) => l.includes(`task ${stuck.id}: auto-merge failed`)).length, 1);
-  assert.equal(told(), 1, 'told once, not every refresh');
+  let t: ReturnType<typeof tested>;
+  try {
+    await waitFor(() => told() > 0, { what: 'the failed auto-merge to be told' });
+    await sleep(200); // time passes: many more refreshes
+    assert.equal(logs.filter((l) => l.includes(`task ${stuck.id}: auto-merge failed`)).length, 1);
+    assert.equal(told(), 1, 'told once, not every refresh');
 
-  mergeError = null;
-  const t = tested({ title: 'merge me' });
-  await until(() => db.getTask(t.id)!.pr?.state === 'merged');
-  scheduler.stop();
-  await running;
+    mergeError = null;
+    t = tested({ title: 'merge me' });
+    await waitFor(() => db.getTask(t.id)!.pr?.state === 'merged', { what: `the PR of #${t.id} to be merged` });
+  } finally {
+    scheduler.stop();
+    await running;
+  }
   assert.equal(db.getTask(t.id)!.pr?.state, 'merged');
 });

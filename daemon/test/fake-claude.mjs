@@ -31,6 +31,7 @@
 import { execFileSync } from 'node:child_process';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { setTimeout as sleep } from 'node:timers/promises';
 
 const args = process.argv.slice(2);
 const given = args[args.indexOf('-p') + 1] ?? '';
@@ -165,7 +166,7 @@ if (isPlanner) {
 } else if (prompt.includes('FAKE_NEEDS_SETUP') && !existsSync('setup-done.txt')) {
   result('setup-done.txt is missing.\nSTATUS: BLOCKED: setup did not run');
 } else if (prompt.includes('FAKE_SLOW') || (prompt.includes('FAKE_STALL') && resume === undefined)) {
-  await new Promise((r) => setTimeout(r, 30_000));
+  await sleep(30_000); // time passes: a slow claude, until it is stopped
   result('slow done\nSTATUS: DONE');
 } else {
   // The plan file AgentDeck put in the worktree. FAKE_PLAN_ALL marks every step in it done, linked or not, with a note in
