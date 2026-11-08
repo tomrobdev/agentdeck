@@ -78,11 +78,12 @@ Status changes and what follows them: domain events, the follow-ups table, task_
 
 ## run
 
-The run's lifecycle: the worker, the claude process, resuming, prompts, logs, the live view and unblock runs.
+The run's lifecycle: the worker, the claude process, resuming, prompts, logs, the live view, unblock runs and review runs.
 
 - daemon/src/domain/runs/run.ts
 - daemon/src/domain/runs/prompt.ts
 - daemon/src/domain/runs/unblock.ts
+- daemon/src/domain/runs/review.ts
 - daemon/src/domain/runs/translate/
 - daemon/src/domain/repos/protected-edits.ts
 - daemon/src/application/runs/worker.ts

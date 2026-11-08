@@ -149,7 +149,7 @@ function planSection(plan: PrPlan): string[] {
 export function buildPrBody(task: { id: number }, runs: PrRun[], plan: PrPlan | null = null): string {
   const rows = runs.map((r) => {
     const tests = r.tests_passed === null ? '-' : r.tests_passed ? 'pass' : 'fail';
-    const kind = r.kind === 'resolve' ? ' (conflicts)' : r.kind === 'unblock' ? ' (unblock)' : '';
+    const kind = r.kind === 'resolve' ? ' (conflicts)' : r.kind === 'unblock' ? ' (unblock)' : r.kind === 'review' ? ' (review)' : '';
     return `| ${r.attempt}${kind} | ${r.outcome ?? '-'} | ${r.num_turns ?? '-'} | $${r.cost_usd.toFixed(2)} | ${tests} |`;
   });
   return [

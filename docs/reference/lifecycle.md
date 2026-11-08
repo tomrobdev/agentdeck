@@ -16,7 +16,7 @@ stateDiagram-v2
   running --> failed: finish/failed, recover/exhausted
   running --> cancel_requested: cancel
   running --> cancelled: finish/cancelled
-  done --> queued: retry
+  done --> queued: retry, review_retry
   done --> blocked: conflict
   blocked --> queued: retry, unblock_retry
   blocked --> done: mark_done, pr_merged

@@ -18,7 +18,7 @@ const { openDb } = await import('../src/db/index.ts');
 const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
 const { addTask, editTask, pilotStats, syncNow, updateRepo, updateSettings } = await import('../src/application/actions.ts');
 const { DEFAULT_MODEL, modelSourceText, newTaskModel } = await import('../src/domain/work/index.ts');
-const { DEFAULT_SUPPORT_MODEL, runModel } = await import('../src/domain/runs/index.ts');
+const { DEFAULT_REVIEW_MODEL, DEFAULT_SUPPORT_MODEL, runModel } = await import('../src/domain/runs/index.ts');
 const { measureByModel } = await import('../src/domain/insights/index.ts');
 const { UNKNOWN_MODEL, interventionModel } = await import('../src/domain/insights/by-model.ts');
 const { repoCommands } = await import('../src/cli/repos.ts');
@@ -40,11 +40,14 @@ test('newTaskModel: the model asked for, else the repo’s, else the default_mod
   assert.equal(modelSourceText('asked'), null);
 });
 
-test('runModel: a work run takes the task’s model, a resolve or unblock run the support model', () => {
-  const task = { model: 'opus' };
-  assert.equal(runModel('work', task, 'haiku'), 'opus');
-  assert.equal(runModel('resolve', task, 'haiku'), 'haiku');
-  assert.equal(runModel('unblock', task, 'haiku'), 'haiku');
+test('runModel: a work run takes the task’s model, a resolve or unblock run the support model, a review run the review model', () => {
+  const task = { model: 'sonnet' };
+  const models = { support_model: 'haiku', review_model: 'opus' };
+  assert.equal(runModel('work', task, models), 'sonnet');
+  assert.equal(runModel('resolve', task, models), 'haiku');
+  assert.equal(runModel('unblock', task, models), 'haiku');
+  assert.equal(runModel('review', task, models), 'opus');
+  assert.equal(DEFAULT_REVIEW_MODEL, 'opus', 'a reviewer at least as strong as the worker');
 });
 
 test('measureByModel: a row per recorded model, unknown last, and interventions go to the run before them', () => {

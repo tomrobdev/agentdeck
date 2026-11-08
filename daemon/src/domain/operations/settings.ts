@@ -12,6 +12,8 @@ export interface Settings {
   default_model: string;
   /** The model resolve and unblock runs use, in place of their task's (`runModel` in domain/runs/run.ts). */
   support_model: string;
+  /** The model review runs use (`runModel` in domain/runs/run.ts); opus by default, a reviewer at least as strong as the worker. */
+  review_model: string;
   /** Restart the daemon onto new code when daemon/src changes and nothing is running. */
   reload_on_change: boolean;
 }

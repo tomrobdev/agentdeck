@@ -538,16 +538,19 @@ Where opening a failed PR again stands. `due`: the PR refresh opens it now. `wai
 
 ### Review
 
-One review of a task. A draft has no `submitted_at` and no `kind` yet.
+One review of a task. A draft has no `submitted_at` and no `kind` yet, and no head or diff: they are read at submit.
 
 | Field          | Type                                     | Comment           |
 | -------------- | ---------------------------------------- | ----------------- |
 | `id`           | `ReviewId`                               |                   |
 | `task_id`      | `TaskId`                                 |                   |
 | `kind`         | `"comment" \| "request_changes" \| null` |                   |
+| `by`           | `"person" \| "review_run"`               |                   |
 | `body`         | `string`                                 | The overall note. |
 | `created_at`   | `string`                                 |                   |
 | `submitted_at` | `string \| null`                         |                   |
+| `head_commit`  | `string \| null`                         |                   |
+| `diff_hash`    | `string \| null`                         |                   |
 
 ### ReviewComment
 
@@ -586,10 +589,22 @@ A review with its comments, oldest first.
 | `id`           | `ReviewId`                               |                   |
 | `task_id`      | `TaskId`                                 |                   |
 | `kind`         | `"comment" \| "request_changes" \| null` |                   |
+| `by`           | `"person" \| "review_run"`               |                   |
 | `body`         | `string`                                 | The overall note. |
 | `created_at`   | `string`                                 |                   |
 | `submitted_at` | `string \| null`                         |                   |
+| `head_commit`  | `string \| null`                         |                   |
+| `diff_hash`    | `string \| null`                         |                   |
 | `comments`     | `ReviewComment[]`                        |                   |
+
+### ReviewedDiff
+
+The changes a submitted review read: the task's head commit, and the patch-id of the task's changes against the base branch (`diffHash` on the Workspace port). A sync that only brings in the base keeps the patch-id, so it needs no new review. Each is null when it could not be read (no branch, no base).
+
+| Field         | Type             | Comment |
+| ------------- | ---------------- | ------- |
+| `head_commit` | `string \| null` |         |
+| `diff_hash`   | `string \| null` |         |
 
 ### StoredChecks
 
@@ -719,12 +734,12 @@ Problems found in the daemon log.
 
 A claude process group recorded on a run, found alive.
 
-| Field   | Type                                            | Comment                         |
-| ------- | ----------------------------------------------- | ------------------------------- |
-| `kind`  | `"planner" \| "work" \| "resolve" \| "unblock"` |                                 |
-| `run`   | `number`                                        |                                 |
-| `pid`   | `number`                                        |                                 |
-| `ended` | `boolean`                                       | The run has a finished-at time. |
+| Field   | Type                                                        | Comment                         |
+| ------- | ----------------------------------------------------------- | ------------------------------- |
+| `kind`  | `"planner" \| "review" \| "work" \| "resolve" \| "unblock"` |                                 |
+| `run`   | `number`                                                    |                                 |
+| `pid`   | `number`                                                    |                                 |
+| `ended` | `boolean`                                                   | The run has a finished-at time. |
 
 ### ReloadDecision
 
@@ -781,15 +796,16 @@ A task in running (or being cancelled) and the process of its unfinished run, if
 
 ### Settings
 
-| Field              | Type              | Comment                                                                                              |
-| ------------------ | ----------------- | ---------------------------------------------------------------------------------------------------- |
-| `max_concurrent`   | `number`          |                                                                                                      |
-| `budget`           | `Budget`          |                                                                                                      |
-| `notify`           | `NotifySettings`  |                                                                                                      |
-| `planner`          | `PlannerSettings` |                                                                                                      |
-| `default_model`    | `string`          | The model a new task takes when neither it nor its repo names one.                                   |
-| `support_model`    | `string`          | The model resolve and unblock runs use, in place of their task's (`runModel` in domain/runs/run.ts). |
-| `reload_on_change` | `boolean`         | Restart the daemon onto new code when daemon/src changes and nothing is running.                     |
+| Field              | Type              | Comment                                                                                                                     |
+| ------------------ | ----------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `max_concurrent`   | `number`          |                                                                                                                             |
+| `budget`           | `Budget`          |                                                                                                                             |
+| `notify`           | `NotifySettings`  |                                                                                                                             |
+| `planner`          | `PlannerSettings` |                                                                                                                             |
+| `default_model`    | `string`          | The model a new task takes when neither it nor its repo names one.                                                          |
+| `support_model`    | `string`          | The model resolve and unblock runs use, in place of their task's (`runModel` in domain/runs/run.ts).                        |
+| `review_model`     | `string`          | The model review runs use (`runModel` in domain/runs/run.ts); opus by default, a reviewer at least as strong as the worker. |
+| `reload_on_change` | `boolean`         | Restart the daemon onto new code when daemon/src changes and nothing is running.                                            |
 
 ## `domain/proposals/`
 
@@ -838,31 +854,32 @@ A task in running (or being cancelled) and the process of its unfinished run, if
 
 ### Repo
 
-| Field                  | Type               | Comment                                                                                                  |
-| ---------------------- | ------------------ | -------------------------------------------------------------------------------------------------------- |
-| `id`                   | `RepoId`           |                                                                                                          |
-| `name`                 | `string`           |                                                                                                          |
-| `path`                 | `string`           |                                                                                                          |
-| `base_branch`          | `string`           |                                                                                                          |
-| `test_cmd`             | `string \| null`   |                                                                                                          |
-| `allowed_tools`        | `string[] \| null` | Tool rules the repo set itself; null = the generic defaults plus the toolchain's rules.                  |
-| `auto_approve`         | `boolean`          | Planner tasks skip approval.                                                                             |
-| `proposed_at`          | `string \| null`   |                                                                                                          |
-| `toolchain`            | `string \| null`   | pnpm \| yarn \| npm \| cargo \| uv \| go, null = not detected                                            |
-| `setup_cmd`            | `string \| null`   | run in each worktree before claude                                                                       |
-| `paused_reason`        | `string \| null`   | set = no task of this repo is claimed until `repo resume` or a passing doctor                            |
-| `pr_mode`              | `PrMode`           |                                                                                                          |
-| `merge_method`         | `MergeMethod`      | how a PR is merged from the app unless the person picks another                                          |
-| `auto_resolve`         | `boolean`          | The daemon starts a resolve run on its own when a branch conflicts with the base.                        |
-| `auto_unblock`         | `boolean`          | The daemon starts an unblock run on its own when a task blocks (domain/runs/unblock.ts); off by default. |
-| `sandbox`              | `boolean`          | The agent's Bash commands run in Claude Code's sandbox (the default).                                    |
-| `archived_at`          | `string \| null`   | set = hidden everywhere and its work stopped, until `repo unarchive`                                     |
-| `network`              | `string[]`         | Hosts sandboxed commands may reach; none = empty.                                                        |
-| `auto_merge`           | `boolean`          | The daemon merges a done task's PR on its own when it passes the auto-merge check.                       |
-| `auto_merge_max_lines` | `number`           | a PR changing more lines (additions + deletions) needs a person                                          |
-| `auto_merge_skip`      | `string[]`         | Path prefixes; a PR touching one needs a person.                                                         |
-| `model`                | `string \| null`   | The model a new task of this repo takes when it names none; null follows the default_model setting.      |
-| `created_at`           | `string`           |                                                                                                          |
+| Field                  | Type               | Comment                                                                                                                                                        |
+| ---------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                   | `RepoId`           |                                                                                                                                                                |
+| `name`                 | `string`           |                                                                                                                                                                |
+| `path`                 | `string`           |                                                                                                                                                                |
+| `base_branch`          | `string`           |                                                                                                                                                                |
+| `test_cmd`             | `string \| null`   |                                                                                                                                                                |
+| `allowed_tools`        | `string[] \| null` | Tool rules the repo set itself; null = the generic defaults plus the toolchain's rules.                                                                        |
+| `auto_approve`         | `boolean`          | Planner tasks skip approval.                                                                                                                                   |
+| `proposed_at`          | `string \| null`   |                                                                                                                                                                |
+| `toolchain`            | `string \| null`   | pnpm \| yarn \| npm \| cargo \| uv \| go, null = not detected                                                                                                  |
+| `setup_cmd`            | `string \| null`   | run in each worktree before claude                                                                                                                             |
+| `paused_reason`        | `string \| null`   | set = no task of this repo is claimed until `repo resume` or a passing doctor                                                                                  |
+| `pr_mode`              | `PrMode`           |                                                                                                                                                                |
+| `merge_method`         | `MergeMethod`      | how a PR is merged from the app unless the person picks another                                                                                                |
+| `auto_resolve`         | `boolean`          | The daemon starts a resolve run on its own when a branch conflicts with the base.                                                                              |
+| `auto_unblock`         | `boolean`          | The daemon starts an unblock run on its own when a task blocks (domain/runs/unblock.ts); off by default.                                                       |
+| `auto_review`          | `boolean`          | The daemon starts a review run on its own when a task is done (domain/runs/review.ts), and a clean verdict may stand in for a person's review; off by default. |
+| `sandbox`              | `boolean`          | The agent's Bash commands run in Claude Code's sandbox (the default).                                                                                          |
+| `archived_at`          | `string \| null`   | set = hidden everywhere and its work stopped, until `repo unarchive`                                                                                           |
+| `network`              | `string[]`         | Hosts sandboxed commands may reach; none = empty.                                                                                                              |
+| `auto_merge`           | `boolean`          | The daemon merges a done task's PR on its own when it passes the auto-merge check.                                                                             |
+| `auto_merge_max_lines` | `number`           | a PR changing more lines (additions + deletions) needs a person                                                                                                |
+| `auto_merge_skip`      | `string[]`         | Path prefixes; a PR touching one needs a person.                                                                                                               |
+| `model`                | `string \| null`   | The model a new task of this repo takes when it names none; null follows the default_model setting.                                                            |
+| `created_at`           | `string`           |                                                                                                                                                                |
 
 ### ToolchainInfo
 
@@ -1012,35 +1029,75 @@ The parts of claude's final `result` event that a run records.
 | `result?`         | `string \| undefined`                                                                                                                                                                         |         |
 | `usage?`          | `{ input_tokens?: number \| undefined; output_tokens?: number \| undefined; cache_read_input_tokens?: number \| undefined; cache_creation_input_tokens?: number \| undefined; } \| undefined` |         |
 
+### ReviewAnswer
+
+A review run's answer: a summary of the changes, and its findings.
+
+| Field      | Type              | Comment |
+| ---------- | ----------------- | ------- |
+| `summary`  | `string`          |         |
+| `findings` | `ReviewFinding[]` |         |
+
+### ReviewContext
+
+| Field  | Type                 | Comment                                                                            |
+| ------ | -------------------- | ---------------------------------------------------------------------------------- |
+| `plan` | `PromptPlan \| null` | The plan the task follows, if any.                                                 |
+| `from` | `string`             | The commit the task's branch left the base at (`diffBase`): the diff starts there. |
+| `head` | `string`             | The task's head commit the review reads.                                           |
+
+### ReviewFinding
+
+One thing a review run found: where it is in the diff, what it says, and whether it stops the task merging.
+
+| Field      | Type             | Comment                                                              |
+| ---------- | ---------------- | -------------------------------------------------------------------- |
+| `path`     | `string`         |                                                                      |
+| `line`     | `number`         | The line it points at, counted on `side`.                            |
+| `side`     | `"old" \| "new"` | The base file (old) or the task's head (new), as a person's comment. |
+| `body`     | `string`         |                                                                      |
+| `blocking` | `boolean`        | True when the task must not merge until it is handled.               |
+
+### ReviewRecord
+
+A review run's review, as it is stored: its kind, its note and its line comments.
+
+| Field      | Type                                                          | Comment |
+| ---------- | ------------------------------------------------------------- | ------- |
+| `kind`     | `"comment" \| "request_changes"`                              |         |
+| `body`     | `string`                                                      |         |
+| `comments` | `Pick<ReviewFinding, "path" \| "line" \| "side" \| "body">[]` |         |
+
 ### Run
 
-| Field                | Type                 | Comment                                                                                                               |
-| -------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `id`                 | `RunId`              |                                                                                                                       |
-| `task_id`            | `TaskId`             |                                                                                                                       |
-| `kind`               | `RunKind`            |                                                                                                                       |
-| `attempt`            | `number`             | a resolve or unblock run carries the attempt it ran beside                                                            |
-| `started_at`         | `string`             |                                                                                                                       |
-| `ended_at`           | `string \| null`     |                                                                                                                       |
-| `outcome`            | `RunOutcome \| null` |                                                                                                                       |
-| `exit_code`          | `number \| null`     |                                                                                                                       |
-| `session_id`         | `string \| null`     | stored when claude's init line names it, so a run a restart ends can be resumed                                       |
-| `num_turns`          | `number \| null`     |                                                                                                                       |
-| `input_tokens`       | `number`             |                                                                                                                       |
-| `output_tokens`      | `number`             |                                                                                                                       |
-| `cache_read_tokens`  | `number`             |                                                                                                                       |
-| `cache_write_tokens` | `number`             |                                                                                                                       |
-| `cost_usd`           | `number`             |                                                                                                                       |
-| `tests_passed`       | `boolean \| null`    | null when no test command                                                                                             |
-| `result_text`        | `string \| null`     |                                                                                                                       |
-| `log_path`           | `string`             |                                                                                                                       |
-| `pid`                | `number \| null`     | claude's process group while the run is live                                                                          |
-| `denials`            | `number`             | tool uses refused by the permission rules during the run                                                              |
-| `live_turns`         | `number`             | turns so far while the run is live (domain/runs/translate/live.ts)                                                    |
-| `live_tool`          | `string \| null`     | the last tool call while the run is live, in a few words                                                              |
-| `pid_at`             | `string \| null`     | when `pid` was stored: claude started then, which can be well after `started_at` (setup, a sync)                      |
-| `model`              | `string \| null`     | The model the run was started with (`runModel`); null for a run from before runs recorded it, which reads as unknown. |
-| `model_id`           | `string \| null`     | The exact model id claude's init line names, such as claude-sonnet-5-5; null until it arrives.                        |
+| Field                | Type                 | Comment                                                                                                                                                                                                                                        |
+| -------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                 | `RunId`              |                                                                                                                                                                                                                                                |
+| `task_id`            | `TaskId`             |                                                                                                                                                                                                                                                |
+| `kind`               | `RunKind`            |                                                                                                                                                                                                                                                |
+| `attempt`            | `number`             | a resolve or unblock run carries the attempt it ran beside                                                                                                                                                                                     |
+| `started_at`         | `string`             |                                                                                                                                                                                                                                                |
+| `ended_at`           | `string \| null`     |                                                                                                                                                                                                                                                |
+| `outcome`            | `RunOutcome \| null` |                                                                                                                                                                                                                                                |
+| `exit_code`          | `number \| null`     |                                                                                                                                                                                                                                                |
+| `session_id`         | `string \| null`     | stored when claude's init line names it, so a run a restart ends can be resumed                                                                                                                                                                |
+| `num_turns`          | `number \| null`     |                                                                                                                                                                                                                                                |
+| `input_tokens`       | `number`             |                                                                                                                                                                                                                                                |
+| `output_tokens`      | `number`             |                                                                                                                                                                                                                                                |
+| `cache_read_tokens`  | `number`             |                                                                                                                                                                                                                                                |
+| `cache_write_tokens` | `number`             |                                                                                                                                                                                                                                                |
+| `cost_usd`           | `number`             |                                                                                                                                                                                                                                                |
+| `tests_passed`       | `boolean \| null`    | null when no test command                                                                                                                                                                                                                      |
+| `result_text`        | `string \| null`     |                                                                                                                                                                                                                                                |
+| `log_path`           | `string`             |                                                                                                                                                                                                                                                |
+| `pid`                | `number \| null`     | claude's process group while the run is live                                                                                                                                                                                                   |
+| `denials`            | `number`             | tool uses refused by the permission rules during the run                                                                                                                                                                                       |
+| `live_turns`         | `number`             | turns so far while the run is live (domain/runs/translate/live.ts)                                                                                                                                                                             |
+| `live_tool`          | `string \| null`     | the last tool call while the run is live, in a few words                                                                                                                                                                                       |
+| `pid_at`             | `string \| null`     | when `pid` was stored: claude started then, which can be well after `started_at` (setup, a sync)                                                                                                                                               |
+| `model`              | `string \| null`     | The model the run was started with (`runModel`); null for a run from before runs recorded it, which reads as unknown.                                                                                                                          |
+| `model_id`           | `string \| null`     | The exact model id claude's init line names, such as claude-sonnet-5-5; null until it arrives.                                                                                                                                                 |
+| `diff_hash`          | `string \| null`     | For a review run, the patch-id of the task's changes it was started to read (`diffHash` on the Workspace port), kept even when the run fails or answers nothing usable, so the diff is known to have had its review run. Null for other kinds. |
 
 ### RunCameTo
 
@@ -1053,6 +1110,15 @@ What a run came to, for `runOutcome`.
 | `testsPassed`  | `boolean \| null`                                                                                                 | Whether the repo's test command passed; null when it was not run (no command, or the agent reported blocked). |
 | `commitsAhead` | `number \| null`                                                                                                  | Commits on the branch past the base; null when not counted (only a run that could be done needs it).          |
 | `denials`      | `number`                                                                                                          | Tool uses the permission rules refused during the run.                                                        |
+
+### RunModels
+
+The settings `runModel` reads: the support model and the review model.
+
+| Field           | Type     | Comment |
+| --------------- | -------- | ------- |
+| `support_model` | `string` |         |
+| `review_model`  | `string` |         |
 
 ### RunSummary
 

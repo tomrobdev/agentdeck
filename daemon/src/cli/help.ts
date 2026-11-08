@@ -22,6 +22,8 @@ Repos
   agentdeck repo set <repo> auto_resolve on|off   start a resolve run on its own when a branch conflicts with the base (default on)
   agentdeck repo set <repo> auto_unblock on|off   start a short unblock run on its own when a task blocks: it retries the task
                                                   with a note or leaves it blocked with a question; uses no attempt (default off)
+  agentdeck repo set <repo> auto_review on|off    start a review run on its own when a task is done: it reads the changes
+                                                  against the task's goal and plan steps; uses no attempt (default off)
   agentdeck repo set <repo> auto_merge on|off     merge a done task's PR on its own once checks and tests pass (default off;
                                                   planner proposals only when auto_approve is off)
   agentdeck repo set <repo> auto_merge_max_lines <n>  a PR changing more lines needs a person (default ${DEFAULT_AUTO_MERGE_MAX_LINES})
@@ -100,6 +102,7 @@ Daemon
                                   planner_enabled (on|off), planner_interval_hours, planner_max_tasks, planner_model,
                                   default_model (a new task's model when neither it nor its repo names one),
                                   support_model (the model of resolve and unblock runs),
+                                  review_model (the model of review runs, default opus),
                                   reload_on_change (on|off): restart onto new daemon/src code once nothing is running
   agentdeck stats [--repo r] [--since <date>] [--by week|model] [--json]  the pilot scorecard measures per repo: tasks done on
                                   the first run (with a Wilson 95% interval), permission denials per run, cost and minutes per

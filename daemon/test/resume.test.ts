@@ -58,6 +58,7 @@ const run = (o: Partial<Run>): Run => ({
   pid_at: null,
   model: 'sonnet',
   model_id: null,
+  diff_hash: null,
   ...o,
 });
 

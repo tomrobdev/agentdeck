@@ -1,7 +1,15 @@
 // Reviews and their comments. A draft is edited freely; a submitted review changes only in its comments' states.
 import { and, asc, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
 import type { ReviewId, TaskId } from '../domain/shared/index.ts';
-import type { CommentSide, CommentState, Review, ReviewComment, ReviewKind, ReviewWithComments } from '../domain/landing/index.ts';
+import type {
+  CommentSide,
+  CommentState,
+  Review,
+  ReviewComment,
+  ReviewKind,
+  ReviewWithComments,
+  ReviewedDiff,
+} from '../domain/landing/index.ts';
 import type { Orm } from './orm.ts';
 import { NOW_SQL } from './sql.ts';
 import { reviewComments, reviews } from './tables.ts';
@@ -17,20 +25,20 @@ export function reviewStore(orm: Orm) {
     orm.select().from(reviewComments).where(eq(reviewComments.review_id, review_id)).orderBy(asc(reviewComments.id)).all().map(toComment);
 
   return {
-    /** A new draft for the task. */
+    /** A new draft for the task, a person's. */
     createReview(task_id: TaskId): Review {
-      return toReview(orm.insert(reviews).values({ task_id }).returning().get());
+      return toReview(orm.insert(reviews).values({ task_id, by: 'person' }).returning().get());
     },
     getReview(id: ReviewId): Review | undefined {
       const row = orm.select().from(reviews).where(eq(reviews.id, id)).get();
       return row && toReview(row);
     },
-    /** The task's draft, if it has one. */
+    /** The task's draft by a person, if it has one. A review run's review is never a person's draft. */
     draftReviewFor(task_id: TaskId): Review | undefined {
       const row = orm
         .select()
         .from(reviews)
-        .where(and(eq(reviews.task_id, task_id), isNull(reviews.submitted_at)))
+        .where(and(eq(reviews.task_id, task_id), eq(reviews.by, 'person'), isNull(reviews.submitted_at)))
         .orderBy(asc(reviews.id))
         .get();
       return row && toReview(row);
@@ -67,12 +75,12 @@ export function reviewStore(orm: Orm) {
           .run().changes > 0
       );
     },
-    /** Submit a draft with its kind and overall note. False when the review is not a draft. */
-    submitReview(id: ReviewId, kind: ReviewKind, body: string): boolean {
+    /** Submit a draft with its kind, overall note and the changes it read. False when the review is not a draft. */
+    submitReview(id: ReviewId, kind: ReviewKind, body: string, read: ReviewedDiff): boolean {
       return (
         orm
           .update(reviews)
-          .set({ kind, body, submitted_at: NOW_SQL })
+          .set({ kind, body, head_commit: read.head_commit, diff_hash: read.diff_hash, submitted_at: NOW_SQL })
           .where(and(eq(reviews.id, id), isNull(reviews.submitted_at)))
           .run().changes > 0
       );
