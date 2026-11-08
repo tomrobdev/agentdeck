@@ -18,9 +18,9 @@ export interface ApproveItem {
   check: ProposalCheck | null;
 }
 
-/** Whether a check has a staleness line, notes or overlaps to show. */
+/** Whether a check has a staleness line, notes or overlaps to show. An overlap a link already joins is settled, so not one. */
 export const hasSomethingToShow = (check: ProposalCheck | null): boolean =>
-  !!check && (proposalCheckLine(check) !== null || check.notes.length > 0 || check.overlaps.length > 0);
+  !!check && (proposalCheckLine(check) !== null || check.notes.length > 0 || check.overlaps.some((o) => !o.linked));
 
 export interface ApprovePlan {
   open: boolean;
