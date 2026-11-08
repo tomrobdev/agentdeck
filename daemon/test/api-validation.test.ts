@@ -53,6 +53,9 @@ function wrongTyped(): [string, unknown][] {
   const t = `/api/tasks/${taskId}`;
   const r = `/api/repos/${repoId}`;
   return [
+    [`${t}/links`, { on: 'x', kind: 'after' }],
+    [`${t}/links`, { on: 0, kind: 'after' }],
+    [`${t}/links`, { on: 1, kind: 'sideways' }],
     ['/api/settings', { max_concurrent: '3' }],
     ['/api/settings', { max_concurrent: [2] }],
     ['/api/settings', { reload_on_change: 'yes' }],
