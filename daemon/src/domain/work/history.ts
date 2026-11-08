@@ -82,6 +82,10 @@ export type PendingFollowUp = Pick<TaskEventRow, 'id' | 'task_id' | 'type' | 'to
  * The note on the task's latest retry ("changes requested in review"), or null if that retry had none. A retry by an
  * unblock run counts: its note starts with UNBLOCK_NOTE (domain/runs/unblock.ts).
  */
+export function latestRetryAt(events: Pick<TaskEventRow, 'type' | 'at'>[]): string | null {
+  return events.findLast((e) => e.type === 'retry' || e.type === 'unblock_retry')?.at ?? null;
+}
+
 export function latestReviewNote(events: Pick<TaskEventRow, 'type' | 'reason'>[]): string | null {
   return events.findLast((e) => e.type === 'retry' || e.type === 'unblock_retry')?.reason ?? null;
 }

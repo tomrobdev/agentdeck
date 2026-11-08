@@ -2,7 +2,7 @@
 export { branchName } from './branch.ts';
 export { checkoutOf } from './checkout.ts';
 export type { Checkout } from './checkout.ts';
-export { isAutoMergeReason, latestReviewNote, mergeReason, prEventReason } from './history.ts';
+export { isAutoMergeReason, latestRetryAt, latestReviewNote, mergeReason, prEventReason } from './history.ts';
 export type { PendingFollowUp, PrEvent, TaskEventRow, TaskEventType } from './history.ts';
 export { parseTaskIds } from './ids.ts';
 export {

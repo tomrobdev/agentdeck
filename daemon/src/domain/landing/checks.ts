@@ -154,9 +154,17 @@ export function logTail(log: string, lines = LOG_TAIL_LINES, bytes = LOG_TAIL_BY
   let tail = log.replace(/\s+$/, '').split('\n').slice(-lines).join('\n');
   while (size(tail) > bytes) {
     const cut = tail.indexOf('\n');
-    tail = cut === -1 ? tail.slice(tail.length - bytes) : tail.slice(cut + 1);
+    tail = cut === -1 ? lastBytes(tail, bytes) : tail.slice(cut + 1);
   }
   return tail;
+}
+
+/** The last `bytes` bytes of a string, starting at a character boundary (a broken first character is dropped). */
+function lastBytes(s: string, bytes: number): string {
+  const encoded = new TextEncoder().encode(s);
+  let start = Math.max(0, encoded.length - Math.max(0, bytes));
+  while (start < encoded.length && (encoded[start] & 0xc0) === 0x80) start++;
+  return new TextDecoder().decode(encoded.subarray(start));
 }
 
 /** One failing check as the worker hears it: its name and link, and its log's tail when there is one. */
