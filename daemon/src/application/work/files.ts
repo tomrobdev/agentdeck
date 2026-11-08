@@ -1,11 +1,11 @@
 // Use cases for reading a task's code: what its branch changed, and its files at head or base.
 // All git reads run in the repo's main checkout, which shares refs with the task worktrees.
-import { branchCommit, changedFiles, commitsBetween, diffBase, filePatch, listTree, objectAt, readFile } from '../../adapters/git.ts';
 import type { App } from '../ports/app.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import {
   type ChangedFile,
   type Changes,
+  type Commit,
   FILE_REFS,
   type FileContent,
   type FilePatch,
@@ -24,14 +24,14 @@ import { ActionError, requireTask, requireTaskRepo } from '../shared/input.ts';
 async function resolveHead(app: App, id: TaskId): Promise<{ repo: Repo; head: string }> {
   const task = requireTask(app, id);
   const repo = requireTaskRepo(app, task);
-  const head = task.checkout?.branch ? await branchCommit(repo.path, task.checkout.branch) : null;
+  const head = task.checkout?.branch ? await app.workspace.branchHead(repo.path, task.checkout.branch) : null;
   if (!head) throw new ActionError('task has no branch yet');
   return { repo, head };
 }
 
 /** Where the commit `head` left the repo's base branch. */
-async function baseOf(repo: Repo, head: string): Promise<{ ref: string; sha: string }> {
-  const base = await diffBase(repo.path, repo.base_branch, head);
+async function baseOf(app: App, repo: Repo, head: string): Promise<{ ref: string; sha: string }> {
+  const base = await app.workspace.diffBase(repo.path, repo.base_branch, head);
   if (!base) throw new ActionError(`no common history with base branch "${repo.base_branch}"`);
   return base;
 }
@@ -39,7 +39,7 @@ async function baseOf(repo: Repo, head: string): Promise<{ ref: string; sha: str
 /** Plus where that branch left the base branch. */
 async function taskRefs(app: App, id: TaskId): Promise<{ repo: Repo; head: string; base: { ref: string; sha: string } }> {
   const { repo, head } = await resolveHead(app, id);
-  return { repo, head, base: await baseOf(repo, head) };
+  return { repo, head, base: await baseOf(app, repo, head) };
 }
 
 /** The commit a file ref names; only `base` needs the merge-base lookup. */
@@ -53,21 +53,24 @@ async function resolveRef(app: App, id: TaskId, ref: FileRef): Promise<{ repo: R
 }
 
 /**
- * Changed files between two commits never change, and the diff view asks for them once per file
+ * What changed between two commits never changes, and the diff view asks for it once per file
  * it shows (to find renames), so the last few results are kept.
  */
-const changedCache = new Map<string, Promise<ChangedFile[]>>();
+const changedCache = new Map<string, Promise<{ files: ChangedFile[]; commits: Commit[] }>>();
 const CHANGED_CACHE_SIZE = 16;
-function changedFilesCached(repoPath: string, base: string, head: string): Promise<ChangedFile[]> {
+function compareCached(app: App, repoPath: string, base: string, head: string): Promise<{ files: ChangedFile[]; commits: Commit[] }> {
   const key = `${repoPath}\0${base}..${head}`;
   let hit = changedCache.get(key);
   if (hit)
     changedCache.delete(key); // re-insert below, so it counts as recently used
-  else hit = changedFiles(repoPath, base, head).catch((err) => (changedCache.delete(key), Promise.reject(err)));
+  else hit = app.workspace.compare(repoPath, base, head).catch((err) => (changedCache.delete(key), Promise.reject(err)));
   changedCache.set(key, hit);
   if (changedCache.size > CHANGED_CACHE_SIZE) changedCache.delete(changedCache.keys().next().value!);
   return hit;
 }
+
+const changedFilesCached = async (app: App, repoPath: string, base: string, head: string): Promise<ChangedFile[]> =>
+  (await compareCached(app, repoPath, base, head)).files;
 
 function path(input: string | null | undefined, opts: { allowRoot?: boolean } = {}): string {
   const p = checkPath(input, opts);
@@ -84,7 +87,7 @@ export function parseFileRef(input: string | null | undefined): FileRef {
 
 export async function taskChanges(app: App, id: TaskId): Promise<Changes> {
   const { repo, head, base } = await taskRefs(app, id);
-  const [files, commits] = await Promise.all([changedFilesCached(repo.path, base.sha, head), commitsBetween(repo.path, base.sha, head)]);
+  const { files, commits } = await compareCached(app, repo.path, base.sha, head);
   return { base_ref: base.ref, base: base.sha, head, files, commits };
 }
 
@@ -92,12 +95,12 @@ export async function taskChanges(app: App, id: TaskId): Promise<Changes> {
  * A task branch measured against the auto-merge limits: the lines it changed against the base (binary files count none)
  * and its paths, renames by both names. Null when git can't say (no branch yet, no common history).
  */
-export async function measureBranch(repo: Repo, branch: string): Promise<AutoMergeMeasured | null> {
+export async function measureBranch(app: App, repo: Repo, branch: string): Promise<AutoMergeMeasured | null> {
   try {
-    const head = await branchCommit(repo.path, branch);
+    const head = await app.workspace.branchHead(repo.path, branch);
     if (!head) return null;
-    const base = await baseOf(repo, head);
-    const files = await changedFilesCached(repo.path, base.sha, head);
+    const base = await baseOf(app, repo, head);
+    const files = await changedFilesCached(app, repo.path, base.sha, head);
     return {
       lines: files.reduce((sum, f) => sum + f.additions + f.deletions, 0),
       paths: files.flatMap((f) => (f.old_path ? [f.path, f.old_path] : [f.path])),
@@ -111,9 +114,9 @@ export async function measureBranch(repo: Repo, branch: string): Promise<AutoMer
 export async function taskDiff(app: App, id: TaskId, rawPath: string | null): Promise<FilePatch> {
   const p = path(rawPath);
   const { repo, head, base } = await taskRefs(app, id);
-  const file = (await changedFilesCached(repo.path, base.sha, head)).find((f) => f.path === p);
+  const file = (await changedFilesCached(app, repo.path, base.sha, head)).find((f) => f.path === p);
   if (!file) throw new ActionError(`${p} is not changed on this task's branch`);
-  const { patch, truncated } = await filePatch(repo.path, base.sha, head, file.old_path ? [file.old_path, p] : [p]);
+  const { patch, truncated } = await app.workspace.filePatch(repo.path, base.sha, head, file.old_path ? [file.old_path, p] : [p]);
   return { path: p, patch, truncated };
 }
 
@@ -122,8 +125,9 @@ export async function taskTree(app: App, id: TaskId, rawRef: string | null, rawP
   const ref = parseFileRef(rawRef);
   const dir = path(rawPath, { allowRoot: true });
   const { repo, sha } = await resolveRef(app, id, ref);
-  if ((await objectAt(repo.path, sha, dir))?.type !== 'tree') throw new ActionError(`no folder ${dir} at ${ref}`);
-  return { ref, sha, path: dir, entries: await listTree(repo.path, sha, dir) };
+  const entries = await app.workspace.listTree(repo.path, sha, dir);
+  if (!entries) throw new ActionError(`no folder ${dir} at ${ref}`);
+  return { ref, sha, path: dir, entries };
 }
 
 /** A file at head or base. Text is cut at TEXT_LIMIT; a binary file has no text. */
@@ -131,7 +135,7 @@ export async function taskFile(app: App, id: TaskId, rawRef: string | null, rawP
   const ref = parseFileRef(rawRef);
   const p = path(rawPath);
   const { repo, sha } = await resolveRef(app, id, ref);
-  const file = await readFile(repo.path, sha, p, TEXT_LIMIT);
+  const file = await app.workspace.readFile(repo.path, sha, p, TEXT_LIMIT);
   if (!file) throw new ActionError(`no file ${p} at ${ref}`);
   const binary = isBinary(file.bytes);
   const { text, truncated } = binary ? { text: null, truncated: false } : capText(file.bytes, TEXT_LIMIT);

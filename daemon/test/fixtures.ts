@@ -16,15 +16,23 @@ type Db = ReturnType<typeof openDb>;
  */
 const real = () => import('../src/compose.ts');
 
-/** The ports a test's App gets unless it hands in its own (the in-memory fakes in `fakes.ts`): the real adapters. */
-const testPorts = (): Ports => ({
-  agent: { run: async (s) => (await real()).realAgent().run(s), find: async () => (await real()).realAgent().find() },
-  codeHost: new Proxy({} as Ports['codeHost'], {
+/** A port whose every method loads the real adapter on its first call, then calls it. */
+const lazy = <T extends object>(load: (compose: Awaited<ReturnType<typeof real>>) => T): T =>
+  new Proxy({} as T, {
     get:
       (_, name: string) =>
       async (...args: unknown[]) =>
-        ((await real()).realCodeHost() as any)[name](...args),
-  }),
+        (load(await real()) as any)[name](...args),
+  });
+
+/**
+ * The ports a test's App gets unless it hands in its own (the in-memory fakes in `fakes.ts`): the real adapters.
+ * Workspace has no fake: tests run it on real git in a temporary folder.
+ */
+const testPorts = (): Ports => ({
+  agent: lazy((c) => c.realAgent()),
+  codeHost: lazy((c) => c.realCodeHost()),
+  workspace: lazy((c) => c.realWorkspace()),
 });
 
 /**

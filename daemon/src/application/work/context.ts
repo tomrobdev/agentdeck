@@ -1,7 +1,6 @@
 // The live state of a repo's queue for an agent's session (`agentdeck context`, run by Claude Code's hooks).
 import { realpathSync } from 'node:fs';
 import { join, sep } from 'node:path';
-import { headSummary } from '../../adapters/git.ts';
 import { WORKTREE_DIR } from '../../config.ts';
 import type { App } from '../ports/app.ts';
 import type { Repo } from '../../domain/repos/index.ts';
@@ -58,6 +57,7 @@ export async function liveContext(app: App, opts: { repo: Repo; after: number | 
     .listTasks()
     .filter((t) => t.repo_id === opts.repo.id && ([...OPEN_STATUSES, 'blocked', 'failed'].includes(t.status) || isReview(stageOf(t))));
   const open = filterTasks(withViews(app, maybeOpen).map(listable), { states: OPEN_STATES, repo_id: opts.repo.id, sort: 'attention' });
+  const head = await app.workspace.head(opts.repo.path);
   const lines = digest({
     header: {
       repo: opts.repo.name,
@@ -67,7 +67,7 @@ export async function liveContext(app: App, opts: { repo: Repo; after: number | 
       max_concurrent: st.max_concurrent,
       governor: st.governor,
       rate_limited_until: st.rate_limited_until && st.rate_limited_until * 1000 > Date.now() ? st.rate_limited_until : null,
-      head: await headSummary(opts.repo.path),
+      head: head && { branch: head.branch, commit: head.short, subject: head.subject },
     },
     events,
     open,

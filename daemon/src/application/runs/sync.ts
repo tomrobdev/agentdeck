@@ -1,24 +1,9 @@
 // Syncs task branches with their base branch; a conflict starts a resolve run.
 // The daemon does the git work in the task's worktree (agents cannot fetch); only a real conflict starts a claude run.
-import {
-  abortMerge,
-  aheadOfRemote,
-  commitLeftovers,
-  concludeMerge,
-  conflictedFiles,
-  ensureWorktree,
-  filesWithMarkers,
-  headCommit,
-  mergeInProgress,
-  mergeRef,
-  mergeSides,
-  refExists,
-  startPoint,
-} from '../../adapters/git.ts';
 import { writeEvent } from '../../adapters/run-log.ts';
-import { runCommand } from '../../adapters/shell.ts';
 import { TEST_TIMEOUT_MS } from '../../config.ts';
 import type { App } from '../ports/app.ts';
+import type { SyncFinish } from '../ports/workspace.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import { type SyncResult, conflictReason, syncResultOf, syncSummary } from '../../domain/landing/index.ts';
 import type { Repo } from '../../domain/repos/index.ts';
@@ -49,38 +34,35 @@ interface SyncOptions {
  * Never throws.
  */
 export async function syncBranch(app: App, task: Task, repo: Repo, worktree: string, opts: SyncOptions): Promise<SyncResult> {
+  const ws = app.workspace;
   let before: string | undefined;
   try {
-    // A merge left half done by a crash would otherwise be committed with its markers.
-    if (await mergeInProgress(worktree)) await abortMerge(worktree, await headCommit(worktree));
-    await commitLeftovers(worktree, leftoversMessage(task));
-    const ref = await startPoint(repo.path, repo.base_branch);
-    if (!(await refExists(worktree, ref))) {
-      const reason = `there is no ${ref} to sync with`;
+    const merge = await ws.startSync(repo, worktree, leftoversMessage(task));
+    if (merge.kind === 'no_base') {
+      const reason = `there is no ${merge.ref} to sync with`;
       console.error(`task ${task.id}: ${reason}`);
       return { kind: 'error', reason };
     }
-
-    before = await headCommit(worktree);
-    const merge = await mergeRef(worktree, ref);
     if (merge.kind === 'up_to_date') return merge;
+    before = merge.before;
     if (merge.kind === 'merged') {
       if (opts.runTests && repo.test_cmd) {
-        const tests = await runCommand(repo.test_cmd, worktree, TEST_TIMEOUT_MS);
+        const tests = await ws.runCommand(repo.test_cmd, worktree, TEST_TIMEOUT_MS);
         if (!tests.passed) {
-          await abortMerge(worktree, before);
+          await ws.undoSync(worktree, before);
           return { kind: 'failed', files: [], reason: `tests failed after merging ${repo.base_branch}: ${lastLine(tests.output)}` };
         }
       }
       return { kind: 'clean' };
     }
     if (!opts.allowResolve) {
-      await abortMerge(worktree, before);
+      await ws.undoSync(worktree, before);
       return { kind: 'needs_resolution', files: merge.files };
     }
-    return await resolveConflicts(app, task, repo, worktree, before, merge.files, opts.runTests);
+    const { files, ours, theirs } = merge;
+    return await resolveConflicts(app, task, repo, worktree, before, { files, ours, theirs }, opts.runTests);
   } catch (err) {
-    if (before) await abortMerge(worktree, before).catch(() => {});
+    if (before) await ws.undoSync(worktree, before).catch(() => {});
     return { kind: 'error', reason: errorMessage(err) };
   }
 }
@@ -92,10 +74,11 @@ async function resolveConflicts(
   repo: Repo,
   worktree: string,
   before: string,
-  files: string[],
+  conflict: { files: string[]; ours: string[]; theirs: string[] },
   runTests: boolean,
 ): Promise<SyncResult> {
-  const prompt = buildResolvePrompt(task, { base: repo.base_branch, files, ...(await mergeSides(worktree)), testCmd: repo.test_cmd });
+  const { files } = conflict;
+  const prompt = buildResolvePrompt(task, { base: repo.base_branch, ...conflict, testCmd: repo.test_cmd });
   const opened = openTaskRun(app, task, 'resolve');
   const { log } = opened;
   let fields: Partial<Run> = {};
@@ -111,9 +94,9 @@ async function resolveConflicts(
       outcome = settled.outcome;
       reason = 'reason' in settled ? settled.reason : '';
     } else {
-      reason = await checkResolution(worktree, before, files, task);
+      reason = resolutionProblem(await app.workspace.finishSync(worktree, files, before, leftoversMessage(task)));
       if (!reason && runTests && repo.test_cmd) {
-        const tests = await runCommand(repo.test_cmd, worktree, TEST_TIMEOUT_MS);
+        const tests = await app.workspace.runCommand(repo.test_cmd, worktree, TEST_TIMEOUT_MS);
         writeEvent(log, { type: 'agentdeck_tests', passed: tests.passed, output: tests.output });
         fields.tests_passed = tests.passed;
         if (!tests.passed) reason = `tests failed: ${lastLine(tests.output)}`;
@@ -125,21 +108,24 @@ async function resolveConflicts(
     reason = errorMessage(err);
   }
 
-  if (outcome !== 'done') await abortMerge(worktree, before).catch(() => {});
+  if (outcome !== 'done') await app.workspace.undoSync(worktree, before).catch(() => {});
   await endTaskRun(app, opened, outcome, reason, fields);
 
   return syncResultOf(outcome, files, reason);
 }
 
-/** After a resolve run said it was done: conclude the merge and say what is wrong with it, or '' when nothing is. */
-async function checkResolution(worktree: string, before: string, files: string[], task: Task): Promise<string> {
-  const marked = filesWithMarkers(worktree, files);
-  if (marked.length) return `conflict markers are still in ${marked.join(', ')}`;
-  await concludeMerge(worktree);
-  await commitLeftovers(worktree, leftoversMessage(task));
-  if ((await mergeInProgress(worktree)) || (await conflictedFiles(worktree)).length) return 'the merge was left unfinished';
-  if ((await headCommit(worktree)) === before) return 'the merge was not committed';
-  return '';
+/** What is wrong with a merge a resolve run said it settled, or '' when nothing is. */
+function resolutionProblem(finish: SyncFinish): string {
+  switch (finish.kind) {
+    case 'markers':
+      return `conflict markers are still in ${finish.files.join(', ')}`;
+    case 'unfinished':
+      return 'the merge was left unfinished';
+    case 'not_committed':
+      return 'the merge was not committed';
+    case 'done':
+      return '';
+  }
 }
 
 export interface SyncReport {
@@ -164,7 +150,7 @@ async function pushIfNeeded(
   if (!branch || !openPrUrl(task.pr)) return { pushed: false };
   try {
     // A branch that was merged but not pushed (the push failed last time) still needs pushing.
-    if (!changed && !(await aheadOfRemote(worktree, branch))) return { pushed: false };
+    if (!changed && !(await app.workspace.unpushedCommits(worktree, branch))) return { pushed: false };
     await app.codeHost.push(repo.path, branch);
     return { pushed: true };
   } catch (err) {
@@ -198,7 +184,7 @@ export async function syncTask(app: App, id: TaskId, opts: { manual: boolean }):
 
 async function syncMarked(app: App, task: Task, repo: Repo, opts: { manual: boolean }): Promise<SyncReport> {
   const id = task.id;
-  const wt = await ensureWorktree(repo, task);
+  const wt = await app.workspace.prepareCheckout(repo, task);
   if (wt.path !== task.checkout?.worktree) app.setCheckout(id, { worktree: wt.path });
   const res = await syncBranch(app, task, repo, wt.path, { allowResolve: opts.manual || repo.auto_resolve, runTests: true });
   switch (res.kind) {

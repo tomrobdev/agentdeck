@@ -1,11 +1,8 @@
 // Runs one attempt of a claimed task: worktree, setup, claude, tests, then the task's next status.
-import { commitLeftovers, commitsAhead, ensureWorktree } from '../../adapters/git.ts';
-import { writePlanFile } from '../../adapters/plan-file.ts';
-import { applyProtectedEdits } from '../../adapters/protected-edits.ts';
 import { writeEvent } from '../../adapters/run-log.ts';
-import { runCommand } from '../../adapters/shell.ts';
 import { SETUP_TIMEOUT_MS, TEST_TIMEOUT_MS, ensureDirs } from '../../config.ts';
 import type { App } from '../ports/app.ts';
+import type { Checkout } from '../ports/workspace.ts';
 import { conflictReason, syncSummary } from '../../domain/landing/index.ts';
 import { unfinishedSteps, unfinishedSummary } from '../../domain/work/index.ts';
 import { type PromptPlan, buildPrompt, buildResumePrompt } from '../../domain/runs/index.ts';
@@ -40,9 +37,9 @@ export async function runTask(app: App, task: Task): Promise<WorkerResult> {
   const repo = app.getRepo(task.repo_id);
   if (!repo) return finish(app, task, null, { outcome: 'failed', reason: `repo ${task.repo_id} not found` });
 
-  let wt: { branch: string; path: string };
+  let wt: Checkout;
   try {
-    wt = await ensureWorktree(repo, task);
+    wt = await app.workspace.prepareCheckout(repo, task);
   } catch (err) {
     return finish(app, task, null, { outcome: 'failed', reason: `worktree: ${errorMessage(err)}` });
   }
@@ -59,8 +56,9 @@ export async function runTask(app: App, task: Task): Promise<WorkerResult> {
 }
 
 /** The attempt's run once its row is open: everything up to the outcome, which `finish` records. */
-async function runOpened(app: App, task: Task, repo: Repo, wt: { branch: string; path: string }, opened: OpenedRun): Promise<WorkerResult> {
+async function runOpened(app: App, task: Task, repo: Repo, wt: Checkout, opened: OpenedRun): Promise<WorkerResult> {
   const { runId, log } = opened;
+  const ws = app.workspace;
   const previousRuns = app.runsForTask(task.id).filter((r) => r.id !== runId);
   // A daemon restart cut the attempt's last run off: continue its claude session (with `prompt` as the fallback),
   // unless the prompt or plan was edited since, which the session never saw.
@@ -96,7 +94,7 @@ async function runOpened(app: App, task: Task, repo: Repo, wt: { branch: string;
   // Install dependencies before the agent starts: it isn't allowed to install them itself.
   const setUp = async (): Promise<WorkerResult | null> => {
     if (!repo.setup_cmd) return null;
-    const setup = await runCommand(repo.setup_cmd, wt.path, SETUP_TIMEOUT_MS);
+    const setup = await ws.runCommand(repo.setup_cmd, wt.path, SETUP_TIMEOUT_MS);
     writeEvent(log, { type: 'agentdeck_setup', cmd: repo.setup_cmd, passed: setup.passed, output: setup.output });
     if (setup.passed) return null;
     pauseRepo(app, repo, `setup failed on task #${task.id}`);
@@ -129,7 +127,7 @@ async function runOpened(app: App, task: Task, repo: Repo, wt: { branch: string;
 
   // The plan goes in the worktree's plan file, which git ignores, for the worker to set its steps' statuses in.
   try {
-    await writePlanFile(wt.path, plan?.html ?? null);
+    await ws.writePlanFile(wt.path, plan?.html ?? null);
   } catch (err) {
     writeEvent(log, { type: 'agentdeck_error', text: `write plan file: ${errorMessage(err)}` });
   }
@@ -145,13 +143,13 @@ async function runOpened(app: App, task: Task, repo: Repo, wt: { branch: string;
   const runFields: Partial<Run> = ran.fields;
 
   try {
-    await commitLeftovers(wt.path, leftoversMessage(task));
+    await ws.commit(wt.path, leftoversMessage(task));
   } catch (err) {
     writeEvent(log, { type: 'agentdeck_error', text: `commit leftovers: ${errorMessage(err)}` });
   }
   // Files the worker may not edit itself (under .claude/) and wrote to the edits folder instead: committed before the tests.
   try {
-    const edits = await applyProtectedEdits(wt.path);
+    const edits = await ws.applyProtectedEdits(wt.path);
     if (edits.applied.length || edits.refused.length) writeEvent(log, { type: 'agentdeck_protected_edits', ...edits });
   } catch (err) {
     writeEvent(log, { type: 'agentdeck_error', text: `apply protected edits: ${errorMessage(err)}` });
@@ -169,12 +167,12 @@ async function runOpened(app: App, task: Task, repo: Repo, wt: { branch: string;
     // The answers to the review's comments are stored whatever the status; comments with none are named in the run's summary.
     if (review && runFields.result_text) runFields.result_text = recordAnswers(app, review.comments, runFields.result_text);
     if (!status.blocked && repo.test_cmd) {
-      const tests = await runCommand(repo.test_cmd, wt.path, TEST_TIMEOUT_MS);
+      const tests = await ws.runCommand(repo.test_cmd, wt.path, TEST_TIMEOUT_MS);
       writeEvent(log, { type: 'agentdeck_tests', passed: tests.passed, output: tests.output });
       runFields.tests_passed = tests.passed;
       testsPassed = tests.passed;
     }
-    if (!status.blocked && testsPassed !== false) ahead = await commitsAhead(wt.path, repo.base_branch);
+    if (!status.blocked && testsPassed !== false) ahead = await ws.commitsAhead(wt.path, repo.base_branch);
   }
   const { result: outcome, pause } = runOutcome({ end, status, testsPassed, commitsAhead: ahead, denials: denials.length });
 

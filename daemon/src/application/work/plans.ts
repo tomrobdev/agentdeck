@@ -1,6 +1,5 @@
 // Plans: stored in AgentDeck per task, named after the task they belong to (`112-plans-in-agentdeck.html`). A task
 // follows its linked plan (plan_task) or else its own; each run gets it in the worktree's plan file and gives it back.
-import { readGivenPlan, readPlanFile, writeGivenPlan } from '../../adapters/plan-file.ts';
 import type { App } from '../ports/app.ts';
 import {
   type OwnPlan,
@@ -53,10 +52,10 @@ export function planForRun(app: App, task: Task): PromptPlan | null {
  * recorded as the given copy, so taking the same file again changes nothing. Returns whether a plan changed.
  */
 export async function takePlanFile(app: App, task: Task, worktree: string): Promise<boolean> {
-  const [written, given] = await Promise.all([readPlanFile(worktree), readGivenPlan(worktree)]);
+  const { written, given } = await app.workspace.readPlanFiles(worktree);
   if (written === null || !parsePlan(written)) return false;
   const changed = storeWrittenPlan(app, task, written, given);
-  await writeGivenPlan(worktree, written);
+  await app.workspace.writeGivenPlan(worktree, written);
   return changed;
 }
 

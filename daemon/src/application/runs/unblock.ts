@@ -1,6 +1,5 @@
 // The unblock run of a blocked task: claude reads why the task stopped, then the daemon queues it again with the run's
 // note or leaves it blocked with the run's question. It takes a slot and uses no attempt (domain/runs/unblock.ts).
-import { commitLeftovers, ensureWorktree } from '../../adapters/git.ts';
 import { writeEvent } from '../../adapters/run-log.ts';
 import type { App } from '../ports/app.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
@@ -54,7 +53,7 @@ async function runOpened(app: App, task: BlockedTask, opened: OpenedRun): Promis
   const { log } = opened;
   const repo = app.getRepo(task.repo_id);
   if (!repo) throw new Error(`repo ${task.repo_id} not found`);
-  const wt = await ensureWorktree(repo, task);
+  const wt = await app.workspace.prepareCheckout(repo, task);
   if (wt.path !== task.checkout?.worktree) app.setCheckout(task.id, { branch: wt.branch, worktree: wt.path });
 
   let plan: PromptPlan | null = null;
@@ -81,7 +80,7 @@ async function runOpened(app: App, task: BlockedTask, opened: OpenedRun): Promis
   });
   // The run may make a small fix; what it left uncommitted is kept on the branch like a worker's.
   try {
-    await commitLeftovers(wt.path, leftoversMessage(task));
+    await app.workspace.commit(wt.path, leftoversMessage(task));
   } catch (err) {
     writeEvent(log, { type: 'agentdeck_error', text: `commit leftovers: ${errorMessage(err)}` });
   }

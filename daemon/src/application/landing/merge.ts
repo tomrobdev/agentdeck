@@ -1,5 +1,4 @@
 // Merging a done task's PR, as a person asked or on its own, and closing one.
-import { removeWorktree } from '../../adapters/git.ts';
 import type { App } from '../ports/app.ts';
 import { type PrDetails, mergeCheck, mergeFindings } from '../../domain/landing/index.ts';
 import { MERGE_METHODS, type MergeMethod, isMergeMethod } from '../../domain/repos/index.ts';
@@ -238,7 +237,7 @@ export async function mergeOpenPr(
     const { branch, worktree } = task.checkout ?? { branch: null, worktree: null };
     if (branch) await app.codeHost.deleteRemoteBranch(repo.path, branch).catch((err) => errors.push(`remote branch: ${errorMessage(err)}`));
     if (worktree)
-      await removeWorktree(repo, worktree).then(
+      await app.workspace.removeCheckout(repo, { worktree }).then(
         () => app.setCheckout(id, { worktree: null }),
         (err) => errors.push(`worktree: ${errorMessage(err)}`),
       );

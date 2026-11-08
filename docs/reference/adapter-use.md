@@ -4,13 +4,12 @@
 
 Each area of `application/` and the adapters it imports, with the number of imports where there is more than one.
 
-| Area                     | Adapters imported                                                                                    |
-| ------------------------ | ---------------------------------------------------------------------------------------------------- |
-| `application/actions.ts` | `run-log.ts`, `service.ts`                                                                           |
-| `application/landing`    | `git.ts` (2), `run-log.ts`                                                                           |
-| `application/operations` | `daemon-api.ts`, `daemon-log.ts`, `git.ts`, `notify.ts`, `processes.ts`, `service.ts`                |
-| `application/proposals`  | `goals.ts`, `run-log.ts`                                                                             |
-| `application/repos`      | `git.ts` (2), `goals.ts`, `repo-root.ts` (2), `run-log.ts`, `shell.ts`                               |
-| `application/runs`       | `git.ts` (3), `plan-file.ts`, `protected-edits.ts`, `repo-root.ts`, `run-log.ts` (4), `shell.ts` (2) |
-| `application/scheduler`  | `caffeinate.ts`, `processes.ts`                                                                      |
-| `application/work`       | `git.ts` (5), `plan-file.ts`, `shell.ts`                                                             |
+| Area                     | Adapters imported                                                           |
+| ------------------------ | --------------------------------------------------------------------------- |
+| `application/actions.ts` | `run-log.ts`, `service.ts`                                                  |
+| `application/landing`    | `run-log.ts`                                                                |
+| `application/operations` | `daemon-api.ts`, `daemon-log.ts`, `notify.ts`, `processes.ts`, `service.ts` |
+| `application/proposals`  | `goals.ts`, `run-log.ts`                                                    |
+| `application/repos`      | `goals.ts`, `run-log.ts`                                                    |
+| `application/runs`       | `run-log.ts` (4)                                                            |
+| `application/scheduler`  | `caffeinate.ts`, `processes.ts`                                             |

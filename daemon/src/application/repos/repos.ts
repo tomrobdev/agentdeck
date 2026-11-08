@@ -2,9 +2,7 @@
 import { normalizeNetwork, settingsPath } from '../../domain/runs/index.ts';
 import { existsSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
-import { deleteBranch, currentBranch, isGitRepo, pruneWorktrees, removeWorktree } from '../../adapters/git.ts';
 import { deleteGoals, goalsPath, readGoals, writeGoals } from '../../adapters/goals.ts';
-import { rootInfo } from '../../adapters/repo-root.ts';
 import { removeFiles } from '../../adapters/run-log.ts';
 import type { App } from '../ports/app.ts';
 import { autoMergeMaxLinesError } from '../../domain/landing/index.ts';
@@ -32,17 +30,18 @@ export async function addRepo(
   const setup = textOrNull(body, 'setup');
   const tools = body.tools === null ? undefined : list(body, 'tools');
   const abs = resolve(path.replace(/^~(?=\/|$)/, process.env.HOME ?? '~'));
-  if (!existsSync(abs) || !(await isGitRepo(abs))) throw new ActionError(`${abs} is not a git repository`);
+  const git = existsSync(abs) ? await app.workspace.inspectRepo(abs) : null;
+  if (!git) throw new ActionError(`${abs} is not a git repository`);
   const repoName = name || basename(abs);
   const nameError = repoNameError(repoName);
   if (nameError) throw new ActionError(nameError);
-  const { files, scripts } = rootInfo(abs);
+  const { files, scripts } = await app.workspace.rootInfo(abs);
   const detected = detectToolchain(files, scripts);
   try {
     return app.addRepo({
       name: repoName,
       path: abs,
-      base_branch: base || (await currentBranch(abs)),
+      base_branch: base || git.branch,
       test_cmd: test || detected?.test_cmd || null,
       // Left null unless given, so the rules follow the repo's scripts as they change (domain/repos/tools.ts).
       allowed_tools: tools?.length ? tools : null,
@@ -186,16 +185,11 @@ export async function deleteRepo(app: App, nameOrId: string | number): Promise<{
   const leftover: string[] = [];
   for (const t of tasks) {
     try {
-      if (t.worktree && existsSync(t.worktree)) await removeWorktree(repo, t.worktree);
-      if (t.branch) await deleteBranch(repo.path, t.branch);
+      const worktree = t.worktree && existsSync(t.worktree) ? t.worktree : null;
+      if (worktree || t.branch) await app.workspace.removeCheckout(repo, { worktree, branch: t.branch });
     } catch (err) {
       leftover.push(`task #${t.id} checkout: ${err instanceof Error ? err.message : String(err)}`);
     }
-  }
-  try {
-    await pruneWorktrees(repo.path);
-  } catch {
-    // the repo's folder may be gone; nothing to prune then
   }
   const logs = [...run_logs, ...planner_logs];
   leftover.push(...removeFiles([...logs, ...logs.map(settingsPath)]));

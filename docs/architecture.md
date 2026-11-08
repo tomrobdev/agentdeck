@@ -59,6 +59,7 @@ flowchart LR
     worker["application/run"]
     db["db/"]
     claude["adapters/claude.ts"]
+    workspace["adapters/workspace.ts"]
     git["adapters/git.ts"]
     github["adapters/github.ts"]
     service["adapters/service.ts"]
@@ -89,21 +90,20 @@ flowchart LR
   worker --> db
   db --> sqlite
   worker --> claude --> claudecli
-  worker --> git --> gitbin
+  worker -- "the Workspace port" --> workspace --> git --> gitbin
   worker --> github --> ghbin
-  worker --> shell
+  workspace --> shell & reporoot
   claude --> processes
   worker --> runlog
-  worker -- "the run's plan, in the worktree" --> planfile
-  worker -- "edits under .claude/ the worker wrote out" --> protectededits --> git
+  workspace -- "the run's plan, in the worktree" --> planfile
+  workspace -- "edits under .claude/ the worker wrote out" --> protectededits --> git
   scheduler --> goals
   goals --> reporoot
   service --> launchd
   notify --> notifications
   watch -. "source changed" .-> scheduler
   caffeinate -. "keeps the Mac awake" .-> scheduler
-  cli -- "agentdeck doctor" --> daemonapi
-  cli -- "agentdeck doctor" --> daemonlog
+  cli -- "agentdeck doctor" --> daemonapi & daemonlog
 ```
 
 ## One task's run
