@@ -1,5 +1,6 @@
 // The daemon's loop: claims queued tasks into free slots when the governor allows, runs the planner
-// when a queue runs dry, and refreshes open PRs, merging those that pass the auto-merge check.
+// when a queue runs dry, opens again the PRs that failed to open, and refreshes open PRs, merging those that pass the
+// auto-merge check.
 import { DEFAULTS } from '../../config.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import { MAX_RESTARTS } from '../../domain/work/index.ts';
@@ -11,6 +12,7 @@ import { resolveConflicting } from '../runs/sync.ts';
 import { autoMerge } from '../landing/auto-merge.ts';
 import { MERGE_REQUEST_POLL_MS, PR_REFRESH_MS, refreshPrStates } from '../landing/refresh.ts';
 import { followUpPending, settle } from '../landing/settle.ts';
+import { retryFailedPrs } from '../landing/open-pr.ts';
 import { runTask } from '../runs/worker.ts';
 import { nextUnblockable, runUnblock } from '../runs/unblock.ts';
 import type { App } from '../ports/app.ts';
@@ -241,7 +243,10 @@ export class Scheduler {
     this.handledPrCheck = Math.max(this.handledPrCheck, requested);
     this.lastPrRefresh = now;
     this.refreshingPrs = true;
-    refreshPrStates(this.app, this.opts.log)
+    // A PR that failed to open is opened again first, so the refresh reads it with the others.
+    retryFailedPrs(this.app, this.opts.log)
+      .catch((err) => this.opts.log(`PR retry crashed: ${err?.stack ?? err}`))
+      .then(() => refreshPrStates(this.app, this.opts.log))
       .then((found) => {
         this.recheckLeft = found.unknown ? Math.max(this.recheckLeft - 1, 0) : 0;
         this.recheckAt = Date.now() + PR_RECHECK_MS;

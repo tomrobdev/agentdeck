@@ -25,6 +25,7 @@ export { closeTaskPr, mergeAll, mergePreview, mergeTask } from './landing/merge.
 export { cancelMergeRequest, requestMerge, requestMerges } from './landing/merge-requests.ts';
 export { setAutoMerge } from './landing/auto-merge.ts';
 export { type FixChecksResult, fixChecks } from './landing/fix-checks.ts';
+export { type OpenTaskPrResult, openTaskPr } from './landing/open-pr.ts';
 export {
   type DoctorReport,
   type RepoPatch,

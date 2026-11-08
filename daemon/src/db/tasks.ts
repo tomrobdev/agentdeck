@@ -398,6 +398,16 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         .all()
         .map(toTask);
     },
+    /** Done tasks whose pull request failed to open, for the PR refresh to open again. */
+    failedPrTasks(): Task[] {
+      return orm
+        .select(TASK_COLUMNS)
+        .from(tasks)
+        .where(and(eq(tasks.status, 'done'), eq(tasks.pr_state, 'failed'), inActiveRepo(tasks.repo_id)))
+        .orderBy(asc(tasks.id))
+        .all()
+        .map(toTask);
+    },
     /**
      * Atomically claim the next queued task of a repo that isn't paused, or undefined if none.
      * A task waits until every task it builds on is done and, if that has a PR, the PR is merged.

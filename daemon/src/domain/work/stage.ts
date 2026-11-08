@@ -1,6 +1,6 @@
 // Where a task stands, derived from its status, its pull request and what it waits for. Pure: types only.
 // The one definition: the CLI's listing and the dashboard (which imports this file) both use it.
-import type { PrState } from '../landing/index.ts';
+import { type PrRetry, type PrState, prNeedsPerson } from '../landing/index.ts';
 import type { TaskStatus } from './lifecycle.ts';
 import type { Waiting } from './start.ts';
 
@@ -9,6 +9,8 @@ type Stage = {
   pr_state: PrState | null;
   /** What a queued task waits for on its builds-on links, as application/task/dependencies.ts waitingFor reports it. */
   waiting?: Waiting | null;
+  /** For a done task whose PR failed to open: whether the PR refresh opens it again, or a person must. */
+  pr_retry?: Pick<PrRetry, 'state'> | null;
 };
 
 /** A task's stage fields from its pull request value: the predicates below read the flat `pr_state` the dashboard receives. */
@@ -36,8 +38,9 @@ export const isWaiting = (t: Pick<Stage, 'status' | 'waiting'>) => t.status === 
 export const isStuck = (t: Pick<Stage, 'status' | 'waiting'>) => t.status === 'queued' && !!t.waiting?.stuck;
 
 /**
- * Status groups, in attention order. Every task is in exactly one; a stuck task needs you, so it isn't queued. Done holds every
- * finished task whose PR doesn't wait on you: merged, closed, or none. The PR chip tells them apart.
+ * Status groups, in attention order. Every task is in exactly one; a stuck task needs you, so it isn't queued, and so does a
+ * done task whose PR the daemon gave up opening. Done holds every finished task whose PR doesn't wait on you: merged, closed,
+ * or none. The PR chip tells them apart.
  */
 export const STATUS_GROUPS = [
   { key: 'needs-you', label: 'Needs you' },
@@ -60,7 +63,7 @@ export function statusGroup(t: Stage): StatusGroup {
     case 'cancel_requested':
       return 'running';
     case 'done':
-      return isReview(t) ? 'review' : 'done';
+      return isReview(t) ? 'review' : prNeedsPerson(t) ? 'needs-you' : 'done';
     default:
       return t.status;
   }

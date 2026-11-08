@@ -8,7 +8,7 @@ import type { PlannerOutcome } from '../domain/proposals/index.ts';
 import type { AutoMergeState } from '../domain/landing/index.ts';
 import type { CheckState } from '../domain/landing/index.ts';
 import type { MergeMethod, PrMode } from '../domain/repos/index.ts';
-import type { PrState } from '../domain/landing/index.ts';
+import type { PrRetry, PrState } from '../domain/landing/index.ts';
 import type { RunKind } from '../domain/runs/index.ts';
 import type { HeadlineState, AttentionWhy } from '../domain/operations/index.ts';
 import type { LinkKind } from '../domain/work/index.ts';
@@ -257,6 +257,11 @@ export interface TaskSummary {
   checks: ChecksSummary | null;
   /** What a queued task waits for; null once it waits for nothing (or it isn't queued). */
   wait: StartWait | null;
+  /**
+   * For a done task whose PR failed to open: `due` or `wait` while the PR refresh opens it again (at `next_at`), `person` once
+   * its retries are used up. Null for any other task.
+   */
+  pr_retry: PrRetry | null;
   created_at: string;
   updated_at: string;
 }
@@ -581,6 +586,13 @@ export interface RequestMergesResult {
 export interface FixChecksResult {
   /** The failing checks sent to the worker, by name. */
   checks: string[];
+  task: TaskDetail;
+}
+
+/** POST /api/tasks/:id/open-pr: a person opened a done task's PR (one that failed to open, never opened, or was closed). */
+export interface OpenPrResult {
+  /** The PR's url. */
+  url: string;
   task: TaskDetail;
 }
 
