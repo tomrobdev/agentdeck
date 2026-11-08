@@ -55,6 +55,9 @@ test('a run must address the open comments of submitted request_changes reviews 
     id: asReviewId(id),
     task_id: asTaskId(1),
     kind: submitted ? kind : null,
+    by: 'person',
+    head_commit: null,
+    diff_hash: null,
     body: '',
     created_at: '',
     submitted_at: submitted ? 'now' : null,
@@ -77,7 +80,7 @@ test('the retry reason is the note, then each comment with where it points', () 
   assert.equal(reviewReason('', [{ ...c(2, 'open'), side: 'old' }]), '- a.ts:2 (old): b2');
 });
 
-test('a draft is built, edited and submitted as a Comment without touching the task', () => {
+test('a draft is built, edited and submitted as a Comment without touching the task', async () => {
   const { db, repo } = setup();
   const task = doneTask(db, repo);
   const draft = actions.startReview(db, task.id);
@@ -88,11 +91,13 @@ test('a draft is built, edited and submitted as a Comment without touching the t
   const id = added.comments[0].id;
   assert.equal(added.comments[0].state, 'open');
   assert.equal(actions.deleteReviewComment(db, id).comments.length, 0);
-  assert.throws(() => actions.submitReview(db, draft.id, { kind: 'comment' }), /needs a note or at least one comment/);
+  await assert.rejects(actions.submitReview(db, draft.id, { kind: 'comment' }), /needs a note or at least one comment/);
 
   actions.addReviewComment(db, draft.id, comment);
   actions.editReview(db, draft.id, { body: 'Mostly fine' });
-  const sent = actions.submitReview(db, draft.id, { kind: 'comment' });
+  const sent = await actions.submitReview(db, draft.id, { kind: 'comment' });
+  assert.equal(sent.by, 'person');
+  assert.deepEqual([sent.head_commit, sent.diff_hash], [null, null], 'a task with no branch: nothing to record');
   assert.equal(sent.kind, 'comment');
   assert.ok(sent.submitted_at);
   assert.equal(db.getTask(task.id)?.status, 'done');
@@ -100,16 +105,16 @@ test('a draft is built, edited and submitted as a Comment without touching the t
   assert.throws(() => actions.editReview(db, draft.id, { body: 'x' }), /already submitted/);
   assert.throws(() => actions.addReviewComment(db, draft.id, comment), /already submitted/);
   assert.throws(() => actions.deleteReviewComment(db, sent.comments[0].id), /already submitted/);
-  assert.throws(() => actions.submitReview(db, draft.id, { kind: 'comment' }), /already submitted/);
+  await assert.rejects(actions.submitReview(db, draft.id, { kind: 'comment' }), /already submitted/);
   assert.notEqual(actions.startReview(db, task.id).id, draft.id, 'a new draft after submitting');
 });
 
-test('Request changes moves a done task back to queued with the review as the reason', () => {
+test('Request changes moves a done task back to queued with the review as the reason', async () => {
   const { db, repo } = setup();
   const task = doneTask(db, repo);
   const draft = actions.startReview(db, task.id);
   actions.addReviewComment(db, draft.id, comment);
-  const sent = actions.submitReview(db, draft.id, { kind: 'request_changes', body: 'Needs work' });
+  const sent = await actions.submitReview(db, draft.id, { kind: 'request_changes', body: 'Needs work' });
   assert.equal(sent.kind, 'request_changes');
   assert.equal(db.getTask(task.id)?.status, 'queued');
   const retry = db.eventsForTask(task.id).findLast((e) => e.type === 'retry');
@@ -120,23 +125,23 @@ test('Request changes moves a done task back to queued with the review as the re
   );
 });
 
-test('Request changes on a task that cannot be retried leaves the review a draft', () => {
+test('Request changes on a task that cannot be retried leaves the review a draft', async () => {
   const { db, repo } = setup();
   const task = runningTask(db, repo);
   const draft = actions.startReview(db, task.id);
   actions.addReviewComment(db, draft.id, comment);
-  assert.throws(() => actions.submitReview(db, draft.id, { kind: 'request_changes' }), /is running/);
+  await assert.rejects(actions.submitReview(db, draft.id, { kind: 'request_changes' }), /is running/);
   assert.equal(db.getReview(draft.id)?.submitted_at, null);
   assert.equal(db.getTask(task.id)?.status, 'running');
 });
 
-test('comments are answered, resolved and reopened after the review is submitted', () => {
+test('comments are answered, resolved and reopened after the review is submitted', async () => {
   const { db, repo } = setup();
   const task = doneTask(db, repo);
   const draft = actions.startReview(db, task.id);
   const id = actions.addReviewComment(db, draft.id, comment).comments[0].id;
   assert.throws(() => actions.resolveReviewComment(db, id), /still a draft/);
-  actions.submitReview(db, draft.id, { kind: 'comment' });
+  await actions.submitReview(db, draft.id, { kind: 'comment' });
 
   const state = () => actions.taskReviews(db, task.id)[0].comments[0];
   assert.throws(() => actions.reopenReviewComment(db, id), /nothing to reopen/);
@@ -151,7 +156,7 @@ test('comments are answered, resolved and reopened after the review is submitted
   assert.equal(state().state, 'open');
 });
 
-test('bad input is refused', () => {
+test('bad input is refused', async () => {
   const { db, repo } = setup();
   const task = doneTask(db, repo);
   assert.throws(() => actions.startReview(db, asTaskId(999)), /no such task/);
@@ -159,6 +164,6 @@ test('bad input is refused', () => {
   assert.throws(() => actions.addReviewComment(db, draft.id, { ...comment, side: 'left' }), /side must be/);
   assert.throws(() => actions.addReviewComment(db, draft.id, { ...comment, line: 0 }), /line must be/);
   assert.throws(() => actions.addReviewComment(db, draft.id, { ...comment, body: '  ' }), /body/);
-  assert.throws(() => actions.submitReview(db, draft.id, { kind: 'approve' }), /kind must be/);
+  await assert.rejects(actions.submitReview(db, draft.id, { kind: 'approve' }), /kind must be/);
   assert.throws(() => actions.resolveReviewComment(db, 999), /no such comment/);
 });

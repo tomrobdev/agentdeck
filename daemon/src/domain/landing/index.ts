@@ -41,6 +41,7 @@ export { PR_OPEN_RETRIES, prNeedsPerson, prRetry } from './pr-retry.ts';
 export type { PrOpenFailures, PrRetry } from './pr-retry.ts';
 export type { PrFields, PrPlan, PrState, PullRequest } from './pr.ts';
 export {
+  COMMENT_SIDES,
   commentActionError,
   commentLineError,
   commentLocation,

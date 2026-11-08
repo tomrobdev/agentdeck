@@ -734,12 +734,12 @@ Problems found in the daemon log.
 
 A claude process group recorded on a run, found alive.
 
-| Field   | Type                                            | Comment                         |
-| ------- | ----------------------------------------------- | ------------------------------- |
-| `kind`  | `"planner" \| "work" \| "resolve" \| "unblock"` |                                 |
-| `run`   | `number`                                        |                                 |
-| `pid`   | `number`                                        |                                 |
-| `ended` | `boolean`                                       | The run has a finished-at time. |
+| Field   | Type                                                        | Comment                         |
+| ------- | ----------------------------------------------------------- | ------------------------------- |
+| `kind`  | `"planner" \| "review" \| "work" \| "resolve" \| "unblock"` |                                 |
+| `run`   | `number`                                                    |                                 |
+| `pid`   | `number`                                                    |                                 |
+| `ended` | `boolean`                                                   | The run has a finished-at time. |
 
 ### ReloadDecision
 
@@ -1028,6 +1028,45 @@ The parts of claude's final `result` event that a run records.
 | `total_cost_usd?` | `number \| undefined`                                                                                                                                                                         |         |
 | `result?`         | `string \| undefined`                                                                                                                                                                         |         |
 | `usage?`          | `{ input_tokens?: number \| undefined; output_tokens?: number \| undefined; cache_read_input_tokens?: number \| undefined; cache_creation_input_tokens?: number \| undefined; } \| undefined` |         |
+
+### ReviewAnswer
+
+A review run's answer: a summary of the changes, and its findings.
+
+| Field      | Type              | Comment |
+| ---------- | ----------------- | ------- |
+| `summary`  | `string`          |         |
+| `findings` | `ReviewFinding[]` |         |
+
+### ReviewContext
+
+| Field  | Type                 | Comment                                                                            |
+| ------ | -------------------- | ---------------------------------------------------------------------------------- |
+| `plan` | `PromptPlan \| null` | The plan the task follows, if any.                                                 |
+| `from` | `string`             | The commit the task's branch left the base at (`diffBase`): the diff starts there. |
+| `head` | `string`             | The task's head commit the review reads.                                           |
+
+### ReviewFinding
+
+One thing a review run found: where it is in the diff, what it says, and whether it stops the task merging.
+
+| Field      | Type             | Comment                                                              |
+| ---------- | ---------------- | -------------------------------------------------------------------- |
+| `path`     | `string`         |                                                                      |
+| `line`     | `number`         | The line it points at, counted on `side`.                            |
+| `side`     | `"old" \| "new"` | The base file (old) or the task's head (new), as a person's comment. |
+| `body`     | `string`         |                                                                      |
+| `blocking` | `boolean`        | True when the task must not merge until it is handled.               |
+
+### ReviewRecord
+
+A review run's review, as it is stored: its kind, its note and its line comments.
+
+| Field      | Type                                                          | Comment |
+| ---------- | ------------------------------------------------------------- | ------- |
+| `kind`     | `"comment" \| "request_changes"`                              |         |
+| `body`     | `string`                                                      |         |
+| `comments` | `Pick<ReviewFinding, "path" \| "line" \| "side" \| "body">[]` |         |
 
 ### Run
 

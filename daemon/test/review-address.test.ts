@@ -181,10 +181,12 @@ test('a run whose final message answers the comments moves them to answered; the
     return actions.submitReview(db, draft.id, { kind: 'request_changes', body: 'Please fix.' });
   };
 
-  const first = review([
+  const first = await review([
     { path: 'fake-output.txt', line: 1, body: 'reword this' },
     { path: 'README.md', line: 1, body: 'and this' },
   ]);
+  assert.equal(first.head_commit, head, 'a submitted review records the head it read');
+  assert.match(first.diff_hash ?? '', /^[0-9a-f]{40}$/, "and the patch-id of the task's changes");
   assert.equal(db.getTask(task.id)!.status, 'queued');
   await drain();
   assert.equal(db.getTask(task.id)!.status, 'done');
@@ -203,7 +205,7 @@ test('a run whose final message answers the comments moves them to answered; the
   );
 
   // A second review whose run answers only c1: c2 stays open and the run's summary names it.
-  const second = review([
+  const second = await review([
     { path: 'fake-output.txt', line: 1, body: 'once more FAKE_ANSWER_FIRST' },
     { path: 'README.md', line: 1, body: 'again' },
   ]);
