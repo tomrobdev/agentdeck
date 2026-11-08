@@ -1,6 +1,6 @@
 // Pull request commands: fix failing checks, close, merge and auto-merge.
 import * as actions from '../application/actions.ts';
-import { isReview, stageOf } from '../domain/work/stage.ts';
+import { isReview, stageOf } from '../domain/work/index.ts';
 import { confirm, die, taskId } from './format.ts';
 import type { Command } from './context.ts';
 

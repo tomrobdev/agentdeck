@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { type LinkKind, type TaskDetail, type TaskLink, type TaskSummary, api, tasksQuery } from '../../api';
-import { errorMessage } from '../../../../daemon/src/domain/shared/text.ts';
+import { errorMessage } from '../../../../daemon/src/domain/shared/index.ts';
 import { openTask } from '../../router';
 import { statusLabel } from '../../lib/taskView';
 import { useActions } from '../../composables/useActions';

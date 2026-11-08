@@ -1,5 +1,5 @@
 // How a run addresses a review: the comments as the worker is shown them, and the answers it gives back. Pure: no I/O.
-import { STATUS_TAIL, cut, plural } from '../shared/text.ts';
+import { STATUS_TAIL, cut, plural } from '../shared/index.ts';
 import { type CommentSide, type ReviewComment, type ReviewWithComments, commentLocation, submittedRequests } from './review.ts';
 
 /** The most the review may take of a prompt, in characters. Past it, hunks are dropped and long comments cut, and the prompt says so. */

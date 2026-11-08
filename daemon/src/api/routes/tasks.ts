@@ -1,7 +1,7 @@
 // Tasks: list, add, edit and move through the lifecycle, sync and the log tail.
 import * as actions from '../../application/actions.ts';
-import { type TaskId, asTaskId } from '../../domain/shared/id.ts';
-import { TASK_STATUSES } from '../../domain/work/lifecycle.ts';
+import { type TaskId, asTaskId } from '../../domain/shared/index.ts';
+import { TASK_STATUSES } from '../../domain/work/index.ts';
 import type * as C from '../contract.ts';
 import { type ApiContext, BadRequest, type Route, idsField, route, taskIdParam } from '../http.ts';
 import { streamLog } from '../log-stream.ts';

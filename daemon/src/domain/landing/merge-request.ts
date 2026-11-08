@@ -1,7 +1,7 @@
 // A merge request: a person's Merge, which the daemon carries out once the PR is ready (docs/plans/merge-requests.html). Pure: no I/O.
 import { isMergeabilityUnknown } from './conflict.ts';
 import { type AutoMergeCheck, verdictOf } from './auto-merge.ts';
-import { DEFAULT_MERGE_METHOD, type MergeMethod } from '../repos/repo.ts';
+import { DEFAULT_MERGE_METHOD, type MergeMethod } from '../repos/index.ts';
 import { type MergeFinding, type MergeInput, conflictNeedsPerson, mergeFindings } from './merge.ts';
 import type { PullRequest } from './pr.ts';
 

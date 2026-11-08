@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { type PrCheck, type TaskDetail, api, checkDuration } from '../../api';
-import { finalMessage } from '../../../../daemon/src/domain/landing/pr.ts';
+import { finalMessage } from '../../../../daemon/src/domain/landing/index.ts';
 import { canFixChecks } from '../../lib/taskView';
 import { useAction } from '../../composables/useActions';
 import { openExternal } from '../../platform/native';

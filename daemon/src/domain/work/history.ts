@@ -1,7 +1,7 @@
 // A task's history: one row per status change. Pure: no I/O.
-import type { TaskId } from '../shared/id.ts';
-import type { MergeMethod } from '../repos/repo.ts';
-import type { PrState } from '../landing/pr.ts';
+import type { TaskId } from '../shared/index.ts';
+import type { MergeMethod } from '../repos/index.ts';
+import type { PrState } from '../landing/index.ts';
 import type { TaskEvent, TaskStatus } from './lifecycle.ts';
 
 /**

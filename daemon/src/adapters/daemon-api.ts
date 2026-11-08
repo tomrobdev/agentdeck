@@ -1,5 +1,5 @@
 // Asks a running daemon about itself over its HTTP API. Null when nothing (or nothing that speaks JSON) answers.
-import type { DaemonState } from '../domain/operations/health.ts';
+import type { DaemonState } from '../domain/operations/index.ts';
 
 export async function fetchDaemonState(port: number, timeoutMs = 3000): Promise<DaemonState | null> {
   try {

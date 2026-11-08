@@ -8,8 +8,8 @@ import { ownsLiveGroup } from '../../adapters/processes.ts';
 import { DAEMON_LOG, serviceStatus } from '../../adapters/service.ts';
 import { API_PORT, CHECKOUT_ROOT } from '../../config.ts';
 import type { Db } from '../../db/index.ts';
-import { type Check, type DaemonState, type HealthFacts, judgeHealth, logFacts } from '../../domain/operations/health.ts';
-import { sqliteMs } from '../../domain/shared/time.ts';
+import { type Check, type DaemonState, type HealthFacts, judgeHealth, logFacts } from '../../domain/operations/index.ts';
+import { sqliteMs } from '../../domain/shared/index.ts';
 
 /** Where the facts come from; tests hand in plain ones. */
 export interface Probes {

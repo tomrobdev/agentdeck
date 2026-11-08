@@ -6,10 +6,10 @@ import { writeEvent } from '../../adapters/run-log.ts';
 import { runCommand } from '../../adapters/shell.ts';
 import { SETUP_TIMEOUT_MS, TEST_TIMEOUT_MS, ensureDirs } from '../../config.ts';
 import type { Db } from '../../db/index.ts';
-import { conflictReason, syncSummary } from '../../domain/landing/sync.ts';
-import { unfinishedSteps, unfinishedSummary } from '../../domain/work/plan.ts';
-import { type PromptPlan, buildPrompt, buildResumePrompt } from '../../domain/runs/prompt.ts';
-import { latestReviewNote } from '../../domain/work/history.ts';
+import { conflictReason, syncSummary } from '../../domain/landing/index.ts';
+import { unfinishedSteps, unfinishedSummary } from '../../domain/work/index.ts';
+import { type PromptPlan, buildPrompt, buildResumePrompt } from '../../domain/runs/index.ts';
+import { latestReviewNote } from '../../domain/work/index.ts';
 import {
   type Run,
   type WorkerResult,
@@ -21,12 +21,12 @@ import {
   resumeMaxTurns,
   runOutcome,
   setupFailedReason,
-} from '../../domain/runs/run.ts';
-import { hasPlanLink, otherPlanOwner } from '../../domain/work/plan-link.ts';
-import { type Task, leftoversMessage } from '../../domain/work/task.ts';
-import { errorMessage } from '../../domain/shared/text.ts';
+} from '../../domain/runs/index.ts';
+import { hasPlanLink, otherPlanOwner } from '../../domain/work/index.ts';
+import { type Task, leftoversMessage } from '../../domain/work/index.ts';
+import { errorMessage } from '../../domain/shared/index.ts';
 import { type OpenedRun, type TaskRunEnd, endTaskRun, openTaskRun, startTaskRun } from './claude-run.ts';
-import type { Repo } from '../../domain/repos/repo.ts';
+import type { Repo } from '../../domain/repos/index.ts';
 import { syncBranch } from './sync.ts';
 import { pauseRepo } from '../repos/pause.ts';
 import { markSyncing } from '../work/checkout-locks.ts';

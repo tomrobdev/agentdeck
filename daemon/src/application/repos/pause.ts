@@ -1,6 +1,6 @@
 // Pausing a repo: its queued tasks stay queued but aren't claimed until someone fixes the cause.
 import type { Db } from '../../db/index.ts';
-import type { Repo } from '../../domain/repos/repo.ts';
+import type { Repo } from '../../domain/repos/index.ts';
 import { notifyLater } from '../operations/notifications.ts';
 
 /**

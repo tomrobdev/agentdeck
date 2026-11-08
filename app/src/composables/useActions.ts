@@ -1,7 +1,7 @@
 // What every button that changes something does the same way: run it, refresh the page's data after
 // it worked, and flash the error if it didn't. App creates this once; components `useActions()` it.
 import { type InjectionKey, type Ref, computed, inject, provide, ref } from 'vue';
-import { errorMessage } from '../../../daemon/src/domain/shared/text.ts';
+import { errorMessage } from '../../../daemon/src/domain/shared/index.ts';
 
 export type RunOptions = {
   done?: string;

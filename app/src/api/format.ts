@@ -11,8 +11,8 @@ import type {
   SyncResult,
   SyncView,
 } from './types.ts';
-import { oneLine, plural } from '../../../daemon/src/domain/shared/text.ts';
-import { sqliteMs } from '../../../daemon/src/domain/shared/time.ts';
+import { oneLine, plural } from '../../../daemon/src/domain/shared/index.ts';
+import { sqliteMs } from '../../../daemon/src/domain/shared/index.ts';
 
 /** What a queued task waits for, in a few words, for chips and callouts. */
 export function describeWait(h: StartWait): string {

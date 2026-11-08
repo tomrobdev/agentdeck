@@ -4,11 +4,11 @@
 import * as actions from '../application/actions.ts';
 import type { Db } from '../db/index.ts';
 import { stored } from '../db/mappers.ts';
-import type { TaskId } from '../domain/shared/id.ts';
-import { type PullRequest, prFields } from '../domain/landing/pr.ts';
-import type { Checkout } from '../domain/work/checkout.ts';
-import type { PlanLink } from '../domain/work/plan-link.ts';
-import { type TaskState, stateFields } from '../domain/work/task.ts';
+import type { TaskId } from '../domain/shared/index.ts';
+import { type PullRequest, prFields } from '../domain/landing/index.ts';
+import type { Checkout } from '../domain/work/index.ts';
+import type { PlanLink } from '../domain/work/index.ts';
+import { type TaskState, stateFields } from '../domain/work/index.ts';
 
 /** A task's fields in the API's shape: stored as their columns are, with its state, pull request, checkout and plan link flat. */
 const flat = <T extends TaskState & { pr: PullRequest | null; checkout: Checkout | null; plan: PlanLink | null }>(task: T) => {

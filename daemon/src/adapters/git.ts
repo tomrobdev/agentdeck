@@ -15,10 +15,10 @@ import {
   parseLog,
   parseLsTree,
   treeEntries,
-} from '../domain/work/read/files.ts';
-import { branchName } from '../domain/work/branch.ts';
-import type { Repo } from '../domain/repos/repo.ts';
-import type { Task } from '../domain/work/task.ts';
+} from '../domain/work/index.ts';
+import { branchName } from '../domain/work/index.ts';
+import type { Repo } from '../domain/repos/index.ts';
+import type { Task } from '../domain/work/index.ts';
 
 const exec = promisify(execFile);
 

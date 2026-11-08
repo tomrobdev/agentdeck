@@ -1,11 +1,11 @@
 // Use cases for tasks: add, edit, and move them through the lifecycle on a person's request.
 import { removeWorktree } from '../../adapters/git.ts';
 import type { Db } from '../../db/index.ts';
-import type { TaskId } from '../../domain/shared/id.ts';
-import type { TaskStatus } from '../../domain/work/lifecycle.ts';
-import { archivedRepoError, maxAttemptsError, maxTurnsError, modelError, priorityError } from '../../domain/work/rules.ts';
-import { planOwnerOf } from '../../domain/work/plan-link.ts';
-import { EDITABLE_STATUSES, RUNNING_STATUSES, type Task, defaultTitle } from '../../domain/work/task.ts';
+import type { TaskId } from '../../domain/shared/index.ts';
+import type { TaskStatus } from '../../domain/work/index.ts';
+import { archivedRepoError, maxAttemptsError, maxTurnsError, modelError, priorityError } from '../../domain/work/index.ts';
+import { planOwnerOf } from '../../domain/work/index.ts';
+import { EDITABLE_STATUSES, RUNNING_STATUSES, type Task, defaultTitle } from '../../domain/work/index.ts';
 import { refuseWhileSyncing } from './checkout-locks.ts';
 import { warnStuckDependents } from './dependencies.ts';
 import { newLinks } from './links.ts';

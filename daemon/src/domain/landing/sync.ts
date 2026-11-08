@@ -1,6 +1,6 @@
 // How a sync (merging the base branch into a task's branch) is worded, and what it comes to. How a resolve run's end settles
 // it is the Runs context's (domain/runs/resolve.ts). Pure: no I/O.
-import { plural } from '../shared/text.ts';
+import { plural } from '../shared/index.ts';
 
 /** How a sync that changed the branch went. */
 type SyncKind = 'clean' | 'resolved';

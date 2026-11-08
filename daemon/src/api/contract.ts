@@ -1,20 +1,20 @@
 // The HTTP API's request and response types: what the dashboard imports (app/src/api/types.ts) and what contract-check.ts
 // holds the use cases to. It imports only types, and only from domain/, so the app can read it without node types.
-import type { ChangeStatus, FileRef } from '../domain/work/read/files.ts';
-import type { PlannerRunId, RepoId, ReviewId, RunId, TaskId } from '../domain/shared/id.ts';
-import type { NotifyKind } from '../domain/operations/notification.ts';
-import type { PlanSource, PlanStepStatus } from '../domain/work/plan.ts';
-import type { PlannerOutcome } from '../domain/proposals/proposals.ts';
-import type { AutoMergeState } from '../domain/landing/auto-merge.ts';
-import type { CheckState } from '../domain/landing/checks.ts';
-import type { MergeMethod, PrMode } from '../domain/repos/repo.ts';
-import type { PrState } from '../domain/landing/pr.ts';
-import type { RunKind } from '../domain/runs/run.ts';
-import type { HeadlineState, AttentionWhy } from '../domain/operations/headline.ts';
-import type { LinkKind } from '../domain/work/link.ts';
-import type { TaskStatus } from '../domain/work/lifecycle.ts';
-import type { NeedsKind } from '../domain/work/needs.ts';
-import type { TaskSource } from '../domain/work/task.ts';
+import type { ChangeStatus, FileRef } from '../domain/work/index.ts';
+import type { PlannerRunId, RepoId, ReviewId, RunId, TaskId } from '../domain/shared/index.ts';
+import type { NotifyKind } from '../domain/operations/index.ts';
+import type { PlanSource, PlanStepStatus } from '../domain/work/index.ts';
+import type { PlannerOutcome } from '../domain/proposals/index.ts';
+import type { AutoMergeState } from '../domain/landing/index.ts';
+import type { CheckState } from '../domain/landing/index.ts';
+import type { MergeMethod, PrMode } from '../domain/repos/index.ts';
+import type { PrState } from '../domain/landing/index.ts';
+import type { RunKind } from '../domain/runs/index.ts';
+import type { HeadlineState, AttentionWhy } from '../domain/operations/index.ts';
+import type { LinkKind } from '../domain/work/index.ts';
+import type { TaskStatus } from '../domain/work/index.ts';
+import type { NeedsKind } from '../domain/work/index.ts';
+import type { TaskSource } from '../domain/work/index.ts';
 
 // ---- Vocabulary
 

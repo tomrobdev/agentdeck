@@ -1,6 +1,6 @@
 // What counts as an intervention in the pilot scorecard (docs/pilot/scorecard.md). Pure: no I/O.
-import { isAutoMergeReason } from '../work/history.ts';
-import { INSTALL_NOTE } from '../work/needs.ts';
+import { isAutoMergeReason } from '../work/index.ts';
+import { INSTALL_NOTE } from '../work/index.ts';
 import type { ScorecardEvent, ScorecardTask } from './scorecard.ts';
 
 /**

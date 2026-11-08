@@ -2,7 +2,7 @@
 import { isConflicting } from './conflict.ts';
 import { type PrState, parsePrState } from './pr.ts';
 import { type CheckCounts, type PrCheck, countOf, parseChecks } from './checks.ts';
-import { plural } from '../shared/text.ts';
+import { plural } from '../shared/index.ts';
 
 export { type CheckCounts, checksSettled, countChecks } from './checks.ts';
 

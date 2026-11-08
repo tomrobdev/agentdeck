@@ -6,6 +6,7 @@ import { join, relative } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
 import ts from 'typescript';
+import { checkContextImports, checkContextIndexes, checkUnusedIndexExports } from '../scripts/lib/contexts.ts';
 import { LAYERS, layerOf, mayImport } from '../scripts/lib/layers.ts';
 import { checkFolderCycles, checkRowShapedFields } from '../scripts/lib/progress.ts';
 import { type Source, lineOf, parseSource, readSources } from '../scripts/lib/sources.ts';
@@ -99,6 +100,35 @@ test('[layers] there are no import cycles', () => {
   };
   for (const path of edges.keys()) if (!state.has(path)) visit(path);
   assert.deepEqual(cycles, []);
+});
+
+const dashboard = readSources(join(SRC, '../../app/src'), { vue: true });
+
+test('[contexts] every context has an index.ts of named exports, and every context is imported only through it', () => {
+  assert.deepEqual([...checkContextIndexes(sources), ...checkContextImports(sources, dashboard)], []);
+});
+
+test('[contexts] an index exports only what something outside its context imports', () => {
+  assert.deepEqual(checkUnusedIndexExports(sources, dashboard), []);
+});
+
+test('[contexts] a sample that reaches into another context, or has a bare or starred index, fails', () => {
+  const sample = [
+    parseSource('domain/work/lifecycle.ts', 'export const RULES = 1;\n'),
+    parseSource('domain/work/index.ts', "export { RULES } from './lifecycle.ts';\n"),
+    parseSource('domain/runs/run.ts', "import { RULES } from '../work/lifecycle.ts';\nexport const r = RULES;\n"),
+    parseSource('domain/runs/index.ts', "export * from './run.ts';\n"),
+    parseSource('domain/capacity/quota.ts', "import { RULES } from '../work/index.ts';\nexport const q = RULES;\n"),
+  ];
+  const found = [...checkContextIndexes(sample), ...checkContextImports(sample)];
+  assert.equal(found.length, 3);
+  assert.match(found.join('\n'), /domain\/runs\/run\.ts:1 imports domain\/work\/lifecycle\.ts/);
+  assert.match(found.join('\n'), /domain\/runs\/index\.ts:1 must be/);
+  assert.match(found.join('\n'), /domain\/capacity\/ has no index\.ts/);
+  const dash = [parseSource('x.ts', "import { PATCH_LIMIT } from '../../daemon/src/domain/work/read/files.ts';\n")];
+  assert.equal(checkContextImports(sample, dash).filter((m) => m.startsWith('x.ts:1')).length, 1);
+  assert.deepEqual(checkUnusedIndexExports(sample), []);
+  assert.match(checkUnusedIndexExports(sample.slice(0, 2)).join('\n'), /domain\/work\/index\.ts exports RULES/);
 });
 
 test('[folder-cycles] domain/ and application/ folders form no cycle beyond the allowed ones, and no allowed entry is stale', () => {

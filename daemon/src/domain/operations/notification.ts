@@ -1,9 +1,9 @@
 // Alerts for things that need a human: task finished, blocked, failed, proposals, a governor hold, a pause, an
 // auto-merge or a PR's checks failing. Pure: no I/O.
-import { type PrCheck, failingChecks } from '../landing/checks.ts';
-import type { TaskId } from '../shared/id.ts';
-import { plural } from '../shared/text.ts';
-import type { Task, TaskState } from '../work/task.ts';
+import { type PrCheck, failingChecks } from '../landing/index.ts';
+import type { TaskId } from '../shared/index.ts';
+import { plural } from '../shared/index.ts';
+import type { Task, TaskState } from '../work/index.ts';
 
 export type NotifyKind = 'done' | 'blocked' | 'failed' | 'hold' | 'paused' | 'proposed' | 'merged' | 'checks_failed';
 export const NOTIFY_KINDS: NotifyKind[] = ['done', 'blocked', 'failed', 'hold', 'paused', 'proposed', 'merged', 'checks_failed'];

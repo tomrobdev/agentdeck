@@ -1,6 +1,6 @@
 // The Claude Code settings each worker run gets with `--settings`. Pure: no I/O.
 // See docs/adr/0001-worker-sandbox.md for why the Bash sandbox is on and what it covers.
-import { textList } from '../../shared/text.ts';
+import { textList } from '../../shared/index.ts';
 
 export interface WorkerSettings {
   sandbox: {

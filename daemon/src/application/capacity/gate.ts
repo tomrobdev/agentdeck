@@ -1,7 +1,7 @@
 // May new work start? The pause flag, the rate limit and the governor's decision, read once.
 import type { Db } from '../../db/index.ts';
-import { decide } from '../../domain/capacity/governor.ts';
-import { type QueueState, type QueueWait, startDecision } from '../../domain/work/start.ts';
+import { decide } from '../../domain/capacity/index.ts';
+import { type QueueState, type QueueWait, startDecision } from '../../domain/work/index.ts';
 
 /** The state that decides whether work may start. `rate_limited_until` is null once it has lifted or was never set. */
 export function startGate(db: Db): QueueState {

@@ -1,10 +1,10 @@
 // The rest of the pilot scorecard (docs/pilot/scorecard.md), computed from plain rows: interventions, time queued,
 // running and in review, quota spent and PRs green on CI. Pure: no I/O. The first-run measures are in stats.ts.
-import type { RepoId, TaskId } from '../shared/id.ts';
-import type { CheckCounts } from '../landing/checks.ts';
-import { type QuotaSample, quotaSpends } from '../capacity/quota.ts';
-import { isAutoMergeReason } from '../work/history.ts';
-import { median, minutesBetween, sqliteMs, weekOf } from '../shared/time.ts';
+import type { RepoId, TaskId } from '../shared/index.ts';
+import type { CheckCounts } from '../landing/index.ts';
+import { type QuotaSample, quotaSpends } from '../capacity/index.ts';
+import { isAutoMergeReason } from '../work/index.ts';
+import { median, minutesBetween, sqliteMs, weekOf } from '../shared/index.ts';
 import { type InterventionCount, INTERVENTION_KINDS, countInterventions } from './interventions.ts';
 import { num, pct, table } from './report-text.ts';
 

@@ -1,11 +1,11 @@
 // What a worker's claude is told and allowed. Pure: no I/O.
-import { PLAN_FILE, parsePlanWithText } from '../work/plan.ts';
-import { PR_SUMMARY_FORMAT } from '../landing/summary.ts';
-import { ALWAYS_DISALLOWED_TOOLS } from '../repos/tools.ts';
-import { type ReviewPrompt, reviewPromptBlock } from '../landing/address.ts';
-import { NEVER_APPLIED, PROTECTED_PREFIXES, editPathFor } from '../repos/protected-edits.ts';
+import { PLAN_FILE, parsePlanWithText } from '../work/index.ts';
+import { PR_SUMMARY_FORMAT } from '../landing/index.ts';
+import { ALWAYS_DISALLOWED_TOOLS } from '../repos/index.ts';
+import { type ReviewPrompt, reviewPromptBlock } from '../landing/index.ts';
+import { NEVER_APPLIED, PROTECTED_PREFIXES, editPathFor } from '../repos/index.ts';
 import { withoutUnscopedFileTools } from './translate/sandbox.ts';
-import { type Task, leftoversMessage } from '../work/task.ts';
+import { type Task, leftoversMessage } from '../work/index.ts';
 import { INTERRUPTED, type Run } from './run.ts';
 import { UNBLOCK_NOTE } from './unblock.ts';
 

@@ -8,7 +8,7 @@
 //   so a busy morning can't burn the whole week.
 // Running tasks are never interrupted; this only gates new starts.
 
-import { wholeNumberError } from '../shared/text.ts';
+import { wholeNumberError } from '../shared/index.ts';
 
 export interface Budget {
   five_hour_max: number;

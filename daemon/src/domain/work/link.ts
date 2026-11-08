@@ -3,9 +3,9 @@
 // - builds_on: the task uses the other's code, so it starts once the other is done and merged.
 // - after: the task runs on its own and only its merge waits for the other's.
 
-import type { TaskId } from '../shared/id.ts';
-import type { PullRequest } from '../landing/pr.ts';
-import type { PrMode } from '../repos/repo.ts';
+import type { TaskId } from '../shared/index.ts';
+import type { PullRequest } from '../landing/index.ts';
+import type { PrMode } from '../repos/index.ts';
 import type { TaskStatus } from './lifecycle.ts';
 import type { DoneState } from './task.ts';
 

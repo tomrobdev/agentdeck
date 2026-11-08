@@ -1,6 +1,6 @@
 // What a running task is doing right now, read from the events of its run's stream. Pure: no I/O.
 
-import { cut } from '../../shared/text.ts';
+import { cut } from '../../shared/index.ts';
 import { shortFile, toolSummary } from './log.ts';
 
 /** What the daemon keeps of a live run: the turns so far and the last tool call in a few words. */

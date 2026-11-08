@@ -1,7 +1,7 @@
 // Use cases for reviews: a person builds a draft of line comments and an overall note on a task, submits it as a Comment or
 // as Request changes, and comments are answered and resolved. Reviews live only in AgentDeck.
 import type { Db } from '../../db/index.ts';
-import type { ReviewId, TaskId } from '../../domain/shared/id.ts';
+import type { ReviewId, TaskId } from '../../domain/shared/index.ts';
 import {
   type CommentAction,
   type ReviewComment,
@@ -16,7 +16,7 @@ import {
   nextCommentState,
   reviewKindError,
   reviewReason,
-} from '../../domain/landing/review.ts';
+} from '../../domain/landing/index.ts';
 import { ActionError, number, object, refuse, requireTask, text } from '../shared/input.ts';
 import { retryTask } from '../work/tasks.ts';
 

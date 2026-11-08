@@ -1,10 +1,10 @@
 // Send a PR's failing checks back to the worker: the failed steps' logs go into a retry's note.
 import { github } from '../../adapters/github.ts';
 import type { Db } from '../../db/index.ts';
-import type { TaskId } from '../../domain/shared/id.ts';
-import { type FailedCheck, LOG_TAIL_BYTES, actionsRun, failingChecks, fixChecksNote, logTail } from '../../domain/landing/checks.ts';
-import { openPrUrl } from '../../domain/landing/pr.ts';
-import { errorMessage } from '../../domain/shared/text.ts';
+import type { TaskId } from '../../domain/shared/index.ts';
+import { type FailedCheck, LOG_TAIL_BYTES, actionsRun, failingChecks, fixChecksNote, logTail } from '../../domain/landing/index.ts';
+import { openPrUrl } from '../../domain/landing/index.ts';
+import { errorMessage } from '../../domain/shared/index.ts';
 import { ActionError, requireTask, requireTaskRepo } from '../shared/input.ts';
 import { retryTask } from '../work/tasks.ts';
 

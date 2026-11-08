@@ -1,7 +1,7 @@
 // What every CLI command gets: the parsed command line and the database.
 import { parseArgs } from 'node:util';
 import type { Db } from '../db/index.ts';
-import type { RepoId } from '../domain/shared/id.ts';
+import type { RepoId } from '../domain/shared/index.ts';
 
 export function parseCommandLine(argv: string[]) {
   return parseArgs({

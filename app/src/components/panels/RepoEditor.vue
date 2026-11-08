@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/vue-query';
 import { MERGE_METHODS, type Repo, ago, api, queryKeys, repoQuery } from '../../api';
 import { type RepoForm, toRepoForm, toRepoPatch } from '../../lib/forms';
 import { useActions } from '../../composables/useActions';
-import { plural } from '../../../../daemon/src/domain/shared/text.ts';
+import { plural } from '../../../../daemon/src/domain/shared/index.ts';
 import NumberInput from '../ui/NumberInput.vue';
 import Switch from '../ui/Switch.vue';
 

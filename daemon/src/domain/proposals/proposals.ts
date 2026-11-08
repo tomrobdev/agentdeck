@@ -1,9 +1,9 @@
 // Turning a repo's goals into task proposals: the prompt, the answer's shape, and which proposals to keep.
 // Pure: no I/O. The planner runs read-only in the repo's main checkout and answers in PROPOSALS_SCHEMA.
-import type { PlannerRunId, RepoId } from '../shared/id.ts';
-import type { Repo } from '../repos/repo.ts';
-import { MODELS, OPEN_STATUSES, PROMPT_SECTIONS, type Task, stopReasonOf } from '../work/task.ts';
-import { sqliteMs } from '../shared/time.ts';
+import type { PlannerRunId, RepoId } from '../shared/index.ts';
+import type { Repo } from '../repos/index.ts';
+import { MODELS, OPEN_STATUSES, PROMPT_SECTIONS, type Task, stopReasonOf } from '../work/index.ts';
+import { sqliteMs } from '../shared/index.ts';
 
 export interface PlannerSettings {
   enabled: boolean;

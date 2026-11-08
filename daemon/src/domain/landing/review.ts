@@ -1,6 +1,6 @@
 // Reviews made in the dashboard: a draft a person builds up, then submits as a comment or a request for changes.
 // Pure rules for how a comment's state moves and which comments a run must address. Nothing here comes from or goes to GitHub.
-import type { ReviewId, TaskId } from '../shared/id.ts';
+import type { ReviewId, TaskId } from '../shared/index.ts';
 
 export const REVIEW_KINDS = ['comment', 'request_changes'] as const;
 export type ReviewKind = (typeof REVIEW_KINDS)[number];

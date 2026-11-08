@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue';
 import type { TaskSummary } from '../../api';
 import { DEFAULT_SIZE, chainOf, edgesOf, graphTasks, layoutGraph, stuckSet } from '../../lib/graph';
-import { cut } from '../../../../daemon/src/domain/shared/text.ts';
+import { cut } from '../../../../daemon/src/domain/shared/index.ts';
 import StatusIcon from '../ui/StatusIcon.vue';
 
 // Linked tasks as a layered graph: builds-on edges solid, after edges dashed, a stuck chain outlined in the blocked colour.
