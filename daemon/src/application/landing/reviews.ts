@@ -7,6 +7,7 @@ import {
   type ReviewComment,
   type ReviewKind,
   type ReviewWithComments,
+  type ReviewedDiff,
   commentActionError,
   commentLineError,
   commentSideError,
@@ -41,7 +42,7 @@ export function taskReviews(app: App, taskId: TaskId): ReviewWithComments[] {
   return app.reviewsForTask(taskId);
 }
 
-/** The task's draft review, started if it has none. A task has at most one draft. */
+/** The task's draft review by a person, started if it has none. A task has at most one; a review run's is never it. */
 export function startReview(app: App, taskId: TaskId): ReviewWithComments {
   requireTask(app, taskId);
   const draft = app.draftReviewFor(taskId) ?? app.createReview(taskId);
@@ -88,10 +89,24 @@ export function deleteReviewComment(app: App, commentId: number): ReviewWithComm
 }
 
 /**
- * Submit a draft as a Comment or as Request changes. Request changes also sends the task the retry event with the
- * review as its reason (so a done task moves back to queued); if the task can't be retried the review stays a draft.
+ * The changes a person's review read, from the task's branch as it is now: its head commit and the patch-id of its changes
+ * against the base. Both null when the task has no branch (or its repo is gone); the patch-id null when git can't tell.
  */
-export function submitReview(app: App, id: ReviewId, input: { kind: string; body?: string }): ReviewWithComments {
+async function reviewedDiff(app: App, taskId: TaskId): Promise<ReviewedDiff> {
+  const task = requireTask(app, taskId);
+  const repo = app.getRepo(task.repo_id);
+  const branch = task.checkout?.branch;
+  const head = repo && branch ? await app.workspace.branchHead(repo.path, branch) : null;
+  if (!repo || !head) return { head_commit: null, diff_hash: null };
+  return { head_commit: head, diff_hash: await app.workspace.diffHash(repo.path, repo.base_branch, head) };
+}
+
+/**
+ * Submit a draft as a Comment or as Request changes, recording the head and the diff it read. Request changes also sends
+ * the task the retry event with the review as its reason (so a done task moves back to queued); if the task can't be
+ * retried the review stays a draft.
+ */
+export async function submitReview(app: App, id: ReviewId, input: { kind: string; body?: string }): Promise<ReviewWithComments> {
   const review = requireReview(app, id);
   refuse(draftError(review));
   const fields = object(input);
@@ -99,8 +114,9 @@ export function submitReview(app: App, id: ReviewId, input: { kind: string; body
   const kind = fields.kind as ReviewKind;
   const note = text(fields, 'body', { empty: true, raw: true }) ?? review.body;
   refuse(emptyReviewError(note, review.comments.length));
-  if (kind === 'request_changes') retryTask(app, review.task_id, reviewReason(note, review.comments));
-  if (!app.submitReview(id, kind, note)) throw new ActionError('the review is already submitted');
+  const read = await reviewedDiff(app, review.task_id);
+  if (kind === 'request_changes') retryTask(app, review.task_id, { note: reviewReason(note, review.comments) });
+  if (!app.submitReview(id, kind, note, read)) throw new ActionError('the review is already submitted');
   return requireReview(app, id);
 }
 

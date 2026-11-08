@@ -49,6 +49,7 @@ erDiagram
     text auto_merge_skip
     integer auto_unblock
     text model "nullable"
+    integer auto_review
     integer escalate
   }
   review_comments {
@@ -71,6 +72,9 @@ erDiagram
     text body
     text created_at
     text submitted_at "nullable"
+    text by
+    text head_commit "nullable"
+    text diff_hash "nullable"
   }
   runs {
     integer id PK
@@ -98,6 +102,7 @@ erDiagram
     text pid_at "nullable"
     text model "nullable"
     text model_id "nullable"
+    text diff_hash "nullable"
   }
   settings {
     text key PK

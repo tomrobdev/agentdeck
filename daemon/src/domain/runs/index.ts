@@ -4,6 +4,7 @@ export type { PromptPlan } from './prompt.ts';
 export { escalation, escalationReason, escalationSince } from './escalate.ts';
 export { resolveOutcome } from './resolve.ts';
 export {
+  DEFAULT_REVIEW_MODEL,
   DEFAULT_SUPPORT_MODEL,
   INTERRUPTED,
   classifyRun,

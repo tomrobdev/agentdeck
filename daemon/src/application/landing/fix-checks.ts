@@ -62,6 +62,6 @@ export async function fixChecks(app: App, id: TaskId): Promise<FixChecksResult> 
   const now = requireTask(app, id);
   if (now.status !== 'done' || !openPrUrl(now.pr))
     throw new ActionError(`#${id} changed while its checks were read; its PR is no longer open`);
-  retryTask(app, id, fixChecksNote(failed), ['done']);
+  retryTask(app, id, { note: fixChecksNote(failed) }, ['done']);
   return { checks: failed.map((c) => c.name) };
 }

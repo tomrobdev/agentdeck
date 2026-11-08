@@ -4,7 +4,7 @@ import { sql } from 'drizzle-orm';
 import type { PlannerRunId, RepoId, ReviewId, RunId, TaskId } from '../domain/shared/index.ts';
 import type { PlannerOutcome } from '../domain/proposals/index.ts';
 import type { MergeMethod, PrMode } from '../domain/repos/index.ts';
-import type { PrState } from '../domain/landing/index.ts';
+import type { PrState, ReviewAuthor } from '../domain/landing/index.ts';
 import type { RunKind, RunOutcome } from '../domain/runs/index.ts';
 import type { TaskEventType } from '../domain/work/index.ts';
 import type { LinkKind } from '../domain/work/index.ts';
@@ -41,6 +41,7 @@ export const repos = sqliteTable(
     auto_merge_skip: text().default('[".github/"]').notNull(),
     auto_unblock: integer().default(0).notNull(),
     model: text(),
+    auto_review: integer().default(0).notNull(),
     escalate: integer().default(1).notNull(),
   },
   (table) => [unique('repos_name_unique').on(table.name), unique('repos_path_unique').on(table.path)],
@@ -125,6 +126,7 @@ export const runs = sqliteTable(
     pid_at: text(),
     model: text(),
     model_id: text(),
+    diff_hash: text(),
   },
   (table) => [index('runs_task').on(table.task_id, table.id)],
 );
@@ -234,6 +236,9 @@ export const reviews = sqliteTable(
     body: text().default('').notNull(),
     created_at: text().default(NOW_DEFAULT).notNull(),
     submitted_at: text(),
+    by: text().$type<ReviewAuthor>().default('person').notNull(),
+    head_commit: text(),
+    diff_hash: text(),
   },
   (table) => [index('reviews_task').on(table.task_id, table.id)],
 );

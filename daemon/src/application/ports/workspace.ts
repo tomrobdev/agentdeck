@@ -122,6 +122,11 @@ export interface Workspace {
   branchHead(repoPath: string, branch: string): Promise<string | null>;
   /** Where `head` left the base branch: its merge base with the local base or origin's copy, whichever is newer. */
   diffBase(repoPath: string, base: string, head: string): Promise<{ ref: string; sha: string } | null>;
+  /**
+   * The patch-id of `head`'s changes against the base (from where `head` left it, as `diffBase`): the same changes keep
+   * their id after a sync that only brings in the base. Null when there is no base, nothing changed, or git can't tell.
+   */
+  diffHash(repoPath: string, base: string, head: string): Promise<string | null>;
   /** The files changed between two commits (renames detected) and the commits in between, newest first. */
   compare(repoPath: string, base: string, head: string): Promise<{ files: ChangedFile[]; commits: Commit[] }>;
   /** The unified diff of one file between two commits, cut at PATCH_LIMIT. Pass both paths of a rename. */

@@ -378,6 +378,34 @@ export async function diffBase(repoPath: string, base: string, head: string): Pr
   return (await isAncestor(repoPath, local.sha, remote.sha)) ? remote : local;
 }
 
+/** Run git with `input` on its stdin and return its output. */
+function gitWithInput(cwd: string, input: string, args: string[]): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const child = spawn('git', args, { cwd, env: READ_ENV, stdio: ['pipe', 'pipe', 'pipe'] });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (c: Buffer) => (stdout += c.toString()));
+    child.stderr.on('data', (c: Buffer) => (stderr += c.toString()));
+    child.on('error', reject);
+    child.on('close', (code) => (code === 0 ? resolve(stdout) : reject(new Error(`git ${args[0]} failed: ${stderr.trim()}`))));
+    child.stdin.on('error', () => {}); // git may exit before reading all of it; its exit code says how it went
+    child.stdin.end(input);
+  });
+}
+
+/**
+ * The patch-id of `head`'s changes against the base: `git patch-id --stable` of the diff from where `head` left the base
+ * (`diffBase`) to `head`. It ignores line numbers and whitespace, so the same changes on a branch that has since brought
+ * in the base keep their id. Null when there is no base to diff against or nothing changed. Doesn't fetch.
+ */
+export async function diffHash(repoPath: string, base: string, head: string): Promise<string | null> {
+  const from = await diffBase(repoPath, base, head);
+  if (!from) return null;
+  const diff = await gitRead(repoPath, 'diff', ...DIFF_FLAGS, '--binary', from.sha, head, '--');
+  if (!diff.trim()) return null;
+  return (await gitWithInput(repoPath, diff, ['patch-id', '--stable'])).trim().split(/\s+/)[0] || null;
+}
+
 /** Files changed between two commits, renames detected. */
 export async function changedFiles(repoPath: string, base: string, head: string): Promise<ChangedFile[]> {
   const [nameStatus, numstat] = await Promise.all([

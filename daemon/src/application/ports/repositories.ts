@@ -12,6 +12,7 @@ import type {
   ReviewComment,
   ReviewKind,
   ReviewWithComments,
+  ReviewedDiff,
   StoredChecks,
 } from '../../domain/landing/index.ts';
 import type { AttentionCandidate, Notification, NotifySettings, Settings } from '../../domain/operations/index.ts';
@@ -91,6 +92,7 @@ export type RepoUpdate = Partial<
     | 'merge_method'
     | 'auto_resolve'
     | 'auto_unblock'
+    | 'auto_review'
     | 'escalate'
     | 'sandbox'
     | 'network'
@@ -203,7 +205,7 @@ export interface RepoRepository {
 }
 
 export interface RunRepository {
-  startRun(task_id: TaskId, attempt: number, log_path: string, kind?: RunKind, model?: string | null): Run['id'];
+  startRun(task_id: TaskId, attempt: number, log_path: string, kind?: RunKind, model?: string | null, diff_hash?: string | null): Run['id'];
   setRunModelId(id: Run['id'], model_id: string): void;
   setRunPid(id: Run['id'], pid: number): void;
   setRunLive(id: Run['id'], live_turns: number, live_tool: string | null): void;
@@ -234,7 +236,7 @@ export interface ReviewRepository {
   reviewsForTask(task_id: TaskId): ReviewWithComments[];
   reviewWithComments(id: ReviewId): ReviewWithComments | undefined;
   setReviewBody(id: ReviewId, body: string): boolean;
-  submitReview(id: ReviewId, kind: ReviewKind, body: string): boolean;
+  submitReview(id: ReviewId, kind: ReviewKind, body: string, read: ReviewedDiff): boolean;
   getComment(id: number): ReviewComment | undefined;
   addComment(c: Pick<ReviewComment, 'review_id' | 'path' | 'line' | 'side' | 'head_commit' | 'body'>): ReviewComment;
   deleteComment(id: number): boolean;
@@ -282,8 +284,8 @@ export interface SettingsRepository {
   maxConcurrent(): number;
   notifySettings(): NotifySettings;
   plannerSettings(): PlannerSettings;
-  /** The default_model and support_model settings. */
-  modelSettings(): Pick<Settings, 'default_model' | 'support_model'>;
+  /** The default_model, support_model and review_model settings. */
+  modelSettings(): Pick<Settings, 'default_model' | 'support_model' | 'review_model'>;
 }
 
 export interface ChangeRepository {

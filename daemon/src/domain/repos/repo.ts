@@ -35,6 +35,11 @@ export interface Repo {
   auto_resolve: boolean;
   /** The daemon starts an unblock run on its own when a task blocks (domain/runs/unblock.ts); off by default. */
   auto_unblock: boolean;
+  /**
+   * The daemon starts a review run on its own when a task is done (domain/runs/review.ts), and a clean verdict may stand in
+   * for a person's review; off by default.
+   */
+  auto_review: boolean;
   /** The agent's Bash commands run in Claude Code's sandbox (the default). */
   sandbox: boolean;
   archived_at: string | null; // set = hidden everywhere and its work stopped, until `repo unarchive`

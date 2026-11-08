@@ -144,8 +144,8 @@ function draft() {
 }
 
 /** A submitted review's comment, open or resolved. */
-function submittedComment(state: 'open' | 'resolved'): number {
-  const review = actions.submitReview(app, draft().id, { kind: 'comment' });
+async function submittedComment(state: 'open' | 'resolved'): Promise<number> {
+  const review = await actions.submitReview(app, draft().id, { kind: 'comment' });
   const id = review.comments[0].id;
   if (state === 'resolved') actions.resolveReviewComment(app, id);
   return id;
@@ -671,14 +671,14 @@ const ROWS: Row[] = [
   {
     method: 'POST',
     path: '/api/review-comments/:comment/resolve',
-    params: () => ({ comment: submittedComment('open') }),
+    params: async () => ({ comment: await submittedComment('open') }),
     shape: REVIEW,
     check: (r) => assert.equal(r.comments[0].state, 'resolved'),
   },
   {
     method: 'POST',
     path: '/api/review-comments/:comment/reopen',
-    params: () => ({ comment: submittedComment('resolved') }),
+    params: async () => ({ comment: await submittedComment('resolved') }),
     shape: REVIEW,
     check: (r) => assert.equal(r.comments[0].state, 'open'),
   },

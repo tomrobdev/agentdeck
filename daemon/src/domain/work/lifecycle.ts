@@ -32,6 +32,7 @@ export type TaskEvent =
   | { type: 'reject' } // decline a planner proposal
   | { type: 'retry' } // a human asks for another attempt
   | { type: 'unblock_retry' } // an unblock run sent a blocked task back with a note; its attempts stay as they are
+  | { type: 'review_retry' } // a review run asked for changes to a done task; one attempt is added, as a person's retry adds
   | { type: 'mark_done' } // a person finished or landed the work themselves
   | { type: 'pr_merged' } // the daemon found the task's open PR merged on GitHub
   | { type: 'recover' }; // the daemon restarted mid-run; one restart too many (`restartsExhausted`) fails the task
@@ -50,6 +51,7 @@ export type RuleKey =
   | 'reject'
   | 'retry'
   | 'unblock_retry'
+  | 'review_retry'
   | 'mark_done'
   | 'pr_merged'
   | 'recover'
@@ -77,6 +79,7 @@ export const RULES: Record<RuleKey, Partial<Record<TaskStatus, TaskStatus>>> = {
   reject: { proposed: 'cancelled' },
   retry: { blocked: 'queued', failed: 'queued', cancelled: 'queued', done: 'queued' },
   unblock_retry: { blocked: 'queued' },
+  review_retry: { done: 'queued' },
   mark_done: { blocked: 'done', failed: 'done' },
   pr_merged: { blocked: 'done', failed: 'done' },
   recover: { running: 'queued', cancel_requested: 'cancelled' },
@@ -280,14 +283,14 @@ export function transition(task: TransitionTask, event: TaskEvent, opts: Transit
     },
   ];
   const state = nextState(task, to, event, opts);
-  const retried = event.type === 'retry' || event.type === 'unblock_retry';
+  const retried = event.type === 'retry' || event.type === 'unblock_retry' || event.type === 'review_retry';
   const changes = statusChangePrChanges(task.status, to, retried, task.pr);
   const counters: TaskCounters = {};
   if (to === 'cancelled') return { state, counters, changes, events };
 
   const given = Math.max(task.attempts - 1, 0); // the attempt given back
   if (event.type === 'claim') counters.attempts = task.attempts + 1;
-  else if (event.type === 'retry') {
+  else if (event.type === 'retry' || event.type === 'review_retry') {
     counters.max_attempts = task.attempts + 1; // one more attempt on top of those used
     counters.restarts = 0;
   } else if (event.type === 'unblock_retry') counters.restarts = 0;

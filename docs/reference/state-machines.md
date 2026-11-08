@@ -20,7 +20,7 @@ stateDiagram-v2
   running --> failed: finish/failed, recover/exhausted
   running --> cancel_requested: cancel
   running --> cancelled: finish/cancelled
-  done --> queued: retry
+  done --> queued: retry, review_retry
   done --> blocked: conflict
   blocked --> queued: retry, unblock_retry
   blocked --> done: mark_done, pr_merged
@@ -47,6 +47,7 @@ stateDiagram-v2
 | `reject`              | proposed → cancelled                                                                                          |
 | `retry`               | blocked → queued, failed → queued, cancelled → queued, done → queued                                          |
 | `unblock_retry`       | blocked → queued                                                                                              |
+| `review_retry`        | done → queued                                                                                                 |
 | `mark_done`           | blocked → done, failed → done                                                                                 |
 | `pr_merged`           | blocked → done, failed → done                                                                                 |
 | `recover`             | running → queued, cancel_requested → cancelled                                                                |
@@ -79,7 +80,7 @@ What the daemon does after a task's status changes: each domain event `transitio
 | Domain event          | Made by                                                                                                                                                                                                                                                                                                                                                                         | Follow-ups                             |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
 | `TaskStarted`         | `claim` (queued)                                                                                                                                                                                                                                                                                                                                                                | none                                   |
-| `TaskQueued`          | `finish:failed:retry` (running), `rate_limited` (running), `approve` (proposed), `retry` (blocked, failed, cancelled, done), `unblock_retry` (blocked), `recover` (running)                                                                                                                                                                                                     | none                                   |
+| `TaskQueued`          | `finish:failed:retry` (running), `rate_limited` (running), `approve` (proposed), `retry` (blocked, failed, cancelled, done), `unblock_retry` (blocked), `review_retry` (done), `recover` (running)                                                                                                                                                                              | none                                   |
 | `TaskFinished`        | `finish:done` (running)                                                                                                                                                                                                                                                                                                                                                         | `open_pr`, `warn_dependents`, `notify` |
 | `TaskPrMerged`        | `pr_merged` (blocked, failed)                                                                                                                                                                                                                                                                                                                                                   | `warn_dependents`, `notify`            |
 | `TaskMarkedDone`      | `mark_done` (blocked, failed)                                                                                                                                                                                                                                                                                                                                                   | none                                   |

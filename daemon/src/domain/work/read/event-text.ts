@@ -42,6 +42,8 @@ function agentText(e: EventFields): string {
       return withReason('retried', e.reason);
     case 'unblock_retry':
       return 'unblock run: retried with a note';
+    case 'review_retry':
+      return 'review run: requested changes';
     case 'unblock_ask':
       return 'unblock run: asked a question';
     case 'mark_done':

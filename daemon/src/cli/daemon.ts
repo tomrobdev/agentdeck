@@ -101,6 +101,7 @@ export const daemonCommands: Record<string, Command> = {
     );
     console.log(`default_model   ${st.default_model}`);
     console.log(`support_model   ${st.support_model} (resolve and unblock runs)`);
+    console.log(`review_model    ${st.review_model} (review runs)`);
     console.log(
       `\ngovernor        ${d.allow ? 'allowing work' : 'on hold'}${d.reason ? `: ${d.reason}` : ''}${d.until ? ` (lifts in ${relTime(d.until)})` : ''}`,
     );

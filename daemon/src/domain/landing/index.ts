@@ -41,6 +41,7 @@ export { PR_OPEN_RETRIES, prNeedsPerson, prRetry } from './pr-retry.ts';
 export type { PrOpenFailures, PrRetry } from './pr-retry.ts';
 export type { PrFields, PrPlan, PrState, PullRequest } from './pr.ts';
 export {
+  COMMENT_SIDES,
   commentActionError,
   commentLineError,
   commentLocation,
@@ -53,7 +54,17 @@ export {
   reviewKindError,
   reviewReason,
 } from './review.ts';
-export type { CommentAction, CommentSide, CommentState, Review, ReviewComment, ReviewKind, ReviewWithComments } from './review.ts';
+export type {
+  CommentAction,
+  CommentSide,
+  CommentState,
+  Review,
+  ReviewAuthor,
+  ReviewComment,
+  ReviewKind,
+  ReviewWithComments,
+  ReviewedDiff,
+} from './review.ts';
 export { PR_SUMMARY_FORMAT } from './summary.ts';
 export { conflictReason, isConflictReason, syncResultOf, syncSummary } from './sync.ts';
 export type { SyncResult } from './sync.ts';

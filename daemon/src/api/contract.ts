@@ -8,7 +8,7 @@ import type { PlannerOutcome } from '../domain/proposals/index.ts';
 import type { AutoMergeState } from '../domain/landing/index.ts';
 import type { CheckState } from '../domain/landing/index.ts';
 import type { MergeMethod, PrMode, ToolRulesSource } from '../domain/repos/index.ts';
-import type { PrRetry, PrState } from '../domain/landing/index.ts';
+import type { PrRetry, PrState, ReviewAuthor } from '../domain/landing/index.ts';
 import type { RunKind } from '../domain/runs/index.ts';
 import type { HeadlineState, AttentionWhy } from '../domain/operations/index.ts';
 import type { LinkKind } from '../domain/work/index.ts';
@@ -44,6 +44,8 @@ export interface Repo {
   auto_resolve: number;
   /** 1 = the daemon starts an unblock run on its own when a task blocks (off by default). Missing from a daemon that predates it. */
   auto_unblock?: number;
+  /** 1 = the daemon starts a review run on its own when a task is done (off by default). Missing from a daemon that predates it. */
+  auto_review?: number;
   /** 1 = the agent's shell commands run in Claude Code's sandbox. */
   sandbox: number;
   /** JSON array of hosts sandboxed commands may reach. */
@@ -94,6 +96,7 @@ export interface RepoPatch {
   merge_method?: MergeMethod;
   auto_resolve?: boolean;
   auto_unblock?: boolean;
+  auto_review?: boolean;
   sandbox?: boolean;
   network?: string[];
   auto_merge?: boolean;
@@ -290,7 +293,10 @@ export interface Task extends TaskSummary {
 
 export interface Run {
   id: RunId;
-  /** A resolve run merges the base branch into the task's branch, an unblock run reads why a blocked task stopped; neither uses an attempt. */
+  /**
+   * A resolve run merges the base branch into the task's branch, an unblock run reads why a blocked task stopped, a review
+   * run reads a done task's changes; none uses an attempt.
+   */
   kind: RunKind;
   /** A resolve run carries the attempt it ran beside, so pick runs by id. */
   attempt: number;
@@ -309,6 +315,8 @@ export interface Run {
   model?: string | null;
   /** The exact model id claude's init line named, such as claude-sonnet-5-5; null until it arrives. */
   model_id?: string | null;
+  /** For a review run, the patch-id of the task's changes it was started to read; null for other kinds. Missing from a daemon that predates it. */
+  diff_hash?: string | null;
   /** For a failed or blocked run: its turns, time, tools and tests summed up from its log, with a verdict line. Null otherwise. */
   summary?: RunSummary | null;
 }
@@ -356,6 +364,7 @@ export interface TaskEventRow {
     | 'reject'
     | 'retry'
     | 'unblock_retry'
+    | 'review_retry'
     | 'mark_done'
     | 'pr_merged'
     | 'recover';
@@ -476,6 +485,12 @@ export interface Review {
   id: ReviewId;
   task_id: TaskId;
   kind: 'comment' | 'request_changes' | null;
+  /** Who made it: a person, or a review run. Missing from a daemon that predates it. */
+  by?: ReviewAuthor;
+  /** The task's head commit the review read, set at submit; null on a draft or an older review. */
+  head_commit?: string | null;
+  /** The patch-id of the task's changes against the base branch the review read, set at submit; null on a draft or an older review. */
+  diff_hash?: string | null;
   /** The overall note. */
   body: string;
   created_at: string;
@@ -848,6 +863,8 @@ export interface Settings {
   default_model: string;
   /** The model resolve and unblock runs use, in place of their task's. */
   support_model: string;
+  /** The model review runs use; opus by default, a reviewer at least as strong as the worker. */
+  review_model: string;
   reload_on_change: boolean;
 }
 
@@ -859,6 +876,7 @@ export interface SettingsPatch {
   planner?: Partial<Settings['planner']>;
   default_model?: string;
   support_model?: string;
+  review_model?: string;
   reload_on_change?: boolean;
 }
 
