@@ -3,7 +3,10 @@
 import { plural } from '../shared/index.ts';
 import type { PullRequest } from './pr.ts';
 
-/** How one check stands. NEUTRAL and SKIPPED conclusions are `skipped`; anything not failing or pending passed. */
+/**
+ * How one check stands. NEUTRAL and SKIPPED conclusions are `skipped`; only SUCCESS passed. Anything GitHub may add or
+ * that this code does not know (STALE, an empty conclusion on a finished run) is `pending`: it never counts as a pass.
+ */
 export type CheckState = 'pass' | 'fail' | 'pending' | 'skipped';
 
 /** One check on a PR's head commit: a GitHub check run (Actions or an app) or a commit status. */
@@ -42,6 +45,7 @@ export interface ChecksSummary extends CheckCounts {
 const FAILED = new Set(['FAILURE', 'ERROR', 'TIMED_OUT', 'CANCELLED', 'STARTUP_FAILURE', 'ACTION_REQUIRED']);
 const PENDING = new Set(['PENDING', 'EXPECTED', 'QUEUED', 'IN_PROGRESS', 'WAITING', 'REQUESTED']);
 const SKIPPED = new Set(['NEUTRAL', 'SKIPPED']);
+const PASSED = new Set(['SUCCESS']);
 
 const str = (v: unknown): string | null => (typeof v === 'string' && v ? v : null);
 /** A check's time; GitHub gives a check run that hasn't started or finished the zero time, 0001-01-01. */
@@ -55,7 +59,8 @@ function stateOf(item: Record<string, unknown>): CheckState {
   if (FAILED.has(verdict)) return 'fail';
   if (PENDING.has(verdict)) return 'pending';
   if (SKIPPED.has(verdict)) return 'skipped';
-  return 'pass';
+  if (PASSED.has(verdict)) return 'pass';
+  return 'pending';
 }
 
 /**
@@ -88,6 +93,15 @@ export function countOf(checks: PrCheck[]): CheckCounts {
     failing: checks.filter((c) => c.state === 'fail').length,
     pending: checks.filter((c) => c.state === 'pending').length,
   };
+}
+
+/**
+ * How many checks ran on a PR: passed or failed, not skipped, neutral or still pending. Details a caller made up without
+ * `check_list` count every settled check, as they cannot tell a skipped one apart.
+ */
+export function checksRan(pr: { checks: CheckCounts; check_list?: PrCheck[] }): number {
+  if (pr.check_list) return pr.check_list.filter((c) => c.state === 'pass' || c.state === 'fail').length;
+  return pr.checks.total - pr.checks.pending;
 }
 
 /** Count `statusCheckRollup` entries: check runs have `status` and `conclusion`, commit statuses have `state`. */

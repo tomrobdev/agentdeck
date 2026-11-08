@@ -13,7 +13,10 @@ process.env.AGENTDECK_HOME = home;
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { openDb } = await import('./open-db.ts');
-const { doneTask, waitFor } = await import('./fixtures.ts');
+const { doneTask, testApp, waitFor } = await import('./fixtures.ts');
+const { READY_PR, fakeCodeHost } = await import('./fakes.ts');
+const { mergeFailure } = await import('../src/domain/landing/merge.ts');
+const { cancelMergeRequest, requestMerge } = await import('../src/application/actions.ts');
 const { github } = await import('../src/adapters/github.ts');
 const { AUTO_MERGE_LABEL, autoMergeCheck, autoMergeOn } = await import('../src/domain/landing/auto-merge.ts');
 const { isMergeLocked } = await import('../src/application/work/checkout-locks.ts');
@@ -52,12 +55,22 @@ const ready: PrDetails = {
   additions: 30,
   deletions: 5,
   checks: { total: 2, failing: 0, pending: 0 },
+  head: 'head-1',
   paths: ['src/a.ts', 'src/b.ts'],
   labels: [AUTO_MERGE_LABEL.name],
 };
+/** An auto-merge entry from the refresh, as `refreshPrStates` gives it. */
+const auto = (id: TaskId, pr: PrDetails = ready) => ({ id, pr, requested: false });
 
 let details: Record<string, PrDetails>;
-let gh: { labelsMade: number; created: string[][]; labelled: { url: string; on: boolean }[]; merged: string[]; deleted: string[] };
+let gh: {
+  labelsMade: number;
+  created: string[][];
+  labelled: { url: string; on: boolean }[];
+  merged: string[];
+  deleted: string[];
+  heads: string[];
+};
 let mergeError: string | null;
 github.push = async () => {};
 github.createPr = async (pr) => (gh.created.push(pr.labels ?? []), `https://x/pull/new-${gh.created.length}`);
@@ -68,12 +81,13 @@ github.markReady = async () => {};
 github.merge = async (pr) => {
   if (mergeError) throw new Error(mergeError);
   gh.merged.push(pr.url);
+  gh.heads.push(pr.head);
 };
 github.deleteRemoteBranch = async (_path, branch) => void gh.deleted.push(branch);
 
 beforeEach(() => {
   details = {};
-  gh = { labelsMade: 0, created: [], labelled: [], merged: [], deleted: [] };
+  gh = { labelsMade: 0, created: [], labelled: [], merged: [], deleted: [], heads: [] };
   mergeError = null;
   db.setPaused(false);
   updateRepo(db, 'demo', { auto_merge: true, auto_approve: false, pr_mode: 'ready' });
@@ -127,7 +141,7 @@ test('autoMergeCheck: what needs a person', () => {
   assert.deepEqual(reasons({}, { tests_passed: false }).reasons, ['tests failed on the last run']);
   assert.deepEqual(reasons({}, { tests_passed: null }).reasons, ['the tests have not run']);
   assert.deepEqual(reasons({ checks: { total: 0, failing: 0, pending: 0 } }, { test_cmd: null, tests_passed: null }).reasons, [
-    'nothing tested it: the repo has no test command and the PR no checks',
+    'nothing tested it: the repo has no test command and no check ran on the PR',
   ]);
   assert.deepEqual(reasons({ additions: 390, deletions: 20 }).reasons, ['410 lines changed, over the limit of 400']);
   assert.deepEqual(reasons({ paths: ['src/a.ts', '.github/workflows/ci.yml'] }).reasons, ['touches .github/workflows/ci.yml']);
@@ -136,6 +150,34 @@ test('autoMergeCheck: what needs a person', () => {
     'GitHub says branch protection may block this merge (required reviews or checks)',
   ]);
   assert.equal(check({ labels: [] }, { paused: 'AgentDeck is paused' }).verdict, 'never', 'a person beats a wait');
+});
+
+test('autoMergeCheck: with no test command, only a check that ran tested it; skipped and neutral ones did not', () => {
+  const one = (state: 'pass' | 'fail' | 'pending' | 'skipped') => ({ name: state, state, url: null, started_at: null, completed_at: null });
+  const untested = { test_cmd: null, tests_passed: null };
+  const nothing = 'nothing tested it: the repo has no test command and no check ran on the PR';
+  const skipped = { checks: { total: 2, failing: 0, pending: 0 }, check_list: [one('skipped'), one('skipped')] };
+  assert.deepEqual(check(skipped, untested), { verdict: 'never', reasons: [nothing] });
+  assert.equal(check({ ...skipped, check_list: [one('skipped'), one('pass')] }, untested).verdict, 'merge');
+  // A check still running may yet test it: that waits.
+  const running = { checks: { total: 2, failing: 0, pending: 1 }, check_list: [one('skipped'), one('pending')] };
+  assert.deepEqual(check(running, untested), { verdict: 'wait', reasons: ['1 check still running on GitHub'] });
+  // A failing check did run: it needs a person for failing, not for being untested.
+  const failing = { checks: { total: 1, failing: 1, pending: 0 }, check_list: [one('fail')] };
+  assert.deepEqual(check(failing, untested).reasons, ['1 check failing on GitHub']);
+});
+
+test('the refresh leaves a PR with only skipped checks in a repo with no test command for a person', async () => {
+  updateRepo(db, 'demo', { test_cmd: null });
+  try {
+    const t = doneTask(db, repo, { pr: 'open', url: `https://x/pull/${++n}` });
+    const skipped = { name: 'deploy', state: 'skipped' as const, url: null, started_at: null, completed_at: null };
+    details[db.getTask(t.id)!.pr!.url!] = { ...ready, checks: { total: 1, failing: 0, pending: 0 }, check_list: [skipped] };
+    assert.deepEqual((await refreshPrStates(db)).mergeable, []);
+    assert.equal(db.getTask(t.id)!.pr?.auto_merge_check?.verdict, 'never');
+  } finally {
+    updateRepo(db, 'demo', { test_cmd: 'true' });
+  }
 });
 
 test('autoMergeCheck: a PR touching .claude/ needs a person, even with an empty skip list', () => {
@@ -241,9 +283,10 @@ test('the refresh finds a ready PR and autoMerge merges it, records who did, cle
   assert.ok(waiting(db.getTask(later.id)!));
 
   const found = await refreshPrStates(db);
-  assert.deepEqual(found.mergeable, [{ id: t.id, pr: ready }]);
+  assert.deepEqual(found.mergeable, [auto(t.id)]);
   assert.equal(await autoMerge(db, found.mergeable), t.id);
   assert.deepEqual(gh.merged, [t.url]);
+  assert.deepEqual(gh.heads, [ready.head], 'merged pinned to the head the refresh read');
   assert.deepEqual(gh.deleted, [t.branch]);
   assert.equal(db.getTask(t.id)!.pr?.state, 'merged');
   assert.equal(db.eventsForTask(t.id).at(-1)!.reason, 'auto-merged (squash)');
@@ -303,14 +346,14 @@ test('autoMerge merges one PR per call, skips one that moved on, and tells a ref
   db.recordPr(gone.id, { type: 'closed' });
   const a = tested();
   const b = tested();
-  const candidates = [gone, a, b].map(({ id }) => ({ id, pr: ready }));
+  const candidates = [gone, a, b].map(({ id }) => auto(id));
   assert.equal(await autoMerge(db, candidates), a.id);
   assert.deepEqual(gh.merged, [a.url], 'b waits for the re-read the merge asks for');
 
   mergeError = 'Pull request is not mergeable: the base branch policy prohibits the merge';
   const told = new Map<TaskId, string>();
   const logs: string[] = [];
-  for (let i = 0; i < 3; i++) assert.equal(await autoMerge(db, [{ id: b.id, pr: ready }], { told, log: (m) => logs.push(m) }), null);
+  for (let i = 0; i < 3; i++) assert.equal(await autoMerge(db, [auto(b.id)], { told, log: (m) => logs.push(m) }), null);
   assert.equal(logs.length, 1);
   assert.match(logs[0], /base branch policy/);
   assert.equal(db.recentNotifications(50).filter((x) => x.task_id === b.id).length, 1);
@@ -322,7 +365,7 @@ test('a merge and a sync never touch one task at once', async () => {
   const a = tested();
   db.setSyncing(a.id, true);
   await assert.rejects(mergeTask(db, a.id), /syncing/);
-  assert.equal(await autoMerge(db, [{ id: a.id, pr: ready }]), null);
+  assert.equal(await autoMerge(db, [auto(a.id)]), null);
   assert.deepEqual(gh.merged, []);
   assert.equal(db.recentNotifications(50).filter((x) => x.task_id === a.id).length, 0);
   db.setSyncing(a.id, false);
@@ -352,17 +395,144 @@ test('a merge and a sync never touch one task at once', async () => {
   assert.deepEqual(gh.merged, [b.url]);
 });
 
-test('a gh merge failure on a PR that is already merged sends no "Could not merge"', async () => {
-  const a = tested();
-  mergeError = 'Pull request is already merged';
+const notified = (id: TaskId) => db.recentNotifications(50).filter((x) => x.task_id === id);
+
+test('a merge gh reports failed while GitHub has it merged is recorded with its reason, cleaned up and notified once', async () => {
+  const a = tested({ title: 'timed out after merging' });
+  mergeError = 'gh timed out after 60s';
   const prDetails = github.prDetails;
   github.prDetails = async () => ({ ...ready, state: 'merged' });
   try {
-    assert.equal(await autoMerge(db, [{ id: a.id, pr: ready }]), null);
+    assert.equal(await autoMerge(db, [auto(a.id)]), a.id);
   } finally {
     github.prDetails = prDetails;
   }
-  assert.equal(db.recentNotifications(50).filter((x) => x.task_id === a.id).length, 0);
+  assert.equal(db.getTask(a.id)!.pr?.state, 'merged');
+  assert.equal(db.eventsForTask(a.id).at(-1)!.reason, 'auto-merged (squash)');
+  assert.deepEqual(gh.deleted, [a.branch]);
+  assert.deepEqual(
+    notified(a.id).map((x) => x.title),
+    [`Merged #${a.id}`],
+  );
+});
+
+test('a merge gh reports failed because someone else merged and recorded it says nothing', async () => {
+  const a = tested();
+  const { prDetails, merge } = github;
+  github.merge = async () => {
+    db.recordMerge(a.id, 'merge', 'merged by a person (merge)'); // a CLI merge in another process
+    throw new Error('Pull request is already merged');
+  };
+  github.prDetails = async () => ({ ...ready, state: 'merged' });
+  try {
+    assert.equal(await autoMerge(db, [auto(a.id)]), null);
+  } finally {
+    Object.assign(github, { prDetails, merge });
+  }
+  assert.equal(db.eventsForTask(a.id).at(-1)!.reason, 'merged by a person (merge)');
+  assert.deepEqual(gh.deleted, [], 'the cleanup is the merger’s');
+  assert.equal(notified(a.id).length, 0);
+});
+
+test('autoMerge skips a PR whose request was withdrawn, or whose auto-merge was turned off, after the refresh', async () => {
+  const asked = tested();
+  requestMerge(db, asked.id);
+  const off = tested();
+  const found = await refreshPrStates(db);
+  assert.deepEqual(found.mergeable, [
+    { id: asked.id, pr: ready, requested: true },
+    { id: off.id, pr: ready, requested: false },
+  ]);
+  // While the refresh read the other PRs, a person withdrew the request and turned auto-merge off for the other.
+  cancelMergeRequest(db, asked.id);
+  db.setAutoMerge(off.id, false);
+  assert.equal(await autoMerge(db, found.mergeable), null);
+  assert.deepEqual(gh.merged, [], 'neither falls through to its repo’s auto-merge');
+  assert.equal(notified(asked.id).length + notified(off.id).length, 0);
+});
+
+test('a head that moved since the refresh leaves the request in place and sends nothing', async () => {
+  const fake = fakeCodeHost();
+  const real = db.codeHost;
+  const app = testApp(db, { codeHost: fake }); // testApp sets the ports on db itself: put the real one back after
+  try {
+    await headMoved(app, fake);
+  } finally {
+    testApp(db, { codeHost: real });
+  }
+});
+
+async function headMoved(app: typeof db, fake: ReturnType<typeof fakeCodeHost>) {
+  const t = tested();
+  requestMerge(app, t.id);
+  const read = { ...READY_PR, head: 'judged-head' };
+  fake.details[t.url] = read;
+  const found = await refreshPrStates(app);
+  assert.deepEqual(found.mergeable, [{ id: t.id, pr: read, requested: true }]);
+  assert.equal(await autoMerge(app, found.mergeable), t.id);
+  assert.deepEqual(
+    fake.merged.map((m) => m.head),
+    ['judged-head'],
+    'merge is called with the head the refresh read',
+  );
+
+  // A push after the refresh: GitHub refuses the pinned merge.
+  const moved = tested();
+  requestMerge(app, moved.id);
+  fake.details[moved.url] = read;
+  fake.merge = async () => {
+    throw new Error('GraphQL: Head branch was modified. Review and try the merge again. (mergePullRequest)');
+  };
+  const logs: string[] = [];
+  const next = await refreshPrStates(app);
+  assert.equal(await autoMerge(app, next.mergeable, { log: (m) => logs.push(m) }), null);
+  assert.ok(db.getTask(moved.id)!.pr?.merge_request, 'the request waits for the next round');
+  assert.equal(db.getTask(moved.id)!.pr?.state, 'open');
+  assert.equal(notified(moved.id).length, 0);
+  assert.match(logs.join('\n'), /left for the next refresh: .*Head branch was modified/);
+}
+
+test('a transient merge error keeps the merge request; a lasting one drops it and notifies once', async () => {
+  const t = tested();
+  requestMerge(db, t.id);
+  const requested = [{ id: t.id, pr: ready, requested: true }];
+  for (const error of [
+    'GraphQL: Base branch was modified. Review and try the merge again.',
+    'HTTP 502: Bad Gateway',
+    'gh timed out after 60s',
+  ]) {
+    mergeError = error;
+    assert.equal(await autoMerge(db, requested), null, error);
+    assert.ok(db.getTask(t.id)!.pr?.merge_request, `kept after: ${error}`);
+  }
+  assert.equal(notified(t.id).length, 0);
+
+  mergeError = 'Pull request is not mergeable: the base branch policy prohibits the merge';
+  assert.equal(await autoMerge(db, requested), null);
+  assert.equal(db.getTask(t.id)!.pr?.merge_request, null, 'dropped: a person must act');
+  assert.deepEqual(
+    notified(t.id).map((x) => x.title),
+    [`Could not merge #${t.id}`],
+  );
+  // A second try at the same entry finds no request left to drop: nothing more is told.
+  assert.equal(await autoMerge(db, requested), null);
+  assert.equal(notified(t.id).length, 1);
+});
+
+test('mergeFailure: what passes on its own, and what needs a person', () => {
+  const cases: [string, string][] = [
+    ['GraphQL: Head branch was modified. Review and try the merge again. (mergePullRequest)', 'head_moved'],
+    ['GraphQL: Base branch was modified. Review and try the merge again. (mergePullRequest)', 'transient'],
+    ['HTTP 502: Bad Gateway (https://api.github.com/graphql)', 'transient'],
+    ['HTTP 503: Service Unavailable', 'transient'],
+    ['gh timed out after 60s', 'transient'],
+    ['Post "https://api.github.com/graphql": read: connection reset by peer', 'transient'],
+    ['Pull request is not mergeable: the base branch policy prohibits the merge', 'lasting'],
+    ['GraphQL: Pull Request is not mergeable (mergePullRequest)', 'lasting'],
+    ['HTTP 403: Resource not accessible by integration', 'lasting'],
+    ['merge #502 refused', 'lasting'],
+  ];
+  for (const [message, failure] of cases) assert.equal(mergeFailure(message), failure, message);
 });
 
 // ---- A person's override

@@ -67,6 +67,7 @@ const pending: PrDetails = {
   additions: 5,
   deletions: 1,
   checks: { total: 3, failing: 0, pending: 1 },
+  head: 'head-1',
   paths: [],
   labels: [],
 };

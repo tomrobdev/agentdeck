@@ -1,6 +1,6 @@
 // Merging a done task's PR, as a person asked or on its own, and closing one.
 import type { App } from '../ports/app.ts';
-import { type PrDetails, mergeCheck, mergeFindings } from '../../domain/landing/index.ts';
+import { type MergeFailure, type PrDetails, mergeCheck, mergeFailure, mergeFindings } from '../../domain/landing/index.ts';
 import { MERGE_METHODS, type MergeMethod, isMergeMethod } from '../../domain/repos/index.ts';
 import { type AutoMergeCheck, autoMergeOn } from '../../domain/landing/index.ts';
 import type { CheckCounts } from '../../domain/landing/index.ts';
@@ -65,14 +65,12 @@ export interface MergePreview {
   merge_now: boolean;
 }
 
-/** A merge refused because of what the PR's state is, with the `reasons`; `conflicting` when one of them is a conflict with the base branch. */
-class MergeRefused extends ActionError {
-  reasons: string[];
-  conflicting: boolean;
-  constructor(id: TaskId, reasons: string[], conflicting: boolean) {
-    super(`can't merge #${id}: ${reasons.join('; ')}`);
-    this.reasons = reasons;
-    this.conflicting = conflicting;
+/** A merge that did not go through, with what it means for trying again (`mergeFailure`). */
+export class MergeFailed extends ActionError {
+  failure: MergeFailure;
+  constructor(message: string, failure: MergeFailure) {
+    super(message);
+    this.failure = failure;
   }
 }
 
@@ -126,6 +124,8 @@ export interface MergeResult {
   unblocked: TaskId[];
   /** Set when the merge went through but removing the branch or worktree did not. */
   cleanup_error?: string;
+  /** Set when gh failed because the PR was merged meanwhile by someone else, who recorded it. */
+  elsewhere?: true;
 }
 
 /**
@@ -147,55 +147,16 @@ export async function mergeTask(app: App, id: TaskId, opts: { method?: string; d
   });
   const found = mergeFindings({ pr_state: task.pr?.state ?? null, pr, tests_passed: null, lands_after: landsAfter(app, id) });
   const problems = found.filter((f) => f.problem);
-  if (problems.length)
-    throw new MergeRefused(
-      id,
-      problems.map((f) => f.text),
-      problems.some((f) => f.kind === 'conflict'),
-    );
+  if (problems.length) throw new ActionError(`can't merge #${id}: ${problems.map((f) => f.text).join('; ')}`);
   return mergeOpenPr(app, { task, repo, url, cwd }, pr, { method, deleteBranch, reason: mergeReason('person', method) });
 }
 
-/** What merging a set of PRs came to: the ones merged, and why each other one was left open. */
-export interface MergeAllResult {
-  merged: ({ id: TaskId } & MergeResult)[];
-  /** `conflicting`: the PR conflicts with the base branch, so a sync may let it merge. */
-  skipped: { id: TaskId; reason: string; conflicting: boolean }[];
-}
-
 /**
- * Merge the open PRs of the given tasks, as a person approving them all: each with the repo's method, then the remote branch and the worktree go, as after an auto-merge. A PR that lands after another waits for a
- * round in which that one merged, so the order the ids come in doesn't matter. One that can't merge stays as it was, with
- * the reason mergeTask refused it. The base moves with every merge; GitHub refuses a PR that then conflicts.
- */
-export async function mergeAll(app: App, input: { ids: TaskId[] }): Promise<MergeAllResult> {
-  const result: MergeAllResult = { merged: [], skipped: [] };
-  let pending = [...new Set(input.ids)];
-  // A round with nothing merged frees no one, so the next round tries every PR left, to say why each stays open.
-  let last = false;
-  while (pending.length) {
-    const now = last ? pending : pending.filter((id) => !landsAfter(app, id).length);
-    pending = pending.filter((id) => !now.includes(id));
-    let merged = false;
-    for (const id of now) {
-      try {
-        result.merged.push({ id, ...(await mergeTask(app, id, { delete_branch: true })) });
-        merged = true;
-      } catch (err) {
-        if (!(err instanceof ActionError)) throw err;
-        // The id is on the entry, so a refusal gives its reasons without mergeTask's "can't merge #12: ".
-        const refused = err instanceof MergeRefused ? err : null;
-        result.skipped.push({ id, reason: refused ? refused.reasons.join('; ') : err.message, conflicting: refused?.conflicting ?? false });
-      }
-    }
-    last = !merged;
-  }
-  return result;
-}
-
-/**
- * Merge a PR that has been checked: mark a draft ready, merge, record it with `reason`, and optionally clean up.
- * Throws ActionError if gh fails; a cleanup failure after the merge is returned, not thrown.
+ * Merge a PR that has been checked, as `pr` read it: mark a draft ready, merge its head `pr.head` and nothing else, record
+ * it with `reason`, and optionally clean up. A merge gh reports failed while GitHub reads the PR merged afterwards (a
+ * timeout after the merge) is recorded the same way; `elsewhere` when the merge was already recorded (another process
+ * merged it), and then nothing is cleaned up. Throws MergeFailed if the merge did not go through; a cleanup failure after
+ * the merge is returned, not thrown.
  */
 export async function mergeOpenPr(
   app: App,
@@ -205,27 +166,38 @@ export async function mergeOpenPr(
 ): Promise<MergeResult> {
   const { id } = task;
   const { method, deleteBranch, log = (msg) => console.log(`[${new Date().toISOString()}] ${msg}`) } = opts;
-  if (!lockMerge(id)) throw new ActionError(`#${id} is already being merged`);
+  const head = pr.head;
+  if (!head) throw new MergeFailed(`GitHub did not say which commit #${id}'s PR is at, so the merge can't be pinned to it`, 'lasting');
+  if (!lockMerge(id)) throw new MergeFailed(`#${id} is already being merged`, 'transient');
   if (isSyncing(app, id)) {
     unlockMerge(id);
-    throw new ActionError(`#${id} is syncing with its base branch; try again when that is done`);
+    throw new MergeFailed(`#${id} is syncing with its base branch; try again when that is done`, 'transient');
   }
+  let failed: string | null = null;
   try {
     if (pr.draft) await app.codeHost.markReady(url, cwd);
     await app.codeHost.merge({
       url,
       cwd,
       method,
+      head,
       message: { subject: task.title, body: buildPrBody(task, app.runsForTask(id), prPlanFor(app, task)) },
     });
   } catch (err) {
-    throw new ActionError(`merge failed: ${errorMessage(err)}`);
+    const error = errorMessage(err);
+    // gh may fail after GitHub merged (a timeout on the answer): what GitHub says now decides.
+    const now = await app.codeHost.prDetails(url, cwd).catch(() => null);
+    if (now?.state !== 'merged') throw new MergeFailed(`merge failed: ${error}`, mergeFailure(error));
+    failed = error;
   } finally {
     unlockMerge(id);
   }
   // False when a refresh in another process already recorded the PR as merged: say so, so the merge leaves a trace.
-  if (!app.recordMerge(id, method, opts.reason, pr.checks))
+  if (!app.recordMerge(id, method, opts.reason, pr.checks)) {
+    // gh failed and someone else recorded the merge: it was theirs, not this one.
+    if (failed) return { method, unblocked: [], elsewhere: true };
     log(`task ${id}: merged its PR (${method}), but the merge was already recorded or the task has moved on`);
+  } else if (failed) log(`task ${id}: gh said the merge failed (${failed}), but GitHub has it merged: recorded`);
   // The base just moved: the repo's other open PRs may now conflict. The scheduler re-reads them at once
   // (a setting, so a merge from the CLI reaches the daemon too).
   app.requestPrCheck();
