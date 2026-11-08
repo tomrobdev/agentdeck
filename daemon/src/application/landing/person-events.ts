@@ -3,8 +3,9 @@
 // which imports work/.
 import type { App } from '../ports/app.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
-import type { TaskStatus } from '../../domain/work/index.ts';
+import { type TaskStatus, fromStatuses, modelError } from '../../domain/work/index.ts';
 import { refuseWhileSyncing } from '../work/checkout-locks.ts';
+import { escalateOnRetry } from '../work/escalate.ts';
 import { ActionError, requireTask } from '../shared/input.ts';
 import { applyPersonEvent } from './settle.ts';
 
@@ -24,14 +25,36 @@ export function rejectTask(app: App, id: TaskId): void {
   if (!applyPersonEvent(app, id, { type: 'reject' })) throw new ActionError(`#${id} is not a proposal`);
 }
 
-/** Another attempt. A `note` ("request changes") is kept on the timeline and goes first in the next run's prompt. */
-export function retryTask(app: App, id: TaskId, note?: string, onlyFrom?: TaskStatus[]): void {
+/** What a person's retry says: a note for the next run, and the model it runs on. */
+export interface RetryInput {
+  note?: string;
+  model?: string;
+}
+
+/**
+ * Another attempt. A `note` ("request changes") is kept on the timeline and goes first in the next run's prompt. A `model`
+ * is the one the attempt runs on, set as an edit; without one, a blocked or failed task whose last run failed in a way a
+ * stronger model may fix runs one model up (`escalateOnRetry`). Returns the model the attempt runs on, and whether it was
+ * moved up.
+ */
+export function retryTask(app: App, id: TaskId, input: RetryInput = {}, onlyFrom?: TaskStatus[]): { model: string; escalated: boolean } {
   const t = requireTask(app, id);
   refuseWhileSyncing(app, id);
+  const { note, model } = input;
   if (note !== undefined && typeof note !== 'string') throw new ActionError('note must be text');
+  if (model !== undefined && typeof model !== 'string') throw new ActionError('model must be text');
+  const badModel = model === '' ? 'model must not be empty' : modelError(model);
+  if (badModel) throw new ActionError(badModel);
+  const from = fromStatuses({ type: 'retry' }).filter((s) => !onlyFrom || onlyFrom.includes(s));
+  if (!from.includes(t.status)) throw new ActionError(`#${id} is ${t.status}`);
+  // The model changes before the retry queues the task, so its next run starts on it.
+  const escalated = model === undefined ? escalateOnRetry(app, t) : null;
+  if (model !== undefined && model !== t.model && !app.changeModel(id, { from: t.model, to: model }, { type: 'edit' }, from))
+    throw new ActionError(`#${id} changed meanwhile; try again`);
   // One more attempt on top of what has been used.
-  if (!applyPersonEvent(app, id, { type: 'retry' }, { reason: note?.trim() || null, onlyFrom }))
-    throw new ActionError(`#${id} is ${app.getTask(id)?.status ?? t.status}`);
+  const retried = applyPersonEvent(app, id, { type: 'retry' }, { reason: note?.trim() || null, onlyFrom });
+  if (!retried) throw new ActionError(`#${id} is ${app.getTask(id)?.status ?? t.status}`);
+  return { model: retried.model, escalated: escalated !== null };
 }
 
 /**

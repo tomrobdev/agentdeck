@@ -8,7 +8,15 @@ import { test } from 'node:test';
 import ts from 'typescript';
 import { checkContextImports, checkContextIndexes, checkUnusedIndexExports } from '../scripts/lib/contexts.ts';
 import { LAYERS, layerOf, mayImport } from '../scripts/lib/layers.ts';
-import { PLAIN_TASK_WRITES, checkFolderCycles, checkRowShapedFields } from '../scripts/lib/progress.ts';
+import { type LayoutFile, checkContextFolders, checkFileSize, checkFolderSize, readLayout } from '../scripts/lib/layout.ts';
+import {
+  LONG_FILES,
+  OVERSIZED_FOLDERS,
+  PLAIN_TASK_WRITES,
+  UNPLACED_FOLDERS,
+  checkFolderCycles,
+  checkRowShapedFields,
+} from '../scripts/lib/progress.ts';
 import { type Source, lineOf, parseSource, readSources } from '../scripts/lib/sources.ts';
 import { MIGRATIONS, migrate } from '../src/db/index.ts';
 
@@ -178,6 +186,71 @@ test('[folder-cycles] a sample with a new folder cycle fails, naming the folders
   const stale = checkFolderCycles([sample[0], sample[2]], { domain: ['domain/a, domain/b'] });
   assert.equal(stale.stale.length, 1);
   assert.match(stale.stale[0], /no longer a cycle/);
+});
+
+const layout = readLayout(join(SRC, '../..'));
+
+test('[folder-size] no folder has more than 12 files beyond the listed ones, and no listed folder is back under the limit', () => {
+  const { found, stale } = checkFolderSize(layout, OVERSIZED_FOLDERS);
+  assert.deepEqual([...found, ...stale], []);
+});
+
+test('[folder-size] a sample with a 13th file in an unlisted folder fails, naming it; a listed folder may grow; a stale entry fails', () => {
+  const files = (dir: string, n: number): LayoutFile[] => Array.from({ length: n }, (_, i) => ({ path: `${dir}/f${i}.ts`, lines: 1 }));
+  const sample = [...files('daemon/src/a', 13), ...files('daemon/src/b', 12), ...files('daemon/src/c', 20)];
+  const fresh = checkFolderSize(sample, ['daemon/src/c']);
+  assert.equal(fresh.found.length, 1);
+  assert.match(fresh.found[0], /^daemon\/src\/a has 13 files, over 12/);
+  assert.deepEqual(fresh.stale, []);
+  assert.deepEqual(checkFolderSize(sample, ['daemon/src/a', 'daemon/src/c']), { found: [], stale: [] });
+  const stale = checkFolderSize(sample, ['daemon/src/a', 'daemon/src/b', 'daemon/src/c']);
+  assert.equal(stale.stale.length, 1);
+  assert.match(stale.stale[0], /daemon\/src\/b is on OVERSIZED_FOLDERS but is within the limit/);
+  // Subfolders do not count: 12 files in a folder with a subfolder of 12 more is within the limit.
+  assert.deepEqual(checkFolderSize([...files('daemon/src/d', 12), ...files('daemon/src/d/e', 12)], []), { found: [], stale: [] });
+});
+
+test('[file-size] no file has more than 400 lines beyond the listed ones, and no listed file is back under the limit', () => {
+  const { found, stale } = checkFileSize(layout, LONG_FILES);
+  assert.deepEqual([...found, ...stale], []);
+});
+
+test('[file-size] a sample with a 401-line file fails, naming it; a listed file may grow; a stale entry fails', () => {
+  const sample: LayoutFile[] = [
+    { path: 'daemon/src/a.ts', lines: 401 },
+    { path: 'daemon/src/b.ts', lines: 400 },
+    { path: 'daemon/src/c.ts', lines: 900 },
+  ];
+  const fresh = checkFileSize(sample, ['daemon/src/c.ts']);
+  assert.equal(fresh.found.length, 1);
+  assert.match(fresh.found[0], /^daemon\/src\/a\.ts has 401 lines, over 400/);
+  assert.deepEqual(checkFileSize(sample, ['daemon/src/a.ts', 'daemon/src/c.ts']), { found: [], stale: [] });
+  const stale = checkFileSize(sample, ['daemon/src/a.ts', 'daemon/src/b.ts', 'daemon/src/c.ts']);
+  assert.equal(stale.stale.length, 1);
+  assert.match(stale.stale[0], /daemon\/src\/b\.ts is on LONG_FILES but is within the limit/);
+});
+
+test('[context-folders] files in db/, adapters/, api/routes/, cli/ and daemon/test/ sit in context folders beyond the listed folders', () => {
+  const { found, stale } = checkContextFolders(layout, UNPLACED_FOLDERS);
+  assert.deepEqual([...found, ...stale], []);
+});
+
+test('[context-folders] a sample with a loose file or an unknown folder fails; a listed folder may keep loose files; a stale entry fails', () => {
+  const at = (path: string): LayoutFile => ({ path, lines: 1 });
+  const sample = [
+    at('daemon/src/db/index.ts'),
+    at('daemon/src/db/work/tasks.ts'),
+    at('daemon/src/db/loose.ts'),
+    at('daemon/src/db/misc/x.ts'),
+    at('daemon/src/cli/work/tasks.ts'),
+  ];
+  const fresh = checkContextFolders(sample, ['daemon/src/cli']);
+  assert.equal(fresh.found.length, 2);
+  assert.match(fresh.found.join('\n'), /daemon\/src\/db\/ has 1 files outside a context folder, such as daemon\/src\/db\/loose\.ts/);
+  assert.match(fresh.found.join('\n'), /daemon\/src\/db\/misc/);
+  assert.match(fresh.stale.join('\n'), /daemon\/src\/cli is on UNPLACED_FOLDERS but holds only shared files/);
+  const listed = checkContextFolders(sample.slice(0, 3), ['daemon/src/db']);
+  assert.deepEqual(listed, { found: [], stale: [] });
 });
 
 /** Globals that read the clock, randomness, the environment or the outside world. */
@@ -725,6 +798,8 @@ const ALLOWED_MODULE_STATE: Record<string, string> = {
   'application/landing/settle.ts:following':
     'the follow-up lock: history rows whose follow-ups run in this process; the outbox in the database is what the processes share',
   'application/work/files.ts:changedCache': 'a cache of immutable diff results: the same two commits always differ the same way',
+  'application/work/proposal-check.ts:stalenessCache':
+    'a cache of immutable staleness results: the same task, base commit and prompt always come to the same commits and paths',
 };
 
 const MUTATORS = /^(set|add|delete|clear|push|pop|shift|unshift|splice|sort|reverse|fill|copyWithin)$/;

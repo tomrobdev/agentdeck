@@ -30,6 +30,21 @@ export interface PlainItem {
 export type Item = CallItem | ExploredItem | PlainItem;
 
 const EXPLORE = new Set(['Read', 'Grep', 'Glob', 'LS']);
+const READ_KIND = new Set([...EXPLORE, 'WebFetch']);
+const WRITES = new Set(['Edit', 'MultiEdit', 'Write', 'NotebookEdit']);
+
+/** What a call does, which sets its colour and icon. */
+export type ToolKind = 'read' | 'edit' | 'command' | 'agent' | 'other';
+
+export function toolKind(name: string): ToolKind {
+  if (READ_KIND.has(name)) return 'read';
+  if (WRITES.has(name)) return 'edit';
+  if (name === 'Bash') return 'command';
+  if (name === 'Task' || name === 'Agent') return 'agent';
+  return 'other';
+}
+
+export const TOOL_ICONS: Record<ToolKind, string> = { read: '◉', edit: '✎', command: '$', agent: '◆', other: '●' };
 
 function fold(items: Item[]): Item[] {
   const out: Item[] = [];
@@ -98,6 +113,81 @@ export function changeLines(change: NonNullable<ToolEntry['change']>): { sign: '
     ...split(change.old).map((text) => ({ sign: '−' as const, text })),
     ...split(change.new).map((text) => ({ sign: '+' as const, text })),
   ];
+}
+
+/** Whether a call's result is left out: a write that worked has nothing to add to the call. */
+export function resultHidden(item: CallItem): boolean {
+  return !!item.result?.ok && WRITES.has(item.call.name);
+}
+
+/** A function that cuts the worktree's root from a text; with no worktree it changes nothing. */
+export function cutRoot(root: string | null | undefined): (text: string) => string {
+  const prefix = root ? root.replace(/\/$/, '') + '/' : '';
+  return (text) => (prefix ? text.split(prefix).join('') : text);
+}
+
+function inputOf(input: string): Record<string, unknown> {
+  try {
+    const v: unknown = JSON.parse(input);
+    return v && typeof v === 'object' ? (v as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
+}
+
+/** What a Read read, as "lines 10–59" or "first 2000 lines"; null when it is not a Read or has no result. */
+export function readRange(item: CallItem): string | null {
+  if (item.call.name !== 'Read' || !item.result?.ok) return null;
+  const n = item.result.lines;
+  const input = inputOf(item.call.input);
+  const offset = typeof input.offset === 'number' && input.offset > 0 ? input.offset : 1;
+  if (input.limit === undefined && n === 2000) return 'first 2000 lines';
+  return `lines ${offset}–${offset + n - 1}`;
+}
+
+/** A piece of an output: plain, a link to a file (and line), or a conflict marker line. */
+export interface OutputPart {
+  text: string;
+  path?: string;
+  line?: number | null;
+  conflict?: boolean;
+}
+
+const CONFLICT = /^(<{7}|={7}|>{7})/;
+
+/**
+ * An output split into parts. In a Grep result (`grep` is the call's input), `path:line:` at a line's start, `line:` with the
+ * call's own `file`, and a files_with_matches result's bare paths become links, when `isPath` accepts the path.
+ */
+export function outputParts(output: string, opts: { grep?: string; file?: string | null; isPath?: (p: string) => boolean }): OutputPart[] {
+  const ok = (p: string) => !!opts.isPath?.(p);
+  const norm = (p: string) => p.replace(/^\.\//, '');
+  const grep = opts.grep !== undefined;
+  const mode = grep ? inputOf(opts.grep!).output_mode : undefined;
+  const bare = grep && (mode === undefined || mode === 'files_with_matches');
+  const lines = output.split('\n');
+  const parts: OutputPart[] = [];
+  lines.forEach((text, i) => {
+    const nl = i < lines.length - 1 ? '\n' : '';
+    if (CONFLICT.test(text)) return void parts.push({ text: text + nl, conflict: true });
+    if (grep) {
+      const m = /^(.+?):(\d+):/.exec(text);
+      if (m && ok(norm(m[1]))) {
+        const head = `${m[1]}:${m[2]}:`;
+        parts.push({ text: head, path: norm(m[1]), line: Number(m[2]) }, { text: text.slice(head.length) + nl });
+        return;
+      }
+      const single = /^(\d+):/.exec(text);
+      if (single && opts.file && ok(norm(opts.file))) {
+        const head = `${single[1]}:`;
+        parts.push({ text: head, path: norm(opts.file), line: Number(single[1]) }, { text: text.slice(head.length) + nl });
+        return;
+      }
+      if (bare && text.trim() && ok(norm(text.trim()))) return void parts.push({ text, path: norm(text.trim()), line: null }, { text: nl });
+    }
+    parts.push({ text: text + nl });
+  });
+  return parts;
 }
 
 /** Whether the run's calls have all been answered: a call without a result is still going while the run is live. */

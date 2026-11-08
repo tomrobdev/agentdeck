@@ -15,6 +15,49 @@ export const CYCLE_LAYERS = ['domain', 'application'];
  */
 export const ALLOWED_FOLDER_CYCLES: Record<string, string[]> = {};
 
+/**
+ * The folders with more than 12 files directly in them today (rule:folder-size), as paths from the repo root; subfolders do not count.
+ * The list only shrinks: a new folder over the limit fails the test, and so does an entry back under it, so remove an entry in the change
+ * that splits its folder. Never add one. A listed folder may grow while it is listed.
+ */
+export const OVERSIZED_FOLDERS: string[] = [
+  'app/src/components/task',
+  'app/src/components/ui',
+  'app/src/composables',
+  'app/src/lib',
+  'daemon/src/adapters',
+  'daemon/src/cli',
+  'daemon/src/db',
+  'daemon/src/domain/landing',
+  'daemon/src/domain/work',
+  'daemon/test',
+];
+
+/**
+ * The .ts and .vue files over 400 lines today (rule:file-size), as paths from the repo root. The list only shrinks, as above: remove an
+ * entry in the change that brings its file under the limit. Never add one. A listed file may grow while it is listed.
+ */
+export const LONG_FILES: string[] = [
+  'daemon/src/adapters/git.ts',
+  'daemon/src/api/contract.ts',
+  'daemon/src/application/scheduler/scheduler.ts',
+  'daemon/src/db/tasks.ts',
+  'daemon/src/domain/landing/checks.ts',
+  'daemon/src/domain/runs/run.ts',
+];
+
+/**
+ * The folders of `PLACED_FOLDERS` (`layout.ts`) that still have files outside a context folder today (rule:context-folders). The list
+ * only shrinks, as above: remove an entry once its folder holds only its shared files and context folders. Never add one.
+ */
+export const UNPLACED_FOLDERS: string[] = [
+  'daemon/src/adapters',
+  'daemon/src/api/routes',
+  'daemon/src/cli',
+  'daemon/src/db',
+  'daemon/test',
+];
+
 export const cycleKey = (c: FolderCycle) => c.folders.join(', ');
 
 /** One of the imports that ties a cycle, as `file:line imports target-folder`. */
@@ -186,6 +229,9 @@ export function progress(sources: Source[]): Progress {
     cycles,
     lists: [
       { name: 'ALLOWED_FOLDER_CYCLES (`scripts/lib/progress.ts`)', size: Object.values(ALLOWED_FOLDER_CYCLES).flat().length },
+      { name: 'OVERSIZED_FOLDERS (`scripts/lib/progress.ts`)', size: OVERSIZED_FOLDERS.length },
+      { name: 'LONG_FILES (`scripts/lib/progress.ts`)', size: LONG_FILES.length },
+      { name: 'UNPLACED_FOLDERS (`scripts/lib/progress.ts`)', size: UNPLACED_FOLDERS.length },
       { name: 'ROW_SHAPED_FIELDS (`scripts/lib/progress.ts`)', size: ROW_SHAPED_FIELDS.length },
       { name: 'PLAIN_TASK_WRITES (`scripts/lib/progress.ts`)', size: Object.keys(PLAIN_TASK_WRITES).length },
     ],

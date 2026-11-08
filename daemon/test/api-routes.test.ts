@@ -597,6 +597,17 @@ const ROWS: Row[] = [
     shape: ['path', 'ref', 'sha', 'size', 'binary', 'truncated', 'text'],
     check: (f) => assert.equal(f.text, 'b\n'),
   },
+  {
+    method: 'GET',
+    path: '/api/tasks/:task/proposal-check',
+    params: task(() => app.addTask({ repo_id: repo.id, title: 'p', prompt: 'Change `a.txt` and `gone.txt`', status: 'proposed' }).id),
+    shape: ['staleness', 'notes', 'overlaps'],
+    check: (c) => {
+      assert.equal(c.staleness.ref, 'main');
+      assert.equal(c.staleness.commits, 0);
+      assert.deepEqual(c.notes, ["the prompt names gone.txt, which isn't on main and no task it builds on adds it"]);
+    },
+  },
 
   // plans.ts
   {

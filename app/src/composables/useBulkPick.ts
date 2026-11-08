@@ -6,6 +6,7 @@ import { errorMessage } from '../../../daemon/src/domain/shared/index.ts';
 import { type BulkAction, type BulkResult, bulkActions, bulkMessage } from '../lib/bulk';
 import { canStartMerge } from '../lib/taskView';
 import { useAction, useActions } from './useActions';
+import { useApprovals } from './useApprovals';
 import { usePicked } from './usePicked';
 
 const VERB: Record<BulkAction, string> = { approve: 'Approve', reject: 'Reject', retry: 'Retry', merge: 'Merge', cancel: 'Cancel' };
@@ -13,6 +14,7 @@ const VERB: Record<BulkAction, string> = { approve: 'Approve', reject: 'Reject',
 export function useBulkPick(tasks: () => TaskSummary[], shown: Ref<TaskSummary[]>) {
   const { run, pending } = useAction();
   const { flash, defer } = useActions();
+  const { approve } = useApprovals();
   const { picked, pick, pickMany, toggleGroup, clearPicked, keepIn, setPicked } = usePicked();
   const pickedTasks = computed(() => tasks().filter((t) => picked.value.includes(t.id)));
   const bar = computed(() => bulkActions(pickedTasks.value));
@@ -25,7 +27,7 @@ export function useBulkPick(tasks: () => TaskSummary[], shown: Ref<TaskSummary[]
   const pickShown = () => pickMany(shown.value.map((t) => t.id));
 
   /** Calls every task, whatever an earlier one did, says what happened, and leaves the failed ones picked. */
-  async function runAll(action: Exclude<BulkAction, 'merge'>, list: TaskSummary[]) {
+  async function runAll(action: Exclude<BulkAction, 'merge' | 'approve'>, list: TaskSummary[]) {
     const results: BulkResult[] = [];
     for (const t of list) {
       try {
@@ -53,6 +55,14 @@ export function useBulkPick(tasks: () => TaskSummary[], shown: Ref<TaskSummary[]
         () => runAll(action, list),
         () => setPicked(before),
       );
+      return;
+    }
+    if (action === 'approve') {
+      // The approve gate may open a dialog and says what happened itself. A task not approved (failed, unticked) stays picked.
+      await run(async () => {
+        const results = await approve(list.map((t) => t.id));
+        if (results) setPicked(list.map((t) => t.id).filter((id) => !results.some((r) => r.id === id && r.error === undefined)));
+      });
       return;
     }
     await run(() => runAll(action, list));

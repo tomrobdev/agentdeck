@@ -27,13 +27,19 @@ Builds on and After links: a task's dependencies and dependents.
 
 ## task-context
 
-What a session or worker is told about a task: the agent context digest, prompt path warnings and prompt sections.
+What a session or worker is told about a task: the agent context digest, prompt path warnings, the proposal check and prompt sections.
 
 - daemon/src/domain/work/read/digest.ts
 - daemon/src/domain/work/read/event-text.ts
 - daemon/src/domain/work/prompt-paths.ts
+- daemon/src/domain/work/proposal-check.ts
 - daemon/src/application/work/context.ts
 - daemon/src/application/work/prompt-paths.ts
+- daemon/src/application/work/proposal-check.ts
+- app/src/components/task/ProposalCheckCard.vue
+- app/src/components/task/ApproveDialog.vue
+- app/src/composables/useApprovals.ts
+- app/src/lib/approveDialog.ts
 - daemon/src/cli/context.ts
 - daemon/src/cli/agent-context.ts
 
@@ -78,12 +84,14 @@ Status changes and what follows them: domain events, the follow-ups table, task_
 
 ## run
 
-The run's lifecycle: the worker, the claude process, resuming, prompts, logs, the live view, unblock runs and review runs.
+The run's lifecycle: the worker, the claude process, resuming, prompts, logs, the live view, unblock runs, review runs and escalation.
 
 - daemon/src/domain/runs/run.ts
 - daemon/src/domain/runs/prompt.ts
 - daemon/src/domain/runs/unblock.ts
 - daemon/src/domain/runs/review.ts
+- daemon/src/domain/runs/escalate.ts
+- daemon/src/application/work/escalate.ts
 - daemon/src/domain/runs/translate/
 - daemon/src/domain/repos/protected-edits.ts
 - daemon/src/application/runs/worker.ts
@@ -143,6 +151,7 @@ Pull requests, checks, merge requests, merging and auto-merge.
 ## review
 
 - daemon/src/domain/landing/review.ts
+- daemon/src/domain/landing/review-gate.ts
 - daemon/src/domain/landing/address.ts
 - daemon/src/application/landing/reviews.ts
 - daemon/src/application/landing/address.ts

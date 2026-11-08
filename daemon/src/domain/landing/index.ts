@@ -44,7 +44,10 @@ export { buildPrBody, existingPr, finalMessage, isPrExistsError, openPrUrl, prFi
 export { PR_OPEN_RETRIES, prNeedsPerson, prRetry } from './pr-retry.ts';
 export type { PrOpenFailures, PrRetry } from './pr-retry.ts';
 export type { PrFields, PrPlan, PrState, PullRequest } from './pr.ts';
+export { countedReviewRuns, reviewRunCounts } from './review-gate.ts';
+export type { ReviewFacts } from './review-gate.ts';
 export {
+  BLOCKING_PREFIX,
   COMMENT_SIDES,
   commentActionError,
   commentLineError,

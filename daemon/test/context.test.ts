@@ -58,6 +58,7 @@ test('describeEvent words each kind of history row', () => {
   assert.equal(say('sync', 'done'), 'synced with the base branch');
   assert.equal(say('plan_unfinished', 'done'), 'left plan steps unfinished');
   assert.equal(say('environment_block', 'blocked', 'no network'), 'blocked by the environment: no network');
+  assert.equal(say('escalate', 'running', 'runs on opus, up from sonnet'), 'model moved up: runs on opus, up from sonnet');
 });
 
 test('digest: a quiet turn is the header alone; a start shows the open tasks', () => {

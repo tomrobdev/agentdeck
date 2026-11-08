@@ -88,6 +88,10 @@ function problems(p: Vars): string[] {
     need(`${name} task page pill`, c(name), mix(c(name), 16, c('panel')), 4.5);
   }
 
+  // The run log's tool colours sit on the log's surface and on cards.
+  for (const name of ['tool-read', 'tool-edit', 'tool-cmd'])
+    for (const s of ['code-bg', 'panel']) need(`${name} on ${s}`, c(name), c(s), 4.5);
+
   // Code: the viewer, and the diff's tinted lines, gutters and highlighted line.
   const diff: [string, Rgb][] = [
     ['added line', mix(c('done'), 14, c('panel'))],

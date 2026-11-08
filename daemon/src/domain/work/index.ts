@@ -9,6 +9,7 @@ export {
   autoMergeCheckChanges,
   autoMergeSettingChanges,
   mergedPrChanges,
+  modelChanges,
   mergeRequestChanges,
   mergeRequestCheckChanges,
   noMergeRequestChanges,
@@ -24,10 +25,12 @@ export { MAX_RESTARTS, TASK_STATUSES, fromStatuses, personEvents, transition } f
 export type { DomainEvent, PersonEvent, TaskEvent, TaskStatus } from './lifecycle.ts';
 export {
   buildsOnError,
+  buildsOnRepoError,
   dependentViews,
   linkError,
   linkState,
   linkViews,
+  prModeOffError,
   releasedBy,
   startState,
   stuckOn,
@@ -57,6 +60,17 @@ export {
 } from './plan.ts';
 export type { OwnPlan, ParsedPlan, PlanSource, PlanStepStatus, TaskPlan } from './plan.ts';
 export { matchPath, pathsNamedIn } from './prompt-paths.ts';
+export {
+  BASE_LOG_FORMAT,
+  CHECKED_STATUSES,
+  emptyProposalCheck,
+  mayOverlap,
+  overlaps,
+  parseBaseLog,
+  proposalCheckLine,
+  staleness,
+} from './proposal-check.ts';
+export type { BaseCommit, Overlap, ProposalCheck, Staleness } from './proposal-check.ts';
 export { digest } from './read/digest.ts';
 export { describeEvent } from './read/event-text.ts';
 export type { PersonEventText } from './read/event-text.ts';

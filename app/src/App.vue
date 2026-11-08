@@ -12,6 +12,7 @@ import {
   isImmutable,
   isOffline,
   liveStatusQuery,
+  proposalCheckQuery,
   reposQuery,
   taskQuery,
   tasksQuery,
@@ -30,6 +31,7 @@ import InsightsView from './components/insights/InsightsView.vue';
 import QueueView from './components/queue/QueueView.vue';
 import TaskPage from './components/task/TaskPage.vue';
 import MergeDialog from './components/task/MergeDialog.vue';
+import ApproveDialog from './components/task/ApproveDialog.vue';
 import AppProvider from './components/ui/AppProvider.vue';
 import CommandPalette from './components/ui/CommandPalette.vue';
 import Toaster, { type ToastItem } from './components/ui/Toaster.vue';
@@ -37,9 +39,12 @@ import { useOpenNext } from './composables/useOpenNext';
 import { go, openTask, parseAppUrl, route, taskUrl } from './router';
 import { type PersonEvent, openingTab } from './lib/taskView';
 import { paletteItems } from './lib/palette';
+import { type ApproveItem, type ApprovePlan, approveDialog } from './lib/approveDialog';
+import { type BulkResult, bulkMessage } from './lib/bulk';
 import { requestedView } from './composables/useView';
 import { type Flash, UNDO_MS, provideActions, trackPending } from './composables/useActions';
 import { useChangeStream } from './composables/useChangeStream';
+import { approveDialogSetting, provideApprovals } from './composables/useApprovals';
 
 const selectedId = ref<number | null>(null);
 const toasts = ref<ToastItem[]>([]);
@@ -105,9 +110,54 @@ watch(
 );
 
 const togglePause = () => pauseRun(() => (status.value?.paused ? api.resume() : api.pause()));
-// A reject waits 5 seconds behind an Undo toast before the API is called; every other event goes at once.
+// A reject waits 5 seconds behind an Undo toast before the API is called; an approve goes through the approve gate below;
+// every other event goes at once.
 const actOn = (kind: PersonEvent, id: number) =>
-  kind === 'reject' ? actions.defer(`Rejected #${id}`, () => PERSON_CALLS.reject(id)) : act(() => PERSON_CALLS[kind](id));
+  kind === 'reject'
+    ? actions.defer(`Rejected #${id}`, () => PERSON_CALLS.reject(id))
+    : kind === 'approve'
+      ? void approve([id])
+      : act(() => PERSON_CALLS[kind](id));
+
+// The approve gate: every way to approve comes here. It reads each task's proposal check, and opens the dialog when the setting
+// and the checks say so; else it approves at once. A check that can't be read counts as nothing to show.
+const approving = ref<{ items: ApproveItem[]; plan: ApprovePlan; resolve: (r: BulkResult[] | null) => void } | null>(null);
+async function approveNow(ids: number[]): Promise<BulkResult[]> {
+  const results: BulkResult[] = [];
+  for (const id of ids) {
+    try {
+      await PERSON_CALLS.approve(id);
+      results.push({ id });
+    } catch (e) {
+      results.push({ id, error: e instanceof Error ? e.message : String(e) });
+    }
+  }
+  await refresh();
+  // One task that worked is the row changing; anything else is said.
+  if (ids.length > 1 || results.some((r) => r.error !== undefined)) flash(bulkMessage('approve', results));
+  return results;
+}
+async function approve(ids: number[]): Promise<BulkResult[] | null> {
+  const setting = approveDialogSetting.value;
+  if (setting === 'never') return approveNow(ids);
+  const items = await Promise.all(
+    ids.map(async (id) => ({
+      id,
+      check: await queryClient.fetchQuery({ ...proposalCheckQuery(id), staleTime: 0 }).catch(() => null),
+    })),
+  );
+  const plan = approveDialog(items, setting);
+  if (!plan.open) return approveNow(ids);
+  return new Promise((resolve) => (approving.value = { items, plan, resolve }));
+}
+provideApprovals({ approve });
+function onApproved(results: BulkResult[] | null) {
+  approving.value?.resolve(results);
+  approving.value = null;
+}
+const approveRows = computed(() =>
+  (approving.value?.items ?? []).map((i) => ({ ...i, title: tasks.value.find((t) => t.id === i.id)?.title ?? '' })),
+);
 /** A task in review opens on its diff, the rest on the overview. */
 function openFromQueue(id: number) {
   const t = tasks.value.find((x) => x.id === id);
@@ -270,6 +320,7 @@ function onCreated(task: Detail) {
         @merged="onMerged"
         @requested="onRequested"
       />
+      <ApproveDialog v-if="approving" :rows="approveRows" :ticked="approving.plan.ticked" @done="onApproved" />
       <CommandPalette v-if="palette" :items="paletteRows" @close="palette = false" />
 
       <Toaster :toasts="toasts" @close="closeToast" />

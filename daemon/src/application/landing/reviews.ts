@@ -115,7 +115,7 @@ export async function submitReview(app: App, id: ReviewId, input: { kind: string
   const note = text(fields, 'body', { empty: true, raw: true }) ?? review.body;
   refuse(emptyReviewError(note, review.comments.length));
   const read = await reviewedDiff(app, review.task_id);
-  if (kind === 'request_changes') retryTask(app, review.task_id, reviewReason(note, review.comments));
+  if (kind === 'request_changes') retryTask(app, review.task_id, { note: reviewReason(note, review.comments) });
   if (!app.submitReview(id, kind, note, read)) throw new ActionError('the review is already submitted');
   return requireReview(app, id);
 }

@@ -112,7 +112,8 @@ function tested(o: { source?: 'manual' | 'planner'; title?: string } = {}) {
 // ---- The check
 
 const repoRow = { test_cmd: 'pnpm test', auto_merge_max_lines: 400, auto_merge_skip: ['.github/'] };
-type CheckOptions = { tests_passed?: boolean | null; paused?: string | null; test_cmd?: string | null };
+type ReviewFacts = import('../src/domain/landing/review-gate.ts').ReviewFacts;
+type CheckOptions = { tests_passed?: boolean | null; paused?: string | null; test_cmd?: string | null; review?: ReviewFacts | null };
 /** The check as stored, its reasons with their kinds. */
 const raw = (pr: Partial<PrDetails> = {}, o: CheckOptions = {}) =>
   autoMergeCheck({
@@ -121,6 +122,7 @@ const raw = (pr: Partial<PrDetails> = {}, o: CheckOptions = {}) =>
     pr: { ...ready, ...pr },
     tests_passed: o.tests_passed === undefined ? true : o.tests_passed,
     paused: o.paused ?? null,
+    review: o.review ?? null,
   });
 /** The check as a person reads it: its reasons' texts. */
 const check = (pr: Partial<PrDetails> = {}, o: CheckOptions = {}) => verdictView(raw(pr, o));
@@ -283,6 +285,183 @@ test('a merge request reads the findings as auto-merge does, without what only a
 });
 
 // ---- Settings
+
+// ---- The review gate (auto_review on)
+
+type ReviewWithComments = import('../src/domain/landing/review.ts').ReviewWithComments;
+let reviewIds = 0;
+/** A submitted review of the changes `diff_hash`, by a review run unless said, with line comments (open unless said). */
+const reviewOf = (
+  kind: 'comment' | 'request_changes',
+  o: {
+    by?: 'person' | 'review_run';
+    diff_hash?: string | null;
+    body?: string;
+    comments?: { body: string; state?: 'open' | 'answered' }[];
+  } = {},
+): ReviewWithComments => {
+  const id = ++reviewIds as ReviewWithComments['id'];
+  return {
+    id,
+    task_id: 1 as TaskId,
+    kind,
+    by: o.by ?? 'review_run',
+    body: o.body ?? 'Summary of the changes',
+    head_commit: 'head-1',
+    diff_hash: o.diff_hash === undefined ? 'diff-1' : o.diff_hash,
+    created_at: '2026-11-08 10:00:00',
+    submitted_at: '2026-11-08 10:00:00',
+    comments: (o.comments ?? []).map((c, i) => ({
+      id: id * 100 + i,
+      review_id: id,
+      path: 'src/a.ts',
+      line: 3 + i,
+      side: 'new' as const,
+      head_commit: 'head-1',
+      body: c.body,
+      answer: null,
+      state: c.state ?? 'open',
+      created_at: '2026-11-08 10:00:00',
+      updated_at: '2026-11-08 10:00:00',
+    })),
+  };
+};
+/** A review run of the changes `diff_hash`, ended `outcome` (null while it runs). */
+const reviewRun = (outcome: string | null, diff_hash = 'diff-1') => ({ kind: 'review', diff_hash, outcome });
+const gated = (review: Partial<ReviewFacts>) => check({}, { review: { diff_hash: 'diff-1', reviews: [], runs: [], ...review } });
+
+test('the review gate: with no review run of these changes yet, auto-merge waits for one', () => {
+  assert.deepEqual(gated({}), { verdict: 'wait', reasons: ['the review run has not read these changes'] });
+  assert.deepEqual(gated({ runs: [reviewRun(null)] }), { verdict: 'wait', reasons: ['the review run is reading these changes'] });
+  assert.deepEqual(
+    gated({ runs: [reviewRun('rate_limited'), reviewRun('interrupted')] }).reasons,
+    ['the review run has not read these changes'],
+    'a rate limit or a restart stopped it before it answered: another starts',
+  );
+  assert.deepEqual(
+    gated({ reviews: [reviewOf('comment', { diff_hash: 'diff-0' })], runs: [reviewRun('done', 'diff-0')] }).reasons,
+    ['the review run has not read these changes'],
+    'a clean review of earlier changes does not count for these',
+  );
+  assert.equal(raw({}, { review: { diff_hash: 'diff-1', reviews: [], runs: [] } }).reasons[0].kind, 'review_pending');
+  assert.deepEqual(check({}, { review: null }), { verdict: 'merge', reasons: [] }, 'auto_review off: no gate');
+});
+
+test('the review gate: a review run that asked for changes needs a person, its first blocking finding told', () => {
+  const blocking = reviewOf('request_changes', {
+    comments: [{ body: 'A style nit' }, { body: 'Blocking: the retry is never\n counted' }, { body: 'Blocking: second' }],
+  });
+  assert.deepEqual(gated({ reviews: [blocking], runs: [reviewRun('done')] }), {
+    verdict: 'never',
+    reasons: ['the review run asked for changes: src/a.ts:4: the retry is never counted'],
+  });
+  assert.equal(raw({}, { review: { diff_hash: 'diff-1', reviews: [blocking], runs: [] } }).reasons[0].kind, 'review_blocking');
+  assert.deepEqual(gated({ reviews: [reviewOf('request_changes', { body: 'Misses the goal' })] }).reasons, [
+    'the review run asked for changes: Misses the goal',
+  ]);
+});
+
+test('the review gate: a clean review run of these changes adds nothing', () => {
+  assert.deepEqual(gated({ reviews: [reviewOf('comment', { comments: [{ body: 'A style nit' }] })], runs: [reviewRun('done')] }), {
+    verdict: 'merge',
+    reasons: [],
+  });
+  assert.deepEqual(
+    gated({ reviews: [reviewOf('request_changes', { diff_hash: 'diff-0' }), reviewOf('comment')] }),
+    { verdict: 'merge', reasons: [] },
+    'an earlier blocking review of other changes is past',
+  );
+});
+
+test("the review gate: a person's review of these changes counts over the review run's", () => {
+  const blocking = reviewOf('request_changes', { comments: [{ body: 'Blocking: wrong' }] });
+  const person = reviewOf('comment', { by: 'person', body: 'Read it: fine' });
+  assert.deepEqual(gated({ reviews: [blocking, person], runs: [reviewRun('done')] }), { verdict: 'merge', reasons: [] });
+  assert.deepEqual(gated({ reviews: [person] }), { verdict: 'merge', reasons: [] }, 'no review run needed once a person read them');
+  assert.deepEqual(gated({ reviews: [person, blocking] }), { verdict: 'merge', reasons: [] }, 'whichever came first');
+  assert.deepEqual(gated({ reviews: [reviewOf('request_changes', { by: 'person', body: 'Not yet' })] }).reasons, [
+    'a person asked for changes: Not yet',
+  ]);
+  assert.deepEqual(
+    gated({ reviews: [blocking, reviewOf('comment', { by: 'person', diff_hash: 'diff-0' })] }).verdict,
+    'never',
+    "a person's review of other changes does not count",
+  );
+});
+
+test('the review gate: a review run that left no review, or changes it cannot read, need a person', () => {
+  for (const outcome of ['failed', 'cancelled'])
+    assert.deepEqual(gated({ runs: [reviewRun(outcome)] }), {
+      verdict: 'never',
+      reasons: ['the review run of these changes left no review, and no other starts for them'],
+    });
+  assert.deepEqual(gated({ diff_hash: null }), {
+    verdict: 'never',
+    reasons: ["the changes could not be read at the PR's head, so no review run can read them"],
+  });
+});
+
+test('the review gate: asks of earlier reviews the worker left unanswered need a person', () => {
+  const earlier = reviewOf('request_changes', {
+    diff_hash: 'diff-0',
+    comments: [{ body: 'Blocking: handle the empty list' }, { body: 'Blocking: answered', state: 'answered' }, { body: 'A nit' }],
+  });
+  const asked = reviewOf('request_changes', { by: 'person', diff_hash: 'diff-0', comments: [{ body: 'Rename this' }] });
+  const clean = reviewOf('comment');
+  assert.deepEqual(gated({ reviews: [earlier, asked, clean] }), {
+    verdict: 'never',
+    reasons: ['the worker left 2 review comments unanswered: src/a.ts:3: handle the empty list and 1 more'],
+  });
+  assert.equal(raw({}, { review: { diff_hash: 'diff-1', reviews: [earlier, clean], runs: [] } }).reasons[0].kind, 'review_unanswered');
+  assert.deepEqual(
+    gated({ reviews: [earlier, reviewOf('comment', { by: 'person' })] }),
+    { verdict: 'merge', reasons: [] },
+    "a person's review of these changes counts over them too",
+  );
+});
+
+test('the refresh gates auto-merge on the review run of the PR’s changes in a repo with auto_review on', async () => {
+  updateRepo(db, 'demo', { auto_review: true });
+  try {
+    const branch = `agentdeck/gate-${++n}`;
+    sh('checkout', '-q', '-b', branch);
+    writeFileSync(join(dir, 'gate.txt'), 'gated\n');
+    sh('add', '-A');
+    sh('commit', '-q', '-m', 'gated change');
+    const head = sh('rev-parse', 'HEAD');
+    sh('checkout', '-q', 'main');
+    const url = `https://x/pull/${n}`;
+    const t = doneTask(db, repo, { pr: 'open', url, branch });
+    db.finishRun(db.startRun(t.id, 1, join(home, `run-${t.id}.log`)), { tests_passed: true });
+    details[url] = { ...ready, head };
+    const diff_hash = (await db.workspace.diffHash(dir, 'main', head))!;
+    assert.ok(diff_hash);
+
+    assert.deepEqual((await refreshPrStates(db)).mergeable, [], 'no review run yet');
+    assert.deepEqual(db.getTask(t.id)!.pr?.auto_merge_check?.reasons, [
+      { kind: 'review_pending', text: 'the review run has not read these changes' },
+    ]);
+    const preview = await mergePreview(db, t.id);
+    assert.equal(preview.auto_merge?.verdict, 'wait');
+    assert.equal(preview.request.verdict, 'merge', "a person's merge request does not wait on the review run");
+
+    const blocking = db.addRunReview(t.id, 'request_changes', 'Misses a case', { head_commit: head, diff_hash });
+    db.addComment({ review_id: blocking.id, path: 'gate.txt', line: 1, side: 'new', head_commit: head, body: 'Blocking: empty file' });
+    assert.deepEqual((await refreshPrStates(db)).mergeable, []);
+    assert.deepEqual(db.getTask(t.id)!.pr?.auto_merge_check?.verdict, 'never');
+
+    const person = db.createReview(t.id);
+    assert.ok(db.submitReview(person.id, 'comment', 'Read it: the empty file is fine', { head_commit: head, diff_hash }));
+    const found = await refreshPrStates(db);
+    assert.deepEqual(
+      found.mergeable.map((m) => m.id),
+      [t.id],
+      "the person's review counts over the review run's",
+    );
+  } finally {
+    updateRepo(db, 'demo', { auto_review: false });
+  }
+});
 
 test('repo auto-merge settings: off by default, set from the CLI and the API, validated', () => {
   const fresh = db.addRepo({ name: 'fresh', path: join(home, 'fresh'), base_branch: 'main' });

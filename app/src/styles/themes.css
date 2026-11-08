@@ -25,6 +25,9 @@
   --running: #1f58b8;
   --done: #1c6a42;
   --blocked: #8a5a00;
+  --tool-read: #0a6464;
+  --tool-edit: #7b3fa0;
+  --tool-cmd: #a02c66;
   --failed: #b53030;
   --merged: #7340c8;
   --hl-keyword: #a1328f;
@@ -51,6 +54,9 @@
   --running: #6c9bf0;
   --done: #57b583;
   --blocked: #e0ab3c;
+  --tool-read: #4fc4c4;
+  --tool-edit: #c79cf2;
+  --tool-cmd: #f28fb5;
   --failed: #ee7f7f;
   --merged: #b99cf5;
   --hl-keyword: #e08bd6;
@@ -78,6 +84,9 @@
     --running: #6c9bf0;
     --done: #57b583;
     --blocked: #e0ab3c;
+    --tool-read: #4fc4c4;
+    --tool-edit: #c79cf2;
+    --tool-cmd: #f28fb5;
     --failed: #ee7f7f;
     --merged: #b99cf5;
     --hl-keyword: #e08bd6;
@@ -107,6 +116,9 @@
   --running: #1c55bf;
   --done: #186a41;
   --blocked: #8a5700;
+  --tool-read: #0a6464;
+  --tool-edit: #7b3fa0;
+  --tool-cmd: #a02c66;
   --failed: #b02838;
   --merged: #7640cc;
   --hl-keyword: #8f35b8;
@@ -133,6 +145,9 @@
   --running: #6ea2ff;
   --done: #52c28a;
   --blocked: #e2b04a;
+  --tool-read: #4fc4c4;
+  --tool-edit: #c79cf2;
+  --tool-cmd: #f28fb5;
   --failed: #f2808c;
   --merged: #b79af7;
   --hl-keyword: #d79bf2;
@@ -160,6 +175,9 @@
     --running: #6ea2ff;
     --done: #52c28a;
     --blocked: #e2b04a;
+    --tool-read: #4fc4c4;
+    --tool-edit: #c79cf2;
+    --tool-cmd: #f28fb5;
     --failed: #f2808c;
     --merged: #b79af7;
     --hl-keyword: #d79bf2;
@@ -189,6 +207,9 @@
   --running: #0757b5;
   --done: #136a2b;
   --blocked: #8a5a00;
+  --tool-read: #0a6464;
+  --tool-edit: #7b3fa0;
+  --tool-cmd: #a02c66;
   --failed: #b81c28;
   --merged: #6e40c9;
   --hl-keyword: #b81c28;
@@ -215,6 +236,9 @@
   --running: #58a6ff;
   --done: #3fb950;
   --blocked: #d29922;
+  --tool-read: #4fc4c4;
+  --tool-edit: #c79cf2;
+  --tool-cmd: #f28fb5;
   --failed: #ff7b72;
   --merged: #ba8fff;
   --hl-keyword: #ff7b72;
@@ -242,6 +266,9 @@
     --running: #58a6ff;
     --done: #3fb950;
     --blocked: #d29922;
+    --tool-read: #4fc4c4;
+    --tool-edit: #c79cf2;
+    --tool-cmd: #f28fb5;
     --failed: #ff7b72;
     --merged: #ba8fff;
     --hl-keyword: #ff7b72;
@@ -272,6 +299,9 @@
   --running: #0033cc;
   --done: #005a1f;
   --blocked: #6b4500;
+  --tool-read: #0a6464;
+  --tool-edit: #7b3fa0;
+  --tool-cmd: #a02c66;
   --failed: #a80000;
   --merged: #5a1fb0;
   --hl-keyword: #7a0070;
@@ -299,6 +329,9 @@
   --running: #7fb2ff;
   --done: #5ee08a;
   --blocked: #ffc933;
+  --tool-read: #4fc4c4;
+  --tool-edit: #c79cf2;
+  --tool-cmd: #f28fb5;
   --failed: #ff8a8a;
   --merged: #d0b3ff;
   --hl-keyword: #ff9cf0;
@@ -327,6 +360,9 @@
     --running: #7fb2ff;
     --done: #5ee08a;
     --blocked: #ffc933;
+    --tool-read: #4fc4c4;
+    --tool-edit: #c79cf2;
+    --tool-cmd: #f28fb5;
     --failed: #ff8a8a;
     --merged: #d0b3ff;
     --hl-keyword: #ff9cf0;

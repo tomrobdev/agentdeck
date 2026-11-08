@@ -39,6 +39,8 @@ export function pilotStats(app: App, opts: { repo?: string; since?: string; by?:
     tasks,
     events,
     samples: app.usageSamples('seven_day'),
+    review_runs: app.scorecardReviewRuns(only?.id),
+    run_reviews: app.scorecardRunReviews(only?.id),
     repoName,
     since: opts.since,
     by: opts.by === 'week' ? 'week' : undefined,

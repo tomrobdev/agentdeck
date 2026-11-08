@@ -164,6 +164,7 @@ export function repoStore(db: DatabaseSync, orm: Orm) {
           | 'merge_method'
           | 'auto_resolve'
           | 'auto_unblock'
+          | 'escalate'
           | 'sandbox'
           | 'network'
           | 'auto_merge'

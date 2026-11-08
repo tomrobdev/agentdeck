@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { type LogEntry, api } from '../../api';
-import { buildTranscript } from '../../lib/transcript';
+import { buildTranscript, cutRoot } from '../../lib/transcript';
 import LogItem from './LogItem.vue';
 
 const props = defineProps<{
@@ -21,6 +21,7 @@ function repoPath(file: string | undefined): string | null {
   return root && file.startsWith(root) ? file.slice(root.length) : null;
 }
 
+const cut = computed(() => (props.worktree ? cutRoot(props.worktree) : undefined));
 const entries = ref<LogEntry[]>([]);
 const streaming = ref(false);
 const box = ref<HTMLElement | null>(null);
@@ -86,6 +87,7 @@ onBeforeUnmount(close);
       :live="streaming"
       :repo-path="repoPath"
       :is-path="isPath"
+      :cut="cut"
       @file="(p) => emit('file', p)"
       @path="(p, l) => emit('path', p, l)"
     />
