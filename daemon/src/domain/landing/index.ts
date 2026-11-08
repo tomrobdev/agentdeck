@@ -53,7 +53,17 @@ export {
   reviewKindError,
   reviewReason,
 } from './review.ts';
-export type { CommentAction, CommentSide, CommentState, Review, ReviewComment, ReviewKind, ReviewWithComments } from './review.ts';
+export type {
+  CommentAction,
+  CommentSide,
+  CommentState,
+  Review,
+  ReviewAuthor,
+  ReviewComment,
+  ReviewKind,
+  ReviewWithComments,
+  ReviewedDiff,
+} from './review.ts';
 export { PR_SUMMARY_FORMAT } from './summary.ts';
 export { conflictReason, isConflictReason, syncResultOf, syncSummary } from './sync.ts';
 export type { SyncResult } from './sync.ts';

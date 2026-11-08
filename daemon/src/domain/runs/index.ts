@@ -3,6 +3,7 @@ export { buildPrompt, buildResolvePrompt, buildResumePrompt, claudeArgs } from '
 export type { PromptPlan } from './prompt.ts';
 export { resolveOutcome } from './resolve.ts';
 export {
+  DEFAULT_REVIEW_MODEL,
   DEFAULT_SUPPORT_MODEL,
   INTERRUPTED,
   classifyRun,

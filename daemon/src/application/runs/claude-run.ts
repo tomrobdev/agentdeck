@@ -44,16 +44,17 @@ export interface OpenedRun {
 }
 
 /**
- * Open the log and the run row, with the model the run starts with: the task's for a work run, the support_model setting's
- * for a resolve or unblock run. A work run is named by its attempt, a resolve or unblock run by its kind and the time it started.
+ * Open the log and the run row, with the model the run starts with: the task's for a work run, the review_model setting's
+ * for a review run, the support_model setting's for a resolve or unblock run. A work run is named by its attempt, any
+ * other by its kind and the time it started. `diffHash` is the diff a review run reads, recorded on its row.
  */
-export function openTaskRun(app: App, task: Task, kind: RunKind): OpenedRun {
+export function openTaskRun(app: App, task: Task, kind: RunKind, diffHash: string | null = null): OpenedRun {
   ensureDirs();
   const name = kind === 'work' ? `attempt-${task.attempts}` : `${kind}-${Date.now()}`;
   const logPath = join(LOG_DIR, `task-${task.id}-${name}.jsonl`);
   const log = createWriteStream(logPath, { flags: 'a' });
-  const model = runModel(kind, task, app.modelSettings().support_model);
-  const runId = app.startRun(task.id, task.attempts, logPath, kind, model);
+  const model = runModel(kind, task, app.modelSettings());
+  const runId = app.startRun(task.id, task.attempts, logPath, kind, model, diffHash);
   return { runId, logPath, log, model };
 }
 
