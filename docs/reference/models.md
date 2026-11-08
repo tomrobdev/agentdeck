@@ -526,10 +526,11 @@ A line comment on the task's diff.
 
 What the worker is shown of the review it addresses.
 
-| Field      | Type              | Comment                    |
-| ---------- | ----------------- | -------------------------- |
-| `comments` | `CommentInView[]` |                            |
-| `note`     | `string`          | The review's overall note. |
+| Field       | Type                   | Comment                                                                                                           |
+| ----------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `comments`  | `CommentInView[]`      |                                                                                                                   |
+| `note`      | `string`               | The review's overall note.                                                                                        |
+| `ownRetry?` | `boolean \| undefined` | Whether the task's latest retry is this review's own (`isReviewRetry`): its note is then the review block itself. |
 
 ### ReviewWithComments
 

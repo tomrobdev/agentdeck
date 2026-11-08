@@ -1,5 +1,5 @@
 // The landing context's interface: what other contexts and the layers above import.
-export { hunkAround, latestRequestNote, matchAnswers, reviewPromptBlock, unansweredNote, withNote } from './address.ts';
+export { hunkAround, isReviewRetry, latestRequestNote, matchAnswers, reviewPromptBlock, unansweredNote, withNote } from './address.ts';
 export type { ReviewPrompt } from './address.ts';
 export {
   AUTO_MERGE_LABEL,
