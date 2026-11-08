@@ -15,6 +15,8 @@ import { type Task, stopReasonOf } from '../src/domain/work/task.ts';
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-resume-'));
 process.env.AGENTDECK_HOME = home;
 process.env.AGENTDECK_NO_NOTIFY = '1';
+// run-once refuses to start while a daemon answers on the API port: a port nothing answers on, not the live daemon's.
+process.env.AGENTDECK_PORT = '0';
 const fake = join(import.meta.dirname, 'fake-claude.mjs');
 chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;

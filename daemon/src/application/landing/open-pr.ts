@@ -2,10 +2,10 @@
 import type { App } from '../ports/app.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import { AUTO_MERGE_LABEL, autoMergeOn } from '../../domain/landing/index.ts';
-import { buildPrBody, openPrUrl } from '../../domain/landing/index.ts';
-import type { PrRetry } from '../../domain/landing/index.ts';
+import { buildPrBody, existingPr, isPrExistsError, openPrUrl } from '../../domain/landing/index.ts';
+import type { BranchPr, PrRetry } from '../../domain/landing/index.ts';
 import { prNeedsPersonNotification } from '../../domain/operations/index.ts';
-import { type Task, prRetryFor } from '../../domain/work/index.ts';
+import { type Task, prEventsOf, prRetryFor } from '../../domain/work/index.ts';
 import { errorMessage } from '../../domain/shared/index.ts';
 import { prPlanFor } from '../work/plans.ts';
 import { notifyLater } from '../operations/notifications.ts';
@@ -43,18 +43,25 @@ export async function openPullRequest(app: App, task: Task): Promise<{ url?: str
         () => true,
         () => false,
       ));
-    const url = await app.codeHost.createPr({
-      cwd: task.checkout?.worktree ?? repo.path,
-      base: repo.base_branch,
-      head: branch,
-      title: task.title,
-      body: buildPrBody(task, app.runsForTask(task.id), prPlanFor(app, task)),
-      draft: repo.pr_mode === 'draft',
-      labels: labelled ? [AUTO_MERGE_LABEL.name] : [],
-    });
-    app.recordPr(task.id, { type: 'opened', url });
-    logPrEvent(app, task.id, { url });
-    return { url };
+    const cwd = task.checkout?.worktree ?? repo.path;
+    const pr: BranchPr = await app.codeHost
+      .createPr({
+        cwd,
+        base: repo.base_branch,
+        head: branch,
+        title: task.title,
+        body: buildPrBody(task, app.runsForTask(task.id), prPlanFor(app, task)),
+        draft: repo.pr_mode === 'draft',
+        labels: labelled ? [AUTO_MERGE_LABEL.name] : [],
+      })
+      .then(
+        (url) => ({ url, state: 'open' as const }),
+        (err) => existingPrOf(app, cwd, branch, err),
+      );
+    // Recorded whatever the task's status: GitHub has the PR even if the task was retried while it opened.
+    for (const event of prEventsOf(pr)) app.recordPr(task.id, event);
+    logPrEvent(app, task.id, { url: pr.url });
+    return { url: pr.url };
   } catch (err) {
     const error = errorMessage(err);
     // Tell dependents the PR won't appear on its own. A PR that is already open stays open.
@@ -62,6 +69,18 @@ export async function openPullRequest(app: App, task: Task): Promise<{ url?: str
     logPrEvent(app, task.id, { error });
     return { error };
   }
+}
+
+/**
+ * `gh pr create` failed with `err`. When that is because the branch has a PR already (a daemon stopped between opening it
+ * and recording it, or a retry while it opened kept it from being recorded), the PR GitHub has. Otherwise, or when GitHub
+ * can't say which PR, throws `err`.
+ */
+async function existingPrOf(app: App, cwd: string, branch: string, err: unknown): Promise<BranchPr> {
+  if (!isPrExistsError(errorMessage(err))) throw err;
+  const found = existingPr(await app.codeHost.prsForBranch(cwd, branch).catch(() => []));
+  if (!found) throw err;
+  return found;
 }
 
 /**

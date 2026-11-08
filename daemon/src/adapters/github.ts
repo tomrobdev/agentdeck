@@ -2,7 +2,7 @@
 // agents cannot push. Tests replace the members of `github` to fake the network.
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { type CreatePr, type PrDetails, parsePrDetails } from '../domain/landing/index.ts';
+import { type BranchPr, type CreatePr, type PrDetails, parseBranchPrs, parsePrDetails } from '../domain/landing/index.ts';
 import type { MergeMethod } from '../domain/repos/index.ts';
 import { lastLine } from '../domain/shared/index.ts';
 import { gitRemote } from './git.ts';
@@ -80,6 +80,11 @@ export const github = {
     const url = stdout.trim().split('\n').at(-1) ?? '';
     if (!url) throw new Error('gh printed no URL');
     return url;
+  },
+
+  /** `gh pr list --head <branch> --state all`: the branch's PRs in any state, newest first. */
+  async prsForBranch(cwd: string, branch: string): Promise<BranchPr[]> {
+    return parseBranchPrs(await gh(['pr', 'list', '--head', branch, '--state', 'all', '--json', 'url,state'], { cwd }));
   },
 
   /** `gh label create --force`: make sure the repo has the label, so `gh pr create --label` can use it. */

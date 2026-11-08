@@ -256,6 +256,15 @@ What a task says about its own auto-merge: its setting (null follows the repo) a
 | `checked_at` | `string \| null`                                        | When the PR refresh made the check; null when no check counts.                                                             |
 | `limits`     | `{ max_lines: number; skip: string[]; tests: string; }` |                                                                                                                            |
 
+### BranchPr
+
+A PR `gh pr list --head <branch>` lists.
+
+| Field   | Type                             | Comment |
+| ------- | -------------------------------- | ------- |
+| `url`   | `string`                         |         |
+| `state` | `"open" \| "merged" \| "closed"` |         |
+
 ### CheckCounts
 
 What GitHub reports about a PR's checks, counted.
