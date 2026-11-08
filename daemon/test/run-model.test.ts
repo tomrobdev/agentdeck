@@ -215,6 +215,11 @@ test('a resolve run of an opus task starts with the support model, and each run 
   const r = await syncNow(db, task.id);
   assert.equal(r.outcome, 'resolved');
   assert.deepEqual(modelsStarted('AgentDeck conflict resolution').at(-1), 'haiku', 'the resolve run was started on the support model');
+  const logged = readFileSync(join(home, 'fake-claude-args.log'), 'utf8').trim().split('\n');
+  assert.ok(
+    logged.every((l) => (JSON.parse(l) as string[]).includes('--strict-mcp-config')),
+    'every run on the fake claude passes --strict-mcp-config',
+  );
 
   const [work, resolve] = db.runsForTask(task.id);
   assert.deepEqual([work.kind, work.model, work.model_id], ['work', 'opus', 'claude-opus-5-5']);

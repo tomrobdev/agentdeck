@@ -9,6 +9,7 @@ import { runSettings } from '../src/application/runs/claude-run.ts';
 import type { Repo } from '../src/domain/repos/repo.ts';
 import { ALWAYS_DISALLOWED_TOOLS, DEFAULT_ALLOWED_TOOLS } from '../src/domain/repos/tools.ts';
 import { claudeArgs, workerSystemPrompt } from '../src/domain/runs/prompt.ts';
+import { plannerArgs } from '../src/domain/proposals/index.ts';
 import { PR_SUMMARY_FORMAT } from '../src/domain/landing/summary.ts';
 import { normalizeNetwork, settingsPath, workerSettings, worktreeFileRules } from '../src/domain/runs/translate/sandbox.ts';
 import type { Task } from '../src/domain/work/task.ts';
@@ -61,6 +62,12 @@ test('claudeArgs passes --settings and drops bare Edit/Write; push stays disallo
   const disallowed = args.slice(args.indexOf('--disallowedTools') + 1, args.indexOf('--append-system-prompt'));
   assert.deepEqual(disallowed, ALWAYS_DISALLOWED_TOOLS);
   assert.ok(disallowed.includes('Bash(git push*)') && disallowed.includes('Bash(git remote*)'));
+});
+
+test('worker and planner runs load no MCP servers of the person’s own', () => {
+  const task = { model: 'sonnet', max_turns: 10 } as Task;
+  assert.ok(claudeArgs(task, ['Read'], 'do it', null, '/s.json').includes('--strict-mcp-config'));
+  assert.ok(plannerArgs('propose', 'sonnet').includes('--strict-mcp-config'));
 });
 
 test('the worker prompt says sandbox-only test failures are no reason to block', () => {
