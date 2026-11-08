@@ -48,6 +48,21 @@ export function checkFolderCycles(
  */
 export const ROW_SHAPED_FIELDS: string[] = [];
 
+/**
+ * The functions in `db/` that write a task without a rule (rule:task-writes), each with why: a plain write stays in the store. A write
+ * with a rule takes its changes from a function in `domain/work/task-writes.ts`. Status writes are `applyEvent`'s and `claimNextTask`'s
+ * (rule:guarded-status). A new plain write fails the test until it is listed here; an entry that no longer applies fails it too.
+ */
+export const PLAIN_TASK_WRITES: Record<string, string> = {
+  noteEvent: 'only touches updated_at to record a history row; the status stays',
+  addTask: "sets the task's own plan right after the insert; no rule decides it",
+  editTask: 'stores the fields a person gave; the only rule is the status guard',
+  attachOwnPlan: 'only touches updated_at; the plan itself is stored in plans',
+  setCheckout: 'where the work is checked out; a fact the worker reports, no decision',
+  setSyncing: 'marks that a sync is running; a lock, no decision',
+  recoverOrphans: 'clears the sync marks a crash left; a lock, no decision',
+};
+
 /** The row-shaped fields `sources` have that are not allowed, and the allowed entries that are no longer row-shaped. */
 export function checkRowShapedFields(sources: Source[], allowed: string[] = ROW_SHAPED_FIELDS): { found: string[]; stale: string[] } {
   const { flags, jsonFields } = entityFields(sources);
@@ -138,6 +153,7 @@ export function progress(sources: Source[]): Progress {
     lists: [
       { name: 'ALLOWED_FOLDER_CYCLES (`scripts/lib/progress.ts`)', size: Object.values(ALLOWED_FOLDER_CYCLES).flat().length },
       { name: 'ROW_SHAPED_FIELDS (`scripts/lib/progress.ts`)', size: ROW_SHAPED_FIELDS.length },
+      { name: 'PLAIN_TASK_WRITES (`scripts/lib/progress.ts`)', size: Object.keys(PLAIN_TASK_WRITES).length },
     ],
   };
 }

@@ -8,7 +8,7 @@ import { test } from 'node:test';
 import ts from 'typescript';
 import { checkContextImports, checkContextIndexes, checkUnusedIndexExports } from '../scripts/lib/contexts.ts';
 import { LAYERS, layerOf, mayImport } from '../scripts/lib/layers.ts';
-import { checkFolderCycles, checkRowShapedFields } from '../scripts/lib/progress.ts';
+import { PLAIN_TASK_WRITES, checkFolderCycles, checkRowShapedFields } from '../scripts/lib/progress.ts';
 import { type Source, lineOf, parseSource, readSources } from '../scripts/lib/sources.ts';
 import { MIGRATIONS, migrate } from '../src/db/index.ts';
 
@@ -404,6 +404,96 @@ test('[guarded-status] a task status changes only through a guarded transition',
   }
   assert.deepEqual(found, []);
   assert.equal(count, STATUS_WRITERS.length, 'the finder should see exactly the status writes of applyEvent and claimNextTask');
+});
+
+interface TaskWrite {
+  line: number;
+  fn: string;
+  /** Whether what it sets comes from a function of domain/ (a decision), or sets the status (rule:guarded-status's). */
+  fromDomain: boolean;
+  setsStatus: boolean;
+}
+
+/** Every `.update(tasks).set(…)` in a source string, and where its fields come from. */
+function findTaskWrites(source: string): TaskWrite[] {
+  const ast = ts.createSourceFile('sample.ts', source, ts.ScriptTarget.Latest, true);
+  const fromDomainNames = new Set<string>();
+  for (const st of ast.statements) {
+    if (ts.isImportDeclaration(st) && ts.isStringLiteral(st.moduleSpecifier) && /(^|\/)domain\//.test(st.moduleSpecifier.text)) {
+      const named = st.importClause?.namedBindings;
+      // `stored` only turns values into columns; it decides nothing.
+      if (named && ts.isNamedImports(named)) for (const e of named.elements) if (e.name.text !== 'stored') fromDomainNames.add(e.name.text);
+    }
+  }
+  const writes: TaskWrite[] = [];
+  const visit = (node: ts.Node) => {
+    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) && node.expression.name.text === 'set') {
+      let updatesTasks = false;
+      for (let r: ts.Expression = node.expression.expression; ts.isCallExpression(r) && ts.isPropertyAccessExpression(r.expression);) {
+        if (r.expression.name.text === 'update' && r.arguments[0]?.getText(ast) === 'tasks') updatesTasks = true;
+        r = r.expression.expression;
+      }
+      if (updatesTasks) {
+        const [fields] = node.arguments;
+        let fromDomain = false;
+        let setsStatus = false;
+        const inspect = (n: ts.Node) => {
+          if (ts.isCallExpression(n) && ts.isIdentifier(n.expression) && fromDomainNames.has(n.expression.text)) fromDomain = true;
+          if ((ts.isPropertyAssignment(n) || ts.isShorthandPropertyAssignment(n)) && n.name.getText(ast) === 'status') setsStatus = true;
+          ts.forEachChild(n, inspect);
+        };
+        if (fields) inspect(fields);
+        writes.push({ line: lineOf(ast, node), fn: enclosingFunction(node)?.name ?? '', fromDomain, setsStatus });
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(ast);
+  return writes;
+}
+
+/** What is wrong with each non-status task write of a source string: it neither takes its fields from the domain nor is on `plain`. */
+function checkTaskWrites(source: string, plain: Record<string, string>): { found: string[]; used: string[] } {
+  const found: string[] = [];
+  const used: string[] = [];
+  for (const w of findTaskWrites(source)) {
+    if (w.setsStatus || w.fromDomain) continue;
+    if (plain[w.fn]) used.push(w.fn);
+    else
+      found.push(
+        `line ${w.line}: ${w.fn || 'no function'} writes a task without a rule from domain/: ` +
+          'get the changes from a function in domain/work/task-writes.ts, or add the function to PLAIN_TASK_WRITES with its reason',
+      );
+  }
+  return { found, used };
+}
+
+test('[task-writes] the finder fails a write that is neither from the domain nor on the list', () => {
+  const sample =
+    "import { prChanges } from '../domain/work/index.ts';\nfunction a() { orm.update(tasks).set({ ...prChanges(e) }).run(); }\n";
+  assert.deepEqual(checkTaskWrites(sample, {}), { found: [], used: [] });
+  const bare = 'function setTitle() { orm.update(tasks).set({ title }).where(x).run(); }';
+  assert.equal(checkTaskWrites(bare, {}).found.length, 1);
+  assert.match(checkTaskWrites(bare, {}).found[0], /^line 1: setTitle writes a task without a rule/);
+  assert.deepEqual(checkTaskWrites(bare, { setTitle: 'a plain edit' }), { found: [], used: ['setTitle'] });
+  assert.deepEqual(checkTaskWrites('function applyEvent() { orm.update(tasks).set({ status: to }).run(); }', {}), { found: [], used: [] });
+});
+
+test('[task-writes] a task write with a rule takes its changes from domain/, and a plain one is on the list with its reason', () => {
+  const found: string[] = [];
+  const used = new Set<string>();
+  for (const s of sources.filter((s) => s.path.startsWith('db/'))) {
+    const r = checkTaskWrites(s.ast.text, PLAIN_TASK_WRITES);
+    found.push(...r.found.map((m) => `${s.path}:${m}`));
+    for (const fn of r.used) used.add(fn);
+  }
+  const stale = Object.keys(PLAIN_TASK_WRITES)
+    .filter((fn) => !used.has(fn))
+    .map((fn) => `${fn} is on PLAIN_TASK_WRITES but no longer writes a task without a rule: remove the entry`);
+  const noReason = Object.entries(PLAIN_TASK_WRITES)
+    .filter(([, why]) => !why.trim())
+    .map(([fn]) => `${fn} is on PLAIN_TASK_WRITES with no reason`);
+  assert.deepEqual([...found, ...stale, ...noReason], []);
 });
 
 /** The tables whose rows reach the domain only through a mapper, and those mappers. */

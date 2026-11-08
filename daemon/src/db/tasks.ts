@@ -7,6 +7,19 @@ import { type RepoId, type TaskId, asTaskId, stored } from '../domain/shared/ind
 import type { AutoMergeCheck } from '../domain/landing/index.ts';
 import type { StoredChecks } from '../domain/landing/index.ts';
 import type { CheckCounts } from '../domain/landing/index.ts';
+import {
+  type TaskChanges,
+  autoMergeCheckChanges,
+  autoMergeSettingChanges,
+  mergedPrChanges,
+  mergeRequestChanges,
+  mergeRequestCheckChanges,
+  noMergeRequestChanges,
+  prChanges,
+  prChecksChanges,
+  prChecksOpenedChanges,
+  questionChanges,
+} from '../domain/work/index.ts';
 import type { MergeMethod } from '../domain/repos/index.ts';
 import { INTERRUPTED, type RunOutcome } from '../domain/runs/index.ts';
 import {
@@ -47,10 +60,15 @@ const prOpen = eq(tasks.pr_state, 'open');
 /** A task whose PR is open and which is done: in review. Writes to a PR's checks and requests only apply to such a task. */
 const inReview = and(eq(tasks.status, 'done'), prOpen);
 
-/** The columns of a task with no merge request. */
-const NO_MERGE_REQUEST = { merge_requested_at: null, merge_request_method: null, merge_request_check: null };
-/** The columns of a task with no auto-merge check. */
-const NO_AUTO_MERGE_CHECK = { auto_merge_check: null, auto_merge_checked_at: null };
+/** A domain write's changes as columns: the documents as JSON, and `'now'` as the database's clock. */
+const columns = (changes: TaskChanges) => {
+  const { auto_merge_checked_at, merge_requested_at, ...rest } = changes;
+  return {
+    ...stored(rest),
+    ...(auto_merge_checked_at === undefined ? {} : { auto_merge_checked_at: auto_merge_checked_at === 'now' ? NOW_SQL : null }),
+    ...(merge_requested_at === undefined ? {} : { merge_requested_at: merge_requested_at === 'now' ? NOW_SQL : null }),
+  };
+};
 
 /** The task row `t` in the claim and queue queries, which `notWaiting` refers to. */
 const t = alias(tasks, 't');
@@ -332,7 +350,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       return atomically(db, () => {
         const res = orm
           .update(tasks)
-          .set({ ...stored({ question }), updated_at: NOW_SQL })
+          .set({ ...columns(questionChanges(question)), updated_at: NOW_SQL })
           .where(and(eq(tasks.id, id), eq(tasks.status, 'blocked')))
           .run();
         if (!Number(res.changes)) return false;
@@ -488,8 +506,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       return mapFound(
         orm
           .update(tasks)
-          // The stored check was made for the old setting, so it goes with it.
-          .set({ ...stored({ auto_merge: value }), ...NO_AUTO_MERGE_CHECK, updated_at: NOW_SQL })
+          .set({ ...columns(autoMergeSettingChanges(value)), updated_at: NOW_SQL })
           .where(eq(tasks.id, id))
           .returning(TASK_COLUMNS)
           .get(),
@@ -503,7 +520,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     setAutoMergeCheck(id: TaskId, check: AutoMergeCheck | null): boolean {
       const res = orm
         .update(tasks)
-        .set({ auto_merge_check: check && JSON.stringify(check), auto_merge_checked_at: check === null ? null : NOW_SQL })
+        .set(columns(autoMergeCheckChanges(check)))
         .where(and(eq(tasks.id, id), inReview))
         .run();
       return changed(res);
@@ -515,7 +532,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     requestMerge(id: TaskId, method: MergeMethod): boolean {
       const res = orm
         .update(tasks)
-        .set({ merge_requested_at: NOW_SQL, merge_request_method: method, merge_request_check: null, updated_at: NOW_SQL })
+        .set({ ...columns(mergeRequestChanges(method)), updated_at: NOW_SQL })
         .where(and(eq(tasks.id, id), inReview))
         .run();
       return changed(res);
@@ -524,7 +541,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     clearMergeRequest(id: TaskId): boolean {
       const res = orm
         .update(tasks)
-        .set({ ...NO_MERGE_REQUEST, updated_at: NOW_SQL })
+        .set({ ...columns(noMergeRequestChanges()), updated_at: NOW_SQL })
         .where(and(eq(tasks.id, id), isNotNull(tasks.merge_requested_at)))
         .run();
       return changed(res);
@@ -536,7 +553,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     setMergeRequestCheck(id: TaskId, check: AutoMergeCheck): boolean {
       const res = orm
         .update(tasks)
-        .set({ merge_request_check: JSON.stringify(check) })
+        .set(columns(mergeRequestCheckChanges(check)))
         .where(and(eq(tasks.id, id), isNotNull(tasks.merge_requested_at), inReview))
         .run();
       return changed(res);
@@ -548,7 +565,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     recordPrChecksOpened(id: TaskId, checks: CheckCounts): boolean {
       const res = orm
         .update(tasks)
-        .set({ pr_checks_opened: JSON.stringify(checks) })
+        .set(columns(prChecksOpenedChanges(checks)))
         .where(and(eq(tasks.id, id), inReview, isNull(tasks.pr_checks_opened)))
         .run();
       return changed(res);
@@ -560,7 +577,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     setPrChecks(id: TaskId, checks: StoredChecks): boolean {
       const res = orm
         .update(tasks)
-        .set({ pr_checks: JSON.stringify(checks) })
+        .set(columns(prChecksChanges(checks)))
         .where(and(eq(tasks.id, id), inReview))
         .run();
       return changed(res);
@@ -575,26 +592,16 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       const notOpenAndDone = and(or(isNull(tasks.pr_state), not(prOpen)), eq(tasks.status, 'done'));
       const isOpen = prOpen;
       const reason = prEventReason(e);
-      const [set, guard]: [Partial<typeof tasks.$inferInsert>, SQL | undefined] =
-        e.type === 'opened'
-          ? [{ pr_url: e.url, pr_state: 'open' }, notOpenAndDone]
-          : e.type === 'failed'
-            ? [{ pr_state: 'failed' }, notOpenAndDone]
-            : e.type === 'closed'
-              ? [{ pr_state: 'closed' }, isOpen]
-              : [{ pr_state: e.state }, and(isOpen, ne(tasks.pr_state, e.state))];
+      const guard: SQL | undefined =
+        e.type === 'opened' || e.type === 'failed'
+          ? notOpenAndDone
+          : e.type === 'closed'
+            ? isOpen
+            : and(isOpen, ne(tasks.pr_state, e.state));
       return atomically(db, () => {
         const row = orm
           .update(tasks)
-          // A PR that is no longer open has no auto-merge check; a reopened one gets its first at the next refresh.
-          .set({
-            ...set,
-            // A newly opened PR has its own checks to record.
-            ...(e.type === 'opened' ? { pr_checks_opened: null, pr_checks_merged: null, pr_checks: null } : {}),
-            ...NO_AUTO_MERGE_CHECK,
-            ...NO_MERGE_REQUEST,
-            updated_at: NOW_SQL,
-          })
+          .set({ ...columns(prChanges(e)), updated_at: NOW_SQL })
           .where(and(eq(tasks.id, id), guard))
           .returning({ status: tasks.status })
           .get() as { status: TaskStatus } | undefined;
@@ -611,14 +618,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       return atomically(db, () => {
         const res = orm
           .update(tasks)
-          .set({
-            pr_state: 'merged',
-            merge_method: method,
-            ...(checks ? { pr_checks_merged: JSON.stringify(checks) } : {}),
-            ...NO_AUTO_MERGE_CHECK,
-            ...NO_MERGE_REQUEST,
-            updated_at: NOW_SQL,
-          })
+          .set({ ...columns(mergedPrChanges(method, checks)), updated_at: NOW_SQL })
           .where(and(eq(tasks.id, id), inReview))
           .run();
         if (!changed(res)) return false;
