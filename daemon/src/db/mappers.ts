@@ -1,7 +1,7 @@
 // From a row to its domain type: the one place a store's reads of tasks, repos and runs go through, so the domain type need not equal
 // its row. `types-check.ts` checks each row against its mapper, and rule:models-not-rows checks the stores use them.
 import { getColumns } from 'drizzle-orm';
-import { type AutoMergeCheck, DEFAULT_AUTO_MERGE_SKIP } from '../domain/landing/index.ts';
+import { type AutoMergeCheck, DEFAULT_AUTO_MERGE_SKIP, type MergeReason } from '../domain/landing/index.ts';
 import type { CheckCounts, StoredChecks } from '../domain/landing/index.ts';
 import { type PrFields, pullRequestOf } from '../domain/landing/index.ts';
 import { type Checkout, checkoutOf } from '../domain/work/index.ts';
@@ -55,11 +55,19 @@ export function readSteps(json: string | null): string[] | null {
   return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string') : null;
 }
 
-/** A stored auto-merge or merge request check: null when there is none or it is malformed. */
+/** One stored reason of a check: a `{ kind, text }`, or a plain string as checks were stored before reasons had kinds. */
+function readReason(raw: unknown): MergeReason | null {
+  if (typeof raw === 'string') return { kind: 'other', text: raw };
+  const r = raw as Partial<MergeReason> | null;
+  return r && typeof r === 'object' && typeof r.kind === 'string' && typeof r.text === 'string' ? { kind: r.kind, text: r.text } : null;
+}
+
+/** A stored auto-merge or merge request check: null when there is none or it is malformed. A malformed reason is left out. */
 export function readCheck(json: string | null): AutoMergeCheck | null {
-  const v = parseJson(json) as Partial<AutoMergeCheck> | null | undefined;
+  const v = parseJson(json) as (Omit<Partial<AutoMergeCheck>, 'reasons'> & { reasons?: unknown }) | null | undefined;
   if (!v || !['merge', 'wait', 'never'].includes(v.verdict as string) || !Array.isArray(v.reasons)) return null;
-  const check: AutoMergeCheck = { verdict: v.verdict!, reasons: v.reasons.filter((r): r is string => typeof r === 'string') };
+  const reasons = v.reasons.map(readReason).filter((r): r is MergeReason => r !== null);
+  const check: AutoMergeCheck = { verdict: v.verdict!, reasons };
   if (v.conflict === true) check.conflict = true;
   return check;
 }

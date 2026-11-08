@@ -6,8 +6,11 @@ export type { Check, DaemonState, HealthFacts } from './health.ts';
 export {
   NOTIFY_KINDS,
   appDelivers,
+  canStart,
   checksFailedNotification,
   finalNotification,
+  mergeFailedNotification,
+  mergedNotification,
   notifyEventsError,
   ntfyServerError,
   prNeedsPersonNotification,

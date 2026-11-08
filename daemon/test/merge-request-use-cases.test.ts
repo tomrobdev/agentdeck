@@ -147,7 +147,10 @@ test('a request with checks running waits, then merges once they pass, with its 
   const first = await refreshPrStates(db);
   assert.deepEqual(first.mergeable, []);
   assert.equal(first.polling, 1, 'worth reading again soon');
-  assert.deepEqual(db.getTask(a.id)!.pr!.merge_request?.check, { verdict: 'wait', reasons: ['1 check still running on GitHub'] });
+  assert.deepEqual(db.getTask(a.id)!.pr!.merge_request?.check, {
+    verdict: 'wait',
+    reasons: [{ kind: 'checks_pending', text: '1 check still running on GitHub' }],
+  });
   assert.deepEqual((await taskDetail(db, a.id)).merge_request, {
     state: 'waiting',
     method: 'rebase',
@@ -240,7 +243,7 @@ test('two requests where one lands after the other merge in that order', async (
     [first.id],
     'the second waits for the first',
   );
-  assert.match(db.getTask(second.id)!.pr!.merge_request!.check!.reasons[0], new RegExp(`lands after #${first.id}`));
+  assert.match(db.getTask(second.id)!.pr!.merge_request!.check!.reasons[0].text, new RegExp(`lands after #${first.id}`));
   assert.equal(await autoMerge(db, one.mergeable), first.id);
 
   const two = await refreshPrStates(db);

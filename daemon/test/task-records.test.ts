@@ -140,7 +140,7 @@ test('a merge request check finished after a conflict blocked the task is droppe
   const { db, repo } = setup();
   const t = doneTask(db, repo, { pr: 'open' });
   assert.ok(db.requestMerge(t.id, 'squash'));
-  assert.ok(db.setMergeRequestCheck(t.id, { verdict: 'wait', reasons: ['checks pending'] }));
+  assert.ok(db.setMergeRequestCheck(t.id, { verdict: 'wait', reasons: [{ kind: 'checks_pending', text: 'checks pending' }] }));
   assert.ok(db.applyEvent(t.id, { type: 'conflict' }, { reason: 'conflict' }));
   assert.equal(db.getTask(t.id)!.pr?.merge_request, null, 'leaving done drops the request, in the same write');
   assert.equal(db.getTask(t.id)!.pr?.state, 'open', 'the PR stays on the blocked task');

@@ -6,6 +6,7 @@ import { AUTO_MERGE_LABEL, autoMergeOn } from '../../domain/landing/index.ts';
 import { mergeReason } from '../../domain/work/index.ts';
 import { openPrUrl } from '../../domain/landing/index.ts';
 import { errorMessage } from '../../domain/shared/index.ts';
+import { canStart, mergeFailedNotification, mergedNotification } from '../../domain/operations/index.ts';
 import { ActionError, object, requireTask, requireTaskRepo } from '../shared/input.ts';
 import { notifyLater } from '../operations/notifications.ts';
 import { isMergeLocked } from '../work/checkout-locks.ts';
@@ -52,15 +53,9 @@ export async function autoMerge(
       told.delete(id);
       // A merge someone else made and recorded meanwhile (a CLI merge in another process) is theirs: say nothing.
       if (res.elsewhere) continue;
-      const unblocked = res.unblocked.length ? `; ${res.unblocked.map((n) => `#${n}`).join(', ')} can start` : '';
-      log(`task ${id}: ${requested ? 'merged its PR as requested' : 'auto-merged its PR'} (${method})${unblocked}`);
+      log(`task ${id}: ${requested ? 'merged its PR as requested' : 'auto-merged its PR'} (${method})${canStart(res.unblocked)}`);
       if (res.cleanup_error) log(`task ${id}: cleanup after the merge incomplete: ${res.cleanup_error}`);
-      notifyLater(app, {
-        kind: 'merged',
-        title: `Merged #${id}`,
-        body: `${target.task.title} (${target.repo.name})${unblocked}`,
-        task_id: id,
-      });
+      notifyLater(app, mergedNotification(target.task, target.repo.name, res.unblocked));
       return id;
     } catch (err) {
       const error = errorMessage(err);
@@ -75,7 +70,7 @@ export async function autoMerge(
       if (requested ? !app.clearMergeRequest(id) : told.get(id) === error) continue;
       told.set(id, error);
       log(`task ${id}: ${requested ? 'requested merge' : 'auto-merge'} failed: ${error}`);
-      notifyLater(app, { kind: 'merged', title: `Could not merge #${id}`, body: error, task_id: id });
+      notifyLater(app, mergeFailedNotification(id, error));
     }
   }
   return null;

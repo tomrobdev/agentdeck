@@ -2,7 +2,7 @@
 import type { App } from '../ports/app.ts';
 import { type MergeFailure, type PrDetails, mergeCheck, mergeFailure, mergeFindings } from '../../domain/landing/index.ts';
 import { MERGE_METHODS, type MergeMethod, isMergeMethod } from '../../domain/repos/index.ts';
-import { type AutoMergeCheck, autoMergeOn } from '../../domain/landing/index.ts';
+import { type MergeVerdictView, autoMergeOn, verdictView } from '../../domain/landing/index.ts';
 import type { CheckCounts } from '../../domain/landing/index.ts';
 import { isConflicting } from '../../domain/landing/index.ts';
 import { mergeRequestCheck, mergesNow } from '../../domain/landing/index.ts';
@@ -13,10 +13,10 @@ import type { Task } from '../../domain/work/index.ts';
 import { errorMessage } from '../../domain/shared/index.ts';
 import { ActionError, flag, object, requireTask, requireTaskRepo, text } from '../shared/input.ts';
 import { prPlanFor } from '../work/plans.ts';
-import { dependentsReleased, landsAfter } from '../work/dependencies.ts';
+import { dependentsReleased } from '../work/dependencies.ts';
 import { isMergeLocked, isSyncing, lockMerge, unlockMerge } from '../work/checkout-locks.ts';
 import { settlePr } from './settle.ts';
-import { autoMergeFor, lastTestsPassed, prCwd } from './refresh.ts';
+import { autoMergeFor, mergeInputFor, prCwd } from './refresh.ts';
 
 /** Close a task's PR on GitHub and record it. Throws if `gh` fails. */
 export async function closePullRequest(app: App, task: Task): Promise<void> {
@@ -58,9 +58,9 @@ export interface MergePreview {
   /** Queued tasks that build on this one and so wait for it. */
   unblocks: { id: TaskId; title: string }[];
   /** Whether the daemon will merge it on its own, and why not yet; null when auto-merge is off for the task. */
-  auto_merge: AutoMergeCheck | null;
+  auto_merge: MergeVerdictView | null;
   /** What a merge request would do now: `merge` it as asked, `wait` for the PR to be ready, or `never` (a person must act). */
-  request: AutoMergeCheck;
+  request: MergeVerdictView;
   /** Whether the dialog merges now (failing checks or failed tests, on the person's say-so) instead of asking for a merge request. */
   merge_now: boolean;
 }
@@ -93,9 +93,10 @@ export async function mergePreview(app: App, id: TaskId): Promise<MergePreview> 
   const pr = await app.codeHost.prDetails(url, cwd, { withFiles: autoMergeOn(task, repo) }).catch((err) => {
     throw new ActionError(`could not read the PR: ${errorMessage(err)}`);
   });
-  const tests_passed = lastTestsPassed(app, id);
-  const lands_after = landsAfter(app, id);
-  const request = mergeRequestCheck({ pr_state: task.pr?.state ?? null, pr, tests_passed, lands_after, auto_resolve: repo.auto_resolve });
+  const input = mergeInputFor(app, task, repo, pr);
+  const { tests_passed } = input;
+  const request = mergeRequestCheck(input);
+  const auto_merge = await autoMergeFor(app, task, repo, input);
   return {
     title: task.title,
     pr_url: url,
@@ -109,12 +110,12 @@ export async function mergePreview(app: App, id: TaskId): Promise<MergePreview> 
     deletions: pr.deletions,
     tests_passed: tests_passed === null ? null : tests_passed ? 1 : 0, // the API keeps 1, 0 or null
     checks: pr.checks,
-    ...mergeCheck({ pr_state: task.pr?.state ?? null, pr, tests_passed, lands_after }),
+    ...mergeCheck(input),
     conflicting: isConflicting(pr),
     unblocks: dependentsReleased(app, id).map((t) => ({ id: t.id, title: t.title })),
-    auto_merge: await autoMergeFor(app, task, repo, pr, tests_passed),
-    request,
-    merge_now: mergesNow(request, { pr, tests_passed }),
+    auto_merge: auto_merge && verdictView(auto_merge),
+    request: verdictView(request),
+    merge_now: mergesNow(request, input),
   };
 }
 
@@ -145,7 +146,7 @@ export async function mergeTask(app: App, id: TaskId, opts: { method?: string; d
   const pr = await app.codeHost.prDetails(url, cwd).catch((err) => {
     throw new ActionError(`could not read the PR: ${errorMessage(err)}`);
   });
-  const found = mergeFindings({ pr_state: task.pr?.state ?? null, pr, tests_passed: null, lands_after: landsAfter(app, id) });
+  const found = mergeFindings(mergeInputFor(app, task, repo, pr));
   const problems = found.filter((f) => f.problem);
   if (problems.length) throw new ActionError(`can't merge #${id}: ${problems.map((f) => f.text).join('; ')}`);
   return mergeOpenPr(app, { task, repo, url, cwd }, pr, { method, deleteBranch, reason: mergeReason('person', method) });

@@ -1,5 +1,5 @@
 // Whether a PR can be merged, and how. Pure: no I/O.
-import { isConflicting } from './conflict.ts';
+import { isConflicting, isMergeabilityUnknown } from './conflict.ts';
 import { type PrState, parsePrState } from './pr.ts';
 import { type CheckCounts, type JobStep, type PrCheck, countOf, failingChecks, failureLine, failureRead, parseChecks } from './checks.ts';
 import { plural } from '../shared/index.ts';
@@ -177,3 +177,114 @@ export function mergeCheck(input: MergeInput): MergeCheck {
   const found = mergeFindings(input);
   return { problems: found.filter((f) => f.problem).map((f) => f.text), warnings: found.filter((f) => !f.problem).map((f) => f.text) };
 }
+
+/**
+ * What a reason a merge waits or needs a person is about: a merge finding's kind, GitHub still working out mergeability,
+ * one of the rules only auto-merge asks (`no_label`, `tests_not_run`, `untested`, `too_many_lines`, `files_unlisted`,
+ * `protected_paths`, `skipped_paths`, `paused`), or `other`: a reason stored before reasons had kinds.
+ */
+export type MergeReasonKind =
+  | MergeFinding['kind']
+  | 'mergeability_unknown'
+  | 'no_label'
+  | 'tests_not_run'
+  | 'untested'
+  | 'too_many_lines'
+  | 'files_unlisted'
+  | 'protected_paths'
+  | 'skipped_paths'
+  | 'paused'
+  | 'other';
+
+/** One reason a merge waits or needs a person: what it is about, and how a person reads it. */
+export interface MergeReason {
+  kind: MergeReasonKind;
+  text: string;
+}
+
+/** The reasons a merge needs a person (`never`) and those it waits for (`wait`), each in the order they are told. */
+export interface MergeReasons {
+  never: MergeReason[];
+  wait: MergeReason[];
+}
+
+/** Whether a merge goes ahead, waits or needs a person, and why: auto-merge's check, or a merge request's. */
+export interface AutoMergeCheck {
+  /** `merge`: go ahead. `wait`: something that can still change on its own. `never`: it needs a person. */
+  verdict: 'merge' | 'wait' | 'never';
+  /** Why it waits or needs a person; empty for `merge`. */
+  reasons: MergeReason[];
+  /** Set when one of the reasons is the merge finding of kind `conflict`: the branch conflicts with the base. */
+  conflict?: true;
+}
+
+/** A verdict from its reasons, marked when one of the findings was a conflict with the base. */
+export function verdictOf(reasons: MergeReasons, found: MergeFinding[]): AutoMergeCheck {
+  const check: AutoMergeCheck = reasons.never.length
+    ? { verdict: 'never', reasons: reasons.never }
+    : reasons.wait.length
+      ? { verdict: 'wait', reasons: reasons.wait }
+      : { verdict: 'merge', reasons: [] };
+  if (check.verdict !== 'merge' && found.some((f) => f.kind === 'conflict')) check.conflict = true;
+  return check;
+}
+
+/**
+ * What each merge-dialog finding means when the daemon merges without a person waving it through: on its own (auto-merge)
+ * or as a person asked earlier (a merge request). A draft is fine: the merge marks it ready. So is BEHIND: a PR that
+ * merges cleanly onto the moved base is what GitHub would merge, and a repo that requires up-to-date branches makes the
+ * merge fail, which is told once. A conflict waits for the sync the refresh starts, unless the repo has auto_resolve off:
+ * then none starts and a person must sync the task (`conflictNeedsPerson`). The PRs it lands after wait for those to merge.
+ */
+const UNATTENDED: Record<MergeFinding['kind'], 'never' | 'wait' | null> = {
+  not_open: 'never',
+  lands_after: 'wait',
+  conflict: 'wait',
+  draft: null,
+  behind: null,
+  blocked: 'never',
+  tests_failed: 'never',
+  checks_failing: 'never',
+  checks_pending: 'wait',
+};
+
+/** Where one finding goes when no person waves it through, or null when it is fine. */
+function unattended(f: MergeFinding, input: MergeInput): 'never' | 'wait' | null {
+  // While required checks run GitHub says BLOCKED too; the pending checks are the wait.
+  if (f.kind === 'blocked' && input.pr.checks.pending) return null;
+  if (f.kind === 'conflict' && conflictNeedsPerson(input)) return 'never';
+  return UNATTENDED[f.kind];
+}
+
+/**
+ * The verdict on merging a PR without a person waving its findings through: each finding as `UNATTENDED` says, then
+ * `extra`'s reasons (what only auto-merge asks), GitHub still working out mergeability, and `extra`'s waits last.
+ */
+export function unattendedVerdict(input: MergeInput, extra: Partial<MergeReasons> = {}): AutoMergeCheck {
+  const reasons: MergeReasons = { never: [], wait: [] };
+  const found = mergeFindings(input);
+  for (const f of found) {
+    const how = unattended(f, input);
+    if (how) reasons[how].push({ kind: f.kind, text: f.text });
+  }
+  reasons.never.push(...(extra.never ?? []));
+  if (isMergeabilityUnknown(input.pr))
+    reasons.wait.push({ kind: 'mergeability_unknown', text: 'GitHub is still working out whether it merges cleanly' });
+  reasons.wait.push(...(extra.wait ?? []));
+  return verdictOf(reasons, found);
+}
+
+/** What a check says to a person: its verdict and reasons as text, as the API and the CLI show them. */
+export interface MergeVerdictView {
+  verdict: AutoMergeCheck['verdict'];
+  reasons: string[];
+  conflict?: true;
+}
+
+/** A check as a person reads it (`MergeVerdictView`). */
+export function verdictView(check: AutoMergeCheck): MergeVerdictView {
+  return { ...check, reasons: reasonTexts(check.reasons) };
+}
+
+/** The reasons' texts, in order. */
+export const reasonTexts = (reasons: MergeReason[]): string[] => reasons.map((r) => r.text);
