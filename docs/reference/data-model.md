@@ -50,6 +50,7 @@ erDiagram
     integer auto_unblock
     text model "nullable"
     integer auto_review
+    integer escalate
   }
   review_comments {
     integer id PK

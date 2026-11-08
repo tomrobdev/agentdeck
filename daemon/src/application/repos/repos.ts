@@ -69,6 +69,8 @@ export interface RepoPatch {
   auto_resolve?: boolean;
   auto_unblock?: boolean;
   auto_review?: boolean;
+  /** A retry after a failure a stronger model may fix runs one model up. */
+  escalate?: boolean;
   sandbox?: boolean;
   /** Hosts the agent's sandboxed commands may reach; a string is split on commas and spaces. */
   network?: string | string[];
@@ -98,6 +100,7 @@ export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch
   const auto_resolve = flag(body, 'auto_resolve');
   const auto_unblock = flag(body, 'auto_unblock');
   const auto_review = flag(body, 'auto_review');
+  const escalate = flag(body, 'escalate');
   const sandbox = flag(body, 'sandbox');
   const hosts = list(body, 'network', { split: true });
   const network = hosts && normalizeNetwork(hosts);
@@ -136,6 +139,7 @@ export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch
     ...(auto_resolve !== undefined ? { auto_resolve } : {}),
     ...(auto_unblock !== undefined ? { auto_unblock } : {}),
     ...(auto_review !== undefined ? { auto_review } : {}),
+    ...(escalate !== undefined ? { escalate } : {}),
     ...(sandbox !== undefined ? { sandbox } : {}),
     ...(network !== undefined ? { network } : {}),
     ...(auto_merge !== undefined ? { auto_merge } : {}),

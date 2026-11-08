@@ -237,7 +237,7 @@ test('request changes: the note is on the timeline and first in the next prompt,
   updateRepo(db, 'demo', { pr_mode: 'ready' });
   const task = db.addTask({ repo_id: repo.id, title: 'Review me', prompt: 'FAKE_DONE review' });
   await drain();
-  retryTask(db, task.id, '  Rename the helper.  ');
+  retryTask(db, task.id, { note: '  Rename the helper.  ' });
   const events = db.eventsForTask(task.id);
   assert.equal(events.at(-1)!.type, 'retry');
   assert.equal(events.at(-1)!.reason, 'Rename the helper.');

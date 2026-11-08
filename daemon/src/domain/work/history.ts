@@ -10,10 +10,21 @@ import type { TaskEvent, TaskStatus } from './lifecycle.ts';
  * request was closed or seen closed (likewise; its follow-up warns the tasks that now cannot start), `plan_unfinished` when a done run left linked plan steps
  * unfinished (a warning, the status stays as it was), `environment_block` when a run blocked because of the environment and
  * its attempt was given back, `unblock_ask` when an unblock run left a blocked task blocked with a question (the status
- * stays as it was; the reason is the question), otherwise the lifecycle event that changed its status.
+ * stays as it was; the reason is the question), `escalate` when a failure moved the task's model one up for its next attempt
+ * (the status stays as it was; the reason says why, domain/runs/escalate.ts), otherwise the lifecycle event that changed its status.
  */
 export type TaskEventType =
-  'created' | 'edit' | 'merge' | 'pr' | 'pr_closed' | 'sync' | 'plan_unfinished' | 'environment_block' | 'unblock_ask' | TaskEvent['type'];
+  | 'created'
+  | 'edit'
+  | 'merge'
+  | 'pr'
+  | 'pr_closed'
+  | 'sync'
+  | 'plan_unfinished'
+  | 'environment_block'
+  | 'unblock_ask'
+  | 'escalate'
+  | TaskEvent['type'];
 
 /** What happened to a task's pull request. `seen` is what GitHub says about an open one. */
 export type PrEvent =

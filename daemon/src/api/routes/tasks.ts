@@ -59,7 +59,7 @@ export function routes({ db, scheduler }: ApiContext): Route[] {
     })),
     route<C.TaskDetail>('POST', /^\/api\/tasks\/(\d+)\/retry$/, ({ params: [text], body }) => {
       const id = taskIdParam(text);
-      actions.retryTask(db, id, body.note as string | undefined);
+      actions.retryTask(db, id, { note: body.note as string | undefined, model: body.model as string | undefined });
       return detail(id);
     }),
     route<C.TaskDetail>('POST', /^\/api\/tasks\/(\d+)\/done$/, ({ params: [text], body }) => {

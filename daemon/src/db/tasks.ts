@@ -12,6 +12,7 @@ import {
   autoMergeCheckChanges,
   autoMergeSettingChanges,
   mergedPrChanges,
+  modelChanges,
   mergeRequestChanges,
   mergeRequestCheckChanges,
   noMergeRequestChanges,
@@ -684,6 +685,29 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
      */
     recordPlanUnfinished(id: TaskId, reason: string): boolean {
       return noteEvent(id, ['running'], 'plan_unfinished', reason);
+    },
+    /**
+     * Change the model a task's next attempt runs on, with a history row, together: an `escalate` row saying why
+     * (domain/runs/escalate.ts), or an `edit` naming `model` for the one a person's retry names. Guarded on the model it moves
+     * from, so an escalation is made once and a change made meanwhile wins, and on `statuses`. Returns false if it was not.
+     */
+    changeModel(
+      id: TaskId,
+      change: { from: string; to: string },
+      row: { type: 'escalate'; reason: string } | { type: 'edit' },
+      statuses: TaskStatus[],
+    ): boolean {
+      return atomically(db, () => {
+        const updated = orm
+          .update(tasks)
+          .set({ ...columns(modelChanges(change.to)), updated_at: NOW_SQL })
+          .where(and(eq(tasks.id, id), eq(tasks.model, change.from), inArray(tasks.status, statuses)))
+          .returning({ status: tasks.status })
+          .get() as { status: TaskStatus } | undefined;
+        if (!updated) return false;
+        recordEvent(orm, id, row.type, updated.status, updated.status, row.type === 'escalate' ? row.reason : 'model');
+        return true;
+      });
     },
     /**
      * After a crash, anything still marked running was orphaned: put it back in the queue,

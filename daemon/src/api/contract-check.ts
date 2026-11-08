@@ -37,5 +37,5 @@ check<Fits<C.RequestMergesRequest, In<typeof actions.requestMerges, 1>>>();
 check<Fits<C.ReviewPatch, In<typeof actions.editReview, 2>>>();
 check<Fits<C.NewReviewComment, In<typeof actions.addReviewComment, 2>>>();
 check<Fits<C.SubmitReview, In<typeof actions.submitReview, 2>>>();
-check<Fits<C.RetryRequest['note'], In<typeof actions.retryTask, 2>>>();
+check<Fits<C.RetryRequest, In<typeof actions.retryTask, 2>>>();
 check<Fits<C.MarkDoneRequest['note'], In<typeof actions.markDone, 2>>>();

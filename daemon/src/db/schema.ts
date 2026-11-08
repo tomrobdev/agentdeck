@@ -271,6 +271,9 @@ export const MIGRATIONS: Migration[] = [
   // failed, kept on the row because the log is not (a removed repo's logs are deleted). Older runs read as unknown.
   `ALTER TABLE runs ADD COLUMN run_end TEXT;
    ALTER TABLE runs ADD COLUMN last_test_failed INTEGER;`,
+  // 35: escalation (domain/runs/escalate.ts). repos.escalate lets a retry after a failure a stronger model may fix run one
+  // model up (on by default); the change is an `escalate` row in task_events.
+  'ALTER TABLE repos ADD COLUMN escalate INTEGER NOT NULL DEFAULT 1;',
 ];
 
 /** Runs every step above the database's user_version in one transaction; returns how many ran. */

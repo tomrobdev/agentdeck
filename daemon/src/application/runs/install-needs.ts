@@ -48,6 +48,8 @@ export async function installNeeds(app: App, id: TaskId): Promise<{ packages: st
   const now = app.getTask(id)?.status;
   if (now !== 'blocked')
     throw new ActionError(`installed ${packages.join(' ')}, but #${id} is now ${now ?? 'gone'}, so it was not retried`);
-  retryTask(app, id, `${INSTALL_NOTE} ${packages.join(' ')}${dev ? ' (dev)' : ''} on the branch at the person's request.`, ['blocked']);
+  retryTask(app, id, { note: `${INSTALL_NOTE} ${packages.join(' ')}${dev ? ' (dev)' : ''} on the branch at the person's request.` }, [
+    'blocked',
+  ]);
   return { packages, dev };
 }

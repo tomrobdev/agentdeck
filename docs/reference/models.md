@@ -1055,6 +1055,7 @@ A task in running (or being cancelled) and the process of its unfinished run, if
 | `auto_merge_max_lines` | `number`           | a PR changing more lines (additions + deletions) needs a person                                                                                                |
 | `auto_merge_skip`      | `string[]`         | Path prefixes; a PR touching one needs a person.                                                                                                               |
 | `model`                | `string \| null`   | The model a new task of this repo takes when it names none; null follows the default_model setting.                                                            |
+| `escalate`             | `boolean`          | A retry after a failure a stronger model may fix runs one model up (domain/runs/escalate.ts); on by default.                                                   |
 | `created_at`           | `string`           |                                                                                                                                                                |
 
 ### ToolchainInfo
@@ -1120,6 +1121,16 @@ A task's timeline entry, as far as `editsSinceCutOff` reads it.
 | `type`   | `string`         |         |
 | `reason` | `string \| null` |         |
 | `at`     | `string`         |         |
+
+### Escalation
+
+A change of a task's model one step up, and the failure that called for it.
+
+| Field   | Type          | Comment |
+| ------- | ------------- | ------- |
+| `from`  | `string`      |         |
+| `to`    | `string`      |         |
+| `cause` | `HardFailure` |         |
 
 ### LiveState
 
@@ -1374,6 +1385,18 @@ One usage window a claude session reports.
 | `utilization` | `number`         |         |
 | `resets_at`   | `number`         |         |
 | `status`      | `string \| null` |         |
+
+### WorkRunEnd
+
+How a work run ended, as far as the escalation reads it: its outcome, the stop reason, and what blamed the environment.
+
+| Field     | Type                 | Comment                                                          |
+| --------- | -------------------- | ---------------------------------------------------------------- |
+| `outcome` | `RunOutcome \| null` |                                                                  |
+| `reason`  | `string \| null`     | The stop reason (`WorkerResult.reason`, a task's `stop_reason`). |
+| `needs`   | `Needs \| null`      | What the worker said it needs, for a block.                      |
+| `denials` | `number`             | Tool uses the permission rules refused during the run.           |
+| `turns`   | `number`             | Turns the run took (claude's count, else as counted live).       |
 
 ### WorkerResult
 
@@ -1854,6 +1877,7 @@ The fields of a task a write sets, named as its columns are; the store stores th
 
 | Field                    | Type                                   | Comment |
 | ------------------------ | -------------------------------------- | ------- |
+| `model?`                 | `string \| undefined`                  |         |
 | `question?`              | `UnblockQuestion \| null \| undefined` |         |
 | `auto_merge?`            | `boolean \| null \| undefined`         |         |
 | `auto_merge_check?`      | `AutoMergeCheck \| null \| undefined`  |         |
