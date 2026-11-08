@@ -58,7 +58,7 @@ export const daemonCommands: Record<string, Command> = {
         actions.gracefulRestart(db, { restart: () => actions.restartService(db), log: console.log, aborted: () => interrupted }),
       );
     } else {
-      const running = db.countRunning();
+      const running = actions.runningCount(db);
       if (running && st.loaded) console.log(`restarting at once: ${running} running task(s) lose their run and are requeued`);
       await launchd(() => actions.restartService(db));
     }

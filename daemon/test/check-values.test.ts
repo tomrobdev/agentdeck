@@ -1,7 +1,8 @@
 // The stored PR check columns are parsed once, in the mapper: a malformed or half-written document reads as no value.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { readCheck, readCounts, stored, toTask } from '../src/db/mappers.ts';
+import { readCheck, readCounts, toTask } from '../src/db/mappers.ts';
+import { stored } from '../src/domain/shared/index.ts';
 import { openDb } from '../src/db/index.ts';
 
 test('readCheck: a stored check is a verdict with its reasons, and anything else is none', () => {

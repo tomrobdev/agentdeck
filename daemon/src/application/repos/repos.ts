@@ -218,3 +218,12 @@ export async function doctorRepo(app: App, nameOrId: string | number): Promise<D
   else app.setRepoPaused(repo.id, null);
   return { repo: repo.name, ok: !failed, checks, paused_reason: app.getRepo(repo.id)!.paused_reason };
 }
+
+/** The repos, the archived ones only when asked for. */
+export const listRepos = (app: App, opts: { archived?: boolean } = {}): Repo[] => app.listRepos(opts);
+
+/** A repo by name or id, or undefined. */
+export const findRepo = (app: App, nameOrId: string): Repo | undefined => app.findRepo(nameOrId);
+
+/** A repo's name for a line of output: `repo<id>` when it is gone. */
+export const repoName = (app: App, id: Repo['id']): string => app.getRepo(id)?.name ?? `repo${id}`;

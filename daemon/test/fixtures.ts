@@ -49,6 +49,7 @@ const testPorts = (): Ports => ({
   runLog: lazySync((c) => c.realRunLog()),
   processes: lazySync((c) => c.realProcesses()),
   goals: lazySync((c) => c.realGoals()),
+  source: lazySync((c) => c.realSource()),
 });
 
 /**

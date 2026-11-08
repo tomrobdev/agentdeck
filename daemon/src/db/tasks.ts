@@ -3,7 +3,7 @@ import { type SQL, and, asc, count, desc, eq, exists, inArray, isNotNull, isNull
 import { type AnySQLiteColumn, alias } from 'drizzle-orm/sqlite-core';
 import type { DatabaseSync } from 'node:sqlite';
 import { DEFAULTS } from '../config.ts';
-import { type RepoId, type TaskId, asTaskId } from '../domain/shared/index.ts';
+import { type RepoId, type TaskId, asTaskId, stored } from '../domain/shared/index.ts';
 import type { AutoMergeCheck } from '../domain/landing/index.ts';
 import type { StoredChecks } from '../domain/landing/index.ts';
 import type { CheckCounts } from '../domain/landing/index.ts';
@@ -25,7 +25,7 @@ import {
 } from '../domain/work/index.ts';
 import type { AttentionCandidate, AttentionWhy } from '../domain/operations/index.ts';
 import type { Needs, UnblockQuestion } from '../domain/work/index.ts';
-import { SUMMARY_COLUMNS, TASK_COLUMNS, mapFound, stateColumns, stored, toTask, toTaskSummary } from './mappers.ts';
+import { SUMMARY_COLUMNS, TASK_COLUMNS, mapFound, stateColumns, toTask, toTaskSummary } from './mappers.ts';
 import type { Orm } from './orm.ts';
 import { insertOwnPlan, saveOwnPlan } from './plans.ts';
 import { NOW_SQL, atomically, changed, inActiveRepo as inActiveRepoOf } from './sql.ts';

@@ -9,6 +9,7 @@ import type { Processes } from './processes.ts';
 import type { Repositories } from './repositories.ts';
 import type { RunLog } from './run-log.ts';
 import type { Service } from './service.ts';
+import type { Source } from './source.ts';
 import type { Workspace } from './workspace.ts';
 
 /** The ports besides the repositories, each an interface application/ owns. */
@@ -29,7 +30,12 @@ export interface Ports {
   service: Service;
   /** Each repo's goals file. */
   goals: Goals;
+  /** The daemon's own source checkout: its commit, branch and changes. */
+  source: Source;
 }
 
 /** What the use cases take: the repositories and the ports, one object. */
 export type App = Repositories & Ports;
+
+/** The App an entry point is given: it also closes the database when the process is done. */
+export type ComposedApp = App & { close(): void };

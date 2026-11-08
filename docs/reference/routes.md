@@ -23,7 +23,7 @@ The dashboard's routes, and the use case each calls.
 | DELETE | `/api/repos/:id`                   | `actions.deleteRepo`                           |
 | GET    | `/api/repos/:id`                   | `actions.repoDetail`                           |
 | POST   | `/api/repos/:id`                   | `actions.updateRepo`                           |
-| GET    | `/api/repos`                       | `db.listRepos`                                 |
+| GET    | `/api/repos`                       | `actions.listRepos`                            |
 | POST   | `/api/repos`                       | `actions.repoView`, `actions.addRepo`          |
 | POST   | `/api/resume`                      | `actions.setPaused`, `actions.status`          |
 | POST   | `/api/review-comments/:id/reopen`  | `actions.reopenReviewComment`                  |

@@ -163,3 +163,15 @@ export function appSeen(app: App, now = Date.now()): { desktop: boolean } {
 export function sendTestNotification(app: App): Promise<void> {
   return notify(app, { kind: 'test', title: 'Test notification', body: 'Notifications from AgentDeck are working.' });
 }
+
+/** How many tasks are running now. */
+export const runningCount = (app: App): number => app.countRunning();
+
+/** Whether a person has paused the daemon. */
+export const isPaused = (app: App): boolean => app.isPaused();
+
+/** Whether the daemon restarts itself onto changed source. */
+export const reloadOnChange = (app: App): boolean => app.reloadOnChange();
+
+/** How many tasks may run at once. */
+export const maxConcurrent = (app: App): number => app.maxConcurrent();

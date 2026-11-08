@@ -19,7 +19,7 @@ export const prCommands: Record<string, Command> = {
   },
   merge: async ({ db, flags, rest }) => {
     if (flags.all) {
-      const review = db.openPrTasks().filter((t) => isReview(stageOf(t)));
+      const review = actions.openPrTasks(db).filter((t) => isReview(stageOf(t)));
       if (!review.length) return void console.log('no pull requests in review');
       for (const t of review) console.log(`#${t.id}  ${t.title}`);
       if (!flags.yes && !(await confirm(`merge ${review.length === 1 ? 'this PR' : `these ${review.length} PRs`}?`))) {

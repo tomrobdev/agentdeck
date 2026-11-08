@@ -71,7 +71,7 @@ export const repoCommands: Record<string, Command> = {
       actions.updateRepo(db, name, patch);
       console.log(`${name}: ${key} ${value || '(none)'}`);
     } else if (sub === 'ls' || !sub) {
-      for (const r of db.listRepos({ archived: !!flags.archived })) {
+      for (const r of actions.listRepos(db, { archived: !!flags.archived })) {
         const goals = actions.repoDetail(db, r.id).goals.trim() ? 'goals ✓' : 'no goals';
         console.log(
           `${r.name.padEnd(16)} ${r.path}  base=${r.base_branch}  toolchain=${r.toolchain ?? '-'}  setup=${r.setup_cmd ?? '-'}  test=${r.test_cmd ?? '-'}  pr=${r.pr_mode}  merge=${r.merge_method}  sandbox=${r.sandbox ? `on network=${r.network.join(',') || '-'}` : 'OFF'}  ${goals}${r.auto_approve ? '  auto-approve' : ''}${r.paused_reason ? `  PAUSED (${r.paused_reason})` : ''}`,

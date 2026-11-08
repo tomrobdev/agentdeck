@@ -197,3 +197,15 @@ export async function removeTaskWorktree(app: App, id: TaskId): Promise<{ branch
   app.setCheckout(t.id, { worktree: null });
   return { branch: t.checkout?.branch ?? null };
 }
+
+/** A task by id, or undefined. */
+export const findTask = (app: App, id: TaskId): Task | undefined => app.getTask(id);
+
+/** A task's runs, oldest first. */
+export const taskRuns = (app: App, id: TaskId) => app.runsForTask(id);
+
+/** Every task. */
+export const listTasks = (app: App): Task[] => app.listTasks();
+
+/** The tasks with an open pull request. */
+export const openPrTasks = (app: App): Task[] => app.openPrTasks();

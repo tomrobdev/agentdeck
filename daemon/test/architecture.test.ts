@@ -27,6 +27,33 @@ const PACKAGES: { match: RegExp; allowed: (path: string) => boolean; why: string
 
 const at = (s: Source, line: number) => `${s.path}:${line}`;
 
+/** The imports that break the layer rules, as `path:line imports target: why`. */
+const layerViolations = (files: Source[]) =>
+  files.flatMap((s) => {
+    const rule = LAYERS[layerOf(s.path)];
+    return s.imports
+      .filter((i) => i.target && !mayImport(layerOf(s.path), layerOf(i.target)))
+      .map((i) => `${at(s, i.line)} imports ${i.target}: ${rule?.why}`);
+  });
+
+test('[ports] application/ imports only itself and domain/, and only compose.ts names db/ and adapters/', () => {
+  const namers = sources
+    .filter((s) => s.imports.some((i) => ['db', 'adapters'].includes(layerOf(i.target ?? ''))))
+    .map((s) => s.path)
+    .filter((p) => !['compose.ts', 'db', 'adapters'].includes(layerOf(p)));
+  assert.deepEqual(namers, [], 'a layer above db/ and adapters/ reaches them through a port in application/ports/, built in compose.ts');
+});
+
+test('[ports] a sample where application/ imports adapters/git.ts or db/ fails', () => {
+  const sample = [
+    parseSource('application/work/x.ts', "import { git } from '../../adapters/git.ts';\nexport const x = git;\n"),
+    parseSource('application/work/y.ts', "import { openDb } from '../../db/index.ts';\nexport const y = openDb;\n"),
+    parseSource('api/z.ts', "import { openDb } from '../db/index.ts';\nexport const z = openDb;\n"),
+    parseSource('compose.ts', "import { openDb } from './db/index.ts';\nexport const c = openDb;\n"),
+  ];
+  assert.equal(layerViolations(sample).length, 3);
+});
+
 test('[layers, domain-pure, adapters-io, entry-points] each layer imports only the layers below it', () => {
   const found: string[] = [];
   for (const s of sources) {

@@ -2,9 +2,8 @@
 // pull request as one value and its checkout as one; the API keeps the shape it always had (JSON text, 1 or 0, flat PR, checkout and
 // plan fields), so the dashboard reads them as before.
 import * as actions from '../application/actions.ts';
-import type { ComposedApp } from '../compose.ts';
-import { stored } from '../db/mappers.ts';
-import type { TaskId } from '../domain/shared/index.ts';
+import type { ComposedApp } from '../application/actions.ts';
+import { type TaskId, stored } from '../domain/shared/index.ts';
 import { type PullRequest, prFields } from '../domain/landing/index.ts';
 import type { Checkout } from '../domain/work/index.ts';
 import type { PlanLink } from '../domain/work/index.ts';

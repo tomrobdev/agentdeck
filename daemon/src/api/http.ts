@@ -1,8 +1,14 @@
 // The generic part of the HTTP API: reading a request, answering it, CORS, and dispatching to routes.
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { ActionError, type ChangeWatcher, type DaemonInfo, type ReloadFacts, type Scheduler } from '../application/actions.ts';
+import {
+  ActionError,
+  type ChangeWatcher,
+  type ComposedApp,
+  type DaemonInfo,
+  type ReloadFacts,
+  type Scheduler,
+} from '../application/actions.ts';
 import { API_ALLOWED_ORIGINS } from '../config.ts';
-import type { ComposedApp } from '../compose.ts';
 import { type RepoId, type ReviewId, type TaskId, parseId } from '../domain/shared/index.ts';
 import { parseTaskIds } from '../domain/work/index.ts';
 
