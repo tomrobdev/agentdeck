@@ -14,7 +14,7 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { isOwnPlanName, mergePlanSteps, parsePlan, planAfterRun, planFileName, planProgress, planSlug } =
   await import('../src/domain/work/plan.ts');
-const { openDb } = await import('../src/db/index.ts');
+const { openDb } = await import('./open-db.ts');
 const { startApi } = await import('../src/api/server.ts');
 const { attachPlan } = await import('../src/application/work/plans.ts');
 const { editTask, addTask } = await import('../src/application/actions.ts');

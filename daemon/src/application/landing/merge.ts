@@ -1,6 +1,5 @@
 // Merging a done task's PR, as a person asked or on its own, and closing one.
 import { removeWorktree } from '../../adapters/git.ts';
-import { github } from '../../adapters/github.ts';
 import type { App } from '../ports/app.ts';
 import { type PrDetails, mergeCheck, mergeFindings } from '../../domain/landing/index.ts';
 import { MERGE_METHODS, type MergeMethod, isMergeMethod } from '../../domain/repos/index.ts';
@@ -22,7 +21,7 @@ import { autoMergeFor, lastTestsPassed, prCwd } from './refresh.ts';
 
 /** Close a task's PR on GitHub and record it. Throws if `gh` fails. */
 export async function closePullRequest(app: App, task: Task): Promise<void> {
-  await github.closePr(task.pr!.url!, prCwd(app, task));
+  await app.codeHost.closePr(task.pr!.url!, prCwd(app, task));
   settlePr(app, task.id, { type: 'closed' });
 }
 
@@ -94,7 +93,7 @@ export function mergeable(app: App, id: TaskId) {
 /** Read the PR from GitHub and say what merging it would do. */
 export async function mergePreview(app: App, id: TaskId): Promise<MergePreview> {
   const { task, repo, url, cwd } = mergeable(app, id);
-  const pr = await github.prDetails(url, cwd, { withFiles: autoMergeOn(task, repo) }).catch((err) => {
+  const pr = await app.codeHost.prDetails(url, cwd, { withFiles: autoMergeOn(task, repo) }).catch((err) => {
     throw new ActionError(`could not read the PR: ${errorMessage(err)}`);
   });
   const tests_passed = lastTestsPassed(app, id);
@@ -144,7 +143,7 @@ export async function mergeTask(app: App, id: TaskId, opts: { method?: string; d
   const method = given ?? repo.merge_method;
   if (!isMergeMethod(method)) throw new ActionError(`method must be one of ${MERGE_METHODS.join(', ')}`);
 
-  const pr = await github.prDetails(url, cwd).catch((err) => {
+  const pr = await app.codeHost.prDetails(url, cwd).catch((err) => {
     throw new ActionError(`could not read the PR: ${errorMessage(err)}`);
   });
   const found = mergeFindings({ pr_state: task.pr?.state ?? null, pr, tests_passed: null, lands_after: landsAfter(app, id) });
@@ -213,8 +212,8 @@ export async function mergeOpenPr(
     throw new ActionError(`#${id} is syncing with its base branch; try again when that is done`);
   }
   try {
-    if (pr.draft) await github.markReady(url, cwd);
-    await github.merge({
+    if (pr.draft) await app.codeHost.markReady(url, cwd);
+    await app.codeHost.merge({
       url,
       cwd,
       method,
@@ -237,7 +236,7 @@ export async function mergeOpenPr(
   if (deleteBranch) {
     const errors: string[] = [];
     const { branch, worktree } = task.checkout ?? { branch: null, worktree: null };
-    if (branch) await github.deleteRemoteBranch(repo.path, branch).catch((err) => errors.push(`remote branch: ${errorMessage(err)}`));
+    if (branch) await app.codeHost.deleteRemoteBranch(repo.path, branch).catch((err) => errors.push(`remote branch: ${errorMessage(err)}`));
     if (worktree)
       await removeWorktree(repo, worktree).then(
         () => app.setCheckout(id, { worktree: null }),

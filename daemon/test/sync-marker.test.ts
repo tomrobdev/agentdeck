@@ -9,7 +9,7 @@ import { test } from 'node:test';
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-sync-marker-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../src/db/index.ts');
+const { openDb } = await import('./open-db.ts');
 const { installNeeds, removeTaskWorktree, retryTask, syncNow } = await import('../src/application/actions.ts');
 const { isSyncing, markSyncing } = await import('../src/application/work/checkout-locks.ts');
 const { doneTask } = await import('./fixtures.ts');

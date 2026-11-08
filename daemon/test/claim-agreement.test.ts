@@ -9,7 +9,7 @@ import type { TaskId } from '../src/domain/shared/id.ts';
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-claim-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../src/db/index.ts');
+const { openDb } = await import('./open-db.ts');
 const { startWaits } = await import('../src/application/capacity/queue.ts');
 const { dependencyOf, liveLinks } = await import('../src/application/work/dependencies.ts');
 

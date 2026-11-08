@@ -8,7 +8,7 @@ import { test } from 'node:test';
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-syncview-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../src/db/index.ts');
+const { openDb } = await import('./open-db.ts');
 const { taskViews } = await import('../src/application/actions.ts');
 const { doneTask } = await import('./fixtures.ts');
 

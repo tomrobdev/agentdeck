@@ -9,7 +9,7 @@ import { test } from 'node:test';
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-views-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../src/db/index.ts');
+const { openDb } = await import('./open-db.ts');
 const { taskDetail, taskViews } = await import('../src/application/actions.ts');
 const { dependentViews, liveLinks, loadedLinks } = await import('../src/application/work/dependencies.ts');
 const { withViews } = await import('../src/application/work/task-views.ts');

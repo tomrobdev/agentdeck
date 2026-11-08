@@ -11,7 +11,7 @@ const home = mkdtempSync(join(tmpdir(), 'agentdeck-automerge-'));
 process.env.AGENTDECK_HOME = home;
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../src/db/index.ts');
+const { openDb } = await import('./open-db.ts');
 const { doneTask } = await import('./fixtures.ts');
 const { github } = await import('../src/adapters/github.ts');
 const { AUTO_MERGE_LABEL, autoMergeCheck, autoMergeOn } = await import('../src/domain/landing/auto-merge.ts');

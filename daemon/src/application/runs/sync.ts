@@ -15,7 +15,6 @@ import {
   refExists,
   startPoint,
 } from '../../adapters/git.ts';
-import { github } from '../../adapters/github.ts';
 import { writeEvent } from '../../adapters/run-log.ts';
 import { runCommand } from '../../adapters/shell.ts';
 import { TEST_TIMEOUT_MS } from '../../config.ts';
@@ -166,7 +165,7 @@ async function pushIfNeeded(
   try {
     // A branch that was merged but not pushed (the push failed last time) still needs pushing.
     if (!changed && !(await aheadOfRemote(worktree, branch))) return { pushed: false };
-    await github.push(repo.path, branch);
+    await app.codeHost.push(repo.path, branch);
     return { pushed: true };
   } catch (err) {
     const error = errorMessage(err);

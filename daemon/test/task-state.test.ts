@@ -9,7 +9,7 @@ import { type StateFields, stateFields } from '../src/domain/work/task.ts';
 
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-task-state-'));
 
-const { openDb } = await import('../src/db/index.ts');
+const { openDb } = await import('./open-db.ts');
 const { taskDetail, taskViews } = await import('../src/api/wire.ts');
 const { TASK_STATUSES } = await import('../src/domain/work/lifecycle.ts');
 

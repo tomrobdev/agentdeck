@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { pilotStats } from '../src/application/actions.ts';
-import { openDb } from '../src/db/index.ts';
+import { openDb } from './open-db.ts';
 import {
   type ScorecardEvent,
   type ScorecardTask,

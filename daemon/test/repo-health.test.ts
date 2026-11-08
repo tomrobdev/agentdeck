@@ -15,7 +15,7 @@ const fake = join(import.meta.dirname, 'fake-claude.mjs');
 chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
 
-const { openDb } = await import('../src/db/index.ts');
+const { openDb } = await import('./open-db.ts');
 const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
 const { doctorRepo, editTask, resumeRepo, ActionError } = await import('../src/application/actions.ts');
 const { runDoctor } = await import('../src/application/repos/doctor.ts');
@@ -143,7 +143,7 @@ test('doctor reports a missing repo, a missing claude binary, and PR mode withou
   const r = repo('no-claude');
   process.env.AGENTDECK_CLAUDE_BIN = join(home, 'no-such-claude');
   try {
-    const checks = byName(await runDoctor(r));
+    const checks = byName(await runDoctor(db, r));
     assert.equal(checks['claude binary'].ok, false);
     assert.match(checks['claude binary'].reason, /not found/);
   } finally {
@@ -151,11 +151,11 @@ test('doctor reports a missing repo, a missing claude binary, and PR mode withou
   }
 
   // Without a pr_mode (it doesn't exist yet) there are no PR checks; with one, origin is required.
-  assert.equal(byName(await runDoctor(r))['origin remote'], undefined);
-  const pr = byName(await runDoctor({ ...r, pr_mode: 'draft' } as typeof r));
+  assert.equal(byName(await runDoctor(db, r))['origin remote'], undefined);
+  const pr = byName(await runDoctor(db, { ...r, pr_mode: 'draft' } as typeof r));
   assert.equal(pr['origin remote'].ok, false);
   assert.ok(pr['gh auth'], 'gh auth is checked too');
-  assert.equal(byName(await runDoctor({ ...r, pr_mode: 'off' } as typeof r))['gh auth'], undefined);
+  assert.equal(byName(await runDoctor(db, { ...r, pr_mode: 'off' } as typeof r))['gh auth'], undefined);
 });
 
 test("a paused repo's tasks are not claimed; resuming releases them", async () => {

@@ -183,6 +183,47 @@ export function resultFields(result: ResultLike | undefined, exitCode: number, s
   };
 }
 
+/** The final `result` event of a claude session. */
+export interface ClaudeResult {
+  subtype?: string;
+  is_error?: boolean;
+  result?: string;
+  structured_output?: unknown;
+  session_id?: string;
+  num_turns?: number;
+  total_cost_usd?: number;
+  api_error_status?: number | null;
+  /** Tool uses the permission rules refused during the run. */
+  permission_denials?: { tool_name?: string; tool_input?: { command?: unknown } & Record<string, unknown> }[];
+  usage?: {
+    input_tokens?: number;
+    output_tokens?: number;
+    cache_read_input_tokens?: number;
+    cache_creation_input_tokens?: number;
+  };
+}
+
+/** What a claude session left behind: its result, how the process ended, and why it stopped. */
+export interface ClaudeRun {
+  result: ClaudeResult | undefined;
+  exitCode: number;
+  /** Set when Claude rejected a request on rate limits (unix seconds). */
+  rateLimitedUntil: number | undefined;
+  cancelled: boolean;
+  /** The end of what claude wrote to stderr, e.g. why it refused to start. */
+  stderr: string;
+  /** The session claude's first `system`/`init` line named; undefined if claude stopped before it. */
+  sessionId: string | undefined;
+}
+
+/** One usage window a claude session reports. */
+export interface UsageWindow {
+  window: string;
+  utilization: number;
+  resets_at: number;
+  status: string | null;
+}
+
 /** What a finished `claude` process left behind (the adapter's `ClaudeRun`). */
 export interface ClaudeRunLike<R extends ResultLike = ResultLike> {
   result: (R & { is_error?: boolean; subtype?: string }) | undefined;

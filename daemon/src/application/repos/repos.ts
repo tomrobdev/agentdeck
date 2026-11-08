@@ -220,7 +220,7 @@ export interface DoctorReport {
  */
 export async function doctorRepo(app: App, nameOrId: string | number): Promise<DoctorReport> {
   const repo = requireRepo(app, nameOrId);
-  const checks = await runDoctor(repo);
+  const checks = await runDoctor(app, repo);
   const failed = checks.find((c) => !c.ok);
   if (failed) pauseRepo(app, repo, `doctor: ${failed.name}`, { replace: true });
   else app.setRepoPaused(repo.id, null);

@@ -19,7 +19,7 @@ const fake = join(import.meta.dirname, 'fake-claude.mjs');
 chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
 
-const { openDb } = await import('../src/db/index.ts');
+const { openDb } = await import('./open-db.ts');
 const { DB_PATH, LOG_DIR } = await import('../src/config.ts');
 const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
 const { MAX_RESTARTS } = await import('../src/domain/work/lifecycle.ts');

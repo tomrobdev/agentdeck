@@ -8,7 +8,7 @@ process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-settings-'));
 
 const { ActionError, updateSettings } = await import('../src/application/actions.ts');
 const { repoSettingPatch, settingPatch } = await import('../src/cli/settings-args.ts');
-const { openDb } = await import('../src/db/index.ts');
+const { openDb } = await import('./open-db.ts');
 
 test('boolean settings refuse words other than on/off and their synonyms', () => {
   assert.throws(() => settingPatch('planner_enabled', 'yse'), /planner_enabled takes .*"yse"/);

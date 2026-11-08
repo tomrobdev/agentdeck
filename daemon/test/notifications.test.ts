@@ -12,7 +12,7 @@ delete process.env.AGENTDECK_NO_NOTIFY;
 const { appDelivers } = await import('../src/domain/operations/notification.ts');
 const { notify } = await import('../src/application/operations/notifications.ts');
 const { appSeen } = await import('../src/application/actions.ts');
-const { openDb } = await import('../src/db/index.ts');
+const { openDb } = await import('./open-db.ts');
 
 const NOW = 1_793_707_200_000;
 

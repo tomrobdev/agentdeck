@@ -4,7 +4,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { taskDetail, taskViews } from '../src/api/wire.ts';
-import { openDb } from '../src/db/index.ts';
+import { openDb } from './open-db.ts';
 import { type TaskRow, stored, toTask } from '../src/db/mappers.ts';
 import { checksSummary } from '../src/domain/landing/checks.ts';
 import { type PrFields, type PrState, type PullRequest, prFields, pullRequestOf } from '../src/domain/landing/pr.ts';

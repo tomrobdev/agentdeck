@@ -8,7 +8,7 @@ import { after, test } from 'node:test';
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-archive-'));
 process.env.AGENTDECK_HOME = home;
 
-const { openDb } = await import('../src/db/index.ts');
+const { openDb } = await import('./open-db.ts');
 const { openPr } = await import('./fixtures.ts');
 const actions = await import('../src/application/actions.ts');
 const { plannerDue } = await import('../src/application/proposals/planner.ts');

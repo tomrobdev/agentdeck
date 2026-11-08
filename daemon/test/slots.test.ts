@@ -8,7 +8,7 @@ import { test } from 'node:test';
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-slots-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../src/db/index.ts');
+const { openDb } = await import('./open-db.ts');
 const { startWaits } = await import('../src/application/capacity/queue.ts');
 const { canStartResolve } = await import('../src/application/runs/sync.ts');
 

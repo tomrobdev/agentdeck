@@ -1,5 +1,4 @@
 // Opening a task's pull request when it finishes done.
-import { github } from '../../adapters/github.ts';
 import { appendEvent } from '../../adapters/run-log.ts';
 import type { App } from '../ports/app.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
@@ -16,8 +15,8 @@ export function logPrEvent(app: App, taskId: TaskId, event: { url?: string; erro
 }
 
 /** Make sure the repo has the auto-merge label, so a PR can carry it. Throws if gh fails. */
-export function ensureAutoMergeLabel(cwd: string): Promise<void> {
-  return github.ensureLabel(cwd, AUTO_MERGE_LABEL);
+export function ensureAutoMergeLabel(app: App, cwd: string): Promise<void> {
+  return app.codeHost.ensureLabel(cwd, AUTO_MERGE_LABEL);
 }
 
 /**
@@ -29,7 +28,7 @@ export async function openPullRequest(app: App, task: Task): Promise<{ url?: str
   const branch = task.checkout?.branch;
   if (!repo || repo.pr_mode === 'off' || !branch) return {};
   try {
-    await github.push(repo.path, branch);
+    await app.codeHost.push(repo.path, branch);
     // A task retried while its PR is still open keeps that PR; the push above updated it.
     // Once that PR is merged or closed, the new commits need a new PR.
     const open = openPrUrl(task.pr);
@@ -37,11 +36,11 @@ export async function openPullRequest(app: App, task: Task): Promise<{ url?: str
     // A PR the daemon may merge carries the label. If the repo can't have it, the PR opens without it and waits for a person.
     const labelled =
       autoMergeOn(task, repo) &&
-      (await ensureAutoMergeLabel(repo.path).then(
+      (await ensureAutoMergeLabel(app, repo.path).then(
         () => true,
         () => false,
       ));
-    const url = await github.createPr({
+    const url = await app.codeHost.createPr({
       cwd: task.checkout?.worktree ?? repo.path,
       base: repo.base_branch,
       head: branch,

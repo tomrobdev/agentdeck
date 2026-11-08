@@ -3,7 +3,6 @@
 import { fetchDaemonState } from '../../adapters/daemon-api.ts';
 import { readLogTail } from '../../adapters/daemon-log.ts';
 import { checkoutCommit, commitsAheadOf } from '../../adapters/git.ts';
-import { github } from '../../adapters/github.ts';
 import { ownsLiveGroup } from '../../adapters/processes.ts';
 import { DAEMON_LOG, serviceStatus } from '../../adapters/service.ts';
 import { API_PORT, CHECKOUT_ROOT } from '../../config.ts';
@@ -25,21 +24,21 @@ export interface Probes {
   now: () => number;
 }
 
-export const realProbes: Probes = {
+export const realProbes = (app: App): Probes => ({
   service: serviceStatus,
   api: fetchDaemonState,
   head: () => checkoutCommit(CHECKOUT_ROOT),
   ahead: (commit) => commitsAheadOf(CHECKOUT_ROOT, commit),
   alive: ownsLiveGroup,
   logLines: () => readLogTail(DAEMON_LOG),
-  gh: () => github.auth(),
+  gh: () => app.codeHost.auth(),
   now: Date.now,
-};
+});
 
 /** How far back ended runs are searched for a claude process that outlived them. */
 const RUN_DAYS = 7;
 
-export async function gatherHealth(app: App, probes: Probes = realProbes, port = API_PORT): Promise<HealthFacts> {
+export async function gatherHealth(app: App, probes: Probes = realProbes(app), port = API_PORT): Promise<HealthFacts> {
   const [service, api, head, gh] = await Promise.all([probes.service(), probes.api(port), probes.head(), probes.gh()]);
   const now = probes.now();
   const behind = api?.commit && head && api.commit !== head ? await probes.ahead(api.commit) : null;
@@ -70,7 +69,7 @@ export async function gatherHealth(app: App, probes: Probes = realProbes, port =
 }
 
 /** Every check on the daemon's health, with the command that fixes each one that fails. */
-export async function daemonHealth(app: App, probes: Probes = realProbes, port?: number): Promise<Check[]> {
+export async function daemonHealth(app: App, probes: Probes = realProbes(app), port?: number): Promise<Check[]> {
   return judgeHealth(await gatherHealth(app, probes, port));
 }
 
@@ -78,7 +77,7 @@ export async function daemonHealth(app: App, probes: Probes = realProbes, port?:
 export const REPORT_LOG_LINES = 20;
 
 /** GET /api/daemon/health: the doctor's checks, the checkout's HEAD, what is running, and the end of the log. */
-export async function daemonReport(app: App, probes: Probes = realProbes, port?: number) {
+export async function daemonReport(app: App, probes: Probes = realProbes(app), port?: number) {
   const facts = await gatherHealth(app, probes, port);
   const lines = probes.logLines();
   return {

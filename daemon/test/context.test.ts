@@ -9,7 +9,7 @@ import { asTaskId } from '../src/domain/shared/id.ts';
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-context-'));
 process.env.AGENTDECK_HOME = home;
 
-const { openDb } = await import('../src/db/index.ts');
+const { openDb } = await import('./open-db.ts');
 const { liveContext, repoForPath } = await import('../src/application/actions.ts');
 const { DIGEST_LIMIT, describeEvent, digest } = await import('../src/domain/work/read/digest.ts');
 const { WORKTREE_DIR } = await import('../src/config.ts');
