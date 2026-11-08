@@ -3,6 +3,7 @@
 import type { MergeMethod, NotifyKind, RepoDetail, RepoPatch, Settings, SettingsPatch } from '../api';
 import { DEFAULT_AUTO_MERGE_SKIP } from '../../../daemon/src/domain/landing/index.ts';
 import { NOTIFY_KINDS } from '../../../daemon/src/domain/operations/index.ts';
+import { parseToolRules } from '../../../daemon/src/domain/repos/index.ts';
 import { parseTextList, textList } from '../../../daemon/src/domain/shared/index.ts';
 import { MODELS } from '../../../daemon/src/domain/work/index.ts';
 
@@ -24,6 +25,8 @@ export type RepoForm = {
   network: string;
   /** The model a new task of the repo takes when it names none; '' follows the default_model setting. */
   model: string;
+  /** The repo's own tool rules, one per line; empty = the detected ones. */
+  tools: string;
 };
 
 /** The models a model picker offers: the aliases, and `current` too when it is a full claude-… id set elsewhere. */
@@ -44,6 +47,7 @@ export function toRepoForm(d: RepoDetail): RepoForm {
     sandbox: !!d.sandbox,
     network: parseTextList(d.network).join(', '),
     model: d.model ?? '',
+    tools: d.allowed_tools === null ? '' : parseTextList(d.allowed_tools).join('\n'),
   };
 }
 
@@ -61,6 +65,7 @@ export function toRepoPatch(f: RepoForm): RepoPatch {
     sandbox: f.sandbox,
     network: textList(f.network),
     model: f.model || null,
+    allowed_tools: parseToolRules(f.tools),
   };
 }
 

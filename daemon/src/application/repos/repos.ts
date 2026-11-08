@@ -5,7 +5,7 @@ import { basename, resolve } from 'node:path';
 import type { App } from '../ports/app.ts';
 import { autoMergeMaxLinesError } from '../../domain/landing/index.ts';
 import { MERGE_METHODS, type MergeMethod, PR_MODES, type PrMode, type Repo, isMergeMethod } from '../../domain/repos/index.ts';
-import { goalsError, networkError, repoNameError } from '../../domain/repos/index.ts';
+import { goalsError, networkError, parseToolRules, repoNameError, toolRulesError } from '../../domain/repos/index.ts';
 import { detectToolchain } from '../../domain/repos/index.ts';
 import { textList } from '../../domain/shared/index.ts';
 import { modelError } from '../../domain/work/index.ts';
@@ -77,6 +77,11 @@ export interface RepoPatch {
   auto_merge_skip?: string | string[];
   /** The model a new task of the repo takes when it names none: an alias or a claude-… id; null or "" clears it. */
   model?: string | null;
+  /**
+   * The repo's own tool rules, in place of the detected ones; a string is split on commas and lines (`parseToolRules`).
+   * None (null, "" or []) goes back to the defaults plus the rules detected from its toolchain.
+   */
+  allowed_tools?: string | string[] | null;
 }
 
 export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch) {
@@ -100,6 +105,15 @@ export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch
   const auto_merge_skip = skip && textList(skip);
   const model = textOrNull(body, 'model');
   refuse(modelError(model ?? undefined));
+  const rules =
+    typeof body.allowed_tools === 'string'
+      ? parseToolRules(body.allowed_tools)
+      : body.allowed_tools === null
+        ? []
+        : list(body, 'allowed_tools');
+  // No rules is null, not [] (which would allow nothing): the detected rules again.
+  const allowed_tools = rules && (rules.length ? parseToolRules(rules.join('\n')) : null);
+  if (allowed_tools) refuse(toolRulesError(allowed_tools));
   if (network) refuse(networkError(network));
   if (pr_mode !== undefined && !PR_MODES.includes(pr_mode as PrMode))
     throw new ActionError(`pr_mode must be one of ${PR_MODES.join(', ')}`);
@@ -125,6 +139,7 @@ export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch
     ...(auto_merge_max_lines !== undefined ? { auto_merge_max_lines } : {}),
     ...(auto_merge_skip !== undefined ? { auto_merge_skip } : {}),
     ...(model !== undefined ? { model: model || null } : {}),
+    ...(allowed_tools !== undefined ? { allowed_tools } : {}),
   });
   return repoDetail(app, repo.id);
 }

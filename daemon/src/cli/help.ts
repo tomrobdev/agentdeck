@@ -30,6 +30,8 @@ Repos
   agentdeck repo set <repo> network "<hosts>"     hosts sandboxed commands may reach, e.g. "registry.npmjs.org,github.com" ("" for none)
   agentdeck repo set <repo> model ${MODELS.join('|')}|""  the model a new task of the repo takes when it names none
                                                   ("" follows the default_model setting)
+  agentdeck repo set <repo> tools "<rules>"       replace the tool rules workers run with, comma-separated, e.g. "Read,Edit,Bash(make *)"
+                                                  ("" goes back to the defaults plus the rules detected from its toolchain)
   agentdeck goals <repo> [--file goals.md]        show (or replace) the goals the planner works from
   agentdeck propose <repo>                        run the planner now (also: repo propose, plan)
 

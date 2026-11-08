@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, test } from 'node:test';
 import { asTaskId } from '../src/domain/shared/id.ts';
+import { waitFor } from './fixtures.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-api-'));
 process.env.AGENTDECK_HOME = home;
@@ -291,7 +292,7 @@ test('GET /api/events sends the current rev, then each new one, and unsubscribes
     for (const fn of subscribers) fn(8);
     assert.equal(dec.decode((await reader.read()).value), 'event: rev\ndata: {"rev":8}\n\n');
     ctl.abort();
-    for (let i = 0; i < 50 && subscribers.size; i++) await new Promise((r) => setTimeout(r, 20));
+    await waitFor(() => subscribers.size === 0, { timeoutMs: 1_000, what: 'the aborted stream to unsubscribe' });
     assert.equal(subscribers.size, 0);
   } finally {
     ctl.abort();

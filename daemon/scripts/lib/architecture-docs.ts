@@ -10,7 +10,7 @@ import * as tables from '../../src/db/tables.ts';
 import { RULES, TASK_STATUSES, type TaskStatus } from '../../src/domain/work/lifecycle.ts';
 import { adapterUse, contextMap } from './graphs.ts';
 import { modelsBody, stateMachinesBody, useCasesBody } from './model-docs.ts';
-import { progress } from './progress.ts';
+import { COVERAGE_FLOORS, progress } from './progress.ts';
 import { UNCHECKED } from './rules.ts';
 import { type Source, readSources } from './sources.ts';
 
@@ -164,6 +164,22 @@ export function progressBody(sources: Source[]): string {
     'Folders that import each other, counting runtime and type-only imports (`rule:folder-cycles`).',
     cycleLines.length ? cycleLines.join('\n') : 'None.',
   ].join('\n\n');
+}
+
+/** The coverage page: each group of daemon/src, the files it holds and its floors, from `COVERAGE_FLOORS`. */
+export function coverageBody(): string {
+  const holds = (group: string) =>
+    group === 'src'
+      ? 'the files at the top of `daemon/src/` (`cli.ts`, `compose.ts`, `config.ts`, `daemon.ts`)'
+      : group === 'application'
+        ? 'the files directly in `application/` (`actions.ts`)'
+        : `\`${group}/\``;
+  return table(
+    ['Group', 'Holds', 'Lines', 'Branches'],
+    Object.entries(COVERAGE_FLOORS)
+      .sort(([a], [b]) => cmp(a, b))
+      .map(([group, floor]) => [`\`${group}\``, holds(group), `${floor.lines}%`, `${floor.branches}%`]),
+  );
 }
 
 function dataModel(): string {
@@ -376,6 +392,11 @@ export function generateReference(): Record<string, string> {
       'Migration progress',
       'How far the move to a domain model has come, counted from the code. Each number should fall to zero.',
       progressBody(sources),
+    ),
+    'coverage.md': file(
+      'Coverage floors',
+      'The least line and branch coverage each group of `daemon/src/` may have (`COVERAGE_FLOORS` in `daemon/scripts/lib/progress.ts`). `pnpm coverage` runs the tests with coverage, prints what each group has now, and fails when one drops below its floor. The floors only rise: raise one, to its number rounded down, when it is beaten by more than 2 points. A file that holds only types never loads, so it is not counted.',
+      coverageBody(),
     ),
     'adapters.md': file('Adapters', 'The files of `daemon/src/adapters/`, each the I/O of one outside system.', adapters(sources)),
   };

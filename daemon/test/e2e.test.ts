@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, test } from 'node:test';
 import type { Repo } from '../src/domain/repos/repo.ts';
-import { asRepoId, testApp } from './fixtures.ts';
+import { asRepoId, testApp, waitFor } from './fixtures.ts';
 import { stopReasonOf } from '../src/domain/work/task.ts';
 
 const REPO = asRepoId(1); // the one repo this file registers
@@ -101,7 +101,7 @@ test('rate limit requeues without spending an attempt and holds the queue', asyn
 test('cancel stops a running task', async () => {
   const task = db.addTask({ repo_id: REPO, title: 'slow', prompt: 'FAKE_SLOW' });
   const done = drain();
-  while (db.getTask(task.id)!.status !== 'running') await new Promise((r) => setTimeout(r, 20));
+  await waitFor(() => db.getTask(task.id)!.status === 'running', { what: `#${task.id} to be running` });
   assert.equal(db.applyEvent(task.id, { type: 'cancel' })?.task.status, 'cancel_requested');
   await done;
   assert.equal(db.getTask(task.id)!.status, 'cancelled');
@@ -114,7 +114,7 @@ test('a cancel requested while the run is finishing wins over done', async () =>
   try {
     const task = db.addTask({ repo_id: REPO, title: 'finishing', prompt: 'FAKE_DONE almost there' });
     const done = drain();
-    while (!existsSync(marker)) await new Promise((r) => setTimeout(r, 20));
+    await waitFor(() => existsSync(marker), { what: "the repo's test command to start" });
     assert.equal(db.getTask(task.id)!.status, 'running');
     assert.equal(db.applyEvent(task.id, { type: 'cancel' })?.task.status, 'cancel_requested');
     await done;
@@ -165,19 +165,21 @@ test('claude processes left by a dead daemon are stopped, with their children', 
       return false;
     }
   };
-  // Stands in for claude plus a bash tool it started; ignores SIGTERM like a stuck process.
-  const child = spawn('sh', ['-c', "trap '' TERM; sleep 60 & sleep 60"], { detached: true, stdio: 'ignore' });
+  // Stands in for claude plus a bash tool it started; ignores SIGTERM like a stuck process. It touches `started`
+  // once the trap is set and the tool runs.
+  const started = join(home, 'group-started');
+  const child = spawn('sh', ['-c', `trap '' TERM; sleep 60 & touch '${started}'; sleep 60`], { detached: true, stdio: 'ignore' });
   child.unref();
   const pid = child.pid!;
   const sqliteNow = new Date().toISOString().slice(0, 19).replace('T', ' ');
-  await new Promise((r) => setTimeout(r, 200));
+  await waitFor(() => existsSync(started), { what: 'the process group to start' });
 
   // A pid whose leader started at another time belongs to someone else: leave it alone.
   assert.equal(reapOrphans([{ pid, pid_at: '2020-01-01 00:00:00' }], 200), 0);
   assert.ok(alive(pid));
 
   assert.equal(reapOrphans([{ pid, pid_at: sqliteNow }], 300), 1);
-  await new Promise((r) => setTimeout(r, 100));
+  await waitFor(() => !alive(pid), { timeoutMs: 1_000, what: 'the process group to be gone' });
   assert.ok(!alive(pid), 'whole process group is gone, SIGKILL after the grace period');
 });
 

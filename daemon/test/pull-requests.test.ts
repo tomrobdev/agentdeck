@@ -5,6 +5,7 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from '
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, beforeEach, test } from 'node:test';
+import { setTimeout as sleep } from 'node:timers/promises';
 import { asTaskId } from '../src/domain/shared/id.ts';
 import { stopReasonOf } from '../src/domain/work/task.ts';
 
@@ -16,7 +17,7 @@ chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
 
 const { openDb } = await import('./open-db.ts');
-const { blockedTask, doneTask, failedTask, openPr, rerun, settlePr } = await import('./fixtures.ts');
+const { blockedTask, doneTask, failedTask, openPr, rerun, settlePr, waitFor } = await import('./fixtures.ts');
 const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
 const { github } = await import('../src/adapters/github.ts');
 const { refreshPrStates } = await import('../src/application/landing/refresh.ts');
@@ -337,9 +338,11 @@ test('the scheduler refreshes PR states on its own, not only when work runs', as
   states = { 'https://x/pull/20': 'merged' };
   const scheduler = new Scheduler(db, { tickMs: 10, prRefreshMs: 10, log: () => {} });
   const running = scheduler.run(); // paused by default: nothing is claimed
-  const deadline = Date.now() + 5000;
-  while (db.getTask(t.id)!.pr?.state !== 'merged' && Date.now() < deadline) await new Promise((r) => setTimeout(r, 20));
-  scheduler.stop();
+  try {
+    await waitFor(() => db.getTask(t.id)!.pr?.state === 'merged', { what: `the PR of #${t.id} to be seen merged` });
+  } finally {
+    scheduler.stop();
+  }
   await running;
   assert.equal(db.getTask(t.id)!.pr?.state, 'merged');
 });
@@ -421,14 +424,13 @@ test('a dependent is not claimed while its dependency pushes and opens its PR', 
     // The task is done, the push is still going: the PR does not exist yet.
     assert.equal(db.getTask(dep.id)!.status, 'done');
     assert.equal(db.getTask(dep.id)!.pr?.url ?? null, null);
-    await new Promise((r) => setTimeout(r, 150)); // several scheduler ticks
+    await sleep(150); // time passes: several scheduler ticks
     assert.equal(db.getTask(later.id)!.status, 'queued', 'held while the PR is being opened');
     assert.deepEqual(waiting(db.getTask(later.id)!), { on: [dep.id], stuck: null });
 
     release();
-    const deadline = Date.now() + 5000;
-    while (db.getTask(dep.id)!.pr?.state !== 'open' && Date.now() < deadline) await new Promise((r) => setTimeout(r, 10));
-    await new Promise((r) => setTimeout(r, 100));
+    await waitFor(() => db.getTask(dep.id)!.pr?.state === 'open', { what: `the PR of #${dep.id} to be open` });
+    await sleep(100); // time passes: more scheduler ticks
     assert.equal(db.getTask(later.id)!.status, 'queued', 'held while the PR is open');
     await running;
   } finally {
