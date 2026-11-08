@@ -15,7 +15,7 @@ import { MERGE_REQUEST_POLL_MS, PR_REFRESH_MS, refreshPrStates } from '../landin
 import { settle, settleRecovered } from '../landing/settle.ts';
 import { runTask } from '../runs/worker.ts';
 import { nextUnblockable, runUnblock } from '../runs/unblock.ts';
-import type { Repositories as Db } from '../ports/repositories.ts';
+import type { App } from '../ports/app.ts';
 import type { Activity, ReloadDecision } from '../../domain/operations/index.ts';
 
 /** After a merge, how many times to re-read PRs whose mergeability GitHub is still computing, and how far apart. */
@@ -38,7 +38,7 @@ export interface SchedulerOptions {
 }
 
 export class Scheduler {
-  private readonly db: Db;
+  private readonly app: App;
   private readonly opts: Required<Omit<SchedulerOptions, 'reload'>>;
   private readonly reload: SchedulerOptions['reload'];
   /** Everything that takes a slot: task runs, the syncs and conflict resolutions in `resolves`, and the unblock runs in `unblocks`. */
@@ -66,8 +66,8 @@ export class Scheduler {
   /** The tasks whose conflict was told as waiting for a person's sync (auto_resolve off), so it is said once. */
   private readonly conflictsTold = new Set<TaskId>();
 
-  constructor(db: Db, opts: SchedulerOptions = {}) {
-    this.db = db;
+  constructor(app: App, opts: SchedulerOptions = {}) {
+    this.app = app;
     this.opts = {
       tickMs: DEFAULTS.tickMs,
       once: false,
@@ -83,12 +83,12 @@ export class Scheduler {
 
   /** Start ticking. Resolves when stopped, or when the queue is drained in `once` mode. */
   run(): Promise<void> {
-    const reaped = reapOrphans(this.db.unfinishedPids());
+    const reaped = reapOrphans(this.app.unfinishedPids());
     if (reaped) this.opts.log(`stopped ${reaped} claude process(es) left running by a previous daemon`);
-    const { requeued, failed } = this.db.recoverOrphans();
+    const { requeued, failed } = this.app.recoverOrphans();
     if (requeued) this.opts.log(`requeued ${requeued} task(s) left running by a previous daemon`);
     if (failed.length) this.opts.log(`failed ${failed.length} task(s) interrupted by ${MAX_RESTARTS} daemon restarts`);
-    settleRecovered(this.db, failed).catch((err) => this.opts.log(`settling recovered tasks crashed: ${err?.stack ?? err}`));
+    settleRecovered(this.app, failed).catch((err) => this.opts.log(`settling recovered tasks crashed: ${err?.stack ?? err}`));
     return new Promise((resolve) => {
       this.drained = resolve;
       this.tick();
@@ -167,15 +167,15 @@ export class Scheduler {
     const { reason, free } = reload?.pending ? { reason: 'reload pending', free: 0 } : this.gate();
     if (!reason) {
       for (let room = free; room > 0; room--) {
-        const task = this.db.claimNextTask();
+        const task = this.app.claimNextTask();
         if (!task) break;
         this.opts.log(`task ${task.id} attempt ${task.attempts}: starting "${task.title}"`);
-        const p = runTask(this.db, task)
+        const p = runTask(this.app, task)
           .then((res) => this.opts.log(`task ${task.id}: ${res.outcome}${res.reason ? ` (${res.reason})` : ''}`))
           .catch((err) => {
             this.opts.log(`task ${task.id}: worker crashed: ${err?.stack ?? err}`);
             return settle(
-              this.db,
+              this.app,
               task.id,
               { type: 'finish', outcome: 'failed', retry: false },
               { reason: String(err?.message ?? err) },
@@ -192,7 +192,7 @@ export class Scheduler {
     }
     this.maybeRefreshPrs();
     this.awake.set(this.running.size > 0 || this.proposing);
-    if (this.opts.once && this.running.size === 0 && !this.proposing && (reason || !this.db.hasQueued())) {
+    if (this.opts.once && this.running.size === 0 && !this.proposing && (reason || !this.app.hasQueued())) {
       this.stop();
       return;
     }
@@ -208,7 +208,7 @@ export class Scheduler {
    */
   private maybeRefreshPrs(): void {
     if (this.opts.once || this.refreshingPrs) return;
-    const requested = this.db.prCheckRequested();
+    const requested = this.app.prCheckRequested();
     const now = Date.now();
     const due =
       now - this.lastPrRefresh >= this.opts.prRefreshMs ||
@@ -220,7 +220,7 @@ export class Scheduler {
     this.handledPrCheck = Math.max(this.handledPrCheck, requested);
     this.lastPrRefresh = now;
     this.refreshingPrs = true;
-    refreshPrStates(this.db, this.opts.log)
+    refreshPrStates(this.app, this.opts.log)
       .then((found) => {
         this.recheckLeft = found.unknown ? Math.max(this.recheckLeft - 1, 0) : 0;
         this.recheckAt = Date.now() + PR_RECHECK_MS;
@@ -228,7 +228,7 @@ export class Scheduler {
         this.requestPollAt = found.polling ? Date.now() + MERGE_REQUEST_POLL_MS : 0;
         if (found.conflicting.length) this.resolveConflicts(found.conflicting);
         if (found.mergeable.length)
-          return autoMerge(this.db, found.mergeable, { log: this.opts.log, told: this.autoMergeErrors }).then((merged) => {
+          return autoMerge(this.app, found.mergeable, { log: this.opts.log, told: this.autoMergeErrors }).then((merged) => {
             if (merged) this.tick(); // the tasks waiting on it can start now
           });
       })
@@ -240,7 +240,7 @@ export class Scheduler {
 
   /** Merge the base into conflicting PRs' branches in the background; counts as a running task while it works. */
   private resolveConflicts(ids: TaskId[]): void {
-    const p = resolveConflicting(this.db, ids, this.opts.log, this.conflictsTold)
+    const p = resolveConflicting(this.app, ids, this.opts.log, this.conflictsTold)
       .catch((err) => this.opts.log(`conflict resolution crashed: ${err?.stack ?? err}`))
       .finally(() => {
         this.freeSyncSlot(p);
@@ -255,10 +255,10 @@ export class Scheduler {
    */
   private maybeUnblock(): void {
     for (let room = this.gate().free; room > 0; room--) {
-      const task = nextUnblockable(this.db);
+      const task = nextUnblockable(this.app);
       if (!task) return;
       this.opts.log(`task ${task.id}: unblock run: reading why it blocked`);
-      const p: Promise<unknown> = runUnblock(this.db, task)
+      const p: Promise<unknown> = runUnblock(this.app, task)
         .then((r) => this.opts.log(`task ${task.id}: unblock run: ${r.outcome}${r.reason ? ` (${r.reason})` : ''}`))
         .catch((err) => this.opts.log(`task ${task.id}: unblock run crashed: ${err?.stack ?? err}`))
         .finally(() => {
@@ -273,11 +273,11 @@ export class Scheduler {
 
   /** Run the planner for the first repo whose queue has run dry. One planner at a time. */
   private maybePropose(): void {
-    const repo = this.db.listRepos().find((r) => plannerDue(this.db, r));
+    const repo = this.app.listRepos().find((r) => plannerDue(this.app, r));
     if (!repo) return;
     this.opts.log(`planner: proposing tasks for ${repo.name}`);
     this.track(
-      proposeNow(this.db, repo.id)
+      proposeNow(this.app, repo.id)
         .then((r) => this.opts.log(`planner: ${repo.name}: ${r.outcome}, ${r.tasks.length} task(s)${r.note ? ` (${r.note})` : ''}`))
         .catch((err) => this.opts.log(`planner: ${repo.name} crashed: ${err?.stack ?? err}`)),
       'propose',
@@ -286,15 +286,15 @@ export class Scheduler {
 
   /** Why we can't start new work right now (null if we can), and how many slots are free. Announces a hold once. */
   private gate(): { reason: string | null; free: number } {
-    const { wait, free } = queueWait(this.db, this.opts.once);
+    const { wait, free } = queueWait(this.app, this.opts.once);
     const hold = wait?.kind === 'governor' ? wait : null;
     // Announce a hold once, and only when it is actually keeping queued work waiting.
-    if (hold && !this.lastHold && this.db.hasQueued()) {
+    if (hold && !this.lastHold && this.app.hasQueued()) {
       const lifts = hold.until
         ? ` Resumes around ${new Date(hold.until * 1000).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })}.`
         : '';
       this.opts.log(`governor hold: ${hold.reason}`);
-      notifyLater(this.db, { kind: 'hold', title: 'Queued work on hold', body: `${hold.reason}.${lifts}` });
+      notifyLater(this.app, { kind: 'hold', title: 'Queued work on hold', body: `${hold.reason}.${lifts}` });
       this.lastHold = hold.reason;
     } else if (!wait && this.lastHold) {
       this.opts.log('governor: hold lifted');

@@ -1,6 +1,6 @@
-// What every CLI command gets: the parsed command line and the database.
+// What every CLI command gets: the parsed command line and the App (src/compose.ts).
 import { parseArgs } from 'node:util';
-import type { Db } from '../db/index.ts';
+import type { ComposedApp } from '../compose.ts';
 import type { RepoId } from '../domain/shared/index.ts';
 
 export function parseCommandLine(argv: string[]) {
@@ -49,7 +49,7 @@ export function parseCommandLine(argv: string[]) {
 }
 
 export interface CommandContext {
-  db: Db;
+  db: ComposedApp;
   /** The command name, as typed. */
   cmd: string;
   /** Positional arguments after the command name. */

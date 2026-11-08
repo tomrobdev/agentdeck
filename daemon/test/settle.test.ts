@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import type { TaskId } from '../src/domain/shared/id.ts';
-import { asTaskId } from './fixtures.ts';
+import { asTaskId, testApp } from './fixtures.ts';
 
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-settle-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
@@ -21,7 +21,7 @@ const { finalNotification } = await import('../src/domain/operations/notificatio
 const { MAX_RESTARTS } = await import('../src/domain/work/lifecycle.ts');
 
 function setup(pr_mode: 'off' | 'ready' = 'off') {
-  const db = openDb(':memory:');
+  const db = testApp(openDb(':memory:'));
   const repo = db.addRepo({ name: 'demo', path: '/tmp/demo', base_branch: 'main' });
   db.raw.prepare('UPDATE repos SET pr_mode = ? WHERE id = ?').run(pr_mode, repo.id);
   const add = (after_task: number | null = null) =>

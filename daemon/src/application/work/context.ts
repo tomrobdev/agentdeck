@@ -3,7 +3,7 @@ import { realpathSync } from 'node:fs';
 import { join, sep } from 'node:path';
 import { headSummary } from '../../adapters/git.ts';
 import { WORKTREE_DIR } from '../../config.ts';
-import type { Repositories as Db } from '../ports/repositories.ts';
+import type { App } from '../ports/app.ts';
 import type { Repo } from '../../domain/repos/index.ts';
 import { digest } from '../../domain/work/index.ts';
 import { filterTasks, listable } from '../../domain/work/index.ts';
@@ -32,10 +32,10 @@ const real = (path: string): string => {
 const within = (dir: string, root: string) => dir === root || dir.startsWith(root + sep);
 
 /** The registered repo a directory is in: its checkout, or one of its task worktrees. The deepest match wins. */
-export function repoForPath(db: Db, dir: string): Repo | undefined {
+export function repoForPath(app: App, dir: string): Repo | undefined {
   const here = real(dir);
   let best: { repo: Repo; depth: number } | undefined;
-  for (const repo of db.listRepos()) {
+  for (const repo of app.listRepos()) {
     for (const root of [real(repo.path), join(real(WORKTREE_DIR), repo.name)]) {
       if (within(here, root) && (!best || root.length > best.depth)) best = { repo, depth: root.length };
     }
@@ -47,17 +47,17 @@ export function repoForPath(db: Db, dir: string): Repo | undefined {
  * The repo's queue: the header, what changed after event `after` (none when `after` is null), and the open tasks when
  * something changed or `full` is set. `cursor` is the newest event now, whatever repo it belongs to.
  */
-export async function liveContext(db: Db, opts: { repo: Repo; after: number | null; full: boolean }): Promise<LiveContext> {
-  const cursor = db.lastEventId();
+export async function liveContext(app: App, opts: { repo: Repo; after: number | null; full: boolean }): Promise<LiveContext> {
+  const cursor = app.lastEventId();
   // A cursor above the newest event is from other ids (a repo deleted, a restored database): it is no cursor.
   const after = opts.after !== null && opts.after > cursor ? null : opts.after;
-  const events = after === null ? [] : db.eventsAfter(after, cursor, opts.repo.id);
-  const st = status(db);
+  const events = after === null ? [] : app.eventsAfter(after, cursor, opts.repo.id);
+  const st = status(app);
   // Only this repo's tasks that can be open get views; the views are the costly part.
-  const maybeOpen = db
+  const maybeOpen = app
     .listTasks()
     .filter((t) => t.repo_id === opts.repo.id && ([...OPEN_STATUSES, 'blocked', 'failed'].includes(t.status) || isReview(stageOf(t))));
-  const open = filterTasks(withViews(db, maybeOpen).map(listable), { states: OPEN_STATES, repo_id: opts.repo.id, sort: 'attention' });
+  const open = filterTasks(withViews(app, maybeOpen).map(listable), { states: OPEN_STATES, repo_id: opts.repo.id, sort: 'attention' });
   const lines = digest({
     header: {
       repo: opts.repo.name,

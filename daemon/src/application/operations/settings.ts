@@ -1,5 +1,5 @@
 // Use cases for the daemon as a whole: pause, status, and settings.
-import type { Repositories as Db } from '../ports/repositories.ts';
+import type { App } from '../ports/app.ts';
 import { type NotifyKind, type NotifySettings, notifyEventsError, ntfyServerError, ntfyTopicError } from '../../domain/operations/index.ts';
 import { type PlannerSettings, plannerIntervalError, plannerMaxTasksError, plannerModelError } from '../../domain/proposals/index.ts';
 import { BUDGET_KEYS, type Budget, validateBudget, validateSlots } from '../../domain/capacity/index.ts';
@@ -13,9 +13,9 @@ import { notify } from './notifications.ts';
 import { queueWaits } from '../capacity/queue.ts';
 import { runningActivity } from './restart.ts';
 
-export function setPaused(db: Db, paused: boolean): void {
-  db.setPaused(paused);
-  if (!paused) db.setRateLimitedUntil(0);
+export function setPaused(app: App, paused: boolean): void {
+  app.setPaused(paused);
+  if (!paused) app.setRateLimitedUntil(0);
 }
 
 /** Which code the daemon is running, recorded once at start. */
@@ -30,28 +30,28 @@ export interface DaemonInfo {
 export type ReloadFacts = Pick<ReloadInput, 'changed' | 'lastChangeAt' | 'requested' | 'blocked'>;
 
 /** GET /api/daemon: the code the daemon loaded, since when and as which process, and where a reload stands. */
-export function daemonState(db: Db, info: DaemonInfo, facts: ReloadFacts): DaemonState {
+export function daemonState(app: App, info: DaemonInfo, facts: ReloadFacts): DaemonState {
   return {
     ...info,
     reload: reloadState({
       ...facts,
-      enabled: db.reloadOnChange(),
+      enabled: app.reloadOnChange(),
       now: Date.now(),
-      activity: runningActivity(db),
+      activity: runningActivity(app),
     }),
   };
 }
 
-export function status(db: Db, daemon: DaemonInfo = { commit: null, started_at: new Date(0).toISOString(), pid: process.pid }) {
-  const gate = startGate(db);
-  const counts = db.countByStatus();
-  const review = db.countReview();
+export function status(app: App, daemon: DaemonInfo = { commit: null, started_at: new Date(0).toISOString(), pid: process.pid }) {
+  const gate = startGate(app);
+  const counts = app.countByStatus();
+  const review = app.countReview();
   return {
     daemon,
     paused: gate.paused,
     rate_limited_until: gate.rate_limited_until,
-    running: db.countRunning(),
-    max_concurrent: db.maxConcurrent(),
+    running: app.countRunning(),
+    max_concurrent: app.maxConcurrent(),
     counts,
     review,
     headline: headline(
@@ -59,18 +59,18 @@ export function status(db: Db, daemon: DaemonInfo = { commit: null, started_at: 
         paused: gate.paused,
         rate_limited_until: gate.rate_limited_until,
         governor: gate.governor,
-        running: db.countRunning(),
+        running: app.countRunning(),
         need_you: { proposed: counts.proposed ?? 0, blocked: counts.blocked ?? 0, review },
-        attention: db.attentionTasks(ATTENTION_LIMIT),
+        attention: app.attentionTasks(ATTENTION_LIMIT),
       },
       Date.now() / 1000,
     ),
-    usage: db.usageWindows(),
+    usage: app.usageWindows(),
     governor: gate.governor,
-    budget: db.budget(),
-    notifications: db.recentNotifications(10),
-    planning: db.unfinishedPlannerRuns(),
-    ...queueWaits(db),
+    budget: app.budget(),
+    notifications: app.recentNotifications(10),
+    planning: app.unfinishedPlannerRuns(),
+    ...queueWaits(app),
   };
 }
 
@@ -78,15 +78,15 @@ export function status(db: Db, daemon: DaemonInfo = { commit: null, started_at: 
  * Ask the daemon to exit so launchd starts it on the code on disk. It exits once nothing is running;
  * `waiting` says what it is waiting for, or null when it is exiting now.
  */
-export function restartDaemon(db: Db, request: () => void): { waiting: string | null } {
+export function restartDaemon(app: App, request: () => void): { waiting: string | null } {
   request();
-  return { waiting: restartWait(runningActivity(db)) };
+  return { waiting: restartWait(runningActivity(app)) };
 }
 
 export type { Settings };
 
-export function getSettings(db: Db): Settings {
-  return db.readSettings();
+export function getSettings(app: App): Settings {
+  return app.readSettings();
 }
 
 export interface SettingsPatch {
@@ -98,8 +98,8 @@ export interface SettingsPatch {
 }
 
 /** Apply a partial settings update after validating all of it. */
-export function updateSettings(db: Db, patch: SettingsPatch): Settings {
-  const next = db.readSettings();
+export function updateSettings(app: App, patch: SettingsPatch): Settings {
+  const next = app.readSettings();
   const body = object(patch);
   const section = (key: string) => (body[key] === undefined ? undefined : object(body[key]));
 
@@ -150,16 +150,16 @@ export function updateSettings(db: Db, patch: SettingsPatch): Settings {
     }
   }
 
-  db.writeSettings(next);
-  return getSettings(db);
+  app.writeSettings(next);
+  return getSettings(app);
 }
 
 /** POST /api/app/seen: the desktop app is running, so it shows desktop notifications for the next 90 s. Says whether they are on. */
-export function appSeen(db: Db, now = Date.now()): { desktop: boolean } {
-  db.setAppSeenAt(now);
-  return { desktop: db.notifySettings().desktop };
+export function appSeen(app: App, now = Date.now()): { desktop: boolean } {
+  app.setAppSeenAt(now);
+  return { desktop: app.notifySettings().desktop };
 }
 
-export function sendTestNotification(db: Db): Promise<void> {
-  return notify(db, { kind: 'test', title: 'Test notification', body: 'Notifications from AgentDeck are working.' });
+export function sendTestNotification(app: App): Promise<void> {
+  return notify(app, { kind: 'test', title: 'Test notification', body: 'Notifications from AgentDeck are working.' });
 }

@@ -6,7 +6,7 @@ import { deleteBranch, currentBranch, isGitRepo, pruneWorktrees, removeWorktree 
 import { deleteGoals, goalsPath, readGoals, writeGoals } from '../../adapters/goals.ts';
 import { rootInfo } from '../../adapters/repo-root.ts';
 import { removeFiles } from '../../adapters/run-log.ts';
-import type { Repositories as Db } from '../ports/repositories.ts';
+import type { App } from '../ports/app.ts';
 import { autoMergeMaxLinesError } from '../../domain/landing/index.ts';
 import { MERGE_METHODS, type MergeMethod, PR_MODES, type PrMode, type Repo, isMergeMethod } from '../../domain/repos/index.ts';
 import { goalsError, networkError, repoNameError } from '../../domain/repos/index.ts';
@@ -20,7 +20,7 @@ import { buildersOnRepo, warnBuildersOnDeleted } from '../work/dependencies.ts';
 
 /** Register a repo. Its toolchain is detected from the root files and fills in whatever isn't given. */
 export async function addRepo(
-  db: Db,
+  app: App,
   input: { path: string; name?: string; base?: string; test?: string | null; setup?: string | null; tools?: string[] | null },
 ): Promise<Repo> {
   const body = object(input);
@@ -39,7 +39,7 @@ export async function addRepo(
   const { files, scripts } = rootInfo(abs);
   const detected = detectToolchain(files, scripts);
   try {
-    return db.addRepo({
+    return app.addRepo({
       name: repoName,
       path: abs,
       base_branch: base || (await currentBranch(abs)),
@@ -55,9 +55,9 @@ export async function addRepo(
   }
 }
 
-export function repoDetail(db: Db, nameOrId: string | number) {
-  const repo = requireRepo(db, nameOrId);
-  return { ...repoView(repo), goals: readGoals(repo), goals_path: goalsPath(repo), planner_runs: db.plannerRuns(repo.id, 5) };
+export function repoDetail(app: App, nameOrId: string | number) {
+  const repo = requireRepo(app, nameOrId);
+  return { ...repoView(repo), goals: readGoals(repo), goals_path: goalsPath(repo), planner_runs: app.plannerRuns(repo.id, 5) };
 }
 
 export interface RepoPatch {
@@ -79,8 +79,8 @@ export interface RepoPatch {
   auto_merge_skip?: string | string[];
 }
 
-export function updateRepo(db: Db, nameOrId: string | number, patch: RepoPatch) {
-  const repo = requireRepo(db, nameOrId);
+export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch) {
+  const repo = requireRepo(app, nameOrId);
   const body = object(patch);
   const goals = text(body, 'goals', { empty: true, raw: true });
   const auto_approve = flag(body, 'auto_approve');
@@ -108,7 +108,7 @@ export function updateRepo(db: Db, nameOrId: string | number, patch: RepoPatch) 
     refuse(goalsError(goals));
     writeGoals(repo, goals);
   }
-  db.updateRepo(repo.id, {
+  app.updateRepo(repo.id, {
     ...(auto_approve !== undefined ? { auto_approve } : {}),
     ...(test_cmd !== undefined ? { test_cmd: test_cmd?.trim() || null } : {}),
     ...(setup_cmd !== undefined ? { setup_cmd: setup_cmd?.trim() || null } : {}),
@@ -123,39 +123,39 @@ export function updateRepo(db: Db, nameOrId: string | number, patch: RepoPatch) 
     ...(auto_merge_max_lines !== undefined ? { auto_merge_max_lines } : {}),
     ...(auto_merge_skip !== undefined ? { auto_merge_skip } : {}),
   });
-  return repoDetail(db, repo.id);
+  return repoDetail(app, repo.id);
 }
 
 /** Let a paused repo's tasks run again. */
-export function resumeRepo(db: Db, nameOrId: string | number): Repo {
-  const repo = requireRepo(db, nameOrId);
-  db.setRepoPaused(repo.id, null);
-  return db.getRepo(repo.id)!;
+export function resumeRepo(app: App, nameOrId: string | number): Repo {
+  const repo = requireRepo(app, nameOrId);
+  app.setRepoPaused(repo.id, null);
+  return app.getRepo(repo.id)!;
 }
 
 /**
  * Hide a repo and all its tasks and stop its work: nothing of it is claimed, planned or polled.
  * Refuses while one of its tasks is running. Its tasks keep their statuses; `unarchiveRepo` brings them back.
  */
-export function archiveRepo(db: Db, nameOrId: string | number): Repo {
-  const repo = requireRepo(db, nameOrId);
+export function archiveRepo(app: App, nameOrId: string | number): Repo {
+  const repo = requireRepo(app, nameOrId);
   if (repo.archived_at) return repo;
-  if (db.repoHasRunning(repo.id))
+  if (app.repoHasRunning(repo.id))
     throw new ActionError(`${repo.name} has a task running; cancel it or wait for it to finish, then archive`);
-  db.setRepoArchived(repo.id, true);
-  return db.getRepo(repo.id)!;
+  app.setRepoArchived(repo.id, true);
+  return app.getRepo(repo.id)!;
 }
 
-export function unarchiveRepo(db: Db, nameOrId: string | number): Repo {
-  const repo = requireRepo(db, nameOrId);
-  db.setRepoArchived(repo.id, false);
-  return db.getRepo(repo.id)!;
+export function unarchiveRepo(app: App, nameOrId: string | number): Repo {
+  const repo = requireRepo(app, nameOrId);
+  app.setRepoArchived(repo.id, false);
+  return app.getRepo(repo.id)!;
 }
 
 /** What deleting a repo will remove, counted. */
-export function repoDeletionPreview(db: Db, nameOrId: string | number) {
-  const repo = requireRepo(db, nameOrId);
-  const { tasks, run_logs } = db.repoFootprint(repo.id);
+export function repoDeletionPreview(app: App, nameOrId: string | number) {
+  const repo = requireRepo(app, nameOrId);
+  const { tasks, run_logs } = app.repoFootprint(repo.id);
   return {
     repo: repo.name,
     archived: !!repo.archived_at,
@@ -171,18 +171,18 @@ export function repoDeletionPreview(db: Db, nameOrId: string | number) {
  * Files go after the rows, so a failure leaves files behind, never rows pointing at missing files;
  * `leftover` names what couldn't be removed.
  */
-export async function deleteRepo(db: Db, nameOrId: string | number): Promise<{ repo: string; leftover: string[] }> {
-  const repo = requireRepo(db, nameOrId);
+export async function deleteRepo(app: App, nameOrId: string | number): Promise<{ repo: string; leftover: string[] }> {
+  const repo = requireRepo(app, nameOrId);
   if (!repo.archived_at) throw new ActionError(`${repo.name} is not archived; archive it first, then delete`);
-  const { tasks, run_logs, planner_logs } = db.repoFootprint(repo.id);
+  const { tasks, run_logs, planner_logs } = app.repoFootprint(repo.id);
   // Other repos' tasks that build on this repo's unmerged tasks lose those links with it: say so, so none starts unannounced.
   const builders = buildersOnRepo(
-    db,
+    app,
     repo.id,
     tasks.map((t) => t.id),
   );
-  if (!db.deleteRepo(repo.id)) throw new ActionError(`${repo.name} is not archived; archive it first, then delete`);
-  warnBuildersOnDeleted(db, repo.name, builders);
+  if (!app.deleteRepo(repo.id)) throw new ActionError(`${repo.name} is not archived; archive it first, then delete`);
+  warnBuildersOnDeleted(app, repo.name, builders);
   const leftover: string[] = [];
   for (const t of tasks) {
     try {
@@ -218,11 +218,11 @@ export interface DoctorReport {
  * Check that a repo is ready for unattended runs. A failure pauses the repo, naming the first failed check;
  * a pass clears any pause.
  */
-export async function doctorRepo(db: Db, nameOrId: string | number): Promise<DoctorReport> {
-  const repo = requireRepo(db, nameOrId);
+export async function doctorRepo(app: App, nameOrId: string | number): Promise<DoctorReport> {
+  const repo = requireRepo(app, nameOrId);
   const checks = await runDoctor(repo);
   const failed = checks.find((c) => !c.ok);
-  if (failed) pauseRepo(db, repo, `doctor: ${failed.name}`, { replace: true });
-  else db.setRepoPaused(repo.id, null);
-  return { repo: repo.name, ok: !failed, checks, paused_reason: db.getRepo(repo.id)!.paused_reason };
+  if (failed) pauseRepo(app, repo, `doctor: ${failed.name}`, { replace: true });
+  else app.setRepoPaused(repo.id, null);
+  return { repo: repo.name, ok: !failed, checks, paused_reason: app.getRepo(repo.id)!.paused_reason };
 }

@@ -2,7 +2,7 @@
 // pull request as one value and its checkout as one; the API keeps the shape it always had (JSON text, 1 or 0, flat PR, checkout and
 // plan fields), so the dashboard reads them as before.
 import * as actions from '../application/actions.ts';
-import type { Db } from '../db/index.ts';
+import type { ComposedApp } from '../compose.ts';
 import { stored } from '../db/mappers.ts';
 import type { TaskId } from '../domain/shared/index.ts';
 import { type PullRequest, prFields } from '../domain/landing/index.ts';
@@ -26,13 +26,13 @@ const flat = <T extends TaskState & { pr: PullRequest | null; checkout: Checkout
 };
 
 /** One task with its view, runs, events and plans, in the API's shape. */
-export async function taskDetail(db: Db, id: TaskId) {
+export async function taskDetail(db: ComposedApp, id: TaskId) {
   const detail = await actions.taskDetail(db, id);
   return { ...flat(detail), runs: detail.runs.map(stored) };
 }
 
 /** Task summaries, each with its view, in the API's shape. The checks are summed up in `checks`, so their list stays out. */
-export function taskViews(db: Db, filter: Parameters<typeof actions.taskViews>[1]) {
+export function taskViews(db: ComposedApp, filter: Parameters<typeof actions.taskViews>[1]) {
   return actions.taskViews(db, filter).map((task) => {
     const { pr_checks: _pr_checks, ...fields } = flat(task);
     return fields;

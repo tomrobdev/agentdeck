@@ -1,7 +1,7 @@
 // What a use case needs to read a request: ActionError and the rules that raise it, finding the task or repo a person
 // named (the one place these messages are worded), and checks on the fields of a request body. A wrong type is the
 // caller's mistake, so each throws ActionError (a 400).
-import type { Repositories as Db } from '../ports/repositories.ts';
+import type { App } from '../ports/app.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import type { Repo } from '../../domain/repos/index.ts';
 import type { Task } from '../../domain/work/index.ts';
@@ -14,21 +14,21 @@ export function refuse(message: string | null): void {
   if (message) throw new ActionError(message);
 }
 
-export function requireTask(db: Db, id: TaskId): Task {
-  const task = db.getTask(id);
+export function requireTask(app: App, id: TaskId): Task {
+  const task = app.getTask(id);
   if (!task) throw new ActionError('no such task');
   return task;
 }
 
-export function requireRepo(db: Db, nameOrId: string | number): Repo {
-  const repo = db.findRepo(String(nameOrId));
+export function requireRepo(app: App, nameOrId: string | number): Repo {
+  const repo = app.findRepo(String(nameOrId));
   if (!repo) throw new ActionError(`no repo "${nameOrId}"`);
   return repo;
 }
 
 /** The repo a task belongs to. */
-export function requireTaskRepo(db: Db, task: Task): Repo {
-  const repo = db.getRepo(task.repo_id);
+export function requireTaskRepo(app: App, task: Task): Repo {
+  const repo = app.getRepo(task.repo_id);
   if (!repo) throw new ActionError('the task has no repo');
   return repo;
 }

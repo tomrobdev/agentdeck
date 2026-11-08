@@ -19,7 +19,7 @@ import { github } from '../../adapters/github.ts';
 import { writeEvent } from '../../adapters/run-log.ts';
 import { runCommand } from '../../adapters/shell.ts';
 import { TEST_TIMEOUT_MS } from '../../config.ts';
-import type { Repositories as Db } from '../ports/repositories.ts';
+import type { App } from '../ports/app.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import { type SyncResult, conflictReason, syncResultOf, syncSummary } from '../../domain/landing/index.ts';
 import type { Repo } from '../../domain/repos/index.ts';
@@ -49,7 +49,7 @@ interface SyncOptions {
  * of run, which uses no attempt) fixes them. If that fails, the merge is aborted and the branch is left as it was.
  * Never throws.
  */
-export async function syncBranch(db: Db, task: Task, repo: Repo, worktree: string, opts: SyncOptions): Promise<SyncResult> {
+export async function syncBranch(app: App, task: Task, repo: Repo, worktree: string, opts: SyncOptions): Promise<SyncResult> {
   let before: string | undefined;
   try {
     // A merge left half done by a crash would otherwise be committed with its markers.
@@ -79,7 +79,7 @@ export async function syncBranch(db: Db, task: Task, repo: Repo, worktree: strin
       await abortMerge(worktree, before);
       return { kind: 'needs_resolution', files: merge.files };
     }
-    return await resolveConflicts(db, task, repo, worktree, before, merge.files, opts.runTests);
+    return await resolveConflicts(app, task, repo, worktree, before, merge.files, opts.runTests);
   } catch (err) {
     if (before) await abortMerge(worktree, before).catch(() => {});
     return { kind: 'error', reason: errorMessage(err) };
@@ -88,7 +88,7 @@ export async function syncBranch(db: Db, task: Task, repo: Repo, worktree: strin
 
 /** The merge is in progress with conflicts: run claude on it, check what it left, and keep or undo the merge. */
 async function resolveConflicts(
-  db: Db,
+  app: App,
   task: Task,
   repo: Repo,
   worktree: string,
@@ -97,7 +97,7 @@ async function resolveConflicts(
   runTests: boolean,
 ): Promise<SyncResult> {
   const prompt = buildResolvePrompt(task, { base: repo.base_branch, files, ...(await mergeSides(worktree)), testCmd: repo.test_cmd });
-  const opened = openTaskRun(db, task, 'resolve');
+  const opened = openTaskRun(app, task, 'resolve');
   const { log } = opened;
   let fields: Partial<Run> = {};
 
@@ -105,7 +105,7 @@ async function resolveConflicts(
   let reason = '';
   try {
     // Throws if the run cannot start (no settings, no worktree): the row still ends below, failed.
-    const ran = await startTaskRun(db, task, { kind: 'resolve', repo, worktree, prompt, opened });
+    const ran = await startTaskRun(app, task, { kind: 'resolve', repo, worktree, prompt, opened });
     fields = ran.fields;
     const settled = resolveOutcome(ran.end);
     if (settled.outcome !== 'check') {
@@ -127,7 +127,7 @@ async function resolveConflicts(
   }
 
   if (outcome !== 'done') await abortMerge(worktree, before).catch(() => {});
-  await endTaskRun(db, opened, outcome, reason, fields);
+  await endTaskRun(app, opened, outcome, reason, fields);
 
   return syncResultOf(outcome, files, reason);
 }
@@ -155,7 +155,7 @@ export interface SyncReport {
 
 /** Push the branch if the task has an open PR that does not have its latest commits yet. Returns an error message, if any. */
 async function pushIfNeeded(
-  db: Db,
+  app: App,
   task: Task,
   repo: Repo,
   worktree: string,
@@ -170,7 +170,7 @@ async function pushIfNeeded(
     return { pushed: true };
   } catch (err) {
     const error = errorMessage(err);
-    logPrEvent(db, task.id, { error });
+    logPrEvent(app, task.id, { error });
     return { pushed: false, error };
   }
 }
@@ -181,43 +181,43 @@ async function pushIfNeeded(
  * branch, the merge is undone and the task becomes blocked with the conflicting files as the reason.
  * `manual` is a person asking (it ignores the repo's auto_resolve and throws what an automatic call only reports).
  */
-export async function syncTask(db: Db, id: TaskId, opts: { manual: boolean }): Promise<SyncReport> {
-  const task = requireTask(db, id);
-  const repo = requireTaskRepo(db, task);
+export async function syncTask(app: App, id: TaskId, opts: { manual: boolean }): Promise<SyncReport> {
+  const task = requireTask(app, id);
+  const repo = requireTaskRepo(app, task);
   if (task.status !== 'done') throw new ActionError(`#${id} is ${task.status}; only a done task's branch is synced this way`);
   if (!task.checkout?.branch) throw new ActionError(`#${id} has no branch`);
-  if (isSyncLocked(id) || db.hasSyncMarker(id)) throw new ActionError(`#${id} is already syncing`);
+  if (isSyncLocked(id) || app.hasSyncMarker(id)) throw new ActionError(`#${id} is already syncing`);
   if (isMergeLocked(id)) throw new ActionError(`#${id} is being merged; try again when that is done`);
 
   lockSync(id);
   try {
-    return await markSyncing(db, id, () => syncMarked(db, task, repo, opts));
+    return await markSyncing(app, id, () => syncMarked(app, task, repo, opts));
   } finally {
     unlockSync(id);
   }
 }
 
-async function syncMarked(db: Db, task: Task, repo: Repo, opts: { manual: boolean }): Promise<SyncReport> {
+async function syncMarked(app: App, task: Task, repo: Repo, opts: { manual: boolean }): Promise<SyncReport> {
   const id = task.id;
   const wt = await ensureWorktree(repo, task);
-  if (wt.path !== task.checkout?.worktree) db.setCheckout(id, { worktree: wt.path });
-  const res = await syncBranch(db, task, repo, wt.path, { allowResolve: opts.manual || repo.auto_resolve, runTests: true });
+  if (wt.path !== task.checkout?.worktree) app.setCheckout(id, { worktree: wt.path });
+  const res = await syncBranch(app, task, repo, wt.path, { allowResolve: opts.manual || repo.auto_resolve, runTests: true });
   switch (res.kind) {
     case 'up_to_date':
     case 'clean':
     case 'resolved': {
       const changed = res.kind !== 'up_to_date';
       if (res.kind !== 'up_to_date') {
-        db.recordSync(id, syncSummary(repo.base_branch, res.kind, res.kind === 'resolved' ? res.files : []));
+        app.recordSync(id, syncSummary(repo.base_branch, res.kind, res.kind === 'resolved' ? res.files : []));
       }
-      const push = await pushIfNeeded(db, task, repo, wt.path, changed);
+      const push = await pushIfNeeded(app, task, repo, wt.path, changed);
       return { outcome: res.kind, files: res.kind === 'resolved' ? res.files : [], pushed: push.pushed, push_error: push.error };
     }
     case 'needs_resolution':
       return { outcome: 'skipped', files: res.files, reason: 'the repo has auto_resolve off', pushed: false };
     case 'failed': {
       const reason = conflictReason(repo.base_branch, res.files, res.reason);
-      await settle(db, id, { type: 'conflict' }, { reason });
+      await settle(app, id, { type: 'conflict' }, { reason });
       return { outcome: 'blocked', files: res.files, reason, pushed: false };
     }
     case 'rate_limited':
@@ -231,11 +231,11 @@ async function syncMarked(db: Db, task: Task, repo: Repo, opts: { manual: boolea
 }
 
 /** A person asked (`agentdeck sync`, the dashboard's sync button): the repo's auto_resolve does not apply. */
-export const syncNow = (db: Db, id: TaskId): Promise<SyncReport> => syncTask(db, id, { manual: true });
+export const syncNow = (app: App, id: TaskId): Promise<SyncReport> => syncTask(app, id, { manual: true });
 
 /** Whether the governor lets a resolve run start now: not paused, not rate limited, inside the usage windows, a slot free. */
-export function canStartResolve(db: Db): boolean {
-  return queueWait(db).free > 0;
+export function canStartResolve(app: App): boolean {
+  return queueWait(app).free > 0;
 }
 
 /**
@@ -244,16 +244,16 @@ export function canStartResolve(db: Db): boolean {
  * sync, said once per conflict while `told` is kept between calls. Never throws.
  */
 export async function resolveConflicting(
-  db: Db,
+  app: App,
   ids: TaskId[],
   log: (msg: string) => void = () => {},
   told: Set<TaskId> = new Set(),
 ): Promise<void> {
   for (const id of told) if (!ids.includes(id)) told.delete(id);
   for (const id of ids) {
-    const task = db.getTask(id);
-    const repo = task && db.getRepo(task.repo_id);
-    if (!task || !repo || task.status !== 'done' || repo.paused_reason || isSyncing(db, id) || isMergeLocked(id)) continue;
+    const task = app.getTask(id);
+    const repo = task && app.getRepo(task.repo_id);
+    if (!task || !repo || task.status !== 'done' || repo.paused_reason || isSyncing(app, id) || isMergeLocked(id)) continue;
     if (!repo.auto_resolve) {
       if (!told.has(id)) {
         told.add(id);
@@ -261,13 +261,13 @@ export async function resolveConflicting(
       }
       continue;
     }
-    if (!canStartResolve(db)) {
+    if (!canStartResolve(app)) {
       log(`task ${id}: PR conflicts with ${repo.base_branch}; waiting for the governor before syncing`);
       return;
     }
     log(`task ${id}: PR conflicts with ${repo.base_branch}; syncing it with ${repo.base_branch}`);
     try {
-      const r = await syncTask(db, id, { manual: false });
+      const r = await syncTask(app, id, { manual: false });
       log(`task ${id}: ${r.outcome}${r.reason ? ` (${r.reason})` : ''}${r.push_error ? `; push failed: ${r.push_error}` : ''}`);
     } catch (err) {
       log(`task ${id}: could not sync with ${repo.base_branch}: ${errorMessage(err)}`);

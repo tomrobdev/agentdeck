@@ -1,5 +1,5 @@
 // The plan link a task request asks for: its steps, the plan it follows, and the checks on both.
-import type { Repositories as Db } from '../ports/repositories.ts';
+import type { App } from '../ports/app.ts';
 import { type TaskId, parseId } from '../../domain/shared/index.ts';
 import { type ParsedPlan, parsePlan } from '../../domain/work/index.ts';
 import type { Repo } from '../../domain/repos/index.ts';
@@ -30,14 +30,14 @@ function checkSteps(name: string, plan: ParsedPlan, steps: string[] | null): voi
  * The task whose plan `--plan <number>` links: that task, which must be in the same repo, if it has a plan of its own;
  * else the task whose plan it follows. Refused when there is no plan to follow.
  */
-function planOwner(db: Db, repo: Repo, on: TaskId): { owner: TaskId; name: string; plan: ParsedPlan } {
-  const target = db.getTask(on);
+function planOwner(app: App, repo: Repo, on: TaskId): { owner: TaskId; name: string; plan: ParsedPlan } {
+  const target = app.getTask(on);
   if (!target) throw new ActionError(`plan: there is no task #${on}`);
   if (target.repo_id !== repo.id) {
-    throw new ActionError(`plan: #${on} is in ${db.getRepo(target.repo_id)?.name ?? 'another repo'}, not ${repo.name}`);
+    throw new ActionError(`plan: #${on} is in ${app.getRepo(target.repo_id)?.name ?? 'another repo'}, not ${repo.name}`);
   }
   for (const owner of [on, target.plan?.task ?? null]) {
-    const own = owner === null ? undefined : db.ownPlan(owner);
+    const own = owner === null ? undefined : app.ownPlan(owner);
     const plan = own && parsePlan(own.html);
     if (owner !== null && own && plan) return { owner, name: own.name, plan };
   }
@@ -63,7 +63,7 @@ export function planRequest(body: Record<string, unknown>): PlanRequest | undefi
  * is followed (`owner`, null for no link, which can't have steps). `repo` is read only when another task's plan is linked.
  */
 export function checkPlanLink(
-  db: Db,
+  app: App,
   repo: () => Repo,
   asked: PlanRequest,
   steps: string[] | null,
@@ -74,7 +74,7 @@ export function checkPlanLink(
   }
   refuse(stepsNeedPlanError(asked.task, steps));
   if (asked.task === null) return { owner: null };
-  const linked = planOwner(db, repo(), asked.task);
+  const linked = planOwner(app, repo(), asked.task);
   checkSteps(linked.name, linked.plan, steps);
   return { owner: linked.owner };
 }

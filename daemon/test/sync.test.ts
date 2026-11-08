@@ -21,7 +21,7 @@ const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
 const { github } = await import('../src/adapters/github.ts');
 const { startApi } = await import('../src/api/server.ts');
 const { refreshPrStates } = await import('../src/application/landing/refresh.ts');
-const { doneTask: doneTaskWithPr } = await import('./fixtures.ts');
+const { doneTask: doneTaskWithPr, testApp } = await import('./fixtures.ts');
 const { resolveConflicting } = await import('../src/application/runs/sync.ts');
 const { ActionError, mergeTask, syncNow, retryTask, updateRepo } = await import('../src/application/actions.ts');
 const { isConflicting, isMergeabilityUnknown } = await import('../src/domain/landing/conflict.ts');
@@ -30,7 +30,7 @@ const { buildPrBody } = await import('../src/domain/landing/pr.ts');
 const { buildPrompt, buildResolvePrompt } = await import('../src/domain/runs/prompt.ts');
 type PrDetails = import('../src/domain/landing/merge.ts').PrDetails;
 
-const db = openDb(join(home, 'test.db'));
+const db = testApp(openDb(join(home, 'test.db')));
 db.setSetting('max_concurrent', '1');
 const api = await startApi({ db, port: 0 });
 after(() => {

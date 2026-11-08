@@ -2,12 +2,22 @@
 // A state a fixture cannot reach through those calls fails an assertion here, so tests cannot depend on one.
 import assert from 'node:assert/strict';
 import type { RepoId, TaskId } from '../src/domain/shared/id.ts';
+import type { App, Ports } from '../src/application/ports/app.ts';
 import type { openDb } from '../src/db/index.ts';
 
 // A test makes an id from a number with these.
 export { asPlannerRunId, asRepoId, asReviewId, asRunId, asTaskId } from '../src/domain/shared/id.ts';
 
 type Db = ReturnType<typeof openDb>;
+
+/** The ports a test's App gets. None yet: each port that lands adds its fake, or its real adapter, here. */
+const testPorts = (): Ports => ({});
+
+/**
+ * The App for a test, as `src/compose.ts` builds it for the daemon and the CLI, on a database the test opened
+ * (`openDb(':memory:')` or a scratch file): the test's own `openDb`, because it must run after AGENTDECK_HOME is set.
+ */
+export const testApp = (db: Db): Db & App => Object.assign(db, testPorts());
 type Task = NonNullable<ReturnType<Db['getTask']>>;
 type TaskStatus = Task['status'];
 type NewTask = Partial<Omit<Parameters<Db['addTask']>[0], 'repo_id' | 'status'>>;

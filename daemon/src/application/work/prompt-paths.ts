@@ -1,6 +1,6 @@
 // Warn when a task's prompt names a repo path that won't be there when the task runs.
 import { branchCommit, listFiles, localStartPoint, resolveCommit } from '../../adapters/git.ts';
-import type { Repositories as Db } from '../ports/repositories.ts';
+import type { App } from '../ports/app.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import { linkState } from '../../domain/work/index.ts';
 import { matchPath, pathsNamedIn } from '../../domain/work/index.ts';
@@ -15,23 +15,23 @@ import { requireTask, requireTaskRepo } from '../shared/input.ts';
  * counts through its branch; with no branch yet, the path "may come from it". Checks the saved task, so call it after
  * addTask or editTask. Git trouble (no base commit, an unreadable repo) means no warnings, not a failure.
  */
-export async function promptWarnings(db: Db, id: TaskId): Promise<string[]> {
-  const task = requireTask(db, id);
+export async function promptWarnings(app: App, id: TaskId): Promise<string[]> {
+  const task = requireTask(app, id);
   const paths = pathsNamedIn(task.prompt);
   if (!paths.length) return [];
   try {
-    const repo = requireTaskRepo(db, task);
+    const repo = requireTaskRepo(app, task);
     // The commit a worker starts from (see startPoint), not the local base: a plan committed but not pushed isn't there.
     const ref = await localStartPoint(repo.path, repo.base_branch);
     const base = await resolveCommit(repo.path, ref);
     if (!base) return [];
     const baseFiles = await listFiles(repo.path, base);
-    const sources = unmergedBuiltOn(db, task);
+    const sources = unmergedBuiltOn(app, task);
     const branchless = sources.filter((s) => !s.checkout?.branch).map((s) => `#${s.id}`);
     const branchFiles = (
       await Promise.all(
         sources.flatMap(async (s) => {
-          const dep = db.getRepo(s.repo_id);
+          const dep = app.getRepo(s.repo_id);
           const commit = dep && s.checkout?.branch ? await branchCommit(dep.path, s.checkout.branch) : null;
           return dep && commit ? [await listFiles(dep.path, commit)] : [];
         }),
@@ -60,17 +60,17 @@ export async function promptWarnings(db: Db, id: TaskId): Promise<string[]> {
 }
 
 /** The tasks the task builds on, directly or down the chain, whose work is not on the base branch yet. */
-function unmergedBuiltOn(db: Db, task: Task): Task[] {
+function unmergedBuiltOn(app: App, task: Task): Task[] {
   const seen = new Set<TaskId>([task.id]);
   const found: Task[] = [];
   const queue = [task.id];
   for (let next = queue.shift(); next !== undefined; next = queue.shift()) {
-    for (const link of db.linksOf(next)) {
+    for (const link of app.linksOf(next)) {
       if (link.kind !== 'builds_on' || seen.has(link.on)) continue;
       seen.add(link.on);
-      const dep = db.getTask(link.on);
+      const dep = app.getTask(link.on);
       if (!dep) continue;
-      if (linkState(link, targetOf(db, link.on)).kind === 'met') continue;
+      if (linkState(link, targetOf(app, link.on)).kind === 'met') continue;
       found.push(dep);
       queue.push(dep.id);
     }

@@ -11,7 +11,7 @@ export interface Layer {
   why: string;
 }
 
-/** The layer a file belongs to: its top folder under src/, or the file itself for `config.ts`, `daemon.ts` and `cli.ts`. */
+/** The layer a file belongs to: its top folder under src/, or the file itself for `config.ts`, `compose.ts`, `daemon.ts` and `cli.ts`. */
 export const layerOf = (path: string) => (path.includes('/') ? path.split('/')[0] : path);
 
 export const LAYERS: Record<string, Layer> = {
@@ -40,24 +40,29 @@ export const LAYERS: Record<string, Layer> = {
     imports: ['adapters', 'domain', 'config.ts'],
     why: 'application/ reaches the database only through the repository interfaces it declares (application/ports/)',
   },
+  'compose.ts': {
+    holds: 'Builds the App the use cases take, on the database and the real adapters',
+    imports: ['application', 'adapters', 'db', 'domain', 'config.ts'],
+    why: 'compose.ts builds the App and uses no entry point',
+  },
   api: {
     holds: "The dashboard's HTTP API",
-    imports: ['application', 'db', 'domain', 'config.ts'],
+    imports: ['application', 'compose.ts', 'db', 'domain', 'config.ts'],
     why: 'entry points reach adapters through application/',
   },
   cli: {
     holds: 'One file per command group of the agentdeck CLI',
-    imports: ['api', 'application', 'db', 'domain', 'config.ts', 'daemon.ts'],
+    imports: ['api', 'application', 'compose.ts', 'db', 'domain', 'config.ts', 'daemon.ts'],
     why: 'entry points reach adapters through application/',
   },
   'daemon.ts': {
     holds: 'The composition root: wires the source watcher, the API and the scheduler',
-    imports: ['api', 'application', 'adapters', 'db', 'domain', 'config.ts'],
+    imports: ['api', 'application', 'adapters', 'compose.ts', 'db', 'domain', 'config.ts'],
     why: 'the composition root does not use the CLI',
   },
   'cli.ts': {
     holds: 'The CLI entry point the launchd plist runs',
-    imports: ['cli', 'application', 'db', 'config.ts'],
+    imports: ['cli', 'application', 'compose.ts', 'config.ts'],
     why: 'cli.ts only dispatches to cli/',
   },
 };

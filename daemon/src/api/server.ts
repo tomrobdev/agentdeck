@@ -1,7 +1,7 @@
 // Local HTTP API for the dashboard: JSON endpoints plus a Server-Sent Events log tail.
 import { type Server, createServer } from 'node:http';
 import { API_PORT } from '../config.ts';
-import type { Db } from '../db/index.ts';
+import type { ComposedApp } from '../compose.ts';
 import { type ApiContext, type ApiScheduler, dispatch } from './http.ts';
 import * as daemonRoutes from './routes/daemon.ts';
 import * as filesRoutes from './routes/files.ts';
@@ -17,7 +17,7 @@ const idleScheduler: ApiScheduler = { wake: () => {}, track: (p) => p };
 const idleChanges: ApiContext['changes'] = { rev: 1, subscribe: () => () => {} };
 
 export interface ApiOptions {
-  db: Db;
+  db: ComposedApp;
   port?: number;
   scheduler?: ApiScheduler;
   changes?: ApiContext['changes'];

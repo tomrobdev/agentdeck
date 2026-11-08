@@ -1,7 +1,7 @@
 // Auto-merge: the daemon merges a done task's PR on its own when it passes the auto-merge check
 // (docs/plans/auto-merge.html), and a person turns it on or off for one task.
 import { github } from '../../adapters/github.ts';
-import type { Repositories as Db } from '../ports/repositories.ts';
+import type { App } from '../ports/app.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import { AUTO_MERGE_LABEL, autoMergeOn } from '../../domain/landing/index.ts';
 import type { PrDetails } from '../../domain/landing/index.ts';
@@ -21,7 +21,7 @@ import { mergeable, mergeOpenPr } from './merge.ts';
  * ready PR is tried. Returns the merged task, or null.
  */
 export async function autoMerge(
-  db: Db,
+  app: App,
   ready: { id: TaskId; pr: PrDetails }[],
   report: { log?: (msg: string) => void; told?: Map<TaskId, string> } = {},
 ): Promise<TaskId | null> {
@@ -30,7 +30,7 @@ export async function autoMerge(
     if (isMergeLocked(id)) continue; // another merge of it is under way
     let target: ReturnType<typeof mergeable>;
     try {
-      target = mergeable(db, id);
+      target = mergeable(app, id);
     } catch {
       continue; // it moved on since the refresh read it
     }
@@ -39,7 +39,7 @@ export async function autoMerge(
     const asked = request ? request.method : null;
     const method = asked ?? target.repo.merge_method;
     try {
-      const res = await mergeOpenPr(db, target, pr, {
+      const res = await mergeOpenPr(app, target, pr, {
         method,
         deleteBranch: true,
         log,
@@ -49,7 +49,7 @@ export async function autoMerge(
       const unblocked = res.unblocked.length ? `; ${res.unblocked.map((n) => `#${n}`).join(', ')} can start` : '';
       log(`task ${id}: ${asked ? 'merged its PR as requested' : 'auto-merged its PR'} (${method})${unblocked}`);
       if (res.cleanup_error) log(`task ${id}: cleanup after the merge incomplete: ${res.cleanup_error}`);
-      notifyLater(db, {
+      notifyLater(app, {
         kind: 'merged',
         title: `Merged #${id}`,
         body: `${target.task.title} (${target.repo.name})${unblocked}`,
@@ -59,13 +59,13 @@ export async function autoMerge(
     } catch (err) {
       const error = errorMessage(err);
       // A request gh refused is dropped, told once: a person can ask again.
-      if (asked) db.clearMergeRequest(id);
+      if (asked) app.clearMergeRequest(id);
       // A merge made meanwhile (a CLI merge in another process) is no failure: say nothing.
       if ((await github.prDetails(target.url, target.cwd).catch(() => null))?.state === 'merged') continue;
       if (told.get(id) === error) continue;
       told.set(id, error);
       log(`task ${id}: auto-merge failed: ${error}`);
-      notifyLater(db, { kind: 'merged', title: `Could not merge #${id}`, body: error, task_id: id });
+      notifyLater(app, { kind: 'merged', title: `Could not merge #${id}`, body: error, task_id: id });
     }
   }
   return null;
@@ -76,22 +76,22 @@ export async function autoMerge(
  * match; a label gh could not change is returned, the setting is kept.
  */
 export async function setAutoMerge(
-  db: Db,
+  app: App,
   id: TaskId,
   patch: { auto_merge: boolean | null },
 ): Promise<{ auto_merge: boolean; label_error?: string }> {
   const value = object(patch).auto_merge;
   if (value !== null && typeof value !== 'boolean') throw new ActionError('auto_merge must be true, false or null');
-  requireTask(db, id);
-  const task = db.setAutoMerge(id, value)!;
-  const repo = requireTaskRepo(db, task);
+  requireTask(app, id);
+  const task = app.setAutoMerge(id, value)!;
+  const repo = requireTaskRepo(app, task);
   const on = autoMergeOn(task, repo);
   const url = openPrUrl(task.pr);
   if (!url) return { auto_merge: on };
   try {
     if (on) await ensureAutoMergeLabel(repo.path);
     await github.setLabel(url, repo.path, AUTO_MERGE_LABEL.name, on);
-    db.requestPrCheck();
+    app.requestPrCheck();
     return { auto_merge: on };
   } catch (err) {
     return { auto_merge: on, label_error: errorMessage(err) };

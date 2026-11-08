@@ -5,7 +5,7 @@ import { type ClaudeResult, type ClaudeRun, type UsageWindow, runClaude } from '
 import { rootInfo } from '../../adapters/repo-root.ts';
 import { closeLog, writeEvent, writeSettings } from '../../adapters/run-log.ts';
 import { LOG_DIR, ensureDirs } from '../../config.ts';
-import type { Repositories as Db } from '../ports/repositories.ts';
+import type { App } from '../ports/app.ts';
 import type { RunId } from '../../domain/shared/index.ts';
 import type { Repo } from '../../domain/repos/index.ts';
 import { allowedTools } from '../../domain/repos/index.ts';
@@ -36,12 +36,12 @@ export interface OpenedRun {
 }
 
 /** Open the log and the run row. A work run is named by its attempt, a resolve or unblock run by its kind and the time it started. */
-export function openTaskRun(db: Db, task: Task, kind: RunKind): OpenedRun {
+export function openTaskRun(app: App, task: Task, kind: RunKind): OpenedRun {
   ensureDirs();
   const name = kind === 'work' ? `attempt-${task.attempts}` : `${kind}-${Date.now()}`;
   const logPath = join(LOG_DIR, `task-${task.id}-${name}.jsonl`);
   const log = createWriteStream(logPath, { flags: 'a' });
-  const runId = db.startRun(task.id, task.attempts, logPath, kind);
+  const runId = app.startRun(task.id, task.attempts, logPath, kind);
   return { runId, logPath, log };
 }
 
@@ -49,11 +49,11 @@ export function openTaskRun(db: Db, task: Task, kind: RunKind): OpenedRun {
  * End an opened run: close its log, then finish its row with `outcome` (and `reason` as its result text when `fields`
  * has none). The one way a work or resolve run ends. A run already ended is left as it is, so a row is never finished twice.
  */
-export async function endTaskRun(db: Db, opened: OpenedRun, outcome: Outcome, reason?: string, fields: Partial<Run> = {}): Promise<void> {
+export async function endTaskRun(app: App, opened: OpenedRun, outcome: Outcome, reason?: string, fields: Partial<Run> = {}): Promise<void> {
   if (opened.ended) return;
   opened.ended = true;
   await closeLog(opened.log);
-  db.finishRun(opened.runId, { ...fields, outcome, ...(reason && !fields.result_text ? { result_text: reason } : {}) });
+  app.finishRun(opened.runId, { ...fields, outcome, ...(reason && !fields.result_text ? { result_text: reason } : {}) });
 }
 
 /** What a task run came to. `fields` are the run row's columns that claude's exit decides. */
@@ -80,7 +80,7 @@ export interface ResumeRun {
  * as soon as the task is anything else (a person retried, cancelled or marked it done).
  */
 export async function startTaskRun(
-  db: Db,
+  app: App,
   task: Task,
   opts: {
     kind: RunKind;
@@ -93,7 +93,7 @@ export async function startTaskRun(
     systemPrompt?: string;
   },
 ): Promise<TaskRunEnd> {
-  const opened = opts.opened ?? openTaskRun(db, task, opts.kind);
+  const opened = opts.opened ?? openTaskRun(app, task, opts.kind);
   const { runId, logPath, log } = opened;
   const { repo, worktree, resume } = opts;
   const settings = runSettings(repo, worktree, logPath);
@@ -101,7 +101,7 @@ export async function startTaskRun(
   let live = START_LIVE;
   const allowed = allowedTools(repo, rootInfo(worktree));
   const cancelled =
-    opts.kind === 'unblock' ? () => db.getTask(task.id)?.status !== 'blocked' : () => db.getTask(task.id)?.status === 'cancel_requested';
+    opts.kind === 'unblock' ? () => app.getTask(task.id)?.status !== 'blocked' : () => app.getTask(task.id)?.status === 'cancel_requested';
   const start = (prompt: string, session: string | null, maxTurns = opts.maxTurns ?? task.max_turns): Promise<ClaudeRun> =>
     runClaude({
       args: claudeArgs(task, allowed, prompt, repo.test_cmd, settings, session, maxTurns, opts.systemPrompt),
@@ -109,14 +109,14 @@ export async function startTaskRun(
       log,
       env: { AGENTDECK_TASK_ID: String(task.id) },
       shouldCancel: cancelled,
-      onSpawn: (pid) => db.setRunPid(runId, pid),
-      onSession: (id) => db.setRunSession(runId, id),
-      onUsage: usageRecorder(db),
+      onSpawn: (pid) => app.setRunPid(runId, pid),
+      onSession: (id) => app.setRunSession(runId, id),
+      onUsage: usageRecorder(app),
       onEvent: (ev) => {
         const next = nextLive(live, ev);
         if (next.turns === live.turns && next.tool === live.tool) return;
         live = next;
-        db.setRunLive(runId, live.turns, live.tool);
+        app.setRunLive(runId, live.turns, live.tool);
       },
     });
   let run: ClaudeRun;
@@ -132,16 +132,16 @@ export async function startTaskRun(
     run = await start(opts.prompt, null);
   }
   const end = classifyRun(run);
-  if (end.kind === 'rate_limited') db.setRateLimitedUntil(end.until);
+  if (end.kind === 'rate_limited') app.setRateLimitedUntil(end.until);
   return { ...opened, end, result: run.result, fields: resultFields(run.result, run.exitCode, run.sessionId) };
 }
 
 /** The `onUsage` callback that stores each usage window claude reports. */
-export function usageRecorder(db: Db): (w: UsageWindow) => void {
-  return (w) => db.recordUsageWindow(w.window, w.utilization, w.resets_at, w.status);
+export function usageRecorder(app: App): (w: UsageWindow) => void {
+  return (w) => app.recordUsageWindow(w.window, w.utilization, w.resets_at, w.status);
 }
 
 /** Remember that claude rejected a request on rate limits, so nothing starts until `until` (unix seconds). */
-export function recordRateLimit(db: Db, until: number): void {
-  db.setRateLimitedUntil(until);
+export function recordRateLimit(app: App, until: number): void {
+  app.setRateLimitedUntil(until);
 }

@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import * as actions from '../application/actions.ts';
 import { HOME } from '../config.ts';
 import { errorMessage } from '../domain/shared/index.ts';
-import type { Db } from '../db/index.ts';
+import type { ComposedApp } from '../compose.ts';
 import type { Command } from './context.ts';
 import { die } from './format.ts';
 
@@ -77,7 +77,7 @@ export function pruneCursors(): void {
  * The hook: prints nothing for workers and the planner, or outside a registered repo. A session's start (or its first
  * message) gets the whole picture; later messages get the header and what changed since. Never fails the prompt.
  */
-async function hook(db: Db): Promise<void> {
+async function hook(db: ComposedApp): Promise<void> {
   if (process.env.AGENTDECK_TASK_ID || process.env.AGENTDECK_PLANNER) return;
   try {
     const input = parseHookInput(await readStdin());

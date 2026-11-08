@@ -1,5 +1,5 @@
 // Tasks as the dashboard and the CLI show them: a task plus what the queue says about it.
-import type { Repositories as Db } from '../ports/repositories.ts';
+import type { App } from '../ports/app.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import { type AutoMergeView, autoMergeOn, autoMergeView } from '../../domain/landing/index.ts';
 import { type ChecksSummary, checksSummary } from '../../domain/landing/index.ts';
@@ -47,12 +47,12 @@ type Viewed = Pick<Task, 'id' | 'repo_id' | 'status' | 'max_turns' | 'auto_merge
  * Each task with its view. Reads the repos, plans, links and queue state once for the whole list, so the queries it runs
  * don't grow with the tasks or their links. `links` is for a test to watch what is read.
  */
-export function withViews<T extends Viewed>(db: Db, tasks: T[], links: LinkIndex = loadedLinks(db)): (T & TaskView)[] {
-  const repos = new Map(db.listRepos().map((r) => [r.id, r]));
-  const waitOf = startWaits(db);
-  const unfinished = db.planUnfinishedIds();
-  const liveRuns = db.liveRuns('work');
-  const resolves = db.liveRuns('resolve');
+export function withViews<T extends Viewed>(app: App, tasks: T[], links: LinkIndex = loadedLinks(app)): (T & TaskView)[] {
+  const repos = new Map(app.listRepos().map((r) => [r.id, r]));
+  const waitOf = startWaits(app);
+  const unfinished = app.planUnfinishedIds();
+  const liveRuns = app.liveRuns('work');
+  const resolves = app.liveRuns('resolve');
   return tasks.map((t) => {
     const repo = repos.get(t.repo_id);
     const dependency = dependencyOf(t, links);
@@ -76,10 +76,10 @@ export function withViews<T extends Viewed>(db: Db, tasks: T[], links: LinkIndex
 }
 
 /** One task with its view, runs, events and plans. A branch with no open PR is measured against the auto-merge limits. */
-export async function taskDetail(db: Db, id: TaskId) {
-  const task = requireTask(db, id);
-  const repo = db.getRepo(task.repo_id);
-  const [view] = withViews(db, [task]);
+export async function taskDetail(app: App, id: TaskId) {
+  const task = requireTask(app, id);
+  const repo = app.getRepo(task.repo_id);
+  const [view] = withViews(app, [task]);
   // Only a done task's branch is final; measuring a running one would start git on every refetch.
   const branch = task.checkout?.branch;
   if (repo && task.status === 'done' && branch && !openPrUrl(task.pr) && task.pr?.state !== 'merged' && autoMergeOn(task, repo)) {
@@ -89,13 +89,13 @@ export async function taskDetail(db: Db, id: TaskId) {
   return {
     ...view,
     check_list: task.pr?.checks.latest ? { read_at: task.pr.checks.latest.read_at, checks: task.pr.checks.latest.checks } : null,
-    runs: db.runsForTask(id),
-    events: db.eventsForTask(id),
-    plans: plansShown(db, task),
+    runs: app.runsForTask(id),
+    events: app.eventsForTask(id),
+    plans: plansShown(app, task),
   };
 }
 
 /** Task summaries (no prompt), newest first, each with its view. The checks are summed up in `checks`, so their list stays out. */
-export function taskViews(db: Db, filter: { status?: TaskStatus; limit: number; before?: TaskId }) {
-  return withViews(db, db.listTaskSummaries(filter));
+export function taskViews(app: App, filter: { status?: TaskStatus; limit: number; before?: TaskId }) {
+  return withViews(app, app.listTaskSummaries(filter));
 }

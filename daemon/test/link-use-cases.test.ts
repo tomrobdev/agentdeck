@@ -11,13 +11,13 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { openDb } = await import('../src/db/index.ts');
 const { ActionError, addTask, linkTasks, unlinkTasks, taskDetail, cancelTask, deleteRepo } = await import('../src/application/actions.ts');
-const { doneTask, failedTask, queuedTask, runningTask, settlePr } = await import('./fixtures.ts');
+const { doneTask, failedTask, queuedTask, runningTask, settlePr, testApp } = await import('./fixtures.ts');
 const { landsAfter, warnStuckDependents } = await import('../src/application/work/dependencies.ts');
 const { mergeCheck } = await import('../src/domain/landing/merge.ts');
 const { autoMergeCheck } = await import('../src/domain/landing/auto-merge.ts');
 
 function setup() {
-  const db = openDb(':memory:');
+  const db = testApp(openDb(':memory:'));
   const repo = db.addRepo({ name: 'demo', path: '/tmp/demo', base_branch: 'main' });
   const add = () => db.addTask({ repo_id: repo.id, title: 't', prompt: 'p' });
   return { db, repo, add };
