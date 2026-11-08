@@ -4,6 +4,7 @@ import { chmodSync, createWriteStream, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import { setTimeout as sleep } from 'node:timers/promises';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-test-'));
 process.env.AGENTDECK_HOME = home;
@@ -45,7 +46,7 @@ test('a run that exits on its own sends no SIGKILL later', async () => {
     // SIGTERM ends this one at once, so the timer must be cleared on close; wait past the grace period to see.
     const r = await run('FAKE_SLOW', { shouldCancel: () => true, cancelGraceMs: 300 });
     assert.ok(r.cancelled);
-    await new Promise((res) => setTimeout(res, 800));
+    await sleep(800); // time passes: past the 300 ms grace period
     assert.deepEqual(kills, []);
   } finally {
     process.kill = real;

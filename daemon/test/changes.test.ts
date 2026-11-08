@@ -5,6 +5,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { after, test } from 'node:test';
+import { setTimeout as sleep } from 'node:timers/promises';
+import { waitFor } from './fixtures.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-changes-'));
 process.env.AGENTDECK_HOME = home;
@@ -52,7 +54,7 @@ test('with no writes, rev stays put across several intervals', async () => {
   const live = new ChangeWatcher(db);
   live.start(5);
   const before = live.rev;
-  await new Promise((r) => setTimeout(r, 60));
+  await sleep(60); // time passes: several intervals
   live.stop();
   assert.equal(live.rev, before);
 });
@@ -62,7 +64,10 @@ test('the timer notices a write on its own', async () => {
   live.start(5);
   const before = live.rev;
   db.setPaused(false);
-  await new Promise((r) => setTimeout(r, 60));
-  live.stop();
+  try {
+    await waitFor(() => live.rev > before, { what: 'the timer to move rev' });
+  } finally {
+    live.stop();
+  }
   assert.ok(live.rev > before);
 });
