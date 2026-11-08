@@ -19,7 +19,7 @@ The least line and branch coverage each group of `daemon/src/` may have (`COVERA
 | `application/scheduler`  | `application/scheduler/`                                                                 | 98%   | 91%      |
 | `application/shared`     | `application/shared/`                                                                    | 100%  | 97%      |
 | `application/work`       | `application/work/`                                                                      | 99%   | 90%      |
-| `cli`                    | `cli/`                                                                                   | 68%   | 58%      |
+| `cli`                    | `cli/`                                                                                   | 73%   | 62%      |
 | `db`                     | `db/`                                                                                    | 99%   | 94%      |
 | `domain/capacity`        | `domain/capacity/`                                                                       | 100%  | 94%      |
 | `domain/insights`        | `domain/insights/`                                                                       | 100%  | 98%      |
@@ -27,7 +27,7 @@ The least line and branch coverage each group of `daemon/src/` may have (`COVERA
 | `domain/operations`      | `domain/operations/`                                                                     | 100%  | 97%      |
 | `domain/proposals`       | `domain/proposals/`                                                                      | 100%  | 89%      |
 | `domain/repos`           | `domain/repos/`                                                                          | 100%  | 99%      |
-| `domain/runs`            | `domain/runs/`                                                                           | 98%   | 92%      |
+| `domain/runs`            | `domain/runs/`                                                                           | 98%   | 94%      |
 | `domain/shared`          | `domain/shared/`                                                                         | 100%  | 95%      |
 | `domain/work`            | `domain/work/`                                                                           | 99%   | 95%      |
 | `src`                    | the files at the top of `daemon/src/` (`cli.ts`, `compose.ts`, `config.ts`, `daemon.ts`) | 96%   | 81%      |

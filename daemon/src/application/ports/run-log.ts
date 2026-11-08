@@ -19,4 +19,6 @@ export interface RunLog {
   removeFiles(paths: string[]): string[];
   /** A log's entries; none when the file is missing. */
   read(path: string): LogEntry[];
+  /** A log's lines, parsed as JSON, skipping any that aren't; none when the file is missing. */
+  events(path: string): unknown[];
 }

@@ -10,7 +10,7 @@ import { filterTasks, listable } from '../domain/work/index.ts';
 import { type PlanLink, hasPlanLink, otherPlanOwner, planOwnerOf } from '../domain/work/index.ts';
 import { errorMessage, plural } from '../domain/shared/index.ts';
 import { callDaemon } from './daemon-client.ts';
-import { confirm, die, idsText, taskId, taskIds, fmtAutoMerge, fmtChecks, fmtLink, fmtTask, printLog } from './format.ts';
+import { confirm, die, idsText, taskId, taskIds, fmtAutoMerge, fmtChecks, fmtLink, fmtRunSummary, fmtTask, printLog } from './format.ts';
 import type { Command } from './context.ts';
 
 /** A file's text, or exit saying why it can't be read. */
@@ -183,11 +183,12 @@ export const taskCommands: Record<string, Command> = {
       const { finished, total } = planProgress(p.steps);
       console.log(`plan: ${p.title} (${p.name}${p.task_id === t.id ? '' : ` of #${p.task_id}`}, ${finished}/${total} steps)`);
     }
-    for (const r of actions.taskRuns(db, t.id)) {
+    for (const r of t.runs) {
       const tokens = r.input_tokens + r.output_tokens + r.cache_read_tokens + r.cache_write_tokens;
       console.log(
         `${r.kind === 'resolve' ? 'resolve run' : r.kind === 'unblock' ? 'unblock run' : 'run'} ${r.attempt}: ${r.outcome ?? 'running'}  turns=${r.num_turns ?? '-'}  tokens=${tokens}  tests=${r.tests_passed === null ? '-' : r.tests_passed ? 'pass' : 'fail'}  ${r.started_at}`,
       );
+      if (r.summary) for (const line of fmtRunSummary(r.summary)) console.log(`  ${line}`);
       if (r.result_text) console.log(`  ${r.result_text.trim().split('\n').slice(-6).join('\n  ')}`);
     }
   },

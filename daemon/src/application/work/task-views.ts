@@ -6,6 +6,7 @@ import { type ChecksSummary, checksSummary } from '../../domain/landing/index.ts
 import { type MergeRequestView, conflictsWithBase, mergeRequestView } from '../../domain/landing/index.ts';
 import { isMergeLocked, isSyncLocked } from './checkout-locks.ts';
 import { type LiveView, type SyncView, liveView, syncView } from '../../domain/runs/index.ts';
+import { type Run, type RunSummary, runSummary } from '../../domain/runs/index.ts';
 import { type PrRetry, openPrUrl } from '../../domain/landing/index.ts';
 import { prRetryFor } from '../../domain/work/index.ts';
 import type { Repo } from '../../domain/repos/index.ts';
@@ -87,6 +88,17 @@ function prRetryView(app: App, t: Viewed, repo: Repo | undefined, now: number): 
   return prRetryFor(t, repo, app.eventsForTask(t.id), now);
 }
 
+/**
+ * A failed or blocked run's summary, read from its log: computed on read, so the runs table keeps no copy and runs from before
+ * summaries have one too. Null for a run that ended any other way, or whose log is gone.
+ */
+function summaryOf(app: App, run: Run, task: Task, repo: Repo | undefined): RunSummary | null {
+  if (run.outcome !== 'failed' && run.outcome !== 'blocked') return null;
+  const events = app.runLog.events(run.log_path);
+  if (!events.length) return null;
+  return runSummary(events, { testCmd: repo?.test_cmd ?? null, maxTurns: task.max_turns });
+}
+
 /** One task with its view, runs, events and plans. A branch with no open PR is measured against the auto-merge limits. */
 export async function taskDetail(app: App, id: TaskId) {
   const task = requireTask(app, id);
@@ -101,7 +113,7 @@ export async function taskDetail(app: App, id: TaskId) {
   return {
     ...view,
     check_list: task.pr?.checks.latest ? { read_at: task.pr.checks.latest.read_at, checks: task.pr.checks.latest.checks } : null,
-    runs: app.runsForTask(id),
+    runs: app.runsForTask(id).map((run) => ({ ...run, summary: summaryOf(app, run, task, repo) })),
     events: app.eventsForTask(id),
     plans: plansShown(app, task),
   };

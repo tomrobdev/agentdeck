@@ -4,6 +4,7 @@ import { MODEL_LABELS, type TaskDetail, ago, fmtTokens, runDuration, runHint, ru
 import LogView from './LogView.vue';
 import Markdown from '../files/Markdown.vue';
 import FinalMessage from './FinalMessage.vue';
+import RunSummaryCard from './RunSummaryCard.vue';
 import Listbox from '../ui/Listbox.vue';
 
 // The checks view: one card per run, then the chosen run's final message and log.
@@ -61,8 +62,18 @@ const live = computed(() => (props.task.status === 'running' || !!props.task.syn
             ><template v-if="totalTokens(r)"> · {{ fmtTokens(totalTokens(r)) }} tok</template> · {{ ago(r.started_at) }}
           </span>
         </div>
+        <p
+          v-if="r.summary"
+          class="truncate px-3.5 pb-2 pl-8 text-left text-sm text-muted"
+          :class="selected ? 'bg-[color-mix(in_srgb,var(--accent)_8%,var(--panel))]' : 'bg-panel'"
+          :title="r.summary.verdict"
+        >
+          {{ r.summary.verdict }}
+        </p>
       </template>
     </Listbox>
+
+    <RunSummaryCard v-if="run?.summary" :key="`summary-${run.id}`" class="flex-none" :summary="run.summary" />
 
     <FinalMessage v-if="run?.result_text" :key="run.id" class="max-h-[40vh] flex-none overflow-y-auto" :open="run.outcome !== 'done'">
       <Markdown :text="run.result_text" :is-path="isPath" @path="(p, l) => emit('path', p, l)" />

@@ -1054,6 +1054,24 @@ What a run came to, for `runOutcome`.
 | `commitsAhead` | `number \| null`                                                                                                  | Commits on the branch past the base; null when not counted (only a run that could be done needs it).          |
 | `denials`      | `number`                                                                                                          | Tool uses the permission rules refused during the run.                                                        |
 
+### RunSummary
+
+| Field           | Type                                 | Comment                                                                                                             |
+| --------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| `end`           | `RunEnd`                             |                                                                                                                     |
+| `turns`         | `number`                             | The main loop's turns: its assistant messages, one per message id.                                                  |
+| `max_turns`     | `number \| null`                     | The turn limit the run had, from claude's error, else the task's; null when neither says.                           |
+| `minutes`       | `number`                             | Minutes overall (claude's own duration, else the span of the stream's timestamps) and in test commands, to a tenth. |
+| `test_minutes`  | `number`                             |                                                                                                                     |
+| `tools`         | `{ name: string; count: number; }[]` | The main loop's tool calls by tool, the most used first.                                                            |
+| `test_runs`     | `number`                             | How many times it ran a test command, in how many turns, and how the last one went.                                 |
+| `test_turns`    | `number`                             |                                                                                                                     |
+| `last_test`     | `"failed" \| "passed" \| null`       |                                                                                                                     |
+| `refused`       | `number`                             | Tool calls refused by the run's permissions.                                                                        |
+| `excerpt`       | `string \| null`                     | The tail of the last failing output it saw: a failing test run's, else any failed tool call's.                      |
+| `final_message` | `string \| null`                     | Its final message: the result's text, else the main loop's last text.                                               |
+| `verdict`       | `string`                             | The summary in one line, such as "used 60 of 60 turns, 14 of them running tests that kept failing".                 |
+
 ### RunningTaskRun
 
 A running task with its unfinished work run, if it has one.
@@ -1064,6 +1082,13 @@ A running task with its unfinished work run, if it has one.
 | `pid`        | `number \| null` |         |
 | `pid_at`     | `string \| null` |         |
 | `started_at` | `string \| null` |         |
+
+### SummaryContext
+
+| Field      | Type             | Comment                                                                 |
+| ---------- | ---------------- | ----------------------------------------------------------------------- |
+| `testCmd`  | `string \| null` | The repo's test command; a common test runner counts as a test run too. |
+| `maxTurns` | `number \| null` | The task's turn limit, for a stream whose result does not name its own. |
 
 ### SyncView
 
@@ -1407,6 +1432,7 @@ A task as listed: with where it stands on its builds-on links (as waitingFor rep
 | `id`           | `TaskId`                                                                                                      |                                                                                                               |
 | `repo_id`      | `RepoId`                                                                                                      |                                                                                                               |
 | `created_at`   | `string`                                                                                                      |                                                                                                               |
+| `max_turns`    | `number`                                                                                                      |                                                                                                               |
 | `pr`           | `PullRequest \| null`                                                                                         | the task's pull request, as one value                                                                         |
 | `attempts`     | `number`                                                                                                      |                                                                                                               |
 | `restarts`     | `number`                                                                                                      | times a daemon restart requeued this task mid-run                                                             |
@@ -1415,7 +1441,6 @@ A task as listed: with where it stands on its builds-on links (as waitingFor rep
 | `updated_at`   | `string`                                                                                                      |                                                                                                               |
 | `priority`     | `number`                                                                                                      |                                                                                                               |
 | `model`        | `string`                                                                                                      |                                                                                                               |
-| `max_turns`    | `number`                                                                                                      |                                                                                                               |
 | `max_attempts` | `number`                                                                                                      |                                                                                                               |
 | `checkout`     | `Checkout \| null`                                                                                            | the branch and worktree the work is on, and a running sync                                                    |
 | `plan`         | `PlanLink \| null`                                                                                            | the plan this task follows and its linked steps (domain/work/plan-link.ts); null follows its own plan, if any |
@@ -1652,6 +1677,7 @@ A stored plan as the API returns it: parsed, without its HTML.
 | `id`           | `TaskId`                                                                                                      |                                                                                                               |
 | `repo_id`      | `RepoId`                                                                                                      |                                                                                                               |
 | `created_at`   | `string`                                                                                                      |                                                                                                               |
+| `max_turns`    | `number`                                                                                                      |                                                                                                               |
 | `pr`           | `PullRequest \| null`                                                                                         | the task's pull request, as one value                                                                         |
 | `attempts`     | `number`                                                                                                      |                                                                                                               |
 | `restarts`     | `number`                                                                                                      | times a daemon restart requeued this task mid-run                                                             |
@@ -1660,7 +1686,6 @@ A stored plan as the API returns it: parsed, without its HTML.
 | `updated_at`   | `string`                                                                                                      |                                                                                                               |
 | `priority`     | `number`                                                                                                      |                                                                                                               |
 | `model`        | `string`                                                                                                      |                                                                                                               |
-| `max_turns`    | `number`                                                                                                      |                                                                                                               |
 | `max_attempts` | `number`                                                                                                      |                                                                                                               |
 | `checkout`     | `Checkout \| null`                                                                                            | the branch and worktree the work is on, and a running sync                                                    |
 | `plan`         | `PlanLink \| null`                                                                                            | the plan this task follows and its linked steps (domain/work/plan-link.ts); null follows its own plan, if any |
