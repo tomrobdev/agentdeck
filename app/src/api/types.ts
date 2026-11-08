@@ -65,6 +65,7 @@ export type {
   ReviewComment,
   ReviewPatch,
   Run,
+  RunSummary,
   RunningTask,
   ServiceStatus,
   Settings,

@@ -43,3 +43,20 @@ export function readLog(path: string): LogEntry[] {
   if (!existsSync(path)) return [];
   return readFileSync(path, 'utf8').split('\n').flatMap(parseLogLine);
 }
+
+/** A log's lines parsed as JSON, for the run summary; a line that isn't JSON is skipped, a log that can't be read has none. */
+export function readEvents(path: string): unknown[] {
+  let text: string;
+  try {
+    text = readFileSync(path, 'utf8');
+  } catch {
+    return [];
+  }
+  return text.split('\n').flatMap((line) => {
+    try {
+      return line.trim() ? [JSON.parse(line) as unknown] : [];
+    } catch {
+      return [];
+    }
+  });
+}

@@ -300,6 +300,28 @@ export interface Run {
   model?: string | null;
   /** The exact model id claude's init line named, such as claude-sonnet-5-5; null until it arrives. */
   model_id?: string | null;
+  /** For a failed or blocked run: its turns, time, tools and tests summed up from its log, with a verdict line. Null otherwise. */
+  summary?: RunSummary | null;
+}
+
+/** A failed or blocked run summed up from its log (`runSummary` in domain/runs). */
+export interface RunSummary {
+  /** How claude ended: out of turns, on its own, on another error, or cut off before a result. */
+  end: 'max_turns' | 'ended' | 'error' | 'cut_off';
+  turns: number;
+  max_turns: number | null;
+  minutes: number;
+  test_minutes: number;
+  tools: { name: string; count: number }[];
+  test_runs: number;
+  test_turns: number;
+  last_test: 'passed' | 'failed' | null;
+  refused: number;
+  /** The tail of the last failing output the run saw. */
+  excerpt: string | null;
+  final_message: string | null;
+  /** The summary in one line, e.g. "used 60 of 60 turns, 14 of them running tests that kept failing". */
+  verdict: string;
 }
 
 /** One status change in a task's history. Tasks from before migration step 6 have none. */

@@ -7,6 +7,7 @@ import type { ChecksSummary } from '../domain/landing/index.ts';
 import type { TaskStatus } from '../domain/work/index.ts';
 import { parseTaskIds } from '../domain/work/index.ts';
 import type { Task } from '../domain/work/index.ts';
+import type { RunSummary } from '../domain/runs/index.ts';
 
 const STATUS_ICON: Record<TaskStatus, string> = {
   proposed: '?',
@@ -50,6 +51,25 @@ export const idsText = (ids: TaskId[]): string => ids.map((id) => `#${id}`).join
 export function fmtLink(l: TaskView['links'][number]): string {
   const state = { met: 'met', waiting: 'waiting', stuck: 'stuck', unlanded: 'not landed yet' }[l.state];
   return `${l.kind === 'builds_on' ? 'builds on' : 'after'} #${l.on} (${state})`;
+}
+
+/** A failed or blocked run's summary in a few lines: the verdict, time and tools, and the last failing output's tail. */
+export function fmtRunSummary(s: RunSummary): string[] {
+  const tools = s.tools
+    .slice(0, 6)
+    .map((t) => `${t.name} ${t.count}`)
+    .join(', ');
+  const time = `${s.minutes} min${s.test_runs ? `, ${s.test_minutes} in tests` : ''}`;
+  const lines = [s.verdict, tools ? `${time} · ${tools}` : time];
+  if (s.excerpt)
+    lines.push(
+      'last failure:',
+      ...s.excerpt
+        .split('\n')
+        .slice(-6)
+        .map((l) => `  │ ${l}`),
+    );
+  return lines;
 }
 
 /** `waiting`, `unblocks` and `links` come from a task view (`taskDetail`, `withViews`); a plain task shows none. */

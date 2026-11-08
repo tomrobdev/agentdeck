@@ -9,7 +9,7 @@ import { github } from './adapters/github.ts';
 import { deleteGoals, goalsPath, readGoals, writeGoals } from './adapters/goals.ts';
 import { desktop, ntfy } from './adapters/notify.ts';
 import { activeChildren, killGroup, ownsLiveGroup, reapOrphans } from './adapters/processes.ts';
-import { appendEvent, closeLog, readLog, removeFiles, writeEvent, writeSettings } from './adapters/run-log.ts';
+import { appendEvent, closeLog, readEvents, readLog, removeFiles, writeEvent, writeSettings } from './adapters/run-log.ts';
 import { DAEMON_LOG, install, restart, serviceStatus, start, stop, tailLog, uninstall } from './adapters/service.ts';
 import type { Agent } from './application/ports/agent.ts';
 import type { ComposedApp, Ports } from './application/ports/app.ts';
@@ -59,6 +59,7 @@ export const realRunLog = (): RunLog => ({
   close: closeLog,
   removeFiles,
   read: readLog,
+  events: readEvents,
 });
 
 /** Process groups through `adapters/processes.ts`, keep-awake through `adapters/caffeinate.ts`. */
