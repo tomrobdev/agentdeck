@@ -689,6 +689,7 @@ What the PR refresh keeps on a task (`tasks.pr_checks`): the latest checks and w
 | `planner`   | `number`              | Planner runs still going.                                                                                   |
 | `resolves`  | `number`              | Resolve runs still going (they belong to done tasks, so `tasks` doesn't count them).                        |
 | `unblocks?` | `number \| undefined` | Unblock runs still going (they belong to blocked tasks, so `tasks` doesn't count them). Missing means none. |
+| `reviews?`  | `number \| undefined` | Review runs still going (they belong to done tasks, so `tasks` doesn't count them). Missing means none.     |
 
 ### AttentionCandidate
 
@@ -1119,6 +1120,15 @@ One thing a review run found: where it is in the diff, what it says, and whether
 | `side`     | `"old" \| "new"` | The base file (old) or the task's head (new), as a person's comment. |
 | `body`     | `string`         |                                                                      |
 | `blocking` | `boolean`        | True when the task must not merge until it is handled.               |
+
+### ReviewOutcome
+
+What follows a review run's answer: the review it stores, and the note to retry the task with, null for none.
+
+| Field    | Type             | Comment |
+| -------- | ---------------- | ------- |
+| `record` | `ReviewRecord`   |         |
+| `retry`  | `string \| null` |         |
 
 ### ReviewRecord
 

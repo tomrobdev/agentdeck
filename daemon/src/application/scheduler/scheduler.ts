@@ -15,9 +15,13 @@ import { followUpPending, hasFollowUpsToRun, settle } from '../landing/settle.ts
 import { retryFailedPrs } from '../landing/open-pr.ts';
 import { runTask } from '../runs/worker.ts';
 import { nextUnblockable, runUnblock } from '../runs/unblock.ts';
+import { nextReviewable, runReview } from '../runs/review.ts';
 import type { App } from '../ports/app.ts';
 import type { KeepAwake } from '../ports/processes.ts';
 import type { Activity, ReloadDecision } from '../../domain/operations/index.ts';
+
+/** After a look for a task to review found none, how long until the next, unless a run ends first. */
+const REVIEW_LOOK_MS = 30_000;
 
 /** After a merge, how many times to re-read PRs whose mergeability GitHub is still computing, and how far apart. */
 const PR_RECHECKS = 6;
@@ -42,10 +46,18 @@ export class Scheduler {
   private readonly app: App;
   private readonly opts: Required<Omit<SchedulerOptions, 'reload'>>;
   private readonly reload: SchedulerOptions['reload'];
-  /** Everything that takes a slot: task runs, the syncs and conflict resolutions in `resolves`, and the unblock runs in `unblocks`. */
+  /**
+   * Everything that takes a slot: task runs, the syncs and conflict resolutions in `resolves`, the unblock runs in
+   * `unblocks` and the review runs in `reviews`.
+   */
   private readonly running = new Set<Promise<unknown>>();
   private readonly resolves = new Set<Promise<unknown>>();
   private readonly unblocks = new Set<Promise<unknown>>();
+  private readonly reviews = new Set<Promise<unknown>>();
+  /** Looking for the next done task to review (`nextReviewable` reads git); one look at a time. */
+  private findingReview = false;
+  /** After a look found nothing, when to look again; a run that ends looks at once (`lookForReviews`). */
+  private reviewIdleUntil = 0;
   private timer: NodeJS.Timeout | undefined;
   private stopped = false;
   private drained: (() => void) | undefined;
@@ -136,6 +148,12 @@ export class Scheduler {
   private freeSyncSlot(p: Promise<unknown>): void {
     this.running.delete(p);
     this.resolves.delete(p);
+    this.lookForReviews();
+  }
+
+  /** A run ended, so a task may have new changes to review: the next tick looks, however recent the last look. */
+  private lookForReviews(): void {
+    this.reviewIdleUntil = 0;
   }
 
   private get proposing(): boolean {
@@ -145,9 +163,10 @@ export class Scheduler {
   /** What is going on that a restart would have to wait for. */
   private get activity(): Activity {
     return {
-      tasks: this.running.size - this.resolves.size - this.unblocks.size,
+      tasks: this.running.size - this.resolves.size - this.unblocks.size - this.reviews.size,
       resolves: this.resolves.size,
       unblocks: this.unblocks.size,
+      reviews: this.reviews.size,
       planner: this.proposingRuns,
     };
   }
@@ -188,16 +207,25 @@ export class Scheduler {
           })
           .finally(() => {
             this.running.delete(p);
+            this.lookForReviews();
             this.tick(); // a slot opened up
           });
         this.running.add(p);
       }
       this.maybeUnblock(); // after the claims: queued work comes first
+      this.maybeReview();
       if (this.opts.autoPropose && !this.proposing && this.gate().free > 0) this.maybePropose(); // a claim above took a slot: ask again
     }
     this.maybeRefreshPrs();
     this.awake.set(this.running.size > 0 || this.proposing);
-    if (this.opts.once && this.running.size === 0 && !this.proposing && !this.followingUp && (reason || !this.app.hasQueued())) {
+    if (
+      this.opts.once &&
+      this.running.size === 0 &&
+      !this.proposing &&
+      !this.followingUp &&
+      !this.findingReview &&
+      (reason || !this.app.hasQueued())
+    ) {
       this.stop();
       return;
     }
@@ -294,11 +322,50 @@ export class Scheduler {
         .finally(() => {
           this.running.delete(p);
           this.unblocks.delete(p);
+          this.lookForReviews();
           this.tick();
         });
       this.running.add(p);
       this.unblocks.add(p);
     }
+  }
+
+  /**
+   * Start a review run for a done task with an open PR, in a repo with auto_review on, whose changes had none yet
+   * (`nextReviewable`), when a slot is free. One look at a time, since working out the changes reads git; the run row
+   * opens before the next look, so the same changes never get two. It takes a slot until it ends, and ticks when it
+   * does; a start ticks too, to look for another.
+   */
+  private maybeReview(): void {
+    if (this.findingReview || Date.now() < this.reviewIdleUntil || this.gate().free <= 0) return;
+    this.findingReview = true;
+    nextReviewable(this.app)
+      .then((target) => {
+        this.findingReview = false;
+        if (!target) this.reviewIdleUntil = Date.now() + REVIEW_LOOK_MS;
+        if (!target || this.stopped) return;
+        const { reason, free } = this.gate();
+        if (reason || free <= 0) return;
+        const id = target.task.id;
+        this.opts.log(`task ${id}: review run: reading its changes`);
+        const p: Promise<unknown> = runReview(this.app, target)
+          .then((r) => this.opts.log(`task ${id}: review run: ${r.outcome}${r.reason ? ` (${r.reason})` : ''}`))
+          .catch((err) => this.opts.log(`task ${id}: review run crashed: ${err?.stack ?? err}`))
+          .finally(() => {
+            this.running.delete(p);
+            this.reviews.delete(p);
+            this.lookForReviews();
+            this.tick();
+          });
+        this.running.add(p);
+        this.reviews.add(p);
+        this.tick();
+      })
+      .catch((err) => {
+        this.findingReview = false;
+        this.reviewIdleUntil = Date.now() + REVIEW_LOOK_MS;
+        this.opts.log(`review runs: looking for one crashed: ${err?.stack ?? err}`);
+      });
   }
 
   /** Run the planner for the first repo whose queue has run dry. One planner at a time. */

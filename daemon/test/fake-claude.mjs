@@ -22,6 +22,9 @@
 // An unblock run (the prompt starts "AgentDeck unblock run") retries with a note naming FAKE_UNBLOCKED, which a
 // FAKE_BLOCKED task's next run takes as leave to finish like FAKE_DONE; FAKE_UNBLOCK_ASK asks a question with two
 // options instead, and FAKE_UNBLOCK_GARBAGE ends without an UNBLOCK line. Those words come from the task's prompt too.
+// A review run (the prompt starts "AgentDeck review run") answers in its schema: clean, or with a blocking finding for
+// FAKE_REVIEW_BLOCK, or with no summary for FAKE_REVIEW_GARBAGE (words from the task's prompt, which the review prompt quotes);
+// FAKE_REVIEW_FAIL exits 1, and FAKE_REVIEW_SLOW sleeps 30s first.
 //   FAKE_ANSWER   like FAKE_DONE, and answers every review comment (c1, c2…) the prompt lists; FAKE_ANSWER_FIRST answers only c1
 //   FAKE_NO_SANDBOX  if the --settings file enables the sandbox with failIfUnavailable, exits at startup like claude does
 //   FAKE_PLAN_ALL    like FAKE_DONE, and marks every step of the plan file (.agentdeck/plan.html) done, with a note in each
@@ -136,7 +139,30 @@ const toolCall = (name, input, output, { error = false, id = `toolu_fake_${++too
 };
 const readme = () => toolCall('Read', { file_path: join(process.cwd(), 'README.md') }, '1\t# README\n');
 
-if (isPlanner) {
+if (prompt.startsWith('AgentDeck review run')) {
+  // A review run (--json-schema too): reads the diff, then answers in the schema. FAKE_REVIEW_BLOCK in the task's prompt
+  // gives a blocking finding and one that does not block, FAKE_REVIEW_GARBAGE an answer with no summary; else it is clean.
+  // FAKE_REVIEW_FAIL exits 1 with no result; FAKE_REVIEW_SLOW sleeps 30s before it answers (for cancel tests).
+  if (prompt.includes('FAKE_REVIEW_FAIL')) {
+    process.stderr.write('fake review failure\n');
+    process.exit(1);
+  }
+  if (prompt.includes('FAKE_REVIEW_SLOW')) await sleep(30_000);
+  toolCall('Bash', { command: 'git diff --stat' }, ' fake-output.txt | 1 +\n');
+  const answer = prompt.includes('FAKE_REVIEW_GARBAGE')
+    ? { findings: [] }
+    : prompt.includes('FAKE_REVIEW_BLOCK')
+      ? {
+          summary: 'It writes the file, but leaves it unchecked.',
+          findings: [
+            { path: 'fake-output.txt', line: 1, side: 'new', body: 'Nothing checks this line', blocking: true },
+            { path: 'fake-output.txt', line: 1, side: 'new', body: 'A clearer name would help', blocking: false },
+          ],
+        }
+      : { summary: 'It does what the task asks.', findings: [] };
+  toolCall('StructuredOutput', answer, 'Structured output provided successfully');
+  result(JSON.stringify(answer), { structured_output: answer });
+} else if (isPlanner) {
   // Planner mode: answer with structured output. FAKE_PLAN_EMPTY in the goals → nothing to do.
   const tasks = prompt.includes('FAKE_PLAN_EMPTY')
     ? []

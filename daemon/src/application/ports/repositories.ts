@@ -126,6 +126,7 @@ export interface TaskRepository {
   attentionTasks(limit: number): AttentionCandidate[];
   hasQueued(): boolean;
   unblockCandidates(): BlockedTask[];
+  reviewCandidates(): Task[];
   recordQuestion(id: TaskId, question: UnblockQuestion, reason: string): boolean;
   listTaskSummaries(opts: { status?: TaskStatus; limit: number; before?: TaskId }): TaskSummary[];
   openPrTasks(): Task[];
@@ -208,6 +209,7 @@ export interface RunRepository {
   runsForTask(task_id: TaskId): Run[];
   countRunningResolves(): number;
   countRunningUnblocks(): number;
+  countRunningReviews(): number;
   slotsUsed(): number;
   pidRuns(days: number): PidRun[];
   runningTaskRuns(): RunningTaskRun[];
@@ -226,6 +228,7 @@ export interface PlannerRunRepository {
 export interface ReviewRepository {
   createReview(task_id: TaskId): Review;
   draftReviewFor(task_id: TaskId): Review | undefined;
+  addRunReview(task_id: TaskId, kind: ReviewKind, body: string, read: { head_commit: string; diff_hash: string }): Review;
   reviewsForTask(task_id: TaskId): ReviewWithComments[];
   reviewWithComments(id: ReviewId): ReviewWithComments | undefined;
   setReviewBody(id: ReviewId, body: string): boolean;

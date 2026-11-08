@@ -133,13 +133,16 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         .where(and(eq(buildsOn.task_id, t.id), eq(buildsOn.kind, 'builds_on'), notExists(unmet))),
     );
   };
-  /** The task row `t` has no unblock run going: a person's retry during one waits for it to stop before a claim. */
+  /**
+   * The task row `t` has no unblock or review run going: a retry during one (a person's, or the review run's own) waits
+   * for it to end before a claim, so a review run's retry is claimed only once its review is stored.
+   */
   const notUnblocking = () =>
     notExists(
       orm
         .select({ id: runs.id })
         .from(runs)
-        .where(and(eq(runs.task_id, t.id), eq(runs.kind, 'unblock'), isNull(runs.ended_at))),
+        .where(and(eq(runs.task_id, t.id), inArray(runs.kind, ['unblock', 'review']), isNull(runs.ended_at))),
     );
   const countWhere = (where: SQL | undefined) => orm.select({ n: count() }).from(tasks).where(where).get()?.n ?? 0;
 
@@ -364,6 +367,23 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         .all()
         .map(toTask)
         .filter(isBlocked);
+    },
+    /**
+     * Done tasks with an open pull request in repos that have auto_review on and may start work (not paused, not
+     * archived), by priority then age: the ones a review run may be for. Whether one may start is `reviewable`'s to say.
+     */
+    reviewCandidates(): Task[] {
+      const reviewing = orm
+        .select({ id: repos.id })
+        .from(repos)
+        .where(and(eq(repos.auto_review, 1), isNull(repos.paused_reason), isNull(repos.archived_at)));
+      return orm
+        .select(TASK_COLUMNS)
+        .from(tasks)
+        .where(and(eq(tasks.status, 'done'), eq(tasks.pr_state, 'open'), inArray(tasks.repo_id, reviewing)))
+        .orderBy(desc(tasks.priority), asc(tasks.id))
+        .all()
+        .map(toTask);
     },
     /**
      * Leave an unblock run's question on a blocked task, with an `unblock_ask` history row whose
