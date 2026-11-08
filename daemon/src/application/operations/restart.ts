@@ -1,14 +1,14 @@
 // Restarting the daemon without losing work: stop claiming, wait for the runs to end, restart, then put pause back.
-import type { Repositories as Db } from '../ports/repositories.ts';
+import type { App } from '../ports/app.ts';
 import { type Activity, restartWait } from '../../domain/operations/index.ts';
 
 /** What the daemon is running now: tasks, planner runs and resolve runs. */
-export function runningActivity(db: Db): Activity {
+export function runningActivity(app: App): Activity {
   return {
-    tasks: db.countRunning(),
-    planner: db.countRunningPlannerRuns(),
-    resolves: db.countRunningResolves(),
-    unblocks: db.countRunningUnblocks(),
+    tasks: app.countRunning(),
+    planner: app.countRunningPlannerRuns(),
+    resolves: app.countRunningResolves(),
+    unblocks: app.countRunningUnblocks(),
   };
 }
 
@@ -27,18 +27,18 @@ export interface RestartDeps {
  * is seen), restart, then restore the pause state from before. The pause state is restored even when
  * the restart fails or the wait is abandoned.
  */
-export async function gracefulRestart(db: Db, deps: RestartDeps): Promise<{ waited: boolean }> {
+export async function gracefulRestart(app: App, deps: RestartDeps): Promise<{ waited: boolean }> {
   const sleep = deps.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
   const pollMs = deps.pollMs ?? 2000;
-  const wasPaused = db.isPaused();
-  db.setPaused(true);
+  const wasPaused = app.isPaused();
+  app.setPaused(true);
   let waited = false;
   try {
     let idle = 0;
     let last: string | null = null;
     while (idle < 2) {
       if (deps.aborted?.()) throw new Error('interrupted; nothing was restarted');
-      const wait = restartWait(runningActivity(db));
+      const wait = restartWait(runningActivity(app));
       if (!wait) {
         idle++;
       } else {
@@ -52,7 +52,7 @@ export async function gracefulRestart(db: Db, deps: RestartDeps): Promise<{ wait
     deps.log('nothing is running; restarting');
     await deps.restart();
   } finally {
-    db.setPaused(wasPaused);
+    app.setPaused(wasPaused);
   }
   return { waited };
 }

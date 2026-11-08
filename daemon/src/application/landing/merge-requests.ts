@@ -1,6 +1,6 @@
 // Merge requests: a person's Merge, recorded on the task and carried out by the daemon once the PR is ready
 // (docs/plans/merge-requests.html; the carrying out is `refreshPrStates` and `autoMerge`).
-import type { Repositories as Db } from '../ports/repositories.ts';
+import type { App } from '../ports/app.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import { MERGE_METHODS, type MergeMethod, isMergeMethod } from '../../domain/repos/index.ts';
 import { ActionError, object, requireTask, text } from '../shared/input.ts';
@@ -15,13 +15,13 @@ export interface MergeRequestedResult {
  * Asking again replaces the request. The scheduler reads the PRs again at once. Throws ActionError if the task is not
  * done or has no open PR.
  */
-export function requestMerge(db: Db, id: TaskId, opts: { method?: string } = {}): MergeRequestedResult {
+export function requestMerge(app: App, id: TaskId, opts: { method?: string } = {}): MergeRequestedResult {
   const given = text(object(opts), 'method', { empty: true, raw: true });
-  const { task, repo } = mergeable(db, id);
+  const { task, repo } = mergeable(app, id);
   const method = given ?? repo.merge_method;
   if (!isMergeMethod(method)) throw new ActionError(`method must be one of ${MERGE_METHODS.join(', ')}`);
-  if (!db.requestMerge(id, method)) throw new ActionError(`#${id} is no longer a done task with an open PR`);
-  db.requestPrCheck();
+  if (!app.requestMerge(id, method)) throw new ActionError(`#${id} is no longer a done task with an open PR`);
+  app.requestPrCheck();
   return { method };
 }
 
@@ -32,11 +32,11 @@ export interface MergesRequestedResult {
 }
 
 /** Request the merge of each task given (Merge all), each with its own method. The ones that can't be requested come back with why. */
-export function requestMerges(db: Db, input: { ids: TaskId[] }): MergesRequestedResult {
+export function requestMerges(app: App, input: { ids: TaskId[] }): MergesRequestedResult {
   const result: MergesRequestedResult = { requested: [], failed: [] };
   for (const id of new Set(input.ids)) {
     try {
-      requestMerge(db, id);
+      requestMerge(app, id);
       result.requested.push(id);
     } catch (err) {
       if (!(err instanceof ActionError)) throw err;
@@ -47,7 +47,7 @@ export function requestMerges(db: Db, input: { ids: TaskId[] }): MergesRequested
 }
 
 /** Withdraw a task's merge request; a task with none is left as it is. */
-export function cancelMergeRequest(db: Db, id: TaskId): { cancelled: boolean } {
-  requireTask(db, id);
-  return { cancelled: db.clearMergeRequest(id) };
+export function cancelMergeRequest(app: App, id: TaskId): { cancelled: boolean } {
+  requireTask(app, id);
+  return { cancelled: app.clearMergeRequest(id) };
 }

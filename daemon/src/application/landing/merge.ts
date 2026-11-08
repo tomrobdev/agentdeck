@@ -1,7 +1,7 @@
 // Merging a done task's PR, as a person asked or on its own, and closing one.
 import { removeWorktree } from '../../adapters/git.ts';
 import { github } from '../../adapters/github.ts';
-import type { Repositories as Db } from '../ports/repositories.ts';
+import type { App } from '../ports/app.ts';
 import { type PrDetails, mergeCheck, mergeFindings } from '../../domain/landing/index.ts';
 import { MERGE_METHODS, type MergeMethod, isMergeMethod } from '../../domain/repos/index.ts';
 import { type AutoMergeCheck, autoMergeOn } from '../../domain/landing/index.ts';
@@ -21,17 +21,17 @@ import { settlePr } from './settle.ts';
 import { autoMergeFor, lastTestsPassed, prCwd } from './refresh.ts';
 
 /** Close a task's PR on GitHub and record it. Throws if `gh` fails. */
-export async function closePullRequest(db: Db, task: Task): Promise<void> {
-  await github.closePr(task.pr!.url!, prCwd(db, task));
-  settlePr(db, task.id, { type: 'closed' });
+export async function closePullRequest(app: App, task: Task): Promise<void> {
+  await github.closePr(task.pr!.url!, prCwd(app, task));
+  settlePr(app, task.id, { type: 'closed' });
 }
 
 /** Close a task's open PR without merging it. Tasks waiting on it become stuck. */
-export async function closeTaskPr(db: Db, id: TaskId): Promise<void> {
-  const t = requireTask(db, id);
+export async function closeTaskPr(app: App, id: TaskId): Promise<void> {
+  const t = requireTask(app, id);
   if (!openPrUrl(t.pr)) throw new ActionError(`#${id} has no open pull request`);
   try {
-    await closePullRequest(db, t);
+    await closePullRequest(app, t);
   } catch (err) {
     throw new ActionError(`could not close the PR: ${errorMessage(err)}`);
   }
@@ -79,26 +79,26 @@ class MergeRefused extends ActionError {
 }
 
 /** The task, its repo and its open PR, or an ActionError saying why it can't be merged. */
-export function mergeable(db: Db, id: TaskId) {
-  const task = requireTask(db, id);
-  const repo = requireTaskRepo(db, task);
+export function mergeable(app: App, id: TaskId) {
+  const task = requireTask(app, id);
+  const repo = requireTaskRepo(app, task);
   if (task.status !== 'done') throw new ActionError(`#${id} is ${task.status}; only a done task can be merged`);
   if (!task.pr?.url) throw new ActionError(`#${id} has no pull request`);
   const url = openPrUrl(task.pr);
   if (!url) throw new ActionError(`#${id}'s PR is ${task.pr.state}`);
-  if (isSyncing(db, id)) throw new ActionError(`#${id} is syncing with its base branch; try again when that is done`);
+  if (isSyncing(app, id)) throw new ActionError(`#${id} is syncing with its base branch; try again when that is done`);
   // gh reads the PR by its URL, so any directory of the repo will do; the worktree may be gone.
   return { task, repo, url, cwd: repo.path };
 }
 
 /** Read the PR from GitHub and say what merging it would do. */
-export async function mergePreview(db: Db, id: TaskId): Promise<MergePreview> {
-  const { task, repo, url, cwd } = mergeable(db, id);
+export async function mergePreview(app: App, id: TaskId): Promise<MergePreview> {
+  const { task, repo, url, cwd } = mergeable(app, id);
   const pr = await github.prDetails(url, cwd, { withFiles: autoMergeOn(task, repo) }).catch((err) => {
     throw new ActionError(`could not read the PR: ${errorMessage(err)}`);
   });
-  const tests_passed = lastTestsPassed(db, id);
-  const lands_after = landsAfter(db, id);
+  const tests_passed = lastTestsPassed(app, id);
+  const lands_after = landsAfter(app, id);
   const request = mergeRequestCheck({ pr_state: task.pr?.state ?? null, pr, tests_passed, lands_after, auto_resolve: repo.auto_resolve });
   return {
     title: task.title,
@@ -115,8 +115,8 @@ export async function mergePreview(db: Db, id: TaskId): Promise<MergePreview> {
     checks: pr.checks,
     ...mergeCheck({ pr_state: task.pr?.state ?? null, pr, tests_passed, lands_after }),
     conflicting: isConflicting(pr),
-    unblocks: dependentsReleased(db, id).map((t) => ({ id: t.id, title: t.title })),
-    auto_merge: autoMergeFor(db, task, repo, pr, tests_passed),
+    unblocks: dependentsReleased(app, id).map((t) => ({ id: t.id, title: t.title })),
+    auto_merge: autoMergeFor(app, task, repo, pr, tests_passed),
     request,
     merge_now: mergesNow(request, { pr, tests_passed }),
   };
@@ -136,18 +136,18 @@ export interface MergeResult {
  * The tasks waiting on it start on the scheduler's next tick. Throws ActionError if the PR can't be merged;
  * a cleanup failure after the merge is returned, not thrown.
  */
-export async function mergeTask(db: Db, id: TaskId, opts: { method?: string; delete_branch?: boolean } = {}): Promise<MergeResult> {
+export async function mergeTask(app: App, id: TaskId, opts: { method?: string; delete_branch?: boolean } = {}): Promise<MergeResult> {
   const body = object(opts);
   const given = text(body, 'method', { empty: true, raw: true });
   const deleteBranch = flag(body, 'delete_branch') === true;
-  const { task, repo, url, cwd } = mergeable(db, id);
+  const { task, repo, url, cwd } = mergeable(app, id);
   const method = given ?? repo.merge_method;
   if (!isMergeMethod(method)) throw new ActionError(`method must be one of ${MERGE_METHODS.join(', ')}`);
 
   const pr = await github.prDetails(url, cwd).catch((err) => {
     throw new ActionError(`could not read the PR: ${errorMessage(err)}`);
   });
-  const found = mergeFindings({ pr_state: task.pr?.state ?? null, pr, tests_passed: null, lands_after: landsAfter(db, id) });
+  const found = mergeFindings({ pr_state: task.pr?.state ?? null, pr, tests_passed: null, lands_after: landsAfter(app, id) });
   const problems = found.filter((f) => f.problem);
   if (problems.length)
     throw new MergeRefused(
@@ -155,7 +155,7 @@ export async function mergeTask(db: Db, id: TaskId, opts: { method?: string; del
       problems.map((f) => f.text),
       problems.some((f) => f.kind === 'conflict'),
     );
-  return mergeOpenPr(db, { task, repo, url, cwd }, pr, { method, deleteBranch, reason: mergeReason('person', method) });
+  return mergeOpenPr(app, { task, repo, url, cwd }, pr, { method, deleteBranch, reason: mergeReason('person', method) });
 }
 
 /** What merging a set of PRs came to: the ones merged, and why each other one was left open. */
@@ -170,18 +170,18 @@ export interface MergeAllResult {
  * round in which that one merged, so the order the ids come in doesn't matter. One that can't merge stays as it was, with
  * the reason mergeTask refused it. The base moves with every merge; GitHub refuses a PR that then conflicts.
  */
-export async function mergeAll(db: Db, input: { ids: TaskId[] }): Promise<MergeAllResult> {
+export async function mergeAll(app: App, input: { ids: TaskId[] }): Promise<MergeAllResult> {
   const result: MergeAllResult = { merged: [], skipped: [] };
   let pending = [...new Set(input.ids)];
   // A round with nothing merged frees no one, so the next round tries every PR left, to say why each stays open.
   let last = false;
   while (pending.length) {
-    const now = last ? pending : pending.filter((id) => !landsAfter(db, id).length);
+    const now = last ? pending : pending.filter((id) => !landsAfter(app, id).length);
     pending = pending.filter((id) => !now.includes(id));
     let merged = false;
     for (const id of now) {
       try {
-        result.merged.push({ id, ...(await mergeTask(db, id, { delete_branch: true })) });
+        result.merged.push({ id, ...(await mergeTask(app, id, { delete_branch: true })) });
         merged = true;
       } catch (err) {
         if (!(err instanceof ActionError)) throw err;
@@ -200,7 +200,7 @@ export async function mergeAll(db: Db, input: { ids: TaskId[] }): Promise<MergeA
  * Throws ActionError if gh fails; a cleanup failure after the merge is returned, not thrown.
  */
 export async function mergeOpenPr(
-  db: Db,
+  app: App,
   { task, repo, url, cwd }: ReturnType<typeof mergeable>,
   pr: PrDetails,
   opts: { method: MergeMethod; deleteBranch: boolean; reason: string; log?: (msg: string) => void },
@@ -208,7 +208,7 @@ export async function mergeOpenPr(
   const { id } = task;
   const { method, deleteBranch, log = (msg) => console.log(`[${new Date().toISOString()}] ${msg}`) } = opts;
   if (!lockMerge(id)) throw new ActionError(`#${id} is already being merged`);
-  if (isSyncing(db, id)) {
+  if (isSyncing(app, id)) {
     unlockMerge(id);
     throw new ActionError(`#${id} is syncing with its base branch; try again when that is done`);
   }
@@ -218,7 +218,7 @@ export async function mergeOpenPr(
       url,
       cwd,
       method,
-      message: { subject: task.title, body: buildPrBody(task, db.runsForTask(id), prPlanFor(db, task)) },
+      message: { subject: task.title, body: buildPrBody(task, app.runsForTask(id), prPlanFor(app, task)) },
     });
   } catch (err) {
     throw new ActionError(`merge failed: ${errorMessage(err)}`);
@@ -226,12 +226,12 @@ export async function mergeOpenPr(
     unlockMerge(id);
   }
   // False when a refresh in another process already recorded the PR as merged: say so, so the merge leaves a trace.
-  if (!db.recordMerge(id, method, opts.reason, pr.checks))
+  if (!app.recordMerge(id, method, opts.reason, pr.checks))
     log(`task ${id}: merged its PR (${method}), but the merge was already recorded or the task has moved on`);
   // The base just moved: the repo's other open PRs may now conflict. The scheduler re-reads them at once
   // (a setting, so a merge from the CLI reaches the daemon too).
-  db.requestPrCheck();
-  const unblocked = dependentsReleased(db, id).map((t) => t.id);
+  app.requestPrCheck();
+  const unblocked = dependentsReleased(app, id).map((t) => t.id);
 
   const result: MergeResult = { method, unblocked };
   if (deleteBranch) {
@@ -240,7 +240,7 @@ export async function mergeOpenPr(
     if (branch) await github.deleteRemoteBranch(repo.path, branch).catch((err) => errors.push(`remote branch: ${errorMessage(err)}`));
     if (worktree)
       await removeWorktree(repo, worktree).then(
-        () => db.setCheckout(id, { worktree: null }),
+        () => app.setCheckout(id, { worktree: null }),
         (err) => errors.push(`worktree: ${errorMessage(err)}`),
       );
     if (errors.length) result.cleanup_error = errors.join('; ');

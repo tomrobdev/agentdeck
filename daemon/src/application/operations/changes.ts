@@ -1,6 +1,6 @@
 // Tells subscribers when the database changed. The revision it counts is what the dashboard's event stream sends.
 // An instance made in daemon.ts, not module state.
-import type { Repositories as Db } from '../ports/repositories.ts';
+import type { App } from '../ports/app.ts';
 
 export class ChangeWatcher {
   /** Moves by one whenever the database changed, whoever wrote. Starts at 1. */
@@ -10,17 +10,17 @@ export class ChangeWatcher {
   private timer: NodeJS.Timeout | undefined;
   private last: { dataVersion: number; ownChanges: number };
 
-  private readonly db: Pick<Db, 'changeCounters'>;
+  private readonly app: Pick<App, 'changeCounters'>;
 
-  constructor(db: Pick<Db, 'changeCounters'>) {
-    this.db = db;
-    this.last = db.changeCounters();
+  constructor(app: Pick<App, 'changeCounters'>) {
+    this.app = app;
+    this.last = app.changeCounters();
   }
 
   /** Check the counters every `intervalMs` on a timer that does not keep the process alive. */
   start(intervalMs = 250): void {
     this.stop();
-    this.last = this.db.changeCounters();
+    this.last = this.app.changeCounters();
     this.timer = setInterval(() => this.check(), intervalMs);
     this.timer.unref();
   }
@@ -43,7 +43,7 @@ export class ChangeWatcher {
 
   /** Read the counters once and notify if they moved. */
   check(): void {
-    const now = this.db.changeCounters();
+    const now = this.app.changeCounters();
     const other = now.dataVersion !== this.last.dataVersion;
     const own = now.ownChanges !== this.last.ownChanges;
     this.last = now;

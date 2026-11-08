@@ -1,6 +1,6 @@
 // A run addressing a review: what the worker is shown of it, and what its answers do to the comments afterwards.
 import { diffBase, filePatch } from '../../adapters/git.ts';
-import type { Repositories as Db } from '../ports/repositories.ts';
+import type { App } from '../ports/app.ts';
 import { type ReviewPrompt, hunkAround, latestRequestNote, matchAnswers, unansweredNote, withNote } from '../../domain/landing/index.ts';
 import { type ReviewComment, commentStatesFor, commentsToAddress } from '../../domain/landing/index.ts';
 import type { Repo } from '../../domain/repos/index.ts';
@@ -8,11 +8,11 @@ import type { Task } from '../../domain/work/index.ts';
 
 /** The review a run of the task addresses: the open comments of its Request changes reviews with their diff hunks, or null when there are none. */
 export async function reviewForRun(
-  db: Db,
+  app: App,
   task: Pick<Task, 'id'>,
   repo: Pick<Repo, 'path' | 'base_branch'>,
 ): Promise<{ prompt: ReviewPrompt; comments: ReviewComment[] } | null> {
-  const reviews = db.reviewsForTask(task.id);
+  const reviews = app.reviewsForTask(task.id);
   const comments = commentsToAddress(reviews);
   if (!comments.length) return null;
   // The patch of a file at the commit a comment was made on; comments on one file share it.
@@ -46,8 +46,8 @@ export async function reviewForRun(
  * Store the answers in a run's final message: each answered comment moves to `answered` (unless it was resolved meanwhile).
  * Returns the final message with a line naming the comments left open, or as it was when every comment got an answer.
  */
-export function recordAnswers(db: Db, comments: ReviewComment[], finalMessage: string): string {
+export function recordAnswers(app: App, comments: ReviewComment[], finalMessage: string): string {
   const { answered, unanswered } = matchAnswers(comments, finalMessage);
-  for (const { comment, answer } of answered) db.moveComment(comment.id, commentStatesFor('answer'), 'answered', answer);
+  for (const { comment, answer } of answered) app.moveComment(comment.id, commentStatesFor('answer'), 'answered', answer);
   return unanswered.length ? withNote(finalMessage, unansweredNote(unanswered)) : finalMessage;
 }

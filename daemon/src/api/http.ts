@@ -2,16 +2,16 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { ActionError, type ChangeWatcher, type DaemonInfo, type ReloadFacts, type Scheduler } from '../application/actions.ts';
 import { API_ALLOWED_ORIGINS } from '../config.ts';
-import type { Db } from '../db/index.ts';
+import type { ComposedApp } from '../compose.ts';
 import { type RepoId, type ReviewId, type TaskId, parseId } from '../domain/shared/index.ts';
 import { parseTaskIds } from '../domain/work/index.ts';
 
 /** What the API needs of the scheduler: `wake` after a change that may let queued work start, `track` for runs it starts. */
 export type ApiScheduler = Pick<Scheduler, 'wake' | 'track'>;
 
-/** What the route files share: the database, the scheduler to wake, and facts about this daemon process. */
+/** What the route files share: the App, the scheduler to wake, and facts about this daemon process. */
 export interface ApiContext {
-  db: Db;
+  db: ComposedApp;
   scheduler: ApiScheduler;
   /** The change stream behind GET /api/events. */
   changes: Pick<ChangeWatcher, 'rev' | 'subscribe'>;

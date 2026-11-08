@@ -12,7 +12,7 @@ process.env.AGENTDECK_HOME = home;
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { openDb } = await import('../src/db/index.ts');
-const { doneTask, queuedTask } = await import('./fixtures.ts');
+const { doneTask, queuedTask, testApp } = await import('./fixtures.ts');
 const { github } = await import('../src/adapters/github.ts');
 const { refreshPrStates } = await import('../src/application/landing/refresh.ts');
 const { autoMerge } = await import('../src/application/landing/auto-merge.ts');
@@ -20,7 +20,7 @@ const { ActionError, cancelMergeRequest, linkTasks, mergePreview, requestMerge, 
   await import('../src/application/actions.ts');
 type PrDetails = import('../src/domain/landing/merge.ts').PrDetails;
 
-const db = openDb(join(home, 'test.db'));
+const db = testApp(openDb(join(home, 'test.db')));
 after(() => db.close());
 
 const dir = join(home, 'demo');

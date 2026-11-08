@@ -1,6 +1,6 @@
 // Use cases for tasks: add, edit, and move them through the lifecycle on a person's request.
 import { removeWorktree } from '../../adapters/git.ts';
-import type { Repositories as Db } from '../ports/repositories.ts';
+import type { App } from '../ports/app.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import type { TaskStatus } from '../../domain/work/index.ts';
 import { archivedRepoError, maxAttemptsError, maxTurnsError, modelError, priorityError } from '../../domain/work/index.ts';
@@ -14,7 +14,7 @@ import { checkFollowers } from './plans.ts';
 import { checkPlanLink, planRequest, stepList } from './plan-link.ts';
 
 export async function addTask(
-  db: Db,
+  app: App,
   input: {
     repo?: string;
     prompt: string;
@@ -48,17 +48,17 @@ export async function addTask(
   const max_turns = whole(body, 'max_turns', maxTurnsError);
   const max_attempts = whole(body, 'max_attempts', maxAttemptsError);
   const planAsked = planRequest(body);
-  const links = newLinks(db, input);
-  const repos = db.listRepos();
-  const repo = repoName ? db.findRepo(repoName) : repos.length === 1 ? repos[0] : undefined;
+  const links = newLinks(app, input);
+  const repos = app.listRepos();
+  const repo = repoName ? app.findRepo(repoName) : repos.length === 1 ? repos[0] : undefined;
   if (!repo) throw new ActionError(repoName ? `no repo "${repoName}"` : 'choose a repo (more than one is registered)');
   refuse(archivedRepoError(repo));
   const steps = stepList(input.plan_steps);
-  const checked = checkPlanLink(db, () => repo, planAsked ?? { task: null }, steps);
+  const checked = checkPlanLink(app, () => repo, planAsked ?? { task: null }, steps);
   const own_plan = 'ownPlan' in checked ? checked.ownPlan : undefined;
   const owner = 'owner' in checked ? checked.owner : null;
   const linked = owner !== null || own_plan !== undefined;
-  return db.addTask({
+  return app.addTask({
     repo_id: repo.id,
     title: title || defaultTitle(prompt),
     prompt,
@@ -82,7 +82,7 @@ export async function addTask(
  * every unfinished step.
  */
 export async function editTask(
-  db: Db,
+  app: App,
   id: TaskId,
   patch: {
     title?: string;
@@ -96,8 +96,8 @@ export async function editTask(
     plan_steps?: string[] | string | null;
   },
 ): Promise<Task> {
-  const task = requireTask(db, id);
-  const fields: Parameters<Db['editTask']>[1] = {};
+  const task = requireTask(app, id);
+  const fields: Parameters<App['editTask']>[1] = {};
 
   const body = object(patch);
   for (const key of ['title', 'prompt', 'model'] as const) {
@@ -120,16 +120,16 @@ export async function editTask(
     const steps = patch.plan_steps !== undefined ? stepList(patch.plan_steps) : planAsked === undefined ? (task.plan?.steps ?? null) : null;
     const asked = planAsked ?? { task: task.plan?.task ?? null };
     // A null link means "follow its own plan", so clearing it would keep the plan and widen its steps to all of them.
-    if (planAsked !== undefined && 'task' in asked && asked.task === null && planOwnerOf(task) === id && db.ownPlan(id)) {
+    if (planAsked !== undefined && 'task' in asked && asked.task === null && planOwnerOf(task) === id && app.ownPlan(id)) {
       throw new ActionError(
         `#${id} has a plan of its own, which can't be cleared: replace it with --plan <file>, or follow another task's plan with --plan <task number>`,
       );
     }
-    const checked = checkPlanLink(db, () => requireTaskRepo(db, task), asked, steps);
+    const checked = checkPlanLink(app, () => requireTaskRepo(app, task), asked, steps);
     let link: TaskId | null;
     if ('ownPlan' in checked) {
       // The task's own steps are the ones just checked; the tasks following its plan keep theirs.
-      checkFollowers(db, id, checked.plan, id);
+      checkFollowers(app, id, checked.plan, id);
       link = id;
       ownPlan = checked.ownPlan;
     } else link = checked.owner;
@@ -139,62 +139,62 @@ export async function editTask(
 
   if (!Object.keys(fields).length) throw new ActionError('nothing to change');
   // The task's own plan is stored in the same guarded write, so a task the daemon claimed meanwhile keeps its plan.
-  const edited = db.editTask(id, fields, { ownPlan });
+  const edited = app.editTask(id, fields, { ownPlan });
   if (!edited) {
-    const now = db.getTask(id)?.status ?? task.status;
+    const now = app.getTask(id)?.status ?? task.status;
     throw new ActionError(`#${id} is ${now}; only ${EDITABLE_STATUSES.join(', ')} tasks can be edited`);
   }
   return edited;
 }
 
 /** Returns 'cancelled' for idle tasks, 'stopping' when a running worker has been asked to stop. */
-export function cancelTask(db: Db, id: TaskId): 'cancelled' | 'stopping' {
-  const t = db.applyEvent(id, { type: 'cancel' });
+export function cancelTask(app: App, id: TaskId): 'cancelled' | 'stopping' {
+  const t = app.applyEvent(id, { type: 'cancel' });
   if (!t) throw new ActionError(`#${id} can't be cancelled from its current state`);
-  warnStuckDependents(db, id);
+  warnStuckDependents(app, id);
   return t.status === 'cancel_requested' ? 'stopping' : 'cancelled';
 }
 
 /** Accept a planner proposal into the queue. */
-export function approveTask(db: Db, id: TaskId): void {
-  if (!db.applyEvent(id, { type: 'approve' })) throw new ActionError(`#${id} is not a proposal`);
+export function approveTask(app: App, id: TaskId): void {
+  if (!app.applyEvent(id, { type: 'approve' })) throw new ActionError(`#${id} is not a proposal`);
 }
 
-export function rejectTask(db: Db, id: TaskId): void {
-  if (!db.applyEvent(id, { type: 'reject' })) throw new ActionError(`#${id} is not a proposal`);
-  warnStuckDependents(db, id);
+export function rejectTask(app: App, id: TaskId): void {
+  if (!app.applyEvent(id, { type: 'reject' })) throw new ActionError(`#${id} is not a proposal`);
+  warnStuckDependents(app, id);
 }
 
 /** Another attempt. A `note` ("request changes") is kept on the timeline and goes first in the next run's prompt. */
-export function retryTask(db: Db, id: TaskId, note?: string, onlyFrom?: TaskStatus[]): void {
-  const t = requireTask(db, id);
-  refuseWhileSyncing(db, id);
+export function retryTask(app: App, id: TaskId, note?: string, onlyFrom?: TaskStatus[]): void {
+  const t = requireTask(app, id);
+  refuseWhileSyncing(app, id);
   if (note !== undefined && typeof note !== 'string') throw new ActionError('note must be text');
   // One more attempt on top of what has been used.
-  if (!db.applyEvent(id, { type: 'retry' }, { reason: note?.trim() || null, onlyFrom }))
-    throw new ActionError(`#${id} is ${db.getTask(id)?.status ?? t.status}`);
+  if (!app.applyEvent(id, { type: 'retry' }, { reason: note?.trim() || null, onlyFrom }))
+    throw new ActionError(`#${id} is ${app.getTask(id)?.status ?? t.status}`);
 }
 
 /**
  * A person finished or landed a blocked or failed task's work themselves. The optional `note` goes on the timeline.
  * Done releases the tasks waiting on it (unless its PR is open: they wait for the merge), so no warnStuckDependents.
  */
-export function markDone(db: Db, id: TaskId, note?: string): void {
-  const t = requireTask(db, id);
+export function markDone(app: App, id: TaskId, note?: string): void {
+  const t = requireTask(app, id);
   if (note !== undefined && typeof note !== 'string') throw new ActionError('note must be text');
-  if (!db.applyEvent(id, { type: 'mark_done' }, { reason: note?.trim() || null }))
-    throw new ActionError(`#${id} is ${db.getTask(id)?.status ?? t.status}; only blocked or failed tasks can be marked done`);
+  if (!app.applyEvent(id, { type: 'mark_done' }, { reason: note?.trim() || null }))
+    throw new ActionError(`#${id} is ${app.getTask(id)?.status ?? t.status}; only blocked or failed tasks can be marked done`);
 }
 
 /** Remove a task's worktree; its branch is kept. Not while the task is running, or queued (it is about to run in it). */
-export async function removeTaskWorktree(db: Db, id: TaskId): Promise<{ branch: string | null }> {
-  const t = requireTask(db, id);
+export async function removeTaskWorktree(app: App, id: TaskId): Promise<{ branch: string | null }> {
+  const t = requireTask(app, id);
   if (RUNNING_STATUSES.includes(t.status)) throw new ActionError('task is running');
   if (t.status === 'queued') throw new ActionError('task is queued');
   const worktree = t.checkout?.worktree;
   if (!worktree) throw new ActionError('task has no worktree');
-  refuseWhileSyncing(db, id);
-  await removeWorktree(requireTaskRepo(db, t), worktree);
-  db.setCheckout(t.id, { worktree: null });
+  refuseWhileSyncing(app, id);
+  await removeWorktree(requireTaskRepo(app, t), worktree);
+  app.setCheckout(t.id, { worktree: null });
   return { branch: t.checkout?.branch ?? null };
 }

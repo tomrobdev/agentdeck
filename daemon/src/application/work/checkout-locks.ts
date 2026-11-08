@@ -1,6 +1,6 @@
 // The locks on a task's checkout in this process: a sync of its branch (`runs/sync.ts`) and a merge of its PR
 // (`landing/merge.ts`). Apart, here in Work, so that the use cases of every context can read them without a cycle.
-import type { Repositories as Db } from '../ports/repositories.ts';
+import type { App } from '../ports/app.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import { ActionError } from '../shared/input.ts';
 
@@ -31,19 +31,19 @@ export const lockSync = (id: TaskId): void => void syncing.add(id);
 export const unlockSync = (id: TaskId): void => void syncing.delete(id);
 
 /** Whether a sync of this task's branch is running, in any process: the marker the daemon keeps in the database. */
-export const isSyncing = (db: Db, id: TaskId): boolean => db.hasSyncMarker(id);
+export const isSyncing = (app: App, id: TaskId): boolean => app.hasSyncMarker(id);
 
 /** Refuse a change to a task while a sync of its branch is running. */
-export function refuseWhileSyncing(db: Db, id: TaskId): void {
-  if (isSyncing(db, id)) throw new ActionError(`#${id} is syncing with its base branch; try again when that is done`);
+export function refuseWhileSyncing(app: App, id: TaskId): void {
+  if (isSyncing(app, id)) throw new ActionError(`#${id} is syncing with its base branch; try again when that is done`);
 }
 
 /** Run `fn` with the task's sync marked in the database, so the CLI sees it too; the mark is cleared however `fn` ends. */
-export async function markSyncing<T>(db: Db, id: TaskId, fn: () => Promise<T>): Promise<T> {
-  db.setSyncing(id, true);
+export async function markSyncing<T>(app: App, id: TaskId, fn: () => Promise<T>): Promise<T> {
+  app.setSyncing(id, true);
   try {
     return await fn();
   } finally {
-    db.setSyncing(id, false);
+    app.setSyncing(id, false);
   }
 }

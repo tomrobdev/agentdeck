@@ -1,6 +1,6 @@
 // The PR refresh: keep the state of open PRs fresh, and say which ones conflict or are ready to merge.
 import { github } from '../../adapters/github.ts';
-import type { Repositories as Db } from '../ports/repositories.ts';
+import type { App } from '../ports/app.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import type { PrDetails } from '../../domain/landing/index.ts';
 import { type AutoMergeCheck, autoMergeCheck, autoMergeOn } from '../../domain/landing/index.ts';
@@ -21,26 +21,26 @@ export const PR_REFRESH_MS = 3 * 60_000;
 export const MERGE_REQUEST_POLL_MS = 30_000;
 
 /** Where `gh` runs for a task's PR. It reads the PR by its URL, so the repo's path will do; the worktree may be gone. */
-export function prCwd(db: Db, task: Task): string {
-  return db.getRepo(task.repo_id)?.path ?? process.cwd();
+export function prCwd(app: App, task: Task): string {
+  return app.getRepo(task.repo_id)?.path ?? process.cwd();
 }
 
 /** Whether the last run that ran the tests passed them; null when none did. */
-export function lastTestsPassed(db: Db, id: TaskId): boolean | null {
-  return db.runsForTask(id).findLast((r) => r.tests_passed !== null)?.tests_passed ?? null;
+export function lastTestsPassed(app: App, id: TaskId): boolean | null {
+  return app.runsForTask(id).findLast((r) => r.tests_passed !== null)?.tests_passed ?? null;
 }
 
 /** The auto-merge check for a task's PR (read `withFiles`), or null when auto-merge is off for the task. */
-export function autoMergeFor(db: Db, task: Task, repo: Repo, pr: PrDetails, tests_passed: boolean | null): AutoMergeCheck | null {
+export function autoMergeFor(app: App, task: Task, repo: Repo, pr: PrDetails, tests_passed: boolean | null): AutoMergeCheck | null {
   if (!autoMergeOn(task, repo)) return null;
   return autoMergeCheck({
     repo,
     pr_state: task.pr?.state ?? null,
     pr,
     tests_passed,
-    lands_after: landsAfter(db, task.id),
+    lands_after: landsAfter(app, task.id),
     auto_resolve: repo.auto_resolve,
-    paused: pausedReason(db.isPaused(), repo),
+    paused: pausedReason(app.isPaused(), repo),
   });
 }
 
@@ -48,13 +48,13 @@ export function autoMergeFor(db: Db, task: Task, repo: Repo, pr: PrDetails, test
  * Keep a done task's open PR's checks on the task, and tell a person when they newly fail (`nextChecks` says when).
  * Nothing is told when the write was refused: the PR merged or closed meanwhile.
  */
-function keepChecks(db: Db, task: Task, pr: PrDetails): void {
+function keepChecks(app: App, task: Task, pr: PrDetails): void {
   const { stored, notify } = nextChecks(task.pr?.checks.latest ?? null, {
     head: pr.head ?? null,
     checks: pr.check_list ?? [],
     read_at: new Date().toISOString(),
   });
-  if (db.setPrChecks(task.id, stored) && notify) notifyLater(db, checksFailedNotification(task, stored.checks));
+  if (app.setPrChecks(task.id, stored) && notify) notifyLater(app, checksFailedNotification(task, stored.checks));
 }
 
 /** What a refresh found out about the open PRs beyond their state. */
@@ -90,59 +90,59 @@ interface PrFound {
   polling: boolean;
 }
 
-function dropRequest(db: Db, id: TaskId, why: string, log: (msg: string) => void): void {
-  if (db.clearMergeRequest(id)) log(`task ${id}: merge request dropped: ${why}`);
+function dropRequest(app: App, id: TaskId, why: string, log: (msg: string) => void): void {
+  if (app.clearMergeRequest(id)) log(`task ${id}: merge request dropped: ${why}`);
 }
 
 /**
  * Re-read one task's PR and record what changed. Null when the PR is no longer open, the task is not done, or its merge
  * request was dropped. Throws when GitHub can't be read.
  */
-async function refreshOne(db: Db, task: Task, log: (msg: string) => void): Promise<PrFound | null> {
-  const repo = db.getRepo(task.repo_id);
-  const pr = await github.prDetails(task.pr!.url!, prCwd(db, task), { withFiles: !!repo && autoMergeOn(task, repo) });
+async function refreshOne(app: App, task: Task, log: (msg: string) => void): Promise<PrFound | null> {
+  const repo = app.getRepo(task.repo_id);
+  const pr = await github.prDetails(task.pr!.url!, prCwd(app, task), { withFiles: !!repo && autoMergeOn(task, repo) });
   const state = pr.state;
   if (state !== task.pr?.state) {
     // Guarded on the PR still being open: a merge recorded while GitHub was being asked stays.
-    const applied = state === 'closed' ? settlePr(db, task.id, { type: 'closed' }) : db.recordPr(task.id, { type: 'seen', state });
+    const applied = state === 'closed' ? settlePr(app, task.id, { type: 'closed' }) : app.recordPr(task.id, { type: 'seen', state });
     if (applied) log(`task ${task.id}: PR is ${state}`);
     if (
       applied &&
       state === 'merged' &&
       task.status !== 'done' &&
-      (await settle(db, task.id, { type: 'pr_merged' }, { reason: 'PR merged on GitHub' }))
+      (await settle(app, task.id, { type: 'pr_merged' }, { reason: 'PR merged on GitHub' }))
     )
       log(`task ${task.id}: PR merged, task is done`);
   }
   if (state !== 'open' || task.status !== 'done') {
-    if (task.pr?.merge_request) dropRequest(db, task.id, state !== 'open' ? `the PR is ${state}` : `the task is ${task.status}`, log);
+    if (task.pr?.merge_request) dropRequest(app, task.id, state !== 'open' ? `the PR is ${state}` : `the task is ${task.status}`, log);
     return null;
   }
-  if (checksSettled(pr.checks)) db.recordPrChecksOpened(task.id, pr.checks);
-  keepChecks(db, task, pr);
-  const tests = lastTestsPassed(db, task.id);
+  if (checksSettled(pr.checks)) app.recordPrChecksOpened(task.id, pr.checks);
+  keepChecks(app, task, pr);
+  const tests = lastTestsPassed(app, task.id);
   if (task.pr?.merge_request) {
     // A person asked: the merge request's check stands in for auto-merge's.
     const check = mergeRequestCheck({
       pr_state: task.pr.state,
       pr,
       tests_passed: tests,
-      lands_after: landsAfter(db, task.id),
+      lands_after: landsAfter(app, task.id),
       auto_resolve: repo ? repo.auto_resolve : true,
     });
-    db.setAutoMergeCheck(task.id, null);
+    app.setAutoMergeCheck(task.id, null);
     if (check.verdict === 'never') {
       const why = check.reasons.join('; ');
-      dropRequest(db, task.id, why, log);
-      notifyLater(db, { kind: 'merged', title: `Could not merge #${task.id}`, body: why, task_id: task.id });
+      dropRequest(app, task.id, why, log);
+      notifyLater(app, { kind: 'merged', title: `Could not merge #${task.id}`, body: why, task_id: task.id });
       return null;
     }
-    db.setMergeRequestCheck(task.id, check);
+    app.setMergeRequestCheck(task.id, check);
     return { pr, place: classify(pr, check.verdict), requested: true, polling: mergeRequestPolls(check, pr) };
   }
   // Every check is kept on the task for the views, whatever the verdict; none when auto-merge is off.
-  const check = repo ? autoMergeFor(db, task, repo, pr, tests) : null;
-  db.setAutoMergeCheck(task.id, check);
+  const check = repo ? autoMergeFor(app, task, repo, pr, tests) : null;
+  app.setAutoMergeCheck(task.id, check);
   return { pr, place: classify(pr, check?.verdict ?? null), requested: false, polling: false };
 }
 
@@ -150,12 +150,12 @@ async function refreshOne(db: Db, task: Task, log: (msg: string) => void): Promi
  * Re-read the state of every open PR of a done task, and whether it still merges cleanly. A blocked or failed task
  * whose PR was merged becomes done; its mergeability is not read. A failed lookup leaves that task as it was. Resolving the conflicts it finds is the caller's call (`resolveConflicting`).
  */
-export async function refreshPrStates(db: Db, log: (msg: string) => void = () => {}): Promise<PrRefresh> {
+export async function refreshPrStates(app: App, log: (msg: string) => void = () => {}): Promise<PrRefresh> {
   const found: PrRefresh = { conflicting: [], unknown: 0, mergeable: [], polling: 0 };
   const requested: PrRefresh['mergeable'] = [];
-  for (const task of db.openPrTasks()) {
+  for (const task of app.openPrTasks()) {
     try {
-      const one = await refreshOne(db, task, log);
+      const one = await refreshOne(app, task, log);
       if (!one) continue;
       if (one.polling) found.polling++;
       if (one.place === 'conflicting') found.conflicting.push(task.id);

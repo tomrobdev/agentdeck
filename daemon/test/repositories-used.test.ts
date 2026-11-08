@@ -4,7 +4,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import type { App } from '../src/application/ports/app.ts';
 import type { Repositories } from '../src/application/ports/repositories.ts';
+import type { ComposedApp } from '../src/compose.ts';
 import type { Db } from '../src/db/index.ts';
 import { readSources } from '../scripts/lib/sources.ts';
 
@@ -12,6 +14,9 @@ const SRC = join(import.meta.dirname, '../src');
 
 /** Compile-time: what `openDb` returns satisfies `Repositories`. */
 export const satisfied = (db: Db): Repositories => db;
+
+/** Compile-time: what `compose.ts` builds is the App the use cases take. */
+export const composed = (app: ComposedApp): App => app;
 
 test('[layers] every method an interface declares is called by a use case', () => {
   const ports = readFileSync(join(SRC, 'application/ports/repositories.ts'), 'utf8');

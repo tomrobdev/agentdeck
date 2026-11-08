@@ -1,6 +1,7 @@
 // The daemon's composition root: wires the source watcher, the API and the scheduler together and runs until stopped.
-// It reports through `log` and throws what the caller should print; it never prints or exits on its own account.
-import type { Db } from './db/index.ts';
+// It runs on the App `compose.ts` built (`db` below). It reports through `log` and throws what the caller should
+// print; it never prints or exits on its own account.
+import type { ComposedApp } from './compose.ts';
 import { startApi } from './api/server.ts';
 import { join } from 'node:path';
 import { checkedOutBranch, checkoutCommit, hasUncommittedChanges } from './adapters/git.ts';
@@ -12,7 +13,7 @@ import { API_PORT, DEFAULTS } from './config.ts';
 import { type Activity, SCHEMA_DIRTY, offMain, reloadDecision } from './domain/operations/index.ts';
 
 export interface DaemonOptions {
-  db: Db;
+  db: ComposedApp;
   /** Run the queue once and return, without the API, the source watcher or keeping the Mac awake. */
   once: boolean;
   log?: (line: string) => void;

@@ -7,7 +7,7 @@ import { github } from '../../adapters/github.ts';
 import { ownsLiveGroup } from '../../adapters/processes.ts';
 import { DAEMON_LOG, serviceStatus } from '../../adapters/service.ts';
 import { API_PORT, CHECKOUT_ROOT } from '../../config.ts';
-import type { Repositories as Db } from '../ports/repositories.ts';
+import type { App } from '../ports/app.ts';
 import { type Check, type DaemonState, type HealthFacts, judgeHealth, logFacts } from '../../domain/operations/index.ts';
 import { sqliteMs } from '../../domain/shared/index.ts';
 
@@ -39,15 +39,15 @@ export const realProbes: Probes = {
 /** How far back ended runs are searched for a claude process that outlived them. */
 const RUN_DAYS = 7;
 
-export async function gatherHealth(db: Db, probes: Probes = realProbes, port = API_PORT): Promise<HealthFacts> {
+export async function gatherHealth(app: App, probes: Probes = realProbes, port = API_PORT): Promise<HealthFacts> {
   const [service, api, head, gh] = await Promise.all([probes.service(), probes.api(port), probes.head(), probes.gh()]);
   const now = probes.now();
   const behind = api?.commit && head && api.commit !== head ? await probes.ahead(api.commit) : null;
-  const processes = db
+  const processes = app
     .pidRuns(RUN_DAYS)
     .filter((r) => probes.alive(r))
     .map((r) => ({ kind: r.kind, run: r.id, pid: r.pid, ended: r.ended_at !== null }));
-  const tasks = db.runningTaskRuns().map((t) => ({
+  const tasks = app.runningTaskRuns().map((t) => ({
     id: t.id,
     pid: t.pid,
     alive: t.pid !== null && probes.alive({ pid: t.pid, pid_at: t.pid_at ?? '' }),
@@ -70,21 +70,21 @@ export async function gatherHealth(db: Db, probes: Probes = realProbes, port = A
 }
 
 /** Every check on the daemon's health, with the command that fixes each one that fails. */
-export async function daemonHealth(db: Db, probes: Probes = realProbes, port?: number): Promise<Check[]> {
-  return judgeHealth(await gatherHealth(db, probes, port));
+export async function daemonHealth(app: App, probes: Probes = realProbes, port?: number): Promise<Check[]> {
+  return judgeHealth(await gatherHealth(app, probes, port));
 }
 
 /** Lines of the daemon log in the report. */
 export const REPORT_LOG_LINES = 20;
 
 /** GET /api/daemon/health: the doctor's checks, the checkout's HEAD, what is running, and the end of the log. */
-export async function daemonReport(db: Db, probes: Probes = realProbes, port?: number) {
-  const facts = await gatherHealth(db, probes, port);
+export async function daemonReport(app: App, probes: Probes = realProbes, port?: number) {
+  const facts = await gatherHealth(app, probes, port);
   const lines = probes.logLines();
   return {
     checks: judgeHealth(facts),
     head: facts.head,
-    running: db.runningTasks(),
+    running: app.runningTasks(),
     log: lines ? lines.filter((l) => l !== '').slice(-REPORT_LOG_LINES) : [],
   };
 }
@@ -93,8 +93,8 @@ export async function daemonReport(db: Db, probes: Probes = realProbes, port?: n
  * Restart the service at once (POST /api/daemon/restart-now): running tasks lose their run and are requeued.
  * The restart starts after the API has answered, because it kills this process.
  */
-export function restartNow(db: Db, restart: () => Promise<unknown>, delayMs = 200) {
-  const requeued = db.runningTasks();
+export function restartNow(app: App, restart: () => Promise<unknown>, delayMs = 200) {
+  const requeued = app.runningTasks();
   setTimeout(() => void restart().catch(() => {}), delayMs).unref();
   return { requeued };
 }

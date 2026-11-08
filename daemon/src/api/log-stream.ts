@@ -1,7 +1,7 @@
 // Server-Sent Events tail of a run's log for the dashboard.
 import { closeSync, existsSync, openSync, readSync, statSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import type { Db } from '../db/index.ts';
+import type { ComposedApp } from '../compose.ts';
 import type { TaskId } from '../domain/shared/index.ts';
 import { parseLogLine } from '../domain/runs/index.ts';
 import { pickRun } from '../domain/runs/index.ts';
@@ -10,7 +10,7 @@ const LOG_POLL_MS = 500;
 
 /** Stream a run's log as SSE: everything so far, then new lines until the run ends. */
 export function streamLog(
-  db: Db,
+  db: ComposedApp,
   req: IncomingMessage,
   res: ServerResponse,
   taskId: TaskId,

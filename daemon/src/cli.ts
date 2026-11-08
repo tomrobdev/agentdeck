@@ -3,7 +3,7 @@ import { COMMANDS } from './cli/commands.ts';
 import { die } from './cli/format.ts';
 import { HELP } from './cli/help.ts';
 import { type CommandContext, parseCommandLine } from './cli/context.ts';
-import { openDb } from './db/index.ts';
+import { composeApp } from './compose.ts';
 
 async function main(argv: string[]): Promise<void> {
   const { values: flags, positionals } = parseCommandLine(argv);
@@ -12,7 +12,7 @@ async function main(argv: string[]): Promise<void> {
   const command = Object.hasOwn(COMMANDS, cmd) ? COMMANDS[cmd] : undefined;
   if (!command) die(`unknown command "${cmd}"\n\n${HELP}`);
 
-  const db = openDb();
+  const db = composeApp();
   const repoName: CommandContext['repoName'] = (id) => db.getRepo(id)?.name ?? `repo${id}`;
   await command({ db, cmd, rest, flags, repoName });
   db.close();

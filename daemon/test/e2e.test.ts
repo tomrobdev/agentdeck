@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, test } from 'node:test';
 import type { Repo } from '../src/domain/repos/repo.ts';
-import { asRepoId } from './fixtures.ts';
+import { asRepoId, testApp } from './fixtures.ts';
 import { stopReasonOf } from '../src/domain/work/task.ts';
 
 const REPO = asRepoId(1); // the one repo this file registers
@@ -22,7 +22,7 @@ const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
 const { parseStatus } = await import('../src/domain/runs/run.ts');
 
 const repoPath = join(home, 'demo');
-const db = openDb(join(home, 'test.db'));
+const db = testApp(openDb(join(home, 'test.db')));
 
 function sh(cwd: string, ...args: string[]) {
   return execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
