@@ -6,8 +6,22 @@ import { cut } from '../../../../daemon/src/domain/shared/index.ts';
 import StatusIcon from '../ui/StatusIcon.vue';
 
 // Linked tasks as a layered graph: builds-on edges solid, after edges dashed, a stuck chain outlined in the blocked colour.
-const props = defineProps<{ all: TaskSummary[]; shown: TaskSummary[]; selected: number | null; showFinished: boolean }>();
-const emit = defineEmits<{ open: [id: number]; select: [id: number] }>();
+const props = defineProps<{
+  all: TaskSummary[];
+  shown: TaskSummary[];
+  selected: number | null;
+  showFinished: boolean;
+  /** The tasks picked for a bulk action. */
+  picked?: number[];
+}>();
+// A shift-click picks the task with the unfinished tasks it builds on (`pickChain`), and does not open the page.
+const emit = defineEmits<{ open: [id: number]; select: [id: number]; pickChain: [id: number] }>();
+
+function onClick(e: MouseEvent, id: number) {
+  emit('select', id);
+  if (e.shiftKey) emit('pickChain', id);
+  else emit('open', id);
+}
 
 const PAD = 16;
 const { nodeWidth: W, nodeHeight: H } = DEFAULT_SIZE;
@@ -78,7 +92,7 @@ const dim = (id: number) => lit.value !== null && !lit.value.has(id);
         :data-stuck="stuck.has(n.id) || undefined"
         tabindex="0"
         role="button"
-        @click="(emit('select', n.id), emit('open', n.id))"
+        @click="onClick($event, n.id)"
         @focus="emit('select', n.id)"
         @keydown.enter.prevent="emit('open', n.id)"
         @mouseenter="hover = n.id"
@@ -88,8 +102,8 @@ const dim = (id: number) => lit.value !== null && !lit.value.has(id);
           :width="W"
           :height="H"
           rx="6"
-          fill="var(--panel-2)"
-          :stroke="stuck.has(n.id) ? 'var(--blocked)' : selected === n.id ? 'var(--accent)' : 'var(--border)'"
+          :fill="picked?.includes(n.id) ? 'color-mix(in srgb, var(--accent) 18%, var(--panel-2))' : 'var(--panel-2)'"
+          :stroke="stuck.has(n.id) ? 'var(--blocked)' : selected === n.id || picked?.includes(n.id) ? 'var(--accent)' : 'var(--border)'"
           :stroke-width="stuck.has(n.id) || selected === n.id ? 2 : 1"
         />
         <rect width="4" :height="H" rx="2" fill="var(--c)" />

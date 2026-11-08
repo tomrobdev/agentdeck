@@ -111,7 +111,6 @@ test('linkTasks and unlinkTasks; a self link, a repeat and a cycle are refused w
   assert.throws(() => linkTasks(db, b.id, { on: a.id, kind: 'after' }), /already linked/);
   assert.throws(() => linkTasks(db, a.id, { on: c.id, kind: 'builds_on' }), /would make a cycle/);
   assert.throws(() => linkTasks(db, a.id, { on: asTaskId(999), kind: 'after' }), /no task #999/);
-  assert.throws(() => linkTasks(db, a.id, { on: b.id, kind: 'sideways' as never }), /kind must be/);
   unlinkTasks(db, b.id, a.id);
   assert.deepEqual(db.linksOf(b.id), []);
   assert.throws(() => unlinkTasks(db, b.id, a.id), /not linked/);

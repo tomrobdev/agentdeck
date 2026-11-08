@@ -526,8 +526,37 @@ test('a dependency PR closed without merging notifies when the refresh sees it',
 
   states = { 'https://x/pull/40': 'closed' };
   await refreshPrStates(db);
+  assert.equal(stuckNotices(dep.id).length, 0, "the closed PR is written pending: the outbox warns, on the daemon's tick");
+  await followUpPending(db);
   assert.match(stuckNotices(dep.id)[0].title, /PR was closed without merging/);
   assert.equal(waiting(db.getTask(later.id)!)?.stuck, `#${dep.id}'s PR was closed without merging`);
+  db.applyEvent(later.id, { type: 'cancel' });
+});
+
+test("closing a PR from the CLI writes a pending row, and the daemon's tick warns the stuck dependents without opening a PR", async () => {
+  updateRepo(db, 'demo', { pr_mode: 'ready' });
+  const dep = db.addTask({ repo_id: repo.id, title: 'closed by a person', prompt: 'FAKE_DONE close' });
+  const later = await addTask(db, { repo: 'demo', prompt: 'builds on the closed pr', builds_on: [dep.id] });
+  await drain();
+  assert.equal(db.getTask(dep.id)!.pr?.state, 'open');
+  await followUpPending(db);
+  const opened = calls.create.length;
+
+  await closeTaskPr(db, dep.id);
+  const row = db.eventsForTask(dep.id).at(-1)!;
+  assert.equal(row.type, 'pr_closed');
+  assert.deepEqual(
+    db.pendingFollowUps().map((r) => [r.task_id, r.type]),
+    [[dep.id, 'pr_closed']],
+    'the row is pending',
+  );
+  assert.equal(stuckNotices(dep.id).length, 0, 'nothing is warned until the tick');
+
+  assert.equal(await followUpPending(db), 1);
+  assert.match(stuckNotices(dep.id)[0].title, /can't start: .*PR was closed without merging/);
+  assert.equal(calls.create.length, opened, 'no new PR is opened for the task a person closed');
+  assert.equal(db.getTask(dep.id)!.pr?.state, 'closed');
+  assert.deepEqual(db.pendingFollowUps(), []);
   db.applyEvent(later.id, { type: 'cancel' });
 });
 

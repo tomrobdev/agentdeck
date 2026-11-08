@@ -67,5 +67,5 @@ The dashboard's routes, and the use case each calls.
 | GET    | `/api/tasks/:id`                   | `taskIdParam`                                  |
 | POST   | `/api/tasks/:id`                   | `actions.editTask`, `actions.promptWarnings`   |
 | POST   | `/api/tasks/merge-requests`        | `actions.requestMerges`                        |
-| GET    | `/api/tasks`                       | `asTaskId`                                     |
+| GET    | `/api/tasks`                       | `parseId`                                      |
 | POST   | `/api/tasks`                       | `actions.addTask`, `actions.promptWarnings`    |

@@ -11,7 +11,7 @@ import type { Task } from '../../domain/work/index.ts';
 import { errorMessage } from '../../domain/shared/index.ts';
 import { landsAfter } from '../work/dependencies.ts';
 import { measureBranch } from '../work/files.ts';
-import { settle, settlePr } from './settle.ts';
+import { settle } from './settle.ts';
 import { notifyLater } from '../operations/notifications.ts';
 
 /** How often the scheduler re-reads the state of open PRs. */
@@ -124,7 +124,7 @@ async function refreshOne(app: App, task: Task, log: (msg: string) => void): Pro
   const state = pr.state;
   if (state !== task.pr?.state) {
     // Guarded on the PR still being open: a merge recorded while GitHub was being asked stays.
-    const applied = state === 'closed' ? settlePr(app, task.id, { type: 'closed' }) : app.recordPr(task.id, { type: 'seen', state });
+    const applied = state === 'closed' ? app.recordPr(task.id, { type: 'closed' }) : app.recordPr(task.id, { type: 'seen', state });
     if (applied) log(`task ${task.id}: PR is ${state}`);
     if (
       applied &&

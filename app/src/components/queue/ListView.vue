@@ -27,6 +27,7 @@ const emit = defineEmits<{
   toggle: [key: string];
   select: [id: number];
   pick: [id: number, range: boolean];
+  pickGroup: [ids: number[]];
   open: [id: number];
   act: [kind: BoardMove | 'sync', id: number];
   merge: [id: number];
@@ -68,6 +69,18 @@ watch(
     <template v-for="g in groups" :key="g.key">
       <section v-if="g.tasks.length || showEmpty">
         <div v-if="groupBy !== 'none'" class="sticky top-0 z-1 flex items-center border-b border-border bg-panel-2 pr-4">
+          <Checkbox
+            v-if="g.tasks.length"
+            class="pl-4"
+            :label="`Pick every task in ${g.label}`"
+            :model-value="g.tasks.every((t) => picked?.includes(t.id))"
+            @update:model-value="
+              emit(
+                'pickGroup',
+                g.tasks.map((t) => t.id),
+              )
+            "
+          />
           <button
             class="flex min-w-0 flex-1 items-center gap-2 rounded-none border-0 bg-transparent px-4 py-1.5 font-semibold"
             :aria-expanded="!collapsed.includes(g.key)"

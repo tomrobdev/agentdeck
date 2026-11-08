@@ -51,7 +51,6 @@ export const FILTER_STATES: { key: string; label: string; test: Test }[] = [
   { key: 'failed', label: 'Failed', test: is('failed') },
   { key: 'review', label: 'Review', test: isReview },
   { key: 'done', label: 'Done', test: is('done') },
-  { key: 'pr-open', label: 'PR open', test: isReview },
   { key: 'merged', label: 'Merged', test: isMerged },
   { key: 'pr-closed', label: 'PR closed', test: (t) => t.status === 'done' && t.pr_state === 'closed' },
   { key: 'no-pr', label: 'No PR', test: (t) => t.status === 'done' && !t.pr_url },
@@ -63,10 +62,14 @@ const stateTests = (keys: string[]): Test => {
   return (t) => tests.some((test) => test(t));
 };
 
-/** Names for several states at once, for the CLI. A stuck task needs you, so it isn't active. */
+/**
+ * Names for the CLI beside the states: several at once, or another name for one (`pr-open`, the dashboard's Review). A stuck
+ * task needs you, so it isn't active.
+ */
 const GROUPS: Record<string, Test> = {
   active: (t) => stateTests(['running'])(t) || (t.status === 'queued' && !isStuck(t)),
   'needs-you': stateTests(['blocked', 'failed', 'stuck']),
+  'pr-open': isReview,
 };
 
 /** What the dashboard's "need you" chip filters by: proposals to approve, blocked tasks and PRs to review. Not the `needs-you` group. */
