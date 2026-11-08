@@ -5,6 +5,19 @@ export type { Checkout } from './checkout.ts';
 export { isAutoMergeReason, latestReviewNote, mergeReason, prEventReason } from './history.ts';
 export type { PendingFollowUp, PrEvent, TaskEventRow, TaskEventType } from './history.ts';
 export { parseTaskIds } from './ids.ts';
+export {
+  autoMergeCheckChanges,
+  autoMergeSettingChanges,
+  mergedPrChanges,
+  mergeRequestChanges,
+  mergeRequestCheckChanges,
+  noMergeRequestChanges,
+  prChanges,
+  prChecksChanges,
+  prChecksOpenedChanges,
+  questionChanges,
+} from './task-writes.ts';
+export type { TaskChanges } from './task-writes.ts';
 export { followUpsOf, followUpsOfRow } from './follow-ups.ts';
 export type { FollowUp } from './follow-ups.ts';
 export { MAX_RESTARTS, TASK_STATUSES, fromStatuses, nextStatus, personEvents, transition } from './lifecycle.ts';

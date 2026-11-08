@@ -1489,6 +1489,26 @@ The fields a state carries, each null where its status has none: how the columns
 | `updated_at`   | `string`                                                                                                      |                                                                                                               |
 | `status`       | `"failed" \| "blocked" \| "proposed" \| "done" \| "cancelled" \| "queued" \| "running" \| "cancel_requested"` |                                                                                                               |
 
+### TaskChanges
+
+The fields of a task a write sets, named as its columns are; the store stores the documents as JSON. `'now'` is a timestamp it fills in.
+
+| Field                    | Type                                   | Comment |
+| ------------------------ | -------------------------------------- | ------- |
+| `question?`              | `UnblockQuestion \| null \| undefined` |         |
+| `auto_merge?`            | `boolean \| null \| undefined`         |         |
+| `auto_merge_check?`      | `AutoMergeCheck \| null \| undefined`  |         |
+| `auto_merge_checked_at?` | `"now" \| null \| undefined`           |         |
+| `merge_requested_at?`    | `"now" \| null \| undefined`           |         |
+| `merge_request_method?`  | `MergeMethod \| null \| undefined`     |         |
+| `merge_request_check?`   | `AutoMergeCheck \| null \| undefined`  |         |
+| `pr_url?`                | `string \| undefined`                  |         |
+| `pr_state?`              | `PrState \| undefined`                 |         |
+| `pr_checks?`             | `StoredChecks \| null \| undefined`    |         |
+| `pr_checks_opened?`      | `CheckCounts \| null \| undefined`     |         |
+| `pr_checks_merged?`      | `CheckCounts \| null \| undefined`     |         |
+| `merge_method?`          | `MergeMethod \| undefined`             |         |
+
 ### TaskCore
 
 What every task has, whatever its status.
