@@ -267,7 +267,11 @@ export const MIGRATIONS: Migration[] = [
   // does not take the setting's default, so the kind is added to it, unless a person turned every kind off.
   `UPDATE settings SET value = value || ',review_due'
    WHERE key = 'notify_events' AND value <> '' AND ',' || value || ',' NOT LIKE '%,review_due,%';`,
-  // 34: escalation (domain/runs/escalate.ts). repos.escalate lets a retry after a failure a stronger model may fix run one
+  // 34: how a failed or blocked work run ended (domain/runs/translate/summary.ts's RunEnd) and whether its last test run
+  // failed, kept on the row because the log is not (a removed repo's logs are deleted). Older runs read as unknown.
+  `ALTER TABLE runs ADD COLUMN run_end TEXT;
+   ALTER TABLE runs ADD COLUMN last_test_failed INTEGER;`,
+  // 35: escalation (domain/runs/escalate.ts). repos.escalate lets a retry after a failure a stronger model may fix run one
   // model up (on by default); the change is an `escalate` row in task_events.
   'ALTER TABLE repos ADD COLUMN escalate INTEGER NOT NULL DEFAULT 1;',
 ];

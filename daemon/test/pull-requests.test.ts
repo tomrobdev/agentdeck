@@ -30,9 +30,13 @@ const { testApp } = await import('./fixtures.ts');
 const { prCommands } = await import('../src/cli/pull-requests.ts');
 const { mergeCheck, parsePrDetails } = await import('../src/domain/landing/merge.ts');
 type PrDetails = import('../src/domain/landing/merge.ts').PrDetails;
-const { dependencyOf, liveLinks, waitingFor } = await import('../src/application/work/dependencies.ts');
+const { liveLinks } = await import('../src/application/work/dependencies.ts');
+const { startState, waitingFor } = await import('../src/domain/work/index.ts');
 /** What a task waits for on its builds-on links, read from the database now. */
-const waiting = (t: import('../src/domain/work/task.ts').Task) => waitingFor(t, dependencyOf(t, liveLinks(db)));
+const waiting = (t: import('../src/domain/work/task.ts').Task) => {
+  const links = liveLinks(db);
+  return waitingFor(t, startState(t, links.linksOf(t.id), links.target));
+};
 const { cancelTask } = await import('../src/application/actions.ts');
 
 const db = openDb(join(home, 'test.db'));

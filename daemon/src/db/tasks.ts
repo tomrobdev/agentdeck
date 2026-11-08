@@ -1,4 +1,4 @@
-// Tasks. Every status change goes through applyEvent (or claimNextTask), guarded by the current status.
+// Tasks. Every status change goes through applyEvent, the claim included, guarded by the current status.
 import { type SQL, and, asc, count, desc, eq, exists, inArray, isNotNull, isNull, lt, ne, not, notExists, or, sql } from 'drizzle-orm';
 import { type AnySQLiteColumn, alias } from 'drizzle-orm/sqlite-core';
 import type { DatabaseSync } from 'node:sqlite';
@@ -30,7 +30,6 @@ import {
   type TaskStatus,
   followUpsOf,
   fromStatuses,
-  nextStatus,
   transition,
 } from '../domain/work/index.ts';
 import type { LinkKind } from '../domain/work/index.ts';
@@ -134,14 +133,23 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         .where(and(eq(buildsOn.task_id, t.id), eq(buildsOn.kind, 'builds_on'), notExists(unmet))),
     );
   };
-  /** The task row `t` has no unblock run going: a person's retry during one waits for it to stop before a claim. */
+  /**
+   * The task row `t` has no unblock or review run going: a retry during one (a person's, or the review run's own) waits
+   * for it to end before a claim, so a review run's retry is claimed only once its review is stored.
+   */
   const notUnblocking = () =>
     notExists(
       orm
         .select({ id: runs.id })
         .from(runs)
-        .where(and(eq(runs.task_id, t.id), eq(runs.kind, 'unblock'), isNull(runs.ended_at))),
+        .where(and(eq(runs.task_id, t.id), inArray(runs.kind, ['unblock', 'review']), isNull(runs.ended_at))),
     );
+  /**
+   * The task row `t` may be claimed: in a status a claim is allowed from (queued), not waiting on a task it builds on, with no
+   * unblock run going, in a repo work may start in. The one definition, for the claim and `hasQueued`; mirrors `startWait`
+   * in domain/work/start.ts, but for the slots, which the scheduler counts.
+   */
+  const claimable = () => and(inArray(t.status, fromStatuses({ type: 'claim' })), notWaiting(), notUnblocking(), inOpenRepo(t.repo_id));
   const countWhere = (where: SQL | undefined) => orm.select({ n: count() }).from(tasks).where(where).get()?.n ?? 0;
 
   const getTask = (id: TaskId): Task | undefined => mapFound(orm.select(TASK_COLUMNS).from(tasks).where(eq(tasks.id, id)).get(), toTask);
@@ -200,6 +208,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
                 eq(tasks.id, id),
                 eq(tasks.status, cur.status),
                 eq(tasks.attempts, cur.attempts),
+                eq(tasks.max_attempts, cur.max_attempts),
                 eq(tasks.restarts, cur.restarts),
                 prStateAsRead(cur),
               ),
@@ -339,14 +348,9 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         .limit(limit)
         .all();
     },
-    /** Whether a task could be claimed: queued, not waiting on a dependency, in a repo that isn't paused. */
+    /** Whether a task could be claimed (`claimable`). */
     hasQueued(): boolean {
-      return !!orm
-        .select({ id: t.id })
-        .from(t)
-        .where(and(eq(t.status, 'queued'), notWaiting(), notUnblocking(), inOpenRepo(t.repo_id)))
-        .limit(1)
-        .get();
+      return !!orm.select({ id: t.id }).from(t).where(claimable()).limit(1).get();
     },
     /**
      * Blocked tasks in repos that have auto_unblock on and may start work (not paused, not archived), by priority then
@@ -365,6 +369,23 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         .all()
         .map(toTask)
         .filter(isBlocked);
+    },
+    /**
+     * Done tasks with an open pull request in repos that have auto_review on and may start work (not paused, not
+     * archived), by priority then age: the ones a review run may be for. Whether one may start is `reviewable`'s to say.
+     */
+    reviewCandidates(): Task[] {
+      const reviewing = orm
+        .select({ id: repos.id })
+        .from(repos)
+        .where(and(eq(repos.auto_review, 1), isNull(repos.paused_reason), isNull(repos.archived_at)));
+      return orm
+        .select(TASK_COLUMNS)
+        .from(tasks)
+        .where(and(eq(tasks.status, 'done'), eq(tasks.pr_state, 'open'), inArray(tasks.repo_id, reviewing)))
+        .orderBy(desc(tasks.priority), asc(tasks.id))
+        .all()
+        .map(toTask);
     },
     /**
      * Leave an unblock run's question on a blocked task, with an `unblock_ask` history row whose
@@ -434,32 +455,18 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         .map(toTask);
     },
     /**
-     * Atomically claim the next queued task of a repo that isn't paused, or undefined if none.
-     * A task waits until every task it builds on is done and, if that has a PR, the PR is merged.
+     * Claim the next claimable task (`claimable`), by priority then id, or undefined if none: the claim goes through
+     * applyEvent like every status change, trying the next task if its guarded write misses. The read and the claim are one
+     * unit, so an unblock run cannot start between them.
      */
     claimNextTask(): Task | undefined {
-      const from = fromStatuses({ type: 'claim' });
-      const to = nextStatus(from[0], { type: 'claim' })!;
-      const next = orm
-        .select({ id: t.id })
-        .from(t)
-        .where(and(inArray(t.status, from), notWaiting(), notUnblocking(), inOpenRepo(t.repo_id)))
-        .orderBy(desc(t.priority), asc(t.id))
-        .limit(1);
       return atomically(db, () => {
-        const row = mapFound(
-          orm
-            .update(tasks)
-            // guard: the builder has no column arithmetic, and the attempt must count in the same guarded write as the claim
-            .set({ status: to, attempts: sql`${tasks.attempts} + 1`, updated_at: NOW_SQL })
-            .where(and(inArray(tasks.status, from), eq(tasks.id, next)))
-            .returning(TASK_COLUMNS)
-            .get(),
-          toTask,
-        );
-        // A claim is allowed from one status only (queued), so that is where the task came from.
-        if (row) recordEvent(orm, row.id, 'claim', from[0], to);
-        return row;
+        const ids = orm.select({ id: t.id }).from(t).where(claimable()).orderBy(desc(t.priority), asc(t.id)).all();
+        for (const { id } of ids) {
+          const claimed = applyEvent(id, { type: 'claim' });
+          if (claimed) return claimed.task;
+        }
+        return undefined;
       });
     },
     /**

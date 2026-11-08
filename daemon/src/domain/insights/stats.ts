@@ -2,7 +2,7 @@
 import type { RepoId, TaskId } from '../shared/index.ts';
 import { minutesBetween, weekOf } from '../shared/index.ts';
 import { num, pct, table } from './report-text.ts';
-import { INTERRUPTED } from '../runs/index.ts';
+import { INTERRUPTED, type RunEnd } from '../runs/index.ts';
 
 /** One work run with the status of the task it belongs to. Resolve runs are never given here. */
 export interface StatRun {
@@ -17,6 +17,9 @@ export interface StatRun {
   task_status: string;
   /** The model the run was started with; null for a run from before runs recorded it. */
   model: string | null;
+  /** How the run ended and whether its last test run failed (`runEndOf`); absent for a run that ended any other way or before this was kept. */
+  run_end?: RunEnd | null;
+  last_test_failed?: boolean | null;
 }
 
 export interface Interval {

@@ -154,6 +154,8 @@ export type StartWait =
   | { kind: 'repo-paused'; reason: string }
   /** `on`: every task it builds on still on its way, or the one it is stuck on (with `stuck`, the reason). */
   | { kind: 'dependency'; on: TaskId[]; stuck: string | null }
+  /** An unblock run for the task is still going: a person retried it meanwhile, and it starts once that run stops. */
+  | { kind: 'unblocking' }
   | { kind: 'slots'; running: number; max: number };
 
 /** One link: the task it points at, its kind and where it stands (unlanded is an after link whose other task has not landed yet). */
@@ -977,6 +979,32 @@ export interface ScorecardMeasures {
   pr_checks: { recorded: number; green: number; rate: number | null };
 }
 
+/** One cause of failures and how often it came up, such as "CI › Coverage floors" or "used its turns, tests failing". */
+export interface FailureCause {
+  cause: string;
+  count: number;
+}
+
+/** What failures were made of in one week and repo (`agentdeck stats --failures`). */
+export interface FailureWeek {
+  week: string;
+  repo: string;
+  /** Failing checks by step on the head the PR first settled on, and on the head it merged on. */
+  checks_opened: FailureCause[];
+  checks_merged: FailureCause[];
+  /** Failed or blocked work runs by how they ended; "unknown end" for runs from before it was kept. */
+  runs: FailureCause[];
+  runs_failed: number;
+  /** Of those, the runs a later run of the task then finished. */
+  runs_fixed: number;
+}
+
+/** The failures per week and repo, and the most frequent causes over all of them. */
+export interface FailureReport {
+  weeks: FailureWeek[];
+  top: (FailureCause & { kind: 'check' | 'run'; where: 'opened' | 'merged' | 'run' })[];
+}
+
 /** GET /api/stats?repo=<name or id>&since=<date>&by=week|model: what `agentdeck stats --json` prints. */
 export interface Stats {
   repos: { repo: string; measures: RunMeasures }[];
@@ -988,6 +1016,8 @@ export interface Stats {
    * the interventions counted against each; empty unless `by` is model. Missing from a daemon that predates it.
    */
   models?: { model: string; measures: RunMeasures; interventions: number }[];
+  /** What failures are made of; missing from a daemon that predates it. */
+  failures?: FailureReport;
   scorecard: {
     since: string | null;
     by: 'week' | null;

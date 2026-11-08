@@ -83,7 +83,12 @@ function readStoredChecks(json: string | null): StoredChecks | null {
 export function readCounts(json: string | null): CheckCounts | null {
   const c = parseJson(json) as Partial<CheckCounts> | null | undefined;
   if (!c || typeof c.total !== 'number' || typeof c.failing !== 'number' || typeof c.pending !== 'number') return null;
-  return { total: c.total, failing: c.failing, pending: c.pending };
+  const failures = Array.isArray(c.failures)
+    ? c.failures.flatMap((f) =>
+        f && typeof f.name === 'string' ? [{ name: f.name, step: typeof f.step === 'string' ? f.step : null }] : [],
+      )
+    : undefined;
+  return { total: c.total, failing: c.failing, pending: c.pending, ...(failures ? { failures } : {}) };
 }
 
 /** The task columns the pull request is made of: a task has them as `pr`, not as fields. */
@@ -216,7 +221,9 @@ export function repoColumns(fields: Partial<Repo>): Partial<RepoRow> {
   };
   return Object.fromEntries(Object.entries(columns).filter(([, v]) => v !== undefined));
 }
-export const toRun = (row: RunRow): Run => ({ ...row, tests_passed: row.tests_passed === null ? null : row.tests_passed === 1 });
+const flag = (v: number | null): boolean | null => (v === null ? null : v === 1);
+
+export const toRun = (row: RunRow): Run => ({ ...row, tests_passed: flag(row.tests_passed), last_test_failed: flag(row.last_test_failed) });
 
 /** What a `.get()` goes through: its row mapped, if there was one. */
 export const mapFound = <Row, Model>(row: Row | undefined, toModel: (row: Row) => Model): Model | undefined =>

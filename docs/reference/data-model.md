@@ -103,6 +103,8 @@ erDiagram
     text model "nullable"
     text model_id "nullable"
     text diff_hash "nullable"
+    text run_end "nullable"
+    integer last_test_failed "nullable"
   }
   settings {
     text key PK

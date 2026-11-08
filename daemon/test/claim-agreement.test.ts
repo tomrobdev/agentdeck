@@ -11,13 +11,14 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { openDb } = await import('./open-db.ts');
 const { startWaits } = await import('../src/application/capacity/queue.ts');
-const { dependencyOf, liveLinks } = await import('../src/application/work/dependencies.ts');
+const { liveLinks } = await import('../src/application/work/dependencies.ts');
+const { startState } = await import('../src/domain/work/link.ts');
 
-/** What each task waits for, from the queue state and links as they are now. */
+/** What each task waits for, from the queue state, the unblock runs going and the links as they are now. */
 function waits(db: ReturnType<typeof openDb>) {
   const waitOf = startWaits(db);
   const links = liveLinks(db);
-  return (t: import('../src/domain/work/task.ts').Task) => waitOf(t, dependencyOf(t, links));
+  return (t: import('../src/domain/work/task.ts').Task) => waitOf(t, startState(t, links.linksOf(t.id), links.target));
 }
 
 test('claimNextTask picks the first queued task, by priority then id, that has no startWait', () => {
@@ -156,5 +157,33 @@ test('claimNextTask and startState agree for tasks with several links, of either
     claimed++;
   }
   assert.ok(claimed > 0);
+  db.close();
+});
+
+test('claimNextTask and startWait agree on a task an unblock run keeps waiting, before, during and after the run', () => {
+  const db = openDb(':memory:');
+  const repo = db.addRepo({ name: 'unblock', path: '/tmp/unblock', base_branch: 'main' });
+  db.setPaused(false);
+  // `held` is retried by a person while its unblock run goes; `other`, of lower priority, is free to start.
+  const held = db.addTask({ repo_id: repo.id, title: 'held', prompt: 'p', priority: 5 });
+  assert.ok(db.applyEvent(held.id, { type: 'claim' }));
+  assert.ok(db.applyEvent(held.id, { type: 'finish', outcome: 'blocked' }, { reason: 'stuck' }));
+  const run = db.startRun(held.id, 1, '/tmp/unblock.log', 'unblock');
+  assert.ok(db.applyEvent(held.id, { type: 'retry' }));
+  const other = db.addTask({ repo_id: repo.id, title: 'other', prompt: 'p' });
+
+  /** What the domain says of `held`, which the claim's SQL must agree with: the first claim takes `held` only when it may start. */
+  const heldWait = () => waits(db)(db.getTask(held.id)!);
+  assert.deepEqual(heldWait(), { kind: 'unblocking' }, 'the unblock run is going');
+  assert.equal(db.hasQueued(), true, 'other may start');
+  assert.equal(db.claimNextTask()?.id, other.id, 'the claim passes over the task the unblock run keeps waiting');
+  assert.equal(db.claimNextTask(), undefined);
+  assert.equal(db.hasQueued(), false);
+
+  db.finishRun(run, { outcome: 'cancelled' });
+  const wait = heldWait();
+  assert.ok(wait === null || wait.kind === 'slots', 'the run stopped: nothing but a slot to wait for');
+  assert.equal(db.hasQueued(), true);
+  assert.equal(db.claimNextTask()?.id, held.id);
   db.close();
 });

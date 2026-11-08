@@ -21,7 +21,7 @@ const TO_QUEUED: [string, TaskEvent, 'blocked' | 'done' | 'running'][] = [
   ['review_retry', { type: 'review_retry' }, 'done'],
   ['rate_limited', { type: 'rate_limited' }, 'running'],
   ['recover', { type: 'recover' }, 'running'],
-  ['finish:failed:retry', { type: 'finish', outcome: 'failed', retry: true }, 'running'],
+  ['finish:failed:retry', { type: 'finish', outcome: 'failed' }, 'running'],
 ];
 
 for (const [name, event, from] of TO_QUEUED) {
@@ -52,7 +52,7 @@ test('transition leaves no stop reason whenever it leads to queued', () => {
         : from === 'done'
           ? { status: from, done_by: null }
           : { status: from };
-    const t = transition({ ...state, id: asTaskId(1), attempts: 1, restarts: 0, pr: null }, event);
+    const t = transition({ ...state, id: asTaskId(1), attempts: 1, max_attempts: 3, restarts: 0, pr: null }, event);
     assert.deepEqual(t?.state, { status: 'queued' }, name);
   }
 });

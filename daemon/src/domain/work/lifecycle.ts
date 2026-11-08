@@ -1,10 +1,10 @@
 // The task state machine, as data. Pure: no I/O, so it can be tested exhaustively.
-// applyEvent and claimNextTask (db/tasks.ts) are the only things that write a status, and each asks this module first.
+// applyEvent (db/tasks.ts) is the only thing that writes a status, and it asks this module first.
 import type { TaskId } from '../shared/index.ts';
 import type { PullRequest } from '../landing/index.ts';
 import type { TaskEventType } from './history.ts';
 import type { Needs } from './needs.ts';
-import { type TaskCore, type TaskState, stopReasonOf } from './task.ts';
+import { type TaskCore, type TaskState, attemptsLeft, stopReasonOf } from './task.ts';
 import { type TaskChanges, statusChangePrChanges } from './task-writes.ts';
 
 export type TaskStatus =
@@ -24,7 +24,7 @@ export type TaskEvent =
   | { type: 'claim' } // the scheduler picked it up
   | { type: 'finish'; outcome: 'done' | 'cancelled' } // a run ended
   | { type: 'finish'; outcome: 'blocked'; environment?: boolean } // environment = the environment is to blame: the attempt is given back
-  | { type: 'finish'; outcome: 'failed'; retry: boolean } // a run failed; retry = attempts remain
+  | { type: 'finish'; outcome: 'failed'; retry?: false } // a run failed: requeued while attempts remain (`attemptsLeft`), unless retry is false (the worker crashed)
   | { type: 'rate_limited' } // a run hit the usage limit; not the task's fault
   | { type: 'conflict' } // a done task's branch conflicts with its base and the resolve run could not fix it
   | { type: 'cancel' }
@@ -91,21 +91,30 @@ export const TRANSITIONS: Record<TaskStatus, TaskStatus[]> = Object.fromEntries(
   TASK_STATUSES.map((from) => [from, [...new Set(Object.values(RULES).flatMap((r) => (r[from] ? [r[from]] : [])))]]),
 ) as Record<TaskStatus, TaskStatus[]>;
 
-/** The rule `e` follows. `restarts` are the task's restarts so far, which decide whether a recover is one too many. */
-export function ruleKey(e: TaskEvent, restarts = 0): RuleKey {
+/**
+ * The counters of a task that choose between an event's rules: its restarts so far, which decide whether a recover is one
+ * too many, and its attempts, which decide whether a failed run is requeued. A counter left out counts as 0.
+ */
+export type RuleCounters = Partial<Pick<TaskCore, 'restarts' | 'attempts' | 'max_attempts'>>;
+
+/** The rule `e` follows for a task with `counters`. */
+export function ruleKey(e: TaskEvent, counters: RuleCounters = {}): RuleKey {
   switch (e.type) {
     case 'finish':
-      return e.outcome === 'failed' ? (e.retry ? 'finish:failed:retry' : 'finish:failed') : `finish:${e.outcome}`;
+      if (e.outcome !== 'failed') return `finish:${e.outcome}`;
+      return e.retry !== false && attemptsLeft({ attempts: counters.attempts ?? 0, max_attempts: counters.max_attempts ?? 0 })
+        ? 'finish:failed:retry'
+        : 'finish:failed';
     case 'recover':
-      return restartsExhausted(restarts) ? 'recover:exhausted' : 'recover';
+      return restartsExhausted(counters.restarts ?? 0) ? 'recover:exhausted' : 'recover';
     default:
       return e.type;
   }
 }
 
-/** The status `event` leads to from `from` after `restarts` restarts, or undefined if the event isn't allowed there. */
-export function nextStatus(from: TaskStatus, event: TaskEvent, restarts = 0): TaskStatus | undefined {
-  return RULES[ruleKey(event, restarts)][from];
+/** The status `event` leads to from `from` for a task with `counters`, or undefined if the event isn't allowed there. */
+export function nextStatus(from: TaskStatus, event: TaskEvent, counters: RuleCounters = {}): TaskStatus | undefined {
+  return RULES[ruleKey(event, counters)][from];
 }
 
 export function canApply(from: TaskStatus, event: TaskEvent): boolean {
@@ -124,7 +133,7 @@ export function personEvents(t: { status: TaskStatus }): PersonEvent[] {
   return PERSON_EVENTS.filter((type) => canApply(t.status, { type }) && !(type === 'cancel' && t.status === 'proposed'));
 }
 
-/** Every status `event` is allowed from (for guards like `WHERE status IN (...)`). */
+/** Every status `event` is allowed from (for guards like `WHERE status IN (...)`). An event's rules share their from statuses. */
 export function fromStatuses(event: TaskEvent): TaskStatus[] {
   return Object.keys(RULES[ruleKey(event)]) as TaskStatus[];
 }
@@ -214,7 +223,8 @@ function eventTypeOf(to: TaskStatus, done: 'pr_merged' | 'mark_done' | 'finished
 }
 
 /** What `transition` reads of a task. */
-export type TransitionTask = TaskState & Pick<TaskCore, 'id' | 'attempts' | 'restarts'> & { pr: Pick<PullRequest, 'state'> | null };
+export type TransitionTask = TaskState &
+  Pick<TaskCore, 'id' | 'attempts' | 'max_attempts' | 'restarts'> & { pr: Pick<PullRequest, 'state'> | null };
 
 /** The counters an event sets, with their new values. A counter not listed is left as it is. */
 export interface TaskCounters {
@@ -261,15 +271,16 @@ export interface TransitionOptions {
 
 /**
  * What `event` does to `task`: the state it leads to, the new value of every counter it sets, what it does to the PR and the
- * domain events it makes; null if the event isn't allowed from the task's status. A cancelled outcome (the cancel
+ * domain events it makes; null if the event isn't allowed from the task's status. A failed run is requeued while the task has
+ * attempts left, unless the event forbids it (the worker crashed). A cancelled outcome (the cancel
  * wins from `cancel_requested`) changes no counter. A retry starts the task's restarts afresh, as it does its attempts: a
  * task once failed for restarts gets MAX_RESTARTS of them again.
  */
 export function transition(task: TransitionTask, event: TaskEvent, opts: TransitionOptions = {}): Transition | null {
-  const to = nextStatus(task.status, event, task.restarts);
+  const cause = ruleKey(event, task);
+  const to = RULES[cause][task.status];
   if (!to) return null;
   const environment = event.type === 'finish' && event.outcome === 'blocked' && event.environment === true;
-  const cause = ruleKey(event, task.restarts);
   const events: DomainEvent[] = [
     {
       type: domainEventType(cause, to),

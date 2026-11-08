@@ -12,7 +12,9 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 const { openDb } = await import('./open-db.ts');
 const { installNeeds, removeTaskWorktree, retryTask, syncNow } = await import('../src/application/actions.ts');
 const { isSyncing, markSyncing } = await import('../src/application/work/checkout-locks.ts');
-const { doneTask } = await import('./fixtures.ts');
+const { advance, doneTask } = await import('./fixtures.ts');
+const { TASK_STATUSES, WORKTREE_REMOVABLE_STATUSES } = await import('../src/domain/work/index.ts');
+type TaskStatus = (typeof TASK_STATUSES)[number];
 
 function setup() {
   const db = openDb(':memory:');
@@ -76,4 +78,25 @@ test('a sync that throws still clears its marker', async () => {
   // The same through syncTask: the repo is not a git repo, so the worktree step throws.
   await assert.rejects(syncNow(db, t.id));
   assert.ok(!isSyncing(db, t.id));
+});
+
+test('worktree removal refuses a task in any status but WORKTREE_REMOVABLE_STATUSES, saying why', async () => {
+  const { db, repo } = setup();
+  const dir = mkdtempSync(join(tmpdir(), 'agentdeck-sync-marker-rm-'));
+  const refusals: Partial<Record<TaskStatus, RegExp>> = {
+    queued: /: task is queued$/,
+    running: /: task is running$/,
+    cancel_requested: /: task is running$/,
+  };
+  for (const status of TASK_STATUSES) {
+    const added = db.addTask({ repo_id: repo.id, title: status, prompt: 'p', status: status === 'proposed' ? 'proposed' : 'queued' });
+    const t = status === 'proposed' ? added : advance(db, added.id, status);
+    assert.equal(t.status, status);
+    const refused = refusals[status];
+    assert.equal(WORKTREE_REMOVABLE_STATUSES.includes(status), !refused, status);
+    // A removable task with no worktree recorded is refused for that, after its status passed.
+    await assert.rejects(removeTaskWorktree(db, t.id), refused ?? /: task has no worktree$/, status);
+    db.setCheckout(t.id, { worktree: dir });
+    if (refused) await assert.rejects(removeTaskWorktree(db, t.id), refused, status);
+  }
 });

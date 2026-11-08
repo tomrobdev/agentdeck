@@ -23,8 +23,8 @@ const EVENT_OF: Record<RuleKey, TaskEvent> = {
   'finish:done': { type: 'finish', outcome: 'done' },
   'finish:blocked': { type: 'finish', outcome: 'blocked' },
   'finish:cancelled': { type: 'finish', outcome: 'cancelled' },
-  'finish:failed': { type: 'finish', outcome: 'failed', retry: false },
-  'finish:failed:retry': { type: 'finish', outcome: 'failed', retry: true },
+  'finish:failed': { type: 'finish', outcome: 'failed' },
+  'finish:failed:retry': { type: 'finish', outcome: 'failed' },
   rate_limited: { type: 'rate_limited' },
   conflict: { type: 'conflict' },
   cancel: { type: 'cancel' },
@@ -44,6 +44,7 @@ const taskFor = (key: RuleKey, from: TaskStatus) => ({
   ...stateIn(from),
   id,
   attempts: 1,
+  max_attempts: key === 'finish:failed:retry' ? 2 : 1,
   restarts: key === 'recover:exhausted' ? MAX_RESTARTS - 1 : 0,
   pr: null,
 });

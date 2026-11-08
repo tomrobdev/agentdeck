@@ -8,6 +8,7 @@ import { withoutUnscopedFileTools } from './translate/sandbox.ts';
 import { type Task, leftoversMessage } from '../work/index.ts';
 import { INTERRUPTED, type Run } from './run.ts';
 import { UNBLOCK_NOTE } from './unblock.ts';
+import { REVIEW_NOTE } from './review.ts';
 
 /**
  * Appended to every worker's system prompt; the worker parses the STATUS line. `testCmd` is the command
@@ -114,9 +115,9 @@ export function buildPrompt(
       : finished.attempt < task.attempts
         ? `Before that, the previous attempt ended as "${finished.outcome}".`
         : `Before that, a run of this attempt ended as "${finished.outcome}".`;
-  // An unblock run's note names itself (UNBLOCK_NOTE); a person's is what they asked to change.
-  const note =
-    reviewNote === null ? '' : reviewNote.startsWith(UNBLOCK_NOTE) ? `${reviewNote}\n` : `Changes requested in review:\n${reviewNote}\n`;
+  // An unblock or review run's note names itself (UNBLOCK_NOTE, REVIEW_NOTE); a person's is what they asked to change.
+  const named = reviewNote !== null && (reviewNote.startsWith(UNBLOCK_NOTE) || reviewNote.startsWith(REVIEW_NOTE));
+  const note = reviewNote === null ? '' : named ? `${reviewNote}\n` : `Changes requested in review:\n${reviewNote}\n`;
   return [
     review ? `${reviewPromptBlock(review)}\n` : '',
     // The review's own retry note is the review block; any other note (Fix checks, an unblock run) goes under it.
@@ -210,7 +211,8 @@ export function buildResolvePrompt(task: Pick<Task, 'id' | 'title' | 'prompt'>, 
  * claude session to continue (`resumableSession`), with `maxTurns` the turns it has left (`resumeMaxTurns`); everything
  * else, the system prompt and tool rules included, is the same as for a fresh run. `systemPrompt` is the worker's unless
  * the run is another kind (an unblock run ends with UNBLOCK lines, not a STATUS line). `run.model` is the model the run
- * starts with (`runModel`: the task's for a work run, the support model for the others).
+ * starts with (`runModel`: the task's for a work run, the support model for the others). `extra` adds tools denied on top of
+ * the ones always denied (a review run's `REVIEW_DENIED_TOOLS`) and arguments at the end (its `reviewSchemaArgs`).
  */
 export function claudeArgs(
   run: { model: string; max_turns: number },
@@ -221,6 +223,7 @@ export function claudeArgs(
   resume: string | null = null,
   maxTurns: number = run.max_turns,
   systemPrompt: string = workerSystemPrompt(testCmd),
+  extra: { disallowed?: string[]; args?: string[] } = {},
 ): string[] {
   return [
     '--settings',
@@ -246,7 +249,9 @@ export function claudeArgs(
     // Kept on top of the sandbox: the agent never pushes, sandbox or not.
     '--disallowedTools',
     ...ALWAYS_DISALLOWED_TOOLS,
+    ...(extra.disallowed ?? []),
     '--append-system-prompt',
     systemPrompt,
+    ...(extra.args ?? []),
   ];
 }
