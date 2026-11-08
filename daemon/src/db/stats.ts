@@ -1,11 +1,11 @@
 // The reads behind `agentdeck stats`: work runs with their task's repo and status, and tasks with their history.
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, isNotNull } from 'drizzle-orm';
 import type { RepoId } from '../domain/shared/index.ts';
-import type { ScorecardEvent, ScorecardTaskRow } from '../domain/insights/index.ts';
+import type { ScorecardEvent, ScorecardReviewRun, ScorecardRunReview, ScorecardTaskRow } from '../domain/insights/index.ts';
 import type { StatRun } from '../domain/insights/index.ts';
 import { readCounts } from './mappers.ts';
 import type { Orm } from './orm.ts';
-import { repos, runs, taskEvents, tasks } from './tables.ts';
+import { repos, reviews, runs, taskEvents, tasks } from './tables.ts';
 
 export function statsStore(orm: Orm) {
   return {
@@ -23,12 +23,15 @@ export function statsStore(orm: Orm) {
           denials: runs.denials,
           task_status: tasks.status,
           model: runs.model,
+          run_end: runs.run_end,
+          last_test_failed: runs.last_test_failed,
         })
         .from(runs)
         .innerJoin(tasks, eq(tasks.id, runs.task_id))
         .where(and(eq(runs.kind, 'work'), repo_id === undefined ? undefined : eq(tasks.repo_id, repo_id)))
         .orderBy(asc(runs.id))
-        .all();
+        .all()
+        .map(({ last_test_failed, ...run }) => ({ ...run, last_test_failed: last_test_failed === null ? null : last_test_failed === 1 }));
     },
     /** Every task, optionally of one repo, with its own auto-merge setting and its repo's. */
     scorecardTasks(repo_id?: RepoId): ScorecardTaskRow[] {
@@ -40,15 +43,17 @@ export function statsStore(orm: Orm) {
           auto_merge: tasks.auto_merge,
           repo_auto_merge: repos.auto_merge,
           pr_checks_opened: tasks.pr_checks_opened,
+          pr_checks_merged: tasks.pr_checks_merged,
         })
         .from(tasks)
         .innerJoin(repos, eq(repos.id, tasks.repo_id))
         .where(repo_id === undefined ? undefined : eq(tasks.repo_id, repo_id))
         .orderBy(asc(tasks.id))
         .all()
-        .map(({ auto_merge, repo_auto_merge, pr_checks_opened, ...task }) => ({
+        .map(({ auto_merge, repo_auto_merge, pr_checks_opened, pr_checks_merged, ...task }) => ({
           ...task,
           pr_checks_opened: readCounts(pr_checks_opened),
+          pr_checks_merged: readCounts(pr_checks_merged),
           auto_merge: auto_merge === null ? null : auto_merge === 1,
           repo_auto_merge: repo_auto_merge === 1,
         }));
@@ -69,6 +74,38 @@ export function statsStore(orm: Orm) {
         .innerJoin(tasks, eq(tasks.id, taskEvents.task_id))
         .where(repo_id === undefined ? undefined : eq(tasks.repo_id, repo_id))
         .orderBy(asc(taskEvents.id))
+        .all();
+    },
+    /** Every review run, optionally of one repo, oldest first, with its task's repo. */
+    scorecardReviewRuns(repo_id?: RepoId): ScorecardReviewRun[] {
+      return orm
+        .select({
+          task_id: runs.task_id,
+          repo_id: tasks.repo_id,
+          diff_hash: runs.diff_hash,
+          outcome: runs.outcome,
+          started_at: runs.started_at,
+        })
+        .from(runs)
+        .innerJoin(tasks, eq(tasks.id, runs.task_id))
+        .where(and(eq(runs.kind, 'review'), repo_id === undefined ? undefined : eq(tasks.repo_id, repo_id)))
+        .orderBy(asc(runs.id))
+        .all();
+    },
+    /** Every submitted review a review run left, optionally on one repo's tasks, oldest first. */
+    scorecardRunReviews(repo_id?: RepoId): ScorecardRunReview[] {
+      return orm
+        .select({ task_id: reviews.task_id, diff_hash: reviews.diff_hash, kind: reviews.kind })
+        .from(reviews)
+        .innerJoin(tasks, eq(tasks.id, reviews.task_id))
+        .where(
+          and(
+            eq(reviews.by, 'review_run'),
+            isNotNull(reviews.submitted_at),
+            repo_id === undefined ? undefined : eq(tasks.repo_id, repo_id),
+          ),
+        )
+        .orderBy(asc(reviews.id))
         .all();
     },
   };

@@ -93,14 +93,14 @@ What the daemon does after a task's status changes: each domain event `transitio
 
 State types in `domain/` that no rule table drives, and why.
 
-| State type         | Why                                                                                                                      |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------ |
-| `AutoMergeState`   | a verdict computed from the pull request each time, not a state with moves                                               |
-| `ChangeStatus`     | a git file change letter, read from git                                                                                  |
-| `CheckState`       | a value read from GitHub for each check, not a state a thing moves through                                               |
-| `HeadlineState`    | computed from the daemon and queue each time, not a state with moves                                                     |
-| `LinkState`        | computed from the linked task each time, not a state with moves                                                          |
-| `MergeRequestView` | a merge request is set, cleared and read as columns (domain/landing/merge-request.ts), not a state type with a table yet |
-| `PlanStepStatus`   | set from the plan page by a person or worker; any step may take any status                                               |
-| `PrState`          | a pull request moves by what GitHub reports (domain/landing/pr.ts), not by an event table yet                            |
-| `StartState`       | computed from a task's links each time, not a state with moves                                                           |
+| State type         | Why                                                                                                                                                                                                            |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AutoMergeState`   | a verdict computed from the pull request each time (in a repo with auto_review on, with the review run of its changes: it waits for one, and needs a person when it asked for changes), not a state with moves |
+| `ChangeStatus`     | a git file change letter, read from git                                                                                                                                                                        |
+| `CheckState`       | a value read from GitHub for each check, not a state a thing moves through                                                                                                                                     |
+| `HeadlineState`    | computed from the daemon and queue each time, not a state with moves                                                                                                                                           |
+| `LinkState`        | computed from the linked task each time, not a state with moves                                                                                                                                                |
+| `MergeRequestView` | a merge request is set, cleared and read as columns (domain/landing/merge-request.ts), not a state type with a table yet                                                                                       |
+| `PlanStepStatus`   | set from the plan page by a person or worker; any step may take any status                                                                                                                                     |
+| `PrState`          | a pull request moves by what GitHub reports (domain/landing/pr.ts), not by an event table yet                                                                                                                  |
+| `StartState`       | computed from a task's links each time, not a state with moves                                                                                                                                                 |

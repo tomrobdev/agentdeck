@@ -3,15 +3,15 @@ import { type Ref, computed } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { type Review, type ReviewComment, reviewsQuery } from '../api';
 
-/** A comment with whether it is still part of a draft. */
-export type ShownComment = ReviewComment & { draft: boolean };
+/** A comment with whether it is still part of a draft, and who left its review: a person or the review run. */
+export type ShownComment = ReviewComment & { draft: boolean; by: Review['by'] };
 
 export function useReviews(taskId: Ref<number>) {
   const q = useQuery(computed(() => reviewsQuery(taskId.value)));
   const reviews = computed(() => q.data.value ?? []);
   const draft = computed<Review | null>(() => reviews.value.find((r) => r.submitted_at === null) ?? null);
   const comments = computed<ShownComment[]>(() =>
-    reviews.value.flatMap((r) => r.comments.map((c) => ({ ...c, draft: r.submitted_at === null }))),
+    reviews.value.flatMap((r) => r.comments.map((c) => ({ ...c, draft: r.submitted_at === null, by: r.by }))),
   );
   /** Every comment by the file it is on. */
   const byPath = computed(() => {

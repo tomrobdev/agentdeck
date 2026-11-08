@@ -18,6 +18,8 @@ export {
   carryFailures,
   checksSettled,
   checksSummary,
+  countOfKept,
+  countWithSteps,
   failedStep,
   failingChecks,
   failureExcerpt,

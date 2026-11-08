@@ -3,7 +3,7 @@
 // and no more (test/repositories-used.test.ts); the rest of what the database offers stays on db/'s own `Db`.
 import type { PlannerRunId, RepoId, ReviewId, TaskId } from '../../domain/shared/index.ts';
 import type { Budget } from '../../domain/capacity/index.ts';
-import type { ScorecardEvent, ScorecardTaskRow, StatRun } from '../../domain/insights/index.ts';
+import type { ScorecardEvent, ScorecardReviewRun, ScorecardRunReview, ScorecardTaskRow, StatRun } from '../../domain/insights/index.ts';
 import type {
   AutoMergeCheck,
   CheckCounts,
@@ -243,6 +243,8 @@ export interface StatsRepository {
   statRuns(repo_id?: RepoId): StatRun[];
   scorecardTasks(repo_id?: RepoId): ScorecardTaskRow[];
   scorecardEvents(repo_id?: RepoId): ScorecardEvent[];
+  scorecardReviewRuns(repo_id?: RepoId): ScorecardReviewRun[];
+  scorecardRunReviews(repo_id?: RepoId): ScorecardRunReview[];
 }
 
 export interface NotificationRepository {
