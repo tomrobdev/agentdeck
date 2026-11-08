@@ -1,0 +1,61 @@
+{
+ "additions": 802,
+ "changedFiles": 1,
+ "commits": [
+  {
+   "authoredDate": "2026-11-08T17:30:00Z",
+   "authors": [
+    {
+     "email": "person@example.com",
+     "id": "U_kgDOFIdF3A",
+     "login": "tomrobdev",
+     "name": "tomrobdev"
+    },
+    {
+     "email": "person@example.com",
+     "id": "MDQ6VXNlcjgxODQ3",
+     "login": "claude",
+     "name": "Claude Opus 5.5"
+    }
+   ],
+   "committedDate": "2026-11-08T17:30:00Z",
+   "messageBody": "daemon/test/api-routes.test.ts: one row per route (method, path, body)\nagainst startApi on a testApp with fakes for claude, gh, launchd and\nnotifications, checking the status code and the answer's keys. Routes are\ncollected from src/api/routes/, so a route without a row fails, named by\nits method and pattern; a route whose handler reads its body needs a 400\nrow too.\n\nCo-Authored-By: Claude Opus 5.5 <person@example.com>",
+   "messageHeadline": "Every API route called over HTTP",
+   "oid": "b11cd700d095510ddc08e40ed07f196adaedc2a0"
+  }
+ ],
+ "deletions": 0,
+ "files": [
+  {
+   "path": "daemon/test/api-routes.test.ts",
+   "additions": 802,
+   "deletions": 0,
+   "changeType": "ADDED"
+  }
+ ],
+ "headRefOid": "b11cd700d095510ddc08e40ed07f196adaedc2a0",
+ "isDraft": false,
+ "labels": [
+  {
+   "id": "LA_kwDOVOg0Rc8AAAADAgx9ZA",
+   "name": "agentdeck:auto-merge",
+   "description": "AgentDeck merges this PR once its checks pass",
+   "color": "0e8a16"
+  }
+ ],
+ "mergeStateStatus": "UNKNOWN",
+ "mergeable": "UNKNOWN",
+ "state": "MERGED",
+ "statusCheckRollup": [
+  {
+   "__typename": "CheckRun",
+   "completedAt": "2026-11-08T17:33:02Z",
+   "conclusion": "SUCCESS",
+   "detailsUrl": "https://github.com/tomrobdev/agentdeck/actions/runs/42505319614/job/128806575742",
+   "name": "check",
+   "startedAt": "2026-11-08T17:30:46Z",
+   "status": "COMPLETED",
+   "workflowName": "check"
+  }
+ ]
+}

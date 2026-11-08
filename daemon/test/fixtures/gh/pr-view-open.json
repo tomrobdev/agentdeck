@@ -1,0 +1,145 @@
+{
+ "additions": 208,
+ "changedFiles": 15,
+ "commits": [
+  {
+   "authoredDate": "2026-11-08T17:39:49Z",
+   "authors": [
+    {
+     "email": "person@example.com",
+     "id": "U_kgDOFIdF3A",
+     "login": "tomrobdev",
+     "name": "tomrobdev"
+    },
+    {
+     "email": "person@example.com",
+     "id": "MDQ6VXNlcjgxODQ3",
+     "login": "claude",
+     "name": "Claude Opus 5.5"
+    }
+   ],
+   "committedDate": "2026-11-08T17:39:49Z",
+   "messageBody": "agentdeck repo set <repo> tools \"<rules>\" replaces a repo's tool rules, and\n\"\" goes back to the defaults plus the rules detected from its toolchain. The\nsame setting through POST /api/repos/:id (allowed_tools) and the repo editor.\nrepo ls and the repo page say which rules are in use (tools_source).\n\nCo-Authored-By: Claude Opus 5.5 <person@example.com>",
+   "messageHeadline": "Tool rules can be changed: repo set <repo> tools",
+   "oid": "b3d4e4491b8d77f72da87918024d2d0c3be0a2f5"
+  }
+ ],
+ "deletions": 11,
+ "files": [
+  {
+   "path": "app/src/components/panels/RepoEditor.vue",
+   "additions": 19,
+   "deletions": 0,
+   "changeType": "MODIFIED"
+  },
+  {
+   "path": "app/src/lib/forms.ts",
+   "additions": 5,
+   "deletions": 0,
+   "changeType": "MODIFIED"
+  },
+  {
+   "path": "daemon/src/api/contract.ts",
+   "additions": 6,
+   "deletions": 1,
+   "changeType": "MODIFIED"
+  },
+  {
+   "path": "daemon/src/application/ports/repositories.ts",
+   "additions": 1,
+   "deletions": 0,
+   "changeType": "MODIFIED"
+  },
+  {
+   "path": "daemon/src/application/repos/repo-view.ts",
+   "additions": 4,
+   "deletions": 1,
+   "changeType": "MODIFIED"
+  },
+  {
+   "path": "daemon/src/application/repos/repos.ts",
+   "additions": 16,
+   "deletions": 1,
+   "changeType": "MODIFIED"
+  },
+  {
+   "path": "daemon/src/cli/help.ts",
+   "additions": 2,
+   "deletions": 0,
+   "changeType": "MODIFIED"
+  },
+  {
+   "path": "daemon/src/cli/repos.ts",
+   "additions": 10,
+   "deletions": 3,
+   "changeType": "MODIFIED"
+  },
+  {
+   "path": "daemon/src/cli/settings-args.ts",
+   "additions": 3,
+   "deletions": 1,
+   "changeType": "MODIFIED"
+  },
+  {
+   "path": "daemon/src/db/repos.ts",
+   "additions": 1,
+   "deletions": 0,
+   "changeType": "MODIFIED"
+  },
+  {
+   "path": "daemon/src/domain/repos/index.ts",
+   "additions": 3,
+   "deletions": 2,
+   "changeType": "MODIFIED"
+  },
+  {
+   "path": "daemon/src/domain/repos/rules.ts",
+   "additions": 6,
+   "deletions": 0,
+   "changeType": "MODIFIED"
+  },
+  {
+   "path": "daemon/src/domain/repos/tools.ts",
+   "additions": 25,
+   "deletions": 0,
+   "changeType": "MODIFIED"
+  },
+  {
+   "path": "daemon/test/repo-tools.test.ts",
+   "additions": 105,
+   "deletions": 0,
+   "changeType": "ADDED"
+  },
+  {
+   "path": "docs/reference/use-cases.md",
+   "additions": 2,
+   "deletions": 2,
+   "changeType": "MODIFIED"
+  }
+ ],
+ "headRefOid": "b3d4e4491b8d77f72da87918024d2d0c3be0a2f5",
+ "isDraft": true,
+ "labels": [
+  {
+   "id": "LA_kwDOVOg0Rc8AAAADAgx9ZA",
+   "name": "agentdeck:auto-merge",
+   "description": "AgentDeck merges this PR once its checks pass",
+   "color": "0e8a16"
+  }
+ ],
+ "mergeStateStatus": "UNSTABLE",
+ "mergeable": "MERGEABLE",
+ "state": "OPEN",
+ "statusCheckRollup": [
+  {
+   "__typename": "CheckRun",
+   "completedAt": "0001-01-01T00:00:00Z",
+   "conclusion": "",
+   "detailsUrl": "https://github.com/tomrobdev/agentdeck/actions/runs/42506139061/job/128809077528",
+   "name": "check",
+   "startedAt": "2026-11-08T17:40:38Z",
+   "status": "IN_PROGRESS",
+   "workflowName": "check"
+  }
+ ]
+}
