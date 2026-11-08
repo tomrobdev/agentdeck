@@ -50,7 +50,8 @@ function standing(on: TaskId, dependency: Dependency | undefined): Standing {
   if (!dependency) return stuck(`${id} no longer exists`, 'which no longer exists');
   switch (dependency.status) {
     case 'done':
-      // Done and merged; or done in a repo that opens no PRs; or a person said so and its PR is not open.
+      // Done and merged; or done in a repo that opens no PRs; or a person said so and its PR is not open. A PR merged before a
+      // retry is set aside by it (`statusChangePrChanges`), so the task is not met again until its new PR merges.
       const state = dependency.pr?.state ?? null;
       if (state === 'merged') return { kind: 'met' };
       if (state === null && dependency.pr_mode === 'off') return { kind: 'met' };
