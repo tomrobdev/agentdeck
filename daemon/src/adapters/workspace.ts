@@ -31,6 +31,7 @@ import {
   listTree,
   localStartPoint,
   makeTempDir,
+  mergeCommit,
   mergeInProgress,
   mergeRef,
   mergeSides,
@@ -175,6 +176,8 @@ export const workspace = {
   },
 
   filePatch: (repoPath: string, base: string, head: string, paths: string[]) => filePatch(repoPath, base, head, paths),
+
+  mergeCommit: (repoPath: string, ours: string, theirs: string) => mergeCommit(repoPath, ours, theirs),
 
   async listTree(repoPath: string, commit: string, dir: string) {
     if ((await objectAt(repoPath, commit, dir))?.type !== 'tree') return null;

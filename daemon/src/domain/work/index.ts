@@ -74,6 +74,8 @@ export {
   treeEntries,
 } from './read/files.ts';
 export type { ChangeStatus, ChangedFile, Changes, Commit, FileContent, FilePatch, FileRef, Tree, TreeEntry } from './read/files.ts';
+export { sincePoints } from './read/since.ts';
+export type { SinceKind } from './read/since.ts';
 export { DECISION_STATES, FILTER_STATES, SORT_OPTIONS, filterTasks, listable } from './read/listing.ts';
 export { archivedRepoError, maxAttemptsError, maxTurnsError, modelError, priorityError, stepsNeedPlanError } from './rules.ts';
 export {

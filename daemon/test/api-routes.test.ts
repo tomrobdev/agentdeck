@@ -570,12 +570,28 @@ const ROWS: Row[] = [
     method: 'GET',
     path: '/api/tasks/:task/changes',
     params: task(() => withWorktree()),
-    shape: ['base_ref', 'base', 'head', 'files', 'commits'],
+    shape: ['base_ref', 'base', 'head', 'since', 'base_may_show', 'files', 'commits', 'since_points'],
     check: (c) =>
       assert.deepEqual(
         c.files.map((f: Json) => f.path),
         ['b.txt'],
       ),
+  },
+  {
+    method: 'GET',
+    path: `/api/tasks/:task/changes?since=${'1'.repeat(40)}`,
+    params: task(() => withWorktree()),
+    status: 400,
+    shape: ERROR,
+    check: (e) => assert.match(e.error, /not a commit on this task's branch/),
+  },
+  {
+    method: 'GET',
+    path: `/api/tasks/:task/diff?path=b.txt&since=${'1'.repeat(40)}`,
+    params: task(() => withWorktree()),
+    status: 400,
+    shape: ERROR,
+    check: (e) => assert.match(e.error, /not a commit on this task's branch/),
   },
   {
     method: 'GET',

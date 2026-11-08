@@ -137,6 +137,11 @@ export interface Workspace {
   compare(repoPath: string, base: string, head: string): Promise<{ files: ChangedFile[]; commits: Commit[] }>;
   /** The unified diff of one file between two commits, cut at PATCH_LIMIT. Pass both paths of a rename. */
   filePatch(repoPath: string, base: string, head: string, paths: string[]): Promise<{ patch: string; truncated: boolean }>;
+  /**
+   * `ours` and `theirs` merged as a commit of their own, on no ref and with no checkout touched, for `compare` and `filePatch`
+   * to diff from: `ours` itself when it already has `theirs`, null when they conflict.
+   */
+  mergeCommit(repoPath: string, ours: string, theirs: string): Promise<string | null>;
   /** One level of the folder `dir` ('' for the root) at `commit`, folders first; null when no folder is there. */
   listTree(repoPath: string, commit: string, dir: string): Promise<TreeEntry[] | null>;
   /** The file at `path` in `commit`, at most `limit` bytes of it, or null if no file is there. */
