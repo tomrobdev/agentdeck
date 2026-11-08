@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { type MergeResult, type TaskDetail, api } from '../../api';
-import { canFixChecks, canStartMerge, isReview, personEvents } from '../../lib/taskView';
+import { type MergeResult, type TaskDetail, api, describePrRetry } from '../../api';
+import { canFixChecks, canOpenPr, canStartMerge, isReview, personEvents } from '../../lib/taskView';
 import { useAction, useActions } from '../../composables/useActions';
 import ConfirmDialog from '../ui/ConfirmDialog.vue';
 import MarkDoneDialog from './MarkDoneDialog.vue';
@@ -28,6 +28,12 @@ async function closePr() {
 async function fixChecks() {
   if (pending.value) return;
   await run(() => api.fixChecks(props.task.id));
+}
+
+// Open a done task's PR that failed to open, or was closed; a refusal or gh's error is flashed with the API's wording.
+async function openPr() {
+  if (pending.value) return;
+  await run(() => api.openPr(props.task.id));
 }
 
 // Mark a blocked or failed task done by hand, with an optional note for the timeline.
@@ -58,6 +64,15 @@ async function onMerged(result: MergeResult) {
     </template>
     <button v-else-if="events.includes('retry')" @click="emit('act', 'retry')">↻ Retry</button>
     <button v-if="canFixChecks(task)" :disabled="pending" @click="fixChecks">Fix failing checks</button>
+    <button
+      v-if="canOpenPr(task)"
+      :class="{ primary: task.pr_retry?.state === 'person' }"
+      :disabled="pending"
+      :title="task.pr_retry ? describePrRetry(task.pr_retry) : 'Push the branch and open the PR again'"
+      @click="openPr"
+    >
+      Open PR
+    </button>
     <button v-if="events.includes('mark_done')" @click="markingDone = true">✓ Mark done</button>
     <button
       v-if="isReview(task)"

@@ -23,36 +23,40 @@ const STUCK: Waiting = { on: [asTaskId(1)], stuck: '#1 was cancelled' };
 const PR_STATES: (PrState | null)[] = [null, 'open', 'merged', 'closed', 'failed'];
 const WAITS: (Waiting | null | undefined)[] = [undefined, null, ON_ITS_WAY, STUCK];
 
-test('stageOf takes the status, the pull request state and the wait, and nothing else', () => {
+test('stageOf takes the status, the pull request state, the wait and the PR retry, and nothing else', () => {
   const rows: [Parameters<typeof stageOf>[0], ReturnType<typeof stageOf>][] = [
     [
       { status: 'queued', pr: null },
-      { status: 'queued', pr_state: null, waiting: undefined },
+      { status: 'queued', pr_state: null, waiting: undefined, pr_retry: undefined },
     ],
     [
       { status: 'queued', pr: null, waiting: null },
-      { status: 'queued', pr_state: null, waiting: null },
+      { status: 'queued', pr_state: null, waiting: null, pr_retry: undefined },
     ],
     [
       { status: 'queued', pr: null, waiting: STUCK },
-      { status: 'queued', pr_state: null, waiting: STUCK },
+      { status: 'queued', pr_state: null, waiting: STUCK, pr_retry: undefined },
     ],
     [
       { status: 'done', pr: { state: 'open' } },
-      { status: 'done', pr_state: 'open', waiting: undefined },
+      { status: 'done', pr_state: 'open', waiting: undefined, pr_retry: undefined },
     ],
     [
       { status: 'done', pr: { state: 'merged' } },
-      { status: 'done', pr_state: 'merged', waiting: undefined },
+      { status: 'done', pr_state: 'merged', waiting: undefined, pr_retry: undefined },
     ],
     [
       { status: 'blocked', pr: { state: 'failed' } },
-      { status: 'blocked', pr_state: 'failed', waiting: undefined },
+      { status: 'blocked', pr_state: 'failed', waiting: undefined, pr_retry: undefined },
+    ],
+    [
+      { status: 'done', pr: { state: 'failed' }, pr_retry: { state: 'wait' } },
+      { status: 'done', pr_state: 'failed', waiting: undefined, pr_retry: { state: 'wait' } },
     ],
   ];
   for (const [task, stage] of rows) assert.deepEqual(stageOf(task), stage, JSON.stringify(task));
   const extra = { status: 'done' as const, pr: { state: 'open' as const, url: 'https://x/pull/1' }, title: 'kept out' };
-  assert.deepEqual(Object.keys(stageOf(extra)).sort(), ['pr_state', 'status', 'waiting']);
+  assert.deepEqual(Object.keys(stageOf(extra)).sort(), ['pr_retry', 'pr_state', 'status', 'waiting']);
 });
 
 test('isWaiting and isStuck: only a queued task waits, on its way or stuck, never both', () => {
