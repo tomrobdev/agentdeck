@@ -158,6 +158,18 @@ test('actionsRun finds the run and job in an Actions link; logTail keeps the las
   assert.ok(logTail(log, 60, 100).endsWith('line 199'));
 });
 
+test('logTail ends on a line that is over budget in bytes but not in characters, cut at a character boundary', () => {
+  const wide = logTail('line one\n' + '─'.repeat(1000), 60, 2048);
+  assert.ok(Buffer.byteLength(wide) <= 2048);
+  assert.ok(wide.length > 0 && /^─+$/.test(wide));
+
+  // 4-byte emoji: a cut inside one drops it whole, never leaving a broken character.
+  const emoji = logTail('x\n' + '😀'.repeat(50), 60, 10);
+  assert.equal(emoji, '😀😀');
+  assert.ok(!emoji.includes('�'));
+  assert.equal(logTail('😀', 60, 3), '');
+});
+
 // The real adapter would call GitHub.
 const failingDetails: PrDetails = parsePrDetails(
   JSON.stringify({ state: 'OPEN', headRefOid: 'abc123', mergeable: 'MERGEABLE', mergeStateStatus: 'UNSTABLE', statusCheckRollup: ROLLUP }),
