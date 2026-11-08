@@ -40,7 +40,10 @@ export function fakeAgent(work: (session: AgentSession) => void | Promise<void> 
   };
 }
 
-/** A pull request that is open, clean and ready to merge. */
+/**
+ * A pull request that is open, clean and ready to merge, with every field `parsePrDetails` reads from real `gh pr view`
+ * output (contracts.test.ts checks it against daemon/test/fixtures/gh/).
+ */
 export const READY_PR: PrDetails = {
   state: 'open',
   draft: false,
@@ -51,6 +54,16 @@ export const READY_PR: PrDetails = {
   additions: 10,
   deletions: 2,
   checks: { total: 1, failing: 0, pending: 0 },
+  check_list: [
+    {
+      name: 'check',
+      state: 'pass',
+      url: 'https://github.com/owner/repo/actions/runs/1/job/1',
+      started_at: '2026-01-01T00:00:00Z',
+      completed_at: '2026-01-01T00:02:00Z',
+    },
+  ],
+  head: '0000000000000000000000000000000000000001',
   paths: ['src/a.ts'],
   labels: [],
 };
