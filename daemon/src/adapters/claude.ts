@@ -5,6 +5,7 @@ import { accessSync, constants, type WriteStream } from 'node:fs';
 import { delimiter, isAbsolute, join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { claudeBin, withToolchainPath } from '../config.ts';
+import type { ClaudeRun, UsageWindow } from '../domain/runs/index.ts';
 import { activeChildren, killGroup } from './processes.ts';
 
 function executable(path: string): boolean {
@@ -26,49 +27,11 @@ export function findClaude(): string | null {
   return null;
 }
 
-export interface ClaudeResult {
-  subtype?: string;
-  is_error?: boolean;
-  result?: string;
-  structured_output?: unknown;
-  session_id?: string;
-  num_turns?: number;
-  total_cost_usd?: number;
-  api_error_status?: number | null;
-  /** Tool uses the permission rules refused during the run. */
-  permission_denials?: { tool_name?: string; tool_input?: { command?: unknown } & Record<string, unknown> }[];
-  usage?: {
-    input_tokens?: number;
-    output_tokens?: number;
-    cache_read_input_tokens?: number;
-    cache_creation_input_tokens?: number;
-  };
-}
-
-export interface ClaudeRun {
-  result: ClaudeResult | undefined;
-  exitCode: number;
-  /** Set when Claude rejected a request on rate limits (unix seconds). */
-  rateLimitedUntil: number | undefined;
-  cancelled: boolean;
-  /** The end of what claude wrote to stderr, e.g. why it refused to start. */
-  stderr: string;
-  /** The session claude's first `system`/`init` line named; undefined if claude stopped before it. */
-  sessionId: string | undefined;
-}
-
 const STDERR_TAIL = 4_000;
 
 const CANCEL_POLL_MS = 2_000;
 /** After a cancel's SIGTERM, how long the process group has to exit before SIGKILL. */
 export const CANCEL_GRACE_MS = 10_000;
-
-export interface UsageWindow {
-  window: string;
-  utilization: number;
-  resets_at: number;
-  status: string | null;
-}
 
 export async function runClaude(opts: {
   args: string[];

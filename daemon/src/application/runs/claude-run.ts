@@ -1,7 +1,6 @@
 // The sequence every task-bound claude run shares: log, run row, settings, the process, and what its end means.
 import { createWriteStream, type WriteStream } from 'node:fs';
 import { join } from 'node:path';
-import { type ClaudeResult, type ClaudeRun, type UsageWindow, runClaude } from '../../adapters/claude.ts';
 import { rootInfo } from '../../adapters/repo-root.ts';
 import { closeLog, writeEvent, writeSettings } from '../../adapters/run-log.ts';
 import { LOG_DIR, ensureDirs } from '../../config.ts';
@@ -9,7 +8,7 @@ import type { App } from '../ports/app.ts';
 import type { RunId } from '../../domain/shared/index.ts';
 import type { Repo } from '../../domain/repos/index.ts';
 import { allowedTools } from '../../domain/repos/index.ts';
-import { START_LIVE, nextLive } from '../../domain/runs/index.ts';
+import { type ClaudeResult, type ClaudeRun, type UsageWindow, START_LIVE, nextLive } from '../../domain/runs/index.ts';
 import { claudeArgs } from '../../domain/runs/index.ts';
 import { settingsPath, workerSettings } from '../../domain/runs/index.ts';
 import { type Outcome, type Run, type RunClass, type RunKind, classifyRun, resultFields, resumeFailed } from '../../domain/runs/index.ts';
@@ -103,7 +102,7 @@ export async function startTaskRun(
   const cancelled =
     opts.kind === 'unblock' ? () => app.getTask(task.id)?.status !== 'blocked' : () => app.getTask(task.id)?.status === 'cancel_requested';
   const start = (prompt: string, session: string | null, maxTurns = opts.maxTurns ?? task.max_turns): Promise<ClaudeRun> =>
-    runClaude({
+    app.agent.run({
       args: claudeArgs(task, allowed, prompt, repo.test_cmd, settings, session, maxTurns, opts.systemPrompt),
       cwd: worktree,
       log,

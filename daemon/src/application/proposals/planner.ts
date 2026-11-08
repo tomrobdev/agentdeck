@@ -1,7 +1,6 @@
 // Runs the planner: turns a repo's goals file into task proposals (see domain/proposals/proposals.ts).
 import { type WriteStream, createWriteStream } from 'node:fs';
 import { join } from 'node:path';
-import { runClaude } from '../../adapters/claude.ts';
 import { goalsPath, readGoals } from '../../adapters/goals.ts';
 import { closeLog } from '../../adapters/run-log.ts';
 import { LOG_DIR, ensureDirs } from '../../config.ts';
@@ -49,7 +48,7 @@ async function planRepo(app: App, repo: Repo, goals: string, runId: PlannerRunId
   const s = app.plannerSettings();
   const existing = app.tasksForRepo(repo.id, EXISTING_TASKS_SHOWN);
 
-  const run = await runClaude({
+  const run = await app.agent.run({
     args: plannerArgs(buildPlannerPrompt(repo, goals, existing, s.max_tasks), s.model),
     cwd: repo.path,
     log,

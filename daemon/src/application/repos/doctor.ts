@@ -1,6 +1,4 @@
 // Yes/no checks that a repo is ready for unattended runs. Does the I/O; the decisions on tool rules are in domain/.
-import { findClaude } from '../../adapters/claude.ts';
-import { github } from '../../adapters/github.ts';
 import {
   addDetachedWorktree,
   hasOrigin,
@@ -12,6 +10,7 @@ import {
   removeWorktree,
   startPoint,
 } from '../../adapters/git.ts';
+import type { App } from '../ports/app.ts';
 import { rootInfo } from '../../adapters/repo-root.ts';
 import { runCommand } from '../../adapters/shell.ts';
 import { errorMessage, lastLine } from '../../domain/shared/index.ts';
@@ -32,7 +31,7 @@ export interface Check {
  * reported as failed with "not run: …", so a green result always means everything was verified.
  * The temporary worktree is removed whether or not the checks pass.
  */
-export async function runDoctor(repo: Repo): Promise<Check[]> {
+export async function runDoctor(app: App, repo: Repo): Promise<Check[]> {
   const checks: Check[] = [];
   const add = (name: string, ok: boolean, reason: string) => void checks.push({ name, ok, reason });
 
@@ -55,14 +54,14 @@ export async function runDoctor(repo: Repo): Promise<Check[]> {
     toolchain ? `${toolchain}${repo.toolchain ? '' : ' (detected)'}` : 'none detected: no setup step, generic tool rules only',
   );
 
-  const claude = findClaude();
+  const claude = await app.agent.find();
   add('claude binary', !!claude, claude ?? `${claudeBin()} not found; install Claude Code or set AGENTDECK_CLAUDE_BIN`);
 
   // A PR mode other than off needs an origin to push to and a working gh to open the PR.
   if (repo.pr_mode !== 'off') {
     const origin = await hasOrigin(repo.path);
     add('origin remote', origin, origin ? 'origin exists' : `PR mode is ${repo.pr_mode} but the repo has no origin remote`);
-    const gh = await github.auth();
+    const gh = await app.codeHost.auth();
     add('gh auth', gh.ok, gh.ok ? 'gh auth status succeeded' : `gh auth status failed: ${gh.output}`);
   }
 

@@ -13,7 +13,7 @@ const fake = join(import.meta.dirname, 'fake-claude.mjs');
 chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
 
-const { openDb } = await import('../src/db/index.ts');
+const { openDb } = await import('./open-db.ts');
 const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
 const { syncBranch } = await import('../src/application/runs/sync.ts');
 const { endTaskRun, openTaskRun } = await import('../src/application/runs/claude-run.ts');

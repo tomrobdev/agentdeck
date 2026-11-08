@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { ActionError, pilotStats } from '../src/application/actions.ts';
-import { openDb } from '../src/db/index.ts';
+import { openDb } from './open-db.ts';
 import type { TaskId } from '../src/domain/shared/id.ts';
 import type { RunOutcome } from '../src/domain/runs/run.ts';
 import { type StatRun, measure, statsTable, wilson } from '../src/domain/insights/stats.ts';

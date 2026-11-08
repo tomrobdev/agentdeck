@@ -1,5 +1,4 @@
 // Send a PR's failing checks back to the worker: the failed steps' logs go into a retry's note.
-import { github } from '../../adapters/github.ts';
 import type { App } from '../ports/app.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import { type FailedCheck, LOG_TAIL_BYTES, actionsRun, failingChecks, fixChecksNote, logTail } from '../../domain/landing/index.ts';
@@ -25,7 +24,7 @@ export async function fixChecks(app: App, id: TaskId): Promise<FixChecksResult> 
   const url = openPrUrl(task.pr);
   if (!url) throw new ActionError(`#${id} has no open pull request`);
   const repo = requireTaskRepo(app, task);
-  const pr = await github.prDetails(url, repo.path).catch((err) => {
+  const pr = await app.codeHost.prDetails(url, repo.path).catch((err) => {
     throw new ActionError(`could not read the PR: ${errorMessage(err)}`);
   });
   const failing = failingChecks(pr.check_list ?? []);
@@ -40,7 +39,7 @@ export async function fixChecks(app: App, id: TaskId): Promise<FixChecksResult> 
       const run = actionsRun(c.url);
       if (!run) return { name: c.name, url: c.url };
       const key = `${run.run}/${run.job ?? ''}`;
-      if (!logs.has(key)) logs.set(key, github.failedLog(repo.path, run.run, run.job));
+      if (!logs.has(key)) logs.set(key, app.codeHost.failedLog(repo.path, run.run, run.job));
       try {
         const log = logTail(await logs.get(key)!, undefined, budget);
         return log ? { name: c.name, url: c.url, log } : { name: c.name, url: c.url, log_error: 'gh printed no failed steps' };

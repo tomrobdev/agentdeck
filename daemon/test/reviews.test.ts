@@ -11,7 +11,7 @@ import type { ReviewComment, ReviewWithComments } from '../src/domain/landing/re
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-reviews-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../src/db/index.ts');
+const { openDb } = await import('./open-db.ts');
 const actions = await import('../src/application/actions.ts');
 const { recordAnswers } = await import('../src/application/landing/address.ts');
 const { doneTask, runningTask } = await import('./fixtures.ts');

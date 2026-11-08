@@ -10,7 +10,7 @@ import { test } from 'node:test';
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-records-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../src/db/index.ts');
+const { openDb } = await import('./open-db.ts');
 const { addTask, attachPlan, editTask, linkTasks, taskDetail, taskViews, unlinkTasks } = await import('../src/application/actions.ts');
 const { editsSinceCutOff } = await import('../src/domain/runs/run.ts');
 const { MAX_RESTARTS } = await import('../src/domain/work/lifecycle.ts');

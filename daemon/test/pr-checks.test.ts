@@ -11,7 +11,7 @@ const home = mkdtempSync(join(tmpdir(), 'agentdeck-checks-'));
 process.env.AGENTDECK_HOME = home;
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../src/db/index.ts');
+const { openDb } = await import('./open-db.ts');
 const { doneTask, queuedTask } = await import('./fixtures.ts');
 const { github } = await import('../src/adapters/github.ts');
 const { refreshPrStates } = await import('../src/application/landing/refresh.ts');

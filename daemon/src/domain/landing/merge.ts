@@ -6,6 +6,17 @@ import { plural } from '../shared/index.ts';
 
 export { type CheckCounts, checksSettled, countChecks } from './checks.ts';
 
+/** A pull request to open. */
+export interface CreatePr {
+  cwd: string; // the task's worktree
+  base: string;
+  head: string;
+  title: string;
+  body: string;
+  draft: boolean;
+  labels?: string[];
+}
+
 /** What `gh pr view` says about a PR that decides whether and how it merges. */
 export interface PrDetails {
   /** GitHub's `state`, as the daemon names it. */

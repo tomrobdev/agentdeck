@@ -8,7 +8,7 @@ How far the move to a domain model has come, counted from the code. Each number 
 | ------------------------------------------------------- | ----- | ----- |
 | Flags left in domain entities (stored as numbers)       | 0     |       |
 | JSON fields left in domain entities (stored as strings) | 0     |       |
-| Runtime imports of adapters from `application/`         | 52    |       |
+| Runtime imports of adapters from `application/`         | 41    |       |
 | Store calls (`db.…`) in `api/` and `cli/`               | 13    |       |
 | Folder cycles in `domain/` and `application/`           | 0     |       |
 

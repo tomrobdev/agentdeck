@@ -10,14 +10,28 @@ export { asPlannerRunId, asRepoId, asReviewId, asRunId, asTaskId } from '../src/
 
 type Db = ReturnType<typeof openDb>;
 
-/** The ports a test's App gets. None yet: each port that lands adds its fake, or its real adapter, here. */
-const testPorts = (): Ports => ({});
+/**
+ * The real adapters, loaded on first use: `compose.ts` reaches `config.ts`, which reads AGENTDECK_HOME when first
+ * imported, so a test that sets it first must not pull it in through this file.
+ */
+const real = () => import('../src/compose.ts');
+
+/** The ports a test's App gets unless it hands in its own (the in-memory fakes in `fakes.ts`): the real adapters. */
+const testPorts = (): Ports => ({
+  agent: { run: async (s) => (await real()).realAgent().run(s), find: async () => (await real()).realAgent().find() },
+  codeHost: new Proxy({} as Ports['codeHost'], {
+    get:
+      (_, name: string) =>
+      async (...args: unknown[]) =>
+        ((await real()).realCodeHost() as any)[name](...args),
+  }),
+});
 
 /**
  * The App for a test, as `src/compose.ts` builds it for the daemon and the CLI, on a database the test opened
  * (`openDb(':memory:')` or a scratch file): the test's own `openDb`, because it must run after AGENTDECK_HOME is set.
  */
-export const testApp = (db: Db): Db & App => Object.assign(db, testPorts());
+export const testApp = (db: Db, ports: Partial<Ports> = {}): Db & App => Object.assign(db, { ...testPorts(), ...ports });
 type Task = NonNullable<ReturnType<Db['getTask']>>;
 type TaskStatus = Task['status'];
 type NewTask = Partial<Omit<Parameters<Db['addTask']>[0], 'repo_id' | 'status'>>;

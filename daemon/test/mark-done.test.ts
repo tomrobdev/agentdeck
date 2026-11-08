@@ -11,7 +11,7 @@ import { asTaskId } from './fixtures.ts';
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-markdone-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../src/db/index.ts');
+const { openDb } = await import('./open-db.ts');
 const { advance, settlePr } = await import('./fixtures.ts');
 const { linkState } = await import('../src/domain/work/link.ts');
 const { TASK_STATUSES } = await import('../src/domain/work/lifecycle.ts');

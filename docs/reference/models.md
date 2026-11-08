@@ -267,6 +267,20 @@ A comment and the diff around it at the commit it was made on (null when that ca
 | `comment` | `Pick<ReviewComment, "path" \| "line" \| "side" \| "body">` |         |
 | `hunk`    | `string \| null`                                            |         |
 
+### CreatePr
+
+A pull request to open.
+
+| Field     | Type                    | Comment             |
+| --------- | ----------------------- | ------------------- |
+| `cwd`     | `string`                | the task's worktree |
+| `base`    | `string`                |                     |
+| `head`    | `string`                |                     |
+| `title`   | `string`                |                     |
+| `body`    | `string`                |                     |
+| `draft`   | `boolean`               |                     |
+| `labels?` | `string[] \| undefined` |                     |
+
 ### FailedCheck
 
 One failing check as the worker hears it: its name and link, and its log's tail when there is one.
@@ -791,6 +805,36 @@ A task in running (or being cancelled) and the process of its unfinished run, if
 
 ## `domain/runs/`
 
+### ClaudeResult
+
+The final `result` event of a claude session.
+
+| Field                 | Type                                                                                                                                                                                          | Comment                                                |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| `subtype?`            | `string \| undefined`                                                                                                                                                                         |                                                        |
+| `is_error?`           | `boolean \| undefined`                                                                                                                                                                        |                                                        |
+| `result?`             | `string \| undefined`                                                                                                                                                                         |                                                        |
+| `structured_output?`  | `unknown`                                                                                                                                                                                     |                                                        |
+| `session_id?`         | `string \| undefined`                                                                                                                                                                         |                                                        |
+| `num_turns?`          | `number \| undefined`                                                                                                                                                                         |                                                        |
+| `total_cost_usd?`     | `number \| undefined`                                                                                                                                                                         |                                                        |
+| `api_error_status?`   | `number \| null \| undefined`                                                                                                                                                                 |                                                        |
+| `permission_denials?` | `{ tool_name?: string \| undefined; tool_input?: ({ command?: unknown; } & Record<string, unknown>) \| undefined; }[] \| undefined`                                                           | Tool uses the permission rules refused during the run. |
+| `usage?`              | `{ input_tokens?: number \| undefined; output_tokens?: number \| undefined; cache_read_input_tokens?: number \| undefined; cache_creation_input_tokens?: number \| undefined; } \| undefined` |                                                        |
+
+### ClaudeRun
+
+What a claude session left behind: its result, how the process ended, and why it stopped.
+
+| Field              | Type                        | Comment                                                                                       |
+| ------------------ | --------------------------- | --------------------------------------------------------------------------------------------- |
+| `result`           | `ClaudeResult \| undefined` |                                                                                               |
+| `exitCode`         | `number`                    |                                                                                               |
+| `rateLimitedUntil` | `number \| undefined`       | Set when Claude rejected a request on rate limits (unix seconds).                             |
+| `cancelled`        | `boolean`                   |                                                                                               |
+| `stderr`           | `string`                    | The end of what claude wrote to stderr, e.g. why it refused to start.                         |
+| `sessionId`        | `string \| undefined`       | The session claude's first `system`/`init` line named; undefined if claude stopped before it. |
+
 ### ClaudeRunLike
 
 What a finished `claude` process left behind (the adapter's `ClaudeRun`).
@@ -969,6 +1013,17 @@ A sync of a done task under way, as the queue shows it.
 | `plan`        | `PromptPlan \| null` | The plan the task follows, if any.                        |
 | `lastMessage` | `string \| null`     | The final message of the task's last work run.            |
 | `reviewNote`  | `string \| null`     | The note on the task's latest retry (`latestReviewNote`). |
+
+### UsageWindow
+
+One usage window a claude session reports.
+
+| Field         | Type             | Comment |
+| ------------- | ---------------- | ------- |
+| `window`      | `string`         |         |
+| `utilization` | `number`         |         |
+| `resets_at`   | `number`         |         |
+| `status`      | `string \| null` |         |
 
 ### WorkerResult
 

@@ -2,7 +2,7 @@
 // agents cannot push. Tests replace the members of `github` to fake the network.
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { type PrDetails, parsePrDetails } from '../domain/landing/index.ts';
+import { type CreatePr, type PrDetails, parsePrDetails } from '../domain/landing/index.ts';
 import type { MergeMethod } from '../domain/repos/index.ts';
 import { lastLine } from '../domain/shared/index.ts';
 import { gitRemote } from './git.ts';
@@ -12,16 +12,6 @@ const exec = promisify(execFile);
 /** How long a `gh` call may take unless it asks for more. */
 const GH_TIMEOUT_MS = 30_000;
 const LONG_GH_TIMEOUT_MS = 60_000;
-
-export interface CreatePr {
-  cwd: string; // the task's worktree
-  base: string;
-  head: string;
-  title: string;
-  body: string;
-  draft: boolean;
-  labels?: string[];
-}
 
 /**
  * The first lines of a failed command's stderr, for a one-line error. Never the error's own message: node quotes the

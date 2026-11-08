@@ -1,5 +1,4 @@
 // The PR refresh: keep the state of open PRs fresh, and say which ones conflict or are ready to merge.
-import { github } from '../../adapters/github.ts';
 import type { App } from '../ports/app.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import type { PrDetails } from '../../domain/landing/index.ts';
@@ -100,7 +99,7 @@ function dropRequest(app: App, id: TaskId, why: string, log: (msg: string) => vo
  */
 async function refreshOne(app: App, task: Task, log: (msg: string) => void): Promise<PrFound | null> {
   const repo = app.getRepo(task.repo_id);
-  const pr = await github.prDetails(task.pr!.url!, prCwd(app, task), { withFiles: !!repo && autoMergeOn(task, repo) });
+  const pr = await app.codeHost.prDetails(task.pr!.url!, prCwd(app, task), { withFiles: !!repo && autoMergeOn(task, repo) });
   const state = pr.state;
   if (state !== task.pr?.state) {
     // Guarded on the PR still being open: a merge recorded while GitHub was being asked stays.

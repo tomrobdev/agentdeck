@@ -27,7 +27,7 @@ echo junk > stray.txt
 chmodSync(join(bin, 'pnpm'), 0o755);
 process.env.PATH = `${bin}:${process.env.PATH}`;
 
-const { openDb } = await import('../src/db/index.ts');
+const { openDb } = await import('./open-db.ts');
 const { ensureWorktree } = await import('../src/adapters/git.ts');
 const { installNeeds } = await import('../src/application/actions.ts');
 

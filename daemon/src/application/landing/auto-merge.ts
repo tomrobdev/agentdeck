@@ -1,6 +1,5 @@
 // Auto-merge: the daemon merges a done task's PR on its own when it passes the auto-merge check
 // (docs/plans/auto-merge.html), and a person turns it on or off for one task.
-import { github } from '../../adapters/github.ts';
 import type { App } from '../ports/app.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import { AUTO_MERGE_LABEL, autoMergeOn } from '../../domain/landing/index.ts';
@@ -61,7 +60,7 @@ export async function autoMerge(
       // A request gh refused is dropped, told once: a person can ask again.
       if (asked) app.clearMergeRequest(id);
       // A merge made meanwhile (a CLI merge in another process) is no failure: say nothing.
-      if ((await github.prDetails(target.url, target.cwd).catch(() => null))?.state === 'merged') continue;
+      if ((await app.codeHost.prDetails(target.url, target.cwd).catch(() => null))?.state === 'merged') continue;
       if (told.get(id) === error) continue;
       told.set(id, error);
       log(`task ${id}: auto-merge failed: ${error}`);
@@ -89,8 +88,8 @@ export async function setAutoMerge(
   const url = openPrUrl(task.pr);
   if (!url) return { auto_merge: on };
   try {
-    if (on) await ensureAutoMergeLabel(repo.path);
-    await github.setLabel(url, repo.path, AUTO_MERGE_LABEL.name, on);
+    if (on) await ensureAutoMergeLabel(app, repo.path);
+    await app.codeHost.setLabel(url, repo.path, AUTO_MERGE_LABEL.name, on);
     app.requestPrCheck();
     return { auto_merge: on };
   } catch (err) {

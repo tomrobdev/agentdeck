@@ -9,7 +9,7 @@ import { test } from 'node:test';
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-promptpaths-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../src/db/index.ts');
+const { openDb } = await import('./open-db.ts');
 const { addTask, editTask, promptWarnings } = await import('../src/application/actions.ts');
 const { pathsNamedIn } = await import('../src/domain/work/prompt-paths.ts');
 

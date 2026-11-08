@@ -10,7 +10,7 @@ const { ActionError, gracefulRestart } = await import('../src/application/action
 const { logsOptions, restartOptions, serviceAction } = await import('../src/cli/daemon-args.ts');
 const { parseCommandLine } = await import('../src/cli/context.ts');
 const { RELOAD_QUIET_MS, reloadDecision, restartWait } = await import('../src/domain/operations/restart.ts');
-const { openDb } = await import('../src/db/index.ts');
+const { openDb } = await import('./open-db.ts');
 
 const flagsOf = (...argv: string[]) => parseCommandLine(argv).values;
 

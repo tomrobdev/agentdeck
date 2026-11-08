@@ -10,7 +10,7 @@ const home = mkdtempSync(join(tmpdir(), 'agentdeck-pilot-'));
 process.env.AGENTDECK_HOME = home;
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../src/db/index.ts');
+const { openDb } = await import('./open-db.ts');
 const { doneTask } = await import('./fixtures.ts');
 const { github } = await import('../src/adapters/github.ts');
 const { mergeTask } = await import('../src/application/landing/merge.ts');

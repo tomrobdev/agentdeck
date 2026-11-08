@@ -10,7 +10,7 @@ const { ActionError, retryTask } = await import('../src/application/actions.ts')
 const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
 const { callDaemon } = await import('../src/cli/daemon-client.ts');
 const { RELOAD_QUIET_MS, reloadDecision, restartWait } = await import('../src/domain/operations/restart.ts');
-const { openDb } = await import('../src/db/index.ts');
+const { openDb } = await import('./open-db.ts');
 
 const base = { enabled: true, changed: ['a.ts'], lastChangeAt: 0, now: RELOAD_QUIET_MS + 1 };
 

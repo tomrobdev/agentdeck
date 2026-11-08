@@ -17,7 +17,7 @@ export { isConflicting, isMergeabilityUnknown } from './conflict.ts';
 export { conflictsWithBase, mergeRequestCheck, mergeRequestPolls, mergeRequestView, mergesNow } from './merge-request.ts';
 export type { MergeRequestView } from './merge-request.ts';
 export { mergeCheck, mergeFindings, parsePrDetails } from './merge.ts';
-export type { PrDetails } from './merge.ts';
+export type { CreatePr, PrDetails } from './merge.ts';
 export { buildPrBody, finalMessage, openPrUrl, prFields, pullRequestOf } from './pr.ts';
 export type { PrFields, PrPlan, PrState, PullRequest } from './pr.ts';
 export {
