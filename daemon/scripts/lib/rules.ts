@@ -15,7 +15,13 @@ export const UNCHECKED: Record<string, string> = {
   'delegate-skill': 'a pointer to a skill, not a behaviour; doc-paths.test.ts only checks that the path exists',
 };
 
-export type Rule = { id: string; text: string; tests: string[]; unchecked: string | null };
+/** Rules a script enforces rather than a test, each with the script and what makes it fail. The rule's test checks its inputs. */
+export const SCRIPT_CHECKS: Record<string, string> = {
+  'coverage-floors':
+    'pnpm coverage (daemon/scripts/coverage.ts; CI runs it): fails when a group of daemon/src drops below its floor in COVERAGE_FLOORS',
+};
+
+export type Rule = { id: string; text: string; tests: string[]; script: string | null; unchecked: string | null };
 
 /** The ids on each rule line of CLAUDE.md's Boundaries and Rules, with the line's text. */
 export function readRuleLines(): { ids: string[]; text: string; line: number; isBullet: boolean }[] {
@@ -52,6 +58,7 @@ export function readRules(): Rule[] {
       id,
       text,
       tests: tags.filter((t) => t.ids.includes(id)).map((t) => `${t.file}: ${t.name}`),
+      script: SCRIPT_CHECKS[id] ?? null,
       unchecked: UNCHECKED[id] ?? null,
     }));
 }
