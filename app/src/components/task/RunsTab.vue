@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import { useQuery } from '@tanstack/vue-query';
 import { computed } from 'vue';
-import { MODEL_LABELS, type TaskDetail, ago, fmtTokens, runDuration, runHint, runLabel, totalTokens } from '../../api';
+import { MODEL_LABELS, type TaskDetail, ago, fmtTokens, reposQuery, runDuration, runHint, runLabel, totalTokens } from '../../api';
+import { liveSource } from '../../lib/runLive';
+import Progress from '../ui/Progress.vue';
 import LogView from './LogView.vue';
 import Markdown from '../files/Markdown.vue';
 import FinalMessage from './FinalMessage.vue';
@@ -15,6 +18,9 @@ const emit = defineEmits<{ select: [runId: number]; path: [path: string, line: n
 const latest = computed(() => props.task.runs.at(-1)?.id ?? null);
 const chosen = computed(() => props.runId ?? latest.value);
 const run = computed(() => props.task.runs.find((r) => r.id === chosen.value));
+const reposQ = useQuery(reposQuery());
+const testCmd = computed(() => reposQ.data.value?.find((r) => r.id === props.task.repo_id)?.test_cmd ?? null);
+const source = computed(() => (run.value && !run.value.ended_at ? liveSource(run.value, props.task) : null));
 const live = computed(() => (props.task.status === 'running' || !!props.task.sync?.resolving) && chosen.value === latest.value);
 </script>
 
@@ -55,6 +61,14 @@ const live = computed(() => (props.task.status === 'running' || !!props.task.syn
             </span>
             <span v-if="r.denials" class="text-blocked">{{ r.denials }} refused</span>
           </span>
+          <Progress
+            v-if="!r.ended_at && liveSource(r, task)?.max_turns"
+            class="h-1 w-16 flex-none overflow-hidden rounded-full bg-border"
+            indicator-class="bg-running"
+            label="Turns used"
+            :value="liveSource(r, task)!.turns"
+            :max="liveSource(r, task)!.max_turns"
+          />
           <span class="ml-auto text-sm text-muted">
             <template v-if="r.model"
               ><span :title="r.model_id ?? ''">{{ MODEL_LABELS[r.model] ?? r.model }}</span> · </template
@@ -84,6 +98,9 @@ const live = computed(() => (props.task.status === 'running' || !!props.task.syn
       :task-id="task.id"
       :run-id="chosen"
       :live="live"
+      :run="run"
+      :source="source"
+      :test-cmd="testCmd"
       :worktree="task.worktree"
       :is-path="isPath"
       @file="(p) => emit('path', p, null)"
