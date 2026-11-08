@@ -346,6 +346,7 @@ export interface TaskEventRow {
     | 'plan_unfinished'
     | 'environment_block'
     | 'unblock_ask'
+    | 'escalate'
     | 'claim'
     | 'finish'
     | 'rate_limited'
@@ -444,6 +445,8 @@ export interface CancelResult {
 /** POST /api/tasks/:id/retry: `note` is "request changes", kept on the timeline and put first in the next run's prompt. */
 export interface RetryRequest {
   note?: string;
+  /** The model the next attempt runs on; a retry that names one is never escalated. */
+  model?: string;
 }
 
 /** POST /api/tasks/:id/done: `note` is kept on the timeline. */

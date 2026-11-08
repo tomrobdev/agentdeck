@@ -8,6 +8,7 @@ import type { UnblockQuestion } from './needs.ts';
 
 /** The fields of a task a write sets, named as its columns are; the store stores the documents as JSON. `'now'` is a timestamp it fills in. */
 export interface TaskChanges {
+  model?: string;
   question?: UnblockQuestion | null;
   auto_merge?: boolean | null;
   auto_merge_check?: AutoMergeCheck | null;
@@ -27,6 +28,12 @@ export interface TaskChanges {
 const NO_MERGE_REQUEST = { merge_requested_at: null, merge_request_method: null, merge_request_check: null } as const;
 /** A task with no auto-merge check: one is made for a setting and a PR state, so it goes when either changes. */
 const NO_AUTO_MERGE_CHECK = { auto_merge_check: null, auto_merge_checked_at: null } as const;
+
+/**
+ * A change of the model the task's next attempt runs on, apart from an edit: an escalation one model up (domain/runs/escalate.ts),
+ * or the model a person's retry names, which may be a done or cancelled task's.
+ */
+export const modelChanges = (to: string): TaskChanges => ({ model: to });
 
 /** What an unblock run's question changes: the question stays on the blocked task. */
 export const questionChanges = (question: UnblockQuestion): TaskChanges => ({ question });

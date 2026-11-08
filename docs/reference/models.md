@@ -838,31 +838,32 @@ A task in running (or being cancelled) and the process of its unfinished run, if
 
 ### Repo
 
-| Field                  | Type               | Comment                                                                                                  |
-| ---------------------- | ------------------ | -------------------------------------------------------------------------------------------------------- |
-| `id`                   | `RepoId`           |                                                                                                          |
-| `name`                 | `string`           |                                                                                                          |
-| `path`                 | `string`           |                                                                                                          |
-| `base_branch`          | `string`           |                                                                                                          |
-| `test_cmd`             | `string \| null`   |                                                                                                          |
-| `allowed_tools`        | `string[] \| null` | Tool rules the repo set itself; null = the generic defaults plus the toolchain's rules.                  |
-| `auto_approve`         | `boolean`          | Planner tasks skip approval.                                                                             |
-| `proposed_at`          | `string \| null`   |                                                                                                          |
-| `toolchain`            | `string \| null`   | pnpm \| yarn \| npm \| cargo \| uv \| go, null = not detected                                            |
-| `setup_cmd`            | `string \| null`   | run in each worktree before claude                                                                       |
-| `paused_reason`        | `string \| null`   | set = no task of this repo is claimed until `repo resume` or a passing doctor                            |
-| `pr_mode`              | `PrMode`           |                                                                                                          |
-| `merge_method`         | `MergeMethod`      | how a PR is merged from the app unless the person picks another                                          |
-| `auto_resolve`         | `boolean`          | The daemon starts a resolve run on its own when a branch conflicts with the base.                        |
-| `auto_unblock`         | `boolean`          | The daemon starts an unblock run on its own when a task blocks (domain/runs/unblock.ts); off by default. |
-| `sandbox`              | `boolean`          | The agent's Bash commands run in Claude Code's sandbox (the default).                                    |
-| `archived_at`          | `string \| null`   | set = hidden everywhere and its work stopped, until `repo unarchive`                                     |
-| `network`              | `string[]`         | Hosts sandboxed commands may reach; none = empty.                                                        |
-| `auto_merge`           | `boolean`          | The daemon merges a done task's PR on its own when it passes the auto-merge check.                       |
-| `auto_merge_max_lines` | `number`           | a PR changing more lines (additions + deletions) needs a person                                          |
-| `auto_merge_skip`      | `string[]`         | Path prefixes; a PR touching one needs a person.                                                         |
-| `model`                | `string \| null`   | The model a new task of this repo takes when it names none; null follows the default_model setting.      |
-| `created_at`           | `string`           |                                                                                                          |
+| Field                  | Type               | Comment                                                                                                      |
+| ---------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------ |
+| `id`                   | `RepoId`           |                                                                                                              |
+| `name`                 | `string`           |                                                                                                              |
+| `path`                 | `string`           |                                                                                                              |
+| `base_branch`          | `string`           |                                                                                                              |
+| `test_cmd`             | `string \| null`   |                                                                                                              |
+| `allowed_tools`        | `string[] \| null` | Tool rules the repo set itself; null = the generic defaults plus the toolchain's rules.                      |
+| `auto_approve`         | `boolean`          | Planner tasks skip approval.                                                                                 |
+| `proposed_at`          | `string \| null`   |                                                                                                              |
+| `toolchain`            | `string \| null`   | pnpm \| yarn \| npm \| cargo \| uv \| go, null = not detected                                                |
+| `setup_cmd`            | `string \| null`   | run in each worktree before claude                                                                           |
+| `paused_reason`        | `string \| null`   | set = no task of this repo is claimed until `repo resume` or a passing doctor                                |
+| `pr_mode`              | `PrMode`           |                                                                                                              |
+| `merge_method`         | `MergeMethod`      | how a PR is merged from the app unless the person picks another                                              |
+| `auto_resolve`         | `boolean`          | The daemon starts a resolve run on its own when a branch conflicts with the base.                            |
+| `auto_unblock`         | `boolean`          | The daemon starts an unblock run on its own when a task blocks (domain/runs/unblock.ts); off by default.     |
+| `sandbox`              | `boolean`          | The agent's Bash commands run in Claude Code's sandbox (the default).                                        |
+| `archived_at`          | `string \| null`   | set = hidden everywhere and its work stopped, until `repo unarchive`                                         |
+| `network`              | `string[]`         | Hosts sandboxed commands may reach; none = empty.                                                            |
+| `auto_merge`           | `boolean`          | The daemon merges a done task's PR on its own when it passes the auto-merge check.                           |
+| `auto_merge_max_lines` | `number`           | a PR changing more lines (additions + deletions) needs a person                                              |
+| `auto_merge_skip`      | `string[]`         | Path prefixes; a PR touching one needs a person.                                                             |
+| `model`                | `string \| null`   | The model a new task of this repo takes when it names none; null follows the default_model setting.          |
+| `escalate`             | `boolean`          | A retry after a failure a stronger model may fix runs one model up (domain/runs/escalate.ts); on by default. |
+| `created_at`           | `string`           |                                                                                                              |
 
 ### ToolchainInfo
 
@@ -928,6 +929,16 @@ A task's timeline entry, as far as `editsSinceCutOff` reads it.
 | `reason` | `string \| null` |         |
 | `at`     | `string`         |         |
 
+### Escalation
+
+A change of a task's model one step up, and the failure that called for it.
+
+| Field   | Type          | Comment |
+| ------- | ------------- | ------- |
+| `from`  | `string`      |         |
+| `to`    | `string`      |         |
+| `cause` | `HardFailure` |         |
+
 ### LiveState
 
 What the daemon keeps of a live run: the turns so far and the last tool call in a few words.
@@ -966,7 +977,7 @@ An edit in numbers and a little text, for a small diff.
 | --------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------- |
 | `at?`     | `string \| undefined`                                                            | The event's timestamp.                                        |
 | `parent?` | `string \| undefined`                                                            | The `tool_use` id of the subagent call this entry comes from. |
-| `kind`    | `"text" \| "tool" \| "tool_result" \| "result" \| "setup" \| "tests" \| "error"` |                                                               |
+| `kind`    | `"error" \| "text" \| "tool" \| "tool_result" \| "result" \| "setup" \| "tests"` |                                                               |
 
 ### PidRun
 
@@ -1121,6 +1132,18 @@ One usage window a claude session reports.
 | `utilization` | `number`         |         |
 | `resets_at`   | `number`         |         |
 | `status`      | `string \| null` |         |
+
+### WorkRunEnd
+
+How a work run ended, as far as the escalation reads it: its outcome, the stop reason, and what blamed the environment.
+
+| Field     | Type                 | Comment                                                          |
+| --------- | -------------------- | ---------------------------------------------------------------- |
+| `outcome` | `RunOutcome \| null` |                                                                  |
+| `reason`  | `string \| null`     | The stop reason (`WorkerResult.reason`, a task's `stop_reason`). |
+| `needs`   | `Needs \| null`      | What the worker said it needs, for a block.                      |
+| `denials` | `number`             | Tool uses the permission rules refused during the run.           |
+| `turns`   | `number`             | Turns the run took (claude's count, else as counted live).       |
 
 ### WorkerResult
 
@@ -1592,6 +1615,7 @@ The fields of a task a write sets, named as its columns are; the store stores th
 
 | Field                    | Type                                   | Comment |
 | ------------------------ | -------------------------------------- | ------- |
+| `model?`                 | `string \| undefined`                  |         |
 | `question?`              | `UnblockQuestion \| null \| undefined` |         |
 | `auto_merge?`            | `boolean \| null \| undefined`         |         |
 | `auto_merge_check?`      | `AutoMergeCheck \| null \| undefined`  |         |

@@ -68,6 +68,8 @@ function agentText(e: EventFields): string {
       return 'left plan steps unfinished';
     case 'environment_block':
       return withReason('blocked by the environment', e.reason);
+    case 'escalate':
+      return withReason('model moved up', e.reason);
     default:
       return e.type;
   }
@@ -110,6 +112,8 @@ function personText(e: EventFields): PersonEventText | null {
       return say(e.reason ?? 'left linked plan steps unfinished');
     case 'environment_block':
       return say('blocked by the environment; attempt given back');
+    case 'escalate':
+      return say('moved the next attempt to a stronger model');
     case 'conflict':
       return say("the sync hit conflicts it couldn't settle; blocked");
     case 'rate_limited':

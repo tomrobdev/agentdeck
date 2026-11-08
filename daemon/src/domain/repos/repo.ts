@@ -47,6 +47,8 @@ export interface Repo {
   auto_merge_skip: string[];
   /** The model a new task of this repo takes when it names none; null follows the default_model setting. */
   model: string | null;
+  /** A retry after a failure a stronger model may fix runs one model up (domain/runs/escalate.ts); on by default. */
+  escalate: boolean;
   created_at: string;
 }
 

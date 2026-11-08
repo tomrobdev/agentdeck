@@ -9,6 +9,7 @@ export {
   autoMergeCheckChanges,
   autoMergeSettingChanges,
   mergedPrChanges,
+  modelChanges,
   mergeRequestChanges,
   mergeRequestCheckChanges,
   noMergeRequestChanges,

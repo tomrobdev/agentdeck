@@ -22,6 +22,8 @@ Repos
   agentdeck repo set <repo> auto_resolve on|off   start a resolve run on its own when a branch conflicts with the base (default on)
   agentdeck repo set <repo> auto_unblock on|off   start a short unblock run on its own when a task blocks: it retries the task
                                                   with a note or leaves it blocked with a question; uses no attempt (default off)
+  agentdeck repo set <repo> escalate on|off       a retry after the turn limit, failing tests, an error or no change runs one
+                                                  model up: haiku to sonnet, sonnet to opus (default on)
   agentdeck repo set <repo> auto_merge on|off     merge a done task's PR on its own once checks and tests pass (default off;
                                                   planner proposals only when auto_approve is off)
   agentdeck repo set <repo> auto_merge_max_lines <n>  a PR changing more lines needs a person (default ${DEFAULT_AUTO_MERGE_MAX_LINES})
@@ -60,7 +62,9 @@ Tasks
   agentdeck approve <id>...       queue planner proposals
   agentdeck reject <id>...
   agentdeck cancel <id>
-  agentdeck retry <id> [--note "…"]   another attempt; the note goes first in its prompt (changes requested in review)
+  agentdeck retry <id> [--note "…"] [--model <model>]   another attempt; the note goes first in its prompt (changes
+                                  requested in review). It runs on --model if given; without it, a blocked or failed task whose
+                                  last run hit the turn limit, failing tests, an error or no change runs one model up (repo escalate)
   agentdeck done <id> [--note "…"]   mark a blocked or failed task done (you finished the work); tasks waiting on it start
   agentdeck install-needs <id> [--yes]   install the packages a blocked task asked for (NEEDS deps) on its branch, then retry
   agentdeck fix-checks <id>    retry a done task whose PR checks fail, with each failing check and its log tail in the note

@@ -280,11 +280,26 @@ export function classifyRun<R extends ResultLike>(run: ClaudeRunLike<R>): RunCla
     // (daemon/test/fixtures/claude/cut-off-after-api-retry.jsonl), or its result line was cut off: say why. A clean exit
     // with no result is said as such, not as "code 0", which reads like success.
     const why = stderr.trim() ? `: ${lastLine(stderr)}` : '';
-    const stopped = exitCode === 0 ? 'claude ended without a result' : `claude exited with code ${exitCode}`;
+    const stopped = exitCode === 0 ? NO_RESULT[0] : `${NO_RESULT[1]}${exitCode}`;
     return { kind: 'failed', reason: result?.subtype ?? `${stopped}${why}` };
   }
   return { kind: 'finished', result };
 }
+
+/** How the stop reason of a run whose claude ended without a result begins: a clean exit, or an exit code. */
+const NO_RESULT = ['claude ended without a result', 'claude exited with code '];
+
+/** Whether a stop reason says claude ended without a result (`classifyRun`). */
+export const isNoResult = (reason: string | null | undefined): boolean => NO_RESULT.some((r) => (reason ?? '').startsWith(r));
+
+/** The stop reason of a run claude stopped at its turn limit: the subtype of its result. */
+export const TURN_LIMIT = 'error_max_turns';
+
+/** The stop reason of a run whose test command failed. */
+export const TESTS_FAILED = 'tests failed';
+
+/** The stop reason of a run that finished without a commit. */
+export const NO_CHANGE = 'agent finished without changing anything';
 
 export type Outcome = 'done' | 'blocked' | 'failed' | 'cancelled' | 'rate_limited';
 
@@ -349,8 +364,8 @@ function baseOutcome(r: RunCameTo): WorkerResult {
   if (status.blocked) {
     return { outcome: 'blocked', reason: status.reason ?? 'agent reported blocked', ...(status.needs ? { needs: status.needs } : {}) };
   }
-  if (r.testsPassed === false) return { outcome: 'failed', reason: 'tests failed' };
-  if (r.commitsAhead === 0) return { outcome: 'blocked', reason: 'agent finished without changing anything' };
+  if (r.testsPassed === false) return { outcome: 'failed', reason: TESTS_FAILED };
+  if (r.commitsAhead === 0) return { outcome: 'blocked', reason: NO_CHANGE };
   return { outcome: 'done' };
 }
 

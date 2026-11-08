@@ -91,6 +91,7 @@ export type RepoUpdate = Partial<
     | 'merge_method'
     | 'auto_resolve'
     | 'auto_unblock'
+    | 'escalate'
     | 'sandbox'
     | 'network'
     | 'auto_merge'
@@ -145,6 +146,12 @@ export interface TaskRepository {
   recordMerge(id: TaskId, method: MergeMethod, reason: string, checks?: CheckCounts): boolean;
   recordSync(id: TaskId, reason: string): boolean;
   recordPlanUnfinished(id: TaskId, reason: string): boolean;
+  changeModel(
+    id: TaskId,
+    change: { from: string; to: string },
+    row: { type: 'escalate'; reason: string } | { type: 'edit' },
+    statuses: TaskStatus[],
+  ): boolean;
   recoverOrphans(): { requeued: number; failed: TaskId[] };
 }
 

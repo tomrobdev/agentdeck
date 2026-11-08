@@ -168,6 +168,7 @@ export const toRepo = (row: RepoRow): Repo => ({
   auto_approve: row.auto_approve === 1,
   auto_resolve: row.auto_resolve === 1,
   auto_unblock: row.auto_unblock === 1,
+  escalate: row.escalate !== 0,
   sandbox: row.sandbox !== 0,
   network: parseTextList(row.network),
   auto_merge: row.auto_merge === 1,
@@ -176,7 +177,8 @@ export const toRepo = (row: RepoRow): Repo => ({
 
 /** The columns `fields` of a repo are stored in: the way back from `toRepo`. */
 export function repoColumns(fields: Partial<Repo>): Partial<RepoRow> {
-  const { allowed_tools, auto_approve, auto_resolve, auto_unblock, sandbox, network, auto_merge, auto_merge_skip, ...same } = fields;
+  const { allowed_tools, auto_approve, auto_resolve, auto_unblock, escalate, sandbox, network, auto_merge, auto_merge_skip, ...same } =
+    fields;
   const bit = (on: boolean | undefined) => (on === undefined ? undefined : on ? 1 : 0);
   const json = (list: string[] | null | undefined) => (list ? JSON.stringify(list) : list);
   const columns = {
@@ -185,6 +187,7 @@ export function repoColumns(fields: Partial<Repo>): Partial<RepoRow> {
     auto_approve: bit(auto_approve),
     auto_resolve: bit(auto_resolve),
     auto_unblock: bit(auto_unblock),
+    escalate: bit(escalate),
     sandbox: bit(sandbox),
     network: json(network) ?? undefined,
     auto_merge: bit(auto_merge),

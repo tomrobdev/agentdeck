@@ -41,6 +41,7 @@ export const repos = sqliteTable(
     auto_merge_skip: text().default('[".github/"]').notNull(),
     auto_unblock: integer().default(0).notNull(),
     model: text(),
+    escalate: integer().default(1).notNull(),
   },
   (table) => [unique('repos_name_unique').on(table.name), unique('repos_path_unique').on(table.path)],
 );
