@@ -221,11 +221,23 @@ One work run with the status of the task it belongs to. Resolve runs are never g
 
 ### AutoMergeCheck
 
+Whether a merge goes ahead, waits or needs a person, and why: auto-merge's check, or a merge request's.
+
 | Field       | Type                           | Comment                                                                                                  |
 | ----------- | ------------------------------ | -------------------------------------------------------------------------------------------------------- |
 | `verdict`   | `"merge" \| "wait" \| "never"` | `merge`: go ahead. `wait`: something that can still change on its own. `never`: it needs a person.       |
-| `reasons`   | `string[]`                     | Why it waits or needs a person; empty for `merge`.                                                       |
+| `reasons`   | `MergeReason[]`                | Why it waits or needs a person; empty for `merge`.                                                       |
 | `conflict?` | `true \| undefined`            | Set when one of the reasons is the merge finding of kind `conflict`: the branch conflicts with the base. |
+
+### AutoMergeFacts
+
+What only auto-merge's check reads, beside the merge input: the repo's limits, a pause, and the branch as measured.
+
+| Field       | Type                                                                    | Comment                                                                                                   |
+| ----------- | ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `repo`      | `Pick<Repo, "test_cmd" \| "auto_merge_max_lines" \| "auto_merge_skip">` |                                                                                                           |
+| `paused`    | `string \| null`                                                        | Why the daemon or the repo is paused; null when neither is.                                               |
+| `measured?` | `AutoMergeMeasured \| null \| undefined`                                | The branch measured locally (`git diff --numstat` against the base); null or missing when it couldn't be. |
 
 ### AutoMergeMeasured
 
@@ -374,6 +386,24 @@ One fact about a PR that bears on merging it. A problem stops any merge; anythin
 | `lands_after?`  | `{ on: number; reason: string; }[] \| undefined` | The tasks this one lands after that have not landed (`unlandedAfter`), each with why. Missing means none.            |
 | `auto_resolve?` | `boolean \| undefined`                           | False when the repo has auto_resolve off: no sync starts on its own, so a conflict needs a person. Missing means on. |
 
+### MergeReason
+
+One reason a merge waits or needs a person: what it is about, and how a person reads it.
+
+| Field  | Type              | Comment |
+| ------ | ----------------- | ------- |
+| `kind` | `MergeReasonKind` |         |
+| `text` | `string`          |         |
+
+### MergeReasons
+
+The reasons a merge needs a person (`never`) and those it waits for (`wait`), each in the order they are told.
+
+| Field   | Type            | Comment |
+| ------- | --------------- | ------- |
+| `never` | `MergeReason[]` |         |
+| `wait`  | `MergeReason[]` |         |
+
 ### MergeRequestView
 
 What a view says about a task's merge request: waiting for the PR to be ready, or merging it now.
@@ -384,6 +414,16 @@ What a view says about a task's merge request: waiting for the PR to be ready, o
 | `method`  | `MergeMethod`            |                                                                                    |
 | `reasons` | `string[]`               | Why it waits, from the last check; empty before the first check and while merging. |
 | `since`   | `string`                 | When the person asked (UTC, `YYYY-MM-DD HH:MM:SS`).                                |
+
+### MergeVerdictView
+
+What a check says to a person: its verdict and reasons as text, as the API and the CLI show them.
+
+| Field       | Type                           | Comment |
+| ----------- | ------------------------------ | ------- |
+| `verdict`   | `"merge" \| "wait" \| "never"` |         |
+| `reasons`   | `string[]`                     |         |
+| `conflict?` | `true \| undefined`            |         |
 
 ### OpenedPullRequest
 
@@ -536,6 +576,28 @@ Where opening a failed PR again stands. `due`: the PR refresh opens it now. `wai
 | `tests_passed` | `boolean \| null`     |                                                                                                  |
 | `result_text`  | `string \| null`      |                                                                                                  |
 
+### RefreshRead
+
+What the refresh read about one open PR of a done task.
+
+| Field       | Type                     | Comment                                                                                                      |
+| ----------- | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| `input`     | `MergeInput`             | The merge input, its PR as GitHub said it now (with the checks the refresh kept).                            |
+| `requested` | `boolean`                | A person asked for the merge: their merge request's check stands in for auto-merge's.                        |
+| `auto`      | `AutoMergeFacts \| null` | What auto-merge's check reads beside the input; null when auto-merge is off for the task, or a person asked. |
+
+### RefreshVerdict
+
+What the refresh does about one open PR.
+
+| Field              | Type                     | Comment                                                                                                              |
+| ------------------ | ------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| `auto_merge_check` | `AutoMergeCheck \| null` | The auto-merge check to keep on the task: null when auto-merge is off, or a person's merge request stands in for it. |
+| `request_check`    | `AutoMergeCheck \| null` | The merge request's check to keep; null when there is no request, or it is dropped.                                  |
+| `drop`             | `string \| null`         | Why the merge request is dropped (its check needs a person), told as it is; null when it stays or there is none.     |
+| `place`            | `PrPlace`                | Where the PR goes in the refresh's findings; a dropped request's PR goes nowhere.                                    |
+| `polling`          | `boolean`                | A merge request worth reading again soon: its checks are running, or GitHub is working out mergeability.             |
+
 ### Review
 
 One review of a task. A draft has no `submitted_at` and no `kind` yet, and no head or diff: they are read at submit.
@@ -649,12 +711,13 @@ An attention candidate: a task that needs a person, with the priority it is orde
 
 ### Check
 
-| Field    | Type             | Comment                                      |
-| -------- | ---------------- | -------------------------------------------- |
-| `name`   | `string`         |                                              |
-| `ok`     | `boolean`        |                                              |
-| `reason` | `string`         |                                              |
-| `fix`    | `string \| null` | For a failed check: a command that fixes it. |
+| Field      | Type                   | Comment                                                                              |
+| ---------- | ---------------------- | ------------------------------------------------------------------------------------ |
+| `name`     | `string`               |                                                                                      |
+| `ok`       | `boolean`              |                                                                                      |
+| `reason`   | `string`               |                                                                                      |
+| `fix`      | `string \| null`       | For a failed check, or a warning: a command that fixes it.                           |
+| `warning?` | `boolean \| undefined` | Passed, but something a person should look at (an area review due); never a failure. |
 
 ### DaemonState
 
@@ -669,12 +732,13 @@ What the daemon says about itself on GET /api/daemon.
 
 ### Headline
 
-| Field       | Type              | Comment                                                                                             |
-| ----------- | ----------------- | --------------------------------------------------------------------------------------------------- |
-| `state`     | `HeadlineState`   |                                                                                                     |
-| `until`     | `number \| null`  | When a rate limit or a hold ends (unix seconds); null for any other state, or when it is not known. |
-| `need_you`  | `number`          |                                                                                                     |
-| `attention` | `AttentionTask[]` |                                                                                                     |
+| Field        | Type              | Comment                                                                                             |
+| ------------ | ----------------- | --------------------------------------------------------------------------------------------------- |
+| `state`      | `HeadlineState`   |                                                                                                     |
+| `until`      | `number \| null`  | When a rate limit or a hold ends (unix seconds); null for any other state, or when it is not known. |
+| `need_you`   | `number`          |                                                                                                     |
+| `attention`  | `AttentionTask[]` |                                                                                                     |
+| `review_due` | `RepoReviewDue[]` |                                                                                                     |
 
 ### HeadlineFacts
 
@@ -686,6 +750,7 @@ What the daemon says about itself on GET /api/daemon.
 | `running`            | `number`                                                 |                                                                                      |
 | `need_you`           | `{ proposed: number; blocked: number; review: number; }` | Proposed, blocked and in-review tasks.                                               |
 | `attention`          | `AttentionCandidate[]`                                   | Tasks that need a person; any number, in any order.                                  |
+| `review_due?`        | `RepoReviewDue[] \| undefined`                           | The repos due for an area review, as the daemon's last check found them.             |
 
 ### HealthFacts
 
@@ -702,6 +767,7 @@ What the daemon says about itself on GET /api/daemon.
 | `tasks`     | `RunningTaskFact[]`                |                                                                                                  |
 | `log`       | `LogFacts \| null`                 | null when there is no log file.                                                                  |
 | `gh`        | `{ ok: boolean; output: string; }` |                                                                                                  |
+| `reviews`   | `ReviewDue[]`                      | The repos due for an area review.                                                                |
 
 ### LogFacts
 
@@ -774,6 +840,57 @@ The reload as the API serves it: what a person needs to know about why the daemo
 | `blocked` | `string \| null` | Why the code on disk must not be loaded, or null.                         |
 | `changed` | `number`         | How many source files changed since the daemon started.                   |
 
+### RepoReviewDue
+
+A repo due for an area review, as the headline shows it.
+
+| Field  | Type     | Comment                                               |
+| ------ | -------- | ----------------------------------------------------- |
+| `repo` | `string` |                                                       |
+| `line` | `string` | "area review due: 9 days, 115 commits since the last" |
+
+### ReviewDue
+
+A repo due for an area review, and the facts that made it due.
+
+| Field     | Type             | Comment                                                                                 |
+| --------- | ---------------- | --------------------------------------------------------------------------------------- |
+| `repo_id` | `RepoId`         |                                                                                         |
+| `repo`    | `string`         |                                                                                         |
+| `area`    | `string \| null` | The area of the oldest mark, and its age in whole days; null when the repo has no mark. |
+| `days`    | `number \| null` |                                                                                         |
+| `commits` | `number`         |                                                                                         |
+| `lines`   | `number`         |                                                                                         |
+| `line`    | `string`         | The line the headline and the digest show.                                              |
+
+### ReviewDueSettings
+
+When a repo is due: its oldest mark is older than `days`, or more than `lines` lines merged since it.
+
+| Field   | Type     | Comment |
+| ------- | -------- | ------- |
+| `days`  | `number` |         |
+| `lines` | `number` |         |
+
+### ReviewFacts
+
+What git says about a repo's area reviews.
+
+| Field     | Type           | Comment                                                                                                                    |
+| --------- | -------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `marks`   | `ReviewMark[]` |                                                                                                                            |
+| `commits` | `number`       | Commits and lines (added plus deleted) merged into the base since the oldest mark; with no mark, since the repo was added. |
+| `lines`   | `number`       |                                                                                                                            |
+
+### ReviewMark
+
+One area's mark: the area's name and when the base commit it points at was committed (ms since the epoch).
+
+| Field  | Type     | Comment |
+| ------ | -------- | ------- |
+| `area` | `string` |         |
+| `at`   | `number` |         |
+
 ### RunningTaskFact
 
 A task in running (or being cancelled) and the process of its unfinished run, if any.
@@ -796,16 +913,17 @@ A task in running (or being cancelled) and the process of its unfinished run, if
 
 ### Settings
 
-| Field              | Type              | Comment                                                                                                                     |
-| ------------------ | ----------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `max_concurrent`   | `number`          |                                                                                                                             |
-| `budget`           | `Budget`          |                                                                                                                             |
-| `notify`           | `NotifySettings`  |                                                                                                                             |
-| `planner`          | `PlannerSettings` |                                                                                                                             |
-| `default_model`    | `string`          | The model a new task takes when neither it nor its repo names one.                                                          |
-| `support_model`    | `string`          | The model resolve and unblock runs use, in place of their task's (`runModel` in domain/runs/run.ts).                        |
-| `review_model`     | `string`          | The model review runs use (`runModel` in domain/runs/run.ts); opus by default, a reviewer at least as strong as the worker. |
-| `reload_on_change` | `boolean`         | Restart the daemon onto new code when daemon/src changes and nothing is running.                                            |
+| Field              | Type                | Comment                                                                                                                     |
+| ------------------ | ------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `max_concurrent`   | `number`            |                                                                                                                             |
+| `budget`           | `Budget`            |                                                                                                                             |
+| `notify`           | `NotifySettings`    |                                                                                                                             |
+| `planner`          | `PlannerSettings`   |                                                                                                                             |
+| `default_model`    | `string`            | The model a new task takes when neither it nor its repo names one.                                                          |
+| `support_model`    | `string`            | The model resolve and unblock runs use, in place of their task's (`runModel` in domain/runs/run.ts).                        |
+| `review_model`     | `string`            | The model review runs use (`runModel` in domain/runs/run.ts); opus by default, a reviewer at least as strong as the worker. |
+| `reload_on_change` | `boolean`           | Restart the daemon onto new code when daemon/src changes and nothing is running.                                            |
+| `review_due`       | `ReviewDueSettings` | When a repo is due for an area review (review_due_days, review_due_lines).                                                  |
 
 ## `domain/proposals/`
 
@@ -1351,16 +1469,17 @@ A history row with its task's title.
 
 ### DigestHeader
 
-| Field                 | Type                                                           | Comment                                                                            |
-| --------------------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `repo`                | `string`                                                       |                                                                                    |
-| `paused`              | `boolean`                                                      | The daemon is paused.                                                              |
-| `repo_paused`         | `string \| null`                                               | Why the repo is paused, or null.                                                   |
-| `running`             | `number`                                                       |                                                                                    |
-| `max_concurrent`      | `number`                                                       |                                                                                    |
-| `governor`            | `{ allow: boolean; reason: string \| null; }`                  |                                                                                    |
-| `rate_limited_until?` | `number \| null \| undefined`                                  | When a usage-limit backoff lifts (unix seconds), or null when none is in force.    |
-| `head`                | `{ branch: string; commit: string; subject: string; } \| null` | The repo's checkout: branch, short commit and subject. Null when git couldn't say. |
+| Field                 | Type                                                           | Comment                                                                                                   |
+| --------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `repo`                | `string`                                                       |                                                                                                           |
+| `paused`              | `boolean`                                                      | The daemon is paused.                                                                                     |
+| `repo_paused`         | `string \| null`                                               | Why the repo is paused, or null.                                                                          |
+| `running`             | `number`                                                       |                                                                                                           |
+| `max_concurrent`      | `number`                                                       |                                                                                                           |
+| `governor`            | `{ allow: boolean; reason: string \| null; }`                  |                                                                                                           |
+| `rate_limited_until?` | `number \| null \| undefined`                                  | When a usage-limit backoff lifts (unix seconds), or null when none is in force.                           |
+| `head`                | `{ branch: string; commit: string; subject: string; } \| null` | The repo's checkout: branch, short commit and subject. Null when git couldn't say.                        |
+| `review_due?`         | `string \| null \| undefined`                                  | "area review due: 9 days, 115 commits since the last" when the repo is due for an area review; else null. |
 
 ### DigestInput
 

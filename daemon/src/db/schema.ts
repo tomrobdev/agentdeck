@@ -263,7 +263,11 @@ export const MIGRATIONS: Migration[] = [
    ALTER TABLE reviews ADD COLUMN head_commit TEXT;
    ALTER TABLE reviews ADD COLUMN diff_hash TEXT;
    ALTER TABLE runs ADD COLUMN diff_hash TEXT;`,
-  // 33: escalation (domain/runs/escalate.ts). repos.escalate lets a retry after a failure a stronger model may fix run one
+  // 33: review_due, a new notification kind (domain/operations/review-due.ts), on by default. A stored notify_events
+  // does not take the setting's default, so the kind is added to it, unless a person turned every kind off.
+  `UPDATE settings SET value = value || ',review_due'
+   WHERE key = 'notify_events' AND value <> '' AND ',' || value || ',' NOT LIKE '%,review_due,%';`,
+  // 34: escalation (domain/runs/escalate.ts). repos.escalate lets a retry after a failure a stronger model may fix run one
   // model up (on by default); the change is an `escalate` row in task_events.
   'ALTER TABLE repos ADD COLUMN escalate INTEGER NOT NULL DEFAULT 1;',
 ];

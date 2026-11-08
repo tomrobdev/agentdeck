@@ -1,12 +1,22 @@
 // Alerts for things that need a human: task finished, blocked, failed, proposals, a governor hold, a pause, an
-// auto-merge or a PR's checks failing. Pure: no I/O.
+// auto-merge, a PR's checks failing or an area review due. Pure: no I/O.
 import { type PrCheck, failingChecks, failureLine, failureRead } from '../landing/index.ts';
 import type { TaskId } from '../shared/index.ts';
 import { plural } from '../shared/index.ts';
 import type { Task, TaskState } from '../work/index.ts';
 
-export type NotifyKind = 'done' | 'blocked' | 'failed' | 'hold' | 'paused' | 'proposed' | 'merged' | 'checks_failed';
-export const NOTIFY_KINDS: NotifyKind[] = ['done', 'blocked', 'failed', 'hold', 'paused', 'proposed', 'merged', 'checks_failed'];
+export type NotifyKind = 'done' | 'blocked' | 'failed' | 'hold' | 'paused' | 'proposed' | 'merged' | 'checks_failed' | 'review_due';
+export const NOTIFY_KINDS: NotifyKind[] = [
+  'done',
+  'blocked',
+  'failed',
+  'hold',
+  'paused',
+  'proposed',
+  'merged',
+  'checks_failed',
+  'review_due',
+];
 
 /** The rules for the notification settings. Each returns the message to show, or null. */
 export function notifyEventsError(events: string[]): string | null {
@@ -84,4 +94,18 @@ export function checksFailedNotification(task: { id: TaskId; title: string }, ch
     body: `${plural(failing.length, 'check')} failing on ${task.title}: ${failing.map(failureLine).join(failing.some(failureRead) ? '; ' : ', ')}`,
     task_id: task.id,
   };
+}
+
+/** The tasks a merge lets start, as the merge's log line and notification end: "; #4, #5 can start", or nothing. */
+export const canStart = (unblocked: TaskId[]): string =>
+  unblocked.length ? `; ${unblocked.map((n) => `#${n}`).join(', ')} can start` : '';
+
+/** What a person is told when the daemon merged a task's PR, on its own or as they asked: the task, its repo and the tasks it lets start. */
+export function mergedNotification(task: { id: TaskId; title: string }, repoName: string, unblocked: TaskId[]): Notification {
+  return { kind: 'merged', title: `Merged #${task.id}`, body: `${task.title} (${repoName})${canStart(unblocked)}`, task_id: task.id };
+}
+
+/** What a person is told when the daemon could not merge a task's PR, or dropped its merge request: why. */
+export function mergeFailedNotification(id: TaskId, why: string): Notification {
+  return { kind: 'merged', title: `Could not merge #${id}`, body: why, task_id: id };
 }

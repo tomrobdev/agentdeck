@@ -139,14 +139,16 @@ export function printDoctor(report: DoctorReport): DoctorReport {
   return report;
 }
 
-/** Print each daemon check with its reason, and under each failed one the command that fixes it. */
+/** Print each daemon check with its reason (a warning marked `!`), and under each failed one or warning the command that fixes it. */
 export function printHealth(checks: HealthCheck[]): void {
   for (const c of checks) {
-    console.log(`${c.ok ? '✓' : '✗'} ${c.name.padEnd(17)} ${c.reason}`);
+    console.log(`${c.ok ? (c.warning ? '!' : '✓') : '✗'} ${c.name.padEnd(17)} ${c.reason}`);
     if (c.fix) console.log(`  → ${c.fix}`);
   }
   const failed = checks.filter((c) => !c.ok).length;
-  console.log(failed ? `${failed} of ${checks.length} checks failed` : 'the daemon is healthy');
+  const warnings = checks.filter((c) => c.ok && c.warning).length;
+  const warned = warnings ? `, ${warnings === 1 ? '1 warning' : `${warnings} warnings`}` : '';
+  console.log(failed ? `${failed} of ${checks.length} checks failed${warned}` : `the daemon is healthy${warned}`);
 }
 
 export function relTime(unixSeconds: number): string {

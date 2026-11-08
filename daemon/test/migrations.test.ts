@@ -150,7 +150,7 @@ test('a stored blocked_reason survives as stop_reason', () => {
   }
 });
 
-test('a stored notify_events with hold gains paused; one without hold is unchanged', () => {
+test('a stored notify_events with hold gains paused, and every one but an empty one gains review_due', () => {
   const upgraded = (value: string): string | undefined => {
     const t = tmpPath();
     try {
@@ -168,9 +168,11 @@ test('a stored notify_events with hold gains paused; one without hold is unchang
       t.cleanup();
     }
   };
-  assert.equal(upgraded('done,hold'), 'done,hold,paused');
-  assert.equal(upgraded('done,blocked'), 'done,blocked');
-  assert.equal(upgraded('hold,paused'), 'hold,paused');
+  assert.equal(upgraded('done,hold'), 'done,hold,paused,review_due');
+  assert.equal(upgraded('done,blocked'), 'done,blocked,review_due');
+  assert.equal(upgraded('hold,paused'), 'hold,paused,review_due');
+  assert.equal(upgraded('done,review_due'), 'done,review_due', 'already there: not added twice');
+  assert.equal(upgraded(''), '', 'every kind turned off stays off');
 });
 
 test('opening an up-to-date database runs no steps', () => {

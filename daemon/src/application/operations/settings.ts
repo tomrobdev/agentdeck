@@ -6,7 +6,8 @@ import { BUDGET_KEYS, type Budget, validateBudget, validateSlots } from '../../d
 import { ATTENTION_LIMIT, headline } from '../../domain/operations/index.ts';
 import type { DaemonState } from '../../domain/operations/index.ts';
 import { type ReloadInput, reloadState, restartWait } from '../../domain/operations/index.ts';
-import type { Settings } from '../../domain/operations/index.ts';
+import type { ReviewDueSettings, Settings } from '../../domain/operations/index.ts';
+import { reviewDueDaysError, reviewDueLinesError } from '../../domain/operations/index.ts';
 import { modelError } from '../../domain/work/index.ts';
 import { flag, list, number, object, refuse, text, whole } from '../shared/input.ts';
 import { startGate } from '../capacity/gate.ts';
@@ -63,6 +64,7 @@ export function status(app: App, daemon: DaemonInfo = { commit: null, started_at
         running: app.countRunning(),
         need_you: { proposed: counts.proposed ?? 0, blocked: counts.blocked ?? 0, review },
         attention: app.attentionTasks(ATTENTION_LIMIT),
+        review_due: app.reviewsDue(),
       },
       Date.now() / 1000,
     ),
@@ -99,6 +101,7 @@ export interface SettingsPatch {
   support_model?: string;
   review_model?: string;
   reload_on_change?: boolean;
+  review_due?: Partial<ReviewDueSettings>;
 }
 
 /** Apply a partial settings update after validating all of it. */
@@ -157,6 +160,12 @@ export function updateSettings(app: App, patch: SettingsPatch): Settings {
       refuse(plannerModelError(model));
       next.planner.model = model;
     }
+  }
+
+  const r = section('review_due');
+  if (r) {
+    next.review_due.days = whole(r, 'days', (v) => reviewDueDaysError(v as number)) ?? next.review_due.days;
+    next.review_due.lines = whole(r, 'lines', (v) => reviewDueLinesError(v as number)) ?? next.review_due.lines;
   }
 
   app.writeSettings(next);
