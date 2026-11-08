@@ -34,6 +34,11 @@ export interface CheckCounts {
   total: number;
   failing: number;
   pending: number;
+  /**
+   * The failing checks' names and the step each failed on (null when none was read), kept when the counts are. A stored
+   * count from before this has none: its failing checks read as failing on an unknown step.
+   */
+  failures?: { name: string; step: string | null }[];
 }
 
 /** What the PR refresh keeps on a task (`tasks.pr_checks`): the latest checks and when they were read. */
@@ -107,6 +112,12 @@ export function countOf(checks: PrCheck[]): CheckCounts {
   };
 }
 
+/** The counts to keep on a task: `countOf`, with the failing checks' names and the step each failed on when there are any. */
+export function countOfKept(checks: PrCheck[]): CheckCounts {
+  const failing = failingChecks(checks);
+  return { ...countOf(checks), ...(failing.length ? { failures: failing.map((c) => ({ name: c.name, step: c.step ?? null })) } : {}) };
+}
+
 /**
  * How many checks ran on a PR: passed or failed, not skipped, neutral or still pending. Details a caller made up without
  * `check_list` count every settled check, as they cannot tell a skipped one apart.
@@ -114,6 +125,18 @@ export function countOf(checks: PrCheck[]): CheckCounts {
 export function checksRan(pr: { checks: CheckCounts; check_list?: PrCheck[] }): number {
   if (pr.check_list) return pr.check_list.filter((c) => c.state === 'pass' || c.state === 'fail').length;
   return pr.checks.total - pr.checks.pending;
+}
+
+/**
+ * A PR's checks counted with the failing steps the refresh already read on the same head (`carryFailures`), for the counts
+ * kept when it merges. A PR whose checks were not listed keeps its plain counts.
+ */
+export function countWithSteps(
+  stored: StoredChecks | null,
+  pr: { head?: string | null; check_list?: PrCheck[]; checks: CheckCounts },
+): CheckCounts {
+  if (!pr.check_list) return pr.checks;
+  return countOfKept(carryFailures(stored, pr.head ?? null, pr.check_list).checks);
 }
 
 /** Count `statusCheckRollup` entries: check runs have `status` and `conclusion`, commit statuses have `state`. */

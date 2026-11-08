@@ -4,7 +4,7 @@ import { type MergeFailure, type PrDetails, mergeCheck, mergeFailure, mergeFindi
 import { MERGE_METHODS, type MergeMethod, isMergeMethod } from '../../domain/repos/index.ts';
 import { type MergeVerdictView, autoMergeOn, verdictView } from '../../domain/landing/index.ts';
 import type { CheckCounts } from '../../domain/landing/index.ts';
-import { isConflicting } from '../../domain/landing/index.ts';
+import { countWithSteps, isConflicting } from '../../domain/landing/index.ts';
 import { mergeRequestCheck, mergesNow } from '../../domain/landing/index.ts';
 import { buildPrBody, openPrUrl } from '../../domain/landing/index.ts';
 import { mergeReason } from '../../domain/work/index.ts';
@@ -193,7 +193,7 @@ export async function mergeOpenPr(
     unlockMerge(id);
   }
   // False when a refresh in another process already recorded the PR as merged: say so, so the merge leaves a trace.
-  if (!app.recordMerge(id, method, opts.reason, pr.checks)) {
+  if (!app.recordMerge(id, method, opts.reason, countWithSteps(task.pr?.checks.latest ?? null, pr))) {
     // gh failed and someone else recorded the merge: it was theirs, not this one.
     if (failed) return { method, unblocked: [], elsewhere: true };
     log(`task ${id}: merged its PR (${method}), but the merge was already recorded or the task has moved on`);

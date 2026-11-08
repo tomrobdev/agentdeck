@@ -83,6 +83,10 @@ export function runStore(orm: Orm) {
     countRunningUnblocks(): number {
       return runningOf('unblock');
     },
+    /** Review runs still going, in any daemon process. */
+    countRunningReviews(): number {
+      return runningOf('review');
+    },
     /**
      * Slots in use, counted from the db so every process sees the same number: a task that is running (or being
      * cancelled), a task not running that has an unfinished resolve or unblock run (a task whose sync started one
