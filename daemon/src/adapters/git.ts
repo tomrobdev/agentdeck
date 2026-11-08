@@ -5,6 +5,8 @@ import { dirname, join } from 'node:path';
 import { promisify } from 'node:util';
 import { WORKTREE_DIR } from '../config.ts';
 import {
+  BASE_LOG_FORMAT,
+  type BaseCommit,
   type ChangedFile,
   type Commit,
   LOG_FORMAT,
@@ -12,6 +14,7 @@ import {
   type TreeEntry,
   capText,
   mergeChanges,
+  parseBaseLog,
   parseLog,
   parseLsTree,
   treeEntries,
@@ -462,6 +465,40 @@ export async function reviewFacts(repoPath: string, base: string, since: number)
   ]);
   const lines = [...stat.matchAll(/(\d+) (?:insertion|deletion)/g)].reduce((sum, m) => sum + Number(m[1]), 0);
   return { marks: marks.map(({ area, at }) => ({ area, at })), commits: Number(count), lines };
+}
+
+/**
+ * The commits on `commit`'s first-parent line made after `since` (ms, by committer date), newest first, each with the
+ * paths it changed (a merge against its first parent). At most `limit` are listed; `count` counts them all.
+ */
+export async function commitsSince(
+  repoPath: string,
+  commit: string,
+  since: number,
+  limit: number,
+): Promise<{ count: number; commits: BaseCommit[] }> {
+  // The base as it was at `since`: the newest first-parent commit made by then, none when the line is younger.
+  const from = (await git(repoPath, 'rev-list', '-1', '--first-parent', `--before=${gitDate(since)}`, commit)) || null;
+  const range = from ? `${from}..${commit}` : commit;
+  const [count, log] = await Promise.all([
+    git(repoPath, 'rev-list', '--count', '--first-parent', range),
+    gitRead(
+      repoPath,
+      '-c',
+      'core.quotePath=false',
+      'log',
+      '--no-color',
+      '--first-parent',
+      '-m',
+      '--name-only',
+      '-z',
+      `--max-count=${limit}`,
+      `--format=${BASE_LOG_FORMAT}`,
+      range,
+      '--',
+    ),
+  ]);
+  return { count: Number(count), commits: parseBaseLog(log) };
 }
 
 /** Commits reachable from `head` but not `base`, newest first. */

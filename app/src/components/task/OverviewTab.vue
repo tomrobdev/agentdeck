@@ -7,6 +7,7 @@ import DependenciesCard from './DependenciesCard.vue';
 import DocumentsCard from './DocumentsCard.vue';
 import FinalMessage from './FinalMessage.vue';
 import PlanCard from './PlanCard.vue';
+import ProposalCheckCard from './ProposalCheckCard.vue';
 import PullRequestCard from './PullRequestCard.vue';
 
 // The prompt as the description, then everything that happened, oldest first: status changes
@@ -49,6 +50,8 @@ const when = 'ml-auto text-sm text-muted';
 
 <template>
   <div class="flex min-w-0 flex-col gap-4.5">
+    <ProposalCheckCard :task="task" />
+
     <article class="card">
       <header class="card-head gap-1.5 px-3.5 py-2">
         <b>{{ task.source === 'planner' ? 'Planner' : 'You' }}</b>

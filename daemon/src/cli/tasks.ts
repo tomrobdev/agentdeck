@@ -5,12 +5,25 @@ import { type TaskId, asTaskId, parseId } from '../domain/shared/index.ts';
 import { isOwnPlanName, modelSourceText, planProgress } from '../domain/work/index.ts';
 import { commentLocation } from '../domain/landing/index.ts';
 import { pickRun } from '../domain/runs/index.ts';
-import { TASK_STATUSES } from '../domain/work/index.ts';
+import { CHECKED_STATUSES, TASK_STATUSES } from '../domain/work/index.ts';
 import { filterTasks, listable } from '../domain/work/index.ts';
 import { type PlanLink, hasPlanLink, otherPlanOwner, planOwnerOf } from '../domain/work/index.ts';
 import { errorMessage, plural } from '../domain/shared/index.ts';
 import { callDaemon } from './daemon-client.ts';
-import { confirm, die, idsText, taskId, taskIds, fmtAutoMerge, fmtChecks, fmtLink, fmtRunSummary, fmtTask, printLog } from './format.ts';
+import {
+  confirm,
+  die,
+  idsText,
+  taskId,
+  taskIds,
+  fmtAutoMerge,
+  fmtChecks,
+  fmtLink,
+  fmtProposalCheck,
+  fmtRunSummary,
+  fmtTask,
+  printLog,
+} from './format.ts';
 import type { Command } from './context.ts';
 
 /** A file's text, or exit saying why it can't be read. */
@@ -178,6 +191,8 @@ export const taskCommands: Record<string, Command> = {
       const whose = other !== null ? `#${other}'s plan, ` : '';
       console.log(`plan     ${plan} (${whose}${steps ? `steps ${steps.join(', ')}` : 'every unfinished step'})`);
     }
+    if ((CHECKED_STATUSES as readonly string[]).includes(t.status))
+      for (const line of fmtProposalCheck(await actions.proposalCheck(db, t.id))) console.log(line);
     console.log(`\n${t.prompt}\n`);
     for (const p of t.plans) {
       const { finished, total } = planProgress(p.steps);

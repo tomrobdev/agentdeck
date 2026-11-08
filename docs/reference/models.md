@@ -1416,6 +1416,17 @@ How a work run ended, as far as the escalation reads it: its outcome, the stop r
 
 ## `domain/work/`
 
+### BaseCommit
+
+A commit on the base since a task was added, with the paths it changed. `at` is its author date, UTC `YYYY-MM-DD HH:MM:SS`.
+
+| Field     | Type       | Comment |
+| --------- | ---------- | ------- |
+| `sha`     | `string`   |         |
+| `subject` | `string`   |         |
+| `at`      | `string`   |         |
+| `paths`   | `string[]` |         |
+
 ### BlockedState
 
 A task stopped until something changes.
@@ -1750,6 +1761,30 @@ A task waiting to run or running: it carries nothing about how it ended.
 | -------- | ----------------------------------------------------------- | ------- |
 | `status` | `"proposed" \| "queued" \| "running" \| "cancel_requested"` |         |
 
+### Overlap
+
+Another open task in the repo that touches the same files, the paths they share, and whether a link joins them.
+
+| Field    | Type         | Comment |
+| -------- | ------------ | ------- |
+| `id`     | `TaskId`     |         |
+| `title`  | `string`     |         |
+| `status` | `TaskStatus` |         |
+| `paths`  | `string[]`   |         |
+| `linked` | `boolean`    |         |
+
+### OverlapCandidate
+
+Another task, with the paths it names or changed and whether a link (either way) joins it to the task checked.
+
+| Field    | Type                | Comment |
+| -------- | ------------------- | ------- |
+| `id`     | `TaskId`            |         |
+| `title`  | `string`            |         |
+| `status` | `TaskStatus`        |         |
+| `paths`  | `readonly string[]` |         |
+| `linked` | `boolean`           |         |
+
 ### OwnPlan
 
 A task's own plan with its HTML: the one stored under the task's numbered name.
@@ -1829,6 +1864,16 @@ A task's link to a plan: the task whose plan it follows (itself when its own pla
 | `status` | `PlanStepStatus` |                                                                        |
 | `done`   | `string[]`       | the done criteria, one per <li> of the step's [data-plan-done] element |
 
+### ProposalCheck
+
+What the dashboard and `agentdeck show` say about a proposal before it is approved.
+
+| Field       | Type                | Comment                                                     |
+| ----------- | ------------------- | ----------------------------------------------------------- |
+| `staleness` | `Staleness \| null` | Null when git can't say (no base, an unreadable repo).      |
+| `notes`     | `string[]`          | promptWarnings' lines: named paths that aren't on the base. |
+| `overlaps`  | `Overlap[]`         |                                                             |
+
 ### QueueState
 
 | Field                | Type             | Comment                                                             |
@@ -1836,6 +1881,26 @@ A task's link to a plan: the task whose plan it follows (itself when its own pla
 | `paused`             | `boolean`        |                                                                     |
 | `rate_limited_until` | `number \| null` | Unix seconds; in the past (or null) once the rate limit has lifted. |
 | `governor`           | `Decision`       |                                                                     |
+
+### StalePath
+
+A named path the base changed since the task was added, and the commits that changed it, newest first.
+
+| Field     | Type                                              | Comment |
+| --------- | ------------------------------------------------- | ------- |
+| `path`    | `string`                                          |         |
+| `commits` | `{ sha: string; subject: string; at: string; }[]` |         |
+
+### Staleness
+
+How far the base (`ref`, at commit `base`) moved since the task was added.
+
+| Field     | Type          | Comment |
+| --------- | ------------- | ------- |
+| `ref`     | `string`      |         |
+| `base`    | `string`      |         |
+| `commits` | `number`      |         |
+| `changed` | `StalePath[]` |         |
 
 ### StateFields
 
