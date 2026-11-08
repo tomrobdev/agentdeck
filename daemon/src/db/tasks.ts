@@ -9,7 +9,15 @@ import type { StoredChecks } from '../domain/landing/index.ts';
 import type { CheckCounts } from '../domain/landing/index.ts';
 import type { MergeMethod } from '../domain/repos/index.ts';
 import { INTERRUPTED, type RunOutcome } from '../domain/runs/index.ts';
-import { MAX_RESTARTS, type TaskEvent, type TaskStatus, fromStatuses, nextStatus, transition } from '../domain/work/index.ts';
+import {
+  type DomainEvent,
+  MAX_RESTARTS,
+  type TaskEvent,
+  type TaskStatus,
+  fromStatuses,
+  nextStatus,
+  transition,
+} from '../domain/work/index.ts';
 import type { LinkKind } from '../domain/work/index.ts';
 import { type PrEvent, prEventReason } from '../domain/work/index.ts';
 import type { TaskPlan } from '../domain/work/index.ts';
@@ -141,14 +149,14 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     id: TaskId,
     event: TaskEvent,
     opts: { reason?: string | null; needs?: Needs | null; onlyFrom?: TaskStatus[] } = {},
-  ): Task | undefined => {
+  ): { task: Task; events: DomainEvent[] } | undefined => {
     for (let attempt = 0; attempt < 3; attempt++) {
       const cur = getTask(id);
       if (!cur) return undefined;
       if (opts.onlyFrom && !opts.onlyFrom.includes(cur.status)) return undefined;
       const next = transition(cur, event, opts);
       if (!next) return undefined;
-      const row = atomically(db, () => {
+      const task = atomically(db, () => {
         // Guarded on the status and on the counters the changes were computed from.
         const row = mapFound(
           orm
@@ -159,10 +167,10 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
             .get(),
           toTask,
         );
-        if (row) recordEvent(orm, id, next.history, cur.status, next.state.status, opts.reason ?? null);
+        if (row) for (const e of next.events) recordEvent(orm, e.task_id, e.history, e.from, e.to, e.reason);
         return row;
       });
-      if (row) return row;
+      if (task) return { task, events: next.events };
     }
     return undefined;
   };
@@ -656,7 +664,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         const exhausted = o.restarts + 1 >= MAX_RESTARTS;
         const reason = `the daemon restarted ${o.restarts + 1} times while this task was running`;
         atomically(db, () => {
-          const task = applyEvent(o.id, { type: 'recover', exhausted }, { reason });
+          const task = applyEvent(o.id, { type: 'recover', exhausted }, { reason })?.task;
           if (task?.status === 'queued') requeued++;
           else if (task?.status === 'failed') failed.push(task.id);
           if (task?.status === 'failed' || task?.status === 'cancelled') endRuns(task.status, task.id);

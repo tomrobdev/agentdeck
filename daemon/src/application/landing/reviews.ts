@@ -18,7 +18,7 @@ import {
   reviewReason,
 } from '../../domain/landing/index.ts';
 import { ActionError, number, object, refuse, requireTask, text } from '../shared/input.ts';
-import { retryTask } from '../work/tasks.ts';
+import { retryTask } from './person-events.ts';
 
 function requireReview(app: App, id: ReviewId): ReviewWithComments {
   const review = app.reviewWithComments(id);

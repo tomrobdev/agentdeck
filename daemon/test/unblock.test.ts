@@ -301,7 +301,7 @@ test('an unblock run that asks leaves the question and its options; a retry clea
   assert.equal(t.attempts, 1);
   assert.deepEqual(t.question, { question: 'Which database should it use?', options: ['sqlite', 'postgres'] });
 
-  assert.equal(stateFields(db.applyEvent(task.id, { type: 'retry' })!).question, null);
+  assert.equal(stateFields(db.applyEvent(task.id, { type: 'retry' })!.task).question, null);
   assert.ok(db.applyEvent(task.id, { type: 'cancel' }));
 });
 

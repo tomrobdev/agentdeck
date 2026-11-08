@@ -67,7 +67,7 @@ test('mark_done moves blocked and failed tasks to done, clears the reason and ne
     const before = db.getTask(t.id)!;
     assert.equal(before.status, from);
     assert.equal(before.stop_reason !== null, true);
-    const done = db.applyEvent(t.id, { type: 'mark_done' }, { reason: 'landed by hand' })!;
+    const done = db.applyEvent(t.id, { type: 'mark_done' }, { reason: 'landed by hand' })!.task;
     assert.equal(done.status, 'done');
     assert.equal(done.attempts, before.attempts);
     assert.equal(done.max_attempts, before.max_attempts);
@@ -98,14 +98,14 @@ test('done_by is cleared when the task leaves done', () => {
   bring(db, t.id, 'failed');
   db.applyEvent(t.id, { type: 'mark_done' });
   assert.equal(stateFields(db.getTask(t.id)!).done_by, 'person');
-  const retried = db.applyEvent(t.id, { type: 'retry' })!;
+  const retried = db.applyEvent(t.id, { type: 'retry' })!.task;
   assert.equal(retried.status, 'queued');
   assert.equal(stateFields(retried).done_by, null);
 
   const c = add();
   bring(db, c.id, 'blocked');
   db.applyEvent(c.id, { type: 'mark_done' });
-  assert.equal(stateFields(db.applyEvent(c.id, { type: 'conflict' })!).done_by, null, 'a conflict blocks it again');
+  assert.equal(stateFields(db.applyEvent(c.id, { type: 'conflict' })!.task).done_by, null, 'a conflict blocks it again');
   db.close();
 });
 
@@ -113,7 +113,7 @@ test('pr_merged also moves blocked and failed tasks to done, without done_by', (
   const { db, add } = setup();
   const t = add();
   bring(db, t.id, 'blocked');
-  const done = db.applyEvent(t.id, { type: 'pr_merged' })!;
+  const done = db.applyEvent(t.id, { type: 'pr_merged' })!.task;
   assert.equal(done.status, 'done');
   assert.equal(stateFields(done).stop_reason, null);
   assert.equal(done.done_by, null);

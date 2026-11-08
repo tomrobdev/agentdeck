@@ -79,7 +79,7 @@ test('addTask with propose files a proposal that keeps its links until it is app
   const t = await addTask(db, { repo: 'demo', prompt: 'x', builds_on: [a.id], propose: true });
   assert.equal(t.status, 'proposed');
   assert.equal(t.source, 'manual');
-  assert.equal(db.applyEvent(t.id, { type: 'approve' })?.status, 'queued');
+  assert.equal(db.applyEvent(t.id, { type: 'approve' })?.task.status, 'queued');
   assert.deepEqual(
     (await taskDetail(db, t.id)).links.map((l) => [l.on, l.kind]),
     [[a.id, 'builds_on']],

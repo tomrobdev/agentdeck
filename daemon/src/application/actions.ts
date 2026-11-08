@@ -74,21 +74,9 @@ export {
   updateSettings,
 } from './operations/settings.ts';
 export { type TaskView, taskDetail, taskViews, withViews } from './work/task-views.ts';
-export {
-  addTask,
-  approveTask,
-  cancelTask,
-  editTask,
-  findTask,
-  listTasks,
-  markDone,
-  openPrTasks,
-  rejectTask,
-  removeTaskWorktree,
-  retryTask,
-  taskRuns,
-} from './work/tasks.ts';
-export { installNeeds } from './work/install-needs.ts';
+export { addTask, editTask, findTask, listTasks, openPrTasks, removeTaskWorktree, taskRuns } from './work/tasks.ts';
+export { approveTask, cancelTask, markDone, rejectTask, retryTask } from './landing/person-events.ts';
+export { installNeeds } from './runs/install-needs.ts';
 export { promptWarnings } from './work/prompt-paths.ts';
 export { linkTasks, unlinkTasks } from './work/links.ts';
 export type { TaskStatus } from '../domain/work/index.ts';

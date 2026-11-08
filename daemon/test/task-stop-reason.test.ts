@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { openDb } from '../src/db/index.ts';
+import { asTaskId } from '../src/domain/shared/id.ts';
 import { type TaskEvent, transition } from '../src/domain/work/lifecycle.ts';
 import { buildPlannerPrompt } from '../src/domain/proposals/proposals.ts';
 import { type TaskState, stopReasonOf } from '../src/domain/work/task.ts';
@@ -45,7 +46,7 @@ test('transition leaves no stop reason whenever it leads to queued', () => {
   for (const [name, event, from] of TO_QUEUED) {
     const state: TaskState =
       from === 'running' ? { status: from } : { status: from, stop_reason: 'old reason', needs: null, question: null };
-    const t = transition({ ...state, attempts: 1, restarts: 0 }, event);
+    const t = transition({ ...state, id: asTaskId(1), attempts: 1, restarts: 0 }, event);
     assert.deepEqual(t?.state, { status: 'queued' }, name);
   }
 });

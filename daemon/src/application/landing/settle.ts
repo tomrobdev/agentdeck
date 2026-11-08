@@ -1,21 +1,20 @@
-// Settling a task: the daemon's own events that end a run or a wait, applied together with what follows them.
+// Every status change and its follow-ups: the daemon's own events that end a run or a wait (settling), and a person's.
+// What follows each domain event is the table in domain/work/follow-ups.ts; this module runs it.
 import type { App } from '../ports/app.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import { finalNotification } from '../../domain/operations/index.ts';
 import type { PrEvent } from '../../domain/work/index.ts';
-import type { TaskEvent } from '../../domain/work/index.ts';
+import type { PersonEvent, TaskEvent, TaskStatus } from '../../domain/work/index.ts';
 import type { Needs } from '../../domain/work/index.ts';
 import type { Task } from '../../domain/work/index.ts';
+import { FOLLOW_UPS, type FollowUp, followUpsOf } from '../../domain/work/index.ts';
 import { warnStuckDependents } from '../work/dependencies.ts';
 import { notifyLater } from '../operations/notifications.ts';
 import { openPullRequest } from './open-pr.ts';
 
 /**
- * Apply `event` to task `id` and everything that follows its new status: done opens the PR (unless the PR
- * was just merged, which means it has one) and tells a person, blocked and failed tell a person, and any
- * change warns the tasks waiting on it if they are now stuck. Returns the task as it is afterwards, or
- * undefined (and does nothing else) if the lifecycle refused the event.
- * For the daemon's own events; what a person triggers calls `app.applyEvent` and sends no notification.
+ * Apply the daemon's `event` to task `id` and run its follow-ups (`FOLLOW_UPS`): a finished run opens the PR, and so on.
+ * Returns the task as it is afterwards, or undefined (and does nothing else) if the lifecycle refused the event.
  */
 export async function settle(
   app: App,
@@ -23,13 +22,32 @@ export async function settle(
   event: TaskEvent,
   fields: { reason?: string | null; needs?: Needs | null } = {},
 ): Promise<Task | undefined> {
-  if (!app.applyEvent(id, event, fields)) return undefined;
-  return afterSettled(app, id, event.type !== 'pr_merged');
+  const applied = app.applyEvent(id, event, fields);
+  if (!applied) return undefined;
+  return follow(app, id, followUpsOf(applied.events));
 }
 
-/** For tasks the database already moved itself (crash recovery): the effects of their new status. */
+/**
+ * Apply a person's `event` to task `id` and run its follow-ups, none of which opens a PR, so all are done when it returns.
+ * Returns the task as the change left it, or undefined if the lifecycle refused the event (or `onlyFrom` left it out).
+ */
+export function applyPersonEvent(
+  app: App,
+  id: TaskId,
+  event: { type: PersonEvent },
+  opts: { reason?: string | null; onlyFrom?: TaskStatus[] } = {},
+): Task | undefined {
+  const applied = app.applyEvent(id, event, opts);
+  if (!applied) return undefined;
+  const followUps = followUpsOf(applied.events);
+  if (followUps.includes('open_pr')) throw new Error(`a person's ${event.type} cannot open a PR`);
+  followUp(app, applied.task, followUps);
+  return applied.task;
+}
+
+/** For tasks crash recovery failed (the database moved them itself): the follow-ups of a failed task. */
 export async function settleRecovered(app: App, ids: TaskId[]): Promise<void> {
-  for (const id of ids) await afterSettled(app, id, false);
+  for (const id of ids) await follow(app, id, FOLLOW_UPS.TaskFailed);
 }
 
 /** A PR's state changed. A closed or failed PR may strand the tasks waiting on its merge. Returns whether it applied. */
@@ -39,13 +57,20 @@ export function settlePr(app: App, id: TaskId, event: PrEvent): boolean {
   return true;
 }
 
-async function afterSettled(app: App, id: TaskId, openPr: boolean): Promise<Task | undefined> {
+/** Run `followUps` for task `id`, as it is now; returns it as they leave it. */
+async function follow(app: App, id: TaskId, followUps: FollowUp[]): Promise<Task | undefined> {
   const task = app.getTask(id);
   if (!task) return undefined;
   // The daemon opens the PR (agents cannot push). Whatever happens, the task stays done.
-  const pr = task.status === 'done' && openPr ? await openPullRequest(app, task) : {};
-  warnStuckDependents(app, id);
-  const note = finalNotification(app.getTask(id) ?? task, app.getRepo(task.repo_id)?.name ?? '', pr);
-  if (note) notifyLater(app, note);
+  const pr = followUps.includes('open_pr') && task.status === 'done' ? await openPullRequest(app, task) : {};
+  followUp(app, task, followUps, pr);
   return app.getTask(id);
+}
+
+/** The follow-ups after the PR: warn the tasks waiting on `task` if they are now stuck, and tell a person. */
+function followUp(app: App, task: Task, followUps: FollowUp[], pr: { url?: string; error?: string } = {}): void {
+  if (followUps.includes('warn_dependents')) warnStuckDependents(app, task.id);
+  if (!followUps.includes('notify')) return;
+  const note = finalNotification(app.getTask(task.id) ?? task, app.getRepo(task.repo_id)?.name ?? '', pr);
+  if (note) notifyLater(app, note);
 }

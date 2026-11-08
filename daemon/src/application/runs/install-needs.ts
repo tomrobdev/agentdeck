@@ -6,8 +6,8 @@ import type { TaskId } from '../../domain/shared/index.ts';
 import { INSTALL_NOTE, LOCKFILES, canInstallWith, depsRequest, depsRequestError, installArgs } from '../../domain/work/index.ts';
 import { errorMessage, lastLine } from '../../domain/shared/index.ts';
 import { ActionError, refuse, requireTask, requireTaskRepo } from '../shared/input.ts';
-import { refuseWhileSyncing } from './checkout-locks.ts';
-import { retryTask } from './tasks.ts';
+import { refuseWhileSyncing } from '../work/checkout-locks.ts';
+import { retryTask } from '../landing/person-events.ts';
 
 const INSTALL_TIMEOUT_MS = 10 * 60_000;
 

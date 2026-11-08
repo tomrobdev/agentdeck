@@ -1,12 +1,10 @@
-// Use cases for tasks: add, edit, and move them through the lifecycle on a person's request.
+// Use cases for tasks: add, edit, list them and remove their worktrees. A person's lifecycle events are in landing/person-events.ts.
 import type { App } from '../ports/app.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
-import type { TaskStatus } from '../../domain/work/index.ts';
 import { archivedRepoError, maxAttemptsError, maxTurnsError, modelError, priorityError } from '../../domain/work/index.ts';
 import { planOwnerOf } from '../../domain/work/index.ts';
 import { EDITABLE_STATUSES, RUNNING_STATUSES, type Task, defaultTitle } from '../../domain/work/index.ts';
 import { refuseWhileSyncing } from './checkout-locks.ts';
-import { warnStuckDependents } from './dependencies.ts';
 import { newLinks } from './links.ts';
 import { ActionError, flag, object, refuse, requireTask, requireTaskRepo, text, whole } from '../shared/input.ts';
 import { checkFollowers } from './plans.ts';
@@ -144,45 +142,6 @@ export async function editTask(
     throw new ActionError(`#${id} is ${now}; only ${EDITABLE_STATUSES.join(', ')} tasks can be edited`);
   }
   return edited;
-}
-
-/** Returns 'cancelled' for idle tasks, 'stopping' when a running worker has been asked to stop. */
-export function cancelTask(app: App, id: TaskId): 'cancelled' | 'stopping' {
-  const t = app.applyEvent(id, { type: 'cancel' });
-  if (!t) throw new ActionError(`#${id} can't be cancelled from its current state`);
-  warnStuckDependents(app, id);
-  return t.status === 'cancel_requested' ? 'stopping' : 'cancelled';
-}
-
-/** Accept a planner proposal into the queue. */
-export function approveTask(app: App, id: TaskId): void {
-  if (!app.applyEvent(id, { type: 'approve' })) throw new ActionError(`#${id} is not a proposal`);
-}
-
-export function rejectTask(app: App, id: TaskId): void {
-  if (!app.applyEvent(id, { type: 'reject' })) throw new ActionError(`#${id} is not a proposal`);
-  warnStuckDependents(app, id);
-}
-
-/** Another attempt. A `note` ("request changes") is kept on the timeline and goes first in the next run's prompt. */
-export function retryTask(app: App, id: TaskId, note?: string, onlyFrom?: TaskStatus[]): void {
-  const t = requireTask(app, id);
-  refuseWhileSyncing(app, id);
-  if (note !== undefined && typeof note !== 'string') throw new ActionError('note must be text');
-  // One more attempt on top of what has been used.
-  if (!app.applyEvent(id, { type: 'retry' }, { reason: note?.trim() || null, onlyFrom }))
-    throw new ActionError(`#${id} is ${app.getTask(id)?.status ?? t.status}`);
-}
-
-/**
- * A person finished or landed a blocked or failed task's work themselves. The optional `note` goes on the timeline.
- * Done releases the tasks waiting on it (unless its PR is open: they wait for the merge), so no warnStuckDependents.
- */
-export function markDone(app: App, id: TaskId, note?: string): void {
-  const t = requireTask(app, id);
-  if (note !== undefined && typeof note !== 'string') throw new ActionError('note must be text');
-  if (!app.applyEvent(id, { type: 'mark_done' }, { reason: note?.trim() || null }))
-    throw new ActionError(`#${id} is ${app.getTask(id)?.status ?? t.status}; only blocked or failed tasks can be marked done`);
 }
 
 /** Remove a task's worktree; its branch is kept. Not while the task is running, or queued (it is about to run in it). */
