@@ -17,7 +17,7 @@ flowchart LR
   domain_work["domain/work"]
   domain_capacity --> domain_shared
   domain_insights --> domain_capacity
-  domain_insights -.-> domain_landing
+  domain_insights --> domain_landing
   domain_insights --> domain_runs
   domain_insights --> domain_shared
   domain_insights --> domain_work

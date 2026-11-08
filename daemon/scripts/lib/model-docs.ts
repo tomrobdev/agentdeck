@@ -233,7 +233,8 @@ export const NOT_YET_TABLES: Record<string, string> = {
   MergeRequestView:
     'a merge request is set, cleared and read as columns (domain/landing/merge-request.ts), not a state type with a table yet',
   CheckState: 'a value read from GitHub for each check, not a state a thing moves through',
-  AutoMergeState: 'a verdict computed from the pull request each time, not a state with moves',
+  AutoMergeState:
+    'a verdict computed from the pull request each time (in a repo with auto_review on, with the review run of its changes: it waits for one, and needs a person when it asked for changes), not a state with moves',
   HeadlineState: 'computed from the daemon and queue each time, not a state with moves',
   LinkState: 'computed from the linked task each time, not a state with moves',
   StartState: "computed from a task's links each time, not a state with moves",

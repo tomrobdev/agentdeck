@@ -161,3 +161,35 @@ test('pilotStats: the report per repo, a total row, --repo and unknown repos', (
   );
   db.close();
 });
+
+test('pilotStats: the scorecard counts review runs and the reviews they left, per repo and with --repo', () => {
+  const db = openDb(':memory:');
+  const a = db.addRepo({ name: 'alpha', path: '/tmp/a', base_branch: 'main' });
+  const b = db.addRepo({ name: 'beta', path: '/tmp/b', base_branch: 'main' });
+  const review = (repo: typeof a, kind: 'comment' | 'request_changes' | null) => {
+    const task = doneTask(db, repo);
+    const id = db.startRun(task.id, 0, 'log', 'review', 'opus', `h${task.id}`);
+    db.finishRun(id, { outcome: kind ? 'done' : 'failed', cost_usd: 0, denials: 0 });
+    if (kind) db.addRunReview(task.id, kind, 'summary', { head_commit: 'c', diff_hash: `h${task.id}` });
+    return task;
+  };
+  review(a, 'comment');
+  review(a, 'request_changes');
+  const failed = review(b, null);
+  // A person's review of the same changes is not the review run's: the run still left none.
+  db.raw
+    .prepare(`INSERT INTO reviews (task_id, kind, body, submitted_at, diff_hash) VALUES (?, 'comment', '', datetime('now'), ?)`)
+    .run(failed.id, `h${failed.id}`);
+
+  const card = pilotStats(db).scorecard;
+  assert.deepEqual(card.total.review_runs, { runs: 3, clean: 1, asked_changes: 1, merged_unchanged: 0, no_review: 1 });
+  assert.deepEqual(
+    card.repos.map((r) => [r.repo, r.measures.review_runs.runs]),
+    [
+      ['alpha', 2],
+      ['beta', 1],
+    ],
+  );
+  assert.equal(pilotStats(db, { repo: 'beta' }).scorecard.total.review_runs.no_review, 1);
+  db.close();
+});

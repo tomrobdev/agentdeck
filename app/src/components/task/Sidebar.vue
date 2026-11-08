@@ -123,6 +123,7 @@ const levelLabel = computed(() => PRIORITY_LEVELS.find((l) => l.key === priority
             · not under <span class="font-mono">{{ task.auto_merge_view.limits.skip.join(', ') }}</span>
           </template>
           · tests {{ task.auto_merge_view.limits.tests }}
+          <template v-if="task.auto_merge_view.limits.review"> · {{ task.auto_merge_view.limits.review }}</template>
         </span>
       </div>
     </div>

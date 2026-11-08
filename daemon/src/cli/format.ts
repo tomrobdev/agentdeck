@@ -120,7 +120,7 @@ export function fmtAutoMerge(v: AutoMergeView): string[] {
   if (v.checked_at) lines.push(`           checked ${v.checked_at} UTC`);
   if (v.state !== 'off')
     lines.push(
-      `           limits: ${v.limits.max_lines.toLocaleString('en-US')} lines, not touching ${v.limits.skip.join(', ') || 'nothing'}; ${v.limits.tests}`,
+      `           limits: ${v.limits.max_lines.toLocaleString('en-US')} lines, not touching ${v.limits.skip.join(', ') || 'nothing'}; ${v.limits.tests}${v.limits.review ? `; ${v.limits.review}` : ''}`,
     );
   return lines;
 }

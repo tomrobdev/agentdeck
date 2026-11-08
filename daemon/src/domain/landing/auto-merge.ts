@@ -5,6 +5,7 @@ import { wholeNumberError } from '../shared/index.ts';
 import { checksRan } from './checks.ts';
 import { type AutoMergeCheck, type MergeInput, type MergeReason, type MergeReasonKind, reasonTexts, unattendedVerdict } from './merge.ts';
 import type { PullRequest } from './pr.ts';
+import { type ReviewFacts, reviewGate } from './review-gate.ts';
 
 /** The label a PR carries while the daemon may merge it. Removing it on GitHub opts that PR out. */
 export const AUTO_MERGE_LABEL = {
@@ -58,6 +59,11 @@ export interface AutoMergeFacts {
   paused: string | null;
   /** The branch measured locally (`git diff --numstat` against the base); null or missing when it couldn't be. */
   measured?: AutoMergeMeasured | null;
+  /**
+   * What the review gate reads (`reviewGate`), in a repo with auto_review on; null or missing when it is off. Only
+   * auto-merge waits on review runs: a person's merge and a merge request do not.
+   */
+  review?: ReviewFacts | null;
 }
 
 /**
@@ -81,7 +87,9 @@ export function autoMergeCheck(input: MergeInput & AutoMergeFacts): AutoMergeChe
   if (lines > repo.auto_merge_max_lines) add('too_many_lines', `${lines} lines changed, over the limit of ${repo.auto_merge_max_lines}`);
   if (!measured && pr.paths.length < pr.files) add('files_unlisted', `GitHub listed ${pr.paths.length} of ${pr.files} changed files`);
   never.push(...pathReasons(paths, repo.auto_merge_skip));
-  const wait: MergeReason[] = input.paused ? [{ kind: 'paused', text: input.paused }] : [];
+  const gate = input.review ? reviewGate(input.review) : { never: [], wait: [] };
+  never.push(...gate.never);
+  const wait: MergeReason[] = [...gate.wait, ...(input.paused ? [{ kind: 'paused' as const, text: input.paused }] : [])];
   return unattendedVerdict(input, { never, wait });
 }
 
@@ -104,8 +112,12 @@ export interface AutoMergeView {
   source: 'task' | 'repo' | 'planner';
   /** When the PR refresh made the check; null when no check counts. */
   checked_at: string | null;
-  limits: { max_lines: number; skip: string[]; tests: string };
+  /** `review`: what the review gate asks, in a repo with auto_review on; null when it is off. */
+  limits: { max_lines: number; skip: string[]; tests: string; review: string | null };
 }
+
+/** What the review gate asks, as the limits say it. */
+const REVIEW_LIMIT = 'a review run must read the changes and find nothing blocking, unless a person reviewed them';
 
 const LABELS = { off: 'auto-merge off', on: 'auto-merge on', merge: 'will auto-merge' };
 
@@ -116,7 +128,7 @@ const LABELS = { off: 'auto-merge off', on: 'auto-merge on', merge: 'will auto-m
  */
 export function autoMergeView(
   task: AutoMergeSetting & { pr: PullRequest | null },
-  repo: Pick<Repo, 'auto_merge' | 'auto_approve' | 'test_cmd' | 'auto_merge_max_lines' | 'auto_merge_skip'>,
+  repo: Pick<Repo, 'auto_merge' | 'auto_approve' | 'test_cmd' | 'auto_merge_max_lines' | 'auto_merge_skip' | 'auto_review'>,
   measured?: AutoMergeMeasured | null,
 ): AutoMergeView {
   const on = autoMergeOn(task, repo);
@@ -127,6 +139,7 @@ export function autoMergeView(
     max_lines: repo.auto_merge_max_lines,
     skip,
     tests: repo.test_cmd ? 'the last run must pass the tests' : 'the PR must have passing checks (the repo has no test command)',
+    review: repo.auto_review ? REVIEW_LIMIT : null,
   };
   if (!on) return { state: 'off', label: LABELS.off, reasons: [], source, checked_at: null, limits };
 

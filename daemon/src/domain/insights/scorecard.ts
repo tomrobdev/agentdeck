@@ -7,6 +7,13 @@ import { isAutoMergeReason } from '../work/index.ts';
 import { median, minutesBetween, sqliteMs, weekOf } from '../shared/index.ts';
 import { type InterventionCount, INTERVENTION_KINDS, countInterventions } from './interventions.ts';
 import { num, pct, table } from './report-text.ts';
+import {
+  type ReviewRunMeasures,
+  type ScorecardReviewRun,
+  type ScorecardRunReview,
+  measureReviewRuns,
+  reviewRunsText,
+} from './review-runs.ts';
 
 /**
  * The pilot's targets for the measures that have one (docs/pilot/scorecard.md): first-run success at least this share,
@@ -107,14 +114,20 @@ export interface ScorecardMeasures {
   running_minutes: number | null;
   review_minutes: number | null;
   pr_checks: ChecksSummary;
+  /** The review runs of the group, by when they started. */
+  review_runs: ReviewRunMeasures;
 }
 
-/** The measures over tasks and the events that belong to the same group. Each median skips tasks without that time. */
-export function scorecardMeasures(
+/**
+ * The measures over tasks and the events that belong to the same group, with its review runs' measures. Each median
+ * skips tasks without that time.
+ */
+function scorecardMeasures(
   byTask: Map<number, ScorecardTask>,
   tasks: ScorecardTask[],
   events: ScorecardEvent[],
   interventionEvents: ScorecardEvent[],
+  review_runs: ReviewRunMeasures,
 ): ScorecardMeasures {
   const eventsOf = new Map<number, ScorecardEvent[]>();
   for (const e of events) eventsOf.set(e.task_id, [...(eventsOf.get(e.task_id) ?? []), e]);
@@ -127,6 +140,7 @@ export function scorecardMeasures(
     running_minutes: med((c) => c.running),
     review_minutes: med((c) => c.review),
     pr_checks: summarizeChecks(tasks),
+    review_runs,
   };
 }
 
@@ -148,8 +162,14 @@ export interface ScorecardInput {
   tasks: ScorecardTaskRow[];
   events: ScorecardEvent[];
   samples: QuotaSample[];
+  /** The review runs, and the reviews they left (`by` review_run); missing means none. */
+  review_runs?: ScorecardReviewRun[];
+  run_reviews?: ScorecardRunReview[];
   repoName: (id: RepoId) => string;
-  /** Only tasks created, interventions made and quota seen at or after this stamp ("YYYY-MM-DD HH:MM:SS"). */
+  /**
+   * Only tasks created, interventions made, review runs started and quota seen at or after this stamp
+   * ("YYYY-MM-DD HH:MM:SS").
+   */
   since?: string;
   by?: 'week';
 }
@@ -179,8 +199,15 @@ export function buildScorecard(input: ScorecardInput): Scorecard {
   const interventions = input.events.filter((e) => since === null || e.at >= since);
   const spends = quotaSpends(input.samples).filter((s) => since === null || s.at >= since);
   const sum = (items: { points: number }[]) => items.reduce((n, s) => n + s.points, 0);
+  const reviewRuns = (input.review_runs ?? []).filter((r) => since === null || r.started_at >= since);
+  const historyOf = new Map<number, ScorecardEvent[]>();
+  for (const e of input.events) historyOf.set(e.task_id, [...(historyOf.get(e.task_id) ?? []), e]);
+  const reviewMeasures = (runs: ScorecardReviewRun[]) =>
+    measureReviewRuns(runs, input.run_reviews ?? [], (task) => historyOf.get(task) ?? []);
 
-  const repoIds = [...new Set([...tasks.map((t) => t.repo_id), ...interventions.map((e) => e.repo_id)])];
+  const repoIds = [
+    ...new Set([...tasks.map((t) => t.repo_id), ...interventions.map((e) => e.repo_id), ...reviewRuns.map((r) => r.repo_id)]),
+  ];
   const repos = repoIds
     .map((id) => ({
       repo: input.repoName(id),
@@ -189,6 +216,7 @@ export function buildScorecard(input: ScorecardInput): Scorecard {
         tasks.filter((t) => t.repo_id === id),
         own.filter((e) => e.repo_id === id),
         interventions.filter((e) => e.repo_id === id),
+        reviewMeasures(reviewRuns.filter((r) => r.repo_id === id)),
       ),
     }))
     .sort((a, b) => a.repo.localeCompare(b.repo));
@@ -200,6 +228,7 @@ export function buildScorecard(input: ScorecardInput): Scorecard {
             ...tasks.map((t) => weekOf(t.created_at)),
             ...interventions.map((e) => weekOf(e.at)),
             ...spends.map((s) => weekOf(s.at)),
+            ...reviewRuns.map((r) => weekOf(r.started_at)),
           ]),
         ]
           .filter(Boolean)
@@ -214,6 +243,7 @@ export function buildScorecard(input: ScorecardInput): Scorecard {
                 weekTasks,
                 own.filter((e) => weekIds.has(e.task_id)),
                 interventions.filter((e) => weekOf(e.at) === week),
+                reviewMeasures(reviewRuns.filter((r) => weekOf(r.started_at) === week)),
               ),
               quota_points: sum(spends.filter((s) => weekOf(s.at) === week)),
             };
@@ -224,7 +254,7 @@ export function buildScorecard(input: ScorecardInput): Scorecard {
     since,
     by: input.by ?? null,
     repos,
-    total: scorecardMeasures(byTask, tasks, own, interventions),
+    total: scorecardMeasures(byTask, tasks, own, interventions, reviewMeasures(reviewRuns)),
     quota_points: sum(spends),
     weeks,
   };
@@ -268,6 +298,7 @@ export function scorecardText(card: Scorecard): string {
   const kinds = INTERVENTION_KINDS.map((k) => `${k} ${card.total.interventions.by_kind[k]}`).join(', ');
   parts.push(
     `interventions: ${card.total.interventions.total} on ${card.total.interventions.tasks} task${card.total.interventions.tasks === 1 ? '' : 's'} (${kinds})`,
+    reviewRunsText(card.total.review_runs),
     `times are medians in minutes; quota spent: ${num(card.quota_points)} points of the 7-day window${card.since ? ` since ${card.since}` : ''}`,
   );
   return parts.join('\n\n');

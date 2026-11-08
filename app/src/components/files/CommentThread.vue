@@ -18,6 +18,9 @@ const reopen = () => run(() => api.reopenComment(props.comment.id));
       <Chip :tone="comment.draft ? 'blocked' : 'muted'" variant="tint" size="xs" class="font-medium">
         {{ comment.draft ? 'Pending' : comment.state }}
       </Chip>
+      <Chip v-if="comment.by === 'review_run'" tone="accent" variant="tint" size="xs" title="Left by the review run, not a person">
+        Review run
+      </Chip>
       <span v-if="outdated" class="font-mono text-xs">{{ comment.side === 'old' ? 'old ' : '' }}line {{ comment.line }}</span>
       <Chip v-if="outdated" variant="tint" size="xs">Outdated</Chip>
       <div class="spacer" />
