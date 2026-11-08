@@ -1,8 +1,9 @@
 // The changes a task's non-status writes make, where a rule decides them (rule:task-writes). Pure: each function returns the fields to
 // store, and the store in db/ only persists them under its guard. A timestamp the store sets is `'now'`.
-import type { AutoMergeCheck, CheckCounts, PrState, StoredChecks } from '../landing/index.ts';
+import type { AutoMergeCheck, CheckCounts, PrState, PullRequest, StoredChecks } from '../landing/index.ts';
 import type { MergeMethod } from '../repos/index.ts';
 import type { PrEvent } from './history.ts';
+import type { TaskStatus } from './lifecycle.ts';
 import type { UnblockQuestion } from './needs.ts';
 
 /** The fields of a task a write sets, named as its columns are; the store stores the documents as JSON. `'now'` is a timestamp it fills in. */
@@ -15,7 +16,7 @@ export interface TaskChanges {
   merge_request_method?: MergeMethod | null;
   merge_request_check?: AutoMergeCheck | null;
   pr_url?: string;
-  pr_state?: PrState;
+  pr_state?: PrState | null;
   pr_checks?: StoredChecks | null;
   pr_checks_opened?: CheckCounts | null;
   pr_checks_merged?: CheckCounts | null;
@@ -48,6 +49,30 @@ export const mergeRequestChanges = (method: MergeMethod): TaskChanges => ({
 
 /** A dropped merge request. */
 export const noMergeRequestChanges = (): TaskChanges => ({ ...NO_MERGE_REQUEST });
+
+/**
+ * A PR set aside: the task's next run needs a new one. Its state goes, so it is no PR to the task, its dependents and the dashboard;
+ * its url stays, as the earlier PR a new one that fails to open names (`FailedPullRequest`).
+ */
+const PR_SET_ASIDE = { pr_state: null, ...NO_AUTO_MERGE_CHECK, ...NO_MERGE_REQUEST } as const;
+
+/**
+ * What a status change from `from` to `to` does to the task's PR (`pr`, as it was read), written with the status:
+ * - a retry (`retried`) sets aside a PR that is no longer open (merged, closed, or never opened): the next run's commits need a new
+ *   one, and until it opens, the old merge must not count as met for the tasks that build on this one. An open PR stays: the next
+ *   push updates it.
+ * - leaving done drops the merge request: it was asked of the work as it stood, and the task is sent back to change it.
+ */
+export function statusChangePrChanges(
+  from: TaskStatus,
+  to: TaskStatus,
+  retried: boolean,
+  pr: Pick<PullRequest, 'state'> | null,
+): TaskChanges {
+  if (retried && pr !== null && pr.state !== 'open') return { ...PR_SET_ASIDE };
+  if (from === 'done' && to !== 'done') return noMergeRequestChanges();
+  return {};
+}
 
 /** The PR refresh's latest check of a merge request. */
 export const mergeRequestCheckChanges = (check: AutoMergeCheck): TaskChanges => ({ merge_request_check: check });

@@ -16,9 +16,22 @@ const { doneTask, queuedTask, testApp } = await import('./fixtures.ts');
 const { github } = await import('../src/adapters/github.ts');
 const { refreshPrStates } = await import('../src/application/landing/refresh.ts');
 const { autoMerge } = await import('../src/application/landing/auto-merge.ts');
-const { ActionError, cancelMergeRequest, linkTasks, mergePreview, requestMerge, requestMerges, taskDetail, updateRepo } =
-  await import('../src/application/actions.ts');
+const {
+  ActionError,
+  cancelMergeRequest,
+  fixChecks,
+  linkTasks,
+  mergePreview,
+  requestMerge,
+  requestMerges,
+  retryTask,
+  startReview,
+  submitReview,
+  taskDetail,
+  updateRepo,
+} = await import('../src/application/actions.ts');
 type PrDetails = import('../src/domain/landing/merge.ts').PrDetails;
+type TaskId = import('../src/domain/shared/id.ts').TaskId;
 
 const db = testApp(openDb(join(home, 'test.db')));
 after(() => db.close());
@@ -247,6 +260,40 @@ test('a conflicting request goes to be synced and stays; one whose task or PR mo
     closedUrl = null;
   }
   assert.equal(db.getTask(closedOnGithub.id)!.pr?.merge_request ?? null, null);
+});
+
+test('a merge request is dropped when the task is sent back: retry, request changes, fix checks', async () => {
+  const sendBack: [string, (id: TaskId) => unknown][] = [
+    ['retry', (id) => retryTask(db, id)],
+    [
+      'request changes',
+      (id) => {
+        const draft = startReview(db, id);
+        return submitReview(db, draft.id, { kind: 'request_changes', body: 'Rename it' });
+      },
+    ],
+    ['fix checks', (id) => fixChecks(db, id)],
+  ];
+  for (const [name, send] of sendBack) {
+    const a = tested();
+    requestMerge(db, a.id);
+    details[a.url] = {
+      ...ready,
+      checks: { total: 1, failing: 1, pending: 0 },
+      check_list: [{ name: 'test', state: 'fail', url: null, started_at: null, completed_at: null }],
+    };
+    await send(a.id);
+    const row = db.getTask(a.id)!;
+    assert.equal(row.status, 'queued', name);
+    assert.equal(row.pr?.state, 'open', `${name}: the open PR stays, for the next push to update`);
+    assert.equal(row.pr?.merge_request, null, `${name}: the request goes in the same write`);
+
+    // The rework finishes done, its push updates the same open PR, and the next refresh merges nothing unseen.
+    assert.ok(db.applyEvent(a.id, { type: 'claim' }));
+    assert.ok(db.applyEvent(a.id, { type: 'finish', outcome: 'done' }));
+    details[a.url] = ready;
+    assert.deepEqual((await refreshPrStates(db)).mergeable, [], name);
+  }
 });
 
 test('a merge gh refuses drops the request and tells once', async () => {

@@ -100,6 +100,31 @@ test('the scheduler runs the follow-ups a dead daemon left: the PR opens once on
   db.close();
 });
 
+test('on a tick with a pending follow-up and a claimable task, the follow-up runs first', async () => {
+  const { db, codeHost, add, finishedDone } = setup();
+  db.setPaused(false);
+  finishedDone(); // a dead daemon left its PR to open
+  add(); // claimable: it builds on nothing
+  const order: string[] = [];
+  const createPr = codeHost.createPr;
+  codeHost.createPr = async (pr) => {
+    order.push('follow-up');
+    return createPr(pr);
+  };
+  // The claim is only recorded: the task does not run.
+  db.claimNextTask = () => {
+    order.push('claim');
+    return undefined;
+  };
+  const scheduler = new Scheduler(db, { tickMs: 5, prRefreshMs: Infinity, autoPropose: false, log: () => {} });
+  const running = scheduler.run();
+  for (let i = 0; i < 200 && !order.includes('claim'); i++) await new Promise((r) => setTimeout(r, 5));
+  scheduler.stop();
+  await running;
+  assert.deepEqual(order.slice(0, 2), ['follow-up', 'claim']);
+  db.close();
+});
+
 test('an event row written without the column, as older code writes it, is never followed up', async () => {
   const { db, codeHost, add, notes } = setup();
   const task = add();

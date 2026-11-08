@@ -70,6 +70,11 @@ export async function followUpPending(app: App, log: (msg: string) => void = () 
   return rows.length;
 }
 
+/** Whether the outbox has follow-ups `followUpPending` would run now: pending, and not being run by this process already. */
+export function hasFollowUpsToRun(app: App): boolean {
+  return app.pendingFollowUps().some((r) => !following.has(r.id));
+}
+
 /** A PR's state changed. A closed or failed PR may strand the tasks waiting on its merge. Returns whether it applied. */
 export function settlePr(app: App, id: TaskId, event: PrEvent): boolean {
   if (!app.recordPr(id, event)) return false;

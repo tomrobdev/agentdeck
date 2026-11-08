@@ -24,7 +24,6 @@ import type { MergeMethod } from '../domain/repos/index.ts';
 import { INTERRUPTED, type RunOutcome } from '../domain/runs/index.ts';
 import {
   type DomainEvent,
-  MAX_RESTARTS,
   type TaskEvent,
   type TaskStatus,
   followUpsOf,
@@ -70,6 +69,13 @@ const columns = (changes: TaskChanges) => {
   };
 };
 
+/**
+ * The task's PR state is still the one `task` was read with: a PR the task has no value for (`pullRequestOf`) has no state,
+ * or no url and a state other than failed.
+ */
+const prStateAsRead = (task: Task): SQL | undefined =>
+  task.pr ? eq(tasks.pr_state, task.pr.state) : or(isNull(tasks.pr_state), and(isNull(tasks.pr_url), ne(tasks.pr_state, 'failed')));
+
 /** The task row `t` in the claim and queue queries, which `notWaiting` refers to. */
 const t = alias(tasks, 't');
 /** A builds-on link of `t`, the task `d` it builds on, and `d`'s repo `r`: what `notWaiting` looks through. */
@@ -94,8 +100,8 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     );
   /**
    * The task row `t` is free to start: every task it builds on is met, that is done, and merged unless its repo has pr_mode off.
-   * A done task whose PR isn't opened yet (or failed to open) has pr_url NULL, so it must not count as met.
-   * A task a person marked done counts as met unless its PR is open. After links never stop a start.
+   * A done task with no PR state (none opened yet, or an earlier one set aside by a retry) counts as met only in a repo with
+   * pr_mode off. A task a person marked done counts as met unless its PR is open. After links never stop a start.
    * Mirrors startState and domain/work/link.ts.
    */
   const notWaiting = () => {
@@ -104,7 +110,6 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       or(
         eq(dep.pr_state, 'merged'),
         and(
-          isNull(dep.pr_url),
           isNull(dep.pr_state),
           exists(
             orm
@@ -177,12 +182,26 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       if (!next) return undefined;
       const pending: number[] = [];
       const task = atomically(db, () => {
-        // Guarded on the status and on the counters the changes were computed from.
+        // Guarded on the status, the counters and the PR state the changes were computed from.
         const row = mapFound(
           orm
             .update(tasks)
-            .set({ status: next.state.status, ...stateColumns(next.state), ...next.counters, updated_at: NOW_SQL })
-            .where(and(eq(tasks.id, id), eq(tasks.status, cur.status), eq(tasks.attempts, cur.attempts), eq(tasks.restarts, cur.restarts)))
+            .set({
+              status: next.state.status,
+              ...stateColumns(next.state),
+              ...next.counters,
+              ...columns(next.changes),
+              updated_at: NOW_SQL,
+            })
+            .where(
+              and(
+                eq(tasks.id, id),
+                eq(tasks.status, cur.status),
+                eq(tasks.attempts, cur.attempts),
+                eq(tasks.restarts, cur.restarts),
+                prStateAsRead(cur),
+              ),
+            )
             .returning(TASK_COLUMNS)
             .get(),
           toTask,
@@ -679,10 +698,9 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         .where(inArray(tasks.status, RUNNING_STATUSES))
         .all();
       for (const o of orphans) {
-        const exhausted = o.restarts + 1 >= MAX_RESTARTS;
         const reason = `the daemon restarted ${o.restarts + 1} times while this task was running`;
         atomically(db, () => {
-          const task = applyEvent(o.id, { type: 'recover', exhausted }, { reason })?.task;
+          const task = applyEvent(o.id, { type: 'recover' }, { reason })?.task;
           if (task?.status === 'queued') requeued++;
           else if (task?.status === 'failed') failed.push(task.id);
           if (task?.status === 'failed' || task?.status === 'cancelled') endRuns(task.status, task.id);

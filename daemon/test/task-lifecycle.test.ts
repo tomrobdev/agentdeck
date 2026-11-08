@@ -4,6 +4,7 @@ import {
   type TaskEvent,
   type PersonEvent,
   type TaskStatus,
+  MAX_RESTARTS,
   TASK_STATUSES,
   TRANSITIONS,
   canApply,
@@ -27,9 +28,12 @@ const EVENTS: Record<string, TaskEvent> = {
   retry: { type: 'retry' },
   mark_done: { type: 'mark_done' },
   pr_merged: { type: 'pr_merged' },
-  'recover after restart': { type: 'recover', exhausted: false },
-  'recover after too many restarts': { type: 'recover', exhausted: true },
+  'recover after restart': { type: 'recover' },
+  'recover after too many restarts': { type: 'recover' },
 };
+
+/** The restarts a task has had before each event: one short of too many makes the next recover the last. */
+const RESTARTS: Record<string, number> = { 'recover after too many restarts': MAX_RESTARTS - 1 };
 
 // event → status it is allowed from → status it leads to. Anything not listed must be refused.
 const ALLOWED: Record<string, Partial<Record<TaskStatus, TaskStatus>>> = {
@@ -55,7 +59,7 @@ for (const [name, event] of Object.entries(EVENTS)) {
   for (const from of TASK_STATUSES) {
     const to = ALLOWED[name][from];
     test(`${name} from ${from}: ${to ? `-> ${to}` : 'refused'}`, () => {
-      assert.equal(nextStatus(from, event), to);
+      assert.equal(nextStatus(from, event, RESTARTS[name] ?? 0), to);
       assert.equal(canApply(from, event), to !== undefined);
       assert.equal(fromStatuses(event).includes(from), to !== undefined);
     });
@@ -84,7 +88,7 @@ test('TRANSITIONS lists the statuses each status can move to', () => {
 test('a finished run after cancel was requested always ends cancelled', () => {
   for (const [name, event] of Object.entries(EVENTS)) {
     if (event.type === 'finish' || event.type === 'rate_limited' || event.type === 'recover') {
-      assert.equal(nextStatus('cancel_requested', event), 'cancelled', name);
+      assert.equal(nextStatus('cancel_requested', event, RESTARTS[name] ?? 0), 'cancelled', name);
     }
   }
 });
