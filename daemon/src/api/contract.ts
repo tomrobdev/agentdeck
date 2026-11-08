@@ -7,10 +7,10 @@ import type { PlanSource, PlanStepStatus } from '../domain/work/index.ts';
 import type { PlannerOutcome } from '../domain/proposals/index.ts';
 import type { AutoMergeState } from '../domain/landing/index.ts';
 import type { CheckState } from '../domain/landing/index.ts';
-import type { MergeMethod, PrMode } from '../domain/repos/index.ts';
-import type { PrState } from '../domain/landing/index.ts';
+import type { MergeMethod, PrMode, ToolRulesSource } from '../domain/repos/index.ts';
+import type { PrRetry, PrState, ReviewAuthor } from '../domain/landing/index.ts';
 import type { RunKind } from '../domain/runs/index.ts';
-import type { HeadlineState, AttentionWhy } from '../domain/operations/index.ts';
+import type { HeadlineState, AttentionWhy, RepoReviewDue } from '../domain/operations/index.ts';
 import type { LinkKind } from '../domain/work/index.ts';
 import type { TaskStatus } from '../domain/work/index.ts';
 import type { NeedsKind } from '../domain/work/index.ts';
@@ -19,7 +19,7 @@ import type { TaskSource } from '../domain/work/index.ts';
 // ---- Vocabulary
 
 // The domain's words, shared as they are.
-export type { AutoMergeState, FileRef, LinkKind, MergeMethod, NotifyKind, PrMode, PrState, TaskStatus };
+export type { AutoMergeState, FileRef, LinkKind, MergeMethod, NotifyKind, PrMode, PrRetry, PrState, TaskStatus };
 
 // ---- Repos
 
@@ -29,7 +29,10 @@ export interface Repo {
   path: string;
   base_branch: string;
   test_cmd: string | null;
+  /** JSON array of the repo's own tool rules; null = the defaults plus the rules detected from its toolchain. */
   allowed_tools: string | null;
+  /** Which rules its workers run with. Missing from a daemon that predates it. */
+  tools_source?: ToolRulesSource;
   auto_approve: number;
   proposed_at: string | null;
   toolchain: string | null;
@@ -41,6 +44,8 @@ export interface Repo {
   auto_resolve: number;
   /** 1 = the daemon starts an unblock run on its own when a task blocks (off by default). Missing from a daemon that predates it. */
   auto_unblock?: number;
+  /** 1 = the daemon starts a review run on its own when a task is done (off by default). Missing from a daemon that predates it. */
+  auto_review?: number;
   /** 1 = the agent's shell commands run in Claude Code's sandbox. */
   sandbox: number;
   /** JSON array of hosts sandboxed commands may reach. */
@@ -53,6 +58,8 @@ export interface Repo {
   auto_merge_max_lines: number;
   /** JSON array of path prefixes; a PR touching one needs a person. */
   auto_merge_skip: string;
+  /** The model a new task of the repo takes when it names none; null follows the default_model setting. Missing from a daemon that predates it. */
+  model?: string | null;
   created_at: string;
 }
 
@@ -89,11 +96,16 @@ export interface RepoPatch {
   merge_method?: MergeMethod;
   auto_resolve?: boolean;
   auto_unblock?: boolean;
+  auto_review?: boolean;
   sandbox?: boolean;
   network?: string[];
   auto_merge?: boolean;
   auto_merge_max_lines?: number;
   auto_merge_skip?: string[];
+  /** A model alias or claude-… id; null or "" clears it. */
+  model?: string | null;
+  /** The repo's own tool rules; null or [] goes back to the detected ones. */
+  allowed_tools?: string[] | null;
 }
 
 export interface DoctorCheck {
@@ -142,6 +154,8 @@ export type StartWait =
   | { kind: 'repo-paused'; reason: string }
   /** `on`: every task it builds on still on its way, or the one it is stuck on (with `stuck`, the reason). */
   | { kind: 'dependency'; on: TaskId[]; stuck: string | null }
+  /** An unblock run for the task is still going: a person retried it meanwhile, and it starts once that run stops. */
+  | { kind: 'unblocking' }
   | { kind: 'slots'; running: number; max: number };
 
 /** One link: the task it points at, its kind and where it stands (unlanded is an after link whose other task has not landed yet). */
@@ -184,6 +198,13 @@ export interface PrCheck {
   url: string | null;
   started_at: string | null;
   completed_at: string | null;
+  /** A failing GitHub Actions check's failed step and its link, read once for the head it failed on. */
+  step?: string | null;
+  step_url?: string | null;
+  /** The lines of the failed step's log that say why. */
+  excerpt?: string;
+  /** Why the log could not be read, in place of the excerpt. */
+  excerpt_error?: string;
 }
 
 /** An open PR's checks in a line's worth: counted, with the failing ones' names. `read_at` is when the PR refresh read them. */
@@ -192,6 +213,8 @@ export interface ChecksSummary {
   failing: number;
   pending: number;
   failing_names: string[];
+  /** Each failing check in a line: "check › tests and coverage: cli: branches 53.6% is below its floor of 54%". */
+  failing_lines: string[];
   read_at: string;
 }
 
@@ -257,6 +280,11 @@ export interface TaskSummary {
   checks: ChecksSummary | null;
   /** What a queued task waits for; null once it waits for nothing (or it isn't queued). */
   wait: StartWait | null;
+  /**
+   * For a done task whose PR failed to open: `due` or `wait` while the PR refresh opens it again (at `next_at`), `person` once
+   * its retries are used up. Null for any other task.
+   */
+  pr_retry: PrRetry | null;
   created_at: string;
   updated_at: string;
 }
@@ -267,7 +295,10 @@ export interface Task extends TaskSummary {
 
 export interface Run {
   id: RunId;
-  /** A resolve run merges the base branch into the task's branch, an unblock run reads why a blocked task stopped; neither uses an attempt. */
+  /**
+   * A resolve run merges the base branch into the task's branch, an unblock run reads why a blocked task stopped, a review
+   * run reads a done task's changes; none uses an attempt.
+   */
   kind: RunKind;
   /** A resolve run carries the attempt it ran beside, so pick runs by id. */
   attempt: number;
@@ -282,6 +313,34 @@ export interface Run {
   tests_passed: number | null;
   result_text: string | null;
   denials: number;
+  /** The model the run was started with; null for a run from before runs recorded it. Missing from a daemon that predates it. */
+  model?: string | null;
+  /** The exact model id claude's init line named, such as claude-sonnet-5-5; null until it arrives. */
+  model_id?: string | null;
+  /** For a review run, the patch-id of the task's changes it was started to read; null for other kinds. Missing from a daemon that predates it. */
+  diff_hash?: string | null;
+  /** For a failed or blocked run: its turns, time, tools and tests summed up from its log, with a verdict line. Null otherwise. */
+  summary?: RunSummary | null;
+}
+
+/** A failed or blocked run summed up from its log (`runSummary` in domain/runs). */
+export interface RunSummary {
+  /** How claude ended: out of turns, on its own, on another error, or cut off before a result. */
+  end: 'max_turns' | 'ended' | 'error' | 'cut_off';
+  turns: number;
+  max_turns: number | null;
+  minutes: number;
+  test_minutes: number;
+  tools: { name: string; count: number }[];
+  test_runs: number;
+  test_turns: number;
+  last_test: 'passed' | 'failed' | null;
+  refused: number;
+  /** The tail of the last failing output the run saw. */
+  excerpt: string | null;
+  final_message: string | null;
+  /** The summary in one line, e.g. "used 60 of 60 turns, 14 of them running tests that kept failing". */
+  verdict: string;
 }
 
 /** One status change in a task's history. Tasks from before migration step 6 have none. */
@@ -306,6 +365,7 @@ export interface TaskEventRow {
     | 'reject'
     | 'retry'
     | 'unblock_retry'
+    | 'review_retry'
     | 'mark_done'
     | 'pr_merged'
     | 'recover';
@@ -424,6 +484,12 @@ export interface Review {
   id: ReviewId;
   task_id: TaskId;
   kind: 'comment' | 'request_changes' | null;
+  /** Who made it: a person, or a review run. Missing from a daemon that predates it. */
+  by?: ReviewAuthor;
+  /** The task's head commit the review read, set at submit; null on a draft or an older review. */
+  head_commit?: string | null;
+  /** The patch-id of the task's changes against the base branch the review read, set at submit; null on a draft or an older review. */
+  diff_hash?: string | null;
   /** The overall note. */
   body: string;
   created_at: string;
@@ -581,6 +647,13 @@ export interface RequestMergesResult {
 export interface FixChecksResult {
   /** The failing checks sent to the worker, by name. */
   checks: string[];
+  task: TaskDetail;
+}
+
+/** POST /api/tasks/:id/open-pr: a person opened a done task's PR (one that failed to open, never opened, or was closed). */
+export interface OpenPrResult {
+  /** The PR's url. */
+  url: string;
   task: TaskDetail;
 }
 
@@ -755,6 +828,8 @@ export interface Headline {
   need_you: number;
   /** Up to five of those tasks: blocked first, then review, then proposed, each by priority. */
   attention: { id: TaskId; title: string; why: AttentionWhy }[];
+  /** The repos due for an area review, each with its line ("area review due: 9 days, 115 commits since the last"). */
+  review_due: RepoReviewDue[];
 }
 
 export interface Status {
@@ -785,7 +860,15 @@ export interface Settings {
   budget: Budget;
   notify: { desktop: boolean; events: NotifyKind[]; ntfy_topic: string; ntfy_server: string };
   planner: { enabled: boolean; interval_hours: number; max_tasks: number; model: string };
+  /** The model a new task takes when neither it nor its repo names one. */
+  default_model: string;
+  /** The model resolve and unblock runs use, in place of their task's. */
+  support_model: string;
+  /** The model review runs use; opus by default, a reviewer at least as strong as the worker. */
+  review_model: string;
   reload_on_change: boolean;
+  /** A repo is due for an area review when its oldest mark is older than `days`, or more than `lines` lines merged since it. */
+  review_due: { days: number; lines: number };
 }
 
 /** POST /api/settings */
@@ -794,7 +877,11 @@ export interface SettingsPatch {
   budget?: Partial<Budget>;
   notify?: Partial<Settings['notify']>;
   planner?: Partial<Settings['planner']>;
+  default_model?: string;
+  support_model?: string;
+  review_model?: string;
   reload_on_change?: boolean;
+  review_due?: Partial<Settings['review_due']>;
 }
 
 export interface ServiceStatus {
@@ -815,12 +902,14 @@ export interface RunningTask {
   title: string;
 }
 
-/** One check of `agentdeck doctor`; a failed one names the command that fixes it. */
+/** One check of `agentdeck doctor`; a failed one, or a warning, names the command that fixes it. */
 export interface HealthCheck {
   name: string;
   ok: boolean;
   reason: string;
   fix: string | null;
+  /** Passed, but a person should look (an area review due); never a failure. */
+  warning?: boolean;
 }
 
 /** GET /api/daemon/health: `agentdeck doctor`, the checkout's HEAD, what is running, and the last lines of the daemon log. */
@@ -887,12 +976,45 @@ export interface ScorecardMeasures {
   pr_checks: { recorded: number; green: number; rate: number | null };
 }
 
-/** GET /api/stats?repo=<name or id>&since=<date>&by=week: what `agentdeck stats --json` prints. */
+/** One cause of failures and how often it came up, such as "CI › Coverage floors" or "used its turns, tests failing". */
+export interface FailureCause {
+  cause: string;
+  count: number;
+}
+
+/** What failures were made of in one week and repo (`agentdeck stats --failures`). */
+export interface FailureWeek {
+  week: string;
+  repo: string;
+  /** Failing checks by step on the head the PR first settled on, and on the head it merged on. */
+  checks_opened: FailureCause[];
+  checks_merged: FailureCause[];
+  /** Failed or blocked work runs by how they ended; "unknown end" for runs from before it was kept. */
+  runs: FailureCause[];
+  runs_failed: number;
+  /** Of those, the runs a later run of the task then finished. */
+  runs_fixed: number;
+}
+
+/** The failures per week and repo, and the most frequent causes over all of them. */
+export interface FailureReport {
+  weeks: FailureWeek[];
+  top: (FailureCause & { kind: 'check' | 'run'; where: 'opened' | 'merged' | 'run' })[];
+}
+
+/** GET /api/stats?repo=<name or id>&since=<date>&by=week|model: what `agentdeck stats --json` prints. */
 export interface Stats {
   repos: { repo: string; measures: RunMeasures }[];
   total: RunMeasures;
   /** The first-run measures per week, oldest first; empty unless `by` is week. */
   weeks: { week: string; measures: RunMeasures }[];
+  /**
+   * The measures per model the work runs ran on, by name with "unknown" (runs from before models were recorded) last, and
+   * the interventions counted against each; empty unless `by` is model. Missing from a daemon that predates it.
+   */
+  models?: { model: string; measures: RunMeasures; interventions: number }[];
+  /** What failures are made of; missing from a daemon that predates it. */
+  failures?: FailureReport;
   scorecard: {
     since: string | null;
     by: 'week' | null;

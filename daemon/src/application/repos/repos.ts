@@ -5,9 +5,10 @@ import { basename, resolve } from 'node:path';
 import type { App } from '../ports/app.ts';
 import { autoMergeMaxLinesError } from '../../domain/landing/index.ts';
 import { MERGE_METHODS, type MergeMethod, PR_MODES, type PrMode, type Repo, isMergeMethod } from '../../domain/repos/index.ts';
-import { goalsError, networkError, repoNameError } from '../../domain/repos/index.ts';
+import { goalsError, networkError, parseToolRules, repoNameError, toolRulesError } from '../../domain/repos/index.ts';
 import { detectToolchain } from '../../domain/repos/index.ts';
 import { textList } from '../../domain/shared/index.ts';
+import { modelError } from '../../domain/work/index.ts';
 import { type Check, runDoctor } from './doctor.ts';
 import { repoView } from './repo-view.ts';
 import { ActionError, flag, list, object, refuse, requireRepo, text, textOrNull, whole } from '../shared/input.ts';
@@ -68,6 +69,7 @@ export interface RepoPatch {
   merge_method?: MergeMethod;
   auto_resolve?: boolean;
   auto_unblock?: boolean;
+  auto_review?: boolean;
   sandbox?: boolean;
   /** Hosts the agent's sandboxed commands may reach; a string is split on commas and spaces. */
   network?: string | string[];
@@ -75,6 +77,13 @@ export interface RepoPatch {
   auto_merge_max_lines?: number;
   /** Path prefixes a PR touching needs a person; a string is split on commas and spaces. */
   auto_merge_skip?: string | string[];
+  /** The model a new task of the repo takes when it names none: an alias or a claude-… id; null or "" clears it. */
+  model?: string | null;
+  /**
+   * The repo's own tool rules, in place of the detected ones; a string is split on commas and lines (`parseToolRules`).
+   * None (null, "" or []) goes back to the defaults plus the rules detected from its toolchain.
+   */
+  allowed_tools?: string | string[] | null;
 }
 
 export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch) {
@@ -89,6 +98,7 @@ export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch
   const merge_method = text(body, 'merge_method', { empty: true, raw: true });
   const auto_resolve = flag(body, 'auto_resolve');
   const auto_unblock = flag(body, 'auto_unblock');
+  const auto_review = flag(body, 'auto_review');
   const sandbox = flag(body, 'sandbox');
   const hosts = list(body, 'network', { split: true });
   const network = hosts && normalizeNetwork(hosts);
@@ -96,6 +106,17 @@ export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch
   const auto_merge_max_lines = whole(body, 'auto_merge_max_lines', autoMergeMaxLinesError);
   const skip = list(body, 'auto_merge_skip', { split: true });
   const auto_merge_skip = skip && textList(skip);
+  const model = textOrNull(body, 'model');
+  refuse(modelError(model ?? undefined));
+  const rules =
+    typeof body.allowed_tools === 'string'
+      ? parseToolRules(body.allowed_tools)
+      : body.allowed_tools === null
+        ? []
+        : list(body, 'allowed_tools');
+  // No rules is null, not [] (which would allow nothing): the detected rules again.
+  const allowed_tools = rules && (rules.length ? parseToolRules(rules.join('\n')) : null);
+  if (allowed_tools) refuse(toolRulesError(allowed_tools));
   if (network) refuse(networkError(network));
   if (pr_mode !== undefined && !PR_MODES.includes(pr_mode as PrMode))
     throw new ActionError(`pr_mode must be one of ${PR_MODES.join(', ')}`);
@@ -127,11 +148,14 @@ export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch
     ...(merge_method !== undefined ? { merge_method: merge_method as MergeMethod } : {}),
     ...(auto_resolve !== undefined ? { auto_resolve } : {}),
     ...(auto_unblock !== undefined ? { auto_unblock } : {}),
+    ...(auto_review !== undefined ? { auto_review } : {}),
     ...(sandbox !== undefined ? { sandbox } : {}),
     ...(network !== undefined ? { network } : {}),
     ...(auto_merge !== undefined ? { auto_merge } : {}),
     ...(auto_merge_max_lines !== undefined ? { auto_merge_max_lines } : {}),
     ...(auto_merge_skip !== undefined ? { auto_merge_skip } : {}),
+    ...(model !== undefined ? { model: model || null } : {}),
+    ...(allowed_tools !== undefined ? { allowed_tools } : {}),
   });
   return repoDetail(app, repo.id);
 }

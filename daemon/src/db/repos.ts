@@ -169,6 +169,8 @@ export function repoStore(db: DatabaseSync, orm: Orm) {
           | 'auto_merge'
           | 'auto_merge_max_lines'
           | 'auto_merge_skip'
+          | 'model'
+          | 'allowed_tools'
         >
       >,
     ): void {

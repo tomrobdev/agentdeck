@@ -19,6 +19,15 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: git config --global user.name ci && git config --global user.email ci@example.com
-      - run: pnpm check
-        env:
-          CRASH_ITERATIONS: 5
+      # One named step per check, so a failure names what failed. daemon/test/ci-parity.test.ts keeps these to what
+      # `pnpm check:task`, a task's own check, runs.
+      - name: format
+        run: pnpm format:check
+      - name: typecheck
+        run: pnpm typecheck
+      - name: db
+        run: pnpm db:check
+      - name: tests and coverage
+        run: pnpm coverage
+      - name: crash test
+        run: node daemon/scripts/crash-test.mjs 5

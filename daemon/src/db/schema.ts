@@ -248,6 +248,29 @@ export const MIGRATIONS: Migration[] = [
   // are still to run, and the daemon's tick runs them. Every row before this step, and every row older code writes, reads
   // 0: their follow-ups ran inline, so they never run twice.
   'ALTER TABLE task_events ADD COLUMN follow_up_pending INTEGER NOT NULL DEFAULT 0;',
+  // 31: models. repos.model is the model a new task of the repo
+  // takes when it names none (NULL follows the default_model setting). runs.model is the model a run was started with and
+  // runs.model_id the exact id claude's init line named; both are NULL on rows from older code, which read as unknown.
+  `ALTER TABLE repos ADD COLUMN model TEXT;
+   ALTER TABLE runs ADD COLUMN model TEXT;
+   ALTER TABLE runs ADD COLUMN model_id TEXT;`,
+  // 32: review runs (domain/runs/review.ts). repos.auto_review lets the daemon start one when a task is done (off by
+  // default). reviews.by is who made a review (every earlier one was a person's); head_commit and diff_hash are the head
+  // and the patch-id of the changes it read, set at submit (NULL on older rows). runs.diff_hash is the diff a review run
+  // was started for, NULL for other kinds.
+  `ALTER TABLE repos ADD COLUMN auto_review INTEGER NOT NULL DEFAULT 0;
+   ALTER TABLE reviews ADD COLUMN by TEXT NOT NULL DEFAULT 'person';
+   ALTER TABLE reviews ADD COLUMN head_commit TEXT;
+   ALTER TABLE reviews ADD COLUMN diff_hash TEXT;
+   ALTER TABLE runs ADD COLUMN diff_hash TEXT;`,
+  // 33: review_due, a new notification kind (domain/operations/review-due.ts), on by default. A stored notify_events
+  // does not take the setting's default, so the kind is added to it, unless a person turned every kind off.
+  `UPDATE settings SET value = value || ',review_due'
+   WHERE key = 'notify_events' AND value <> '' AND ',' || value || ',' NOT LIKE '%,review_due,%';`,
+  // 34: how a failed or blocked work run ended (domain/runs/translate/summary.ts's RunEnd) and whether its last test run
+  // failed, kept on the row because the log is not (a removed repo's logs are deleted). Older runs read as unknown.
+  `ALTER TABLE runs ADD COLUMN run_end TEXT;
+   ALTER TABLE runs ADD COLUMN last_test_failed INTEGER;`,
 ];
 
 /** Runs every step above the database's user_version in one transaction; returns how many ran. */

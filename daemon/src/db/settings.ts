@@ -1,9 +1,12 @@
-// Key-value settings: pause flag, budget, concurrency, notification and planner options.
+// Key-value settings: pause flag, budget, concurrency, notification, planner and model options.
 import { eq } from 'drizzle-orm';
 import type { DatabaseSync } from 'node:sqlite';
 import { DEFAULTS } from '../config.ts';
-import { NOTIFY_KINDS, type NotifyKind, type NotifySettings } from '../domain/operations/index.ts';
+import { DEFAULT_REVIEW_DUE, NOTIFY_KINDS, type NotifyKind, type NotifySettings, type ReviewDue } from '../domain/operations/index.ts';
+import type { RepoId } from '../domain/shared/index.ts';
 import type { PlannerSettings } from '../domain/proposals/index.ts';
+import { DEFAULT_REVIEW_MODEL, DEFAULT_SUPPORT_MODEL } from '../domain/runs/index.ts';
+import { DEFAULT_MODEL } from '../domain/work/index.ts';
 import type { Settings } from '../domain/operations/index.ts';
 import { BUDGET_KEYS, type Budget, DEFAULT_BUDGET } from '../domain/capacity/index.ts';
 import type { Orm } from './orm.ts';
@@ -25,7 +28,14 @@ export const SETTING_DEFAULTS = {
   planner_enabled: '1',
   planner_interval_hours: '3',
   planner_max_tasks: '3',
-  planner_model: 'sonnet',
+  planner_model: DEFAULT_MODEL,
+  default_model: DEFAULT_MODEL,
+  support_model: DEFAULT_SUPPORT_MODEL,
+  review_model: DEFAULT_REVIEW_MODEL,
+  review_due_days: String(DEFAULT_REVIEW_DUE.days),
+  review_due_lines: String(DEFAULT_REVIEW_DUE.lines),
+  reviews_due: '[]',
+  review_due_told: '{}',
   ...Object.fromEntries(BUDGET_KEYS.map((k) => [k, String(DEFAULT_BUDGET[k])])),
 } as Record<string, string>;
 
@@ -34,6 +44,14 @@ export function settingsStore(db: DatabaseSync, orm: Orm) {
     orm.select({ value: settings.value }).from(settings).where(eq(settings.key, key)).get()?.value ?? SETTING_DEFAULTS[key] ?? '';
   const set = (key: string, value: string): void => {
     orm.insert(settings).values({ key, value }).onConflictDoUpdate({ target: settings.key, set: { value } }).run();
+  };
+  /** A setting the daemon keeps as JSON; `fallback` when it does not parse. */
+  const json = <T>(key: string, fallback: T): T => {
+    try {
+      return (JSON.parse(get(key)) as T) ?? fallback;
+    } catch {
+      return fallback;
+    }
   };
   const budget = (): Budget => {
     const out = { ...DEFAULT_BUDGET };
@@ -52,6 +70,11 @@ export function settingsStore(db: DatabaseSync, orm: Orm) {
     max_tasks: Number(get('planner_max_tasks')),
     model: get('planner_model'),
   });
+  const modelSettings = (): Pick<Settings, 'default_model' | 'support_model' | 'review_model'> => ({
+    default_model: get('default_model'),
+    support_model: get('support_model'),
+    review_model: get('review_model'),
+  });
   return {
     /** Raw write by key, for flags the daemon keeps for itself. The person's settings go through writeSettings. */
     setSetting: set,
@@ -61,7 +84,9 @@ export function settingsStore(db: DatabaseSync, orm: Orm) {
       budget: budget(),
       notify: notifySettings(),
       planner: plannerSettings(),
+      ...modelSettings(),
       reload_on_change: get('reload_on_change') === '1',
+      review_due: { days: Number(get('review_due_days')), lines: Number(get('review_due_lines')) },
     }),
     /** Store all of `s` in one transaction. */
     writeSettings: (s: Settings): void =>
@@ -76,8 +101,20 @@ export function settingsStore(db: DatabaseSync, orm: Orm) {
         set('planner_interval_hours', String(s.planner.interval_hours));
         set('planner_max_tasks', String(s.planner.max_tasks));
         set('planner_model', s.planner.model);
+        set('default_model', s.default_model);
+        set('support_model', s.support_model);
+        set('review_model', s.review_model);
         set('reload_on_change', s.reload_on_change ? '1' : '0');
+        set('review_due_days', String(s.review_due.days));
+        set('review_due_lines', String(s.review_due.lines));
       }),
+    /** The repos due for an area review, as the daemon's last check found them. */
+    reviewsDue: (): ReviewDue[] => json<ReviewDue[]>('reviews_due', []),
+    setReviewsDue: (dues: ReviewDue[]): void => set('reviews_due', JSON.stringify(dues)),
+    /** When a person was last told the repo is due for an area review, in ms since the epoch; null when never. */
+    reviewDueToldAt: (repo: RepoId): number | null => json<Record<string, number>>('review_due_told', {})[repo] ?? null,
+    setReviewDueToldAt: (repo: RepoId, at: number): void =>
+      atomically(db, () => set('review_due_told', JSON.stringify({ ...json<Record<string, number>>('review_due_told', {}), [repo]: at }))),
     isPaused: (): boolean => get('paused') === '1',
     setPaused: (paused: boolean): void => set('paused', paused ? '1' : '0'),
     /** Unix seconds until which claude is rate limited, or null when it is not (or has lifted). */
@@ -94,5 +131,6 @@ export function settingsStore(db: DatabaseSync, orm: Orm) {
     maxConcurrent: (): number => Number(get('max_concurrent')),
     notifySettings,
     plannerSettings,
+    modelSettings,
   };
 }

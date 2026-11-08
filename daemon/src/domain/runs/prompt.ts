@@ -8,6 +8,7 @@ import { withoutUnscopedFileTools } from './translate/sandbox.ts';
 import { type Task, leftoversMessage } from '../work/index.ts';
 import { INTERRUPTED, type Run } from './run.ts';
 import { UNBLOCK_NOTE } from './unblock.ts';
+import { REVIEW_NOTE } from './review.ts';
 
 /**
  * Appended to every worker's system prompt; the worker parses the STATUS line. `testCmd` is the command
@@ -88,7 +89,8 @@ export function planPromptBlock(plan: PromptPlan): string {
 /**
  * `reviewNote` is what the person asked to change when they sent the task back from review. `plan` is the plan the task
  * carries out, if any: its steps go after the task's prompt. `review` is the review being addressed, comment by comment;
- * it takes the place of `reviewNote` (which holds the same comments, flattened).
+ * it takes the place of `reviewNote` only when that is the review's own retry (`ownRetry`, which holds the same comments,
+ * flattened); a later retry's note goes under it.
  */
 export function buildPrompt(
   task: Task,
@@ -112,11 +114,13 @@ export function buildPrompt(
       : finished.attempt < task.attempts
         ? `Before that, the previous attempt ended as "${finished.outcome}".`
         : `Before that, a run of this attempt ended as "${finished.outcome}".`;
-  // An unblock run's note names itself (UNBLOCK_NOTE); a person's is what they asked to change.
-  const note =
-    reviewNote === null ? '' : reviewNote.startsWith(UNBLOCK_NOTE) ? `${reviewNote}\n` : `Changes requested in review:\n${reviewNote}\n`;
+  // An unblock or review run's note names itself (UNBLOCK_NOTE, REVIEW_NOTE); a person's is what they asked to change.
+  const named = reviewNote !== null && (reviewNote.startsWith(UNBLOCK_NOTE) || reviewNote.startsWith(REVIEW_NOTE));
+  const note = reviewNote === null ? '' : named ? `${reviewNote}\n` : `Changes requested in review:\n${reviewNote}\n`;
   return [
-    review ? `${reviewPromptBlock(review)}\n` : note,
+    review ? `${reviewPromptBlock(review)}\n` : '',
+    // The review's own retry note is the review block; any other note (Fix checks, an unblock run) goes under it.
+    review?.ownRetry ? '' : note,
     base,
     '',
     interrupted ? `--- This is attempt ${task.attempts}. A daemon restart stopped an earlier run of it before it finished. ---` : '',
@@ -204,17 +208,20 @@ export function buildResolvePrompt(task: Pick<Task, 'id' | 'title' | 'prompt'>, 
  * `settings` is the run's settings file (sandbox and worktree-only file rules, domain/runs/translate/sandbox.ts). `resume` is a
  * claude session to continue (`resumableSession`), with `maxTurns` the turns it has left (`resumeMaxTurns`); everything
  * else, the system prompt and tool rules included, is the same as for a fresh run. `systemPrompt` is the worker's unless
- * the run is another kind (an unblock run ends with UNBLOCK lines, not a STATUS line).
+ * the run is another kind (an unblock run ends with UNBLOCK lines, not a STATUS line). `run.model` is the model the run
+ * starts with (`runModel`: the task's for a work run, the support model for the others). `extra` adds tools denied on top of
+ * the ones always denied (a review run's `REVIEW_DENIED_TOOLS`) and arguments at the end (its `reviewSchemaArgs`).
  */
 export function claudeArgs(
-  task: Task,
+  run: { model: string; max_turns: number },
   allowed: string[],
   prompt: string,
   testCmd: string | null,
   settings: string,
   resume: string | null = null,
-  maxTurns: number = task.max_turns,
+  maxTurns: number = run.max_turns,
   systemPrompt: string = workerSystemPrompt(testCmd),
+  extra: { disallowed?: string[]; args?: string[] } = {},
 ): string[] {
   return [
     '--settings',
@@ -226,11 +233,13 @@ export function claudeArgs(
     'stream-json',
     '--verbose',
     '--model',
-    task.model,
+    run.model,
     '--max-turns',
     String(maxTurns),
     '--permission-mode',
     'dontAsk',
+    // No MCP servers or connectors from the person's own config: a run's tools are the same on every machine.
+    '--strict-mcp-config',
     // One argv entry per rule: patterns like "Bash(npm test*)" contain spaces.
     '--allowedTools',
     // Edit and Write come from the settings file, limited to the worktree.
@@ -238,7 +247,9 @@ export function claudeArgs(
     // Kept on top of the sandbox: the agent never pushes, sandbox or not.
     '--disallowedTools',
     ...ALWAYS_DISALLOWED_TOOLS,
+    ...(extra.disallowed ?? []),
     '--append-system-prompt',
     systemPrompt,
+    ...(extra.args ?? []),
   ];
 }

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
-import { MERGE_METHODS, type Repo, ago, api, queryKeys, repoQuery } from '../../api';
-import { type RepoForm, toRepoForm, toRepoPatch } from '../../lib/forms';
+import { MERGE_METHODS, MODEL_LABELS, type Repo, ago, api, queryKeys, repoQuery } from '../../api';
+import { type RepoForm, modelChoices, toRepoForm, toRepoPatch } from '../../lib/forms';
 import { useActions } from '../../composables/useActions';
 import { plural } from '../../../../daemon/src/domain/shared/index.ts';
 import NumberInput from '../ui/NumberInput.vue';
@@ -19,6 +19,14 @@ const id = props.repo.id;
 const q = useQuery(repoQuery(id));
 const detail = computed(() => q.data.value);
 const lastPlannerRun = computed(() => detail.value?.planner_runs[0]);
+// What the saved repo runs with, which the form's edits change only once saved.
+const toolsInUse = computed(() => {
+  const d = detail.value;
+  if (!d?.tools_source) return '';
+  return d.tools_source === 'own'
+    ? 'In use: the repo’s own rules.'
+    : `In use: the defaults plus the rules detected from its toolchain (${d.toolchain ?? 'none found'}).`;
+});
 
 // Copied into the form once, from the read made on opening; later refetches leave the edits alone.
 const form = ref<RepoForm | null>(null);
@@ -92,12 +100,21 @@ async function archive() {
       </label>
       <Switch v-model="form.autoApprove" class="flex-none self-end pb-2">Auto-approve planner tasks</Switch>
     </div>
-    <label class="field flex-1">
-      <span>Merge method <span class="text-muted">(when you merge a PR from the app)</span></span>
-      <select v-model="form.mergeMethod">
-        <option v-for="m in MERGE_METHODS" :key="m.key" :value="m.key">{{ m.label }} · {{ m.hint }}</option>
-      </select>
-    </label>
+    <div class="flex gap-2.5">
+      <label class="field flex-1">
+        <span>Merge method <span class="text-muted">(when you merge a PR from the app)</span></span>
+        <select v-model="form.mergeMethod">
+          <option v-for="m in MERGE_METHODS" :key="m.key" :value="m.key">{{ m.label }} · {{ m.hint }}</option>
+        </select>
+      </label>
+      <label class="field flex-1">
+        <span>Model <span class="text-muted">(for a new task that names none)</span></span>
+        <select v-model="form.model">
+          <option value="">The default model setting</option>
+          <option v-for="m in modelChoices(form.model)" :key="m" :value="m">{{ MODEL_LABELS[m] ?? m }}</option>
+        </select>
+      </label>
+    </div>
     <Switch v-model="form.autoResolve" class="flex-none">
       <span
         >Resolve merge conflicts automatically
@@ -137,6 +154,17 @@ async function archive() {
     <label v-if="form.sandbox" class="field flex-1">
       <span>Network hosts <span class="text-muted">(sandboxed commands may reach these; empty = none)</span></span>
       <input v-model="form.network" placeholder="registry.npmjs.org, github.com" />
+    </label>
+    <label class="field flex-1">
+      <span>Tool rules <span class="text-muted">(one per line; they replace the detected rules, and empty goes back to them)</span></span>
+      <textarea
+        class="resize-y font-mono text-sm"
+        v-model="form.tools"
+        rows="3"
+        placeholder="Read&#10;Edit&#10;Bash(make *)"
+        data-testid="repo-tools"
+      />
+      <small class="text-muted text-xs">{{ toolsInUse }}</small>
     </label>
     <p v-if="lastPlannerRun" class="text-muted m-0 line-clamp-2 text-sm" :title="lastPlannerRun.note ?? ''">
       Last proposals {{ ago(lastPlannerRun.started_at) }}: {{ lastPlannerRun.outcome ?? 'running' }}

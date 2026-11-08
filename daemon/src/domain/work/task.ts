@@ -111,8 +111,35 @@ Limits the agent must keep to, such as no new dependencies or no changes to pack
 ## Definition of done
 The test command passing, plus concrete checks a reviewer can confirm.`;
 
+/** The default_model setting's default: the model a new task takes when neither it nor its repo names one. */
+export const DEFAULT_MODEL = 'sonnet';
+
 /** The model aliases claude takes; the planner chooses among these. */
-export const MODELS = ['haiku', 'sonnet', 'opus'];
+export const MODELS = ['haiku', DEFAULT_MODEL, 'opus'];
+
+/** Where a new task's model came from: asked for, the repo's default, or the default_model setting. */
+export type ModelSource = 'asked' | 'repo' | 'setting';
+
+/**
+ * The model a new task takes: the one asked for, else its repo's default, else the default_model setting. An empty model
+ * is none asked for. One decision, so the CLI, the dashboard and the planner give a task the same default.
+ */
+export function newTaskModel(
+  asked: string | undefined,
+  repo: { model: string | null },
+  defaultModel: string,
+): { model: string; source: ModelSource } {
+  if (asked) return { model: asked, source: 'asked' };
+  if (repo.model) return { model: repo.model, source: 'repo' };
+  return { model: defaultModel, source: 'setting' };
+}
+
+/** How `agentdeck add` names a default: "the repo's default" or "the default_model setting"; null for a model asked for. */
+export function modelSourceText(source: ModelSource): string | null {
+  if (source === 'repo') return "the repo's default";
+  if (source === 'setting') return 'the default_model setting';
+  return null;
+}
 
 /** A model claude will accept: an alias, or a full model id such as claude-sonnet-5-5. */
 export const isModel = (model: string): boolean => MODELS.includes(model) || /^claude-[a-z0-9][a-z0-9.-]*$/.test(model);
@@ -125,6 +152,12 @@ export const OPEN_STATUSES: TaskStatus[] = ['proposed', 'queued', ...RUNNING_STA
 
 /** Statuses in which a task's title, prompt and limits may be edited: waiting, or finished unsuccessfully. */
 export const EDITABLE_STATUSES: TaskStatus[] = ['proposed', 'queued', 'blocked', 'failed'];
+
+/** Statuses in which a task's worktree may be removed: any but a live run's, or a queued task's, whose next run needs it. */
+export const WORKTREE_REMOVABLE_STATUSES: TaskStatus[] = ['proposed', 'done', 'blocked', 'failed', 'cancelled'];
+
+/** Whether a task has attempts left: a failed run requeues it, and an unblock run may retry it. */
+export const attemptsLeft = (t: Pick<TaskCore, 'attempts' | 'max_attempts'>): boolean => t.attempts < t.max_attempts;
 
 /** Statuses in which a task's own plan may be attached or replaced: any but a live run's, whose end would write the old plan back. */
 export const PLAN_ATTACHABLE_STATUSES: TaskStatus[] = ['proposed', 'queued', 'done', 'blocked', 'failed', 'cancelled'];

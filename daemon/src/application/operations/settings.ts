@@ -6,7 +6,9 @@ import { BUDGET_KEYS, type Budget, validateBudget, validateSlots } from '../../d
 import { ATTENTION_LIMIT, headline } from '../../domain/operations/index.ts';
 import type { DaemonState } from '../../domain/operations/index.ts';
 import { type ReloadInput, reloadState, restartWait } from '../../domain/operations/index.ts';
-import type { Settings } from '../../domain/operations/index.ts';
+import type { ReviewDueSettings, Settings } from '../../domain/operations/index.ts';
+import { reviewDueDaysError, reviewDueLinesError } from '../../domain/operations/index.ts';
+import { modelError } from '../../domain/work/index.ts';
 import { flag, list, number, object, refuse, text, whole } from '../shared/input.ts';
 import { startGate } from '../capacity/gate.ts';
 import { notify } from './notifications.ts';
@@ -62,6 +64,7 @@ export function status(app: App, daemon: DaemonInfo = { commit: null, started_at
         running: app.countRunning(),
         need_you: { proposed: counts.proposed ?? 0, blocked: counts.blocked ?? 0, review },
         attention: app.attentionTasks(ATTENTION_LIMIT),
+        review_due: app.reviewsDue(),
       },
       Date.now() / 1000,
     ),
@@ -94,7 +97,11 @@ export interface SettingsPatch {
   budget?: Partial<Budget>;
   notify?: Partial<NotifySettings>;
   planner?: Partial<PlannerSettings>;
+  default_model?: string;
+  support_model?: string;
+  review_model?: string;
   reload_on_change?: boolean;
+  review_due?: Partial<ReviewDueSettings>;
 }
 
 /** Apply a partial settings update after validating all of it. */
@@ -105,6 +112,11 @@ export function updateSettings(app: App, patch: SettingsPatch): Settings {
 
   next.reload_on_change = flag(body, 'reload_on_change') ?? next.reload_on_change;
   next.max_concurrent = whole(body, 'max_concurrent', validateSlots) ?? next.max_concurrent;
+  for (const key of ['default_model', 'support_model', 'review_model'] as const) {
+    const model = text(body, key);
+    refuse(modelError(model));
+    next[key] = model ?? next[key];
+  }
 
   const budget = section('budget');
   if (budget) {
@@ -148,6 +160,12 @@ export function updateSettings(app: App, patch: SettingsPatch): Settings {
       refuse(plannerModelError(model));
       next.planner.model = model;
     }
+  }
+
+  const r = section('review_due');
+  if (r) {
+    next.review_due.days = whole(r, 'days', (v) => reviewDueDaysError(v as number)) ?? next.review_due.days;
+    next.review_due.lines = whole(r, 'lines', (v) => reviewDueLinesError(v as number)) ?? next.review_due.lines;
   }
 
   app.writeSettings(next);

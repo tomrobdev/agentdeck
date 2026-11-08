@@ -6,6 +6,7 @@ import { FOLLOW_UPS, type FollowUp, followUpsOf, followUpsOfRow } from '../src/d
 import { linkState } from '../src/domain/work/link.ts';
 import {
   DOMAIN_EVENT_TYPES,
+  MAX_RESTARTS,
   RULES,
   type RuleKey,
   type TaskEvent,
@@ -22,8 +23,8 @@ const EVENT_OF: Record<RuleKey, TaskEvent> = {
   'finish:done': { type: 'finish', outcome: 'done' },
   'finish:blocked': { type: 'finish', outcome: 'blocked' },
   'finish:cancelled': { type: 'finish', outcome: 'cancelled' },
-  'finish:failed': { type: 'finish', outcome: 'failed', retry: false },
-  'finish:failed:retry': { type: 'finish', outcome: 'failed', retry: true },
+  'finish:failed': { type: 'finish', outcome: 'failed' },
+  'finish:failed:retry': { type: 'finish', outcome: 'failed' },
   rate_limited: { type: 'rate_limited' },
   conflict: { type: 'conflict' },
   cancel: { type: 'cancel' },
@@ -31,11 +32,22 @@ const EVENT_OF: Record<RuleKey, TaskEvent> = {
   reject: { type: 'reject' },
   retry: { type: 'retry' },
   unblock_retry: { type: 'unblock_retry' },
+  review_retry: { type: 'review_retry' },
   mark_done: { type: 'mark_done' },
   pr_merged: { type: 'pr_merged' },
-  recover: { type: 'recover', exhausted: false },
-  'recover:exhausted': { type: 'recover', exhausted: true },
+  recover: { type: 'recover' },
+  'recover:exhausted': { type: 'recover' },
 };
+
+/** A task in `from`, ready for rule `key`: one restart short of too many for the last recover. */
+const taskFor = (key: RuleKey, from: TaskStatus) => ({
+  ...stateIn(from),
+  id,
+  attempts: 1,
+  max_attempts: key === 'finish:failed:retry' ? 2 : 1,
+  restarts: key === 'recover:exhausted' ? MAX_RESTARTS - 1 : 0,
+  pr: null,
+});
 
 const stateIn = (status: TaskStatus): TaskState => {
   switch (status) {
@@ -75,7 +87,7 @@ const warnsNoOne = (s: TaskStatus) => (WARNS_NO_ONE as TaskStatus[]).includes(s)
 
 /** What the daemon runs now: the table's follow-ups of the move's events, crash recovery's too (the outbox keeps them all). */
 function now(key: RuleKey, from: TaskStatus): FollowUp[] {
-  return followUpsOf(transition({ ...stateIn(from), id, attempts: 1, restarts: 0 }, EVENT_OF[key])!.events);
+  return followUpsOf(transition(taskFor(key, from), EVENT_OF[key])!.events);
 }
 
 /** Since the outbox, crash recovery's events are followed up like any other: a task it cancelled now warns its dependents. */
@@ -95,19 +107,16 @@ test('follow-ups: every entry in RULES is followed up as before, less the warnin
 test('follow-ups: a history row reads back as the domain event that wrote it, so the outbox runs the same follow-ups', () => {
   for (const [key, rule] of Object.entries(RULES) as [RuleKey, Partial<Record<TaskStatus, TaskStatus>>][]) {
     for (const from of Object.keys(rule) as TaskStatus[]) {
-      const [e] = transition({ ...stateIn(from), id, attempts: 1, restarts: 0 }, EVENT_OF[key])!.events;
+      const [e] = transition(taskFor(key, from), EVENT_OF[key])!.events;
       assert.equal(domainEventOfRow({ type: e.history, to_status: e.to }), e.type, `${key} from ${from}`);
       assert.deepEqual(followUpsOfRow({ type: e.history, to_status: e.to }), followUpsOf([e]), `${key} from ${from}`);
     }
   }
-  const blocked = transition(
-    { ...stateIn('running'), id, attempts: 1, restarts: 0 },
-    {
-      type: 'finish',
-      outcome: 'blocked',
-      environment: true,
-    },
-  )!.events[0];
+  const blocked = transition(taskFor('finish:blocked', 'running'), {
+    type: 'finish',
+    outcome: 'blocked',
+    environment: true,
+  })!.events[0];
   assert.equal(blocked.history, 'environment_block');
   assert.equal(domainEventOfRow({ type: blocked.history, to_status: blocked.to }), 'TaskBlocked');
   assert.equal(domainEventOfRow({ type: 'created', to_status: 'proposed' }), null);
@@ -124,7 +133,7 @@ test('follow-ups: a task queued, running or asked to stop leaves no one stuck, s
 test("follow-ups: only the daemon's events notify or open a PR, and a person's cancel and reject warn dependents", () => {
   for (const [key, rule] of Object.entries(RULES) as [RuleKey, Partial<Record<TaskStatus, TaskStatus>>][]) {
     for (const from of Object.keys(rule) as TaskStatus[]) {
-      const t = transition({ ...stateIn(from), id, attempts: 1, restarts: 0 }, EVENT_OF[key])!;
+      const t = transition(taskFor(key, from), EVENT_OF[key])!;
       if (t.events[0].by !== 'person') continue;
       const f = followUpsOf(t.events);
       assert.ok(!f.includes('notify') && !f.includes('open_pr'), `${key} from ${from}`);

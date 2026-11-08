@@ -30,6 +30,10 @@ test('no result is failed with the stderr tail', () => {
   assert.deepEqual(end, { kind: 'failed', reason: 'claude exited with code 2: sandbox unavailable' });
 });
 
+test('a clean exit with no result is failed as "ended without a result", not "code 0"', () => {
+  assert.deepEqual(classifyRun({ ...base, result: undefined }), { kind: 'failed', reason: 'claude ended without a result' });
+});
+
 test('an error result is failed with its subtype', () => {
   const end = classifyRun({ ...base, result: { result: 'x', is_error: true, subtype: 'error_max_turns' } });
   assert.deepEqual(end, { kind: 'failed', reason: 'error_max_turns' });

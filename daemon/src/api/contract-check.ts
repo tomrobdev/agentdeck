@@ -21,6 +21,7 @@ check<Fits<NonNullable<Out<typeof actions.taskViews>[number]['merge_request']>, 
 check<Fits<Out<typeof actions.taskViews>[number]['conflicting'], NonNullable<C.TaskSummary['conflicting']>>>();
 check<Fits<NonNullable<Out<typeof actions.taskViews>[number]['checks']>, C.ChecksSummary>>();
 check<Fits<NonNullable<Out<typeof actions.taskDetail>['check_list']>['checks'][number], C.PrCheck>>();
+check<Fits<NonNullable<Out<typeof actions.taskDetail>['runs'][number]['summary']>, C.RunSummary>>();
 
 // Requests
 check<Fits<C.NewRepo, In<typeof actions.addRepo, 1>>>();

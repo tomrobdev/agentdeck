@@ -1,7 +1,7 @@
 // From a row to its domain type: the one place a store's reads of tasks, repos and runs go through, so the domain type need not equal
 // its row. `types-check.ts` checks each row against its mapper, and rule:models-not-rows checks the stores use them.
 import { getColumns } from 'drizzle-orm';
-import { type AutoMergeCheck, DEFAULT_AUTO_MERGE_SKIP } from '../domain/landing/index.ts';
+import { type AutoMergeCheck, DEFAULT_AUTO_MERGE_SKIP, type MergeReason } from '../domain/landing/index.ts';
 import type { CheckCounts, StoredChecks } from '../domain/landing/index.ts';
 import { type PrFields, pullRequestOf } from '../domain/landing/index.ts';
 import { type Checkout, checkoutOf } from '../domain/work/index.ts';
@@ -55,11 +55,19 @@ export function readSteps(json: string | null): string[] | null {
   return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string') : null;
 }
 
-/** A stored auto-merge or merge request check: null when there is none or it is malformed. */
+/** One stored reason of a check: a `{ kind, text }`, or a plain string as checks were stored before reasons had kinds. */
+function readReason(raw: unknown): MergeReason | null {
+  if (typeof raw === 'string') return { kind: 'other', text: raw };
+  const r = raw as Partial<MergeReason> | null;
+  return r && typeof r === 'object' && typeof r.kind === 'string' && typeof r.text === 'string' ? { kind: r.kind, text: r.text } : null;
+}
+
+/** A stored auto-merge or merge request check: null when there is none or it is malformed. A malformed reason is left out. */
 export function readCheck(json: string | null): AutoMergeCheck | null {
-  const v = parseJson(json) as Partial<AutoMergeCheck> | null | undefined;
+  const v = parseJson(json) as (Omit<Partial<AutoMergeCheck>, 'reasons'> & { reasons?: unknown }) | null | undefined;
   if (!v || !['merge', 'wait', 'never'].includes(v.verdict as string) || !Array.isArray(v.reasons)) return null;
-  const check: AutoMergeCheck = { verdict: v.verdict!, reasons: v.reasons.filter((r): r is string => typeof r === 'string') };
+  const reasons = v.reasons.map(readReason).filter((r): r is MergeReason => r !== null);
+  const check: AutoMergeCheck = { verdict: v.verdict!, reasons };
   if (v.conflict === true) check.conflict = true;
   return check;
 }
@@ -75,7 +83,12 @@ function readStoredChecks(json: string | null): StoredChecks | null {
 export function readCounts(json: string | null): CheckCounts | null {
   const c = parseJson(json) as Partial<CheckCounts> | null | undefined;
   if (!c || typeof c.total !== 'number' || typeof c.failing !== 'number' || typeof c.pending !== 'number') return null;
-  return { total: c.total, failing: c.failing, pending: c.pending };
+  const failures = Array.isArray(c.failures)
+    ? c.failures.flatMap((f) =>
+        f && typeof f.name === 'string' ? [{ name: f.name, step: typeof f.step === 'string' ? f.step : null }] : [],
+      )
+    : undefined;
+  return { total: c.total, failing: c.failing, pending: c.pending, ...(failures ? { failures } : {}) };
 }
 
 /** The task columns the pull request is made of: a task has them as `pr`, not as fields. */
@@ -168,6 +181,7 @@ export const toRepo = (row: RepoRow): Repo => ({
   auto_approve: row.auto_approve === 1,
   auto_resolve: row.auto_resolve === 1,
   auto_unblock: row.auto_unblock === 1,
+  auto_review: row.auto_review === 1,
   sandbox: row.sandbox !== 0,
   network: parseTextList(row.network),
   auto_merge: row.auto_merge === 1,
@@ -176,7 +190,8 @@ export const toRepo = (row: RepoRow): Repo => ({
 
 /** The columns `fields` of a repo are stored in: the way back from `toRepo`. */
 export function repoColumns(fields: Partial<Repo>): Partial<RepoRow> {
-  const { allowed_tools, auto_approve, auto_resolve, auto_unblock, sandbox, network, auto_merge, auto_merge_skip, ...same } = fields;
+  const { allowed_tools, auto_approve, auto_resolve, auto_unblock, auto_review, sandbox, network, auto_merge, auto_merge_skip, ...same } =
+    fields;
   const bit = (on: boolean | undefined) => (on === undefined ? undefined : on ? 1 : 0);
   const json = (list: string[] | null | undefined) => (list ? JSON.stringify(list) : list);
   const columns = {
@@ -185,6 +200,7 @@ export function repoColumns(fields: Partial<Repo>): Partial<RepoRow> {
     auto_approve: bit(auto_approve),
     auto_resolve: bit(auto_resolve),
     auto_unblock: bit(auto_unblock),
+    auto_review: bit(auto_review),
     sandbox: bit(sandbox),
     network: json(network) ?? undefined,
     auto_merge: bit(auto_merge),
@@ -192,7 +208,9 @@ export function repoColumns(fields: Partial<Repo>): Partial<RepoRow> {
   };
   return Object.fromEntries(Object.entries(columns).filter(([, v]) => v !== undefined));
 }
-export const toRun = (row: RunRow): Run => ({ ...row, tests_passed: row.tests_passed === null ? null : row.tests_passed === 1 });
+const flag = (v: number | null): boolean | null => (v === null ? null : v === 1);
+
+export const toRun = (row: RunRow): Run => ({ ...row, tests_passed: flag(row.tests_passed), last_test_failed: flag(row.last_test_failed) });
 
 /** What a `.get()` goes through: its row mapped, if there was one. */
 export const mapFound = <Row, Model>(row: Row | undefined, toModel: (row: Row) => Model): Model | undefined =>

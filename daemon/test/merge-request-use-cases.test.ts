@@ -16,9 +16,22 @@ const { doneTask, queuedTask, testApp } = await import('./fixtures.ts');
 const { github } = await import('../src/adapters/github.ts');
 const { refreshPrStates } = await import('../src/application/landing/refresh.ts');
 const { autoMerge } = await import('../src/application/landing/auto-merge.ts');
-const { ActionError, cancelMergeRequest, linkTasks, mergePreview, requestMerge, requestMerges, taskDetail, updateRepo } =
-  await import('../src/application/actions.ts');
+const {
+  ActionError,
+  cancelMergeRequest,
+  fixChecks,
+  linkTasks,
+  mergePreview,
+  requestMerge,
+  requestMerges,
+  retryTask,
+  startReview,
+  submitReview,
+  taskDetail,
+  updateRepo,
+} = await import('../src/application/actions.ts');
 type PrDetails = import('../src/domain/landing/merge.ts').PrDetails;
+type TaskId = import('../src/domain/shared/id.ts').TaskId;
 
 const db = testApp(openDb(join(home, 'test.db')));
 after(() => db.close());
@@ -44,6 +57,7 @@ const ready: PrDetails = {
   additions: 10,
   deletions: 2,
   checks: { total: 2, failing: 0, pending: 0 },
+  head: 'head-1',
   paths: ['src/a.ts'],
   labels: [],
 };
@@ -133,7 +147,10 @@ test('a request with checks running waits, then merges once they pass, with its 
   const first = await refreshPrStates(db);
   assert.deepEqual(first.mergeable, []);
   assert.equal(first.polling, 1, 'worth reading again soon');
-  assert.deepEqual(db.getTask(a.id)!.pr!.merge_request?.check, { verdict: 'wait', reasons: ['1 check still running on GitHub'] });
+  assert.deepEqual(db.getTask(a.id)!.pr!.merge_request?.check, {
+    verdict: 'wait',
+    reasons: [{ kind: 'checks_pending', text: '1 check still running on GitHub' }],
+  });
   assert.deepEqual((await taskDetail(db, a.id)).merge_request, {
     state: 'waiting',
     method: 'rebase',
@@ -144,7 +161,7 @@ test('a request with checks running waits, then merges once they pass, with its 
   details[a.url] = ready;
   const second = await refreshPrStates(db);
   assert.equal(second.polling, 0);
-  assert.deepEqual(second.mergeable, [{ id: a.id, pr: ready }]);
+  assert.deepEqual(second.mergeable, [{ id: a.id, pr: ready, requested: true }]);
   assert.equal(await autoMerge(db, second.mergeable), a.id);
   assert.deepEqual(merged, [{ url: a.url, method: 'rebase' }]);
   const row = db.getTask(a.id)!;
@@ -166,6 +183,22 @@ test('a request whose check fails is cleared with a notification', async () => {
   assert.equal(sent[0].body, '1 check failing on GitHub');
 });
 
+test('a request withdrawn while the refresh reads its failing PR is not told "Could not merge"', async () => {
+  const a = tested();
+  requestMerge(db, a.id);
+  const read = github.prDetails;
+  github.prDetails = async (url, cwd, opts) => {
+    cancelMergeRequest(db, a.id); // a person withdraws it while GitHub is asked
+    return { ...(await read(url, cwd, opts)), checks: { total: 3, failing: 1, pending: 0 } };
+  };
+  try {
+    assert.deepEqual((await refreshPrStates(db)).mergeable, []);
+  } finally {
+    github.prDetails = read;
+  }
+  assert.equal(notified(a.id).length, 0);
+});
+
 test("a request over auto-merge's line limit, without its label, merges", async () => {
   updateRepo(db, 'demo', { auto_merge: true, auto_approve: false });
   const a = tested();
@@ -178,7 +211,7 @@ test("a request over auto-merge's line limit, without its label, merges", async 
   assert.deepEqual((await refreshPrStates(db)).mergeable, []);
   requestMerge(db, a.id);
   const found = await refreshPrStates(db);
-  assert.deepEqual(found.mergeable, [{ id: a.id, pr: big }]);
+  assert.deepEqual(found.mergeable, [{ id: a.id, pr: big, requested: true }]);
   assert.equal(await autoMerge(db, found.mergeable), a.id);
   assert.deepEqual(merged, [{ url: a.url, method: 'squash' }]);
 });
@@ -210,7 +243,7 @@ test('two requests where one lands after the other merge in that order', async (
     [first.id],
     'the second waits for the first',
   );
-  assert.match(db.getTask(second.id)!.pr!.merge_request!.check!.reasons[0], new RegExp(`lands after #${first.id}`));
+  assert.match(db.getTask(second.id)!.pr!.merge_request!.check!.reasons[0].text, new RegExp(`lands after #${first.id}`));
   assert.equal(await autoMerge(db, one.mergeable), first.id);
 
   const two = await refreshPrStates(db);
@@ -247,6 +280,40 @@ test('a conflicting request goes to be synced and stays; one whose task or PR mo
     closedUrl = null;
   }
   assert.equal(db.getTask(closedOnGithub.id)!.pr?.merge_request ?? null, null);
+});
+
+test('a merge request is dropped when the task is sent back: retry, request changes, fix checks', async () => {
+  const sendBack: [string, (id: TaskId) => unknown][] = [
+    ['retry', (id) => retryTask(db, id)],
+    [
+      'request changes',
+      (id) => {
+        const draft = startReview(db, id);
+        return submitReview(db, draft.id, { kind: 'request_changes', body: 'Rename it' });
+      },
+    ],
+    ['fix checks', (id) => fixChecks(db, id)],
+  ];
+  for (const [name, send] of sendBack) {
+    const a = tested();
+    requestMerge(db, a.id);
+    details[a.url] = {
+      ...ready,
+      checks: { total: 1, failing: 1, pending: 0 },
+      check_list: [{ name: 'test', state: 'fail', url: null, started_at: null, completed_at: null }],
+    };
+    await send(a.id);
+    const row = db.getTask(a.id)!;
+    assert.equal(row.status, 'queued', name);
+    assert.equal(row.pr?.state, 'open', `${name}: the open PR stays, for the next push to update`);
+    assert.equal(row.pr?.merge_request, null, `${name}: the request goes in the same write`);
+
+    // The rework finishes done, its push updates the same open PR, and the next refresh merges nothing unseen.
+    assert.ok(db.applyEvent(a.id, { type: 'claim' }));
+    assert.ok(db.applyEvent(a.id, { type: 'finish', outcome: 'done' }));
+    details[a.url] = ready;
+    assert.deepEqual((await refreshPrStates(db)).mergeable, [], name);
+  }
 });
 
 test('a merge gh refuses drops the request and tells once', async () => {

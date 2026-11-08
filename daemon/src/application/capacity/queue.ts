@@ -27,12 +27,20 @@ export function queueWaits(app: App): { wait: QueueWait | null; paused_repos: Pa
 }
 
 /**
- * A function telling what a task waits for, given its start state (application/task/dependencies.ts dependencyOf). Make
- * one per request: it reads the queue state once.
+ * A function telling what a task waits for, given its start state (`startState` in domain/work/link.ts). Make one per
+ * request: it reads the queue state and the unblock runs going once.
  */
-export function startWaits(app: App): (task: Pick<Task, 'status' | 'repo_id'>, dependency: StartState) => StartWait | null {
+export function startWaits(app: App): (task: Pick<Task, 'id' | 'status' | 'repo_id'>, dependency: StartState) => StartWait | null {
   const { wait: queue, used, max } = queueWait(app);
   const repos = new Map<RepoId, Repo>(app.listRepos().map((r) => [r.id, r]));
+  const unblocks = app.liveRuns('unblock');
   return (task, dependency) =>
-    startWait(task, { queue, repoPaused: repos.get(task.repo_id)?.paused_reason ?? null, dependency, running: used, max });
+    startWait(task, {
+      queue,
+      repoPaused: repos.get(task.repo_id)?.paused_reason ?? null,
+      dependency,
+      unblocking: unblocks.has(task.id),
+      running: used,
+      max,
+    });
 }

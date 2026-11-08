@@ -49,6 +49,7 @@ test('measureByWeek puts a task in the week of its first run, oldest week first'
     cost_usd: 1,
     denials: 0,
     task_status: 'done',
+    model: 'sonnet',
     ...o,
   });
   const weeks = measureByWeek([
@@ -92,6 +93,8 @@ test('countInterventions: only a person event that changes the outcome counts', 
       ev({ type: 'retry', reason: null, at }), // a plain retry asks again, nothing more
       ev({ type: 'retry', reason: '  ', at }), // a blank note is no note
       ev({ type: 'retry', reason: "AgentDeck installed lodash on the branch at the person's request.", at }), // install, not a note
+      ev({ type: 'unblock_retry', reason: 'Unblock run: use sqlite', at }), // the daemon's, not a person's
+      ev({ type: 'review_retry', reason: 'Review run: handle tabs', at }), // the daemon's, not a person's
       ev({ type: 'mark_done', from_status: 'blocked', to_status: 'done', at }),
       ev({ type: 'cancel', from_status: 'queued', to_status: 'cancelled', at }),
       ev({ type: 'edit', from_status: 'queued', to_status: 'queued', at }),

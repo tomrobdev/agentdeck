@@ -20,6 +20,7 @@ const NTFY_TAGS: Record<Notification['kind'], string> = {
   proposed: 'memo',
   merged: 'twisted_rightwards_arrows',
   checks_failed: 'rotating_light',
+  review_due: 'mag',
   test: 'bell',
 };
 

@@ -37,6 +37,8 @@ export interface DigestHeader {
   rate_limited_until?: number | null;
   /** The repo's checkout: branch, short commit and subject. Null when git couldn't say. */
   head: { branch: string; commit: string; subject: string } | null;
+  /** "area review due: 9 days, 115 commits since the last" when the repo is due for an area review; else null. */
+  review_due?: string | null;
 }
 
 export interface DigestInput {
@@ -84,6 +86,7 @@ function headerLine(h: DigestHeader): string {
   if (h.rate_limited_until) parts.push(`usage limit until ${clock(h.rate_limited_until)}`);
   parts.push(h.governor.allow ? 'governor allowing' : `governor on hold: ${short(h.governor.reason ?? '', REASON_MAX)}`);
   if (h.head) parts.push(`${h.head.branch} ${h.head.commit} ${short(h.head.subject, TITLE_MAX)}`);
+  if (h.review_due) parts.push(h.review_due);
   return parts.join(' · ');
 }
 

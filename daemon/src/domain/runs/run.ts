@@ -2,13 +2,15 @@
 import type { PlannerRunId, RunId, TaskId } from '../shared/index.ts';
 import { STATUS_WORD, lastLine, oneLine } from '../shared/index.ts';
 import { type Needs, parseNeeds } from '../work/index.ts';
+import type { RunEnd, RunSummary } from './translate/summary.ts';
 
 /**
  * `work` is an attempt at the task; `resolve` merges the base branch into the task's branch and never uses an attempt;
  * `unblock` reads why a blocked task stopped and retries it with a note or asks a question (domain/runs/unblock.ts), and
- * never uses an attempt either.
+ * never uses an attempt either; `review` reads a done task's changes against its Goal, Definition of done and plan steps,
+ * and answers with findings (domain/runs/review.ts).
  */
-export type RunKind = 'work' | 'resolve' | 'unblock';
+export type RunKind = 'work' | 'resolve' | 'unblock' | 'review';
 
 /** A run (or planner run) with a recorded pid: where a claude process may still be. */
 export interface PidRun {
@@ -28,9 +30,9 @@ export interface RunningTaskRun {
   started_at: string | null;
 }
 
-/** A run's name in the dashboard: "Run 2", or "Resolve conflicts" for the resolve run of a sync. */
+/** A run's name in the dashboard: "Run 2", "Resolve conflicts" for the resolve run of a sync, or "Review" for a review run. */
 export const runLabel = (run: Pick<Run, 'kind' | 'attempt'>): string =>
-  run.kind === 'resolve' ? 'Resolve conflicts' : `Run ${run.attempt}`;
+  run.kind === 'resolve' ? 'Resolve conflicts' : run.kind === 'review' ? 'Review' : `Run ${run.attempt}`;
 
 /** How a run ended: a worker's result, or `interrupted` when a daemon restart ended it. */
 export type RunOutcome = Outcome | typeof INTERRUPTED;
@@ -59,6 +61,47 @@ export interface Run {
   live_turns: number; // turns so far while the run is live (domain/runs/translate/live.ts)
   live_tool: string | null; // the last tool call while the run is live, in a few words
   pid_at: string | null; // when `pid` was stored: claude started then, which can be well after `started_at` (setup, a sync)
+  /** The model the run was started with (`runModel`); null for a run from before runs recorded it, which reads as unknown. */
+  model: string | null;
+  /** The exact model id claude's init line names, such as claude-sonnet-5-5; null until it arrives. */
+  model_id: string | null;
+  /**
+   * For a review run, the patch-id of the task's changes it was started to read (`diffHash` on the Workspace port), kept
+   * even when the run fails or answers nothing usable, so the diff is known to have had its review run. Null for other kinds.
+   */
+  diff_hash: string | null;
+  /**
+   * How a failed or blocked work run's claude ended (`runEndOf`), kept when the run ends because its log is not kept for
+   * good; null for a run that ended any other way and for one from before this was recorded, which reads as unknown.
+   */
+  run_end: RunEnd | null;
+  /** Whether the last test run of that run failed; null with no test run, and for a run with no `run_end`. */
+  last_test_failed: boolean | null;
+}
+
+/** The support model's default: the model resolve and unblock runs use unless the support_model setting says otherwise. */
+export const DEFAULT_SUPPORT_MODEL = 'sonnet';
+
+/**
+ * The review model's default: the model review runs use unless the review_model setting says otherwise. A reviewer at
+ * least as strong as the worker, so the strongest of the models.
+ */
+export const DEFAULT_REVIEW_MODEL = 'opus';
+
+/** The settings `runModel` reads: the support model and the review model. */
+export interface RunModels {
+  support_model: string;
+  review_model: string;
+}
+
+/**
+ * The model a run of `kind` starts with. A work run is an attempt at the task, so it takes the task's model; a review run
+ * reads the task's changes, so it takes the review model; a resolve or unblock run is support work beside the task
+ * (settling conflicts, reading why it blocked), so it takes the support model.
+ */
+export function runModel(kind: RunKind, task: { model: string }, models: RunModels): string {
+  if (kind === 'work') return task.model;
+  return kind === 'review' ? models.review_model : models.support_model;
 }
 
 /**
@@ -261,11 +304,12 @@ export function classifyRun<R extends ResultLike>(run: ClaudeRunLike<R>): RunCla
   }
   const { result, exitCode, stderr } = run;
   if (!result || result.is_error || exitCode !== 0) {
-    // No result means claude stopped before working, e.g. the sandbox could not start (failIfUnavailable): say why.
-    return {
-      kind: 'failed',
-      reason: result?.subtype ?? `claude exited with code ${exitCode}${stderr.trim() ? `: ${lastLine(stderr)}` : ''}`,
-    };
+    // No result means claude stopped before working (the sandbox could not start: failIfUnavailable) or stopped midway
+    // (daemon/test/fixtures/claude/cut-off-after-api-retry.jsonl), or its result line was cut off: say why. A clean exit
+    // with no result is said as such, not as "code 0", which reads like success.
+    const why = stderr.trim() ? `: ${lastLine(stderr)}` : '';
+    const stopped = exitCode === 0 ? 'claude ended without a result' : `claude exited with code ${exitCode}`;
+    return { kind: 'failed', reason: result?.subtype ?? `${stopped}${why}` };
   }
   return { kind: 'finished', result };
 }
@@ -361,3 +405,9 @@ export function firstDenial(denials: { tool_name?: string; tool_input?: { comman
   const command = typeof d?.tool_input?.command === 'string' ? d.tool_input.command : (d?.tool_name ?? 'unknown tool');
   return oneLine(command).slice(0, 200);
 }
+
+/** What a failed or blocked work run's summary says about how it ended, to keep on its row. */
+export const runEndOf = (summary: Pick<RunSummary, 'end' | 'last_test'>): Pick<Run, 'run_end' | 'last_test_failed'> => ({
+  run_end: summary.end,
+  last_test_failed: summary.last_test === null ? null : summary.last_test === 'failed',
+});

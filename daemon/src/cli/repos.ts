@@ -18,6 +18,12 @@ const propose: Command = async ({ db, rest, repoName }) => {
   if (res.tasks.some((t) => t.status === 'proposed')) console.log('approve with `agentdeck approve <id>`');
 };
 
+/** Which tool rules a repo's workers run with, for a line of output. */
+const fmtToolRules = (repo: ReturnType<typeof actions.repoView>): string =>
+  repo.tools_source === 'own'
+    ? `the repo's own: ${(JSON.parse(repo.allowed_tools ?? '[]') as string[]).join(', ')}`
+    : `detected from its toolchain (${repo.toolchain ?? 'none found'}) with the defaults`;
+
 export const repoCommands: Record<string, Command> = {
   repo: async (args) => {
     const { db, cmd, flags, rest } = args;
@@ -68,13 +74,14 @@ export const repoCommands: Record<string, Command> = {
       const [, name, key, value = ''] = rest;
       // No repo name means no key either, so the patch is what says how to use the command.
       const patch = repoSettingPatch(name && key, value);
-      actions.updateRepo(db, name, patch);
-      console.log(`${name}: ${key} ${value || '(none)'}`);
+      const repo = actions.updateRepo(db, name, patch);
+      if (key === 'tools') console.log(`${name}: tools ${fmtToolRules(repo)}`);
+      else console.log(`${name}: ${key} ${value || '(none)'}`);
     } else if (sub === 'ls' || !sub) {
       for (const r of actions.listRepos(db, { archived: !!flags.archived })) {
         const goals = actions.repoDetail(db, r.id).goals.trim() ? 'goals ✓' : 'no goals';
         console.log(
-          `${r.name.padEnd(16)} ${r.path}  base=${r.base_branch}  toolchain=${r.toolchain ?? '-'}  setup=${r.setup_cmd ?? '-'}  test=${r.test_cmd ?? '-'}  pr=${r.pr_mode}  merge=${r.merge_method}  sandbox=${r.sandbox ? `on network=${r.network.join(',') || '-'}` : 'OFF'}  ${goals}${r.auto_approve ? '  auto-approve' : ''}${r.paused_reason ? `  PAUSED (${r.paused_reason})` : ''}`,
+          `${r.name.padEnd(16)} ${r.path}  base=${r.base_branch}  toolchain=${r.toolchain ?? '-'}  setup=${r.setup_cmd ?? '-'}  test=${r.test_cmd ?? '-'}  tools=${r.allowed_tools ? `own(${r.allowed_tools.length})` : 'detected'}  pr=${r.pr_mode}  merge=${r.merge_method}  model=${r.model ?? '-'}  sandbox=${r.sandbox ? `on network=${r.network.join(',') || '-'}` : 'OFF'}  ${goals}${r.auto_approve ? '  auto-approve' : ''}${r.paused_reason ? `  PAUSED (${r.paused_reason})` : ''}`,
         );
       }
     } else die(`unknown repo command: ${sub}`);

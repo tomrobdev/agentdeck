@@ -3,7 +3,9 @@ import { test } from 'node:test';
 import {
   type TaskEvent,
   type PersonEvent,
+  type RuleCounters,
   type TaskStatus,
+  MAX_RESTARTS,
   TASK_STATUSES,
   TRANSITIONS,
   canApply,
@@ -17,8 +19,9 @@ const EVENTS: Record<string, TaskEvent> = {
   'finish done': { type: 'finish', outcome: 'done' },
   'finish blocked': { type: 'finish', outcome: 'blocked' },
   'finish cancelled': { type: 'finish', outcome: 'cancelled' },
-  'finish failed (no retry)': { type: 'finish', outcome: 'failed', retry: false },
-  'finish failed (retry)': { type: 'finish', outcome: 'failed', retry: true },
+  'finish failed (no attempts left)': { type: 'finish', outcome: 'failed' },
+  'finish failed (worker crashed)': { type: 'finish', outcome: 'failed', retry: false },
+  'finish failed (attempts left)': { type: 'finish', outcome: 'failed' },
   rate_limited: { type: 'rate_limited' },
   conflict: { type: 'conflict' },
   cancel: { type: 'cancel' },
@@ -27,9 +30,20 @@ const EVENTS: Record<string, TaskEvent> = {
   retry: { type: 'retry' },
   mark_done: { type: 'mark_done' },
   pr_merged: { type: 'pr_merged' },
-  'recover after restart': { type: 'recover', exhausted: false },
-  'recover after too many restarts': { type: 'recover', exhausted: true },
+  'recover after restart': { type: 'recover' },
+  'recover after too many restarts': { type: 'recover' },
 };
+
+/**
+ * The counters of a task before each event: one restart short of too many makes the next recover the last, and a failed run
+ * is requeued only with attempts left. A task with neither has used its one attempt.
+ */
+const COUNTERS: Record<string, RuleCounters> = {
+  'recover after too many restarts': { restarts: MAX_RESTARTS - 1 },
+  'finish failed (worker crashed)': { attempts: 1, max_attempts: 3 },
+  'finish failed (attempts left)': { attempts: 1, max_attempts: 3 },
+};
+const countersOf = (name: string): RuleCounters => COUNTERS[name] ?? { attempts: 1, max_attempts: 1 };
 
 // event → status it is allowed from → status it leads to. Anything not listed must be refused.
 const ALLOWED: Record<string, Partial<Record<TaskStatus, TaskStatus>>> = {
@@ -37,8 +51,9 @@ const ALLOWED: Record<string, Partial<Record<TaskStatus, TaskStatus>>> = {
   'finish done': { running: 'done', cancel_requested: 'cancelled' },
   'finish blocked': { running: 'blocked', cancel_requested: 'cancelled' },
   'finish cancelled': { running: 'cancelled', cancel_requested: 'cancelled' },
-  'finish failed (no retry)': { running: 'failed', cancel_requested: 'cancelled' },
-  'finish failed (retry)': { running: 'queued', cancel_requested: 'cancelled' },
+  'finish failed (no attempts left)': { running: 'failed', cancel_requested: 'cancelled' },
+  'finish failed (worker crashed)': { running: 'failed', cancel_requested: 'cancelled' },
+  'finish failed (attempts left)': { running: 'queued', cancel_requested: 'cancelled' },
   rate_limited: { running: 'queued', cancel_requested: 'cancelled' },
   conflict: { done: 'blocked' },
   cancel: { proposed: 'cancelled', queued: 'cancelled', blocked: 'cancelled', failed: 'cancelled', running: 'cancel_requested' },
@@ -55,7 +70,7 @@ for (const [name, event] of Object.entries(EVENTS)) {
   for (const from of TASK_STATUSES) {
     const to = ALLOWED[name][from];
     test(`${name} from ${from}: ${to ? `-> ${to}` : 'refused'}`, () => {
-      assert.equal(nextStatus(from, event), to);
+      assert.equal(nextStatus(from, event, countersOf(name)), to);
       assert.equal(canApply(from, event), to !== undefined);
       assert.equal(fromStatuses(event).includes(from), to !== undefined);
     });
@@ -84,7 +99,7 @@ test('TRANSITIONS lists the statuses each status can move to', () => {
 test('a finished run after cancel was requested always ends cancelled', () => {
   for (const [name, event] of Object.entries(EVENTS)) {
     if (event.type === 'finish' || event.type === 'rate_limited' || event.type === 'recover') {
-      assert.equal(nextStatus('cancel_requested', event), 'cancelled', name);
+      assert.equal(nextStatus('cancel_requested', event, countersOf(name)), 'cancelled', name);
     }
   }
 });

@@ -56,8 +56,10 @@ export function applyPersonEvent(
 /**
  * Run the follow-ups still pending in the outbox, oldest first, and mark each row: those of a status change the daemon
  * stopped before following up (crash recovery's among them), and a person's events. Rows this process is following up
- * already are left to it. Each follow-up is safe to repeat: a PR already open is not opened again, and a task that has
- * moved on since is not notified about. Returns how many rows it followed up.
+ * already are left to it. Each follow-up is safe to repeat: a PR already open is not opened again (one GitHub opened before
+ * a crash cut off its recording is found and recorded), and a task that has moved on since is not notified about. The
+ * lock is this process's: only the daemon runs this (`run-once` refuses to start beside it). Returns how many rows it
+ * followed up.
  */
 export async function followUpPending(app: App, log: (msg: string) => void = () => {}): Promise<number> {
   const rows = app.pendingFollowUps().filter((r) => !following.has(r.id));
@@ -68,6 +70,11 @@ export async function followUpPending(app: App, log: (msg: string) => void = () 
     );
   }
   return rows.length;
+}
+
+/** Whether the outbox has follow-ups `followUpPending` would run now: pending, and not being run by this process already. */
+export function hasFollowUpsToRun(app: App): boolean {
+  return app.pendingFollowUps().some((r) => !following.has(r.id));
 }
 
 /** A PR's state changed. A closed or failed PR may strand the tasks waiting on its merge. Returns whether it applied. */

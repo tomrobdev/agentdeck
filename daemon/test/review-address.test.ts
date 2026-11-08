@@ -8,6 +8,7 @@ import { test } from 'node:test';
 import {
   REVIEW_PROMPT_BUDGET,
   hunkAround,
+  isReviewRetry,
   matchAnswers,
   parseAnswers,
   reviewPromptBlock,
@@ -95,8 +96,32 @@ test('buildPrompt puts the review first and the system prompt asks for ANSWER li
   });
   assert.ok(prompt.startsWith('Changes requested in review.'));
   assert.ok(prompt.indexOf('c1 — a.ts:1') < prompt.indexOf('do it'));
-  assert.doesNotMatch(prompt, /flat note/);
   assert.match(workerSystemPrompt(null), /ANSWER c1: /);
+});
+
+test("the review replaces the retry note only when it is the review's own retry", () => {
+  const task = { prompt: 'do it', attempts: 2 } as Task;
+  const runs = [{ kind: 'work', outcome: 'done', tests_passed: 1, result_text: 'ok' } as never];
+  const comments = [{ comment: { path: 'a.ts', line: 1, side: 'new' as const, body: 'b' }, hunk: null }];
+  const own = buildPrompt(task, runs, 'flat note', null, { note: 'n', comments, ownRetry: true });
+  assert.doesNotMatch(own, /flat note/);
+  const later = buildPrompt(task, runs, 'CI logs: lint failed', null, { note: 'n', comments, ownRetry: false });
+  assert.ok(later.startsWith('Changes requested in review.'));
+  assert.equal(later.match(/lint failed/g)?.length, 1);
+  assert.ok(later.indexOf('c1 — a.ts:1') < later.indexOf('lint failed'));
+  assert.ok(later.indexOf('lint failed') < later.indexOf('do it'));
+});
+
+test('isReviewRetry: the latest request was submitted at or after the latest retry', () => {
+  const review = (submitted_at: string | null, kind = 'request_changes') => ({ kind, submitted_at, comments: [] }) as never;
+  const cases: [string, unknown[], string | null, boolean][] = [
+    ['same second', [review('2026-11-08 10:00:00')], '2026-11-08 10:00:00', true],
+    ['a later retry', [review('2026-11-08 10:00:00')], '2026-11-08 10:05:00', false],
+    ['no retry', [review('2026-11-08 10:00:00')], null, false],
+    ['a draft', [review(null)], '2026-11-08 10:00:00', false],
+    ['a comment review', [review('2026-11-08 10:00:00', 'comment')], '2026-11-08 10:00:00', false],
+  ];
+  for (const [name, reviews, retryAt, want] of cases) assert.equal(isReviewRetry(reviews as never, retryAt), want, name);
 });
 
 test('parseAnswers reads ANSWER lines and a missing one stays unanswered', () => {
@@ -156,10 +181,12 @@ test('a run whose final message answers the comments moves them to answered; the
     return actions.submitReview(db, draft.id, { kind: 'request_changes', body: 'Please fix.' });
   };
 
-  const first = review([
+  const first = await review([
     { path: 'fake-output.txt', line: 1, body: 'reword this' },
     { path: 'README.md', line: 1, body: 'and this' },
   ]);
+  assert.equal(first.head_commit, head, 'a submitted review records the head it read');
+  assert.match(first.diff_hash ?? '', /^[0-9a-f]{40}$/, "and the patch-id of the task's changes");
   assert.equal(db.getTask(task.id)!.status, 'queued');
   await drain();
   assert.equal(db.getTask(task.id)!.status, 'done');
@@ -178,7 +205,7 @@ test('a run whose final message answers the comments moves them to answered; the
   );
 
   // A second review whose run answers only c1: c2 stays open and the run's summary names it.
-  const second = review([
+  const second = await review([
     { path: 'fake-output.txt', line: 1, body: 'once more FAKE_ANSWER_FIRST' },
     { path: 'README.md', line: 1, body: 'again' },
   ]);

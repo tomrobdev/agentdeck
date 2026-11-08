@@ -2,6 +2,7 @@
 // A state a fixture cannot reach through those calls fails an assertion here, so tests cannot depend on one.
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
+import { setTimeout as sleep } from 'node:timers/promises';
 import type { RepoId, TaskId } from '../src/domain/shared/id.ts';
 import type { App, Ports } from '../src/application/ports/app.ts';
 import type { openDb } from '../src/db/index.ts';
@@ -10,6 +11,24 @@ import type { openDb } from '../src/db/index.ts';
 export { asPlannerRunId, asRepoId, asReviewId, asRunId, asTaskId } from '../src/domain/shared/id.ts';
 
 type Db = ReturnType<typeof openDb>;
+
+/**
+ * Wait until `check` returns something truthy, and return it. It is polled every 20 ms; at `timeoutMs` (5 s by
+ * default) the wait throws, naming `what` it waited for, so a state that never comes fails the test instead of
+ * hanging it. A check that throws ends the wait with its error.
+ */
+export async function waitFor<T>(
+  check: () => T | Promise<T>,
+  { timeoutMs = 5_000, what }: { timeoutMs?: number; what: string },
+): Promise<NonNullable<T>> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const value = await check();
+    if (value) return value as NonNullable<T>;
+    if (Date.now() >= deadline) throw new Error(`timed out after ${timeoutMs} ms waiting for ${what}`);
+    await sleep(20); // time passes: the poll interval
+  }
+}
 
 /**
  * The real adapters, loaded on first use: `compose.ts` reaches `config.ts`, which reads AGENTDECK_HOME when first

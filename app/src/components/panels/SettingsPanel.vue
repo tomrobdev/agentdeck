@@ -3,7 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { MODEL_LABELS, type NotificationRow, type Settings, ago, api, serviceQuery, settingsQuery } from '../../api';
 import { errorMessage } from '../../../../daemon/src/domain/shared/index.ts';
-import { type SettingsForm, toSettingsForm, toSettingsPatch } from '../../lib/forms';
+import { type SettingsForm, modelChoices, toSettingsForm, toSettingsPatch } from '../../lib/forms';
 import { MODELS } from '../../lib/taskView';
 import {
   CMUX_TEMPLATE,
@@ -123,6 +123,24 @@ async function test() {
       </section>
 
       <BudgetSettings :form="form" />
+
+      <section class="flex flex-col gap-2.5">
+        <h4 class="m-0">Models</h4>
+        <div class="grid grid-cols-2 gap-x-4 gap-y-3">
+          <label class="field">
+            <span>Default model <span class="text-muted">(a new task's, unless it or its repo names one)</span></span>
+            <select v-model="form.default_model">
+              <option v-for="m in modelChoices(form.default_model)" :key="m" :value="m">{{ MODEL_LABELS[m] ?? m }}</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Support model <span class="text-muted">(resolve and unblock runs)</span></span>
+            <select v-model="form.support_model">
+              <option v-for="m in modelChoices(form.support_model)" :key="m" :value="m">{{ MODEL_LABELS[m] ?? m }}</option>
+            </select>
+          </label>
+        </div>
+      </section>
 
       <section class="flex flex-col gap-2.5">
         <h4 class="m-0">Planner</h4>

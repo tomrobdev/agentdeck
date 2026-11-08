@@ -9,7 +9,7 @@ import { github } from './adapters/github.ts';
 import { deleteGoals, goalsPath, readGoals, writeGoals } from './adapters/goals.ts';
 import { desktop, ntfy } from './adapters/notify.ts';
 import { activeChildren, killGroup, ownsLiveGroup, reapOrphans } from './adapters/processes.ts';
-import { appendEvent, closeLog, readLog, removeFiles, writeEvent, writeSettings } from './adapters/run-log.ts';
+import { appendEvent, closeLog, readEvents, readLog, removeFiles, writeEvent, writeSettings } from './adapters/run-log.ts';
 import { DAEMON_LOG, install, restart, serviceStatus, start, stop, tailLog, uninstall } from './adapters/service.ts';
 import type { Agent } from './application/ports/agent.ts';
 import type { ComposedApp, Ports } from './application/ports/app.ts';
@@ -34,11 +34,13 @@ export const realCodeHost = (): CodeHost => ({
   auth: () => github.auth(),
   push: (repoPath, branch) => github.push(repoPath, branch),
   createPr: (pr) => github.createPr(pr),
+  prsForBranch: (cwd, branch) => github.prsForBranch(cwd, branch),
   ensureLabel: (cwd, label) => github.ensureLabel(cwd, label),
   setLabel: (url, cwd, label, on) => github.setLabel(url, cwd, label, on),
   closePr: (url, cwd) => github.closePr(url, cwd),
   prDetails: (url, cwd, opts) => github.prDetails(url, cwd, opts),
   failedLog: (cwd, run, check) => github.failedLog(cwd, run, check),
+  jobSteps: (cwd, job) => github.jobSteps(cwd, job),
   markReady: (url, cwd) => github.markReady(url, cwd),
   merge: (pr) => github.merge(pr),
   deleteRemoteBranch: (repoPath, branch) => github.deleteRemoteBranch(repoPath, branch),
@@ -58,6 +60,7 @@ export const realRunLog = (): RunLog => ({
   close: closeLog,
   removeFiles,
   read: readLog,
+  events: readEvents,
 });
 
 /** Process groups through `adapters/processes.ts`, keep-awake through `adapters/caffeinate.ts`. */

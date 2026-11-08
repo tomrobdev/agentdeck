@@ -7,6 +7,7 @@ import type { ChecksSummary } from '../domain/landing/index.ts';
 import type { TaskStatus } from '../domain/work/index.ts';
 import { parseTaskIds } from '../domain/work/index.ts';
 import type { Task } from '../domain/work/index.ts';
+import type { RunSummary } from '../domain/runs/index.ts';
 
 const STATUS_ICON: Record<TaskStatus, string> = {
   proposed: '?',
@@ -52,6 +53,25 @@ export function fmtLink(l: TaskView['links'][number]): string {
   return `${l.kind === 'builds_on' ? 'builds on' : 'after'} #${l.on} (${state})`;
 }
 
+/** A failed or blocked run's summary in a few lines: the verdict, time and tools, and the last failing output's tail. */
+export function fmtRunSummary(s: RunSummary): string[] {
+  const tools = s.tools
+    .slice(0, 6)
+    .map((t) => `${t.name} ${t.count}`)
+    .join(', ');
+  const time = `${s.minutes} min${s.test_runs ? `, ${s.test_minutes} in tests` : ''}`;
+  const lines = [s.verdict, tools ? `${time} · ${tools}` : time];
+  if (s.excerpt)
+    lines.push(
+      'last failure:',
+      ...s.excerpt
+        .split('\n')
+        .slice(-6)
+        .map((l) => `  │ ${l}`),
+    );
+  return lines;
+}
+
 /** `waiting`, `unblocks` and `links` come from a task view (`taskDetail`, `withViews`); a plain task shows none. */
 export function fmtTask(
   t: Task & {
@@ -94,12 +114,18 @@ export function fmtAutoMerge(v: AutoMergeView): string[] {
   return lines;
 }
 
-/** The line `agentdeck show` prints for the open PR's checks: "checks   2 of 5 failing: lint, test (agentdeck fix-checks 12)". */
+/**
+ * What `agentdeck show` prints for the open PR's checks: "checks   2 of 5 failing: lint, test (agentdeck fix-checks 12)",
+ * then a line for each failing check whose failure was read, with its step and what failed:
+ * "         - check › tests and coverage: cli: branches 53.6% is below its floor of 54%".
+ */
 export function fmtChecks(c: ChecksSummary, id?: TaskId): string {
   const running = c.pending ? `, ${c.pending} running` : '';
   if (!c.failing) return `checks   ${c.total} on the PR, none failing${running}`;
   const fix = id === undefined ? '' : `  (agentdeck fix-checks ${id})`;
-  return `checks   ${c.failing} of ${c.total} failing: ${c.failing_names.join(', ')}${running}${fix}`;
+  const head = `checks   ${c.failing} of ${c.total} failing: ${c.failing_names.join(', ')}${running}${fix}`;
+  const details = c.failing_lines.filter((line, i) => line !== c.failing_names[i]);
+  return [head, ...details.map((line) => `         - ${line}`)].join('\n');
 }
 
 /** Print each doctor check with its reason, then the verdict. */
@@ -113,14 +139,16 @@ export function printDoctor(report: DoctorReport): DoctorReport {
   return report;
 }
 
-/** Print each daemon check with its reason, and under each failed one the command that fixes it. */
+/** Print each daemon check with its reason (a warning marked `!`), and under each failed one or warning the command that fixes it. */
 export function printHealth(checks: HealthCheck[]): void {
   for (const c of checks) {
-    console.log(`${c.ok ? '✓' : '✗'} ${c.name.padEnd(17)} ${c.reason}`);
+    console.log(`${c.ok ? (c.warning ? '!' : '✓') : '✗'} ${c.name.padEnd(17)} ${c.reason}`);
     if (c.fix) console.log(`  → ${c.fix}`);
   }
   const failed = checks.filter((c) => !c.ok).length;
-  console.log(failed ? `${failed} of ${checks.length} checks failed` : 'the daemon is healthy');
+  const warnings = checks.filter((c) => c.ok && c.warning).length;
+  const warned = warnings ? `, ${warnings === 1 ? '1 warning' : `${warnings} warnings`}` : '';
+  console.log(failed ? `${failed} of ${checks.length} checks failed${warned}` : `the daemon is healthy${warned}`);
 }
 
 export function relTime(unixSeconds: number): string {

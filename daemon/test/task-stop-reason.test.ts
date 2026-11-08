@@ -15,12 +15,13 @@ function setup() {
 }
 
 // Every way a task reaches queued from another status, with the status to start from.
-const TO_QUEUED: [string, TaskEvent, 'blocked' | 'failed' | 'running'][] = [
+const TO_QUEUED: [string, TaskEvent, 'blocked' | 'done' | 'running'][] = [
   ['retry', { type: 'retry' }, 'blocked'],
   ['unblock_retry', { type: 'unblock_retry' }, 'blocked'],
+  ['review_retry', { type: 'review_retry' }, 'done'],
   ['rate_limited', { type: 'rate_limited' }, 'running'],
-  ['recover', { type: 'recover', exhausted: false }, 'running'],
-  ['finish:failed:retry', { type: 'finish', outcome: 'failed', retry: true }, 'running'],
+  ['recover', { type: 'recover' }, 'running'],
+  ['finish:failed:retry', { type: 'finish', outcome: 'failed' }, 'running'],
 ];
 
 for (const [name, event, from] of TO_QUEUED) {
@@ -28,6 +29,7 @@ for (const [name, event, from] of TO_QUEUED) {
     const { db, id } = setup();
     assert.ok(db.applyEvent(id, { type: 'claim' }));
     if (from === 'blocked') assert.ok(db.applyEvent(id, { type: 'finish', outcome: 'blocked' }, { reason: 'old reason' }));
+    if (from === 'done') assert.ok(db.applyEvent(id, { type: 'finish', outcome: 'done' }));
     const before = db.getTask(id)!;
     assert.equal(before.status, from);
     assert.equal(stopReasonOf(before), from === 'blocked' ? 'old reason' : null);
@@ -45,8 +47,12 @@ for (const [name, event, from] of TO_QUEUED) {
 test('transition leaves no stop reason whenever it leads to queued', () => {
   for (const [name, event, from] of TO_QUEUED) {
     const state: TaskState =
-      from === 'running' ? { status: from } : { status: from, stop_reason: 'old reason', needs: null, question: null };
-    const t = transition({ ...state, id: asTaskId(1), attempts: 1, restarts: 0 }, event);
+      from === 'blocked'
+        ? { status: from, stop_reason: 'old reason', needs: null, question: null }
+        : from === 'done'
+          ? { status: from, done_by: null }
+          : { status: from };
+    const t = transition({ ...state, id: asTaskId(1), attempts: 1, max_attempts: 3, restarts: 0, pr: null }, event);
     assert.deepEqual(t?.state, { status: 'queued' }, name);
   }
 });

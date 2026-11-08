@@ -146,5 +146,5 @@ sequenceDiagram
 - [HTTP API](reference/routes.md): the routes and the use case each calls.
 - [Adapters](reference/adapters.md) and [adapter use](reference/adapter-use.md): what each file in `daemon/src/adapters/` does, and which adapters each area of `application/` imports.
 - [Context map](reference/context-map.md): the folders under `domain/` and the imports between them.
-- [Models](reference/models.md), [use cases](reference/use-cases.md) and [state machines](reference/state-machines.md): the entities, `application/actions.ts` and the rule tables. [Migration progress](reference/progress.md) counts what is left of the move to a domain model.
+- [Models](reference/models.md), [use cases](reference/use-cases.md) and [state machines](reference/state-machines.md): the entities, `application/actions.ts` and the rule tables. [Migration progress](reference/progress.md) counts what is left of the move to a domain model, and [coverage floors](reference/coverage.md) the least coverage each layer and context may have.
 - [Runs](reference/runs.md): plans in a run, and resuming a cut-off run.

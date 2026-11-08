@@ -21,10 +21,11 @@ export { type LiveContext, liveContext, repoForPath } from './work/context.ts';
 export { attachPlan, planHtml } from './work/plans.ts';
 export { proposeNow } from './proposals/planner.ts';
 export { pilotStats } from './insights/stats.ts';
-export { closeTaskPr, mergeAll, mergePreview, mergeTask } from './landing/merge.ts';
-export { cancelMergeRequest, requestMerge, requestMerges } from './landing/merge-requests.ts';
+export { closeTaskPr, mergePreview, mergeTask } from './landing/merge.ts';
+export { cancelMergeRequest, requestAllMerges, requestMerge, requestMerges } from './landing/merge-requests.ts';
 export { setAutoMerge } from './landing/auto-merge.ts';
 export { type FixChecksResult, fixChecks } from './landing/fix-checks.ts';
+export { type OpenTaskPrResult, openTaskPr } from './landing/open-pr.ts';
 export {
   type DoctorReport,
   type RepoPatch,

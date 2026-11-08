@@ -7,6 +7,7 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, beforeEach, test } from 'node:test';
+import { setTimeout as sleep } from 'node:timers/promises';
 import { type TaskId, asTaskId } from '../src/domain/shared/id.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-conflicts-'));
@@ -21,7 +22,7 @@ const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
 const { github } = await import('../src/adapters/github.ts');
 const { startApi } = await import('../src/api/server.ts');
 const { refreshPrStates } = await import('../src/application/landing/refresh.ts');
-const { doneTask: doneTaskWithPr, testApp } = await import('./fixtures.ts');
+const { doneTask: doneTaskWithPr, testApp, waitFor } = await import('./fixtures.ts');
 const { resolveConflicting } = await import('../src/application/runs/sync.ts');
 const { ActionError, mergeTask, syncNow, retryTask, updateRepo } = await import('../src/application/actions.ts');
 const { isConflicting, isMergeabilityUnknown } = await import('../src/domain/landing/conflict.ts');
@@ -64,6 +65,7 @@ const cleanDetails: PrDetails = {
   additions: 1,
   deletions: 0,
   checks: { total: 0, failing: 0, pending: 0 },
+  head: 'head-1',
   paths: ['README.md'],
   labels: [],
 };
@@ -597,14 +599,13 @@ test('merging a PR makes the scheduler re-read the open PRs at once and resolve 
   // The periodic refresh is far away: only the merge's request can trigger it.
   const scheduler = new Scheduler(db, { tickMs: 10, prRefreshMs: Number.MAX_SAFE_INTEGER, log: () => {} });
   const running = scheduler.run();
-  await new Promise((r) => setTimeout(r, 100));
-  assert.equal(syncEvents(other.id).length, 0, 'nothing happens until a merge');
-
   try {
+    await sleep(100); // time passes: several scheduler ticks
+    assert.equal(syncEvents(other.id).length, 0, 'nothing happens until a merge');
+
     await mergeTask(db, merged.id);
     assert.ok(db.prCheckRequested() > 0);
-    const deadline = Date.now() + 15_000;
-    while (!syncEvents(other.id).length && Date.now() < deadline) await new Promise((r) => setTimeout(r, 25));
+    await waitFor(() => syncEvents(other.id).length, { timeoutMs: 15_000, what: `a sync of #${other.id}` });
   } finally {
     scheduler.stop();
     await running;
@@ -644,4 +645,19 @@ test('the merge preview says when the conflict is something a resolve run can fi
   const p = await mergePreview(db, t.id);
   assert.equal(p.conflicting, true);
   assert.match(p.problems[0], /conflicts/);
+  assert.doesNotMatch(p.problems[0], /auto_resolve/, 'with auto_resolve on, a resolve run fixes it');
+});
+
+test("with auto_resolve off, the merge preview's problems name the sync, as its merge request does", async () => {
+  const { mergePreview } = await import('../src/application/actions.ts');
+  const t = await doneTask();
+  details[db.getTask(t.id)!.pr!.url!] = { ...cleanDetails, mergeable: 'CONFLICTING' };
+  updateRepo(db, 'demo', { auto_resolve: false });
+  try {
+    const p = await mergePreview(db, t.id);
+    assert.match(p.problems[0], /auto_resolve off: sync the task/);
+    assert.deepEqual(p.problems, p.request.reasons, 'one answer words the conflict one way');
+  } finally {
+    updateRepo(db, 'demo', { auto_resolve: true });
+  }
 });

@@ -13,7 +13,7 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { openDb } = await import('../src/db/index.ts');
 const { doneTask, testApp } = await import('./fixtures.ts');
-const { fakeAgent, fakeCodeHost } = await import('./fakes.ts');
+const { READY_PR, fakeAgent, fakeCodeHost } = await import('./fakes.ts');
 const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
 const { mergeTask } = await import('../src/application/landing/merge.ts');
 
@@ -60,7 +60,7 @@ test('a merge goes through the CodeHost port: the PR is merged with the repo met
 
   const result = await mergeTask(db, t.id, { delete_branch: true });
 
-  assert.deepEqual(codeHost.merged, [{ url, method: repo.merge_method }]);
+  assert.deepEqual(codeHost.merged, [{ url, method: repo.merge_method, head: READY_PR.head }], 'pinned to the head it read');
   assert.deepEqual(codeHost.deletedBranches, ['agentdeck/fake-merge']);
   assert.equal(db.getTask(t.id)!.pr?.state, 'merged');
   assert.ok(result);

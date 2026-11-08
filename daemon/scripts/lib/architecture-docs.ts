@@ -10,7 +10,7 @@ import * as tables from '../../src/db/tables.ts';
 import { RULES, TASK_STATUSES, type TaskStatus } from '../../src/domain/work/lifecycle.ts';
 import { adapterUse, contextMap } from './graphs.ts';
 import { modelsBody, stateMachinesBody, useCasesBody } from './model-docs.ts';
-import { progress } from './progress.ts';
+import { COVERAGE_FLOORS, progress } from './progress.ts';
 import { UNCHECKED } from './rules.ts';
 import { type Source, readSources } from './sources.ts';
 
@@ -34,6 +34,15 @@ const SETTING_MEANINGS: Record<string, string> = {
   planner_interval_hours: 'The fewest hours between two planner runs on a repo',
   planner_max_tasks: 'The most proposals one planner run keeps',
   planner_model: 'The model the planner runs with',
+  default_model: "The model a new task takes when neither it nor its repo names one (a repo's own is repos.model)",
+  support_model: 'The model resolve and unblock runs use, in place of their task’s',
+  review_model: 'The model review runs use: a reviewer at least as strong as the worker',
+  review_due_days: 'A repo is due for an area review once its oldest refs/reviewed/* mark is older than this many days',
+  review_due_lines:
+    'A repo is due for an area review once more than this many lines merged since its oldest mark (or, with none, since it was added)',
+  reviews_due: 'The repos due for an area review as the daemon’s last check found them (JSON), for the headline',
+  review_due_told:
+    'When a person was last told each repo is due for an area review (JSON of repo id to ms since the epoch); at most once a day',
   five_hour_max: 'Governor: no new work above this share of the 5-hour window',
   five_hour_soft: 'Governor: one task at a time above this share of the 5-hour window',
   weekly_max: 'Governor: the share of the 7-day window the weekly allowance grows to',
@@ -162,6 +171,22 @@ export function progressBody(sources: Source[]): string {
     'Folders that import each other, counting runtime and type-only imports (`rule:folder-cycles`).',
     cycleLines.length ? cycleLines.join('\n') : 'None.',
   ].join('\n\n');
+}
+
+/** The coverage page: each group of daemon/src, the files it holds and its floors, from `COVERAGE_FLOORS`. */
+export function coverageBody(): string {
+  const holds = (group: string) =>
+    group === 'src'
+      ? 'the files at the top of `daemon/src/` (`cli.ts`, `compose.ts`, `config.ts`, `daemon.ts`)'
+      : group === 'application'
+        ? 'the files directly in `application/` (`actions.ts`)'
+        : `\`${group}/\``;
+  return table(
+    ['Group', 'Holds', 'Lines', 'Branches'],
+    Object.entries(COVERAGE_FLOORS)
+      .sort(([a], [b]) => cmp(a, b))
+      .map(([group, floor]) => [`\`${group}\``, holds(group), `${floor.lines}%`, `${floor.branches}%`]),
+  );
 }
 
 function dataModel(): string {
@@ -374,6 +399,11 @@ export function generateReference(): Record<string, string> {
       'Migration progress',
       'How far the move to a domain model has come, counted from the code. Each number should fall to zero.',
       progressBody(sources),
+    ),
+    'coverage.md': file(
+      'Coverage floors',
+      'The least line and branch coverage each group of `daemon/src/` may have (`COVERAGE_FLOORS` in `daemon/scripts/lib/progress.ts`). `pnpm coverage` runs the tests with coverage, prints what each group has now, and fails when one drops below its floor. The floors only rise: raise one, to its number rounded down, when it is beaten by more than 2 points. A file that holds only types never loads, so it is not counted.',
+      coverageBody(),
     ),
     'adapters.md': file('Adapters', 'The files of `daemon/src/adapters/`, each the I/O of one outside system.', adapters(sources)),
   };

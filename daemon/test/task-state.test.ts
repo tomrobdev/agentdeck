@@ -102,6 +102,7 @@ const API_FIELDS = [
   'plan_unfinished',
   'pr_checks_merged',
   'pr_checks_opened',
+  'pr_retry',
   'pr_state',
   'pr_url',
   'priority',

@@ -7,6 +7,7 @@ import type { TaskId } from '../shared/index.ts';
 import type { PullRequest } from '../landing/index.ts';
 import type { PrMode } from '../repos/index.ts';
 import type { TaskStatus } from './lifecycle.ts';
+import { isReview, stageOf } from './stage.ts';
 import type { DoneState } from './task.ts';
 
 export type LinkKind = 'builds_on' | 'after';
@@ -50,7 +51,8 @@ function standing(on: TaskId, dependency: Dependency | undefined): Standing {
   if (!dependency) return stuck(`${id} no longer exists`, 'which no longer exists');
   switch (dependency.status) {
     case 'done':
-      // Done and merged; or done in a repo that opens no PRs; or a person said so and its PR is not open.
+      // Done and merged; or done in a repo that opens no PRs; or a person said so and its PR is not open. A PR merged before a
+      // retry is set aside by it (`statusChangePrChanges`), so the task is not met again until its new PR merges.
       const state = dependency.pr?.state ?? null;
       if (state === 'merged') return { kind: 'met' };
       // A person's `agentdeck done` stays met in any repo: they say the work is finished. In a repo with `pr_mode off` no
@@ -157,8 +159,8 @@ export function unlandedAfter(links: Link[], lookup: (id: TaskId) => Dependency 
 
 /**
  * What the link functions read: a task's links, the tasks that depend on it (through links of either kind) and a task as a
- * link's other end. application/task/dependencies.ts builds one that queries the database when asked, and one from a
- * single read of every link, for a list of tasks.
+ * link's other end. application/work/dependencies.ts builds one that queries the database when asked (`liveLinks`), and one
+ * from a single read of every link, for a list of tasks (`loadedLinks`).
  */
 export interface LinkIndex {
   linksOf: (id: TaskId) => Link[];
@@ -253,4 +255,27 @@ export function prModeOffError(repo: string, unmet: TaskId[]): string | null {
   if (unmet.length === 0) return null;
   const names = unmet.map((id) => `#${id}`).join(', ');
   return `${repo} can't stop opening PRs while ${names} ${unmet.length === 1 ? 'builds' : 'build'} on a task that is not merged yet: wait for ${unmet.length === 1 ? 'it' : 'them'} to start, or cancel ${unmet.length === 1 ? 'it' : 'them'}`;
+}
+
+/** The queued tasks merging this one lets start, for a task in review; none for any other task. */
+export function unblocksOf(task: Parameters<typeof stageOf>[0] & { id: TaskId }, links: LinkIndex): TaskId[] {
+  if (!isReview(stageOf(task))) return [];
+  return releasedBy(task.id, links).map((t) => t.id);
+}
+
+/** A task's link as views show it: the other task, the kind and where the link stands. */
+export interface LinkView {
+  on: TaskId;
+  kind: LinkKind;
+  state: LinkState['kind'];
+}
+
+/** Task `id`'s links as views show them, each with where it stands. */
+export function linkViews(id: TaskId, links: LinkIndex): LinkView[] {
+  return links.linksOf(id).map((l) => ({ on: l.on, kind: l.kind, state: linkState(l, links.target(l.on)).kind }));
+}
+
+/** The tasks that depend on task `id`, whatever their status, each with its link's kind. */
+export function dependentViews(id: TaskId, links: LinkIndex): { id: TaskId; kind: LinkKind }[] {
+  return links.dependentsOf(id).map((d) => ({ id: d.id, kind: d.kind }));
 }

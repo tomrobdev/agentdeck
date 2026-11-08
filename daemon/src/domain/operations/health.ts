@@ -3,6 +3,7 @@
 import type { TaskId } from '../shared/index.ts';
 import { plural } from '../shared/index.ts';
 import { type ReloadState, SCHEMA_DIRTY } from './restart.ts';
+import { type ReviewDue, checkReviews } from './review-due.ts';
 
 /** What the daemon says about itself on GET /api/daemon. */
 export interface DaemonState {
@@ -13,12 +14,24 @@ export interface DaemonState {
   reload: ReloadState;
 }
 
+/**
+ * Why `run-once` may not start, from what answers on the API port (`running`, null for nothing): a daemon there runs the
+ * same pending follow-ups, and the follow-up lock is per process, so both would open the same PRs. Null when it may start.
+ */
+export function runOnceRefusal(running: Pick<DaemonState, 'pid' | 'commit'> | null, port: number): string | null {
+  if (!running) return null;
+  const which = `pid ${running.pid}${running.commit ? `, ${running.commit.slice(0, 7)}` : ''}`;
+  return `the agentdeck daemon is running (${which}, on port ${port}); stop it first (\`agentdeck service stop\`), or let it work the queue`;
+}
+
 export interface Check {
   name: string;
   ok: boolean;
   reason: string;
-  /** For a failed check: a command that fixes it. */
+  /** For a failed check, or a warning: a command that fixes it. */
   fix: string | null;
+  /** Passed, but something a person should look at (an area review due); never a failure. */
+  warning?: boolean;
 }
 
 export interface ServiceFacts {
@@ -30,7 +43,7 @@ export interface ServiceFacts {
 
 /** A claude process group recorded on a run, found alive. */
 export interface ProcessFact {
-  kind: 'work' | 'resolve' | 'unblock' | 'planner';
+  kind: 'work' | 'resolve' | 'unblock' | 'review' | 'planner';
   run: number;
   pid: number;
   /** The run has a finished-at time. */
@@ -72,6 +85,8 @@ export interface HealthFacts {
   /** null when there is no log file. */
   log: LogFacts | null;
   gh: { ok: boolean; output: string };
+  /** The repos due for an area review. */
+  reviews: ReviewDue[];
 }
 
 /** A run recorded as started: its pid may not be written yet this long after. */
@@ -165,7 +180,7 @@ export function checkReload(f: Pick<HealthFacts, 'service' | 'api' | 'checkout'>
   return check(name, true, reload.enabled ? 'none pending' : 'none pending (reload_on_change is off)');
 }
 
-const KIND_NAME = { work: 'run', resolve: 'resolve run', unblock: 'unblock run', planner: 'planner run' } as const;
+const KIND_NAME = { work: 'run', resolve: 'resolve run', unblock: 'unblock run', review: 'review run', planner: 'planner run' } as const;
 
 export function checkProcesses(f: Pick<HealthFacts, 'processes' | 'api'>): Check {
   const name = 'claude processes';
@@ -255,5 +270,15 @@ export function checkGh(gh: HealthFacts['gh']): Check {
 
 /** Every check, in the order they are shown. */
 export function judgeHealth(f: HealthFacts): Check[] {
-  return [checkService(f.service), checkApi(f), checkCode(f), checkReload(f), checkProcesses(f), checkTasks(f), checkLog(f), checkGh(f.gh)];
+  return [
+    checkService(f.service),
+    checkApi(f),
+    checkCode(f),
+    checkReload(f),
+    checkProcesses(f),
+    checkTasks(f),
+    checkLog(f),
+    checkGh(f.gh),
+    checkReviews(f.reviews),
+  ];
 }

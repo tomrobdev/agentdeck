@@ -4,7 +4,7 @@ import type { App } from '../ports/app.ts';
 import type { Checkout } from '../ports/workspace.ts';
 import { conflictReason, syncSummary } from '../../domain/landing/index.ts';
 import { unfinishedSteps, unfinishedSummary } from '../../domain/work/index.ts';
-import { type PromptPlan, buildPrompt, buildResumePrompt } from '../../domain/runs/index.ts';
+import { type PromptPlan, type SummaryContext, buildPrompt, buildResumePrompt } from '../../domain/runs/index.ts';
 import { latestReviewNote } from '../../domain/work/index.ts';
 import {
   type Run,
@@ -49,7 +49,7 @@ export async function runTask(app: App, task: Task): Promise<WorkerResult> {
     return await runOpened(app, task, repo, wt, opened);
   } catch (err) {
     // Whatever threw, the row ends failed (a no-op if it already ended) and the scheduler settles the task.
-    await endTaskRun(app, opened, 'failed', errorMessage(err));
+    await endTaskRun(app, opened, 'failed', errorMessage(err), {}, summaryContext(app, task));
     throw err;
   }
 }
@@ -198,6 +198,11 @@ async function giveBackPlan(app: App, task: Task, worktree: string, log: OpenedR
   }
 }
 
+/** What `runSummary` needs to read a work run's log: the repo's test command and the task's turn limit. */
+function summaryContext(app: App, task: Task): SummaryContext {
+  return { testCmd: app.getRepo(task.repo_id)?.test_cmd ?? null, maxTurns: task.max_turns };
+}
+
 /** End the run (when there is one) and move the task to its next state (including retry). */
 async function finish(
   app: App,
@@ -206,7 +211,7 @@ async function finish(
   res: WorkerResult,
   runFields: Partial<Run> = {},
 ): Promise<WorkerResult> {
-  if (opened) await endTaskRun(app, opened, res.outcome, res.reason, runFields);
+  if (opened) await endTaskRun(app, opened, res.outcome, res.reason, runFields, summaryContext(app, task));
   // If cancel was requested while the run was ending, the lifecycle makes every outcome end 'cancelled'.
   const reason = { reason: res.reason ?? null };
   switch (res.outcome) {
@@ -228,7 +233,8 @@ async function finish(
       await settle(app, task.id, { type: 'rate_limited' });
       break;
     case 'failed':
-      await settle(app, task.id, { type: 'finish', outcome: 'failed', retry: task.attempts < task.max_attempts }, reason);
+      // The lifecycle requeues it while it has attempts left.
+      await settle(app, task.id, { type: 'finish', outcome: 'failed' }, reason);
       break;
   }
   return res;

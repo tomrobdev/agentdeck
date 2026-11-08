@@ -2,7 +2,15 @@
 // agents cannot push. Tests replace the members of `github` to fake the network.
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { type CreatePr, type PrDetails, parsePrDetails } from '../domain/landing/index.ts';
+import {
+  type BranchPr,
+  type CreatePr,
+  type JobStep,
+  type PrDetails,
+  parseBranchPrs,
+  parseJobSteps,
+  parsePrDetails,
+} from '../domain/landing/index.ts';
 import type { MergeMethod } from '../domain/repos/index.ts';
 import { lastLine } from '../domain/shared/index.ts';
 import { gitRemote } from './git.ts';
@@ -82,6 +90,11 @@ export const github = {
     return url;
   },
 
+  /** `gh pr list --head <branch> --state all`: the branch's PRs in any state, newest first. */
+  async prsForBranch(cwd: string, branch: string): Promise<BranchPr[]> {
+    return parseBranchPrs(await gh(['pr', 'list', '--head', branch, '--state', 'all', '--json', 'url,state'], { cwd }));
+  },
+
   /** `gh label create --force`: make sure the repo has the label, so `gh pr create --label` can use it. */
   async ensureLabel(cwd: string, label: { name: string; description: string; color: string }): Promise<void> {
     await gh(['label', 'create', label.name, '--force', '--description', label.description, '--color', label.color], { cwd });
@@ -118,19 +131,37 @@ export const github = {
     });
   },
 
+  /**
+   * `gh api repos/{owner}/{repo}/actions/jobs/<id>`: a GitHub Actions job's steps, which name the one that failed where
+   * `--log-failed` labels every line UNKNOWN STEP. gh fills in the owner and repo from the checkout at `cwd`.
+   */
+  async jobSteps(cwd: string, job: string): Promise<JobStep[]> {
+    return parseJobSteps(await gh(['api', `repos/{owner}/{repo}/actions/jobs/${job}`], { cwd }));
+  },
+
   /** `gh pr ready`: take a draft PR out of draft. */
   async markReady(url: string, cwd: string): Promise<void> {
     await gh(['pr', 'ready', url], { cwd });
   },
 
   /**
-   * `gh pr merge` with the given method. A squash gets `message` as its commit (subject and body).
+   * `gh pr merge` with the given method, pinned to `head` (`--match-head-commit`): a push after the PR was judged makes
+   * GitHub refuse it. A squash gets `message` as its commit (subject and body).
    * The branch is left alone (`deleteRemoteBranch` removes it afterwards), since gh would
    * also try to delete the local branch, which the task's worktree has checked out.
    */
-  async merge(pr: { url: string; cwd: string; method: MergeMethod; message?: { subject: string; body: string } }): Promise<void> {
+  async merge(pr: {
+    url: string;
+    cwd: string;
+    method: MergeMethod;
+    head: string;
+    message?: { subject: string; body: string };
+  }): Promise<void> {
     const message = pr.method === 'squash' && pr.message ? ['--subject', pr.message.subject, '--body', pr.message.body] : [];
-    await gh(['pr', 'merge', pr.url, `--${pr.method}`, ...message], { cwd: pr.cwd, timeoutMs: LONG_GH_TIMEOUT_MS });
+    await gh(['pr', 'merge', pr.url, `--${pr.method}`, '--match-head-commit', pr.head, ...message], {
+      cwd: pr.cwd,
+      timeoutMs: LONG_GH_TIMEOUT_MS,
+    });
   },
 
   /** `git push origin --delete <branch>`. */

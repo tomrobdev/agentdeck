@@ -9,12 +9,14 @@ import { join } from 'node:path';
 import { after, before, test } from 'node:test';
 import type { TaskId } from '../src/domain/shared/id.ts';
 import type { Run } from '../src/domain/runs/run.ts';
-import { asRepoId, asRunId, asTaskId } from './fixtures.ts';
+import { asRepoId, asRunId, asTaskId, waitFor } from './fixtures.ts';
 import { type Task, stopReasonOf } from '../src/domain/work/task.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-resume-'));
 process.env.AGENTDECK_HOME = home;
 process.env.AGENTDECK_NO_NOTIFY = '1';
+// run-once refuses to start while a daemon answers on the API port: a port nothing answers on, not the live daemon's.
+process.env.AGENTDECK_PORT = '0';
 const fake = join(import.meta.dirname, 'fake-claude.mjs');
 chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
@@ -54,6 +56,11 @@ const run = (o: Partial<Run>): Run => ({
   live_turns: 0,
   live_tool: null,
   pid_at: null,
+  model: 'sonnet',
+  model_id: null,
+  diff_hash: null,
+  run_end: null,
+  last_test_failed: null,
   ...o,
 });
 
@@ -215,7 +222,6 @@ before(() => {
 
 after(() => db.close());
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 /** The next daemon, in this process: it recovers what the last one left running, then works the queue. */
 const drain = () => new Scheduler(db, { once: true, tickMs: 50, log: () => {} }).run();
 /** Every fake claude's arguments, oldest first. */
@@ -237,14 +243,18 @@ async function restartMidRun(taskId: TaskId, afterRun = 0): Promise<Run> {
   daemon.stdout.on('data', (b) => (output += b));
   daemon.stderr.on('data', (b) => (output += b));
   const exited = new Promise((r) => daemon.on('exit', r));
-  const deadline = Date.now() + 30_000;
-  let live: Run | undefined;
-  while (!(live = db.runsForTask(taskId).find((r) => r.id > afterRun && r.session_id && r.ended_at === null))) {
-    if (Date.now() > deadline || daemon.exitCode !== null) {
-      daemon.kill('SIGKILL');
-      assert.fail(`task ${taskId} never had a live run with a session. Daemon output:\n${output}`);
-    }
-    await sleep(25);
+  let live: Run;
+  try {
+    live = await waitFor(
+      () => {
+        if (daemon.exitCode !== null) throw new Error(`the daemon exited with ${daemon.exitCode}`);
+        return db.runsForTask(taskId).find((r) => r.id > afterRun && r.session_id && r.ended_at === null);
+      },
+      { timeoutMs: 30_000, what: `task ${taskId} to have a live run with a session` },
+    );
+  } catch (e) {
+    daemon.kill('SIGKILL');
+    assert.fail(`task ${taskId} never had a live run with a session (${(e as Error).message}). Daemon output:\n${output}`);
   }
   assert.equal(db.getTask(taskId)!.status, 'running', 'the session is stored while the run is still going');
   daemon.kill('SIGTERM');

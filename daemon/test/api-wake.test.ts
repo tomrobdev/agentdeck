@@ -5,6 +5,8 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
+import { setTimeout as sleep } from 'node:timers/promises';
+import { waitFor } from './fixtures.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-wake-'));
 process.env.AGENTDECK_HOME = home;
@@ -40,13 +42,13 @@ test('a successful write wakes the scheduler once, after the response', async ()
   await post('/api/repos', { path: repoPath, name: 'demo' });
   const task = await (await post('/api/tasks', { repo: 'demo', prompt: 'do it', propose: true })).json();
   assert.equal(task.status, 'proposed');
-  await new Promise((r) => setTimeout(r, 20));
+  await waitFor(() => events.length > 0, { what: 'the wake after the proposal' });
   events.length = 0;
 
   const res = await post(`/api/tasks/${task.id}/approve`);
   assert.equal(res.status, 200);
   assert.equal((await res.json()).status, 'queued');
-  await new Promise((r) => setTimeout(r, 20));
+  await waitFor(() => events.length > 0, { what: 'the wake after the approval' });
   assert.deepEqual(events, ['wake']);
 });
 
@@ -54,6 +56,6 @@ test('reads and failed writes do not wake it', async () => {
   events.length = 0;
   assert.equal((await fetch(`${base}/api/tasks`)).status, 200);
   assert.equal((await post('/api/tasks/9999/approve')).status >= 400, true);
-  await new Promise((r) => setTimeout(r, 20));
+  await sleep(20); // time passes: long enough for a wake to land
   assert.deepEqual(events, []);
 });

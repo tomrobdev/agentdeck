@@ -1,6 +1,7 @@
 // How far the DDD migration (docs/plans/…, plan 197) has come, counted from the code: the source of docs/reference/progress.md,
 // and of rule:folder-cycles. Pure: it reads `Source`s and returns numbers.
 import ts from 'typescript';
+import type { Floor } from './coverage.ts';
 import { type FolderCycle, folderCycles } from './graphs.ts';
 import { type Source, lineOf } from './sources.ts';
 
@@ -50,7 +51,7 @@ export const ROW_SHAPED_FIELDS: string[] = [];
 
 /**
  * The functions in `db/` that write a task without a rule (rule:task-writes), each with why: a plain write stays in the store. A write
- * with a rule takes its changes from a function in `domain/work/task-writes.ts`. Status writes are `applyEvent`'s and `claimNextTask`'s
+ * with a rule takes its changes from a function in `domain/work/task-writes.ts`. Status writes are `applyEvent`'s, the claim's included
  * (rule:guarded-status). A new plain write fails the test until it is listed here; an entry that no longer applies fails it too.
  */
 export const PLAIN_TASK_WRITES: Record<string, string> = {
@@ -61,6 +62,39 @@ export const PLAIN_TASK_WRITES: Record<string, string> = {
   setCheckout: 'where the work is checked out; a fact the worker reports, no decision',
   setSyncing: 'marks that a sync is running; a lock, no decision',
   recoverOrphans: 'clears the sync marks a crash left; a lock, no decision',
+};
+
+/**
+ * The least line and branch coverage each group of daemon/src may have, in whole percents (rule:coverage-floors; groups are
+ * `groupOf` in `coverage.ts`). The floors only rise: `pnpm coverage` fails when a group drops below its floor, and says to raise a
+ * floor beaten by more than 2 points, to the group's numbers rounded down. Never lower one. A new group gets its numbers rounded down.
+ */
+export const COVERAGE_FLOORS: Record<string, Floor> = {
+  adapters: { lines: 88, branches: 83 },
+  api: { lines: 99, branches: 94 },
+  application: { lines: 100, branches: 100 },
+  'application/capacity': { lines: 100, branches: 100 },
+  'application/insights': { lines: 100, branches: 96 },
+  'application/landing': { lines: 99, branches: 90 },
+  'application/operations': { lines: 98, branches: 93 },
+  'application/proposals': { lines: 92, branches: 82 },
+  'application/repos': { lines: 98, branches: 88 },
+  'application/runs': { lines: 94, branches: 82 },
+  'application/scheduler': { lines: 98, branches: 91 },
+  'application/shared': { lines: 100, branches: 97 },
+  'application/work': { lines: 99, branches: 92 },
+  cli: { lines: 73, branches: 62 },
+  db: { lines: 99, branches: 94 },
+  'domain/capacity': { lines: 100, branches: 94 },
+  'domain/insights': { lines: 100, branches: 98 },
+  'domain/landing': { lines: 100, branches: 97 },
+  'domain/operations': { lines: 100, branches: 97 },
+  'domain/proposals': { lines: 100, branches: 89 },
+  'domain/repos': { lines: 100, branches: 99 },
+  'domain/runs': { lines: 98, branches: 94 },
+  'domain/shared': { lines: 100, branches: 95 },
+  'domain/work': { lines: 99, branches: 95 },
+  src: { lines: 96, branches: 81 },
 };
 
 /** The row-shaped fields `sources` have that are not allowed, and the allowed entries that are no longer row-shaped. */

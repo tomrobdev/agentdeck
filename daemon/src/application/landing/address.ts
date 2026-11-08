@@ -1,9 +1,17 @@
 // A run addressing a review: what the worker is shown of it, and what its answers do to the comments afterwards.
 import type { App } from '../ports/app.ts';
-import { type ReviewPrompt, hunkAround, latestRequestNote, matchAnswers, unansweredNote, withNote } from '../../domain/landing/index.ts';
+import {
+  type ReviewPrompt,
+  hunkAround,
+  isReviewRetry,
+  latestRequestNote,
+  matchAnswers,
+  unansweredNote,
+  withNote,
+} from '../../domain/landing/index.ts';
 import { type ReviewComment, commentStatesFor, commentsToAddress } from '../../domain/landing/index.ts';
 import type { Repo } from '../../domain/repos/index.ts';
-import type { Task } from '../../domain/work/index.ts';
+import { type Task, latestRetryAt } from '../../domain/work/index.ts';
 
 /** The review a run of the task addresses: the open comments of its Request changes reviews with their diff hunks, or null when there are none. */
 export async function reviewForRun(
@@ -38,7 +46,8 @@ export async function reviewForRun(
       return { comment, hunk: patch ? hunkAround(patch, comment.side, comment.line) : null };
     }),
   );
-  return { prompt: { comments: shown, note: latestRequestNote(reviews) }, comments };
+  const ownRetry = isReviewRetry(reviews, latestRetryAt(app.eventsForTask(task.id)));
+  return { prompt: { comments: shown, note: latestRequestNote(reviews), ownRetry }, comments };
 }
 
 /**

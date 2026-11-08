@@ -15,6 +15,8 @@ const week = thisWeek();
 const cards = computed(() =>
   (statsQ.data.value ? seriesOf(statsQ.data.value) : []).map((s) => ({ series: s, now: s.points.find((p) => p.week === week) ?? null })),
 );
+const top = computed(() => statsQ.data.value?.failures?.top ?? []);
+const whereLabel = { opened: 'CI when the PR opened', merged: 'CI when it merged', run: 'work run' } as const;
 const empty = computed(() => !hasData(cards.value.map((c) => c.series)));
 </script>
 
@@ -53,6 +55,18 @@ const empty = computed(() => !hasData(cards.value.map((c) => c.series)));
         <TrendChart :series="s" />
       </article>
     </div>
+
+    <article v-if="top.length" class="mt-4 rounded-md border border-border bg-panel p-3" aria-label="Top causes of failure">
+      <h2 class="m-0 text-md">Top causes of failure</h2>
+      <p class="text-muted m-0 mb-2 text-sm">Failing CI checks by step, and failed or blocked runs by how they ended, in all weeks</p>
+      <ol class="m-0 list-none p-0">
+        <li v-for="c in top" :key="`${c.where}/${c.cause}`" class="flex items-baseline gap-2 py-0.5">
+          <span class="font-[650]">{{ c.count }}×</span>
+          <span>{{ c.cause }}</span>
+          <span class="text-muted text-sm">{{ whereLabel[c.where] }}</span>
+        </li>
+      </ol>
+    </article>
   </section>
 </template>
 

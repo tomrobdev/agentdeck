@@ -55,6 +55,7 @@ The dashboard's routes, and the use case each calls.
 | POST   | `/api/tasks/:id/merge-request`     | `actions.requestMerge`                         |
 | GET    | `/api/tasks/:id/merge`             | `actions.mergePreview`                         |
 | POST   | `/api/tasks/:id/merge`             | `actions.mergeTask`                            |
+| POST   | `/api/tasks/:id/open-pr`           | `actions.openTaskPr`                           |
 | GET    | `/api/tasks/:id/plans/:id2`        | `actions.planHtml`                             |
 | POST   | `/api/tasks/:id/plans`             | `actions.attachPlan`                           |
 | POST   | `/api/tasks/:id/reject`            | `actions.rejectTask`                           |

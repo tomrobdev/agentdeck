@@ -48,6 +48,8 @@ erDiagram
     integer auto_merge_max_lines
     text auto_merge_skip
     integer auto_unblock
+    text model "nullable"
+    integer auto_review
   }
   review_comments {
     integer id PK
@@ -69,6 +71,9 @@ erDiagram
     text body
     text created_at
     text submitted_at "nullable"
+    text by
+    text head_commit "nullable"
+    text diff_hash "nullable"
   }
   runs {
     integer id PK
@@ -94,6 +99,11 @@ erDiagram
     integer live_turns
     text live_tool "nullable"
     text pid_at "nullable"
+    text model "nullable"
+    text model_id "nullable"
+    text diff_hash "nullable"
+    text run_end "nullable"
+    integer last_test_failed "nullable"
   }
   settings {
     text key PK

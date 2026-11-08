@@ -3,17 +3,21 @@ export { buildPrompt, buildResolvePrompt, buildResumePrompt, claudeArgs } from '
 export type { PromptPlan } from './prompt.ts';
 export { resolveOutcome } from './resolve.ts';
 export {
+  DEFAULT_REVIEW_MODEL,
+  DEFAULT_SUPPORT_MODEL,
   INTERRUPTED,
   classifyRun,
   editsSinceCutOff,
   firstDenial,
   isEnvironmentBlock,
+  runEndOf,
   parseStatus,
   pickRun,
   resultFields,
   resumableSession,
   resumeFailed,
   resumeMaxTurns,
+  runModel,
   runOutcome,
   setupFailedReason,
 } from './run.ts';
@@ -23,6 +27,20 @@ export { START_LIVE, liveView, nextLive, syncView } from './translate/live.ts';
 export type { LiveView, SyncView } from './translate/live.ts';
 export { parseLogLine } from './translate/log.ts';
 export type { LogEntry } from './translate/log.ts';
+export { runSummary } from './translate/summary.ts';
+export type { RunEnd, RunSummary, SummaryContext } from './translate/summary.ts';
 export { normalizeNetwork, settingsPath, workerSettings } from './translate/sandbox.ts';
+export {
+  REVIEW_DENIED_TOOLS,
+  REVIEW_MAX_TURNS,
+  REVIEW_TOOLS,
+  buildReviewPrompt,
+  parseReviewAnswer,
+  reviewOutcome,
+  reviewSchemaArgs,
+  reviewSystemPrompt,
+  reviewable,
+} from './review.ts';
+export type { ReviewOutcome } from './review.ts';
 export { UNBLOCK_MAX_TURNS, buildUnblockPrompt, parseUnblock, unblockDecision, unblockSystemPrompt, unblockable } from './unblock.ts';
 export type { UnblockDecision } from './unblock.ts';

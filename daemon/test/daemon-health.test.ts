@@ -16,6 +16,7 @@ const h = await import('../src/domain/operations/health.ts');
 const { SCHEMA_DIRTY, offMain, reloadState } = await import('../src/domain/operations/restart.ts');
 const { daemonReport, gatherHealth, restartNow } = await import('../src/application/operations/doctor.ts');
 const { openDb } = await import('./open-db.ts');
+const { waitFor } = await import('./fixtures.ts');
 
 const NOW = Date.parse('2026-11-01T12:00:00Z');
 const running = { installed: true, loaded: true, pid: 100, state: 'running' };
@@ -39,12 +40,13 @@ const facts = (over: Partial<import('../src/domain/operations/health.ts').Health
   tasks: [],
   log: { problems: [], lastStop: null },
   gh: { ok: true, output: 'Logged in' },
+  reviews: [],
   ...over,
 });
 
 test('a healthy daemon passes every check and has nothing to fix', () => {
   const checks = h.judgeHealth(facts());
-  assert.equal(checks.length, 8);
+  assert.equal(checks.length, 9);
   assert.ok(
     checks.every((c) => c.ok && c.fix === null),
     JSON.stringify(checks),
@@ -267,6 +269,7 @@ test('gatherHealth reads runs and tasks from the database and their liveness fro
       },
       logLines: () => ['[2026-11-01T11:59:00.000Z] task 9: worker crashed: Error: x'],
       gh: async () => ({ ok: true, output: 'ok' }),
+      reviews: async () => [],
       now: () => NOW,
     },
     4317,
@@ -315,6 +318,7 @@ test('daemonReport gives the checks, HEAD, the running tasks and the last 20 log
       alive: () => true,
       logLines: () => [...lines, ''],
       gh: async () => ({ ok: true, output: 'ok' }),
+      reviews: async () => [],
       now: () => NOW,
     },
     4317,
@@ -336,7 +340,7 @@ test('restartNow names the running tasks and restarts after the answer', async (
   const result = restartNow(db, async () => void restarted++, 0);
   assert.deepEqual(result, { requeued: [{ id: task.id, title: 'busy' }] });
   assert.equal(restarted, 0);
-  await new Promise((r) => setTimeout(r, 20));
+  await waitFor(() => restarted > 0, { what: 'the restart' });
   assert.equal(restarted, 1);
   db.close();
 });

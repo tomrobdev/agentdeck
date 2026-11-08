@@ -16,6 +16,7 @@
     "build": "pnpm --filter agentdeck-app tauri:build",
     "test": "pnpm --filter agentdeck-daemon test",
     "test:crash": "pnpm --filter agentdeck-daemon test:crash",
+    "coverage": "pnpm --filter agentdeck-daemon coverage",
     "typecheck": "pnpm -r typecheck",
     "db:studio": "pnpm --filter agentdeck-daemon db:studio",
     "db:check": "pnpm --filter agentdeck-daemon db:check",
@@ -26,7 +27,7 @@
     "check:rust:changed": "if git diff --quiet origin/main -- app/src-tauri; then echo 'nothing to check: app/src-tauri is unchanged from origin/main'; else pnpm check:rust; fi",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check:fast": "pnpm format:check && pnpm typecheck && pnpm db:check && pnpm test",
+    "check:fast": "pnpm format:check && pnpm typecheck && pnpm db:check && pnpm coverage",
     "check": "pnpm check:fast && node daemon/scripts/crash-test.mjs \"${CRASH_ITERATIONS:-10}\"",
     "check:task": "node scripts/check-task.mjs",
     "check:stack": "node scripts/check-stack.mjs"

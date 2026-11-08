@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { type PrCheck, type TaskDetail, api, checkDuration } from '../../api';
-import { finalMessage } from '../../../../daemon/src/domain/landing/index.ts';
+import { failureHeadline, finalMessage } from '../../../../daemon/src/domain/landing/index.ts';
 import { canFixChecks } from '../../lib/taskView';
 import { useAction } from '../../composables/useActions';
 import { openExternal } from '../../platform/native';
@@ -33,6 +33,15 @@ const checks = computed(() =>
 );
 const fixable = computed(() => canFixChecks(props.task));
 
+// A failing check's failed step and what failed, in a line, when the PR refresh read its log.
+function failure(c: PrCheck): string | null {
+  if (c.state !== 'fail') return null;
+  const headline = c.excerpt ? failureHeadline(c.excerpt) : '';
+  const what = headline || (c.excerpt_error ? `log not read: ${c.excerpt_error}` : '');
+  if (!c.step && !what) return null;
+  return [c.step, what].filter(Boolean).join(': ');
+}
+
 async function fixChecks() {
   if (pending.value) return;
   await run(() => api.fixChecks(props.task.id));
@@ -52,15 +61,25 @@ async function fixChecks() {
         <button v-if="fixable" class="ml-auto" :disabled="pending" @click="fixChecks">Fix failing checks</button>
       </div>
       <ul class="m-0 flex list-none flex-col gap-1 p-0">
-        <li v-for="c in checks" :key="c.name" class="flex items-center gap-2" :data-check-state="c.state">
-          <Tooltip :text="`${c.name}\n${ICON[c.state].label}`">
-            <span class="w-4 flex-none text-center" :class="ICON[c.state].cls" tabindex="0" :aria-label="ICON[c.state].label">{{
-              ICON[c.state].icon
-            }}</span>
-          </Tooltip>
-          <span class="min-w-0 flex-1 truncate" :title="c.name">{{ c.name }}</span>
-          <span class="flex-none text-muted">{{ checkDuration(c) }}</span>
-          <button v-if="c.url" class="btn-ghost flex-none text-accent" @click="openExternal(c.url)">↗</button>
+        <li v-for="c in checks" :key="c.name" class="flex flex-col gap-1" :data-check-state="c.state">
+          <div class="flex items-center gap-2">
+            <Tooltip :text="`${c.name}\n${ICON[c.state].label}`">
+              <span class="w-4 flex-none text-center" :class="ICON[c.state].cls" tabindex="0" :aria-label="ICON[c.state].label">{{
+                ICON[c.state].icon
+              }}</span>
+            </Tooltip>
+            <span class="min-w-0 flex-1 truncate" :title="c.name">{{ c.name }}</span>
+            <span class="flex-none text-muted">{{ checkDuration(c) }}</span>
+            <button v-if="c.url" class="btn-ghost flex-none text-accent" @click="openExternal(c.url)">↗</button>
+          </div>
+          <details v-if="failure(c)" class="ml-6 min-w-0" data-check-failure>
+            <summary class="cursor-pointer truncate text-muted" :title="failure(c)!">› {{ failure(c) }}</summary>
+            <pre v-if="c.excerpt" class="mt-1 max-h-72 overflow-auto rounded bg-code-bg p-2 text-xs whitespace-pre">{{ c.excerpt }}</pre>
+            <div class="mt-1 flex gap-3">
+              <button v-if="c.step_url" class="btn-ghost text-accent" @click="openExternal(c.step_url)">Open the step ↗</button>
+              <button v-if="c.url" class="btn-ghost text-accent" @click="openExternal(c.url)">Open the job ↗</button>
+            </div>
+          </details>
         </li>
       </ul>
     </section>

@@ -38,6 +38,7 @@ const task = (extra: Partial<TaskSummary> = {}): TaskSummary => ({
   source: 'manual',
   pr_url: null,
   pr_state: null,
+  pr_retry: null,
   merge_method: null,
   plan_task: null,
   plan_steps: null,
@@ -204,6 +205,7 @@ test('checks: running and passed are muted facts, failing is an attention chip, 
     failing_names: [],
     read_at: '2026-11-01 10:00:00',
     ...extra,
+    failing_lines: extra.failing_lines ?? extra.failing_names ?? [],
   });
   const labels = (t: TaskSummary) => taskBadges(t).facts.map((f) => f.label);
 
@@ -228,6 +230,16 @@ test('checks: running and passed are muted facts, failing is an attention chip, 
   const two = taskBadges(review({ checks: sum({ failing: 2, pending: 1, failing_names: ['lint', 'test'] }) }));
   assert.equal(two.attention[0]?.label, '✗ 2 checks failing');
   assert.match(two.attention[0]?.title ?? '', /lint, test/);
+  const read = taskBadges(
+    review({
+      checks: sum({ failing: 1, failing_names: ['check'], failing_lines: ['check › tests and coverage: cli: branches below its floor'] }),
+    }),
+  );
+  assert.equal(
+    read.attention[0]?.title,
+    'Failing:\ncheck › tests and coverage: cli: branches below its floor',
+    'a failure read names its step',
+  );
 
   assert.deepEqual(labels(review({ checks: null })), []);
   assert.deepEqual(labels(review({})), []);

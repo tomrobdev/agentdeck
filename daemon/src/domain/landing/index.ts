@@ -1,5 +1,5 @@
 // The landing context's interface: what other contexts and the layers above import.
-export { hunkAround, latestRequestNote, matchAnswers, reviewPromptBlock, unansweredNote, withNote } from './address.ts';
+export { hunkAround, isReviewRetry, latestRequestNote, matchAnswers, reviewPromptBlock, unansweredNote, withNote } from './address.ts';
 export type { ReviewPrompt } from './address.ts';
 export {
   AUTO_MERGE_LABEL,
@@ -10,17 +10,42 @@ export {
   autoMergeOn,
   autoMergeView,
 } from './auto-merge.ts';
-export type { AutoMergeCheck, AutoMergeMeasured, AutoMergeState, AutoMergeView } from './auto-merge.ts';
-export { LOG_TAIL_BYTES, actionsRun, checksSettled, checksSummary, failingChecks, fixChecksNote, logTail, nextChecks } from './checks.ts';
-export type { CheckCounts, CheckState, ChecksSummary, FailedCheck, PrCheck, StoredChecks } from './checks.ts';
-export { isConflicting, isMergeabilityUnknown } from './conflict.ts';
-export { conflictsWithBase, mergeRequestCheck, mergeRequestPolls, mergeRequestView, mergesNow } from './merge-request.ts';
+export type { AutoMergeFacts, AutoMergeMeasured, AutoMergeState, AutoMergeView } from './auto-merge.ts';
+export {
+  EXCERPT_BYTES,
+  LOG_TAIL_BYTES,
+  actionsRun,
+  carryFailures,
+  checksSettled,
+  checksSummary,
+  countOfKept,
+  countWithSteps,
+  failedStep,
+  failingChecks,
+  failureExcerpt,
+  failureHeadline,
+  failureLine,
+  failureRead,
+  fixChecksNote,
+  headBytes,
+  nextChecks,
+  stepUrl,
+  withoutFailure,
+} from './checks.ts';
+export type { CheckCounts, CheckState, ChecksSummary, FailedCheck, JobStep, PrCheck, StoredChecks } from './checks.ts';
+export { isConflicting } from './conflict.ts';
+export { conflictsWithBase, mergeRequestCheck, mergeRequestView, mergesNow } from './merge-request.ts';
 export type { MergeRequestView } from './merge-request.ts';
-export { mergeCheck, mergeFindings, parsePrDetails } from './merge.ts';
-export type { CreatePr, PrDetails } from './merge.ts';
-export { buildPrBody, finalMessage, openPrUrl, prFields, pullRequestOf } from './pr.ts';
+export { mergeCheck, mergeFailure, mergeFindings, parseBranchPrs, parseJobSteps, parsePrDetails, verdictView } from './merge.ts';
+export type { AutoMergeCheck, BranchPr, CreatePr, MergeFailure, MergeInput, MergeReason, MergeVerdictView, PrDetails } from './merge.ts';
+export { refreshVerdict } from './refresh.ts';
+export type { PrPlace } from './refresh.ts';
+export { buildPrBody, existingPr, finalMessage, isPrExistsError, openPrUrl, prFields, pullRequestOf } from './pr.ts';
+export { PR_OPEN_RETRIES, prNeedsPerson, prRetry } from './pr-retry.ts';
+export type { PrOpenFailures, PrRetry } from './pr-retry.ts';
 export type { PrFields, PrPlan, PrState, PullRequest } from './pr.ts';
 export {
+  COMMENT_SIDES,
   commentActionError,
   commentLineError,
   commentLocation,
@@ -33,7 +58,17 @@ export {
   reviewKindError,
   reviewReason,
 } from './review.ts';
-export type { CommentAction, CommentSide, CommentState, Review, ReviewComment, ReviewKind, ReviewWithComments } from './review.ts';
+export type {
+  CommentAction,
+  CommentSide,
+  CommentState,
+  Review,
+  ReviewAuthor,
+  ReviewComment,
+  ReviewKind,
+  ReviewWithComments,
+  ReviewedDiff,
+} from './review.ts';
 export { PR_SUMMARY_FORMAT } from './summary.ts';
 export { conflictReason, isConflictReason, syncResultOf, syncSummary } from './sync.ts';
 export type { SyncResult } from './sync.ts';

@@ -1,5 +1,6 @@
 // The Workspace port: git, the shell and a worktree's files, in the operations the use cases need. The real adapter is
 // adapters/workspace.ts (compose.ts); tests run it on real git in a temporary folder, with no fake.
+import type { ReviewFacts } from '../../domain/operations/index.ts';
 import type { Repo } from '../../domain/repos/index.ts';
 import type { ChangedFile, Commit, Task, TreeEntry } from '../../domain/work/index.ts';
 
@@ -84,6 +85,11 @@ export interface Workspace {
   commitsAhead(cwd: string, base: string): Promise<number>;
   /** Commits on `branch` that origin's copy of it lacks, or null when it was never pushed. */
   unpushedCommits(worktree: string, branch: string): Promise<number | null>;
+  /**
+   * The repo's area review marks (refs/reviewed/*) and the commits and lines merged into the base since the oldest; with
+   * no mark, since `since` (ms since the epoch). Origin's copy of the base when there is one; no fetch. Null with no base.
+   */
+  reviewFacts(repoPath: string, base: string, since: number): Promise<ReviewFacts | null>;
 
   // Changing a worktree
 
@@ -122,6 +128,11 @@ export interface Workspace {
   branchHead(repoPath: string, branch: string): Promise<string | null>;
   /** Where `head` left the base branch: its merge base with the local base or origin's copy, whichever is newer. */
   diffBase(repoPath: string, base: string, head: string): Promise<{ ref: string; sha: string } | null>;
+  /**
+   * The patch-id of `head`'s changes against the base (from where `head` left it, as `diffBase`): the same changes keep
+   * their id after a sync that only brings in the base. Null when there is no base, nothing changed, or git can't tell.
+   */
+  diffHash(repoPath: string, base: string, head: string): Promise<string | null>;
   /** The files changed between two commits (renames detected) and the commits in between, newest first. */
   compare(repoPath: string, base: string, head: string): Promise<{ files: ChangedFile[]; commits: Commit[] }>;
   /** The unified diff of one file between two commits, cut at PATCH_LIMIT. Pass both paths of a rename. */

@@ -1,4 +1,4 @@
-// Pull request commands: fix failing checks, close, merge and auto-merge.
+// Pull request commands: fix failing checks, open, close, merge and auto-merge.
 import * as actions from '../application/actions.ts';
 import { isReview, stageOf } from '../domain/work/index.ts';
 import { confirm, die, taskId } from './format.ts';
@@ -11,6 +11,11 @@ export const prCommands: Record<string, Command> = {
     console.log(
       `requeued #${id} to fix ${checks.length === 1 ? 'the failing check' : `${checks.length} failing checks`}: ${checks.join(', ')}`,
     );
+  },
+  'open-pr': async ({ db, rest }) => {
+    const id = taskId(rest[0]);
+    const { url } = await actions.openTaskPr(db, id);
+    console.log(`opened the pull request of #${id}: ${url}`);
   },
   'close-pr': async ({ db, rest }) => {
     const id = taskId(rest[0]);
@@ -25,14 +30,13 @@ export const prCommands: Record<string, Command> = {
       if (!flags.yes && !(await confirm(`merge ${review.length === 1 ? 'this PR' : `these ${review.length} PRs`}?`))) {
         return void console.log('not merged');
       }
-      const res = await actions.mergeAll(db, { ids: review.map((t) => t.id) });
-      for (const m of res.merged) {
-        console.log(
-          `merged #${m.id} (${m.method})${m.unblocked.length ? `; ${m.unblocked.map((n) => `#${n}`).join(', ')} can start` : ''}`,
-        );
-        if (m.cleanup_error) console.log(`  cleanup incomplete: ${m.cleanup_error}`);
-      }
-      for (const s of res.skipped) console.log(`left #${s.id}: ${s.reason}`);
+      // As the dashboard's Merge all: merge requests, which the daemon carries out once each PR is ready.
+      const res = await actions.requestAllMerges(db, { ids: review.map((t) => t.id) });
+      for (const r of res.requested)
+        console.log(`requested the merge of #${r.id}${r.waits.length ? `; waits: ${r.waits.join('; ')}` : ''}`);
+      for (const s of res.left) console.log(`left #${s.id}: ${s.reason}`);
+      if (res.requested.length && !res.daemon_running)
+        console.log('the daemon is not running: the requests wait until it starts (`agentdeck service start`)');
       return;
     }
     const id = taskId(rest[0]);

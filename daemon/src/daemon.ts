@@ -8,7 +8,7 @@ import { ChangeWatcher } from './application/operations/changes.ts';
 import { reloadBlock } from './application/operations/reload-block.ts';
 import { Scheduler } from './application/scheduler/scheduler.ts';
 import { API_PORT, DEFAULTS } from './config.ts';
-import { type Activity, SCHEMA_DIRTY, offMain, reloadDecision } from './domain/operations/index.ts';
+import { type Activity, SCHEMA_DIRTY, offMain, reloadDecision, runOnceRefusal } from './domain/operations/index.ts';
 
 export interface DaemonOptions {
   db: ComposedApp;
@@ -18,6 +18,11 @@ export interface DaemonOptions {
 }
 
 export async function runDaemon({ db, once, log = () => {} }: DaemonOptions): Promise<void> {
+  // run-once has no API to claim the port, so it asks whether a daemon answers there: only one process runs follow-ups.
+  if (once) {
+    const refusal = runOnceRefusal(await db.service.daemonState(API_PORT), API_PORT);
+    if (refusal) throw new Error(refusal);
+  }
   // Read once at start: it names the code this process loaded, even if the checkout moves on later.
   const info = { commit: await db.source.commit(import.meta.dirname), started_at: new Date().toISOString(), pid: process.pid };
   // The lines the scheduler doesn't date itself get the same `[time]` prefix, so the log can say when the daemon started and stopped.

@@ -1,9 +1,11 @@
 // The task state machine, as data. Pure: no I/O, so it can be tested exhaustively.
-// applyEvent and claimNextTask (db/tasks.ts) are the only things that write a status, and each asks this module first.
+// applyEvent (db/tasks.ts) is the only thing that writes a status, and it asks this module first.
 import type { TaskId } from '../shared/index.ts';
+import type { PullRequest } from '../landing/index.ts';
 import type { TaskEventType } from './history.ts';
 import type { Needs } from './needs.ts';
-import { type TaskCore, type TaskState, stopReasonOf } from './task.ts';
+import { type TaskCore, type TaskState, attemptsLeft, stopReasonOf } from './task.ts';
+import { type TaskChanges, statusChangePrChanges } from './task-writes.ts';
 
 export type TaskStatus =
   | 'proposed' // suggested by the planner, waiting for approval
@@ -22,7 +24,7 @@ export type TaskEvent =
   | { type: 'claim' } // the scheduler picked it up
   | { type: 'finish'; outcome: 'done' | 'cancelled' } // a run ended
   | { type: 'finish'; outcome: 'blocked'; environment?: boolean } // environment = the environment is to blame: the attempt is given back
-  | { type: 'finish'; outcome: 'failed'; retry: boolean } // a run failed; retry = attempts remain
+  | { type: 'finish'; outcome: 'failed'; retry?: false } // a run failed: requeued while attempts remain (`attemptsLeft`), unless retry is false (the worker crashed)
   | { type: 'rate_limited' } // a run hit the usage limit; not the task's fault
   | { type: 'conflict' } // a done task's branch conflicts with its base and the resolve run could not fix it
   | { type: 'cancel' }
@@ -30,9 +32,10 @@ export type TaskEvent =
   | { type: 'reject' } // decline a planner proposal
   | { type: 'retry' } // a human asks for another attempt
   | { type: 'unblock_retry' } // an unblock run sent a blocked task back with a note; its attempts stay as they are
+  | { type: 'review_retry' } // a review run asked for changes to a done task; one attempt is added, as a person's retry adds
   | { type: 'mark_done' } // a person finished or landed the work themselves
   | { type: 'pr_merged' } // the daemon found the task's open PR merged on GitHub
-  | { type: 'recover'; exhausted: boolean }; // the daemon restarted mid-run; exhausted = too many restarts
+  | { type: 'recover' }; // the daemon restarted mid-run; one restart too many (`restartsExhausted`) fails the task
 
 export type RuleKey =
   | 'claim'
@@ -48,6 +51,7 @@ export type RuleKey =
   | 'reject'
   | 'retry'
   | 'unblock_retry'
+  | 'review_retry'
   | 'mark_done'
   | 'pr_merged'
   | 'recover'
@@ -75,6 +79,7 @@ export const RULES: Record<RuleKey, Partial<Record<TaskStatus, TaskStatus>>> = {
   reject: { proposed: 'cancelled' },
   retry: { blocked: 'queued', failed: 'queued', cancelled: 'queued', done: 'queued' },
   unblock_retry: { blocked: 'queued' },
+  review_retry: { done: 'queued' },
   mark_done: { blocked: 'done', failed: 'done' },
   pr_merged: { blocked: 'done', failed: 'done' },
   recover: { running: 'queued', cancel_requested: 'cancelled' },
@@ -86,20 +91,30 @@ export const TRANSITIONS: Record<TaskStatus, TaskStatus[]> = Object.fromEntries(
   TASK_STATUSES.map((from) => [from, [...new Set(Object.values(RULES).flatMap((r) => (r[from] ? [r[from]] : [])))]]),
 ) as Record<TaskStatus, TaskStatus[]>;
 
-export function ruleKey(e: TaskEvent): RuleKey {
+/**
+ * The counters of a task that choose between an event's rules: its restarts so far, which decide whether a recover is one
+ * too many, and its attempts, which decide whether a failed run is requeued. A counter left out counts as 0.
+ */
+export type RuleCounters = Partial<Pick<TaskCore, 'restarts' | 'attempts' | 'max_attempts'>>;
+
+/** The rule `e` follows for a task with `counters`. */
+export function ruleKey(e: TaskEvent, counters: RuleCounters = {}): RuleKey {
   switch (e.type) {
     case 'finish':
-      return e.outcome === 'failed' ? (e.retry ? 'finish:failed:retry' : 'finish:failed') : `finish:${e.outcome}`;
+      if (e.outcome !== 'failed') return `finish:${e.outcome}`;
+      return e.retry !== false && attemptsLeft({ attempts: counters.attempts ?? 0, max_attempts: counters.max_attempts ?? 0 })
+        ? 'finish:failed:retry'
+        : 'finish:failed';
     case 'recover':
-      return e.exhausted ? 'recover:exhausted' : 'recover';
+      return restartsExhausted(counters.restarts ?? 0) ? 'recover:exhausted' : 'recover';
     default:
       return e.type;
   }
 }
 
-/** The status `event` leads to from `from`, or undefined if the event isn't allowed there. */
-export function nextStatus(from: TaskStatus, event: TaskEvent): TaskStatus | undefined {
-  return RULES[ruleKey(event)][from];
+/** The status `event` leads to from `from` for a task with `counters`, or undefined if the event isn't allowed there. */
+export function nextStatus(from: TaskStatus, event: TaskEvent, counters: RuleCounters = {}): TaskStatus | undefined {
+  return RULES[ruleKey(event, counters)][from];
 }
 
 export function canApply(from: TaskStatus, event: TaskEvent): boolean {
@@ -118,7 +133,7 @@ export function personEvents(t: { status: TaskStatus }): PersonEvent[] {
   return PERSON_EVENTS.filter((type) => canApply(t.status, { type }) && !(type === 'cancel' && t.status === 'proposed'));
 }
 
-/** Every status `event` is allowed from (for guards like `WHERE status IN (...)`). */
+/** Every status `event` is allowed from (for guards like `WHERE status IN (...)`). An event's rules share their from statuses. */
 export function fromStatuses(event: TaskEvent): TaskStatus[] {
   return Object.keys(RULES[ruleKey(event)]) as TaskStatus[];
 }
@@ -208,7 +223,8 @@ function eventTypeOf(to: TaskStatus, done: 'pr_merged' | 'mark_done' | 'finished
 }
 
 /** What `transition` reads of a task. */
-export type TransitionTask = TaskState & Pick<TaskCore, 'id' | 'attempts' | 'restarts'>;
+export type TransitionTask = TaskState &
+  Pick<TaskCore, 'id' | 'attempts' | 'max_attempts' | 'restarts'> & { pr: Pick<PullRequest, 'state'> | null };
 
 /** The counters an event sets, with their new values. A counter not listed is left as it is. */
 export interface TaskCounters {
@@ -221,6 +237,8 @@ export interface Transition {
   /** The status the event leads to, and all the task carries in it. */
   state: TaskState;
   counters: TaskCounters;
+  /** What the change does to the task's PR, written with it (`statusChangePrChanges` in task-writes.ts). */
+  changes: TaskChanges;
   /** What happened, for the timeline and the follow-ups: one event, the status change. */
   events: DomainEvent[];
 }
@@ -252,15 +270,17 @@ export interface TransitionOptions {
 }
 
 /**
- * What `event` does to `task`: the state it leads to, the new value of every counter it sets and the
- * domain events it makes; null if the event isn't allowed from the task's status. A cancelled outcome (the cancel
- * wins from `cancel_requested`) changes no counter.
+ * What `event` does to `task`: the state it leads to, the new value of every counter it sets, what it does to the PR and the
+ * domain events it makes; null if the event isn't allowed from the task's status. A failed run is requeued while the task has
+ * attempts left, unless the event forbids it (the worker crashed). A cancelled outcome (the cancel
+ * wins from `cancel_requested`) changes no counter. A retry starts the task's restarts afresh, as it does its attempts: a
+ * task once failed for restarts gets MAX_RESTARTS of them again.
  */
 export function transition(task: TransitionTask, event: TaskEvent, opts: TransitionOptions = {}): Transition | null {
-  const to = nextStatus(task.status, event);
+  const cause = ruleKey(event, task);
+  const to = RULES[cause][task.status];
   if (!to) return null;
   const environment = event.type === 'finish' && event.outcome === 'blocked' && event.environment === true;
-  const cause = ruleKey(event);
   const events: DomainEvent[] = [
     {
       type: domainEventType(cause, to),
@@ -274,20 +294,27 @@ export function transition(task: TransitionTask, event: TaskEvent, opts: Transit
     },
   ];
   const state = nextState(task, to, event, opts);
+  const retried = event.type === 'retry' || event.type === 'unblock_retry' || event.type === 'review_retry';
+  const changes = statusChangePrChanges(task.status, to, retried, task.pr);
   const counters: TaskCounters = {};
-  if (to === 'cancelled') return { state, counters, events };
+  if (to === 'cancelled') return { state, counters, changes, events };
 
   const given = Math.max(task.attempts - 1, 0); // the attempt given back
   if (event.type === 'claim') counters.attempts = task.attempts + 1;
-  else if (event.type === 'retry')
+  else if (event.type === 'retry' || event.type === 'review_retry') {
     counters.max_attempts = task.attempts + 1; // one more attempt on top of those used
+    counters.restarts = 0;
+  } else if (event.type === 'unblock_retry') counters.restarts = 0;
   else if (event.type === 'rate_limited' || environment) counters.attempts = given;
   else if (event.type === 'recover') {
     counters.restarts = task.restarts + 1;
     if (to === 'queued') counters.attempts = given;
   }
-  return { state, counters, events };
+  return { state, counters, changes, events };
 }
 
 /** A task requeued by this many daemon restarts is failed instead, in case the task itself kills the daemon. */
 export const MAX_RESTARTS = 3;
+
+/** Whether one more daemon restart, after `restarts` of them, is too many: the recover fails the task instead of requeuing it. */
+export const restartsExhausted = (restarts: number): boolean => restarts + 1 >= MAX_RESTARTS;

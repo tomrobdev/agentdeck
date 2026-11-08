@@ -1,0 +1,1554 @@
+check	UNKNOWN STEP	﻿2026-11-08T18:02:49.9116480Z Current runner version: '2.338.2'
+check	UNKNOWN STEP	2026-11-08T18:02:49.9154873Z ##[group]Runner Image Provisioner
+check	UNKNOWN STEP	2026-11-08T18:02:49.9156683Z Hosted Compute Agent
+check	UNKNOWN STEP	2026-11-08T18:02:49.9157849Z Version: 20261028.624
+check	UNKNOWN STEP	2026-11-08T18:02:49.9159093Z Commit: 54898b74c23fde5556c9b3c3a2290865feef0dfe
+check	UNKNOWN STEP	2026-11-08T18:02:49.9160451Z Build Date: 2026-10-28T21:51:42Z
+check	UNKNOWN STEP	2026-11-08T18:02:49.9161700Z Worker ID: {df25a734-b527-46b5-963d-675d3a29d877}
+check	UNKNOWN STEP	2026-11-08T18:02:49.9163135Z Region: eastus
+check	UNKNOWN STEP	2026-11-08T18:02:49.9164244Z Cloud: Azure
+check	UNKNOWN STEP	2026-11-08T18:02:49.9165353Z ##[endgroup]
+check	UNKNOWN STEP	2026-11-08T18:02:49.9168717Z ##[group]Operating System
+check	UNKNOWN STEP	2026-11-08T18:02:49.9170001Z Ubuntu
+check	UNKNOWN STEP	2026-11-08T18:02:49.9170992Z 26.04.1
+check	UNKNOWN STEP	2026-11-08T18:02:49.9171968Z LTS
+check	UNKNOWN STEP	2026-11-08T18:02:49.9173060Z ##[endgroup]
+check	UNKNOWN STEP	2026-11-08T18:02:49.9174144Z ##[group]Runner Image
+check	UNKNOWN STEP	2026-11-08T18:02:49.9175378Z Image: ubuntu-26.04
+check	UNKNOWN STEP	2026-11-08T18:02:49.9176719Z Version: 20261101.186.1
+check	UNKNOWN STEP	2026-11-08T18:02:49.9179188Z Included Software: https://github.com/actions/runner-images/blob/ubuntu26/20261101.186/images/ubuntu/Ubuntu2604-Readme.md
+check	UNKNOWN STEP	2026-11-08T18:02:49.9182101Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu26%2F20261101.186
+check	UNKNOWN STEP	2026-11-08T18:02:49.9183996Z ##[endgroup]
+check	UNKNOWN STEP	2026-11-08T18:02:49.9186468Z ##[group]GITHUB_TOKEN Permissions
+check	UNKNOWN STEP	2026-11-08T18:02:49.9189863Z Contents: read
+check	UNKNOWN STEP	2026-11-08T18:02:49.9191017Z Metadata: read
+check	UNKNOWN STEP	2026-11-08T18:02:49.9192074Z Packages: read
+check	UNKNOWN STEP	2026-11-08T18:02:49.9193112Z ##[endgroup]
+check	UNKNOWN STEP	2026-11-08T18:02:49.9196766Z Secret source: Actions
+check	UNKNOWN STEP	2026-11-08T18:02:49.9198576Z Cache mode: write
+check	UNKNOWN STEP	2026-11-08T18:02:49.9200253Z Prepare workflow directory
+check	UNKNOWN STEP	2026-11-08T18:02:49.9726691Z Prepare all required actions
+check	UNKNOWN STEP	2026-11-08T18:02:49.9801721Z Getting action download info
+check	UNKNOWN STEP	2026-11-08T18:02:50.1677799Z Download action repository 'actions/checkout@v4' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+check	UNKNOWN STEP	2026-11-08T18:02:50.2757605Z Download action repository 'pnpm/action-setup@v4' (SHA:b906affcce14559ad1aafd4ab0e942779e9f58b1)
+check	UNKNOWN STEP	2026-11-08T18:02:50.4415616Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+check	UNKNOWN STEP	2026-11-08T18:02:50.6310909Z Complete job name: check
+check	UNKNOWN STEP	2026-11-08T18:02:50.7288792Z ##[group]Run actions/checkout@v4
+check	UNKNOWN STEP	2026-11-08T18:02:50.7289754Z with:
+check	UNKNOWN STEP	2026-11-08T18:02:50.7290243Z   repository: tomrobdev/agentdeck
+check	UNKNOWN STEP	2026-11-08T18:02:50.7294435Z   token: ***
+check	UNKNOWN STEP	2026-11-08T18:02:50.7294906Z   ssh-strict: true
+check	UNKNOWN STEP	2026-11-08T18:02:50.7295378Z   ssh-user: git
+check	UNKNOWN STEP	2026-11-08T18:02:50.7295865Z   persist-credentials: true
+check	UNKNOWN STEP	2026-11-08T18:02:50.7296555Z   clean: true
+check	UNKNOWN STEP	2026-11-08T18:02:50.7297029Z   sparse-checkout-cone-mode: true
+check	UNKNOWN STEP	2026-11-08T18:02:50.7297582Z   fetch-depth: 1
+check	UNKNOWN STEP	2026-11-08T18:02:50.7298044Z   fetch-tags: false
+check	UNKNOWN STEP	2026-11-08T18:02:50.7298515Z   show-progress: true
+check	UNKNOWN STEP	2026-11-08T18:02:50.7298989Z   lfs: false
+check	UNKNOWN STEP	2026-11-08T18:02:50.7299425Z   submodules: false
+check	UNKNOWN STEP	2026-11-08T18:02:50.7299908Z   set-safe-directory: true
+check	UNKNOWN STEP	2026-11-08T18:02:50.7300447Z   allow-unsafe-pr-checkout: false
+check	UNKNOWN STEP	2026-11-08T18:02:50.7301640Z ##[endgroup]
+check	UNKNOWN STEP	2026-11-08T18:02:51.0713624Z Syncing repository: tomrobdev/agentdeck
+check	UNKNOWN STEP	2026-11-08T18:02:51.0717386Z ##[group]Getting Git version info
+check	UNKNOWN STEP	2026-11-08T18:02:51.0718924Z Working directory is '/home/runner/work/agentdeck/agentdeck'
+check	UNKNOWN STEP	2026-11-08T18:02:51.0721311Z [command]/usr/bin/git version
+check	UNKNOWN STEP	2026-11-08T18:02:51.0722376Z git version 2.56.0
+check	UNKNOWN STEP	2026-11-08T18:02:51.0725672Z ##[endgroup]
+check	UNKNOWN STEP	2026-11-08T18:02:51.0733034Z Temporarily overriding HOME='/home/runner/work/_temp/c2e14f7f-512a-4c80-94bd-b7abbcc49f4f' before making global git config changes
+check	UNKNOWN STEP	2026-11-08T18:02:51.0735715Z Adding repository directory to the temporary git global config as a safe directory
+check	UNKNOWN STEP	2026-11-08T18:02:51.0738917Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/agentdeck/agentdeck
+check	UNKNOWN STEP	2026-11-08T18:02:51.0807583Z Deleting the contents of '/home/runner/work/agentdeck/agentdeck'
+check	UNKNOWN STEP	2026-11-08T18:02:51.0811260Z ##[group]Initializing the repository
+check	UNKNOWN STEP	2026-11-08T18:02:51.0813161Z [command]/usr/bin/git init /home/runner/work/agentdeck/agentdeck
+check	UNKNOWN STEP	2026-11-08T18:02:51.0930209Z hint: Using 'master' as the name for the initial branch. This default branch name
+check	UNKNOWN STEP	2026-11-08T18:02:51.0933341Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+check	UNKNOWN STEP	2026-11-08T18:02:51.0942314Z hint: to use in all of your new repositories, which will suppress this warning,
+check	UNKNOWN STEP	2026-11-08T18:02:51.0978223Z hint: call:
+check	UNKNOWN STEP	2026-11-08T18:02:51.0997312Z hint:
+check	UNKNOWN STEP	2026-11-08T18:02:51.1000795Z hint: 	git config --global init.defaultBranch <name>
+check	UNKNOWN STEP	2026-11-08T18:02:51.1028464Z hint:
+check	UNKNOWN STEP	2026-11-08T18:02:51.1029868Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+check	UNKNOWN STEP	2026-11-08T18:02:51.1031617Z hint: 'development'. The just-created branch can be renamed via this command:
+check	UNKNOWN STEP	2026-11-08T18:02:51.1033257Z hint:
+check	UNKNOWN STEP	2026-11-08T18:02:51.1034164Z hint: 	git branch -m <name>
+check	UNKNOWN STEP	2026-11-08T18:02:51.1035205Z hint:
+check	UNKNOWN STEP	2026-11-08T18:02:51.1046827Z hint: Disable this message with "git config set advice.defaultBranchName false"
+check	UNKNOWN STEP	2026-11-08T18:02:51.1048903Z Initialized empty Git repository in /home/runner/work/agentdeck/agentdeck/.git/
+check	UNKNOWN STEP	2026-11-08T18:02:51.1052571Z [command]/usr/bin/git remote add origin https://github.com/tomrobdev/agentdeck
+check	UNKNOWN STEP	2026-11-08T18:02:51.1059610Z ##[endgroup]
+check	UNKNOWN STEP	2026-11-08T18:02:51.1061792Z ##[group]Disabling automatic garbage collection
+check	UNKNOWN STEP	2026-11-08T18:02:51.1063900Z [command]/usr/bin/git config --local gc.auto 0
+check	UNKNOWN STEP	2026-11-08T18:02:51.1132660Z ##[endgroup]
+check	UNKNOWN STEP	2026-11-08T18:02:51.1175028Z ##[group]Setting up auth
+check	UNKNOWN STEP	2026-11-08T18:02:51.1177389Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+check	UNKNOWN STEP	2026-11-08T18:02:51.1206816Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+check	UNKNOWN STEP	2026-11-08T18:02:51.1852390Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+check	UNKNOWN STEP	2026-11-08T18:02:51.1876975Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+check	UNKNOWN STEP	2026-11-08T18:02:51.2189678Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+check	UNKNOWN STEP	2026-11-08T18:02:51.2230095Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+check	UNKNOWN STEP	2026-11-08T18:02:51.2544919Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+check	UNKNOWN STEP	2026-11-08T18:02:51.2581575Z ##[endgroup]
+check	UNKNOWN STEP	2026-11-08T18:02:51.2584392Z ##[group]Fetching the repository
+check	UNKNOWN STEP	2026-11-08T18:02:51.2594575Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +17d1c231537bb41ae7a6de5a1a06f95ddf463d9c:refs/remotes/pull/237/merge
+check	UNKNOWN STEP	2026-11-08T18:02:51.7158484Z From https://github.com/tomrobdev/agentdeck
+check	UNKNOWN STEP	2026-11-08T18:02:51.7161359Z  * [new ref]         17d1c231537bb41ae7a6de5a1a06f95ddf463d9c -> pull/237/merge
+check	UNKNOWN STEP	2026-11-08T18:02:51.7175063Z ##[endgroup]
+check	UNKNOWN STEP	2026-11-08T18:02:51.7197916Z ##[group]Determining the checkout info
+check	UNKNOWN STEP	2026-11-08T18:02:51.7200408Z ##[endgroup]
+check	UNKNOWN STEP	2026-11-08T18:02:51.7201772Z [command]/usr/bin/git sparse-checkout disable
+check	UNKNOWN STEP	2026-11-08T18:02:51.7204103Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+check	UNKNOWN STEP	2026-11-08T18:02:51.7248058Z ##[group]Checking out the ref
+check	UNKNOWN STEP	2026-11-08T18:02:51.7250744Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/237/merge
+check	UNKNOWN STEP	2026-11-08T18:02:51.7711872Z Note: switching to 'refs/remotes/pull/237/merge'.
+check	UNKNOWN STEP	2026-11-08T18:02:51.7713234Z 
+check	UNKNOWN STEP	2026-11-08T18:02:51.7714475Z You are in 'detached HEAD' state. You can look around, make experimental
+check	UNKNOWN STEP	2026-11-08T18:02:51.7717270Z changes and commit them, and you can discard any commits you make in this
+check	UNKNOWN STEP	2026-11-08T18:02:51.7720007Z state without impacting any branches by switching back to a branch.
+check	UNKNOWN STEP	2026-11-08T18:02:51.7724143Z 
+check	UNKNOWN STEP	2026-11-08T18:02:51.7737419Z If you want to create a new branch to retain commits you create, you may
+check	UNKNOWN STEP	2026-11-08T18:02:51.7744050Z do so (now or later) by using -c with the switch command. Example:
+check	UNKNOWN STEP	2026-11-08T18:02:51.7746725Z 
+check	UNKNOWN STEP	2026-11-08T18:02:51.7747846Z   git switch -c <new-branch-name>
+check	UNKNOWN STEP	2026-11-08T18:02:51.7749312Z 
+check	UNKNOWN STEP	2026-11-08T18:02:51.7750625Z Or undo this operation with:
+check	UNKNOWN STEP	2026-11-08T18:02:51.7751938Z 
+check	UNKNOWN STEP	2026-11-08T18:02:51.7753022Z   git switch -
+check	UNKNOWN STEP	2026-11-08T18:02:51.7754473Z 
+check	UNKNOWN STEP	2026-11-08T18:02:51.7756003Z Turn off this advice by setting config variable advice.detachedHead to false
+check	UNKNOWN STEP	2026-11-08T18:02:51.7758421Z 
+check	UNKNOWN STEP	2026-11-08T18:02:51.7760452Z HEAD is now at 17d1c23 Merge 78d97ded3ecefece1052c8c7d27d79556a160f14 into 4062a35f82222b8b3069432d1f6ac416b596b04f
+check	UNKNOWN STEP	2026-11-08T18:02:51.7771166Z ##[endgroup]
+check	UNKNOWN STEP	2026-11-08T18:02:51.7788948Z [command]/usr/bin/git log -1 --format=%H
+check	UNKNOWN STEP	2026-11-08T18:02:51.7821326Z 17d1c231537bb41ae7a6de5a1a06f95ddf463d9c
+check	UNKNOWN STEP	2026-11-08T18:02:51.8240162Z ##[group]Run pnpm/action-setup@v4
+check	UNKNOWN STEP	2026-11-08T18:02:51.8241183Z with:
+check	UNKNOWN STEP	2026-11-08T18:02:51.8241976Z   dest: ~/setup-pnpm
+check	UNKNOWN STEP	2026-11-08T18:02:51.8242818Z   run_install: null
+check	UNKNOWN STEP	2026-11-08T18:02:51.8243631Z   cache: false
+check	UNKNOWN STEP	2026-11-08T18:02:51.8244499Z   cache_dependency_path: pnpm-lock.yaml
+check	UNKNOWN STEP	2026-11-08T18:02:51.8245518Z   package_json_file: package.json
+check	UNKNOWN STEP	2026-11-08T18:02:51.8246604Z   standalone: false
+check	UNKNOWN STEP	2026-11-08T18:02:51.8247440Z ##[endgroup]
+check	UNKNOWN STEP	2026-11-08T18:02:51.9884979Z ##[group]Running self-installer...
+check	UNKNOWN STEP	2026-11-08T18:02:52.6829859Z (node:2165) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+check	UNKNOWN STEP	2026-11-08T18:02:52.6848227Z (Use `node --trace-deprecation ...` to show where the warning was created)
+check	UNKNOWN STEP	2026-11-08T18:02:52.8178071Z Progress: resolved 1, reused 0, downloaded 0, added 0
+check	UNKNOWN STEP	2026-11-08T18:02:53.0337136Z Packages: +3
+check	UNKNOWN STEP	2026-11-08T18:02:53.0363374Z +++
+check	UNKNOWN STEP	2026-11-08T18:02:53.8177488Z Progress: resolved 15, reused 0, downloaded 2, added 1
+check	UNKNOWN STEP	2026-11-08T18:02:54.1377787Z Progress: resolved 15, reused 0, downloaded 3, added 3, done
+check	UNKNOWN STEP	2026-11-08T18:02:54.1567273Z .../.pnpm/pnpm@12.14.0/node_modules/pnpm preinstall$ node install.js
+check	UNKNOWN STEP	2026-11-08T18:02:54.3722424Z .../.pnpm/pnpm@12.14.0/node_modules/pnpm preinstall: Done
+check	UNKNOWN STEP	2026-11-08T18:02:54.3727768Z .../.pnpm/pnpm@12.14.0/node_modules/pnpm postinstall$ node install.js
+check	UNKNOWN STEP	2026-11-08T18:02:54.4274550Z .../.pnpm/pnpm@12.14.0/node_modules/pnpm postinstall: Done
+check	UNKNOWN STEP	2026-11-08T18:02:59.0946540Z 
+check	UNKNOWN STEP	2026-11-08T18:02:59.0948130Z dependencies:
+check	UNKNOWN STEP	2026-11-08T18:02:59.0957116Z + pnpm 12.14.0 (12.18.0 is available)
+check	UNKNOWN STEP	2026-11-08T18:02:59.0968554Z 
+check	UNKNOWN STEP	2026-11-08T18:02:59.1012625Z Done in 6.7s
+check	UNKNOWN STEP	2026-11-08T18:02:59.1880066Z ##[endgroup]
+check	UNKNOWN STEP	2026-11-08T18:02:59.1880540Z Installation Completed!
+check	UNKNOWN STEP	2026-11-08T18:02:59.2119952Z ##[group]Run actions/setup-node@v4
+check	UNKNOWN STEP	2026-11-08T18:02:59.2120291Z with:
+check	UNKNOWN STEP	2026-11-08T18:02:59.2120514Z   node-version: 26
+check	UNKNOWN STEP	2026-11-08T18:02:59.2120744Z   cache: pnpm
+check	UNKNOWN STEP	2026-11-08T18:02:59.2120960Z   always-auth: false
+check	UNKNOWN STEP	2026-11-08T18:02:59.2121195Z   check-latest: false
+check	UNKNOWN STEP	2026-11-08T18:02:59.2123932Z   token: ***
+check	UNKNOWN STEP	2026-11-08T18:02:59.2124153Z env:
+check	UNKNOWN STEP	2026-11-08T18:02:59.2124455Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+check	UNKNOWN STEP	2026-11-08T18:02:59.2124784Z ##[endgroup]
+check	UNKNOWN STEP	2026-11-08T18:02:59.3692353Z Attempting to download 26...
+check	UNKNOWN STEP	2026-11-08T18:02:59.3806735Z (node:2197) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+check	UNKNOWN STEP	2026-11-08T18:02:59.3808634Z (Use `node --trace-deprecation ...` to show where the warning was created)
+check	UNKNOWN STEP	2026-11-08T18:02:59.8497761Z Acquiring 26.13.0 - x64 from https://github.com/actions/node-versions/releases/download/26.13.0-41378513395/node-26.13.0-linux-x64.tar.gz
+check	UNKNOWN STEP	2026-11-08T18:03:00.3736905Z Extracting ...
+check	UNKNOWN STEP	2026-11-08T18:03:00.3873229Z [command]/usr/bin/tar xz --strip 1 --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/c441bfe4-214f-4499-bb0d-3f46adb93c76 -f /home/runner/work/_temp/2fa87ff2-04ba-48fc-9415-0f3e4a09e9ac
+check	UNKNOWN STEP	2026-11-08T18:03:01.4179105Z Adding to the cache ...
+check	UNKNOWN STEP	2026-11-08T18:03:03.8877927Z ##[group]Environment details
+check	UNKNOWN STEP	2026-11-08T18:03:04.1727496Z node: v26.13.0
+check	UNKNOWN STEP	2026-11-08T18:03:04.1728858Z npm: 11.20.0
+check	UNKNOWN STEP	2026-11-08T18:03:04.1736057Z yarn: 1.22.22
+check	UNKNOWN STEP	2026-11-08T18:03:04.1737618Z ##[endgroup]
+check	UNKNOWN STEP	2026-11-08T18:03:04.1770567Z [command]/home/runner/setup-pnpm/node_modules/.bin/pnpm store path --silent
+check	UNKNOWN STEP	2026-11-08T18:03:04.1993139Z /home/runner/setup-pnpm/node_modules/.bin/store/v11
+check	UNKNOWN STEP	2026-11-08T18:03:04.2804161Z Cache hit for: node-cache-Linux-x64-pnpm-7bbbf07c0f32a2fee1cb0725403b74f5693f68d1fc903d91765ac7130924bc4c
+check	UNKNOWN STEP	2026-11-08T18:03:04.2921095Z (node:2197) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+check	UNKNOWN STEP	2026-11-08T18:03:04.7549344Z Received 76790894 of 76790894 (100.0%), 174.4 MBs/sec
+check	UNKNOWN STEP	2026-11-08T18:03:04.7550529Z Cache Size: ~73 MB (76790894 B)
+check	UNKNOWN STEP	2026-11-08T18:03:04.7579216Z [command]/usr/bin/tar -xf /home/runner/work/_temp/2b399951-bf40-4950-8166-69da0a316709/cache.tzst -P -C /home/runner/work/agentdeck/agentdeck --use-compress-program unzstd
+check	UNKNOWN STEP	2026-11-08T18:03:05.8667729Z Cache restored successfully
+check	UNKNOWN STEP	2026-11-08T18:03:05.8717733Z Cache restored from key: node-cache-Linux-x64-pnpm-7bbbf07c0f32a2fee1cb0725403b74f5693f68d1fc903d91765ac7130924bc4c
+check	UNKNOWN STEP	2026-11-08T18:03:05.9053523Z ##[group]Run pnpm install --frozen-lockfile
+check	UNKNOWN STEP	2026-11-08T18:03:05.9053968Z ^[[36;1mpnpm install --frozen-lockfile^[[0m
+check	UNKNOWN STEP	2026-11-08T18:03:05.9111164Z shell: /usr/bin/bash -e {0}
+check	UNKNOWN STEP	2026-11-08T18:03:05.9111467Z env:
+check	UNKNOWN STEP	2026-11-08T18:03:05.9111754Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+check	UNKNOWN STEP	2026-11-08T18:03:05.9112109Z ##[endgroup]
+check	UNKNOWN STEP	2026-11-08T18:03:05.9481616Z Scope: all 3 workspace projects
+check	UNKNOWN STEP	2026-11-08T18:03:05.9658954Z ? Verifying lockfile against supply-chain policies (164 entries)...
+check	UNKNOWN STEP	2026-11-08T18:03:06.1815632Z Packages are hard linked from the content-addressable store to the virtual store.
+check	UNKNOWN STEP	2026-11-08T18:03:06.1818290Z   Content-addressable store is at: /home/runner/setup-pnpm/node_modules/.bin/store/v11
+check	UNKNOWN STEP	2026-11-08T18:03:06.1819908Z   Virtual store is at:             node_modules/.pnpm
+check	UNKNOWN STEP	2026-11-08T18:03:07.3198033Z ✓ Lockfile passes supply-chain policies (164 entries in 1.4s)
+check	UNKNOWN STEP	2026-11-08T18:03:07.3208588Z Lockfile is up to date, resolution step is skipped
+check	UNKNOWN STEP	2026-11-08T18:03:07.3246828Z Packages: +108
+check	UNKNOWN STEP	2026-11-08T18:03:07.3260839Z ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+check	UNKNOWN STEP	2026-11-08T18:03:07.3574619Z Progress: resolved 108, reused 108, downloaded 0, added 108, done
+check	UNKNOWN STEP	2026-11-08T18:03:07.3819027Z Agent skills awaiting approval: drizzle-kit.
+check	UNKNOWN STEP	2026-11-08T18:03:07.3820686Z Run "pnpm approve" to review them.
+check	UNKNOWN STEP	2026-11-08T18:03:07.3832471Z 
+check	UNKNOWN STEP	2026-11-08T18:03:07.3833018Z devDependencies:
+check	UNKNOWN STEP	2026-11-08T18:03:07.3837290Z + prettier 3.9.10
+check	UNKNOWN STEP	2026-11-08T18:03:07.3846722Z 
+check	UNKNOWN STEP	2026-11-08T18:03:07.3847558Z Done in 1.4s using pnpm v12.14.0
+check	UNKNOWN STEP	2026-11-08T18:03:07.4043410Z ##[group]Run git config --global user.name ci && git config --global user.email person@example.com
+check	UNKNOWN STEP	2026-11-08T18:03:07.4044119Z ^[[36;1mgit config --global user.name ci && git config --global user.email person@example.com^[[0m
+check	UNKNOWN STEP	2026-11-08T18:03:07.4094636Z shell: /usr/bin/bash -e {0}
+check	UNKNOWN STEP	2026-11-08T18:03:07.4094917Z env:
+check	UNKNOWN STEP	2026-11-08T18:03:07.4095197Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+check	UNKNOWN STEP	2026-11-08T18:03:07.4095541Z ##[endgroup]
+check	UNKNOWN STEP	2026-11-08T18:03:07.4237749Z ##[group]Run pnpm check
+check	UNKNOWN STEP	2026-11-08T18:03:07.4238051Z ^[[36;1mpnpm check^[[0m
+check	UNKNOWN STEP	2026-11-08T18:03:07.4286149Z shell: /usr/bin/bash -e {0}
+check	UNKNOWN STEP	2026-11-08T18:03:07.4286684Z env:
+check	UNKNOWN STEP	2026-11-08T18:03:07.4286960Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+check	UNKNOWN STEP	2026-11-08T18:03:07.4287297Z   CRASH_ITERATIONS: 5
+check	UNKNOWN STEP	2026-11-08T18:03:07.4287531Z ##[endgroup]
+check	UNKNOWN STEP	2026-11-08T18:03:07.4562807Z $ pnpm check:fast && node daemon/scripts/crash-test.mjs "${CRASH_ITERATIONS:-10}"
+check	UNKNOWN STEP	2026-11-08T18:03:07.4755893Z $ pnpm format:check && pnpm typecheck && pnpm db:check && pnpm test
+check	UNKNOWN STEP	2026-11-08T18:03:07.4951933Z $ prettier --check .
+check	UNKNOWN STEP	2026-11-08T18:03:07.5858840Z Checking formatting...
+check	UNKNOWN STEP	2026-11-08T18:03:22.0012602Z All matched files use Prettier code style!
+check	UNKNOWN STEP	2026-11-08T18:03:22.0665589Z $ pnpm -r typecheck
+check	UNKNOWN STEP	2026-11-08T18:03:22.0927354Z daemon typecheck$ tsc
+check	UNKNOWN STEP	2026-11-08T18:03:22.0928432Z app typecheck$ vue-tsc --noEmit
+check	UNKNOWN STEP	2026-11-08T18:03:36.0931546Z daemon typecheck: Done
+check	UNKNOWN STEP	2026-11-08T18:03:37.8400053Z app typecheck: Done
+check	UNKNOWN STEP	2026-11-08T18:03:37.8708266Z $ pnpm --filter agentdeck-daemon db:check
+check	UNKNOWN STEP	2026-11-08T18:03:37.9002446Z $ node scripts/db-check.ts
+check	UNKNOWN STEP	2026-11-08T18:03:39.6707981Z db:check: src/db/tables.ts matches the migrated schema
+check	UNKNOWN STEP	2026-11-08T18:03:39.7133135Z $ pnpm --filter agentdeck-daemon test
+check	UNKNOWN STEP	2026-11-08T18:03:39.7356815Z $ AGENTDECK_NO_NOTIFY=1 node --test --test-timeout=60000 test/
+check	UNKNOWN STEP	2026-11-08T18:03:39.9980252Z ✔ nothing under way gives an empty list (2.284761ms)
+check	UNKNOWN STEP	2026-11-08T18:03:39.9998016Z ✔ a running task and a waiting merge request are two rows (0.778626ms)
+check	UNKNOWN STEP	2026-11-08T18:03:40.0062464Z ✔ a resolve run opens on Runs, a clean sync on the overview, and planner runs have no task (0.421307ms)
+check	UNKNOWN STEP	2026-11-08T18:03:40.5971397Z ✔ every route in src/api/routes/ has a row (4.293515ms)
+check	UNKNOWN STEP	2026-11-08T18:03:40.5978352Z ✔ a route without a row is named by its method and pattern (0.845711ms)
+check	UNKNOWN STEP	2026-11-08T18:03:40.5980177Z ✔ every row calls a route, and every route that reads a body has a 400 row (2.259864ms)
+check	UNKNOWN STEP	2026-11-08T18:03:40.6171200Z ✔ GET /api/events (37.645446ms)
+check	UNKNOWN STEP	2026-11-08T18:03:40.6572152Z ✔ GET /api/status (15.474474ms)
+check	UNKNOWN STEP	2026-11-08T18:03:40.6573281Z ✔ GET /api/stats (5.445739ms)
+check	UNKNOWN STEP	2026-11-08T18:03:40.6574472Z ✔ GET /api/daemon (3.853873ms)
+check	UNKNOWN STEP	2026-11-08T18:03:40.6575410Z ✔ POST /api/pause (7.116883ms)
+check	UNKNOWN STEP	2026-11-08T18:03:40.6576845Z ✔ POST /api/resume (6.405513ms)
+check	UNKNOWN STEP	2026-11-08T18:03:40.6577784Z ✔ POST /api/daemon/restart (2.478633ms)
+check	UNKNOWN STEP	2026-11-08T18:03:40.6760059Z ✔ GET /api/daemon/health (18.115581ms)
+check	UNKNOWN STEP	2026-11-08T18:03:40.8798473Z ✔ POST /api/daemon/restart-now (205.227168ms)
+check	UNKNOWN STEP	2026-11-08T18:03:40.8836720Z ✔ GET /api/service (2.98558ms)
+check	UNKNOWN STEP	2026-11-08T18:03:40.8859336Z ✔ POST /api/notify/test (3.847231ms)
+check	UNKNOWN STEP	2026-11-08T18:03:40.8880775Z ✔ POST /api/app/seen (2.40721ms)
+check	UNKNOWN STEP	2026-11-08T18:03:40.8948079Z ✔ GET /api/settings (2.78728ms)
+check	UNKNOWN STEP	2026-11-08T18:03:40.9026157Z ✔ POST /api/settings (9.835975ms)
+check	UNKNOWN STEP	2026-11-08T18:03:40.9095128Z ✔ POST /api/settings answers 400 to {"max_concurrent":"3"} (4.409041ms)
+check	UNKNOWN STEP	2026-11-08T18:03:40.9096455Z ✔ GET /api/repos (2.342419ms)
+check	UNKNOWN STEP	2026-11-08T18:03:40.9387614Z ✔ GET /api/repos?archived=1 (1.846741ms)
+check	UNKNOWN STEP	2026-11-08T18:03:40.9538090Z ✔ POST /api/repos (43.314262ms)
+check	UNKNOWN STEP	2026-11-08T18:03:40.9808587Z ✔ POST /api/repos answers 400 to {"path":5} (2.087184ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.0120847Z ✔ GET /api/repos/:repo (29.593575ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.0469676Z ✔ POST /api/repos/:repo (35.943185ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.0759132Z ✔ POST /api/repos/:repo answers 400 to {"pr_mode":5} (27.969457ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.1037411Z ✔ POST /api/repos/:repo/propose (28.725827ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.1734796Z ✔ POST /api/repos/:repo/doctor (67.389213ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.2006984Z ✔ POST /api/repos/:repo/resume (29.808347ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.2318294Z ✔ POST /api/repos/:repo/archive (28.366281ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.2601879Z ✔ POST /api/repos/:repo/unarchive (29.492865ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.2881670Z ✔ GET /api/repos/:repo/deletion (29.7725ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.2947007Z ✔ DELETE /api/repos/:repo (30.220981ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.2994276Z ✔ GET /api/tasks (5.892572ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.3009334Z ✔ GET /api/tasks?status=nonsense answers 400 (1.622906ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.3118607Z ✔ POST /api/tasks (11.080852ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.3158162Z ✔ POST /api/tasks answers 400 to {"prompt":5} (1.882599ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.3214886Z ✔ GET /api/tasks/:task (6.282831ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.3327154Z ✔ POST /api/tasks/:task (10.178478ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.3364330Z ✔ POST /api/tasks/:task answers 400 to {"priority":"1"} (3.10984ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.3434986Z ✔ POST /api/tasks/:task/links (8.818897ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.3480135Z ✔ POST /api/tasks/:task/links answers 400 to {"on":"one","kind":"after"} (2.780217ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.3545296Z ✔ DELETE /api/tasks/:task/links/:on (7.344217ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.3597582Z ✔ POST /api/tasks/:task/approve (6.037646ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.3668315Z ✔ POST /api/tasks/:task/reject (6.322778ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.3748795Z ✔ POST /api/tasks/:task/cancel (3.607352ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.3849009Z ✔ POST /api/tasks/:task/retry (10.263644ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.3908644Z ✔ POST /api/tasks/:task/retry answers 400 to {"note":5} (6.143099ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.4022353Z ✔ POST /api/tasks/:task/done (13.481433ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.4098953Z ✔ POST /api/tasks/:task/done answers 400 to {"note":5} (5.358306ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.4679165Z ✔ POST /api/tasks/:task/install-needs (57.301667ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.5256875Z ✔ POST /api/tasks/:task/clean (60.036075ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.5971718Z ✔ POST /api/tasks/:task/sync (74.284424ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.6057841Z ✔ GET /api/tasks/:task/log (3.441783ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.6130110Z ✔ POST /api/tasks/:task/fix-checks (10.043343ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.6244669Z ✔ POST /api/tasks/:task/close-pr (10.501419ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.6321816Z ✔ GET /api/tasks/:task/merge (6.277424ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.6419049Z ✔ POST /api/tasks/:task/merge (10.819272ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.6464988Z ✔ POST /api/tasks/:task/merge answers 400 to {"method":5} (5.102258ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.6553523Z ✔ POST /api/tasks/:task/merge-request (7.841327ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.6614423Z ✔ POST /api/tasks/:task/merge-request answers 400 to {"method":5} (5.144816ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.6692367Z ✔ DELETE /api/tasks/:task/merge-request (9.784939ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.6720657Z ✔ POST /api/tasks/merge-requests (6.813786ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.6765785Z ✔ POST /api/tasks/merge-requests answers 400 to {"ids":"one"} (1.383226ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.6849697Z ✔ POST /api/tasks/:task/auto-merge (7.667362ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.6928959Z ✔ POST /api/tasks/:task/auto-merge answers 400 to {"auto_merge":"yes"} (7.379671ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.7591296Z ✔ GET /api/tasks/:task/changes (65.058727ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.8176865Z ✔ GET /api/tasks/:task/diff?path=b.txt (58.953765ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.8652860Z ✔ GET /api/tasks/:task/tree?ref=head (47.735509ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.9135101Z ✔ GET /api/tasks/:task/file?ref=head&path=b.txt (51.548642ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.9213422Z ✔ POST /api/tasks/:task/plans (7.610345ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.9259364Z ✔ POST /api/tasks/:task/plans answers 400 to {"html":5} (2.993185ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.9361385Z ✔ GET /api/tasks/:task/plans/:plan (5.144405ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.9381947Z ✔ GET /api/tasks/:task/reviews (8.242567ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.9450224Z ✔ POST /api/tasks/:task/reviews (3.374017ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.9526603Z ✔ POST /api/reviews/:review (7.628238ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.9614540Z ✔ POST /api/reviews/:review answers 400 to {"body":5} (9.238358ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.9682471Z ✔ POST /api/reviews/:review/comments (6.897624ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.9755528Z ✔ POST /api/reviews/:review/comments answers 400 to {"path":"a.txt","line":0,"side":"new","head_commit":"abc","body":"x"} (6.172186ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.9842114Z ✔ POST /api/reviews/:review/submit (8.750196ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.9903154Z ✔ POST /api/reviews/:review/submit answers 400 to {"kind":"approve"} (6.800584ms)
+check	UNKNOWN STEP	2026-11-08T18:03:41.9986960Z ✔ DELETE /api/review-comments/:comment (6.928951ms)
+check	UNKNOWN STEP	2026-11-08T18:03:42.0098523Z ✔ POST /api/review-comments/:comment/resolve (7.900438ms)
+check	UNKNOWN STEP	2026-11-08T18:03:42.0140399Z ✔ POST /api/review-comments/:comment/reopen (10.513649ms)
+check	UNKNOWN STEP	2026-11-08T18:03:42.6700549Z ✔ a POST body with a wrong-typed field answers 400, never 500 (177.326185ms)
+check	UNKNOWN STEP	2026-11-08T18:03:42.7499307Z ✔ every POST route answers 400 to a body that is not a JSON object (79.941485ms)
+check	UNKNOWN STEP	2026-11-08T18:03:42.7518652Z ✔ malformed JSON answers 400 (1.743018ms)
+check	UNKNOWN STEP	2026-11-08T18:03:42.7691561Z ✔ GET /api/stats serves what `agentdeck stats --by week --json` prints (12.931889ms)
+check	UNKNOWN STEP	2026-11-08T18:03:42.7822501Z ✔ a body over 2 MB answers 413 (16.104923ms)
+check	UNKNOWN STEP	2026-11-08T18:03:43.3588131Z ✔ a successful write wakes the scheduler once, after the response (100.361872ms)
+check	UNKNOWN STEP	2026-11-08T18:03:43.3958347Z ✔ reads and failed writes do not wake it (35.974753ms)
+check	UNKNOWN STEP	2026-11-08T18:03:43.9168093Z ✔ status starts paused (38.581235ms)
+check	UNKNOWN STEP	2026-11-08T18:03:43.9860967Z ✔ add repo and task, then read it back (72.080649ms)
+check	UNKNOWN STEP	2026-11-08T18:03:44.0128608Z ✔ rejects browser requests from other origins (9.134394ms)
+check	UNKNOWN STEP	2026-11-08T18:03:44.1737958Z ✔ log stream replays a finished run and ends (175.855238ms)
+check	UNKNOWN STEP	2026-11-08T18:03:44.1742624Z Error: EISDIR: illegal operation on a directory, read
+check	UNKNOWN STEP	2026-11-08T18:03:44.1743313Z     at readSync (node:fs:1005:18)
+check	UNKNOWN STEP	2026-11-08T18:03:44.1744218Z     at tail (file:///home/runner/work/agentdeck/agentdeck/daemon/src/api/log-stream.ts:48:9)
+check	UNKNOWN STEP	2026-11-08T18:03:44.1745497Z     at pump (file:///home/runner/work/agentdeck/agentdeck/daemon/src/api/log-stream.ts:32:7)
+check	UNKNOWN STEP	2026-11-08T18:03:44.1767686Z     at streamLog (file:///home/runner/work/agentdeck/agentdeck/daemon/src/api/log-stream.ts:66:3)
+check	UNKNOWN STEP	2026-11-08T18:03:44.1769142Z     at Object.handle (file:///home/runner/work/agentdeck/agentdeck/daemon/src/api/routes/tasks.ts:84:7)
+check	UNKNOWN STEP	2026-11-08T18:03:44.1770499Z     at dispatch (file:///home/runner/work/agentdeck/agentdeck/daemon/src/api/http.ts:140:27)
+check	UNKNOWN STEP	2026-11-08T18:03:44.1771891Z     at Server.<anonymous> (file:///home/runner/work/agentdeck/agentdeck/daemon/src/api/server.ts:58:12)
+check	UNKNOWN STEP	2026-11-08T18:03:44.1772872Z     at Server.emit (node:events:514:20)
+check	UNKNOWN STEP	2026-11-08T18:03:44.1773551Z     at parserOnIncoming (node:_http_server:1464:12)
+check	UNKNOWN STEP	2026-11-08T18:03:44.1774425Z     at HTTPParser.parserOnHeadersComplete (node:_http_common:125:17) {
+check	UNKNOWN STEP	2026-11-08T18:03:44.1775144Z   errno: -21,
+check	UNKNOWN STEP	2026-11-08T18:03:44.1775531Z   code: 'EISDIR',
+check	UNKNOWN STEP	2026-11-08T18:03:44.1775915Z   syscall: 'read'
+check	UNKNOWN STEP	2026-11-08T18:03:44.1796592Z }
+check	UNKNOWN STEP	2026-11-08T18:03:44.1841345Z ✔ a log that cannot be read ends the stream instead of stopping the daemon (13.587017ms)
+check	UNKNOWN STEP	2026-11-08T18:03:44.1924217Z ✔ cancel and retry (8.171624ms)
+check	UNKNOWN STEP	2026-11-08T18:03:44.2013425Z ✔ retry takes a note, which the timeline keeps; close-pr needs an open PR (8.887502ms)
+check	UNKNOWN STEP	2026-11-08T18:03:44.2204722Z ✔ settings round-trip with validation (18.124238ms)
+check	UNKNOWN STEP	2026-11-08T18:03:44.2232312Z ✔ test notification is recorded (2.629596ms)
+check	UNKNOWN STEP	2026-11-08T18:03:44.2410860Z ✔ POST /api/tasks/:id edits a task; bad edits are 400 (18.502662ms)
+check	UNKNOWN STEP	2026-11-08T18:03:44.2874282Z ✔ POST /api/repos/:id/doctor reports checks and pauses; resume clears the pause (46.016426ms)
+check	UNKNOWN STEP	2026-11-08T18:03:44.3437970Z ✔ task list returns summaries, pages with limit/before, and always includes active tasks (55.151385ms)
+check	UNKNOWN STEP	2026-11-08T18:03:44.3553164Z ✔ status reports which code the daemon runs, and restart waits while work runs (12.195155ms)
+check	UNKNOWN STEP	2026-11-08T18:03:44.3842981Z ✔ GET /api/events sends the current rev, then each new one, and unsubscribes on close (27.751904ms)
+check	UNKNOWN STEP	2026-11-08T18:03:44.5787613Z ✔ #/tray is the tray window, and round-trips (2.575434ms)
+check	UNKNOWN STEP	2026-11-08T18:03:44.5811264Z ✔ a task link opens that task, on the overview unless a tab is named (0.39631ms)
+check	UNKNOWN STEP	2026-11-08T18:03:44.5823417Z ✔ new opens the form, and an empty link or queue opens the queue (0.311863ms)
+check	UNKNOWN STEP	2026-11-08T18:03:44.5854182Z ✔ the menu links open the scorecard, the palette and the panels (0.292828ms)
+check	UNKNOWN STEP	2026-11-08T18:03:44.5871466Z ✔ anything else is ignored (0.271938ms)
+check	UNKNOWN STEP	2026-11-08T18:03:44.5908589Z ✔ taskUrl round-trips through parseAppUrl (0.312444ms)
+check	UNKNOWN STEP	2026-11-08T18:03:49.6013445Z ✔ docs/architecture.md matches the code (489.166765ms)
+check	UNKNOWN STEP	2026-11-08T18:03:49.6019044Z ✔ docs/reference: each generated file matches the code (2739.670613ms)
+check	UNKNOWN STEP	2026-11-08T18:03:49.6023234Z ✔ docs: generating twice changes nothing (357.324064ms)
+check	UNKNOWN STEP	2026-11-08T18:03:49.6027943Z ✔ docs/architecture.md is short and opens with the layers (0.471321ms)
+check	UNKNOWN STEP	2026-11-08T18:03:49.6034269Z ✔ docs/architecture.md links every file of docs/reference/ (1.168614ms)
+check	UNKNOWN STEP	2026-11-08T18:03:49.6041802Z ✔ docs: every adapters/*.ts file is named in the system context (0.542604ms)
+check	UNKNOWN STEP	2026-11-08T18:03:49.6044871Z ✔ docs: identifiers in backticks in the hand-written sections are exported from daemon/src (170.677798ms)
+check	UNKNOWN STEP	2026-11-08T18:03:49.6046802Z ✔ docs/reference/models.md lists every field of Task (196.220371ms)
+check	UNKNOWN STEP	2026-11-08T18:03:49.6063493Z ✔ docs/reference/use-cases.md lists every export of actions.ts (248.387258ms)
+check	UNKNOWN STEP	2026-11-08T18:03:49.6067039Z ✔ [state-as-data] every rule table in domain/ is listed by the generator, and every state type has one or a reason (252.44149ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.3465353Z ✔ [ports] application/ imports only itself and domain/, and only compose.ts names db/ and adapters/ (4.379817ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.3607893Z ✔ [ports] a sample where application/ imports adapters/git.ts or db/ fails (0.761613ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.3775376Z ✔ [layers, domain-pure, adapters-io, entry-points] each layer imports only the layers below it (1.820322ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.3790241Z ✔ [actions-only, entry-points] api/ and cli/ reach application/ only through actions.ts (0.419144ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.3791688Z ✔ [contract-types] api/contract.ts imports only types, only from domain/ (0.24061ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.3793130Z ✔ [domain-pure, sql-in-db, no-runtime-deps] packages are imported only where they belong (0.691573ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.3794478Z ✔ [sql-in-db] db/tables.ts is imported at runtime only by files in db/ (0.437969ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.3863417Z ✔ [layers] there are no import cycles (1.175437ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.3868577Z ✔ [contexts] every context has an index.ts of named exports, and every context is imported only through it (2.488111ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.3870217Z ✔ [contexts] an index exports only what something outside its context imports (17.94879ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.3871882Z ✔ [contexts] a sample that reaches into another context, or has a bare or starred index, fails (1.207307ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.3873831Z ✔ [folder-cycles] domain/ and application/ folders form no cycle beyond the allowed ones, and no allowed entry is stale (2.414553ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.3875789Z ✔ [folder-cycles] a sample with a new folder cycle fails, naming the folders and files; a stale entry fails too (1.096069ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.3883988Z ✔ [domain-pure] domain/ reads no clock, randomness or environment, except as a parameter default (16.01923ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.3885609Z ✔ [domain-pure] domain/ calls JSON.parse only in the parsers of outside formats (0.385471ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.3886897Z ✔ [sql-in-db] SQL runs only in db/ (15.15135ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.3887928Z ✔ [sql-in-db] nothing outside db/ uses db.raw (153.878808ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.3889393Z ✔ [sql-in-db] raw sql in db/ carries a `// guard:` comment saying what the builder cannot express (4.748957ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.3891448Z ✔ [guarded-status] the finder reports an unguarded builder write, a write outside the allowed functions, and a raw SQL write (2.458836ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.3893255Z ✔ [guarded-status] a task status changes only through a guarded transition (29.949774ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.3894664Z ✔ [task-writes] the finder fails a write that is neither from the domain nor on the list (1.070221ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.3896675Z ✔ [task-writes] a task write with a rule takes its changes from domain/, and a plain one is on the list with its reason (19.465241ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.3898737Z ✔ [models-not-rows] the finder tells a mapped read from an unmapped one, and a row from a projection (2.774185ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.3900505Z ✔ [models-not-rows] no store returns a whole row of tasks, repos or runs unmapped (32.151096ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.3903419Z ✔ [models-not-rows] domain entities have no flags or JSON documents beyond the shrinking list, and no entry is stale (1.529589ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.3905487Z ✔ [models-not-rows] a sample with a new row-shaped field fails; a stale entry fails too (0.525082ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.3907488Z ✔ [claude-process-group] claude runs only from adapters/claude.ts, in its own process group (23.51865ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.3909073Z ✔ [migrations-append] shipped migration steps are unchanged (119.576941ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.3910378Z ✔ [migrations-append] a new migration step only adds (0.327051ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.3911907Z ✔ [migrations-append] the additive check finds renames and drops, in SQL and in function steps (0.271007ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.3913842Z ✔ [no-module-state] application/ keeps no module-level state except a lock or a cache of immutable results (9.652763ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.9893569Z ✔ a refresh stores the check it ran, never or merge alike; merging, closing and turning auto-merge off clear it (72.028896ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.9901537Z ✔ a refresh stores no check for a task with auto-merge off (9.84572ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.9922192Z ✔ autoMergeView: each state with its label and reasons (1.91031ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.9924362Z ✔ autoMergeView: a stored check counts only while the PR is open, and an unreadable one counts for nothing (1.292326ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.9933834Z ✔ autoMergeView: where on or off comes from, and what the limits say about the tests (1.764178ms)
+check	UNKNOWN STEP	2026-11-08T18:03:51.9935803Z ✔ autoMergeView: a measured branch adds how it stands against the limits (14.549396ms)
+check	UNKNOWN STEP	2026-11-08T18:03:52.0730299Z ✔ measureBranch counts the lines and paths a branch changed against the base; taskDetail shows them for a task with no PR (93.625566ms)
+check	UNKNOWN STEP	2026-11-08T18:03:52.0732908Z ✔ ls and show say a task with a PR over the limit needs a person to merge (16.054757ms)
+check	UNKNOWN STEP	2026-11-08T18:03:52.0735311Z ✔ context marks an open task with its auto-merge label unless it is off (2.933263ms)
+check	UNKNOWN STEP	2026-11-08T18:03:52.7131451Z ✔ autoMergeOn: the task wins, else the repo; a planner proposal only when a person approved it (16.152251ms)
+check	UNKNOWN STEP	2026-11-08T18:03:52.7137709Z ✔ autoMergeCheck: a clean, tested, labelled PR merges; a draft too (3.471348ms)
+check	UNKNOWN STEP	2026-11-08T18:03:52.7140688Z ✔ autoMergeCheck: what needs a person (2.651866ms)
+check	UNKNOWN STEP	2026-11-08T18:03:52.7150260Z ✔ autoMergeCheck: a PR touching .claude/ needs a person, even with an empty skip list (1.989468ms)
+check	UNKNOWN STEP	2026-11-08T18:03:52.7153948Z ✔ autoMergeCheck: what can still change on its own (2.235007ms)
+check	UNKNOWN STEP	2026-11-08T18:03:52.7155825Z ✔ autoMergeCheck: with auto_resolve off a conflict needs a person and names the sync; on, it still waits (1.809923ms)
+check	UNKNOWN STEP	2026-11-08T18:03:52.7163517Z ✔ repo auto-merge settings: off by default, set from the CLI and the API, validated (8.550332ms)
+check	UNKNOWN STEP	2026-11-08T18:03:52.7167564Z ✔ a PR the daemon may merge opens with the label; one it may not opens without (27.808196ms)
+check	UNKNOWN STEP	2026-11-08T18:03:52.7172418Z ✔ the refresh finds a ready PR and autoMerge merges it, records who did, cleans up and releases its dependents (20.447433ms)
+check	UNKNOWN STEP	2026-11-08T18:03:52.7179045Z ✔ the refresh leaves PRs that need a person or must wait, and the preview says why (44.327626ms)
+check	UNKNOWN STEP	2026-11-08T18:03:52.7180080Z ✔ a paused daemon or repo waits; a planner proposal the planner approved itself never merges (29.310804ms)
+check	UNKNOWN STEP	2026-11-08T18:03:52.7181108Z ✔ autoMerge merges one PR per call, skips one that moved on, and tells a refused merge once (25.650839ms)
+check	UNKNOWN STEP	2026-11-08T18:03:52.7880062Z ✔ a merge and a sync never touch one task at once (35.773146ms)
+check	UNKNOWN STEP	2026-11-08T18:03:52.7882680Z ✔ a gh merge failure on a PR that is already merged sends no "Could not merge" (7.525696ms)
+check	UNKNOWN STEP	2026-11-08T18:03:52.7884332Z ✔ setAutoMerge overrides the repo for one task and moves the label on its open PR (14.440743ms)
+check	UNKNOWN STEP	2026-11-08T18:03:53.0375157Z ✔ the scheduler merges a ready PR on its own refresh, and tells a merge that keeps failing once (280.988796ms)
+check	UNKNOWN STEP	2026-11-08T18:03:53.2778699Z ✔ a blocked or failed task dropped on Done is marked done (1.705037ms)
+check	UNKNOWN STEP	2026-11-08T18:03:53.2797201Z ✔ a task in review dropped on Done merges its PR; dropped on Queued it runs again (0.33748ms)
+check	UNKNOWN STEP	2026-11-08T18:03:53.2807261Z ✔ no other task moves to Done by a drop (0.408264ms)
+check	UNKNOWN STEP	2026-11-08T18:03:53.2823877Z ✔ the other moves are unchanged (0.24608ms)
+check	UNKNOWN STEP	2026-11-08T18:03:53.2825255Z ✔ every finished task is in Done, whatever its PR; an open PR is in Review (0.249406ms)
+check	UNKNOWN STEP	2026-11-08T18:03:54.1658282Z ✔ [branded-ids] a RepoId passed where a TaskId is wanted fails the type check (0.971295ms)
+check	UNKNOWN STEP	2026-11-08T18:03:54.1677483Z ✔ [branded-ids] parseId reads a whole number above 0, with or without # (0.340026ms)
+check	UNKNOWN STEP	2026-11-08T18:03:54.1687062Z ✔ [branded-ids] a domain or contract field named …_id or …Id is not typed number (501.730826ms)
+check	UNKNOWN STEP	2026-11-08T18:03:54.4111054Z ✔ three proposals can be approved or rejected together (4.807116ms)
+check	UNKNOWN STEP	2026-11-08T18:03:54.4149801Z ✔ only what every task allows is offered (1.697854ms)
+check	UNKNOWN STEP	2026-11-08T18:03:54.4158001Z ✔ done tasks with open PRs can be merged together (0.511206ms)
+check	UNKNOWN STEP	2026-11-08T18:03:54.4187605Z ✔ a task in review that is syncing or has a merge request is not offered for a merge (0.294651ms)
+check	UNKNOWN STEP	2026-11-08T18:03:54.4189561Z ✔ Merge all takes the Review group's tasks that may start a merge, and nothing from another group (0.451033ms)
+check	UNKNOWN STEP	2026-11-08T18:03:54.4207087Z ✔ nothing selected offers nothing (0.183282ms)
+check	UNKNOWN STEP	2026-11-08T18:03:54.4217600Z ✔ a shift-click range runs either way and falls back to the one row (0.285063ms)
+check	UNKNOWN STEP	2026-11-08T18:03:57.0772778Z ✔ a cancel kills a group that ignores SIGTERM once the grace period is over (2518.550279ms)
+check	UNKNOWN STEP	2026-11-08T18:03:57.0785134Z ✔ the grace period is a named constant (0.37465ms)
+check	UNKNOWN STEP	2026-11-08T18:03:59.8825261Z ✔ a run that exits on its own sends no SIGKILL later (2807.243187ms)
+check	UNKNOWN STEP	2026-11-08T18:04:00.0138168Z ✔ a chain of single-child folders is one node (2.455962ms)
+check	UNKNOWN STEP	2026-11-08T18:04:00.0142036Z ✔ a folder with files or several folders is not joined (12.632508ms)
+check	UNKNOWN STEP	2026-11-08T18:04:00.0144455Z ✔ folders come before files, each sorted by name (0.464028ms)
+check	UNKNOWN STEP	2026-11-08T18:04:00.0149497Z ✔ a file carries its status as a badge, and its counts or "bin" (0.56659ms)
+check	UNKNOWN STEP	2026-11-08T18:04:00.0180180Z ✔ no changed files is an empty root (0.254495ms)
+check	UNKNOWN STEP	2026-11-08T18:04:00.3970861Z ✔ a write from another connection moves rev and calls onOtherProcess (2.281455ms)
+check	UNKNOWN STEP	2026-11-08T18:04:00.3984283Z ✔ a write through the daemon’s own Db moves rev but does not call onOtherProcess (3.706109ms)
+check	UNKNOWN STEP	2026-11-08T18:04:00.4559323Z ✔ with no writes, rev stays put across several intervals (59.931801ms)
+check	UNKNOWN STEP	2026-11-08T18:04:00.4764298Z ✔ the timer notices a write on its own (20.632636ms)
+check	UNKNOWN STEP	2026-11-08T18:04:00.5997643Z ✔ a branch changing only docs runs check:fast alone (2.700519ms)
+check	UNKNOWN STEP	2026-11-08T18:04:00.6038184Z ✔ a branch changing daemon/src/db/ runs the crash test (0.389519ms)
+check	UNKNOWN STEP	2026-11-08T18:04:00.6079064Z ✔ each crash-test path calls for it (0.346148ms)
+check	UNKNOWN STEP	2026-11-08T18:04:00.6109142Z ✔ paths beside the crash-test ones do not call for it (0.482822ms)
+check	UNKNOWN STEP	2026-11-08T18:04:00.6128232Z ✔ a branch changing app/src-tauri/ runs check:rust (0.306954ms)
+check	UNKNOWN STEP	2026-11-08T18:04:00.6147861Z ✔ a branch changing both runs both, the crash test first, each with the paths that call for it (0.305371ms)
+check	UNKNOWN STEP	2026-11-08T18:04:00.6157802Z ✔ the crash test runs 5 times (0.237103ms)
+check	UNKNOWN STEP	2026-11-08T18:04:00.6161394Z ✔ the reason line names the paths, and how many more (0.565477ms)
+check	UNKNOWN STEP	2026-11-08T18:04:00.9846128Z ✔ readCheck: a stored check is a verdict with its reasons, and anything else is none (1.63688ms)
+check	UNKNOWN STEP	2026-11-08T18:04:00.9867675Z ✔ readCounts: stored check counts need all three numbers (0.230531ms)
+check	UNKNOWN STEP	2026-11-08T18:04:00.9887533Z ✔ stored checks read as values, and stored() turns them back for the API (17.271191ms)
+check	UNKNOWN STEP	2026-11-08T18:04:01.6454910Z ✔ claimNextTask picks the first queued task, by priority then id, that has no startWait (152.125888ms)
+check	UNKNOWN STEP	2026-11-08T18:04:01.6469324Z ✔ claimNextTask and startState agree for tasks with several links, of either kind (134.171507ms)
+check	UNKNOWN STEP	2026-11-08T18:04:01.8628538Z ✔ a clean exit with a result is finished (1.562831ms)
+check	UNKNOWN STEP	2026-11-08T18:04:01.8647873Z ✔ cancel wins over a rate limit (0.964002ms)
+check	UNKNOWN STEP	2026-11-08T18:04:01.8667773Z ✔ a 429 with no reset time stays a failure, as before: there is no time to wait until (0.293439ms)
+check	UNKNOWN STEP	2026-11-08T18:04:01.8708516Z ✔ a rate limit with a reset time is rate limited until then (0.450372ms)
+check	UNKNOWN STEP	2026-11-08T18:04:01.8709639Z ✔ no result is failed with the stderr tail (0.362297ms)
+check	UNKNOWN STEP	2026-11-08T18:04:01.8711813Z ✔ an error result is failed with its subtype (0.232755ms)
+check	UNKNOWN STEP	2026-11-08T18:04:02.2496835Z ✔ the old command names still run the renamed commands (0.921863ms)
+check	UNKNOWN STEP	2026-11-08T18:04:02.2499409Z ✔ repo plan and repo propose reach the propose command (1.473505ms)
+check	UNKNOWN STEP	2026-11-08T18:04:02.6360181Z ✔ every command is in the help (4.247489ms)
+check	UNKNOWN STEP	2026-11-08T18:04:02.6376006Z ✔ the help lists every notification kind (0.469047ms)
+check	UNKNOWN STEP	2026-11-08T18:04:03.1155237Z ✔ describeEvent words each kind of history row (1.997223ms)
+check	UNKNOWN STEP	2026-11-08T18:04:03.1158959Z ✔ digest: a quiet turn is the header alone; a start shows the open tasks (1.817989ms)
+check	UNKNOWN STEP	2026-11-08T18:04:03.1160390Z ✔ digest groups changes by task, in order, and shows the open tasks with them (0.43858ms)
+check	UNKNOWN STEP	2026-11-08T18:04:03.1161832Z ✔ digest cuts the lines below the header at the limit and counts the rest (0.402572ms)
+check	UNKNOWN STEP	2026-11-08T18:04:03.1164910Z ✔ digest: 30 events still leave "Open:" with the tasks that need you (0.723833ms)
+check	UNKNOWN STEP	2026-11-08T18:04:03.1166836Z ✔ digest: the header names a usage-limit backoff (14.889521ms)
+check	UNKNOWN STEP	2026-11-08T18:04:03.1939127Z ✔ liveContext: the open tasks first, then only what changed after the cursor, in this repo (117.941848ms)
+check	UNKNOWN STEP	2026-11-08T18:04:07.0738406Z ✔ liveContext: a cursor above the newest event is no cursor; only this repo's open tasks show (28.648713ms)
+check	UNKNOWN STEP	2026-11-08T18:04:07.0739487Z ✔ repoForPath finds the repo from its checkout, a subdirectory or a task worktree, and nothing elsewhere (12.887957ms)
+check	UNKNOWN STEP	2026-11-08T18:04:07.0748918Z ✔ the hook prints the picture once per session, then only changes, and nothing for a worker (3864.812494ms)
+check	UNKNOWN STEP	2026-11-08T18:04:07.9769084Z ✔ [coverage-floors] COVERAGE_FLOORS names every group of daemon/src that has code, and nothing else (497.334356ms)
+check	UNKNOWN STEP	2026-11-08T18:04:07.9774515Z ✔ [coverage-floors] every floor is a whole percent from 0 to 100 (0.396221ms)
+check	UNKNOWN STEP	2026-11-08T18:04:07.9777841Z ✔ coverage: a file belongs to its context, its layer, or the top of src (0.210954ms)
+check	UNKNOWN STEP	2026-11-08T18:04:07.9780756Z ✔ coverage: an lcov report is read per file under daemon/src and summed per group (0.78647ms)
+check	UNKNOWN STEP	2026-11-08T18:04:07.9782989Z ✔ coverage: a group below its floor fails, one beaten by more than 2 points is told to rise, and floors must match the groups (0.465179ms)
+check	UNKNOWN STEP	2026-11-08T18:04:07.9785221Z ✔ coverage: a percent shows rounded down, and a file of types alone has no group (0.389769ms)
+check	UNKNOWN STEP	2026-11-08T18:04:08.4074901Z ✔ a healthy daemon passes every check and has nothing to fix (1.896224ms)
+check	UNKNOWN STEP	2026-11-08T18:04:08.4082788Z ✔ service: not installed, not loaded, loaded but not running (0.813842ms)
+check	UNKNOWN STEP	2026-11-08T18:04:08.4096830Z ✔ api: unreachable, a foreign daemon on the port, and answering with its uptime (0.263763ms)
+check	UNKNOWN STEP	2026-11-08T18:04:08.4103337Z ✔ uptime is worded in the largest units (0.157034ms)
+check	UNKNOWN STEP	2026-11-08T18:04:08.4118647Z ✔ code: same commit passes; a different one names both and how far behind, and fixes with a restart (0.375132ms)
+check	UNKNOWN STEP	2026-11-08T18:04:08.4135790Z ✔ reload: idle and pending pass; blocked fails with the way out (0.420055ms)
+check	UNKNOWN STEP	2026-11-08T18:04:08.4137504Z ✔ checks that need the daemon fail as not run when it is down, with the fix for the daemon (0.323034ms)
+check	UNKNOWN STEP	2026-11-08T18:04:08.4139270Z ✔ processes: a group that outlived its run is a stray; one of a running run is not, unless the daemon is gone (0.272088ms)
+check	UNKNOWN STEP	2026-11-08T18:04:08.4141163Z ✔ tasks, daemon up: its own runs are healthy in setup, sync and tests; one older than the daemon with no claude is dead (0.568312ms)
+check	UNKNOWN STEP	2026-11-08T18:04:08.4142444Z ✔ tasks, daemon down: a dead process or a pid overdue fails; a fresh run without a pid yet does not (0.601454ms)
+check	UNKNOWN STEP	2026-11-08T18:04:08.4143942Z ✔ log: errors of the last 24 hours are found, with stacks folded in and older ones left out (0.707563ms)
+check	UNKNOWN STEP	2026-11-08T18:04:08.4144912Z ✔ log: verdict and fix (0.271608ms)
+check	UNKNOWN STEP	2026-11-08T18:04:08.4145505Z ✔ gh: logged in or not (0.168165ms)
+check	UNKNOWN STEP	2026-11-08T18:04:08.4146719Z ✔ reloadState: pending with what it waits for, blocked only while a change waits (0.519662ms)
+check	UNKNOWN STEP	2026-11-08T18:04:08.4147994Z ✔ gatherHealth reads runs and tasks from the database and their liveness from the probes (29.759794ms)
+check	UNKNOWN STEP	2026-11-08T18:04:08.4148845Z ✔ daemonReport gives the checks, HEAD, the running tasks and the last 20 log lines (19.668893ms)
+check	UNKNOWN STEP	2026-11-08T18:04:08.4243906Z ✔ restartNow names the running tasks and restarts after the answer (30.04585ms)
+check	UNKNOWN STEP	2026-11-08T18:04:09.1121533Z ✔ [dashboard-layout] each folder of app/src imports only the folders below it (3.263971ms)
+check	UNKNOWN STEP	2026-11-08T18:04:09.1158319Z ✔ [dashboard-layout] the layout check fails when components/ui/ imports from components/task/ (0.769358ms)
+check	UNKNOWN STEP	2026-11-08T18:04:09.1160241Z ✔ [dashboard-layout] the status comparison finder sees a rule by its name and ignores other comparisons (0.998025ms)
+check	UNKNOWN STEP	2026-11-08T18:04:09.1163018Z ✔ [dashboard-layout] the dashboard decides no new rule on a task status, and the known ones are still there (15.649521ms)
+check	UNKNOWN STEP	2026-11-08T18:04:09.5254702Z ✔ hasQueued is true only while a queued task exists (24.541794ms)
+check	UNKNOWN STEP	2026-11-08T18:04:09.5270233Z ✔ runsForTask query uses the runs_task index (13.941789ms)
+check	UNKNOWN STEP	2026-11-08T18:04:09.5335110Z ✔ a database already at version 1 gets the runs_task index on open (13.088203ms)
+check	UNKNOWN STEP	2026-11-08T18:04:09.6592332Z ✔ parsePatch numbers lines per hunk and skips file headers and the no-newline marker (2.802488ms)
+check	UNKNOWN STEP	2026-11-08T18:04:09.6632370Z ✔ parsePatch of nothing has no hunks (0.227635ms)
+check	UNKNOWN STEP	2026-11-08T18:04:09.6657633Z ✔ splitRows pairs each run of deletions with the additions after it (0.411438ms)
+check	UNKNOWN STEP	2026-11-08T18:04:09.6687250Z ✔ splitRows leaves the left blank for additions alone (0.246511ms)
+check	UNKNOWN STEP	2026-11-08T18:04:09.6689047Z ✔ anchorOf puts deleted lines on the old file and the rest on the new one (0.38004ms)
+check	UNKNOWN STEP	2026-11-08T18:04:09.8212253Z ✔ every file path named in the docs exists (27.159942ms)
+check	UNKNOWN STEP	2026-11-08T18:04:10.2877836Z ✔ parseStatus (2.145179ms)
+check	UNKNOWN STEP	2026-11-08T18:04:10.4459140Z ✔ done task: worktree, branch, commit, tests, usage recorded (206.232713ms)
+check	UNKNOWN STEP	2026-11-08T18:04:10.5655066Z ✔ blocked task keeps the reason (117.948056ms)
+check	UNKNOWN STEP	2026-11-08T18:04:10.7730514Z ✔ failing task retries up to max_attempts (210.180843ms)
+check	UNKNOWN STEP	2026-11-08T18:04:10.8984304Z ✔ rate limit requeues without spending an attempt and holds the queue (121.4785ms)
+check	UNKNOWN STEP	2026-11-08T18:04:12.9799349Z ✔ cancel stops a running task (2086.154295ms)
+check	UNKNOWN STEP	2026-11-08T18:04:14.1277202Z ✔ a cancel requested while the run is finishing wins over done (1140.870062ms)
+check	UNKNOWN STEP	2026-11-08T18:04:14.1291834Z ✔ orphaned running tasks are requeued on start (3.650654ms)
+check	UNKNOWN STEP	2026-11-08T18:04:14.1294757Z ✔ a task interrupted by repeated restarts fails instead of looping (6.197824ms)
+check	UNKNOWN STEP	2026-11-08T18:04:14.8443894Z ✔ claude processes left by a dead daemon are stopped, with their children (366.115585ms)
+check	UNKNOWN STEP	2026-11-08T18:04:14.8445569Z ✔ a claude started long after its run row opened (setup, a sync) is still the run own, and is reaped (337.203688ms)
+check	UNKNOWN STEP	2026-11-08T18:04:14.8447104Z ✔ defaultTitle cuts at sentence or word boundary (0.680492ms)
+check	UNKNOWN STEP	2026-11-08T18:04:14.8447784Z ✔ final outcomes are recorded as notifications; retried failures are not (0.358761ms)
+check	UNKNOWN STEP	2026-11-08T18:04:15.0131797Z ✔ governor holds queued work over the 5h cap and notifies once (143.972026ms)
+check	UNKNOWN STEP	2026-11-08T18:04:15.0569771Z ✔ repo add detects the toolchain; repos registered before detection get its rules on the fly (77.476715ms)
+check	UNKNOWN STEP	2026-11-08T18:04:15.2139668Z ✔ setup runs in the worktree before claude starts (157.377671ms)
+check	UNKNOWN STEP	2026-11-08T18:04:15.2539833Z ✔ a failing setup blocks the task without starting claude (37.138893ms)
+check	UNKNOWN STEP	2026-11-08T18:04:15.5275456Z ✔ each run gets a sandbox settings file outside its worktree (273.207799ms)
+check	UNKNOWN STEP	2026-11-08T18:04:15.7478889Z ✔ a sandbox that cannot start fails the run with claude’s reason (119.611379ms)
+check	UNKNOWN STEP	2026-11-08T18:04:15.7480453Z ✔ repo network rejects things that are not host names (0.997455ms)
+check	UNKNOWN STEP	2026-11-08T18:04:15.9263800Z ✔ a new worktree starts from origin/<base> when origin is ahead of the local base (284.818219ms)
+check	UNKNOWN STEP	2026-11-08T18:04:16.0727221Z ✔ the person variant words a sync as a sync (4.669617ms)
+check	UNKNOWN STEP	2026-11-08T18:04:16.0747375Z ✔ the person variant shows the reason beside the sentence, except where the sentence says it (0.376223ms)
+check	UNKNOWN STEP	2026-11-08T18:04:16.0752155Z ✔ the person variant reads merge reasons (0.414635ms)
+check	UNKNOWN STEP	2026-11-08T18:04:16.0779209Z ✔ the person variant leaves out rows the timeline does not show (0.222066ms)
+check	UNKNOWN STEP	2026-11-08T18:04:16.0798248Z ✔ the person variant words cancels and restarts by status (0.231051ms)
+check	UNKNOWN STEP	2026-11-08T18:04:16.7041695Z ✔ /changes lists added, modified, deleted, renamed and binary files against the merge base (84.773543ms)
+check	UNKNOWN STEP	2026-11-08T18:04:16.8409525Z ✔ /diff returns one file patch, pairs renames, and cuts big patches (136.517501ms)
+check	UNKNOWN STEP	2026-11-08T18:04:16.9165798Z ✔ /tree lists one level, folders first, at head or base (74.887376ms)
+check	UNKNOWN STEP	2026-11-08T18:04:17.0648389Z ✔ /file reads text, binary and oversized files from git objects (149.987368ms)
+check	UNKNOWN STEP	2026-11-08T18:04:17.0753156Z ✔ bad paths and refs are 400s (10.914279ms)
+check	UNKNOWN STEP	2026-11-08T18:04:17.1578838Z ✔ a task with no branch, or a branch that is gone, answers 400 task has no branch yet (26.866784ms)
+check	UNKNOWN STEP	2026-11-08T18:04:17.2069798Z ✔ the base is the newer merge base of the local base branch and origin/<base> (101.281219ms)
+check	UNKNOWN STEP	2026-11-08T18:04:17.3504957Z ✔ checkPath accepts repo-relative paths and drops trailing slashes (3.5043ms)
+check	UNKNOWN STEP	2026-11-08T18:04:17.3532072Z ✔ checkPath refuses absolute, .., NUL, option-like and empty paths (0.466572ms)
+check	UNKNOWN STEP	2026-11-08T18:04:17.3549045Z ✔ checkPath allows the root only when asked (0.313335ms)
+check	UNKNOWN STEP	2026-11-08T18:04:17.3555533Z ✔ isBinary looks for a NUL byte in the first 8000 bytes (0.735425ms)
+check	UNKNOWN STEP	2026-11-08T18:04:17.3557361Z ✔ capText keeps text under the limit and cuts on a character or line boundary (0.626591ms)
+check	UNKNOWN STEP	2026-11-08T18:04:17.3558619Z ✔ parseNumstat reads counts, binary files and renames (0.559796ms)
+check	UNKNOWN STEP	2026-11-08T18:04:17.3559737Z ✔ parseNameStatus reads statuses, renames and type changes (0.287046ms)
+check	UNKNOWN STEP	2026-11-08T18:04:17.3560675Z ✔ mergeChanges joins status and counts by path (0.57814ms)
+check	UNKNOWN STEP	2026-11-08T18:04:17.3561460Z ✔ parseLog splits commits on record and unit separators, with times in UTC like the rest of the API (0.801127ms)
+check	UNKNOWN STEP	2026-11-08T18:04:17.3562318Z ✔ parseLsTree and treeEntries: folders first, then by name, sizes for files only (0.973108ms)
+check	UNKNOWN STEP	2026-11-08T18:04:17.5387548Z ✔ waitFor returns what the check returned once it is truthy (42.075728ms)
+check	UNKNOWN STEP	2026-11-08T18:04:17.6424970Z ✔ waitFor throws, naming what it waited for, at the deadline (101.776941ms)
+check	UNKNOWN STEP	2026-11-08T18:04:17.6427701Z ✔ waitFor ends with the error of a check that throws (0.460431ms)
+check	UNKNOWN STEP	2026-11-08T18:04:17.7973978Z ✔ follow-ups: every entry in RULES is followed up as before, less the warnings that found no one (4.62444ms)
+check	UNKNOWN STEP	2026-11-08T18:04:17.8096427Z ✔ follow-ups: a history row reads back as the domain event that wrote it, so the outbox runs the same follow-ups (0.993678ms)
+check	UNKNOWN STEP	2026-11-08T18:04:17.8098612Z ✔ follow-ups: a task queued, running or asked to stop leaves no one stuck, so warning about it did nothing (0.432228ms)
+check	UNKNOWN STEP	2026-11-08T18:04:17.8150316Z ✔ follow-ups: only the daemon's events notify or open a PR, and a person's cancel and reject warn dependents (0.54578ms)
+check	UNKNOWN STEP	2026-11-08T18:04:17.8152181Z ✔ follow-ups: every domain event has a row, and followUpsOf runs each once, the PR first (0.290112ms)
+check	UNKNOWN STEP	2026-11-08T18:04:18.0653615Z ✔ a timed-out gh says so and does not quote its arguments (1.510674ms)
+check	UNKNOWN STEP	2026-11-08T18:04:18.0668694Z ✔ a gh that fails without stderr reports its exit code, not the arguments (16.824264ms)
+check	UNKNOWN STEP	2026-11-08T18:04:18.0771424Z ✔ a failing gh reports the first lines of its stderr, and auth() reports the last line of gh's output (13.970561ms)
+check	UNKNOWN STEP	2026-11-08T18:04:18.0778760Z ✔ auth() is ok when gh is logged in (7.103656ms)
+check	UNKNOWN STEP	2026-11-08T18:04:18.2251550Z ✔ no data: run freely (2.105705ms)
+check	UNKNOWN STEP	2026-11-08T18:04:18.2257765Z ✔ 5h soft limit throttles to one task, cap holds until reset (1.880795ms)
+check	UNKNOWN STEP	2026-11-08T18:04:18.2297250Z ✔ expired windows are ignored (0.388696ms)
+check	UNKNOWN STEP	2026-11-08T18:04:18.2298805Z ✔ weekly pacing allows linear spend plus slack (0.394878ms)
+check	UNKNOWN STEP	2026-11-08T18:04:18.2300370Z ✔ weekly cap holds until the window resets (0.348441ms)
+check	UNKNOWN STEP	2026-11-08T18:04:18.2302781Z ✔ the later of two holds wins (0.345827ms)
+check	UNKNOWN STEP	2026-11-08T18:04:18.2303713Z ✔ budget validation (0.280775ms)
+check	UNKNOWN STEP	2026-11-08T18:04:18.4779523Z ✔ a chain goes left to right on one row (3.75061ms)
+check	UNKNOWN STEP	2026-11-08T18:04:18.4781468Z ✔ a fan-out puts the dependents in one layer, one row each (0.573322ms)
+check	UNKNOWN STEP	2026-11-08T18:04:18.4784415Z ✔ a diamond layers by the longest path (0.524711ms)
+check	UNKNOWN STEP	2026-11-08T18:04:18.4786785Z ✔ two separate graphs are stacked without overlap (0.4066ms)
+check	UNKNOWN STEP	2026-11-08T18:04:18.4789776Z ✔ ordering cuts a crossing (0.297406ms)
+check	UNKNOWN STEP	2026-11-08T18:04:18.4791378Z ✔ edges to tasks that are not drawn are dropped (0.238635ms)
+check	UNKNOWN STEP	2026-11-08T18:04:18.4795059Z ✔ the graph is the linked tasks; unlinked ones stay out (0.763837ms)
+check	UNKNOWN STEP	2026-11-08T18:04:18.4796858Z ✔ a chain that is all finished hides unless shown (0.673388ms)
+check	UNKNOWN STEP	2026-11-08T18:04:18.4799670Z ✔ a stuck task, its root and everything it holds are outlined (0.639224ms)
+check	UNKNOWN STEP	2026-11-08T18:04:18.4803388Z ✔ hovering a task highlights its chain up and down (0.482842ms)
+check	UNKNOWN STEP	2026-11-08T18:04:19.0415518Z ✔ context map: a type-only edge is drawn dotted, a runtime one solid (10.017934ms)
+check	UNKNOWN STEP	2026-11-08T18:04:19.0445760Z ✔ context map: a cycle is marked, a runtime import beside a type-only one makes the edge runtime (1.959623ms)
+check	UNKNOWN STEP	2026-11-08T18:04:19.0449127Z ✔ adapter use: each application area lists the adapters it imports (1.928635ms)
+check	UNKNOWN STEP	2026-11-08T18:04:19.1849331Z ✔ idle, or working with a task running (2.104633ms)
+check	UNKNOWN STEP	2026-11-08T18:04:19.1852440Z ✔ precedence: paused, then rate limited, then hold, then working (1.099504ms)
+check	UNKNOWN STEP	2026-11-08T18:04:19.1853556Z ✔ a hold with no known end has no until (0.224269ms)
+check	UNKNOWN STEP	2026-11-08T18:04:19.1854450Z ✔ a rate limit that has passed counts as not limited (0.313186ms)
+check	UNKNOWN STEP	2026-11-08T18:04:19.1855329Z ✔ need_you adds proposed, blocked and review (0.238666ms)
+check	UNKNOWN STEP	2026-11-08T18:04:19.1856795Z ✔ attention: blocked, then review, then proposed, each by priority then id, at most five (0.448869ms)
+check	UNKNOWN STEP	2026-11-08T18:04:19.3081622Z ✔ Enter and Space on a button, link or role=button are left to it (2.110004ms)
+check	UNKNOWN STEP	2026-11-08T18:04:19.3083443Z ✔ other keys still work on a focused button (0.361636ms)
+check	UNKNOWN STEP	2026-11-08T18:04:19.3086967Z ✔ nothing counts while a modal dialog, alert dialog, menu or listbox is open (0.42859ms)
+check	UNKNOWN STEP	2026-11-08T18:04:19.3088870Z ✔ a non-modal popover (a dialog role without aria-modal) leaves the keys on (0.457956ms)
+check	UNKNOWN STEP	2026-11-08T18:04:19.3090687Z ✔ typing in a field, or with a modifier, does not count (1.008434ms)
+check	UNKNOWN STEP	2026-11-08T18:04:19.5892232Z ✔ priority, turn and attempt limits (1.61069ms)
+check	UNKNOWN STEP	2026-11-08T18:04:19.5896612Z ✔ task model: an alias, a full id, or none (0.354903ms)
+check	UNKNOWN STEP	2026-11-08T18:04:19.5904742Z ✔ steps need a plan (0.202478ms)
+check	UNKNOWN STEP	2026-11-08T18:04:19.5905559Z ✔ an archived repo takes no tasks (0.196758ms)
+check	UNKNOWN STEP	2026-11-08T18:04:19.5906781Z ✔ goals are limited to 20,000 characters (17.422891ms)
+check	UNKNOWN STEP	2026-11-08T18:04:19.5907576Z ✔ network hosts (0.312525ms)
+check	UNKNOWN STEP	2026-11-08T18:04:19.5908374Z ✔ planner interval, max tasks and model (0.296034ms)
+check	UNKNOWN STEP	2026-11-08T18:04:19.5909380Z ✔ notification events, ntfy topic and server (0.328213ms)
+check	UNKNOWN STEP	2026-11-08T18:04:19.5910189Z ✔ slot count (0.362597ms)
+check	UNKNOWN STEP	2026-11-08T18:04:19.8808754Z ✔ thisWeek is the Monday of the week (1.769888ms)
+check	UNKNOWN STEP	2026-11-08T18:04:19.8809721Z ✔ weekLabel is a short date (19.947462ms)
+check	UNKNOWN STEP	2026-11-08T18:04:19.8811271Z ✔ seriesOf with no data gives every measure an empty series, and hasData says so (0.606293ms)
+check	UNKNOWN STEP	2026-11-08T18:04:19.8812396Z ✔ seriesOf fills the weeks from the first with data to this one (1.105306ms)
+check	UNKNOWN STEP	2026-11-08T18:04:19.8813319Z ✔ seriesOf judges this week against the target, and quota by its total (0.413933ms)
+check	UNKNOWN STEP	2026-11-08T18:04:19.8817744Z ✔ seriesOf shows a week after this one when the data runs ahead of the clock (0.286296ms)
+check	UNKNOWN STEP	2026-11-08T18:04:20.3560651Z ✔ names are validated: a shell metacharacter is refused (36.205551ms)
+check	UNKNOWN STEP	2026-11-08T18:04:20.4288419Z ✔ installs, commits only the manifest and lockfile, and queues the task with a note (71.482601ms)
+check	UNKNOWN STEP	2026-11-08T18:04:20.4549818Z ✔ a failed install keeps the task blocked and says why (28.405989ms)
+check	UNKNOWN STEP	2026-11-08T18:04:20.4947734Z ✔ a task cancelled while its install runs stays cancelled, and the person is told (39.175219ms)
+check	UNKNOWN STEP	2026-11-08T18:04:20.5159385Z ✔ only a blocked task that asked for packages, on a Node toolchain (24.211652ms)
+check	UNKNOWN STEP	2026-11-08T18:04:20.5168672Z ✔ nothing in the worker or scheduler installs (0.504824ms)
+check	UNKNOWN STEP	2026-11-08T18:04:21.1499669Z ✔ addTask takes builds_on and after as id lists, and refuses a missing task without naming a flag (39.52861ms)
+check	UNKNOWN STEP	2026-11-08T18:04:21.1526194Z ✔ addTask with propose files a proposal that keeps its links until it is approved (14.832252ms)
+check	UNKNOWN STEP	2026-11-08T18:04:21.1527730Z ✔ a task after another runs at once (11.088896ms)
+check	UNKNOWN STEP	2026-11-08T18:04:21.1542076Z ✔ linkTasks and unlinkTasks; a self link, a repeat and a cycle are refused with a reason (15.229524ms)
+check	UNKNOWN STEP	2026-11-08T18:04:21.1544204Z ✔ an after link holds the merge until the other lands, and is gone when the other is (16.400021ms)
+check	UNKNOWN STEP	2026-11-08T18:04:21.1547216Z ✔ an after link frees the merge when the other is cancelled, a proposal rejected, or its PR closed (18.182483ms)
+check	UNKNOWN STEP	2026-11-08T18:04:21.1552109Z ✔ a builds-on link is refused on a task that has started, and an after link is not (11.973439ms)
+check	UNKNOWN STEP	2026-11-08T18:04:21.1554244Z ✔ a stuck notification leaves out a task stuck on a cancelled task between, and a chained reason says via (21.90979ms)
+check	UNKNOWN STEP	2026-11-08T18:04:21.1556418Z ✔ merging one of two tasks a task builds on does not list it as unblocked (29.862193ms)
+check	UNKNOWN STEP	2026-11-08T18:04:21.1558397Z ✔ deleting a repo warns about another repo's queued task that built on its unmerged work (31.575364ms)
+check	UNKNOWN STEP	2026-11-08T18:04:21.1560338Z ✔ a failed task notifies once for every task it leaves stuck, two links down (14.263558ms)
+check	UNKNOWN STEP	2026-11-08T18:04:21.5818069Z ✔ linkState: every row of the rules table, for builds on (2.294107ms)
+check	UNKNOWN STEP	2026-11-08T18:04:21.5819371Z ✔ linkState: an after link is met once the other landed, was rejected or is gone; otherwise it has not landed yet (0.329326ms)
+check	UNKNOWN STEP	2026-11-08T18:04:21.5829357Z ✔ startState: none, met, waiting on every unmet link (0.557371ms)
+check	UNKNOWN STEP	2026-11-08T18:04:21.5841483Z ✔ startState: stuck spreads down builds-on links, naming the root (0.539228ms)
+check	UNKNOWN STEP	2026-11-08T18:04:21.5847742Z ✔ startState: a cycle that got into the data does not loop (0.286606ms)
+check	UNKNOWN STEP	2026-11-08T18:04:21.5851678Z ✔ unlandedAfter lists the after links whose other task has not landed (0.344635ms)
+check	UNKNOWN STEP	2026-11-08T18:04:21.5860237Z ✔ stuckOn names the dependents stuck on a task, and not one stuck on something else on the way (0.71685ms)
+check	UNKNOWN STEP	2026-11-08T18:04:21.5864190Z ✔ releasedBy lists only the dependents merging a task leaves free to start (0.442507ms)
+check	UNKNOWN STEP	2026-11-08T18:04:21.5879158Z ✔ buildsOnError refuses a builds-on link once a task has started, pointing at an after link (0.579673ms)
+check	UNKNOWN STEP	2026-11-08T18:04:21.5885306Z ✔ parseTaskIds reads lists and typed text, and refuses anything else (0.708936ms)
+check	UNKNOWN STEP	2026-11-08T18:04:21.5887745Z ✔ linkError refuses a self link, a repeat and every kind of cycle (0.464809ms)
+check	UNKNOWN STEP	2026-11-08T18:04:21.5889375Z ✔ migration 18 turns an existing after_task into a builds-on link (9.005923ms)
+check	UNKNOWN STEP	2026-11-08T18:04:21.5892218Z ✔ the store lists links and dependents, and addTask turns after_task into one builds-on link (18.537888ms)
+check	UNKNOWN STEP	2026-11-08T18:04:21.5894342Z ✔ a task with two builds-on links is claimed only once both are met; an after link never holds it (20.787893ms)
+check	UNKNOWN STEP	2026-11-08T18:04:21.5895968Z ✔ repo deletion removes its tasks' links (19.895398ms)
+check	UNKNOWN STEP	2026-11-08T18:04:21.7312879Z ✔ a tool call is worded in a few words (1.806076ms)
+check	UNKNOWN STEP	2026-11-08T18:04:21.7337490Z ✔ each assistant message is a turn and the last tool use is the tool (1.082513ms)
+check	UNKNOWN STEP	2026-11-08T18:04:21.7359860Z ✔ a subagent message is not a turn and does not replace the main loop tool (0.299199ms)
+check	UNKNOWN STEP	2026-11-08T18:04:21.7377132Z ✔ only a running task has a live view (0.303737ms)
+check	UNKNOWN STEP	2026-11-08T18:04:21.7387342Z ✔ a done task has a sync view only while a sync is under way (0.299801ms)
+check	UNKNOWN STEP	2026-11-08T18:04:23.5323935Z ✔ mark_done moves blocked and failed tasks to done, clears the reason and needs, and uses no attempt (40.842024ms)
+check	UNKNOWN STEP	2026-11-08T18:04:23.5333087Z ✔ mark_done is refused from every other status (55.402367ms)
+check	UNKNOWN STEP	2026-11-08T18:04:23.5334565Z ✔ done_by is cleared when the task leaves done (11.222495ms)
+check	UNKNOWN STEP	2026-11-08T18:04:23.5336430Z ✔ pr_merged also moves blocked and failed tasks to done, without done_by (9.57211ms)
+check	UNKNOWN STEP	2026-11-08T18:04:23.5340863Z ✔ markDone names the status when it is refused, and keeps the note (12.508479ms)
+check	UNKNOWN STEP	2026-11-08T18:04:23.5344731Z ✔ the SQL and the domain agree on when a dependency is met (1256.18856ms)
+check	UNKNOWN STEP	2026-11-08T18:04:23.5346611Z ✔ a task after a person-done task starts unless that task has an open PR (12.43987ms)
+check	UNKNOWN STEP	2026-11-08T18:04:24.2165570Z ✔ requestMerge records the request with the task method, then the repo method; the preview says what it would do (40.948333ms)
+check	UNKNOWN STEP	2026-11-08T18:04:24.2170546Z ✔ requestMerge refuses a task that is not done or has no open PR (19.809717ms)
+check	UNKNOWN STEP	2026-11-08T18:04:24.2176654Z ✔ requestMerges returns the tasks it could not request, and why (9.210324ms)
+check	UNKNOWN STEP	2026-11-08T18:04:24.2189112Z ✔ cancelMergeRequest clears the request, and does nothing for a task without one (10.686123ms)
+check	UNKNOWN STEP	2026-11-08T18:04:24.2197104Z ✔ a request with checks running waits, then merges once they pass, with its method (27.829811ms)
+check	UNKNOWN STEP	2026-11-08T18:04:24.2207100Z ✔ a request whose check fails is cleared with a notification (21.585274ms)
+check	UNKNOWN STEP	2026-11-08T18:04:24.2218906Z ✔ a request over auto-merge's line limit, without its label, merges (21.699917ms)
+check	UNKNOWN STEP	2026-11-08T18:04:24.2221614Z ✔ a request is ahead of auto-merges in the refresh (18.659074ms)
+check	UNKNOWN STEP	2026-11-08T18:04:24.2224190Z ✔ two requests where one lands after the other merge in that order (26.212264ms)
+check	UNKNOWN STEP	2026-11-08T18:04:24.2226030Z ✔ a conflicting request goes to be synced and stays; one whose task or PR moved on is cleared (20.067136ms)
+check	UNKNOWN STEP	2026-11-08T18:04:24.2229123Z ✔ a merge gh refuses drops the request and tells once (15.606549ms)
+check	UNKNOWN STEP	2026-11-08T18:04:24.3891922Z ✔ a clean PR merges, with or without a label, tests or checks (2.688224ms)
+check	UNKNOWN STEP	2026-11-08T18:04:24.3927883Z ✔ pending checks, a conflict, lands after and unknown mergeability wait (0.512377ms)
+check	UNKNOWN STEP	2026-11-08T18:04:24.3959699Z ✔ required checks running make GitHub say BLOCKED; the checks are the wait, not branch protection (0.297867ms)
+check	UNKNOWN STEP	2026-11-08T18:04:24.4007544Z ✔ a failing check, failed tests, branch protection and a closed PR are never (0.334075ms)
+check	UNKNOWN STEP	2026-11-08T18:04:24.4009235Z ✔ never wins over wait: only the reasons a person must act on are listed (0.254566ms)
+check	UNKNOWN STEP	2026-11-08T18:04:24.4030814Z ✔ a draft or a branch behind the base merges (0.200024ms)
+check	UNKNOWN STEP	2026-11-08T18:04:24.4047459Z ✔ auto-merge's limits don't count: lines, skipped paths, no label (0.226093ms)
+check	UNKNOWN STEP	2026-11-08T18:04:24.4067952Z ✔ a waiting request is read again soon only for running checks or mergeability GitHub has not worked out (0.298948ms)
+check	UNKNOWN STEP	2026-11-08T18:04:24.4084887Z ✔ mergeRequestView: none, waiting with its reasons, and merging (0.680292ms)
+check	UNKNOWN STEP	2026-11-08T18:04:24.4086983Z ✔ a check marks a conflict as data, and conflictsWithBase reads it from the stored checks of an open PR (0.590032ms)
+check	UNKNOWN STEP	2026-11-08T18:04:24.4089121Z ✔ mergesNow: only failing checks or failed tests merge now, on the person's say-so; the rest goes through a request (0.402833ms)
+check	UNKNOWN STEP	2026-11-08T18:04:24.9068046Z ✔ a database from an earlier release upgrades to the fresh schema (45.604803ms)
+check	UNKNOWN STEP	2026-11-08T18:04:24.9087353Z ✔ a stored blocked_reason survives as stop_reason (22.828627ms)
+check	UNKNOWN STEP	2026-11-08T18:04:24.9151184Z ✔ a stored notify_events with hold gains paused; one without hold is unchanged (58.889478ms)
+check	UNKNOWN STEP	2026-11-08T18:04:24.9162868Z ✔ opening an up-to-date database runs no steps (11.809472ms)
+check	UNKNOWN STEP	2026-11-08T18:04:24.9164543Z ✔ a failing step rolls back and leaves user_version unchanged (2.266005ms)
+check	UNKNOWN STEP	2026-11-08T18:04:25.3129884Z ✔ each NEEDS form parses (2.17717ms)
+check	UNKNOWN STEP	2026-11-08T18:04:25.3135056Z ✔ a plain BLOCKED reason has no needs (0.230341ms)
+check	UNKNOWN STEP	2026-11-08T18:04:25.3139543Z ✔ depsRequest splits the --dev flag from the packages (0.352188ms)
+check	UNKNOWN STEP	2026-11-08T18:04:25.3146432Z ✔ depsRequestError refuses no packages and anything that is not a package spec (0.353931ms)
+check	UNKNOWN STEP	2026-11-08T18:04:25.3150218Z ✔ installArgs: npm installs, pnpm and yarn add (0.303126ms)
+check	UNKNOWN STEP	2026-11-08T18:04:25.3152827Z ✔ canInstallWith: the JS package managers only (0.230261ms)
+check	UNKNOWN STEP	2026-11-08T18:04:25.3171134Z ✔ branchName: the task’s own branch, else the one the daemon will give it (0.196136ms)
+check	UNKNOWN STEP	2026-11-08T18:04:25.3177155Z ✔ the worker prompt describes the NEEDS forms (1.419524ms)
+check	UNKNOWN STEP	2026-11-08T18:04:25.3249402Z ✔ isEnvironmentBlock: needs, denials or a setup failure (0.351707ms)
+check	UNKNOWN STEP	2026-11-08T18:04:25.3251041Z ✔ stored needs, question and plan steps are read in the mapper; malformed JSON reads as null (21.575835ms)
+check	UNKNOWN STEP	2026-11-08T18:04:25.3252598Z ✔ an environment block gives the attempt back and records the needs (14.43549ms)
+check	UNKNOWN STEP	2026-11-08T18:04:25.3267214Z ✔ a task-caused block uses its attempt (11.394707ms)
+check	UNKNOWN STEP	2026-11-08T18:04:25.7746033Z ✔ the app delivers desktop notifications when it was seen in the last 90 s (1.394807ms)
+check	UNKNOWN STEP	2026-11-08T18:04:25.7755246Z ✔ notify() uses osascript when the app has not been seen (20.337601ms)
+check	UNKNOWN STEP	2026-11-08T18:04:25.7760130Z ✔ notify() skips osascript while the app delivers, and still records the notification and sends ntfy (10.186859ms)
+check	UNKNOWN STEP	2026-11-08T18:04:25.7761890Z ✔ notify() goes back to osascript once the app has not been seen for 90 s (8.41654ms)
+check	UNKNOWN STEP	2026-11-08T18:04:25.7763188Z ✔ the app is told whether desktop notifications are on (8.745526ms)
+check	UNKNOWN STEP	2026-11-08T18:04:26.3123615Z ✔ a status change with follow-ups writes its row pending, in the same transaction; one without writes none (27.488005ms)
+check	UNKNOWN STEP	2026-11-08T18:04:26.3129973Z ✔ running a follow-up twice opens one PR and sends one notification (17.246504ms)
+check	UNKNOWN STEP	2026-11-08T18:04:26.3131949Z ✔ a tick while settle opens the PR leaves settle's row to it: one PR (13.158222ms)
+check	UNKNOWN STEP	2026-11-08T18:04:26.3134365Z ✔ the scheduler runs the follow-ups a dead daemon left: the PR opens once on restart (40.189825ms)
+check	UNKNOWN STEP	2026-11-08T18:04:26.3136718Z ✔ an event row written without the column, as older code writes it, is never followed up (12.237984ms)
+check	UNKNOWN STEP	2026-11-08T18:04:26.3140107Z ✔ a person's event waits in the outbox for the daemon, which warns the dependents once (14.063645ms)
+check	UNKNOWN STEP	2026-11-08T18:04:26.3149827Z ✔ a follow-up for a task that moved on since tells no one about the status it left (11.991513ms)
+check	UNKNOWN STEP	2026-11-08T18:04:26.7869126Z ✔ a tracked sync keeps the reload from exiting until it settles (32.984568ms)
+check	UNKNOWN STEP	2026-11-08T18:04:26.7961108Z ✔ a tracked propose keeps the reload from exiting until it settles (9.53935ms)
+check	UNKNOWN STEP	2026-11-08T18:04:26.8288801Z ✔ a tracked run that fails still lets the reload go ahead (9.551976ms)
+check	UNKNOWN STEP	2026-11-08T18:04:26.8293996Z ✔ restartWait names a running resolve, which the db counts from its run row (13.608515ms)
+check	UNKNOWN STEP	2026-11-08T18:04:26.8296495Z ✔ retryTask refuses while an unfinished resolve run is in the db (12.667535ms)
+check	UNKNOWN STEP	2026-11-08T18:04:26.8306536Z ✔ callDaemon against a stopped port dies saying the daemon is not running (7.542266ms)
+check	UNKNOWN STEP	2026-11-08T18:04:27.0790917Z ✔ every query character must appear in order, ignoring case (1.787611ms)
+check	UNKNOWN STEP	2026-11-08T18:04:27.0797842Z ✔ an empty query matches everything with the same score (0.204141ms)
+check	UNKNOWN STEP	2026-11-08T18:04:27.0817182Z ✔ exact beats prefix beats a scattered match (0.338272ms)
+check	UNKNOWN STEP	2026-11-08T18:04:27.0827860Z ✔ consecutive characters and word starts score higher (0.21435ms)
+check	UNKNOWN STEP	2026-11-08T18:04:27.0837301Z ✔ bestScore takes the best field and null when none match (0.248715ms)
+check	UNKNOWN STEP	2026-11-08T18:04:27.0838629Z ✔ rank orders by score, keeps ties in order and drops non-matches (1.207928ms)
+check	UNKNOWN STEP	2026-11-08T18:04:27.0839828Z ✔ "#88" then Enter opens task 88, whichever task is selected (1.577087ms)
+check	UNKNOWN STEP	2026-11-08T18:04:27.0841371Z ✔ with a done task whose PR is open selected, Merge is listed first (0.403263ms)
+check	UNKNOWN STEP	2026-11-08T18:04:27.0842549Z ✔ the selected task offers only what its status allows (0.613547ms)
+check	UNKNOWN STEP	2026-11-08T18:04:27.0843724Z ✔ a task in review that is syncing or has a merge request offers no Merge (0.667658ms)
+check	UNKNOWN STEP	2026-11-08T18:04:27.0844976Z ✔ commands are listed, and the daemon toggle follows its state (1.614858ms)
+check	UNKNOWN STEP	2026-11-08T18:04:27.0846011Z ✔ tasks match on title, repo and branch (0.298237ms)
+check	UNKNOWN STEP	2026-11-08T18:04:27.5375561Z ✔ a usage reading that changed appends a sample; an unchanged one does not (9.60934ms)
+check	UNKNOWN STEP	2026-11-08T18:04:27.5385827Z ✔ a PR's checks are stored once they settle, kept as first seen, and the merge stores its own (51.608604ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.0198928Z ✔ linked steps by id or all, and which are unfinished (4.447082ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.0201948Z ✔ the PR body lists criteria as checkboxes, and has no Plan section without a plan (0.790107ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.0207686Z ✔ the PR body starts with the summary and keeps the plan and runs inside one details block (0.304449ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.1740371Z ✔ a done run with every linked step finished records no event (177.821201ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.3210430Z ✔ a done run with an unfinished linked step records the event and stays done (142.387268ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.4535921Z ✔ a task with no plan gets no Plan section in its PR (144.740031ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.6205525Z ✔ there are plans to check, and plan.css beside them (2.028562ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.6230304Z ✔ auto-merge-view.html parses as a plan (5.058555ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.6257866Z ✔ auto-merge.html parses as a plan (0.909871ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.6277398Z ✔ checked-rules.html parses as a plan (1.485076ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.6278960Z ✔ conflict-resolution.html parses as a plan (2.222193ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.6297489Z ✔ daemon-architecture.html parses as a plan (1.025326ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.6317530Z ✔ dashboard-views.html parses as a plan (0.62594ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.6337300Z ✔ domain-model.html parses as a plan (1.673558ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.6348224Z ✔ drizzle.html parses as a plan (1.018443ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.6412505Z ✔ fewer-blocks.html parses as a plan (0.94115ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.6419678Z ✔ frontend-design.html parses as a plan (0.408965ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.6437174Z ✔ ink-rebrand.html parses as a plan (0.467805ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.6448506Z ✔ live-context.html parses as a plan (0.480418ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.6467848Z ✔ live-dashboard.html parses as a plan (1.274893ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.6469184Z ✔ manual-moves.html parses as a plan (0.495105ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.6470408Z ✔ merge-requests.html parses as a plan (1.012302ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.6471639Z ✔ plan-files.html parses as a plan (0.332882ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.6472781Z ✔ plan-first.html parses as a plan (0.402182ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.6474169Z ✔ plan-linked-tasks.html parses as a plan (1.342449ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.6487505Z ✔ repo-archive.html parses as a plan (0.301132ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.6489106Z ✔ resume-after-restart.html parses as a plan (0.325037ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.6490190Z ✔ review-merge.html parses as a plan (0.33178ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.6491197Z ✔ run-transcript.html parses as a plan (0.347841ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.6492149Z ✔ settle.html parses as a plan (0.328694ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.6493136Z ✔ start-decision.html parses as a plan (0.249507ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.6494250Z ✔ sync-in-dashboard.html parses as a plan (0.364932ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.6495295Z ✔ task-links.html parses as a plan (0.480688ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.7774542Z ✔ planOwnerOf: the task whose plan this one follows, else itself (1.370151ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.7807256Z ✔ otherPlanOwner: only a plan that belongs to another task (0.247844ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.7808970Z ✔ hasPlanLink: a link to its own plan or another’s counts, no link does not (0.93088ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.7828478Z ✔ checkoutOf: none when the branch, worktree and sync are all empty (0.295633ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.8930070Z ✔ a plan without plan.css gets the base style first in head, following the mode (1.659192ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.8943693Z ✔ a plan linking plan.css gets the css in place of the link and always renders light (0.304058ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.8977412Z ✔ the css is put in verbatim, whatever $ it holds (0.201487ms)
+check	UNKNOWN STEP	2026-11-08T18:04:28.8978794Z ✔ a page without head gets the style after its doctype, or at the start (0.322052ms)
+check	UNKNOWN STEP	2026-11-08T18:04:29.1624726Z ✔ step text leaves out the heading and the done criteria (5.290829ms)
+check	UNKNOWN STEP	2026-11-08T18:04:29.1649210Z ✔ the block carries the linked steps by id, and says where the plan file is (0.902006ms)
+check	UNKNOWN STEP	2026-11-08T18:04:29.1652119Z ✔ without linked steps every unfinished step is carried, and finished steps are left out (0.479707ms)
+check	UNKNOWN STEP	2026-11-08T18:04:29.1666903Z ✔ a retry sees the statuses the earlier attempt left in the stored plan (2.649302ms)
+check	UNKNOWN STEP	2026-11-08T18:04:29.1670572Z ✔ a missing plan leaves the task prompt and says so (0.286406ms)
+check	UNKNOWN STEP	2026-11-08T18:04:29.1672285Z ✔ the system prompt has the worker write plans to the plan file, never committed, and never under docs/plans/ (0.523558ms)
+check	UNKNOWN STEP	2026-11-08T18:04:29.6898231Z ✔ commitLeftovers never commits the plan file (70.884573ms)
+check	UNKNOWN STEP	2026-11-08T18:04:29.9309114Z ✔ two tasks on one plan each write back only their own steps (277.181419ms)
+check	UNKNOWN STEP	2026-11-08T18:04:30.0744869Z ✔ a plan the worker writes is stored as the task’s own plan, named after it (147.540834ms)
+check	UNKNOWN STEP	2026-11-08T18:04:30.0835176Z ✔ a plan’s owner with no --steps does not undo a step a sibling finished while it ran (10.720488ms)
+check	UNKNOWN STEP	2026-11-08T18:04:30.0953587Z ✔ a task given its plan with --plan <file>, no one following it, keeps a step its worker added (6.535586ms)
+check	UNKNOWN STEP	2026-11-08T18:04:30.2318494Z ✔ the step statuses a run marked before a restart cut it off survive when its session cannot be resumed (137.708879ms)
+check	UNKNOWN STEP	2026-11-08T18:04:30.3740489Z ✔ the step statuses a cut-off run marked survive when the restarts fail the task and a person retries it (143.216739ms)
+check	UNKNOWN STEP	2026-11-08T18:04:30.8877816Z ✔ planner is due only with goals, an empty queue, and after the interval (37.998614ms)
+check	UNKNOWN STEP	2026-11-08T18:04:30.9461310Z ✔ proposing tasks yields capped, de-duplicated tasks that wait for approval (60.8374ms)
+check	UNKNOWN STEP	2026-11-08T18:04:30.9475448Z ✔ approve queues a proposal, reject cancels it, neither works twice (5.795222ms)
+check	UNKNOWN STEP	2026-11-08T18:04:30.9816905Z ✔ an empty plan is recorded as nothing (40.361ms)
+check	UNKNOWN STEP	2026-11-08T18:04:31.0116944Z ✔ a planner run that throws still ends its row (5.728928ms)
+check	UNKNOWN STEP	2026-11-08T18:04:31.1807358Z ✔ repo names that escape the goals folder or read as an id are refused (167.621129ms)
+check	UNKNOWN STEP	2026-11-08T18:04:31.1808897Z ✔ prompt lists open and recent tasks (1.124522ms)
+check	UNKNOWN STEP	2026-11-08T18:04:31.1811126Z ✔ the planner asks for prompts with markdown section headings, shown below its own headings (1.089777ms)
+check	UNKNOWN STEP	2026-11-08T18:04:31.4269256Z ✔ with auto-approve, the scheduler plans an empty queue and runs the tasks (256.160808ms)
+check	UNKNOWN STEP	2026-11-08T18:04:31.4281928Z ✔ old databases gain the new columns (14.003742ms)
+check	UNKNOWN STEP	2026-11-08T18:04:31.4283404Z ✔ launchd plist runs this daemon with a usable PATH (0.695079ms)
+check	UNKNOWN STEP	2026-11-08T18:04:31.4285652Z ✔ the plist carries the installing shell's SDKROOT and DEVELOPER_DIR, and leaves out unset ones (0.330769ms)
+check	UNKNOWN STEP	2026-11-08T18:04:35.1843238Z ✔ parsePlan reads the title, summary and steps, in order (4.202555ms)
+check	UNKNOWN STEP	2026-11-08T18:04:35.1850336Z ✔ parsePlan reads a step’s done criteria: a list, plain text, none, and not from comments or templates (0.712061ms)
+check	UNKNOWN STEP	2026-11-08T18:04:35.1857077Z ✔ this plan’s own steps all carry done criteria (0.681755ms)
+check	UNKNOWN STEP	2026-11-08T18:04:35.1859858Z ✔ parsePlan needs the marker on <html>, and falls back to <h1> for the title (0.263553ms)
+check	UNKNOWN STEP	2026-11-08T18:04:35.1873458Z ✔ a plan is named after the task it belongs to and its title (0.571047ms)
+check	UNKNOWN STEP	2026-11-08T18:04:35.1879747Z ✔ mergePlanSteps takes only the linked steps from the plan file (1.125994ms)
+check	UNKNOWN STEP	2026-11-08T18:04:35.1883791Z ✔ mergePlanSteps saves only the steps the run changed from the copy it was given (0.943344ms)
+check	UNKNOWN STEP	2026-11-08T18:04:35.1887434Z ✔ inserting a step without an id shifts and loses none of the others (0.346387ms)
+check	UNKNOWN STEP	2026-11-08T18:04:35.1890405Z ✔ planAfterRun keeps the whole file only for an own plan no one else follows and no one changed meanwhile (1.077354ms)
+check	UNKNOWN STEP	2026-11-08T18:04:35.1892374Z ✔ two tasks on one plan, running at once, each write back only their own steps (0.673359ms)
+check	UNKNOWN STEP	2026-11-08T18:04:35.1894261Z ✔ the store keeps a task’s own plan under its numbered name, replacing it in place (20.270478ms)
+check	UNKNOWN STEP	2026-11-08T18:04:35.1897462Z ✔ agentdeck add --plan <file> stores the plan under its numbered name, with no commit to the repo (3227.536934ms)
+check	UNKNOWN STEP	2026-11-08T18:04:35.2641736Z ✔ add links a task to another task’s plan by number, and refuses what does not hold (80.056346ms)
+check	UNKNOWN STEP	2026-11-08T18:04:35.2812033Z ✔ edit sets, changes and clears the plan link (41.268443ms)
+check	UNKNOWN STEP	2026-11-08T18:04:35.7668207Z ✔ attach stores or replaces the task’s own plan under its numbered name, and refuses HTML that is not a plan (483.871245ms)
+check	UNKNOWN STEP	2026-11-08T18:04:35.7811190Z ✔ attach refuses a running task: its run’s end would write the old plan back (6.502694ms)
+check	UNKNOWN STEP	2026-11-08T18:04:35.7814487Z ✔ replacing a plan that drops a step a follower links is refused, naming the follower (8.066801ms)
+check	UNKNOWN STEP	2026-11-08T18:04:36.3613599Z ✔ a worker run goes through the Agent port: the task ends done, with the session and the commit the agent made (159.394976ms)
+check	UNKNOWN STEP	2026-11-08T18:04:36.3614988Z ✔ a merge goes through the CodeHost port: the PR is merged with the repo method and the remote branch deleted (9.525935ms)
+check	UNKNOWN STEP	2026-11-08T18:04:36.8757958Z ✔ parseChecks reads check runs and commit statuses, and countChecks counts the same parse (2.333723ms)
+check	UNKNOWN STEP	2026-11-08T18:04:36.8765603Z ✔ check runs that share a name are told apart by their workflow (0.337251ms)
+check	UNKNOWN STEP	2026-11-08T18:04:36.8776153Z ✔ parsePrDetails keeps each check and the head commit (0.32079ms)
+check	UNKNOWN STEP	2026-11-08T18:04:36.8777921Z ✔ nextChecks notifies when checks start failing, and again only after they pass or a new commit (0.52467ms)
+check	UNKNOWN STEP	2026-11-08T18:04:36.8779736Z ✔ actionsRun finds the run and job in an Actions link; logTail keeps the last lines within the bytes (1.290613ms)
+check	UNKNOWN STEP	2026-11-08T18:04:36.8781278Z ✔ a refresh that finds checks newly failing keeps them and notifies once (40.620769ms)
+check	UNKNOWN STEP	2026-11-08T18:04:36.8782811Z ✔ fixChecks retries the task with a note naming each failing check and holding its log tail (9.639801ms)
+check	UNKNOWN STEP	2026-11-08T18:04:36.8784388Z ✔ fixChecks does not requeue a task whose PR was merged while the checks were read (5.381901ms)
+check	UNKNOWN STEP	2026-11-08T18:04:36.8786078Z ✔ fixChecks is refused with no failing check, without an open PR, or when the task is not done (7.71723ms)
+check	UNKNOWN STEP	2026-11-08T18:04:37.1450161Z ✔ a merged or closed PR goes nowhere, whatever GitHub says about its mergeability (1.057257ms)
+check	UNKNOWN STEP	2026-11-08T18:04:37.1463253Z ✔ an open PR that conflicts with the base is conflicting, whatever its verdict (0.282468ms)
+check	UNKNOWN STEP	2026-11-08T18:04:37.1468455Z ✔ an open PR whose mergeability GitHub hasn't worked out is unknown (0.214161ms)
+check	UNKNOWN STEP	2026-11-08T18:04:37.1470058Z ✔ a clean open PR is mergeable only when its check says merge (0.20358ms)
+check	UNKNOWN STEP	2026-11-08T18:04:37.8103855Z ✔ paths in backticks and bare paths are picked, once each (3.330006ms)
+check	UNKNOWN STEP	2026-11-08T18:04:37.8105644Z ✔ URLs, globs, absolute paths, plain words and code are ignored (0.295633ms)
+check	UNKNOWN STEP	2026-11-08T18:04:37.8120944Z ✔ paths the prompt says to create are ignored (1.998646ms)
+check	UNKNOWN STEP	2026-11-08T18:04:37.8122503Z ✔ only real paths are picked: dotted identifiers, fences, links, line suffixes, created paths (1.170869ms)
+check	UNKNOWN STEP	2026-11-08T18:04:37.9290738Z ✔ a prompt naming an uncommitted file warns, on add and on edit; a committed one does not (149.106656ms)
+check	UNKNOWN STEP	2026-11-08T18:04:38.0447358Z ✔ a path that exists only under a subfolder gets the write-it-in-full note (78.148679ms)
+check	UNKNOWN STEP	2026-11-08T18:04:38.1125075Z ✔ paths are checked against origin/<base>, where a worker starts: a local-only file warns (119.611777ms)
+check	UNKNOWN STEP	2026-11-08T18:04:38.2479264Z ✔ a path a builds-on task adds is not a warning; a builds-on task with no branch yet may add it (183.098555ms)
+check	UNKNOWN STEP	2026-11-08T18:04:38.8189948Z ✔ protectedEditTarget takes paths under .claude/, with or without the dot, and refuses the rest (2.715878ms)
+check	UNKNOWN STEP	2026-11-08T18:04:38.8251282Z ✔ the worker is told where to write protected edits, and to block only for settings and hooks (0.389178ms)
+check	UNKNOWN STEP	2026-11-08T18:04:38.9168784Z ✔ applyProtectedEdits commits the edits under .claude/ and clears the folder (112.801315ms)
+check	UNKNOWN STEP	2026-11-08T18:04:39.0279906Z ✔ an edit outside .claude/, a symlink, or a target that leads out of the worktree is refused and nothing is written (59.772833ms)
+check	UNKNOWN STEP	2026-11-08T18:04:39.1954431Z ✔ a run whose worker wrote protected edits ends with them committed on the branch and the edits folder empty (241.919632ms)
+check	UNKNOWN STEP	2026-11-08T18:04:39.6659131Z ✔ every combination of a PR on GitHub maps from its columns to pr and back (16.569576ms)
+check	UNKNOWN STEP	2026-11-08T18:04:39.6660844Z ✔ pr_state = 'failed' is a state of its own, with or without the url of a PR opened before (10.177527ms)
+check	UNKNOWN STEP	2026-11-08T18:04:39.6662300Z ✔ no pr_state is no PR, and no PR is every column empty (0.333192ms)
+check	UNKNOWN STEP	2026-11-08T18:04:39.6663649Z ✔ columns that say no PR exists read as none, whatever else they hold (0.422359ms)
+check	UNKNOWN STEP	2026-11-08T18:04:39.6665319Z ✔ a merge request is one value: its method and check count only with the time it was asked for (0.194995ms)
+check	UNKNOWN STEP	2026-11-08T18:04:39.6666952Z ✔ a malformed stored value reads as none in pr too (0.244337ms)
+check	UNKNOWN STEP	2026-11-08T18:04:39.6668167Z ✔ checksSummary: only an open PR with checks has a summary (0.322232ms)
+check	UNKNOWN STEP	2026-11-08T18:04:39.6669698Z ✔ a task read from the database has pr beside its flat fields, and the API stays flat (32.453551ms)
+check	UNKNOWN STEP	2026-11-08T18:04:39.6685139Z ✔ the pull request value in domain/landing/pr.ts does not import Task (0.656247ms)
+check	UNKNOWN STEP	2026-11-08T18:04:40.1628486Z ✔ pr_mode defaults to off and rejects unknown values (17.041378ms)
+check	UNKNOWN STEP	2026-11-08T18:04:40.3171083Z ✔ a done task in a draft repo is pushed and opened as a draft PR (173.254583ms)
+check	UNKNOWN STEP	2026-11-08T18:04:40.4554109Z ✔ a ready repo opens a PR that is not a draft (136.54737ms)
+check	UNKNOWN STEP	2026-11-08T18:04:40.5960703Z ✔ a repo with pr_mode off pushes nothing (143.278593ms)
+check	UNKNOWN STEP	2026-11-08T18:04:40.7215655Z ✔ blocked tasks do not open a PR (121.704653ms)
+check	UNKNOWN STEP	2026-11-08T18:04:40.8563250Z ✔ a push failure keeps the task done, logs agentdeck_pr, and notifies with the error (138.429606ms)
+check	UNKNOWN STEP	2026-11-08T18:04:40.9883595Z ✔ a gh failure after a good push also keeps the task done (133.994661ms)
+check	UNKNOWN STEP	2026-11-08T18:04:41.3398525Z ✔ a retried task keeps its open PR, but gets a new one once the old PR is merged (349.497418ms)
+check	UNKNOWN STEP	2026-11-08T18:04:41.5808941Z ✔ request changes: the note is on the timeline and first in the next prompt, and only the latest retry counts (241.007326ms)
+check	UNKNOWN STEP	2026-11-08T18:04:41.9032584Z ✔ close PR closes it with gh, marks it closed and only works on an open PR (251.847957ms)
+check	UNKNOWN STEP	2026-11-08T18:04:41.9042029Z ✔ refreshPrStates updates open PRs of done tasks and leaves a failed lookup alone (27.158972ms)
+check	UNKNOWN STEP	2026-11-08T18:04:41.9044327Z ✔ refreshPrStates: a merged PR moves a blocked or failed task to done, a closed one leaves it, each PR is read once (36.853316ms)
+check	UNKNOWN STEP	2026-11-08T18:04:41.9733793Z ✔ the scheduler refreshes PR states on its own, not only when work runs (29.080357ms)
+check	UNKNOWN STEP	2026-11-08T18:04:41.9735857Z ✔ --after holds a task until its dependency is done (7.323318ms)
+check	UNKNOWN STEP	2026-11-08T18:04:41.9739460Z ✔ --after waits for the dependency PR to be merged (11.943401ms)
+check	UNKNOWN STEP	2026-11-08T18:04:41.9742803Z ✔ --after rejects a task that does not exist, and a failed dependency never releases (4.704655ms)
+check	UNKNOWN STEP	2026-11-08T18:04:42.4794810Z ✔ a dependent is not claimed while its dependency pushes and opens its PR (525.538511ms)
+check	UNKNOWN STEP	2026-11-08T18:04:42.7513712Z ✔ a dependent is stuck, not released, when its dependency PR could not be opened (276.49556ms)
+check	UNKNOWN STEP	2026-11-08T18:04:42.9988157Z ✔ a blocked dependency notifies once, naming the waiting task, which stays queued until a retry (244.15164ms)
+check	UNKNOWN STEP	2026-11-08T18:04:43.2888776Z ✔ a failure that will be retried does not notify, a final one does (192.571908ms)
+check	UNKNOWN STEP	2026-11-08T18:04:43.2908729Z ✔ cancelling a dependency notifies; cancelling a task nobody waits on does not (9.608433ms)
+check	UNKNOWN STEP	2026-11-08T18:04:43.2918019Z ✔ a dependency PR closed without merging notifies when the refresh sees it (12.031803ms)
+check	UNKNOWN STEP	2026-11-08T18:04:43.2919349Z ✔ mergeCheck: blocking problems and warnings (0.960947ms)
+check	UNKNOWN STEP	2026-11-08T18:04:43.2920866Z ✔ parsePrDetails reads gh output, counting failing and pending checks (1.039684ms)
+check	UNKNOWN STEP	2026-11-08T18:04:43.2922376Z ✔ repo merge_method defaults to squash and rejects unknown values (1.789706ms)
+check	UNKNOWN STEP	2026-11-08T18:04:43.2923950Z ✔ mergePreview shows the PR, the repo default method and the tasks the merge unblocks (6.235908ms)
+check	UNKNOWN STEP	2026-11-08T18:04:43.2925639Z ✔ mergeTask squashes by default, records it, and releases the tasks waiting on the PR (8.065648ms)
+check	UNKNOWN STEP	2026-11-08T18:04:43.2927572Z ✔ mergeTask uses the method asked for, then the repo default; a draft is marked ready first (11.624228ms)
+check	UNKNOWN STEP	2026-11-08T18:04:43.2929416Z ✔ a task merged with rebase, retried and given a new PR, previews and merges with the repo method (7.341798ms)
+check	UNKNOWN STEP	2026-11-08T18:04:43.2931064Z ✔ mergeTask refuses what cannot be merged and leaves the task as it was (10.466757ms)
+check	UNKNOWN STEP	2026-11-08T18:04:43.2932860Z ✔ mergeAll merges each PR, one that lands after another once that one has, and says why the rest stay open (23.011606ms)
+check	UNKNOWN STEP	2026-11-08T18:04:43.4482982Z ✔ mergeTask can delete the remote branch and remove the worktree, and reports a cleanup that fails (173.007674ms)
+check	UNKNOWN STEP	2026-11-08T18:04:43.5659358Z ✔ a display saved before show had every key gets the new keys (1.940749ms)
+check	UNKNOWN STEP	2026-11-08T18:04:43.5690788Z ✔ an old display with Merged collapsed collapses Done instead, once (0.28369ms)
+check	UNKNOWN STEP	2026-11-08T18:04:43.5717415Z ✔ nothing saved, or something that is not a display, is the default (0.240499ms)
+check	UNKNOWN STEP	2026-11-08T18:04:43.5739161Z ✔ the board puts review just before done (0.436145ms)
+check	UNKNOWN STEP	2026-11-08T18:04:43.5757981Z ✔ the list walks every group but the collapsed ones (0.392254ms)
+check	UNKNOWN STEP	2026-11-08T18:04:43.6934013Z ✔ a block on uncommitted changes lifts within the rate limit once they are committed, with no file change (4.757993ms)
+check	UNKNOWN STEP	2026-11-08T18:04:43.6967416Z ✔ nothing is re-checked while not blocked (2.159146ms)
+check	UNKNOWN STEP	2026-11-08T18:04:43.7008989Z ✔ a refresh that resolves after a newer one is dropped (0.384288ms)
+check	UNKNOWN STEP	2026-11-08T18:04:43.9969139Z ✔ an uncommitted change to db/schema.ts blocks until it is committed (95.047545ms)
+check	UNKNOWN STEP	2026-11-08T18:04:44.2059671Z ✔ highlightLines gives one entry per line and escapes plain text (17.570722ms)
+check	UNKNOWN STEP	2026-11-08T18:04:44.2061465Z ✔ highlightLines closes and reopens spans for a multi-line comment (3.242761ms)
+check	UNKNOWN STEP	2026-11-08T18:04:44.2067652Z ✔ languageFor picks the language from the file name (0.226183ms)
+check	UNKNOWN STEP	2026-11-08T18:04:44.6680340Z ✔ an archived repo and its tasks disappear everywhere, and come back unchanged (39.609587ms)
+check	UNKNOWN STEP	2026-11-08T18:04:44.6690601Z ✔ archiving refuses while a task of the repo is running (6.011657ms)
+check	UNKNOWN STEP	2026-11-08T18:04:44.6707190Z ✔ the planner skips an archived repo (19.750307ms)
+check	UNKNOWN STEP	2026-11-08T18:04:45.1542866Z ✔ delete refuses an active repo (38.619006ms)
+check	UNKNOWN STEP	2026-11-08T18:04:45.2580257Z ✔ deleting an archived repo leaves no rows, worktree, branch or files, and spares another repo (120.200447ms)
+check	UNKNOWN STEP	2026-11-08T18:04:45.2657611Z ✔ a missing worktree, branch or log does not stop it (36.794416ms)
+check	UNKNOWN STEP	2026-11-08T18:04:45.8086020Z ✔ doctor passes on a healthy repo, clears a pause, and leaves no worktree behind (104.513034ms)
+check	UNKNOWN STEP	2026-11-08T18:04:45.8724015Z ✔ a repo without a toolchain is not a doctor failure (64.707991ms)
+check	UNKNOWN STEP	2026-11-08T18:04:46.2084399Z ✔ doctor fails and pauses the repo with the first failed check (331.690047ms)
+check	UNKNOWN STEP	2026-11-08T18:04:46.5899856Z ✔ doctor reports a missing repo, a missing claude binary, and PR mode without gh or origin (327.051031ms)
+check	UNKNOWN STEP	2026-11-08T18:04:46.7870332Z ✔ a paused repo's tasks are not claimed; resuming releases them (225.027485ms)
+check	UNKNOWN STEP	2026-11-08T18:04:46.7871372Z ✔ a repo that is already paused keeps its first reason (25.008979ms)
+check	UNKNOWN STEP	2026-11-08T18:04:46.8665818Z ✔ a failing setup pauses the repo and notifies (66.76181ms)
+check	UNKNOWN STEP	2026-11-08T18:04:47.1465341Z ✔ a refused tool use that ends a run pauses the repo and counts denials on the run (292.668982ms)
+check	UNKNOWN STEP	2026-11-08T18:04:47.4244368Z ✔ a refused tool use the worker reported as a need blocks the task without pausing the repo (265.189237ms)
+check	UNKNOWN STEP	2026-11-08T18:04:47.6112150Z ✔ a run that finishes despite refusals but fails its tests does not pause the repo (157.790499ms)
+check	UNKNOWN STEP	2026-11-08T18:04:47.6115856Z ✔ edit changes the fields of a proposed, queued, blocked or failed task (38.653737ms)
+check	UNKNOWN STEP	2026-11-08T18:04:47.6117907Z ✔ edit refuses other statuses, unknown tasks, empty edits and invalid values (33.603845ms)
+check	UNKNOWN STEP	2026-11-08T18:04:48.0936954Z ✔ parseToolRules: commas and lines split rules, a comma in parentheses does not, blanks and repeats go (1.661025ms)
+check	UNKNOWN STEP	2026-11-08T18:04:48.0950157Z ✔ toolRulesError names the first rule that is not a tool name with an optional pattern (0.39602ms)
+check	UNKNOWN STEP	2026-11-08T18:04:48.0989810Z ✔ toolRulesSource: own rules when the repo has them, else detected (0.180548ms)
+check	UNKNOWN STEP	2026-11-08T18:04:48.5191460Z ✔ repo set tools replaces the next run’s --allowedTools, and "" goes back to the detected rules (451.462273ms)
+check	UNKNOWN STEP	2026-11-08T18:04:48.5199333Z ✔ the settings API takes the rules as a list, and an empty list or null goes back to the detected rules (4.787308ms)
+check	UNKNOWN STEP	2026-11-08T18:04:48.5201182Z ✔ a malformed rule is refused and leaves the rules as they were (1.888701ms)
+check	UNKNOWN STEP	2026-11-08T18:04:48.9447905Z ✔ a new repo has its defaults as values (15.388014ms)
+check	UNKNOWN STEP	2026-11-08T18:04:48.9457566Z ✔ each flag round-trips through the store (13.901484ms)
+check	UNKNOWN STEP	2026-11-08T18:04:48.9459426Z ✔ each list round-trips through the store (12.254435ms)
+check	UNKNOWN STEP	2026-11-08T18:04:48.9460845Z ✔ a repo registered with its own tool rules keeps them, and none leaves them null (12.168275ms)
+check	UNKNOWN STEP	2026-11-08T18:04:48.9462244Z ✔ a legacy malformed list reads as its default (10.719798ms)
+check	UNKNOWN STEP	2026-11-08T18:04:48.9463288Z ✔ repoColumns is the way back from toRepo (0.226934ms)
+check	UNKNOWN STEP	2026-11-08T18:04:48.9464364Z ✔ repoView keeps the flat shape of the columns (8.548869ms)
+check	UNKNOWN STEP	2026-11-08T18:04:49.8314544Z ✔ [layers] every method an interface declares is called by a use case (503.542ms)
+check	UNKNOWN STEP	2026-11-08T18:04:50.0712307Z ✔ a cancelled resolve run is cancelled (4.086288ms)
+check	UNKNOWN STEP	2026-11-08T18:04:50.0743351Z ✔ a rate limited resolve run keeps the reason (0.257772ms)
+check	UNKNOWN STEP	2026-11-08T18:04:50.0769943Z ✔ a resolve run that failed keeps the reason (0.205895ms)
+check	UNKNOWN STEP	2026-11-08T18:04:50.0771912Z ✔ a resolve run that says BLOCKED is blocked, with its reason or a default (0.726989ms)
+check	UNKNOWN STEP	2026-11-08T18:04:50.0790791Z ✔ a resolve run that says DONE, or nothing, is left to the merge and test check (0.274684ms)
+check	UNKNOWN STEP	2026-11-08T18:04:50.0807502Z ✔ syncResultOf turns a resolve run outcome into the sync result (2.646947ms)
+check	UNKNOWN STEP	2026-11-08T18:04:50.5220050Z ✔ restartWait says what is active (1.470107ms)
+check	UNKNOWN STEP	2026-11-08T18:04:50.5224985Z ✔ reload: nothing happens when off or when nothing changed (0.972909ms)
+check	UNKNOWN STEP	2026-11-08T18:04:50.5229391Z ✔ reload: waits for running work, and for edits to settle, then exits (0.514381ms)
+check	UNKNOWN STEP	2026-11-08T18:04:50.5230609Z ✔ service, logs and restart arguments (2.68036ms)
+check	UNKNOWN STEP	2026-11-08T18:04:50.5232440Z ✔ graceful restart pauses, waits for the runs, restarts and restores the pause state (22.525023ms)
+check	UNKNOWN STEP	2026-11-08T18:04:50.7727343Z ✔ graceful restart restores the pause state when the restart fails (261.115114ms)
+check	UNKNOWN STEP	2026-11-08T18:04:50.7741770Z ✔ a requested restart exits once nothing is running, and waits otherwise (0.617183ms)
+check	UNKNOWN STEP	2026-11-08T18:04:50.7743781Z ✔ a blocked reload neither exits nor holds back new work, unless a restart was requested (0.33155ms)
+check	UNKNOWN STEP	2026-11-08T18:04:51.2319221Z ✔ resumableSession: the session of the attempt’s interrupted run, and only that (1.488984ms)
+check	UNKNOWN STEP	2026-11-08T18:04:51.2321496Z ✔ resumableSession looks past a rate-limited run of the attempt, back to the interrupted one (0.274894ms)
+check	UNKNOWN STEP	2026-11-08T18:04:51.2323784Z ✔ editsSinceCutOff: a prompt or plan edited after the cut-off run ended, and nothing else (1.006121ms)
+check	UNKNOWN STEP	2026-11-08T18:04:51.2326170Z ✔ resumeMaxTurns: the task’s limit less the turns the attempt’s cut-off runs used (0.673208ms)
+check	UNKNOWN STEP	2026-11-08T18:04:51.2328656Z ✔ pickRun by attempt picks the attempt’s latest work run: the resume, not the run a restart cut off (0.354473ms)
+check	UNKNOWN STEP	2026-11-08T18:04:51.2330588Z ✔ resumeFailed: a resume whose session claude no longer has, and nothing else (0.409445ms)
+check	UNKNOWN STEP	2026-11-08T18:04:51.2332614Z ✔ resultFields keeps the session claude named when the run ends without a result (0.333503ms)
+check	UNKNOWN STEP	2026-11-08T18:04:51.2334135Z ✔ claudeArgs adds --resume and changes nothing else (0.546401ms)
+check	UNKNOWN STEP	2026-11-08T18:04:51.2336379Z ✔ the resume prompt says what happened and where to look; a fresh run after a restart does not say it failed (0.696762ms)
+check	UNKNOWN STEP	2026-11-08T18:04:51.2338515Z ✔ a fresh run after a restart still names the earlier attempt’s failed tests and final message (0.498592ms)
+check	UNKNOWN STEP	2026-11-08T18:04:51.9863589Z ✔ a restart mid-run: the next run resumes the session and uses no attempt (784.36079ms)
+check	UNKNOWN STEP	2026-11-08T18:04:52.1856169Z ✔ a resume whose session is gone falls back to a fresh run, in the same run (193.102081ms)
+check	UNKNOWN STEP	2026-11-08T18:04:52.3179806Z ✔ a task whose prompt was edited while it waited starts afresh instead of resuming the old session (145.25023ms)
+check	UNKNOWN STEP	2026-11-08T18:04:54.0660143Z ✔ a task whose resumed runs keep being interrupted fails at MAX_RESTARTS (1751.340761ms)
+check	UNKNOWN STEP	2026-11-08T18:04:54.5730281Z ✔ hunkAround keeps a few lines either side, on the side the comment counts on (1.879404ms)
+check	UNKNOWN STEP	2026-11-08T18:04:54.5732410Z ✔ the prompt renders two comments in two files with id, location, hunk and comment, then the note (0.830753ms)
+check	UNKNOWN STEP	2026-11-08T18:04:54.5734058Z ✔ a long review is cut to the budget and says so (1.163045ms)
+check	UNKNOWN STEP	2026-11-08T18:04:54.5735654Z ✔ buildPrompt puts the review first and the system prompt asks for ANSWER lines (0.715878ms)
+check	UNKNOWN STEP	2026-11-08T18:04:54.5737620Z ✔ parseAnswers reads ANSWER lines and a missing one stays unanswered (1.598238ms)
+check	UNKNOWN STEP	2026-11-08T18:04:55.0207912Z ✔ a run whose final message answers the comments moves them to answered; the rest stay open and are named (530.881524ms)
+check	UNKNOWN STEP	2026-11-08T18:04:55.1588158Z ✔ [review-areas] every path the review areas list exists (5.781478ms)
+check	UNKNOWN STEP	2026-11-08T18:04:55.1612740Z ✔ [review-areas] every source file is in a review area (14.095521ms)
+check	UNKNOWN STEP	2026-11-08T18:04:55.1635258Z ✔ [review-areas] the unmapped list names only files that exist and no area covers (0.763818ms)
+check	UNKNOWN STEP	2026-11-08T18:04:55.1658548Z ✔ [review-areas] area names are unique (0.651307ms)
+check	UNKNOWN STEP	2026-11-08T18:04:55.6658091Z ✔ a comment moves open → answered → resolved, and reopens (1.43323ms)
+check	UNKNOWN STEP	2026-11-08T18:04:55.6672979Z ✔ a run must address the open comments of submitted request_changes reviews only (1.123491ms)
+check	UNKNOWN STEP	2026-11-08T18:04:55.6674924Z ✔ the retry reason is the note, then each comment with where it points (0.329055ms)
+check	UNKNOWN STEP	2026-11-08T18:04:55.6682212Z ✔ a draft is built, edited and submitted as a Comment without touching the task (33.847456ms)
+check	UNKNOWN STEP	2026-11-08T18:04:55.6685881Z ✔ Request changes moves a done task back to queued with the review as the reason (15.466895ms)
+check	UNKNOWN STEP	2026-11-08T18:04:55.6687960Z ✔ Request changes on a task that cannot be retried leaves the review a draft (12.277422ms)
+check	UNKNOWN STEP	2026-11-08T18:04:55.6691692Z ✔ comments are answered, resolved and reopened after the review is submitted (19.446558ms)
+check	UNKNOWN STEP	2026-11-08T18:04:55.6693117Z ✔ bad input is refused (11.617238ms)
+check	UNKNOWN STEP	2026-11-08T18:04:55.8062619Z ✔ every bullet in Boundaries and Rules has a rule id (2.483232ms)
+check	UNKNOWN STEP	2026-11-08T18:04:55.8085908Z ✔ rule ids are unique (2.16592ms)
+check	UNKNOWN STEP	2026-11-08T18:04:55.8108848Z ✔ every rule is named by a test or on the unchecked list (5.870605ms)
+check	UNKNOWN STEP	2026-11-08T18:04:55.8110053Z ✔ a rule is not both checked and unchecked (5.116475ms)
+check	UNKNOWN STEP	2026-11-08T18:04:55.8129081Z ✔ tests and the unchecked list name only rules CLAUDE.md has (6.076289ms)
+check	UNKNOWN STEP	2026-11-08T18:04:56.4554537Z task 1: there is no gone to sync with
+check	UNKNOWN STEP	2026-11-08T18:04:56.5448097Z ✔ a throw in the work run after its row opens ends the row failed (277.321721ms)
+check	UNKNOWN STEP	2026-11-08T18:04:56.7645069Z ✔ a resolve run that cannot start ends failed and frees its slot (229.564816ms)
+check	UNKNOWN STEP	2026-11-08T18:04:56.7691324Z ✔ a run row is never finished twice (3.259694ms)
+check	UNKNOWN STEP	2026-11-08T18:04:56.9167017Z ✔ tool entries take file from file_path, path or notebook_path (4.622411ms)
+check	UNKNOWN STEP	2026-11-08T18:04:56.9177043Z ✔ the file is kept whole when the input is cut (0.430044ms)
+check	UNKNOWN STEP	2026-11-08T18:04:56.9202934Z ✔ tool entries without a string path have no file field (0.433911ms)
+check	UNKNOWN STEP	2026-11-08T18:04:56.9238826Z ✔ a tool result with string content (0.356817ms)
+check	UNKNOWN STEP	2026-11-08T18:04:56.9240326Z ✔ a tool result with text blocks and an image joins them (0.282228ms)
+check	UNKNOWN STEP	2026-11-08T18:04:56.9273166Z ✔ an error result is not ok (0.257963ms)
+check	UNKNOWN STEP	2026-11-08T18:04:56.9284736Z ✔ output is cut at 4 KB while lines counts all of it (0.471401ms)
+check	UNKNOWN STEP	2026-11-08T18:04:56.9285780Z ✔ the summary of each tool (0.86635ms)
+check	UNKNOWN STEP	2026-11-08T18:04:56.9287021Z ✔ tool entries carry the tool_use id (0.330989ms)
+check	UNKNOWN STEP	2026-11-08T18:04:56.9295303Z ✔ an Edit carries its change (0.719937ms)
+check	UNKNOWN STEP	2026-11-08T18:04:56.9296675Z ✔ at and parent come from the event (0.359842ms)
+check	UNKNOWN STEP	2026-11-08T18:04:59.8020615Z ✔ newTaskModel: the model asked for, else the repo’s, else the default_model setting (1.710538ms)
+check	UNKNOWN STEP	2026-11-08T18:04:59.8042865Z ✔ runModel: a work run takes the task’s model, a resolve or unblock run the support model (0.179766ms)
+check	UNKNOWN STEP	2026-11-08T18:04:59.8045367Z ✔ measureByModel: a row per recorded model, unknown last, and interventions go to the run before them (8.712628ms)
+check	UNKNOWN STEP	2026-11-08T18:04:59.8047333Z ✔ the defaults are the settings’ defaults (0.158306ms)
+check	UNKNOWN STEP	2026-11-08T18:04:59.8049109Z ✔ a task added with no model takes its repo’s model, else default_model, and the CLI says which (2393.963798ms)
+check	UNKNOWN STEP	2026-11-08T18:05:00.0964306Z ✔ a resolve run of an opus task starts with the support model, and each run row records its model (311.083162ms)
+check	UNKNOWN STEP	2026-11-08T18:05:01.1458574Z ✔ stats --by model: a row per recorded model, unknown for older runs, and an edit leaves a run’s model as it was (1055.485414ms)
+check	UNKNOWN STEP	2026-11-08T18:05:01.3689656Z ✔ a done run with no commits is blocked (2.4858ms)
+check	UNKNOWN STEP	2026-11-08T18:05:01.3714642Z ✔ a blocked run with refused tool uses is the environment, and pauses the repo (0.379329ms)
+check	UNKNOWN STEP	2026-11-08T18:05:01.3716906Z ✔ a block the worker reported as a need does not pause the repo, refusals or not (0.436246ms)
+check	UNKNOWN STEP	2026-11-08T18:05:01.3724000Z ✔ failed tests with refused tool uses fail the run without pausing (0.266118ms)
+check	UNKNOWN STEP	2026-11-08T18:05:01.3758568Z ✔ a cancel or a rate limit never pauses (0.284743ms)
+check	UNKNOWN STEP	2026-11-08T18:05:01.6587789Z ✔ file rules cover the worktree by absolute path (// prefix) (2.33585ms)
+check	UNKNOWN STEP	2026-11-08T18:05:01.6607461Z ✔ sandbox on: enabled, no fallback, strict allowlist from the repo (0.46511ms)
+check	UNKNOWN STEP	2026-11-08T18:05:01.6608758Z ✔ sandbox off: disabled, file tools still limited to the worktree (0.236763ms)
+check	UNKNOWN STEP	2026-11-08T18:05:01.6609669Z ✔ network lists normalize (0.447727ms)
+check	UNKNOWN STEP	2026-11-08T18:05:01.6610797Z ✔ claudeArgs passes --settings and drops bare Edit/Write; push stays disallowed (0.752197ms)
+check	UNKNOWN STEP	2026-11-08T18:05:01.6622869Z ✔ the worker prompt says sandbox-only test failures are no reason to block (0.387265ms)
+check	UNKNOWN STEP	2026-11-08T18:05:01.6630841Z ✔ the worker prompt asks for the summary format before the STATUS line (0.403665ms)
+check	UNKNOWN STEP	2026-11-08T18:05:01.6634442Z ✔ the settings file is written next to the run log with the repo’s sandbox settings (1.083897ms)
+check	UNKNOWN STEP	2026-11-08T18:05:02.1047531Z ✔ measureByWeek puts a task in the week of its first run, oldest week first (12.270768ms)
+check	UNKNOWN STEP	2026-11-08T18:05:02.1053985Z ✔ countInterventions: only a person event that changes the outcome counts (0.81764ms)
+check	UNKNOWN STEP	2026-11-08T18:05:02.1058175Z ✔ cycleOf: queued, running and review minutes from a task history (0.591777ms)
+check	UNKNOWN STEP	2026-11-08T18:05:02.1067988Z ✔ PR checks: green is some checks, none failing or pending (2.804066ms)
+check	UNKNOWN STEP	2026-11-08T18:05:02.1069722Z ✔ quotaSpends: rises add up, a reset counts what the new window shows (0.471151ms)
+check	UNKNOWN STEP	2026-11-08T18:05:02.1071788Z ✔ resolveAutoMerge: auto-merge is known to be on from the repo's first merge by the daemon (0.461283ms)
+check	UNKNOWN STEP	2026-11-08T18:05:02.1074602Z ✔ parseSince: a date, or a date and time, as a sqlite stamp (0.422611ms)
+check	UNKNOWN STEP	2026-11-08T18:05:02.1079257Z ✔ buildScorecard: per repo, per week, with --since (2.875249ms)
+check	UNKNOWN STEP	2026-11-08T18:05:02.1081257Z ✔ pilotStats: an edit is recorded in the history, and the scorecard reads the database (25.735177ms)
+check	UNKNOWN STEP	2026-11-08T18:05:02.5488413Z ✔ boolean settings refuse words other than on/off and their synonyms (3.487916ms)
+check	UNKNOWN STEP	2026-11-08T18:05:02.5489710Z ✔ notify_events entries are trimmed (24.285474ms)
+check	UNKNOWN STEP	2026-11-08T18:05:02.5496991Z ✔ planner max_tasks must be a whole number (11.729084ms)
+check	UNKNOWN STEP	2026-11-08T18:05:02.5501582Z ✔ the repo set usage lists the PR modes and merge methods (0.225001ms)
+check	UNKNOWN STEP	2026-11-08T18:05:03.0715810Z ✔ a worker that throws leaves its task failed, notified, and its dependents warned (61.050707ms)
+check	UNKNOWN STEP	2026-11-08T18:05:03.0729765Z ✔ a task failed by crash recovery gets a notification (17.83158ms)
+check	UNKNOWN STEP	2026-11-08T18:05:03.0748407Z ✔ finalNotification words done, blocked and failed, and nothing else (0.791431ms)
+check	UNKNOWN STEP	2026-11-08T18:05:03.0762090Z ✔ opening, failing and closing a PR each add one pr row to the history (15.59219ms)
+check	UNKNOWN STEP	2026-11-08T18:05:03.0763582Z ✔ a refresh does not undo a merge recorded while it waited on GitHub (24.579966ms)
+check	UNKNOWN STEP	2026-11-08T18:05:03.0765077Z ✔ a PR merged on GitHub settles a blocked task as done, notifying and opening no second PR (18.646104ms)
+check	UNKNOWN STEP	2026-11-08T18:05:03.7180867Z ✔ a timeout kills the command and the children it started (509.940839ms)
+check	UNKNOWN STEP	2026-11-08T18:05:03.7488993Z ✔ a passing command with more than 8 MB of output still passes, with the tail (30.063444ms)
+check	UNKNOWN STEP	2026-11-08T18:05:03.7535036Z ✔ a failing command reports its output, and a missing directory does not throw (8.693727ms)
+check	UNKNOWN STEP	2026-11-08T18:05:04.1631802Z ✔ a running task and an open resolve run fill two slots: nothing else is claimed (28.455769ms)
+check	UNKNOWN STEP	2026-11-08T18:05:04.1650683Z ✔ a running task whose sync started a resolve run counts once (10.718335ms)
+check	UNKNOWN STEP	2026-11-08T18:05:04.1715959Z ✔ a finished resolve run frees its slot, and a planner run takes one (10.312907ms)
+check	UNKNOWN STEP	2026-11-08T18:05:04.1717193Z ✔ the resolve-run half of slotsUsed looks tasks up through the runs_task index (8.692348ms)
+check	UNKNOWN STEP	2026-11-08T18:05:04.5578960Z ✔ a .vue file keeps its script lines (1.378607ms)
+check	UNKNOWN STEP	2026-11-08T18:05:04.5595318Z ✔ the parser lists the imports of a .vue file with their lines (9.615546ms)
+check	UNKNOWN STEP	2026-11-08T18:05:04.7186655Z ✔ startDecision checks pause, then rate limit, then the governor (2.331708ms)
+check	UNKNOWN STEP	2026-11-08T18:05:04.7208496Z ✔ startDecision ignores the pause for run-once, but not the rate limit (0.275966ms)
+check	UNKNOWN STEP	2026-11-08T18:05:04.7210090Z ✔ startDecision frees max_concurrent minus the slots used, never below 0 (0.258954ms)
+check	UNKNOWN STEP	2026-11-08T18:05:04.7241731Z ✔ describeWait words each wait as the scheduler logs it (22.457517ms)
+check	UNKNOWN STEP	2026-11-08T18:05:04.7242818Z ✔ startWait names what a queued task waits for (1.561358ms)
+check	UNKNOWN STEP	2026-11-08T18:05:05.1813834Z ✔ wilson: hand-checked intervals (1.184143ms)
+check	UNKNOWN STEP	2026-11-08T18:05:05.1832849Z ✔ measure: first-run success, denials per run, cost and minutes per done task (0.559576ms)
+check	UNKNOWN STEP	2026-11-08T18:05:05.1834510Z ✔ measure: a run a daemon restart cut off is not a first run; the run that resumed it is (0.217847ms)
+check	UNKNOWN STEP	2026-11-08T18:05:05.1835736Z ✔ measure: nothing to measure gives nulls, not NaN (1.191658ms)
+check	UNKNOWN STEP	2026-11-08T18:05:05.1837704Z ✔ pilotStats: the report per repo, a total row, --repo and unknown repos (60.569405ms)
+check	UNKNOWN STEP	2026-11-08T18:05:05.6554887Z ✔ retry, install-needs and worktree removal refuse while another process has a sync marked (36.862044ms)
+check	UNKNOWN STEP	2026-11-08T18:05:05.6562186Z ✔ recoverOrphans clears a marker left by a daemon that died mid-sync (11.591684ms)
+check	UNKNOWN STEP	2026-11-08T18:05:05.6566487Z ✔ a sync that throws still clears its marker (38.487199ms)
+check	UNKNOWN STEP	2026-11-08T18:05:06.0832776Z ✔ taskViews gives a done task with an unfinished resolve run its sync view, and the others none (37.408062ms)
+check	UNKNOWN STEP	2026-11-08T18:05:06.6313226Z ✔ a migration adds auto_resolve (on) and the run kind (work) (21.714909ms)
+check	UNKNOWN STEP	2026-11-08T18:05:06.6314988Z ✔ the domain words: conflicting PRs, timeline lines, blocked reasons (2.037899ms)
+check	UNKNOWN STEP	2026-11-08T18:05:06.6319027Z ✔ the resolve prompt names the files, both sides and the goal; resolve runs do not count as attempts in prompts or PR bodies (4.324794ms)
+check	UNKNOWN STEP	2026-11-08T18:05:06.8973262Z ✔ a clean merge is committed, tested and pushed without a claude run (290.903078ms)
+check	UNKNOWN STEP	2026-11-08T18:05:07.0657720Z task 4: there is no no-such-branch to sync with
+check	UNKNOWN STEP	2026-11-08T18:05:07.0764159Z ✔ a sync with no base ref ends as an error, not up to date (176.044979ms)
+check	UNKNOWN STEP	2026-11-08T18:05:07.3714176Z ✔ a conflict starts a resolve run that keeps both sides; the task stays done and no attempt is used (298.557445ms)
+check	UNKNOWN STEP	2026-11-08T18:05:07.6639997Z ✔ a resolve run that stages but does not commit still concludes the merge (292.530882ms)
+check	UNKNOWN STEP	2026-11-08T18:05:07.9592716Z ✔ FAKE_RESOLVE_BLOCKED: the merge is aborted and the task is blocked with the conflicting files (292.74136ms)
+check	UNKNOWN STEP	2026-11-08T18:05:08.2610090Z ✔ FAKE_RESOLVE_LEAVE: the merge is aborted and the task is blocked with the conflicting files (301.389411ms)
+check	UNKNOWN STEP	2026-11-08T18:05:08.5685260Z ✔ FAKE_RESOLVE_ABORT: the merge is aborted and the task is blocked with the conflicting files (307.765402ms)
+check	UNKNOWN STEP	2026-11-08T18:05:08.7940385Z ✔ tests that fail on the merged result undo a clean merge and block the task (224.496699ms)
+check	UNKNOWN STEP	2026-11-08T18:05:09.0461315Z ✔ an undone merge removes the untracked files the tests wrote, so the next commit does not contain them (252.644876ms)
+check	UNKNOWN STEP	2026-11-08T18:05:09.3613725Z ✔ tests that fail after a resolve run undo the merge and block the task (317.473498ms)
+check	UNKNOWN STEP	2026-11-08T18:05:09.7844357Z ✔ auto_resolve off: clean merges still happen, conflicts wait for a person (423.049203ms)
+check	UNKNOWN STEP	2026-11-08T18:05:09.9828666Z ✔ a push that fails is reported and retried next time; the task stays done (193.800412ms)
+check	UNKNOWN STEP	2026-11-08T18:05:09.9833225Z ✔ only a done task can be synced by hand (2.928277ms)
+check	UNKNOWN STEP	2026-11-08T18:05:10.2605092Z ✔ every run starts from the latest base, retries included (278.046688ms)
+check	UNKNOWN STEP	2026-11-08T18:05:10.6314040Z ✔ a conflict at the start of a retry gets a resolve run before the work run, without using an attempt (372.177041ms)
+check	UNKNOWN STEP	2026-11-08T18:05:10.9315441Z ✔ a conflict at the start of a run that cannot be resolved blocks the task before the agent starts (299.67584ms)
+check	UNKNOWN STEP	2026-11-08T18:05:11.2702019Z ✔ with auto_resolve off a run still starts when the base conflicts, on the branch as it was (297.33797ms)
+check	UNKNOWN STEP	2026-11-08T18:05:11.2706463Z ✔ refreshPrStates reads mergeability: conflicting PRs are returned, unknown ones counted, merged ones not looked up (33.074318ms)
+check	UNKNOWN STEP	2026-11-08T18:05:11.5623214Z ✔ resolveConflicting waits for the governor: paused, rate limited, or no free slot (300.821414ms)
+check	UNKNOWN STEP	2026-11-08T18:05:11.7367130Z ✔ resolveConflicting with auto_resolve off makes no sync attempt and tells the conflict once (174.132459ms)
+check	UNKNOWN STEP	2026-11-08T18:05:12.3347828Z ✔ merging a PR makes the scheduler re-read the open PRs at once and resolve the ones that now conflict (599.349493ms)
+check	UNKNOWN STEP	2026-11-08T18:05:12.6738496Z ✔ POST /api/tasks/:id/sync syncs with the base and returns the task (316.931267ms)
+check	UNKNOWN STEP	2026-11-08T18:05:12.8454604Z ✔ the merge preview says when the conflict is something a resolve run can fix (192.284904ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.1164350Z ✔ the chip maps give tone names, not class strings (2.514029ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.1172245Z ✔ a task status maps to a tone, and an unknown one is muted (0.253554ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.1176162Z ✔ a PR in review with a waiting merge request and a conflict: a status line, a conflicts chip, ↓ and try 2 (0.764299ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.1187525Z ✔ a conflict is the API field, not words in the reasons (0.206256ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.1195642Z ✔ auto-merge that follows the repo shows no badge; one set on the task does (0.629116ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.1197912Z ✔ auto-merge that needs a person is a won't auto-merge chip, unless a merge request stands in for it (0.453017ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.1201475Z ✔ a queued task built on two unmerged tasks shows ↑ both (0.271237ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.1204396Z ✔ the status line goes in order: live run, sync, merge request, stop reason, can’t start, auto-merge (0.664862ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.1207134Z ✔ facts: planner, a merged or closed PR (not an open one), and the repo when the display shows it (0.605752ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.1209224Z ✔ checks: running and passed are muted facts, failing is an attention chip, none is no badge (0.647591ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.5888215Z ✔ addTask records created with the initial status (19.340649ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.5912136Z ✔ claimNextTask records claim from queued to running (14.228744ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.5928343Z ✔ each lifecycle event records its type, from and to status and reason (37.18945ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.5937641Z ✔ a refused event records nothing (9.117541ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.5939051Z ✔ the status change and its event land together or not at all (10.927965ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.5941328Z ✔ events compose with an outer transaction (9.449982ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.5942698Z ✔ recoverOrphans records a recover event per orphan (16.366811ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.5944123Z ✔ eventsForTask uses the task_events_task index (13.521322ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.5946013Z ✔ PR and merge event reasons are written and read through the history functions, byte for byte (0.980532ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.7711434Z ✔ claim from proposed: refused (4.920848ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.7717438Z ✔ claim from queued: -> running (0.250909ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.7750237Z ✔ claim from running: refused (0.155391ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.7756668Z ✔ claim from done: refused (0.185867ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.7757688Z ✔ claim from blocked: refused (0.350795ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.7758620Z ✔ claim from failed: refused (1.007222ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.7759552Z ✔ claim from cancel_requested: refused (0.246441ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.7760488Z ✔ claim from cancelled: refused (0.169397ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.7761422Z ✔ finish done from proposed: refused (0.598999ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.7762348Z ✔ finish done from queued: refused (0.402532ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.7763274Z ✔ finish done from running: -> done (0.273071ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.7764179Z ✔ finish done from done: refused (0.209362ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.7765124Z ✔ finish done from blocked: refused (0.114665ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.7766048Z ✔ finish done from failed: refused (1.392072ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.7767287Z ✔ finish done from cancel_requested: -> cancelled (0.114204ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.7768343Z ✔ finish done from cancelled: refused (0.141514ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.7769326Z ✔ finish blocked from proposed: refused (0.096741ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.7770295Z ✔ finish blocked from queued: refused (0.081592ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.7771284Z ✔ finish blocked from running: -> blocked (0.142737ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.7824089Z ✔ finish blocked from done: refused (0.097652ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.7873442Z ✔ finish blocked from blocked: refused (0.086802ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.7881192Z ✔ finish blocked from failed: refused (0.094547ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.7882649Z ✔ finish blocked from cancel_requested: -> cancelled (0.085329ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.7913890Z ✔ finish blocked from cancelled: refused (0.091371ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.7934219Z ✔ finish cancelled from proposed: refused (0.082123ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.7948674Z ✔ finish cancelled from queued: refused (0.083606ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.7972948Z ✔ finish cancelled from running: -> cancelled (0.143408ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8001979Z ✔ finish cancelled from done: refused (0.120004ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8018450Z ✔ finish cancelled from blocked: refused (0.088475ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8037941Z ✔ finish cancelled from failed: refused (0.080881ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8051175Z ✔ finish cancelled from cancel_requested: -> cancelled (0.077575ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8052546Z ✔ finish cancelled from cancelled: refused (0.076333ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8054101Z ✔ finish failed (no retry) from proposed: refused (0.115215ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8055407Z ✔ finish failed (no retry) from queued: refused (0.103483ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8056870Z ✔ finish failed (no retry) from running: -> failed (0.11757ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8058450Z ✔ finish failed (no retry) from done: refused (0.108182ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8060636Z ✔ finish failed (no retry) from blocked: refused (0.093665ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8062242Z ✔ finish failed (no retry) from failed: refused (0.072836ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8063969Z ✔ finish failed (no retry) from cancel_requested: -> cancelled (0.068708ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8065415Z ✔ finish failed (no retry) from cancelled: refused (0.112079ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8066871Z ✔ finish failed (retry) from proposed: refused (0.070993ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8068420Z ✔ finish failed (retry) from queued: refused (0.086151ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8069563Z ✔ finish failed (retry) from running: -> queued (0.090079ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8070725Z ✔ finish failed (retry) from done: refused (0.095629ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8088407Z ✔ finish failed (retry) from blocked: refused (0.086963ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8089112Z ✔ finish failed (retry) from failed: refused (0.076313ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8089819Z ✔ finish failed (retry) from cancel_requested: -> cancelled (0.120124ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8090455Z ✔ finish failed (retry) from cancelled: refused (0.070943ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8091091Z ✔ rate_limited from proposed: refused (0.061455ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8091675Z ✔ rate_limited from queued: refused (0.059431ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8092188Z ✔ rate_limited from running: -> queued (0.057488ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8092722Z ✔ rate_limited from done: refused (0.057528ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8093357Z ✔ rate_limited from blocked: refused (0.111097ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8094088Z ✔ rate_limited from failed: refused (0.06413ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8094996Z ✔ rate_limited from cancel_requested: -> cancelled (0.073788ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8095851Z ✔ rate_limited from cancelled: refused (0.069009ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8096821Z ✔ conflict from proposed: refused (0.061785ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8097317Z ✔ conflict from queued: refused (0.057708ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8097896Z ✔ conflict from running: refused (0.055404ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8098343Z ✔ conflict from done: -> blocked (0.055664ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8098882Z ✔ conflict from blocked: refused (0.055484ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8099415Z ✔ conflict from failed: refused (0.062047ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8099873Z ✔ conflict from cancel_requested: refused (0.354412ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8100462Z ✔ conflict from cancelled: refused (0.121226ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8101033Z ✔ cancel from proposed: -> cancelled (0.076923ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8101562Z ✔ cancel from queued: -> cancelled (0.069149ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8102275Z ✔ cancel from running: -> cancel_requested (0.08552ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8102831Z ✔ cancel from done: refused (0.065953ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8103242Z ✔ cancel from blocked: -> cancelled (0.103103ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8104003Z ✔ cancel from failed: -> cancelled (0.068397ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8104797Z ✔ cancel from cancel_requested: refused (0.065532ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8105607Z ✔ cancel from cancelled: refused (0.079289ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8106731Z ✔ approve from proposed: -> queued (0.10688ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8107551Z ✔ approve from queued: refused (0.113562ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8108283Z ✔ approve from running: refused (0.127418ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8108987Z ✔ approve from done: refused (1.240829ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8110011Z ✔ approve from blocked: refused (0.074099ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8110880Z ✔ approve from failed: refused (0.06405ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8111765Z ✔ approve from cancel_requested: refused (0.059992ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8112638Z ✔ approve from cancelled: refused (0.063018ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8113700Z ✔ reject from proposed: -> cancelled (0.058971ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8114555Z ✔ reject from queued: refused (0.056636ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8115355Z ✔ reject from running: refused (0.072115ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8116153Z ✔ reject from done: refused (0.055745ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8117180Z ✔ reject from blocked: refused (0.081413ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8117935Z ✔ reject from failed: refused (0.066104ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8118801Z ✔ reject from cancel_requested: refused (0.054552ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8121846Z ✔ reject from cancelled: refused (0.054873ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8122676Z ✔ retry from proposed: refused (0.056606ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8123483Z ✔ retry from queued: refused (0.067437ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8124282Z ✔ retry from running: refused (0.057578ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8125046Z ✔ retry from done: -> queued (0.056115ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8125842Z ✔ retry from blocked: -> queued (0.055795ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8133608Z ✔ retry from failed: -> queued (0.0535ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8134528Z ✔ retry from cancel_requested: refused (0.119453ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8135435Z ✔ retry from cancelled: -> queued (0.162974ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8138274Z ✔ mark_done from proposed: refused (0.222436ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8139215Z ✔ mark_done from queued: refused (0.167193ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8140036Z ✔ mark_done from running: refused (0.17093ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8140855Z ✔ mark_done from done: refused (0.142005ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8141776Z ✔ mark_done from blocked: -> done (0.165179ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8142640Z ✔ mark_done from failed: -> done (0.092493ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8143545Z ✔ mark_done from cancel_requested: refused (0.139822ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8144535Z ✔ mark_done from cancelled: refused (0.138008ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8145342Z ✔ pr_merged from proposed: refused (0.086622ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8155346Z ✔ pr_merged from queued: refused (0.093465ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8157213Z ✔ pr_merged from running: refused (0.12285ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8158204Z ✔ pr_merged from done: refused (0.086251ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8177175Z ✔ pr_merged from blocked: -> done (0.087223ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8179123Z ✔ pr_merged from failed: -> done (0.084207ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8180344Z ✔ pr_merged from cancel_requested: refused (0.063528ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8181537Z ✔ pr_merged from cancelled: refused (0.086341ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8182785Z ✔ recover after restart from proposed: refused (0.148578ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8195721Z ✔ recover after restart from queued: refused (0.092472ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8198148Z ✔ recover after restart from running: -> queued (0.089137ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8199312Z ✔ recover after restart from done: refused (0.083917ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8200571Z ✔ recover after restart from blocked: refused (1.638172ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8201907Z ✔ recover after restart from failed: refused (0.055834ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8203298Z ✔ recover after restart from cancel_requested: -> cancelled (0.047569ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8204640Z ✔ recover after restart from cancelled: refused (0.044854ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8205865Z ✔ recover after too many restarts from proposed: refused (0.062427ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8207314Z ✔ recover after too many restarts from queued: refused (0.06465ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8208606Z ✔ recover after too many restarts from running: -> failed (0.051346ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8209829Z ✔ recover after too many restarts from done: refused (0.045536ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8211040Z ✔ recover after too many restarts from blocked: refused (0.043451ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8212277Z ✔ recover after too many restarts from failed: refused (0.04294ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8213613Z ✔ recover after too many restarts from cancel_requested: -> cancelled (0.044033ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8215161Z ✔ recover after too many restarts from cancelled: refused (0.0427ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8216571Z ✔ personEvents: what a person may do in every status (1.193721ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8217825Z ✔ TRANSITIONS lists the statuses each status can move to (0.170378ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.8219196Z ✔ a finished run after cancel was requested always ends cancelled (0.186909ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.9816745Z ✔ states pick out waiting and stuck tasks, and PR states of done tasks (3.869823ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.9818536Z ✔ groups match the dashboard: a stuck task needs you and is not active (0.506878ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.9878851Z ✔ repo and search narrow the list (0.519852ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.9890007Z ✔ sorts (12.134811ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.9907395Z ✔ review is a done task whose PR is open (0.258333ms)
+check	UNKNOWN STEP	2026-11-08T18:05:13.9914472Z ✔ an unknown state or sort says which names are valid (0.655094ms)
+check	UNKNOWN STEP	2026-11-08T18:05:14.3651709Z ✔ a model is an alias or a full claude model id (1.132186ms)
+check	UNKNOWN STEP	2026-11-08T18:05:14.3661538Z ✔ adding or editing a task refuses a model claude would reject (18.552306ms)
+check	UNKNOWN STEP	2026-11-08T18:05:14.3687060Z ✔ a repo's own tool rules replace the defaults (0.73302ms)
+check	UNKNOWN STEP	2026-11-08T18:05:14.9046643Z ✔ clearing the plan of a task that owns one is refused, saying how to replace it (33.204322ms)
+check	UNKNOWN STEP	2026-11-08T18:05:14.9058462Z ✔ a claim between the edit check and the save leaves the plan unchanged (16.661642ms)
+check	UNKNOWN STEP	2026-11-08T18:05:14.9079700Z ✔ a plan attached to a done owner makes a follower a restart cut off start afresh (19.093136ms)
+check	UNKNOWN STEP	2026-11-08T18:05:14.9084133Z ✔ a recovered task that fails or is cancelled has its runs end so; a requeued one keeps them interrupted (15.485573ms)
+check	UNKNOWN STEP	2026-11-08T18:05:14.9085614Z ✔ link and unlink leave no stale after_task in the API (21.392444ms)
+check	UNKNOWN STEP	2026-11-08T18:05:14.9087148Z ✔ a legacy plan_path stays in its column, out of the store and the API (14.302753ms)
+check	UNKNOWN STEP	2026-11-08T18:05:14.9088628Z ✔ a merge request check finished after a conflict blocked the task is dropped (17.473379ms)
+check	UNKNOWN STEP	2026-11-08T18:05:15.6033191Z ✔ a proposed row with every state column set carries only what proposed has (25.333189ms)
+check	UNKNOWN STEP	2026-11-08T18:05:15.6037185Z ✔ a proposed row with malformed JSON in its columns still reads (9.406852ms)
+check	UNKNOWN STEP	2026-11-08T18:05:15.6043009Z ✔ a queued row with every state column set carries only what queued has (11.224499ms)
+check	UNKNOWN STEP	2026-11-08T18:05:15.6049549Z ✔ a queued row with malformed JSON in its columns still reads (9.201759ms)
+check	UNKNOWN STEP	2026-11-08T18:05:15.6065008Z ✔ a running row with every state column set carries only what running has (11.670233ms)
+check	UNKNOWN STEP	2026-11-08T18:05:15.6070840Z ✔ a running row with malformed JSON in its columns still reads (8.734806ms)
+check	UNKNOWN STEP	2026-11-08T18:05:15.6074483Z ✔ a done row with every state column set carries only what done has (11.489335ms)
+check	UNKNOWN STEP	2026-11-08T18:05:15.6080736Z ✔ a done row with malformed JSON in its columns still reads (8.983741ms)
+check	UNKNOWN STEP	2026-11-08T18:05:15.6109886Z ✔ a blocked row with every state column set carries only what blocked has (9.957822ms)
+check	UNKNOWN STEP	2026-11-08T18:05:15.6111794Z ✔ a blocked row with malformed JSON in its columns still reads (9.226115ms)
+check	UNKNOWN STEP	2026-11-08T18:05:15.6118621Z ✔ a failed row with every state column set carries only what failed has (8.746167ms)
+check	UNKNOWN STEP	2026-11-08T18:05:15.6120200Z ✔ a failed row with malformed JSON in its columns still reads (8.446447ms)
+check	UNKNOWN STEP	2026-11-08T18:05:15.6121974Z ✔ a cancel_requested row with every state column set carries only what cancel_requested has (8.70994ms)
+check	UNKNOWN STEP	2026-11-08T18:05:15.6123750Z ✔ a cancel_requested row with malformed JSON in its columns still reads (8.285346ms)
+check	UNKNOWN STEP	2026-11-08T18:05:15.6125486Z ✔ a cancelled row with every state column set carries only what cancelled has (9.476111ms)
+check	UNKNOWN STEP	2026-11-08T18:05:15.6137184Z ✔ a cancelled row with malformed JSON in its columns still reads (9.525814ms)
+check	UNKNOWN STEP	2026-11-08T18:05:15.6139582Z ✔ the API sends every field for a proposed task, in the shape it always had (19.396914ms)
+check	UNKNOWN STEP	2026-11-08T18:05:15.6141335Z ✔ the API sends every field for a queued task, in the shape it always had (14.92711ms)
+check	UNKNOWN STEP	2026-11-08T18:05:15.6143092Z ✔ the API sends every field for a running task, in the shape it always had (12.989809ms)
+check	UNKNOWN STEP	2026-11-08T18:05:15.6145696Z ✔ the API sends every field for a done task, in the shape it always had (12.347859ms)
+check	UNKNOWN STEP	2026-11-08T18:05:15.6147581Z ✔ the API sends every field for a blocked task, in the shape it always had (12.942099ms)
+check	UNKNOWN STEP	2026-11-08T18:05:15.6149314Z ✔ the API sends every field for a failed task, in the shape it always had (11.34783ms)
+check	UNKNOWN STEP	2026-11-08T18:05:15.6151178Z ✔ the API sends every field for a cancel_requested task, in the shape it always had (12.736335ms)
+check	UNKNOWN STEP	2026-11-08T18:05:15.6153155Z ✔ the API sends every field for a cancelled task, in the shape it always had (18.094129ms)
+check	UNKNOWN STEP	2026-11-08T18:05:15.6154570Z ✔ applyEvent clears the columns of the status the task left (15.806133ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.0365511Z ✔ retry: the task has no stop reason, the timeline row keeps it (22.419068ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.0416709Z ✔ unblock_retry: the task has no stop reason, the timeline row keeps it (12.018109ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.0418300Z ✔ rate_limited: the task has no stop reason, the timeline row keeps it (11.389866ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.0421662Z ✔ recover: the task has no stop reason, the timeline row keeps it (11.873098ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.0430318Z ✔ finish:failed:retry: the task has no stop reason, the timeline row keeps it (10.062287ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.0432001Z ✔ transition leaves no stop reason whenever it leads to queued (0.879753ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.0475527Z ✔ the planner lists a queued task without a stop reason (12.841066ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.2034386Z ✔ transition: claim (3.475613ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.2067593Z ✔ transition: finish:done leaves no stop reason (0.281065ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.2069005Z ✔ transition: finish:blocked sets the stop reason and needs (0.239758ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.2089971Z ✔ transition: finish:blocked without needs (0.195295ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.2121789Z ✔ transition: finish:blocked by the environment gives the attempt back (0.537254ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.2153359Z ✔ transition: finish:cancelled (0.343622ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.2154516Z ✔ transition: finish:failed (0.234648ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.2180692Z ✔ transition: finish:failed:retry requeues and carries nothing (0.221915ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.2197932Z ✔ transition: rate_limited gives the attempt back (0.785697ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.2199750Z ✔ transition: rate_limited never takes attempts below zero (0.324777ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.2218452Z ✔ transition: conflict blocks a done task and clears done_by (0.208399ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.2237074Z ✔ transition: cancel a queued task (0.758568ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.2257007Z ✔ transition: cancel a running task (0.145992ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.2266672Z ✔ transition: approve carries nothing (0.108593ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.2268250Z ✔ transition: reject (0.103483ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.2269190Z ✔ transition: retry allows one more attempt (0.148127ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.2270279Z ✔ transition: retry of a done task clears done_by (0.093254ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.2272070Z ✔ transition: unblock_retry queues a blocked task without touching its attempts (0.104766ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.2273235Z ✔ transition: mark_done (0.086752ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.2274013Z ✔ transition: pr_merged (0.123771ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.2275209Z ✔ transition: recover requeues, counts the restart and gives the attempt back (0.098394ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.2276831Z ✔ transition: recover:exhausted fails the task with the reason (0.086431ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.2278164Z ✔ transition: finish:done from cancel_requested: the cancel wins (0.101881ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.2279532Z ✔ transition: finish:blocked from cancel_requested: the cancel wins (0.103904ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.2280924Z ✔ transition: finish:cancelled from cancel_requested: the cancel wins (0.092042ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.2282565Z ✔ transition: finish:failed from cancel_requested: the cancel wins (0.099336ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.2283958Z ✔ transition: finish:failed:retry from cancel_requested: the cancel wins (0.083005ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.2285365Z ✔ transition: rate_limited from cancel_requested: the cancel wins (0.09077ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.2286892Z ✔ transition: recover from cancel_requested: the cancel wins (0.085219ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.2297893Z ✔ transition: recover:exhausted from cancel_requested: the cancel wins (0.088435ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.2311797Z ✔ transition: every rule key has a case (0.192279ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.2313127Z ✔ transition: the domain events of every entry in RULES (0.836122ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.2314291Z ✔ transition: null where the event is refused (0.1766ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.2315901Z ✔ transition: a cancel keeps the stop reason of the block or failure it ended, and drops the needs and the question (0.174636ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.7790992Z ✔ the task list runs the same statements however many tasks and links there are (74.456753ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.7817900Z ✔ the list works out each task's start state once, for both its waiting and its wait (19.557573ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.7819682Z ✔ the list shows the links, dependents and waits it always did (13.990143ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.7821082Z ✔ a dependent's link removed between reads doesn't throw (11.639552ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.7844518Z ✔ a running task's detail starts no git; a done task's still measures its branch (49.166539ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.9006129Z ✔ errorMessage: an Error gives its message, anything else its text (1.518877ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.9017866Z ✔ cut: a text within the limit is kept; a longer one ends in an ellipsis within the limit (0.264393ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.9043692Z ✔ oneLine: whitespace runs become one space and the ends are trimmed (0.309879ms)
+check	UNKNOWN STEP	2026-11-08T18:05:16.9059205Z ✔ plural: one takes the singular, any other count the plural (0.28422ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.0488319Z ✔ there are at least three themes, and the default is high contrast (2.793518ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.0522976Z ✔ every theme defines the same tokens in light and dark (1.342428ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.0524302Z ✔ the system mode repeats the dark palette under prefers-color-scheme (0.585794ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.0587627Z ✔ warm light passes WCAG AA (1.725915ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.0588456Z ✔ warm dark passes WCAG AA (1.299989ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.0598461Z ✔ cool light passes WCAG AA (1.418139ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.0626694Z ✔ cool dark passes WCAG AA (0.895794ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.0644025Z ✔ github light passes WCAG AA (2.101295ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.0704093Z ✔ github dark passes WCAG AA (0.820974ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.0710685Z ✔ contrast light passes WCAG AA (0.922934ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.0727500Z ✔ contrast dark passes WCAG AA (0.948382ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.1725987Z ✔ sqliteMs reads a sqlite stamp as UTC (1.430281ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.1809956Z ✔ sqliteUtc writes an ISO date as a sqlite stamp, and sqliteMs reads it back (0.473985ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.1827109Z ✔ minutesBetween reads sqlite timestamps (0.265295ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.1828040Z ✔ weekOf: the Monday of the week, in UTC (0.301012ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.1829511Z ✔ median: the middle value, or the mean of the two middle ones (0.421006ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.3027614Z ✔ splitCommand splits on &&, ||, ; and | (2.390155ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.3059546Z ✔ matchesRule: a trailing * is a prefix match, otherwise the command must be exact (0.456373ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.3085307Z ✔ bashPatterns reads Bash(...) rules and ignores other tools (0.370151ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.3097613Z ✔ refusedCommands lists the parts of a command that no rule allows (0.522636ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.4184471Z ✔ an existing rustup directory is added to PATH, a missing one is left out (1.866276ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.4207441Z ✔ a directory already on PATH is not added twice (0.277528ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.5580953Z ✔ detectToolchain: pnpm lockfile (2.464784ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.5582952Z ✔ detectToolchain: yarn lockfile (0.217456ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.5611100Z ✔ detectToolchain: npm lockfile (0.212858ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.5636878Z ✔ detectToolchain: bare package.json is npm; install-like and odd script names get no rule (0.186308ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.5657344Z ✔ detectToolchain: cargo (0.190896ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.5658532Z ✔ detectToolchain: uv lockfile (0.162103ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.5677295Z ✔ detectToolchain: pyproject only (0.184024ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.5697081Z ✔ detectToolchain: go (0.678347ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.5710308Z ✔ detectToolchain: a lockfile beats other markers (JS front end in a Rust repo) (0.268662ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.5711699Z ✔ detectToolchain: unknown repo (0.334084ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.5712618Z ✔ detectToolchain: empty repo (0.174346ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.5713628Z ✔ toolchain rules never allow installs (0.673619ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.6956193Z ✔ a result is paired with its call and is not an item of its own (1.705526ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.6975458Z ✔ back-to-back reads fold into one item; a lone read does not (1.029143ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.6987226Z ✔ a subagent's entries nest under its call (0.307745ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.7007469Z ✔ an old log with no ids shows one item per call (0.434071ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.7027412Z ✔ the gutter shows time since the first entry (0.424443ms)
+check	UNKNOWN STEP	2026-11-08T18:05:17.7033101Z ✔ colour codes become colour; other codes are dropped (0.656075ms)
+check	UNKNOWN STEP	2026-11-08T18:05:18.2267424Z ✔ unblockable: off by default, and only for a blocked task (12.189299ms)
+check	UNKNOWN STEP	2026-11-08T18:05:18.2277902Z ✔ unblockable: never for NEEDS deps or host, a setup failure or a conflict (0.410497ms)
+check	UNKNOWN STEP	2026-11-08T18:05:18.2314317Z ✔ unblockable: once per block (0.242123ms)
+check	UNKNOWN STEP	2026-11-08T18:05:18.2320037Z ✔ parseUnblock: a retry with its note (0.886076ms)
+check	UNKNOWN STEP	2026-11-08T18:05:18.2321403Z ✔ parseUnblock: an ask with its options, at most four (0.441184ms)
+check	UNKNOWN STEP	2026-11-08T18:05:18.2323036Z ✔ parseUnblock: a malformed ending counts as ask with the last line (0.30536ms)
+check	UNKNOWN STEP	2026-11-08T18:05:18.2324821Z ✔ unblockDecision: a retry needs attempts left; otherwise it asks (0.359823ms)
+check	UNKNOWN STEP	2026-11-08T18:05:18.2326923Z ✔ buildUnblockPrompt: the task, why it stopped, the last message and the review note (0.31056ms)
+check	UNKNOWN STEP	2026-11-08T18:05:18.2328449Z ✔ repo set auto_unblock on|off (0.431547ms)
+check	UNKNOWN STEP	2026-11-08T18:05:18.2330146Z ✔ an open unblock run takes a slot, keeps a retried task from being claimed, and a restart ends it (20.474886ms)
+check	UNKNOWN STEP	2026-11-08T18:05:18.5579918Z ✔ a blocked task gets one unblock run, then is queued again with the note and its attempts unchanged (350.520321ms)
+check	UNKNOWN STEP	2026-11-08T18:05:18.7486461Z ✔ the unblock run itself uses no attempt (195.058025ms)
+check	UNKNOWN STEP	2026-11-08T18:05:18.9364049Z ✔ a task with no attempts left gets a question, not a retry (193.18976ms)
+check	UNKNOWN STEP	2026-11-08T18:05:19.1331305Z ✔ an unblock run that asks leaves the question and its options; a retry clears them (195.534192ms)
+check	UNKNOWN STEP	2026-11-08T18:05:19.2796111Z ✔ an unblock run with a malformed ending asks with its last line (176.956519ms)
+check	UNKNOWN STEP	2026-11-08T18:05:19.4407915Z ✔ [vocabulary] avoid-words from GLOSSARY.md appear only on allowed lines (34.586029ms)
+check	UNKNOWN STEP	2026-11-08T18:05:19.4424513Z ✔ [vocabulary] "hold" is still an avoid-word (0.579503ms)
+check	UNKNOWN STEP	2026-11-08T18:05:19.4452774Z ✔ [vocabulary] a sample file with an avoid-word fails, and an allowed line does not (0.693866ms)
+check	UNKNOWN STEP	2026-11-08T18:05:19.4454623Z ✔ [vocabulary] CLAUDE.md imports GLOSSARY.md and no longer has its own Domain language (0.598208ms)
+check	UNKNOWN STEP	2026-11-08T18:05:19.5658029Z ✔ no scoped style puts selectors after :global(…) (7.171987ms)
+check	UNKNOWN STEP	2026-11-08T18:05:19.5788230Z ℹ tests 1141
+check	UNKNOWN STEP	2026-11-08T18:05:19.5807451Z ℹ suites 0
+check	UNKNOWN STEP	2026-11-08T18:05:19.5828470Z ℹ pass 1141
+check	UNKNOWN STEP	2026-11-08T18:05:19.5857359Z ℹ fail 0
+check	UNKNOWN STEP	2026-11-08T18:05:19.5858020Z ℹ cancelled 0
+check	UNKNOWN STEP	2026-11-08T18:05:19.5871404Z ℹ skipped 0
+check	UNKNOWN STEP	2026-11-08T18:05:19.5871992Z ℹ todo 0
+check	UNKNOWN STEP	2026-11-08T18:05:19.5872597Z ℹ duration_ms 99809.075361
+check	UNKNOWN STEP	2026-11-08T18:05:26.5749311Z it1 stream=true kill@834ms orphans=0 drain=3918ms 
+check	UNKNOWN STEP	2026-11-08T18:05:33.2607362Z it2 stream=false kill@2408ms orphans=1 drain=2092ms 
+check	UNKNOWN STEP	2026-11-08T18:05:40.0448862Z it3 stream=true kill@858ms orphans=0 drain=3719ms 
+check	UNKNOWN STEP	2026-11-08T18:05:48.0952255Z it4 stream=false kill@1705ms orphans=1 drain=4168ms 
+check	UNKNOWN STEP	2026-11-08T18:05:54.5702803Z it5 stream=true kill@2382ms orphans=0 drain=1885ms 
+check	UNKNOWN STEP	2026-11-08T18:05:59.3495082Z pr: killed between done and its PR, opened once on restart
+check	UNKNOWN STEP	2026-11-08T18:05:59.3495972Z 
+check	UNKNOWN STEP	2026-11-08T18:05:59.3501272Z === results over 5 iterations ===
+check	UNKNOWN STEP	2026-11-08T18:05:59.3502048Z a_nonterminal                    0  
+check	UNKNOWN STEP	2026-11-08T18:05:59.3502847Z b_too_many_runs                  0  
+check	UNKNOWN STEP	2026-11-08T18:05:59.3503604Z b_concurrent_same_worktree       0  
+check	UNKNOWN STEP	2026-11-08T18:05:59.3504402Z c_orphan_alive_after_restart     0  
+check	UNKNOWN STEP	2026-11-08T18:05:59.3505175Z c_orphan_commit_after_restart    0  
+check	UNKNOWN STEP	2026-11-08T18:05:59.3508935Z d_worktree_mismatch              0  
+check	UNKNOWN STEP	2026-11-08T18:05:59.3514811Z e_attempts_insane                0  
+check	UNKNOWN STEP	2026-11-08T18:05:59.3515455Z f_restart_timeout                0  
+check	UNKNOWN STEP	2026-11-08T18:05:59.3516070Z g_pr_after_crash                 0  
+check	UNKNOWN STEP	2026-11-08T18:05:59.3517786Z orphan claude processes total: 2; committed into worktree after the kill: 0; died of EPIPE: 0
+check	UNKNOWN STEP	2026-11-08T18:05:59.3787086Z crash-test: 5 iterations, 0 violations
+check	UNKNOWN STEP	2026-11-08T18:05:59.3883329Z ##[group]Run pnpm coverage
+check	UNKNOWN STEP	2026-11-08T18:05:59.3883645Z ^[[36;1mpnpm coverage^[[0m
+check	UNKNOWN STEP	2026-11-08T18:05:59.3933153Z shell: /usr/bin/bash -e {0}
+check	UNKNOWN STEP	2026-11-08T18:05:59.3933415Z env:
+check	UNKNOWN STEP	2026-11-08T18:05:59.3933689Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+check	UNKNOWN STEP	2026-11-08T18:05:59.3934021Z ##[endgroup]
+check	UNKNOWN STEP	2026-11-08T18:05:59.4192344Z $ pnpm --filter agentdeck-daemon coverage
+check	UNKNOWN STEP	2026-11-08T18:05:59.4426534Z $ node scripts/coverage.ts
+check	UNKNOWN STEP	2026-11-08T18:06:01.0002723Z ....................
+check	UNKNOWN STEP	2026-11-08T18:06:01.4334285Z ....................
+check	UNKNOWN STEP	2026-11-08T18:06:01.7675824Z ....................
+check	UNKNOWN STEP	2026-11-08T18:06:02.1138904Z ....................
+check	UNKNOWN STEP	2026-11-08T18:06:04.5934271Z ....................
+check	UNKNOWN STEP	2026-11-08T18:06:18.9294353Z ....................
+check	UNKNOWN STEP	2026-11-08T18:06:22.3137277Z ....................
+check	UNKNOWN STEP	2026-11-08T18:06:23.0087520Z ....................
+check	UNKNOWN STEP	2026-11-08T18:06:24.4286911Z ....................
+check	UNKNOWN STEP	2026-11-08T18:06:31.8547559Z ....................
+check	UNKNOWN STEP	2026-11-08T18:06:33.8782223Z ....................
+check	UNKNOWN STEP	2026-11-08T18:06:41.6421378Z ....................
+check	UNKNOWN STEP	2026-11-08T18:06:42.1382776Z ....................
+check	UNKNOWN STEP	2026-11-08T18:06:45.1061283Z ....................
+check	UNKNOWN STEP	2026-11-08T18:06:50.4295991Z ....................
+check	UNKNOWN STEP	2026-11-08T18:06:52.1107159Z ....................
+check	UNKNOWN STEP	2026-11-08T18:06:53.0220578Z ....................
+check	UNKNOWN STEP	2026-11-08T18:06:53.9540380Z ....................
+check	UNKNOWN STEP	2026-11-08T18:06:55.2134136Z ....................
+check	UNKNOWN STEP	2026-11-08T18:06:56.3811612Z ....................
+check	UNKNOWN STEP	2026-11-08T18:06:58.4978618Z ....................
+check	UNKNOWN STEP	2026-11-08T18:06:59.4836426Z ....................
+check	UNKNOWN STEP	2026-11-08T18:07:00.9290870Z ....................
+check	UNKNOWN STEP	2026-11-08T18:07:02.3332149Z ....................
+check	UNKNOWN STEP	2026-11-08T18:07:04.0800817Z ....................
+check	UNKNOWN STEP	2026-11-08T18:07:04.0947109Z ....................
+check	UNKNOWN STEP	2026-11-08T18:07:05.5164232Z ....................
+check	UNKNOWN STEP	2026-11-08T18:07:11.3133806Z ....................
+check	UNKNOWN STEP	2026-11-08T18:07:13.1780432Z ....................
+check	UNKNOWN STEP	2026-11-08T18:07:14.8204819Z ....................
+check	UNKNOWN STEP	2026-11-08T18:07:17.7628912Z ....................
+check	UNKNOWN STEP	2026-11-08T18:07:19.6412371Z ....................
+check	UNKNOWN STEP	2026-11-08T18:07:21.8322714Z ....................
+check	UNKNOWN STEP	2026-11-08T18:07:25.6657436Z ....................
+check	UNKNOWN STEP	2026-11-08T18:07:28.1487370Z ....................
+check	UNKNOWN STEP	2026-11-08T18:07:32.3440396Z ....................
+check	UNKNOWN STEP	2026-11-08T18:07:34.7619763Z ....................
+check	UNKNOWN STEP	2026-11-08T18:07:40.3865783Z ....................
+check	UNKNOWN STEP	2026-11-08T18:07:41.1922465Z ....................
+check	UNKNOWN STEP	2026-11-08T18:07:43.8397337Z ....................
+check	UNKNOWN STEP	2026-11-08T18:07:46.9575538Z ....................
+check	UNKNOWN STEP	2026-11-08T18:07:52.9621373Z ....................
+check	UNKNOWN STEP	2026-11-08T18:07:54.0164424Z ....................
+check	UNKNOWN STEP	2026-11-08T18:07:54.0305899Z ....................
+check	UNKNOWN STEP	2026-11-08T18:07:54.0382179Z ....................
+check	UNKNOWN STEP	2026-11-08T18:07:54.0436855Z ....................
+check	UNKNOWN STEP	2026-11-08T18:07:54.0511967Z ....................
+check	UNKNOWN STEP	2026-11-08T18:07:54.0542500Z ....................
+check	UNKNOWN STEP	2026-11-08T18:07:54.0603806Z ....................
+check	UNKNOWN STEP	2026-11-08T18:07:55.2330872Z ....................
+check	UNKNOWN STEP	2026-11-08T18:07:55.9726587Z ....................
+check	UNKNOWN STEP	2026-11-08T18:07:56.6320595Z ....................
+check	UNKNOWN STEP	2026-11-08T18:07:56.6466169Z ....................
+check	UNKNOWN STEP	2026-11-08T18:07:57.3957904Z ....................
+check	UNKNOWN STEP	2026-11-08T18:07:57.8501350Z ....................
+check	UNKNOWN STEP	2026-11-08T18:07:58.2923130Z ....................
+check	UNKNOWN STEP	2026-11-08T18:08:00.2127412Z ....................
+check	UNKNOWN STEP	2026-11-08T18:08:01.2076501Z .
+check	UNKNOWN STEP	2026-11-08T18:08:01.2700554Z 
+check	UNKNOWN STEP	2026-11-08T18:08:01.2716811Z 
+check	UNKNOWN STEP	2026-11-08T18:08:01.2717655Z Group                   Files   Lines  Floor  Branches  Floor
+check	UNKNOWN STEP	2026-11-08T18:08:01.2719566Z adapters                   17   88.0%    88%     84.1%    83%
+check	UNKNOWN STEP	2026-11-08T18:08:01.2723834Z Coverage fails:
+check	UNKNOWN STEP	2026-11-08T18:08:01.2724454Z api                        12   98.0%    91%     93.7%    90%
+check	UNKNOWN STEP	2026-11-08T18:08:01.2725762Z application                 1  100.0%   100%    100.0%   100%
+check	UNKNOWN STEP	2026-11-08T18:08:01.2727261Z   cli: branches 53.6% is below its floor of 54%: add tests, never lower the floor
+check	UNKNOWN STEP	2026-11-08T18:08:01.2728638Z application/capacity        2  100.0%   100%    100.0%   100%
+check	UNKNOWN STEP	2026-11-08T18:08:01.2730387Z   domain/insights: branches 95.8% is below its floor of 96%: add tests, never lower the floor
+check	UNKNOWN STEP	2026-11-08T18:08:01.2737415Z application/insights        1  100.0%   100%     92.5%    91%
+check	UNKNOWN STEP	2026-11-08T18:08:01.2747090Z application/landing        10   99.0%    99%     89.1%    88%
+check	UNKNOWN STEP	2026-11-08T18:08:01.2748065Z application/operations      7   99.5%    95%     94.3%    91%
+check	UNKNOWN STEP	2026-11-08T18:08:01.2749011Z application/proposals       1   92.9%    92%     81.8%    79%
+check	UNKNOWN STEP	2026-11-08T18:08:01.2749906Z application/repos           4   98.7%    98%     91.1%    88%
+check	UNKNOWN STEP	2026-11-08T18:08:01.2750796Z application/runs            5   94.5%    94%     83.6%    82%
+check	UNKNOWN STEP	2026-11-08T18:08:01.2751675Z application/scheduler       1   98.4%    98%     91.9%    91%
+check	UNKNOWN STEP	2026-11-08T18:08:01.2752577Z application/shared          1  100.0%   100%     97.0%    95%
+check	UNKNOWN STEP	2026-11-08T18:08:01.2753467Z application/work           10   99.6%    99%     91.7%    90%
+check	UNKNOWN STEP	2026-11-08T18:08:01.2754305Z cli                        13   65.1%    63%     53.6%    54%
+check	UNKNOWN STEP	2026-11-08T18:08:01.2755095Z db                         19   99.9%    99%     94.2%    94%
+check	UNKNOWN STEP	2026-11-08T18:08:01.2755903Z domain/capacity             3  100.0%   100%     97.3%    94%
+check	UNKNOWN STEP	2026-11-08T18:08:01.2756945Z domain/insights             6  100.0%   100%     95.8%    96%
+check	UNKNOWN STEP	2026-11-08T18:08:01.2757815Z domain/landing             11  100.0%   100%     96.7%    95%
+check	UNKNOWN STEP	2026-11-08T18:08:01.2758692Z domain/operations           5  100.0%   100%     98.4%    97%
+check	UNKNOWN STEP	2026-11-08T18:08:01.2759615Z domain/proposals            2  100.0%   100%     89.3%    89%
+check	UNKNOWN STEP	2026-11-08T18:08:01.2760573Z domain/repos                7  100.0%   100%     99.3%    99%
+check	UNKNOWN STEP	2026-11-08T18:08:01.2761477Z domain/runs                 8   98.3%    98%     92.3%    92%
+check	UNKNOWN STEP	2026-11-08T18:08:01.2762391Z domain/shared               5  100.0%   100%     95.8%    95%
+check	UNKNOWN STEP	2026-11-08T18:08:01.2763263Z domain/work                21   99.6%    99%     95.6%    95%
+check	UNKNOWN STEP	2026-11-08T18:08:01.2764141Z src                         4   84.8%    84%     70.4%    70%
+check	UNKNOWN STEP	2026-11-08T18:08:01.2764659Z 
+check	UNKNOWN STEP	2026-11-08T18:08:01.2765551Z Floors beaten by more than 2 points: raise them in COVERAGE_FLOORS (daemon/scripts/lib/progress.ts).
+check	UNKNOWN STEP	2026-11-08T18:08:01.2766980Z   api: lines 98.0% beats its floor of 91%: raise it to 98
+check	UNKNOWN STEP	2026-11-08T18:08:01.2767874Z   api: branches 93.7% beats its floor of 90%: raise it to 93
+check	UNKNOWN STEP	2026-11-08T18:08:01.2768909Z   application/operations: lines 99.5% beats its floor of 95%: raise it to 99
+check	UNKNOWN STEP	2026-11-08T18:08:01.2770082Z   application/operations: branches 94.3% beats its floor of 91%: raise it to 94
+check	UNKNOWN STEP	2026-11-08T18:08:01.2771275Z   application/proposals: branches 81.8% beats its floor of 79%: raise it to 81
+check	UNKNOWN STEP	2026-11-08T18:08:01.2772414Z   application/repos: branches 91.1% beats its floor of 88%: raise it to 91
+check	UNKNOWN STEP	2026-11-08T18:08:01.2773516Z   application/shared: branches 97.0% beats its floor of 95%: raise it to 97
+check	UNKNOWN STEP	2026-11-08T18:08:01.2774474Z   cli: lines 65.1% beats its floor of 63%: raise it to 65
+check	UNKNOWN STEP	2026-11-08T18:08:01.2775802Z   domain/capacity: branches 97.3% beats its floor of 94%: raise it to 97
+check	UNKNOWN STEP	2026-11-08T18:08:01.2851263Z [ELIFECYCLE] Command failed with exit code 1.
+check	UNKNOWN STEP	2026-11-08T18:08:01.2858646Z Error: ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL
+check	UNKNOWN STEP	2026-11-08T18:08:01.2866682Z 
+check	UNKNOWN STEP	2026-11-08T18:08:01.2874727Z   × "pnpm recursive run" failed in /home/runner/work/agentdeck/agentdeck/
+check	UNKNOWN STEP	2026-11-08T18:08:01.2875894Z   │ daemon
+check	UNKNOWN STEP	2026-11-08T18:08:01.2887579Z 
+check	UNKNOWN STEP	2026-11-08T18:08:01.2888315Z [ELIFECYCLE] Command failed with exit code 1.
+check	UNKNOWN STEP	2026-11-08T18:08:01.2916777Z ##[error]Process completed with exit code 1.
+check	UNKNOWN STEP	2026-11-08T18:08:01.3014847Z Post job cleanup.
+check	UNKNOWN STEP	2026-11-08T18:08:01.5007365Z Pruning is unnecessary.
+check	UNKNOWN STEP	2026-11-08T18:08:01.5377307Z Post job cleanup.
+check	UNKNOWN STEP	2026-11-08T18:08:01.6367943Z [command]/usr/bin/git version
+check	UNKNOWN STEP	2026-11-08T18:08:01.6437301Z git version 2.56.0
+check	UNKNOWN STEP	2026-11-08T18:08:01.6488724Z Copying '/home/runner/.gitconfig' to '/home/runner/work/_temp/f49b5677-9a09-42f6-ad34-35b78efd5b62/.gitconfig'
+check	UNKNOWN STEP	2026-11-08T18:08:01.6500723Z Temporarily overriding HOME='/home/runner/work/_temp/f49b5677-9a09-42f6-ad34-35b78efd5b62' before making global git config changes
+check	UNKNOWN STEP	2026-11-08T18:08:01.6512851Z Adding repository directory to the temporary git global config as a safe directory
+check	UNKNOWN STEP	2026-11-08T18:08:01.6518025Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/agentdeck/agentdeck
+check	UNKNOWN STEP	2026-11-08T18:08:01.6589541Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+check	UNKNOWN STEP	2026-11-08T18:08:01.6660520Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+check	UNKNOWN STEP	2026-11-08T18:08:01.7145277Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+check	UNKNOWN STEP	2026-11-08T18:08:01.7185990Z http.https://github.com/.extraheader
+check	UNKNOWN STEP	2026-11-08T18:08:01.7238180Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+check	UNKNOWN STEP	2026-11-08T18:08:01.7301987Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+check	UNKNOWN STEP	2026-11-08T18:08:01.7925377Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+check	UNKNOWN STEP	2026-11-08T18:08:01.7987673Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+check	UNKNOWN STEP	2026-11-08T18:08:01.8662070Z Cleaning up orphan processes
+check	UNKNOWN STEP	2026-11-08T18:08:01.9110473Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-node@v4, pnpm/action-setup@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

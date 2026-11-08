@@ -35,6 +35,11 @@ export interface Repo {
   auto_resolve: boolean;
   /** The daemon starts an unblock run on its own when a task blocks (domain/runs/unblock.ts); off by default. */
   auto_unblock: boolean;
+  /**
+   * The daemon starts a review run on its own when a task is done (domain/runs/review.ts), and a clean verdict may stand in
+   * for a person's review; off by default.
+   */
+  auto_review: boolean;
   /** The agent's Bash commands run in Claude Code's sandbox (the default). */
   sandbox: boolean;
   archived_at: string | null; // set = hidden everywhere and its work stopped, until `repo unarchive`
@@ -45,6 +50,8 @@ export interface Repo {
   auto_merge_max_lines: number; // a PR changing more lines (additions + deletions) needs a person
   /** Path prefixes; a PR touching one needs a person. */
   auto_merge_skip: string[];
+  /** The model a new task of this repo takes when it names none; null follows the default_model setting. */
+  model: string | null;
   created_at: string;
 }
 

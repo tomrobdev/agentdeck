@@ -12,9 +12,10 @@ import type {
   ReviewComment,
   ReviewKind,
   ReviewWithComments,
+  ReviewedDiff,
   StoredChecks,
 } from '../../domain/landing/index.ts';
-import type { AttentionCandidate, Notification, NotifySettings, Settings } from '../../domain/operations/index.ts';
+import type { AttentionCandidate, Notification, NotifySettings, ReviewDue, Settings } from '../../domain/operations/index.ts';
 import type { PlannerOutcome, PlannerRun, PlannerSettings } from '../../domain/proposals/index.ts';
 import type { MergeMethod, Repo } from '../../domain/repos/index.ts';
 import type { PidRun, Run, RunKind, RunningTaskRun } from '../../domain/runs/index.ts';
@@ -52,7 +53,8 @@ export interface NewTask {
   title: string;
   prompt: string;
   priority?: number;
-  model?: string;
+  /** Decided by the caller (`newTaskModel`): the store has no default of its own. */
+  model: string;
   max_turns?: number;
   max_attempts?: number;
   status?: 'queued' | 'proposed';
@@ -90,11 +92,14 @@ export type RepoUpdate = Partial<
     | 'merge_method'
     | 'auto_resolve'
     | 'auto_unblock'
+    | 'auto_review'
     | 'sandbox'
     | 'network'
     | 'auto_merge'
     | 'auto_merge_max_lines'
     | 'auto_merge_skip'
+    | 'model'
+    | 'allowed_tools'
   >
 >;
 
@@ -121,9 +126,11 @@ export interface TaskRepository {
   attentionTasks(limit: number): AttentionCandidate[];
   hasQueued(): boolean;
   unblockCandidates(): BlockedTask[];
+  reviewCandidates(): Task[];
   recordQuestion(id: TaskId, question: UnblockQuestion, reason: string): boolean;
   listTaskSummaries(opts: { status?: TaskStatus; limit: number; before?: TaskId }): TaskSummary[];
   openPrTasks(): Task[];
+  failedPrTasks(): Task[];
   claimNextTask(): Task | undefined;
   editTask(id: TaskId, fields: TaskEdit, opts?: { ownPlan?: string }): Task | undefined;
   attachOwnPlan(id: TaskId, html: string): TaskPlan | undefined;
@@ -192,15 +199,17 @@ export interface RepoRepository {
 }
 
 export interface RunRepository {
-  startRun(task_id: TaskId, attempt: number, log_path: string, kind?: RunKind): Run['id'];
+  startRun(task_id: TaskId, attempt: number, log_path: string, kind?: RunKind, model?: string | null, diff_hash?: string | null): Run['id'];
+  setRunModelId(id: Run['id'], model_id: string): void;
   setRunPid(id: Run['id'], pid: number): void;
   setRunLive(id: Run['id'], live_turns: number, live_tool: string | null): void;
   setRunSession(id: Run['id'], session_id: string): void;
   liveRuns(kind: RunKind): Map<TaskId, { started_at: string; live_turns: number; live_tool: string | null }>;
-  finishRun(id: Run['id'], r: Partial<Omit<Run, 'id' | 'task_id' | 'kind' | 'attempt' | 'started_at' | 'log_path'>>): void;
+  finishRun(id: Run['id'], r: Partial<Omit<Run, 'id' | 'task_id' | 'kind' | 'attempt' | 'started_at' | 'log_path' | 'model'>>): void;
   runsForTask(task_id: TaskId): Run[];
   countRunningResolves(): number;
   countRunningUnblocks(): number;
+  countRunningReviews(): number;
   slotsUsed(): number;
   pidRuns(days: number): PidRun[];
   runningTaskRuns(): RunningTaskRun[];
@@ -219,10 +228,11 @@ export interface PlannerRunRepository {
 export interface ReviewRepository {
   createReview(task_id: TaskId): Review;
   draftReviewFor(task_id: TaskId): Review | undefined;
+  addRunReview(task_id: TaskId, kind: ReviewKind, body: string, read: { head_commit: string; diff_hash: string }): Review;
   reviewsForTask(task_id: TaskId): ReviewWithComments[];
   reviewWithComments(id: ReviewId): ReviewWithComments | undefined;
   setReviewBody(id: ReviewId, body: string): boolean;
-  submitReview(id: ReviewId, kind: ReviewKind, body: string): boolean;
+  submitReview(id: ReviewId, kind: ReviewKind, body: string, read: ReviewedDiff): boolean;
   getComment(id: number): ReviewComment | undefined;
   addComment(c: Pick<ReviewComment, 'review_id' | 'path' | 'line' | 'side' | 'head_commit' | 'body'>): ReviewComment;
   deleteComment(id: number): boolean;
@@ -270,6 +280,14 @@ export interface SettingsRepository {
   maxConcurrent(): number;
   notifySettings(): NotifySettings;
   plannerSettings(): PlannerSettings;
+  /** The default_model, support_model and review_model settings. */
+  modelSettings(): Pick<Settings, 'default_model' | 'support_model' | 'review_model'>;
+  /** The repos due for an area review, as the daemon's last check found them, for the headline. */
+  reviewsDue(): ReviewDue[];
+  setReviewsDue(dues: ReviewDue[]): void;
+  /** When a person was last told the repo is due for an area review (ms since the epoch); null when never. */
+  reviewDueToldAt(repo: RepoId): number | null;
+  setReviewDueToldAt(repo: RepoId, at: number): void;
 }
 
 export interface ChangeRepository {

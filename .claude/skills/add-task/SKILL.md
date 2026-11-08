@@ -45,7 +45,7 @@ The test command passing, plus concrete checks a reviewer can confirm.
 
 ## 4. Choose model, turns and links
 
-- **Model:** `sonnet` by default; `opus` for subtle design or a wide change; `haiku` only for mechanical work.
+- **Model:** choose one for every task and pass it as `--model`. The rule: `opus` for subtle design, a wide change or anything a reviewer would struggle to check; `sonnet` for a well-specified change of a few files; `haiku` only for mechanical work (a rename, a wording sweep). Say which you chose and why when you show the task. Without `--model` the task takes the repo's model, else the `default_model` setting, and `agentdeck add` says which.
 - **Turns:** the default is 40. Raise `--max-turns` for a change across many files (80), or a large port (120).
 - **Links:** `--builds-on <task>` when this needs another task's code: it starts once that one is done and merged. `--after <task>` when it only has to land after it: it runs at once and only its merge waits. Run `agentdeck ls` right before naming a task in a link.
 - **Auto-merge:** the repo's `auto_merge` setting applies. If the person wants to see the PR first, run `agentdeck auto-merge <id> off` after adding.
@@ -55,7 +55,7 @@ The test command passing, plus concrete checks a reviewer can confirm.
 Show the title, the prompt, the model, turns and links. Queue only on the person's OK:
 
 ```sh
-agentdeck add "<prompt>" --repo <repo> --title "<title>" [--model sonnet] [--max-turns n] [--builds-on <tasks>] [--after <tasks>]
+agentdeck add "<prompt>" --repo <repo> --title "<title>" --model <sonnet|opus> [--max-turns n] [--builds-on <tasks>] [--after <tasks>]
 ```
 
 If they ask to file it for later, or for someone else to approve, add `--propose`: it lands in `proposed` and waits for `agentdeck approve <id>`.

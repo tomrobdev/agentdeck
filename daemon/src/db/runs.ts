@@ -8,8 +8,11 @@ import type { Orm } from './orm.ts';
 import { NOW_SQL } from './sql.ts';
 import { plannerRuns, runs, tasks } from './tables.ts';
 
-/** The run kinds that run beside a task's status rather than as it: a resolve run (of a done task) and an unblock run (of a blocked one). */
-const SIDE_KINDS: RunKind[] = ['resolve', 'unblock'];
+/**
+ * The run kinds that run beside a task's status rather than as it: a resolve run (of a done task), an unblock run (of a
+ * blocked one) and a review run (of a done one).
+ */
+const SIDE_KINDS: RunKind[] = ['resolve', 'unblock', 'review'];
 
 export function runStore(orm: Orm) {
   /** Unfinished runs of one kind. */
@@ -20,8 +23,23 @@ export function runStore(orm: Orm) {
       .where(and(eq(runs.kind, kind), isNull(runs.ended_at)))
       .get()?.n ?? 0;
   return {
-    startRun(task_id: TaskId, attempt: number, log_path: string, kind: RunKind = 'work'): RunId {
-      return Number(orm.insert(runs).values({ task_id, attempt, log_path, kind }).run().lastInsertRowid) as RunId;
+    /**
+     * A new run row; `model` is the model its claude is started with (null: not known), and `diff_hash` the diff a review
+     * run reads (null for other kinds).
+     */
+    startRun(
+      task_id: TaskId,
+      attempt: number,
+      log_path: string,
+      kind: RunKind = 'work',
+      model: string | null = null,
+      diff_hash: string | null = null,
+    ): RunId {
+      return Number(orm.insert(runs).values({ task_id, attempt, log_path, kind, model, diff_hash }).run().lastInsertRowid) as RunId;
+    },
+    /** The exact model id claude's init line named for the run. */
+    setRunModelId(id: RunId, model_id: string): void {
+      orm.update(runs).set({ model_id }).where(eq(runs.id, id)).run();
     },
     /** Record the run's claude process group, and when it started: what `ownsLiveGroup` checks the pid against. */
     setRunPid(id: RunId, pid: number): void {
@@ -45,7 +63,7 @@ export function runStore(orm: Orm) {
         .all();
       return new Map(rows.map((r) => [r.task_id, r]));
     },
-    finishRun(id: RunId, r: Partial<Omit<Run, 'id' | 'task_id' | 'kind' | 'attempt' | 'started_at' | 'log_path'>>): void {
+    finishRun(id: RunId, r: Partial<Omit<Run, 'id' | 'task_id' | 'kind' | 'attempt' | 'started_at' | 'log_path' | 'model'>>): void {
       // undefined means "not given" to Drizzle, but this has always written a given-as-undefined key as NULL.
       const given = Object.fromEntries(Object.entries(stored(r)).map(([k, v]) => [k, v ?? null]));
       orm
@@ -64,6 +82,10 @@ export function runStore(orm: Orm) {
     /** Unblock runs still going, in any daemon process. */
     countRunningUnblocks(): number {
       return runningOf('unblock');
+    },
+    /** Review runs still going, in any daemon process. */
+    countRunningReviews(): number {
+      return runningOf('review');
     },
     /**
      * Slots in use, counted from the db so every process sees the same number: a task that is running (or being

@@ -4,6 +4,7 @@ import type {
   LiveView,
   NotifyKind,
   PrCheck,
+  PrRetry,
   MergeRequestView,
   Run,
   StartWait,
@@ -27,6 +28,8 @@ export function describeWait(h: StartWait): string {
       return `The repo is paused: ${oneLine(h.reason)}`;
     case 'dependency':
       return h.stuck ? `Can't start: ${h.stuck}` : `Waits for ${h.on.map((id) => `#${id}`).join(', ')} to finish`;
+    case 'unblocking':
+      return 'Waits for its unblock run to stop';
     case 'slots':
       return `Waiting for a free slot (${h.running} of ${h.max} in use)`;
   }
@@ -42,6 +45,7 @@ export const NOTIFY_LABELS: Record<NotifyKind, string> = {
   proposed: 'Planner proposals',
   merged: 'PR auto-merged',
   checks_failed: 'PR checks failed',
+  review_due: 'Area review due',
 };
 
 /** Why a task in the headline's `attention` needs a person, in a word or two. The tray menu words it the same way (`why_label` in `app/src-tauri/src/tray.rs`). */
@@ -53,7 +57,7 @@ export const ATTENTION_LABELS: Record<Status['headline']['attention'][number]['w
 
 /** What each model is called, and when to pick it. */
 export const MODEL_LABELS: Record<string, string> = { haiku: 'Haiku', sonnet: 'Sonnet', opus: 'Opus' };
-export const MODEL_HINTS: Record<string, string> = { haiku: 'cheap, simple', sonnet: 'default', opus: 'hard tasks' };
+export const MODEL_HINTS: Record<string, string> = { haiku: 'cheap, simple', sonnet: 'most tasks', opus: 'hard tasks' };
 
 /** Whether the daemon will merge a PR on its own, in a line. */
 export function autoMergeLine(c: AutoMergeCheck): string {
@@ -99,6 +103,14 @@ export function parseTime(s: string): number {
   return sqliteMs(s);
 }
 
+/** Why a done task's PR is not open yet, for the Open PR button's tooltip: its failures, and whether the PR refresh tries again. */
+export function describePrRetry(r: PrRetry): string {
+  const tries = `${r.failures} ${r.failures === 1 ? 'try' : 'tries'} to open the PR failed: ${r.error}`;
+  if (r.state === 'person') return `${tries}. The PR refresh stopped trying; open it by hand.`;
+  const at = r.next_at ? ` at ${new Date(parseTime(r.next_at)).toLocaleTimeString()}` : '';
+  return `${tries}. The PR refresh tries again${at}.`;
+}
+
 export function ago(time: string): string {
   const secs = Math.round((Date.now() - parseTime(time)) / 1000);
   if (secs < 60) return `${secs}s ago`;
@@ -126,13 +138,17 @@ export function taskList(ids: number[]): string {
 
 /** A run's name: "Run 2", or the kind of run that uses no attempt. */
 export function runLabel(r: Pick<Run, 'kind' | 'attempt'>): string {
-  return r.kind === 'resolve' ? 'Resolve conflicts' : r.kind === 'unblock' ? 'Unblock run' : `Run ${r.attempt}`;
+  if (r.kind === 'resolve') return 'Resolve conflicts';
+  if (r.kind === 'unblock') return 'Unblock run';
+  if (r.kind === 'review') return 'Review';
+  return `Run ${r.attempt}`;
 }
 
 /** What a run that uses no attempt did, for a tooltip; undefined for a work run. */
 export function runHint(r: Pick<Run, 'kind'>): string | undefined {
   if (r.kind === 'resolve') return 'Merged the base branch into the branch; uses no attempt';
   if (r.kind === 'unblock') return 'Read why the task blocked, then retried it with a note or asked you; uses no attempt';
+  if (r.kind === 'review') return "Read the task's changes against its goal and plan steps, and left a review; uses no attempt";
   return undefined;
 }
 

@@ -28,6 +28,7 @@ export type StartWait =
   | QueueWait
   | { kind: 'repo-paused'; reason: string }
   | ({ kind: 'dependency' } & Waiting)
+  | { kind: 'unblocking' }
   | { kind: 'slots'; running: number; max: number };
 
 export interface QueueState {
@@ -67,22 +68,36 @@ export function describeWait(w: QueueWait): string {
   }
 }
 
-/** What a queued task waits for, or null if it will start on the next tick. Mirrors claimNextTask in db/tasks.ts. */
+/** Only a queued task waits to start: any other has started, or is not to start. */
+const waitsToStart = (task: { status: TaskStatus }): boolean => task.status === 'queued';
+
+/** What a queued task in start state `dependency` waits for on its builds-on links; null for any other task. */
+export function waitingFor(task: { status: TaskStatus }, dependency: StartState): Waiting | null {
+  return waitsToStart(task) ? waitingOf(dependency) : null;
+}
+
+/**
+ * What a queued task waits for, or null if it will start on the next tick. Mirrors `claimable` in db/tasks.ts, which leaves
+ * out the slots: the scheduler counts those. `unblocking`: an unblock run for the task is still going (a person retried it
+ * meanwhile), and the task waits for that run to stop.
+ */
 export function startWait(
   task: { status: TaskStatus },
   ctx: {
     queue: QueueWait | null;
     repoPaused: string | null;
     dependency: StartState;
+    unblocking: boolean;
     running: number;
     max: number;
   },
 ): StartWait | null {
-  if (task.status !== 'queued') return null;
+  if (!waitsToStart(task)) return null;
   if (ctx.queue) return ctx.queue;
   if (ctx.repoPaused) return { kind: 'repo-paused', reason: ctx.repoPaused };
   const waiting = waitingOf(ctx.dependency);
   if (waiting) return { kind: 'dependency', ...waiting };
+  if (ctx.unblocking) return { kind: 'unblocking' };
   if (ctx.running >= ctx.max) return { kind: 'slots', running: ctx.running, max: ctx.max };
   return null;
 }
