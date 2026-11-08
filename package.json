@@ -29,6 +29,7 @@
     "format:check": "prettier --check .",
     "check:fast": "pnpm format:check && pnpm typecheck && pnpm db:check && pnpm test",
     "check": "pnpm check:fast && node daemon/scripts/crash-test.mjs \"${CRASH_ITERATIONS:-10}\"",
+    "check:task": "node scripts/check-task.mjs",
     "check:stack": "node scripts/check-stack.mjs"
   },
   "devDependencies": {

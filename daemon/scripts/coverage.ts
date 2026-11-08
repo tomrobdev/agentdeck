@@ -22,6 +22,7 @@ if (given >= 0) {
     process.execPath,
     [
       '--test',
+      '--test-timeout=60000',
       '--experimental-test-coverage',
       '--test-coverage-include=src/**',
       '--test-reporter=dot',
