@@ -1,6 +1,6 @@
 // Tasks: list, add, edit and move through the lifecycle, sync and the log tail.
 import * as actions from '../../application/actions.ts';
-import { type TaskId, asTaskId } from '../../domain/shared/index.ts';
+import { type TaskId, parseId } from '../../domain/shared/index.ts';
 import { TASK_STATUSES } from '../../domain/work/index.ts';
 import type * as C from '../contract.ts';
 import { type ApiContext, BadRequest, type Route, idsField, route, taskIdParam } from '../http.ts';
@@ -16,8 +16,9 @@ export function routes({ db, scheduler }: ApiContext): Route[] {
         throw new BadRequest(`status takes one of ${TASK_STATUSES.join(', ')}`);
       const status = param as actions.TaskStatus | null;
       const limit = Math.min(Math.max(Math.floor(Number(query.get('limit'))) || 200, 1), 1000);
-      const before = Number(query.get('before')) || undefined;
-      return wire.taskViews(db, { status: status ?? undefined, limit, before: before === undefined ? undefined : asTaskId(before) });
+      const beforeParam = query.get('before');
+      const before = beforeParam === null ? undefined : (parseId<TaskId>(beforeParam) ?? undefined);
+      return wire.taskViews(db, { status: status ?? undefined, limit, before });
     }),
     route<C.TaskSaved>('POST', /^\/api\/tasks$/, async ({ body }) => {
       const links = { builds_on: idsField(body, 'builds_on'), after: idsField(body, 'after') };
@@ -32,7 +33,10 @@ export function routes({ db, scheduler }: ApiContext): Route[] {
     }),
     route<C.TaskDetail>('POST', /^\/api\/tasks\/(\d+)\/links$/, ({ params: [text], body }) => {
       const id = taskIdParam(text);
-      actions.linkTasks(db, id, body as Parameters<typeof actions.linkTasks>[2]);
+      const on = parseId<TaskId>(body.on);
+      if (on === null) throw new BadRequest('on must be a task id');
+      if (body.kind !== 'builds_on' && body.kind !== 'after') throw new BadRequest('kind must be one of builds_on, after');
+      actions.linkTasks(db, id, { on, kind: body.kind });
       return detail(id);
     }),
     route<C.TaskDetail>('DELETE', /^\/api\/tasks\/(\d+)\/links\/(\d+)$/, ({ params: [text, on] }) => {

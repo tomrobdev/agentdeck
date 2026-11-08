@@ -15,13 +15,12 @@ import { ActionError, flag, object, requireTask, requireTaskRepo, text } from '.
 import { prPlanFor } from '../work/plans.ts';
 import { dependentsReleased } from '../work/dependencies.ts';
 import { isMergeLocked, isSyncing, lockMerge, unlockMerge } from '../work/checkout-locks.ts';
-import { settlePr } from './settle.ts';
 import { autoMergeFor, mergeInputFor, prCwd } from './refresh.ts';
 
 /** Close a task's PR on GitHub and record it. Throws if `gh` fails. */
 export async function closePullRequest(app: App, task: Task): Promise<void> {
   await app.codeHost.closePr(task.pr!.url!, prCwd(app, task));
-  settlePr(app, task.id, { type: 'closed' });
+  app.recordPr(task.id, { type: 'closed' });
 }
 
 /** Close a task's open PR without merging it. Tasks waiting on it become stuck. */

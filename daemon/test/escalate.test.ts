@@ -3,7 +3,7 @@
 // `retryTask` and the CLI.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
@@ -201,6 +201,22 @@ test('a person’s retry without a model escalates; one that names a model runs 
   );
   assert.equal(escalations(kept.id).length, 0);
   updateRepo(db, 'demo', { escalate: true });
+});
+
+test('a retry escalates without the run log, worded without a summary; a failed task with no work run keeps its model', async () => {
+  const task = await addTask(db, { repo: 'demo', prompt: 'FAKE_MAX_TURNS log gone', model: 'haiku', max_attempts: 1 });
+  await drain();
+  const run = db.runsForTask(task.id).findLast((r) => r.kind === 'work')!;
+  rmSync(run.log_path, { force: true });
+  assert.deepEqual(retryTask(db, task.id), { model: 'sonnet', escalated: true });
+  assert.match(escalations(task.id)[0].reason ?? '', /up from haiku/);
+  db.raw.prepare("UPDATE tasks SET status = 'cancelled' WHERE id = ?").run(task.id);
+
+  const never = await addTask(db, { repo: 'demo', prompt: 'never ran', model: 'haiku' });
+  db.raw.prepare("UPDATE tasks SET status = 'failed' WHERE id = ?").run(never.id);
+  assert.deepEqual(retryTask(db, never.id), { model: 'haiku', escalated: false });
+  assert.equal(escalations(never.id).length, 0);
+  db.raw.prepare("UPDATE tasks SET status = 'cancelled' WHERE id = ?").run(never.id);
 });
 
 test('agentdeck retry says when it moved the model up, and repo set takes escalate', async () => {

@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { type TaskSummary, ago } from '../../api';
 import { mergeAllIds } from '../../lib/bulk';
 import { type BoardMove, type Group, type StatusGroup, boardMove, isReview } from '../../lib/taskView';
+import Checkbox from '../ui/Checkbox.vue';
 import MarkDoneDialog from '../task/MarkDoneDialog.vue';
 import MergeButtons from './MergeButtons.vue';
 import PriorityIcon from '../ui/PriorityIcon.vue';
@@ -14,16 +15,21 @@ import TaskStatusLine from '../ui/TaskStatusLine.vue';
 const props = defineProps<{
   groups: Group[];
   selected: number | null;
+  /** The tasks picked for a bulk action. */
+  picked?: number[];
   show: { repo: boolean; pr: boolean };
 }>();
 const emit = defineEmits<{
   open: [id: number];
   select: [id: number];
+  /** A pick; a shift-click range runs within `column`, the ids of the card's column in its order. */
+  pick: [id: number, range: boolean, column: number[]];
   move: [kind: BoardMove, id: number];
   merge: [id: number];
   mergeAll: [ids: number[]];
 }>();
 
+const columnIds = (g: Group) => g.tasks.map((t) => t.id);
 const dragging = ref<TaskSummary | null>(null);
 const over = ref<string | null>(null);
 
@@ -101,7 +107,11 @@ const LABELS: Record<BoardMove, string> = {
           v-for="t in g.tasks"
           :key="t.id"
           class="group cursor-pointer rounded-md border bg-panel px-2.5 py-2"
-          :class="[t.id === selected ? 'border-accent' : 'border-border', dragging?.id === t.id ? 'opacity-50' : '']"
+          :class="[
+            t.id === selected ? 'border-accent' : 'border-border',
+            dragging?.id === t.id ? 'opacity-50' : '',
+            picked?.includes(t.id) ? 'bg-[color-mix(in_srgb,var(--accent)_16%,var(--panel))]' : '',
+          ]"
           :draggable="canDrag(t)"
           :title="
             canDrag(t)
@@ -112,10 +122,18 @@ const LABELS: Record<BoardMove, string> = {
           "
           @dragstart="onDragStart($event, t)"
           @dragend="end"
-          @click="emit('open', t.id)"
+          @click="$event.shiftKey ? emit('pick', t.id, true, columnIds(g)) : emit('open', t.id)"
+          @mousedown="$event.shiftKey && $event.preventDefault()"
           @mouseenter="emit('select', t.id)"
         >
           <div class="flex items-center gap-1.5">
+            <Checkbox
+              :class="picked?.length || picked?.includes(t.id) ? '' : 'hidden group-hover:inline-flex'"
+              :label="`Pick #${t.id}`"
+              :model-value="!!picked?.includes(t.id)"
+              @click.stop
+              @update:model-value="emit('pick', t.id, false, columnIds(g))"
+            />
             <span class="font-mono text-sm text-muted">#{{ t.id }}</span>
             <PriorityIcon :priority="t.priority" />
             <div class="spacer" />

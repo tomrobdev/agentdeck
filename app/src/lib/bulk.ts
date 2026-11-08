@@ -27,3 +27,67 @@ export function idRange(order: number[], from: number | null, to: number): numbe
   if (a === -1 || b === -1) return [to];
   return order.slice(Math.min(a, b), Math.max(a, b) + 1);
 }
+
+const DONE_WORD: Record<BulkAction, string> = {
+  approve: 'approved',
+  reject: 'rejected',
+  retry: 'retried',
+  merge: 'merged',
+  cancel: 'cancelled',
+};
+
+/** One picked task's call: it worked, or `error` says why not. */
+export interface BulkResult {
+  id: number;
+  error?: string;
+}
+
+/** What a bulk action did, in a few words: "4 approved · 1 failed". */
+export function summarizeBulk(action: BulkAction, results: BulkResult[]): string {
+  const failed = results.filter((r) => r.error !== undefined).length;
+  const ok = results.length - failed;
+  return [ok ? `${ok} ${DONE_WORD[action]}` : '', failed ? `${failed} failed` : ''].filter(Boolean).join(' · ') || `0 ${DONE_WORD[action]}`;
+}
+
+/** The toast after a bulk action: the sum, then each failure with its reason ("4 approved · #253 failed: …"). */
+export function bulkMessage(action: BulkAction, results: BulkResult[]): string {
+  const ok = results.filter((r) => r.error === undefined).length;
+  const failures = results.filter((r) => r.error !== undefined).map((r) => `#${r.id} failed: ${r.error}`);
+  return [ok ? `${ok} ${DONE_WORD[action]}` : '', ...failures].filter(Boolean).join(' · ') || summarizeBulk(action, results);
+}
+
+/**
+ * The task and every task it builds on, directly or not, that is not done and is in `shown`, for a shift-click in the graph.
+ * Follows builds-on links only (an after link only orders a merge), and stops at a task that is done or not shown.
+ * In the order of `shown`.
+ */
+export function buildsOnChain(shown: Pick<TaskSummary, 'id' | 'status' | 'links'>[], id: number): number[] {
+  const byId = new Map<number, Pick<TaskSummary, 'id' | 'status' | 'links'>>(shown.map((t) => [t.id, t]));
+  if (!byId.has(id)) return [id];
+  const seen = new Set<number>([id]);
+  const stack = [id];
+  while (stack.length) {
+    const t = byId.get(stack.pop()!);
+    for (const l of t?.links ?? []) {
+      const dep = byId.get(l.on);
+      if (l.kind !== 'builds_on' || !dep || dep.status === 'done' || seen.has(dep.id)) continue;
+      seen.add(dep.id);
+      stack.push(dep.id);
+    }
+  }
+  return shown.filter((t) => seen.has(t.id)).map((t) => t.id);
+}
+
+/** Every id the filter shows, added to what is picked. */
+export const pickAll = (picked: number[], order: number[]): number[] => [...new Set([...picked, ...order])];
+
+/** The picks that are still in the filtered set. Collapsing a group never drops a pick: only leaving the set does. */
+export function keepPicked(picked: number[], shown: number[]): number[] {
+  const ids = new Set(shown);
+  return picked.filter((id) => ids.has(id));
+}
+
+/** A group's ids picked as one: all of them when any is not picked yet, else none of them (the group header's checkbox). */
+export function toggleGroupPicks(picked: number[], group: number[]): number[] {
+  return group.every((id) => picked.includes(id)) ? picked.filter((id) => !group.includes(id)) : pickAll(picked, group);
+}

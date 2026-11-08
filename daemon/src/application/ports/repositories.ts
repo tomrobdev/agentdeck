@@ -115,14 +115,14 @@ export interface TaskRepository {
     id: TaskId,
     event: TaskEvent,
     opts?: { reason?: string | null; needs?: Needs | null; onlyFrom?: TaskStatus[] },
-  ) => { task: Task; events: DomainEvent[]; pending: number[] } | undefined;
+  ) => { task: Task; event: DomainEvent; pending: number[] } | undefined;
   listTasks(): Task[];
   tasksForRepo(repo_id: RepoId, limit?: number): Task[];
   countOpen(repo_id: RepoId): number;
   countRunning(): number;
   runningTasks(): { id: TaskId; title: string }[];
   countByStatus(): Record<string, number>;
-  countQueuedByRepo(): Map<number, number>;
+  countQueuedByRepo(): Map<RepoId, number>;
   countReview(): number;
   attentionTasks(limit: number): AttentionCandidate[];
   hasQueued(): boolean;

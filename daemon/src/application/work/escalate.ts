@@ -17,8 +17,8 @@ export function escalateAfter(
   stop: { reason: string | null; needs: Needs | null },
   statuses: TaskStatus[],
 ): string | null {
-  const repo = app.getRepo(task.repo_id);
-  if (!repo) return null;
+  // A task's repo exists: deleting a repo deletes its tasks.
+  const repo = app.getRepo(task.repo_id)!;
   const e = escalation(task, run, { ...stop, outcome: run.outcome, denials: run.denials, turns: run.num_turns ?? run.live_turns }, repo);
   if (!e) return null;
   const events = app.runLog.events(run.log_path);

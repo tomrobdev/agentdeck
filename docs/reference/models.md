@@ -1575,14 +1575,12 @@ An open task as the digest shows it.
 
 ### DomainEvent
 
-One status change of one task. `applyEvent` (db/tasks.ts) records each as a task_events row and returns them.
+The status change of one task. `applyEvent` (db/tasks.ts) records it as a task_events row and returns it.
 
 | Field     | Type              | Comment                                                                                               |
 | --------- | ----------------- | ----------------------------------------------------------------------------------------------------- |
 | `type`    | `DomainEventType` | What happened, named for the status the task reached.                                                 |
 | `task_id` | `TaskId`          |                                                                                                       |
-| `cause`   | `RuleKey`         | The lifecycle event that caused it, by its rule key.                                                  |
-| `by`      | `Actor`           | Who asked for that event.                                                                             |
 | `from`    | `TaskStatus`      |                                                                                                       |
 | `to`      | `TaskStatus`      |                                                                                                       |
 | `history` | `TaskEventType`   | The type of its timeline row: the event's, or `environment_block` for a block the environment caused. |
@@ -1981,12 +1979,12 @@ A stored plan as the API returns it: parsed, without its HTML.
 
 ### Transition
 
-| Field      | Type            | Comment                                                                                             |
-| ---------- | --------------- | --------------------------------------------------------------------------------------------------- |
-| `state`    | `TaskState`     | The status the event leads to, and all the task carries in it.                                      |
-| `counters` | `TaskCounters`  |                                                                                                     |
-| `changes`  | `TaskChanges`   | What the change does to the task's PR, written with it (`statusChangePrChanges` in task-writes.ts). |
-| `events`   | `DomainEvent[]` | What happened, for the timeline and the follow-ups: one event, the status change.                   |
+| Field      | Type           | Comment                                                                                             |
+| ---------- | -------------- | --------------------------------------------------------------------------------------------------- |
+| `state`    | `TaskState`    | The status the event leads to, and all the task carries in it.                                      |
+| `counters` | `TaskCounters` |                                                                                                     |
+| `changes`  | `TaskChanges`  | What the change does to the task's PR, written with it (`statusChangePrChanges` in task-writes.ts). |
+| `event`    | `DomainEvent`  | What happened, for the timeline and the follow-ups: the status change.                              |
 
 ### TransitionOptions
 

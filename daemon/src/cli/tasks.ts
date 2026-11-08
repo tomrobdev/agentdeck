@@ -101,7 +101,7 @@ export const taskCommands: Record<string, Command> = {
       actions.linkTasks(db, id, { on, kind });
     } catch (e) {
       // A builds-on link refused on a started task: the after link it suggests is one flag away.
-      if (kind === 'builds_on' && e instanceof actions.ActionError && /after link instead$/.test(e.message))
+      if (kind === 'builds_on' && e instanceof actions.ActionError && e.code === actions.BUILDS_ON_STARTED)
         die(`${e.message}: agentdeck link ${id} --after ${on}`);
       throw e;
     }

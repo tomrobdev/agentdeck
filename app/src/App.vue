@@ -32,25 +32,27 @@ import TaskPage from './components/task/TaskPage.vue';
 import MergeDialog from './components/task/MergeDialog.vue';
 import AppProvider from './components/ui/AppProvider.vue';
 import CommandPalette from './components/ui/CommandPalette.vue';
-import Toaster from './components/ui/Toaster.vue';
+import Toaster, { type ToastItem } from './components/ui/Toaster.vue';
 import { go, openTask, parseAppUrl, route, taskUrl } from './router';
 import { type PersonEvent, openingTab } from './lib/taskView';
 import { paletteItems } from './lib/palette';
 import { requestedView } from './composables/useView';
-import { provideActions, trackPending } from './composables/useActions';
+import { type Flash, UNDO_MS, provideActions, trackPending } from './composables/useActions';
 import { useChangeStream } from './composables/useChangeStream';
 
 const selectedId = ref<number | null>(null);
-const toast = ref<{ id: number; message: string; duration: number } | null>(null);
+const toasts = ref<ToastItem[]>([]);
 const modal = ref<'new' | 'repos' | 'settings' | 'daemon' | null>(null);
 
-// A long message (a gh error, a sync that could not push) stays up long enough to read. A newer message replaces it.
+// A long message (a gh error, a sync that could not push) stays up long enough to read. Messages stack: a newer one does not
+// replace an Undo toast. The toast lives here, so a page change keeps an Undo's wait going.
 let toastId = 0;
-function flash(msg: string) {
-  toast.value = { id: ++toastId, message: msg, duration: Math.min(Math.max(3500, msg.length * 60), 15_000) };
-}
+const flash: Flash = (msg, action) => {
+  const duration = action ? UNDO_MS : Math.min(Math.max(3500, msg.length * 60), 15_000);
+  toasts.value = [...toasts.value, { id: ++toastId, message: msg, duration, action }];
+};
 const closeToast = (id: number) => {
-  if (toast.value?.id === id) toast.value = null;
+  toasts.value = toasts.value.filter((t) => t.id !== id);
 };
 
 /** The task whose page is open, from the route. */
@@ -102,7 +104,9 @@ watch(
 );
 
 const togglePause = () => pauseRun(() => (status.value?.paused ? api.resume() : api.pause()));
-const actOn = (kind: PersonEvent, id: number) => act(() => PERSON_CALLS[kind](id));
+// A reject waits 5 seconds behind an Undo toast before the API is called; every other event goes at once.
+const actOn = (kind: PersonEvent, id: number) =>
+  kind === 'reject' ? actions.defer(`Rejected #${id}`, () => PERSON_CALLS.reject(id)) : act(() => PERSON_CALLS[kind](id));
 /** A task in review opens on its diff, the rest on the overview. */
 function openFromQueue(id: number) {
   const t = tasks.value.find((x) => x.id === id);
@@ -252,7 +256,7 @@ function onCreated(task: Detail) {
       <MergeDialog v-if="merging !== null" :task-id="merging" @close="merging = null" @merged="onMerged" @requested="merging = null" />
       <CommandPalette v-if="palette" :items="paletteRows" @close="palette = false" />
 
-      <Toaster :toast="toast" @close="closeToast" />
+      <Toaster :toasts="toasts" @close="closeToast" />
     </div>
   </AppProvider>
 </template>

@@ -183,7 +183,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     id: TaskId,
     event: TaskEvent,
     opts: { reason?: string | null; needs?: Needs | null; onlyFrom?: TaskStatus[] } = {},
-  ): { task: Task; events: DomainEvent[]; pending: number[] } | undefined => {
+  ): { task: Task; event: DomainEvent; pending: number[] } | undefined => {
     for (let attempt = 0; attempt < 3; attempt++) {
       const cur = getTask(id);
       if (!cur) return undefined;
@@ -218,15 +218,15 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
           toTask,
         );
         // An event with follow-ups is written pending, in the same transaction as the change: the outbox.
-        if (row)
-          for (const e of next.events) {
-            const followUp = followUpsOf([e]).length > 0;
-            const eventId = recordEvent(orm, e.task_id, e.history, e.from, e.to, e.reason, followUp);
-            if (followUp) pending.push(eventId);
-          }
+        if (row) {
+          const e = next.event;
+          const followUp = followUpsOf(e).length > 0;
+          const eventId = recordEvent(orm, e.task_id, e.history, e.from, e.to, e.reason, followUp);
+          if (followUp) pending.push(eventId);
+        }
         return row;
       });
-      if (task) return { task, events: next.events, pending };
+      if (task) return { task, event: next.event, pending };
     }
     return undefined;
   };
@@ -318,7 +318,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       return Object.fromEntries(rows.map((r) => [r.status, r.n]));
     },
     /** How many queued tasks each repo has (repos with none are left out). */
-    countQueuedByRepo(): Map<number, number> {
+    countQueuedByRepo(): Map<RepoId, number> {
       const rows = orm
         .select({ repo_id: tasks.repo_id, n: count() })
         .from(tasks)
@@ -625,7 +625,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       return changed(res);
     },
     /**
-     * Record a change to a task's PR: `pr_state` (and `pr_url` when opened) and a 'pr' history row, together.
+     * Record a change to a task's PR: `pr_state` (and `pr_url` when opened) and a 'pr' history row (`pr_closed`, pending, for a close), together.
      * Guarded on the PR state the change starts from, like every task write: an opened or failed PR replaces anything
      * but an open one, a close or a sighting only moves an open PR. A merge recorded in between is therefore never
      * undone. A failure needs a done task; an opened PR does not: GitHub has it whatever the task did meanwhile (a
@@ -652,7 +652,8 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
           .returning({ status: tasks.status })
           .get() as { status: TaskStatus } | undefined;
         if (!row) return false;
-        recordEvent(orm, id, 'pr', row.status, row.status, reason);
+        // A closed PR may strand the tasks that build on it: its row is written pending, and the outbox warns them.
+        recordEvent(orm, id, e.type === 'closed' ? 'pr_closed' : 'pr', row.status, row.status, reason, e.type === 'closed');
         return true;
       });
     },

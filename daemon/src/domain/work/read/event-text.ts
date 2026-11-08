@@ -62,6 +62,8 @@ function agentText(e: EventFields): string {
       if (seen !== null) return `PR ${short(seen, REASON_MAX)}`;
       return withReason('PR', e.reason);
     }
+    case 'pr_closed':
+      return 'PR closed without merging';
     case 'edit':
       return withReason('edited', e.reason);
     case 'sync':
@@ -78,7 +80,7 @@ function agentText(e: EventFields): string {
 }
 
 /** Rows whose sentence already says what the reason says, so the timeline does not repeat it. */
-const REASON_IN_TEXT = new Set<string>(['sync', 'pr', 'plan_unfinished', 'pr_merged']);
+const REASON_IN_TEXT = new Set<string>(['sync', 'pr', 'pr_closed', 'plan_unfinished', 'pr_merged']);
 
 function personText(e: EventFields): PersonEventText | null {
   const reason = e.reason ?? undefined;
@@ -108,6 +110,8 @@ function personText(e: EventFields): PersonEventText | null {
       if (seen !== null) return say(`pull request ${seen}`);
       return say(`pull request ${e.reason}`);
     }
+    case 'pr_closed':
+      return say('pull request closed without merging');
     case 'sync':
       return say(e.reason ?? 'synced with the base branch');
     case 'plan_unfinished':

@@ -58,8 +58,8 @@ test('a claim writes its row through applyEvent: claimNextTask and applyEvent le
   assert.equal(claimed.id, byClaim.id);
   const applied = db.applyEvent(byEvent.id, { type: 'claim' })!;
   assert.deepEqual(
-    applied.events.map((e) => [e.type, e.cause, e.from, e.to]),
-    [['TaskStarted', 'claim', 'queued', 'running']],
+    [applied.event.type, applied.event.history, applied.event.from, applied.event.to],
+    ['TaskStarted', 'claim', 'queued', 'running'],
   );
   assert.deepEqual(applied.pending, [], 'a claim has no follow-ups, so its row is not pending');
   const { id: _a, updated_at: _ua, created_at: _ca, ...fromClaim } = claimed;
