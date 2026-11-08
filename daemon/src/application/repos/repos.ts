@@ -13,8 +13,8 @@ import { type Check, runDoctor } from './doctor.ts';
 import { repoView } from './repo-view.ts';
 import { ActionError, flag, list, object, refuse, requireRepo, text, textOrNull, whole } from '../shared/input.ts';
 import { pauseRepo } from './pause.ts';
-import { buildersOnRepo, dependencyOf, liveLinks, warnBuildersOnDeleted } from '../work/dependencies.ts';
-import { prModeOffError } from '../../domain/work/index.ts';
+import { buildersOnRepo, liveLinks, warnBuildersOnDeleted } from '../work/dependencies.ts';
+import { prModeOffError, startState } from '../../domain/work/index.ts';
 
 /** Register a repo. Its toolchain is detected from the root files and fills in whatever isn't given. */
 export async function addRepo(
@@ -126,7 +126,7 @@ export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch
       .listTasks()
       .filter((t) => t.repo_id === repo.id && t.status !== 'done' && t.status !== 'cancelled')
       .filter((t) => {
-        const kind = dependencyOf(t, links).kind;
+        const kind = startState(t, links.linksOf(t.id), links.target).kind;
         return kind !== 'none' && kind !== 'met';
       })
       .map((t) => t.id);
