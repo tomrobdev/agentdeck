@@ -263,6 +263,10 @@ export const MIGRATIONS: Migration[] = [
    ALTER TABLE reviews ADD COLUMN head_commit TEXT;
    ALTER TABLE reviews ADD COLUMN diff_hash TEXT;
    ALTER TABLE runs ADD COLUMN diff_hash TEXT;`,
+  // 33: review_due, a new notification kind (domain/operations/review-due.ts), on by default. A stored notify_events
+  // does not take the setting's default, so the kind is added to it, unless a person turned every kind off.
+  `UPDATE settings SET value = value || ',review_due'
+   WHERE key = 'notify_events' AND value <> '' AND ',' || value || ',' NOT LIKE '%,review_due,%';`,
 ];
 
 /** Runs every step above the database's user_version in one transaction; returns how many ran. */

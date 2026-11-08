@@ -43,6 +43,7 @@ export const NOTIFY_LABELS: Record<NotifyKind, string> = {
   proposed: 'Planner proposals',
   merged: 'PR auto-merged',
   checks_failed: 'PR checks failed',
+  review_due: 'Area review due',
 };
 
 /** Why a task in the headline's `attention` needs a person, in a word or two. The tray menu words it the same way (`why_label` in `app/src-tauri/src/tray.rs`). */

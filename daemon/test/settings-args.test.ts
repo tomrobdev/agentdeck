@@ -33,6 +33,19 @@ test('planner max_tasks must be a whole number', () => {
   assert.equal(updateSettings(db, { planner: { max_tasks: 3 } }).planner.max_tasks, 3);
 });
 
+test('the ntfy server, planner interval and planner model are checked before they are stored', () => {
+  const db = openDb(':memory:');
+  assert.throws(() => updateSettings(db, { notify: { ntfy_server: 'ntfy.sh' } }), /http\(s\) URL/);
+  assert.throws(() => updateSettings(db, { planner: { interval_hours: 0.1 } }), /between 0\.25 and 168/);
+  assert.throws(() => updateSettings(db, { planner: { model: 'gpt-9' } }), /planner model must be/);
+  const st = updateSettings(db, {
+    notify: { ntfy_server: 'https://ntfy.example.com' },
+    planner: { interval_hours: 2, model: 'sonnet' },
+  });
+  assert.equal(st.notify.ntfy_server, 'https://ntfy.example.com');
+  assert.deepEqual([st.planner.interval_hours, st.planner.model], [2, 'sonnet']);
+});
+
 test('the repo set usage lists the PR modes and merge methods', () => {
   assert.throws(
     () => repoSettingPatch('nope', ''),

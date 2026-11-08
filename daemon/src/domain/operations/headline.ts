@@ -31,6 +31,15 @@ export interface HeadlineFacts {
   need_you: { proposed: number; blocked: number; review: number };
   /** Tasks that need a person; any number, in any order. */
   attention: AttentionCandidate[];
+  /** The repos due for an area review, as the daemon's last check found them. */
+  review_due?: RepoReviewDue[];
+}
+
+/** A repo due for an area review, as the headline shows it. */
+export interface RepoReviewDue {
+  repo: string;
+  /** "area review due: 9 days, 115 commits since the last" */
+  line: string;
 }
 
 export interface Headline {
@@ -39,6 +48,7 @@ export interface Headline {
   until: number | null;
   need_you: number;
   attention: AttentionTask[];
+  review_due: RepoReviewDue[];
 }
 
 /** The tasks to show first: blocked, then review, then proposed, each by priority (highest first) then id; at most five. */
@@ -51,7 +61,11 @@ export function attentionList(candidates: AttentionCandidate[]): AttentionTask[]
 
 export function headline(facts: HeadlineFacts, now: number): Headline {
   const { proposed, blocked, review } = facts.need_you;
-  const rest = { need_you: proposed + blocked + review, attention: attentionList(facts.attention) };
+  const rest = {
+    need_you: proposed + blocked + review,
+    attention: attentionList(facts.attention),
+    review_due: (facts.review_due ?? []).map(({ repo, line }) => ({ repo, line })),
+  };
   if (facts.paused) return { state: 'paused', until: null, ...rest };
   const limited = facts.rate_limited_until && facts.rate_limited_until > now ? facts.rate_limited_until : null;
   if (limited) return { state: 'rate_limited', until: limited, ...rest };

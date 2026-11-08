@@ -4,6 +4,7 @@ import { API_PORT, CHECKOUT_ROOT } from '../../config.ts';
 import type { App } from '../ports/app.ts';
 import { type Check, type DaemonState, type HealthFacts, judgeHealth, logFacts } from '../../domain/operations/index.ts';
 import { sqliteMs } from '../../domain/shared/index.ts';
+import { reviewsDue } from './review-due.ts';
 
 /** Where the facts come from; tests hand in plain ones. */
 export interface Probes {
@@ -16,6 +17,8 @@ export interface Probes {
   alive: (run: { pid: number; pid_at: string }) => boolean;
   logLines: () => string[] | null;
   gh: () => Promise<HealthFacts['gh']>;
+  /** The repos due for an area review, read from their refs/reviewed/* marks now. */
+  reviews: () => Promise<HealthFacts['reviews']>;
   now: () => number;
 }
 
@@ -27,6 +30,7 @@ export const realProbes = (app: App): Probes => ({
   alive: (run) => app.processes.ownsLiveGroup(run),
   logLines: () => app.service.logTail(),
   gh: () => app.codeHost.auth(),
+  reviews: () => reviewsDue(app),
   now: Date.now,
 });
 
@@ -34,7 +38,13 @@ export const realProbes = (app: App): Probes => ({
 const RUN_DAYS = 7;
 
 export async function gatherHealth(app: App, probes: Probes = realProbes(app), port = API_PORT): Promise<HealthFacts> {
-  const [service, api, head, gh] = await Promise.all([probes.service(), probes.api(port), probes.head(), probes.gh()]);
+  const [service, api, head, gh, reviews] = await Promise.all([
+    probes.service(),
+    probes.api(port),
+    probes.head(),
+    probes.gh(),
+    probes.reviews(),
+  ]);
   const now = probes.now();
   const behind = api?.commit && head && api.commit !== head ? await probes.ahead(api.commit) : null;
   const processes = app
@@ -60,6 +70,7 @@ export async function gatherHealth(app: App, probes: Probes = realProbes(app), p
     tasks,
     log: lines ? logFacts(lines, now) : null,
     gh,
+    reviews,
   };
 }
 
