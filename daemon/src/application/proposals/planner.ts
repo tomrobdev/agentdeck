@@ -1,8 +1,6 @@
 // Runs the planner: turns a repo's goals file into task proposals (see domain/proposals/proposals.ts).
 import { type WriteStream, createWriteStream } from 'node:fs';
 import { join } from 'node:path';
-import { goalsPath, readGoals } from '../../adapters/goals.ts';
-import { closeLog } from '../../adapters/run-log.ts';
 import { LOG_DIR, ensureDirs } from '../../config.ts';
 import type { App } from '../ports/app.ts';
 import type { PlannerRunId, RepoId } from '../../domain/shared/index.ts';
@@ -19,13 +17,13 @@ const EXISTING_TASKS_SHOWN = 100;
 /** Why the planner should run for this repo now, or null. */
 export function plannerDue(app: App, repo: Repo, now = Date.now()): string | null {
   if (repo.archived_at) return null;
-  const repoState = { hasGoals: !!readGoals(repo).trim(), openTasks: app.countOpen(repo.id), proposed_at: repo.proposed_at };
+  const repoState = { hasGoals: !!app.goals.read(repo).trim(), openTasks: app.countOpen(repo.id), proposed_at: repo.proposed_at };
   return plannerDueReason(app.plannerSettings(), repoState, now);
 }
 
 export async function propose(app: App, repo: Repo): Promise<ProposalResult> {
-  const goals = readGoals(repo);
-  if (!goals.trim()) return { outcome: 'no_goals', tasks: [], skipped: [], note: `write goals in ${goalsPath(repo)} first` };
+  const goals = app.goals.read(repo);
+  if (!goals.trim()) return { outcome: 'no_goals', tasks: [], skipped: [], note: `write goals in ${app.goals.path(repo)} first` };
 
   ensureDirs();
   const logPath = join(LOG_DIR, `proposals-${repo.name}-${Date.now()}.jsonl`);
@@ -40,7 +38,7 @@ export async function propose(app: App, repo: Repo): Promise<ProposalResult> {
     app.finishPlannerRun(runId, 'failed', 0, `planner crashed: ${lastLine(String(err))}`);
     throw err;
   } finally {
-    await closeLog(log).catch(() => {});
+    await app.runLog.close(log).catch(() => {});
   }
 }
 

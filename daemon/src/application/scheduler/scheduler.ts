@@ -1,7 +1,5 @@
 // The daemon's loop: claims queued tasks into free slots when the governor allows, runs the planner
 // when a queue runs dry, and refreshes open PRs, merging those that pass the auto-merge check.
-import { KeepAwake } from '../../adapters/caffeinate.ts';
-import { activeChildren, killGroup, reapOrphans } from '../../adapters/processes.ts';
 import { DEFAULTS } from '../../config.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import { MAX_RESTARTS } from '../../domain/work/index.ts';
@@ -16,6 +14,7 @@ import { settle, settleRecovered } from '../landing/settle.ts';
 import { runTask } from '../runs/worker.ts';
 import { nextUnblockable, runUnblock } from '../runs/unblock.ts';
 import type { App } from '../ports/app.ts';
+import type { KeepAwake } from '../ports/processes.ts';
 import type { Activity, ReloadDecision } from '../../domain/operations/index.ts';
 
 /** After a merge, how many times to re-read PRs whose mergeability GitHub is still computing, and how far apart. */
@@ -78,12 +77,12 @@ export class Scheduler {
       ...opts,
     };
     this.reload = opts.reload;
-    this.awake = new KeepAwake(this.opts.keepAwake);
+    this.awake = app.processes.keepAwake(this.opts.keepAwake);
   }
 
   /** Start ticking. Resolves when stopped, or when the queue is drained in `once` mode. */
   run(): Promise<void> {
-    const reaped = reapOrphans(this.app.unfinishedPids());
+    const reaped = this.app.processes.reapOrphans(this.app.unfinishedPids());
     if (reaped) this.opts.log(`stopped ${reaped} claude process(es) left running by a previous daemon`);
     const { requeued, failed } = this.app.recoverOrphans();
     if (requeued) this.opts.log(`requeued ${requeued} task(s) left running by a previous daemon`);
@@ -99,7 +98,7 @@ export class Scheduler {
     this.stopped = true;
     clearTimeout(this.timer);
     this.awake.set(false);
-    for (const child of activeChildren) killGroup(child.pid);
+    this.app.processes.stopAll();
     this.drained?.();
   }
 

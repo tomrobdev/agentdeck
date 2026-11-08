@@ -3,6 +3,8 @@ import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import { writeSettings } from '../src/adapters/run-log.ts';
+import type { App } from '../src/application/ports/app.ts';
 import { runSettings } from '../src/application/runs/claude-run.ts';
 import type { Repo } from '../src/domain/repos/repo.ts';
 import { ALWAYS_DISALLOWED_TOOLS, DEFAULT_ALLOWED_TOOLS } from '../src/domain/repos/tools.ts';
@@ -83,8 +85,10 @@ test('the settings file is written next to the run log with the repo’s sandbox
   assert.equal(settingsPath(log), join(dir, 'task-3-attempt-2.settings.json'));
   const repo = { sandbox: true, network: ['registry.npmjs.org'] } as Repo;
 
-  const on = JSON.parse(readFileSync(runSettings(repo, wt, log), 'utf8'));
+  const app = { runLog: { writeSettings } } as unknown as App;
+
+  const on = JSON.parse(readFileSync(runSettings(app, repo, wt, log), 'utf8'));
   assert.deepEqual(on, workerSettings({ worktree: wt, sandbox: true, network: ['registry.npmjs.org'] }));
-  const off = JSON.parse(readFileSync(runSettings({ ...repo, sandbox: false }, wt, log), 'utf8'));
+  const off = JSON.parse(readFileSync(runSettings(app, { ...repo, sandbox: false }, wt, log), 'utf8'));
   assert.deepEqual(off.sandbox, { enabled: false });
 });

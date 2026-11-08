@@ -1,5 +1,6 @@
 // How the CLI prints tasks, doctor reports, logs and times, and how it fails.
 import { createInterface } from 'node:readline/promises';
+import type { ComposedApp } from '../compose.ts';
 import { type DoctorReport, type HealthCheck, type TaskView, readLog } from '../application/actions.ts';
 import { type TaskId, asTaskId } from '../domain/shared/index.ts';
 import type { AutoMergeView } from '../domain/landing/index.ts';
@@ -130,8 +131,8 @@ export function relTime(unixSeconds: number): string {
 }
 
 /** Print a run's log in readable form. */
-export function printLog(path: string): void {
-  for (const e of readLog(path)) {
+export function printLog(app: ComposedApp, path: string): void {
+  for (const e of readLog(app, path)) {
     if (e.kind === 'text') console.log(`\n💬 ${e.text}`);
     if (e.kind === 'tool') console.log(`🔧 ${e.name} ${e.summary}`.trimEnd());
     if (e.kind === 'tool_result' && !e.ok) {

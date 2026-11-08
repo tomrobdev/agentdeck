@@ -1,7 +1,15 @@
 // The use cases the CLI and the HTTP API share, and the only application module they import. They throw ActionError on bad input.
-export { readLog } from '../adapters/run-log.ts';
-// The launchd service the daemon runs under, for the CLI's daemon commands.
-export { install, restart, serviceStatus, start, stop, tailLog, uninstall } from '../adapters/service.ts';
+// The launchd service the daemon runs under, for the CLI's daemon commands, and a run's log.
+export {
+  installService,
+  readLog,
+  restartService,
+  serviceStatus,
+  startService,
+  stopService,
+  tailDaemonLog,
+  uninstallService,
+} from './operations/service.ts';
 export { type SyncReport, syncNow } from './runs/sync.ts';
 export { daemonHealth, daemonReport, restartNow } from './operations/doctor.ts';
 export type { Check as HealthCheck } from '../domain/operations/index.ts';

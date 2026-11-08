@@ -4,12 +4,5 @@
 
 Each area of `application/` and the adapters it imports, with the number of imports where there is more than one.
 
-| Area                     | Adapters imported                                                           |
-| ------------------------ | --------------------------------------------------------------------------- |
-| `application/actions.ts` | `run-log.ts`, `service.ts`                                                  |
-| `application/landing`    | `run-log.ts`                                                                |
-| `application/operations` | `daemon-api.ts`, `daemon-log.ts`, `notify.ts`, `processes.ts`, `service.ts` |
-| `application/proposals`  | `goals.ts`, `run-log.ts`                                                    |
-| `application/repos`      | `goals.ts`, `run-log.ts`                                                    |
-| `application/runs`       | `run-log.ts` (4)                                                            |
-| `application/scheduler`  | `caffeinate.ts`, `processes.ts`                                             |
+| Area | Adapters imported |
+| ---- | ----------------- |

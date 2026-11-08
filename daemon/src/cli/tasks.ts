@@ -211,7 +211,7 @@ export const taskCommands: Record<string, Command> = {
     const run = pickRun(db.runsForTask(id), { attempt: flags.attempt ? Number(flags.attempt) : undefined });
     if (!run) die(`#${id} has no runs yet`);
     if (flags.raw) process.stdout.write(readFileSync(run.log_path, 'utf8'));
-    else printLog(run.log_path);
+    else printLog(db, run.log_path);
   },
   attach: ({ db, rest }) => {
     if (rest.length !== 2) die('usage: agentdeck attach <id> <plan file>');

@@ -1,5 +1,4 @@
 // Opening a task's pull request when it finishes done.
-import { appendEvent } from '../../adapters/run-log.ts';
 import type { App } from '../ports/app.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import { AUTO_MERGE_LABEL, autoMergeOn } from '../../domain/landing/index.ts';
@@ -11,7 +10,7 @@ import { prPlanFor } from '../work/plans.ts';
 /** Record a PR event on the task's latest run log, where `agentdeck log` and the dashboard show it. */
 export function logPrEvent(app: App, taskId: TaskId, event: { url?: string; error?: string }): void {
   const run = app.runsForTask(taskId).at(-1);
-  if (run) appendEvent(run.log_path, { type: 'agentdeck_pr', ...event });
+  if (run) app.runLog.append(run.log_path, { type: 'agentdeck_pr', ...event });
 }
 
 /** Make sure the repo has the auto-merge label, so a PR can carry it. Throws if gh fails. */

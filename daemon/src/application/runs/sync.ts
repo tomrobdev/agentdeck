@@ -1,6 +1,5 @@
 // Syncs task branches with their base branch; a conflict starts a resolve run.
 // The daemon does the git work in the task's worktree (agents cannot fetch); only a real conflict starts a claude run.
-import { writeEvent } from '../../adapters/run-log.ts';
 import { TEST_TIMEOUT_MS } from '../../config.ts';
 import type { App } from '../ports/app.ts';
 import type { SyncFinish } from '../ports/workspace.ts';
@@ -97,7 +96,7 @@ async function resolveConflicts(
       reason = resolutionProblem(await app.workspace.finishSync(worktree, files, before, leftoversMessage(task)));
       if (!reason && runTests && repo.test_cmd) {
         const tests = await app.workspace.runCommand(repo.test_cmd, worktree, TEST_TIMEOUT_MS);
-        writeEvent(log, { type: 'agentdeck_tests', passed: tests.passed, output: tests.output });
+        app.runLog.event(log, { type: 'agentdeck_tests', passed: tests.passed, output: tests.output });
         fields.tests_passed = tests.passed;
         if (!tests.passed) reason = `tests failed: ${lastLine(tests.output)}`;
       }

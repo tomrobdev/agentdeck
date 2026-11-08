@@ -1,5 +1,4 @@
 // Runs one attempt of a claimed task: worktree, setup, claude, tests, then the task's next status.
-import { writeEvent } from '../../adapters/run-log.ts';
 import { SETUP_TIMEOUT_MS, TEST_TIMEOUT_MS, ensureDirs } from '../../config.ts';
 import type { App } from '../ports/app.ts';
 import type { Checkout } from '../ports/workspace.ts';
@@ -70,7 +69,7 @@ async function runOpened(app: App, task: Task, repo: Repo, wt: Checkout, opened:
       planOwner: owner === null ? [] : app.eventsForTask(owner),
     });
     if (edited.length) {
-      writeEvent(log, {
+      app.runLog.event(log, {
         type: 'agentdeck_resume_skipped',
         session_id: session,
         text: `edited since: ${edited.join(', ')}; starting afresh`,
@@ -85,7 +84,7 @@ async function runOpened(app: App, task: Task, repo: Repo, wt: Checkout, opened:
   try {
     plan = planForRun(app, task);
   } catch (err) {
-    writeEvent(log, { type: 'agentdeck_error', text: `read plan: ${errorMessage(err)}` });
+    app.runLog.event(log, { type: 'agentdeck_error', text: `read plan: ${errorMessage(err)}` });
   }
   const review = await reviewForRun(app, task, repo);
   const prompt = buildPrompt(task, previousRuns, latestReviewNote(app.eventsForTask(task.id)), plan, review?.prompt ?? null);
@@ -95,7 +94,7 @@ async function runOpened(app: App, task: Task, repo: Repo, wt: Checkout, opened:
   const setUp = async (): Promise<WorkerResult | null> => {
     if (!repo.setup_cmd) return null;
     const setup = await ws.runCommand(repo.setup_cmd, wt.path, SETUP_TIMEOUT_MS);
-    writeEvent(log, { type: 'agentdeck_setup', cmd: repo.setup_cmd, passed: setup.passed, output: setup.output });
+    app.runLog.event(log, { type: 'agentdeck_setup', cmd: repo.setup_cmd, passed: setup.passed, output: setup.output });
     if (setup.passed) return null;
     pauseRepo(app, repo, `setup failed on task #${task.id}`);
     return finish(app, task, opened, {
@@ -111,7 +110,7 @@ async function runOpened(app: App, task: Task, repo: Repo, wt: Checkout, opened:
   const synced = await markSyncing(app, task.id, () =>
     syncBranch(app, task, repo, wt.path, { allowResolve: repo.auto_resolve, runTests: false }),
   );
-  writeEvent(log, { type: 'agentdeck_sync', ...synced });
+  app.runLog.event(log, { type: 'agentdeck_sync', ...synced });
   if (synced.kind === 'clean' || synced.kind === 'resolved') {
     app.recordSync(task.id, syncSummary(repo.base_branch, synced.kind, synced.kind === 'resolved' ? synced.files : []));
     // The merge may have changed what the setup installs.
@@ -129,7 +128,7 @@ async function runOpened(app: App, task: Task, repo: Repo, wt: Checkout, opened:
   try {
     await ws.writePlanFile(wt.path, plan?.html ?? null);
   } catch (err) {
-    writeEvent(log, { type: 'agentdeck_error', text: `write plan file: ${errorMessage(err)}` });
+    app.runLog.event(log, { type: 'agentdeck_error', text: `write plan file: ${errorMessage(err)}` });
   }
 
   // Written after setup: setup runs here in the daemon, outside the sandbox, so installs keep the network.
@@ -145,14 +144,14 @@ async function runOpened(app: App, task: Task, repo: Repo, wt: Checkout, opened:
   try {
     await ws.commit(wt.path, leftoversMessage(task));
   } catch (err) {
-    writeEvent(log, { type: 'agentdeck_error', text: `commit leftovers: ${errorMessage(err)}` });
+    app.runLog.event(log, { type: 'agentdeck_error', text: `commit leftovers: ${errorMessage(err)}` });
   }
   // Files the worker may not edit itself (under .claude/) and wrote to the edits folder instead: committed before the tests.
   try {
     const edits = await ws.applyProtectedEdits(wt.path);
-    if (edits.applied.length || edits.refused.length) writeEvent(log, { type: 'agentdeck_protected_edits', ...edits });
+    if (edits.applied.length || edits.refused.length) app.runLog.event(log, { type: 'agentdeck_protected_edits', ...edits });
   } catch (err) {
-    writeEvent(log, { type: 'agentdeck_error', text: `apply protected edits: ${errorMessage(err)}` });
+    app.runLog.event(log, { type: 'agentdeck_error', text: `apply protected edits: ${errorMessage(err)}` });
   }
   // What the worker did to the plan is stored, whatever the outcome.
   await giveBackPlan(app, task, wt.path, log);
@@ -168,7 +167,7 @@ async function runOpened(app: App, task: Task, repo: Repo, wt: Checkout, opened:
     if (review && runFields.result_text) runFields.result_text = recordAnswers(app, review.comments, runFields.result_text);
     if (!status.blocked && repo.test_cmd) {
       const tests = await ws.runCommand(repo.test_cmd, wt.path, TEST_TIMEOUT_MS);
-      writeEvent(log, { type: 'agentdeck_tests', passed: tests.passed, output: tests.output });
+      app.runLog.event(log, { type: 'agentdeck_tests', passed: tests.passed, output: tests.output });
       runFields.tests_passed = tests.passed;
       testsPassed = tests.passed;
     }
@@ -182,7 +181,7 @@ async function runOpened(app: App, task: Task, repo: Repo, wt: Checkout, opened:
       const left = unfinishedSteps(followedSteps(app, task) ?? []);
       if (left.length) app.recordPlanUnfinished(task.id, unfinishedSummary(left));
     } catch (err) {
-      writeEvent(log, { type: 'agentdeck_error', text: `check plan steps: ${errorMessage(err)}` });
+      app.runLog.event(log, { type: 'agentdeck_error', text: `check plan steps: ${errorMessage(err)}` });
     }
   }
 
@@ -191,11 +190,11 @@ async function runOpened(app: App, task: Task, repo: Repo, wt: Checkout, opened:
 }
 
 /** Store what a run left in the worktree's plan file (takePlanFile). A failure is logged, never fatal. */
-async function giveBackPlan(app: App, task: Task, worktree: string, log: Parameters<typeof writeEvent>[0]): Promise<void> {
+async function giveBackPlan(app: App, task: Task, worktree: string, log: OpenedRun['log']): Promise<void> {
   try {
     await takePlanFile(app, task, worktree);
   } catch (err) {
-    writeEvent(log, { type: 'agentdeck_error', text: `save plan file: ${errorMessage(err)}` });
+    app.runLog.event(log, { type: 'agentdeck_error', text: `save plan file: ${errorMessage(err)}` });
   }
 }
 

@@ -3,13 +3,15 @@
 // what they need arrives on `app`.
 import type { Agent } from './agent.ts';
 import type { CodeHost } from './code-host.ts';
+import type { Goals } from './goals.ts';
+import type { Notifier } from './notifier.ts';
+import type { Processes } from './processes.ts';
 import type { Repositories } from './repositories.ts';
+import type { RunLog } from './run-log.ts';
+import type { Service } from './service.ts';
 import type { Workspace } from './workspace.ts';
 
-/**
- * The ports besides the repositories, each an interface application/ owns. Agent, CodeHost and Workspace so far; the
- * rest join here one at a time, and the use cases that still import their adapters move onto them.
- */
+/** The ports besides the repositories, each an interface application/ owns. */
 export interface Ports {
   /** Runs claude sessions. */
   agent: Agent;
@@ -17,6 +19,16 @@ export interface Ports {
   codeHost: CodeHost;
   /** Git, the shell and a worktree's files. */
   workspace: Workspace;
+  /** Desktop and ntfy notifications. */
+  notifier: Notifier;
+  /** Run logs and settings files. */
+  runLog: RunLog;
+  /** The claude process groups, and keeping the Mac awake. */
+  processes: Processes;
+  /** The launchd service and what can be read of a daemon from outside. */
+  service: Service;
+  /** Each repo's goals file. */
+  goals: Goals;
 }
 
 /** What the use cases take: the repositories and the ports, one object. */
