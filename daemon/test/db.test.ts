@@ -62,3 +62,49 @@ test('a database already at version 1 gets the runs_task index on open', async (
     db.close();
   }
 });
+
+test('atomically: processes that read and then write at once all land, waiting on the lock instead of failing', async () => {
+  const { spawn } = await import('node:child_process');
+  const path = join(home, 'concurrent.db');
+  openDb(path).close();
+  const child = `
+    const { openDb } = await import(${JSON.stringify(join(import.meta.dirname, '../src/db/index.ts'))});
+    const { atomically } = await import(${JSON.stringify(join(import.meta.dirname, '../src/db/sql.ts'))});
+    const db = openDb(process.env.DB);
+    for (let i = 0; i < 100; i++)
+      atomically(db.raw, () => {
+        const n = db.raw.prepare("SELECT count(*) AS n FROM settings").get().n;
+        db.raw.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)").run('k' + (i % 3), String(n));
+      });
+    db.close();
+  `;
+  const codes = await Promise.all(
+    Array.from(
+      { length: 8 },
+      () =>
+        new Promise<string>((resolve) => {
+          const p = spawn(process.execPath, ['--input-type=module', '-e', child], { env: { ...process.env, DB: path } });
+          let err = '';
+          p.stderr.on('data', (b) => (err += b));
+          p.on('exit', (code) => resolve(code === 0 ? 'ok' : err));
+        }),
+    ),
+  );
+  assert.deepEqual(codes, Array(8).fill('ok'));
+});
+
+test('atomically: inside a transaction it is a savepoint, so a failure rolls back only its own writes', async () => {
+  const { atomically } = await import('../src/db/sql.ts');
+  const keys = () =>
+    (db.raw.prepare("SELECT key FROM settings WHERE key IN ('outer', 'inner')").all() as { key: string }[]).map((r) => r.key);
+  db.raw.exec('BEGIN');
+  db.setSetting('outer', '1');
+  assert.throws(() =>
+    atomically(db.raw, () => {
+      db.setSetting('inner', '1');
+      throw new Error('no');
+    }),
+  );
+  db.raw.exec('COMMIT');
+  assert.deepEqual(keys(), ['outer']);
+});
