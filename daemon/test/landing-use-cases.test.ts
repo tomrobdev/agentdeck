@@ -46,6 +46,8 @@ function gitRepo(name: string) {
   return db.addRepo({ name, path: dir, base_branch: 'main', test_cmd: 'true' });
 }
 const repo = gitRepo('demo');
+// Its tasks open PRs, and a builds-on link into a repo with pr_mode off is refused.
+db.updateRepo(repo.id, { pr_mode: 'ready' });
 
 beforeEach(() => {
   db.setPaused(false);

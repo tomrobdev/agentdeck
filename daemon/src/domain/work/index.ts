@@ -36,7 +36,7 @@ export {
   unblocksOf,
   unlandedAfter,
 } from './link.ts';
-export type { Dependent, Link, LinkIndex, LinkKind, LinkState, LinkTarget, LinkView, LinkedTask, StartState } from './link.ts';
+export type { Dependent, Link, LinkIndex, LinkKind, LinkTarget, LinkView, LinkedTask, StartState } from './link.ts';
 export { INSTALL_NOTE, LOCKFILES, canInstallWith, depsRequest, depsRequestError, installArgs, isNeeds, parseNeeds } from './needs.ts';
 export type { Needs, NeedsKind, UnblockQuestion } from './needs.ts';
 export { hasPlanLink, otherPlanOwner, planOwnerOf } from './plan-link.ts';
