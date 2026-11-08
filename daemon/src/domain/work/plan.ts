@@ -38,6 +38,17 @@ export interface TaskPlan extends ParsedPlan {
   updated_at: string;
 }
 
+/** A task's own plan with its HTML: the one stored under the task's numbered name. */
+export type OwnPlan = Omit<TaskPlan, keyof ParsedPlan> & { html: string };
+
+/** A stored plan as the API shows it. A plan that no longer parses (it always did when saved) reads as untitled. */
+export function toPlan({ html, ...row }: OwnPlan): TaskPlan {
+  return {
+    ...row,
+    ...(parsePlan(html) ?? { version: '1', title: 'Untitled plan', summary: null, steps: [] }),
+  };
+}
+
 /** Where a run's plan sits in the task's worktree, for the worker to read and update. Never committed. */
 export const PLAN_FILE = `${AGENTDECK_FOLDER}/plan.html`;
 /**

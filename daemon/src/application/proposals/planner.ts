@@ -5,7 +5,7 @@ import { runClaude } from '../../adapters/claude.ts';
 import { goalsPath, readGoals } from '../../adapters/goals.ts';
 import { closeLog } from '../../adapters/run-log.ts';
 import { LOG_DIR, ensureDirs } from '../../config.ts';
-import type { Db } from '../../db/index.ts';
+import type { Repositories as Db } from '../ports/repositories.ts';
 import type { PlannerRunId, RepoId } from '../../domain/shared/index.ts';
 import { type ProposalResult, buildPlannerPrompt, plannerArgs, plannerDueReason, selectProposals } from '../../domain/proposals/index.ts';
 import type { Repo } from '../../domain/repos/index.ts';

@@ -1,5 +1,5 @@
 // Settling a task: the daemon's own events that end a run or a wait, applied together with what follows them.
-import type { Db } from '../../db/index.ts';
+import type { Repositories as Db } from '../ports/repositories.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import { finalNotification } from '../../domain/operations/index.ts';
 import type { PrEvent } from '../../domain/work/index.ts';

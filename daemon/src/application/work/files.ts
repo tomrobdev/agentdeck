@@ -1,7 +1,7 @@
 // Use cases for reading a task's code: what its branch changed, and its files at head or base.
 // All git reads run in the repo's main checkout, which shares refs with the task worktrees.
 import { branchCommit, changedFiles, commitsBetween, diffBase, filePatch, listTree, objectAt, readFile } from '../../adapters/git.ts';
-import type { Db } from '../../db/index.ts';
+import type { Repositories as Db } from '../ports/repositories.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import {
   type ChangedFile,

@@ -1,7 +1,7 @@
 // What a use case needs to read a request: ActionError and the rules that raise it, finding the task or repo a person
 // named (the one place these messages are worded), and checks on the fields of a request body. A wrong type is the
 // caller's mistake, so each throws ActionError (a 400).
-import type { Db } from '../../db/index.ts';
+import type { Repositories as Db } from '../ports/repositories.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import type { Repo } from '../../domain/repos/index.ts';
 import type { Task } from '../../domain/work/index.ts';

@@ -8,17 +8,17 @@ What each layer of `daemon/src` holds and may import. The rule is `LAYERS` in `d
 
 <!-- generated:layers -->
 
-| Layer          | Holds                                                                        | May import                                                         | Why                                                                       |
-| -------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------- |
-| `domain/`      | Entities and decisions, pure: task lifecycle, governor, prompts, plans       | nothing                                                            | domain/ is pure and imports no other layer                                |
-| `config.ts`    | Paths and constants                                                          | nothing                                                            | config.ts is read by every layer and imports none                         |
-| `db/`          | Every SQL query, through Drizzle, and the migrations                         | `domain/`, `config.ts`                                             | db/ holds the SQL and knows only the domain                               |
-| `adapters/`    | The I/O: claude, git, gh, processes, shell, notifications, launchd, run logs | `domain/`, `config.ts`                                             | adapters import domain/ and config.ts only; they report through callbacks |
-| `application/` | The use cases, connecting domain, db and adapters                            | `adapters/`, `db/`, `domain/`, `config.ts`                         | application/ is never imported by db/ or adapters/                        |
-| `api/`         | The dashboard's HTTP API                                                     | `application/`, `db/`, `domain/`, `config.ts`                      | entry points reach adapters through application/                          |
-| `cli/`         | One file per command group of the agentdeck CLI                              | `api/`, `application/`, `db/`, `domain/`, `config.ts`, `daemon.ts` | entry points reach adapters through application/                          |
-| `daemon.ts`    | The composition root: wires the source watcher, the API and the scheduler    | `api/`, `application/`, `adapters/`, `db/`, `domain/`, `config.ts` | the composition root does not use the CLI                                 |
-| `cli.ts`       | The CLI entry point the launchd plist runs                                   | `cli/`, `application/`, `db/`, `config.ts`                         | cli.ts only dispatches to cli/                                            |
+| Layer          | Holds                                                                                                        | May import                                                         | Why                                                                                                       |
+| -------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| `domain/`      | Entities and decisions, pure: task lifecycle, governor, prompts, plans                                       | nothing                                                            | domain/ is pure and imports no other layer                                                                |
+| `config.ts`    | Paths and constants                                                                                          | nothing                                                            | config.ts is read by every layer and imports none                                                         |
+| `db/`          | Every SQL query, through Drizzle, and the migrations                                                         | `domain/`, `config.ts`                                             | db/ holds the SQL and knows only the domain                                                               |
+| `adapters/`    | The I/O: claude, git, gh, processes, shell, notifications, launchd, run logs                                 | `domain/`, `config.ts`                                             | adapters import domain/ and config.ts only; they report through callbacks                                 |
+| `application/` | The use cases, connecting domain and adapters, and the repository interfaces they reach the database through | `adapters/`, `domain/`, `config.ts`                                | application/ reaches the database only through the repository interfaces it declares (application/ports/) |
+| `api/`         | The dashboard's HTTP API                                                                                     | `application/`, `db/`, `domain/`, `config.ts`                      | entry points reach adapters through application/                                                          |
+| `cli/`         | One file per command group of the agentdeck CLI                                                              | `api/`, `application/`, `db/`, `domain/`, `config.ts`, `daemon.ts` | entry points reach adapters through application/                                                          |
+| `daemon.ts`    | The composition root: wires the source watcher, the API and the scheduler                                    | `api/`, `application/`, `adapters/`, `db/`, `domain/`, `config.ts` | the composition root does not use the CLI                                                                 |
+| `cli.ts`       | The CLI entry point the launchd plist runs                                                                   | `cli/`, `application/`, `db/`, `config.ts`                         | cli.ts only dispatches to cli/                                                                            |
 
 ```mermaid
 flowchart TD
@@ -33,7 +33,7 @@ flowchart TD
   cli_ts["cli.ts"]
   db --> domain & config_ts
   adapters --> domain & config_ts
-  application --> adapters & db & domain & config_ts
+  application --> adapters & domain & config_ts
   api --> application & db & domain & config_ts
   cli --> api & application & db & domain & config_ts & daemon_ts
   daemon_ts --> api & application & adapters & db & domain & config_ts

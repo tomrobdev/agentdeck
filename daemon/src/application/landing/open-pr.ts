@@ -1,7 +1,7 @@
 // Opening a task's pull request when it finishes done.
 import { github } from '../../adapters/github.ts';
 import { appendEvent } from '../../adapters/run-log.ts';
-import type { Db } from '../../db/index.ts';
+import type { Repositories as Db } from '../ports/repositories.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import { AUTO_MERGE_LABEL, autoMergeOn } from '../../domain/landing/index.ts';
 import { buildPrBody, openPrUrl } from '../../domain/landing/index.ts';

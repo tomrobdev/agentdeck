@@ -15,7 +15,7 @@ import { MERGE_REQUEST_POLL_MS, PR_REFRESH_MS, refreshPrStates } from '../landin
 import { settle, settleRecovered } from '../landing/settle.ts';
 import { runTask } from '../runs/worker.ts';
 import { nextUnblockable, runUnblock } from '../runs/unblock.ts';
-import type { Db } from '../../db/index.ts';
+import type { Repositories as Db } from '../ports/repositories.ts';
 import type { Activity, ReloadDecision } from '../../domain/operations/index.ts';
 
 /** After a merge, how many times to re-read PRs whose mergeability GitHub is still computing, and how far apart. */

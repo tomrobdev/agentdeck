@@ -1,5 +1,5 @@
 // Tasks as the dashboard and the CLI show them: a task plus what the queue says about it.
-import type { Db } from '../../db/index.ts';
+import type { Repositories as Db } from '../ports/repositories.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import { type AutoMergeView, autoMergeOn, autoMergeView } from '../../domain/landing/index.ts';
 import { type ChecksSummary, checksSummary } from '../../domain/landing/index.ts';

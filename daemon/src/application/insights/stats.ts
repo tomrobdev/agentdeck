@@ -1,5 +1,5 @@
 // The pilot scorecard measures per repo, read from the database.
-import type { Db } from '../../db/index.ts';
+import type { Repositories as Db } from '../ports/repositories.ts';
 import type { RepoId } from '../../domain/shared/index.ts';
 import { type Scorecard, buildScorecard } from '../../domain/insights/index.ts';
 import { type Measures, type StatsReport, measure, measureByRepo, measureByWeek } from '../../domain/insights/index.ts';

@@ -1,7 +1,7 @@
 // Auto-merge: the daemon merges a done task's PR on its own when it passes the auto-merge check
 // (docs/plans/auto-merge.html), and a person turns it on or off for one task.
 import { github } from '../../adapters/github.ts';
-import type { Db } from '../../db/index.ts';
+import type { Repositories as Db } from '../ports/repositories.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import { AUTO_MERGE_LABEL, autoMergeOn } from '../../domain/landing/index.ts';
 import type { PrDetails } from '../../domain/landing/index.ts';

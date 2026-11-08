@@ -1,6 +1,6 @@
 // Tells subscribers when the database changed. The revision it counts is what the dashboard's event stream sends.
 // An instance made in daemon.ts, not module state.
-import type { Db } from '../../db/index.ts';
+import type { Repositories as Db } from '../ports/repositories.ts';
 
 export class ChangeWatcher {
   /** Moves by one whenever the database changed, whoever wrote. Starts at 1. */

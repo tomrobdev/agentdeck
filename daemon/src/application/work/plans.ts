@@ -1,9 +1,9 @@
 // Plans: stored in AgentDeck per task, named after the task they belong to (`112-plans-in-agentdeck.html`). A task
 // follows its linked plan (plan_task) or else its own; each run gets it in the worktree's plan file and gives it back.
 import { readGivenPlan, readPlanFile, writeGivenPlan } from '../../adapters/plan-file.ts';
-import type { Db } from '../../db/index.ts';
-import { type OwnPlan, toPlan } from '../../db/plans.ts';
+import type { Repositories as Db } from '../ports/repositories.ts';
 import {
+  type OwnPlan,
   PLAN_LIMIT,
   type ParsedPlan,
   type TaskPlan,
@@ -11,6 +11,7 @@ import {
   missingFollowedSteps,
   parsePlan,
   planAfterRun,
+  toPlan,
 } from '../../domain/work/index.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import type { PrPlan } from '../../domain/landing/index.ts';

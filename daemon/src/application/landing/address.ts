@@ -1,6 +1,6 @@
 // A run addressing a review: what the worker is shown of it, and what its answers do to the comments afterwards.
 import { diffBase, filePatch } from '../../adapters/git.ts';
-import type { Db } from '../../db/index.ts';
+import type { Repositories as Db } from '../ports/repositories.ts';
 import { type ReviewPrompt, hunkAround, latestRequestNote, matchAnswers, unansweredNote, withNote } from '../../domain/landing/index.ts';
 import { type ReviewComment, commentStatesFor, commentsToAddress } from '../../domain/landing/index.ts';
 import type { Repo } from '../../domain/repos/index.ts';

@@ -6,7 +6,7 @@ import { deleteBranch, currentBranch, isGitRepo, pruneWorktrees, removeWorktree 
 import { deleteGoals, goalsPath, readGoals, writeGoals } from '../../adapters/goals.ts';
 import { rootInfo } from '../../adapters/repo-root.ts';
 import { removeFiles } from '../../adapters/run-log.ts';
-import type { Db } from '../../db/index.ts';
+import type { Repositories as Db } from '../ports/repositories.ts';
 import { autoMergeMaxLinesError } from '../../domain/landing/index.ts';
 import { MERGE_METHODS, type MergeMethod, PR_MODES, type PrMode, type Repo, isMergeMethod } from '../../domain/repos/index.ts';
 import { goalsError, networkError, repoNameError } from '../../domain/repos/index.ts';

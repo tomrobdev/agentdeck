@@ -5,7 +5,7 @@ import { applyProtectedEdits } from '../../adapters/protected-edits.ts';
 import { writeEvent } from '../../adapters/run-log.ts';
 import { runCommand } from '../../adapters/shell.ts';
 import { SETUP_TIMEOUT_MS, TEST_TIMEOUT_MS, ensureDirs } from '../../config.ts';
-import type { Db } from '../../db/index.ts';
+import type { Repositories as Db } from '../ports/repositories.ts';
 import { conflictReason, syncSummary } from '../../domain/landing/index.ts';
 import { unfinishedSteps, unfinishedSummary } from '../../domain/work/index.ts';
 import { type PromptPlan, buildPrompt, buildResumePrompt } from '../../domain/runs/index.ts';

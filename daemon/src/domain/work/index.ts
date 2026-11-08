@@ -8,7 +8,7 @@ export { parseTaskIds } from './ids.ts';
 export { MAX_RESTARTS, TASK_STATUSES, fromStatuses, nextStatus, personEvents, transition } from './lifecycle.ts';
 export type { PersonEvent, TaskEvent, TaskStatus } from './lifecycle.ts';
 export { buildsOnError, linkError, linkState, releasedBy, startState, stuckOn, unlandedAfter } from './link.ts';
-export type { Dependency, Link, LinkIndex, LinkKind, LinkState, LinkTarget, StartState } from './link.ts';
+export type { Dependent, Link, LinkIndex, LinkKind, LinkState, LinkTarget, LinkedTask, StartState } from './link.ts';
 export { INSTALL_NOTE, LOCKFILES, canInstallWith, depsRequest, depsRequestError, installArgs, isNeeds, parseNeeds } from './needs.ts';
 export type { Needs, NeedsKind, UnblockQuestion } from './needs.ts';
 export { hasPlanLink, otherPlanOwner, planOwnerOf } from './plan-link.ts';
@@ -25,10 +25,11 @@ export {
   planAfterRun,
   planFileName,
   planProgress,
+  toPlan,
   unfinishedSteps,
   unfinishedSummary,
 } from './plan.ts';
-export type { ParsedPlan, PlanSource, PlanStepStatus, TaskPlan } from './plan.ts';
+export type { OwnPlan, ParsedPlan, PlanSource, PlanStepStatus, TaskPlan } from './plan.ts';
 export { matchPath, pathsNamedIn } from './prompt-paths.ts';
 export { digest } from './read/digest.ts';
 export { describeEvent } from './read/event-text.ts';

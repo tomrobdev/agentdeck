@@ -24,6 +24,16 @@ type DependencyState = DoneState | { status: Exclude<TaskStatus, 'done'> };
 /** `pr_mode` is that of the dependency's repo: a done task in a repo that opens PRs isn't met until its PR is merged. */
 export type Dependency = DependencyState & { pr: Pick<PullRequest, 'state'> | null; pr_mode: PrMode };
 
+/** A task that depends on another, and the kind of that link. */
+export interface Dependent {
+  id: TaskId;
+  status: TaskStatus;
+  kind: LinkKind;
+}
+
+/** A task at the end of a link: what its link states are read from. */
+export type LinkedTask = Dependency & { id: TaskId };
+
 /** A dependency, and the links it has itself (stuck spreads down its builds-on links). */
 export type LinkTarget = Dependency & { links: Link[] };
 

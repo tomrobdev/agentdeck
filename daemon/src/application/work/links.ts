@@ -1,5 +1,5 @@
 // Use cases for task links: add one, remove one, and check the lists a new task names.
-import type { Db } from '../../db/index.ts';
+import type { Repositories as Db } from '../ports/repositories.ts';
 import { type TaskId, parseId } from '../../domain/shared/index.ts';
 import { type Link, type LinkKind, buildsOnError, linkError } from '../../domain/work/index.ts';
 import { ActionError, object, refuse, requireTask } from '../shared/input.ts';

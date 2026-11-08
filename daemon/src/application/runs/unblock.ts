@@ -2,7 +2,7 @@
 // note or leaves it blocked with the run's question. It takes a slot and uses no attempt (domain/runs/unblock.ts).
 import { commitLeftovers, ensureWorktree } from '../../adapters/git.ts';
 import { writeEvent } from '../../adapters/run-log.ts';
-import type { Db } from '../../db/index.ts';
+import type { Repositories as Db } from '../ports/repositories.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import type { PromptPlan } from '../../domain/runs/index.ts';
 import {
