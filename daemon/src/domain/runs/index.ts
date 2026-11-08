@@ -17,7 +17,7 @@ export {
   runOutcome,
   setupFailedReason,
 } from './run.ts';
-export type { Outcome, Run, RunClass, RunKind, RunOutcome, WorkerResult } from './run.ts';
+export type { Outcome, PidRun, Run, RunClass, RunKind, RunOutcome, RunningTaskRun, WorkerResult } from './run.ts';
 export { START_LIVE, liveView, nextLive, syncView } from './translate/live.ts';
 export type { LiveView, SyncView } from './translate/live.ts';
 export { parseLogLine } from './translate/log.ts';

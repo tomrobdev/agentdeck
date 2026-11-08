@@ -1,7 +1,7 @@
 // Plans attached to tasks: the HTML as written, parsed into steps when read.
 import { and, asc, desc, eq, ne, notInArray, sql } from 'drizzle-orm';
 import type { TaskId } from '../domain/shared/index.ts';
-import { type PlanSource, type TaskPlan, parsePlan, planFileName } from '../domain/work/index.ts';
+import { type OwnPlan, type PlanSource, type TaskPlan, parsePlan, planFileName, toPlan } from '../domain/work/index.ts';
 import type { PlanFollower } from '../domain/work/index.ts';
 import { readSteps } from './mappers.ts';
 import type { Orm } from './orm.ts';
@@ -11,16 +11,7 @@ import type { DatabaseSync } from 'node:sqlite';
 
 type PlanRow = typeof taskPlans.$inferSelect;
 
-/** A task's own plan with its HTML: the one stored under the task's numbered name. */
-export type OwnPlan = Omit<PlanRow, 'source'> & { source: PlanSource };
-
-/** A row as the API shows it. A row that no longer parses (it always did when saved) reads as untitled. */
-export function toPlan({ html, ...row }: OwnPlan): TaskPlan {
-  return {
-    ...row,
-    ...(parsePlan(html) ?? { version: '1', title: 'Untitled plan', summary: null, steps: [] }),
-  };
-}
+const asOwnPlan = (row: PlanRow): OwnPlan => ({ ...row, source: row.source as PlanSource });
 
 /** Insert task `task_id`'s own plan under the name its title gives (planFileName). The caller makes sure it has none. */
 export function insertOwnPlan(orm: Orm, task_id: TaskId, html: string, source: PlanSource): string {
@@ -48,7 +39,7 @@ function ownPlanRow(orm: Orm, task_id: TaskId): OwnPlan | undefined {
     )
     .orderBy(desc(taskPlans.id))
     .get();
-  return row && { ...row, source: row.source as PlanSource };
+  return row && asOwnPlan(row);
 }
 
 /**
@@ -115,7 +106,7 @@ export function planStore(db: DatabaseSync, orm: Orm) {
         .where(eq(taskPlans.task_id, task_id))
         .orderBy(asc(taskPlans.id))
         .all()
-        .map((row) => toPlan({ ...row, source: row.source as PlanSource }));
+        .map((row) => toPlan(asOwnPlan(row)));
     },
     planHtml(task_id: TaskId, id: number): string | undefined {
       return orm

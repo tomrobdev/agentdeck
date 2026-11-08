@@ -7,7 +7,7 @@ import { github } from '../../adapters/github.ts';
 import { ownsLiveGroup } from '../../adapters/processes.ts';
 import { DAEMON_LOG, serviceStatus } from '../../adapters/service.ts';
 import { API_PORT, CHECKOUT_ROOT } from '../../config.ts';
-import type { Db } from '../../db/index.ts';
+import type { Repositories as Db } from '../ports/repositories.ts';
 import { type Check, type DaemonState, type HealthFacts, judgeHealth, logFacts } from '../../domain/operations/index.ts';
 import { sqliteMs } from '../../domain/shared/index.ts';
 

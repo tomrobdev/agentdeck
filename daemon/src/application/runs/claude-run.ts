@@ -5,7 +5,7 @@ import { type ClaudeResult, type ClaudeRun, type UsageWindow, runClaude } from '
 import { rootInfo } from '../../adapters/repo-root.ts';
 import { closeLog, writeEvent, writeSettings } from '../../adapters/run-log.ts';
 import { LOG_DIR, ensureDirs } from '../../config.ts';
-import type { Db } from '../../db/index.ts';
+import type { Repositories as Db } from '../ports/repositories.ts';
 import type { RunId } from '../../domain/shared/index.ts';
 import type { Repo } from '../../domain/repos/index.ts';
 import { allowedTools } from '../../domain/repos/index.ts';

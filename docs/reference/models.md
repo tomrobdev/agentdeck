@@ -854,6 +854,18 @@ An edit in numbers and a little text, for a small diff.
 | `parent?` | `string \| undefined`                                                            | The `tool_use` id of the subagent call this entry comes from. |
 | `kind`    | `"text" \| "tool" \| "tool_result" \| "result" \| "setup" \| "tests" \| "error"` |                                                               |
 
+### PidRun
+
+A run (or planner run) with a recorded pid: where a claude process may still be.
+
+| Field      | Type                    | Comment                                                                            |
+| ---------- | ----------------------- | ---------------------------------------------------------------------------------- |
+| `kind`     | `"planner" \| RunKind`  |                                                                                    |
+| `id`       | `PlannerRunId \| RunId` |                                                                                    |
+| `pid`      | `number`                |                                                                                    |
+| `pid_at`   | `string`                | When the pid was stored (the run's start for a row from before that was recorded). |
+| `ended_at` | `string \| null`        |                                                                                    |
+
 ### PromptPlan
 
 The plan a run follows: its name (`112-plans-in-agentdeck.html`) and its HTML as AgentDeck stores it, null when it is gone. `steps` are the step ids the task is linked to, null for every step.
@@ -925,6 +937,17 @@ What a run came to, for `runOutcome`.
 | `testsPassed`  | `boolean \| null`                                                                                                 | Whether the repo's test command passed; null when it was not run (no command, or the agent reported blocked). |
 | `commitsAhead` | `number \| null`                                                                                                  | Commits on the branch past the base; null when not counted (only a run that could be done needs it).          |
 | `denials`      | `number`                                                                                                          | Tool uses the permission rules refused during the run.                                                        |
+
+### RunningTaskRun
+
+A running task with its unfinished work run, if it has one.
+
+| Field        | Type             | Comment |
+| ------------ | ---------------- | ------- |
+| `id`         | `TaskId`         |         |
+| `pid`        | `number \| null` |         |
+| `pid_at`     | `string \| null` |         |
+| `started_at` | `string \| null` |         |
 
 ### SyncView
 
@@ -1061,6 +1084,16 @@ A task's checkout: its branch and worktree, and when a sync of the branch began.
 | `pr`      | `Pick<PullRequest, "state"> \| null`                                                                          |         |
 | `pr_mode` | `PrMode`                                                                                                      |         |
 
+### Dependent
+
+A task that depends on another, and the kind of that link.
+
+| Field    | Type         | Comment |
+| -------- | ------------ | ------- |
+| `id`     | `TaskId`     |         |
+| `status` | `TaskStatus` |         |
+| `kind`   | `LinkKind`   |         |
+
 ### DigestEvent
 
 A history row with its task's title.
@@ -1180,6 +1213,17 @@ A dependency, and the links it has itself (stuck spreads down its builds-on link
 | `pr_mode` | `PrMode`                                                                                                      |         |
 | `links`   | `Link[]`                                                                                                      |         |
 
+### LinkedTask
+
+A task at the end of a link: what its link states are read from.
+
+| Field     | Type                                                                                                          | Comment |
+| --------- | ------------------------------------------------------------------------------------------------------------- | ------- |
+| `status`  | `"failed" \| "blocked" \| "proposed" \| "done" \| "cancelled" \| "queued" \| "running" \| "cancel_requested"` |         |
+| `pr`      | `Pick<PullRequest, "state"> \| null`                                                                          |         |
+| `pr_mode` | `PrMode`                                                                                                      |         |
+| `id`      | `TaskId`                                                                                                      |         |
+
 ### ListFilter
 
 | Field      | Type                          | Comment                                                                                         |
@@ -1199,10 +1243,10 @@ A dependency, and the links it has itself (stuck spreads down its builds-on link
 | `repo_id`     | `RepoId`                                                                                                      |         |
 | `waiting`     | `Waiting \| null`                                                                                             |         |
 | `title`       | `string`                                                                                                      |         |
-| `priority`    | `number`                                                                                                      |         |
-| `model`       | `string`                                                                                                      |         |
 | `source`      | `TaskSource`                                                                                                  |         |
 | `updated_at`  | `string`                                                                                                      |         |
+| `priority`    | `number`                                                                                                      |         |
+| `model`       | `string`                                                                                                      |         |
 | `status`      | `"failed" \| "blocked" \| "proposed" \| "done" \| "cancelled" \| "queued" \| "running" \| "cancel_requested"` |         |
 | `stop_reason` | `string \| null`                                                                                              |         |
 | `pr_url`      | `string \| null`                                                                                              |         |
@@ -1225,14 +1269,14 @@ A task as listed: with where it stands on its builds-on links (as waitingFor rep
 | `attempts`     | `number`                                                                                                      |                                                                                                               |
 | `restarts`     | `number`                                                                                                      | times a daemon restart requeued this task mid-run                                                             |
 | `title`        | `string`                                                                                                      |                                                                                                               |
+| `source`       | `TaskSource`                                                                                                  |                                                                                                               |
+| `updated_at`   | `string`                                                                                                      |                                                                                                               |
 | `priority`     | `number`                                                                                                      |                                                                                                               |
 | `model`        | `string`                                                                                                      |                                                                                                               |
 | `max_turns`    | `number`                                                                                                      |                                                                                                               |
 | `max_attempts` | `number`                                                                                                      |                                                                                                               |
 | `checkout`     | `Checkout \| null`                                                                                            | the branch and worktree the work is on, and a running sync                                                    |
-| `source`       | `TaskSource`                                                                                                  |                                                                                                               |
 | `plan`         | `PlanLink \| null`                                                                                            | the plan this task follows and its linked steps (domain/work/plan-link.ts); null follows its own plan, if any |
-| `updated_at`   | `string`                                                                                                      |                                                                                                               |
 | `status`       | `"failed" \| "blocked" \| "proposed" \| "done" \| "cancelled" \| "queued" \| "running" \| "cancel_requested"` |                                                                                                               |
 | `waiting`      | `Waiting \| null`                                                                                             |                                                                                                               |
 | `unblocks`     | `number[]`                                                                                                    |                                                                                                               |
@@ -1253,6 +1297,20 @@ A task waiting to run or running: it carries nothing about how it ended.
 | Field    | Type                                                        | Comment |
 | -------- | ----------------------------------------------------------- | ------- |
 | `status` | `"proposed" \| "queued" \| "running" \| "cancel_requested"` |         |
+
+### OwnPlan
+
+A task's own plan with its HTML: the one stored under the task's numbered name.
+
+| Field        | Type         | Comment                                                                                  |
+| ------------ | ------------ | ---------------------------------------------------------------------------------------- |
+| `id`         | `number`     |                                                                                          |
+| `created_at` | `string`     |                                                                                          |
+| `task_id`    | `TaskId`     | the task the plan belongs to: the one it was first attached to                           |
+| `name`       | `string`     | `<task id>-<slug>.html` (planFileName); older plans keep the name they were stored under |
+| `source`     | `PlanSource` |                                                                                          |
+| `updated_at` | `string`     |                                                                                          |
+| `html`       | `string`     |                                                                                          |
 
 ### ParsedPlan
 
@@ -1425,14 +1483,14 @@ A stored plan as the API returns it: parsed, without its HTML.
 | `attempts`     | `number`                                                                                                      |                                                                                                               |
 | `restarts`     | `number`                                                                                                      | times a daemon restart requeued this task mid-run                                                             |
 | `title`        | `string`                                                                                                      |                                                                                                               |
+| `source`       | `TaskSource`                                                                                                  |                                                                                                               |
+| `updated_at`   | `string`                                                                                                      |                                                                                                               |
 | `priority`     | `number`                                                                                                      |                                                                                                               |
 | `model`        | `string`                                                                                                      |                                                                                                               |
 | `max_turns`    | `number`                                                                                                      |                                                                                                               |
 | `max_attempts` | `number`                                                                                                      |                                                                                                               |
 | `checkout`     | `Checkout \| null`                                                                                            | the branch and worktree the work is on, and a running sync                                                    |
-| `source`       | `TaskSource`                                                                                                  |                                                                                                               |
 | `plan`         | `PlanLink \| null`                                                                                            | the plan this task follows and its linked steps (domain/work/plan-link.ts); null follows its own plan, if any |
-| `updated_at`   | `string`                                                                                                      |                                                                                                               |
 | `status`       | `"failed" \| "blocked" \| "proposed" \| "done" \| "cancelled" \| "queued" \| "running" \| "cancel_requested"` |                                                                                                               |
 
 ### Transition

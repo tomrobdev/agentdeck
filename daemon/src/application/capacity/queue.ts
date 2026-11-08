@@ -1,5 +1,5 @@
 // What queued tasks wait for: what stops the whole queue, and what each task waits for.
-import type { Db } from '../../db/index.ts';
+import type { Repositories as Db } from '../ports/repositories.ts';
 import type { RepoId } from '../../domain/shared/index.ts';
 import type { Repo } from '../../domain/repos/index.ts';
 import type { StartState } from '../../domain/work/index.ts';

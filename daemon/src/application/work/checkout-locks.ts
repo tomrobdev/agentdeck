@@ -1,6 +1,6 @@
 // The locks on a task's checkout in this process: a sync of its branch (`runs/sync.ts`) and a merge of its PR
 // (`landing/merge.ts`). Apart, here in Work, so that the use cases of every context can read them without a cycle.
-import type { Db } from '../../db/index.ts';
+import type { Repositories as Db } from '../ports/repositories.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import { ActionError } from '../shared/input.ts';
 

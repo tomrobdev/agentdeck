@@ -1,6 +1,6 @@
 // Use cases for tasks: add, edit, and move them through the lifecycle on a person's request.
 import { removeWorktree } from '../../adapters/git.ts';
-import type { Db } from '../../db/index.ts';
+import type { Repositories as Db } from '../ports/repositories.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import type { TaskStatus } from '../../domain/work/index.ts';
 import { archivedRepoError, maxAttemptsError, maxTurnsError, modelError, priorityError } from '../../domain/work/index.ts';

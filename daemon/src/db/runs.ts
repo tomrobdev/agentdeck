@@ -1,7 +1,7 @@
 // Task runs: one row per worker claude process.
 import { and, asc, count, countDistinct, eq, gt, inArray, isNotNull, isNull, notInArray, or, sql } from 'drizzle-orm';
 import type { PlannerRunId, RunId, TaskId } from '../domain/shared/index.ts';
-import type { Run, RunKind } from '../domain/runs/index.ts';
+import type { PidRun, Run, RunKind, RunningTaskRun } from '../domain/runs/index.ts';
 import { RUNNING_STATUSES } from '../domain/work/index.ts';
 import { stored, toRun } from './mappers.ts';
 import type { Orm } from './orm.ts';
@@ -10,22 +10,6 @@ import { plannerRuns, runs, tasks } from './tables.ts';
 
 /** The run kinds that run beside a task's status rather than as it: a resolve run (of a done task) and an unblock run (of a blocked one). */
 const SIDE_KINDS: RunKind[] = ['resolve', 'unblock'];
-
-export interface PidRun {
-  kind: RunKind | 'planner';
-  id: RunId | PlannerRunId;
-  pid: number;
-  /** When the pid was stored (the run's start for a row from before that was recorded). */
-  pid_at: string;
-  ended_at: string | null;
-}
-
-export interface RunningTaskRun {
-  id: TaskId;
-  pid: number | null;
-  pid_at: string | null;
-  started_at: string | null;
-}
 
 export function runStore(orm: Orm) {
   /** Unfinished runs of one kind. */

@@ -1,8 +1,7 @@
 // Merging a done task's PR, as a person asked or on its own, and closing one.
 import { removeWorktree } from '../../adapters/git.ts';
 import { github } from '../../adapters/github.ts';
-import type { Db } from '../../db/index.ts';
-import { stored } from '../../db/mappers.ts';
+import type { Repositories as Db } from '../ports/repositories.ts';
 import { type PrDetails, mergeCheck, mergeFindings } from '../../domain/landing/index.ts';
 import { MERGE_METHODS, type MergeMethod, isMergeMethod } from '../../domain/repos/index.ts';
 import { type AutoMergeCheck, autoMergeOn } from '../../domain/landing/index.ts';
@@ -112,7 +111,7 @@ export async function mergePreview(db: Db, id: TaskId): Promise<MergePreview> {
     files: pr.files,
     additions: pr.additions,
     deletions: pr.deletions,
-    tests_passed: stored({ tests_passed }).tests_passed, // the API keeps 1, 0 or null
+    tests_passed: tests_passed === null ? null : tests_passed ? 1 : 0, // the API keeps 1, 0 or null
     checks: pr.checks,
     ...mergeCheck({ pr_state: task.pr?.state ?? null, pr, tests_passed, lands_after }),
     conflicting: isConflicting(pr),

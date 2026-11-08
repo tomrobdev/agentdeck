@@ -1,5 +1,5 @@
 // May new work start? The pause flag, the rate limit and the governor's decision, read once.
-import type { Db } from '../../db/index.ts';
+import type { Repositories as Db } from '../ports/repositories.ts';
 import { decide } from '../../domain/capacity/index.ts';
 import { type QueueState, type QueueWait, startDecision } from '../../domain/work/index.ts';
 

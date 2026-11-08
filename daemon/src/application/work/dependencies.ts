@@ -1,5 +1,5 @@
 // Tasks waiting on another through a builds-on link: why they wait, and telling a human when they're stuck.
-import type { Db } from '../../db/index.ts';
+import type { Repositories as Db } from '../ports/repositories.ts';
 import type { RepoId, TaskId } from '../../domain/shared/index.ts';
 import {
   type Link,

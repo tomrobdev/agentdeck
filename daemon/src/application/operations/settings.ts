@@ -1,5 +1,5 @@
 // Use cases for the daemon as a whole: pause, status, and settings.
-import type { Db } from '../../db/index.ts';
+import type { Repositories as Db } from '../ports/repositories.ts';
 import { type NotifyKind, type NotifySettings, notifyEventsError, ntfyServerError, ntfyTopicError } from '../../domain/operations/index.ts';
 import { type PlannerSettings, plannerIntervalError, plannerMaxTasksError, plannerModelError } from '../../domain/proposals/index.ts';
 import { BUDGET_KEYS, type Budget, validateBudget, validateSlots } from '../../domain/capacity/index.ts';

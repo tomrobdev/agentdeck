@@ -36,9 +36,9 @@ export const LAYERS: Record<string, Layer> = {
     why: 'adapters import domain/ and config.ts only; they report through callbacks',
   },
   application: {
-    holds: 'The use cases, connecting domain, db and adapters',
-    imports: ['adapters', 'db', 'domain', 'config.ts'],
-    why: 'application/ is never imported by db/ or adapters/',
+    holds: 'The use cases, connecting domain and adapters, and the repository interfaces they reach the database through',
+    imports: ['adapters', 'domain', 'config.ts'],
+    why: 'application/ reaches the database only through the repository interfaces it declares (application/ports/)',
   },
   api: {
     holds: "The dashboard's HTTP API",

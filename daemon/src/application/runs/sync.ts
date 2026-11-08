@@ -19,7 +19,7 @@ import { github } from '../../adapters/github.ts';
 import { writeEvent } from '../../adapters/run-log.ts';
 import { runCommand } from '../../adapters/shell.ts';
 import { TEST_TIMEOUT_MS } from '../../config.ts';
-import type { Db } from '../../db/index.ts';
+import type { Repositories as Db } from '../ports/repositories.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import { type SyncResult, conflictReason, syncResultOf, syncSummary } from '../../domain/landing/index.ts';
 import type { Repo } from '../../domain/repos/index.ts';

@@ -1,5 +1,5 @@
 // The run entity and how to read a run's result. Pure: no I/O.
-import type { RunId, TaskId } from '../shared/index.ts';
+import type { PlannerRunId, RunId, TaskId } from '../shared/index.ts';
 import { STATUS_WORD, lastLine, oneLine } from '../shared/index.ts';
 import { type Needs, parseNeeds } from '../work/index.ts';
 
@@ -9,6 +9,24 @@ import { type Needs, parseNeeds } from '../work/index.ts';
  * never uses an attempt either.
  */
 export type RunKind = 'work' | 'resolve' | 'unblock';
+
+/** A run (or planner run) with a recorded pid: where a claude process may still be. */
+export interface PidRun {
+  kind: RunKind | 'planner';
+  id: RunId | PlannerRunId;
+  pid: number;
+  /** When the pid was stored (the run's start for a row from before that was recorded). */
+  pid_at: string;
+  ended_at: string | null;
+}
+
+/** A running task with its unfinished work run, if it has one. */
+export interface RunningTaskRun {
+  id: TaskId;
+  pid: number | null;
+  pid_at: string | null;
+  started_at: string | null;
+}
 
 /** A run's name in the dashboard: "Run 2", or "Resolve conflicts" for the resolve run of a sync. */
 export const runLabel = (run: Pick<Run, 'kind' | 'attempt'>): string =>

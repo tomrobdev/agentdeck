@@ -1,6 +1,6 @@
 // The PR refresh: keep the state of open PRs fresh, and say which ones conflict or are ready to merge.
 import { github } from '../../adapters/github.ts';
-import type { Db } from '../../db/index.ts';
+import type { Repositories as Db } from '../ports/repositories.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import type { PrDetails } from '../../domain/landing/index.ts';
 import { type AutoMergeCheck, autoMergeCheck, autoMergeOn } from '../../domain/landing/index.ts';
