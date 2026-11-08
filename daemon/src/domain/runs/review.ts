@@ -1,16 +1,58 @@
 // The review run: a claude run that reads a done task's changes against its Goal, Definition of done and linked plan
 // steps, and answers with a summary and findings in REVIEW_ANSWER_SCHEMA. It uses no attempt, and it stores its own
 // review (by a review run), never a person's draft. Pure: no I/O.
-import { COMMENT_SIDES, type CommentSide, type ReviewKind } from '../landing/index.ts';
+import { COMMENT_SIDES, type CommentSide, type ReviewKind, reviewReason } from '../landing/index.ts';
+import type { Repo } from '../repos/index.ts';
 import { parsePlanWithText } from '../work/index.ts';
-import type { Task } from '../work/index.ts';
+import type { Task, TaskEventRow } from '../work/index.ts';
 import type { PromptPlan } from './prompt.ts';
+import type { Run } from './run.ts';
 
 /** How the note on a retry by a review run begins, so the worker and the timeline can tell it from a person's. */
 export const REVIEW_NOTE = 'Review run: ';
 
 /** A review run reads; it does not do the task. */
 export const REVIEW_MAX_TURNS = 30;
+
+/** The tools a review run is given in place of the repo's: it reads the files and the history, and runs nothing else. */
+export const REVIEW_TOOLS = ['Read', 'Grep', 'Glob', 'Bash(git diff*)', 'Bash(git log*)', 'Bash(git show*)'];
+
+/** Denied outright: the run's settings file allows Edit in the worktree, as it does for a worker (translate/sandbox.ts). */
+export const REVIEW_DENIED_TOOLS = ['Edit', 'Write', 'NotebookEdit'];
+
+/**
+ * Whether a review run may start for `task`, reading the changes whose patch-id is `diffHash`: its repo has auto_review
+ * on, it is done with an open pull request, and no review run read these changes yet (`runs` is its runs; one still
+ * going, failed or answering garbage counts). A rate limit or a restart stopped one before it answered, so that one
+ * does not count. A sync that only brings in the base keeps the patch-id, so it starts no second one.
+ */
+export function reviewable(
+  task: Pick<Task, 'status' | 'pr'>,
+  runs: Pick<Run, 'kind' | 'diff_hash' | 'outcome'>[],
+  repo: Pick<Repo, 'auto_review'>,
+  diffHash: string | null,
+): boolean {
+  if (!repo.auto_review || task.status !== 'done' || task.pr?.state !== 'open' || !diffHash) return false;
+  return !runs.some((r) => r.kind === 'review' && r.diff_hash === diffHash && r.outcome !== 'rate_limited' && r.outcome !== 'interrupted');
+}
+
+/** What follows a review run's answer: the review it stores, and the note to retry the task with, null for none. */
+export interface ReviewOutcome {
+  record: ReviewRecord;
+  retry: string | null;
+}
+
+/**
+ * A review run's answer as what follows it: its review (`reviewRecord`), and a retry when a finding blocks, with the
+ * review as its note starting REVIEW_NOTE, as a person's Request changes does. Only once per task: when a review run
+ * retried it before (`events`, its history), a review that still blocks leaves the task in review for a person.
+ */
+export function reviewOutcome(answer: ReviewAnswer, events: Pick<TaskEventRow, 'type'>[]): ReviewOutcome {
+  const record = reviewRecord(answer);
+  const retried = events.some((e) => e.type === 'review_retry');
+  const retry = record.kind === 'request_changes' && !retried ? `${REVIEW_NOTE}${reviewReason(record.body, record.comments)}` : null;
+  return { record, retry };
+}
 
 /** One thing a review run found: where it is in the diff, what it says, and whether it stops the task merging. */
 export interface ReviewFinding {

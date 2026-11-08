@@ -10,6 +10,7 @@ export {
   editsSinceCutOff,
   firstDenial,
   isEnvironmentBlock,
+  runEndOf,
   parseStatus,
   pickRun,
   resultFields,
@@ -27,7 +28,19 @@ export type { LiveView, SyncView } from './translate/live.ts';
 export { parseLogLine } from './translate/log.ts';
 export type { LogEntry } from './translate/log.ts';
 export { runSummary } from './translate/summary.ts';
-export type { RunSummary } from './translate/summary.ts';
+export type { RunEnd, RunSummary, SummaryContext } from './translate/summary.ts';
 export { normalizeNetwork, settingsPath, workerSettings } from './translate/sandbox.ts';
+export {
+  REVIEW_DENIED_TOOLS,
+  REVIEW_MAX_TURNS,
+  REVIEW_TOOLS,
+  buildReviewPrompt,
+  parseReviewAnswer,
+  reviewOutcome,
+  reviewSchemaArgs,
+  reviewSystemPrompt,
+  reviewable,
+} from './review.ts';
+export type { ReviewOutcome } from './review.ts';
 export { UNBLOCK_MAX_TURNS, buildUnblockPrompt, parseUnblock, unblockDecision, unblockSystemPrompt, unblockable } from './unblock.ts';
 export type { UnblockDecision } from './unblock.ts';

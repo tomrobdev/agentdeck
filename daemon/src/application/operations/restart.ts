@@ -9,6 +9,7 @@ export function runningActivity(app: App): Activity {
     planner: app.countRunningPlannerRuns(),
     resolves: app.countRunningResolves(),
     unblocks: app.countRunningUnblocks(),
+    reviews: app.countRunningReviews(),
   };
 }
 

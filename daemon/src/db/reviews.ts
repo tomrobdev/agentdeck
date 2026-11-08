@@ -29,6 +29,27 @@ export function reviewStore(orm: Orm) {
     createReview(task_id: TaskId): Review {
       return toReview(orm.insert(reviews).values({ task_id, by: 'person' }).returning().get());
     },
+    /**
+     * A review a review run made, submitted as it is stored, with the changes it read. Its line comments follow with
+     * `addComment`. Never a draft: a person's draft (`draftReviewFor`) is never taken or filled by a review run.
+     */
+    addRunReview(task_id: TaskId, kind: ReviewKind, body: string, read: { head_commit: string; diff_hash: string }): Review {
+      return toReview(
+        orm
+          .insert(reviews)
+          .values({
+            task_id,
+            by: 'review_run',
+            kind,
+            body,
+            head_commit: read.head_commit,
+            diff_hash: read.diff_hash,
+            submitted_at: NOW_SQL,
+          })
+          .returning()
+          .get(),
+      );
+    },
     getReview(id: ReviewId): Review | undefined {
       const row = orm.select().from(reviews).where(eq(reviews.id, id)).get();
       return row && toReview(row);

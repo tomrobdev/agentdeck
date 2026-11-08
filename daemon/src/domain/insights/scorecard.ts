@@ -35,6 +35,8 @@ export interface ScorecardTaskRow {
   repo_auto_merge: boolean;
   /** The PR's checks the first time they settled after it opened; null if never recorded (or unreadable). */
   pr_checks_opened: CheckCounts | null;
+  /** The PR's checks when it merged; null if it has not merged or they were not recorded. */
+  pr_checks_merged?: CheckCounts | null;
 }
 
 /** A task with auto-merge made into the time it is known to have been on. */

@@ -43,6 +43,7 @@ export function parseCommandLine(argv: string[]) {
       by: { type: 'string' },
       hook: { type: 'boolean' },
       json: { type: 'boolean' },
+      failures: { type: 'boolean' },
       help: { type: 'boolean', short: 'h' },
     },
   });
