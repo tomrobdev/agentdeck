@@ -28,6 +28,8 @@ export function describeWait(h: StartWait): string {
       return `The repo is paused: ${oneLine(h.reason)}`;
     case 'dependency':
       return h.stuck ? `Can't start: ${h.stuck}` : `Waits for ${h.on.map((id) => `#${id}`).join(', ')} to finish`;
+    case 'unblocking':
+      return 'Waits for its unblock run to stop';
     case 'slots':
       return `Waiting for a free slot (${h.running} of ${h.max} in use)`;
   }

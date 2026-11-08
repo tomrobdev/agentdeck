@@ -35,7 +35,7 @@ interface Case {
   from: TaskStatus;
   event: TaskEvent;
   opts?: { reason?: string | null; needs?: Needs | null };
-  task?: { attempts?: number; restarts?: number; pr?: Pick<PullRequest, 'state'> | null };
+  task?: { attempts?: number; max_attempts?: number; restarts?: number; pr?: Pick<PullRequest, 'state'> | null };
   to: TaskState;
   counters: TaskCounters;
   /** What the change does to the PR; none when left out. */
@@ -113,19 +113,31 @@ const CASES: Case[] = [
     history: 'finish',
   },
   {
-    name: 'finish:failed',
+    name: 'finish:failed with no attempts left fails the task',
     from: 'running',
-    event: { type: 'finish', outcome: 'failed', retry: false },
+    event: { type: 'finish', outcome: 'failed' },
     opts: { reason: 'tests fail' },
+    task: { attempts: 3, max_attempts: 3 },
     to: { status: 'failed', stop_reason: 'tests fail' },
     counters: {},
     history: 'finish',
   },
   {
-    name: 'finish:failed:retry requeues and carries nothing',
+    name: 'finish:failed with retry false (the worker crashed) fails the task though attempts are left',
     from: 'running',
-    event: { type: 'finish', outcome: 'failed', retry: true },
+    event: { type: 'finish', outcome: 'failed', retry: false },
+    opts: { reason: 'worker crashed' },
+    task: { attempts: 1, max_attempts: 3 },
+    to: { status: 'failed', stop_reason: 'worker crashed' },
+    counters: {},
+    history: 'finish',
+  },
+  {
+    name: 'finish:failed:retry requeues while attempts are left and carries nothing',
+    from: 'running',
+    event: { type: 'finish', outcome: 'failed' },
     opts: { reason: 'tests fail' },
+    task: { attempts: 2, max_attempts: 3 },
     to: { status: 'queued' },
     counters: {},
     history: 'finish',
@@ -321,8 +333,8 @@ const CASES: Case[] = [
       ['finish:done', { type: 'finish', outcome: 'done' }],
       ['finish:blocked', { type: 'finish', outcome: 'blocked', environment: true }],
       ['finish:cancelled', { type: 'finish', outcome: 'cancelled' }],
-      ['finish:failed', { type: 'finish', outcome: 'failed', retry: false }],
-      ['finish:failed:retry', { type: 'finish', outcome: 'failed', retry: true }],
+      ['finish:failed', { type: 'finish', outcome: 'failed' }],
+      ['finish:failed:retry', { type: 'finish', outcome: 'failed' }],
       ['rate_limited', { type: 'rate_limited' }],
       ['recover', { type: 'recover' }],
       ['recover:exhausted', { type: 'recover' }],
@@ -332,7 +344,11 @@ const CASES: Case[] = [
     from: 'cancel_requested',
     event,
     opts: { reason: 'r', needs: { kind: 'host', items: ['n'] } },
-    task: { attempts: 2, restarts: name === 'recover:exhausted' ? MAX_RESTARTS - 1 : 1 },
+    task: {
+      attempts: 2,
+      max_attempts: name === 'finish:failed:retry' ? 3 : 2,
+      restarts: name === 'recover:exhausted' ? MAX_RESTARTS - 1 : 1,
+    },
     to: { status: 'cancelled', stop_reason: null },
     counters: {},
     history: event.type === 'finish' && event.outcome === 'blocked' && event.environment ? 'environment_block' : event.type,
@@ -343,7 +359,7 @@ const id = asTaskId(7);
 
 for (const c of CASES) {
   test(`transition: ${c.name}`, () => {
-    const t = transition({ ...stateIn(c.from), id, attempts: 0, restarts: 0, pr: null, ...c.task }, c.event, c.opts);
+    const t = transition({ ...stateIn(c.from), id, attempts: 0, max_attempts: 0, restarts: 0, pr: null, ...c.task }, c.event, c.opts);
     assert.ok(t);
     const { events, ...rest } = t;
     assert.deepEqual(rest, { state: c.to, counters: c.counters, changes: c.changes ?? {} });
@@ -355,13 +371,36 @@ for (const c of CASES) {
 }
 
 test('transition: every rule key has a case', () => {
-  const covered = new Set(CASES.map((c) => ruleKey(c.event, c.task?.restarts ?? 0)));
+  const covered = new Set(CASES.map((c) => ruleKey(c.event, c.task ?? {})));
   for (const key of Object.keys(RULES) as RuleKey[]) assert.ok(covered.has(key), `no case for ${key}`);
+});
+
+test('transition: a failed run is requeued while the task has attempts left, unless the worker crashed', () => {
+  const table: [attempts: number, max_attempts: number, event: TaskEvent, to: TaskStatus][] = [
+    [1, 3, { type: 'finish', outcome: 'failed' }, 'queued'],
+    [2, 3, { type: 'finish', outcome: 'failed' }, 'queued'],
+    [3, 3, { type: 'finish', outcome: 'failed' }, 'failed'],
+    [4, 3, { type: 'finish', outcome: 'failed' }, 'failed'],
+    [1, 3, { type: 'finish', outcome: 'failed', retry: false }, 'failed'],
+  ];
+  for (const [attempts, max_attempts, event, to] of table) {
+    const t = transition({ status: 'running', id, attempts, max_attempts, restarts: 0, pr: null }, event);
+    assert.equal(t?.state.status, to, `attempt ${attempts} of ${max_attempts}${'retry' in event ? ', worker crashed' : ''}`);
+    assert.equal(t?.events[0].cause, to === 'queued' ? 'finish:failed:retry' : 'finish:failed');
+  }
 });
 
 test('transition: a retried task gets MAX_RESTARTS restarts again', () => {
   // Failed after MAX_RESTARTS restarts, then retried.
-  let task: TransitionTask = { status: 'failed', stop_reason: 'restarts', id, attempts: 1, restarts: MAX_RESTARTS, pr: null };
+  let task: TransitionTask = {
+    status: 'failed',
+    stop_reason: 'restarts',
+    id,
+    attempts: 1,
+    max_attempts: 1,
+    restarts: MAX_RESTARTS,
+    pr: null,
+  };
   const step = (event: TaskEvent): TaskStatus => {
     const t = transition(task, event)!;
     task = { ...task, ...t.state, ...t.counters } as TransitionTask;
@@ -380,7 +419,7 @@ test('transition: a retried task gets MAX_RESTARTS restarts again', () => {
 test('transition: leaving done drops the merge request, whatever the PR', () => {
   for (const state of ['open', 'merged', 'closed', 'failed'] as const)
     for (const event of [{ type: 'retry' }, { type: 'conflict' }] as TaskEvent[]) {
-      const t = transition({ status: 'done', done_by: null, id, attempts: 1, restarts: 0, pr: { state } }, event);
+      const t = transition({ status: 'done', done_by: null, id, attempts: 1, max_attempts: 1, restarts: 0, pr: { state } }, event);
       if (!t) continue;
       assert.equal(t.changes.merge_requested_at, null, `${event.type} with the PR ${state}`);
       assert.equal(t.changes.merge_request_method, null, `${event.type} with the PR ${state}`);
@@ -393,8 +432,8 @@ const EVENT_OF: Record<RuleKey, TaskEvent> = {
   'finish:done': { type: 'finish', outcome: 'done' },
   'finish:blocked': { type: 'finish', outcome: 'blocked' },
   'finish:cancelled': { type: 'finish', outcome: 'cancelled' },
-  'finish:failed': { type: 'finish', outcome: 'failed', retry: false },
-  'finish:failed:retry': { type: 'finish', outcome: 'failed', retry: true },
+  'finish:failed': { type: 'finish', outcome: 'failed' },
+  'finish:failed:retry': { type: 'finish', outcome: 'failed' },
   rate_limited: { type: 'rate_limited' },
   conflict: { type: 'conflict' },
   cancel: { type: 'cancel' },
@@ -409,8 +448,12 @@ const EVENT_OF: Record<RuleKey, TaskEvent> = {
   'recover:exhausted': { type: 'recover' },
 };
 
-/** The restarts a task needs for each rule key: one short of too many for the last recover. */
-const restartsFor = (key: RuleKey) => (key === 'recover:exhausted' ? MAX_RESTARTS - 1 : 0);
+/** The counters a task needs for each rule key: one restart short of too many for the last recover, an attempt left to requeue. */
+const countersFor = (key: RuleKey) => ({
+  attempts: 1,
+  max_attempts: key === 'finish:failed:retry' ? 2 : 1,
+  restarts: key === 'recover:exhausted' ? MAX_RESTARTS - 1 : 0,
+});
 
 /** Every entry of RULES: rule key → current status → the domain event its move makes. */
 const EVENTS: Record<RuleKey, Partial<Record<TaskStatus, DomainEventType>>> = {
@@ -447,7 +490,7 @@ test('transition: the domain events of every entry in RULES', () => {
   for (const [key, rule] of Object.entries(RULES) as [RuleKey, Partial<Record<TaskStatus, TaskStatus>>][]) {
     assert.deepEqual(Object.keys(EVENTS[key]).sort(), Object.keys(rule).sort(), `EVENTS lists each move of ${key}`);
     for (const [from, to] of Object.entries(rule) as [TaskStatus, TaskStatus][]) {
-      const t = transition({ ...stateIn(from), id, attempts: 1, restarts: restartsFor(key), pr: null }, EVENT_OF[key], { reason: 'why' });
+      const t = transition({ ...stateIn(from), id, ...countersFor(key), pr: null }, EVENT_OF[key], { reason: 'why' });
       const expected: DomainEvent = {
         type: EVENTS[key][from]!,
         task_id: id,
@@ -464,8 +507,11 @@ test('transition: the domain events of every entry in RULES', () => {
 });
 
 test('transition: null where the event is refused', () => {
-  assert.equal(transition({ ...stateIn('done'), id, attempts: 1, restarts: 0, pr: null }, { type: 'claim' }), null);
-  assert.equal(transition({ ...stateIn('cancelled'), id, attempts: 1, restarts: 0, pr: null }, { type: 'mark_done' }), null);
+  assert.equal(transition({ ...stateIn('done'), id, attempts: 1, max_attempts: 1, restarts: 0, pr: null }, { type: 'claim' }), null);
+  assert.equal(
+    transition({ ...stateIn('cancelled'), id, attempts: 1, max_attempts: 1, restarts: 0, pr: null }, { type: 'mark_done' }),
+    null,
+  );
 });
 
 test('transition: a cancel keeps the stop reason of the block or failure it ended, and drops the needs and the question', () => {
@@ -475,12 +521,13 @@ test('transition: a cancel keeps the stop reason of the block or failure it ende
     needs: { kind: 'host', items: ['x'] },
     question: { question: 'Which?', options: [] },
   };
-  assert.deepEqual(transition({ ...blocked, id, attempts: 1, restarts: 0, pr: null }, { type: 'cancel' })?.state, {
+  assert.deepEqual(transition({ ...blocked, id, attempts: 1, max_attempts: 1, restarts: 0, pr: null }, { type: 'cancel' })?.state, {
     status: 'cancelled',
     stop_reason: 'no network',
   });
   assert.deepEqual(
-    transition({ status: 'failed', stop_reason: 'tests fail', id, attempts: 1, restarts: 0, pr: null }, { type: 'cancel' })?.state,
+    transition({ status: 'failed', stop_reason: 'tests fail', id, attempts: 1, max_attempts: 1, restarts: 0, pr: null }, { type: 'cancel' })
+      ?.state,
     {
       status: 'cancelled',
       stop_reason: 'tests fail',

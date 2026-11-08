@@ -51,7 +51,7 @@ export const ROW_SHAPED_FIELDS: string[] = [];
 
 /**
  * The functions in `db/` that write a task without a rule (rule:task-writes), each with why: a plain write stays in the store. A write
- * with a rule takes its changes from a function in `domain/work/task-writes.ts`. Status writes are `applyEvent`'s and `claimNextTask`'s
+ * with a rule takes its changes from a function in `domain/work/task-writes.ts`. Status writes are `applyEvent`'s, the claim's included
  * (rule:guarded-status). A new plain write fails the test until it is listed here; an entry that no longer applies fails it too.
  */
 export const PLAIN_TASK_WRITES: Record<string, string> = {
@@ -82,7 +82,7 @@ export const COVERAGE_FLOORS: Record<string, Floor> = {
   'application/runs': { lines: 94, branches: 82 },
   'application/scheduler': { lines: 98, branches: 91 },
   'application/shared': { lines: 100, branches: 97 },
-  'application/work': { lines: 99, branches: 90 },
+  'application/work': { lines: 99, branches: 92 },
   cli: { lines: 73, branches: 62 },
   db: { lines: 99, branches: 94 },
   'domain/capacity': { lines: 100, branches: 94 },

@@ -1489,7 +1489,7 @@ A task that ran out of attempts.
 
 ### LinkIndex
 
-What the link functions read: a task's links, the tasks that depend on it (through links of either kind) and a task as a link's other end. application/task/dependencies.ts builds one that queries the database when asked, and one from a single read of every link, for a list of tasks.
+What the link functions read: a task's links, the tasks that depend on it (through links of either kind) and a task as a link's other end. application/work/dependencies.ts builds one that queries the database when asked (`liveLinks`), and one from a single read of every link, for a list of tasks (`loadedLinks`).
 
 | Field          | Type                                                                | Comment |
 | -------------- | ------------------------------------------------------------------- | ------- |
@@ -1507,6 +1507,16 @@ A dependency, and the links it has itself (stuck spreads down its builds-on link
 | `pr`      | `Pick<PullRequest, "state"> \| null`                                                                          |         |
 | `pr_mode` | `PrMode`                                                                                                      |         |
 | `links`   | `Link[]`                                                                                                      |         |
+
+### LinkView
+
+A task's link as views show it: the other task, the kind and where the link stands.
+
+| Field   | Type                                          | Comment |
+| ------- | --------------------------------------------- | ------- |
+| `on`    | `TaskId`                                      |         |
+| `kind`  | `LinkKind`                                    |         |
+| `state` | `"waiting" \| "met" \| "stuck" \| "unlanded"` |         |
 
 ### LinkedTask
 
@@ -1563,13 +1573,13 @@ A task as listed: with where it stands on its builds-on links (as waitingFor rep
 | `max_turns`    | `number`                                                                                                      |                                                                                                               |
 | `pr`           | `PullRequest \| null`                                                                                         | the task's pull request, as one value                                                                         |
 | `attempts`     | `number`                                                                                                      |                                                                                                               |
+| `max_attempts` | `number`                                                                                                      |                                                                                                               |
 | `restarts`     | `number`                                                                                                      | times a daemon restart requeued this task mid-run                                                             |
 | `title`        | `string`                                                                                                      |                                                                                                               |
 | `source`       | `TaskSource`                                                                                                  |                                                                                                               |
 | `updated_at`   | `string`                                                                                                      |                                                                                                               |
 | `priority`     | `number`                                                                                                      |                                                                                                               |
 | `model`        | `string`                                                                                                      |                                                                                                               |
-| `max_attempts` | `number`                                                                                                      |                                                                                                               |
 | `checkout`     | `Checkout \| null`                                                                                            | the branch and worktree the work is on, and a running sync                                                    |
 | `plan`         | `PlanLink \| null`                                                                                            | the plan this task follows and its linked steps (domain/work/plan-link.ts); null follows its own plan, if any |
 | `status`       | `"failed" \| "blocked" \| "proposed" \| "done" \| "cancelled" \| "queued" \| "running" \| "cancel_requested"` |                                                                                                               |
@@ -1808,13 +1818,13 @@ A stored plan as the API returns it: parsed, without its HTML.
 | `max_turns`    | `number`                                                                                                      |                                                                                                               |
 | `pr`           | `PullRequest \| null`                                                                                         | the task's pull request, as one value                                                                         |
 | `attempts`     | `number`                                                                                                      |                                                                                                               |
+| `max_attempts` | `number`                                                                                                      |                                                                                                               |
 | `restarts`     | `number`                                                                                                      | times a daemon restart requeued this task mid-run                                                             |
 | `title`        | `string`                                                                                                      |                                                                                                               |
 | `source`       | `TaskSource`                                                                                                  |                                                                                                               |
 | `updated_at`   | `string`                                                                                                      |                                                                                                               |
 | `priority`     | `number`                                                                                                      |                                                                                                               |
 | `model`        | `string`                                                                                                      |                                                                                                               |
-| `max_attempts` | `number`                                                                                                      |                                                                                                               |
 | `checkout`     | `Checkout \| null`                                                                                            | the branch and worktree the work is on, and a running sync                                                    |
 | `plan`         | `PlanLink \| null`                                                                                            | the plan this task follows and its linked steps (domain/work/plan-link.ts); null follows its own plan, if any |
 | `status`       | `"failed" \| "blocked" \| "proposed" \| "done" \| "cancelled" \| "queued" \| "running" \| "cancel_requested"` |                                                                                                               |
@@ -1841,13 +1851,14 @@ What a run or a person says about an event: why the task stopped, and what its w
 
 What `transition` reads of a task.
 
-| Field      | Type                                                                                                          | Comment                                           |
-| ---------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
-| `status`   | `"failed" \| "blocked" \| "proposed" \| "done" \| "cancelled" \| "queued" \| "running" \| "cancel_requested"` |                                                   |
-| `id`       | `TaskId`                                                                                                      |                                                   |
-| `attempts` | `number`                                                                                                      |                                                   |
-| `restarts` | `number`                                                                                                      | times a daemon restart requeued this task mid-run |
-| `pr`       | `Pick<PullRequest, "state"> \| null`                                                                          |                                                   |
+| Field          | Type                                                                                                          | Comment                                           |
+| -------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| `status`       | `"failed" \| "blocked" \| "proposed" \| "done" \| "cancelled" \| "queued" \| "running" \| "cancel_requested"` |                                                   |
+| `id`           | `TaskId`                                                                                                      |                                                   |
+| `attempts`     | `number`                                                                                                      |                                                   |
+| `max_attempts` | `number`                                                                                                      |                                                   |
+| `restarts`     | `number`                                                                                                      | times a daemon restart requeued this task mid-run |
+| `pr`           | `Pick<PullRequest, "state"> \| null`                                                                          |                                                   |
 
 ### Tree
 

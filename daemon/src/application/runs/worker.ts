@@ -228,7 +228,8 @@ async function finish(
       await settle(app, task.id, { type: 'rate_limited' });
       break;
     case 'failed':
-      await settle(app, task.id, { type: 'finish', outcome: 'failed', retry: task.attempts < task.max_attempts }, reason);
+      // The lifecycle requeues it while it has attempts left.
+      await settle(app, task.id, { type: 'finish', outcome: 'failed' }, reason);
       break;
   }
   return res;

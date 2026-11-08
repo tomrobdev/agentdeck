@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { describeWait, startDecision, startWait } from '../src/domain/work/start.ts';
+import { describeWait, startDecision, startWait, waitingFor } from '../src/domain/work/start.ts';
 import type { Decision } from '../src/domain/capacity/governor.ts';
+import type { StartState } from '../src/domain/work/link.ts';
 import { asTaskId } from './fixtures.ts';
 
 const allow: Decision = { allow: true, max_concurrent: 2, reason: null, until: null, weekly_allowed: null };
 const held: Decision = { ...allow, allow: false, reason: '5h window at 92%', until: 2000 };
-const free = { queue: null, repoPaused: null, dependency: { kind: 'none' } as const, running: 0, max: 2 };
+const free = { queue: null, repoPaused: null, dependency: { kind: 'none' } as const, unblocking: false, running: 0, max: 2 };
 
 test('startDecision checks pause, then rate limit, then the governor', () => {
   const at = (q: Parameters<typeof startDecision>[0]) => startDecision(q, { ignorePause: false, used: 0, now: 1000 });
@@ -69,4 +70,26 @@ test('startWait names what a queued task waits for', () => {
   });
   assert.equal(startWait({ status: 'queued' }, { ...free, dependency: { kind: 'met' } }), null);
   assert.deepEqual(startWait({ status: 'queued' }, { ...free, running: 2 }), { kind: 'slots', running: 2, max: 2 });
+});
+
+test('startWait: a queued task waits for its unblock run to stop, after its dependencies and before the slots', () => {
+  assert.deepEqual(startWait({ status: 'queued' }, { ...free, unblocking: true }), { kind: 'unblocking' });
+  assert.deepEqual(startWait({ status: 'queued' }, { ...free, unblocking: true, running: 2 }), { kind: 'unblocking' });
+  assert.equal(
+    startWait({ status: 'queued' }, { ...free, unblocking: true, dependency: { kind: 'waiting', on: [asTaskId(3)] } })?.kind,
+    'dependency',
+  );
+  assert.equal(startWait({ status: 'queued' }, { ...free, unblocking: true, repoPaused: 'refused' })?.kind, 'repo-paused');
+  assert.equal(startWait({ status: 'blocked' }, { ...free, unblocking: true }), null, 'only a queued task waits to start');
+});
+
+test('waitingFor: only a queued task waits on its builds-on links', () => {
+  const waiting: StartState = { kind: 'waiting', on: [asTaskId(3)] };
+  assert.deepEqual(waitingFor({ status: 'queued' }, waiting), { on: [3], stuck: null });
+  assert.deepEqual(waitingFor({ status: 'queued' }, { kind: 'stuck', on: asTaskId(3), reason: '#3 failed' }), {
+    on: [3],
+    stuck: '#3 failed',
+  });
+  assert.equal(waitingFor({ status: 'queued' }, { kind: 'met' }), null);
+  for (const status of ['running', 'blocked', 'done'] as const) assert.equal(waitingFor({ status }, waiting), null, status);
 });

@@ -153,6 +153,12 @@ export const OPEN_STATUSES: TaskStatus[] = ['proposed', 'queued', ...RUNNING_STA
 /** Statuses in which a task's title, prompt and limits may be edited: waiting, or finished unsuccessfully. */
 export const EDITABLE_STATUSES: TaskStatus[] = ['proposed', 'queued', 'blocked', 'failed'];
 
+/** Statuses in which a task's worktree may be removed: any but a live run's, or a queued task's, whose next run needs it. */
+export const WORKTREE_REMOVABLE_STATUSES: TaskStatus[] = ['proposed', 'done', 'blocked', 'failed', 'cancelled'];
+
+/** Whether a task has attempts left: a failed run requeues it, and an unblock run may retry it. */
+export const attemptsLeft = (t: Pick<TaskCore, 'attempts' | 'max_attempts'>): boolean => t.attempts < t.max_attempts;
+
 /** Statuses in which a task's own plan may be attached or replaced: any but a live run's, whose end would write the old plan back. */
 export const PLAN_ATTACHABLE_STATUSES: TaskStatus[] = ['proposed', 'queued', 'done', 'blocked', 'failed', 'cancelled'];
 

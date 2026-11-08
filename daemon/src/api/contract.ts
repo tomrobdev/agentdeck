@@ -154,6 +154,8 @@ export type StartWait =
   | { kind: 'repo-paused'; reason: string }
   /** `on`: every task it builds on still on its way, or the one it is stuck on (with `stuck`, the reason). */
   | { kind: 'dependency'; on: TaskId[]; stuck: string | null }
+  /** An unblock run for the task is still going: a person retried it meanwhile, and it starts once that run stops. */
+  | { kind: 'unblocking' }
   | { kind: 'slots'; running: number; max: number };
 
 /** One link: the task it points at, its kind and where it stands (unlanded is an after link whose other task has not landed yet). */

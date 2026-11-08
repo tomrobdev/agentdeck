@@ -311,7 +311,7 @@ test('linkState: a retried task whose old PR merged is not met until its new PR 
   const merged: Dependency = { status: 'done', done_by: null, pr: { state: 'merged' }, pr_mode: 'ready' };
   assert.deepEqual(linkState(builds, merged), { kind: 'met' });
   // The retry sets the merged PR aside: with no state, the task has no PR (pullRequestOf).
-  const retry = transition({ ...merged, id: asTaskId(5), attempts: 1, restarts: 0 }, { type: 'retry' })!;
+  const retry = transition({ ...merged, id: asTaskId(5), attempts: 1, max_attempts: 1, restarts: 0 }, { type: 'retry' })!;
   assert.equal(retry.changes.pr_state, null);
   assert.deepEqual(linkState(builds, { status: 'queued', pr: null, pr_mode: 'ready' }), waiting('#5 is not done yet'));
   // Done again before its new PR opens: still waiting, not met on the old merge.

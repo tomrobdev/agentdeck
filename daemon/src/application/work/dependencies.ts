@@ -1,21 +1,7 @@
 // Tasks waiting on another through a builds-on link: why they wait, and telling a human when they're stuck.
 import type { App } from '../ports/app.ts';
 import type { RepoId, TaskId } from '../../domain/shared/index.ts';
-import {
-  type Link,
-  type LinkIndex,
-  type LinkKind,
-  type LinkState,
-  type LinkTarget,
-  type StartState,
-  linkState,
-  releasedBy,
-  startState,
-  stuckOn,
-  unlandedAfter,
-} from '../../domain/work/index.ts';
-import { isReview, stageOf } from '../../domain/work/index.ts';
-import { type Waiting, waitingOf } from '../../domain/work/index.ts';
+import { type Link, type LinkIndex, type LinkTarget, linkState, releasedBy, stuckOn, unlandedAfter } from '../../domain/work/index.ts';
 import type { Task } from '../../domain/work/index.ts';
 import { plural } from '../../domain/shared/index.ts';
 import { notifyLater } from '../operations/notifications.ts';
@@ -63,22 +49,6 @@ export function loadedLinks(app: App): LinkIndex {
 /** The tasks of `refs`, in full, for their titles; one that was deleted meanwhile is left out. */
 function tasksOf(app: App, refs: { id: TaskId }[]): Task[] {
   return refs.flatMap((r) => app.getTask(r.id) ?? []);
-}
-
-/** Where a task stands with the tasks it builds on, reading each one and its repo's pr_mode. */
-export function dependencyOf(task: Pick<Task, 'id'>, links: LinkIndex): StartState {
-  return startState(task, links.linksOf(task.id), links.target);
-}
-
-/** What a queued task in start state `dependency` waits for on its builds-on links; null for any other task. */
-export function waitingFor(task: Pick<Task, 'status'>, dependency: StartState): Waiting | null {
-  return task.status === 'queued' ? waitingOf(dependency) : null;
-}
-
-/** The queued tasks merging this one lets start, for a task in review. */
-export function unblocksOf(task: Pick<Task, 'id' | 'status' | 'pr'>, links: LinkIndex): TaskId[] {
-  if (!isReview(stageOf(task))) return [];
-  return releasedBy(task.id, links).map((t) => t.id);
 }
 
 /** The queued tasks that building on task `id` alone keeps from starting: merging `id` lets them start. */
@@ -144,20 +114,4 @@ export function warnBuildersOnDeleted(app: App, repo: string, tasks: Task[]): vo
 /** The after links whose other task has not landed: task `id`'s merge waits for them, each with why. */
 export function landsAfter(app: App, id: TaskId): { on: TaskId; reason: string }[] {
   return unlandedAfter(app.linksOf(id), (on) => targetOf(app, on));
-}
-
-/** A task's link as views show it: the other task, the kind and where the link stands. */
-export interface LinkView {
-  on: TaskId;
-  kind: LinkKind;
-  state: LinkState['kind'];
-}
-
-export function linkViews(id: TaskId, links: LinkIndex): LinkView[] {
-  return links.linksOf(id).map((l) => ({ on: l.on, kind: l.kind, state: linkState(l, links.target(l.on)).kind }));
-}
-
-/** The tasks that depend on task `id`, whatever their status, each with its link's kind. */
-export function dependentViews(id: TaskId, links: LinkIndex): { id: TaskId; kind: LinkKind }[] {
-  return links.dependentsOf(id).map((d) => ({ id: d.id, kind: d.kind }));
 }

@@ -20,10 +20,21 @@ export {
 export type { TaskChanges } from './task-writes.ts';
 export { followUpsOf, followUpsOfRow } from './follow-ups.ts';
 export type { FollowUp } from './follow-ups.ts';
-export { MAX_RESTARTS, TASK_STATUSES, fromStatuses, nextStatus, personEvents, transition } from './lifecycle.ts';
+export { MAX_RESTARTS, TASK_STATUSES, fromStatuses, personEvents, transition } from './lifecycle.ts';
 export type { DomainEvent, PersonEvent, TaskEvent, TaskStatus } from './lifecycle.ts';
-export { buildsOnError, linkError, linkState, releasedBy, startState, stuckOn, unlandedAfter } from './link.ts';
-export type { Dependent, Link, LinkIndex, LinkKind, LinkState, LinkTarget, LinkedTask, StartState } from './link.ts';
+export {
+  buildsOnError,
+  dependentViews,
+  linkError,
+  linkState,
+  linkViews,
+  releasedBy,
+  startState,
+  stuckOn,
+  unblocksOf,
+  unlandedAfter,
+} from './link.ts';
+export type { Dependent, Link, LinkIndex, LinkKind, LinkTarget, LinkView, LinkedTask, StartState } from './link.ts';
 export { INSTALL_NOTE, LOCKFILES, canInstallWith, depsRequest, depsRequestError, installArgs, isNeeds, parseNeeds } from './needs.ts';
 export type { Needs, NeedsKind, UnblockQuestion } from './needs.ts';
 export { hasPlanLink, otherPlanOwner, planOwnerOf } from './plan-link.ts';
@@ -78,7 +89,7 @@ export {
   statusGroup,
 } from './stage.ts';
 export type { StatusGroup } from './stage.ts';
-export { describeWait, startDecision, startWait, waitingOf } from './start.ts';
+export { describeWait, startDecision, startWait, waitingFor } from './start.ts';
 export type { QueueState, QueueWait, StartWait, Waiting } from './start.ts';
 export {
   DEFAULT_MODEL,
@@ -88,6 +99,8 @@ export {
   PLAN_ATTACHABLE_STATUSES,
   PROMPT_SECTIONS,
   RUNNING_STATUSES,
+  WORKTREE_REMOVABLE_STATUSES,
+  attemptsLeft,
   defaultTitle,
   isBlocked,
   leftoversMessage,
