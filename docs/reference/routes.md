@@ -4,67 +4,67 @@
 
 The dashboard's routes, and the use case each calls.
 
-| Method | Path                               | Use case                                     |
-| ------ | ---------------------------------- | -------------------------------------------- |
-| POST   | `/api/app/seen`                    | `actions.appSeen`                            |
-| GET    | `/api/daemon/health`               | `actions.daemonReport`                       |
-| POST   | `/api/daemon/restart-now`          | `actions.restartNow`                         |
-| POST   | `/api/daemon/restart`              | `actions.restartDaemon`                      |
-| GET    | `/api/daemon`                      | `actions.daemonState`                        |
-| GET    | `/api/events`                      |                                              |
-| POST   | `/api/notify/test`                 | `actions.sendTestNotification`               |
-| POST   | `/api/pause`                       | `actions.setPaused`, `actions.status`        |
-| POST   | `/api/repos/:id/archive`           | `actions.repoView`, `actions.archiveRepo`    |
-| GET    | `/api/repos/:id/deletion`          | `actions.repoDeletionPreview`                |
-| POST   | `/api/repos/:id/doctor`            | `actions.doctorRepo`                         |
-| POST   | `/api/repos/:id/propose`           | `actions.proposeNow`                         |
-| POST   | `/api/repos/:id/resume`            | `actions.repoView`, `actions.resumeRepo`     |
-| POST   | `/api/repos/:id/unarchive`         | `actions.repoView`, `actions.unarchiveRepo`  |
-| DELETE | `/api/repos/:id`                   | `actions.deleteRepo`                         |
-| GET    | `/api/repos/:id`                   | `actions.repoDetail`                         |
-| POST   | `/api/repos/:id`                   | `actions.updateRepo`                         |
-| GET    | `/api/repos`                       | `db.listRepos`                               |
-| POST   | `/api/repos`                       | `actions.repoView`, `actions.addRepo`        |
-| POST   | `/api/resume`                      | `actions.setPaused`, `actions.status`        |
-| POST   | `/api/review-comments/:id/reopen`  | `actions.reopenReviewComment`                |
-| POST   | `/api/review-comments/:id/resolve` | `actions.resolveReviewComment`               |
-| DELETE | `/api/review-comments/:id`         | `actions.deleteReviewComment`                |
-| POST   | `/api/reviews/:id/comments`        | `actions.addReviewComment`                   |
-| POST   | `/api/reviews/:id/submit`          | `actions.submitReview`                       |
-| POST   | `/api/reviews/:id`                 | `actions.editReview`                         |
-| GET    | `/api/service`                     | `actions.serviceStatus`                      |
-| GET    | `/api/settings`                    | `actions.getSettings`                        |
-| POST   | `/api/settings`                    | `actions.updateSettings`                     |
-| GET    | `/api/stats`                       | `actions.pilotStats`                         |
-| GET    | `/api/status`                      | `actions.status`                             |
-| POST   | `/api/tasks/:id/approve`           | `actions.approveTask`                        |
-| POST   | `/api/tasks/:id/auto-merge`        | `actions.setAutoMerge`                       |
-| POST   | `/api/tasks/:id/cancel`            | `actions.cancelTask`                         |
-| GET    | `/api/tasks/:id/changes`           | `actions.taskChanges`                        |
-| POST   | `/api/tasks/:id/clean`             | `actions.removeTaskWorktree`                 |
-| POST   | `/api/tasks/:id/close-pr`          | `actions.closeTaskPr`                        |
-| GET    | `/api/tasks/:id/diff`              | `actions.taskDiff`                           |
-| POST   | `/api/tasks/:id/done`              | `actions.markDone`                           |
-| GET    | `/api/tasks/:id/file`              | `actions.taskFile`                           |
-| POST   | `/api/tasks/:id/fix-checks`        | `actions.fixChecks`                          |
-| POST   | `/api/tasks/:id/install-needs`     | `actions.installNeeds`                       |
-| DELETE | `/api/tasks/:id/links/:id2`        | `actions.unlinkTasks`                        |
-| POST   | `/api/tasks/:id/links`             | `actions.linkTasks`                          |
-| GET    | `/api/tasks/:id/log`               | `streamLog`, `taskIdParam`                   |
-| DELETE | `/api/tasks/:id/merge-request`     | `actions.cancelMergeRequest`                 |
-| POST   | `/api/tasks/:id/merge-request`     | `actions.requestMerge`                       |
-| GET    | `/api/tasks/:id/merge`             | `actions.mergePreview`                       |
-| POST   | `/api/tasks/:id/merge`             | `actions.mergeTask`                          |
-| GET    | `/api/tasks/:id/plans/:id2`        | `actions.planHtml`                           |
-| POST   | `/api/tasks/:id/plans`             | `actions.attachPlan`                         |
-| POST   | `/api/tasks/:id/reject`            | `actions.rejectTask`                         |
-| POST   | `/api/tasks/:id/retry`             | `actions.retryTask`                          |
-| GET    | `/api/tasks/:id/reviews`           | `actions.taskReviews`                        |
-| POST   | `/api/tasks/:id/reviews`           | `actions.startReview`                        |
-| POST   | `/api/tasks/:id/sync`              | `actions.syncNow`                            |
-| GET    | `/api/tasks/:id/tree`              | `actions.taskTree`                           |
-| GET    | `/api/tasks/:id`                   | `taskIdParam`                                |
-| POST   | `/api/tasks/:id`                   | `actions.editTask`, `actions.promptWarnings` |
-| POST   | `/api/tasks/merge-requests`        | `actions.requestMerges`                      |
-| GET    | `/api/tasks`                       | `asTaskId`                                   |
-| POST   | `/api/tasks`                       | `actions.addTask`, `actions.promptWarnings`  |
+| Method | Path                               | Use case                                       |
+| ------ | ---------------------------------- | ---------------------------------------------- |
+| POST   | `/api/app/seen`                    | `actions.appSeen`                              |
+| GET    | `/api/daemon/health`               | `actions.daemonReport`                         |
+| POST   | `/api/daemon/restart-now`          | `actions.restartNow`, `actions.restartService` |
+| POST   | `/api/daemon/restart`              | `actions.restartDaemon`                        |
+| GET    | `/api/daemon`                      | `actions.daemonState`                          |
+| GET    | `/api/events`                      |                                                |
+| POST   | `/api/notify/test`                 | `actions.sendTestNotification`                 |
+| POST   | `/api/pause`                       | `actions.setPaused`, `actions.status`          |
+| POST   | `/api/repos/:id/archive`           | `actions.repoView`, `actions.archiveRepo`      |
+| GET    | `/api/repos/:id/deletion`          | `actions.repoDeletionPreview`                  |
+| POST   | `/api/repos/:id/doctor`            | `actions.doctorRepo`                           |
+| POST   | `/api/repos/:id/propose`           | `actions.proposeNow`                           |
+| POST   | `/api/repos/:id/resume`            | `actions.repoView`, `actions.resumeRepo`       |
+| POST   | `/api/repos/:id/unarchive`         | `actions.repoView`, `actions.unarchiveRepo`    |
+| DELETE | `/api/repos/:id`                   | `actions.deleteRepo`                           |
+| GET    | `/api/repos/:id`                   | `actions.repoDetail`                           |
+| POST   | `/api/repos/:id`                   | `actions.updateRepo`                           |
+| GET    | `/api/repos`                       | `db.listRepos`                                 |
+| POST   | `/api/repos`                       | `actions.repoView`, `actions.addRepo`          |
+| POST   | `/api/resume`                      | `actions.setPaused`, `actions.status`          |
+| POST   | `/api/review-comments/:id/reopen`  | `actions.reopenReviewComment`                  |
+| POST   | `/api/review-comments/:id/resolve` | `actions.resolveReviewComment`                 |
+| DELETE | `/api/review-comments/:id`         | `actions.deleteReviewComment`                  |
+| POST   | `/api/reviews/:id/comments`        | `actions.addReviewComment`                     |
+| POST   | `/api/reviews/:id/submit`          | `actions.submitReview`                         |
+| POST   | `/api/reviews/:id`                 | `actions.editReview`                           |
+| GET    | `/api/service`                     | `actions.serviceStatus`                        |
+| GET    | `/api/settings`                    | `actions.getSettings`                          |
+| POST   | `/api/settings`                    | `actions.updateSettings`                       |
+| GET    | `/api/stats`                       | `actions.pilotStats`                           |
+| GET    | `/api/status`                      | `actions.status`                               |
+| POST   | `/api/tasks/:id/approve`           | `actions.approveTask`                          |
+| POST   | `/api/tasks/:id/auto-merge`        | `actions.setAutoMerge`                         |
+| POST   | `/api/tasks/:id/cancel`            | `actions.cancelTask`                           |
+| GET    | `/api/tasks/:id/changes`           | `actions.taskChanges`                          |
+| POST   | `/api/tasks/:id/clean`             | `actions.removeTaskWorktree`                   |
+| POST   | `/api/tasks/:id/close-pr`          | `actions.closeTaskPr`                          |
+| GET    | `/api/tasks/:id/diff`              | `actions.taskDiff`                             |
+| POST   | `/api/tasks/:id/done`              | `actions.markDone`                             |
+| GET    | `/api/tasks/:id/file`              | `actions.taskFile`                             |
+| POST   | `/api/tasks/:id/fix-checks`        | `actions.fixChecks`                            |
+| POST   | `/api/tasks/:id/install-needs`     | `actions.installNeeds`                         |
+| DELETE | `/api/tasks/:id/links/:id2`        | `actions.unlinkTasks`                          |
+| POST   | `/api/tasks/:id/links`             | `actions.linkTasks`                            |
+| GET    | `/api/tasks/:id/log`               | `streamLog`, `taskIdParam`                     |
+| DELETE | `/api/tasks/:id/merge-request`     | `actions.cancelMergeRequest`                   |
+| POST   | `/api/tasks/:id/merge-request`     | `actions.requestMerge`                         |
+| GET    | `/api/tasks/:id/merge`             | `actions.mergePreview`                         |
+| POST   | `/api/tasks/:id/merge`             | `actions.mergeTask`                            |
+| GET    | `/api/tasks/:id/plans/:id2`        | `actions.planHtml`                             |
+| POST   | `/api/tasks/:id/plans`             | `actions.attachPlan`                           |
+| POST   | `/api/tasks/:id/reject`            | `actions.rejectTask`                           |
+| POST   | `/api/tasks/:id/retry`             | `actions.retryTask`                            |
+| GET    | `/api/tasks/:id/reviews`           | `actions.taskReviews`                          |
+| POST   | `/api/tasks/:id/reviews`           | `actions.startReview`                          |
+| POST   | `/api/tasks/:id/sync`              | `actions.syncNow`                              |
+| GET    | `/api/tasks/:id/tree`              | `actions.taskTree`                             |
+| GET    | `/api/tasks/:id`                   | `taskIdParam`                                  |
+| POST   | `/api/tasks/:id`                   | `actions.editTask`, `actions.promptWarnings`   |
+| POST   | `/api/tasks/merge-requests`        | `actions.requestMerges`                        |
+| GET    | `/api/tasks`                       | `asTaskId`                                     |
+| POST   | `/api/tasks`                       | `actions.addTask`, `actions.promptWarnings`    |
