@@ -1,6 +1,6 @@
 // Tasks waiting on another through a builds-on link: why they wait, and telling a human when they're stuck.
 import type { Db } from '../../db/index.ts';
-import type { RepoId, TaskId } from '../../domain/shared/id.ts';
+import type { RepoId, TaskId } from '../../domain/shared/index.ts';
 import {
   type Link,
   type LinkIndex,
@@ -13,11 +13,11 @@ import {
   startState,
   stuckOn,
   unlandedAfter,
-} from '../../domain/work/link.ts';
-import { isReview, stageOf } from '../../domain/work/stage.ts';
-import { type Waiting, waitingOf } from '../../domain/work/start.ts';
-import type { Task } from '../../domain/work/task.ts';
-import { plural } from '../../domain/shared/text.ts';
+} from '../../domain/work/index.ts';
+import { isReview, stageOf } from '../../domain/work/index.ts';
+import { type Waiting, waitingOf } from '../../domain/work/index.ts';
+import type { Task } from '../../domain/work/index.ts';
+import { plural } from '../../domain/shared/index.ts';
 import { notifyLater } from '../operations/notifications.ts';
 
 /** A task as a link's other end: its state, its repo's pr_mode and its own links. */

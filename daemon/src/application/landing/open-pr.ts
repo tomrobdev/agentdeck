@@ -2,11 +2,11 @@
 import { github } from '../../adapters/github.ts';
 import { appendEvent } from '../../adapters/run-log.ts';
 import type { Db } from '../../db/index.ts';
-import type { TaskId } from '../../domain/shared/id.ts';
-import { AUTO_MERGE_LABEL, autoMergeOn } from '../../domain/landing/auto-merge.ts';
-import { buildPrBody, openPrUrl } from '../../domain/landing/pr.ts';
-import type { Task } from '../../domain/work/task.ts';
-import { errorMessage } from '../../domain/shared/text.ts';
+import type { TaskId } from '../../domain/shared/index.ts';
+import { AUTO_MERGE_LABEL, autoMergeOn } from '../../domain/landing/index.ts';
+import { buildPrBody, openPrUrl } from '../../domain/landing/index.ts';
+import type { Task } from '../../domain/work/index.ts';
+import { errorMessage } from '../../domain/shared/index.ts';
 import { prPlanFor } from '../work/plans.ts';
 
 /** Record a PR event on the task's latest run log, where `agentdeck log` and the dashboard show it. */

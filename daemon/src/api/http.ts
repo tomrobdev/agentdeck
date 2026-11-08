@@ -3,8 +3,8 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { ActionError, type ChangeWatcher, type DaemonInfo, type ReloadFacts, type Scheduler } from '../application/actions.ts';
 import { API_ALLOWED_ORIGINS } from '../config.ts';
 import type { Db } from '../db/index.ts';
-import { type RepoId, type ReviewId, type TaskId, parseId } from '../domain/shared/id.ts';
-import { parseTaskIds } from '../domain/work/ids.ts';
+import { type RepoId, type ReviewId, type TaskId, parseId } from '../domain/shared/index.ts';
+import { parseTaskIds } from '../domain/work/index.ts';
 
 /** What the API needs of the scheduler: `wake` after a change that may let queued work start, `track` for runs it starts. */
 export type ApiScheduler = Pick<Scheduler, 'wake' | 'track'>;

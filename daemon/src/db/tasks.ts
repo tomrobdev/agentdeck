@@ -3,16 +3,16 @@ import { type SQL, and, asc, count, desc, eq, exists, inArray, isNotNull, isNull
 import { type AnySQLiteColumn, alias } from 'drizzle-orm/sqlite-core';
 import type { DatabaseSync } from 'node:sqlite';
 import { DEFAULTS } from '../config.ts';
-import { type RepoId, type TaskId, asTaskId } from '../domain/shared/id.ts';
-import type { AutoMergeCheck } from '../domain/landing/auto-merge.ts';
-import type { StoredChecks } from '../domain/landing/checks.ts';
-import type { CheckCounts } from '../domain/landing/merge.ts';
-import type { MergeMethod } from '../domain/repos/repo.ts';
-import { INTERRUPTED, type RunOutcome } from '../domain/runs/run.ts';
-import { MAX_RESTARTS, type TaskEvent, type TaskStatus, fromStatuses, nextStatus, transition } from '../domain/work/lifecycle.ts';
-import type { LinkKind } from '../domain/work/link.ts';
-import { type PrEvent, prEventReason } from '../domain/work/history.ts';
-import type { TaskPlan } from '../domain/work/plan.ts';
+import { type RepoId, type TaskId, asTaskId } from '../domain/shared/index.ts';
+import type { AutoMergeCheck } from '../domain/landing/index.ts';
+import type { StoredChecks } from '../domain/landing/index.ts';
+import type { CheckCounts } from '../domain/landing/index.ts';
+import type { MergeMethod } from '../domain/repos/index.ts';
+import { INTERRUPTED, type RunOutcome } from '../domain/runs/index.ts';
+import { MAX_RESTARTS, type TaskEvent, type TaskStatus, fromStatuses, nextStatus, transition } from '../domain/work/index.ts';
+import type { LinkKind } from '../domain/work/index.ts';
+import { type PrEvent, prEventReason } from '../domain/work/index.ts';
+import type { TaskPlan } from '../domain/work/index.ts';
 import {
   type BlockedTask,
   EDITABLE_STATUSES,
@@ -22,9 +22,9 @@ import {
   type Task,
   type TaskSummary,
   isBlocked,
-} from '../domain/work/task.ts';
-import type { AttentionCandidate, AttentionWhy } from '../domain/operations/headline.ts';
-import type { Needs, UnblockQuestion } from '../domain/work/needs.ts';
+} from '../domain/work/index.ts';
+import type { AttentionCandidate, AttentionWhy } from '../domain/operations/index.ts';
+import type { Needs, UnblockQuestion } from '../domain/work/index.ts';
 import { SUMMARY_COLUMNS, TASK_COLUMNS, mapFound, stateColumns, stored, toTask, toTaskSummary } from './mappers.ts';
 import type { Orm } from './orm.ts';
 import { insertOwnPlan, saveOwnPlan } from './plans.ts';

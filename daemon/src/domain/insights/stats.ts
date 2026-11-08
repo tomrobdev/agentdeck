@@ -1,8 +1,8 @@
 // The pilot scorecard's measures (docs/pilot/scorecard.md), computed from plain run rows. Pure: no I/O.
-import type { RepoId, TaskId } from '../shared/id.ts';
-import { minutesBetween, weekOf } from '../shared/time.ts';
+import type { RepoId, TaskId } from '../shared/index.ts';
+import { minutesBetween, weekOf } from '../shared/index.ts';
 import { num, pct, table } from './report-text.ts';
-import { INTERRUPTED } from '../runs/run.ts';
+import { INTERRUPTED } from '../runs/index.ts';
 
 /** One work run with the status of the task it belongs to. Resolve runs are never given here. */
 export interface StatRun {

@@ -3,8 +3,8 @@
 import { commitLeftovers, ensureWorktree } from '../../adapters/git.ts';
 import { writeEvent } from '../../adapters/run-log.ts';
 import type { Db } from '../../db/index.ts';
-import type { TaskId } from '../../domain/shared/id.ts';
-import type { PromptPlan } from '../../domain/runs/prompt.ts';
+import type { TaskId } from '../../domain/shared/index.ts';
+import type { PromptPlan } from '../../domain/runs/index.ts';
 import {
   UNBLOCK_MAX_TURNS,
   type UnblockDecision,
@@ -13,10 +13,10 @@ import {
   unblockDecision,
   unblockSystemPrompt,
   unblockable,
-} from '../../domain/runs/unblock.ts';
-import { latestReviewNote } from '../../domain/work/history.ts';
-import { type BlockedTask, leftoversMessage } from '../../domain/work/task.ts';
-import { errorMessage } from '../../domain/shared/text.ts';
+} from '../../domain/runs/index.ts';
+import { latestReviewNote } from '../../domain/work/index.ts';
+import { type BlockedTask, leftoversMessage } from '../../domain/work/index.ts';
+import { errorMessage } from '../../domain/shared/index.ts';
 import { type OpenedRun, endTaskRun, openTaskRun, startTaskRun } from './claude-run.ts';
 import { planForRun } from '../work/plans.ts';
 import { settle } from '../landing/settle.ts';

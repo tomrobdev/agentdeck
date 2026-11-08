@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, reactive, ref, watch } from 'vue';
 import { type ChangedFile, type Changes, type NewReviewComment, type TaskDetail, ago, api } from '../../api';
-import { plural } from '../../../../daemon/src/domain/shared/text.ts';
+import { plural } from '../../../../daemon/src/domain/shared/index.ts';
 import { useActions } from '../../composables/useActions';
 import { useFilePatches } from '../../composables/useFilePatches';
 import { useFileText } from '../../composables/useFileText';

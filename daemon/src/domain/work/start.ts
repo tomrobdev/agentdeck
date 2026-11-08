@@ -1,6 +1,6 @@
 // What a queued task waits for, in the order the scheduler checks. Pure: no I/O.
-import type { TaskId } from '../shared/id.ts';
-import type { Decision } from '../capacity/governor.ts';
+import type { TaskId } from '../shared/index.ts';
+import type { Decision } from '../capacity/index.ts';
 import type { TaskStatus } from './lifecycle.ts';
 import type { StartState } from './link.ts';
 

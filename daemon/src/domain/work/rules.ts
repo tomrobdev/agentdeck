@@ -1,6 +1,6 @@
 // What a person may ask of a task: the limits on its fields and the checks on how it is added.
 // Each rule returns the message to show, or null when the input is fine. Pure: no I/O.
-import { wholeNumberError } from '../shared/text.ts';
+import { wholeNumberError } from '../shared/index.ts';
 import { MODELS, isModel } from './task.ts';
 
 export const priorityError = (value: unknown): string | null => wholeNumberError('priority', value, -1000, 1000);

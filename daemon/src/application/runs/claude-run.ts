@@ -6,15 +6,15 @@ import { rootInfo } from '../../adapters/repo-root.ts';
 import { closeLog, writeEvent, writeSettings } from '../../adapters/run-log.ts';
 import { LOG_DIR, ensureDirs } from '../../config.ts';
 import type { Db } from '../../db/index.ts';
-import type { RunId } from '../../domain/shared/id.ts';
-import type { Repo } from '../../domain/repos/repo.ts';
-import { allowedTools } from '../../domain/repos/tools.ts';
-import { START_LIVE, nextLive } from '../../domain/runs/translate/live.ts';
-import { claudeArgs } from '../../domain/runs/prompt.ts';
-import { settingsPath, workerSettings } from '../../domain/runs/translate/sandbox.ts';
-import { type Outcome, type Run, type RunClass, type RunKind, classifyRun, resultFields, resumeFailed } from '../../domain/runs/run.ts';
-import type { Task } from '../../domain/work/task.ts';
-import { lastLine } from '../../domain/shared/text.ts';
+import type { RunId } from '../../domain/shared/index.ts';
+import type { Repo } from '../../domain/repos/index.ts';
+import { allowedTools } from '../../domain/repos/index.ts';
+import { START_LIVE, nextLive } from '../../domain/runs/index.ts';
+import { claudeArgs } from '../../domain/runs/index.ts';
+import { settingsPath, workerSettings } from '../../domain/runs/index.ts';
+import { type Outcome, type Run, type RunClass, type RunKind, classifyRun, resultFields, resumeFailed } from '../../domain/runs/index.ts';
+import type { Task } from '../../domain/work/index.ts';
+import { lastLine } from '../../domain/shared/index.ts';
 
 /**
  * Write the sandbox and file-rule settings for a claude run in `worktree` (docs/adr/0001-worker-sandbox.md)

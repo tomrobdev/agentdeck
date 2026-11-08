@@ -1,5 +1,5 @@
 // The repo entity. Pure: no I/O.
-import type { RepoId } from '../shared/id.ts';
+import type { RepoId } from '../shared/index.ts';
 
 /** What the daemon does when a task is done: nothing, open a draft PR, or open a ready PR. */
 export type PrMode = 'off' | 'draft' | 'ready';

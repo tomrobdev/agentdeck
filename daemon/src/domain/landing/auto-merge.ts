@@ -1,7 +1,7 @@
 // Whether the daemon may merge a done task's PR without a person (docs/plans/auto-merge.html). Pure: no I/O.
-import type { Repo } from '../repos/repo.ts';
-import { PROTECTED_PREFIXES, isProtectedPath } from '../repos/protected-edits.ts';
-import { wholeNumberError } from '../shared/text.ts';
+import type { Repo } from '../repos/index.ts';
+import { PROTECTED_PREFIXES, isProtectedPath } from '../repos/index.ts';
+import { wholeNumberError } from '../shared/index.ts';
 import { isMergeabilityUnknown } from './conflict.ts';
 import { type MergeFinding, type MergeInput, conflictNeedsPerson, mergeFindings } from './merge.ts';
 import type { PullRequest } from './pr.ts';

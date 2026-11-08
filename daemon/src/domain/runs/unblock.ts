@@ -1,11 +1,11 @@
 // The unblock run: a short claude run that reads why a blocked task stopped and either sends it back to work with a
 // note or leaves it blocked with a question and options for a person. It uses no attempt. Pure: no I/O.
-import { isConflictReason } from '../landing/sync.ts';
-import { parsePlanWithText } from '../work/plan.ts';
-import type { Repo } from '../repos/repo.ts';
-import type { UnblockQuestion } from '../work/needs.ts';
-import type { BlockedTask, Task, TaskState } from '../work/task.ts';
-import { lastLine } from '../shared/text.ts';
+import { isConflictReason } from '../landing/index.ts';
+import { parsePlanWithText } from '../work/index.ts';
+import type { Repo } from '../repos/index.ts';
+import type { UnblockQuestion } from '../work/index.ts';
+import type { BlockedTask, Task, TaskState } from '../work/index.ts';
+import { lastLine } from '../shared/index.ts';
 import type { PromptPlan } from './prompt.ts';
 import { type Run, isSetupFailure } from './run.ts';
 

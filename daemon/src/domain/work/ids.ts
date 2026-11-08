@@ -1,6 +1,6 @@
 // Task ids as a person names them in a list. Pure. The entry points (the CLI's flags, the API's request bodies) read
 // id lists with this and word their own error; the use cases take the branded ids.
-import { type TaskId, parseId } from '../shared/id.ts';
+import { type TaskId, parseId } from '../shared/index.ts';
 
 /**
  * Task ids from a list ([12, 14]) or typed text ("12,14", "#12 #14"), each a whole number above 0, without repeats.

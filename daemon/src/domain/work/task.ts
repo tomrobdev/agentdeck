@@ -1,6 +1,6 @@
 // The task entity. Pure: no I/O.
-import type { RepoId, TaskId } from '../shared/id.ts';
-import type { PullRequest } from '../landing/pr.ts';
+import type { RepoId, TaskId } from '../shared/index.ts';
+import type { PullRequest } from '../landing/index.ts';
 import type { Checkout } from './checkout.ts';
 import type { TaskStatus } from './lifecycle.ts';
 import type { Needs, UnblockQuestion } from './needs.ts';

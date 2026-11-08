@@ -1,7 +1,7 @@
 // Planner runs: one row per planner claude process.
 import { and, count, desc, eq, isNull } from 'drizzle-orm';
-import type { PlannerRunId, RepoId } from '../domain/shared/id.ts';
-import type { PlannerOutcome, PlannerRun } from '../domain/proposals/proposals.ts';
+import type { PlannerRunId, RepoId } from '../domain/shared/index.ts';
+import type { PlannerOutcome, PlannerRun } from '../domain/proposals/index.ts';
 import type { Orm } from './orm.ts';
 import { NOW_SQL } from './sql.ts';
 import { plannerRuns, repos } from './tables.ts';

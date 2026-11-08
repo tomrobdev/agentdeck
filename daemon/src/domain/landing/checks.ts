@@ -1,6 +1,6 @@
 // A PR's checks on GitHub, one by one: what `statusCheckRollup` says about each, what is kept on the task, and the note that
 // sends the failures back to the worker. What a person is told when they fail is in domain/operations/notification.ts. Pure: no I/O.
-import { plural } from '../shared/text.ts';
+import { plural } from '../shared/index.ts';
 import type { PullRequest } from './pr.ts';
 
 /** How one check stands. NEUTRAL and SKIPPED conclusions are `skipped`; anything not failing or pending passed. */

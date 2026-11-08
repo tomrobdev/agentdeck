@@ -2,8 +2,8 @@
 import { computed, nextTick, ref } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { type PlanStep, type TaskPlan, ago, planHtmlQuery } from '../../api';
-import { planProgress } from '../../../../daemon/src/domain/work/plan.ts';
-import { plural } from '../../../../daemon/src/domain/shared/text.ts';
+import { planProgress } from '../../../../daemon/src/domain/work/index.ts';
+import { plural } from '../../../../daemon/src/domain/shared/index.ts';
 import { mode } from '../../platform/theme';
 import { withBaseStyle } from '../../lib/planPage';
 import planCss from '../../../../docs/plans/plan.css?raw';

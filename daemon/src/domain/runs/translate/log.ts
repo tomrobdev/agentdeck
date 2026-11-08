@@ -1,5 +1,5 @@
 // A run's stream-json log reduced to what a person wants to read. Pure: no I/O.
-import { cut, oneLine } from '../../shared/text.ts';
+import { cut, oneLine } from '../../shared/index.ts';
 
 /** An edit in numbers and a little text, for a small diff. */
 export interface LogChange {

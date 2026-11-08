@@ -1,6 +1,6 @@
 // Reading a task's code from git: the shapes the API returns, path checks, size limits and the
 // parsing of git's -z output. Pure: no I/O. The git calls are in adapters/git.ts.
-import { sqliteUtc } from '../../shared/time.ts';
+import { sqliteUtc } from '../../shared/index.ts';
 
 /** Which commit a read is at: the task's branch, or where it left the repo's base branch. */
 export type FileRef = 'head' | 'base';

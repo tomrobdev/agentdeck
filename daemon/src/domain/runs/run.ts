@@ -1,7 +1,7 @@
 // The run entity and how to read a run's result. Pure: no I/O.
-import type { RunId, TaskId } from '../shared/id.ts';
-import { STATUS_WORD, lastLine, oneLine } from '../shared/text.ts';
-import { type Needs, parseNeeds } from '../work/needs.ts';
+import type { RunId, TaskId } from '../shared/index.ts';
+import { STATUS_WORD, lastLine, oneLine } from '../shared/index.ts';
+import { type Needs, parseNeeds } from '../work/index.ts';
 
 /**
  * `work` is an attempt at the task; `resolve` merges the base branch into the task's branch and never uses an attempt;

@@ -4,11 +4,11 @@ import { join, sep } from 'node:path';
 import { headSummary } from '../../adapters/git.ts';
 import { WORKTREE_DIR } from '../../config.ts';
 import type { Db } from '../../db/index.ts';
-import type { Repo } from '../../domain/repos/repo.ts';
-import { digest } from '../../domain/work/read/digest.ts';
-import { filterTasks, listable } from '../../domain/work/read/listing.ts';
-import { isReview, stageOf } from '../../domain/work/stage.ts';
-import { OPEN_STATUSES } from '../../domain/work/task.ts';
+import type { Repo } from '../../domain/repos/index.ts';
+import { digest } from '../../domain/work/index.ts';
+import { filterTasks, listable } from '../../domain/work/index.ts';
+import { isReview, stageOf } from '../../domain/work/index.ts';
+import { OPEN_STATUSES } from '../../domain/work/index.ts';
 import { status } from '../operations/settings.ts';
 import { withViews } from './task-views.ts';
 

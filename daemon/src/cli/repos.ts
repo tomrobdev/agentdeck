@@ -1,7 +1,7 @@
 // Repo commands: register, configure and check repos, goals and the planner.
 import { readFileSync } from 'node:fs';
 import * as actions from '../application/actions.ts';
-import type { ProposalResult } from '../domain/proposals/proposals.ts';
+import type { ProposalResult } from '../domain/proposals/index.ts';
 import { callDaemon } from './daemon-client.ts';
 import { confirm, die, fmtTask, printDoctor } from './format.ts';
 import { repoSettingPatch } from './settings-args.ts';

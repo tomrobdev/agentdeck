@@ -1,12 +1,12 @@
 // How the CLI prints tasks, doctor reports, logs and times, and how it fails.
 import { createInterface } from 'node:readline/promises';
 import { type DoctorReport, type HealthCheck, type TaskView, readLog } from '../application/actions.ts';
-import { type TaskId, asTaskId } from '../domain/shared/id.ts';
-import type { AutoMergeView } from '../domain/landing/auto-merge.ts';
-import type { ChecksSummary } from '../domain/landing/checks.ts';
-import type { TaskStatus } from '../domain/work/lifecycle.ts';
-import { parseTaskIds } from '../domain/work/ids.ts';
-import type { Task } from '../domain/work/task.ts';
+import { type TaskId, asTaskId } from '../domain/shared/index.ts';
+import type { AutoMergeView } from '../domain/landing/index.ts';
+import type { ChecksSummary } from '../domain/landing/index.ts';
+import type { TaskStatus } from '../domain/work/index.ts';
+import { parseTaskIds } from '../domain/work/index.ts';
+import type { Task } from '../domain/work/index.ts';
 
 const STATUS_ICON: Record<TaskStatus, string> = {
   proposed: '?',

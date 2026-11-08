@@ -1,6 +1,6 @@
 // Pull requests: fix checks, close, merge (now, requested or automatic).
 import * as actions from '../../application/actions.ts';
-import type { TaskId } from '../../domain/shared/id.ts';
+import type { TaskId } from '../../domain/shared/index.ts';
 import type * as C from '../contract.ts';
 import { type ApiContext, type Route, idsField, route, taskIdParam } from '../http.ts';
 import * as wire from '../wire.ts';

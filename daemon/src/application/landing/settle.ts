@@ -1,11 +1,11 @@
 // Settling a task: the daemon's own events that end a run or a wait, applied together with what follows them.
 import type { Db } from '../../db/index.ts';
-import type { TaskId } from '../../domain/shared/id.ts';
-import { finalNotification } from '../../domain/operations/notification.ts';
-import type { PrEvent } from '../../domain/work/history.ts';
-import type { TaskEvent } from '../../domain/work/lifecycle.ts';
-import type { Needs } from '../../domain/work/needs.ts';
-import type { Task } from '../../domain/work/task.ts';
+import type { TaskId } from '../../domain/shared/index.ts';
+import { finalNotification } from '../../domain/operations/index.ts';
+import type { PrEvent } from '../../domain/work/index.ts';
+import type { TaskEvent } from '../../domain/work/index.ts';
+import type { Needs } from '../../domain/work/index.ts';
+import type { Task } from '../../domain/work/index.ts';
 import { warnStuckDependents } from '../work/dependencies.ts';
 import { notifyLater } from '../operations/notifications.ts';
 import { openPullRequest } from './open-pr.ts';

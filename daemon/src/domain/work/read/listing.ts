@@ -1,6 +1,6 @@
 // Filtering and sorting task lists: `agentdeck ls` and the dashboard's queue share it. Pure: no I/O.
-import type { RepoId } from '../../shared/id.ts';
-import type { PrState, PullRequest } from '../../landing/pr.ts';
+import type { RepoId } from '../../shared/index.ts';
+import type { PrState, PullRequest } from '../../landing/index.ts';
 import type { Checkout } from '../checkout.ts';
 import { STATUS_GROUPS, isMerged, isReview, isStuck, isWaiting, statusGroup } from '../stage.ts';
 import type { TaskStatus } from '../lifecycle.ts';

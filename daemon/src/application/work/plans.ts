@@ -11,12 +11,12 @@ import {
   missingFollowedSteps,
   parsePlan,
   planAfterRun,
-} from '../../domain/work/plan.ts';
-import type { TaskId } from '../../domain/shared/id.ts';
-import type { PrPlan } from '../../domain/landing/pr.ts';
-import type { PromptPlan } from '../../domain/runs/prompt.ts';
-import { hasPlanLink, otherPlanOwner } from '../../domain/work/plan-link.ts';
-import { PLAN_ATTACHABLE_STATUSES, type Task } from '../../domain/work/task.ts';
+} from '../../domain/work/index.ts';
+import type { TaskId } from '../../domain/shared/index.ts';
+import type { PrPlan } from '../../domain/landing/index.ts';
+import type { PromptPlan } from '../../domain/runs/index.ts';
+import { hasPlanLink, otherPlanOwner } from '../../domain/work/index.ts';
+import { PLAN_ATTACHABLE_STATUSES, type Task } from '../../domain/work/index.ts';
 import { ActionError, object, requireTask } from '../shared/input.ts';
 
 /** HTML a person gives as a plan: refused unless it is a plan and small enough. */

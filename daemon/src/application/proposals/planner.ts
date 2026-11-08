@@ -6,16 +6,10 @@ import { goalsPath, readGoals } from '../../adapters/goals.ts';
 import { closeLog } from '../../adapters/run-log.ts';
 import { LOG_DIR, ensureDirs } from '../../config.ts';
 import type { Db } from '../../db/index.ts';
-import type { PlannerRunId, RepoId } from '../../domain/shared/id.ts';
-import {
-  type ProposalResult,
-  buildPlannerPrompt,
-  plannerArgs,
-  plannerDueReason,
-  selectProposals,
-} from '../../domain/proposals/proposals.ts';
-import type { Repo } from '../../domain/repos/repo.ts';
-import { lastLine, plural } from '../../domain/shared/text.ts';
+import type { PlannerRunId, RepoId } from '../../domain/shared/index.ts';
+import { type ProposalResult, buildPlannerPrompt, plannerArgs, plannerDueReason, selectProposals } from '../../domain/proposals/index.ts';
+import type { Repo } from '../../domain/repos/index.ts';
+import { lastLine, plural } from '../../domain/shared/index.ts';
 import { recordRateLimit, usageRecorder } from '../runs/claude-run.ts';
 import { ActionError, requireRepo } from '../shared/input.ts';
 import { notifyLater } from '../operations/notifications.ts';

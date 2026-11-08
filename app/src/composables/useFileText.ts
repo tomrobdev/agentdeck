@@ -4,7 +4,7 @@
 import { type MaybeRefOrGetter, reactive, toValue, watch } from 'vue';
 import { useQueryClient } from '@tanstack/vue-query';
 import { fileQuery } from '../api';
-import { errorMessage } from '../../../daemon/src/domain/shared/text.ts';
+import { errorMessage } from '../../../daemon/src/domain/shared/index.ts';
 
 export function useFileText(taskId: MaybeRefOrGetter<number>, head: MaybeRefOrGetter<string | null>) {
   const queryClient = useQueryClient();

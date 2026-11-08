@@ -2,7 +2,7 @@
 // All git reads run in the repo's main checkout, which shares refs with the task worktrees.
 import { branchCommit, changedFiles, commitsBetween, diffBase, filePatch, listTree, objectAt, readFile } from '../../adapters/git.ts';
 import type { Db } from '../../db/index.ts';
-import type { TaskId } from '../../domain/shared/id.ts';
+import type { TaskId } from '../../domain/shared/index.ts';
 import {
   type ChangedFile,
   type Changes,
@@ -15,9 +15,9 @@ import {
   capText,
   checkPath,
   isBinary,
-} from '../../domain/work/read/files.ts';
-import type { AutoMergeMeasured } from '../../domain/landing/auto-merge.ts';
-import type { Repo } from '../../domain/repos/repo.ts';
+} from '../../domain/work/index.ts';
+import type { AutoMergeMeasured } from '../../domain/landing/index.ts';
+import type { Repo } from '../../domain/repos/index.ts';
 import { ActionError, requireTask, requireTaskRepo } from '../shared/input.ts';
 
 /** The task's repo and the commit its branch is at. */

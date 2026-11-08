@@ -1,7 +1,7 @@
 // Is the daemon healthy? Judges facts gathered elsewhere (launchd, the API, git, ps, the log) into one verdict per check,
 // and for each failure the command that fixes it. Pure: `application/daemon/doctor.ts` gathers the facts.
-import type { TaskId } from '../shared/id.ts';
-import { plural } from '../shared/text.ts';
+import type { TaskId } from '../shared/index.ts';
+import { plural } from '../shared/index.ts';
 import { type ReloadState, SCHEMA_DIRTY } from './restart.ts';
 
 /** What the daemon says about itself on GET /api/daemon. */

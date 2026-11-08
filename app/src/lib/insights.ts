@@ -1,9 +1,9 @@
 // The Insights page's numbers: each scorecard measure as a value per week, set against the pilot's target.
 // Pure: the targets and the week a stamp falls in are the daemon's (domain/insights/scorecard.ts, domain/shared/time.ts).
 import type { Stats } from '../../../daemon/src/api/contract.ts';
-import { SCORECARD_TARGETS } from '../../../daemon/src/domain/insights/scorecard.ts';
-import { plural } from '../../../daemon/src/domain/shared/text.ts';
-import { sqliteUtc, weekOf } from '../../../daemon/src/domain/shared/time.ts';
+import { SCORECARD_TARGETS } from '../../../daemon/src/domain/insights/index.ts';
+import { plural } from '../../../daemon/src/domain/shared/index.ts';
+import { sqliteUtc, weekOf } from '../../../daemon/src/domain/shared/index.ts';
 
 export type MeasureKey = 'first_run' | 'interventions' | 'cost' | 'minutes' | 'review' | 'quota' | 'ci';
 

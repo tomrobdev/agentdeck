@@ -1,6 +1,6 @@
 // Where a task stands, derived from its status, its pull request and what it waits for. Pure: types only.
 // The one definition: the CLI's listing and the dashboard (which imports this file) both use it.
-import type { PrState } from '../landing/pr.ts';
+import type { PrState } from '../landing/index.ts';
 import type { TaskStatus } from './lifecycle.ts';
 import type { Waiting } from './start.ts';
 
