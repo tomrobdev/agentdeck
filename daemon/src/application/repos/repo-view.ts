@@ -1,12 +1,14 @@
 // A repo as the API and the dashboard see it: the flat shape of its columns (flags as 1 or 0, lists as JSON text), so neither changes
 // with the domain's `Repo`.
-import type { Repo } from '../../domain/repos/index.ts';
+import { type Repo, type ToolRulesSource, toolRulesSource } from '../../domain/repos/index.ts';
 
 export interface RepoView extends Omit<
   Repo,
   'allowed_tools' | 'auto_approve' | 'auto_resolve' | 'auto_unblock' | 'sandbox' | 'network' | 'auto_merge' | 'auto_merge_skip'
 > {
   allowed_tools: string | null;
+  /** Whether its workers run with the repo's own tool rules or the detected ones. */
+  tools_source: ToolRulesSource;
   auto_approve: number;
   auto_resolve: number;
   auto_unblock: number;
@@ -22,6 +24,7 @@ export function repoView(repo: Repo): RepoView {
   return {
     ...repo,
     allowed_tools: repo.allowed_tools && JSON.stringify(repo.allowed_tools),
+    tools_source: toolRulesSource(repo),
     auto_approve: bit(repo.auto_approve),
     auto_resolve: bit(repo.auto_resolve),
     auto_unblock: bit(repo.auto_unblock),

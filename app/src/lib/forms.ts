@@ -3,6 +3,7 @@
 import type { MergeMethod, NotifyKind, RepoDetail, RepoPatch, Settings, SettingsPatch } from '../api';
 import { DEFAULT_AUTO_MERGE_SKIP } from '../../../daemon/src/domain/landing/index.ts';
 import { NOTIFY_KINDS } from '../../../daemon/src/domain/operations/index.ts';
+import { parseToolRules } from '../../../daemon/src/domain/repos/index.ts';
 import { parseTextList, textList } from '../../../daemon/src/domain/shared/index.ts';
 
 export { NOTIFY_KINDS };
@@ -21,6 +22,8 @@ export type RepoForm = {
   sandbox: boolean;
   /** Hosts, comma-separated. */
   network: string;
+  /** The repo's own tool rules, one per line; empty = the detected ones. */
+  tools: string;
 };
 
 export function toRepoForm(d: RepoDetail): RepoForm {
@@ -36,6 +39,7 @@ export function toRepoForm(d: RepoDetail): RepoForm {
     autoMergeSkip: parseTextList(d.auto_merge_skip, DEFAULT_AUTO_MERGE_SKIP).join(', '),
     sandbox: !!d.sandbox,
     network: parseTextList(d.network).join(', '),
+    tools: d.allowed_tools === null ? '' : parseTextList(d.allowed_tools).join('\n'),
   };
 }
 
@@ -52,6 +56,7 @@ export function toRepoPatch(f: RepoForm): RepoPatch {
     auto_merge_skip: textList(f.autoMergeSkip),
     sandbox: f.sandbox,
     network: textList(f.network),
+    allowed_tools: parseToolRules(f.tools),
   };
 }
 

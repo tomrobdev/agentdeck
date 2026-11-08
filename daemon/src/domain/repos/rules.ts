@@ -14,6 +14,12 @@ export function repoNameError(name: string): string | null {
   return null;
 }
 
+/** The first tool rule that is not a tool name, alone or with a pattern in parentheses: `Read`, `Bash(pnpm test*)`, `mcp__x__y`. */
+export function toolRulesError(rules: string[]): string | null {
+  const bad = rules.find((rule) => !/^[A-Za-z][\w-]*(\(.*\))?$/.test(rule));
+  return bad === undefined ? null : `not a tool rule: ${bad} (a tool name, with a pattern in parentheses if it takes one)`;
+}
+
 /** The first entry of a network allowlist that is not a host name (a wildcard, port or bracketed address is fine). */
 export function networkError(hosts: string[]): string | null {
   const bad = hosts.find((host) => !/^[A-Za-z0-9*.:[\]-]+$/.test(host));

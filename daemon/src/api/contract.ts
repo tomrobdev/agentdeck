@@ -7,7 +7,7 @@ import type { PlanSource, PlanStepStatus } from '../domain/work/index.ts';
 import type { PlannerOutcome } from '../domain/proposals/index.ts';
 import type { AutoMergeState } from '../domain/landing/index.ts';
 import type { CheckState } from '../domain/landing/index.ts';
-import type { MergeMethod, PrMode } from '../domain/repos/index.ts';
+import type { MergeMethod, PrMode, ToolRulesSource } from '../domain/repos/index.ts';
 import type { PrRetry, PrState } from '../domain/landing/index.ts';
 import type { RunKind } from '../domain/runs/index.ts';
 import type { HeadlineState, AttentionWhy } from '../domain/operations/index.ts';
@@ -29,7 +29,10 @@ export interface Repo {
   path: string;
   base_branch: string;
   test_cmd: string | null;
+  /** JSON array of the repo's own tool rules; null = the defaults plus the rules detected from its toolchain. */
   allowed_tools: string | null;
+  /** Which rules its workers run with. Missing from a daemon that predates it. */
+  tools_source?: ToolRulesSource;
   auto_approve: number;
   proposed_at: string | null;
   toolchain: string | null;
@@ -94,6 +97,8 @@ export interface RepoPatch {
   auto_merge?: boolean;
   auto_merge_max_lines?: number;
   auto_merge_skip?: string[];
+  /** The repo's own tool rules; null or [] goes back to the detected ones. */
+  allowed_tools?: string[] | null;
 }
 
 export interface DoctorCheck {

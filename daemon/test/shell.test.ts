@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { runCommand } from '../src/adapters/shell.ts';
+import { waitFor } from './fixtures.ts';
 
 function alive(pid: number): boolean {
   try {
@@ -22,7 +23,7 @@ test('a timeout kills the command and the children it started', async () => {
   assert.equal(result.passed, false);
   const pid = Number(readFileSync(pidFile, 'utf8').trim());
   assert.ok(pid > 0);
-  for (let i = 0; i < 20 && alive(pid); i++) await new Promise((r) => setTimeout(r, 50));
+  await waitFor(() => !alive(pid), { timeoutMs: 1_000, what: `the child ${pid} to be gone` });
   assert.equal(alive(pid), false);
 });
 
