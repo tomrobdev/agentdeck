@@ -14,6 +14,7 @@ import {
   commitLeftovers,
   commitsAhead,
   commitsBetween,
+  commitsSince,
   concludeMerge,
   conflictedFiles,
   currentBranch,
@@ -191,4 +192,12 @@ export const workspace = {
     const commit = 'base' in at ? await resolveCommit(repoPath, ref) : await branchCommit(repoPath, at.branch);
     return commit ? { ref, files: await listFiles(repoPath, commit) } : null;
   },
+
+  async startCommit(repoPath: string, base: string): Promise<{ ref: string; sha: string } | null> {
+    const ref = await localStartPoint(repoPath, base);
+    const sha = await resolveCommit(repoPath, ref);
+    return sha ? { ref, sha } : null;
+  },
+
+  commitsSince: (repoPath: string, commit: string, since: number, limit: number) => commitsSince(repoPath, commit, since, limit),
 };

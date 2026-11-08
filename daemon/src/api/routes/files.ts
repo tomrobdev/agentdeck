@@ -18,5 +18,8 @@ export function routes({ db }: ApiContext): Route[] {
     route<C.FileContent>('GET', /^\/api\/tasks\/(\d+)\/file$/, ({ params: [id], query }) =>
       actions.taskFile(db, taskIdParam(id), query.get('ref'), query.get('path')),
     ),
+    route<C.ProposalCheck>('GET', /^\/api\/tasks\/(\d+)\/proposal-check$/, ({ params: [id] }) =>
+      actions.proposalCheck(db, taskIdParam(id)),
+    ),
   ];
 }

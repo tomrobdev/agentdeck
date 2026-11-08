@@ -357,6 +357,7 @@ export interface TaskEventRow {
     | 'plan_unfinished'
     | 'environment_block'
     | 'unblock_ask'
+    | 'escalate'
     | 'claim'
     | 'finish'
     | 'rate_limited'
@@ -456,6 +457,8 @@ export interface CancelResult {
 /** POST /api/tasks/:id/retry: `note` is "request changes", kept on the timeline and put first in the next run's prompt. */
 export interface RetryRequest {
   note?: string;
+  /** The model the next attempt runs on; a retry that names one is never escalated. */
+  model?: string;
 }
 
 /** POST /api/tasks/:id/done: `note` is kept on the timeline. */
@@ -721,6 +724,39 @@ export interface Changes {
   files: ChangedFile[];
   commits: Commit[];
   since_points: SincePoint[];
+}
+
+/** A path the prompt names that the base changed since the task was added, with the commits that changed it, newest first. */
+export interface StalePath {
+  path: string;
+  commits: { sha: string; subject: string; at: string }[];
+}
+
+/** How far the base (`ref`, at commit `base`) moved since the task was added: `commits` on it, and the named paths they changed. */
+export interface Staleness {
+  ref: string;
+  base: string;
+  commits: number;
+  changed: StalePath[];
+}
+
+/** Another open task in the repo whose named or changed paths meet this one's, and whether a link already joins them. */
+export interface Overlap {
+  id: TaskId;
+  title: string;
+  status: TaskStatus;
+  paths: string[];
+  linked: boolean;
+}
+
+/**
+ * GET /api/tasks/:id/proposal-check: what to know before approving a proposed or queued task. Empty for any other
+ * status; `staleness` is null when git can't say. `notes` are the named paths not on the base.
+ */
+export interface ProposalCheck {
+  staleness: Staleness | null;
+  notes: string[];
+  overlaps: Overlap[];
 }
 
 export interface FilePatch {

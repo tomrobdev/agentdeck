@@ -2,7 +2,7 @@
 // adapters/workspace.ts (compose.ts); tests run it on real git in a temporary folder, with no fake.
 import type { ReviewFacts } from '../../domain/operations/index.ts';
 import type { Repo } from '../../domain/repos/index.ts';
-import type { ChangedFile, Commit, Task, TreeEntry } from '../../domain/work/index.ts';
+import type { BaseCommit, ChangedFile, Commit, Task, TreeEntry } from '../../domain/work/index.ts';
 
 /** A task's checkout: its branch and the worktree it is checked out in. */
 export interface Checkout {
@@ -156,4 +156,11 @@ export interface Workspace {
    * not fetched) or at a local branch; with the ref's name. Null when there is no such commit.
    */
   filesAt(repoPath: string, at: { base: string } | { branch: string }): Promise<{ ref: string; files: string[] } | null>;
+  /** The commit a worker would start from, as `filesAt` reads it (origin's copy when there is one, not fetched), with the ref's name. */
+  startCommit(repoPath: string, base: string): Promise<{ ref: string; sha: string } | null>;
+  /**
+   * The commits on `commit`'s first-parent line made after `since` (ms since the epoch, by committer date), newest
+   * first, each with the paths it changed (a merge against its first parent). At most `limit` are listed; `count` is all.
+   */
+  commitsSince(repoPath: string, commit: string, since: number, limit: number): Promise<{ count: number; commits: BaseCommit[] }>;
 }

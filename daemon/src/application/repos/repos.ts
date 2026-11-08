@@ -13,7 +13,8 @@ import { type Check, runDoctor } from './doctor.ts';
 import { repoView } from './repo-view.ts';
 import { ActionError, flag, list, object, refuse, requireRepo, text, textOrNull, whole } from '../shared/input.ts';
 import { pauseRepo } from './pause.ts';
-import { buildersOnRepo, warnBuildersOnDeleted } from '../work/dependencies.ts';
+import { buildersOnRepo, liveLinks, warnBuildersOnDeleted } from '../work/dependencies.ts';
+import { prModeOffError, startState } from '../../domain/work/index.ts';
 
 /** Register a repo. Its toolchain is detected from the root files and fills in whatever isn't given. */
 export async function addRepo(
@@ -69,6 +70,8 @@ export interface RepoPatch {
   auto_resolve?: boolean;
   auto_unblock?: boolean;
   auto_review?: boolean;
+  /** A retry after a failure a stronger model may fix runs one model up. */
+  escalate?: boolean;
   sandbox?: boolean;
   /** Hosts the agent's sandboxed commands may reach; a string is split on commas and spaces. */
   network?: string | string[];
@@ -98,6 +101,7 @@ export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch
   const auto_resolve = flag(body, 'auto_resolve');
   const auto_unblock = flag(body, 'auto_unblock');
   const auto_review = flag(body, 'auto_review');
+  const escalate = flag(body, 'escalate');
   const sandbox = flag(body, 'sandbox');
   const hosts = list(body, 'network', { split: true });
   const network = hosts && normalizeNetwork(hosts);
@@ -119,6 +123,18 @@ export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch
   if (network) refuse(networkError(network));
   if (pr_mode !== undefined && !PR_MODES.includes(pr_mode as PrMode))
     throw new ActionError(`pr_mode must be one of ${PR_MODES.join(', ')}`);
+  if (pr_mode === 'off' && repo.pr_mode !== 'off') {
+    const links = liveLinks(app);
+    const unmet = app
+      .listTasks()
+      .filter((t) => t.repo_id === repo.id && t.status !== 'done' && t.status !== 'cancelled')
+      .filter((t) => {
+        const kind = startState(t, links.linksOf(t.id), links.target).kind;
+        return kind !== 'none' && kind !== 'met';
+      })
+      .map((t) => t.id);
+    refuse(prModeOffError(repo.name, unmet));
+  }
   if (merge_method !== undefined && !isMergeMethod(merge_method))
     throw new ActionError(`merge_method must be one of ${MERGE_METHODS.join(', ')}`);
   if (base_branch === '') throw new ActionError('base_branch cannot be empty');
@@ -136,6 +152,7 @@ export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch
     ...(auto_resolve !== undefined ? { auto_resolve } : {}),
     ...(auto_unblock !== undefined ? { auto_unblock } : {}),
     ...(auto_review !== undefined ? { auto_review } : {}),
+    ...(escalate !== undefined ? { escalate } : {}),
     ...(sandbox !== undefined ? { sandbox } : {}),
     ...(network !== undefined ? { network } : {}),
     ...(auto_merge !== undefined ? { auto_merge } : {}),

@@ -48,6 +48,7 @@ export type {
   PlannerRun,
   PrMode,
   PrState,
+  ProposalCheck,
   ProposalResult,
   QueueWait,
   Repo,

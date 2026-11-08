@@ -110,6 +110,7 @@ test('paths are checked against origin/<base>, where a worker starts: a local-on
 
 test('a path a builds-on task adds is not a warning; a builds-on task with no branch yet may add it', async () => {
   const { db, repo, path } = setup();
+  db.updateRepo(repo.id, { pr_mode: 'ready' });
   const dep = db.addTask({ repo_id: repo.id, title: 'mark', prompt: 'make the mark' });
   const later = await addTask(db, { repo: 'demo', prompt: 'Use `assets/mark.svg`', builds_on: [dep.id] });
 

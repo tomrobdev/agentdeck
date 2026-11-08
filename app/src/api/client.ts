@@ -23,6 +23,7 @@ import type {
   NewReviewComment,
   NewTask,
   PlanHtml,
+  ProposalCheck,
   ProposalResult,
   Repo,
   RepoDeleted,
@@ -160,6 +161,8 @@ export const api = {
   changes: (id: number, since: string | null = null) => call<Changes>(`/api/tasks/${id}/changes${since ? `?since=${since}` : ''}`),
   diff: (id: number, path: string, since: string | null = null) =>
     call<FilePatch>(`/api/tasks/${id}/diff?path=${encodeURIComponent(path)}${since ? `&since=${since}` : ''}`),
+  /** How stale a proposed or queued task is, its named paths not on the base, and the open tasks touching the same files. */
+  proposalCheck: (id: number) => call<ProposalCheck>(`/api/tasks/${id}/proposal-check`),
   tree: (id: number, ref: FileRef, path = '') => call<TreeListing>(`/api/tasks/${id}/tree?ref=${ref}&path=${encodeURIComponent(path)}`),
   file: (id: number, ref: FileRef, path: string) => call<FileContent>(`/api/tasks/${id}/file?ref=${ref}&path=${encodeURIComponent(path)}`),
   reviews: (id: number) => call<Review[]>(`/api/tasks/${id}/reviews`),

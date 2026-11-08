@@ -726,6 +726,8 @@ const ALLOWED_MODULE_STATE: Record<string, string> = {
     'the follow-up lock: history rows whose follow-ups run in this process; the outbox in the database is what the processes share',
   'application/work/files.ts:changedCache': 'a cache of immutable diff results: the same two commits always differ the same way',
   'application/work/files.ts:mergeCache': 'a cache of immutable merges: the same two commits always merge to the same commit',
+  'application/work/proposal-check.ts:stalenessCache':
+    'a cache of immutable staleness results: the same task, base commit and prompt always come to the same commits and paths',
 };
 
 const MUTATORS = /^(set|add|delete|clear|push|pop|shift|unshift|splice|sort|reverse|fill|copyWithin)$/;

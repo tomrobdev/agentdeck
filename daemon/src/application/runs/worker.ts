@@ -10,6 +10,7 @@ import {
   type Run,
   type WorkerResult,
   editsSinceCutOff,
+  escalationSince,
   firstDenial,
   isEnvironmentBlock,
   parseStatus,
@@ -19,7 +20,7 @@ import {
   setupFailedReason,
 } from '../../domain/runs/index.ts';
 import { hasPlanLink, otherPlanOwner } from '../../domain/work/index.ts';
-import { type Task, leftoversMessage } from '../../domain/work/index.ts';
+import { type Task, attemptsLeft, leftoversMessage } from '../../domain/work/index.ts';
 import { errorMessage } from '../../domain/shared/index.ts';
 import { type OpenedRun, type TaskRunEnd, endTaskRun, openTaskRun, startTaskRun } from './claude-run.ts';
 import type { Repo } from '../../domain/repos/index.ts';
@@ -29,6 +30,7 @@ import { markSyncing } from '../work/checkout-locks.ts';
 import { followedSteps, planForRun, takePlanFile } from '../work/plans.ts';
 import { settle } from '../landing/settle.ts';
 import { recordAnswers, reviewForRun } from '../landing/address.ts';
+import { escalateAfter } from '../work/escalate.ts';
 
 /** Run one attempt of a task that the scheduler has already claimed (status = running). */
 export async function runTask(app: App, task: Task): Promise<WorkerResult> {
@@ -87,7 +89,15 @@ async function runOpened(app: App, task: Task, repo: Repo, wt: Checkout, opened:
     app.runLog.event(log, { type: 'agentdeck_error', text: `read plan: ${errorMessage(err)}` });
   }
   const review = await reviewForRun(app, task, repo);
-  const prompt = buildPrompt(task, previousRuns, latestReviewNote(app.eventsForTask(task.id)), plan, review?.prompt ?? null);
+  const events = app.eventsForTask(task.id);
+  const prompt = buildPrompt(
+    task,
+    previousRuns,
+    latestReviewNote(events),
+    plan,
+    review?.prompt ?? null,
+    escalationSince(events, previousRuns),
+  );
   const resume = session ? { session, prompt: buildResumePrompt(task), maxTurns: resumeMaxTurns(task, previousRuns) } : undefined;
 
   // Install dependencies before the agent starts: it isn't allowed to install them itself.
@@ -232,10 +242,14 @@ async function finish(
       // Not the task's fault: give the attempt back and requeue.
       await settle(app, task.id, { type: 'rate_limited' });
       break;
-    case 'failed':
-      // The lifecycle requeues it while it has attempts left.
+    case 'failed': {
+      // The lifecycle requeues it while it has attempts left. The next attempt may run one model up: the model changes while
+      // the task is still running, before the requeue.
+      const run = attemptsLeft(task) && opened ? app.runsForTask(task.id).find((r) => r.id === opened.runId) : undefined;
+      if (run) escalateAfter(app, task, run, { reason: res.reason ?? null, needs: res.needs ?? null }, ['running']);
       await settle(app, task.id, { type: 'finish', outcome: 'failed' }, reason);
       break;
+    }
   }
   return res;
 }
