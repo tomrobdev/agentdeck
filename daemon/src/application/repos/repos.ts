@@ -13,7 +13,8 @@ import { type Check, runDoctor } from './doctor.ts';
 import { repoView } from './repo-view.ts';
 import { ActionError, flag, list, object, refuse, requireRepo, text, textOrNull, whole } from '../shared/input.ts';
 import { pauseRepo } from './pause.ts';
-import { buildersOnRepo, warnBuildersOnDeleted } from '../work/dependencies.ts';
+import { buildersOnRepo, liveLinks, warnBuildersOnDeleted } from '../work/dependencies.ts';
+import { prModeOffError, startState } from '../../domain/work/index.ts';
 
 /** Register a repo. Its toolchain is detected from the root files and fills in whatever isn't given. */
 export async function addRepo(
@@ -122,6 +123,18 @@ export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch
   if (network) refuse(networkError(network));
   if (pr_mode !== undefined && !PR_MODES.includes(pr_mode as PrMode))
     throw new ActionError(`pr_mode must be one of ${PR_MODES.join(', ')}`);
+  if (pr_mode === 'off' && repo.pr_mode !== 'off') {
+    const links = liveLinks(app);
+    const unmet = app
+      .listTasks()
+      .filter((t) => t.repo_id === repo.id && t.status !== 'done' && t.status !== 'cancelled')
+      .filter((t) => {
+        const kind = startState(t, links.linksOf(t.id), links.target).kind;
+        return kind !== 'none' && kind !== 'met';
+      })
+      .map((t) => t.id);
+    refuse(prModeOffError(repo.name, unmet));
+  }
   if (merge_method !== undefined && !isMergeMethod(merge_method))
     throw new ActionError(`merge_method must be one of ${MERGE_METHODS.join(', ')}`);
   if (base_branch === '') throw new ActionError('base_branch cannot be empty');

@@ -55,6 +55,8 @@ function standing(on: TaskId, dependency: Dependency | undefined): Standing {
       // retry is set aside by it (`statusChangePrChanges`), so the task is not met again until its new PR merges.
       const state = dependency.pr?.state ?? null;
       if (state === 'merged') return { kind: 'met' };
+      // A person's `agentdeck done` stays met in any repo: they say the work is finished. In a repo with `pr_mode off` no
+      // builds-on link may be made to a task (`buildsOnRepoError`), so this only covers links made before.
       if (state === null && dependency.pr_mode === 'off') return { kind: 'met' };
       if (dependency.done_by === 'person' && state !== 'open') return { kind: 'met' };
       if (state === 'closed') return stuck(`${id}'s PR was closed without merging`, 'whose PR was closed without merging');
@@ -85,6 +87,7 @@ function neverLands(dependency: Dependency | undefined): boolean {
  * - after: `met` once the other has landed, or will never land (cancelled, its PR closed, or gone); otherwise
  *   `unlanded`, with the reason, and the task's merge waits. A failed or blocked task, or a PR that could not be opened,
  *   can still land after a retry, so those wait.
+ * A dependency marked done by a person (`agentdeck done`) stays met: the person says the work is finished.
  */
 export type LinkState =
   | { kind: 'met' }
@@ -233,6 +236,25 @@ export function linkError(task: TaskId, on: TaskId, links: Link[]): string | nul
 export function buildsOnError(task: TaskId, status: string, on: TaskId): string | null {
   if (status === 'proposed' || status === 'queued') return null;
   return `#${task} has started already, so it can't build on #${on}; make it an after link instead`;
+}
+
+/**
+ * Why a task may not build on task `on`, which is in `repo`, or null if it may. In a repo with `pr_mode off` the work of
+ * `on` is never merged into the base, so a task building on it would start without it. After links stay allowed.
+ */
+export function buildsOnRepoError(on: TaskId, repo: { name: string; pr_mode: PrMode }): string | null {
+  if (repo.pr_mode !== 'off') return null;
+  return `#${on} is in ${repo.name}, which opens no PRs, so its work never reaches the base: make it an after link instead`;
+}
+
+/**
+ * Why a repo may not switch to `pr_mode off`, or null if it may: `unmet` are its tasks (not done or cancelled) that build
+ * on a task that is not yet met, which would start without that work once nothing is merged.
+ */
+export function prModeOffError(repo: string, unmet: TaskId[]): string | null {
+  if (unmet.length === 0) return null;
+  const names = unmet.map((id) => `#${id}`).join(', ');
+  return `${repo} can't stop opening PRs while ${names} ${unmet.length === 1 ? 'builds' : 'build'} on a task that is not merged yet: wait for ${unmet.length === 1 ? 'it' : 'them'} to start, or cancel ${unmet.length === 1 ? 'it' : 'them'}`;
 }
 
 /** The queued tasks merging this one lets start, for a task in review; none for any other task. */

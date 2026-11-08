@@ -25,10 +25,12 @@ export { MAX_RESTARTS, TASK_STATUSES, fromStatuses, personEvents, transition } f
 export type { DomainEvent, PersonEvent, TaskEvent, TaskStatus } from './lifecycle.ts';
 export {
   buildsOnError,
+  buildsOnRepoError,
   dependentViews,
   linkError,
   linkState,
   linkViews,
+  prModeOffError,
   releasedBy,
   startState,
   stuckOn,
