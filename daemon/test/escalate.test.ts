@@ -145,6 +145,27 @@ test('a failed run at the turn limit requeues one model up, and the next run is 
   assert.equal(escalations(task.id).length, 1);
 });
 
+test('a sonnet task at the turn limit runs its second attempt on opus; an environment block’s retry stays sonnet', async () => {
+  const task = await addTask(db, { repo: 'demo', prompt: 'FAKE_MAX_TURNS to opus', model: 'sonnet', max_attempts: 2 });
+  await drain();
+  assert.deepEqual(
+    started('FAKE_MAX_TURNS to opus').map((r) => r.model),
+    ['sonnet', 'opus'],
+  );
+  assert.equal(escalations(task.id).length, 1, 'opus stays opus after the second failure');
+
+  const blocked = await addTask(db, { repo: 'demo', prompt: 'FAKE_DENIED_NEEDS sandboxed', model: 'sonnet', max_attempts: 2 });
+  await drain();
+  assert.equal(db.getTask(blocked.id)!.status, 'blocked');
+  assert.deepEqual(retryTask(db, blocked.id), { model: 'sonnet', escalated: false });
+  await drain();
+  assert.deepEqual(
+    started('FAKE_DENIED_NEEDS sandboxed').map((r) => r.model),
+    ['sonnet', 'sonnet'],
+  );
+  assert.equal(escalations(blocked.id).length, 0);
+});
+
 test('a person’s retry without a model escalates; one that names a model runs on it; escalate off keeps the model', async () => {
   const task = await addTask(db, { repo: 'demo', prompt: 'FAKE_MAX_TURNS retry me', model: 'sonnet', max_attempts: 1 });
   await drain();

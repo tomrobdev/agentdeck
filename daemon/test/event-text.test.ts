@@ -24,6 +24,8 @@ test('the person variant shows the reason beside the sentence, except where the 
   assert.deepEqual(person('pr', null, 'opened https://x/pull/1'), { text: 'pull request opened https://x/pull/1' });
   assert.deepEqual(person('pr', null, 'PR is merged'), { text: 'pull request merged' });
   assert.deepEqual(person('pr'), { text: 'pull request changed' });
+  const why = 'runs on opus, up from sonnet, after the turn limit';
+  assert.deepEqual(person('escalate', 'queued', why), { text: 'moved the next attempt to a stronger model', reason: why });
 });
 
 test('the person variant reads merge reasons', () => {
