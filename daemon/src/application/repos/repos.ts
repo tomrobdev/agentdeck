@@ -2,8 +2,6 @@
 import { normalizeNetwork, settingsPath } from '../../domain/runs/index.ts';
 import { existsSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
-import { deleteGoals, goalsPath, readGoals, writeGoals } from '../../adapters/goals.ts';
-import { removeFiles } from '../../adapters/run-log.ts';
 import type { App } from '../ports/app.ts';
 import { autoMergeMaxLinesError } from '../../domain/landing/index.ts';
 import { MERGE_METHODS, type MergeMethod, PR_MODES, type PrMode, type Repo, isMergeMethod } from '../../domain/repos/index.ts';
@@ -56,7 +54,7 @@ export async function addRepo(
 
 export function repoDetail(app: App, nameOrId: string | number) {
   const repo = requireRepo(app, nameOrId);
-  return { ...repoView(repo), goals: readGoals(repo), goals_path: goalsPath(repo), planner_runs: app.plannerRuns(repo.id, 5) };
+  return { ...repoView(repo), goals: app.goals.read(repo), goals_path: app.goals.path(repo), planner_runs: app.plannerRuns(repo.id, 5) };
 }
 
 export interface RepoPatch {
@@ -105,7 +103,7 @@ export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch
   if (base_branch === '') throw new ActionError('base_branch cannot be empty');
   if (goals !== undefined) {
     refuse(goalsError(goals));
-    writeGoals(repo, goals);
+    app.goals.write(repo, goals);
   }
   app.updateRepo(repo.id, {
     ...(auto_approve !== undefined ? { auto_approve } : {}),
@@ -192,9 +190,9 @@ export async function deleteRepo(app: App, nameOrId: string | number): Promise<{
     }
   }
   const logs = [...run_logs, ...planner_logs];
-  leftover.push(...removeFiles([...logs, ...logs.map(settingsPath)]));
+  leftover.push(...app.runLog.removeFiles([...logs, ...logs.map(settingsPath)]));
   try {
-    deleteGoals(repo);
+    app.goals.delete(repo);
   } catch (err) {
     leftover.push(`goals file: ${err instanceof Error ? err.message : String(err)}`);
   }

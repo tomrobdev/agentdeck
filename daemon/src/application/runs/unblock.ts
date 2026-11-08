@@ -1,6 +1,5 @@
 // The unblock run of a blocked task: claude reads why the task stopped, then the daemon queues it again with the run's
 // note or leaves it blocked with the run's question. It takes a slot and uses no attempt (domain/runs/unblock.ts).
-import { writeEvent } from '../../adapters/run-log.ts';
 import type { App } from '../ports/app.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import type { PromptPlan } from '../../domain/runs/index.ts';
@@ -60,7 +59,7 @@ async function runOpened(app: App, task: BlockedTask, opened: OpenedRun): Promis
   try {
     plan = planForRun(app, task);
   } catch (err) {
-    writeEvent(log, { type: 'agentdeck_error', text: `read plan: ${errorMessage(err)}` });
+    app.runLog.event(log, { type: 'agentdeck_error', text: `read plan: ${errorMessage(err)}` });
   }
   const lastWork = app.runsForTask(task.id).findLast((r) => r.kind === 'work');
   const prompt = buildUnblockPrompt(task, {
@@ -82,7 +81,7 @@ async function runOpened(app: App, task: BlockedTask, opened: OpenedRun): Promis
   try {
     await app.workspace.commit(wt.path, leftoversMessage(task));
   } catch (err) {
-    writeEvent(log, { type: 'agentdeck_error', text: `commit leftovers: ${errorMessage(err)}` });
+    app.runLog.event(log, { type: 'agentdeck_error', text: `commit leftovers: ${errorMessage(err)}` });
   }
 
   const { end, fields } = ran;
@@ -96,7 +95,7 @@ async function runOpened(app: App, task: BlockedTask, opened: OpenedRun): Promis
   }
   // Read again: a blocked task's attempts don't change, but a person may have edited max_attempts meanwhile.
   const decision = unblockDecision(parseUnblock(end.result.result), app.getTask(task.id) ?? task);
-  writeEvent(log, {
+  app.runLog.event(log, {
     type: 'agentdeck_unblock',
     text: 'retry' in decision ? `Retried with a note: ${decision.retry}` : `Asked a question: ${decision.ask.question}`,
   });

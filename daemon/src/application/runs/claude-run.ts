@@ -1,7 +1,6 @@
 // The sequence every task-bound claude run shares: log, run row, settings, the process, and what its end means.
 import { createWriteStream, type WriteStream } from 'node:fs';
 import { join } from 'node:path';
-import { closeLog, writeEvent, writeSettings } from '../../adapters/run-log.ts';
 import { LOG_DIR, ensureDirs } from '../../config.ts';
 import type { App } from '../ports/app.ts';
 import type { RunId } from '../../domain/shared/index.ts';
@@ -18,9 +17,9 @@ import { lastLine } from '../../domain/shared/index.ts';
  * Write the sandbox and file-rule settings for a claude run in `worktree` (docs/adr/0001-worker-sandbox.md)
  * next to its log, and return their path for `--settings`.
  */
-export function runSettings(repo: Repo, worktree: string, logPath: string): string {
+export function runSettings(app: App, repo: Repo, worktree: string, logPath: string): string {
   const path = settingsPath(logPath);
-  writeSettings(path, workerSettings({ worktree, sandbox: repo.sandbox, network: repo.network }));
+  app.runLog.writeSettings(path, workerSettings({ worktree, sandbox: repo.sandbox, network: repo.network }));
   return path;
 }
 
@@ -50,7 +49,7 @@ export function openTaskRun(app: App, task: Task, kind: RunKind): OpenedRun {
 export async function endTaskRun(app: App, opened: OpenedRun, outcome: Outcome, reason?: string, fields: Partial<Run> = {}): Promise<void> {
   if (opened.ended) return;
   opened.ended = true;
-  await closeLog(opened.log);
+  await app.runLog.close(opened.log);
   app.finishRun(opened.runId, { ...fields, outcome, ...(reason && !fields.result_text ? { result_text: reason } : {}) });
 }
 
@@ -94,7 +93,7 @@ export async function startTaskRun(
   const opened = opts.opened ?? openTaskRun(app, task, opts.kind);
   const { runId, logPath, log } = opened;
   const { repo, worktree, resume } = opts;
-  const settings = runSettings(repo, worktree, logPath);
+  const settings = runSettings(app, repo, worktree, logPath);
   // Local to this run, not module state: the live state goes to the run row, where the queue reads it.
   let live = START_LIVE;
   const allowed = allowedTools(repo, await app.workspace.rootInfo(worktree));
@@ -119,11 +118,11 @@ export async function startTaskRun(
     });
   let run: ClaudeRun;
   if (resume) {
-    writeEvent(log, { type: 'agentdeck_resume', session_id: resume.session });
+    app.runLog.event(log, { type: 'agentdeck_resume', session_id: resume.session });
     run = await start(resume.prompt, resume.session, resume.maxTurns);
     if (resumeFailed(run)) {
       const why = run.stderr.trim() ? lastLine(run.stderr) : `claude exited with code ${run.exitCode}`;
-      writeEvent(log, { type: 'agentdeck_resume_failed', session_id: resume.session, text: `${why}; starting afresh` });
+      app.runLog.event(log, { type: 'agentdeck_resume_failed', session_id: resume.session, text: `${why}; starting afresh` });
       run = await start(opts.prompt, null);
     }
   } else {

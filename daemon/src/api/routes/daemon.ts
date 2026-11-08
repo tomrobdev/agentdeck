@@ -37,8 +37,8 @@ export function routes({ db, daemon, changes }: ApiContext): Route[] {
     route<C.Status>('POST', /^\/api\/resume$/, () => (actions.setPaused(db, false), actions.status(db, daemon.info))),
     route<C.RestartResult>('POST', /^\/api\/daemon\/restart$/, () => actions.restartDaemon(db, daemon.requestRestart)),
     route<C.DaemonHealth>('GET', /^\/api\/daemon\/health$/, () => actions.daemonReport(db)),
-    route<C.RestartNowResult>('POST', /^\/api\/daemon\/restart-now$/, () => actions.restartNow(db, actions.restart)),
-    route<C.ServiceStatus>('GET', /^\/api\/service$/, () => actions.serviceStatus()),
+    route<C.RestartNowResult>('POST', /^\/api\/daemon\/restart-now$/, () => actions.restartNow(db, () => actions.restartService(db))),
+    route<C.ServiceStatus>('GET', /^\/api\/service$/, () => actions.serviceStatus(db)),
     route<C.TestNotifyResult>('POST', /^\/api\/notify\/test$/, async () => (await actions.sendTestNotification(db), { ok: true })),
     route<C.AppSeenResult>('POST', /^\/api\/app\/seen$/, () => actions.appSeen(db)),
   ];

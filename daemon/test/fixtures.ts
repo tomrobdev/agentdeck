@@ -1,6 +1,7 @@
 // Tasks in a given state, built the way the daemon builds them: through claim, applyEvent, recordPr and recordMerge.
 // A state a fixture cannot reach through those calls fails an assertion here, so tests cannot depend on one.
 import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
 import type { RepoId, TaskId } from '../src/domain/shared/id.ts';
 import type { App, Ports } from '../src/application/ports/app.ts';
 import type { openDb } from '../src/db/index.ts';
@@ -25,6 +26,15 @@ const lazy = <T extends object>(load: (compose: Awaited<ReturnType<typeof real>>
         (load(await real()) as any)[name](...args),
   });
 
+/** Like `lazy`, for a port whose methods are synchronous: the real adapter is loaded with `require`. */
+const lazySync = <T extends object>(load: (compose: Awaited<ReturnType<typeof real>>) => T): T =>
+  new Proxy({} as T, {
+    get:
+      (_, name: string) =>
+      (...args: unknown[]) =>
+        (load(createRequire(import.meta.url)('../src/compose.ts')) as any)[name](...args),
+  });
+
 /**
  * The ports a test's App gets unless it hands in its own (the in-memory fakes in `fakes.ts`): the real adapters.
  * Workspace has no fake: tests run it on real git in a temporary folder.
@@ -33,6 +43,12 @@ const testPorts = (): Ports => ({
   agent: lazy((c) => c.realAgent()),
   codeHost: lazy((c) => c.realCodeHost()),
   workspace: lazy((c) => c.realWorkspace()),
+  notifier: lazy((c) => c.realNotifier()),
+  service: lazy((c) => c.realService()),
+  // These are called without awaiting, so they load the real adapter synchronously on first use.
+  runLog: lazySync((c) => c.realRunLog()),
+  processes: lazySync((c) => c.realProcesses()),
+  goals: lazySync((c) => c.realGoals()),
 });
 
 /**
