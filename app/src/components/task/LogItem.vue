@@ -1,5 +1,18 @@
 <script setup lang="ts">
-import { type CallItem, type Item, changeLines, firstLine, offsetLabel, pending } from '../../lib/transcript';
+import {
+  type CallItem,
+  type Item,
+  type ToolKind,
+  TOOL_ICONS,
+  changeLines,
+  firstLine,
+  offsetLabel,
+  outputParts,
+  pending,
+  readRange,
+  resultHidden,
+  toolKind,
+} from '../../lib/transcript';
 import { parseAnsi } from '../../lib/ansi';
 import Markdown from '../files/Markdown.vue';
 import Delta from '../ui/Delta.vue';
@@ -12,12 +25,28 @@ const props = defineProps<{
   live: boolean;
   repoPath: (file: string | undefined) => string | null;
   isPath?: (p: string) => boolean;
+  /** Cuts the worktree's root from an output; absent when the worktree is gone. */
+  cut?: (text: string) => string;
 }>();
 const emit = defineEmits<{ file: [path: string]; path: [path: string, line: number | null] }>();
 
 const ANSI = ['#6e7681', 'var(--failed)', 'var(--done)', '#d29922', 'var(--running)', '#bc8cff', '#39c5cf', 'inherit'];
 const gutter = (at: string | undefined) => offsetLabel(props.first, at);
 const isSubagent = (c: CallItem) => c.call.name === 'Task' || c.call.name === 'Agent';
+const TONE: Record<ToolKind, string> = {
+  read: 'text-tool-read',
+  edit: 'text-tool-edit',
+  command: 'text-tool-cmd',
+  agent: 'text-muted',
+  other: 'text-muted',
+};
+const cutText = (t: string) => (props.cut ? props.cut(t) : t);
+const parts = (c: CallItem) =>
+  outputParts(cutText(c.result!.output), {
+    grep: c.call.name === 'Grep' ? c.call.input : undefined,
+    file: props.repoPath(c.call.file),
+    isPath: props.isPath,
+  });
 </script>
 
 <template>
@@ -27,6 +56,7 @@ const isSubagent = (c: CallItem) => c.call.name === 'Task' || c.call.name === 'A
       <!-- claude's text -->
       <Markdown
         v-if="item.type === 'plain' && item.entry.kind === 'text'"
+        class="text-text"
         :text="item.entry.text"
         :is-path="isPath"
         @path="(p, l) => emit('path', p, l)"
@@ -34,8 +64,9 @@ const isSubagent = (c: CallItem) => c.call.name === 'Task' || c.call.name === 'A
 
       <!-- a run of reads -->
       <details v-else-if="item.type === 'explored'">
-        <summary class="cursor-pointer text-muted">
-          <b class="font-semibold text-running">◦</b> Explored {{ item.calls.length }} files
+        <summary class="disclose text-sm text-muted">
+          <span class="chev">›</span> <b class="font-semibold text-tool-read">{{ TOOL_ICONS.read }}</b> Explored
+          {{ item.calls.length }} files
         </summary>
         <LogItem
           :items="item.calls"
@@ -43,6 +74,7 @@ const isSubagent = (c: CallItem) => c.call.name === 'Task' || c.call.name === 'A
           :live="live"
           :repo-path="repoPath"
           :is-path="isPath"
+          :cut="cut"
           @file="(p) => emit('file', p)"
           @path="(p, l) => emit('path', p, l)"
         />
@@ -50,16 +82,18 @@ const isSubagent = (c: CallItem) => c.call.name === 'Task' || c.call.name === 'A
 
       <!-- a tool call and what came back -->
       <template v-else-if="item.type === 'call'">
-        <code class="flex items-baseline gap-1.5 text-muted">
+        <code class="flex items-baseline gap-1.5 text-sm text-muted">
           <span
             v-if="pending(item, live)"
             class="inline-block size-2.5 flex-none animate-spin rounded-full border border-running border-t-transparent"
           />
-          <b v-else class="font-semibold" :class="item.result && !item.result.ok ? 'text-failed' : 'text-running'">●</b>
+          <b v-else class="font-semibold" :class="item.result && !item.result.ok ? 'text-failed' : TONE[toolKind(item.call.name)]">{{
+            TOOL_ICONS[toolKind(item.call.name)]
+          }}</b>
           <b class="font-semibold text-text">{{ item.call.name }}</b>
           <button
             v-if="repoPath(item.call.file)"
-            class="btn-ghost flex-none text-accent underline"
+            class="btn-ghost flex-none text-text underline"
             :title="`Open ${repoPath(item.call.file)}`"
             @click="emit('file', repoPath(item.call.file)!)"
           >
@@ -69,7 +103,7 @@ const isSubagent = (c: CallItem) => c.call.name === 'Task' || c.call.name === 'A
           <Delta v-if="item.call.change" class="text-xs" :add="item.call.change.added" :del="item.call.change.removed" />
         </code>
         <details v-if="item.call.change" class="ml-4">
-          <summary class="cursor-pointer text-sm text-muted">▸ diff</summary>
+          <summary class="disclose text-sm text-muted"><span class="chev">›</span> diff</summary>
           <pre class="my-1 max-h-65 overflow-auto text-sm"><span
             v-for="(l, i) in changeLines(item.call.change)"
             :key="i"
@@ -77,18 +111,27 @@ const isSubagent = (c: CallItem) => c.call.name === 'Task' || c.call.name === 'A
             :class="l.sign === '+' ? 'text-done' : 'text-failed'"
           >{{ l.sign }} {{ l.text }}</span></pre>
         </details>
-        <div v-if="item.result" class="ml-4 text-sm" :class="item.result.ok ? 'text-muted' : 'text-failed'">
-          <details v-if="item.result.lines > 1" class="group" :open="!item.result.ok">
-            <summary class="cursor-pointer truncate">
-              <span class="group-open:hidden">{{ firstLine(item.result.output) }}</span> ▸ {{ item.result.lines }} lines
+        <div v-if="item.result && !resultHidden(item)" class="ml-4 text-sm" :class="item.result.ok ? 'text-muted' : 'text-failed'">
+          <details v-if="item.result.lines > 1" :open="!item.result.ok">
+            <summary class="disclose truncate">
+              <span class="chev">›</span>
+              <span v-if="readRange(item)">{{ readRange(item) }}</span>
+              <template v-else>
+                <span class="when-closed">{{ firstLine(cutText(item.result.output)) }}</span> · {{ item.result.lines }} lines
+              </template>
             </summary>
-            <pre class="my-1 max-h-65 overflow-auto whitespace-pre-wrap">{{ item.result.output }}</pre>
+            <pre class="my-1 max-h-65 overflow-auto whitespace-pre [tab-size:4]"><template v-for="(p, i) in parts(item)" :key="i"><button
+              v-if="p.path"
+              class="btn-ghost text-accent underline"
+              :title="`Open ${p.path}`"
+              @click="emit('path', p.path, p.line ?? null)"
+            >{{ p.text }}</button><span v-else :class="p.conflict ? 'text-blocked' : undefined">{{ p.text }}</span></template></pre>
           </details>
-          <div v-else class="truncate">{{ firstLine(item.result.output) || '(no output)' }}</div>
+          <div v-else class="truncate">{{ readRange(item) || firstLine(cutText(item.result.output)) || '(no output)' }}</div>
         </div>
         <details v-if="item.children.length" class="ml-4 border-l border-border pl-2" open>
-          <summary class="cursor-pointer text-sm text-muted">
-            {{ isSubagent(item) ? 'Subagent' : 'Nested' }} · {{ item.children.length }} steps
+          <summary class="disclose text-sm text-muted">
+            <span class="chev">›</span> {{ isSubagent(item) ? 'Subagent' : 'Nested' }} · {{ item.children.length }} steps
           </summary>
           <LogItem
             :items="item.children"
@@ -96,6 +139,7 @@ const isSubagent = (c: CallItem) => c.call.name === 'Task' || c.call.name === 'A
             :live="live"
             :repo-path="repoPath"
             :is-path="isPath"
+            :cut="cut"
             @file="(p) => emit('file', p)"
             @path="(p, l) => emit('path', p, l)"
           />
@@ -108,7 +152,8 @@ const isSubagent = (c: CallItem) => c.call.name === 'Task' || c.call.name === 'A
           result: {{ item.entry.subtype }} · {{ item.entry.turns }} turns
         </div>
         <details v-else-if="item.entry.kind === 'setup' || item.entry.kind === 'tests'" :open="!item.entry.passed">
-          <summary class="cursor-pointer" :class="item.entry.passed ? 'text-done' : 'text-failed'">
+          <summary class="disclose" :class="item.entry.passed ? 'text-done' : 'text-failed'">
+            <span class="chev">›</span>
             <template v-if="item.entry.kind === 'setup'">Setup {{ item.entry.passed ? 'done' : 'failed' }}: {{ item.entry.cmd }}</template>
             <template v-else>Tests {{ item.entry.passed ? 'passed' : 'failed' }}</template>
           </summary>
