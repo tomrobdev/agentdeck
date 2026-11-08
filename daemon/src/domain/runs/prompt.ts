@@ -207,16 +207,17 @@ export function buildResolvePrompt(task: Pick<Task, 'id' | 'title' | 'prompt'>, 
  * `settings` is the run's settings file (sandbox and worktree-only file rules, domain/runs/translate/sandbox.ts). `resume` is a
  * claude session to continue (`resumableSession`), with `maxTurns` the turns it has left (`resumeMaxTurns`); everything
  * else, the system prompt and tool rules included, is the same as for a fresh run. `systemPrompt` is the worker's unless
- * the run is another kind (an unblock run ends with UNBLOCK lines, not a STATUS line).
+ * the run is another kind (an unblock run ends with UNBLOCK lines, not a STATUS line). `run.model` is the model the run
+ * starts with (`runModel`: the task's for a work run, the support model for the others).
  */
 export function claudeArgs(
-  task: Task,
+  run: { model: string; max_turns: number },
   allowed: string[],
   prompt: string,
   testCmd: string | null,
   settings: string,
   resume: string | null = null,
-  maxTurns: number = task.max_turns,
+  maxTurns: number = run.max_turns,
   systemPrompt: string = workerSystemPrompt(testCmd),
 ): string[] {
   return [
@@ -229,7 +230,7 @@ export function claudeArgs(
     'stream-json',
     '--verbose',
     '--model',
-    task.model,
+    run.model,
     '--max-turns',
     String(maxTurns),
     '--permission-mode',

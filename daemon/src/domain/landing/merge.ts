@@ -79,6 +79,23 @@ export function parseJobSteps(json: string): JobStep[] {
     }));
 }
 
+/** A PR `gh pr list --head <branch>` lists. */
+export interface BranchPr {
+  url: string;
+  state: Exclude<PrState, 'failed'>;
+}
+
+/** Read `gh pr list --head <branch> --state all --json url,state`; an entry without a url or a known state is left out. */
+export function parseBranchPrs(json: string): BranchPr[] {
+  const raw = JSON.parse(json) as unknown;
+  if (!Array.isArray(raw)) throw new Error('gh pr list did not answer with a list');
+  return raw.flatMap((item) => {
+    const r = (item ?? {}) as Record<string, unknown>;
+    const state = parsePrState(String(r.state ?? ''));
+    return typeof r.url === 'string' && r.url && state && state !== 'failed' ? [{ url: r.url, state }] : [];
+  });
+}
+
 /** One fact about a PR that bears on merging it. A problem stops any merge; anything else is a warning a person may wave through. */
 export interface MergeFinding {
   kind: 'not_open' | 'lands_after' | 'conflict' | 'draft' | 'behind' | 'blocked' | 'tests_failed' | 'checks_failing' | 'checks_pending';

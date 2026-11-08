@@ -3,6 +3,7 @@ import type { App } from '../ports/app.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import { archivedRepoError, maxAttemptsError, maxTurnsError, modelError, priorityError } from '../../domain/work/index.ts';
 import { planOwnerOf } from '../../domain/work/index.ts';
+import { type ModelSource, newTaskModel } from '../../domain/work/index.ts';
 import { EDITABLE_STATUSES, RUNNING_STATUSES, type Task, defaultTitle } from '../../domain/work/index.ts';
 import { refuseWhileSyncing } from './checkout-locks.ts';
 import { newLinks } from './links.ts';
@@ -10,6 +11,7 @@ import { ActionError, flag, object, refuse, requireTask, requireTaskRepo, text, 
 import { checkFollowers } from './plans.ts';
 import { checkPlanLink, planRequest, stepList } from './plan-link.ts';
 
+/** Add a task. One without a model takes its repo's, else the default_model setting's; `model_source` says which. */
 export async function addTask(
   app: App,
   input: {
@@ -32,7 +34,7 @@ export async function addTask(
     /** File it as a proposal, waiting for a person to approve it, instead of queueing it. */
     propose?: boolean;
   },
-): Promise<Task> {
+): Promise<Task & { model_source: ModelSource }> {
   const body = object(input);
   const propose = flag(body, 'propose');
   const prompt = text(body, 'prompt', { empty: true });
@@ -55,12 +57,13 @@ export async function addTask(
   const own_plan = 'ownPlan' in checked ? checked.ownPlan : undefined;
   const owner = 'owner' in checked ? checked.owner : null;
   const linked = owner !== null || own_plan !== undefined;
-  return app.addTask({
+  const chosen = newTaskModel(model, repo, app.modelSettings().default_model);
+  const task = app.addTask({
     repo_id: repo.id,
     title: title || defaultTitle(prompt),
     prompt,
     priority,
-    model: model || undefined,
+    model: chosen.model,
     max_turns,
     max_attempts,
     links,
@@ -69,6 +72,7 @@ export async function addTask(
     plan_steps: linked && steps ? steps : null,
     status: propose ? 'proposed' : 'queued',
   });
+  return { ...task, model_source: chosen.source };
 }
 
 /**

@@ -23,6 +23,7 @@ import {
 import type { MergeMethod } from '../domain/repos/index.ts';
 import { INTERRUPTED, type RunOutcome } from '../domain/runs/index.ts';
 import {
+  DEFAULT_MODEL,
   type DomainEvent,
   type TaskEvent,
   type TaskStatus,
@@ -226,6 +227,10 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       title: string;
       prompt: string;
       priority?: number;
+      /**
+       * Required on the port (`NewTask`), so every use case decides it with `newTaskModel`; only a direct store call (a test)
+       * leaves it out and gets the default_model setting's default.
+       */
       model?: string;
       max_turns?: number;
       max_attempts?: number;
@@ -248,7 +253,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
             title: n.title,
             prompt: n.prompt,
             priority: n.priority ?? 0,
-            model: n.model ?? DEFAULTS.model,
+            model: n.model ?? DEFAULT_MODEL,
             max_turns: n.max_turns ?? DEFAULTS.maxTurns,
             max_attempts: n.max_attempts ?? DEFAULTS.maxAttempts,
             status,
@@ -614,19 +619,23 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     /**
      * Record a change to a task's PR: `pr_state` (and `pr_url` when opened) and a 'pr' history row, together.
      * Guarded on the PR state the change starts from, like every task write: an opened or failed PR replaces anything
-     * but an open one (and needs a done task), a close or a sighting only moves an open PR. A merge recorded in
-     * between is therefore never undone. Returns false if the task was not in a state the change applies to.
+     * but an open one, a close or a sighting only moves an open PR. A merge recorded in between is therefore never
+     * undone. A failure needs a done task; an opened PR does not: GitHub has it whatever the task did meanwhile (a
+     * retry while it opened), and the task's next finish finds it. Returns false if the task was not in a state the
+     * change applies to.
      */
     recordPr(id: TaskId, e: PrEvent): boolean {
-      const notOpenAndDone = and(or(isNull(tasks.pr_state), not(prOpen)), eq(tasks.status, 'done'));
+      const notOpen = or(isNull(tasks.pr_state), not(prOpen));
       const isOpen = prOpen;
       const reason = prEventReason(e);
       const guard: SQL | undefined =
-        e.type === 'opened' || e.type === 'failed'
-          ? notOpenAndDone
-          : e.type === 'closed'
-            ? isOpen
-            : and(isOpen, ne(tasks.pr_state, e.state));
+        e.type === 'opened'
+          ? notOpen
+          : e.type === 'failed'
+            ? and(notOpen, eq(tasks.status, 'done'))
+            : e.type === 'closed'
+              ? isOpen
+              : and(isOpen, ne(tasks.pr_state, e.state));
       return atomically(db, () => {
         const row = orm
           .update(tasks)

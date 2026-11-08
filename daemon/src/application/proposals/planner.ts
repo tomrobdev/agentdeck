@@ -7,6 +7,7 @@ import type { PlannerRunId, RepoId } from '../../domain/shared/index.ts';
 import { type ProposalResult, buildPlannerPrompt, plannerArgs, plannerDueReason, selectProposals } from '../../domain/proposals/index.ts';
 import type { Repo } from '../../domain/repos/index.ts';
 import { lastLine, plural } from '../../domain/shared/index.ts';
+import { newTaskModel } from '../../domain/work/index.ts';
 import { recordRateLimit, usageRecorder } from '../runs/claude-run.ts';
 import { ActionError, requireRepo } from '../shared/input.ts';
 import { notifyLater } from '../operations/notifications.ts';
@@ -72,8 +73,15 @@ async function planRepo(app: App, repo: Repo, goals: string, runId: PlannerRunId
     existing.map((t) => t.title),
     s.max_tasks,
   );
+  const { default_model } = app.modelSettings();
   const created = accepted.map((p) =>
-    app.addTask({ repo_id: repo.id, ...p, status: repo.auto_approve ? 'queued' : 'proposed', source: 'planner' }),
+    app.addTask({
+      repo_id: repo.id,
+      ...p,
+      model: newTaskModel(p.model, repo, default_model).model,
+      status: repo.auto_approve ? 'queued' : 'proposed',
+      source: 'planner',
+    }),
   );
 
   const note = out.note?.trim() || null;

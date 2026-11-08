@@ -34,6 +34,7 @@ export const realCodeHost = (): CodeHost => ({
   auth: () => github.auth(),
   push: (repoPath, branch) => github.push(repoPath, branch),
   createPr: (pr) => github.createPr(pr),
+  prsForBranch: (cwd, branch) => github.prsForBranch(cwd, branch),
   ensureLabel: (cwd, label) => github.ensureLabel(cwd, label),
   setLabel: (url, cwd, label, on) => github.setLabel(url, cwd, label, on),
   closePr: (url, cwd) => github.closePr(url, cwd),

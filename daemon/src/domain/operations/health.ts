@@ -13,6 +13,16 @@ export interface DaemonState {
   reload: ReloadState;
 }
 
+/**
+ * Why `run-once` may not start, from what answers on the API port (`running`, null for nothing): a daemon there runs the
+ * same pending follow-ups, and the follow-up lock is per process, so both would open the same PRs. Null when it may start.
+ */
+export function runOnceRefusal(running: Pick<DaemonState, 'pid' | 'commit'> | null, port: number): string | null {
+  if (!running) return null;
+  const which = `pid ${running.pid}${running.commit ? `, ${running.commit.slice(0, 7)}` : ''}`;
+  return `the agentdeck daemon is running (${which}, on port ${port}); stop it first (\`agentdeck service stop\`), or let it work the queue`;
+}
+
 export interface Check {
   name: string;
   ok: boolean;

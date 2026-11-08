@@ -140,6 +140,15 @@ test('prRetry: the first retry waits 3 minutes, each after twice the last, and t
   });
 });
 
+test('prRetry: a failure at a time that cannot be read is due at once', () => {
+  assert.deepEqual(prRetry({ count: 1, error: 'boom', at: 'not a time' }, Date.parse('2026-11-08T12:00:00Z')), {
+    state: 'due',
+    failures: 1,
+    error: 'boom',
+    next_at: null,
+  });
+});
+
 test('prOpenFailures counts the failures since the task last finished, and an opened PR starts the count again', () => {
   const row = (type: string, reason: string | null, from = 'done', to = 'done', at = '2026-11-08 12:00:00') => ({
     type: type as 'pr',

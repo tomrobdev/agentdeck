@@ -7,6 +7,7 @@ import { ATTENTION_LIMIT, headline } from '../../domain/operations/index.ts';
 import type { DaemonState } from '../../domain/operations/index.ts';
 import { type ReloadInput, reloadState, restartWait } from '../../domain/operations/index.ts';
 import type { Settings } from '../../domain/operations/index.ts';
+import { modelError } from '../../domain/work/index.ts';
 import { flag, list, number, object, refuse, text, whole } from '../shared/input.ts';
 import { startGate } from '../capacity/gate.ts';
 import { notify } from './notifications.ts';
@@ -94,6 +95,8 @@ export interface SettingsPatch {
   budget?: Partial<Budget>;
   notify?: Partial<NotifySettings>;
   planner?: Partial<PlannerSettings>;
+  default_model?: string;
+  support_model?: string;
   reload_on_change?: boolean;
 }
 
@@ -105,6 +108,11 @@ export function updateSettings(app: App, patch: SettingsPatch): Settings {
 
   next.reload_on_change = flag(body, 'reload_on_change') ?? next.reload_on_change;
   next.max_concurrent = whole(body, 'max_concurrent', validateSlots) ?? next.max_concurrent;
+  for (const key of ['default_model', 'support_model'] as const) {
+    const model = text(body, key);
+    refuse(modelError(model));
+    next[key] = model ?? next[key];
+  }
 
   const budget = section('budget');
   if (budget) {

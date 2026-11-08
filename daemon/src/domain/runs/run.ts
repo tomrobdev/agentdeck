@@ -59,6 +59,21 @@ export interface Run {
   live_turns: number; // turns so far while the run is live (domain/runs/translate/live.ts)
   live_tool: string | null; // the last tool call while the run is live, in a few words
   pid_at: string | null; // when `pid` was stored: claude started then, which can be well after `started_at` (setup, a sync)
+  /** The model the run was started with (`runModel`); null for a run from before runs recorded it, which reads as unknown. */
+  model: string | null;
+  /** The exact model id claude's init line names, such as claude-sonnet-5-5; null until it arrives. */
+  model_id: string | null;
+}
+
+/** The support model's default: the model resolve and unblock runs use unless the support_model setting says otherwise. */
+export const DEFAULT_SUPPORT_MODEL = 'sonnet';
+
+/**
+ * The model a run of `kind` starts with. A work run is an attempt at the task, so it takes the task's model; a resolve or
+ * unblock run is support work beside the task (settling conflicts, reading why it blocked), so it takes the support model.
+ */
+export function runModel(kind: RunKind, task: { model: string }, supportModel: string): string {
+  return kind === 'work' ? task.model : supportModel;
 }
 
 /**

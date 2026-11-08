@@ -45,6 +45,8 @@ export interface Repo {
   auto_merge_max_lines: number; // a PR changing more lines (additions + deletions) needs a person
   /** Path prefixes; a PR touching one needs a person. */
   auto_merge_skip: string[];
+  /** The model a new task of this repo takes when it names none; null follows the default_model setting. */
+  model: string | null;
   created_at: string;
 }
 

@@ -15,6 +15,8 @@ export interface StatRun {
   cost_usd: number;
   denials: number;
   task_status: string;
+  /** The model the run was started with; null for a run from before runs recorded it. */
+  model: string | null;
 }
 
 export interface Interval {

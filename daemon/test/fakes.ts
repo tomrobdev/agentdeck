@@ -3,7 +3,7 @@
 // adapters, on the fake claude binary, so the real process path stays covered.
 import type { Agent, AgentSession } from '../src/application/ports/agent.ts';
 import type { CodeHost } from '../src/application/ports/code-host.ts';
-import type { CreatePr, PrDetails } from '../src/domain/landing/index.ts';
+import type { BranchPr, CreatePr, PrDetails } from '../src/domain/landing/index.ts';
 import type { ClaudeResult, ClaudeRun } from '../src/domain/runs/index.ts';
 
 /** A fake agent and the sessions it was asked to run. */
@@ -24,6 +24,8 @@ export function fakeAgent(work: (session: AgentSession) => void | Promise<void> 
       sessions.push(session);
       const id = `fake-session-${sessions.length}`;
       session.onSession?.(id);
+      const model = session.args.includes('--model') ? session.args[session.args.indexOf('--model') + 1] : undefined;
+      if (model) session.onModel?.(model.startsWith('claude-') ? model : `claude-${model}-5-5`);
       await work(session);
       const end: ClaudeResult = {
         subtype: 'success',
@@ -68,9 +70,13 @@ export const READY_PR: PrDetails = {
   labels: [],
 };
 
-/** A fake code host: what each pull request looks like (`details`, by url), and a record of what was done to them. */
+/**
+ * A fake code host: what each pull request looks like (`details`, by url), the PRs GitHub lists for a branch (`branchPrs`, by
+ * branch; it does not list the ones `createPr` made), and a record of what was done to them.
+ */
 export interface FakeCodeHost extends CodeHost {
   details: Record<string, PrDetails>;
+  branchPrs: Record<string, BranchPr[]>;
   created: CreatePr[];
   pushed: { repoPath: string; branch: string }[];
   merged: { url: string; method: string; head: string }[];
@@ -81,6 +87,7 @@ export interface FakeCodeHost extends CodeHost {
 export function fakeCodeHost(): FakeCodeHost {
   const host: FakeCodeHost = {
     details: {},
+    branchPrs: {},
     created: [],
     pushed: [],
     merged: [],
@@ -92,6 +99,7 @@ export function fakeCodeHost(): FakeCodeHost {
       host.created.push(pr);
       return `https://example.test/pull/${host.created.length}`;
     },
+    prsForBranch: async (_cwd, branch) => host.branchPrs[branch] ?? [],
     ensureLabel: async () => {},
     setLabel: async () => {},
     closePr: async (url) => void host.closed.push(url),

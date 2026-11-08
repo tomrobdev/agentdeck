@@ -1,7 +1,7 @@
 // A task's history: one row per status change. Pure: no I/O.
 import type { TaskId } from '../shared/index.ts';
 import type { MergeMethod } from '../repos/index.ts';
-import { type PrOpenFailures, type PrRetry, type PrState, prRetry } from '../landing/index.ts';
+import { type BranchPr, type PrOpenFailures, type PrRetry, type PrState, prRetry } from '../landing/index.ts';
 import type { TaskEvent, TaskStatus } from './lifecycle.ts';
 
 /**
@@ -18,6 +18,18 @@ export type TaskEventType =
 /** What happened to a task's pull request. `seen` is what GitHub says about an open one. */
 export type PrEvent =
   { type: 'opened'; url: string } | { type: 'failed'; error: string } | { type: 'closed' } | { type: 'seen'; state: PrState };
+
+/**
+ * The PR events that record a PR GitHub has for the task's branch: the one `gh pr create` opened, or the one it found there
+ * already (`existingPr`). Opened, and then seen merged or closed when it is no longer open, so the task keeps its url either way.
+ */
+export const prEventsOf = (pr: BranchPr): PrEvent[] =>
+  pr.state === 'open'
+    ? [{ type: 'opened', url: pr.url }]
+    : [
+        { type: 'opened', url: pr.url },
+        { type: 'seen', state: pr.state },
+      ];
 
 /** The reason a `pr` history row records for a PR event. Readers: `isPrOpenedReason`, `prSeenState`. */
 export function prEventReason(e: PrEvent): string {

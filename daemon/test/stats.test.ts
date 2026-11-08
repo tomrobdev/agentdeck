@@ -33,6 +33,7 @@ const run = (o: Partial<StatRun>): StatRun => ({
   cost_usd: 1,
   denials: 0,
   task_status: 'done',
+  model: 'sonnet',
   ...o,
 });
 

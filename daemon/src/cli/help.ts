@@ -1,5 +1,6 @@
 import { NOTIFY_KINDS } from '../domain/operations/index.ts';
 import { DEFAULT_AUTO_MERGE_MAX_LINES, DEFAULT_AUTO_MERGE_SKIP, PR_OPEN_RETRIES } from '../domain/landing/index.ts';
+import { MODELS } from '../domain/work/index.ts';
 
 export const HELP = `agentdeck: always-on Claude Code task queue
 
@@ -27,13 +28,16 @@ Repos
   agentdeck repo set <repo> auto_merge_skip "<prefixes>"  a PR touching these paths needs a person (default "${DEFAULT_AUTO_MERGE_SKIP.join(',')}")
   agentdeck repo set <repo> sandbox on|off        run the agent's shell commands in Claude Code's sandbox (default on)
   agentdeck repo set <repo> network "<hosts>"     hosts sandboxed commands may reach, e.g. "registry.npmjs.org,github.com" ("" for none)
+  agentdeck repo set <repo> model ${MODELS.join('|')}|""  the model a new task of the repo takes when it names none
+                                                  ("" follows the default_model setting)
   agentdeck repo set <repo> tools "<rules>"       replace the tool rules workers run with, comma-separated, e.g. "Read,Edit,Bash(make *)"
                                                   ("" goes back to the defaults plus the rules detected from its toolchain)
   agentdeck goals <repo> [--file goals.md]        show (or replace) the goals the planner works from
   agentdeck propose <repo>                        run the planner now (also: repo propose, plan)
 
 Tasks
-  agentdeck add "<prompt>" --repo <name> [--title t] [--priority n] [--model sonnet] [--max-turns n] [--attempts n]
+  agentdeck add "<prompt>" --repo <name> [--title t] [--priority n] [--model ${MODELS.join('|')}] [--max-turns n] [--attempts n]
+                      without --model: the repo's model, else the default_model setting
                       [--builds-on <tasks>]     start once those tasks (12,14) are done and merged
                       [--after <tasks>]         run at once; the PR waits to merge until those tasks have landed
                       [--plan <file|task>] [--steps a,b]   carry out steps of a plan: a plan file anywhere on disk
@@ -87,17 +91,20 @@ Daemon
   agentdeck doctor [--json]     check the daemon: service, API, loaded commit, reload, stray claude processes, the log, gh;
                                   each failed check names the command that fixes it (exit 1 if any fails; works with the daemon down)
   agentdeck daemon              run the scheduler in the foreground
-  agentdeck run-once            work the queue until empty, then exit (ignores pause)
+  agentdeck run-once            work the queue until empty, then exit (ignores pause; refused while the daemon runs)
   agentdeck pause | resume
   agentdeck status
   agentdeck settings              show concurrency, usage budget and notification settings
   agentdeck set <key> <value>     max_concurrent, five_hour_max, five_hour_soft, weekly_max, pace_slack (0..1),
                                   notify_desktop (on|off), notify_events (${NOTIFY_KINDS.join(',')}), ntfy_topic, ntfy_server,
                                   planner_enabled (on|off), planner_interval_hours, planner_max_tasks, planner_model,
+                                  default_model (a new task's model when neither it nor its repo names one),
+                                  support_model (the model of resolve and unblock runs),
                                   reload_on_change (on|off): restart onto new daemon/src code once nothing is running
-  agentdeck stats [--repo r] [--since <date>] [--by week] [--json]  the pilot scorecard measures per repo: tasks done on
+  agentdeck stats [--repo r] [--since <date>] [--by week|model] [--json]  the pilot scorecard measures per repo: tasks done on
                                   the first run (with a Wilson 95% interval), permission denials per run, cost and minutes per
                                   done task, then interventions, median minutes queued, running and in review, PRs green on CI
-                                  when opened and quota spent (points of the 7-day window); --by week adds a row per week
+                                  when opened and quota spent (points of the 7-day window); --by week adds a row per week,
+                                  --by model a row per model the work runs ran on (runs from before models were recorded: unknown)
   agentdeck notify-test           send a test notification on every enabled channel
 `;
