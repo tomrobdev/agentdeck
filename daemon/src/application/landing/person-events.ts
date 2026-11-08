@@ -1,5 +1,6 @@
 // Use cases for a person's lifecycle events: approve, reject, retry, cancel and mark done. Each goes through
-// applyPersonEvent (settle.ts), which runs its follow-ups; they sit in landing/ beside it, which imports work/.
+// applyPersonEvent (settle.ts), which leaves its follow-ups in the outbox for the daemon; they sit in landing/ beside it,
+// which imports work/.
 import type { App } from '../ports/app.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import type { TaskStatus } from '../../domain/work/index.ts';

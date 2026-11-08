@@ -1158,8 +1158,8 @@ A history row with its task's title.
 | `id`          | `number`             |                    |
 | `type`        | `TaskEventType`      |                    |
 | `task_id`     | `TaskId`             |                    |
-| `from_status` | `TaskStatus \| null` | null for 'created' |
 | `to_status`   | `TaskStatus \| null` |                    |
+| `from_status` | `TaskStatus \| null` | null for 'created' |
 | `reason`      | `string \| null`     |                    |
 | `title`       | `string`             |                    |
 
@@ -1390,6 +1390,17 @@ A task's own plan with its HTML: the one stored under the task's numbered name.
 | `title`   | `string`         |         |
 | `summary` | `string \| null` |         |
 | `steps`   | `PlanStep[]`     |         |
+
+### PendingFollowUp
+
+A history row whose status change's follow-ups are still to run (the outbox): what the daemon's tick reads to run them.
+
+| Field       | Type                 | Comment |
+| ----------- | -------------------- | ------- |
+| `id`        | `number`             |         |
+| `type`      | `TaskEventType`      |         |
+| `task_id`   | `TaskId`             |         |
+| `to_status` | `TaskStatus \| null` |         |
 
 ### PersonEventText
 

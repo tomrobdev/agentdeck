@@ -41,6 +41,7 @@ const fails = {
   d_worktree_mismatch: [],
   e_attempts_insane: [],
   f_restart_timeout: [],
+  g_pr_after_crash: [],
 };
 let orphanTotal = 0,
   orphanCommitsAfterKill = 0,
@@ -169,6 +170,91 @@ for (let i = 1; i <= N; i++) {
   process.stdout.write(
     `it${i} stream=${stream} kill@${Math.round(killAt)}ms orphans=${orphans.length} drain=${drainMs}ms ${done ? '' : 'TIMEOUT'}\n`,
   );
+}
+
+// The outbox: kill the daemon between a task reaching done and its PR opening (a fake gh hangs in `pr create`), restart
+// it, and the PR opens once.
+{
+  const home = mkdtempSync(join(ROOT, 'pr-'));
+  const bin = join(home, 'bin');
+  mkdirSync(bin);
+  writeFileSync(join(bin, 'gh'), `#!/bin/sh\nexec "${process.execPath}" "${join(DAEMON, 'scripts/fake-gh.mjs')}" "$@"\n`, { mode: 0o755 });
+  const env = {
+    ...process.env,
+    AGENTDECK_HOME: home,
+    AGENTDECK_CLAUDE_BIN: FAKE,
+    AGENTDECK_NO_NOTIFY: '1',
+    FAKE_STREAM: '0',
+    FAKE_GH_DIR: home,
+    AGENTDECK_PORT: '0',
+    PATH: `${bin}:${process.env.PATH}`,
+  };
+  const origin = join(home, 'origin.git');
+  execFileSync('git', ['init', '-q', '--bare', '-b', 'main', origin]);
+  const repo = join(home, 'demo');
+  mkdirSync(repo);
+  execFileSync('git', ['init', '-q', '-b', 'main'], { cwd: repo });
+  execFileSync('git', ['config', 'user.name', 't'], { cwd: repo });
+  execFileSync('git', ['config', 'user.email', 't@t'], { cwd: repo });
+  execFileSync('git', ['commit', '-q', '--allow-empty', '-m', 'init'], { cwd: repo });
+  execFileSync('git', ['remote', 'add', 'origin', origin], { cwd: repo });
+  execFileSync('git', ['push', '-q', 'origin', 'main'], { cwd: repo });
+  const cli = (...a) => execFileSync(process.execPath, [CLI, ...a], { env, encoding: 'utf8' });
+  cli('repo', 'add', repo, '--test', 'node -e 0');
+  cli('repo', 'set', 'demo', 'pr_mode', 'ready');
+  cli('add', '--repo', 'demo', 'open my PR');
+  writeFileSync(join(home, 'gh-hang'), '');
+
+  const fail = (msg) => fails.g_pr_after_crash.push(msg);
+  const read = (fn) => {
+    const db = new DatabaseSync(join(home, 'agentdeck.db'), { readOnly: true });
+    try {
+      return fn(db);
+    } finally {
+      db.close();
+    }
+  };
+  const d1 = spawn(process.execPath, [CLI, 'run-once'], { env, stdio: 'ignore' });
+  const hanging = join(home, 'gh-hanging');
+  for (let waited = 0; !existsSync(hanging) && waited < 20_000; waited += 50) await sleep(50);
+  if (!existsSync(hanging)) {
+    d1.kill('SIGKILL');
+    fail('the daemon never reached gh pr create');
+  } else {
+    d1.kill('SIGKILL');
+    try {
+      process.kill(Number(readFileSync(hanging, 'utf8')), 'SIGKILL');
+    } catch {}
+    rmSync(join(home, 'gh-hang'));
+    await sleep(200);
+    const before = read((db) => ({
+      task: db.prepare('SELECT status, pr_url FROM tasks').get(),
+      pending: db.prepare('SELECT COUNT(*) AS n FROM task_events WHERE follow_up_pending = 1').get().n,
+    }));
+    if (before.task.status !== 'done' || before.task.pr_url) fail(`killed at the wrong moment: ${JSON.stringify(before.task)}`);
+    if (before.pending !== 1) fail(`${before.pending} pending follow-ups after the kill, not 1`);
+
+    const d2 = spawn(process.execPath, [CLI, 'run-once'], { env, stdio: ['ignore', 'pipe', 'pipe'] });
+    let d2out = '';
+    d2.stdout.on('data', (b) => (d2out += b));
+    d2.stderr.on('data', (b) => (d2out += b));
+    const exited = await Promise.race([new Promise((r) => d2.on('exit', () => r(true))), sleep(15_000).then(() => false)]);
+    writeFileSync(join(home, 'daemon2.log'), d2out);
+    if (!exited) {
+      d2.kill('SIGKILL');
+      fail('the restarted daemon did not drain');
+    }
+    const calls = readFileSync(join(home, 'gh-calls.jsonl'), 'utf8').trim().split('\n').map(JSON.parse);
+    const created = calls.filter((c) => c.kind === 'created').length;
+    if (created !== 1) fail(`the PR was opened ${created} times after the restart, not once`);
+    const after = read((db) => ({
+      task: db.prepare('SELECT status, pr_url FROM tasks').get(),
+      pending: db.prepare('SELECT COUNT(*) AS n FROM task_events WHERE follow_up_pending = 1').get().n,
+    }));
+    if (after.task.pr_url !== 'https://github.com/demo/demo/pull/1') fail(`the task's PR is ${after.task.pr_url}`);
+    if (after.pending !== 0) fail(`${after.pending} follow-ups still pending after the restart`);
+  }
+  process.stdout.write(`pr: killed between done and its PR, ${fails.g_pr_after_crash.length ? 'FAILED' : 'opened once on restart'}\n`);
 }
 
 console.log('\n=== results over', N, 'iterations ===');

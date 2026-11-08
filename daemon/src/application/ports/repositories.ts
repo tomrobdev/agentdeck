@@ -27,6 +27,7 @@ import type {
   LinkedTask,
   Needs,
   OwnPlan,
+  PendingFollowUp,
   PlanFollower,
   PlanSource,
   PrEvent,
@@ -100,12 +101,15 @@ export type RepoUpdate = Partial<
 export interface TaskRepository {
   addTask(n: NewTask): Task;
   getTask(id: TaskId): Task | undefined;
-  /** A status change: the task as it is after, and its domain events. Only application/landing/settle.ts calls it. */
+  /**
+   * A status change: the task as it is after, its domain events, and the ids of their history rows written pending (those
+   * with follow-ups). Only application/landing/settle.ts calls it.
+   */
   applyEvent: (
     id: TaskId,
     event: TaskEvent,
     opts?: { reason?: string | null; needs?: Needs | null; onlyFrom?: TaskStatus[] },
-  ) => { task: Task; events: DomainEvent[] } | undefined;
+  ) => { task: Task; events: DomainEvent[]; pending: number[] } | undefined;
   listTasks(): Task[];
   tasksForRepo(repo_id: RepoId, limit?: number): Task[];
   countOpen(repo_id: RepoId): number;
@@ -142,6 +146,9 @@ export interface TaskRepository {
 
 export interface TaskEventRepository {
   eventsForTask(task_id: TaskId): TaskEventRow[];
+  /** The outbox: history rows whose follow-ups are still to run, oldest first. */
+  pendingFollowUps(): PendingFollowUp[];
+  markFollowedUp(ids: number[]): void;
   lastEventId(): number;
   eventsAfter(after: number, upTo: number, repo_id: RepoId): (TaskEventRow & { title: string })[];
   planUnfinishedIds(): Set<number>;

@@ -14,6 +14,7 @@ import {
   MAX_RESTARTS,
   type TaskEvent,
   type TaskStatus,
+  followUpsOf,
   fromStatuses,
   nextStatus,
   transition,
@@ -149,13 +150,14 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
     id: TaskId,
     event: TaskEvent,
     opts: { reason?: string | null; needs?: Needs | null; onlyFrom?: TaskStatus[] } = {},
-  ): { task: Task; events: DomainEvent[] } | undefined => {
+  ): { task: Task; events: DomainEvent[]; pending: number[] } | undefined => {
     for (let attempt = 0; attempt < 3; attempt++) {
       const cur = getTask(id);
       if (!cur) return undefined;
       if (opts.onlyFrom && !opts.onlyFrom.includes(cur.status)) return undefined;
       const next = transition(cur, event, opts);
       if (!next) return undefined;
+      const pending: number[] = [];
       const task = atomically(db, () => {
         // Guarded on the status and on the counters the changes were computed from.
         const row = mapFound(
@@ -167,10 +169,16 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
             .get(),
           toTask,
         );
-        if (row) for (const e of next.events) recordEvent(orm, e.task_id, e.history, e.from, e.to, e.reason);
+        // An event with follow-ups is written pending, in the same transaction as the change: the outbox.
+        if (row)
+          for (const e of next.events) {
+            const followUp = followUpsOf([e]).length > 0;
+            const eventId = recordEvent(orm, e.task_id, e.history, e.from, e.to, e.reason, followUp);
+            if (followUp) pending.push(eventId);
+          }
         return row;
       });
-      if (task) return { task, events: next.events };
+      if (task) return { task, events: next.events, pending };
     }
     return undefined;
   };

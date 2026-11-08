@@ -244,6 +244,10 @@ export const MIGRATIONS: Migration[] = [
    ALTER TABLE tasks ADD COLUMN question TEXT;`,
   // 29: the planner's last run is when the repo last had tasks proposed, so planned_at is now proposed_at.
   'ALTER TABLE repos RENAME COLUMN planned_at TO proposed_at;',
+  // 30: task_events as the outbox (domain/work/follow-ups.ts). follow_up_pending is 1 while a status change's follow-ups
+  // are still to run, and the daemon's tick runs them. Every row before this step, and every row older code writes, reads
+  // 0: their follow-ups ran inline, so they never run twice.
+  'ALTER TABLE task_events ADD COLUMN follow_up_pending INTEGER NOT NULL DEFAULT 0;',
 ];
 
 /** Runs every step above the database's user_version in one transaction; returns how many ran. */

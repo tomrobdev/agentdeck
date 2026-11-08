@@ -1,5 +1,7 @@
 // Every status change and its follow-ups: the daemon's own events that end a run or a wait (settling), and a person's.
-// What follows each domain event is the table in domain/work/follow-ups.ts; this module runs it.
+// What follows each domain event is the table in domain/work/follow-ups.ts; this module runs it. task_events is the outbox:
+// a status change writes its history rows pending in the same transaction, and they are marked once their follow-ups ran,
+// so a crash between the two loses nothing. The daemon's tick runs whatever is still pending (`followUpPending`).
 import type { App } from '../ports/app.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import { finalNotification } from '../../domain/operations/index.ts';
@@ -7,10 +9,16 @@ import type { PrEvent } from '../../domain/work/index.ts';
 import type { PersonEvent, TaskEvent, TaskStatus } from '../../domain/work/index.ts';
 import type { Needs } from '../../domain/work/index.ts';
 import type { Task } from '../../domain/work/index.ts';
-import { FOLLOW_UPS, type FollowUp, followUpsOf } from '../../domain/work/index.ts';
+import { type FollowUp, followUpsOf, followUpsOfRow } from '../../domain/work/index.ts';
 import { warnStuckDependents } from '../work/dependencies.ts';
 import { notifyLater } from '../operations/notifications.ts';
 import { openPullRequest } from './open-pr.ts';
+
+/**
+ * The follow-up lock: the history rows whose follow-ups this process is running now, which `followUpPending` leaves to it.
+ * The outbox in the database is what the processes share.
+ */
+const following = new Set<number>();
 
 /**
  * Apply the daemon's `event` to task `id` and run its follow-ups (`FOLLOW_UPS`): a finished run opens the PR, and so on.
@@ -24,11 +32,13 @@ export async function settle(
 ): Promise<Task | undefined> {
   const applied = app.applyEvent(id, event, fields);
   if (!applied) return undefined;
-  return follow(app, id, followUpsOf(applied.events));
+  const to = applied.task.status;
+  return followLocked(app, applied.pending, () => follow(app, id, followUpsOf(applied.events), to));
 }
 
 /**
- * Apply a person's `event` to task `id` and run its follow-ups, none of which opens a PR, so all are done when it returns.
+ * Apply a person's `event` to task `id`. Its follow-ups, none of which opens a PR, wait in the outbox for the daemon's next
+ * tick: only the daemon runs follow-ups, so a person's event from the CLI reaches it like any other CLI change.
  * Returns the task as the change left it, or undefined if the lifecycle refused the event (or `onlyFrom` left it out).
  */
 export function applyPersonEvent(
@@ -39,15 +49,25 @@ export function applyPersonEvent(
 ): Task | undefined {
   const applied = app.applyEvent(id, event, opts);
   if (!applied) return undefined;
-  const followUps = followUpsOf(applied.events);
-  if (followUps.includes('open_pr')) throw new Error(`a person's ${event.type} cannot open a PR`);
-  followUp(app, applied.task, followUps);
+  if (followUpsOf(applied.events).includes('open_pr')) throw new Error(`a person's ${event.type} cannot open a PR`);
   return applied.task;
 }
 
-/** For tasks crash recovery failed (the database moved them itself): the follow-ups of a failed task. */
-export async function settleRecovered(app: App, ids: TaskId[]): Promise<void> {
-  for (const id of ids) await follow(app, id, FOLLOW_UPS.TaskFailed);
+/**
+ * Run the follow-ups still pending in the outbox, oldest first, and mark each row: those of a status change the daemon
+ * stopped before following up (crash recovery's among them), and a person's events. Rows this process is following up
+ * already are left to it. Each follow-up is safe to repeat: a PR already open is not opened again, and a task that has
+ * moved on since is not notified about. Returns how many rows it followed up.
+ */
+export async function followUpPending(app: App, log: (msg: string) => void = () => {}): Promise<number> {
+  const rows = app.pendingFollowUps().filter((r) => !following.has(r.id));
+  for (const r of rows) following.add(r.id);
+  for (const r of rows) {
+    await followLocked(app, [r.id], () => follow(app, r.task_id, followUpsOfRow(r), r.to_status)).catch((err) =>
+      log(`task ${r.task_id}: follow-up crashed: ${err?.stack ?? err}`),
+    );
+  }
+  return rows.length;
 }
 
 /** A PR's state changed. A closed or failed PR may strand the tasks waiting on its merge. Returns whether it applied. */
@@ -57,20 +77,32 @@ export function settlePr(app: App, id: TaskId, event: PrEvent): boolean {
   return true;
 }
 
-/** Run `followUps` for task `id`, as it is now; returns it as they leave it. */
-async function follow(app: App, id: TaskId, followUps: FollowUp[]): Promise<Task | undefined> {
+/**
+ * Run `follow` with history rows `ids` under the follow-up lock, then mark them followed up, even if it throws: a crash
+ * leaves them pending for the next tick, an error does not (it would only fail again, every tick).
+ */
+async function followLocked<T>(app: App, ids: number[], follow: () => Promise<T>): Promise<T> {
+  for (const id of ids) following.add(id);
+  try {
+    return await follow();
+  } finally {
+    app.markFollowedUp(ids);
+    for (const id of ids) following.delete(id);
+  }
+}
+
+/** Run `followUps` for task `id`, as it is now, after a change to status `to`; returns it as they leave it. */
+async function follow(app: App, id: TaskId, followUps: FollowUp[], to: TaskStatus | null): Promise<Task | undefined> {
   const task = app.getTask(id);
   if (!task) return undefined;
   // The daemon opens the PR (agents cannot push). Whatever happens, the task stays done.
   const pr = followUps.includes('open_pr') && task.status === 'done' ? await openPullRequest(app, task) : {};
-  followUp(app, task, followUps, pr);
-  return app.getTask(id);
-}
-
-/** The follow-ups after the PR: warn the tasks waiting on `task` if they are now stuck, and tell a person. */
-function followUp(app: App, task: Task, followUps: FollowUp[], pr: { url?: string; error?: string } = {}): void {
   if (followUps.includes('warn_dependents')) warnStuckDependents(app, task.id);
-  if (!followUps.includes('notify')) return;
-  const note = finalNotification(app.getTask(task.id) ?? task, app.getRepo(task.repo_id)?.name ?? '', pr);
-  if (note) notifyLater(app, note);
+  // A task that has moved on since (retried, say, before a restart ran this) is told about as it is now, not as it was.
+  const now = app.getTask(id) ?? task;
+  if (followUps.includes('notify') && now.status === to) {
+    const note = finalNotification(now, app.getRepo(task.repo_id)?.name ?? '', pr);
+    if (note) notifyLater(app, note);
+  }
+  return app.getTask(id);
 }

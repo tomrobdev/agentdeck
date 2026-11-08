@@ -10,7 +10,7 @@ import { proposeNow, plannerDue } from '../proposals/planner.ts';
 import { resolveConflicting } from '../runs/sync.ts';
 import { autoMerge } from '../landing/auto-merge.ts';
 import { MERGE_REQUEST_POLL_MS, PR_REFRESH_MS, refreshPrStates } from '../landing/refresh.ts';
-import { settle, settleRecovered } from '../landing/settle.ts';
+import { followUpPending, settle } from '../landing/settle.ts';
 import { runTask } from '../runs/worker.ts';
 import { nextUnblockable, runUnblock } from '../runs/unblock.ts';
 import type { App } from '../ports/app.ts';
@@ -54,6 +54,8 @@ export class Scheduler {
   private readonly awake: KeepAwake;
   private lastPrRefresh = 0;
   private refreshingPrs = false;
+  /** Running the follow-ups pending in the outbox; one pass at a time. */
+  private followingUp = false;
   /** The latest `pr_check_requested` this scheduler has acted on. */
   private handledPrCheck = Date.now();
   private recheckLeft = 0;
@@ -84,10 +86,10 @@ export class Scheduler {
   run(): Promise<void> {
     const reaped = this.app.processes.reapOrphans(this.app.unfinishedPids());
     if (reaped) this.opts.log(`stopped ${reaped} claude process(es) left running by a previous daemon`);
+    // Recovery's status changes wait in the outbox, with any a crash left unfollowed: the first tick runs them.
     const { requeued, failed } = this.app.recoverOrphans();
     if (requeued) this.opts.log(`requeued ${requeued} task(s) left running by a previous daemon`);
     if (failed.length) this.opts.log(`failed ${failed.length} task(s) interrupted by ${MAX_RESTARTS} daemon restarts`);
-    settleRecovered(this.app, failed).catch((err) => this.opts.log(`settling recovered tasks crashed: ${err?.stack ?? err}`));
     return new Promise((resolve) => {
       this.drained = resolve;
       this.tick();
@@ -189,14 +191,34 @@ export class Scheduler {
       this.maybeUnblock(); // after the claims: queued work comes first
       if (this.opts.autoPropose && !this.proposing && this.gate().free > 0) this.maybePropose(); // a claim above took a slot: ask again
     }
+    this.maybeFollowUp();
     this.maybeRefreshPrs();
     this.awake.set(this.running.size > 0 || this.proposing);
-    if (this.opts.once && this.running.size === 0 && !this.proposing && (reason || !this.app.hasQueued())) {
+    if (this.opts.once && this.running.size === 0 && !this.proposing && !this.followingUp && (reason || !this.app.hasQueued())) {
       this.stop();
       return;
     }
     clearTimeout(this.timer);
     this.schedule();
+  }
+
+  /**
+   * Run the follow-ups the outbox keeps: a status change's whose follow-ups a crash cut off, recovery's, and a person's
+   * from the CLI or the API. Ticks again when a pass ran some, in once mode to stop only after them.
+   */
+  private maybeFollowUp(): void {
+    if (this.followingUp || !this.app.pendingFollowUps().length) return;
+    this.followingUp = true;
+    followUpPending(this.app, this.opts.log)
+      .catch((err) => {
+        this.opts.log(`follow-ups crashed: ${err?.stack ?? err}`);
+        return 0;
+      })
+      .then((n) => {
+        this.followingUp = false;
+        // Rows a settle in this process is following up are left to it, and its run's end ticks.
+        if (n > 0 && this.opts.once) this.tick();
+      });
   }
 
   /**
