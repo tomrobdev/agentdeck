@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import type { TaskId } from '../src/domain/shared/id.ts';
+import { MAX_RESTARTS } from '../src/domain/work/lifecycle.ts';
 import { asTaskId } from './fixtures.ts';
 
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-events-'));
@@ -73,8 +74,14 @@ test('each lifecycle event records its type, from and to status and reason', () 
   cases.push(['approve', proposed, { type: 'approve' }, 'proposed', 'queued', null]);
   cases.push(['reject', proposed, { type: 'reject' }, 'proposed', 'cancelled', null]);
   cases.push(['retry', blocked, { type: 'retry' }, 'blocked', 'queued', null]);
-  cases.push(['recover', running, { type: 'recover', exhausted: false }, 'running', 'queued', 'restarted']);
-  cases.push(['recover exhausted', running, { type: 'recover', exhausted: true }, 'running', 'failed', 'restarted']);
+  // One restart short of too many: the next recover fails it.
+  const restarted = () => {
+    const id = running();
+    db.raw.prepare('UPDATE tasks SET restarts = ? WHERE id = ?').run(MAX_RESTARTS - 1, id);
+    return id;
+  };
+  cases.push(['recover', running, { type: 'recover' }, 'running', 'queued', 'restarted']);
+  cases.push(['recover exhausted', restarted, { type: 'recover' }, 'running', 'failed', 'restarted']);
 
   for (const [name, make, event, from, to, reason] of cases) {
     const id = make();
