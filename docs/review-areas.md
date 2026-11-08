@@ -52,6 +52,7 @@ The task entity, its lifecycle, and the person-facing use cases, CLI and routes.
 - daemon/src/domain/work/start.ts
 - daemon/src/domain/work/read/listing.ts
 - daemon/src/domain/work/read/files.ts
+- daemon/src/domain/work/read/since.ts
 - daemon/src/application/work/tasks.ts
 - daemon/src/application/work/task-views.ts
 - daemon/src/application/work/files.ts

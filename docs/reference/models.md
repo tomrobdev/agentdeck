@@ -1452,13 +1452,16 @@ A cancelled task, with the stop reason it had if it was blocked or failed when c
 
 ### Changes
 
-| Field      | Type            | Comment                                                                     |
-| ---------- | --------------- | --------------------------------------------------------------------------- |
-| `base_ref` | `string`        | the base branch ref the merge base was taken with, e.g. main or origin/main |
-| `base`     | `string`        |                                                                             |
-| `head`     | `string`        |                                                                             |
-| `files`    | `ChangedFile[]` |                                                                             |
-| `commits`  | `Commit[]`      | newest first                                                                |
+| Field           | Type             | Comment                                                                                                                                                          |
+| --------------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `base_ref`      | `string`         | the base branch ref the merge base was taken with, e.g. main or origin/main                                                                                      |
+| `base`          | `string`         |                                                                                                                                                                  |
+| `head`          | `string`         |                                                                                                                                                                  |
+| `since`         | `string \| null` | The commit on the branch the changes are shown since; null for the changes against the base.                                                                     |
+| `base_may_show` | `boolean`        | With `since`: true when merging the base into it conflicted, so the diff is from `since` alone and the base changes a sync brought in may show. False otherwise. |
+| `files`         | `ChangedFile[]`  |                                                                                                                                                                  |
+| `commits`       | `Commit[]`       | newest first                                                                                                                                                     |
+| `since_points`  | `SincePoint[]`   | The commits the changes can be shown since (sincePoints), whatever `since` is.                                                                                   |
 
 ### Checkout
 
@@ -1472,12 +1475,13 @@ A task's checkout: its branch and worktree, and when a sync of the branch began.
 
 ### Commit
 
-| Field     | Type     | Comment                   |
-| --------- | -------- | ------------------------- |
-| `sha`     | `string` |                           |
-| `subject` | `string` |                           |
-| `author`  | `string` |                           |
-| `at`      | `string` | ISO 8601, the author date |
+| Field          | Type     | Comment                                                                                              |
+| -------------- | -------- | ---------------------------------------------------------------------------------------------------- |
+| `sha`          | `string` |                                                                                                      |
+| `subject`      | `string` |                                                                                                      |
+| `author`       | `string` |                                                                                                      |
+| `at`           | `string` | SQLite UTC, the author date                                                                          |
+| `committed_at` | `string` | SQLite UTC, the committer date: when the commit was made on this branch (a rebase or amend moves it) |
 
 ### Dependency
 
@@ -1813,6 +1817,37 @@ A task's link to a plan: the task whose plan it follows (itself when its own pla
 | `paused`             | `boolean`        |                                                                     |
 | `rate_limited_until` | `number \| null` | Unix seconds; in the past (or null) once the rate limit has lifted. |
 | `governor`           | `Decision`       |                                                                     |
+
+### ReviewRead
+
+What sincePoints reads of a review.
+
+| Field          | Type             | Comment |
+| -------------- | ---------------- | ------- |
+| `by`           | `string`         |         |
+| `submitted_at` | `string \| null` |         |
+| `head_commit`  | `string \| null` |         |
+
+### RunTimes
+
+What attemptEnds reads of a run.
+
+| Field      | Type             | Comment |
+| ---------- | ---------------- | ------- |
+| `kind`     | `string`         |         |
+| `attempt`  | `number`         |         |
+| `ended_at` | `string \| null` |         |
+
+### SincePoint
+
+A commit on the task's branch the changes can be shown since.
+
+| Field     | Type             | Comment                                                 |
+| --------- | ---------------- | ------------------------------------------------------- |
+| `kind`    | `SinceKind`      |                                                         |
+| `sha`     | `string`         |                                                         |
+| `attempt` | `number \| null` | The attempt it is the end of; null for a review.        |
+| `at`      | `string`         | When: the review's submit or the run's end, SQLite UTC. |
 
 ### StateFields
 

@@ -19,6 +19,7 @@ export type {
   Changes,
   ChangedFile,
   Commit,
+  SincePoint,
   Decision,
   DaemonHealth,
   DaemonState,

@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import { after, test } from 'node:test';
 import { attemptEnds, sincePoints } from '../src/domain/work/read/since.ts';
 import type { TaskId } from '../src/domain/shared/id.ts';
+import { SINCE_BASE, shownSince, sinceKey, sinceLabel } from '../../app/src/lib/since.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-since-'));
 process.env.AGENTDECK_HOME = home;
@@ -121,6 +122,18 @@ test('sincePoints: the last person review first, then earlier attempts newest fi
     [],
     'a review of a commit no longer on the branch offers nothing',
   );
+});
+
+test('shownSince: the pick while it is offered, else the last review, else the base', () => {
+  const reviewPoint = { kind: 'review' as const, sha: 'r', attempt: null, at: '2026-11-01 11:40:00' };
+  const run1 = { kind: 'attempt' as const, sha: 'c1', attempt: 1, at: '2026-11-01 10:30:00' };
+  assert.equal(shownSince([reviewPoint, run1], null), reviewPoint, 'opens on the last review');
+  assert.equal(shownSince([run1], null), null, 'with no review behind the head, opens on the base');
+  assert.equal(shownSince([reviewPoint, run1], SINCE_BASE), null);
+  assert.equal(shownSince([reviewPoint, run1], sinceKey(run1)), run1);
+  assert.equal(shownSince([reviewPoint], 'attempt-1'), reviewPoint, 'a pick no longer offered falls back');
+  assert.equal(sinceKey(reviewPoint), 'review');
+  assert.equal(sinceLabel(run1), 'Since the end of run 1');
 });
 
 // ---- On a real repo

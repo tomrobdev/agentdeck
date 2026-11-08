@@ -20,10 +20,12 @@ export const queryKeys = {
   planHtml: (id: number, planId: number, updatedAt: string) => ['task', id, 'plan', planId, updatedAt] as const,
   reviews: (id: number) => ['task', id, 'reviews'] as const,
   changes: (id: number) => ['task', id, 'changes'] as const,
+  /** Under `changes`, so what refreshes the changes refreshes these too; by head, so a new commit fetches them afresh. */
+  changesSince: (id: number, since: string, head: string | null) => ['task', id, 'changes', since, head] as const,
   // Git objects at a commit never change, so these start with 'at' and the commit (null while it is unknown).
   tree: (id: number, ref: FileRef, path: string, commit: string | null) => ['at', commit, 'tree', id, ref, path] as const,
   file: (id: number, ref: FileRef, path: string, commit: string | null) => ['at', commit, 'file', id, ref, path] as const,
-  diff: (id: number, path: string, head: string | null) => ['at', head, 'diff', id, path] as const,
+  diff: (id: number, path: string, head: string | null, since: string | null) => ['at', head, 'diff', id, path, since] as const,
 };
 
 /** True for a query keyed by a known commit: its data is final, so a write's refresh leaves it alone. */
@@ -74,6 +76,14 @@ export const treeQuery = (id: number, ref: FileRef, path: string, commit: string
   queryOptions({ queryKey: queryKeys.tree(id, ref, path, commit), queryFn: () => api.tree(id, ref, path), staleTime: atCommit(commit) });
 export const fileQuery = (id: number, ref: FileRef, path: string, commit: string | null) =>
   queryOptions({ queryKey: queryKeys.file(id, ref, path, commit), queryFn: () => api.file(id, ref, path), staleTime: atCommit(commit) });
-export const diffQuery = (id: number, path: string, head: string | null) =>
-  queryOptions({ queryKey: queryKeys.diff(id, path, head), queryFn: () => api.diff(id, path), staleTime: atCommit(head) });
+/** The task's changes since a commit on its branch, at the head the changes against the base were read at. */
+export const changesSinceQuery = (id: number, since: string, head: string | null) =>
+  queryOptions({ queryKey: queryKeys.changesSince(id, since, head), queryFn: () => api.changes(id, since) });
+/** One file's patch at the head, against the base or since a commit on the branch. */
+export const diffQuery = (id: number, path: string, head: string | null, since: string | null = null) =>
+  queryOptions({
+    queryKey: queryKeys.diff(id, path, head, since),
+    queryFn: () => api.diff(id, path, since),
+    staleTime: atCommit(head),
+  });
 export const reviewsQuery = (id: number) => queryOptions({ queryKey: queryKeys.reviews(id), queryFn: () => api.reviews(id) });
