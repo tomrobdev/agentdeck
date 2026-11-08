@@ -235,6 +235,8 @@ export function claudeArgs(
     String(maxTurns),
     '--permission-mode',
     'dontAsk',
+    // No MCP servers or connectors from the person's own config: a run's tools are the same on every machine.
+    '--strict-mcp-config',
     // One argv entry per rule: patterns like "Bash(npm test*)" contain spaces.
     '--allowedTools',
     // Edit and Write come from the settings file, limited to the worktree.
