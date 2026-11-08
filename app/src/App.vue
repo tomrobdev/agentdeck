@@ -33,6 +33,7 @@ import MergeDialog from './components/task/MergeDialog.vue';
 import AppProvider from './components/ui/AppProvider.vue';
 import CommandPalette from './components/ui/CommandPalette.vue';
 import Toaster, { type ToastItem } from './components/ui/Toaster.vue';
+import { useOpenNext } from './composables/useOpenNext';
 import { go, openTask, parseAppUrl, route, taskUrl } from './router';
 import { type PersonEvent, openingTab } from './lib/taskView';
 import { paletteItems } from './lib/palette';
@@ -114,10 +115,18 @@ function openFromQueue(id: number) {
 }
 // The command palette (⌘K). It lists the selected task's actions first; what each task allows is the daemon's rule (lib/palette.ts).
 const merging = ref<number | null>(null);
-async function onMerged(result: MergeResult) {
+const { nextAfter, openNext } = useOpenNext();
+async function onMerged(result: MergeResult, next: boolean) {
+  const id = merging.value;
   merging.value = null;
+  if (next && id !== null) openNext(id);
   await refresh();
   if (result.cleanup_error) flash(`Merged, but cleanup failed: ${result.cleanup_error}`);
+}
+function onRequested(next: boolean) {
+  const id = merging.value;
+  merging.value = null;
+  if (next && id !== null) openNext(id);
 }
 const selectedTask = computed(
   () => tasks.value.find((t) => t.id === selectedId.value) ?? (detail.value?.id === selectedId.value ? detail.value : null),
@@ -253,7 +262,14 @@ function onCreated(task: Detail) {
       <SettingsPanel v-if="modal === 'settings'" :notifications="status?.notifications ?? []" @close="modal = null" />
       <DaemonPanel v-if="modal === 'daemon'" @close="modal = null" />
 
-      <MergeDialog v-if="merging !== null" :task-id="merging" @close="merging = null" @merged="onMerged" @requested="merging = null" />
+      <MergeDialog
+        v-if="merging !== null"
+        :task-id="merging"
+        :has-next="!!nextAfter(merging)"
+        @close="merging = null"
+        @merged="onMerged"
+        @requested="onRequested"
+      />
       <CommandPalette v-if="palette" :items="paletteRows" @close="palette = false" />
 
       <Toaster :toasts="toasts" @close="closeToast" />

@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { type MergeResult, type TaskDetail, api, describePrRetry } from '../../api';
 import { canFixChecks, canOpenPr, canStartMerge, isReview, personEvents } from '../../lib/taskView';
 import { useAction, useActions } from '../../composables/useActions';
+import { useOpenNext } from '../../composables/useOpenNext';
 import ConfirmDialog from '../ui/ConfirmDialog.vue';
 import MarkDoneDialog from './MarkDoneDialog.vue';
 import MergeDialog from './MergeDialog.vue';
@@ -45,10 +46,16 @@ async function submitMarkDone(doneNote: string) {
 }
 
 const merging = ref(false);
-async function onMerged(result: MergeResult) {
+const { nextAfter, openNext } = useOpenNext();
+async function onMerged(result: MergeResult, next: boolean) {
   merging.value = false;
+  if (next) openNext(props.task.id);
   await refresh();
   if (result.cleanup_error) flash(`Merged, but cleanup failed: ${result.cleanup_error}`);
+}
+function onRequested(next: boolean) {
+  merging.value = false;
+  if (next) openNext(props.task.id);
 }
 </script>
 
@@ -87,7 +94,14 @@ async function onMerged(result: MergeResult) {
   </div>
 
   <MarkDoneDialog v-if="markingDone" :task="task" with-note :busy="pending" @close="markingDone = false" @confirm="submitMarkDone" />
-  <MergeDialog v-if="merging" :task-id="task.id" @close="merging = false" @merged="onMerged" @requested="merging = false" />
+  <MergeDialog
+    v-if="merging"
+    :task-id="task.id"
+    :has-next="!!nextAfter(task.id)"
+    @close="merging = false"
+    @merged="onMerged"
+    @requested="onRequested"
+  />
 
   <ConfirmDialog
     v-if="closing"

@@ -5,9 +5,11 @@ import { plural } from '../../../../daemon/src/domain/shared/index.ts';
 import { useActions } from '../../composables/useActions';
 import { useFilePatches } from '../../composables/useFilePatches';
 import { useFileText } from '../../composables/useFileText';
+import { useHotkeys } from '../../composables/useHotkeys';
 import { useReviews } from '../../composables/useReviews';
 import { useViewed } from '../../composables/useViewed';
 import { changedTree } from '../../lib/changedTree';
+import { openCommentOrder, stepFrom } from '../../lib/reviewNav';
 import { loadSetting, saveSetting } from '../../lib/storage';
 import FileTree from '../files/FileTree.vue';
 import Checkbox from '../ui/Checkbox.vue';
@@ -24,7 +26,7 @@ const head = computed(() => props.changes?.head ?? null);
 
 // Line comments go into the task's draft review (started with the first one); the review bar submits it.
 const { run } = useActions();
-const { byPath, openPaths } = useReviews(taskId);
+const { byPath, openPaths, comments } = useReviews(taskId);
 function addComment(path: string, line: Pick<NewReviewComment, 'side' | 'line'>, body: string) {
   const head = props.changes?.head;
   if (!head) return Promise.resolve(false);
@@ -81,6 +83,36 @@ async function jump(path: string) {
   await nextTick();
   document.querySelector(`[data-path="${CSS.escape(path)}"]`)?.scrollIntoView({ block: 'start' });
 }
+
+// Keys: j and k move to the next and previous file, ] and [ to the next and previous open comment, v marks the file viewed.
+async function scrollToComment(id: number, path: string) {
+  current.value = path;
+  collapsed.delete(path);
+  await nextTick();
+  document.querySelector(`[data-comment="${id}"]`)?.scrollIntoView({ block: 'center' });
+}
+let currentComment: number | null = null;
+function stepComment(by: 1 | -1) {
+  const list = openCommentOrder(
+    comments.value,
+    shown.value.map((f) => f.path),
+  );
+  const at = list.find((c) => c.id === currentComment) ?? null;
+  const next = stepFrom(list, at, by);
+  if (!next) return;
+  currentComment = next.id;
+  void scrollToComment(next.id, next.path);
+}
+function stepFile(by: 1 | -1) {
+  const paths = shown.value.map((f) => f.path);
+  const next = stepFrom(paths, current.value, by);
+  if (next) void jump(next);
+}
+function toggleViewed() {
+  const f = shown.value.find((x) => x.path === current.value);
+  if (f) markViewed(f, !isViewed(f));
+}
+useHotkeys({ j: () => stepFile(1), k: () => stepFile(-1), ']': () => stepComment(1), '[': () => stepComment(-1), v: toggleViewed });
 </script>
 
 <template>

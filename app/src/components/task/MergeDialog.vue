@@ -12,8 +12,9 @@ import RadioGroup from '../ui/RadioGroup.vue';
 // The confirm before a merge: it writes to the base branch on GitHub and can't be undone from here. The button asks the
 // daemon to merge (a merge request) and the dialog closes at once; the daemon merges when the PR is ready. Whether it merges
 // now instead (failing checks or failed tests, on the person's say-so) is the daemon's merge_now. The dialog focuses the confirm button, so Enter confirms; Esc cancels. Errors show in the dialog.
-const props = defineProps<{ taskId: number }>();
-const emit = defineEmits<{ close: []; merged: [result: MergeResult]; requested: [] }>();
+// With `hasNext` it also offers Merge and open next: the same merge, then the caller opens the next task in review.
+const props = defineProps<{ taskId: number; hasNext?: boolean }>();
+const emit = defineEmits<{ close: []; merged: [result: MergeResult, openNext: boolean]; requested: [openNext: boolean] }>();
 const { refresh } = useActions();
 
 const previewQ = useQuery(mergePreviewQuery(props.taskId));
@@ -59,18 +60,18 @@ const checks = computed(() => {
   return parts.join(', ');
 });
 
-async function merge() {
+async function merge(openNext = false) {
   if (!canConfirm.value) return;
   merging.value = true;
   mergeError.value = '';
   try {
     if (mergeNow.value) {
-      emit('merged', await api.merge(props.taskId, { method: method.value, delete_branch: true }));
+      emit('merged', await api.merge(props.taskId, { method: method.value, delete_branch: true }), openNext);
       return;
     }
     await api.requestMerge(props.taskId, { method: method.value });
     await refresh();
-    emit('requested');
+    emit('requested', openNext);
   } catch (e) {
     mergeError.value = errorMessage(e);
     merging.value = false;
@@ -85,8 +86,11 @@ async function merge() {
     :confirm-disabled="!canConfirm"
     :busy="merging"
     @cancel="emit('close')"
-    @confirm="merge"
+    @confirm="merge(false)"
   >
+    <template v-if="hasNext" #actions>
+      <button :disabled="!canConfirm || merging" @click="merge(true)">{{ label }} and open next</button>
+    </template>
     <p v-if="loadError" class="form-error">{{ loadError }}</p>
     <p v-else-if="!preview" class="text-muted">Reading the pull request from GitHub…</p>
     <div v-else class="flex flex-col gap-2.5">
