@@ -1,6 +1,6 @@
 // The HTTP API's request and response types: what the dashboard imports (app/src/api/types.ts) and what contract-check.ts
 // holds the use cases to. It imports only types, and only from domain/, so the app can read it without node types.
-import type { ChangeStatus, FileRef } from '../domain/work/index.ts';
+import type { ChangeStatus, FileRef, SinceKind } from '../domain/work/index.ts';
 import type { PlannerRunId, RepoId, ReviewId, RunId, TaskId } from '../domain/shared/index.ts';
 import type { NotifyKind } from '../domain/operations/index.ts';
 import type { PlanSource, PlanStepStatus } from '../domain/work/index.ts';
@@ -709,14 +709,25 @@ export interface Commit {
   subject: string;
   author: string;
   at: string;
+  committed_at: string;
+}
+
+export interface SincePoint {
+  kind: SinceKind;
+  sha: string;
+  attempt: number | null;
+  at: string;
 }
 
 export interface Changes {
   base_ref: string;
   base: string;
   head: string;
+  since: string | null;
+  base_may_show: boolean;
   files: ChangedFile[];
   commits: Commit[];
+  since_points: SincePoint[];
 }
 
 /** A path the prompt names that the base changed since the task was added, with the commits that changed it, newest first. */

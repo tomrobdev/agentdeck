@@ -16,13 +16,16 @@ export function useChanges(task: Ref<TaskDetail>) {
     })),
   );
 
-  // Same commits, same changes: keep the object so nothing downstream rebuilds.
+  // Same commits, same changes: keep the object so nothing downstream rebuilds. A review or a run's end moves the points
+  // the changes can be shown since without a new commit.
   const changes = shallowRef<Changes | null>(null);
+  const pointsOf = (c: Changes | null | undefined) => JSON.stringify(c?.since_points ?? []);
   watch(
     () => (task.value.branch ? q.data.value : undefined),
     (next) => {
       if (!next) changes.value = null;
-      else if (next.head !== changes.value?.head || next.base !== changes.value?.base) changes.value = next;
+      else if (next.head !== changes.value?.head || next.base !== changes.value?.base || pointsOf(next) !== pointsOf(changes.value))
+        changes.value = next;
     },
     { immediate: true },
   );

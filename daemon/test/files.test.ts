@@ -105,10 +105,12 @@ test('mergeChanges joins status and counts by path', () => {
 });
 
 test('parseLog splits commits on record and unit separators, with times in UTC like the rest of the API', () => {
-  const out = 'abc\x1fFix: a | b\x1fAda\x1f2026-10-19T10:00:00+02:00\x1e\ndef\x1fFirst\x1fBo\x1f2026-10-18T09:00:00Z\x1e\n';
+  const out =
+    'abc\x1fFix: a | b\x1fAda\x1f2026-10-19T10:00:00+02:00\x1f2026-10-20T10:00:00+02:00\x1e\n' +
+    'def\x1fFirst\x1fBo\x1f2026-10-18T09:00:00Z\x1f2026-10-18T09:00:00Z\x1e\n';
   assert.deepEqual(parseLog(out), [
-    { sha: 'abc', subject: 'Fix: a | b', author: 'Ada', at: '2026-10-19 08:00:00' },
-    { sha: 'def', subject: 'First', author: 'Bo', at: '2026-10-18 09:00:00' },
+    { sha: 'abc', subject: 'Fix: a | b', author: 'Ada', at: '2026-10-19 08:00:00', committed_at: '2026-10-20 08:00:00' },
+    { sha: 'def', subject: 'First', author: 'Bo', at: '2026-10-18 09:00:00', committed_at: '2026-10-18 09:00:00' },
   ]);
   assert.deepEqual(parseLog(''), []);
 });
