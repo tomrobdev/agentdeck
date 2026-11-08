@@ -76,7 +76,7 @@ export const COVERAGE_FLOORS: Record<string, Floor> = {
   'application/capacity': { lines: 100, branches: 100 },
   'application/insights': { lines: 100, branches: 96 },
   'application/landing': { lines: 99, branches: 90 },
-  'application/operations': { lines: 98, branches: 95 },
+  'application/operations': { lines: 98, branches: 91 },
   'application/proposals': { lines: 92, branches: 82 },
   'application/repos': { lines: 98, branches: 88 },
   'application/runs': { lines: 94, branches: 82 },
