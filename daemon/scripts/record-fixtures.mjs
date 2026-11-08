@@ -72,7 +72,7 @@ const SCHEMA = {
   properties: { word: { type: 'string' }, lines: { type: 'integer' } },
   required: ['word', 'lines'],
 };
-const base = ['--output-format', 'stream-json', '--verbose', '--model', 'haiku', '--permission-mode', 'dontAsk'];
+const base = ['--output-format', 'stream-json', '--verbose', '--model', 'haiku', '--permission-mode', 'dontAsk', '--strict-mcp-config'];
 const RUNS = [
   {
     name: 'done-with-tool',
