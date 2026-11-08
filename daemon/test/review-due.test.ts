@@ -108,9 +108,8 @@ test('the notification, the headline and the doctor name the due repo; the docto
   assert.equal(warned.warning, true);
   assert.match(warned.reason, /demo: area review due: 9 days/);
   assert.match(warned.fix ?? '', /review-area/);
-  const facts = { reviews: [due] } as unknown as Parameters<typeof judgeHealth>[0];
   assert.ok(
-    judgeHealth({ ...facts, ...healthyFacts() }).some((c) => c.name === 'area reviews' && c.warning),
+    judgeHealth({ ...healthyFacts(), reviews: [due] } as never).some((c) => c.name === 'area reviews' && c.warning),
     'judgeHealth lists it',
   );
 });
@@ -126,7 +125,7 @@ function healthyFacts() {
     tasks: [],
     log: { problems: [], lastStop: null },
     gh: { ok: true, output: 'Logged in' },
-  } as never;
+  };
 }
 
 // --- On a real repo ---
