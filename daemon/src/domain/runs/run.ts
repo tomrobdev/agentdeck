@@ -276,11 +276,12 @@ export function classifyRun<R extends ResultLike>(run: ClaudeRunLike<R>): RunCla
   }
   const { result, exitCode, stderr } = run;
   if (!result || result.is_error || exitCode !== 0) {
-    // No result means claude stopped before working, e.g. the sandbox could not start (failIfUnavailable): say why.
-    return {
-      kind: 'failed',
-      reason: result?.subtype ?? `claude exited with code ${exitCode}${stderr.trim() ? `: ${lastLine(stderr)}` : ''}`,
-    };
+    // No result means claude stopped before working (the sandbox could not start: failIfUnavailable) or stopped midway
+    // (daemon/test/fixtures/claude/cut-off-after-api-retry.jsonl), or its result line was cut off: say why. A clean exit
+    // with no result is said as such, not as "code 0", which reads like success.
+    const why = stderr.trim() ? `: ${lastLine(stderr)}` : '';
+    const stopped = exitCode === 0 ? 'claude ended without a result' : `claude exited with code ${exitCode}`;
+    return { kind: 'failed', reason: result?.subtype ?? `${stopped}${why}` };
   }
   return { kind: 'finished', result };
 }

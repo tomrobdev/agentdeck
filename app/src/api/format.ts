@@ -4,6 +4,7 @@ import type {
   LiveView,
   NotifyKind,
   PrCheck,
+  PrRetry,
   MergeRequestView,
   Run,
   StartWait,
@@ -97,6 +98,14 @@ export function relTime(unixSeconds: number): string {
 /** Every time from the daemon is SQLite's UTC `YYYY-MM-DD HH:MM:SS`, with no zone marker. */
 export function parseTime(s: string): number {
   return sqliteMs(s);
+}
+
+/** Why a done task's PR is not open yet, for the Open PR button's tooltip: its failures, and whether the PR refresh tries again. */
+export function describePrRetry(r: PrRetry): string {
+  const tries = `${r.failures} ${r.failures === 1 ? 'try' : 'tries'} to open the PR failed: ${r.error}`;
+  if (r.state === 'person') return `${tries}. The PR refresh stopped trying; open it by hand.`;
+  const at = r.next_at ? ` at ${new Date(parseTime(r.next_at)).toLocaleTimeString()}` : '';
+  return `${tries}. The PR refresh tries again${at}.`;
 }
 
 export function ago(time: string): string {

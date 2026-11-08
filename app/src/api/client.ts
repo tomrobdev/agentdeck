@@ -7,6 +7,7 @@ import type {
   CancelResult,
   Changes,
   FixChecksResult,
+  OpenPrResult,
   DaemonHealth,
   DaemonState,
   DoctorReport,
@@ -132,6 +133,8 @@ export const api = {
     call<TaskDetail>(`/api/tasks/${id}/done`, { method: 'POST', json: (note ? { note } : {}) satisfies MarkDoneRequest }),
   /** Install the packages a blocked task asked for (NEEDS deps) on its branch, then retry it. */
   installNeeds: (id: number) => call<TaskDetail>(`/api/tasks/${id}/install-needs`, { method: 'POST' }),
+  /** Push a done task's branch and open its PR (one that failed to open, or was closed); refused with the reason as the error. */
+  openPr: (id: number) => call<OpenPrResult>(`/api/tasks/${id}/open-pr`, { method: 'POST' }),
   closePr: (id: number) => call<TaskDetail>(`/api/tasks/${id}/close-pr`, { method: 'POST' }),
   /** Retry the task with its PR's failing checks, and their logs, in the note; refused with the reason as the error. */
   fixChecks: (id: number) => call<FixChecksResult>(`/api/tasks/${id}/fix-checks`, { method: 'POST' }),

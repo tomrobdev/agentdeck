@@ -118,9 +118,9 @@ const queued = () => queuedTask(app, repo).id;
 const withPr = () => doneTask(app, repo, { pr: 'open' });
 
 /** A task with a worktree whose branch has one commit (b.txt), then taken to done or blocked. */
-async function withWorktree(status: 'done' | 'blocked' = 'done', needs?: string[]): Promise<TaskId> {
-  const t = app.addTask({ repo_id: repo.id, title: 'w', prompt: 'p' });
-  const { branch, path } = await ensureWorktree(repo, t);
+async function withWorktree(status: 'done' | 'blocked' = 'done', needs?: string[], on: typeof repo = repo): Promise<TaskId> {
+  const t = app.addTask({ repo_id: on.id, title: 'w', prompt: 'p' });
+  const { branch, path } = await ensureWorktree(on, t);
   app.setCheckout(t.id, { branch, worktree: path });
   writeFileSync(join(path, 'b.txt'), 'b\n');
   git(path, 'add', '-A');
@@ -467,6 +467,20 @@ const ROWS: Row[] = [
   },
   {
     method: 'POST',
+    path: '/api/tasks/:task/open-pr',
+    params: task(() => {
+      const prRepo = newRepo();
+      app.updateRepo(prRepo.id, { pr_mode: 'ready' });
+      return withWorktree('done', undefined, prRepo);
+    }),
+    shape: ['url', 'task'],
+    check: (r) => {
+      assert.equal(typeof r.url, 'string');
+      assert.equal(r.task.pr_state, 'open');
+    },
+  },
+  {
+    method: 'POST',
     path: '/api/tasks/:task/close-pr',
     params: task(() => withPr().id),
     shape: TASK_DETAIL,
@@ -711,8 +725,8 @@ test('every route in src/api/routes/ has a row', () => {
 });
 
 test('a route without a row is named by its method and pattern', () => {
-  const added: Route = { method: 'POST', path: /^\/api\/tasks\/(\d+)\/open-pr$/, handle: () => ({}) };
-  assert.deepEqual(unrouted([...routes, added], ROWS), ['POST /^\\/api\\/tasks\\/(\\d+)\\/open-pr$/']);
+  const added: Route = { method: 'POST', path: /^\/api\/tasks\/(\d+)\/unrouted$/, handle: () => ({}) };
+  assert.deepEqual(unrouted([...routes, added], ROWS), ['POST /^\\/api\\/tasks\\/(\\d+)\\/unrouted$/']);
 });
 
 test('every row calls a route, and every route that reads a body has a 400 row', () => {

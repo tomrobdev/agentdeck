@@ -2,7 +2,7 @@
 export { branchName } from './branch.ts';
 export { checkoutOf } from './checkout.ts';
 export type { Checkout } from './checkout.ts';
-export { isAutoMergeReason, latestReviewNote, mergeReason, prEventReason } from './history.ts';
+export { isAutoMergeReason, latestRetryAt, latestReviewNote, mergeReason, prEventReason, prRetryFor } from './history.ts';
 export type { PendingFollowUp, PrEvent, TaskEventRow, TaskEventType } from './history.ts';
 export { parseTaskIds } from './ids.ts';
 export {
@@ -65,7 +65,18 @@ export {
 export type { ChangeStatus, ChangedFile, Changes, Commit, FileContent, FilePatch, FileRef, Tree, TreeEntry } from './read/files.ts';
 export { DECISION_STATES, FILTER_STATES, SORT_OPTIONS, filterTasks, listable } from './read/listing.ts';
 export { archivedRepoError, maxAttemptsError, maxTurnsError, modelError, priorityError, stepsNeedPlanError } from './rules.ts';
-export { STATUS_GROUPS, canStartMerge, hasOpenPr, isMerged, isReview, isStuck, isWaiting, stageOf, statusGroup } from './stage.ts';
+export {
+  STATUS_GROUPS,
+  canOpenPr,
+  canStartMerge,
+  hasOpenPr,
+  isMerged,
+  isReview,
+  isStuck,
+  isWaiting,
+  stageOf,
+  statusGroup,
+} from './stage.ts';
 export type { StatusGroup } from './stage.ts';
 export { describeWait, startDecision, startWait, waitingOf } from './start.ts';
 export type { QueueState, QueueWait, StartWait, Waiting } from './start.ts';

@@ -17,6 +17,7 @@ import {
   stuckOn,
   unlandedAfter,
 } from '../src/domain/work/link.ts';
+import { transition } from '../src/domain/work/lifecycle.ts';
 
 const done: Dependency = { status: 'done', pr: null, pr_mode: 'off', done_by: null };
 const t1 = asTaskId(1);
@@ -302,6 +303,45 @@ test('a task with two builds-on links is claimed only once both are met; an afte
   assert.equal(db.claimNextTask(), undefined, 'only one is done');
   assert.ok(db.applyEvent(b.id, { type: 'finish', outcome: 'done' }));
   assert.equal(db.claimNextTask()?.id, both.id, 'both are done; the running after link does not hold the start');
+  db.close();
+});
+
+test('linkState: a retried task whose old PR merged is not met until its new PR merges', () => {
+  const waiting = (reason: string) => ({ kind: 'waiting', on: 5, reason });
+  const merged: Dependency = { status: 'done', done_by: null, pr: { state: 'merged' }, pr_mode: 'ready' };
+  assert.deepEqual(linkState(builds, merged), { kind: 'met' });
+  // The retry sets the merged PR aside: with no state, the task has no PR (pullRequestOf).
+  const retry = transition({ ...merged, id: asTaskId(5), attempts: 1, restarts: 0 }, { type: 'retry' })!;
+  assert.equal(retry.changes.pr_state, null);
+  assert.deepEqual(linkState(builds, { status: 'queued', pr: null, pr_mode: 'ready' }), waiting('#5 is not done yet'));
+  // Done again before its new PR opens: still waiting, not met on the old merge.
+  const again: Dependency = { status: 'done', done_by: null, pr: null, pr_mode: 'ready' };
+  assert.deepEqual(linkState(builds, again), waiting("#5's PR is not opened yet"));
+  assert.deepEqual(linkState(builds, { ...again, pr: { state: 'open' } }), waiting("#5's PR is not merged yet"));
+  assert.deepEqual(linkState(builds, { ...again, pr: { state: 'merged' } }), { kind: 'met' });
+});
+
+test('the claim waits on a retried task whose old PR merged until its new PR merges', () => {
+  const db = openDb(':memory:');
+  const repo = db.addRepo({ name: 'r', path: '/tmp/r', base_branch: 'main' });
+  db.updateRepo(repo.id, { pr_mode: 'ready' });
+  const dep = db.addTask({ repo_id: repo.id, title: 'dep', prompt: 'p' });
+  assert.ok(db.applyEvent(dep.id, { type: 'claim' }));
+  assert.ok(db.applyEvent(dep.id, { type: 'finish', outcome: 'done' }));
+  assert.ok(db.recordPr(dep.id, { type: 'opened', url: 'https://x/pull/1' }));
+  assert.ok(db.recordPr(dep.id, { type: 'seen', state: 'merged' }));
+  const later = db.addTask({ repo_id: repo.id, title: 'later', prompt: 'p', links: [{ on: dep.id, kind: 'builds_on' }] });
+
+  assert.ok(db.applyEvent(dep.id, { type: 'retry' }, { reason: 'one more thing' }));
+  assert.equal(db.getTask(dep.id)!.pr, null, 'the retry set the merged PR aside');
+  assert.equal(db.claimNextTask()?.id, dep.id, 'the retried task runs, the one building on it waits');
+  assert.ok(db.applyEvent(dep.id, { type: 'finish', outcome: 'done' }));
+  assert.equal(db.hasQueued(), false, 'done again, but its new PR is not opened yet');
+  assert.equal(db.claimNextTask(), undefined);
+  assert.ok(db.recordPr(dep.id, { type: 'opened', url: 'https://x/pull/2' }));
+  assert.equal(db.claimNextTask(), undefined, 'the new PR is not merged yet');
+  assert.ok(db.recordPr(dep.id, { type: 'seen', state: 'merged' }));
+  assert.equal(db.claimNextTask()?.id, later.id);
   db.close();
 });
 

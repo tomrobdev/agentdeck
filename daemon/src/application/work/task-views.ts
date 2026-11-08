@@ -6,7 +6,9 @@ import { type ChecksSummary, checksSummary } from '../../domain/landing/index.ts
 import { type MergeRequestView, conflictsWithBase, mergeRequestView } from '../../domain/landing/index.ts';
 import { isMergeLocked, isSyncLocked } from './checkout-locks.ts';
 import { type LiveView, type SyncView, liveView, syncView } from '../../domain/runs/index.ts';
-import { openPrUrl } from '../../domain/landing/index.ts';
+import { type PrRetry, openPrUrl } from '../../domain/landing/index.ts';
+import { prRetryFor } from '../../domain/work/index.ts';
+import type { Repo } from '../../domain/repos/index.ts';
 import type { StartWait, Waiting } from '../../domain/work/index.ts';
 import { measureBranch } from './files.ts';
 import type { TaskStatus } from '../../domain/work/index.ts';
@@ -38,6 +40,8 @@ export interface TaskView {
   sync: SyncView | null;
   /** The open PR's checks, counted, with the failing ones' names. Null when there is no open PR or it has no checks. */
   checks: ChecksSummary | null;
+  /** For a done task whose PR failed to open: when the PR refresh opens it again, or that a person must. Null for any other. */
+  pr_retry: PrRetry | null;
 }
 
 /** The task fields a view reads. */
@@ -53,6 +57,7 @@ export function withViews<T extends Viewed>(app: App, tasks: T[], links: LinkInd
   const unfinished = app.planUnfinishedIds();
   const liveRuns = app.liveRuns('work');
   const resolves = app.liveRuns('resolve');
+  const now = Date.now();
   return tasks.map((t) => {
     const repo = repos.get(t.repo_id);
     const dependency = dependencyOf(t, links);
@@ -71,8 +76,15 @@ export function withViews<T extends Viewed>(app: App, tasks: T[], links: LinkInd
       dependents: dependentViews(t.id, links),
       plan_unfinished: unfinished.has(t.id),
       wait: waitOf(t, dependency),
+      pr_retry: prRetryView(app, t, repo, now),
     };
   });
+}
+
+/** Whether the PR refresh opens a task's failed PR again: only a done task whose PR failed to open reads its history. */
+function prRetryView(app: App, t: Viewed, repo: Repo | undefined, now: number): PrRetry | null {
+  if (t.status !== 'done' || t.pr?.state !== 'failed') return null;
+  return prRetryFor(t, repo, app.eventsForTask(t.id), now);
 }
 
 /** One task with its view, runs, events and plans. A branch with no open PR is measured against the auto-merge limits. */

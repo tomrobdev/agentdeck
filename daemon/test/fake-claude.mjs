@@ -6,7 +6,11 @@
 //   FAKE_DENIED   reports STATUS: BLOCKED with two permission_denials in the result (FAKE_DENIED_DONE: finishes, same denials;
 //                 FAKE_DENIED_NEEDS: blocks with NEEDS edit, same denials)
 //   FAKE_PROTECTED_EDIT  like FAKE_DONE, and writes protected edits to .agentdeck/edits/ (.claude/…, claude/… and src/…)
+//   FAKE_TOOLS    with FAKE_DONE: reads README.md and writes fake-output.txt as tool calls first (tool_use and tool_result events)
 //   FAKE_ERROR    exits non-zero with no result
+//   FAKE_MAX_TURNS  makes a tool call, then ends with an error_max_turns result (no result text), as claude does at --max-turns
+//   FAKE_TRUNCATED  writes its result line cut off halfway, with no newline, and exits 0
+//   FAKE_EXIT_MIDSTREAM  makes a tool call, then exits 1 with no result and nothing on stderr
 //   FAKE_RATELIMIT emits a rejected rate_limit_event
 //   FAKE_SLOW     sleeps 30s (for cancel tests), resumed or not
 //   FAKE_IGNORE_TERM  ignores SIGTERM (use with FAKE_SLOW), so a cancel needs SIGKILL
@@ -22,6 +26,8 @@
 //   FAKE_NO_SANDBOX  if the --settings file enables the sandbox with failIfUnavailable, exits at startup like claude does
 //   FAKE_PLAN_ALL    like FAKE_DONE, and marks every step of the plan file (.agentdeck/plan.html) done, with a note in each
 //   FAKE_WRITE_PLAN  like FAKE_DONE, and writes a plan of its own to the plan file
+// The planner (--json-schema) and FAKE_DENIED make their tool calls too, as the recorded runs do. The events have the shape
+// of the real ones in daemon/test/fixtures/claude/, which contracts.test.ts checks.
 // Every run appends its prompt to $AGENTDECK_HOME/fake-claude-calls.log, so tests can tell it never started,
 // the --settings path it got (or "-") to $AGENTDECK_HOME/fake-claude-settings.log, and its arguments as a JSON
 // array to $AGENTDECK_HOME/fake-claude-args.log.
@@ -88,18 +94,47 @@ out({
 });
 
 const isPlanner = args.includes('--json-schema');
-const result = (text, extra = {}) =>
+const USAGE = { input_tokens: 100, output_tokens: 50, cache_read_input_tokens: 1000, cache_creation_input_tokens: 200 };
+/** The final result event, as claude ends a run that finished. */
+const ending = (text, extra = {}) => ({
+  type: 'result',
+  subtype: 'success',
+  is_error: false,
+  api_error_status: null,
+  result: text,
+  session_id: session,
+  num_turns: 3,
+  total_cost_usd: 0.01,
+  usage: USAGE,
+  permission_denials: [],
+  ...extra,
+});
+const result = (text, extra = {}) => out(ending(text, extra));
+
+const stamp = () => new Date().toISOString();
+let messages = 0;
+let toolUses = 0;
+/** An assistant message as claude writes one: its own id, a timestamp, and no parent outside a subagent. */
+const assistant = (content) =>
   out({
-    type: 'result',
-    subtype: 'success',
-    is_error: false,
-    result: text,
+    type: 'assistant',
+    message: { id: `msg_fake_${process.pid}_${++messages}`, type: 'message', role: 'assistant', content },
+    parent_tool_use_id: null,
     session_id: session,
-    num_turns: 3,
-    total_cost_usd: 0.01,
-    usage: { input_tokens: 100, output_tokens: 50, cache_read_input_tokens: 1000, cache_creation_input_tokens: 200 },
-    ...extra,
+    timestamp: stamp(),
   });
+/** A tool call and its result: the assistant's tool_use, then the user's tool_result, which says is_error only when it failed. */
+const toolCall = (name, input, output, { error = false, id = `toolu_fake_${++toolUses}` } = {}) => {
+  assistant([{ type: 'tool_use', id, name, input }]);
+  out({
+    type: 'user',
+    message: { role: 'user', content: [{ tool_use_id: id, type: 'tool_result', content: output, ...(error ? { is_error: true } : {}) }] },
+    parent_tool_use_id: null,
+    session_id: session,
+    timestamp: stamp(),
+  });
+};
+const readme = () => toolCall('Read', { file_path: join(process.cwd(), 'README.md') }, '1\t# README\n');
 
 if (isPlanner) {
   // Planner mode: answer with structured output. FAKE_PLAN_EMPTY in the goals → nothing to do.
@@ -111,7 +146,11 @@ if (isPlanner) {
         { title: 'Add input validation', prompt: 'FAKE_DONE validate', priority: 1, model: 'sonnet' },
         { title: 'Tidy the README', prompt: 'FAKE_DONE tidy', priority: 0, model: 'gpt-9' },
       ];
-  result('planned', { structured_output: { tasks, note: tasks.length ? 'looked at src/' : 'goals already met' } });
+  const answer = { tasks, note: tasks.length ? 'looked at src/' : 'goals already met' };
+  // As claude answers a --json-schema run: a StructuredOutput tool call, then the answer as the result's text and structured_output.
+  readme();
+  toolCall('StructuredOutput', answer, 'Structured output provided successfully');
+  result(JSON.stringify(answer), { structured_output: answer });
 } else if (prompt.startsWith('AgentDeck conflict resolution')) {
   // A resolve run: a merge is in progress in the worktree. Keep both sides of every conflict, unless told otherwise.
   const git = (...a) => execFileSync('git', a, { encoding: 'utf8' });
@@ -146,12 +185,31 @@ if (isPlanner) {
 } else if (prompt.includes('FAKE_ERROR')) {
   process.stderr.write('fake failure\n');
   process.exit(1);
+} else if (prompt.includes('FAKE_MAX_TURNS')) {
+  // claude's result at --max-turns: an error with the reason in `errors` and no `result` text or api_error_status.
+  readme();
+  const { result: _text, api_error_status: _status, ...end } = ending('');
+  out({ ...end, subtype: 'error_max_turns', is_error: true, num_turns: 2, errors: ['Reached maximum number of turns (1)'] });
+  process.exitCode = 1;
+} else if (prompt.includes('FAKE_TRUNCATED')) {
+  // The result line cut off halfway, as when claude's output stops mid-write: no newline, and no result that parses.
+  assistant([{ type: 'text', text: 'Almost there.' }]);
+  const line = JSON.stringify(ending('Wrote it.\nSTATUS: DONE'));
+  process.stdout.write(line.slice(0, Math.floor(line.length / 2)));
+} else if (prompt.includes('FAKE_EXIT_MIDSTREAM')) {
+  // claude stops in the middle of the run: a tool call, then nothing more, not even a result.
+  readme();
+  process.exitCode = 1;
 } else if (prompt.includes('FAKE_DENIED')) {
   // A tool use the permission rules refused; the agent gives up. FAKE_DENIED_DONE finishes anyway.
   const permission_denials = [
     { tool_name: 'Bash', tool_use_id: 'toolu_1', tool_input: { command: 'npx prettier --write .' } },
     { tool_name: 'Bash', tool_use_id: 'toolu_2', tool_input: { command: 'python3 fix.py' } },
   ];
+  for (const d of permission_denials) {
+    toolCall(d.tool_name, d.tool_input, `Permission to use ${d.tool_name} has been denied.`, { error: true, id: d.tool_use_id });
+  }
+  assistant([{ type: 'text', text: 'The tool rules refused the command.' }]);
   if (prompt.includes('FAKE_DENIED_NEEDS')) {
     result('Claude Code refused the settings file.\nSTATUS: BLOCKED: NEEDS edit: .claude/settings.json', { permission_denials });
   } else if (prompt.includes('FAKE_DENIED_DONE')) {
@@ -201,10 +259,16 @@ if (isPlanner) {
     edit('claude/skills/y/SKILL.md', '# y\nwritten without the dot\n');
     edit('src/outside.ts', 'export const outside = 1;\n');
   }
-  writeFileSync('fake-output.txt', `done by fake claude for: ${prompt.slice(0, 60)}\nrun ${process.pid}\n`);
+  const output = `done by fake claude for: ${prompt.slice(0, 60)}\nrun ${process.pid}\n`;
+  if (prompt.includes('FAKE_TOOLS')) {
+    readme();
+    const file = join(process.cwd(), 'fake-output.txt');
+    toolCall('Write', { file_path: file, content: output }, `File created successfully at: ${file}`);
+  }
+  writeFileSync('fake-output.txt', output);
   execFileSync('git', ['add', '-A']);
   execFileSync('git', ['commit', '-q', '-m', 'fake: add output']);
-  out({ type: 'assistant', message: { content: [{ type: 'text', text: 'Wrote fake-output.txt' }] } });
+  assistant([{ type: 'text', text: 'Wrote fake-output.txt' }]);
   const labels = [...prompt.matchAll(/^(c\d+) — /gm)].map((m) => m[1]);
   const answered = prompt.includes('FAKE_ANSWER_FIRST') ? labels.slice(0, 1) : prompt.includes('FAKE_ANSWER') ? labels : [];
   const answers = answered.map((l) => `ANSWER ${l}: handled ${l}\n`).join('');

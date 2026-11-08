@@ -1,5 +1,6 @@
 // The daemon's loop: claims queued tasks into free slots when the governor allows, runs the planner
-// when a queue runs dry, and refreshes open PRs, merging those that pass the auto-merge check.
+// when a queue runs dry, opens again the PRs that failed to open, and refreshes open PRs, merging those that pass the
+// auto-merge check.
 import { DEFAULTS } from '../../config.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import { MAX_RESTARTS } from '../../domain/work/index.ts';
@@ -10,7 +11,8 @@ import { proposeNow, plannerDue } from '../proposals/planner.ts';
 import { resolveConflicting } from '../runs/sync.ts';
 import { autoMerge } from '../landing/auto-merge.ts';
 import { MERGE_REQUEST_POLL_MS, PR_REFRESH_MS, refreshPrStates } from '../landing/refresh.ts';
-import { followUpPending, settle } from '../landing/settle.ts';
+import { followUpPending, hasFollowUpsToRun, settle } from '../landing/settle.ts';
+import { retryFailedPrs } from '../landing/open-pr.ts';
 import { runTask } from '../runs/worker.ts';
 import { nextUnblockable, runUnblock } from '../runs/unblock.ts';
 import type { App } from '../ports/app.ts';
@@ -166,7 +168,9 @@ export class Scheduler {
     if (reload?.pending && reload.reason !== this.lastReload) this.opts.log(reload.reason);
     this.lastReload = reload?.pending ? reload.reason : null;
     const { reason, free } = reload?.pending ? { reason: 'reload pending', free: 0 } : this.gate();
-    if (!reason) {
+    // Follow-ups first: one a crash or a person left pending (a PR to open, say) may change what a claim may take.
+    const followingUp = this.maybeFollowUp();
+    if (!reason && !followingUp) {
       for (let room = free; room > 0; room--) {
         const task = this.app.claimNextTask();
         if (!task) break;
@@ -191,7 +195,6 @@ export class Scheduler {
       this.maybeUnblock(); // after the claims: queued work comes first
       if (this.opts.autoPropose && !this.proposing && this.gate().free > 0) this.maybePropose(); // a claim above took a slot: ask again
     }
-    this.maybeFollowUp();
     this.maybeRefreshPrs();
     this.awake.set(this.running.size > 0 || this.proposing);
     if (this.opts.once && this.running.size === 0 && !this.proposing && !this.followingUp && (reason || !this.app.hasQueued())) {
@@ -204,10 +207,13 @@ export class Scheduler {
 
   /**
    * Run the follow-ups the outbox keeps: a status change's whose follow-ups a crash cut off, recovery's, and a person's
-   * from the CLI or the API. Ticks again when a pass ran some, in once mode to stop only after them.
+   * from the CLI or the API. Returns whether a pass is running, so the tick claims nothing until it ends; it ticks again
+   * when a pass ran some, to claim then (and in once mode to stop only after them).
    */
-  private maybeFollowUp(): void {
-    if (this.followingUp || !this.app.pendingFollowUps().length) return;
+  private maybeFollowUp(): boolean {
+    if (this.followingUp) return true;
+    // Rows a settle in this process is following up are left to it, and its run's end ticks.
+    if (!hasFollowUpsToRun(this.app)) return false;
     this.followingUp = true;
     followUpPending(this.app, this.opts.log)
       .catch((err) => {
@@ -216,9 +222,9 @@ export class Scheduler {
       })
       .then((n) => {
         this.followingUp = false;
-        // Rows a settle in this process is following up are left to it, and its run's end ticks.
-        if (n > 0 && this.opts.once) this.tick();
+        if (n > 0) this.tick();
       });
+    return true;
   }
 
   /**
@@ -241,7 +247,10 @@ export class Scheduler {
     this.handledPrCheck = Math.max(this.handledPrCheck, requested);
     this.lastPrRefresh = now;
     this.refreshingPrs = true;
-    refreshPrStates(this.app, this.opts.log)
+    // A PR that failed to open is opened again first, so the refresh reads it with the others.
+    retryFailedPrs(this.app, this.opts.log)
+      .catch((err) => this.opts.log(`PR retry crashed: ${err?.stack ?? err}`))
+      .then(() => refreshPrStates(this.app, this.opts.log))
       .then((found) => {
         this.recheckLeft = found.unknown ? Math.max(this.recheckLeft - 1, 0) : 0;
         this.recheckAt = Date.now() + PR_RECHECK_MS;

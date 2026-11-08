@@ -7,6 +7,7 @@ import { type UnblockQuestion, canInstallWith, depsRequest } from '../../../daem
 import {
   STATUS_GROUPS,
   type StatusGroup,
+  canOpenPr,
   canStartMerge,
   hasOpenPr,
   isMerged,
@@ -21,7 +22,7 @@ import type { GroupBy } from './queueDisplay.ts';
 import { needsOf, questionOf } from './wire.ts';
 
 // The board's move rule is in boardMove.ts, which the daemon's tests import.
-export { STATUS_GROUPS, type StatusGroup, canStartMerge, hasOpenPr, isMerged, isReview, isStuck, isWaiting, statusGroup };
+export { STATUS_GROUPS, type StatusGroup, canOpenPr, canStartMerge, hasOpenPr, isMerged, isReview, isStuck, isWaiting, statusGroup };
 export { FILTER_STATES, MODELS, SORT_OPTIONS, type PersonEvent, personEvents };
 export * from './boardMove';
 

@@ -1,5 +1,5 @@
 // The landing context's interface: what other contexts and the layers above import.
-export { hunkAround, latestRequestNote, matchAnswers, reviewPromptBlock, unansweredNote, withNote } from './address.ts';
+export { hunkAround, isReviewRetry, latestRequestNote, matchAnswers, reviewPromptBlock, unansweredNote, withNote } from './address.ts';
 export type { ReviewPrompt } from './address.ts';
 export {
   AUTO_MERGE_LABEL,
@@ -19,6 +19,8 @@ export type { MergeRequestView } from './merge-request.ts';
 export { mergeCheck, mergeFindings, parsePrDetails } from './merge.ts';
 export type { CreatePr, PrDetails } from './merge.ts';
 export { buildPrBody, finalMessage, openPrUrl, prFields, pullRequestOf } from './pr.ts';
+export { PR_OPEN_RETRIES, prNeedsPerson, prRetry } from './pr-retry.ts';
+export type { PrOpenFailures, PrRetry } from './pr-retry.ts';
 export type { PrFields, PrPlan, PrState, PullRequest } from './pr.ts';
 export {
   commentActionError,
