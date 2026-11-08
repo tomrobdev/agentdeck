@@ -1,19 +1,6 @@
 // Yes/no checks that a repo is ready for unattended runs. Does the I/O; the decisions on tool rules are in domain/.
-import {
-  addDetachedWorktree,
-  hasOrigin,
-  isGitRepo,
-  makeTempDir,
-  pruneWorktrees,
-  refExists,
-  removeTempDir,
-  removeWorktree,
-  startPoint,
-} from '../../adapters/git.ts';
 import type { App } from '../ports/app.ts';
-import { rootInfo } from '../../adapters/repo-root.ts';
-import { runCommand } from '../../adapters/shell.ts';
-import { errorMessage, lastLine } from '../../domain/shared/index.ts';
+import { lastLine } from '../../domain/shared/index.ts';
 import { SETUP_TIMEOUT_MS, TEST_TIMEOUT_MS, claudeBin } from '../../config.ts';
 import type { Repo } from '../../domain/repos/index.ts';
 import { refusedCommands } from '../../domain/repos/index.ts';
@@ -35,17 +22,15 @@ export async function runDoctor(app: App, repo: Repo): Promise<Check[]> {
   const checks: Check[] = [];
   const add = (name: string, ok: boolean, reason: string) => void checks.push({ name, ok, reason });
 
-  const isRepo = await isGitRepo(repo.path);
-  add('git repo', isRepo, isRepo ? repo.path : `${repo.path} is not a git repository`);
-  if (!isRepo) return checks;
+  const ws = app.workspace;
+  const git = await ws.inspectRepo(repo.path, repo.base_branch);
+  add('git repo', !!git, git ? repo.path : `${repo.path} is not a git repository`);
+  if (!git) return checks;
 
-  const local = await refExists(repo.path, `refs/heads/${repo.base_branch}`);
-  const remote = !local && (await refExists(repo.path, `refs/remotes/origin/${repo.base_branch}`));
-  const baseOk = local || remote;
-  const base = local ? repo.base_branch : `origin/${repo.base_branch}`;
-  add('base branch', baseOk, baseOk ? `${base} exists` : `no branch ${repo.base_branch} locally or as origin/${repo.base_branch}`);
+  const base = git.base;
+  add('base branch', !!base, base ? `${base} exists` : `no branch ${repo.base_branch} locally or as origin/${repo.base_branch}`);
 
-  const { files, scripts } = rootInfo(repo.path);
+  const { files, scripts } = await ws.rootInfo(repo.path);
   const toolchain = repo.toolchain ?? detectToolchain(files, scripts)?.toolchain ?? null;
   // Not a failure: a repo built with make or plain scripts has no toolchain, only the generic tool rules.
   add(
@@ -59,26 +44,13 @@ export async function runDoctor(app: App, repo: Repo): Promise<Check[]> {
 
   // A PR mode other than off needs an origin to push to and a working gh to open the PR.
   if (repo.pr_mode !== 'off') {
-    const origin = await hasOrigin(repo.path);
-    add('origin remote', origin, origin ? 'origin exists' : `PR mode is ${repo.pr_mode} but the repo has no origin remote`);
+    add('origin remote', git.origin, git.origin ? 'origin exists' : `PR mode is ${repo.pr_mode} but the repo has no origin remote`);
     const gh = await app.codeHost.auth();
     add('gh auth', gh.ok, gh.ok ? 'gh auth status succeeded' : `gh auth status failed: ${gh.output}`);
   }
 
-  let worktree: string | null = null;
-  const tmp = baseOk ? makeTempDir(repo, 'doctor') : null;
-  try {
-    if (tmp) {
-      const path = tmp.worktree;
-      try {
-        await addDetachedWorktree(repo, path, await startPoint(repo.path, repo.base_branch));
-        worktree = path;
-      } catch (err) {
-        add('worktree', false, `could not check out ${repo.base_branch}: ${lastLine(errorMessage(err))}`);
-      }
-    }
-    const notRun = !baseOk ? `not run: base branch ${repo.base_branch} is missing` : 'not run: no worktree';
-
+  // The checks that run in a checkout of the base, or report why they could not (`notRun`) without one.
+  const inCheckout = async (worktree: string | null, notRun: string) => {
     let setupOk = true;
     if (!repo.setup_cmd) {
       add('setup', true, 'no setup command');
@@ -86,7 +58,7 @@ export async function runDoctor(app: App, repo: Repo): Promise<Check[]> {
       setupOk = false;
       add('setup', false, notRun);
     } else {
-      const setup = await runCommand(repo.setup_cmd, worktree, SETUP_TIMEOUT_MS);
+      const setup = await ws.runCommand(repo.setup_cmd, worktree, SETUP_TIMEOUT_MS);
       setupOk = setup.passed;
       add('setup', setupOk, setupOk ? `${repo.setup_cmd} succeeded` : `${repo.setup_cmd} failed: ${lastLine(setup.output)}`);
     }
@@ -95,23 +67,27 @@ export async function runDoctor(app: App, repo: Repo): Promise<Check[]> {
     else if (!worktree) add('tests', false, notRun);
     else if (!setupOk) add('tests', false, 'not run: setup failed');
     else {
-      const tests = await runCommand(repo.test_cmd, worktree, TEST_TIMEOUT_MS);
+      const tests = await ws.runCommand(repo.test_cmd, worktree, TEST_TIMEOUT_MS);
       add('tests', tests.passed, tests.passed ? `${repo.test_cmd} passed` : `${repo.test_cmd} failed: ${lastLine(tests.output)}`);
     }
 
     if (!repo.test_cmd) add('tool rules', true, 'no test command');
     else {
-      const refused = refusedCommands(repo.test_cmd, allowedTools(repo, rootInfo(worktree ?? repo.path)));
+      const refused = refusedCommands(repo.test_cmd, allowedTools(repo, await ws.rootInfo(worktree ?? repo.path)));
       add(
         'tool rules',
         refused.length === 0,
         refused.length ? `the tool rules don't allow: ${refused.join(', ')}` : 'every command in the test command is allowed',
       );
     }
-  } finally {
-    if (worktree) await removeWorktree(repo, worktree).catch(() => {});
-    if (tmp) removeTempDir(tmp.dir);
-    await pruneWorktrees(repo.path).catch(() => {});
-  }
+  };
+
+  // The scratch checkout is removed whether or not the checks pass.
+  if (!base) await inCheckout(null, `not run: base branch ${repo.base_branch} is missing`);
+  else
+    await ws.withScratchCheckout(repo, async (checkout) => {
+      if ('error' in checkout) add('worktree', false, `could not check out ${repo.base_branch}: ${lastLine(checkout.error)}`);
+      await inCheckout('path' in checkout ? checkout.path : null, 'not run: no worktree');
+    });
   return checks;
 }

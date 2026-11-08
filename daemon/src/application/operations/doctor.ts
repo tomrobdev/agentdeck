@@ -2,7 +2,6 @@
 // has domain/operations/health.ts judge them. It runs in the CLI's own process, so it works with the daemon down.
 import { fetchDaemonState } from '../../adapters/daemon-api.ts';
 import { readLogTail } from '../../adapters/daemon-log.ts';
-import { checkoutCommit, commitsAheadOf } from '../../adapters/git.ts';
 import { ownsLiveGroup } from '../../adapters/processes.ts';
 import { DAEMON_LOG, serviceStatus } from '../../adapters/service.ts';
 import { API_PORT, CHECKOUT_ROOT } from '../../config.ts';
@@ -27,8 +26,8 @@ export interface Probes {
 export const realProbes = (app: App): Probes => ({
   service: serviceStatus,
   api: fetchDaemonState,
-  head: () => checkoutCommit(CHECKOUT_ROOT),
-  ahead: (commit) => commitsAheadOf(CHECKOUT_ROOT, commit),
+  head: async () => (await app.workspace.head(CHECKOUT_ROOT))?.sha ?? null,
+  ahead: (commit) => app.workspace.commitsAhead(CHECKOUT_ROOT, commit).catch(() => null),
   alive: ownsLiveGroup,
   logLines: () => readLogTail(DAEMON_LOG),
   gh: () => app.codeHost.auth(),

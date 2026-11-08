@@ -1,8 +1,6 @@
 // Install the packages a blocked task asked for, on a person's request.
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { commitFiles } from '../../adapters/git.ts';
-import { runProgram } from '../../adapters/shell.ts';
 import type { App } from '../ports/app.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import { INSTALL_NOTE, LOCKFILES, canInstallWith, depsRequest, depsRequestError, installArgs } from '../../domain/work/index.ts';
@@ -36,13 +34,13 @@ export async function installNeeds(app: App, id: TaskId): Promise<{ packages: st
   refuseWhileSyncing(app, id);
 
   const args = installArgs(toolchain, packages, dev);
-  const result = await runProgram(toolchain, args, worktree, INSTALL_TIMEOUT_MS);
+  const result = await app.workspace.runCommand([toolchain, ...args], worktree, INSTALL_TIMEOUT_MS);
   if (!result.passed) {
     throw new ActionError(`${toolchain} ${args[0]} failed: ${lastLine(result.output)}`);
   }
   const files = ['package.json', LOCKFILES[toolchain]].filter((f) => existsSync(join(worktree, f)));
   try {
-    await commitFiles(worktree, files, `agentdeck: add ${packages.join(' ')} for task #${id}`);
+    await app.workspace.commit(worktree, `agentdeck: add ${packages.join(' ')} for task #${id}`, files);
   } catch (err) {
     throw new ActionError(`installed, but could not commit: ${lastLine(errorMessage(err))}`);
   }

@@ -6,6 +6,8 @@ import { github } from './adapters/github.ts';
 import type { Agent } from './application/ports/agent.ts';
 import type { App, Ports } from './application/ports/app.ts';
 import type { CodeHost } from './application/ports/code-host.ts';
+import type { Workspace } from './application/ports/workspace.ts';
+import { workspace } from './adapters/workspace.ts';
 import { type Db, openDb } from './db/index.ts';
 
 /**
@@ -32,8 +34,11 @@ export const realCodeHost = (): CodeHost => ({
   deleteRemoteBranch: (repoPath, branch) => github.deleteRemoteBranch(repoPath, branch),
 });
 
+/** Git, the shell and worktree files through `adapters/workspace.ts`. */
+export const realWorkspace = (): Workspace => workspace;
+
 /** The ports on the real adapters. */
-export const realPorts = (): Ports => ({ agent: realAgent(), codeHost: realCodeHost() });
+export const realPorts = (): Ports => ({ agent: realAgent(), codeHost: realCodeHost(), workspace: realWorkspace() });
 
 /** Open the database (the live one unless `path` names another) and build the App on it. */
 export function composeApp(path?: string): ComposedApp {

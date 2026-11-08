@@ -1,5 +1,4 @@
 // A run addressing a review: what the worker is shown of it, and what its answers do to the comments afterwards.
-import { diffBase, filePatch } from '../../adapters/git.ts';
 import type { App } from '../ports/app.ts';
 import { type ReviewPrompt, hunkAround, latestRequestNote, matchAnswers, unansweredNote, withNote } from '../../domain/landing/index.ts';
 import { type ReviewComment, commentStatesFor, commentsToAddress } from '../../domain/landing/index.ts';
@@ -23,8 +22,8 @@ export async function reviewForRun(
     if (!patch) {
       patch = (async () => {
         try {
-          const base = await diffBase(repo.path, repo.base_branch, head);
-          return base ? (await filePatch(repo.path, base.sha, head, [path])).patch : null;
+          const base = await app.workspace.diffBase(repo.path, repo.base_branch, head);
+          return base ? (await app.workspace.filePatch(repo.path, base.sha, head, [path])).patch : null;
         } catch {
           return null; // the commit or file is gone: the comment goes without its hunk
         }

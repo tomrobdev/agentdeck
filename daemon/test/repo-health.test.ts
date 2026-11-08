@@ -56,7 +56,7 @@ const byName = (checks: { name: string; ok: boolean; reason: string }[]) => Obje
 const worktrees = (path: string) => sh(path, 'worktree', 'list').split('\n');
 const doctorDirs = () => {
   const root = join(home, 'worktrees');
-  return existsSync(root) ? readdirSync(root).flatMap((r) => readdirSync(join(root, r)).filter((d) => d.startsWith('doctor-'))) : [];
+  return existsSync(root) ? readdirSync(root).flatMap((r) => readdirSync(join(root, r)).filter((d) => d.startsWith('scratch-'))) : [];
 };
 
 test('doctor passes on a healthy repo, clears a pause, and leaves no worktree behind', async () => {

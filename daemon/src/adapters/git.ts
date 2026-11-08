@@ -44,12 +44,12 @@ export async function gitRemote(cwd: string, timeoutMs: number, ...args: string[
   return stdout.trim();
 }
 
-/** The branch, short commit and subject checked out in `cwd`, or null when it is not a git checkout. Local only: no fetch. */
-export async function headSummary(cwd: string): Promise<{ branch: string; commit: string; subject: string } | null> {
+/** The branch, commit (whole and short) and subject checked out in `cwd`, or null when it is not a git checkout. Local only: no fetch. */
+export async function headSummary(cwd: string): Promise<{ branch: string; sha: string; short: string; subject: string } | null> {
   try {
-    const [line, branch] = await Promise.all([git(cwd, 'log', '-1', '--format=%h%x09%s'), git(cwd, 'branch', '--show-current')]);
-    const [commit, subject = ''] = line.split('\t');
-    return commit ? { branch: branch || 'detached', commit, subject } : null;
+    const [line, branch] = await Promise.all([git(cwd, 'log', '-1', '--format=%H%x09%h%x09%s'), git(cwd, 'branch', '--show-current')]);
+    const [sha, short = '', ...subject] = line.split('\t');
+    return sha ? { branch: branch || 'detached', sha, short, subject: subject.join('\t') } : null;
   } catch {
     return null;
   }

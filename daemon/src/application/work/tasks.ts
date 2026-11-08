@@ -1,5 +1,4 @@
 // Use cases for tasks: add, edit, and move them through the lifecycle on a person's request.
-import { removeWorktree } from '../../adapters/git.ts';
 import type { App } from '../ports/app.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import type { TaskStatus } from '../../domain/work/index.ts';
@@ -194,7 +193,7 @@ export async function removeTaskWorktree(app: App, id: TaskId): Promise<{ branch
   const worktree = t.checkout?.worktree;
   if (!worktree) throw new ActionError('task has no worktree');
   refuseWhileSyncing(app, id);
-  await removeWorktree(requireTaskRepo(app, t), worktree);
+  await app.workspace.removeCheckout(requireTaskRepo(app, t), { worktree });
   app.setCheckout(t.id, { worktree: null });
   return { branch: t.checkout?.branch ?? null };
 }

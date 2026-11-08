@@ -1,5 +1,4 @@
 // Warn when a task's prompt names a repo path that won't be there when the task runs.
-import { branchCommit, listFiles, localStartPoint, resolveCommit } from '../../adapters/git.ts';
 import type { App } from '../ports/app.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import { linkState } from '../../domain/work/index.ts';
@@ -22,18 +21,17 @@ export async function promptWarnings(app: App, id: TaskId): Promise<string[]> {
   try {
     const repo = requireTaskRepo(app, task);
     // The commit a worker starts from (see startPoint), not the local base: a plan committed but not pushed isn't there.
-    const ref = await localStartPoint(repo.path, repo.base_branch);
-    const base = await resolveCommit(repo.path, ref);
-    if (!base) return [];
-    const baseFiles = await listFiles(repo.path, base);
+    const start = await app.workspace.filesAt(repo.path, { base: repo.base_branch });
+    if (!start) return [];
+    const { ref, files: baseFiles } = start;
     const sources = unmergedBuiltOn(app, task);
     const branchless = sources.filter((s) => !s.checkout?.branch).map((s) => `#${s.id}`);
     const branchFiles = (
       await Promise.all(
         sources.flatMap(async (s) => {
           const dep = app.getRepo(s.repo_id);
-          const commit = dep && s.checkout?.branch ? await branchCommit(dep.path, s.checkout.branch) : null;
-          return dep && commit ? [await listFiles(dep.path, commit)] : [];
+          const at = dep && s.checkout?.branch ? await app.workspace.filesAt(dep.path, { branch: s.checkout.branch }) : null;
+          return at ? [at.files] : [];
         }),
       )
     ).flat();

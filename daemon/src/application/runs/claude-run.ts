@@ -1,7 +1,6 @@
 // The sequence every task-bound claude run shares: log, run row, settings, the process, and what its end means.
 import { createWriteStream, type WriteStream } from 'node:fs';
 import { join } from 'node:path';
-import { rootInfo } from '../../adapters/repo-root.ts';
 import { closeLog, writeEvent, writeSettings } from '../../adapters/run-log.ts';
 import { LOG_DIR, ensureDirs } from '../../config.ts';
 import type { App } from '../ports/app.ts';
@@ -98,7 +97,7 @@ export async function startTaskRun(
   const settings = runSettings(repo, worktree, logPath);
   // Local to this run, not module state: the live state goes to the run row, where the queue reads it.
   let live = START_LIVE;
-  const allowed = allowedTools(repo, rootInfo(worktree));
+  const allowed = allowedTools(repo, await app.workspace.rootInfo(worktree));
   const cancelled =
     opts.kind === 'unblock' ? () => app.getTask(task.id)?.status !== 'blocked' : () => app.getTask(task.id)?.status === 'cancel_requested';
   const start = (prompt: string, session: string | null, maxTurns = opts.maxTurns ?? task.max_turns): Promise<ClaudeRun> =>
