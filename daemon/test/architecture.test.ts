@@ -630,6 +630,8 @@ const ALLOWED_MODULE_STATE: Record<string, string> = {
     'the sync lock: a task being synced in this process; the database is the state the processes share',
   'application/proposals/planner.ts:proposing': 'the propose lock: a repo being planned in this process',
   'application/work/checkout-locks.ts:merging': 'the merge lock: a task being merged in this process',
+  'application/landing/settle.ts:following':
+    'the follow-up lock: history rows whose follow-ups run in this process; the outbox in the database is what the processes share',
   'application/work/files.ts:changedCache': 'a cache of immutable diff results: the same two commits always differ the same way',
 };
 

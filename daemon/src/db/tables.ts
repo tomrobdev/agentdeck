@@ -185,6 +185,8 @@ export const taskEvents = sqliteTable(
     to_status: text().$type<TaskStatus>(),
     reason: text(),
     at: text().default(NOW_DEFAULT).notNull(),
+    /** 1 while the status change's follow-ups are still to run (the outbox); 0 once they ran, or when it has none. */
+    follow_up_pending: integer().default(0).notNull(),
   },
   (table) => [index('task_events_task').on(table.task_id, table.id)],
 );

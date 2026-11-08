@@ -66,7 +66,9 @@ check<Equals<Maps<WithNewColumn, (row: WithNewColumn) => Task>, false>>();
 check<Maps<WithNewColumn, (row: WithNewColumn) => Task, never, FoldedColumn | 'new_column'>>();
 
 check<Same<typeof plannerRuns.$inferSelect, PlannerRun>>();
-check<Same<typeof taskEvents.$inferSelect, TaskEventRow>>();
+// follow_up_pending is the outbox's flag, read only by pendingFollowUps: a history row as the timeline reads it leaves it out.
+check<Same<Omit<typeof taskEvents.$inferSelect, 'follow_up_pending'>, TaskEventRow>>();
+check<Equals<(typeof taskEvents.$inferSelect)['follow_up_pending'], number>>();
 check<Same<typeof reviews.$inferSelect, Review>>();
 check<Same<typeof reviewComments.$inferSelect, ReviewComment>>();
 

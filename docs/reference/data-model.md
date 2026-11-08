@@ -107,6 +107,7 @@ erDiagram
     text to_status "nullable"
     text reason "nullable"
     text at
+    integer follow_up_pending
   }
   task_links {
     integer task_id PK,FK

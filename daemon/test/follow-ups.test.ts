@@ -2,9 +2,17 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { asTaskId } from '../src/domain/shared/id.ts';
-import { FOLLOW_UPS, type FollowUp, followUpsOf } from '../src/domain/work/follow-ups.ts';
+import { FOLLOW_UPS, type FollowUp, followUpsOf, followUpsOfRow } from '../src/domain/work/follow-ups.ts';
 import { linkState } from '../src/domain/work/link.ts';
-import { DOMAIN_EVENT_TYPES, RULES, type RuleKey, type TaskEvent, type TaskStatus, transition } from '../src/domain/work/lifecycle.ts';
+import {
+  DOMAIN_EVENT_TYPES,
+  RULES,
+  type RuleKey,
+  type TaskEvent,
+  type TaskStatus,
+  domainEventOfRow,
+  transition,
+} from '../src/domain/work/lifecycle.ts';
 import type { TaskState } from '../src/domain/work/task.ts';
 
 const id = asTaskId(4);
@@ -65,20 +73,45 @@ function before(key: RuleKey, to: TaskStatus): FollowUp[] {
 const WARNS_NO_ONE: Exclude<TaskStatus, 'done'>[] = ['queued', 'running', 'cancel_requested'];
 const warnsNoOne = (s: TaskStatus) => (WARNS_NO_ONE as TaskStatus[]).includes(s);
 
-/** What the daemon runs now: the table's follow-ups of the move's events; crash recovery runs the failed ones only. */
+/** What the daemon runs now: the table's follow-ups of the move's events, crash recovery's too (the outbox keeps them all). */
 function now(key: RuleKey, from: TaskStatus): FollowUp[] {
-  const t = transition({ ...stateIn(from), id, attempts: 1, restarts: 0 }, EVENT_OF[key])!;
-  if (key === 'recover' || key === 'recover:exhausted') return t.state.status === 'failed' ? FOLLOW_UPS.TaskFailed : [];
-  return followUpsOf(t.events);
+  return followUpsOf(transition({ ...stateIn(from), id, attempts: 1, restarts: 0 }, EVENT_OF[key])!.events);
 }
+
+/** Since the outbox, crash recovery's events are followed up like any other: a task it cancelled now warns its dependents. */
+const recoveryCancels = (key: RuleKey, to: TaskStatus) => (key === 'recover' || key === 'recover:exhausted') && to === 'cancelled';
 
 test('follow-ups: every entry in RULES is followed up as before, less the warnings that found no one', () => {
   for (const [key, rule] of Object.entries(RULES) as [RuleKey, Partial<Record<TaskStatus, TaskStatus>>][]) {
     for (const [from, to] of Object.entries(rule) as [TaskStatus, TaskStatus][]) {
-      const expected = before(key, to).filter((f) => !(f === 'warn_dependents' && warnsNoOne(to)));
+      const expected = recoveryCancels(key, to)
+        ? ['warn_dependents']
+        : before(key, to).filter((f) => !(f === 'warn_dependents' && warnsNoOne(to)));
       assert.deepEqual(now(key, from), expected, `${key} from ${from}`);
     }
   }
+});
+
+test('follow-ups: a history row reads back as the domain event that wrote it, so the outbox runs the same follow-ups', () => {
+  for (const [key, rule] of Object.entries(RULES) as [RuleKey, Partial<Record<TaskStatus, TaskStatus>>][]) {
+    for (const from of Object.keys(rule) as TaskStatus[]) {
+      const [e] = transition({ ...stateIn(from), id, attempts: 1, restarts: 0 }, EVENT_OF[key])!.events;
+      assert.equal(domainEventOfRow({ type: e.history, to_status: e.to }), e.type, `${key} from ${from}`);
+      assert.deepEqual(followUpsOfRow({ type: e.history, to_status: e.to }), followUpsOf([e]), `${key} from ${from}`);
+    }
+  }
+  const blocked = transition(
+    { ...stateIn('running'), id, attempts: 1, restarts: 0 },
+    {
+      type: 'finish',
+      outcome: 'blocked',
+      environment: true,
+    },
+  )!.events[0];
+  assert.equal(blocked.history, 'environment_block');
+  assert.equal(domainEventOfRow({ type: blocked.history, to_status: blocked.to }), 'TaskBlocked');
+  assert.equal(domainEventOfRow({ type: 'created', to_status: 'proposed' }), null);
+  assert.deepEqual(followUpsOfRow({ type: 'created', to_status: 'queued' }), []);
 });
 
 test('follow-ups: a task queued, running or asked to stop leaves no one stuck, so warning about it did nothing', () => {

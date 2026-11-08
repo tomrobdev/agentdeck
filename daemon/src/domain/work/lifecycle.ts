@@ -174,13 +174,26 @@ export interface DomainEvent {
 
 /** The domain event a rule's move to `to` is. */
 export function domainEventType(cause: RuleKey, to: TaskStatus): DomainEventType {
+  return eventTypeOf(to, cause === 'pr_merged' || cause === 'mark_done' ? cause : 'finished');
+}
+
+/**
+ * The domain event a status change's timeline row records, read back from the row: the status it reached, and for done,
+ * how (a `pr_merged` or `mark_done` row; any other is a finished run). Null for a row that changed no status this way.
+ */
+export function domainEventOfRow(row: { type: TaskEventType; to_status: TaskStatus | null }): DomainEventType | null {
+  if (!row.to_status || row.to_status === 'proposed') return null;
+  return eventTypeOf(row.to_status, row.type === 'pr_merged' || row.type === 'mark_done' ? row.type : 'finished');
+}
+
+function eventTypeOf(to: TaskStatus, done: 'pr_merged' | 'mark_done' | 'finished'): DomainEventType {
   switch (to) {
     case 'running':
       return 'TaskStarted';
     case 'queued':
       return 'TaskQueued';
     case 'done':
-      return cause === 'pr_merged' ? 'TaskPrMerged' : cause === 'mark_done' ? 'TaskMarkedDone' : 'TaskFinished';
+      return done === 'pr_merged' ? 'TaskPrMerged' : done === 'mark_done' ? 'TaskMarkedDone' : 'TaskFinished';
     case 'blocked':
       return 'TaskBlocked';
     case 'failed':
@@ -190,7 +203,7 @@ export function domainEventType(cause: RuleKey, to: TaskStatus): DomainEventType
     case 'cancelled':
       return 'TaskCancelled';
     case 'proposed':
-      throw new Error(`no rule moves a task to proposed (${cause})`);
+      throw new Error('no rule moves a task to proposed');
   }
 }
 

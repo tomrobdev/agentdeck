@@ -20,6 +20,7 @@ const { blockedTask, doneTask, failedTask, openPr, rerun, settlePr } = await imp
 const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
 const { github } = await import('../src/adapters/github.ts');
 const { refreshPrStates } = await import('../src/application/landing/refresh.ts');
+const { followUpPending } = await import('../src/application/landing/settle.ts');
 const { addTask, ActionError, closeTaskPr, retryTask, updateRepo } = await import('../src/application/actions.ts');
 const { buildPrompt } = await import('../src/domain/runs/prompt.ts');
 const { latestReviewNote } = await import('../src/domain/work/history.ts');
@@ -492,6 +493,8 @@ test('cancelling a dependency notifies; cancelling a task nobody waits on does n
   const alone = db.addTask({ repo_id: repo.id, title: 'alone', prompt: 'x' });
   cancelTask(db, dep.id);
   cancelTask(db, alone.id);
+  assert.equal(stuckNotices(dep.id).length, 0, "a person's event waits in the outbox for the daemon's tick");
+  await followUpPending(db);
   assert.match(stuckNotices(dep.id)[0].title, /was cancelled/);
   assert.equal(stuckNotices(alone.id).length, 0);
 });

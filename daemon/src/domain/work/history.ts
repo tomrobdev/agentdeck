@@ -75,6 +75,9 @@ export interface TaskEventRow {
   at: string;
 }
 
+/** A history row whose status change's follow-ups are still to run (the outbox): what the daemon's tick reads to run them. */
+export type PendingFollowUp = Pick<TaskEventRow, 'id' | 'task_id' | 'type' | 'to_status'>;
+
 /**
  * The note on the task's latest retry ("changes requested in review"), or null if that retry had none. A retry by an
  * unblock run counts: its note starts with UNBLOCK_NOTE (domain/runs/unblock.ts).

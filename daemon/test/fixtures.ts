@@ -75,8 +75,12 @@ export interface Outcome {
 
 let urls = 0;
 
-const apply = (db: Db, id: TaskId, event: Parameters<Db['applyEvent']>[1], reason?: string) =>
-  assert.ok(db.applyEvent(id, event, reason ? { reason } : undefined), `${event.type} was refused for #${id}`);
+/** A status change the task went through in its past: its follow-ups are not left pending for a scheduler to run. */
+const apply = (db: Db, id: TaskId, event: Parameters<Db['applyEvent']>[1], reason?: string) => {
+  const applied = db.applyEvent(id, event, reason ? { reason } : undefined);
+  assert.ok(applied, `${event.type} was refused for #${id}`);
+  db.markFollowedUp(applied.pending);
+};
 
 /** Record a PR on a done task. open: recordPr opened. merged: opened, then seen merged. closed: opened, then closed. failed: recordPr failed. */
 function recordPrOn(db: Db, id: TaskId, pr: PrState, url = `https://x/pull/${++urls}`): void {
