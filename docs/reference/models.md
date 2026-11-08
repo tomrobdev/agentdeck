@@ -1318,16 +1318,17 @@ A history row with its task's title.
 
 ### DigestHeader
 
-| Field                 | Type                                                           | Comment                                                                            |
-| --------------------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `repo`                | `string`                                                       |                                                                                    |
-| `paused`              | `boolean`                                                      | The daemon is paused.                                                              |
-| `repo_paused`         | `string \| null`                                               | Why the repo is paused, or null.                                                   |
-| `running`             | `number`                                                       |                                                                                    |
-| `max_concurrent`      | `number`                                                       |                                                                                    |
-| `governor`            | `{ allow: boolean; reason: string \| null; }`                  |                                                                                    |
-| `rate_limited_until?` | `number \| null \| undefined`                                  | When a usage-limit backoff lifts (unix seconds), or null when none is in force.    |
-| `head`                | `{ branch: string; commit: string; subject: string; } \| null` | The repo's checkout: branch, short commit and subject. Null when git couldn't say. |
+| Field                 | Type                                                           | Comment                                                                                                   |
+| --------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `repo`                | `string`                                                       |                                                                                                           |
+| `paused`              | `boolean`                                                      | The daemon is paused.                                                                                     |
+| `repo_paused`         | `string \| null`                                               | Why the repo is paused, or null.                                                                          |
+| `running`             | `number`                                                       |                                                                                                           |
+| `max_concurrent`      | `number`                                                       |                                                                                                           |
+| `governor`            | `{ allow: boolean; reason: string \| null; }`                  |                                                                                                           |
+| `rate_limited_until?` | `number \| null \| undefined`                                  | When a usage-limit backoff lifts (unix seconds), or null when none is in force.                           |
+| `head`                | `{ branch: string; commit: string; subject: string; } \| null` | The repo's checkout: branch, short commit and subject. Null when git couldn't say.                        |
+| `review_due?`         | `string \| null \| undefined`                                  | "area review due: 9 days, 115 commits since the last" when the repo is due for an area review; else null. |
 
 ### DigestInput
 

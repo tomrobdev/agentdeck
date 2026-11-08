@@ -36,6 +36,12 @@ const SETTING_MEANINGS: Record<string, string> = {
   planner_model: 'The model the planner runs with',
   default_model: "The model a new task takes when neither it nor its repo names one (a repo's own is repos.model)",
   support_model: 'The model resolve and unblock runs use, in place of their task’s',
+  review_due_days: 'A repo is due for an area review once its oldest refs/reviewed/* mark is older than this many days',
+  review_due_lines:
+    'A repo is due for an area review once more than this many lines merged since its oldest mark (or, with none, since it was added)',
+  reviews_due: 'The repos due for an area review as the daemon’s last check found them (JSON), for the headline',
+  review_due_told:
+    'When a person was last told each repo is due for an area review (JSON of repo id to ms since the epoch); at most once a day',
   five_hour_max: 'Governor: no new work above this share of the 5-hour window',
   five_hour_soft: 'Governor: one task at a time above this share of the 5-hour window',
   weekly_max: 'Governor: the share of the 7-day window the weekly allowance grows to',

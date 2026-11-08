@@ -270,5 +270,15 @@ export function checkGh(gh: HealthFacts['gh']): Check {
 
 /** Every check, in the order they are shown. */
 export function judgeHealth(f: HealthFacts): Check[] {
-  return [checkService(f.service), checkApi(f), checkCode(f), checkReload(f), checkProcesses(f), checkTasks(f), checkLog(f), checkGh(f.gh), checkReviews(f.reviews)];
+  return [
+    checkService(f.service),
+    checkApi(f),
+    checkCode(f),
+    checkReload(f),
+    checkProcesses(f),
+    checkTasks(f),
+    checkLog(f),
+    checkGh(f.gh),
+    checkReviews(f.reviews),
+  ];
 }

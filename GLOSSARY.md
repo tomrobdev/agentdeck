@@ -46,6 +46,8 @@ _Avoid_: bring in
 
 **Review**: a person's read of a task's changes, with line comments that go back to the worker as a note.
 
+**Area review**: a person's review of one part of a repo across everything merged into it since its last, marked by `refs/reviewed/<area>`. A repo is **due** for one when its oldest mark is older than `review_due_days`, or more than `review_due_lines` lines have merged since it.
+
 ## Capacity
 
 **Governor**: decides whether new work may start, from the 5-hour and 7-day **usage windows**.
