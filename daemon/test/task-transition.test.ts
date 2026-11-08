@@ -361,12 +361,9 @@ for (const c of CASES) {
   test(`transition: ${c.name}`, () => {
     const t = transition({ ...stateIn(c.from), id, attempts: 0, max_attempts: 0, restarts: 0, pr: null, ...c.task }, c.event, c.opts);
     assert.ok(t);
-    const { events, ...rest } = t;
+    const { event, ...rest } = t;
     assert.deepEqual(rest, { state: c.to, counters: c.counters, changes: c.changes ?? {} });
-    assert.deepEqual(
-      events.map((e) => [e.history, e.from, e.to, e.reason]),
-      [[c.history, c.from, c.to.status, c.opts?.reason ?? null]],
-    );
+    assert.deepEqual([event.history, event.from, event.to, event.reason], [c.history, c.from, c.to.status, c.opts?.reason ?? null]);
   });
 }
 
@@ -386,7 +383,7 @@ test('transition: a failed run is requeued while the task has attempts left, unl
   for (const [attempts, max_attempts, event, to] of table) {
     const t = transition({ status: 'running', id, attempts, max_attempts, restarts: 0, pr: null }, event);
     assert.equal(t?.state.status, to, `attempt ${attempts} of ${max_attempts}${'retry' in event ? ', worker crashed' : ''}`);
-    assert.equal(t?.events[0].cause, to === 'queued' ? 'finish:failed:retry' : 'finish:failed');
+    assert.equal(t?.event.type, to === 'queued' ? 'TaskQueued' : 'TaskFailed');
   }
 });
 
@@ -483,9 +480,6 @@ const EVENTS: Record<RuleKey, Partial<Record<TaskStatus, DomainEventType>>> = {
   'recover:exhausted': { running: 'TaskFailed', cancel_requested: 'TaskCancelled' },
 };
 
-/** The rule keys a person asks for; the daemon asks for every other. */
-const BY_PERSON: RuleKey[] = ['approve', 'reject', 'retry', 'cancel', 'mark_done'];
-
 test('transition: the domain events of every entry in RULES', () => {
   for (const [key, rule] of Object.entries(RULES) as [RuleKey, Partial<Record<TaskStatus, TaskStatus>>][]) {
     assert.deepEqual(Object.keys(EVENTS[key]).sort(), Object.keys(rule).sort(), `EVENTS lists each move of ${key}`);
@@ -494,14 +488,12 @@ test('transition: the domain events of every entry in RULES', () => {
       const expected: DomainEvent = {
         type: EVENTS[key][from]!,
         task_id: id,
-        cause: key,
-        by: BY_PERSON.includes(key) ? 'person' : 'daemon',
         from,
         to,
         history: EVENT_OF[key].type,
         reason: 'why',
       };
-      assert.deepEqual(t?.events, [expected], `${key} from ${from}`);
+      assert.deepEqual(t?.event, expected, `${key} from ${from}`);
     }
   }
 });

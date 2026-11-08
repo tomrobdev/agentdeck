@@ -6,8 +6,8 @@ import {
   type RuleCounters,
   type TaskStatus,
   MAX_RESTARTS,
+  RULES,
   TASK_STATUSES,
-  TRANSITIONS,
   canApply,
   fromStatuses,
   nextStatus,
@@ -91,9 +91,10 @@ test('personEvents: what a person may do in every status', () => {
   for (const status of TASK_STATUSES) assert.deepEqual(personEvents({ status }), EXPECTED[status], status);
 });
 
-test('TRANSITIONS lists the statuses each status can move to', () => {
-  assert.deepEqual([...TRANSITIONS.proposed].sort(), ['cancelled', 'queued']);
-  assert.deepEqual([...TRANSITIONS.running].sort(), ['blocked', 'cancel_requested', 'cancelled', 'done', 'failed', 'queued']);
+test('RULES move a status to the statuses it can reach', () => {
+  const reach = (from: TaskStatus) => [...new Set(Object.values(RULES).flatMap((r) => (r[from] ? [r[from]] : [])))].sort();
+  assert.deepEqual(reach('proposed'), ['cancelled', 'queued']);
+  assert.deepEqual(reach('running'), ['blocked', 'cancel_requested', 'cancelled', 'done', 'failed', 'queued']);
 });
 
 test('a finished run after cancel was requested always ends cancelled', () => {
