@@ -313,6 +313,10 @@ export interface Run {
   tests_passed: number | null;
   result_text: string | null;
   denials: number;
+  /** Turns so far while the run is live; the header of an unblock or review run reads it. */
+  live_turns: number;
+  /** The last tool call while the run is live, in a few words; null before the first. */
+  live_tool: string | null;
   /** The model the run was started with; null for a run from before runs recorded it. Missing from a daemon that predates it. */
   model?: string | null;
   /** The exact model id claude's init line named, such as claude-sonnet-5-5; null until it arrives. */

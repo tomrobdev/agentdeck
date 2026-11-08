@@ -50,7 +50,7 @@ const parts = (c: CallItem) =>
 </script>
 
 <template>
-  <div v-for="item in items" :key="item.key" class="flex gap-2 px-3.5 py-[3px]">
+  <div v-for="item in items" :key="item.key" :data-at="item.at" class="flex gap-2 px-3.5 py-[3px]">
     <span class="w-9 flex-none text-right text-xs text-muted tabular-nums select-none">{{ gutter(item.at) }}</span>
     <div class="min-w-0 flex-1">
       <!-- claude's text -->

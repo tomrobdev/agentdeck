@@ -1,13 +1,22 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
-import { type LogEntry, api } from '../../api';
+import { type LogEntry, type Run, api, parseTime } from '../../api';
+import { type LiveSource, runHeader, timeline } from '../../lib/runLive';
 import { buildTranscript, cutRoot } from '../../lib/transcript';
 import LogItem from './LogItem.vue';
+import RunHeader from './RunHeader.vue';
+import RunTimeline from './RunTimeline.vue';
 
 const props = defineProps<{
   taskId: number;
   runId: number | null;
   live: boolean;
+  /** The chosen run, for the header and the timeline. */
+  run?: Run;
+  /** Where its turns and tool come from while it is live. */
+  source?: LiveSource | null;
+  /** The repo's test command, to tell a test call from another command. */
+  testCmd?: string | null;
   worktree?: string | null;
   isPath?: (p: string) => boolean;
 }>();
@@ -35,6 +44,53 @@ async function jump() {
   following.value = true;
   await nextTick();
   box.value?.scrollTo({ top: box.value.scrollHeight });
+}
+
+/** The run whose header shows: one seen live. A finished run opened later has the run list's summary instead. */
+const liveRunId = ref<number | null>(null);
+watch(
+  () => props.run,
+  (r) => {
+    if (r && !r.ended_at) liveRunId.value = r.id;
+  },
+  { immediate: true },
+);
+const now = ref(Date.now());
+const ticker = setInterval(() => {
+  if (props.run && !props.run.ended_at) now.value = Date.now();
+}, 1000);
+const header = computed(() =>
+  props.run && liveRunId.value === props.run.id ? runHeader(props.run, props.source ?? null, items.value, now.value) : null,
+);
+// The strip's segments depend on the entries alone; only its end moves with the clock.
+const marks = computed(() => timeline(entries.value, props.testCmd ?? null));
+const strip = computed(() => {
+  const r = props.run;
+  if (!r) return null;
+  const start = parseTime(r.started_at);
+  return { start, end: r.ended_at ? parseTime(r.ended_at) : Math.max(now.value, start + 1) };
+});
+
+/** Scroll the log to the last row at or before a moment. */
+async function scrollToMoment(at: string) {
+  const el = box.value;
+  if (!el) return;
+  const target = Date.parse(at);
+  let row: HTMLElement | null = null;
+  for (const r of el.querySelectorAll<HTMLElement>('[data-at]')) {
+    if (Date.parse(r.dataset.at!) > target) break;
+    row = r;
+  }
+  row ??= el.querySelector<HTMLElement>('[data-at]');
+  if (!row) return;
+  following.value = false;
+  await nextTick();
+  el.scrollTo({ top: el.scrollTop + row.getBoundingClientRect().top - el.getBoundingClientRect().top - 8 });
+}
+
+function setFollowing(on: boolean) {
+  if (on) void jump();
+  else following.value = false;
 }
 
 function close() {
@@ -74,30 +130,43 @@ watch(
     if (live && !streaming.value) open();
   },
 );
-onBeforeUnmount(close);
+onBeforeUnmount(() => {
+  close();
+  clearInterval(ticker);
+});
 </script>
 
 <template>
-  <div ref="box" class="min-h-0 flex-1 overflow-y-auto rounded-md border border-border bg-code-bg py-2" @scroll="onScroll">
-    <p v-if="!runId" class="px-3.5 py-1 text-muted">No runs yet. The log appears here when the task starts.</p>
-    <p v-else-if="!entries.length" class="px-3.5 py-1 text-muted">{{ streaming ? 'Waiting for output…' : 'Empty log.' }}</p>
-    <LogItem
-      :items="items"
-      :first="first"
-      :live="streaming"
-      :repo-path="repoPath"
-      :is-path="isPath"
-      :cut="cut"
-      @file="(p) => emit('file', p)"
-      @path="(p, l) => emit('path', p, l)"
+  <div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border border-border bg-code-bg">
+    <RunHeader v-if="header" :header="header" :following="following" @follow="setFollowing" />
+    <RunTimeline
+      v-if="strip && marks.segments.length"
+      :segments="marks.segments"
+      :ticks="marks.ticks"
+      :start="strip.start"
+      :end="strip.end"
+      @jump="scrollToMoment"
     />
-    <p v-if="streaming && entries.length" class="px-3.5 py-1 text-sm text-running">● live</p>
-    <button
-      v-if="streaming && !following"
-      class="sticky bottom-2 mr-3 ml-auto block rounded-full border border-border bg-panel px-3 py-1 text-sm shadow"
-      @click="jump"
-    >
-      Jump to live ↓
-    </button>
+    <div ref="box" class="min-h-0 flex-1 overflow-y-auto py-2" @scroll="onScroll">
+      <p v-if="!runId" class="px-3.5 py-1 text-muted">No runs yet. The log appears here when the task starts.</p>
+      <p v-else-if="!entries.length" class="px-3.5 py-1 text-muted">{{ streaming ? 'Waiting for output…' : 'Empty log.' }}</p>
+      <LogItem
+        :items="items"
+        :first="first"
+        :live="streaming"
+        :repo-path="repoPath"
+        :is-path="isPath"
+        :cut="cut"
+        @file="(p) => emit('file', p)"
+        @path="(p, l) => emit('path', p, l)"
+      />
+      <button
+        v-if="streaming && !following"
+        class="sticky bottom-2 mr-3 ml-auto block rounded-full border border-border bg-panel px-3 py-1 text-sm shadow"
+        @click="jump"
+      >
+        Jump to live ↓
+      </button>
+    </div>
   </div>
 </template>
