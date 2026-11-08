@@ -109,6 +109,7 @@ test('a recovered task that fails or is cancelled has its runs end so; a requeue
 
 test('link and unlink leave no stale after_task in the API', async () => {
   const { db, repo } = setup();
+  db.updateRepo(repo.id, { pr_mode: 'ready' });
   const a = db.addTask({ repo_id: repo.id, title: 'a', prompt: 'p' });
   const b = db.addTask({ repo_id: repo.id, title: 'b', prompt: 'p' });
   const t = await addTask(db, { repo: 'demo', prompt: 'x', builds_on: [a.id] });

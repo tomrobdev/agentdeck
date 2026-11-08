@@ -13,7 +13,7 @@ _Avoid_: ticket, tickets, job, jobs
 
 **Stage**: where a task stands for a person, worked out from its status, its pull request and what it waits for. Not its status.
 
-**Link**: one task depending on another, of one of two kinds. **Builds on**: B uses A's code, so B starts once A is done and merged, and B's branch includes A's work; if A is rejected, B is stuck. **After**: B only has to land after A, so B runs any time on its own branch from the base, and only its merge waits for A's. A task's links are its **dependencies**; the tasks linked to it are its **dependents**. Not a task's **Needs**, which are what a blocked worker asked for.
+**Link**: one task depending on another, of one of two kinds. **Builds on**: B uses A's code, so B starts once A is done and merged, and B's branch includes A's work; if A is rejected, B is stuck; a task in a repo that opens no PRs can't be built on. **After**: B only has to land after A, so B runs any time on its own branch from the base, and only its merge waits for A's. A task's links are its **dependencies**; the tasks linked to it are its **dependents**. Not a task's **Needs**, which are what a blocked worker asked for.
 
 **Wait**: a task or a merge held back until something else happens, such as a link's task landing or checks finishing. A wait is not a hold, and not a pause.
 

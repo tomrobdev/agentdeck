@@ -10,7 +10,8 @@ process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-linkuse-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { openDb } = await import('../src/db/index.ts');
-const { ActionError, addTask, linkTasks, unlinkTasks, taskDetail, cancelTask, deleteRepo } = await import('../src/application/actions.ts');
+const { ActionError, addTask, updateRepo, linkTasks, unlinkTasks, taskDetail, cancelTask, deleteRepo } =
+  await import('../src/application/actions.ts');
 const { doneTask, failedTask, queuedTask, runningTask, settlePr, testApp } = await import('./fixtures.ts');
 const { landsAfter, warnStuckDependents } = await import('../src/application/work/dependencies.ts');
 const { mergeCheck } = await import('../src/domain/landing/merge.ts');
@@ -19,6 +20,7 @@ const { autoMergeCheck } = await import('../src/domain/landing/auto-merge.ts');
 function setup() {
   const db = testApp(openDb(':memory:'));
   const repo = db.addRepo({ name: 'demo', path: '/tmp/demo', base_branch: 'main' });
+  db.updateRepo(repo.id, { pr_mode: 'ready' });
   const add = () => db.addTask({ repo_id: repo.id, title: 't', prompt: 'p' });
   return { db, repo, add };
 }
@@ -118,7 +120,8 @@ test('linkTasks and unlinkTasks; a self link, a repeat and a cycle are refused w
 });
 
 test('an after link holds the merge until the other lands, and is gone when the other is', () => {
-  const { db, add } = setup();
+  const { db, repo: demo, add } = setup();
+  db.updateRepo(demo.id, { pr_mode: 'off' });
   const [a, b] = [add(), add()];
   linkTasks(db, b.id, { on: a.id, kind: 'after' });
   assert.equal(landsAfter(db, b.id).length, 1);
@@ -181,6 +184,36 @@ test('a builds-on link is refused on a task that has started, and an after link 
   db.close();
 });
 
+test('a builds-on link into a repo with pr_mode off is refused, through linkTasks and addTask; an after link is not', async () => {
+  const { db, repo, add } = setup();
+  db.updateRepo(repo.id, { pr_mode: 'off' });
+  const [a, b] = [add(), add()];
+  const refusal = `#${a.id} is in demo, which opens no PRs, so its work never reaches the base: make it an after link instead`;
+  assert.throws(() => linkTasks(db, b.id, { on: a.id, kind: 'builds_on' }), new ActionError(refusal));
+  await assert.rejects(() => addTask(db, { repo: 'demo', prompt: 'x', builds_on: [a.id] }), new ActionError(refusal));
+  assert.deepEqual(db.linksOf(b.id), []);
+  linkTasks(db, b.id, { on: a.id, kind: 'after' });
+  const t = await addTask(db, { repo: 'demo', prompt: 'x', after: [a.id] });
+  assert.deepEqual(
+    db.linksOf(t.id).map((l) => l.kind),
+    ['after'],
+  );
+  db.close();
+});
+
+test('pr_mode off is refused while a task has an unmet builds-on link, and accepted once it is met', async () => {
+  const { db, repo, add } = setup();
+  const dep = doneTask(db, repo, { pr: 'open' });
+  const later = add();
+  linkTasks(db, later.id, { on: dep.id, kind: 'builds_on' });
+  const refusal = new RegExp(`demo can't stop opening PRs while #${later.id} builds on a task that is not merged yet`);
+  assert.throws(() => updateRepo(db, 'demo', { pr_mode: 'off' }), refusal);
+  assert.equal(db.getRepo(repo.id)!.pr_mode, 'ready');
+  settlePr(db, dep.id, 'merged');
+  assert.equal(updateRepo(db, 'demo', { pr_mode: 'off' }).pr_mode, 'off');
+  db.close();
+});
+
 test('a stuck notification leaves out a task stuck on a cancelled task between, and a chained reason says via', async () => {
   const { db, add } = setup();
   const [root, mid, cancelled, leaf, deep] = [add(), add(), add(), add(), add()];
@@ -224,6 +257,7 @@ test('merging one of two tasks a task builds on does not list it as unblocked', 
 test("deleting a repo warns about another repo's queued task that built on its unmerged work", async () => {
   const { db, repo } = setup();
   const gone = db.addRepo({ name: 'gone', path: join(process.env.AGENTDECK_HOME!, 'no-such-repo'), base_branch: 'main' });
+  db.updateRepo(gone.id, { pr_mode: 'ready' });
   const [unmerged, merged] = [queuedTask(db, gone), doneTask(db, gone, { pr: 'merged' })];
   const builder = await addTask(db, { repo: 'demo', prompt: 'x', title: 'builder', builds_on: [unmerged.id] });
   const fine = await addTask(db, { repo: 'demo', prompt: 'x', title: 'fine', builds_on: [merged.id] });

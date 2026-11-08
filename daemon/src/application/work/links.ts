@@ -1,10 +1,16 @@
 // Use cases for task links: add one, remove one, and check the lists a new task names.
 import type { App } from '../ports/app.ts';
-import { type TaskId, parseId } from '../../domain/shared/index.ts';
-import { type Link, type LinkKind, buildsOnError, linkError } from '../../domain/work/index.ts';
+import { type RepoId, type TaskId, parseId } from '../../domain/shared/index.ts';
+import { type Link, type LinkKind, buildsOnError, buildsOnRepoError, linkError } from '../../domain/work/index.ts';
 import { ActionError, object, refuse, requireTask } from '../shared/input.ts';
 
 const KINDS: LinkKind[] = ['builds_on', 'after'];
+
+/** Why a task may not be built on, from the `pr_mode` of its repo, or null. */
+function buildsOnTargetError(app: App, target: { id: TaskId; repo_id: RepoId }): string | null {
+  const repo = app.getRepo(target.repo_id);
+  return repo ? buildsOnRepoError(target.id, repo) : null;
+}
 
 /** The links a new task asks for, checked: every task exists and none is named under both kinds. The entry points parse the ids. */
 export function newLinks(app: App, input: { builds_on?: TaskId[]; after?: TaskId[] }): { on: TaskId; kind: LinkKind }[] {
@@ -15,7 +21,9 @@ export function newLinks(app: App, input: { builds_on?: TaskId[]; after?: TaskId
   const verb = { builds_on: 'build on', after: 'land after' };
   return [...builds_on.map((on) => ({ on, kind: 'builds_on' as const })), ...after.map((on) => ({ on, kind: 'after' as const }))].map(
     (link) => {
-      if (!app.getTask(link.on)) throw new ActionError(`can't ${verb[link.kind]} #${link.on}: no such task`);
+      const target = app.getTask(link.on);
+      if (!target) throw new ActionError(`can't ${verb[link.kind]} #${link.on}: no such task`);
+      if (link.kind === 'builds_on') refuse(buildsOnTargetError(app, target));
       return link;
     },
   );
@@ -32,7 +40,10 @@ export function linkTasks(app: App, id: TaskId, input: { on: TaskId; kind: LinkK
   if (on === null) throw new ActionError('on must be a task id');
   if (!KINDS.includes(body.kind as LinkKind)) throw new ActionError(`kind must be one of ${KINDS.join(', ')}`);
   if (!app.getTask(on)) throw new ActionError(`no task #${on}`);
-  if (body.kind === 'builds_on') refuse(buildsOnError(id, task.status, on));
+  if (body.kind === 'builds_on') {
+    refuse(buildsOnError(id, task.status, on));
+    refuse(buildsOnTargetError(app, app.getTask(on)!));
+  }
   refuse(linkError(id, on, app.allLinks()));
   const link: Link = { task_id: id, on, kind: body.kind as LinkKind };
   app.addLink(link);

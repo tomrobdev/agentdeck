@@ -22,7 +22,17 @@ export { followUpsOf, followUpsOfRow } from './follow-ups.ts';
 export type { FollowUp } from './follow-ups.ts';
 export { MAX_RESTARTS, TASK_STATUSES, fromStatuses, nextStatus, personEvents, transition } from './lifecycle.ts';
 export type { DomainEvent, PersonEvent, TaskEvent, TaskStatus } from './lifecycle.ts';
-export { buildsOnError, linkError, linkState, releasedBy, startState, stuckOn, unlandedAfter } from './link.ts';
+export {
+  buildsOnError,
+  buildsOnRepoError,
+  linkError,
+  linkState,
+  prModeOffError,
+  releasedBy,
+  startState,
+  stuckOn,
+  unlandedAfter,
+} from './link.ts';
 export type { Dependent, Link, LinkIndex, LinkKind, LinkState, LinkTarget, LinkedTask, StartState } from './link.ts';
 export { INSTALL_NOTE, LOCKFILES, canInstallWith, depsRequest, depsRequestError, installArgs, isNeeds, parseNeeds } from './needs.ts';
 export type { Needs, NeedsKind, UnblockQuestion } from './needs.ts';
