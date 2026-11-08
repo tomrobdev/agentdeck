@@ -1,4 +1,4 @@
-// A second test for each landing use case a single test file named before: fixChecks, mergeAll, closeTaskPr,
+// A second test for each landing use case a single test file named before: fixChecks, requestAllMerges, closeTaskPr,
 // requestMerges, cancelMergeRequest and markDone. Real SQLite and git, the fake code host (fakes.ts).
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -16,7 +16,8 @@ const { openDb } = await import('../src/db/index.ts');
 const { asTaskId, blockedTask, doneTask, failedTask, queuedTask, testApp } = await import('./fixtures.ts');
 const { refreshPrStates } = await import('../src/application/landing/refresh.ts');
 const actions = await import('../src/application/actions.ts');
-const { ActionError, cancelMergeRequest, closeTaskPr, fixChecks, linkTasks, markDone, mergeAll, requestMerges, taskDetail } = actions;
+const { ActionError, cancelMergeRequest, closeTaskPr, fixChecks, linkTasks, markDone, requestAllMerges, requestMerges, taskDetail } =
+  actions;
 const { latestReviewNote } = await import('../src/domain/work/history.ts');
 
 const host = fakeCodeHost();
@@ -114,36 +115,27 @@ test('fixChecks: a PR that cannot be read is refused and leaves the task done', 
   await assert.rejects(fixChecks(db, asTaskId(99999)), ActionError);
 });
 
-test('mergeAll: a merge gh refuses, a task that is not done and an unknown id are skipped with why; what lands after them waits', async () => {
-  const refused = tested();
+test('requestAllMerges: failing checks, a task that is not done and an unknown id are left with why; what lands after another waits', async () => {
+  const failing = tested();
+  host.details[failing.url] = { ...READY_PR, checks: { total: 2, failing: 1, pending: 0 } };
+  const first = tested();
   const after = tested();
-  linkTasks(db, after.id, { on: refused.id, kind: 'after' });
-  const fine = tested();
+  linkTasks(db, after.id, { on: first.id, kind: 'after' });
   const queued = queuedTask(db, repo);
-  const merge = host.merge;
-  host.merge = async (pr) => {
-    if (pr.url === refused.url) throw new Error('gh: base branch was modified');
-    return merge(pr);
-  };
-  let res;
-  try {
-    res = await mergeAll(db, { ids: [after.id, refused.id, fine.id, queued.id, asTaskId(99999)] });
-  } finally {
-    host.merge = merge;
-  }
-  assert.deepEqual(
-    res.merged.map((m) => m.id),
-    [fine.id],
-  );
-  assert.deepEqual(host.merged, [{ url: fine.url, method: repo.merge_method }]);
-  const why = Object.fromEntries(res.skipped.map((s) => [s.id, s]));
-  assert.deepEqual(Object.keys(why).map(Number).sort(), [after.id, refused.id, queued.id, 99999].sort());
-  assert.equal(why[refused.id].reason, 'merge failed: gh: base branch was modified');
-  assert.equal(why[refused.id].conflicting, false);
-  assert.match(why[after.id].reason, new RegExp(`lands after #${refused.id}`));
-  assert.match(why[queued.id].reason, /only a done task can be merged/);
-  assert.match(why[99999].reason, /no such task/);
-  for (const t of [refused, after]) assert.equal(db.getTask(t.id)!.pr?.state, 'open', 'a skipped PR stays open');
+  const res = await requestAllMerges(db, { ids: [after.id, failing.id, first.id, queued.id, asTaskId(99999), first.id] });
+  assert.deepEqual(host.merged, [], 'nothing merges here: the daemon carries the requests out');
+  assert.deepEqual(res.requested.map((r) => r.id).sort(), [after.id, first.id].sort(), 'an id given twice is asked once');
+  const waits = Object.fromEntries(res.requested.map((r) => [r.id, r.waits]));
+  assert.deepEqual(waits[first.id], []);
+  assert.match(waits[after.id].join('; '), new RegExp(`lands after #${first.id}`));
+  const why = Object.fromEntries(res.left.map((s) => [s.id, s.reason]));
+  assert.deepEqual(Object.keys(why).map(Number).sort(), [failing.id, queued.id, 99999].sort());
+  assert.equal(why[failing.id], '1 check failing on GitHub');
+  assert.match(why[queued.id], /only a done task can be merged/);
+  assert.match(why[99999], /no such task/);
+  assert.equal(db.getTask(failing.id)!.pr?.merge_request ?? null, null);
+  for (const t of [first, after]) assert.ok(db.getTask(t.id)!.pr?.merge_request, 'requested, for the daemon');
+  for (const t of [first, after]) cancelMergeRequest(db, t.id);
 });
 
 test('closeTaskPr: closes the PR on the code host, and a task building on it is stuck', async () => {
