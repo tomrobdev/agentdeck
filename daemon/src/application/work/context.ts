@@ -9,6 +9,7 @@ import { filterTasks, listable } from '../../domain/work/index.ts';
 import { isReview, stageOf } from '../../domain/work/index.ts';
 import { OPEN_STATUSES } from '../../domain/work/index.ts';
 import { status } from '../operations/settings.ts';
+import { repoReviewDue } from '../operations/review-due.ts';
 import { withViews } from './task-views.ts';
 
 /** What the session is shown, and the cursor to pass as `after` next time. */
@@ -57,7 +58,7 @@ export async function liveContext(app: App, opts: { repo: Repo; after: number | 
     .listTasks()
     .filter((t) => t.repo_id === opts.repo.id && ([...OPEN_STATUSES, 'blocked', 'failed'].includes(t.status) || isReview(stageOf(t))));
   const open = filterTasks(withViews(app, maybeOpen).map(listable), { states: OPEN_STATES, repo_id: opts.repo.id, sort: 'attention' });
-  const head = await app.workspace.head(opts.repo.path);
+  const [head, due] = await Promise.all([app.workspace.head(opts.repo.path), repoReviewDue(app, opts.repo)]);
   const lines = digest({
     header: {
       repo: opts.repo.name,
@@ -68,6 +69,7 @@ export async function liveContext(app: App, opts: { repo: Repo; after: number | 
       governor: st.governor,
       rate_limited_until: st.rate_limited_until && st.rate_limited_until * 1000 > Date.now() ? st.rate_limited_until : null,
       head: head && { branch: head.branch, commit: head.short, subject: head.subject },
+      review_due: due?.line ?? null,
     },
     events,
     open,

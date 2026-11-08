@@ -90,8 +90,9 @@ Daemon
   agentdeck restart [--now]     restart the service: pause new claims, wait until no task or planner run is active,
                                   restart, restore the pause state. --now restarts at once (a running task is requeued)
   agentdeck logs [-f] [-n lines]  print (or follow) ~/.agentdeck/logs/daemon.log
-  agentdeck doctor [--json]     check the daemon: service, API, loaded commit, reload, stray claude processes, the log, gh;
-                                  each failed check names the command that fixes it (exit 1 if any fails; works with the daemon down)
+  agentdeck doctor [--json]     check the daemon: service, API, loaded commit, reload, stray claude processes, the log, gh,
+                                  area reviews due (a warning, never a failure); each failed check names the command that
+                                  fixes it (exit 1 if any fails; works with the daemon down)
   agentdeck daemon              run the scheduler in the foreground
   agentdeck run-once            work the queue until empty, then exit (ignores pause; refused while the daemon runs)
   agentdeck pause | resume
@@ -103,7 +104,9 @@ Daemon
                                   default_model (a new task's model when neither it nor its repo names one),
                                   support_model (the model of resolve and unblock runs),
                                   review_model (the model of review runs, default opus),
-                                  reload_on_change (on|off): restart onto new daemon/src code once nothing is running
+                                  reload_on_change (on|off): restart onto new daemon/src code once nothing is running,
+                                  review_due_days, review_due_lines: a repo is due for an area review once its oldest
+                                  refs/reviewed/* mark is older than that many days, or more lines merged since it
   agentdeck stats [--repo r] [--since <date>] [--by week|model] [--json]  the pilot scorecard measures per repo: tasks done on
                                   the first run (with a Wilson 95% interval), permission denials per run, cost and minutes per
                                   done task, then interventions, median minutes queued, running and in review, PRs green on CI

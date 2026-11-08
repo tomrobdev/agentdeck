@@ -7,6 +7,7 @@ import { MAX_RESTARTS } from '../../domain/work/index.ts';
 import { describeWait } from '../../domain/work/index.ts';
 import { queueWait } from '../capacity/gate.ts';
 import { notifyLater } from '../operations/notifications.ts';
+import { REVIEW_CHECK_MS, checkReviewsDue } from '../operations/review-due.ts';
 import { proposeNow, plannerDue } from '../proposals/planner.ts';
 import { resolveConflicting } from '../runs/sync.ts';
 import { autoMerge } from '../landing/auto-merge.ts';
@@ -68,6 +69,8 @@ export class Scheduler {
   private readonly awake: KeepAwake;
   private lastPrRefresh = 0;
   private refreshingPrs = false;
+  private lastReviewCheck = 0;
+  private checkingReviews = false;
   /** Running the follow-ups pending in the outbox; one pass at a time. */
   private followingUp = false;
   /** The latest `pr_check_requested` this scheduler has acted on. */
@@ -217,6 +220,7 @@ export class Scheduler {
       if (this.opts.autoPropose && !this.proposing && this.gate().free > 0) this.maybePropose(); // a claim above took a slot: ask again
     }
     this.maybeRefreshPrs();
+    this.maybeCheckReviews();
     this.awake.set(this.running.size > 0 || this.proposing);
     if (
       this.opts.once &&
@@ -293,6 +297,22 @@ export class Scheduler {
       .catch((err) => this.opts.log(`pr refresh crashed: ${err?.stack ?? err}`))
       .finally(() => {
         this.refreshingPrs = false;
+      });
+  }
+
+  /**
+   * Once a minute (not in once mode), read the repos' area review marks: store which repos are due for the headline and
+   * remind a person of each at most once a day. A moved mark clears its repo on the next check. One check at a time.
+   */
+  private maybeCheckReviews(): void {
+    const now = Date.now();
+    if (this.opts.once || this.checkingReviews || now - this.lastReviewCheck < REVIEW_CHECK_MS) return;
+    this.lastReviewCheck = now;
+    this.checkingReviews = true;
+    checkReviewsDue(this.app, now)
+      .catch((err) => this.opts.log(`area review check crashed: ${err?.stack ?? err}`))
+      .finally(() => {
+        this.checkingReviews = false;
       });
   }
 

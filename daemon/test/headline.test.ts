@@ -21,7 +21,7 @@ test('idle, or working with a task running', () => {
 
 test('precedence: paused, then rate limited, then hold, then working', () => {
   const all = facts({ paused: true, rate_limited_until: NOW + 60, governor: { allow: false, until: NOW + 120 }, running: 1 });
-  assert.deepEqual(headline(all, NOW), { state: 'paused', until: null, need_you: 0, attention: [] });
+  assert.deepEqual(headline(all, NOW), { state: 'paused', until: null, need_you: 0, attention: [], review_due: [] });
   assert.deepEqual(headline({ ...all, paused: false }, NOW).state, 'rate_limited');
   assert.equal(headline({ ...all, paused: false }, NOW).until, NOW + 60);
   const hold = headline({ ...all, paused: false, rate_limited_until: null }, NOW);

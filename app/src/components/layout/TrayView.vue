@@ -44,6 +44,7 @@ const running = computed(() => {
 });
 const attention = computed(() => status.value?.headline.attention ?? []);
 const more = computed(() => Math.max(0, (status.value?.headline.need_you ?? 0) - attention.value.length));
+const reviewDue = computed(() => status.value?.headline.review_due ?? []);
 
 const error = ref('');
 const queryClient = useQueryClient();
@@ -113,6 +114,7 @@ const openQueue = () => open('agentdeck://queue', { name: 'queue' });
             </li>
           </ul>
           <p v-if="more" class="text-muted m-0 px-1.5 pt-1 text-xs">and {{ more }} more</p>
+          <p v-for="r in reviewDue" :key="r.repo" class="m-0 px-1.5 pt-1 text-xs text-blocked">{{ r.repo }}: {{ r.line }}</p>
         </section>
       </div>
       <p v-else class="text-muted m-auto px-6 text-center">The AgentDeck daemon isn't running.</p>

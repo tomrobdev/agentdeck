@@ -24,6 +24,8 @@ export function settingPatch(key: string | undefined, value: string): SettingsPa
   if (key === 'planner_max_tasks') return { planner: { max_tasks: Number(value) } };
   if (key === 'planner_model') return { planner: { model: value } };
   if (key === 'default_model' || key === 'support_model' || key === 'review_model') return { [key]: value };
+  if (key === 'review_due_days') return { review_due: { days: Number(value) } };
+  if (key === 'review_due_lines') return { review_due: { lines: Number(value) } };
   throw new ActionError(`unknown setting "${key}"; see agentdeck help`);
 }
 

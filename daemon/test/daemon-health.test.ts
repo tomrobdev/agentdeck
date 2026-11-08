@@ -40,12 +40,13 @@ const facts = (over: Partial<import('../src/domain/operations/health.ts').Health
   tasks: [],
   log: { problems: [], lastStop: null },
   gh: { ok: true, output: 'Logged in' },
+  reviews: [],
   ...over,
 });
 
 test('a healthy daemon passes every check and has nothing to fix', () => {
   const checks = h.judgeHealth(facts());
-  assert.equal(checks.length, 8);
+  assert.equal(checks.length, 9);
   assert.ok(
     checks.every((c) => c.ok && c.fix === null),
     JSON.stringify(checks),
@@ -268,6 +269,7 @@ test('gatherHealth reads runs and tasks from the database and their liveness fro
       },
       logLines: () => ['[2026-11-01T11:59:00.000Z] task 9: worker crashed: Error: x'],
       gh: async () => ({ ok: true, output: 'ok' }),
+      reviews: async () => [],
       now: () => NOW,
     },
     4317,
@@ -316,6 +318,7 @@ test('daemonReport gives the checks, HEAD, the running tasks and the last 20 log
       alive: () => true,
       logLines: () => [...lines, ''],
       gh: async () => ({ ok: true, output: 'ok' }),
+      reviews: async () => [],
       now: () => NOW,
     },
     4317,

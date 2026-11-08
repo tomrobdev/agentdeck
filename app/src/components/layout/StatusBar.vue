@@ -46,6 +46,14 @@ const meters = computed(() => {
   });
 });
 
+/** The repos due for an area review: one repo's line, or how many, with every line in the title. */
+const reviewDue = computed(() => {
+  const due = props.offline ? [] : (props.status?.headline.review_due ?? []);
+  if (!due.length) return null;
+  const title = due.map((r) => `${r.repo}: ${r.line}`).join('\n');
+  return { label: due.length === 1 ? `${due[0].repo}: ${due[0].line}` : `area review due in ${due.length} repos`, title };
+});
+
 const toggleTitle = computed(() => {
   const action = props.status?.paused ? 'Resume: let new tasks start' : 'Pause: no new tasks start';
   return state.value.title ? `${state.value.title} · ${action}` : action;
@@ -134,6 +142,7 @@ const toggleTitle = computed(() => {
     <span v-if="status && !offline && !status.governor.allow && status.governor.reason" class="text-muted truncate">
       On hold: {{ status.governor.reason }}
     </span>
+    <span v-if="reviewDue" class="truncate text-blocked" :title="reviewDue.title">{{ reviewDue.label }}</span>
     <Chip as="button" variant="tint" size="xs" title="The daemon's health, and restart" @click="$emit('daemon')">Daemon</Chip>
   </footer>
 </template>
