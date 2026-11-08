@@ -7,6 +7,7 @@ import { useHotkeys } from '../../composables/useHotkeys';
 import { useMergeConfirm } from '../../composables/useMergeConfirm';
 import { useQueueDisplay } from '../../composables/useQueueDisplay';
 import { type BoardMove, type PersonEvent, canStartMerge, emptyFilters, hasFilters, personEvents, quickRetry } from '../../lib/taskView';
+import { buildsOnChain } from '../../lib/bulk';
 import BulkMergeDialog from '../task/BulkMergeDialog.vue';
 import MergeDialog from '../task/MergeDialog.vue';
 import SegmentedControl from '../ui/SegmentedControl.vue';
@@ -30,11 +31,17 @@ const {
   bulkMerging,
   pending: bulkPending,
   pick,
+  pickMany,
+  pickShown,
+  toggleGroup: togglePicks,
   clearPicked,
   bulkAct,
   onBulkMerged,
   mergeAll,
-} = useBulkPick(() => props.tasks, order);
+} = useBulkPick(() => props.tasks, shown);
+const orderIds = () => order.value.map((t) => t.id);
+/** A shift-click in the graph: the task and every unfinished task it builds on that is shown, without opening the page. */
+const pickChain = (id: number) => pickMany(buildsOnChain(shown.value, id));
 
 function step(by: number) {
   const list = order.value;
@@ -80,7 +87,8 @@ useHotkeys({
     if (selected.value === null && order.value.length) selected.value = order.value[0].id;
     peek.value = !peek.value;
   },
-  x: () => display.value.mode === 'list' && selected.value !== null && pick(selected.value, false),
+  x: () => selected.value !== null && pick(selected.value, false, orderIds()),
+  X: pickShown,
   Escape: () => {
     if (picked.value.length) clearPicked();
     else if (peek.value) peek.value = false;
@@ -136,7 +144,8 @@ useHotkeys({
           :show="display.show"
           :show-empty="display.showEmpty"
           @toggle="toggleGroup"
-          @pick="pick"
+          @pick="(id, range) => pick(id, range, orderIds())"
+          @pick-group="togglePicks"
           @select="selected = $event"
           @open="emit('open', $event)"
           @act="act"
@@ -149,28 +158,25 @@ useHotkeys({
           :shown="shown"
           :selected="selected"
           :show-finished="!!display.showFinished"
+          :picked="picked"
           @select="selected = $event"
+          @pick-chain="pickChain"
           @open="emit('open', $event)"
         />
         <BoardView
           v-else
           :groups="groups"
           :selected="selected"
+          :picked="picked"
           :show="display.show"
           @select="selected = $event"
+          @pick="(id, range, column) => pick(id, range, column)"
           @open="emit('open', $event)"
           @move="act"
           @merge="startMerge"
           @merge-all="mergeAll"
         />
-        <BulkBar
-          v-if="picked.length && display.mode === 'list'"
-          :count="picked.length"
-          :actions="bar"
-          :busy="bulkPending"
-          @act="bulkAct"
-          @clear="clearPicked"
-        />
+        <BulkBar v-if="picked.length" :count="picked.length" :actions="bar" :busy="bulkPending" @act="bulkAct" @clear="clearPicked" />
       </div>
       <PeekPane
         v-if="peek && display.mode === 'list' && selected !== null"
