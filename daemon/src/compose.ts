@@ -12,22 +12,19 @@ import { activeChildren, killGroup, ownsLiveGroup, reapOrphans } from './adapter
 import { appendEvent, closeLog, readLog, removeFiles, writeEvent, writeSettings } from './adapters/run-log.ts';
 import { DAEMON_LOG, install, restart, serviceStatus, start, stop, tailLog, uninstall } from './adapters/service.ts';
 import type { Agent } from './application/ports/agent.ts';
-import type { App, Ports } from './application/ports/app.ts';
+import type { ComposedApp, Ports } from './application/ports/app.ts';
 import type { CodeHost } from './application/ports/code-host.ts';
 import type { Goals } from './application/ports/goals.ts';
 import type { Notifier } from './application/ports/notifier.ts';
 import type { Processes } from './application/ports/processes.ts';
 import type { RunLog } from './application/ports/run-log.ts';
 import type { Service } from './application/ports/service.ts';
+import type { Source } from './application/ports/source.ts';
+import { checkedOutBranch, checkoutCommit, hasUncommittedChanges } from './adapters/git.ts';
+import { watchSource } from './adapters/watch.ts';
 import type { Workspace } from './application/ports/workspace.ts';
 import { workspace } from './adapters/workspace.ts';
-import { type Db, openDb } from './db/index.ts';
-
-/**
- * The App the entry points are given: the use cases' App, plus the rest of what the database offers that the entry
- * points still call directly (`close`, and the store calls the strict-layers step replaces with use cases).
- */
-export type ComposedApp = Db & App;
+import { openDb } from './db/index.ts';
 
 /** claude through `adapters/claude.ts`: every session in its own process group. */
 export const realAgent = (): Agent => ({ run: (session) => runClaude(session), find: async () => findClaude() });
@@ -89,8 +86,17 @@ export const realService = (): Service => ({
 /** Goals files through `adapters/goals.ts`. */
 export const realGoals = (): Goals => ({ path: goalsPath, read: readGoals, write: writeGoals, delete: deleteGoals });
 
+/** The daemon's source checkout through `adapters/git.ts` and `adapters/watch.ts`. */
+export const realSource = (): Source => ({
+  commit: checkoutCommit,
+  branch: checkedOutBranch,
+  dirty: hasUncommittedChanges,
+  watch: watchSource,
+});
+
 /** The ports on the real adapters. */
 export const realPorts = (): Ports => ({
+  source: realSource(),
   agent: realAgent(),
   codeHost: realCodeHost(),
   workspace: realWorkspace(),

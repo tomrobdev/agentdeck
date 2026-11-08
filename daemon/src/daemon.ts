@@ -1,11 +1,9 @@
 // The daemon's composition root: wires the source watcher, the API and the scheduler together and runs until stopped.
 // It runs on the App `compose.ts` built (`db` below). It reports through `log` and throws what the caller should
 // print; it never prints or exits on its own account.
-import type { ComposedApp } from './compose.ts';
 import { startApi } from './api/server.ts';
 import { join } from 'node:path';
-import { checkedOutBranch, checkoutCommit, hasUncommittedChanges } from './adapters/git.ts';
-import { watchSource } from './adapters/watch.ts';
+import { type ComposedApp, isPaused, maxConcurrent, reloadOnChange } from './application/actions.ts';
 import { ChangeWatcher } from './application/operations/changes.ts';
 import { reloadBlock } from './application/operations/reload-block.ts';
 import { Scheduler } from './application/scheduler/scheduler.ts';
@@ -21,7 +19,7 @@ export interface DaemonOptions {
 
 export async function runDaemon({ db, once, log = () => {} }: DaemonOptions): Promise<void> {
   // Read once at start: it names the code this process loaded, even if the checkout moves on later.
-  const info = { commit: await checkoutCommit(import.meta.dirname), started_at: new Date().toISOString(), pid: process.pid };
+  const info = { commit: await db.source.commit(import.meta.dirname), started_at: new Date().toISOString(), pid: process.pid };
   // The lines the scheduler doesn't date itself get the same `[time]` prefix, so the log can say when the daemon started and stopped.
   const stamped = (line: string) => log(`[${new Date().toISOString()}] ${line}`);
   let restartRequested = false;
@@ -31,8 +29,8 @@ export async function runDaemon({ db, once, log = () => {} }: DaemonOptions): Pr
   const block = reloadBlock(
     async () => {
       const [dirty, branch] = await Promise.all([
-        hasUncommittedChanges(join(import.meta.dirname, 'db', 'schema.ts')),
-        checkedOutBranch(import.meta.dirname),
+        db.source.dirty(join(import.meta.dirname, 'db', 'schema.ts')),
+        db.source.branch(import.meta.dirname),
       ]);
       return dirty ? SCHEMA_DIRTY : branch && branch !== 'main' ? offMain(branch) : null;
     },
@@ -40,7 +38,7 @@ export async function runDaemon({ db, once, log = () => {} }: DaemonOptions): Pr
     { onNew: (next) => log(`not reloading: ${next}`) },
   );
   if (!once) {
-    watchSource(import.meta.dirname, (file) => {
+    db.source.watch(import.meta.dirname, (file) => {
       if (!changed.includes(file)) changed.push(file);
       lastChangeAt = Date.now();
       void block.refresh().catch(() => {});
@@ -53,7 +51,7 @@ export async function runDaemon({ db, once, log = () => {} }: DaemonOptions): Pr
           // A commit changes no file, so look again while blocked.
           block.recheck();
           return reloadDecision({
-            enabled: db.reloadOnChange(),
+            enabled: reloadOnChange(db),
             changed,
             lastChangeAt,
             now: Date.now(),
@@ -94,7 +92,7 @@ export async function runDaemon({ db, once, log = () => {} }: DaemonOptions): Pr
     process.on('exit', () => api.close());
   }
   stamped(
-    `agentdeck ${once ? 'run-once' : 'daemon'} ${info.commit ? info.commit.slice(0, 7) : 'no commit'} (pid ${info.pid}): ${db.isPaused() && !once ? 'PAUSED (agentdeck resume to start)' : 'active'}, max ${db.maxConcurrent()} concurrent, tick ${DEFAULTS.tickMs / 1000}s`,
+    `agentdeck ${once ? 'run-once' : 'daemon'} ${info.commit ? info.commit.slice(0, 7) : 'no commit'} (pid ${info.pid}): ${isPaused(db) && !once ? 'PAUSED (agentdeck resume to start)' : 'active'}, max ${maxConcurrent(db)} concurrent, tick ${DEFAULTS.tickMs / 1000}s`,
   );
   try {
     await scheduler.run();

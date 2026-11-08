@@ -1,7 +1,6 @@
 // How the CLI prints tasks, doctor reports, logs and times, and how it fails.
 import { createInterface } from 'node:readline/promises';
-import type { ComposedApp } from '../compose.ts';
-import { type DoctorReport, type HealthCheck, type TaskView, readLog } from '../application/actions.ts';
+import { type ComposedApp, type DoctorReport, type HealthCheck, type TaskView, readLog } from '../application/actions.ts';
 import { type TaskId, asTaskId } from '../domain/shared/index.ts';
 import type { AutoMergeView } from '../domain/landing/index.ts';
 import type { ChecksSummary } from '../domain/landing/index.ts';

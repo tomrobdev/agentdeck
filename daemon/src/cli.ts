@@ -1,4 +1,5 @@
 // The `agentdeck` command. The launchd plist runs this file, so it stays at src/cli.ts.
+import { repoName as nameOfRepo } from './application/actions.ts';
 import { COMMANDS } from './cli/commands.ts';
 import { die } from './cli/format.ts';
 import { HELP } from './cli/help.ts';
@@ -13,7 +14,7 @@ async function main(argv: string[]): Promise<void> {
   if (!command) die(`unknown command "${cmd}"\n\n${HELP}`);
 
   const db = composeApp();
-  const repoName: CommandContext['repoName'] = (id) => db.getRepo(id)?.name ?? `repo${id}`;
+  const repoName: CommandContext['repoName'] = (id) => nameOfRepo(db, id);
   await command({ db, cmd, rest, flags, repoName });
   db.close();
 }

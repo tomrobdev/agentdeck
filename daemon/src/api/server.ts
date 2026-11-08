@@ -1,7 +1,7 @@
 // Local HTTP API for the dashboard: JSON endpoints plus a Server-Sent Events log tail.
 import { type Server, createServer } from 'node:http';
 import { API_PORT } from '../config.ts';
-import type { ComposedApp } from '../compose.ts';
+import type { ComposedApp } from '../application/actions.ts';
 import { type ApiContext, type ApiScheduler, dispatch } from './http.ts';
 import * as daemonRoutes from './routes/daemon.ts';
 import * as filesRoutes from './routes/files.ts';

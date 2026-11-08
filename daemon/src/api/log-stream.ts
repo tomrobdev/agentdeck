@@ -1,7 +1,7 @@
 // Server-Sent Events tail of a run's log for the dashboard.
 import { closeSync, existsSync, openSync, readSync, statSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import type { ComposedApp } from '../compose.ts';
+import { type ComposedApp, taskRuns } from '../application/actions.ts';
 import type { TaskId } from '../domain/shared/index.ts';
 import { parseLogLine } from '../domain/runs/index.ts';
 import { pickRun } from '../domain/runs/index.ts';
@@ -16,7 +16,7 @@ export function streamLog(
   taskId: TaskId,
   pick: { attempt?: number; run?: number } = {},
 ): void {
-  const run = pickRun(db.runsForTask(taskId), pick);
+  const run = pickRun(taskRuns(db, taskId), pick);
   res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
   if (!run) {
     res.write('event: end\ndata: {}\n\n');
@@ -54,7 +54,7 @@ export function streamLog(
         if (entries.length) res.write(`data: ${JSON.stringify(entries)}\n\n`);
       }
     }
-    const current = db.runsForTask(taskId).find((r) => r.id === run.id);
+    const current = taskRuns(db, taskId).find((r) => r.id === run.id);
     if (current?.ended_at) {
       res.write('event: end\ndata: {}\n\n');
       res.end();

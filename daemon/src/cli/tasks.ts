@@ -86,7 +86,7 @@ export const taskCommands: Record<string, Command> = {
     if (waiting?.stuck) console.log(`note: ${waiting.stuck}, so this task won't start until ${idsText(waiting.on)} is retried`);
     for (const w of await actions.promptWarnings(db, t.id)) console.log(`note: ${w}`);
     if (t.status === 'proposed') console.log(`note: it waits for \`agentdeck approve ${t.id}\` before it can run`);
-    else if (db.isPaused()) console.log('note: the daemon is paused; run `agentdeck resume` to start working');
+    else if (actions.isPaused(db)) console.log('note: the daemon is paused; run `agentdeck resume` to start working');
   },
   link: async ({ db, flags, rest }) => {
     const id = taskId(rest[0]);
@@ -140,7 +140,7 @@ export const taskCommands: Record<string, Command> = {
       .filter(Boolean);
     // One status keeps its old order, priority first; anything else lists the newest first.
     const sort = flags.sort ?? (states.length === 1 && (TASK_STATUSES as string[]).includes(states[0]) ? 'priority' : 'newest');
-    const all = actions.withViews(db, db.listTasks()).map(listable);
+    const all = actions.withViews(db, actions.listTasks(db)).map(listable);
     let tasks;
     try {
       tasks = filterTasks(all, { states, repo_id: repo?.id, search: rest.join(' '), sort });
@@ -182,7 +182,7 @@ export const taskCommands: Record<string, Command> = {
       const { finished, total } = planProgress(p.steps);
       console.log(`plan: ${p.title} (${p.name}${p.task_id === t.id ? '' : ` of #${p.task_id}`}, ${finished}/${total} steps)`);
     }
-    for (const r of db.runsForTask(t.id)) {
+    for (const r of actions.taskRuns(db, t.id)) {
       const tokens = r.input_tokens + r.output_tokens + r.cache_read_tokens + r.cache_write_tokens;
       console.log(
         `${r.kind === 'resolve' ? 'resolve run' : r.kind === 'unblock' ? 'unblock run' : 'run'} ${r.attempt}: ${r.outcome ?? 'running'}  turns=${r.num_turns ?? '-'}  tokens=${tokens}  tests=${r.tests_passed === null ? '-' : r.tests_passed ? 'pass' : 'fail'}  ${r.started_at}`,
@@ -207,8 +207,8 @@ export const taskCommands: Record<string, Command> = {
   },
   log: ({ db, flags, rest }) => {
     const id = taskId(rest[0]);
-    if (!db.getTask(id)) die(`no task #${id}`);
-    const run = pickRun(db.runsForTask(id), { attempt: flags.attempt ? Number(flags.attempt) : undefined });
+    if (!actions.findTask(db, id)) die(`no task #${id}`);
+    const run = pickRun(actions.taskRuns(db, id), { attempt: flags.attempt ? Number(flags.attempt) : undefined });
     if (!run) die(`#${id} has no runs yet`);
     if (flags.raw) process.stdout.write(readFileSync(run.log_path, 'utf8'));
     else printLog(db, run.log_path);
@@ -239,7 +239,7 @@ export const taskCommands: Record<string, Command> = {
   'install-needs': async ({ db, flags, rest }) => {
     const id = taskId(rest[0]);
     // Without a package request there is nothing to confirm: installNeeds says why.
-    const task = db.getTask(id);
+    const task = actions.findTask(db, id);
     const needs = task?.status === 'blocked' ? task.needs : null;
     if (needs?.kind === 'deps') {
       console.log(`#${id} asks for: ${needs.items.join(' ')}`);

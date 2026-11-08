@@ -36,9 +36,9 @@ export const LAYERS: Record<string, Layer> = {
     why: 'adapters import domain/ and config.ts only; they report through callbacks',
   },
   application: {
-    holds: 'The use cases, connecting domain and adapters, and the repository interfaces they reach the database through',
-    imports: ['adapters', 'domain', 'config.ts'],
-    why: 'application/ reaches the database only through the repository interfaces it declares (application/ports/)',
+    holds: 'The use cases, and the ports (repositories and other interfaces) they reach the database and the adapters through',
+    imports: ['domain', 'config.ts'],
+    why: 'application/ reaches the database and the adapters only through the ports it declares (application/ports/)',
   },
   'compose.ts': {
     holds: 'Builds the App the use cases take, on the database and the real adapters',
@@ -47,18 +47,18 @@ export const LAYERS: Record<string, Layer> = {
   },
   api: {
     holds: "The dashboard's HTTP API",
-    imports: ['application', 'compose.ts', 'db', 'domain', 'config.ts'],
-    why: 'entry points reach adapters through application/',
+    imports: ['application', 'domain', 'config.ts'],
+    why: 'entry points use application/actions.ts, domain/ and the contract; only compose.ts names db/ and adapters/',
   },
   cli: {
     holds: 'One file per command group of the agentdeck CLI',
-    imports: ['api', 'application', 'compose.ts', 'db', 'domain', 'config.ts', 'daemon.ts'],
-    why: 'entry points reach adapters through application/',
+    imports: ['api', 'application', 'domain', 'config.ts', 'daemon.ts'],
+    why: 'entry points use application/actions.ts, domain/ and the contract; only compose.ts names db/ and adapters/',
   },
   'daemon.ts': {
-    holds: 'The composition root: wires the source watcher, the API and the scheduler',
-    imports: ['api', 'application', 'adapters', 'compose.ts', 'db', 'domain', 'config.ts'],
-    why: 'the composition root does not use the CLI',
+    holds: 'Wires the source watcher, the API and the scheduler onto the App it is given',
+    imports: ['api', 'application', 'domain', 'config.ts'],
+    why: 'daemon.ts gets its App from compose.ts and names neither db/ nor adapters/',
   },
   'cli.ts': {
     holds: 'The CLI entry point the launchd plist runs',

@@ -6,7 +6,7 @@ import { type ApiContext, type Route, repoIdParam, route } from '../http.ts';
 export function routes({ db, scheduler }: ApiContext): Route[] {
   return [
     route<C.Repo[]>('GET', /^\/api\/repos$/, ({ query }) =>
-      db.listRepos({ archived: query.get('archived') === '1' }).map(actions.repoView),
+      actions.listRepos(db, { archived: query.get('archived') === '1' }).map(actions.repoView),
     ),
     route<C.Repo>('POST', /^\/api\/repos$/, async ({ body }) =>
       actions.repoView(await actions.addRepo(db, body as Parameters<typeof actions.addRepo>[1])),

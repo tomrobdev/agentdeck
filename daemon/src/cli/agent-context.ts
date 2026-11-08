@@ -4,7 +4,6 @@ import { join } from 'node:path';
 import * as actions from '../application/actions.ts';
 import { HOME } from '../config.ts';
 import { errorMessage } from '../domain/shared/index.ts';
-import type { ComposedApp } from '../compose.ts';
 import type { Command } from './context.ts';
 import { die } from './format.ts';
 
@@ -77,7 +76,7 @@ export function pruneCursors(): void {
  * The hook: prints nothing for workers and the planner, or outside a registered repo. A session's start (or its first
  * message) gets the whole picture; later messages get the header and what changed since. Never fails the prompt.
  */
-async function hook(db: ComposedApp): Promise<void> {
+async function hook(db: actions.ComposedApp): Promise<void> {
   if (process.env.AGENTDECK_TASK_ID || process.env.AGENTDECK_PLANNER) return;
   try {
     const input = parseHookInput(await readStdin());
@@ -106,7 +105,7 @@ async function hook(db: ComposedApp): Promise<void> {
 export const contextCommands: Record<string, Command> = {
   context: async ({ db, flags }) => {
     if (flags.hook) return hook(db);
-    const repo = flags.repo === undefined ? actions.repoForPath(db, process.cwd()) : db.findRepo(flags.repo);
+    const repo = flags.repo === undefined ? actions.repoForPath(db, process.cwd()) : actions.findRepo(db, flags.repo);
     if (!repo) die(flags.repo === undefined ? 'not in a registered repo; pass --repo <name>' : `no repo "${flags.repo}"`);
     const since = flags.since === undefined ? null : Number(flags.since);
     if (since !== null && !Number.isInteger(since)) die('--since takes an event id, as the last line printed');

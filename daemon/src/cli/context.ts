@@ -1,6 +1,6 @@
 // What every CLI command gets: the parsed command line and the App (src/compose.ts).
 import { parseArgs } from 'node:util';
-import type { ComposedApp } from '../compose.ts';
+import type { ComposedApp } from '../application/actions.ts';
 import type { RepoId } from '../domain/shared/index.ts';
 
 export function parseCommandLine(argv: string[]) {

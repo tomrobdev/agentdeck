@@ -9,7 +9,7 @@ import type { Repo } from '../domain/repos/index.ts';
 import type { Run } from '../domain/runs/index.ts';
 import { type Needs, type UnblockQuestion, isNeeds } from '../domain/work/index.ts';
 import { type StateFields, type Task, type TaskState, type TaskSummary, stateFields } from '../domain/work/index.ts';
-import { parseTextList } from '../domain/shared/index.ts';
+import { parseTextList, stored } from '../domain/shared/index.ts';
 import { repos, runs, tasks } from './tables.ts';
 
 /** Legacy task columns, which nothing reads or writes: `after_task` went to task_links in migration 18, and `plan_path` stopped being written in 24. */
@@ -193,41 +193,6 @@ export function repoColumns(fields: Partial<Repo>): Partial<RepoRow> {
   return Object.fromEntries(Object.entries(columns).filter(([, v]) => v !== undefined));
 }
 export const toRun = (row: RunRow): Run => ({ ...row, tests_passed: row.tests_passed === null ? null : row.tests_passed === 1 });
-
-/** The task fields stored as JSON text. */
-const JSON_FIELDS = [
-  'needs',
-  'question',
-  'plan_steps',
-  'auto_merge_check',
-  'merge_request_check',
-  'pr_checks',
-  'pr_checks_opened',
-  'pr_checks_merged',
-];
-type JsonField =
-  'needs' | 'question' | 'plan_steps' | 'auto_merge_check' | 'merge_request_check' | 'pr_checks' | 'pr_checks_opened' | 'pr_checks_merged';
-
-/** A task or run value as its column stores it: the type of `T` with its parsed fields turned back. */
-export type Stored<T> = {
-  [K in keyof T]: K extends JsonField
-    ? Extract<T[K], null | undefined> | string
-    : K extends 'auto_merge' | 'tests_passed'
-      ? Extract<T[K], null | undefined> | number
-      : T[K];
-};
-
-/**
- * The fields of a task or run as the columns (and the API, which keeps the stored shape) store them: a `Needs`, a question or
- * step ids as JSON, a flag as 1 or 0. A field not present stays absent; one present as undefined or null becomes null.
- */
-export function stored<T extends object>(fields: T): Stored<T> {
-  const f = fields as Record<string, unknown>;
-  const out: Record<string, unknown> = { ...f };
-  for (const key of JSON_FIELDS) if (key in f) out[key] = f[key] == null ? null : JSON.stringify(f[key]);
-  for (const key of ['auto_merge', 'tests_passed']) if (key in f) out[key] = f[key] == null ? null : f[key] ? 1 : 0;
-  return out as Stored<T>;
-}
 
 /** What a `.get()` goes through: its row mapped, if there was one. */
 export const mapFound = <Row, Model>(row: Row | undefined, toModel: (row: Row) => Model): Model | undefined =>
