@@ -126,6 +126,7 @@ Pull requests, checks, merge requests, merging and auto-merge.
 - daemon/src/domain/landing/summary.ts
 - daemon/src/application/landing/auto-merge.ts
 - daemon/src/application/landing/fix-checks.ts
+- daemon/src/application/landing/check-failures.ts
 - daemon/src/application/landing/merge-requests.ts
 - daemon/src/application/landing/merge.ts
 - daemon/src/application/landing/open-pr.ts

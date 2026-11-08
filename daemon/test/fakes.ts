@@ -97,6 +97,7 @@ export function fakeCodeHost(): FakeCodeHost {
     closePr: async (url) => void host.closed.push(url),
     prDetails: async (url) => host.details[url] ?? READY_PR,
     failedLog: async () => '',
+    jobSteps: async () => [],
     markReady: async () => {},
     merge: async (pr) => void host.merged.push({ url: pr.url, method: pr.method, head: pr.head }),
     deleteRemoteBranch: async (_repoPath, branch) => void host.deletedBranches.push(branch),

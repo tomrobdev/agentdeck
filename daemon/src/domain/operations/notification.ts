@@ -1,6 +1,6 @@
 // Alerts for things that need a human: task finished, blocked, failed, proposals, a governor hold, a pause, an
 // auto-merge or a PR's checks failing. Pure: no I/O.
-import { type PrCheck, failingChecks } from '../landing/index.ts';
+import { type PrCheck, failingChecks, failureLine, failureRead } from '../landing/index.ts';
 import type { TaskId } from '../shared/index.ts';
 import { plural } from '../shared/index.ts';
 import type { Task, TaskState } from '../work/index.ts';
@@ -75,13 +75,13 @@ export function prNeedsPersonNotification(task: { id: TaskId; title: string }, f
   };
 }
 
-/** What a person is told when a PR's checks fail. */
+/** What a person is told when a PR's checks fail: each failing check, with its failed step and what failed when it was read. */
 export function checksFailedNotification(task: { id: TaskId; title: string }, checks: PrCheck[]): Notification {
-  const failing = failingChecks(checks).map((c) => c.name);
+  const failing = failingChecks(checks);
   return {
     kind: 'checks_failed',
     title: `Checks failed on #${task.id}`,
-    body: `${plural(failing.length, 'check')} failing on ${task.title}: ${failing.join(', ')}`,
+    body: `${plural(failing.length, 'check')} failing on ${task.title}: ${failing.map(failureLine).join(failing.some(failureRead) ? '; ' : ', ')}`,
     task_id: task.id,
   };
 }

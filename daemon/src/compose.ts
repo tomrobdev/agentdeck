@@ -39,6 +39,7 @@ export const realCodeHost = (): CodeHost => ({
   closePr: (url, cwd) => github.closePr(url, cwd),
   prDetails: (url, cwd, opts) => github.prDetails(url, cwd, opts),
   failedLog: (cwd, run, check) => github.failedLog(cwd, run, check),
+  jobSteps: (cwd, job) => github.jobSteps(cwd, job),
   markReady: (url, cwd) => github.markReady(url, cwd),
   merge: (pr) => github.merge(pr),
   deleteRemoteBranch: (repoPath, branch) => github.deleteRemoteBranch(repoPath, branch),

@@ -10,7 +10,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { runClaude } from '../src/adapters/claude.ts';
-import { LOG_TAIL_BYTES, actionsRun, logTail, parsePrDetails, type PrDetails } from '../src/domain/landing/index.ts';
+import { LOG_TAIL_BYTES, actionsRun, parsePrDetails, type PrDetails } from '../src/domain/landing/index.ts';
+import { logTail } from '../src/domain/landing/checks.ts';
 import {
   type ClaudeRun,
   type LogEntry,

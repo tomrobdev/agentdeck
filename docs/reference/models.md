@@ -250,13 +250,14 @@ What GitHub reports about a PR's checks, counted.
 
 A task's checks in a line's worth: the counts and the failing checks' names.
 
-| Field           | Type       | Comment |
-| --------------- | ---------- | ------- |
-| `failing_names` | `string[]` |         |
-| `read_at`       | `string`   |         |
-| `total`         | `number`   |         |
-| `failing`       | `number`   |         |
-| `pending`       | `number`   |         |
+| Field           | Type       | Comment                                                                                  |
+| --------------- | ---------- | ---------------------------------------------------------------------------------------- |
+| `failing_names` | `string[]` |                                                                                          |
+| `failing_lines` | `string[]` | Each failing check in a line (`failureLine`): its name, the failed step and what failed. |
+| `read_at`       | `string`   |                                                                                          |
+| `total`         | `number`   |                                                                                          |
+| `failing`       | `number`   |                                                                                          |
+| `pending`       | `number`   |                                                                                          |
 
 ### CommentInView
 
@@ -283,14 +284,15 @@ A pull request to open.
 
 ### FailedCheck
 
-One failing check as the worker hears it: its name and link, and its log's tail when there is one.
+One failing check as the worker hears it: its name and link, and the failed step and what its log says when there is one.
 
-| Field        | Type                  | Comment                                                  |
-| ------------ | --------------------- | -------------------------------------------------------- |
-| `name`       | `string`              |                                                          |
-| `url`        | `string \| null`      |                                                          |
-| `log?`       | `string \| undefined` | The tail of the failed steps' log (GitHub Actions only). |
-| `log_error?` | `string \| undefined` | Why the log could not be read.                           |
+| Field        | Type                          | Comment                                                                  |
+| ------------ | ----------------------------- | ------------------------------------------------------------------------ |
+| `name`       | `string`                      |                                                                          |
+| `url`        | `string \| null`              |                                                                          |
+| `step?`      | `string \| null \| undefined` |                                                                          |
+| `excerpt?`   | `string \| undefined`         | What the failed step's log says (GitHub Actions only, `failureExcerpt`). |
+| `log_error?` | `string \| undefined`         | Why the log could not be read.                                           |
 
 ### FailedPullRequest
 
@@ -305,6 +307,16 @@ The task finished but its PR could not be opened. `url` is the PR an earlier att
 | `auto_merge_check`      | `AutoMergeCheck \| null` | the PR refresh's latest auto-merge check while the PR is open |
 | `auto_merge_checked_at` | `string \| null`         | when that check was made                                      |
 | `merge_request`         | `PrMergeRequest \| null` |                                                               |
+
+### JobStep
+
+One step of a GitHub Actions job, as `gh api repos/{owner}/{repo}/actions/jobs/<id>` lists it.
+
+| Field        | Type             | Comment                                                 |
+| ------------ | ---------------- | ------------------------------------------------------- |
+| `name`       | `string`         |                                                         |
+| `number`     | `number`         |                                                         |
+| `conclusion` | `string \| null` | `success`, `failure`, `skipped`, …; null while it runs. |
 
 ### MergeCheck
 
@@ -362,13 +374,17 @@ A PR that exists on GitHub.
 
 One check on a PR's head commit: a GitHub check run (Actions or an app) or a commit status.
 
-| Field          | Type             | Comment                                                               |
-| -------------- | ---------------- | --------------------------------------------------------------------- |
-| `name`         | `string`         |                                                                       |
-| `state`        | `CheckState`     |                                                                       |
-| `url`          | `string \| null` | The check's page: a check run's `detailsUrl`, a status's `targetUrl`. |
-| `started_at`   | `string \| null` |                                                                       |
-| `completed_at` | `string \| null` |                                                                       |
+| Field            | Type                          | Comment                                                                                                                                                                                    |
+| ---------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `name`           | `string`                      |                                                                                                                                                                                            |
+| `state`          | `CheckState`                  |                                                                                                                                                                                            |
+| `url`            | `string \| null`              | The check's page: a check run's `detailsUrl`, a status's `targetUrl`.                                                                                                                      |
+| `started_at`     | `string \| null`              |                                                                                                                                                                                            |
+| `completed_at`   | `string \| null`              |                                                                                                                                                                                            |
+| `step?`          | `string \| null \| undefined` | Why a failing GitHub Actions check failed, read once for the head it failed on (`carryFailures`): the failed step's name from the job's steps (null when GitHub named none), and its link. |
+| `step_url?`      | `string \| null \| undefined` |                                                                                                                                                                                            |
+| `excerpt?`       | `string \| undefined`         | The lines of the failed step's log that say why (`failureExcerpt`).                                                                                                                        |
+| `excerpt_error?` | `string \| undefined`         | Why the log could not be read, in place of the excerpt.                                                                                                                                    |
 
 ### PrChecks
 

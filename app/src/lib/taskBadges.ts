@@ -124,7 +124,10 @@ export function taskBadges(t: Viewed, opts: BadgeOptions = {}): Badges {
     const running = checks.pending ? `; ${checks.pending} still running` : '';
     attention.push({
       label: `✗ ${plural(n, 'check')} failing`,
-      title: `Failing: ${checks.failing_names.join(', ')}${running}`,
+      // Each failing check with its step and what failed, once the PR refresh read it; their names until then.
+      title: checks.failing_lines.some((line, i) => line !== checks.failing_names[i])
+        ? `Failing${running}:\n${checks.failing_lines.join('\n')}`
+        : `Failing: ${checks.failing_names.join(', ')}${running}`,
       tone: 'failed',
     });
   }

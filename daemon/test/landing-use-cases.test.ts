@@ -2,9 +2,10 @@
 // requestMerges, cancelMergeRequest and markDone. Real SQLite and git, the fake code host (fakes.ts).
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { after, beforeEach, test } from 'node:test';
 import { READY_PR, fakeAgent, fakeCodeHost } from './fakes.ts';
 
@@ -19,6 +20,10 @@ const actions = await import('../src/application/actions.ts');
 const { ActionError, cancelMergeRequest, closeTaskPr, fixChecks, linkTasks, markDone, requestAllMerges, requestMerges, taskDetail } =
   actions;
 const { latestReviewNote } = await import('../src/domain/work/history.ts');
+const { parseJobSteps } = await import('../src/domain/landing/index.ts');
+const { fmtChecks } = await import('../src/cli/format.ts');
+/** #246's failed CI, as `gh` gave it (2026-11-08). */
+const ghFixture = (name: string) => readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'gh', name), 'utf8');
 
 const host = fakeCodeHost();
 const db = testApp(openDb(join(home, 'test.db')), {
@@ -95,6 +100,49 @@ test('fixChecks: checks of one Actions job share one log read, and a log that ca
   assert.match(note, /### unit \(/);
   assert.match(note, /Error: unit failed/);
   assert.match(note, /### e2e \([^)]*\)\n[^\n]*gh: log expired/);
+});
+
+test("a failing check is kept with its step and excerpt, read once per head; show, the merge's reason and Fix checks say it", async () => {
+  const t = tested();
+  const job = 'https://github.com/acme/demo/actions/runs/400/job/9';
+  const failing = (head: string) => ({
+    ...READY_PR,
+    head,
+    checks: { total: 1, failing: 1, pending: 0 },
+    check_list: [{ name: 'check', state: 'fail' as const, url: job, started_at: null, completed_at: null }],
+  });
+  host.details[t.url] = failing('a1');
+  const reads: string[] = [];
+  const { failedLog, jobSteps } = host;
+  host.failedLog = async (_path, run, id) => (reads.push(`log ${run}/${id}`), ghFixture('run-log-failed-coverage.txt'));
+  host.jobSteps = async (_path, id) => (reads.push(`steps ${id}`), parseJobSteps(ghFixture('job-steps-coverage-failed.json')));
+  await actions.setAutoMerge(db, t.id, { auto_merge: true });
+  try {
+    await refreshPrStates(db);
+    const kept = db.getTask(t.id)!.pr!.checks.latest!.checks[0];
+    assert.equal(kept.step, 'Run pnpm coverage');
+    assert.equal(kept.step_url, `${job}#step:8:1`);
+    assert.match(kept.excerpt!, /cli: branches 53\.6% is below its floor of 54%[^]*domain\/insights: branches 95\.8% is below its floor/);
+    assert.deepEqual(reads.sort(), ['log 400/9', 'steps 9']);
+
+    await refreshPrStates(db);
+    assert.equal(reads.length, 2, 'a second refresh of the same head reads no log');
+
+    const view = actions.taskViews(db, { limit: 100 }).find((v) => v.id === t.id)!;
+    const line = 'check › Run pnpm coverage: cli: branches 53.6% is below its floor of 54%: add tests, never lower the floor';
+    assert.equal(fmtChecks(view.checks!, t.id).split('\n')[1], `         - ${line}`, 'agentdeck show prints the step and what failed');
+    assert.ok(view.auto_merge_view?.reasons.includes(`1 check failing on GitHub: ${line}`), view.auto_merge_view?.reasons.join('\n'));
+
+    await fixChecks(db, t.id);
+    assert.equal(reads.length, 2, 'Fix checks sends the excerpt the refresh kept');
+    const note = latestReviewNote(db.eventsForTask(t.id))!;
+    assert.match(note, new RegExp(`### check › Run pnpm coverage \\(${job.replace(/[./]/g, '\\$&')}\\)`));
+    assert.match(note, /cli: branches 53\.6% is below its floor of 54%/);
+    assert.match(note, /domain\/insights: branches 95\.8% is below its floor of 96%/);
+  } finally {
+    host.failedLog = failedLog;
+    host.jobSteps = jobSteps;
+  }
 });
 
 test('fixChecks: a PR that cannot be read is refused and leaves the task done', async () => {

@@ -54,6 +54,11 @@ const ALLOWED: Allowed[] = [
   { file: 'domain/landing/checks.ts', line: /\bjobs?\b/i, why: JOB },
   { file: 'application/landing/fix-checks.ts', line: /\bjobs?\b/i, why: JOB },
   { file: 'adapters/github.ts', line: /\bjobs?\b/i, why: JOB },
+  { file: 'application/landing/check-failures.ts', line: /\bjobs?\b/i, why: JOB },
+  { file: 'application/ports/code-host.ts', line: /\bjobs?\b/i, why: JOB },
+  { file: 'compose.ts', line: /\bjob\b/, why: JOB },
+  { file: 'domain/landing/merge.ts', line: /\bjobs?\b/i, why: JOB },
+  { file: 'app/src/components/task/PullRequestCard.vue', line: /\bjob\b/i, why: JOB },
   { file: 'application/operations/notifications.ts', line: /\bjobs\b/, why: OTHER_JOB },
   { file: 'adapters/notify.ts', line: /caller's job/, why: OTHER_JOB },
 ];

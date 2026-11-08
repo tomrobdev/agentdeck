@@ -17,6 +17,16 @@ export interface PrCheck {
   url: string | null;
   started_at: string | null;
   completed_at: string | null;
+  /**
+   * Why a failing GitHub Actions check failed, read once for the head it failed on (`carryFailures`): the failed step's
+   * name from the job's steps (null when GitHub named none), and its link.
+   */
+  step?: string | null;
+  step_url?: string | null;
+  /** The lines of the failed step's log that say why (`failureExcerpt`). */
+  excerpt?: string;
+  /** Why the log could not be read, in place of the excerpt. */
+  excerpt_error?: string;
 }
 
 /** What GitHub reports about a PR's checks, counted. */
@@ -39,6 +49,8 @@ export interface StoredChecks {
 /** A task's checks in a line's worth: the counts and the failing checks' names. */
 export interface ChecksSummary extends CheckCounts {
   failing_names: string[];
+  /** Each failing check in a line (`failureLine`): its name, the failed step and what failed. */
+  failing_lines: string[];
   read_at: string;
 }
 
@@ -133,7 +145,13 @@ export function checksSummary(pr: PullRequest | null): ChecksSummary | null {
   if (pr?.state !== 'open') return null;
   const stored = pr.checks.latest;
   if (!stored?.checks.length) return null;
-  return { ...countOf(stored.checks), failing_names: failingChecks(stored.checks).map((c) => c.name), read_at: stored.read_at };
+  const failing = failingChecks(stored.checks);
+  return {
+    ...countOf(stored.checks),
+    failing_names: failing.map((c) => c.name),
+    failing_lines: failing.map(failureLine),
+    read_at: stored.read_at,
+  };
 }
 
 export const failingChecks = (checks: PrCheck[]): PrCheck[] => checks.filter((c) => c.state === 'fail');
@@ -167,12 +185,197 @@ function lastBytes(s: string, bytes: number): string {
   return new TextDecoder().decode(encoded.subarray(start));
 }
 
-/** One failing check as the worker hears it: its name and link, and its log's tail when there is one. */
+/** The first `bytes` bytes of a text, cut after its last whole line that fits; a first line longer than that is cut at a character. */
+export function headBytes(text: string, bytes: number): string {
+  const encoder = new TextEncoder();
+  if (encoder.encode(text).length <= bytes) return text;
+  const kept: string[] = [];
+  let size = 0;
+  for (const line of text.split('\n')) {
+    const next = size + encoder.encode(line).length + (kept.length ? 1 : 0);
+    if (next > bytes) break;
+    kept.push(line);
+    size = next;
+  }
+  if (kept.length) return kept.join('\n');
+  const encoded = encoder.encode(text);
+  let end = Math.max(0, bytes);
+  while (end > 0 && (encoded[end] & 0xc0) === 0x80) end--;
+  return new TextDecoder().decode(encoded.subarray(0, end));
+}
+
+/** One step of a GitHub Actions job, as `gh api repos/{owner}/{repo}/actions/jobs/<id>` lists it. */
+export interface JobStep {
+  name: string;
+  number: number;
+  /** `success`, `failure`, `skipped`, …; null while it runs. */
+  conclusion: string | null;
+}
+
+/** The step a job failed on: the first one that failed, timed out or was cancelled; null when none did. */
+export function failedStep(steps: JobStep[]): JobStep | null {
+  return steps.find((s) => ['failure', 'timed_out', 'cancelled'].includes(s.conclusion?.toLowerCase() ?? '')) ?? null;
+}
+
+/** A step's link on a job's page: GitHub opens the job with that step's log unfolded. */
+export function stepUrl(jobUrl: string | null, step: JobStep | null): string | null {
+  return jobUrl && step?.number ? `${jobUrl.replace(/#.*$/, '')}#step:${step.number}:1` : null;
+}
+
+/** The bytes of a failure excerpt kept on a check. */
+export const EXCERPT_BYTES = 4 * 1024;
+
+/**
+ * The lines that say why a step failed. Each is a line of a known tool's failure: node's test runner (`✖`, and its
+ * failing-tests summary), tsc (`error TS`), prettier (`[warn]`), cargo (`error[`), the coverage floors ("below its floor"),
+ * the crash test's invariants (a nonzero count, its violations line), and GitHub's own `##[error]`, the weakest.
+ */
+const MARKERS: { at: RegExp; weak?: true }[] = [
+  { at: /^\s*✖/ },
+  { at: /\berror TS\d+/ },
+  { at: /^\[warn\]/ },
+  { at: /^\s*error\[/ },
+  { at: /\bbelow its floor\b/ },
+  { at: /^[a-z]_[a-z_]+\s+[1-9]\d*\s/ },
+  { at: /^crash-test: \d+ iterations, [1-9]\d* violations/ },
+  { at: /^##\[error\]/, weak: true },
+];
+/** The header of node's failing-tests summary, which lists again each test that failed above it. */
+const FAILING_TESTS = /^\s*✖ failing tests:/;
+/** What ends that summary: pnpm's and GitHub's lines after the test run. */
+const SUMMARY_END = /^(\[ELIFECYCLE\]|##\[error\]|Error: ERR_PNPM)/;
+const CONTEXT_BEFORE = 2;
+const CONTEXT_AFTER = 3;
+const SUMMARY_LINES = 40;
+
+const isMarker = (line: string): boolean => MARKERS.some((m) => m.at.test(line));
+
+/**
+ * A log's lines as a person reads them: without `gh run view --log-failed`'s `<job>\t<step>\t<timestamp> ` prefix (or a
+ * bare timestamp) and colour codes.
+ */
+export function logLines(log: string): string[] {
+  return log
+    .replace(/\s+$/, '')
+    .split(/\r?\n/)
+    .map((line) =>
+      line
+        .replace(/^[^\t]*\t[^\t]*\t(?=\d{4}-\d\d-\d\dT)/, '')
+        .replace(/^\d{4}-\d\d-\d\dT[\d:.]+Z ?/, '')
+        .replace(/\u001b\[[0-9;]*[A-Za-z]/g, ''),
+    );
+}
+
+/**
+ * The failed step's part of a job's log. `gh` may label every line UNKNOWN STEP and print the whole job, so the step is
+ * found by its `##[group]<step>` header, else as the `##[group]Run …` the first `##[error]` is in, else it is the whole
+ * log; it ends at the next `##[group]Run …` or at the job's cleanup.
+ */
+function stepLines(lines: string[], step: string | null): string[] {
+  let start = step ? lines.indexOf(`##[group]${step}`) : -1;
+  if (start === -1) {
+    const error = lines.findIndex((l) => l.startsWith('##[error]'));
+    start =
+      error === -1
+        ? 0
+        : Math.max(
+            0,
+            lines.slice(0, error).findLastIndex((l) => l.startsWith('##[group]Run ')),
+          );
+  }
+  const rest = lines.slice(start + 1).findIndex((l) => l.startsWith('##[group]Run ') || l === 'Post job cleanup.');
+  return lines.slice(start, rest === -1 ? lines.length : start + 1 + rest);
+}
+
+/**
+ * What a failed step's log says about why, within `bytes`: each line that marks a failure (`MARKERS`) with a few lines
+ * around it, node's failing-tests summary whole (the failures it repeats above it are left out), passing tests never;
+ * the step's tail when nothing marks a failure. Gaps between the parts are an ellipsis line.
+ */
+export function failureExcerpt(log: string, step: string | null, bytes = EXCERPT_BYTES): string {
+  const lines = stepLines(logLines(log), step);
+  const summary = lines.findIndex((l) => FAILING_TESTS.test(l));
+  const ranges: [number, number][] = [];
+  lines.forEach((line, i) => {
+    if (!isMarker(line)) return;
+    if (summary !== -1 && i < summary && /^\s*✖/.test(line)) return;
+    if (i === summary) {
+      const end = lines.slice(i + 1).findIndex((l) => SUMMARY_END.test(l));
+      ranges.push([i, Math.min(end === -1 ? lines.length : i + 1 + end, i + SUMMARY_LINES)]);
+    } else ranges.push([Math.max(0, i - CONTEXT_BEFORE), Math.min(lines.length, i + 1 + CONTEXT_AFTER)]);
+  });
+  if (!ranges.length) return logTail(lines.join('\n'), LOG_TAIL_LINES, bytes);
+  const out: string[] = [];
+  let last = -1;
+  for (const [from, to] of ranges) {
+    if (to <= last) continue;
+    const begin = Math.max(from, last);
+    if (out.length && begin > last) out.push('…');
+    for (let i = begin; i < to; i++) if (isMarker(lines[i]) || !/^\s*✔/.test(lines[i])) out.push(lines[i]);
+    last = to;
+  }
+  return headBytes(out.join('\n').replace(/^\n+|\s+$/g, ''), bytes);
+}
+
+const HEADLINE_CHARS = 160;
+
+/**
+ * The excerpt's line that says best what failed: its first strong marker (not the failing-tests header), without node's
+ * `✖` and duration or GitHub's `##[error]`; then its first `##[error]`; then its last line. Empty for an empty excerpt.
+ */
+export function failureHeadline(excerpt: string): string {
+  const lines = excerpt.split('\n').filter((l) => l.trim() && l !== '…');
+  const strong = lines.find((l) => MARKERS.some((m) => !m.weak && m.at.test(l)) && !FAILING_TESTS.test(l));
+  const line = strong ?? lines.find((l) => l.startsWith('##[error]')) ?? lines.at(-1) ?? '';
+  const clean = line
+    .replace(/^##\[error\]/, '')
+    .replace(/^\s*✖\s*/, '')
+    .replace(/\s*\(\d+(?:\.\d+)?m?s\)$/, '')
+    .trim();
+  return clean.length > HEADLINE_CHARS ? `${clean.slice(0, HEADLINE_CHARS - 1)}…` : clean;
+}
+
+/** A check in a line: "check › tests and coverage: cli: branches 53.6% is below its floor of 54%", as much as is known. */
+export function failureLine(c: Pick<PrCheck, 'name' | 'step' | 'excerpt'>): string {
+  const headline = c.excerpt ? failureHeadline(c.excerpt) : '';
+  return `${c.name}${c.step ? ` › ${c.step}` : ''}${headline ? `: ${headline}` : ''}`;
+}
+
+/** Whether a check carries what was read about its failure. */
+export const failureRead = (c: PrCheck): boolean => c.excerpt !== undefined || c.excerpt_error !== undefined;
+
+/** A check without what was read about its failure. */
+export function withoutFailure(c: PrCheck): PrCheck {
+  const { step: _step, step_url: _url, excerpt: _excerpt, excerpt_error: _error, ...check } = c;
+  return check;
+}
+
+/**
+ * The checks a PR refresh keeps, each failing one with what was read about its failure on the same head and job (the
+ * same name and link), and the failing GitHub Actions checks still to read. So a check's log is read once per head, not
+ * on every refresh; a re-run of it is a new job, and is read again.
+ */
+export function carryFailures(
+  previous: StoredChecks | null,
+  head: string | null,
+  checks: PrCheck[],
+): { checks: PrCheck[]; unread: PrCheck[] } {
+  const before = previous && previous.head === head ? previous.checks : [];
+  const kept = checks.map((c) => {
+    if (c.state !== 'fail') return c;
+    const known = before.find((b) => b.name === c.name && b.url === c.url && b.state === 'fail' && failureRead(b));
+    return known ? { ...known, ...withoutFailure(c) } : c;
+  });
+  return { checks: kept, unread: kept.filter((c) => c.state === 'fail' && !failureRead(c) && actionsRun(c.url)) };
+}
+
+/** One failing check as the worker hears it: its name and link, and the failed step and what its log says when there is one. */
 export interface FailedCheck {
   name: string;
   url: string | null;
-  /** The tail of the failed steps' log (GitHub Actions only). */
-  log?: string;
+  step?: string | null;
+  /** What the failed step's log says (GitHub Actions only, `failureExcerpt`). */
+  excerpt?: string;
   /** Why the log could not be read. */
   log_error?: string;
 }
@@ -185,8 +388,8 @@ export function fixChecksNote(failed: FailedCheck[]): string {
     `${plural(failed.length, 'check')} failed on GitHub. Find out why, fix it on this branch, and run the tests again. The PR updates when the run finishes.`,
   ];
   for (const c of failed) {
-    parts.push('', `### ${c.name}${c.url ? ` (${c.url})` : ''}`);
-    if (c.log) parts.push('Last lines of the failed steps:', '```', c.log, '```');
+    parts.push('', `### ${c.name}${c.step ? ` › ${c.step}` : ''}${c.url ? ` (${c.url})` : ''}`);
+    if (c.excerpt) parts.push(`What failed${c.step ? ` in "${c.step}"` : ''}, from its log:`, '```', c.excerpt, '```');
     else if (c.log_error) parts.push(`The log could not be read: ${c.log_error}`);
     else parts.push('Not a GitHub Actions check: open its link to see why it failed.');
   }

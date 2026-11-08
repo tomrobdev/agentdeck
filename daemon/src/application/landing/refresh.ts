@@ -1,9 +1,10 @@
 // The PR refresh: keep the state of open PRs fresh, and say which ones conflict or are ready to merge.
 import type { App } from '../ports/app.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
-import type { PrDetails } from '../../domain/landing/index.ts';
+import type { PrCheck, PrDetails } from '../../domain/landing/index.ts';
 import { type AutoMergeCheck, autoMergeCheck, autoMergeOn } from '../../domain/landing/index.ts';
-import { checksSettled, nextChecks } from '../../domain/landing/index.ts';
+import { carryFailures, checksSettled, nextChecks } from '../../domain/landing/index.ts';
+import { readFailure } from './check-failures.ts';
 import { checksFailedNotification } from '../../domain/operations/index.ts';
 import { isConflicting, isMergeabilityUnknown } from '../../domain/landing/index.ts';
 import { mergeRequestCheck, mergeRequestPolls } from '../../domain/landing/index.ts';
@@ -59,15 +60,18 @@ export async function autoMergeFor(
 
 /**
  * Keep a done task's open PR's checks on the task, and tell a person when they newly fail (`nextChecks` says when).
- * Nothing is told when the write was refused: the PR merged or closed meanwhile.
+ * A failing GitHub Actions check brings why it failed, read once for each head (`carryFailures`). Nothing is told when
+ * the write was refused: the PR merged or closed meanwhile. Returns the checks kept, with what was read.
  */
-function keepChecks(app: App, task: Task, pr: PrDetails): void {
-  const { stored, notify } = nextChecks(task.pr?.checks.latest ?? null, {
-    head: pr.head ?? null,
-    checks: pr.check_list ?? [],
-    read_at: new Date().toISOString(),
-  });
+async function keepChecks(app: App, task: Task, pr: PrDetails): Promise<PrCheck[]> {
+  const previous = task.pr?.checks.latest ?? null;
+  const head = pr.head ?? null;
+  const { checks, unread } = carryFailures(previous, head, pr.check_list ?? []);
+  const cwd = prCwd(app, task);
+  const read = await Promise.all(checks.map((c) => (unread.includes(c) ? readFailure(app, cwd, c) : c)));
+  const { stored, notify } = nextChecks(previous, { head, checks: read, read_at: new Date().toISOString() });
   if (app.setPrChecks(task.id, stored) && notify) notifyLater(app, checksFailedNotification(task, stored.checks));
+  return stored.checks;
 }
 
 /** A PR the refresh found ready to merge, with what GitHub said about it, and why: a person's merge request, or auto-merge. */
@@ -142,13 +146,15 @@ async function refreshOne(app: App, task: Task, log: (msg: string) => void): Pro
     return null;
   }
   if (checksSettled(pr.checks)) app.recordPrChecksOpened(task.id, pr.checks);
-  keepChecks(app, task, pr);
+  // The checks kept carry why each failing one failed, so the merge's reasons can say it.
+  const kept = await keepChecks(app, task, pr);
+  const judged = pr.check_list ? { ...pr, check_list: kept } : pr;
   const tests = lastTestsPassed(app, task.id);
   if (task.pr?.merge_request) {
     // A person asked: the merge request's check stands in for auto-merge's.
     const check = mergeRequestCheck({
       pr_state: task.pr.state,
-      pr,
+      pr: judged,
       tests_passed: tests,
       lands_after: landsAfter(app, task.id),
       auto_resolve: repo ? repo.auto_resolve : true,
@@ -164,7 +170,7 @@ async function refreshOne(app: App, task: Task, log: (msg: string) => void): Pro
     return { pr, place: classify(pr, check.verdict), requested: true, polling: mergeRequestPolls(check, pr) };
   }
   // Every check is kept on the task for the views, whatever the verdict; none when auto-merge is off.
-  const check = repo ? await autoMergeFor(app, task, repo, pr, tests) : null;
+  const check = repo ? await autoMergeFor(app, task, repo, judged, tests) : null;
   app.setAutoMergeCheck(task.id, check);
   return { pr, place: classify(pr, check?.verdict ?? null), requested: false, polling: false };
 }
