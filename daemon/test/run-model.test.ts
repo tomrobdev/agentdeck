@@ -20,6 +20,11 @@ const { addTask, editTask, pilotStats, syncNow, updateRepo, updateSettings } = a
 const { DEFAULT_MODEL, modelSourceText, newTaskModel } = await import('../src/domain/work/index.ts');
 const { DEFAULT_SUPPORT_MODEL, runModel } = await import('../src/domain/runs/index.ts');
 const { measureByModel } = await import('../src/domain/insights/index.ts');
+const { UNKNOWN_MODEL, interventionModel } = await import('../src/domain/insights/by-model.ts');
+const { repoCommands } = await import('../src/cli/repos.ts');
+const { statsCommands } = await import('../src/cli/stats.ts');
+const { taskCommands } = await import('../src/cli/tasks.ts');
+const { daemonCommands } = await import('../src/cli/daemon.ts');
 const { asRepoId, asTaskId, testApp } = await import('./fixtures.ts');
 const { fakeCodeHost } = await import('./fakes.ts');
 
@@ -89,6 +94,36 @@ test('measureByModel: a row per recorded model, unknown last, and interventions 
     ],
   );
   assert.equal(rows[0].measures.cost_per_done_task, 1, 'opus: two runs over two done tasks');
+
+  // Since 11:00: only runs begun then count, an intervention goes to the older run before it, and a person's event that
+  // is no intervention (a plain retry) leaves no row for a model with no runs since.
+  const since = measureByModel({
+    runs,
+    tasks: [1, 2, 3].map(scorecardTask),
+    events: [
+      { ...retry(2, '2026-10-01 09:30:00'), reason: 'before since' },
+      retry(2, '2026-10-01 11:00:00'),
+      { ...retry(3, '2026-10-01 11:30:00'), reason: null },
+    ],
+    since: '2026-10-01 11:00:00',
+  });
+  assert.deepEqual(
+    since.map((r) => [r.model, r.measures.runs, r.interventions]),
+    [
+      ['opus', 1, 0],
+      ['sonnet', 0, 1],
+    ],
+    'sonnet ran before since, and task 3’s plain retry is no intervention, so unknown has no row',
+  );
+});
+
+test('interventionModel: the run before the event, else the task’s first, else unknown', () => {
+  const at = (started_at: string, model: string | null) => ({ started_at, model }) as never;
+  const e = { at: '2026-10-01 10:00:00' } as never;
+  assert.equal(interventionModel(e, [at('2026-10-01 09:00:00', 'opus'), at('2026-10-01 11:00:00', 'haiku')]), 'opus');
+  assert.equal(interventionModel(e, [at('2026-10-01 11:00:00', 'haiku')]), 'haiku', 'an edit before any run');
+  assert.equal(interventionModel(e, [at('2026-10-01 09:00:00', null)]), UNKNOWN_MODEL);
+  assert.equal(interventionModel(e, []), UNKNOWN_MODEL);
 });
 
 test('the defaults are the settings’ defaults', () => {
@@ -220,4 +255,60 @@ test('stats --by model: a row per recorded model, unknown for older runs, and an
   assert.match(out.stdout, /^opus +2 +2 /m);
   assert.match(out.stdout, /^unknown +1 +1 /m);
   assert.equal(cli('stats', '--by', 'day').status, 1);
+});
+
+/** Runs a CLI command in this process, with what it prints, and `exit <code>` thrown where it would exit. */
+async function inProcess(command: (ctx: never) => void | Promise<void>, rest: string[], flags: Record<string, unknown> = {}) {
+  const out: string[] = [];
+  const { log, error } = console;
+  const exit = process.exit;
+  console.log = (m: unknown) => void out.push(String(m));
+  console.error = (m: unknown) => void out.push(String(m));
+  process.exit = ((code?: number) => {
+    throw new Error(`exit ${code}`);
+  }) as never;
+  try {
+    const repoName = (id: number) => db.listRepos().find((r) => r.id === id)?.name ?? '?';
+    await command({ db, cmd: 'test', rest, flags, repoName } as never);
+  } finally {
+    console.log = log;
+    console.error = error;
+    process.exit = exit;
+  }
+  return out.join('\n');
+}
+
+test('in process: repo set model, add names where its model came from, settings shows the two models, stats --by model', async () => {
+  assert.equal(await inProcess(repoCommands.repo, ['set', 'demo', 'model', 'opus']), 'demo: model opus');
+  assert.match(await inProcess(repoCommands.repo, ['ls']), /model=opus/);
+  const fromRepo = await inProcess(taskCommands.add, ['in process from the repo'], { repo: 'demo', propose: true });
+  assert.match(fromRepo, /\(opus: the repo's default, /);
+
+  assert.equal(await inProcess(repoCommands.repo, ['set', 'demo', 'model', '']), 'demo: model (none)');
+  assert.match(await inProcess(repoCommands.repo, ['ls']), /model=- /);
+  assert.equal(await inProcess(daemonCommands.set, ['default_model', 'haiku']), 'default_model = haiku');
+  assert.match(
+    await inProcess(taskCommands.add, ['in process from the setting'], { repo: 'demo', propose: true }),
+    /\(haiku: the default_model setting, /,
+  );
+  assert.match(await inProcess(taskCommands.add, ['in process asked'], { repo: 'demo', model: 'opus', propose: true }), /\(opus, /);
+
+  assert.equal(await inProcess(daemonCommands.set, ['support_model', 'opus']), 'support_model = opus');
+  const settings = await inProcess(daemonCommands.settings, []);
+  assert.match(settings, /^default_model {3}haiku$/m);
+  assert.match(settings, /^support_model {3}opus \(resolve and unblock runs\)$/m);
+  assert.match(settings, /^governor {8}/m);
+  updateSettings(db, { default_model: 'sonnet', support_model: 'sonnet' });
+
+  const table = await inProcess(statsCommands.stats, [], { by: 'model' });
+  assert.match(table, /^model +tasks +runs /m);
+  assert.match(table, /^opus +2 +2 /m);
+  const json = JSON.parse(await inProcess(statsCommands.stats, [], { by: 'model', json: true })) as { models: { model: string }[] };
+  assert.deepEqual(
+    json.models.map((m) => m.model),
+    ['opus', 'unknown'],
+  );
+  assert.doesNotMatch(await inProcess(statsCommands.stats, [], { since: '2026-10-01' }), /^model /m, 'no model table unless asked for');
+  await assert.rejects(inProcess(statsCommands.stats, [], { by: 'day' }), /exit 1/);
+  await assert.rejects(inProcess(statsCommands.stats, [], { since: 'last tuesday' }), /exit 1/);
 });

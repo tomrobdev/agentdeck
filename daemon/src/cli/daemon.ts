@@ -102,7 +102,7 @@ export const daemonCommands: Record<string, Command> = {
     console.log(`default_model   ${st.default_model}`);
     console.log(`support_model   ${st.support_model} (resolve and unblock runs)`);
     console.log(
-      `\ngovernor       ${d.allow ? 'allowing work' : 'on hold'}${d.reason ? `: ${d.reason}` : ''}${d.until ? ` (lifts in ${relTime(d.until)})` : ''}`,
+      `\ngovernor        ${d.allow ? 'allowing work' : 'on hold'}${d.reason ? `: ${d.reason}` : ''}${d.until ? ` (lifts in ${relTime(d.until)})` : ''}`,
     );
     if (d.weekly_allowed !== null) console.log(`weekly pace     ${Math.round(d.weekly_allowed * 100)}% of the 7d window allowed so far`);
   },
