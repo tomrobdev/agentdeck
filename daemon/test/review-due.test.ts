@@ -16,7 +16,7 @@ const { checkReviews } = await import('../src/domain/operations/review-due.ts');
 const { judgeHealth } = await import('../src/domain/operations/health.ts');
 const { headline } = await import('../src/domain/operations/headline.ts');
 const { checkReviewsDue } = await import('../src/application/operations/review-due.ts');
-const { getSettings, status, updateSettings } = await import('../src/application/actions.ts');
+const { daemonHealth, getSettings, status, updateSettings } = await import('../src/application/actions.ts');
 const { daemonCommands } = await import('../src/cli/daemon.ts');
 const { openDb } = await import('./open-db.ts');
 const { asRepoId } = await import('./fixtures.ts');
@@ -112,6 +112,32 @@ test('the notification, the headline and the doctor name the due repo; the docto
     judgeHealth({ ...healthyFacts(), reviews: [due] } as never).some((c) => c.name === 'area reviews' && c.warning),
     'judgeHealth lists it',
   );
+});
+
+test('agentdeck doctor warns of a repo its probes say is due', async () => {
+  const due = reviewDue(repo, { marks: [{ area: 'sync', at: NOW - 9 * DAY }], commits: 115, lines: 900 }, settings, NOW)!;
+  const scratch = openDb(':memory:');
+  const f = healthyFacts();
+  const checks = await daemonHealth(
+    scratch,
+    {
+      service: async () => f.service as never,
+      api: async () => f.api as never,
+      head: async () => f.head,
+      ahead: async () => 0,
+      alive: () => true,
+      logLines: () => [],
+      gh: async () => f.gh,
+      reviews: async () => [due],
+      now: () => NOW,
+    },
+    4317,
+  );
+  const area = checks.find((c) => c.name === 'area reviews');
+  assert.equal(area?.ok, true);
+  assert.equal(area?.warning, true);
+  assert.match(area?.reason ?? '', /demo: area review due/);
+  scratch.close();
 });
 
 /** Facts on which every other doctor check passes. */

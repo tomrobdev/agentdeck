@@ -12,7 +12,7 @@ The least line and branch coverage each group of `daemon/src/` may have (`COVERA
 | `application/capacity`   | `application/capacity/`                                                                  | 100%  | 100%     |
 | `application/insights`   | `application/insights/`                                                                  | 100%  | 96%      |
 | `application/landing`    | `application/landing/`                                                                   | 99%   | 90%      |
-| `application/operations` | `application/operations/`                                                                | 98%   | 91%      |
+| `application/operations` | `application/operations/`                                                                | 98%   | 93%      |
 | `application/proposals`  | `application/proposals/`                                                                 | 92%   | 82%      |
 | `application/repos`      | `application/repos/`                                                                     | 98%   | 88%      |
 | `application/runs`       | `application/runs/`                                                                      | 94%   | 82%      |
