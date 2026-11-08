@@ -8,6 +8,7 @@ import { MERGE_METHODS, type MergeMethod, PR_MODES, type PrMode, type Repo, isMe
 import { goalsError, networkError, repoNameError } from '../../domain/repos/index.ts';
 import { detectToolchain } from '../../domain/repos/index.ts';
 import { textList } from '../../domain/shared/index.ts';
+import { modelError } from '../../domain/work/index.ts';
 import { type Check, runDoctor } from './doctor.ts';
 import { repoView } from './repo-view.ts';
 import { ActionError, flag, list, object, refuse, requireRepo, text, textOrNull, whole } from '../shared/input.ts';
@@ -74,6 +75,8 @@ export interface RepoPatch {
   auto_merge_max_lines?: number;
   /** Path prefixes a PR touching needs a person; a string is split on commas and spaces. */
   auto_merge_skip?: string | string[];
+  /** The model a new task of the repo takes when it names none: an alias or a claude-… id; null or "" clears it. */
+  model?: string | null;
 }
 
 export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch) {
@@ -95,6 +98,8 @@ export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch
   const auto_merge_max_lines = whole(body, 'auto_merge_max_lines', autoMergeMaxLinesError);
   const skip = list(body, 'auto_merge_skip', { split: true });
   const auto_merge_skip = skip && textList(skip);
+  const model = textOrNull(body, 'model');
+  refuse(modelError(model ?? undefined));
   if (network) refuse(networkError(network));
   if (pr_mode !== undefined && !PR_MODES.includes(pr_mode as PrMode))
     throw new ActionError(`pr_mode must be one of ${PR_MODES.join(', ')}`);
@@ -119,6 +124,7 @@ export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch
     ...(auto_merge !== undefined ? { auto_merge } : {}),
     ...(auto_merge_max_lines !== undefined ? { auto_merge_max_lines } : {}),
     ...(auto_merge_skip !== undefined ? { auto_merge_skip } : {}),
+    ...(model !== undefined ? { model: model || null } : {}),
   });
   return repoDetail(app, repo.id);
 }

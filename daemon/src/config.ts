@@ -59,7 +59,6 @@ export const DEFAULTS = {
   maxConcurrent: 2,
   maxTurns: 40,
   maxAttempts: 2,
-  model: 'sonnet',
   tickMs: 5_000,
 };
 

@@ -25,6 +25,8 @@ _Avoid_: ticket, tickets, job, jobs
 
 **Run**: one attempt at a task, one `claude` process. A task has at most `max_attempts` runs, and a retry continues on the same branch. A **resolve run** is another kind: the `claude` part of a sync, settling its conflicts. It uses no attempt. An **unblock run** is the third: in a repo with `auto_unblock` on, a short run that reads why a task blocked and either retries it with a note or leaves it blocked with a **question** and options. It uses no attempt, takes a slot, and is not a resolve run.
 
+**Model**: the Claude model a run is started with, recorded on the run. A work run takes its task's model, a resolve or unblock run the **support model** (a setting). A new task that names none takes its repo's model, else the **default model** (a setting).
+
 **Slot**: room for one running task.
 
 **Sync**: bringing the base branch into a task's branch: before every run, and for a done task when its pull request conflicts or a person asks. A clean merge needs no `claude`; conflicts start a resolve run. A **conflict** is a sync that could not be settled: the merge is undone and the task is blocked.

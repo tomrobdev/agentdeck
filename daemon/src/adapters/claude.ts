@@ -49,6 +49,8 @@ export async function runClaude(opts: {
   onEvent?: (ev: any) => void;
   /** Called once with the session id from claude's init line, so a run a restart ends can be resumed. */
   onSession?: (sessionId: string) => void;
+  /** Called once with the exact model id from claude's init line (such as claude-sonnet-5-5), so the run records it. */
+  onModel?: (modelId: string) => void;
 }): Promise<ClaudeRun> {
   const { log } = opts;
   const child = spawn(claudeBin(), opts.args, {
@@ -93,6 +95,7 @@ export async function runClaude(opts: {
     if (ev.type === 'system' && ev.subtype === 'init' && typeof ev.session_id === 'string' && run.sessionId === undefined) {
       run.sessionId = ev.session_id;
       opts.onSession?.(ev.session_id);
+      if (typeof ev.model === 'string' && ev.model) opts.onModel?.(ev.model);
     }
     if (ev.type === 'result') run.result = ev;
     if (ev.type === 'rate_limit_event') {

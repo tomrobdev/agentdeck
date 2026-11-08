@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { type TaskDetail, ago, fmtTokens, runDuration, runHint, runLabel, totalTokens } from '../../api';
+import { MODEL_LABELS, type TaskDetail, ago, fmtTokens, runDuration, runHint, runLabel, totalTokens } from '../../api';
 import LogView from './LogView.vue';
 import Markdown from '../files/Markdown.vue';
 import FinalMessage from './FinalMessage.vue';
@@ -55,7 +55,9 @@ const live = computed(() => (props.task.status === 'running' || !!props.task.syn
             <span v-if="r.denials" class="text-failed">{{ r.denials }} refused</span>
           </span>
           <span class="ml-auto text-sm text-muted">
-            {{ runDuration(r) }}<template v-if="r.num_turns"> · {{ r.num_turns }} turns</template
+            <template v-if="r.model"
+              ><span :title="r.model_id ?? ''">{{ MODEL_LABELS[r.model] ?? r.model }}</span> · </template
+            >{{ runDuration(r) }}<template v-if="r.num_turns"> · {{ r.num_turns }} turns</template
             ><template v-if="totalTokens(r)"> · {{ fmtTokens(totalTokens(r)) }} tok</template> · {{ ago(r.started_at) }}
           </span>
         </div>

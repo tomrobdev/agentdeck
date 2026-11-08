@@ -40,6 +40,7 @@ export const repos = sqliteTable(
     auto_merge_max_lines: integer().default(400).notNull(),
     auto_merge_skip: text().default('[".github/"]').notNull(),
     auto_unblock: integer().default(0).notNull(),
+    model: text(),
   },
   (table) => [unique('repos_name_unique').on(table.name), unique('repos_path_unique').on(table.path)],
 );
@@ -121,6 +122,8 @@ export const runs = sqliteTable(
     live_turns: integer().default(0).notNull(),
     live_tool: text(),
     pid_at: text(),
+    model: text(),
+    model_id: text(),
   },
   (table) => [index('runs_task').on(table.task_id, table.id)],
 );

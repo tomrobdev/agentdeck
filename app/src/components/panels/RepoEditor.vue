@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
-import { MERGE_METHODS, type Repo, ago, api, queryKeys, repoQuery } from '../../api';
-import { type RepoForm, toRepoForm, toRepoPatch } from '../../lib/forms';
+import { MERGE_METHODS, MODEL_LABELS, type Repo, ago, api, queryKeys, repoQuery } from '../../api';
+import { type RepoForm, modelChoices, toRepoForm, toRepoPatch } from '../../lib/forms';
 import { useActions } from '../../composables/useActions';
 import { plural } from '../../../../daemon/src/domain/shared/index.ts';
 import NumberInput from '../ui/NumberInput.vue';
@@ -92,12 +92,21 @@ async function archive() {
       </label>
       <Switch v-model="form.autoApprove" class="flex-none self-end pb-2">Auto-approve planner tasks</Switch>
     </div>
-    <label class="field flex-1">
-      <span>Merge method <span class="text-muted">(when you merge a PR from the app)</span></span>
-      <select v-model="form.mergeMethod">
-        <option v-for="m in MERGE_METHODS" :key="m.key" :value="m.key">{{ m.label }} · {{ m.hint }}</option>
-      </select>
-    </label>
+    <div class="flex gap-2.5">
+      <label class="field flex-1">
+        <span>Merge method <span class="text-muted">(when you merge a PR from the app)</span></span>
+        <select v-model="form.mergeMethod">
+          <option v-for="m in MERGE_METHODS" :key="m.key" :value="m.key">{{ m.label }} · {{ m.hint }}</option>
+        </select>
+      </label>
+      <label class="field flex-1">
+        <span>Model <span class="text-muted">(for a new task that names none)</span></span>
+        <select v-model="form.model">
+          <option value="">The default model setting</option>
+          <option v-for="m in modelChoices(form.model)" :key="m" :value="m">{{ MODEL_LABELS[m] ?? m }}</option>
+        </select>
+      </label>
+    </div>
     <Switch v-model="form.autoResolve" class="flex-none">
       <span
         >Resolve merge conflicts automatically

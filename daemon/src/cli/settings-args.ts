@@ -3,6 +3,7 @@ import { ActionError, type RepoPatch, type SettingsPatch, onOff } from '../appli
 import type { NotifyKind } from '../domain/operations/index.ts';
 import { MERGE_METHODS, type MergeMethod, PR_MODES, type PrMode } from '../domain/repos/index.ts';
 import { BUDGET_KEYS } from '../domain/capacity/index.ts';
+import { MODELS } from '../domain/work/index.ts';
 
 /** The patch `agentdeck set <key> <value>` stands for. Throws ActionError for a key it does not know. */
 export function settingPatch(key: string | undefined, value: string): SettingsPatch {
@@ -22,10 +23,11 @@ export function settingPatch(key: string | undefined, value: string): SettingsPa
   if (key === 'planner_interval_hours') return { planner: { interval_hours: Number(value) } };
   if (key === 'planner_max_tasks') return { planner: { max_tasks: Number(value) } };
   if (key === 'planner_model') return { planner: { model: value } };
+  if (key === 'default_model' || key === 'support_model') return { [key]: value };
   throw new ActionError(`unknown setting "${key}"; see agentdeck help`);
 }
 
-const REPO_SETTING_USAGE = `usage: agentdeck repo set <repo> auto_approve on|off | auto_resolve on|off | auto_unblock on|off | base_branch <branch> | test_cmd "<cmd>" | setup_cmd "<cmd>" | pr_mode ${PR_MODES.join('|')} | merge_method ${MERGE_METHODS.join('|')} | sandbox on|off | network "<hosts>" | auto_merge on|off | auto_merge_max_lines <n> | auto_merge_skip "<prefixes>"`;
+const REPO_SETTING_USAGE = `usage: agentdeck repo set <repo> auto_approve on|off | auto_resolve on|off | auto_unblock on|off | base_branch <branch> | test_cmd "<cmd>" | setup_cmd "<cmd>" | pr_mode ${PR_MODES.join('|')} | merge_method ${MERGE_METHODS.join('|')} | sandbox on|off | network "<hosts>" | auto_merge on|off | auto_merge_max_lines <n> | auto_merge_skip "<prefixes>" | model ${MODELS.join('|')}|""`;
 
 /** The patch `agentdeck repo set <repo> <key> <value>` stands for. Throws ActionError for a key it does not know. */
 export function repoSettingPatch(key: string | undefined, value: string): RepoPatch {
@@ -42,5 +44,6 @@ export function repoSettingPatch(key: string | undefined, value: string): RepoPa
   if (key === 'base_branch') return { base_branch: value };
   if (key === 'setup_cmd') return { setup_cmd: value };
   if (key === 'test_cmd') return { test_cmd: value };
+  if (key === 'model') return { model: value || null };
   throw new ActionError(REPO_SETTING_USAGE);
 }

@@ -24,6 +24,8 @@ export function fakeAgent(work: (session: AgentSession) => void | Promise<void> 
       sessions.push(session);
       const id = `fake-session-${sessions.length}`;
       session.onSession?.(id);
+      const model = session.args.includes('--model') ? session.args[session.args.indexOf('--model') + 1] : undefined;
+      if (model) session.onModel?.(model.startsWith('claude-') ? model : `claude-${model}-5-5`);
       await work(session);
       const end: ClaudeResult = {
         subtype: 'success',

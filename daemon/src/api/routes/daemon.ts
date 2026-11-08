@@ -24,12 +24,12 @@ export function routes({ db, daemon, changes }: ApiContext): Route[] {
     route<C.Stats>('GET', /^\/api\/stats$/, ({ query }) => {
       const since = query.get('since');
       const by = query.get('by');
-      if (by !== null && by !== 'week') throw new BadRequest('by takes week');
+      if (by !== null && by !== 'week' && by !== 'model') throw new BadRequest('by takes week or model');
       if (since !== null && parseSince(since) === null) throw new BadRequest('since takes a date, like 2026-10-18');
       return actions.pilotStats(db, {
         repo: query.get('repo') || undefined,
         since: since === null ? undefined : (parseSince(since) ?? undefined),
-        by: by === 'week' ? 'week' : undefined,
+        by: by ?? undefined,
       });
     }),
     route<C.DaemonState>('GET', /^\/api\/daemon$/, () => actions.daemonState(db, daemon.info, daemon.reloadFacts())),

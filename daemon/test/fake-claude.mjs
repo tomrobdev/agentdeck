@@ -25,6 +25,7 @@
 // Every run appends its prompt to $AGENTDECK_HOME/fake-claude-calls.log, so tests can tell it never started,
 // the --settings path it got (or "-") to $AGENTDECK_HOME/fake-claude-settings.log, and its arguments as a JSON
 // array to $AGENTDECK_HOME/fake-claude-args.log.
+// The init line names the model --model asked for as a full id (claude-<alias>-5-5).
 // Sessions: a new session is named fake-session-<pid> and its prompt kept in $AGENTDECK_HOME/fake-sessions/.
 // `--resume <id>` continues it: the init line names <id> and the kept prompt's keywords still count. A session that
 // is not kept is answered as claude answers one it no longer has: "No conversation found" on stderr, exit 1, no output.
@@ -72,7 +73,10 @@ if (prompt.includes('FAKE_NO_SANDBOX') && settingsPath) {
   }
 }
 
-out({ type: 'system', subtype: 'init', session_id: session, cwd: process.cwd() });
+// The init line names the exact model, as claude's does: an alias from --model becomes claude-<alias>-5-5.
+const alias = args.includes('--model') ? args[args.indexOf('--model') + 1] : 'sonnet';
+const model = alias.startsWith('claude-') ? alias : `claude-${alias}-5-5`;
+out({ type: 'system', subtype: 'init', session_id: session, cwd: process.cwd(), model });
 out({
   type: 'rate_limit_event',
   rate_limit_info: {

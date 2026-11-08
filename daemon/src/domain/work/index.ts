@@ -70,6 +70,7 @@ export type { StatusGroup } from './stage.ts';
 export { describeWait, startDecision, startWait, waitingOf } from './start.ts';
 export type { QueueState, QueueWait, StartWait, Waiting } from './start.ts';
 export {
+  DEFAULT_MODEL,
   EDITABLE_STATUSES,
   MODELS,
   OPEN_STATUSES,
@@ -79,6 +80,8 @@ export {
   defaultTitle,
   isBlocked,
   leftoversMessage,
+  modelSourceText,
+  newTaskModel,
   stateFields,
   stopReasonOf,
 } from './task.ts';
@@ -88,6 +91,7 @@ export type {
   CancelledState,
   DoneState,
   FailedState,
+  ModelSource,
   StateFields,
   Task,
   TaskSource,

@@ -52,7 +52,8 @@ export interface NewTask {
   title: string;
   prompt: string;
   priority?: number;
-  model?: string;
+  /** Decided by the caller (`newTaskModel`): the store has no default of its own. */
+  model: string;
   max_turns?: number;
   max_attempts?: number;
   status?: 'queued' | 'proposed';
@@ -95,6 +96,7 @@ export type RepoUpdate = Partial<
     | 'auto_merge'
     | 'auto_merge_max_lines'
     | 'auto_merge_skip'
+    | 'model'
   >
 >;
 
@@ -192,12 +194,13 @@ export interface RepoRepository {
 }
 
 export interface RunRepository {
-  startRun(task_id: TaskId, attempt: number, log_path: string, kind?: RunKind): Run['id'];
+  startRun(task_id: TaskId, attempt: number, log_path: string, kind?: RunKind, model?: string | null): Run['id'];
+  setRunModelId(id: Run['id'], model_id: string): void;
   setRunPid(id: Run['id'], pid: number): void;
   setRunLive(id: Run['id'], live_turns: number, live_tool: string | null): void;
   setRunSession(id: Run['id'], session_id: string): void;
   liveRuns(kind: RunKind): Map<TaskId, { started_at: string; live_turns: number; live_tool: string | null }>;
-  finishRun(id: Run['id'], r: Partial<Omit<Run, 'id' | 'task_id' | 'kind' | 'attempt' | 'started_at' | 'log_path'>>): void;
+  finishRun(id: Run['id'], r: Partial<Omit<Run, 'id' | 'task_id' | 'kind' | 'attempt' | 'started_at' | 'log_path' | 'model'>>): void;
   runsForTask(task_id: TaskId): Run[];
   countRunningResolves(): number;
   countRunningUnblocks(): number;
@@ -270,6 +273,8 @@ export interface SettingsRepository {
   maxConcurrent(): number;
   notifySettings(): NotifySettings;
   plannerSettings(): PlannerSettings;
+  /** The default_model and support_model settings. */
+  modelSettings(): Pick<Settings, 'default_model' | 'support_model'>;
 }
 
 export interface ChangeRepository {

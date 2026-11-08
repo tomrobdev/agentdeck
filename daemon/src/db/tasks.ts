@@ -23,6 +23,7 @@ import {
 import type { MergeMethod } from '../domain/repos/index.ts';
 import { INTERRUPTED, type RunOutcome } from '../domain/runs/index.ts';
 import {
+  DEFAULT_MODEL,
   type DomainEvent,
   MAX_RESTARTS,
   type TaskEvent,
@@ -207,6 +208,10 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
       title: string;
       prompt: string;
       priority?: number;
+      /**
+       * Required on the port (`NewTask`), so every use case decides it with `newTaskModel`; only a direct store call (a test)
+       * leaves it out and gets the default_model setting's default.
+       */
       model?: string;
       max_turns?: number;
       max_attempts?: number;
@@ -229,7 +234,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
             title: n.title,
             prompt: n.prompt,
             priority: n.priority ?? 0,
-            model: n.model ?? DEFAULTS.model,
+            model: n.model ?? DEFAULT_MODEL,
             max_turns: n.max_turns ?? DEFAULTS.maxTurns,
             max_attempts: n.max_attempts ?? DEFAULTS.maxAttempts,
             status,

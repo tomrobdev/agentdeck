@@ -49,6 +49,7 @@ test('measureByWeek puts a task in the week of its first run, oldest week first'
     cost_usd: 1,
     denials: 0,
     task_status: 'done',
+    model: 'sonnet',
     ...o,
   });
   const weeks = measureByWeek([

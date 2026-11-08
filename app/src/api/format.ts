@@ -53,7 +53,7 @@ export const ATTENTION_LABELS: Record<Status['headline']['attention'][number]['w
 
 /** What each model is called, and when to pick it. */
 export const MODEL_LABELS: Record<string, string> = { haiku: 'Haiku', sonnet: 'Sonnet', opus: 'Opus' };
-export const MODEL_HINTS: Record<string, string> = { haiku: 'cheap, simple', sonnet: 'default', opus: 'hard tasks' };
+export const MODEL_HINTS: Record<string, string> = { haiku: 'cheap, simple', sonnet: 'most tasks', opus: 'hard tasks' };
 
 /** Whether the daemon will merge a PR on its own, in a line. */
 export function autoMergeLine(c: AutoMergeCheck): string {
