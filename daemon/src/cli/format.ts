@@ -5,7 +5,7 @@ import { type TaskId, asTaskId } from '../domain/shared/index.ts';
 import type { AutoMergeView } from '../domain/landing/index.ts';
 import type { ChecksSummary } from '../domain/landing/index.ts';
 import type { TaskStatus } from '../domain/work/index.ts';
-import { parseTaskIds } from '../domain/work/index.ts';
+import { type ProposalCheck, parseTaskIds, proposalCheckLine } from '../domain/work/index.ts';
 import type { Task } from '../domain/work/index.ts';
 import type { RunSummary } from '../domain/runs/index.ts';
 
@@ -48,6 +48,17 @@ export function taskIds(value: string | undefined, flag: string): TaskId[] {
 export const idsText = (ids: TaskId[]): string => ids.map((id) => `#${id}`).join(', ');
 
 /** One link in words: "builds on #12 (waiting)", "after #9 (not landed yet)". */
+/** A proposal check: its line, then each named file the base changed, each task touching the same files, and the notes. */
+export function fmtProposalCheck(check: ProposalCheck): string[] {
+  const line = proposalCheckLine(check);
+  const out = line ? [`check    ${line}`] : [];
+  for (const c of check.staleness?.changed ?? [])
+    out.push(`         changed ${c.path}: ${c.commits.map((x) => `${x.sha.slice(0, 7)} ${x.subject}`).join('; ')}`);
+  for (const o of check.overlaps) out.push(`         #${o.id} ${o.title}${o.linked ? ' (linked)' : ''} touches ${o.paths.join(', ')}`);
+  for (const n of check.notes) out.push(`note     ${n}`);
+  return out;
+}
+
 export function fmtLink(l: TaskView['links'][number]): string {
   const state = { met: 'met', waiting: 'waiting', stuck: 'stuck', unlanded: 'not landed yet' }[l.state];
   return `${l.kind === 'builds_on' ? 'builds on' : 'after'} #${l.on} (${state})`;

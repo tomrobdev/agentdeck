@@ -711,6 +711,39 @@ export interface Changes {
   commits: Commit[];
 }
 
+/** A path the prompt names that the base changed since the task was added, with the commits that changed it, newest first. */
+export interface StalePath {
+  path: string;
+  commits: { sha: string; subject: string; at: string }[];
+}
+
+/** How far the base (`ref`, at commit `base`) moved since the task was added: `commits` on it, and the named paths they changed. */
+export interface Staleness {
+  ref: string;
+  base: string;
+  commits: number;
+  changed: StalePath[];
+}
+
+/** Another open task in the repo whose named or changed paths meet this one's, and whether a link already joins them. */
+export interface Overlap {
+  id: TaskId;
+  title: string;
+  status: TaskStatus;
+  paths: string[];
+  linked: boolean;
+}
+
+/**
+ * GET /api/tasks/:id/proposal-check: what to know before approving a proposed or queued task. Empty for any other
+ * status; `staleness` is null when git can't say. `notes` are the named paths not on the base.
+ */
+export interface ProposalCheck {
+  staleness: Staleness | null;
+  notes: string[];
+  overlaps: Overlap[];
+}
+
 export interface FilePatch {
   path: string;
   patch: string;

@@ -57,6 +57,17 @@ export {
 } from './plan.ts';
 export type { OwnPlan, ParsedPlan, PlanSource, PlanStepStatus, TaskPlan } from './plan.ts';
 export { matchPath, pathsNamedIn } from './prompt-paths.ts';
+export {
+  BASE_LOG_FORMAT,
+  CHECKED_STATUSES,
+  emptyProposalCheck,
+  mayOverlap,
+  overlaps,
+  parseBaseLog,
+  proposalCheckLine,
+  staleness,
+} from './proposal-check.ts';
+export type { BaseCommit, Overlap, ProposalCheck, Staleness } from './proposal-check.ts';
 export { digest } from './read/digest.ts';
 export { describeEvent } from './read/event-text.ts';
 export type { PersonEventText } from './read/event-text.ts';
