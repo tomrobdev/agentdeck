@@ -94,12 +94,18 @@ export function fmtAutoMerge(v: AutoMergeView): string[] {
   return lines;
 }
 
-/** The line `agentdeck show` prints for the open PR's checks: "checks   2 of 5 failing: lint, test (agentdeck fix-checks 12)". */
+/**
+ * What `agentdeck show` prints for the open PR's checks: "checks   2 of 5 failing: lint, test (agentdeck fix-checks 12)",
+ * then a line for each failing check whose failure was read, with its step and what failed:
+ * "         - check › tests and coverage: cli: branches 53.6% is below its floor of 54%".
+ */
 export function fmtChecks(c: ChecksSummary, id?: TaskId): string {
   const running = c.pending ? `, ${c.pending} running` : '';
   if (!c.failing) return `checks   ${c.total} on the PR, none failing${running}`;
   const fix = id === undefined ? '' : `  (agentdeck fix-checks ${id})`;
-  return `checks   ${c.failing} of ${c.total} failing: ${c.failing_names.join(', ')}${running}${fix}`;
+  const head = `checks   ${c.failing} of ${c.total} failing: ${c.failing_names.join(', ')}${running}${fix}`;
+  const details = c.failing_lines.filter((line, i) => line !== c.failing_names[i]);
+  return [head, ...details.map((line) => `         - ${line}`)].join('\n');
 }
 
 /** Print each doctor check with its reason, then the verdict. */

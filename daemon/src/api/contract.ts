@@ -193,6 +193,13 @@ export interface PrCheck {
   url: string | null;
   started_at: string | null;
   completed_at: string | null;
+  /** A failing GitHub Actions check's failed step and its link, read once for the head it failed on. */
+  step?: string | null;
+  step_url?: string | null;
+  /** The lines of the failed step's log that say why. */
+  excerpt?: string;
+  /** Why the log could not be read, in place of the excerpt. */
+  excerpt_error?: string;
 }
 
 /** An open PR's checks in a line's worth: counted, with the failing ones' names. `read_at` is when the PR refresh read them. */
@@ -201,6 +208,8 @@ export interface ChecksSummary {
   failing: number;
   pending: number;
   failing_names: string[];
+  /** Each failing check in a line: "check › tests and coverage: cli: branches 53.6% is below its floor of 54%". */
+  failing_lines: string[];
   read_at: string;
 }
 

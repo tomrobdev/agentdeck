@@ -2,7 +2,15 @@
 // agents cannot push. Tests replace the members of `github` to fake the network.
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { type BranchPr, type CreatePr, type PrDetails, parseBranchPrs, parsePrDetails } from '../domain/landing/index.ts';
+import {
+  type BranchPr,
+  type CreatePr,
+  type JobStep,
+  type PrDetails,
+  parseBranchPrs,
+  parseJobSteps,
+  parsePrDetails,
+} from '../domain/landing/index.ts';
 import type { MergeMethod } from '../domain/repos/index.ts';
 import { lastLine } from '../domain/shared/index.ts';
 import { gitRemote } from './git.ts';
@@ -121,6 +129,14 @@ export const github = {
       timeoutMs: LONG_GH_TIMEOUT_MS,
       maxBuffer: 64 * 1024 * 1024,
     });
+  },
+
+  /**
+   * `gh api repos/{owner}/{repo}/actions/jobs/<id>`: a GitHub Actions job's steps, which name the one that failed where
+   * `--log-failed` labels every line UNKNOWN STEP. gh fills in the owner and repo from the checkout at `cwd`.
+   */
+  async jobSteps(cwd: string, job: string): Promise<JobStep[]> {
+    return parseJobSteps(await gh(['api', `repos/{owner}/{repo}/actions/jobs/${job}`], { cwd }));
   },
 
   /** `gh pr ready`: take a draft PR out of draft. */

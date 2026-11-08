@@ -1,7 +1,7 @@
 // Whether a PR can be merged, and how. Pure: no I/O.
 import { isConflicting } from './conflict.ts';
 import { type PrState, parsePrState } from './pr.ts';
-import { type CheckCounts, type PrCheck, countOf, parseChecks } from './checks.ts';
+import { type CheckCounts, type JobStep, type PrCheck, countOf, failingChecks, failureLine, failureRead, parseChecks } from './checks.ts';
 import { plural } from '../shared/index.ts';
 
 export { type CheckCounts, checksSettled, countChecks } from './checks.ts';
@@ -66,6 +66,19 @@ export function parsePrDetails(json: string): PrDetails {
   };
 }
 
+/** Read the steps of `gh api repos/{owner}/{repo}/actions/jobs/<id>`: a GitHub Actions job's steps and how each ended. */
+export function parseJobSteps(json: string): JobStep[] {
+  const raw = JSON.parse(json) as { steps?: unknown };
+  if (!Array.isArray(raw.steps)) return [];
+  return raw.steps
+    .filter((s): s is Record<string, unknown> => !!s && typeof s === 'object' && typeof s.name === 'string')
+    .map((s) => ({
+      name: s.name as string,
+      number: typeof s.number === 'number' ? s.number : 0,
+      conclusion: typeof s.conclusion === 'string' ? s.conclusion : null,
+    }));
+}
+
 /** A PR `gh pr list --head <branch>` lists. */
 export interface BranchPr {
   url: string;
@@ -111,6 +124,12 @@ export interface MergeInput {
 /** Whether a conflict with the base is left to a person: the repo has auto_resolve off, so the daemon never syncs it. */
 export const conflictNeedsPerson = (input: Pick<MergeInput, 'auto_resolve'>): boolean => input.auto_resolve === false;
 
+/** What failed, once the PR refresh read why a failing check failed: ": check › step: what failed; …". Empty until then. */
+function failingDetail(checks: PrCheck[] | undefined): string {
+  const failing = failingChecks(checks ?? []);
+  return failing.some(failureRead) ? `: ${failing.map(failureLine).join('; ')}` : '';
+}
+
 /** What about a PR's state bears on merging it, in the order the merge dialog shows it. */
 export function mergeFindings({ pr_state, pr, tests_passed, lands_after = [], auto_resolve }: MergeInput): MergeFinding[] {
   const found: MergeFinding[] = [];
@@ -130,7 +149,7 @@ export function mergeFindings({ pr_state, pr, tests_passed, lands_after = [], au
   if (pr.merge_state === 'BLOCKED' && !pr.draft)
     add('blocked', 'GitHub says branch protection may block this merge (required reviews or checks)');
   if (tests_passed === false) add('tests_failed', 'tests failed on the last run');
-  if (pr.checks.failing) add('checks_failing', `${plural(pr.checks.failing, 'check')} failing on GitHub`);
+  if (pr.checks.failing) add('checks_failing', `${plural(pr.checks.failing, 'check')} failing on GitHub${failingDetail(pr.check_list)}`);
   if (pr.checks.pending) add('checks_pending', `${plural(pr.checks.pending, 'check')} still running on GitHub`);
   return found;
 }

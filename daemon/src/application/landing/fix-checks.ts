@@ -1,10 +1,20 @@
-// Send a PR's failing checks back to the worker: the failed steps' logs go into a retry's note.
+// Send a PR's failing checks back to the worker: each failed step and what its log says go into a retry's note.
 import type { App } from '../ports/app.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
-import { type FailedCheck, LOG_TAIL_BYTES, actionsRun, failingChecks, fixChecksNote, logTail } from '../../domain/landing/index.ts';
+import {
+  type FailedCheck,
+  LOG_TAIL_BYTES,
+  type PrCheck,
+  actionsRun,
+  carryFailures,
+  failingChecks,
+  fixChecksNote,
+  headBytes,
+} from '../../domain/landing/index.ts';
 import { openPrUrl } from '../../domain/landing/index.ts';
 import { errorMessage } from '../../domain/shared/index.ts';
 import { ActionError, requireTask, requireTaskRepo } from '../shared/input.ts';
+import { readFailure } from './check-failures.ts';
 import { retryTask } from './person-events.ts';
 
 export interface FixChecksResult {
@@ -13,10 +23,10 @@ export interface FixChecksResult {
 }
 
 /**
- * Retry a done task whose open PR has failing checks, with a note naming each one. A GitHub Actions check brings the
- * tail of its failed steps' log (`gh run view --log-failed`); any other check its name and link. The worker continues
- * on the same branch, and the PR updates when it is done. Refused when the task isn't done with an open PR, or no
- * check is failing.
+ * Retry a done task whose open PR has failing checks, with a note naming each one. A GitHub Actions check brings its
+ * failed step and the excerpt of that step's log (`failureExcerpt`): the one the PR refresh kept for this head, or read
+ * now when it kept none; any other check its name and link. The worker continues on the same branch, and the PR updates
+ * when it is done. Refused when the task isn't done with an open PR, or no check is failing.
  */
 export async function fixChecks(app: App, id: TaskId): Promise<FixChecksResult> {
   const task = requireTask(app, id);
@@ -27,25 +37,25 @@ export async function fixChecks(app: App, id: TaskId): Promise<FixChecksResult> 
   const pr = await app.codeHost.prDetails(url, repo.path).catch((err) => {
     throw new ActionError(`could not read the PR: ${errorMessage(err)}`);
   });
-  const failing = failingChecks(pr.check_list ?? []);
+  const { checks } = carryFailures(task.pr?.checks.latest ?? null, pr.head ?? null, pr.check_list ?? []);
+  const failing = failingChecks(checks);
   if (!failing.length) throw new ActionError(`no check is failing on #${id}'s PR`);
 
-  // Each Actions check's share of the note's log budget; checks of one job share its log.
+  // Each Actions check's share of the note's log budget; checks of one job share one read.
   const fromActions = failing.filter((c) => actionsRun(c.url)).length;
   const budget = Math.floor(LOG_TAIL_BYTES / Math.max(fromActions, 1));
-  const logs = new Map<string, Promise<string>>();
+  const reads = new Map<string, Promise<PrCheck>>();
   const failed = await Promise.all(
     failing.map(async (c): Promise<FailedCheck> => {
-      const run = actionsRun(c.url);
-      if (!run) return { name: c.name, url: c.url };
-      const key = `${run.run}/${run.job ?? ''}`;
-      if (!logs.has(key)) logs.set(key, app.codeHost.failedLog(repo.path, run.run, run.job));
-      try {
-        const log = logTail(await logs.get(key)!, undefined, budget);
-        return log ? { name: c.name, url: c.url, log } : { name: c.name, url: c.url, log_error: 'gh printed no failed steps' };
-      } catch (err) {
-        return { name: c.name, url: c.url, log_error: errorMessage(err) };
+      if (!actionsRun(c.url)) return { name: c.name, url: c.url };
+      let read: PrCheck = c;
+      if (!c.excerpt) {
+        if (!reads.has(c.url!)) reads.set(c.url!, readFailure(app, repo.path, c, budget));
+        read = await reads.get(c.url!)!;
       }
+      return read.excerpt
+        ? { name: c.name, url: c.url, step: read.step ?? null, excerpt: headBytes(read.excerpt, budget) }
+        : { name: c.name, url: c.url, step: read.step ?? null, log_error: read.excerpt_error ?? 'gh printed no failed steps' };
     }),
   );
   // The reads took a while: a PR merged or closed meanwhile, or a task that left done, is not requeued.

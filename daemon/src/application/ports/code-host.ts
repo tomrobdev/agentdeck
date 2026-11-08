@@ -1,6 +1,6 @@
 // The CodeHost port: pull requests and the pushes that go with them. The real adapter is adapters/github.ts
 // (compose.ts); tests use the in-memory fake in test/fakes.ts.
-import type { BranchPr, CreatePr, PrDetails } from '../../domain/landing/index.ts';
+import type { BranchPr, CreatePr, JobStep, PrDetails } from '../../domain/landing/index.ts';
 import type { MergeMethod } from '../../domain/repos/index.ts';
 
 export interface CodeHost {
@@ -18,6 +18,8 @@ export interface CodeHost {
   prDetails(url: string, cwd: string, opts?: { withFiles?: boolean }): Promise<PrDetails>;
   /** The log of a checks run's failed steps, or of one check's with `check`. */
   failedLog(cwd: string, run: string, check?: string | null): Promise<string>;
+  /** The steps of a GitHub Actions job (its id is the last part of a check's link, …/job/<id>), and how each ended. */
+  jobSteps(cwd: string, job: string): Promise<JobStep[]>;
   markReady(url: string, cwd: string): Promise<void>;
   /** Merge the PR only while its head is still `head`, the commit the merge was decided on; GitHub refuses it otherwise. */
   merge(pr: { url: string; cwd: string; method: MergeMethod; head: string; message?: { subject: string; body: string } }): Promise<void>;
