@@ -16,8 +16,8 @@ export type { CheckCounts, CheckState, ChecksSummary, FailedCheck, PrCheck, Stor
 export { isConflicting, isMergeabilityUnknown } from './conflict.ts';
 export { conflictsWithBase, mergeRequestCheck, mergeRequestPolls, mergeRequestView, mergesNow } from './merge-request.ts';
 export type { MergeRequestView } from './merge-request.ts';
-export { mergeCheck, mergeFindings, parsePrDetails } from './merge.ts';
-export type { CreatePr, PrDetails } from './merge.ts';
+export { mergeCheck, mergeFailure, mergeFindings, parsePrDetails } from './merge.ts';
+export type { CreatePr, MergeFailure, PrDetails } from './merge.ts';
 export { buildPrBody, finalMessage, openPrUrl, prFields, pullRequestOf } from './pr.ts';
 export type { PrFields, PrPlan, PrState, PullRequest } from './pr.ts';
 export {

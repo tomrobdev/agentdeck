@@ -44,6 +44,7 @@ const ready: PrDetails = {
   additions: 10,
   deletions: 2,
   checks: { total: 2, failing: 0, pending: 0 },
+  head: 'head-1',
   paths: ['src/a.ts'],
   labels: [],
 };
@@ -144,7 +145,7 @@ test('a request with checks running waits, then merges once they pass, with its 
   details[a.url] = ready;
   const second = await refreshPrStates(db);
   assert.equal(second.polling, 0);
-  assert.deepEqual(second.mergeable, [{ id: a.id, pr: ready }]);
+  assert.deepEqual(second.mergeable, [{ id: a.id, pr: ready, requested: true }]);
   assert.equal(await autoMerge(db, second.mergeable), a.id);
   assert.deepEqual(merged, [{ url: a.url, method: 'rebase' }]);
   const row = db.getTask(a.id)!;
@@ -166,6 +167,22 @@ test('a request whose check fails is cleared with a notification', async () => {
   assert.equal(sent[0].body, '1 check failing on GitHub');
 });
 
+test('a request withdrawn while the refresh reads its failing PR is not told "Could not merge"', async () => {
+  const a = tested();
+  requestMerge(db, a.id);
+  const read = github.prDetails;
+  github.prDetails = async (url, cwd, opts) => {
+    cancelMergeRequest(db, a.id); // a person withdraws it while GitHub is asked
+    return { ...(await read(url, cwd, opts)), checks: { total: 3, failing: 1, pending: 0 } };
+  };
+  try {
+    assert.deepEqual((await refreshPrStates(db)).mergeable, []);
+  } finally {
+    github.prDetails = read;
+  }
+  assert.equal(notified(a.id).length, 0);
+});
+
 test("a request over auto-merge's line limit, without its label, merges", async () => {
   updateRepo(db, 'demo', { auto_merge: true, auto_approve: false });
   const a = tested();
@@ -178,7 +195,7 @@ test("a request over auto-merge's line limit, without its label, merges", async 
   assert.deepEqual((await refreshPrStates(db)).mergeable, []);
   requestMerge(db, a.id);
   const found = await refreshPrStates(db);
-  assert.deepEqual(found.mergeable, [{ id: a.id, pr: big }]);
+  assert.deepEqual(found.mergeable, [{ id: a.id, pr: big, requested: true }]);
   assert.equal(await autoMerge(db, found.mergeable), a.id);
   assert.deepEqual(merged, [{ url: a.url, method: 'squash' }]);
 });

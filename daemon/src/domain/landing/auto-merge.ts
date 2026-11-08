@@ -2,6 +2,7 @@
 import type { Repo } from '../repos/index.ts';
 import { PROTECTED_PREFIXES, isProtectedPath } from '../repos/index.ts';
 import { wholeNumberError } from '../shared/index.ts';
+import { checksRan } from './checks.ts';
 import { isMergeabilityUnknown } from './conflict.ts';
 import { type MergeFinding, type MergeInput, conflictNeedsPerson, mergeFindings } from './merge.ts';
 import type { PullRequest } from './pr.ts';
@@ -90,7 +91,7 @@ const UNATTENDED: Record<MergeFinding['kind'], 'never' | 'wait' | null> = {
 /**
  * Whether the daemon may merge this PR now, for a task with auto-merge on: the merge dialog's findings (above), plus what
  * only auto-merge asks. Something must have tested it: the last tested run passed, or the repo has no test command and
- * the PR has CI checks. It must carry the label, stay under the repo's limits, and nothing may be paused.
+ * a CI check ran on the PR (passed or failed; skipped and neutral ones tested nothing). It must carry the label, stay under the repo's limits, and nothing may be paused.
  */
 export function autoMergeCheck(
   input: MergeInput & {
@@ -111,8 +112,9 @@ export function autoMergeCheck(
 
   if (!pr.labels.includes(AUTO_MERGE_LABEL.name)) reasons.never.push(`the PR has no ${AUTO_MERGE_LABEL.name} label`);
   if (repo.test_cmd && tests_passed === null) reasons.never.push('the tests have not run');
-  if (!repo.test_cmd && tests_passed === null && !pr.checks.total)
-    reasons.never.push('nothing tested it: the repo has no test command and the PR no checks');
+  // A check that ran counts, not one skipped or neutral; one still running is the wait its finding says.
+  if (!repo.test_cmd && tests_passed === null && !checksRan(pr) && !pr.checks.pending)
+    reasons.never.push('nothing tested it: the repo has no test command and no check ran on the PR');
   const lines = pr.additions + pr.deletions;
   if (lines > repo.auto_merge_max_lines) reasons.never.push(`${lines} lines changed, over the limit of ${repo.auto_merge_max_lines}`);
   if (pr.paths.length < pr.files) reasons.never.push(`GitHub listed ${pr.paths.length} of ${pr.files} changed files`);

@@ -105,6 +105,24 @@ test('parseChecks reads check runs and commit statuses, and countChecks counts t
   ]);
 });
 
+test('a conclusion the daemon does not know counts as pending, never as a pass; only SUCCESS passes', () => {
+  const states = parseChecks([
+    { name: 'stale', status: 'COMPLETED', conclusion: 'STALE' },
+    { name: 'new', status: 'COMPLETED', conclusion: 'SOMETHING_NEW' },
+    { name: 'blank', status: 'COMPLETED', conclusion: '' },
+    { name: 'ok', status: 'COMPLETED', conclusion: 'SUCCESS' },
+    { context: 'ci/status', state: 'SUCCESS' },
+  ]).map((c) => [c.name, c.state]);
+  assert.deepEqual(states, [
+    ['stale', 'pending'],
+    ['new', 'pending'],
+    ['blank', 'pending'],
+    ['ok', 'pass'],
+    ['ci/status', 'pass'],
+  ]);
+  assert.deepEqual(countChecks([{ conclusion: 'STALE' }]), { total: 1, failing: 0, pending: 1 });
+});
+
 test('check runs that share a name are told apart by their workflow', () => {
   const checks = parseChecks([
     { name: 'test', workflowName: 'CI', conclusion: 'SUCCESS' },

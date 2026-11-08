@@ -73,7 +73,7 @@ export interface FakeCodeHost extends CodeHost {
   details: Record<string, PrDetails>;
   created: CreatePr[];
   pushed: { repoPath: string; branch: string }[];
-  merged: { url: string; method: string }[];
+  merged: { url: string; method: string; head: string }[];
   closed: string[];
   deletedBranches: string[];
 }
@@ -98,7 +98,7 @@ export function fakeCodeHost(): FakeCodeHost {
     prDetails: async (url) => host.details[url] ?? READY_PR,
     failedLog: async () => '',
     markReady: async () => {},
-    merge: async (pr) => void host.merged.push({ url: pr.url, method: pr.method }),
+    merge: async (pr) => void host.merged.push({ url: pr.url, method: pr.method, head: pr.head }),
     deleteRemoteBranch: async (_repoPath, branch) => void host.deletedBranches.push(branch),
   };
   return host;

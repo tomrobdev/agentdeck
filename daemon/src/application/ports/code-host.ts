@@ -17,6 +17,7 @@ export interface CodeHost {
   /** The log of a checks run's failed steps, or of one check's with `check`. */
   failedLog(cwd: string, run: string, check?: string | null): Promise<string>;
   markReady(url: string, cwd: string): Promise<void>;
-  merge(pr: { url: string; cwd: string; method: MergeMethod; message?: { subject: string; body: string } }): Promise<void>;
+  /** Merge the PR only while its head is still `head`, the commit the merge was decided on; GitHub refuses it otherwise. */
+  merge(pr: { url: string; cwd: string; method: MergeMethod; head: string; message?: { subject: string; body: string } }): Promise<void>;
   deleteRemoteBranch(repoPath: string, branch: string): Promise<void>;
 }

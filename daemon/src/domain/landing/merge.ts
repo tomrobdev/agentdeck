@@ -118,6 +118,24 @@ export function mergeFindings({ pr_state, pr, tests_passed, lands_after = [], au
   return found;
 }
 
+/**
+ * What a failed merge means for trying again. `head_moved`: GitHub refused because the PR's head is no longer the commit
+ * that was judged; the next refresh judges the new one. `transient`: something that passes on its own (the base moved
+ * under a merge round, GitHub answered 5xx, the call timed out). `lasting`: a refusal that stays until a person acts.
+ */
+export type MergeFailure = 'head_moved' | 'transient' | 'lasting';
+
+/** The failures that pass on their own, by what `gh pr merge` says. Anything else is `lasting`. */
+const MERGE_FAILURES: { failure: Exclude<MergeFailure, 'lasting'>; when: RegExp }[] = [
+  { failure: 'head_moved', when: /head branch was modified|expected head (?:sha|oid)|head (?:sha|oid|commit)\b[^.]*\bmatch/i },
+  { failure: 'transient', when: /base branch was modified/i },
+  { failure: 'transient', when: /\bHTTP 5\d\d\b|bad gateway|service unavailable|gateway time-?out|internal server error/i },
+  { failure: 'transient', when: /timed out|\btimeout\b|ETIMEDOUT|ECONNRESET|EAI_AGAIN|socket hang up|connection reset/i },
+];
+
+/** What a failed merge's error message means for trying again (`MergeFailure`). */
+export const mergeFailure = (message: string): MergeFailure => MERGE_FAILURES.find((f) => f.when.test(message))?.failure ?? 'lasting';
+
 /** Turn a PR's state into blocking problems and warnings. */
 export function mergeCheck(input: MergeInput): MergeCheck {
   const found = mergeFindings(input);

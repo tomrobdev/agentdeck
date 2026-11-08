@@ -25,7 +25,9 @@ const { followUpPending } = await import('../src/application/landing/settle.ts')
 const { addTask, ActionError, closeTaskPr, retryTask, updateRepo } = await import('../src/application/actions.ts');
 const { buildPrompt } = await import('../src/domain/runs/prompt.ts');
 const { latestReviewNote } = await import('../src/domain/work/history.ts');
-const { linkTasks, mergeAll, mergePreview, mergeTask } = await import('../src/application/actions.ts');
+const { mergePreview, mergeTask } = await import('../src/application/actions.ts');
+const { testApp } = await import('./fixtures.ts');
+const { prCommands } = await import('../src/cli/pull-requests.ts');
 const { mergeCheck, parsePrDetails } = await import('../src/domain/landing/merge.ts');
 type PrDetails = import('../src/domain/landing/merge.ts').PrDetails;
 const { dependencyOf, liveLinks, waitingFor } = await import('../src/application/work/dependencies.ts');
@@ -85,6 +87,7 @@ const cleanDetails: PrDetails = {
   additions: 10,
   deletions: 4,
   checks: { total: 2, failing: 0, pending: 0 },
+  head: 'head-1',
   paths: ['src/a.ts', 'src/b.ts'],
   labels: [],
 };
@@ -693,50 +696,41 @@ test('mergeTask refuses what cannot be merged and leaves the task as it was', as
   }
 });
 
-test('mergeAll merges each PR, one that lands after another once that one has, and says why the rest stay open', async () => {
-  const [first, later, conflicted, held] = [prTask(110), prTask(111), prTask(112), prTask(113)];
-  linkTasks(db, later.id, { on: first.id, kind: 'after' });
-  details[conflicted.url] = { ...cleanDetails, mergeable: 'CONFLICTING' };
-  const outside = db.addTask({ repo_id: repo.id, title: 'not landed', prompt: 'x' });
-  linkTasks(db, held.id, { on: outside.id, kind: 'after' });
+/** Run `agentdeck merge --all --yes` against the test app with `daemon` answering or not, and return what it printed. */
+async function mergeAllCli(daemon: boolean): Promise<string[]> {
+  const out: string[] = [];
+  const { log } = console;
+  const service = db.service;
+  testApp(db, { service: { ...service, daemonState: async () => (daemon ? ({} as never) : null) } });
+  console.log = (m: unknown) => void out.push(String(m));
+  try {
+    await prCommands.merge({ db, cmd: 'merge', rest: [], flags: { all: true, yes: true }, repoName: () => 'demo' } as never);
+  } finally {
+    console.log = log;
+    testApp(db, { service });
+  }
+  return out;
+}
 
-  // `later` comes first and waits for the round in which `first` merged; a repeated id merges once.
-  const res = await mergeAll(db, { ids: [later.id, conflicted.id, first.id, held.id, first.id] });
-  assert.deepEqual(
-    res.merged.map((m) => [m.id, m.method]),
-    [
-      [first.id, 'squash'],
-      [later.id, 'squash'],
-    ],
-  );
-  assert.deepEqual(
-    merging.merged.map((m) => m.url),
-    [first.url, later.url],
-  );
-  assert.deepEqual(
-    merging.deleted,
-    [`agentdeck/task-${first.id}`, `agentdeck/task-${later.id}`],
-    'the branches go, as after an auto-merge',
-  );
-  assert.deepEqual(
-    res.skipped.map((s) => s.id),
-    [conflicted.id, held.id],
-  );
-  assert.equal(
-    res.skipped[0].reason,
-    'the branch has conflicts with the base branch',
-    'the entry has the id; the reason does not repeat it',
-  );
-  assert.match(res.skipped[1].reason, new RegExp(`^lands after #${outside.id}`));
-  assert.deepEqual(
-    res.skipped.map((s) => s.conflicting),
-    [true, false],
-    'only the conflict with the base branch can be settled by a sync',
-  );
-  for (const id of [conflicted.id, held.id]) assert.equal(db.getTask(id)!.pr?.state, 'open');
-  db.applyEvent(outside.id, { type: 'cancel' });
+test('merge --all requests the merges as Merge all does, and leaves a PR with failing checks open with why', async () => {
+  for (const t of db.openPrTasks()) db.recordPr(t.id, { type: 'closed' }); // earlier tests' PRs are not in review
+  const [clean, failing, running] = [prTask(110), prTask(111), prTask(112)];
+  details[failing.url] = { ...cleanDetails, checks: { total: 2, failing: 1, pending: 0 } };
+  details[running.url] = { ...cleanDetails, checks: { total: 2, failing: 0, pending: 1 } };
 
-  assert.deepEqual(await mergeAll(db, { ids: [] }), { merged: [], skipped: [] });
+  const out = await mergeAllCli(false);
+  assert.deepEqual(merging.merged, [], 'the CLI merges nothing itself: the daemon carries the requests out');
+  assert.ok(db.getTask(clean.id)!.pr?.merge_request);
+  assert.ok(db.getTask(running.id)!.pr?.merge_request, 'running checks are waited for');
+  assert.equal(db.getTask(failing.id)!.pr?.merge_request ?? null, null, 'failing checks are not requested');
+  assert.equal(db.getTask(failing.id)!.pr?.state, 'open');
+  assert.ok(out.includes(`requested the merge of #${clean.id}`), out.join('\n'));
+  assert.ok(out.includes(`requested the merge of #${running.id}; waits: 1 check still running on GitHub`), out.join('\n'));
+  assert.ok(out.includes(`left #${failing.id}: 1 check failing on GitHub`), out.join('\n'));
+  assert.match(out.at(-1)!, /the daemon is not running: the requests wait until it starts/);
+
+  for (const t of [clean, running]) db.clearMergeRequest(t.id);
+  assert.ok(!(await mergeAllCli(true)).some((l) => l.includes('not running')), 'a running daemon is not mentioned');
 });
 
 test('mergeTask can delete the remote branch and remove the worktree, and reports a cleanup that fails', async () => {

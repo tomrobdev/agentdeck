@@ -64,8 +64,9 @@ Tasks
   agentdeck merge <id> [--method squash|merge|rebase] [--yes] [--keep-branch]
                                   merge a done task's open PR: shows the preview, asks unless --yes, then deletes
                                   the remote branch and the worktree unless --keep-branch
-  agentdeck merge --all [--yes]   merge every PR in review, each with its own method, deleting the branches;
-                                  says why each one left open couldn't merge
+  agentdeck merge --all [--yes]   ask the daemon to merge every PR in review once it is ready, as the app's Merge all:
+                                  each with its repo's method, deleting the branches; leaves one with failing checks,
+                                  failed tests or blocked by GitHub, and says why (also when the daemon is not running)
   agentdeck auto-merge <id> on|off|repo   let the daemon merge this task's PR on its own, or not, or follow the repo
   agentdeck sync <id>         sync a done task's branch with the base branch (the PR gets the push); conflicts start
                                   a claude run, and if it fails the merge is undone and the task is blocked (also: resolve)
