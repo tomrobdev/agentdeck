@@ -86,11 +86,6 @@ export const RULES: Record<RuleKey, Partial<Record<TaskStatus, TaskStatus>>> = {
   'recover:exhausted': { running: 'failed', cancel_requested: 'cancelled' },
 };
 
-/** Every status each status may move to, read off RULES. */
-export const TRANSITIONS: Record<TaskStatus, TaskStatus[]> = Object.fromEntries(
-  TASK_STATUSES.map((from) => [from, [...new Set(Object.values(RULES).flatMap((r) => (r[from] ? [r[from]] : [])))]]),
-) as Record<TaskStatus, TaskStatus[]>;
-
 /**
  * The counters of a task that choose between an event's rules: its restarts so far, which decide whether a recover is one
  * too many, and its attempts, which decide whether a failed run is requeued. A counter left out counts as 0.
@@ -138,20 +133,17 @@ export function fromStatuses(event: TaskEvent): TaskStatus[] {
   return Object.keys(RULES[ruleKey(event)]) as TaskStatus[];
 }
 
-/** Who asked for an event: a person (the person events above), or the daemon on its own (every other event). */
-export type Actor = 'daemon' | 'person';
-
-export const actorOf = (cause: RuleKey): Actor => ((PERSON_EVENTS as string[]).includes(cause) ? 'person' : 'daemon');
-
 /**
  * What a status change says happened, read by its follow-ups (`FOLLOW_UPS` in follow-ups.ts). Named for the status the
  * task reached; reaching done is told apart by how: its run finished, its PR was seen merged, or a person marked it done.
+ * A closed PR changes no status, but has its own event: it may strand the tasks that build on it.
  */
 export type DomainEventType =
   | 'TaskStarted'
   | 'TaskQueued'
   | 'TaskFinished'
   | 'TaskPrMerged'
+  | 'TaskPrClosed'
   | 'TaskMarkedDone'
   | 'TaskBlocked'
   | 'TaskFailed'
@@ -163,6 +155,7 @@ export const DOMAIN_EVENT_TYPES: DomainEventType[] = [
   'TaskQueued',
   'TaskFinished',
   'TaskPrMerged',
+  'TaskPrClosed',
   'TaskMarkedDone',
   'TaskBlocked',
   'TaskFailed',
@@ -170,15 +163,11 @@ export const DOMAIN_EVENT_TYPES: DomainEventType[] = [
   'TaskCancelled',
 ];
 
-/** One status change of one task. `applyEvent` (db/tasks.ts) records each as a task_events row and returns them. */
+/** The status change of one task. `applyEvent` (db/tasks.ts) records it as a task_events row and returns it. */
 export interface DomainEvent {
   /** What happened, named for the status the task reached. */
   type: DomainEventType;
   task_id: TaskId;
-  /** The lifecycle event that caused it, by its rule key. */
-  cause: RuleKey;
-  /** Who asked for that event. */
-  by: Actor;
   from: TaskStatus;
   to: TaskStatus;
   /** The type of its timeline row: the event's, or `environment_block` for a block the environment caused. */
@@ -193,10 +182,12 @@ export function domainEventType(cause: RuleKey, to: TaskStatus): DomainEventType
 }
 
 /**
- * The domain event a status change's timeline row records, read back from the row: the status it reached, and for done,
- * how (a `pr_merged` or `mark_done` row; any other is a finished run). Null for a row that changed no status this way.
+ * The domain event a timeline row records, read back from the row: a `pr_closed` row is a closed PR, whatever the task's
+ * status; any other is the status it reached, and for done, how (a `pr_merged` or `mark_done` row; any other is a finished
+ * run). Null for a row that changed no status this way.
  */
 export function domainEventOfRow(row: { type: TaskEventType; to_status: TaskStatus | null }): DomainEventType | null {
+  if (row.type === 'pr_closed') return 'TaskPrClosed';
   if (!row.to_status || row.to_status === 'proposed') return null;
   return eventTypeOf(row.to_status, row.type === 'pr_merged' || row.type === 'mark_done' ? row.type : 'finished');
 }
@@ -239,8 +230,8 @@ export interface Transition {
   counters: TaskCounters;
   /** What the change does to the task's PR, written with it (`statusChangePrChanges` in task-writes.ts). */
   changes: TaskChanges;
-  /** What happened, for the timeline and the follow-ups: one event, the status change. */
-  events: DomainEvent[];
+  /** What happened, for the timeline and the follow-ups: the status change. */
+  event: DomainEvent;
 }
 
 /**
@@ -281,23 +272,19 @@ export function transition(task: TransitionTask, event: TaskEvent, opts: Transit
   const to = RULES[cause][task.status];
   if (!to) return null;
   const environment = event.type === 'finish' && event.outcome === 'blocked' && event.environment === true;
-  const events: DomainEvent[] = [
-    {
-      type: domainEventType(cause, to),
-      task_id: task.id,
-      cause,
-      by: actorOf(cause),
-      from: task.status,
-      to,
-      history: environment ? 'environment_block' : event.type,
-      reason: opts.reason ?? null,
-    },
-  ];
+  const domainEvent: DomainEvent = {
+    type: domainEventType(cause, to),
+    task_id: task.id,
+    from: task.status,
+    to,
+    history: environment ? 'environment_block' : event.type,
+    reason: opts.reason ?? null,
+  };
   const state = nextState(task, to, event, opts);
   const retried = event.type === 'retry' || event.type === 'unblock_retry' || event.type === 'review_retry';
   const changes = statusChangePrChanges(task.status, to, retried, task.pr);
   const counters: TaskCounters = {};
-  if (to === 'cancelled') return { state, counters, changes, events };
+  if (to === 'cancelled') return { state, counters, changes, event: domainEvent };
 
   const given = Math.max(task.attempts - 1, 0); // the attempt given back
   if (event.type === 'claim') counters.attempts = task.attempts + 1;
@@ -310,7 +297,7 @@ export function transition(task: TransitionTask, event: TaskEvent, opts: Transit
     counters.restarts = task.restarts + 1;
     if (to === 'queued') counters.attempts = given;
   }
-  return { state, counters, changes, events };
+  return { state, counters, changes, event: domainEvent };
 }
 
 /** A task requeued by this many daemon restarts is failed instead, in case the task itself kills the daemon. */

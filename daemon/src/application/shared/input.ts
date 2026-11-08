@@ -7,11 +7,18 @@ import type { Repo } from '../../domain/repos/index.ts';
 import type { Task } from '../../domain/work/index.ts';
 
 /** Bad input to a use case. The CLI prints it; the API answers 400. */
-export class ActionError extends Error {}
+export class ActionError extends Error {
+  /** What went wrong, for a caller that acts on it; the message is for a person. */
+  code?: string;
+  constructor(message: string, code?: string) {
+    super(message);
+    this.code = code;
+  }
+}
 
 /** Turn a domain rule's message into an ActionError; a null message means the input is fine. */
-export function refuse(message: string | null): void {
-  if (message) throw new ActionError(message);
+export function refuse(message: string | null, code?: string): void {
+  if (message) throw new ActionError(message, code);
 }
 
 export function requireTask(app: App, id: TaskId): Task {

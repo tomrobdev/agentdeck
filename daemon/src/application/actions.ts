@@ -80,5 +80,5 @@ export { approveTask, cancelTask, markDone, rejectTask, retryTask } from './land
 export { installNeeds } from './runs/install-needs.ts';
 export { promptWarnings } from './work/prompt-paths.ts';
 export { proposalCheck } from './work/proposal-check.ts';
-export { linkTasks, unlinkTasks } from './work/links.ts';
+export { BUILDS_ON_STARTED, linkTasks, unlinkTasks } from './work/links.ts';
 export type { TaskStatus } from '../domain/work/index.ts';

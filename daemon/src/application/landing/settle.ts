@@ -5,7 +5,6 @@
 import type { App } from '../ports/app.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import { finalNotification } from '../../domain/operations/index.ts';
-import type { PrEvent } from '../../domain/work/index.ts';
 import type { PersonEvent, TaskEvent, TaskStatus } from '../../domain/work/index.ts';
 import type { Needs } from '../../domain/work/index.ts';
 import type { Task } from '../../domain/work/index.ts';
@@ -33,7 +32,7 @@ export async function settle(
   const applied = app.applyEvent(id, event, fields);
   if (!applied) return undefined;
   const to = applied.task.status;
-  return followLocked(app, applied.pending, () => follow(app, id, followUpsOf(applied.events), to));
+  return followLocked(app, applied.pending, () => follow(app, id, followUpsOf(applied.event), to));
 }
 
 /**
@@ -49,7 +48,6 @@ export function applyPersonEvent(
 ): Task | undefined {
   const applied = app.applyEvent(id, event, opts);
   if (!applied) return undefined;
-  if (followUpsOf(applied.events).includes('open_pr')) throw new Error(`a person's ${event.type} cannot open a PR`);
   return applied.task;
 }
 
@@ -77,13 +75,6 @@ export function hasFollowUpsToRun(app: App): boolean {
   return app.pendingFollowUps().some((r) => !following.has(r.id));
 }
 
-/** A PR's state changed. A closed or failed PR may strand the tasks waiting on its merge. Returns whether it applied. */
-export function settlePr(app: App, id: TaskId, event: PrEvent): boolean {
-  if (!app.recordPr(id, event)) return false;
-  warnStuckDependents(app, id);
-  return true;
-}
-
 /**
  * Run `follow` with history rows `ids` under the follow-up lock, then mark them followed up, even if it throws: a crash
  * leaves them pending for the next tick, an error does not (it would only fail again, every tick).
@@ -93,8 +84,11 @@ async function followLocked<T>(app: App, ids: number[], follow: () => Promise<T>
   try {
     return await follow();
   } finally {
-    app.markFollowedUp(ids);
-    for (const id of ids) following.delete(id);
+    try {
+      app.markFollowedUp(ids);
+    } finally {
+      for (const id of ids) following.delete(id);
+    }
   }
 }
 

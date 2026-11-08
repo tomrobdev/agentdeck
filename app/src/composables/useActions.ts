@@ -14,12 +14,20 @@ export type Actions = {
   run: (fn: () => Promise<unknown>, opts?: RunOptions) => Promise<boolean>;
   /** For callers that handle their own errors (inline in a dialog) but still need the refresh. */
   refresh: () => Promise<unknown>;
-  flash: (msg: string) => void;
+  flash: Flash;
+  /** Waits 5 seconds behind a toast with Undo, then runs `fn` and refreshes. Undo drops it; closing the window never sends it. */
+  defer: (message: string, fn: () => Promise<unknown>, onUndo?: () => void) => void;
 };
+
+/** Shows a message; with `action`, a button on the toast (Undo). Later messages stack under it. */
+export type Flash = (msg: string, action?: { label: string; run: () => void }) => void;
+
+/** How long a rejected or cancelled task waits for Undo. */
+export const UNDO_MS = 5000;
 
 const KEY: InjectionKey<Actions> = Symbol('actions');
 
-export function createActions(refresh: () => Promise<unknown>, flash: (msg: string) => void): Actions {
+export function createActions(refresh: () => Promise<unknown>, flash: Flash): Actions {
   async function run(fn: () => Promise<unknown>, opts: RunOptions = {}) {
     const pending = opts.pending;
     if (pending) pending.value++;
@@ -35,7 +43,21 @@ export function createActions(refresh: () => Promise<unknown>, flash: (msg: stri
       if (pending) pending.value--;
     }
   }
-  return { run, refresh, flash };
+  function defer(message: string, fn: () => Promise<unknown>, onUndo?: () => void) {
+    let undone = false;
+    const timer = setTimeout(() => {
+      if (!undone) void run(fn);
+    }, UNDO_MS);
+    flash(message, {
+      label: 'Undo',
+      run: () => {
+        undone = true;
+        clearTimeout(timer);
+        onUndo?.();
+      },
+    });
+  }
+  return { run, refresh, flash, defer };
 }
 
 /** A button group's own `run` and its `pending` flag: true only while this group's actions are running. */
@@ -51,7 +73,7 @@ export function useAction() {
   return trackPending(useActions());
 }
 
-export function provideActions(refresh: () => Promise<unknown>, flash: (msg: string) => void): Actions {
+export function provideActions(refresh: () => Promise<unknown>, flash: Flash): Actions {
   const actions = createActions(refresh, flash);
   provide(KEY, actions);
   return actions;
