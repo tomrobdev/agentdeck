@@ -101,6 +101,7 @@ export const daemonCommands: Record<string, Command> = {
     );
     console.log(`default_model   ${st.default_model}`);
     console.log(`support_model   ${st.support_model} (resolve and unblock runs)`);
+    console.log(`review_model    ${st.review_model} (review runs)`);
     console.log(`review_due_days  ${st.review_due.days} (an area review is due once the oldest mark is older)`);
     console.log(`review_due_lines ${st.review_due.lines} (or once more lines merged since it)`);
     console.log(

@@ -4,7 +4,15 @@ import { type Repo, type ToolRulesSource, toolRulesSource } from '../../domain/r
 
 export interface RepoView extends Omit<
   Repo,
-  'allowed_tools' | 'auto_approve' | 'auto_resolve' | 'auto_unblock' | 'sandbox' | 'network' | 'auto_merge' | 'auto_merge_skip'
+  | 'allowed_tools'
+  | 'auto_approve'
+  | 'auto_resolve'
+  | 'auto_unblock'
+  | 'auto_review'
+  | 'sandbox'
+  | 'network'
+  | 'auto_merge'
+  | 'auto_merge_skip'
 > {
   allowed_tools: string | null;
   /** Whether its workers run with the repo's own tool rules or the detected ones. */
@@ -12,6 +20,7 @@ export interface RepoView extends Omit<
   auto_approve: number;
   auto_resolve: number;
   auto_unblock: number;
+  auto_review: number;
   sandbox: number;
   network: string;
   auto_merge: number;
@@ -28,6 +37,7 @@ export function repoView(repo: Repo): RepoView {
     auto_approve: bit(repo.auto_approve),
     auto_resolve: bit(repo.auto_resolve),
     auto_unblock: bit(repo.auto_unblock),
+    auto_review: bit(repo.auto_review),
     sandbox: bit(repo.sandbox),
     network: JSON.stringify(repo.network),
     auto_merge: bit(repo.auto_merge),

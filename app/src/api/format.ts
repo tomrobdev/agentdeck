@@ -136,13 +136,17 @@ export function taskList(ids: number[]): string {
 
 /** A run's name: "Run 2", or the kind of run that uses no attempt. */
 export function runLabel(r: Pick<Run, 'kind' | 'attempt'>): string {
-  return r.kind === 'resolve' ? 'Resolve conflicts' : r.kind === 'unblock' ? 'Unblock run' : `Run ${r.attempt}`;
+  if (r.kind === 'resolve') return 'Resolve conflicts';
+  if (r.kind === 'unblock') return 'Unblock run';
+  if (r.kind === 'review') return 'Review';
+  return `Run ${r.attempt}`;
 }
 
 /** What a run that uses no attempt did, for a tooltip; undefined for a work run. */
 export function runHint(r: Pick<Run, 'kind'>): string | undefined {
   if (r.kind === 'resolve') return 'Merged the base branch into the branch; uses no attempt';
   if (r.kind === 'unblock') return 'Read why the task blocked, then retried it with a note or asked you; uses no attempt';
+  if (r.kind === 'review') return "Read the task's changes against its goal and plan steps, and left a review; uses no attempt";
   return undefined;
 }
 

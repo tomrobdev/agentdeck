@@ -25,7 +25,9 @@ _Avoid_: ticket, tickets, job, jobs
 
 **Run**: one attempt at a task, one `claude` process. A task has at most `max_attempts` runs, and a retry continues on the same branch. A **resolve run** is another kind: the `claude` part of a sync, settling its conflicts. It uses no attempt. An **unblock run** is the third: in a repo with `auto_unblock` on, a short run that reads why a task blocked and either retries it with a note or leaves it blocked with a **question** and options. It uses no attempt, takes a slot, and is not a resolve run.
 
-**Model**: the Claude model a run is started with, recorded on the run. A work run takes its task's model, a resolve or unblock run the **support model** (a setting). A new task that names none takes its repo's model, else the **default model** (a setting).
+**Review run**: a run that reads a done task's changes against its Goal, Definition of done and linked plan steps, and leaves a review of its own: a summary and findings, each blocking or not. Its **verdict** is clean when no finding blocks. It uses no attempt, takes the **review model** (a setting), and a repo starts one on its own only with `auto_review` on. It never takes or fills a person's draft.
+
+**Model**: the Claude model a run is started with, recorded on the run. A work run takes its task's model, a resolve or unblock run the **support model** (a setting), a review run the **review model** (a setting). A new task that names none takes its repo's model, else the **default model** (a setting).
 
 **Slot**: room for one running task.
 
@@ -44,7 +46,7 @@ _Avoid_: bring in
 
 **Auto-merge check**: the daemon's judgement of whether a done task's pull request may merge without a person, and if not, what it is waiting for.
 
-**Review**: a person's read of a task's changes, with line comments that go back to the worker as a note.
+**Review**: a read of a task's changes, by a person or a review run, with line comments that go back to the worker as a note. A submitted review records the head it read and the patch-id of the task's changes against the base, so a sync that only brings in the base needs no new review.
 
 **Area review**: a person's review of one part of a repo across everything merged into it since its last, marked by `refs/reviewed/<area>`. A repo is **due** for one when its oldest mark is older than `review_due_days`, or more than `review_due_lines` lines have merged since it.
 

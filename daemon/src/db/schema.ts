@@ -254,7 +254,16 @@ export const MIGRATIONS: Migration[] = [
   `ALTER TABLE repos ADD COLUMN model TEXT;
    ALTER TABLE runs ADD COLUMN model TEXT;
    ALTER TABLE runs ADD COLUMN model_id TEXT;`,
-  // 32: review_due, a new notification kind (domain/operations/review-due.ts), on by default. A stored notify_events
+  // 32: review runs (domain/runs/review.ts). repos.auto_review lets the daemon start one when a task is done (off by
+  // default). reviews.by is who made a review (every earlier one was a person's); head_commit and diff_hash are the head
+  // and the patch-id of the changes it read, set at submit (NULL on older rows). runs.diff_hash is the diff a review run
+  // was started for, NULL for other kinds.
+  `ALTER TABLE repos ADD COLUMN auto_review INTEGER NOT NULL DEFAULT 0;
+   ALTER TABLE reviews ADD COLUMN by TEXT NOT NULL DEFAULT 'person';
+   ALTER TABLE reviews ADD COLUMN head_commit TEXT;
+   ALTER TABLE reviews ADD COLUMN diff_hash TEXT;
+   ALTER TABLE runs ADD COLUMN diff_hash TEXT;`,
+  // 33: review_due, a new notification kind (domain/operations/review-due.ts), on by default. A stored notify_events
   // does not take the setting's default, so the kind is added to it, unless a person turned every kind off.
   `UPDATE settings SET value = value || ',review_due'
    WHERE key = 'notify_events' AND value <> '' AND ',' || value || ',' NOT LIKE '%,review_due,%';`,

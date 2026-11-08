@@ -5,7 +5,7 @@ import { DEFAULTS } from '../config.ts';
 import { DEFAULT_REVIEW_DUE, NOTIFY_KINDS, type NotifyKind, type NotifySettings, type ReviewDue } from '../domain/operations/index.ts';
 import type { RepoId } from '../domain/shared/index.ts';
 import type { PlannerSettings } from '../domain/proposals/index.ts';
-import { DEFAULT_SUPPORT_MODEL } from '../domain/runs/index.ts';
+import { DEFAULT_REVIEW_MODEL, DEFAULT_SUPPORT_MODEL } from '../domain/runs/index.ts';
 import { DEFAULT_MODEL } from '../domain/work/index.ts';
 import type { Settings } from '../domain/operations/index.ts';
 import { BUDGET_KEYS, type Budget, DEFAULT_BUDGET } from '../domain/capacity/index.ts';
@@ -31,6 +31,7 @@ export const SETTING_DEFAULTS = {
   planner_model: DEFAULT_MODEL,
   default_model: DEFAULT_MODEL,
   support_model: DEFAULT_SUPPORT_MODEL,
+  review_model: DEFAULT_REVIEW_MODEL,
   review_due_days: String(DEFAULT_REVIEW_DUE.days),
   review_due_lines: String(DEFAULT_REVIEW_DUE.lines),
   reviews_due: '[]',
@@ -69,9 +70,10 @@ export function settingsStore(db: DatabaseSync, orm: Orm) {
     max_tasks: Number(get('planner_max_tasks')),
     model: get('planner_model'),
   });
-  const modelSettings = (): Pick<Settings, 'default_model' | 'support_model'> => ({
+  const modelSettings = (): Pick<Settings, 'default_model' | 'support_model' | 'review_model'> => ({
     default_model: get('default_model'),
     support_model: get('support_model'),
+    review_model: get('review_model'),
   });
   return {
     /** Raw write by key, for flags the daemon keeps for itself. The person's settings go through writeSettings. */
@@ -101,6 +103,7 @@ export function settingsStore(db: DatabaseSync, orm: Orm) {
         set('planner_model', s.planner.model);
         set('default_model', s.default_model);
         set('support_model', s.support_model);
+        set('review_model', s.review_model);
         set('reload_on_change', s.reload_on_change ? '1' : '0');
         set('review_due_days', String(s.review_due.days));
         set('review_due_lines', String(s.review_due.lines));

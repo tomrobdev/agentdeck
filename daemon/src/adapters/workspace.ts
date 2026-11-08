@@ -19,6 +19,7 @@ import {
   currentBranch,
   deleteBranch,
   diffBase,
+  diffHash,
   ensureWorktree,
   filePatch,
   filesWithMarkers,
@@ -159,6 +160,14 @@ export const workspace = {
   branchHead: (repoPath: string, branch: string) => branchCommit(repoPath, branch),
 
   diffBase: (repoPath: string, base: string, head: string) => diffBase(repoPath, base, head),
+
+  async diffHash(repoPath: string, base: string, head: string) {
+    try {
+      return await diffHash(repoPath, base, head);
+    } catch {
+      return null; // no such commit, or git refused: the review is stored without it
+    }
+  },
 
   async compare(repoPath: string, base: string, head: string) {
     const [files, commits] = await Promise.all([changedFiles(repoPath, base, head), commitsBetween(repoPath, base, head)]);

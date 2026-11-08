@@ -36,6 +36,7 @@ const SETTING_MEANINGS: Record<string, string> = {
   planner_model: 'The model the planner runs with',
   default_model: "The model a new task takes when neither it nor its repo names one (a repo's own is repos.model)",
   support_model: 'The model resolve and unblock runs use, in place of their task’s',
+  review_model: 'The model review runs use: a reviewer at least as strong as the worker',
   review_due_days: 'A repo is due for an area review once its oldest refs/reviewed/* mark is older than this many days',
   review_due_lines:
     'A repo is due for an area review once more than this many lines merged since its oldest mark (or, with none, since it was added)',

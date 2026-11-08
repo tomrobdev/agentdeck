@@ -99,6 +99,7 @@ export interface SettingsPatch {
   planner?: Partial<PlannerSettings>;
   default_model?: string;
   support_model?: string;
+  review_model?: string;
   reload_on_change?: boolean;
   review_due?: Partial<ReviewDueSettings>;
 }
@@ -111,7 +112,7 @@ export function updateSettings(app: App, patch: SettingsPatch): Settings {
 
   next.reload_on_change = flag(body, 'reload_on_change') ?? next.reload_on_change;
   next.max_concurrent = whole(body, 'max_concurrent', validateSlots) ?? next.max_concurrent;
-  for (const key of ['default_model', 'support_model'] as const) {
+  for (const key of ['default_model', 'support_model', 'review_model'] as const) {
     const model = text(body, key);
     refuse(modelError(model));
     next[key] = model ?? next[key];
