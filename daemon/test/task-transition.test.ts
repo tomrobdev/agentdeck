@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { asTaskId } from '../src/domain/shared/id.ts';
 import {
+  type DomainEvent,
+  type DomainEventType,
   RULES,
   type RuleKey,
   type TaskCounters,
@@ -257,10 +260,18 @@ const CASES: Case[] = [
   })),
 ];
 
+const id = asTaskId(7);
+
 for (const c of CASES) {
   test(`transition: ${c.name}`, () => {
-    const t = transition({ ...stateIn(c.from), attempts: 0, restarts: 0, ...c.task }, c.event, c.opts);
-    assert.deepEqual(t, { state: c.to, counters: c.counters, history: c.history });
+    const t = transition({ ...stateIn(c.from), id, attempts: 0, restarts: 0, ...c.task }, c.event, c.opts);
+    assert.ok(t);
+    const { events, ...rest } = t;
+    assert.deepEqual(rest, { state: c.to, counters: c.counters });
+    assert.deepEqual(
+      events.map((e) => [e.history, e.from, e.to, e.reason]),
+      [[c.history, c.from, c.to.status, c.opts?.reason ?? null]],
+    );
   });
 }
 
@@ -269,9 +280,80 @@ test('transition: every rule key has a case', () => {
   for (const key of Object.keys(RULES) as RuleKey[]) assert.ok(covered.has(key), `no case for ${key}`);
 });
 
+/** An event for each rule key. */
+const EVENT_OF: Record<RuleKey, TaskEvent> = {
+  claim: { type: 'claim' },
+  'finish:done': { type: 'finish', outcome: 'done' },
+  'finish:blocked': { type: 'finish', outcome: 'blocked' },
+  'finish:cancelled': { type: 'finish', outcome: 'cancelled' },
+  'finish:failed': { type: 'finish', outcome: 'failed', retry: false },
+  'finish:failed:retry': { type: 'finish', outcome: 'failed', retry: true },
+  rate_limited: { type: 'rate_limited' },
+  conflict: { type: 'conflict' },
+  cancel: { type: 'cancel' },
+  approve: { type: 'approve' },
+  reject: { type: 'reject' },
+  retry: { type: 'retry' },
+  unblock_retry: { type: 'unblock_retry' },
+  mark_done: { type: 'mark_done' },
+  pr_merged: { type: 'pr_merged' },
+  recover: { type: 'recover', exhausted: false },
+  'recover:exhausted': { type: 'recover', exhausted: true },
+};
+
+/** Every entry of RULES: rule key → current status → the domain event its move makes. */
+const EVENTS: Record<RuleKey, Partial<Record<TaskStatus, DomainEventType>>> = {
+  claim: { queued: 'TaskStarted' },
+  'finish:done': { running: 'TaskFinished', cancel_requested: 'TaskCancelled' },
+  'finish:blocked': { running: 'TaskBlocked', cancel_requested: 'TaskCancelled' },
+  'finish:cancelled': { running: 'TaskCancelled', cancel_requested: 'TaskCancelled' },
+  'finish:failed': { running: 'TaskFailed', cancel_requested: 'TaskCancelled' },
+  'finish:failed:retry': { running: 'TaskQueued', cancel_requested: 'TaskCancelled' },
+  rate_limited: { running: 'TaskQueued', cancel_requested: 'TaskCancelled' },
+  conflict: { done: 'TaskBlocked' },
+  cancel: {
+    proposed: 'TaskCancelled',
+    queued: 'TaskCancelled',
+    blocked: 'TaskCancelled',
+    failed: 'TaskCancelled',
+    running: 'TaskCancelRequested',
+  },
+  approve: { proposed: 'TaskQueued' },
+  reject: { proposed: 'TaskCancelled' },
+  retry: { blocked: 'TaskQueued', failed: 'TaskQueued', cancelled: 'TaskQueued', done: 'TaskQueued' },
+  unblock_retry: { blocked: 'TaskQueued' },
+  mark_done: { blocked: 'TaskMarkedDone', failed: 'TaskMarkedDone' },
+  pr_merged: { blocked: 'TaskPrMerged', failed: 'TaskPrMerged' },
+  recover: { running: 'TaskQueued', cancel_requested: 'TaskCancelled' },
+  'recover:exhausted': { running: 'TaskFailed', cancel_requested: 'TaskCancelled' },
+};
+
+/** The rule keys a person asks for; the daemon asks for every other. */
+const BY_PERSON: RuleKey[] = ['approve', 'reject', 'retry', 'cancel', 'mark_done'];
+
+test('transition: the domain events of every entry in RULES', () => {
+  for (const [key, rule] of Object.entries(RULES) as [RuleKey, Partial<Record<TaskStatus, TaskStatus>>][]) {
+    assert.deepEqual(Object.keys(EVENTS[key]).sort(), Object.keys(rule).sort(), `EVENTS lists each move of ${key}`);
+    for (const [from, to] of Object.entries(rule) as [TaskStatus, TaskStatus][]) {
+      const t = transition({ ...stateIn(from), id, attempts: 1, restarts: 0 }, EVENT_OF[key], { reason: 'why' });
+      const expected: DomainEvent = {
+        type: EVENTS[key][from]!,
+        task_id: id,
+        cause: key,
+        by: BY_PERSON.includes(key) ? 'person' : 'daemon',
+        from,
+        to,
+        history: EVENT_OF[key].type,
+        reason: 'why',
+      };
+      assert.deepEqual(t?.events, [expected], `${key} from ${from}`);
+    }
+  }
+});
+
 test('transition: null where the event is refused', () => {
-  assert.equal(transition({ ...stateIn('done'), attempts: 1, restarts: 0 }, { type: 'claim' }), null);
-  assert.equal(transition({ ...stateIn('cancelled'), attempts: 1, restarts: 0 }, { type: 'mark_done' }), null);
+  assert.equal(transition({ ...stateIn('done'), id, attempts: 1, restarts: 0 }, { type: 'claim' }), null);
+  assert.equal(transition({ ...stateIn('cancelled'), id, attempts: 1, restarts: 0 }, { type: 'mark_done' }), null);
 });
 
 test('transition: a cancel keeps the stop reason of the block or failure it ended, and drops the needs and the question', () => {
@@ -281,11 +363,11 @@ test('transition: a cancel keeps the stop reason of the block or failure it ende
     needs: { kind: 'host', items: ['x'] },
     question: { question: 'Which?', options: [] },
   };
-  assert.deepEqual(transition({ ...blocked, attempts: 1, restarts: 0 }, { type: 'cancel' })?.state, {
+  assert.deepEqual(transition({ ...blocked, id, attempts: 1, restarts: 0 }, { type: 'cancel' })?.state, {
     status: 'cancelled',
     stop_reason: 'no network',
   });
-  assert.deepEqual(transition({ status: 'failed', stop_reason: 'tests fail', attempts: 1, restarts: 0 }, { type: 'cancel' })?.state, {
+  assert.deepEqual(transition({ status: 'failed', stop_reason: 'tests fail', id, attempts: 1, restarts: 0 }, { type: 'cancel' })?.state, {
     status: 'cancelled',
     stop_reason: 'tests fail',
   });

@@ -21,6 +21,7 @@ import type { PidRun, Run, RunKind, RunningTaskRun } from '../../domain/runs/ind
 import type {
   BlockedTask,
   Dependent,
+  DomainEvent,
   Link,
   LinkKind,
   LinkedTask,
@@ -99,11 +100,12 @@ export type RepoUpdate = Partial<
 export interface TaskRepository {
   addTask(n: NewTask): Task;
   getTask(id: TaskId): Task | undefined;
-  applyEvent(
+  /** A status change: the task as it is after, and its domain events. Only application/landing/settle.ts calls it. */
+  applyEvent: (
     id: TaskId,
     event: TaskEvent,
     opts?: { reason?: string | null; needs?: Needs | null; onlyFrom?: TaskStatus[] },
-  ): Task | undefined;
+  ) => { task: Task; events: DomainEvent[] } | undefined;
   listTasks(): Task[];
   tasksForRepo(repo_id: RepoId, limit?: number): Task[];
   countOpen(repo_id: RepoId): number;

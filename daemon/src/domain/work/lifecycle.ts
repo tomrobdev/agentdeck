@@ -1,5 +1,6 @@
 // The task state machine, as data. Pure: no I/O, so it can be tested exhaustively.
 // applyEvent and claimNextTask (db/tasks.ts) are the only things that write a status, and each asks this module first.
+import type { TaskId } from '../shared/index.ts';
 import type { TaskEventType } from './history.ts';
 import type { Needs } from './needs.ts';
 import { type TaskCore, type TaskState, stopReasonOf } from './task.ts';
@@ -122,8 +123,79 @@ export function fromStatuses(event: TaskEvent): TaskStatus[] {
   return Object.keys(RULES[ruleKey(event)]) as TaskStatus[];
 }
 
+/** Who asked for an event: a person (the person events above), or the daemon on its own (every other event). */
+export type Actor = 'daemon' | 'person';
+
+export const actorOf = (cause: RuleKey): Actor => ((PERSON_EVENTS as string[]).includes(cause) ? 'person' : 'daemon');
+
+/**
+ * What a status change says happened, read by its follow-ups (`FOLLOW_UPS` in follow-ups.ts). Named for the status the
+ * task reached; reaching done is told apart by how: its run finished, its PR was seen merged, or a person marked it done.
+ */
+export type DomainEventType =
+  | 'TaskStarted'
+  | 'TaskQueued'
+  | 'TaskFinished'
+  | 'TaskPrMerged'
+  | 'TaskMarkedDone'
+  | 'TaskBlocked'
+  | 'TaskFailed'
+  | 'TaskCancelRequested'
+  | 'TaskCancelled';
+
+export const DOMAIN_EVENT_TYPES: DomainEventType[] = [
+  'TaskStarted',
+  'TaskQueued',
+  'TaskFinished',
+  'TaskPrMerged',
+  'TaskMarkedDone',
+  'TaskBlocked',
+  'TaskFailed',
+  'TaskCancelRequested',
+  'TaskCancelled',
+];
+
+/** One status change of one task. `applyEvent` (db/tasks.ts) records each as a task_events row and returns them. */
+export interface DomainEvent {
+  /** What happened, named for the status the task reached. */
+  type: DomainEventType;
+  task_id: TaskId;
+  /** The lifecycle event that caused it, by its rule key. */
+  cause: RuleKey;
+  /** Who asked for that event. */
+  by: Actor;
+  from: TaskStatus;
+  to: TaskStatus;
+  /** The type of its timeline row: the event's, or `environment_block` for a block the environment caused. */
+  history: TaskEventType;
+  /** Why, as the timeline row records it: the stop reason, or a person's note. */
+  reason: string | null;
+}
+
+/** The domain event a rule's move to `to` is. */
+export function domainEventType(cause: RuleKey, to: TaskStatus): DomainEventType {
+  switch (to) {
+    case 'running':
+      return 'TaskStarted';
+    case 'queued':
+      return 'TaskQueued';
+    case 'done':
+      return cause === 'pr_merged' ? 'TaskPrMerged' : cause === 'mark_done' ? 'TaskMarkedDone' : 'TaskFinished';
+    case 'blocked':
+      return 'TaskBlocked';
+    case 'failed':
+      return 'TaskFailed';
+    case 'cancel_requested':
+      return 'TaskCancelRequested';
+    case 'cancelled':
+      return 'TaskCancelled';
+    case 'proposed':
+      throw new Error(`no rule moves a task to proposed (${cause})`);
+  }
+}
+
 /** What `transition` reads of a task. */
-export type TransitionTask = TaskState & Pick<TaskCore, 'attempts' | 'restarts'>;
+export type TransitionTask = TaskState & Pick<TaskCore, 'id' | 'attempts' | 'restarts'>;
 
 /** The counters an event sets, with their new values. A counter not listed is left as it is. */
 export interface TaskCounters {
@@ -136,8 +208,8 @@ export interface Transition {
   /** The status the event leads to, and all the task carries in it. */
   state: TaskState;
   counters: TaskCounters;
-  /** The timeline type to record: the event's, or `environment_block` for a block the environment caused. */
-  history: TaskEventType;
+  /** What happened, for the timeline and the follow-ups: one event, the status change. */
+  events: DomainEvent[];
 }
 
 /**
@@ -168,17 +240,29 @@ export interface TransitionOptions {
 
 /**
  * What `event` does to `task`: the state it leads to, the new value of every counter it sets and the
- * history type; null if the event isn't allowed from the task's status. A cancelled outcome (the cancel
+ * domain events it makes; null if the event isn't allowed from the task's status. A cancelled outcome (the cancel
  * wins from `cancel_requested`) changes no counter.
  */
 export function transition(task: TransitionTask, event: TaskEvent, opts: TransitionOptions = {}): Transition | null {
   const to = nextStatus(task.status, event);
   if (!to) return null;
   const environment = event.type === 'finish' && event.outcome === 'blocked' && event.environment === true;
-  const history: TaskEventType = environment ? 'environment_block' : event.type;
+  const cause = ruleKey(event);
+  const events: DomainEvent[] = [
+    {
+      type: domainEventType(cause, to),
+      task_id: task.id,
+      cause,
+      by: actorOf(cause),
+      from: task.status,
+      to,
+      history: environment ? 'environment_block' : event.type,
+      reason: opts.reason ?? null,
+    },
+  ];
   const state = nextState(task, to, event, opts);
   const counters: TaskCounters = {};
-  if (to === 'cancelled') return { state, counters, history };
+  if (to === 'cancelled') return { state, counters, events };
 
   const given = Math.max(task.attempts - 1, 0); // the attempt given back
   if (event.type === 'claim') counters.attempts = task.attempts + 1;
@@ -189,7 +273,7 @@ export function transition(task: TransitionTask, event: TaskEvent, opts: Transit
     counters.restarts = task.restarts + 1;
     if (to === 'queued') counters.attempts = given;
   }
-  return { state, counters, history };
+  return { state, counters, events };
 }
 
 /** A task requeued by this many daemon restarts is failed instead, in case the task itself kills the daemon. */

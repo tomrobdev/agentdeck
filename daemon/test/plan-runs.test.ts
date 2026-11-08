@@ -234,7 +234,7 @@ test('the step statuses a cut-off run marked survive when the restarts fail the 
   }
   assert.equal(db.getTask(t.id)!.status, 'failed');
   // The person's retry is a new attempt.
-  assert.equal(db.applyEvent(t.id, { type: 'retry' })?.status, 'queued');
+  assert.equal(db.applyEvent(t.id, { type: 'retry' })?.task.status, 'queued');
 
   await drain();
   const after = db.getTask(t.id)!;

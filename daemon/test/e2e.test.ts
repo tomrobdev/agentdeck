@@ -102,7 +102,7 @@ test('cancel stops a running task', async () => {
   const task = db.addTask({ repo_id: REPO, title: 'slow', prompt: 'FAKE_SLOW' });
   const done = drain();
   while (db.getTask(task.id)!.status !== 'running') await new Promise((r) => setTimeout(r, 20));
-  assert.equal(db.applyEvent(task.id, { type: 'cancel' })?.status, 'cancel_requested');
+  assert.equal(db.applyEvent(task.id, { type: 'cancel' })?.task.status, 'cancel_requested');
   await done;
   assert.equal(db.getTask(task.id)!.status, 'cancelled');
 });
@@ -116,7 +116,7 @@ test('a cancel requested while the run is finishing wins over done', async () =>
     const done = drain();
     while (!existsSync(marker)) await new Promise((r) => setTimeout(r, 20));
     assert.equal(db.getTask(task.id)!.status, 'running');
-    assert.equal(db.applyEvent(task.id, { type: 'cancel' })?.status, 'cancel_requested');
+    assert.equal(db.applyEvent(task.id, { type: 'cancel' })?.task.status, 'cancel_requested');
     await done;
 
     const t = db.getTask(task.id)!;

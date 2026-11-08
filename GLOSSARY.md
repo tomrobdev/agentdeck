@@ -32,6 +32,8 @@ _Avoid_: bring in
 
 **Settle**: the daemon ending a run or a wait on its own, and doing what follows: opening the pull request, telling a person, warning the tasks that now cannot start.
 
+**Follow-up**: what the daemon does after a task's status changes, such as opening its pull request, warning the tasks that now cannot start, or telling a person. Each status change is a domain event, and one table says what follows each.
+
 **Protected edit**: a change to a file a worker may not edit itself. The worker proposes it, the daemon commits it after the run, and a person reviews it before it merges.
 
 ## Landing

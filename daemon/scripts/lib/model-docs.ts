@@ -4,7 +4,15 @@
 import { join } from 'node:path';
 import ts from 'typescript';
 import { COMMENT_MOVES, COMMENT_STATES } from '../../src/domain/landing/review.ts';
-import { RULES, TASK_STATUSES } from '../../src/domain/work/lifecycle.ts';
+import { FOLLOW_UPS } from '../../src/domain/work/follow-ups.ts';
+import {
+  DOMAIN_EVENT_TYPES,
+  RULES,
+  type RuleKey,
+  TASK_STATUSES,
+  type TaskStatus,
+  domainEventType,
+} from '../../src/domain/work/lifecycle.ts';
 import { type Source, readSources } from './sources.ts';
 
 const SRC = join(import.meta.dirname, '../../src');
@@ -266,6 +274,27 @@ export function stateMachinesBody(): string {
       table([m.moves[0].toUpperCase() + m.moves.slice(1), 'Moves'], rows),
     );
   }
+  // domain event → rule key → the statuses it moves from to make that event
+  const causes = new Map<string, Map<RuleKey, TaskStatus[]>>();
+  for (const [key, rule] of Object.entries(RULES) as [RuleKey, Partial<Record<TaskStatus, TaskStatus>>][]) {
+    for (const [from, to] of Object.entries(rule) as [TaskStatus, TaskStatus][]) {
+      const byKey = causes.get(domainEventType(key, to)) ?? new Map<RuleKey, TaskStatus[]>();
+      byKey.set(key, [...(byKey.get(key) ?? []), from]);
+      causes.set(domainEventType(key, to), byKey);
+    }
+  }
+  sections.push(
+    '## Follow-ups',
+    "What the daemon does after a task's status changes: each domain event `transition` makes, the moves that make it (event, from which statuses) and its follow-ups. The table is `FOLLOW_UPS` in `domain/work/follow-ups.ts`, run by `application/landing/settle.ts` for the daemon's events and a person's. Crash recovery follows up only the tasks it failed.",
+    table(
+      ['Domain event', 'Made by', 'Follow-ups'],
+      DOMAIN_EVENT_TYPES.map((type) => [
+        code(type),
+        [...(causes.get(type) ?? [])].map(([key, from]) => `${code(key)} (${from.join(', ')})`).join(', '),
+        FOLLOW_UPS[type].map((f) => code(f)).join(', ') || 'none',
+      ]),
+    ),
+  );
   sections.push(
     '## Not yet tables',
     'State types in `domain/` that no rule table drives, and why.',

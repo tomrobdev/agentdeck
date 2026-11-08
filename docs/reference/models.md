@@ -1199,6 +1199,21 @@ An open task as the digest shows it.
 | `waiting`          | `Waiting \| null`                                        |                                                                                                            |
 | `auto_merge_view?` | `{ state: string; label: string; } \| null \| undefined` | The auto-merge view's state and label (domain/landing/auto-merge.ts); marked on the line unless it is off. |
 
+### DomainEvent
+
+One status change of one task. `applyEvent` (db/tasks.ts) records each as a task_events row and returns them.
+
+| Field     | Type              | Comment                                                                                               |
+| --------- | ----------------- | ----------------------------------------------------------------------------------------------------- |
+| `type`    | `DomainEventType` | What happened, named for the status the task reached.                                                 |
+| `task_id` | `TaskId`          |                                                                                                       |
+| `cause`   | `RuleKey`         | The lifecycle event that caused it, by its rule key.                                                  |
+| `by`      | `Actor`           | Who asked for that event.                                                                             |
+| `from`    | `TaskStatus`      |                                                                                                       |
+| `to`      | `TaskStatus`      |                                                                                                       |
+| `history` | `TaskEventType`   | The type of its timeline row: the event's, or `environment_block` for a block the environment caused. |
+| `reason`  | `string \| null`  | Why, as the timeline row records it: the stop reason, or a person's note.                             |
+
 ### DoneState
 
 A finished task, and whether a person finished it.
@@ -1550,11 +1565,11 @@ A stored plan as the API returns it: parsed, without its HTML.
 
 ### Transition
 
-| Field      | Type            | Comment                                                                                              |
-| ---------- | --------------- | ---------------------------------------------------------------------------------------------------- |
-| `state`    | `TaskState`     | The status the event leads to, and all the task carries in it.                                       |
-| `counters` | `TaskCounters`  |                                                                                                      |
-| `history`  | `TaskEventType` | The timeline type to record: the event's, or `environment_block` for a block the environment caused. |
+| Field      | Type            | Comment                                                                           |
+| ---------- | --------------- | --------------------------------------------------------------------------------- |
+| `state`    | `TaskState`     | The status the event leads to, and all the task carries in it.                    |
+| `counters` | `TaskCounters`  |                                                                                   |
+| `events`   | `DomainEvent[]` | What happened, for the timeline and the follow-ups: one event, the status change. |
 
 ### TransitionOptions
 
@@ -1572,6 +1587,7 @@ What `transition` reads of a task.
 | Field      | Type                                                                                                          | Comment                                           |
 | ---------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
 | `status`   | `"failed" \| "blocked" \| "proposed" \| "done" \| "cancelled" \| "queued" \| "running" \| "cancel_requested"` |                                                   |
+| `id`       | `TaskId`                                                                                                      |                                                   |
 | `attempts` | `number`                                                                                                      |                                                   |
 | `restarts` | `number`                                                                                                      | times a daemon restart requeued this task mid-run |
 
