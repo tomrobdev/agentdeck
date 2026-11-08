@@ -1,15 +1,26 @@
 #!/usr/bin/env node
 // Slow fake `claude -p` for crash tests. Logs start/end to $AGENTDECK_HOME/fake-events.jsonl.
 // FAKE_STREAM=1 emits a stream event every 300ms (like real claude); otherwise silent until the end.
+// Started on a merge in progress (a resolve run), it settles the conflicts and commits the merge; otherwise (a work run)
+// it commits a file of its own. Each event says which (`run`).
 import { execFileSync } from 'node:child_process';
 import { appendFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const ev = join(process.env.AGENTDECK_HOME, 'fake-events.jsonl');
+const merging = (() => {
+  try {
+    execFileSync('git', ['rev-parse', '-q', '--verify', 'MERGE_HEAD'], { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+})();
+const run = merging ? 'resolve' : 'work';
 const rec = (o) =>
   appendFileSync(
     ev,
-    JSON.stringify({ pid: process.pid, cwd: process.cwd(), task: process.env.AGENTDECK_TASK_ID, t: Date.now(), ...o }) + '\n',
+    JSON.stringify({ pid: process.pid, cwd: process.cwd(), task: process.env.AGENTDECK_TASK_ID, run, t: Date.now(), ...o }) + '\n',
   );
 const out = (o) => process.stdout.write(JSON.stringify(o) + '\n');
 process.stdout.on('error', (e) => {
@@ -24,9 +35,16 @@ const iv = stream ? setInterval(() => out({ type: 'assistant', message: { conten
 await new Promise((r) => setTimeout(r, ms));
 clearInterval(iv);
 try {
-  writeFileSync(`out-${process.pid}.txt`, 'x\n');
-  execFileSync('git', ['add', '-A']);
-  execFileSync('git', ['commit', '-q', '-m', `fake ${process.pid}`]);
+  if (merging) {
+    const conflicted = execFileSync('git', ['diff', '--name-only', '--diff-filter=U'], { encoding: 'utf8' }).split('\n').filter(Boolean);
+    for (const file of conflicted) writeFileSync(file, `settled by ${process.pid}\n`);
+    execFileSync('git', ['add', '-A']);
+    execFileSync('git', ['commit', '-q', '--no-edit']);
+  } else {
+    writeFileSync(`out-${process.pid}.txt`, 'x\n');
+    execFileSync('git', ['add', '-A']);
+    execFileSync('git', ['commit', '-q', '-m', `fake ${process.pid}`]);
+  }
   rec({ kind: 'committed' });
 } catch (e) {
   rec({ kind: 'git_error', msg: String(e.message).slice(0, 200) });
