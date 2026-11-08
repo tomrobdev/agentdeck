@@ -56,6 +56,8 @@ export interface Repo {
   auto_merge_max_lines: number;
   /** JSON array of path prefixes; a PR touching one needs a person. */
   auto_merge_skip: string;
+  /** The model a new task of the repo takes when it names none; null follows the default_model setting. Missing from a daemon that predates it. */
+  model?: string | null;
   created_at: string;
 }
 
@@ -97,6 +99,8 @@ export interface RepoPatch {
   auto_merge?: boolean;
   auto_merge_max_lines?: number;
   auto_merge_skip?: string[];
+  /** A model alias or claude-… id; null or "" clears it. */
+  model?: string | null;
   /** The repo's own tool rules; null or [] goes back to the detected ones. */
   allowed_tools?: string[] | null;
 }
@@ -292,6 +296,10 @@ export interface Run {
   tests_passed: number | null;
   result_text: string | null;
   denials: number;
+  /** The model the run was started with; null for a run from before runs recorded it. Missing from a daemon that predates it. */
+  model?: string | null;
+  /** The exact model id claude's init line named, such as claude-sonnet-5-5; null until it arrives. */
+  model_id?: string | null;
 }
 
 /** One status change in a task's history. Tasks from before migration step 6 have none. */
@@ -802,6 +810,10 @@ export interface Settings {
   budget: Budget;
   notify: { desktop: boolean; events: NotifyKind[]; ntfy_topic: string; ntfy_server: string };
   planner: { enabled: boolean; interval_hours: number; max_tasks: number; model: string };
+  /** The model a new task takes when neither it nor its repo names one. */
+  default_model: string;
+  /** The model resolve and unblock runs use, in place of their task's. */
+  support_model: string;
   reload_on_change: boolean;
 }
 
@@ -811,6 +823,8 @@ export interface SettingsPatch {
   budget?: Partial<Budget>;
   notify?: Partial<Settings['notify']>;
   planner?: Partial<Settings['planner']>;
+  default_model?: string;
+  support_model?: string;
   reload_on_change?: boolean;
 }
 
@@ -904,12 +918,17 @@ export interface ScorecardMeasures {
   pr_checks: { recorded: number; green: number; rate: number | null };
 }
 
-/** GET /api/stats?repo=<name or id>&since=<date>&by=week: what `agentdeck stats --json` prints. */
+/** GET /api/stats?repo=<name or id>&since=<date>&by=week|model: what `agentdeck stats --json` prints. */
 export interface Stats {
   repos: { repo: string; measures: RunMeasures }[];
   total: RunMeasures;
   /** The first-run measures per week, oldest first; empty unless `by` is week. */
   weeks: { week: string; measures: RunMeasures }[];
+  /**
+   * The measures per model the work runs ran on, by name with "unknown" (runs from before models were recorded) last, and
+   * the interventions counted against each; empty unless `by` is model. Missing from a daemon that predates it.
+   */
+  models?: { model: string; measures: RunMeasures; interventions: number }[];
   scorecard: {
     since: string | null;
     by: 'week' | null;

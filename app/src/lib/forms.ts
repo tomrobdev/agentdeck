@@ -5,6 +5,7 @@ import { DEFAULT_AUTO_MERGE_SKIP } from '../../../daemon/src/domain/landing/inde
 import { NOTIFY_KINDS } from '../../../daemon/src/domain/operations/index.ts';
 import { parseToolRules } from '../../../daemon/src/domain/repos/index.ts';
 import { parseTextList, textList } from '../../../daemon/src/domain/shared/index.ts';
+import { MODELS } from '../../../daemon/src/domain/work/index.ts';
 
 export { NOTIFY_KINDS };
 
@@ -22,9 +23,15 @@ export type RepoForm = {
   sandbox: boolean;
   /** Hosts, comma-separated. */
   network: string;
+  /** The model a new task of the repo takes when it names none; '' follows the default_model setting. */
+  model: string;
   /** The repo's own tool rules, one per line; empty = the detected ones. */
   tools: string;
 };
+
+/** The models a model picker offers: the aliases, and `current` too when it is a full claude-… id set elsewhere. */
+export const modelChoices = (current: string | null | undefined): string[] =>
+  current && !MODELS.includes(current) ? [...MODELS, current] : MODELS;
 
 export function toRepoForm(d: RepoDetail): RepoForm {
   return {
@@ -39,6 +46,7 @@ export function toRepoForm(d: RepoDetail): RepoForm {
     autoMergeSkip: parseTextList(d.auto_merge_skip, DEFAULT_AUTO_MERGE_SKIP).join(', '),
     sandbox: !!d.sandbox,
     network: parseTextList(d.network).join(', '),
+    model: d.model ?? '',
     tools: d.allowed_tools === null ? '' : parseTextList(d.allowed_tools).join('\n'),
   };
 }
@@ -56,6 +64,7 @@ export function toRepoPatch(f: RepoForm): RepoPatch {
     auto_merge_skip: textList(f.autoMergeSkip),
     sandbox: f.sandbox,
     network: textList(f.network),
+    model: f.model || null,
     allowed_tools: parseToolRules(f.tools),
   };
 }
@@ -74,6 +83,8 @@ export type SettingsForm = {
   planner_interval_hours: number;
   planner_max_tasks: number;
   planner_model: string;
+  default_model: string;
+  support_model: string;
   reload_on_change: boolean;
 };
 
@@ -93,6 +104,8 @@ export function toSettingsForm(s: Settings): SettingsForm {
     planner_interval_hours: s.planner.interval_hours,
     planner_max_tasks: s.planner.max_tasks,
     planner_model: s.planner.model,
+    default_model: s.default_model,
+    support_model: s.support_model,
     reload_on_change: s.reload_on_change,
   };
 }
@@ -100,6 +113,8 @@ export function toSettingsForm(s: Settings): SettingsForm {
 export function toSettingsPatch(f: SettingsForm): SettingsPatch {
   return {
     max_concurrent: f.max_concurrent,
+    default_model: f.default_model,
+    support_model: f.support_model,
     reload_on_change: f.reload_on_change,
     budget: {
       five_hour_max: f.five_hour_max / 100,

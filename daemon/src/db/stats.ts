@@ -22,6 +22,7 @@ export function statsStore(orm: Orm) {
           cost_usd: runs.cost_usd,
           denials: runs.denials,
           task_status: tasks.status,
+          model: runs.model,
         })
         .from(runs)
         .innerJoin(tasks, eq(tasks.id, runs.task_id))

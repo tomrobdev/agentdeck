@@ -20,8 +20,13 @@ export function runStore(orm: Orm) {
       .where(and(eq(runs.kind, kind), isNull(runs.ended_at)))
       .get()?.n ?? 0;
   return {
-    startRun(task_id: TaskId, attempt: number, log_path: string, kind: RunKind = 'work'): RunId {
-      return Number(orm.insert(runs).values({ task_id, attempt, log_path, kind }).run().lastInsertRowid) as RunId;
+    /** A new run row; `model` is the model its claude is started with (null: not known). */
+    startRun(task_id: TaskId, attempt: number, log_path: string, kind: RunKind = 'work', model: string | null = null): RunId {
+      return Number(orm.insert(runs).values({ task_id, attempt, log_path, kind, model }).run().lastInsertRowid) as RunId;
+    },
+    /** The exact model id claude's init line named for the run. */
+    setRunModelId(id: RunId, model_id: string): void {
+      orm.update(runs).set({ model_id }).where(eq(runs.id, id)).run();
     },
     /** Record the run's claude process group, and when it started: what `ownsLiveGroup` checks the pid against. */
     setRunPid(id: RunId, pid: number): void {
@@ -45,7 +50,7 @@ export function runStore(orm: Orm) {
         .all();
       return new Map(rows.map((r) => [r.task_id, r]));
     },
-    finishRun(id: RunId, r: Partial<Omit<Run, 'id' | 'task_id' | 'kind' | 'attempt' | 'started_at' | 'log_path'>>): void {
+    finishRun(id: RunId, r: Partial<Omit<Run, 'id' | 'task_id' | 'kind' | 'attempt' | 'started_at' | 'log_path' | 'model'>>): void {
       // undefined means "not given" to Drizzle, but this has always written a given-as-undefined key as NULL.
       const given = Object.fromEntries(Object.entries(stored(r)).map(([k, v]) => [k, v ?? null]));
       orm

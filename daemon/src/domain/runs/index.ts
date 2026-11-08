@@ -3,6 +3,7 @@ export { buildPrompt, buildResolvePrompt, buildResumePrompt, claudeArgs } from '
 export type { PromptPlan } from './prompt.ts';
 export { resolveOutcome } from './resolve.ts';
 export {
+  DEFAULT_SUPPORT_MODEL,
   INTERRUPTED,
   classifyRun,
   editsSinceCutOff,
@@ -14,6 +15,7 @@ export {
   resumableSession,
   resumeFailed,
   resumeMaxTurns,
+  runModel,
   runOutcome,
   setupFailedReason,
 } from './run.ts';

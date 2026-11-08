@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { MODEL_HINTS, MODEL_LABELS, type Repo, type TaskDetail, api } from '../../api';
+import { computed, ref } from 'vue';
+import { useQuery } from '@tanstack/vue-query';
+import { MODEL_HINTS, MODEL_LABELS, type Repo, type TaskDetail, api, settingsQuery } from '../../api';
 import { errorMessage, textList } from '../../../../daemon/src/domain/shared/index.ts';
-import { MODELS } from '../../lib/taskView';
+import { modelSourceText, newTaskModel } from '../../../../daemon/src/domain/work/index.ts';
+import { modelChoices } from '../../lib/forms';
 import { useTerminal } from '../../composables/useTerminal';
 import Modal from '../ui/Modal.vue';
 import NumberInput from '../ui/NumberInput.vue';
@@ -13,7 +15,20 @@ const emit = defineEmits<{ close: []; created: [task: TaskDetail]; repos: [] }>(
 const repo = ref(props.repos[0]?.name ?? '');
 const title = ref('');
 const prompt = ref('');
-const model = ref('sonnet');
+// The model starts from the default the daemon would give (the repo's, else the default_model setting) and follows the
+// repo picked until the person picks a model; only a picked one is sent, so the daemon decides the default itself.
+const settingsQ = useQuery(settingsQuery());
+const picked = ref<string | null>(null);
+const byDefault = computed(() => {
+  const defaultModel = settingsQ.data.value?.default_model;
+  if (!defaultModel) return null;
+  return newTaskModel(undefined, { model: props.repos.find((r) => r.name === repo.value)?.model ?? null }, defaultModel);
+});
+const model = computed({
+  get: () => picked.value ?? byDefault.value?.model ?? '',
+  set: (m: string) => (picked.value = m),
+});
+const modelSource = computed(() => (picked.value === null && byDefault.value ? modelSourceText(byDefault.value.source) : null));
 const priority = ref(0);
 const maxTurns = ref(40);
 /** The task whose plan this one follows, as typed: "112" or "#112". */
@@ -56,7 +71,7 @@ async function submit() {
       repo: repo.value,
       prompt: prompt.value,
       title: title.value || undefined,
-      model: model.value,
+      model: picked.value ?? undefined,
       priority: priority.value,
       max_turns: maxTurns.value,
       plan_task: planOn ? Number(planOn) : undefined,
@@ -102,9 +117,13 @@ async function submit() {
           </select>
         </label>
         <label class="field flex-1">
-          Model
+          <span
+            >Model <span v-if="modelSource" class="text-muted">({{ modelSource }})</span></span
+          >
           <select v-model="model">
-            <option v-for="m in MODELS" :key="m" :value="m">{{ MODEL_LABELS[m] ?? m }} ({{ MODEL_HINTS[m] }})</option>
+            <option v-for="m in modelChoices(model)" :key="m" :value="m">
+              {{ MODEL_LABELS[m] ?? m }}<template v-if="MODEL_HINTS[m]"> ({{ MODEL_HINTS[m] }})</template>
+            </option>
           </select>
         </label>
         <label class="field flex-[0_0_84px]">

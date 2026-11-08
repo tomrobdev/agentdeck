@@ -45,6 +45,15 @@ A reading of the 7-day window, as kept in `usage_samples`: utilization is 0..1.
 
 ## `domain/insights/`
 
+### ByModelInput
+
+| Field    | Type                  | Comment                                                                                                     |
+| -------- | --------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `runs`   | `StatRun[]`           | Every work run, `since` or not: an intervention goes to the model of the run before it, which may be older. |
+| `tasks`  | `ScorecardTaskRow[]`  |                                                                                                             |
+| `events` | `ScorecardEvent[]`    |                                                                                                             |
+| `since?` | `string \| undefined` | Only runs begun and interventions made at or after this stamp.                                              |
+
 ### ChecksSummary
 
 | Field      | Type             | Comment                                                       |
@@ -101,6 +110,16 @@ An intervention is something a person did that changed how a task turned out, wh
 | `done_tasks`            | `number`           | Tasks now done.                                                                             |
 | `cost_per_done_task`    | `number \| null`   | Cost of every work run of the done tasks, over their number; null with no done task.        |
 | `minutes_per_done_task` | `number \| null`   | Minutes of finished work runs of the done tasks, over their number; null with no done task. |
+
+### ModelMeasures
+
+The first-run measures of the work runs of one model, and the interventions on the tasks while they ran on it.
+
+| Field           | Type       | Comment |
+| --------------- | ---------- | ------- |
+| `model`         | `string`   |         |
+| `measures`      | `Measures` |         |
+| `interventions` | `number`   |         |
 
 ### Scorecard
 
@@ -178,17 +197,18 @@ The fields of a task the scorecard reads, as the database has them.
 
 One work run with the status of the task it belongs to. Resolve runs are never given here.
 
-| Field         | Type             | Comment                             |
-| ------------- | ---------------- | ----------------------------------- |
-| `repo_id`     | `RepoId`         |                                     |
-| `task_id`     | `TaskId`         |                                     |
-| `attempt`     | `number`         |                                     |
-| `outcome`     | `string \| null` | null while the run has not finished |
-| `started_at`  | `string`         |                                     |
-| `ended_at`    | `string \| null` |                                     |
-| `cost_usd`    | `number`         |                                     |
-| `denials`     | `number`         |                                     |
-| `task_status` | `string`         |                                     |
+| Field         | Type             | Comment                                                                          |
+| ------------- | ---------------- | -------------------------------------------------------------------------------- |
+| `repo_id`     | `RepoId`         |                                                                                  |
+| `task_id`     | `TaskId`         |                                                                                  |
+| `attempt`     | `number`         |                                                                                  |
+| `outcome`     | `string \| null` | null while the run has not finished                                              |
+| `started_at`  | `string`         |                                                                                  |
+| `ended_at`    | `string \| null` |                                                                                  |
+| `cost_usd`    | `number`         |                                                                                  |
+| `denials`     | `number`         |                                                                                  |
+| `task_status` | `string`         |                                                                                  |
+| `model`       | `string \| null` | The model the run was started with; null for a run from before runs recorded it. |
 
 ### StatsReport
 
@@ -736,13 +756,15 @@ A task in running (or being cancelled) and the process of its unfinished run, if
 
 ### Settings
 
-| Field              | Type              | Comment                                                                          |
-| ------------------ | ----------------- | -------------------------------------------------------------------------------- |
-| `max_concurrent`   | `number`          |                                                                                  |
-| `budget`           | `Budget`          |                                                                                  |
-| `notify`           | `NotifySettings`  |                                                                                  |
-| `planner`          | `PlannerSettings` |                                                                                  |
-| `reload_on_change` | `boolean`         | Restart the daemon onto new code when daemon/src changes and nothing is running. |
+| Field              | Type              | Comment                                                                                              |
+| ------------------ | ----------------- | ---------------------------------------------------------------------------------------------------- |
+| `max_concurrent`   | `number`          |                                                                                                      |
+| `budget`           | `Budget`          |                                                                                                      |
+| `notify`           | `NotifySettings`  |                                                                                                      |
+| `planner`          | `PlannerSettings` |                                                                                                      |
+| `default_model`    | `string`          | The model a new task takes when neither it nor its repo names one.                                   |
+| `support_model`    | `string`          | The model resolve and unblock runs use, in place of their task's (`runModel` in domain/runs/run.ts). |
+| `reload_on_change` | `boolean`         | Restart the daemon onto new code when daemon/src changes and nothing is running.                     |
 
 ## `domain/proposals/`
 
@@ -814,6 +836,7 @@ A task in running (or being cancelled) and the process of its unfinished run, if
 | `auto_merge`           | `boolean`          | The daemon merges a done task's PR on its own when it passes the auto-merge check.                       |
 | `auto_merge_max_lines` | `number`           | a PR changing more lines (additions + deletions) needs a person                                          |
 | `auto_merge_skip`      | `string[]`         | Path prefixes; a PR touching one needs a person.                                                         |
+| `model`                | `string \| null`   | The model a new task of this repo takes when it names none; null follows the default_model setting.      |
 | `created_at`           | `string`           |                                                                                                          |
 
 ### ToolchainInfo
@@ -966,31 +989,33 @@ The parts of claude's final `result` event that a run records.
 
 ### Run
 
-| Field                | Type                 | Comment                                                                                          |
-| -------------------- | -------------------- | ------------------------------------------------------------------------------------------------ |
-| `id`                 | `RunId`              |                                                                                                  |
-| `task_id`            | `TaskId`             |                                                                                                  |
-| `kind`               | `RunKind`            |                                                                                                  |
-| `attempt`            | `number`             | a resolve or unblock run carries the attempt it ran beside                                       |
-| `started_at`         | `string`             |                                                                                                  |
-| `ended_at`           | `string \| null`     |                                                                                                  |
-| `outcome`            | `RunOutcome \| null` |                                                                                                  |
-| `exit_code`          | `number \| null`     |                                                                                                  |
-| `session_id`         | `string \| null`     | stored when claude's init line names it, so a run a restart ends can be resumed                  |
-| `num_turns`          | `number \| null`     |                                                                                                  |
-| `input_tokens`       | `number`             |                                                                                                  |
-| `output_tokens`      | `number`             |                                                                                                  |
-| `cache_read_tokens`  | `number`             |                                                                                                  |
-| `cache_write_tokens` | `number`             |                                                                                                  |
-| `cost_usd`           | `number`             |                                                                                                  |
-| `tests_passed`       | `boolean \| null`    | null when no test command                                                                        |
-| `result_text`        | `string \| null`     |                                                                                                  |
-| `log_path`           | `string`             |                                                                                                  |
-| `pid`                | `number \| null`     | claude's process group while the run is live                                                     |
-| `denials`            | `number`             | tool uses refused by the permission rules during the run                                         |
-| `live_turns`         | `number`             | turns so far while the run is live (domain/runs/translate/live.ts)                               |
-| `live_tool`          | `string \| null`     | the last tool call while the run is live, in a few words                                         |
-| `pid_at`             | `string \| null`     | when `pid` was stored: claude started then, which can be well after `started_at` (setup, a sync) |
+| Field                | Type                 | Comment                                                                                                               |
+| -------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `id`                 | `RunId`              |                                                                                                                       |
+| `task_id`            | `TaskId`             |                                                                                                                       |
+| `kind`               | `RunKind`            |                                                                                                                       |
+| `attempt`            | `number`             | a resolve or unblock run carries the attempt it ran beside                                                            |
+| `started_at`         | `string`             |                                                                                                                       |
+| `ended_at`           | `string \| null`     |                                                                                                                       |
+| `outcome`            | `RunOutcome \| null` |                                                                                                                       |
+| `exit_code`          | `number \| null`     |                                                                                                                       |
+| `session_id`         | `string \| null`     | stored when claude's init line names it, so a run a restart ends can be resumed                                       |
+| `num_turns`          | `number \| null`     |                                                                                                                       |
+| `input_tokens`       | `number`             |                                                                                                                       |
+| `output_tokens`      | `number`             |                                                                                                                       |
+| `cache_read_tokens`  | `number`             |                                                                                                                       |
+| `cache_write_tokens` | `number`             |                                                                                                                       |
+| `cost_usd`           | `number`             |                                                                                                                       |
+| `tests_passed`       | `boolean \| null`    | null when no test command                                                                                             |
+| `result_text`        | `string \| null`     |                                                                                                                       |
+| `log_path`           | `string`             |                                                                                                                       |
+| `pid`                | `number \| null`     | claude's process group while the run is live                                                                          |
+| `denials`            | `number`             | tool uses refused by the permission rules during the run                                                              |
+| `live_turns`         | `number`             | turns so far while the run is live (domain/runs/translate/live.ts)                                                    |
+| `live_tool`          | `string \| null`     | the last tool call while the run is live, in a few words                                                              |
+| `pid_at`             | `string \| null`     | when `pid` was stored: claude started then, which can be well after `started_at` (setup, a sync)                      |
+| `model`              | `string \| null`     | The model the run was started with (`runModel`); null for a run from before runs recorded it, which reads as unknown. |
+| `model_id`           | `string \| null`     | The exact model id claude's init line names, such as claude-sonnet-5-5; null until it arrives.                        |
 
 ### RunCameTo
 

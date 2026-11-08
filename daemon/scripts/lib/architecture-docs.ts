@@ -34,6 +34,8 @@ const SETTING_MEANINGS: Record<string, string> = {
   planner_interval_hours: 'The fewest hours between two planner runs on a repo',
   planner_max_tasks: 'The most proposals one planner run keeps',
   planner_model: 'The model the planner runs with',
+  default_model: "The model a new task takes when neither it nor its repo names one (a repo's own is repos.model)",
+  support_model: 'The model resolve and unblock runs use, in place of their task’s',
   five_hour_max: 'Governor: no new work above this share of the 5-hour window',
   five_hour_soft: 'Governor: one task at a time above this share of the 5-hour window',
   weekly_max: 'Governor: the share of the 7-day window the weekly allowance grows to',

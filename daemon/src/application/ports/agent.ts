@@ -18,6 +18,8 @@ export interface AgentSession {
   onEvent?: (ev: any) => void;
   /** Called once with the session id, so a run a restart ends can be resumed. */
   onSession?: (sessionId: string) => void;
+  /** Called once with the exact model id the session's init names, so the run records what it ran on. */
+  onModel?: (modelId: string) => void;
 }
 
 export interface Agent {

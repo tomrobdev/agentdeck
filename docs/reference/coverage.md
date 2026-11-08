@@ -10,7 +10,7 @@ The least line and branch coverage each group of `daemon/src/` may have (`COVERA
 | `api`                    | `api/`                                                                                   | 99%   | 94%      |
 | `application`            | the files directly in `application/` (`actions.ts`)                                      | 100%  | 100%     |
 | `application/capacity`   | `application/capacity/`                                                                  | 100%  | 100%     |
-| `application/insights`   | `application/insights/`                                                                  | 100%  | 91%      |
+| `application/insights`   | `application/insights/`                                                                  | 100%  | 96%      |
 | `application/landing`    | `application/landing/`                                                                   | 99%   | 90%      |
 | `application/operations` | `application/operations/`                                                                | 98%   | 91%      |
 | `application/proposals`  | `application/proposals/`                                                                 | 92%   | 82%      |
@@ -19,10 +19,10 @@ The least line and branch coverage each group of `daemon/src/` may have (`COVERA
 | `application/scheduler`  | `application/scheduler/`                                                                 | 98%   | 91%      |
 | `application/shared`     | `application/shared/`                                                                    | 100%  | 97%      |
 | `application/work`       | `application/work/`                                                                      | 99%   | 90%      |
-| `cli`                    | `cli/`                                                                                   | 63%   | 57%      |
+| `cli`                    | `cli/`                                                                                   | 68%   | 58%      |
 | `db`                     | `db/`                                                                                    | 99%   | 94%      |
 | `domain/capacity`        | `domain/capacity/`                                                                       | 100%  | 94%      |
-| `domain/insights`        | `domain/insights/`                                                                       | 100%  | 96%      |
+| `domain/insights`        | `domain/insights/`                                                                       | 100%  | 98%      |
 | `domain/landing`         | `domain/landing/`                                                                        | 100%  | 97%      |
 | `domain/operations`      | `domain/operations/`                                                                     | 100%  | 97%      |
 | `domain/proposals`       | `domain/proposals/`                                                                      | 100%  | 89%      |

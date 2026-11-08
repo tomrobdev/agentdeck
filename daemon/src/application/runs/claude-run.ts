@@ -9,7 +9,16 @@ import { allowedTools } from '../../domain/repos/index.ts';
 import { type ClaudeResult, type ClaudeRun, type UsageWindow, START_LIVE, nextLive } from '../../domain/runs/index.ts';
 import { claudeArgs } from '../../domain/runs/index.ts';
 import { settingsPath, workerSettings } from '../../domain/runs/index.ts';
-import { type Outcome, type Run, type RunClass, type RunKind, classifyRun, resultFields, resumeFailed } from '../../domain/runs/index.ts';
+import {
+  type Outcome,
+  type Run,
+  type RunClass,
+  type RunKind,
+  classifyRun,
+  resultFields,
+  resumeFailed,
+  runModel,
+} from '../../domain/runs/index.ts';
 import type { Task } from '../../domain/work/index.ts';
 import { lastLine } from '../../domain/shared/index.ts';
 
@@ -28,18 +37,24 @@ export interface OpenedRun {
   runId: RunId;
   logPath: string;
   log: WriteStream;
+  /** The model the run's claude starts with (`runModel`), recorded on the row as it opens. */
+  model: string;
   /** Set by `endTaskRun`: the row is finished and the log closed, and neither happens again. */
   ended?: boolean;
 }
 
-/** Open the log and the run row. A work run is named by its attempt, a resolve or unblock run by its kind and the time it started. */
+/**
+ * Open the log and the run row, with the model the run starts with: the task's for a work run, the support_model setting's
+ * for a resolve or unblock run. A work run is named by its attempt, a resolve or unblock run by its kind and the time it started.
+ */
 export function openTaskRun(app: App, task: Task, kind: RunKind): OpenedRun {
   ensureDirs();
   const name = kind === 'work' ? `attempt-${task.attempts}` : `${kind}-${Date.now()}`;
   const logPath = join(LOG_DIR, `task-${task.id}-${name}.jsonl`);
   const log = createWriteStream(logPath, { flags: 'a' });
-  const runId = app.startRun(task.id, task.attempts, logPath, kind);
-  return { runId, logPath, log };
+  const model = runModel(kind, task, app.modelSettings().support_model);
+  const runId = app.startRun(task.id, task.attempts, logPath, kind, model);
+  return { runId, logPath, log, model };
 }
 
 /**
@@ -91,7 +106,7 @@ export async function startTaskRun(
   },
 ): Promise<TaskRunEnd> {
   const opened = opts.opened ?? openTaskRun(app, task, opts.kind);
-  const { runId, logPath, log } = opened;
+  const { runId, logPath, log, model } = opened;
   const { repo, worktree, resume } = opts;
   const settings = runSettings(app, repo, worktree, logPath);
   // Local to this run, not module state: the live state goes to the run row, where the queue reads it.
@@ -101,13 +116,23 @@ export async function startTaskRun(
     opts.kind === 'unblock' ? () => app.getTask(task.id)?.status !== 'blocked' : () => app.getTask(task.id)?.status === 'cancel_requested';
   const start = (prompt: string, session: string | null, maxTurns = opts.maxTurns ?? task.max_turns): Promise<ClaudeRun> =>
     app.agent.run({
-      args: claudeArgs(task, allowed, prompt, repo.test_cmd, settings, session, maxTurns, opts.systemPrompt),
+      args: claudeArgs(
+        { model, max_turns: task.max_turns },
+        allowed,
+        prompt,
+        repo.test_cmd,
+        settings,
+        session,
+        maxTurns,
+        opts.systemPrompt,
+      ),
       cwd: worktree,
       log,
       env: { AGENTDECK_TASK_ID: String(task.id) },
       shouldCancel: cancelled,
       onSpawn: (pid) => app.setRunPid(runId, pid),
       onSession: (id) => app.setRunSession(runId, id),
+      onModel: (id) => app.setRunModelId(runId, id),
       onUsage: usageRecorder(app),
       onEvent: (ev) => {
         const next = nextLive(live, ev);

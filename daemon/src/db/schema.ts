@@ -248,6 +248,12 @@ export const MIGRATIONS: Migration[] = [
   // are still to run, and the daemon's tick runs them. Every row before this step, and every row older code writes, reads
   // 0: their follow-ups ran inline, so they never run twice.
   'ALTER TABLE task_events ADD COLUMN follow_up_pending INTEGER NOT NULL DEFAULT 0;',
+  // 31: models. repos.model is the model a new task of the repo
+  // takes when it names none (NULL follows the default_model setting). runs.model is the model a run was started with and
+  // runs.model_id the exact id claude's init line named; both are NULL on rows from older code, which read as unknown.
+  `ALTER TABLE repos ADD COLUMN model TEXT;
+   ALTER TABLE runs ADD COLUMN model TEXT;
+   ALTER TABLE runs ADD COLUMN model_id TEXT;`,
 ];
 
 /** Runs every step above the database's user_version in one transaction; returns how many ran. */
