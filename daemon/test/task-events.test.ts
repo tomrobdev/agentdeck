@@ -1,6 +1,6 @@
 // Task history: every status change records one task_events row, atomically with the change.
 import assert from 'node:assert/strict';
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -49,6 +49,40 @@ test('claimNextTask records claim from queued to running', () => {
   db.close();
 });
 
+test('a claim writes its row through applyEvent: claimNextTask and applyEvent leave the same task and timeline', () => {
+  const { db, add } = setup();
+  const byClaim = add();
+  const byEvent = add();
+  // The higher id waits behind the lower one, so claimNextTask takes byClaim.
+  const claimed = db.claimNextTask()!;
+  assert.equal(claimed.id, byClaim.id);
+  const applied = db.applyEvent(byEvent.id, { type: 'claim' })!;
+  assert.deepEqual(
+    applied.events.map((e) => [e.type, e.cause, e.from, e.to]),
+    [['TaskStarted', 'claim', 'queued', 'running']],
+  );
+  assert.deepEqual(applied.pending, [], 'a claim has no follow-ups, so its row is not pending');
+  const { id: _a, updated_at: _ua, created_at: _ca, ...fromClaim } = claimed;
+  const { id: _b, updated_at: _ub, created_at: _cb, ...fromEvent } = applied.task;
+  assert.deepEqual(fromClaim, fromEvent);
+  assert.equal(claimed.attempts, 1);
+  assert.deepEqual(brief(db, byClaim.id), brief(db, byEvent.id));
+  assert.deepEqual(db.pendingFollowUps(), [], 'nor is the row claimNextTask wrote');
+  db.close();
+});
+
+test('no claim row is written outside applyEvent', () => {
+  const dir = new URL('../src/db/', import.meta.url);
+  for (const file of readdirSync(dir).filter((f) => f.endsWith('.ts'))) {
+    const source = readFileSync(new URL(file, dir), 'utf8');
+    for (const call of source.match(/recordEvent\([^;]*\)/g) ?? []) assert.doesNotMatch(call, /'claim'/, `${file}: ${call}`);
+  }
+  const tasks = readFileSync(new URL('tasks.ts', dir), 'utf8');
+  const claim = /claimNextTask\(\)[^]*?\n {4}\},/.exec(tasks)?.[0] ?? '';
+  assert.match(claim, /applyEvent\(id, \{ type: 'claim' \}\)/, 'claimNextTask claims through applyEvent');
+  assert.doesNotMatch(claim, /recordEvent|\.update\(tasks\)/, 'claimNextTask writes no row of its own');
+});
+
 test('each lifecycle event records its type, from and to status and reason', () => {
   const { db, add } = setup();
   const cases: [string, () => TaskId, Parameters<Db['applyEvent']>[1], string, string, string | null][] = [];
@@ -67,7 +101,8 @@ test('each lifecycle event records its type, from and to status and reason', () 
   cases.push(['finish done', running, { type: 'finish', outcome: 'done' }, 'running', 'done', null]);
   cases.push(['finish blocked', running, { type: 'finish', outcome: 'blocked' }, 'running', 'blocked', 'needs a key']);
   cases.push(['finish failed', running, { type: 'finish', outcome: 'failed', retry: false }, 'running', 'failed', 'tests failed']);
-  cases.push(['finish failed retry', running, { type: 'finish', outcome: 'failed', retry: true }, 'running', 'queued', null]);
+  // One attempt used of DEFAULTS.maxAttempts (2): the failed run is requeued.
+  cases.push(['finish failed retry', running, { type: 'finish', outcome: 'failed' }, 'running', 'queued', null]);
   cases.push(['rate_limited', running, { type: 'rate_limited' }, 'running', 'queued', null]);
   cases.push(['cancel queued', () => add().id, { type: 'cancel' }, 'queued', 'cancelled', null]);
   cases.push(['cancel running', running, { type: 'cancel' }, 'running', 'cancel_requested', null]);

@@ -307,7 +307,7 @@ function enclosingFunction(node: ts.Node): { name: string; body: ts.Node } | und
 }
 
 /** The only functions that may write a task's status. */
-const STATUS_WRITERS = ['applyEvent', 'claimNextTask'];
+const STATUS_WRITERS = ['applyEvent'];
 
 interface StatusWrite {
   line: number;
@@ -386,14 +386,16 @@ test('[guarded-status] the finder reports an unguarded builder write, a write ou
   assert.deepEqual(findStatusWrites(GUARDED), [{ line: 1, kind: 'builder', problems: [] }]);
   assert.deepEqual(findStatusWrites(UNGUARDED)[0].problems, ['has no WHERE on the status']);
   const elsewhere = findStatusWrites(GUARDED.replace('applyEvent', 'cancelAll'));
-  assert.match(elsewhere[0].problems[0], /is in cancelAll, not applyEvent or claimNextTask/);
-  const raw = findStatusWrites('function claimNextTask() { nextStatus(); db.prepare("UPDATE tasks SET status = \'x\' WHERE id = 1"); }');
+  assert.match(elsewhere[0].problems[0], /is in cancelAll, not applyEvent$/);
+  const claim = findStatusWrites(GUARDED.replace('applyEvent', 'claimNextTask'));
+  assert.match(claim[0].problems[0], /is in claimNextTask, not applyEvent$/, 'the claim writes its status through applyEvent');
+  const raw = findStatusWrites('function applyEvent() { transition(); db.prepare("UPDATE tasks SET status = \'x\' WHERE id = 1"); }');
   assert.deepEqual(raw[0], { line: 1, kind: 'raw', problems: ['has no WHERE on the status'] });
   assert.deepEqual(findStatusWrites('orm.update(tasks).set({ title: x }).where(eq(tasks.id, 1)); orm.update(runs).set({ status: x })'), []);
 });
 
 test('[guarded-status] a task status changes only through a guarded transition', () => {
-  // Every status write is in applyEvent or claimNextTask, guarded on the status, and asks the lifecycle for the next status.
+  // Every status write is in applyEvent, the claim's included, guarded on the status, and asks the lifecycle for the next status.
   const found: string[] = [];
   let count = 0;
   for (const s of sources.filter((s) => s.path.startsWith('db/'))) {
@@ -403,7 +405,7 @@ test('[guarded-status] a task status changes only through a guarded transition',
     }
   }
   assert.deepEqual(found, []);
-  assert.equal(count, STATUS_WRITERS.length, 'the finder should see exactly the status writes of applyEvent and claimNextTask');
+  assert.equal(count, STATUS_WRITERS.length, 'the finder should see exactly the status write of applyEvent');
 });
 
 interface TaskWrite {

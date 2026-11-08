@@ -1,7 +1,7 @@
 // The unblock run: a short claude run that reads why a blocked task stopped and either sends it back to work with a
 // note or leaves it blocked with a question and options for a person. It uses no attempt. Pure: no I/O.
 import { isConflictReason } from '../landing/index.ts';
-import { parsePlanWithText } from '../work/index.ts';
+import { attemptsLeft, parsePlanWithText } from '../work/index.ts';
 import type { Repo } from '../repos/index.ts';
 import type { UnblockQuestion } from '../work/index.ts';
 import type { BlockedTask, Task, TaskState } from '../work/index.ts';
@@ -142,6 +142,6 @@ export function parseUnblock(text: string | null | undefined): UnblockAnswer {
  */
 export function unblockDecision(answer: UnblockAnswer, task: Pick<Task, 'attempts' | 'max_attempts'>): UnblockDecision {
   if ('ask' in answer) return { ask: { question: answer.ask, options: answer.options } };
-  if (task.attempts < task.max_attempts) return { retry: `${UNBLOCK_NOTE}${answer.retry}` };
+  if (attemptsLeft(task)) return { retry: `${UNBLOCK_NOTE}${answer.retry}` };
   return { ask: { question: `The task has no attempts left. Retry it with this note? ${answer.retry}`, options: [] } };
 }

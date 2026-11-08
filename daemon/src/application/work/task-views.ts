@@ -14,7 +14,8 @@ import type { StartWait, Waiting } from '../../domain/work/index.ts';
 import { measureBranch } from './files.ts';
 import type { TaskStatus } from '../../domain/work/index.ts';
 import type { Task } from '../../domain/work/index.ts';
-import { type LinkView, dependencyOf, dependentViews, linkViews, loadedLinks, unblocksOf, waitingFor } from './dependencies.ts';
+import { loadedLinks } from './dependencies.ts';
+import { type LinkView, dependentViews, linkViews, startState, unblocksOf, waitingFor } from '../../domain/work/index.ts';
 import type { LinkIndex, LinkKind } from '../../domain/work/index.ts';
 import { requireTask } from '../shared/input.ts';
 import { plansShown } from './plans.ts';
@@ -61,7 +62,7 @@ export function withViews<T extends Viewed>(app: App, tasks: T[], links: LinkInd
   const now = Date.now();
   return tasks.map((t) => {
     const repo = repos.get(t.repo_id);
-    const dependency = dependencyOf(t, links);
+    const dependency = startState(t, links.linksOf(t.id), links.target);
     return {
       ...t,
       live: liveView(t, liveRuns.get(t.id)),

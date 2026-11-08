@@ -4,7 +4,7 @@ import type { TaskId } from '../../domain/shared/index.ts';
 import { archivedRepoError, maxAttemptsError, maxTurnsError, modelError, priorityError } from '../../domain/work/index.ts';
 import { planOwnerOf } from '../../domain/work/index.ts';
 import { type ModelSource, newTaskModel } from '../../domain/work/index.ts';
-import { EDITABLE_STATUSES, RUNNING_STATUSES, type Task, defaultTitle } from '../../domain/work/index.ts';
+import { EDITABLE_STATUSES, type Task, WORKTREE_REMOVABLE_STATUSES, defaultTitle } from '../../domain/work/index.ts';
 import { refuseWhileSyncing } from './checkout-locks.ts';
 import { newLinks } from './links.ts';
 import { ActionError, flag, object, refuse, requireTask, requireTaskRepo, text, whole } from '../shared/input.ts';
@@ -151,8 +151,7 @@ export async function editTask(
 /** Remove a task's worktree; its branch is kept. Not while the task is running, or queued (it is about to run in it). */
 export async function removeTaskWorktree(app: App, id: TaskId): Promise<{ branch: string | null }> {
   const t = requireTask(app, id);
-  if (RUNNING_STATUSES.includes(t.status)) throw new ActionError('task is running');
-  if (t.status === 'queued') throw new ActionError('task is queued');
+  if (!WORKTREE_REMOVABLE_STATUSES.includes(t.status)) throw new ActionError(t.status === 'queued' ? 'task is queued' : 'task is running');
   const worktree = t.checkout?.worktree;
   if (!worktree) throw new ActionError('task has no worktree');
   refuseWhileSyncing(app, id);

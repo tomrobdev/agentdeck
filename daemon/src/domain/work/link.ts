@@ -7,6 +7,7 @@ import type { TaskId } from '../shared/index.ts';
 import type { PullRequest } from '../landing/index.ts';
 import type { PrMode } from '../repos/index.ts';
 import type { TaskStatus } from './lifecycle.ts';
+import { isReview, stageOf } from './stage.ts';
 import type { DoneState } from './task.ts';
 
 export type LinkKind = 'builds_on' | 'after';
@@ -155,8 +156,8 @@ export function unlandedAfter(links: Link[], lookup: (id: TaskId) => Dependency 
 
 /**
  * What the link functions read: a task's links, the tasks that depend on it (through links of either kind) and a task as a
- * link's other end. application/task/dependencies.ts builds one that queries the database when asked, and one from a
- * single read of every link, for a list of tasks.
+ * link's other end. application/work/dependencies.ts builds one that queries the database when asked (`liveLinks`), and one
+ * from a single read of every link, for a list of tasks (`loadedLinks`).
  */
 export interface LinkIndex {
   linksOf: (id: TaskId) => Link[];
@@ -232,4 +233,27 @@ export function linkError(task: TaskId, on: TaskId, links: Link[]): string | nul
 export function buildsOnError(task: TaskId, status: string, on: TaskId): string | null {
   if (status === 'proposed' || status === 'queued') return null;
   return `#${task} has started already, so it can't build on #${on}; make it an after link instead`;
+}
+
+/** The queued tasks merging this one lets start, for a task in review; none for any other task. */
+export function unblocksOf(task: Parameters<typeof stageOf>[0] & { id: TaskId }, links: LinkIndex): TaskId[] {
+  if (!isReview(stageOf(task))) return [];
+  return releasedBy(task.id, links).map((t) => t.id);
+}
+
+/** A task's link as views show it: the other task, the kind and where the link stands. */
+export interface LinkView {
+  on: TaskId;
+  kind: LinkKind;
+  state: LinkState['kind'];
+}
+
+/** Task `id`'s links as views show them, each with where it stands. */
+export function linkViews(id: TaskId, links: LinkIndex): LinkView[] {
+  return links.linksOf(id).map((l) => ({ on: l.on, kind: l.kind, state: linkState(l, links.target(l.on)).kind }));
+}
+
+/** The tasks that depend on task `id`, whatever their status, each with its link's kind. */
+export function dependentViews(id: TaskId, links: LinkIndex): { id: TaskId; kind: LinkKind }[] {
+  return links.dependentsOf(id).map((d) => ({ id: d.id, kind: d.kind }));
 }
