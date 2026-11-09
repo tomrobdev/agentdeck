@@ -4,7 +4,7 @@
 // - attention: coloured chips, only where a person must act;
 // - links: ↑ the builds-on dependencies not yet met, ↓ the tasks merging this one releases;
 // - facts: muted text, joined by " · ".
-// Free of the dashboard's other modules so the daemon's tests can import it (daemon/test/task-badges.test.ts). What the
+// Free of the dashboard's other modules so the daemon's tests can import it (daemon/test/dashboard/task/task-badges.test.ts). What the
 // daemon decides (needs, a conflict, auto-merge, merge requests) comes from the API; this only picks and words it.
 import type { AutoMergeView, TaskSummary } from '../../../daemon/src/api/contract.ts';
 import { isReview } from '../../../daemon/src/domain/work/index.ts';

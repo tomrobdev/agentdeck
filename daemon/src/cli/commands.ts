@@ -1,4 +1,4 @@
-// The command table: every `agentdeck <command>`, by name. test/cli-help.test.ts checks each one is in the help.
+// The command table: every `agentdeck <command>`, by name. test/cli/cli-help.test.ts checks each one is in the help.
 import { contextCommands } from './agent-context.ts';
 import type { Command } from './context.ts';
 import { daemonCommands } from './daemon.ts';

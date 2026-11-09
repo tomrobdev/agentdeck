@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Stand-in for `claude -p … --output-format stream-json` in the dashboard's end-to-end tests. It writes the same events as
-// daemon/test/fake-claude.mjs, but what it changes and says never varies from run to run (no pids), so the screenshots stay
+// daemon/test/fixtures/fake-claude.mjs, but what it changes and says never varies from run to run (no pids), so the screenshots stay
 // the same. Picked by a word in the task's prompt:
 //   UI_GREET    edits src/greet.ts and adds src/greet.test.ts, commits, reports STATUS: DONE
 //   UI_QUEUE    edits src/queue.ts, commits, reports STATUS: DONE

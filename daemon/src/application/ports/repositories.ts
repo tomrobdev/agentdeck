@@ -1,6 +1,6 @@
 // The repositories the use cases reach the database through: interfaces application/ owns, in domain types. db/
 // implements them (`openDb` returns something that satisfies `Repositories`). An interface lists what use cases call
-// and no more (test/repositories-used.test.ts); the rest of what the database offers stays on db/'s own `Db`.
+// and no more (test/db/repositories-used.test.ts); the rest of what the database offers stays on db/'s own `Db`.
 import type { PlannerRunId, RepoId, ReviewId, TaskId } from '../../domain/shared/index.ts';
 import type { Budget } from '../../domain/capacity/index.ts';
 import type { ScorecardEvent, ScorecardReviewRun, ScorecardRunReview, ScorecardTaskRow, StatRun } from '../../domain/insights/index.ts';

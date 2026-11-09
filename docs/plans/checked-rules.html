@@ -17,10 +17,10 @@
     <h2>Where it starts</h2>
     <ul>
       <li>
-        <code>daemon/test/architecture.test.ts</code> parses every file in <code>daemon/src</code> with the TypeScript compiler and checks
-        11 rules: layers, <code>actions.ts</code> as the only way into <code>application/</code>, <code>contract.ts</code> imports nothing,
-        packages, cycles, a pure <code>domain/</code>, SQL only in <code>db/</code>, guarded status changes, <code>claude</code> in its own
-        process group, and unchanged migration steps. <code>app/src</code> is not checked.
+        <code>daemon/test/architecture/architecture.test.ts</code> parses every file in <code>daemon/src</code> with the TypeScript compiler
+        and checks 11 rules: layers, <code>actions.ts</code> as the only way into <code>application/</code>,
+        <code>contract.ts</code> imports nothing, packages, cycles, a pure <code>domain/</code>, SQL only in <code>db/</code>, guarded
+        status changes, <code>claude</code> in its own process group, and unchanged migration steps. <code>app/src</code> is not checked.
       </li>
       <li>
         Not checked: "application code keeps no module-level state other than a lock", "keep this checkout on <code>main</code>", the

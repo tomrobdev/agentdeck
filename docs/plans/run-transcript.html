@@ -75,11 +75,14 @@
       </ul>
       <ul data-plan-done>
         <li>
-          <code>daemon/test/run-log.test.ts</code> covers: a result with string content and one with text blocks and an image; an error
-          result; output cut at 4 KB with <code>lines</code> still counting all of it; the summary for each tool named above and for an
-          unknown one; <code>change</code> on an Edit; <code>at</code> and <code>parent</code> taken from the event.
+          <code>daemon/test/runs/run/run-log.test.ts</code> covers: a result with string content and one with text blocks and an image; an
+          error result; output cut at 4 KB with <code>lines</code> still counting all of it; the summary for each tool named above and for
+          an unknown one; <code>change</code> on an Edit; <code>at</code> and <code>parent</code> taken from the event.
         </li>
-        <li>The existing tests in <code>daemon/test/run-log.test.ts</code> and <code>daemon/test/live.test.ts</code> still pass.</li>
+        <li>
+          The existing tests in <code>daemon/test/runs/run/run-log.test.ts</code> and <code>daemon/test/runs/run/live.test.ts</code> still
+          pass.
+        </li>
         <li><code>pnpm check</code> passes.</li>
       </ul>
     </section>

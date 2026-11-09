@@ -3,7 +3,7 @@
 // 2. when it is under daemon/src (or is the docs generator or the layers), regenerate docs/architecture.md's generated
 //    block and the files of docs/reference/
 //    (`pnpm docs:gen`, about 0.25s), so the architecture test never finds them stale.
-// 3. under daemon/src, run daemon/test/architecture.test.ts (about 1.5s) and show its failures to the session
+// 3. under daemon/src, run daemon/test/architecture/architecture.test.ts (about 1.5s) and show its failures to the session
 //    (stderr, exit 2: the edit itself has already happened and stays), so a broken layer rule is seen at once.
 // Quiet when all is well, and never fails the edit: a file mid-edit that doesn't parse yet is left for `pnpm check` to catch.
 import { execFileSync } from 'node:child_process';
@@ -57,7 +57,7 @@ try {
       existsSync(docs)
     )
       run(process.execPath, [docs], join(root, 'daemon'));
-    const test = join(root, 'daemon', 'test', 'architecture.test.ts');
+    const test = join(root, 'daemon', 'test', 'architecture', 'architecture.test.ts');
     if (rel.startsWith('daemon/src/') && existsSync(test)) failures = architectureFailures(test, join(root, 'daemon'));
   }
 } catch {

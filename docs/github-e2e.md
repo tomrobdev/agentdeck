@@ -1,6 +1,6 @@
 # The GitHub end-to-end test
 
-`pnpm test:github` runs the daemon through a task's whole life on a real GitHub repo: a task done and its PR opened, the PR's check run, a review run, auto-merge, a second task whose PR conflicts with main and is synced with a resolve run, then merged, and a PR a person closes. The daemon runs with the fake claude (`daemon/test/fake-claude.mjs`), so it costs no usage, only a few GitHub Actions minutes. The script is `daemon/scripts/github-e2e.mjs`.
+`pnpm test:github` runs the daemon through a task's whole life on a real GitHub repo: a task done and its PR opened, the PR's check run, a review run, auto-merge, a second task whose PR conflicts with main and is synced with a resolve run, then merged, and a PR a person closes. The daemon runs with the fake claude (`daemon/test/fixtures/fake-claude.mjs`), so it costs no usage, only a few GitHub Actions minutes. The script is `daemon/scripts/github-e2e.mjs`.
 
 It is opt-in and run by a person, in a session: workers can't reach GitHub, and CI does not run it. It refuses to run without `AGENTDECK_GITHUB_E2E_REPO` and a logged-in `gh`.
 
