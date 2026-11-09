@@ -57,6 +57,6 @@ export {
   verifySchemaArgs,
   verifySystemPrompt,
 } from './verify.ts';
-export type { ClaimVerdict, VerifyFinding } from './verify.ts';
+export type { ClaimVerdict, VerifyFinding, VerifyView } from './verify.ts';
 export { UNBLOCK_MAX_TURNS, buildUnblockPrompt, parseUnblock, unblockDecision, unblockSystemPrompt, unblockable } from './unblock.ts';
 export type { UnblockDecision } from './unblock.ts';

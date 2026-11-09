@@ -94,6 +94,7 @@ export type {
   UsageWindow,
   VerifyFinding,
   VerifyResult,
+  VerifyView,
 } from '../../../daemon/src/api/contract.ts';
 
 export const MERGE_METHODS: { key: MergeMethod; label: string; hint: string }[] = [

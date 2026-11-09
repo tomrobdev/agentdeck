@@ -9,6 +9,9 @@ import FinalMessage from './FinalMessage.vue';
 import PlanCard from './PlanCard.vue';
 import ProposalCheckCard from './ProposalCheckCard.vue';
 import PullRequestCard from './PullRequestCard.vue';
+import VerifyCard from './VerifyCard.vue';
+import VerifyFindings from './VerifyFindings.vue';
+import { latestVerify } from '../../../../daemon/src/domain/runs/index.ts';
 
 // The prompt as the description, then everything that happened, oldest first: status changes
 // (task_events) and runs. Runs stand in for claim and finish events, which they describe better.
@@ -51,6 +54,8 @@ const when = 'ml-auto text-sm text-muted';
 <template>
   <div class="flex min-w-0 flex-col gap-4.5">
     <ProposalCheckCard :task="task" />
+
+    <VerifyCard :task="task" @path="(p, l) => emit('path', p, l)" />
 
     <article class="card">
       <header class="card-head gap-1.5 px-3.5 py-2">
@@ -120,7 +125,14 @@ const when = 'ml-auto text-sm text-muted';
             </span>
             <span :class="when">{{ ago(it.at) }}</span>
           </div>
-          <FinalMessage v-if="it.run.result_text" class="w-full" :open="it.latest">
+          <!-- A verify run's result is its findings as JSON, shown as findings, not as a message. -->
+          <VerifyFindings
+            v-if="it.run.kind === 'verify' && it.run.ended_at"
+            class="w-full"
+            :view="latestVerify([it.run], null)!"
+            @path="(p, l) => emit('path', p, l)"
+          />
+          <FinalMessage v-else-if="it.run.result_text" class="w-full" :open="it.latest">
             <Markdown :text="it.run.result_text" :is-path="isPath" @path="(p, l) => emit('path', p, l)" />
           </FinalMessage>
         </template>

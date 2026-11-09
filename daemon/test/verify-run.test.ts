@@ -36,6 +36,7 @@ const { runLabel, runModel } = await import('../src/domain/runs/run.ts');
 const { buildPrBody } = await import('../src/domain/landing/pr.ts');
 const { restartWait } = await import('../src/domain/operations/restart.ts');
 const { asRunId, asTaskId, testApp, waitFor } = await import('./fixtures.ts');
+const { VERDICT_MARKS, sortFindings, verifyHeadline } = await import('../../app/src/lib/verify.ts');
 
 // ---- Pure
 
@@ -172,6 +173,34 @@ test('verifyLine, findingPlace, and the run kind in labels, models, the PR body 
   assert.equal(body.split('\n').filter((l) => l.startsWith('| 0')).length, 0, 'a verify run is not in the run table');
   assert.equal(body.split('\n').filter((l) => l.startsWith('| 1')).length, 1);
   assert.equal(restartWait({ tasks: 0, planner: 0, resolves: 0, verifies: 1 }), '1 verify run');
+});
+
+test('the dashboard: false claims first and marked failed, and the line with the commit and staleness', () => {
+  const f = (claim: string, verdict: 'true' | 'false' | 'stale' | 'partly') => ({
+    claim,
+    verdict,
+    path: null,
+    line: null,
+    evidence: '',
+    fix: null,
+  });
+  const sorted = sortFindings([f('a', 'true'), f('b', 'false'), f('c', 'partly'), f('d', 'stale'), f('e', 'false')]);
+  assert.deepEqual(
+    sorted.map((x) => x.claim),
+    ['b', 'e', 'd', 'c', 'a'],
+  );
+  assert.equal(VERDICT_MARKS.false.tone, 'failed');
+  assert.equal(VERDICT_MARKS.false.label, 'false');
+  assert.equal(VERDICT_MARKS.true.tone, 'done');
+  for (const v of CLAIM_VERDICTS) assert.ok(VERDICT_MARKS[v], `${v} has a mark`);
+  const done = { state: 'done' as const, findings: [f('a', 'true'), f('b', 'false')], commit: 'abc1234def', stale: false, reason: null };
+  assert.equal(verifyHeadline(done), '2 claims: 1 true, 1 false at abc1234');
+  assert.match(verifyHeadline({ ...done, stale: true }), /stale: the base has moved on/);
+  assert.match(verifyHeadline({ ...done, state: 'going' }), /going/);
+  assert.equal(
+    verifyHeadline({ ...done, state: 'failed', findings: [], reason: 'no answer' }),
+    'The verify run ended with no findings: no answer',
+  );
 });
 
 // ---- With fake claude

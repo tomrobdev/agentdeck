@@ -9,7 +9,7 @@ import type { AutoMergeState } from '../domain/landing/index.ts';
 import type { CheckState } from '../domain/landing/index.ts';
 import type { MergeMethod, PrMode, ToolRulesSource } from '../domain/repos/index.ts';
 import type { PrRetry, PrState, ReviewAuthor } from '../domain/landing/index.ts';
-import type { ClaimVerdict, RunKind, VerifyFinding } from '../domain/runs/index.ts';
+import type { ClaimVerdict, RunKind, VerifyFinding, VerifyView } from '../domain/runs/index.ts';
 import type { HeadlineState, AttentionWhy, RepoReviewDue } from '../domain/operations/index.ts';
 import type { LinkKind } from '../domain/work/index.ts';
 import type { TaskStatus } from '../domain/work/index.ts';
@@ -20,7 +20,7 @@ import type { TaskSource } from '../domain/work/index.ts';
 
 // The domain's words, shared as they are.
 export type { AutoMergeState, ClaimVerdict, FileRef, LinkKind, MergeMethod, NotifyKind, PrMode, PrRetry, PrState, TaskStatus };
-export type { VerifyFinding };
+export type { VerifyFinding, VerifyView };
 
 // ---- Repos
 

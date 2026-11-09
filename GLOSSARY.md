@@ -27,7 +27,9 @@ _Avoid_: ticket, tickets, job, jobs
 
 **Review run**: a run that reads a done task's changes against its Goal, Definition of done and linked plan steps, and leaves a review of its own: a summary and findings, each blocking or not. Its **verdict** is clean when no finding blocks. It uses no attempt, takes the **review model** (a setting), and a repo starts one on its own only with `auto_review` on. It never takes or fills a person's draft.
 
-**Model**: the Claude model a run is started with, recorded on the run. A work run takes its task's model, a resolve or unblock run the **support model** (a setting), a review run the **review model** (a setting). A new task that names none takes its repo's model, else the **default model** (a setting).
+**Verify run**: a short read-only run a person starts on a proposed or queued task, in a scratch checkout of the base. It checks each claim the task's prompt makes about the code and answers with **findings**: each claim true, false, stale or partly, with the file and line that show it, the evidence and a suggested fix. It records the commit it read, so its findings go stale once the base moves on. It uses no attempt, takes a slot and the review model, and changes nothing: what to do about its findings is a person's call. It ends when the task stops being proposed or queued.
+
+**Model**: the Claude model a run is started with, recorded on the run. A work run takes its task's model, a resolve or unblock run the **support model** (a setting), a review or verify run the **review model** (a setting). A new task that names none takes its repo's model, else the **default model** (a setting).
 
 **Slot**: room for one running task.
 

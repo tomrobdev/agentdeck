@@ -180,19 +180,21 @@ export function runFindings(run: Pick<Run, 'kind' | 'outcome' | 'result_text'>):
  * (null when unknown): findings read at another commit are stale.
  */
 export function latestVerify(
-  runs: Pick<Run, 'id' | 'kind' | 'outcome' | 'result_text' | 'base_commit' | 'started_at' | 'ended_at'>[],
+  // `base_commit` may be missing from a daemon that predates it (the dashboard's Run).
+  runs: (Pick<Run, 'id' | 'kind' | 'outcome' | 'result_text' | 'started_at' | 'ended_at'> & { base_commit?: string | null })[],
   base: string | null,
 ): VerifyView | null {
   const run = runs.findLast((r) => r.kind === 'verify');
   if (!run) return null;
   const findings = runFindings(run);
   const state = run.ended_at === null ? 'going' : findings ? 'done' : 'failed';
+  const commit = run.base_commit ?? null;
   return {
     run_id: run.id,
     state,
-    commit: run.base_commit,
+    commit,
     findings: findings ?? [],
-    stale: base !== null && run.base_commit !== null && run.base_commit !== base,
+    stale: base !== null && commit !== null && commit !== base,
     reason: state === 'failed' ? (run.result_text ?? run.outcome ?? 'it ended with no findings') : null,
     started_at: run.started_at,
     ended_at: run.ended_at,
