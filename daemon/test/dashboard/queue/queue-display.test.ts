@@ -10,7 +10,7 @@ const ids = (tasks: { id: number }[]) => tasks.map((t) => t.id);
 test('a display saved before show had every key gets the new keys', () => {
   const d = normalizeDisplay({ mode: 'board', show: { repo: false, pr: true } });
   assert.equal(d.mode, 'board');
-  assert.deepEqual(d.show, { repo: false, pr: true, time: true, reason: true });
+  assert.deepEqual(d.show, { repo: false, pr: true, time: true, reason: true, model: true });
   assert.equal(d.groupBy, 'status');
   assert.deepEqual(d.collapsed, DEFAULT_DISPLAY.collapsed);
 });

@@ -16,6 +16,8 @@ export interface ShowProps {
   pr: boolean;
   time: boolean;
   reason: boolean;
+  /** The model chip; on for a display saved before it existed. */
+  model: boolean;
 }
 
 export interface Display {
@@ -33,7 +35,7 @@ export const DEFAULT_DISPLAY: Display = {
   mode: 'list',
   groupBy: 'status',
   sort: 'attention',
-  show: { repo: true, pr: true, time: true, reason: true },
+  show: { repo: true, pr: true, time: true, reason: true, model: true },
   showEmpty: false,
   collapsed: ['cancelled', 'done'],
 };

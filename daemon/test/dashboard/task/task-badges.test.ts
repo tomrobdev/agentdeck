@@ -54,6 +54,7 @@ const task = (extra: Partial<TaskSummary> = {}): TaskSummary => ({
   links: [],
   dependents: [],
   plan_unfinished: false,
+  run_model: null,
   live: null,
   sync: null,
   checks: null,

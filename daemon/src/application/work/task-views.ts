@@ -29,6 +29,8 @@ export interface TaskView {
   links: LinkView[];
   dependents: { id: TaskId; kind: LinkKind }[];
   plan_unfinished: boolean;
+  /** The model of the task's latest work run, which differs from the task's after an escalated retry. Null before any run. */
+  run_model: string | null;
   wait: StartWait | null;
   /** Whether the PR will merge on its own and why not, from the check the PR refresh stored. Null when the repo is gone. */
   auto_merge_view: AutoMergeView | null;
@@ -57,6 +59,7 @@ export function withViews<T extends Viewed>(app: App, tasks: T[], links: LinkInd
   const repos = new Map(app.listRepos().map((r) => [r.id, r]));
   const waitOf = startWaits(app);
   const unfinished = app.planUnfinishedIds();
+  const runModels = app.latestRunModels();
   const liveRuns = app.liveRuns('work');
   const resolves = app.liveRuns('resolve');
   const now = Date.now();
@@ -77,6 +80,7 @@ export function withViews<T extends Viewed>(app: App, tasks: T[], links: LinkInd
       links: linkViews(t.id, links),
       dependents: dependentViews(t.id, links),
       plan_unfinished: unfinished.has(t.id),
+      run_model: runModels.get(t.id) ?? null,
       wait: waitOf(t, dependency),
       pr_retry: prRetryView(app, t, repo, now),
     };

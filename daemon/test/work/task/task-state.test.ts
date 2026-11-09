@@ -110,6 +110,7 @@ const API_FIELDS = [
   'repo',
   'repo_id',
   'restarts',
+  'run_model',
   'source',
   'status',
   'stop_reason',

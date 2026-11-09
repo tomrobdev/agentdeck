@@ -1,5 +1,5 @@
 // Task runs: one row per worker claude process.
-import { and, asc, count, countDistinct, eq, gt, inArray, isNotNull, isNull, notInArray, or, sql } from 'drizzle-orm';
+import { and, asc, count, countDistinct, eq, gt, inArray, isNotNull, isNull, max, notInArray, or, sql } from 'drizzle-orm';
 import { type PlannerRunId, type RunId, type TaskId, stored } from '../domain/shared/index.ts';
 import type { PidRun, Run, RunKind, RunningTaskRun } from '../domain/runs/index.ts';
 import { RUNNING_STATUSES } from '../domain/work/index.ts';
@@ -62,6 +62,27 @@ export function runStore(orm: Orm) {
         .orderBy(asc(runs.id))
         .all();
       return new Map(rows.map((r) => [r.task_id, r]));
+    },
+    /** The model of each task's latest work run, by task id; a task with no work run, or one from before runs recorded it, has none. */
+    latestRunModels(): Map<TaskId, string> {
+      const rows = orm
+        .select({ task_id: runs.task_id, model: runs.model })
+        .from(runs)
+        .where(
+          and(
+            eq(runs.kind, 'work'),
+            inArray(
+              runs.id,
+              orm
+                .select({ id: max(runs.id) })
+                .from(runs)
+                .where(eq(runs.kind, 'work'))
+                .groupBy(runs.task_id),
+            ),
+          ),
+        )
+        .all();
+      return new Map(rows.flatMap((r) => (r.model ? [[r.task_id, r.model] as const] : [])));
     },
     finishRun(id: RunId, r: Partial<Omit<Run, 'id' | 'task_id' | 'kind' | 'attempt' | 'started_at' | 'log_path' | 'model'>>): void {
       // undefined means "not given" to Drizzle, but this has always written a given-as-undefined key as NULL.

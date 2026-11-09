@@ -121,6 +121,7 @@ export {
   leftoversMessage,
   modelSourceText,
   newTaskModel,
+  promptGoal,
   stateFields,
   stopReasonOf,
 } from './task.ts';

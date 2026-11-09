@@ -273,6 +273,8 @@ export interface TaskSummary {
   dependents: { id: TaskId; kind: LinkKind }[];
   /** A done task whose latest run left linked plan steps unfinished. */
   plan_unfinished: boolean;
+  /** The model of the latest work run, which differs from `model` after an escalated retry; null before any run. */
+  run_model: string | null;
   /** For a running task: when its run started, turns so far and the last tool call. */
   live: LiveView | null;
   /** For a done task: the sync under way, whoever started it. Null when none is. */
