@@ -6,9 +6,11 @@ import { plural } from '../../../../daemon/src/domain/shared/index.ts';
 import { useActions } from '../../composables/useActions';
 import { useFilePatches } from '../../composables/useFilePatches';
 import { useFileText } from '../../composables/useFileText';
+import { useHotkeys } from '../../composables/useHotkeys';
 import { useReviews } from '../../composables/useReviews';
 import { useViewed } from '../../composables/useViewed';
 import { changedTree } from '../../lib/changedTree';
+import { openCommentOrder, stepFrom } from '../../lib/reviewNav';
 import { SINCE_BASE, shownSince, sinceKey, sinceLabel } from '../../lib/since';
 import { loadSetting, saveSetting } from '../../lib/storage';
 import FileTree from '../files/FileTree.vue';
@@ -47,7 +49,7 @@ const head = computed(() => shown.value?.head ?? null);
 // Line comments go into the task's draft review (started with the first one); the review bar submits it. Since a point, the
 // old side is that point's file, not the base's, so only the new side's comments show there and only it takes new ones.
 const { run } = useActions();
-const { byPath, openPaths } = useReviews(taskId);
+const { byPath, openPaths, comments } = useReviews(taskId);
 const commentsOn = (path: string) => (since.value ? byPath.value.get(path)?.filter((c) => c.side === 'new') : byPath.value.get(path));
 function addComment(path: string, line: Pick<NewReviewComment, 'side' | 'line'>, body: string) {
   const head = shown.value?.head;
@@ -107,6 +109,36 @@ async function jump(path: string) {
   await nextTick();
   document.querySelector(`[data-path="${CSS.escape(path)}"]`)?.scrollIntoView({ block: 'start' });
 }
+
+// Keys: j and k move to the next and previous file, ] and [ to the next and previous open comment, v marks the file viewed.
+async function scrollToComment(id: number, path: string) {
+  current.value = path;
+  collapsed.delete(path);
+  await nextTick();
+  document.querySelector(`[data-comment="${id}"]`)?.scrollIntoView({ block: 'center' });
+}
+let currentComment: number | null = null;
+function stepComment(by: 1 | -1) {
+  const list = openCommentOrder(
+    comments.value,
+    files.value.map((f) => f.path),
+  );
+  const at = list.find((c) => c.id === currentComment) ?? null;
+  const next = stepFrom(list, at, by);
+  if (!next) return;
+  currentComment = next.id;
+  void scrollToComment(next.id, next.path);
+}
+function stepFile(by: 1 | -1) {
+  const paths = files.value.map((f) => f.path);
+  const next = stepFrom(paths, current.value, by);
+  if (next) void jump(next);
+}
+function toggleViewed() {
+  const f = files.value.find((x) => x.path === current.value);
+  if (f) markViewed(f, !isViewed(f));
+}
+useHotkeys({ j: () => stepFile(1), k: () => stepFile(-1), ']': () => stepComment(1), '[': () => stepComment(-1), v: toggleViewed });
 </script>
 
 <template>

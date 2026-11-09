@@ -83,6 +83,7 @@ const onOpenChange = (open: boolean) => !open && !props.busy && emit('cancel');
             <AlertDialogCancel v-if="!hideCancel" as-child>
               <button data-cancel :disabled="busy">{{ cancelLabel }}</button>
             </AlertDialogCancel>
+            <slot name="actions" />
             <button ref="confirmButton" class="primary" :disabled="busy || confirmDisabled" @click="emit('confirm')">
               {{ confirmLabel }}
             </button>

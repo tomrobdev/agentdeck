@@ -13,7 +13,7 @@ const reopen = () => run(() => api.reopenComment(props.comment.id));
 </script>
 
 <template>
-  <div class="my-1.5 rounded-md border border-border bg-panel px-3 py-2 font-sans text-base whitespace-normal">
+  <div :data-comment="comment.id" class="my-1.5 rounded-md border border-border bg-panel px-3 py-2 font-sans text-base whitespace-normal">
     <div class="mb-1 flex items-center gap-1.5 text-sm text-muted">
       <Chip :tone="comment.draft ? 'blocked' : 'muted'" variant="tint" size="xs" class="font-medium">
         {{ comment.draft ? 'Pending' : comment.state }}
