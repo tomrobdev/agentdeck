@@ -114,7 +114,7 @@ export const GO_KEYS: { key: string; label: string; to: GoTarget }[] = [
 
 /**
  * `p` then a digit sets a priority level, as in Linear: 1 urgent down to 4 low, 0 none. `level` is a key of the dashboard's
- * PRIORITY_LEVELS (lib/taskView.ts), which owns the number each sets.
+ * PRIORITY_LEVELS (lib/task/task-view.ts), which owns the number each sets.
  */
 export const PRIORITY_KEYS = [
   { key: '1', level: 'urgent', label: 'Urgent' },

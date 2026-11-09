@@ -1,5 +1,5 @@
 /* The look of every plan. A plan links this file and adds no <style> of its own.
-   The dashboard puts the same file into the page it shows (app/src/components/task/PlanCard.vue). */
+   The dashboard puts the same file into the page it shows (app/src/components/task/overview/PlanCard.vue). */
 :root {
   color-scheme: light;
   --bg: #f6f6f4;
