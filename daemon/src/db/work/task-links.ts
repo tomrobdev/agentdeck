@@ -1,10 +1,10 @@
 // Task links: what a task depends on, and what depends on it.
 import { and, asc, eq, inArray } from 'drizzle-orm';
-import type { TaskId } from '../domain/shared/index.ts';
-import type { Dependent, Link, LinkKind, LinkedTask } from '../domain/work/index.ts';
-import type { Orm } from './orm.ts';
-import { changed } from './sql.ts';
-import { repos, taskLinks, tasks } from './tables.ts';
+import type { TaskId } from '../../domain/shared/index.ts';
+import type { Dependent, Link, LinkKind, LinkedTask } from '../../domain/work/index.ts';
+import type { Orm } from '../orm.ts';
+import { changed } from '../sql.ts';
+import { repos, taskLinks, tasks } from '../tables.ts';
 
 /** A link's columns, named as the domain's `Link`. */
 const LINK_COLUMNS = { task_id: taskLinks.task_id, on: taskLinks.on_task, kind: taskLinks.kind };

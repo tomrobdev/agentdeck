@@ -19,9 +19,9 @@ Each list can only shrink: an entry that stops applying fails `pnpm test`.
 | List                                              | Entries |
 | ------------------------------------------------- | ------- |
 | ALLOWED_FOLDER_CYCLES (`scripts/lib/progress.ts`) | 0       |
-| OVERSIZED_FOLDERS (`scripts/lib/progress.ts`)     | 9       |
-| LONG_FILES (`scripts/lib/progress.ts`)            | 6       |
-| UNPLACED_FOLDERS (`scripts/lib/progress.ts`)      | 4       |
+| OVERSIZED_FOLDERS (`scripts/lib/progress.ts`)     | 8       |
+| LONG_FILES (`scripts/lib/progress.ts`)            | 5       |
+| UNPLACED_FOLDERS (`scripts/lib/progress.ts`)      | 3       |
 | ROW_SHAPED_FIELDS (`scripts/lib/progress.ts`)     | 0       |
 | PLAIN_TASK_WRITES (`scripts/lib/progress.ts`)     | 7       |
 | UNCHECKED rules (`scripts/lib/rules.ts`)          | 5       |

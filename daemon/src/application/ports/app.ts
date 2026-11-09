@@ -6,7 +6,7 @@ import type { CodeHost } from './code-host.ts';
 import type { Goals } from './goals.ts';
 import type { Notifier } from './notifier.ts';
 import type { Processes } from './processes.ts';
-import type { Repositories } from './repositories.ts';
+import type { Repositories } from './repositories/index.ts';
 import type { RunLog } from './run-log.ts';
 import type { Service } from './service.ts';
 import type { Source } from './source.ts';

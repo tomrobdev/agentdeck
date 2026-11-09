@@ -2,12 +2,12 @@
 // pending (the outbox): the daemon's tick runs them and marks it.
 import { and, asc, eq, exists, gt, inArray, lte, max, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
-import type { RepoId, TaskId } from '../domain/shared/index.ts';
-import type { PendingFollowUp, TaskEventRow, TaskEventType } from '../domain/work/index.ts';
-import type { TaskStatus } from '../domain/work/index.ts';
-import type { Orm } from './orm.ts';
-import { inActiveRepo } from './sql.ts';
-import { taskEvents, tasks } from './tables.ts';
+import type { RepoId, TaskId } from '../../domain/shared/index.ts';
+import type { PendingFollowUp, TaskEventRow, TaskEventType } from '../../domain/work/index.ts';
+import type { TaskStatus } from '../../domain/work/index.ts';
+import type { Orm } from '../orm.ts';
+import { inActiveRepo } from '../sql.ts';
+import { taskEvents, tasks } from '../tables.ts';
 
 /** A history row as the timeline reads it: every column but the outbox's flag. */
 const EVENT_COLUMNS = {
