@@ -1,5 +1,5 @@
 // The Workspace port: git, the shell and a worktree's files, in the operations the use cases need. The real adapter is
-// adapters/workspace.ts (compose.ts); tests run it on real git in a temporary folder, with no fake.
+// adapters/git/workspace.ts (compose.ts); tests run it on real git in a temporary folder, with no fake.
 import type { ReviewFacts } from '../../domain/operations/index.ts';
 import type { Repo } from '../../domain/repos/index.ts';
 import type { BaseCommit, ChangedFile, Commit, Task, TreeEntry } from '../../domain/work/index.ts';

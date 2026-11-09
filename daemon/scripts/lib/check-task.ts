@@ -21,8 +21,8 @@ export const EXTRA_CHECKS: ExtraCheck[] = [
     prefixes: [
       'daemon/src/application/runs/',
       'daemon/src/application/scheduler/',
-      'daemon/src/adapters/processes.ts',
-      'daemon/src/adapters/claude.ts',
+      'daemon/src/adapters/process/processes.ts',
+      'daemon/src/adapters/claude/claude.ts',
       'daemon/src/db/',
     ],
   },

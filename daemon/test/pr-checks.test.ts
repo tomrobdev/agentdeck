@@ -14,7 +14,7 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { openDb } = await import('./open-db.ts');
 const { doneTask, queuedTask } = await import('./fixtures.ts');
-const { github } = await import('../src/adapters/github.ts');
+const { github } = await import('../src/adapters/github/github.ts');
 const { refreshPrStates } = await import('../src/application/landing/refresh.ts');
 const { ActionError, fixChecks, taskDetail, taskViews } = await import('../src/application/actions.ts');
 const { latestReviewNote } = await import('../src/domain/work/history.ts');

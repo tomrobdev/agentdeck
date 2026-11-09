@@ -16,7 +16,7 @@ process.env.AGENTDECK_CLAUDE_BIN = fake;
 
 const { openDb } = await import('./open-db.ts');
 const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
-const { github } = await import('../src/adapters/github.ts');
+const { github } = await import('../src/adapters/github/github.ts');
 const { updateRepo } = await import('../src/application/actions.ts');
 const { linkedSteps, unfinishedSteps, unfinishedSummary } = await import('../src/domain/work/plan.ts');
 const { buildPrBody } = await import('../src/domain/landing/pr.ts');

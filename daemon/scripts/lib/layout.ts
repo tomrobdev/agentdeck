@@ -118,22 +118,7 @@ export const PLACED_FOLDERS: Record<string, { shared: Record<string, string>; fo
   // Adapters are grouped by the external system they talk to.
   'daemon/src/adapters': {
     shared: {},
-    folders: [
-      'claude',
-      'git',
-      'github',
-      'shell',
-      'processes',
-      'notify',
-      'service',
-      'run-logs',
-      'goals',
-      'plan-files',
-      'workspace',
-      'daemon-api',
-      'caffeinate',
-      'shared',
-    ],
+    folders: ['claude', 'process', 'git', 'github', 'macos', 'local'],
   },
   'daemon/src/api/routes': { shared: {}, folders: CONTEXT_FOLDERS },
   'daemon/src/cli': {

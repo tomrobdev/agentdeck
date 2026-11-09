@@ -13,7 +13,7 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { openDb } = await import('../src/db/index.ts');
 const { doneTask, queuedTask, testApp } = await import('./fixtures.ts');
-const { github } = await import('../src/adapters/github.ts');
+const { github } = await import('../src/adapters/github/github.ts');
 const { refreshPrStates } = await import('../src/application/landing/refresh.ts');
 const { autoMerge } = await import('../src/application/landing/auto-merge.ts');
 const {

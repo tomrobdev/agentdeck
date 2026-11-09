@@ -1,10 +1,10 @@
-//! Starts the daemon through launchd when it is down. It mirrors `restart()` in `daemon/src/adapters/service.ts`, which
+//! Starts the daemon through launchd when it is down. It mirrors `restart()` in `daemon/src/adapters/macos/service.ts`, which
 //! is also where the label and the plist path come from. Installing and uninstalling the service stay with the CLI.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-/// The launchd label; keep in step with `LABEL` in `daemon/src/adapters/service.ts`.
+/// The launchd label; keep in step with `LABEL` in `daemon/src/adapters/macos/service.ts`.
 const LABEL: &str = "dev.agentdeck.daemon";
 const NOT_INSTALLED: &str = "The service isn't installed: run agentdeck install";
 

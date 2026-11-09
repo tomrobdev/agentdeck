@@ -28,7 +28,7 @@ chmodSync(join(bin, 'pnpm'), 0o755);
 process.env.PATH = `${bin}:${process.env.PATH}`;
 
 const { openDb } = await import('./open-db.ts');
-const { ensureWorktree } = await import('../src/adapters/git.ts');
+const { ensureWorktree } = await import('../src/adapters/git/worktrees.ts');
 const { installNeeds } = await import('../src/application/actions.ts');
 
 const sh = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();

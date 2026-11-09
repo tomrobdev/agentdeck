@@ -1,6 +1,6 @@
 // Delivers a notification on the desktop (osascript) and to ntfy. Recording it is the caller's job.
 import { execFile } from 'node:child_process';
-import type { Notification, NotifySettings } from '../domain/operations/index.ts';
+import type { Notification, NotifySettings } from '../../domain/operations/index.ts';
 
 /** AppleScript string literal. */
 const q = (s: string) => `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;

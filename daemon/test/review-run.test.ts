@@ -17,7 +17,7 @@ import {
   reviewSchemaArgs,
   reviewVerdict,
 } from '../src/domain/runs/review.ts';
-import { diffHash } from '../src/adapters/git.ts';
+import { diffHash } from '../src/adapters/git/diffs.ts';
 
 const PROMPT = `## Goal
 Count the words in a file.
