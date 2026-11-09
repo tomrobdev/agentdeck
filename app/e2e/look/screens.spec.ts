@@ -22,9 +22,15 @@ const PAGES = [
     ready: (page) => expect(page.getByText('greet() now falls back to everyone').first()).toBeVisible(),
   },
   {
+    // The settings panel is a modal over the queue, opened from the header; the queue settles first, so what shows behind
+    // it is the same from one run to the next.
     name: 'settings',
-    hash: '#/settings',
-    ready: (page) => expect(page.getByRole('heading', { name: 'Usage budget' })).toBeVisible(),
+    hash: '#/',
+    ready: async (page) => {
+      await queueSettled(page);
+      await page.getByRole('button', { name: 'Settings', exact: true }).click();
+      await expect(page.getByRole('heading', { name: 'Usage budget' })).toBeVisible();
+    },
   },
 ] satisfies { name: string; hash: string; ready: (page: import('@playwright/test').Page) => Promise<void> }[];
 
