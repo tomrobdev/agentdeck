@@ -25,7 +25,7 @@ function toggle(list: 'states' | 'repos', key: string) {
 }
 const set = (patch: Partial<Filters>) => (filters.value = { ...filters.value, ...patch });
 
-useHotkeys({ '/': () => search.value?.focus() });
+useHotkeys({ '/': { label: 'Search the queue', scope: 'queue', run: () => search.value?.focus() } });
 function leaveSearch() {
   set({ search: '' });
   search.value?.blur();

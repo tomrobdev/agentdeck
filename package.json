@@ -16,6 +16,7 @@
     "build": "pnpm --filter agentdeck-app tauri:build",
     "test": "pnpm --filter agentdeck-daemon test",
     "test:crash": "pnpm --filter agentdeck-daemon test:crash",
+    "test:github": "node daemon/scripts/github-e2e.mjs",
     "test:ui": "pnpm --filter agentdeck-app test:ui",
     "coverage": "pnpm --filter agentdeck-daemon coverage",
     "typecheck": "pnpm -r typecheck",

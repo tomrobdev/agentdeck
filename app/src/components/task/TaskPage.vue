@@ -2,6 +2,7 @@
 import { computed, ref, toRef, watch } from 'vue';
 import { type TaskDetail, ago, api, describeWait } from '../../api';
 import { plural } from '../../../../daemon/src/domain/shared/index.ts';
+import { useEditKeys } from '../../composables/useEditKeys';
 import { useHotkeys } from '../../composables/useHotkeys';
 import { type TaskTab, go, openTask } from '../../router';
 import { readNeeds, readTaskQuestion } from '../../lib/taskView';
@@ -14,6 +15,7 @@ import TabBar from '../ui/TabBar.vue';
 import TaskBadges from '../ui/TaskBadges.vue';
 import TaskStatusLine from '../ui/TaskStatusLine.vue';
 import ChangesTab from './ChangesTab.vue';
+import EditKeyDialog from './EditKeyDialog.vue';
 import CodeTab from './CodeTab.vue';
 import NeedsCallout from './NeedsCallout.vue';
 import QuestionCallout from './QuestionCallout.vue';
@@ -26,7 +28,7 @@ import TaskTitle from './TaskTitle.vue';
 
 // A task laid out like a pull request: header, tabs, and a properties sidebar.
 const props = defineProps<{ task: TaskDetail; tab: TaskTab; query: Record<string, string> }>();
-const emit = defineEmits<{ act: [kind: 'approve' | 'reject' | 'retry' | 'cancel'] }>();
+const emit = defineEmits<{ act: [kind: 'approve' | 'reject' | 'retry' | 'cancel']; newTask: [] }>();
 const { run } = useActions();
 
 const pageEl = ref<HTMLElement | null>(null);
@@ -63,7 +65,12 @@ const needs = computed(() => readNeeds(props.task));
 const question = computed(() => readTaskQuestion(props.task));
 
 // Dialogs hold the Escape key themselves (useHotkeys skips it while one is open).
-useHotkeys({ Escape: () => go({ name: 'queue' }) });
+const edits = useEditKeys('task', () => props.task.id);
+useHotkeys({
+  Escape: { label: 'Back to the queue', scope: 'task', run: () => go({ name: 'queue' }) },
+  c: { label: 'New task', scope: 'task', run: () => emit('newTask') },
+  ...edits.keys,
+});
 
 // Branch names under the title.
 const base = computed(() => changes.value?.base_ref ?? 'base');
@@ -72,6 +79,7 @@ const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel
 
 <template>
   <section ref="pageEl" class="flex min-h-0 flex-1 flex-col bg-bg">
+    <EditKeyDialog v-if="edits.dialog.value" :kind="edits.dialog.value" :keys="edits" />
     <SnippetPopover v-if="pageEl" :task-id="task.id" :root="pageEl" />
     <!-- Row 1 the number and title, full width; row 2 the status, branch and facts; row 3 the status line. -->
     <header class="flex items-start gap-3 px-6 pt-4 pb-3">

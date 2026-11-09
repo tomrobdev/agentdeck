@@ -3,7 +3,7 @@ import { ref } from 'vue';
 import type { TaskSummary } from '../../api';
 import { useActions } from '../../composables/useActions';
 import type { BulkAction, BulkEdit } from '../../lib/bulk';
-import type { BulkEditValue } from '../../composables/useBulkPick';
+import type { BulkEditValue } from '../../composables/useBulkEdit';
 import { MODELS, PRIORITY_LEVELS, levelPriority } from '../../lib/taskView';
 import Menu from '../ui/Menu.vue';
 import MenuItem from '../ui/MenuItem.vue';

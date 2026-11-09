@@ -138,7 +138,13 @@ function toggleViewed() {
   const f = files.value.find((x) => x.path === current.value);
   if (f) markViewed(f, !isViewed(f));
 }
-useHotkeys({ j: () => stepFile(1), k: () => stepFile(-1), ']': () => stepComment(1), '[': () => stepComment(-1), v: toggleViewed });
+useHotkeys({
+  j: { label: 'Next file', scope: 'diff', run: () => stepFile(1) },
+  k: { label: 'Previous file', scope: 'diff', run: () => stepFile(-1) },
+  ']': { label: 'Next comment', scope: 'diff', run: () => stepComment(1) },
+  '[': { label: 'Previous comment', scope: 'diff', run: () => stepComment(-1) },
+  v: { label: 'Mark the file viewed', scope: 'diff', run: toggleViewed },
+});
 </script>
 
 <template>
