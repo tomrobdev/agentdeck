@@ -14,6 +14,7 @@ import {
   toolKind,
 } from '../../lib/transcript';
 import { parseAnsi } from '../../lib/ansi';
+import { callDuration, durationLabel, isSlow } from '../../lib/logFilter';
 import Markdown from '../files/Markdown.vue';
 import Delta from '../ui/Delta.vue';
 import LogItem from './LogItem.vue';
@@ -23,6 +24,8 @@ const props = defineProps<{
   items: Item[];
   first?: string;
   live: boolean;
+  /** Keys of the items that are failures, which the failure jump finds by `data-failure`. */
+  failures?: Set<string>;
   repoPath: (file: string | undefined) => string | null;
   isPath?: (p: string) => boolean;
   /** Cuts the worktree's root from an output; absent when the worktree is gone. */
@@ -50,7 +53,13 @@ const parts = (c: CallItem) =>
 </script>
 
 <template>
-  <div v-for="item in items" :key="item.key" :data-at="item.at" class="flex gap-2 px-3.5 py-[3px]">
+  <div
+    v-for="item in items"
+    :key="item.key"
+    :data-at="item.at"
+    :data-failure="failures?.has(item.key) || undefined"
+    class="flex gap-2 px-3.5 py-[3px]"
+  >
     <span class="w-9 flex-none text-right text-xs text-muted tabular-nums select-none">{{ gutter(item.at) }}</span>
     <div class="min-w-0 flex-1">
       <!-- claude's text -->
@@ -72,6 +81,7 @@ const parts = (c: CallItem) =>
           :items="item.calls"
           :first="first"
           :live="live"
+          :failures="failures"
           :repo-path="repoPath"
           :is-path="isPath"
           :cut="cut"
@@ -101,6 +111,13 @@ const parts = (c: CallItem) =>
           </button>
           <span class="truncate">{{ repoPath(item.call.file) ? '' : item.call.summary || item.call.input }}</span>
           <Delta v-if="item.call.change" class="text-xs" :add="item.call.change.added" :del="item.call.change.removed" />
+          <span
+            v-if="callDuration(item) !== null"
+            class="ml-auto flex-none text-xs tabular-nums"
+            :class="isSlow(callDuration(item)) ? 'font-semibold text-blocked' : 'text-muted'"
+            :title="isSlow(callDuration(item)) ? 'A slow call: over a minute' : 'How long the call took'"
+            >{{ isSlow(callDuration(item)) ? '⏱ ' : '' }}{{ durationLabel(callDuration(item)!) }}</span
+          >
         </code>
         <details v-if="item.call.change" class="ml-4">
           <summary class="disclose text-sm text-muted"><span class="chev">›</span> diff</summary>
@@ -137,6 +154,7 @@ const parts = (c: CallItem) =>
             :items="item.children"
             :first="first"
             :live="live"
+            :failures="failures"
             :repo-path="repoPath"
             :is-path="isPath"
             :cut="cut"
