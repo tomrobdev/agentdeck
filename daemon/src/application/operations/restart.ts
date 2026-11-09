@@ -10,6 +10,7 @@ export function runningActivity(app: App): Activity {
     resolves: app.countRunningResolves(),
     unblocks: app.countRunningUnblocks(),
     reviews: app.countRunningReviews(),
+    verifies: app.countRunningVerifies(),
   };
 }
 

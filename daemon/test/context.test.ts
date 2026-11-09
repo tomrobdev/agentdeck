@@ -11,7 +11,8 @@ process.env.AGENTDECK_HOME = home;
 
 const { openDb } = await import('./open-db.ts');
 const { liveContext, repoForPath } = await import('../src/application/actions.ts');
-const { DIGEST_LIMIT, describeEvent, digest } = await import('../src/domain/work/read/digest.ts');
+const { describeEvent } = await import('../src/domain/work/index.ts');
+const { DIGEST_LIMIT, digest } = await import('../src/domain/operations/digest.ts');
 const { WORKTREE_DIR } = await import('../src/config.ts');
 
 const CLI = join(import.meta.dirname, '../src/cli.ts');

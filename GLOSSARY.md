@@ -27,7 +27,9 @@ _Avoid_: ticket, tickets, job, jobs
 
 **Review run**: a run that reads a done task's changes against its Goal, Definition of done and linked plan steps, and leaves a review of its own: a summary and findings, each blocking or not. Its **verdict** is clean when no finding blocks. It uses no attempt, takes the **review model** (a setting), and a repo starts one on its own only with `auto_review` on. It never takes or fills a person's draft.
 
-**Model**: the Claude model a run is started with, recorded on the run. A work run takes its task's model, a resolve or unblock run the **support model** (a setting), a review run the **review model** (a setting). A new task that names none takes its repo's model, else the **default model** (a setting).
+**Verify run**: a short read-only run a person starts on a proposed or queued task, in a scratch checkout of the base. It checks each claim the task's prompt makes about the code and answers with **findings**: each claim true, false, stale or partly, with the file and line that show it, the evidence and a suggested fix. It records the commit it read, so its findings go stale once the base moves on. It uses no attempt, takes a slot and the review model, and changes nothing: what to do about its findings is a person's call. It ends when the task stops being proposed or queued.
+
+**Model**: the Claude model a run is started with, recorded on the run. A work run takes its task's model, a resolve or unblock run the **support model** (a setting), a review or verify run the **review model** (a setting). A new task that names none takes its repo's model, else the **default model** (a setting).
 
 **Slot**: room for one running task.
 
@@ -36,7 +38,7 @@ _Avoid_: bring in
 
 **Settle**: the daemon ending a run or a wait on its own, and doing what follows: opening the pull request, telling a person, warning the tasks that now cannot start.
 
-**Follow-up**: what the daemon does after a task's status changes, such as opening its pull request, warning the tasks that now cannot start, or telling a person. Each status change is a domain event, and one table says what follows each.
+**Follow-up**: what the daemon does after a task's status changes, such as opening its pull request, warning the tasks that now cannot start, or telling a person. Each status change is a domain event, and one table says what follows each. Settle runs the follow-ups from `application/landing`, because the highest of them opens a pull request; the rules are Work's.
 
 **Protected edit**: a change to a file a worker may not edit itself. The worker proposes it, the daemon commits it after the run, and a person reviews it before it merges.
 
@@ -85,16 +87,16 @@ The code is divided into eight bounded contexts. Each owns its words and its rul
 
 **Work**: repos' tasks, their links, stages and plans.
 
-**Runs**: the attempts at a task, their prompts, syncs and protected edits.
+**Runs**: the attempts at a task, their prompts and syncs.
 
 **Landing**: pull requests, checks, reviews and merging.
 
-**Repos**: registered repos, their settings and their health.
+**Repos**: registered repos, their settings, their health and their protected edits (which paths a repo protects; a run carries the edit out).
 
 **Capacity**: the usage windows, the governor and its holds, and the slots.
 
 **Proposals**: the planner and the proposals it makes.
 
-**Operations**: the daemon itself, its headline, attention list, digest and doctor.
+**Operations**: the daemon itself, its headline, attention list, digest and doctor. The digest is Operations' even though it reads work.
 
 **Insights**: the scorecard and everything counted over time.

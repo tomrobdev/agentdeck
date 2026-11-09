@@ -62,6 +62,7 @@ const handlers: PaletteHandlers = {
   open: (id) => calls.push(`open ${id}`),
   act: (kind, id) => calls.push(`${kind} ${id}`),
   merge: (id) => calls.push(`merge ${id}`),
+  verify: (id) => calls.push(`verify ${id}`),
   copyLink: (id) => calls.push(`copy ${id}`),
   newTask: noop,
   togglePause: noop,
@@ -106,7 +107,7 @@ test('the selected task offers only what its status allows', () => {
     rows(t, [t])
       .filter((i) => i.forSelected)
       .map((i) => i.label);
-  assert.deepEqual(labels(task(1, 'proposed')), ['Approve #1', 'Open task #1', 'Copy link to #1']);
+  assert.deepEqual(labels(task(1, 'proposed')), ['Approve #1', 'Verify #1', 'Open task #1', 'Copy link to #1']);
   assert.ok(labels(task(2, 'blocked')).includes('Retry #2'));
   assert.ok(labels(task(2, 'blocked')).includes('Mark done #2'));
   assert.ok(labels(task(3, 'running')).includes('Stop #3'));

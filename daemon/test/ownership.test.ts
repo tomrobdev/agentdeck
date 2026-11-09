@@ -29,7 +29,7 @@ function reloading() {
 
 const tick = () => new Promise((r) => setImmediate(r));
 
-for (const kind of ['sync', 'propose'] as const) {
+for (const kind of ['sync', 'verify', 'propose'] as const) {
   test(`a tracked ${kind} keeps the reload from exiting until it settles`, async () => {
     const { scheduler, exited } = reloading();
     let finish!: () => void;

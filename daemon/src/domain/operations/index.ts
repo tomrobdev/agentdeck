@@ -1,6 +1,8 @@
 // The operations context's interface: what other contexts and the layers above import.
 export { ATTENTION_LIMIT, headline } from './headline.ts';
 export type { AttentionCandidate, AttentionWhy, HeadlineState, RepoReviewDue } from './headline.ts';
+export { digest } from './digest.ts';
+export type { DigestTask } from './digest.ts';
 export { judgeHealth, logFacts, runOnceRefusal } from './health.ts';
 export type { Check, DaemonState, HealthFacts } from './health.ts';
 export {

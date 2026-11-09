@@ -73,5 +73,3 @@ export type {
   ReviewedDiff,
 } from './review.ts';
 export { PR_SUMMARY_FORMAT } from './summary.ts';
-export { conflictReason, isConflictReason, syncResultOf, syncSummary } from './sync.ts';
-export type { SyncResult } from './sync.ts';

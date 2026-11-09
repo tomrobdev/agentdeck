@@ -2,7 +2,7 @@
 import { SETUP_TIMEOUT_MS, TEST_TIMEOUT_MS, ensureDirs } from '../../config.ts';
 import type { App } from '../ports/app.ts';
 import type { Checkout } from '../ports/workspace.ts';
-import { conflictReason, syncSummary } from '../../domain/landing/index.ts';
+import { conflictReason, syncSummary } from '../../domain/runs/index.ts';
 import { unfinishedSteps, unfinishedSummary } from '../../domain/work/index.ts';
 import { type PromptPlan, type SummaryContext, buildPrompt, buildResumePrompt } from '../../domain/runs/index.ts';
 import { latestReviewNote } from '../../domain/work/index.ts';

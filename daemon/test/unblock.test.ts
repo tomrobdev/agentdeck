@@ -24,8 +24,8 @@ const { nextUnblockable, runUnblock } = await import('../src/application/runs/un
 const { updateRepo } = await import('../src/application/actions.ts');
 const { repoSettingPatch } = await import('../src/cli/settings-args.ts');
 const { restartWait } = await import('../src/domain/operations/restart.ts');
-const { describeEvent } = await import('../src/domain/work/read/digest.ts');
-const { conflictReason } = await import('../src/domain/landing/sync.ts');
+const { describeEvent } = await import('../src/domain/work/index.ts');
+const { conflictReason } = await import('../src/domain/runs/sync.ts');
 const { setupFailedReason } = await import('../src/domain/runs/run.ts');
 const { UNBLOCK_NOTE, buildUnblockPrompt, parseUnblock, unblockDecision, unblockable } = await import('../src/domain/runs/unblock.ts');
 

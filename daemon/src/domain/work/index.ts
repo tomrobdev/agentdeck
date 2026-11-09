@@ -71,7 +71,6 @@ export {
   staleness,
 } from './proposal-check.ts';
 export type { BaseCommit, Overlap, ProposalCheck, Staleness } from './proposal-check.ts';
-export { digest } from './read/digest.ts';
 export { describeEvent } from './read/event-text.ts';
 export type { PersonEventText } from './read/event-text.ts';
 export {

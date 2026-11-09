@@ -1,5 +1,5 @@
 // What the Runs tab shows of a run as it goes: the live header and the timeline strip. Pure, so daemon/test tests them.
-import { REVIEW_MAX_TURNS, UNBLOCK_MAX_TURNS, isTestCommand } from '../../../daemon/src/domain/runs/index.ts';
+import { REVIEW_MAX_TURNS, UNBLOCK_MAX_TURNS, VERIFY_MAX_TURNS, isTestCommand } from '../../../daemon/src/domain/runs/index.ts';
 import { parseTime } from '../api/format.ts';
 import type { LogEntry, Run, TaskDetail } from '../api/types.ts';
 import { type Item, toolKind } from './transcript.ts';
@@ -12,14 +12,15 @@ export interface LiveSource {
 }
 
 /**
- * The live source of a run by its kind: a work run's is the task's `live`, a resolve run's the task's `sync`, an unblock or review
- * run's its own `live_turns` and `live_tool` against the most that kind may take. Null when the task shows none (a work run
+ * The live source of a run by its kind: a work run's is the task's `live`, a resolve run's the task's `sync`, an unblock, review
+ * or verify run's its own `live_turns` and `live_tool` against the most that kind may take. Null when the task shows none (a work run
  * that is not the running one).
  */
 export function liveSource(run: Run, task: Pick<TaskDetail, 'live' | 'sync'>): LiveSource | null {
   if (run.kind === 'work') return task.live;
   if (run.kind === 'resolve') return task.sync?.resolving ? task.sync : null;
-  return { turns: run.live_turns, max_turns: run.kind === 'unblock' ? UNBLOCK_MAX_TURNS : REVIEW_MAX_TURNS, tool: run.live_tool };
+  const max_turns = run.kind === 'unblock' ? UNBLOCK_MAX_TURNS : run.kind === 'verify' ? VERIFY_MAX_TURNS : REVIEW_MAX_TURNS;
+  return { turns: run.live_turns, max_turns, tool: run.live_tool };
 }
 
 /** The header's fields: while the run goes, its turns, current tool and times; once it has ended, its outcome, turns and duration. */

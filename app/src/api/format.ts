@@ -141,6 +141,7 @@ export function runLabel(r: Pick<Run, 'kind' | 'attempt'>): string {
   if (r.kind === 'resolve') return 'Resolve conflicts';
   if (r.kind === 'unblock') return 'Unblock run';
   if (r.kind === 'review') return 'Review';
+  if (r.kind === 'verify') return 'Verify run';
   return `Run ${r.attempt}`;
 }
 
@@ -149,6 +150,7 @@ export function runHint(r: Pick<Run, 'kind'>): string | undefined {
   if (r.kind === 'resolve') return 'Merged the base branch into the branch; uses no attempt';
   if (r.kind === 'unblock') return 'Read why the task blocked, then retried it with a note or asked you; uses no attempt';
   if (r.kind === 'review') return "Read the task's changes against its goal and plan steps, and left a review; uses no attempt";
+  if (r.kind === 'verify') return "Checked each claim the task's prompt makes about the code against the base; uses no attempt";
   return undefined;
 }
 

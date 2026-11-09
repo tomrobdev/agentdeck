@@ -12,15 +12,18 @@ export interface Activity {
   unblocks?: number;
   /** Review runs still going (they belong to done tasks, so `tasks` doesn't count them). Missing means none. */
   reviews?: number;
+  /** Verify runs still going (they belong to proposed or queued tasks, so `tasks` doesn't count them). Missing means none. */
+  verifies?: number;
 }
 
 /** What a graceful restart is waiting for, or null when nothing is active. */
-export function restartWait({ tasks, planner, resolves, unblocks = 0, reviews = 0 }: Activity): string | null {
+export function restartWait({ tasks, planner, resolves, unblocks = 0, reviews = 0, verifies = 0 }: Activity): string | null {
   const parts = [];
   if (tasks) parts.push(plural(tasks, 'running task'));
   if (resolves) parts.push(plural(resolves, 'resolve run'));
   if (unblocks) parts.push(plural(unblocks, 'unblock run'));
   if (reviews) parts.push(plural(reviews, 'review run'));
+  if (verifies) parts.push(plural(verifies, 'verify run'));
   if (planner) parts.push(plural(planner, 'planner run'));
   return parts.length ? parts.join(' and ') : null;
 }
