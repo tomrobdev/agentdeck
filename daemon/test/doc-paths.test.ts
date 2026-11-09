@@ -11,6 +11,8 @@ const EXCEPTIONS: Record<string, string> = {
   'docs/plan-format.md: 112-plans-in-agentdeck.html': 'an example of how a plan is named, not a real file',
   'docs/plan-format.md: .agentdeck/plan.html': "the plan file, in a task's worktree while it runs",
   'docs/plan-format.md: .agentdeck/plan-given.html': "the copy of the plan a run was given, beside the plan file in a task's worktree",
+  '.claude/skills/daemon-debug/SKILL.md: daemon/src/db/tasks.ts':
+    'moved to daemon/src/db/work/tasks-status.ts; a protected edit to the skill fixes the path, and this entry goes once it merges',
 };
 
 /** What counts as a file name: dotted identifiers such as `repos.network` and CSS classes such as `.pill` do not. */

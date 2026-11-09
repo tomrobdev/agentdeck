@@ -1,5 +1,5 @@
 // The task state machine, as data. Pure: no I/O, so it can be tested exhaustively.
-// applyEvent (db/tasks.ts) is the only thing that writes a status, and it asks this module first.
+// applyEvent (db/work/tasks-status.ts) is the only thing that writes a status, and it asks this module first.
 import type { TaskId } from '../shared/index.ts';
 import type { PullRequest } from '../landing/index.ts';
 import type { TaskEventType } from './history.ts';
@@ -163,7 +163,7 @@ export const DOMAIN_EVENT_TYPES: DomainEventType[] = [
   'TaskCancelled',
 ];
 
-/** The status change of one task. `applyEvent` (db/tasks.ts) records it as a task_events row and returns it. */
+/** The status change of one task. `applyEvent` (db/work/tasks-status.ts) records it as a task_events row and returns it. */
 export interface DomainEvent {
   /** What happened, named for the status the task reached. */
   type: DomainEventType;

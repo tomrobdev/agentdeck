@@ -1,12 +1,12 @@
 // Plans attached to tasks: the HTML as written, parsed into steps when read.
 import { and, asc, desc, eq, ne, notInArray, sql } from 'drizzle-orm';
-import type { TaskId } from '../domain/shared/index.ts';
-import { type OwnPlan, type PlanSource, type TaskPlan, parsePlan, planFileName, toPlan } from '../domain/work/index.ts';
-import type { PlanFollower } from '../domain/work/index.ts';
-import { readSteps } from './mappers.ts';
-import type { Orm } from './orm.ts';
-import { NOW_SQL, atomically } from './sql.ts';
-import { taskPlans, tasks } from './tables.ts';
+import type { TaskId } from '../../domain/shared/index.ts';
+import { type OwnPlan, type PlanSource, type TaskPlan, parsePlan, planFileName, toPlan } from '../../domain/work/index.ts';
+import type { PlanFollower } from '../../domain/work/index.ts';
+import { readSteps } from '../mappers.ts';
+import type { Orm } from '../orm.ts';
+import { NOW_SQL, atomically } from '../sql.ts';
+import { taskPlans, tasks } from '../tables.ts';
 import type { DatabaseSync } from 'node:sqlite';
 
 type PlanRow = typeof taskPlans.$inferSelect;

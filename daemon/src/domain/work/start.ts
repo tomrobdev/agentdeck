@@ -77,7 +77,7 @@ export function waitingFor(task: { status: TaskStatus }, dependency: StartState)
 }
 
 /**
- * What a queued task waits for, or null if it will start on the next tick. Mirrors `claimable` in db/tasks.ts, which leaves
+ * What a queued task waits for, or null if it will start on the next tick. Mirrors `claimable` in db/work/tasks-status.ts, which leaves
  * out the slots: the scheduler counts those. `unblocking`: an unblock run for the task is still going (a person retried it
  * meanwhile), and the task waits for that run to stop.
  */

@@ -1,21 +1,21 @@
-// The database: the only place SQL lives. One store per table group, merged into one `Db`.
+// The database: the only place SQL lives. One store per table group, in a folder per context, merged into one `Db`.
 import { DatabaseSync } from 'node:sqlite';
 import { DB_PATH, ensureDirs } from '../config.ts';
+import { usageStore } from './capacity/usage.ts';
 import { changeStore } from './changes.ts';
-import { notificationStore } from './notifications.ts';
+import { statsStore } from './insights/stats.ts';
+import { reviewStore } from './landing/reviews.ts';
+import { notificationStore } from './operations/notifications.ts';
+import { settingsStore } from './operations/settings.ts';
 import { makeOrm } from './orm.ts';
-import { planStore } from './plans.ts';
-import { plannerRunStore } from './planner-runs.ts';
-import { repoStore } from './repos.ts';
-import { reviewStore } from './reviews.ts';
-import { runStore } from './runs.ts';
+import { plannerRunStore } from './proposals/planner-runs.ts';
+import { repoStore } from './repos/repos.ts';
+import { runStore } from './runs/runs.ts';
 import { migrate } from './schema.ts';
-import { settingsStore } from './settings.ts';
-import { statsStore } from './stats.ts';
-import { taskEventStore } from './task-events.ts';
-import { taskLinkStore } from './task-links.ts';
-import { taskStore } from './tasks.ts';
-import { usageStore } from './usage.ts';
+import { planStore } from './work/plans.ts';
+import { taskEventStore } from './work/task-events.ts';
+import { taskLinkStore } from './work/task-links.ts';
+import { taskStore } from './work/tasks.ts';
 
 export { MIGRATIONS, type Migration, migrate } from './schema.ts';
 

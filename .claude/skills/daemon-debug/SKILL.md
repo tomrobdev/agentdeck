@@ -50,4 +50,4 @@ A `SyntaxError`, a missing export or "Merge conflict marker encountered" right a
 ## Don'ts
 
 - Never point a test daemon at `~/.agentdeck`. Use `AGENTDECK_HOME=$(mktemp -d) AGENTDECK_PORT=4318`.
-- Never write a task's status in the database by hand. Every status change is a guarded event in `daemon/src/db/tasks.ts`. Use the CLI. `pnpm db:studio` is for reading.
+- Never write a task's status in the database by hand. Every status change is a guarded event in `daemon/src/db/work/tasks-status.ts`. Use the CLI. `pnpm db:studio` is for reading.

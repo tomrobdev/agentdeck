@@ -73,11 +73,13 @@ test('a claim writes its row through applyEvent: claimNextTask and applyEvent le
 
 test('no claim row is written outside applyEvent', () => {
   const dir = new URL('../src/db/', import.meta.url);
-  for (const file of readdirSync(dir).filter((f) => f.endsWith('.ts'))) {
+  const files = readdirSync(dir, { recursive: true, encoding: 'utf8' }).filter((f) => f.endsWith('.ts'));
+  assert.ok(files.includes('work/tasks-status.ts'), 'found the task store in db/work/');
+  for (const file of files) {
     const source = readFileSync(new URL(file, dir), 'utf8');
     for (const call of source.match(/recordEvent\([^;]*\)/g) ?? []) assert.doesNotMatch(call, /'claim'/, `${file}: ${call}`);
   }
-  const tasks = readFileSync(new URL('tasks.ts', dir), 'utf8');
+  const tasks = readFileSync(new URL('work/tasks-status.ts', dir), 'utf8');
   const claim = /claimNextTask\(\)[^]*?\n {4}\},/.exec(tasks)?.[0] ?? '';
   assert.match(claim, /applyEvent\(id, \{ type: 'claim' \}\)/, 'claimNextTask claims through applyEvent');
   assert.doesNotMatch(claim, /recordEvent|\.update\(tasks\)/, 'claimNextTask writes no row of its own');
