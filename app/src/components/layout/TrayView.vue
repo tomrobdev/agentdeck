@@ -7,7 +7,7 @@ import { computed, onBeforeUnmount, ref } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
 import { api, isOffline } from '../../api/client';
 import { ATTENTION_LABELS, describeLive, describeState } from '../../api/format';
-import { isImmutable, liveStatusQuery, tasksQuery } from '../../api/queries';
+import { liveStatusQuery, refreshAll, tasksQuery } from '../../api/queries';
 import type { Status, TaskSummary } from '../../api/types';
 import { createActions, trackPending } from '../../composables/shared/useActions';
 import { useChangeStream } from '../../composables/shared/useChangeStream';
@@ -41,7 +41,7 @@ const reviewDue = computed(() => status.value?.headline.review_due ?? []);
 const error = ref('');
 const queryClient = useQueryClient();
 const actions = createActions(
-  () => queryClient.invalidateQueries({ predicate: (q) => !isImmutable(q.queryKey) }),
+  () => refreshAll(queryClient),
   (msg) => (error.value = msg),
 );
 const { pending: busy, run } = trackPending(actions);

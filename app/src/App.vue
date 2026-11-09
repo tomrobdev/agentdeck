@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
 import { PERSON_CALLS, api, isOffline } from './api/client';
-import { isImmutable, liveStatusQuery, proposalCheckQuery, reposQuery, taskQuery, tasksQuery } from './api/queries';
+import { liveStatusQuery, refreshAll, proposalCheckQuery, reposQuery, taskQuery, tasksQuery } from './api/queries';
 import type { MergeResult, Repo, Status, TaskSummary, TaskDetail as Detail } from './api/types';
 import { isNative, onOpenUrl, startDaemon } from './platform/native';
 import { mode, setMode } from './platform/theme';
@@ -88,7 +88,7 @@ async function start() {
 
 // After a change any of it may have moved (the Repos panel adds, archives and edits repos too).
 const queryClient = useQueryClient();
-const actions = provideActions(() => queryClient.invalidateQueries({ predicate: (q) => !isImmutable(q.queryKey) }), flash);
+const actions = provideActions(() => refreshAll(queryClient), flash);
 const { run: act, refresh } = actions;
 // Pause and the two Resume buttons share one pending state; every other button has its own.
 const { pending: pausing, run: pauseRun } = trackPending(actions);

@@ -2,12 +2,11 @@
 import { onBeforeUnmount } from 'vue';
 import { useQueryClient } from '@tanstack/vue-query';
 import { API_BASE } from '../../api/client';
-import { isImmutable } from '../../api/queries';
+import { refreshAll } from '../../api/queries';
 
 export function useChangeStream() {
   const queryClient = useQueryClient();
-  // Queries pinned to a commit (diffs, files, trees) can't change with a write; refetching them is wasted work.
-  const refresh = () => void queryClient.invalidateQueries({ predicate: (q) => !isImmutable(q.queryKey) });
+  const refresh = () => void refreshAll(queryClient);
   let lastRev: number | null = null;
 
   const source = new EventSource(`${API_BASE}/api/events`);

@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
 import { api } from '../../api/client';
-import { archivedReposQuery, queryKeys, repoDeletionQuery } from '../../api/queries';
+import { archivedReposQuery, repoDeletionQuery, repoQuery } from '../../api/queries';
 import type { Repo, RepoDeletion } from '../../api/types';
 import { useActions } from '../../composables/shared/useActions';
 import { errorMessage, plural } from '../../../../daemon/src/domain/shared/index.ts';
@@ -49,7 +49,7 @@ async function confirmDelete() {
     if (res.leftover.length) actionError.value = `Deleted ${res.repo}, but couldn't remove: ${res.leftover.join('; ')}`;
   });
   deleteBusy.value = false;
-  if (ok) queryClient.removeQueries({ queryKey: queryKeys.repo(d.repo.id) });
+  if (ok) queryClient.removeQueries({ queryKey: repoQuery(d.repo.id).queryKey });
 }
 </script>
 
