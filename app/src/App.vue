@@ -26,6 +26,7 @@ import DaemonPanel from './components/panels/DaemonPanel.vue';
 import SettingsPanel from './components/panels/SettingsPanel.vue';
 import StaleDaemonBar from './components/layout/StaleDaemonBar.vue';
 import AppHeader from './components/layout/AppHeader.vue';
+import HotkeySheet from './components/layout/HotkeySheet.vue';
 import StatusBar from './components/layout/StatusBar.vue';
 import InsightsView from './components/insights/InsightsView.vue';
 import QueueView from './components/queue/QueueView.vue';
@@ -41,7 +42,10 @@ import { type PersonEvent, openingTab } from './lib/taskView';
 import { paletteItems } from './lib/palette';
 import { type ApproveItem, type ApprovePlan, approveDialog } from './lib/approveDialog';
 import { type BulkResult, bulkMessage } from './lib/bulk';
-import { requestedView } from './composables/useView';
+import { requestedBulk, requestedEdit, requestedView } from './composables/useView';
+import { useHotkeys } from './composables/useHotkeys';
+import { usePicked } from './composables/usePicked';
+import { GO_KEYS, type GoTarget } from './lib/hotkeys';
 import { type Flash, UNDO_MS, provideActions, trackPending } from './composables/useActions';
 import { useChangeStream } from './composables/useChangeStream';
 import { approveDialogSetting, provideApprovals } from './composables/useApprovals';
@@ -67,6 +71,7 @@ const pageId = computed(() => (route.current.name === 'task' ? route.current.id 
 // The change stream refetches what is on screen; status also refetches on a timer (liveStatusQuery).
 const statusQ = useQuery(liveStatusQuery());
 const palette = ref(false);
+const keySheet = ref(false);
 // The list is read on every page: the palette searches every task and the status bar's activity list is built from it.
 const tasksQ = useQuery(tasksQuery());
 const taskQ = useQuery(computed(() => ({ ...taskQuery(pageId.value ?? 0), enabled: pageId.value !== null })));
@@ -181,10 +186,25 @@ function onRequested(next: boolean) {
 const selectedTask = computed(
   () => tasks.value.find((t) => t.id === selectedId.value) ?? (detail.value?.id === selectedId.value ? detail.value : null),
 );
+const { picked } = usePicked();
+const pickedTasks = computed(() => tasks.value.filter((t) => picked.value.includes(t.id)));
+// `g` then a key, and the palette's go commands: the queue and insights are routes, settings and repos panels.
+function goTo(to: GoTarget) {
+  if (to === 'settings' || to === 'repos') modal.value = to;
+  else {
+    modal.value = null;
+    go({ name: to });
+  }
+}
+useHotkeys({
+  ...Object.fromEntries(GO_KEYS.map((g) => [g.key, { label: g.label, scope: 'app' as const, run: () => goTo(g.to) }])),
+  '?': { label: 'Show the keys', scope: 'app', run: () => (keySheet.value = true) },
+});
 const paletteRows = computed(() =>
   paletteItems({
     tasks: tasks.value,
     selected: selectedTask.value,
+    picked: pickedTasks.value,
     paused: !!status.value?.paused,
     handlers: {
       open: openFromQueue,
@@ -209,6 +229,21 @@ const paletteRows = computed(() =>
         go({ name: 'queue' });
       },
       toggleTheme: () => setMode(mode.value === 'dark' ? 'light' : 'dark'),
+      go: goTo,
+      showKeys: () => (keySheet.value = true),
+      showStates: (states) => {
+        modal.value = null;
+        go({ name: 'queue', states });
+      },
+      // Edits and bulk actions are done by the page that is open; on a page without one (insights) go to the queue first.
+      edit: (request) => {
+        if (route.current.name !== 'queue' && route.current.name !== 'task') go({ name: 'queue' });
+        requestedEdit.value = request;
+      },
+      bulk: (action) => {
+        if (route.current.name !== 'queue') go({ name: 'queue' });
+        requestedBulk.value = action;
+      },
     },
   }),
 );
@@ -280,6 +315,7 @@ function onCreated(task: Detail) {
           :tab="route.current.tab"
           :query="route.current.query"
           @act="(kind) => actOn(kind, detail!.id)"
+          @new-task="modal = 'new'"
         />
         <section v-else class="text-muted flex flex-1 flex-col items-center justify-center gap-3">Loading task #{{ pageId }}…</section>
       </main>
@@ -322,6 +358,7 @@ function onCreated(task: Detail) {
         @requested="onRequested"
       />
       <ApproveDialog v-if="approving" :rows="approveRows" :ticked="approving.plan.ticked" @done="onApproved" />
+      <HotkeySheet v-if="keySheet" @close="keySheet = false" />
       <CommandPalette v-if="palette" :items="paletteRows" @close="palette = false" />
 
       <Toaster :toasts="toasts" @close="closeToast" />

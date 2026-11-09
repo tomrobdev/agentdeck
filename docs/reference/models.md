@@ -796,13 +796,14 @@ What the PR refresh keeps on a task (`tasks.pr_checks`): the latest checks and w
 
 ### Activity
 
-| Field       | Type                  | Comment                                                                                                     |
-| ----------- | --------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `tasks`     | `number`              | Tasks with a live run.                                                                                      |
-| `planner`   | `number`              | Planner runs still going.                                                                                   |
-| `resolves`  | `number`              | Resolve runs still going (they belong to done tasks, so `tasks` doesn't count them).                        |
-| `unblocks?` | `number \| undefined` | Unblock runs still going (they belong to blocked tasks, so `tasks` doesn't count them). Missing means none. |
-| `reviews?`  | `number \| undefined` | Review runs still going (they belong to done tasks, so `tasks` doesn't count them). Missing means none.     |
+| Field       | Type                  | Comment                                                                                                               |
+| ----------- | --------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `tasks`     | `number`              | Tasks with a live run.                                                                                                |
+| `planner`   | `number`              | Planner runs still going.                                                                                             |
+| `resolves`  | `number`              | Resolve runs still going (they belong to done tasks, so `tasks` doesn't count them).                                  |
+| `unblocks?` | `number \| undefined` | Unblock runs still going (they belong to blocked tasks, so `tasks` doesn't count them). Missing means none.           |
+| `reviews?`  | `number \| undefined` | Review runs still going (they belong to done tasks, so `tasks` doesn't count them). Missing means none.               |
+| `verifies?` | `number \| undefined` | Verify runs still going (they belong to proposed or queued tasks, so `tasks` doesn't count them). Missing means none. |
 
 ### AttentionCandidate
 

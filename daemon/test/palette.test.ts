@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { bestScore, fuzzyScore, rank } from '../../app/src/lib/fuzzy.ts';
+import { FILTER_STATES } from '../../daemon/src/domain/work/index.ts';
 import { type PaletteHandlers, type PaletteTask, paletteItems, searchPalette } from '../../app/src/lib/palette.ts';
 
 test('every query character must appear in order, ignoring case', () => {
@@ -61,12 +62,18 @@ const handlers: PaletteHandlers = {
   open: (id) => calls.push(`open ${id}`),
   act: (kind, id) => calls.push(`${kind} ${id}`),
   merge: (id) => calls.push(`merge ${id}`),
+  verify: (id) => calls.push(`verify ${id}`),
   copyLink: (id) => calls.push(`copy ${id}`),
   newTask: noop,
   togglePause: noop,
   restartDaemon: noop,
   view: noop,
   toggleTheme: noop,
+  go: noop,
+  showKeys: noop,
+  showStates: noop,
+  edit: noop,
+  bulk: noop,
 };
 const task = (id: number, status: string, extra: Record<string, unknown> = {}) =>
   ({ id, title: `Task ${id}`, status, pr_state: null, repo: 'AgentDeck', branch: `agentdeck/task-${id}`, ...extra }) as PaletteTask;
@@ -100,7 +107,7 @@ test('the selected task offers only what its status allows', () => {
     rows(t, [t])
       .filter((i) => i.forSelected)
       .map((i) => i.label);
-  assert.deepEqual(labels(task(1, 'proposed')), ['Approve #1', 'Open task #1', 'Copy link to #1']);
+  assert.deepEqual(labels(task(1, 'proposed')), ['Approve #1', 'Verify #1', 'Open task #1', 'Copy link to #1']);
   assert.ok(labels(task(2, 'blocked')).includes('Retry #2'));
   assert.ok(labels(task(2, 'blocked')).includes('Mark done #2'));
   assert.ok(labels(task(3, 'running')).includes('Stop #3'));
@@ -135,4 +142,33 @@ test('tasks match on title, repo and branch', () => {
   assert.equal(rows(null, tasks, 'login')[0].key, 'task:1');
   assert.equal(rows(null, tasks, 'web')[0].key, 'task:1');
   assert.equal(rows(null, tasks, 'task-2')[0].key, 'task:2');
+});
+
+test('the palette offers the go commands, the keys sheet and a Show command per filter state', () => {
+  const labels = paletteItems({ tasks: [], selected: null, paused: false, handlers }).map((i) => i.label);
+  for (const label of ['Go to the queue', 'Go to insights', 'Go to settings', 'Go to repos', 'Show keyboard shortcuts']) {
+    assert.ok(labels.includes(label), label);
+  }
+  for (const s of FILTER_STATES) assert.ok(labels.includes(`Show ${s.label.toLowerCase()}`), s.key);
+});
+
+test('the selected task gets the edit commands with their keys; a prompt is edited one task at a time', () => {
+  const t = task(5, 'queued');
+  const one = paletteItems({ tasks: [t], selected: t, paused: false, handlers });
+  assert.equal(one.find((i) => i.label === 'Edit the prompt (#5)')?.shortcut, 'e');
+  assert.equal(one.find((i) => i.label === 'Set priority urgent (#5)')?.shortcut, 'p 1');
+  assert.equal(one.find((i) => i.label === 'Set the model (#5)')?.shortcut, 'M');
+  assert.equal(one.find((i) => i.label === 'Link to another task (#5)')?.shortcut, 'l');
+  const picked = [task(5, 'queued'), task(6, 'queued')] as never[];
+  const many = paletteItems({ tasks: [], selected: t, picked, paused: false, handlers });
+  assert.ok(!many.some((i) => i.label.startsWith('Edit the prompt')));
+  assert.ok(many.some((i) => i.label === 'Set priority low (2 picked tasks)'));
+});
+
+test('with tasks picked the palette offers the bulk actions every one allows, first', () => {
+  const picked = [task(1, 'proposed'), task(2, 'proposed')] as never[];
+  const items = paletteItems({ tasks: [], selected: null, picked, paused: false, handlers });
+  assert.equal(items[0].label, 'Approve 2 picked tasks');
+  assert.ok(items.some((i) => i.label === 'Reject 2 picked tasks'));
+  assert.ok(!items.some((i) => i.label.startsWith('Retry')));
 });

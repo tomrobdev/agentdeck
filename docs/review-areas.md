@@ -99,6 +99,8 @@ The run's lifecycle: the worker, the claude process, resuming, prompts, logs, th
 - daemon/src/application/runs/claude-run.ts
 - daemon/src/application/runs/unblock.ts
 - daemon/src/application/runs/review.ts
+- daemon/src/domain/runs/verify.ts
+- daemon/src/application/runs/verify.ts
 - daemon/src/application/runs/install-needs.ts
 - daemon/src/application/ports/agent.ts
 - daemon/src/application/ports/processes.ts

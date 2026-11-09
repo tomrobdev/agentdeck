@@ -2,9 +2,11 @@
 // stage.ts review and merge rules; this file only turns that into rows. Pure, so the daemon's tests can import it
 // (daemon/test/palette.test.ts).
 import type { TaskSummary } from '../../../daemon/src/api/contract.ts';
-import { personEvents } from '../../../daemon/src/domain/work/index.ts';
+import { FILTER_STATES, personEvents } from '../../../daemon/src/domain/work/index.ts';
 import { CHECKED_STATUSES, canStartMerge, isReview } from '../../../daemon/src/domain/work/index.ts';
 import { rank } from './fuzzy.ts';
+import { type BulkAction, bulkActions } from './bulk.ts';
+import { type EditRequest, GO_KEYS, type GoTarget, PRIORITY_KEYS, keyCaps } from './hotkeys.ts';
 
 export type PaletteTask = Pick<TaskSummary, 'id' | 'title' | 'status' | 'pr_state' | 'sync' | 'merge_request'> & {
   repo?: string | null;
@@ -26,11 +28,23 @@ export interface PaletteHandlers {
   restartDaemon: () => void;
   view: (mode: ViewMode) => void;
   toggleTheme: () => void;
+  /** Go to a place, as `g` then a key does. */
+  go: (to: GoTarget) => void;
+  /** Open the sheet of keys. */
+  showKeys: () => void;
+  /** Show the queue filtered to these states. */
+  showStates: (states: string[]) => void;
+  /** An edit key's edit, on the picked tasks or else the selected one. */
+  edit: (request: EditRequest) => void;
+  /** A bulk action on the picked tasks. */
+  bulk: (action: BulkAction) => void;
 }
 
 export interface PaletteInput {
   tasks: readonly PaletteTask[];
   selected: PaletteTask | null;
+  /** The picked tasks, whole, so the bulk actions are the ones every one of them allows. */
+  picked?: readonly TaskSummary[];
   paused: boolean;
   handlers: PaletteHandlers;
 }
@@ -78,6 +92,49 @@ function selectedActions(t: PaletteTask, h: PaletteHandlers): PaletteItem[] {
   return out;
 }
 
+const BULK_LABEL: Record<BulkAction, string> = { approve: 'Approve', reject: 'Reject', retry: 'Retry', merge: 'Merge', cancel: 'Cancel' };
+const BULK_KEY: Partial<Record<BulkAction, string>> = { approve: 'a', retry: 'r', merge: 'm' };
+const plural = (n: number) => `${n} picked task${n === 1 ? '' : 's'}`;
+
+/** The bulk actions every picked task allows, then the edits: first in the list, as the selected task's own actions are. */
+function pickedActions(picked: readonly TaskSummary[], h: PaletteHandlers): PaletteItem[] {
+  const mine = (key: string, label: string, run: () => void, shortcut?: string): PaletteItem => ({
+    key: `picked:${key}`,
+    label,
+    shortcut,
+    kind: 'command',
+    forSelected: true,
+    fields: [label],
+    run,
+  });
+  return [
+    ...bulkActions([...picked]).map((a) => mine(a, `${BULK_LABEL[a]} ${plural(picked.length)}`, () => h.bulk(a), BULK_KEY[a])),
+    ...editCommands(h, plural(picked.length), true).map((i) => ({ ...i, key: `picked:${i.key}`, forSelected: true })),
+  ];
+}
+
+/** The edit keys as commands. `target` names who is edited ("#5" or "2 picked tasks"). */
+function editCommands(h: PaletteHandlers, target: string, many: boolean): PaletteItem[] {
+  const edit = (key: string, label: string, request: EditRequest, shortcut: string): PaletteItem => ({
+    key: `edit:${key}`,
+    label: `${label} (${target})`,
+    shortcut,
+    kind: 'command',
+    forSelected: false,
+    fields: [`${label} ${target}`, label],
+    run: () => h.edit(request),
+  });
+  return [
+    // A prompt is one task's.
+    ...(many ? [] : [edit('prompt', 'Edit the prompt', { kind: 'prompt' }, 'e')]),
+    ...PRIORITY_KEYS.map(({ key, level, label }) =>
+      edit(`priority-${level}`, `Set priority ${label.toLowerCase()}`, { kind: 'priority', level }, `p ${key}`),
+    ),
+    edit('model', 'Set the model', { kind: 'model' }, 'M'),
+    edit('link', 'Link to another task', { kind: 'link' }, 'l'),
+  ];
+}
+
 const command = (key: string, label: string, run: () => void, shortcut?: string): PaletteItem => ({
   key: `command:${key}`,
   label,
@@ -89,8 +146,10 @@ const command = (key: string, label: string, run: () => void, shortcut?: string)
 });
 
 /** Every row the palette can show, before the query. */
-export function paletteItems({ tasks, selected, paused, handlers: h }: PaletteInput): PaletteItem[] {
-  const items: PaletteItem[] = selected ? selectedActions(selected, h) : [];
+export function paletteItems({ tasks, selected, picked = [], paused, handlers: h }: PaletteInput): PaletteItem[] {
+  const items: PaletteItem[] = picked.length ? pickedActions(picked, h) : selected ? selectedActions(selected, h) : [];
+  // The edits come after the other commands, still matched by the selected task's "#id".
+  const edits = !picked.length && selected ? editCommands(h, `#${selected.id}`, false) : [];
   items.push(
     command('new', 'New task', h.newTask, 'c'),
     command('pause', paused ? 'Resume the daemon' : 'Pause the daemon', h.togglePause),
@@ -99,7 +158,11 @@ export function paletteItems({ tasks, selected, paused, handlers: h }: PaletteIn
     command('view-board', 'Show board', () => h.view('board')),
     command('view-graph', 'Show graph', () => h.view('graph')),
     command('theme', 'Toggle light and dark', h.toggleTheme),
+    ...FILTER_STATES.map((s) => command(`show-${s.key}`, `Show ${s.label.toLowerCase()}`, () => h.showStates([s.key]))),
+    ...GO_KEYS.map((g) => command(`go-${g.to}`, g.label, () => h.go(g.to), keyCaps(g.key).join(' then '))),
+    command('keys', 'Show keyboard shortcuts', h.showKeys, '?'),
   );
+  items.push(...edits);
   for (const t of tasks) {
     items.push({
       key: `task:${t.id}`,

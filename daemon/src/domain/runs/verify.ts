@@ -18,8 +18,8 @@ export const VERIFY_DENIED_TOOLS = REVIEW_DENIED_TOOLS;
 
 /**
  * What a verify run found of a claim: `true` when the code bears it out, `false` when the code says otherwise, `stale`
- * when it held once but the code moved on (a file moved, a function renamed, the work already done), `partly` when only
- * part of it holds.
+ * when it was true once but the code moved on (a file moved, a function renamed, the work already done), `partly` when only
+ * part of it is true.
  */
 export const CLAIM_VERDICTS = ['true', 'false', 'stale', 'partly'] as const;
 export type ClaimVerdict = (typeof CLAIM_VERDICTS)[number];
@@ -58,7 +58,7 @@ export const VERIFY_ANSWER_SCHEMA = {
             type: 'string',
             enum: [...CLAIM_VERDICTS],
             description:
-              'true: the code bears it out; false: the code says otherwise; stale: it held once, the code moved on; partly: part of it holds',
+              'true: the code bears it out; false: the code says otherwise; stale: it was true once, the code moved on; partly: part of it is true',
           },
           path: { type: 'string', description: 'The file that shows it, relative to the repo root' },
           line: { type: 'integer', minimum: 1, description: 'The line in that file' },
@@ -109,7 +109,7 @@ export function buildVerifyPrompt(task: Pick<Task, 'id' | 'title' | 'prompt'>, c
     '',
     '## What to answer',
     '- A finding for each claim the prompt makes about the code: that a file, function, setting or test exists, where it is, what it does, what it is called.',
-    '- Its verdict: true when the code bears it out, false when the code says otherwise, stale when it held once but the code moved on (moved, renamed, already done), partly when only part of it holds.',
+    '- Its verdict: true when the code bears it out, false when the code says otherwise, stale when it was true once but the code moved on (moved, renamed, already done), partly when only part of it is true.',
     '- The file and line that show it, and the evidence in a sentence or two.',
     '- For a claim that is not true, a suggested fix: what the prompt should say instead.',
     '- Leave out what the prompt asks to be done and anything that is not about the code. No findings when it makes no claims.',

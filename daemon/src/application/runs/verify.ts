@@ -47,7 +47,7 @@ const stillChecked = (app: App, id: TaskId): boolean => {
 
 /**
  * Start a verify run for a proposed or queued task. Refused when the task is in another status, already has one going,
- * or no work may start now (paused, rate limited, on hold, or every slot in use). The row opens before anything is
+ * or no work may start now (paused, rate limited, the governor says wait, or every slot in use). The row opens before anything is
  * awaited, so a second call finds it going. `done` never rejects: a failure ends the row failed.
  */
 export function startVerify(app: App, id: TaskId): VerifyStart {
