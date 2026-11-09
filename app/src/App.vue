@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
-import { PERSON_CALLS, api } from './api/client';
-import { isImmutable, isOffline, liveStatusQuery, proposalCheckQuery, reposQuery, taskQuery, tasksQuery } from './api/queries';
+import { PERSON_CALLS, api, isOffline } from './api/client';
+import { isImmutable, liveStatusQuery, proposalCheckQuery, reposQuery, taskQuery, tasksQuery } from './api/queries';
 import type { MergeResult, Repo, Status, TaskSummary, TaskDetail as Detail } from './api/types';
 import { isNative, onOpenUrl, startDaemon } from './platform/native';
 import { mode, setMode } from './platform/theme';

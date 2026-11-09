@@ -1,6 +1,6 @@
 // The dashboard's server data as TanStack Query keys and options. App.vue reads them with useQuery.
 import { queryOptions } from '@tanstack/vue-query';
-import { ApiError, api } from './client.ts';
+import { api, isOffline } from './client.ts';
 import type { FileRef } from './types.ts';
 
 export const queryKeys = {
@@ -32,9 +32,6 @@ export const queryKeys = {
 /** True for a query keyed by a known commit: its data is final, so a write's refresh leaves it alone. */
 export const isImmutable = (key: readonly unknown[]) => key[0] === 'at' && key[1] !== null;
 const atCommit = (commit: string | null) => (commit ? Infinity : 0);
-
-/** True for the error `call` throws when the daemon can't be reached. */
-export const isOffline = (e: unknown) => e instanceof ApiError && e.message === 'offline';
 
 /** Offline is handled by the offline screen, which keeps polling status: don't retry it here. */
 export const retryQuery = (failures: number, e: unknown) => !isOffline(e) && failures < 2;

@@ -6,14 +6,13 @@ import type {
   CancelMergeRequestResult,
   CancelResult,
   Changes,
-  FixChecksResult,
-  OpenPrResult,
   DaemonHealth,
   DaemonState,
   DoctorReport,
   FileContent,
   FilePatch,
   FileRef,
+  FixChecksResult,
   MarkDoneRequest,
   MergePreview,
   MergeRequest,
@@ -22,6 +21,7 @@ import type {
   NewRepo,
   NewReviewComment,
   NewTask,
+  OpenPrResult,
   PlanHtml,
   ProposalCheck,
   ProposalResult,
@@ -40,15 +40,15 @@ import type {
   Review,
   ReviewPatch,
   ServiceStatus,
-  SyncResult,
   Settings,
   SettingsPatch,
   Stats,
   Status,
   SubmitReview,
+  SyncResult,
   TaskDetail,
-  TaskSaved,
   TaskPatch,
+  TaskSaved,
   TaskSummary,
   TestNotifyResult,
   TreeListing,
@@ -68,119 +68,141 @@ const brandNewTask = ({ builds_on, after, plan_task, ...rest }: NewTaskInput): N
 
 export const API_BASE: string = import.meta.env.VITE_AGENTDECK_API ?? 'http://127.0.0.1:4317';
 
+/** What the daemon refused, with its reason as the message. */
 export class ApiError extends Error {}
+/** The daemon could not be reached. */
+export class OfflineError extends ApiError {
+  constructor() {
+    super('offline');
+  }
+}
 
-async function call<T>(path: string, init?: { method?: string; json?: unknown }): Promise<T> {
+/** True for the error a call throws when the daemon can't be reached. */
+export const isOffline = (e: unknown) => e instanceof OfflineError;
+
+async function call<T>(method: string, path: string, json?: unknown): Promise<T> {
   let res: Response;
   try {
     res = await fetch(API_BASE + path, {
-      method: init?.method ?? 'GET',
-      headers: init?.json ? { 'Content-Type': 'application/json' } : undefined,
-      body: init?.json ? JSON.stringify(init.json) : undefined,
+      method,
+      headers: json !== undefined ? { 'Content-Type': 'application/json' } : undefined,
+      body: json !== undefined ? JSON.stringify(json) : undefined,
     });
   } catch {
-    throw new ApiError('offline');
+    throw new OfflineError();
   }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new ApiError(data.error ?? `HTTP ${res.status}`);
   return data as T;
 }
+const get = <T>(path: string) => call<T>('GET', path);
+const post = <T>(path: string, json?: unknown) => call<T>('POST', path, json);
+const del = <T>(path: string) => call<T>('DELETE', path);
+
+/** `?a=1&b=2` from the params that are set (null and undefined are left out; '' is sent), or '' when none are. */
+function qs(params: Record<string, string | number | null | undefined>): string {
+  const set = Object.entries(params).flatMap(([k, v]) => (v === null || v === undefined ? [] : [[k, String(v)]]));
+  return set.length ? `?${new URLSearchParams(set)}` : '';
+}
 
 export const api = {
-  status: () => call<Status>('/api/status'),
-  pause: () => call<Status>('/api/pause', { method: 'POST' }),
-  resume: () => call<Status>('/api/resume', { method: 'POST' }),
+  // ---- The daemon and its settings
+  status: () => get<Status>('/api/status'),
+  pause: () => post<Status>('/api/pause'),
+  resume: () => post<Status>('/api/resume'),
   /** Exit once nothing is running so launchd starts the daemon on the new code. `waiting` says what it waits for. */
-  restartDaemon: () => call<RestartResult>('/api/daemon/restart', { method: 'POST' }),
+  restartDaemon: () => post<RestartResult>('/api/daemon/restart'),
   /** Restart at once: the running tasks lose their run and are requeued. */
-  restartDaemonNow: () => call<RestartNowResult>('/api/daemon/restart-now', { method: 'POST' }),
-  daemonState: () => call<DaemonState>('/api/daemon'),
+  restartDaemonNow: () => post<RestartNowResult>('/api/daemon/restart-now'),
+  daemonState: () => get<DaemonState>('/api/daemon'),
   /** `agentdeck doctor`, the checkout's HEAD, what is running and the last lines of the daemon log. */
-  daemonHealth: () => call<DaemonHealth>('/api/daemon/health'),
-  settings: () => call<Settings>('/api/settings'),
-  updateSettings: (patch: SettingsPatch) => call<Settings>('/api/settings', { method: 'POST', json: patch }),
-  testNotify: () => call<TestNotifyResult>('/api/notify/test', { method: 'POST' }),
+  daemonHealth: () => get<DaemonHealth>('/api/daemon/health'),
+  service: () => get<ServiceStatus>('/api/service'),
+  settings: () => get<Settings>('/api/settings'),
+  updateSettings: (patch: SettingsPatch) => post<Settings>('/api/settings', patch),
+  testNotify: () => post<TestNotifyResult>('/api/notify/test'),
   /** The scorecard per week (what `agentdeck stats --by week --json` prints), for one repo name or all. */
-  stats: (repo: string | null) => call<Stats>(`/api/stats?by=week${repo ? `&repo=${encodeURIComponent(repo)}` : ''}`),
-  repos: () => call<Repo[]>('/api/repos'),
-  addRepo: (r: NewRepo) => call<Repo>('/api/repos', { method: 'POST', json: r }),
-  repo: (id: number) => call<RepoDetail>(`/api/repos/${id}`),
-  updateRepo: (id: number, patch: RepoPatch) => call<RepoDetail>(`/api/repos/${id}`, { method: 'POST', json: patch }),
-  propose: (id: number) => call<ProposalResult>(`/api/repos/${id}/propose`, { method: 'POST' }),
-  doctor: (id: number) => call<DoctorReport>(`/api/repos/${id}/doctor`, { method: 'POST' }),
-  resumeRepo: (id: number) => call<Repo>(`/api/repos/${id}/resume`, { method: 'POST' }),
-  archivedRepos: () => call<Repo[]>('/api/repos?archived=1'),
-  archiveRepo: (id: number) => call<Repo>(`/api/repos/${id}/archive`, { method: 'POST' }),
-  unarchiveRepo: (id: number) => call<Repo>(`/api/repos/${id}/unarchive`, { method: 'POST' }),
-  repoDeletion: (id: number) => call<RepoDeletion>(`/api/repos/${id}/deletion`),
+  stats: (repo: string | null) => get<Stats>(`/api/stats${qs({ by: 'week', repo })}`),
+
+  // ---- Repos
+  repos: () => get<Repo[]>('/api/repos'),
+  archivedRepos: () => get<Repo[]>('/api/repos?archived=1'),
+  addRepo: (r: NewRepo) => post<Repo>('/api/repos', r),
+  repo: (id: number) => get<RepoDetail>(`/api/repos/${id}`),
+  updateRepo: (id: number, patch: RepoPatch) => post<RepoDetail>(`/api/repos/${id}`, patch),
+  propose: (id: number) => post<ProposalResult>(`/api/repos/${id}/propose`),
+  doctor: (id: number) => post<DoctorReport>(`/api/repos/${id}/doctor`),
+  resumeRepo: (id: number) => post<Repo>(`/api/repos/${id}/resume`),
+  archiveRepo: (id: number) => post<Repo>(`/api/repos/${id}/archive`),
+  unarchiveRepo: (id: number) => post<Repo>(`/api/repos/${id}/unarchive`),
+  repoDeletion: (id: number) => get<RepoDeletion>(`/api/repos/${id}/deletion`),
   /** Local only: `leftover` names files that couldn't be removed. */
-  deleteRepo: (id: number) => call<RepoDeleted>(`/api/repos/${id}`, { method: 'DELETE' }),
-  editTask: (id: number, patch: TaskPatch) => call<TaskSaved>(`/api/tasks/${id}`, { method: 'POST', json: patch }),
-  approve: (id: number) => call<TaskDetail>(`/api/tasks/${id}/approve`, { method: 'POST' }),
-  reject: (id: number) => call<TaskDetail>(`/api/tasks/${id}/reject`, { method: 'POST' }),
-  service: () => call<ServiceStatus>('/api/service'),
-  tasks: () => call<TaskSummary[]>('/api/tasks'),
-  task: (id: number) => call<TaskDetail>(`/api/tasks/${id}`),
-  addTask: (t: NewTaskInput) => call<TaskSaved>('/api/tasks', { method: 'POST', json: brandNewTask(t) }),
+  deleteRepo: (id: number) => del<RepoDeleted>(`/api/repos/${id}`),
+
+  // ---- Tasks
+  tasks: () => get<TaskSummary[]>('/api/tasks'),
+  task: (id: number) => get<TaskDetail>(`/api/tasks/${id}`),
+  addTask: (t: NewTaskInput) => post<TaskSaved>('/api/tasks', brandNewTask(t)),
+  editTask: (id: number, patch: TaskPatch) => post<TaskSaved>(`/api/tasks/${id}`, patch),
+  approve: (id: number) => post<TaskDetail>(`/api/tasks/${id}/approve`),
+  reject: (id: number) => post<TaskDetail>(`/api/tasks/${id}/reject`),
+  cancel: (id: number) => post<CancelResult>(`/api/tasks/${id}/cancel`),
+  /** `note` is "request changes": kept on the timeline and put first in the next run's prompt. */
+  retry: (id: number, note?: string) => post<TaskDetail>(`/api/tasks/${id}/retry`, { note } satisfies RetryRequest),
+  /** A person finished a blocked or failed task themselves; `note` is kept on the timeline. */
+  markDone: (id: number, note?: string) => post<TaskDetail>(`/api/tasks/${id}/done`, { note } satisfies MarkDoneRequest),
+  /** Install the packages a blocked task asked for (NEEDS deps) on its branch, then retry it. */
+  installNeeds: (id: number) => post<TaskDetail>(`/api/tasks/${id}/install-needs`),
   /** Link the task to another; refused (a cycle, itself, already linked) with the reason as the error. */
   linkTask: (id: number, link: Omit<NewLink, 'on'> & { on: number }) =>
-    call<TaskDetail>(`/api/tasks/${id}/links`, { method: 'POST', json: { ...link, on: asTaskId(link.on) } satisfies NewLink }),
-  unlinkTask: (id: number, on: number) => call<TaskDetail>(`/api/tasks/${id}/links/${on}`, { method: 'DELETE' }),
-  cancel: (id: number) => call<CancelResult>(`/api/tasks/${id}/cancel`, { method: 'POST' }),
-  /** `note` is "request changes": kept on the timeline and put first in the next run's prompt. */
-  retry: (id: number, note?: string) =>
-    call<TaskDetail>(`/api/tasks/${id}/retry`, { method: 'POST', json: (note ? { note } : {}) satisfies RetryRequest }),
-  /** A person finished a blocked or failed task themselves; `note` is kept on the timeline. */
-  markDone: (id: number, note?: string) =>
-    call<TaskDetail>(`/api/tasks/${id}/done`, { method: 'POST', json: (note ? { note } : {}) satisfies MarkDoneRequest }),
-  /** Install the packages a blocked task asked for (NEEDS deps) on its branch, then retry it. */
-  installNeeds: (id: number) => call<TaskDetail>(`/api/tasks/${id}/install-needs`, { method: 'POST' }),
+    post<TaskDetail>(`/api/tasks/${id}/links`, { ...link, on: asTaskId(link.on) } satisfies NewLink),
+  unlinkTask: (id: number, on: number) => del<TaskDetail>(`/api/tasks/${id}/links/${on}`),
+  /** Merge the base branch into the task's branch; a conflict starts a claude run, so this can take minutes. */
+  sync: (id: number) => post<SyncResult>(`/api/tasks/${id}/sync`),
+  /** Start a verify run on a proposed or queued task; the answer is at once, and the run's row says how it goes. */
+  verify: (id: number) => post<VerifyResult>(`/api/tasks/${id}/verify`),
+  /** How stale a proposed or queued task is, its named paths not on the base, and the open tasks touching the same files. */
+  proposalCheck: (id: number) => get<ProposalCheck>(`/api/tasks/${id}/proposal-check`),
+  planHtml: (id: number, planId: number) => get<PlanHtml>(`/api/tasks/${id}/plans/${planId}`),
+  logUrl: (id: number, runId?: number) => `${API_BASE}/api/tasks/${id}/log${qs({ run: runId || null })}`,
+
+  // ---- Pull requests and merging
   /** Push a done task's branch and open its PR (one that failed to open, or was closed); refused with the reason as the error. */
-  openPr: (id: number) => call<OpenPrResult>(`/api/tasks/${id}/open-pr`, { method: 'POST' }),
-  closePr: (id: number) => call<TaskDetail>(`/api/tasks/${id}/close-pr`, { method: 'POST' }),
+  openPr: (id: number) => post<OpenPrResult>(`/api/tasks/${id}/open-pr`),
+  closePr: (id: number) => post<TaskDetail>(`/api/tasks/${id}/close-pr`),
   /** Retry the task with its PR's failing checks, and their logs, in the note; refused with the reason as the error. */
-  fixChecks: (id: number) => call<FixChecksResult>(`/api/tasks/${id}/fix-checks`, { method: 'POST' }),
-  mergePreview: (id: number) => call<MergePreview>(`/api/tasks/${id}/merge`),
-  merge: (id: number, body: MergeRequest) => call<MergeResult>(`/api/tasks/${id}/merge`, { method: 'POST', json: body }),
-  /** Merge these tasks' PRs, each with its own method, deleting the branches; the ones left open come back with why. */
+  fixChecks: (id: number) => post<FixChecksResult>(`/api/tasks/${id}/fix-checks`),
+  mergePreview: (id: number) => get<MergePreview>(`/api/tasks/${id}/merge`),
+  merge: (id: number, body: MergeRequest) => post<MergeResult>(`/api/tasks/${id}/merge`, body),
   /** Ask the daemon to merge the task's PR once it is ready; the answer is at once. */
-  requestMerge: (id: number, body: RequestMergeRequest = {}) =>
-    call<RequestMergeResult>(`/api/tasks/${id}/merge-request`, { method: 'POST', json: body }),
+  requestMerge: (id: number, body: RequestMergeRequest = {}) => post<RequestMergeResult>(`/api/tasks/${id}/merge-request`, body),
   /** Request these tasks' merges, each with its own method; the ones it could not request come back with why. */
   requestMerges: (ids: number[]) =>
-    call<RequestMergesResult>('/api/tasks/merge-requests', {
-      method: 'POST',
-      json: { ids: ids.map(asTaskId) } satisfies RequestMergesRequest,
-    }),
+    post<RequestMergesResult>('/api/tasks/merge-requests', { ids: ids.map(asTaskId) } satisfies RequestMergesRequest),
   /** Drop the task's merge request; the PR stays open. */
-  cancelMergeRequest: (id: number) => call<CancelMergeRequestResult>(`/api/tasks/${id}/merge-request`, { method: 'DELETE' }),
+  cancelMergeRequest: (id: number) => del<CancelMergeRequestResult>(`/api/tasks/${id}/merge-request`),
   /** Let the daemon merge the task's PR on its own (true), not (false), or follow the repo (null). */
-  autoMerge: (id: number, body: AutoMergeRequest) => call<AutoMergeResult>(`/api/tasks/${id}/auto-merge`, { method: 'POST', json: body }),
-  /** Merge the base branch into the task's branch; a conflict starts a claude run, so this can take minutes. */
-  sync: (id: number) => call<SyncResult>(`/api/tasks/${id}/sync`, { method: 'POST' }),
-  /** Start a verify run on a proposed or queued task; the answer is at once, and the run's row says how it goes. */
-  verify: (id: number) => call<VerifyResult>(`/api/tasks/${id}/verify`, { method: 'POST' }),
+  autoMerge: (id: number, body: AutoMergeRequest) => post<AutoMergeResult>(`/api/tasks/${id}/auto-merge`, body),
+
+  // ---- Changes and files
   /** The task's changes against the base, or since a commit on its branch (one of `since_points`). */
-  changes: (id: number, since: string | null = null) => call<Changes>(`/api/tasks/${id}/changes${since ? `?since=${since}` : ''}`),
-  diff: (id: number, path: string, since: string | null = null) =>
-    call<FilePatch>(`/api/tasks/${id}/diff?path=${encodeURIComponent(path)}${since ? `&since=${since}` : ''}`),
-  /** How stale a proposed or queued task is, its named paths not on the base, and the open tasks touching the same files. */
-  proposalCheck: (id: number) => call<ProposalCheck>(`/api/tasks/${id}/proposal-check`),
-  tree: (id: number, ref: FileRef, path = '') => call<TreeListing>(`/api/tasks/${id}/tree?ref=${ref}&path=${encodeURIComponent(path)}`),
-  file: (id: number, ref: FileRef, path: string) => call<FileContent>(`/api/tasks/${id}/file?ref=${ref}&path=${encodeURIComponent(path)}`),
-  reviews: (id: number) => call<Review[]>(`/api/tasks/${id}/reviews`),
+  changes: (id: number, since: string | null = null) => get<Changes>(`/api/tasks/${id}/changes${qs({ since })}`),
+  diff: (id: number, path: string, since: string | null = null) => get<FilePatch>(`/api/tasks/${id}/diff${qs({ path, since })}`),
+  tree: (id: number, ref: FileRef, path = '') => get<TreeListing>(`/api/tasks/${id}/tree${qs({ ref, path })}`),
+  file: (id: number, ref: FileRef, path: string) => get<FileContent>(`/api/tasks/${id}/file${qs({ ref, path })}`),
+
+  // ---- Reviews
+  reviews: (id: number) => get<Review[]>(`/api/tasks/${id}/reviews`),
   /** The task's draft review, started if it has none. */
-  startReview: (id: number) => call<Review>(`/api/tasks/${id}/reviews`, { method: 'POST' }),
+  startReview: (id: number) => post<Review>(`/api/tasks/${id}/reviews`),
   /** Change a draft's overall note. */
-  editReview: (id: number, body: string) => call<Review>(`/api/reviews/${id}`, { method: 'POST', json: { body } satisfies ReviewPatch }),
-  addComment: (reviewId: number, c: NewReviewComment) => call<Review>(`/api/reviews/${reviewId}/comments`, { method: 'POST', json: c }),
-  deleteComment: (id: number) => call<Review>(`/api/review-comments/${id}`, { method: 'DELETE' }),
+  editReview: (id: number, body: string) => post<Review>(`/api/reviews/${id}`, { body } satisfies ReviewPatch),
+  addComment: (reviewId: number, c: NewReviewComment) => post<Review>(`/api/reviews/${reviewId}/comments`, c),
+  deleteComment: (id: number) => del<Review>(`/api/review-comments/${id}`),
   /** Request changes also retries the task with the review as the reason. */
-  submitReview: (id: number, body: SubmitReview) => call<Review>(`/api/reviews/${id}/submit`, { method: 'POST', json: body }),
-  resolveComment: (id: number) => call<Review>(`/api/review-comments/${id}/resolve`, { method: 'POST' }),
-  reopenComment: (id: number) => call<Review>(`/api/review-comments/${id}/reopen`, { method: 'POST' }),
-  planHtml: (id: number, planId: number) => call<PlanHtml>(`/api/tasks/${id}/plans/${planId}`),
-  logUrl: (id: number, runId?: number) => `${API_BASE}/api/tasks/${id}/log${runId ? `?run=${runId}` : ''}`,
+  submitReview: (id: number, body: SubmitReview) => post<Review>(`/api/reviews/${id}/submit`, body),
+  resolveComment: (id: number) => post<Review>(`/api/review-comments/${id}/resolve`),
+  reopenComment: (id: number) => post<Review>(`/api/review-comments/${id}/reopen`),
 };
 
 /** The call behind each thing a person may do to a task, for the row buttons, the hotkeys, the palette and the bulk bar. */
