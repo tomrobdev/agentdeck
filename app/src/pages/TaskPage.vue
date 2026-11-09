@@ -11,6 +11,7 @@ import { useHotkeys } from '../composables/shared/useHotkeys';
 import { type TaskTab, go, openTask } from '../router';
 import { readNeeds, readTaskQuestion } from '../lib/work/task-view';
 import { useActions } from '../composables/shared/useActions';
+import { openPanel } from '../composables/shared/useShell';
 import { useChanges } from '../composables/work/files/useChanges';
 import { useReviews } from '../composables/landing/useReviews';
 import SnippetPopover from '../components/work/files/SnippetPopover.vue';
@@ -32,7 +33,7 @@ import TaskTitle from '../components/work/task/TaskTitle.vue';
 
 // A task laid out like a pull request: header, tabs, and a properties sidebar.
 const props = defineProps<{ task: TaskDetail; tab: TaskTab; query: Record<string, string> }>();
-const emit = defineEmits<{ act: [kind: 'approve' | 'reject' | 'retry' | 'cancel']; newTask: [] }>();
+const emit = defineEmits<{ act: [kind: 'approve' | 'reject' | 'retry' | 'cancel'] }>();
 const { run } = useActions();
 
 const pageEl = ref<HTMLElement | null>(null);
@@ -72,7 +73,7 @@ const question = computed(() => readTaskQuestion(props.task));
 const edits = useEditKeys('task', () => props.task.id);
 useHotkeys({
   Escape: { label: 'Back to the queue', scope: 'task', run: () => go({ name: 'queue' }) },
-  c: { label: 'New task', scope: 'task', run: () => emit('newTask') },
+  c: { label: 'New task', scope: 'task', run: () => openPanel('new') },
   ...edits.keys,
 });
 

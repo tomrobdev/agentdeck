@@ -10,13 +10,14 @@ import { useActivity } from '../../composables/operations/useActivity';
 import { type ActivityItem, KIND_LABEL } from '../../lib/operations/activity';
 import { useAction } from '../../composables/shared/useActions';
 import { openTask } from '../../router';
+import { openPanel } from '../../composables/shared/useShell';
 import Chip from '../ui/Chip.vue';
 import Popover from '../ui/Popover.vue';
 import Progress from '../ui/status/Progress.vue';
 import Tooltip from '../ui/Tooltip.vue';
 
 const props = defineProps<{ status: Status | null; tasks: TaskSummary[]; offline: boolean; busy: boolean }>();
-defineEmits<{ toggle: []; daemon: [] }>();
+defineEmits<{ toggle: [] }>();
 
 // Everything under way, from the task list and status the window already reads.
 const activity = useActivity(
@@ -146,6 +147,6 @@ const toggleTitle = computed(() => {
       On hold: {{ status.governor.reason }}
     </span>
     <span v-if="reviewDue" class="truncate text-blocked" :title="reviewDue.title">{{ reviewDue.label }}</span>
-    <Chip as="button" variant="tint" size="xs" title="The daemon's health, and restart" @click="$emit('daemon')">Daemon</Chip>
+    <Chip as="button" variant="tint" size="xs" title="The daemon's health, and restart" @click="openPanel('daemon')">Daemon</Chip>
   </footer>
 </template>
