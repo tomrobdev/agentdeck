@@ -5,10 +5,11 @@
 // them. A task opens in the main window (the shell's open_in_dashboard), which hides this one.
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
-import { api, isOffline } from '../../api/client';
+import { isOffline, refreshAll } from '../../api/http';
+import { liveStatusQuery, operationsApi } from '../../api/operations';
+import { tasksQuery } from '../../api/work';
 import { ATTENTION_LABELS, describeState } from '../../lib/operations/daemon-wording';
 import { describeLive } from '../../lib/runs/run-wording';
-import { liveStatusQuery, refreshAll, tasksQuery } from '../../api/queries';
 import type { Status, TaskSummary } from '../../api/types';
 import { createActions, trackPending } from '../../composables/shared/useActions';
 import { useChangeStream } from '../../composables/shared/useChangeStream';
@@ -50,7 +51,7 @@ function act(fn: () => Promise<unknown>) {
   error.value = '';
   void run(fn);
 }
-const toggle = () => act(() => (status.value?.paused ? api.resume() : api.pause()));
+const toggle = () => act(() => (status.value?.paused ? operationsApi.resume() : operationsApi.pause()));
 const start = () => act(startDaemon);
 
 /** Open a page in the main window; in a plain browser (working on this view), in a new tab. */

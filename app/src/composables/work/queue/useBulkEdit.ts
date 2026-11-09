@@ -1,5 +1,6 @@
 // An edit made to several tasks through the same calls as one task's edit: the bar's Edit menu, and the edit keys (p, M, l).
-import { api } from '../../../api/client';
+import { landingApi } from '../../../api/landing';
+import { workApi } from '../../../api/work';
 import type { TaskSummary } from '../../../api/types';
 import { errorMessage } from '../../../../../daemon/src/domain/shared/index.ts';
 import { type BulkEdit, type BulkResult, bulkEditMessage, planBulkEdit } from '../../../lib/work/queue/bulk';
@@ -30,10 +31,10 @@ export function useBulkEdit(run: (fn: () => Promise<unknown>) => Promise<unknown
     await run(async () => {
       for (const id of allowed) {
         try {
-          if (edit === 'priority') await api.editTask(id, { priority: value as number });
-          else if (edit === 'model') await api.editTask(id, { model: value as string });
-          else if (edit === 'auto_merge') await api.autoMerge(id, { auto_merge: value as boolean | null });
-          else await api.linkTask(id, { on: on!, kind: edit });
+          if (edit === 'priority') await workApi.editTask(id, { priority: value as number });
+          else if (edit === 'model') await workApi.editTask(id, { model: value as string });
+          else if (edit === 'auto_merge') await landingApi.autoMerge(id, { auto_merge: value as boolean | null });
+          else await workApi.linkTask(id, { on: on!, kind: edit });
           results.push({ id });
         } catch (e) {
           results.push({ id, error: errorMessage(e) });

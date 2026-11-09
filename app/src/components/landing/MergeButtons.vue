@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { api } from '../../api/client';
+import { landingApi } from '../../api/landing';
 import type { TaskSummary } from '../../api/types';
 import { useActions } from '../../composables/shared/useActions';
 import { canStartMerge, isReview } from '../../../../daemon/src/domain/work/index.ts';
@@ -10,7 +10,7 @@ const props = defineProps<{ task: TaskSummary; sync?: boolean }>();
 const emit = defineEmits<{ merge: [id: number]; sync: [id: number] }>();
 
 const { run } = useActions();
-const cancelMerge = () => run(() => api.cancelMergeRequest(props.task.id));
+const cancelMerge = () => run(() => landingApi.cancelMergeRequest(props.task.id));
 </script>
 
 <template>

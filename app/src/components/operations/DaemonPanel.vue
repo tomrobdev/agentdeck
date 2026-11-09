@@ -3,10 +3,10 @@
 // pending or blocked, the failing checks of `agentdeck doctor` with their fix, its warnings, and the end of the log.
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { api, isOffline } from '../../api/client';
+import { isOffline } from '../../api/http';
+import { daemonHealthQuery, daemonQuery, operationsApi } from '../../api/operations';
 import { uptime } from '../../lib/shared/time';
 import { taskList } from '../../lib/work/work-wording';
-import { daemonHealthQuery, daemonQuery } from '../../api/queries';
 import { useAction } from '../../composables/shared/useActions';
 import ConfirmDialog from '../ui/ConfirmDialog.vue';
 import Modal from '../ui/Modal.vue';
@@ -66,7 +66,7 @@ const warnings = computed(() => (health.value?.checks ?? []).filter((c) => c.ok 
 
 async function restartWhenIdle() {
   await run(async () => {
-    await api.restartDaemon();
+    await operationsApi.restartDaemon();
     asked.value = true;
   });
 }
@@ -80,7 +80,7 @@ function askRestartNow() {
 async function restartNow() {
   confirming.value = false;
   await run(async () => {
-    requeued.value = (await api.restartDaemonNow()).requeued;
+    requeued.value = (await operationsApi.restartDaemonNow()).requeued;
   });
 }
 

@@ -1,7 +1,7 @@
 // "Merge and open next": the next task in review, in the queue's order as the stored display and filters make it.
 import { useQuery } from '@tanstack/vue-query';
 import { computed } from 'vue';
-import { tasksQuery } from '../../../api/queries';
+import { tasksQuery } from '../../../api/work';
 import { type Display, boardGroups, normalizeDisplay, rowOrder } from '../../../lib/work/queue/queue-display';
 import { nextInReview } from '../../../lib/work/queue/review-nav';
 import { loadSetting } from '../../../lib/shared/storage';

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { api } from '../../../api/client';
+import { landingApi } from '../../../api/landing';
 import type { TaskSummary } from '../../../api/types';
 import { useAction } from '../../../composables/shared/useActions';
 import { type StatusLine, TONE_TEXT, statusLine } from '../../../lib/work/task-badges';
@@ -22,7 +22,7 @@ const l = computed(() => {
   return found && !props.hide.includes(found.kind) ? found : null;
 });
 const FIT = { line: 'truncate', two: 'line-clamp-2', full: 'wrap-anywhere' };
-const cancelMerge = () => run(() => api.cancelMergeRequest(props.task.id));
+const cancelMerge = () => run(() => landingApi.cancelMergeRequest(props.task.id));
 </script>
 
 <template>

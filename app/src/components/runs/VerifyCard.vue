@@ -3,8 +3,8 @@ import { computed } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { CHECKED_STATUSES } from '../../../../daemon/src/domain/work/index.ts';
 import { latestVerify } from '../../../../daemon/src/domain/runs/index.ts';
-import { api } from '../../api/client';
-import { proposalCheckQuery } from '../../api/queries';
+import { runsApi } from '../../api/runs';
+import { proposalCheckQuery } from '../../api/work';
 import type { TaskDetail } from '../../api/types';
 import { useAction } from '../../composables/shared/useActions';
 import VerifyFindings from './VerifyFindings.vue';
@@ -21,7 +21,7 @@ const q = useQuery(computed(() => ({ ...proposalCheckQuery(props.task.id), enabl
 const view = computed(() => latestVerify(props.task.runs, q.data.value?.staleness?.base ?? null));
 const going = computed(() => view.value?.state === 'going');
 
-const verify = () => run(() => api.verify(props.task.id), { done: `Verify run started on #${props.task.id}` });
+const verify = () => run(() => runsApi.verify(props.task.id), { done: `Verify run started on #${props.task.id}` });
 </script>
 
 <template>

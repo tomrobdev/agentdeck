@@ -3,8 +3,7 @@
 import { type InjectionKey, inject, provide, ref } from 'vue';
 import type { QueryClient } from '@tanstack/vue-query';
 import { errorMessage } from '../../../../daemon/src/domain/shared/index.ts';
-import { PERSON_CALLS } from '../../api/client';
-import { proposalCheckQuery } from '../../api/queries';
+import { PERSON_CALLS, proposalCheckQuery } from '../../api/work';
 import {
   type ApproveDialogSetting,
   type ApproveItem,

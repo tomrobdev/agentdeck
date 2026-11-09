@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { api } from '../../api/client';
+import { reposApi } from '../../api/repos';
 import type { Repo } from '../../api/types';
 import { useActions } from '../../composables/shared/useActions';
 import { isNative, pickFolder } from '../../platform/native';
@@ -24,7 +24,7 @@ async function add() {
   saving.value = true;
   let repo: Repo | undefined;
   const ok = await run(async () => {
-    repo = await api.addRepo({ path: path.value.trim(), name: name.value.trim() || undefined, test: test.value.trim() || undefined });
+    repo = await reposApi.addRepo({ path: path.value.trim(), name: name.value.trim() || undefined, test: test.value.trim() || undefined });
   });
   saving.value = false;
   if (!ok || !repo) return;

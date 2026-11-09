@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
-import { api } from '../../api/client';
-import { archivedReposQuery, repoDeletionQuery, repoQuery } from '../../api/queries';
+import { archivedReposQuery, repoDeletionQuery, repoQuery, reposApi } from '../../api/repos';
 import type { Repo, RepoDeletion } from '../../api/types';
 import { useActions } from '../../composables/shared/useActions';
 import { errorMessage, plural } from '../../../../daemon/src/domain/shared/index.ts';
@@ -23,7 +22,7 @@ const deleteBusy = ref(false);
 async function unarchive(r: Repo) {
   actionError.value = '';
   await run(async () => {
-    await api.unarchiveRepo(r.id);
+    await reposApi.unarchiveRepo(r.id);
     if (deleting.value?.repo.id === r.id) deleting.value = null;
   });
 }
@@ -44,7 +43,7 @@ async function confirmDelete() {
   if (!d || typed.value !== d.repo.name) return;
   deleteBusy.value = true;
   const ok = await run(async () => {
-    const res = await api.deleteRepo(d.repo.id);
+    const res = await reposApi.deleteRepo(d.repo.id);
     deleting.value = null;
     if (res.leftover.length) actionError.value = `Deleted ${res.repo}, but couldn't remove: ${res.leftover.join('; ')}`;
   });

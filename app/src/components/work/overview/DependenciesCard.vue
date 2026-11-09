@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { api } from '../../../api/client';
-import { tasksQuery } from '../../../api/queries';
+import { tasksQuery, workApi } from '../../../api/work';
 import type { LinkKind, TaskDetail, TaskLink, TaskSummary } from '../../../api/types';
 import { errorMessage } from '../../../../../daemon/src/domain/shared/index.ts';
 import { openTask } from '../../../router';
@@ -80,7 +79,7 @@ function startAdding() {
 async function add(on: number) {
   error.value = null;
   try {
-    await api.linkTask(props.task.id, { on, kind: kind.value });
+    await workApi.linkTask(props.task.id, { on, kind: kind.value });
   } catch (e) {
     error.value = errorMessage(e);
     return;
@@ -100,7 +99,7 @@ function submit() {
 async function remove(on: number) {
   error.value = null;
   try {
-    await api.unlinkTask(props.task.id, on);
+    await workApi.unlinkTask(props.task.id, on);
   } catch (e) {
     error.value = errorMessage(e);
     return;

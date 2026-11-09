@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { api } from '../../api/client';
+import { landingApi, mergePreviewQuery } from '../../api/landing';
 import { autoMergeLine } from '../../lib/landing/landing-wording';
-import { mergePreviewQuery } from '../../api/queries';
 import { type MergeMethod, type MergeResult, MERGE_METHODS } from '../../api/types';
 import { errorMessage, plural } from '../../../../daemon/src/domain/shared/index.ts';
 import { useActions } from '../../composables/shared/useActions';
@@ -69,10 +68,10 @@ async function merge(openNext = false) {
   mergeError.value = '';
   try {
     if (mergeNow.value) {
-      emit('merged', await api.merge(props.taskId, { method: method.value, delete_branch: true }), openNext);
+      emit('merged', await landingApi.merge(props.taskId, { method: method.value, delete_branch: true }), openNext);
       return;
     }
-    await api.requestMerge(props.taskId, { method: method.value });
+    await landingApi.requestMerge(props.taskId, { method: method.value });
     await refresh();
     emit('requested', openNext);
   } catch (e) {

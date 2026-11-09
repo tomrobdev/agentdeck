@@ -2,9 +2,8 @@
 import { computed, ref } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { CHECKED_STATUSES, proposalCheckLine } from '../../../../../daemon/src/domain/work/index.ts';
-import { api } from '../../../api/client';
+import { proposalCheckQuery, workApi } from '../../../api/work';
 import { ago } from '../../../lib/shared/time';
-import { proposalCheckQuery } from '../../../api/queries';
 import type { TaskStatus } from '../../../api/types';
 import { openTask } from '../../../router';
 import { statusLabel } from '../../../lib/work/task-view';
@@ -23,7 +22,7 @@ const line = computed(() => (check.value ? proposalCheckLine(check.value) : null
 const open = ref(false);
 
 const addAfter = (on: number) =>
-  run(() => api.linkTask(props.task.id, { on, kind: 'after' }), { done: `#${props.task.id} now lands after #${on}` });
+  run(() => workApi.linkTask(props.task.id, { on, kind: 'after' }), { done: `#${props.task.id} now lands after #${on}` });
 
 const row = 'flex min-w-0 flex-wrap items-baseline gap-x-2 px-3.5 py-1';
 const heading = 'px-3.5 pt-2 pb-0.5 text-sm text-muted';

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { taskQuery, tasksQuery } from '../../../api/queries';
+import { taskQuery, tasksQuery } from '../../../api/work';
 import { editRefusal } from '../../../lib/work/queue/bulk';
 import { MODELS } from '../../../../../daemon/src/domain/work/index.ts';
 import { useActions } from '../../../composables/shared/useActions';

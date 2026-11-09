@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { api } from '../../../api/client';
+import { runsApi } from '../../../api/runs';
 import { syncLine } from '../../../lib/landing/landing-wording';
 import type { TaskSummary } from '../../../api/types';
 import { useActions } from '../../../composables/shared/useActions';
@@ -70,7 +70,7 @@ async function sync(id: number) {
   if (props.tasks.find((t) => t.id === id)?.sync) return;
   let done = '';
   const ok = await run(async () => {
-    const r = await api.sync(id);
+    const r = await runsApi.sync(id);
     done = `#${id}: ${syncLine(r)}${r.push_error ? ` Could not push: ${r.push_error}` : ''}`;
   });
   if (ok) flash(done);

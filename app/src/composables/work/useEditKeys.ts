@@ -3,8 +3,7 @@
 // one task's: with several picked it says so. The dialog for `e`, `M` and `l` is components/work/task/EditKeyDialog.vue.
 import { computed, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { api } from '../../api/client';
-import { tasksQuery } from '../../api/queries';
+import { tasksQuery, workApi } from '../../api/work';
 import type { TaskSummary } from '../../api/types';
 import { type BulkEdit } from '../../lib/work/queue/bulk';
 import { type EditRequest, PRIORITY_KEYS } from '../../lib/shared/hotkeys';
@@ -49,7 +48,7 @@ export function useEditKeys(scope: 'queue' | 'task', current: () => number | nul
   }
   const setModel = (model: string) => edit(targets.value, 'model', model, model, undefined, fromPicks());
   const setLink = (kind: Extract<BulkEdit, 'builds_on' | 'after'>, on: number) => edit(targets.value, kind, null, '', on, fromPicks());
-  const savePrompt = (id: number, prompt: string) => run(() => api.editTask(id, { prompt }));
+  const savePrompt = (id: number, prompt: string) => run(() => workApi.editTask(id, { prompt }));
 
   // The palette asks for an edit; apply it when it arrives (also when this mounts after the palette sent it, as on a page change).
   watch(

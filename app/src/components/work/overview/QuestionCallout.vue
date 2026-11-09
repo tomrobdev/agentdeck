@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { api } from '../../../api/client';
+import { workApi } from '../../../api/work';
 import type { TaskDetail } from '../../../api/types';
 import type { UnblockQuestion } from '../../../../../daemon/src/domain/work/index.ts';
 import { answerNote } from '../../../lib/work/task-view';
@@ -13,7 +13,7 @@ const { pending, run } = useAction();
 const other = ref(false);
 const note = ref('');
 
-const answer = (text: string) => run(() => api.retry(props.task.id, text));
+const answer = (text: string) => run(() => workApi.retry(props.task.id, text));
 </script>
 
 <template>

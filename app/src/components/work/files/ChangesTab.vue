@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, nextTick, reactive, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { api } from '../../../api/client';
+import { landingApi } from '../../../api/landing';
 import { ago } from '../../../lib/shared/time';
-import { changesSinceQuery } from '../../../api/queries';
+import { changesSinceQuery } from '../../../api/work';
 import type { ChangedFile, Changes, NewReviewComment, TaskDetail } from '../../../api/types';
 import { plural } from '../../../../../daemon/src/domain/shared/index.ts';
 import { useActions } from '../../../composables/shared/useActions';
@@ -60,8 +60,8 @@ function addComment(path: string, line: Pick<NewReviewComment, 'side' | 'line'>,
   return run(async () => {
     if (since.value && line.side === 'old')
       throw new Error(`Comment on a removed line in the changes against ${shown.value?.base_ref ?? 'the base'}`);
-    const review = await api.startReview(props.task.id);
-    await api.addComment(review.id, { path, ...line, head_commit: head, body });
+    const review = await landingApi.startReview(props.task.id);
+    await landingApi.addComment(review.id, { path, ...line, head_commit: head, body });
   });
 }
 

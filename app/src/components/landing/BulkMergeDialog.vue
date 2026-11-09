@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { api } from '../../api/client';
+import { landingApi } from '../../api/landing';
 import type { RequestMergesResult, TaskSummary } from '../../api/types';
 import { errorMessage, plural } from '../../../../daemon/src/domain/shared/index.ts';
 import { useActions } from '../../composables/shared/useActions';
@@ -24,7 +24,7 @@ async function start() {
   running.value = true;
   error.value = '';
   try {
-    const res = await api.requestMerges(props.tasks.map((t) => t.id));
+    const res = await landingApi.requestMerges(props.tasks.map((t) => t.id));
     await refresh();
     if (!res.failed.length) return emit('done', res.requested);
     result.value = res;

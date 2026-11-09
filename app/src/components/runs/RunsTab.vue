@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/vue-query';
 import { computed } from 'vue';
 import { MODEL_LABELS, runHint, runLabel } from '../../lib/runs/run-wording';
 import { ago, runDuration } from '../../lib/shared/time';
-import { reposQuery } from '../../api/queries';
+import { reposQuery } from '../../api/repos';
 import type { TaskDetail } from '../../api/types';
 import { liveSource } from '../../lib/runs/run-live';
 import { RUN_KIND_ICONS, runCost } from '../../lib/runs/run-row';

@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { type PersonEvent, planProgress, promptGoal } from '../../../../../daemon/src/domain/work/index.ts';
 import { describeWait } from '../../../lib/work/work-wording';
-import { taskQuery } from '../../../api/queries';
+import { taskQuery } from '../../../api/work';
 import type { PlanStep } from '../../../api/types';
 import { linkParts, modelLine, neededBy, ownSteps, peekActions, peekProps } from '../../../lib/work/queue/peek';
 import { readNeeds, readTaskQuestion } from '../../../lib/work/task-view';

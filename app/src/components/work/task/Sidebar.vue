@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick } from 'vue';
-import { api } from '../../../api/client';
+import { landingApi } from '../../../api/landing';
+import { workApi } from '../../../api/work';
 import { ago } from '../../../lib/shared/time';
 import type { TaskDetail } from '../../../api/types';
 import AutoMergeMark from '../../ui/status/AutoMergeMark.vue';
@@ -46,7 +47,7 @@ async function save(field: 'priority' | 'model' | 'max_turns', text: string) {
   if (value === String(props.task[field])) return;
   // An empty field would be sent as 0 (Number('') is 0): refuse it, and the saved value shows again.
   if (!value) return flash(`${FIELD_NAMES[field]} can't be empty.`);
-  await run(() => api.editTask(props.task.id, { [field]: field === 'model' ? value : Number(value) }));
+  await run(() => workApi.editTask(props.task.id, { [field]: field === 'model' ? value : Number(value) }));
 }
 
 // Auto-merge: the task's own setting, or its repo's. Moot once the PR is merged or closed, or the task cancelled.
@@ -61,7 +62,7 @@ const savedAutoMerge = computed(() => AUTO_MERGE.findIndex((o) => o.stored === p
 async function setAutoMerge(select: HTMLSelectElement) {
   const { value: auto_merge } = AUTO_MERGE[select.selectedIndex];
   await run(async () => {
-    const res = await api.autoMerge(props.task.id, { auto_merge });
+    const res = await landingApi.autoMerge(props.task.id, { auto_merge });
     if (res.label_error) flash(`Saved, but the PR's label could not be changed: ${res.label_error}`);
   });
   await nextTick();

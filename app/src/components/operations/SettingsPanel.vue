@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { api } from '../../api/client';
+import { operationsApi, serviceQuery, settingsQuery } from '../../api/operations';
 import { MODEL_LABELS } from '../../lib/runs/run-wording';
 import { ago } from '../../lib/shared/time';
-import { serviceQuery, settingsQuery } from '../../api/queries';
 import type { NotificationRow, Settings } from '../../api/types';
 import { errorMessage } from '../../../../daemon/src/domain/shared/index.ts';
 import { type SettingsForm, modelChoices, toSettingsForm, toSettingsPatch } from '../../lib/shared/forms';
@@ -87,7 +86,7 @@ async function save(close = true) {
   const patch = toSettingsPatch(form.value);
   error.value = '';
   saving.value = true;
-  const ok = await run(async () => load(await api.updateSettings(patch)));
+  const ok = await run(async () => load(await operationsApi.updateSettings(patch)));
   saving.value = false;
   if (ok && close) emit('close');
   return ok;
@@ -97,7 +96,7 @@ async function test() {
   tested.value = '';
   try {
     if (!(await save(false))) return;
-    await api.testNotify();
+    await operationsApi.testNotify();
     tested.value = 'Sent';
   } catch (e) {
     tested.value = errorMessage(e);
