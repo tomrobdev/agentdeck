@@ -40,6 +40,8 @@ export interface Run {
   output_tokens: number;
   cache_read_tokens: number;
   cache_write_tokens: number;
+  /** What the run would have cost at API prices, in US dollars, from claude's result; 0 until it ends, or with no result. */
+  cost_usd: number;
   tests_passed: number | null;
   result_text: string | null;
   denials: number;

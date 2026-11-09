@@ -18,7 +18,13 @@ test("a task page's run log shows what the run did", async ({ page }) => {
   await open(page, '#/tasks/2/runs');
   await expect(page.getByRole('tab', { name: /Runs/ })).toHaveAttribute('data-state', 'active');
   await expect(page.getByText('greet() now falls back to everyone, and greetAll() greets a list.').first()).toBeVisible();
-  await expect(page.getByText('src/greet.ts').first()).toBeVisible();
+  await expect(page.getByText('src/greet.ts').filter({ visible: true }).first()).toBeVisible();
+
+  // Above the log: what the run was told, and the files its edits touched, each folded until opened.
+  await expect(page.getByTestId('run-prompt').first()).toContainText('What this run was told');
+  const touched = page.locator('details', { hasText: 'Files this run touched' });
+  await touched.locator('summary').click();
+  await expect(touched.getByText('src/greet.ts')).toBeVisible();
 });
 
 test('a running task opens on its live log', async ({ page }) => {

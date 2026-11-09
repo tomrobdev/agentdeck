@@ -120,4 +120,6 @@ export type LogEntry = {
   | { kind: 'setup'; passed: boolean; cmd: string; output: string }
   | { kind: 'tests'; passed: boolean; output: string }
   | { kind: 'error'; text: string }
+  /** What a claude was told (cut at 64 KiB), its lines, whether it resumed a session, and the retry's note it carries. */
+  | { kind: 'prompt'; text: string; lines: number; resume: boolean; note: string | null }
 );

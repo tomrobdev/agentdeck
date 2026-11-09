@@ -62,13 +62,11 @@ async function runOpened(app: App, task: BlockedTask, opened: OpenedRun): Promis
     app.runLog.event(log, { type: 'agentdeck_error', text: `read plan: ${errorMessage(err)}` });
   }
   const lastWork = app.runsForTask(task.id).findLast((r) => r.kind === 'work');
-  const prompt = buildUnblockPrompt(task, {
-    plan,
-    lastMessage: lastWork?.result_text ?? null,
-    reviewNote: latestReviewNote(app.eventsForTask(task.id)),
-  });
+  const note = latestReviewNote(app.eventsForTask(task.id));
+  const prompt = buildUnblockPrompt(task, { plan, lastMessage: lastWork?.result_text ?? null, reviewNote: note });
 
   const ran = await startTaskRun(app, task, {
+    note,
     kind: 'unblock',
     repo,
     worktree: wt.path,

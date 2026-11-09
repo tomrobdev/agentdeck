@@ -114,7 +114,8 @@ export interface ResumeRun {
  * `args` go at the end (a review run's are its own: it reads and answers in a schema). A work or resolve run stops when
  * a person cancels the task; an unblock run, whose task is blocked, stops as soon as the task is anything else (a
  * person retried, cancelled or marked it done). `cancelled` replaces that rule (a review run stops once the task is
- * no longer done).
+ * no longer done). Before each claude starts, its log gets an `agentdeck_prompt` event: what that claude is told, whether
+ * it resumes, and `note`, the retry's note the prompt carries, so a reader need not find the note in the text.
  */
 export async function startTaskRun(
   app: App,
@@ -124,6 +125,8 @@ export async function startTaskRun(
     repo: Repo;
     worktree: string;
     prompt: string;
+    /** The retry's note the prompt carries (`latestReviewNote`), logged beside it; none for a run that carries no note. */
+    note?: string | null;
     opened?: OpenedRun;
     resume?: ResumeRun;
     maxTurns?: number;
@@ -146,8 +149,9 @@ export async function startTaskRun(
     (opts.kind === 'unblock'
       ? () => app.getTask(task.id)?.status !== 'blocked'
       : () => app.getTask(task.id)?.status === 'cancel_requested');
-  const start = (prompt: string, session: string | null, maxTurns = opts.maxTurns ?? task.max_turns): Promise<ClaudeRun> =>
-    app.agent.run({
+  const start = (prompt: string, session: string | null, maxTurns = opts.maxTurns ?? task.max_turns): Promise<ClaudeRun> => {
+    app.runLog.event(log, { type: 'agentdeck_prompt', text: prompt, resume: session !== null, note: opts.note ?? null });
+    return app.agent.run({
       args: claudeArgs(
         { model, max_turns: task.max_turns },
         allowed,
@@ -174,6 +178,7 @@ export async function startTaskRun(
         app.setRunLive(runId, live.turns, live.tool);
       },
     });
+  };
   let run: ClaudeRun;
   if (resume) {
     app.runLog.event(log, { type: 'agentdeck_resume', session_id: resume.session });
