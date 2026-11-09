@@ -17,7 +17,7 @@ const { judgeHealth } = await import('../../src/domain/operations/health.ts');
 const { headline } = await import('../../src/domain/operations/headline.ts');
 const { checkReviewsDue } = await import('../../src/application/operations/review-due.ts');
 const { daemonHealth, getSettings, status, updateSettings } = await import('../../src/application/actions.ts');
-const { daemonCommands } = await import('../../src/cli/daemon.ts');
+const { daemonCommands } = await import('../../src/cli/operations/daemon.ts');
 const { openDb } = await import('../fixtures/open-db.ts');
 const { asRepoId } = await import('../fixtures/fixtures.ts');
 

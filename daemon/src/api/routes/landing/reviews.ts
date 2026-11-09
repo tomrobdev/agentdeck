@@ -1,7 +1,7 @@
 // Reviews: a task's drafts and submitted reviews, their line comments, and answering and resolving them.
-import * as actions from '../../application/actions.ts';
-import type * as C from '../contract.ts';
-import { type ApiContext, type Route, reviewIdParam, route, taskIdParam } from '../http.ts';
+import * as actions from '../../../application/actions.ts';
+import type * as C from '../../contract.ts';
+import { type ApiContext, type Route, reviewIdParam, route, taskIdParam } from '../../http.ts';
 
 export function routes({ db }: ApiContext): Route[] {
   const n = Number; // a comment's id is not branded

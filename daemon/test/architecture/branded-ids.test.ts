@@ -42,7 +42,7 @@ test('[branded-ids] a domain or contract field named …_id or …Id is not type
     (ts.isUnionTypeNode(t) && t.types.some(isNumber)) ||
     (ts.isParenthesizedTypeNode(t) && isNumber(t.type));
   for (const s of readSources(SRC)) {
-    if (!s.path.startsWith('domain/') && s.path !== 'api/contract.ts') continue;
+    if (!s.path.startsWith('domain/') && !s.path.startsWith('api/contract/')) continue;
     const visit = (node: ts.Node): void => {
       if (ts.isPropertySignature(node) && node.type && ts.isIdentifier(node.name) && named.test(node.name.text) && isNumber(node.type)) {
         found.push(

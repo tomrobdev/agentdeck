@@ -27,7 +27,7 @@ const { openPullRequest } = await import('../../../src/application/landing/open-
 const { ActionError, addTask, mergePreview, mergeTask, setAutoMerge, syncNow, updateRepo } =
   await import('../../../src/application/actions.ts');
 const { resolveConflicting } = await import('../../../src/application/runs/sync.ts');
-const { repoSettingPatch } = await import('../../../src/cli/settings-args.ts');
+const { repoSettingPatch } = await import('../../../src/cli/operations/settings-args.ts');
 const { liveLinks } = await import('../../../src/application/work/dependencies.ts');
 const { startState, waitingFor } = await import('../../../src/domain/work/index.ts');
 /** What a task waits for on its builds-on links, read from the database now. */

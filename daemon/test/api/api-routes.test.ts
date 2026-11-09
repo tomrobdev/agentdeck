@@ -747,7 +747,7 @@ async function collectRoutes(): Promise<Route[]> {
       reloadFacts: () => ({ changed: [], lastChangeAt: null }),
     },
   };
-  const files = readdirSync(dir).filter((f) => f.endsWith('.ts'));
+  const files = readdirSync(dir, { recursive: true, encoding: 'utf8' }).filter((f) => f.endsWith('.ts'));
   const modules = await Promise.all(files.map((f) => import(join(dir, f)) as Promise<{ routes: (c: typeof ctx) => Route[] }>));
   return modules.flatMap((m) => m.routes(ctx));
 }

@@ -1,4 +1,4 @@
-// The CLI calling a live daemon: callDaemon (cli/daemon-client.ts) against a started API, on the paths `agentdeck
+// The CLI calling a live daemon: callDaemon (cli/operations/daemon-client.ts) against a started API, on the paths `agentdeck
 // propose` and `agentdeck sync` call, in success and error. An error ends the CLI through `die`, so the test replaces
 // process.exit and console.error for the call and reads what it would have printed.
 import assert from 'node:assert/strict';
@@ -20,7 +20,7 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 const { openDb } = await import('../../src/db/index.ts');
 const { startApi } = await import('../../src/api/server.ts');
 const { ensureWorktree } = await import('../../src/adapters/git.ts');
-const { callDaemon } = await import('../../src/cli/daemon-client.ts');
+const { callDaemon } = await import('../../src/cli/operations/daemon-client.ts');
 type SyncReport = import('../../src/application/actions.ts').SyncReport;
 
 const app = testApp(openDb(join(home, 'test.db')), { agent: fakeAgent(), codeHost: fakeCodeHost() });

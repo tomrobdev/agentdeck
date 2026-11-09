@@ -21,10 +21,10 @@ const { DEFAULT_MODEL, modelSourceText, newTaskModel } = await import('../../../
 const { DEFAULT_REVIEW_MODEL, DEFAULT_SUPPORT_MODEL, runModel } = await import('../../../src/domain/runs/index.ts');
 const { measureByModel } = await import('../../../src/domain/insights/index.ts');
 const { UNKNOWN_MODEL, interventionModel } = await import('../../../src/domain/insights/by-model.ts');
-const { repoCommands } = await import('../../../src/cli/repos.ts');
-const { statsCommands } = await import('../../../src/cli/stats.ts');
-const { taskCommands } = await import('../../../src/cli/tasks.ts');
-const { daemonCommands } = await import('../../../src/cli/daemon.ts');
+const { repoCommands } = await import('../../../src/cli/repos/repos.ts');
+const { statsCommands } = await import('../../../src/cli/insights/stats.ts');
+const { taskCommands } = await import('../../../src/cli/work/tasks.ts');
+const { daemonCommands } = await import('../../../src/cli/operations/daemon.ts');
 const { asRepoId, asTaskId, testApp } = await import('../../fixtures/fixtures.ts');
 const { fakeCodeHost } = await import('../../fixtures/fakes.ts');
 

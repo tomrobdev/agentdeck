@@ -1,9 +1,9 @@
 // Pull requests: fix checks, open, close, merge (now, requested or automatic).
-import * as actions from '../../application/actions.ts';
-import type { TaskId } from '../../domain/shared/index.ts';
-import type * as C from '../contract.ts';
-import { type ApiContext, type Route, idsField, route, taskIdParam } from '../http.ts';
-import * as wire from '../wire.ts';
+import * as actions from '../../../application/actions.ts';
+import type { TaskId } from '../../../domain/shared/index.ts';
+import type * as C from '../../contract.ts';
+import { type ApiContext, type Route, idsField, route, taskIdParam } from '../../http.ts';
+import * as wire from '../../wire.ts';
 
 export function routes({ db }: ApiContext): Route[] {
   const detail = (id: TaskId) => wire.taskDetail(db, id);

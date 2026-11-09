@@ -7,7 +7,7 @@ import { join } from 'node:path';
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-settings-'));
 
 const { ActionError, updateSettings } = await import('../../src/application/actions.ts');
-const { repoSettingPatch, settingPatch } = await import('../../src/cli/settings-args.ts');
+const { repoSettingPatch, settingPatch } = await import('../../src/cli/operations/settings-args.ts');
 const { openDb } = await import('../fixtures/open-db.ts');
 
 test('boolean settings refuse words other than on/off and their synonyms', () => {

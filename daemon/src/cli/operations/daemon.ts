@@ -1,11 +1,11 @@
 // Daemon commands: the service, the scheduler, pause, status and settings.
-import * as actions from '../application/actions.ts';
-import { DB_PATH } from '../config.ts';
-import { runDaemon } from '../daemon.ts';
+import * as actions from '../../application/actions.ts';
+import { DB_PATH } from '../../config.ts';
+import { runDaemon } from '../../daemon.ts';
 import { logsOptions, restartOptions, serviceAction } from './daemon-args.ts';
-import { die, printHealth, relTime } from './format.ts';
+import { die, printHealth, relTime } from '../format.ts';
 import { settingPatch } from './settings-args.ts';
-import type { Command } from './context.ts';
+import type { Command } from '../context.ts';
 
 /** Adapter failures are plain Errors with a message fit to print. */
 async function launchd<T>(fn: () => Promise<T>): Promise<T> {

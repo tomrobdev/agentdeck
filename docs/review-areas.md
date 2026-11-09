@@ -12,7 +12,7 @@ Groups for a session: **work** is task-use-cases, task-events, task-store and ta
 - daemon/src/application/work/plan-link.ts
 - daemon/src/adapters/plan-file.ts
 - daemon/src/db/work/plans.ts
-- daemon/src/api/routes/plans.ts
+- daemon/src/api/routes/work/plans.ts
 - app/src/components/task/PlanCard.vue
 - docs/plan-format.md
 
@@ -42,7 +42,7 @@ What a session or worker is told about a task: the agent context digest, prompt 
 - app/src/composables/useApprovals.ts
 - app/src/lib/approveDialog.ts
 - daemon/src/cli/context.ts
-- daemon/src/cli/agent-context.ts
+- daemon/src/cli/operations/agent-context.ts
 
 ## task-use-cases
 
@@ -63,9 +63,9 @@ The task entity, its lifecycle, and the person-facing use cases, CLI and routes.
 - daemon/src/application/work/tasks.ts
 - daemon/src/application/work/task-views.ts
 - daemon/src/application/work/files.ts
-- daemon/src/api/routes/tasks.ts
-- daemon/src/api/routes/files.ts
-- daemon/src/cli/tasks.ts
+- daemon/src/api/routes/work/tasks.ts
+- daemon/src/api/routes/work/files.ts
+- daemon/src/cli/work/tasks.ts
 - daemon/src/domain/work/index.ts
 
 ## task-events
@@ -157,8 +157,8 @@ Pull requests, checks, merge requests, merging and auto-merge.
 - daemon/src/application/landing/refresh.ts
 - daemon/src/application/ports/code-host.ts
 - daemon/src/adapters/github.ts
-- daemon/src/api/routes/pull-requests.ts
-- daemon/src/cli/pull-requests.ts
+- daemon/src/api/routes/landing/pull-requests.ts
+- daemon/src/cli/landing/pull-requests.ts
 - daemon/src/domain/landing/index.ts
 
 ## review
@@ -170,7 +170,7 @@ Pull requests, checks, merge requests, merging and auto-merge.
 - daemon/src/application/landing/address.ts
 - daemon/src/db/landing/reviews.ts
 - daemon/src/application/ports/repositories/landing.ts
-- daemon/src/api/routes/reviews.ts
+- daemon/src/api/routes/landing/reviews.ts
 
 ## run-stats
 
@@ -180,7 +180,7 @@ Pull requests, checks, merge requests, merging and auto-merge.
 - daemon/src/application/insights/
 - daemon/src/db/insights/stats.ts
 - daemon/src/application/ports/repositories/insights.ts
-- daemon/src/cli/stats.ts
+- daemon/src/cli/insights/stats.ts
 
 ## scheduler
 
@@ -203,8 +203,8 @@ Pull requests, checks, merge requests, merging and auto-merge.
 - daemon/src/application/ports/repositories/proposals.ts
 - daemon/src/adapters/goals.ts
 - daemon/src/adapters/repo-root.ts
-- daemon/src/api/routes/repos.ts
-- daemon/src/cli/repos.ts
+- daemon/src/api/routes/repos/repos.ts
+- daemon/src/cli/repos/repos.ts
 
 ## operations
 
@@ -224,12 +224,12 @@ The daemon itself: health, the headline, restart and reload, notifications, sett
 - daemon/src/db/operations/notifications.ts
 - daemon/src/db/operations/settings.ts
 - daemon/src/application/ports/repositories/operations.ts
-- daemon/src/api/routes/daemon.ts
-- daemon/src/api/routes/settings.ts
-- daemon/src/cli/daemon.ts
-- daemon/src/cli/daemon-client.ts
-- daemon/src/cli/settings-args.ts
-- daemon/src/cli/daemon-args.ts
+- daemon/src/api/routes/operations/daemon.ts
+- daemon/src/api/routes/operations/settings.ts
+- daemon/src/cli/operations/daemon.ts
+- daemon/src/cli/operations/daemon-client.ts
+- daemon/src/cli/operations/settings-args.ts
+- daemon/src/cli/operations/daemon-args.ts
 - daemon/src/db/changes.ts
 
 ## wiring
@@ -262,6 +262,13 @@ The App object, the ports and repositories, the composition root and the entry p
 - daemon/src/db/sql.ts
 - daemon/src/db/types-check.ts
 - daemon/src/api/contract.ts
+- daemon/src/api/contract/files.ts
+- daemon/src/api/contract/insights.ts
+- daemon/src/api/contract/landing.ts
+- daemon/src/api/contract/operations.ts
+- daemon/src/api/contract/repos.ts
+- daemon/src/api/contract/runs.ts
+- daemon/src/api/contract/work.ts
 - daemon/src/api/contract-check.ts
 
 ## dashboard

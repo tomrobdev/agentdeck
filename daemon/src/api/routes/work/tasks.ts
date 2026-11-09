@@ -1,11 +1,11 @@
 // Tasks: list, add, edit and move through the lifecycle, sync, verify runs and the log tail.
-import * as actions from '../../application/actions.ts';
-import { type TaskId, parseId } from '../../domain/shared/index.ts';
-import { TASK_STATUSES } from '../../domain/work/index.ts';
-import type * as C from '../contract.ts';
-import { type ApiContext, BadRequest, type Route, idsField, route, taskIdParam } from '../http.ts';
-import { streamLog } from '../log-stream.ts';
-import * as wire from '../wire.ts';
+import * as actions from '../../../application/actions.ts';
+import { type TaskId, parseId } from '../../../domain/shared/index.ts';
+import { TASK_STATUSES } from '../../../domain/work/index.ts';
+import type * as C from '../../contract.ts';
+import { type ApiContext, BadRequest, type Route, idsField, route, taskIdParam } from '../../http.ts';
+import { streamLog } from '../../log-stream.ts';
+import * as wire from '../../wire.ts';
 
 export function routes({ db, scheduler }: ApiContext): Route[] {
   const detail = (id: TaskId) => wire.taskDetail(db, id);

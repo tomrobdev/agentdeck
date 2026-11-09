@@ -1,15 +1,15 @@
 // Task commands: add, edit, inspect and move tasks.
 import { readFileSync } from 'node:fs';
-import * as actions from '../application/actions.ts';
-import { type TaskId, asTaskId, parseId } from '../domain/shared/index.ts';
-import { isOwnPlanName, modelSourceText, planProgress } from '../domain/work/index.ts';
-import { commentLocation } from '../domain/landing/index.ts';
-import { latestVerify, pickRun, runFindings } from '../domain/runs/index.ts';
-import { CHECKED_STATUSES, TASK_STATUSES } from '../domain/work/index.ts';
-import { filterTasks, listable } from '../domain/work/index.ts';
-import { type PlanLink, hasPlanLink, otherPlanOwner, planOwnerOf } from '../domain/work/index.ts';
-import { errorMessage, plural } from '../domain/shared/index.ts';
-import { callDaemon } from './daemon-client.ts';
+import * as actions from '../../application/actions.ts';
+import { type TaskId, asTaskId, parseId } from '../../domain/shared/index.ts';
+import { isOwnPlanName, modelSourceText, planProgress } from '../../domain/work/index.ts';
+import { commentLocation } from '../../domain/landing/index.ts';
+import { latestVerify, pickRun, runFindings } from '../../domain/runs/index.ts';
+import { CHECKED_STATUSES, TASK_STATUSES } from '../../domain/work/index.ts';
+import { filterTasks, listable } from '../../domain/work/index.ts';
+import { type PlanLink, hasPlanLink, otherPlanOwner, planOwnerOf } from '../../domain/work/index.ts';
+import { errorMessage, plural } from '../../domain/shared/index.ts';
+import { callDaemon } from '../operations/daemon-client.ts';
 import {
   confirm,
   die,
@@ -24,8 +24,8 @@ import {
   fmtTask,
   fmtVerifyFindings,
   printLog,
-} from './format.ts';
-import type { Command } from './context.ts';
+} from '../format.ts';
+import type { Command } from '../context.ts';
 
 /** A file's text, or exit saying why it can't be read. */
 function readText(file: string): string {

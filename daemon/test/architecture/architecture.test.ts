@@ -86,13 +86,17 @@ test('[actions-only, entry-points] api/ and cli/ reach application/ only through
   assert.deepEqual(found, []);
 });
 
-test('[contract-types] api/contract.ts imports only types, only from domain/', () => {
-  const contract = sources.find((s) => s.path === 'api/contract.ts')!;
-  const found = contract.imports.flatMap((i) => {
-    if (!i.typeOnly) return [`${at(contract, i.line)} imports ${i.spec} as a value: the contract imports types only`];
-    if (!i.target?.startsWith('domain/')) return [`${at(contract, i.line)} imports ${i.spec}: the contract imports only from domain/`];
-    return [];
-  });
+test('[contract-types] api/contract.ts and api/contract/ import only types, only from domain/ and each other', () => {
+  const found = sources
+    .filter((s) => s.path === 'api/contract.ts' || s.path.startsWith('api/contract/'))
+    .flatMap((s) =>
+      s.imports.flatMap((i) => {
+        if (!i.typeOnly) return [`${at(s, i.line)} imports ${i.spec} as a value: the contract imports types only`];
+        if (!i.target?.startsWith('domain/') && !i.target?.startsWith('api/contract/'))
+          return [`${at(s, i.line)} imports ${i.spec}: the contract imports only from domain/ and its own files`];
+        return [];
+      }),
+    );
   assert.deepEqual(found, []);
 });
 
