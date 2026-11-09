@@ -13,7 +13,7 @@ Groups for a session: **work** is task-use-cases, task-events, task-store and ta
 - daemon/src/adapters/local/plan-file.ts
 - daemon/src/db/work/plans.ts
 - daemon/src/api/routes/work/plans.ts
-- app/src/components/task/overview/PlanCard.vue
+- app/src/components/work/overview/PlanCard.vue
 - docs/plan-format.md
 
 ## task-links
@@ -37,10 +37,10 @@ What a session or worker is told about a task: the agent context digest, prompt 
 - daemon/src/application/work/live-context.ts
 - daemon/src/application/work/prompt-paths.ts
 - daemon/src/application/work/proposal-check.ts
-- app/src/components/task/overview/ProposalCheckCard.vue
-- app/src/components/task/merge/ApproveDialog.vue
-- app/src/composables/task/useApprovals.ts
-- app/src/lib/task/approve-dialog.ts
+- app/src/components/work/overview/ProposalCheckCard.vue
+- app/src/components/work/task/ApproveDialog.vue
+- app/src/composables/work/useApprovals.ts
+- app/src/lib/work/approve-dialog.ts
 - daemon/src/cli/context.ts
 - daemon/src/cli/operations/agent-context.ts
 
@@ -107,9 +107,9 @@ The run's lifecycle: the worker, the claude process, resuming, prompts, logs, th
 - daemon/src/application/runs/review.ts
 - daemon/src/domain/runs/verify.ts
 - daemon/src/application/runs/verify.ts
-- app/src/lib/task/verify.ts
-- app/src/components/task/overview/VerifyCard.vue
-- app/src/components/task/overview/VerifyFindings.vue
+- app/src/lib/runs/verify.ts
+- app/src/components/runs/VerifyCard.vue
+- app/src/components/runs/VerifyFindings.vue
 - daemon/src/application/runs/install-needs.ts
 - daemon/src/application/ports/agent.ts
 - daemon/src/application/ports/processes.ts

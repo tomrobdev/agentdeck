@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { TaskSummary } from '../../../api/types';
-import { isStuck, isWaiting } from '../../../lib/task/task-view';
+import { isStuck, isWaiting } from '../../../lib/work/task-view';
 
 // Each state has its own shape as well as its colour, so it reads without colour too.
 const props = defineProps<{ task: Pick<TaskSummary, 'status' | 'waiting'>; size?: number }>();

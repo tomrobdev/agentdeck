@@ -7,7 +7,7 @@ test('approving a proposal queues it', async ({ page }) => {
   await row(page, 5).hover();
   await row(page, 5).getByRole('button', { name: 'Approve', exact: true }).click();
 
-  // The approve dialog opens when the proposal's check has something to show (approveDialog in lib/task/approve-dialog.ts).
+  // The approve dialog opens when the proposal's check has something to show (approveDialog in lib/work/approve-dialog.ts).
   const dialog = page.getByRole('alertdialog', { name: /^Approve/ });
   const shows = (target: typeof dialog) =>
     target.waitFor({ state: 'visible', timeout: 2_000 }).then(

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { TaskSummary } from '../../../api/types';
-import { modelChip } from '../../../lib/queue/peek';
+import { modelChip } from '../../../lib/work/queue/peek';
 import Chip from '../Chip.vue';
 
 // A task's model as a small chip on a row or card: the latest run's when it differs from the task's, in the accent tone.

@@ -4,41 +4,12 @@ import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import ts from 'typescript';
+import { MAY_IMPORT, areaOf } from '../../scripts/lib/dashboard-layout.ts';
 import { type Source, lineOf, parseSource, readSources } from '../../scripts/lib/sources.ts';
 import { TASK_STATUSES } from '../../src/domain/work/lifecycle/lifecycle.ts';
 
 const APP_SRC = join(import.meta.dirname, '../../../app/src');
 const sources = readSources(APP_SRC, { vue: true });
-
-/** The area a file belongs to: `components/<area>`, another top folder, or the file itself (`App.vue`, `router.ts`, `main.ts`). */
-export function areaOf(path: string): string {
-  if (path.startsWith('..')) return path.includes('daemon/src/') ? 'daemon' : 'repo';
-  const parts = path.split('/');
-  if (parts[0] === 'components' && parts.length > 2) return `components/${parts[1]}`;
-  return parts.length > 1 ? parts[0] : path;
-}
-
-const UI = 'components/ui';
-const BELOW_COMPONENTS = ['api', 'lib', 'composables', 'platform', 'router'];
-
-/** Which areas each area may import, and why. Imports point down: a shared piece never imports the area that uses it. */
-const MAY_IMPORT: Record<string, { areas: string[]; why: string }> = {
-  api: { areas: ['api'], why: 'api/ is the base: types, calls and wording' },
-  lib: { areas: ['lib', 'api'], why: 'lib/ is pure helpers over the api' },
-  platform: { areas: ['platform', 'lib'], why: 'platform/ is the Tauri shell, build commit and theme' },
-  composables: { areas: ['composables', 'api', 'lib', 'platform', 'router'], why: 'composables/ never reach into components/' },
-  router: { areas: ['api', 'lib'], why: 'the router is below the components' },
-  [UI]: { areas: [UI, ...BELOW_COMPONENTS], why: 'components/ui/ is shared by every area, so it imports none of them' },
-  'components/files': { areas: ['components/files', UI, ...BELOW_COMPONENTS], why: 'components/files/ is used by task/ and queue/' },
-  'components/task': { areas: ['components/task', 'components/files', UI, ...BELOW_COMPONENTS], why: 'task/ may use files/ and ui/' },
-  'components/queue': {
-    areas: ['components/queue', 'components/task', 'components/files', UI, ...BELOW_COMPONENTS],
-    why: 'queue/ may use task/, files/ and ui/',
-  },
-  'components/layout': { areas: ['components/layout', UI, ...BELOW_COMPONENTS], why: 'layout/ is the frame and uses ui/ only' },
-  'components/panels': { areas: ['components/panels', UI, ...BELOW_COMPONENTS], why: 'panels/ use ui/ only' },
-  'components/insights': { areas: ['components/insights', UI, ...BELOW_COMPONENTS], why: 'insights/ uses ui/ only' },
-};
 
 /** Files at the top of app/src and `styles/` that import anything: the entry points. */
 const ENTRY = ['App.vue', 'main.ts', 'vite-env.d.ts'];
@@ -51,7 +22,7 @@ const daemonAllowed = (target: string) =>
 export function layoutViolations(sources: Source[]): string[] {
   const found: string[] = [];
   for (const s of sources) {
-    const area = areaOf(s.path).replace(/\.ts$/, '');
+    const area = areaOf(s.path);
     if (ENTRY.includes(s.path) || area === 'styles') continue;
     const rule = MAY_IMPORT[area];
     if (!rule) {
@@ -77,15 +48,37 @@ test('[dashboard-layout] each folder of app/src imports only the folders below i
   assert.deepEqual(layoutViolations(sources), []);
 });
 
-test('[dashboard-layout] the layout check fails when components/ui/ imports from components/task/', () => {
-  const bad = parseSource('components/ui/Chip.vue', `<script setup lang="ts">\nimport Card from '../task/PlanCard.vue';\n</script>`);
+test('[dashboard-layout] the layout check fails when components/ui/ imports from a context', () => {
+  const bad = parseSource(
+    'components/ui/Chip.vue',
+    `<script setup lang="ts">\nimport Card from '../work/overview/PlanCard.vue';\n</script>`,
+  );
   assert.deepEqual(layoutViolations([bad]), [
-    'components/ui/Chip.vue:2 imports components/task/PlanCard.vue: components/ui/ is shared by every area, so it imports none of them',
+    'components/ui/Chip.vue:2 imports components/work/overview/PlanCard.vue: components/ui/ is shared by every context, so it imports none of them in its layer',
   ]);
-  const ok = parseSource('components/task/PlanCard.vue', `import Chip from '../ui/Chip.vue';\nimport { x } from '../../lib/taskView';`);
+  const ok = parseSource(
+    'components/work/overview/PlanCard.vue',
+    `import Chip from '../../ui/Chip.vue';\nimport PrCard from '../../landing/PullRequestCard.vue';\nimport { x } from '../../../lib/work/task-view';`,
+  );
   assert.deepEqual(layoutViolations([ok]), []);
-  const daemon = parseSource('lib/x.ts', `import { a } from '../../../daemon/src/db/index.ts';`);
+  const daemon = parseSource('lib/shared/x.ts', `import { a } from '../../../../daemon/src/db/index.ts';`);
   assert.equal(layoutViolations([daemon]).length, 1);
+});
+
+test('[dashboard-layout] the layout check fails when one context imports another', () => {
+  const repos = parseSource(
+    'components/repos/RepoEditor.vue',
+    `<script setup lang="ts">\nimport Peek from '../work/queue/TaskPeek.vue';\n</script>`,
+  );
+  assert.deepEqual(layoutViolations([repos]), [
+    'components/repos/RepoEditor.vue:2 imports components/work/queue/TaskPeek.vue: a context imports no other context',
+  ]);
+  const runs = parseSource('lib/runs/verify.ts', `import { taskBadges } from '../work/task-badges.ts';`);
+  assert.deepEqual(layoutViolations([runs]), ['lib/runs/verify.ts:1 imports lib/work/task-badges.ts: a context imports no other context']);
+  for (const context of ['work', 'runs', 'landing', 'repos', 'operations', 'insights']) {
+    const shared = parseSource('lib/shared/forms.ts', `import { x } from '../${context}/x.ts';`);
+    assert.equal(layoutViolations([shared]).length, 1, `lib/shared/ importing lib/${context}/`);
+  }
 });
 
 const STATUSES = new Set<string>(TASK_STATUSES);
@@ -138,9 +131,9 @@ export function statusComparisons(s: Source): { key: string; line: number; name:
  * deleting its line here.
  */
 const KNOWN_RULES: Record<string, string> = {
-  'components/queue/BoardView.vue:canDrag': 'domain/work/lifecycle/lifecycle.ts: when a task can be moved',
-  'components/task/Sidebar.vue:autoMergeShown': 'domain/landing/merge/auto-merge.ts: when auto-merge applies to a task',
-  'lib/queue/graph.ts:isFinished': 'domain/work/task/stage.ts: when a task counts as finished',
+  'components/work/queue/BoardView.vue:canDrag': 'domain/work/lifecycle/lifecycle.ts: when a task can be moved',
+  'components/work/task/Sidebar.vue:autoMergeShown': 'domain/landing/merge/auto-merge.ts: when auto-merge applies to a task',
+  'lib/work/queue/graph.ts:isFinished': 'domain/work/task/stage.ts: when a task counts as finished',
 };
 
 test('[dashboard-layout] the status comparison finder sees a rule by its name and ignores other comparisons', () => {

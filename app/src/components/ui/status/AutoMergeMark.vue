@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import type { AutoMergeView } from '../../../api/types';
-import { AUTO_MERGE_CHIP } from '../../../lib/task/task-badges';
-import { autoMergeTip } from '../../../lib/task/task-view';
+import { AUTO_MERGE_CHIP } from '../../../lib/work/task-badges';
+import { autoMergeTip } from '../../../lib/work/task-view';
 import Chip from '../Chip.vue';
 import Tooltip from '../Tooltip.vue';
 
 // A small chip for a task's auto-merge state, coloured by state, in the task page's sidebar. The label and reasons are the
-// daemon's words. Everywhere else a task's auto-merge is on its status line or a TaskBadges chip (lib/task/task-badges.ts).
+// daemon's words. Everywhere else a task's auto-merge is on its status line or a TaskBadges chip (lib/work/task-badges.ts).
 defineProps<{ view?: AutoMergeView | null }>();
 </script>
 
