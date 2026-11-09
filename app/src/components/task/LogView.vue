@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { type LogEntry, type Run, api, parseTime } from '../../api';
+import { useHotkeys } from '../../composables/useHotkeys';
+import { LOG_FILTERS, type LogFilter, failureKeys, failureStep, filterItems, parseLogFilter } from '../../lib/logFilter';
 import { type LiveSource, runHeader, timeline } from '../../lib/runLive';
+import { loadSetting, saveSetting } from '../../lib/storage';
+import SegmentedControl from '../ui/SegmentedControl.vue';
 import { buildTranscript, cutRoot } from '../../lib/transcript';
 import LogItem from './LogItem.vue';
 import RunHeader from './RunHeader.vue';
@@ -38,6 +42,28 @@ let source: EventSource | null = null;
 /** Whether the view follows the log's end; false once the reader scrolls up. */
 const following = ref(true);
 const items = computed(() => buildTranscript(entries.value));
+const filter = ref<LogFilter>(parseLogFilter(loadSetting<string>('runLogFilter', 'all')));
+watch(filter, (f) => saveSetting('runLogFilter', f));
+// The header and the failure marks read the whole log; the filter only changes what the log lists.
+const shown = computed(() => filterItems(items.value, filter.value, props.testCmd ?? null));
+const failures = computed(() => failureKeys(items.value, props.testCmd ?? null));
+
+/** Move to the next or previous failure row below or above the top of the log. */
+async function stepFailure(dir: 1 | -1) {
+  const el = box.value;
+  if (!el) return;
+  const rows = [...el.querySelectorAll<HTMLElement>('[data-failure]')];
+  const top = el.getBoundingClientRect().top;
+  const i = failureStep(
+    rows.map((r) => r.getBoundingClientRect().top - top - 8),
+    dir,
+  );
+  if (i < 0) return;
+  following.value = false;
+  await nextTick();
+  el.scrollTo({ top: el.scrollTop + rows[i].getBoundingClientRect().top - top - 8 });
+}
+useHotkeys({ ']': () => stepFailure(1), '[': () => stepFailure(-1) });
 const first = computed(() => entries.value.find((e) => e.at)?.at);
 
 async function jump() {
@@ -147,11 +173,30 @@ onBeforeUnmount(() => {
       :end="strip.end"
       @jump="scrollToMoment"
     />
+    <div class="flex flex-none items-center gap-2 border-b border-border px-3 py-1.5">
+      <SegmentedControl v-model="filter" label="Filter the log" :options="LOG_FILTERS" />
+      <span class="ml-auto flex items-center gap-1 text-sm text-muted">
+        <button
+          class="btn-ghost"
+          :disabled="!failures.size"
+          title="Previous failure ([)"
+          aria-label="Previous failure"
+          @click="stepFailure(-1)"
+        >
+          ↑ Previous failure
+        </button>
+        <button class="btn-ghost" :disabled="!failures.size" title="Next failure (])" aria-label="Next failure" @click="stepFailure(1)">
+          ↓ Next failure
+        </button>
+      </span>
+    </div>
     <div ref="box" class="min-h-0 flex-1 overflow-y-auto py-2" @scroll="onScroll">
       <p v-if="!runId" class="px-3.5 py-1 text-muted">No runs yet. The log appears here when the task starts.</p>
       <p v-else-if="!entries.length" class="px-3.5 py-1 text-muted">{{ streaming ? 'Waiting for output…' : 'Empty log.' }}</p>
+      <p v-else-if="!shown.length" class="px-3.5 py-1 text-muted">Nothing in this log matches {{ filter }}.</p>
       <LogItem
-        :items="items"
+        :items="shown"
+        :failures="failures"
         :first="first"
         :live="streaming"
         :repo-path="repoPath"

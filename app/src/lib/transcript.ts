@@ -46,7 +46,7 @@ export function toolKind(name: string): ToolKind {
 
 export const TOOL_ICONS: Record<ToolKind, string> = { read: '◉', edit: '✎', command: '$', agent: '◆', other: '●' };
 
-function fold(items: Item[]): Item[] {
+export function fold(items: Item[]): Item[] {
   const out: Item[] = [];
   let run: CallItem[] = [];
   const flush = () => {

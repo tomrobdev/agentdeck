@@ -122,7 +122,7 @@ function bashCommand(input: string): string {
 }
 
 /** Whether a call is a Bash call that runs the repo's tests. */
-function isTestCall(e: Extract<LogEntry, { kind: 'tool' }>, testCmd: string | null): boolean {
+export function isTestCall(e: Extract<LogEntry, { kind: 'tool' }>, testCmd: string | null): boolean {
   return e.name === 'Bash' && isTestCommand(bashCommand(e.input), testCmd);
 }
 
