@@ -17,8 +17,8 @@ import {
   liveStatusQuery,
   tasksQuery,
 } from '../../api';
-import { createActions, trackPending } from '../../composables/useActions';
-import { useChangeStream } from '../../composables/useChangeStream';
+import { createActions, trackPending } from '../../composables/shared/useActions';
+import { useChangeStream } from '../../composables/shared/useChangeStream';
 import { isNative, openFromTray, startDaemon } from '../../platform/native';
 import { type Route, hashFor, taskUrl } from '../../router';
 import AppProvider from '../ui/AppProvider.vue';

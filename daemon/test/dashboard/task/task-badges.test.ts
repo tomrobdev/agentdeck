@@ -1,10 +1,10 @@
-// What every view of a task shows besides its title (app/src/lib/taskBadges.ts). The dashboard has no test runner, so its
+// What every view of a task shows besides its title (app/src/lib/task/task-badges.ts). The dashboard has no test runner, so its
 // badge rules are tested here, like the board's move rule.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { AutoMergeView, TaskSummary } from '../../../src/api/contract.ts';
-import { AUTO_MERGE_CHIP, TONE_CHIP, statusLine, statusText, taskBadges } from '../../../../app/src/lib/taskBadges.ts';
-import { TONES, statusTone } from '../../../../app/src/lib/tone.ts';
+import { AUTO_MERGE_CHIP, TONE_CHIP, statusLine, statusText, taskBadges } from '../../../../app/src/lib/task/task-badges.ts';
+import { TONES, statusTone } from '../../../../app/src/lib/shared/tone.ts';
 import { asRepoId, asTaskId } from '../../fixtures/fixtures.ts';
 
 test('the chip maps give tone names, not class strings', () => {

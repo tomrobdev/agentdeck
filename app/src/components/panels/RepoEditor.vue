@@ -2,11 +2,11 @@
 import { computed, ref, watch } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
 import { MERGE_METHODS, MODEL_LABELS, type Repo, ago, api, queryKeys, repoQuery } from '../../api';
-import { type RepoForm, modelChoices, toRepoForm, toRepoPatch } from '../../lib/forms';
-import { useActions } from '../../composables/useActions';
+import { type RepoForm, modelChoices, toRepoForm, toRepoPatch } from '../../lib/shared/forms';
+import { useActions } from '../../composables/shared/useActions';
 import { plural } from '../../../../daemon/src/domain/shared/index.ts';
-import NumberInput from '../ui/NumberInput.vue';
-import Switch from '../ui/Switch.vue';
+import NumberInput from '../ui/form/NumberInput.vue';
+import Switch from '../ui/form/Switch.vue';
 
 // One repo's editor. Mounted with :key="repo.id", so every answer it waits for is this repo's, and
 // switching repos mid-request never shows or overwrites another one.

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { Stats } from '../../../../app/src/api/types.ts';
-import { MEASURES, hasData, seriesOf, thisWeek, weekLabel } from '../../../../app/src/lib/insights.ts';
+import { MEASURES, hasData, seriesOf, thisWeek, weekLabel } from '../../../../app/src/lib/insights/insights.ts';
 
 type Measures = Stats['total'];
 type Card = Stats['scorecard']['total'];

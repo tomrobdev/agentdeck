@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { openExternal } from '../../platform/native';
-import { markdownHtml } from '../../lib/render';
+import { markdownHtml } from '../../lib/shared/render';
 
 // Rendered, sanitised markdown. Links open in the system browser; `isPath` turns inline code
 // that names a repo file into a link (see lib/render.ts), reported through `path`.

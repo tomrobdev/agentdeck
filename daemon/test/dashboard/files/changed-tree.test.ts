@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { ChangedFile } from '../../../src/api/contract.ts';
-import { changedTree } from '../../../../app/src/lib/changedTree.ts';
+import { changedTree } from '../../../../app/src/lib/task/changed-tree.ts';
 
 const file = (path: string, over: Partial<ChangedFile> = {}): ChangedFile => ({
   path,

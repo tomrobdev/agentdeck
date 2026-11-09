@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { type Status, api, describeStaleDaemon } from '../../api';
 import { appCommit } from '../../platform/build';
-import { useActions } from '../../composables/useActions';
+import { useActions } from '../../composables/shared/useActions';
 
 // Shown when the dashboard and the daemon run different commits, so a missing field is explained, not mysterious.
 const props = defineProps<{ status: Status | null }>();

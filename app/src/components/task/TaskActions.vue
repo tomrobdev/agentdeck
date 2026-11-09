@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { type MergeResult, type TaskDetail, api, describePrRetry } from '../../api';
-import { canFixChecks, canOpenPr, canStartMerge, isReview, personEvents } from '../../lib/taskView';
-import { useAction, useActions } from '../../composables/useActions';
-import { useOpenNext } from '../../composables/useOpenNext';
+import { canFixChecks, canOpenPr, canStartMerge, isReview, personEvents } from '../../lib/task/task-view';
+import { useAction, useActions } from '../../composables/shared/useActions';
+import { useOpenNext } from '../../composables/queue/useOpenNext';
 import ConfirmDialog from '../ui/ConfirmDialog.vue';
-import MarkDoneDialog from './MarkDoneDialog.vue';
-import MergeDialog from './MergeDialog.vue';
+import MarkDoneDialog from './merge/MarkDoneDialog.vue';
+import MergeDialog from './merge/MergeDialog.vue';
 
 // The buttons at the end of a task page's tab bar, and the dialogs some of them open. A sync or a merge request is on the
 // header's status line, with Cancel merge.

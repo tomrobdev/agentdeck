@@ -3,7 +3,7 @@
 import { computed } from 'vue';
 import type { Status } from '../../api';
 import { go, route } from '../../router';
-import { NEED_YOU_STATES, needYouCount } from '../../lib/taskView';
+import { NEED_YOU_STATES, needYouCount } from '../../lib/task/task-view';
 import BrandMark from '../ui/BrandMark.vue';
 import Chip from '../ui/Chip.vue';
 

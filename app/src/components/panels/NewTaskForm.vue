@@ -4,10 +4,10 @@ import { useQuery } from '@tanstack/vue-query';
 import { MODEL_HINTS, MODEL_LABELS, type Repo, type TaskDetail, api, settingsQuery } from '../../api';
 import { errorMessage, textList } from '../../../../daemon/src/domain/shared/index.ts';
 import { modelSourceText, newTaskModel } from '../../../../daemon/src/domain/work/index.ts';
-import { modelChoices } from '../../lib/forms';
-import { useTerminal } from '../../composables/useTerminal';
+import { modelChoices } from '../../lib/shared/forms';
+import { useTerminal } from '../../composables/runs/useTerminal';
 import Modal from '../ui/Modal.vue';
-import NumberInput from '../ui/NumberInput.vue';
+import NumberInput from '../ui/form/NumberInput.vue';
 
 const props = defineProps<{ repos: Repo[] }>();
 const emit = defineEmits<{ close: []; created: [task: TaskDetail]; repos: [] }>();

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { highlightLines, languageFor } from '../../../../app/src/lib/render.ts';
+import { highlightLines, languageFor } from '../../../../app/src/lib/shared/render.ts';
 
 test('highlightLines gives one entry per line and escapes plain text', () => {
   assert.deepEqual(highlightLines(['a < b', 'c & d'], null), ['a &lt; b', 'c &amp; d']);

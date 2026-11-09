@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { type LinkKind, type TaskSummary, api } from '../../api';
-import { useActions } from '../../composables/useActions';
+import { useActions } from '../../composables/shared/useActions';
 import { openExternal, useCopy } from '../../platform/native';
 import {
   type PersonEvent,
@@ -14,13 +14,13 @@ import {
   levelPriority,
   personEvents,
   priorityLevel,
-} from '../../lib/taskView';
-import Menu from '../ui/Menu.vue';
-import MenuItem from '../ui/MenuItem.vue';
-import MenuRadioGroup from '../ui/MenuRadioGroup.vue';
-import MenuRadioItem from '../ui/MenuRadioItem.vue';
-import MenuSeparator from '../ui/MenuSeparator.vue';
-import MenuSub from '../ui/MenuSub.vue';
+} from '../../lib/task/task-view';
+import Menu from '../ui/menu/Menu.vue';
+import MenuItem from '../ui/menu/MenuItem.vue';
+import MenuRadioGroup from '../ui/menu/MenuRadioGroup.vue';
+import MenuRadioItem from '../ui/menu/MenuRadioItem.vue';
+import MenuSeparator from '../ui/menu/MenuSeparator.vue';
+import MenuSub from '../ui/menu/MenuSub.vue';
 
 // The menu a row opens on right-click, the context-menu key or ⇧F10: the task's usual actions and properties. It opens at
 // (x, y) as soon as it is mounted and says `close` when it is dismissed or something was chosen.

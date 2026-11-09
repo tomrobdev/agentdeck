@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { keyCaps, registeredKeys, sheetGroups } from '../../lib/hotkeys';
+import { keyCaps, registeredKeys, sheetGroups } from '../../lib/shared/hotkeys';
 import Modal from '../ui/Modal.vue';
 
 // The keys in force: read from what the open page registered (useHotkeys) when the sheet opens. No key can be bound or

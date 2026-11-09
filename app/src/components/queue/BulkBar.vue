@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import type { TaskSummary } from '../../api';
-import { useActions } from '../../composables/useActions';
-import type { BulkAction, BulkEdit } from '../../lib/bulk';
-import type { BulkEditValue } from '../../composables/useBulkEdit';
-import { MODELS, PRIORITY_LEVELS, levelPriority } from '../../lib/taskView';
-import Menu from '../ui/Menu.vue';
-import MenuItem from '../ui/MenuItem.vue';
-import MenuSeparator from '../ui/MenuSeparator.vue';
-import MenuSub from '../ui/MenuSub.vue';
+import { useActions } from '../../composables/shared/useActions';
+import type { BulkAction, BulkEdit } from '../../lib/queue/bulk';
+import type { BulkEditValue } from '../../composables/queue/useBulkEdit';
+import { MODELS, PRIORITY_LEVELS, levelPriority } from '../../lib/task/task-view';
+import Menu from '../ui/menu/Menu.vue';
+import MenuItem from '../ui/menu/MenuItem.vue';
+import MenuSeparator from '../ui/menu/MenuSeparator.vue';
+import MenuSub from '../ui/menu/MenuSub.vue';
 
 // `others` are the tasks a link may point at (the ones not picked). An edit leaves out the picked tasks that don't allow it;
 // the toast says which (lib/bulk.ts).

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { type Tone, statusTone } from '../../lib/tone';
+import { type Tone, statusTone } from '../../lib/shared/tone';
 
 // The one chip: a small label in a tone. `status` picks the tone of a task status. `outline` is a ring, `tint` a wash of the
 // tone, `solid` a fill; the high-contrast theme draws all three as outlines. `as="button"` makes it a toggle or a trigger.

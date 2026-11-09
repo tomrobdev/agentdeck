@@ -2,7 +2,7 @@
 // has no test runner, so it is tested here.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { DEFAULT_DISPLAY, boardGroups, normalizeDisplay, rowOrder } from '../../../../app/src/lib/queueDisplay.ts';
+import { DEFAULT_DISPLAY, boardGroups, normalizeDisplay, rowOrder } from '../../../../app/src/lib/queue/queue-display.ts';
 
 const group = (key: string, ...ids: number[]) => ({ key, label: key, tasks: ids.map((id) => ({ id })) }) as never;
 const ids = (tasks: { id: number }[]) => tasks.map((t) => t.id);

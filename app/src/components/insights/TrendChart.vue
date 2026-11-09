@@ -2,7 +2,7 @@
 // A small weekly trend as inline SVG: a line through the weeks with data, a dot per week, and the target as a dashed line.
 // Each dot has a title, so hovering names the week and its value; a screen reader gets the same as a list.
 import { computed } from 'vue';
-import { type Series, weekLabel } from '../../lib/insights';
+import { type Series, weekLabel } from '../../lib/insights/insights';
 
 const props = defineProps<{ series: Series }>();
 

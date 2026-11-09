@@ -1,18 +1,26 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { type TaskSummary, api, syncLine } from '../../api';
-import { useActions } from '../../composables/useActions';
-import { useBulkPick } from '../../composables/useBulkPick';
-import { useEditKeys } from '../../composables/useEditKeys';
-import { useHotkeys } from '../../composables/useHotkeys';
-import { useMergeConfirm } from '../../composables/useMergeConfirm';
-import { useQueueDisplay } from '../../composables/useQueueDisplay';
-import { type BoardMove, type PersonEvent, canStartMerge, emptyFilters, hasFilters, personEvents, quickRetry } from '../../lib/taskView';
-import { buildsOnChain } from '../../lib/bulk';
-import BulkMergeDialog from '../task/BulkMergeDialog.vue';
-import EditKeyDialog from '../task/EditKeyDialog.vue';
-import MergeDialog from '../task/MergeDialog.vue';
-import SegmentedControl from '../ui/SegmentedControl.vue';
+import { useActions } from '../../composables/shared/useActions';
+import { useBulkPick } from '../../composables/queue/useBulkPick';
+import { useEditKeys } from '../../composables/task/useEditKeys';
+import { useHotkeys } from '../../composables/shared/useHotkeys';
+import { useMergeConfirm } from '../../composables/task/useMergeConfirm';
+import { useQueueDisplay } from '../../composables/queue/useQueueDisplay';
+import {
+  type BoardMove,
+  type PersonEvent,
+  canStartMerge,
+  emptyFilters,
+  hasFilters,
+  personEvents,
+  quickRetry,
+} from '../../lib/task/task-view';
+import { buildsOnChain } from '../../lib/queue/bulk';
+import BulkMergeDialog from '../task/merge/BulkMergeDialog.vue';
+import EditKeyDialog from '../task/merge/EditKeyDialog.vue';
+import MergeDialog from '../task/merge/MergeDialog.vue';
+import SegmentedControl from '../ui/form/SegmentedControl.vue';
 import BoardView from './BoardView.vue';
 import BulkBar from './BulkBar.vue';
 import DisplayMenu from './DisplayMenu.vue';

@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { type TaskSummary, ago } from '../../api';
-import { mergeAllIds } from '../../lib/bulk';
-import { type BoardMove, type Group, type StatusGroup, boardMove, isReview } from '../../lib/taskView';
-import Checkbox from '../ui/Checkbox.vue';
-import MarkDoneDialog from '../task/MarkDoneDialog.vue';
+import { mergeAllIds } from '../../lib/queue/bulk';
+import { type BoardMove, type Group, type StatusGroup, boardMove, isReview } from '../../lib/task/task-view';
+import Checkbox from '../ui/form/Checkbox.vue';
+import MarkDoneDialog from '../task/merge/MarkDoneDialog.vue';
 import MergeButtons from './MergeButtons.vue';
-import ModelChip from '../ui/ModelChip.vue';
-import PriorityIcon from '../ui/PriorityIcon.vue';
-import StatusIcon from '../ui/StatusIcon.vue';
-import TaskBadges from '../ui/TaskBadges.vue';
-import TaskStatusLine from '../ui/TaskStatusLine.vue';
+import ModelChip from '../ui/status/ModelChip.vue';
+import PriorityIcon from '../ui/status/PriorityIcon.vue';
+import StatusIcon from '../ui/status/StatusIcon.vue';
+import TaskBadges from '../ui/status/TaskBadges.vue';
+import TaskStatusLine from '../ui/status/TaskStatusLine.vue';
 
 // Columns are the status groups. A drop is allowed only where it is a real lifecycle event.
 const props = defineProps<{

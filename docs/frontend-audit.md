@@ -21,7 +21,7 @@ Nothing in `app/` was changed. File references are `path:line` against the tree 
 | DOMPurify    | `3.4.17`                       | 3.4.17                      |
 
 - **No CSS tooling.** There is no PostCSS config, no Sass and no CSS framework. The whole design system is one global `style.css` (275 lines) plus a `<style scoped>` block in almost every SFC. `Markdown.vue:27` is the one unscoped block, because it styles `v-html` output.
-- **No router or state library.** `router.ts` and `taskView.ts` are hand-rolled. This is irrelevant to styling except that dynamic class names come from `taskView.ts` and `app/src/api/format.ts` (see section 6).
+- **No router or state library.** `router.ts` and `lib/task/task-view.ts` are hand-rolled. This is irrelevant to styling except that dynamic class names come from `lib/task/task-view.ts` and `app/src/api/format.ts` (see section 6).
 - **No component library.** Buttons, inputs, pills and popovers are all hand-styled. The code shows where Reka UI or a similar headless library would fit (`Popover.vue`, `Modal.vue`), but none is installed.
 - **Theming is OS-driven only.** Dark mode is two `@media (prefers-color-scheme: dark)` blocks (`style.css:26`, `style.css:172`). There is no `data-theme` attribute, no toggle and no stored preference.
 - **Webview CSP** (`src-tauri/tauri.conf.json:24`): `style-src 'self' 'unsafe-inline'`, `img-src 'self' data:`. Inline styles and generated CSS are allowed; remote fonts are not.
@@ -271,7 +271,7 @@ Syntax highlighting, on `--panel` (code view) and on the added-line tint (diff):
 2. **No `color-scheme`** (section 5.3), and the `--accent-text` / `--hl-*` / purple gaps mean dark mode is not complete today.
 3. **The plan iframe ignores the app.** `PlanCard.vue:15-26` injects `color-scheme: light dark` into the plan's `srcdoc`, so a plan follows the OS even if the app is forced to the other theme. The injected style must receive the active scheme, and the cached `html` (`:28`) needs re-rendering on a theme change (it is only reloaded when `plan.updated_at` moves, `:42`). A plan that ships its own styles still wins, by design.
 4. **Window chrome.** Tauri's title bar follows the OS unless the native window theme is set. Forcing the app dark on a light Mac will show a light title bar unless `setTheme` is called from `native.ts`.
-5. **Persistence.** `taskView.ts` already has `loadSetting` / `saveSetting` (localStorage), which is the obvious home. The stored value must be applied before first paint (a one-line inline script in `index.html` or applying it at the top of `main.ts`) to avoid a light flash. The CSP allows inline styles but the page has no inline script today.
+5. **Persistence.** `lib/task/task-view.ts` already has `loadSetting` / `saveSetting` (localStorage), which is the obvious home. The stored value must be applied before first paint (a one-line inline script in `index.html` or applying it at the top of `main.ts`) to avoid a light flash. The CSP allows inline styles but the page has no inline script today.
 6. **Colour mixed in JS or class strings.** `api.ts:377-393` (`describeState`) returns class names (`s-blocked`, `s-failed`, …) as strings. That is fine for theming, but it ties the TS layer to CSS class names, which matters for the Tailwind point below.
 
 ### 6.2 Tailwind v4
@@ -405,5 +405,5 @@ In the order that removes the most duplication: `Card` (+ header) → `Chip` →
 
 ### Order of work for the next two tasks
 
-1. **Themes.** Add `color-scheme`, move the values above into `:root` and `[data-theme="dark"]` (plus the media query for "system"), fix `--accent-text`, replace `#8250df`, add `--border-input` and `:focus-visible`, add the toggle with persistence in `taskView.ts`, apply the stored theme before first paint, pass the scheme into the plan iframe and call the native window theme. No Tailwind yet; this is pure CSS and can be checked with the contrast script.
+1. **Themes.** Add `color-scheme`, move the values above into `:root` and `[data-theme="dark"]` (plus the media query for "system"), fix `--accent-text`, replace `#8250df`, add `--border-input` and `:focus-visible`, add the toggle with persistence in `lib/task/task-view.ts`, apply the stored theme before first paint, pass the scheme into the plan iframe and call the native window theme. No Tailwind yet; this is pure CSS and can be checked with the contrast script.
 2. **Tailwind.** Add the plugin, wrap the existing global rules in `@layer base` and `@layer components` first (blocker 6.2.1), map the tokens with `@theme inline`, then convert one component family at a time (the card and chip components first, since they remove the most CSS). Leave `.hljs-*` and `.md` as CSS.

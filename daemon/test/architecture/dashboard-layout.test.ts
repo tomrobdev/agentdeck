@@ -140,7 +140,7 @@ export function statusComparisons(s: Source): { key: string; line: number; name:
 const KNOWN_RULES: Record<string, string> = {
   'components/queue/BoardView.vue:canDrag': 'domain/work/lifecycle/lifecycle.ts: when a task can be moved',
   'components/task/Sidebar.vue:autoMergeShown': 'domain/landing/merge/auto-merge.ts: when auto-merge applies to a task',
-  'lib/graph.ts:isFinished': 'domain/work/task/stage.ts: when a task counts as finished',
+  'lib/queue/graph.ts:isFinished': 'domain/work/task/stage.ts: when a task counts as finished',
 };
 
 test('[dashboard-layout] the status comparison finder sees a rule by its name and ignores other comparisons', () => {

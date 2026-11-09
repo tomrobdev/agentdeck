@@ -13,7 +13,7 @@ import {
   planBulkEdit,
   summarizeBulk,
   toggleGroupPicks,
-} from '../../../../app/src/lib/bulk.ts';
+} from '../../../../app/src/lib/queue/bulk.ts';
 
 const task = (status: string, extra: Record<string, unknown> = {}) => ({ id: 1, status, pr_state: null, pr_url: null, ...extra }) as never;
 

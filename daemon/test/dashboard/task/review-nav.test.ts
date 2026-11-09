@@ -1,7 +1,7 @@
 // Moving through review: the next task in review after a merge, and the next file and open comment of a diff.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { nextInReview, openCommentOrder, stepFrom } from '../../../../app/src/lib/reviewNav.ts';
+import { nextInReview, openCommentOrder, stepFrom } from '../../../../app/src/lib/task/review-nav.ts';
 
 const task = (id: number, over: Record<string, unknown> = {}) =>
   ({ id, title: `t${id}`, status: 'done', pr_state: 'open', merge_request: null, sync: null, priority: 0, ...over }) as never;

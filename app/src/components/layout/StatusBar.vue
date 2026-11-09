@@ -3,13 +3,13 @@
 // and the usage windows. Actions and navigation are in the header (AppHeader.vue).
 import { computed } from 'vue';
 import { type Status, type TaskSummary, api, describeState, relTime } from '../../api';
-import { useActivity } from '../../composables/useActivity';
-import { type ActivityItem, KIND_LABEL } from '../../lib/activity';
-import { useAction } from '../../composables/useActions';
+import { useActivity } from '../../composables/shared/useActivity';
+import { type ActivityItem, KIND_LABEL } from '../../lib/queue/activity';
+import { useAction } from '../../composables/shared/useActions';
 import { openTask } from '../../router';
 import Chip from '../ui/Chip.vue';
 import Popover from '../ui/Popover.vue';
-import Progress from '../ui/Progress.vue';
+import Progress from '../ui/status/Progress.vue';
 import Tooltip from '../ui/Tooltip.vue';
 
 const props = defineProps<{ status: Status | null; tasks: TaskSummary[]; offline: boolean; busy: boolean }>();

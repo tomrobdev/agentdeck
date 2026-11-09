@@ -1,4 +1,4 @@
-// The keys' labels and scopes, the `g` and `p` sequences, and the `?` sheet's list (app/src/lib/hotkeys.ts).
+// The keys' labels and scopes, the `g` and `p` sequences, and the `?` sheet's list (app/src/lib/shared/hotkeys.ts).
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
@@ -11,7 +11,7 @@ import {
   registeredKeys,
   resolveKey,
   sheetGroups,
-} from '../../../../app/src/lib/hotkeys.ts';
+} from '../../../../app/src/lib/shared/hotkeys.ts';
 
 const BINDINGS = [...GO_KEYS.map((g) => g.key), ...PRIORITY_KEYS.map((p) => `p ${p.key}`), 'j', 'c', 'e'];
 

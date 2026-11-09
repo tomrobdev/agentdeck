@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { SettingsForm } from '../../lib/forms';
-import NumberInput from '../ui/NumberInput.vue';
+import type { SettingsForm } from '../../lib/shared/forms';
+import NumberInput from '../ui/form/NumberInput.vue';
 import PercentField from './PercentField.vue';
 
 const props = defineProps<{ form: SettingsForm }>();

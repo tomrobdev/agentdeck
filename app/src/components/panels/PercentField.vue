@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import NumberInput from '../ui/NumberInput.vue';
+import NumberInput from '../ui/form/NumberInput.vue';
 
 defineProps<{ label: string; hint: string }>();
 const model = defineModel<number>({ required: true });

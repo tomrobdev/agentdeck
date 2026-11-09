@@ -13,7 +13,7 @@ import {
   DialogRoot,
   DialogTitle,
 } from 'reka-ui';
-import { type PaletteItem, searchPalette } from '../../lib/palette';
+import { type PaletteItem, searchPalette } from '../../lib/shared/palette';
 
 // ⌘K: jump to a task or run a command from the keyboard. App builds the rows (lib/palette.ts); this lists and runs them.
 // The order is searchPalette's fuzzy ranking, so the Combobox does no filtering of its own (ignore-filter) and the first row is

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 // The selected task beside the list, behind a separator that resizes it. Its width is remembered.
 import { ref } from 'vue';
-import { useResize } from '../../composables/useResize';
-import { loadSetting, saveSetting } from '../../lib/storage';
-import type { PersonEvent } from '../../lib/taskView';
+import { useResize } from '../../composables/shared/useResize';
+import { loadSetting, saveSetting } from '../../lib/shared/storage';
+import type { PersonEvent } from '../../lib/task/task-view';
 import TaskPeek from './TaskPeek.vue';
 
 defineProps<{ id: number }>();

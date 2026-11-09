@@ -4,7 +4,7 @@
 import { computed, ref } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { reposQuery, statsQuery } from '../../api';
-import { hasData, seriesOf, thisWeek, weekLabel } from '../../lib/insights';
+import { hasData, seriesOf, thisWeek, weekLabel } from '../../lib/insights/insights';
 import TrendChart from './TrendChart.vue';
 
 const repo = ref<string | null>(null);

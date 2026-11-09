@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import type { Repo } from '../../api';
-import Accordion from '../ui/Accordion.vue';
-import AccordionItem from '../ui/AccordionItem.vue';
-import AccordionTrigger from '../ui/AccordionTrigger.vue';
+import Accordion from '../ui/disclosure/Accordion.vue';
+import AccordionItem from '../ui/disclosure/AccordionItem.vue';
+import AccordionTrigger from '../ui/disclosure/AccordionTrigger.vue';
 import Modal from '../ui/Modal.vue';
 import AddRepoForm from './AddRepoForm.vue';
 import ArchivedRepos from './ArchivedRepos.vue';

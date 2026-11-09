@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { api } from '../../api';
-import type { ShownComment } from '../../composables/useReviews';
-import { useAction } from '../../composables/useActions';
+import type { ShownComment } from '../../composables/task/useReviews';
+import { useAction } from '../../composables/shared/useActions';
 import Chip from '../ui/Chip.vue';
 
 // One review comment under its diff line: its text, the answer it got and its state.
