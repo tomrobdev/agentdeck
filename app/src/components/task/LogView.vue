@@ -199,7 +199,6 @@ onBeforeUnmount(() => {
       </span>
     </div>
     <div ref="box" class="min-h-0 flex-1 overflow-y-auto py-2" @scroll="onScroll">
-      <p v-if="!runId" class="px-3.5 py-1 text-muted">No runs yet. The log appears here when the task starts.</p>
       <RunContext v-if="runId" :prompts="prompts" :touched="touched" :repo-path="repoPath" @file="(p) => emit('file', p)" />
       <p v-if="!runId" class="px-3.5 py-1 text-muted">No runs yet. The log appears here when the task starts.</p>
       <p v-else-if="!items.length" class="px-3.5 py-1 text-muted">{{ streaming ? 'Waiting for output…' : 'Empty log.' }}</p>
