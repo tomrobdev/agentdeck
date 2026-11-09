@@ -7,6 +7,7 @@ import MergeButtons from './MergeButtons.vue';
 import RowMenu from './RowMenu.vue';
 import { type BoardMove, type Group, type GroupBy, personEvents, quickRetry, statusLabel } from '../../lib/taskView';
 import Checkbox from '../ui/Checkbox.vue';
+import ModelChip from '../ui/ModelChip.vue';
 import PriorityIcon from '../ui/PriorityIcon.vue';
 import StatusIcon from '../ui/StatusIcon.vue';
 import TaskBadges from '../ui/TaskBadges.vue';
@@ -134,6 +135,7 @@ watch(
               <span class="truncate font-medium">{{ t.title }}</span>
               <TaskStatusLine :task="t" :hide="show.reason ? [] : ['stopped', 'cant_start']" />
             </span>
+            <ModelChip v-if="show.model" :task="t" class="flex-none max-sm:hidden" />
             <TaskBadges :task="t" :repo="show.repo" :pr="show.pr" nowrap class="max-w-[45%] flex-none max-sm:hidden" />
             <span class="flex-none gap-1" :class="t.id === selected || t.sync ? 'flex' : 'hidden group-hover:flex'" @click.stop>
               <button v-if="personEvents(t).includes('approve')" class="btn-mini" title="Approve (a)" @click="emit('act', 'approve', t.id)">

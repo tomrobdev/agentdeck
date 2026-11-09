@@ -218,6 +218,9 @@ useHotkeys({
         :id="selected"
         @open="emit('open', selected!)"
         @close="peek = false"
+        @act="act"
+        @merge="startMerge"
+        @peek="selected = $event"
       />
     </div>
     <QueueFooter :shown="shown.length" :total="tasks.length" />

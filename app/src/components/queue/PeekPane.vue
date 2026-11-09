@@ -3,10 +3,11 @@
 import { ref } from 'vue';
 import { useResize } from '../../composables/useResize';
 import { loadSetting, saveSetting } from '../../lib/storage';
+import type { PersonEvent } from '../../lib/taskView';
 import TaskPeek from './TaskPeek.vue';
 
 defineProps<{ id: number }>();
-const emit = defineEmits<{ open: []; close: [] }>();
+const emit = defineEmits<{ open: []; close: []; act: [kind: PersonEvent, id: number]; merge: [id: number]; peek: [id: number] }>();
 
 const PEEK_MIN = 320;
 const peekWidth = ref(Math.max(PEEK_MIN, loadSetting<number>('peekWidth', 520)));
@@ -26,6 +27,13 @@ const { startResize } = useResize(peekWidth, {
     @pointerdown="startResize"
   />
   <div class="flex min-h-0 flex-none flex-col border-l border-border" :style="{ width: `${peekWidth}px` }">
-    <TaskPeek :id="id" @open="emit('open')" @close="emit('close')" />
+    <TaskPeek
+      :id="id"
+      @open="emit('open')"
+      @close="emit('close')"
+      @act="(kind, taskId) => emit('act', kind, taskId)"
+      @merge="emit('merge', $event)"
+      @peek="emit('peek', $event)"
+    />
   </div>
 </template>
