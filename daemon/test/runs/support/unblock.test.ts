@@ -8,8 +8,8 @@ import { join } from 'node:path';
 import { after, test } from 'node:test';
 import { asTaskId } from '../../../src/domain/shared/id.ts';
 import type { RunKind, RunOutcome } from '../../../src/domain/runs/run.ts';
-import type { Needs } from '../../../src/domain/work/needs.ts';
-import { type TaskState, stateFields } from '../../../src/domain/work/task.ts';
+import type { Needs } from '../../../src/domain/work/task/needs.ts';
+import { type TaskState, stateFields } from '../../../src/domain/work/task/task.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-unblock-'));
 process.env.AGENTDECK_HOME = home;

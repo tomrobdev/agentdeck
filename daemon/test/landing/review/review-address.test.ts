@@ -14,9 +14,9 @@ import {
   reviewPromptBlock,
   unansweredNote,
   withNote,
-} from '../../../src/domain/landing/address.ts';
+} from '../../../src/domain/landing/review/address.ts';
 import { buildPrompt, workerSystemPrompt } from '../../../src/domain/runs/prompt.ts';
-import type { Task } from '../../../src/domain/work/task.ts';
+import type { Task } from '../../../src/domain/work/task/task.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-review-address-'));
 process.env.AGENTDECK_HOME = home;

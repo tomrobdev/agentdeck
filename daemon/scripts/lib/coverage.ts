@@ -16,7 +16,7 @@ export interface Counts {
 }
 
 export interface FileCoverage extends Counts {
-  /** Relative to daemon/src, e.g. `domain/work/task.ts`. */
+  /** Relative to daemon/src, e.g. `domain/work/task/task.ts`. */
   path: string;
 }
 

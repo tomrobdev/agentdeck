@@ -1,4 +1,4 @@
-// Every row of COMMENT_MOVES (domain/landing/review.ts), the state machine of a review comment, and the functions that
+// Every row of COMMENT_MOVES (domain/landing/review/review.ts), the state machine of a review comment, and the functions that
 // read it: each action from each state, its guard states, and the error a refused move gives. Plain values.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
@@ -8,8 +8,8 @@ import {
   commentActionError,
   commentStatesFor,
   nextCommentState,
-} from '../../../src/domain/landing/review.ts';
-import type { CommentAction, CommentState } from '../../../src/domain/landing/review.ts';
+} from '../../../src/domain/landing/review/review.ts';
+import type { CommentAction, CommentState } from '../../../src/domain/landing/review/review.ts';
 
 /** [action, from, to]: to is null where the action does not apply. One row for each action from each state. */
 const TABLE: [CommentAction, CommentState, CommentState | null][] = [

@@ -23,11 +23,11 @@ export { liveContext } from './work/live-context.ts';
 export { attachPlan, planHtml } from './work/plans.ts';
 export { proposeNow } from './proposals/planner.ts';
 export { pilotStats } from './insights/stats.ts';
-export { closeTaskPr, mergePreview, mergeTask } from './landing/merge.ts';
-export { cancelMergeRequest, requestAllMerges, requestMerge, requestMerges } from './landing/merge-requests.ts';
-export { setAutoMerge } from './landing/auto-merge.ts';
-export { type FixChecksResult, fixChecks } from './landing/fix-checks.ts';
-export { type OpenTaskPrResult, openTaskPr } from './landing/open-pr.ts';
+export { closeTaskPr, mergePreview, mergeTask } from './landing/merge/merge.ts';
+export { cancelMergeRequest, requestAllMerges, requestMerge, requestMerges } from './landing/merge/merge-requests.ts';
+export { setAutoMerge } from './landing/merge/auto-merge.ts';
+export { type FixChecksResult, fixChecks } from './landing/pull-request/fix-checks.ts';
+export { type OpenTaskPrResult, openTaskPr } from './landing/pull-request/open-pr.ts';
 export {
   type DoctorReport,
   type RepoPatch,
@@ -54,7 +54,7 @@ export {
   startReview,
   submitReview,
   taskReviews,
-} from './landing/reviews.ts';
+} from './landing/review/reviews.ts';
 export { gracefulRestart } from './operations/restart.ts';
 export { ChangeWatcher } from './operations/changes.ts';
 export type { Scheduler } from './scheduler/scheduler.ts';

@@ -1,4 +1,4 @@
-// The CodeHost port: pull requests and the pushes that go with them. The real adapter is adapters/github.ts
+// The CodeHost port: pull requests and the pushes that go with them. The real adapter is adapters/github/github.ts
 // (compose.ts); tests use the in-memory fake in test/fakes.ts.
 import type { BranchPr, CreatePr, JobStep, PrDetails } from '../../domain/landing/index.ts';
 import type { MergeMethod } from '../../domain/repos/index.ts';

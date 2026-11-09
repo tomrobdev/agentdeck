@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import type { TaskId } from '../../../src/domain/shared/id.ts';
-import { stateFields } from '../../../src/domain/work/task.ts';
+import { stateFields } from '../../../src/domain/work/task/task.ts';
 import { asTaskId } from '../../fixtures/fixtures.ts';
 
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-markdone-'));
@@ -13,11 +13,11 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { openDb } = await import('../../fixtures/open-db.ts');
 const { advance, settlePr } = await import('../../fixtures/fixtures.ts');
-const { linkState } = await import('../../../src/domain/work/link.ts');
-const { TASK_STATUSES } = await import('../../../src/domain/work/lifecycle.ts');
+const { linkState } = await import('../../../src/domain/work/links/link.ts');
+const { TASK_STATUSES } = await import('../../../src/domain/work/lifecycle/lifecycle.ts');
 const { markDone, retryTask, ActionError } = await import('../../../src/application/actions.ts');
 const { liveLinks } = await import('../../../src/application/work/dependencies.ts');
-const { startState } = await import('../../../src/domain/work/link.ts');
+const { startState } = await import('../../../src/domain/work/links/link.ts');
 type Db = ReturnType<typeof openDb>;
 type TaskStatus = (typeof TASK_STATUSES)[number];
 

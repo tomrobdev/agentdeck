@@ -1,7 +1,7 @@
 // What failures are made of: failing checks by step, and failed or blocked runs by how they ended, per week and repo.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { countOfKept, parseChecks } from '../../src/domain/landing/checks.ts';
+import { countOfKept, parseChecks } from '../../src/domain/landing/pull-request/checks.ts';
 import { failureReport, failuresTable } from '../../src/domain/insights/index.ts';
 import type { StatRun } from '../../src/domain/insights/index.ts';
 import { runEndOf } from '../../src/domain/runs/index.ts';

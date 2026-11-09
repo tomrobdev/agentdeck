@@ -13,9 +13,9 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { openDb } = await import('../../../src/db/index.ts');
 const { doneTask, queuedTask, testApp } = await import('../../fixtures/fixtures.ts');
-const { github } = await import('../../../src/adapters/github.ts');
-const { refreshPrStates } = await import('../../../src/application/landing/refresh.ts');
-const { autoMerge } = await import('../../../src/application/landing/auto-merge.ts');
+const { github } = await import('../../../src/adapters/github/github.ts');
+const { refreshPrStates } = await import('../../../src/application/landing/pull-request/refresh.ts');
+const { autoMerge } = await import('../../../src/application/landing/merge/auto-merge.ts');
 const {
   ActionError,
   cancelMergeRequest,
@@ -30,7 +30,7 @@ const {
   taskDetail,
   updateRepo,
 } = await import('../../../src/application/actions.ts');
-type PrDetails = import('../../../src/domain/landing/merge.ts').PrDetails;
+type PrDetails = import('../../../src/domain/landing/merge/merge.ts').PrDetails;
 type TaskId = import('../../../src/domain/shared/id.ts').TaskId;
 
 const db = testApp(openDb(join(home, 'test.db')));

@@ -18,8 +18,8 @@ test('each crash-test path calls for it', () => {
   for (const path of [
     'daemon/src/application/runs/worker.ts',
     'daemon/src/application/scheduler/scheduler.ts',
-    'daemon/src/adapters/processes.ts',
-    'daemon/src/adapters/claude.ts',
+    'daemon/src/adapters/process/processes.ts',
+    'daemon/src/adapters/claude/claude.ts',
     'daemon/src/db/schema.ts',
   ]) {
     assert.deepEqual(names([path]), ['crash test'], path);

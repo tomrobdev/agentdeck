@@ -9,9 +9,9 @@ import { chmodSync, mkdtempSync, readFileSync, writeFileSync, type WriteStream }
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { runClaude } from '../../../src/adapters/claude.ts';
+import { runClaude } from '../../../src/adapters/claude/claude.ts';
 import { LOG_TAIL_BYTES, actionsRun, parsePrDetails, type PrDetails } from '../../../src/domain/landing/index.ts';
-import { logTail } from '../../../src/domain/landing/checks.ts';
+import { logTail } from '../../../src/domain/landing/pull-request/checks.ts';
 import {
   type ClaudeRun,
   type LogEntry,
@@ -248,9 +248,9 @@ test('run-log-failed: the tail of a failed run log, as the worker hears it', () 
  * (`assistant tool_use`, `user tool_result`, a `permission denial` in the result). `*` stands for any key.
  */
 const READ: Record<string, string[]> = {
-  // adapters/claude.ts: the session to resume.
+  // adapters/claude/claude.ts: the session to resume.
   'system/init': ['session_id'],
-  // adapters/claude.ts: the usage windows and a rejected request.
+  // adapters/claude/claude.ts: the usage windows and a rejected request.
   rate_limit_event: [
     'rate_limit_info.status',
     'rate_limit_info.resetsAt',
@@ -263,7 +263,7 @@ const READ: Record<string, string[]> = {
   'assistant tool_use': ['id', 'name', 'input'],
   user: ['message.content', 'parent_tool_use_id', 'timestamp'],
   'user tool_result': ['tool_use_id', 'content', 'is_error'],
-  // classifyRun and resultFields, adapters/claude.ts (api_error_status), the worker (permission_denials), the planner (structured_output).
+  // classifyRun and resultFields, adapters/claude/claude.ts (api_error_status), the worker (permission_denials), the planner (structured_output).
   result: [
     'subtype',
     'is_error',

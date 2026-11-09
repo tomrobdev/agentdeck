@@ -14,7 +14,7 @@ const { openDb } = await import('../../fixtures/open-db.ts');
 const { addTask, attachPlan, editTask, linkTasks, taskDetail, taskViews, unlinkTasks } =
   await import('../../../src/application/actions.ts');
 const { editsSinceCutOff } = await import('../../../src/domain/runs/run.ts');
-const { MAX_RESTARTS } = await import('../../../src/domain/work/lifecycle.ts');
+const { MAX_RESTARTS } = await import('../../../src/domain/work/lifecycle/lifecycle.ts');
 const { advance, doneTask } = await import('../../fixtures/fixtures.ts');
 
 type Db = ReturnType<typeof openDb>;

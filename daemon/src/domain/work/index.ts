@@ -1,10 +1,18 @@
 // The work context's interface: what other contexts and the layers above import.
-export { branchName } from './branch.ts';
-export { checkoutOf } from './checkout.ts';
-export type { Checkout } from './checkout.ts';
-export { isAutoMergeReason, latestRetryAt, latestReviewNote, mergeReason, prEventReason, prEventsOf, prRetryFor } from './history.ts';
-export type { PendingFollowUp, PrEvent, TaskEventRow, TaskEventType } from './history.ts';
-export { parseTaskIds } from './ids.ts';
+export { branchName } from './task/branch.ts';
+export { checkoutOf } from './task/checkout.ts';
+export type { Checkout } from './task/checkout.ts';
+export {
+  isAutoMergeReason,
+  latestRetryAt,
+  latestReviewNote,
+  mergeReason,
+  prEventReason,
+  prEventsOf,
+  prRetryFor,
+} from './lifecycle/history.ts';
+export type { PendingFollowUp, PrEvent, TaskEventRow, TaskEventType } from './lifecycle/history.ts';
+export { parseTaskIds } from './task/ids.ts';
 export {
   autoMergeCheckChanges,
   autoMergeSettingChanges,
@@ -17,12 +25,12 @@ export {
   prChecksChanges,
   prChecksOpenedChanges,
   questionChanges,
-} from './task-writes.ts';
-export type { TaskChanges } from './task-writes.ts';
-export { followUpsOf, followUpsOfRow } from './follow-ups.ts';
-export type { FollowUp } from './follow-ups.ts';
-export { MAX_RESTARTS, TASK_STATUSES, fromStatuses, personEvents, transition } from './lifecycle.ts';
-export type { DomainEvent, PersonEvent, TaskEvent, TaskStatus } from './lifecycle.ts';
+} from './lifecycle/task-writes.ts';
+export type { TaskChanges } from './lifecycle/task-writes.ts';
+export { followUpsOf, followUpsOfRow } from './lifecycle/follow-ups.ts';
+export type { FollowUp } from './lifecycle/follow-ups.ts';
+export { MAX_RESTARTS, TASK_STATUSES, fromStatuses, personEvents, transition } from './lifecycle/lifecycle.ts';
+export type { DomainEvent, PersonEvent, TaskEvent, TaskStatus } from './lifecycle/lifecycle.ts';
 export {
   buildsOnError,
   buildsOnRepoError,
@@ -36,12 +44,12 @@ export {
   stuckOn,
   unblocksOf,
   unlandedAfter,
-} from './link.ts';
-export type { Dependent, Link, LinkIndex, LinkKind, LinkTarget, LinkView, LinkedTask, StartState } from './link.ts';
-export { INSTALL_NOTE, LOCKFILES, canInstallWith, depsRequest, depsRequestError, installArgs, isNeeds, parseNeeds } from './needs.ts';
-export type { Needs, NeedsKind, UnblockQuestion } from './needs.ts';
-export { hasPlanLink, otherPlanOwner, planOwnerOf } from './plan-link.ts';
-export type { PlanFollower, PlanLink } from './plan-link.ts';
+} from './links/link.ts';
+export type { Dependent, Link, LinkIndex, LinkKind, LinkTarget, LinkView, LinkedTask, StartState } from './links/link.ts';
+export { INSTALL_NOTE, LOCKFILES, canInstallWith, depsRequest, depsRequestError, installArgs, isNeeds, parseNeeds } from './task/needs.ts';
+export type { Needs, NeedsKind, UnblockQuestion } from './task/needs.ts';
+export { hasPlanLink, otherPlanOwner, planOwnerOf } from './plans/plan-link.ts';
+export type { PlanFollower, PlanLink } from './plans/plan-link.ts';
 export {
   PLAN_FILE,
   PLAN_GIVEN_FILE,
@@ -57,9 +65,9 @@ export {
   toPlan,
   unfinishedSteps,
   unfinishedSummary,
-} from './plan.ts';
-export type { OwnPlan, ParsedPlan, PlanSource, PlanStepStatus, TaskPlan } from './plan.ts';
-export { matchPath, pathsNamedIn } from './prompt-paths.ts';
+} from './plans/plan.ts';
+export type { OwnPlan, ParsedPlan, PlanSource, PlanStepStatus, TaskPlan } from './plans/plan.ts';
+export { matchPath, pathsNamedIn } from './plans/prompt-paths.ts';
 export {
   BASE_LOG_FORMAT,
   CHECKED_STATUSES,
@@ -69,8 +77,8 @@ export {
   parseBaseLog,
   proposalCheckLine,
   staleness,
-} from './proposal-check.ts';
-export type { BaseCommit, Overlap, ProposalCheck, Staleness } from './proposal-check.ts';
+} from './task/proposal-check.ts';
+export type { BaseCommit, Overlap, ProposalCheck, Staleness } from './task/proposal-check.ts';
 export { describeEvent } from './read/event-text.ts';
 export type { PersonEventText } from './read/event-text.ts';
 export {
@@ -90,7 +98,7 @@ export type { ChangeStatus, ChangedFile, Changes, Commit, FileContent, FilePatch
 export { sincePoints } from './read/since.ts';
 export type { SinceKind } from './read/since.ts';
 export { DECISION_STATES, FILTER_STATES, SORT_OPTIONS, filterTasks, listable } from './read/listing.ts';
-export { archivedRepoError, maxAttemptsError, maxTurnsError, modelError, priorityError, stepsNeedPlanError } from './rules.ts';
+export { archivedRepoError, maxAttemptsError, maxTurnsError, modelError, priorityError, stepsNeedPlanError } from './task/rules.ts';
 export {
   STATUS_GROUPS,
   canOpenPr,
@@ -102,10 +110,10 @@ export {
   isWaiting,
   stageOf,
   statusGroup,
-} from './stage.ts';
-export type { StatusGroup } from './stage.ts';
-export { describeWait, startDecision, startWait, waitingFor } from './start.ts';
-export type { QueueState, QueueWait, StartWait, Waiting } from './start.ts';
+} from './task/stage.ts';
+export type { StatusGroup } from './task/stage.ts';
+export { describeWait, startDecision, startWait, waitingFor } from './task/start.ts';
+export type { QueueState, QueueWait, StartWait, Waiting } from './task/start.ts';
 export {
   DEFAULT_MODEL,
   EDITABLE_STATUSES,
@@ -124,7 +132,7 @@ export {
   promptGoal,
   stateFields,
   stopReasonOf,
-} from './task.ts';
+} from './task/task.ts';
 export type {
   BlockedState,
   BlockedTask,
@@ -137,4 +145,4 @@ export type {
   TaskSource,
   TaskState,
   TaskSummary,
-} from './task.ts';
+} from './task/task.ts';

@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 
-const { github, failure } = await import('../../../src/adapters/github.ts');
+const { github, failure } = await import('../../../src/adapters/github/github.ts');
 
 /** Put a fake `gh` first on PATH that runs `script`. */
 function fakeGh(script: string): void {

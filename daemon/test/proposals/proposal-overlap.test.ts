@@ -12,7 +12,7 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { openDb } = await import('../fixtures/open-db.ts');
 const { addTask, proposalCheck } = await import('../../src/application/actions.ts');
-const { mayOverlap, overlaps, proposalCheckLine } = await import('../../src/domain/work/proposal-check.ts');
+const { mayOverlap, overlaps, proposalCheckLine } = await import('../../src/domain/work/task/proposal-check.ts');
 const { asTaskId } = await import('../../src/domain/shared/id.ts');
 const { doneTask, runningTask } = await import('../fixtures/fixtures.ts');
 

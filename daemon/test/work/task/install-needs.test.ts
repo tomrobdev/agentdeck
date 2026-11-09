@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { asTaskId } from '../../../src/domain/shared/id.ts';
-import { stateFields } from '../../../src/domain/work/task.ts';
+import { stateFields } from '../../../src/domain/work/task/task.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-install-'));
 process.env.AGENTDECK_HOME = home;
@@ -28,7 +28,7 @@ chmodSync(join(bin, 'pnpm'), 0o755);
 process.env.PATH = `${bin}:${process.env.PATH}`;
 
 const { openDb } = await import('../../fixtures/open-db.ts');
-const { ensureWorktree } = await import('../../../src/adapters/git.ts');
+const { ensureWorktree } = await import('../../../src/adapters/git/worktrees.ts');
 const { installNeeds } = await import('../../../src/application/actions.ts');
 
 const sh = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();

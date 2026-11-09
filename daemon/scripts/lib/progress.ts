@@ -20,24 +20,15 @@ export const ALLOWED_FOLDER_CYCLES: Record<string, string[]> = {};
  * The list only shrinks: a new folder over the limit fails the test, and so does an entry back under it, so remove an entry in the change
  * that splits its folder. Never add one. A listed folder may grow while it is listed.
  */
-export const OVERSIZED_FOLDERS: string[] = [
-  'app/src/components/task',
-  'app/src/components/ui',
-  'app/src/composables',
-  'app/src/lib',
-  'daemon/src/adapters',
-  'daemon/src/domain/landing',
-  'daemon/src/domain/work',
-];
+export const OVERSIZED_FOLDERS: string[] = ['app/src/components/task', 'app/src/components/ui', 'app/src/composables', 'app/src/lib'];
 
 /**
  * The .ts and .vue files over 400 lines today (rule:file-size), as paths from the repo root. The list only shrinks, as above: remove an
  * entry in the change that brings its file under the limit. Never add one. A listed file may grow while it is listed.
  */
 export const LONG_FILES: string[] = [
-  'daemon/src/adapters/git.ts',
   'daemon/src/application/scheduler/scheduler.ts',
-  'daemon/src/domain/landing/checks.ts',
+  'daemon/src/domain/landing/pull-request/checks.ts',
   'daemon/src/domain/runs/run.ts',
 ];
 
@@ -45,7 +36,7 @@ export const LONG_FILES: string[] = [
  * The folders of `PLACED_FOLDERS` (`layout.ts`) that still have files outside a context folder today (rule:context-folders). The list
  * only shrinks, as above: remove an entry once its folder holds only its shared files and context folders. Never add one.
  */
-export const UNPLACED_FOLDERS: string[] = ['daemon/src/adapters'];
+export const UNPLACED_FOLDERS: string[] = [];
 
 export const cycleKey = (c: FolderCycle) => c.folders.join(', ');
 
@@ -83,7 +74,7 @@ export const ROW_SHAPED_FIELDS: string[] = [];
 
 /**
  * The functions in `db/` that write a task without a rule (rule:task-writes), each with why: a plain write stays in the store. A write
- * with a rule takes its changes from a function in `domain/work/task-writes.ts`. Status writes are `applyEvent`'s, the claim's included
+ * with a rule takes its changes from a function in `domain/work/lifecycle/task-writes.ts`. Status writes are `applyEvent`'s, the claim's included
  * (rule:guarded-status). A new plain write fails the test until it is listed here; an entry that no longer applies fails it too.
  */
 export const PLAIN_TASK_WRITES: Record<string, string> = {

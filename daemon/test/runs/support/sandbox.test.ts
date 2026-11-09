@@ -3,16 +3,16 @@ import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { writeSettings } from '../../../src/adapters/run-log.ts';
+import { writeSettings } from '../../../src/adapters/claude/run-log.ts';
 import type { App } from '../../../src/application/ports/app.ts';
 import { runSettings } from '../../../src/application/runs/claude-run.ts';
 import type { Repo } from '../../../src/domain/repos/repo.ts';
 import { ALWAYS_DISALLOWED_TOOLS, DEFAULT_ALLOWED_TOOLS } from '../../../src/domain/repos/tools.ts';
 import { claudeArgs, workerSystemPrompt } from '../../../src/domain/runs/prompt.ts';
 import { plannerArgs } from '../../../src/domain/proposals/index.ts';
-import { PR_SUMMARY_FORMAT } from '../../../src/domain/landing/summary.ts';
+import { PR_SUMMARY_FORMAT } from '../../../src/domain/landing/pull-request/summary.ts';
 import { normalizeNetwork, settingsPath, workerSettings, worktreeFileRules } from '../../../src/domain/runs/translate/sandbox.ts';
-import type { Task } from '../../../src/domain/work/task.ts';
+import type { Task } from '../../../src/domain/work/task/task.ts';
 
 const wt = '/Users/me/.agentdeck/worktrees/demo/task-7';
 

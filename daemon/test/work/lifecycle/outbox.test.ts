@@ -15,7 +15,7 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 const { openDb } = await import('../../../src/db/index.ts');
 const { Scheduler } = await import('../../../src/application/scheduler/scheduler.ts');
 const { followUpPending, settle } = await import('../../../src/application/landing/settle.ts');
-const { openPullRequest } = await import('../../../src/application/landing/open-pr.ts');
+const { openPullRequest } = await import('../../../src/application/landing/pull-request/open-pr.ts');
 const { cancelTask } = await import('../../../src/application/actions.ts');
 
 function setup() {

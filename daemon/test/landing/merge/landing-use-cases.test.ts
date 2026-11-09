@@ -15,11 +15,11 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { openDb } = await import('../../../src/db/index.ts');
 const { asTaskId, blockedTask, doneTask, failedTask, queuedTask, testApp } = await import('../../fixtures/fixtures.ts');
-const { refreshPrStates } = await import('../../../src/application/landing/refresh.ts');
+const { refreshPrStates } = await import('../../../src/application/landing/pull-request/refresh.ts');
 const actions = await import('../../../src/application/actions.ts');
 const { ActionError, cancelMergeRequest, closeTaskPr, fixChecks, linkTasks, markDone, requestAllMerges, requestMerges, taskDetail } =
   actions;
-const { latestReviewNote } = await import('../../../src/domain/work/history.ts');
+const { latestReviewNote } = await import('../../../src/domain/work/lifecycle/history.ts');
 const { parseJobSteps } = await import('../../../src/domain/landing/index.ts');
 const { fmtChecks } = await import('../../../src/cli/format.ts');
 /** #246's failed CI, as `gh` gave it (2026-11-08). */

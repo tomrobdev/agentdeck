@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import ts from 'typescript';
 import { type Source, lineOf, parseSource, readSources } from '../../scripts/lib/sources.ts';
-import { TASK_STATUSES } from '../../src/domain/work/lifecycle.ts';
+import { TASK_STATUSES } from '../../src/domain/work/lifecycle/lifecycle.ts';
 
 const APP_SRC = join(import.meta.dirname, '../../../app/src');
 const sources = readSources(APP_SRC, { vue: true });
@@ -138,9 +138,9 @@ export function statusComparisons(s: Source): { key: string; line: number; name:
  * deleting its line here.
  */
 const KNOWN_RULES: Record<string, string> = {
-  'components/queue/BoardView.vue:canDrag': 'domain/work/lifecycle.ts: when a task can be moved',
-  'components/task/Sidebar.vue:autoMergeShown': 'domain/landing/auto-merge.ts: when auto-merge applies to a task',
-  'lib/graph.ts:isFinished': 'domain/work/stage.ts: when a task counts as finished',
+  'components/queue/BoardView.vue:canDrag': 'domain/work/lifecycle/lifecycle.ts: when a task can be moved',
+  'components/task/Sidebar.vue:autoMergeShown': 'domain/landing/merge/auto-merge.ts: when auto-merge applies to a task',
+  'lib/graph.ts:isFinished': 'domain/work/task/stage.ts: when a task counts as finished',
 };
 
 test('[dashboard-layout] the status comparison finder sees a rule by its name and ignores other comparisons', () => {

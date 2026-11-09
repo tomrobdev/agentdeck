@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { promptGoal } from '../../../src/domain/work/index.ts';
-import { promptSections } from '../../../src/domain/work/task.ts';
+import { promptSections } from '../../../src/domain/work/task/task.ts';
 import { linkParts, modelChip, modelLine, ownSteps, peekActions, peekProps } from '../../../../app/src/lib/peek.ts';
 
 test('a prompt with sections shows its Goal, cut to a few lines', () => {

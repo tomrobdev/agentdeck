@@ -12,7 +12,7 @@ const fake = join(import.meta.dirname, '../../fixtures/fake-claude.mjs');
 chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
 
-const { runClaude, CANCEL_GRACE_MS } = await import('../../../src/adapters/claude.ts');
+const { runClaude, CANCEL_GRACE_MS } = await import('../../../src/adapters/claude/claude.ts');
 
 const run = (prompt: string, extra: { shouldCancel?: () => boolean; cancelGraceMs?: number }) =>
   runClaude({

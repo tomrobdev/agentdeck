@@ -1,5 +1,5 @@
 // The Service port: the launchd service the daemon runs under, and what can be read of a daemon from outside. The real
-// adapters are adapters/service.ts, daemon-api.ts and daemon-log.ts (compose.ts).
+// adapters are adapters/macos/service.ts, daemon-api.ts and daemon-log.ts (compose.ts).
 import type { DaemonState } from '../../domain/operations/index.ts';
 
 /** What launchd says about the service. */

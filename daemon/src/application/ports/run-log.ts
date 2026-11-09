@@ -1,4 +1,4 @@
-// The RunLog port: a run's log and settings files on disk. The real adapter is adapters/run-log.ts (compose.ts); tests
+// The RunLog port: a run's log and settings files on disk. The real adapter is adapters/claude/run-log.ts (compose.ts); tests
 // run it on real files in a temporary folder.
 import type { WriteStream } from 'node:fs';
 import type { LogEntry } from '../../domain/runs/index.ts';

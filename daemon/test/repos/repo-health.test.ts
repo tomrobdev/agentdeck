@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
 import { type TaskId, asTaskId } from '../../src/domain/shared/id.ts';
-import type { TaskEvent } from '../../src/domain/work/lifecycle.ts';
+import type { TaskEvent } from '../../src/domain/work/lifecycle/lifecycle.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-health-'));
 process.env.AGENTDECK_HOME = home;

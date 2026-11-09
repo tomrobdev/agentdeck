@@ -5,7 +5,7 @@ description: Write a pull request summary in the Overview, Frontend, Backend for
 
 # Write a PR summary
 
-AgentDeck's workers end every done run with this summary, and it becomes the PR's body and the Overview's pull request card. A PR opened from a session should read the same, so a reviewer reads every PR one way. The format's one source is `PR_SUMMARY_FORMAT` in `daemon/src/domain/landing/summary.ts` of the AgentDeck repo; if that text has changed, follow it over this page.
+AgentDeck's workers end every done run with this summary, and it becomes the PR's body and the Overview's pull request card. A PR opened from a session should read the same, so a reviewer reads every PR one way. The format's one source is `PR_SUMMARY_FORMAT` in `daemon/src/domain/landing/pull-request/summary.ts` of the AgentDeck repo; if that text has changed, follow it over this page.
 
 ## The format
 
@@ -37,4 +37,4 @@ Bullets in these sections, in this order:
 - New PR: `gh pr create --title "<title>" --body-file <file>`.
 - Existing PR: `gh pr edit <url> --body-file <file>`.
 
-A worker's PR body also has the plan's steps and a table of runs, which AgentDeck adds (`buildPrBody` in `daemon/src/domain/landing/pr.ts`). When rewriting one, change only the summary part and keep the rest. A merge through AgentDeck builds the squash commit message again from the runs' own summaries, not from the PR's body, so an edit on GitHub changes the PR page but not the commit.
+A worker's PR body also has the plan's steps and a table of runs, which AgentDeck adds (`buildPrBody` in `daemon/src/domain/landing/pull-request/pr.ts`). When rewriting one, change only the summary part and keep the rest. A merge through AgentDeck builds the squash commit message again from the runs' own summaries, not from the PR's body, so an edit on GitHub changes the PR page but not the commit.

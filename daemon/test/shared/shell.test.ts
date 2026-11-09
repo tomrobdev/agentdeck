@@ -4,7 +4,7 @@ import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { runCommand } from '../../src/adapters/shell.ts';
+import { runCommand } from '../../src/adapters/process/shell.ts';
 import { waitFor } from '../fixtures/fixtures.ts';
 
 function alive(pid: number): boolean {

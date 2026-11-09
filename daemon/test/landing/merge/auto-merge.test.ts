@@ -15,15 +15,15 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 const { openDb } = await import('../../fixtures/open-db.ts');
 const { doneTask, testApp, waitFor } = await import('../../fixtures/fixtures.ts');
 const { READY_PR, fakeCodeHost } = await import('../../fixtures/fakes.ts');
-const { mergeFailure, verdictView } = await import('../../../src/domain/landing/merge.ts');
-const { mergeRequestCheck } = await import('../../../src/domain/landing/merge-request.ts');
+const { mergeFailure, verdictView } = await import('../../../src/domain/landing/merge/merge.ts');
+const { mergeRequestCheck } = await import('../../../src/domain/landing/merge/merge-request.ts');
 const { cancelMergeRequest, requestMerge } = await import('../../../src/application/actions.ts');
-const { github } = await import('../../../src/adapters/github.ts');
-const { AUTO_MERGE_LABEL, autoMergeCheck, autoMergeOn } = await import('../../../src/domain/landing/auto-merge.ts');
+const { github } = await import('../../../src/adapters/github/github.ts');
+const { AUTO_MERGE_LABEL, autoMergeCheck, autoMergeOn } = await import('../../../src/domain/landing/merge/auto-merge.ts');
 const { isMergeLocked } = await import('../../../src/application/work/checkout-locks.ts');
-const { refreshPrStates } = await import('../../../src/application/landing/refresh.ts');
-const { autoMerge } = await import('../../../src/application/landing/auto-merge.ts');
-const { openPullRequest } = await import('../../../src/application/landing/open-pr.ts');
+const { refreshPrStates } = await import('../../../src/application/landing/pull-request/refresh.ts');
+const { autoMerge } = await import('../../../src/application/landing/merge/auto-merge.ts');
+const { openPullRequest } = await import('../../../src/application/landing/pull-request/open-pr.ts');
 const { ActionError, addTask, mergePreview, mergeTask, setAutoMerge, syncNow, updateRepo } =
   await import('../../../src/application/actions.ts');
 const { resolveConflicting } = await import('../../../src/application/runs/sync.ts');
@@ -31,11 +31,11 @@ const { repoSettingPatch } = await import('../../../src/cli/operations/settings-
 const { liveLinks } = await import('../../../src/application/work/dependencies.ts');
 const { startState, waitingFor } = await import('../../../src/domain/work/index.ts');
 /** What a task waits for on its builds-on links, read from the database now. */
-const waiting = (t: import('../../../src/domain/work/task.ts').Task) => {
+const waiting = (t: import('../../../src/domain/work/task/task.ts').Task) => {
   const links = liveLinks(db);
   return waitingFor(t, startState(t, links.linksOf(t.id), links.target));
 };
-type PrDetails = import('../../../src/domain/landing/merge.ts').PrDetails;
+type PrDetails = import('../../../src/domain/landing/merge/merge.ts').PrDetails;
 
 const db = openDb(join(home, 'test.db'));
 after(() => db.close());
@@ -113,7 +113,7 @@ function tested(o: { source?: 'manual' | 'planner'; title?: string } = {}) {
 // ---- The check
 
 const repoRow = { test_cmd: 'pnpm test', auto_merge_max_lines: 400, auto_merge_skip: ['.github/'] };
-type ReviewFacts = import('../../../src/domain/landing/review-gate.ts').ReviewFacts;
+type ReviewFacts = import('../../../src/domain/landing/review/review-gate.ts').ReviewFacts;
 type CheckOptions = { tests_passed?: boolean | null; paused?: string | null; test_cmd?: string | null; review?: ReviewFacts | null };
 /** The check as stored, its reasons with their kinds. */
 const raw = (pr: Partial<PrDetails> = {}, o: CheckOptions = {}) =>
@@ -289,7 +289,7 @@ test('a merge request reads the findings as auto-merge does, without what only a
 
 // ---- The review gate (auto_review on)
 
-type ReviewWithComments = import('../../../src/domain/landing/review.ts').ReviewWithComments;
+type ReviewWithComments = import('../../../src/domain/landing/review/review.ts').ReviewWithComments;
 let reviewIds = 0;
 /** A submitted review of the changes `diff_hash`, by a review run unless said, with line comments (open unless said). */
 const reviewOf = (

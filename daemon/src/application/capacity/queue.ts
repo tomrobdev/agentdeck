@@ -27,7 +27,7 @@ export function queueWaits(app: App): { wait: QueueWait | null; paused_repos: Pa
 }
 
 /**
- * A function telling what a task waits for, given its start state (`startState` in domain/work/link.ts). Make one per
+ * A function telling what a task waits for, given its start state (`startState` in domain/work/links/link.ts). Make one per
  * request: it reads the queue state and the unblock runs going once.
  */
 export function startWaits(app: App): (task: Pick<Task, 'id' | 'status' | 'repo_id'>, dependency: StartState) => StartWait | null {

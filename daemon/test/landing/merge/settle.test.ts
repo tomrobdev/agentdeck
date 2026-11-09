@@ -11,14 +11,14 @@ process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-settle-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { openDb } = await import('../../../src/db/index.ts');
-const { github } = await import('../../../src/adapters/github.ts');
+const { github } = await import('../../../src/adapters/github/github.ts');
 const { Scheduler } = await import('../../../src/application/scheduler/scheduler.ts');
-const { closePullRequest } = await import('../../../src/application/landing/merge.ts');
-const { refreshPrStates } = await import('../../../src/application/landing/refresh.ts');
-const { openPullRequest } = await import('../../../src/application/landing/open-pr.ts');
-const { parsePrDetails } = await import('../../../src/domain/landing/merge.ts');
+const { closePullRequest } = await import('../../../src/application/landing/merge/merge.ts');
+const { refreshPrStates } = await import('../../../src/application/landing/pull-request/refresh.ts');
+const { openPullRequest } = await import('../../../src/application/landing/pull-request/open-pr.ts');
+const { parsePrDetails } = await import('../../../src/domain/landing/merge/merge.ts');
 const { finalNotification } = await import('../../../src/domain/operations/notification.ts');
-const { MAX_RESTARTS } = await import('../../../src/domain/work/lifecycle.ts');
+const { MAX_RESTARTS } = await import('../../../src/domain/work/lifecycle/lifecycle.ts');
 
 function setup(pr_mode: 'off' | 'ready' = 'off') {
   const db = testApp(openDb(':memory:'));

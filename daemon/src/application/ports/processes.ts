@@ -1,5 +1,5 @@
 // The Processes port: the claude process groups, and keeping the Mac awake while they work. The real adapters are
-// adapters/processes.ts and adapters/caffeinate.ts (compose.ts).
+// adapters/process/processes.ts and adapters/macos/caffeinate.ts (compose.ts).
 
 /** A claude process group recorded on a run, and when it was recorded (UTC, SQLite format). */
 export interface PidRecord {

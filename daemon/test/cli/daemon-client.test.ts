@@ -19,7 +19,7 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { openDb } = await import('../../src/db/index.ts');
 const { startApi } = await import('../../src/api/server.ts');
-const { ensureWorktree } = await import('../../src/adapters/git.ts');
+const { ensureWorktree } = await import('../../src/adapters/git/worktrees.ts');
 const { callDaemon } = await import('../../src/cli/operations/daemon-client.ts');
 type SyncReport = import('../../src/application/actions.ts').SyncReport;
 

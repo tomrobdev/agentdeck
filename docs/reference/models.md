@@ -886,15 +886,15 @@ A history row with its task's title.
 
 An open task as the digest shows it.
 
-| Field              | Type                                                     | Comment                                                                                                    |
-| ------------------ | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `id`               | `TaskId`                                                 |                                                                                                            |
-| `title`            | `string`                                                 |                                                                                                            |
-| `status`           | `TaskStatus`                                             |                                                                                                            |
-| `pr_state`         | `PrState \| null`                                        |                                                                                                            |
-| `stop_reason`      | `string \| null`                                         |                                                                                                            |
-| `waiting`          | `Waiting \| null`                                        |                                                                                                            |
-| `auto_merge_view?` | `{ state: string; label: string; } \| null \| undefined` | The auto-merge view's state and label (domain/landing/auto-merge.ts); marked on the line unless it is off. |
+| Field              | Type                                                     | Comment                                                                                                          |
+| ------------------ | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `id`               | `TaskId`                                                 |                                                                                                                  |
+| `title`            | `string`                                                 |                                                                                                                  |
+| `status`           | `TaskStatus`                                             |                                                                                                                  |
+| `pr_state`         | `PrState \| null`                                        |                                                                                                                  |
+| `stop_reason`      | `string \| null`                                         |                                                                                                                  |
+| `waiting`          | `Waiting \| null`                                        |                                                                                                                  |
+| `auto_merge_view?` | `{ state: string; label: string; } \| null \| undefined` | The auto-merge view's state and label (domain/landing/merge/auto-merge.ts); marked on the line unless it is off. |
 
 ### Headline
 
@@ -1594,29 +1594,29 @@ A task stopped until something changes.
 
 ### BlockedTask
 
-| Field          | Type                      | Comment                                                                                                       |
-| -------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `id`           | `TaskId`                  |                                                                                                               |
-| `repo_id`      | `RepoId`                  |                                                                                                               |
-| `title`        | `string`                  |                                                                                                               |
-| `prompt`       | `string`                  |                                                                                                               |
-| `priority`     | `number`                  |                                                                                                               |
-| `model`        | `string`                  |                                                                                                               |
-| `max_turns`    | `number`                  |                                                                                                               |
-| `attempts`     | `number`                  |                                                                                                               |
-| `max_attempts` | `number`                  |                                                                                                               |
-| `checkout`     | `Checkout \| null`        | the branch and worktree the work is on, and a running sync                                                    |
-| `source`       | `TaskSource`              |                                                                                                               |
-| `restarts`     | `number`                  | times a daemon restart requeued this task mid-run                                                             |
-| `pr`           | `PullRequest \| null`     | the task's pull request, as one value                                                                         |
-| `plan`         | `PlanLink \| null`        | the plan this task follows and its linked steps (domain/work/plan-link.ts); null follows its own plan, if any |
-| `auto_merge`   | `boolean \| null`         | overrides the repo's auto_merge; null = the repo's (domain/landing/auto-merge.ts)                             |
-| `created_at`   | `string`                  |                                                                                                               |
-| `updated_at`   | `string`                  |                                                                                                               |
-| `status`       | `"blocked"`               |                                                                                                               |
-| `stop_reason`  | `string \| null`          |                                                                                                               |
-| `needs`        | `Needs \| null`           | what the worker said it needs when it blocked                                                                 |
-| `question`     | `UnblockQuestion \| null` | what an unblock run left on the task                                                                          |
+| Field          | Type                      | Comment                                                                                                             |
+| -------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `id`           | `TaskId`                  |                                                                                                                     |
+| `repo_id`      | `RepoId`                  |                                                                                                                     |
+| `title`        | `string`                  |                                                                                                                     |
+| `prompt`       | `string`                  |                                                                                                                     |
+| `priority`     | `number`                  |                                                                                                                     |
+| `model`        | `string`                  |                                                                                                                     |
+| `max_turns`    | `number`                  |                                                                                                                     |
+| `attempts`     | `number`                  |                                                                                                                     |
+| `max_attempts` | `number`                  |                                                                                                                     |
+| `checkout`     | `Checkout \| null`        | the branch and worktree the work is on, and a running sync                                                          |
+| `source`       | `TaskSource`              |                                                                                                                     |
+| `restarts`     | `number`                  | times a daemon restart requeued this task mid-run                                                                   |
+| `pr`           | `PullRequest \| null`     | the task's pull request, as one value                                                                               |
+| `plan`         | `PlanLink \| null`        | the plan this task follows and its linked steps (domain/work/plans/plan-link.ts); null follows its own plan, if any |
+| `auto_merge`   | `boolean \| null`         | overrides the repo's auto_merge; null = the repo's (domain/landing/merge/auto-merge.ts)                             |
+| `created_at`   | `string`                  |                                                                                                                     |
+| `updated_at`   | `string`                  |                                                                                                                     |
+| `status`       | `"blocked"`               |                                                                                                                     |
+| `stop_reason`  | `string \| null`          |                                                                                                                     |
+| `needs`        | `Needs \| null`           | what the worker said it needs when it blocked                                                                       |
+| `question`     | `UnblockQuestion \| null` | what an unblock run left on the task                                                                                |
 
 ### CancelledState
 
@@ -1829,27 +1829,27 @@ A task at the end of a link: what its link states are read from.
 
 A task as listed: with where it stands on its builds-on links (as waitingFor reports it), the tasks merging its open PR lets start and, from the API, its repo's name. A daemon from before `unblocks` existed sends none, which reads as empty.
 
-| Field          | Type                                                                                                          | Comment                                                                                                       |
-| -------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `repo_id`      | `RepoId`                                                                                                      |                                                                                                               |
-| `created_at`   | `string`                                                                                                      |                                                                                                               |
-| `auto_merge`   | `boolean \| null`                                                                                             | overrides the repo's auto_merge; null = the repo's (domain/landing/auto-merge.ts)                             |
-| `id`           | `TaskId`                                                                                                      |                                                                                                               |
-| `max_turns`    | `number`                                                                                                      |                                                                                                               |
-| `pr`           | `PullRequest \| null`                                                                                         | the task's pull request, as one value                                                                         |
-| `attempts`     | `number`                                                                                                      |                                                                                                               |
-| `max_attempts` | `number`                                                                                                      |                                                                                                               |
-| `restarts`     | `number`                                                                                                      | times a daemon restart requeued this task mid-run                                                             |
-| `title`        | `string`                                                                                                      |                                                                                                               |
-| `source`       | `TaskSource`                                                                                                  |                                                                                                               |
-| `updated_at`   | `string`                                                                                                      |                                                                                                               |
-| `priority`     | `number`                                                                                                      |                                                                                                               |
-| `model`        | `string`                                                                                                      |                                                                                                               |
-| `checkout`     | `Checkout \| null`                                                                                            | the branch and worktree the work is on, and a running sync                                                    |
-| `plan`         | `PlanLink \| null`                                                                                            | the plan this task follows and its linked steps (domain/work/plan-link.ts); null follows its own plan, if any |
-| `status`       | `"failed" \| "blocked" \| "proposed" \| "queued" \| "running" \| "done" \| "cancel_requested" \| "cancelled"` |                                                                                                               |
-| `waiting`      | `Waiting \| null`                                                                                             |                                                                                                               |
-| `unblocks`     | `number[]`                                                                                                    |                                                                                                               |
+| Field          | Type                                                                                                          | Comment                                                                                                             |
+| -------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `repo_id`      | `RepoId`                                                                                                      |                                                                                                                     |
+| `created_at`   | `string`                                                                                                      |                                                                                                                     |
+| `auto_merge`   | `boolean \| null`                                                                                             | overrides the repo's auto_merge; null = the repo's (domain/landing/merge/auto-merge.ts)                             |
+| `id`           | `TaskId`                                                                                                      |                                                                                                                     |
+| `max_turns`    | `number`                                                                                                      |                                                                                                                     |
+| `pr`           | `PullRequest \| null`                                                                                         | the task's pull request, as one value                                                                               |
+| `attempts`     | `number`                                                                                                      |                                                                                                                     |
+| `max_attempts` | `number`                                                                                                      |                                                                                                                     |
+| `restarts`     | `number`                                                                                                      | times a daemon restart requeued this task mid-run                                                                   |
+| `title`        | `string`                                                                                                      |                                                                                                                     |
+| `source`       | `TaskSource`                                                                                                  |                                                                                                                     |
+| `updated_at`   | `string`                                                                                                      |                                                                                                                     |
+| `priority`     | `number`                                                                                                      |                                                                                                                     |
+| `model`        | `string`                                                                                                      |                                                                                                                     |
+| `checkout`     | `Checkout \| null`                                                                                            | the branch and worktree the work is on, and a running sync                                                          |
+| `plan`         | `PlanLink \| null`                                                                                            | the plan this task follows and its linked steps (domain/work/plans/plan-link.ts); null follows its own plan, if any |
+| `status`       | `"failed" \| "blocked" \| "proposed" \| "queued" \| "running" \| "done" \| "cancel_requested" \| "cancelled"` |                                                                                                                     |
+| `waiting`      | `Waiting \| null`                                                                                             |                                                                                                                     |
+| `unblocks`     | `number[]`                                                                                                    |                                                                                                                     |
 
 ### Needs
 
@@ -2053,26 +2053,26 @@ The fields a state carries, each null where its status has none: how the columns
 
 ### Task
 
-| Field          | Type                                                                                                          | Comment                                                                                                       |
-| -------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `id`           | `TaskId`                                                                                                      |                                                                                                               |
-| `repo_id`      | `RepoId`                                                                                                      |                                                                                                               |
-| `title`        | `string`                                                                                                      |                                                                                                               |
-| `prompt`       | `string`                                                                                                      |                                                                                                               |
-| `priority`     | `number`                                                                                                      |                                                                                                               |
-| `model`        | `string`                                                                                                      |                                                                                                               |
-| `max_turns`    | `number`                                                                                                      |                                                                                                               |
-| `attempts`     | `number`                                                                                                      |                                                                                                               |
-| `max_attempts` | `number`                                                                                                      |                                                                                                               |
-| `checkout`     | `Checkout \| null`                                                                                            | the branch and worktree the work is on, and a running sync                                                    |
-| `source`       | `TaskSource`                                                                                                  |                                                                                                               |
-| `restarts`     | `number`                                                                                                      | times a daemon restart requeued this task mid-run                                                             |
-| `pr`           | `PullRequest \| null`                                                                                         | the task's pull request, as one value                                                                         |
-| `plan`         | `PlanLink \| null`                                                                                            | the plan this task follows and its linked steps (domain/work/plan-link.ts); null follows its own plan, if any |
-| `auto_merge`   | `boolean \| null`                                                                                             | overrides the repo's auto_merge; null = the repo's (domain/landing/auto-merge.ts)                             |
-| `created_at`   | `string`                                                                                                      |                                                                                                               |
-| `updated_at`   | `string`                                                                                                      |                                                                                                               |
-| `status`       | `"failed" \| "blocked" \| "proposed" \| "queued" \| "running" \| "done" \| "cancel_requested" \| "cancelled"` |                                                                                                               |
+| Field          | Type                                                                                                          | Comment                                                                                                             |
+| -------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `id`           | `TaskId`                                                                                                      |                                                                                                                     |
+| `repo_id`      | `RepoId`                                                                                                      |                                                                                                                     |
+| `title`        | `string`                                                                                                      |                                                                                                                     |
+| `prompt`       | `string`                                                                                                      |                                                                                                                     |
+| `priority`     | `number`                                                                                                      |                                                                                                                     |
+| `model`        | `string`                                                                                                      |                                                                                                                     |
+| `max_turns`    | `number`                                                                                                      |                                                                                                                     |
+| `attempts`     | `number`                                                                                                      |                                                                                                                     |
+| `max_attempts` | `number`                                                                                                      |                                                                                                                     |
+| `checkout`     | `Checkout \| null`                                                                                            | the branch and worktree the work is on, and a running sync                                                          |
+| `source`       | `TaskSource`                                                                                                  |                                                                                                                     |
+| `restarts`     | `number`                                                                                                      | times a daemon restart requeued this task mid-run                                                                   |
+| `pr`           | `PullRequest \| null`                                                                                         | the task's pull request, as one value                                                                               |
+| `plan`         | `PlanLink \| null`                                                                                            | the plan this task follows and its linked steps (domain/work/plans/plan-link.ts); null follows its own plan, if any |
+| `auto_merge`   | `boolean \| null`                                                                                             | overrides the repo's auto_merge; null = the repo's (domain/landing/merge/auto-merge.ts)                             |
+| `created_at`   | `string`                                                                                                      |                                                                                                                     |
+| `updated_at`   | `string`                                                                                                      |                                                                                                                     |
+| `status`       | `"failed" \| "blocked" \| "proposed" \| "queued" \| "running" \| "done" \| "cancel_requested" \| "cancelled"` |                                                                                                                     |
 
 ### TaskChanges
 
@@ -2099,25 +2099,25 @@ The fields of a task a write sets, named as its columns are; the store stores th
 
 What every task has, whatever its status.
 
-| Field          | Type                  | Comment                                                                                                       |
-| -------------- | --------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `id`           | `TaskId`              |                                                                                                               |
-| `repo_id`      | `RepoId`              |                                                                                                               |
-| `title`        | `string`              |                                                                                                               |
-| `prompt`       | `string`              |                                                                                                               |
-| `priority`     | `number`              |                                                                                                               |
-| `model`        | `string`              |                                                                                                               |
-| `max_turns`    | `number`              |                                                                                                               |
-| `attempts`     | `number`              |                                                                                                               |
-| `max_attempts` | `number`              |                                                                                                               |
-| `checkout`     | `Checkout \| null`    | the branch and worktree the work is on, and a running sync                                                    |
-| `source`       | `TaskSource`          |                                                                                                               |
-| `restarts`     | `number`              | times a daemon restart requeued this task mid-run                                                             |
-| `pr`           | `PullRequest \| null` | the task's pull request, as one value                                                                         |
-| `plan`         | `PlanLink \| null`    | the plan this task follows and its linked steps (domain/work/plan-link.ts); null follows its own plan, if any |
-| `auto_merge`   | `boolean \| null`     | overrides the repo's auto_merge; null = the repo's (domain/landing/auto-merge.ts)                             |
-| `created_at`   | `string`              |                                                                                                               |
-| `updated_at`   | `string`              |                                                                                                               |
+| Field          | Type                  | Comment                                                                                                             |
+| -------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `id`           | `TaskId`              |                                                                                                                     |
+| `repo_id`      | `RepoId`              |                                                                                                                     |
+| `title`        | `string`              |                                                                                                                     |
+| `prompt`       | `string`              |                                                                                                                     |
+| `priority`     | `number`              |                                                                                                                     |
+| `model`        | `string`              |                                                                                                                     |
+| `max_turns`    | `number`              |                                                                                                                     |
+| `attempts`     | `number`              |                                                                                                                     |
+| `max_attempts` | `number`              |                                                                                                                     |
+| `checkout`     | `Checkout \| null`    | the branch and worktree the work is on, and a running sync                                                          |
+| `source`       | `TaskSource`          |                                                                                                                     |
+| `restarts`     | `number`              | times a daemon restart requeued this task mid-run                                                                   |
+| `pr`           | `PullRequest \| null` | the task's pull request, as one value                                                                               |
+| `plan`         | `PlanLink \| null`    | the plan this task follows and its linked steps (domain/work/plans/plan-link.ts); null follows its own plan, if any |
+| `auto_merge`   | `boolean \| null`     | overrides the repo's auto_merge; null = the repo's (domain/landing/merge/auto-merge.ts)                             |
+| `created_at`   | `string`              |                                                                                                                     |
+| `updated_at`   | `string`              |                                                                                                                     |
 
 ### TaskCounters
 
@@ -2160,25 +2160,25 @@ A stored plan as the API returns it: parsed, without its HTML.
 
 ### TaskSummary
 
-| Field          | Type                                                                                                          | Comment                                                                                                       |
-| -------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `repo_id`      | `RepoId`                                                                                                      |                                                                                                               |
-| `created_at`   | `string`                                                                                                      |                                                                                                               |
-| `auto_merge`   | `boolean \| null`                                                                                             | overrides the repo's auto_merge; null = the repo's (domain/landing/auto-merge.ts)                             |
-| `id`           | `TaskId`                                                                                                      |                                                                                                               |
-| `max_turns`    | `number`                                                                                                      |                                                                                                               |
-| `pr`           | `PullRequest \| null`                                                                                         | the task's pull request, as one value                                                                         |
-| `attempts`     | `number`                                                                                                      |                                                                                                               |
-| `max_attempts` | `number`                                                                                                      |                                                                                                               |
-| `restarts`     | `number`                                                                                                      | times a daemon restart requeued this task mid-run                                                             |
-| `title`        | `string`                                                                                                      |                                                                                                               |
-| `source`       | `TaskSource`                                                                                                  |                                                                                                               |
-| `updated_at`   | `string`                                                                                                      |                                                                                                               |
-| `priority`     | `number`                                                                                                      |                                                                                                               |
-| `model`        | `string`                                                                                                      |                                                                                                               |
-| `checkout`     | `Checkout \| null`                                                                                            | the branch and worktree the work is on, and a running sync                                                    |
-| `plan`         | `PlanLink \| null`                                                                                            | the plan this task follows and its linked steps (domain/work/plan-link.ts); null follows its own plan, if any |
-| `status`       | `"failed" \| "blocked" \| "proposed" \| "queued" \| "running" \| "done" \| "cancel_requested" \| "cancelled"` |                                                                                                               |
+| Field          | Type                                                                                                          | Comment                                                                                                             |
+| -------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `repo_id`      | `RepoId`                                                                                                      |                                                                                                                     |
+| `created_at`   | `string`                                                                                                      |                                                                                                                     |
+| `auto_merge`   | `boolean \| null`                                                                                             | overrides the repo's auto_merge; null = the repo's (domain/landing/merge/auto-merge.ts)                             |
+| `id`           | `TaskId`                                                                                                      |                                                                                                                     |
+| `max_turns`    | `number`                                                                                                      |                                                                                                                     |
+| `pr`           | `PullRequest \| null`                                                                                         | the task's pull request, as one value                                                                               |
+| `attempts`     | `number`                                                                                                      |                                                                                                                     |
+| `max_attempts` | `number`                                                                                                      |                                                                                                                     |
+| `restarts`     | `number`                                                                                                      | times a daemon restart requeued this task mid-run                                                                   |
+| `title`        | `string`                                                                                                      |                                                                                                                     |
+| `source`       | `TaskSource`                                                                                                  |                                                                                                                     |
+| `updated_at`   | `string`                                                                                                      |                                                                                                                     |
+| `priority`     | `number`                                                                                                      |                                                                                                                     |
+| `model`        | `string`                                                                                                      |                                                                                                                     |
+| `checkout`     | `Checkout \| null`                                                                                            | the branch and worktree the work is on, and a running sync                                                          |
+| `plan`         | `PlanLink \| null`                                                                                            | the plan this task follows and its linked steps (domain/work/plans/plan-link.ts); null follows its own plan, if any |
+| `status`       | `"failed" \| "blocked" \| "proposed" \| "queued" \| "running" \| "done" \| "cancel_requested" \| "cancelled"` |                                                                                                                     |
 
 ### Transition
 

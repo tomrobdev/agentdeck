@@ -50,7 +50,7 @@ export function taskStatusStore(db: DatabaseSync, orm: Orm, getTask: (id: TaskId
    * The task row `t` is free to start: every task it builds on is met, that is done, and merged unless its repo has pr_mode off.
    * A done task with no PR state (none opened yet, or an earlier one set aside by a retry) counts as met only in a repo with
    * pr_mode off. A task a person marked done counts as met unless its PR is open. After links never stop a start.
-   * Mirrors startState and domain/work/link.ts.
+   * Mirrors startState and domain/work/links/link.ts.
    */
   const notWaiting = () => {
     const met = and(
@@ -94,7 +94,7 @@ export function taskStatusStore(db: DatabaseSync, orm: Orm, getTask: (id: TaskId
   /**
    * The task row `t` may be claimed: in a status a claim is allowed from (queued), not waiting on a task it builds on, with no
    * unblock run going, in a repo work may start in. The one definition, for the claim and `hasQueued`; mirrors `startWait`
-   * in domain/work/start.ts, but for the slots, which the scheduler counts.
+   * in domain/work/task/start.ts, but for the slots, which the scheduler counts.
    */
   const claimable = () => and(inArray(t.status, fromStatuses({ type: 'claim' })), notWaiting(), notUnblocking(), inOpenRepo(t.repo_id));
 

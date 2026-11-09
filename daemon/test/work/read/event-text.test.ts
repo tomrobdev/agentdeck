@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { describeEvent } from '../../../src/domain/work/read/event-text.ts';
-import type { TaskEventRow } from '../../../src/domain/work/history.ts';
+import type { TaskEventRow } from '../../../src/domain/work/lifecycle/history.ts';
 
 const person = (type: string, to_status: string | null = null, reason: string | null = null) =>
   describeEvent({ type, to_status, reason } as Pick<TaskEventRow, 'type' | 'to_status' | 'reason'>, 'person');

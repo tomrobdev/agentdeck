@@ -1,6 +1,6 @@
 // Protected edits: files a worker may not edit itself (under .claude/), which it writes out to the worktree's edits
 // folder for the daemon to commit after the run. A person still reviews them: a PR touching a protected path is never
-// auto-merged (domain/landing/auto-merge.ts). Pure: no I/O.
+// auto-merged (domain/landing/merge/auto-merge.ts). Pure: no I/O.
 import { AGENTDECK_FOLDER } from './repo.ts';
 
 /** The path prefixes a worker may not edit. Their files instruct every later agent, so a person merges them. */

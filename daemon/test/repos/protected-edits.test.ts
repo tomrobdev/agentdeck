@@ -15,8 +15,8 @@ process.env.AGENTDECK_CLAUDE_BIN = fake;
 
 const { openDb } = await import('../fixtures/open-db.ts');
 const { Scheduler } = await import('../../src/application/scheduler/scheduler.ts');
-const { applyProtectedEdits } = await import('../../src/adapters/protected-edits.ts');
-const { writePlanFile } = await import('../../src/adapters/plan-file.ts');
+const { applyProtectedEdits } = await import('../../src/adapters/local/protected-edits.ts');
+const { writePlanFile } = await import('../../src/adapters/local/plan-file.ts');
 const { EDITS_FOLDER, editPathFor, isProtectedPath, protectedEditTarget, protectedEditsMessage } =
   await import('../../src/domain/repos/protected-edits.ts');
 const { workerSystemPrompt } = await import('../../src/domain/runs/prompt.ts');

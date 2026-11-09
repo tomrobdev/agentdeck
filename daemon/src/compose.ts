@@ -1,16 +1,16 @@
 // Builds the App the use cases take, on the database and the real adapters: for the CLI (`cli.ts`), which also hands
 // it to the daemon (`cli/operations/daemon.ts` → `daemon.ts`). Tests build theirs in test/fixtures.ts. Each process builds one,
 // so nothing here is module state.
-import { findClaude, runClaude } from './adapters/claude.ts';
-import { KeepAwake } from './adapters/caffeinate.ts';
-import { fetchDaemonState } from './adapters/daemon-api.ts';
-import { readLogTail } from './adapters/daemon-log.ts';
-import { github } from './adapters/github.ts';
-import { deleteGoals, goalsPath, readGoals, writeGoals } from './adapters/goals.ts';
-import { desktop, ntfy } from './adapters/notify.ts';
-import { activeChildren, killGroup, ownsLiveGroup, reapOrphans } from './adapters/processes.ts';
-import { appendEvent, closeLog, readEvents, readLog, removeFiles, writeEvent, writeSettings } from './adapters/run-log.ts';
-import { DAEMON_LOG, install, restart, serviceStatus, start, stop, tailLog, uninstall } from './adapters/service.ts';
+import { findClaude, runClaude } from './adapters/claude/claude.ts';
+import { KeepAwake } from './adapters/macos/caffeinate.ts';
+import { fetchDaemonState } from './adapters/local/daemon-api.ts';
+import { readLogTail } from './adapters/local/daemon-log.ts';
+import { github } from './adapters/github/github.ts';
+import { deleteGoals, goalsPath, readGoals, writeGoals } from './adapters/local/goals.ts';
+import { desktop, ntfy } from './adapters/macos/notify.ts';
+import { activeChildren, killGroup, ownsLiveGroup, reapOrphans } from './adapters/process/processes.ts';
+import { appendEvent, closeLog, readEvents, readLog, removeFiles, writeEvent, writeSettings } from './adapters/claude/run-log.ts';
+import { DAEMON_LOG, install, restart, serviceStatus, start, stop, tailLog, uninstall } from './adapters/macos/service.ts';
 import type { Agent } from './application/ports/agent.ts';
 import type { ComposedApp, Ports } from './application/ports/app.ts';
 import type { CodeHost } from './application/ports/code-host.ts';
@@ -20,16 +20,16 @@ import type { Processes } from './application/ports/processes.ts';
 import type { RunLog } from './application/ports/run-log.ts';
 import type { Service } from './application/ports/service.ts';
 import type { Source } from './application/ports/source.ts';
-import { checkedOutBranch, checkoutCommit, hasUncommittedChanges } from './adapters/git.ts';
-import { watchSource } from './adapters/watch.ts';
+import { checkedOutBranch, checkoutCommit, hasUncommittedChanges } from './adapters/git/refs.ts';
+import { watchSource } from './adapters/macos/watch.ts';
 import type { Workspace } from './application/ports/workspace.ts';
-import { workspace } from './adapters/workspace.ts';
+import { workspace } from './adapters/git/workspace.ts';
 import { openDb } from './db/index.ts';
 
-/** claude through `adapters/claude.ts`: every session in its own process group. */
+/** claude through `adapters/claude/claude.ts`: every session in its own process group. */
 export const realAgent = (): Agent => ({ run: (session) => runClaude(session), find: async () => findClaude() });
 
-/** Pull requests through `adapters/github.ts`. Each call looks the member up on `github`, so a test can replace one. */
+/** Pull requests through `adapters/github/github.ts`. Each call looks the member up on `github`, so a test can replace one. */
 export const realCodeHost = (): CodeHost => ({
   auth: () => github.auth(),
   push: (repoPath, branch) => github.push(repoPath, branch),
@@ -46,13 +46,13 @@ export const realCodeHost = (): CodeHost => ({
   deleteRemoteBranch: (repoPath, branch) => github.deleteRemoteBranch(repoPath, branch),
 });
 
-/** Git, the shell and worktree files through `adapters/workspace.ts`. */
+/** Git, the shell and worktree files through `adapters/git/workspace.ts`. */
 export const realWorkspace = (): Workspace => workspace;
 
-/** Desktop and ntfy notifications through `adapters/notify.ts`. */
+/** Desktop and ntfy notifications through `adapters/macos/notify.ts`. */
 export const realNotifier = (): Notifier => ({ desktop, ntfy });
 
-/** Run log and settings files through `adapters/run-log.ts`. */
+/** Run log and settings files through `adapters/claude/run-log.ts`. */
 export const realRunLog = (): RunLog => ({
   event: writeEvent,
   append: appendEvent,
@@ -63,7 +63,7 @@ export const realRunLog = (): RunLog => ({
   events: readEvents,
 });
 
-/** Process groups through `adapters/processes.ts`, keep-awake through `adapters/caffeinate.ts`. */
+/** Process groups through `adapters/process/processes.ts`, keep-awake through `adapters/macos/caffeinate.ts`. */
 export const realProcesses = (): Processes => ({
   stopAll: () => {
     for (const child of activeChildren) killGroup(child.pid);
@@ -73,7 +73,7 @@ export const realProcesses = (): Processes => ({
   keepAwake: (enabled) => new KeepAwake(enabled),
 });
 
-/** The launchd service through `adapters/service.ts`, a daemon's API and log through `daemon-api.ts` and `daemon-log.ts`. */
+/** The launchd service through `adapters/macos/service.ts`, a daemon's API and log through `daemon-api.ts` and `daemon-log.ts`. */
 export const realService = (): Service => ({
   status: serviceStatus,
   start,
@@ -86,10 +86,10 @@ export const realService = (): Service => ({
   logTail: () => readLogTail(DAEMON_LOG),
 });
 
-/** Goals files through `adapters/goals.ts`. */
+/** Goals files through `adapters/local/goals.ts`. */
 export const realGoals = (): Goals => ({ path: goalsPath, read: readGoals, write: writeGoals, delete: deleteGoals });
 
-/** The daemon's source checkout through `adapters/git.ts` and `adapters/watch.ts`. */
+/** The daemon's source checkout through `adapters/git.ts` and `adapters/macos/watch.ts`. */
 export const realSource = (): Source => ({
   commit: checkoutCommit,
   branch: checkedOutBranch,

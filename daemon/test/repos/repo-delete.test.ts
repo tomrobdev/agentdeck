@@ -11,8 +11,8 @@ process.env.AGENTDECK_HOME = home;
 
 const { openDb } = await import('../fixtures/open-db.ts');
 const actions = await import('../../src/application/actions.ts');
-const { ensureWorktree } = await import('../../src/adapters/git.ts');
-const { writeGoals, goalsPath } = await import('../../src/adapters/goals.ts');
+const { ensureWorktree } = await import('../../src/adapters/git/worktrees.ts');
+const { writeGoals, goalsPath } = await import('../../src/adapters/local/goals.ts');
 const { settingsPath } = await import('../../src/domain/runs/translate/sandbox.ts');
 const db = openDb(join(home, 'test.db'));
 

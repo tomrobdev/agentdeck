@@ -10,7 +10,7 @@ import { after, before, test } from 'node:test';
 import type { TaskId } from '../../../src/domain/shared/id.ts';
 import type { Run } from '../../../src/domain/runs/run.ts';
 import { asRepoId, asRunId, asTaskId, waitFor } from '../../fixtures/fixtures.ts';
-import { type Task, stopReasonOf } from '../../../src/domain/work/task.ts';
+import { type Task, stopReasonOf } from '../../../src/domain/work/task/task.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-resume-'));
 process.env.AGENTDECK_HOME = home;
@@ -24,7 +24,7 @@ process.env.AGENTDECK_CLAUDE_BIN = fake;
 const { openDb } = await import('../../fixtures/open-db.ts');
 const { DB_PATH, LOG_DIR } = await import('../../../src/config.ts');
 const { Scheduler } = await import('../../../src/application/scheduler/scheduler.ts');
-const { MAX_RESTARTS } = await import('../../../src/domain/work/lifecycle.ts');
+const { MAX_RESTARTS } = await import('../../../src/domain/work/lifecycle/lifecycle.ts');
 const { INTERRUPTED, editsSinceCutOff, pickRun, resultFields, resumableSession, resumeFailed, resumeMaxTurns } =
   await import('../../../src/domain/runs/run.ts');
 const { buildPrompt, buildResumePrompt, claudeArgs } = await import('../../../src/domain/runs/prompt.ts');

@@ -33,7 +33,7 @@ const {
   verifySchemaArgs,
 } = await import('../../../src/domain/runs/verify.ts');
 const { runLabel, runModel } = await import('../../../src/domain/runs/run.ts');
-const { buildPrBody } = await import('../../../src/domain/landing/pr.ts');
+const { buildPrBody } = await import('../../../src/domain/landing/pull-request/pr.ts');
 const { restartWait } = await import('../../../src/domain/operations/restart.ts');
 const { asRunId, asTaskId, testApp, waitFor } = await import('../../fixtures/fixtures.ts');
 const { VERDICT_MARKS, sortFindings, verifyHeadline } = await import('../../../../app/src/lib/verify.ts');

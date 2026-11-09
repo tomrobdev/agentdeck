@@ -1,9 +1,9 @@
-// The follow-up table (domain/work/follow-ups.ts), pinned against what settling did before it: for every entry in RULES.
+// The follow-up table (domain/work/lifecycle/follow-ups.ts), pinned against what settling did before it: for every entry in RULES.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { asTaskId } from '../../../src/domain/shared/id.ts';
-import { FOLLOW_UPS, type FollowUp, followUpsOf, followUpsOfRow } from '../../../src/domain/work/follow-ups.ts';
-import { linkState } from '../../../src/domain/work/link.ts';
+import { FOLLOW_UPS, type FollowUp, followUpsOf, followUpsOfRow } from '../../../src/domain/work/lifecycle/follow-ups.ts';
+import { linkState } from '../../../src/domain/work/links/link.ts';
 import {
   DOMAIN_EVENT_TYPES,
   MAX_RESTARTS,
@@ -13,8 +13,8 @@ import {
   type TaskStatus,
   domainEventOfRow,
   transition,
-} from '../../../src/domain/work/lifecycle.ts';
-import type { TaskState } from '../../../src/domain/work/task.ts';
+} from '../../../src/domain/work/lifecycle/lifecycle.ts';
+import type { TaskState } from '../../../src/domain/work/task/task.ts';
 
 const id = asTaskId(4);
 

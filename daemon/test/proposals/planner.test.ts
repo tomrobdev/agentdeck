@@ -20,7 +20,7 @@ const { Scheduler } = await import('../../src/application/scheduler/scheduler.ts
 const actions = await import('../../src/application/actions.ts');
 const { plannerDue } = await import('../../src/application/proposals/planner.ts');
 const { buildPlannerPrompt } = await import('../../src/domain/proposals/proposals.ts');
-const { renderPlist, servicePath, LABEL } = await import('../../src/adapters/service.ts');
+const { renderPlist, servicePath, LABEL } = await import('../../src/adapters/macos/service.ts');
 
 const db = openDb(join(home, 'test.db'));
 

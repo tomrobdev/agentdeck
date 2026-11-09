@@ -10,7 +10,7 @@ import {
   modelError,
   priorityError,
   stepsNeedPlanError,
-} from '../../src/domain/work/rules.ts';
+} from '../../src/domain/work/task/rules.ts';
 import { validateSlots } from '../../src/domain/capacity/governor.ts';
 
 test('priority, turn and attempt limits', () => {

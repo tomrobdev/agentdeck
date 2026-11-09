@@ -2,8 +2,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { asTaskId } from '../../fixtures/fixtures.ts';
-import { checkoutOf } from '../../../src/domain/work/checkout.ts';
-import { hasPlanLink, otherPlanOwner, planOwnerOf } from '../../../src/domain/work/plan-link.ts';
+import { checkoutOf } from '../../../src/domain/work/task/checkout.ts';
+import { hasPlanLink, otherPlanOwner, planOwnerOf } from '../../../src/domain/work/plans/plan-link.ts';
 
 const own = { id: asTaskId(5), plan: { task: asTaskId(5), steps: ['a'] } };
 const following = { id: asTaskId(6), plan: { task: asTaskId(5), steps: null } };

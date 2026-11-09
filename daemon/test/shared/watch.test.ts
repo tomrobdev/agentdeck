@@ -1,4 +1,4 @@
-// The source watcher (adapters/watch.ts) on a real temporary folder: which file changes reach the callback, and with
+// The source watcher (adapters/macos/watch.ts) on a real temporary folder: which file changes reach the callback, and with
 // what path. Waiting for "no callback" is done with a marker file: watch events arrive in order, so once a later .ts
 // file's change has come, every change made before it has come too.
 import assert from 'node:assert/strict';
@@ -6,7 +6,7 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { watchSource } from '../../src/adapters/watch.ts';
+import { watchSource } from '../../src/adapters/macos/watch.ts';
 import { waitFor } from '../fixtures/fixtures.ts';
 
 /** The marker files' names start with this, so the paths a test checks can leave them out. */

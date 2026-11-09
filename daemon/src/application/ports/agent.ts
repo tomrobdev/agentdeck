@@ -1,4 +1,4 @@
-// The Agent port: runs one claude session and reports through callbacks. The real adapter is adapters/claude.ts
+// The Agent port: runs one claude session and reports through callbacks. The real adapter is adapters/claude/claude.ts
 // (compose.ts); tests use the in-memory fake in test/fakes.ts. Every real session runs in its own process group.
 import type { WriteStream } from 'node:fs';
 import type { ClaudeRun, UsageWindow } from '../../domain/runs/index.ts';
