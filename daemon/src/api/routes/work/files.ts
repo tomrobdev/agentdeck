@@ -1,8 +1,8 @@
 // Reads of the task's branch from git objects. ref is head or base, paths are repo-relative, and since is a whole commit id
 // on the branch the changes are shown since.
-import * as actions from '../../application/actions.ts';
-import type * as C from '../contract.ts';
-import { type ApiContext, type Route, route, taskIdParam } from '../http.ts';
+import * as actions from '../../../application/actions.ts';
+import type * as C from '../../contract.ts';
+import { type ApiContext, type Route, route, taskIdParam } from '../../http.ts';
 
 export function routes({ db }: ApiContext): Route[] {
   return [
