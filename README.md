@@ -129,7 +129,10 @@ pnpm check:fast                                    # format check + typecheck + 
 pnpm check                                         # check:fast + crash test (CRASH_ITERATIONS, default 10); what CI runs
 pnpm format                                        # Prettier, whole repo
 pnpm check:rust                                    # cargo fmt, clippy and test on the Tauri shell (offline; not in CI, which has no crate cache or Tauri system libraries)
+pnpm test:ui                                       # the dashboard end to end: Playwright, light and dark screenshots, contrast
 ```
+
+`pnpm test:ui` (`app/e2e/`) starts a daemon on a scratch home (`app/e2e/harness/daemon.mjs`) seeded with a repo and a task in every stage, with a fake `claude` and a fake `gh`, and the Vite dev server pointed at it, on ports of their own (4391 and 1430). It needs a Chromium: `pnpm --filter agentdeck-app exec playwright install chromium`. The screenshots are stored per platform in `app/e2e/screenshots/`: a platform's first run writes them and passes, and later runs compare with them. After a change that is meant to change the look, delete the images and run it again. CI's are in its `ui-screenshots` artifact.
 
 ## Milestones
 

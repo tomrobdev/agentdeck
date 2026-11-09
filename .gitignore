@@ -4,6 +4,9 @@ dist/
 target/
 app/src-tauri/target/
 coverage/
+# Playwright's output: failures' traces and images, and the HTML report (app/playwright.config.ts)
+app/e2e/results/
+app/e2e/report/
 
 # runtime data
 *.db

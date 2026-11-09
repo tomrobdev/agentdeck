@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en" data-agentdeck-plan="1">
+  <head>
+    <meta charset="utf-8" />
+    <title>Friendlier greetings</title>
+    <link rel="stylesheet" href="plan.css" />
+  </head>
+  <body>
+    <h1>Friendlier greetings</h1>
+    <p data-plan-summary>greet() should never print an empty name, and a list of names should get one greeting each.</p>
+
+    <section data-plan-step id="fallback" data-status="done">
+      <h2>Greet everyone when no name is given</h2>
+      <p>An empty or missing name greets everyone.</p>
+      <ul data-plan-done>
+        <li><code>greet()</code> returns "Hello, everyone!".</li>
+      </ul>
+    </section>
+
+    <section data-plan-step id="greet-all" data-status="todo">
+      <h2>Greet a list of names</h2>
+      <p><code>greetAll(names)</code> returns one greeting per name, in order.</p>
+    </section>
+  </body>
+</html>
