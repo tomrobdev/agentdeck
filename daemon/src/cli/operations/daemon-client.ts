@@ -1,8 +1,8 @@
 // Calls the running daemon's HTTP API. Work that starts `claude` (resolve, plan) goes through here, so only the
 // daemon process ever spawns it. node:http rather than fetch: fetch's 300 s headers timeout would cut off a long resolve.
 import { request } from 'node:http';
-import { API_PORT } from '../config.ts';
-import { die } from './format.ts';
+import { API_PORT } from '../../config.ts';
+import { die } from '../format.ts';
 
 export function callDaemon<T>(method: string, path: string, body?: unknown, port = API_PORT): Promise<T> {
   return new Promise<T>((resolve) => {

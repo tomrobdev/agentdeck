@@ -1,11 +1,11 @@
 // `agentdeck context`: the live queue in a few lines for an agent, and the mode Claude Code's hooks run it in.
 import { mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import * as actions from '../application/actions.ts';
-import { HOME } from '../config.ts';
-import { errorMessage } from '../domain/shared/index.ts';
-import type { Command } from './context.ts';
-import { die } from './format.ts';
+import * as actions from '../../application/actions.ts';
+import { HOME } from '../../config.ts';
+import { errorMessage } from '../../domain/shared/index.ts';
+import type { Command } from '../context.ts';
+import { die } from '../format.ts';
 
 /** One cursor file per Claude session: the last event id that session was shown. */
 const HOOK_DIR = join(HOME, 'hooks');

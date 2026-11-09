@@ -136,7 +136,15 @@ export const PLACED_FOLDERS: Record<string, { shared: Record<string, string>; fo
     ],
   },
   'daemon/src/api/routes': { shared: {}, folders: CONTEXT_FOLDERS },
-  'daemon/src/cli': { shared: {}, folders: CONTEXT_FOLDERS },
+  'daemon/src/cli': {
+    shared: {
+      'commands.ts': 'lists the commands of every group',
+      'context.ts': 'parses the command line and carries the context every command gets',
+      'help.ts': 'the help text of every command',
+      'format.ts': 'the output helpers every command group prints with',
+    },
+    folders: CONTEXT_FOLDERS,
+  },
   'daemon/test': {
     shared: {},
     folders: [...CONTEXT_FOLDERS, 'architecture', 'tooling', 'e2e', 'fixtures', 'api', 'cli', 'db', 'dashboard'],
