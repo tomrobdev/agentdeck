@@ -4,7 +4,6 @@ import {
   type Item,
   type ToolKind,
   TOOL_ICONS,
-  changeLines,
   firstLine,
   offsetLabel,
   outputParts,
@@ -14,6 +13,8 @@ import {
   toolKind,
 } from '../../lib/transcript';
 import { parseAnsi } from '../../lib/ansi';
+import { CHANGE_MAX } from '../../../../daemon/src/domain/runs/index.ts';
+import { lineDiff } from '../../lib/runs/lineDiff';
 import { callDuration, durationLabel, isSlow } from '../../lib/logFilter';
 import Markdown from '../files/Markdown.vue';
 import Delta from '../ui/Delta.vue';
@@ -43,6 +44,9 @@ const TONE: Record<ToolKind, string> = {
   agent: 'text-muted',
   other: 'text-muted',
 };
+// An edit's diff: shared lines as context, with no file line numbers (the log has none).
+const DIFF_SIGN = { ctx: ' ', del: '−', add: '+' } as const;
+const DIFF_TONE = { ctx: 'text-muted', del: 'text-failed', add: 'text-done' } as const;
 const cutText = (t: string) => (props.cut ? props.cut(t) : t);
 const parts = (c: CallItem) =>
   outputParts(cutText(c.result!.output), {
@@ -121,12 +125,17 @@ const parts = (c: CallItem) =>
         </code>
         <details v-if="item.call.change" class="ml-4">
           <summary class="disclose text-sm text-muted"><span class="chev">›</span> diff</summary>
-          <pre class="my-1 max-h-65 overflow-auto text-sm"><span
-            v-for="(l, i) in changeLines(item.call.change)"
-            :key="i"
-            class="block whitespace-pre-wrap"
-            :class="l.sign === '+' ? 'text-done' : 'text-failed'"
-          >{{ l.sign }} {{ l.text }}</span></pre>
+          <pre
+            class="my-1 max-h-65 overflow-auto text-sm [tab-size:4]"
+          ><template v-for="(l, i) in lineDiff(item.call.change)" :key="i"><span
+            v-if="l.type === 'cut'"
+            class="block text-muted italic"
+            :title="`The log keeps the first ${CHANGE_MAX} characters of each text`"
+          >⋯ the log cut the {{ l.side }} text here</span><span
+            v-else
+            class="block whitespace-pre"
+            :class="DIFF_TONE[l.type]"
+          >{{ DIFF_SIGN[l.type] }} {{ l.text }}</span></template></pre>
         </details>
         <div v-if="item.result && !resultHidden(item)" class="ml-4 text-sm" :class="item.result.ok ? 'text-muted' : 'text-failed'">
           <details v-if="item.result.lines > 1" :open="!item.result.ok">

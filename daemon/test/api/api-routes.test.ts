@@ -8,6 +8,7 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, test } from 'node:test';
+import type { Run as ContractRun } from '../../src/api/contract.ts';
 import type { Route } from '../../src/api/http.ts';
 import type { Service, ServiceStatus } from '../../src/application/ports/service.ts';
 import type { Workspace } from '../../src/application/ports/workspace.ts';
@@ -181,6 +182,30 @@ interface Row {
 
 const TASK_DETAIL = ['id', 'repo', 'title', 'status', 'check_list', 'runs', 'events', 'plans'];
 const TASK_SAVED = [...TASK_DETAIL, 'warnings'];
+/** The keys of the contract's Run (api/contract.ts). */
+const RUN = [
+  'id',
+  'kind',
+  'attempt',
+  'started_at',
+  'ended_at',
+  'outcome',
+  'num_turns',
+  'input_tokens',
+  'output_tokens',
+  'cache_read_tokens',
+  'cache_write_tokens',
+  'cost_usd',
+  'tests_passed',
+  'result_text',
+  'denials',
+  'live_turns',
+  'live_tool',
+  'model',
+  'model_id',
+  'diff_hash',
+  'summary',
+] satisfies (keyof ContractRun)[];
 const REPO = ['id', 'name', 'path', 'base_branch', 'pr_mode', 'merge_method', 'archived_at'];
 const REVIEW = ['id', 'task_id', 'kind', 'body', 'submitted_at', 'comments'];
 const STATUS = ['daemon', 'paused', 'running', 'max_concurrent', 'counts', 'headline', 'governor'];
@@ -339,6 +364,25 @@ const ROWS: Row[] = [
   },
   bad('POST', '/api/tasks', { prompt: 5 }),
   { method: 'GET', path: '/api/tasks/:task', params: task(queued), shape: TASK_DETAIL },
+  {
+    method: 'GET',
+    path: '/api/tasks/:task?run',
+    params: task(() => {
+      const t = failedTask(app, repo);
+      const run = app.startRun(t.id, 1, join(home, `task-${t.id}.jsonl`), 'work', 'sonnet');
+      app.finishRun(run, { outcome: 'failed', cost_usd: 2.1, input_tokens: 10, num_turns: 3 });
+      return t.id;
+    }),
+    shape: TASK_DETAIL,
+    // Every key of the contract's Run, cost and live state included, which the dashboard's run list and header read.
+    check: (t) => {
+      const [run] = t.runs;
+      for (const key of RUN) assert.ok(key in run, `the run has ${key}`);
+      assert.equal(run.cost_usd, 2.1);
+      assert.equal(run.live_turns, 0);
+      assert.equal(run.live_tool, null);
+    },
+  },
   {
     method: 'POST',
     path: '/api/tasks/:task',

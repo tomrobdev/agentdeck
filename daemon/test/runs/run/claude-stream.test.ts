@@ -19,6 +19,7 @@ process.env.AGENTDECK_CLAUDE_BIN = fake;
 const { openDb } = await import('../../../src/db/index.ts');
 const { Scheduler } = await import('../../../src/application/scheduler/scheduler.ts');
 const { parseLogLine } = await import('../../../src/domain/runs/index.ts');
+const { retryTask } = await import('../../../src/application/actions.ts');
 
 const REPO = asRepoId(1);
 const repoPath = join(home, 'demo');
@@ -98,6 +99,27 @@ test('a mid-stream exit fails the run with the exit code, and the log keeps what
   assert.equal(run.session_id?.startsWith('fake-session-'), true, 'the session from the init line is kept');
   assert.deepEqual(
     entries.map((e) => e.kind),
-    ['tool', 'tool_result'],
+    ['prompt', 'tool', 'tool_result'],
   );
+});
+
+test('each run logs what it was told before claude starts, and a retry its note', async () => {
+  const first = await runOnce('FAKE_BLOCKED');
+  assert.equal(first.task.status, 'blocked');
+  const told = first.entries.filter((e) => e.kind === 'prompt');
+  assert.equal(told.length, 1);
+  assert.ok(told[0].kind === 'prompt' && told[0].text.includes('FAKE_BLOCKED') && !told[0].resume && told[0].note === null);
+
+  retryTask(db, first.task.id, { note: 'try the other file' });
+  await drain();
+  const second = db.runsForTask(first.task.id).at(-1)!;
+  assert.notEqual(second.id, first.run.id);
+  const entries = readFileSync(second.log_path, 'utf8').split('\n').flatMap(parseLogLine);
+  const prompt = entries.find((e) => e.kind === 'prompt');
+  assert.ok(prompt?.kind === 'prompt');
+  assert.ok(entries.findIndex((e) => e.kind === 'prompt') < entries.findIndex((e) => e.kind === 'result'), 'logged before claude ran');
+  assert.equal(prompt.note, 'try the other file');
+  assert.equal(prompt.resume, false);
+  assert.match(prompt.text, /try the other file/, 'the note is in the prompt too');
+  assert.ok(prompt.lines > 1);
 });

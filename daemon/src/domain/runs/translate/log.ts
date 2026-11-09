@@ -35,11 +35,33 @@ export type LogEntry = LogMeta &
     | { kind: 'setup'; passed: boolean; cmd: string; output: string }
     | { kind: 'tests'; passed: boolean; output: string }
     | { kind: 'error'; text: string }
+    | {
+        kind: 'prompt';
+        /** What claude was told, cut at PROMPT_MAX characters. */
+        text: string;
+        /** Lines in the whole text. */
+        lines: number;
+        /** Whether this claude continued a session cut off earlier. */
+        resume: boolean;
+        /** The retry's note the prompt carries; null when it carries none. */
+        note: string | null;
+      }
   );
 
-const CHANGE_MAX = 2048;
+/** The characters of an edit's old and new text the log keeps; a text this long was cut. */
+export const CHANGE_MAX = 2048;
 const OUTPUT_MAX = 4096;
+const PROMPT_MAX = 65536;
 const SUMMARY_MAX = 200;
+
+/**
+ * What a run cost at API prices, as the CLI and the dashboard say it: "$2.10 equiv", "<$0.01 equiv", or "–" for none
+ * (claude reports no cost under a subscription's quota, or the run had no result).
+ */
+export function costText(usd: number): string {
+  if (!(usd > 0)) return '–';
+  return usd < 0.01 ? '<$0.01 equiv' : `$${usd.toFixed(2)} equiv`;
+}
 
 /** What the daemon's `agentdeck_sync` event (the sync with the base branch before a run) says in the log. */
 const SYNC_TEXT: Record<string, string> = {
@@ -197,6 +219,11 @@ function parseEvent(ev: any): LogEntry[] {
       return [{ kind: 'setup', passed: ev.passed, cmd: ev.cmd, output: ev.output }];
     case 'agentdeck_tests':
       return [{ kind: 'tests', passed: ev.passed, output: ev.output }];
+    case 'agentdeck_prompt': {
+      const text = typeof ev.text === 'string' ? ev.text : '';
+      const note = typeof ev.note === 'string' && ev.note.trim() ? ev.note.trim() : null;
+      return [{ kind: 'prompt', text: text.slice(0, PROMPT_MAX), lines: countLines(text), resume: ev.resume === true, note }];
+    }
     case 'agentdeck_pr':
       return [ev.error ? { kind: 'error', text: `pull request: ${ev.error}` } : { kind: 'text', text: `Opened pull request ${ev.url}` }];
     case 'agentdeck_sync':

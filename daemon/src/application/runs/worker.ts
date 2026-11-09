@@ -90,14 +90,8 @@ async function runOpened(app: App, task: Task, repo: Repo, wt: Checkout, opened:
   }
   const review = await reviewForRun(app, task, repo);
   const events = app.eventsForTask(task.id);
-  const prompt = buildPrompt(
-    task,
-    previousRuns,
-    latestReviewNote(events),
-    plan,
-    review?.prompt ?? null,
-    escalationSince(events, previousRuns),
-  );
+  const note = latestReviewNote(events);
+  const prompt = buildPrompt(task, previousRuns, note, plan, review?.prompt ?? null, escalationSince(events, previousRuns));
   const resume = session ? { session, prompt: buildResumePrompt(task), maxTurns: resumeMaxTurns(task, previousRuns) } : undefined;
 
   // Install dependencies before the agent starts: it isn't allowed to install them itself.
@@ -144,7 +138,7 @@ async function runOpened(app: App, task: Task, repo: Repo, wt: Checkout, opened:
   // Written after setup: setup runs here in the daemon, outside the sandbox, so installs keep the network.
   let ran: TaskRunEnd;
   try {
-    ran = await startTaskRun(app, task, { kind: 'work', repo, worktree: wt.path, prompt, opened, resume });
+    ran = await startTaskRun(app, task, { kind: 'work', repo, worktree: wt.path, prompt, note, opened, resume });
   } catch (err) {
     return finish(app, task, opened, { outcome: 'failed', reason: `settings:${errorMessage(err)}` });
   }
