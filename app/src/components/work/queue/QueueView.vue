@@ -1,18 +1,8 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { runsApi } from '../../../api/runs';
-import { syncLine } from '../../../lib/landing/landing-wording';
 import type { TaskSummary } from '../../../api/types';
-import { useActions } from '../../../composables/shared/useActions';
-import { useBulkPick } from '../../../composables/work/queue/useBulkPick';
-import { useEditKeys } from '../../../composables/work/useEditKeys';
-import { useHotkeys } from '../../../composables/shared/useHotkeys';
-import { useMergeConfirm } from '../../../composables/landing/useMergeConfirm';
-import { useQueueDisplay } from '../../../composables/work/queue/useQueueDisplay';
-import { type PersonEvent, canStartMerge, personEvents } from '../../../../../daemon/src/domain/work/index.ts';
-import type { BoardMove } from '../../../lib/work/queue/board-move';
-import { emptyFilters, hasFilters, quickRetry } from '../../../lib/work/task-view';
-import { buildsOnChain } from '../../../lib/work/queue/bulk';
+import { useQueueView } from '../../../composables/work/queue/useQueueView';
+import type { PersonEvent } from '../../../../../daemon/src/domain/work/index.ts';
+import { emptyFilters, hasFilters } from '../../../lib/work/task-view';
 import BulkMergeDialog from '../../landing/BulkMergeDialog.vue';
 import EditKeyDialog from '../task/EditKeyDialog.vue';
 import MergeDialog from '../../landing/MergeDialog.vue';
@@ -26,119 +16,38 @@ import ListView from './ListView.vue';
 import PeekPane from './PeekPane.vue';
 import QueueFooter from './QueueFooter.vue';
 
+// The queue as a list, a board or a graph, with its filters, picks and keys. The state is in useQueueView.
 const props = defineProps<{ tasks: TaskSummary[] }>();
 const selected = defineModel<number | null>('selected', { required: true });
 const emit = defineEmits<{ open: [id: number]; act: [kind: PersonEvent, id: number]; newTask: [] }>();
 
-const { display, filters, shown, groups, order, toggleGroup, nextMode } = useQueueDisplay(() => props.tasks);
 const {
+  display,
+  filters,
+  shown,
+  groups,
+  toggleGroup,
+  orderIds,
+  pickChain,
+  peek,
+  act,
+  edits,
+  merging,
+  startMerge,
+  onMerged,
+  onRequested,
   picked,
+  pick,
   bar,
   bulkMerging,
-  pending: bulkPending,
-  pick,
-  pickMany,
-  pickShown,
-  toggleGroup: togglePicks,
+  bulkPending,
+  togglePicks,
   clearPicked,
   bulkAct,
   bulkEdit,
   onBulkMerged,
   mergeAll,
-} = useBulkPick(() => props.tasks, shown);
-const orderIds = () => order.value.map((t) => t.id);
-/** A shift-click in the graph: the task and every unfinished task it builds on that is shown, without opening the page. */
-const pickChain = (id: number) => pickMany(buildsOnChain(shown.value, id));
-
-function step(by: number) {
-  const list = order.value;
-  if (!list.length) return;
-  const i = list.findIndex((t) => t.id === selected.value);
-  selected.value = list[Math.min(Math.max(i === -1 ? 0 : i + by, 0), list.length - 1)].id;
-}
-
-const { merging, startMerge, onMerged, onRequested } = useMergeConfirm(order, selected);
-const { flash, run } = useActions();
-
-// Space opens the selected task beside the list (list view only). The panel follows the selection; its width is remembered.
-const peek = ref(false);
-
-// A PR in review moves on from its row: Merge (or a drop on Done) opens the merge confirm, Sync brings its branch up to the
-// base branch. A sync that conflicts starts a resolve run, which takes minutes; the row shows the sync from the task's summary,
-// whoever started it, until it ends.
-async function sync(id: number) {
-  if (props.tasks.find((t) => t.id === id)?.sync) return;
-  let done = '';
-  const ok = await run(async () => {
-    const r = await runsApi.sync(id);
-    done = `#${id}: ${syncLine(r)}${r.push_error ? ` Could not push: ${r.push_error}` : ''}`;
-  });
-  if (ok) flash(done);
-}
-function act(kind: BoardMove | 'sync', id: number) {
-  const task = props.tasks.find((t) => t.id === id);
-  if (kind === 'merge') {
-    if (task && canStartMerge(task)) startMerge(id);
-  } else if (kind === 'sync') sync(id);
-  else emit('act', kind, id);
-}
-
-const selectedTask = () => props.tasks.find((x) => x.id === selected.value);
-const edits = useEditKeys('queue', () => selected.value);
-const Q = 'queue' as const;
-useHotkeys({
-  j: { label: 'Next task', scope: Q, run: () => step(1) },
-  ArrowDown: { label: 'Next task', scope: Q, run: () => step(1) },
-  k: { label: 'Previous task', scope: Q, run: () => step(-1) },
-  ArrowUp: { label: 'Previous task', scope: Q, run: () => step(-1) },
-  ' ': {
-    label: 'Peek at the task',
-    scope: Q,
-    run: () => {
-      if (display.value.mode !== 'list') return;
-      if (selected.value === null && order.value.length) selected.value = order.value[0].id;
-      peek.value = !peek.value;
-    },
-  },
-  x: { label: 'Pick the task', scope: Q, run: () => selected.value !== null && pick(selected.value, false, orderIds()) },
-  X: { label: 'Pick every task shown', scope: Q, run: pickShown },
-  Escape: {
-    label: 'Clear the picks, close the peek',
-    scope: Q,
-    run: () => {
-      if (picked.value.length) clearPicked();
-      else if (peek.value) peek.value = false;
-    },
-  },
-  Enter: { label: 'Open the task', scope: Q, run: () => selected.value !== null && emit('open', selected.value) },
-  a: {
-    label: 'Approve',
-    scope: Q,
-    run: () => {
-      const t = selectedTask();
-      if (t && personEvents(t).includes('approve')) emit('act', 'approve', t.id);
-    },
-  },
-  r: {
-    label: 'Retry',
-    scope: Q,
-    run: () => {
-      const t = selectedTask();
-      if (t && quickRetry(t)) emit('act', 'retry', t.id);
-    },
-  },
-  m: {
-    label: 'Merge',
-    scope: Q,
-    run: () => {
-      const t = selectedTask();
-      if (t && canStartMerge(t)) startMerge(t.id);
-    },
-  },
-  v: { label: 'Next view', scope: Q, run: nextMode },
-  c: { label: 'New task', scope: Q, run: () => emit('newTask') },
-  ...edits.keys,
-});
+} = useQueueView(() => props.tasks, selected, emit);
 </script>
 
 <template>

@@ -21,7 +21,7 @@ const ALLOWED: Allowed[] = [
   { file: 'app/src/lib/operations/daemon-wording.ts', line: /case 'hold':/, why: "the governor's hold, as a headline state" },
   { file: 'adapters/macos/notify.ts', line: /^\s*hold:/, why: 'the `hold` notification kind' },
   { file: 'db/schema.ts', line: /`hold`|,hold,/, why: 'migration 16 is about the `hold` notification kind' },
-  { file: 'app/src/components/operations/SettingsPanel.vue', line: /kind === 'hold'/, why: 'the `hold` notification kind' },
+  { file: 'app/src/components/operations/settings/RecentAlerts.vue', line: /kind === 'hold'/, why: 'the `hold` notification kind' },
   { file: 'app/src/lib/operations/daemon-wording.ts', line: /^\s*hold: /, why: 'the `hold` notification kind' },
   { file: 'app/src/components/operations/settings/BudgetSettings.vue', line: /Hold new tasks above/, why: 'the governor budget setting' },
   { file: 'domain/operations/digest.ts', line: /governor on hold/, why: 'the governor' },

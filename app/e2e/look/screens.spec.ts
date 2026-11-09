@@ -21,6 +21,11 @@ const PAGES = [
     hash: '#/tasks/2/runs',
     ready: (page) => expect(page.getByText('greet() now falls back to everyone').first()).toBeVisible(),
   },
+  {
+    name: 'settings',
+    hash: '#/settings',
+    ready: (page) => expect(page.getByRole('heading', { name: 'Usage budget' })).toBeVisible(),
+  },
 ] satisfies { name: string; hash: string; ready: (page: import('@playwright/test').Page) => Promise<void> }[];
 
 for (const mode of ['light', 'dark'] as Mode[]) {
@@ -36,7 +41,7 @@ for (const mode of ['light', 'dark'] as Mode[]) {
       });
     }
 
-    for (const p of PAGES.filter((x) => x.name === 'queue' || x.name === 'task')) {
+    for (const p of PAGES.filter((x) => x.name === 'queue' || x.name === 'task' || x.name === 'settings')) {
       test(`the ${p.name} page looks as it did`, async ({ page }) => {
         await open(page, p.hash);
         await p.ready(page);

@@ -1,0 +1,82 @@
+import { computed, onMounted, ref, watch } from 'vue';
+import { useQuery } from '@tanstack/vue-query';
+import { operationsApi, serviceQuery, settingsQuery } from '../../api/operations';
+import type { Settings } from '../../api/types';
+import { type SettingsForm, toSettingsForm, toSettingsPatch } from '../../lib/shared/forms';
+import { editorTemplate, saveEditorTemplate, saveTerminalTemplate, terminalTemplate } from '../../lib/runs/terminal';
+import { launchAtLogin, setLaunchAtLogin } from '../../platform/native';
+import { errorMessage } from '../../../../daemon/src/domain/shared/index.ts';
+import { useActions } from '../shared/useActions';
+
+/**
+ * The settings panel's state: the form to edit (a copy of the daemon's settings), the commands kept on this computer, the
+ * login item, and the save and test. `close` runs after a save that should shut the panel.
+ */
+export function useSettingsForm(close: () => void) {
+  const { run } = useActions();
+  const form = ref<SettingsForm | null>(null);
+  const appAtLogin = ref<boolean | null>(null);
+  const error = ref('');
+  const saving = ref(false);
+  const tested = ref('');
+  const terminalCmd = ref(terminalTemplate());
+  const editorCmd = ref(editorTemplate());
+
+  function load(s: Settings) {
+    form.value = toSettingsForm(s);
+  }
+
+  // The form is a copy to edit: it takes the first answer, and a save replaces it. Later refetches don't touch it.
+  const settingsQ = useQuery(settingsQuery());
+  watch(
+    () => settingsQ.data.value,
+    (s) => s && !form.value && load(s),
+    { immediate: true },
+  );
+  const serviceQ = useQuery(serviceQuery());
+  const service = computed(() => serviceQ.data.value ?? null);
+  const failure = computed(() => error.value || settingsQ.error.value?.message || serviceQ.error.value?.message || '');
+
+  onMounted(async () => {
+    try {
+      appAtLogin.value = await launchAtLogin();
+    } catch (e) {
+      error.value = errorMessage(e);
+    }
+  });
+
+  async function toggleAppAtLogin() {
+    try {
+      await setLaunchAtLogin(!appAtLogin.value);
+      appAtLogin.value = await launchAtLogin();
+    } catch (e) {
+      error.value = errorMessage(e);
+    }
+  }
+
+  async function save(closeAfter = true) {
+    if (!form.value) return;
+    saveTerminalTemplate(terminalCmd.value);
+    saveEditorTemplate(editorCmd.value);
+    const patch = toSettingsPatch(form.value);
+    error.value = '';
+    saving.value = true;
+    const ok = await run(async () => load(await operationsApi.updateSettings(patch)));
+    saving.value = false;
+    if (ok && closeAfter) close();
+    return ok;
+  }
+
+  async function test() {
+    tested.value = '';
+    try {
+      if (!(await save(false))) return;
+      await operationsApi.testNotify();
+      tested.value = 'Sent';
+    } catch (e) {
+      tested.value = errorMessage(e);
+    }
+  }
+
+  return { form, service, failure, saving, tested, terminalCmd, editorCmd, appAtLogin, toggleAppAtLogin, save, test };
+}
