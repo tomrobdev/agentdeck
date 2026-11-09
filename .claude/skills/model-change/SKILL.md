@@ -13,5 +13,5 @@ Follow the steps in order; `pnpm typecheck` and `pnpm db:check` fail until the p
 4. **Store.** Use the column in the store's queries. A status change stays a guarded `UPDATE … WHERE status IN (…)` through `applyEvent`.
 5. **Contract.** If the dashboard needs it, add it to `daemon/src/api/contract.ts` (flat, imports only types from `domain/`). `daemon/src/api/contract-check.ts` checks request types against the use cases. Dashboard code imports them through `app/src/api/types.ts`.
 6. **Generated docs.** Run `pnpm docs:gen` (the edit hook does it after edits under `daemon/src`) so `docs/architecture.md` is not stale.
-7. **Lock.** Once the migration is final, append the hash `daemon/test/migrations.lock`'s test prints.
+7. **Lock.** Once the migration is final, append the hash `daemon/test/db/migrations.lock`'s test prints.
 8. **Check.** Run `pnpm check:fast`. Add a test of the new decision in `daemon/test/`.

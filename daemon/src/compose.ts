@@ -1,5 +1,5 @@
 // Builds the App the use cases take, on the database and the real adapters: for the CLI (`cli.ts`), which also hands
-// it to the daemon (`cli/daemon.ts` → `daemon.ts`). Tests build theirs in test/fixtures.ts. Each process builds one,
+// it to the daemon (`cli/operations/daemon.ts` → `daemon.ts`). Tests build theirs in test/fixtures.ts. Each process builds one,
 // so nothing here is module state.
 import { findClaude, runClaude } from './adapters/claude/claude.ts';
 import { KeepAwake } from './adapters/macos/caffeinate.ts';

@@ -1,5 +1,5 @@
 // When approving opens the dialog, and which tasks it lists. Free of the dashboard's other modules so the daemon's tests can
-// import it (daemon/test/approve-dialog.test.ts). What there is to show about a task is the daemon's proposalCheckLine.
+// import it (daemon/test/dashboard/queue/approve-dialog.test.ts). What there is to show about a task is the daemon's proposalCheckLine.
 import type { ProposalCheck } from '../../../../daemon/src/api/contract.ts';
 import { proposalCheckLine } from '../../../../daemon/src/domain/work/index.ts';
 

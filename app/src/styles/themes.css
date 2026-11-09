@@ -2,7 +2,7 @@
  * Themes: sets of colour tokens. <html data-theme="…" data-mode="system|light|dark"> picks one (see platform/theme.ts).
  *
  * Each theme has a light rule, a dark rule, and the dark values again under prefers-color-scheme for data-mode="system".
- * Keep the system copy identical to the dark rule: daemon/test/themes.test.ts checks that, and that every pair
+ * Keep the system copy identical to the dark rule: daemon/test/dashboard/shared/themes.test.ts checks that, and that every pair
  * the dashboard draws (text, status colours, code, tints) reaches WCAG AA in both modes.
  *
  * High contrast is the default, and also applies before platform/theme.ts has run.

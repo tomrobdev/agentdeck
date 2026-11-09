@@ -210,7 +210,7 @@ ALTER TABLE tasks ADD COLUMN auto_merge INTEGER;</code></pre>
           <p>
             Make the same change in <code>db/tables.ts</code>, <code>Repo</code> and <code>Task</code>, <code>db/repos.ts</code>'s updatable
             fields, <code>repo/repos.ts</code>'s input, and <code>api/contract.ts</code>. Add the step's hash to
-            <code>daemon/test/migrations.lock</code>.
+            <code>daemon/test/db/migrations.lock</code>.
           </p>
           <ul data-plan-done>
             <li><code>pnpm typecheck</code> and <code>pnpm db:check</code> pass, and the migration test is locked.</li>

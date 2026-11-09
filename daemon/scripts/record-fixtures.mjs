@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Record real `claude` and `gh` output as test fixtures, so the parsers and the fakes can be checked against them
-// (daemon/test/contracts.test.ts). Workers can't reach Anthropic or GitHub, so a person runs this, in a session.
+// (daemon/test/runs/run/contracts.test.ts). Workers can't reach Anthropic or GitHub, so a person runs this, in a session.
 //
 // Usage: node daemon/scripts/record-fixtures.mjs [--repo owner/name] [--check]
 //   --repo   the GitHub repo whose PRs are read (default: this checkout's origin)

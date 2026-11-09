@@ -1,5 +1,5 @@
 // Moving through review with keys: the next task in review after a merge, the next file of a diff and its next open
-// comment. Pure, so the daemon's tests can import it (daemon/test/review-nav.test.ts).
+// comment. Pure, so the daemon's tests can import it (daemon/test/dashboard/task/review-nav.test.ts).
 import type { TaskSummary } from '../../../../daemon/src/api/contract.ts';
 import { isReview } from '../../../../daemon/src/domain/work/index.ts';
 

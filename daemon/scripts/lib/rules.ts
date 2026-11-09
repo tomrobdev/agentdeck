@@ -41,7 +41,9 @@ export function readRuleLines(): { ids: string[]; text: string; line: number; is
 /** Every `test('[id, id] name'` in daemon/test, as the test's name and the ids it names. */
 export function readTestTags(): { file: string; name: string; ids: string[] }[] {
   const found: ReturnType<typeof readTestTags> = [];
-  for (const file of readdirSync(TESTS).filter((f) => f.endsWith('.test.ts'))) {
+  for (const file of readdirSync(TESTS, { recursive: true, encoding: 'utf8' })
+    .filter((f) => f.endsWith('.test.ts'))
+    .sort()) {
     const source = readFileSync(join(TESTS, file), 'utf8');
     for (const m of source.matchAll(/\btest\(\s*(['"`])\[([^\]]*)\]\s*([^\n]*?)\1/g)) {
       found.push({ file, name: m[3], ids: m[2].split(',').map((s) => s.trim()) });

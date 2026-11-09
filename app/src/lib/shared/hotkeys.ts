@@ -1,7 +1,7 @@
 // The dashboard's single-key shortcuts as data: what a key is called and where it counts (its scope), how a two-key
 // sequence such as `g q` resolves, and the registrations the `?` sheet lists. `hotkeyApplies` (which reads the page) owns
 // whether a press counts at all; this file owns what a counted press means. Free of Vue so the daemon's tests can import it
-// (daemon/test/hotkeys.test.ts).
+// (daemon/test/dashboard/shared/hotkeys.test.ts).
 
 /** Where a key counts: everywhere (`app`), on the queue, on a task's page, in a diff or in a run's log. */
 export type HotkeyScope = 'app' | 'queue' | 'task' | 'diff' | 'log';
