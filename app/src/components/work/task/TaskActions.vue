@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { api } from '../../../api/client';
-import { describePrRetry } from '../../../api/format';
+import { describePrRetry } from '../../../lib/landing/landing-wording';
 import type { MergeResult, TaskDetail } from '../../../api/types';
-import { canFixChecks, canOpenPr, canStartMerge, isReview, personEvents } from '../../../lib/work/task-view';
+import { canOpenPr, canStartMerge, isReview, personEvents } from '../../../../../daemon/src/domain/work/index.ts';
+import { canFixChecks } from '../../../lib/work/task-view';
 import { useAction, useActions } from '../../../composables/shared/useActions';
 import { useOpenNext } from '../../../composables/work/queue/useOpenNext';
 import ConfirmDialog from '../../ui/ConfirmDialog.vue';

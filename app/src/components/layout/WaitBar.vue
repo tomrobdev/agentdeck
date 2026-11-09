@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { describeWait } from '../../api/format';
+import { describeWait } from '../../lib/work/work-wording';
 import type { Status } from '../../api/types';
 import { oneLine, plural } from '../../../../daemon/src/domain/shared/index.ts';
 

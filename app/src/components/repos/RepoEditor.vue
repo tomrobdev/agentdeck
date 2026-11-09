@@ -2,7 +2,8 @@
 import { computed, ref, watch } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
 import { api } from '../../api/client';
-import { MODEL_LABELS, ago } from '../../api/format';
+import { MODEL_LABELS } from '../../lib/runs/run-wording';
+import { ago } from '../../lib/shared/time';
 import { repoQuery } from '../../api/queries';
 import { MERGE_METHODS, type Repo } from '../../api/types';
 import { type RepoForm, modelChoices, toRepoForm, toRepoPatch } from '../../lib/shared/forms';

@@ -81,6 +81,56 @@ test('[dashboard-layout] the layout check fails when one context imports another
   }
 });
 
+/** The names a file exports that it imports: `export { a } from './x'`, and `export { a }` or `export type { a }` of an imported `a`. */
+export function reExports(s: Source): { name: string; line: number }[] {
+  const imported = new Set<string>();
+  for (const st of s.ast.statements) {
+    const b = ts.isImportDeclaration(st) ? st.importClause : undefined;
+    if (b?.name) imported.add(b.name.text);
+    if (b?.namedBindings && ts.isNamedImports(b.namedBindings)) b.namedBindings.elements.forEach((e) => imported.add(e.name.text));
+    if (b?.namedBindings && ts.isNamespaceImport(b.namedBindings)) imported.add(b.namedBindings.name.text);
+  }
+  const out: { name: string; line: number }[] = [];
+  for (const st of s.ast.statements) {
+    if (!ts.isExportDeclaration(st) || !st.exportClause || !ts.isNamedExports(st.exportClause)) continue;
+    for (const e of st.exportClause.elements) {
+      const local = (e.propertyName ?? e.name).text;
+      if (st.moduleSpecifier || imported.has(local)) out.push({ name: e.name.text, line: lineOf(s.ast, e) });
+    }
+  }
+  return out;
+}
+
+test('[dashboard-layout] a file in lib/ re-exports no name it imports', () => {
+  const found = sources
+    .filter((s) => s.path.startsWith('lib/'))
+    .flatMap((s) => reExports(s).map((r) => `${s.path}:${r.line} re-exports ${r.name}: import it from where it is declared`));
+  assert.deepEqual(found, []);
+});
+
+test('[dashboard-layout] the re-export finder sees an imported name exported, and ignores what a file declares', () => {
+  const s = parseSource(
+    'lib/work/view.ts',
+    [
+      `import { a, type B } from './x.ts';`,
+      `import { c } from './y.ts';`,
+      `export { a, type B };`,
+      `export { d } from './z.ts';`,
+      `const e = c + 1;`,
+      `export { e };`,
+      `export const f = 1;`,
+    ].join('\n'),
+  );
+  assert.deepEqual(
+    reExports(s).map((r) => [r.name, r.line]),
+    [
+      ['a', 3],
+      ['B', 3],
+      ['d', 4],
+    ],
+  );
+});
+
 const STATUSES = new Set<string>(TASK_STATUSES);
 
 /** A declaration named like a yes-or-no question about a task: what it answers is a rule, whatever the markup does with it. */

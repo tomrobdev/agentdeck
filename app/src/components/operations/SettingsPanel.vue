@@ -2,12 +2,13 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { api } from '../../api/client';
-import { MODEL_LABELS, ago } from '../../api/format';
+import { MODEL_LABELS } from '../../lib/runs/run-wording';
+import { ago } from '../../lib/shared/time';
 import { serviceQuery, settingsQuery } from '../../api/queries';
 import type { NotificationRow, Settings } from '../../api/types';
 import { errorMessage } from '../../../../daemon/src/domain/shared/index.ts';
 import { type SettingsForm, modelChoices, toSettingsForm, toSettingsPatch } from '../../lib/shared/forms';
-import { MODELS } from '../../lib/work/task-view';
+import { MODELS } from '../../../../daemon/src/domain/work/index.ts';
 import {
   CMUX_TEMPLATE,
   EDITOR_PRESETS,

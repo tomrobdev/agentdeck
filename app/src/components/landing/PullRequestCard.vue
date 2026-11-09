@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { api } from '../../api/client';
-import { checkDuration } from '../../api/format';
+import { checkDuration } from '../../lib/shared/time';
 import type { PrCheck, TaskDetail } from '../../api/types';
 import { failureHeadline, finalMessage } from '../../../../daemon/src/domain/landing/index.ts';
 import { canFixChecks } from '../../lib/work/task-view';

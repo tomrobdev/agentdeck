@@ -3,7 +3,7 @@ import { computed, ref } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { CHECKED_STATUSES, proposalCheckLine } from '../../../../../daemon/src/domain/work/index.ts';
 import { api } from '../../../api/client';
-import { ago } from '../../../api/format';
+import { ago } from '../../../lib/shared/time';
 import { proposalCheckQuery } from '../../../api/queries';
 import type { TaskStatus } from '../../../api/types';
 import { openTask } from '../../../router';

@@ -4,7 +4,8 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { api, isOffline } from '../../api/client';
-import { taskList, uptime } from '../../api/format';
+import { uptime } from '../../lib/shared/time';
+import { taskList } from '../../lib/work/work-wording';
 import { daemonHealthQuery, daemonQuery } from '../../api/queries';
 import { useAction } from '../../composables/shared/useActions';
 import ConfirmDialog from '../ui/ConfirmDialog.vue';

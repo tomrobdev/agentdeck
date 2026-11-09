@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { planProgress, promptGoal } from '../../../../../daemon/src/domain/work/index.ts';
-import { describeWait } from '../../../api/format';
+import { type PersonEvent, planProgress, promptGoal } from '../../../../../daemon/src/domain/work/index.ts';
+import { describeWait } from '../../../lib/work/work-wording';
 import { taskQuery } from '../../../api/queries';
 import type { PlanStep } from '../../../api/types';
 import { linkParts, modelLine, neededBy, ownSteps, peekActions, peekProps } from '../../../lib/work/queue/peek';
-import { type PersonEvent, readNeeds, readTaskQuestion } from '../../../lib/work/task-view';
+import { readNeeds, readTaskQuestion } from '../../../lib/work/task-view';
 import Markdown from '../../ui/Markdown.vue';
 import FinalMessage from '../../runs/FinalMessage.vue';
 import LogView from '../../runs/LogView.vue';

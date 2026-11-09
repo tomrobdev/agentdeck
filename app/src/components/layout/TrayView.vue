@@ -6,7 +6,8 @@
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
 import { api, isOffline } from '../../api/client';
-import { ATTENTION_LABELS, describeLive, describeState } from '../../api/format';
+import { ATTENTION_LABELS, describeState } from '../../lib/operations/daemon-wording';
+import { describeLive } from '../../lib/runs/run-wording';
 import { liveStatusQuery, refreshAll, tasksQuery } from '../../api/queries';
 import type { Status, TaskSummary } from '../../api/types';
 import { createActions, trackPending } from '../../composables/shared/useActions';

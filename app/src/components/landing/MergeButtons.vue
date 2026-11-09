@@ -2,7 +2,7 @@
 import { api } from '../../api/client';
 import type { TaskSummary } from '../../api/types';
 import { useActions } from '../../composables/shared/useActions';
-import { canStartMerge, isReview } from '../../lib/work/task-view';
+import { canStartMerge, isReview } from '../../../../daemon/src/domain/work/index.ts';
 
 // A task in review's buttons on a list row or a board card: Merge, or Cancel merge while a merge request waits. With
 // `sync`, also Sync, and Syncing… while one is under way. Merge is offered by the daemon's canStartMerge rule.

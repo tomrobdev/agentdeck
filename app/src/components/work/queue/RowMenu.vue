@@ -7,15 +7,12 @@ import { openExternal, useCopy } from '../../../platform/native';
 import {
   type PersonEvent,
   MODELS,
-  PRIORITY_LEVELS,
   branchName,
-  canEdit,
   canStartMerge,
   isReview,
-  levelPriority,
   personEvents,
-  priorityLevel,
-} from '../../../lib/work/task-view';
+} from '../../../../../daemon/src/domain/work/index.ts';
+import { PRIORITY_LEVELS, canEdit, levelPriority, priorityLevel } from '../../../lib/work/task-view';
 import Menu from '../../ui/menu/Menu.vue';
 import MenuItem from '../../ui/menu/MenuItem.vue';
 import MenuRadioGroup from '../../ui/menu/MenuRadioGroup.vue';

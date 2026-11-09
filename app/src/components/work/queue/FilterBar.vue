@@ -2,7 +2,8 @@
 import { computed, ref } from 'vue';
 import type { TaskSummary } from '../../../api/types';
 import { useHotkeys } from '../../../composables/shared/useHotkeys';
-import { FILTER_STATES, type Filters, hasFilters } from '../../../lib/work/task-view';
+import { FILTER_STATES } from '../../../../../daemon/src/domain/work/index.ts';
+import { type Filters, hasFilters } from '../../../lib/work/task-view';
 import Chip from '../../ui/Chip.vue';
 import Menu from '../../ui/menu/Menu.vue';
 import MenuCheckboxItem from '../../ui/menu/MenuCheckboxItem.vue';

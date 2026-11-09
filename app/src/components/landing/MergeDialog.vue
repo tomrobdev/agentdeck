@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { api } from '../../api/client';
-import { autoMergeLine } from '../../api/format';
+import { autoMergeLine } from '../../lib/landing/landing-wording';
 import { mergePreviewQuery } from '../../api/queries';
 import { type MergeMethod, type MergeResult, MERGE_METHODS } from '../../api/types';
 import { errorMessage, plural } from '../../../../daemon/src/domain/shared/index.ts';

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { fileSize } from '../../../api/format';
+import { fileSize } from '../../../lib/work/work-wording';
 import { type ChangedFile, type NewReviewComment, PATCH_LIMIT } from '../../../api/types';
 import type { PatchState } from '../../../composables/work/files/useFilePatches';
 import type { ShownComment } from '../../../composables/landing/useReviews';
