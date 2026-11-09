@@ -10,6 +10,8 @@ import { buildTranscript, cutRoot } from '../../lib/transcript';
 import LogItem from './LogItem.vue';
 import RunHeader from './RunHeader.vue';
 import RunTimeline from './RunTimeline.vue';
+import { filesTouched, promptsOf, withoutPrompts } from '../../lib/runs/context';
+import RunContext from './runs/RunContext.vue';
 
 const props = defineProps<{
   taskId: number;
@@ -41,7 +43,10 @@ const box = ref<HTMLElement | null>(null);
 let source: EventSource | null = null;
 /** Whether the view follows the log's end; false once the reader scrolls up. */
 const following = ref(true);
-const items = computed(() => buildTranscript(entries.value));
+// What the run was told shows above the transcript, not in it.
+const items = computed(() => buildTranscript(withoutPrompts(entries.value)));
+const prompts = computed(() => promptsOf(entries.value));
+const touched = computed(() => filesTouched(entries.value));
 const filter = ref<LogFilter>(parseLogFilter(loadSetting<string>('runLogFilter', 'all')));
 watch(filter, (f) => saveSetting('runLogFilter', f));
 // The header and the failure marks read the whole log; the filter only changes what the log lists.
@@ -192,7 +197,9 @@ onBeforeUnmount(() => {
     </div>
     <div ref="box" class="min-h-0 flex-1 overflow-y-auto py-2" @scroll="onScroll">
       <p v-if="!runId" class="px-3.5 py-1 text-muted">No runs yet. The log appears here when the task starts.</p>
-      <p v-else-if="!entries.length" class="px-3.5 py-1 text-muted">{{ streaming ? 'Waiting for output…' : 'Empty log.' }}</p>
+      <RunContext v-if="runId" :prompts="prompts" :touched="touched" :repo-path="repoPath" @file="(p) => emit('file', p)" />
+      <p v-if="!runId" class="px-3.5 py-1 text-muted">No runs yet. The log appears here when the task starts.</p>
+      <p v-else-if="!items.length" class="px-3.5 py-1 text-muted">{{ streaming ? 'Waiting for output…' : 'Empty log.' }}</p>
       <p v-else-if="!shown.length" class="px-3.5 py-1 text-muted">Nothing in this log matches {{ filter }}.</p>
       <LogItem
         :items="shown"

@@ -310,6 +310,8 @@ export interface Run {
   output_tokens: number;
   cache_read_tokens: number;
   cache_write_tokens: number;
+  /** What the run would have cost at API prices, in US dollars, from claude's result; 0 until it ends, or with no result. */
+  cost_usd: number;
   tests_passed: number | null;
   result_text: string | null;
   denials: number;
@@ -817,6 +819,8 @@ export type LogEntry = {
   | { kind: 'setup'; passed: boolean; cmd: string; output: string }
   | { kind: 'tests'; passed: boolean; output: string }
   | { kind: 'error'; text: string }
+  /** What a claude was told (cut at 64 KiB), its lines, whether it resumed a session, and the retry's note it carries. */
+  | { kind: 'prompt'; text: string; lines: number; resume: boolean; note: string | null }
 );
 
 // ---- The daemon

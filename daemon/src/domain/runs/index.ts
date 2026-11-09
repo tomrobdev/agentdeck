@@ -26,7 +26,7 @@ export type { ClaudeResult, ClaudeRun, UsageWindow } from './run.ts';
 export type { Outcome, PidRun, Run, RunClass, RunKind, RunOutcome, RunningTaskRun, WorkerResult } from './run.ts';
 export { START_LIVE, liveView, nextLive, syncView } from './translate/live.ts';
 export type { LiveView, SyncView } from './translate/live.ts';
-export { parseLogLine } from './translate/log.ts';
+export { CHANGE_MAX, costText, parseLogLine } from './translate/log.ts';
 export type { LogEntry } from './translate/log.ts';
 export { isTestCommand, runSummary } from './translate/summary.ts';
 export type { RunEnd, RunSummary, SummaryContext } from './translate/summary.ts';

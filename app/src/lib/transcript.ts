@@ -106,15 +106,6 @@ export function firstLine(output: string): string {
   return output.split('\n').find((l) => l.trim()) ?? '';
 }
 
-/** A small diff of an Edit or Write: the old lines marked removed, then the new lines marked added. */
-export function changeLines(change: NonNullable<ToolEntry['change']>): { sign: '+' | '−'; text: string }[] {
-  const split = (t: string) => (t ? t.replace(/\n$/, '').split('\n') : []);
-  return [
-    ...split(change.old).map((text) => ({ sign: '−' as const, text })),
-    ...split(change.new).map((text) => ({ sign: '+' as const, text })),
-  ];
-}
-
 /** Whether a call's result is left out: a write that worked has nothing to add to the call. */
 export function resultHidden(item: CallItem): boolean {
   return !!item.result?.ok && WRITES.has(item.call.name);

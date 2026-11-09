@@ -1,13 +1,13 @@
 // How the CLI prints tasks, doctor reports, logs and times, and how it fails.
 import { createInterface } from 'node:readline/promises';
 import { type ComposedApp, type DoctorReport, type HealthCheck, type TaskView, readLog } from '../application/actions.ts';
-import { type TaskId, asTaskId } from '../domain/shared/index.ts';
+import { type TaskId, asTaskId, cut, oneLine } from '../domain/shared/index.ts';
 import type { AutoMergeView } from '../domain/landing/index.ts';
 import type { ChecksSummary } from '../domain/landing/index.ts';
 import type { TaskStatus } from '../domain/work/index.ts';
 import { type ProposalCheck, parseTaskIds, proposalCheckLine } from '../domain/work/index.ts';
 import type { Task } from '../domain/work/index.ts';
-import type { RunSummary } from '../domain/runs/index.ts';
+import { type RunSummary, costText } from '../domain/runs/index.ts';
 
 const STATUS_ICON: Record<TaskStatus, string> = {
   proposed: '?',
@@ -168,15 +168,22 @@ export function relTime(unixSeconds: number): string {
   return mins < 90 ? `${mins}m` : `${(mins / 60).toFixed(1)}h`;
 }
 
+/** What a claude was told, in a line: "prompt: 42 lines, note: fix the test", "resumed, prompt: 6 lines". */
+export function fmtPrompt(e: { lines: number; resume: boolean; note: string | null }): string {
+  const note = e.note ? `, note: ${cut(oneLine(e.note), 120)}` : '';
+  return `📝 ${e.resume ? 'resumed, ' : ''}prompt: ${e.lines} ${e.lines === 1 ? 'line' : 'lines'}${note}`;
+}
+
 /** Print a run's log in readable form. */
 export function printLog(app: ComposedApp, path: string): void {
   for (const e of readLog(app, path)) {
+    if (e.kind === 'prompt') console.log(fmtPrompt(e));
     if (e.kind === 'text') console.log(`\n💬 ${e.text}`);
     if (e.kind === 'tool') console.log(`🔧 ${e.name} ${e.summary}`.trimEnd());
     if (e.kind === 'tool_result' && !e.ok) {
       for (const l of e.output.split('\n').slice(0, 3)) console.log(`   ${l}`);
     }
-    if (e.kind === 'result') console.log(`\n── result: ${e.subtype}, ${e.turns} turns, $${e.cost.toFixed(3)} equiv ──`);
+    if (e.kind === 'result') console.log(`\n── result: ${e.subtype}, ${e.turns} turns, ${costText(e.cost)} ──`);
     if (e.kind === 'setup') console.log(`\n── setup ${e.passed ? 'done' : 'FAILED'}: ${e.cmd} ──\n${e.output.slice(-3000)}`);
     if (e.kind === 'tests') console.log(`\n── tests ${e.passed ? 'passed' : 'FAILED'} ──\n${e.output.slice(-3000)}`);
     if (e.kind === 'error') console.log(`⚠️  ${e.text}`);
