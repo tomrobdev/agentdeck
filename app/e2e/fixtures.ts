@@ -34,6 +34,13 @@ export const row = (page: Page, id: number): Locator => page.locator(`[data-task
 export const group = (page: Page, label: string): Locator =>
   page.locator('[role="list"] > section').filter({ has: page.getByRole('button', { name: new RegExp(`${label}\\s*\\d+$`) }) });
 
+/** Open the queue's group with this label if it is collapsed, as Done starts out (it holds the finished history). */
+export async function expandGroup(page: Page, label: string): Promise<void> {
+  const header = page.getByRole('button', { name: new RegExp(`${label}\\s*\\d+$`) });
+  if ((await header.getAttribute('aria-expanded')) !== 'true') await header.click();
+  await expect(header).toHaveAttribute('aria-expanded', 'true');
+}
+
 /** The task numbers of the rows inside `scope`, in order. */
 export const rowIds = (scope: Locator): Promise<number[]> =>
   scope.locator('[data-task-row]').evaluateAll((rows) => rows.map((r) => Number(r.getAttribute('data-task-row'))));

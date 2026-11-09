@@ -14,7 +14,7 @@ const PAGES = [
   {
     name: 'diff',
     hash: '#/tasks/2/changes',
-    ready: (page) => expect(page.locator('.diff').first()).toContainText('greetAll'),
+    ready: (page) => expect(page.locator('.diff', { hasText: 'greetAll' })).toBeVisible(),
   },
   {
     name: 'run',

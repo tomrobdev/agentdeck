@@ -1,5 +1,5 @@
 // The queue: every stage the seed made is in its group, and "need you" opens the tasks that wait on a person.
-import { expect, group, open, queueSettled, row, rowIds, test } from '../fixtures';
+import { expandGroup, expect, group, open, queueSettled, row, rowIds, test } from '../fixtures';
 
 test('the queue lists each stage in its group', async ({ page }) => {
   await open(page, '#/');
@@ -8,6 +8,7 @@ test('the queue lists each stage in its group', async ({ page }) => {
   await expect.poll(async () => (await rowIds(group(page, 'Review'))).sort()).toEqual([2, 3]);
   await expect.poll(() => rowIds(group(page, 'Proposed'))).toEqual([5]);
   await expect.poll(() => rowIds(group(page, 'Running'))).toEqual([6]);
+  await expandGroup(page, 'Done');
   await expect.poll(() => rowIds(group(page, 'Done'))).toEqual([1]);
 
   // What each row says about its stage.
