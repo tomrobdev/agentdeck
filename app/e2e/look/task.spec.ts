@@ -5,7 +5,7 @@ test("a task page's Overview shows the prompt, the pull request and the plan", a
   await open(page, '#/tasks/2/overview');
   await expect(page.getByRole('tab', { name: /Overview/ })).toHaveAttribute('data-state', 'active');
   await expect(page.getByText('Greet everyone', { exact: true }).first()).toBeVisible();
-  await expect(page.getByText('UI_GREET: greet everyone when no name is given')).toBeVisible();
+  await expect(page.getByText('UI_GREET: greet everyone when no name is given').first()).toBeVisible();
   await expect(page.locator('[data-branch]')).toContainText('agentdeck/task-2');
 
   const plan = page.locator('article', { hasText: 'Friendlier greetings' });

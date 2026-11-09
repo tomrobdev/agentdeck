@@ -32,7 +32,7 @@ export const row = (page: Page, id: number): Locator => page.locator(`[data-task
 
 /** The queue's group with this label ("Needs you", "Review", …), by its header. */
 export const group = (page: Page, label: string): Locator =>
-  page.locator('[role="list"] > section').filter({ has: page.getByRole('button', { name: new RegExp(`${label} \\d+$`) }) });
+  page.locator('[role="list"] > section').filter({ has: page.getByRole('button', { name: new RegExp(`${label}\\s*\\d+$`) }) });
 
 /** The task numbers of the rows inside `scope`, in order. */
 export const rowIds = (scope: Locator): Promise<number[]> =>

@@ -9,7 +9,7 @@ const PAGES = [
   {
     name: 'task',
     hash: '#/tasks/2/overview',
-    ready: (page) => expect(page.getByText('Friendlier greetings')).toBeVisible(),
+    ready: (page) => expect(page.getByText('Friendlier greetings').first()).toBeVisible(),
   },
   {
     name: 'diff',
