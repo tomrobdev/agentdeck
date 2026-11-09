@@ -63,7 +63,10 @@ async function stepFailure(dir: 1 | -1) {
   await nextTick();
   el.scrollTo({ top: el.scrollTop + rows[i].getBoundingClientRect().top - top - 8 });
 }
-useHotkeys({ ']': () => stepFailure(1), '[': () => stepFailure(-1) });
+useHotkeys({
+  ']': { label: 'Next failure', scope: 'log', run: () => stepFailure(1) },
+  '[': { label: 'Previous failure', scope: 'log', run: () => stepFailure(-1) },
+});
 const first = computed(() => entries.value.find((e) => e.at)?.at);
 
 async function jump() {

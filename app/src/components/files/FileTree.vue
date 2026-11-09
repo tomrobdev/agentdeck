@@ -127,7 +127,7 @@ const matches = computed(() => {
 const ROW = 'flex w-full items-center gap-[5px] rounded-sm border-none bg-transparent px-2 py-0.5 text-left text-sm whitespace-nowrap';
 const SELECTED = 'bg-[color-mix(in_srgb,var(--accent)_14%,var(--panel))]';
 
-useHotkeys({ t: () => filterBox.value?.focus() });
+useHotkeys({ t: { label: 'Filter the files', scope: 'diff', run: () => filterBox.value?.focus() } });
 </script>
 
 <template>
