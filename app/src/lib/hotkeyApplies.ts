@@ -3,9 +3,17 @@
 // belong to a focused button or link (they activate it).
 const FIELD = 'input, textarea, select, [contenteditable]';
 const ACTIVATABLE = 'button, a, [role="button"]';
-// A layer that takes the keyboard: a modal dialog (ui/Modal marks its content aria-modal), an alert dialog, a menu or a
-// listbox. A non-modal popover is a role="dialog" without aria-modal, so single keys still work under it.
-const BLOCKING_LAYER = '[role="dialog"][aria-modal="true"], [role="alertdialog"], [role="menu"], [role="listbox"]';
+// A layer that takes the keyboard: a modal dialog (ui/Modal marks its content aria-modal), an alert dialog, a menu, or a
+// listbox open as a popup (in a popover or menu, or an expanded combobox's). A non-modal popover is a role="dialog"
+// without aria-modal, so single keys still work under it. A listbox that sits on the page (the Runs tab's run list) is
+// not a layer.
+const BLOCKING_LAYER = [
+  '[role="dialog"][aria-modal="true"]',
+  '[role="alertdialog"]',
+  '[role="menu"]',
+  '[role="dialog"] [role="listbox"]',
+  '[role="combobox"][aria-expanded="true"]',
+].join(', ');
 
 export function hotkeyApplies(e: KeyboardEvent): boolean {
   if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return false;

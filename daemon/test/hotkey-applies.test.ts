@@ -44,11 +44,26 @@ test('other keys still work on a focused button', () => {
   assert.equal(hotkeyApplies(press('Enter', [])), true);
 });
 
-test('nothing counts while a modal dialog, alert dialog, menu or listbox is open', () => {
-  for (const layer of ['[role="dialog"][aria-modal="true"]', '[role="alertdialog"]', '[role="menu"]', '[role="listbox"]']) {
+test('nothing counts while a modal dialog, alert dialog, menu or popup listbox is open', () => {
+  for (const layer of [
+    '[role="dialog"][aria-modal="true"]',
+    '[role="alertdialog"]',
+    '[role="menu"]',
+    '[role="dialog"] [role="listbox"]',
+    '[role="combobox"][aria-expanded="true"]',
+  ]) {
     page(layer);
     assert.equal(hotkeyApplies(press('j', [])), false, layer);
   }
+});
+
+test('a listbox that sits on the page (the Runs tab) leaves the keys on, one open in a popover does not', () => {
+  // The page has a bare listbox: no selector for a layer matches it.
+  page(null);
+  assert.equal(hotkeyApplies(press(']', [])), true);
+  assert.equal(hotkeyApplies(press('Escape', [])), true);
+  page('[role="dialog"] [role="listbox"]');
+  assert.equal(hotkeyApplies(press(']', [])), false);
 });
 
 test('a non-modal popover (a dialog role without aria-modal) leaves the keys on', () => {

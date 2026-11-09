@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { Run } from '../../app/src/api/types.ts';
 import { parseAnsi } from '../../app/src/lib/ansi.ts';
+import { callDuration, durationLabel, failureKeys, failureStep, filterItems, isSlow, parseLogFilter } from '../../app/src/lib/logFilter.ts';
 import { clock, liveSource, placeSegment, runHeader, timeline } from '../../app/src/lib/runLive.ts';
 import { REVIEW_MAX_TURNS, UNBLOCK_MAX_TURNS } from '../src/domain/runs/index.ts';
 import {
@@ -233,4 +234,87 @@ test('the timeline: a segment per stretch coloured by kind, a tick at a failed t
   assert.deepEqual(placeSegment(segments.at(-1)!, T0, T0 + 100_000), { left: 90, width: 10 });
   assert.equal(timeline([bash('x', 'make check', 0)], 'make check').segments[0].kind, 'test');
   assert.equal(timeline([bash('x', 'make check', 0)], null).segments[0].kind, 'command');
+});
+
+test('the filter over a log: Failures keeps failed tests and leaves out a grep with no match', () => {
+  const bash = (id: string, command: string, at: number) =>
+    tool('Bash', id, { input: JSON.stringify({ command }), summary: command, at: stamp(at) });
+  const res = (id: string, ok: boolean, at: number) => ({ ...(result(id, ok) as object), at: stamp(at) }) as never;
+  const entries = [
+    { kind: 'text', text: 'start', at: stamp(0) } as never,
+    tool('Read', 'r1', { at: stamp(1) }),
+    res('r1', true, 2),
+    tool('Grep', 'g', { at: stamp(3) }),
+    res('g', false, 4),
+    tool('Edit', 'e', { at: stamp(5) }),
+    res('e', true, 6),
+    bash('t1', 'pnpm test', 10),
+    res('t1', false, 40),
+    bash('ls', 'ls', 41),
+    res('ls', true, 42),
+    bash('t2', 'pnpm test', 50),
+    res('t2', false, 60),
+    { kind: 'setup', passed: false, cmd: 'pnpm i', output: '' } as never,
+    { kind: 'tests', passed: true, output: '' } as never,
+    { kind: 'error', text: 'boom' } as never,
+  ];
+  const items = buildTranscript(entries);
+  const shape = (f: Parameters<typeof filterItems>[1]) =>
+    filterItems(items, f, 'pnpm test').map((i) => (i.type === 'call' ? i.call.name : i.type === 'plain' ? i.entry.kind : i.type));
+  assert.equal(filterItems(items, 'all', 'pnpm test'), items);
+  assert.deepEqual(shape('text'), ['text']);
+  assert.deepEqual(shape('edits'), ['Edit']);
+  assert.deepEqual(shape('failures'), ['Bash', 'Bash', 'setup', 'error']);
+  // A failed grep shows under Commands, with the Bash calls and the daemon's runs.
+  assert.deepEqual(shape('commands'), ['Grep', 'Bash', 'Bash', 'Bash', 'setup', 'tests']);
+  assert.equal(failureKeys(items, 'pnpm test').size, 4);
+  const failedLs = buildTranscript([tool('Bash', 'x', { input: JSON.stringify({ command: 'ls' }) }), result('x', false)]);
+  assert.equal(failureKeys(failedLs, 'pnpm test').size, 0, 'a failed Bash that is not a test is no failed test');
+});
+
+test('the filter unfolds Explored first, and a subagent call stays with its matching steps', () => {
+  const entries = [
+    tool('Read', 'a'),
+    tool('Grep', 'b'),
+    tool('Task', 'sub'),
+    tool('Edit', 'c', { parent: 'sub' }),
+    tool('Read', 'd', { parent: 'sub' }),
+    tool('Edit', 'e'),
+  ];
+  const items = buildTranscript(entries);
+  assert.equal(items[0].type, 'explored');
+  const edits = filterItems(items, 'edits', null);
+  assert.deepEqual(
+    edits.map((i) => i.type === 'call' && [i.call.name, i.children.length]),
+    [
+      ['Task', 1],
+      ['Edit', 0],
+    ],
+  );
+  assert.deepEqual(filterItems(items, 'failures', null), []);
+});
+
+test('a call took from its time to its result, a slow one is marked', () => {
+  const timed = (from: number, to: number | null) => {
+    const [item] = buildTranscript([
+      tool('Bash', 'a', { at: stamp(from) }),
+      ...(to === null ? [] : [{ ...(result('a') as object), at: stamp(to) } as never]),
+    ]);
+    return item as CallItem;
+  };
+  assert.equal(callDuration(timed(0, 12)), 12_000);
+  assert.equal(callDuration(timed(0, null)), null);
+  assert.equal(callDuration(buildTranscript([tool('Bash', 'a'), result('a')])[0] as CallItem), null, 'no time logged');
+  assert.equal(durationLabel(400), '0.4s');
+  assert.equal(durationLabel(12_000), '12s');
+  assert.equal(durationLabel(65_000), '1m 05s');
+  assert.equal(isSlow(60_000), false);
+  assert.equal(isSlow(61_000), true);
+  assert.equal(isSlow(null), false);
+  assert.equal(parseLogFilter('edits'), 'edits');
+  assert.equal(parseLogFilter('nope'), 'all');
+  assert.equal(failureStep([-50, 20, 90], 1), 1);
+  assert.equal(failureStep([-50, 20, 90], -1), 0);
+  assert.equal(failureStep([-50, 5], 1), -1);
+  assert.equal(failureStep([5, 20], -1), -1);
 });
