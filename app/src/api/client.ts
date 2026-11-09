@@ -52,6 +52,7 @@ import type {
   TaskSummary,
   TestNotifyResult,
   TreeListing,
+  VerifyResult,
 } from './types.ts';
 import { asTaskId } from '../../../daemon/src/domain/shared/index.ts';
 import type { PersonEvent } from '../../../daemon/src/domain/work/index.ts';
@@ -157,6 +158,8 @@ export const api = {
   autoMerge: (id: number, body: AutoMergeRequest) => call<AutoMergeResult>(`/api/tasks/${id}/auto-merge`, { method: 'POST', json: body }),
   /** Merge the base branch into the task's branch; a conflict starts a claude run, so this can take minutes. */
   sync: (id: number) => call<SyncResult>(`/api/tasks/${id}/sync`, { method: 'POST' }),
+  /** Start a verify run on a proposed or queued task; the answer is at once, and the run's row says how it goes. */
+  verify: (id: number) => call<VerifyResult>(`/api/tasks/${id}/verify`, { method: 'POST' }),
   /** The task's changes against the base, or since a commit on its branch (one of `since_points`). */
   changes: (id: number, since: string | null = null) => call<Changes>(`/api/tasks/${id}/changes${since ? `?since=${since}` : ''}`),
   diff: (id: number, path: string, since: string | null = null) =>

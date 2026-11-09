@@ -12,6 +12,7 @@ export {
   uninstallService,
 } from './operations/service.ts';
 export { type SyncReport, syncNow } from './runs/sync.ts';
+export { type VerifyReport, type VerifyStart, startVerify } from './runs/verify.ts';
 export { daemonHealth, daemonReport, restartNow } from './operations/doctor.ts';
 export type { Check as HealthCheck } from '../domain/operations/index.ts';
 export type { ComposedApp } from './ports/app.ts';

@@ -10,9 +10,9 @@ import { plannerRuns, runs, tasks } from './tables.ts';
 
 /**
  * The run kinds that run beside a task's status rather than as it: a resolve run (of a done task), an unblock run (of a
- * blocked one) and a review run (of a done one).
+ * blocked one), a review run (of a done one) and a verify run (of a proposed or queued one).
  */
-const SIDE_KINDS: RunKind[] = ['resolve', 'unblock', 'review'];
+const SIDE_KINDS: RunKind[] = ['resolve', 'unblock', 'review', 'verify'];
 
 export function runStore(orm: Orm) {
   /** Unfinished runs of one kind. */
@@ -87,10 +87,14 @@ export function runStore(orm: Orm) {
     countRunningReviews(): number {
       return runningOf('review');
     },
+    /** Verify runs still going, in any daemon process. */
+    countRunningVerifies(): number {
+      return runningOf('verify');
+    },
     /**
      * Slots in use, counted from the db so every process sees the same number: a task that is running (or being
-     * cancelled), a task not running that has an unfinished resolve or unblock run (a task whose sync started one
-     * counts once), and an unfinished planner run. A clean sync runs no claude and takes none.
+     * cancelled), a task not running that has an unfinished run beside it (resolve, unblock, review or verify; a task
+     * whose sync started one counts once), and an unfinished planner run. A clean sync runs no claude and takes none.
      */
     slotsUsed(): number {
       const running = orm.select({ n: count() }).from(tasks).where(inArray(tasks.status, RUNNING_STATUSES)).get()?.n ?? 0;

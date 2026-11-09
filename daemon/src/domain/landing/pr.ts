@@ -145,13 +145,18 @@ function planSection(plan: PrPlan): string[] {
   return [...out, ''];
 }
 
-/** The agent's final message, the linked plan's steps, a table of the task's runs, and a signature. */
+/**
+ * The agent's final message, the linked plan's steps, a table of the task's runs, and a signature. A verify run read the
+ * prompt before the work began, not the work, so it is left out of the table.
+ */
 export function buildPrBody(task: { id: number }, runs: PrRun[], plan: PrPlan | null = null): string {
-  const rows = runs.map((r) => {
-    const tests = r.tests_passed === null ? '-' : r.tests_passed ? 'pass' : 'fail';
-    const kind = r.kind === 'resolve' ? ' (conflicts)' : r.kind === 'unblock' ? ' (unblock)' : r.kind === 'review' ? ' (review)' : '';
-    return `| ${r.attempt}${kind} | ${r.outcome ?? '-'} | ${r.num_turns ?? '-'} | $${r.cost_usd.toFixed(2)} | ${tests} |`;
-  });
+  const rows = runs
+    .filter((r) => r.kind !== 'verify')
+    .map((r) => {
+      const tests = r.tests_passed === null ? '-' : r.tests_passed ? 'pass' : 'fail';
+      const kind = r.kind === 'resolve' ? ' (conflicts)' : r.kind === 'unblock' ? ' (unblock)' : r.kind === 'review' ? ' (review)' : '';
+      return `| ${r.attempt}${kind} | ${r.outcome ?? '-'} | ${r.num_turns ?? '-'} | $${r.cost_usd.toFixed(2)} | ${tests} |`;
+    });
   return [
     finalMessage(runs) || '(the agent left no final message)',
     '',

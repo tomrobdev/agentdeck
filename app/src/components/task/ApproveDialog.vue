@@ -1,16 +1,21 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
-import { type ProposalCheck, PERSON_CALLS, api } from '../../api';
+import { useQueries } from '@tanstack/vue-query';
+import { type ProposalCheck, PERSON_CALLS, api, taskQuery } from '../../api';
 import { errorMessage, plural } from '../../../../daemon/src/domain/shared/index.ts';
 import { proposalCheckLine } from '../../../../daemon/src/domain/work/index.ts';
+import { latestVerify } from '../../../../daemon/src/domain/runs/index.ts';
 import { type BulkResult, bulkMessage, summarizeBulk } from '../../lib/bulk';
 import { useActions } from '../../composables/useActions';
 import Checkbox from '../ui/Checkbox.vue';
 import ConfirmDialog from '../ui/ConfirmDialog.vue';
+import VerifyFindings from './VerifyFindings.vue';
 
 // What to read before approving one task or many: each task with its staleness line, notes and the tasks it overlaps.
 // Each prompt can be edited in place; "Save and approve" saves the edits (they show on the timeline) and then approves the
 // ticked tasks. Tasks with nothing to show start ticked, and so does a lone task. One that failed stays listed with why.
+// Each task shows its latest verify run's findings, and Verify starts one; the task's detail, refetched on every change,
+// says when it ends.
 const props = defineProps<{
   rows: { id: number; title: string; check: ProposalCheck | null }[];
   ticked: number[];
@@ -26,6 +31,23 @@ const drafts = reactive(new Map<number, string>());
 const editing = reactive(new Set<number>());
 const results = ref<BulkResult[] | null>(null);
 const running = ref(false);
+const details = useQueries({ queries: computed(() => props.rows.map((r) => taskQuery(r.id))) });
+const verifyOf = (id: number) => {
+  const runs = details.value[props.rows.findIndex((r) => r.id === id)]?.data?.runs ?? [];
+  return latestVerify(runs, checks.get(id)?.staleness?.base ?? null);
+};
+const starting = reactive(new Set<number>());
+async function startVerify(id: number) {
+  starting.add(id);
+  try {
+    await api.verify(id);
+    await details.value[props.rows.findIndex((r) => r.id === id)]?.refetch();
+  } catch (e) {
+    flash(errorMessage(e));
+  } finally {
+    starting.delete(id);
+  }
+}
 
 onMounted(() =>
   props.rows.forEach((r) =>
@@ -118,6 +140,15 @@ async function confirm() {
           />
           <span class="font-mono text-muted">#{{ r.id }}</span>
           <span class="min-w-0 flex-1 truncate">{{ r.title }}</span>
+          <button
+            v-if="!results"
+            class="btn-ghost px-2 py-0 text-sm"
+            :disabled="running || starting.has(r.id) || verifyOf(r.id)?.state === 'going'"
+            title="Check the prompt's claims about the code against the base: a short read-only run that uses no attempt"
+            @click="startVerify(r.id)"
+          >
+            {{ verifyOf(r.id) && verifyOf(r.id)!.state !== 'going' ? 'Verify again' : 'Verify' }}
+          </button>
           <button v-if="!results && saved.has(r.id) && !editing.has(r.id)" class="btn-ghost px-2 py-0 text-sm" @click="startEdit(r.id)">
             Edit prompt
           </button>
@@ -145,6 +176,7 @@ async function confirm() {
             </li>
           </ul>
         </template>
+        <VerifyFindings v-if="verifyOf(r.id)" class="pl-6" :view="verifyOf(r.id)!" />
         <textarea
           v-if="editing.has(r.id) && !results"
           class="ml-6 min-h-32 font-mono text-sm"

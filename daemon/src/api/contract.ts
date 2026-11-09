@@ -9,7 +9,7 @@ import type { AutoMergeState } from '../domain/landing/index.ts';
 import type { CheckState } from '../domain/landing/index.ts';
 import type { MergeMethod, PrMode, ToolRulesSource } from '../domain/repos/index.ts';
 import type { PrRetry, PrState, ReviewAuthor } from '../domain/landing/index.ts';
-import type { RunKind } from '../domain/runs/index.ts';
+import type { ClaimVerdict, RunKind, VerifyFinding, VerifyView } from '../domain/runs/index.ts';
 import type { HeadlineState, AttentionWhy, RepoReviewDue } from '../domain/operations/index.ts';
 import type { LinkKind } from '../domain/work/index.ts';
 import type { TaskStatus } from '../domain/work/index.ts';
@@ -19,7 +19,8 @@ import type { TaskSource } from '../domain/work/index.ts';
 // ---- Vocabulary
 
 // The domain's words, shared as they are.
-export type { AutoMergeState, FileRef, LinkKind, MergeMethod, NotifyKind, PrMode, PrRetry, PrState, TaskStatus };
+export type { AutoMergeState, ClaimVerdict, FileRef, LinkKind, MergeMethod, NotifyKind, PrMode, PrRetry, PrState, TaskStatus };
+export type { VerifyFinding, VerifyView };
 
 // ---- Repos
 
@@ -323,6 +324,11 @@ export interface Run {
   model_id?: string | null;
   /** For a review run, the patch-id of the task's changes it was started to read; null for other kinds. Missing from a daemon that predates it. */
   diff_hash?: string | null;
+  /**
+   * For a verify run, the base commit it read; its findings are its `result_text`, as JSON (`runFindings` in domain/runs).
+   * Null for other kinds. Missing from a daemon that predates it.
+   */
+  base_commit?: string | null;
   /** For a failed or blocked run: its turns, time, tools and tests summed up from its log, with a verdict line. Null otherwise. */
   summary?: RunSummary | null;
 }
@@ -694,6 +700,21 @@ export interface SyncResult {
   /** The branch was pushed, so the PR has it. */
   pushed: boolean;
   push_error?: string;
+  task: TaskDetail;
+}
+
+/**
+ * POST /api/tasks/:id/verify: a verify run started on a proposed or queued task. With `{ wait: true }` the answer comes
+ * once it ends, with `report`; else at once, and the run's row says how it goes.
+ */
+export interface VerifyResult {
+  run_id: RunId;
+  report: {
+    outcome: 'done' | 'garbage' | 'failed' | 'rate_limited' | 'cancelled';
+    findings: VerifyFinding[];
+    commit: string | null;
+    reason?: string;
+  } | null;
   task: TaskDetail;
 }
 
