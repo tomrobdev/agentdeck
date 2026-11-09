@@ -139,7 +139,30 @@ const toolCall = (name, input, output, { error = false, id = `toolu_fake_${++too
 };
 const readme = () => toolCall('Read', { file_path: join(process.cwd(), 'README.md') }, '1\t# README\n');
 
-if (prompt.startsWith('AgentDeck review run')) {
+if (prompt.startsWith('AgentDeck verify run')) {
+  // A verify run (--json-schema too): reads a file of the base, then answers in the schema with a true finding and a false
+  // one. FAKE_VERIFY_GARBAGE in the task's prompt (which the verify prompt quotes) answers with no findings list;
+  // FAKE_VERIFY_SLOW sleeps 30s before it answers (for cancel tests).
+  if (prompt.includes('FAKE_VERIFY_SLOW')) await sleep(30_000);
+  readme();
+  const answer = prompt.includes('FAKE_VERIFY_GARBAGE')
+    ? { summary: 'Looks fine.' }
+    : {
+        findings: [
+          { claim: 'README.md has a heading', verdict: 'true', path: 'README.md', line: 1, evidence: 'Line 1 is "# README".' },
+          {
+            claim: 'src/count.ts exports count()',
+            verdict: 'false',
+            path: 'src/count.ts',
+            line: 1,
+            evidence: 'There is no src/count.ts on the base.',
+            fix: 'Say where count() is to be added.',
+          },
+        ],
+      };
+  toolCall('StructuredOutput', answer, 'Structured output provided successfully');
+  result(JSON.stringify(answer), { structured_output: answer });
+} else if (prompt.startsWith('AgentDeck review run')) {
   // A review run (--json-schema too): reads the diff, then answers in the schema. FAKE_REVIEW_BLOCK in the task's prompt
   // gives a blocking finding and one that does not block, FAKE_REVIEW_GARBAGE an answer with no summary; else it is clean.
   // FAKE_REVIEW_FAIL exits 1 with no result; FAKE_REVIEW_SLOW sleeps 30s before it answers (for cancel tests).

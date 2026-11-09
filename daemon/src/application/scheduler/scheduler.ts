@@ -49,12 +49,13 @@ export class Scheduler {
   private readonly reload: SchedulerOptions['reload'];
   /**
    * Everything that takes a slot: task runs, the syncs and conflict resolutions in `resolves`, the unblock runs in
-   * `unblocks` and the review runs in `reviews`.
+   * `unblocks`, the review runs in `reviews` and the verify runs a person started in `verifies`.
    */
   private readonly running = new Set<Promise<unknown>>();
   private readonly resolves = new Set<Promise<unknown>>();
   private readonly unblocks = new Set<Promise<unknown>>();
   private readonly reviews = new Set<Promise<unknown>>();
+  private readonly verifies = new Set<Promise<unknown>>();
   /** Looking for the next done task to review (`nextReviewable` reads git); one look at a time. */
   private findingReview = false;
   /** After a look found nothing, when to look again; a run that ends looks at once (`lookForReviews`). */
@@ -127,30 +128,31 @@ export class Scheduler {
   }
 
   /**
-   * Count a sync or planner run the API started: a sync takes a slot, a proposing run counts as proposing. Either one
-   * keeps a reload from exiting until it settles, and ticks when it does. Returns `p` itself so the caller can still await it.
+   * Count a sync, verify or planner run the API started: a sync or a verify run takes a slot, a proposing run counts as
+   * proposing. Each keeps a reload from exiting until it settles, and ticks when it does. Returns `p` itself so the
+   * caller can still await it.
    */
-  track<T>(p: Promise<T>, kind: 'sync' | 'propose'): Promise<T> {
+  track<T>(p: Promise<T>, kind: 'sync' | 'verify' | 'propose'): Promise<T> {
     const settled: Promise<unknown> = p
       .catch(() => {})
       .finally(() => {
-        if (kind === 'sync') this.freeSyncSlot(settled);
-        else this.proposingRuns--;
+        if (kind === 'propose') this.proposingRuns--;
+        else this.freeSlot(settled, kind);
         this.tick();
       });
-    if (kind === 'sync') this.takeSyncSlot(settled);
-    else this.proposingRuns++;
+    if (kind === 'propose') this.proposingRuns++;
+    else this.takeSlot(settled, kind);
     return p;
   }
 
-  private takeSyncSlot(p: Promise<unknown>): void {
+  private takeSlot(p: Promise<unknown>, kind: 'sync' | 'verify'): void {
     this.running.add(p);
-    this.resolves.add(p);
+    (kind === 'sync' ? this.resolves : this.verifies).add(p);
   }
 
-  private freeSyncSlot(p: Promise<unknown>): void {
+  private freeSlot(p: Promise<unknown>, kind: 'sync' | 'verify'): void {
     this.running.delete(p);
-    this.resolves.delete(p);
+    (kind === 'sync' ? this.resolves : this.verifies).delete(p);
     this.lookForReviews();
   }
 
@@ -166,10 +168,11 @@ export class Scheduler {
   /** What is going on that a restart would have to wait for. */
   private get activity(): Activity {
     return {
-      tasks: this.running.size - this.resolves.size - this.unblocks.size - this.reviews.size,
+      tasks: this.running.size - this.resolves.size - this.unblocks.size - this.reviews.size - this.verifies.size,
       resolves: this.resolves.size,
       unblocks: this.unblocks.size,
       reviews: this.reviews.size,
+      verifies: this.verifies.size,
       planner: this.proposingRuns,
     };
   }
@@ -321,10 +324,10 @@ export class Scheduler {
     const p = resolveConflicting(this.app, ids, this.opts.log, this.conflictsTold)
       .catch((err) => this.opts.log(`conflict resolution crashed: ${err?.stack ?? err}`))
       .finally(() => {
-        this.freeSyncSlot(p);
+        this.freeSlot(p, 'sync');
         this.tick();
       });
-    this.takeSyncSlot(p);
+    this.takeSlot(p, 'sync');
   }
 
   /**

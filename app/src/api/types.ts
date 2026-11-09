@@ -10,6 +10,7 @@ export type {
   Budget,
   CancelMergeRequestResult,
   CancelResult,
+  ClaimVerdict,
   ChecksSummary,
   FixChecksResult,
   OpenPrResult,
@@ -91,6 +92,8 @@ export type {
   TreeEntry,
   TreeListing,
   UsageWindow,
+  VerifyFinding,
+  VerifyResult,
 } from '../../../daemon/src/api/contract.ts';
 
 export const MERGE_METHODS: { key: MergeMethod; label: string; hint: string }[] = [

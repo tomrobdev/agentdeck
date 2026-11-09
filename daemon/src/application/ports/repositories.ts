@@ -217,6 +217,7 @@ export interface RunRepository {
   countRunningResolves(): number;
   countRunningUnblocks(): number;
   countRunningReviews(): number;
+  countRunningVerifies(): number;
   slotsUsed(): number;
   pidRuns(days: number): PidRun[];
   runningTaskRuns(): RunningTaskRun[];

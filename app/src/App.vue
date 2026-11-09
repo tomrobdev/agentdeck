@@ -190,6 +190,7 @@ const paletteRows = computed(() =>
       open: openFromQueue,
       act: actOn,
       merge: (id) => (merging.value = id),
+      verify: (id) => act(() => api.verify(id), { done: `Verify run started on #${id}` }),
       copyLink: (id) => {
         navigator.clipboard.writeText(taskUrl(id)).then(
           () => flash(`Copied ${taskUrl(id)}`),

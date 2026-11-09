@@ -82,6 +82,9 @@ Tasks
   agentdeck auto-merge <id> on|off|repo   let the daemon merge this task's PR on its own, or not, or follow the repo
   agentdeck sync <id>         sync a done task's branch with the base branch (the PR gets the push); conflicts start
                                   a claude run, and if it fails the merge is undone and the task is blocked (also: resolve)
+  agentdeck verify <id>       start a verify run on a proposed or queued task: a short read-only claude run that checks
+                                  each claim its prompt makes about the code against the base, and prints its findings
+                                  (true, false, stale or partly, with the file and line); uses no attempt
   agentdeck clean <id>          remove the task's worktree (its branch is kept)
   agentdeck context [--repo r] [--since <event>]   the repo's live queue in a few lines, for an agent (default: this
                                   directory's repo); --since shows what changed after that event. --hook is the
@@ -107,7 +110,7 @@ Daemon
                                   planner_enabled (on|off), planner_interval_hours, planner_max_tasks, planner_model,
                                   default_model (a new task's model when neither it nor its repo names one),
                                   support_model (the model of resolve and unblock runs),
-                                  review_model (the model of review runs, default opus),
+                                  review_model (the model of review and verify runs, default opus),
                                   reload_on_change (on|off): restart onto new daemon/src code once nothing is running,
                                   review_due_days, review_due_lines: a repo is due for an area review once its oldest
                                   refs/reviewed/* mark is older than that many days, or more lines merged since it

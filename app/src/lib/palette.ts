@@ -3,7 +3,7 @@
 // (daemon/test/palette.test.ts).
 import type { TaskSummary } from '../../../daemon/src/api/contract.ts';
 import { personEvents } from '../../../daemon/src/domain/work/index.ts';
-import { canStartMerge, isReview } from '../../../daemon/src/domain/work/index.ts';
+import { CHECKED_STATUSES, canStartMerge, isReview } from '../../../daemon/src/domain/work/index.ts';
 import { rank } from './fuzzy.ts';
 
 export type PaletteTask = Pick<TaskSummary, 'id' | 'title' | 'status' | 'pr_state' | 'sync' | 'merge_request'> & {
@@ -17,6 +17,8 @@ export interface PaletteHandlers {
   open: (id: number) => void;
   act: (kind: 'approve' | 'retry' | 'cancel' | 'mark_done', id: number) => void;
   merge: (id: number) => void;
+  /** Start a verify run on a proposed or queued task. */
+  verify: (id: number) => void;
   /** Copy the task's agentdeck:// link. */
   copyLink: (id: number) => void;
   newTask: () => void;
@@ -65,6 +67,8 @@ function selectedActions(t: PaletteTask, h: PaletteHandlers): PaletteItem[] {
   const out: PaletteItem[] = [];
   if (canStartMerge(t)) out.push(mine('merge', 'Merge', () => h.merge(t.id), 'm'));
   if (events.includes('approve')) out.push(mine('approve', 'Approve', () => h.act('approve', t.id), 'a'));
+  // A verify run checks the prompt's claims about the code before the task starts.
+  if (CHECKED_STATUSES.includes(t.status)) out.push(mine('verify', 'Verify', () => h.verify(t.id)));
   // A task in review is sent back with a note, from its page; a plain retry is for work that went wrong.
   if (events.includes('retry') && !isReview(t)) out.push(mine('retry', 'Retry', () => h.act('retry', t.id), 'r'));
   if (events.includes('mark_done')) out.push(mine('mark_done', 'Mark done', () => h.act('mark_done', t.id)));

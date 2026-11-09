@@ -129,6 +129,7 @@ export const runs = sqliteTable(
     diff_hash: text(),
     run_end: text().$type<RunEnd>(),
     last_test_failed: integer(),
+    base_commit: text(),
   },
   (table) => [index('runs_task').on(table.task_id, table.id)],
 );

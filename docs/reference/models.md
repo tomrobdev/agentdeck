@@ -914,12 +914,12 @@ Problems found in the daemon log.
 
 A claude process group recorded on a run, found alive.
 
-| Field   | Type                                                        | Comment                         |
-| ------- | ----------------------------------------------------------- | ------------------------------- |
-| `kind`  | `"planner" \| "review" \| "work" \| "resolve" \| "unblock"` |                                 |
-| `run`   | `number`                                                    |                                 |
-| `pid`   | `number`                                                    |                                 |
-| `ended` | `boolean`                                                   | The run has a finished-at time. |
+| Field   | Type                                                                    | Comment                         |
+| ------- | ----------------------------------------------------------------------- | ------------------------------- |
+| `kind`  | `"planner" \| "review" \| "work" \| "resolve" \| "unblock" \| "verify"` |                                 |
+| `run`   | `number`                                                                |                                 |
+| `pid`   | `number`                                                                |                                 |
+| `ended` | `boolean`                                                               | The run has a finished-at time. |
 
 ### ReloadDecision
 
@@ -1350,6 +1350,7 @@ A review run's review, as it is stored: its kind, its note and its line comments
 | `model`              | `string \| null`     | The model the run was started with (`runModel`); null for a run from before runs recorded it, which reads as unknown.                                                                                                                          |
 | `model_id`           | `string \| null`     | The exact model id claude's init line names, such as claude-sonnet-5-5; null until it arrives.                                                                                                                                                 |
 | `diff_hash`          | `string \| null`     | For a review run, the patch-id of the task's changes it was started to read (`diffHash` on the Workspace port), kept even when the run fails or answers nothing usable, so the diff is known to have had its review run. Null for other kinds. |
+| `base_commit`        | `string \| null`     | For a verify run, the base commit its checkout read (`head` on the Workspace port); null for other kinds.                                                                                                                                      |
 | `run_end`            | `RunEnd \| null`     | How a failed or blocked work run's claude ended (`runEndOf`), kept when the run ends because its log is not kept for good; null for a run that ended any other way and for one from before this was recorded, which reads as unknown.          |
 | `last_test_failed`   | `boolean \| null`    | Whether the last test run of that run failed; null with no test run, and for a run with no `run_end`.                                                                                                                                          |
 
@@ -1441,6 +1442,51 @@ One usage window a claude session reports.
 | `utilization` | `number`         |         |
 | `resets_at`   | `number`         |         |
 | `status`      | `string \| null` |         |
+
+### VerifyAnswer
+
+A verify run's answer: its findings, none when the prompt makes no claim about the code.
+
+| Field      | Type              | Comment |
+| ---------- | ----------------- | ------- |
+| `findings` | `VerifyFinding[]` |         |
+
+### VerifyContext
+
+The base a verify run reads: the branch's name and the commit checked out.
+
+| Field    | Type     | Comment |
+| -------- | -------- | ------- |
+| `ref`    | `string` |         |
+| `commit` | `string` |         |
+
+### VerifyFinding
+
+One claim the task's prompt makes about the code, and what the base says of it.
+
+| Field      | Type                                       | Comment                                                                                                 |
+| ---------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| `claim`    | `string`                                   | The claim, in the prompt's words or close to them.                                                      |
+| `verdict`  | `"true" \| "false" \| "stale" \| "partly"` |                                                                                                         |
+| `path`     | `string \| null`                           | The file that shows it, relative to the repo root; null when the run named none.                        |
+| `line`     | `number \| null`                           | The line in `path`; null when the run named none.                                                       |
+| `evidence` | `string`                                   | What the code says, in a sentence or two.                                                               |
+| `fix`      | `string \| null`                           | For a claim that is not true, what the prompt should say instead; null when there is nothing to change. |
+
+### VerifyView
+
+The latest verify run of a task, as the dashboard and `agentdeck show` show it.
+
+| Field        | Type                            | Comment                                                                                                           |
+| ------------ | ------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `run_id`     | `RunId`                         |                                                                                                                   |
+| `state`      | `"failed" \| "done" \| "going"` | `going` while it runs; `done` with its findings; `failed` when it ended with none (failed, cancelled or garbage). |
+| `commit`     | `string \| null`                | The base commit it read; null until its checkout is made, or when it could not be.                                |
+| `findings`   | `VerifyFinding[]`               |                                                                                                                   |
+| `stale`      | `boolean`                       | True once the base has moved on from the commit it read.                                                          |
+| `reason`     | `string \| null`                | Why it ended with no findings; null otherwise.                                                                    |
+| `started_at` | `string`                        |                                                                                                                   |
+| `ended_at`   | `string \| null`                |                                                                                                                   |
 
 ### WorkRunEnd
 
