@@ -1274,11 +1274,11 @@ An edit in numbers and a little text, for a small diff.
 
 ### LogEntry
 
-| Field     | Type                                                                             | Comment                                                       |
-| --------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `at?`     | `string \| undefined`                                                            | The event's timestamp.                                        |
-| `parent?` | `string \| undefined`                                                            | The `tool_use` id of the subagent call this entry comes from. |
-| `kind`    | `"error" \| "text" \| "tool" \| "tool_result" \| "result" \| "setup" \| "tests"` |                                                               |
+| Field     | Type                                                                                         | Comment                                                       |
+| --------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `at?`     | `string \| undefined`                                                                        | The event's timestamp.                                        |
+| `parent?` | `string \| undefined`                                                                        | The `tool_use` id of the subagent call this entry comes from. |
+| `kind`    | `"error" \| "text" \| "tool" \| "tool_result" \| "result" \| "setup" \| "tests" \| "prompt"` |                                                               |
 
 ### PidRun
 

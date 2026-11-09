@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { useQuery } from '@tanstack/vue-query';
 import { computed } from 'vue';
-import { MODEL_LABELS, type TaskDetail, ago, fmtTokens, reposQuery, runDuration, runHint, runLabel, totalTokens } from '../../api';
+import { MODEL_LABELS, type TaskDetail, ago, reposQuery, runDuration, runHint, runLabel } from '../../api';
 import { liveSource } from '../../lib/runLive';
+import { RUN_KIND_ICONS, runCost } from '../../lib/runs/runRow';
 import Progress from '../ui/Progress.vue';
 import LogView from './LogView.vue';
 import Markdown from '../files/Markdown.vue';
@@ -72,10 +73,12 @@ const live = computed(() => (props.task.status === 'running' || !!props.task.syn
             :max="liveSource(r, task)!.max_turns"
           />
           <span class="ml-auto text-sm text-muted">
+            <span :title="RUN_KIND_ICONS[r.kind].label" :aria-label="RUN_KIND_ICONS[r.kind].label">{{ RUN_KIND_ICONS[r.kind].icon }}</span>
             <template v-if="r.model"
-              ><span :title="r.model_id ?? ''">{{ MODEL_LABELS[r.model] ?? r.model }}</span> · </template
-            >{{ runDuration(r) }}<template v-if="r.num_turns"> · {{ r.num_turns }} turns</template
-            ><template v-if="totalTokens(r)"> · {{ fmtTokens(totalTokens(r)) }} tok</template> · {{ ago(r.started_at) }}
+              >&nbsp;<span :title="r.model_id ?? ''">{{ MODEL_LABELS[r.model] ?? r.model }}</span></template
+            >
+            · {{ runDuration(r) }}<template v-if="r.num_turns"> · {{ r.num_turns }} turns</template> ·
+            <span class="tabular-nums" :title="runCost(r).title">{{ runCost(r).text }}</span> · {{ ago(r.started_at) }}
           </span>
         </div>
         <p

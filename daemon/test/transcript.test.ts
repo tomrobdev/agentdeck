@@ -5,7 +5,10 @@ import type { Run } from '../../app/src/api/types.ts';
 import { parseAnsi } from '../../app/src/lib/ansi.ts';
 import { callDuration, durationLabel, failureKeys, failureStep, filterItems, isSlow, parseLogFilter } from '../../app/src/lib/logFilter.ts';
 import { clock, liveSource, placeSegment, runHeader, timeline } from '../../app/src/lib/runLive.ts';
-import { REVIEW_MAX_TURNS, UNBLOCK_MAX_TURNS } from '../src/domain/runs/index.ts';
+import { CHANGE_MAX, REVIEW_MAX_TURNS, UNBLOCK_MAX_TURNS, parseLogLine } from '../src/domain/runs/index.ts';
+import { filesTouched, promptsOf, withoutPrompts } from '../../app/src/lib/runs/context.ts';
+import { isCut, lineDiff } from '../../app/src/lib/runs/lineDiff.ts';
+import { RUN_KIND_ICONS, runCost } from '../../app/src/lib/runs/runRow.ts';
 import {
   type CallItem,
   buildTranscript,
@@ -317,4 +320,95 @@ test('a call took from its time to its result, a slow one is marked', () => {
   assert.equal(failureStep([-50, 20, 90], -1), 0);
   assert.equal(failureStep([-50, 5], 1), -1);
   assert.equal(failureStep([5, 20], -1), -1);
+});
+
+/** A stream-json assistant line with one tool call, and the user line with its result, as claude writes them. */
+const callLine = (id: string, name: string, input: unknown) =>
+  JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', id, name, input }] } });
+const resultLine = (id: string, ok = true) =>
+  JSON.stringify({ type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: id, content: 'done', is_error: !ok }] } });
+
+test('the files a run touched: each once in first-touched order, a file edited twice summed, failed and other calls left out', () => {
+  const entries = [
+    callLine('a', 'Edit', { file_path: '/w/src/a.ts', old_string: 'one\ntwo', new_string: 'one\n2\nthree' }),
+    resultLine('a'),
+    callLine('b', 'Write', { file_path: '/w/src/b.ts', content: 'x\ny\n' }),
+    resultLine('b'),
+    callLine('c', 'MultiEdit', { file_path: '/w/src/a.ts', edits: [{ old_string: 'q', new_string: 'r' }] }),
+    resultLine('c'),
+    callLine('d', 'Edit', { file_path: '/w/src/c.ts', old_string: 'gone', new_string: 'here' }),
+    resultLine('d', false),
+    callLine('e', 'Read', { file_path: '/w/src/d.ts' }),
+    resultLine('e'),
+  ].flatMap(parseLogLine);
+  assert.deepEqual(filesTouched(entries), [
+    { file: '/w/src/a.ts', added: 4, removed: 3, calls: 2 },
+    { file: '/w/src/b.ts', added: 2, removed: 0, calls: 1 },
+  ]);
+});
+
+test('the prompts come out of the transcript to show above it, each with its note', () => {
+  const entries = [
+    JSON.stringify({ type: 'agentdeck_prompt', text: 'resume\nplease', resume: true, note: 'fix the test' }),
+    JSON.stringify({ type: 'agentdeck_prompt', text: 'a\nb\nc\n', resume: false, note: null }),
+    JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: 'hello' }] } }),
+  ].flatMap(parseLogLine);
+  assert.deepEqual(
+    promptsOf(entries).map((p) => [p.lines, p.resume, p.note]),
+    [
+      [2, true, 'fix the test'],
+      [3, false, null],
+    ],
+  );
+  assert.deepEqual(
+    buildTranscript(withoutPrompts(entries)).map((i) => (i.type === 'plain' ? i.entry.kind : i.type)),
+    ['text'],
+  );
+  assert.deepEqual(
+    parseLogLine(JSON.stringify({ type: 'agentdeck_prompt' })),
+    [{ kind: 'prompt', text: '', lines: 0, resume: false, note: null }],
+    'a prompt event missing its fields',
+  );
+});
+
+const diffRows = (change: { old: string; new: string }) =>
+  lineDiff(change).map((r) => (r.type === 'cut' ? `cut ${r.side}` : `${r.type} ${r.text}`));
+
+test('an edit as a line diff: shared lines as context, removals before additions', () => {
+  assert.deepEqual(diffRows({ old: 'a\nb\nc\n', new: 'a\nB\nc\nd\n' }), ['ctx a', 'del b', 'add B', 'ctx c', 'add d']);
+  assert.deepEqual(diffRows({ old: '', new: 'x\ny' }), ['add x', 'add y'], 'a Write is all additions');
+  assert.deepEqual(diffRows({ old: 'x', new: '' }), ['del x']);
+  assert.deepEqual(diffRows({ old: 'same', new: 'same' }), ['ctx same']);
+});
+
+test('a line diff on a text the log cut marks where each side was cut', () => {
+  // 400 lines are over CHANGE_MAX characters: the log keeps lines 0–238 of the old text and part of line 239.
+  const long = Array.from({ length: 400 }, (_, i) => `line ${i}`).join('\n');
+  const [edit] = parseLogLine(callLine('a', 'Edit', { file_path: '/w/a.ts', old_string: long, new_string: `top\n${long}` }));
+  const change = edit.kind === 'tool' ? edit.change! : assert.fail('not a tool call');
+  assert.equal(change.old.length, CHANGE_MAX);
+  assert.ok(isCut(change.old) && isCut(change.new));
+  assert.equal(isCut('short'), false);
+  const rows = diffRows(change);
+  assert.equal(rows[0], 'add top');
+  assert.deepEqual(
+    rows.slice(-5),
+    ['ctx line 238', 'del line 23', 'cut old', 'add lin', 'cut new'],
+    'each cut line is followed by its mark',
+  );
+  assert.deepEqual(diffRows({ old: 'a', new: 'b'.repeat(CHANGE_MAX) }).slice(-1), ['cut new'], 'only the cut side is marked');
+  assert.equal(diffRows({ old: 'a', new: 'b'.repeat(CHANGE_MAX) }).filter((r) => r.startsWith('cut')).length, 1);
+});
+
+test('a run row: its cost as the CLI says it, its tokens on hover, and an icon for each kind', () => {
+  const tokens = { input_tokens: 1200, output_tokens: 300, cache_read_tokens: 50_000, cache_write_tokens: 0 };
+  assert.deepEqual(runCost({ ...tokens, cost_usd: 2.1 }), {
+    text: '$2.10 equiv',
+    title: '51,500 tokens: 1,200 in, 300 out, 50,000 cache read, 0 cache write',
+  });
+  assert.equal(runCost({ ...tokens, cost_usd: 0 }).text, '–');
+  assert.equal(runCost({ ...tokens, cost_usd: 0.004 }).text, '<$0.01 equiv');
+  const none = { input_tokens: 0, output_tokens: 0, cache_read_tokens: 0, cache_write_tokens: 0, cost_usd: 0 };
+  assert.equal(runCost(none).title, 'No tokens recorded');
+  assert.deepEqual(Object.keys(RUN_KIND_ICONS).sort(), ['resolve', 'review', 'unblock', 'verify', 'work']);
 });
