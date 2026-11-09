@@ -1,6 +1,6 @@
 // Which lifecycle event a drop on the board means. Free of the dashboard's other modules so the daemon's tests can import it
 // (daemon/test/board-move.test.ts); taskView.ts re-exports it. What a person may do in a status is the daemon's personEvents
-// (domain/work/lifecycle.ts); the status groups it moves between are in the daemon's stage.ts.
+// (domain/work/lifecycle/lifecycle.ts); the status groups it moves between are in the daemon's stage.ts.
 import type { TaskSummary } from '../../../daemon/src/api/contract.ts';
 import { type PersonEvent, personEvents } from '../../../daemon/src/domain/work/index.ts';
 import { type StatusGroup, statusGroup } from '../../../daemon/src/domain/work/index.ts';

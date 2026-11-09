@@ -13,7 +13,7 @@ process.env.AGENTDECK_HOME = home;
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { isOwnPlanName, mergePlanSteps, parsePlan, planAfterRun, planFileName, planProgress, planSlug } =
-  await import('../src/domain/work/plan.ts');
+  await import('../src/domain/work/plans/plan.ts');
 const { openDb } = await import('./open-db.ts');
 const { startApi } = await import('../src/api/server.ts');
 const { attachPlan } = await import('../src/application/work/plans.ts');

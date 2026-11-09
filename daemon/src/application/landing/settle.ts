@@ -1,5 +1,5 @@
 // Every status change and its follow-ups: the daemon's own events that end a run or a wait (settling), and a person's.
-// What follows each domain event is the table in domain/work/follow-ups.ts; this module runs it. task_events is the outbox:
+// What follows each domain event is the table in domain/work/lifecycle/follow-ups.ts; this module runs it. task_events is the outbox:
 // a status change writes its history rows pending in the same transaction, and they are marked once their follow-ups ran,
 // so a crash between the two loses nothing. The daemon's tick runs whatever is still pending (`followUpPending`).
 import type { App } from '../ports/app.ts';
@@ -11,7 +11,7 @@ import type { Task } from '../../domain/work/index.ts';
 import { type FollowUp, followUpsOf, followUpsOfRow } from '../../domain/work/index.ts';
 import { warnStuckDependents } from '../work/dependencies.ts';
 import { notifyLater } from '../operations/notifications.ts';
-import { openPullRequest } from './open-pr.ts';
+import { openPullRequest } from './pull-request/open-pr.ts';
 
 /**
  * The follow-up lock: the history rows whose follow-ups this process is running now, which `followUpPending` leaves to it.

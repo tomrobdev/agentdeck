@@ -1,11 +1,11 @@
 // Filtering and sorting task lists: `agentdeck ls` and the dashboard's queue share it. Pure: no I/O.
 import type { RepoId } from '../../shared/index.ts';
 import type { PrState, PullRequest } from '../../landing/index.ts';
-import type { Checkout } from '../checkout.ts';
-import { STATUS_GROUPS, isMerged, isReview, isStuck, isWaiting, statusGroup } from '../stage.ts';
-import type { TaskStatus } from '../lifecycle.ts';
-import type { Waiting } from '../start.ts';
-import { RUNNING_STATUSES, type TaskState, type TaskSummary, stopReasonOf } from '../task.ts';
+import type { Checkout } from '../task/checkout.ts';
+import { STATUS_GROUPS, isMerged, isReview, isStuck, isWaiting, statusGroup } from '../task/stage.ts';
+import type { TaskStatus } from '../lifecycle/lifecycle.ts';
+import type { Waiting } from '../task/start.ts';
+import { RUNNING_STATUSES, type TaskState, type TaskSummary, stopReasonOf } from '../task/task.ts';
 
 /**
  * A task as listed: with where it stands on its builds-on links (as waitingFor reports it), the tasks merging its open PR lets

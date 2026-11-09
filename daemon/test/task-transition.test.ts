@@ -13,12 +13,12 @@ import {
   type TransitionTask,
   ruleKey,
   transition,
-} from '../src/domain/work/lifecycle.ts';
-import type { PullRequest } from '../src/domain/landing/pr.ts';
-import type { TaskEventType } from '../src/domain/work/history.ts';
-import type { Needs } from '../src/domain/work/needs.ts';
-import type { TaskState } from '../src/domain/work/task.ts';
-import { type TaskChanges, noMergeRequestChanges } from '../src/domain/work/task-writes.ts';
+} from '../src/domain/work/lifecycle/lifecycle.ts';
+import type { PullRequest } from '../src/domain/landing/pull-request/pr.ts';
+import type { TaskEventType } from '../src/domain/work/lifecycle/history.ts';
+import type { Needs } from '../src/domain/work/task/needs.ts';
+import type { TaskState } from '../src/domain/work/task/task.ts';
+import { type TaskChanges, noMergeRequestChanges } from '../src/domain/work/lifecycle/task-writes.ts';
 
 /** A retry's set-aside PR: no state, so no PR to anyone, and nothing of its checks or merge request. */
 const SET_ASIDE: TaskChanges = {

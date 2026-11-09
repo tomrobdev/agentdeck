@@ -17,7 +17,7 @@ Find the files the change starts from, the code it must fit (rules in the repo's
 
 ## 3. Write the six sections
 
-Write the prompt in these sections, in this order, each headed by its name (`PROMPT_SECTIONS` in `daemon/src/domain/work/task.ts` of the AgentDeck repo). Leave out a section only when it would be empty. It should read well as a ticket.
+Write the prompt in these sections, in this order, each headed by its name (`PROMPT_SECTIONS` in `daemon/src/domain/work/task/task.ts` of the AgentDeck repo). Leave out a section only when it would be empty. It should read well as a ticket.
 
 ```
 ## Goal
@@ -39,7 +39,7 @@ Limits the agent must keep to, such as no new dependencies or no changes to pack
 The test command passing, plus concrete checks a reviewer can confirm.
 ```
 
-- **Paths in full, from the repo root:** `daemon/src/domain/work/task.ts`, not `domain/work/task.ts`. `agentdeck add` warns about every path the prompt names that isn't on the base branch, and a shortened path gives a false warning.
+- **Paths in full, from the repo root:** `daemon/src/domain/work/task/task.ts`, not `domain/work/task/task.ts`. `agentdeck add` warns about every path the prompt names that isn't on the base branch, and a shortened path gives a false warning.
 - **Every path on the base branch, or added by a task this one builds on.** Task branches start from `origin/<base>`, so work that is only committed locally, or only on another task's branch, isn't there. Push it first, or link the task with `--builds-on`.
 - **Sandbox limits:** no new packages, no network unless the repo allows the host, nothing under `.claude/` (see `delegate`). If the task needs one of these, do that part yourself first or leave it out.
 

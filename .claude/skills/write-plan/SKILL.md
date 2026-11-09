@@ -28,7 +28,7 @@ Write it as a draft outside the repo, at `~/.agentdeck/drafts/<short-name>.html`
 Check the page parses before going on:
 
 ```sh
-node -e 'import("./daemon/src/domain/work/plan.ts").then(m => console.log(JSON.stringify(m.parsePlan(require("fs").readFileSync(process.argv[1], "utf8")), null, 1)))' ~/.agentdeck/drafts/<short-name>.html
+node -e 'import("./daemon/src/domain/work/plans/plan.ts").then(m => console.log(JSON.stringify(m.parsePlan(require("fs").readFileSync(process.argv[1], "utf8")), null, 1)))' ~/.agentdeck/drafts/<short-name>.html
 ```
 
 (from the AgentDeck checkout; it prints the title, summary and steps, or null when the marker is missing). Nothing is committed: no plan goes to the base branch.

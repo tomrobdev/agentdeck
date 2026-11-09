@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { openDb } from '../src/db/index.ts';
 import { asTaskId } from '../src/domain/shared/id.ts';
-import { type TaskEvent, transition } from '../src/domain/work/lifecycle.ts';
+import { type TaskEvent, transition } from '../src/domain/work/lifecycle/lifecycle.ts';
 import { buildPlannerPrompt } from '../src/domain/proposals/proposals.ts';
-import { type TaskState, stopReasonOf } from '../src/domain/work/task.ts';
+import { type TaskState, stopReasonOf } from '../src/domain/work/task/task.ts';
 
 function setup() {
   const db = openDb(':memory:');

@@ -9,7 +9,7 @@ process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-model-'));
 
 const { openDb } = await import('./open-db.ts');
 const { addTask, editTask } = await import('../src/application/work/tasks.ts');
-const { isModel } = await import('../src/domain/work/task.ts');
+const { isModel } = await import('../src/domain/work/task/task.ts');
 const { allowedTools } = await import('../src/domain/repos/tools.ts');
 
 test('a model is an alias or a full claude model id', () => {

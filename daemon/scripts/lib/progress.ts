@@ -25,8 +25,6 @@ export const OVERSIZED_FOLDERS: string[] = [
   'app/src/components/ui',
   'app/src/composables',
   'app/src/lib',
-  'daemon/src/domain/landing',
-  'daemon/src/domain/work',
   'daemon/test',
 ];
 
@@ -36,7 +34,7 @@ export const OVERSIZED_FOLDERS: string[] = [
  */
 export const LONG_FILES: string[] = [
   'daemon/src/application/scheduler/scheduler.ts',
-  'daemon/src/domain/landing/checks.ts',
+  'daemon/src/domain/landing/pull-request/checks.ts',
   'daemon/src/domain/runs/run.ts',
 ];
 
@@ -82,7 +80,7 @@ export const ROW_SHAPED_FIELDS: string[] = [];
 
 /**
  * The functions in `db/` that write a task without a rule (rule:task-writes), each with why: a plain write stays in the store. A write
- * with a rule takes its changes from a function in `domain/work/task-writes.ts`. Status writes are `applyEvent`'s, the claim's included
+ * with a rule takes its changes from a function in `domain/work/lifecycle/task-writes.ts`. Status writes are `applyEvent`'s, the claim's included
  * (rule:guarded-status). A new plain write fails the test until it is listed here; an entry that no longer applies fails it too.
  */
 export const PLAIN_TASK_WRITES: Record<string, string> = {

@@ -153,7 +153,7 @@ test('[contexts] an index exports only what something outside its context import
 
 test('[contexts] a sample that reaches into another context, or has a bare or starred index, fails', () => {
   const sample = [
-    parseSource('domain/work/lifecycle.ts', 'export const RULES = 1;\n'),
+    parseSource('domain/work/lifecycle/lifecycle.ts', 'export const RULES = 1;\n'),
     parseSource('domain/work/index.ts', "export { RULES } from './lifecycle.ts';\n"),
     parseSource('domain/runs/run.ts', "import { RULES } from '../work/lifecycle.ts';\nexport const r = RULES;\n"),
     parseSource('domain/runs/index.ts', "export * from './run.ts';\n"),
@@ -288,7 +288,7 @@ test('[domain-pure] domain/ reads no clock, randomness or environment, except as
 });
 
 /** The parsers of outside formats in domain/ that may call JSON.parse: claude's log, a review run's answer, GitHub's answers, and a stored list a repo's setting reads. A stored column is parsed in db/mappers.ts. */
-const OUTSIDE_JSON = ['domain/runs/translate/log.ts', 'domain/runs/review.ts', 'domain/landing/merge.ts', 'domain/shared/text.ts'];
+const OUTSIDE_JSON = ['domain/runs/translate/log.ts', 'domain/runs/review.ts', 'domain/landing/merge/merge.ts', 'domain/shared/text.ts'];
 
 test('[domain-pure] domain/ calls JSON.parse only in the parsers of outside formats', () => {
   const found = sources
@@ -403,7 +403,7 @@ function findStatusWrites(source: string): StatusWrite[] {
     const fn = enclosingFunction(node);
     if (!fn || !STATUS_WRITERS.includes(fn.name)) problems.push(`is in ${fn?.name || 'no function'}, not ${STATUS_WRITERS.join(' or ')}`);
     else if (!/\b(nextStatus|transition)\(/.test(fn.body.getText(ast)))
-      problems.push('does not ask the lifecycle (domain/work/lifecycle.ts)');
+      problems.push('does not ask the lifecycle (domain/work/lifecycle/lifecycle.ts)');
     if (!guarded) problems.push('has no WHERE on the status');
     writes.push({ line: lineOf(ast, node), kind, problems });
   };
@@ -541,7 +541,7 @@ function checkTaskWrites(source: string, plain: Record<string, string>): { found
     else
       found.push(
         `line ${w.line}: ${w.fn || 'no function'} writes a task without a rule from domain/: ` +
-          'get the changes from a function in domain/work/task-writes.ts, or add the function to PLAIN_TASK_WRITES with its reason',
+          'get the changes from a function in domain/work/lifecycle/task-writes.ts, or add the function to PLAIN_TASK_WRITES with its reason',
       );
   }
   return { found, used };
@@ -709,7 +709,10 @@ test('[models-not-rows] domain entities have no flags or JSON documents beyond t
 
 test('[models-not-rows] a sample with a new row-shaped field fails; a stale entry fails too', () => {
   const sample = [
-    parseSource('domain/work/task.ts', 'export interface Task {\n  a: number; // 1 = on\n  b: string; // JSON list\n  c: string;\n}\n'),
+    parseSource(
+      'domain/work/task/task.ts',
+      'export interface Task {\n  a: number; // 1 = on\n  b: string; // JSON list\n  c: string;\n}\n',
+    ),
   ];
   assert.deepEqual(checkRowShapedFields(sample, ['Task.a', 'Task.b']), { found: [], stale: [] });
   const fresh = checkRowShapedFields(sample, ['Task.a']);

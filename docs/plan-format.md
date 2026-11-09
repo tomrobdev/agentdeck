@@ -63,13 +63,13 @@ Replacing a plan (`attach`, `edit --plan <file>`) is refused when a task followi
 
 - **Written by a worker.** A task with no plan that writes one (because it was asked to, or the work is big enough to need one) writes it to the plan file below, and the daemon stores it as the task's plan after the run.
 
-The task detail (`GET /api/tasks/:id`) lists the parsed plans under `plans`, without their HTML: the plan the task follows when it belongs to another task, then the task's own. `GET /api/tasks/:id/plans/:plan` returns `{ html }`, with `:id` the task the plan belongs to (its `task_id`). Plans stored before plans moved into AgentDeck keep their old names and still show. The parser is `parsePlan` in `daemon/src/domain/work/plan.ts`.
+The task detail (`GET /api/tasks/:id`) lists the parsed plans under `plans`, without their HTML: the plan the task follows when it belongs to another task, then the task's own. `GET /api/tasks/:id/plans/:plan` returns `{ html }`, with `:id` the task the plan belongs to (its `task_id`). Plans stored before plans moved into AgentDeck keep their old names and still show. The parser is `parsePlan` in `daemon/src/domain/work/plans/plan.ts`.
 
 ## How a run uses its plan
 
 A task follows its linked plan, or else its own plan. Before every run the daemon writes that plan to `.agentdeck/plan.html` in the task's worktree, and a copy of it as given to the run to `.agentdeck/plan-given.html`; a `.gitignore` in `.agentdeck/` makes git ignore the folder, so neither file is ever committed. The worker's prompt lists the linked steps that are not yet done and tells it to set each one's `data-status` in the plan file and never to commit it.
 
-After every run, whatever its outcome, the daemon reads the plan file back and decides what the stored plan becomes (`planAfterRun` in `daemon/src/domain/work/plan.ts`):
+After every run, whatever its outcome, the daemon reads the plan file back and decides what the stored plan becomes (`planAfterRun` in `daemon/src/domain/work/plans/plan.ts`):
 
 - **The whole file** when the plan is the task's own (given with `--plan <file>`, attached, or written by its worker), no other task follows it, and the stored plan still equals the copy the run was given. Steps and notes the worker added anywhere in the page are kept.
 - **Otherwise only the linked steps the run changed** (`mergePlanSteps`): each linked step whose section in the plan file differs from its section in the given copy replaces the stored one, whole, with its status and any note the worker put in it. Steps the run left as it got them keep what is stored, so a sibling task on the same plan, an earlier run or a person who changed them meanwhile loses nothing; the rest of the page stays as stored. A task linked to every step (no `--steps`) counts every step. Steps match by id, so only steps with an id are saved back: a step the worker adds or moves never lands on another one.

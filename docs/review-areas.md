@@ -6,8 +6,8 @@ Groups for a session: **work** is task-use-cases, task-events, task-store and ta
 
 ## plan
 
-- daemon/src/domain/work/plan.ts
-- daemon/src/domain/work/plan-link.ts
+- daemon/src/domain/work/plans/plan.ts
+- daemon/src/domain/work/plans/plan-link.ts
 - daemon/src/application/work/plans.ts
 - daemon/src/application/work/plan-link.ts
 - daemon/src/adapters/local/plan-file.ts
@@ -20,7 +20,7 @@ Groups for a session: **work** is task-use-cases, task-events, task-store and ta
 
 Builds on and After links: a task's dependencies and dependents.
 
-- daemon/src/domain/work/link.ts
+- daemon/src/domain/work/links/link.ts
 - daemon/src/application/work/dependencies.ts
 - daemon/src/application/work/links.ts
 - daemon/src/db/work/task-links.ts
@@ -31,8 +31,8 @@ What a session or worker is told about a task: the agent context digest, prompt 
 
 - daemon/src/domain/operations/digest.ts
 - daemon/src/domain/work/read/event-text.ts
-- daemon/src/domain/work/prompt-paths.ts
-- daemon/src/domain/work/proposal-check.ts
+- daemon/src/domain/work/plans/prompt-paths.ts
+- daemon/src/domain/work/task/proposal-check.ts
 - daemon/src/application/operations/digest.ts
 - daemon/src/application/work/live-context.ts
 - daemon/src/application/work/prompt-paths.ts
@@ -48,15 +48,15 @@ What a session or worker is told about a task: the agent context digest, prompt 
 
 The task entity, its lifecycle, and the person-facing use cases, CLI and routes.
 
-- daemon/src/domain/work/task.ts
-- daemon/src/domain/work/lifecycle.ts
-- daemon/src/domain/work/history.ts
-- daemon/src/domain/work/checkout.ts
-- daemon/src/domain/work/ids.ts
-- daemon/src/domain/work/needs.ts
-- daemon/src/domain/work/rules.ts
-- daemon/src/domain/work/stage.ts
-- daemon/src/domain/work/start.ts
+- daemon/src/domain/work/task/task.ts
+- daemon/src/domain/work/lifecycle/lifecycle.ts
+- daemon/src/domain/work/lifecycle/history.ts
+- daemon/src/domain/work/task/checkout.ts
+- daemon/src/domain/work/task/ids.ts
+- daemon/src/domain/work/task/needs.ts
+- daemon/src/domain/work/task/rules.ts
+- daemon/src/domain/work/task/stage.ts
+- daemon/src/domain/work/task/start.ts
 - daemon/src/domain/work/read/listing.ts
 - daemon/src/domain/work/read/files.ts
 - daemon/src/domain/work/read/since.ts
@@ -72,8 +72,8 @@ The task entity, its lifecycle, and the person-facing use cases, CLI and routes.
 
 Status changes and what follows them: domain events, the follow-ups table, task_events as the outbox, and settling.
 
-- daemon/src/domain/work/follow-ups.ts
-- daemon/src/domain/work/task-writes.ts
+- daemon/src/domain/work/lifecycle/follow-ups.ts
+- daemon/src/domain/work/lifecycle/task-writes.ts
 - daemon/src/application/landing/settle.ts
 - daemon/src/application/landing/person-events.ts
 - daemon/src/db/work/task-events.ts
@@ -129,7 +129,7 @@ The run's lifecycle: the worker, the claude process, resuming, prompts, logs, th
 - daemon/src/application/runs/sync.ts
 - daemon/src/application/work/checkout-locks.ts
 - daemon/src/application/ports/workspace.ts
-- daemon/src/domain/work/branch.ts
+- daemon/src/domain/work/task/branch.ts
 - daemon/src/domain/runs/sync.ts
 - daemon/src/domain/runs/resolve.ts
 - daemon/src/adapters/git/exec.ts
@@ -142,22 +142,22 @@ The run's lifecycle: the worker, the claude process, resuming, prompts, logs, th
 
 Pull requests, checks, merge requests, merging and auto-merge.
 
-- daemon/src/domain/landing/auto-merge.ts
-- daemon/src/domain/landing/checks.ts
-- daemon/src/domain/landing/conflict.ts
-- daemon/src/domain/landing/merge-request.ts
-- daemon/src/domain/landing/merge.ts
-- daemon/src/domain/landing/refresh.ts
-- daemon/src/domain/landing/pr.ts
-- daemon/src/domain/landing/pr-retry.ts
-- daemon/src/domain/landing/summary.ts
-- daemon/src/application/landing/auto-merge.ts
-- daemon/src/application/landing/fix-checks.ts
-- daemon/src/application/landing/check-failures.ts
-- daemon/src/application/landing/merge-requests.ts
-- daemon/src/application/landing/merge.ts
-- daemon/src/application/landing/open-pr.ts
-- daemon/src/application/landing/refresh.ts
+- daemon/src/domain/landing/merge/auto-merge.ts
+- daemon/src/domain/landing/pull-request/checks.ts
+- daemon/src/domain/landing/merge/conflict.ts
+- daemon/src/domain/landing/merge/merge-request.ts
+- daemon/src/domain/landing/merge/merge.ts
+- daemon/src/domain/landing/pull-request/refresh.ts
+- daemon/src/domain/landing/pull-request/pr.ts
+- daemon/src/domain/landing/pull-request/pr-retry.ts
+- daemon/src/domain/landing/pull-request/summary.ts
+- daemon/src/application/landing/merge/auto-merge.ts
+- daemon/src/application/landing/pull-request/fix-checks.ts
+- daemon/src/application/landing/pull-request/check-failures.ts
+- daemon/src/application/landing/merge/merge-requests.ts
+- daemon/src/application/landing/merge/merge.ts
+- daemon/src/application/landing/pull-request/open-pr.ts
+- daemon/src/application/landing/pull-request/refresh.ts
 - daemon/src/application/ports/code-host.ts
 - daemon/src/adapters/github/github.ts
 - daemon/src/api/routes/landing/pull-requests.ts
@@ -166,11 +166,11 @@ Pull requests, checks, merge requests, merging and auto-merge.
 
 ## review
 
-- daemon/src/domain/landing/review.ts
-- daemon/src/domain/landing/review-gate.ts
-- daemon/src/domain/landing/address.ts
-- daemon/src/application/landing/reviews.ts
-- daemon/src/application/landing/address.ts
+- daemon/src/domain/landing/review/review.ts
+- daemon/src/domain/landing/review/review-gate.ts
+- daemon/src/domain/landing/review/address.ts
+- daemon/src/application/landing/review/reviews.ts
+- daemon/src/application/landing/review/address.ts
 - daemon/src/db/landing/reviews.ts
 - daemon/src/application/ports/repositories/landing.ts
 - daemon/src/api/routes/landing/reviews.ts

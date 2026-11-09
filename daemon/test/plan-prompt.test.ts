@@ -1,7 +1,7 @@
 // The linked plan steps in a worker's prompt (domain/runs/prompt.ts).
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { parsePlanWithText } from '../src/domain/work/plan.ts';
+import { parsePlanWithText } from '../src/domain/work/plans/plan.ts';
 import { buildPrompt, planPromptBlock, workerSystemPrompt } from '../src/domain/runs/prompt.ts';
 
 const plan = (statuses: [string, string, string]) => `<!doctype html>

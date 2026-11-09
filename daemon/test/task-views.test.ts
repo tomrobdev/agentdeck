@@ -12,7 +12,7 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 const { openDb } = await import('./open-db.ts');
 const { taskDetail, taskViews } = await import('../src/application/actions.ts');
 const { liveLinks, loadedLinks } = await import('../src/application/work/dependencies.ts');
-const { dependentViews } = await import('../src/domain/work/link.ts');
+const { dependentViews } = await import('../src/domain/work/links/link.ts');
 const { withViews } = await import('../src/application/work/task-views.ts');
 const { doneTask, runningTask } = await import('./fixtures.ts');
 

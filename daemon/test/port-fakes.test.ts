@@ -15,7 +15,7 @@ const { openDb } = await import('../src/db/index.ts');
 const { doneTask, testApp } = await import('./fixtures.ts');
 const { READY_PR, fakeAgent, fakeCodeHost } = await import('./fakes.ts');
 const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
-const { mergeTask } = await import('../src/application/landing/merge.ts');
+const { mergeTask } = await import('../src/application/landing/merge/merge.ts');
 
 const agent = fakeAgent((session) => {
   writeFileSync(join(session.cwd, 'fake-output.txt'), 'made by the fake agent\n');

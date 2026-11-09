@@ -15,7 +15,7 @@ import { type Task, leftoversMessage } from '../../domain/work/index.ts';
 import { endTaskRun, openTaskRun, startTaskRun } from './claude-run.ts';
 import { ActionError, requireTask, requireTaskRepo } from '../shared/input.ts';
 import { queueWait } from '../capacity/gate.ts';
-import { logPrEvent } from '../landing/open-pr.ts';
+import { logPrEvent } from '../landing/pull-request/open-pr.ts';
 import { settle } from '../landing/settle.ts';
 import { isMergeLocked, isSyncLocked, isSyncing, lockSync, markSyncing, unlockSync } from '../work/checkout-locks.ts';
 

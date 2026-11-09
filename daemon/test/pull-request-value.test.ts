@@ -7,8 +7,8 @@ import { taskDetail, taskViews } from '../src/api/wire.ts';
 import { openDb } from './open-db.ts';
 import { type TaskRow, toTask } from '../src/db/mappers.ts';
 import { stored } from '../src/domain/shared/index.ts';
-import { checksSummary } from '../src/domain/landing/checks.ts';
-import { type PrFields, type PrState, type PullRequest, prFields, pullRequestOf } from '../src/domain/landing/pr.ts';
+import { checksSummary } from '../src/domain/landing/pull-request/checks.ts';
+import { type PrFields, type PrState, type PullRequest, prFields, pullRequestOf } from '../src/domain/landing/pull-request/pr.ts';
 import { doneTask } from './fixtures.ts';
 
 const check = { verdict: 'wait' as const, reasons: [{ kind: 'checks_pending' as const, text: '2 checks still running on GitHub' }] };
@@ -154,10 +154,10 @@ test('a task read from the database has pr beside its flat fields, and the API s
   db.close();
 });
 
-test('the pull request value in domain/landing/pr.ts does not import Task', () => {
-  const dir = join(import.meta.dirname, '../src/domain/landing');
+test('the pull request value in domain/landing/pull-request/pr.ts does not import Task', () => {
+  const dir = join(import.meta.dirname, '../src/domain/landing/pull-request');
   for (const file of ['pr.ts']) {
     const text = readFileSync(join(dir, file), 'utf8');
-    assert.doesNotMatch(text, /from '\.\.\/work\/task/, `${file} imports Task`);
+    assert.doesNotMatch(text, /from '\.\.\/\.\.\/work\/task/, `${file} imports Task`);
   }
 });

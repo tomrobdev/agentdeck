@@ -1,5 +1,5 @@
 // The writes to a task's pull request: its state, its checks, the auto-merge setting and check, and a person's merge request.
-// Each takes its changes from domain/work/task-writes.ts and only persists them under its guard.
+// Each takes its changes from domain/work/lifecycle/task-writes.ts and only persists them under its guard.
 import { type SQL, and, eq, isNotNull, isNull, ne, not, or } from 'drizzle-orm';
 import type { DatabaseSync } from 'node:sqlite';
 import type { TaskId } from '../../domain/shared/index.ts';

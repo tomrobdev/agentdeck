@@ -1,4 +1,4 @@
-// A task's stage (domain/work/stage.ts) as tables: stageOf's fields, then what each predicate and statusGroup say for
+// A task's stage (domain/work/task/stage.ts) as tables: stageOf's fields, then what each predicate and statusGroup say for
 // each status, pull request state and wait. Plain values, no database.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
