@@ -1,6 +1,6 @@
 // The one gate every approval passes through: the task page, the list row, the row menu, the `a` key, the palette, a board
 // drag and the bulk bar all call `approve`. App provides it (it shows the dialog); components `useApprovals()` it.
-import { type InjectionKey, inject, provide, ref } from 'vue';
+import { type InjectionKey, type Ref, inject, provide, ref } from 'vue';
 import type { QueryClient } from '@tanstack/vue-query';
 import { errorMessage } from '../../../../daemon/src/domain/shared/index.ts';
 import { PERSON_CALLS, proposalCheckQuery } from '../../api/work';
@@ -22,6 +22,9 @@ export type Approvals = {
    * person dismissed the dialog and nothing was approved. It says what happened itself (a toast, or the dialog's own report).
    */
   approve: (ids: number[]) => Promise<BulkResult[] | null>;
+  /** The approval waiting on the dialog, which Overlays shows; `answer` passes the dialog's result back to the caller. */
+  approving: Ref<ApproveRequest | null>;
+  answer: (results: BulkResult[] | null) => void;
 };
 
 const KEY: InjectionKey<Approvals> = Symbol('approvals');
@@ -31,8 +34,8 @@ export type ApproveRequest = { items: ApproveItem[]; plan: ApprovePlan; resolve:
 
 /**
  * The gate, for App to provide. It reads each task's proposal check, and opens the dialog (`approving`) when the setting
- * and the checks say so; else it approves at once. A check that can't be read counts as nothing to show. App shows the
- * dialog while `approving` is set and passes its answer to `answer`.
+ * and the checks say so; else it approves at once. A check that can't be read counts as nothing to show. Overlays shows
+ * the dialog while `approving` is set and passes its answer to `answer`.
  */
 export function provideApprovals(queryClient: QueryClient, { refresh, flash }: Pick<Actions, 'refresh' | 'flash'>) {
   const approving = ref<ApproveRequest | null>(null);
@@ -72,8 +75,9 @@ export function provideApprovals(queryClient: QueryClient, { refresh, flash }: P
     approving.value = null;
   }
 
-  provide(KEY, { approve } satisfies Approvals);
-  return { approve, approving, answer };
+  const approvals: Approvals = { approve, approving, answer };
+  provide(KEY, approvals);
+  return approvals;
 }
 
 export function useApprovals(): Approvals {

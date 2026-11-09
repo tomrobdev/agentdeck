@@ -1,4 +1,5 @@
-// The messages at the bottom of the window (Toaster.vue shows them). They live in App, so a page change keeps an Undo's wait going.
+// The messages at the bottom of the window (Toaster.vue shows them). Module refs, so App's actions flash into
+// the Overlays' toaster and a page change keeps an Undo's wait going.
 import { ref } from 'vue';
 import { type Flash, UNDO_MS } from './useActions';
 
@@ -14,15 +15,16 @@ export interface ToastItem {
 /** How long a message stays: long enough to read a long one (a gh error, a sync that could not push), at most 15 s. */
 export const toastDuration = (message: string) => Math.min(Math.max(3500, message.length * 60), 15_000);
 
+const toasts = ref<ToastItem[]>([]);
+let lastId = 0;
+// Messages stack: a newer one does not replace an Undo toast.
+const flash: Flash = (message, action) => {
+  toasts.value = [...toasts.value, { id: ++lastId, message, duration: action ? UNDO_MS : toastDuration(message), action }];
+};
+const close = (id: number) => {
+  toasts.value = toasts.value.filter((t) => t.id !== id);
+};
+
 export function useToasts() {
-  const toasts = ref<ToastItem[]>([]);
-  let lastId = 0;
-  // Messages stack: a newer one does not replace an Undo toast.
-  const flash: Flash = (message, action) => {
-    toasts.value = [...toasts.value, { id: ++lastId, message, duration: action ? UNDO_MS : toastDuration(message), action }];
-  };
-  const close = (id: number) => {
-    toasts.value = toasts.value.filter((t) => t.id !== id);
-  };
   return { toasts, flash, close };
 }

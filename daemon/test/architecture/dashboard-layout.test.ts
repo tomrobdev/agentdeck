@@ -81,6 +81,16 @@ test('[dashboard-layout] the layout check fails when one context imports another
   }
 });
 
+test('[dashboard-layout] the layout check fails when a component imports from pages/, and only App uses a page', () => {
+  const vue = (from: string) => `<script setup lang="ts">\nimport Page from '${from}';\n</script>`;
+  const layout = parseSource('components/layout/Overlays.vue', vue('../../pages/TaskPage.vue'));
+  assert.equal(layoutViolations([layout]).length, 1, 'components/layout/ importing a page');
+  const task = parseSource('components/work/task/TaskView.vue', vue('../../../pages/TaskPage.vue'));
+  assert.equal(layoutViolations([task]).length, 1, 'a context component importing a page');
+  const app = parseSource('App.vue', vue('./pages/TaskPage.vue'));
+  assert.deepEqual(layoutViolations([app]), []);
+});
+
 /** The names a file exports that it imports: `export { a } from './x'`, and `export { a }` or `export type { a }` of an imported `a`. */
 export function reExports(s: Source): { name: string; line: number }[] {
   const imported = new Set<string>();

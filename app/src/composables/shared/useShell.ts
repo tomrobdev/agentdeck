@@ -11,6 +11,8 @@ export const panel = ref<Panel | null>(null);
 export const palette = ref(false);
 /** True while the sheet of keys is open. */
 export const keySheet = ref(false);
+/** The task last selected in the queue or opened as a page: the palette lists its actions first. */
+export const selectedId = ref<number | null>(null);
 /** The task the merge dialog is open for. */
 export const merging = ref<number | null>(null);
 
@@ -38,6 +40,7 @@ export function useShell() {
     panel,
     palette,
     keySheet,
+    selectedId,
     merging,
     openPanel,
     closePanel,
