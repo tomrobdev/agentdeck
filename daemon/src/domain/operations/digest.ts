@@ -16,7 +16,7 @@ export interface DigestTask {
   pr_state: PrState | null;
   stop_reason: string | null;
   waiting: Waiting | null;
-  /** The auto-merge view's state and label (domain/landing/auto-merge.ts); marked on the line unless it is off. */
+  /** The auto-merge view's state and label (domain/landing/merge/auto-merge.ts); marked on the line unless it is off. */
   auto_merge_view?: { state: string; label: string } | null;
 }
 

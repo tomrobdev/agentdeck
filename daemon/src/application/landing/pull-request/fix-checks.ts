@@ -1,0 +1,67 @@
+// Send a PR's failing checks back to the worker: each failed step and what its log says go into a retry's note.
+import type { App } from '../../ports/app.ts';
+import type { TaskId } from '../../../domain/shared/index.ts';
+import {
+  type FailedCheck,
+  LOG_TAIL_BYTES,
+  type PrCheck,
+  actionsRun,
+  carryFailures,
+  failingChecks,
+  fixChecksNote,
+  headBytes,
+} from '../../../domain/landing/index.ts';
+import { openPrUrl } from '../../../domain/landing/index.ts';
+import { errorMessage } from '../../../domain/shared/index.ts';
+import { ActionError, requireTask, requireTaskRepo } from '../../shared/input.ts';
+import { readFailure } from './check-failures.ts';
+import { retryTask } from '../person-events.ts';
+
+export interface FixChecksResult {
+  /** The failing checks sent to the worker, by name. */
+  checks: string[];
+}
+
+/**
+ * Retry a done task whose open PR has failing checks, with a note naming each one. A GitHub Actions check brings its
+ * failed step and the excerpt of that step's log (`failureExcerpt`): the one the PR refresh kept for this head, or read
+ * now when it kept none; any other check its name and link. The worker continues on the same branch, and the PR updates
+ * when it is done. Refused when the task isn't done with an open PR, or no check is failing.
+ */
+export async function fixChecks(app: App, id: TaskId): Promise<FixChecksResult> {
+  const task = requireTask(app, id);
+  if (task.status !== 'done') throw new ActionError(`#${id} is ${task.status}; only a done task's checks can be sent back`);
+  const url = openPrUrl(task.pr);
+  if (!url) throw new ActionError(`#${id} has no open pull request`);
+  const repo = requireTaskRepo(app, task);
+  const pr = await app.codeHost.prDetails(url, repo.path).catch((err) => {
+    throw new ActionError(`could not read the PR: ${errorMessage(err)}`);
+  });
+  const { checks } = carryFailures(task.pr?.checks.latest ?? null, pr.head ?? null, pr.check_list ?? []);
+  const failing = failingChecks(checks);
+  if (!failing.length) throw new ActionError(`no check is failing on #${id}'s PR`);
+
+  // Each Actions check's share of the note's log budget; checks of one job share one read.
+  const fromActions = failing.filter((c) => actionsRun(c.url)).length;
+  const budget = Math.floor(LOG_TAIL_BYTES / Math.max(fromActions, 1));
+  const reads = new Map<string, Promise<PrCheck>>();
+  const failed = await Promise.all(
+    failing.map(async (c): Promise<FailedCheck> => {
+      if (!actionsRun(c.url)) return { name: c.name, url: c.url };
+      let read: PrCheck = c;
+      if (!c.excerpt) {
+        if (!reads.has(c.url!)) reads.set(c.url!, readFailure(app, repo.path, c, budget));
+        read = await reads.get(c.url!)!;
+      }
+      return read.excerpt
+        ? { name: c.name, url: c.url, step: read.step ?? null, excerpt: headBytes(read.excerpt, budget) }
+        : { name: c.name, url: c.url, step: read.step ?? null, log_error: read.excerpt_error ?? 'gh printed no failed steps' };
+    }),
+  );
+  // The reads took a while: a PR merged or closed meanwhile, or a task that left done, is not requeued.
+  const now = requireTask(app, id);
+  if (now.status !== 'done' || !openPrUrl(now.pr))
+    throw new ActionError(`#${id} changed while its checks were read; its PR is no longer open`);
+  retryTask(app, id, { note: fixChecksNote(failed) }, ['done']);
+  return { checks: failed.map((c) => c.name) };
+}

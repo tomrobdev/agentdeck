@@ -25,7 +25,7 @@ const { restartWait } = await import('../src/domain/operations/restart.ts');
 const { REVIEW_NOTE, reviewOutcome, reviewable } = await import('../src/domain/runs/review.ts');
 const { buildPrompt } = await import('../src/domain/runs/prompt.ts');
 const { runLabel } = await import('../src/domain/runs/run.ts');
-const { REVIEW_PROMPT_INTRO } = await import('../src/domain/landing/address.ts');
+const { REVIEW_PROMPT_INTRO } = await import('../src/domain/landing/review/address.ts');
 const { doneTask, testApp, waitFor } = await import('./fixtures.ts');
 const { fakeCodeHost } = await import('./fakes.ts');
 

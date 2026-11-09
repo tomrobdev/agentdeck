@@ -5,15 +5,15 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { asReviewId, asTaskId } from '../src/domain/shared/id.ts';
-import { commentsToAddress, nextCommentState, reviewReason } from '../src/domain/landing/review.ts';
-import type { ReviewComment, ReviewWithComments } from '../src/domain/landing/review.ts';
+import { commentsToAddress, nextCommentState, reviewReason } from '../src/domain/landing/review/review.ts';
+import type { ReviewComment, ReviewWithComments } from '../src/domain/landing/review/review.ts';
 
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-reviews-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { openDb } = await import('./open-db.ts');
 const actions = await import('../src/application/actions.ts');
-const { recordAnswers } = await import('../src/application/landing/address.ts');
+const { recordAnswers } = await import('../src/application/landing/review/address.ts');
 const { doneTask, runningTask } = await import('./fixtures.ts');
 
 function setup() {

@@ -14,8 +14,8 @@ const { ActionError, addTask, updateRepo, linkTasks, unlinkTasks, taskDetail, ca
   await import('../src/application/actions.ts');
 const { doneTask, failedTask, queuedTask, runningTask, settlePr, testApp } = await import('./fixtures.ts');
 const { landsAfter, warnStuckDependents } = await import('../src/application/work/dependencies.ts');
-const { mergeCheck } = await import('../src/domain/landing/merge.ts');
-const { autoMergeCheck } = await import('../src/domain/landing/auto-merge.ts');
+const { mergeCheck } = await import('../src/domain/landing/merge/merge.ts');
+const { autoMergeCheck } = await import('../src/domain/landing/merge/auto-merge.ts');
 
 function setup() {
   const db = testApp(openDb(':memory:'));

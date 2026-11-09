@@ -15,18 +15,18 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 const { openDb } = await import('./open-db.ts');
 const { doneTask, queuedTask } = await import('./fixtures.ts');
 const { github } = await import('../src/adapters/github/github.ts');
-const { refreshPrStates } = await import('../src/application/landing/refresh.ts');
+const { refreshPrStates } = await import('../src/application/landing/pull-request/refresh.ts');
 const { ActionError, fixChecks, taskDetail, taskViews } = await import('../src/application/actions.ts');
-const { latestReviewNote } = await import('../src/domain/work/history.ts');
-const { parsePrDetails } = await import('../src/domain/landing/merge.ts');
+const { latestReviewNote } = await import('../src/domain/work/lifecycle/history.ts');
+const { parsePrDetails } = await import('../src/domain/landing/merge/merge.ts');
 const { actionsRun, carryFailures, countChecks, failedStep, failureExcerpt, failureHeadline, failureLine, headBytes, logLines, logTail } =
-  await import('../src/domain/landing/checks.ts');
-const { fixChecksNote, nextChecks, parseChecks, stepUrl } = await import('../src/domain/landing/checks.ts');
-const { parseJobSteps } = await import('../src/domain/landing/merge.ts');
+  await import('../src/domain/landing/pull-request/checks.ts');
+const { fixChecksNote, nextChecks, parseChecks, stepUrl } = await import('../src/domain/landing/pull-request/checks.ts');
+const { parseJobSteps } = await import('../src/domain/landing/merge/merge.ts');
 const { checksFailedNotification } = await import('../src/domain/operations/notification.ts');
 const { fmtChecks } = await import('../src/cli/format.ts');
-type PrDetails = import('../src/domain/landing/merge.ts').PrDetails;
-type PrCheck = import('../src/domain/landing/checks.ts').PrCheck;
+type PrDetails = import('../src/domain/landing/merge/merge.ts').PrDetails;
+type PrCheck = import('../src/domain/landing/pull-request/checks.ts').PrCheck;
 
 const db = openDb(join(home, 'test.db'));
 after(() => db.close());

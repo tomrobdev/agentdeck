@@ -18,8 +18,8 @@ const { openDb } = await import('./open-db.ts');
 const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
 const { github } = await import('../src/adapters/github/github.ts');
 const { updateRepo } = await import('../src/application/actions.ts');
-const { linkedSteps, unfinishedSteps, unfinishedSummary } = await import('../src/domain/work/plan.ts');
-const { buildPrBody } = await import('../src/domain/landing/pr.ts');
+const { linkedSteps, unfinishedSteps, unfinishedSummary } = await import('../src/domain/work/plans/plan.ts');
+const { buildPrBody } = await import('../src/domain/landing/pull-request/pr.ts');
 
 const plan = (a: string, b: string) => `<!doctype html>
 <html data-agentdeck-plan="1"><head><title>Cache plan</title></head><body>

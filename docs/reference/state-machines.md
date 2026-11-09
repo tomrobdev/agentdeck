@@ -6,7 +6,7 @@ Each state machine of `domain/`, read from its rule table.
 
 ## Task lifecycle
 
-The rule table is `RULES` in `domain/work/lifecycle.ts`. States: `proposed`, `queued`, `running`, `done`, `blocked`, `failed`, `cancel_requested`, `cancelled`.
+The rule table is `RULES` in `domain/work/lifecycle/lifecycle.ts`. States: `proposed`, `queued`, `running`, `done`, `blocked`, `failed`, `cancel_requested`, `cancelled`.
 
 ```mermaid
 stateDiagram-v2
@@ -55,7 +55,7 @@ stateDiagram-v2
 
 ## Review comment
 
-The rule table is `COMMENT_MOVES` in `domain/landing/review.ts`. States: `open`, `answered`, `resolved`.
+The rule table is `COMMENT_MOVES` in `domain/landing/review/review.ts`. States: `open`, `answered`, `resolved`.
 
 ```mermaid
 stateDiagram-v2
@@ -75,7 +75,7 @@ stateDiagram-v2
 
 ## Follow-ups
 
-What the daemon does after a task's status changes: each domain event `transition` makes, the moves that make it (event, from which statuses) and its follow-ups. The table is `FOLLOW_UPS` in `domain/work/follow-ups.ts`, run by `application/landing/settle.ts`. `task_events` is the outbox: a change whose event has follow-ups writes its row pending in the same transaction, `settle` runs the daemon's at once and marks the row, and the daemon's tick runs whatever is still pending: a person's events (only the daemon follows up), crash recovery's, and any a crash cut off.
+What the daemon does after a task's status changes: each domain event `transition` makes, the moves that make it (event, from which statuses) and its follow-ups. The table is `FOLLOW_UPS` in `domain/work/lifecycle/follow-ups.ts`, run by `application/landing/settle.ts`. `task_events` is the outbox: a change whose event has follow-ups writes its row pending in the same transaction, `settle` runs the daemon's at once and marks the row, and the daemon's tick runs whatever is still pending: a person's events (only the daemon follows up), crash recovery's, and any a crash cut off.
 
 | Domain event          | Made by                                                                                                                                                                                                                                                                                                                                                                         | Follow-ups                             |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
@@ -101,7 +101,7 @@ State types in `domain/` that no rule table drives, and why.
 | `CheckState`       | a value read from GitHub for each check, not a state a thing moves through                                                                                                                                     |
 | `HeadlineState`    | computed from the daemon and queue each time, not a state with moves                                                                                                                                           |
 | `LinkState`        | computed from the linked task each time, not a state with moves                                                                                                                                                |
-| `MergeRequestView` | a merge request is set, cleared and read as columns (domain/landing/merge-request.ts), not a state type with a table yet                                                                                       |
+| `MergeRequestView` | a merge request is set, cleared and read as columns (domain/landing/merge/merge-request.ts), not a state type with a table yet                                                                                 |
 | `PlanStepStatus`   | set from the plan page by a person or worker; any step may take any status                                                                                                                                     |
-| `PrState`          | a pull request moves by what GitHub reports (domain/landing/pr.ts), not by an event table yet                                                                                                                  |
+| `PrState`          | a pull request moves by what GitHub reports (domain/landing/pull-request/pr.ts), not by an event table yet                                                                                                     |
 | `StartState`       | computed from a task's links each time, not a state with moves                                                                                                                                                 |

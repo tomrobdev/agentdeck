@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { after, before, test } from 'node:test';
 import type { Repo } from '../src/domain/repos/repo.ts';
 import { asRepoId, testApp, waitFor } from './fixtures.ts';
-import { stopReasonOf } from '../src/domain/work/task.ts';
+import { stopReasonOf } from '../src/domain/work/task/task.ts';
 
 const REPO = asRepoId(1); // the one repo this file registers
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-test-'));
@@ -141,7 +141,7 @@ test('orphaned running tasks are requeued on start', () => {
 });
 
 test('a task interrupted by repeated restarts fails instead of looping', async () => {
-  const { MAX_RESTARTS } = await import('../src/domain/work/lifecycle.ts');
+  const { MAX_RESTARTS } = await import('../src/domain/work/lifecycle/lifecycle.ts');
   const task = db.addTask({ repo_id: REPO, title: 'poison', prompt: 'x' });
   for (let i = 1; i < MAX_RESTARTS; i++) {
     db.claimNextTask();
@@ -211,7 +211,7 @@ test('a claude started long after its run row opened (setup, a sync) is still th
 });
 
 test('defaultTitle cuts at sentence or word boundary', async () => {
-  const { defaultTitle } = await import('../src/domain/work/task.ts');
+  const { defaultTitle } = await import('../src/domain/work/task/task.ts');
   assert.equal(defaultTitle('Fix the login bug. Then add tests.'), 'Fix the login bug');
   const long = defaultTitle(
     'Add a truncate(s, n) function to src/strings.js that shortens s to at most n characters, ending with an ellipsis',

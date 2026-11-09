@@ -29,7 +29,7 @@ import { pauseRepo } from '../repos/pause.ts';
 import { markSyncing } from '../work/checkout-locks.ts';
 import { followedSteps, planForRun, takePlanFile } from '../work/plans.ts';
 import { settle } from '../landing/settle.ts';
-import { recordAnswers, reviewForRun } from '../landing/address.ts';
+import { recordAnswers, reviewForRun } from '../landing/review/address.ts';
 import { escalateAfter } from '../work/escalate.ts';
 
 /** Run one attempt of a task that the scheduler has already claimed (status = running). */

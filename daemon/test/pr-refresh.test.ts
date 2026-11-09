@@ -2,7 +2,7 @@
 // again soon, and whether a person's merge request is dropped.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { AUTO_MERGE_LABEL } from '../src/domain/landing/auto-merge.ts';
+import { AUTO_MERGE_LABEL } from '../src/domain/landing/merge/auto-merge.ts';
 import type { AutoMergeFacts, MergeInput, PrDetails } from '../src/domain/landing/index.ts';
 import { refreshVerdict } from '../src/domain/landing/index.ts';
 

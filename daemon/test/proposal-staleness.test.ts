@@ -13,7 +13,7 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { openDb } = await import('./open-db.ts');
 const { addTask, proposalCheck } = await import('../src/application/actions.ts');
-const { parseBaseLog, proposalCheckLine, staleness } = await import('../src/domain/work/proposal-check.ts');
+const { parseBaseLog, proposalCheckLine, staleness } = await import('../src/domain/work/task/proposal-check.ts');
 const { sqliteMs } = await import('../src/domain/shared/time.ts');
 const { blockedTask } = await import('./fixtures.ts');
 

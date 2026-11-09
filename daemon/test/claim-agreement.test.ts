@@ -12,13 +12,13 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 const { openDb } = await import('./open-db.ts');
 const { startWaits } = await import('../src/application/capacity/queue.ts');
 const { liveLinks } = await import('../src/application/work/dependencies.ts');
-const { startState } = await import('../src/domain/work/link.ts');
+const { startState } = await import('../src/domain/work/links/link.ts');
 
 /** What each task waits for, from the queue state, the unblock runs going and the links as they are now. */
 function waits(db: ReturnType<typeof openDb>) {
   const waitOf = startWaits(db);
   const links = liveLinks(db);
-  return (t: import('../src/domain/work/task.ts').Task) => waitOf(t, startState(t, links.linksOf(t.id), links.target));
+  return (t: import('../src/domain/work/task/task.ts').Task) => waitOf(t, startState(t, links.linksOf(t.id), links.target));
 }
 
 test('claimNextTask picks the first queued task, by priority then id, that has no startWait', () => {

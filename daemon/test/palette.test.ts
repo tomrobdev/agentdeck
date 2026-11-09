@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { bestScore, fuzzyScore, rank } from '../../app/src/lib/fuzzy.ts';
-import { FILTER_STATES } from '../../daemon/src/domain/work/index.ts';
+import { FILTER_STATES } from '../src/domain/work/index.ts';
 import { type PaletteHandlers, type PaletteTask, paletteItems, searchPalette } from '../../app/src/lib/palette.ts';
 
 test('every query character must appear in order, ignoring case', () => {

@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { asTaskId } from '../src/domain/shared/id.ts';
-import { stateFields } from '../src/domain/work/task.ts';
+import { stateFields } from '../src/domain/work/task/task.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-install-'));
 process.env.AGENTDECK_HOME = home;
