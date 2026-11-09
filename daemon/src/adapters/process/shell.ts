@@ -1,6 +1,6 @@
 // Runs a repo's own commands (setup, tests) through the shell.
 import { spawn } from 'node:child_process';
-import { withToolchainPath } from '../config.ts';
+import { withToolchainPath } from '../../config.ts';
 
 const TAIL_BYTES = 20_000;
 

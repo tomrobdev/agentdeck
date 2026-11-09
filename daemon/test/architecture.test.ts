@@ -54,7 +54,7 @@ test('[ports] application/ imports only itself and domain/, and only compose.ts 
 
 test('[ports] a sample where application/ imports adapters/git.ts or db/ fails', () => {
   const sample = [
-    parseSource('application/work/x.ts', "import { git } from '../../adapters/git.ts';\nexport const x = git;\n"),
+    parseSource('application/work/x.ts', "import { git } from '../../adapters/git/exec.ts';\nexport const x = git;\n"),
     parseSource('application/work/y.ts', "import { openDb } from '../../db/index.ts';\nexport const y = openDb;\n"),
     parseSource('api/z.ts', "import { openDb } from '../db/index.ts';\nexport const z = openDb;\n"),
     parseSource('compose.ts', "import { openDb } from './db/index.ts';\nexport const c = openDb;\n"),
@@ -720,7 +720,7 @@ test('[models-not-rows] a sample with a new row-shaped field fails; a stale entr
   assert.match(stale.stale[0], /^Task\.c is on ROW_SHAPED_FIELDS/);
 });
 
-test('[claude-process-group] claude runs only from adapters/claude.ts, in its own process group', () => {
+test('[claude-process-group] claude runs only from adapters/claude/claude.ts, in its own process group', () => {
   // So crash recovery can stop the whole process tree by its pid.
   const found: string[] = [];
   for (const s of sources) {
@@ -729,7 +729,7 @@ test('[claude-process-group] claude runs only from adapters/claude.ts, in its ow
         const [bin, , options = node.arguments[1]] = node.arguments;
         if (bin?.getText(s.ast).includes('claudeBin')) {
           const where = `${at(s, lineOf(s.ast, node))} starts claude`;
-          if (s.path !== 'adapters/claude.ts') found.push(`${where} outside adapters/claude.ts`);
+          if (s.path !== 'adapters/claude/claude.ts') found.push(`${where} outside adapters/claude/claude.ts`);
           if (!options || !/\bdetached:\s*true\b/.test(options.getText(s.ast))) found.push(`${where} without detached: true`);
         }
       }

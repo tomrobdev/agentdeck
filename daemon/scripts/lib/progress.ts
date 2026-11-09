@@ -25,7 +25,6 @@ export const OVERSIZED_FOLDERS: string[] = [
   'app/src/components/ui',
   'app/src/composables',
   'app/src/lib',
-  'daemon/src/adapters',
   'daemon/src/domain/landing',
   'daemon/src/domain/work',
   'daemon/test',
@@ -36,7 +35,6 @@ export const OVERSIZED_FOLDERS: string[] = [
  * entry in the change that brings its file under the limit. Never add one. A listed file may grow while it is listed.
  */
 export const LONG_FILES: string[] = [
-  'daemon/src/adapters/git.ts',
   'daemon/src/application/scheduler/scheduler.ts',
   'daemon/src/domain/landing/checks.ts',
   'daemon/src/domain/runs/run.ts',
@@ -46,7 +44,7 @@ export const LONG_FILES: string[] = [
  * The folders of `PLACED_FOLDERS` (`layout.ts`) that still have files outside a context folder today (rule:context-folders). The list
  * only shrinks, as above: remove an entry once its folder holds only its shared files and context folders. Never add one.
  */
-export const UNPLACED_FOLDERS: string[] = ['daemon/src/adapters', 'daemon/test'];
+export const UNPLACED_FOLDERS: string[] = ['daemon/test'];
 
 export const cycleKey = (c: FolderCycle) => c.folders.join(', ');
 

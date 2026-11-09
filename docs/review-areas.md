@@ -10,7 +10,7 @@ Groups for a session: **work** is task-use-cases, task-events, task-store and ta
 - daemon/src/domain/work/plan-link.ts
 - daemon/src/application/work/plans.ts
 - daemon/src/application/work/plan-link.ts
-- daemon/src/adapters/plan-file.ts
+- daemon/src/adapters/local/plan-file.ts
 - daemon/src/db/work/plans.ts
 - daemon/src/api/routes/work/plans.ts
 - app/src/components/task/PlanCard.vue
@@ -114,14 +114,14 @@ The run's lifecycle: the worker, the claude process, resuming, prompts, logs, th
 - daemon/src/application/ports/agent.ts
 - daemon/src/application/ports/processes.ts
 - daemon/src/application/ports/run-log.ts
-- daemon/src/adapters/claude.ts
-- daemon/src/adapters/processes.ts
-- daemon/src/adapters/run-log.ts
-- daemon/src/adapters/protected-edits.ts
+- daemon/src/adapters/claude/claude.ts
+- daemon/src/adapters/process/processes.ts
+- daemon/src/adapters/claude/run-log.ts
+- daemon/src/adapters/local/protected-edits.ts
 - daemon/src/db/runs/runs.ts
 - daemon/src/application/ports/repositories/runs.ts
 - daemon/src/domain/runs/index.ts
-- daemon/src/adapters/shell.ts
+- daemon/src/adapters/process/shell.ts
 - daemon/src/api/log-stream.ts
 
 ## sync
@@ -132,8 +132,11 @@ The run's lifecycle: the worker, the claude process, resuming, prompts, logs, th
 - daemon/src/domain/work/branch.ts
 - daemon/src/domain/runs/sync.ts
 - daemon/src/domain/runs/resolve.ts
-- daemon/src/adapters/git.ts
-- daemon/src/adapters/workspace.ts
+- daemon/src/adapters/git/exec.ts
+- daemon/src/adapters/git/refs.ts
+- daemon/src/adapters/git/diffs.ts
+- daemon/src/adapters/git/worktrees.ts
+- daemon/src/adapters/git/workspace.ts
 
 ## pull-request
 
@@ -156,7 +159,7 @@ Pull requests, checks, merge requests, merging and auto-merge.
 - daemon/src/application/landing/open-pr.ts
 - daemon/src/application/landing/refresh.ts
 - daemon/src/application/ports/code-host.ts
-- daemon/src/adapters/github.ts
+- daemon/src/adapters/github/github.ts
 - daemon/src/api/routes/landing/pull-requests.ts
 - daemon/src/cli/landing/pull-requests.ts
 - daemon/src/domain/landing/index.ts
@@ -201,8 +204,8 @@ Pull requests, checks, merge requests, merging and auto-merge.
 - daemon/src/db/proposals/planner-runs.ts
 - daemon/src/application/ports/repositories/repos.ts
 - daemon/src/application/ports/repositories/proposals.ts
-- daemon/src/adapters/goals.ts
-- daemon/src/adapters/repo-root.ts
+- daemon/src/adapters/local/goals.ts
+- daemon/src/adapters/git/repo-root.ts
 - daemon/src/api/routes/repos/repos.ts
 - daemon/src/cli/repos/repos.ts
 
@@ -215,12 +218,12 @@ The daemon itself: health, the headline, restart and reload, notifications, sett
 - daemon/src/application/ports/notifier.ts
 - daemon/src/application/ports/service.ts
 - daemon/src/application/ports/source.ts
-- daemon/src/adapters/notify.ts
-- daemon/src/adapters/service.ts
-- daemon/src/adapters/watch.ts
-- daemon/src/adapters/caffeinate.ts
-- daemon/src/adapters/daemon-api.ts
-- daemon/src/adapters/daemon-log.ts
+- daemon/src/adapters/macos/notify.ts
+- daemon/src/adapters/macos/service.ts
+- daemon/src/adapters/macos/watch.ts
+- daemon/src/adapters/macos/caffeinate.ts
+- daemon/src/adapters/local/daemon-api.ts
+- daemon/src/adapters/local/daemon-log.ts
 - daemon/src/db/operations/notifications.ts
 - daemon/src/db/operations/settings.ts
 - daemon/src/application/ports/repositories/operations.ts

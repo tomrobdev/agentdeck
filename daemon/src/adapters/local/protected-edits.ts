@@ -3,9 +3,9 @@
 import type { Dirent } from 'node:fs';
 import { lstat, mkdir, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, isAbsolute } from 'node:path';
-import { EDITS_FOLDER, EDIT_LIMIT, protectedEditTarget, protectedEditsMessage } from '../domain/repos/index.ts';
-import { errorMessage } from '../domain/shared/index.ts';
-import { commitFiles } from './git.ts';
+import { EDITS_FOLDER, EDIT_LIMIT, protectedEditTarget, protectedEditsMessage } from '../../domain/repos/index.ts';
+import { errorMessage } from '../../domain/shared/index.ts';
+import { commitFiles } from '../git/worktrees.ts';
 
 export interface AppliedEdits {
   /** The files written and committed, from the repo root. */

@@ -4,14 +4,14 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir, userInfo } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { promisify } from 'node:util';
-import { HOME, LOG_DIR, ensureDirs, rustDirs } from '../config.ts';
+import { HOME, LOG_DIR, ensureDirs, rustDirs } from '../../config.ts';
 
 const exec = promisify(execFile);
 
 export const LABEL = 'dev.agentdeck.daemon';
 export const PLIST_PATH = join(homedir(), 'Library/LaunchAgents', `${LABEL}.plist`);
 // The installed plist runs this path, so the entry point stays at src/cli.ts.
-const CLI_PATH = resolve(import.meta.dirname, '../cli.ts');
+const CLI_PATH = resolve(import.meta.dirname, '../../cli.ts');
 const domain = () => `gui/${userInfo().uid}`;
 
 const xml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');

@@ -16,7 +16,7 @@ writeFileSync(
 );
 process.env.PATH = `${bin}:${process.env.PATH}`;
 
-const { github } = await import('../src/adapters/github.ts');
+const { github } = await import('../src/adapters/github/github.ts');
 const { mergeFailure } = await import('../src/domain/landing/merge.ts');
 
 const pr = { url: 'https://github.com/acme/demo/pull/7', cwd: bin, head: 'abc123' };

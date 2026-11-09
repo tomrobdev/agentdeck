@@ -10,10 +10,10 @@ import {
   parseBranchPrs,
   parseJobSteps,
   parsePrDetails,
-} from '../domain/landing/index.ts';
-import type { MergeMethod } from '../domain/repos/index.ts';
-import { lastLine } from '../domain/shared/index.ts';
-import { gitRemote } from './git.ts';
+} from '../../domain/landing/index.ts';
+import type { MergeMethod } from '../../domain/repos/index.ts';
+import { lastLine } from '../../domain/shared/index.ts';
+import { gitRemote } from '../git/exec.ts';
 
 const exec = promisify(execFile);
 

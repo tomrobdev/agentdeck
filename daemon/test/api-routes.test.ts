@@ -23,7 +23,7 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 const { openDb } = await import('../src/db/index.ts');
 const { startApi } = await import('../src/api/server.ts');
 const { realWorkspace } = await import('../src/compose.ts');
-const { ensureWorktree } = await import('../src/adapters/git.ts');
+const { ensureWorktree } = await import('../src/adapters/git/worktrees.ts');
 const actions = await import('../src/application/actions.ts');
 
 // ---- The App: real git, fakes for claude, gh, launchd and notifications

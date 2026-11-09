@@ -1,4 +1,4 @@
-// The Goals port: each repo's goals file, read by the planner. The real adapter is adapters/goals.ts (compose.ts);
+// The Goals port: each repo's goals file, read by the planner. The real adapter is adapters/local/goals.ts (compose.ts);
 // tests run it on real files under AGENTDECK_HOME.
 import type { Repo } from '../../domain/repos/index.ts';
 

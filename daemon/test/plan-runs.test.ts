@@ -17,8 +17,8 @@ process.env.AGENTDECK_CLAUDE_BIN = fake;
 
 const { openDb } = await import('./open-db.ts');
 const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
-const { commitLeftovers, ensureWorktree } = await import('../src/adapters/git.ts');
-const { readPlanFile, writePlanFile } = await import('../src/adapters/plan-file.ts');
+const { commitLeftovers, ensureWorktree } = await import('../src/adapters/git/worktrees.ts');
+const { readPlanFile, writePlanFile } = await import('../src/adapters/local/plan-file.ts');
 const { parsePlan } = await import('../src/domain/work/plan.ts');
 const { planForRun, takePlanFile } = await import('../src/application/work/plans.ts');
 const { LOG_DIR } = await import('../src/config.ts');

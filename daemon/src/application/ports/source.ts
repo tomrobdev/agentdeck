@@ -1,5 +1,5 @@
 // The Source port: the daemon's own source checkout, which it watches to notice it is running stale code. The real adapters are
-// adapters/git.ts and adapters/watch.ts (compose.ts); tests run them on the real checkout.
+// adapters/git.ts and adapters/macos/watch.ts (compose.ts); tests run them on the real checkout.
 
 export interface Source {
   /** The commit checked out in `dir`, or null when it is not a git checkout. */

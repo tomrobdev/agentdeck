@@ -1,55 +1,49 @@
 // Adapter for the Workspace port (application/ports/workspace.ts): git, the shell and a worktree's files, grouped into the
 // operations the use cases need, on git.ts, shell.ts, plan-file.ts, protected-edits.ts and repo-root.ts.
-import type { Repo } from '../domain/repos/index.ts';
-import { errorMessage } from '../domain/shared/index.ts';
-import type { Task } from '../domain/work/index.ts';
+import type { Repo } from '../../domain/repos/index.ts';
+import { errorMessage } from '../../domain/shared/index.ts';
+import type { Task } from '../../domain/work/index.ts';
 import {
   abortMerge,
   addDetachedWorktree,
-  aheadOfRemote,
-  branchCommit,
-  changedFiles,
-  checkedOutBranch,
   commitFiles,
   commitLeftovers,
-  commitsAhead,
-  commitsBetween,
-  commitsSince,
   concludeMerge,
   conflictedFiles,
-  currentBranch,
   deleteBranch,
-  diffBase,
-  diffHash,
   ensureWorktree,
-  filePatch,
   filesWithMarkers,
-  hasOrigin,
   headCommit,
-  headSummary,
-  isGitRepo,
-  listFiles,
-  listTree,
-  localStartPoint,
   makeTempDir,
-  mergeCommit,
   mergeInProgress,
   mergeRef,
   mergeSides,
-  objectAt,
   pruneWorktrees,
-  readFile,
-  refExists,
   removeTempDir,
   removeWorktree,
+} from './worktrees.ts';
+import {
+  aheadOfRemote,
+  branchCommit,
+  checkedOutBranch,
+  commitsAhead,
+  commitsBetween,
+  commitsSince,
+  currentBranch,
+  hasOrigin,
+  headSummary,
+  isGitRepo,
+  localStartPoint,
+  refExists,
   resolveCommit,
   reviewFacts,
   startPoint,
-} from './git.ts';
-import { readGivenPlan, readPlanFile, writeGivenPlan, writePlanFile } from './plan-file.ts';
-import { applyProtectedEdits } from './protected-edits.ts';
+} from './refs.ts';
+import { changedFiles, diffBase, diffHash, filePatch, listFiles, listTree, mergeCommit, objectAt, readFile } from './diffs.ts';
+import { readGivenPlan, readPlanFile, writeGivenPlan, writePlanFile } from '../local/plan-file.ts';
+import { applyProtectedEdits } from '../local/protected-edits.ts';
 import { rootInfo } from './repo-root.ts';
-import { runCommand, runProgram } from './shell.ts';
+import { runCommand, runProgram } from '../process/shell.ts';
 
 /** Run `step` after a merge started at `before`; if it throws, put the branch back first. */
 async function orUndo<T>(worktree: string, before: string, step: () => Promise<T>): Promise<T> {

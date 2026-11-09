@@ -11,7 +11,7 @@ process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-settle-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { openDb } = await import('../src/db/index.ts');
-const { github } = await import('../src/adapters/github.ts');
+const { github } = await import('../src/adapters/github/github.ts');
 const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
 const { closePullRequest } = await import('../src/application/landing/merge.ts');
 const { refreshPrStates } = await import('../src/application/landing/refresh.ts');

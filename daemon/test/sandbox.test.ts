@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { writeSettings } from '../src/adapters/run-log.ts';
+import { writeSettings } from '../src/adapters/claude/run-log.ts';
 import type { App } from '../src/application/ports/app.ts';
 import { runSettings } from '../src/application/runs/claude-run.ts';
 import type { Repo } from '../src/domain/repos/repo.ts';

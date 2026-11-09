@@ -1,6 +1,6 @@
 // Run logs on disk: claude's stream-json lines plus the daemon's own `agentdeck_*` events.
 import { type WriteStream, appendFileSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { type LogEntry, parseLogLine } from '../domain/runs/index.ts';
+import { type LogEntry, parseLogLine } from '../../domain/runs/index.ts';
 
 /** Append one daemon event to a log stream. */
 export function writeEvent(log: WriteStream, event: { type: string } & Record<string, unknown>): void {

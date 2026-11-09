@@ -156,7 +156,7 @@ test('a task interrupted by repeated restarts fails instead of looping', async (
 
 test('claude processes left by a dead daemon are stopped, with their children', async () => {
   const { spawn } = await import('node:child_process');
-  const { reapOrphans } = await import('../src/adapters/processes.ts');
+  const { reapOrphans } = await import('../src/adapters/process/processes.ts');
   const alive = (pgid: number) => {
     try {
       process.kill(-pgid, 0);
@@ -185,7 +185,7 @@ test('claude processes left by a dead daemon are stopped, with their children', 
 
 test('a claude started long after its run row opened (setup, a sync) is still the run own, and is reaped', async () => {
   const { spawn } = await import('node:child_process');
-  const { ownsLiveGroup, reapOrphans } = await import('../src/adapters/processes.ts');
+  const { ownsLiveGroup, reapOrphans } = await import('../src/adapters/process/processes.ts');
   const { openDb } = await import('../src/db/index.ts');
   const db = openDb(':memory:');
   const repo = db.addRepo({ name: 'r', path: '/tmp/r', base_branch: 'main' });
@@ -244,7 +244,7 @@ test('governor holds queued work over the 5h cap and notifies once', async () =>
 
 test('repo add detects the toolchain; repos registered before detection get its rules on the fly', async () => {
   const { addRepo } = await import('../src/application/actions.ts');
-  const { rootInfo } = await import('../src/adapters/repo-root.ts');
+  const { rootInfo } = await import('../src/adapters/git/repo-root.ts');
   const { DEFAULT_ALLOWED_TOOLS, allowedTools } = await import('../src/domain/repos/tools.ts');
   const effectiveTools = (repo: Repo, dir: string) => allowedTools(repo, rootInfo(dir));
   const jsRepo = (name: string) => {

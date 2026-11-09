@@ -1,6 +1,6 @@
 // Process groups of claude runs: stopping them on shutdown, and after a crash.
 import { type ChildProcess, execFileSync } from 'node:child_process';
-import { sqliteMs } from '../domain/shared/index.ts';
+import { sqliteMs } from '../../domain/shared/index.ts';
 
 /** Live claude processes, so the daemon can stop them on shutdown. */
 export const activeChildren = new Set<ChildProcess>();
