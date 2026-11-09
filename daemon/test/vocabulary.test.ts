@@ -16,7 +16,7 @@ type Allowed = { file: string; line: RegExp; why: string };
 /** Lines that may say an avoid-word. Paths are under daemon/src/, or app/src/ when prefixed. */
 const ALLOWED: Allowed[] = [
   { file: 'domain/operations/notification.ts', line: /governor hold|'hold'/, why: 'the `hold` notification kind' },
-  { file: 'api/contract.ts', line: /rate limit or a hold ends/, why: "the governor's hold" },
+  { file: 'api/contract/operations.ts', line: /rate limit or a hold ends/, why: "the governor's hold" },
   { file: 'domain/operations/headline.ts', line: /'hold'|a hold ends/, why: "the governor's hold, as a headline state" },
   { file: 'app/src/api/format.ts', line: /case 'hold':/, why: "the governor's hold, as a headline state" },
   { file: 'adapters/notify.ts', line: /^\s*hold:/, why: 'the `hold` notification kind' },
@@ -31,7 +31,7 @@ const ALLOWED: Allowed[] = [
     line: /a hold once|const hold = |\bhold( &&|\.\w)|governor hold|kind: 'hold'|hold lifted/,
     why: "the scheduler's hold announcement",
   },
-  { file: 'cli/daemon.ts', line: /on hold|HOLD:/, why: "the governor's state, shown" },
+  { file: 'cli/operations/daemon.ts', line: /on hold|HOLD:/, why: "the governor's state, shown" },
   { file: 'app/src/api/format.ts', line: /On hold/, why: "the governor's state, shown" },
   { file: 'app/src/components/layout/StatusBar.vue', line: /On hold/, why: "the governor's state, shown" },
   { file: 'app/src/api/queries.ts', line: /hold lifting/, why: "the governor's hold lifting" },
@@ -42,7 +42,7 @@ const ALLOWED: Allowed[] = [
   { file: 'domain/operations/health.ts', line: /another daemon holds port/, why: PLAIN },
   { file: 'application/work/checkout-locks.ts', line: /sync in this process holds/, why: PLAIN },
   { file: 'api/contract.ts', line: /holds the use cases to/, why: PLAIN },
-  { file: 'db/tasks.ts', line: /Later pages hold older tasks/, why: PLAIN },
+  { file: 'db/work/tasks-queries.ts', line: /Later pages hold older tasks/, why: PLAIN },
   { file: 'db/sql.ts', line: /caller already holds/, why: PLAIN },
   { file: 'adapters/git.ts', line: /branch holds all its work|still hold conflict markers/, why: PLAIN },
   { file: 'app/src/lib/forms.ts', line: /panels only hold the form/, why: PLAIN },

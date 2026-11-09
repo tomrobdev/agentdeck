@@ -1,0 +1,75 @@
+// Pull request commands: fix failing checks, open, close, merge and auto-merge.
+import * as actions from '../../application/actions.ts';
+import { isReview, stageOf } from '../../domain/work/index.ts';
+import { confirm, die, taskId } from '../format.ts';
+import type { Command } from '../context.ts';
+
+export const prCommands: Record<string, Command> = {
+  'fix-checks': async ({ db, rest }) => {
+    const id = taskId(rest[0]);
+    const { checks } = await actions.fixChecks(db, id);
+    console.log(
+      `requeued #${id} to fix ${checks.length === 1 ? 'the failing check' : `${checks.length} failing checks`}: ${checks.join(', ')}`,
+    );
+  },
+  'open-pr': async ({ db, rest }) => {
+    const id = taskId(rest[0]);
+    const { url } = await actions.openTaskPr(db, id);
+    console.log(`opened the pull request of #${id}: ${url}`);
+  },
+  'close-pr': async ({ db, rest }) => {
+    const id = taskId(rest[0]);
+    await actions.closeTaskPr(db, id);
+    console.log(`closed the pull request of #${id}`);
+  },
+  merge: async ({ db, flags, rest }) => {
+    if (flags.all) {
+      const review = actions.openPrTasks(db).filter((t) => isReview(stageOf(t)));
+      if (!review.length) return void console.log('no pull requests in review');
+      for (const t of review) console.log(`#${t.id}  ${t.title}`);
+      if (!flags.yes && !(await confirm(`merge ${review.length === 1 ? 'this PR' : `these ${review.length} PRs`}?`))) {
+        return void console.log('not merged');
+      }
+      // As the dashboard's Merge all: merge requests, which the daemon carries out once each PR is ready.
+      const res = await actions.requestAllMerges(db, { ids: review.map((t) => t.id) });
+      for (const r of res.requested)
+        console.log(`requested the merge of #${r.id}${r.waits.length ? `; waits: ${r.waits.join('; ')}` : ''}`);
+      for (const s of res.left) console.log(`left #${s.id}: ${s.reason}`);
+      if (res.requested.length && !res.daemon_running)
+        console.log('the daemon is not running: the requests wait until it starts (`agentdeck service start`)');
+      return;
+    }
+    const id = taskId(rest[0]);
+    const preview = await actions.mergePreview(db, id);
+    const method = flags.method ?? preview.method;
+    const { commits, files, additions, deletions, checks } = preview;
+    console.log(`${preview.title}  #${id}`);
+    console.log(`${preview.pr_url}`);
+    console.log(
+      `${preview.branch ?? '?'} → ${preview.base}, ${method}${method === 'squash' ? ` (${commits} → 1 commit)` : `, ${commits} commits`}`,
+    );
+    console.log(`${files} files, +${additions} −${deletions}`);
+    const tests = preview.tests_passed === null ? 'not run' : preview.tests_passed ? 'passed' : 'FAILED';
+    console.log(
+      `tests ${tests}; GitHub checks: ${checks.total ? `${checks.total} (${checks.failing} failing, ${checks.pending} running)` : 'none'}`,
+    );
+    if (preview.unblocks.length) console.log(`unblocks ${preview.unblocks.map((t) => `#${t.id}`).join(', ')}`);
+    for (const w of preview.warnings) console.log(`warning: ${w}`);
+    for (const p of preview.problems) console.log(`problem: ${p}`);
+    if (preview.problems.length) die(`can't merge #${id}`);
+    if (!flags.yes && !(await confirm(`merge into ${preview.base} with ${method}?`))) return void console.log('not merged');
+    const res = await actions.mergeTask(db, id, { method, delete_branch: !flags['keep-branch'] });
+    console.log(
+      `merged #${id} (${res.method})${res.unblocked.length ? `; ${res.unblocked.map((n) => `#${n}`).join(', ')} can start` : ''}`,
+    );
+    if (res.cleanup_error) console.log(`cleanup incomplete: ${res.cleanup_error}`);
+  },
+  'auto-merge': async ({ db, rest }) => {
+    const id = taskId(rest[0]);
+    const value = { on: true, off: false, repo: null }[rest[1] as 'on' | 'off' | 'repo'];
+    if (value === undefined) die('usage: agentdeck auto-merge <id> on|off|repo');
+    const res = await actions.setAutoMerge(db, id, { auto_merge: value });
+    console.log(`#${id}: auto-merge ${res.auto_merge ? 'on' : 'off'}${value === null ? " (the repo's setting)" : ''}`);
+    if (res.label_error) console.log(`could not change the PR's label: ${res.label_error}`);
+  },
+};

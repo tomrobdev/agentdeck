@@ -6,8 +6,8 @@ import { join } from 'node:path';
 
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-cli-'));
 
-const { repoCommands } = await import('../src/cli/repos.ts');
-const { taskCommands } = await import('../src/cli/tasks.ts');
+const { repoCommands } = await import('../src/cli/repos/repos.ts');
+const { taskCommands } = await import('../src/cli/work/tasks.ts');
 
 test('the old command names still run the renamed commands', () => {
   assert.equal(repoCommands.plan, repoCommands.propose);

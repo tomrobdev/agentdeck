@@ -20,8 +20,8 @@ const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
 const { addTask, retryTask, updateRepo } = await import('../src/application/actions.ts');
 const { escalation, escalationReason, escalationSince, hardFailure, strongerModel } = await import('../src/domain/runs/escalate.ts');
 const { TESTS_FAILED, TURN_LIMIT, NO_CHANGE } = await import('../src/domain/runs/run.ts');
-const { repoSettingPatch } = await import('../src/cli/settings-args.ts');
-const { taskCommands } = await import('../src/cli/tasks.ts');
+const { repoSettingPatch } = await import('../src/cli/operations/settings-args.ts');
+const { taskCommands } = await import('../src/cli/work/tasks.ts');
 const { testApp } = await import('./fixtures.ts');
 const { fakeCodeHost } = await import('./fakes.ts');
 

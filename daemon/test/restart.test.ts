@@ -7,7 +7,7 @@ import { test } from 'node:test';
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-restart-'));
 
 const { ActionError, gracefulRestart } = await import('../src/application/actions.ts');
-const { logsOptions, restartOptions, serviceAction } = await import('../src/cli/daemon-args.ts');
+const { logsOptions, restartOptions, serviceAction } = await import('../src/cli/operations/daemon-args.ts');
 const { parseCommandLine } = await import('../src/cli/context.ts');
 const { RELOAD_QUIET_MS, reloadDecision, restartWait } = await import('../src/domain/operations/restart.ts');
 const { openDb } = await import('./open-db.ts');

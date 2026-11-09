@@ -8,7 +8,7 @@ process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-ownership-'))
 
 const { ActionError, retryTask } = await import('../src/application/actions.ts');
 const { Scheduler } = await import('../src/application/scheduler/scheduler.ts');
-const { callDaemon } = await import('../src/cli/daemon-client.ts');
+const { callDaemon } = await import('../src/cli/operations/daemon-client.ts');
 const { RELOAD_QUIET_MS, reloadDecision, restartWait } = await import('../src/domain/operations/restart.ts');
 const { openDb } = await import('./open-db.ts');
 
