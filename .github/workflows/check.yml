@@ -31,3 +31,31 @@ jobs:
         run: pnpm coverage
       - name: crash test
         run: node daemon/scripts/crash-test.mjs 5
+
+  # The dashboard end to end (app/e2e/): Playwright against the Vite dev server and a seeded scratch daemon.
+  ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: git config --global user.name ci && git config --global user.email ci@example.com
+      - run: pnpm --filter agentdeck-app exec playwright install --with-deps chromium
+      - name: dashboard end to end
+        run: pnpm test:ui
+      # The screenshots CI compared or, on Linux's first run, wrote (commit those under app/e2e/screenshots/), and the
+      # failures' traces and diffs.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ui-screenshots
+          path: |
+            app/e2e/screenshots/
+            app/e2e/results/
+            app/e2e/report/
+          if-no-files-found: ignore

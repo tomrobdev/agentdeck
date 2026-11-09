@@ -16,6 +16,8 @@ const SETUP: Record<string, string> = {
   'git config --global user.name ci && git config --global user.email ci@example.com': 'tests commit in temporary repos',
   'cargo fetch --locked': 'check:rust runs with --offline, so CI fetches the crates first',
   'mkdir -p app/dist': 'tauri::generate_context! needs app/dist to exist to compile',
+  'pnpm --filter agentdeck-app exec playwright install --with-deps chromium':
+    'test:ui needs a Chromium; on a Mac it was installed by hand, and a worker cannot download it',
 };
 
 /** Each workflow's `run:` commands, with the line each is on. */

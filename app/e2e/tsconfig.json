@@ -1,0 +1,18 @@
+{
+  // The end-to-end specs and their config run in Node under Playwright. The app has no @types/node of its own, so the
+  // daemon's are used.
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "typeRoots": ["../../daemon/node_modules/@types"],
+    "types": ["node"],
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
+  },
+  "include": ["**/*.ts", "../playwright.config.ts"]
+}

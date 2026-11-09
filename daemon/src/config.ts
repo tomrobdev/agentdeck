@@ -16,12 +16,16 @@ export const GOALS_DIR = join(HOME, 'goals');
 /** Local API for the dashboard. Bound to 127.0.0.1 only. */
 export const API_PORT = Number(process.env.AGENTDECK_PORT ?? 4317);
 
-/** Origins allowed to call the API from a browser context: the Tauri webview and the Vite dev server. */
+/**
+ * Origins allowed to call the API from a browser context: the Tauri webview and the Vite dev server, and any in
+ * AGENTDECK_ORIGINS (comma-separated; the dashboard's end-to-end tests serve it on a port of their own).
+ */
 export const API_ALLOWED_ORIGINS = new Set([
   'tauri://localhost',
   'http://tauri.localhost',
   'http://localhost:1420',
   'http://127.0.0.1:1420',
+  ...(process.env.AGENTDECK_ORIGINS ?? '').split(',').filter(Boolean),
 ]);
 
 export function ensureDirs(): void {

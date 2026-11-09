@@ -6,6 +6,11 @@
 // While $FAKE_GH_DIR/hang-pr exists, `pr create` appends its pid to hangs.jsonl there and waits, so the test can kill the
 // daemon while a PR opens. The file says when: `before` it opens the PR, or `after` (GitHub has the PR, the daemon never
 // heard). Once the file is gone it exits 1, as if it had been killed.
+//
+// For the dashboard's end-to-end tests (app/e2e/): with FAKE_GH_FROM_GIT=1, `pr view` reads the PR's head commit, size and
+// files from the branch pushed to origin, as GitHub would; and $FAKE_GH_DIR/pr-view-<number>.json, when it exists, is
+// laid over the answer (its checks and labels, say).
+import { execFileSync } from 'node:child_process';
 import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
@@ -39,6 +44,22 @@ function prs() {
     }
   }
   return list.map((p) => ({ ...p, url: urlOf(p.number) }));
+}
+
+/** What GitHub says of a PR that git can tell: its head commit and what it changes against the base, from origin's branches. */
+function fromGit(pr) {
+  const git = (...a) => execFileSync('git', a, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+  git('fetch', '-q', 'origin');
+  const head = git('rev-parse', `origin/${pr.head}`);
+  const files = git('diff', '--numstat', '--no-renames', `origin/${pr.base}...${head}`)
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => {
+      const [additions, deletions, path] = line.split('\t');
+      return { path, additions: Number(additions), deletions: Number(deletions), changeType: 'MODIFIED' };
+    });
+  const sum = (key) => files.reduce((n, f) => n + f[key], 0);
+  return { headRefOid: head, files, changedFiles: files.length, additions: sum('additions'), deletions: sum('deletions') };
 }
 
 /** Wait while the hang file exists; the test kills this process, or removes the file and it exits as if killed. */
@@ -93,7 +114,15 @@ if (cmd === 'auth' && sub === 'status') {
 } else if (cmd === 'pr' && sub === 'view') {
   const pr = named();
   const recorded = JSON.parse(fixture(pr.state === 'MERGED' ? 'pr-view-merged.json' : 'pr-view-open.json'));
-  process.stdout.write(JSON.stringify({ ...recorded, state: pr.state, isDraft: pr.state === 'OPEN' && pr.draft }) + '\n');
+  const own = join(dir, `pr-view-${pr.number}.json`);
+  const answer = {
+    ...recorded,
+    ...(process.env.FAKE_GH_FROM_GIT === '1' ? fromGit(pr) : {}),
+    state: pr.state,
+    isDraft: pr.state === 'OPEN' && pr.draft,
+    ...(existsSync(own) ? JSON.parse(readFileSync(own, 'utf8')) : {}),
+  };
+  process.stdout.write(JSON.stringify(answer) + '\n');
 } else if (cmd === 'pr' && sub === 'merge') {
   const pr = named();
   if (pr.state !== 'OPEN') fail(`Pull request #${pr.number} is not mergeable: the pull request is ${pr.state.toLowerCase()}`);

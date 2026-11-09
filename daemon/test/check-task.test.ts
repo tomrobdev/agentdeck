@@ -42,7 +42,20 @@ test('paths beside the crash-test ones do not call for it', () => {
 
 test('a branch changing app/src-tauri/ runs check:rust', () => {
   assert.deepEqual(names(['app/src-tauri/src/main.rs']), ['check:rust']);
-  assert.deepEqual(names(['app/src/App.vue']), []);
+  assert.deepEqual(names(['app/src-tauri/tauri.conf.json']), ['check:rust']);
+});
+
+test("a branch changing the dashboard or its end-to-end tests runs test:ui, and the Tauri shell's doesn't", () => {
+  for (const path of ['app/src/App.vue', 'app/src/lib/diff.ts', 'app/e2e/look/queue.spec.ts', 'app/playwright.config.ts']) {
+    assert.deepEqual(names([path]), ['test:ui'], path);
+  }
+  for (const path of ['app/src-tauri/src/main.rs', 'app/package.json', 'app/vite.config.ts', 'daemon/src/api/http.ts']) {
+    assert.ok(!names([path]).includes('test:ui'), path);
+  }
+});
+
+test('test:ui runs pnpm test:ui, the command CI runs', () => {
+  assert.deepEqual(EXTRA_CHECKS.find((c) => c.name === 'test:ui')?.command, ['pnpm', 'test:ui']);
 });
 
 test('a branch changing both runs both, the crash test first, each with the paths that call for it', () => {
