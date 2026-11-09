@@ -24,7 +24,7 @@ const ALLOWED: Allowed[] = [
   { file: 'app/src/components/panels/SettingsPanel.vue', line: /kind === 'hold'/, why: 'the `hold` notification kind' },
   { file: 'app/src/api/format.ts', line: /^\s*hold: /, why: 'the `hold` notification kind' },
   { file: 'app/src/components/panels/BudgetSettings.vue', line: /Hold new tasks above/, why: 'the governor budget setting' },
-  { file: 'domain/work/read/digest.ts', line: /governor on hold/, why: 'the governor' },
+  { file: 'domain/operations/digest.ts', line: /governor on hold/, why: 'the governor' },
   { file: 'domain/work/start.ts', line: /governor holds/, why: 'the governor' },
   {
     file: 'application/scheduler/scheduler.ts',

@@ -36,7 +36,7 @@ _Avoid_: bring in
 
 **Settle**: the daemon ending a run or a wait on its own, and doing what follows: opening the pull request, telling a person, warning the tasks that now cannot start.
 
-**Follow-up**: what the daemon does after a task's status changes, such as opening its pull request, warning the tasks that now cannot start, or telling a person. Each status change is a domain event, and one table says what follows each.
+**Follow-up**: what the daemon does after a task's status changes, such as opening its pull request, warning the tasks that now cannot start, or telling a person. Each status change is a domain event, and one table says what follows each. Settle runs the follow-ups from `application/landing`, because the highest of them opens a pull request; the rules are Work's.
 
 **Protected edit**: a change to a file a worker may not edit itself. The worker proposes it, the daemon commits it after the run, and a person reviews it before it merges.
 
@@ -85,16 +85,16 @@ The code is divided into eight bounded contexts. Each owns its words and its rul
 
 **Work**: repos' tasks, their links, stages and plans.
 
-**Runs**: the attempts at a task, their prompts, syncs and protected edits.
+**Runs**: the attempts at a task, their prompts and syncs.
 
 **Landing**: pull requests, checks, reviews and merging.
 
-**Repos**: registered repos, their settings and their health.
+**Repos**: registered repos, their settings, their health and their protected edits (which paths a repo protects; a run carries the edit out).
 
 **Capacity**: the usage windows, the governor and its holds, and the slots.
 
 **Proposals**: the planner and the proposals it makes.
 
-**Operations**: the daemon itself, its headline, attention list, digest and doctor.
+**Operations**: the daemon itself, its headline, attention list, digest and doctor. The digest is Operations' even though it reads work.
 
 **Insights**: the scorecard and everything counted over time.

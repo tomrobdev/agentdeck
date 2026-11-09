@@ -3,6 +3,8 @@ export { buildPrompt, buildResolvePrompt, buildResumePrompt, claudeArgs } from '
 export type { PromptPlan } from './prompt.ts';
 export { escalation, escalationReason, escalationSince } from './escalate.ts';
 export { resolveOutcome } from './resolve.ts';
+export { conflictReason, syncResultOf, syncSummary } from './sync.ts';
+export type { SyncResult } from './sync.ts';
 export {
   DEFAULT_REVIEW_MODEL,
   DEFAULT_SUPPORT_MODEL,

@@ -4,22 +4,15 @@ import { join, sep } from 'node:path';
 import { WORKTREE_DIR } from '../../config.ts';
 import type { App } from '../ports/app.ts';
 import type { Repo } from '../../domain/repos/index.ts';
-import { digest } from '../../domain/work/index.ts';
-import { filterTasks, listable } from '../../domain/work/index.ts';
-import { isReview, stageOf } from '../../domain/work/index.ts';
-import { OPEN_STATUSES } from '../../domain/work/index.ts';
-import { status } from '../operations/settings.ts';
-import { repoReviewDue } from '../operations/review-due.ts';
-import { withViews } from './task-views.ts';
+import { type DigestTask, digest } from '../../domain/operations/index.ts';
+import { status } from './settings.ts';
+import { repoReviewDue } from './review-due.ts';
 
 /** What the session is shown, and the cursor to pass as `after` next time. */
 export interface LiveContext {
   lines: string[];
   cursor: number;
 }
-
-/** Open means it is moving or someone has to act on it. */
-const OPEN_STATES = ['active', 'needs-you', 'proposed', 'review'];
 
 const real = (path: string): string => {
   try {
@@ -44,20 +37,18 @@ export function repoForPath(app: App, dir: string): Repo | undefined {
 }
 
 /**
- * The repo's queue: the header, what changed after event `after` (none when `after` is null), and the open tasks when
+ * The repo's queue (`open` is its open tasks, which Work reads): the header, what changed after event `after` (none when `after` is null), and the open tasks when
  * something changed or `full` is set. `cursor` is the newest event now, whatever repo it belongs to.
  */
-export async function liveContext(app: App, opts: { repo: Repo; after: number | null; full: boolean }): Promise<LiveContext> {
+export async function digestContext(
+  app: App,
+  opts: { repo: Repo; after: number | null; full: boolean; open: DigestTask[] },
+): Promise<LiveContext> {
   const cursor = app.lastEventId();
   // A cursor above the newest event is from other ids (a repo deleted, a restored database): it is no cursor.
   const after = opts.after !== null && opts.after > cursor ? null : opts.after;
   const events = after === null ? [] : app.eventsAfter(after, cursor, opts.repo.id);
   const st = status(app);
-  // Only this repo's tasks that can be open get views; the views are the costly part.
-  const maybeOpen = app
-    .listTasks()
-    .filter((t) => t.repo_id === opts.repo.id && ([...OPEN_STATUSES, 'blocked', 'failed'].includes(t.status) || isReview(stageOf(t))));
-  const open = filterTasks(withViews(app, maybeOpen).map(listable), { states: OPEN_STATES, repo_id: opts.repo.id, sort: 'attention' });
   const [head, due] = await Promise.all([app.workspace.head(opts.repo.path), repoReviewDue(app, opts.repo)]);
   const lines = digest({
     header: {
@@ -72,7 +63,7 @@ export async function liveContext(app: App, opts: { repo: Repo; after: number | 
       review_due: due?.line ?? null,
     },
     events,
-    open,
+    open: opts.open,
     full: opts.full || after === null,
   });
   return { lines, cursor };

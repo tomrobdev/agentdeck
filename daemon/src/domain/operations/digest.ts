@@ -1,13 +1,9 @@
 // The live state of a repo's queue in a few lines, for an agent: what changed since it last looked, and what is open.
 // Pure: the caller reads the events, tasks and header facts. `agentdeck context` prints it, and Claude Code's hooks run that.
-import type { TaskId } from '../../shared/index.ts';
-import { describeEvent } from './event-text.ts';
-import type { TaskEventRow } from '../history.ts';
-import type { TaskStatus } from '../lifecycle.ts';
-import type { PrState } from '../../landing/index.ts';
-import { statusGroup } from '../stage.ts';
-import type { Waiting } from '../start.ts';
-import { short } from '../../shared/index.ts';
+import type { TaskId } from '../shared/index.ts';
+import { short } from '../shared/index.ts';
+import type { PrState } from '../landing/index.ts';
+import { type TaskEventRow, type TaskStatus, type Waiting, describeEvent, statusGroup } from '../work/index.ts';
 
 /** A history row with its task's title. */
 export type DigestEvent = Pick<TaskEventRow, 'id' | 'task_id' | 'type' | 'from_status' | 'to_status' | 'reason'> & { title: string };
@@ -60,9 +56,6 @@ const MORE = (k: number) => `  +${k} more: agentdeck ls`;
 
 const TITLE_MAX = 60;
 const REASON_MAX = 80;
-
-// What one history row says happened lives in event-text.ts; the digest words rows for an agent and keeps the old name.
-export { describeEvent };
 
 /** One open task: its status, title, and why it waits or stopped. */
 function describeTask(t: DigestTask): string {
