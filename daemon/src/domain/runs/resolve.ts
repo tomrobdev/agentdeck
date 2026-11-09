@@ -1,4 +1,4 @@
-// How a resolve run's end settles the sync it is part of (domain/landing/sync.ts). Pure: no I/O.
+// How a resolve run's end settles the sync it is part of (domain/runs/sync.ts). Pure: no I/O.
 import { type RunClass, parseStatus } from './run.ts';
 
 /** What a resolve run's end settles on its own, or `check`: the agent said it was done, so the merge and the tests decide. */
