@@ -9,11 +9,12 @@ import { errorMessage, textList } from '../../../../../daemon/src/domain/shared/
 import { modelSourceText, newTaskModel } from '../../../../../daemon/src/domain/work/index.ts';
 import { modelChoices } from '../../../lib/shared/forms';
 import { useTerminal } from '../../../composables/runs/useTerminal';
+import { openPanel } from '../../../composables/shared/useShell';
 import Modal from '../../ui/Modal.vue';
 import NumberInput from '../../ui/form/NumberInput.vue';
 
 const props = defineProps<{ repos: Repo[] }>();
-const emit = defineEmits<{ close: []; created: [task: TaskDetail]; repos: [] }>();
+const emit = defineEmits<{ close: []; created: [task: TaskDetail] }>();
 
 const repo = ref(props.repos[0]?.name ?? '');
 const title = ref('');
@@ -96,7 +97,7 @@ async function submit() {
   <Modal title="New task" focus="textarea" @close="$emit('close')">
     <div v-if="!repos.length">
       <p class="mt-0">Register a repo first. Tasks run in a worktree of a git repository.</p>
-      <button class="primary" @click="$emit('repos')">Add a repo</button>
+      <button class="primary" @click="openPanel('repos')">Add a repo</button>
     </div>
     <form v-else class="flex flex-col gap-3" @submit.prevent="submit" @keydown.meta.enter="submit">
       <label class="field flex-1">

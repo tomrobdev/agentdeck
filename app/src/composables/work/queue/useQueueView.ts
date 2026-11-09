@@ -10,6 +10,7 @@ import { type PersonEvent, canStartMerge, personEvents } from '../../../../../da
 import { useMergeConfirm } from '../../landing/useMergeConfirm';
 import { useActions } from '../../shared/useActions';
 import { useHotkeys } from '../../shared/useHotkeys';
+import { openPanel } from '../../shared/useShell';
 import { useEditKeys } from '../useEditKeys';
 import { useBulkPick } from './useBulkPick';
 import { useQueueDisplay } from './useQueueDisplay';
@@ -17,7 +18,6 @@ import { useQueueDisplay } from './useQueueDisplay';
 interface QueueEmit {
   (e: 'open', id: number): void;
   (e: 'act', kind: PersonEvent, id: number): void;
-  (e: 'newTask'): void;
 }
 
 /**
@@ -116,7 +116,7 @@ export function useQueueView(tasks: () => TaskSummary[], selected: Ref<number | 
       },
     },
     v: { label: 'Next view', scope: Q, run: nextMode },
-    c: { label: 'New task', scope: Q, run: () => emit('newTask') },
+    c: { label: 'New task', scope: Q, run: () => openPanel('new') },
     ...edits.keys,
   });
 
