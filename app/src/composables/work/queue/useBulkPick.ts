@@ -5,7 +5,7 @@ import { PERSON_CALLS } from '../../../api/client';
 import type { TaskSummary } from '../../../api/types';
 import { errorMessage } from '../../../../../daemon/src/domain/shared/index.ts';
 import { type BulkAction, type BulkEdit, type BulkResult, bulkActions, bulkMessage } from '../../../lib/work/queue/bulk';
-import { canStartMerge } from '../../../lib/work/task-view';
+import { canStartMerge } from '../../../../../daemon/src/domain/work/index.ts';
 import { useAction, useActions } from '../../shared/useActions';
 import { useApprovals } from '../useApprovals';
 import { type BulkEditValue, useBulkEdit } from './useBulkEdit';

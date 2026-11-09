@@ -10,7 +10,9 @@ import type { TaskSummary } from '../../../../daemon/src/api/contract/work.ts';
 import type { AutoMergeView } from '../../../../daemon/src/api/contract/landing.ts';
 import { isReview } from '../../../../daemon/src/domain/work/index.ts';
 import { plural } from '../../../../daemon/src/domain/shared/index.ts';
-import { describeLive, describeMergeRequest, describeSync, describeWait } from '../../api/format.ts';
+import { describeMergeRequest } from '../landing/landing-wording.ts';
+import { describeLive, describeSync } from '../runs/run-wording.ts';
+import { describeWait } from './work-wording.ts';
 import type { Tone as ChipTone } from '../shared/tone.ts';
 import { needsOf, questionOf } from '../shared/wire.ts';
 

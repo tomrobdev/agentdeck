@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { api } from '../../../api/client';
-import { syncLine } from '../../../api/format';
+import { syncLine } from '../../../lib/landing/landing-wording';
 import type { TaskSummary } from '../../../api/types';
 import { useActions } from '../../../composables/shared/useActions';
 import { useBulkPick } from '../../../composables/work/queue/useBulkPick';
@@ -9,15 +9,9 @@ import { useEditKeys } from '../../../composables/work/useEditKeys';
 import { useHotkeys } from '../../../composables/shared/useHotkeys';
 import { useMergeConfirm } from '../../../composables/landing/useMergeConfirm';
 import { useQueueDisplay } from '../../../composables/work/queue/useQueueDisplay';
-import {
-  type BoardMove,
-  type PersonEvent,
-  canStartMerge,
-  emptyFilters,
-  hasFilters,
-  personEvents,
-  quickRetry,
-} from '../../../lib/work/task-view';
+import { type PersonEvent, canStartMerge, personEvents } from '../../../../../daemon/src/domain/work/index.ts';
+import type { BoardMove } from '../../../lib/work/queue/board-move';
+import { emptyFilters, hasFilters, quickRetry } from '../../../lib/work/task-view';
 import { buildsOnChain } from '../../../lib/work/queue/bulk';
 import BulkMergeDialog from '../../landing/BulkMergeDialog.vue';
 import EditKeyDialog from '../task/EditKeyDialog.vue';

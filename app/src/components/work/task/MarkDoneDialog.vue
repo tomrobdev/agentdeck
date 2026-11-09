@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import type { TaskSummary } from '../../../api/types';
-import { hasOpenPr } from '../../../lib/work/task-view';
+import { hasOpenPr } from '../../../../../daemon/src/domain/work/index.ts';
 import ConfirmDialog from '../../ui/ConfirmDialog.vue';
 
 // Asks before a person says a blocked or failed task is done. The board asks without a note; the task page takes one.

@@ -4,7 +4,8 @@ import { useQuery, useQueryClient } from '@tanstack/vue-query';
 import { api } from '../../../api/client';
 import { repoQuery } from '../../../api/queries';
 import type { Needs, TaskDetail } from '../../../api/types';
-import { canInstallWith, depsAreDev, depsPackages, withHost } from '../../../lib/work/task-view';
+import { canInstallWith } from '../../../../../daemon/src/domain/work/index.ts';
+import { depsAreDev, depsPackages, withHost } from '../../../lib/work/task-view';
 import { useAction, useActions } from '../../../composables/shared/useActions';
 import ConfirmDialog from '../../ui/ConfirmDialog.vue';
 

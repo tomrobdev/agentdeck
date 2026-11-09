@@ -3,7 +3,7 @@
 import { ref } from 'vue';
 import { useResize } from '../../../composables/shared/useResize';
 import { loadSetting, saveSetting } from '../../../lib/shared/storage';
-import type { PersonEvent } from '../../../lib/work/task-view';
+import type { PersonEvent } from '../../../../../daemon/src/domain/work/index.ts';
 import TaskPeek from './TaskPeek.vue';
 
 defineProps<{ id: number }>();

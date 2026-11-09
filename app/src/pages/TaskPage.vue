@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, toRef, watch } from 'vue';
 import { api } from '../api/client';
-import { ago, describeWait } from '../api/format';
+import { ago } from '../lib/shared/time';
+import { describeWait } from '../lib/work/work-wording';
 import type { TaskDetail } from '../api/types';
 import { plural } from '../../../daemon/src/domain/shared/index.ts';
 import { useEditKeys } from '../composables/work/useEditKeys';

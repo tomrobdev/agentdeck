@@ -20,6 +20,10 @@ export const ALSO_IMPORTS: Record<string, { contexts: string[]; why: string }> =
     contexts: ['runs', 'landing'],
     why: "the queue and the task overview show a run's summary, a pull request and the merge buttons",
   },
+  operations: {
+    contexts: ['runs', 'landing'],
+    why: 'the activity pill words a run, a sync and a merge request the way the task rows do',
+  },
 };
 
 /** The area a path of app/src belongs to: `<layer>/<context>`, `components/ui`, `components/layout`, another top folder, or the file itself. */
@@ -71,7 +75,7 @@ const ALL_BELOW_PAGES = [...CONTEXT_LAYERS.flatMap((l) => areasOf(l.layer)), 'ap
 
 /** Which areas each area may import, and why. Imports point down the layers, and across contexts only as `ALSO_IMPORTS` says. */
 export const MAY_IMPORT: Record<string, AreaRule> = {
-  api: { areas: ['api'], why: 'api/ is the base: types, calls and wording' },
+  api: { areas: ['api'], why: 'api/ is the base: types, calls and query options' },
   platform: { areas: ['platform', 'lib/shared'], why: 'platform/ is the Tauri shell, build commit and theme' },
   router: { areas: ['api', 'lib/shared'], why: 'the router is below the composables and components' },
   ...contextRules(),

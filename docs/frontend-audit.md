@@ -21,7 +21,7 @@ Nothing in `app/` was changed. File references are `path:line` against the tree 
 | DOMPurify    | `3.4.17`                       | 3.4.17                      |
 
 - **No CSS tooling.** There is no PostCSS config, no Sass and no CSS framework. The whole design system is one global `style.css` (275 lines) plus a `<style scoped>` block in almost every SFC. `Markdown.vue:27` is the one unscoped block, because it styles `v-html` output.
-- **No router or state library.** `router.ts` and `lib/work/task-view.ts` are hand-rolled. This is irrelevant to styling except that dynamic class names come from `lib/work/task-view.ts` and `app/src/api/format.ts` (see section 6).
+- **No router or state library.** `router.ts` and `lib/work/task-view.ts` are hand-rolled. This is irrelevant to styling except that dynamic class names come from `lib/work/task-view.ts` and `app/src/lib/operations/daemon-wording.ts` (see section 6).
 - **No component library.** Buttons, inputs, pills and popovers are all hand-styled. The code shows where Reka UI or a similar headless library would fit (`Popover.vue`, `Modal.vue`), but none is installed.
 - **Theming is OS-driven only.** Dark mode is two `@media (prefers-color-scheme: dark)` blocks (`style.css:26`, `style.css:172`). There is no `data-theme` attribute, no toggle and no stored preference.
 - **Webview CSP** (`src-tauri/tauri.conf.json:24`): `style-src 'self' 'unsafe-inline'`, `img-src 'self' data:`. Inline styles and generated CSS are allowed; remote fonts are not.

@@ -1,6 +1,8 @@
 // What is under way, for the status bar's activity pill: running tasks, syncs, merge requests and planner runs.
 // Built from the task list and the status the window already reads; nothing is polled for it.
-import { describeLive, describeMergeRequest, describeSync, parseTime } from '../../api/format.ts';
+import { describeMergeRequest } from '../landing/landing-wording.ts';
+import { describeLive, describeSync } from '../runs/run-wording.ts';
+import { parseTime } from '../shared/time.ts';
 import type { Status, TaskSummary } from '../../api/types.ts';
 
 type TaskTab = 'overview' | 'runs';

@@ -1,6 +1,6 @@
 //! The tray icon, its menu and the dock badge, kept up to date from what `daemon_client` reads, so they stay fresh while
 //! the window is hidden. A left-click on the icon opens the tray window (`tray_window`), a right-click this menu. `tray_view` words the read; it decides nothing: the state and what needs a person come from the
-//! daemon's headline, and the words follow `describeState` in `app/src/api/format.ts`.
+//! daemon's headline, and the words follow `describeState` in `app/src/lib/operations/daemon-wording.ts`.
 
 use crate::daemon_client::{self, AttentionWhy, HeadlineState, Read};
 use crate::open::open_in_dashboard;

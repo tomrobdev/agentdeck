@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { taskQuery, tasksQuery } from '../../../api/queries';
 import { editRefusal } from '../../../lib/work/queue/bulk';
-import { MODELS } from '../../../lib/work/task-view';
+import { MODELS } from '../../../../../daemon/src/domain/work/index.ts';
 import { useActions } from '../../../composables/shared/useActions';
 import type { EditKeys, KeyEdit } from '../../../composables/work/useEditKeys';
 import Modal from '../../ui/Modal.vue';

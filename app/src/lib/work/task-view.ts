@@ -1,30 +1,15 @@
 // How the queue is grouped and shown. What a person may do with a task, how the queue is filtered and sorted and what a blocked
-// task needs are the daemon's domain (task/lifecycle.ts, listing.ts, needs.ts, stage.ts); this file re-exports what the views use.
+// task needs are the daemon's domain (`domain/work/index.ts`); a view imports those rules from there, not from this file. The
+// board's move rule is in `queue/board-move.ts`, which the daemon's tests import.
 import type { AutoMergeView, Needs, Status, TaskStatus, TaskSummary } from '../../api/types';
-import { type PersonEvent, personEvents } from '../../../../daemon/src/domain/work/index.ts';
+import { personEvents } from '../../../../daemon/src/domain/work/index.ts';
 import { DECISION_STATES, FILTER_STATES, SORT_OPTIONS, filterTasks } from '../../../../daemon/src/domain/work/index.ts';
-import { type UnblockQuestion, canInstallWith, depsRequest } from '../../../../daemon/src/domain/work/index.ts';
-import {
-  STATUS_GROUPS,
-  type StatusGroup,
-  canOpenPr,
-  canStartMerge,
-  hasOpenPr,
-  isMerged,
-  isReview,
-  isStuck,
-  isWaiting,
-  statusGroup,
-} from '../../../../daemon/src/domain/work/index.ts';
-import { EDITABLE_STATUSES, MODELS } from '../../../../daemon/src/domain/work/index.ts';
+import { type UnblockQuestion, depsRequest } from '../../../../daemon/src/domain/work/index.ts';
+import { STATUS_GROUPS, isReview, statusGroup } from '../../../../daemon/src/domain/work/index.ts';
+import { EDITABLE_STATUSES } from '../../../../daemon/src/domain/work/index.ts';
 import { parseTextList } from '../../../../daemon/src/domain/shared/index.ts';
 import type { GroupBy } from './queue/queue-display.ts';
 import { needsOf, questionOf } from '../shared/wire.ts';
-
-// The board's move rule is in boardMove.ts, which the daemon's tests import.
-export { STATUS_GROUPS, type StatusGroup, canOpenPr, canStartMerge, hasOpenPr, isMerged, isReview, isStuck, isWaiting, statusGroup };
-export { FILTER_STATES, MODELS, SORT_OPTIONS, type PersonEvent, personEvents };
-export { type BoardMove, boardMove } from './queue/board-move';
 
 /**
  * The tab a task opens on from the queue: a running task, or one with a resolve run under way, on its live log (the latest
@@ -55,7 +40,6 @@ export const priorityLevel = (p: number): PriorityLevel => PRIORITY_LEVELS.find(
 /** A tooltip for the auto-merge mark: the daemon's label, then its reasons, one to a line. */
 export const autoMergeTip = (v: AutoMergeView): string => [v.label, ...v.reasons].join('\n');
 
-export type { GroupBy };
 export const GROUP_BYS: { key: GroupBy; label: string }[] = [
   { key: 'status', label: 'Status' },
   { key: 'repo', label: 'Repo' },
@@ -110,8 +94,6 @@ export function groupTasks(tasks: TaskSummary[], by: GroupBy, sort: string): Gro
   }
 }
 
-export { branchName } from '../../../../daemon/src/domain/work/index.ts';
-
 export const canEdit = (t: Pick<TaskSummary, 'status'>) => EDITABLE_STATUSES.includes(t.status);
 /** A done task's open PR has failing checks: they can be sent back to the worker (POST /api/tasks/:id/fix-checks). */
 export const canFixChecks = (t: Pick<TaskSummary, 'status' | 'pr_state' | 'checks'>) => isReview(t) && (t.checks?.failing ?? 0) > 0;
@@ -132,8 +114,6 @@ export const answerNote = (q: UnblockQuestion, option: string): string => `${q.q
 /** The package names of a deps request, without its `--dev` flag. */
 export const depsPackages = (n: Needs) => depsRequest(n.items).packages;
 export const depsAreDev = (n: Needs) => depsRequest(n.items).dev;
-
-export { canInstallWith };
 
 /** A repo's network setting with a host added once. */
 export function withHost(networkJson: string, host: string): string[] {

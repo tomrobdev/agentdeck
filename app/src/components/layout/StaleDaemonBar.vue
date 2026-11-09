@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { api } from '../../api/client';
-import { describeStaleDaemon } from '../../api/format';
+import { describeStaleDaemon } from '../../lib/operations/daemon-wording';
 import type { Status } from '../../api/types';
 import { appCommit } from '../../platform/build';
 import { useActions } from '../../composables/shared/useActions';

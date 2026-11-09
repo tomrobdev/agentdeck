@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { ago } from '../../../api/format';
+import { ago } from '../../../lib/shared/time';
 import { mergeAllIds } from '../../../lib/work/queue/bulk';
 import { openExternal } from '../../../platform/native';
 import MergeButtons from '../../landing/MergeButtons.vue';
 import RowMenu from './RowMenu.vue';
-import { type BoardMove, type Group, type GroupBy, personEvents, quickRetry, statusLabel } from '../../../lib/work/task-view';
+import { personEvents } from '../../../../../daemon/src/domain/work/index.ts';
+import type { BoardMove } from '../../../lib/work/queue/board-move';
+import type { GroupBy } from '../../../lib/work/queue/queue-display';
+import { type Group, quickRetry, statusLabel } from '../../../lib/work/task-view';
 import Checkbox from '../../ui/form/Checkbox.vue';
 import ModelChip from '../../ui/status/ModelChip.vue';
 import PriorityIcon from '../../ui/status/PriorityIcon.vue';

@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { api } from '../../../api/client';
-import { MODEL_HINTS, MODEL_LABELS } from '../../../api/format';
+import { MODEL_HINTS, MODEL_LABELS } from '../../../lib/runs/run-wording';
 import { settingsQuery } from '../../../api/queries';
 import type { Repo, TaskDetail } from '../../../api/types';
 import { errorMessage, textList } from '../../../../../daemon/src/domain/shared/index.ts';

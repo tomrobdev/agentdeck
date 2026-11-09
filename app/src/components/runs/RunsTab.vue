@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { useQuery } from '@tanstack/vue-query';
 import { computed } from 'vue';
-import { MODEL_LABELS, ago, runDuration, runHint, runLabel } from '../../api/format';
+import { MODEL_LABELS, runHint, runLabel } from '../../lib/runs/run-wording';
+import { ago, runDuration } from '../../lib/shared/time';
 import { reposQuery } from '../../api/queries';
 import type { TaskDetail } from '../../api/types';
 import { liveSource } from '../../lib/runs/run-live';

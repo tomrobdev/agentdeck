@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { GROUP_BYS, type GroupBy, SORT_OPTIONS } from '../../../lib/work/task-view';
+import { SORT_OPTIONS } from '../../../../../daemon/src/domain/work/index.ts';
+import type { GroupBy } from '../../../lib/work/queue/queue-display';
+import { GROUP_BYS } from '../../../lib/work/task-view';
 import type { Display, ShowProps } from '../../../lib/work/queue/queue-display';
 import ChipToggle from '../../ui/form/ChipToggle.vue';
 import Popover from '../../ui/Popover.vue';

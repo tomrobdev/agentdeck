@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick } from 'vue';
 import { api } from '../../../api/client';
-import { ago } from '../../../api/format';
+import { ago } from '../../../lib/shared/time';
 import type { TaskDetail } from '../../../api/types';
 import AutoMergeMark from '../../ui/status/AutoMergeMark.vue';
 import { isNative, openExternal, revealInFinder, runTemplate, useCopy } from '../../../platform/native';

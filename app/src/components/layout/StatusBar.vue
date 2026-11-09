@@ -3,7 +3,8 @@
 // and the usage windows. Actions and navigation are in the header (AppHeader.vue).
 import { computed } from 'vue';
 import { api } from '../../api/client';
-import { describeState, relTime } from '../../api/format';
+import { describeState } from '../../lib/operations/daemon-wording';
+import { relTime } from '../../lib/shared/time';
 import type { Status, TaskSummary } from '../../api/types';
 import { useActivity } from '../../composables/operations/useActivity';
 import { type ActivityItem, KIND_LABEL } from '../../lib/operations/activity';
