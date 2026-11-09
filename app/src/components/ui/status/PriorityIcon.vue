@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { PRIORITY_LEVELS, priorityLevel } from '../../../lib/task/task-view';
+import { PRIORITY_LEVELS, priorityLevel } from '../../../lib/work/task-view';
 
 const props = defineProps<{ priority: number }>();
 

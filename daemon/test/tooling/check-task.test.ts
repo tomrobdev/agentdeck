@@ -46,7 +46,7 @@ test('a branch changing app/src-tauri/ runs check:rust', () => {
 });
 
 test("a branch changing the dashboard or its end-to-end tests runs test:ui, and the Tauri shell's doesn't", () => {
-  for (const path of ['app/src/App.vue', 'app/src/lib/task/diff.ts', 'app/e2e/look/queue.spec.ts', 'app/playwright.config.ts']) {
+  for (const path of ['app/src/App.vue', 'app/src/lib/work/files/diff.ts', 'app/e2e/look/queue.spec.ts', 'app/playwright.config.ts']) {
     assert.deepEqual(names([path]), ['test:ui'], path);
   }
   for (const path of ['app/src-tauri/src/main.rs', 'app/package.json', 'app/vite.config.ts', 'daemon/src/api/http.ts']) {

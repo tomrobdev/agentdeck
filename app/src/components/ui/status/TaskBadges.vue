@@ -2,10 +2,10 @@
 import { computed } from 'vue';
 import type { TaskSummary } from '../../../api/types';
 import { openTask } from '../../../router';
-import { TONE_CHIP, taskBadges } from '../../../lib/task/task-badges';
+import { TONE_CHIP, taskBadges } from '../../../lib/work/task-badges';
 import Chip from '../Chip.vue';
 
-// A task's attention chips, links and facts, the same in every view (rules in lib/task/task-badges.ts). A link opens its task.
+// A task's attention chips, links and facts, the same in every view (rules in lib/work/task-badges.ts). A link opens its task.
 // `nowrap` keeps them on one line, the facts truncated, for a list row.
 const props = defineProps<{ task: TaskSummary; repo?: boolean; pr?: boolean; nowrap?: boolean }>();
 const b = computed(() => taskBadges(props.task, { repo: props.repo, pr: props.pr }));

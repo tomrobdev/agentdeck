@@ -106,6 +106,14 @@ flowchart LR
   cli -- "agentdeck doctor" --> daemonapi & daemonlog
 ```
 
+## Dashboard
+
+<!-- generated:dashboard -->
+
+Grouped by the daemon's contexts. The layers `lib/` (pure helpers: shared 8, work 14, runs 9, operations 1, insights 1), `composables/` (`useX` functions: shared 5, work 12, runs 1, landing 2, operations 1), `components/` (Vue components: ui 45, work 34, runs 10, landing 7, repos 4, operations 5, insights 2) each have a folder per context, the shared one first, with its number of files; beside them `api/` 4, `platform/` 3, `components/layout/` 7, `pages/` 1. Imports point down `pages/` → `components/` → `composables/` → `lib/` → `api/`. Within a layer a context imports only itself and the shared folder, which imports no context; `work/` may also import `runs/` and `landing/`, because the queue and the task overview show a run's summary, a pull request and the merge buttons. `pages/` and `components/layout/` combine the contexts. Each area's rule and why: [dashboard](reference/dashboard.md), from `MAY_IMPORT` in `daemon/scripts/lib/dashboard-layout.ts`, which `daemon/test/architecture/dashboard-layout.test.ts` enforces.
+
+<!-- /generated -->
+
 ## One task's run
 
 `Scheduler` ticks, asks the governor (`decide`, behind `startGate`) whether new work may start, and claims the next queued task into a slot. `runTask` syncs the branch (`syncBranch`), runs claude through `runClaude`, then the repo's tests, and opens the pull request (`openPullRequest`). A repo with auto-merge on is merged by `autoMerge`; otherwise a person merges, and `refreshPrStates` finds the merged PR and moves the task on with the pr_merged event. How a run's plan travels and how a cut-off run resumes are in [runs](reference/runs.md).
