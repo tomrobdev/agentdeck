@@ -1,6 +1,6 @@
 # Review areas
 
-The areas the `review-area` skill reviews AgentDeck in. One heading per area, then the path prefixes it covers (a folder ends in `/`). Areas are slices down through the layers, one per aggregate or feature, named after the bounded contexts in `GLOSSARY.md` where they can be; the layers themselves are checked by `daemon/test/architecture.test.ts`. A file may sit in two areas. Every file under `daemon/src/` and `app/src/` is in an area, and every path listed here exists: `daemon/test/review-areas.test.ts` checks both, so a task that adds a file adds it here.
+The areas the `review-area` skill reviews AgentDeck in. One heading per area, then the path prefixes it covers (a folder ends in `/`). Areas are slices down through the layers, one per aggregate or feature, named after the bounded contexts in `GLOSSARY.md` where they can be; the layers themselves are checked by `daemon/test/architecture/architecture.test.ts`. A file may sit in two areas. Every file under `daemon/src/` and `app/src/` is in an area, and every path listed here exists: `daemon/test/architecture/review-areas.test.ts` checks both, so a task that adds a file adds it here.
 
 Groups for a session: **work** is task-use-cases, task-events, task-store and task-links; **landing** is pull-request and review; **runs** is run and sync.
 

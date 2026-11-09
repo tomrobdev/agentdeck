@@ -19,7 +19,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: git config --global user.name ci && git config --global user.email ci@example.com
-      # One named step per check, so a failure names what failed. daemon/test/ci-parity.test.ts keeps these to what
+      # One named step per check, so a failure names what failed. daemon/test/tooling/ci-parity.test.ts keeps these to what
       # `pnpm check:task`, a task's own check, runs.
       - name: format
         run: pnpm format:check

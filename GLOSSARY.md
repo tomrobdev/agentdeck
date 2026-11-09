@@ -1,6 +1,6 @@
 # Glossary
 
-The words AgentDeck uses in code, logs and UI. Each entry is `**Term**:` and what it means, with an optional `_Avoid_:` line of words to use nowhere in `daemon/src` or `app/src` (`daemon/test/vocabulary.test.ts` checks it). It says what things are, not how they are built.
+The words AgentDeck uses in code, logs and UI. Each entry is `**Term**:` and what it means, with an optional `_Avoid_:` line of words to use nowhere in `daemon/src` or `app/src` (`daemon/test/architecture/vocabulary.test.ts` checks it). It says what things are, not how they are built.
 
 ## Work
 

@@ -1,5 +1,5 @@
 // How the dashboard shows a verify run's findings: the order, each verdict's mark, and the card's one line. Pure, so the
-// daemon's tests import it (daemon/test/verify-run.test.ts). The findings and their line are the daemon's (domain/runs).
+// daemon's tests import it (daemon/test/runs/review/verify-run.test.ts). The findings and their line are the daemon's (domain/runs).
 import type { ClaimVerdict, VerifyFinding, VerifyView } from '../../../daemon/src/api/contract.ts';
 import { verifyLine } from '../../../daemon/src/domain/runs/index.ts';
 

@@ -1,6 +1,6 @@
 // What the command palette lists and in which order. What a person may do with a task is the daemon's personEvents and the
 // stage.ts review and merge rules; this file only turns that into rows. Pure, so the daemon's tests can import it
-// (daemon/test/palette.test.ts).
+// (daemon/test/dashboard/shared/palette.test.ts).
 import type { TaskSummary } from '../../../daemon/src/api/contract.ts';
 import { FILTER_STATES, personEvents } from '../../../daemon/src/domain/work/index.ts';
 import { CHECKED_STATUSES, canStartMerge, isReview } from '../../../daemon/src/domain/work/index.ts';

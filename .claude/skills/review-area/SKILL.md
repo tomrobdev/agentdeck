@@ -13,7 +13,7 @@ This doesn't replace a person on risky PRs: the repo's `auto_merge_skip` still h
 
 Areas are in the repo's `docs/review-areas.md` (AgentDeck's own), or else `areas/<repo>.md` next to this file: a heading per area and the path prefixes it covers. Keep them in the repo, outside `.claude/`, so workers can map the files they add and their PRs still auto-merge. No file for the repo yet: propose areas from its CLAUDE.md and architecture docs (slices down through the layers, one per aggregate or feature, not one per layer), agree them with the person, and write `docs/review-areas.md`.
 
-Check the map is current before measuring anything. In AgentDeck, `node --test daemon/test/review-areas.test.ts` fails on a listed path that no longer exists and on a source file in no area; `pnpm check` runs it on every PR, so it only fails here when main is red. In another repo, check by hand that each listed path exists and that new folders have an area.
+Check the map is current before measuring anything. In AgentDeck, `node --test daemon/test/architecture/review-areas.test.ts` fails on a listed path that no longer exists and on a source file in no area; `pnpm check` runs it on every PR, so it only fails here when main is red. In another repo, check by hand that each listed path exists and that new folders have an area.
 
 First bring the checkout up to date with `git pull --ff-only`, not only `git fetch`: reviewers read callers from the checkout, and a checkout behind `origin/main` gives them stale files (in the run review, it was missing a task that had just merged). An area's last review is a local ref, `refs/reviewed/<area>`. Show each area's change since then:
 
@@ -60,7 +60,7 @@ One list from the three: drop duplicates, and drop anything you can't back with 
 
 - Group findings into fix tasks, one per PR's worth, written with `add-task`'s sections; queue them, or `--propose` them to triage later.
 - A one-line fix the person wants now: make it in this session.
-- A rule finding that could be checked mechanically, or one seen in an earlier area review too: propose a test for it in `daemon/test/architecture.test.ts` (or move it off the unchecked list), so `pnpm check` catches it on every PR from then on.
+- A rule finding that could be checked mechanically, or one seen in an earlier area review too: propose a test for it in `daemon/test/architecture/architecture.test.ts` (or move it off the unchecked list), so `pnpm check` catches it on every PR from then on.
 - Then mark the area reviewed and remove the branch:
 
   ```sh

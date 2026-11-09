@@ -91,9 +91,9 @@
       </ul>
       <ul data-plan-done>
         <li>
-          A domain test in <code>daemon/test/merge-request.test.ts</code> gives each finding its verdict: pending checks, a conflict, lands
-          after and unknown mergeability wait; a failing check, failed tests, branch protection and a closed PR are never; a draft or a
-          branch behind the base merges; an auto-merge limit (lines, skipped paths, no label) doesn't count.
+          A domain test in <code>daemon/test/landing/merge/merge-request.test.ts</code> gives each finding its verdict: pending checks, a
+          conflict, lands after and unknown mergeability wait; a failing check, failed tests, branch protection and a closed PR are never; a
+          draft or a branch behind the base merges; an auto-merge limit (lines, skipped paths, no label) doesn't count.
         </li>
         <li>
           A test with a db fixture shows <code>requestMerge</code> refusing a task that isn't done or has no open PR, and
@@ -101,7 +101,7 @@
         </li>
         <li>
           <code>pnpm db:check</code> and <code>pnpm check</code> pass, and the migration's hash is in
-          <code>daemon/test/migrations.lock</code>.
+          <code>daemon/test/db/migrations.lock</code>.
         </li>
       </ul>
     </section>
@@ -133,9 +133,9 @@
       </ul>
       <ul data-plan-done>
         <li>
-          Tests with a db fixture and a fake GitHub, in the style of <code>daemon/test/auto-merge.test.ts</code>: a request with checks
-          running waits, then merges once they pass; a request whose check fails is cleared with a notification; a request over auto-merge's
-          line limit merges; two requests where one lands after the other merge in that order.
+          Tests with a db fixture and a fake GitHub, in the style of <code>daemon/test/landing/merge/auto-merge.test.ts</code>: a request
+          with checks running waits, then merges once they pass; a request whose check fails is cleared with a notification; a request over
+          auto-merge's line limit merges; two requests where one lands after the other merge in that order.
         </li>
         <li>A domain test covers the <code>merge_request</code> view: none, waiting with its reasons, and merging.</li>
         <li><code>pnpm check</code> passes.</li>

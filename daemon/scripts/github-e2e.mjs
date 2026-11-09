@@ -11,7 +11,7 @@
 //   reset     closes the repo's open agentdeck/ PRs, deletes its agentdeck/ branches, and force-pushes main to one
 //             commit with a README and a workflow whose one check (`check`) runs on every PR
 //   register  clones it into a scratch AGENTDECK_HOME, registers it with pr_mode ready and auto_merge, auto_review and
-//             auto_resolve on, and starts the daemon there with the fake claude (daemon/test/fake-claude.mjs)
+//             auto_resolve on, and starts the daemon there with the fake claude (daemon/test/fixtures/fake-claude.mjs)
 // and runs the daemon through the steps below, checking GitHub's state with gh and the daemon's in its database after
 // each. Task 1 and task 2 both write fake-output.txt; task 2 lands after task 1, so once task 1 merges, task 2's PR
 // conflicts with main, and its sync takes a resolve run. Task 3 has auto-merge off, and its PR is closed by hand.
@@ -30,7 +30,7 @@ const { values: opts } = parseArgs({ options: { keep: { type: 'boolean', default
 const ROOT = resolve(import.meta.dirname, '../..');
 const DAEMON = join(ROOT, 'daemon');
 const CLI = join(DAEMON, 'src/cli.ts');
-const FAKE_CLAUDE = join(DAEMON, 'test/fake-claude.mjs');
+const FAKE_CLAUDE = join(DAEMON, 'test/fixtures/fake-claude.mjs');
 const REPO_NAME = 'e2e';
 const BRANCH_PREFIX = 'agentdeck/';
 /** The subject of the commit the reset makes: a repo whose first commit has it is one this script may reset again. */

@@ -1,5 +1,5 @@
 // The one object every use case takes: the repositories and the other ports, built by the composition root
-// (`src/compose.ts` for the daemon and the CLI, `test/fixtures.ts` for tests). Use cases keep no state of their own:
+// (`src/compose.ts` for the daemon and the CLI, `test/fixtures/fixtures.ts` for tests). Use cases keep no state of their own:
 // what they need arrives on `app`.
 import type { Agent } from './agent.ts';
 import type { CodeHost } from './code-host.ts';

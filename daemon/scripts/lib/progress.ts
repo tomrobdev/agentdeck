@@ -20,13 +20,7 @@ export const ALLOWED_FOLDER_CYCLES: Record<string, string[]> = {};
  * The list only shrinks: a new folder over the limit fails the test, and so does an entry back under it, so remove an entry in the change
  * that splits its folder. Never add one. A listed folder may grow while it is listed.
  */
-export const OVERSIZED_FOLDERS: string[] = [
-  'app/src/components/task',
-  'app/src/components/ui',
-  'app/src/composables',
-  'app/src/lib',
-  'daemon/test',
-];
+export const OVERSIZED_FOLDERS: string[] = ['app/src/components/task', 'app/src/components/ui', 'app/src/composables', 'app/src/lib'];
 
 /**
  * The .ts and .vue files over 400 lines today (rule:file-size), as paths from the repo root. The list only shrinks, as above: remove an
@@ -42,7 +36,7 @@ export const LONG_FILES: string[] = [
  * The folders of `PLACED_FOLDERS` (`layout.ts`) that still have files outside a context folder today (rule:context-folders). The list
  * only shrinks, as above: remove an entry once its folder holds only its shared files and context folders. Never add one.
  */
-export const UNPLACED_FOLDERS: string[] = ['daemon/test'];
+export const UNPLACED_FOLDERS: string[] = [];
 
 export const cycleKey = (c: FolderCycle) => c.folders.join(', ');
 

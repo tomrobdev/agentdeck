@@ -225,7 +225,9 @@
         <code>application/input.ts</code>.
       </p>
       <ul data-plan-done>
-        <li><code>pnpm check</code> passes; <code>test/api.test.ts</code> and <code>test/files-api.test.ts</code> pass unchanged.</li>
+        <li>
+          <code>pnpm check</code> passes; <code>test/api/api.test.ts</code> and <code>test/api/files-api.test.ts</code> pass unchanged.
+        </li>
         <li>Test: every POST route given a body with wrong-typed fields answers 400, never 500.</li>
         <li>Test: a body over 2 MB answers 413; malformed JSON answers 400.</li>
         <li>

@@ -31,7 +31,7 @@
         <code>pnpm typecheck</code> when a table and its domain type disagree, <code>pnpm db:check</code> fails when
         <code>tables.ts</code> and the migrations disagree, and <code>drizzle.config.ts</code> points Studio at the live database.
         <code>drizzle-orm</code> is a runtime dependency at exactly <code>1.0.0-rc.5</code>;
-        <code>daemon/test/architecture.test.ts</code> still allows it only in <code>db/tables.ts</code>.
+        <code>daemon/test/architecture/architecture.test.ts</code> still allows it only in <code>db/tables.ts</code>.
       </li>
       <li>
         Drizzle on npm, 2026-11-01: <code>latest</code> is 0.45.4, which has no <code>node-sqlite</code> driver. 1.0 has been a release
@@ -191,8 +191,8 @@
         The tables, the type checks and <code>db:check</code> exist already (see Where it starts). What's left:
         <code>db/orm.ts</code> exports <code>makeOrm(client)</code> (<code>drizzle({ client })</code> from
         <code>drizzle-orm/node-sqlite</code>) and its <code>Orm</code> type; <code>openDb</code> builds it on the connection it opens and
-        can hand it to the stores. In <code>daemon/test/architecture.test.ts</code>, <code>drizzle-orm</code> may be imported by any file in
-        <code>db/</code> and nowhere else, it stays the only package allowed besides <code>node:</code> ones, and
+        can hand it to the stores. In <code>daemon/test/architecture/architecture.test.ts</code>, <code>drizzle-orm</code> may be imported
+        by any file in <code>db/</code> and nowhere else, it stays the only package allowed besides <code>node:</code> ones, and
         <code>db/tables.ts</code> may be imported at runtime by files in <code>db/</code> only (replacing the "imported only for its types"
         test). Add <code>pnpm db:generate</code> (daemon and root <code>package.json</code>): migrate a scratch database like
         <code>scripts/db-check.ts</code> does and print the SQL drizzle-kit would run to make it match <code>tables.ts</code>, exiting 0;

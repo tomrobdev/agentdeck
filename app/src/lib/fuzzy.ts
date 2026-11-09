@@ -1,5 +1,5 @@
 // A small fuzzy matcher for the command palette. Free of the dashboard's other modules so the daemon's tests can import it
-// (daemon/test/fuzzy.test.ts).
+// (daemon/test/dashboard/shared/palette.test.ts).
 
 const WORD_START = /[\s#/_\-.:]/;
 
