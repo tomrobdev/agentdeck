@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import type { TaskSummary } from '../../api';
-import { useHotkeys } from '../../composables/useHotkeys';
-import { FILTER_STATES, type Filters, hasFilters } from '../../lib/taskView';
+import { useHotkeys } from '../../composables/shared/useHotkeys';
+import { FILTER_STATES, type Filters, hasFilters } from '../../lib/task/task-view';
 import Chip from '../ui/Chip.vue';
-import Menu from '../ui/Menu.vue';
-import MenuCheckboxItem from '../ui/MenuCheckboxItem.vue';
-import MenuLabel from '../ui/MenuLabel.vue';
-import MenuRadioGroup from '../ui/MenuRadioGroup.vue';
-import MenuRadioItem from '../ui/MenuRadioItem.vue';
+import Menu from '../ui/menu/Menu.vue';
+import MenuCheckboxItem from '../ui/menu/MenuCheckboxItem.vue';
+import MenuLabel from '../ui/menu/MenuLabel.vue';
+import MenuRadioGroup from '../ui/menu/MenuRadioGroup.vue';
+import MenuRadioItem from '../ui/menu/MenuRadioItem.vue';
 
 const props = defineProps<{ tasks: TaskSummary[] }>();
 const filters = defineModel<Filters>({ required: true });

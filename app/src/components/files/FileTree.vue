@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
 import { errorMessage } from '../../../../daemon/src/domain/shared/index.ts';
-import { useHotkeys } from '../../composables/useHotkeys';
-import type { TreeNode } from '../../lib/changedTree';
-import { fuzzyScore } from '../../lib/fuzzy';
-import Delta from '../ui/Delta.vue';
+import { useHotkeys } from '../../composables/shared/useHotkeys';
+import type { TreeNode } from '../../lib/task/changed-tree';
+import { fuzzyScore } from '../../lib/shared/fuzzy';
+import Delta from '../ui/status/Delta.vue';
 
 // A file tree that loads folders through `load`, so the same component serves the changed files
 // (all known up front) and a repo browsed one level at a time.

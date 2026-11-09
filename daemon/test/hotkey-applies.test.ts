@@ -1,7 +1,7 @@
 // When a single-key shortcut counts. The dashboard has no test runner and no DOM, so the page is faked here.
 import assert from 'node:assert/strict';
 import { afterEach, test } from 'node:test';
-import { hotkeyApplies } from '../../app/src/lib/hotkeyApplies.ts';
+import { hotkeyApplies } from '../../app/src/lib/shared/hotkey-applies.ts';
 
 class FakeElement {
   readonly matches: string[];

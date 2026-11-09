@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { after, test } from 'node:test';
 import { attemptEnds, sincePoints } from '../src/domain/work/read/since.ts';
 import type { TaskId } from '../src/domain/shared/id.ts';
-import { SINCE_BASE, shownSince, sinceKey, sinceLabel } from '../../app/src/lib/since.ts';
+import { SINCE_BASE, shownSince, sinceKey, sinceLabel } from '../../app/src/lib/task/since.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-since-'));
 process.env.AGENTDECK_HOME = home;

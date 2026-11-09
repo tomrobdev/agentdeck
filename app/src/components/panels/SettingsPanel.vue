@@ -3,8 +3,8 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { MODEL_LABELS, type NotificationRow, type Settings, ago, api, serviceQuery, settingsQuery } from '../../api';
 import { errorMessage } from '../../../../daemon/src/domain/shared/index.ts';
-import { type SettingsForm, modelChoices, toSettingsForm, toSettingsPatch } from '../../lib/forms';
-import { MODELS } from '../../lib/taskView';
+import { type SettingsForm, modelChoices, toSettingsForm, toSettingsPatch } from '../../lib/shared/forms';
+import { MODELS } from '../../lib/task/task-view';
 import {
   CMUX_TEMPLATE,
   EDITOR_PRESETS,
@@ -12,20 +12,20 @@ import {
   saveEditorTemplate,
   saveTerminalTemplate,
   terminalTemplate,
-} from '../../lib/terminal';
+} from '../../lib/runs/terminal';
 import { isNative, launchAtLogin, setLaunchAtLogin } from '../../platform/native';
 import { MODES, THEMES, mode, setMode, setTheme, theme } from '../../platform/theme';
-import { useActions } from '../../composables/useActions';
-import { approveDialogSetting, setApproveDialogSetting } from '../../composables/useApprovals';
-import { APPROVE_DIALOG_SETTINGS, asApproveDialogSetting } from '../../lib/approveDialog';
+import { useActions } from '../../composables/shared/useActions';
+import { approveDialogSetting, setApproveDialogSetting } from '../../composables/task/useApprovals';
+import { APPROVE_DIALOG_SETTINGS, asApproveDialogSetting } from '../../lib/task/approve-dialog';
 import BudgetSettings from './BudgetSettings.vue';
 import NotificationSettings from './NotificationSettings.vue';
 import Chip from '../ui/Chip.vue';
 import Modal from '../ui/Modal.vue';
-import NumberInput from '../ui/NumberInput.vue';
-import RadioGroup from '../ui/RadioGroup.vue';
-import Switch from '../ui/Switch.vue';
-import SegmentedControl from '../ui/SegmentedControl.vue';
+import NumberInput from '../ui/form/NumberInput.vue';
+import RadioGroup from '../ui/form/RadioGroup.vue';
+import Switch from '../ui/form/Switch.vue';
+import SegmentedControl from '../ui/form/SegmentedControl.vue';
 
 defineProps<{ notifications: NotificationRow[] }>();
 const emit = defineEmits<{ close: [] }>();

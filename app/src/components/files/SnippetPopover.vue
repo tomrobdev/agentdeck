@@ -2,7 +2,7 @@
 import { onBeforeUnmount, onMounted, ref, toRef, watch } from 'vue';
 import { useQueryClient } from '@tanstack/vue-query';
 import { fileQuery } from '../../api';
-import { useCommits } from '../../composables/useChanges';
+import { useCommits } from '../../composables/task/useChanges';
 import AnchoredPanel from '../ui/AnchoredPanel.vue';
 import CodeView from './CodeView.vue';
 

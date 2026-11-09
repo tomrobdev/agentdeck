@@ -3,18 +3,18 @@ import { computed } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { planProgress, promptGoal } from '../../../../daemon/src/domain/work/index.ts';
 import { type PlanStep, describeWait, taskQuery } from '../../api';
-import { linkParts, modelLine, neededBy, ownSteps, peekActions, peekProps } from '../../lib/peek';
-import { type PersonEvent, readNeeds, readTaskQuestion } from '../../lib/taskView';
+import { linkParts, modelLine, neededBy, ownSteps, peekActions, peekProps } from '../../lib/queue/peek';
+import { type PersonEvent, readNeeds, readTaskQuestion } from '../../lib/task/task-view';
 import Markdown from '../files/Markdown.vue';
-import FinalMessage from '../task/FinalMessage.vue';
-import LogView from '../task/LogView.vue';
-import ProposalCheckCard from '../task/ProposalCheckCard.vue';
-import PullRequestCard from '../task/PullRequestCard.vue';
-import QuestionCallout from '../task/QuestionCallout.vue';
-import RunSummaryCard from '../task/RunSummaryCard.vue';
-import StatusPill from '../ui/StatusPill.vue';
-import TaskBadges from '../ui/TaskBadges.vue';
-import TaskStatusLine from '../ui/TaskStatusLine.vue';
+import FinalMessage from '../task/runs/FinalMessage.vue';
+import LogView from '../task/runs/LogView.vue';
+import ProposalCheckCard from '../task/overview/ProposalCheckCard.vue';
+import PullRequestCard from '../task/merge/PullRequestCard.vue';
+import QuestionCallout from '../task/overview/QuestionCallout.vue';
+import RunSummaryCard from '../task/runs/RunSummaryCard.vue';
+import StatusPill from '../ui/status/StatusPill.vue';
+import TaskBadges from '../ui/status/TaskBadges.vue';
+import TaskStatusLine from '../ui/status/TaskStatusLine.vue';
 
 // A look at one task beside the list: what a person needs to decide on it without opening it, and the actions for its stage.
 // Properties, links, plan and Goal always; then what the stage adds (the check, the wait, the live log, why it stopped, the

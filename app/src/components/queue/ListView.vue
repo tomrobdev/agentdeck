@@ -1,18 +1,18 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { ago } from '../../api';
-import { mergeAllIds } from '../../lib/bulk';
+import { mergeAllIds } from '../../lib/queue/bulk';
 import { openExternal } from '../../platform/native';
 import MergeButtons from './MergeButtons.vue';
 import RowMenu from './RowMenu.vue';
-import { type BoardMove, type Group, type GroupBy, personEvents, quickRetry, statusLabel } from '../../lib/taskView';
-import Checkbox from '../ui/Checkbox.vue';
-import ModelChip from '../ui/ModelChip.vue';
-import PriorityIcon from '../ui/PriorityIcon.vue';
-import StatusIcon from '../ui/StatusIcon.vue';
-import TaskBadges from '../ui/TaskBadges.vue';
-import TaskStatusLine from '../ui/TaskStatusLine.vue';
-import type { ShowProps } from '../../lib/queueDisplay';
+import { type BoardMove, type Group, type GroupBy, personEvents, quickRetry, statusLabel } from '../../lib/task/task-view';
+import Checkbox from '../ui/form/Checkbox.vue';
+import ModelChip from '../ui/status/ModelChip.vue';
+import PriorityIcon from '../ui/status/PriorityIcon.vue';
+import StatusIcon from '../ui/status/StatusIcon.vue';
+import TaskBadges from '../ui/status/TaskBadges.vue';
+import TaskStatusLine from '../ui/status/TaskStatusLine.vue';
+import type { ShowProps } from '../../lib/queue/queue-display';
 
 const props = defineProps<{
   groups: Group[];

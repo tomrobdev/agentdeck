@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
 import { type Repo, type RepoDeletion, api, archivedReposQuery, queryKeys, repoDeletionQuery } from '../../api';
-import { useActions } from '../../composables/useActions';
+import { useActions } from '../../composables/shared/useActions';
 import { errorMessage, plural } from '../../../../daemon/src/domain/shared/index.ts';
 
 // The archived repos, to unarchive or delete for good.

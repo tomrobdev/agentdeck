@@ -4,7 +4,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { api, daemonHealthQuery, daemonQuery, isOffline, taskList, uptime } from '../../api';
-import { useAction } from '../../composables/useActions';
+import { useAction } from '../../composables/shared/useActions';
 import ConfirmDialog from '../ui/ConfirmDialog.vue';
 import Modal from '../ui/Modal.vue';
 

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { type DiffLine, anchorOf, anchorKey, parsePatch, splitRows } from '../../lib/diff';
-import { highlightLines, languageFor } from '../../lib/render';
+import { type DiffLine, anchorOf, anchorKey, parsePatch, splitRows } from '../../lib/task/diff';
+import { highlightLines, languageFor } from '../../lib/shared/render';
 import type { NewReviewComment } from '../../api';
-import type { ShownComment } from '../../composables/useReviews';
+import type { ShownComment } from '../../composables/task/useReviews';
 import CommentBox from './CommentBox.vue';
 import CommentThread from './CommentThread.vue';
 

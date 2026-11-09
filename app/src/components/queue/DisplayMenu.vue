@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { GROUP_BYS, type GroupBy, SORT_OPTIONS } from '../../lib/taskView';
-import type { Display, ShowProps } from '../../lib/queueDisplay';
-import ChipToggle from '../ui/ChipToggle.vue';
+import { GROUP_BYS, type GroupBy, SORT_OPTIONS } from '../../lib/task/task-view';
+import type { Display, ShowProps } from '../../lib/queue/queue-display';
+import ChipToggle from '../ui/form/ChipToggle.vue';
 import Popover from '../ui/Popover.vue';
 
 const display = defineModel<Display>({ required: true });

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import type { TaskSummary } from '../../api';
-import { DEFAULT_SIZE, chainOf, edgesOf, graphTasks, layoutGraph, stuckSet } from '../../lib/graph';
+import { DEFAULT_SIZE, chainOf, edgesOf, graphTasks, layoutGraph, stuckSet } from '../../lib/queue/graph';
 import { cut } from '../../../../daemon/src/domain/shared/index.ts';
-import StatusIcon from '../ui/StatusIcon.vue';
+import StatusIcon from '../ui/status/StatusIcon.vue';
 
 // Linked tasks as a layered graph: builds-on edges solid, after edges dashed, a stuck chain outlined in the blocked colour.
 const props = defineProps<{

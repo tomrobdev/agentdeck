@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { computed, nextTick } from 'vue';
 import { type TaskDetail, ago, api } from '../../api';
-import AutoMergeMark from '../ui/AutoMergeMark.vue';
+import AutoMergeMark from '../ui/status/AutoMergeMark.vue';
 import { isNative, openExternal, revealInFinder, runTemplate, useCopy } from '../../platform/native';
-import { editorArgv, editorTemplate } from '../../lib/terminal';
-import { PRIORITY_LEVELS, canEdit, priorityLevel, statusLabel } from '../../lib/taskView';
-import { useActions } from '../../composables/useActions';
-import { useTerminal } from '../../composables/useTerminal';
-import PriorityIcon from '../ui/PriorityIcon.vue';
-import StatusIcon from '../ui/StatusIcon.vue';
-import EditableProp from './EditableProp.vue';
+import { editorArgv, editorTemplate } from '../../lib/runs/terminal';
+import { PRIORITY_LEVELS, canEdit, priorityLevel, statusLabel } from '../../lib/task/task-view';
+import { useActions } from '../../composables/shared/useActions';
+import { useTerminal } from '../../composables/runs/useTerminal';
+import PriorityIcon from '../ui/status/PriorityIcon.vue';
+import StatusIcon from '../ui/status/StatusIcon.vue';
+import EditableProp from './overview/EditableProp.vue';
 import { name, prop, row, rowButton, rowMono } from './sidebarStyle';
 
 // Task properties, GitHub-sidebar style. Priority, model and turns are editable while the task is.

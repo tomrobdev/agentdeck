@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { type Repo, api } from '../../api';
-import { useActions } from '../../composables/useActions';
+import { useActions } from '../../composables/shared/useActions';
 import { isNative, pickFolder } from '../../platform/native';
 
 // Registers a repo; the panel opens its editor once it is added.
