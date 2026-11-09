@@ -1693,7 +1693,7 @@ A task that depends on another, and the kind of that link.
 
 ### DomainEvent
 
-The status change of one task. `applyEvent` (db/tasks.ts) records it as a task_events row and returns it.
+The status change of one task. `applyEvent` (db/work/tasks-status.ts) records it as a task_events row and returns it.
 
 | Field     | Type              | Comment                                                                                               |
 | --------- | ----------------- | ----------------------------------------------------------------------------------------------------- |

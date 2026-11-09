@@ -1,13 +1,13 @@
 // Registered repos.
 import { and, asc, eq, inArray, isNotNull, isNull, or } from 'drizzle-orm';
 import type { DatabaseSync } from 'node:sqlite';
-import { type RepoId, type TaskId, asRepoId } from '../domain/shared/index.ts';
-import type { Repo } from '../domain/repos/index.ts';
-import { RUNNING_STATUSES } from '../domain/work/index.ts';
-import { mapFound, repoColumns, toRepo } from './mappers.ts';
-import type { Orm } from './orm.ts';
-import { NOW_SQL, atomically } from './sql.ts';
-import { notifications, plannerRuns, repos, reviewComments, reviews, runs, taskEvents, taskLinks, taskPlans, tasks } from './tables.ts';
+import { type RepoId, type TaskId, asRepoId } from '../../domain/shared/index.ts';
+import type { Repo } from '../../domain/repos/index.ts';
+import { RUNNING_STATUSES } from '../../domain/work/index.ts';
+import { mapFound, repoColumns, toRepo } from '../mappers.ts';
+import type { Orm } from '../orm.ts';
+import { NOW_SQL, atomically } from '../sql.ts';
+import { notifications, plannerRuns, repos, reviewComments, reviews, runs, taskEvents, taskLinks, taskPlans, tasks } from '../tables.ts';
 
 export function repoStore(db: DatabaseSync, orm: Orm) {
   const tasksOf = (repo_id: RepoId) => orm.select({ id: tasks.id }).from(tasks).where(eq(tasks.repo_id, repo_id));

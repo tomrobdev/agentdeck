@@ -27,7 +27,6 @@ export const OVERSIZED_FOLDERS: string[] = [
   'app/src/lib',
   'daemon/src/adapters',
   'daemon/src/cli',
-  'daemon/src/db',
   'daemon/src/domain/landing',
   'daemon/src/domain/work',
   'daemon/test',
@@ -41,7 +40,6 @@ export const LONG_FILES: string[] = [
   'daemon/src/adapters/git.ts',
   'daemon/src/api/contract.ts',
   'daemon/src/application/scheduler/scheduler.ts',
-  'daemon/src/db/tasks.ts',
   'daemon/src/domain/landing/checks.ts',
   'daemon/src/domain/runs/run.ts',
 ];
@@ -50,13 +48,7 @@ export const LONG_FILES: string[] = [
  * The folders of `PLACED_FOLDERS` (`layout.ts`) that still have files outside a context folder today (rule:context-folders). The list
  * only shrinks, as above: remove an entry once its folder holds only its shared files and context folders. Never add one.
  */
-export const UNPLACED_FOLDERS: string[] = [
-  'daemon/src/adapters',
-  'daemon/src/api/routes',
-  'daemon/src/cli',
-  'daemon/src/db',
-  'daemon/test',
-];
+export const UNPLACED_FOLDERS: string[] = ['daemon/src/adapters', 'daemon/src/api/routes', 'daemon/src/cli', 'daemon/test'];
 
 export const cycleKey = (c: FolderCycle) => c.folders.join(', ');
 

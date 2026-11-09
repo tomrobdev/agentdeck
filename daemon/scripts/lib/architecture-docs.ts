@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { type SQLiteTable, getTableConfig } from 'drizzle-orm/sqlite-core';
 import ts from 'typescript';
-import { SETTING_DEFAULTS } from '../../src/db/settings.ts';
+import { SETTING_DEFAULTS } from '../../src/db/operations/settings.ts';
 import { LAYERS, layerOf, mayImport } from './layers.ts';
 import * as tables from '../../src/db/tables.ts';
 import { RULES, TASK_STATUSES, type TaskStatus } from '../../src/domain/work/lifecycle.ts';

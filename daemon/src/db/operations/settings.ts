@@ -1,17 +1,17 @@
 // Key-value settings: pause flag, budget, concurrency, notification, planner and model options.
 import { eq } from 'drizzle-orm';
 import type { DatabaseSync } from 'node:sqlite';
-import { DEFAULTS } from '../config.ts';
-import { DEFAULT_REVIEW_DUE, NOTIFY_KINDS, type NotifyKind, type NotifySettings, type ReviewDue } from '../domain/operations/index.ts';
-import type { RepoId } from '../domain/shared/index.ts';
-import type { PlannerSettings } from '../domain/proposals/index.ts';
-import { DEFAULT_REVIEW_MODEL, DEFAULT_SUPPORT_MODEL } from '../domain/runs/index.ts';
-import { DEFAULT_MODEL } from '../domain/work/index.ts';
-import type { Settings } from '../domain/operations/index.ts';
-import { BUDGET_KEYS, type Budget, DEFAULT_BUDGET } from '../domain/capacity/index.ts';
-import type { Orm } from './orm.ts';
-import { atomically } from './sql.ts';
-import { settings } from './tables.ts';
+import { DEFAULTS } from '../../config.ts';
+import { DEFAULT_REVIEW_DUE, NOTIFY_KINDS, type NotifyKind, type NotifySettings, type ReviewDue } from '../../domain/operations/index.ts';
+import type { RepoId } from '../../domain/shared/index.ts';
+import type { PlannerSettings } from '../../domain/proposals/index.ts';
+import { DEFAULT_REVIEW_MODEL, DEFAULT_SUPPORT_MODEL } from '../../domain/runs/index.ts';
+import { DEFAULT_MODEL } from '../../domain/work/index.ts';
+import type { Settings } from '../../domain/operations/index.ts';
+import { BUDGET_KEYS, type Budget, DEFAULT_BUDGET } from '../../domain/capacity/index.ts';
+import type { Orm } from '../orm.ts';
+import { atomically } from '../sql.ts';
+import { settings } from '../tables.ts';
 
 /** What each setting reads as until someone sets it. The daemon starts paused until someone resumes it. */
 export const SETTING_DEFAULTS = {
