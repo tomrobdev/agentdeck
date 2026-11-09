@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { api } from '../../../api/client';
+import { workApi } from '../../../api/work';
 import { MODEL_HINTS, MODEL_LABELS } from '../../../lib/runs/run-wording';
-import { settingsQuery } from '../../../api/queries';
+import { settingsQuery } from '../../../api/operations';
 import type { Repo, TaskDetail } from '../../../api/types';
 import { errorMessage, textList } from '../../../../../daemon/src/domain/shared/index.ts';
 import { modelSourceText, newTaskModel } from '../../../../../daemon/src/domain/work/index.ts';
@@ -70,7 +70,7 @@ async function submit() {
   }
   saving.value = true;
   try {
-    const task = await api.addTask({
+    const task = await workApi.addTask({
       repo: repo.value,
       prompt: prompt.value,
       title: title.value || undefined,

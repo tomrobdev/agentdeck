@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { api } from '../../api/client';
+import { landingApi } from '../../api/landing';
 import type { Review, SubmitReview } from '../../api/types';
 import { plural } from '../../../../daemon/src/domain/shared/index.ts';
 import { useAction } from '../../composables/shared/useActions';
@@ -29,7 +29,7 @@ async function saveNote() {
   const draft = props.draft;
   if (!draft || note.value === draft.body) return;
   try {
-    await api.editReview(draft.id, note.value);
+    await landingApi.editReview(draft.id, note.value);
   } catch {
     // see above
   }
@@ -38,8 +38,8 @@ async function saveNote() {
 async function submit(kind: SubmitReview['kind']) {
   if (!canSubmit()) return;
   const ok = await run(async () => {
-    const review = props.draft ?? (await api.startReview(props.taskId));
-    await api.submitReview(review.id, { kind, body: note.value });
+    const review = props.draft ?? (await landingApi.startReview(props.taskId));
+    await landingApi.submitReview(review.id, { kind, body: note.value });
   });
   if (ok) {
     note.value = '';

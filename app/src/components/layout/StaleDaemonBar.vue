@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { api } from '../../api/client';
+import { operationsApi } from '../../api/operations';
 import { describeStaleDaemon } from '../../lib/operations/daemon-wording';
 import type { Status } from '../../api/types';
 import { appCommit } from '../../platform/build';
@@ -21,7 +21,7 @@ watch(message, (m) => {
 
 async function restart() {
   await run(async () => {
-    const res = await api.restartDaemon();
+    const res = await operationsApi.restartDaemon();
     asked.value = true;
     waiting.value = res.waiting;
   });

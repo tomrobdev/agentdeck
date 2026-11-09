@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { api } from '../../../api/client';
+import { landingApi } from '../../../api/landing';
+import { workApi } from '../../../api/work';
 import { describePrRetry } from '../../../lib/landing/landing-wording';
 import type { MergeResult, TaskDetail } from '../../../api/types';
 import { canOpenPr, canStartMerge, isReview, personEvents } from '../../../../../daemon/src/domain/work/index.ts';
@@ -24,27 +25,27 @@ const events = computed(() => personEvents(props.task));
 const closing = ref(false);
 async function closePr() {
   if (pending.value) return;
-  await run(() => api.closePr(props.task.id));
+  await run(() => landingApi.closePr(props.task.id));
   closing.value = false;
 }
 
 // Send the PR's failing checks back to the worker; a refusal is flashed with the API's wording.
 async function fixChecks() {
   if (pending.value) return;
-  await run(() => api.fixChecks(props.task.id));
+  await run(() => landingApi.fixChecks(props.task.id));
 }
 
 // Open a done task's PR that failed to open, or was closed; a refusal or gh's error is flashed with the API's wording.
 async function openPr() {
   if (pending.value) return;
-  await run(() => api.openPr(props.task.id));
+  await run(() => landingApi.openPr(props.task.id));
 }
 
 // Mark a blocked or failed task done by hand, with an optional note for the timeline.
 const markingDone = ref(false);
 async function submitMarkDone(doneNote: string) {
   if (pending.value) return;
-  await run(() => api.markDone(props.task.id, doneNote));
+  await run(() => workApi.markDone(props.task.id, doneNote));
   markingDone.value = false;
 }
 

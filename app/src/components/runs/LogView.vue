@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
-import { api } from '../../api/client';
+import { runsApi } from '../../api/runs';
 import { parseTime } from '../../lib/shared/time';
 import type { LogEntry, Run } from '../../api/types';
 import { useHotkeys } from '../../composables/shared/useHotkeys';
@@ -141,7 +141,7 @@ function open() {
   if (!props.runId) return;
   following.value = true;
   streaming.value = true;
-  source = new EventSource(api.logUrl(props.taskId, props.runId));
+  source = new EventSource(runsApi.logUrl(props.taskId, props.runId));
   source.onmessage = async (e) => {
     entries.value.push(...(JSON.parse(e.data) as LogEntry[]));
     if (following.value) {

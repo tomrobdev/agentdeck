@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
 import { fileSize } from '../../../lib/work/work-wording';
-import { fileQuery, treeQuery } from '../../../api/queries';
+import { fileQuery, treeQuery } from '../../../api/work';
 import { type FileRef, TEXT_LIMIT, type TaskDetail } from '../../../api/types';
 import { useCommits } from '../../../composables/work/files/useChanges';
 import { useCopy } from '../../../platform/native';

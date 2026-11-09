@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
-import { api } from '../../api/client';
+import { repoQuery, reposApi } from '../../api/repos';
 import { MODEL_LABELS } from '../../lib/runs/run-wording';
 import { ago } from '../../lib/shared/time';
-import { repoQuery } from '../../api/queries';
 import { MERGE_METHODS, type Repo } from '../../api/types';
 import { type RepoForm, modelChoices, toRepoForm, toRepoPatch } from '../../lib/shared/forms';
 import { useActions } from '../../composables/shared/useActions';
@@ -52,7 +51,7 @@ async function save(): Promise<boolean> {
   const f = form.value;
   actionError.value = msg.value = '';
   busy.value = 'save';
-  const ok = await run(async () => queryClient.setQueryData(repoQuery(id).queryKey, await api.updateRepo(id, toRepoPatch(f))));
+  const ok = await run(async () => queryClient.setQueryData(repoQuery(id).queryKey, await reposApi.updateRepo(id, toRepoPatch(f))));
   busy.value = '';
   if (ok) msg.value = 'Saved';
   return ok;
@@ -64,7 +63,7 @@ async function proposeNow() {
   busy.value = 'propose';
   msg.value = 'Proposing tasks… this reads the repo and can take a minute.';
   const ok = await run(async () => {
-    const res = await api.propose(id);
+    const res = await reposApi.propose(id);
     msg.value =
       res.outcome === 'proposed'
         ? `${plural(res.tasks.length, 'task')} ${autoApprove ? 'queued' : 'proposed: approve them under Needs you'}.`
@@ -78,7 +77,7 @@ async function proposeNow() {
 
 async function archive() {
   actionError.value = '';
-  if (await run(() => api.archiveRepo(id))) emit('archived');
+  if (await run(() => reposApi.archiveRepo(id))) emit('archived');
 }
 </script>
 

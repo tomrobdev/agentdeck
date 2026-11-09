@@ -1,8 +1,7 @@
 // The daemon says when the database changed (GET /api/events, a revision number); refetch what is on screen then.
 import { onBeforeUnmount } from 'vue';
 import { useQueryClient } from '@tanstack/vue-query';
-import { API_BASE } from '../../api/client';
-import { refreshAll } from '../../api/queries';
+import { API_BASE, refreshAll } from '../../api/http';
 
 export function useChangeStream() {
   const queryClient = useQueryClient();

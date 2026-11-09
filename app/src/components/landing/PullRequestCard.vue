@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { api } from '../../api/client';
+import { landingApi } from '../../api/landing';
 import { checkDuration } from '../../lib/shared/time';
 import type { PrCheck, TaskDetail } from '../../api/types';
 import { failureHeadline, finalMessage } from '../../../../daemon/src/domain/landing/index.ts';
@@ -46,7 +46,7 @@ function failure(c: PrCheck): string | null {
 
 async function fixChecks() {
   if (pending.value) return;
-  await run(() => api.fixChecks(props.task.id));
+  await run(() => landingApi.fixChecks(props.task.id));
 }
 </script>
 

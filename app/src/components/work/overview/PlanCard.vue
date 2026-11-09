@@ -2,7 +2,7 @@
 import { computed, nextTick, ref } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { ago } from '../../../lib/shared/time';
-import { planHtmlQuery } from '../../../api/queries';
+import { planHtmlQuery } from '../../../api/work';
 import type { PlanStep, TaskPlan } from '../../../api/types';
 import { planProgress } from '../../../../../daemon/src/domain/work/index.ts';
 import { plural } from '../../../../../daemon/src/domain/shared/index.ts';

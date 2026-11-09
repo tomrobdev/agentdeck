@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
-import { api } from '../../../api/client';
-import { repoQuery } from '../../../api/queries';
+import { repoQuery, reposApi } from '../../../api/repos';
+import { workApi } from '../../../api/work';
 import type { Needs, TaskDetail } from '../../../api/types';
 import { canInstallWith } from '../../../../../daemon/src/domain/work/index.ts';
 import { depsAreDev, depsPackages, withHost } from '../../../lib/work/task-view';
@@ -32,14 +32,14 @@ async function run(fn: () => Promise<unknown>) {
   confirmHost.value = false;
 }
 
-const install = () => run(() => api.installNeeds(props.task.id));
+const install = () => run(() => workApi.installNeeds(props.task.id));
 const host = () => props.needs.items[0] ?? '';
 // Allow the host on the repo, then retry the task.
 const allow = () =>
   run(async () => {
     const r = repo.value ?? (await queryClient.fetchQuery(repoQuery(props.task.repo_id)));
-    await api.updateRepo(r.id, { network: withHost(r.network, host()) });
-    await api.retry(props.task.id);
+    await reposApi.updateRepo(r.id, { network: withHost(r.network, host()) });
+    await workApi.retry(props.task.id);
   });
 </script>
 

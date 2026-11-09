@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { api } from '../../api/client';
+import { landingApi } from '../../api/landing';
 import type { ShownComment } from '../../composables/landing/useReviews';
 import { useAction } from '../../composables/shared/useActions';
 import Chip from '../ui/Chip.vue';
@@ -7,9 +7,9 @@ import Chip from '../ui/Chip.vue';
 // One review comment under its diff line: its text, the answer it got and its state.
 const props = defineProps<{ comment: ShownComment; outdated?: boolean }>();
 const { pending, run } = useAction();
-const remove = () => run(() => api.deleteComment(props.comment.id));
-const resolve = () => run(() => api.resolveComment(props.comment.id));
-const reopen = () => run(() => api.reopenComment(props.comment.id));
+const remove = () => run(() => landingApi.deleteComment(props.comment.id));
+const resolve = () => run(() => landingApi.resolveComment(props.comment.id));
+const reopen = () => run(() => landingApi.reopenComment(props.comment.id));
 </script>
 
 <template>

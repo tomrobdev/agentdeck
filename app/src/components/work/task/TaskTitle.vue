@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { api } from '../../../api/client';
+import { workApi } from '../../../api/work';
 import type { TaskDetail } from '../../../api/types';
 import { canEdit } from '../../../lib/work/task-view';
 import { useActions } from '../../../composables/shared/useActions';
@@ -15,7 +15,7 @@ const editable = computed(() => canEdit(props.task));
 async function save(text: string) {
   const t = text.trim();
   if (!t || t === props.task.title) return;
-  await run(() => api.editTask(props.task.id, { title: t }));
+  await run(() => workApi.editTask(props.task.id, { title: t }));
 }
 </script>
 

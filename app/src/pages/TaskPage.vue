@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, toRef, watch } from 'vue';
-import { api } from '../api/client';
+import { operationsApi } from '../api/operations';
+import { reposApi } from '../api/repos';
 import { ago } from '../lib/shared/time';
 import { describeWait } from '../lib/work/work-wording';
 import type { TaskDetail } from '../api/types';
@@ -37,8 +38,8 @@ const { run } = useActions();
 const pageEl = ref<HTMLElement | null>(null);
 
 // End what this task waits for: resume the daemon or the repo.
-const resumeDaemon = () => run(() => api.resume());
-const resumeRepo = () => run(() => api.resumeRepo(props.task.repo_id));
+const resumeDaemon = () => run(() => operationsApi.resume());
+const resumeRepo = () => run(() => reposApi.resumeRepo(props.task.repo_id));
 
 const { changes, error: changesError, isPath, paths: knownPaths } = useChanges(toRef(props, 'task'));
 

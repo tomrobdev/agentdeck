@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useQueries } from '@tanstack/vue-query';
-import { PERSON_CALLS, api } from '../../../api/client';
-import { taskQuery } from '../../../api/queries';
+import { runsApi } from '../../../api/runs';
+import { PERSON_CALLS, taskQuery, workApi } from '../../../api/work';
 import type { ProposalCheck } from '../../../api/types';
 import { errorMessage, plural } from '../../../../../daemon/src/domain/shared/index.ts';
 import { proposalCheckLine } from '../../../../../daemon/src/domain/work/index.ts';
@@ -42,7 +42,7 @@ const starting = reactive(new Set<number>());
 async function startVerify(id: number) {
   starting.add(id);
   try {
-    await api.verify(id);
+    await runsApi.verify(id);
     await details.value[props.rows.findIndex((r) => r.id === id)]?.refetch();
   } catch (e) {
     flash(errorMessage(e));
@@ -53,7 +53,7 @@ async function startVerify(id: number) {
 
 onMounted(() =>
   props.rows.forEach((r) =>
-    api.task(r.id).then(
+    workApi.task(r.id).then(
       (t) => saved.set(r.id, t.prompt),
       () => {}, // no prompt, no edit: the row still approves
     ),
@@ -91,9 +91,9 @@ async function confirm() {
     // Saves first, so a task's edit is on its timeline before its approval; the edit may change what the check says.
     for (const id of editedIds.value) {
       try {
-        await api.editTask(id, { prompt: drafts.get(id) });
+        await workApi.editTask(id, { prompt: drafts.get(id) });
         saved.set(id, drafts.get(id)!);
-        checks.set(id, await api.proposalCheck(id).catch(() => checks.get(id) ?? null));
+        checks.set(id, await workApi.proposalCheck(id).catch(() => checks.get(id) ?? null));
       } catch (e) {
         saveFailed.add(id);
         if (on.has(id)) out.push({ id, error: `not saved: ${errorMessage(e)}` });

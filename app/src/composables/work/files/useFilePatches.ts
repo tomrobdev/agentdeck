@@ -2,7 +2,7 @@
 // seen before shows at once from it; these maps (here and in useFileText) only hold what this page is showing.
 import { type Ref, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import { useQueryClient } from '@tanstack/vue-query';
-import { diffQuery } from '../../../api/queries';
+import { diffQuery } from '../../../api/work';
 import type { FilePatch } from '../../../api/types';
 import { errorMessage } from '../../../../../daemon/src/domain/shared/index.ts';
 

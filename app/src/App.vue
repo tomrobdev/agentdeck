@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
-import { PERSON_CALLS, api, isOffline } from './api/client';
-import { liveStatusQuery, refreshAll, reposQuery, taskQuery, tasksQuery } from './api/queries';
+import { isOffline, refreshAll } from './api/http';
+import { liveStatusQuery, operationsApi } from './api/operations';
+import { reposApi, reposQuery } from './api/repos';
+import { runsApi } from './api/runs';
+import { PERSON_CALLS, taskQuery, tasksQuery } from './api/work';
 import type { MergeResult, Repo, Status, TaskDetail, TaskSummary } from './api/types';
 import { isNative, onOpenUrl } from './platform/native';
 import { mode, setMode } from './platform/theme';
@@ -70,9 +73,9 @@ const { approve, approving, answer: answerApproval } = provideApprovals(queryCli
 
 // Pause and the two Resume buttons share one pending state; every other button has its own.
 const { pending: pausing, run: pauseRun } = trackPending(actions);
-const togglePause = () => pauseRun(() => (status.value?.paused ? api.resume() : api.pause()));
-const resumeDaemon = () => pauseRun(() => api.resume());
-const resumeRepo = (id: number) => pauseRun(() => api.resumeRepo(id));
+const togglePause = () => pauseRun(() => (status.value?.paused ? operationsApi.resume() : operationsApi.pause()));
+const resumeDaemon = () => pauseRun(() => operationsApi.resume());
+const resumeRepo = (id: number) => pauseRun(() => reposApi.resumeRepo(id));
 
 const selectedId = ref<number | null>(null);
 watch(
@@ -145,7 +148,7 @@ const paletteRows = computed(() =>
       open: openFromQueue,
       act: actOn,
       merge: (id) => (merging.value = id),
-      verify: (id) => act(() => api.verify(id), { done: `Verify run started on #${id}` }),
+      verify: (id) => act(() => runsApi.verify(id), { done: `Verify run started on #${id}` }),
       copyLink: (id) => {
         navigator.clipboard.writeText(taskUrl(id)).then(
           () => flash(`Copied ${taskUrl(id)}`),
@@ -156,7 +159,7 @@ const paletteRows = computed(() =>
       togglePause,
       restartDaemon: () =>
         act(async () => {
-          const res = await api.restartDaemon();
+          const res = await operationsApi.restartDaemon();
           flash(res.waiting ? `Waiting for ${res.waiting} to finish, then the daemon restarts.` : 'Restarting the daemon…');
         }),
       view: (m) => {

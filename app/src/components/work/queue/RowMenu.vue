@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { api } from '../../../api/client';
+import { landingApi } from '../../../api/landing';
+import { workApi } from '../../../api/work';
 import type { LinkKind, TaskSummary } from '../../../api/types';
 import { useActions } from '../../../composables/shared/useActions';
 import { openExternal, useCopy } from '../../../platform/native';
@@ -47,13 +48,13 @@ function done(fn: () => unknown) {
   emit('close');
   return fn();
 }
-const cancelMerge = () => run(() => api.cancelMergeRequest(props.task.id));
+const cancelMerge = () => run(() => landingApi.cancelMergeRequest(props.task.id));
 function setPriority(key: string) {
   const level = PRIORITY_LEVELS.find((l) => l.key === key);
   if (level && key !== priorityLevel(props.task.priority))
-    done(() => run(() => api.editTask(props.task.id, { priority: levelPriority(level) })));
+    done(() => run(() => workApi.editTask(props.task.id, { priority: levelPriority(level) })));
 }
-const setModel = (model: string) => model !== props.task.model && done(() => run(() => api.editTask(props.task.id, { model })));
+const setModel = (model: string) => model !== props.task.model && done(() => run(() => workApi.editTask(props.task.id, { model })));
 const copyText = (text: string, what: string) => done(async () => (await copy(text, what), flash(`Copied ${what}`)));
 
 // A bad id keeps the menu open (preventDefault on the item's select) so the person can fix it.
@@ -64,7 +65,7 @@ async function link(kind: LinkKind, e?: Event) {
     return flash('Enter the task to link as #id');
   }
   emit('close');
-  await run(() => api.linkTask(props.task.id, { on, kind }), {
+  await run(() => workApi.linkTask(props.task.id, { on, kind }), {
     done: `#${props.task.id} ${kind === 'after' ? 'after' : 'builds on'} #${on}`,
   });
 }

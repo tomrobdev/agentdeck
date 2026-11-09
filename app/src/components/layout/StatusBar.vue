@@ -2,7 +2,7 @@
 // The status bar along the bottom of the window: the daemon's state (click to pause or resume), slots,
 // and the usage windows. Actions and navigation are in the header (AppHeader.vue).
 import { computed } from 'vue';
-import { api } from '../../api/client';
+import { landingApi } from '../../api/landing';
 import { describeState } from '../../lib/operations/daemon-wording';
 import { relTime } from '../../lib/shared/time';
 import type { Status, TaskSummary } from '../../api/types';
@@ -25,7 +25,7 @@ const activity = useActivity(
 );
 const { pending: cancelling, run } = useAction();
 const open = (item: ActivityItem) => item.taskId !== null && openTask(item.taskId, item.tab);
-const cancelMerge = (item: ActivityItem) => item.taskId !== null && run(() => api.cancelMergeRequest(item.taskId!));
+const cancelMerge = (item: ActivityItem) => item.taskId !== null && run(() => landingApi.cancelMergeRequest(item.taskId!));
 
 const state = computed(() => describeState(props.status, props.offline));
 

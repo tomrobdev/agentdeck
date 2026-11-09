@@ -35,7 +35,7 @@ const ALLOWED: Allowed[] = [
   { file: 'app/src/lib/operations/daemon-wording.ts', line: /On hold/, why: "the governor's state, shown" },
   { file: 'app/src/lib/work/work-wording.ts', line: /On hold/, why: "the governor's wait, shown" },
   { file: 'app/src/components/layout/StatusBar.vue', line: /On hold/, why: "the governor's state, shown" },
-  { file: 'app/src/api/queries.ts', line: /hold lifting/, why: "the governor's hold lifting" },
+  { file: 'app/src/api/operations.ts', line: /hold lifting/, why: "the governor's hold lifting" },
   { file: 'domain/runs/run.ts', line: /it holds the old prompt/, why: PLAIN },
   { file: 'domain/runs/prompt.ts', line: /holds the same comments|already holds the task|files hold conflict markers/, why: PLAIN },
   { file: 'domain/work/read/listing.ts', line: /PRs that hold up other/, why: PLAIN },
