@@ -6,6 +6,7 @@ import { type BoardMove, type Group, type StatusGroup, boardMove, isReview } fro
 import Checkbox from '../ui/Checkbox.vue';
 import MarkDoneDialog from '../task/MarkDoneDialog.vue';
 import MergeButtons from './MergeButtons.vue';
+import ModelChip from '../ui/ModelChip.vue';
 import PriorityIcon from '../ui/PriorityIcon.vue';
 import StatusIcon from '../ui/StatusIcon.vue';
 import TaskBadges from '../ui/TaskBadges.vue';
@@ -17,7 +18,7 @@ const props = defineProps<{
   selected: number | null;
   /** The tasks picked for a bulk action. */
   picked?: number[];
-  show: { repo: boolean; pr: boolean };
+  show: { repo: boolean; pr: boolean; model: boolean };
 }>();
 const emit = defineEmits<{
   open: [id: number];
@@ -142,6 +143,7 @@ const LABELS: Record<BoardMove, string> = {
           <div class="mt-1 mb-1.5 line-clamp-2 font-medium">{{ t.title }}</div>
           <TaskStatusLine :task="t" fit="two" class="mb-1.5" />
           <div class="flex items-center gap-2">
+            <ModelChip v-if="show.model" :task="t" class="flex-none" />
             <TaskBadges :task="t" :repo="show.repo" :pr="show.pr" class="flex-1" />
             <span class="ml-auto flex-none text-sm text-muted">{{ ago(t.updated_at) }}</span>
           </div>

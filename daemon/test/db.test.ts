@@ -29,6 +29,25 @@ test('hasQueued is true only while a queued task exists', () => {
   assert.ok(db.applyEvent(proposed.id, { type: 'approve' }));
   assert.equal(db.hasQueued(), true);
 });
+test('latestRunModels gives each task the model of its latest work run', () => {
+  const db = openDb(':memory:');
+  try {
+    const repo = db.addRepo({ name: 'r', path: '/tmp/r', base_branch: 'main' });
+    const a = db.addTask({ repo_id: repo.id, title: 'a', prompt: 'a' });
+    const b = db.addTask({ repo_id: repo.id, title: 'b', prompt: 'b' });
+    db.addTask({ repo_id: repo.id, title: 'none', prompt: 'n' });
+    db.startRun(a.id, 1, '/tmp/a1.log', 'work', 'sonnet');
+    db.startRun(a.id, 2, '/tmp/a2.log', 'work', 'opus');
+    db.startRun(a.id, 2, '/tmp/a3.log', 'resolve', 'haiku'); // a resolve run is not the task's model
+    db.startRun(b.id, 1, '/tmp/b1.log', 'work', null); // from before runs recorded it
+    const models = db.latestRunModels();
+    assert.equal(models.get(a.id), 'opus');
+    assert.equal(models.has(b.id), false);
+    assert.equal(models.size, 1);
+  } finally {
+    db.close();
+  }
+});
 test('runsForTask query uses the runs_task index', () => {
   const db = openDb(':memory:');
   try {

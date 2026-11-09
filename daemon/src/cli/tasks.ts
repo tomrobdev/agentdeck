@@ -4,7 +4,7 @@ import * as actions from '../application/actions.ts';
 import { type TaskId, asTaskId, parseId } from '../domain/shared/index.ts';
 import { isOwnPlanName, modelSourceText, planProgress } from '../domain/work/index.ts';
 import { commentLocation } from '../domain/landing/index.ts';
-import { pickRun } from '../domain/runs/index.ts';
+import { latestVerify, pickRun, runFindings } from '../domain/runs/index.ts';
 import { CHECKED_STATUSES, TASK_STATUSES } from '../domain/work/index.ts';
 import { filterTasks, listable } from '../domain/work/index.ts';
 import { type PlanLink, hasPlanLink, otherPlanOwner, planOwnerOf } from '../domain/work/index.ts';
@@ -22,6 +22,7 @@ import {
   fmtProposalCheck,
   fmtRunSummary,
   fmtTask,
+  fmtVerifyFindings,
   printLog,
 } from './format.ts';
 import type { Command } from './context.ts';
@@ -191,8 +192,10 @@ export const taskCommands: Record<string, Command> = {
       const whose = other !== null ? `#${other}'s plan, ` : '';
       console.log(`plan     ${plan} (${whose}${steps ? `steps ${steps.join(', ')}` : 'every unfinished step'})`);
     }
-    if ((CHECKED_STATUSES as readonly string[]).includes(t.status))
-      for (const line of fmtProposalCheck(await actions.proposalCheck(db, t.id))) console.log(line);
+    const check = CHECKED_STATUSES.includes(t.status) ? await actions.proposalCheck(db, t.id) : null;
+    if (check) for (const line of fmtProposalCheck(check)) console.log(line);
+    const verify = latestVerify(t.runs, check?.staleness?.base ?? null);
+    if (verify?.stale) console.log(`verify   the base moved on since the verify run read ${verify.commit?.slice(0, 7)}`);
     console.log(`\n${t.prompt}\n`);
     for (const p of t.plans) {
       const { finished, total } = planProgress(p.steps);
@@ -204,7 +207,10 @@ export const taskCommands: Record<string, Command> = {
         `${r.kind === 'work' ? 'run' : `${r.kind} run`} ${r.attempt}: ${r.outcome ?? 'running'}  turns=${r.num_turns ?? '-'}  tokens=${tokens}  tests=${r.tests_passed === null ? '-' : r.tests_passed ? 'pass' : 'fail'}  ${r.started_at}`,
       );
       if (r.summary) for (const line of fmtRunSummary(r.summary)) console.log(`  ${line}`);
-      if (r.result_text) console.log(`  ${r.result_text.trim().split('\n').slice(-6).join('\n  ')}`);
+      const findings = runFindings(r);
+      if (r.kind === 'verify' && r.base_commit) console.log(`  read ${r.base_commit.slice(0, 7)}`);
+      if (findings) for (const line of fmtVerifyFindings(findings)) console.log(`  ${line}`);
+      else if (r.result_text) console.log(`  ${r.result_text.trim().split('\n').slice(-6).join('\n  ')}`);
     }
   },
   review: ({ db, rest }) => {
@@ -283,6 +289,19 @@ export const taskCommands: Record<string, Command> = {
     if (r.pushed) console.log('pushed; the pull request has it');
     if (r.push_error) console.log(`push failed: ${r.push_error}`);
     if (r.outcome === 'blocked') process.exitCode = 1;
+  },
+  verify: async ({ rest }) => {
+    const id = taskId(rest[0]);
+    console.log(`verify run on #${id}: checking its prompt's claims against the base… (a claude run, a few minutes)`);
+    const { report }: { report: actions.VerifyReport | null } = await callDaemon('POST', `/api/tasks/${id}/verify`, { wait: true });
+    if (!report) return;
+    if (report.outcome !== 'done') {
+      console.log(`#${id}: the verify run ended ${report.outcome}${report.reason ? `: ${report.reason}` : ''}`);
+      process.exitCode = 1;
+      return;
+    }
+    console.log(`#${id} against ${report.commit?.slice(0, 7) ?? 'the base'}:`);
+    for (const line of fmtVerifyFindings(report.findings)) console.log(`  ${line}`);
   },
   clean: async ({ db, rest }) => {
     const { branch } = await actions.removeTaskWorktree(db, taskId(rest[0]));

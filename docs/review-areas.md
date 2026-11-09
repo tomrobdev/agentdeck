@@ -29,11 +29,12 @@ Builds on and After links: a task's dependencies and dependents.
 
 What a session or worker is told about a task: the agent context digest, prompt path warnings, the proposal check and prompt sections.
 
-- daemon/src/domain/work/read/digest.ts
+- daemon/src/domain/operations/digest.ts
 - daemon/src/domain/work/read/event-text.ts
 - daemon/src/domain/work/prompt-paths.ts
 - daemon/src/domain/work/proposal-check.ts
-- daemon/src/application/work/context.ts
+- daemon/src/application/operations/digest.ts
+- daemon/src/application/work/live-context.ts
 - daemon/src/application/work/prompt-paths.ts
 - daemon/src/application/work/proposal-check.ts
 - app/src/components/task/ProposalCheckCard.vue
@@ -99,6 +100,11 @@ The run's lifecycle: the worker, the claude process, resuming, prompts, logs, th
 - daemon/src/application/runs/claude-run.ts
 - daemon/src/application/runs/unblock.ts
 - daemon/src/application/runs/review.ts
+- daemon/src/domain/runs/verify.ts
+- daemon/src/application/runs/verify.ts
+- app/src/lib/verify.ts
+- app/src/components/task/VerifyCard.vue
+- app/src/components/task/VerifyFindings.vue
 - daemon/src/application/runs/install-needs.ts
 - daemon/src/application/ports/agent.ts
 - daemon/src/application/ports/processes.ts
@@ -118,7 +124,7 @@ The run's lifecycle: the worker, the claude process, resuming, prompts, logs, th
 - daemon/src/application/work/checkout-locks.ts
 - daemon/src/application/ports/workspace.ts
 - daemon/src/domain/work/branch.ts
-- daemon/src/domain/landing/sync.ts
+- daemon/src/domain/runs/sync.ts
 - daemon/src/domain/runs/resolve.ts
 - daemon/src/adapters/git.ts
 - daemon/src/adapters/workspace.ts

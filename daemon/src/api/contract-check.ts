@@ -22,6 +22,7 @@ check<Fits<Out<typeof actions.taskViews>[number]['conflicting'], NonNullable<C.T
 check<Fits<NonNullable<Out<typeof actions.taskViews>[number]['checks']>, C.ChecksSummary>>();
 check<Fits<NonNullable<Out<typeof actions.taskDetail>['check_list']>['checks'][number], C.PrCheck>>();
 check<Fits<NonNullable<Out<typeof actions.taskDetail>['runs'][number]['summary']>, C.RunSummary>>();
+check<Fits<Awaited<Out<typeof actions.startVerify>['done']>, NonNullable<C.VerifyResult['report']>>>();
 
 // Requests
 check<Fits<C.NewRepo, In<typeof actions.addRepo, 1>>>();

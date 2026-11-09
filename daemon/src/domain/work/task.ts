@@ -111,6 +111,28 @@ Limits the agent must keep to, such as no new dependencies or no changes to pack
 ## Definition of done
 The test command passing, plus concrete checks a reviewer can confirm.`;
 
+/** A prompt cut at its `## ` headings: each section's heading and its body, trimmed. Text before the first heading is dropped. */
+export function promptSections(prompt: string): { heading: string; body: string }[] {
+  const sections: { heading: string; lines: string[] }[] = [];
+  for (const line of prompt.split('\n')) {
+    const heading = /^##\s+(.+?)\s*$/.exec(line);
+    if (heading) sections.push({ heading: heading[1], lines: [] });
+    else sections.at(-1)?.lines.push(line);
+  }
+  return sections.map((s) => ({ heading: s.heading, body: s.lines.join('\n').trim() }));
+}
+
+/**
+ * What the peek shows of a prompt: its Goal section, cut to `maxLines` lines. A prompt with no sections shows its first
+ * lines; one whose Goal is empty (or that has sections but no Goal) shows the first lines of its first section with a body.
+ */
+export function promptGoal(prompt: string, maxLines = 6): string {
+  const sections = promptSections(prompt);
+  const goal = sections.find((s) => s.heading.toLowerCase() === 'goal' && s.body);
+  const text = sections.length ? (goal ?? sections.find((s) => s.body))?.body : prompt.trim();
+  return (text ?? '').split('\n').slice(0, maxLines).join('\n').trim();
+}
+
 /** The default_model setting's default: the model a new task takes when neither it nor its repo names one. */
 export const DEFAULT_MODEL = 'sonnet';
 

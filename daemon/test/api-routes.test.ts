@@ -486,6 +486,27 @@ const ROWS: Row[] = [
     check: (r) => assert.equal(r.outcome, 'up_to_date'),
   },
   {
+    method: 'POST',
+    path: '/api/tasks/:task/verify',
+    params: task(proposed),
+    body: { wait: true },
+    shape: ['run_id', 'report', 'task'],
+    check: (r, { task: id }) => {
+      // The fake agent answers in words, not findings: the run ends failed, and uses no attempt.
+      assert.equal(r.report.outcome, 'garbage');
+      assert.equal(r.task.runs.at(-1).kind, 'verify');
+      assert.equal(r.task.runs.at(-1).id, r.run_id);
+      assert.equal(app.getTask(id as TaskId)!.attempts, 0);
+    },
+  },
+  bad('POST', '/api/tasks/:task/verify', { wait: 'yes' }, task(proposed)),
+  bad(
+    'POST',
+    '/api/tasks/:task/verify',
+    {},
+    task(() => withWorktree()),
+  ),
+  {
     method: 'GET',
     path: '/api/tasks/:task/log',
     params: task(queued),

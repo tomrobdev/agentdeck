@@ -105,6 +105,7 @@ erDiagram
     text diff_hash "nullable"
     text run_end "nullable"
     integer last_test_failed "nullable"
+    text base_commit "nullable"
   }
   settings {
     text key PK

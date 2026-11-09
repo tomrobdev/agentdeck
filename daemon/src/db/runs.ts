@@ -1,5 +1,5 @@
 // Task runs: one row per worker claude process.
-import { and, asc, count, countDistinct, eq, gt, inArray, isNotNull, isNull, notInArray, or, sql } from 'drizzle-orm';
+import { and, asc, count, countDistinct, eq, gt, inArray, isNotNull, isNull, max, notInArray, or, sql } from 'drizzle-orm';
 import { type PlannerRunId, type RunId, type TaskId, stored } from '../domain/shared/index.ts';
 import type { PidRun, Run, RunKind, RunningTaskRun } from '../domain/runs/index.ts';
 import { RUNNING_STATUSES } from '../domain/work/index.ts';
@@ -10,9 +10,9 @@ import { plannerRuns, runs, tasks } from './tables.ts';
 
 /**
  * The run kinds that run beside a task's status rather than as it: a resolve run (of a done task), an unblock run (of a
- * blocked one) and a review run (of a done one).
+ * blocked one), a review run (of a done one) and a verify run (of a proposed or queued one).
  */
-const SIDE_KINDS: RunKind[] = ['resolve', 'unblock', 'review'];
+const SIDE_KINDS: RunKind[] = ['resolve', 'unblock', 'review', 'verify'];
 
 export function runStore(orm: Orm) {
   /** Unfinished runs of one kind. */
@@ -63,6 +63,27 @@ export function runStore(orm: Orm) {
         .all();
       return new Map(rows.map((r) => [r.task_id, r]));
     },
+    /** The model of each task's latest work run, by task id; a task with no work run, or one from before runs recorded it, has none. */
+    latestRunModels(): Map<TaskId, string> {
+      const rows = orm
+        .select({ task_id: runs.task_id, model: runs.model })
+        .from(runs)
+        .where(
+          and(
+            eq(runs.kind, 'work'),
+            inArray(
+              runs.id,
+              orm
+                .select({ id: max(runs.id) })
+                .from(runs)
+                .where(eq(runs.kind, 'work'))
+                .groupBy(runs.task_id),
+            ),
+          ),
+        )
+        .all();
+      return new Map(rows.flatMap((r) => (r.model ? [[r.task_id, r.model] as const] : [])));
+    },
     finishRun(id: RunId, r: Partial<Omit<Run, 'id' | 'task_id' | 'kind' | 'attempt' | 'started_at' | 'log_path' | 'model'>>): void {
       // undefined means "not given" to Drizzle, but this has always written a given-as-undefined key as NULL.
       const given = Object.fromEntries(Object.entries(stored(r)).map(([k, v]) => [k, v ?? null]));
@@ -87,10 +108,14 @@ export function runStore(orm: Orm) {
     countRunningReviews(): number {
       return runningOf('review');
     },
+    /** Verify runs still going, in any daemon process. */
+    countRunningVerifies(): number {
+      return runningOf('verify');
+    },
     /**
      * Slots in use, counted from the db so every process sees the same number: a task that is running (or being
-     * cancelled), a task not running that has an unfinished resolve or unblock run (a task whose sync started one
-     * counts once), and an unfinished planner run. A clean sync runs no claude and takes none.
+     * cancelled), a task not running that has an unfinished run beside it (resolve, unblock, review or verify; a task
+     * whose sync started one counts once), and an unfinished planner run. A clean sync runs no claude and takes none.
      */
     slotsUsed(): number {
       const running = orm.select({ n: count() }).from(tasks).where(inArray(tasks.status, RUNNING_STATUSES)).get()?.n ?? 0;

@@ -7,7 +7,8 @@ import type { ChecksSummary } from '../domain/landing/index.ts';
 import type { TaskStatus } from '../domain/work/index.ts';
 import { type ProposalCheck, parseTaskIds, proposalCheckLine } from '../domain/work/index.ts';
 import type { Task } from '../domain/work/index.ts';
-import { type RunSummary, costText } from '../domain/runs/index.ts';
+import type { RunSummary, VerifyFinding } from '../domain/runs/index.ts';
+import { costText, findingPlace, verifyLine } from '../domain/runs/index.ts';
 
 const STATUS_ICON: Record<TaskStatus, string> = {
   proposed: '?',
@@ -56,6 +57,18 @@ export function fmtProposalCheck(check: ProposalCheck): string[] {
     out.push(`         changed ${c.path}: ${c.commits.map((x) => `${x.sha.slice(0, 7)} ${x.subject}`).join('; ')}`);
   for (const o of check.overlaps) out.push(`         #${o.id} ${o.title}${o.linked ? ' (linked)' : ''} touches ${o.paths.join(', ')}`);
   for (const n of check.notes) out.push(`note     ${n}`);
+  return out;
+}
+
+/** A verify run's findings: their line, then each claim with its verdict and place, its evidence and the fix. */
+export function fmtVerifyFindings(findings: VerifyFinding[]): string[] {
+  const out = [verifyLine(findings)];
+  for (const f of findings) {
+    const place = findingPlace(f);
+    out.push(`${f.verdict.padEnd(6)} ${f.claim}${place ? ` (${place})` : ''}`);
+    if (f.evidence) out.push(`       ${f.evidence}`);
+    if (f.fix) out.push(`       fix: ${f.fix}`);
+  }
   return out;
 }
 

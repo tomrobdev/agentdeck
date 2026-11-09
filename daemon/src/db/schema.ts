@@ -274,6 +274,9 @@ export const MIGRATIONS: Migration[] = [
   // 35: escalation (domain/runs/escalate.ts). repos.escalate lets a retry after a failure a stronger model may fix run one
   // model up (on by default); the change is an `escalate` row in task_events.
   'ALTER TABLE repos ADD COLUMN escalate INTEGER NOT NULL DEFAULT 1;',
+  // 36: the base commit a verify run read (domain/runs/verify.ts), so its findings can be marked stale once the base
+  // moves on. NULL for every other kind.
+  'ALTER TABLE runs ADD COLUMN base_commit TEXT;',
 ];
 
 /** Runs every step above the database's user_version in one transaction; returns how many ran. */

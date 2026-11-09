@@ -8,6 +8,7 @@ const display = defineModel<Display>({ required: true });
 const set = (patch: Partial<Display>) => (display.value = { ...display.value, ...patch });
 const PROPS: { key: keyof ShowProps; label: string }[] = [
   { key: 'repo', label: 'Repo' },
+  { key: 'model', label: 'Model' },
   { key: 'pr', label: 'Pull request' },
   { key: 'reason', label: 'Blocked reason' },
   { key: 'time', label: 'Updated' },

@@ -8,9 +8,10 @@ import type { RunEnd, RunSummary } from './translate/summary.ts';
  * `work` is an attempt at the task; `resolve` merges the base branch into the task's branch and never uses an attempt;
  * `unblock` reads why a blocked task stopped and retries it with a note or asks a question (domain/runs/unblock.ts), and
  * never uses an attempt either; `review` reads a done task's changes against its Goal, Definition of done and plan steps,
- * and answers with findings (domain/runs/review.ts).
+ * and answers with findings (domain/runs/review.ts); `verify` checks a proposed or queued task's prompt against the base,
+ * claim by claim (domain/runs/verify.ts). Neither uses an attempt.
  */
-export type RunKind = 'work' | 'resolve' | 'unblock' | 'review';
+export type RunKind = 'work' | 'resolve' | 'unblock' | 'review' | 'verify';
 
 /** A run (or planner run) with a recorded pid: where a claude process may still be. */
 export interface PidRun {
@@ -30,9 +31,12 @@ export interface RunningTaskRun {
   started_at: string | null;
 }
 
-/** A run's name in the dashboard: "Run 2", "Resolve conflicts" for the resolve run of a sync, or "Review" for a review run. */
+/**
+ * A run's name in the dashboard: "Run 2", "Resolve conflicts" for the resolve run of a sync, "Review" for a review run, or
+ * "Verify" for a verify run.
+ */
 export const runLabel = (run: Pick<Run, 'kind' | 'attempt'>): string =>
-  run.kind === 'resolve' ? 'Resolve conflicts' : run.kind === 'review' ? 'Review' : `Run ${run.attempt}`;
+  run.kind === 'resolve' ? 'Resolve conflicts' : run.kind === 'review' ? 'Review' : run.kind === 'verify' ? 'Verify' : `Run ${run.attempt}`;
 
 /** How a run ended: a worker's result, or `interrupted` when a daemon restart ended it. */
 export type RunOutcome = Outcome | typeof INTERRUPTED;
@@ -70,6 +74,8 @@ export interface Run {
    * even when the run fails or answers nothing usable, so the diff is known to have had its review run. Null for other kinds.
    */
   diff_hash: string | null;
+  /** For a verify run, the base commit its checkout read (`head` on the Workspace port); null for other kinds. */
+  base_commit: string | null;
   /**
    * How a failed or blocked work run's claude ended (`runEndOf`), kept when the run ends because its log is not kept for
    * good; null for a run that ended any other way and for one from before this was recorded, which reads as unknown.
@@ -96,12 +102,12 @@ export interface RunModels {
 
 /**
  * The model a run of `kind` starts with. A work run is an attempt at the task, so it takes the task's model; a review run
- * reads the task's changes, so it takes the review model; a resolve or unblock run is support work beside the task
- * (settling conflicts, reading why it blocked), so it takes the support model.
+ * reads the task's changes and a verify run checks its prompt, so they take the review model; a resolve or unblock run
+ * is support work beside the task (settling conflicts, reading why it blocked), so it takes the support model.
  */
 export function runModel(kind: RunKind, task: { model: string }, models: RunModels): string {
   if (kind === 'work') return task.model;
-  return kind === 'review' ? models.review_model : models.support_model;
+  return kind === 'review' || kind === 'verify' ? models.review_model : models.support_model;
 }
 
 /**

@@ -65,6 +65,7 @@ The dashboard's routes, and the use case each calls.
 | POST   | `/api/tasks/:id/reviews`           | `actions.startReview`                          |
 | POST   | `/api/tasks/:id/sync`              | `actions.syncNow`                              |
 | GET    | `/api/tasks/:id/tree`              | `actions.taskTree`                             |
+| POST   | `/api/tasks/:id/verify`            | `actions.startVerify`                          |
 | GET    | `/api/tasks/:id`                   | `taskIdParam`                                  |
 | POST   | `/api/tasks/:id`                   | `actions.editTask`, `actions.promptWarnings`   |
 | POST   | `/api/tasks/merge-requests`        | `actions.requestMerges`                        |

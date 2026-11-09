@@ -187,10 +187,10 @@ export function buildReviewPrompt(task: Pick<Task, 'id' | 'title' | 'prompt'>, c
   ].join('\n');
 }
 
-const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+export const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 
 /** The answer as a value: claude's structured output as it is, or JSON text (bare or in a ```json fence). */
-function answerValue(raw: unknown): unknown {
+export function answerValue(raw: unknown): unknown {
   if (typeof raw !== 'string') return raw;
   const fenced = /```(?:json)?\s*\n([\s\S]*?)```/i.exec(raw);
   const text = (fenced ? fenced[1] : raw).trim();

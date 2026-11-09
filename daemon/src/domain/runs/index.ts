@@ -3,6 +3,8 @@ export { buildPrompt, buildResolvePrompt, buildResumePrompt, claudeArgs } from '
 export type { PromptPlan } from './prompt.ts';
 export { escalation, escalationReason, escalationSince } from './escalate.ts';
 export { resolveOutcome } from './resolve.ts';
+export { conflictReason, syncResultOf, syncSummary } from './sync.ts';
+export type { SyncResult } from './sync.ts';
 export {
   DEFAULT_REVIEW_MODEL,
   DEFAULT_SUPPORT_MODEL,
@@ -43,5 +45,20 @@ export {
   reviewable,
 } from './review.ts';
 export type { ReviewOutcome } from './review.ts';
+export {
+  VERIFY_DENIED_TOOLS,
+  VERIFY_MAX_TURNS,
+  VERIFY_TOOLS,
+  buildVerifyPrompt,
+  findingPlace,
+  latestVerify,
+  parseVerifyAnswer,
+  runFindings,
+  verifyLine,
+  verifyRefusal,
+  verifySchemaArgs,
+  verifySystemPrompt,
+} from './verify.ts';
+export type { ClaimVerdict, VerifyFinding, VerifyView } from './verify.ts';
 export { UNBLOCK_MAX_TURNS, buildUnblockPrompt, parseUnblock, unblockDecision, unblockSystemPrompt, unblockable } from './unblock.ts';
 export type { UnblockDecision } from './unblock.ts';

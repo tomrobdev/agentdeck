@@ -9,6 +9,8 @@ import LogView from './LogView.vue';
 import Markdown from '../files/Markdown.vue';
 import FinalMessage from './FinalMessage.vue';
 import RunSummaryCard from './RunSummaryCard.vue';
+import VerifyFindings from './VerifyFindings.vue';
+import { latestVerify } from '../../../../daemon/src/domain/runs/index.ts';
 import Listbox from '../ui/Listbox.vue';
 
 // The checks view: one card per run, then the chosen run's final message and log.
@@ -92,12 +94,20 @@ const live = computed(() => (props.task.status === 'running' || !!props.task.syn
 
     <RunSummaryCard v-if="run?.summary" :key="`summary-${run.id}`" class="flex-none" :summary="run.summary" />
 
-    <FinalMessage v-if="run?.result_text" :key="run.id" class="max-h-[40vh] flex-none overflow-y-auto" :open="run.outcome !== 'done'">
+    <!-- A verify run's result is its findings as JSON, shown as findings, not as a message. -->
+    <VerifyFindings
+      v-if="run?.kind === 'verify' && run.ended_at"
+      :key="`verify-${run.id}`"
+      class="max-h-[40vh] flex-none overflow-y-auto rounded-md border border-border bg-panel px-3.5 py-2"
+      :view="latestVerify([run], null)!"
+      @path="(p, l) => emit('path', p, l)"
+    />
+    <FinalMessage v-else-if="run?.result_text" :key="run.id" class="max-h-[40vh] flex-none overflow-y-auto" :open="run.outcome !== 'done'">
       <Markdown :text="run.result_text" :is-path="isPath" @path="(p, l) => emit('path', p, l)" />
     </FinalMessage>
 
     <LogView
-      v-if="task.status !== 'proposed'"
+      v-if="task.status !== 'proposed' || run?.kind === 'verify'"
       :task-id="task.id"
       :run-id="chosen"
       :live="live"

@@ -27,7 +27,7 @@ flowchart LR
   domain_operations --> domain_landing
   domain_operations -.-> domain_proposals
   domain_operations --> domain_shared
-  domain_operations -.-> domain_work
+  domain_operations --> domain_work
   domain_proposals -.-> domain_repos
   domain_proposals --> domain_shared
   domain_proposals --> domain_work

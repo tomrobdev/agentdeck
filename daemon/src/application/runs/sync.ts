@@ -4,7 +4,7 @@ import { TEST_TIMEOUT_MS } from '../../config.ts';
 import type { App } from '../ports/app.ts';
 import type { SyncFinish } from '../ports/workspace.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
-import { type SyncResult, conflictReason, syncResultOf, syncSummary } from '../../domain/landing/index.ts';
+import { type SyncResult, conflictReason, syncResultOf, syncSummary } from '../../domain/runs/index.ts';
 import type { Repo } from '../../domain/repos/index.ts';
 import { buildResolvePrompt } from '../../domain/runs/index.ts';
 import { resolveOutcome } from '../../domain/runs/index.ts';
