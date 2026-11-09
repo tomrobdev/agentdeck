@@ -3,12 +3,14 @@ import { ref } from 'vue';
 import { type TaskSummary, api, syncLine } from '../../api';
 import { useActions } from '../../composables/useActions';
 import { useBulkPick } from '../../composables/useBulkPick';
+import { useEditKeys } from '../../composables/useEditKeys';
 import { useHotkeys } from '../../composables/useHotkeys';
 import { useMergeConfirm } from '../../composables/useMergeConfirm';
 import { useQueueDisplay } from '../../composables/useQueueDisplay';
 import { type BoardMove, type PersonEvent, canStartMerge, emptyFilters, hasFilters, personEvents, quickRetry } from '../../lib/taskView';
 import { buildsOnChain } from '../../lib/bulk';
 import BulkMergeDialog from '../task/BulkMergeDialog.vue';
+import EditKeyDialog from '../task/EditKeyDialog.vue';
 import MergeDialog from '../task/MergeDialog.vue';
 import SegmentedControl from '../ui/SegmentedControl.vue';
 import BoardView from './BoardView.vue';
@@ -78,37 +80,60 @@ function act(kind: BoardMove | 'sync', id: number) {
 }
 
 const selectedTask = () => props.tasks.find((x) => x.id === selected.value);
+const edits = useEditKeys('queue', () => selected.value);
+const Q = 'queue' as const;
 useHotkeys({
-  j: () => step(1),
-  ArrowDown: () => step(1),
-  k: () => step(-1),
-  ArrowUp: () => step(-1),
-  ' ': () => {
-    if (display.value.mode !== 'list') return;
-    if (selected.value === null && order.value.length) selected.value = order.value[0].id;
-    peek.value = !peek.value;
+  j: { label: 'Next task', scope: Q, run: () => step(1) },
+  ArrowDown: { label: 'Next task', scope: Q, run: () => step(1) },
+  k: { label: 'Previous task', scope: Q, run: () => step(-1) },
+  ArrowUp: { label: 'Previous task', scope: Q, run: () => step(-1) },
+  ' ': {
+    label: 'Peek at the task',
+    scope: Q,
+    run: () => {
+      if (display.value.mode !== 'list') return;
+      if (selected.value === null && order.value.length) selected.value = order.value[0].id;
+      peek.value = !peek.value;
+    },
   },
-  x: () => selected.value !== null && pick(selected.value, false, orderIds()),
-  X: pickShown,
-  Escape: () => {
-    if (picked.value.length) clearPicked();
-    else if (peek.value) peek.value = false;
+  x: { label: 'Pick the task', scope: Q, run: () => selected.value !== null && pick(selected.value, false, orderIds()) },
+  X: { label: 'Pick every task shown', scope: Q, run: pickShown },
+  Escape: {
+    label: 'Clear the picks, close the peek',
+    scope: Q,
+    run: () => {
+      if (picked.value.length) clearPicked();
+      else if (peek.value) peek.value = false;
+    },
   },
-  Enter: () => selected.value !== null && emit('open', selected.value),
-  a: () => {
-    const t = selectedTask();
-    if (t && personEvents(t).includes('approve')) emit('act', 'approve', t.id);
+  Enter: { label: 'Open the task', scope: Q, run: () => selected.value !== null && emit('open', selected.value) },
+  a: {
+    label: 'Approve',
+    scope: Q,
+    run: () => {
+      const t = selectedTask();
+      if (t && personEvents(t).includes('approve')) emit('act', 'approve', t.id);
+    },
   },
-  r: () => {
-    const t = selectedTask();
-    if (t && quickRetry(t)) emit('act', 'retry', t.id);
+  r: {
+    label: 'Retry',
+    scope: Q,
+    run: () => {
+      const t = selectedTask();
+      if (t && quickRetry(t)) emit('act', 'retry', t.id);
+    },
   },
-  m: () => {
-    const t = selectedTask();
-    if (t && canStartMerge(t)) startMerge(t.id);
+  m: {
+    label: 'Merge',
+    scope: Q,
+    run: () => {
+      const t = selectedTask();
+      if (t && canStartMerge(t)) startMerge(t.id);
+    },
   },
-  v: nextMode,
-  c: () => emit('newTask'),
+  v: { label: 'Next view', scope: Q, run: nextMode },
+  c: { label: 'New task', scope: Q, run: () => emit('newTask') },
+  ...edits.keys,
 });
 </script>
 
@@ -196,6 +221,7 @@ useHotkeys({
       />
     </div>
     <QueueFooter :shown="shown.length" :total="tasks.length" />
+    <EditKeyDialog v-if="edits.dialog.value" :kind="edits.dialog.value" :keys="edits" />
     <BulkMergeDialog v-if="bulkMerging" :tasks="bulkMerging" @close="bulkMerging = null" @done="onBulkMerged" />
     <MergeDialog v-if="merging" :task-id="merging.id" @close="merging = null" @merged="onMerged" @requested="onRequested" />
   </section>
