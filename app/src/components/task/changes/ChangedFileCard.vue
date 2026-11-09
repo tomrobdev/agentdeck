@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { type ChangedFile, type NewReviewComment, PATCH_LIMIT, fileSize } from '../../../api';
+import { fileSize } from '../../../api/format';
+import { type ChangedFile, type NewReviewComment, PATCH_LIMIT } from '../../../api/types';
 import type { PatchState } from '../../../composables/task/useFilePatches';
 import type { ShownComment } from '../../../composables/task/useReviews';
 import { CHANGE_LABEL } from '../../../lib/task/changed-tree';

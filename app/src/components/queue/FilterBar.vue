@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import type { TaskSummary } from '../../api';
+import type { TaskSummary } from '../../api/types';
 import { useHotkeys } from '../../composables/shared/useHotkeys';
 import { FILTER_STATES, type Filters, hasFilters } from '../../lib/task/task-view';
 import Chip from '../ui/Chip.vue';

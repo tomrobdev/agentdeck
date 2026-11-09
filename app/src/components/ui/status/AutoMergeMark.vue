@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { AutoMergeView } from '../../../api';
+import type { AutoMergeView } from '../../../api/types';
 import { AUTO_MERGE_CHIP } from '../../../lib/task/task-badges';
 import { autoMergeTip } from '../../../lib/task/task-view';
 import Chip from '../Chip.vue';

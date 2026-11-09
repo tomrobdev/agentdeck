@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { type Status, describeWait } from '../../api';
+import { describeWait } from '../../api/format';
+import type { Status } from '../../api/types';
 import { oneLine, plural } from '../../../../daemon/src/domain/shared/index.ts';
 
 // What queued tasks wait for, each with the action that ends the wait. Empty when nothing keeps work waiting.

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { type RequestMergesResult, type TaskSummary, api } from '../../../api';
+import { api } from '../../../api/client';
+import type { RequestMergesResult, TaskSummary } from '../../../api/types';
 import { errorMessage, plural } from '../../../../../daemon/src/domain/shared/index.ts';
 import { useActions } from '../../../composables/shared/useActions';
 import ConfirmDialog from '../../ui/ConfirmDialog.vue';

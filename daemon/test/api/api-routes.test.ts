@@ -8,7 +8,7 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, test } from 'node:test';
-import type { Run as ContractRun } from '../../src/api/contract.ts';
+import type { Run as ContractRun } from '../../src/api/contract/runs.ts';
 import type { Route } from '../../src/api/http.ts';
 import type { Service, ServiceStatus } from '../../src/application/ports/service.ts';
 import type { Workspace } from '../../src/application/ports/workspace.ts';
@@ -182,7 +182,7 @@ interface Row {
 
 const TASK_DETAIL = ['id', 'repo', 'title', 'status', 'check_list', 'runs', 'events', 'plans'];
 const TASK_SAVED = [...TASK_DETAIL, 'warnings'];
-/** The keys of the contract's Run (api/contract.ts). */
+/** The keys of the contract's Run (api/contract/runs.ts). */
 const RUN = [
   'id',
   'kind',

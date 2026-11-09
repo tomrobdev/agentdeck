@@ -1,6 +1,6 @@
 // The status bar's activity list, from the task list and status the window already reads; nothing is polled for it.
 import { type MaybeRefOrGetter, computed, toValue } from 'vue';
-import type { Status, TaskSummary } from '../../api';
+import type { Status, TaskSummary } from '../../api/types';
 import { activityItems } from '../../lib/queue/activity';
 
 export function useActivity(tasks: MaybeRefOrGetter<TaskSummary[]>, status: MaybeRefOrGetter<Status | null>) {

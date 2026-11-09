@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { VerifyView } from '../../../api';
+import type { VerifyView } from '../../../api/types';
 import { findingPlace } from '../../../../../daemon/src/domain/runs/index.ts';
 import { VERDICT_MARKS, sortFindings, verifyHeadline } from '../../../lib/task/verify';
 

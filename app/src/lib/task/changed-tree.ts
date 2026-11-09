@@ -1,6 +1,6 @@
 // The files a task changed, as the folders of a file tree. Pure, so the daemon's tests can import it
 // (daemon/test/dashboard/files/changed-tree.test.ts).
-import type { ChangedFile } from '../../../../daemon/src/api/contract.ts';
+import type { ChangedFile } from '../../../../daemon/src/api/contract/files.ts';
 
 /** A tree node. `meta` is shown at the row end (e.g. "bin"), `delta` as +n −n counts; `badge` before the name (A, M, D, R). */
 export interface TreeNode {

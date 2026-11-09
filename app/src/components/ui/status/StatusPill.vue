@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { TaskSummary } from '../../../api';
+import type { TaskSummary } from '../../../api/types';
 import { statusText } from '../../../lib/task/task-badges';
 import Chip from '../Chip.vue';
 import StatusIcon from './StatusIcon.vue';

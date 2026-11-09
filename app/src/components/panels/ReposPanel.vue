@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import type { Repo } from '../../api';
+import type { Repo } from '../../api/types';
 import Accordion from '../ui/disclosure/Accordion.vue';
 import AccordionItem from '../ui/disclosure/AccordionItem.vue';
 import AccordionTrigger from '../ui/disclosure/AccordionTrigger.vue';

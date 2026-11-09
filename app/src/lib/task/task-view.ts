@@ -1,6 +1,6 @@
 // How the queue is grouped and shown. What a person may do with a task, how the queue is filtered and sorted and what a blocked
 // task needs are the daemon's domain (task/lifecycle.ts, listing.ts, needs.ts, stage.ts); this file re-exports what the views use.
-import type { AutoMergeView, Needs, Status, TaskStatus, TaskSummary } from '../../api';
+import type { AutoMergeView, Needs, Status, TaskStatus, TaskSummary } from '../../api/types';
 import { type PersonEvent, personEvents } from '../../../../daemon/src/domain/work/index.ts';
 import { DECISION_STATES, FILTER_STATES, SORT_OPTIONS, filterTasks } from '../../../../daemon/src/domain/work/index.ts';
 import { type UnblockQuestion, canInstallWith, depsRequest } from '../../../../daemon/src/domain/work/index.ts';
@@ -24,7 +24,7 @@ import { needsOf, questionOf } from '../shared/wire.ts';
 // The board's move rule is in boardMove.ts, which the daemon's tests import.
 export { STATUS_GROUPS, type StatusGroup, canOpenPr, canStartMerge, hasOpenPr, isMerged, isReview, isStuck, isWaiting, statusGroup };
 export { FILTER_STATES, MODELS, SORT_OPTIONS, type PersonEvent, personEvents };
-export * from '../queue/board-move';
+export { type BoardMove, boardMove } from '../queue/board-move';
 
 /**
  * The tab a task opens on from the queue: a running task, or one with a resolve run under way, on its live log (the latest

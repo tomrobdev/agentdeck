@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { NOTIFY_LABELS } from '../../api';
+import { NOTIFY_LABELS } from '../../api/format';
 import { NOTIFY_KINDS, type SettingsForm } from '../../lib/shared/forms';
 import Switch from '../ui/form/Switch.vue';
 

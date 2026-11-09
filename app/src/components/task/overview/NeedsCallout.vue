@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
-import { type Needs, type TaskDetail, api, repoQuery } from '../../../api';
+import { api } from '../../../api/client';
+import { repoQuery } from '../../../api/queries';
+import type { Needs, TaskDetail } from '../../../api/types';
 import { canInstallWith, depsAreDev, depsPackages, withHost } from '../../../lib/task/task-view';
 import { useAction, useActions } from '../../../composables/shared/useActions';
 import ConfirmDialog from '../../ui/ConfirmDialog.vue';

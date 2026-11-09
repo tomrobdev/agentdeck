@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick } from 'vue';
-import { type TaskDetail, ago, api } from '../../api';
+import { api } from '../../api/client';
+import { ago } from '../../api/format';
+import type { TaskDetail } from '../../api/types';
 import AutoMergeMark from '../ui/status/AutoMergeMark.vue';
 import { isNative, openExternal, revealInFinder, runTemplate, useCopy } from '../../platform/native';
 import { editorArgv, editorTemplate } from '../../lib/runs/terminal';

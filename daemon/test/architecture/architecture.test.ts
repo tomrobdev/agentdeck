@@ -86,9 +86,9 @@ test('[actions-only, entry-points] api/ and cli/ reach application/ only through
   assert.deepEqual(found, []);
 });
 
-test('[contract-types] api/contract.ts and api/contract/ import only types, only from domain/ and each other', () => {
+test('[contract-types] api/contract/ imports only types, only from domain/ and each other', () => {
   const found = sources
-    .filter((s) => s.path === 'api/contract.ts' || s.path.startsWith('api/contract/'))
+    .filter((s) => s.path.startsWith('api/contract/'))
     .flatMap((s) =>
       s.imports.flatMap((i) => {
         if (!i.typeOnly) return [`${at(s, i.line)} imports ${i.spec} as a value: the contract imports types only`];
@@ -168,6 +168,26 @@ test('[contexts] a sample that reaches into another context, or has a bare or st
   assert.equal(checkContextImports(sample, dash).filter((m) => m.startsWith('x.ts:1')).length, 1);
   assert.deepEqual(checkUnusedIndexExports(sample), []);
   assert.match(checkUnusedIndexExports(sample.slice(0, 2)).join('\n'), /domain\/work\/index\.ts exports RULES/);
+});
+
+/** Each `export * from` in the sources, as `path:line`. */
+const exportStars = (files: Source[]) =>
+  files.flatMap((s) =>
+    s.ast.statements
+      .filter((n) => ts.isExportDeclaration(n) && !n.exportClause && n.moduleSpecifier)
+      .map((n) => `${at(s, lineOf(s.ast, n))}: name what it re-exports`),
+  );
+
+test('[no-export-star] nothing in daemon/src or app/src re-exports with `export *`', () => {
+  assert.deepEqual([...exportStars(sources), ...exportStars(dashboard)], []);
+});
+
+test('[no-export-star] a sample with `export *` fails, naming the line; a named re-export passes', () => {
+  const sample = [
+    parseSource('api/index.ts', "// the api\nexport * from './client.ts';\n"),
+    parseSource('lib/view.ts', "export { boardMove, type BoardMove } from './board-move.ts';\nexport * as moves from './moves.ts';\n"),
+  ];
+  assert.deepEqual(exportStars(sample), ['api/index.ts:2: name what it re-exports']);
 });
 
 test('[folder-cycles] domain/ and application/ folders form no cycle beyond the allowed ones, and no allowed entry is stale', () => {

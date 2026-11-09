@@ -1,6 +1,6 @@
 // The Changes tab's "Since" choice: what each point is called, and which one the tab shows. Pure, so the daemon's tests can
 // import it (daemon/test/work/read/changes-since.test.ts). The points themselves come from the daemon (sincePoints in domain/work).
-import type { SincePoint } from '../../../../daemon/src/api/contract.ts';
+import type { SincePoint } from '../../../../daemon/src/api/contract/files.ts';
 
 /** The pick that shows the changes against the base. */
 export const SINCE_BASE = 'base';

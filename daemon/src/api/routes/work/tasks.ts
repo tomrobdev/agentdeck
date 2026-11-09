@@ -2,7 +2,8 @@
 import * as actions from '../../../application/actions.ts';
 import { type TaskId, parseId } from '../../../domain/shared/index.ts';
 import { TASK_STATUSES } from '../../../domain/work/index.ts';
-import type * as C from '../../contract.ts';
+import type { CancelResult, TaskDetail, TaskSaved, TaskSummary } from '../../contract/work.ts';
+import type { SyncResult, VerifyResult } from '../../contract/runs.ts';
 import { type ApiContext, BadRequest, type Route, idsField, route, taskIdParam } from '../../http.ts';
 import { streamLog } from '../../log-stream.ts';
 import * as wire from '../../wire.ts';
@@ -10,7 +11,7 @@ import * as wire from '../../wire.ts';
 export function routes({ db, scheduler }: ApiContext): Route[] {
   const detail = (id: TaskId) => wire.taskDetail(db, id);
   return [
-    route<C.TaskSummary[]>('GET', /^\/api\/tasks$/, ({ query }) => {
+    route<TaskSummary[]>('GET', /^\/api\/tasks$/, ({ query }) => {
       const param = query.get('status');
       if (param !== null && !(TASK_STATUSES as string[]).includes(param))
         throw new BadRequest(`status takes one of ${TASK_STATUSES.join(', ')}`);
@@ -20,18 +21,18 @@ export function routes({ db, scheduler }: ApiContext): Route[] {
       const before = beforeParam === null ? undefined : (parseId<TaskId>(beforeParam) ?? undefined);
       return wire.taskViews(db, { status: status ?? undefined, limit, before });
     }),
-    route<C.TaskSaved>('POST', /^\/api\/tasks$/, async ({ body }) => {
+    route<TaskSaved>('POST', /^\/api\/tasks$/, async ({ body }) => {
       const links = { builds_on: idsField(body, 'builds_on'), after: idsField(body, 'after') };
       const task = await actions.addTask(db, { ...body, ...links } as Parameters<typeof actions.addTask>[1]);
       return { ...(await wire.taskDetail(db, task.id)), warnings: await actions.promptWarnings(db, task.id) };
     }),
-    route<C.TaskDetail>('GET', /^\/api\/tasks\/(\d+)$/, ({ params: [id] }) => detail(taskIdParam(id))),
-    route<C.TaskSaved>('POST', /^\/api\/tasks\/(\d+)$/, async ({ params: [text], body }) => {
+    route<TaskDetail>('GET', /^\/api\/tasks\/(\d+)$/, ({ params: [id] }) => detail(taskIdParam(id))),
+    route<TaskSaved>('POST', /^\/api\/tasks\/(\d+)$/, async ({ params: [text], body }) => {
       const id = taskIdParam(text);
       await actions.editTask(db, id, body);
       return { ...(await detail(id)), warnings: await actions.promptWarnings(db, id) };
     }),
-    route<C.TaskDetail>('POST', /^\/api\/tasks\/(\d+)\/links$/, ({ params: [text], body }) => {
+    route<TaskDetail>('POST', /^\/api\/tasks\/(\d+)\/links$/, ({ params: [text], body }) => {
       const id = taskIdParam(text);
       const on = parseId<TaskId>(body.on);
       if (on === null) throw new BadRequest('on must be a task id');
@@ -39,52 +40,52 @@ export function routes({ db, scheduler }: ApiContext): Route[] {
       actions.linkTasks(db, id, { on, kind: body.kind });
       return detail(id);
     }),
-    route<C.TaskDetail>('DELETE', /^\/api\/tasks\/(\d+)\/links\/(\d+)$/, ({ params: [text, on] }) => {
+    route<TaskDetail>('DELETE', /^\/api\/tasks\/(\d+)\/links\/(\d+)$/, ({ params: [text, on] }) => {
       const id = taskIdParam(text);
       actions.unlinkTasks(db, id, taskIdParam(on));
       return detail(id);
     }),
-    route<C.TaskDetail>('POST', /^\/api\/tasks\/(\d+)\/approve$/, ({ params: [text] }) => {
+    route<TaskDetail>('POST', /^\/api\/tasks\/(\d+)\/approve$/, ({ params: [text] }) => {
       const id = taskIdParam(text);
       actions.approveTask(db, id);
       return detail(id);
     }),
-    route<C.TaskDetail>('POST', /^\/api\/tasks\/(\d+)\/reject$/, ({ params: [text] }) => {
+    route<TaskDetail>('POST', /^\/api\/tasks\/(\d+)\/reject$/, ({ params: [text] }) => {
       const id = taskIdParam(text);
       actions.rejectTask(db, id);
       return detail(id);
     }),
-    route<C.CancelResult>('POST', /^\/api\/tasks\/(\d+)\/cancel$/, ({ params: [id] }) => ({
+    route<CancelResult>('POST', /^\/api\/tasks\/(\d+)\/cancel$/, ({ params: [id] }) => ({
       result: actions.cancelTask(db, taskIdParam(id)),
     })),
-    route<C.TaskDetail>('POST', /^\/api\/tasks\/(\d+)\/retry$/, ({ params: [text], body }) => {
+    route<TaskDetail>('POST', /^\/api\/tasks\/(\d+)\/retry$/, ({ params: [text], body }) => {
       const id = taskIdParam(text);
       actions.retryTask(db, id, { note: body.note as string | undefined, model: body.model as string | undefined });
       return detail(id);
     }),
-    route<C.TaskDetail>('POST', /^\/api\/tasks\/(\d+)\/done$/, ({ params: [text], body }) => {
+    route<TaskDetail>('POST', /^\/api\/tasks\/(\d+)\/done$/, ({ params: [text], body }) => {
       const id = taskIdParam(text);
       actions.markDone(db, id, body.note as string | undefined);
       return detail(id);
     }),
-    route<C.TaskDetail>('POST', /^\/api\/tasks\/(\d+)\/install-needs$/, async ({ params: [text] }) => {
+    route<TaskDetail>('POST', /^\/api\/tasks\/(\d+)\/install-needs$/, async ({ params: [text] }) => {
       const id = taskIdParam(text);
       await actions.installNeeds(db, id);
       return detail(id);
     }),
-    route<C.TaskDetail>('POST', /^\/api\/tasks\/(\d+)\/clean$/, async ({ params: [text] }) => {
+    route<TaskDetail>('POST', /^\/api\/tasks\/(\d+)\/clean$/, async ({ params: [text] }) => {
       const id = taskIdParam(text);
       await actions.removeTaskWorktree(db, id);
       return detail(id);
     }),
     // Sync the task's branch with the base, settling conflicts with a claude run. Answers when it is done.
-    route<C.SyncResult>('POST', /^\/api\/tasks\/(\d+)\/sync$/, async ({ params: [text] }) => {
+    route<SyncResult>('POST', /^\/api\/tasks\/(\d+)\/sync$/, async ({ params: [text] }) => {
       const id = taskIdParam(text);
       const report = await scheduler.track(actions.syncNow(db, id), 'sync');
       return { ...report, task: await detail(id) };
     }),
     // Start a verify run on a proposed or queued task. Answers at once, or with `{ wait: true }` once it ends.
-    route<C.VerifyResult>('POST', /^\/api\/tasks\/(\d+)\/verify$/, async ({ params: [text], body }) => {
+    route<VerifyResult>('POST', /^\/api\/tasks\/(\d+)\/verify$/, async ({ params: [text], body }) => {
       const id = taskIdParam(text);
       if (body.wait !== undefined && typeof body.wait !== 'boolean') throw new BadRequest('wait must be true or false');
       const { run_id, done } = actions.startVerify(db, id);

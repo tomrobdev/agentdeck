@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { type LinkKind, type TaskDetail, type TaskLink, type TaskSummary, api, tasksQuery } from '../../../api';
+import { api } from '../../../api/client';
+import { tasksQuery } from '../../../api/queries';
+import type { LinkKind, TaskDetail, TaskLink, TaskSummary } from '../../../api/types';
 import { errorMessage } from '../../../../../daemon/src/domain/shared/index.ts';
 import { openTask } from '../../../router';
 import { statusLabel } from '../../../lib/task/task-view';

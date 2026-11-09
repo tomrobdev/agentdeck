@@ -41,7 +41,6 @@ const ALLOWED: Allowed[] = [
   { file: 'domain/work/task/stage.ts', line: /Done holds every/, why: PLAIN },
   { file: 'domain/operations/health.ts', line: /another daemon holds port/, why: PLAIN },
   { file: 'application/work/checkout-locks.ts', line: /sync in this process holds/, why: PLAIN },
-  { file: 'api/contract.ts', line: /holds the use cases to/, why: PLAIN },
   { file: 'db/work/tasks-queries.ts', line: /Later pages hold older tasks/, why: PLAIN },
   { file: 'db/sql.ts', line: /caller already holds/, why: PLAIN },
   { file: 'adapters/git/worktrees.ts', line: /branch holds all its work|still hold conflict markers/, why: PLAIN },

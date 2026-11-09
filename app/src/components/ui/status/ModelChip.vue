@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { TaskSummary } from '../../../api';
+import type { TaskSummary } from '../../../api/types';
 import { modelChip } from '../../../lib/queue/peek';
 import Chip from '../Chip.vue';
 

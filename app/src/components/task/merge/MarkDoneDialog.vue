@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import type { TaskSummary } from '../../../api';
+import type { TaskSummary } from '../../../api/types';
 import { hasOpenPr } from '../../../lib/task/task-view';
 import ConfirmDialog from '../../ui/ConfirmDialog.vue';
 

@@ -45,7 +45,7 @@ const ENTRY = ['App.vue', 'main.ts', 'vite-env.d.ts'];
 
 /** The daemon files the dashboard may import: rules come from `domain/`, types from the contract. */
 const daemonAllowed = (target: string) =>
-  /^(\.\.\/)+daemon\/src\/domain\//.test(target) || /^(\.\.\/)+daemon\/src\/api\/contract\.ts$/.test(target);
+  /^(\.\.\/)+daemon\/src\/domain\//.test(target) || /^(\.\.\/)+daemon\/src\/api\/contract\/[a-z-]+\.ts$/.test(target);
 
 /** What each import in a source breaks, as `file:line imports target: why`. */
 export function layoutViolations(sources: Source[]): string[] {
@@ -66,7 +66,7 @@ export function layoutViolations(sources: Source[]): string[] {
         if (!/\/docs\/plans\/plan\.css\?raw$/.test(i.target))
           found.push(`${at}: only the plan stylesheet is imported from outside app/ and daemon/`);
       } else if (to === 'daemon') {
-        if (!daemonAllowed(i.target)) found.push(`${at}: only the daemon's domain/ and api/contract.ts are imported`);
+        if (!daemonAllowed(i.target)) found.push(`${at}: only the daemon's domain/ and api/contract/ are imported`);
       } else if (to !== area && !rule.areas.includes(to)) found.push(`${at}: ${rule.why}`);
     }
   }

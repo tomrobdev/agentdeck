@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { type LinkKind, type TaskSummary, api } from '../../api';
+import { api } from '../../api/client';
+import type { LinkKind, TaskSummary } from '../../api/types';
 import { useActions } from '../../composables/shared/useActions';
 import { openExternal, useCopy } from '../../platform/native';
 import {

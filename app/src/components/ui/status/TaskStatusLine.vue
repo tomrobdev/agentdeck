@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { type TaskSummary, api } from '../../../api';
+import { api } from '../../../api/client';
+import type { TaskSummary } from '../../../api/types';
 import { useAction } from '../../../composables/shared/useActions';
 import { type StatusLine, TONE_TEXT, statusLine } from '../../../lib/task/task-badges';
 

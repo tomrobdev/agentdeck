@@ -3,7 +3,7 @@
 // the old head is dropped, so text from an old commit never lands on the new one.
 import { type MaybeRefOrGetter, reactive, toValue, watch } from 'vue';
 import { useQueryClient } from '@tanstack/vue-query';
-import { fileQuery } from '../../api';
+import { fileQuery } from '../../api/queries';
 import { errorMessage } from '../../../../daemon/src/domain/shared/index.ts';
 
 export function useFileText(taskId: MaybeRefOrGetter<number>, head: MaybeRefOrGetter<string | null>) {

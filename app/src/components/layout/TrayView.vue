@@ -5,18 +5,10 @@
 // them. A task opens in the main window (the shell's open_in_dashboard), which hides this one.
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
-import {
-  ATTENTION_LABELS,
-  type Status,
-  type TaskSummary,
-  api,
-  describeLive,
-  describeState,
-  isImmutable,
-  isOffline,
-  liveStatusQuery,
-  tasksQuery,
-} from '../../api';
+import { api } from '../../api/client';
+import { ATTENTION_LABELS, describeLive, describeState } from '../../api/format';
+import { isImmutable, isOffline, liveStatusQuery, tasksQuery } from '../../api/queries';
+import type { Status, TaskSummary } from '../../api/types';
 import { createActions, trackPending } from '../../composables/shared/useActions';
 import { useChangeStream } from '../../composables/shared/useChangeStream';
 import { isNative, openFromTray, startDaemon } from '../../platform/native';

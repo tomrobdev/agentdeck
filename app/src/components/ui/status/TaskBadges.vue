@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { TaskSummary } from '../../../api';
+import type { TaskSummary } from '../../../api/types';
 import { openTask } from '../../../router';
 import { TONE_CHIP, taskBadges } from '../../../lib/task/task-badges';
 import Chip from '../Chip.vue';

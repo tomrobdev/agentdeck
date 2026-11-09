@@ -15,7 +15,7 @@ const RETRY: Duration = Duration::from_secs(5);
 /// The most a status read or a pause may take before the daemon counts as offline.
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
 
-/// The state headline, as `Headline` in `daemon/src/api/contract.ts`.
+/// The state headline, as `Headline` in `daemon/src/api/contract/operations.ts`.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum HeadlineState {
@@ -52,7 +52,7 @@ pub struct Headline {
     pub attention: Vec<AttentionTask>,
 }
 
-/// A sent notification, as `NotificationRow` in `daemon/src/api/contract.ts`.
+/// A sent notification, as `NotificationRow` in `daemon/src/api/contract/operations.ts`.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct NotificationRow {
     pub id: i64,

@@ -3,7 +3,9 @@
 // pending or blocked, the failing checks of `agentdeck doctor` with their fix, its warnings, and the end of the log.
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { api, daemonHealthQuery, daemonQuery, isOffline, taskList, uptime } from '../../api';
+import { api } from '../../api/client';
+import { taskList, uptime } from '../../api/format';
+import { daemonHealthQuery, daemonQuery, isOffline } from '../../api/queries';
 import { useAction } from '../../composables/shared/useActions';
 import ConfirmDialog from '../ui/ConfirmDialog.vue';
 import Modal from '../ui/Modal.vue';

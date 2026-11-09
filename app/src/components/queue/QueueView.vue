@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { type TaskSummary, api, syncLine } from '../../api';
+import { api } from '../../api/client';
+import { syncLine } from '../../api/format';
+import type { TaskSummary } from '../../api/types';
 import { useActions } from '../../composables/shared/useActions';
 import { useBulkPick } from '../../composables/queue/useBulkPick';
 import { useEditKeys } from '../../composables/task/useEditKeys';

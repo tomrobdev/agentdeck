@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed, nextTick, reactive, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { type ChangedFile, type Changes, type NewReviewComment, type TaskDetail, ago, api, changesSinceQuery } from '../../../api';
+import { api } from '../../../api/client';
+import { ago } from '../../../api/format';
+import { changesSinceQuery } from '../../../api/queries';
+import type { ChangedFile, Changes, NewReviewComment, TaskDetail } from '../../../api/types';
 import { plural } from '../../../../../daemon/src/domain/shared/index.ts';
 import { useActions } from '../../../composables/shared/useActions';
 import { useFilePatches } from '../../../composables/task/useFilePatches';

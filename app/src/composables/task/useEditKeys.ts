@@ -3,7 +3,9 @@
 // one task's: with several picked it says so. The dialog for `e`, `M` and `l` is components/task/EditKeyDialog.vue.
 import { computed, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { type TaskSummary, api, tasksQuery } from '../../api';
+import { api } from '../../api/client';
+import { tasksQuery } from '../../api/queries';
+import type { TaskSummary } from '../../api/types';
 import { type BulkEdit } from '../../lib/queue/bulk';
 import { type EditRequest, PRIORITY_KEYS } from '../../lib/shared/hotkeys';
 import { PRIORITY_LEVELS, levelPriority } from '../../lib/task/task-view';

@@ -1,6 +1,6 @@
 // What the peek pane and the queue's rows say of a task's model, properties and links, as plain values.
 // Free of the dashboard's other modules so the daemon's tests can import it (daemon/test/peek.test.ts).
-import type { PlanStep, TaskLink, TaskSummary } from '../../../../daemon/src/api/contract.ts';
+import type { PlanStep, TaskLink, TaskSummary } from '../../../../daemon/src/api/contract/work.ts';
 import { canStartMerge, personEvents, statusGroup } from '../../../../daemon/src/domain/work/index.ts';
 
 type Modeled = Pick<TaskSummary, 'model' | 'run_model'>;

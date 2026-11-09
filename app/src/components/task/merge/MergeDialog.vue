@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { type MergeMethod, type MergeResult, MERGE_METHODS, api, autoMergeLine, mergePreviewQuery } from '../../../api';
+import { api } from '../../../api/client';
+import { autoMergeLine } from '../../../api/format';
+import { mergePreviewQuery } from '../../../api/queries';
+import { type MergeMethod, type MergeResult, MERGE_METHODS } from '../../../api/types';
 import { errorMessage, plural } from '../../../../../daemon/src/domain/shared/index.ts';
 import { useActions } from '../../../composables/shared/useActions';
 import Chip from '../../ui/Chip.vue';

@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue';
 import { type DiffLine, anchorOf, anchorKey, parsePatch, splitRows } from '../../lib/task/diff';
 import { highlightLines, languageFor } from '../../lib/shared/render';
-import type { NewReviewComment } from '../../api';
+import type { NewReviewComment } from '../../api/types';
 import type { ShownComment } from '../../composables/task/useReviews';
 import CommentBox from './CommentBox.vue';
 import CommentThread from './CommentThread.vue';

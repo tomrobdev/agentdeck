@@ -4,7 +4,23 @@
 // where it is. The contract may name fewer fields than the use case returns.
 import type { LogEntry as DomainLogEntry } from '../domain/runs/index.ts';
 import * as actions from '../application/actions.ts';
-import type * as C from './contract.ts';
+import type { NewRepo, RepoPatch } from './contract/repos.ts';
+import type { MarkDoneRequest, NewLink, NewTask, RetryRequest, TaskPatch, TaskSummary } from './contract/work.ts';
+import type { LiveView, RunSummary, SyncView, VerifyResult } from './contract/runs.ts';
+import type {
+  AutoMergeRequest,
+  ChecksSummary,
+  MergeRequest,
+  MergeRequestView,
+  NewReviewComment,
+  PrCheck,
+  RequestMergeRequest,
+  RequestMergesRequest,
+  ReviewPatch,
+  SubmitReview,
+} from './contract/landing.ts';
+import type { LogEntry } from './contract/files.ts';
+import type { SettingsPatch } from './contract/operations.ts';
 
 /** What a use case resolves to, whether it is async or not. */
 type Out<F extends (...args: never[]) => unknown> = Awaited<ReturnType<F>>;
@@ -14,29 +30,29 @@ export const check = <_T extends true>(): true => true;
 type Fits<Actual, Contract> = [Actual] extends [Contract] ? true : false;
 
 // Parts of responses
-check<Fits<DomainLogEntry, C.LogEntry>>();
-check<Fits<NonNullable<Out<typeof actions.taskViews>[number]['live']>, C.LiveView>>();
-check<Fits<NonNullable<Out<typeof actions.taskViews>[number]['sync']>, C.SyncView>>();
-check<Fits<NonNullable<Out<typeof actions.taskViews>[number]['merge_request']>, C.MergeRequestView>>();
-check<Fits<Out<typeof actions.taskViews>[number]['conflicting'], NonNullable<C.TaskSummary['conflicting']>>>();
-check<Fits<NonNullable<Out<typeof actions.taskViews>[number]['checks']>, C.ChecksSummary>>();
-check<Fits<NonNullable<Out<typeof actions.taskDetail>['check_list']>['checks'][number], C.PrCheck>>();
-check<Fits<NonNullable<Out<typeof actions.taskDetail>['runs'][number]['summary']>, C.RunSummary>>();
-check<Fits<Awaited<Out<typeof actions.startVerify>['done']>, NonNullable<C.VerifyResult['report']>>>();
+check<Fits<DomainLogEntry, LogEntry>>();
+check<Fits<NonNullable<Out<typeof actions.taskViews>[number]['live']>, LiveView>>();
+check<Fits<NonNullable<Out<typeof actions.taskViews>[number]['sync']>, SyncView>>();
+check<Fits<NonNullable<Out<typeof actions.taskViews>[number]['merge_request']>, MergeRequestView>>();
+check<Fits<Out<typeof actions.taskViews>[number]['conflicting'], NonNullable<TaskSummary['conflicting']>>>();
+check<Fits<NonNullable<Out<typeof actions.taskViews>[number]['checks']>, ChecksSummary>>();
+check<Fits<NonNullable<Out<typeof actions.taskDetail>['check_list']>['checks'][number], PrCheck>>();
+check<Fits<NonNullable<Out<typeof actions.taskDetail>['runs'][number]['summary']>, RunSummary>>();
+check<Fits<Awaited<Out<typeof actions.startVerify>['done']>, NonNullable<VerifyResult['report']>>>();
 
 // Requests
-check<Fits<C.NewRepo, In<typeof actions.addRepo, 1>>>();
-check<Fits<C.RepoPatch, In<typeof actions.updateRepo, 2>>>();
-check<Fits<C.NewTask, In<typeof actions.addTask, 1>>>();
-check<Fits<C.TaskPatch, In<typeof actions.editTask, 2>>>();
-check<Fits<C.NewLink, In<typeof actions.linkTasks, 2>>>();
-check<Fits<C.SettingsPatch, In<typeof actions.updateSettings, 1>>>();
-check<Fits<C.MergeRequest, In<typeof actions.mergeTask, 2>>>();
-check<Fits<C.AutoMergeRequest, In<typeof actions.setAutoMerge, 2>>>();
-check<Fits<C.RequestMergeRequest, In<typeof actions.requestMerge, 2>>>();
-check<Fits<C.RequestMergesRequest, In<typeof actions.requestMerges, 1>>>();
-check<Fits<C.ReviewPatch, In<typeof actions.editReview, 2>>>();
-check<Fits<C.NewReviewComment, In<typeof actions.addReviewComment, 2>>>();
-check<Fits<C.SubmitReview, In<typeof actions.submitReview, 2>>>();
-check<Fits<C.RetryRequest, In<typeof actions.retryTask, 2>>>();
-check<Fits<C.MarkDoneRequest['note'], In<typeof actions.markDone, 2>>>();
+check<Fits<NewRepo, In<typeof actions.addRepo, 1>>>();
+check<Fits<RepoPatch, In<typeof actions.updateRepo, 2>>>();
+check<Fits<NewTask, In<typeof actions.addTask, 1>>>();
+check<Fits<TaskPatch, In<typeof actions.editTask, 2>>>();
+check<Fits<NewLink, In<typeof actions.linkTasks, 2>>>();
+check<Fits<SettingsPatch, In<typeof actions.updateSettings, 1>>>();
+check<Fits<MergeRequest, In<typeof actions.mergeTask, 2>>>();
+check<Fits<AutoMergeRequest, In<typeof actions.setAutoMerge, 2>>>();
+check<Fits<RequestMergeRequest, In<typeof actions.requestMerge, 2>>>();
+check<Fits<RequestMergesRequest, In<typeof actions.requestMerges, 1>>>();
+check<Fits<ReviewPatch, In<typeof actions.editReview, 2>>>();
+check<Fits<NewReviewComment, In<typeof actions.addReviewComment, 2>>>();
+check<Fits<SubmitReview, In<typeof actions.submitReview, 2>>>();
+check<Fits<RetryRequest, In<typeof actions.retryTask, 2>>>();
+check<Fits<MarkDoneRequest['note'], In<typeof actions.markDone, 2>>>();

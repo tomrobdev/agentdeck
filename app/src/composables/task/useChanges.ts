@@ -2,7 +2,8 @@
 // invalidates them) or the first branch appears (`enabled`).
 import { type Ref, computed, shallowRef, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { type Changes, type TaskDetail, changesQuery } from '../../api';
+import { changesQuery } from '../../api/queries';
+import type { Changes, TaskDetail } from '../../api/types';
 
 /** A running task commits without changing status, so its branch is checked every 10 s. */
 const RUNNING_POLL_MS = 10_000;

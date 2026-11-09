@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { type TaskDetail, api } from '../../../api';
+import { api } from '../../../api/client';
+import type { TaskDetail } from '../../../api/types';
 import type { UnblockQuestion } from '../../../../../daemon/src/domain/work/index.ts';
 import { answerNote } from '../../../lib/task/task-view';
 import { useAction } from '../../../composables/shared/useActions';

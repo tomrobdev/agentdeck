@@ -1,5 +1,5 @@
 // An Edit's old and new text as a line diff, for the run log. Hand-written: each text is at most CHANGE_MAX characters.
-import type { LogChange } from '../../../../daemon/src/api/contract.ts';
+import type { LogChange } from '../../../../daemon/src/api/contract/files.ts';
 import { CHANGE_MAX } from '../../../../daemon/src/domain/runs/index.ts';
 
 /** One row of an edit's diff: a shared line, a removed or added one, or the mark where the log cut the old or new text. */

@@ -2,7 +2,10 @@
 import { computed, ref } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { CHECKED_STATUSES, proposalCheckLine } from '../../../../../daemon/src/domain/work/index.ts';
-import { type TaskStatus, ago, api, proposalCheckQuery } from '../../../api';
+import { api } from '../../../api/client';
+import { ago } from '../../../api/format';
+import { proposalCheckQuery } from '../../../api/queries';
+import type { TaskStatus } from '../../../api/types';
 import { openTask } from '../../../router';
 import { statusLabel } from '../../../lib/task/task-view';
 import { useAction } from '../../../composables/shared/useActions';

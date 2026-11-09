@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { ago } from '../../api';
+import { ago } from '../../api/format';
 import { mergeAllIds } from '../../lib/queue/bulk';
 import { openExternal } from '../../platform/native';
 import MergeButtons from './MergeButtons.vue';

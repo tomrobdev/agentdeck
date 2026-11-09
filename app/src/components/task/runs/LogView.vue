@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
-import { type LogEntry, type Run, api, parseTime } from '../../../api';
+import { api } from '../../../api/client';
+import { parseTime } from '../../../api/format';
+import type { LogEntry, Run } from '../../../api/types';
 import { useHotkeys } from '../../../composables/shared/useHotkeys';
 import { LOG_FILTERS, type LogFilter, failureKeys, failureStep, filterItems, parseLogFilter } from '../../../lib/runs/log-filter';
 import { type LiveSource, runHeader, timeline } from '../../../lib/runs/run-live';

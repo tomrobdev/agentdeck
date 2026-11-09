@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
-import { type Repo, type RepoDeletion, api, archivedReposQuery, queryKeys, repoDeletionQuery } from '../../api';
+import { api } from '../../api/client';
+import { archivedReposQuery, queryKeys, repoDeletionQuery } from '../../api/queries';
+import type { Repo, RepoDeletion } from '../../api/types';
 import { useActions } from '../../composables/shared/useActions';
 import { errorMessage, plural } from '../../../../daemon/src/domain/shared/index.ts';
 

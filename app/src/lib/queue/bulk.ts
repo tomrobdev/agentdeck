@@ -1,7 +1,7 @@
 // What a bar over several selected tasks may offer: the actions every one of them allows. What a person may do
 // with one task is the daemon's (personEvents, canStartMerge); this only intersects.
 // Free of the dashboard's other modules so the daemon's tests can import it (daemon/test/dashboard/queue/bulk-actions.test.ts).
-import type { TaskSummary } from '../../../../daemon/src/api/contract.ts';
+import type { TaskSummary } from '../../../../daemon/src/api/contract/work.ts';
 import { personEvents } from '../../../../daemon/src/domain/work/index.ts';
 import { EDITABLE_STATUSES, buildsOnError, canStartMerge } from '../../../../daemon/src/domain/work/index.ts';
 import { asTaskId } from '../../../../daemon/src/domain/shared/index.ts';

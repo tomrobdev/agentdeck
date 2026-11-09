@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { type TaskSummary, ago } from '../../api';
+import { ago } from '../../api/format';
+import type { TaskSummary } from '../../api/types';
 import { mergeAllIds } from '../../lib/queue/bulk';
 import { type BoardMove, type Group, type StatusGroup, boardMove, isReview } from '../../lib/task/task-view';
 import Checkbox from '../ui/form/Checkbox.vue';

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { type Status, api, describeStaleDaemon } from '../../api';
+import { api } from '../../api/client';
+import { describeStaleDaemon } from '../../api/format';
+import type { Status } from '../../api/types';
 import { appCommit } from '../../platform/build';
 import { useActions } from '../../composables/shared/useActions';
 

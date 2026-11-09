@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
-import { MERGE_METHODS, MODEL_LABELS, type Repo, ago, api, queryKeys, repoQuery } from '../../api';
+import { api } from '../../api/client';
+import { MODEL_LABELS, ago } from '../../api/format';
+import { queryKeys, repoQuery } from '../../api/queries';
+import { MERGE_METHODS, type Repo } from '../../api/types';
 import { type RepoForm, modelChoices, toRepoForm, toRepoPatch } from '../../lib/shared/forms';
 import { useActions } from '../../composables/shared/useActions';
 import { plural } from '../../../../daemon/src/domain/shared/index.ts';

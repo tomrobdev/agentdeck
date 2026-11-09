@@ -3,7 +3,9 @@ import { computed } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { CHECKED_STATUSES } from '../../../../../daemon/src/domain/work/index.ts';
 import { latestVerify } from '../../../../../daemon/src/domain/runs/index.ts';
-import { type TaskDetail, api, proposalCheckQuery } from '../../../api';
+import { api } from '../../../api/client';
+import { proposalCheckQuery } from '../../../api/queries';
+import type { TaskDetail } from '../../../api/types';
 import { useAction } from '../../../composables/shared/useActions';
 import VerifyFindings from './VerifyFindings.vue';
 

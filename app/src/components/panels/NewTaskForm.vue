@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { MODEL_HINTS, MODEL_LABELS, type Repo, type TaskDetail, api, settingsQuery } from '../../api';
+import { api } from '../../api/client';
+import { MODEL_HINTS, MODEL_LABELS } from '../../api/format';
+import { settingsQuery } from '../../api/queries';
+import type { Repo, TaskDetail } from '../../api/types';
 import { errorMessage, textList } from '../../../../daemon/src/domain/shared/index.ts';
 import { modelSourceText, newTaskModel } from '../../../../daemon/src/domain/work/index.ts';
 import { modelChoices } from '../../lib/shared/forms';

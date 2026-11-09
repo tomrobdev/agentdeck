@@ -1,7 +1,7 @@
 // The queue's display and filters: remembered per browser, changed by the command palette's view request and by links
 // that open the queue filtered, and the groups and rows they make of the tasks.
 import { computed, ref, watch } from 'vue';
-import type { TaskSummary } from '../../api';
+import type { TaskSummary } from '../../api/types';
 import { type Display, boardGroups, normalizeDisplay, rowOrder } from '../../lib/queue/queue-display';
 import { loadSetting, saveSetting } from '../../lib/shared/storage';
 import { type Filters, applyFilters, emptyFilters, groupTasks } from '../../lib/task/task-view';

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { api } from '../../api';
+import { api } from '../../api/client';
 import type { ShownComment } from '../../composables/task/useReviews';
 import { useAction } from '../../composables/shared/useActions';
 import Chip from '../ui/Chip.vue';

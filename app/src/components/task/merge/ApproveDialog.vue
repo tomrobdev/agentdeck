@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useQueries } from '@tanstack/vue-query';
-import { type ProposalCheck, PERSON_CALLS, api, taskQuery } from '../../../api';
+import { PERSON_CALLS, api } from '../../../api/client';
+import { taskQuery } from '../../../api/queries';
+import type { ProposalCheck } from '../../../api/types';
 import { errorMessage, plural } from '../../../../../daemon/src/domain/shared/index.ts';
 import { proposalCheckLine } from '../../../../../daemon/src/domain/work/index.ts';
 import { latestVerify } from '../../../../../daemon/src/domain/runs/index.ts';

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { type TaskDetail, api } from '../../api';
+import { api } from '../../api/client';
+import type { TaskDetail } from '../../api/types';
 import { canEdit } from '../../lib/task/task-view';
 import { useActions } from '../../composables/shared/useActions';
 import InlineEdit from '../ui/form/InlineEdit.vue';

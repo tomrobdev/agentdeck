@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import type { ChangedFile } from '../../../api';
+import type { ChangedFile } from '../../../api/types';
 import { useFileText } from '../../../composables/task/useFileText';
 import { isMarkdown } from '../../../lib/shared/render';
 import Markdown from '../../files/Markdown.vue';

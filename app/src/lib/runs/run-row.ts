@@ -1,5 +1,5 @@
 // What a row of the run list says about a run besides its outcome: its kind as an icon, and its cost with its tokens.
-import type { Run } from '../../../../daemon/src/api/contract.ts';
+import type { Run } from '../../../../daemon/src/api/contract/runs.ts';
 
 type RunKind = Run['kind'];
 import { costText } from '../../../../daemon/src/domain/runs/index.ts';

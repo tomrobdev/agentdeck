@@ -2,7 +2,9 @@
 // The status bar along the bottom of the window: the daemon's state (click to pause or resume), slots,
 // and the usage windows. Actions and navigation are in the header (AppHeader.vue).
 import { computed } from 'vue';
-import { type Status, type TaskSummary, api, describeState, relTime } from '../../api';
+import { api } from '../../api/client';
+import { describeState, relTime } from '../../api/format';
+import type { Status, TaskSummary } from '../../api/types';
 import { useActivity } from '../../composables/shared/useActivity';
 import { type ActivityItem, KIND_LABEL } from '../../lib/queue/activity';
 import { useAction } from '../../composables/shared/useActions';

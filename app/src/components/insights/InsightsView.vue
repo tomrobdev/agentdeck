@@ -3,7 +3,7 @@
 // beneath. The numbers are `agentdeck stats --by week --json`, for all repos or the one chosen.
 import { computed, ref } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { reposQuery, statsQuery } from '../../api';
+import { reposQuery, statsQuery } from '../../api/queries';
 import { hasData, seriesOf, thisWeek, weekLabel } from '../../lib/insights/insights';
 import TrendChart from './TrendChart.vue';
 

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { type Review, type SubmitReview, api } from '../../../api';
+import { api } from '../../../api/client';
+import type { Review, SubmitReview } from '../../../api/types';
 import { plural } from '../../../../../daemon/src/domain/shared/index.ts';
 import { useAction } from '../../../composables/shared/useActions';
 

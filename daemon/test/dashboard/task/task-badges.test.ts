@@ -2,7 +2,8 @@
 // badge rules are tested here, like the board's move rule.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import type { AutoMergeView, TaskSummary } from '../../../src/api/contract.ts';
+import type { TaskSummary } from '../../../src/api/contract/work.ts';
+import type { AutoMergeView } from '../../../src/api/contract/landing.ts';
 import { AUTO_MERGE_CHIP, TONE_CHIP, statusLine, statusText, taskBadges } from '../../../../app/src/lib/task/task-badges.ts';
 import { TONES, statusTone } from '../../../../app/src/lib/shared/tone.ts';
 import { asRepoId, asTaskId } from '../../fixtures/fixtures.ts';

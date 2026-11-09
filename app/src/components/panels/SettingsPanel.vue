@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { MODEL_LABELS, type NotificationRow, type Settings, ago, api, serviceQuery, settingsQuery } from '../../api';
+import { api } from '../../api/client';
+import { MODEL_LABELS, ago } from '../../api/format';
+import { serviceQuery, settingsQuery } from '../../api/queries';
+import type { NotificationRow, Settings } from '../../api/types';
 import { errorMessage } from '../../../../daemon/src/domain/shared/index.ts';
 import { type SettingsForm, modelChoices, toSettingsForm, toSettingsPatch } from '../../lib/shared/forms';
 import { MODELS } from '../../lib/task/task-view';

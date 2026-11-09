@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // A failed or blocked run summed up from its log: the verdict, its time and tools, its tests, and the last failing output.
-import type { RunSummary } from '../../../api';
+import type { RunSummary } from '../../../api/types';
 
 defineProps<{ summary: RunSummary }>();
 </script>

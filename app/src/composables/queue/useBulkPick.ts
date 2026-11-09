@@ -1,7 +1,8 @@
 // Bulk selection in every view: `x` or shift-click picks, and the bar offers what every picked task allows. The picks
 // themselves are shared (usePicked); this adds the bar's actions and the bulk merge.
 import { type Ref, computed, ref, watch } from 'vue';
-import { PERSON_CALLS, type TaskSummary } from '../../api';
+import { PERSON_CALLS } from '../../api/client';
+import type { TaskSummary } from '../../api/types';
 import { errorMessage } from '../../../../daemon/src/domain/shared/index.ts';
 import { type BulkAction, type BulkEdit, type BulkResult, bulkActions, bulkMessage } from '../../lib/queue/bulk';
 import { canStartMerge } from '../../lib/task/task-view';

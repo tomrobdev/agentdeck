@@ -12,4 +12,4 @@ How-to only. The rule statements (pure, no imports from other layers) are in CLA
 - Take the clock, random ids and anything else impure as arguments (`time.ts` has the shared helpers).
 - Use the words in CLAUDE.md's Domain language in names and in user-facing text built here.
 - A test calls the function with plain values; no database, no fakes. Name the rule it checks.
-- Changing a type used by a table or by `api/contract.ts`: follow the `model-change` skill.
+- Changing a type used by a table or by `api/contract/`: follow the `model-change` skill.

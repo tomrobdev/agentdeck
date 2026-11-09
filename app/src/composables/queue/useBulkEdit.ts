@@ -1,5 +1,6 @@
 // An edit made to several tasks through the same calls as one task's edit: the bar's Edit menu, and the edit keys (p, M, l).
-import { type TaskSummary, api } from '../../api';
+import { api } from '../../api/client';
+import type { TaskSummary } from '../../api/types';
 import { errorMessage } from '../../../../daemon/src/domain/shared/index.ts';
 import { type BulkEdit, type BulkResult, bulkEditMessage, planBulkEdit } from '../../lib/queue/bulk';
 import { useActions } from '../shared/useActions';

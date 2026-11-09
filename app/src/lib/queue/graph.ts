@@ -1,7 +1,8 @@
 // The queue's graph mode: which tasks form the graph and where each is drawn. Pure; the drawing is components/queue/GraphView.vue.
 // Tasks are layered by longest path from a root (left to right: a task sits right of everything it depends on), ordered within a
 // layer by the mean position of their neighbours, with a few sweeps to cut crossings. Separate graphs are stacked top to bottom.
-import type { LinkKind, TaskSummary } from '../../../../daemon/src/api/contract.ts';
+import type { LinkKind } from '../../../../daemon/src/domain/work/index.ts';
+import type { TaskSummary } from '../../../../daemon/src/api/contract/work.ts';
 import { isMerged, isStuck } from '../../../../daemon/src/domain/work/index.ts';
 
 export interface GraphEdge {

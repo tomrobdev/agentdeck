@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { type MergeResult, type TaskDetail, api, describePrRetry } from '../../api';
+import { api } from '../../api/client';
+import { describePrRetry } from '../../api/format';
+import type { MergeResult, TaskDetail } from '../../api/types';
 import { canFixChecks, canOpenPr, canStartMerge, isReview, personEvents } from '../../lib/task/task-view';
 import { useAction, useActions } from '../../composables/shared/useActions';
 import { useOpenNext } from '../../composables/queue/useOpenNext';

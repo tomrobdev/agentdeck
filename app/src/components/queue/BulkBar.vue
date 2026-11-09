@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import type { TaskSummary } from '../../api';
+import type { TaskSummary } from '../../api/types';
 import { useActions } from '../../composables/shared/useActions';
 import type { BulkAction, BulkEdit } from '../../lib/queue/bulk';
 import type { BulkEditValue } from '../../composables/queue/useBulkEdit';

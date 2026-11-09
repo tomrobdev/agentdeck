@@ -1,5 +1,5 @@
 // A run's log as a transcript: results paired with their calls, subagent entries nested, runs of reads folded.
-import type { LogEntry } from '../../../../daemon/src/api/contract.ts';
+import type { LogEntry } from '../../../../daemon/src/api/contract/files.ts';
 
 type Of<K extends LogEntry['kind']> = Extract<LogEntry, { kind: K }>;
 export type ToolEntry = Of<'tool'>;

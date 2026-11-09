@@ -6,7 +6,8 @@
 // - facts: muted text, joined by " · ".
 // Free of the dashboard's other modules so the daemon's tests can import it (daemon/test/dashboard/task/task-badges.test.ts). What the
 // daemon decides (needs, a conflict, auto-merge, merge requests) comes from the API; this only picks and words it.
-import type { AutoMergeView, TaskSummary } from '../../../../daemon/src/api/contract.ts';
+import type { TaskSummary } from '../../../../daemon/src/api/contract/work.ts';
+import type { AutoMergeView } from '../../../../daemon/src/api/contract/landing.ts';
 import { isReview } from '../../../../daemon/src/domain/work/index.ts';
 import { plural } from '../../../../daemon/src/domain/shared/index.ts';
 import { describeLive, describeMergeRequest, describeSync, describeWait } from '../../api/format.ts';
