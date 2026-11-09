@@ -3,7 +3,7 @@
 
 export type ExtraCheck = {
   /** The check's name, as printed. */
-  name: 'crash test' | 'check:rust';
+  name: 'crash test' | 'check:rust' | 'test:ui';
   /** The command and its arguments, run from the repo root. */
   command: string[];
   /** The path prefixes that call for it. */
@@ -27,6 +27,8 @@ export const EXTRA_CHECKS: ExtraCheck[] = [
     ],
   },
   { name: 'check:rust', command: ['pnpm', 'check:rust'], prefixes: ['app/src-tauri/'] },
+  // The dashboard's end-to-end tests (app/e2e/): Playwright against a seeded scratch daemon.
+  { name: 'test:ui', command: ['pnpm', 'test:ui'], prefixes: ['app/src/', 'app/e2e/', 'app/playwright.config.ts'] },
 ];
 
 export type ChosenCheck = ExtraCheck & {
