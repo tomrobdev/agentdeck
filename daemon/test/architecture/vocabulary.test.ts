@@ -46,7 +46,7 @@ const ALLOWED: Allowed[] = [
   { file: 'db/sql.ts', line: /caller already holds/, why: PLAIN },
   { file: 'adapters/git/worktrees.ts', line: /branch holds all its work|still hold conflict markers/, why: PLAIN },
   { file: 'app/src/lib/shared/forms.ts', line: /panels only hold the form/, why: PLAIN },
-  { file: 'app/src/pages/TaskPage.vue', line: /Dialogs hold the Escape key/, why: PLAIN },
+  { file: 'app/src/components/work/task/TaskView.vue', line: /Dialogs hold the Escape key/, why: PLAIN },
   { file: 'app/src/composables/work/files/useFilePatches.ts', line: /only hold what/, why: PLAIN },
   { file: 'app/src/lib/work/queue/queue-display.ts', line: /Done now, which holds the finished history/, why: PLAIN },
   { file: 'application/scheduler/scheduler.ts', line: /Hold a `caffeinate/, why: PLAIN },
