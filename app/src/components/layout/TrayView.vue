@@ -14,7 +14,8 @@ import type { Status, TaskSummary } from '../../api/types';
 import { createActions, trackPending } from '../../composables/shared/useActions';
 import { useChangeStream } from '../../composables/shared/useChangeStream';
 import { isNative, openFromTray, startDaemon } from '../../platform/native';
-import { type Route, hashFor, taskUrl } from '../../router';
+import { taskUrl } from '../../lib/shared/app-url';
+import { type Route, hashFor } from '../../router';
 import AppProvider from '../ui/AppProvider.vue';
 import Chip from '../ui/Chip.vue';
 

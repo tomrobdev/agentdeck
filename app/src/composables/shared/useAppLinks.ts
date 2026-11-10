@@ -3,9 +3,10 @@ import { onBeforeUnmount, onMounted } from 'vue';
 import { GO_KEYS } from '../../lib/shared/hotkeys';
 import { isPaletteKey } from '../../lib/shared/shell';
 import { isNative, onOpenUrl } from '../../platform/native';
-import { parseAppUrl } from '../../router';
+import { parseAppUrl } from '../../lib/shared/app-url';
+import { router } from '../../router';
 import { useHotkeys } from './useHotkeys';
-import { goPage, goTo, openPanel, showKeys, togglePalette } from './useShell';
+import { closePanel, goTo, openPanel, showKeys, togglePalette } from './useShell';
 
 /** An agentdeck:// link opened from outside (the shell's open_in_dashboard): a page, a panel or the palette. */
 function openLink(url: string) {
@@ -14,7 +15,10 @@ function openLink(url: string) {
   if (to.name === 'palette') togglePalette();
   else if (to.name === 'new') openPanel('new');
   else if (to.name === 'panel') openPanel(to.panel);
-  else goPage(to);
+  else {
+    closePanel();
+    void router.push(to);
+  }
 }
 
 // In the desktop app the View menu owns ⌘K (it arrives as agentdeck://palette); this handler is for the plain browser.

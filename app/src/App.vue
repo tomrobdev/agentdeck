@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
+import { RouterView } from 'vue-router';
 import { isOffline, refreshAll } from './api/http';
 import { liveStatusQuery } from './api/operations';
 import { tasksQuery } from './api/work';
@@ -15,10 +16,6 @@ import { useChangeStream } from './composables/shared/useChangeStream';
 import { usePause } from './composables/shared/usePause';
 import { useToasts } from './composables/shared/useToasts';
 import { provideApprovals } from './composables/work/useApprovals';
-import InsightsPage from './pages/InsightsPage.vue';
-import QueuePage from './pages/QueuePage.vue';
-import TaskPage from './pages/TaskPage.vue';
-import { route } from './router';
 
 // The frame: providers, header, the page the route names, status bar and overlays. Each page reads its own queries.
 const statusQ = useQuery(liveStatusQuery());
@@ -42,9 +39,7 @@ const { status, pausing, togglePause } = usePause(actions);
     <div class="flex h-screen flex-col">
       <AppHeader :status="status" :offline="offline" />
       <OfflineScreen v-if="offline" @started="() => void statusQ.refetch()" />
-      <TaskPage v-else-if="route.current.name === 'task'" :id="route.current.id" :tab="route.current.tab" :query="route.current.query" />
-      <InsightsPage v-else-if="route.current.name === 'insights'" />
-      <QueuePage v-else />
+      <RouterView v-else />
       <StatusBar :status="status" :tasks="tasksQ.data.value ?? []" :offline="offline" :busy="pausing" @toggle="togglePause" />
       <Overlays />
     </div>

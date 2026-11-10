@@ -77,10 +77,20 @@ const ALL_BELOW_PAGES = [...CONTEXT_LAYERS.flatMap((l) => areasOf(l.layer)), 'ap
 export const MAY_IMPORT: Record<string, AreaRule> = {
   api: { areas: ['api'], why: 'api/ is the base: types, calls and query options' },
   platform: { areas: ['platform', 'lib/shared'], why: 'platform/ is the Tauri shell, build commit and theme' },
-  router: { areas: ['api', 'lib/shared'], why: 'the router is below the composables and components' },
+  router: {
+    areas: ['api', 'lib/shared', 'pages', 'components/layout'],
+    why: "the router names each route's page (and the tray window), and is otherwise below the composables and components",
+  },
   ...contextRules(),
   'components/layout': { areas: ['components/layout', ...ALL_BELOW_PAGES], why: "layout/ is the app's frame, so it combines contexts" },
   pages: { areas: ['pages', 'components/layout', ...ALL_COMPONENTS, ...ALL_BELOW_PAGES], why: 'pages/ combine the contexts per route' },
+};
+
+export const PACKAGE_AREAS: Record<string, AreaRule> = {
+  'vue-router': {
+    areas: ['router', 'App.vue', 'main', ...areasOf('composables'), ...ALL_COMPONENTS, 'components/layout'],
+    why: 'the route table is in router.ts, and pages get their props from it rather than reading the route',
+  },
 };
 
 const APP_SRC = join(import.meta.dirname, '../../../app/src');

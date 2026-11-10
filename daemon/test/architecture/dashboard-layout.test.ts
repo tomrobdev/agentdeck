@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import ts from 'typescript';
-import { MAY_IMPORT, areaOf } from '../../scripts/lib/dashboard-layout.ts';
+import { MAY_IMPORT, PACKAGE_AREAS, areaOf } from '../../scripts/lib/dashboard-layout.ts';
 import { type Source, lineOf, parseSource, readSources } from '../../scripts/lib/sources.ts';
 import { TASK_STATUSES } from '../../src/domain/work/lifecycle/lifecycle.ts';
 
@@ -23,6 +23,10 @@ export function layoutViolations(sources: Source[]): string[] {
   const found: string[] = [];
   for (const s of sources) {
     const area = areaOf(s.path);
+    for (const i of s.imports) {
+      const pkg = PACKAGE_AREAS[i.spec];
+      if (pkg && !pkg.areas.includes(area)) found.push(`${s.path}:${i.line} imports ${i.spec}: ${pkg.why}`);
+    }
     if (ENTRY.includes(s.path) || area === 'styles') continue;
     const rule = MAY_IMPORT[area];
     if (!rule) {
@@ -89,6 +93,15 @@ test('[dashboard-layout] the layout check fails when a component imports from pa
   assert.equal(layoutViolations([task]).length, 1, 'a context component importing a page');
   const app = parseSource('App.vue', vue('./pages/TaskPage.vue'));
   assert.deepEqual(layoutViolations([app]), []);
+});
+
+test('[dashboard-layout] vue-router is imported only by the router, the entry files, composables and components', () => {
+  const line = `import { useRoute } from 'vue-router';`;
+  const use = (path: string) => parseSource(path, path.endsWith('.vue') ? `<script setup lang="ts">\n${line}\n</script>` : line);
+  for (const path of ['router.ts', 'App.vue', 'main.ts', 'composables/work/useX.ts', 'components/ui/X.vue', 'components/layout/X.vue'])
+    assert.deepEqual(layoutViolations([use(path)]), [], path);
+  for (const path of ['pages/TaskPage.vue', 'lib/shared/x.ts', 'api/work.ts', 'platform/theme.ts'])
+    assert.equal(layoutViolations([use(path)]).length, 1, path);
 });
 
 /** The names a file exports that it imports: `export { a } from './x'`, and `export { a }` or `export type { a }` of an imported `a`. */
