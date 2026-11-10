@@ -9,7 +9,6 @@ export function useChangeStream() {
   let lastRev: number | null = null;
 
   const source = new EventSource(`${API_BASE}/api/events`);
-  // Every (re)open: a daemon restart reconnects, and writes may have been missed while it was down.
   source.onopen = refresh;
   source.addEventListener('rev', (e) => {
     let rev: number;

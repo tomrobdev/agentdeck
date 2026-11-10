@@ -9,7 +9,6 @@ import { readCounts } from '../../src/db/mappers.ts';
 import { asRepoId, asTaskId } from '../../src/domain/shared/index.ts';
 
 const repo = asRepoId(1);
-// 2026-11-02 and 2026-11-09 are Mondays: two weeks.
 const W1 = '2026-11-03 10:00:00';
 const W2 = '2026-11-10 10:00:00';
 
@@ -51,7 +50,6 @@ test('counts failing checks by step and failed runs by how they ended, over two 
         },
       }),
       task({ pr_checks_opened: { total: 2, failing: 1, pending: 0, failures: [{ name: 'CI / check', step: 'Coverage' }] } }),
-      // A count stored before steps were kept: its failing checks are on an unknown step.
       task({
         created_at: W2,
         pr_checks_opened: { total: 2, failing: 2, pending: 0 },
@@ -65,7 +63,7 @@ test('counts failing checks by step and failed runs by how they ended, over two 
       run({ task: 1, attempt: 2, outcome: 'done', task_status: 'done' }),
       run({ task: 2, run_end: 'max_turns', last_test_failed: true, outcome: 'blocked', task_status: 'blocked' }),
       run({ task: 3, started_at: W2, run_end: 'error', last_test_failed: null }),
-      run({ task: 4, started_at: W2 }), // from before ends were kept
+      run({ task: 4, started_at: W2 }),
       run({ task: 5, started_at: W2, run_end: 'ended', last_test_failed: false }),
       run({ task: 5, started_at: W2, attempt: 2, outcome: 'done', task_status: 'done' }),
     ],

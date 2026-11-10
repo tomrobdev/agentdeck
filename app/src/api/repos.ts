@@ -15,7 +15,6 @@ export const reposApi = {
   archiveRepo: (id: number) => post<Repo>(`/api/repos/${id}/archive`),
   unarchiveRepo: (id: number) => post<Repo>(`/api/repos/${id}/unarchive`),
   repoDeletion: (id: number) => get<RepoDeletion>(`/api/repos/${id}/deletion`),
-  /** Local only: `leftover` names files that couldn't be removed. */
   deleteRepo: (id: number) => del<RepoDeleted>(`/api/repos/${id}`),
 };
 

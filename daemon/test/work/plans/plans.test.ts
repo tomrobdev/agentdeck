@@ -112,7 +112,6 @@ const steps3 = (a: string, b: string, c: string, extra = '') => `<html data-agen
 
 test('mergePlanSteps takes only the linked steps from the plan file', () => {
   const stored = steps3('todo', 'todo', 'todo');
-  // The worker marked every step and changed the summary; only step a is its own.
   const written = steps3('done', 'done', 'done', ' changed').replace('<h2>A</h2>', '<h2>A</h2><p>Note on a</p>');
   const merged = mergePlanSteps(stored, written, ['a'], stored);
   assert.deepEqual(
@@ -122,12 +121,10 @@ test('mergePlanSteps takes only the linked steps from the plan file', () => {
   assert.match(merged, /Note on a/);
   assert.match(merged, /<p data-plan-summary>Summary<\/p>/, 'the rest stays as stored');
   assert.match(merged, /<!-- <section data-plan-step id="a" data-status="skipped">/, 'a commented-out step is left alone');
-  // Every step: only steps with an id are saved back.
   assert.deepEqual(
     parsePlan(mergePlanSteps(stored, written, null, stored))!.steps.map((s) => s.status),
     ['done', 'done', 'todo'],
   );
-  // A file that is not a plan, or lacks the step, changes nothing.
   assert.equal(mergePlanSteps(stored, '<html>gone</html>', null, stored), stored);
   assert.equal(
     mergePlanSteps(stored, written.replace(/<section data-plan-step id="a" data-status="done">[\s\S]*?<\/section>/, ''), ['a'], stored),
@@ -136,7 +133,6 @@ test('mergePlanSteps takes only the linked steps from the plan file', () => {
 });
 
 test('mergePlanSteps saves only the steps the run changed from the copy it was given', () => {
-  // The run was given a and b todo; meanwhile b was finished elsewhere. The run changed only a.
   const given = steps3('todo', 'todo', 'todo');
   const stored = steps3('todo', 'done', 'todo');
   const written = steps3('done', 'todo', 'todo');
@@ -151,7 +147,6 @@ test('inserting a step without an id shifts and loses none of the others', () =>
   const x = '<section data-plan-step data-status="todo"><h2>X</h2></section>';
   const y = '<section data-plan-step data-status="todo"><h2>Y</h2></section>';
   const stored = plan(`<section data-plan-step id="a" data-status="todo"><h2>A</h2></section>${x}${y}`);
-  // The worker finished a and inserted a new step, without an id, before X.
   const written = plan(
     `<section data-plan-step id="a" data-status="done"><h2>A</h2></section><section data-plan-step data-status="todo"><h2>New</h2></section>${x}${y}`,
   );
@@ -184,7 +179,6 @@ test('planAfterRun keeps the whole file only for an own plan no one else follows
 
 test('two tasks on one plan, running at once, each write back only their own steps', () => {
   const stored = steps3('todo', 'todo', 'todo');
-  // Both runs got the same plan file and marked every step; they give it back one after the other.
   const fromA = steps3('done', 'done', 'blocked');
   const fromB = steps3('blocked', 'done', 'done');
   const afterA = mergePlanSteps(stored, fromA, ['a'], stored);
@@ -230,7 +224,6 @@ test('the store keeps a task’s own plan under its numbered name, replacing it 
   db.close();
 });
 
-// A real repo, the API, the CLI and the use cases.
 const db = openDb(join(home, 'agentdeck.db'));
 const server = await startApi({ db, port: 0 });
 const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
@@ -252,10 +245,8 @@ const head = git('rev-parse', 'HEAD');
 
 const repo = db.addRepo({ name: 'demo', path: repoPath, base_branch: 'main' });
 const otherRepo = db.addRepo({ name: 'other', path: join(home, 'other'), base_branch: 'main' });
-/** A task's plan link as [task, steps]. */
 const link = (t: { plan: { task: number; steps: string[] | null } | null }) => [t.plan?.task ?? null, t.plan?.steps ?? null];
 
-// A plan file outside the repo, its steps a and b.
 const elsewhere = mkdtempSync(join(tmpdir(), 'agentdeck-plan-file-'));
 const planFile = join(elsewhere, 'x.html');
 writeFileSync(planFile, PLAN.replace('id="s1"', 'id="a"').replace("id='s2'", "id='b'"));
@@ -297,7 +288,6 @@ test('agentdeck add --plan <file> stores the plan under its numbered name, with 
   assert.equal(shown.status, 0, shown.stderr);
   assert.match(shown.stdout, new RegExp(`plan +${name} \\(steps a\\)`));
 
-  // A task number links that task's plan.
   const follower = cli('add', 'Then cache', '--repo', 'demo', '--plan', `#${id}`, '--steps', 'b');
   assert.equal(follower.status, 0, follower.stderr);
   const fid = Number(/task #(\d+)/.exec(follower.stdout)![1]);
@@ -321,7 +311,6 @@ test('add links a task to another task’s plan by number, and refuses what does
 
   const some = await addTask(db, { repo: 'demo', prompt: 'do b', plan_task: owner.id, plan_steps: 'b' });
   assert.deepEqual(link(some), [owner.id, ['b']]);
-  // Following a task that follows a plan follows that plan.
   const viaFollower = await addTask(db, { repo: 'demo', prompt: 'do a', plan_task: some.id, plan_steps: ['a'] });
   assert.equal(viaFollower.plan?.task, owner.id);
   const every = await addTask(db, { repo: 'demo', prompt: 'do it all', plan_task: owner.id });
@@ -330,7 +319,6 @@ test('add links a task to another task’s plan by number, and refuses what does
   const viaApi = await call('/api/tasks', { repo: 'demo', prompt: 'api', plan_task: owner.id, plan_steps: ['a'] });
   assert.equal(viaApi.status, 200);
   assert.deepEqual([viaApi.body.plan_task, viaApi.body.plan_steps], [owner.id, '["a"]']);
-  // The follower's detail shows the plan it follows, read from the task it belongs to.
   const detail = await call(`/api/tasks/${viaApi.body.id}`);
   assert.deepEqual(
     detail.body.plans.map((p: any) => [p.task_id, p.name]),
@@ -373,7 +361,6 @@ test('edit sets, changes and clears the plan link', async () => {
   const cleared = await editTask(db, t.id, { plan_task: null });
   assert.deepEqual(link(cleared), [null, null]);
 
-  // A plan file becomes the task's own plan.
   const own = await editTask(db, t.id, { plan_html: PLAN, plan_steps: 's2' });
   assert.deepEqual(link(own), [t.id, ['s2']]);
   assert.equal(db.ownPlan(t.id)!.name, `${t.id}-speed-up-the-cache.html`);
@@ -422,7 +409,7 @@ test('attach refuses a running task: its run’s end would write the old plan ba
 });
 
 test('replacing a plan that drops a step a follower links is refused, naming the follower', async () => {
-  const html = readFileSync(planFile, 'utf8'); // steps a and b
+  const html = readFileSync(planFile, 'utf8');
   const owner = await addTask(db, { repo: 'demo', prompt: 'owner', plan_html: html, plan_steps: 'a' });
   const follower = await addTask(db, { repo: 'demo', prompt: 'follows b', plan_task: owner.id, plan_steps: 'b' });
   const finished = await addTask(db, { repo: 'demo', prompt: 'did b', plan_task: owner.id, plan_steps: 'b' });
@@ -433,9 +420,7 @@ test('replacing a plan that drops a step a follower links is refused, naming the
   assert.throws(() => attachPlan(db, owner.id, { html: renamed }), refused);
   await assert.rejects(editTask(db, owner.id, { plan_html: renamed, plan_steps: 'a' }), refused);
   assert.equal(db.ownPlan(owner.id)!.html, html, 'the plan is untouched');
-  // attach checks the owner's own linked steps too (edit checks the steps it names).
   assert.throws(() => attachPlan(db, owner.id, { html: html.replace('id="a"', 'id="a2"') }), new RegExp(`#${owner.id} \\(a\\)`));
-  // A plan that keeps the linked ids replaces it.
   const kept = html.replace('Speed up the &amp; cache', 'Kept ids');
   assert.equal(attachPlan(db, owner.id, { html: kept }).name, `${owner.id}-kept-ids.html`);
 });

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { CMUX_TEMPLATE, EDITOR_PRESETS } from '../../../lib/runs/terminal';
 
-// The commands that open a terminal and an editor, kept on this computer (the app only).
 const terminal = defineModel<string>('terminal', { required: true });
 const editor = defineModel<string>('editor', { required: true });
 </script>

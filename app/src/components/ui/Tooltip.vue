@@ -1,9 +1,6 @@
 <script setup lang="ts">
 import { TooltipContent, TooltipPortal, TooltipRoot, TooltipTrigger } from 'reka-ui';
 
-// A hover and focus hint for text of more than a line (new lines are kept). The slot is the trigger and gets the hint's
-// handlers, so it must be one element or component that takes attributes, and the hint is also its accessible description.
-// A one-line hint stays a plain `title=`. Needs the TooltipProvider in AppProvider.
 defineProps<{ text: string; side?: 'top' | 'bottom' }>();
 </script>
 

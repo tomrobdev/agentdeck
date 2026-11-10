@@ -28,7 +28,6 @@ const counts = { total: 2, failing: 1, pending: 0 };
 const NO_PR = prFields(null);
 const URL = 'https://x/pull/1';
 
-/** The ways a task can have each group of a PR's columns, which vary independently of its state and url. */
 const METHODS: Partial<PrFields>[] = [{}, { merge_method: 'rebase' }];
 const CHECKS: Partial<PrFields>[] = [
   {},
@@ -49,14 +48,11 @@ const MERGE_REQUESTS: Partial<PrFields>[] = [
   { merge_requested_at: '2026-11-01 10:00:00', merge_request_method: 'merge', merge_request_check: conflict },
 ];
 
-/** Every combination of the groups above. */
 const records = (): Partial<PrFields>[] =>
   METHODS.flatMap((a) => CHECKS.flatMap((b) => AUTO_MERGE.flatMap((c) => MERGE_REQUESTS.map((d) => ({ ...a, ...b, ...c, ...d })))));
 
-/** A task's row with these PR fields stored as their columns are. Its other columns don't bear on `pr`. */
 const rowOf = (fields: PrFields) => ({ needs: null, question: null, plan_steps: null, auto_merge: null, ...stored(fields) }) as TaskRow;
 
-/** The PR columns of a row. */
 const columnsOf = (row: TaskRow) => Object.fromEntries(Object.keys(NO_PR).map((k) => [k, row[k as keyof TaskRow]]));
 
 test('every combination of a PR on GitHub maps from its columns to pr and back', () => {

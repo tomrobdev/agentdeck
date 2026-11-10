@@ -1,5 +1,4 @@
 <script setup lang="ts">
-// The queue's footer: how many tasks the filters show, and the keys.
 defineProps<{ shown: number; total: number }>();
 </script>
 

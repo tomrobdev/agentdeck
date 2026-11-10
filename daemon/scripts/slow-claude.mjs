@@ -1,8 +1,5 @@
 #!/usr/bin/env node
 // Slow fake `claude -p` for crash tests. Logs start/end to $AGENTDECK_HOME/fake-events.jsonl.
-// FAKE_STREAM=1 emits a stream event every 300ms (like real claude); otherwise silent until the end.
-// Started on a merge in progress (a resolve run), it settles the conflicts and commits the merge; otherwise (a work run)
-// it commits a file of its own. Each event says which (`run`).
 import { execFileSync } from 'node:child_process';
 import { appendFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';

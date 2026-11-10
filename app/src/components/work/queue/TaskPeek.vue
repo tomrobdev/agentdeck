@@ -18,9 +18,6 @@ import StatusPill from '../../ui/status/StatusPill.vue';
 import TaskBadges from '../../ui/status/TaskBadges.vue';
 import TaskStatusLine from '../../ui/status/TaskStatusLine.vue';
 
-// A look at one task beside the list: what a person needs to decide on it without opening it, and the actions for its stage.
-// Properties, links, plan and Goal always; then what the stage adds (the check, the wait, the live log, why it stopped, the
-// auto-merge check). Actions go to the queue's own handlers, so they carry its keys and the approve gate.
 const props = defineProps<{ id: number }>();
 const emit = defineEmits<{ open: []; close: []; act: [kind: PersonEvent, id: number]; merge: [id: number]; peek: [id: number] }>();
 

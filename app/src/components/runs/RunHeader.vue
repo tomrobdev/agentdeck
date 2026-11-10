@@ -4,8 +4,6 @@ import { type RunHeader, clock } from '../../lib/runs/run-live';
 import Progress from '../ui/status/Progress.vue';
 import Switch from '../ui/form/Switch.vue';
 
-// The top of a live run's log: turns used of the most, the current tool and how long it has run, the time since the run began, and the
-// Follow switch. Once the run has ended it shows how it ended instead.
 const props = defineProps<{ header: RunHeader; following: boolean }>();
 const emit = defineEmits<{ follow: [on: boolean] }>();
 const turns = computed(() =>

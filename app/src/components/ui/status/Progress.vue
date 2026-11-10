@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ProgressIndicator, ProgressRoot } from 'reka-ui';
 
-// A bar filled to value/max. The default slot is drawn over the bar (a marker); indicatorClass colours the fill.
 const props = withDefaults(defineProps<{ value: number; max?: number; label: string; indicatorClass?: string }>(), { max: 100 });
 </script>
 

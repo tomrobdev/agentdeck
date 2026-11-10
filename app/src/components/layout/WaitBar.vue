@@ -5,7 +5,6 @@ import type { Status } from '../../api/types';
 import { oneLine, plural } from '../../../../daemon/src/domain/shared/index.ts';
 import { openPanel } from '../../composables/shared/useShell';
 
-// What queued tasks wait for, each with the action that ends the wait. Empty when nothing keeps work waiting.
 const props = defineProps<{ status: Status | null; busy: boolean }>();
 const emit = defineEmits<{ resume: []; resumeRepo: [id: number] }>();
 

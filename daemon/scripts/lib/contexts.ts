@@ -1,12 +1,8 @@
-// rule:contexts. Each folder under domain/ is a bounded context with an `index.ts` of named exports. Everything outside the
-// context (other contexts, the layers above, the dashboard) imports it only through that file.
 import ts from 'typescript';
 import { type Source, exportedNames } from './sources.ts';
 
-/** The context a path under src/ belongs to (`domain/work/read/files.ts` is in `work`), or null outside domain/. */
 export const contextOf = (path: string): string | null => path.match(/^domain\/([^/]+)\//)?.[1] ?? null;
 
-/** The imports of a context's files from outside it that do not go through its `index.ts`, as `file:line` messages. */
 export function checkContextImports(sources: Source[], dashboard: Source[] = []): string[] {
   const found: string[] = [];
   const check = (s: Source, own: string | null, toDomain: (target: string) => string | null) => {
@@ -18,13 +14,11 @@ export function checkContextImports(sources: Source[], dashboard: Source[] = [])
     }
   };
   for (const s of sources) check(s, contextOf(s.path), (t) => t);
-  // The dashboard reaches the daemon with paths such as ../../../daemon/src/domain/work/plan.ts.
   for (const s of dashboard)
     check(s, null, (t) => (t.includes('daemon/src/') ? t.slice(t.indexOf('daemon/src/') + 'daemon/src/'.length) : null));
   return found;
 }
 
-/** The contexts without an `index.ts`, and the index files that use `export *`, a default export or a declaration of their own. */
 export function checkContextIndexes(sources: Source[]): string[] {
   const found: string[] = [];
   const contexts = new Set(sources.map((s) => contextOf(s.path)).filter((c): c is string => c !== null));
@@ -45,7 +39,6 @@ export function checkContextIndexes(sources: Source[]): string[] {
   return found;
 }
 
-/** The names an index exports that nothing outside its context imports: remove them. */
 export function checkUnusedIndexExports(sources: Source[], dashboard: Source[] = []): string[] {
   const found: string[] = [];
   const imported = new Map<string, Set<string>>();

@@ -82,7 +82,6 @@ test('callDaemon against a stopped port dies saying the daemon is not running', 
   const printed: string[] = [];
   console.error = (m: string) => void printed.push(m);
   try {
-    // Port 1 is never listening; the refusal comes back as an error event, whose handler dies.
     const outcome = await new Promise<string>((resolve) => {
       process.exit = ((code?: number) => resolve(`exit ${code}`)) as never;
       callDaemon('POST', '/api/tasks/1/sync', {}, 1).then(() => resolve('answered'));

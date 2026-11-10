@@ -1,5 +1,3 @@
-// The PR refresh's verdict on one open PR (refreshVerdict): the check that stands, where the PR goes, whether it is read
-// again soon, and whether a person's merge request is dropped.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { AUTO_MERGE_LABEL } from '../../../src/domain/landing/merge/auto-merge.ts';
@@ -38,7 +36,6 @@ const facts: AutoMergeFacts = {
   paused: null,
 };
 
-/** The verdict in short: the kept checks' verdicts, the drop, the place and polling. */
 const brief = (v: ReturnType<typeof refreshVerdict>) => ({
   auto: v.auto_merge_check?.verdict ?? null,
   request: v.request_check?.verdict ?? null,

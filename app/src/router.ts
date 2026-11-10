@@ -1,5 +1,3 @@
-// Hash routes: `#/` is the queue (`#/?states=a,b` opens it filtered to those states), `#/tasks/16/<tab>?path=…&L=10-20` a
-// task page, `#/tray` the small window under the tray icon (its own root, see main.ts). No router dependency.
 import { reactive } from 'vue';
 
 export type TaskTab = 'overview' | 'runs' | 'changes' | 'code';
@@ -24,11 +22,6 @@ export function parseHash(hash: string): Route {
   return { name: 'task', id: Number(m[1]), tab, query: Object.fromEntries(new URLSearchParams(qs)) };
 }
 
-/**
- * Where an `agentdeck://` link goes: `tasks/<id>` and `tasks/<id>/<tab>` a task page, `new` the New task form, an empty
- * path or `queue` the queue, `insights` the scorecard, `settings`, `repos` and `daemon` their panels, `palette` the command
- * palette. Anything else (another scheme, a non-numeric id, an unknown tab) is null.
- */
 export type AppLink = Route | { name: 'new' } | { name: 'palette' } | { name: 'panel'; panel: 'settings' | 'repos' | 'daemon' };
 
 export function parseAppUrl(url: string): AppLink | null {
@@ -47,7 +40,6 @@ export function parseAppUrl(url: string): AppLink | null {
   return { name: 'task', id: Number(parts[1]), tab: tab as TaskTab, query: {} };
 }
 
-/** The link that opens a task from outside the dashboard. */
 export const taskUrl = (id: number) => `agentdeck://tasks/${id}`;
 
 export function hashFor(route: Route): string {
@@ -62,7 +54,6 @@ export const route = reactive<{ current: Route }>({ current: parseHash(location.
 
 window.addEventListener('hashchange', () => (route.current = parseHash(location.hash)));
 
-/** Go to a route; `replace` swaps the history entry, for changes like a line selection. */
 export function go(to: Route, opts: { replace?: boolean } = {}): void {
   const hash = hashFor(to);
   if (hash === location.hash) return;

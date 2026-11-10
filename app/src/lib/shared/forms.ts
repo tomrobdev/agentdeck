@@ -1,5 +1,3 @@
-// How the repo editor and the settings form map to and from what the API sends. Pure, so the
-// panels only hold the form's state.
 import type { MergeMethod, NotifyKind, RepoDetail, RepoPatch, Settings, SettingsPatch } from '../../api/types';
 import { DEFAULT_AUTO_MERGE_SKIP } from '../../../../daemon/src/domain/landing/index.ts';
 import { parseToolRules } from '../../../../daemon/src/domain/repos/index.ts';
@@ -15,18 +13,13 @@ export type RepoForm = {
   autoUnblock: boolean;
   autoMerge: boolean;
   autoMergeMaxLines: number;
-  /** Path prefixes, comma-separated. */
   autoMergeSkip: string;
   sandbox: boolean;
-  /** Hosts, comma-separated. */
   network: string;
-  /** The model a new task of the repo takes when it names none; '' follows the default_model setting. */
   model: string;
-  /** The repo's own tool rules, one per line; empty = the detected ones. */
   tools: string;
 };
 
-/** The models a model picker offers: the aliases, and `current` too when it is a full claude-… id set elsewhere. */
 export const modelChoices = (current: string | null | undefined): string[] =>
   current && !MODELS.includes(current) ? [...MODELS, current] : MODELS;
 
@@ -66,7 +59,6 @@ export function toRepoPatch(f: RepoForm): RepoPatch {
   };
 }
 
-// Edited as whole percentages, stored as 0..1.
 export type SettingsForm = {
   max_concurrent: number;
   five_hour_max: number;

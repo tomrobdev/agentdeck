@@ -9,14 +9,12 @@ import { depsAreDev, depsPackages, withHost } from '../../../lib/work/task-view'
 import { useAction, useActions } from '../../../composables/shared/useActions';
 import ConfirmDialog from '../../ui/ConfirmDialog.vue';
 
-// What a blocked task's worker said it needs, with the one action that clears it.
 const props = defineProps<{ task: TaskDetail; needs: Needs }>();
 const emit = defineEmits<{ retry: [] }>();
 const { flash } = useActions();
 const { pending, run: act } = useAction();
 const queryClient = useQueryClient();
 
-// Only the toolchain (deps) and the network setting (host) need the repo.
 const repoQ = useQuery(computed(() => ({ ...repoQuery(props.task.repo_id), enabled: props.needs.kind !== 'edit' })));
 const repo = computed(() => repoQ.data.value ?? null);
 watch(
@@ -34,7 +32,6 @@ async function run(fn: () => Promise<unknown>) {
 
 const install = () => run(() => workApi.installNeeds(props.task.id));
 const host = () => props.needs.items[0] ?? '';
-// Allow the host on the repo, then retry the task.
 const allow = () =>
   run(async () => {
     const r = repo.value ?? (await queryClient.fetchQuery(repoQuery(props.task.repo_id)));

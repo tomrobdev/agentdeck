@@ -26,12 +26,11 @@ export function parsePatch(patch: string): Hunk[] {
       hunks.push(cur);
       continue;
     }
-    if (!cur || line.startsWith('\\')) continue; // file headers before the first hunk; "\ No newline at end of file"
+    if (!cur || line.startsWith('\\')) continue;
     const mark = line[0];
     const text = line.slice(1);
     if (mark === '+') cur.lines.push({ type: 'add', old: null, new: newNo++, text });
     else if (mark === '-') cur.lines.push({ type: 'del', old: oldNo++, new: null, text });
-    // git writes an empty context line as a single space; a bare "" is only the patch's trailing newline.
     else if (mark === ' ') cur.lines.push({ type: 'ctx', old: oldNo++, new: newNo++, text });
   }
   return hunks;
@@ -42,7 +41,6 @@ export interface SplitRow {
   right: DiffLine | null;
 }
 
-/** Side-by-side rows: context on both sides, and each run of deletions paired with the additions after it. */
 export function splitRows(lines: DiffLine[]): SplitRow[] {
   const rows: SplitRow[] = [];
   let i = 0;
@@ -62,7 +60,6 @@ export function splitRows(lines: DiffLine[]): SplitRow[] {
   return rows;
 }
 
-/** Where a comment on a diff line is anchored: deleted lines count on the old file, everything else on the new one. */
 export function anchorOf(l: DiffLine): { side: 'old' | 'new'; line: number } {
   return l.type === 'del' ? { side: 'old', line: l.old! } : { side: 'new', line: l.new! };
 }

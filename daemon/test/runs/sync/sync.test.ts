@@ -1,5 +1,3 @@
-// Keeping task branches up to date: a real temporary git repo with a conflicting change on main, a fake claude for the
-// resolve run, and a fake github adapter.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
@@ -89,7 +87,6 @@ beforeEach(() => {
 });
 
 let n = 0;
-/** A done task with an open PR whose branch changes shared.txt, the way an agent's work would. */
 async function doneTask(extra = ''): Promise<{ id: TaskId; wt: string; branch: string }> {
   n++;
   const task = db.addTask({ repo_id: repo.id, title: `Task ${n}`, prompt: `FAKE_DONE ${extra}`.trim() });
@@ -104,7 +101,6 @@ async function doneTask(extra = ''): Promise<{ id: TaskId; wt: string; branch: s
   return { id: t.id, wt: worktree!, branch: branch! };
 }
 
-/** A commit on main, as if another PR had been merged. */
 function advanceMain(file: string, content: string, message: string): void {
   writeFileSync(join(dir, file), content);
   sh(dir, 'add', '-A');
@@ -253,7 +249,6 @@ test('a conflict starts a resolve run that keeps both sides; the task stays done
   assert.ok(runs[1].ended_at && runs[1].log_path !== runs[0].log_path);
   assert.equal(syncEvents(t.id)[0].reason, 'Resolved conflicts in 1 file');
 
-  // The prompt named the file, the goal and both sides' commit messages.
   const prompt = claudeLog().split('AgentDeck conflict resolution').at(-1)!;
   assert.match(prompt, /- shared\.txt/);
   assert.ok(prompt.includes(`Task ${n} changes line two`) && prompt.includes(`Main changes line two (${n})`), prompt);
@@ -268,7 +263,6 @@ test('a resolve run that stages but does not commit still concludes the merge', 
   clean(t.wt);
 });
 
-/** The branch is exactly as the task left it: same commit, no merge underway, nothing dirty. */
 function untouched(t: { wt: string }, head: string): void {
   assert.equal(sh(t.wt, 'rev-parse', 'HEAD'), head);
   assert.throws(
@@ -316,7 +310,6 @@ for (const [flag, why] of [
       'its dependent is warned',
     );
     db.applyEvent(dependent.id, { type: 'cancel' });
-    // The person can take it from here: a retry works on the same branch.
     retryTask(db, t.id);
     assert.equal(db.getTask(t.id)!.status, 'queued');
     db.applyEvent(t.id, { type: 'cancel' });
@@ -392,13 +385,11 @@ test('auto_resolve off: clean merges still happen, conflicts wait for a person',
   clean(t.wt);
   assert.equal(db.getTask(t.id)!.status, 'done', 'not blocked: the person decides');
 
-  // By hand it still works.
   assert.equal((await syncNow(db, t.id)).outcome, 'resolved');
   assert.equal(resolveCalls(), before + 1);
   assert.equal(db.getTask(t.id)!.status, 'done');
 });
 
-/** What the scheduler's automatic path does for a task. */
 const syncAuto = async (id: TaskId) => {
   const { syncTask } = await import('../../../src/application/runs/sync.ts');
   return syncTask(db, id, { manual: false });
@@ -443,7 +434,7 @@ test('a conflict at the start of a retry gets a resolve run before the work run,
   const t = await doneTask('FAKE_DONE');
   conflictOnMain();
   retryTask(db, t.id);
-  const claimedAttempts = db.getTask(t.id)!.attempts + 1; // the claim takes one
+  const claimedAttempts = db.getTask(t.id)!.attempts + 1;
   await drain();
 
   const task = db.getTask(t.id)!;
@@ -459,7 +450,6 @@ test('a conflict at the start of a run that cannot be resolved blocks the task b
   const t = await doneTask('FAKE_RESOLVE_BLOCKED');
   conflictOnMain();
   const head = sh(t.wt, 'rev-parse', 'HEAD');
-  // A retry's work prompt carries the attempt line; the resolve prompt only quotes the goal.
   const workCalls = () => (claudeLog().match(/^--- This is attempt/gm) ?? []).length;
   const before = workCalls();
   retryTask(db, t.id);
@@ -518,7 +508,6 @@ test('refreshPrStates reads mergeability: conflicting PRs are returned, unknown 
     assert.equal(db.getTask(d.id)!.pr?.state, 'merged');
   } finally {
     github.prDetails = det;
-    // Out of the way of the tests after this one: a done task is cancelled by retrying it first.
     for (const x of [a, b, c, d]) {
       db.applyEvent(x.id, { type: 'retry' });
       db.applyEvent(x.id, { type: 'cancel' });
@@ -554,7 +543,6 @@ test('resolveConflicting waits for the governor: paused, rate limited, or no fre
   assert.equal(syncEvents(t.id).at(-1)!.reason, 'Resolved conflicts in 1 file');
   assert.match(log.join('\n'), /resolved/);
 
-  // A task that is no longer done, or whose repo is paused, is left alone.
   db.setRepoPaused(repo.id, 'doctor: tests');
   await resolveConflicting(db, [t.id]);
   db.setRepoPaused(repo.id, null);
@@ -578,7 +566,6 @@ test('resolveConflicting with auto_resolve off makes no sync attempt and tells t
     assert.equal(sh(t.wt, 'rev-parse', 'HEAD'), head, 'the branch was not touched');
     assert.equal(sh(t.wt, 'status', '--porcelain'), '', 'no merge was tried in the worktree');
 
-    // Once the conflict is gone from the refresh it is forgotten, so a new one is told again.
     await resolveConflicting(db, [], (m) => log.push(m), told);
     await resolveConflicting(db, [t.id], (m) => log.push(m), told);
     assert.equal(log.length, 2);
@@ -596,11 +583,10 @@ test('merging a PR makes the scheduler re-read the open PRs at once and resolve 
   details[otherUrl] = { ...cleanDetails, mergeable: 'CONFLICTING', merge_state: 'DIRTY' };
   db.setSetting('paused', '0');
 
-  // The periodic refresh is far away: only the merge's request can trigger it.
   const scheduler = new Scheduler(db, { tickMs: 10, prRefreshMs: Number.MAX_SAFE_INTEGER, log: () => {} });
   const running = scheduler.run();
   try {
-    await sleep(100); // time passes: several scheduler ticks
+    await sleep(100);
     assert.equal(syncEvents(other.id).length, 0, 'nothing happens until a merge');
 
     await mergeTask(db, merged.id);

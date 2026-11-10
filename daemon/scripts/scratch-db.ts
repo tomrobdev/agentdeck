@@ -5,7 +5,6 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { openDb } from '../src/db/index.ts';
 
-/** Migrate a scratch database, run `drizzle-kit <args>` against it, and remove it. Returns the exit status and all output. */
 export function drizzleKitOnScratch(args: string[]): { status: number | null; out: string } {
   const dir = mkdtempSync(join(tmpdir(), 'agentdeck-db-'));
   const path = join(dir, 'scratch.db');

@@ -1,15 +1,5 @@
 #!/usr/bin/env node
 // Fake `gh` for the crash test. Every call is appended to $FAKE_GH_DIR/gh-calls.jsonl, and the PRs it opens live there too:
-// a `created` record per PR (numbered in the order they were made), then a `merged` or `closed` one if that happens. The
-// other answers come from the recorded fixtures in daemon/test/fixtures/gh/, with each PR's own state put in.
-//
-// While $FAKE_GH_DIR/hang-pr exists, `pr create` appends its pid to hangs.jsonl there and waits, so the test can kill the
-// daemon while a PR opens. The file says when: `before` it opens the PR, or `after` (GitHub has the PR, the daemon never
-// heard). Once the file is gone it exits 1, as if it had been killed.
-//
-// For the dashboard's end-to-end tests (app/e2e/): with FAKE_GH_FROM_GIT=1, `pr view` reads the PR's head commit, size and
-// files from the branch pushed to origin, as GitHub would; and $FAKE_GH_DIR/pr-view-<number>.json, when it exists, is
-// laid over the answer (its checks and labels, say).
 import { execFileSync } from 'node:child_process';
 import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -32,7 +22,6 @@ const fail = (msg) => {
 };
 const urlOf = (number) => `https://github.com/demo/demo/pull/${number}`;
 
-/** The PRs opened so far, oldest first, each with its latest state. */
 function prs() {
   const lines = existsSync(CALLS) ? readFileSync(CALLS, 'utf8').trim().split('\n').filter(Boolean).map(JSON.parse) : [];
   const list = [];
@@ -46,7 +35,6 @@ function prs() {
   return list.map((p) => ({ ...p, url: urlOf(p.number) }));
 }
 
-/** What GitHub says of a PR that git can tell: its head commit and what it changes against the base, from origin's branches. */
 function fromGit(pr) {
   const git = (...a) => execFileSync('git', a, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
   git('fetch', '-q', 'origin');
@@ -62,7 +50,6 @@ function fromGit(pr) {
   return { headRefOid: head, files, changedFiles: files.length, additions: sum('additions'), deletions: sum('deletions') };
 }
 
-/** Wait while the hang file exists; the test kills this process, or removes the file and it exits as if killed. */
 async function hang(when) {
   appendFileSync(join(dir, 'hangs.jsonl'), JSON.stringify({ phase: 'pr', when, pid: process.pid, t: Date.now() }) + '\n');
   for (;;) {
@@ -71,7 +58,6 @@ async function hang(when) {
   }
 }
 
-/** `pr create`: one open PR per branch, as GitHub allows. */
 async function create() {
   const head = flag('--head');
   const base = flag('--base');
@@ -80,7 +66,6 @@ async function create() {
   if (when === 'before') await hang(when);
   const open = prs().find((p) => p.head === head && p.state === 'OPEN');
   if (open) fail(`a pull request for branch "${head}" into branch "${base}" already exists:\n${open.url}`);
-  // Appended, then read back: the record's place among the created ones is the PR's number, without a lock.
   rec('created', { head, base, draft: args.includes('--draft') });
   const mine = prs()
     .filter((p) => p.head === head)
@@ -89,7 +74,6 @@ async function create() {
   process.stdout.write(`${mine.url}\n`);
 }
 
-/** The PR a `pr <sub> <url>` call names, or a failure like gh's. */
 function named() {
   const url = args[2];
   const pr = prs().find((p) => p.url === url);
@@ -101,7 +85,6 @@ rec('call', { args: args.slice(0, 3) });
 if (cmd === 'auth' && sub === 'status') {
   process.stderr.write('github.com\n  ✓ Logged in to github.com account demo (keyring)\n');
 } else if (cmd === 'label' && sub === 'create') {
-  // succeeds with no output
 } else if (cmd === 'pr' && sub === 'create') {
   await create();
 } else if (cmd === 'pr' && sub === 'list') {

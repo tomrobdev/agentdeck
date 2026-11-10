@@ -1,20 +1,13 @@
 // In-memory fakes of the Agent and CodeHost ports, for tests that need no `claude` binary and no `gh`:
-// `testApp(db, { agent: fakeAgent(), codeHost: fakeCodeHost() })`. The end-to-end tests (`e2e.test.ts`) keep the real
-// adapters, on the fake claude binary, so the real process path stays covered.
 import type { Agent, AgentSession } from '../../src/application/ports/agent.ts';
 import type { CodeHost } from '../../src/application/ports/code-host.ts';
 import type { BranchPr, CreatePr, PrDetails } from '../../src/domain/landing/index.ts';
 import type { ClaudeResult, ClaudeRun } from '../../src/domain/runs/index.ts';
 
-/** A fake agent and the sessions it was asked to run. */
 export interface FakeAgent extends Agent {
   sessions: AgentSession[];
 }
 
-/**
- * An agent that "runs" by calling `work` (which may edit the session's worktree) and then ends with `result`, which
- * says `STATUS: DONE` unless a test gives another. It writes the result line to the log, as claude does.
- */
 export function fakeAgent(work: (session: AgentSession) => void | Promise<void> = () => {}, result: Partial<ClaudeResult> = {}): FakeAgent {
   const sessions: AgentSession[] = [];
   return {
@@ -42,10 +35,6 @@ export function fakeAgent(work: (session: AgentSession) => void | Promise<void> 
   };
 }
 
-/**
- * A pull request that is open, clean and ready to merge, with every field `parsePrDetails` reads from real `gh pr view`
- * output (contracts.test.ts checks it against daemon/test/fixtures/gh/).
- */
 export const READY_PR: PrDetails = {
   state: 'open',
   draft: false,
@@ -70,10 +59,6 @@ export const READY_PR: PrDetails = {
   labels: [],
 };
 
-/**
- * A fake code host: what each pull request looks like (`details`, by url), the PRs GitHub lists for a branch (`branchPrs`, by
- * branch; it does not list the ones `createPr` made), and a record of what was done to them.
- */
 export interface FakeCodeHost extends CodeHost {
   details: Record<string, PrDetails>;
   branchPrs: Record<string, BranchPr[]>;

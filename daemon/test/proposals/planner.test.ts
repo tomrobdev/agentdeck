@@ -82,7 +82,6 @@ test('proposing tasks yields capped, de-duplicated tasks that wait for approval'
   assert.ok(db.getRepo(repoId)!.proposed_at);
   assert.equal(db.recentNotifications(1)[0].kind, 'proposed');
 
-  // The scheduler never picks up proposals.
   assert.equal(db.claimNextTask(), undefined);
 });
 

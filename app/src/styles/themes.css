@@ -1,14 +1,3 @@
-/*
- * Themes: sets of colour tokens. <html data-theme="…" data-mode="system|light|dark"> picks one (see platform/theme.ts).
- *
- * Each theme has a light rule, a dark rule, and the dark values again under prefers-color-scheme for data-mode="system".
- * Keep the system copy identical to the dark rule: daemon/test/dashboard/shared/themes.test.ts checks that, and that every pair
- * the dashboard draws (text, status colours, code, tints) reaches WCAG AA in both modes.
- *
- * High contrast is the default, and also applies before platform/theme.ts has run.
- */
-
-/* ── Warm: the original neutral greys with a terracotta accent ───────────── */
 :root[data-theme='warm'] {
   --bg: #f6f6f4;
   --panel: #ffffff;
@@ -99,7 +88,6 @@
   }
 }
 
-/* ── Cool: a blue-grey, Linear-like, with an indigo accent ───────────────── */
 :root[data-theme='cool'] {
   --bg: #f4f5f8;
   --panel: #ffffff;
@@ -190,7 +178,6 @@
   }
 }
 
-/* ── GitHub: Primer's light and dark-dimmed-ish greys, with the blue link accent ─ */
 :root[data-theme='github'] {
   --bg: #f6f8fa;
   --panel: #ffffff;
@@ -281,7 +268,6 @@
   }
 }
 
-/* ── High contrast: black on white and white on black, strong edges, 7:1 and up ── */
 :root,
 :root[data-theme='contrast'] {
   --bg: #ffffff;

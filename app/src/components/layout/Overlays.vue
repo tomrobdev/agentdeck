@@ -23,7 +23,6 @@ import ApproveDialog from '../work/task/ApproveDialog.vue';
 import NewTaskForm from '../work/task/NewTaskForm.vue';
 import HotkeySheet from './HotkeySheet.vue';
 
-// Everything that opens over the page, each shown from useShell's state.
 const { panel, palette, keySheet, selectedId, closePanel, closePalette, closeKeys } = useShell();
 const { toasts, flash, close: closeToast } = useToasts();
 const actions = useActions();

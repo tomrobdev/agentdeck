@@ -20,16 +20,11 @@ interface QueueEmit {
   (e: 'act', kind: PersonEvent, id: number): void;
 }
 
-/**
- * The state of the queue view: its display and filters, the picks and bulk actions, the merge confirm, a row's actions
- * and the queue's keys. `selected` is the page's selected task.
- */
 export function useQueueView(tasks: () => TaskSummary[], selected: Ref<number | null>, emit: QueueEmit) {
   const { display, filters, shown, groups, order, toggleGroup, nextMode } = useQueueDisplay(tasks);
   const bulk = useBulkPick(tasks, shown);
   const { picked, pick, pickMany, pickShown, clearPicked } = bulk;
   const orderIds = () => order.value.map((t) => t.id);
-  /** A shift-click in the graph: the task and every unfinished task it builds on that is shown, without opening the page. */
   const pickChain = (id: number) => pickMany(buildsOnChain(shown.value, id));
 
   function step(by: number) {
@@ -40,12 +35,8 @@ export function useQueueView(tasks: () => TaskSummary[], selected: Ref<number | 
   const { merging, startMerge, onMerged, onRequested } = useMergeConfirm(order, selected);
   const { flash, run } = useActions();
 
-  // Space opens the selected task beside the list (list view only). The panel follows the selection; its width is remembered.
   const peek = ref(false);
 
-  // A PR in review moves on from its row: Merge (or a drop on Done) opens the merge confirm, Sync brings its branch up to the
-  // base branch. A sync that conflicts starts a resolve run, which takes minutes; the row shows the sync from the task's summary,
-  // whoever started it, until it ends.
   async function sync(id: number) {
     if (tasks().find((t) => t.id === id)?.sync) return;
     let done = '';

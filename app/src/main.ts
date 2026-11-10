@@ -10,6 +10,5 @@ import { route } from './router';
 
 initTheme();
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: retryQuery, refetchOnWindowFocus: true } } });
-// The tray window loads the same page at #/tray and mounts its own root: no header, status bar or link handling.
 const root = route.current.name === 'tray' ? TrayView : App;
 createApp(root).use(VueQueryPlugin, { queryClient }).mount('#app');

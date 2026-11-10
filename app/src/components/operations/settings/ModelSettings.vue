@@ -5,7 +5,6 @@ import { MODELS } from '../../../../../daemon/src/domain/work/index.ts';
 import NumberInput from '../../ui/form/NumberInput.vue';
 import Switch from '../../ui/form/Switch.vue';
 
-// The models runs start with, and the planner that proposes tasks when a queue runs dry.
 defineProps<{ form: SettingsForm }>();
 </script>
 

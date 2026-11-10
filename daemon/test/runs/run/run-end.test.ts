@@ -41,7 +41,6 @@ test('a throw in the work run after its row opens ends the row failed', async ()
   await drain();
   assert.equal(db.getTask(task.id)!.status, 'done');
 
-  // The base branch goes missing: commitsAhead (git rev-list) throws after claude finished.
   updateRepo(db, 'demo', { base_branch: 'gone' });
   db.applyEvent(task.id, { type: 'retry' });
   await drain();
@@ -65,7 +64,6 @@ test('a resolve run that cannot start ends failed and frees its slot', async () 
   writeFileSync(join(dir, 'shared.txt'), 'one\nmain\nthree\n');
   sh(dir, 'commit', '-q', '-am', 'main change');
 
-  // Make the run's settings file unwritable: a directory sits where it goes.
   const realNow = Date.now;
   Date.now = () => 424242;
   mkdirSync(join(LOG_DIR, `task-${t.id}-resolve-424242.settings.json`), { recursive: true });

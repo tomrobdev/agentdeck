@@ -18,7 +18,6 @@ test('a tool call is worded in a few words', () => {
 test('each assistant message is a turn and the last tool use is the tool', () => {
   let s = nextLive(START_LIVE, assistant('m1', { name: 'Read', input: { file_path: 'a.ts' } }));
   assert.deepEqual([s.turns, s.tool], [1, 'Read a.ts']);
-  // The same message in a second event is the same turn.
   s = nextLive(s, assistant('m1', { name: 'Edit', input: { file_path: 'a.ts' } }));
   assert.deepEqual([s.turns, s.tool], [1, 'Edit a.ts']);
   s = nextLive(s, assistant('m2'));

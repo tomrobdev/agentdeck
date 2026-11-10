@@ -46,14 +46,12 @@ test('a usage reading that changed appends a sample; an unchanged one does not',
     ],
   );
 
-  // A new window resetting is a change even at the same utilization.
   db.recordUsageWindow('five_hour', 0.3, 2000, 'allowed');
   assert.equal(db.usageSamples('five_hour').length, 3);
 
   db.recordUsageWindow('seven_day', 0.1, 5000, null);
   assert.equal(db.usageSamples().length, 4);
   assert.equal(db.usageSamples('seven_day').length, 1);
-  // The latest reading is still kept as before.
   assert.equal(db.usageWindows().find((w) => w.window === 'five_hour')!.utilization, 0.3);
 });
 
@@ -80,7 +78,6 @@ test("a PR's checks are stored once they settle, kept as first seen, and the mer
   github.merge = async () => {};
   github.deleteRemoteBranch = async () => {};
 
-  // Still running: nothing stored. No checks at all might only be CI not started: nothing stored.
   await refreshPrStates(db);
   assert.equal(db.getTask(t.id)!.pr!.checks.opened, null);
   current = { ...pending, checks: { total: 0, failing: 0, pending: 0 } };
@@ -91,7 +88,6 @@ test("a PR's checks are stored once they settle, kept as first seen, and the mer
   await refreshPrStates(db);
   assert.deepEqual(db.getTask(t.id)!.pr!.checks.opened, { total: 3, failing: 1, pending: 0 });
 
-  // A later result does not replace the first settled one.
   current = { ...pending, checks: { total: 3, failing: 0, pending: 0 } };
   await refreshPrStates(db);
   assert.deepEqual(db.getTask(t.id)!.pr!.checks.opened, { total: 3, failing: 1, pending: 0 });

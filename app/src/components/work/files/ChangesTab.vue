@@ -14,8 +14,6 @@ import Popover from '../../ui/Popover.vue';
 import SegmentedControl from '../../ui/form/SegmentedControl.vue';
 import ChangedFileCard from './ChangedFileCard.vue';
 
-// What the task's branch changes against the base branch, or since a person's last review or the end of an earlier run
-// (the Since menu): a tree of changed files and their diffs. The state is in useChangesTab.
 const props = defineProps<{ task: TaskDetail; changes: Changes | null; error: string }>();
 const emit = defineEmits<{ open: [path: string] }>();
 const {
@@ -103,7 +101,6 @@ const {
         Merging <code>{{ shown.base_ref }}</code> into that point conflicts, so changes a sync brought in from it may show here.
       </p>
       <div v-if="shown && files.length" class="flex items-start gap-4">
-        <!-- The page scrolls as one; the tree sticks beside the diffs at the scroller's height (TaskPage makes it a size container). -->
         <aside class="sticky top-0 h-[calc(100cqh-1.5rem)] min-h-0 w-65 flex-none pb-4 max-md:hidden">
           <FileTree
             :load="loadTree"

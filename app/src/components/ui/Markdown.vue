@@ -3,8 +3,6 @@ import { computed } from 'vue';
 import { openExternal } from '../../platform/native';
 import { markdownHtml } from '../../lib/shared/render';
 
-// Rendered, sanitised markdown. Links open in the system browser; `isPath` turns inline code
-// that names a repo file into a link (see lib/render.ts), reported through `path`.
 const props = defineProps<{ text: string; isPath?: (p: string) => boolean }>();
 const emit = defineEmits<{ path: [path: string, line: number | null] }>();
 
@@ -24,7 +22,6 @@ function onClick(e: MouseEvent) {
 </template>
 
 <style>
-/* Rendered markdown is v-html output: no template to put utilities on. */
 @layer components {
   .md {
     line-height: 1.55;

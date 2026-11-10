@@ -11,7 +11,6 @@ import { stateFields } from '../../../src/domain/work/task/task.ts';
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-install-'));
 process.env.AGENTDECK_HOME = home;
 
-// A fake `pnpm`: records its arguments, adds them to package.json, writes a lockfile and a stray file.
 const bin = join(home, 'bin');
 mkdirSync(bin);
 writeFileSync(
@@ -44,7 +43,6 @@ sh(dir, 'commit', '-q', '-m', 'init');
 const db = openDb(':memory:');
 const repo = db.addRepo({ name: 'demo', path: dir, base_branch: 'main', toolchain: 'pnpm' });
 
-/** A task blocked asking for `items`, with a worktree. */
 async function blockedFor(items: string[], kind: 'deps' | 'host' | 'edit' = 'deps') {
   const t = db.addTask({ repo_id: repo.id, title: 't', prompt: 'p' });
   const { branch, path } = await ensureWorktree(repo, t);
@@ -77,7 +75,7 @@ test('installs, commits only the manifest and lockfile, and queues the task with
   assert.equal(t.status, 'queued');
   assert.equal(stateFields(t).needs, null);
   assert.match(db.eventsForTask(id).at(-1)!.reason ?? '', /installed added/);
-  db.applyEvent(id, { type: 'cancel' }); // so a later claimNextTask finds only its own task
+  db.applyEvent(id, { type: 'cancel' });
 });
 
 test('a failed install keeps the task blocked and says why', async () => {
@@ -93,7 +91,6 @@ test('a failed install keeps the task blocked and says why', async () => {
 
 test('a task cancelled while its install runs stays cancelled, and the person is told', async () => {
   const { id } = await blockedFor(['added']);
-  // installNeeds runs up to the package manager synchronously, so this cancel lands while the install runs.
   const running = installNeeds(db, id);
   assert.ok(db.applyEvent(id, { type: 'cancel' }));
   await assert.rejects(running, /is now cancelled, so it was not retried/);

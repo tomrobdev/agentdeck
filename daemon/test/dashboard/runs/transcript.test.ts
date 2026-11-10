@@ -152,8 +152,6 @@ test('colour codes become colour; other codes are dropped', () => {
   ]);
 });
 
-// ---- The live header and the timeline strip
-
 const T0 = Date.parse('2026-11-08T10:00:00Z');
 const stamp = (s: number) => new Date(T0 + s * 1000).toISOString();
 const runOf = (extra: Partial<Run> = {}): Run =>
@@ -276,7 +274,6 @@ test('the filter over a log: Failures keeps failed tests and leaves out a grep w
   assert.deepEqual(shape('text'), ['text']);
   assert.deepEqual(shape('edits'), ['Edit']);
   assert.deepEqual(shape('failures'), ['Bash', 'Bash', 'setup', 'error']);
-  // A failed grep shows under Commands, with the Bash calls and the daemon's runs.
   assert.deepEqual(shape('commands'), ['Grep', 'Bash', 'Bash', 'Bash', 'setup', 'tests']);
   assert.equal(failureKeys(items, 'pnpm test').size, 4);
   const failedLs = buildTranscript([tool('Bash', 'x', { input: JSON.stringify({ command: 'ls' }) }), result('x', false)]);
@@ -330,7 +327,6 @@ test('a call took from its time to its result, a slow one is marked', () => {
   assert.equal(failureStep([5, 20], -1), -1);
 });
 
-/** A stream-json assistant line with one tool call, and the user line with its result, as claude writes them. */
 const callLine = (id: string, name: string, input: unknown) =>
   JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', id, name, input }] } });
 const resultLine = (id: string, ok = true) =>
@@ -390,7 +386,6 @@ test('an edit as a line diff: shared lines as context, removals before additions
 });
 
 test('a line diff on a text the log cut marks where each side was cut', () => {
-  // 400 lines are over CHANGE_MAX characters: the log keeps lines 0–238 of the old text and part of line 239.
   const long = Array.from({ length: 400 }, (_, i) => `line ${i}`).join('\n');
   const [edit] = parseLogLine(callLine('a', 'Edit', { file_path: '/w/a.ts', old_string: long, new_string: `top\n${long}` }));
   const change = edit.kind === 'tool' ? edit.change! : assert.fail('not a tool call');

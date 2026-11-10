@@ -1,5 +1,3 @@
-// A task carries only what its status has. A row an older daemon left with another status's columns reads as if it had none, and the
-// API's JSON keeps every field on every status. (That `task.needs` doesn't compile until narrowed is in db/types-check.ts.)
 import assert from 'node:assert/strict';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -23,7 +21,6 @@ const STALE: StateFields = {
 };
 const NONE: StateFields = { stop_reason: null, needs: null, question: null, done_by: null };
 
-/** What a task reads as from a row with every state column set, by status: these fields and no others. */
 const ON_TASK: Record<(typeof TASK_STATUSES)[number], Partial<StateFields>> = {
   proposed: {},
   queued: {},
@@ -47,7 +44,6 @@ const writeRow = (db: Db, id: number, status: string, needs: string, question: s
     .prepare('UPDATE tasks SET status = ?, stop_reason = ?, needs = ?, question = ?, done_by = ? WHERE id = ?')
     .run(status, STALE.stop_reason, needs, question, STALE.done_by, id);
 
-/** The state fields a task has as its own properties. */
 const onTask = (task: object) => Object.fromEntries(Object.entries(task).filter(([key]) => key in NONE));
 
 for (const status of TASK_STATUSES) {
@@ -72,7 +68,6 @@ for (const status of TASK_STATUSES) {
   });
 }
 
-/** Every field the API sends for a task in a list; the detail adds its prompt, runs, events and plans. */
 const API_FIELDS = [
   'attempts',
   'auto_merge',

@@ -1,5 +1,4 @@
 // Builds the generated blocks of docs/architecture.md from the code. Deterministic: sorted, no timestamps.
-// `renderDocs` replaces the blocks between `<!-- generated:NAME -->` and `<!-- /generated -->` and leaves the rest alone.
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { type SQLiteTable, getTableConfig } from 'drizzle-orm/sqlite-core';
@@ -18,7 +17,6 @@ import { type Source, readSources } from './sources.ts';
 const SRC = join(import.meta.dirname, '../../src');
 export const DOCS_PATH = join(import.meta.dirname, '../../../docs/architecture.md');
 
-/** What each setting means. A setting with no entry here fails the docs, so a new one gets described. */
 const SETTING_MEANINGS: Record<string, string> = {
   paused: 'The daemon starts no new work while this is 1; it starts paused until someone resumes it',
   rate_limited_until: 'Unix seconds until which a run that hit the usage limit keeps new work from starting; 0 for none',
@@ -53,7 +51,6 @@ const SETTING_MEANINGS: Record<string, string> = {
 const ident = (s: string) => s.replace(/\W/g, '_');
 const escapeCell = (s: string) => s.replace(/\|/g, '\\|');
 
-/** A markdown table laid out as Prettier lays it out, so the file stays formatted. */
 function table(headers: string[], rows: string[][]): string {
   const cells = [headers, ...rows].map((r) => r.map(escapeCell));
   const widths = headers.map((_, i) => Math.max(3, ...cells.map((r) => r[i].length)));
@@ -65,7 +62,6 @@ const mermaid = (body: string[]) => ['```mermaid', ...body, '```'].join('\n');
 
 const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 
-/** The layers table and the diagram of allowed imports (from `LAYERS`), with any import outside the rule called out. */
 function layers(sources: Source[]): string {
   const names = Object.keys(LAYERS);
   const outside = new Map<string, string[]>();
@@ -97,7 +93,6 @@ function layers(sources: Source[]): string {
   ].join('\n\n');
 }
 
-/** The first sentence of a file's leading `//` comment. */
 function firstSentence(source: Source): string {
   const lines: string[] = [];
   for (const line of source.ast.getFullText().split('\n')) {
@@ -116,7 +111,6 @@ function adapters(sources: Source[]): string {
   return table(['Adapter', 'What it does'], rows);
 }
 
-/** The context map: a mermaid graph (solid arrow runtime, dotted type-only, `cycle` label on a cycle's edges) and the cycles in a list. */
 export function contextMapBody(sources: Source[]): string {
   const map = contextMap(sources);
   const lines = map.edges.map((e) => {
@@ -129,7 +123,6 @@ export function contextMapBody(sources: Source[]): string {
   return [mermaid(['flowchart LR', ...map.contexts.map((c) => `  ${ident(c)}["${c}"]`), ...lines]), cycles].join('\n\n');
 }
 
-/** The adapter-use table: each application/ area and the adapters it imports. */
 export function adapterUseBody(sources: Source[]): string {
   return table(
     ['Area', 'Adapters imported'],
@@ -140,7 +133,6 @@ export function adapterUseBody(sources: Source[]): string {
   );
 }
 
-/** The progress page: what is left of the DDD migration, counted by `progress()`. */
 export function progressBody(sources: Source[]): string {
   const p = progress(sources);
   const lists = [...p.lists, { name: 'UNCHECKED rules (`scripts/lib/rules.ts`)', size: Object.keys(UNCHECKED).length }];
@@ -174,7 +166,6 @@ export function progressBody(sources: Source[]): string {
   ].join('\n\n');
 }
 
-/** The coverage page: each group of daemon/src, the files it holds and its floors, from `COVERAGE_FLOORS`. */
 export function coverageBody(): string {
   const holds = (group: string) =>
     group === 'src'
@@ -216,11 +207,10 @@ function dataModel(): string {
         `  ${getTableConfig((r.foreignColumns[0] as unknown as { table: SQLiteTable }).table).name} ${col.notNull ? '||' : '|o'}--o{ ${c.name} : "${col.name}"`,
       );
     }
-    // A column that names another row but has no foreign key: shown dotted so the missing key is visible.
     for (const col of c.columns) {
       if (fkColumns.has(col.name) || !(col.name.endsWith('_id') || col.name === 'after_task')) continue;
       const parent = col.name === 'after_task' ? 'tasks' : `${col.name.slice(0, -3)}s`;
-      if (!tableNames.has(parent)) continue; // e.g. session_id names a claude session, not a row
+      if (!tableNames.has(parent)) continue;
       relations.push(`  ${parent} ${col.notNull ? '||' : '|o'}..o{ ${c.name} : "${col.name}"`);
     }
   }
@@ -228,7 +218,6 @@ function dataModel(): string {
 }
 
 function lifecycle(): string {
-  // A run-ending event is one that also applies to a cancel_requested task (the cancel wins there).
   const runEnds = Object.entries(RULES)
     .filter(([, r]) => r.cancel_requested)
     .map(([key]) => key)
@@ -249,7 +238,6 @@ function lifecycle(): string {
   return mermaid(['stateDiagram-v2', ...lines]);
 }
 
-/** `/^\/api\/tasks\/(\d+)\/links$/` → `/api/tasks/:id/links`. */
 function routePath(regex: string): string {
   let n = 0;
   return regex
@@ -286,7 +274,6 @@ function routes(): string {
   return table(['Method', 'Path', 'Use case'], rows);
 }
 
-/** The `actions.x` and `db.x` calls a handler makes, looking into the local helpers it calls; else the imported functions it calls. */
 function useCases(handler: ts.Node, locals: Map<string, ts.Node>, imported: Set<string>): string {
   const found = new Set<string>();
   const others = new Set<string>();
@@ -353,14 +340,12 @@ function migrations(sources: Source[]): string {
   return table(['Step', 'What it does'], rows);
 }
 
-/** Every generated block of docs/architecture.md, by name. */
 export function generateBlocks(): Record<string, string> {
   return { layers: layers(readSources(SRC)), dashboard: dashboardBody() };
 }
 
 const REFERENCE_NOTE = '<!-- Generated by `pnpm docs:gen` from the code. Do not edit: `pnpm test` fails when it is stale. -->';
 
-/** The wholly generated files of docs/reference/, by file name. */
 export function generateReference(): Record<string, string> {
   const sources = readSources(SRC);
   const file = (title: string, intro: string, body: string) =>
@@ -415,12 +400,10 @@ export function generateReference(): Record<string, string> {
   };
 }
 
-/** Where `generateReference` writes. `runs.md` beside them is written by hand. */
 export const REFERENCE_DIR = join(import.meta.dirname, '../../../docs/reference');
 
 const BLOCK = /<!-- generated:([\w-]+) -->\n[^]*?<!-- \/generated -->/g;
 
-/** `markdown` with every generated block replaced by what the code says now. */
 export function renderDocs(markdown: string): string {
   const blocks = generateBlocks();
   const used = new Set<string>();
@@ -436,7 +419,6 @@ export function renderDocs(markdown: string): string {
 
 export const readDocs = () => readFileSync(DOCS_PATH, 'utf8');
 
-/** The text of a `## heading` section of the docs, up to the next `## `. */
 export function section(markdown: string, heading: string): string {
   const m = new RegExp(`^## ${heading}\\n([^]*?)(?=^## |(?![^]))`, 'm').exec(markdown);
   if (!m) throw new Error(`docs: docs/architecture.md has no "## ${heading}" section`);

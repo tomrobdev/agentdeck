@@ -1,9 +1,5 @@
-// The queue and a task page in light and dark, compared with the stored images (e2e/screenshots/), and the contrast of
-// every piece of text on them. A theme or a style that leaks (like #152's :global() rule, which turned the page's text the
-// colour of its background) changes the images and fails the contrast check.
 import { type Mode, expect, lowContrast, open, queueSettled, test } from '../fixtures';
 
-/** The pages to look at: what to open and what to wait for before the screenshot. */
 const PAGES = [
   { name: 'queue', hash: '#/', ready: queueSettled },
   {
@@ -22,8 +18,6 @@ const PAGES = [
     ready: (page) => expect(page.getByText('greet() now falls back to everyone').first()).toBeVisible(),
   },
   {
-    // The settings panel is a modal over the queue, opened from the header; the queue settles first, so what shows behind
-    // it is the same from one run to the next.
     name: 'settings',
     hash: '#/',
     ready: async (page) => {
@@ -51,7 +45,6 @@ for (const mode of ['light', 'dark'] as Mode[]) {
       test(`the ${p.name} page looks as it did`, async ({ page }) => {
         await open(page, p.hash);
         await p.ready(page);
-        // Keep the pointer off the rows: hovering one selects it.
         await page.mouse.move(0, 0);
         await expect(page).toHaveScreenshot(`${p.name}-${mode}.png`);
       });

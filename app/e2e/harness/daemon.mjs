@@ -1,16 +1,4 @@
 #!/usr/bin/env node
-// The daemon the dashboard's end-to-end tests talk to: a scratch AGENTDECK_HOME seeded with one repo and a task in every
-// stage, then `agentdeck daemon` on it, until this process is stopped. Playwright starts it (app/playwright.config.ts).
-//
-// The seed drives the real code: the CLI adds the repo and the tasks, `run-once` works them with the end-to-end claude
-// (harness/claude.mjs) and the fake gh (daemon/scripts/fake-gh.mjs), and `merge` merges one. What it leaves:
-//   #1 merged                      #4 blocked, with a question from its unblock run
-//   #2 in review, auto-merge waiting on running checks, with a plan
-//   #3 in review, checks passed, auto-merge off (the merge dialog's)
-//   #5 proposed                    #6 queued, then running once the daemon starts (it takes the only slot)
-//
-// Usage: node e2e/harness/daemon.mjs [--port 4391] [--origin http://127.0.0.1:1430] [--keep]
-//   --keep  leave the scratch home behind, and print where it is
 import { execFileSync, spawn } from 'node:child_process';
 import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -55,7 +43,6 @@ const env = {
 const cli = (...args) => execFileSync(process.execPath, [CLI, ...args], { env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
 const git = (cwd, ...args) => execFileSync('git', args, { cwd, env, stdio: 'ignore' });
 
-/** The demo repo: a bare origin and a checkout with a few files on main. */
 function makeRepo() {
   const origin = join(home, 'origin.git');
   git(home, 'init', '-q', '--bare', '-b', 'main', origin);
@@ -91,7 +78,6 @@ function makeRepo() {
   return repo;
 }
 
-/** What GitHub says of a PR beyond what git tells the fake gh: its checks and labels. */
 function prView(number, view) {
   writeFileSync(join(home, `pr-view-${number}.json`), JSON.stringify(view));
 }
@@ -128,7 +114,6 @@ function seed() {
   cli('add', 'UI_QUEUE: pop() says when the queue is empty', '--repo', 'demo', '--title', 'Document pop()');
   cli('add', 'UI_BLOCKED: keep the queue on disk', '--repo', 'demo', '--title', 'Keep the queue on disk');
   cli('auto-merge', '3', 'off');
-  // The PRs the run opens, numbered in the order they open: #1 for task 1, and so on.
   prView(1, { statusCheckRollup: [check('COMPLETED', 'SUCCESS')] });
   prView(2, { statusCheckRollup: [check('IN_PROGRESS', '')] });
   prView(3, { statusCheckRollup: [check('COMPLETED', 'SUCCESS')], labels: [], mergeStateStatus: 'CLEAN' });

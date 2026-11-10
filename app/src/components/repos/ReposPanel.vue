@@ -12,11 +12,9 @@ import RepoEditor from './RepoEditor.vue';
 const props = defineProps<{ repos: Repo[] }>();
 defineEmits<{ close: [] }>();
 
-// Which repo's editor is open; the editor reads the repo itself.
 const openId = ref<number | null>(null);
 const open = computed(() => props.repos.find((r) => r.id === openId.value) ?? null);
 
-// The accordion opens one repo's editor, or closes it.
 function toggle(id: string | undefined) {
   openId.value = (id && props.repos.find((x) => String(x.id) === id)?.id) || null;
 }

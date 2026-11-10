@@ -4,7 +4,6 @@ import type { ShownComment } from '../../composables/landing/useReviews';
 import { useAction } from '../../composables/shared/useActions';
 import Chip from '../ui/Chip.vue';
 
-// One review comment under its diff line: its text, the answer it got and its state.
 const props = defineProps<{ comment: ShownComment; outdated?: boolean }>();
 const { pending, run } = useAction();
 const remove = () => run(() => landingApi.deleteComment(props.comment.id));

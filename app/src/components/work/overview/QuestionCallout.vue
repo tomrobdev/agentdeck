@@ -6,8 +6,6 @@ import type { UnblockQuestion } from '../../../../../daemon/src/domain/work/inde
 import { answerNote } from '../../../lib/work/task-view';
 import { useAction } from '../../../composables/shared/useActions';
 
-// What an unblock run asked about a blocked task: one button per option, each retrying the task with that option as
-// the note. "Something else…" opens a field for your own note.
 const props = defineProps<{ task: TaskDetail; question: UnblockQuestion }>();
 const { pending, run } = useAction();
 const other = ref(false);

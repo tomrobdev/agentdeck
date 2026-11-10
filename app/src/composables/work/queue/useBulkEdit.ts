@@ -7,14 +7,8 @@ import { type BulkEdit, type BulkResult, bulkEditMessage, planBulkEdit } from '.
 import { useActions } from '../../shared/useActions';
 import { usePicked } from './usePicked';
 
-/** What a bulk edit sets: a priority, a model, or auto-merge (true, false, null for the repo's setting); a link has none. */
 export type BulkEditValue = number | string | boolean | null;
 
-/**
- * `run` wraps the calls (it refreshes and shows a pending state). The returned function edits every task in `targets` that
- * allows the edit; the rest are left out and named in the toast, with the failures. With `fromPicks`, the tasks the edit
- * worked on are unpicked and the others stay picked.
- */
 export function useBulkEdit(run: (fn: () => Promise<unknown>) => Promise<unknown>) {
   const { flash } = useActions();
   const { setPicked } = usePicked();

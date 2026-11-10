@@ -1,5 +1,3 @@
-// rule:coverage-floors: how `pnpm coverage` reads an lcov report, groups it and judges it against COVERAGE_FLOORS, and that the floors
-// name exactly the groups daemon/src has. The coverage itself is measured by `pnpm coverage`, not here.
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import { test } from 'node:test';

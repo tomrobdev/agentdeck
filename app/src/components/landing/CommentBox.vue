@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 
-// The inline box for a new line comment. Save adds a draft comment; Escape or Cancel closes the box.
 const props = defineProps<{ save: (body: string) => Promise<boolean> }>();
 const emit = defineEmits<{ close: [] }>();
 

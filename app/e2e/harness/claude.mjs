@@ -1,11 +1,4 @@
 #!/usr/bin/env node
-// Stand-in for `claude -p … --output-format stream-json` in the dashboard's end-to-end tests. It writes the same events as
-// daemon/test/fixtures/fake-claude.mjs, but what it changes and says never varies from run to run (no pids), so the screenshots stay
-// the same. Picked by a word in the task's prompt:
-//   UI_GREET    edits src/greet.ts and adds src/greet.test.ts, commits, reports STATUS: DONE
-//   UI_QUEUE    edits src/queue.ts, commits, reports STATUS: DONE
-//   UI_BLOCKED  reports STATUS: BLOCKED; the unblock run that follows asks which store to use
-//   UI_RUNNING  reads and edits a file, then waits until it is stopped (a task that stays running)
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -60,7 +53,6 @@ const result = (text) =>
     permission_denials: [],
   });
 
-/** Write `file`, as the Edit tool would, and say so in the log. */
 function edit(file, text) {
   const path = join(process.cwd(), file);
   tool('Read', { file_path: path }, readFileSync(path, 'utf8'));
@@ -68,10 +60,6 @@ function edit(file, text) {
   tool('Edit', { file_path: path, old_string: '…', new_string: '…' }, `The file ${path} has been updated successfully.`);
 }
 
-/**
- * Commit everything, dated now like the seed's tasks: the page's clock stands a fixed time after both (e2e/fixtures.ts), so
- * every "ago" reads the same.
- */
 function commit(message) {
   execFileSync('git', ['add', '-A']);
   execFileSync('git', ['commit', '-q', '-m', message]);
@@ -87,7 +75,6 @@ if (prompt.startsWith('AgentDeck unblock run')) {
 } else if (prompt.includes('UI_RUNNING')) {
   edit('README.md', '# demo\n\nA small queue, used by the dashboard tests.\n\n## Usage\n\nRun `node src/queue.ts`.\n');
   say('Writing the usage section, then the tests.');
-  // Wait until the daemon stops the run, or exit once the daemon is gone (this process is then an orphan).
   const parent = process.ppid;
   for (;;) {
     await sleep(500);

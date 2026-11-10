@@ -6,7 +6,6 @@ import PercentField from './PercentField.vue';
 
 const props = defineProps<{ form: SettingsForm }>();
 
-/** Plain-language summary of the weekly cap. */
 const perDay = computed(() => (props.form.weekly_max / 7).toFixed(1));
 </script>
 

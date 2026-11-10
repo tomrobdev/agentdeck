@@ -56,7 +56,6 @@ test('commitLeftovers never commits the plan file', async () => {
   assert.equal(await commitLeftovers(dir, 'leftovers'), true);
   assert.deepEqual(git(dir, 'ls-files').split('\n'), ['README.md', 'work.txt']);
 
-  // A run with no plan clears the file, so a plan written afterwards is the worker's own.
   await writePlanFile(dir, null);
   assert.equal(await readPlanFile(dir), null);
   assert.ok(existsSync(join(dir, '.agentdeck/.gitignore')));
@@ -71,7 +70,6 @@ const committed = (branch: string) => git(dir, 'ls-tree', '-r', '--name-only', b
 
 test('two tasks on one plan each write back only their own steps', async () => {
   db.setSetting('max_concurrent', '2');
-  // The worker marks every step of the plan file done, linked or not, with a note in each.
   const owner = db.addTask({ repo_id: repo.id, title: 'a', prompt: 'FAKE_PLAN_ALL a', own_plan: plan, plan_steps: ['a'] });
   const sibling = db.addTask({
     repo_id: repo.id,
@@ -94,7 +92,6 @@ test('two tasks on one plan each write back only their own steps', async () => {
       ['c', 'todo'],
     ],
   );
-  // Each step keeps the note its own task's run put in it; step c, no one's, has none.
   const sections = [...stored.html.matchAll(/<section[\s\S]*?<\/section>/g)].map((m) => m[0]);
   assert.equal(sections.length, 3);
   assert.match(sections[0], /noted by run/);
@@ -102,7 +99,6 @@ test('two tasks on one plan each write back only their own steps', async () => {
   assert.doesNotMatch(sections[2], /noted by run/);
   assert.equal(db.plansForTask(sibling.id).length, 0, 'the sibling stores no plan of its own');
 
-  // The prompt pointed the worker at the plan file; neither branch carries it.
   const calls = readFileSync(join(home, 'fake-claude-calls.log'), 'utf8');
   assert.match(calls, new RegExp(`--- Plan: ${owner.id}-shared-plan\\.html \\(in \\.agentdeck/plan\\.html\\) ---`));
   for (const t of [owner, sibling]) {
@@ -131,7 +127,6 @@ test('a plan the worker writes is stored as the task’s own plan, named after i
   assert.ok(!committed(db.getTask(t.id)!.checkout!.branch!).some((f) => f.startsWith('.agentdeck')));
 });
 
-/** Set step `id`'s status in the plan file of `worktree`, as a worker does. */
 function markStep(worktree: string, id: string, status: string): void {
   const file = join(worktree, '.agentdeck/plan.html');
   writeFileSync(file, readFileSync(file, 'utf8').replace(new RegExp(`(id="${id}" data-status=)"[^"]*"`), `$1"${status}"`));
@@ -139,7 +134,6 @@ function markStep(worktree: string, id: string, status: string): void {
 const statuses = (taskId: TaskId) => parsePlan(db.ownPlan(taskId)!.html)!.steps.map((s) => [s.id, s.status]);
 
 test('a plan’s owner with no --steps does not undo a step a sibling finished while it ran', async () => {
-  // The owner was given the plan with --plan <file> and no --steps: it is linked to every step.
   const owner = db.addTask({ repo_id: repo.id, title: 'owner', prompt: 'p', own_plan: plan, status: 'proposed' });
   const sibling = db.addTask({
     repo_id: repo.id,
@@ -150,10 +144,8 @@ test('a plan’s owner with no --steps does not undo a step a sibling finished w
     status: 'proposed',
   });
   const [ownerTree, siblingTree] = [mkdtempSync(join(home, 'owner-')), mkdtempSync(join(home, 'sibling-'))];
-  // Both runs start with the plan as stored.
   await writePlanFile(ownerTree, planForRun(db, db.getTask(owner.id)!)?.html ?? null);
   await writePlanFile(siblingTree, planForRun(db, db.getTask(sibling.id)!)?.html ?? null);
-  // The sibling finishes b and ends first; then the owner, which did a, ends.
   markStep(siblingTree, 'b', 'done');
   assert.equal(await takePlanFile(db, db.getTask(sibling.id)!, siblingTree), true);
   markStep(ownerTree, 'a', 'done');
@@ -163,7 +155,6 @@ test('a plan’s owner with no --steps does not undo a step a sibling finished w
     ['b', 'done'],
     ['c', 'todo'],
   ]);
-  // Taking the same file again changes nothing.
   assert.equal(await takePlanFile(db, db.getTask(owner.id)!, ownerTree), false);
 });
 
@@ -190,7 +181,6 @@ test('a task given its plan with --plan <file>, no one following it, keeps a ste
 test('the step statuses a run marked before a restart cut it off survive when its session cannot be resumed', async () => {
   db.setSetting('max_concurrent', '1');
   const t = db.addTask({ repo_id: repo.id, title: 'cut off', prompt: 'FAKE_DONE after a restart', own_plan: plan });
-  // A run that a restart cut off before claude named a session, after the worker finished step a.
   const claimed = db.claimNextTask()!;
   assert.equal(claimed.id, t.id);
   const wt = await ensureWorktree(repo, claimed);
@@ -221,7 +211,6 @@ test('the step statuses a run marked before a restart cut it off survive when it
 test('the step statuses a cut-off run marked survive when the restarts fail the task and a person retries it', async () => {
   db.setSetting('max_concurrent', '1');
   const t = db.addTask({ repo_id: repo.id, title: 'restarted out', prompt: 'FAKE_DONE after a retry', own_plan: plan });
-  // Restart after restart cuts its runs off, until the last recovery fails the task; the last run had finished step a.
   for (let i = 0; i < MAX_RESTARTS; i++) {
     const claimed = db.claimNextTask()!;
     assert.equal(claimed.id, t.id);
@@ -233,7 +222,6 @@ test('the step statuses a cut-off run marked survive when the restarts fail the 
     db.recoverOrphans();
   }
   assert.equal(db.getTask(t.id)!.status, 'failed');
-  // The person's retry is a new attempt.
   assert.equal(db.applyEvent(t.id, { type: 'retry' })?.task.status, 'queued');
 
   await drain();

@@ -1,7 +1,6 @@
 <script setup lang="ts" generic="T extends string">
 import { ToggleGroupItem, ToggleGroupRoot } from 'reka-ui';
 
-// A row of options, exactly one of them on (never empty). A click on the one that is on changes nothing.
 defineProps<{ options: { value: T; label: string; title?: string }[]; label: string }>();
 const model = defineModel<T>({ required: true });
 </script>

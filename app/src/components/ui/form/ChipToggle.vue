@@ -3,7 +3,6 @@ import { Toggle } from 'reka-ui';
 import type { Tone } from '../../../lib/shared/tone';
 import Chip from '../Chip.vue';
 
-// A Reka toggle drawn as a chip: tinted in its tone while on, an outline in muted while off.
 defineProps<{ tone?: Tone }>();
 const on = defineModel<boolean>({ required: true });
 </script>

@@ -6,18 +6,12 @@ import type { TreeNode } from '../../../lib/work/files/changed-tree';
 import { fuzzyScore } from '../../../lib/shared/fuzzy';
 import Delta from '../../ui/status/Delta.vue';
 
-// A file tree that loads folders through `load`, so the same component serves the changed files
-// (all known up front) and a repo browsed one level at a time.
 const props = defineProps<{
   load: (dir: string) => Promise<TreeNode[]>;
   selected: string | null;
-  /** Paths to mark with a dot, such as the files a task changed. */
   marks?: Set<string>;
-  /** Paths with open review comments, marked with a dot. */
   commented?: Set<string>;
-  /** Folders to open at the start, and whenever `selected` changes, its parents. */
   expandAll?: boolean;
-  /** Extra paths the filter can find although their folders aren't loaded. */
   known?: string[];
 }>();
 const emit = defineEmits<{ select: [path: string] }>();
@@ -25,13 +19,11 @@ const emit = defineEmits<{ select: [path: string] }>();
 const children = reactive(new Map<string, TreeNode[]>());
 const open = reactive(new Set<string>());
 const loading = reactive(new Set<string>());
-// A folder's error shows until that folder loads, or the loader changes.
 const errors = reactive(new Map<string, string>());
 const error = computed(() => errors.values().next().value ?? '');
 const filter = ref('');
 const filterBox = ref<HTMLInputElement | null>(null);
 
-// In-flight loads, so a second caller waits for the first instead of seeing an empty folder.
 const pending = new Map<string, Promise<void>>();
 function ensure(dir: string): Promise<void> {
   if (children.has(dir)) return Promise.resolve();
@@ -47,7 +39,7 @@ async function fetchDir(dir: string) {
   loading.add(dir);
   try {
     const list = await load(dir);
-    if (load !== props.load) return; // another task or ref took over meanwhile
+    if (load !== props.load) return;
     children.set(dir, list);
     errors.delete(dir);
     if (props.expandAll) for (const n of list) if (n.type === 'dir') await toggle(n.path, true);
@@ -66,7 +58,6 @@ async function toggle(dir: string, force?: boolean) {
   } else open.delete(dir);
 }
 
-// Reset when the loader changes (another task or ref).
 watch(
   () => props.load,
   () => {
@@ -80,7 +71,6 @@ watch(
   { immediate: true },
 );
 
-/** Open the folders above the selected file, so it's visible. */
 async function revealSelected() {
   const p = props.selected;
   if (!p) return;
@@ -88,7 +78,6 @@ async function revealSelected() {
   let dir = '';
   for (const part of parts.slice(0, -1)) {
     dir = dir ? `${dir}/${part}` : part;
-    // Compressed folders ("daemon/src") are one node; only open paths that exist as nodes.
     const parent = dir.includes('/') ? dir.slice(0, dir.lastIndexOf('/')) : '';
     await ensure(parent);
     if ([...children.values()].some((list) => list.some((n) => n.path === dir && n.type === 'dir'))) await toggle(dir, true);
@@ -112,7 +101,6 @@ const rows = computed<Row[]>(() => {
   return out;
 });
 
-/** With a filter, a flat list of matching files among everything loaded or known. */
 const matches = computed(() => {
   const q = filter.value.trim();
   if (!q) return null;

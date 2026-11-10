@@ -12,7 +12,6 @@ import { AUTO_MERGE_LABEL } from '../../../src/domain/landing/merge/auto-merge.t
 import { type PrDetails, verdictView } from '../../../src/domain/landing/merge/merge.ts';
 import { type PrFields, prFields, pullRequestOf } from '../../../src/domain/landing/pull-request/pr.ts';
 
-/** An open PR with these flat fields. */
 const openPr = (o: Partial<PrFields> = {}) => pullRequestOf({ ...prFields(null), pr_url: 'https://x/pull/1', pr_state: 'open', ...o });
 
 const ready: PrDetails = {
@@ -30,7 +29,6 @@ const ready: PrDetails = {
 };
 
 type Options = { pr_state?: 'open' | 'closed' | 'merged' | null; tests?: boolean | null; after?: boolean; auto_resolve?: boolean };
-/** The check as stored, its reasons with their kinds. */
 const raw = (pr: Partial<PrDetails> = {}, o: Options = {}) =>
   mergeRequestCheck({
     pr_state: o.pr_state === undefined ? 'open' : o.pr_state,
@@ -39,7 +37,6 @@ const raw = (pr: Partial<PrDetails> = {}, o: Options = {}) =>
     lands_after: o.after ? [{ on: 7, reason: 'its PR is open' }] : [],
     ...(o.auto_resolve === undefined ? {} : { auto_resolve: o.auto_resolve }),
   });
-/** The check as a person reads it: its reasons' texts. */
 const check = (pr: Partial<PrDetails> = {}, o: Options = {}) => verdictView(raw(pr, o));
 
 test('each reason says what it is about', () => {

@@ -1,5 +1,3 @@
-// Area reviews due: the pure decision from a repo's refs/reviewed/* marks, the git adapter on a temp repo whose mark
-// moves, the once-a-day reminder, the doctor's warning, and the review_due_days and review_due_lines settings.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
@@ -25,8 +23,6 @@ const DAY = 24 * 60 * 60 * 1000;
 const NOW = Date.parse('2026-11-08T12:00:00Z');
 const repo = { id: asRepoId(1), name: 'demo' };
 const settings = DEFAULT_REVIEW_DUE;
-
-// --- The decision, pure ---
 
 test('reviewDue: fresh, old, many lines and no marks', () => {
   const table = [
@@ -140,7 +136,6 @@ test('agentdeck doctor warns of a repo its probes say is due', async () => {
   scratch.close();
 });
 
-/** Facts on which every other doctor check passes. */
 function healthyFacts() {
   return {
     service: { installed: true, loaded: true, running: true, pid: 1, plist: null, lastExit: null },
@@ -154,15 +149,12 @@ function healthyFacts() {
   };
 }
 
-// --- On a real repo ---
-
 const db = openDb(join(home, 'agentdeck.db'));
 after(() => db.close());
 
 const sh = (cwd: string, env: Record<string, string>, ...args: string[]) =>
   execFileSync('git', args, { cwd, encoding: 'utf8', env: { ...process.env, ...env } }).trim();
 
-/** A commit of `lines` new lines, committed at `at` (ms). */
 function commit(dir: string, name: string, lines: number, at: number): string {
   writeFileSync(join(dir, name), `${Array.from({ length: lines }, (_, i) => `line ${i}`).join('\n')}\n`);
   const date = new Date(at).toISOString();
@@ -230,16 +222,12 @@ test('moving the mark clears the repo on the next check', async () => {
 
 test('a repo with no mark is due once more than review_due_lines lines merged since it was added', async () => {
   sh(dir, {}, 'update-ref', '-d', 'refs/reviewed/plan');
-  // The repo was added just now, so every commit above is from before it: nothing merged since.
   assert.deepEqual(await checkReviewsDue(db, Date.now()), []);
-  // Counted from the base as it was when the repo was added; from the empty tree when it is older than every commit.
   assert.deepEqual(await db.workspace.reviewFacts(dir, 'main', NOW - 5 * DAY), { marks: [], commits: 2, lines: 50 });
   assert.deepEqual(await db.workspace.reviewFacts(dir, 'main', NOW - 30 * DAY), { marks: [], commits: 3, lines: 60 });
   assert.equal(reviewDue(repo, { marks: [], commits: 3, lines: 60 }, { days: 7, lines: 50 }, NOW)?.days, null);
   sh(dir, {}, 'update-ref', 'refs/reviewed/plan', tip);
 });
-
-// --- The settings ---
 
 test('agentdeck set review_due_days and review_due_lines, shown by agentdeck settings', async () => {
   assert.deepEqual(getSettings(db).review_due, { days: 7, lines: 3000 });
@@ -252,14 +240,12 @@ test('agentdeck set review_due_days and review_due_lines, shown by agentdeck set
   assert.throws(() => updateSettings(db, { review_due: { days: 0 } }), /review_due_days/);
   assert.throws(() => updateSettings(db, { review_due: { lines: 1.5 } }), /review_due_lines/);
 
-  // Three days with a three-day-old mark: due again.
   sh(dir, {}, 'update-ref', 'refs/reviewed/plan', reviewed);
   const dues = await checkReviewsDue(db, NOW);
   assert.equal(dues.length, 1);
   updateSettings(db, { review_due: { days: 7, lines: 3000 } });
 });
 
-/** Run a CLI command in this process on `db`, returning what it printed. */
 async function inProcess(command: (ctx: never) => unknown, rest: string[]): Promise<string> {
   const out: string[] = [];
   const log = console.log;

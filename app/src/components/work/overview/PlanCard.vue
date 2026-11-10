@@ -14,8 +14,6 @@ import DisclosureContent from '../../ui/disclosure/DisclosureContent.vue';
 import DisclosureTrigger from '../../ui/disclosure/DisclosureTrigger.vue';
 import Progress from '../../ui/status/Progress.vue';
 
-// One plan attached to the task: its steps and how far they got, and the whole page on request.
-// The page runs in a sandboxed frame with no scripts; same-origin only so we can size and scroll it.
 const props = defineProps<{ taskId: number; plan: TaskPlan }>();
 const emit = defineEmits<{ open: [path: string] }>();
 
@@ -23,7 +21,6 @@ const STEP_ICON: Record<PlanStep['status'], string> = { done: '✓', doing: '◐
 const progress = computed(() => planProgress(props.plan.steps));
 const finished = computed(() => progress.value.finished);
 const total = computed(() => progress.value.total);
-// What colour a step's icon (and "in progress" label) takes, and how its title looks, by status.
 const ICON_TONE: Record<PlanStep['status'], string> = {
   done: 'text-done',
   doing: 'text-running',
@@ -33,7 +30,6 @@ const ICON_TONE: Record<PlanStep['status'], string> = {
 };
 const STEP_TONE: Record<PlanStep['status'], string> = { done: '', doing: '', todo: '', blocked: '', skipped: 'text-muted line-through' };
 
-// Where the plan came from. A plan this task follows may belong to another task, the one it was first attached to.
 const SOURCE_LABEL: Record<TaskPlan['source'], string> = {
   attached: 'attached',
   worker: 'written by the worker',
@@ -42,24 +38,18 @@ const SOURCE_LABEL: Record<TaskPlan['source'], string> = {
 const origin = computed(() => (props.plan.task_id === props.taskId ? SOURCE_LABEL[props.plan.source] : `#${props.plan.task_id}'s plan`));
 
 const full = ref(false);
-// Keyed by updated_at, so a run that rewrites the page reads it again, and only while it is showing. Read from the
-// task the plan belongs to.
 const pageQ = useQuery(
   computed(() => ({ ...planHtmlQuery(props.plan.task_id, props.plan.id, props.plan.updated_at), enabled: full.value })),
 );
-// Rebuilt when the mode changes, but only for a plan that follows it (the frame reloads, so it returns to the top):
-// withBaseStyle reads the mode only for a plan that doesn't link plan.css.
 const html = computed(() => (pageQ.data.value ? withBaseStyle(pageQ.data.value.html, mode.value, planCss) : null));
 const error = computed(() => (pageQ.error.value ? `Couldn't load the plan: ${pageQ.error.value.message}` : ''));
 const frame = ref<HTMLIFrameElement | null>(null);
 let scrollTo: string | null = null;
 
-// Show the whole plan, scrolled to a step. (The Read the plan button opens and closes it by itself.)
 async function show(stepId: string) {
   const wasShowing = full.value;
   full.value = true;
   scrollTo = stepId;
-  // A frame that is already up doesn't reload, so scroll it now; a new one scrolls when it loads.
   if (wasShowing && html.value !== null) await nextTick().then(onFrameLoad);
 }
 
@@ -69,7 +59,6 @@ function onFrameLoad() {
   const step = scrollTo && doc.getElementById(scrollTo);
   scrollTo = null;
   if (!step) return;
-  // Scroll the frame alone (scrollIntoView would move the dashboard too), then show the frame.
   doc.defaultView?.scrollTo({ top: step.getBoundingClientRect().top + doc.defaultView.scrollY - 12 });
   frame.value!.scrollIntoView({ block: 'nearest' });
 }

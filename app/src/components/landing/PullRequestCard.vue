@@ -10,14 +10,12 @@ import { openExternal } from '../../platform/native';
 import Markdown from '../ui/Markdown.vue';
 import Tooltip from '../ui/Tooltip.vue';
 
-// The pull request as it was opened: its state and link, its checks, and the summary the worker ended with (the PR body's first part).
 const props = defineProps<{ task: TaskDetail; isPath?: (p: string) => boolean }>();
 const emit = defineEmits<{ path: [path: string, line: number | null] }>();
 const { pending, run } = useAction();
 
 const summary = computed(() => finalMessage(props.task.runs));
 
-// Failing first, then running, then passed, then skipped; the PR's own order within each. Only an open PR has checks to show.
 const ORDER: Record<PrCheck['state'], number> = { fail: 0, pending: 1, pass: 2, skipped: 3 };
 const ICON: Record<PrCheck['state'], { icon: string; cls: string; label: string }> = {
   fail: { icon: '✗', cls: 'text-failed', label: 'failed' },
@@ -35,7 +33,6 @@ const checks = computed(() =>
 );
 const fixable = computed(() => canFixChecks(props.task));
 
-// A failing check's failed step and what failed, in a line, when the PR refresh read its log.
 function failure(c: PrCheck): string | null {
   if (c.state !== 'fail') return null;
   const headline = c.excerpt ? failureHeadline(c.excerpt) : '';

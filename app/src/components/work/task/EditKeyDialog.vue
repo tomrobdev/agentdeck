@@ -8,13 +8,11 @@ import { useActions } from '../../../composables/shared/useActions';
 import type { EditKeys, KeyEdit } from '../../../composables/work/useEditKeys';
 import Modal from '../../ui/Modal.vue';
 
-// What `e` (the prompt), `M` (the model) and `l` (a link) open, for the tasks the edit keys act on (composables/useEditKeys.ts).
 const props = defineProps<{ kind: KeyEdit; keys: EditKeys }>();
 const { flash } = useActions();
 const targets = computed(() => props.keys.targets.value);
 const heading = computed(() => (targets.value.length === 1 ? `#${targets.value[0].id}` : `${targets.value.length} tasks`));
 
-// The prompt, read from the task: the list has none.
 const first = computed(() => targets.value[0]?.id ?? 0);
 const detail = useQuery(computed(() => ({ ...taskQuery(first.value), enabled: props.kind === 'prompt' && first.value > 0 })));
 const prompt = ref('');
@@ -43,7 +41,6 @@ async function pickModel(model: string) {
 const all = useQuery(tasksQuery());
 const others = computed(() => (all.data.value ?? []).filter((t) => !targets.value.some((x) => x.id === t.id)));
 const linkTo = ref('');
-// The #id typed, or the one a suggestion starts with ("#12 Title").
 const linkId = () => Number(/^#?(\d+)/.exec(linkTo.value.trim())?.[1] ?? 0);
 async function link(kind: 'builds_on' | 'after') {
   const on = linkId();

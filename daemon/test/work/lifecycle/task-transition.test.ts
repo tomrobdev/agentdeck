@@ -20,7 +20,6 @@ import type { Needs } from '../../../src/domain/work/task/needs.ts';
 import type { TaskState } from '../../../src/domain/work/task/task.ts';
 import { type TaskChanges, noMergeRequestChanges } from '../../../src/domain/work/lifecycle/task-writes.ts';
 
-/** A retry's set-aside PR: no state, so no PR to anyone, and nothing of its checks or merge request. */
 const SET_ASIDE: TaskChanges = {
   pr_state: null,
   auto_merge_check: null,
@@ -38,12 +37,10 @@ interface Case {
   task?: { attempts?: number; max_attempts?: number; restarts?: number; pr?: Pick<PullRequest, 'state'> | null };
   to: TaskState;
   counters: TaskCounters;
-  /** What the change does to the PR; none when left out. */
   changes?: TaskChanges;
   history: TaskEventType;
 }
 
-/** A task's state in `status`, with what it carries there empty. */
 const stateIn = (status: TaskStatus): TaskState => {
   switch (status) {
     case 'done':
@@ -327,7 +324,6 @@ const CASES: Case[] = [
     counters: { restarts: MAX_RESTARTS },
     history: 'recover',
   },
-  // The cancel wins: a run that ends after cancel_requested leaves the task cancelled and changes nothing else.
   ...(
     [
       ['finish:done', { type: 'finish', outcome: 'done' }],
@@ -388,7 +384,6 @@ test('transition: a failed run is requeued while the task has attempts left, unl
 });
 
 test('transition: a retried task gets MAX_RESTARTS restarts again', () => {
-  // Failed after MAX_RESTARTS restarts, then retried.
   let task: TransitionTask = {
     status: 'failed',
     stop_reason: 'restarts',
@@ -423,7 +418,6 @@ test('transition: leaving done drops the merge request, whatever the PR', () => 
     }
 });
 
-/** An event for each rule key. */
 const EVENT_OF: Record<RuleKey, TaskEvent> = {
   claim: { type: 'claim' },
   'finish:done': { type: 'finish', outcome: 'done' },
@@ -445,14 +439,12 @@ const EVENT_OF: Record<RuleKey, TaskEvent> = {
   'recover:exhausted': { type: 'recover' },
 };
 
-/** The counters a task needs for each rule key: one restart short of too many for the last recover, an attempt left to requeue. */
 const countersFor = (key: RuleKey) => ({
   attempts: 1,
   max_attempts: key === 'finish:failed:retry' ? 2 : 1,
   restarts: key === 'recover:exhausted' ? MAX_RESTARTS - 1 : 0,
 });
 
-/** Every entry of RULES: rule key → current status → the domain event its move makes. */
 const EVENTS: Record<RuleKey, Partial<Record<TaskStatus, DomainEventType>>> = {
   claim: { queued: 'TaskStarted' },
   'finish:done': { running: 'TaskFinished', cancel_requested: 'TaskCancelled' },

@@ -19,10 +19,10 @@ test('minutesBetween reads sqlite timestamps', () => {
 });
 
 test('weekOf: the Monday of the week, in UTC', () => {
-  assert.equal(weekOf('2026-10-05 10:00:00'), '2026-10-05'); // a Monday
-  assert.equal(weekOf('2026-10-11 23:59:59'), '2026-10-05'); // the Sunday after
+  assert.equal(weekOf('2026-10-05 10:00:00'), '2026-10-05');
+  assert.equal(weekOf('2026-10-11 23:59:59'), '2026-10-05');
   assert.equal(weekOf('2026-10-12 00:00:00'), '2026-10-12');
-  assert.equal(weekOf('2026-10-04 12:00:00'), '2026-09-28'); // the Sunday before
+  assert.equal(weekOf('2026-10-04 12:00:00'), '2026-09-28');
   assert.equal(weekOf('nonsense'), '');
 });
 
