@@ -10,7 +10,6 @@ import { router } from './router';
 
 initTheme();
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: retryQuery, refetchOnWindowFocus: true } } });
-// The tray window loads the same page at #/tray and mounts its own root: no header, status bar or link handling.
 void router.replace(router.options.history.location);
 void router.isReady().then(() => {
   const root = router.currentRoute.value.name === 'tray' ? TrayView : App;

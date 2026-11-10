@@ -1,6 +1,4 @@
 // How a run ends on each way claude's stream can go, through the real adapter and the scheduler on the fake claude:
-// tool calls, the turn limit, a result line cut off halfway, and a process that stops mid-stream. The fake's events have
-// the shape of the recorded ones (contracts.test.ts).
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
@@ -41,7 +39,6 @@ after(() => db.close());
 
 const drain = () => new Scheduler(db, { once: true, tickMs: 50, log: () => {} }).run();
 
-/** Run one task with `prompt` to its end; its task, its one run and the run log's entries. */
 async function runOnce(prompt: string) {
   const task = db.addTask({ repo_id: REPO, title: prompt, prompt, max_attempts: 1 });
   await drain();

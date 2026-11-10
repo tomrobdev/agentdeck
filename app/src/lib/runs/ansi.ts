@@ -3,7 +3,6 @@
 export interface AnsiSegment {
   text: string;
   bold: boolean;
-  /** 0–7 (black … white), or null for the default colour. */
   color: number | null;
 }
 
@@ -20,7 +19,7 @@ export function parseAnsi(text: string): AnsiSegment[] {
   for (const m of text.matchAll(ESCAPE)) {
     push(m.index);
     last = m.index + m[0].length;
-    if (m[2] !== 'm') continue; // cursor moves and the like
+    if (m[2] !== 'm') continue;
     const codes = m[1] === '' ? [0] : m[1].split(';').map(Number);
     for (let i = 0; i < codes.length; i++) {
       const c = codes[i];
@@ -31,7 +30,7 @@ export function parseAnsi(text: string): AnsiSegment[] {
       else if (c === 22) bold = false;
       else if (c >= 30 && c <= 37) color = c - 30;
       else if (c === 39) color = null;
-      else if (c === 38 || c === 48) i += codes[i + 1] === 5 ? 2 : codes[i + 1] === 2 ? 4 : 0; // extended colours: skip their arguments
+      else if (c === 38 || c === 48) i += codes[i + 1] === 5 ? 2 : codes[i + 1] === 2 ? 4 : 0;
     }
   }
   push(text.length);

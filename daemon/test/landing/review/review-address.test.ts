@@ -44,9 +44,7 @@ const patchA = [
 ].join('\n');
 
 test('hunkAround keeps a few lines either side, on the side the comment counts on', () => {
-  // new line 4 is "three and a half"
   assert.equal(hunkAround(patchA, 'new', 4, 1), ['@@ -1,5 +1,6 @@', '+THREE', '+three and a half', ' four'].join('\n'));
-  // old line 3 is the removed "three"
   assert.equal(hunkAround(patchA, 'old', 3, 1), ['@@ -1,5 +1,6 @@', ' two', '-three', '+THREE'].join('\n'));
   assert.equal(hunkAround(patchA, 'new', 40), null);
   assert.equal(hunkAround('', 'new', 1), null);
@@ -153,8 +151,6 @@ test('parseAnswers reads ANSWER lines and a missing one stays unanswered', () =>
   assert.match(withNote(text, note), /no answer: c2[^\n]*\nSTATUS: DONE$/);
 });
 
-// --- a run that answers ---
-
 const repoPath = join(home, 'demo');
 const db = openDb(join(home, 'test.db'));
 const sh = (...args: string[]) => execFileSync('git', args, { cwd: repoPath, encoding: 'utf8' }).trim();
@@ -204,7 +200,6 @@ test('a run whose final message answers the comments moves them to answered; the
     ],
   );
 
-  // A second review whose run answers only c1: c2 stays open and the run's summary names it.
   const second = await review([
     { path: 'fake-output.txt', line: 1, body: 'once more FAKE_ANSWER_FIRST' },
     { path: 'README.md', line: 1, body: 'again' },

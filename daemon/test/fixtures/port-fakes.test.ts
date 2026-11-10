@@ -1,5 +1,4 @@
 // The Agent and CodeHost ports on their in-memory fakes: a worker run and a merge, with no claude binary and no gh.
-// Real git and SQLite. The real adapters stay covered by e2e.test.ts.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';

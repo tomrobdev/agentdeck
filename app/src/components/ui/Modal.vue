@@ -2,12 +2,8 @@
 import { ref } from 'vue';
 import { DialogContent, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui';
 
-// A modal dialog on Reka's Dialog. Callers mount it with v-if, so it is always open and a dismissal (Escape, a click on
-// the overlay, the ✕) emits `close`. Reka does the rest: Escape reaches only the top layer, focus is trapped inside and
-// returned to the trigger, and a drag that starts in the content and ends on the overlay does not close it.
 const props = defineProps<{
   title: string;
-  /** What gets focus on open: a selector inside the dialog, or an element. Default: the first field in the body. */
   focus?: string | HTMLElement | null;
 }>();
 const emit = defineEmits<{ close: [] }>();
@@ -19,7 +15,6 @@ function onOpenAutoFocus(e: Event) {
   const root = content.value?.$el;
   const target = typeof props.focus === 'string' ? root?.querySelector<HTMLElement>(props.focus) : props.focus;
   const field = target ?? root?.querySelector<HTMLElement>(`[data-modal-body] :is(${FIELD})`);
-  // No field: leave Reka's own choice (the first focusable thing).
   if (!field) return;
   e.preventDefault();
   field.focus();

@@ -23,7 +23,6 @@ test('the app delivers desktop notifications when it was seen in the last 90 s',
   assert.equal(appDelivers(null, NOW), false);
 });
 
-/** Channels that only count what they were asked to send. */
 function channels() {
   const sent = { desktop: [] as string[], ntfy: [] as string[] };
   return {

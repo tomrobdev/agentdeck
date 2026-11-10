@@ -1,5 +1,3 @@
-// Models: a new task's model from one default (the repo's, else the default_model setting), resolve and unblock runs on
-// the support_model setting, the model recorded on every run, and `agentdeck stats --by model` read from those records.
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
@@ -27,8 +25,6 @@ const { taskCommands } = await import('../../../src/cli/work/tasks.ts');
 const { daemonCommands } = await import('../../../src/cli/operations/daemon.ts');
 const { asRepoId, asTaskId, testApp } = await import('../../fixtures/fixtures.ts');
 const { fakeCodeHost } = await import('../../fixtures/fakes.ts');
-
-// --- The decisions, pure ---
 
 test('newTaskModel: the model asked for, else the repo’s, else the default_model setting', () => {
   assert.deepEqual(newTaskModel('haiku', { model: 'opus' }, 'sonnet'), { model: 'haiku', source: 'asked' });
@@ -86,7 +82,6 @@ test('measureByModel: a row per recorded model, unknown last, and interventions 
     { ...run(2, 'opus', '2026-10-01 12:00:00'), attempt: 2 },
     run(3, null, '2026-10-01 10:00:00'),
   ];
-  // The retry with a note came after task 2's sonnet run, before its opus one: it counts against sonnet.
   const rows = measureByModel({ runs, tasks: [1, 2, 3].map(scorecardTask), events: [retry(2, '2026-10-01 11:00:00')] });
   assert.deepEqual(
     rows.map((r) => [r.model, r.measures.runs, r.measures.first_runs, r.measures.first_run_done, r.interventions]),
@@ -98,8 +93,6 @@ test('measureByModel: a row per recorded model, unknown last, and interventions 
   );
   assert.equal(rows[0].measures.cost_per_done_task, 1, 'opus: two runs over two done tasks');
 
-  // Since 11:00: only runs begun then count, an intervention goes to the older run before it, and a person's event that
-  // is no intervention (a plain retry) leaves no row for a model with no runs since.
   const since = measureByModel({
     runs,
     tasks: [1, 2, 3].map(scorecardTask),
@@ -134,8 +127,6 @@ test('the defaults are the settings’ defaults', () => {
   assert.equal(DEFAULT_SUPPORT_MODEL, 'sonnet');
 });
 
-// --- Through the database, the scheduler, the fake claude and the CLI ---
-
 const db = testApp(openDb(join(home, 'agentdeck.db')), { codeHost: fakeCodeHost() });
 db.setSetting('max_concurrent', '1');
 after(() => db.close());
@@ -159,7 +150,6 @@ const cli = (...args: string[]) =>
     encoding: 'utf8',
     env: { ...process.env, AGENTDECK_HOME: home, AGENTDECK_TASK_ID: '', AGENTDECK_PLANNER: '' },
   });
-/** The --model of each fake claude run whose prompt starts with `start`. */
 const modelsStarted = (start: string) =>
   readFileSync(join(home, 'fake-claude-args.log'), 'utf8')
     .trim()
@@ -242,7 +232,6 @@ test('stats --by model: a row per recorded model, unknown for older runs, and an
     'the run keeps the model it ran on',
   );
 
-  // A run from older code recorded no model.
   const old = db.addTask({ repo_id: db.findRepo('demo')!.id, title: 'old', prompt: 'old', model: 'sonnet' });
   db.finishRun(db.startRun(old.id, 1, join(home, 'old.log')), { outcome: 'done' });
 
@@ -265,7 +254,6 @@ test('stats --by model: a row per recorded model, unknown for older runs, and an
   assert.equal(cli('stats', '--by', 'day').status, 1);
 });
 
-/** Runs a CLI command in this process, with what it prints, and `exit <code>` thrown where it would exit. */
 async function inProcess(command: (ctx: never) => void | Promise<void>, rest: string[], flags: Record<string, unknown> = {}) {
   const out: string[] = [];
   const { log, error } = console;

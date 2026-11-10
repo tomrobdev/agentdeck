@@ -15,7 +15,6 @@ import StatusIcon from '../../ui/status/StatusIcon.vue';
 import EditableProp from '../overview/EditableProp.vue';
 import { name, prop, row, rowButton, rowMono } from './sidebar-style';
 
-// Task properties, GitHub-sidebar style. Priority, model and turns are editable while the task is.
 const props = defineProps<{ task: TaskDetail }>();
 const { run, flash } = useActions();
 
@@ -33,24 +32,20 @@ function revealWorktree() {
   if (dir) run(() => revealInFinder(dir));
 }
 
-// The editor template is read when drawn, so a change in Settings shows without a reload.
 const editorSet = () => isNative && !!editorTemplate();
 function openInEditor() {
   const dir = props.task.worktree;
   if (dir) run(() => runTemplate(editorArgv(), { cwd: dir }));
 }
 
-// An edit is saved from the field's own value; a refused one leaves the task unchanged, so the saved value shows again.
 const FIELD_NAMES = { priority: 'Priority', model: 'Model', max_turns: 'Max turns' } as const;
 async function save(field: 'priority' | 'model' | 'max_turns', text: string) {
   const value = text.trim();
   if (value === String(props.task[field])) return;
-  // An empty field would be sent as 0 (Number('') is 0): refuse it, and the saved value shows again.
   if (!value) return flash(`${FIELD_NAMES[field]} can't be empty.`);
   await run(() => workApi.editTask(props.task.id, { [field]: field === 'model' ? value : Number(value) }));
 }
 
-// Auto-merge: the task's own setting, or its repo's. Moot once the PR is merged or closed, or the task cancelled.
 const autoMergeShown = computed(() => props.task.status !== 'cancelled' && !['merged', 'closed'].includes(props.task.pr_state ?? ''));
 const AUTO_MERGE = [
   { label: "The repo's setting", stored: null, value: null },
@@ -58,7 +53,6 @@ const AUTO_MERGE = [
   { label: 'Off for this task', stored: 0, value: false },
 ] as const;
 const savedAutoMerge = computed(() => AUTO_MERGE.findIndex((o) => o.stored === props.task.auto_merge));
-// The select shows the saved value: after a save that failed it goes back to it, instead of keeping the refused choice.
 async function setAutoMerge(select: HTMLSelectElement) {
   const { value: auto_merge } = AUTO_MERGE[select.selectedIndex];
   await run(async () => {

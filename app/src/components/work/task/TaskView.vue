@@ -31,20 +31,17 @@ import Sidebar from './Sidebar.vue';
 import TaskActions from './TaskActions.vue';
 import TaskTitle from './TaskTitle.vue';
 
-// A task laid out like a pull request: header, tabs, and a properties sidebar.
 const props = defineProps<{ task: TaskDetail; tab: TaskTab; query: Record<string, string> }>();
 const emit = defineEmits<{ act: [kind: 'approve' | 'reject' | 'retry' | 'cancel'] }>();
 const { run } = useActions();
 
 const pageEl = ref<HTMLElement | null>(null);
 
-// End what this task waits for: resume the daemon or the repo.
 const resumeDaemon = () => run(() => operationsApi.resume());
 const resumeRepo = () => run(() => reposApi.resumeRepo(props.task.repo_id));
 
 const { changes, error: changesError, isPath, paths: knownPaths } = useChanges(toRef(props, 'task'));
 
-// The review bar shows while a draft has comments, or once Request changes was pressed.
 const { draft, pending } = useReviews(computed(() => props.task.id));
 const requesting = ref(false);
 const showReviewBar = computed(() => requesting.value || pending.value > 0);
@@ -69,7 +66,6 @@ const s = computed(() => props.task.status);
 const needs = computed(() => readNeeds(props.task));
 const question = computed(() => readTaskQuestion(props.task));
 
-// Dialogs hold the Escape key themselves (useHotkeys skips it while one is open).
 const edits = useEditKeys('task', () => props.task.id);
 useHotkeys({
   Escape: { label: 'Back to the queue', scope: 'task', run: () => go({ name: 'queue' }) },
@@ -77,7 +73,6 @@ useHotkeys({
   ...edits.keys,
 });
 
-// Branch names under the title.
 const base = computed(() => changes.value?.base_ref ?? 'base');
 const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel))] px-1.5 py-px';
 </script>
@@ -86,7 +81,6 @@ const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel
   <section ref="pageEl" class="flex min-h-0 flex-1 flex-col bg-bg">
     <EditKeyDialog v-if="edits.dialog.value" :kind="edits.dialog.value" :keys="edits" />
     <SnippetPopover v-if="pageEl" :task-id="task.id" :root="pageEl" />
-    <!-- Row 1 the number and title, full width; row 2 the status, branch and facts; row 3 the status line. -->
     <header class="flex items-start gap-3 px-6 pt-4 pb-3">
       <button class="mt-0.5" title="Back to the queue (Esc)" @click="go({ name: 'queue' })">←</button>
       <div class="min-w-0 flex-1">
@@ -111,7 +105,6 @@ const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel
       </div>
     </header>
 
-    <!-- The tabs, and the task's actions at the end of the bar. -->
     <div class="flex items-end border-b border-border px-6">
       <TabBar class="min-w-0" label="Task" :tabs="TABS" :model-value="tab" @update:model-value="(key) => openTask(task.id, key)" />
       <div class="ml-auto self-center py-1 pl-3">

@@ -11,13 +11,11 @@ import { useApprovals } from '../composables/work/useApprovals';
 import { useTaskActs } from '../composables/work/usePaletteCommands';
 import type { TaskTab } from '../lib/shared/app-url';
 
-// One task's page: the stale-daemon bar, then the task once it has loaded.
 const props = defineProps<{ id: number; tab: TaskTab; query: Record<string, string> }>();
 const { status } = usePause();
 const taskQ = useQuery(computed(() => taskQuery(props.id)));
 const tasksQ = useQuery(tasksQuery());
 const { actOn } = useTaskActs(() => tasksQ.data.value ?? [], useActions(), useApprovals());
-// The palette lists the open task's actions first.
 watch(
   () => props.id,
   (id) => (selectedId.value = id),

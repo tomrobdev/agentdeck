@@ -31,7 +31,6 @@ test('docs: generating twice changes nothing', () => {
 test('docs/architecture.md is short and opens with the layers', () => {
   const docs = readDocs();
   const lines = docs.trimEnd().split('\n').length;
-  // 150 for the daemon's sections, and 10 for the Dashboard's one paragraph (its table is in docs/reference/dashboard.md).
   assert.ok(lines <= 160, `docs/architecture.md is ${lines} lines; keep it at 160 or fewer and move detail to docs/reference/`);
   assert.equal(/^## (.*)$/m.exec(docs)?.[1], 'Layers', 'the first ## of docs/architecture.md must be Layers');
 });
@@ -75,7 +74,6 @@ test('docs: identifiers in backticks in the hand-written sections are exported f
 });
 
 test('docs/reference/models.md lists every field of Task', () => {
-  // The catalogue is read from the type, so a field added without `pnpm docs:gen` also makes the file stale (above).
   const task = readModels().find((m) => m.name === 'Task');
   assert.ok(task);
   const models = readFileSync(join(REFERENCE_DIR, 'models.md'), 'utf8');

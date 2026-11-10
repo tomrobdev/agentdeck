@@ -55,7 +55,6 @@ test('measureByWeek puts a task in the week of its first run, oldest week first'
   const weeks = measureByWeek([
     run({ task_id: asTaskId(2), started_at: '2026-10-13 09:00:00', ended_at: '2026-10-13 09:30:00', cost_usd: 3 }),
     run({ task_id: asTaskId(1), outcome: 'failed' }),
-    // the retry begins in the next week but belongs to the week the task began in
     run({ task_id: asTaskId(1), attempt: 2, started_at: '2026-10-12 08:00:00', ended_at: '2026-10-12 08:20:00', cost_usd: 2 }),
   ]);
   assert.deepEqual(
@@ -84,31 +83,31 @@ test('countInterventions: only a person event that changes the outcome counts', 
   const tasks = new Map([
     [1, task({ id: asTaskId(1), auto_merge_from: '' })],
     [2, task({ id: asTaskId(2) })],
-    [3, task({ id: asTaskId(3), auto_merge_from: '2026-10-06 00:00:00' })], // auto-merge known to be on from the 6th
+    [3, task({ id: asTaskId(3), auto_merge_from: '2026-10-06 00:00:00' })],
   ]);
   const at = '2026-10-05 12:00:00';
   const c = countInterventions(
     [
-      ev({ type: 'retry', reason: 'use the helper in lib/', at }), // counts: retry with a note
-      ev({ type: 'retry', reason: null, at }), // a plain retry asks again, nothing more
-      ev({ type: 'retry', reason: '  ', at }), // a blank note is no note
-      ev({ type: 'retry', reason: "AgentDeck installed lodash on the branch at the person's request.", at }), // install, not a note
-      ev({ type: 'unblock_retry', reason: 'Unblock run: use sqlite', at }), // the daemon's, not a person's
-      ev({ type: 'review_retry', reason: 'Review run: handle tabs', at }), // the daemon's, not a person's
+      ev({ type: 'retry', reason: 'use the helper in lib/', at }),
+      ev({ type: 'retry', reason: null, at }),
+      ev({ type: 'retry', reason: '  ', at }),
+      ev({ type: 'retry', reason: "AgentDeck installed lodash on the branch at the person's request.", at }),
+      ev({ type: 'unblock_retry', reason: 'Unblock run: use sqlite', at }),
+      ev({ type: 'review_retry', reason: 'Review run: handle tabs', at }),
       ev({ type: 'mark_done', from_status: 'blocked', to_status: 'done', at }),
       ev({ type: 'cancel', from_status: 'queued', to_status: 'cancelled', at }),
       ev({ type: 'edit', from_status: 'queued', to_status: 'queued', at }),
       ev({ type: 'edit', from_status: 'blocked', to_status: 'blocked', at }),
-      ev({ type: 'edit', from_status: 'proposed', to_status: 'proposed', at }), // a proposal is not yet work
+      ev({ type: 'edit', from_status: 'proposed', to_status: 'proposed', at }),
       ev({ type: 'edit', from_status: 'failed', to_status: 'failed', at }),
-      ev({ type: 'merge', reason: 'squash merge', at }), // auto-merge on for task 1: by hand counts
-      ev({ type: 'merge', reason: 'auto-merged (squash)', at }), // the daemon did it
-      ev({ type: 'merge', reason: 'squash merge', task_id: asTaskId(2), at }), // auto-merge off for task 2: normal
-      ev({ type: 'merge', reason: 'squash merge', task_id: asTaskId(3), at }), // before auto-merge was known to be on: normal
-      ev({ type: 'merge', reason: 'squash merge', task_id: asTaskId(3), at: '2026-10-07 09:00:00' }), // after: by hand counts
+      ev({ type: 'merge', reason: 'squash merge', at }),
+      ev({ type: 'merge', reason: 'auto-merged (squash)', at }),
+      ev({ type: 'merge', reason: 'squash merge', task_id: asTaskId(2), at }),
+      ev({ type: 'merge', reason: 'squash merge', task_id: asTaskId(3), at }),
+      ev({ type: 'merge', reason: 'squash merge', task_id: asTaskId(3), at: '2026-10-07 09:00:00' }),
       ev({ type: 'approve', from_status: 'proposed', to_status: 'queued', at }),
       ev({ type: 'claim', at }),
-      ev({ type: 'retry', reason: 'orphan', task_id: asTaskId(99), at }), // a task not in the set
+      ev({ type: 'retry', reason: 'orphan', task_id: asTaskId(99), at }),
     ],
     tasks,
   );
@@ -125,8 +124,6 @@ test('countInterventions: only a person event that changes the outcome counts', 
 });
 
 test('cycleOf: queued, running and review minutes from a task history', () => {
-  // queued 10:00 → 10:10 = 10; ran 10:10 → 10:35 (failed, retried) and 11:00 → 11:20 = 25 + 20 = 45;
-  // a plan_unfinished row inside the second run does not end it; done at 11:20, merged at 13:20 = 120 in review.
   const c = cycleOf([
     ev({ type: 'created', to_status: 'queued', at: '2026-10-05 10:00:00' }),
     ev({ type: 'claim', from_status: 'queued', to_status: 'running', at: '2026-10-05 10:10:00' }),
@@ -138,7 +135,6 @@ test('cycleOf: queued, running and review minutes from a task history', () => {
   ]);
   assert.deepEqual(c, { queued: 10, running: 45, review: 120 });
 
-  // a proposal waits from its approval, not its creation; no run and no merge leave the other times out
   assert.deepEqual(
     cycleOf([
       ev({ type: 'created', to_status: 'proposed', at: '2026-10-05 09:00:00' }),
@@ -160,7 +156,7 @@ test('PR checks: green is some checks, none failing or pending', () => {
     task({ pr_checks_opened: { total: 2, failing: 1, pending: 0 } }),
     task({ pr_checks_opened: { total: 5, failing: 0, pending: 0 } }),
     task({ pr_checks_opened: { total: 1, failing: 0, pending: 0 } }),
-    task({ pr_checks_opened: null }), // never recorded: left out
+    task({ pr_checks_opened: null }),
   ]);
   assert.deepEqual(s, { recorded: 4, green: 3, rate: 0.75 });
   assert.deepEqual(summarizeChecks([]), { recorded: 0, green: 0, rate: null });
@@ -169,11 +165,11 @@ test('PR checks: green is some checks, none failing or pending', () => {
 test('quotaSpends: rises add up, a reset counts what the new window shows', () => {
   const sample = (utilization: number, resets_at: number, observed_at: string) => ({ utilization, resets_at, observed_at });
   const spends = quotaSpends([
-    sample(0.1, 100, '2026-10-05 10:00:00'), // the baseline: not spent while watched
-    sample(0.25, 100, '2026-10-05 11:00:00'), // +15
-    sample(0.4, 100, '2026-10-05 12:00:00'), // +15
-    sample(0.05, 200, '2026-10-12 09:00:00'), // reset: 5 spent since
-    sample(0.12, 200, '2026-10-12 10:00:00'), // +7
+    sample(0.1, 100, '2026-10-05 10:00:00'),
+    sample(0.25, 100, '2026-10-05 11:00:00'),
+    sample(0.4, 100, '2026-10-05 12:00:00'),
+    sample(0.05, 200, '2026-10-12 09:00:00'),
+    sample(0.12, 200, '2026-10-12 10:00:00'),
   ]);
   assert.deepEqual(
     spends.map((s) => s.at),
@@ -188,16 +184,16 @@ test('quotaSpends: rises add up, a reset counts what the new window shows', () =
 
 test("resolveAutoMerge: auto-merge is known to be on from the repo's first merge by the daemon", () => {
   const events = [
-    ev({ repo_id: asRepoId(1), type: 'merge', reason: 'squash merge', at: '2026-10-01 10:00:00' }), // by hand, before the setting was used
+    ev({ repo_id: asRepoId(1), type: 'merge', reason: 'squash merge', at: '2026-10-01 10:00:00' }),
     ev({ repo_id: asRepoId(1), type: 'merge', reason: 'auto-merged (squash)', at: '2026-10-08 10:00:00' }),
-    ev({ repo_id: asRepoId(1), type: 'merge', reason: 'auto-merged (squash)', at: '2026-10-06 10:00:00' }), // the earliest
+    ev({ repo_id: asRepoId(1), type: 'merge', reason: 'auto-merged (squash)', at: '2026-10-06 10:00:00' }),
   ];
   const from = (o: Partial<ScorecardTaskRow>) => resolveAutoMerge([row(o)], events)[0].auto_merge_from;
   assert.equal(from({ repo_auto_merge: true }), '2026-10-06 10:00:00');
-  assert.equal(from({ repo_auto_merge: true, auto_merge: false }), null); // the task opted out
-  assert.equal(from({ repo_auto_merge: false, auto_merge: true }), ''); // the task opted in: always
+  assert.equal(from({ repo_auto_merge: true, auto_merge: false }), null);
+  assert.equal(from({ repo_auto_merge: false, auto_merge: true }), '');
   assert.equal(from({ repo_auto_merge: false }), null);
-  assert.equal(from({ repo_id: asRepoId(2), repo_auto_merge: true }), null); // on, but nothing merged by the daemon yet
+  assert.equal(from({ repo_id: asRepoId(2), repo_auto_merge: true }), null);
 });
 
 test('parseSince: a date, or a date and time, as a sqlite stamp', () => {
@@ -211,8 +207,6 @@ test('parseSince: a date, or a date and time, as a sqlite stamp', () => {
 test('buildScorecard: per repo, per week, with --since', () => {
   const week1 = '2026-10-05';
   const week2 = '2026-10-12';
-  // Task 1 (repo 1, week 1): queued 10, ran 30, review 120, checks green. Task 2 (repo 1, week 1): queued 30, ran 60, no PR.
-  // Task 3 (repo 2, week 2): queued 20, ran 90, review 30, checks failing.
   const tasks = [
     row({
       id: asTaskId(1),
@@ -278,8 +272,8 @@ test('buildScorecard: per repo, per week, with --since', () => {
   ];
   const samples = [
     { utilization: 0.1, resets_at: 1, observed_at: '2026-10-05 09:00:00' },
-    { utilization: 0.18, resets_at: 1, observed_at: '2026-10-06 09:00:00' }, // +8, week 1
-    { utilization: 0.2, resets_at: 1, observed_at: '2026-10-13 09:00:00' }, // +2, week 2
+    { utilization: 0.18, resets_at: 1, observed_at: '2026-10-06 09:00:00' },
+    { utilization: 0.2, resets_at: 1, observed_at: '2026-10-13 09:00:00' },
   ];
   const input = { tasks, events, samples, repoName: (id: number) => (id === 1 ? 'alpha' : 'beta') };
 
@@ -291,14 +285,14 @@ test('buildScorecard: per repo, per week, with --since', () => {
   const [alpha, beta] = card.repos.map((r) => r.measures);
   assert.equal(alpha.interventions.total, 1);
   assert.equal(beta.interventions.total, 1);
-  assert.equal(alpha.queued_minutes, 20); // median of 10, 30
-  assert.equal(alpha.running_minutes, 45); // median of 30, 60
+  assert.equal(alpha.queued_minutes, 20);
+  assert.equal(alpha.running_minutes, 45);
   assert.equal(alpha.review_minutes, 120);
   assert.deepEqual(alpha.pr_checks, { recorded: 1, green: 1, rate: 1 });
   assert.deepEqual(beta.pr_checks, { recorded: 1, green: 0, rate: 0 });
-  assert.equal(card.total.queued_minutes, 20); // median of 10, 20, 30
-  assert.equal(card.total.running_minutes, 60); // median of 30, 60, 90
-  assert.equal(card.total.review_minutes, 75); // median of 120, 30
+  assert.equal(card.total.queued_minutes, 20);
+  assert.equal(card.total.running_minutes, 60);
+  assert.equal(card.total.review_minutes, 75);
   assert.equal(card.total.interventions.total, 2);
   assert.deepEqual(card.total.pr_checks, { recorded: 2, green: 1, rate: 0.5 });
   near(card.quota_points, 10);
@@ -313,9 +307,8 @@ test('buildScorecard: per repo, per week, with --since', () => {
   assert.equal(card.weeks[1].measures.review_minutes, 30);
 
   assert.deepEqual(buildScorecard(input).weeks, []);
-  // task 2 was created on the 6th, but its mark_done on the 7th still falls after this `since`
   const late = buildScorecard({ ...input, since: '2026-10-06 12:00:00' });
-  assert.equal(late.total.tasks, 1); // only task 3 was created since
+  assert.equal(late.total.tasks, 1);
   assert.equal(late.total.interventions.by_kind.mark_done, 1);
   assert.equal(late.total.interventions.total, 2);
   const since = buildScorecard({ ...input, since: '2026-10-12 00:00:00' });
@@ -344,7 +337,6 @@ test('pilotStats: an edit is recorded in the history, and the scorecard reads th
   assert.equal(edit?.from_status, 'queued');
   assert.equal(edit?.to_status, 'queued');
   assert.equal(edit?.reason, 'title, priority');
-  // a task that cannot be edited records nothing
   const done = doneTask(db, repo);
   assert.equal(db.editTask(done.id, { title: 'x' }), undefined);
   assert.equal(db.eventsForTask(done.id).filter((e) => e.type === 'edit').length, 0);

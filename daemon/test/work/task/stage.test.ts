@@ -1,5 +1,3 @@
-// A task's stage (domain/work/task/stage.ts) as tables: stageOf's fields, then what each predicate and statusGroup say for
-// each status, pull request state and wait. Plain values, no database.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
@@ -60,7 +58,6 @@ test('stageOf takes the status, the pull request state, the wait and the PR retr
 });
 
 test('isWaiting and isStuck: only a queued task waits, on its way or stuck, never both', () => {
-  // [status, waiting, isWaiting, isStuck]
   const rows: [TaskStatus, Waiting | null | undefined, boolean, boolean][] = [
     ['queued', undefined, false, false],
     ['queued', null, false, false],
@@ -85,7 +82,6 @@ test('isWaiting and isStuck: only a queued task waits, on its way or stuck, neve
 });
 
 test('the pull request predicates: open is review only when done, merged is history only when done', () => {
-  // [status, pr_state, hasOpenPr, isReview, isMerged]
   const rows: [TaskStatus, PrState | null, boolean, boolean, boolean][] = [
     ['done', 'open', true, true, false],
     ['done', 'merged', false, false, true],
@@ -115,7 +111,6 @@ test('canStartMerge: a task in review, not syncing and with no merge request wai
 });
 
 test('statusGroup: each status, pull request state and wait lands in the group the table says', () => {
-  // [status, pr_state, waiting, group]
   const rows: [TaskStatus, PrState | null, Waiting | null | undefined, string][] = [
     ['proposed', null, undefined, 'proposed'],
     ['queued', null, undefined, 'queued'],

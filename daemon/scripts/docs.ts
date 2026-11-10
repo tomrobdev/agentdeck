@@ -1,6 +1,4 @@
 // pnpm docs:gen: rewrites the generated block of docs/architecture.md and the files of docs/reference/ from the code.
-// The edit hook (scripts/edit-hook.mjs) runs it after every Claude edit under daemon/src or to the layers, so it rarely
-// needs running by hand.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { DOCS_PATH, REFERENCE_DIR, generateReference, readDocs, renderDocs } from './lib/architecture-docs.ts';

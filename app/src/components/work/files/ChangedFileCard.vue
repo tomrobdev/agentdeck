@@ -13,13 +13,11 @@ import Disclosure from '../../ui/disclosure/Disclosure.vue';
 import DisclosureContent from '../../ui/disclosure/DisclosureContent.vue';
 import DisclosureTrigger from '../../ui/disclosure/DisclosureTrigger.vue';
 
-// One changed file on the Changes tab: its header, and its diff or markdown preview.
 defineProps<{
   file: ChangedFile;
   patch: PatchState | undefined;
   split: boolean;
   viewed: boolean;
-  /** The preview's text while it is shown: null until it loads, undefined when the diff is shown. */
   preview: string | null | undefined;
   comments?: ShownComment[];
   add: (line: Pick<NewReviewComment, 'side' | 'line'>, body: string) => Promise<boolean>;

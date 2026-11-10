@@ -1,5 +1,4 @@
 <script setup lang="ts">
-// The top bar: where to go and what to add. The daemon's live numbers are in the status bar at the bottom.
 import { computed } from 'vue';
 import type { Status } from '../../api/types';
 import { go, route } from '../../router';

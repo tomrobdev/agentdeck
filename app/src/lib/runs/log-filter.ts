@@ -12,15 +12,12 @@ export const LOG_FILTERS: { value: LogFilter; label: string; title: string }[] =
   { value: 'failures', label: 'Failures', title: 'Failed test calls, failed setup and test runs, and errors' },
 ];
 
-/** A call that is over this long is marked slow. */
 export const SLOW_MS = 60_000;
 
-/** A stored filter, or All when it is not one of the five. */
 export function parseLogFilter(v: unknown): LogFilter {
   return LOG_FILTERS.some((f) => f.value === v) ? (v as LogFilter) : 'all';
 }
 
-/** Whether an item is a failure: a failed test call, a failed setup or test run by the daemon, or an error entry. */
 export function isFailure(item: Item, testCmd: string | null): boolean {
   if (item.type === 'call') return !!item.result && !item.result.ok && isTestCall(item.call, testCmd);
   if (item.type !== 'plain') return false;
@@ -28,7 +25,6 @@ export function isFailure(item: Item, testCmd: string | null): boolean {
   return e.kind === 'error' || ((e.kind === 'setup' || e.kind === 'tests') && !e.passed);
 }
 
-/** Whether an item itself (not what is nested under it) belongs under a filter. */
 function matches(item: Item, filter: LogFilter, testCmd: string | null): boolean {
   if (filter === 'failures') return isFailure(item, testCmd);
   if (item.type === 'plain') {
@@ -47,10 +43,6 @@ function flatten(items: Item[]): Item[] {
   return items.flatMap((i) => (i.type === 'explored' ? i.calls : [i]));
 }
 
-/**
- * The items a filter leaves. It runs before the Explored folding: reads are unfolded, filtered and folded again. A subagent's
- * call stays, with only its matching steps, when any step matches.
- */
 export function filterItems(items: Item[], filter: LogFilter, testCmd: string | null): Item[] {
   if (filter === 'all') return items;
   const keep = (list: Item[]): Item[] => {
@@ -66,7 +58,6 @@ export function filterItems(items: Item[], filter: LogFilter, testCmd: string | 
   return keep(items);
 }
 
-/** The keys of every failure in a transcript, nested ones included. */
 export function failureKeys(items: Item[], testCmd: string | null): Set<string> {
   const keys = new Set<string>();
   const walk = (list: Item[]) => {
@@ -82,14 +73,12 @@ export function failureKeys(items: Item[], testCmd: string | null): Set<string> 
   return keys;
 }
 
-/** How long a call took, in ms, from its time to its result's; null without a result or a time on either. */
 export function callDuration(item: CallItem): number | null {
   const from = item.at ? Date.parse(item.at) : NaN;
   const to = item.result?.at ? Date.parse(item.result.at) : NaN;
   return Number.isNaN(from) || Number.isNaN(to) ? null : Math.max(0, to - from);
 }
 
-/** A duration as "0.4s", "12s" or "1m 05s". */
 export function durationLabel(ms: number): string {
   return ms < 10_000 ? `${(ms / 1000).toFixed(1)}s` : clock(Math.round(ms / 1000));
 }
@@ -98,7 +87,6 @@ export function isSlow(ms: number | null): boolean {
   return ms !== null && ms > SLOW_MS;
 }
 
-/** The index of the failure after (`dir` 1) or before (-1) the reader's place, from the rows' offsets to the log's top; -1 when none. */
 export function failureStep(tops: number[], dir: 1 | -1, slack = 10): number {
   if (dir === 1) return tops.findIndex((t) => t > slack);
   for (let i = tops.length - 1; i >= 0; i--) if (tops[i] < -slack) return i;

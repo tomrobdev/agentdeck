@@ -6,9 +6,6 @@ import { errorMessage, plural } from '../../../../daemon/src/domain/shared/index
 import { useActions } from '../../composables/shared/useActions';
 import ConfirmDialog from '../ui/ConfirmDialog.vue';
 
-// One confirm for several merges: the selection's, or every PR in review ("Merge all"). It records a merge request for each
-// and closes at once; the daemon merges them one after another, each with its task's method and deleting its branch, and a PR
-// that lands after another waits for it. A task it could not request stays listed with why. The confirm button has focus, so Enter confirms; Esc cancels, but not while the requests run.
 const props = defineProps<{ tasks: TaskSummary[] }>();
 const emit = defineEmits<{ close: []; done: [requested: number[]] }>();
 const { refresh } = useActions();

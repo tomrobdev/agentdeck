@@ -10,11 +10,6 @@ import {
   AlertDialogTitle,
 } from 'reka-ui';
 
-// One confirm for every "are you sure": a title, a body, and a confirm and cancel button. Enter presses whichever button has
-// focus, so `focus` is the Enter policy: "confirm" for a safe default, "cancel" for one that can't be undone (Close PR),
-// "field" to start in the body's first text field. While `busy` the action runs, so nothing dismisses the dialog.
-// Mount it with v-if; Cancel, Escape and a click outside emit `cancel`, the confirm button emits `confirm` and leaves the
-// closing to the caller.
 const props = withDefaults(
   defineProps<{
     title: string;
@@ -44,8 +39,6 @@ function onOpenAutoFocus(e: Event) {
   focusTarget()?.focus();
 }
 
-// A button that was disabled when the dialog opened (a preview still loading) or while it worked loses focus: take it back
-// once it is enabled, unless the person has moved on to something inside the dialog.
 watch(
   () => [props.busy, props.confirmDisabled],
   async () => {
@@ -56,7 +49,6 @@ watch(
 );
 
 function onEscape(e: KeyboardEvent) {
-  // A confirm nested in another dialog: the Escape closes only this one.
   e.stopPropagation();
   if (props.busy) e.preventDefault();
 }

@@ -11,7 +11,6 @@ import ModelSettings from './settings/ModelSettings.vue';
 import NotificationSettings from './settings/NotificationSettings.vue';
 import RecentAlerts from './settings/RecentAlerts.vue';
 
-// The settings in sections; the form's state and its save are in useSettingsForm.
 defineProps<{ notifications: NotificationRow[] }>();
 const emit = defineEmits<{ close: [] }>();
 const { form, service, failure, saving, tested, terminalCmd, editorCmd, appAtLogin, toggleAppAtLogin, save, test } = useSettingsForm(() =>

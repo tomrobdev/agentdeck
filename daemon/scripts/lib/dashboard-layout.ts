@@ -1,20 +1,15 @@
 // The dashboard's layout (app/src/): its layers, the context folders they share, and which areas may import which.
-// `daemon/test/architecture/dashboard-layout.test.ts` checks the imports against it, and `pnpm docs:gen` writes the Dashboard
-// section of docs/architecture.md from it.
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
-/** The daemon's bounded contexts, as folders in each layer that is split by context. */
 export const DASHBOARD_CONTEXTS = ['work', 'runs', 'landing', 'repos', 'operations', 'insights'];
 
-/** The layers split by context, bottom up, each with the folder of what every context shares. */
 export const CONTEXT_LAYERS: { layer: string; shared: string; holds: string }[] = [
   { layer: 'lib', shared: 'lib/shared', holds: 'pure helpers' },
   { layer: 'composables', shared: 'composables/shared', holds: '`useX` functions' },
   { layer: 'components', shared: 'components/ui', holds: 'Vue components' },
 ];
 
-/** The contexts a context may import besides itself and the shared folder, and why. No other context imports another. */
 export const ALSO_IMPORTS: Record<string, { contexts: string[]; why: string }> = {
   work: {
     contexts: ['runs', 'landing'],
@@ -26,7 +21,6 @@ export const ALSO_IMPORTS: Record<string, { contexts: string[]; why: string }> =
   },
 };
 
-/** The area a path of app/src belongs to: `<layer>/<context>`, `components/ui`, `components/layout`, another top folder, or the file itself. */
 export function areaOf(path: string): string {
   if (path.startsWith('..')) return path.includes('daemon/src/') ? 'daemon' : 'repo';
   const parts = path.split('/');
@@ -45,7 +39,6 @@ const BELOW: Record<string, string[]> = {
   components: ['api', 'platform', 'router'],
 };
 
-/** Every area of a layer split by context: its shared folder first, then one per context. */
 const areasOf = (layer: string) => {
   const l = CONTEXT_LAYERS.find((c) => c.layer === layer)!;
   return [l.shared, ...DASHBOARD_CONTEXTS.map((c) => `${layer}/${c}`)];
@@ -73,7 +66,6 @@ function contextRules(): Record<string, AreaRule> {
 const ALL_COMPONENTS = areasOf('components');
 const ALL_BELOW_PAGES = [...CONTEXT_LAYERS.flatMap((l) => areasOf(l.layer)), 'api', 'platform', 'router'];
 
-/** Which areas each area may import, and why. Imports point down the layers, and across contexts only as `ALSO_IMPORTS` says. */
 export const MAY_IMPORT: Record<string, AreaRule> = {
   api: { areas: ['api'], why: 'api/ is the base: types, calls and query options' },
   platform: { areas: ['platform', 'lib/shared'], why: 'platform/ is the Tauri shell, build commit and theme' },
@@ -95,7 +87,6 @@ export const PACKAGE_AREAS: Record<string, AreaRule> = {
 
 const APP_SRC = join(import.meta.dirname, '../../../app/src');
 
-/** The number of files in an area, its subfolders included. */
 function fileCount(area: string): number {
   const path = join(APP_SRC, area === 'router' ? 'router.ts' : area);
   if (!existsSync(path)) return 0;
@@ -103,7 +94,6 @@ function fileCount(area: string): number {
   return readdirSync(path, { recursive: true, encoding: 'utf8' }).filter((f) => statSync(join(path, f)).isFile()).length;
 }
 
-/** `areas` in a few words: a whole layer as `lib/`, the rest by name, the area itself left out. */
 function importsLabel(area: string, areas: string[]): string {
   const rest = areas.filter((a) => a !== area);
   const whole = CONTEXT_LAYERS.filter((l) => areasOf(l.layer).every((a) => rest.includes(a))).map((l) => l.layer);
@@ -114,10 +104,6 @@ function importsLabel(area: string, areas: string[]): string {
 
 const code = (area: string) => `\`${area === 'router' ? 'router.ts' : `${area}/`}\``;
 
-/**
- * The Dashboard section of docs/architecture.md, in one paragraph: the layers and their context folders with their file
- * counts, and the import rule. `dashboardReference` has each area's rule.
- */
 export function dashboardBody(): string {
   const counted = (areas: string[]) =>
     areas
@@ -136,9 +122,7 @@ export function dashboardBody(): string {
   ].join(' ');
 }
 
-/** docs/reference/dashboard.md: each area of app/src, what it may import and why, and its file count. */
 export function dashboardReference(): string {
-  // A context folder with no files yet is left out: its rule is the same as its neighbours'.
   const shown = Object.entries(MAY_IMPORT).filter(([area]) => fileCount(area) > 0);
   const rows = shown.map(([area, rule]) => [code(area), importsLabel(area, rule.areas), rule.why, String(fileCount(area))]);
   const head = ['Area', 'May import', 'Why', 'Files'];

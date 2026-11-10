@@ -9,9 +9,6 @@ import type { TaskDetail } from '../../api/types';
 import { useAction } from '../../composables/shared/useActions';
 import VerifyFindings from './VerifyFindings.vue';
 
-// The latest verify run of a proposed or queued task, with a button to start one: a short read-only run that checks
-// each claim the prompt makes about the code against the base. Its findings are marked stale once the base moves on,
-// which the proposal check (the same query as ProposalCheckCard's) says.
 const props = defineProps<{ task: Pick<TaskDetail, 'id' | 'status' | 'runs'> }>();
 const emit = defineEmits<{ path: [path: string, line: number | null] }>();
 const { pending, run } = useAction();

@@ -8,7 +8,6 @@ import { router } from '../../router';
 import { useHotkeys } from './useHotkeys';
 import { closePanel, goTo, openPanel, showKeys, togglePalette } from './useShell';
 
-/** An agentdeck:// link opened from outside (the shell's open_in_dashboard): a page, a panel or the palette. */
 function openLink(url: string) {
   const to = parseAppUrl(url);
   if (!to) return;
@@ -21,14 +20,12 @@ function openLink(url: string) {
   }
 }
 
-// In the desktop app the View menu owns ⌘K (it arrives as agentdeck://palette); this handler is for the plain browser.
 function onPaletteKey(e: KeyboardEvent) {
   if (isNative || !isPaletteKey(e)) return;
   e.preventDefault();
   togglePalette();
 }
 
-/** Registers the app's keys and listens for ⌘K and agentdeck:// links while the component is mounted. */
 export function useAppLinks() {
   useHotkeys({
     ...Object.fromEntries(GO_KEYS.map((g) => [g.key, { label: g.label, scope: 'app' as const, run: () => goTo(g.to) }])),

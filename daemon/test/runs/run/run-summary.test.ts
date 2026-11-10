@@ -1,5 +1,3 @@
-// The run summary: a failed or blocked run's stream summed up (turns, time, tools, tests, the last failing output and a verdict
-// line), on the recorded claude streams and hand-made ones, then through taskDetail and `agentdeck show`.
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { copyFileSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
@@ -51,7 +49,6 @@ test('runSummary on denied-tool.jsonl: ended on its own, the refused call counte
   assert.equal(s.verdict, 'ended after 2 turns: no test runs, 1 tool call refused');
 });
 
-// A hand-made stream: one turn per message, a Bash call per turn, its result some seconds later.
 let n = 0;
 const at = (sec: number) => new Date(Date.UTC(2026, 10, 8, 12, 0, 0) + sec * 1000).toISOString();
 function turn(sec: number, command: string, output: string, failed: boolean, took = 30): unknown[] {
@@ -185,8 +182,6 @@ test('isTestCommand: the repo’s test command anywhere in the command, or a com
   assert.ok(!isTestCommand('make check', null));
   assert.ok(isTestCommand('make check', 'make check'));
 });
-
-// --- Through taskDetail and the CLI ---
 
 const db = openDb(join(home, 'agentdeck.db'));
 after(() => db.close());

@@ -1,9 +1,6 @@
 <script setup lang="ts">
 import { PopoverAnchor, PopoverContent, PopoverPortal, PopoverRoot } from 'reka-ui';
 
-// A panel shown beside something the caller points at (`anchor`: an element, or anything with getBoundingClientRect), with
-// no trigger of its own: the caller says when it is `open`. It flips to the other side and shifts to stay on screen. It
-// takes no focus and no pointer events, so it can sit under the pointer; Escape and a press outside ask to close it.
 defineProps<{ open: boolean; anchor: { getBoundingClientRect(): DOMRect } | null }>();
 const emit = defineEmits<{ close: [] }>();
 </script>

@@ -12,7 +12,6 @@ test('tool entries take file from file_path, path or notebook_path', () => {
   ]);
   assert.equal((parseLogLine(toolUse('Grep', { pattern: 'x', path: 'src' }))[0] as any).file, 'src');
   assert.equal((parseLogLine(toolUse('NotebookEdit', { notebook_path: 'n.ipynb' }))[0] as any).file, 'n.ipynb');
-  // file_path wins over path.
   assert.equal((parseLogLine(toolUse('X', { path: 'b', file_path: 'a' }))[0] as any).file, 'a');
 });
 

@@ -1,5 +1,4 @@
 // Which open tasks touch the same files as a proposal: the paths each names, and a branch's changed files, meeting.
-// The rule on plain values, then the use case on real git.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
@@ -89,19 +88,15 @@ test('named against named, named against changed, a link marked, another repo ig
   const other = db.addRepo({ name: 'other', path: gitRepo(), base_branch: 'main' });
 
   const p = await addTask(db, { repo: 'demo', prompt: 'Change `src/a.ts` and `src/b.ts`.', propose: true });
-  // Two proposals approved together warn about each other.
   const q = await addTask(db, { repo: 'demo', prompt: 'Rename things in `src/a.ts`.', propose: true });
-  // A running task whose prompt names nothing, but whose branch changed src/b.ts.
   const branch = 'agentdeck/changes-b';
   git(path, 'checkout', '-q', '-b', branch);
   writeFileSync(join(path, 'src/b.ts'), 'b2');
   git(path, 'commit', '-qam', 'change b');
   git(path, 'checkout', '-q', 'main');
   const r = runningTask(db, repo, { prompt: 'Tidy up.', branch });
-  // Linked already: a done task with an open PR, naming src/a.ts.
   const linked = doneTask(db, repo, { prompt: 'Fix `src/a.ts`.', pr: 'open' });
   db.addLink({ task_id: p.id, on: linked.id, kind: 'after' });
-  // Ignored: another repo's proposal on the same path, and this repo's merged task.
   await addTask(db, { repo: other.name, prompt: 'Change `src/a.ts`.', propose: true });
   doneTask(db, repo, { prompt: 'Old `src/a.ts` work.', pr: 'merged' });
 

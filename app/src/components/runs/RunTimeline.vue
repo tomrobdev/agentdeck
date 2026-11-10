@@ -2,8 +2,6 @@
 import { computed } from 'vue';
 import { type Segment, type SegmentKind, type Tick, placeSegment, stripShare } from '../../lib/runs/run-live';
 
-// The run from its start to its end (or now) as a strip: a segment per stretch of the log, coloured by what it was spent on, and a red
-// tick for each failed test. A click asks the log to scroll to that moment.
 const props = defineProps<{ segments: Segment[]; ticks: Tick[]; start: number; end: number }>();
 const emit = defineEmits<{ jump: [at: string] }>();
 

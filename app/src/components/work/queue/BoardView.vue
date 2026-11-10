@@ -15,18 +15,15 @@ import StatusIcon from '../../ui/status/StatusIcon.vue';
 import TaskBadges from '../../ui/status/TaskBadges.vue';
 import TaskStatusLine from '../../ui/status/TaskStatusLine.vue';
 
-// Columns are the status groups. A drop is allowed only where it is a real lifecycle event.
 const props = defineProps<{
   groups: Group[];
   selected: number | null;
-  /** The tasks picked for a bulk action. */
   picked?: number[];
   show: { repo: boolean; pr: boolean; model: boolean };
 }>();
 const emit = defineEmits<{
   open: [id: number];
   select: [id: number];
-  /** A pick; a shift-click range runs within `column`, the ids of the card's column in its order. */
   pick: [id: number, range: boolean, column: number[]];
   move: [kind: BoardMove, id: number];
   merge: [id: number];
@@ -37,7 +34,6 @@ const columnIds = (g: Group) => g.tasks.map((t) => t.id);
 const dragging = ref<TaskSummary | null>(null);
 const over = ref<string | null>(null);
 
-/** The move a drop on each column would make, for the card being dragged. */
 const moves = computed<Record<string, BoardMove | null>>(() =>
   Object.fromEntries(props.groups.map((g) => [g.key, dragging.value ? boardMove(dragging.value, g.key as StatusGroup) : null])),
 );
@@ -50,10 +46,9 @@ function onDragStart(e: DragEvent, t: TaskSummary) {
 }
 function onDragOver(e: DragEvent, key: string) {
   if (!moves.value[key]) return;
-  e.preventDefault(); // allows the drop
+  e.preventDefault();
   over.value = key;
 }
-/** The task a drop is waiting to mark done: that move asks first. */
 const confirming = ref<TaskSummary | null>(null);
 function onDrop(key: string) {
   const kind = moves.value[key];

@@ -15,8 +15,6 @@ import VerifyCard from '../../runs/VerifyCard.vue';
 import VerifyFindings from '../../runs/VerifyFindings.vue';
 import { latestVerify } from '../../../../../daemon/src/domain/runs/index.ts';
 
-// The prompt as the description, then everything that happened, oldest first: status changes
-// (task_events) and runs. Runs stand in for claim and finish events, which they describe better.
 const props = defineProps<{ task: TaskDetail; changes: Changes | null; isPath?: (p: string) => boolean }>();
 const emit = defineEmits<{ run: [runId: number]; path: [path: string, line: number | null] }>();
 
@@ -28,7 +26,6 @@ type Item =
   | { kind: 'created'; key: string; at: string }
   | { kind: 'run'; key: string; at: string; run: Run; latest: boolean };
 
-// The marker on the line for the events that have one of their own.
 const EVENT_ICON: Record<string, string> = { retry: '↻', approve: '✓', mark_done: '✓' };
 
 const items = computed<Item[]>(() => {
@@ -47,7 +44,6 @@ const items = computed<Item[]>(() => {
 
 const outcomeClass = (r: Run) => `s-${r.outcome ?? 'running'}`;
 
-// A timeline entry, and the marker that sits on the line to its left.
 const item = 'relative flex flex-wrap items-baseline gap-2 py-2 pr-0 pl-4';
 const node = 'absolute top-[7px] -left-[21px] grid size-5 place-items-center rounded-full bg-bg text-sm text-muted';
 const when = 'ml-auto text-sm text-muted';
@@ -127,7 +123,6 @@ const when = 'ml-auto text-sm text-muted';
             </span>
             <span :class="when">{{ ago(it.at) }}</span>
           </div>
-          <!-- A verify run's result is its findings as JSON, shown as findings, not as a message. -->
           <VerifyFindings
             v-if="it.run.kind === 'verify' && it.run.ended_at"
             class="w-full"

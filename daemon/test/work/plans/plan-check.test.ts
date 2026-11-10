@@ -122,7 +122,6 @@ test('a done run with an unfinished linked step records the event and stays done
   assert.equal(events.length, 1);
   assert.equal(events[0].reason, 'left a linked plan step unfinished: a (todo)');
   assert.ok(db.planUnfinishedIds().has(t.id));
-  // The PR lists only the linked step, its criteria as checkboxes.
   const body = bodies.at(-1)!;
   assert.match(body, new RegExp(`## Plan: \`${t.id}-cache-plan\\.html\``));
   assert.match(body, /\*\*Measure\*\* \(todo\)/);

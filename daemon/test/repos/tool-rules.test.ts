@@ -15,12 +15,10 @@ test('splitCommand splits on &&, ||, ; and |', () => {
     ['a &&  && b', ['a', 'b']],
     ['', []],
     [' ; ', []],
-    // separators inside quotes belong to the argument
     ['echo "a && b" && ls', ['echo "a && b"', 'ls']],
     ["grep 'x|y' file | wc", ["grep 'x|y' file", 'wc']],
     ['echo "say \\"hi; bye\\""; ls', ['echo "say \\"hi; bye\\""', 'ls']],
     ['echo a\\;b', ['echo a\\;b']],
-    // a lone & is part of a redirection, not a separator
     ['pnpm test 2>&1 | tail', ['pnpm test 2>&1', 'tail']],
   ];
   for (const [cmd, want] of table) assert.deepEqual(splitCommand(cmd), want, JSON.stringify(cmd));
@@ -30,7 +28,7 @@ test('matchesRule: a trailing * is a prefix match, otherwise the command must be
   const table: [string, string, boolean][] = [
     ['pnpm test', 'pnpm test*', true],
     ['pnpm test --watch', 'pnpm test*', true],
-    ['pnpm testing', 'pnpm test*', true], // the star is a plain prefix, as in the tool rules themselves
+    ['pnpm testing', 'pnpm test*', true],
     ['pnpm tes', 'pnpm test*', false],
     ['pnpm run lint', 'pnpm run *', true],
     ['pnpm run', 'pnpm run *', false],

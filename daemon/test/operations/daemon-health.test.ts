@@ -6,7 +6,6 @@ import { test } from 'node:test';
 import type { RunningTaskFact } from '../../src/domain/operations/health.ts';
 import { type TaskId, asTaskId } from '../../src/domain/shared/id.ts';
 
-/** A running task's facts with its id as a plain number, which `withTaskId` makes an id. */
 type LooseTaskFact = Omit<RunningTaskFact, 'id'> & { id: number };
 const withTaskId = (f: LooseTaskFact): RunningTaskFact => ({ ...f, id: asTaskId(f.id) });
 
@@ -69,7 +68,6 @@ test('api: unreachable, a foreign daemon on the port, and answering with its upt
   assert.equal(down.ok, false);
   assert.match(down.reason, /127\.0\.0\.1:4317/);
   assert.equal(down.fix, 'agentdeck restart --now');
-  // With the service stopped the fix is to start it.
   assert.equal(
     h.checkApi(facts({ api: null, service: { ...running, loaded: false, pid: null, state: null } })).fix,
     'agentdeck service start',
@@ -92,7 +90,6 @@ test('code: same commit passes; a different one names both and how far behind, a
   assert.equal(behind.ok, false);
   assert.match(behind.reason, /loaded aaaaaaa; the checkout is at bbbbbbb, 3 commits ahead/);
   assert.equal(behind.fix, 'agentdeck restart');
-  // Without a commit on either side there is nothing to compare.
   assert.equal(h.checkCode(facts({ api: state({ commit: null }) })).ok, true);
   assert.equal(h.checkCode(facts({ head: null })).ok, true);
 });
@@ -138,7 +135,6 @@ test('processes: a group that outlived its run is a stray; one of a running run 
 });
 
 test('tasks, daemon up: its own runs are healthy in setup, sync and tests; one older than the daemon with no claude is dead', () => {
-  // The daemon (state()) started 3 hours before NOW.
   const tasks = (...t: LooseTaskFact[]) => h.checkTasks({ now: NOW, api: state(), tasks: t.map(withTaskId) });
   const working = { id: 1, pid: 10, alive: true, runAgeSeconds: 500 };
   const inSetup = { id: 2, pid: null, alive: false, runAgeSeconds: 600 };
@@ -153,9 +149,7 @@ test('tasks, daemon up: its own runs are healthy in setup, sync and tests; one o
   assert.equal(dead.ok, false);
   assert.match(dead.reason, /2 tasks in running with no live claude process: #5, #6/);
   assert.equal(dead.fix, 'agentdeck restart --now');
-  // An old run whose claude is still alive is working, whoever started it.
   assert.equal(tasks({ id: 7, pid: 13, alive: true, runAgeSeconds: 4 * 3600 }).ok, true);
-  // A run opened in the second the daemon started is its own: run starts are stored to the second.
   assert.equal(tasks({ id: 8, pid: null, alive: false, runAgeSeconds: 3 * 3600 + 0.5 }).ok, true);
 });
 
@@ -175,7 +169,7 @@ test('tasks, daemon down: a dead process or a pid overdue fails; a fresh run wit
 
 test('log: errors of the last 24 hours are found, with stacks folded in and older ones left out', () => {
   const lines = [
-    'Error: from before any date', // unknown age
+    'Error: from before any date',
     '[2026-10-30T10:00:00.000Z] task 1: worker crashed: Error: too old',
     '[2026-11-01T08:00:00.000Z] SIGTERM: stopping workers; their tasks will be requeued on next start',
     '[2026-11-01T09:00:00.000Z] task 2: worker crashed: Error: boom',
@@ -243,7 +237,6 @@ test('gatherHealth reads runs and tasks from the database and their liveness fro
   runOf(live.id, 222);
   db.applyEvent(dead.id, { type: 'claim' });
   runOf(dead.id, 333);
-  // Those runs were opened by an earlier daemon (state() started at 09:00); the next two by this one.
   db.raw.prepare("UPDATE runs SET started_at = '2026-11-01 08:00:00'").run();
   const setup = t('in setup');
   db.applyEvent(setup.id, { type: 'claim' });
@@ -291,7 +284,6 @@ test('gatherHealth reads runs and tasks from the database and their liveness fro
       [testing.id, 444, false, 1800],
     ],
   );
-  // Liveness is judged by when the pid was stored, not by when the run opened.
   assert.ok(asked.length > 0);
   for (const r of asked) assert.notEqual(r.pid_at, '2026-11-01 08:00:00', JSON.stringify(r));
   assert.equal(facts.log?.problems.length, 1);

@@ -1,5 +1,4 @@
 // The daemon's API types come from its contract (daemon/src/api/contract/<context>.ts), which the daemon checks against its use cases.
-// What is declared here is the dashboard's own.
 import type { MergeMethod } from '../../../daemon/src/domain/repos/index.ts';
 
 export type { PrRetry, PrState } from '../../../daemon/src/domain/landing/index.ts';
@@ -100,5 +99,4 @@ export const MERGE_METHODS: { key: MergeMethod; label: string; hint: string }[] 
   { key: 'rebase', label: 'Rebase and merge', hint: 'Replays every commit on the base branch' },
 ];
 
-/** Where the daemon cuts a patch and a file's text. */
 export { PATCH_LIMIT, TEXT_LIMIT } from '../../../daemon/src/domain/work/index.ts';

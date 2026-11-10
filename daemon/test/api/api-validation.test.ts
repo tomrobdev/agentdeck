@@ -48,7 +48,6 @@ after(() => {
   db.close();
 });
 
-/** [route, body] pairs: each body has a field of the wrong type. */
 function wrongTyped(): [string, unknown][] {
   const t = `/api/tasks/${taskId}`;
   const r = `/api/repos/${repoId}`;

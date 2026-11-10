@@ -1,6 +1,4 @@
 <script setup lang="ts">
-// The pilot scorecard over time: this week's number for each measure against its target, with the weekly trend
-// beneath. The numbers are `agentdeck stats --by week --json`, for all repos or the one chosen.
 import { computed, ref } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { statsQuery } from '../../api/insights';

@@ -15,9 +15,6 @@ import {
 } from 'reka-ui';
 import { type PaletteItem, searchPalette } from '../../lib/work/palette';
 
-// ⌘K: jump to a task or run a command from the keyboard. App builds the rows (lib/palette.ts); this lists and runs them.
-// The order is searchPalette's fuzzy ranking, so the Combobox does no filtering of its own (ignore-filter) and the first row is
-// highlighted again whenever the term changes.
 const props = defineProps<{ items: PaletteItem[] }>();
 const emit = defineEmits<{ close: [] }>();
 
@@ -39,7 +36,6 @@ function choose(item: PaletteItem) {
   item.run();
 }
 
-// Ctrl-N and Ctrl-P move like the arrow keys: hand the combobox the key it already understands.
 function onKey(e: KeyboardEvent) {
   const key = e.ctrlKey && e.key === 'n' ? 'ArrowDown' : e.ctrlKey && e.key === 'p' ? 'ArrowUp' : null;
   if (!key) return;
@@ -47,7 +43,6 @@ function onKey(e: KeyboardEvent) {
   input.value?.$el.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
 }
 
-// What a row opened (a dialog, say) owns the focus now: don't hand it back to whatever the palette was opened from.
 const keepFocus = (e: Event) => chosen.value && e.preventDefault();
 </script>
 
@@ -73,7 +68,6 @@ const keepFocus = (e: Event) => chosen.value && e.preventDefault();
             spellcheck="false"
             @keydown="onKey"
           />
-          <!-- The content is the topmost layer, so it gets the Escape: it closes the palette, not just the list. -->
           <ComboboxContent @escape-key-down.prevent="emit('close')">
             <ComboboxViewport class="max-h-[50vh] overflow-auto p-1">
               <ComboboxItem

@@ -13,11 +13,9 @@ export async function setLaunchAtLogin(on: boolean): Promise<void> {
   if (isNative) await (on ? enable() : disable());
 }
 
-/** Call `cb` with each agentdeck:// URL opened from outside, including one that started the app. Returns a stop function. */
 export async function onOpenUrl(cb: (url: string) => void): Promise<() => void> {
   if (!isNative) return () => {};
   const { listen } = await import('@tauri-apps/api/event');
-  // The shell keeps the URL until it is taken, so an event and the startup check never route it twice.
   const take = async () => {
     const url = await invoke<string | null>('take_open_url').catch(() => null);
     if (url) cb(url);
@@ -27,22 +25,19 @@ export async function onOpenUrl(cb: (url: string) => void): Promise<() => void> 
   return stop;
 }
 
-/** From the tray window: open an agentdeck:// URL in the main window, and hide the tray window. */
 export async function openFromTray(url: string): Promise<void> {
   if (isNative) await invoke('open_from_tray', { url });
 }
 
-/** Start the daemon through launchd. Throws with the reason (the service isn't installed, launchctl failed). */
 export async function startDaemon(): Promise<void> {
   if (!isNative) throw new Error('The daemon starts from the desktop app only');
   try {
     await invoke('start_daemon');
   } catch (e) {
-    throw new Error(String(e)); // Tauri rejects with the command's error string
+    throw new Error(String(e));
   }
 }
 
-/** Whether cmux is installed; false in a plain browser. */
 export async function cmuxInstalled(): Promise<boolean> {
   if (!isNative) return false;
   try {
@@ -52,7 +47,6 @@ export async function cmuxInstalled(): Promise<boolean> {
   }
 }
 
-/** Show the macOS folder picker: the chosen path, or null when cancelled or in a plain browser. */
 export async function pickFolder(): Promise<string | null> {
   if (!isNative) return null;
   try {
@@ -62,24 +56,21 @@ export async function pickFolder(): Promise<string | null> {
   }
 }
 
-/** Run a command template (a terminal's, an editor's): an argv list, run without a shell. `command` is the text to run in a terminal. */
 export async function runTemplate(template: string[], opts: { title?: string; cwd: string; command?: string }): Promise<void> {
   if (!isNative) throw new Error('This opens from the desktop app only');
   try {
     await invoke('run_template', { template, ...opts });
   } catch (e) {
-    throw new Error(String(e)); // Tauri rejects with the command's error string
+    throw new Error(String(e));
   }
 }
 
-/** Show a folder in Finder. */
 export async function revealInFinder(path: string): Promise<void> {
   if (!isNative) throw new Error('Finder opens from the desktop app only');
   const { revealItemInDir } = await import('@tauri-apps/plugin-opener');
   await revealItemInDir(path);
 }
 
-/** Open a URL in the system browser; in a plain browser, a new tab. Never navigates the dashboard itself. */
 export async function openExternal(url: string): Promise<void> {
   if (!/^https?:\/\//.test(url)) return;
   if (isNative) {
@@ -88,14 +79,13 @@ export async function openExternal(url: string): Promise<void> {
   } else window.open(url, '_blank', 'noopener');
 }
 
-/** Copy text and say so for a moment: `copied` holds the key of what was copied last. */
 export function useCopy() {
   const copied = ref('');
   async function copy(text: string, what: string) {
     try {
       await navigator.clipboard.writeText(text);
     } catch {
-      return; // no clipboard access (insecure context or denied)
+      return;
     }
     copied.value = what;
     setTimeout(() => copied.value === what && (copied.value = ''), 1200);

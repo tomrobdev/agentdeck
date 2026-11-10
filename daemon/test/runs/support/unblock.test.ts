@@ -1,5 +1,3 @@
-// The unblock run: when one may start (unblockable), what its final message says (parseUnblock), what follows
-// (unblockDecision), and the whole of it with fake claude: a retry with a note that uses no attempt, or a question.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
@@ -29,8 +27,6 @@ const { conflictReason } = await import('../../../src/domain/runs/sync.ts');
 const { setupFailedReason } = await import('../../../src/domain/runs/run.ts');
 const { UNBLOCK_NOTE, buildUnblockPrompt, parseUnblock, unblockDecision, unblockable } =
   await import('../../../src/domain/runs/unblock.ts');
-
-// ---- unblockable
 
 const ON = { auto_unblock: true };
 const blocked = (o: { needs?: Needs | null; stop_reason?: string | null } = {}) => ({
@@ -66,7 +62,6 @@ test('unblockable: never for NEEDS deps or host, a setup failure or a conflict',
   assert.equal(unblockable(blocked({ stop_reason: setupFailedReason('npm ERR! missing script') }), work, ON), false);
   assert.equal(unblockable(blocked({ stop_reason: conflictReason('main', ['a.ts', 'b.ts']) }), work, ON), false);
   assert.equal(unblockable(blocked({ stop_reason: conflictReason('main', [], 'tests failed') }), work, ON), false);
-  // A file the worker may not edit is not a person-only block.
   assert.equal(unblockable(blocked({ needs: { kind: 'edit', items: ['.claude/x.md'] } }), work, ON), true);
 });
 
@@ -88,8 +83,6 @@ test('unblockable: once per block', () => {
   );
   assert.equal(unblockable(t, [run('work', 'blocked'), run('resolve', 'failed')], ON), true, 'a resolve run is not one');
 });
-
-// ---- the parser and the decision
 
 test('parseUnblock: a retry with its note', () => {
   assert.deepEqual(parseUnblock('Read the README.\nUNBLOCK: RETRY: use sqlite\n'), { retry: 'use sqlite' });
@@ -145,8 +138,6 @@ test('repo set auto_unblock on|off', () => {
   assert.deepEqual(repoSettingPatch('auto_unblock', 'off'), { auto_unblock: false });
 });
 
-// ---- the slot, the claim and crash recovery
-
 test('an open unblock run takes a slot, keeps a retried task from being claimed, and a restart ends it', () => {
   const db = openDb(':memory:');
   const repo = db.addRepo({ name: 'r', path: '/tmp/r-slots', base_branch: 'main' });
@@ -158,7 +149,6 @@ test('an open unblock run takes a slot, keeps a retried task from being claimed,
   assert.equal(db.countRunningUnblocks(), 1);
   assert.equal(restartWait({ tasks: 0, planner: 0, resolves: 0, unblocks: 1 }), '1 unblock run');
 
-  // A person retries while it runs: the claim waits for the unblock run to end.
   assert.ok(db.applyEvent(t.id, { type: 'retry' }));
   assert.equal(db.claimNextTask(), undefined);
   assert.equal(db.hasQueued(), false);
@@ -171,15 +161,12 @@ test('an open unblock run takes a slot, keeps a retried task from being claimed,
   db.close();
 });
 
-// ---- with fake claude
-
 const db = openDb(join(home, 'test.db'));
 db.setSetting('max_concurrent', '1');
 after(() => db.close());
 
 const sh = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
 let repos = 0;
-/** A git repo of its own for each test, with auto_unblock as given. */
 function makeRepo(autoUnblock: boolean) {
   const name = `demo-${++repos}`;
   const dir = join(home, name);
@@ -225,7 +212,6 @@ test('a blocked task gets one unblock run, then is queued again with the note an
   assert.equal(describeEvent(retry), 'unblock run: retried with a note');
   assert.equal(db.eventsForTask(task.id).filter((e) => e.type === 'unblock_retry').length, 1, 'one unblock run');
 
-  // The unblock run ran with its own prompt and turns, under the worker's settings; the next work run got the note.
   const unblockArgs = fakeArgs().find((a) => a[a.indexOf('-p') + 1].startsWith(`AgentDeck unblock run for task #${task.id}`))!;
   assert.equal(unblockArgs[unblockArgs.indexOf('--max-turns') + 1], '30');
   assert.match(unblockArgs[unblockArgs.indexOf('--append-system-prompt') + 1], /AgentDeck unblock run/);

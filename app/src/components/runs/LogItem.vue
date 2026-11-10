@@ -20,16 +20,13 @@ import Markdown from '../ui/Markdown.vue';
 import Delta from '../ui/status/Delta.vue';
 import LogItem from './LogItem.vue';
 
-// One transcript item and, under a subagent call, its own items.
 const props = defineProps<{
   items: Item[];
   first?: string;
   live: boolean;
-  /** Keys of the items that are failures, which the failure jump finds by `data-failure`. */
   failures?: Set<string>;
   repoPath: (file: string | undefined) => string | null;
   isPath?: (p: string) => boolean;
-  /** Cuts the worktree's root from an output; absent when the worktree is gone. */
   cut?: (text: string) => string;
 }>();
 const emit = defineEmits<{ file: [path: string]; path: [path: string, line: number | null] }>();
@@ -44,7 +41,6 @@ const TONE: Record<ToolKind, string> = {
   agent: 'text-muted',
   other: 'text-muted',
 };
-// An edit's diff: shared lines as context, with no file line numbers (the log has none).
 const DIFF_SIGN = { ctx: ' ', del: '−', add: '+' } as const;
 const DIFF_TONE = { ctx: 'text-muted', del: 'text-failed', add: 'text-done' } as const;
 const cutText = (t: string) => (props.cut ? props.cut(t) : t);
@@ -66,7 +62,6 @@ const parts = (c: CallItem) =>
   >
     <span class="w-9 flex-none text-right text-xs text-muted tabular-nums select-none">{{ gutter(item.at) }}</span>
     <div class="min-w-0 flex-1">
-      <!-- claude's text -->
       <Markdown
         v-if="item.type === 'plain' && item.entry.kind === 'text'"
         class="text-text"
@@ -75,7 +70,6 @@ const parts = (c: CallItem) =>
         @path="(p, l) => emit('path', p, l)"
       />
 
-      <!-- a run of reads -->
       <details v-else-if="item.type === 'explored'">
         <summary class="disclose text-sm text-muted">
           <span class="chev">›</span> <b class="font-semibold text-tool-read">{{ TOOL_ICONS.read }}</b> Explored
@@ -94,7 +88,6 @@ const parts = (c: CallItem) =>
         />
       </details>
 
-      <!-- a tool call and what came back -->
       <template v-else-if="item.type === 'call'">
         <code class="flex items-baseline gap-1.5 text-sm text-muted">
           <span
@@ -173,7 +166,6 @@ const parts = (c: CallItem) =>
         </details>
       </template>
 
-      <!-- everything else -->
       <template v-else-if="item.type === 'plain'">
         <div v-if="item.entry.kind === 'result'" class="mt-1.5 border-t border-dashed border-border pt-1.5 text-sm text-muted">
           result: {{ item.entry.subtype }} · {{ item.entry.turns }} turns

@@ -12,7 +12,6 @@ import { usePause } from '../composables/shared/usePause';
 import { useApprovals } from '../composables/work/useApprovals';
 import { useTaskActs } from '../composables/work/usePaletteCommands';
 
-// The queue: its bars above, the tasks (or the first-run prompt) below.
 const { status, pausing, resumeDaemon, resumeRepo } = usePause();
 const tasksQ = useQuery(tasksQuery());
 const reposQ = useQuery(reposQuery());

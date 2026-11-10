@@ -1,11 +1,4 @@
 // What every view of a task shows besides its title: the list row, the board card, the peek and the task page header.
-// Four kinds of thing, each shown one way:
-// - the status line: at most one sentence, in a tone, never a chip;
-// - attention: coloured chips, only where a person must act;
-// - links: ↑ the builds-on dependencies not yet met, ↓ the tasks merging this one releases;
-// - facts: muted text, joined by " · ".
-// Free of the dashboard's other modules so the daemon's tests can import it (daemon/test/dashboard/task/task-badges.test.ts). What the
-// daemon decides (needs, a conflict, auto-merge, merge requests) comes from the API; this only picks and words it.
 import type { TaskSummary } from '../../../../daemon/src/api/contract/work.ts';
 import type { AutoMergeView } from '../../../../daemon/src/api/contract/landing.ts';
 import { isReview } from '../../../../daemon/src/domain/work/index.ts';
@@ -19,13 +12,10 @@ import { needsOf, questionOf } from '../shared/wire.ts';
 export type Tone = 'muted' | 'accent' | 'done' | 'blocked' | 'failed';
 
 export interface StatusLine {
-  /** What it is about, so a view can leave some out (the list's "reason" display option hides `stopped` and `cant_start`). */
   kind: 'live' | 'sync' | 'merge_request' | 'stopped' | 'cant_start' | 'auto_merge';
   text: string;
   tone: Tone;
-  /** The longer form, for a tooltip; the text itself when there is none. */
   title: string;
-  /** A merge request waits: it can be withdrawn from the line. */
   cancelMerge: boolean;
 }
 
@@ -42,17 +32,13 @@ export interface Fact {
 
 export interface Badges {
   attention: AttentionChip[];
-  /** Builds-on dependencies not met yet: the task starts once they are done and merged. */
   up: number[];
-  /** Queued tasks that merging this one lets start. */
   down: number[];
   facts: Fact[];
 }
 
 export interface BadgeOptions {
-  /** Show the repo (the display option). */
   repo?: boolean;
-  /** Show a merged or closed PR (the display option); on unless turned off. */
   pr?: boolean;
 }
 
@@ -89,7 +75,6 @@ const line = (kind: StatusLine['kind'], text: string, tone: Tone, more: Partial<
   ...more,
 });
 
-/** The one sentence about where a task stands, the first that applies; null when there is nothing to say. */
 export function statusLine(t: Viewed): StatusLine | null {
   if (t.live) return line('live', describeLive(t.live), 'muted');
   if (t.sync) return line('sync', describeSync(t.sync), 'accent');
@@ -109,7 +94,6 @@ export function statusLine(t: Viewed): StatusLine | null {
   return null;
 }
 
-/** A task's attention chips, links and facts. */
 export function taskBadges(t: Viewed, opts: BadgeOptions = {}): Badges {
   const attention: AttentionChip[] = [];
   const needs = t.status === 'blocked' ? needsOf(t.needs) : null;
@@ -127,7 +111,6 @@ export function taskBadges(t: Viewed, opts: BadgeOptions = {}): Badges {
     const running = checks.pending ? `; ${checks.pending} still running` : '';
     attention.push({
       label: `✗ ${plural(n, 'check')} failing`,
-      // Each failing check with its step and what failed, once the PR refresh read it; their names until then.
       title: checks.failing_lines.some((line, i) => line !== checks.failing_names[i])
         ? `Failing${running}:\n${checks.failing_lines.join('\n')}`
         : `Failing: ${checks.failing_names.join(', ')}${running}`,
@@ -165,11 +148,9 @@ export function taskBadges(t: Viewed, opts: BadgeOptions = {}): Badges {
   return { attention, up, down: t.unblocks, facts };
 }
 
-/** The word on a task's status pill: a done task whose PR is open is in review; a cancel under way is stopping. */
 export const statusText = (t: Pick<TaskSummary, 'status' | 'pr_state'>): string =>
   isReview(t) ? 'in review' : t.status === 'cancel_requested' ? 'stopping' : t.status;
 
-/** The text colour for each tone. */
 export const TONE_TEXT: Record<Tone, string> = {
   muted: 'text-muted',
   accent: 'text-accent',
@@ -178,7 +159,6 @@ export const TONE_TEXT: Record<Tone, string> = {
   failed: 'text-failed',
 };
 
-/** The chip tone for each auto-merge state: green will merge, amber waits, red needs a person, grey is on and unchecked. */
 export const AUTO_MERGE_CHIP: Record<AutoMergeView['state'], ChipTone> = {
   off: 'muted',
   on: 'muted',
@@ -187,5 +167,4 @@ export const AUTO_MERGE_CHIP: Record<AutoMergeView['state'], ChipTone> = {
   never: 'failed',
 };
 
-/** The chip tone for each attention tone. */
 export const TONE_CHIP: Record<AttentionChip['tone'], ChipTone> = { blocked: 'blocked', failed: 'failed' };

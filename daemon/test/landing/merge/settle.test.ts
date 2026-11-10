@@ -42,7 +42,6 @@ test('a worker that throws leaves its task failed, notified, and its dependents 
   const { db, add } = setup();
   const task = add();
   const dependent = add(task.id);
-  // runTask's first read of the repo throws; settling reads it again for the notification.
   const getRepo = db.getRepo;
   let calls = 0;
   db.getRepo = (id) => {

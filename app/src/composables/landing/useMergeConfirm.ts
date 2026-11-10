@@ -18,7 +18,6 @@ export function useMergeConfirm(order: Ref<TaskSummary[]>, selected: Ref<number 
     await refresh();
     if (result.cleanup_error) flash(`Merged, but cleanup failed: ${result.cleanup_error}`);
   }
-  // A requested merge leaves the PR in review until the daemon merges it, so the selection stays.
   function onRequested() {
     merging.value = null;
   }

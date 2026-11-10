@@ -1,5 +1,3 @@
-// A PR's checks one by one: parsing statusCheckRollup, keeping them on the task, telling a person when they fail,
-// and sending the failures back to the worker. Real SQLite and git, fake github adapter.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
@@ -186,14 +184,12 @@ test('logTail ends on a line that is over budget in bytes but not in characters,
   assert.ok(Buffer.byteLength(wide) <= 2048);
   assert.ok(wide.length > 0 && /^─+$/.test(wide));
 
-  // 4-byte emoji: a cut inside one drops it whole, never leaving a broken character.
   const emoji = logTail('x\n' + '😀'.repeat(50), 60, 10);
   assert.equal(emoji, '😀😀');
   assert.ok(!emoji.includes('�'));
   assert.equal(logTail('😀', 60, 3), '');
 });
 
-// The real adapter would call GitHub.
 const failingDetails: PrDetails = parsePrDetails(
   JSON.stringify({ state: 'OPEN', headRefOid: 'abc123', mergeable: 'MERGEABLE', mergeStateStatus: 'UNSTABLE', statusCheckRollup: ROLLUP }),
 );
@@ -317,7 +313,6 @@ test('fixChecks is refused with no failing check, without an open PR, or when th
   assert.deepEqual(logs, []);
 });
 
-// The logs and job of #246's failed CI (2026-11-08) and of an earlier one, as `gh` gave them.
 const GH = join(dirname(fileURLToPath(import.meta.url)), '../../fixtures', 'gh');
 const ghFixture = (name: string) => readFileSync(join(GH, name), 'utf8');
 
@@ -347,7 +342,6 @@ test('failureExcerpt on the coverage failure: both floors missed, no passing tes
     failureLine({ name: 'check', step: 'tests and coverage', excerpt }),
     'check › tests and coverage: cli: branches 53.6% is below its floor of 54%: add tests, never lower the floor',
   );
-  // A named step's header says "Run <command>", not its name: the step is then the one GitHub's ##[error] is in.
   assert.equal(failureExcerpt(ghFixture('run-log-failed-coverage.txt'), 'tests and coverage'), excerpt);
 });
 
@@ -359,7 +353,6 @@ test("failureExcerpt on a failing test: node's failing-tests summary with the er
   assert.doesNotMatch(excerpt, /✔/);
   assert.equal(failureHeadline(excerpt), 'no file in domain/pull-request imports Task');
 
-  // The test's own ✖ above the summary is said again in it, so only the summary is kept.
   const inline = [
     '✖ adds (1ms)',
     '  Error: 1 !== 2',

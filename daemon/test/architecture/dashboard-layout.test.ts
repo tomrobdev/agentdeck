@@ -1,5 +1,3 @@
-// The dashboard's layout in CLAUDE.md (app/src/), checked against the source: which folders may import which, and which
-// task status comparisons are rules the dashboard decides for itself. Each failure names the file, the line and the rule.
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -11,14 +9,11 @@ import { TASK_STATUSES } from '../../src/domain/work/lifecycle/lifecycle.ts';
 const APP_SRC = join(import.meta.dirname, '../../../app/src');
 const sources = readSources(APP_SRC, { vue: true });
 
-/** Files at the top of app/src and `styles/` that import anything: the entry points. */
 const ENTRY = ['App.vue', 'main.ts', 'vite-env.d.ts'];
 
-/** The daemon files the dashboard may import: rules come from `domain/`, types from the contract. */
 const daemonAllowed = (target: string) =>
   /^(\.\.\/)+daemon\/src\/domain\//.test(target) || /^(\.\.\/)+daemon\/src\/api\/contract\/[a-z-]+\.ts$/.test(target);
 
-/** What each import in a source breaks, as `file:line imports target: why`. */
 export function layoutViolations(sources: Source[]): string[] {
   const found: string[] = [];
   for (const s of sources) {
@@ -104,7 +99,6 @@ test('[dashboard-layout] vue-router is imported only by the router, the entry fi
     assert.equal(layoutViolations([use(path)]).length, 1, path);
 });
 
-/** The names a file exports that it imports: `export { a } from './x'`, and `export { a }` or `export type { a }` of an imported `a`. */
 export function reExports(s: Source): { name: string; line: number }[] {
   const imported = new Set<string>();
   for (const st of s.ast.statements) {
@@ -156,10 +150,8 @@ test('[dashboard-layout] the re-export finder sees an imported name exported, an
 
 const STATUSES = new Set<string>(TASK_STATUSES);
 
-/** A declaration named like a yes-or-no question about a task: what it answers is a rule, whatever the markup does with it. */
 const QUESTION = /^(can|is|has|should|may)[A-Z]|(Shown|Allowed|Enabled|Visible|Available)$/;
 
-/** The name of the declaration (`const canDrag = …`, a function or a method) a node is in, or null at the top of a file. */
 function declaredIn(node: ts.Node): string | null {
   for (let n = node.parent; n; n = n.parent) {
     if (ts.isVariableDeclaration(n) && ts.isIdentifier(n.name)) return n.name.text;
@@ -168,7 +160,6 @@ function declaredIn(node: ts.Node): string | null {
   return null;
 }
 
-/** Every `x.status === 'queued'` (or `!==`) in a source, as `file:name` of the declaration it is in and the line. */
 export function statusComparisons(s: Source): { key: string; line: number; name: string | null }[] {
   const out: ReturnType<typeof statusComparisons> = [];
   const visit = (node: ts.Node) => {
@@ -198,11 +189,6 @@ export function statusComparisons(s: Source): { key: string; line: number; name:
   return out;
 }
 
-/**
- * Task status comparisons in the dashboard that are rules (a question like "can this be dragged?"), each with where the
- * rule belongs. They are not fixed yet: this list only shrinks. Fix one by moving the rule into the daemon's domain/ and
- * deleting its line here.
- */
 const KNOWN_RULES: Record<string, string> = {
   'components/work/queue/BoardView.vue:canDrag': 'domain/work/lifecycle/lifecycle.ts: when a task can be moved',
   'components/work/task/Sidebar.vue:autoMergeShown': 'domain/landing/merge/auto-merge.ts: when auto-merge applies to a task',

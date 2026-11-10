@@ -11,10 +11,6 @@ import ConfirmDialog from '../ui/ConfirmDialog.vue';
 import Delta from '../ui/status/Delta.vue';
 import RadioGroup from '../ui/form/RadioGroup.vue';
 
-// The confirm before a merge: it writes to the base branch on GitHub and can't be undone from here. The button asks the
-// daemon to merge (a merge request) and the dialog closes at once; the daemon merges when the PR is ready. Whether it merges
-// now instead (failing checks or failed tests, on the person's say-so) is the daemon's merge_now. The dialog focuses the confirm button, so Enter confirms; Esc cancels. Errors show in the dialog.
-// With `hasNext` it also offers Merge and open next: the same merge, then the caller opens the next task in review.
 const props = defineProps<{ taskId: number; hasNext?: boolean }>();
 const emit = defineEmits<{ close: []; merged: [result: MergeResult, openNext: boolean]; requested: [openNext: boolean] }>();
 const { refresh } = useActions();

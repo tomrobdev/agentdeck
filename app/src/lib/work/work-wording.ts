@@ -3,7 +3,6 @@ import type { StartWait } from '../../api/types.ts';
 import { oneLine } from '../../../../daemon/src/domain/shared/index.ts';
 import { relTime, when } from '../shared/time.ts';
 
-/** What a queued task waits for, in a few words, for chips and callouts. */
 export function describeWait(h: StartWait): string {
   switch (h.kind) {
     case 'daemon-paused':
@@ -23,13 +22,11 @@ export function describeWait(h: StartWait): string {
   }
 }
 
-/** "#80", "#80 and #81", "#80, #81 and #82". */
 export function taskList(ids: number[]): string {
   const tags = ids.map((id) => `#${id}`);
   return tags.length < 2 ? tags.join('') : `${tags.slice(0, -1).join(', ')} and ${tags[tags.length - 1]}`;
 }
 
-/** A size in bytes: "812 B", "14 KB". */
 export function fileSize(bytes: number): string {
   return bytes < 1024 ? `${bytes} B` : `${Math.round(bytes / 1024)} KB`;
 }

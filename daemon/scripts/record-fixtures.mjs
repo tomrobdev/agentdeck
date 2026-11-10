@@ -1,14 +1,4 @@
 #!/usr/bin/env node
-// Record real `claude` and `gh` output as test fixtures, so the parsers and the fakes can be checked against them
-// (daemon/test/runs/run/contracts.test.ts). Workers can't reach Anthropic or GitHub, so a person runs this, in a session.
-//
-// Usage: node daemon/scripts/record-fixtures.mjs [--repo owner/name] [--check]
-//   --repo   the GitHub repo whose PRs are read (default: this checkout's origin)
-//   --check  only say whether the fixtures were recorded with the installed claude and gh
-//
-// Writes daemon/test/fixtures/claude/*.jsonl, daemon/test/fixtures/gh/*.json|txt and daemon/test/fixtures/versions.json.
-// The claude runs use haiku in a scratch repo and cost a few cents. Paths under $HOME, session ids, uuids and emails
-// are scrubbed.
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
@@ -40,7 +30,6 @@ if (opts.check) {
 }
 
 const HOME = homedir();
-/** Scrub what identifies this machine or session from recorded text. */
 function scrub(text, extra = []) {
   let out = text;
   for (const [from, to] of extra) out = out.split(from).join(to);
@@ -59,7 +48,6 @@ function write(path, text) {
   console.log(`wrote ${path.slice(ROOT.length + 1)} (${text.split('\n').filter(Boolean).length} lines)`);
 }
 
-// ── claude ──────────────────────────────────────────────────────────────────────────────────────────────────────────
 const scratch = mkdtempSync(join(tmpdir(), 'agentdeck-fixtures-'));
 const git = (...args) => execFileSync('git', args, { cwd: scratch, stdio: 'ignore' });
 git('init', '-q', '-b', 'main');
@@ -94,7 +82,6 @@ const RUNS = [
   },
   {
     name: 'denied-tool',
-    // Claude Code lets read-only commands such as `ls` through even in dontAsk mode, so this one writes a file.
     what: 'a run whose Bash call is refused by the tool rules',
     args: ['-p', 'Use Bash to run `touch out.txt`, then reply done.', ...base, '--max-turns', '4', '--allowedTools', 'Read'],
   },
@@ -128,7 +115,6 @@ for (const run of RUNS) {
 }
 rmSync(scratch, { recursive: true, force: true });
 
-// ── gh ──────────────────────────────────────────────────────────────────────────────────────────────────────────────
 const ghJson = (args) => execFileSync('gh', args, { cwd: ROOT, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
 const repo = opts.repo ?? JSON.parse(ghJson(['repo', 'view', '--json', 'nameWithOwner'])).nameWithOwner;
 const FIELDS = 'state,headRefOid,isDraft,mergeable,mergeStateStatus,commits,additions,deletions,changedFiles,statusCheckRollup';
