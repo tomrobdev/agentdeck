@@ -29,7 +29,6 @@ test('a block the worker reported as a need does not pause the repo, refusals or
   assert.equal(needs.result.environment, true);
   assert.deepEqual(needs.result.needs, { kind: 'edit', items: ['.claude/settings.json'] });
   assert.equal(needs.pause, false);
-  // A refusal with no need named still pauses: nobody said what was wrong.
   const unnamed = runOutcome({ ...finished, status: parseStatus('STATUS: BLOCKED: could not write'), commitsAhead: null, denials: 1 });
   assert.equal(unnamed.pause, true);
 });

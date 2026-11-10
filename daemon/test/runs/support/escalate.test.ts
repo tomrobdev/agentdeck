@@ -1,6 +1,3 @@
-// Escalation: a retry after a failure a stronger model may fix runs one model up, unless the repo turns escalate off or
-// the person's retry names a model. The rules in domain/runs/escalate.ts, then through the scheduler, the fake claude,
-// `retryTask` and the CLI.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
@@ -24,8 +21,6 @@ const { repoSettingPatch } = await import('../../../src/cli/operations/settings-
 const { taskCommands } = await import('../../../src/cli/work/tasks.ts');
 const { testApp } = await import('../../fixtures/fixtures.ts');
 const { fakeCodeHost } = await import('../../fixtures/fakes.ts');
-
-// --- The rules, on plain values ---
 
 const end = (fields: Partial<Parameters<typeof hardFailure>[0]> = {}) => ({
   outcome: 'failed' as const,
@@ -104,8 +99,6 @@ test('the escalation for a run is the one made since the last work run that ende
   assert.equal(escalationSince(events, []), null, 'a first run has none');
 });
 
-// --- Through the database, the scheduler, the fake claude and the CLI ---
-
 const db = testApp(openDb(join(home, 'agentdeck.db')), { codeHost: fakeCodeHost() });
 db.setSetting('max_concurrent', '1');
 after(() => db.close());
@@ -120,7 +113,6 @@ sh(dir, 'config', 'user.name', 'test');
 sh(dir, 'commit', '-q', '--allow-empty', '-m', 'init');
 db.addRepo({ name: 'demo', path: dir, base_branch: 'main' });
 
-/** The --model and the prompt of each fake claude run whose prompt includes `marker`. */
 const started = (marker: string) =>
   readFileSync(join(home, 'fake-claude-args.log'), 'utf8')
     .trim()
@@ -187,7 +179,6 @@ test('a person’s retry without a model escalates; one that names a model runs 
   assert.ok(db.eventsForTask(task.id).some((e) => e.type === 'edit' && e.reason === 'model'));
   db.raw.prepare("UPDATE tasks SET status = 'failed' WHERE id = ?").run(task.id);
 
-  // The run was on sonnet, the task now on haiku: a person's change wins.
   assert.deepEqual(retryTask(db, task.id), { model: 'haiku', escalated: false });
   db.raw.prepare("UPDATE tasks SET status = 'cancelled' WHERE id = ?").run(task.id);
 

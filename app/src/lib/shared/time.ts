@@ -2,7 +2,6 @@
 import type { PrCheck, Run } from '../../api/types.ts';
 import { sqliteMs } from '../../../../daemon/src/domain/shared/index.ts';
 
-/** "Tue 14:00" style, for when a wait ends. */
 export function when(unixSeconds: number): string {
   return new Date(unixSeconds * 1000).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' });
 }
@@ -13,7 +12,6 @@ export function relTime(unixSeconds: number): string {
   return mins < 90 ? `${mins}m` : `${(mins / 60).toFixed(1)}h`;
 }
 
-/** Every time from the daemon is SQLite's UTC `YYYY-MM-DD HH:MM:SS`, with no zone marker. */
 export function parseTime(s: string): number {
   return sqliteMs(s);
 }
@@ -26,7 +24,6 @@ export function ago(time: string): string {
   return `${Math.round(secs / 86400)}d ago`;
 }
 
-/** How long the daemon has run, from its ISO start time: "45s", "12m", "3h 5m", "2d 4h". */
 export function uptime(startedAt: string, now = Date.now()): string {
   const secs = Math.max(0, Math.floor((now - Date.parse(startedAt)) / 1000));
   if (secs < 60) return `${secs}s`;
@@ -37,13 +34,11 @@ export function uptime(startedAt: string, now = Date.now()): string {
   return `${Math.floor(hours / 24)}d ${hours % 24}h`;
 }
 
-/** How long a run took, or has taken so far: "45s", "12m", "1.4h". */
 export function runDuration(r: Run): string {
   const secs = ((r.ended_at ? parseTime(r.ended_at) : Date.now()) - parseTime(r.started_at)) / 1000;
   return secs < 90 ? `${Math.round(secs)}s` : secs < 5400 ? `${Math.round(secs / 60)}m` : `${(secs / 3600).toFixed(1)}h`;
 }
 
-/** How long a PR check took, or has run so far ("running for 2m"); empty when GitHub gave no start time. */
 export function checkDuration(c: Pick<PrCheck, 'state' | 'started_at' | 'completed_at'>, now = Date.now()): string {
   if (!c.started_at) return '';
   const start = Date.parse(c.started_at);

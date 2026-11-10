@@ -21,8 +21,6 @@ import MenuRadioItem from '../../ui/menu/MenuRadioItem.vue';
 import MenuSeparator from '../../ui/menu/MenuSeparator.vue';
 import MenuSub from '../../ui/menu/MenuSub.vue';
 
-// The menu a row opens on right-click, the context-menu key or ⇧F10: the task's usual actions and properties. It opens at
-// (x, y) as soon as it is mounted and says `close` when it is dismissed or something was chosen.
 const props = defineProps<{ task: TaskSummary; x: number; y: number }>();
 const emit = defineEmits<{ close: []; open: [id: number]; act: [kind: PersonEvent, id: number]; merge: [id: number] }>();
 const { run, flash } = useActions();
@@ -41,7 +39,6 @@ const LABELS: Record<PersonEvent, string> = {
   cancel: 'Cancel task',
   mark_done: 'Mark done',
 };
-// A done task with an open PR is sent back with a note from its page, so Retry is not offered here.
 const events = computed(() => personEvents(props.task).filter((e) => !(e === 'retry' && isReview(props.task))));
 
 function done(fn: () => unknown) {
@@ -57,7 +54,6 @@ function setPriority(key: string) {
 const setModel = (model: string) => model !== props.task.model && done(() => run(() => workApi.editTask(props.task.id, { model })));
 const copyText = (text: string, what: string) => done(async () => (await copy(text, what), flash(`Copied ${what}`)));
 
-// A bad id keeps the menu open (preventDefault on the item's select) so the person can fix it.
 async function link(kind: LinkKind, e?: Event) {
   const on = Number(linkTo.value.trim().replace(/^#/, ''));
   if (!Number.isInteger(on) || on < 1) {
@@ -88,7 +84,6 @@ async function link(kind: LinkKind, e?: Event) {
       </MenuRadioGroup>
     </MenuSub>
     <MenuSub label="Link" :disabled="!editable" @opened="linkInput?.focus()">
-      <!-- keydown.stop: the menu's typeahead and arrow keys must not take the letters and digits typed here. -->
       <input
         ref="linkInput"
         v-model="linkTo"

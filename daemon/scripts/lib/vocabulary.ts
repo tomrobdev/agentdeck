@@ -6,7 +6,6 @@ const ROOT = join(import.meta.dirname, '../../..');
 
 export type GlossaryTerm = { term: string; avoid: string[] };
 
-/** The terms of a glossary: each `**Term**:` line, with the words of the `_Avoid_:` line that follows it. */
 export function parseGlossary(text: string): GlossaryTerm[] {
   const terms: GlossaryTerm[] = [];
   for (const line of text.split('\n')) {
@@ -28,14 +27,12 @@ export function readGlossary(): GlossaryTerm[] {
   return parseGlossary(readFileSync(join(ROOT, 'GLOSSARY.md'), 'utf8'));
 }
 
-/** A case-insensitive whole-word pattern for the words, or null for none. */
 export function avoidPattern(words: string[]): RegExp | null {
   if (!words.length) return null;
   const escaped = words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+'));
   return new RegExp(`\\b(${escaped.join('|')})\\b`, 'i');
 }
 
-/** The 1-based numbers of the lines of `text` that say an avoid-word. */
 export function avoidedLines(text: string, words: string[]): { line: number; text: string }[] {
   const re = avoidPattern(words);
   if (!re) return [];

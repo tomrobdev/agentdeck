@@ -1,5 +1,3 @@
-// A second test for each landing use case a single test file named before: fixChecks, requestAllMerges, closeTaskPr,
-// requestMerges, cancelMergeRequest and markDone. Real SQLite and git, the fake code host (fakes.ts).
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
@@ -22,7 +20,6 @@ const { ActionError, cancelMergeRequest, closeTaskPr, fixChecks, linkTasks, mark
 const { latestReviewNote } = await import('../../../src/domain/work/lifecycle/history.ts');
 const { parseJobSteps } = await import('../../../src/domain/landing/index.ts');
 const { fmtChecks } = await import('../../../src/cli/format.ts');
-/** #246's failed CI, as `gh` gave it (2026-11-08). */
 const ghFixture = (name: string) => readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../../fixtures', 'gh', name), 'utf8');
 
 const host = fakeCodeHost();
@@ -46,7 +43,6 @@ function gitRepo(name: string) {
   return db.addRepo({ name, path: dir, base_branch: 'main', test_cmd: 'true' });
 }
 const repo = gitRepo('demo');
-// Its tasks open PRs, and a builds-on link into a repo with pr_mode off is refused.
 db.updateRepo(repo.id, { pr_mode: 'ready' });
 
 beforeEach(() => {
@@ -58,7 +54,6 @@ beforeEach(() => {
 });
 
 let n = 0;
-/** A done task with an open PR whose last run passed the tests: one a person may merge. */
 function tested(r: { id: typeof repo.id } = repo) {
   const url = `https://github.com/acme/demo/pull/${++n}`;
   const t = doneTask(db, r, { pr: 'open', url, branch: `agentdeck/landing-${n}` });

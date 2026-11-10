@@ -6,11 +6,9 @@ import type { Repo, RepoDeletion } from '../../api/types';
 import { useActions } from '../../composables/shared/useActions';
 import { errorMessage, plural } from '../../../../daemon/src/domain/shared/index.ts';
 
-// The archived repos, to unarchive or delete for good.
 const { run } = useActions();
 const queryClient = useQueryClient();
 
-// A write's refresh refetches the list; the others on screen are read on request.
 const archivedQ = useQuery(archivedReposQuery());
 const archived = computed<Repo[]>(() => archivedQ.data.value ?? []);
 const actionError = ref('');
@@ -27,7 +25,6 @@ async function unarchive(r: Repo) {
   });
 }
 
-// What a delete takes with it is counted fresh when asked, never from an earlier look.
 async function askDelete(r: Repo) {
   actionError.value = '';
   typed.value = '';

@@ -1,13 +1,5 @@
-// A small fuzzy matcher for the command palette. Free of the dashboard's other modules so the daemon's tests can import it
-// (daemon/test/dashboard/work/palette.test.ts).
-
 const WORD_START = /[\s#/_\-.:]/;
 
-/**
- * How well `query` matches `text`, or null when it doesn't. Every query character must appear in `text`, in order, ignoring case.
- * Higher is better: runs of consecutive characters, matches at the start of a word and a match at the very start score more,
- * and an exact match scores most.
- */
 export function fuzzyScore(query: string, text: string): number | null {
   const q = query.trim().toLowerCase();
   if (!q) return 0;
@@ -29,7 +21,6 @@ export function fuzzyScore(query: string, text: string): number | null {
   return score;
 }
 
-/** The best score of `query` over several fields of one item, or null when no field matches. */
 export function bestScore(query: string, fields: readonly string[]): number | null {
   let best: number | null = null;
   for (const f of fields) {
@@ -39,10 +30,6 @@ export function bestScore(query: string, fields: readonly string[]): number | nu
   return best;
 }
 
-/**
- * The items that match `query`, best first; ties keep their order. `bonus` lifts items that should come first among equals
- * (the selected task's actions). An empty query keeps every item in order.
- */
 export function rank<T>(
   items: readonly T[],
   query: string,

@@ -1,5 +1,3 @@
-// How stale a proposal is: the commits on the base since the task was added, and which of the paths its prompt names
-// they changed. The rule on plain values, then the use case on real git with created_at read as UTC.
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
@@ -82,7 +80,6 @@ const git = (cwd: string, env: Record<string, string>, ...args: string[]) =>
     env: { ...process.env, ...env },
   }).toString();
 
-/** Commit everything at `ms`, written in a zone 8 hours west of UTC, as both the author and the committer date. */
 function commitAt(path: string, ms: number, message: string) {
   const local = new Date(ms - 8 * 3600_000).toISOString().slice(0, 19);
   const date = `${local}-08:00`;
@@ -91,7 +88,6 @@ function commitAt(path: string, ms: number, message: string) {
 }
 
 test('a commit after the add that changes a named file counts; created_at is read as UTC', async () => {
-  // A zone west of UTC: read as local time, created_at would come 8 hours late, after the commit below.
   const tz = process.env.TZ;
   process.env.TZ = 'Etc/GMT+8';
   try {

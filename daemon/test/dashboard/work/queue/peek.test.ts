@@ -1,5 +1,3 @@
-// What the peek pane says of a task: its prompt's Goal, its model, its links and the actions for its stage. The dashboard has no
-// test runner, so its rules are tested here.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { promptGoal } from '../../../../src/domain/work/index.ts';

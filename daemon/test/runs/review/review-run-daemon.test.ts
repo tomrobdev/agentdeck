@@ -1,7 +1,3 @@
-// The review run in the daemon: when one may start (reviewable), what follows its answer (reviewOutcome), and the whole
-// of it with fake claude: a clean answer stores a review with nothing blocking, a blocking one retries the task with the
-// review as its note but only once, a garbage one leaves no review and no second run, and a sync that only brings in
-// the base starts no second one.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
@@ -28,8 +24,6 @@ const { runLabel } = await import('../../../src/domain/runs/run.ts');
 const { REVIEW_PROMPT_INTRO } = await import('../../../src/domain/landing/review/address.ts');
 const { doneTask, testApp, waitFor } = await import('../../fixtures/fixtures.ts');
 const { fakeCodeHost } = await import('../../fixtures/fakes.ts');
-
-// ---- reviewable and reviewOutcome, pure
 
 const ON = { auto_review: true };
 const DONE = { status: 'done' as const, pr: { state: 'open' as const } } as never;
@@ -78,15 +72,12 @@ test('restartWait counts review runs', () => {
   assert.equal(restartWait({ tasks: 0, planner: 0, resolves: 0, reviews: 2 }), '2 review runs');
 });
 
-// ---- with fake claude
-
 const db = testApp(openDb(join(home, 'test.db')), { codeHost: fakeCodeHost() });
 db.setSetting('max_concurrent', '1');
 after(() => db.close());
 
 const sh = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
 let repos = 0;
-/** A git repo of its own for each test, opening draft PRs, with auto_review as given. */
 function makeRepo(autoReview: boolean) {
   const name = `demo-${++repos}`;
   const dir = join(home, name);
@@ -107,7 +98,6 @@ const fakeArgs = (): string[][] =>
     .split('\n')
     .filter(Boolean)
     .map((l) => JSON.parse(l));
-/** The values after `flag` in a claude argv, up to the next flag. */
 const flagValues = (args: string[], flag: string): string[] => {
   const from = args.indexOf(flag) + 1;
   const end = args.findIndex((a, i) => i >= from && a.startsWith('--'));
@@ -149,7 +139,6 @@ test('a clean answer stores a submitted review by the review run with no blockin
   assert.deepEqual(stored.comments, []);
   assert.equal(db.draftReviewFor(task.id), undefined, "a person's draft is neither taken nor made");
 
-  // Its own prompt, turns, schema and read-only tools; Edit, Write and NotebookEdit denied outright.
   const args = fakeArgs().find((a) => a[a.indexOf('-p') + 1].startsWith(`AgentDeck review run for task #${task.id}`))!;
   assert.equal(args[args.indexOf('--max-turns') + 1], '30');
   assert.match(args[args.indexOf('--append-system-prompt') + 1], /AgentDeck review run/);
@@ -158,7 +147,6 @@ test('a clean answer stores a submitted review by the review run with no blockin
   const denied = flagValues(args, '--disallowedTools');
   for (const tool of ['Edit', 'Write', 'NotebookEdit', 'Bash(git push*)']) assert.ok(denied.includes(tool), tool);
 
-  // Nothing changed since: the next tick starts no second one.
   assert.equal(await nextReviewable(db), undefined);
   await drain();
   assert.equal(db.runsForTask(task.id).length, 2);
@@ -226,7 +214,6 @@ test('a blocking answer retries the task with the review as its note; a second b
   assert.equal(reviews[0].comments[0].head_commit, reviews[0].head_commit);
   assert.notEqual(reviews[0].diff_hash, reviews[1].diff_hash, 'the second read the new changes');
 
-  // The second work run got the review comment by comment, once: not its note again under it.
   const second = fakeArgs()
     .map((a) => a[a.indexOf('-p') + 1])
     .filter((p) => p.includes('FAKE_REVIEW_BLOCK write it') && !p.startsWith('AgentDeck'))

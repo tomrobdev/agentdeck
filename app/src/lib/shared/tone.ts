@@ -2,7 +2,6 @@
 export const TONES = ['muted', 'accent', 'running', 'done', 'blocked', 'failed', 'merged', 'queued', 'cancelled'] as const;
 export type Tone = (typeof TONES)[number];
 
-/** The tone of each task status (and of the run states the dashboard draws the same way); an unknown status is muted. */
 const STATUS_TONE: Record<string, Tone> = {
   proposed: 'accent',
   queued: 'queued',

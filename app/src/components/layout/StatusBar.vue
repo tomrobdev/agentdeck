@@ -1,6 +1,4 @@
 <script setup lang="ts">
-// The status bar along the bottom of the window: the daemon's state (click to pause or resume), slots,
-// and the usage windows. Actions and navigation are in the header (AppHeader.vue).
 import { computed } from 'vue';
 import { landingApi } from '../../api/landing';
 import { describeState } from '../../lib/operations/daemon-wording';
@@ -19,7 +17,6 @@ import Tooltip from '../ui/Tooltip.vue';
 const props = defineProps<{ status: Status | null; tasks: TaskSummary[]; offline: boolean; busy: boolean }>();
 defineEmits<{ toggle: [] }>();
 
-// Everything under way, from the task list and status the window already reads.
 const activity = useActivity(
   () => props.tasks,
   () => props.status,
@@ -30,7 +27,6 @@ const cancelMerge = (item: ActivityItem) => item.taskId !== null && run(() => la
 
 const state = computed(() => describeState(props.status, props.offline));
 
-/** Meters with a marker for the budget line that matters for each window. */
 const meters = computed(() => {
   const s = props.status;
   if (!s) return [];
@@ -50,7 +46,6 @@ const meters = computed(() => {
   });
 });
 
-/** The repos due for an area review: one repo's line, or how many, with every line in the title. */
 const reviewDue = computed(() => {
   const due = props.offline ? [] : (props.status?.headline.review_due ?? []);
   if (!due.length) return null;

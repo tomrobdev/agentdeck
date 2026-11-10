@@ -24,7 +24,6 @@ const SRC = join(import.meta.dirname, '../../src');
 
 const sources = readSources(SRC);
 
-/** Packages, and the only files that may import them. */
 const PACKAGES: { match: RegExp; allowed: (path: string) => boolean; why: string }[] = [
   { match: /^node:sqlite$/, allowed: (p) => p.startsWith('db/'), why: 'SQL lives only in db/' },
   { match: /^node:child_process$/, allowed: (p) => p.startsWith('adapters/'), why: 'processes are started by adapters/' },
@@ -35,7 +34,6 @@ const PACKAGES: { match: RegExp; allowed: (path: string) => boolean; why: string
 
 const at = (s: Source, line: number) => `${s.path}:${line}`;
 
-/** The imports that break the layer rules, as `path:line imports target: why`. */
 const layerViolations = (files: Source[]) =>
   files.flatMap((s) => {
     const rule = LAYERS[layerOf(s.path)];
@@ -122,7 +120,6 @@ test('[sql-in-db] db/tables.ts is imported at runtime only by files in db/', () 
 });
 
 test('[layers] there are no import cycles', () => {
-  // Type-only imports are erased, so only runtime imports can form a cycle.
   const edges = new Map(sources.map((s) => [s.path, s.imports.filter((i) => i.target && !i.typeOnly).map((i) => i.target!)]));
   const cycles: string[] = [];
   const state = new Map<string, 'open' | 'done'>();
@@ -170,7 +167,6 @@ test('[contexts] a sample that reaches into another context, or has a bare or st
   assert.match(checkUnusedIndexExports(sample.slice(0, 2)).join('\n'), /domain\/work\/index\.ts exports RULES/);
 });
 
-/** Each `export * from` in the sources, as `path:line`. */
 const exportStars = (files: Source[]) =>
   files.flatMap((s) =>
     s.ast.statements
@@ -230,7 +226,6 @@ test('[folder-size] a sample with a 13th file in an unlisted folder fails, namin
   const stale = checkFolderSize(sample, ['daemon/src/a', 'daemon/src/b', 'daemon/src/c']);
   assert.equal(stale.stale.length, 1);
   assert.match(stale.stale[0], /daemon\/src\/b is on OVERSIZED_FOLDERS but is within the limit/);
-  // Subfolders do not count: 12 files in a folder with a subfolder of 12 more is within the limit.
   assert.deepEqual(checkFolderSize([...files('daemon/src/d', 12), ...files('daemon/src/d/e', 12)], []), { found: [], stale: [] });
 });
 
@@ -277,7 +272,6 @@ test('[context-folders] a sample with a loose file or an unknown folder fails; a
   assert.deepEqual(listed, { found: [], stale: [] });
 });
 
-/** Globals that read the clock, randomness, the environment or the outside world. */
 const AMBIENT = new Set([
   'Date.now',
   'Math.random',
@@ -307,7 +301,6 @@ test('[domain-pure] domain/ reads no clock, randomness or environment, except as
   assert.deepEqual(found, []);
 });
 
-/** The parsers of outside formats in domain/ that may call JSON.parse: claude's log, a review run's answer, GitHub's answers, and a stored list a repo's setting reads. A stored column is parsed in db/mappers.ts. */
 const OUTSIDE_JSON = ['domain/runs/translate/log.ts', 'domain/runs/review.ts', 'domain/landing/merge/merge.ts', 'domain/shared/text.ts'];
 
 test('[domain-pure] domain/ calls JSON.parse only in the parsers of outside formats', () => {
@@ -321,7 +314,6 @@ test('[domain-pure] domain/ calls JSON.parse only in the parsers of outside form
   assert.deepEqual(found, []);
 });
 
-/** An identifier that refers to a variable, not a property name or a declaration. */
 function isFreeReference(node: ts.Identifier): boolean {
   const p = node.parent;
   if (ts.isPropertyAccessExpression(p) && p.name === node) return false;
@@ -363,7 +355,6 @@ test('[sql-in-db] nothing outside db/ uses db.raw', () => {
 });
 
 test('[sql-in-db] raw sql in db/ carries a `// guard:` comment saying what the builder cannot express', () => {
-  // The query builder is the default; a raw `sql` fragment is for what it hides or lacks, and says so on its line or the one above.
   const found: string[] = [];
   for (const s of sources.filter((s) => s.path.startsWith('db/'))) {
     const lines = s.ast.text.split('\n');
@@ -386,14 +377,12 @@ test('[sql-in-db] raw sql in db/ carries a `// guard:` comment saying what the b
   assert.deepEqual(found, []);
 });
 
-/** The text of a string or template literal, with each `${…}` as `?`. */
 function literalText(node: ts.Node): string | null {
   if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
   if (ts.isTemplateExpression(node)) return node.head.text + node.templateSpans.map((s) => `?${s.literal.text}`).join('');
   return null;
 }
 
-/** The function a node is in, looking past the arrow functions inside it, named by its method, declaration or `const`. */
 function enclosingFunction(node: ts.Node): { name: string; body: ts.Node } | undefined {
   for (let n = node.parent; n; n = n.parent) {
     if ((ts.isMethodDeclaration(n) || ts.isFunctionDeclaration(n)) && n.body) return { name: n.name?.getText() ?? '', body: n.body };
@@ -403,18 +392,14 @@ function enclosingFunction(node: ts.Node): { name: string; body: ts.Node } | und
   return undefined;
 }
 
-/** The only functions that may write a task's status. */
 const STATUS_WRITERS = ['applyEvent'];
 
 interface StatusWrite {
   line: number;
-  /** The builder's `.update(tasks).set({ status … })`, or a raw SQL string that sets the status. */
   kind: 'builder' | 'raw';
-  /** What is wrong with it; empty when it is a guarded write by an allowed function. */
   problems: string[];
 }
 
-/** Every write of a task's status in a source string, and what is wrong with each. */
 function findStatusWrites(source: string): StatusWrite[] {
   const ast = ts.createSourceFile('sample.ts', source, ts.ScriptTarget.Latest, true);
   const writes: StatusWrite[] = [];
@@ -442,7 +427,6 @@ function findStatusWrites(source: string): StatusWrite[] {
         r = r.expression.expression;
       }
       if (setsStatus && updatesTasks) {
-        // The calls chained after .set(…): the .where(…) must name the status column.
         let guarded = false;
         for (let n: ts.Node = node; ts.isPropertyAccessExpression(n.parent) && ts.isCallExpression(n.parent.parent); n = n.parent.parent) {
           const [arg] = n.parent.parent.arguments;
@@ -463,7 +447,6 @@ function findStatusWrites(source: string): StatusWrite[] {
   return writes;
 }
 
-/** Every `db.raw` (the handle for tests) in a source string: nothing outside db/ may use it. */
 function findRawHandleUse(source: string): number[] {
   const ast = ts.createSourceFile('sample.ts', source, ts.ScriptTarget.Latest, true);
   const lines: number[] = [];
@@ -492,7 +475,6 @@ test('[guarded-status] the finder reports an unguarded builder write, a write ou
 });
 
 test('[guarded-status] a task status changes only through a guarded transition', () => {
-  // Every status write is in applyEvent, the claim's included, guarded on the status, and asks the lifecycle for the next status.
   const found: string[] = [];
   let count = 0;
   for (const s of sources.filter((s) => s.path.startsWith('db/'))) {
@@ -508,19 +490,16 @@ test('[guarded-status] a task status changes only through a guarded transition',
 interface TaskWrite {
   line: number;
   fn: string;
-  /** Whether what it sets comes from a function of domain/ (a decision), or sets the status (rule:guarded-status's). */
   fromDomain: boolean;
   setsStatus: boolean;
 }
 
-/** Every `.update(tasks).set(…)` in a source string, and where its fields come from. */
 function findTaskWrites(source: string): TaskWrite[] {
   const ast = ts.createSourceFile('sample.ts', source, ts.ScriptTarget.Latest, true);
   const fromDomainNames = new Set<string>();
   for (const st of ast.statements) {
     if (ts.isImportDeclaration(st) && ts.isStringLiteral(st.moduleSpecifier) && /(^|\/)domain\//.test(st.moduleSpecifier.text)) {
       const named = st.importClause?.namedBindings;
-      // `stored` only turns values into columns; it decides nothing.
       if (named && ts.isNamedImports(named)) for (const e of named.elements) if (e.name.text !== 'stored') fromDomainNames.add(e.name.text);
     }
   }
@@ -551,7 +530,6 @@ function findTaskWrites(source: string): TaskWrite[] {
   return writes;
 }
 
-/** What is wrong with each non-status task write of a source string: it neither takes its fields from the domain nor is on `plain`. */
 function checkTaskWrites(source: string, plain: Record<string, string>): { found: string[]; used: string[] } {
   const found: string[] = [];
   const used: string[] = [];
@@ -595,10 +573,8 @@ test('[task-writes] a task write with a rule takes its changes from domain/, and
   assert.deepEqual([...found, ...stale, ...noReason], []);
 });
 
-/** The tables whose rows reach the domain only through a mapper, and those mappers. */
 const MAPPED_TABLES = ['tasks', 'repos', 'runs'];
 const MAPPERS = ['toTask', 'toTaskSummary', 'toRepo', 'toRun'];
-/** The query builder's calls that name a table. */
 const TABLE_CALLS = ['from', 'innerJoin', 'leftJoin', 'rightJoin', 'fullJoin', 'crossJoin', 'update', 'insert', 'delete'];
 
 interface RowRead {
@@ -607,11 +583,6 @@ interface RowRead {
   mapped: boolean;
 }
 
-/**
- * Every read of a whole row of a mapped table in a source string: a `select` or `returning` with no columns, with a named set of them
- * (`TASK_COLUMNS`), or spreading one in, and any raw `SELECT *`. It is mapped when its chain goes on `.map(toTask)`, or its result is the
- * argument of a mapper or of `mapFound(…, toTask)`. A selection that lists its columns is a projection, not a row.
- */
 function findRowReads(source: string): RowRead[] {
   const ast = ts.createSourceFile('sample.ts', source, ts.ScriptTarget.Latest, true);
   const aliases = new Map<string, string>();
@@ -630,7 +601,6 @@ function findRowReads(source: string): RowRead[] {
   const method = (call: ts.CallExpression) => (ts.isPropertyAccessExpression(call.expression) ? call.expression.name.text : '');
   const isMapper = (node: ts.Node | undefined) => !!node && MAPPERS.includes(node.getText(ast));
 
-  /** The calls before and after `call` in its chain, in order, and the last of them. */
   const chainOf = (call: ts.CallExpression) => {
     const calls = [call];
     for (let r = call.expression; ts.isPropertyAccessExpression(r) && ts.isCallExpression(r.expression); r = r.expression.expression)
@@ -652,10 +622,11 @@ function findRowReads(source: string): RowRead[] {
       const whole =
         !columns || !ts.isObjectLiteralExpression(columns)
           ? inChain
-          : columns.properties.filter(ts.isSpreadAssignment).flatMap(({ expression: e }) =>
-              // `...getColumns(taskEvents)` is that table's row; any other spread could be anything in the chain.
-              ts.isCallExpression(e) && e.expression.getText(ast) === 'getColumns' ? [tableOf(e.arguments[0])] : inChain,
-            );
+          : columns.properties
+              .filter(ts.isSpreadAssignment)
+              .flatMap(({ expression: e }) =>
+                ts.isCallExpression(e) && e.expression.getText(ast) === 'getColumns' ? [tableOf(e.arguments[0])] : inChain,
+              );
       const tables = [...new Set(whole)].filter((t) => MAPPED_TABLES.includes(t));
       if (tables.length) {
         const around = last.parent;
@@ -744,7 +715,6 @@ test('[models-not-rows] a sample with a new row-shaped field fails; a stale entr
 });
 
 test('[claude-process-group] claude runs only from adapters/claude/claude.ts, in its own process group', () => {
-  // So crash recovery can stop the whole process tree by its pid.
   const found: string[] = [];
   for (const s of sources) {
     const visit = (node: ts.Node) => {
@@ -763,7 +733,6 @@ test('[claude-process-group] claude runs only from adapters/claude/claude.ts, in
   assert.deepEqual(found, []);
 });
 
-// Shipped migration steps never change. Each line of migrations.lock is the schema a fresh database has after that step.
 const LOCK = join(import.meta.dirname, '../db/migrations.lock');
 
 function schemaAfterEachStep(): string[] {
@@ -790,15 +759,12 @@ test('[migrations-append] shipped migration steps are unchanged', () => {
   assert.deepEqual(found, []);
 });
 
-/** The last step that renames or drops. Step 29's rename crashed the running daemon's worker for task 204. */
 const LAST_BREAKING_STEP = 29;
 
-/** The 1-based numbers of the steps after `after` that rename or drop. A function step is judged by its source. */
 const breakingSteps = (steps: readonly unknown[], after: number): number[] =>
   steps.flatMap((step, i) => (i >= after && /\b(RENAME|DROP)\b/i.test(String(step)) ? [i + 1] : []));
 
 test('[migrations-append] a new migration step only adds', () => {
-  // Any process migrates when it opens the database, so the CLI on freshly pulled code migrates while a daemon on older code runs.
   const found = breakingSteps(MIGRATIONS, LAST_BREAKING_STEP).map(
     (n) => `step ${n} renames or drops: a daemon still on older code would fail its queries. Add a column and stop reading the old one`,
   );
@@ -816,7 +782,6 @@ test('[migrations-append] the additive check finds renames and drops, in SQL and
   assert.deepEqual(breakingSteps(steps, 1), [3, 4]);
 });
 
-/** Module-level state in application/ that is allowed, each with why. Keys are `<file>:<name>`. */
 const ALLOWED_MODULE_STATE: Record<string, string> = {
   'application/work/checkout-locks.ts:syncing':
     'the sync lock: a task being synced in this process; the database is the state the processes share',

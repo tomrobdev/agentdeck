@@ -34,7 +34,6 @@ function newRepo(name: string): string {
   git(dir, 'commit', '-q', '-m', 'init');
   return dir;
 }
-/** Write `text` at `path` in `dir`'s edits folder, as a worker does. */
 function edit(dir: string, path: string, text: string): void {
   const file = join(dir, EDITS_FOLDER, path);
   mkdirSync(dirname(file), { recursive: true });
@@ -71,7 +70,7 @@ test('the worker is told where to write protected edits, and to block only for s
 
 test('applyProtectedEdits commits the edits under .claude/ and clears the folder', async () => {
   const dir = newRepo('apply');
-  await writePlanFile(dir, null); // the ignored folder every run gets
+  await writePlanFile(dir, null);
   edit(dir, '.claude/skills/x/SKILL.md', '# x\n');
   edit(dir, 'claude/skills/y/SKILL.md', '# y\n');
   assert.equal(git(dir, 'status', '--porcelain'), '', 'the edits folder is ignored');
@@ -83,7 +82,6 @@ test('applyProtectedEdits commits the edits under .claude/ and clears the folder
   assert.equal(git(dir, 'status', '--porcelain'), '');
   assert.ok(!existsSync(join(dir, EDITS_FOLDER)));
 
-  // An edit that changes nothing makes no commit; no edits folder at all is nothing to do.
   edit(dir, '.claude/skills/x/SKILL.md', '# x\n');
   const head = git(dir, 'rev-parse', 'HEAD');
   assert.deepEqual(await applyProtectedEdits(dir), { applied: [], refused: [] });
@@ -100,7 +98,6 @@ test('an edit outside .claude/, a symlink, or a target that leads out of the wor
   edit(dir, '.claude/settings.json', '{"hooks":{}}\n');
   mkdirSync(join(dir, EDITS_FOLDER, '.claude/skills'), { recursive: true });
   symlinkSync(secret, join(dir, EDITS_FOLDER, '.claude/skills/link.md'));
-  // A .claude folder committed as a symlink to somewhere else in the file system.
   const elsewhere = join(home, 'elsewhere');
   mkdirSync(elsewhere);
   const other = newRepo('refuse-link');

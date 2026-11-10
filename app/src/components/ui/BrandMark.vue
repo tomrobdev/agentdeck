@@ -1,5 +1,4 @@
 <script setup lang="ts">
-// The dashboard's mark: an ink square with a deck line cut through it. Drawn in currentColor, so it follows the theme.
 withDefaults(defineProps<{ size?: number }>(), { size: 18 });
 </script>
 

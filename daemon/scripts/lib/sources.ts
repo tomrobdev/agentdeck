@@ -1,33 +1,25 @@
 // Reads a source tree with the TypeScript compiler: every file's AST and its imports, with target, line and type-only flag.
-// Shared by the architecture test and the docs generator. A .vue file is read through its <script> blocks, keeping line numbers.
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import ts from 'typescript';
 
 export interface Import {
   spec: string;
-  /** The imported file relative to the source root, or null for a package. */
   target: string | null;
   line: number;
   typeOnly: boolean;
 }
 
 export interface Source {
-  /** Relative to the source root, e.g. `domain/work/task/task.ts`. */
   path: string;
   ast: ts.SourceFile;
   imports: Import[];
 }
 
-/** The 1-based line a node starts on. */
 export function lineOf(ast: ts.SourceFile, node: ts.Node): number {
   return ast.getLineAndCharacterOfPosition(node.getStart(ast)).line + 1;
 }
 
-/**
- * The TypeScript inside a .vue file's <script> blocks, at the same line and column as in the file: everything else
- * (template, styles, the tags themselves) becomes blanks, keeping newlines.
- */
 export function vueScript(text: string): string {
   const blank = (s: string) => s.replace(/[^\n]/g, ' ');
   let out = '';
@@ -40,14 +32,12 @@ export function vueScript(text: string): string {
   return out + blank(text.slice(last));
 }
 
-/** Parses one file's text. `path` decides how: a .vue file is read through its script blocks. */
 export function parseSource(path: string, text: string): Source {
   const code = path.endsWith('.vue') ? vueScript(text) : text;
   const ast = ts.createSourceFile(path.replace(/\.vue$/, '.vue.ts'), code, ts.ScriptTarget.Latest, true);
   return { path, ast, imports: importsOf(path, ast) };
 }
 
-/** Every .ts file (and .vue file, with `vue: true`) under `root`, sorted by path. */
 export function readSources(root: string, opts: { vue?: boolean } = {}): Source[] {
   return readdirSync(root, { recursive: true, encoding: 'utf8' })
     .filter((f) => f.endsWith('.ts') || (opts.vue && f.endsWith('.vue')))
@@ -83,7 +73,6 @@ function importsOf(path: string, ast: ts.SourceFile): Import[] {
   return out;
 }
 
-/** The names a file exports (declarations and `export { … }` lists; `export *` is not followed). */
 export function exportedNames(ast: ts.SourceFile): string[] {
   const names: string[] = [];
   for (const stmt of ast.statements) {

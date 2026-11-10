@@ -1,17 +1,9 @@
-// The layers of daemon/src and which of them each may import: the one source of the architecture test's rule and of
-// the Layers section of docs/architecture.md. Imports point down CLAUDE.md's Boundaries list. Changing a layer here
-// changes both: run `pnpm docs:gen` afterwards.
-
 export interface Layer {
-  /** What the layer holds, in a line. */
   holds: string;
-  /** The layers it may import, besides itself. */
   imports: string[];
-  /** Why that is all it may import. */
   why: string;
 }
 
-/** The layer a file belongs to: its top folder under src/, or the file itself for `config.ts`, `compose.ts`, `daemon.ts` and `cli.ts`. */
 export const layerOf = (path: string) => (path.includes('/') ? path.split('/')[0] : path);
 
 export const LAYERS: Record<string, Layer> = {
@@ -67,5 +59,4 @@ export const LAYERS: Record<string, Layer> = {
   },
 };
 
-/** Whether a file in layer `from` may import a file in layer `to`. */
 export const mayImport = (from: string, to: string) => from === to || (LAYERS[from]?.imports.includes(to) ?? false);

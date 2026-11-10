@@ -1,5 +1,4 @@
 <script setup lang="ts">
-// A run's final message, collapsed under a summary. The caller sets the size limits through class.
 defineProps<{ open?: boolean }>();
 </script>
 

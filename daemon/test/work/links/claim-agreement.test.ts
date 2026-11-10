@@ -14,7 +14,6 @@ const { startWaits } = await import('../../../src/application/capacity/queue.ts'
 const { liveLinks } = await import('../../../src/application/work/dependencies.ts');
 const { startState } = await import('../../../src/domain/work/links/link.ts');
 
-/** What each task waits for, from the queue state, the unblock runs going and the links as they are now. */
 function waits(db: ReturnType<typeof openDb>) {
   const waitOf = startWaits(db);
   const links = liveLinks(db);
@@ -29,7 +28,6 @@ test('claimNextTask picks the first queued task, by priority then id, that has n
   db.setRepoPaused(paused.id, 'tests broke');
   db.setPaused(false);
 
-  // One dependency per state: done is met, running is waiting, failed is stuck.
   const dependency = (finish?: 'done' | 'failed') => {
     const t = db.addTask({ repo_id: open.id, title: 'dep', prompt: 'p' });
     if (finish) {
@@ -42,7 +40,6 @@ test('claimNextTask picks the first queued task, by priority then id, that has n
   const deps = { none: null, met: dependency('done'), waiting: dependency(), stuck: dependency('failed') };
   assert.ok(db.applyEvent(deps.waiting, { type: 'claim' }));
 
-  // Ids ascend across the combinations, so priority and id both matter for the order.
   for (const priority of [0, 5, 0, 5])
     for (const [repo_id] of [[open.id], [paused.id]])
       for (const after_task of Object.values(deps)) {
@@ -60,7 +57,6 @@ test('claimNextTask picks the first queued task, by priority then id, that has n
   for (;;) {
     const waitOf = waits(db);
     const queued = db.listTasks().filter((t) => t.status === 'queued');
-    // The slot limit is the scheduler's to check, not the claim's.
     const expected = queued
       .filter((t) => {
         const wait = waitOf(t);
@@ -73,7 +69,6 @@ test('claimNextTask picks the first queued task, by priority then id, that has n
     if (!picked) break;
     claimed++;
   }
-  // Only the open repo's tasks with no dependency or a met one start (2 of the 4 dependency states), once per priority round.
   assert.equal(claimed, 2 * 4);
   db.close();
 });
@@ -92,7 +87,6 @@ test('claimNextTask and startWait agree on a task that builds on a retried task 
   assert.ok(db.applyEvent(dep.id, { type: 'claim' }));
   const later = db.addTask({ repo_id: repo.id, title: 'later', prompt: 'p', links: [{ on: dep.id, kind: 'builds_on' }] });
 
-  /** Whether `later` may start, by the domain and by the claim's SQL, which must say the same. */
   const starts = (step: string): boolean => {
     const wait = waits(db)(db.getTask(later.id)!);
     const domain = wait === null || wait.kind === 'slots';
@@ -102,7 +96,6 @@ test('claimNextTask and startWait agree on a task that builds on a retried task 
   assert.equal(starts('the retried task is running'), false);
   assert.ok(db.applyEvent(dep.id, { type: 'finish', outcome: 'done' }));
   assert.equal(starts('done again, its new PR not opened yet'), false);
-  // Its repo stops opening PRs: the old merged PR, set aside, counts for nothing; done in a repo with no PRs is met.
   db.updateRepo(repo.id, { pr_mode: 'off' });
   assert.equal(starts('done in a repo with pr_mode off'), true);
   db.updateRepo(repo.id, { pr_mode: 'ready' });
@@ -129,7 +122,6 @@ test('claimNextTask and startState agree for tasks with several links, of either
   const done = make('done');
   const running = make('running');
   const failed = make('failed');
-  // Queued behind a failed task: stuck by spreading, though it is itself queued.
   const behind = db.addTask({ repo_id: repo.id, title: 'behind', prompt: 'p' });
   db.addLink({ task_id: behind.id, on: failed, kind: 'builds_on' });
   const ends = [done, running, failed, behind.id];
@@ -164,7 +156,6 @@ test('claimNextTask and startWait agree on a task an unblock run keeps waiting, 
   const db = openDb(':memory:');
   const repo = db.addRepo({ name: 'unblock', path: '/tmp/unblock', base_branch: 'main' });
   db.setPaused(false);
-  // `held` is retried by a person while its unblock run goes; `other`, of lower priority, is free to start.
   const held = db.addTask({ repo_id: repo.id, title: 'held', prompt: 'p', priority: 5 });
   assert.ok(db.applyEvent(held.id, { type: 'claim' }));
   assert.ok(db.applyEvent(held.id, { type: 'finish', outcome: 'blocked' }, { reason: 'stuck' }));
@@ -172,7 +163,6 @@ test('claimNextTask and startWait agree on a task an unblock run keeps waiting, 
   assert.ok(db.applyEvent(held.id, { type: 'retry' }));
   const other = db.addTask({ repo_id: repo.id, title: 'other', prompt: 'p' });
 
-  /** What the domain says of `held`, which the claim's SQL must agree with: the first claim takes `held` only when it may start. */
   const heldWait = () => waits(db)(db.getTask(held.id)!);
   assert.deepEqual(heldWait(), { kind: 'unblocking' }, 'the unblock run is going');
   assert.equal(db.hasQueued(), true, 'other may start');

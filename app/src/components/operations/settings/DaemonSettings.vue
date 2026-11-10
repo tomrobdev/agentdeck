@@ -5,7 +5,6 @@ import { isNative } from '../../../platform/native';
 import Chip from '../../ui/Chip.vue';
 import Switch from '../../ui/form/Switch.vue';
 
-// Keeping the daemon, and in the app the dashboard, running.
 defineProps<{ form: SettingsForm; service: ServiceStatus | null; appAtLogin: boolean | null }>();
 defineEmits<{ toggleAppAtLogin: [] }>();
 </script>

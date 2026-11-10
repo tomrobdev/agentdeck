@@ -1,8 +1,3 @@
-// The parsers and the fakes, checked against real `claude` and `gh` output recorded in daemon/test/fixtures/ by
-// daemon/scripts/record-fixtures.mjs. First each recording goes through what reads it (the claude adapter, the run log,
-// the live state, classifyRun; parsePrDetails, the checks parser, the log tail) and what they read out is checked. Then
-// fake-claude.mjs and fakeCodeHost are run, and every event and field the parsers read must be in their output with the
-// shape it has in the recording it stands for. When claude or gh changes, re-record: these tests say what moved.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { chmodSync, mkdtempSync, readFileSync, writeFileSync, type WriteStream } from 'node:fs';
@@ -30,12 +25,10 @@ const FAKE = join(import.meta.dirname, '../../fixtures/fake-claude.mjs');
 const ZERO_ID = '00000000-0000-0000-0000-000000000000';
 
 const scratch = mkdtempSync(join(tmpdir(), 'agentdeck-contracts-'));
-// A stand-in claude that prints a recording as it was recorded, so the real adapter reads real output.
 const REPLAY = join(scratch, 'replay-claude.sh');
 writeFileSync(REPLAY, '#!/bin/sh\ncat "$AGENTDECK_REPLAY"\n');
 chmodSync(REPLAY, 0o755);
 chmodSync(FAKE, 0o755);
-// The fake commits what it writes, so it runs in a repo of its own.
 const repo = join(scratch, 'repo');
 const git = (...args: string[]) => execFileSync('git', args, { cwd: repo, stdio: 'ignore' });
 execFileSync('mkdir', ['-p', repo]);
@@ -46,7 +39,6 @@ writeFileSync(join(repo, 'README.md'), '# README\n');
 git('add', '-A');
 git('commit', '-q', '-m', 'init');
 
-/** What one claude process left, read the way the daemon reads it: the adapter's run, its log lines, entries, usage and live state. */
 interface Captured {
   run: ClaudeRun;
   lines: string[];
@@ -82,8 +74,6 @@ const replay = (fixture: string) => capture(REPLAY, [], { AGENTDECK_REPLAY: join
 const fakeRun = (prompt: string, extra: string[] = []) =>
   capture(FAKE, ['-p', prompt, '--output-format', 'stream-json', '--verbose', ...extra], { AGENTDECK_HOME: scratch });
 const kinds = (entries: LogEntry[]) => entries.map((e) => e.kind);
-
-// ── claude: the recordings through the parsers ──────────────────────────────────────────────────────────────────────
 
 test('done-with-tool: the session, usage, live line, log entries and result fields read out of a real run', async () => {
   const c = await replay('done-with-tool');
@@ -135,7 +125,6 @@ test('done-with-tool: the session, usage, live line, log entries and result fiel
 test('max-turns: an error_max_turns result fails the run, and a message split over events is one turn', async () => {
   const c = await replay('max-turns');
   assert.deepEqual(classifyRun(c.run), { kind: 'failed', reason: 'error_max_turns' });
-  // The thinking and the tool use are two events of one message.
   assert.deepEqual(c.live, { turns: 1, message: 'msg_011Cgqsdwvb8B8nmfnhmn5P4', tool: 'Read README.md' });
   assert.deepEqual(kinds(c.entries), ['tool', 'tool_result', 'result']);
   assert.deepEqual(c.entries.at(-1), { kind: 'result', subtype: 'error_max_turns', turns: 2, cost: 0.00301273 });
@@ -177,8 +166,6 @@ test('cut-off-after-api-retry: a stream that stops without a result fails the ru
   assert.equal(c.live.turns, 0);
 });
 
-// ── gh: the recordings through the parsers ──────────────────────────────────────────────────────────────────────────
-
 const ghFixture = (name: string) => readFileSync(join(FIXTURES, 'gh', name), 'utf8');
 const prFixture = (name: string) => parsePrDetails(ghFixture(`${name}.json`));
 
@@ -197,7 +184,7 @@ test('pr-view-open: an open draft with a check in progress', () => {
       state: 'pending',
       url: 'https://github.com/tomrobdev/agentdeck/actions/runs/42506139061/job/128809077528',
       started_at: '2026-11-08T17:40:38Z',
-      completed_at: null, // GitHub's zero time, 0001-01-01
+      completed_at: null,
     },
   ]);
   assert.equal(pr.paths.length, 15);
@@ -241,29 +228,19 @@ test('run-log-failed: the tail of a failed run log, as the worker hears it', () 
   assert.match(last, /^check\t[^\t]+\t\d{4}-\d\d-\d\dT/, 'each line is job, step, then a timestamped line');
 });
 
-// ── the fakes against the recordings ────────────────────────────────────────────────────────────────────────────────
-
-/**
- * The fields each parser reads, by record: a stream event (`assistant`, `system/init`) or a block inside one
- * (`assistant tool_use`, `user tool_result`, a `permission denial` in the result). `*` stands for any key.
- */
 const READ: Record<string, string[]> = {
-  // adapters/claude/claude.ts: the session to resume.
   'system/init': ['session_id'],
-  // adapters/claude/claude.ts: the usage windows and a rejected request.
   rate_limit_event: [
     'rate_limit_info.status',
     'rate_limit_info.resetsAt',
     'rate_limit_info.unifiedWindows.*.utilization',
     'rate_limit_info.unifiedWindows.*.resetsAt',
   ],
-  // translate/log.ts (an entry's time and subagent) and translate/live.ts (a turn per message id).
   assistant: ['message.id', 'message.content', 'parent_tool_use_id', 'timestamp'],
   'assistant text': ['text'],
   'assistant tool_use': ['id', 'name', 'input'],
   user: ['message.content', 'parent_tool_use_id', 'timestamp'],
   'user tool_result': ['tool_use_id', 'content', 'is_error'],
-  // classifyRun and resultFields, adapters/claude/claude.ts (api_error_status), the worker (permission_denials), the planner (structured_output).
   result: [
     'subtype',
     'is_error',
@@ -279,7 +256,6 @@ const READ: Record<string, string[]> = {
     'usage.cache_read_input_tokens',
     'usage.cache_creation_input_tokens',
   ],
-  // firstDenial.
   'permission denial': ['tool_name', 'tool_input.command'],
 };
 
@@ -288,7 +264,6 @@ interface Rec {
   value: unknown;
 }
 
-/** A stream's events as records: each event, each content block of a message, each denial of a result. */
 function records(events: any[]): Rec[] {
   const out: Rec[] = [];
   for (const ev of events) {
@@ -304,7 +279,6 @@ function records(events: any[]): Rec[] {
 
 const typeOf = (v: unknown): string => (v === null ? 'null' : Array.isArray(v) ? 'array' : typeof v);
 
-/** The values at a dotted path, `*` matching every key. */
 function valuesAt(value: unknown, path: string[]): unknown[] {
   if (!path.length) return [value];
   if (!value || typeof value !== 'object') return [];
@@ -314,13 +288,11 @@ function valuesAt(value: unknown, path: string[]): unknown[] {
   return key in obj ? valuesAt(obj[key], rest) : [];
 }
 
-/** How a field stands across records: in every one, in none, and the JSON types it has. */
 function fieldShape(recs: Rec[], path: string) {
   const per = recs.map((r) => valuesAt(r.value, path.split('.')));
   return { always: per.every((v) => v.length > 0), never: per.every((v) => v.length === 0), types: new Set(per.flat().map(typeOf)) };
 }
 
-/** Where `fake`'s records differ from `fixture`'s in the fields the parsers read, one line each, naming the field and the fixture. */
 function shapeProblems(fixture: string, fixtureRecs: Rec[], fakeName: string, fakeRecs: Rec[]): string[] {
   const problems: string[] = [];
   for (const [kind, paths] of Object.entries(READ)) {
@@ -353,7 +325,6 @@ const fixtureRecords = (name: string): Rec[] =>
       .map((l) => JSON.parse(l)),
   );
 
-/** Each recording and the fake run that stands for it. */
 const PAIRS: { fixture: string; prompt: string; args?: string[] }[] = [
   { fixture: 'done-with-tool', prompt: 'FAKE_DONE FAKE_TOOLS' },
   { fixture: 'max-turns', prompt: 'FAKE_MAX_TURNS' },
@@ -388,7 +359,6 @@ for (const pair of PAIRS) {
       records(fake.events),
     );
     assert.deepEqual(problems, [], `fake-claude.mjs differs from ${pair.fixture}.jsonl:\n${problems.join('\n')}`);
-    // And the parsers make of it what they make of the recording: the same end, and at least the same kinds of log entry.
     const real = await replay(pair.fixture);
     assert.equal(classifyRun(fake.run).kind, classifyRun(real.run).kind);
     const fakeKinds = new Set(kinds(fake.entries));
@@ -412,7 +382,6 @@ test('the shape check names the field and the fixture when the fake leaves one o
   ]);
 });
 
-/** Every leaf of a value as `path: type`, arrays' items under `path[]`. */
 function leaves(value: unknown, path = ''): Map<string, string> {
   const out = new Map<string, string>();
   const put = (p: string, t: string) => out.set(p, out.has(p) && out.get(p) !== t ? `${out.get(p)}|${t}` : t);

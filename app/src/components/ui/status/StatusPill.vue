@@ -4,7 +4,6 @@ import { statusText } from '../../../lib/work/task-badges';
 import Chip from '../Chip.vue';
 import StatusIcon from './StatusIcon.vue';
 
-// A task's status as a tinted chip in its colour: "in review" for a done task whose PR is open.
 defineProps<{ task: TaskSummary }>();
 </script>
 

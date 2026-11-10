@@ -1,5 +1,4 @@
 <script setup lang="ts">
-// A change count: +n in the done colour, −n in the failed colour, in mono.
 defineProps<{ add: number; del: number }>();
 </script>
 

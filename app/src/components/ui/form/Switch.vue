@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { SwitchRoot, SwitchThumb } from 'reka-ui';
 
-// An on/off setting with its label beside it (the slot). Without a slot, give it a `label` for screen readers.
 defineProps<{ label?: string }>();
 const model = defineModel<boolean>({ required: true });
 </script>

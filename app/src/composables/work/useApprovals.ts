@@ -1,5 +1,3 @@
-// The one gate every approval passes through: the task page, the list row, the row menu, the `a` key, the palette, a board
-// drag and the bulk bar all call `approve`. App provides it (it shows the dialog); components `useApprovals()` it.
 import { type InjectionKey, type Ref, inject, provide, ref } from 'vue';
 import type { QueryClient } from '@tanstack/vue-query';
 import { errorMessage } from '../../../../daemon/src/domain/shared/index.ts';
@@ -17,26 +15,15 @@ import { loadSetting, saveSetting } from '../../lib/shared/storage';
 import type { Actions } from '../shared/useActions';
 
 export type Approvals = {
-  /**
-   * Approves the tasks, after a dialog when one has something to show. Resolves with each task's result, or null when the
-   * person dismissed the dialog and nothing was approved. It says what happened itself (a toast, or the dialog's own report).
-   */
   approve: (ids: number[]) => Promise<BulkResult[] | null>;
-  /** The approval waiting on the dialog, which Overlays shows; `answer` passes the dialog's result back to the caller. */
   approving: Ref<ApproveRequest | null>;
   answer: (results: BulkResult[] | null) => void;
 };
 
 const KEY: InjectionKey<Approvals> = Symbol('approvals');
 
-/** An approval waiting on the dialog: its tasks with their checks, what the dialog ticks, and how to answer the caller. */
 export type ApproveRequest = { items: ApproveItem[]; plan: ApprovePlan; resolve: (results: BulkResult[] | null) => void };
 
-/**
- * The gate, for App to provide. It reads each task's proposal check, and opens the dialog (`approving`) when the setting
- * and the checks say so; else it approves at once. A check that can't be read counts as nothing to show. Overlays shows
- * the dialog while `approving` is set and passes its answer to `answer`.
- */
 export function provideApprovals(queryClient: QueryClient, { refresh, flash }: Pick<Actions, 'refresh' | 'flash'>) {
   const approving = ref<ApproveRequest | null>(null);
 
@@ -51,7 +38,6 @@ export function provideApprovals(queryClient: QueryClient, { refresh, flash }: P
       }
     }
     await refresh();
-    // One task that worked is the row changing; anything else is said.
     if (ids.length > 1 || results.some((r) => r.error !== undefined)) flash(bulkMessage('approve', results));
     return results;
   }
@@ -86,7 +72,6 @@ export function useApprovals(): Approvals {
   return approvals;
 }
 
-/** The dashboard's own setting for when approving opens the dialog, kept on this computer; not a daemon setting. */
 export const approveDialogSetting = ref<ApproveDialogSetting>(
   asApproveDialogSetting(loadSetting<unknown>('approveDialog', DEFAULT_APPROVE_DIALOG)),
 );

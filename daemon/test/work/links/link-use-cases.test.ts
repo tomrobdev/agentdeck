@@ -60,7 +60,6 @@ test('addTask takes builds_on and after as id lists, and refuses a missing task 
       [c.id, 'after', 'unlanded'],
     ],
   );
-  // The view names every task it builds on that is still on its way.
   assert.deepEqual(view.waiting, { on: [a.id, b.id], stuck: null });
   assert.deepEqual((await taskDetail(db, c.id)).dependents, [{ id: t.id, kind: 'after' }]);
   await assert.rejects(
@@ -114,7 +113,7 @@ test('linkTasks and unlinkTasks; a self link, a repeat and a cycle are refused w
   unlinkTasks(db, b.id, a.id);
   assert.deepEqual(db.linksOf(b.id), []);
   assert.throws(() => unlinkTasks(db, b.id, a.id), /not linked/);
-  linkTasks(db, a.id, { on: c.id, kind: 'builds_on' }); // no cycle any more
+  linkTasks(db, a.id, { on: c.id, kind: 'builds_on' });
   db.close();
 });
 
@@ -163,7 +162,6 @@ test('an after link frees the merge when the other is cancelled, a proposal reje
   settlePr(db, closed.id, 'closed');
   assert.deepEqual(merges(b3.id), []);
 
-  // A failed task can still land after a retry, so the merge waits.
   const failed = failedTask(db, repo);
   const b4 = add();
   linkTasks(db, b4.id, { on: failed.id, kind: 'after' });
@@ -276,7 +274,7 @@ test('a failed task notifies once for every task it leaves stuck, two links down
   const [root, mid, leaf, other] = [add(), add(), add(), add()];
   linkTasks(db, mid.id, { on: root.id, kind: 'builds_on' });
   linkTasks(db, leaf.id, { on: mid.id, kind: 'builds_on' });
-  linkTasks(db, other.id, { on: root.id, kind: 'after' }); // after links never strand a start
+  linkTasks(db, other.id, { on: root.id, kind: 'after' });
   assert.ok(db.applyEvent(root.id, { type: 'claim' }));
   db.applyEvent(root.id, { type: 'finish', outcome: 'failed', retry: false }, { reason: 'broke' });
   warnStuckDependents(db, root.id);

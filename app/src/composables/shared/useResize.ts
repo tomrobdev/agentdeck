@@ -1,5 +1,3 @@
-// Dragging the left edge of a pane on the right to resize it. The handle captures the pointer, so a release anywhere,
-// outside the window too, ends the drag.
 import type { Ref } from 'vue';
 
 export function useResize(width: Ref<number>, opts: { min: number; max: () => number; onEnd: (width: number) => void }) {

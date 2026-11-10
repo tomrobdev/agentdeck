@@ -1,5 +1,3 @@
-// A PR that fails to open is opened again on the PR refresh, at most PR_OPEN_RETRIES times with a growing wait, and then
-// needs a person, who opens it with `agentdeck open-pr` (openTaskPr). Fake code host, in-memory database.
 import assert from 'node:assert/strict';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -21,7 +19,6 @@ const { canOpenPr, stageOf, statusGroup } = await import('../../../src/domain/wo
 
 const MIN = 60_000;
 
-/** A repo with a PR mode, and a code host whose `pr create` fails `failures` times (Infinity: always) before it opens. */
 function setup(failures: number) {
   const codeHost = fakeCodeHost();
   let tries = 0;
@@ -33,7 +30,6 @@ function setup(failures: number) {
   const db = testApp(openDb(':memory:'), { codeHost });
   const repo = db.addRepo({ name: 'demo', path: '/tmp/demo', base_branch: 'main' });
   db.updateRepo(repo.id, { pr_mode: 'ready' });
-  /** A task that has just finished done; its follow-up opens the PR, which fails on the first `failures` tries. */
   const finishedDone = async () => {
     const task = db.addTask({ repo_id: repo.id, title: 'work', prompt: 'p' });
     assert.equal(db.claimNextTask()?.id, task.id);

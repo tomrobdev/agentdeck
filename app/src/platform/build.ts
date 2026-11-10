@@ -8,8 +8,6 @@ if (import.meta.hot) {
     try {
       const res = await fetch('/__agentdeck/commit');
       appCommit.value = ((await res.json()) as { commit: string | null }).commit;
-    } catch {
-      // Keep the commit we have.
-    }
+    } catch {}
   });
 }

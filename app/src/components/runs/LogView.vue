@@ -19,18 +19,14 @@ const props = defineProps<{
   taskId: number;
   runId: number | null;
   live: boolean;
-  /** The chosen run, for the header and the timeline. */
   run?: Run;
-  /** Where its turns and tool come from while it is live. */
   source?: LiveSource | null;
-  /** The repo's test command, to tell a test call from another command. */
   testCmd?: string | null;
   worktree?: string | null;
   isPath?: (p: string) => boolean;
 }>();
 const emit = defineEmits<{ file: [path: string]; path: [path: string, line: number | null] }>();
 
-/** A tool's file as a repo path: inside the worktree, made relative; outside it, null (nothing to link to). */
 function repoPath(file: string | undefined): string | null {
   if (!file) return null;
   if (!file.startsWith('/')) return file.replace(/^\.\//, '');
@@ -43,19 +39,15 @@ const entries = ref<LogEntry[]>([]);
 const streaming = ref(false);
 const box = ref<HTMLElement | null>(null);
 let source: EventSource | null = null;
-/** Whether the view follows the log's end; false once the reader scrolls up. */
 const following = ref(true);
-// What the run was told shows above the transcript, not in it.
 const items = computed(() => buildTranscript(withoutPrompts(entries.value)));
 const prompts = computed(() => promptsOf(entries.value));
 const touched = computed(() => filesTouched(entries.value));
 const filter = ref<LogFilter>(parseLogFilter(loadSetting<string>('runLogFilter', 'all')));
 watch(filter, (f) => saveSetting('runLogFilter', f));
-// The header and the failure marks read the whole log; the filter only changes what the log lists.
 const shown = computed(() => filterItems(items.value, filter.value, props.testCmd ?? null));
 const failures = computed(() => failureKeys(items.value, props.testCmd ?? null));
 
-/** Move to the next or previous failure row below or above the top of the log. */
 async function stepFailure(dir: 1 | -1) {
   const el = box.value;
   if (!el) return;
@@ -82,7 +74,6 @@ async function jump() {
   box.value?.scrollTo({ top: box.value.scrollHeight });
 }
 
-/** The run whose header shows: one seen live. A finished run opened later has the run list's summary instead. */
 const liveRunId = ref<number | null>(null);
 watch(
   () => props.run,
@@ -98,7 +89,6 @@ const ticker = setInterval(() => {
 const header = computed(() =>
   props.run && liveRunId.value === props.run.id ? runHeader(props.run, props.source ?? null, items.value, now.value) : null,
 );
-// The strip's segments depend on the entries alone; only its end moves with the clock.
 const marks = computed(() => timeline(entries.value, props.testCmd ?? null));
 const strip = computed(() => {
   const r = props.run;
@@ -107,7 +97,6 @@ const strip = computed(() => {
   return { start, end: r.ended_at ? parseTime(r.ended_at) : Math.max(now.value, start + 1) };
 });
 
-/** Scroll the log to the last row at or before a moment. */
 async function scrollToMoment(at: string) {
   const el = box.value;
   if (!el) return;
@@ -158,7 +147,6 @@ function onScroll() {
   if (el) following.value = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
 }
 
-// Reopen when the task or run changes, or when a finished run's task starts running again.
 watch(() => [props.taskId, props.runId], open, { immediate: true });
 watch(
   () => props.live,

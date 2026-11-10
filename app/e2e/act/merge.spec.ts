@@ -1,5 +1,4 @@
 // A merge from the merge dialog: #3 is in review with its checks passed and auto-merge off, so only a person merges it.
-// The dialog asks the daemon to merge (a merge request), and the daemon merges it through the fake gh.
 import { expandGroup, expect, group, open, row, rowIds, test } from '../fixtures';
 
 test('a merge from the merge dialog lands the pull request', async ({ page }) => {
@@ -17,7 +16,6 @@ test('a merge from the merge dialog lands the pull request', async ({ page }) =>
   await confirm.click();
   await expect(dialog).toBeHidden();
 
-  // The daemon merges on its next look at the PRs, a few seconds after the request, and #3 moves to Done.
   await expect(page.getByRole('button', { name: /Done\s*2$/ })).toBeVisible({ timeout: 30_000 });
   await expandGroup(page, 'Done');
   await expect(row(page, 3)).toContainText('PR merged');

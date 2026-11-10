@@ -1,6 +1,3 @@
-// How the queue is grouped and shown. What a person may do with a task, how the queue is filtered and sorted and what a blocked
-// task needs are the daemon's domain (`domain/work/index.ts`); a view imports those rules from there, not from this file. The
-// board's move rule is in `queue/board-move.ts`, which the daemon's tests import.
 import type { AutoMergeView, Needs, Status, TaskStatus, TaskSummary } from '../../api/types';
 import { personEvents } from '../../../../daemon/src/domain/work/index.ts';
 import { DECISION_STATES, FILTER_STATES, SORT_OPTIONS, filterTasks } from '../../../../daemon/src/domain/work/index.ts';
@@ -11,18 +8,12 @@ import { parseTextList } from '../../../../daemon/src/domain/shared/index.ts';
 import type { GroupBy } from './queue/queue-display.ts';
 import { needsOf, questionOf } from '../shared/wire.ts';
 
-/**
- * The tab a task opens on from the queue: a running task, or one with a resolve run under way, on its live log (the latest
- * run); a task in review as a diff.
- */
 export const openingTab = (t: TaskSummary): 'overview' | 'changes' | 'runs' =>
   t.status === 'running' || t.sync?.resolving ? 'runs' : isReview(t) ? 'changes' : 'overview';
 
-/** Tasks that wait on you: proposals to approve, blocked tasks and PRs to review. The queue filter that shows them. */
 export const NEED_YOU_STATES = DECISION_STATES;
 export const needYouCount = (s: Pick<Status, 'headline'> | null | undefined): number => s?.headline.need_you ?? 0;
 
-/** Priority stays an integer (the scheduler orders by it); the UI shows it as one of five levels. */
 export const PRIORITY_LEVELS = [
   { key: 'urgent', label: 'Urgent', min: 60 },
   { key: 'high', label: 'High', min: 40 },
@@ -32,12 +23,10 @@ export const PRIORITY_LEVELS = [
 ] as const;
 export type PriorityLevel = (typeof PRIORITY_LEVELS)[number]['key'];
 
-/** The integer a level is set to from a menu: its lower bound, and 0 for no priority. */
 export const levelPriority = (l: (typeof PRIORITY_LEVELS)[number]): number => (Number.isFinite(l.min) ? l.min : 0);
 
 export const priorityLevel = (p: number): PriorityLevel => PRIORITY_LEVELS.find((l) => p >= l.min)!.key;
 
-/** A tooltip for the auto-merge mark: the daemon's label, then its reasons, one to a line. */
 export const autoMergeTip = (v: AutoMergeView): string => [v.label, ...v.reasons].join('\n');
 
 export const GROUP_BYS: { key: GroupBy; label: string }[] = [
@@ -58,9 +47,7 @@ export const emptyFilters = (): Filters => ({ states: [], repos: [], source: nul
 
 export const hasFilters = (f: Filters) => !!(f.states.length || f.repos.length || f.source || f.search.trim());
 
-/** The tasks that pass the filters (sorting is groupTasks'). */
 export function applyFilters(tasks: TaskSummary[], f: Filters): TaskSummary[] {
-  // A state the daemon no longer has (kept in a saved view) filters nothing.
   const states = f.states.filter((k) => FILTER_STATES.some((s) => s.key === k));
   return filterTasks(tasks, { states, repos: f.repos, source: f.source, search: f.search, sort: 'newest' });
 }
@@ -71,7 +58,6 @@ export interface Group {
   tasks: TaskSummary[];
 }
 
-/** Split sorted tasks into groups, in a stable order; empty status and priority groups are kept so they can be shown. */
 export function groupTasks(tasks: TaskSummary[], by: GroupBy, sort: string): Group[] {
   const compare = (SORT_OPTIONS.find((s) => s.key === sort) ?? SORT_OPTIONS[0]).compare;
   const sorted = [...tasks].sort(compare);
@@ -95,27 +81,20 @@ export function groupTasks(tasks: TaskSummary[], by: GroupBy, sort: string): Gro
 }
 
 export const canEdit = (t: Pick<TaskSummary, 'status'>) => EDITABLE_STATUSES.includes(t.status);
-/** A done task's open PR has failing checks: they can be sent back to the worker (POST /api/tasks/:id/fix-checks). */
 export const canFixChecks = (t: Pick<TaskSummary, 'status' | 'pr_state' | 'checks'>) => isReview(t) && (t.checks?.failing ?? 0) > 0;
-/** The one-key retry in the queue is for work that went wrong, not for re-running finished work. */
 export const quickRetry = (t: Pick<TaskSummary, 'status' | 'waiting' | 'pr_state'>) =>
   personEvents(t).includes('retry') && statusGroup(t) === 'needs-you';
 
-/** What a blocked task's worker said it needs; null for any other task or an unreadable value. */
 export const readNeeds = (t: Pick<TaskSummary, 'status' | 'needs'>): Needs | null => (t.status === 'blocked' ? needsOf(t.needs) : null);
 
-/** What an unblock run asked about a blocked task; null for any other task or an unreadable value. */
 export const readTaskQuestion = (t: Pick<TaskSummary, 'status' | 'question'>): UnblockQuestion | null =>
   t.status === 'blocked' ? questionOf(t.question) : null;
 
-/** The retry note for an option a person picked from an unblock run's question. */
 export const answerNote = (q: UnblockQuestion, option: string): string => `${q.question} ${option}`;
 
-/** The package names of a deps request, without its `--dev` flag. */
 export const depsPackages = (n: Needs) => depsRequest(n.items).packages;
 export const depsAreDev = (n: Needs) => depsRequest(n.items).dev;
 
-/** A repo's network setting with a host added once. */
 export function withHost(networkJson: string, host: string): string[] {
   const hosts = parseTextList(networkJson);
   return hosts.includes(host) ? hosts : [...hosts, host];

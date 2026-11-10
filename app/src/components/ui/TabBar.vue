@@ -2,8 +2,6 @@
 import { TabsList, TabsRoot, TabsTrigger } from 'reka-ui';
 import Chip from './Chip.vue';
 
-// The tabs of a page that is routed: arrow keys move focus, Enter or Space opens one, so the arrows push no route.
-// The content is not here; the page shows it for the open tab.
 defineProps<{ tabs: { key: K; label: string; count: number | null }[]; label: string }>();
 const model = defineModel<K>({ required: true });
 </script>

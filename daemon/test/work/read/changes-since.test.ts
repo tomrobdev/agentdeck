@@ -1,5 +1,3 @@
-// A task's changes since an earlier attempt or the last review (the Changes tab's "Since"): attemptEnds and sincePoints as
-// tables, then taskChanges and taskDiff on a real repo whose branch synced the base between its attempts.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
@@ -20,11 +18,8 @@ const actions = await import('../../../src/application/actions.ts');
 const db = openDb(join(home, 'test.db'));
 after(() => db.close());
 
-// ---- attemptEnds: the last branch commit before each attempt's last work run ended
-
 const c = (sha: string, committed_at: string) => ({ sha, committed_at });
 const run = (attempt: number, ended_at: string | null, kind = 'work') => ({ kind, attempt, ended_at });
-// Newest first, as git lists them.
 const COMMITS = [c('c3', '2026-11-01 12:00:00'), c('c2', '2026-11-01 11:00:00'), c('c1', '2026-11-01 10:00:00')];
 
 const ENDS: { rule: string; commits: ReturnType<typeof c>[]; runs: ReturnType<typeof run>[]; want: [number, string][] }[] = [
@@ -105,7 +100,7 @@ test('sincePoints: the last person review first, then earlier attempts newest fi
     review('person', '2026-11-01 10:40:00', 'c1'),
     review('person', '2026-11-01 11:40:00', 'c2'),
     review('review_run', '2026-11-01 12:40:00', 'c3'),
-    review('person', null, null), // a draft
+    review('person', null, null),
   ];
   assert.deepEqual(sincePoints(COMMITS, runs, reviews, 'c3'), [
     { kind: 'review', sha: 'c2', attempt: null, at: '2026-11-01 11:40:00' },
@@ -136,17 +131,13 @@ test('shownSince: the pick while it is offered, else the last review, else the b
   assert.equal(sinceLabel(run1), 'Since the end of run 1');
 });
 
-// ---- On a real repo
-
 let repos = 0;
 const now = Date.now();
-/** A time `s` seconds from now, as git reads it. */
 const at = (s: number) => `@${Math.floor(now / 1000) + s} +0000`;
 
 function newRepo() {
   const path = join(home, `repo-${++repos}`);
   mkdirSync(path);
-  /** git in the repo; with `when`, its commits are dated then. */
   const git = (args: string[], when?: number) =>
     execFileSync('git', args, {
       cwd: path,
@@ -172,7 +163,6 @@ function newRepo() {
   return { path, git, write, commit, task: task.id };
 }
 
-/** A work run for the attempt; it ends now unless `open`. */
 function workRun(task: TaskId, attempt: number, open = false) {
   const id = db.startRun(task, attempt, join(home, `run-${task}-${attempt}.jsonl`));
   if (!open) db.finishRun(id, { outcome: 'done' });
@@ -180,12 +170,10 @@ function workRun(task: TaskId, attempt: number, open = false) {
 
 test('since attempt 1: only what attempt 2 changed, not what a sync brought in from the base', async () => {
   const r = newRepo();
-  // Attempt 1 changes a.txt, before its run ends (now).
   r.write('a.txt', 'a1\nA2\na3\n');
   const attempt1 = r.commit('Attempt 1', -300);
   workRun(r.task, 1);
 
-  // The base moves on elsewhere, and the sync before attempt 2 merges it in.
   r.git(['checkout', '-q', 'main']);
   r.write('c.txt', 'from the base\n');
   r.commit('Base work', 50);
@@ -193,18 +181,15 @@ test('since attempt 1: only what attempt 2 changed, not what a sync brought in f
   r.git(['merge', '-q', '--no-edit', 'main'], 100);
   const synced = r.git(['rev-parse', 'HEAD']);
 
-  // Attempt 2 changes b.txt, and is still going.
   r.write('b.txt', 'b1\nB2\nb3\n');
   const head = r.commit('Attempt 2', 200);
   workRun(r.task, 2, true);
 
-  // The base moves on again, not synced yet: the base tip would show this reversed.
   r.git(['checkout', '-q', 'main']);
   r.write('d.txt', 'later\n');
   r.commit('Later base work', 250);
   r.git(['checkout', '-q', 'agentdeck/task-1']);
 
-  // A person reviewed the branch after the sync.
   const review = db.createReview(r.task);
   db.submitReview(review.id, 'comment', 'ok so far', { head_commit: synced, diff_hash: null });
 
@@ -236,7 +221,6 @@ test('since attempt 1: only what attempt 2 changed, not what a sync brought in f
   assert.ok(!since.commits.some((c) => c.sha === attempt1));
   assert.ok(!since.commits.some((c) => c.subject === 'Base work'));
   assert.deepEqual(since.since_points, all.since_points);
-  // A plain diff from attempt 1 would have shown the base's file.
   assert.match(r.git(['diff', '--name-only', attempt1, head]), /c\.txt/);
 
   const patch = await actions.taskDiff(db, r.task, 'b.txt', attempt1);
@@ -257,7 +241,6 @@ test('since a commit the base conflicts with: the diff is from it alone, and say
   const attempt1 = r.commit('Attempt 1', -300);
   workRun(r.task, 1);
 
-  // The base changes the same line; the sync's conflict is settled in the merge commit.
   r.git(['checkout', '-q', 'main']);
   r.write('a.txt', 'a1\nBASE\na3\n');
   r.write('c.txt', 'from the base\n');
@@ -265,9 +248,7 @@ test('since a commit the base conflicts with: the diff is from it alone, and say
   r.git(['checkout', '-q', 'agentdeck/task-1']);
   try {
     r.git(['merge', '-q', '--no-edit', 'main']);
-  } catch {
-    // conflicts, as meant
-  }
+  } catch {}
   r.write('a.txt', 'a1\nTASK and BASE\na3\n');
   r.commit('Resolve', 100);
   r.write('b.txt', 'b1\nB2\nb3\n');

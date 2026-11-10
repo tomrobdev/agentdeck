@@ -1,5 +1,3 @@
-// A running sync is recorded in the database, so the CLI sees what the daemon is doing: retry, install-needs and
-// worktree removal refuse while a task syncs, and a crash or a throw never leaves the marker behind.
 import assert from 'node:assert/strict';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -28,7 +26,7 @@ test('retry, install-needs and worktree removal refuse while another process has
 
   const done = doneTask(db, repo, { title: 'done' });
   db.setCheckout(done.id, { worktree: dir });
-  db.setSyncing(done.id, true); // what the daemon wrote; this "process" only reads it
+  db.setSyncing(done.id, true);
   assert.ok(isSyncing(db, done.id));
   assert.throws(() => retryTask(db, done.id), /syncing/);
   await assert.rejects(removeTaskWorktree(db, done.id), /syncing/);
@@ -48,7 +46,7 @@ test('retry, install-needs and worktree removal refuse while another process has
 
   db.setSyncing(done.id, false);
   assert.ok(!isSyncing(db, done.id));
-  retryTask(db, done.id); // no longer refused
+  retryTask(db, done.id);
   assert.equal(db.getTask(done.id)!.status, 'queued');
 });
 
@@ -75,7 +73,6 @@ test('a sync that throws still clears its marker', async () => {
   assert.equal(seen, true, 'the marker was set while it ran');
   assert.ok(!isSyncing(db, t.id));
 
-  // The same through syncTask: the repo is not a git repo, so the worktree step throws.
   await assert.rejects(syncNow(db, t.id));
   assert.ok(!isSyncing(db, t.id));
 });
@@ -94,7 +91,6 @@ test('worktree removal refuses a task in any status but WORKTREE_REMOVABLE_STATU
     assert.equal(t.status, status);
     const refused = refusals[status];
     assert.equal(WORKTREE_REMOVABLE_STATUSES.includes(status), !refused, status);
-    // A removable task with no worktree recorded is refused for that, after its status passed.
     await assert.rejects(removeTaskWorktree(db, t.id), refused ?? /: task has no worktree$/, status);
     db.setCheckout(t.id, { worktree: dir });
     if (refused) await assert.rejects(removeTaskWorktree(db, t.id), refused, status);

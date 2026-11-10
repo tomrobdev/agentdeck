@@ -1,43 +1,5 @@
 #!/usr/bin/env node
 // Stand-in for `claude -p ... --output-format stream-json` in tests.
-// Behaviour is picked by a keyword in the prompt:
-//   FAKE_DONE     writes a file, commits it, reports STATUS: DONE
-//   FAKE_BLOCKED  reports STATUS: BLOCKED
-//   FAKE_DENIED   reports STATUS: BLOCKED with two permission_denials in the result (FAKE_DENIED_DONE: finishes, same denials;
-//                 FAKE_DENIED_NEEDS: blocks with NEEDS edit, same denials)
-//   FAKE_PROTECTED_EDIT  like FAKE_DONE, and writes protected edits to .agentdeck/edits/ (.claude/…, claude/… and src/…)
-//   FAKE_TOOLS    with FAKE_DONE: reads README.md and writes fake-output.txt as tool calls first (tool_use and tool_result events)
-//   FAKE_ERROR    exits non-zero with no result
-//   FAKE_MAX_TURNS  makes a tool call, then ends with an error_max_turns result (no result text), as claude does at --max-turns
-//   FAKE_TRUNCATED  writes its result line cut off halfway, with no newline, and exits 0
-//   FAKE_EXIT_MIDSTREAM  makes a tool call, then exits 1 with no result and nothing on stderr
-//   FAKE_RATELIMIT emits a rejected rate_limit_event
-//   FAKE_SLOW     sleeps 30s (for cancel tests), resumed or not
-//   FAKE_IGNORE_TERM  ignores SIGTERM (use with FAKE_SLOW), so a cancel needs SIGKILL
-//   FAKE_STALL   sleeps 30s in a new session; resumed, it finishes like FAKE_DONE (for restart tests)
-//   FAKE_NEEDS_SETUP  like FAKE_DONE, but blocks unless the repo's setup wrote setup-done.txt
-// A resolve run (the prompt starts "AgentDeck conflict resolution") keeps both sides of every conflict and commits the merge;
-// FAKE_RESOLVE_BLOCKED reports BLOCKED, _LEAVE says DONE with the markers still there, _ABORT aborts the merge itself,
-// _STAGE stages the files without committing. The words come from the task's prompt, which the resolve prompt quotes.
-// An unblock run (the prompt starts "AgentDeck unblock run") retries with a note naming FAKE_UNBLOCKED, which a
-// FAKE_BLOCKED task's next run takes as leave to finish like FAKE_DONE; FAKE_UNBLOCK_ASK asks a question with two
-// options instead, and FAKE_UNBLOCK_GARBAGE ends without an UNBLOCK line. Those words come from the task's prompt too.
-// A review run (the prompt starts "AgentDeck review run") answers in its schema: clean, or with a blocking finding for
-// FAKE_REVIEW_BLOCK, or with no summary for FAKE_REVIEW_GARBAGE (words from the task's prompt, which the review prompt quotes);
-// FAKE_REVIEW_FAIL exits 1, and FAKE_REVIEW_SLOW sleeps 30s first.
-//   FAKE_ANSWER   like FAKE_DONE, and answers every review comment (c1, c2…) the prompt lists; FAKE_ANSWER_FIRST answers only c1
-//   FAKE_NO_SANDBOX  if the --settings file enables the sandbox with failIfUnavailable, exits at startup like claude does
-//   FAKE_PLAN_ALL    like FAKE_DONE, and marks every step of the plan file (.agentdeck/plan.html) done, with a note in each
-//   FAKE_WRITE_PLAN  like FAKE_DONE, and writes a plan of its own to the plan file
-// The planner (--json-schema) and FAKE_DENIED make their tool calls too, as the recorded runs do. The events have the shape
-// of the real ones in daemon/test/fixtures/claude/, which contracts.test.ts checks.
-// Every run appends its prompt to $AGENTDECK_HOME/fake-claude-calls.log, so tests can tell it never started,
-// the --settings path it got (or "-") to $AGENTDECK_HOME/fake-claude-settings.log, and its arguments as a JSON
-// array to $AGENTDECK_HOME/fake-claude-args.log.
-// The init line names the model --model asked for as a full id (claude-<alias>-5-5).
-// Sessions: a new session is named fake-session-<pid> and its prompt kept in $AGENTDECK_HOME/fake-sessions/.
-// `--resume <id>` continues it: the init line names <id> and the kept prompt's keywords still count. A session that
-// is not kept is answered as claude answers one it no longer has: "No conversation found" on stderr, exit 1, no output.
 import { execFileSync } from 'node:child_process';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -70,10 +32,9 @@ if (sessions && resume === undefined) {
   mkdirSync(sessions, { recursive: true });
   writeFileSync(join(sessions, session), given);
 }
-// What this session has been told: a resumed one remembers the task.
 const prompt = kept ? `${kept}\n${given}` : given;
 
-if (prompt.includes('FAKE_IGNORE_TERM')) process.on('SIGTERM', () => {}); // only SIGKILL stops it
+if (prompt.includes('FAKE_IGNORE_TERM')) process.on('SIGTERM', () => {});
 
 if (prompt.includes('FAKE_NO_SANDBOX') && settingsPath) {
   const { sandbox } = JSON.parse(readFileSync(settingsPath, 'utf8'));
@@ -83,7 +44,6 @@ if (prompt.includes('FAKE_NO_SANDBOX') && settingsPath) {
   }
 }
 
-// The init line names the exact model, as claude's does: an alias from --model becomes claude-<alias>-5-5.
 const alias = args.includes('--model') ? args[args.indexOf('--model') + 1] : 'sonnet';
 const model = alias.startsWith('claude-') ? alias : `claude-${alias}-5-5`;
 out({ type: 'system', subtype: 'init', session_id: session, cwd: process.cwd(), model });
@@ -98,7 +58,6 @@ out({
 
 const isPlanner = args.includes('--json-schema');
 const USAGE = { input_tokens: 100, output_tokens: 50, cache_read_input_tokens: 1000, cache_creation_input_tokens: 200 };
-/** The final result event, as claude ends a run that finished. */
 const ending = (text, extra = {}) => ({
   type: 'result',
   subtype: 'success',
@@ -117,7 +76,6 @@ const result = (text, extra = {}) => out(ending(text, extra));
 const stamp = () => new Date().toISOString();
 let messages = 0;
 let toolUses = 0;
-/** An assistant message as claude writes one: its own id, a timestamp, and no parent outside a subagent. */
 const assistant = (content) =>
   out({
     type: 'assistant',
@@ -126,7 +84,6 @@ const assistant = (content) =>
     session_id: session,
     timestamp: stamp(),
   });
-/** A tool call and its result: the assistant's tool_use, then the user's tool_result, which says is_error only when it failed. */
 const toolCall = (name, input, output, { error = false, id = `toolu_fake_${++toolUses}` } = {}) => {
   assistant([{ type: 'tool_use', id, name, input }]);
   out({
@@ -140,9 +97,6 @@ const toolCall = (name, input, output, { error = false, id = `toolu_fake_${++too
 const readme = () => toolCall('Read', { file_path: join(process.cwd(), 'README.md') }, '1\t# README\n');
 
 if (prompt.startsWith('AgentDeck verify run')) {
-  // A verify run (--json-schema too): reads a file of the base, then answers in the schema with a true finding and a false
-  // one. FAKE_VERIFY_GARBAGE in the task's prompt (which the verify prompt quotes) answers with no findings list;
-  // FAKE_VERIFY_SLOW sleeps 30s before it answers (for cancel tests).
   if (prompt.includes('FAKE_VERIFY_SLOW')) await sleep(30_000);
   readme();
   const answer = prompt.includes('FAKE_VERIFY_GARBAGE')
@@ -163,9 +117,6 @@ if (prompt.startsWith('AgentDeck verify run')) {
   toolCall('StructuredOutput', answer, 'Structured output provided successfully');
   result(JSON.stringify(answer), { structured_output: answer });
 } else if (prompt.startsWith('AgentDeck review run')) {
-  // A review run (--json-schema too): reads the diff, then answers in the schema. FAKE_REVIEW_BLOCK in the task's prompt
-  // gives a blocking finding and one that does not block, FAKE_REVIEW_GARBAGE an answer with no summary; else it is clean.
-  // FAKE_REVIEW_FAIL exits 1 with no result; FAKE_REVIEW_SLOW sleeps 30s before it answers (for cancel tests).
   if (prompt.includes('FAKE_REVIEW_FAIL')) {
     process.stderr.write('fake review failure\n');
     process.exit(1);
@@ -186,7 +137,6 @@ if (prompt.startsWith('AgentDeck verify run')) {
   toolCall('StructuredOutput', answer, 'Structured output provided successfully');
   result(JSON.stringify(answer), { structured_output: answer });
 } else if (isPlanner) {
-  // Planner mode: answer with structured output. FAKE_PLAN_EMPTY in the goals → nothing to do.
   const tasks = prompt.includes('FAKE_PLAN_EMPTY')
     ? []
     : [
@@ -196,12 +146,10 @@ if (prompt.startsWith('AgentDeck verify run')) {
         { title: 'Tidy the README', prompt: 'FAKE_DONE tidy', priority: 0, model: 'gpt-9' },
       ];
   const answer = { tasks, note: tasks.length ? 'looked at src/' : 'goals already met' };
-  // As claude answers a --json-schema run: a StructuredOutput tool call, then the answer as the result's text and structured_output.
   readme();
   toolCall('StructuredOutput', answer, 'Structured output provided successfully');
   result(JSON.stringify(answer), { structured_output: answer });
 } else if (prompt.startsWith('AgentDeck conflict resolution')) {
-  // A resolve run: a merge is in progress in the worktree. Keep both sides of every conflict, unless told otherwise.
   const git = (...a) => execFileSync('git', a, { encoding: 'utf8' });
   const files = git('diff', '--name-only', '--diff-filter=U').split('\n').filter(Boolean);
   if (prompt.includes('FAKE_RESOLVE_BLOCKED')) {
@@ -235,22 +183,18 @@ if (prompt.startsWith('AgentDeck verify run')) {
   process.stderr.write('fake failure\n');
   process.exit(1);
 } else if (prompt.includes('FAKE_MAX_TURNS')) {
-  // claude's result at --max-turns: an error with the reason in `errors` and no `result` text or api_error_status.
   readme();
   const { result: _text, api_error_status: _status, ...end } = ending('');
   out({ ...end, subtype: 'error_max_turns', is_error: true, num_turns: 2, errors: ['Reached maximum number of turns (1)'] });
   process.exitCode = 1;
 } else if (prompt.includes('FAKE_TRUNCATED')) {
-  // The result line cut off halfway, as when claude's output stops mid-write: no newline, and no result that parses.
   assistant([{ type: 'text', text: 'Almost there.' }]);
   const line = JSON.stringify(ending('Wrote it.\nSTATUS: DONE'));
   process.stdout.write(line.slice(0, Math.floor(line.length / 2)));
 } else if (prompt.includes('FAKE_EXIT_MIDSTREAM')) {
-  // claude stops in the middle of the run: a tool call, then nothing more, not even a result.
   readme();
   process.exitCode = 1;
 } else if (prompt.includes('FAKE_DENIED')) {
-  // A tool use the permission rules refused; the agent gives up. FAKE_DENIED_DONE finishes anyway.
   const permission_denials = [
     { tool_name: 'Bash', tool_use_id: 'toolu_1', tool_input: { command: 'npx prettier --write .' } },
     { tool_name: 'Bash', tool_use_id: 'toolu_2', tool_input: { command: 'python3 fix.py' } },
@@ -277,11 +221,9 @@ if (prompt.startsWith('AgentDeck verify run')) {
 } else if (prompt.includes('FAKE_NEEDS_SETUP') && !existsSync('setup-done.txt')) {
   result('setup-done.txt is missing.\nSTATUS: BLOCKED: setup did not run');
 } else if (prompt.includes('FAKE_SLOW') || (prompt.includes('FAKE_STALL') && resume === undefined)) {
-  await sleep(30_000); // time passes: a slow claude, until it is stopped
+  await sleep(30_000);
   result('slow done\nSTATUS: DONE');
 } else {
-  // The plan file AgentDeck put in the worktree. FAKE_PLAN_ALL marks every step in it done, linked or not, with a note in
-  // each step; FAKE_WRITE_PLAN writes a plan of its own there. Either way `git add -A` below must leave it out.
   const planFile = join('.agentdeck', 'plan.html');
   if (prompt.includes('FAKE_PLAN_ALL') && existsSync(planFile)) {
     const html = readFileSync(planFile, 'utf8')

@@ -6,7 +6,6 @@ import { test } from 'node:test';
 
 const ROOT = join(import.meta.dirname, '../../..');
 
-/** Exceptions: `doc: path` mapped to why that path is allowed to be missing. Prefer fixing the doc. */
 const EXCEPTIONS: Record<string, string> = {
   'docs/plan-format.md: 112-plans-in-agentdeck.html': 'an example of how a plan is named, not a real file',
   'docs/plan-format.md: .agentdeck/plan.html': "the plan file, in a task's worktree while it runs",
@@ -15,7 +14,6 @@ const EXCEPTIONS: Record<string, string> = {
     'moved to daemon/src/db/work/tasks-status.ts; a protected edit to the skill fixes the path, and this entry goes once it merges',
 };
 
-/** What counts as a file name: dotted identifiers such as `repos.network` and CSS classes such as `.pill` do not. */
 const FILE_EXTENSIONS = /\.(ts|mts|mjs|js|vue|md|html|css|json|toml|rs|sh|sql|plist|ya?ml|lock|txt|svg|png)$/;
 
 function markdownIn(dir: string): string[] {
@@ -30,11 +28,9 @@ function docFiles(): string[] {
   const skills = readdirSync(join(ROOT, '.claude/skills'))
     .map((s) => join('.claude/skills', s, 'SKILL.md'))
     .filter((f) => existsSync(join(ROOT, f)));
-  // Plans in docs/plans/ are left out: they describe files that don't exist yet.
   return ['CLAUDE.md', 'README.md', ...skills, ...markdownIn('docs'), ...markdownIn('docs/adr')].filter((f) => existsSync(join(ROOT, f)));
 }
 
-/** `dir` itself and every folder under it. */
 function layerFolders(dir: string): string[] {
   return [
     dir,
@@ -46,7 +42,6 @@ function layerFolders(dir: string): string[] {
 
 const BASES = ['', 'daemon', 'app', 'docs', ...layerFolders('daemon/src'), ...layerFolders('app/src'), 'app/src-tauri'];
 
-/** Every folder in the tree (ignoring dependencies and build output), by name. */
 function foldersByName(): Map<string, string[]> {
   const out = new Map<string, string[]>();
   const walk = (dir: string) => {
@@ -67,10 +62,8 @@ function exists(path: string): boolean {
   return existsSync(join(ROOT, path));
 }
 
-/** Is `path` (as written, on a line where `before` precedes it) a file that exists? */
 function resolves(path: string, before: string): boolean {
   if (BASES.some((base) => exists(join(base, path)))) return true;
-  // `planner/` (`proposals.ts`): relative to the folder named just before it.
   const folder = /`([\w.-]+)\/`[^`]*$/.exec(before)?.[1] ?? /\b([\w.-]+)\/\s*\([^`]*$/.exec(before)?.[1];
   return !!folder && (FOLDERS.get(folder) ?? []).some((dir) => exists(join(dir, path)));
 }
@@ -83,7 +76,6 @@ function missingPaths(doc: string): { line: number; path: string }[] {
       for (const m of text.matchAll(/`([^`]+)`/g)) {
         const path = m[1]!;
         if (/[\s*<~$:]/.test(path) || !FILE_EXTENSIONS.test(path)) continue;
-        // `.ts`, `.pill`: an extension or a CSS class, not a file.
         if (path.startsWith('.') && !path.includes('/')) continue;
         const before = text.slice(0, m.index);
         if (!resolves(path.replace(/^\.\//, ''), before) && !(`${doc}: ${path}` in EXCEPTIONS)) out.push({ line: i + 1, path });

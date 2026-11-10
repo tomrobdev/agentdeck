@@ -36,7 +36,7 @@ const stats = (weeks: Stats['weeks'] = [], cardWeeks: Stats['scorecard']['weeks'
   scorecard: { since: null, by: 'week', repos: [], total: card(), quota_points: quota, weeks: cardWeeks },
 });
 
-const NOW = new Date('2026-11-04T12:00:00Z'); // a Wednesday; its week starts Monday 2026-11-02
+const NOW = new Date('2026-11-04T12:00:00Z');
 
 test('thisWeek is the Monday of the week', () => {
   assert.equal(thisWeek(NOW), '2026-11-02');
@@ -67,7 +67,7 @@ test('seriesOf fills the weeks from the first with data to this one', () => {
     ],
   );
   assert.equal(first.points[0].detail, '3 of 4 first runs');
-  assert.equal(first.met, null); // this week has no value
+  assert.equal(first.met, null);
   assert.equal(hasData(series), true);
 });
 

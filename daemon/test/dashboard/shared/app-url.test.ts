@@ -2,14 +2,12 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-// router.ts reads the page's hash when it loads; give it a bare one.
 Object.assign(globalThis, { location: { hash: '' }, window: { addEventListener() {} } });
 const { hashFor, parseAppUrl, parseHash, taskUrl } = await import('../../../../app/src/router.ts');
 
 test('#/tray is the tray window, and round-trips', () => {
   assert.deepEqual(parseHash('#/tray'), { name: 'tray' });
   assert.equal(hashFor({ name: 'tray' }), '#/tray');
-  // Not a link from outside: an agentdeck:// URL never opens the tray view in the main window.
   assert.equal(parseAppUrl('agentdeck://tray'), null);
 });
 

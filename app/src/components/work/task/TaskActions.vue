@@ -12,8 +12,6 @@ import ConfirmDialog from '../../ui/ConfirmDialog.vue';
 import MarkDoneDialog from './MarkDoneDialog.vue';
 import MergeDialog from '../../landing/MergeDialog.vue';
 
-// The buttons at the end of a task page's tab bar, and the dialogs some of them open. A sync or a merge request is on the
-// header's status line, with Cancel merge.
 const props = defineProps<{ task: TaskDetail }>();
 const emit = defineEmits<{ act: [kind: 'approve' | 'reject' | 'retry' | 'cancel']; review: [] }>();
 const { refresh, flash } = useActions();
@@ -21,7 +19,6 @@ const { pending, run } = useAction();
 
 const events = computed(() => personEvents(props.task));
 
-// Closing the PR asks first, because it closes it on GitHub. Request changes opens the review bar on the task page.
 const closing = ref(false);
 async function closePr() {
   if (pending.value) return;
@@ -29,19 +26,16 @@ async function closePr() {
   closing.value = false;
 }
 
-// Send the PR's failing checks back to the worker; a refusal is flashed with the API's wording.
 async function fixChecks() {
   if (pending.value) return;
   await run(() => landingApi.fixChecks(props.task.id));
 }
 
-// Open a done task's PR that failed to open, or was closed; a refusal or gh's error is flashed with the API's wording.
 async function openPr() {
   if (pending.value) return;
   await run(() => landingApi.openPr(props.task.id));
 }
 
-// Mark a blocked or failed task done by hand, with an optional note for the timeline.
 const markingDone = ref(false);
 async function submitMarkDone(doneNote: string) {
   if (pending.value) return;

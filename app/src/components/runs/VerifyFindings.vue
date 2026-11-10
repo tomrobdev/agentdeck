@@ -4,8 +4,6 @@ import type { VerifyView } from '../../api/types';
 import { findingPlace } from '../../../../daemon/src/domain/runs/index.ts';
 import { VERDICT_MARKS, sortFindings, verifyHeadline } from '../../lib/runs/verify';
 
-// A verify run's findings: its line (the counts, the commit it read, stale once the base moved on), then each claim with
-// its verdict, the file and line that show it, the evidence and the suggested fix. False claims come first, marked failed.
 const props = defineProps<{ view: VerifyView }>();
 const emit = defineEmits<{ path: [path: string, line: number | null] }>();
 

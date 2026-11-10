@@ -74,7 +74,6 @@ test('the worker prompt says sandbox-only test failures are no reason to block',
   const prompt = workerSystemPrompt('pnpm test');
   assert.match(prompt, /AgentDeck runs `pnpm test` again outside it/);
   assert.match(prompt, /not a reason to stop: fix every other failure, then finish with STATUS: DONE/);
-  // Without a test command nothing reruns the tests, so a sandboxed failure can't be waved through.
   assert.doesNotMatch(workerSystemPrompt(null), /again outside it/);
 });
 

@@ -1,5 +1,3 @@
-// The queue's display and filters: remembered per browser, changed by the command palette's view request and by links
-// that open the queue filtered, and the groups and rows they make of the tasks.
 import { computed, ref, watch } from 'vue';
 import type { TaskSummary } from '../../../api/types';
 import { type Display, boardGroups, normalizeDisplay, rowOrder } from '../../../lib/work/queue/queue-display';
@@ -13,7 +11,6 @@ const MODES: Display['mode'][] = ['list', 'board', 'graph'];
 export function useQueueDisplay(tasks: () => TaskSummary[]) {
   const display = ref<Display>(normalizeDisplay(loadSetting<unknown>('display', null), loadSetting<boolean>('doneCollapsed', false)));
   saveSetting('doneCollapsed', true);
-  // The command palette asks for a view; apply it when it arrives (also when this mounts after the palette sent it).
   watch(
     requestedView,
     (mode) => {
@@ -23,12 +20,10 @@ export function useQueueDisplay(tasks: () => TaskSummary[]) {
     },
     { immediate: true },
   );
-  // The search box isn't remembered; the rest of the filters are.
   const saved = loadSetting<Omit<Filters, 'search'>>('filters', { states: [], repos: [], source: null });
   const filters = ref<Filters>({ ...emptyFilters(), ...saved, search: '' });
   watch(display, (d) => saveSetting('display', d), { deep: true });
   watch(filters, ({ search: _, ...f }) => saveSetting('filters', f), { deep: true });
-  // A link such as the header's "need you" opens the queue filtered to some states; the filter then stays the user's.
   watch(
     () => route.current,
     (r) => {

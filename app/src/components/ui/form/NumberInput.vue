@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { NumberFieldInput, NumberFieldRoot } from 'reka-ui';
 
-// A number field. It never clamps or snaps what was typed: the daemon validates, and its error is what the person sees.
-// An empty field is NaN, which the daemon refuses with its own message.
 defineProps<{ label?: string; step?: number; placeholder?: string }>();
 const model = defineModel<number>({ required: true });
 </script>
