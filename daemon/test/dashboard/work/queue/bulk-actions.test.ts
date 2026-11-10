@@ -100,7 +100,6 @@ test('picking all adds what the filter shows, and a group toggles as one', () =>
 });
 
 test('a pick survives a collapsed group and goes only when its task leaves the filtered set', () => {
-  // A collapsed group's rows are still in the filtered set, so its picks stay.
   assert.deepEqual(keepPicked([1, 2, 3], [1, 2, 3, 4]), [1, 2, 3]);
   assert.deepEqual(keepPicked([1, 2, 3], [1, 3]), [1, 3]);
 });

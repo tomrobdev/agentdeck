@@ -2,9 +2,6 @@
 import { ref } from 'vue';
 import { PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka-ui';
 
-// A panel anchored to its trigger. It flips to the other side and shifts to stay on screen, closes on an outside click or
-// Escape, and the trigger carries aria-expanded. The default slot gets `close` for content that should dismiss it (a chosen row).
-// Non-modal: single-key hotkeys stay live under it (lib/shared/hotkey-applies.ts).
 defineProps<{ align?: 'left' | 'right'; up?: boolean }>();
 const open = ref(false);
 </script>

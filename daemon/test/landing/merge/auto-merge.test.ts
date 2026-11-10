@@ -30,7 +30,6 @@ const { resolveConflicting } = await import('../../../src/application/runs/sync.
 const { repoSettingPatch } = await import('../../../src/cli/operations/settings-args.ts');
 const { liveLinks } = await import('../../../src/application/work/dependencies.ts');
 const { startState, waitingFor } = await import('../../../src/domain/work/index.ts');
-/** What a task waits for on its builds-on links, read from the database now. */
 const waiting = (t: import('../../../src/domain/work/task/task.ts').Task) => {
   const links = liveLinks(db);
   return waitingFor(t, startState(t, links.linksOf(t.id), links.target));
@@ -65,7 +64,6 @@ const ready: PrDetails = {
   paths: ['src/a.ts', 'src/b.ts'],
   labels: [AUTO_MERGE_LABEL.name],
 };
-/** An auto-merge entry from the refresh, as `refreshPrStates` gives it. */
 const auto = (id: TaskId, pr: PrDetails = ready) => ({ id, pr, requested: false });
 
 let details: Record<string, PrDetails>;
@@ -97,12 +95,10 @@ beforeEach(() => {
   mergeError = null;
   db.setPaused(false);
   updateRepo(db, 'demo', { auto_merge: true, auto_approve: false, pr_mode: 'ready' });
-  // Earlier tests' PRs are settled so each refresh sees only its own.
   for (const t of db.openPrTasks()) db.recordPr(t.id, { type: 'closed' });
 });
 
 let n = 0;
-/** A done task with an open PR whose last run passed the tests. */
 function tested(o: { source?: 'manual' | 'planner'; title?: string } = {}) {
   const url = `https://x/pull/${++n}`;
   const t = doneTask(db, repo, { pr: 'open', url, branch: `agentdeck/pr-${n}`, ...o });
@@ -110,12 +106,9 @@ function tested(o: { source?: 'manual' | 'planner'; title?: string } = {}) {
   return { id: t.id, url, branch: t.checkout?.branch };
 }
 
-// ---- The check
-
 const repoRow = { test_cmd: 'pnpm test', auto_merge_max_lines: 400, auto_merge_skip: ['.github/'] };
 type ReviewFacts = import('../../../src/domain/landing/review/review-gate.ts').ReviewFacts;
 type CheckOptions = { tests_passed?: boolean | null; paused?: string | null; test_cmd?: string | null; review?: ReviewFacts | null };
-/** The check as stored, its reasons with their kinds. */
 const raw = (pr: Partial<PrDetails> = {}, o: CheckOptions = {}) =>
   autoMergeCheck({
     repo: { ...repoRow, test_cmd: o.test_cmd === undefined ? repoRow.test_cmd : o.test_cmd },
@@ -125,7 +118,6 @@ const raw = (pr: Partial<PrDetails> = {}, o: CheckOptions = {}) =>
     paused: o.paused ?? null,
     review: o.review ?? null,
   });
-/** The check as a person reads it: its reasons' texts. */
 const check = (pr: Partial<PrDetails> = {}, o: CheckOptions = {}) => verdictView(raw(pr, o));
 
 test('autoMergeOn: the task wins, else the repo; a planner proposal only when a person approved it', () => {
@@ -171,10 +163,8 @@ test('autoMergeCheck: with no test command, only a check that ran tested it; ski
   const skipped = { checks: { total: 2, failing: 0, pending: 0 }, check_list: [one('skipped'), one('skipped')] };
   assert.deepEqual(check(skipped, untested), { verdict: 'never', reasons: [nothing] });
   assert.equal(check({ ...skipped, check_list: [one('skipped'), one('pass')] }, untested).verdict, 'merge');
-  // A check still running may yet test it: that waits.
   const running = { checks: { total: 2, failing: 0, pending: 1 }, check_list: [one('skipped'), one('pending')] };
   assert.deepEqual(check(running, untested), { verdict: 'wait', reasons: ['1 check still running on GitHub'] });
-  // A failing check did run: it needs a person for failing, not for being untested.
   const failing = { checks: { total: 1, failing: 1, pending: 0 }, check_list: [one('fail')] };
   assert.deepEqual(check(failing, untested).reasons, ['1 check failing on GitHub']);
 });
@@ -207,7 +197,6 @@ test('autoMergeCheck: a PR touching .claude/ needs a person, even with an empty 
     );
     assert.deepEqual(verdict, { verdict: 'never', reasons: [why] }, auto_merge_skip.join());
   }
-  // Both: the protected reason first, then the repo's own skip list.
   assert.deepEqual(check({ paths: [...paths, '.github/ci.yml'] }).reasons, [why, 'touches .github/ci.yml']);
 });
 
@@ -285,13 +274,8 @@ test('a merge request reads the findings as auto-merge does, without what only a
   assert.equal(autoMergeCheck({ ...input, repo: repoRow, paused: null }).verdict, 'never');
 });
 
-// ---- Settings
-
-// ---- The review gate (auto_review on)
-
 type ReviewWithComments = import('../../../src/domain/landing/review/review.ts').ReviewWithComments;
 let reviewIds = 0;
-/** A submitted review of the changes `diff_hash`, by a review run unless said, with line comments (open unless said). */
 const reviewOf = (
   kind: 'comment' | 'request_changes',
   o: {
@@ -327,7 +311,6 @@ const reviewOf = (
     })),
   };
 };
-/** A review run of the changes `diff_hash`, ended `outcome` (null while it runs). */
 const reviewRun = (outcome: string | null, diff_hash = 'diff-1') => ({ kind: 'review', diff_hash, outcome });
 const gated = (review: Partial<ReviewFacts>) => check({}, { review: { diff_hash: 'diff-1', reviews: [], runs: [], ...review } });
 
@@ -477,8 +460,6 @@ test('repo auto-merge settings: off by default, set from the CLI and the API, va
   assert.equal(db.findRepo('fresh')!.auto_merge, true);
 });
 
-// ---- Opening the PR
-
 test('a PR the daemon may merge opens with the label; one it may not opens without', async () => {
   const on = doneTask(db, repo, { title: 'labelled', branch: 'agentdeck/labelled' });
   await openPullRequest(db, db.getTask(on.id)!);
@@ -503,8 +484,6 @@ test('a PR the daemon may merge opens with the label; one it may not opens witho
     github.ensureLabel = async () => void gh.labelsMade++;
   }
 });
-
-// ---- The daemon merges
 
 test('the refresh finds a ready PR and autoMerge merges it, records who did, cleans up and releases its dependents', async () => {
   const t = tested({ title: 'Ship it alone' });
@@ -599,7 +578,6 @@ test('a merge and a sync never touch one task at once', async () => {
   assert.equal(db.recentNotifications(50).filter((x) => x.task_id === a.id).length, 0);
   db.setSyncing(a.id, false);
 
-  // A merge under way refuses a sync and is skipped by the conflict syncs.
   const b = tested();
   let release!: () => void;
   const held = new Promise<void>((r) => (release = r));
@@ -649,7 +627,7 @@ test('a merge gh reports failed because someone else merged and recorded it says
   const a = tested();
   const { prDetails, merge } = github;
   github.merge = async () => {
-    db.recordMerge(a.id, 'merge', 'merged by a person (merge)'); // a CLI merge in another process
+    db.recordMerge(a.id, 'merge', 'merged by a person (merge)');
     throw new Error('Pull request is already merged');
   };
   github.prDetails = async () => ({ ...ready, state: 'merged' });
@@ -672,7 +650,6 @@ test('autoMerge skips a PR whose request was withdrawn, or whose auto-merge was 
     { id: asked.id, pr: ready, requested: true },
     { id: off.id, pr: ready, requested: false },
   ]);
-  // While the refresh read the other PRs, a person withdrew the request and turned auto-merge off for the other.
   cancelMergeRequest(db, asked.id);
   db.setAutoMerge(off.id, false);
   assert.equal(await autoMerge(db, found.mergeable), null);
@@ -683,7 +660,7 @@ test('autoMerge skips a PR whose request was withdrawn, or whose auto-merge was 
 test('a head that moved since the refresh leaves the request in place and sends nothing', async () => {
   const fake = fakeCodeHost();
   const real = db.codeHost;
-  const app = testApp(db, { codeHost: fake }); // testApp sets the ports on db itself: put the real one back after
+  const app = testApp(db, { codeHost: fake });
   try {
     await headMoved(app, fake);
   } finally {
@@ -705,7 +682,6 @@ async function headMoved(app: typeof db, fake: ReturnType<typeof fakeCodeHost>) 
     'merge is called with the head the refresh read',
   );
 
-  // A push after the refresh: GitHub refuses the pinned merge.
   const moved = tested();
   requestMerge(app, moved.id);
   fake.details[moved.url] = read;
@@ -743,7 +719,6 @@ test('a transient merge error keeps the merge request; a lasting one drops it an
     notified(t.id).map((x) => x.title),
     [`Could not merge #${t.id}`],
   );
-  // A second try at the same entry finds no request left to drop: nothing more is told.
   assert.equal(await autoMerge(db, requested), null);
   assert.equal(notified(t.id).length, 1);
 });
@@ -763,8 +738,6 @@ test('mergeFailure: what passes on its own, and what needs a person', () => {
   ];
   for (const [message, failure] of cases) assert.equal(mergeFailure(message), failure, message);
 });
-
-// ---- A person's override
 
 test('setAutoMerge overrides the repo for one task and moves the label on its open PR', async () => {
   const t = tested();
@@ -804,7 +777,7 @@ test('the scheduler merges a ready PR on its own refresh, and tells a merge that
   let t: ReturnType<typeof tested>;
   try {
     await waitFor(() => told() > 0, { what: 'the failed auto-merge to be told' });
-    await sleep(200); // time passes: many more refreshes
+    await sleep(200);
     assert.equal(logs.filter((l) => l.includes(`task ${stuck.id}: auto-merge failed`)).length, 1);
     assert.equal(told(), 1, 'told once, not every refresh');
 

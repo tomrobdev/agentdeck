@@ -1,19 +1,7 @@
-/*
- * The dashboard's stylesheet: Tailwind v4 plus the few things utilities cannot express well.
- *
- * Colours come from themes.css (plain custom properties picked by data-theme and data-mode on <html>, see platform/theme.ts).
- * @theme inline below exposes them as utilities (bg-panel, text-muted, border-border), reading the variable where it is
- * used, so a theme or mode switch needs no rebuild. Components use utilities in their templates; what stays here is
- * the highlight.js classes, the status hooks (.s-*), and a handful of repeated patterns written once.
- *
- * Preflight is not imported on purpose: the dashboard looked the way it does with browser defaults, and a port must
- * not change that. Everything here is in a layer, so utilities in a template always beat it.
- */
 @layer theme, base, components, utilities;
 @import 'tailwindcss/theme.css' layer(theme);
 @import 'tailwindcss/utilities.css' layer(utilities);
 
-/* dark: follows the mode the person picked, not the OS media query. Tokens already swap per mode, so it is rarely needed. */
 @custom-variant dark (&:where([data-mode='dark'], [data-mode='dark'] *));
 
 @theme {
@@ -24,7 +12,6 @@
   --shadow-*: initial;
   --breakpoint-*: initial;
 
-  /* The 13px root is for text; spacing is its own px unit, so p-1 is 4px whatever the root size. */
   --spacing: 4px;
 
   --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
@@ -47,7 +34,6 @@
   --shadow-popover: 0 8px 28px rgb(0 0 0 / 0.18);
   --shadow-modal: 0 20px 60px rgb(0 0 0 / 0.25);
 
-  /* max-sm: and friends are the three widths the layout already switched at. */
   --breakpoint-sm: 720px;
   --breakpoint-md: 900px;
   --breakpoint-lg: 1080px;
@@ -74,7 +60,6 @@
   --color-tool-cmd: var(--tool-cmd);
   --color-cancelled: var(--cancelled);
   --color-merged: var(--merged);
-  /* The colour of the status being drawn, set by the .s-* classes. */
   --color-status: var(--c);
   --color-transparent: transparent;
   --color-current: currentColor;
@@ -91,7 +76,6 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  /* Native controls and scrollbars follow the mode too. */
   :root[data-mode='light'] {
     color-scheme: light;
   }
@@ -162,8 +146,6 @@
     font-size: 12px;
   }
 
-  /* High contrast takes the Ink shapes: 2px corners, text-coloured (black or white) rules and frame edges,
-     outlined chips, no shadows. Colour tokens stay as themes.css has them; the other themes set none of these. */
   :root[data-theme='contrast'] {
     --rule: var(--text);
     --chip-mix: 100%;
@@ -184,12 +166,10 @@
   }
 }
 
-/* Repeated patterns the audit found (docs/frontend-audit.md §3), written once. */
 @utility spacer {
   flex: 1;
 }
 
-/* A bordered panel; add card-head for a header strip. */
 @utility card {
   border: 1px solid var(--rule, var(--border));
   border-radius: var(--r-box, 8px);
@@ -204,7 +184,6 @@
   border-bottom: 1px solid var(--rule, var(--border));
 }
 
-/* A button with no chrome, for text links and icon buttons. */
 @utility btn-ghost {
   border: none;
   background: none;
@@ -216,7 +195,6 @@
   font-size: 12px;
 }
 
-/* The small uppercase label above a group of menu options. */
 @utility sec-label {
   font-size: 11px;
   text-transform: uppercase;
@@ -225,7 +203,6 @@
   padding: 8px 8px 2px;
 }
 
-/* Label over a control, in a form. */
 @utility field {
   display: flex;
   flex-direction: column;
@@ -248,7 +225,6 @@
   margin: 0;
 }
 
-/* A page-level notice tinted by the status colour (--c, set by an s-* class). */
 @utility callout {
   margin: 12px 24px 0;
   padding: 8px 12px;
@@ -276,7 +252,6 @@
     background: var(--c);
   }
 
-  /* --c is the colour of the status being drawn; dots, pills and icons read it. */
   .s-proposed {
     --c: var(--accent);
   }
@@ -305,7 +280,6 @@
   .s-cancelled {
     --c: var(--cancelled);
   }
-  /* A run a daemon restart cut off: its task went back to the queue, and the next run resumes it. */
   .s-interrupted {
     --c: var(--queued);
   }
@@ -325,7 +299,6 @@
     }
   }
 
-  /* Syntax highlighting (highlight.js classes), in the theme's --hl-* colours. */
   .hljs-keyword,
   .hljs-selector-tag,
   .hljs-built_in,
@@ -376,7 +349,6 @@
     font-weight: 600;
   }
 
-  /* How a file changed: A, M, D or R. */
   .badge {
     font: 10px var(--font-mono);
     width: 13px;
@@ -396,7 +368,6 @@
     color: var(--running);
   }
 
-  /* A disclosure in the run log: one chevron that turns when it opens, no native marker. */
   .disclose {
     list-style: none;
     cursor: pointer;

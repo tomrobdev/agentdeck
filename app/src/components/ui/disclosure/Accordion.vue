@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { AccordionRoot } from 'reka-ui';
 
-// Parts of which one is open at a time, or none (a click on the open one closes it). The value is the open item's value.
 defineProps<{ as?: string }>();
 const model = defineModel<string | undefined>();
 </script>

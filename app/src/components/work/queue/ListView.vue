@@ -22,7 +22,6 @@ const props = defineProps<{
   groupBy: GroupBy;
   collapsed: string[];
   selected: number | null;
-  /** The tasks picked for a bulk action (`x`, shift-click). */
   picked?: number[];
   show: ShowProps;
   showEmpty: boolean;
@@ -38,7 +37,6 @@ const emit = defineEmits<{
   mergeAll: [ids: number[]];
 }>();
 
-// The row menu: right-click on a row, or the context-menu key / ⇧F10 on the selected one.
 const menu = ref<{ id: number; x: number; y: number } | null>(null);
 const menuTask = computed(() => props.groups.flatMap((g) => g.tasks).find((t) => t.id === menu.value?.id));
 function openMenu(id: number, x: number, y: number) {
@@ -58,7 +56,6 @@ function onKey(e: KeyboardEvent) {
 onMounted(() => window.addEventListener('keydown', onKey));
 onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
 
-// Keep the selected row in view when the keyboard moves it.
 watch(
   () => props.selected,
   async (id) => {

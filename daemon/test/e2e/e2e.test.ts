@@ -9,7 +9,7 @@ import type { Repo } from '../../src/domain/repos/repo.ts';
 import { asRepoId, testApp, waitFor } from '../fixtures/fixtures.ts';
 import { stopReasonOf } from '../../src/domain/work/task/task.ts';
 
-const REPO = asRepoId(1); // the one repo this file registers
+const REPO = asRepoId(1);
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-test-'));
 process.env.AGENTDECK_HOME = home;
 process.env.AGENTDECK_NO_NOTIFY = '1';
@@ -108,7 +108,6 @@ test('cancel stops a running task', async () => {
 });
 
 test('a cancel requested while the run is finishing wins over done', async () => {
-  // The run succeeds, then the repo's test command runs; cancel lands while it does.
   const marker = join(home, 'tests-started');
   db.updateRepo(REPO, { test_cmd: `touch ${marker} && sleep 1 && test -f fake-output.txt` });
   try {
@@ -165,8 +164,6 @@ test('claude processes left by a dead daemon are stopped, with their children', 
       return false;
     }
   };
-  // Stands in for claude plus a bash tool it started; ignores SIGTERM like a stuck process. It touches `started`
-  // once the trap is set and the tool runs.
   const started = join(home, 'group-started');
   const child = spawn('sh', ['-c', `trap '' TERM; sleep 60 & touch '${started}'; sleep 60`], { detached: true, stdio: 'ignore' });
   child.unref();
@@ -174,7 +171,6 @@ test('claude processes left by a dead daemon are stopped, with their children', 
   const sqliteNow = new Date().toISOString().slice(0, 19).replace('T', ' ');
   await waitFor(() => existsSync(started), { what: 'the process group to start' });
 
-  // A pid whose leader started at another time belongs to someone else: leave it alone.
   assert.equal(reapOrphans([{ pid, pid_at: '2020-01-01 00:00:00' }], 200), 0);
   assert.ok(alive(pid));
 
@@ -203,9 +199,7 @@ test('a claude started long after its run row opened (setup, a sync) is still th
   } finally {
     try {
       process.kill(-child.pid!, 'SIGKILL');
-    } catch {
-      // already gone
-    }
+    } catch {}
     db.close();
   }
 });
@@ -231,7 +225,7 @@ test('governor holds queued work over the 5h cap and notifies once', async () =>
   db.recordUsageWindow('five_hour', 0.9, now + 3600, 'allowed');
   const before = db.recentNotifications(50).filter((n) => n.kind === 'hold').length;
   const task = db.addTask({ repo_id: REPO, title: 'held', prompt: 'FAKE_DONE' });
-  await drain(); // once mode stops when held
+  await drain();
   assert.equal(db.getTask(task.id)!.status, 'queued');
   const holds = db.recentNotifications(50).filter((n) => n.kind === 'hold');
   assert.equal(holds.length, before + 1);
@@ -264,7 +258,6 @@ test('repo add detects the toolchain; repos registered before detection get its 
   assert.equal(repo.allowed_tools, null, 'rules are not snapshotted, so they follow the scripts');
   const tools = [...DEFAULT_ALLOWED_TOOLS, 'Bash(pnpm test*)', 'Bash(pnpm lint*)', 'Bash(pnpm run *)'];
   assert.deepEqual(effectiveTools(repo, js), tools);
-  // A script added later is allowed without re-registering the repo.
   writeFileSync(join(js, 'package.json'), JSON.stringify({ scripts: { test: 'node --test', lint: 'eslint .', typecheck: 'tsc' } }));
   assert.ok(effectiveTools(repo, js).includes('Bash(pnpm typecheck*)'));
   writeFileSync(join(js, 'package.json'), JSON.stringify({ scripts: { test: 'node --test', lint: 'eslint .' } }));
@@ -333,7 +326,7 @@ const settingsCalls = () => readFileSync(join(home, 'fake-claude-settings.log'),
 test('each run gets a sandbox settings file outside its worktree', async () => {
   const { updateRepo } = await import('../../src/application/actions.ts');
   const { LOG_DIR } = await import('../../src/config.ts');
-  db.setRepoPaused(REPO, null); // the failing setup above paused it
+  db.setRepoPaused(REPO, null);
   assert.equal(db.getRepo(REPO)!.sandbox, true, 'sandbox is on by default');
   assert.deepEqual(db.getRepo(REPO)!.network, [], 'no hosts by default');
   updateRepo(db, REPO, { network: 'registry.npmjs.org, github.com' });
@@ -394,7 +387,6 @@ test('a new worktree starts from origin/<base> when origin is ahead of the local
   sh(local, 'config', 'user.email', 'test@example.com');
   sh(local, 'config', 'user.name', 'test');
 
-  // Someone else pushes to origin; the local main checkout falls behind.
   sh(home, 'clone', '-q', origin, other);
   writeFileSync(join(other, 'upstream.txt'), 'from origin\n');
   sh(other, 'add', '-A');

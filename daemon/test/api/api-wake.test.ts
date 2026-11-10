@@ -56,6 +56,6 @@ test('reads and failed writes do not wake it', async () => {
   events.length = 0;
   assert.equal((await fetch(`${base}/api/tasks`)).status, 200);
   assert.equal((await post('/api/tasks/9999/approve')).status >= 400, true);
-  await sleep(20); // time passes: long enough for a wake to land
+  await sleep(20);
   assert.deepEqual(events, []);
 });

@@ -6,20 +6,15 @@ import { useCommits } from '../../../composables/work/files/useChanges';
 import AnchoredPanel from '../../ui/AnchoredPanel.vue';
 import CodeView from './CodeView.vue';
 
-// Hovering a `path:line` link inside `root` shows the lines around it, read from the task branch. The panel flips near
-// the viewport edge. It closes when the pointer leaves the link, on Escape, on scroll, and when the link leaves the page
-// (a tab switch). A file that arrives after any of those is dropped.
 const props = defineProps<{ taskId: number; root: HTMLElement | null }>();
 
 const CONTEXT = 5;
 const shown = ref<{ path: string; line: number; text: string; first: number; link: HTMLElement } | null>(null);
 let timer: number | undefined;
-/** Counts hovers and closes: a fetch started under an older number is stale when it finishes. */
 let generation = 0;
 const queryClient = useQueryClient();
 const { head } = useCommits(toRef(props, 'taskId'));
 
-/** The file's text at the task's head commit: the query cache keeps it, so a second hover makes no request. */
 async function fileText(path: string): Promise<string | null> {
   try {
     return (await queryClient.fetchQuery(fileQuery(props.taskId, 'head', path, head.value))).text;
@@ -52,7 +47,6 @@ function onOut(e: MouseEvent) {
   if ((e.target as HTMLElement).closest('a.path')) close();
 }
 
-// While it is open: any scroll closes it, and so does its link leaving the page.
 const gone = new MutationObserver(() => shown.value && !shown.value.link.isConnected && close());
 watch(shown, (s) => {
   if (s) {

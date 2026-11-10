@@ -1,22 +1,17 @@
-// rule:coverage-floors. Line and branch coverage of daemon/src, grouped by layer and context, against the floors in COVERAGE_FLOORS
-// (`progress.ts`). Pure: `pnpm coverage` (scripts/coverage.ts) runs the tests and hands the lcov text here.
 import ts from 'typescript';
 import type { Source } from './sources.ts';
 
-/** A group's floors: the least line and branch coverage it may have, in whole percents. */
 export interface Floor {
   lines: number;
   branches: number;
 }
 
-/** Hit and found counts of one file, or of a group of files. */
 export interface Counts {
   lines: { hit: number; found: number };
   branches: { hit: number; found: number };
 }
 
 export interface FileCoverage extends Counts {
-  /** Relative to daemon/src, e.g. `domain/work/task/task.ts`. */
   path: string;
 }
 
@@ -25,13 +20,8 @@ export interface GroupCoverage extends Counts {
   files: number;
 }
 
-/** A floor beaten by more than this many points should be raised. */
 export const RAISE_MARGIN = 2;
 
-/**
- * The group a file under daemon/src belongs to: `domain/<context>` and `application/<context>` for their folders, `application` for
- * the files directly in it (`actions.ts`), the layer for `db/`, `adapters/`, `api/` and `cli/`, and `src` for the files at the top.
- */
 export function groupOf(path: string): string {
   const parts = path.split('/');
   if (parts.length === 1) return 'src';
@@ -39,7 +29,6 @@ export function groupOf(path: string): string {
   return parts[0];
 }
 
-/** A path from an lcov `SF:` line, relative to daemon/src; null for a file outside it. */
 function srcPath(file: string): string | null {
   const normal = file.replace(/\\/g, '/');
   const at = normal.lastIndexOf('daemon/src/');
@@ -47,7 +36,6 @@ function srcPath(file: string): string | null {
   return normal.startsWith('src/') ? normal.slice('src/'.length) : null;
 }
 
-/** The files of an lcov report under daemon/src, with their line and branch counts. */
 export function parseLcov(text: string): FileCoverage[] {
   const files: FileCoverage[] = [];
   let current: FileCoverage | null = null;
@@ -72,7 +60,6 @@ export function parseLcov(text: string): FileCoverage[] {
   return files;
 }
 
-/** The files' counts summed per group, sorted by group. */
 export function groupCoverage(files: FileCoverage[]): GroupCoverage[] {
   const groups = new Map<string, GroupCoverage>();
   for (const f of files) {
@@ -88,13 +75,10 @@ export function groupCoverage(files: FileCoverage[]): GroupCoverage[] {
   return [...groups.values()].sort((a, b) => (a.group < b.group ? -1 : a.group > b.group ? 1 : 0));
 }
 
-/** Hit over found as a percent; 100 when there is nothing to hit. */
 export const percent = (c: { hit: number; found: number }) => (c.found ? (100 * c.hit) / c.found : 100);
 
-/** A percent to one decimal, rounded down, so 99.96% never shows as a 100% it has not reached. */
 export const showPercent = (p: number) => `${(Math.floor(p * 10) / 10).toFixed(1)}%`;
 
-/** The groups below a floor, the groups and floors that do not match up, and the floors to raise. Each message names its group. */
 export function judgeCoverage(groups: GroupCoverage[], floors: Record<string, Floor>): { failures: string[]; raise: string[] } {
   const failures: string[] = [];
   const raise: string[] = [];
@@ -121,7 +105,6 @@ export function judgeCoverage(groups: GroupCoverage[], floors: Record<string, Fl
   return { failures, raise };
 }
 
-/** Whether a file has code that runs: anything besides types, interfaces and type-only imports and exports. Type-only files never load. */
 function hasRuntimeCode(source: Source): boolean {
   return source.ast.statements.some((stmt) => {
     if (ts.isInterfaceDeclaration(stmt) || ts.isTypeAliasDeclaration(stmt)) return false;
@@ -141,7 +124,6 @@ function hasRuntimeCode(source: Source): boolean {
   });
 }
 
-/** The groups of daemon/src that have code that runs, sorted: what COVERAGE_FLOORS must name, read without running the tests. */
 export function groupsWithCode(sources: Source[]): string[] {
   return [...new Set(sources.filter(hasRuntimeCode).map((s) => groupOf(s.path)))].sort();
 }

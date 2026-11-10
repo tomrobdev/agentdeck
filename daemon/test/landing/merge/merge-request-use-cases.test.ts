@@ -64,7 +64,7 @@ const ready: PrDetails = {
 
 let details: Record<string, PrDetails>;
 let merged: { url: string; method: string }[];
-let closedUrl: string | null = null; // the PR GitHub reports as closed
+let closedUrl: string | null = null;
 github.prDetails = async (url) => ({ ...(details[url] ?? ready), state: url === closedUrl ? 'closed' : 'open' });
 github.markReady = async () => {};
 github.merge = async (pr) => void merged.push({ url: pr.url, method: pr.method });
@@ -79,7 +79,6 @@ beforeEach(() => {
 });
 
 let n = 0;
-/** A done task with an open PR whose last run passed the tests. */
 function tested() {
   const url = `https://x/pull/${++n}`;
   const t = doneTask(db, repo, { pr: 'open', url, branch: `agentdeck/req-${n}` });
@@ -188,7 +187,7 @@ test('a request withdrawn while the refresh reads its failing PR is not told "Co
   requestMerge(db, a.id);
   const read = github.prDetails;
   github.prDetails = async (url, cwd, opts) => {
-    cancelMergeRequest(db, a.id); // a person withdraws it while GitHub is asked
+    cancelMergeRequest(db, a.id);
     return { ...(await read(url, cwd, opts)), checks: { total: 3, failing: 1, pending: 0 } };
   };
   try {
@@ -207,7 +206,6 @@ test("a request over auto-merge's line limit, without its label, merges", async 
   const auto = tested();
   details[auto.url] = big;
 
-  // Without a request the PR is over the limit and needs a person.
   assert.deepEqual((await refreshPrStates(db)).mergeable, []);
   requestMerge(db, a.id);
   const found = await refreshPrStates(db);
@@ -233,7 +231,6 @@ test('two requests where one lands after the other merge in that order', async (
   const first = tested();
   const second = tested();
   linkTasks(db, second.id, { on: first.id, kind: 'after' });
-  // The later one is asked for first.
   requestMerge(db, second.id);
   requestMerge(db, first.id);
 
@@ -266,7 +263,6 @@ test('a conflicting request goes to be synced and stays; one whose task or PR mo
   assert.deepEqual(found.conflicting, [conflicting.id]);
   assert.ok(db.getTask(conflicting.id)!.pr!.merge_request, 'a conflict is waited out, not refused');
 
-  // The sync could not settle it: the task is blocked, so the request goes.
   db.applyEvent(conflicting.id, { type: 'conflict' }, { reason: 'conflict' });
   await refreshPrStates(db);
   assert.equal(db.getTask(conflicting.id)!.pr?.merge_request ?? null, null);
@@ -308,7 +304,6 @@ test('a merge request is dropped when the task is sent back: retry, request chan
     assert.equal(row.pr?.state, 'open', `${name}: the open PR stays, for the next push to update`);
     assert.equal(row.pr?.merge_request, null, `${name}: the request goes in the same write`);
 
-    // The rework finishes done, its push updates the same open PR, and the next refresh merges nothing unseen.
     assert.ok(db.applyEvent(a.id, { type: 'claim' }));
     assert.ok(db.applyEvent(a.id, { type: 'finish', outcome: 'done' }));
     details[a.url] = ready;

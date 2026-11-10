@@ -14,7 +14,6 @@ function setup() {
   return { db, repo, id: task.id };
 }
 
-// Every way a task reaches queued from another status, with the status to start from.
 const TO_QUEUED: [string, TaskEvent, 'blocked' | 'done' | 'running'][] = [
   ['retry', { type: 'retry' }, 'blocked'],
   ['unblock_retry', { type: 'unblock_retry' }, 'blocked'],

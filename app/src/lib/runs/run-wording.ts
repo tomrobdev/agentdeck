@@ -2,11 +2,9 @@
 import type { LiveView, Run, SyncView } from '../../api/types.ts';
 import { parseTime } from '../shared/time.ts';
 
-/** What each model is called, and when to pick it. */
 export const MODEL_LABELS: Record<string, string> = { haiku: 'Haiku', sonnet: 'Sonnet', opus: 'Opus' };
 export const MODEL_HINTS: Record<string, string> = { haiku: 'cheap, simple', sonnet: 'most tasks', opus: 'hard tasks' };
 
-/** A run's name: "Run 2", or the kind of run that uses no attempt. */
 export function runLabel(r: Pick<Run, 'kind' | 'attempt'>): string {
   if (r.kind === 'resolve') return 'Resolve conflicts';
   if (r.kind === 'unblock') return 'Unblock run';
@@ -15,7 +13,6 @@ export function runLabel(r: Pick<Run, 'kind' | 'attempt'>): string {
   return `Run ${r.attempt}`;
 }
 
-/** What a run that uses no attempt did, for a tooltip; undefined for a work run. */
 export function runHint(r: Pick<Run, 'kind'>): string | undefined {
   if (r.kind === 'resolve') return 'Merged the base branch into the branch; uses no attempt';
   if (r.kind === 'unblock') return 'Read why the task blocked, then retried it with a note or asked you; uses no attempt';
@@ -24,14 +21,12 @@ export function runHint(r: Pick<Run, 'kind'>): string | undefined {
   return undefined;
 }
 
-/** A running task's state on its row: "12m · turn 14/40 · Edit worker.ts" (the turn and tool once there are any). */
 export function describeLive(l: LiveView): string {
   const secs = (Date.now() - parseTime(l.since)) / 1000;
   const took = secs < 90 ? `${Math.max(0, Math.round(secs))}s` : secs < 5400 ? `${Math.round(secs / 60)}m` : `${(secs / 3600).toFixed(1)}h`;
   return [took, l.turns ? `turn ${l.turns}/${l.max_turns}` : null, l.tool].filter(Boolean).join(' · ');
 }
 
-/** A task in review whose sync is under way, on its row: "Syncing with main…", or "Resolving conflicts · 3m · turn 4/40 · Edit a.ts". */
 export function describeSync(s: SyncView): string {
   if (!s.resolving || !s.since) return `Syncing with ${s.base}…`;
   return `Resolving conflicts · ${describeLive({ since: s.since, turns: s.turns, max_turns: s.max_turns, tool: s.tool })}`;

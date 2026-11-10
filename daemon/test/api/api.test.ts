@@ -103,7 +103,6 @@ test('log stream replays a finished run and ends', async () => {
 });
 
 test('a log that cannot be read ends the stream instead of stopping the daemon', async () => {
-  // A directory where the log should be: it exists and has a size, but reading it throws (EISDIR).
   const unreadable = join(home, 'unreadable-log');
   mkdirSync(unreadable);
   const runId = db.startRun(asTaskId(1), 1, unreadable);
@@ -210,21 +209,18 @@ test('task list returns summaries, pages with limit/before, and always includes 
   }
   assert.equal((await (await api(`/api/tasks/${active.id}`)).json()).prompt, 'still queued', 'detail keeps the prompt');
 
-  // limit counts the newest tasks; active ones ride along on top.
   const limited = await list('/api/tasks?limit=2');
   assert.deepEqual(
     limited.map((t) => t.id),
     [ids[4], ids[3], active.id],
   );
 
-  // before pages to older tasks, without repeating active ones.
   const older = await list(`/api/tasks?limit=2&before=${ids[3]}`);
   assert.deepEqual(
     older.map((t) => t.id),
     [ids[2], ids[1]],
   );
 
-  // status filter composes with limit and before.
   const cancelled = await list(`/api/tasks?status=cancelled&limit=2&before=${ids[3]}`);
   assert.deepEqual(
     cancelled.map((t) => t.id),
@@ -236,7 +232,6 @@ test('task list returns summaries, pages with limit/before, and always includes 
     [active.id],
   );
 
-  // limit is clamped to 1..1000 and bad values fall back to the default.
   assert.equal((await list('/api/tasks?limit=0')).length > 0, true);
   assert.equal((await list('/api/tasks?limit=abc')).length, all.length);
 });
@@ -248,14 +243,12 @@ test('status reports which code the daemon runs, and restart waits while work ru
   const server2 = await startApi({ db, port: 0, daemon: { info, requestRestart: () => requested++, reloadFacts } });
   const url = `http://127.0.0.1:${(server2.address() as AddressInfo).port}`;
   try {
-    // GET /api/daemon: the loaded commit, pid and start time next to the reload state.
     db.setSetting('reload_on_change', '1');
     const state = await (await fetch(`${url}/api/daemon`)).json();
     assert.deepEqual([state.commit, state.pid, state.started_at], [info.commit, 4242, info.started_at]);
     assert.equal(state.reload.blocked, 'the checkout is on x, not main');
     assert.equal(state.reload.changed, 1);
     assert.deepEqual((await (await fetch(`${url}/api/status`)).json()).daemon, info);
-    // The default server has no checkout to name.
     assert.equal((await (await api('/api/status')).json()).daemon.commit, null);
 
     const idle = await (await fetch(`${url}/api/daemon/restart`, { method: 'POST' })).json();

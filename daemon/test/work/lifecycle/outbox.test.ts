@@ -1,5 +1,3 @@
-// task_events as the outbox: a status change writes its history row pending, and the daemon's tick runs what a crash
-// left unfollowed. Follow-ups are safe to repeat, and a row older code wrote (without the column) is never followed up.
 import assert from 'node:assert/strict';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -25,7 +23,6 @@ function setup() {
   db.updateRepo(repo.id, { pr_mode: 'ready' });
   const add = (on: TaskId | null = null) =>
     db.addTask({ repo_id: repo.id, title: 'work', prompt: 'p', links: on === null ? [] : [{ on, kind: 'builds_on' }] });
-  /** A task that has just finished done, as a daemon leaves it when it dies before the follow-ups: the row pending. */
   const finishedDone = () => {
     const task = add();
     assert.equal(db.claimNextTask()?.id, task.id);
@@ -54,7 +51,6 @@ test('a status change with follow-ups writes its row pending, in the same transa
 test('running a follow-up twice opens one PR and sends one notification', async () => {
   const { db, codeHost, finishedDone, notes } = setup();
   const { task } = finishedDone();
-  // Two passes at once (the lock), and one after (the row is marked).
   assert.deepEqual(await Promise.all([followUpPending(db), followUpPending(db)]), [1, 0]);
   assert.equal(await followUpPending(db), 0);
   assert.equal(codeHost.created.length, 1);
@@ -63,7 +59,6 @@ test('running a follow-up twice opens one PR and sends one notification', async 
   assert.match(notes(task.id)[0].body, /PR: https:\/\/example\.test\/pull\/1/);
   assert.deepEqual(db.pendingFollowUps(), []);
 
-  // The PR follow-up itself is safe to repeat: a task whose PR is open keeps it, and only its branch is pushed again.
   assert.deepEqual(await openPullRequest(db, db.getTask(task.id)!), { url: 'https://example.test/pull/1' });
   assert.equal(codeHost.created.length, 1);
   db.close();
@@ -103,15 +98,14 @@ test('the scheduler runs the follow-ups a dead daemon left: the PR opens once on
 test('on a tick with a pending follow-up and a claimable task, the follow-up runs first', async () => {
   const { db, codeHost, add, finishedDone } = setup();
   db.setPaused(false);
-  finishedDone(); // a dead daemon left its PR to open
-  add(); // claimable: it builds on nothing
+  finishedDone();
+  add();
   const order: string[] = [];
   const createPr = codeHost.createPr;
   codeHost.createPr = async (pr) => {
     order.push('follow-up');
     return createPr(pr);
   };
-  // The claim is only recorded: the task does not run.
   db.claimNextTask = () => {
     order.push('claim');
     return undefined;
@@ -130,7 +124,6 @@ test('an event row written without the column, as older code writes it, is never
   const task = add();
   assert.equal(db.claimNextTask()?.id, task.id);
   db.setCheckout(task.id, { branch: 'agentdeck/task-old' });
-  // Older code changes the status and writes its row with no follow_up_pending: its follow-ups ran inline.
   db.raw.prepare("UPDATE tasks SET status = 'done' WHERE id = ?").run(task.id);
   db.raw.prepare("INSERT INTO task_events (task_id, type, from_status, to_status) VALUES (?, 'finish', 'running', 'done')").run(task.id);
   assert.deepEqual(db.pendingFollowUps(), []);
@@ -161,7 +154,6 @@ test('a follow-up for a task that moved on since tells no one about the status i
   const task = add();
   assert.equal(db.claimNextTask()?.id, task.id);
   assert.ok(db.applyEvent(task.id, { type: 'finish', outcome: 'blocked' }, { reason: 'needs a key' }));
-  // The daemon died before telling anyone; a person retried it from the CLI meanwhile.
   assert.ok(db.applyEvent(task.id, { type: 'retry' }));
   assert.equal(await followUpPending(db), 1);
   assert.equal(notes(task.id, 'blocked').length, 0);

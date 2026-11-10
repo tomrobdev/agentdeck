@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import { DropdownMenuLabel } from 'reka-ui';
-
-// A small heading over a group of menu items.
 </script>
 
 <template>

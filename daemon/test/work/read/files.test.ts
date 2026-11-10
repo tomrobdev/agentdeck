@@ -64,7 +64,6 @@ test('capText keeps text under the limit and cuts on a character or line boundar
   const enc = (s: string) => new TextEncoder().encode(s);
   assert.deepEqual(capText(enc('abc'), 3), { text: 'abc', truncated: false });
   assert.deepEqual(capText(enc('abcdef'), 4), { text: 'abcd', truncated: true });
-  // é is two bytes; a cut between them backs up to before it.
   assert.deepEqual(capText(enc('abé'), 3), { text: 'ab', truncated: true });
   assert.deepEqual(capText(enc('one\ntwo\nthree'), 10, { wholeLines: true }), { text: 'one\ntwo\n', truncated: true });
   assert.deepEqual(capText(enc('onelongline'), 5, { wholeLines: true }), { text: 'onelo', truncated: true });

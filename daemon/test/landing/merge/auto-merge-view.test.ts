@@ -1,5 +1,3 @@
-// Seeing whether a task will auto-merge (docs/plans/auto-merge-view.html): the check kept on the task, the view the
-// domain words from it, and the CLI lines.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
@@ -78,8 +76,6 @@ function tested() {
   return { id: t.id, url };
 }
 
-// ---- Keeping the check
-
 test('a refresh stores the check it ran, never or merge alike; merging, closing and turning auto-merge off clear it', async () => {
   const big = tested();
   details[big.url] = { ...ready, additions: 900 };
@@ -95,25 +91,20 @@ test('a refresh stores the check it ran, never or merge alike; merging, closing 
   assert.ok(stored.pr!.auto_merge_checked_at);
   assert.equal(db.getTask(fine.id)!.pr!.auto_merge_check?.verdict, 'merge');
 
-  // A later refresh replaces it.
   details[big.url] = { ...ready, additions: 10 };
   await refreshPrStates(db);
   assert.equal(db.getTask(big.id)!.pr!.auto_merge_check?.verdict, 'merge');
 
-  // Merging clears it.
   assert.equal(await autoMerge(db, [{ id: fine.id, pr: ready, requested: false }]), fine.id);
   assert.equal(db.getTask(fine.id)!.pr!.state, 'merged');
   assert.deepEqual([db.getTask(fine.id)!.pr!.auto_merge_check, db.getTask(fine.id)!.pr!.auto_merge_checked_at], [null, null]);
 
-  // So does closing the PR.
   db.recordPr(closed.id, { type: 'closed' });
   assert.equal(db.getTask(closed.id)!.pr!.auto_merge_check, null);
 
-  // A check is not written for a PR that was merged meanwhile.
   assert.equal(db.setAutoMergeCheck(fine.id, { verdict: 'merge', reasons: [] }), false);
   assert.equal(db.getTask(fine.id)!.pr!.auto_merge_check, null);
 
-  // Turning auto-merge off for the task clears it.
   assert.ok(db.getTask(big.id)!.pr!.auto_merge_check);
   await setAutoMerge(db, big.id, { auto_merge: false });
   assert.deepEqual([db.getTask(big.id)!.pr!.auto_merge_check, db.getTask(big.id)!.pr!.auto_merge_checked_at], [null, null]);
@@ -125,8 +116,6 @@ test('a refresh stores no check for a task with auto-merge off', async () => {
   await refreshPrStates(db);
   assert.equal(db.getTask(t.id)!.pr!.auto_merge_check, null);
 });
-
-// ---- The view
 
 const repoRow = {
   auto_merge: true,
@@ -224,7 +213,6 @@ test('autoMergeView: a measured branch adds how it stands against the limits', (
     [],
     'off: nothing to measure',
   );
-  // Once a PR is open its stored check is what counts.
   assert.deepEqual(autoMergeView(checked('merge', []), repoRow, { lines: 5000, paths: [] }).reasons, []);
 });
 
@@ -258,7 +246,6 @@ test('a PR with 150 changed files is measured in full from git, and auto-merges 
   const url = `https://x/pull/${++n}`;
   const t = doneTask(db, repo, { pr: 'open', url, branch: 'agentdeck/wide' });
   db.finishRun(db.startRun(t.id, 1, join(home, `run-${t.id}.log`)), { tests_passed: true });
-  // GitHub's file list stops at 100 of the 150.
   const listed: PrDetails = { ...ready, files: 150, additions: 150, deletions: 0, paths: paths.slice(0, 100), head };
 
   details[url] = { ...listed, head: '0'.repeat(40) };
@@ -280,7 +267,6 @@ test('a PR with 150 changed files is measured in full from git, and auto-merges 
   assert.equal(await autoMerge(db, found.mergeable), t.id);
   assert.equal(db.getTask(t.id)!.pr!.state, 'merged');
 
-  // Measured from git, every path counts against the skip list, not only the first 100 GitHub listed.
   sh('checkout', '-q', '-b', 'agentdeck/wide-ci');
   mkdirSync(join(dir, '.github'), { recursive: true });
   mkdirSync(join(dir, 'wide'), { recursive: true });
@@ -298,8 +284,6 @@ test('a PR with 150 changed files is measured in full from git, and auto-merges 
   assert.equal(db.getTask(ci.id)!.pr!.auto_merge_check?.verdict, 'never');
   assert.deepEqual(db.getTask(ci.id)!.pr!.auto_merge_check?.reasons.at(-1)?.text, 'touches .github/zz.yml');
 });
-
-// ---- The CLI
 
 test('ls and show say a task with a PR over the limit needs a person to merge', async () => {
   const t = tested();

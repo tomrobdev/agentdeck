@@ -34,10 +34,6 @@ const EVENTS: Record<string, TaskEvent> = {
   'recover after too many restarts': { type: 'recover' },
 };
 
-/**
- * The counters of a task before each event: one restart short of too many makes the next recover the last, and a failed run
- * is requeued only with attempts left. A task with neither has used its one attempt.
- */
 const COUNTERS: Record<string, RuleCounters> = {
   'recover after too many restarts': { restarts: MAX_RESTARTS - 1 },
   'finish failed (worker crashed)': { attempts: 1, max_attempts: 3 },
@@ -45,7 +41,6 @@ const COUNTERS: Record<string, RuleCounters> = {
 };
 const countersOf = (name: string): RuleCounters => COUNTERS[name] ?? { attempts: 1, max_attempts: 1 };
 
-// event → status it is allowed from → status it leads to. Anything not listed must be refused.
 const ALLOWED: Record<string, Partial<Record<TaskStatus, TaskStatus>>> = {
   claim: { queued: 'running' },
   'finish done': { running: 'done', cancel_requested: 'cancelled' },

@@ -1,6 +1,4 @@
 <script setup lang="ts">
-// What the window shows while the daemon can't be reached: in the desktop app a button that starts it, in a browser the
-// command. The status query keeps polling (liveStatusQuery) and clears this screen once the daemon answers.
 import { ref } from 'vue';
 import { errorMessage } from '../../../../daemon/src/domain/shared/index.ts';
 import { isNative, startDaemon } from '../../platform/native';

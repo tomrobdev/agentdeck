@@ -1,15 +1,11 @@
-// How the source tree is laid out: the folder size (rule:folder-size), file size (rule:file-size) and context folder
-// (rule:context-folders) checks. Pure over a list of files; `readLayout` lists the real ones. Paths are relative to the repo root.
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 export interface LayoutFile {
   path: string;
-  /** Lines in a .ts or .vue file, 0 for any other. */
   lines: number;
 }
 
-/** The trees the checks cover. */
 export const LAYOUT_ROOTS = ['daemon/src', 'app/src', 'daemon/test'];
 
 export const MAX_FOLDER_FILES = 12;
@@ -17,7 +13,6 @@ export const MAX_FILE_LINES = 400;
 
 const SKIP = new Set(['node_modules', 'dist', 'target', '.DS_Store']);
 
-/** Every file under the layout roots of `repoRoot`, sorted by path. */
 export function readLayout(repoRoot: string): LayoutFile[] {
   const out: LayoutFile[] = [];
   for (const root of LAYOUT_ROOTS) {
@@ -31,7 +26,6 @@ export function readLayout(repoRoot: string): LayoutFile[] {
   return out.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 }
 
-/** The files directly in each folder. */
 export function filesByFolder(files: LayoutFile[]): Map<string, string[]> {
   const map = new Map<string, string[]>();
   for (const f of files) {
@@ -41,21 +35,18 @@ export function filesByFolder(files: LayoutFile[]): Map<string, string[]> {
   return map;
 }
 
-/** The folders with more than `MAX_FOLDER_FILES` files directly in them, with their counts. Subfolders do not count. */
 export function folderSizes(files: LayoutFile[]): Map<string, number> {
   return new Map(
     [...filesByFolder(files)].filter(([, list]) => list.length > MAX_FOLDER_FILES).map(([dir, list]) => [dir, list.length] as const),
   );
 }
 
-/** The files over `MAX_FILE_LINES` lines, with their line counts. */
 export function longFiles(files: LayoutFile[]): Map<string, number> {
   return new Map(
     files.filter((f) => f.lines > MAX_FILE_LINES && !f.path.startsWith('daemon/test/')).map((f) => [f.path, f.lines] as const),
   );
 }
 
-/** A listed entry may change size while it is listed; a new one, or a listed one that is back under the limit, fails. */
 function checkList(
   now: Map<string, number>,
   allowed: string[],
@@ -70,7 +61,6 @@ function checkList(
   };
 }
 
-/** [folder-size] The folders over the limit that are not on `allowed`, and the allowed ones that are not over it. */
 export function checkFolderSize(files: LayoutFile[], allowed: string[]): { found: string[]; stale: string[] } {
   return checkList(
     folderSizes(files),
@@ -82,7 +72,6 @@ export function checkFolderSize(files: LayoutFile[], allowed: string[]): { found
   );
 }
 
-/** [file-size] The files over the limit that are not on `allowed`, and the allowed ones that are not over it. */
 export function checkFileSize(files: LayoutFile[], allowed: string[]): { found: string[]; stale: string[] } {
   return checkList(
     longFiles(files),
@@ -94,13 +83,8 @@ export function checkFileSize(files: LayoutFile[], allowed: string[]): { found: 
   );
 }
 
-/** The eight bounded contexts, and `shared` for what belongs to none. */
 export const CONTEXT_FOLDERS = ['work', 'runs', 'landing', 'repos', 'capacity', 'proposals', 'operations', 'insights', 'shared'];
 
-/**
- * The folders whose files belong in context folders (rule:context-folders): what may sit directly in each (`shared`, each file with
- * why) and which folders may sit in it.
- */
 export const PLACED_FOLDERS: Record<string, { shared: Record<string, string>; folders: string[] }> = {
   'daemon/src/db': {
     shared: {
@@ -115,7 +99,6 @@ export const PLACED_FOLDERS: Record<string, { shared: Record<string, string>; fo
     },
     folders: CONTEXT_FOLDERS,
   },
-  // Adapters are grouped by the external system they talk to.
   'daemon/src/adapters': {
     shared: {},
     folders: ['claude', 'process', 'git', 'github', 'macos', 'local'],
@@ -136,7 +119,6 @@ export const PLACED_FOLDERS: Record<string, { shared: Record<string, string>; fo
   },
 };
 
-/** The files directly in a placed folder that are not shared ones, and its subfolders that are not context folders. */
 export function unplaced(files: LayoutFile[], folder: string, rule = PLACED_FOLDERS[folder]): { files: string[]; folders: string[] } {
   const prefix = `${folder}/`;
   const direct = files.filter((f) => f.path.startsWith(prefix) && !f.path.slice(prefix.length).includes('/')).map((f) => f.path);
@@ -151,7 +133,6 @@ export function unplaced(files: LayoutFile[], folder: string, rule = PLACED_FOLD
   };
 }
 
-/** [context-folders] The placed folders with loose files or unknown folders that are not on `allowed`, and the allowed ones with neither. */
 export function checkContextFolders(files: LayoutFile[], allowed: string[], placed = PLACED_FOLDERS): { found: string[]; stale: string[] } {
   const found: string[] = [];
   const stale: string[] = [];

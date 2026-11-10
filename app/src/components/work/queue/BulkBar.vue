@@ -11,8 +11,6 @@ import MenuItem from '../../ui/menu/MenuItem.vue';
 import MenuSeparator from '../../ui/menu/MenuSeparator.vue';
 import MenuSub from '../../ui/menu/MenuSub.vue';
 
-// `others` are the tasks a link may point at (the ones not picked). An edit leaves out the picked tasks that don't allow it;
-// the toast says which (lib/bulk.ts).
 defineProps<{ count: number; actions: BulkAction[]; busy: boolean; others: Pick<TaskSummary, 'id' | 'title'>[] }>();
 const { flash } = useActions();
 const emit = defineEmits<{
@@ -31,7 +29,6 @@ const AUTO_MERGE = [
 const open = ref(false);
 const linkTo = ref('');
 const linkInput = ref<HTMLInputElement | null>(null);
-// The #id typed, or the one a suggestion starts with ("#12 Title").
 const linkId = () => Number(/^#?(\d+)/.exec(linkTo.value.trim())?.[1] ?? 0);
 function link(kind: 'builds_on' | 'after', e?: Event) {
   const on = linkId();
@@ -69,7 +66,6 @@ function link(kind: 'builds_on' | 'after', e?: Event) {
       </MenuSub>
       <MenuSeparator />
       <MenuSub label="Link" @opened="linkInput?.focus()">
-        <!-- keydown.stop: the menu's typeahead and arrow keys must not take the letters and digits typed here. -->
         <input
           ref="linkInput"
           v-model="linkTo"

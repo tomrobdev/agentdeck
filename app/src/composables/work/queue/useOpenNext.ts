@@ -18,12 +18,10 @@ export function useOpenNext() {
       ...loadSetting<Omit<Filters, 'search'>>('filters', { states: [], repos: [], source: null }),
       search: '',
     };
-    // The queue's own order, rebuilt from the tasks and the stored view rather than read from the queue's state.
     const board = display.mode === 'board';
     const all = groupTasks(applyFilters(tasks.value, filters), board ? 'status' : display.groupBy, display.sort);
     return nextInReview(rowOrder(board ? boardGroups(all) : all, display), id);
   }
-  /** Opens the next task in review on its Changes tab; false when there is none. */
   function openNext(id: number): boolean {
     const next = nextAfter(id);
     if (next) openTask(next.id, 'changes');

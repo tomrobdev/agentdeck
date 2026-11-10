@@ -4,8 +4,6 @@ import { approveDialogSetting, setApproveDialogSetting } from '../../../composab
 import { APPROVE_DIALOG_SETTINGS, asApproveDialogSetting } from '../../../lib/work/approve-dialog';
 import RadioGroup from '../../ui/form/RadioGroup.vue';
 import SegmentedControl from '../../ui/form/SegmentedControl.vue';
-
-// How the dashboard looks and asks, both applied as you pick and remembered on this computer: nothing here is in the form.
 </script>
 
 <template>

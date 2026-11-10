@@ -1,5 +1,3 @@
-// Patches load as their file scrolls near the view. The query cache keeps them per head commit, so a patch or preview
-// seen before shows at once from it; these maps (here and in useFileText) only hold what this page is showing.
 import { type Ref, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import { useQueryClient } from '@tanstack/vue-query';
 import { diffQuery } from '../../../api/work';
@@ -8,7 +6,6 @@ import { errorMessage } from '../../../../../daemon/src/domain/shared/index.ts';
 
 export type PatchState = { state: 'loading' } | { state: 'error'; error: string } | { state: 'ok'; patch: FilePatch };
 
-/** `since` is the commit on the branch the patches are since; null (or none) for against the base. */
 export function useFilePatches(taskId: Ref<number>, head: Ref<string | null>, since: Ref<string | null> = ref(null)) {
   const queryClient = useQueryClient();
   const patches = reactive(new Map<string, PatchState>());
@@ -37,7 +34,6 @@ export function useFilePatches(taskId: Ref<number>, head: Ref<string | null>, si
   );
   const sections = new Set<HTMLElement>();
   const sectionRef = (ref: unknown) => {
-    // A component's ref is its instance; the section is its root element.
     const el = ref instanceof HTMLElement ? ref : (ref as { $el?: unknown } | null)?.$el;
     if (el instanceof HTMLElement && !sections.has(el)) {
       sections.add(el);
@@ -57,8 +53,6 @@ export function useFilePatches(taskId: Ref<number>, head: Ref<string | null>, si
     [head, since],
     () => {
       patches.clear();
-      // The sections stay (keyed by path), and observing a section already observed reports nothing, so the ones on
-      // screen would stay "Loading…": observe them afresh, which reports each one's visibility again.
       void nextTick(reobserve);
     },
     { immediate: true },

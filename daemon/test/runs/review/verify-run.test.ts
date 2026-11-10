@@ -1,6 +1,3 @@
-// The verify run: its prompt and schema, parsing its answer (good, partial, garbage), when one may start, how the latest
-// one reads and when it goes stale. Then whole runs on the fake claude: one stores its findings with the commit it read
-// and uses no attempt, a garbage answer ends it failed, and a reject or a claim ends one that is going.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
@@ -37,8 +34,6 @@ const { buildPrBody } = await import('../../../src/domain/landing/pull-request/p
 const { restartWait } = await import('../../../src/domain/operations/restart.ts');
 const { asRunId, asTaskId, testApp, waitFor } = await import('../../fixtures/fixtures.ts');
 const { VERDICT_MARKS, sortFindings, verifyHeadline } = await import('../../../../app/src/lib/runs/verify.ts');
-
-// ---- Pure
 
 const PROMPT = `## Goal
 Count the words in a file.
@@ -203,8 +198,6 @@ test('the dashboard: false claims first and marked failed, and the line with the
   );
 });
 
-// ---- With fake claude
-
 const db = testApp(openDb(join(home, 'test.db')));
 db.setSetting('max_concurrent', '3');
 db.setPaused(false);
@@ -269,7 +262,6 @@ test('a verify run stores its findings and the commit it read, uses no attempt, 
   assert.equal(db.slotsUsed(), 0);
   assert.equal(sh(repo.path, 'worktree', 'list').split('\n').length, 1, 'the scratch checkout is gone');
 
-  // Read-only, with its own turns, schema and system prompt.
   const args = fakeArgs().find((a) => a[a.indexOf('-p') + 1].startsWith(`AgentDeck verify run for task #${task.id}`))!;
   assert.equal(args[args.indexOf('--max-turns') + 1], '30');
   assert.match(args[args.indexOf('--append-system-prompt') + 1], /AgentDeck verify run/);
@@ -278,7 +270,6 @@ test('a verify run stores its findings and the commit it read, uses no attempt, 
   const denied = flagValues(args, '--disallowedTools');
   for (const tool of ['Edit', 'Write', 'NotebookEdit', 'Bash(git push*)']) assert.ok(denied.includes(tool), tool);
 
-  // The base moves on: the findings are marked stale.
   assert.equal(latestVerify(db.runsForTask(task.id), head)!.stale, false);
   writeFileSync(join(repo.path, 'other.txt'), 'more\n');
   sh(repo.path, 'add', '-A');
@@ -332,7 +323,6 @@ test('a claim ends the verify run of a queued task', async () => {
   const task = db.addTask({ repo_id: repo.id, title: 'claimed', prompt: 'FAKE_VERIFY_SLOW', status: 'queued' });
   const { done } = startVerify(db, task.id);
   await waitFor(() => verifyRuns(task.id)[0]?.pid, { what: 'the verify run to start claude' });
-  // The other tests' queued tasks are claimed first; a verify run does not keep this one from being claimed.
   while (db.getTask(task.id)!.status === 'queued') assert.ok(db.claimNextTask(), 'a claim');
   assert.equal((await done).outcome, 'cancelled');
   assert.equal(db.getTask(task.id)!.attempts, 1, 'only the claim used an attempt');

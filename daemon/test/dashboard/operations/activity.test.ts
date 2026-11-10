@@ -34,7 +34,7 @@ test('a running task and a waiting merge request are two rows', () => {
       ['merge', 2, 'overview', true],
     ],
   );
-  assert.ok(items[0]!.doing.endsWith(' · turn 4/40 · Edit a.ts'), items[0]!.doing); // describeLive reads the clock
+  assert.ok(items[0]!.doing.endsWith(' · turn 4/40 · Edit a.ts'), items[0]!.doing);
   assert.equal(items[1]!.doing, 'Merging when ready · 2 checks running');
   assert.equal(items[1]!.took, '5m');
 });

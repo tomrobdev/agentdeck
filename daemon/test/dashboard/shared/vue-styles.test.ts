@@ -14,8 +14,6 @@ function vueFiles(dir: string): string[] {
 }
 
 test('no scoped style puts selectors after :global(…)', () => {
-  // Vue keeps only what is inside :global() and drops the rest, so `:global(:root[data-theme='x']) .chip { color: … }`
-  // becomes `:root[data-theme='x'] { color: … }` and recolours the whole page. Write `:root[data-theme='x'] .chip` instead.
   const found: string[] = [];
   for (const file of vueFiles(APP)) {
     const text = readFileSync(file, 'utf8');

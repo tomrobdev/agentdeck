@@ -1,5 +1,3 @@
-// The github adapter's merge, against a fake `gh` on PATH: the merge is pinned to the head it was decided on, and a
-// refusal because the head moved comes back as an error mergeFailure reads as `head_moved`.
 import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -8,7 +6,6 @@ import { test } from 'node:test';
 
 const bin = mkdtempSync(join(tmpdir(), 'agentdeck-gh-'));
 const argsFile = join(bin, 'args');
-// Writes its arguments one per line; fails as GitHub does when FAKE_GH_FAIL is set.
 writeFileSync(
   join(bin, 'gh'),
   `#!/bin/sh\nprintf '%s\\n' "$@" > '${argsFile}'\nif [ -n "$FAKE_GH_FAIL" ]; then echo "$FAKE_GH_FAIL" >&2; exit 1; fi\n`,

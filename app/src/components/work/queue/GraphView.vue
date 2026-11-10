@@ -5,16 +5,13 @@ import { DEFAULT_SIZE, chainOf, edgesOf, graphTasks, layoutGraph, stuckSet } fro
 import { cut } from '../../../../../daemon/src/domain/shared/index.ts';
 import StatusIcon from '../../ui/status/StatusIcon.vue';
 
-// Linked tasks as a layered graph: builds-on edges solid, after edges dashed, a stuck chain outlined in the blocked colour.
 const props = defineProps<{
   all: TaskSummary[];
   shown: TaskSummary[];
   selected: number | null;
   showFinished: boolean;
-  /** The tasks picked for a bulk action. */
   picked?: number[];
 }>();
-// A shift-click picks the task with the unfinished tasks it builds on (`pickChain`), and does not open the page.
 const emit = defineEmits<{ open: [id: number]; select: [id: number]; pickChain: [id: number] }>();
 
 function onClick(e: MouseEvent, id: number) {
@@ -39,7 +36,6 @@ const stuck = computed(() => stuckSet(props.all));
 const pos = computed(() => new Map(layout.value.nodes.map((n) => [n.id, n])));
 const lit = computed(() => (hover.value === null ? null : chainOf(hover.value, layout.value.edges)));
 
-/** A smooth curve from the right edge of the dependency to the left edge of the dependent. */
 function path(from: number, to: number): string {
   const a = pos.value.get(from)!;
   const b = pos.value.get(to)!;

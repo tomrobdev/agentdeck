@@ -15,10 +15,8 @@ import Markdown from '../../ui/Markdown.vue';
 import Chip from '../../ui/Chip.vue';
 import SegmentedControl from '../../ui/form/SegmentedControl.vue';
 
-// Browse the task's branch (or its base) from git, with line links: #/tasks/16/code?ref=head&path=…&L=10-20
 const props = defineProps<{ task: TaskDetail; query: Record<string, string>; changed: Set<string> }>();
 
-// The task's id as its own computed: the 2 s poll replaces the task object, and keying on it would refetch.
 const taskId = computed(() => props.task.id);
 const ref_ = computed<FileRef>(() => (props.query.ref === 'base' ? 'base' : 'head'));
 const path = computed(() => props.query.path ?? null);
@@ -33,12 +31,10 @@ function setQuery(patch: Record<string, string | null>, replace = false) {
   go({ name: 'task', id: taskId.value, tab: 'code', query: query as Record<string, string> }, { replace });
 }
 
-// What is at a commit never changes, so folders and files are keyed by it and seen again without a request.
 const queryClient = useQueryClient();
 const { head, base } = useCommits(taskId);
 const commit = computed(() => (ref_.value === 'base' ? base.value : head.value));
 
-// A new loader per task, ref and commit resets the tree.
 const loadTree = computed(() => {
   const id = taskId.value;
   const r = ref_.value;

@@ -20,19 +20,14 @@ import QueuePage from './pages/QueuePage.vue';
 import TaskPage from './pages/TaskPage.vue';
 import { route } from './router';
 
-// The frame: providers, header, the page the route names, status bar and overlays. Each page reads its own queries.
 const statusQ = useQuery(liveStatusQuery());
-// The change stream refetches what is on screen; status also refetches on a timer (liveStatusQuery).
 useChangeStream();
 useAppLinks();
-// The status bar's activity list is built from the task list, which every page reads.
 const tasksQ = useQuery(tasksQuery());
 const offline = computed(() => isOffline(statusQ.error.value));
 
-// After a change any of it may have moved (the Repos panel adds, archives and edits repos too).
 const queryClient = useQueryClient();
 const actions = provideActions(() => refreshAll(queryClient), useToasts().flash);
-// Every way to approve goes through this gate; Overlays shows its dialog.
 provideApprovals(queryClient, actions);
 const { status, pausing, togglePause } = usePause(actions);
 </script>

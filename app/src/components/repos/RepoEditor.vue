@@ -11,8 +11,6 @@ import { plural } from '../../../../daemon/src/domain/shared/index.ts';
 import NumberInput from '../ui/form/NumberInput.vue';
 import Switch from '../ui/form/Switch.vue';
 
-// One repo's editor. Mounted with :key="repo.id", so every answer it waits for is this repo's, and
-// switching repos mid-request never shows or overwrites another one.
 const props = defineProps<{ repo: Repo }>();
 const emit = defineEmits<{ archived: [] }>();
 const { run } = useActions();
@@ -22,7 +20,6 @@ const id = props.repo.id;
 const q = useQuery(repoQuery(id));
 const detail = computed(() => q.data.value);
 const lastPlannerRun = computed(() => detail.value?.planner_runs[0]);
-// What the saved repo runs with, which the form's edits change only once saved.
 const toolsInUse = computed(() => {
   const d = detail.value;
   if (!d?.tools_source) return '';
@@ -31,7 +28,6 @@ const toolsInUse = computed(() => {
     : `In use: the defaults plus the rules detected from its toolchain (${d.toolchain ?? 'none found'}).`;
 });
 
-// Copied into the form once, from the read made on opening; later refetches leave the edits alone.
 const form = ref<RepoForm | null>(null);
 watch(
   () => (q.isFetchedAfterMount.value && !q.error.value ? q.data.value : undefined),

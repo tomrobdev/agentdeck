@@ -1,6 +1,3 @@
-// A daemon restart mid-run: claude's session is stored as soon as claude names it, recovery ends the run
-// `interrupted`, and the task's next run resumes that session without using an attempt. The decisions are tested
-// pure first, then with real daemon processes (`run-once`) stopped by SIGTERM, real git and SQLite, and fake claude.
 import assert from 'node:assert/strict';
 import { execFileSync, spawn } from 'node:child_process';
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
@@ -15,7 +12,6 @@ import { type Task, stopReasonOf } from '../../../src/domain/work/task/task.ts';
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-resume-'));
 process.env.AGENTDECK_HOME = home;
 process.env.AGENTDECK_NO_NOTIFY = '1';
-// run-once refuses to start while a daemon answers on the API port: a port nothing answers on, not the live daemon's.
 process.env.AGENTDECK_PORT = '0';
 const fake = join(import.meta.dirname, '../../fixtures/fake-claude.mjs');
 chmodSync(fake, 0o755);
@@ -28,8 +24,6 @@ const { MAX_RESTARTS } = await import('../../../src/domain/work/lifecycle/lifecy
 const { INTERRUPTED, editsSinceCutOff, pickRun, resultFields, resumableSession, resumeFailed, resumeMaxTurns } =
   await import('../../../src/domain/runs/run.ts');
 const { buildPrompt, buildResumePrompt, claudeArgs } = await import('../../../src/domain/runs/prompt.ts');
-
-// --- The decisions, pure ---
 
 let ids = 0;
 const run = (o: Partial<Run>): Run => ({
@@ -71,19 +65,15 @@ test('resumableSession: the session of the attempt’s interrupted run, and only
   assert.equal(resumableSession(on, [run({ session_id: 's1' })]), 's1');
   assert.equal(resumableSession(on, [run({ session_id: 's1', outcome: 'failed' })]), null, 'a real failure starts afresh');
   assert.equal(resumableSession(on, [run({ session_id: null })]), null, 'claude never named a session');
-  // A person's retry after the task failed or was cancelled is a new attempt, and a new session.
   assert.equal(resumableSession({ attempts: 2 }, [run({ session_id: 's1' })]), null);
-  // A second restart before claude started (say, during setup) does not lose the session.
   assert.equal(resumableSession(on, [run({ session_id: 's1' }), run({ session_id: null })]), 's1');
   assert.equal(resumableSession(on, [run({ session_id: 's1' }), run({ session_id: 's2' })]), 's2', 'the newest one');
-  // A resolve run is not the task's work, and an earlier finished run ends the search.
   assert.equal(resumableSession(on, [run({ session_id: 's1' }), run({ kind: 'resolve', session_id: 'r' })]), 's1');
   assert.equal(resumableSession(on, [run({ session_id: 's1', outcome: 'done' }), run({ session_id: null })]), null);
 });
 
 test('resumableSession looks past a rate-limited run of the attempt, back to the interrupted one', () => {
   const on = { attempts: 1 };
-  // The resume was rate limited (or the pre-run sync's resolve run was): the session is still the one to continue.
   assert.equal(resumableSession(on, [run({ session_id: 's1' }), run({ outcome: 'rate_limited', session_id: null })]), 's1');
   assert.equal(resumableSession(on, [run({ session_id: 's1' }), run({ outcome: 'rate_limited', session_id: 's1' })]), 's1');
   assert.equal(
@@ -110,7 +100,6 @@ test('editsSinceCutOff: a prompt or plan edited after the cut-off run ended, and
   assert.deepEqual(editsSinceCutOff(on, runs, { own: [edit('title'), edit('priority, max_turns')] }), [], 'the session needs no new text');
   assert.deepEqual(editsSinceCutOff(on, runs, { own: [edit('prompt', '2026-11-01 10:04:00')] }), [], 'the session saw it');
   assert.deepEqual(editsSinceCutOff(on, runs, { own: [{ type: 'retry', reason: 'prompt', at: '2026-11-01 10:06:00' }] }), []);
-  // The plan it follows belongs to another task, which replaced it; that task's prompt is not this one's.
   assert.deepEqual(editsSinceCutOff(on, runs, { own: [], planOwner: [edit('prompt'), edit('plan_task, plan')] }), ['plan']);
   assert.deepEqual(editsSinceCutOff(on, [run({ session_id: null })], { own: [edit('prompt')] }), [], 'no session to resume');
 });
@@ -196,13 +185,10 @@ test('a fresh run after a restart still names the earlier attempt’s failed tes
   assert.match(prompt, /The test command failed after the previous attempt\./);
   assert.match(prompt, /Previous final message:\nAdded the cache\./);
   assert.doesNotMatch(prompt, /daemon restarted/, 'nothing from the interrupted run');
-  // Not interrupted: as before.
   const retry = buildPrompt({ ...task, attempts: 2 }, [failed]);
   assert.match(retry, /--- This is attempt 2\. The previous attempt ended as "failed"\. ---\nThe test command failed/);
   assert.doesNotMatch(retry, /daemon restart/);
 });
-
-// --- Real restarts ---
 
 const CLI = join(import.meta.dirname, '../../../src/cli.ts');
 const db = openDb(DB_PATH);
@@ -223,9 +209,7 @@ before(() => {
 
 after(() => db.close());
 
-/** The next daemon, in this process: it recovers what the last one left running, then works the queue. */
 const drain = () => new Scheduler(db, { once: true, tickMs: 50, log: () => {} }).run();
-/** Every fake claude's arguments, oldest first. */
 const calls = (): string[][] =>
   readFileSync(join(home, 'fake-claude-args.log'), 'utf8')
     .trim()
@@ -234,10 +218,6 @@ const calls = (): string[][] =>
 const promptOf = (args: string[]) => args[args.indexOf('-p') + 1];
 const resumeOf = (args: string[]) => (args.includes('--resume') ? args[args.indexOf('--resume') + 1] : null);
 
-/**
- * Start a daemon (`run-once`) in its own process and wait until the task has a run newer than `afterRun` that claude
- * has named a session for and that has not ended; then stop the daemon as launchd does, with SIGTERM. Returns the run.
- */
 async function restartMidRun(taskId: TaskId, afterRun = 0): Promise<Run> {
   const daemon = spawn(process.execPath, [CLI, 'run-once'], { env: process.env, stdio: ['ignore', 'pipe', 'pipe'] });
   let output = '';
@@ -284,7 +264,6 @@ test('a restart mid-run: the next run resumes the session and uses no attempt', 
   assert.equal(resumeOf(fresh), null);
   assert.equal(resumeOf(resumed), cut.session_id);
   assert.match(promptOf(resumed), /AgentDeck restarted while you were working/);
-  // Everything else is the fresh run's: settings, tool rules, system prompt, model and turn limit.
   const rest = (args: string[]) =>
     args.filter((_, i) => i !== args.indexOf('-p') + 1).filter((a) => a !== '--resume' && a !== cut.session_id);
   assert.deepEqual(rest(resumed), rest(fresh));
@@ -294,7 +273,6 @@ test('a restart mid-run: the next run resumes the session and uses no attempt', 
 
 test('a resume whose session is gone falls back to a fresh run, in the same run', async () => {
   const added = db.addTask({ repo_id: repoId, title: 'lost session', prompt: 'FAKE_DONE after a lost session' });
-  // A run a restart cut off, whose session claude no longer has.
   const claimed = db.claimNextTask()!;
   assert.equal(claimed.id, added.id);
   const cut = db.startRun(added.id, claimed.attempts, join(LOG_DIR, `task-${added.id}-attempt-1.jsonl`));
@@ -319,7 +297,6 @@ test('a resume whose session is gone falls back to a fresh run, in the same run'
 
 test('a task whose prompt was edited while it waited starts afresh instead of resuming the old session', async () => {
   const added = db.addTask({ repo_id: repoId, title: 'edited while queued', prompt: 'FAKE_BLOCKED the old prompt' });
-  // A run a restart cut off, whose session claude still has: resumed, it would follow the old prompt and block.
   const claimed = db.claimNextTask()!;
   assert.equal(claimed.id, added.id);
   const cut = db.startRun(added.id, claimed.attempts, join(LOG_DIR, `task-${added.id}-attempt-1.jsonl`));
@@ -345,7 +322,6 @@ test('a task whose resumed runs keep being interrupted fails at MAX_RESTARTS', a
   const added = db.addTask({ repo_id: repoId, title: 'never finishes', prompt: 'FAKE_SLOW forever' });
   const cut: Run[] = [];
   for (let i = 0; i < MAX_RESTARTS; i++) cut.push(await restartMidRun(added.id, cut.at(-1)?.id ?? 0));
-  // The daemon after the last restart: too many restarts, so the task fails instead of resuming again.
   assert.deepEqual(db.recoverOrphans(), { requeued: 0, failed: [added.id] });
   const t = db.getTask(added.id)!;
   assert.equal(t.status, 'failed');
@@ -353,7 +329,6 @@ test('a task whose resumed runs keep being interrupted fails at MAX_RESTARTS', a
   assert.equal(t.attempts, 1, 'no restart used an attempt');
   assert.match(t.stop_reason!, new RegExp(`restarted ${MAX_RESTARTS} times`));
   const runs = db.runsForTask(t.id);
-  // The runs cut off while the task went back to the queue end interrupted; the last, cut off as it failed, ends failed.
   assert.deepEqual(
     runs.map((r) => [r.attempt, r.outcome]),
     runs.map((r, i) => [1, i === runs.length - 1 ? 'failed' : INTERRUPTED]),

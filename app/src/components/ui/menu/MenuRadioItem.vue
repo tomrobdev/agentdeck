@@ -2,7 +2,6 @@
 import { DropdownMenuItemIndicator, DropdownMenuRadioItem } from 'reka-ui';
 import { MENU_ITEM } from './menu';
 
-// One choice in a MenuRadioGroup. The menu closes after a pick unless `keepOpen`.
 const props = defineProps<{ value: string; keepOpen?: boolean }>();
 const stay = (e: Event) => props.keepOpen && e.preventDefault();
 </script>

@@ -1,5 +1,4 @@
 // Every dashboard theme, in both modes, must pass WCAG AA (4.5:1 for text, 3:1 for control edges and icons).
-// Reads app/src/styles/themes.css and checks the pairs the dashboard actually draws, including the tinted backgrounds.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
@@ -9,7 +8,6 @@ type Rgb = [number, number, number];
 
 const css = readFileSync(new URL('../../../../app/src/styles/themes.css', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
 
-/** `selector { --a: b; }` rules, with the `@media (prefers-color-scheme: dark)` ones tagged. */
 function rules(source: string, media = false): { selector: string; vars: Vars; media: boolean }[] {
   const out: { selector: string; vars: Vars; media: boolean }[] = [];
   let i = 0;
@@ -56,7 +54,6 @@ function ratio(a: Rgb, b: Rgb) {
   const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
   return (hi + 0.05) / (lo + 0.05);
 }
-/** `color-mix(in srgb, fg pct%, bg)`, which is how the dashboard tints. */
 const mix = (fg: Rgb, pct: number, bg: Rgb): Rgb => fg.map((c, k) => c * (pct / 100) + bg[k] * (1 - pct / 100)) as Rgb;
 
 const STATUS = ['queued', 'running', 'done', 'blocked', 'failed', 'cancelled', 'merged'];
@@ -74,7 +71,6 @@ function problems(p: Vars): string[] {
 
   for (const s of codeSurfaces) for (const t of ['text', 'muted']) need(`${t} on ${s}`, c(t), c(s), 4.5);
   for (const s of surfaces) need(`accent on ${s}`, c('accent'), c(s), 4.5);
-  // Fields and checkboxes sit on cards and on the page, not on header strips.
   for (const s of ['panel', 'bg']) need(`border-input on ${s}`, c('border-input'), c(s), 3);
   need('accent-fg on accent', c('accent-fg'), c('accent'), 4.5);
   const soft = mix(c('accent'), 14, c('panel'));
@@ -82,17 +78,14 @@ function problems(p: Vars): string[] {
 
   for (const name of ['accent', ...STATUS]) {
     for (const s of surfaces) if (name !== 'accent') need(`${name} on ${s}`, c(name), c(s), 4.5);
-    // Pills tint their own colour over the page or a card: 14%, and 16% on the task page's header.
     need(`${name} pill on bg`, c(name), mix(c(name), 14, c('bg')), 4.5);
     need(`${name} pill on panel`, c(name), mix(c(name), 14, c('panel')), 4.5);
     need(`${name} task page pill`, c(name), mix(c(name), 16, c('panel')), 4.5);
   }
 
-  // The run log's tool colours sit on the log's surface and on cards.
   for (const name of ['tool-read', 'tool-edit', 'tool-cmd'])
     for (const s of ['code-bg', 'panel']) need(`${name} on ${s}`, c(name), c(s), 4.5);
 
-  // Code: the viewer, and the diff's tinted lines, gutters and highlighted line.
   const diff: [string, Rgb][] = [
     ['added line', mix(c('done'), 14, c('panel'))],
     ['removed line', mix(c('failed'), 13, c('panel'))],
@@ -108,7 +101,6 @@ function problems(p: Vars): string[] {
     for (const s of codeSurfaces) need(`${h} on ${s}`, c(h), c(s), 4.5);
     for (const [name, bg] of diff) need(`${h} on ${name}`, c(h), bg, 4.5);
   }
-  // The highlighted line's gutter and the code on it use --text; only the other tints carry --muted (line numbers, +/- signs).
   for (const [name, bg] of [...diff, ...gutters]) {
     need(`text on ${name}`, c('text'), bg, 4.5);
     if (!name.startsWith('highlighted')) need(`muted on ${name}`, c('muted'), bg, 4.5);

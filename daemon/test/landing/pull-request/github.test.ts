@@ -7,7 +7,6 @@ import { test } from 'node:test';
 
 const { github, failure } = await import('../../../src/adapters/github/github.ts');
 
-/** Put a fake `gh` first on PATH that runs `script`. */
 function fakeGh(script: string): void {
   const dir = mkdtempSync(join(tmpdir(), 'agentdeck-gh-'));
   const bin = join(dir, 'gh');
@@ -17,7 +16,6 @@ function fakeGh(script: string): void {
 }
 
 test('a timed-out gh says so and does not quote its arguments', () => {
-  // What execFile throws when its timeout kills the child: the message quotes the whole command line.
   const err = Object.assign(new Error('Command failed: gh pr create --title t --body SECRET-BODY'), {
     killed: true,
     signal: 'SIGTERM',

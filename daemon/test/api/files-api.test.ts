@@ -30,7 +30,7 @@ let taskId: TaskId;
 let noBranchId: TaskId;
 let goneBranchId: TaskId;
 let mergeBaseSha = '';
-const BIG = 'x'.repeat(99) + '\n'; // 100 bytes a line
+const BIG = 'x'.repeat(99) + '\n';
 
 before(() => {
   mkdirSync(repoPath);
@@ -55,11 +55,10 @@ before(() => {
   writeFileSync(join(repoPath, 'added.txt'), 'hello\n');
   git('add', '-A');
   git('commit', '-q', '-m', 'Change things');
-  writeFileSync(join(repoPath, 'big.txt'), BIG.repeat(6000)); // 600 KB: over both limits
+  writeFileSync(join(repoPath, 'big.txt'), BIG.repeat(6000));
   git('add', '-A');
   git('commit', '-q', '-m', 'Add a big file');
 
-  // main moves on after the branch left it: none of this belongs to the task.
   git('checkout', '-q', 'main');
   writeFileSync(join(repoPath, 'main-only.txt'), 'later\n');
   git('add', '-A');
@@ -191,7 +190,6 @@ test('/file reads text, binary and oversized files from git objects', async () =
   assert.equal(big.body.truncated, true);
   assert.equal(Buffer.byteLength(big.body.text), 512 * 1024);
 
-  // Uncommitted changes in the checkout are never shown.
   git('checkout', '-q', 'agentdeck/task-1');
   writeFileSync(join(repoPath, 'a.txt'), 'dirty\n');
   try {
@@ -242,7 +240,6 @@ test('a task with no branch, or a branch that is gone, answers 400 task has no b
 });
 
 test('the base is the newer merge base of the local base branch and origin/<base>', async () => {
-  // origin/main is ahead of local main, and the task branch started from it.
   git('checkout', '-q', '-b', 'upstream', 'main');
   writeFileSync(join(repoPath, 'upstream.txt'), 'fetched\n');
   git('add', '-A');

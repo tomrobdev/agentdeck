@@ -1,8 +1,6 @@
 <script setup lang="ts" generic="K extends string">
 import { RadioGroupItem, RadioGroupRoot } from 'reka-ui';
 
-// A short list of choices, each with a label and a hint. Arrow keys move between them. `cards` lays them out in two
-// columns, each choice a bordered card with its hint beside the label.
 defineProps<{ options: { key: K; label: string; hint?: string }[]; label: string; cards?: boolean }>();
 const model = defineModel<K>({ required: true });
 </script>

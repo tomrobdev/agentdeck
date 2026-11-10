@@ -8,10 +8,6 @@ import { launchAtLogin, setLaunchAtLogin } from '../../platform/native';
 import { errorMessage } from '../../../../daemon/src/domain/shared/index.ts';
 import { useActions } from '../shared/useActions';
 
-/**
- * The settings panel's state: the form to edit (a copy of the daemon's settings), the commands kept on this computer, the
- * login item, and the save and test. `close` runs after a save that should shut the panel.
- */
 export function useSettingsForm(close: () => void) {
   const { run } = useActions();
   const form = ref<SettingsForm | null>(null);
@@ -26,7 +22,6 @@ export function useSettingsForm(close: () => void) {
     form.value = toSettingsForm(s);
   }
 
-  // The form is a copy to edit: it takes the first answer, and a save replaces it. Later refetches don't touch it.
   const settingsQ = useQuery(settingsQuery());
   watch(
     () => settingsQ.data.value,

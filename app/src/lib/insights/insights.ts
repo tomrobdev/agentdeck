@@ -1,5 +1,4 @@
 // The Insights page's numbers: each scorecard measure as a value per week, set against the pilot's target.
-// Pure: the targets and the week a stamp falls in are the daemon's (domain/insights/scorecard.ts, domain/shared/time.ts).
 import type { Stats } from '../../../../daemon/src/api/contract/insights.ts';
 import { SCORECARD_TARGETS } from '../../../../daemon/src/domain/insights/index.ts';
 import { plural } from '../../../../daemon/src/domain/shared/index.ts';
@@ -10,12 +9,9 @@ export type MeasureKey = 'first_run' | 'interventions' | 'cost' | 'minutes' | 'r
 export interface Measure {
   key: MeasureKey;
   label: string;
-  /** What a lower or higher value means for the pilot, in a line. */
   hint: string;
-  /** The target line on the chart and in the card; null where the scorecard has none yet. */
   target: { value: number; goal: 'atLeast' | 'atMost'; text: string } | null;
   format: (v: number) => string;
-  /** The top of the chart's scale when the data is below it (percentages stay on 0–1). */
   floor?: number;
 }
 
@@ -69,35 +65,28 @@ export const MEASURES: Measure[] = [
 export interface WeekPoint {
   week: string;
   value: number | null;
-  /** The size of what the value is over, e.g. "3 of 4 first runs"; null when there is nothing. */
   detail: string | null;
 }
 
 export interface Series {
   measure: Measure;
-  /** Every week from the first with data to this one, oldest first; a week without data has a null value. */
   points: WeekPoint[];
-  /** The value over all weeks shown where it adds up (quota), else null. */
   total: number | null;
-  /** Whether this week's value, or the total for quota, meets the target; null with no target or no data. */
   met: boolean | null;
 }
 
 const DAY_MS = 86_400_000;
 
-/** The Mondays from `first` to `last`, both "YYYY-MM-DD". */
 function weeksBetween(first: string, last: string): string[] {
   const out: string[] = [];
   for (let t = Date.parse(first); t <= Date.parse(last); t += 7 * DAY_MS) out.push(new Date(t).toISOString().slice(0, 10));
   return out;
 }
 
-/** The Monday of the week `now` falls in. */
 export const thisWeek = (now: Date = new Date()): string => weekOf(sqliteUtc(now.toISOString()));
 
 const ratio = (done: number, of: number, what: string) => (of ? `${done} of ${of} ${what}` : null);
 
-/** One series per measure from a `by=week` report. `now` only decides the last week shown. */
 export function seriesOf(stats: Stats, now: Date = new Date()): Series[] {
   const runs = new Map(stats.weeks.map((w) => [w.week, w.measures]));
   const card = new Map(stats.scorecard.weeks.map((w) => [w.week, w]));
@@ -144,11 +133,9 @@ export function seriesOf(stats: Stats, now: Date = new Date()): Series[] {
   });
 }
 
-/** The week as a short label: "Oct 27". */
 export function weekLabel(week: string): string {
   const d = new Date(`${week}T00:00:00Z`);
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
 }
 
-/** Whether any series has a value in any week; false when there is nothing to chart. */
 export const hasData = (series: Series[]): boolean => series.some((s) => s.points.some((p) => p.value !== null));

@@ -1,6 +1,3 @@
-// The catalogues behind docs/reference/models.md, use-cases.md and state-machines.md. Entities and use cases are read with the
-// TypeScript type checker from the exported types and from application/actions.ts; state machines are read from their rule tables.
-// Deterministic: sorted, no absolute paths.
 import { join } from 'node:path';
 import ts from 'typescript';
 import { COMMENT_MOVES, COMMENT_STATES } from '../../src/domain/landing/review/review.ts';
@@ -19,7 +16,6 @@ const SRC = join(import.meta.dirname, '../../src');
 const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 const escapeCell = (s: string) => s.replace(/\|/g, '\\|').replace(/\n/g, ' ');
 
-/** A markdown table laid out as Prettier lays it out, so the file stays formatted. */
 function table(headers: string[], rows: string[][]): string {
   const cells = [headers, ...rows].map((r) => r.map(escapeCell));
   const widths = headers.map((_, i) => Math.max(3, ...cells.map((r) => r[i].length)));
@@ -30,7 +26,6 @@ function table(headers: string[], rows: string[][]): string {
 const code = (s: string) => `\`${s.replace(/`/g, "'")}\``;
 
 let cached: ts.Program | undefined;
-/** One type-checked program over daemon/src, shared by the catalogues. */
 function program(): ts.Program {
   if (cached) return cached;
   const root = join(SRC, '..');
@@ -44,7 +39,6 @@ function program(): ts.Program {
 const typeText = (checker: ts.TypeChecker, type: ts.Type) =>
   checker.typeToString(type, undefined, ts.TypeFormatFlags.NoTruncation | ts.TypeFormatFlags.UseAliasDefinedOutsideCurrentScope);
 
-/** The comment on a declaration: its JSDoc, or the `//` comment trailing it on its line. */
 function commentOf(node: ts.Node): string {
   const text = node.getSourceFile().getFullText();
   const docs = ts.getJSDocCommentsAndTags(node).filter(ts.isJSDoc);
@@ -55,7 +49,6 @@ function commentOf(node: ts.Node): string {
     .trim();
   if (doc) return doc;
   const trailing = ts.getTrailingCommentRanges(text, node.getEnd()) ?? [];
-  // A property's `;` comes after the node's end, so look past it.
   const after = text.slice(node.getEnd()).match(/^[ \t]*[;,]?[ \t]*\/\/\s?([^\n]*)/);
   if (after) return after[1].trim();
   return trailing
@@ -76,7 +69,6 @@ interface Model {
   fields: { name: string; type: string; optional: boolean; comment: string }[];
 }
 
-/** Every exported interface and object-type alias under domain/, with its fields as the checker sees them. */
 export function readModels(): Model[] {
   const prog = program();
   const checker = prog.getTypeChecker();
@@ -108,7 +100,6 @@ export function readModels(): Model[] {
   return out.sort((a, b) => cmp(a.folder, b.folder) || cmp(a.name, b.name));
 }
 
-/** An alias of an object literal type, or of an intersection or Omit/Pick of object types (not a union). */
 function isObjectAlias(node: ts.TypeNode): boolean {
   if (ts.isTypeLiteralNode(node)) return true;
   if (ts.isIntersectionTypeNode(node)) return node.types.every(isObjectAlias) || node.types.some(ts.isTypeReferenceNode);
@@ -139,14 +130,11 @@ export function modelsBody(): string {
 export interface UseCase {
   name: string;
   kind: 'function' | 'type' | 'value';
-  /** The signature's parameters, or null for a type or value. */
   input: string | null;
   output: string;
-  /** The adapters the file that declares it imports, or `adapter` when the adapter itself is exported. */
   adapters: string[];
 }
 
-/** Every export of application/actions.ts, resolved through its re-exports, with the adapters its declaring file imports. */
 export function readUseCases(): UseCase[] {
   const prog = program();
   const checker = prog.getTypeChecker();
@@ -201,15 +189,12 @@ export function useCasesBody(): string {
 
 export interface StateMachine {
   name: string;
-  /** Where the rule table is: file under daemon/src and constant name. */
   source: { file: string; constant: string };
-  /** What the table is keyed by: the events or actions. */
   moves: string;
   states: readonly string[];
   rules: Record<string, Partial<Record<string, string>>>;
 }
 
-/** The state machines of domain/, each a rule table. A new one is added here and the generator lists it. */
 export const STATE_MACHINES: StateMachine[] = [
   {
     name: 'Task lifecycle',
@@ -227,7 +212,6 @@ export const STATE_MACHINES: StateMachine[] = [
   },
 ];
 
-/** State types in domain/ that no rule table drives, each with why. A state that becomes a table moves to STATE_MACHINES. */
 export const NOT_YET_TABLES: Record<string, string> = {
   PrState: 'a pull request moves by what GitHub reports (domain/landing/pull-request/pr.ts), not by an event table yet',
   MergeRequestView:
@@ -275,7 +259,6 @@ export function stateMachinesBody(): string {
       table([m.moves[0].toUpperCase() + m.moves.slice(1), 'Moves'], rows),
     );
   }
-  // domain event → rule key → the statuses it moves from to make that event
   const causes = new Map<string, Map<RuleKey, TaskStatus[]>>();
   for (const [key, rule] of Object.entries(RULES) as [RuleKey, Partial<Record<TaskStatus, TaskStatus>>][]) {
     for (const [from, to] of Object.entries(rule) as [TaskStatus, TaskStatus][]) {
@@ -310,7 +293,6 @@ export function stateMachinesBody(): string {
   return sections.join('\n\n');
 }
 
-/** The exported string-literal union types under domain/ named `…State` or `…Status`, and the constants typed as rule tables. */
 export function readStateTypes(): { states: string[]; tables: { file: string; constant: string }[] } {
   const prog = program();
   const checker = prog.getTypeChecker();
@@ -330,7 +312,6 @@ export function readStateTypes(): { states: string[]; tables: { file: string; co
         for (const d of stmt.declarationList.declarations) {
           if (!ts.isIdentifier(d.name)) continue;
           const text = typeText(checker, checker.getTypeAtLocation(d.name));
-          // Record<K, Partial<Record<S, S>>>: event or action → current state → next state.
           if (/^Record<[^]*Partial<Record<[^]*>>>$/.test(text)) tables.push({ file: source.path, constant: d.name.text });
         }
       }

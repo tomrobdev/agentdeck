@@ -39,7 +39,6 @@ const EVENT_OF: Record<RuleKey, TaskEvent> = {
   'recover:exhausted': { type: 'recover' },
 };
 
-/** A task in `from`, ready for rule `key`: one restart short of too many for the last recover. */
 const taskFor = (key: RuleKey, from: TaskStatus) => ({
   ...stateIn(from),
   id,
@@ -63,14 +62,6 @@ const stateIn = (status: TaskStatus): TaskState => {
   }
 };
 
-/**
- * What followed each move before the table, read off the code it replaced:
- * - the claim (claimNextTask) was followed by nothing;
- * - a person's cancel and reject warned dependents, and approve, retry and mark_done did nothing;
- * - crash recovery followed up only the tasks it failed (settleRecovered), as any daemon event but without a PR;
- * - any other daemon event (settle) opened the PR when the task was done unless its PR had just merged, always warned
- *   dependents, and notified, which sent something only for done, blocked and failed.
- */
 function before(key: RuleKey, to: TaskStatus): FollowUp[] {
   if (key === 'claim') return [];
   if (key === 'cancel' || key === 'reject') return ['warn_dependents'];
@@ -81,19 +72,15 @@ function before(key: RuleKey, to: TaskStatus): FollowUp[] {
   return [...(openPr ? ['open_pr' as const] : []), 'warn_dependents', ...(notifies ? ['notify' as const] : [])];
 }
 
-/** The statuses whose warning found no one stuck, so the table leaves it out. */
 const WARNS_NO_ONE: Exclude<TaskStatus, 'done'>[] = ['queued', 'running', 'cancel_requested'];
 const warnsNoOne = (s: TaskStatus) => (WARNS_NO_ONE as TaskStatus[]).includes(s);
 
-/** The rule keys a person asks for; the daemon asks for every other. */
 const BY_PERSON: RuleKey[] = ['approve', 'reject', 'retry', 'cancel', 'mark_done'];
 
-/** What the daemon runs now: the table's follow-ups of the move's events, crash recovery's too (the outbox keeps them all). */
 function now(key: RuleKey, from: TaskStatus): FollowUp[] {
   return followUpsOf(transition(taskFor(key, from), EVENT_OF[key])!.event);
 }
 
-/** Since the outbox, crash recovery's events are followed up like any other: a task it cancelled now warns its dependents. */
 const recoveryCancels = (key: RuleKey, to: TaskStatus) => (key === 'recover' || key === 'recover:exhausted') && to === 'cancelled';
 
 test('follow-ups: every entry in RULES is followed up as before, less the warnings that found no one', () => {

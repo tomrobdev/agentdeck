@@ -1,5 +1,3 @@
-// The task area review of 2026-11-02: editing a task's plan is guarded and clears only what it says, a plan attached to
-// a done owner reaches a cut-off follower, and the store keeps runs, links and merge checks true.
 import assert from 'node:assert/strict';
 import type { TaskId } from '../../../src/domain/shared/id.ts';
 import { mkdtempSync } from 'node:fs';
@@ -46,7 +44,6 @@ test('clearing the plan of a task that owns one is refused, saying how to replac
 test('a claim between the edit check and the save leaves the plan unchanged', async () => {
   const { db } = setup();
   const t = await addTask(db, { repo: 'demo', prompt: 'p', plan_html: plan('Old') });
-  // The daemon claims the task while the edit checks the plan's followers, after editTask read the task as queued.
   const racing = new Proxy(db, {
     get(target, key: keyof Db) {
       if (key === 'planFollowers')
@@ -69,12 +66,10 @@ test('a plan attached to a done owner makes a follower a restart cut off start a
   const owner = db.addTask({ repo_id: repo.id, title: 'owner', prompt: 'p', own_plan: plan('Owner') });
   const follower = db.addTask({ repo_id: repo.id, title: 'follower', prompt: 'p', plan_task: owner.id });
   advance(db, owner.id, 'done');
-  // The follower's run is cut off by a restart, with a session to resume.
   advance(db, follower.id, 'running');
   const run = db.startRun(follower.id, 1, '/tmp/log');
   db.setRunSession(run, 'cut-session');
   assert.deepEqual(db.recoverOrphans(), { requeued: 1, failed: [] });
-  // Claimed again, it carries the attempt the restart gave back: the worker would resume the session.
   assert.ok(db.applyEvent(follower.id, { type: 'claim' }));
 
   const edits = () =>
@@ -92,7 +87,6 @@ test('a recovered task that fails or is cancelled has its runs end so; a requeue
   const { db, repo } = setup();
   const add = (title: string) => db.addTask({ repo_id: repo.id, title, prompt: 'p' });
   const [requeued, failing, cancelling] = [add('requeued'), add('failing'), add('cancelling')];
-  // Restarts already used up all but one of the failing task's chances.
   db.raw.prepare('UPDATE tasks SET restarts = ? WHERE id = ?').run(MAX_RESTARTS - 1, failing.id);
   for (const t of [requeued, failing, cancelling]) {
     advance(db, t.id, 'running');

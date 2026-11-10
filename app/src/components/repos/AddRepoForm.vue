@@ -5,7 +5,6 @@ import type { Repo } from '../../api/types';
 import { useActions } from '../../composables/shared/useActions';
 import { isNative, pickFolder } from '../../platform/native';
 
-// Registers a repo; the panel opens its editor once it is added.
 const emit = defineEmits<{ added: [repo: Repo] }>();
 const { run } = useActions();
 
@@ -14,7 +13,6 @@ const name = ref('');
 const test = ref('');
 const saving = ref(false);
 
-// Desktop app only; cancelling leaves the field as it was.
 async function choose() {
   const picked = await pickFolder();
   if (picked) path.value = picked;

@@ -43,7 +43,6 @@ test('claimNextTask records claim from queued to running', () => {
   const t = add();
   assert.equal(db.claimNextTask()?.id, t.id);
   assert.deepEqual(brief(db, t.id).at(-1), ['claim', 'queued', 'running', null]);
-  // Nothing to claim: nothing recorded.
   assert.equal(db.claimNextTask(), undefined);
   assert.equal(db.eventsForTask(t.id).length, 2);
   db.close();
@@ -53,7 +52,6 @@ test('a claim writes its row through applyEvent: claimNextTask and applyEvent le
   const { db, add } = setup();
   const byClaim = add();
   const byEvent = add();
-  // The higher id waits behind the lower one, so claimNextTask takes byClaim.
   const claimed = db.claimNextTask()!;
   assert.equal(claimed.id, byClaim.id);
   const applied = db.applyEvent(byEvent.id, { type: 'claim' })!;
@@ -103,7 +101,6 @@ test('each lifecycle event records its type, from and to status and reason', () 
   cases.push(['finish done', running, { type: 'finish', outcome: 'done' }, 'running', 'done', null]);
   cases.push(['finish blocked', running, { type: 'finish', outcome: 'blocked' }, 'running', 'blocked', 'needs a key']);
   cases.push(['finish failed', running, { type: 'finish', outcome: 'failed', retry: false }, 'running', 'failed', 'tests failed']);
-  // One attempt used of DEFAULTS.maxAttempts (2): the failed run is requeued.
   cases.push(['finish failed retry', running, { type: 'finish', outcome: 'failed' }, 'running', 'queued', null]);
   cases.push(['rate_limited', running, { type: 'rate_limited' }, 'running', 'queued', null]);
   cases.push(['cancel queued', () => add().id, { type: 'cancel' }, 'queued', 'cancelled', null]);
@@ -111,7 +108,6 @@ test('each lifecycle event records its type, from and to status and reason', () 
   cases.push(['approve', proposed, { type: 'approve' }, 'proposed', 'queued', null]);
   cases.push(['reject', proposed, { type: 'reject' }, 'proposed', 'cancelled', null]);
   cases.push(['retry', blocked, { type: 'retry' }, 'blocked', 'queued', null]);
-  // One restart short of too many: the next recover fails it.
   const restarted = () => {
     const id = running();
     db.raw.prepare('UPDATE tasks SET restarts = ? WHERE id = ?').run(MAX_RESTARTS - 1, id);

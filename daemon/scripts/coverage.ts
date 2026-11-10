@@ -1,6 +1,3 @@
-// pnpm coverage: runs the daemon tests with coverage, prints line and branch coverage per layer and context, and fails when a group is
-// below its floor in COVERAGE_FLOORS (scripts/lib/progress.ts) or when the tests fail. `--lcov <file>` judges a report already written
-// instead of running the tests. The report is left in daemon/coverage/lcov.info (git ignores it).
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';

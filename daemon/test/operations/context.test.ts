@@ -233,7 +233,6 @@ test('the hook prints the picture once per session, then only changes, and nothi
   assert.equal(elsewhere.status, 0);
   assert.equal(elsewhere.stdout, '');
 
-  // A cursor file that can't be pruned (a dangling link) neither hides the digest nor stops the cursor moving.
   symlinkSync(join(home, 'nowhere'), join(home, 'hooks', 'dangling.json'));
   db.addTask({ repo_id: repo.id, title: 'Later task', prompt: 'p' });
   const pruned = run(message);

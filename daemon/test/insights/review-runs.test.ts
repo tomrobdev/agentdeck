@@ -38,7 +38,6 @@ test('a blocking review run counts as merged unchanged when the PR merged with n
   assert.equal(mergedUnchanged(started, [ev({ type: 'merge', at: '2026-10-05 11:00:00' })]), true);
   assert.equal(mergedUnchanged(started, [ev({ type: 'pr', reason: 'PR is merged', at: '2026-10-05 11:00:00' })]), true);
   assert.equal(mergedUnchanged(started, [ev({ type: 'pr_merged', at: '2026-10-05 11:00:00' })]), true);
-  // A merge before the review run does not count, and neither does no merge at all.
   assert.equal(mergedUnchanged(started, [ev({ type: 'merge', at: '2026-10-05 09:00:00' })]), false);
   assert.equal(mergedUnchanged(started, [ev({ type: 'pr', reason: 'checks passed', at: '2026-10-05 11:00:00' })]), false);
   for (const type of ['claim', 'review_retry', 'retry'])
@@ -64,7 +63,6 @@ test('review run measures: clean, asked for changes, merged unchanged and no rev
     review({ task_id: asTaskId(1), diff_hash: 'a', kind: 'approve' }),
     review({ task_id: asTaskId(2), diff_hash: 'b', kind: 'request_changes' }),
     review({ task_id: asTaskId(3), diff_hash: 'c', kind: 'request_changes' }),
-    // A review of other changes is not this run's.
     review({ task_id: asTaskId(4), diff_hash: 'old', kind: 'approve' }),
     review({ task_id: asTaskId(5), diff_hash: null, kind: 'approve' }),
   ];

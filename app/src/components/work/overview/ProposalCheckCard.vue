@@ -9,9 +9,6 @@ import { openTask } from '../../../router';
 import { statusLabel } from '../../../lib/work/task-view';
 import { useAction } from '../../../composables/shared/useActions';
 
-// What to know before approving a proposed or queued task: how far the base moved since it was added, which named files
-// changed, the named paths not on the base, and the open tasks touching the same files, each with an After link to add.
-// Fetched only while such a task is shown: the check reads git, so it is never part of the task's detail.
 const props = defineProps<{ task: { id: number; status: TaskStatus } }>();
 const { pending, run } = useAction();
 

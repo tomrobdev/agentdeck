@@ -3,7 +3,6 @@ import { plural } from '../../../../daemon/src/domain/shared/index.ts';
 import type { PromptEntry, TouchedFile } from '../../lib/runs/context';
 import Delta from '../ui/status/Delta.vue';
 
-// The top of a run's log: what each claude of the run was told, and the files its edits touched.
 defineProps<{
   prompts: PromptEntry[];
   touched: TouchedFile[];

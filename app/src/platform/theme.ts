@@ -1,5 +1,4 @@
 // The dashboard's theme (a set of colours, styles/themes.css) and mode (system, light or dark).
-// Applied as data-theme and data-mode on <html>, so switching is one attribute write and every CSS variable follows at once.
 import { ref } from 'vue';
 import { loadSetting, saveSetting } from '../lib/shared/storage';
 
@@ -41,7 +40,6 @@ export function setMode(key: ModeKey) {
   apply();
 }
 
-/** Apply the stored choice. Called once, before the app mounts, so there is no flash of the wrong theme. */
 export function initTheme() {
   apply();
 }

@@ -2,9 +2,6 @@
 import { ToastAction, ToastClose, ToastDescription, ToastProvider, ToastRoot, ToastViewport } from 'reka-ui';
 import type { ToastItem } from '../../composables/shared/useToasts';
 
-// The messages at the bottom of the window, newest last. Each has its own `id` and timer, so a later message no longer
-// replaces an earlier one (an Undo toast keeps its 5 seconds). They are announced to screen readers, paused while the pointer
-// is over them, and closed by ✕, a swipe or Escape (F8 focuses them).
 defineProps<{ toasts: ToastItem[] }>();
 const emit = defineEmits<{ close: [id: number] }>();
 </script>

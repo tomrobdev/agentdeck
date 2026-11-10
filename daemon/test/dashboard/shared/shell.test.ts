@@ -9,7 +9,6 @@ test('settings and repos open their panels; the queue and insights are pages', (
   assert.deepEqual(goMove('repos'), { panel: 'repos' });
   assert.deepEqual(goMove('queue'), { page: 'queue' });
   assert.deepEqual(goMove('insights'), { page: 'insights' });
-  // Every `g` key leads somewhere.
   for (const g of GO_KEYS) assert.ok(goMove(g.to));
 });
 

@@ -5,7 +5,6 @@ type Of<K extends LogEntry['kind']> = Extract<LogEntry, { kind: K }>;
 export type ToolEntry = Of<'tool'>;
 export type ResultEntry = Of<'tool_result'>;
 
-/** A tool call with what came back (none yet, or none logged), and a subagent call's own entries beneath it. */
 export interface CallItem {
   type: 'call';
   key: string;
@@ -14,7 +13,6 @@ export interface CallItem {
   result: ResultEntry | null;
   children: Item[];
 }
-/** Back-to-back reads, searches and listings, folded into one line. */
 export interface ExploredItem {
   type: 'explored';
   key: string;
@@ -33,7 +31,6 @@ const EXPLORE = new Set(['Read', 'Grep', 'Glob', 'LS']);
 const READ_KIND = new Set([...EXPLORE, 'WebFetch']);
 const WRITES = new Set(['Edit', 'MultiEdit', 'Write', 'NotebookEdit']);
 
-/** What a call does, which sets its colour and icon. */
 export type ToolKind = 'read' | 'edit' | 'command' | 'agent' | 'other';
 
 export function toolKind(name: string): ToolKind {
@@ -65,7 +62,6 @@ export function fold(items: Item[]): Item[] {
   return out;
 }
 
-/** Group a run's entries. A log from before results existed (no ids) comes out as one call item per call. */
 export function buildTranscript(entries: LogEntry[]): Item[] {
   const results = new Map<string, ResultEntry>();
   const callIds = new Set<string>();
@@ -91,7 +87,6 @@ export function buildTranscript(entries: LogEntry[]): Item[] {
   return foldAll(roots);
 }
 
-/** Time since the run's first entry as m:ss (h:mm:ss past an hour); empty when either time is missing. */
 export function offsetLabel(first: string | undefined, at: string | undefined): string {
   if (!first || !at) return '';
   const s = Math.max(0, Math.round((Date.parse(at) - Date.parse(first)) / 1000));
@@ -101,17 +96,14 @@ export function offsetLabel(first: string | undefined, at: string | undefined): 
   return m < 60 ? `${m}:${sec}` : `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}:${sec}`;
 }
 
-/** The first non-blank line of an output. */
 export function firstLine(output: string): string {
   return output.split('\n').find((l) => l.trim()) ?? '';
 }
 
-/** Whether a call's result is left out: a write that worked has nothing to add to the call. */
 export function resultHidden(item: CallItem): boolean {
   return !!item.result?.ok && WRITES.has(item.call.name);
 }
 
-/** A function that cuts the worktree's root from a text; with no worktree it changes nothing. */
 export function cutRoot(root: string | null | undefined): (text: string) => string {
   const prefix = root ? root.replace(/\/$/, '') + '/' : '';
   return (text) => (prefix ? text.split(prefix).join('') : text);
@@ -126,7 +118,6 @@ function inputOf(input: string): Record<string, unknown> {
   }
 }
 
-/** What a Read read, as "lines 10–59" or "first 2000 lines"; null when it is not a Read or has no result. */
 export function readRange(item: CallItem): string | null {
   if (item.call.name !== 'Read' || !item.result?.ok) return null;
   const n = item.result.lines;
@@ -136,7 +127,6 @@ export function readRange(item: CallItem): string | null {
   return `lines ${offset}–${offset + n - 1}`;
 }
 
-/** A piece of an output: plain, a link to a file (and line), or a conflict marker line. */
 export interface OutputPart {
   text: string;
   path?: string;
@@ -146,10 +136,6 @@ export interface OutputPart {
 
 const CONFLICT = /^(<{7}|={7}|>{7})/;
 
-/**
- * An output split into parts. In a Grep result (`grep` is the call's input), `path:line:` at a line's start, `line:` with the
- * call's own `file`, and a files_with_matches result's bare paths become links, when `isPath` accepts the path.
- */
 export function outputParts(output: string, opts: { grep?: string; file?: string | null; isPath?: (p: string) => boolean }): OutputPart[] {
   const ok = (p: string) => !!opts.isPath?.(p);
   const norm = (p: string) => p.replace(/^\.\//, '');
@@ -181,7 +167,6 @@ export function outputParts(output: string, opts: { grep?: string; file?: string
   return parts;
 }
 
-/** Whether the run's calls have all been answered: a call without a result is still going while the run is live. */
 export function pending(item: CallItem, live: boolean): boolean {
   return live && !item.result && !!item.call.id;
 }

@@ -5,8 +5,6 @@ import type { Review, SubmitReview } from '../../api/types';
 import { plural } from '../../../../daemon/src/domain/shared/index.ts';
 import { useAction } from '../../composables/shared/useActions';
 
-// The bar a draft review lives in: how many comments are pending, an overall note, and Submit as Comment or Request changes.
-// ⌘Enter submits as `kind`, which is Request changes when the bar was opened from that button.
 const props = defineProps<{ taskId: number; draft: Review | null; kind: SubmitReview['kind'] }>();
 const emit = defineEmits<{ close: []; submitted: [] }>();
 const { pending, run } = useAction();
@@ -20,19 +18,12 @@ watch(
 const count = () => props.draft?.comments.length ?? 0;
 const canSubmit = () => !pending.value && (note.value.trim() !== '' || count() > 0);
 
-/**
- * Keep the note across a reload: save it when the field loses focus. Not through `run`: its pending flag would disable
- * Submit between the mousedown that blurs the field and the click, and the click would be lost. Submit sends the
- * note itself, so a failed save here loses nothing; the next blur tries again.
- */
 async function saveNote() {
   const draft = props.draft;
   if (!draft || note.value === draft.body) return;
   try {
     await landingApi.editReview(draft.id, note.value);
-  } catch {
-    // see above
-  }
+  } catch {}
 }
 
 async function submit(kind: SubmitReview['kind']) {
@@ -47,10 +38,8 @@ async function submit(kind: SubmitReview['kind']) {
   }
 }
 
-// An inline comment box stops its own ⌘Enter, so one that gets here is meant for the review.
 const onKey = (e: KeyboardEvent) => {
   if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && !e.defaultPrevented) {
-    // A dialog over the bar has its own ⌘Enter action.
     if (document.querySelector('[role=dialog], [role=alertdialog]')) return;
     e.preventDefault();
     void submit(props.kind);

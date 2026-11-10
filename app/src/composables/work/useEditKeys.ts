@@ -1,6 +1,4 @@
 // The edit keys on the queue and a task page: `e` the prompt, `p` then a digit the priority, `M` the model, `l` a link.
-// They edit every picked task when some are picked (through the bulk edits), else the selected or open one. A prompt is
-// one task's: with several picked it says so. The dialog for `e`, `M` and `l` is components/work/task/EditKeyDialog.vue.
 import { computed, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { tasksQuery, workApi } from '../../api/work';
@@ -25,7 +23,6 @@ export function useEditKeys(scope: 'queue' | 'task', current: () => number | nul
   const edit = useBulkEdit(run);
   const dialog = ref<KeyEdit | null>(null);
 
-  /** The picked tasks, else the selected or open one. */
   const targets = computed<TaskSummary[]>(() => {
     const all = tasksQ.data.value ?? [];
     if (picked.value.length) return all.filter((t) => picked.value.includes(t.id));
@@ -50,7 +47,6 @@ export function useEditKeys(scope: 'queue' | 'task', current: () => number | nul
   const setLink = (kind: Extract<BulkEdit, 'builds_on' | 'after'>, on: number) => edit(targets.value, kind, null, '', on, fromPicks());
   const savePrompt = (id: number, prompt: string) => run(() => workApi.editTask(id, { prompt }));
 
-  // The palette asks for an edit; apply it when it arrives (also when this mounts after the palette sent it, as on a page change).
   watch(
     [requestedEdit, targets],
     ([request]) => {

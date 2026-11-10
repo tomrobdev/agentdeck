@@ -3,10 +3,8 @@ import type { NotificationRow } from '../../../api/types';
 import { ago } from '../../../lib/shared/time';
 import Chip from '../../ui/Chip.vue';
 
-// The latest alerts the daemon sent.
 defineProps<{ notifications: NotificationRow[] }>();
 
-/** An alert's chip tone: a budget or pause alert looks like a blocked task. */
 function alertTone(kind: NotificationRow['kind']) {
   return kind === 'hold' || kind === 'paused' ? 'blocked' : kind;
 }

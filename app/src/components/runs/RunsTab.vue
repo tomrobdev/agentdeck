@@ -16,11 +16,9 @@ import VerifyFindings from './VerifyFindings.vue';
 import { latestVerify } from '../../../../daemon/src/domain/runs/index.ts';
 import Listbox from '../ui/form/Listbox.vue';
 
-// The checks view: one card per run, then the chosen run's final message and log.
 const props = defineProps<{ task: TaskDetail; runId: number | null; isPath?: (p: string) => boolean }>();
 const emit = defineEmits<{ select: [runId: number]; path: [path: string, line: number | null] }>();
 
-// Runs are picked by id: a resolve run shares its attempt number with a work run.
 const latest = computed(() => props.task.runs.at(-1)?.id ?? null);
 const chosen = computed(() => props.runId ?? latest.value);
 const run = computed(() => props.task.runs.find((r) => r.id === chosen.value));
@@ -97,7 +95,6 @@ const live = computed(() => (props.task.status === 'running' || !!props.task.syn
 
     <RunSummaryCard v-if="run?.summary" :key="`summary-${run.id}`" class="flex-none" :summary="run.summary" />
 
-    <!-- A verify run's result is its findings as JSON, shown as findings, not as a message. -->
     <VerifyFindings
       v-if="run?.kind === 'verify' && run.ended_at"
       :key="`verify-${run.id}`"

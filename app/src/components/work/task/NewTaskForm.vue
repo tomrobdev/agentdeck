@@ -19,8 +19,6 @@ const emit = defineEmits<{ close: []; created: [task: TaskDetail] }>();
 const repo = ref(props.repos[0]?.name ?? '');
 const title = ref('');
 const prompt = ref('');
-// The model starts from the default the daemon would give (the repo's, else the default_model setting) and follows the
-// repo picked until the person picks a model; only a picked one is sent, so the daemon decides the default itself.
 const settingsQ = useQuery(settingsQuery());
 const picked = ref<string | null>(null);
 const byDefault = computed(() => {
@@ -35,18 +33,15 @@ const model = computed({
 const modelSource = computed(() => (picked.value === null && byDefault.value ? modelSourceText(byDefault.value.source) : null));
 const priority = ref(0);
 const maxTurns = ref(40);
-/** The task whose plan this one follows, as typed: "112" or "#112". */
 const planTask = ref('');
 const planSteps = ref('');
 const error = ref('');
 const saving = ref(false);
-/** The task once it is queued, while its warnings are shown: the form stays open until the person has read them. */
 const saved = ref<TaskDetail | null>(null);
 const warnings = ref<string[]>([]);
 
 const terminal = useTerminal();
 
-/** Hand the writing to Claude in a terminal at the repo; the task shows up through the change stream. */
 async function writeWithClaude() {
   const path = props.repos.find((r) => r.name === repo.value)?.path;
   if (!path) return;
@@ -61,7 +56,6 @@ async function writeWithClaude() {
 
 async function submit() {
   if (saved.value) return emit('created', saved.value);
-  // ⌘Enter reaches here without the button's :disabled, so the same guard: no second task while one is saving.
   if (saving.value || !prompt.value.trim()) return;
   error.value = '';
   const planOn = planTask.value.trim().replace(/^#/, '');
