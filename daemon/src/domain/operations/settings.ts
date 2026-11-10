@@ -1,4 +1,4 @@
-// The settings a person can change. Pure: no I/O.
+// The settings a person can change.
 import type { NotifySettings } from './notification.ts';
 import type { PlannerSettings } from '../proposals/index.ts';
 import type { Budget } from '../capacity/index.ts';

@@ -1,4 +1,4 @@
-// What a running task is doing right now, read from the events of its run's stream. Pure: no I/O.
+// What a running task is doing right now, read from the events of its run's stream.
 
 import { cut } from '../../shared/index.ts';
 import { shortFile, toolSummary } from './log.ts';
@@ -23,7 +23,6 @@ export interface LiveView {
   tool: string | null;
 }
 
-/** A running task's live view from its unfinished run's row; null for a task that is not running or has no run yet. */
 export function liveView(
   task: { status: string; max_turns: number },
   run: { started_at: string; live_turns: number; live_tool: string | null } | undefined,
@@ -46,10 +45,6 @@ export interface SyncView {
   tool: string | null;
 }
 
-/**
- * A done task's sync view: null when no sync is under way. `locked` is a sync that has the task's worktree locked in this process;
- * the unfinished resolve run, when there is one, says what claude is doing.
- */
 export function syncView(
   task: { status: string; max_turns: number },
   base: string | null,
@@ -64,16 +59,11 @@ export function syncView(
 
 const TOOL_TEXT_MAX = 40;
 
-/** A tool call in a few words: the tool, then the log's summary of the call, with a file shortened to its name. */
 export function toolText(name: string, input: unknown): string {
   const detail = shortFile(toolSummary(name, input), input);
   return cut(detail ? `${name} ${detail}` : name, TOOL_TEXT_MAX);
 }
 
-/**
- * The live state after one event of claude's stream: an assistant message is a turn, its last tool use is the tool.
- * A subagent's message (it names a `parent_tool_use_id`) is neither: the live line follows the main loop.
- */
 export function nextLive(state: LiveState, ev: any): LiveState {
   if (ev?.type !== 'assistant' || ev.parent_tool_use_id) return state;
   const id = typeof ev.message?.id === 'string' ? ev.message.id : null;

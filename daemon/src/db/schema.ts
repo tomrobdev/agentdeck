@@ -1,7 +1,6 @@
 // The database schema and its migrations.
 import type { DatabaseSync } from 'node:sqlite';
 
-/** The baseline schema run by migration step 1. Frozen: add new tables, columns and indexes as new steps. */
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS repos (
   id INTEGER PRIMARY KEY,
@@ -88,10 +87,6 @@ function addColumn(db: DatabaseSync, table: string, column: string, ddl: string)
   if (!cols.some((c) => c.name === column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
 }
 
-/**
- * Ordered schema migrations; the database's `PRAGMA user_version` is the number of steps already applied.
- * Only append: never edit or reorder a step that has shipped.
- */
 export const MIGRATIONS: Migration[] = [
   // 1: baseline. Brings a database from any earlier (unversioned) release up to date; the column
   // additions are idempotent because old databases may already have some of them.
@@ -279,13 +274,11 @@ export const MIGRATIONS: Migration[] = [
   'ALTER TABLE runs ADD COLUMN base_commit TEXT;',
 ];
 
-/** Runs every step above the database's user_version in one transaction; returns how many ran. */
 export function migrate(db: DatabaseSync, steps: Migration[] = MIGRATIONS): number {
   const current = (): number => (db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version;
   if (current() >= steps.length) return 0;
   db.exec('BEGIN IMMEDIATE');
   try {
-    // Re-read under the write lock in case another process migrated first.
     const from = current();
     for (let i = from; i < steps.length; i++) {
       const step = steps[i];

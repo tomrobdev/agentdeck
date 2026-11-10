@@ -1,4 +1,4 @@
-// Whether a PR can be merged, and how. Pure: no I/O.
+// Whether a PR can be merged, and how.
 import { isConflicting, isMergeabilityUnknown } from './conflict.ts';
 import { type PrState, parsePrState } from '../pull-request/pr.ts';
 import {
@@ -49,7 +49,6 @@ export interface PrDetails {
   labels: string[];
 }
 
-/** Read `gh pr view --json state,headRefOid,isDraft,mergeable,mergeStateStatus,commits,additions,deletions,changedFiles,statusCheckRollup,files,labels`. */
 export function parsePrDetails(json: string): PrDetails {
   const raw = JSON.parse(json) as Record<string, unknown>;
   const state = parsePrState(String(raw.state ?? ''));
@@ -75,7 +74,6 @@ export function parsePrDetails(json: string): PrDetails {
   };
 }
 
-/** Read the steps of `gh api repos/{owner}/{repo}/actions/jobs/<id>`: a GitHub Actions job's steps and how each ended. */
 export function parseJobSteps(json: string): JobStep[] {
   const raw = JSON.parse(json) as { steps?: unknown };
   if (!Array.isArray(raw.steps)) return [];
@@ -94,7 +92,6 @@ export interface BranchPr {
   state: Exclude<PrState, 'failed'>;
 }
 
-/** Read `gh pr list --head <branch> --state all --json url,state`; an entry without a url or a known state is left out. */
 export function parseBranchPrs(json: string): BranchPr[] {
   const raw = JSON.parse(json) as unknown;
   if (!Array.isArray(raw)) throw new Error('gh pr list did not answer with a list');
@@ -130,16 +127,13 @@ export interface MergeInput {
   auto_resolve?: boolean;
 }
 
-/** Whether a conflict with the base is left to a person: the repo has auto_resolve off, so the daemon never syncs it. */
 export const conflictNeedsPerson = (input: Pick<MergeInput, 'auto_resolve'>): boolean => input.auto_resolve === false;
 
-/** What failed, once the PR refresh read why a failing check failed: ": check › step: what failed; …". Empty until then. */
 function failingDetail(checks: PrCheck[] | undefined): string {
   const failing = failingChecks(checks ?? []);
   return failing.some(failureRead) ? `: ${failing.map(failureLine).join('; ')}` : '';
 }
 
-/** What about a PR's state bears on merging it, in the order the merge dialog shows it. */
 export function mergeFindings({ pr_state, pr, tests_passed, lands_after = [], auto_resolve }: MergeInput): MergeFinding[] {
   const found: MergeFinding[] = [];
   const add = (kind: MergeFinding['kind'], text: string, problem = false) => found.push({ kind, problem, text });
@@ -170,7 +164,6 @@ export function mergeFindings({ pr_state, pr, tests_passed, lands_after = [], au
  */
 export type MergeFailure = 'head_moved' | 'transient' | 'lasting';
 
-/** The failures that pass on their own, by what `gh pr merge` says. Anything else is `lasting`. */
 const MERGE_FAILURES: { failure: Exclude<MergeFailure, 'lasting'>; when: RegExp }[] = [
   { failure: 'head_moved', when: /head branch was modified|expected head (?:sha|oid)|head (?:sha|oid|commit)\b[^.]*\bmatch/i },
   { failure: 'transient', when: /base branch was modified/i },
@@ -178,10 +171,8 @@ const MERGE_FAILURES: { failure: Exclude<MergeFailure, 'lasting'>; when: RegExp 
   { failure: 'transient', when: /timed out|\btimeout\b|ETIMEDOUT|ECONNRESET|EAI_AGAIN|socket hang up|connection reset/i },
 ];
 
-/** What a failed merge's error message means for trying again (`MergeFailure`). */
 export const mergeFailure = (message: string): MergeFailure => MERGE_FAILURES.find((f) => f.when.test(message))?.failure ?? 'lasting';
 
-/** Turn a PR's state into blocking problems and warnings. */
 export function mergeCheck(input: MergeInput): MergeCheck {
   const found = mergeFindings(input);
   return { problems: found.filter((f) => f.problem).map((f) => f.text), warnings: found.filter((f) => !f.problem).map((f) => f.text) };
@@ -234,7 +225,6 @@ export interface AutoMergeCheck {
   conflict?: true;
 }
 
-/** A verdict from its reasons, marked when one of the findings was a conflict with the base. */
 export function verdictOf(reasons: MergeReasons, found: MergeFinding[]): AutoMergeCheck {
   const check: AutoMergeCheck = reasons.never.length
     ? { verdict: 'never', reasons: reasons.never }
@@ -245,13 +235,6 @@ export function verdictOf(reasons: MergeReasons, found: MergeFinding[]): AutoMer
   return check;
 }
 
-/**
- * What each merge-dialog finding means when the daemon merges without a person waving it through: on its own (auto-merge)
- * or as a person asked earlier (a merge request). A draft is fine: the merge marks it ready. So is BEHIND: a PR that
- * merges cleanly onto the moved base is what GitHub would merge, and a repo that requires up-to-date branches makes the
- * merge fail, which is told once. A conflict waits for the sync the refresh starts, unless the repo has auto_resolve off:
- * then none starts and a person must sync the task (`conflictNeedsPerson`). The PRs it lands after wait for those to merge.
- */
 const UNATTENDED: Record<MergeFinding['kind'], 'never' | 'wait' | null> = {
   not_open: 'never',
   lands_after: 'wait',
@@ -264,18 +247,12 @@ const UNATTENDED: Record<MergeFinding['kind'], 'never' | 'wait' | null> = {
   checks_pending: 'wait',
 };
 
-/** Where one finding goes when no person waves it through, or null when it is fine. */
 function unattended(f: MergeFinding, input: MergeInput): 'never' | 'wait' | null {
-  // While required checks run GitHub says BLOCKED too; the pending checks are the wait.
   if (f.kind === 'blocked' && input.pr.checks.pending) return null;
   if (f.kind === 'conflict' && conflictNeedsPerson(input)) return 'never';
   return UNATTENDED[f.kind];
 }
 
-/**
- * The verdict on merging a PR without a person waving its findings through: each finding as `UNATTENDED` says, then
- * `extra`'s reasons (what only auto-merge asks), GitHub still working out mergeability, and `extra`'s waits last.
- */
 export function unattendedVerdict(input: MergeInput, extra: Partial<MergeReasons> = {}): AutoMergeCheck {
   const reasons: MergeReasons = { never: [], wait: [] };
   const found = mergeFindings(input);
@@ -297,10 +274,8 @@ export interface MergeVerdictView {
   conflict?: true;
 }
 
-/** A check as a person reads it (`MergeVerdictView`). */
 export function verdictView(check: AutoMergeCheck): MergeVerdictView {
   return { ...check, reasons: reasonTexts(check.reasons) };
 }
 
-/** The reasons' texts, in order. */
 export const reasonTexts = (reasons: MergeReason[]): string[] => reasons.map((r) => r.text);

@@ -13,7 +13,6 @@ import type { Orm } from '../orm.ts';
 import { atomically } from '../sql.ts';
 import { settings } from '../tables.ts';
 
-/** What each setting reads as until someone sets it. The daemon starts paused until someone resumes it. */
 export const SETTING_DEFAULTS = {
   paused: '1',
   rate_limited_until: '0',
@@ -45,7 +44,6 @@ export function settingsStore(db: DatabaseSync, orm: Orm) {
   const set = (key: string, value: string): void => {
     orm.insert(settings).values({ key, value }).onConflictDoUpdate({ target: settings.key, set: { value } }).run();
   };
-  /** A setting the daemon keeps as JSON; `fallback` when it does not parse. */
   const json = <T>(key: string, fallback: T): T => {
     try {
       return (JSON.parse(get(key)) as T) ?? fallback;
@@ -76,9 +74,7 @@ export function settingsStore(db: DatabaseSync, orm: Orm) {
     review_model: get('review_model'),
   });
   return {
-    /** Raw write by key, for flags the daemon keeps for itself. The person's settings go through writeSettings. */
     setSetting: set,
-    /** The settings a person can change, as one value. */
     readSettings: (): Settings => ({
       max_concurrent: Number(get('max_concurrent')),
       budget: budget(),
@@ -88,7 +84,6 @@ export function settingsStore(db: DatabaseSync, orm: Orm) {
       reload_on_change: get('reload_on_change') === '1',
       review_due: { days: Number(get('review_due_days')), lines: Number(get('review_due_lines')) },
     }),
-    /** Store all of `s` in one transaction. */
     writeSettings: (s: Settings): void =>
       atomically(db, () => {
         set('max_concurrent', String(s.max_concurrent));
@@ -108,23 +103,18 @@ export function settingsStore(db: DatabaseSync, orm: Orm) {
         set('review_due_days', String(s.review_due.days));
         set('review_due_lines', String(s.review_due.lines));
       }),
-    /** The repos due for an area review, as the daemon's last check found them. */
     reviewsDue: (): ReviewDue[] => json<ReviewDue[]>('reviews_due', []),
     setReviewsDue: (dues: ReviewDue[]): void => set('reviews_due', JSON.stringify(dues)),
-    /** When a person was last told the repo is due for an area review, in ms since the epoch; null when never. */
     reviewDueToldAt: (repo: RepoId): number | null => json<Record<string, number>>('review_due_told', {})[repo] ?? null,
     setReviewDueToldAt: (repo: RepoId, at: number): void =>
       atomically(db, () => set('review_due_told', JSON.stringify({ ...json<Record<string, number>>('review_due_told', {}), [repo]: at }))),
     isPaused: (): boolean => get('paused') === '1',
     setPaused: (paused: boolean): void => set('paused', paused ? '1' : '0'),
-    /** Unix seconds until which claude is rate limited, or null when it is not (or has lifted). */
     rateLimitedUntil: (): number | null => Number(get('rate_limited_until')) || null,
     setRateLimitedUntil: (until: number): void => set('rate_limited_until', String(until)),
     reloadOnChange: (): boolean => get('reload_on_change') === '1',
-    /** When a PR re-read was last asked for, in ms since the epoch. */
     prCheckRequested: (): number => Number(get('pr_check_requested')),
     requestPrCheck: (at = Date.now()): void => set('pr_check_requested', String(at)),
-    /** When the desktop app last said it is running, in ms since the epoch; null when it never did. */
     appSeenAt: (): number | null => Number(get('app_seen_at')) || null,
     setAppSeenAt: (at: number): void => set('app_seen_at', String(at)),
     budget,

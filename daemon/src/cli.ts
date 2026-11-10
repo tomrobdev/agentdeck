@@ -1,4 +1,4 @@
-// The `agentdeck` command. The launchd plist runs this file, so it stays at src/cli.ts.
+// The `agentdeck` command.
 import { repoName as nameOfRepo } from './application/actions.ts';
 import { COMMANDS } from './cli/commands.ts';
 import { die } from './cli/format.ts';
@@ -23,6 +23,5 @@ try {
   await main(process.argv.slice(2));
 } catch (err) {
   if (process.env.AGENTDECK_DEBUG) console.error(err);
-  // One line for any Error; the stack only with AGENTDECK_DEBUG.
   die(err instanceof Error ? err.message.split('\n')[0] : String(err));
 }

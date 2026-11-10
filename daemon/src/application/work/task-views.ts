@@ -21,7 +21,6 @@ import { requireTask } from '../shared/input.ts';
 import { plansShown } from './plans.ts';
 import { startWaits } from '../capacity/queue.ts';
 
-/** What the queue says about one task, beyond the task row. */
 export interface TaskView {
   repo: string | null;
   waiting: Waiting | null;
@@ -29,32 +28,19 @@ export interface TaskView {
   links: LinkView[];
   dependents: { id: TaskId; kind: LinkKind }[];
   plan_unfinished: boolean;
-  /** The model of the task's latest work run, which differs from the task's after an escalated retry. Null before any run. */
   run_model: string | null;
   wait: StartWait | null;
-  /** Whether the PR will merge on its own and why not, from the check the PR refresh stored. Null when the repo is gone. */
   auto_merge_view: AutoMergeView | null;
-  /** The person's merge request: waiting for the PR to be ready, or merging it now. Null when there is none. */
   merge_request: MergeRequestView | null;
-  /** Whether the open PR conflicts with the base branch, from the last PR check (the merge finding of kind `conflict`). */
   conflicting: boolean;
-  /** For a running task: when its run started, turns so far and the last tool call. Null for any other task. */
   live: LiveView | null;
-  /** For a done task: the sync under way (a clean one, or a resolve run settling conflicts). Null when none is. */
   sync: SyncView | null;
-  /** The open PR's checks, counted, with the failing ones' names. Null when there is no open PR or it has no checks. */
   checks: ChecksSummary | null;
-  /** For a done task whose PR failed to open: when the PR refresh opens it again, or that a person must. Null for any other. */
   pr_retry: PrRetry | null;
 }
 
-/** The task fields a view reads. */
 type Viewed = Pick<Task, 'id' | 'repo_id' | 'status' | 'max_turns' | 'auto_merge' | 'source' | 'pr'>;
 
-/**
- * Each task with its view. Reads the repos, plans, links and queue state once for the whole list, so the queries it runs
- * don't grow with the tasks or their links. `links` is for a test to watch what is read.
- */
 export function withViews<T extends Viewed>(app: App, tasks: T[], links: LinkIndex = loadedLinks(app)): (T & TaskView)[] {
   const repos = new Map(app.listRepos().map((r) => [r.id, r]));
   const waitOf = startWaits(app);
@@ -87,16 +73,11 @@ export function withViews<T extends Viewed>(app: App, tasks: T[], links: LinkInd
   });
 }
 
-/** Whether the PR refresh opens a task's failed PR again: only a done task whose PR failed to open reads its history. */
 function prRetryView(app: App, t: Viewed, repo: Repo | undefined, now: number): PrRetry | null {
   if (t.status !== 'done' || t.pr?.state !== 'failed') return null;
   return prRetryFor(t, repo, app.eventsForTask(t.id), now);
 }
 
-/**
- * A failed or blocked run's summary, read from its log: computed on read, so the runs table keeps no copy and runs from before
- * summaries have one too. Null for a run that ended any other way, or whose log is gone.
- */
 function summaryOf(app: App, run: Run, task: Task, repo: Repo | undefined): RunSummary | null {
   if (run.outcome !== 'failed' && run.outcome !== 'blocked') return null;
   const events = app.runLog.events(run.log_path);
@@ -104,12 +85,10 @@ function summaryOf(app: App, run: Run, task: Task, repo: Repo | undefined): RunS
   return runSummary(events, { testCmd: repo?.test_cmd ?? null, maxTurns: task.max_turns });
 }
 
-/** One task with its view, runs, events and plans. A branch with no open PR is measured against the auto-merge limits. */
 export async function taskDetail(app: App, id: TaskId) {
   const task = requireTask(app, id);
   const repo = app.getRepo(task.repo_id);
-  const [view] = withViews(app, [task], liveLinks(app)); // one task: read its links, not all of them
-  // Only a done task's branch is final; measuring a running one would start git on every refetch.
+  const [view] = withViews(app, [task], liveLinks(app));
   const branch = task.checkout?.branch;
   if (repo && task.status === 'done' && branch && !openPrUrl(task.pr) && task.pr?.state !== 'merged' && autoMergeOn(task, repo)) {
     const measured = await measureBranch(app, repo, branch);
@@ -124,7 +103,6 @@ export async function taskDetail(app: App, id: TaskId) {
   };
 }
 
-/** Task summaries (no prompt), newest first, each with its view. The checks are summed up in `checks`, so their list stays out. */
 export function taskViews(app: App, filter: { status?: TaskStatus; limit: number; before?: TaskId }) {
   return withViews(app, app.listTaskSummaries(filter));
 }

@@ -1,4 +1,4 @@
-// Quota spent, read from the readings of the 7-day window kept in `usage_samples`. Pure: no I/O.
+// Quota spent, read from the readings of the 7-day window kept in `usage_samples`.
 
 /** A reading of the 7-day window, as kept in `usage_samples`: utilization is 0..1. */
 export interface QuotaSample {
@@ -7,11 +7,6 @@ export interface QuotaSample {
   observed_at: string;
 }
 
-/**
- * Percentage points of the 7-day window spent between readings, each with the time it was seen. A reading higher than the
- * one before adds the difference. A lower one means the window reset, so everything it shows was spent since. The first
- * reading is only a baseline: what came before it was not seen.
- */
 export function quotaSpends(samples: QuotaSample[]): { at: string; points: number }[] {
   return samples.flatMap((s, i) => {
     if (i === 0) return [];

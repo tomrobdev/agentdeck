@@ -4,16 +4,10 @@ import { withToolchainPath } from '../../config.ts';
 
 const TAIL_BYTES = 20_000;
 
-/** Run a repo command in `cwd`. Never rejects: a failure or timeout is `passed: false`. */
 export function runCommand(cmd: string, cwd: string, timeout: number): Promise<{ passed: boolean; output: string }> {
   return runProgram('sh', ['-c', cmd], cwd, timeout);
 }
 
-/**
- * Run a program with arguments, no shell in between. It gets its own process group, which a timeout kills whole, so a
- * hung test suite leaves nothing behind. Only the tail of the output is kept, however much there is.
- * Never rejects: a failure or timeout is `passed: false`.
- */
 export function runProgram(file: string, args: string[], cwd: string, timeout: number): Promise<{ passed: boolean; output: string }> {
   return new Promise((resolve) => {
     let tail = Buffer.alloc(0);
@@ -34,9 +28,7 @@ export function runProgram(file: string, args: string[], cwd: string, timeout: n
       if (pid === undefined) return;
       try {
         process.kill(-pid, 'SIGKILL');
-      } catch {
-        // The group is already gone.
-      }
+      } catch {}
     };
 
     let pid: number | undefined;
@@ -57,7 +49,6 @@ export function runProgram(file: string, args: string[], cwd: string, timeout: n
       child.stderr.on('data', keep);
       child.on('error', (err) => finish(false, err.message));
       child.on('close', (code, signal) => {
-        // Anything the command left running in its group goes with it.
         killGroup(pid);
         if (timedOut) finish(false, `timed out after ${timeout} ms`);
         else if (code === 0) finish(true, '');

@@ -1,7 +1,4 @@
-// The review run of a done task: claude reads the task's changes against its Goal, Definition of done and linked plan
-// steps with read-only tools, and answers with a summary and findings. The daemon stores that as a submitted review by
-// the review run, and on blocking findings retries the task once with the review as its note. It takes a slot and uses
-// no attempt (domain/runs/review.ts).
+// The review run of a done task: claude reads the task's changes against its Goal, Definition of done and linked plan steps with read-only tools, and answers with a summary and findings.
 import type { App } from '../ports/app.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import type { PromptPlan } from '../../domain/runs/index.ts';
@@ -23,18 +20,11 @@ import { type OpenedRun, endTaskRun, openTaskRun, startTaskRun } from './claude-
 import { planForRun } from '../work/plans.ts';
 import { settle } from '../landing/settle.ts';
 
-/**
- * What a review run came to. `clean`: its review has no blocking finding; `retried`: one blocks, and the task went back
- * to work with the review as its note; `left`: one blocks, but a review run retried the task before, so it waits in
- * review for a person; `garbage`: its answer could not be read, so it left no review; `stale`: the task stopped being
- * done, or another review run read these changes, before it started; `cancelled`: the task stopped being done while it ran.
- */
 export interface ReviewReport {
   outcome: 'clean' | 'retried' | 'left' | 'garbage' | 'stale' | 'failed' | 'rate_limited' | 'cancelled';
   reason?: string;
 }
 
-/** A done task and the changes a review run of it reads: its head, where its branch left the base, and their patch-id. */
 export interface ReviewTarget {
   task: Task;
   head: string;
@@ -42,7 +32,6 @@ export interface ReviewTarget {
   diffHash: string;
 }
 
-/** The changes a review run of `task` would read, or null when its branch, its base or their patch-id can't be found. */
 async function reviewTarget(app: App, task: Task): Promise<ReviewTarget | null> {
   const repo = app.getRepo(task.repo_id);
   const branch = task.checkout?.branch;
@@ -56,17 +45,13 @@ async function reviewTarget(app: App, task: Task): Promise<ReviewTarget | null> 
   return base && diffHash ? { task, head, from: base.sha, diffHash } : null;
 }
 
-/**
- * The done task a review run should start for next, with the changes it reads (`reviewable`), or undefined when none
- * may. A task whose changes can't be read is passed over.
- */
 export async function nextReviewable(app: App): Promise<ReviewTarget | undefined> {
   for (const task of app.reviewCandidates()) {
     let target: ReviewTarget | null = null;
     try {
       target = await reviewTarget(app, task);
     } catch {
-      continue; // git could not read the branch: the next tick looks again
+      continue;
     }
     const now = target && app.getTask(task.id);
     const repo = now && app.getRepo(now.repo_id);
@@ -75,12 +60,6 @@ export async function nextReviewable(app: App): Promise<ReviewTarget | undefined
   return undefined;
 }
 
-/**
- * Run a review run for a done task's changes. The diff was worked out before, so whether one may start is asked again
- * here, with no await between that and the run row opening: a second call for the same changes, while the first is
- * being set up, finds its row and starts nothing. Never throws: a failure ends the row failed and leaves no review,
- * and the row's diff_hash keeps the next tick from starting another for the same changes.
- */
 export async function runReview(app: App, target: ReviewTarget): Promise<ReviewReport> {
   const task = app.getTask(target.task.id);
   const repo = task && app.getRepo(task.repo_id);
@@ -122,7 +101,6 @@ async function runOpened(app: App, target: ReviewTarget, opened: OpenedRun): Pro
     tools: REVIEW_TOOLS,
     disallowed: REVIEW_DENIED_TOOLS,
     args: reviewSchemaArgs(),
-    // Merged, retried or sent back by a person: the changes it reads are no longer the ones waiting to merge.
     cancelled: () => app.getTask(task.id)?.status !== 'done',
   });
 
@@ -144,7 +122,6 @@ async function runOpened(app: App, target: ReviewTarget, opened: OpenedRun): Pro
   }
   const outcome = reviewOutcome(answer, app.eventsForTask(task.id));
   app.runLog.event(log, { type: 'agentdeck_review', text: reviewLogText(outcome) });
-  // The row ends after the review is stored: a retried task is not claimed while its review run is open.
   try {
     return await settleReview(app, task.id, target, outcome);
   } finally {
@@ -159,11 +136,6 @@ const reviewLogText = ({ record, retry }: ReviewOutcome): string =>
       ? 'Changes requested: the task goes back to work with the review as its note'
       : 'Changes requested, but a review run retried the task before: it waits in review for a person';
 
-/**
- * Store the review, after the retry when it blocks, as a person's Request changes retries before it submits: the
- * worker's next prompt reads a review submitted at or after its retry as that retry's own (`isReviewRetry`). Nothing is
- * stored when the task stopped being done meanwhile.
- */
 async function settleReview(app: App, id: TaskId, target: ReviewTarget, { record, retry }: ReviewOutcome): Promise<ReviewReport> {
   if (retry) {
     if (!(await settle(app, id, { type: 'review_retry' }, { reason: retry }))) return { outcome: 'stale' };

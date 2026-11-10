@@ -16,7 +16,6 @@ import { pauseRepo } from './pause.ts';
 import { buildersOnRepo, liveLinks, warnBuildersOnDeleted } from '../work/dependencies.ts';
 import { prModeOffError, startState } from '../../domain/work/index.ts';
 
-/** Register a repo. Its toolchain is detected from the root files and fills in whatever isn't given. */
 export async function addRepo(
   app: App,
   input: { path: string; name?: string; base?: string; test?: string | null; setup?: string | null; tools?: string[] | null },
@@ -43,7 +42,6 @@ export async function addRepo(
       path: abs,
       base_branch: base || git.branch,
       test_cmd: test || detected?.test_cmd || null,
-      // Left null unless given, so the rules follow the repo's scripts as they change (domain/repos/tools.ts).
       allowed_tools: tools?.length ? tools : null,
       toolchain: detected?.toolchain ?? null,
       setup_cmd: setup || detected?.setup_cmd || null,
@@ -70,21 +68,13 @@ export interface RepoPatch {
   auto_resolve?: boolean;
   auto_unblock?: boolean;
   auto_review?: boolean;
-  /** A retry after a failure a stronger model may fix runs one model up. */
   escalate?: boolean;
   sandbox?: boolean;
-  /** Hosts the agent's sandboxed commands may reach; a string is split on commas and spaces. */
   network?: string | string[];
   auto_merge?: boolean;
   auto_merge_max_lines?: number;
-  /** Path prefixes a PR touching needs a person; a string is split on commas and spaces. */
   auto_merge_skip?: string | string[];
-  /** The model a new task of the repo takes when it names none: an alias or a claude-… id; null or "" clears it. */
   model?: string | null;
-  /**
-   * The repo's own tool rules, in place of the detected ones; a string is split on commas and lines (`parseToolRules`).
-   * None (null, "" or []) goes back to the defaults plus the rules detected from its toolchain.
-   */
   allowed_tools?: string | string[] | null;
 }
 
@@ -117,7 +107,6 @@ export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch
       : body.allowed_tools === null
         ? []
         : list(body, 'allowed_tools');
-  // No rules is null, not [] (which would allow nothing): the detected rules again.
   const allowed_tools = rules && (rules.length ? parseToolRules(rules.join('\n')) : null);
   if (allowed_tools) refuse(toolRulesError(allowed_tools));
   if (network) refuse(networkError(network));
@@ -164,17 +153,12 @@ export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch
   return repoDetail(app, repo.id);
 }
 
-/** Let a paused repo's tasks run again. */
 export function resumeRepo(app: App, nameOrId: string | number): Repo {
   const repo = requireRepo(app, nameOrId);
   app.setRepoPaused(repo.id, null);
   return app.getRepo(repo.id)!;
 }
 
-/**
- * Hide a repo and all its tasks and stop its work: nothing of it is claimed, planned or polled.
- * Refuses while one of its tasks is running. Its tasks keep their statuses; `unarchiveRepo` brings them back.
- */
 export function archiveRepo(app: App, nameOrId: string | number): Repo {
   const repo = requireRepo(app, nameOrId);
   if (repo.archived_at) return repo;
@@ -190,7 +174,6 @@ export function unarchiveRepo(app: App, nameOrId: string | number): Repo {
   return app.getRepo(repo.id)!;
 }
 
-/** What deleting a repo will remove, counted. */
 export function repoDeletionPreview(app: App, nameOrId: string | number) {
   const repo = requireRepo(app, nameOrId);
   const { tasks, run_logs } = app.repoFootprint(repo.id);
@@ -203,17 +186,10 @@ export function repoDeletionPreview(app: App, nameOrId: string | number) {
   };
 }
 
-/**
- * Delete an archived repo and all that belongs to it, locally: the rows, then each task's worktree and branch,
- * the logs, settings files and goals file. Never touches GitHub, the remote or the repo's own folder.
- * Files go after the rows, so a failure leaves files behind, never rows pointing at missing files;
- * `leftover` names what couldn't be removed.
- */
 export async function deleteRepo(app: App, nameOrId: string | number): Promise<{ repo: string; leftover: string[] }> {
   const repo = requireRepo(app, nameOrId);
   if (!repo.archived_at) throw new ActionError(`${repo.name} is not archived; archive it first, then delete`);
   const { tasks, run_logs, planner_logs } = app.repoFootprint(repo.id);
-  // Other repos' tasks that build on this repo's unmerged tasks lose those links with it: say so, so none starts unannounced.
   const builders = buildersOnRepo(
     app,
     repo.id,
@@ -247,10 +223,6 @@ export interface DoctorReport {
   paused_reason: string | null;
 }
 
-/**
- * Check that a repo is ready for unattended runs. A failure pauses the repo, naming the first failed check;
- * a pass clears any pause.
- */
 export async function doctorRepo(app: App, nameOrId: string | number): Promise<DoctorReport> {
   const repo = requireRepo(app, nameOrId);
   const checks = await runDoctor(app, repo);
@@ -260,11 +232,8 @@ export async function doctorRepo(app: App, nameOrId: string | number): Promise<D
   return { repo: repo.name, ok: !failed, checks, paused_reason: app.getRepo(repo.id)!.paused_reason };
 }
 
-/** The repos, the archived ones only when asked for. */
 export const listRepos = (app: App, opts: { archived?: boolean } = {}): Repo[] => app.listRepos(opts);
 
-/** A repo by name or id, or undefined. */
 export const findRepo = (app: App, nameOrId: string): Repo | undefined => app.findRepo(nameOrId);
 
-/** A repo's name for a line of output: `repo<id>` when it is gone. */
 export const repoName = (app: App, id: Repo['id']): string => app.getRepo(id)?.name ?? `repo${id}`;

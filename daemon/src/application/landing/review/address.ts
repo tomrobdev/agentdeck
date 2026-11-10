@@ -13,7 +13,6 @@ import { type ReviewComment, commentStatesFor, commentsToAddress } from '../../.
 import type { Repo } from '../../../domain/repos/index.ts';
 import { type Task, latestRetryAt } from '../../../domain/work/index.ts';
 
-/** The review a run of the task addresses: the open comments of its Request changes reviews with their diff hunks, or null when there are none. */
 export async function reviewForRun(
   app: App,
   task: Pick<Task, 'id'>,
@@ -22,7 +21,6 @@ export async function reviewForRun(
   const reviews = app.reviewsForTask(task.id);
   const comments = commentsToAddress(reviews);
   if (!comments.length) return null;
-  // The patch of a file at the commit a comment was made on; comments on one file share it.
   const patches = new Map<string, Promise<string | null>>();
   const patchAt = (head: string, path: string): Promise<string | null> => {
     const key = `${head}\0${path}`;
@@ -33,7 +31,7 @@ export async function reviewForRun(
           const base = await app.workspace.diffBase(repo.path, repo.base_branch, head);
           return base ? (await app.workspace.filePatch(repo.path, base.sha, head, [path])).patch : null;
         } catch {
-          return null; // the commit or file is gone: the comment goes without its hunk
+          return null;
         }
       })();
       patches.set(key, patch);
@@ -50,10 +48,6 @@ export async function reviewForRun(
   return { prompt: { comments: shown, note: latestRequestNote(reviews), ownRetry }, comments };
 }
 
-/**
- * Store the answers in a run's final message: each answered comment moves to `answered` (unless it was resolved meanwhile).
- * Returns the final message with a line naming the comments left open, or as it was when every comment got an answer.
- */
 export function recordAnswers(app: App, comments: ReviewComment[], finalMessage: string): string {
   const { answered, unanswered } = matchAnswers(comments, finalMessage);
   for (const { comment, answer } of answered) app.moveComment(comment.id, commentStatesFor('answer'), 'answered', answer);

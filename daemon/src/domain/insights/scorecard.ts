@@ -1,5 +1,4 @@
-// The rest of the pilot scorecard (docs/pilot/scorecard.md), computed from plain rows: interventions, time queued,
-// running and in review, quota spent and PRs green on CI. Pure: no I/O. The first-run measures are in stats.ts.
+// The rest of the pilot scorecard (docs/pilot/scorecard.md), computed from plain rows: interventions, time queued, running and in review, quota spent and PRs green on CI.
 import type { RepoId, TaskId } from '../shared/index.ts';
 import type { CheckCounts } from '../landing/index.ts';
 import { type QuotaSample, quotaSpends } from '../capacity/index.ts';
@@ -15,10 +14,6 @@ import {
   reviewRunsText,
 } from './review-runs.ts';
 
-/**
- * The pilot's targets for the measures that have one (docs/pilot/scorecard.md): first-run success at least this share,
- * no interventions, every PR green when opened, and at most this many points of the 7-day window spent over the pilot.
- */
 export const SCORECARD_TARGETS = { first_run_rate: 0.8, interventions: 0, pr_green_rate: 1, quota_points: 15 } as const;
 
 /** One row of a task's history (`task_events`), with the task's repo. */
@@ -65,7 +60,6 @@ export interface CycleMinutes {
   review: number | null;
 }
 
-/** The times of one task, read from its history (oldest event first). */
 export function cycleOf(events: ScorecardEvent[]): CycleMinutes {
   const sorted = [...events].sort((a, b) => a.at.localeCompare(b.at));
   const ready = sorted.find((e) => e.type === 'approve') ?? sorted.find((e) => e.type === 'created');
@@ -73,7 +67,6 @@ export function cycleOf(events: ScorecardEvent[]): CycleMinutes {
   let running: number | null = null;
   sorted.forEach((e, i) => {
     if (e.type !== 'claim') return;
-    // The run ends at the next change out of running (a plan_unfinished or sync row keeps the status).
     const end = sorted
       .slice(i + 1)
       .find((n) => (n.from_status === 'running' || n.from_status === 'cancel_requested') && n.to_status !== n.from_status);
@@ -97,7 +90,6 @@ export interface ChecksSummary {
   rate: number | null;
 }
 
-/** Whether a PR's recorded checks were green: there were some, and none failed or was pending. */
 export const checksGreen = (c: CheckCounts): boolean => c.total > 0 && c.failing === 0 && c.pending === 0;
 
 export function summarizeChecks(tasks: ScorecardTask[]): ChecksSummary {
@@ -118,10 +110,6 @@ export interface ScorecardMeasures {
   review_runs: ReviewRunMeasures;
 }
 
-/**
- * The measures over tasks and the events that belong to the same group, with its review runs' measures. Each median
- * skips tasks without that time.
- */
 function scorecardMeasures(
   byTask: Map<number, ScorecardTask>,
   tasks: ScorecardTask[],
@@ -144,7 +132,6 @@ function scorecardMeasures(
   };
 }
 
-/** Read each task's auto-merge off its own setting, its repo's setting and the repo's first merge by the daemon. */
 export function resolveAutoMerge(rows: ScorecardTaskRow[], events: ScorecardEvent[]): ScorecardTask[] {
   const firstAuto = new Map<number, string>();
   for (const e of events) {
@@ -185,14 +172,10 @@ export interface Scorecard {
   weeks: { week: string; measures: ScorecardMeasures; quota_points: number }[];
 }
 
-/**
- * The scorecard. Which week and which `since` a number falls in depends on its subject: a task's times and PR checks go
- * by when the task was created, an intervention by when it happened, quota by when it was seen.
- */
 export function buildScorecard(input: ScorecardInput): Scorecard {
   const since = input.since ?? null;
   const all = resolveAutoMerge(input.tasks, input.events);
-  const byTask = new Map(all.map((t) => [t.id, t])); // interventions may be on a task created before `since`
+  const byTask = new Map(all.map((t) => [t.id, t]));
   const tasks = all.filter((t) => since === null || t.created_at >= since);
   const ids = new Set(tasks.map((t) => t.id));
   const own = input.events.filter((e) => ids.has(e.task_id));
@@ -260,7 +243,6 @@ export function buildScorecard(input: ScorecardInput): Scorecard {
   };
 }
 
-/** "2026-10-01" or "2026-10-01 08:30" read as UTC, as the sqlite stamp it compares with; null if it is not a date. */
 export function parseSince(text: string): string | null {
   const m = text.trim().match(/^(\d{4}-\d{2}-\d{2})(?:[ T](\d{2}:\d{2})(?::(\d{2}))?)?$/);
   if (!m) return null;
@@ -279,7 +261,6 @@ const cells = (name: string, m: ScorecardMeasures, quota?: number): string[] => 
   ...(quota === undefined ? [] : [num(quota)]),
 ];
 
-/** The scorecard as aligned tables: per repo with a total, then per week with `by`; the interventions by kind and the quota below. */
 export function scorecardText(card: Scorecard): string {
   const head = ['', 'interventions', 'queued min', 'running min', 'review min', 'PRs green'];
   const parts = [

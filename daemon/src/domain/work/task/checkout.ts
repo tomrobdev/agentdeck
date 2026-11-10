@@ -1,4 +1,4 @@
-// Where a task's work is checked out. Pure: no I/O.
+// Where a task's work is checked out.
 
 /** A task's checkout: its branch and worktree, and when a sync of the branch began. A task with none of them has null. */
 export interface Checkout {
@@ -7,7 +7,6 @@ export interface Checkout {
   syncing_since: string | null; // when a sync of the branch began; null when none is running
 }
 
-/** The checkout that the three columns make; null when all are empty. */
 export function checkoutOf(fields: Checkout): Checkout | null {
   return fields.branch === null && fields.worktree === null && fields.syncing_since === null ? null : { ...fields };
 }

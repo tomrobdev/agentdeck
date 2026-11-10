@@ -7,7 +7,6 @@ import { die, printHealth, relTime } from '../format.ts';
 import { settingPatch } from './settings-args.ts';
 import type { Command } from '../context.ts';
 
-/** Adapter failures are plain Errors with a message fit to print. */
 async function launchd<T>(fn: () => Promise<T>): Promise<T> {
   try {
     return await fn();
@@ -16,7 +15,6 @@ async function launchd<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
-/** `daemon` and `run-once` share one implementation; `cmd` says which was typed. */
 const runScheduler: Command = async ({ db, cmd }) => {
   await runDaemon({ db, once: cmd === 'run-once', log: console.log, exit: (code) => process.exit(code) }).catch((err) =>
     die(err instanceof Error ? err.message : String(err)),

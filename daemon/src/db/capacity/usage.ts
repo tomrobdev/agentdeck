@@ -6,7 +6,6 @@ import { usageSamples, usageWindows } from '../tables.ts';
 
 export function usageStore(orm: Orm) {
   return {
-    /** Keep the latest reading of a window; when its utilization or reset time changed, append it to the history too. */
     recordUsageWindow(window: string, utilization: number, resets_at: number, status: string | null): void {
       const observed_at = NOW_SQL;
       const last = orm.select().from(usageWindows).where(eq(usageWindows.window, window)).get();
@@ -21,7 +20,6 @@ export function usageStore(orm: Orm) {
     usageWindows(): { window: string; utilization: number; resets_at: number; status: string | null; observed_at: string }[] {
       return orm.select().from(usageWindows).orderBy(asc(usageWindows.window)).all();
     },
-    /** The history of readings, oldest first, optionally of one window. */
     usageSamples(window?: string): { window: string; utilization: number; resets_at: number; observed_at: string }[] {
       return orm
         .select({

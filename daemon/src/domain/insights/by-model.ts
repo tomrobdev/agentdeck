@@ -1,10 +1,9 @@
-// The pilot measures per model (`agentdeck stats --by model`), read from the model each work run recorded. Pure: no I/O.
+// The pilot measures per model (`agentdeck stats --by model`), read from the model each work run recorded.
 import { countInterventions } from './interventions.ts';
 import { num, table } from './report-text.ts';
 import { type ScorecardEvent, type ScorecardTaskRow, resolveAutoMerge } from './scorecard.ts';
 import { type Measures, type StatRun, fmtFirstRun, measure } from './stats.ts';
 
-/** The row of the runs whose model is not known: they ran on code from before runs recorded one. */
 export const UNKNOWN_MODEL = 'unknown';
 
 /** The first-run measures of the work runs of one model, and the interventions on the tasks while they ran on it. */
@@ -25,21 +24,12 @@ export interface ByModelInput {
 
 const modelOf = (r: StatRun): string => r.model ?? UNKNOWN_MODEL;
 
-/**
- * The model an intervention counts against: the model of the task's latest work run begun before it (what the person
- * stepped in on), else of the task's first run (an edit before any run changes what the first one gets); unknown for a
- * task with no work run.
- */
 export function interventionModel(e: ScorecardEvent, runsOfTask: StatRun[]): string {
   const before = runsOfTask.filter((r) => r.started_at <= e.at);
   const run = before.length ? before[before.length - 1] : runsOfTask[0];
   return run ? modelOf(run) : UNKNOWN_MODEL;
 }
 
-/**
- * One row per model the work runs ran on, by name with unknown last: first-run done, cost and minutes per done task
- * from that model's runs, and the interventions counted against it (`interventionModel`).
- */
 export function measureByModel(input: ByModelInput): ModelMeasures[] {
   const since = input.since ?? null;
   const runs = input.runs.filter((r) => since === null || r.started_at >= since);
@@ -62,13 +52,11 @@ export function measureByModel(input: ByModelInput): ModelMeasures[] {
     measures: measure(runsByModel.get(model) ?? []),
     interventions: countInterventions(eventsOf.get(model) ?? [], byTask).total,
   }));
-  // A model with no runs and no interventions has no row: unknown only appears when something is of unknown model.
   return rows
     .filter((r) => r.measures.runs > 0 || r.interventions > 0)
     .sort((a, b) => (a.model === UNKNOWN_MODEL ? 1 : b.model === UNKNOWN_MODEL ? -1 : a.model.localeCompare(b.model)));
 }
 
-/** The per-model rows as an aligned table. */
 export function modelsTable(rows: ModelMeasures[]): string {
   const head = ['model', 'tasks', 'runs', 'first run done', 'cost/done task', 'min/done task', 'interventions'];
   return table(

@@ -1,5 +1,4 @@
 // Turning a repo's goals into task proposals: the prompt, the answer's shape, and which proposals to keep.
-// Pure: no I/O. The planner runs read-only in the repo's main checkout and answers in PROPOSALS_SCHEMA.
 import type { PlannerRunId, RepoId } from '../shared/index.ts';
 import type { Repo } from '../repos/index.ts';
 import { MODELS, OPEN_STATUSES, PROMPT_SECTIONS, type Task, stopReasonOf } from '../work/index.ts';
@@ -100,7 +99,6 @@ export function plannerArgs(prompt: string, model: string): string[] {
     '15',
     '--permission-mode',
     'dontAsk',
-    // No MCP servers or connectors from the person's own config.
     '--strict-mcp-config',
     '--allowedTools',
     ...PLANNER_TOOLS,
@@ -111,7 +109,6 @@ export function plannerArgs(prompt: string, model: string): string[] {
   ];
 }
 
-/** Why the planner should run for a repo now, or null. `proposed_at` is SQLite UTC. */
 export function plannerDueReason(
   s: PlannerSettings,
   repo: { hasGoals: boolean; openTasks: number; proposed_at: string | null },
@@ -124,7 +121,6 @@ export function plannerDueReason(
   return 'queue is empty';
 }
 
-/** The rules for the planner's settings. Each returns the message to show, or null. */
 export function plannerIntervalError(hours: number): string | null {
   return hours >= 0.25 && hours <= 168 ? null : 'planner interval must be between 0.25 and 168 hours';
 }
@@ -153,7 +149,6 @@ const norm = (s: string) =>
 /** One entry of the planner's answer before it is checked: any field may be missing or of another type. */
 type RawProposal = { title?: unknown; prompt?: unknown; priority?: unknown; model?: unknown };
 
-/** Clean up the planner's raw answer: drop empty entries and anything repeating an existing title, then cap. */
 export function selectProposals(raw: unknown[], existingTitles: string[], max: number): { accepted: Proposal[]; skipped: string[] } {
   const seen = new Set(existingTitles.map(norm));
   const accepted: Proposal[] = [];

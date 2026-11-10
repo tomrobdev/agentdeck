@@ -27,7 +27,6 @@ import {
 } from '../format.ts';
 import type { Command } from '../context.ts';
 
-/** A file's text, or exit saying why it can't be read. */
 function readText(file: string): string {
   try {
     return readFileSync(file, 'utf8');
@@ -36,10 +35,6 @@ function readText(file: string): string {
   }
 }
 
-/**
- * `--plan`: a task number (`112` or `#112`) links that task's plan; anything else is a plan file, read from anywhere on
- * disk, that the task stores as its own plan. Empty clears the link (edit).
- */
 function planFlag(value: string | undefined): { plan_task?: TaskId | null; plan_html?: string } {
   if (value === undefined) return {};
   const v = value.trim();
@@ -50,13 +45,11 @@ function planFlag(value: string | undefined): { plan_task?: TaskId | null; plan_
   return { plan_html: readText(v) };
 }
 
-/** The name of the plan a task follows, from the plans its detail shows. */
 function followedPlanName(t: { id: TaskId; plan: PlanLink | null; plans: { task_id: TaskId; name: string }[] }): string | null {
   const owner = planOwnerOf(t);
   return t.plans.find((p) => p.task_id === owner && isOwnPlanName(owner, p.name))?.name ?? null;
 }
 
-/** `approve` and `reject` share one implementation; `cmd` says which was typed. */
 const approveOrReject: Command = ({ db, cmd, rest }) => {
   if (!rest.length) die(`usage: agentdeck ${cmd} <id>...`);
   for (const arg of rest) {
@@ -114,7 +107,6 @@ export const taskCommands: Record<string, Command> = {
     try {
       actions.linkTasks(db, id, { on, kind });
     } catch (e) {
-      // A builds-on link refused on a started task: the after link it suggests is one flag away.
       if (kind === 'builds_on' && e instanceof actions.ActionError && e.code === actions.BUILDS_ON_STARTED)
         die(`${e.message}: agentdeck link ${id} --after ${on}`);
       throw e;
@@ -131,7 +123,6 @@ export const taskCommands: Record<string, Command> = {
   },
   edit: async ({ db, flags, rest, repoName }) => {
     const id = taskId(rest[0]);
-    // A blank or non-numeric value becomes NaN, which editTask rejects.
     const num = (v: string | undefined) => (v === undefined ? undefined : v.trim() === '' ? NaN : Number(v));
     const t = await actions.editTask(db, id, {
       title: flags.title,
@@ -153,7 +144,6 @@ export const taskCommands: Record<string, Command> = {
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean);
-    // One status keeps its old order, priority first; anything else lists the newest first.
     const sort = flags.sort ?? (states.length === 1 && (TASK_STATUSES as string[]).includes(states[0]) ? 'priority' : 'newest');
     const all = actions.withViews(db, actions.listTasks(db)).map(listable);
     let tasks;
@@ -261,7 +251,6 @@ export const taskCommands: Record<string, Command> = {
   },
   'install-needs': async ({ db, flags, rest }) => {
     const id = taskId(rest[0]);
-    // Without a package request there is nothing to confirm: installNeeds says why.
     const task = actions.findTask(db, id);
     const needs = task?.status === 'blocked' ? task.needs : null;
     if (needs?.kind === 'deps') {
@@ -309,5 +298,4 @@ export const taskCommands: Record<string, Command> = {
   },
 };
 
-// `resolve` is the old name of `sync`.
 taskCommands.resolve = taskCommands.sync;

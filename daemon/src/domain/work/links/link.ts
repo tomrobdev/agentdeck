@@ -1,7 +1,4 @@
-// Task links: a task depends on any number of others, each link a kind. Pure: no I/O. (docs/plans/task-links.html)
-//
-// - builds_on: the task uses the other's code, so it starts once the other is done and merged.
-// - after: the task runs on its own and only its merge waits for the other's.
+// Task links: a task depends on any number of others, each link a kind.
 
 import type { TaskId } from '../../shared/index.ts';
 import type { PullRequest } from '../../landing/index.ts';
@@ -51,12 +48,8 @@ function standing(on: TaskId, dependency: Dependency | undefined): Standing {
   if (!dependency) return stuck(`${id} no longer exists`, 'which no longer exists');
   switch (dependency.status) {
     case 'done':
-      // Done and merged; or done in a repo that opens no PRs; or a person said so and its PR is not open. A PR merged before a
-      // retry is set aside by it (`statusChangePrChanges`), so the task is not met again until its new PR merges.
       const state = dependency.pr?.state ?? null;
       if (state === 'merged') return { kind: 'met' };
-      // A person's `agentdeck done` stays met in any repo: they say the work is finished. In a repo with `pr_mode off` no
-      // builds-on link may be made to a task (`buildsOnRepoError`), so this only covers links made before.
       if (state === null && dependency.pr_mode === 'off') return { kind: 'met' };
       if (dependency.done_by === 'person' && state !== 'open') return { kind: 'met' };
       if (state === 'closed') return stuck(`${id}'s PR was closed without merging`, 'whose PR was closed without merging');
@@ -74,7 +67,6 @@ function standing(on: TaskId, dependency: Dependency | undefined): Standing {
   }
 }
 
-/** Whether the other task of an after link was rejected or is gone, so it will never land: cancelled, its PR closed, or deleted. */
 function neverLands(dependency: Dependency | undefined): boolean {
   if (!dependency) return true;
   return dependency.status === 'cancelled' || (dependency.status === 'done' && dependency.pr?.state === 'closed');
@@ -119,11 +111,9 @@ export function startState(task: { id: TaskId }, links: Link[], lookup: (id: Tas
   const own = links.filter((l) => l.task_id === task.id && l.kind === 'builds_on');
   if (own.length === 0) return { kind: 'none' };
   const visited = new Set<TaskId>([task.id]);
-  /** The stuck root at or below `on`, following builds-on links down through tasks that are not done; `via` is the way down. */
   const root = (on: TaskId, via: TaskId[], dep: LinkTarget | undefined, s: Standing): { on: TaskId; reason: string } | null => {
     if (s.kind === 'stuck')
       return { on, reason: via.length ? `waits on #${on} (via ${via.map((v) => `#${v}`).join(', ')}), ${s.which}` : s.reason };
-    // A task that is gone is stuck, so the walk is at a task that exists from here.
     const target = dep!;
     if (s.kind === 'met' || target.status === 'done' || visited.has(on)) return null;
     visited.add(on);
@@ -146,7 +136,6 @@ export function startState(task: { id: TaskId }, links: Link[], lookup: (id: Tas
   return waiting.length ? { kind: 'waiting', on: waiting } : { kind: 'met' };
 }
 
-/** The after links whose other task has not landed yet, each with why: the task's merge waits for them. */
 export function unlandedAfter(links: Link[], lookup: (id: TaskId) => Dependency | undefined): { on: TaskId; reason: string }[] {
   const unlanded: { on: TaskId; reason: string }[] = [];
   for (const link of links) {
@@ -171,14 +160,8 @@ export interface LinkIndex {
 /** A task that builds on another: one of LinkIndex's dependents through a builds-on link. */
 type Builder = { id: TaskId; status: string };
 
-/** The tasks that depend on task `id` through a builds-on link. */
 const buildingOn = (id: TaskId, l: LinkIndex): Builder[] => l.dependentsOf(id).filter((d) => d.kind === 'builds_on');
 
-/**
- * The queued tasks that can't start because of task `id`, however many builds-on links down: those whose own start
- * state is stuck on `id`, so retrying `id` releases them. One stuck on something else on the way (a cancelled task
- * between them) is left out: retrying `id` would not release it. The walk stops at done tasks, which started already.
- */
 export function stuckOn(id: TaskId, l: LinkIndex): Builder[] {
   const stuck: Builder[] = [];
   const seen = new Set<TaskId>([id]);
@@ -197,10 +180,6 @@ export function stuckOn(id: TaskId, l: LinkIndex): Builder[] {
   return stuck.sort((a, b) => a.id - b.id);
 }
 
-/**
- * The queued tasks that build on task `id` and that merging `id` leaves free to start. One that also waits on another
- * task it builds on, or is stuck on one, is left out.
- */
 export function releasedBy(id: TaskId, l: LinkIndex): Builder[] {
   const merged = (on: TaskId): LinkTarget | undefined => {
     const t = l.target(on);
@@ -209,10 +188,6 @@ export function releasedBy(id: TaskId, l: LinkIndex): Builder[] {
   return buildingOn(id, l).filter((t) => t.status === 'queued' && startState(t, l.linksOf(t.id), merged).kind === 'met');
 }
 
-/**
- * Why `task` may not get a link to `on`, or null if it may. `links` is every link there is: a link to `on` makes a
- * cycle when `on` already reaches `task` through links of either kind.
- */
 export function linkError(task: TaskId, on: TaskId, links: Link[]): string | null {
   if (task === on) return `#${task} can't depend on itself`;
   if (links.some((l) => l.task_id === task && l.on === on)) return `#${task} is already linked to #${on}`;
@@ -228,36 +203,22 @@ export function linkError(task: TaskId, on: TaskId, links: Link[]): string | nul
   return null;
 }
 
-/**
- * Why `task` (in `status`) may not build on `on`, or null if it may. A task builds on another's code from its first run, so
- * once it has started (running, done, or stopped after a run) a builds-on link would gate nothing; an after link still
- * orders its merge.
- */
 export function buildsOnError(task: TaskId, status: string, on: TaskId): string | null {
   if (status === 'proposed' || status === 'queued') return null;
   return `#${task} has started already, so it can't build on #${on}; make it an after link instead`;
 }
 
-/**
- * Why a task may not build on task `on`, which is in `repo`, or null if it may. In a repo with `pr_mode off` the work of
- * `on` is never merged into the base, so a task building on it would start without it. After links stay allowed.
- */
 export function buildsOnRepoError(on: TaskId, repo: { name: string; pr_mode: PrMode }): string | null {
   if (repo.pr_mode !== 'off') return null;
   return `#${on} is in ${repo.name}, which opens no PRs, so its work never reaches the base: make it an after link instead`;
 }
 
-/**
- * Why a repo may not switch to `pr_mode off`, or null if it may: `unmet` are its tasks (not done or cancelled) that build
- * on a task that is not yet met, which would start without that work once nothing is merged.
- */
 export function prModeOffError(repo: string, unmet: TaskId[]): string | null {
   if (unmet.length === 0) return null;
   const names = unmet.map((id) => `#${id}`).join(', ');
   return `${repo} can't stop opening PRs while ${names} ${unmet.length === 1 ? 'builds' : 'build'} on a task that is not merged yet: wait for ${unmet.length === 1 ? 'it' : 'them'} to start, or cancel ${unmet.length === 1 ? 'it' : 'them'}`;
 }
 
-/** The queued tasks merging this one lets start, for a task in review; none for any other task. */
 export function unblocksOf(task: Parameters<typeof stageOf>[0] & { id: TaskId }, links: LinkIndex): TaskId[] {
   if (!isReview(stageOf(task))) return [];
   return releasedBy(task.id, links).map((t) => t.id);
@@ -270,12 +231,10 @@ export interface LinkView {
   state: LinkState['kind'];
 }
 
-/** Task `id`'s links as views show them, each with where it stands. */
 export function linkViews(id: TaskId, links: LinkIndex): LinkView[] {
   return links.linksOf(id).map((l) => ({ on: l.on, kind: l.kind, state: linkState(l, links.target(l.on)).kind }));
 }
 
-/** The tasks that depend on task `id`, whatever their status, each with its link's kind. */
 export function dependentViews(id: TaskId, links: LinkIndex): { id: TaskId; kind: LinkKind }[] {
   return links.dependentsOf(id).map((d) => ({ id: d.id, kind: d.kind }));
 }

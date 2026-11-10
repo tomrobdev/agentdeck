@@ -26,7 +26,6 @@ export function die(msg: string): never {
   process.exit(1);
 }
 
-/** Asks `question [y/N] ` on the terminal; true only for y or yes. */
 export async function confirm(question: string): Promise<boolean> {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   const answer = await rl.question(`${question} [y/N] `);
@@ -40,16 +39,12 @@ export function taskId(arg: string | undefined): TaskId {
   return asTaskId(id);
 }
 
-/** The task ids a list flag names (`--builds-on 12,14`); empty when the flag is not given. */
 export function taskIds(value: string | undefined, flag: string): TaskId[] {
   return parseTaskIds(value) ?? die(`${flag} takes task ids, like 12,14`);
 }
 
-/** "#12, #14" */
 export const idsText = (ids: TaskId[]): string => ids.map((id) => `#${id}`).join(', ');
 
-/** One link in words: "builds on #12 (waiting)", "after #9 (not landed yet)". */
-/** A proposal check: its line, then each named file the base changed, each task touching the same files, and the notes. */
 export function fmtProposalCheck(check: ProposalCheck): string[] {
   const line = proposalCheckLine(check);
   const out = line ? [`check    ${line}`] : [];
@@ -60,7 +55,6 @@ export function fmtProposalCheck(check: ProposalCheck): string[] {
   return out;
 }
 
-/** A verify run's findings: their line, then each claim with its verdict and place, its evidence and the fix. */
 export function fmtVerifyFindings(findings: VerifyFinding[]): string[] {
   const out = [verifyLine(findings)];
   for (const f of findings) {
@@ -77,7 +71,6 @@ export function fmtLink(l: TaskView['links'][number]): string {
   return `${l.kind === 'builds_on' ? 'builds on' : 'after'} #${l.on} (${state})`;
 }
 
-/** A failed or blocked run's summary in a few lines: the verdict, time and tools, and the last failing output's tail. */
 export function fmtRunSummary(s: RunSummary): string[] {
   const tools = s.tools
     .slice(0, 6)
@@ -96,7 +89,6 @@ export function fmtRunSummary(s: RunSummary): string[] {
   return lines;
 }
 
-/** `waiting`, `unblocks` and `links` come from a task view (`taskDetail`, `withViews`); a plain task shows none. */
 export function fmtTask(
   t: Task & {
     waiting?: TaskView['waiting'];
@@ -114,7 +106,6 @@ export function fmtTask(
       : `  waiting on ${idsText(waiting.on)}`;
   if (t.pr?.url) extra += `  PR ${t.pr.state}: ${t.pr.url}`;
   if (t.auto_merge_view && t.auto_merge_view.state !== 'off') extra += `  ${t.auto_merge_view.label}`;
-  // A builds-on link that is still waiting is already shown as "waiting on"; show the rest.
   for (const l of t.links ?? []) if (l.kind === 'after' || l.state !== 'waiting' || !waiting) extra += `  ${fmtLink(l)}`;
   if (t.unblocks?.length) extra += `  unblocks ${idsText(t.unblocks)}`;
   return `${STATUS_ICON[t.status]} #${String(t.id).padEnd(4)} ${t.status.padEnd(9)} p${t.priority}  ${repoName.padEnd(14)} ${t.title}${extra}`;
@@ -126,7 +117,6 @@ const SOURCE_WORDS = {
   planner: 'off because the repo auto-approves planner proposals',
 };
 
-/** The lines `agentdeck show` prints for auto-merge: the label and its source, each reason, when it was checked, the limits. */
 export function fmtAutoMerge(v: AutoMergeView): string[] {
   const lines = [`auto-merge ${v.label} (${SOURCE_WORDS[v.source]})`];
   for (const reason of v.reasons) lines.push(`           - ${reason}`);
@@ -138,11 +128,6 @@ export function fmtAutoMerge(v: AutoMergeView): string[] {
   return lines;
 }
 
-/**
- * What `agentdeck show` prints for the open PR's checks: "checks   2 of 5 failing: lint, test (agentdeck fix-checks 12)",
- * then a line for each failing check whose failure was read, with its step and what failed:
- * "         - check › tests and coverage: cli: branches 53.6% is below its floor of 54%".
- */
 export function fmtChecks(c: ChecksSummary, id?: TaskId): string {
   const running = c.pending ? `, ${c.pending} running` : '';
   if (!c.failing) return `checks   ${c.total} on the PR, none failing${running}`;
@@ -152,7 +137,6 @@ export function fmtChecks(c: ChecksSummary, id?: TaskId): string {
   return [head, ...details.map((line) => `         - ${line}`)].join('\n');
 }
 
-/** Print each doctor check with its reason, then the verdict. */
 export function printDoctor(report: DoctorReport): DoctorReport {
   for (const c of report.checks) console.log(`${c.ok ? '✓' : '✗'} ${c.name.padEnd(14)} ${c.reason}`);
   console.log(
@@ -163,7 +147,6 @@ export function printDoctor(report: DoctorReport): DoctorReport {
   return report;
 }
 
-/** Print each daemon check with its reason (a warning marked `!`), and under each failed one or warning the command that fixes it. */
 export function printHealth(checks: HealthCheck[]): void {
   for (const c of checks) {
     console.log(`${c.ok ? (c.warning ? '!' : '✓') : '✗'} ${c.name.padEnd(17)} ${c.reason}`);
@@ -181,13 +164,11 @@ export function relTime(unixSeconds: number): string {
   return mins < 90 ? `${mins}m` : `${(mins / 60).toFixed(1)}h`;
 }
 
-/** What a claude was told, in a line: "prompt: 42 lines, note: fix the test", "resumed, prompt: 6 lines". */
 export function fmtPrompt(e: { lines: number; resume: boolean; note: string | null }): string {
   const note = e.note ? `, note: ${cut(oneLine(e.note), 120)}` : '';
   return `📝 ${e.resume ? 'resumed, ' : ''}prompt: ${e.lines} ${e.lines === 1 ? 'line' : 'lines'}${note}`;
 }
 
-/** Print a run's log in readable form. */
 export function printLog(app: ComposedApp, path: string): void {
   for (const e of readLog(app, path)) {
     if (e.kind === 'prompt') console.log(fmtPrompt(e));

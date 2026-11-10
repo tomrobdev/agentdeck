@@ -9,7 +9,6 @@ import { repos, reviews, runs, taskEvents, tasks } from '../tables.ts';
 
 export function statsStore(orm: Orm) {
   return {
-    /** Every work run (resolve runs use no attempt), optionally of one repo, oldest first. */
     statRuns(repo_id?: RepoId): StatRun[] {
       return orm
         .select({
@@ -33,7 +32,6 @@ export function statsStore(orm: Orm) {
         .all()
         .map(({ last_test_failed, ...run }) => ({ ...run, last_test_failed: last_test_failed === null ? null : last_test_failed === 1 }));
     },
-    /** Every task, optionally of one repo, with its own auto-merge setting and its repo's. */
     scorecardTasks(repo_id?: RepoId): ScorecardTaskRow[] {
       return orm
         .select({
@@ -58,7 +56,6 @@ export function statsStore(orm: Orm) {
           repo_auto_merge: repo_auto_merge === 1,
         }));
     },
-    /** Every history row of the tasks of one repo (or all), oldest first, with the task's repo. */
     scorecardEvents(repo_id?: RepoId): ScorecardEvent[] {
       return orm
         .select({
@@ -76,7 +73,6 @@ export function statsStore(orm: Orm) {
         .orderBy(asc(taskEvents.id))
         .all();
     },
-    /** Every review run, optionally of one repo, oldest first, with its task's repo. */
     scorecardReviewRuns(repo_id?: RepoId): ScorecardReviewRun[] {
       return orm
         .select({
@@ -92,7 +88,6 @@ export function statsStore(orm: Orm) {
         .orderBy(asc(runs.id))
         .all();
     },
-    /** Every submitted review a review run left, optionally on one repo's tasks, oldest first. */
     scorecardRunReviews(repo_id?: RepoId): ScorecardRunReview[] {
       return orm
         .select({ task_id: reviews.task_id, diff_hash: reviews.diff_hash, kind: reviews.kind })

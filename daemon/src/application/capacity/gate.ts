@@ -3,7 +3,6 @@ import type { App } from '../ports/app.ts';
 import { decide } from '../../domain/capacity/index.ts';
 import { type QueueState, type QueueWait, startDecision } from '../../domain/work/index.ts';
 
-/** The state that decides whether work may start. `rate_limited_until` is null once it has lifted or was never set. */
 export function startGate(app: App): QueueState {
   return {
     paused: app.isPaused(),
@@ -12,10 +11,6 @@ export function startGate(app: App): QueueState {
   };
 }
 
-/**
- * What the whole queue waits for now (startDecision over startGate), with the slots: `used` (in use), `max` (the
- * governor's max_concurrent) and `free`. `ignorePause` is run-once's, which works through a paused queue.
- */
 export function queueWait(app: App, ignorePause = false): { wait: QueueWait | null; free: number; used: number; max: number } {
   const gate = startGate(app);
   const used = app.slotsUsed();

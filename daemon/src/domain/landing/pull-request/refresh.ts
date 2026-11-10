@@ -1,5 +1,4 @@
-// What the PR refresh makes of one open PR of a done task: the check that stands, where the PR goes, and whether a
-// person's merge request is dropped. Pure: no I/O.
+// What the PR refresh makes of one open PR of a done task: the check that stands, where the PR goes, and whether a person's merge request is dropped.
 import { type AutoMergeFacts, autoMergeCheck } from '../merge/auto-merge.ts';
 import { isConflicting, isMergeabilityUnknown } from '../merge/conflict.ts';
 import { mergeRequestCheck, mergeRequestPolls } from '../merge/merge-request.ts';
@@ -8,7 +7,6 @@ import { type AutoMergeCheck, type MergeInput, type PrDetails, reasonTexts } fro
 /** Where a PR goes in a refresh's findings: it conflicts with the base, GitHub has not worked out its mergeability, it is ready to merge, or none of these. */
 export type PrPlace = 'conflicting' | 'unknown' | 'mergeable' | null;
 
-/** Where a PR goes, from what GitHub said and its check's verdict (null with no check). A PR that is not open goes nowhere. */
 function placeOf(pr: Pick<PrDetails, 'state' | 'mergeable' | 'merge_state'>, verdict: AutoMergeCheck['verdict'] | null): PrPlace {
   if (pr.state !== 'open') return null;
   if (isConflicting(pr)) return 'conflicting';
@@ -40,10 +38,6 @@ export interface RefreshVerdict {
   polling: boolean;
 }
 
-/**
- * The refresh's verdict on one open PR. With a merge request, its check decides, and a `never` drops the request: a person
- * must act, and can ask again. Without one, auto-merge's check is kept for the views, whatever it says.
- */
 export function refreshVerdict({ input, requested, auto }: RefreshRead): RefreshVerdict {
   const { pr } = input;
   if (requested) {

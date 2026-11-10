@@ -1,7 +1,4 @@
-// Whether a repo is due for an area review: a person's review of one part of a repo across everything merged into it
-// since its last, marked by refs/reviewed/<area> (the review-area skill's marks). The daemon reads only the marks, never
-// the areas' paths: the oldest mark's age, and the commits and lines merged into the base since it. Pure: `now` is a
-// parameter (ms since the epoch), and the git adapter reads the facts.
+// Whether a repo is due for an area review: a person's review of one part of a repo across everything merged into it since its last, marked by refs/reviewed/<area> (the review-area skill's marks).
 import type { RepoId } from '../shared/index.ts';
 import { plural, wholeNumberError } from '../shared/index.ts';
 import type { Check } from './health.ts';
@@ -44,13 +41,11 @@ export interface ReviewDue {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** A person is reminded of a due repo at most this often. */
 export const REVIEW_REMIND_MS = DAY_MS;
 
 export const reviewDueDaysError = (days: number): string | null => wholeNumberError('review_due_days', days, 1, 365);
 export const reviewDueLinesError = (lines: number): string | null => wholeNumberError('review_due_lines', lines, 1, 1_000_000);
 
-/** "area review due: 9 days, 115 commits since the last", or with no mark, what merged since the repo was added. */
 export function reviewDueLine(d: Pick<ReviewDue, 'days' | 'commits' | 'lines'>): string {
   const commits = plural(d.commits, 'commit');
   if (d.days === null)
@@ -58,11 +53,6 @@ export function reviewDueLine(d: Pick<ReviewDue, 'days' | 'commits' | 'lines'>):
   return `area review due: ${plural(d.days, 'day')}, ${commits} since the last`;
 }
 
-/**
- * Whether the repo is due for an area review, and why; null when it is not. A repo with no mark is due once more than
- * `lines` lines have merged since it was added; one with marks once its oldest is older than `days` or more than
- * `lines` lines have merged since it.
- */
 export function reviewDue(
   repo: { id: RepoId; name: string },
   facts: ReviewFacts,
@@ -77,10 +67,8 @@ export function reviewDue(
   return { repo_id: repo.id, repo: repo.name, area: oldest?.area ?? null, ...due, line: reviewDueLine(due) };
 }
 
-/** Whether to remind a person of a due repo now: never told, or told a day ago or more. `toldAt` is ms since the epoch. */
 export const remindReviewDue = (toldAt: number | null, now: number): boolean => toldAt === null || now - toldAt >= REVIEW_REMIND_MS;
 
-/** What a person is told about a due repo. */
 export function reviewDueNotification(d: ReviewDue): Notification {
   const oldest = d.area ? ` The oldest mark is refs/reviewed/${d.area}.` : '';
   return {
@@ -90,7 +78,6 @@ export function reviewDueNotification(d: ReviewDue): Notification {
   };
 }
 
-/** The doctor's check of the area reviews: a warning, never a failure, naming the review-area skill. */
 export function checkReviews(dues: ReviewDue[]): Check {
   const name = 'area reviews';
   if (!dues.length) return { name, ok: true, reason: 'none due', fix: null };

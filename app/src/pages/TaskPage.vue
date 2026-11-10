@@ -9,7 +9,7 @@ import { usePause } from '../composables/shared/usePause';
 import { selectedId } from '../composables/shared/useShell';
 import { useApprovals } from '../composables/work/useApprovals';
 import { useTaskActs } from '../composables/work/usePaletteCommands';
-import type { TaskTab } from '../router';
+import type { TaskTab } from '../lib/shared/app-url';
 
 const props = defineProps<{ id: number; tab: TaskTab; query: Record<string, string> }>();
 const { status } = usePause();

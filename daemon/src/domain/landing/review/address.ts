@@ -1,27 +1,19 @@
-// How a run addresses a review: the comments as the worker is shown them, and the answers it gives back. Pure: no I/O.
+// How a run addresses a review: the comments as the worker is shown them, and the answers it gives back.
 import { STATUS_TAIL, cut, plural } from '../../shared/index.ts';
 import { type CommentSide, type ReviewComment, type ReviewWithComments, commentLocation, submittedRequests } from './review.ts';
 
-/** The most the review may take of a prompt, in characters. Past it, hunks are dropped and long comments cut, and the prompt says so. */
 export const REVIEW_PROMPT_BUDGET = 16000;
-/** Diff lines kept either side of the commented line. */
 export const HUNK_RADIUS = 3;
 const MAX_LINE_CHARS = 200;
 const MAX_COMMENT_CHARS = 2000;
 const SHORT_COMMENT_CHARS = 300;
 
-/** The short id a comment goes by in the prompt: its position (from 0) in the list the worker is given. */
 export const commentLabel = (index: number): string => `c${index + 1}`;
 
-/** The overall note of the latest submitted Request changes review ('' when there is none). */
 export function latestRequestNote(reviews: ReviewWithComments[]): string {
   return submittedRequests(reviews).at(-1)?.body.trim() ?? '';
 }
 
-/**
- * The lines of a unified diff within `radius` of line `line` on `side`, with the header of the hunk they are in.
- * Null when the line is not in the diff (a comment on a line the patch doesn't show).
- */
 export function hunkAround(patch: string, side: CommentSide, line: number, radius: number = HUNK_RADIUS): string | null {
   interface Row {
     text: string;
@@ -72,10 +64,6 @@ export interface ReviewPrompt {
   ownRetry?: boolean;
 }
 
-/**
- * Whether the latest retry (`retryAt`, null when there is none) is the one the latest submitted Request changes review
- * made: the review was submitted at or after it. A later retry, such as Fix checks or an unblock run, has its own note.
- */
 export function isReviewRetry(reviews: ReviewWithComments[], retryAt: string | null): boolean {
   const submitted = submittedRequests(reviews).at(-1)?.submitted_at;
   return !!submitted && retryAt !== null && submitted >= retryAt;
@@ -84,11 +72,6 @@ export function isReviewRetry(reviews: ReviewWithComments[], retryAt: string | n
 export const REVIEW_PROMPT_INTRO =
   'Changes requested in review. Address every comment below, then end your final message with one line per comment, before the STATUS line:\nANSWER c1: <what you did, or why not>';
 
-/**
- * The review as the prompt carries it: each comment with its id (c1, c2…), `path:line`, the diff around it and its text,
- * then the overall note. It stays within REVIEW_PROMPT_BUDGET: later comments lose their hunk first, then get cut short,
- * and a closing line says what was left out.
- */
 export function reviewPromptBlock(review: ReviewPrompt): string {
   let used = REVIEW_PROMPT_INTRO.length + review.note.length;
   let droppedHunks = 0;
@@ -129,7 +112,6 @@ export function reviewPromptBlock(review: ReviewPrompt): string {
     .trimEnd();
 }
 
-/** The `ANSWER cN: …` lines of a final message, by comment id (lowercase). A repeated id keeps its last answer. */
 export function parseAnswers(text: string | null | undefined): Map<string, string> {
   const out = new Map<string, string>();
   for (const line of (text ?? '').split('\n')) {
@@ -139,7 +121,6 @@ export function parseAnswers(text: string | null | undefined): Map<string, strin
   return out;
 }
 
-/** The comments a run was given, split by whether its final message answered them. `index` is the comment's place in the list. */
 export function matchAnswers<C>(
   comments: C[],
   text: string | null | undefined,
@@ -155,12 +136,10 @@ export function matchAnswers<C>(
   return { answered, unanswered };
 }
 
-/** The line for a run's summary naming the comments that got no answer. */
 export function unansweredNote(unanswered: { comment: Pick<ReviewComment, 'path' | 'line' | 'side'>; index: number }[]): string {
   return `Review comments left open, with no answer: ${unanswered.map((u) => `${commentLabel(u.index)} (${commentLocation(u.comment)})`).join(', ')}.`;
 }
 
-/** A final message with `note` added before its closing STATUS line (after it, if it has none), so the STATUS line stays last. */
 export function withNote(text: string, note: string): string {
   const m = text.match(STATUS_TAIL);
   if (!m || m.index === undefined) return `${text.trimEnd()}\n\n${note}`;

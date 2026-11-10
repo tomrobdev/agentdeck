@@ -20,18 +20,14 @@ export function setPaused(app: App, paused: boolean): void {
   if (!paused) app.setRateLimitedUntil(0);
 }
 
-/** Which code the daemon is running, recorded once at start. */
 export interface DaemonInfo {
-  /** The commit of the daemon's checkout; null when it is not a git checkout. */
   commit: string | null;
   started_at: string;
   pid: number;
 }
 
-/** The facts of the daemon's reload that only its process knows (the rest comes from the database). */
 export type ReloadFacts = Pick<ReloadInput, 'changed' | 'lastChangeAt' | 'requested' | 'blocked'>;
 
-/** GET /api/daemon: the code the daemon loaded, since when and as which process, and where a reload stands. */
 export function daemonState(app: App, info: DaemonInfo, facts: ReloadFacts): DaemonState {
   return {
     ...info,
@@ -77,10 +73,6 @@ export function status(app: App, daemon: DaemonInfo = { commit: null, started_at
   };
 }
 
-/**
- * Ask the daemon to exit so launchd starts it on the code on disk. It exits once nothing is running;
- * `waiting` says what it is waiting for, or null when it is exiting now.
- */
 export function restartDaemon(app: App, request: () => void): { waiting: string | null } {
   request();
   return { waiting: restartWait(runningActivity(app)) };
@@ -104,7 +96,6 @@ export interface SettingsPatch {
   review_due?: Partial<ReviewDueSettings>;
 }
 
-/** Apply a partial settings update after validating all of it. */
 export function updateSettings(app: App, patch: SettingsPatch): Settings {
   const next = app.readSettings();
   const body = object(patch);
@@ -172,7 +163,6 @@ export function updateSettings(app: App, patch: SettingsPatch): Settings {
   return getSettings(app);
 }
 
-/** POST /api/app/seen: the desktop app is running, so it shows desktop notifications for the next 90 s. Says whether they are on. */
 export function appSeen(app: App, now = Date.now()): { desktop: boolean } {
   app.setAppSeenAt(now);
   return { desktop: app.notifySettings().desktop };
@@ -182,14 +172,10 @@ export function sendTestNotification(app: App): Promise<void> {
   return notify(app, { kind: 'test', title: 'Test notification', body: 'Notifications from AgentDeck are working.' });
 }
 
-/** How many tasks are running now. */
 export const runningCount = (app: App): number => app.countRunning();
 
-/** Whether a person has paused the daemon. */
 export const isPaused = (app: App): boolean => app.isPaused();
 
-/** Whether the daemon restarts itself onto changed source. */
 export const reloadOnChange = (app: App): boolean => app.reloadOnChange();
 
-/** How many tasks may run at once. */
 export const maxConcurrent = (app: App): number => app.maxConcurrent();

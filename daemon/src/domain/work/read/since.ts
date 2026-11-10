@@ -1,6 +1,4 @@
-// Where the Changes tab can show a task's changes from, besides the base: the head a person's last review read, or the end
-// of an earlier attempt. Pure: worked out from the branch's commits, the task's runs and its reviews. No head is recorded on
-// a run, so an attempt's end is the last branch commit made before its run ended.
+// Where the Changes tab can show a task's changes from, besides the base: the head a person's last review read, or the end of an earlier attempt.
 import { sqliteMs } from '../../shared/index.ts';
 import type { Commit } from './files.ts';
 
@@ -30,12 +28,6 @@ export interface ReviewRead {
   head_commit: string | null;
 }
 
-/**
- * Each attempt's end, oldest attempt first: the last branch commit, by committer date, made before the attempt's last work
- * run ended. Resolve, unblock and review runs don't count (a resolve run commits its sync merge before it ends), nor does
- * a run that has not ended. An attempt with no commit before its end is left out, and so is one that ends where the attempt
- * before it ended: it committed nothing.
- */
 export function attemptEnds(
   commits: Pick<Commit, 'sha' | 'committed_at'>[],
   runs: RunTimes[],
@@ -50,7 +42,6 @@ export function attemptEnds(
   const out: { attempt: number; sha: string; at: string }[] = [];
   for (const [attempt, at] of [...lastRun].sort(([a], [b]) => a - b)) {
     const end = sqliteMs(at);
-    // Newest first from git, so on a tie (one-second dates) the first one seen is the newer.
     let last: { sha: string; ms: number } | null = null;
     for (const c of dated) if (c.ms <= end && (!last || c.ms > last.ms)) last = c;
     if (!last || out.at(-1)?.sha === last.sha) continue;
@@ -59,11 +50,6 @@ export function attemptEnds(
   return out;
 }
 
-/**
- * Where the changes can be shown since, newest first: the head a person's last submitted review read, then each earlier
- * attempt's end. `commits` are the branch's own (against the base), with `head` among them. A point is offered only when
- * it is on the branch and behind `head`, so a review of the current head offers nothing.
- */
 export function sincePoints(
   commits: Pick<Commit, 'sha' | 'committed_at'>[],
   runs: RunTimes[],

@@ -1,4 +1,4 @@
-// Asks a running daemon about itself over its HTTP API. Null when nothing (or nothing that speaks JSON) answers.
+// Asks a running daemon about itself over its HTTP API.
 import type { DaemonState } from '../../domain/operations/index.ts';
 
 export async function fetchDaemonState(port: number, timeoutMs = 3000): Promise<DaemonState | null> {

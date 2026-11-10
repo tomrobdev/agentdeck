@@ -1,5 +1,4 @@
-// The unblock run of a blocked task: claude reads why the task stopped, then the daemon queues it again with the run's
-// note or leaves it blocked with the run's question. It takes a slot and uses no attempt (domain/runs/unblock.ts).
+// The unblock run of a blocked task: claude reads why the task stopped, then the daemon queues it again with the run's note or leaves it blocked with the run's question.
 import type { App } from '../ports/app.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import type { PromptPlan } from '../../domain/runs/index.ts';
@@ -19,13 +18,11 @@ import { type OpenedRun, endTaskRun, openTaskRun, startTaskRun } from './claude-
 import { planForRun } from '../work/plans.ts';
 import { settle } from '../landing/settle.ts';
 
-/** What an unblock run came to. `stale`: the task stopped being blocked while it ran, so nothing was changed. */
 export interface UnblockReport {
   outcome: 'retried' | 'asked' | 'stale' | 'failed' | 'rate_limited' | 'cancelled';
   reason?: string;
 }
 
-/** The blocked task an unblock run should start for next (`unblockable`), or undefined when none may. */
 export function nextUnblockable(app: App): BlockedTask | undefined {
   return app.unblockCandidates().find((t) => {
     const repo = app.getRepo(t.repo_id);
@@ -33,10 +30,6 @@ export function nextUnblockable(app: App): BlockedTask | undefined {
   });
 }
 
-/**
- * Run an unblock run for a blocked task. The run row opens before anything is awaited, so a second look for the next
- * task (`nextUnblockable`) already sees it. Never throws: a failure ends the row failed and leaves the task as it was.
- */
 export async function runUnblock(app: App, task: BlockedTask): Promise<UnblockReport> {
   const opened = openTaskRun(app, task, 'unblock');
   try {
@@ -75,7 +68,6 @@ async function runOpened(app: App, task: BlockedTask, opened: OpenedRun): Promis
     maxTurns: Math.min(UNBLOCK_MAX_TURNS, task.max_turns),
     systemPrompt: unblockSystemPrompt(),
   });
-  // The run may make a small fix; what it left uncommitted is kept on the branch like a worker's.
   try {
     await app.workspace.commit(wt.path, leftoversMessage(task));
   } catch (err) {
@@ -91,7 +83,6 @@ async function runOpened(app: App, task: BlockedTask, opened: OpenedRun): Promis
     await endTaskRun(app, opened, end.kind, end.reason, fields);
     return { outcome: end.kind, reason: end.reason };
   }
-  // Read again: a blocked task's attempts don't change, but a person may have edited max_attempts meanwhile.
   const decision = unblockDecision(parseUnblock(end.result.result), app.getTask(task.id) ?? task);
   app.runLog.event(log, {
     type: 'agentdeck_unblock',
@@ -101,7 +92,6 @@ async function runOpened(app: App, task: BlockedTask, opened: OpenedRun): Promis
   return settleUnblock(app, task.id, decision);
 }
 
-/** Queue the task again with the note, or leave the question on it; neither happens if it is no longer blocked. */
 async function settleUnblock(app: App, id: TaskId, decision: UnblockDecision): Promise<UnblockReport> {
   if ('retry' in decision) {
     const task = await settle(app, id, { type: 'unblock_retry' }, { reason: decision.retry });

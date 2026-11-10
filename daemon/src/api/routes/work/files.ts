@@ -1,5 +1,4 @@
-// Reads of the task's branch from git objects. ref is head or base, paths are repo-relative, and since is a whole commit id
-// on the branch the changes are shown since.
+// Reads of the task's branch from git objects.
 import * as actions from '../../../application/actions.ts';
 import type { Changes, FileContent, FilePatch, ProposalCheck, TreeListing } from '../../contract/files.ts';
 import { type ApiContext, type Route, route, taskIdParam } from '../../http.ts';

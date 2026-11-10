@@ -1,6 +1,4 @@
-// The daemon's loop: claims queued tasks into free slots when the governor allows, runs the planner
-// when a queue runs dry, opens again the PRs that failed to open, and refreshes open PRs, merging those that pass the
-// auto-merge check.
+// The daemon's loop: claims queued tasks into free slots when the governor allows, runs the planner when a queue runs dry, opens again the PRs that failed to open, and refreshes open PRs, merging those that pass the auto-merge check.
 import { DEFAULTS } from '../../config.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import { MAX_RESTARTS } from '../../domain/work/index.ts';
@@ -21,24 +19,17 @@ import type { App } from '../ports/app.ts';
 import type { KeepAwake } from '../ports/processes.ts';
 import type { Activity, ReloadDecision } from '../../domain/operations/index.ts';
 
-/** After a look for a task to review found none, how long until the next, unless a run ends first. */
 const REVIEW_LOOK_MS = 30_000;
 
-/** After a merge, how many times to re-read PRs whose mergeability GitHub is still computing, and how far apart. */
 const PR_RECHECKS = 6;
 const PR_RECHECK_MS = 20_000;
 
 export interface SchedulerOptions {
   tickMs?: number;
-  /** Ignore the paused flag and exit once the queue is drained (for tests and `run-once`). */
   once?: boolean;
-  /** Propose new tasks from repo goals when a queue runs dry (off in once mode by default). */
   autoPropose?: boolean;
-  /** Hold a `caffeinate -i` assertion while work is running (macOS). */
   keepAwake?: boolean;
-  /** How often to refresh the state of open PRs (off in once mode). */
   prRefreshMs?: number;
-  /** Restart onto new code: `check` says whether that is due, `exit` ends the process once it is. */
   reload?: { check: (activity: Activity) => ReloadDecision; exit: () => void };
   log?: (msg: string) => void;
 }
@@ -47,42 +38,30 @@ export class Scheduler {
   private readonly app: App;
   private readonly opts: Required<Omit<SchedulerOptions, 'reload'>>;
   private readonly reload: SchedulerOptions['reload'];
-  /**
-   * Everything that takes a slot: task runs, the syncs and conflict resolutions in `resolves`, the unblock runs in
-   * `unblocks`, the review runs in `reviews` and the verify runs a person started in `verifies`.
-   */
   private readonly running = new Set<Promise<unknown>>();
   private readonly resolves = new Set<Promise<unknown>>();
   private readonly unblocks = new Set<Promise<unknown>>();
   private readonly reviews = new Set<Promise<unknown>>();
   private readonly verifies = new Set<Promise<unknown>>();
-  /** Looking for the next done task to review (`nextReviewable` reads git); one look at a time. */
   private findingReview = false;
-  /** After a look found nothing, when to look again; a run that ends looks at once (`lookForReviews`). */
   private reviewIdleUntil = 0;
   private timer: NodeJS.Timeout | undefined;
   private stopped = false;
   private drained: (() => void) | undefined;
   private lastHold: string | null = null;
   private lastReload: string | null = null;
-  /** Planner runs going: the scheduler's own and the ones people asked for through the API. */
   private proposingRuns = 0;
   private readonly awake: KeepAwake;
   private lastPrRefresh = 0;
   private refreshingPrs = false;
   private lastReviewCheck = 0;
   private checkingReviews = false;
-  /** Running the follow-ups pending in the outbox; one pass at a time. */
   private followingUp = false;
-  /** The latest `pr_check_requested` this scheduler has acted on. */
   private handledPrCheck = Date.now();
   private recheckLeft = 0;
   private recheckAt = 0;
-  /** When to read the PRs again for a merge request waiting on running checks or on mergeability; 0 when none does. */
   private requestPollAt = 0;
-  /** The last auto-merge error told for each task, so a merge that keeps failing is told once, not every refresh. */
   private readonly autoMergeErrors = new Map<TaskId, string>();
-  /** The tasks whose conflict was told as waiting for a person's sync (auto_resolve off), so it is said once. */
   private readonly conflictsTold = new Set<TaskId>();
 
   constructor(app: App, opts: SchedulerOptions = {}) {
@@ -100,11 +79,9 @@ export class Scheduler {
     this.awake = app.processes.keepAwake(this.opts.keepAwake);
   }
 
-  /** Start ticking. Resolves when stopped, or when the queue is drained in `once` mode. */
   run(): Promise<void> {
     const reaped = this.app.processes.reapOrphans(this.app.unfinishedPids());
     if (reaped) this.opts.log(`stopped ${reaped} claude process(es) left running by a previous daemon`);
-    // Recovery's status changes wait in the outbox, with any a crash left unfollowed: the first tick runs them.
     const { requeued, failed } = this.app.recoverOrphans();
     if (requeued) this.opts.log(`requeued ${requeued} task(s) left running by a previous daemon`);
     if (failed.length) this.opts.log(`failed ${failed.length} task(s) interrupted by ${MAX_RESTARTS} daemon restarts`);
@@ -122,16 +99,10 @@ export class Scheduler {
     this.drained?.();
   }
 
-  /** Check the queue now instead of at the next tick, after something changed that may let a task start. */
   wake(): void {
     this.tick();
   }
 
-  /**
-   * Count a sync, verify or planner run the API started: a sync or a verify run takes a slot, a proposing run counts as
-   * proposing. Each keeps a reload from exiting until it settles, and ticks when it does. Returns `p` itself so the
-   * caller can still await it.
-   */
   track<T>(p: Promise<T>, kind: 'sync' | 'verify' | 'propose'): Promise<T> {
     const settled: Promise<unknown> = p
       .catch(() => {})
@@ -156,7 +127,6 @@ export class Scheduler {
     this.lookForReviews();
   }
 
-  /** A run ended, so a task may have new changes to review: the next tick looks, however recent the last look. */
   private lookForReviews(): void {
     this.reviewIdleUntil = 0;
   }
@@ -165,7 +135,6 @@ export class Scheduler {
     return this.proposingRuns > 0;
   }
 
-  /** What is going on that a restart would have to wait for. */
   private get activity(): Activity {
     return {
       tasks: this.running.size - this.resolves.size - this.unblocks.size - this.reviews.size - this.verifies.size,
@@ -193,7 +162,6 @@ export class Scheduler {
     if (reload?.pending && reload.reason !== this.lastReload) this.opts.log(reload.reason);
     this.lastReload = reload?.pending ? reload.reason : null;
     const { reason, free } = reload?.pending ? { reason: 'reload pending', free: 0 } : this.gate();
-    // Follow-ups first: one a crash or a person left pending (a PR to open, say) may change what a claim may take.
     const followingUp = this.maybeFollowUp();
     if (!reason && !followingUp) {
       for (let room = free; room > 0; room--) {
@@ -214,13 +182,13 @@ export class Scheduler {
           .finally(() => {
             this.running.delete(p);
             this.lookForReviews();
-            this.tick(); // a slot opened up
+            this.tick();
           });
         this.running.add(p);
       }
-      this.maybeUnblock(); // after the claims: queued work comes first
+      this.maybeUnblock();
       this.maybeReview();
-      if (this.opts.autoPropose && !this.proposing && this.gate().free > 0) this.maybePropose(); // a claim above took a slot: ask again
+      if (this.opts.autoPropose && !this.proposing && this.gate().free > 0) this.maybePropose();
     }
     this.maybeRefreshPrs();
     this.maybeCheckReviews();
@@ -240,14 +208,8 @@ export class Scheduler {
     this.schedule();
   }
 
-  /**
-   * Run the follow-ups the outbox keeps: a status change's whose follow-ups a crash cut off, recovery's, and a person's
-   * from the CLI or the API. Returns whether a pass is running, so the tick claims nothing until it ends; it ticks again
-   * when a pass ran some, to claim then (and in once mode to stop only after them).
-   */
   private maybeFollowUp(): boolean {
     if (this.followingUp) return true;
-    // Rows a settle in this process is following up are left to it, and its run's end ticks.
     if (!hasFollowUpsToRun(this.app)) return false;
     this.followingUp = true;
     followUpPending(this.app, this.opts.log)
@@ -262,12 +224,6 @@ export class Scheduler {
     return true;
   }
 
-  /**
-   * Every few minutes (not every tick), re-read the state of open PRs; a merged one releases the tasks waiting on it,
-   * and a conflicting one gets the base merged in. A merge from the app or the CLI asks for a re-read at once, and
-   * while GitHub is still working out whether the other PRs conflict it is repeated every few seconds. PRs that pass the
-   * auto-merge check are merged before the refresh counts as finished, so two refreshes never merge at once.
-   */
   private maybeRefreshPrs(): void {
     if (this.opts.once || this.refreshingPrs) return;
     const requested = this.app.prCheckRequested();
@@ -282,19 +238,17 @@ export class Scheduler {
     this.handledPrCheck = Math.max(this.handledPrCheck, requested);
     this.lastPrRefresh = now;
     this.refreshingPrs = true;
-    // A PR that failed to open is opened again first, so the refresh reads it with the others.
     retryFailedPrs(this.app, this.opts.log)
       .catch((err) => this.opts.log(`PR retry crashed: ${err?.stack ?? err}`))
       .then(() => refreshPrStates(this.app, this.opts.log))
       .then((found) => {
         this.recheckLeft = found.unknown ? Math.max(this.recheckLeft - 1, 0) : 0;
         this.recheckAt = Date.now() + PR_RECHECK_MS;
-        // A merge request waiting on checks is read again soon, not after the usual few minutes.
         this.requestPollAt = found.polling ? Date.now() + MERGE_REQUEST_POLL_MS : 0;
         if (found.conflicting.length) this.resolveConflicts(found.conflicting);
         if (found.mergeable.length)
           return autoMerge(this.app, found.mergeable, { log: this.opts.log, told: this.autoMergeErrors }).then((merged) => {
-            if (merged) this.tick(); // the tasks waiting on it can start now
+            if (merged) this.tick();
           });
       })
       .catch((err) => this.opts.log(`pr refresh crashed: ${err?.stack ?? err}`))
@@ -303,10 +257,6 @@ export class Scheduler {
       });
   }
 
-  /**
-   * Once a minute (not in once mode), read the repos' area review marks: store which repos are due for the headline and
-   * remind a person of each at most once a day. A moved mark clears its repo on the next check. One check at a time.
-   */
   private maybeCheckReviews(): void {
     const now = Date.now();
     if (this.opts.once || this.checkingReviews || now - this.lastReviewCheck < REVIEW_CHECK_MS) return;
@@ -319,7 +269,6 @@ export class Scheduler {
       });
   }
 
-  /** Merge the base into conflicting PRs' branches in the background; counts as a running task while it works. */
   private resolveConflicts(ids: TaskId[]): void {
     const p = resolveConflicting(this.app, ids, this.opts.log, this.conflictsTold)
       .catch((err) => this.opts.log(`conflict resolution crashed: ${err?.stack ?? err}`))
@@ -330,10 +279,6 @@ export class Scheduler {
     this.takeSlot(p, 'sync');
   }
 
-  /**
-   * Start unblock runs for blocked tasks whose repo has auto_unblock on (`nextUnblockable`), as far as the free slots go.
-   * Each takes a slot until it ends, and ticks when it does: a retried task can be claimed at once.
-   */
   private maybeUnblock(): void {
     for (let room = this.gate().free; room > 0; room--) {
       const task = nextUnblockable(this.app);
@@ -353,12 +298,6 @@ export class Scheduler {
     }
   }
 
-  /**
-   * Start a review run for a done task with an open PR, in a repo with auto_review on, whose changes had none yet
-   * (`nextReviewable`), when a slot is free. One look at a time, since working out the changes reads git; the run row
-   * opens before the next look, so the same changes never get two. It takes a slot until it ends, and ticks when it
-   * does; a start ticks too, to look for another.
-   */
   private maybeReview(): void {
     if (this.findingReview || Date.now() < this.reviewIdleUntil || this.gate().free <= 0) return;
     this.findingReview = true;
@@ -391,7 +330,6 @@ export class Scheduler {
       });
   }
 
-  /** Run the planner for the first repo whose queue has run dry. One planner at a time. */
   private maybePropose(): void {
     const repo = this.app.listRepos().find((r) => plannerDue(this.app, r));
     if (!repo) return;
@@ -404,11 +342,9 @@ export class Scheduler {
     );
   }
 
-  /** Why we can't start new work right now (null if we can), and how many slots are free. Announces a hold once. */
   private gate(): { reason: string | null; free: number } {
     const { wait, free } = queueWait(this.app, this.opts.once);
     const hold = wait?.kind === 'governor' ? wait : null;
-    // Announce a hold once, and only when it is actually keeping queued work waiting.
     if (hold && !this.lastHold && this.app.hasQueued()) {
       const lifts = hold.until
         ? ` Resumes around ${new Date(hold.until * 1000).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })}.`

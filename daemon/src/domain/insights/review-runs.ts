@@ -1,5 +1,4 @@
-// What the scorecard counts of review runs: how many ran, how many asked for changes, and how many of those a person
-// then merged unchanged, so their judgement can be weighed against a person's. Pure: no I/O.
+// What the scorecard counts of review runs: how many ran, how many asked for changes, and how many of those a person then merged unchanged, so their judgement can be weighed against a person's.
 import { reviewRunCounts } from '../landing/index.ts';
 import type { RepoId, TaskId } from '../shared/index.ts';
 import type { ScorecardEvent } from './scorecard.ts';
@@ -35,15 +34,9 @@ export interface ReviewRunMeasures {
   no_review: number;
 }
 
-/** Whether a history row records the task's PR merging: by AgentDeck, or found merged on GitHub. */
 const isMerged = (e: Pick<ScorecardEvent, 'type' | 'reason'>): boolean =>
   e.type === 'merge' || e.type === 'pr_merged' || (e.type === 'pr' && e.reason === 'PR is merged');
 
-/**
- * Whether the PR merged after a review run that asked for changes, with nothing changed in between: no work run was
- * claimed and no retry made from the review run's start to the merge. Nothing stores the patch-id a PR merged at, and
- * after a merge commit it can no longer be worked out, so this stands in for "merged at the changes it read".
- */
 export function mergedUnchanged(
   run: Pick<ScorecardReviewRun, 'started_at'>,
   events: Pick<ScorecardEvent, 'type' | 'reason' | 'at'>[],
@@ -54,10 +47,6 @@ export function mergedUnchanged(
   return !after.slice(0, merged).some((e) => e.type === 'claim' || e.type === 'review_retry' || e.type === 'retry');
 }
 
-/**
- * The review run measures over `runs`, each matched with the review it left (a review run's review of the same task and
- * changes) and its task's history (`eventsOf`, every row of the task, whatever window the runs are counted in).
- */
 export function measureReviewRuns(
   runs: ScorecardReviewRun[],
   reviews: ScorecardRunReview[],
@@ -77,7 +66,6 @@ export function measureReviewRuns(
   return m;
 }
 
-/** The review runs in a line: "review runs: 4 (2 clean, 1 asked for changes, 1 of them merged unchanged; 1 left no review)". */
 export function reviewRunsText(m: ReviewRunMeasures): string {
   if (!m.runs) return 'review runs: none';
   const parts = [`${m.clean} clean`, `${m.asked_changes} asked for changes, ${m.merged_unchanged} of them merged unchanged by a person`];

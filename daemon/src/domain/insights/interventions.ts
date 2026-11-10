@@ -1,4 +1,4 @@
-// What counts as an intervention in the pilot scorecard (docs/pilot/scorecard.md). Pure: no I/O.
+// What counts as an intervention in the pilot scorecard (docs/pilot/scorecard.md).
 import { isAutoMergeReason } from '../work/index.ts';
 import { INSTALL_NOTE } from '../work/index.ts';
 import type { ScorecardEvent, ScorecardTask } from './scorecard.ts';
@@ -53,7 +53,6 @@ export const INTERVENTIONS: Intervention[] = [
 
 export const INTERVENTION_KINDS = INTERVENTIONS.map((i) => i.kind);
 
-/** The intervention kind of an event, or null if a person's event of that kind does not count. */
 export function interventionKind(e: ScorecardEvent, task: ScorecardTask): string | null {
   return INTERVENTIONS.find((i) => i.is(e, task))?.kind ?? null;
 }

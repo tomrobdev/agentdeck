@@ -48,7 +48,6 @@ export function repoStore(db: DatabaseSync, orm: Orm) {
         toRepo,
       );
     },
-    /** Active repos, or with `{ archived: true }` only the archived ones. */
     listRepos(opts: { archived?: boolean } = {}): Repo[] {
       return orm
         .select()
@@ -58,7 +57,6 @@ export function repoStore(db: DatabaseSync, orm: Orm) {
         .all()
         .map(toRepo);
     },
-    /** Archive (true) or unarchive (false) a repo. */
     setRepoArchived(id: RepoId, archived: boolean): void {
       orm
         .update(repos)
@@ -66,7 +64,6 @@ export function repoStore(db: DatabaseSync, orm: Orm) {
         .where(eq(repos.id, id))
         .run();
     },
-    /** Whether a task of the repo is running or has a cancel requested. */
     repoHasRunning(id: RepoId): boolean {
       return !!orm
         .select({ id: tasks.id })
@@ -75,7 +72,6 @@ export function repoStore(db: DatabaseSync, orm: Orm) {
         .limit(1)
         .get();
     },
-    /** What deleting the repo takes with it: its tasks' checkouts and every log file its runs and planner runs wrote. */
     repoFootprint(id: RepoId): {
       tasks: { id: TaskId; branch: string | null; worktree: string | null }[];
       run_logs: string[];
@@ -102,7 +98,6 @@ export function repoStore(db: DatabaseSync, orm: Orm) {
           .map((r) => r.log_path),
       };
     },
-    /** Delete a repo and everything of it in one transaction, children first. Only an archived repo; returns false otherwise. */
     deleteRepo(id: RepoId): boolean {
       return atomically(db, () => {
         if (
@@ -117,8 +112,6 @@ export function repoStore(db: DatabaseSync, orm: Orm) {
           .delete(taskEvents)
           .where(inArray(taskEvents.task_id, tasksOf(id)))
           .run();
-        // Links to this repo's tasks from other repos' tasks go too, or those would point at nothing. The use case warns
-        // about the queued tasks among them that built on work never merged (buildersOnRepo), which now start without it.
         orm
           .delete(taskLinks)
           .where(or(inArray(taskLinks.task_id, tasksOf(id)), inArray(taskLinks.on_task, tasksOf(id))))
@@ -178,11 +171,9 @@ export function repoStore(db: DatabaseSync, orm: Orm) {
       if (!Object.keys(fields).length) return;
       orm.update(repos).set(repoColumns(fields)).where(eq(repos.id, id)).run();
     },
-    /** Pause (reason) or resume (null) a repo unconditionally. */
     setRepoPaused(id: RepoId, reason: string | null): void {
       orm.update(repos).set({ paused_reason: reason }).where(eq(repos.id, id)).run();
     },
-    /** Pause a repo that isn't paused yet. Returns false if it already was, keeping the first reason. */
     pauseRepo(id: RepoId, reason: string): boolean {
       const res = orm
         .update(repos)

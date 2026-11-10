@@ -1,6 +1,4 @@
-// What failures are made of, per week and repo (`agentdeck stats --failures`): the steps CI failed on, and how failed or
-// blocked work runs ended. Counted from what is stored on tasks and runs, so a row from before it was stored reads as
-// unknown. Pure: no I/O.
+// What failures are made of, per week and repo (`agentdeck stats --failures`): the steps CI failed on, and how failed or blocked work runs ended.
 import type { RepoId } from '../shared/index.ts';
 import { weekOf } from '../shared/index.ts';
 import type { CheckCounts } from '../landing/index.ts';
@@ -9,7 +7,6 @@ import { table } from './report-text.ts';
 import type { ScorecardTaskRow } from './scorecard.ts';
 import type { StatRun } from './stats.ts';
 
-/** What a cause is called when nothing says: a count from before steps were kept, a check GitHub named no step for, a run from before ends were kept. */
 export const UNKNOWN_STEP = 'unknown step';
 export const UNKNOWN_END = 'unknown end';
 
@@ -53,29 +50,24 @@ const END_WORD: Record<RunEnd, string> = {
   cut_off: 'cut off',
 };
 
-/** Where one failing check failed: its name and step, "unknown step" when no step was read. */
 export const stepCause = (f: { name: string; step: string | null }): string => `${f.name} › ${f.step ?? UNKNOWN_STEP}`;
 
-/** The steps a PR's checks failed on. A count without a list of them has its failing checks on an unknown step. */
 export function failingSteps(counts: CheckCounts | null | undefined): string[] {
   if (!counts || counts.failing === 0) return [];
   if (counts.failures?.length) return counts.failures.map(stepCause);
   return Array.from({ length: counts.failing }, () => UNKNOWN_STEP);
 }
 
-/** How a failed or blocked run ended: "used its turns, tests failing", or "unknown end" for a run from before it was kept. */
 export function endCause(run: Pick<StatRun, 'run_end' | 'last_test_failed'>): string {
   if (!run.run_end) return UNKNOWN_END;
   return `${END_WORD[run.run_end]}${run.last_test_failed ? ', tests failing' : ''}`;
 }
 
-/** Whether a work run failed or blocked: only those have a way of ending to count. */
 const failedRun = (r: StatRun): boolean => r.outcome === 'failed' || r.outcome === 'blocked';
 
-/** The failed or blocked runs a retry then fixed: a later run of the same task (`rows` oldest first) finished done. */
 export function fixedByRetry(rows: StatRun[]): Set<StatRun> {
   const fixed = new Set<StatRun>();
-  const doneAfter = new Set<number>(); // tasks with a done run later than the run being looked at
+  const doneAfter = new Set<number>();
   for (const r of [...rows].reverse()) {
     if (r.outcome === 'done') doneAfter.add(r.task_id);
     else if (failedRun(r) && doneAfter.has(r.task_id)) fixed.add(r);
@@ -100,10 +92,6 @@ export interface FailureInput {
   top?: number;
 }
 
-/**
- * The failures per week and repo, oldest week first. A run counts in the week it began and a task's checks in the week
- * the task was created, as nothing else dates them. A retry's fix is looked for among all runs of the task, `since` or not.
- */
 export function failureReport(input: FailureInput): FailureReport {
   const { since, repoName } = input;
   const fixed = fixedByRetry(input.runs);
@@ -143,7 +131,6 @@ export function failureReport(input: FailureInput): FailureReport {
   return { weeks, top: topCauses(weeks, input.top ?? 5) };
 }
 
-/** The most frequent causes over the weeks. */
 export function topCauses(weeks: FailureWeek[], limit: number): TopCause[] {
   const counts = new Map<string, TopCause>();
   const add = (kind: TopCause['kind'], where: TopCause['where'], list: Cause[]) => {
@@ -162,7 +149,6 @@ export function topCauses(weeks: FailureWeek[], limit: number): TopCause[] {
 
 const list = (causes: Cause[]): string => (causes.length ? causes.map((c) => `${c.count}× ${c.cause}`).join('; ') : '–');
 
-/** The report as a table, one row per week and repo. */
 export function failuresTable(report: FailureReport): string {
   if (!report.weeks.length) return 'No failures recorded.';
   const head = ['week', 'repo', 'failing on open', 'failing on merge', 'failed runs', 'fixed by retry', 'how they ended'];

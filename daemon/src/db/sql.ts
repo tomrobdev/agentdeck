@@ -8,21 +8,13 @@ import { repos } from './tables.ts';
 // guard: SQLite's clock; the builder has no "now", and a column default does not apply to an update
 export const NOW_SQL = sql.raw("datetime('now')");
 
-/** Whether a write changed any row. */
 export const changed = (res: { changes: number | bigint }) => Number(res.changes) > 0;
 
-/** The repo id column `col` belongs to a repo that isn't archived. Archived repos' tasks are left out of every list and count. */
 export const inActiveRepo = (orm: Orm, col: AnySQLiteColumn) =>
   inArray(col, orm.select({ id: repos.id }).from(repos).where(isNull(repos.archived_at)));
 
 let savepoints = 0;
 
-/**
- * Run `fn` as one unit: all its writes land, or none do. Outside a transaction it begins one with the write lock
- * (`BEGIN IMMEDIATE`): a deferred one that reads and then writes fails at once with "database is locked" when another
- * process wrote in between, without waiting out busy_timeout, which the CLI and the daemon writing together hit.
- * Inside a transaction the caller already holds, a SAVEPOINT, so it composes.
- */
 export function atomically<T>(db: DatabaseSync, fn: () => T): T {
   if (!db.isTransaction) {
     db.exec('BEGIN IMMEDIATE');

@@ -1,23 +1,18 @@
-// `agentdeck doctor`: gathers the facts about the daemon (launchd, the API, git, the processes of runs, the log, gh) and
-// has domain/operations/health.ts judge them. It runs in the CLI's own process, so it works with the daemon down.
+// `agentdeck doctor`: gathers the facts about the daemon (launchd, the API, git, the processes of runs, the log, gh) and has domain/operations/health.ts judge them.
 import { API_PORT, CHECKOUT_ROOT } from '../../config.ts';
 import type { App } from '../ports/app.ts';
 import { type Check, type DaemonState, type HealthFacts, judgeHealth, logFacts } from '../../domain/operations/index.ts';
 import { sqliteMs } from '../../domain/shared/index.ts';
 import { reviewsDue } from './review-due.ts';
 
-/** Where the facts come from; tests hand in plain ones. */
 export interface Probes {
   service: () => Promise<HealthFacts['service']>;
   api: (port: number) => Promise<DaemonState | null>;
   head: () => Promise<string | null>;
-  /** Commits the checkout's HEAD has that `commit` does not. */
   ahead: (commit: string) => Promise<number | null>;
-  /** Whether the run's process group is alive and its own. */
   alive: (run: { pid: number; pid_at: string }) => boolean;
   logLines: () => string[] | null;
   gh: () => Promise<HealthFacts['gh']>;
-  /** The repos due for an area review, read from their refs/reviewed/* marks now. */
   reviews: () => Promise<HealthFacts['reviews']>;
   now: () => number;
 }
@@ -34,7 +29,6 @@ export const realProbes = (app: App): Probes => ({
   now: Date.now,
 });
 
-/** How far back ended runs are searched for a claude process that outlived them. */
 const RUN_DAYS = 7;
 
 export async function gatherHealth(app: App, probes: Probes = realProbes(app), port = API_PORT): Promise<HealthFacts> {
@@ -74,15 +68,12 @@ export async function gatherHealth(app: App, probes: Probes = realProbes(app), p
   };
 }
 
-/** Every check on the daemon's health, with the command that fixes each one that fails. */
 export async function daemonHealth(app: App, probes: Probes = realProbes(app), port?: number): Promise<Check[]> {
   return judgeHealth(await gatherHealth(app, probes, port));
 }
 
-/** Lines of the daemon log in the report. */
 export const REPORT_LOG_LINES = 20;
 
-/** GET /api/daemon/health: the doctor's checks, the checkout's HEAD, what is running, and the end of the log. */
 export async function daemonReport(app: App, probes: Probes = realProbes(app), port?: number) {
   const facts = await gatherHealth(app, probes, port);
   const lines = probes.logLines();
@@ -94,10 +85,6 @@ export async function daemonReport(app: App, probes: Probes = realProbes(app), p
   };
 }
 
-/**
- * Restart the service at once (POST /api/daemon/restart-now): running tasks lose their run and are requeued.
- * The restart starts after the API has answered, because it kills this process.
- */
 export function restartNow(app: App, restart: () => Promise<unknown>, delayMs = 200) {
   const requeued = app.runningTasks();
   setTimeout(() => void restart().catch(() => {}), delayMs).unref();

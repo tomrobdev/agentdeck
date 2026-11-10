@@ -78,13 +78,11 @@ export function routes({ db, scheduler }: ApiContext): Route[] {
       await actions.removeTaskWorktree(db, id);
       return detail(id);
     }),
-    // Sync the task's branch with the base, settling conflicts with a claude run. Answers when it is done.
     route<SyncResult>('POST', /^\/api\/tasks\/(\d+)\/sync$/, async ({ params: [text] }) => {
       const id = taskIdParam(text);
       const report = await scheduler.track(actions.syncNow(db, id), 'sync');
       return { ...report, task: await detail(id) };
     }),
-    // Start a verify run on a proposed or queued task. Answers at once, or with `{ wait: true }` once it ends.
     route<VerifyResult>('POST', /^\/api\/tasks\/(\d+)\/verify$/, async ({ params: [text], body }) => {
       const id = taskIdParam(text);
       if (body.wait !== undefined && typeof body.wait !== 'boolean') throw new BadRequest('wait must be true or false');
@@ -94,12 +92,11 @@ export function routes({ db, scheduler }: ApiContext): Route[] {
       return { run_id, report, task: await detail(id) };
     }),
     route('GET', /^\/api\/tasks\/(\d+)\/log$/, ({ req, res, params: [id], query }) => {
-      // A run by its id (resolve runs share an attempt number with a work run), or by attempt.
       streamLog(db, req, res, taskIdParam(id), {
         attempt: Number(query.get('attempt')) || undefined,
         run: Number(query.get('run')) || undefined,
       });
-      return undefined; // streamLog owns the response
+      return undefined;
     }),
   ];
 }

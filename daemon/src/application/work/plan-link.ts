@@ -7,7 +7,6 @@ import { stepsNeedPlanError } from '../../domain/work/index.ts';
 import { ActionError, refuse } from '../shared/input.ts';
 import { readPlanInput } from './plans.ts';
 
-/** Step ids as the CLI types them (a,b) or the API sends them (an array); null when none are named. */
 export function stepList(value: unknown): string[] | null {
   if (value === undefined || value === null) return null;
   const list = typeof value === 'string' ? value.split(',') : value;
@@ -16,7 +15,6 @@ export function stepList(value: unknown): string[] | null {
   return ids.length ? ids : null;
 }
 
-/** Refuse step ids that are not steps of the plan. */
 function checkSteps(name: string, plan: ParsedPlan, steps: string[] | null): void {
   const have = new Set(plan.steps.map((step) => step.id));
   const unknown = (steps ?? []).filter((id) => !have.has(id));
@@ -26,10 +24,6 @@ function checkSteps(name: string, plan: ParsedPlan, steps: string[] | null): voi
   }
 }
 
-/**
- * The task whose plan `--plan <number>` links: that task, which must be in the same repo, if it has a plan of its own;
- * else the task whose plan it follows. Refused when there is no plan to follow.
- */
 function planOwner(app: App, repo: Repo, on: TaskId): { owner: TaskId; name: string; plan: ParsedPlan } {
   const target = app.getTask(on);
   if (!target) throw new ActionError(`plan: there is no task #${on}`);
@@ -44,7 +38,6 @@ function planOwner(app: App, repo: Repo, on: TaskId): { owner: TaskId; name: str
   throw new ActionError(`plan: #${on} has no plan`);
 }
 
-/** The plan link a request asks for: a task number (`plan_task`, null to clear) or a parsed plan (`plan_html`); undefined when it names neither. */
 export type PlanRequest = { task: TaskId | null } | { html: string; plan: ParsedPlan };
 
 export function planRequest(body: Record<string, unknown>): PlanRequest | undefined {
@@ -58,10 +51,6 @@ export function planRequest(body: Record<string, unknown>): PlanRequest | undefi
   return { task };
 }
 
-/**
- * Check a plan link against its steps: a plan of its own (`ownPlan`, to be stored with the task), or the task whose plan
- * is followed (`owner`, null for no link, which can't have steps). `repo` is read only when another task's plan is linked.
- */
 export function checkPlanLink(
   app: App,
   repo: () => Repo,

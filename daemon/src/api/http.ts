@@ -12,33 +12,24 @@ import { API_ALLOWED_ORIGINS } from '../config.ts';
 import { type RepoId, type ReviewId, type TaskId, parseId } from '../domain/shared/index.ts';
 import { parseTaskIds } from '../domain/work/index.ts';
 
-/** What the API needs of the scheduler: `wake` after a change that may let queued work start, `track` for runs it starts. */
 export type ApiScheduler = Pick<Scheduler, 'wake' | 'track'>;
 
-/** What the route files share: the App, the scheduler to wake, and facts about this daemon process. */
 export interface ApiContext {
   db: ComposedApp;
   scheduler: ApiScheduler;
-  /** The change stream behind GET /api/events. */
   changes: Pick<ChangeWatcher, 'rev' | 'subscribe'>;
   daemon: { info: DaemonInfo; requestRestart: () => void; reloadFacts: () => ReloadFacts };
 }
 
-/** Biggest request body accepted. */
 const MAX_BODY_BYTES = 2 * 1024 * 1024;
 
-/** A request the client got wrong: answered 400. */
 export class BadRequest extends Error {}
-/** A body over MAX_BODY_BYTES: answered 413. */
 export class PayloadTooLarge extends Error {}
 
-/** What a route handler gets. A handler that writes `res` itself (a stream) returns undefined. */
 export interface Call {
   req: IncomingMessage;
   res: ServerResponse;
-  /** The captured groups of the path pattern. */
   params: string[];
-  /** The parsed JSON body of a POST; {} when there is none. */
   body: Record<string, unknown>;
   query: URLSearchParams;
 }
@@ -49,39 +40,30 @@ export interface Route {
   handle: (call: Call) => unknown | Promise<unknown>;
 }
 
-/**
- * A route answering with the contract type `T` (`route<C.TaskDetail>(…)`), so a handler that drifts from it fails
- * `pnpm typecheck`. `T` is never inferred from the handler: a route that doesn't name it may only return undefined, as a
- * stream does.
- */
 export const route = <T = never>(
   method: string,
   path: RegExp,
   handle: (call: Call) => NoInfer<T> | Promise<NoInfer<T>> | undefined,
 ): Route => ({ method, path, handle });
 
-/** The task ids in body field `key` ([12, 14]); empty when absent, unless `required`. A 400 when they aren't task ids. */
 export function idsField(body: Record<string, unknown>, key: string, opts: { required?: boolean } = {}): TaskId[] {
   const ids = opts.required && body[key] === undefined ? null : parseTaskIds(body[key]);
   if (!ids) throw new BadRequest(`${key} must be a list of task ids`);
   return ids;
 }
 
-/** A task id captured from a path (`(\d+)`): the one place a route turns the text into an id. A 400 when it isn't one (0, say). */
 export function taskIdParam(text: string): TaskId {
   const id = parseId<TaskId>(text);
   if (id === null) throw new BadRequest(`${text} is not a task id`);
   return id;
 }
 
-/** A repo id captured from a path. */
 export function repoIdParam(text: string): RepoId {
   const id = parseId<RepoId>(text);
   if (id === null) throw new BadRequest(`${text} is not a repo id`);
   return id;
 }
 
-/** A review id captured from a path. */
 export function reviewIdParam(text: string): ReviewId {
   const id = parseId<ReviewId>(text);
   if (id === null) throw new BadRequest(`${text} is not a review id`);
@@ -95,7 +77,6 @@ export function send(res: ServerResponse, code: number, data: unknown): void {
 
 export const queryOf = (req: IncomingMessage): URLSearchParams => new URL(req.url ?? '/', 'http://x').searchParams;
 
-/** The JSON object in the body; {} when empty. Reads all of an oversized body (keeping none of it) so the client can read the answer. */
 export async function readBody(req: IncomingMessage): Promise<Record<string, unknown>> {
   const chunks: Buffer[] = [];
   let size = 0;
@@ -116,9 +97,7 @@ export async function readBody(req: IncomingMessage): Promise<Record<string, unk
   return parsed as Record<string, unknown>;
 }
 
-/** Handle one request: CORS, then the first route that matches, with errors mapped to status codes. */
 export async function dispatch(routes: Route[], req: IncomingMessage, res: ServerResponse): Promise<void> {
-  // Browsers may only call us from the dashboard. Requests with no Origin (curl, the CLI) are fine.
   const origin = req.headers.origin;
   if (origin) {
     if (!API_ALLOWED_ORIGINS.has(origin)) return send(res, 403, { error: 'origin not allowed' });
@@ -140,7 +119,6 @@ export async function dispatch(routes: Route[], req: IncomingMessage, res: Serve
       const out = await r.handle({ req, res, params: m.slice(1), body, query: queryOf(req) });
       if (out !== undefined) send(res, 200, out);
     } catch (err) {
-      // A handler that already started its own answer (a stream) can't be sent an error body.
       if (res.headersSent) {
         console.error(err);
         return void res.destroy();

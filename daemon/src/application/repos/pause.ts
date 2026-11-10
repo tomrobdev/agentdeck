@@ -3,10 +3,6 @@ import type { App } from '../ports/app.ts';
 import type { Repo } from '../../domain/repos/index.ts';
 import { notifyLater } from '../operations/notifications.ts';
 
-/**
- * Pause a repo and tell a human. A repo that is already paused keeps its first reason (and doesn't
- * notify again) unless `replace` is set. Returns whether the reason was written.
- */
 export function pauseRepo(app: App, repo: Pick<Repo, 'id' | 'name'>, reason: string, opts: { replace?: boolean } = {}): boolean {
   const wasPaused = !!app.getRepo(repo.id)?.paused_reason;
   if (opts.replace) app.setRepoPaused(repo.id, reason);
