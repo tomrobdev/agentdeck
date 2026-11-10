@@ -1,20 +1,16 @@
 // parseAppUrl: where an agentdeck:// link goes. The dashboard has no test runner, so its pure helpers are tested here.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { parseAppUrl, taskUrl } from '../../../../app/src/lib/shared/app-url.ts';
 
-Object.assign(globalThis, { location: { hash: '' }, window: { addEventListener() {} } });
-const { hashFor, parseAppUrl, parseHash, taskUrl } = await import('../../../../app/src/router.ts');
-
-test('#/tray is the tray window, and round-trips', () => {
-  assert.deepEqual(parseHash('#/tray'), { name: 'tray' });
-  assert.equal(hashFor({ name: 'tray' }), '#/tray');
+test('the tray window is no link from outside: an agentdeck:// URL never opens it in the main window', () => {
   assert.equal(parseAppUrl('agentdeck://tray'), null);
 });
 
 test('a task link opens that task, on the overview unless a tab is named', () => {
-  assert.deepEqual(parseAppUrl('agentdeck://tasks/181'), { name: 'task', id: 181, tab: 'overview', query: {} });
-  assert.deepEqual(parseAppUrl('agentdeck://tasks/181/changes'), { name: 'task', id: 181, tab: 'changes', query: {} });
-  assert.deepEqual(parseAppUrl('agentdeck://tasks/7/'), { name: 'task', id: 7, tab: 'overview', query: {} });
+  assert.deepEqual(parseAppUrl('agentdeck://tasks/181'), { name: 'task', params: { id: 181, tab: 'overview' } });
+  assert.deepEqual(parseAppUrl('agentdeck://tasks/181/changes'), { name: 'task', params: { id: 181, tab: 'changes' } });
+  assert.deepEqual(parseAppUrl('agentdeck://tasks/7/'), { name: 'task', params: { id: 7, tab: 'overview' } });
 });
 
 test('new opens the form, and an empty link or queue opens the queue', () => {
@@ -48,5 +44,5 @@ test('anything else is ignored', () => {
 });
 
 test('taskUrl round-trips through parseAppUrl', () => {
-  assert.deepEqual(parseAppUrl(taskUrl(42)), { name: 'task', id: 42, tab: 'overview', query: {} });
+  assert.deepEqual(parseAppUrl(taskUrl(42)), { name: 'task', params: { id: 42, tab: 'overview' } });
 });
