@@ -3,8 +3,6 @@ import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { writeSettings } from '../../../src/adapters/claude/run-log.ts';
-import type { App } from '../../../src/application/ports/app.ts';
 import { runSettings } from '../../../src/application/runs/claude-run.ts';
 import type { Repo } from '../../../src/domain/repos/repo.ts';
 import { ALWAYS_DISALLOWED_TOOLS, DEFAULT_ALLOWED_TOOLS } from '../../../src/domain/repos/tools.ts';
@@ -13,6 +11,8 @@ import { plannerArgs } from '../../../src/domain/proposals/index.ts';
 import { PR_SUMMARY_FORMAT } from '../../../src/domain/landing/pull-request/summary.ts';
 import { normalizeNetwork, settingsPath, workerSettings, worktreeFileRules } from '../../../src/domain/runs/translate/sandbox.ts';
 import type { Task } from '../../../src/domain/work/task/task.ts';
+import { openDb } from '../../../src/db/index.ts';
+import { testApp } from '../../fixtures/fixtures.ts';
 
 const wt = '/Users/me/.agentdeck/worktrees/demo/task-7';
 
@@ -92,7 +92,7 @@ test('the settings file is written next to the run log with the repo’s sandbox
   assert.equal(settingsPath(log), join(dir, 'task-3-attempt-2.settings.json'));
   const repo = { sandbox: true, network: ['registry.npmjs.org'] } as Repo;
 
-  const app = { runLog: { writeSettings } } as unknown as App;
+  const app = testApp(openDb(':memory:'));
 
   const on = JSON.parse(readFileSync(runSettings(app, repo, wt, log), 'utf8'));
   assert.deepEqual(on, workerSettings({ worktree: wt, sandbox: true, network: ['registry.npmjs.org'] }));

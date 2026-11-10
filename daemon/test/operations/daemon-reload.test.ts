@@ -1,6 +1,6 @@
 // runDaemon's reload wiring (src/daemon.ts): the source watcher's changes reach the scheduler's reload check, and the
 // daemon exits for launchd to start the new code only once nothing runs. The Source port is a fake whose watch callback
-// the test fires; the restart is process.exit, replaced for the test so it records the exit instead.
+// the test fires; the restart is runDaemon's `exit`, which the test records instead of exiting.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
@@ -70,9 +70,7 @@ git('commit', '-q', '-m', 'init');
 const repo = app.addRepo({ name: 'demo', path: repoPath, base_branch: 'main' });
 
 /** The restart: launchd starts the daemon again when it exits, so an exit is what the test records. */
-const exits: (number | string | null | undefined)[] = [];
-const realExit = process.exit;
-process.exit = ((code?: number | string | null) => void exits.push(code)) as typeof process.exit;
+const exits: number[] = [];
 
 const EVENTS = ['exit', 'SIGINT', 'SIGTERM'] as const;
 type Listener = (...args: unknown[]) => void;
@@ -91,7 +89,6 @@ after(() => {
   for (const stop of added('SIGTERM')) stop();
   for (const close of added('exit')) close();
   for (const event of EVENTS) for (const l of added(event)) process.off(event as 'exit', l);
-  process.exit = realExit;
   console.log = realLog;
   finish();
   app.close();
@@ -103,7 +100,7 @@ test('a source change while a task runs waits for it; once nothing runs the daem
   app.writeSettings({ ...app.readSettings(), reload_on_change: true });
   app.setPaused(false);
   const task = app.addTask({ repo_id: repo.id, title: 'long run', prompt: 'take a while' });
-  const stopped = runDaemon({ db: app, once: false, log: (line) => logs.push(line) });
+  const stopped = runDaemon({ db: app, once: false, log: (line) => logs.push(line), exit: (code) => void exits.push(code) });
 
   await waitFor(() => logs.some((l) => l.includes('agentdeck daemon abc1234')), { what: 'the daemon to start' });
   await waitFor(() => agent.sessions.length === 1 && app.getTask(task.id)?.status === 'running', { what: 'the task to run' }).catch(

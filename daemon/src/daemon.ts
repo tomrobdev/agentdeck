@@ -1,6 +1,6 @@
 // The daemon's composition root: wires the source watcher, the API and the scheduler together and runs until stopped.
-// It runs on the App `compose.ts` built (`db` below). It reports through `log` and throws what the caller should
-// print; it never prints or exits on its own account.
+// It runs on the App `compose.ts` built (`db` below). It reports through `log`, exits through `exit` and throws what the
+// caller should print; it never prints or exits on its own account.
 import { startApi } from './api/server.ts';
 import { join } from 'node:path';
 import { type ComposedApp, isPaused, maxConcurrent, reloadOnChange } from './application/actions.ts';
@@ -15,9 +15,10 @@ export interface DaemonOptions {
   /** Run the queue once and return, without the API, the source watcher or keeping the Mac awake. */
   once: boolean;
   log?: (line: string) => void;
+  exit: (code: number) => void;
 }
 
-export async function runDaemon({ db, once, log = () => {} }: DaemonOptions): Promise<void> {
+export async function runDaemon({ db, once, log = () => {}, exit }: DaemonOptions): Promise<void> {
   // run-once has no API to claim the port, so it asks whether a daemon answers there: only one process runs follow-ups.
   if (once) {
     const refusal = runOnceRefusal(await db.service.daemonState(API_PORT), API_PORT);
@@ -66,7 +67,7 @@ export async function runDaemon({ db, once, log = () => {} }: DaemonOptions): Pr
           });
         },
         // launchd's KeepAlive starts the daemon again on the code now on disk.
-        exit: () => process.exit(0),
+        exit: () => exit(0),
       };
   const scheduler = new Scheduler(db, { once, keepAwake: !once, reload });
   // The CLI writes to the same database from its own process; its writes should reach the scheduler and the dashboard at once.
@@ -78,7 +79,7 @@ export async function runDaemon({ db, once, log = () => {} }: DaemonOptions): Pr
       stamped(`${sig}: stopping workers; their tasks will be requeued on next start`);
       changes?.stop();
       scheduler.stop();
-      process.exit(0);
+      exit(0);
     });
   }
   if (!once) {

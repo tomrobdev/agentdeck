@@ -18,7 +18,9 @@ async function launchd<T>(fn: () => Promise<T>): Promise<T> {
 
 /** `daemon` and `run-once` share one implementation; `cmd` says which was typed. */
 const runScheduler: Command = async ({ db, cmd }) => {
-  await runDaemon({ db, once: cmd === 'run-once', log: console.log }).catch((err) => die(err instanceof Error ? err.message : String(err)));
+  await runDaemon({ db, once: cmd === 'run-once', log: console.log, exit: (code) => process.exit(code) }).catch((err) =>
+    die(err instanceof Error ? err.message : String(err)),
+  );
 };
 
 export const daemonCommands: Record<string, Command> = {

@@ -8,8 +8,6 @@ const TESTS = join(ROOT, 'daemon/test');
 
 /** Rules no test enforces, each with why. A new rule gets a check, or goes here with its reason. */
 export const UNCHECKED: Record<string, string> = {
-  'cli-in-process': 'no test yet: whether a use case runs in the CLI process or goes to the daemon is not visible in imports',
-  'composition-root': 'no test yet: "logs through a callback and throws" is not checked',
   'erasable-ts': 'enforced by `erasableSyntaxOnly` in tsconfig, so by `pnpm typecheck`, not by a test',
   'main-checkout': 'a working-copy state a test cannot see; the reload guard only stops the daemon reloading onto another branch',
   'delegate-skill': 'a pointer to a skill, not a behaviour; doc-paths.test.ts only checks that the path exists',
