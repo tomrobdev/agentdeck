@@ -12,7 +12,7 @@ import { usePicked } from '../../composables/work/queue/usePicked';
 import { useApprovals } from '../../composables/work/useApprovals';
 import { useMergeDialog } from '../../composables/work/useMergeDialog';
 import { usePaletteCommands } from '../../composables/work/usePaletteCommands';
-import { openTask } from '../../router';
+import { useRouter } from 'vue-router';
 import MergeDialog from '../landing/MergeDialog.vue';
 import DaemonPanel from '../operations/DaemonPanel.vue';
 import SettingsPanel from '../operations/SettingsPanel.vue';
@@ -23,6 +23,7 @@ import ApproveDialog from '../work/task/ApproveDialog.vue';
 import NewTaskForm from '../work/task/NewTaskForm.vue';
 import HotkeySheet from './HotkeySheet.vue';
 
+const router = useRouter();
 const { panel, palette, keySheet, selectedId, closePanel, closePalette, closeKeys } = useShell();
 const { toasts, flash, close: closeToast } = useToasts();
 const actions = useActions();
@@ -55,7 +56,7 @@ const { merging } = mergeDialog;
 
 function onCreated(task: TaskDetail) {
   closePanel();
-  openTask(task.id);
+  void router.push({ name: 'task', params: { id: task.id } });
   if (status.value?.paused) flash('Queued. The daemon is paused, so press Resume to start working.');
 }
 </script>

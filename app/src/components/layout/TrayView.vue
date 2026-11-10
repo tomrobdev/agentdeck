@@ -11,7 +11,7 @@ import { createActions, trackPending } from '../../composables/shared/useActions
 import { useChangeStream } from '../../composables/shared/useChangeStream';
 import { isNative, openFromTray, startDaemon } from '../../platform/native';
 import { taskUrl } from '../../lib/shared/app-url';
-import { type Route, hashFor } from '../../router';
+import { type RouteLocationRaw, useRouter } from 'vue-router';
 import AppProvider from '../ui/AppProvider.vue';
 import Chip from '../ui/Chip.vue';
 
@@ -50,11 +50,12 @@ function act(fn: () => Promise<unknown>) {
 const toggle = () => act(() => (status.value?.paused ? operationsApi.resume() : operationsApi.pause()));
 const start = () => act(startDaemon);
 
-function open(url: string, browser: Route) {
+const router = useRouter();
+function open(url: string, browser: RouteLocationRaw) {
   if (isNative) openFromTray(url).catch((e) => (error.value = String(e)));
-  else window.open(hashFor(browser), '_blank');
+  else window.open(router.resolve(browser).href, '_blank');
 }
-const openTask = (id: number) => open(taskUrl(id), { name: 'task', id, tab: 'overview', query: {} });
+const openTaskFrom = (id: number) => open(taskUrl(id), { name: 'task', params: { id, tab: 'overview' } });
 const openQueue = () => open('agentdeck://queue', { name: 'queue' });
 </script>
 
@@ -79,7 +80,7 @@ const openQueue = () => open('agentdeck://queue', { name: 'queue' });
           <p v-if="!running.length" class="text-muted m-0 px-1.5 text-xs">Nothing is running.</p>
           <ul class="m-0 flex list-none flex-col gap-0.5 p-0">
             <li v-for="t in running" :key="t.id">
-              <button class="row" @click="openTask(t.id)">
+              <button class="row" @click="openTaskFrom(t.id)">
                 <span class="truncate"
                   ><span class="text-muted">#{{ t.id }}</span> {{ t.title }}</span
                 >
@@ -94,7 +95,7 @@ const openQueue = () => open('agentdeck://queue', { name: 'queue' });
           <p v-if="!attention.length" class="text-muted m-0 px-1.5 text-xs">Nothing needs you.</p>
           <ul class="m-0 flex list-none flex-col gap-0.5 p-0">
             <li v-for="t in attention" :key="t.id">
-              <button class="row" @click="openTask(t.id)">
+              <button class="row" @click="openTaskFrom(t.id)">
                 <span class="truncate"
                   ><span class="text-muted">#{{ t.id }}</span> {{ t.title }}</span
                 >

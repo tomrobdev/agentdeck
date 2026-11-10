@@ -1,14 +1,15 @@
 // "Merge and open next": the next task in review, in the queue's order as the stored display and filters make it.
 import { useQuery } from '@tanstack/vue-query';
 import { computed } from 'vue';
+import { useRouter } from 'vue-router';
 import { tasksQuery } from '../../../api/work';
 import { type Display, boardGroups, normalizeDisplay, rowOrder } from '../../../lib/work/queue/queue-display';
 import { nextInReview } from '../../../lib/work/queue/review-nav';
 import { loadSetting } from '../../../lib/shared/storage';
 import { type Filters, applyFilters, emptyFilters, groupTasks } from '../../../lib/work/task-view';
-import { openTask } from '../../../router';
 
 export function useOpenNext() {
+  const router = useRouter();
   const q = useQuery(tasksQuery());
   const tasks = computed(() => q.data.value ?? []);
   function nextAfter(id: number) {
@@ -24,7 +25,7 @@ export function useOpenNext() {
   }
   function openNext(id: number): boolean {
     const next = nextAfter(id);
-    if (next) openTask(next.id, 'changes');
+    if (next) void router.push({ name: 'task', params: { id: next.id, tab: 'changes' } });
     return !!next;
   }
   return { nextAfter, openNext };

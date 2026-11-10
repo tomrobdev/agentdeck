@@ -7,7 +7,7 @@ import { type FileRef, TEXT_LIMIT, type TaskDetail } from '../../../api/types';
 import { useCommits } from '../../../composables/work/files/useChanges';
 import { useCopy } from '../../../platform/native';
 import { isMarkdown as isMarkdownPath } from '../../../lib/shared/render';
-import { go } from '../../../router';
+import { useRouter } from 'vue-router';
 import CodeView, { type LineRange } from './CodeView.vue';
 import type { TreeNode } from '../../../lib/work/files/changed-tree';
 import FileTree from './FileTree.vue';
@@ -17,6 +17,7 @@ import SegmentedControl from '../../ui/form/SegmentedControl.vue';
 
 const props = defineProps<{ task: TaskDetail; query: Record<string, string>; changed: Set<string> }>();
 
+const router = useRouter();
 const taskId = computed(() => props.task.id);
 const ref_ = computed<FileRef>(() => (props.query.ref === 'base' ? 'base' : 'head'));
 const path = computed(() => props.query.path ?? null);
@@ -28,7 +29,8 @@ const range = computed<LineRange | null>(() => {
 function setQuery(patch: Record<string, string | null>, replace = false) {
   const query = { ...props.query, ...patch };
   for (const k of Object.keys(query)) if (query[k] === null) delete query[k];
-  go({ name: 'task', id: taskId.value, tab: 'code', query: query as Record<string, string> }, { replace });
+  const to = { name: 'task', params: { id: taskId.value, tab: 'code' }, query: query as Record<string, string> } as const;
+  void (replace ? router.replace(to) : router.push(to));
 }
 
 const queryClient = useQueryClient();

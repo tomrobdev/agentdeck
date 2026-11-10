@@ -5,7 +5,7 @@ import { CHECKED_STATUSES, proposalCheckLine } from '../../../../../daemon/src/d
 import { proposalCheckQuery, workApi } from '../../../api/work';
 import { ago } from '../../../lib/shared/time';
 import type { TaskStatus } from '../../../api/types';
-import { openTask } from '../../../router';
+import { RouterLink } from 'vue-router';
 import { statusLabel } from '../../../lib/work/task-view';
 import { useAction } from '../../../composables/shared/useActions';
 
@@ -55,11 +55,14 @@ const heading = 'px-3.5 pt-2 pb-0.5 text-sm text-muted';
       <template v-if="check.overlaps.length">
         <div :class="heading">Touches the same files</div>
         <div v-for="o in check.overlaps" :key="o.id" :class="row">
-          <button class="btn-ghost flex min-w-0 items-baseline gap-2 text-left hover:text-accent" @click="openTask(o.id)">
+          <RouterLink
+            class="btn-ghost flex min-w-0 items-baseline gap-2 text-left hover:text-accent"
+            :to="{ name: 'task', params: { id: o.id } }"
+          >
             <span class="font-mono text-muted">#{{ o.id }}</span>
             <span class="truncate">{{ o.title }}</span>
             <span class="text-sm text-muted">{{ statusLabel(o.status) }}</span>
-          </button>
+          </RouterLink>
           <span v-if="o.linked" class="ml-auto text-sm text-muted">linked</span>
           <button
             v-else

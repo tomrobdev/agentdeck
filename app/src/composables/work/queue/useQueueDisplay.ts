@@ -1,14 +1,16 @@
 import { computed, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import type { TaskSummary } from '../../../api/types';
 import { type Display, boardGroups, normalizeDisplay, rowOrder } from '../../../lib/work/queue/queue-display';
 import { loadSetting, saveSetting } from '../../../lib/shared/storage';
 import { type Filters, applyFilters, emptyFilters, groupTasks } from '../../../lib/work/task-view';
-import { go, route } from '../../../router';
 import { requestedView } from './useView';
 
 const MODES: Display['mode'][] = ['list', 'board', 'graph'];
 
 export function useQueueDisplay(tasks: () => TaskSummary[]) {
+  const route = useRoute();
+  const router = useRouter();
   const display = ref<Display>(normalizeDisplay(loadSetting<unknown>('display', null), loadSetting<boolean>('doneCollapsed', false)));
   saveSetting('doneCollapsed', true);
   watch(
@@ -25,11 +27,13 @@ export function useQueueDisplay(tasks: () => TaskSummary[]) {
   watch(display, (d) => saveSetting('display', d), { deep: true });
   watch(filters, ({ search: _, ...f }) => saveSetting('filters', f), { deep: true });
   watch(
-    () => route.current,
-    (r) => {
-      if (r.name !== 'queue' || !r.states) return;
-      filters.value = { ...emptyFilters(), states: r.states };
-      go({ name: 'queue' }, { replace: true });
+    () => route.query.states,
+    (raw) => {
+      if (route.name !== 'queue') return;
+      const states = (Array.isArray(raw) ? raw[0] : raw)?.split(',').filter(Boolean) ?? [];
+      if (!states.length) return;
+      filters.value = { ...emptyFilters(), states };
+      void router.replace({ name: 'queue' });
     },
     { immediate: true },
   );

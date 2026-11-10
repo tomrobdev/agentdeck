@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { TaskSummary } from '../../../api/types';
-import { openTask } from '../../../router';
+import { RouterLink } from 'vue-router';
 import { TONE_CHIP, taskBadges } from '../../../lib/work/task-badges';
 import Chip from '../Chip.vue';
 
@@ -23,15 +23,15 @@ const tags = (ids: number[]) => ids.map((id) => `#${id}`).join(' ');
       :title="`Builds on ${tags(b.up)}: starts once they are done and merged`"
       data-links-up
     >
-      ↑<button
+      ↑<RouterLink
         v-for="id in b.up"
         :key="id"
-        type="button"
-        class="cursor-pointer border-0 bg-transparent p-0 font-[inherit] text-inherit hover:text-text"
-        @click.stop="openTask(id)"
+        :to="{ name: 'task', params: { id } }"
+        class="cursor-pointer font-[inherit] text-inherit hover:text-text"
+        @click.stop
       >
         #{{ id }}
-      </button>
+      </RouterLink>
     </span>
     <span
       v-if="b.down.length"
@@ -39,15 +39,15 @@ const tags = (ids: number[]) => ids.map((id) => `#${id}`).join(' ');
       :title="`Merging this releases ${tags(b.down)}`"
       data-links-down
     >
-      ↓<button
+      ↓<RouterLink
         v-for="id in b.down"
         :key="id"
-        type="button"
-        class="cursor-pointer border-0 bg-transparent p-0 font-[inherit] text-inherit hover:underline"
-        @click.stop="openTask(id)"
+        :to="{ name: 'task', params: { id } }"
+        class="cursor-pointer font-[inherit] text-inherit hover:underline"
+        @click.stop
       >
         #{{ id }}
-      </button>
+      </RouterLink>
     </span>
     <span v-if="b.facts.length" class="min-w-0 truncate text-muted">
       <template v-for="(f, i) in b.facts" :key="f.label"

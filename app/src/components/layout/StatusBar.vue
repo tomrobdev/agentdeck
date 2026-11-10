@@ -7,7 +7,7 @@ import type { Status, TaskSummary } from '../../api/types';
 import { useActivity } from '../../composables/operations/useActivity';
 import { type ActivityItem, KIND_LABEL } from '../../lib/operations/activity';
 import { useAction } from '../../composables/shared/useActions';
-import { openTask } from '../../router';
+import { useRouter } from 'vue-router';
 import { openPanel } from '../../composables/shared/useShell';
 import Chip from '../ui/Chip.vue';
 import Popover from '../ui/Popover.vue';
@@ -22,7 +22,8 @@ const activity = useActivity(
   () => props.status,
 );
 const { pending: cancelling, run } = useAction();
-const open = (item: ActivityItem) => item.taskId !== null && openTask(item.taskId, item.tab);
+const router = useRouter();
+const open = (item: ActivityItem) => item.taskId !== null && router.push({ name: 'task', params: { id: item.taskId, tab: item.tab } });
 const cancelMerge = (item: ActivityItem) => item.taskId !== null && run(() => landingApi.cancelMergeRequest(item.taskId!));
 
 const state = computed(() => describeState(props.status, props.offline));
