@@ -10,7 +10,7 @@ import { stateFields } from '../../../src/domain/work/task/task.ts';
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-needs-'));
 
 const { openDb } = await import('../../../src/db/index.ts');
-const { isEnvironmentBlock, parseStatus } = await import('../../../src/domain/runs/run.ts');
+const { isEnvironmentBlock, parseStatus } = await import('../../../src/domain/runs/run-result.ts');
 const { canInstallWith, depsRequest, depsRequestError, installArgs } = await import('../../../src/domain/work/task/needs.ts');
 const { branchName } = await import('../../../src/domain/work/task/branch.ts');
 const { workerSystemPrompt } = await import('../../../src/domain/runs/prompt.ts');

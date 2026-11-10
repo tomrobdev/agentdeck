@@ -10,11 +10,11 @@ import { proposeNow, plannerDue } from '../proposals/planner.ts';
 import { resolveConflicting } from '../runs/sync.ts';
 import { autoMerge } from '../landing/merge/auto-merge.ts';
 import { MERGE_REQUEST_POLL_MS, PR_REFRESH_MS, refreshPrStates } from '../landing/pull-request/refresh.ts';
-import { followUpPending, hasFollowUpsToRun, settle } from '../landing/settle.ts';
+import { followUpPending, hasFollowUpsToRun } from '../landing/settle.ts';
 import { retryFailedPrs } from '../landing/pull-request/open-pr.ts';
-import { runTask } from '../runs/worker.ts';
-import { nextUnblockable, runUnblock } from '../runs/unblock.ts';
-import { nextReviewable, runReview } from '../runs/review.ts';
+import { nextUnblockable } from '../runs/unblock.ts';
+import { nextReviewable } from '../runs/review.ts';
+import { startReview, startUnblock, startWork } from './start-runs.ts';
 import type { App } from '../ports/app.ts';
 import type { KeepAwake } from '../ports/processes.ts';
 import type { Activity, ReloadDecision } from '../../domain/operations/index.ts';
@@ -167,23 +167,11 @@ export class Scheduler {
       for (let room = free; room > 0; room--) {
         const task = this.app.claimNextTask();
         if (!task) break;
-        this.opts.log(`task ${task.id} attempt ${task.attempts}: starting "${task.title}"`);
-        const p = runTask(this.app, task)
-          .then((res) => this.opts.log(`task ${task.id}: ${res.outcome}${res.reason ? ` (${res.reason})` : ''}`))
-          .catch((err) => {
-            this.opts.log(`task ${task.id}: worker crashed: ${err?.stack ?? err}`);
-            return settle(
-              this.app,
-              task.id,
-              { type: 'finish', outcome: 'failed', retry: false },
-              { reason: String(err?.message ?? err) },
-            ).catch((e) => this.opts.log(`task ${task.id}: settling crashed: ${e?.stack ?? e}`));
-          })
-          .finally(() => {
-            this.running.delete(p);
-            this.lookForReviews();
-            this.tick();
-          });
+        const p: Promise<unknown> = startWork(this.app, task, this.opts.log, () => {
+          this.running.delete(p);
+          this.lookForReviews();
+          this.tick();
+        });
         this.running.add(p);
       }
       this.maybeUnblock();
@@ -283,16 +271,12 @@ export class Scheduler {
     for (let room = this.gate().free; room > 0; room--) {
       const task = nextUnblockable(this.app);
       if (!task) return;
-      this.opts.log(`task ${task.id}: unblock run: reading why it blocked`);
-      const p: Promise<unknown> = runUnblock(this.app, task)
-        .then((r) => this.opts.log(`task ${task.id}: unblock run: ${r.outcome}${r.reason ? ` (${r.reason})` : ''}`))
-        .catch((err) => this.opts.log(`task ${task.id}: unblock run crashed: ${err?.stack ?? err}`))
-        .finally(() => {
-          this.running.delete(p);
-          this.unblocks.delete(p);
-          this.lookForReviews();
-          this.tick();
-        });
+      const p: Promise<unknown> = startUnblock(this.app, task, this.opts.log, () => {
+        this.running.delete(p);
+        this.unblocks.delete(p);
+        this.lookForReviews();
+        this.tick();
+      });
       this.running.add(p);
       this.unblocks.add(p);
     }
@@ -308,17 +292,12 @@ export class Scheduler {
         if (!target || this.stopped) return;
         const { reason, free } = this.gate();
         if (reason || free <= 0) return;
-        const id = target.task.id;
-        this.opts.log(`task ${id}: review run: reading its changes`);
-        const p: Promise<unknown> = runReview(this.app, target)
-          .then((r) => this.opts.log(`task ${id}: review run: ${r.outcome}${r.reason ? ` (${r.reason})` : ''}`))
-          .catch((err) => this.opts.log(`task ${id}: review run crashed: ${err?.stack ?? err}`))
-          .finally(() => {
-            this.running.delete(p);
-            this.reviews.delete(p);
-            this.lookForReviews();
-            this.tick();
-          });
+        const p: Promise<unknown> = startReview(this.app, target, this.opts.log, () => {
+          this.running.delete(p);
+          this.reviews.delete(p);
+          this.lookForReviews();
+          this.tick();
+        });
         this.running.add(p);
         this.reviews.add(p);
         this.tick();

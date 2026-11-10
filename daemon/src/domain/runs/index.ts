@@ -9,23 +9,25 @@ export {
   DEFAULT_REVIEW_MODEL,
   DEFAULT_SUPPORT_MODEL,
   INTERRUPTED,
-  classifyRun,
   editsSinceCutOff,
-  firstDenial,
-  isEnvironmentBlock,
   runEndOf,
-  parseStatus,
   pickRun,
-  resultFields,
   resumableSession,
-  resumeFailed,
   resumeMaxTurns,
   runModel,
+} from './run.ts';
+export type { Outcome, PidRun, Run, RunKind, RunOutcome, RunningTaskRun } from './run.ts';
+export {
+  classifyRun,
+  firstDenial,
+  isEnvironmentBlock,
+  parseStatus,
+  resultFields,
+  resumeFailed,
   runOutcome,
   setupFailedReason,
-} from './run.ts';
-export type { ClaudeResult, ClaudeRun, UsageWindow } from './run.ts';
-export type { Outcome, PidRun, Run, RunClass, RunKind, RunOutcome, RunningTaskRun, WorkerResult } from './run.ts';
+} from './run-result.ts';
+export type { ClaudeResult, ClaudeRun, RunClass, UsageWindow, WorkerResult } from './run-result.ts';
 export { START_LIVE, liveView, nextLive, syncView } from './translate/live.ts';
 export type { LiveView, SyncView } from './translate/live.ts';
 export { CHANGE_MAX, costText, parseLogLine } from './translate/log.ts';

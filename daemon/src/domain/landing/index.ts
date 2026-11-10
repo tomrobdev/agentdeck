@@ -24,10 +24,6 @@ export {
   LOG_TAIL_BYTES,
   actionsRun,
   carryFailures,
-  checksSettled,
-  checksSummary,
-  countOfKept,
-  countWithSteps,
   failedStep,
   failingChecks,
   failureExcerpt,
@@ -36,11 +32,12 @@ export {
   failureRead,
   fixChecksNote,
   headBytes,
-  nextChecks,
   stepUrl,
   withoutFailure,
-} from './pull-request/checks.ts';
-export type { CheckCounts, CheckState, ChecksSummary, FailedCheck, JobStep, PrCheck, StoredChecks } from './pull-request/checks.ts';
+} from './pull-request/check-failures.ts';
+export type { FailedCheck, JobStep } from './pull-request/check-failures.ts';
+export { checksSettled, checksSummary, countOfKept, countWithSteps, nextChecks } from './pull-request/checks.ts';
+export type { CheckCounts, CheckState, ChecksSummary, PrCheck, StoredChecks } from './pull-request/checks.ts';
 export { isConflicting } from './merge/conflict.ts';
 export { conflictsWithBase, mergeRequestCheck, mergeRequestView, mergesNow } from './merge/merge-request.ts';
 export type { MergeRequestView } from './merge/merge-request.ts';
