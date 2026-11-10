@@ -1,6 +1,5 @@
-// The summary a done run ends with: it becomes the pull request's body and the Overview's pull request card. Pure.
+// The summary a done run ends with: it becomes the pull request's body and the Overview's pull request card.
 
-/** The format and its rules, as the worker's system prompt gives them. The only place this text is written. */
 export const PR_SUMMARY_FORMAT = `A short summary for the reviewer, written as bullets in these sections, in this order:
   ## Overview
   ## Frontend

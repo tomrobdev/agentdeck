@@ -25,7 +25,6 @@ export function plannerRunStore(orm: Orm) {
     countRunningPlannerRuns(): number {
       return orm.select({ n: count() }).from(plannerRuns).where(isNull(plannerRuns.ended_at)).get()?.n ?? 0;
     },
-    /** The planner runs under way, oldest first, with their repo's name. */
     unfinishedPlannerRuns(): { id: PlannerRunId; repo_id: RepoId; repo: string; started_at: string }[] {
       return orm
         .select({ id: plannerRuns.id, repo_id: plannerRuns.repo_id, repo: repos.name, started_at: plannerRuns.started_at })

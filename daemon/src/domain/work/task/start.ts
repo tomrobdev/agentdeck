@@ -1,4 +1,4 @@
-// What a queued task waits for, in the order the scheduler checks. Pure: no I/O.
+// What a queued task waits for, in the order the scheduler checks.
 import type { TaskId } from '../../shared/index.ts';
 import type { Decision } from '../../capacity/index.ts';
 import type { TaskStatus } from '../lifecycle/lifecycle.ts';
@@ -16,7 +16,6 @@ export interface Waiting {
   stuck: string | null;
 }
 
-/** What a start state leaves a task waiting for on its builds-on links, or null when it waits for none of them. */
 export function waitingOf(state: StartState): Waiting | null {
   if (state.kind === 'waiting') return { on: state.on, stuck: null };
   if (state.kind === 'stuck') return { on: [state.on], stuck: state.reason };
@@ -38,12 +37,6 @@ export interface QueueState {
   governor: Decision;
 }
 
-/**
- * May new work start, and how many slots are free? The one place this is decided: the scheduler, the sync of a done
- * task's conflicting PR and the API's queue view all call it. `ignorePause` is run-once, which works through a paused
- * queue. `used` is the slots in use (running tasks, open resolve runs and planner runs: the planner takes a slot);
- * `free` is what is left of the governor's `max_concurrent`, and 0 whenever something is waited for.
- */
 export function startDecision(
   q: QueueState,
   o: { ignorePause: boolean; used: number; now: number },
@@ -56,7 +49,6 @@ export function startDecision(
   return { wait, free: wait ? 0 : Math.max(0, q.governor.max_concurrent - o.used) };
 }
 
-/** The line the daemon logs for a wait. */
 export function describeWait(w: QueueWait): string {
   switch (w.kind) {
     case 'daemon-paused':
@@ -68,19 +60,12 @@ export function describeWait(w: QueueWait): string {
   }
 }
 
-/** Only a queued task waits to start: any other has started, or is not to start. */
 const waitsToStart = (task: { status: TaskStatus }): boolean => task.status === 'queued';
 
-/** What a queued task in start state `dependency` waits for on its builds-on links; null for any other task. */
 export function waitingFor(task: { status: TaskStatus }, dependency: StartState): Waiting | null {
   return waitsToStart(task) ? waitingOf(dependency) : null;
 }
 
-/**
- * What a queued task waits for, or null if it will start on the next tick. Mirrors `claimable` in db/work/tasks-status.ts, which leaves
- * out the slots: the scheduler counts those. `unblocking`: an unblock run for the task is still going (a person retried it
- * meanwhile), and the task waits for that run to stop.
- */
 export function startWait(
   task: { status: TaskStatus },
   ctx: {

@@ -32,14 +32,12 @@ export function taskQueries(orm: Orm) {
     tasksForRepo(repo_id: RepoId, limit = 40): Task[] {
       return orm.select(TASK_COLUMNS).from(tasks).where(eq(tasks.repo_id, repo_id)).orderBy(desc(tasks.id)).limit(limit).all().map(toTask);
     },
-    /** Tasks of a repo that still need work or a decision; the planner waits until there are none. */
     countOpen(repo_id: RepoId): number {
       return countWhere(and(eq(tasks.repo_id, repo_id), inArray(tasks.status, OPEN_STATUSES)));
     },
     countRunning(): number {
       return countWhere(inArray(tasks.status, RUNNING_STATUSES));
     },
-    /** The tasks with a live run, oldest first: what a restart at once would requeue. */
     runningTasks(): { id: TaskId; title: string }[] {
       return orm
         .select({ id: tasks.id, title: tasks.title })
@@ -48,7 +46,6 @@ export function taskQueries(orm: Orm) {
         .orderBy(asc(tasks.id))
         .all();
     },
-    /** How many tasks are in each status (statuses with none are left out). */
     countByStatus(): Record<string, number> {
       const rows = orm
         .select({ status: tasks.status, n: count() })
@@ -58,7 +55,6 @@ export function taskQueries(orm: Orm) {
         .all();
       return Object.fromEntries(rows.map((r) => [r.status, r.n]));
     },
-    /** How many queued tasks each repo has (repos with none are left out). */
     countQueuedByRepo(): Map<RepoId, number> {
       const rows = orm
         .select({ repo_id: tasks.repo_id, n: count() })
@@ -68,14 +64,9 @@ export function taskQueries(orm: Orm) {
         .all();
       return new Map(rows.map((r) => [r.repo_id, r.n]));
     },
-    /** Done tasks whose pull request is open: the ones waiting for a review. */
     countReview(): number {
       return countWhere(and(inReview, inActiveRepo(tasks.repo_id)));
     },
-    /**
-     * The tasks that wait on a person: blocked, in review, proposed, in active repos. One query: blocked first, then
-     * review, then proposed, each by priority then id, at most `limit`.
-     */
     attentionTasks(limit: number): AttentionCandidate[] {
       // guard: the builder has no CASE; one query orders blocked, review and proposed tasks and labels each
       const why = sql<AttentionWhy>`CASE WHEN ${tasks.status} = 'blocked' THEN 'blocked' WHEN ${tasks.status} = 'proposed' THEN 'proposed' ELSE 'review' END`;
@@ -89,10 +80,6 @@ export function taskQueries(orm: Orm) {
         .limit(limit)
         .all();
     },
-    /**
-     * Blocked tasks in repos that have auto_unblock on and may start work (not paused, not archived), by priority then
-     * age: the ones an unblock run may be for. Whether one may start is `unblockable`'s to say.
-     */
     unblockCandidates(): BlockedTask[] {
       const unblocking = orm
         .select({ id: repos.id })
@@ -107,10 +94,6 @@ export function taskQueries(orm: Orm) {
         .map(toTask)
         .filter(isBlocked);
     },
-    /**
-     * Done tasks with an open pull request in repos that have auto_review on and may start work (not paused, not
-     * archived), by priority then age: the ones a review run may be for. Whether one may start is `reviewable`'s to say.
-     */
     reviewCandidates(): Task[] {
       const reviewing = orm
         .select({ id: repos.id })
@@ -124,11 +107,6 @@ export function taskQueries(orm: Orm) {
         .all()
         .map(toTask);
     },
-    /**
-     * Tasks without their prompt, newest first. Returns the `limit` newest tasks older than `before`
-     * (all tasks when omitted). On the first page (no `before`) every active task is included on top
-     * of the limit, so views of in-flight work stay complete. Later pages hold older tasks only.
-     */
     listTaskSummaries(opts: { status?: TaskStatus; limit: number; before?: TaskId }): TaskSummary[] {
       const { status, limit, before } = opts;
       const ofStatus = status === undefined ? undefined : eq(tasks.status, status);
@@ -152,10 +130,6 @@ export function taskQueries(orm: Orm) {
         .all()
         .map(toTaskSummary);
     },
-    /**
-     * Tasks whose pull request is still open, for the state refresh: done ones, and blocked or failed ones
-     * (a conflict blocks a done task and keeps its PR; a retry that fails keeps it too).
-     */
     openPrTasks(): Task[] {
       return orm
         .select(TASK_COLUMNS)
@@ -164,7 +138,6 @@ export function taskQueries(orm: Orm) {
         .all()
         .map(toTask);
     },
-    /** Done tasks whose pull request failed to open, for the PR refresh to open again. */
     failedPrTasks(): Task[] {
       return orm
         .select(TASK_COLUMNS)
@@ -174,7 +147,6 @@ export function taskQueries(orm: Orm) {
         .all()
         .map(toTask);
     },
-    /** Whether a sync of the task's branch is marked as running, by any process. */
     hasSyncMarker(id: TaskId): boolean {
       const row = orm.select({ since: tasks.syncing_since }).from(tasks).where(eq(tasks.id, id)).get();
       return row?.since != null;

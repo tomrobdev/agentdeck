@@ -1,5 +1,4 @@
-// A finished run's claude stream summed up for a person: how it spent its turns and time, how its tests went, and what it
-// was doing when it stopped. Pure: no I/O. It reads the raw events of the run log, as `nextLive` does.
+// A finished run's claude stream summed up for a person: how it spent its turns and time, how its tests went, and what it was doing when it stopped.
 import { cut, plural } from '../../shared/index.ts';
 
 /** How the run's claude ended: out of turns, on its own, on another error, or cut off before a result. */
@@ -41,7 +40,6 @@ const EXCERPT_LINES = 12;
 const EXCERPT_MAX = 1200;
 const FINAL_MAX = 2000;
 
-/** Commands that run tests whatever the repo's test command is. */
 const TEST_RUNNERS = [
   /\b(?:pnpm|npm|yarn|bun)\s+(?:run\s+)?test\b/,
   /\bnode\s+(?:--\S+\s+)*--test\b/,
@@ -51,14 +49,12 @@ const TEST_RUNNERS = [
 
 const squash = (s: string): string => s.replace(/\s+/g, ' ').trim();
 
-/** Whether a shell command runs the repo's test command or a common test runner. */
 export function isTestCommand(command: string, testCmd: string | null): boolean {
   const cmd = squash(command);
   const repoCmd = testCmd ? squash(testCmd) : '';
   return (repoCmd !== '' && cmd.includes(repoCmd)) || TEST_RUNNERS.some((r) => r.test(cmd));
 }
 
-/** A tool result's content as text. */
 function resultText(content: unknown): string {
   if (typeof content === 'string') return content;
   if (!Array.isArray(content)) return '';
@@ -68,7 +64,6 @@ function resultText(content: unknown): string {
     .join('\n');
 }
 
-/** The last lines of an output, without terminal colours, cut to EXCERPT_MAX characters from the end. */
 function tail(output: string): string {
   const plain = output.replace(/\x1b\[[0-9;]*[A-Za-z]/g, '').replace(/\s+$/, '');
   const lines = plain.split('\n').slice(-EXCERPT_LINES).join('\n');
@@ -82,7 +77,6 @@ const ms = (at: unknown): number | null => {
 
 const tenths = (millis: number): number => Math.round(millis / 6000) / 10;
 
-/** The turn limit claude names in a max-turns error, e.g. "Reached maximum number of turns (60)". */
 function limitFrom(errors: unknown): number | null {
   for (const e of Array.isArray(errors) ? errors : []) {
     const m = typeof e === 'string' ? /maximum number of turns \((\d+)\)/i.exec(e) : null;
@@ -91,14 +85,12 @@ function limitFrom(errors: unknown): number | null {
   return null;
 }
 
-/** The test runs in a line: "no test runs", "1 test run, failing", "3 test runs, the last passing". */
 function testsText(runs: number, last: 'passed' | 'failed' | null): string {
   if (!runs) return 'no test runs';
   const word = last === 'passed' ? 'passing' : 'failing';
   return runs === 1 ? `1 test run, ${word}` : `${runs} test runs, the last ${word}`;
 }
 
-/** The one-line verdict. Tests "kept failing" when the last two or more runs in a row failed. */
 function verdictOf(s: Omit<RunSummary, 'verdict'>, failStreak: number, subtype: string): string {
   const refused = s.refused ? `, ${plural(s.refused, 'tool call')} refused` : '';
   const tests = testsText(s.test_runs, s.last_test);
@@ -112,7 +104,6 @@ function verdictOf(s: Omit<RunSummary, 'verdict'>, failStreak: number, subtype: 
   return `${how}: ${tests}${refused}`;
 }
 
-/** A run's stream summed up; `events` are the run log's lines, parsed. Events of other kinds, and the daemon's, are skipped. */
 export function runSummary(events: unknown[], ctx: SummaryContext): RunSummary {
   let turns = 0;
   let message: string | null = null;
@@ -122,7 +113,6 @@ export function runSummary(events: unknown[], ctx: SummaryContext): RunSummary {
   let first: number | null = null;
   let last: number | null = null;
   const tools = new Map<string, number>();
-  /** The main loop's test runs by tool_use id: when each started and in which turn. */
   const pending = new Map<string, { at: number | null; turn: number }>();
   const testTurnSet = new Set<number>();
   let testRuns = 0;

@@ -1,5 +1,4 @@
-// Is the daemon healthy? Judges facts gathered elsewhere (launchd, the API, git, ps, the log) into one verdict per check,
-// and for each failure the command that fixes it. Pure: `application/daemon/doctor.ts` gathers the facts.
+// Is the daemon healthy? Judges facts gathered elsewhere (launchd, the API, git, ps, the log) into one verdict per check, and for each failure the command that fixes it.
 import type { TaskId } from '../shared/index.ts';
 import { plural } from '../shared/index.ts';
 import { type ReloadState, SCHEMA_DIRTY } from './restart.ts';
@@ -14,10 +13,6 @@ export interface DaemonState {
   reload: ReloadState;
 }
 
-/**
- * Why `run-once` may not start, from what answers on the API port (`running`, null for nothing): a daemon there runs the
- * same pending follow-ups, and the follow-up lock is per process, so both would open the same PRs. Null when it may start.
- */
 export function runOnceRefusal(running: Pick<DaemonState, 'pid' | 'commit'> | null, port: number): string | null {
   if (!running) return null;
   const which = `pid ${running.pid}${running.commit ? `, ${running.commit.slice(0, 7)}` : ''}`;
@@ -89,9 +84,7 @@ export interface HealthFacts {
   reviews: ReviewDue[];
 }
 
-/** A run recorded as started: its pid may not be written yet this long after. */
 export const PID_GRACE_SECONDS = 60;
-/** How far back the log is read for errors. */
 export const LOG_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 const short = (commit: string) => commit.slice(0, 7);
@@ -113,7 +106,6 @@ const check = (name: string, ok: boolean, reason: string, fix: string | null = n
   fix: ok ? null : fix,
 });
 
-/** What brings the service up, or null when launchd already runs it. */
 export function serviceFix(s: ServiceFacts): string | null {
   if (!s.installed) return 'agentdeck install';
   if (!s.loaded) return 'agentdeck service start';
@@ -145,7 +137,6 @@ export function checkApi(f: Pick<HealthFacts, 'service' | 'port' | 'api' | 'now'
   return check(name, true, `answering on :${f.port}, pid ${pid}, up ${uptime(f.now - Date.parse(started_at))}`);
 }
 
-/** A check that needs the daemon's answer, when there is none. */
 function notRun(name: string, f: Pick<HealthFacts, 'service'>): Check {
   return check(name, false, 'not run: the daemon is not answering', serviceFix(f.service) ?? 'agentdeck restart --now');
 }
@@ -161,7 +152,6 @@ export function checkCode(f: Pick<HealthFacts, 'service' | 'api' | 'head' | 'beh
   return check(name, false, `the daemon loaded ${short(commit)}; the checkout is at ${short(f.head)}${ahead}`, 'agentdeck restart');
 }
 
-/** How to lift a block on reloading. */
 function blockFix(blocked: string, checkout: string): string {
   return blocked === SCHEMA_DIRTY
     ? `git -C ${checkout} diff daemon/src/db/schema.ts   # commit or revert it`
@@ -191,7 +181,6 @@ const KIND_NAME = {
 
 export function checkProcesses(f: Pick<HealthFacts, 'processes' | 'api'>): Check {
   const name = 'claude processes';
-  // A process of an unfinished run is the daemon's to look after, unless the daemon is gone.
   const strays = f.processes.filter((p) => p.ended || !f.api);
   if (!strays.length) return check(name, true, 'none left over');
   const what = strays.map((p) => `${KIND_NAME[p.kind]} ${p.run} (pid ${p.pid}, ${p.ended ? 'run ended' : 'daemon gone'})`);
@@ -203,14 +192,8 @@ export function checkProcesses(f: Pick<HealthFacts, 'processes' | 'api'>): Check
   );
 }
 
-/**
- * Which running tasks have no claude working on them. While the daemon answers, only a run older than the daemon can
- * be dead: the daemon is working its own runs, and one between setup and claude, in a sync or in its tests has no
- * live claude and is fine. With the daemon down, a run is dead once its pid is overdue or its process is gone.
- */
 export function checkTasks(f: Pick<HealthFacts, 'tasks' | 'api' | 'now'>): Check {
   const name = 'running tasks';
-  // A run's start is stored to the second; the daemon's to the millisecond.
   const daemonAge = f.api ? (f.now - Date.parse(f.api.started_at)) / 1000 + 1 : null;
   const dead = f.tasks.filter((t) => {
     if (daemonAge !== null && (t.runAgeSeconds === null || t.runAgeSeconds <= daemonAge)) return false;
@@ -225,22 +208,15 @@ export function checkTasks(f: Pick<HealthFacts, 'tasks' | 'api' | 'now'>): Check
     name,
     false,
     `${plural(dead.length, 'task')} in running with no live claude process: ${dead.map((t) => `#${t.id}`).join(', ')}`,
-    // The daemon requeues what a previous one left running as it starts.
     f.api ? 'agentdeck restart --now' : 'agentdeck service start',
   );
 }
 
 const STAMP = /^\[(\d{4}-\d\d-\d\dT[\d:.]+Z)\] /;
 const FRAME = /^\s+at /;
-// What an error looks like in the log: a crash the scheduler reported, an error a stack starts with, or one Node printed itself.
 const PROBLEM = /\bcrashed\b|^(?:\w*Error|Uncaught|Unhandled)\b|\bunhandled rejection\b/i;
 const STOP = /^(SIGTERM|SIGINT):/;
 
-/**
- * Pick the errors of the last 24 hours out of the log. Only lines with a time are dated; the ones after
- * them (a stack, a line printed by Node) belong to the time of the line before. Lines before any
- * dated one are of unknown age and left out.
- */
 export function logFacts(lines: readonly string[], now: number): LogFacts {
   const facts: LogFacts = { problems: [], lastStop: null };
   let at: number | null = null;
@@ -275,7 +251,6 @@ export function checkGh(gh: HealthFacts['gh']): Check {
   return check('gh auth', gh.ok, gh.ok ? 'logged in' : `gh is not logged in: ${gh.output}`, 'gh auth login');
 }
 
-/** Every check, in the order they are shown. */
 export function judgeHealth(f: HealthFacts): Check[] {
   return [
     checkService(f.service),

@@ -1,5 +1,4 @@
-// Protected edits in a task's worktree (domain/repos/protected-edits.ts): what a worker wrote to the edits folder, copied
-// to its place, committed on the task's branch, and the folder cleared.
+// Protected edits in a task's worktree (domain/repos/protected-edits.ts): what a worker wrote to the edits folder, copied to its place, committed on the task's branch, and the folder cleared.
 import type { Dirent } from 'node:fs';
 import { lstat, mkdir, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, isAbsolute } from 'node:path';
@@ -8,18 +7,10 @@ import { errorMessage } from '../../domain/shared/index.ts';
 import { commitFiles } from '../git/worktrees.ts';
 
 export interface AppliedEdits {
-  /** The files written and committed, from the repo root. */
   applied: string[];
-  /** The edits left out, by their path in the edits folder, and why. Nothing is written for them. */
   refused: { path: string; reason: string }[];
 }
 
-/**
- * Copy every file in the worktree's edits folder to the protected file it replaces (`protectedEditTarget`), commit the
- * ones that changed in one commit, and remove the folder, whatever happened. Only regular files are read (a symlink is
- * refused, so nothing outside the worktree is copied in), and a target whose folder resolves outside the worktree or
- * that is not a regular file is refused, so nothing is written outside it either.
- */
 export async function applyProtectedEdits(worktree: string): Promise<AppliedEdits> {
   const folder = join(worktree, EDITS_FOLDER);
   const out: AppliedEdits = { applied: [], refused: [] };
@@ -63,7 +54,6 @@ export async function applyProtectedEdits(worktree: string): Promise<AppliedEdit
   }
 }
 
-/** The regular files under `dir`, as paths relative to the edits folder; anything else is refused. */
 async function listFiles(dir: string, prefix: string, refused: AppliedEdits['refused']): Promise<string[]> {
   let entries: Dirent[];
   try {
@@ -81,11 +71,9 @@ async function listFiles(dir: string, prefix: string, refused: AppliedEdits['ref
   return files.sort();
 }
 
-/** Why writing `dest` could reach outside the worktree at `root` (a real path), or null when it can't. */
 async function unsafeTarget(root: string, dest: string): Promise<string | null> {
   const info = await lstat(dest).catch(() => null);
   if (info && !info.isFile()) return 'the target is not a regular file';
-  // The nearest folder that exists must resolve inside the worktree; the ones under it are made fresh.
   let dir = dirname(dest);
   for (;;) {
     const real = await realpath(dir).catch(() => null);

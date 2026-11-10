@@ -7,11 +7,9 @@ import { errorMessage } from '../../domain/shared/index.ts';
 import type { Command } from '../context.ts';
 import { die } from '../format.ts';
 
-/** One cursor file per Claude session: the last event id that session was shown. */
 const HOOK_DIR = join(HOME, 'hooks');
 const HOOK_FILE_DAYS = 7;
 
-/** What Claude Code passes a hook on stdin; only these fields are read. */
 interface HookInput {
   session_id?: string;
   cwd?: string;
@@ -53,7 +51,6 @@ function writeCursor(session: string, after: number): void {
   renameSync(temp, file);
 }
 
-/** Remove cursor files older than a week. Each file is its own try: another session may be pruning the same one. */
 export function pruneCursors(): void {
   const old = Date.now() - HOOK_FILE_DAYS * 86_400_000;
   let names: string[];
@@ -66,16 +63,10 @@ export function pruneCursors(): void {
     const path = join(HOOK_DIR, f);
     try {
       if (statSync(path).mtimeMs < old) rmSync(path, { force: true });
-    } catch {
-      // Gone already, or not ours to remove: leave it.
-    }
+    } catch {}
   }
 }
 
-/**
- * The hook: prints nothing for workers and the planner, or outside a registered repo. A session's start (or its first
- * message) gets the whole picture; later messages get the header and what changed since. Never fails the prompt.
- */
 async function hook(db: actions.ComposedApp): Promise<void> {
   if (process.env.AGENTDECK_TASK_ID || process.env.AGENTDECK_PLANNER) return;
   try {
@@ -87,7 +78,6 @@ async function hook(db: actions.ComposedApp): Promise<void> {
     const after = session && !start ? readCursor(session) : null;
     const ctx = await actions.liveContext(db, { repo, after, full: start });
     console.log(ctx.lines.join('\n'));
-    // After the print, in its own try: a cursor that can't be saved shows the same events again, never none.
     if (session) {
       try {
         writeCursor(session, ctx.cursor);
@@ -97,7 +87,6 @@ async function hook(db: actions.ComposedApp): Promise<void> {
       }
     }
   } catch (err) {
-    // A hook that fails would get in the way of every message; say why on stderr and carry on.
     console.error(`agentdeck context: ${errorMessage(err)}`);
   }
 }

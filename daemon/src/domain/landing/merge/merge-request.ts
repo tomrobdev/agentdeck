@@ -1,26 +1,16 @@
-// A merge request: a person's Merge, which the daemon carries out once the PR is ready (docs/plans/merge-requests.html). Pure: no I/O.
+// A merge request: a person's Merge, which the daemon carries out once the PR is ready (docs/plans/merge-requests.html).
 import { isMergeabilityUnknown } from './conflict.ts';
 import { DEFAULT_MERGE_METHOD, type MergeMethod } from '../../repos/index.ts';
 import { type AutoMergeCheck, type MergeInput, reasonTexts, unattendedVerdict } from './merge.ts';
 import type { PullRequest } from '../pull-request/pr.ts';
 
-/**
- * Whether a requested merge may go ahead now (`merge`), waits for something that can change on its own, or needs a person
- * (`never`). A person asked, so the auto-merge rules (label, line limit, skipped paths, a pause) don't apply: the findings
- * alone decide, as `unattendedVerdict` reads them.
- */
 export const mergeRequestCheck = (input: MergeInput): AutoMergeCheck => unattendedVerdict(input);
 
-/**
- * Whether the merge dialog merges now instead of asking for a merge request. Failing checks or failed tests stop a request
- * for good, so the person may wave them through, here and now; anything else goes through a request.
- */
 export const mergesNow = (
   check: AutoMergeCheck,
   input: Pick<MergeInput, 'tests_passed'> & { pr: Pick<MergeInput['pr'], 'checks'> },
 ): boolean => check.verdict === 'never' && (input.pr.checks.failing > 0 || input.tests_passed === false);
 
-/** Whether a waiting request is worth reading again soon: its checks are running, or GitHub is working out mergeability. */
 export const mergeRequestPolls = (check: AutoMergeCheck, pr: Pick<MergeInput['pr'], 'checks' | 'mergeable' | 'merge_state'>): boolean =>
   check.verdict === 'wait' && (pr.checks.pending > 0 || isMergeabilityUnknown(pr));
 
@@ -34,17 +24,12 @@ export interface MergeRequestView {
   since: string;
 }
 
-/**
- * Whether this PR is open and conflicts with the base branch, as the last PR check found it: the merge request's check, else
- * auto-merge's. False with neither (auto-merge off and no merge request: nothing stores a check).
- */
 export function conflictsWithBase(pr: PullRequest | null): boolean {
   if (pr?.state !== 'open') return false;
   const check = pr.merge_request?.check ?? pr.auto_merge_check;
   return check?.conflict === true;
 }
 
-/** This PR's merge request, or null when it has none. `merging`: a merge of this task is under way in this process. */
 export function mergeRequestView(pr: PullRequest | null, merging: boolean): MergeRequestView | null {
   const request = pr?.merge_request;
   if (!request) return null;

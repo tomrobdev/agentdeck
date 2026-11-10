@@ -11,11 +11,6 @@ import { retryTask } from '../landing/person-events.ts';
 
 const INSTALL_TIMEOUT_MS = 10 * 60_000;
 
-/**
- * Install the packages a blocked task asked for (NEEDS deps) on its branch, then retry it. Only a person's request
- * gets here (the API and the CLI); the worker and scheduler never call it. The package manager runs in the task's
- * worktree through the daemon, outside the worker's sandbox. On failure the task stays blocked.
- */
 export async function installNeeds(app: App, id: TaskId): Promise<{ packages: string[]; dev: boolean }> {
   const task = requireTask(app, id);
   if (task.status !== 'blocked') throw new ActionError(`#${id} is ${task.status}, not blocked`);
@@ -44,7 +39,6 @@ export async function installNeeds(app: App, id: TaskId): Promise<{ packages: st
   } catch (err) {
     throw new ActionError(`installed, but could not commit: ${lastLine(errorMessage(err))}`);
   }
-  // The install took a while: a cancel or mark-done meanwhile stays.
   const now = app.getTask(id)?.status;
   if (now !== 'blocked')
     throw new ActionError(`installed ${packages.join(' ')}, but #${id} is now ${now ?? 'gone'}, so it was not retried`);

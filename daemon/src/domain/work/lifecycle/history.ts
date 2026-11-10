@@ -1,4 +1,4 @@
-// A task's history: one row per status change. Pure: no I/O.
+// A task's history: one row per status change.
 import type { TaskId } from '../../shared/index.ts';
 import type { MergeMethod } from '../../repos/index.ts';
 import { type BranchPr, type PrOpenFailures, type PrRetry, type PrState, prRetry } from '../../landing/index.ts';
@@ -30,10 +30,6 @@ export type TaskEventType =
 export type PrEvent =
   { type: 'opened'; url: string } | { type: 'failed'; error: string } | { type: 'closed' } | { type: 'seen'; state: PrState };
 
-/**
- * The PR events that record a PR GitHub has for the task's branch: the one `gh pr create` opened, or the one it found there
- * already (`existingPr`). Opened, and then seen merged or closed when it is no longer open, so the task keeps its url either way.
- */
 export const prEventsOf = (pr: BranchPr): PrEvent[] =>
   pr.state === 'open'
     ? [{ type: 'opened', url: pr.url }]
@@ -42,7 +38,6 @@ export const prEventsOf = (pr: BranchPr): PrEvent[] =>
         { type: 'seen', state: pr.state },
       ];
 
-/** The reason a `pr` history row records for a PR event. Readers: `isPrOpenedReason`, `prSeenState`. */
 export function prEventReason(e: PrEvent): string {
   switch (e.type) {
     case 'opened':
@@ -56,19 +51,13 @@ export function prEventReason(e: PrEvent): string {
   }
 }
 
-/** Whether a `pr` row's reason is that of an opened PR. */
 export const isPrOpenedReason = (reason: string | null): boolean => !!reason?.startsWith('opened ');
 
 const PR_FAILED = 'could not open the PR: ';
 
-/** The error a `pr` row's reason says the PR failed to open with, or null if it is not such a reason. */
 export const prFailedError = (reason: string | null): string | null =>
   reason?.startsWith(PR_FAILED) ? reason.slice(PR_FAILED.length) : null;
 
-/**
- * The times a task's PR failed to open since the task last finished done, from its history (oldest first): the `pr` rows
- * after its last status change, each failure counted, an opened PR starting the count again. Null when none failed.
- */
 export function prOpenFailures(
   events: Pick<TaskEventRow, 'type' | 'from_status' | 'to_status' | 'reason' | 'at'>[],
 ): PrOpenFailures | null {
@@ -85,10 +74,6 @@ export function prOpenFailures(
   return count ? { count, ...last } : null;
 }
 
-/**
- * For a done task whose PR failed to open, in a repo with a PR mode: whether the PR refresh opens it again at `now`, from the
- * failures its history (`events`) records since it finished. Null for any other task.
- */
 export function prRetryFor(
   task: { status: TaskStatus; pr: { state: PrState } | null },
   repo: { pr_mode: string } | null | undefined,
@@ -100,7 +85,6 @@ export function prRetryFor(
   return failures ? prRetry(failures, now) : null;
 }
 
-/** The state a `pr` row's reason says GitHub showed ("PR is merged" → "merged"), or null if it is not such a reason. */
 export function prSeenState(reason: string | null): string | null {
   const prefix = 'PR is ';
   return reason?.startsWith(prefix) ? reason.slice(prefix.length) : null;
@@ -108,10 +92,6 @@ export function prSeenState(reason: string | null): string | null {
 
 const AUTO_MERGED = 'auto-merged';
 
-/**
- * The reason a `merge` history row records: who merged the PR and how. The daemon on its own (`auto`), the daemon on a
- * person's merge request (`request`), or a person from the app (`person`).
- */
 export function mergeReason(by: 'auto' | 'request' | 'person', method: MergeMethod): string {
   switch (by) {
     case 'auto':
@@ -123,10 +103,8 @@ export function mergeReason(by: 'auto' | 'request' | 'person', method: MergeMeth
   }
 }
 
-/** Whether a `merge` row's reason says the daemon merged the PR on its own. */
 export const isAutoMergeReason = (reason: string | null): boolean => !!reason?.startsWith(AUTO_MERGED);
 
-/** Whether a `merge` row's reason says the daemon merged the PR on a person's request. */
 export const isRequestedMergeReason = (reason: string | null): boolean => !!reason?.startsWith('requested ');
 
 export interface TaskEventRow {
@@ -142,18 +120,12 @@ export interface TaskEventRow {
 /** A history row whose status change's follow-ups are still to run (the outbox): what the daemon's tick reads to run them. */
 export type PendingFollowUp = Pick<TaskEventRow, 'id' | 'task_id' | 'type' | 'to_status'>;
 
-/** The timeline rows of a retry: a person's, an unblock run's, or a review run's. */
 const RETRY_TYPES: TaskEventType[] = ['retry', 'unblock_retry', 'review_retry'];
 
-/** When the task was last retried, or null if it never was. Every kind of retry counts (`RETRY_TYPES`). */
 export function latestRetryAt(events: Pick<TaskEventRow, 'type' | 'at'>[]): string | null {
   return events.findLast((e) => RETRY_TYPES.includes(e.type))?.at ?? null;
 }
 
-/**
- * The note on the task's latest retry ("changes requested in review"), or null if that retry had none. A retry by an
- * unblock run counts (its note starts with UNBLOCK_NOTE, domain/runs/unblock.ts), and so does a review run's.
- */
 export function latestReviewNote(events: Pick<TaskEventRow, 'type' | 'reason'>[]): string | null {
   return events.findLast((e) => RETRY_TYPES.includes(e.type))?.reason ?? null;
 }

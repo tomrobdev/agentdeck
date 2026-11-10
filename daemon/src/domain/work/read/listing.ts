@@ -1,4 +1,4 @@
-// Filtering and sorting task lists: `agentdeck ls` and the dashboard's queue share it. Pure: no I/O.
+// Filtering and sorting task lists: `agentdeck ls` and the dashboard's queue share it.
 import type { RepoId } from '../../shared/index.ts';
 import type { PrState, PullRequest } from '../../landing/index.ts';
 import type { Checkout } from '../task/checkout.ts';
@@ -24,7 +24,6 @@ export type Listable = Pick<
   unblocks?: number[];
 };
 
-/** A task with its stop reason, pull request and branch as the flat fields a list reads (the API's shape). */
 export const listable = <T extends TaskState & { pr: PullRequest | null; checkout: Checkout | null }>(t: T) => ({
   ...t,
   stop_reason: stopReasonOf(t),
@@ -40,7 +39,6 @@ const is =
   (t) =>
     statuses.includes(t.status);
 
-/** States finer than a status: a queued task may be waiting on --after or stuck, a done task may have a PR. In the dashboard's order. */
 export const FILTER_STATES: { key: string; label: string; test: Test }[] = [
   { key: 'running', label: 'Running', test: is(...RUNNING_STATUSES) },
   { key: 'queued', label: 'Queued', test: is('queued') },
@@ -62,24 +60,18 @@ const stateTests = (keys: string[]): Test => {
   return (t) => tests.some((test) => test(t));
 };
 
-/**
- * Names for the CLI beside the states: several at once, or another name for one (`pr-open`, the dashboard's Review). A stuck
- * task needs you, so it isn't active.
- */
 const GROUPS: Record<string, Test> = {
   active: (t) => stateTests(['running'])(t) || (t.status === 'queued' && !isStuck(t)),
   'needs-you': stateTests(['blocked', 'failed', 'stuck']),
   'pr-open': isReview,
 };
 
-/** What the dashboard's "need you" chip filters by: proposals to approve, blocked tasks and PRs to review. Not the `needs-you` group. */
 export const DECISION_STATES = ['proposed', 'blocked', 'review'];
 
 const STATE_NAMES = [...Object.keys(GROUPS), ...FILTER_STATES.map((s) => s.key)];
 
 type Compare = (a: Listable, b: Listable) => number;
 
-/** Where a task sits in attention order: the index of its status group in STATUS_GROUPS. */
 export const attentionRank = (t: Pick<Listable, 'status' | 'pr_state' | 'waiting'>): number =>
   STATUS_GROUPS.findIndex((g) => g.key === statusGroup(t));
 
@@ -89,7 +81,6 @@ export const SORT_OPTIONS: { key: string; label: string; compare: Compare }[] = 
   {
     key: 'attention',
     label: 'Needs attention',
-    // In review, the PRs that hold up other tasks come first.
     compare: (a, b) => attentionRank(a) - attentionRank(b) || unblocks(b) - unblocks(a) || b.priority - a.priority || b.id - a.id,
   },
   { key: 'updated', label: 'Recently updated', compare: (a, b) => b.updated_at.localeCompare(a.updated_at) || b.id - a.id },
@@ -124,7 +115,6 @@ function matchesSearch(t: Listable, text: string): boolean {
   return [t.title, t.repo, t.branch, t.model, t.stop_reason].some((s) => s?.toLowerCase().includes(q));
 }
 
-/** The tasks that pass the filter, sorted. Throws on an unknown state or sort, naming the valid ones. */
 export function filterTasks<T extends Listable>(tasks: T[], filter: ListFilter): T[] {
   const compare = SORT_OPTIONS.find((s) => s.key === filter.sort)?.compare;
   if (!compare) throw new Error(`unknown sort "${filter.sort}" (use ${SORT_OPTIONS.map((s) => s.key).join(', ')})`);

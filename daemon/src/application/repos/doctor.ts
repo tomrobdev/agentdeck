@@ -1,4 +1,4 @@
-// Yes/no checks that a repo is ready for unattended runs. Does the I/O; the decisions on tool rules are in domain/.
+// Yes/no checks that a repo is ready for unattended runs.
 import type { App } from '../ports/app.ts';
 import { lastLine } from '../../domain/shared/index.ts';
 import { SETUP_TIMEOUT_MS, TEST_TIMEOUT_MS, claudeBin } from '../../config.ts';
@@ -13,11 +13,6 @@ export interface Check {
   reason: string;
 }
 
-/**
- * Run every check and return them in order. Checks that can't run because an earlier one failed are
- * reported as failed with "not run: …", so a green result always means everything was verified.
- * The temporary worktree is removed whether or not the checks pass.
- */
 export async function runDoctor(app: App, repo: Repo): Promise<Check[]> {
   const checks: Check[] = [];
   const add = (name: string, ok: boolean, reason: string) => void checks.push({ name, ok, reason });
@@ -32,7 +27,6 @@ export async function runDoctor(app: App, repo: Repo): Promise<Check[]> {
 
   const { files, scripts } = await ws.rootInfo(repo.path);
   const toolchain = repo.toolchain ?? detectToolchain(files, scripts)?.toolchain ?? null;
-  // Not a failure: a repo built with make or plain scripts has no toolchain, only the generic tool rules.
   add(
     'toolchain',
     true,
@@ -42,14 +36,12 @@ export async function runDoctor(app: App, repo: Repo): Promise<Check[]> {
   const claude = await app.agent.find();
   add('claude binary', !!claude, claude ?? `${claudeBin()} not found; install Claude Code or set AGENTDECK_CLAUDE_BIN`);
 
-  // A PR mode other than off needs an origin to push to and a working gh to open the PR.
   if (repo.pr_mode !== 'off') {
     add('origin remote', git.origin, git.origin ? 'origin exists' : `PR mode is ${repo.pr_mode} but the repo has no origin remote`);
     const gh = await app.codeHost.auth();
     add('gh auth', gh.ok, gh.ok ? 'gh auth status succeeded' : `gh auth status failed: ${gh.output}`);
   }
 
-  // The checks that run in a checkout of the base, or report why they could not (`notRun`) without one.
   const inCheckout = async (worktree: string | null, notRun: string) => {
     let setupOk = true;
     if (!repo.setup_cmd) {
@@ -82,7 +74,6 @@ export async function runDoctor(app: App, repo: Repo): Promise<Check[]> {
     }
   };
 
-  // The scratch checkout is removed whether or not the checks pass.
   if (!base) await inCheckout(null, `not run: base branch ${repo.base_branch} is missing`);
   else
     await ws.withScratchCheckout(repo, async (checkout) => {

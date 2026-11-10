@@ -24,7 +24,6 @@ export interface ApiOptions {
   daemon?: ApiContext['daemon'];
 }
 
-/** Start the API on 127.0.0.1. */
 export function startApi(options: ApiOptions): Promise<Server> {
   const ctx: ApiContext = {
     db: options.db,
@@ -48,8 +47,6 @@ export function startApi(options: ApiOptions): Promise<Server> {
   ].flatMap((m) => m.routes(ctx));
 
   const server = createServer((req, res) => {
-    // Every write that succeeds may let queued work start: wake the scheduler once the response is out,
-    // since a tick can exit the process for a pending reload.
     if (req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS') {
       res.once('finish', () => {
         if (res.statusCode >= 200 && res.statusCode < 300) ctx.scheduler.wake();

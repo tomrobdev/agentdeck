@@ -14,26 +14,17 @@ import { measureBranch } from '../../work/files.ts';
 import { settle } from '../settle.ts';
 import { notifyLater } from '../../operations/notifications.ts';
 
-/** How often the scheduler re-reads the state of open PRs. */
 export const PR_REFRESH_MS = 3 * 60_000;
-/** How often it re-reads them while a merge request waits on running checks or on GitHub's mergeability. */
 export const MERGE_REQUEST_POLL_MS = 30_000;
 
-/** Where `gh` runs for a task's PR. It reads the PR by its URL, so the repo's path will do; the worktree may be gone. */
 export function prCwd(app: App, task: Task): string {
   return app.getRepo(task.repo_id)?.path ?? process.cwd();
 }
 
-/** Whether the last run that ran the tests passed them; null when none did. */
 export function lastTestsPassed(app: App, id: TaskId): boolean | null {
   return app.runsForTask(id).findLast((r) => r.tests_passed !== null)?.tests_passed ?? null;
 }
 
-/**
- * What every merge check of a task's PR reads, with `pr` as GitHub said it: the task's PR state, its last tested run, the
- * tasks it lands after, and whether its repo syncs conflicts on its own. With no `repo` (it was removed), auto_resolve
- * counts as on.
- */
 export function mergeInputFor(app: App, task: Task, repo: Repo | undefined, pr: PrDetails): MergeInput {
   return {
     pr_state: task.pr?.state ?? null,
@@ -44,11 +35,6 @@ export function mergeInputFor(app: App, task: Task, repo: Repo | undefined, pr: 
   };
 }
 
-/**
- * What auto-merge's check reads beside the merge input, or null when auto-merge is off for the task. The size is counted
- * from git (`git diff --numstat` against the base in the repo's checkout) when the local branch is at the PR's head, since
- * GitHub's file list stops at 100; from GitHub's numbers otherwise (read `withFiles`).
- */
 async function autoMergeFacts(app: App, task: Task, repo: Repo, pr: PrDetails): Promise<AutoMergeFacts | null> {
   if (!autoMergeOn(task, repo)) return null;
   const branch = task.checkout?.branch;
@@ -59,26 +45,16 @@ async function autoMergeFacts(app: App, task: Task, repo: Repo, pr: PrDetails): 
   return { repo, paused: pausedReason(app.isPaused(), repo), measured, review };
 }
 
-/**
- * What the review gate reads about a task's PR: the patch-id of its changes at the PR's head, as the review run and a
- * submitted review store it, with the task's reviews and runs. The patch-id is null when git can't work it out there.
- */
 async function reviewFacts(app: App, task: Task, repo: Repo, pr: PrDetails): Promise<ReviewFacts> {
   const diff_hash = pr.head ? await app.workspace.diffHash(repo.path, repo.base_branch, pr.head).catch(() => null) : null;
   return { diff_hash, reviews: app.reviewsForTask(task.id), runs: app.runsForTask(task.id) };
 }
 
-/** The auto-merge check for a task's PR, from its merge input (`mergeInputFor`), or null when auto-merge is off for the task. */
 export async function autoMergeFor(app: App, task: Task, repo: Repo, input: MergeInput): Promise<AutoMergeCheck | null> {
   const facts = await autoMergeFacts(app, task, repo, input.pr);
   return facts && autoMergeCheck({ ...input, ...facts });
 }
 
-/**
- * Keep a done task's open PR's checks on the task, and tell a person when they newly fail (`nextChecks` says when).
- * A failing GitHub Actions check brings why it failed, read once for each head (`carryFailures`). Nothing is told when
- * the write was refused: the PR merged or closed meanwhile. Returns the checks kept, with what was read.
- */
 async function keepChecks(app: App, task: Task, pr: PrDetails): Promise<PrCheck[]> {
   const previous = task.pr?.checks.latest ?? null;
   const head = pr.head ?? null;
@@ -90,52 +66,37 @@ async function keepChecks(app: App, task: Task, pr: PrDetails): Promise<PrCheck[
   return stored.checks;
 }
 
-/** A PR the refresh found ready to merge, with what GitHub said about it, and why: a person's merge request, or auto-merge. */
 export interface ReadyPr {
   id: TaskId;
   pr: PrDetails;
   requested: boolean;
 }
 
-/** What a refresh found out about the open PRs beyond their state. */
 export interface PrRefresh {
-  /** Tasks whose open PR GitHub says conflicts with the base. */
   conflicting: TaskId[];
-  /** Open PRs whose mergeability GitHub has not worked out yet (it does so lazily, after the base moves). */
   unknown: number;
-  /** Tasks whose PR is ready to merge now (merge requests first, then auto-merges). */
   mergeable: ReadyPr[];
-  /** Merge requests waiting on running checks or on mergeability GitHub hasn't worked out: worth reading again soon. */
   polling: number;
 }
 
-/** What a refresh found out about one open PR of a done task. */
 interface PrFound {
   pr: PrDetails;
   place: PrPlace;
-  /** A person asked for the merge, so it goes before the auto-merges. */
   requested: boolean;
-  /** A merge request worth reading again soon. */
   polling: boolean;
 }
 
-/** Drop a task's merge request; false when there was none left to drop (a person withdrew it meanwhile). */
 function dropRequest(app: App, id: TaskId, why: string, log: (msg: string) => void): boolean {
   if (!app.clearMergeRequest(id)) return false;
   log(`task ${id}: merge request dropped: ${why}`);
   return true;
 }
 
-/**
- * Re-read one task's PR and record what changed. Null when the PR is no longer open, the task is not done, or its merge
- * request was dropped. Throws when GitHub can't be read.
- */
 async function refreshOne(app: App, task: Task, log: (msg: string) => void): Promise<PrFound | null> {
   const repo = app.getRepo(task.repo_id);
   const pr = await app.codeHost.prDetails(task.pr!.url!, prCwd(app, task), { withFiles: !!repo && autoMergeOn(task, repo) });
   const state = pr.state;
   if (state !== task.pr?.state) {
-    // Guarded on the PR still being open: a merge recorded while GitHub was being asked stays.
     const applied = state === 'closed' ? app.recordPr(task.id, { type: 'closed' }) : app.recordPr(task.id, { type: 'seen', state });
     if (applied) log(`task ${task.id}: PR is ${state}`);
     if (
@@ -150,11 +111,9 @@ async function refreshOne(app: App, task: Task, log: (msg: string) => void): Pro
     if (task.pr?.merge_request) dropRequest(app, task.id, state !== 'open' ? `the PR is ${state}` : `the task is ${task.status}`, log);
     return null;
   }
-  // The checks kept carry why each failing one failed, so the merge's reasons can say it, and so do the counts kept.
   const kept = await keepChecks(app, task, pr);
   if (checksSettled(pr.checks)) app.recordPrChecksOpened(task.id, pr.check_list ? countOfKept(kept) : pr.checks);
   const judged = pr.check_list ? { ...pr, check_list: kept } : pr;
-  // A person asked: the merge request's check stands in for auto-merge's, so the branch is not measured.
   const requested = !!task.pr?.merge_request;
   const auto = requested || !repo ? null : await autoMergeFacts(app, task, repo, judged);
   const verdict = refreshVerdict({ input: mergeInputFor(app, task, repo, judged), requested, auto });
@@ -167,10 +126,6 @@ async function refreshOne(app: App, task: Task, log: (msg: string) => void): Pro
   return { pr, place: verdict.place, requested, polling: verdict.polling };
 }
 
-/**
- * Re-read the state of every open PR of a done task, and whether it still merges cleanly. A blocked or failed task
- * whose PR was merged becomes done; its mergeability is not read. A failed lookup leaves that task as it was. Resolving the conflicts it finds is the caller's call (`resolveConflicting`).
- */
 export async function refreshPrStates(app: App, log: (msg: string) => void = () => {}): Promise<PrRefresh> {
   const found: PrRefresh = { conflicting: [], unknown: 0, mergeable: [], polling: 0 };
   const requested: PrRefresh['mergeable'] = [];

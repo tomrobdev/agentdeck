@@ -29,7 +29,7 @@ export function routes({ db, daemon, changes }: ApiContext): Route[] {
         clearInterval(ping);
         unsubscribe();
       });
-      return undefined; // the stream owns the response
+      return undefined;
     }),
     route<Status>('GET', /^\/api\/status$/, () => actions.status(db, daemon.info)),
     route<Stats>('GET', /^\/api\/stats$/, ({ query }) => {

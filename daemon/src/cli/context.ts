@@ -51,9 +51,7 @@ export function parseCommandLine(argv: string[]) {
 
 export interface CommandContext {
   db: ComposedApp;
-  /** The command name, as typed. */
   cmd: string;
-  /** Positional arguments after the command name. */
   rest: string[];
   flags: ReturnType<typeof parseCommandLine>['values'];
   repoName: (id: RepoId) => string;

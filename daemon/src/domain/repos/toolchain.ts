@@ -1,5 +1,4 @@
-// Works out how to set up, test and safely drive a repo from its root files. Pure: no I/O.
-// The caller lists the repo's root directory and reads package.json's script names.
+// Works out how to set up, test and safely drive a repo from its root files.
 
 export type Toolchain = 'pnpm' | 'yarn' | 'npm' | 'cargo' | 'uv' | 'go';
 
@@ -10,7 +9,6 @@ export interface ToolchainInfo {
   tools: string[]; // Bash rules for this toolchain only; the generic rules live in tools.ts
 }
 
-/** First match wins, so a lockfile beats a bare package.json. */
 const MARKERS: [Toolchain, string[]][] = [
   ['pnpm', ['pnpm-lock.yaml']],
   ['yarn', ['yarn.lock']],
@@ -31,7 +29,6 @@ const SETUP: Record<Toolchain, string> = {
 
 const JS: Toolchain[] = ['pnpm', 'yarn', 'npm'];
 
-/** Package manager commands a script name would shadow; a rule for them could install or publish. */
 const PM_BUILTINS = new Set([
   'install',
   'i',
@@ -50,7 +47,6 @@ const PM_BUILTINS = new Set([
   'x',
 ]);
 
-/** Script names that are safe to put inside a `Bash(...)` rule. */
 const SCRIPT_NAME = /^[\w:.@/-]+$/;
 
 export function toolchainTools(toolchain: Toolchain, packageScripts: string[] = []): string[] {
@@ -78,7 +74,6 @@ export function testCommand(toolchain: Toolchain, packageScripts: string[] = [])
   return 'go test ./...';
 }
 
-/** `files` are the names in the repo's root directory; `packageScripts` the keys of package.json "scripts". */
 export function detectToolchain(files: string[], packageScripts: string[]): ToolchainInfo | null {
   const present = new Set(files);
   const toolchain = MARKERS.find(([, markers]) => markers.some((f) => present.has(f)))?.[0];

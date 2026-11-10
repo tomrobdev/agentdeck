@@ -12,10 +12,8 @@ import { recordRateLimit, usageRecorder } from '../runs/claude-run.ts';
 import { ActionError, requireRepo } from '../shared/input.ts';
 import { notifyLater } from '../operations/notifications.ts';
 
-/** How many of a repo's latest tasks the planner is shown, so it does not propose them again. */
 const EXISTING_TASKS_SHOWN = 100;
 
-/** Why the planner should run for this repo now, or null. */
 export function plannerDue(app: App, repo: Repo, now = Date.now()): string | null {
   if (repo.archived_at) return null;
   const repoState = { hasGoals: !!app.goals.read(repo).trim(), openTasks: app.countOpen(repo.id), proposed_at: repo.proposed_at };
@@ -29,13 +27,11 @@ export async function propose(app: App, repo: Repo): Promise<ProposalResult> {
   ensureDirs();
   const logPath = join(LOG_DIR, `proposals-${repo.name}-${Date.now()}.jsonl`);
   const log = createWriteStream(logPath, { flags: 'a' });
-  // A stream with no 'error' listener crashes the daemon when its file cannot be written.
   log.on('error', () => {});
   const runId = app.startPlannerRun(repo.id, logPath);
   try {
     return await planRepo(app, repo, goals, runId, log);
   } catch (err) {
-    // Whatever threw, the row must end: an open one takes a slot until the next daemon start.
     app.finishPlannerRun(runId, 'failed', 0, `planner crashed: ${lastLine(String(err))}`);
     throw err;
   } finally {
@@ -100,7 +96,6 @@ async function planRepo(app: App, repo: Repo, goals: string, runId: PlannerRunId
 
 const proposing = new Set<RepoId>();
 
-/** Run the planner for one repo now, regardless of its schedule. */
 export async function proposeNow(app: App, nameOrId: string | number): Promise<ProposalResult> {
   const repo = requireRepo(app, nameOrId);
   if (repo.archived_at) throw new ActionError(`${repo.name} is archived; unarchive it first`);

@@ -1,5 +1,4 @@
-// Use cases for reviews: a person builds a draft of line comments and an overall note on a task, submits it as a Comment or
-// as Request changes, and comments are answered and resolved. Reviews live only in AgentDeck.
+// Use cases for reviews: a person builds a draft of line comments and an overall note on a task, submits it as a Comment or as Request changes, and comments are answered and resolved.
 import type { App } from '../../ports/app.ts';
 import type { ReviewId, TaskId } from '../../../domain/shared/index.ts';
 import {
@@ -33,23 +32,19 @@ function requireComment(app: App, id: number): ReviewComment {
   return comment;
 }
 
-/** The review a comment belongs to, as it is now. */
 const reviewOf = (app: App, commentId: number): ReviewWithComments => requireReview(app, requireComment(app, commentId).review_id);
 
-/** A task's reviews with their comments, oldest first. */
 export function taskReviews(app: App, taskId: TaskId): ReviewWithComments[] {
   requireTask(app, taskId);
   return app.reviewsForTask(taskId);
 }
 
-/** The task's draft review by a person, started if it has none. A task has at most one; a review run's is never it. */
 export function startReview(app: App, taskId: TaskId): ReviewWithComments {
   requireTask(app, taskId);
   const draft = app.draftReviewFor(taskId) ?? app.createReview(taskId);
   return requireReview(app, draft.id);
 }
 
-/** Change a draft's overall note. */
 export function editReview(app: App, id: ReviewId, input: { body?: string }): ReviewWithComments {
   const review = requireReview(app, id);
   refuse(draftError(review));
@@ -58,7 +53,6 @@ export function editReview(app: App, id: ReviewId, input: { body?: string }): Re
   return requireReview(app, id);
 }
 
-/** Add a line comment to a draft. `head_commit` is the task's head commit the diff was read at. */
 export function addReviewComment(
   app: App,
   reviewId: ReviewId,
@@ -80,7 +74,6 @@ export function addReviewComment(
   return requireReview(app, reviewId);
 }
 
-/** Delete a draft's comment. */
 export function deleteReviewComment(app: App, commentId: number): ReviewWithComments {
   const review = reviewOf(app, commentId);
   refuse(draftError(review));
@@ -88,10 +81,6 @@ export function deleteReviewComment(app: App, commentId: number): ReviewWithComm
   return requireReview(app, review.id);
 }
 
-/**
- * The changes a person's review read, from the task's branch as it is now: its head commit and the patch-id of its changes
- * against the base. Both null when the task has no branch (or its repo is gone); the patch-id null when git can't tell.
- */
 async function reviewedDiff(app: App, taskId: TaskId): Promise<ReviewedDiff> {
   const task = requireTask(app, taskId);
   const repo = app.getRepo(task.repo_id);
@@ -101,11 +90,6 @@ async function reviewedDiff(app: App, taskId: TaskId): Promise<ReviewedDiff> {
   return { head_commit: head, diff_hash: await app.workspace.diffHash(repo.path, repo.base_branch, head) };
 }
 
-/**
- * Submit a draft as a Comment or as Request changes, recording the head and the diff it read. Request changes also sends
- * the task the retry event with the review as its reason (so a done task moves back to queued); if the task can't be
- * retried the review stays a draft.
- */
 export async function submitReview(app: App, id: ReviewId, input: { kind: string; body?: string }): Promise<ReviewWithComments> {
   const review = requireReview(app, id);
   refuse(draftError(review));
@@ -120,7 +104,6 @@ export async function submitReview(app: App, id: ReviewId, input: { kind: string
   return requireReview(app, id);
 }
 
-/** Move a comment of a submitted review: answered, resolved or reopened. */
 function moveComment(app: App, commentId: number, action: CommentAction, answer?: string): ReviewWithComments {
   const comment = requireComment(app, commentId);
   const review = requireReview(app, comment.review_id);

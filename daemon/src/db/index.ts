@@ -1,4 +1,4 @@
-// The database: the only place SQL lives. One store per table group, in a folder per context, merged into one `Db`.
+// The database: the only place SQL lives.
 import { DatabaseSync } from 'node:sqlite';
 import { DB_PATH, ensureDirs } from '../config.ts';
 import { usageStore } from './capacity/usage.ts';
@@ -24,13 +24,12 @@ export type Db = ReturnType<typeof openDb>;
 export function openDb(path = DB_PATH) {
   if (path === DB_PATH) ensureDirs();
   const db = new DatabaseSync(path);
-  // busy_timeout first, so switching to WAL waits on another process too.
   db.exec('PRAGMA busy_timeout = 5000; PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
   migrate(db);
   const orm = makeOrm(db);
 
   return {
-    raw: db, // for tests that seed or inspect rows directly; nothing in src/ outside db/ uses it
+    raw: db,
     close: () => db.close(),
     ...changeStore(db),
     ...settingsStore(db, orm),

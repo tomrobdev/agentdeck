@@ -1,4 +1,4 @@
-// Reviews and their comments. A draft is edited freely; a submitted review changes only in its comments' states.
+// Reviews and their comments.
 import { and, asc, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
 import type { ReviewId, TaskId } from '../../domain/shared/index.ts';
 import type {
@@ -25,14 +25,9 @@ export function reviewStore(orm: Orm) {
     orm.select().from(reviewComments).where(eq(reviewComments.review_id, review_id)).orderBy(asc(reviewComments.id)).all().map(toComment);
 
   return {
-    /** A new draft for the task, a person's. */
     createReview(task_id: TaskId): Review {
       return toReview(orm.insert(reviews).values({ task_id, by: 'person' }).returning().get());
     },
-    /**
-     * A review a review run made, submitted as it is stored, with the changes it read. Its line comments follow with
-     * `addComment`. Never a draft: a person's draft (`draftReviewFor`) is never taken or filled by a review run.
-     */
     addRunReview(task_id: TaskId, kind: ReviewKind, body: string, read: { head_commit: string; diff_hash: string }): Review {
       return toReview(
         orm
@@ -54,7 +49,6 @@ export function reviewStore(orm: Orm) {
       const row = orm.select().from(reviews).where(eq(reviews.id, id)).get();
       return row && toReview(row);
     },
-    /** The task's draft by a person, if it has one. A review run's review is never a person's draft. */
     draftReviewFor(task_id: TaskId): Review | undefined {
       const row = orm
         .select()
@@ -64,7 +58,6 @@ export function reviewStore(orm: Orm) {
         .get();
       return row && toReview(row);
     },
-    /** The task's reviews with their comments, oldest first. */
     reviewsForTask(task_id: TaskId): ReviewWithComments[] {
       const rows = orm.select().from(reviews).where(eq(reviews.task_id, task_id)).orderBy(asc(reviews.id)).all();
       if (!rows.length) return [];
@@ -86,7 +79,6 @@ export function reviewStore(orm: Orm) {
       const review = this.getReview(id);
       return review && { ...review, comments: commentsOf(id) };
     },
-    /** Change a draft's overall note. False when the review is not a draft. */
     setReviewBody(id: ReviewId, body: string): boolean {
       return (
         orm
@@ -96,7 +88,6 @@ export function reviewStore(orm: Orm) {
           .run().changes > 0
       );
     },
-    /** Submit a draft with its kind, overall note and the changes it read. False when the review is not a draft. */
     submitReview(id: ReviewId, kind: ReviewKind, body: string, read: ReviewedDiff): boolean {
       return (
         orm
@@ -113,7 +104,6 @@ export function reviewStore(orm: Orm) {
     addComment(c: Pick<ReviewComment, 'review_id' | 'path' | 'line' | 'side' | 'head_commit' | 'body'>): ReviewComment {
       return toComment(orm.insert(reviewComments).values(c).returning().get());
     },
-    /** Delete a comment of a draft. False when it is gone or its review is submitted. */
     deleteComment(id: number): boolean {
       return (
         orm
@@ -127,7 +117,6 @@ export function reviewStore(orm: Orm) {
           .run().changes > 0
       );
     },
-    /** Move a comment of a submitted review to `to`, only from one of the `from` states; `answer` (when given) replaces its answer. */
     moveComment(id: number, from: CommentState[], to: CommentState, answer?: string): boolean {
       return (
         orm

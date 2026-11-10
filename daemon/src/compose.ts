@@ -1,6 +1,4 @@
-// Builds the App the use cases take, on the database and the real adapters: for the CLI (`cli.ts`), which also hands
-// it to the daemon (`cli/operations/daemon.ts` → `daemon.ts`). Tests build theirs in test/fixtures.ts. Each process builds one,
-// so nothing here is module state.
+// Builds the App the use cases take, on the database and the real adapters: for the CLI (`cli.ts`), which also hands it to the daemon (`cli/operations/daemon.ts` → `daemon.ts`).
 import { findClaude, runClaude } from './adapters/claude/claude.ts';
 import { KeepAwake } from './adapters/macos/caffeinate.ts';
 import { fetchDaemonState } from './adapters/local/daemon-api.ts';
@@ -26,10 +24,8 @@ import type { Workspace } from './application/ports/workspace.ts';
 import { workspace } from './adapters/git/workspace.ts';
 import { openDb } from './db/index.ts';
 
-/** claude through `adapters/claude/claude.ts`: every session in its own process group. */
 export const realAgent = (): Agent => ({ run: (session) => runClaude(session), find: async () => findClaude() });
 
-/** Pull requests through `adapters/github/github.ts`. Each call looks the member up on `github`, so a test can replace one. */
 export const realCodeHost = (): CodeHost => ({
   auth: () => github.auth(),
   push: (repoPath, branch) => github.push(repoPath, branch),
@@ -46,13 +42,10 @@ export const realCodeHost = (): CodeHost => ({
   deleteRemoteBranch: (repoPath, branch) => github.deleteRemoteBranch(repoPath, branch),
 });
 
-/** Git, the shell and worktree files through `adapters/git/workspace.ts`. */
 export const realWorkspace = (): Workspace => workspace;
 
-/** Desktop and ntfy notifications through `adapters/macos/notify.ts`. */
 export const realNotifier = (): Notifier => ({ desktop, ntfy });
 
-/** Run log and settings files through `adapters/claude/run-log.ts`. */
 export const realRunLog = (): RunLog => ({
   event: writeEvent,
   append: appendEvent,
@@ -63,7 +56,6 @@ export const realRunLog = (): RunLog => ({
   events: readEvents,
 });
 
-/** Process groups through `adapters/process/processes.ts`, keep-awake through `adapters/macos/caffeinate.ts`. */
 export const realProcesses = (): Processes => ({
   stopAll: () => {
     for (const child of activeChildren) killGroup(child.pid);
@@ -73,7 +65,6 @@ export const realProcesses = (): Processes => ({
   keepAwake: (enabled) => new KeepAwake(enabled),
 });
 
-/** The launchd service through `adapters/macos/service.ts`, a daemon's API and log through `daemon-api.ts` and `daemon-log.ts`. */
 export const realService = (): Service => ({
   status: serviceStatus,
   start,
@@ -86,10 +77,8 @@ export const realService = (): Service => ({
   logTail: () => readLogTail(DAEMON_LOG),
 });
 
-/** Goals files through `adapters/local/goals.ts`. */
 export const realGoals = (): Goals => ({ path: goalsPath, read: readGoals, write: writeGoals, delete: deleteGoals });
 
-/** The daemon's source checkout through `adapters/git.ts` and `adapters/macos/watch.ts`. */
 export const realSource = (): Source => ({
   commit: checkoutCommit,
   branch: checkedOutBranch,
@@ -97,7 +86,6 @@ export const realSource = (): Source => ({
   watch: watchSource,
 });
 
-/** The ports on the real adapters. */
 export const realPorts = (): Ports => ({
   source: realSource(),
   agent: realAgent(),
@@ -110,7 +98,6 @@ export const realPorts = (): Ports => ({
   goals: realGoals(),
 });
 
-/** Open the database (the live one unless `path` names another) and build the App on it. */
 export function composeApp(path?: string): ComposedApp {
   return Object.assign(openDb(path), realPorts());
 }

@@ -8,14 +8,9 @@ import type { Orm } from '../orm.ts';
 import { NOW_SQL } from '../sql.ts';
 import { plannerRuns, runs, tasks } from '../tables.ts';
 
-/**
- * The run kinds that run beside a task's status rather than as it: a resolve run (of a done task), an unblock run (of a
- * blocked one), a review run (of a done one) and a verify run (of a proposed or queued one).
- */
 const SIDE_KINDS: RunKind[] = ['resolve', 'unblock', 'review', 'verify'];
 
 export function runStore(orm: Orm) {
-  /** Unfinished runs of one kind. */
   const runningOf = (kind: RunKind) =>
     orm
       .select({ n: count() })
@@ -23,10 +18,6 @@ export function runStore(orm: Orm) {
       .where(and(eq(runs.kind, kind), isNull(runs.ended_at)))
       .get()?.n ?? 0;
   return {
-    /**
-     * A new run row; `model` is the model its claude is started with (null: not known), and `diff_hash` the diff a review
-     * run reads (null for other kinds).
-     */
     startRun(
       task_id: TaskId,
       attempt: number,
@@ -37,23 +28,18 @@ export function runStore(orm: Orm) {
     ): RunId {
       return Number(orm.insert(runs).values({ task_id, attempt, log_path, kind, model, diff_hash }).run().lastInsertRowid) as RunId;
     },
-    /** The exact model id claude's init line named for the run. */
     setRunModelId(id: RunId, model_id: string): void {
       orm.update(runs).set({ model_id }).where(eq(runs.id, id)).run();
     },
-    /** Record the run's claude process group, and when it started: what `ownsLiveGroup` checks the pid against. */
     setRunPid(id: RunId, pid: number): void {
       orm.update(runs).set({ pid, pid_at: NOW_SQL }).where(eq(runs.id, id)).run();
     },
-    /** Record what a live run is doing; the write moves the change counter, which is what pushes it to the dashboard. */
     setRunLive(id: RunId, live_turns: number, live_tool: string | null): void {
       orm.update(runs).set({ live_turns, live_tool }).where(eq(runs.id, id)).run();
     },
-    /** The claude session a run is in, stored as soon as claude names it so a run a restart ends can be resumed. */
     setRunSession(id: RunId, session_id: string): void {
       orm.update(runs).set({ session_id }).where(eq(runs.id, id)).run();
     },
-    /** The unfinished run of a kind (work or resolve) of each task that has one, by task id: when it started and what it is doing. */
     liveRuns(kind: RunKind): Map<TaskId, { started_at: string; live_turns: number; live_tool: string | null }> {
       const rows = orm
         .select({ task_id: runs.task_id, started_at: runs.started_at, live_turns: runs.live_turns, live_tool: runs.live_tool })
@@ -63,7 +49,6 @@ export function runStore(orm: Orm) {
         .all();
       return new Map(rows.map((r) => [r.task_id, r]));
     },
-    /** The model of each task's latest work run, by task id; a task with no work run, or one from before runs recorded it, has none. */
     latestRunModels(): Map<TaskId, string> {
       const rows = orm
         .select({ task_id: runs.task_id, model: runs.model })
@@ -85,7 +70,6 @@ export function runStore(orm: Orm) {
       return new Map(rows.flatMap((r) => (r.model ? [[r.task_id, r.model] as const] : [])));
     },
     finishRun(id: RunId, r: Partial<Omit<Run, 'id' | 'task_id' | 'kind' | 'attempt' | 'started_at' | 'log_path' | 'model'>>): void {
-      // undefined means "not given" to Drizzle, but this has always written a given-as-undefined key as NULL.
       const given = Object.fromEntries(Object.entries(stored(r)).map(([k, v]) => [k, v ?? null]));
       orm
         .update(runs)
@@ -96,27 +80,18 @@ export function runStore(orm: Orm) {
     runsForTask(task_id: TaskId): Run[] {
       return orm.select().from(runs).where(eq(runs.task_id, task_id)).orderBy(asc(runs.id)).all().map(toRun);
     },
-    /** Resolve runs still going, in any daemon process. */
     countRunningResolves(): number {
       return runningOf('resolve');
     },
-    /** Unblock runs still going, in any daemon process. */
     countRunningUnblocks(): number {
       return runningOf('unblock');
     },
-    /** Review runs still going, in any daemon process. */
     countRunningReviews(): number {
       return runningOf('review');
     },
-    /** Verify runs still going, in any daemon process. */
     countRunningVerifies(): number {
       return runningOf('verify');
     },
-    /**
-     * Slots in use, counted from the db so every process sees the same number: a task that is running (or being
-     * cancelled), a task not running that has an unfinished run beside it (resolve, unblock, review or verify; a task
-     * whose sync started one counts once), and an unfinished planner run. A clean sync runs no claude and takes none.
-     */
     slotsUsed(): number {
       const running = orm.select({ n: count() }).from(tasks).where(inArray(tasks.status, RUNNING_STATUSES)).get()?.n ?? 0;
       const beside =
@@ -129,7 +104,6 @@ export function runStore(orm: Orm) {
       const planning = orm.select({ n: count() }).from(plannerRuns).where(isNull(plannerRuns.ended_at)).get()?.n ?? 0;
       return running + beside + planning;
     },
-    /** Whether a resolve run of this task has not finished. */
     hasRunningResolve(task_id: TaskId): boolean {
       return (
         orm
@@ -140,12 +114,10 @@ export function runStore(orm: Orm) {
           .get() !== undefined
       );
     },
-    /** Runs of any kind with a recorded pid that have not finished or finished within `days`: where a claude process may still be. */
     pidRuns(days: number): PidRun[] {
       // guard: the builder has no date arithmetic; this is the clock `days` ago, in the format timestamps are stored in
       const since = sql`datetime('now', ${`-${Math.floor(days)} days`})`;
       const recent = (t: typeof runs | typeof plannerRuns) => and(isNotNull(t.pid), or(isNull(t.ended_at), gt(t.ended_at, since)));
-      // A planner run starts its claude as it opens, so its started_at is when its pid was stored.
       const rows = orm
         .select({
           // guard: the union's column needs the planner side's kind type and an alias, which a plain column reference lacks
@@ -163,7 +135,7 @@ export function runStore(orm: Orm) {
             .select({
               // guard: the builder has no literal column; every row of this side is a planner run
               kind: sql<PidRun['kind']>`'planner'`.as('kind'),
-              id: plannerRuns.id as unknown as typeof runs.id, // a union's columns share one type; PidRun.id says it is either
+              id: plannerRuns.id as unknown as typeof runs.id,
               pid: plannerRuns.pid,
               // guard: the union's column needs the same alias and string type as the runs side
               pid_at: sql<string>`${plannerRuns.started_at}`.as('pid_at'),
@@ -175,7 +147,6 @@ export function runStore(orm: Orm) {
         .all();
       return rows.flatMap((r) => (r.pid === null ? [] : [{ ...r, pid: r.pid }]));
     },
-    /** Tasks in running or being cancelled, each with its unfinished work run, if it has one: its pid, when that was stored, and its start. */
     runningTaskRuns(): RunningTaskRun[] {
       const open = orm
         .select({ task_id: runs.task_id, pid: runs.pid, pid_at: runs.pid_at, started_at: runs.started_at })
@@ -183,7 +154,7 @@ export function runStore(orm: Orm) {
         .where(and(eq(runs.kind, 'work'), isNull(runs.ended_at)))
         .orderBy(asc(runs.id))
         .all();
-      const unfinished = new Map(open.map((r) => [r.task_id, r])); // the newest of a task's unfinished runs wins
+      const unfinished = new Map(open.map((r) => [r.task_id, r]));
       return orm
         .select({ id: tasks.id })
         .from(tasks)
@@ -195,7 +166,6 @@ export function runStore(orm: Orm) {
           return { id, pid: r?.pid ?? null, pid_at: r ? (r.pid_at ?? r.started_at) : null, started_at: r?.started_at ?? null };
         });
     },
-    /** Claude processes recorded on runs that never finished: a previous daemon died mid-run. */
     unfinishedPids(): { pid: number; pid_at: string }[] {
       const unfinished = (t: typeof runs | typeof plannerRuns) => and(isNull(t.ended_at), isNotNull(t.pid));
       return (

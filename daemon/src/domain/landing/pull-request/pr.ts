@@ -1,4 +1,4 @@
-// A task's pull request as a value, and what goes into one. Pure: no I/O.
+// A task's pull request as a value, and what goes into one.
 import { STATUS_TAIL } from '../../shared/index.ts';
 import type { AutoMergeCheck } from '../merge/merge.ts';
 import type { CheckCounts, StoredChecks } from './checks.ts';
@@ -45,19 +45,10 @@ export interface FailedPullRequest extends PrRecord {
 /** A task's pull request. A task with no PR yet has null, not a value. */
 export type PullRequest = OpenedPullRequest | FailedPullRequest;
 
-/** The url of a task's PR while it is open; null with none or in any other state. */
 export const openPrUrl = (pr: PullRequest | null): string | null => (pr?.state === 'open' ? pr.url : null);
 
-/**
- * Whether `gh pr create` failed because the branch has an open PR already (gh: 'a pull request for branch "x" into branch "y"
- * already exists'): a daemon stopped between opening it and recording it, or the task moved on while it opened.
- */
 export const isPrExistsError = (error: string): boolean => /a pull request for branch .+ already exists/i.test(error);
 
-/**
- * Which of a branch's PRs (`prs`, newest first, as gh lists them) is the one `gh pr create` found: the open one, since gh only
- * refuses while one is open; else the newest, which was closed or merged since. Null when the branch has none.
- */
 export const existingPr = <P extends { state: PrState }>(prs: P[]): P | null => prs.find((p) => p.state === 'open') ?? prs[0] ?? null;
 
 /** A PR as flat fields, the shape of its columns on a task. */
@@ -75,10 +66,6 @@ export interface PrFields {
   merge_request_check: AutoMergeCheck | null;
 }
 
-/**
- * The PR that flat fields describe. No state means no PR, and a PR on GitHub needs its url: fields that say otherwise are half-written
- * and read as none, as a malformed stored value does. So does a merge request's method or check with no time it was asked for.
- */
 export function pullRequestOf(fields: PrFields): PullRequest | null {
   const { pr_state: state, pr_url: url } = fields;
   if (state === null) return null;
@@ -96,7 +83,6 @@ export function pullRequestOf(fields: PrFields): PullRequest | null {
   return url === null ? null : { ...record, state, url };
 }
 
-/** A PR as flat fields: the way back from `pullRequestOf`. */
 export function prFields(pr: PullRequest | null): PrFields {
   return {
     pr_url: pr?.url ?? null,
@@ -123,7 +109,6 @@ export interface PrRun {
   result_text: string | null;
 }
 
-/** The agent's final message without its trailing "STATUS: DONE" line. */
 export function finalMessage(runs: Pick<PrRun, 'kind' | 'result_text'>[]): string {
   const text = runs.filter((r) => (r.kind ?? 'work') === 'work').at(-1)?.result_text ?? '';
   return text.replace(STATUS_TAIL, '').trim();
@@ -135,7 +120,6 @@ export interface PrPlan {
   steps: { title: string; status: string; done: string[] }[];
 }
 
-/** The "Plan" section: each linked step with its status, and its done criteria as a checklist for the reviewer. */
 function planSection(plan: PrPlan): string[] {
   const out = [`## Plan: \`${plan.name}\``];
   for (const step of plan.steps) {
@@ -145,10 +129,6 @@ function planSection(plan: PrPlan): string[] {
   return [...out, ''];
 }
 
-/**
- * The agent's final message, the linked plan's steps, a table of the task's runs, and a signature. A verify run read the
- * prompt before the work began, not the work, so it is left out of the table.
- */
 export function buildPrBody(task: { id: number }, runs: PrRun[], plan: PrPlan | null = null): string {
   const rows = runs
     .filter((r) => r.kind !== 'verify')
@@ -173,7 +153,6 @@ export function buildPrBody(task: { id: number }, runs: PrRun[], plan: PrPlan | 
   ].join('\n');
 }
 
-/** Map `gh pr view --json state` output ("OPEN", "MERGED", "CLOSED") to a PR state. */
 export function parsePrState(state: string): PrState | null {
   const s = state.trim().toLowerCase();
   return s === 'open' || s === 'merged' || s === 'closed' ? s : null;

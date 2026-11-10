@@ -1,5 +1,4 @@
-// The daemon's headline: what state it is in, and what needs a person. Decided once here, so the dashboard and the tray
-// read it instead of each deciding. Pure: `now` is a parameter (unix seconds).
+// The daemon's headline: what state it is in, and what needs a person.
 import type { TaskId } from '../shared/index.ts';
 
 export type HeadlineState = 'paused' | 'rate_limited' | 'hold' | 'working' | 'idle';
@@ -51,7 +50,6 @@ export interface Headline {
   review_due: RepoReviewDue[];
 }
 
-/** The tasks to show first: blocked, then review, then proposed, each by priority (highest first) then id; at most five. */
 export function attentionList(candidates: AttentionCandidate[]): AttentionTask[] {
   return [...candidates]
     .sort((a, b) => ATTENTION_ORDER.indexOf(a.why) - ATTENTION_ORDER.indexOf(b.why) || b.priority - a.priority || a.id - b.id)
