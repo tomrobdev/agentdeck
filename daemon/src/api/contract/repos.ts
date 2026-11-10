@@ -39,6 +39,10 @@ export interface Repo {
   auto_merge_max_lines: number;
   /** JSON array of path prefixes; a PR touching one needs a person. */
   auto_merge_skip: string;
+  /** A branch adding more code comment lines is over the limit; 0 turns this limit off. Missing from a daemon that predates it. */
+  code_comment_max_lines?: number;
+  /** A branch whose added lines are a greater share of code comments, in percent, is over the limit; 0 turns this limit off. Missing from a daemon that predates it. */
+  code_comment_max_percent?: number;
   /** The model a new task of the repo takes when it names none; null follows the default_model setting. Missing from a daemon that predates it. */
   model?: string | null;
   created_at: string;
@@ -83,6 +87,8 @@ export interface RepoPatch {
   auto_merge?: boolean;
   auto_merge_max_lines?: number;
   auto_merge_skip?: string[];
+  code_comment_max_lines?: number;
+  code_comment_max_percent?: number;
   /** A model alias or claude-… id; null or "" clears it. */
   model?: string | null;
   /** The repo's own tool rules; null or [] goes back to the detected ones. */

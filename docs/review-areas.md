@@ -144,6 +144,7 @@ Pull requests, checks, merge requests, merging and auto-merge.
 
 - daemon/src/domain/landing/merge/auto-merge.ts
 - daemon/src/domain/landing/pull-request/checks.ts
+- daemon/src/domain/landing/merge/code-comments.ts
 - daemon/src/domain/landing/merge/conflict.ts
 - daemon/src/domain/landing/merge/merge-request.ts
 - daemon/src/domain/landing/merge/merge.ts

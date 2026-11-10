@@ -1,5 +1,6 @@
 // Adapter for local git: diffs and compares, and reading trees and files at a commit.
 import { PATCH_LIMIT, type ChangedFile, type TreeEntry, capText, mergeChanges, parseLsTree, treeEntries } from '../../domain/work/index.ts';
+import { type AddedLines, parseAddedLines } from '../../domain/landing/index.ts';
 import { DIFF_FLAGS, READ_ENV, exec, git, gitCapped, gitRead, gitWithInput } from './exec.ts';
 import { resolveCommit } from './refs.ts';
 
@@ -70,6 +71,12 @@ export async function diffHash(repoPath: string, base: string, head: string): Pr
   const diff = await gitRead(repoPath, 'diff', ...DIFF_FLAGS, '--binary', from.sha, head, '--');
   if (!diff.trim()) return null;
   return (await gitWithInput(repoPath, diff, ['patch-id', '--stable'])).trim().split(/\s+/)[0] || null;
+}
+
+export async function addedLines(repoPath: string, base: string, head: string): Promise<AddedLines | null> {
+  const from = await diffBase(repoPath, base, head);
+  if (!from) return null;
+  return parseAddedLines(await gitRead(repoPath, '-c', 'core.quotePath=false', 'diff', ...DIFF_FLAGS, '-M', '-U0', from.sha, head, '--'));
 }
 
 export async function changedFiles(repoPath: string, base: string, head: string): Promise<ChangedFile[]> {

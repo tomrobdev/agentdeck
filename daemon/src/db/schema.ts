@@ -272,6 +272,8 @@ export const MIGRATIONS: Migration[] = [
   // 36: the base commit a verify run read (domain/runs/verify.ts), so its findings can be marked stale once the base
   // moves on. NULL for every other kind.
   'ALTER TABLE runs ADD COLUMN base_commit TEXT;',
+  `ALTER TABLE repos ADD COLUMN code_comment_max_lines INTEGER NOT NULL DEFAULT 5;
+   ALTER TABLE repos ADD COLUMN code_comment_max_percent INTEGER NOT NULL DEFAULT 5;`,
 ];
 
 export function migrate(db: DatabaseSync, steps: Migration[] = MIGRATIONS): number {

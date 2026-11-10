@@ -51,6 +51,8 @@ erDiagram
     text model "nullable"
     integer auto_review
     integer escalate
+    integer code_comment_max_lines
+    integer code_comment_max_percent
   }
   review_comments {
     integer id PK

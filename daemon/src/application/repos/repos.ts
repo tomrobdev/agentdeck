@@ -3,7 +3,7 @@ import { normalizeNetwork, settingsPath } from '../../domain/runs/index.ts';
 import { existsSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
 import type { App } from '../ports/app.ts';
-import { autoMergeMaxLinesError } from '../../domain/landing/index.ts';
+import { autoMergeMaxLinesError, codeCommentMaxLinesError, codeCommentMaxPercentError } from '../../domain/landing/index.ts';
 import { MERGE_METHODS, type MergeMethod, PR_MODES, type PrMode, type Repo, isMergeMethod } from '../../domain/repos/index.ts';
 import { goalsError, networkError, parseToolRules, repoNameError, toolRulesError } from '../../domain/repos/index.ts';
 import { detectToolchain } from '../../domain/repos/index.ts';
@@ -74,6 +74,8 @@ export interface RepoPatch {
   auto_merge?: boolean;
   auto_merge_max_lines?: number;
   auto_merge_skip?: string | string[];
+  code_comment_max_lines?: number;
+  code_comment_max_percent?: number;
   model?: string | null;
   allowed_tools?: string | string[] | null;
 }
@@ -99,6 +101,8 @@ export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch
   const auto_merge_max_lines = whole(body, 'auto_merge_max_lines', autoMergeMaxLinesError);
   const skip = list(body, 'auto_merge_skip', { split: true });
   const auto_merge_skip = skip && textList(skip);
+  const code_comment_max_lines = whole(body, 'code_comment_max_lines', codeCommentMaxLinesError);
+  const code_comment_max_percent = whole(body, 'code_comment_max_percent', codeCommentMaxPercentError);
   const model = textOrNull(body, 'model');
   refuse(modelError(model ?? undefined));
   const rules =
@@ -147,6 +151,8 @@ export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch
     ...(auto_merge !== undefined ? { auto_merge } : {}),
     ...(auto_merge_max_lines !== undefined ? { auto_merge_max_lines } : {}),
     ...(auto_merge_skip !== undefined ? { auto_merge_skip } : {}),
+    ...(code_comment_max_lines !== undefined ? { code_comment_max_lines } : {}),
+    ...(code_comment_max_percent !== undefined ? { code_comment_max_percent } : {}),
     ...(model !== undefined ? { model: model || null } : {}),
     ...(allowed_tools !== undefined ? { allowed_tools } : {}),
   });

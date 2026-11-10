@@ -393,6 +393,24 @@ A task's checks in a line's worth: the counts and the failing checks' names.
 | `pending`       | `number`                                                 |                                                                                                                                                                                                             |
 | `failures?`     | `{ name: string; step: string \| null; }[] \| undefined` | The failing checks' names and the step each failed on (null when none was read), kept when the counts are. A stored count from before this has none: its failing checks read as failing on an unknown step. |
 
+### CodeCommentCount
+
+The code comment lines a diff adds.
+
+| Field     | Type                                 | Comment                                                                          |
+| --------- | ------------------------------------ | -------------------------------------------------------------------------------- |
+| `files`   | `{ path: string; lines: number; }[]` | Each file that adds a code comment line, with how many.                          |
+| `lines`   | `number`                             | Code comment lines added in all.                                                 |
+| `added`   | `number`                             | Non-blank lines added to the files the syntax table knows, prose files left out. |
+| `percent` | `number`                             | `lines` as a share of `added`, from 0 to 100.                                    |
+
+### CodeCommentLimits
+
+| Field                      | Type     | Comment                                                                                                                      |
+| -------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `code_comment_max_lines`   | `number` | A branch adding more code comment lines than this is over the limit; 0 turns this limit off.                                 |
+| `code_comment_max_percent` | `number` | A branch whose added lines are a greater share of code comments than this percent is over the limit; 0 turns this limit off. |
+
 ### CommentInView
 
 A comment and the diff around it at the commit it was made on (null when that can't be shown).
@@ -1138,33 +1156,35 @@ A task in running (or being cancelled) and the process of its unfinished run, if
 
 ### Repo
 
-| Field                  | Type               | Comment                                                                                                                                                        |
-| ---------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`                   | `RepoId`           |                                                                                                                                                                |
-| `name`                 | `string`           |                                                                                                                                                                |
-| `path`                 | `string`           |                                                                                                                                                                |
-| `base_branch`          | `string`           |                                                                                                                                                                |
-| `test_cmd`             | `string \| null`   |                                                                                                                                                                |
-| `allowed_tools`        | `string[] \| null` | Tool rules the repo set itself; null = the generic defaults plus the toolchain's rules.                                                                        |
-| `auto_approve`         | `boolean`          | Planner tasks skip approval.                                                                                                                                   |
-| `proposed_at`          | `string \| null`   |                                                                                                                                                                |
-| `toolchain`            | `string \| null`   | pnpm \| yarn \| npm \| cargo \| uv \| go, null = not detected                                                                                                  |
-| `setup_cmd`            | `string \| null`   | run in each worktree before claude                                                                                                                             |
-| `paused_reason`        | `string \| null`   | set = no task of this repo is claimed until `repo resume` or a passing doctor                                                                                  |
-| `pr_mode`              | `PrMode`           |                                                                                                                                                                |
-| `merge_method`         | `MergeMethod`      | how a PR is merged from the app unless the person picks another                                                                                                |
-| `auto_resolve`         | `boolean`          | The daemon starts a resolve run on its own when a branch conflicts with the base.                                                                              |
-| `auto_unblock`         | `boolean`          | The daemon starts an unblock run on its own when a task blocks (domain/runs/unblock.ts); off by default.                                                       |
-| `auto_review`          | `boolean`          | The daemon starts a review run on its own when a task is done (domain/runs/review.ts), and a clean verdict may stand in for a person's review; off by default. |
-| `sandbox`              | `boolean`          | The agent's Bash commands run in Claude Code's sandbox (the default).                                                                                          |
-| `archived_at`          | `string \| null`   | set = hidden everywhere and its work stopped, until `repo unarchive`                                                                                           |
-| `network`              | `string[]`         | Hosts sandboxed commands may reach; none = empty.                                                                                                              |
-| `auto_merge`           | `boolean`          | The daemon merges a done task's PR on its own when it passes the auto-merge check.                                                                             |
-| `auto_merge_max_lines` | `number`           | a PR changing more lines (additions + deletions) needs a person                                                                                                |
-| `auto_merge_skip`      | `string[]`         | Path prefixes; a PR touching one needs a person.                                                                                                               |
-| `model`                | `string \| null`   | The model a new task of this repo takes when it names none; null follows the default_model setting.                                                            |
-| `escalate`             | `boolean`          | A retry after a failure a stronger model may fix runs one model up (domain/runs/escalate.ts); on by default.                                                   |
-| `created_at`           | `string`           |                                                                                                                                                                |
+| Field                      | Type               | Comment                                                                                                                                                        |
+| -------------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                       | `RepoId`           |                                                                                                                                                                |
+| `name`                     | `string`           |                                                                                                                                                                |
+| `path`                     | `string`           |                                                                                                                                                                |
+| `base_branch`              | `string`           |                                                                                                                                                                |
+| `test_cmd`                 | `string \| null`   |                                                                                                                                                                |
+| `allowed_tools`            | `string[] \| null` | Tool rules the repo set itself; null = the generic defaults plus the toolchain's rules.                                                                        |
+| `auto_approve`             | `boolean`          | Planner tasks skip approval.                                                                                                                                   |
+| `proposed_at`              | `string \| null`   |                                                                                                                                                                |
+| `toolchain`                | `string \| null`   | pnpm \| yarn \| npm \| cargo \| uv \| go, null = not detected                                                                                                  |
+| `setup_cmd`                | `string \| null`   | run in each worktree before claude                                                                                                                             |
+| `paused_reason`            | `string \| null`   | set = no task of this repo is claimed until `repo resume` or a passing doctor                                                                                  |
+| `pr_mode`                  | `PrMode`           |                                                                                                                                                                |
+| `merge_method`             | `MergeMethod`      | how a PR is merged from the app unless the person picks another                                                                                                |
+| `auto_resolve`             | `boolean`          | The daemon starts a resolve run on its own when a branch conflicts with the base.                                                                              |
+| `auto_unblock`             | `boolean`          | The daemon starts an unblock run on its own when a task blocks (domain/runs/unblock.ts); off by default.                                                       |
+| `auto_review`              | `boolean`          | The daemon starts a review run on its own when a task is done (domain/runs/review.ts), and a clean verdict may stand in for a person's review; off by default. |
+| `sandbox`                  | `boolean`          | The agent's Bash commands run in Claude Code's sandbox (the default).                                                                                          |
+| `archived_at`              | `string \| null`   | set = hidden everywhere and its work stopped, until `repo unarchive`                                                                                           |
+| `network`                  | `string[]`         | Hosts sandboxed commands may reach; none = empty.                                                                                                              |
+| `auto_merge`               | `boolean`          | The daemon merges a done task's PR on its own when it passes the auto-merge check.                                                                             |
+| `auto_merge_max_lines`     | `number`           | a PR changing more lines (additions + deletions) needs a person                                                                                                |
+| `auto_merge_skip`          | `string[]`         | Path prefixes; a PR touching one needs a person.                                                                                                               |
+| `code_comment_max_lines`   | `number`           | A branch adding more code comment lines than this is over the limit; 0 turns this limit off.                                                                   |
+| `code_comment_max_percent` | `number`           | A branch whose added lines are a greater share of code comments than this percent is over the limit; 0 turns this limit off.                                   |
+| `model`                    | `string \| null`   | The model a new task of this repo takes when it names none; null follows the default_model setting.                                                            |
+| `escalate`                 | `boolean`          | A retry after a failure a stronger model may fix runs one model up (domain/runs/escalate.ts); on by default.                                                   |
+| `created_at`               | `string`           |                                                                                                                                                                |
 
 ### ToolchainInfo
 
