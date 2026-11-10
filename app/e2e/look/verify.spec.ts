@@ -1,6 +1,3 @@
-// The approve dialog shows a task's latest verify run: its findings, false claims first and marked as false. The seed has
-// no verify run (its only slot is #6's), so #5's detail is given one on the way to the page. It only reads: the dialog
-// is closed, not confirmed, so #5 stays proposed for act/approve.spec.ts.
 import { expect, open, row, test } from '../fixtures';
 
 const findings = [

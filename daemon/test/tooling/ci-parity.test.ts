@@ -1,6 +1,3 @@
-// CI runs nothing a task's own check skips: every `run:` step of a workflow is a check `pnpm check:task` runs (check:fast's
-// parts, or an extra check the branch's paths call for), or setup listed here with its reason. And CI runs every part of
-// check:fast. So a worker whose tests passed is not failed by a check it never ran, as #246 was by the coverage floors.
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -10,7 +7,6 @@ import { EXTRA_CHECKS } from '../../scripts/lib/check-task.ts';
 const ROOT = join(import.meta.dirname, '../../..');
 const WORKFLOWS = join(ROOT, '.github/workflows');
 
-/** Workflow steps that set up the machine rather than check the code, each with why. */
 const SETUP: Record<string, string> = {
   'pnpm install --frozen-lockfile': "installs dependencies; a task's worktree has its own setup command",
   'git config --global user.name ci && git config --global user.email ci@example.com': 'tests commit in temporary repos',
@@ -20,7 +16,6 @@ const SETUP: Record<string, string> = {
     'test:ui needs a Chromium; on a Mac it was installed by hand, and a worker cannot download it',
 };
 
-/** Each workflow's `run:` commands, with the line each is on. */
 function runSteps(): { file: string; line: number; command: string }[] {
   return readdirSync(WORKFLOWS)
     .filter((f) => /\.ya?ml$/.test(f))
@@ -34,13 +29,11 @@ function runSteps(): { file: string; line: number; command: string }[] {
     );
 }
 
-/** The commands `pnpm check:fast` runs, from the root package.json. */
 function checkFastParts(): string[] {
   const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')) as { scripts: Record<string, string> };
   return pkg.scripts['check:fast'].split('&&').map((s) => s.trim());
 }
 
-/** What check:task runs: check:fast's parts and its extra checks' commands. */
 const taskCommands = (): string[] => [...checkFastParts(), ...EXTRA_CHECKS.map((c) => c.command.join(' '))];
 
 test('[ci-parity] every CI step is a check pnpm check:task runs, or setup with a reason', () => {

@@ -6,7 +6,6 @@ import { canEdit } from '../../../lib/work/task-view';
 import { useActions } from '../../../composables/shared/useActions';
 import InlineEdit from '../../ui/form/InlineEdit.vue';
 
-// The task's number and title, the title edited in place while the task is editable.
 const props = defineProps<{ task: TaskDetail }>();
 const { run } = useActions();
 

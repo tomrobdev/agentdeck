@@ -1,5 +1,3 @@
-// The command palette's rows and what each does, and the person's events on a task that the palette, the queue and the task
-// page share. What each task allows is the daemon's rule; lib/work/palette.ts turns it into rows.
 import { computed } from 'vue';
 import { operationsApi } from '../../api/operations';
 import { runsApi } from '../../api/runs';
@@ -15,20 +13,13 @@ import { goPage, goTo, openPanel, showKeys, startMerge } from '../shared/useShel
 import type { Approvals } from './useApprovals';
 import { requestedBulk, requestedEdit, requestedView } from './queue/useView';
 
-/**
- * A person's event on a task, and opening a task from the queue. App passes the actions and approvals it provides, since a
- * component cannot inject what it provides itself.
- */
 export function useTaskActs(tasks: () => TaskSummary[], { run, defer }: Pick<Actions, 'run' | 'defer'>, { approve }: Approvals) {
-  // A reject waits 5 seconds behind an Undo toast before the API is called; an approve goes through the approve gate;
-  // every other event goes at once.
   const actOn = (kind: PersonEvent, id: number) =>
     kind === 'reject'
       ? defer(`Rejected #${id}`, () => PERSON_CALLS.reject(id))
       : kind === 'approve'
         ? void approve([id])
         : run(() => PERSON_CALLS[kind](id));
-  /** A task in review opens on its diff, the rest on the overview. */
   function openFromQueue(id: number) {
     const t = tasks().find((x) => x.id === id);
     openTask(id, t ? openingTab(t) : 'overview');
@@ -44,7 +35,6 @@ export interface PaletteInput {
   togglePause: () => void;
 }
 
-/** The command palette's rows (⌘K). It lists the selected task's actions first. */
 export function usePaletteCommands(input: PaletteInput, actions: Actions, approvals: Approvals) {
   const { run, flash } = actions;
   const { actOn, openFromQueue } = useTaskActs(input.tasks, actions, approvals);
@@ -80,7 +70,6 @@ export function usePaletteCommands(input: PaletteInput, actions: Actions, approv
         go: goTo,
         showKeys,
         showStates: (states) => goPage({ name: 'queue', states }),
-        // Edits and bulk actions are done by the page that is open; on a page without one (insights) go to the queue first.
         edit: (request) => {
           if (route.current.name !== 'queue' && route.current.name !== 'task') go({ name: 'queue' });
           requestedEdit.value = request;

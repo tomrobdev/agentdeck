@@ -11,17 +11,12 @@ import Combobox from '../../ui/form/Combobox.vue';
 import SegmentedControl from '../../ui/form/SegmentedControl.vue';
 import StatusIcon from '../../ui/status/StatusIcon.vue';
 
-// What this task depends on (builds on, after) and what depends on it, each with where it stands.
-// A refused link (a cycle, itself) shows the daemon's reason here.
 const props = defineProps<{ task: TaskDetail }>();
 const { run } = useActions();
 
-// The task list the queue shares. Rows fall back to the bare id until it arrives (or if it fails), and a
-// change to the links refreshes it through `run`.
 const tasksQ = useQuery(tasksQuery());
 const all = computed<TaskSummary[]>(() => tasksQ.data.value ?? []);
 const byId = computed(() => new Map<number, TaskSummary>(all.value.map((t) => [t.id, t])));
-// The task moved or its links did: the states shown for them may have too.
 watch(
   () => [props.task.updated_at, JSON.stringify(props.task.links), JSON.stringify(props.task.dependents)],
   () => tasksQ.refetch(),
@@ -34,7 +29,6 @@ const dependents = computed(() => props.task.dependents);
 
 const STATE_CLASS = { met: 'text-done', waiting: 'text-muted', stuck: 'text-blocked', unlanded: 'text-blocked' } as const;
 
-/** One link's state in words: stuck says why in terms of the other task. */
 function linkText(l: TaskLink): string {
   const other = byId.value.get(l.on);
   switch (l.state) {
@@ -49,7 +43,6 @@ function linkText(l: TaskLink): string {
   }
 }
 
-/** A dependent's state is that of its link to this task. */
 function dependentLink(id: number, kind: LinkKind): TaskLink | null {
   const link = byId.value.get(id)?.links?.find((l) => l.on === props.task.id && l.kind === kind);
   return link ?? null;
@@ -88,7 +81,6 @@ async function add(on: number) {
   await run(async () => {});
 }
 
-// Enter links the only match, or the exact #id typed.
 function submit() {
   const q = query.value.trim().replace(/^#/, '');
   if (/^\d+$/.test(q)) return add(Number(q));

@@ -1,6 +1,3 @@
-// The CLI calling a live daemon: callDaemon (cli/operations/daemon-client.ts) against a started API, on the paths `agentdeck
-// propose` and `agentdeck sync` call, in success and error. An error ends the CLI through `die`, so the test replaces
-// process.exit and console.error for the call and reads what it would have printed.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
@@ -45,7 +42,6 @@ git(repoPath, 'add', '-A');
 git(repoPath, 'commit', '-q', '-m', 'init');
 const repo = app.addRepo({ name: 'demo', path: repoPath, base_branch: 'main' });
 
-/** A done task with a worktree whose branch has one commit of its own. */
 async function doneWithWorktree() {
   const t = app.addTask({ repo_id: repo.id, title: 'w', prompt: 'p' });
   const { branch, path } = await ensureWorktree(repo, t);
@@ -61,7 +57,6 @@ async function doneWithWorktree() {
   return t;
 }
 
-/** Call the daemon as the CLI does when it must end: the exit code and what it printed to stderr. */
 async function dies(call: () => Promise<unknown>): Promise<{ code: number | undefined; printed: string }> {
   const exit = process.exit;
   const error = console.error;
@@ -81,7 +76,6 @@ async function dies(call: () => Promise<unknown>): Promise<{ code: number | unde
   return { code, printed: printed.join('\n') };
 }
 
-/** A server on a port of its own that answers every request with `status` and `body`. */
 async function answering(status: number, body: string): Promise<number> {
   const s = createServer((_req, res) => res.writeHead(status, { 'Content-Type': 'text/plain' }).end(body));
   others.push(s);

@@ -16,7 +16,6 @@ import ListView from './ListView.vue';
 import PeekPane from './PeekPane.vue';
 import QueueFooter from './QueueFooter.vue';
 
-// The queue as a list, a board or a graph, with its filters, picks and keys. The state is in useQueueView.
 const props = defineProps<{ tasks: TaskSummary[] }>();
 const selected = defineModel<number | null>('selected', { required: true });
 const emit = defineEmits<{ open: [id: number]; act: [kind: PersonEvent, id: number] }>();

@@ -39,7 +39,6 @@ function gitRepo(name: string): string {
   return dir;
 }
 
-/** A registered repo that passes doctor unless `over` breaks something. */
 function repo(name: string, over: Partial<Parameters<typeof db.addRepo>[0]> = {}) {
   return db.addRepo({
     name,
@@ -102,7 +101,6 @@ test('doctor fails and pauses the repo with the first failed check', async () =>
       failed: ['setup', 'tests'],
       reason: /ERR no network/,
     },
-    // incident 4: the test command is pnpm but the rules only know npm
     {
       name: 'wrong-rules',
       over: { test_cmd: 'pnpm check && pnpm test', allowed_tools: ['Bash(npm test*)'], setup_cmd: null },
@@ -150,7 +148,6 @@ test('doctor reports a missing repo, a missing claude binary, and PR mode withou
     process.env.AGENTDECK_CLAUDE_BIN = fake;
   }
 
-  // Without a pr_mode (it doesn't exist yet) there are no PR checks; with one, origin is required.
   assert.equal(byName(await runDoctor(db, r))['origin remote'], undefined);
   const pr = byName(await runDoctor(db, { ...r, pr_mode: 'draft' } as typeof r));
   assert.equal(pr['origin remote'].ok, false);
@@ -170,7 +167,7 @@ test("a paused repo's tasks are not claimed; resuming releases them", async () =
   assert.equal(db.hasQueued(), false, 'paused work does not count as claimable work');
   db.applyEvent(other.id, { type: 'cancel' });
 
-  await drain(); // once mode returns because nothing can be claimed
+  await drain();
   assert.equal(db.getTask(stuck.id)!.status, 'queued');
   assert.equal(db.getTask(stuck.id)!.attempts, 0);
 
@@ -213,7 +210,6 @@ test('a refused tool use that ends a run pauses the repo and counts denials on t
   assert.equal(db.getTask(next.id)!.status, 'queued');
   assert.equal(db.recentNotifications(100).filter((n) => n.kind === 'paused' && n.title.includes('denied')).length, 1);
 
-  // A run that got through despite refusals records them but doesn't pause the repo.
   resumeRepo(db, 'denied');
   db.applyEvent(blocked.id, { type: 'cancel' });
   db.applyEvent(next.id, { type: 'cancel' });
@@ -256,7 +252,6 @@ test('edit changes the fields of a proposed, queued, blocked or failed task', as
   );
   assert.equal((await editTask(db, task.id, { priority: 0 })).title, 'New title', 'other fields are left alone');
 
-  // Queued comes last: claiming below takes the oldest queued task.
   const finishes: Record<string, TaskEvent | undefined> = {
     blocked: { type: 'finish', outcome: 'blocked' },
     failed: { type: 'finish', outcome: 'failed', retry: false },
@@ -297,7 +292,7 @@ test('edit refuses other statuses, unknown tasks, empty edits and invalid values
   assert.equal(db.getTask(task.id)!.title, 't', 'a refused edit changes nothing');
   assert.equal(db.getTask(task.id)!.max_turns, 40);
 
-  db.claimNextTask(); // running
+  db.claimNextTask();
   assert.equal(db.getTask(task.id)!.status, 'running');
   await refuses(task.id, { title: 'x' }, /is running; only proposed, queued, blocked, failed tasks can be edited/);
   db.applyEvent(task.id, { type: 'finish', outcome: 'done' });

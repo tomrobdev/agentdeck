@@ -7,8 +7,6 @@ export interface LineRange {
   to: number;
 }
 
-// A file's text with line numbers and highlighting. Click a number to select a line, shift-click
-// for a range. `first` offsets the numbers when showing a snippet out of a larger file.
 const props = defineProps<{ text: string; path: string; range?: LineRange | null; first?: number; scrollToRange?: boolean }>();
 const emit = defineEmits<{ select: [range: LineRange] }>();
 
@@ -31,7 +29,6 @@ function click(n: number, e: MouseEvent) {
 }
 const inRange = (n: number) => !!props.range && n >= props.range.from && n <= props.range.to;
 
-// Bring a linked range into view once the text is there.
 watch(
   () => [props.text, props.range?.from],
   async () => {

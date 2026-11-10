@@ -38,8 +38,8 @@ test('latestRunModels gives each task the model of its latest work run', () => {
     db.addTask({ repo_id: repo.id, title: 'none', prompt: 'n' });
     db.startRun(a.id, 1, '/tmp/a1.log', 'work', 'sonnet');
     db.startRun(a.id, 2, '/tmp/a2.log', 'work', 'opus');
-    db.startRun(a.id, 2, '/tmp/a3.log', 'resolve', 'haiku'); // a resolve run is not the task's model
-    db.startRun(b.id, 1, '/tmp/b1.log', 'work', null); // from before runs recorded it
+    db.startRun(a.id, 2, '/tmp/a3.log', 'resolve', 'haiku');
+    db.startRun(b.id, 1, '/tmp/b1.log', 'work', null);
     const models = db.latestRunModels();
     assert.equal(models.get(a.id), 'opus');
     assert.equal(models.has(b.id), false);

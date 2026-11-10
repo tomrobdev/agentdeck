@@ -1,8 +1,6 @@
 <script setup lang="ts" generic="V extends string | number, O extends { value: V }">
 import { ListboxContent, ListboxItem, ListboxRoot } from 'reka-ui';
 
-// A list where one row is chosen. Tab enters it, the arrow keys move between rows, and Enter or Space chooses one.
-// The default slot draws a row from its option; `selected` is true for the chosen one.
 defineProps<{ options: O[]; label: string; itemClass?: string }>();
 const model = defineModel<V>({ required: true });
 </script>

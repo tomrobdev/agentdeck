@@ -7,8 +7,6 @@ import type { ShownComment } from '../../../composables/landing/useReviews';
 import CommentBox from '../../landing/CommentBox.vue';
 import CommentThread from '../../landing/CommentThread.vue';
 
-// One file's patch, unified or side by side, highlighted by the file's language. With `add`, hovering a line shows a +
-// in the gutter that opens a box for a comment; `comments` show under their lines.
 const props = defineProps<{
   path: string;
   patch: string;
@@ -19,10 +17,6 @@ const props = defineProps<{
 
 const hunks = computed(() => parsePatch(props.patch));
 
-/**
- * Highlight the old and new sides as continuous text, so a multi-line comment or string keeps its
- * colour across lines; then look each line's HTML up by side and line number.
- */
 const html = computed(() => {
   const lang = languageFor(props.path);
   const oldLines: DiffLine[] = [];
@@ -42,12 +36,10 @@ const html = computed(() => {
   );
   const map = new Map<DiffLine, string>();
   oldLines.forEach((l, i) => map.set(l, oldHtml[i]));
-  // Context lines are on both sides; the new side's HTML wins, which is the same text.
   newLines.forEach((l, i) => map.set(l, newHtml[i]));
   return map;
 });
 
-// Comments by the line they sit on. One whose line the diff no longer has is outdated and shows at the top.
 const present = computed(() => new Set(hunks.value.flatMap((h) => h.lines.map((l) => anchorKey(anchorOf(l))))));
 const byLine = computed(() => {
   const out = new Map<string, ShownComment[]>();
@@ -61,12 +53,10 @@ const outdated = computed(() => (props.comments ?? []).filter((c) => !present.va
 const commentsOn = (...lines: (DiffLine | null)[]) =>
   [...new Set(lines)].flatMap((l) => (l ? (byLine.value.get(anchorKey(anchorOf(l))) ?? []) : []));
 
-// The line whose comment box is open (one at a time).
 const composing = ref<string | null>(null);
 const composingOn = (...lines: (DiffLine | null)[]) => lines.some((l) => l && anchorKey(anchorOf(l)) === composing.value);
 const composeAt = (l: DiffLine | null) => (composing.value = l ? anchorKey(anchorOf(l)) : null);
 const saveAt = (l: DiffLine | null) => (body: string) => (l ? props.add!(anchorOf(l), body) : Promise.resolve(false));
-// A split row's lines: context is one line on both sides.
 const rowLines = (r: { left: DiffLine | null; right: DiffLine | null }) => (r.left === r.right ? [r.left] : [r.left, r.right]);
 
 const splitHunks = computed(() => hunks.value.map((h) => ({ header: h.header, rows: splitRows(h.lines) })));
@@ -106,7 +96,6 @@ const splitHunks = computed(() => hunks.value.map((h) => ({ header: h.header, ro
       </tbody>
     </table>
     <table v-else>
-      <!-- A fixed table takes its widths from the first row, a hunk header with a 3-column cell: name them here. -->
       <colgroup>
         <col class="no-col" />
         <col />

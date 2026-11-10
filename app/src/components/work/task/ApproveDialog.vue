@@ -13,11 +13,6 @@ import Checkbox from '../../ui/form/Checkbox.vue';
 import ConfirmDialog from '../../ui/ConfirmDialog.vue';
 import VerifyFindings from '../../runs/VerifyFindings.vue';
 
-// What to read before approving one task or many: each task with its staleness line, notes and the tasks it overlaps.
-// Each prompt can be edited in place; "Save and approve" saves the edits (they show on the timeline) and then approves the
-// ticked tasks. Tasks with nothing to show start ticked, and so does a lone task. One that failed stays listed with why.
-// Each task shows its latest verify run's findings, and Verify starts one; the task's detail, refetched on every change,
-// says when it ends.
 const props = defineProps<{
   rows: { id: number; title: string; check: ProposalCheck | null }[];
   ticked: number[];
@@ -27,7 +22,6 @@ const { refresh, flash } = useActions();
 
 const on = reactive(new Set<number>(props.ticked));
 const checks = reactive(new Map<number, ProposalCheck | null>(props.rows.map((r) => [r.id, r.check])));
-// A prompt as saved, loaded for every row; an edit is the draft where it differs. Editing opens a textarea.
 const saved = reactive(new Map<number, string>());
 const drafts = reactive(new Map<number, string>());
 const editing = reactive(new Set<number>());
@@ -55,7 +49,7 @@ onMounted(() =>
   props.rows.forEach((r) =>
     workApi.task(r.id).then(
       (t) => saved.set(r.id, t.prompt),
-      () => {}, // no prompt, no edit: the row still approves
+      () => {},
     ),
   ),
 );
@@ -88,7 +82,6 @@ async function confirm() {
   const out: BulkResult[] = [];
   const saveFailed = new Set<number>();
   try {
-    // Saves first, so a task's edit is on its timeline before its approval; the edit may change what the check says.
     for (const id of editedIds.value) {
       try {
         await workApi.editTask(id, { prompt: drafts.get(id) });

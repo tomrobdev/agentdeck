@@ -1,6 +1,3 @@
-// Every route of the HTTP API, called over HTTP: one row per route (and one 400 row per route that reads a body), each
-// checking the status code and the response's shape. The routes come from the modules in src/api/routes/, so a route
-// added there without a row here fails the first test, naming its method and pattern.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
@@ -26,10 +23,7 @@ const { realWorkspace } = await import('../../src/compose.ts');
 const { ensureWorktree } = await import('../../src/adapters/git/worktrees.ts');
 const actions = await import('../../src/application/actions.ts');
 
-// ---- The App: real git, fakes for claude, gh, launchd and notifications
-
 const SERVICE: ServiceStatus = { installed: true, loaded: true, pid: 4242, state: 'running', plist: '/x.plist', program: '/x' };
-/** When the fake service was restarted: /daemon/restart-now's effect, replaced. */
 const restarts: number[] = [];
 const service: Service = {
   status: async () => SERVICE,
@@ -43,7 +37,6 @@ const service: Service = {
   logTail: () => ['daemon started'],
 };
 
-/** The real workspace, but a package manager that writes its files instead of reaching the registry. */
 const real = realWorkspace();
 const workspace: Workspace = {
   ...real,
@@ -82,12 +75,9 @@ after(() => {
   app.close();
 });
 
-// ---- Fixtures: each row makes the repos and tasks it needs, so no row depends on another having run
-
 const git = (cwd: string, ...a: string[]) => execFileSync('git', a, { cwd, encoding: 'utf8' }).trim();
 
 let repos = 0;
-/** A new git repo with one commit on main, not registered. */
 function gitRepo(): string {
   const path = join(home, `repo-${++repos}`);
   mkdirSync(path);
@@ -101,7 +91,6 @@ function gitRepo(): string {
   return path;
 }
 
-/** A registered repo of its own. */
 const newRepo = (o: { archived?: boolean } = {}) => {
   const repo = app.addRepo({ name: `repo-${repos + 1}`, path: gitRepo(), base_branch: 'main', toolchain: 'pnpm' });
   if (o.archived) app.setRepoArchived(repo.id, true);
@@ -115,10 +104,8 @@ before(() => {
 
 const proposed = () => app.addTask({ repo_id: repo.id, title: 'p', prompt: 'p', status: 'proposed' }).id;
 const queued = () => queuedTask(app, repo).id;
-/** A done task with an open PR on the fake code host. */
 const withPr = () => doneTask(app, repo, { pr: 'open' });
 
-/** A task with a worktree whose branch has one commit (b.txt), then taken to done or blocked. */
 async function withWorktree(status: 'done' | 'blocked' = 'done', needs?: string[], on: typeof repo = repo): Promise<TaskId> {
   const t = app.addTask({ repo_id: on.id, title: 'w', prompt: 'p' });
   const { branch, path } = await ensureWorktree(on, t);
@@ -137,14 +124,12 @@ async function withWorktree(status: 'done' | 'blocked' = 'done', needs?: string[
   return t.id;
 }
 
-/** A draft review on a new done task with an open PR (the one a person reviews), with one comment. */
 function draft() {
   const review = actions.startReview(app, withPr().id);
   const comment = { path: 'a.txt', line: 1, side: 'new', head_commit: 'abc123', body: 'Why?' };
   return actions.addReviewComment(app, review.id, comment);
 }
 
-/** A submitted review's comment, open or resolved. */
 async function submittedComment(state: 'open' | 'resolved'): Promise<number> {
   const review = await actions.submitReview(app, draft().id, { kind: 'comment' });
   const id = review.comments[0].id;
@@ -158,31 +143,23 @@ const PLAN = `<!doctype html>
   <section data-plan-step id="a" data-status="todo"><h2>A</h2></section>
 </body></html>`;
 
-// ---- The table
-
 type Method = 'GET' | 'POST' | 'DELETE';
 type Json = any;
 
-/** The keys the answer has. `each`: it is a list, and every item has them. `stream`: Server-Sent Events. */
 type Shape = readonly string[] | { each: readonly string[] } | 'stream';
 
 interface Row {
   method: Method;
-  /** The path, with `:name` for each id `params` makes (`/api/tasks/:task/merge`), and an optional query. */
   path: string;
-  /** Makes the row's fixtures and names their ids for the path. */
   params?: () => Record<string, number> | Promise<Record<string, number>>;
   body?: unknown;
-  /** 200 unless said. */
   status?: 200 | 400;
   shape: Shape;
-  /** More checks on the answer. */
   check?: (json: Json, params: Record<string, number>) => void | Promise<void>;
 }
 
 const TASK_DETAIL = ['id', 'repo', 'title', 'status', 'check_list', 'runs', 'events', 'plans'];
 const TASK_SAVED = [...TASK_DETAIL, 'warnings'];
-/** The keys of the contract's Run (api/contract/runs.ts). */
 const RUN = [
   'id',
   'kind',
@@ -211,7 +188,6 @@ const REVIEW = ['id', 'task_id', 'kind', 'body', 'submitted_at', 'comments'];
 const STATUS = ['daemon', 'paused', 'running', 'max_concurrent', 'counts', 'headline', 'governor'];
 const ERROR = ['error'];
 
-/** A bad-input row: the route parses its body and answers 400 to this one. */
 const bad = (method: Method, path: string, body: unknown, params?: Row['params']): Row => ({
   method,
   path,
@@ -225,7 +201,6 @@ const task = (make: () => TaskId | Promise<TaskId>) => async () => ({ task: awai
 const statusOf = (id: number) => app.getTask(id as TaskId)!.status;
 
 const ROWS: Row[] = [
-  // daemon.ts
   { method: 'GET', path: '/api/events', shape: 'stream', check: (text) => assert.match(text, /^event: rev\ndata: \{"rev":1\}/) },
   { method: 'GET', path: '/api/status', shape: STATUS },
   { method: 'GET', path: '/api/stats', shape: ['repos', 'total', 'weeks', 'scorecard'] },
@@ -256,7 +231,6 @@ const ROWS: Row[] = [
     shape: ['requeued'],
     check: async (r) => {
       assert.deepEqual(r.requeued, []);
-      // The restart starts after the answer: the fake service records it.
       const deadline = Date.now() + 5000;
       while (!restarts.length && Date.now() < deadline) await new Promise((done) => setTimeout(done, 20));
       assert.equal(restarts.length, 1, 'the service was restarted once');
@@ -266,7 +240,6 @@ const ROWS: Row[] = [
   { method: 'POST', path: '/api/notify/test', shape: ['ok'], check: (r) => assert.equal(r.ok, true) },
   { method: 'POST', path: '/api/app/seen', shape: ['desktop'] },
 
-  // settings.ts
   { method: 'GET', path: '/api/settings', shape: ['max_concurrent', 'budget', 'notify', 'planner', 'reload_on_change'] },
   {
     method: 'POST',
@@ -277,7 +250,6 @@ const ROWS: Row[] = [
   },
   bad('POST', '/api/settings', { max_concurrent: '3' }),
 
-  // repos.ts
   { method: 'GET', path: '/api/repos', shape: { each: REPO } },
   { method: 'GET', path: '/api/repos?archived=1', shape: { each: REPO } },
   { method: 'POST', path: '/api/repos', body: { path: '<new>' }, shape: REPO },
@@ -352,7 +324,6 @@ const ROWS: Row[] = [
     },
   },
 
-  // tasks.ts
   { method: 'GET', path: '/api/tasks', shape: { each: ['id', 'repo', 'title', 'status'] } },
   { method: 'GET', path: '/api/tasks?status=nonsense', status: 400, shape: ERROR },
   {
@@ -374,7 +345,6 @@ const ROWS: Row[] = [
       return t.id;
     }),
     shape: TASK_DETAIL,
-    // Every key of the contract's Run, cost and live state included, which the dashboard's run list and header read.
     check: (t) => {
       const [run] = t.runs;
       for (const key of RUN) assert.ok(key in run, `the run has ${key}`);
@@ -492,7 +462,6 @@ const ROWS: Row[] = [
     body: { wait: true },
     shape: ['run_id', 'report', 'task'],
     check: (r, { task: id }) => {
-      // The fake agent answers in words, not findings: the run ends failed, and uses no attempt.
       assert.equal(r.report.outcome, 'garbage');
       assert.equal(r.task.runs.at(-1).kind, 'verify');
       assert.equal(r.task.runs.at(-1).id, r.run_id);
@@ -514,7 +483,6 @@ const ROWS: Row[] = [
     check: (text) => assert.match(text, /event: end/, 'a task with no run ends the stream at once'),
   },
 
-  // pull-requests.ts
   {
     method: 'POST',
     path: '/api/tasks/:task/fix-checks',
@@ -630,7 +598,6 @@ const ROWS: Row[] = [
     task(() => withPr().id),
   ),
 
-  // files.ts
   {
     method: 'GET',
     path: '/api/tasks/:task/changes',
@@ -690,7 +657,6 @@ const ROWS: Row[] = [
     },
   },
 
-  // plans.ts
   {
     method: 'POST',
     path: '/api/tasks/:task/plans',
@@ -711,7 +677,6 @@ const ROWS: Row[] = [
     check: (p) => assert.match(p.html, /A plan/),
   },
 
-  // reviews.ts
   { method: 'GET', path: '/api/tasks/:task/reviews', params: () => ({ task: draft().task_id }), shape: { each: REVIEW } },
   {
     method: 'POST',
@@ -776,9 +741,6 @@ const ROWS: Row[] = [
   },
 ];
 
-// ---- Which route a row calls
-
-/** Every route the API serves, from the modules in src/api/routes/ (the server registers each of them). */
 async function collectRoutes(): Promise<Route[]> {
   const dir = join(import.meta.dirname, '../../src/api/routes');
   const ctx = {
@@ -796,16 +758,13 @@ async function collectRoutes(): Promise<Route[]> {
   return modules.flatMap((m) => m.routes(ctx));
 }
 
-/** A row's path as the router sees it: each `:name` an id, no query. */
 const pathname = (path: string) => path.replace(/\?.*$/, '').replace(/:\w+/g, '1');
 
 const routeName = (r: Route) => `${r.method} ${r.path}`;
 
-/** The routes no row calls, each as its method and pattern. */
 const unrouted = (routes: Route[], rows: Pick<Row, 'method' | 'path'>[]) =>
   routes.filter((r) => !rows.some((row) => row.method === r.method && r.path.test(pathname(row.path)))).map(routeName);
 
-/** The routes that read a request body, for which a 400 row is wanted. */
 const readsBody = (r: Route) => /\bbody\b/.test(r.handle.toString());
 
 const routes = await collectRoutes();
@@ -839,9 +798,6 @@ test('every row calls a route, and every route that reads a body has a 400 row',
   assert.deepEqual(noBadRow, [], `no bad-input row for: ${noBadRow.join(', ')}`);
 });
 
-// ---- Each row, over HTTP
-
-/** `<name>` in a body is the row's id of that name; `<new>` a new git repo's path; `<repo>` the shared repo's name. */
 function fill(value: unknown, params: Record<string, number>): unknown {
   if (typeof value === 'string') {
     if (value === '<new>') return gitRepo();
@@ -854,7 +810,6 @@ function fill(value: unknown, params: Record<string, number>): unknown {
   return value;
 }
 
-/** Read a stream's first event, then hang up: GET /api/events never ends on its own. */
 async function firstEvent(res: Response): Promise<string> {
   const reader = res.body!.getReader();
   let text = '';

@@ -5,9 +5,6 @@ import type { TaskSummary } from '../../../api/types';
 import { useAction } from '../../../composables/shared/useActions';
 import { type StatusLine, TONE_TEXT, statusLine } from '../../../lib/work/task-badges';
 
-// A task's status line, the same in every view (rules in lib/work/task-badges.ts). `fit`: how it fits its space, on one line
-// (truncated), on two, or all of it. `cancel` puts Cancel merge on the line while a merge request waits. `hide` leaves out
-// lines of those kinds.
 const props = withDefaults(
   defineProps<{ task: TaskSummary; fit?: 'line' | 'two' | 'full'; cancel?: boolean; hide?: StatusLine['kind'][] }>(),
   {

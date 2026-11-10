@@ -58,7 +58,6 @@ test('nothing counts while a modal dialog, alert dialog, menu or popup listbox i
 });
 
 test('a listbox that sits on the page (the Runs tab) leaves the keys on, one open in a popover does not', () => {
-  // The page has a bare listbox: no selector for a layer matches it.
   page(null);
   assert.equal(hotkeyApplies(press(']', [])), true);
   assert.equal(hotkeyApplies(press('Escape', [])), true);

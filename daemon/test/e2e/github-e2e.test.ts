@@ -1,5 +1,3 @@
-// pnpm test:github (daemon/scripts/github-e2e.mjs) is opt-in: it refuses to run, before it touches GitHub, without a
-// throwaway repo to run on. The run itself needs GitHub, so a person runs it (docs/github-e2e.md).
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -9,10 +7,6 @@ import { test } from 'node:test';
 
 const SCRIPT = join(import.meta.dirname, '../../scripts/github-e2e.mjs');
 
-/**
- * Run the script with `repo` as AGENTDECK_GITHUB_E2E_REPO (unset when undefined), and gh logged in nowhere: no token, and
- * an empty config folder.
- */
 function runScript(repo: string | undefined) {
   const { AGENTDECK_GITHUB_E2E_REPO: _repo, GH_TOKEN: _gh, GITHUB_TOKEN: _github, ...env } = process.env;
   const config = mkdtempSync(join(tmpdir(), 'agentdeck-gh-config-'));
@@ -27,7 +21,6 @@ function runScript(repo: string | undefined) {
   }
 }
 
-/** The owner/name of this checkout's GitHub origin, or null. */
 function ownOrigin(): string | null {
   try {
     const url = execFileSync('git', ['remote', 'get-url', 'origin'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();

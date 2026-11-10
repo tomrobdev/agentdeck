@@ -1,8 +1,4 @@
 <script setup lang="ts">
-// The small window under the tray icon (#/tray, its own root in main.ts): the daemon's state, the running tasks with their
-// live turns, what needs a person, and Pause or Resume. It reads the daemon with the main window's queries and change
-// stream, and decides nothing: the state and the attention list are the daemon's headline, worded as the status bar words
-// them. A task opens in the main window (the shell's open_in_dashboard), which hides this one.
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
 import { isOffline, refreshAll } from '../../api/http';
@@ -27,7 +23,6 @@ const tasks = computed<TaskSummary[]>(() => tasksQ.data.value ?? []);
 const offline = computed(() => isOffline(statusQ.error.value));
 const state = computed(() => describeState(status.value, offline.value));
 
-// A live run's time moves without a write; tick so its "12m" stays current.
 const now = ref(Date.now());
 const tick = setInterval(() => (now.value = Date.now()), 1000);
 onBeforeUnmount(() => clearInterval(tick));
@@ -54,7 +49,6 @@ function act(fn: () => Promise<unknown>) {
 const toggle = () => act(() => (status.value?.paused ? operationsApi.resume() : operationsApi.pause()));
 const start = () => act(startDaemon);
 
-/** Open a page in the main window; in a plain browser (working on this view), in a new tab. */
 function open(url: string, browser: Route) {
   if (isNative) openFromTray(url).catch((e) => (error.value = String(e)));
   else window.open(hashFor(browser), '_blank');

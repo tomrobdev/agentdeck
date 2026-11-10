@@ -1,5 +1,3 @@
-// pnpm db:check: src/db/tables.ts must match the schema the migrations build. Migrates a scratch database, then
-// asks drizzle-kit what it would change to make that database match tables.ts; anything but "no changes" fails.
 import { drizzleKitOnScratch } from './scratch-db.ts';
 
 const { status, out } = drizzleKitOnScratch(['push', '--explain']);

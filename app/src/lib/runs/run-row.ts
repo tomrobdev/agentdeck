@@ -16,7 +16,6 @@ const count = (n: number): string => n.toLocaleString('en-US');
 
 type CostFields = Pick<Run, 'cost_usd' | 'input_tokens' | 'output_tokens' | 'cache_read_tokens' | 'cache_write_tokens'>;
 
-/** The run's cost as the CLI says it ("$2.10 equiv", "–" for none), and its tokens for a tooltip. */
 export function runCost(r: CostFields): { text: string; title: string } {
   const total = r.input_tokens + r.output_tokens + r.cache_read_tokens + r.cache_write_tokens;
   const title = total

@@ -18,7 +18,6 @@ const { doneTask, runningTask } = await import('../../fixtures/fixtures.ts');
 
 type TestDb = ReturnType<typeof openDb>;
 
-/** How many SQL statements `fn` prepares on `db`. */
 function statements(db: TestDb, fn: () => void): number {
   const raw = db.raw;
   const prepare = raw.prepare.bind(raw);
@@ -35,7 +34,6 @@ function statements(db: TestDb, fn: () => void): number {
   return n;
 }
 
-/** A database with `n` queued tasks, each building on the one before it and after the one before that. */
 function chained(n: number) {
   const db = openDb(':memory:');
   const repo = db.addRepo({ name: 'demo', path: '/tmp/demo', base_branch: 'main' });
@@ -73,7 +71,6 @@ test("the list works out each task's start state once, for both its waiting and 
     },
   };
   const views = withViews(db, db.listTasks(), links);
-  // None is in review, so a task's own links are read twice: once for its start state, once for its link list.
   for (const v of views) assert.equal(reads.get(v.id), 2, `#${v.id}'s links read ${reads.get(v.id)} times`);
   const [, , , last] = views.sort((a, b) => a.id - b.id);
   assert.deepEqual(last.waiting, { on: [views[2].id], stuck: null });
@@ -101,7 +98,6 @@ test('the list shows the links, dependents and waits it always did', () => {
 test("a dependent's link removed between reads doesn't throw", () => {
   const db = chained(2);
   const [a, b] = [db.listTasks()[1], db.listTasks()[0]];
-  // A second read of the dependent's links finds the link gone; the views need no second read.
   db.linksOf = (id) => {
     db.removeLink(id, a.id);
     return [];

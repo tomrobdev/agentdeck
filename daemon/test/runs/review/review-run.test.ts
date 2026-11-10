@@ -1,5 +1,4 @@
 // The review run's decisions, pure: its prompt, the schema and parsing of its answer, its verdict and how it is stored.
-// Then the patch-id a review records, on real git: a sync that only brings in the base keeps it.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync } from 'node:fs';

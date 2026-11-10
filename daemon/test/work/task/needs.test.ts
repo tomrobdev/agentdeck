@@ -135,7 +135,6 @@ test('an environment block gives the attempt back and records the needs', () => 
   assert.equal(after.attempts, 0);
   assert.deepEqual(after.needs, { kind: 'deps', items: ['left-pad'] });
   assert.equal(db.eventsForTask(id).at(-1)!.type, 'environment_block');
-  // Queued again: the needs are cleared.
   assert.equal(stateFields(db.applyEvent(id, { type: 'retry' })!.task).needs, null);
   db.close();
 });

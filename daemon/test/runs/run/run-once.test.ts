@@ -1,5 +1,3 @@
-// `agentdeck run-once` has no API to claim the port, so it would run beside a live daemon, both following up the same
-// outbox rows with a lock each. It asks first whether a daemon answers on the API port, and refuses to start if one does.
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
@@ -29,7 +27,6 @@ test('runOnceRefusal: none when nothing answers; otherwise names the daemon and 
   }
 });
 
-/** A server on a port of its own that answers GET /api/daemon as a running daemon does. */
 async function daemonAnswering(): Promise<number> {
   const state = { pid: 4242, commit: 'abc1234def5678', started_at: '2026-11-08T09:00:00Z', reload: { pending: false } };
   const s = createServer((_req, res) => res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify(state)));

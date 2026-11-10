@@ -2,7 +2,6 @@
 import type { NotifyKind, Status } from '../../api/types.ts';
 import { relTime, when } from '../shared/time.ts';
 
-/** What each notification kind is called in the settings. */
 export const NOTIFY_LABELS: Record<NotifyKind, string> = {
   blocked: 'Task blocked',
   failed: 'Task failed',
@@ -15,14 +14,12 @@ export const NOTIFY_LABELS: Record<NotifyKind, string> = {
   review_due: 'Area review due',
 };
 
-/** Why a task in the headline's `attention` needs a person, in a word or two. The tray menu words it the same way (`why_label` in `app/src-tauri/src/tray.rs`). */
 export const ATTENTION_LABELS: Record<Status['headline']['attention'][number]['why'], string> = {
   blocked: 'blocked',
   review: 'in review',
   proposed: 'proposed',
 };
 
-/** The banner text when the daemon runs a different commit than the dashboard, else null. Unknown commits never warn. */
 export function describeStaleDaemon(s: Status | null, dashboardCommit: string | null): string | null {
   const d = s?.daemon;
   if (!d?.commit || !dashboardCommit || d.commit === dashboardCommit) return null;
@@ -30,7 +27,6 @@ export function describeStaleDaemon(s: Status | null, dashboardCommit: string | 
   return `The daemon is running older code (${d.commit.slice(0, 7)}, started ${started}). Restart it to match the dashboard.`;
 }
 
-/** One label for the daemon's state, in the status bar. The tray words it the same way, in Rust (`tray_view` in `app/src-tauri/src/tray.rs`). */
 export function describeState(s: Status | null, offline: boolean): { label: string; cls: string; title: string } {
   if (offline) return { label: 'Daemon offline', cls: 's-failed', title: '' };
   if (!s) return { label: 'Connecting…', cls: 's-queued', title: '' };

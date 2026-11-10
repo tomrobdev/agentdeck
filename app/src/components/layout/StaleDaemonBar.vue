@@ -6,7 +6,6 @@ import type { Status } from '../../api/types';
 import { appCommit } from '../../platform/build';
 import { useActions } from '../../composables/shared/useActions';
 
-// Shown when the dashboard and the daemon run different commits, so a missing field is explained, not mysterious.
 const props = defineProps<{ status: Status | null }>();
 const { run } = useActions();
 
@@ -14,7 +13,6 @@ const message = computed(() => describeStaleDaemon(props.status, appCommit.value
 const waiting = ref<string | null>(null);
 const asked = ref(false);
 
-// The restarted daemon reports the new commit, which clears the banner; forget the request then.
 watch(message, (m) => {
   if (!m) asked.value = false;
 });

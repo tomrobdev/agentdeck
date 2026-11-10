@@ -15,15 +15,9 @@ import { useFilePatches } from './useFilePatches';
 import { useFileText } from './useFileText';
 import { useViewed } from './useViewed';
 
-/**
- * The state of the Changes tab: what the task's branch changes against the base branch, or since a person's last review or
- * the end of an earlier run (the Since menu, which leaves out what a sync brought in from the base), with its files, their
- * patches, line comments, viewed marks and keys.
- */
 export function useChangesTab(props: { task: TaskDetail; changes: Changes | null }) {
   const taskId = computed(() => props.task.id);
 
-  // The tab opens on the last review when the head has moved past it; a pick stays until another task is opened.
   const picked = ref<string | null>(null);
   watch(taskId, () => (picked.value = null));
   const point = computed(() => shownSince(props.changes?.since_points ?? [], picked.value));
@@ -31,7 +25,6 @@ export function useChangesTab(props: { task: TaskDetail; changes: Changes | null
   const sinceQ = useQuery(
     computed(() => ({ ...changesSinceQuery(taskId.value, since.value ?? '', props.changes?.head ?? null), enabled: !!since.value })),
   );
-  /** The changes on screen: against the base, or since the point picked (null while those load). */
   const shown = computed<Changes | null>(() => {
     if (!since.value) return props.changes;
     const data = sinceQ.data.value;
@@ -40,8 +33,6 @@ export function useChangesTab(props: { task: TaskDetail; changes: Changes | null
   const sinceError = computed(() => (since.value ? (sinceQ.error.value?.message ?? '') : ''));
   const head = computed(() => shown.value?.head ?? null);
 
-  // Line comments go into the task's draft review (started with the first one); the review bar submits it. Since a point, the
-  // old side is that point's file, not the base's, so only the new side's comments show there and only it takes new ones.
   const { run } = useActions();
   const { byPath, openPaths, comments } = useReviews(taskId);
   const commentsOn = (path: string) => visibleComments(byPath.value.get(path), !!since.value);
@@ -102,7 +93,6 @@ export function useChangesTab(props: { task: TaskDetail; changes: Changes | null
     document.querySelector(`[data-path="${CSS.escape(path)}"]`)?.scrollIntoView({ block: 'start' });
   }
 
-  // Keys: j and k move to the next and previous file, ] and [ to the next and previous open comment, v marks the file viewed.
   async function scrollToComment(id: number, path: string) {
     current.value = path;
     collapsed.delete(path);

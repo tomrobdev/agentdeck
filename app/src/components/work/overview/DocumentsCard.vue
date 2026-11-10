@@ -8,7 +8,6 @@ import Accordion from '../../ui/disclosure/Accordion.vue';
 import AccordionItem from '../../ui/disclosure/AccordionItem.vue';
 import AccordionTrigger from '../../ui/disclosure/AccordionTrigger.vue';
 
-// Documents the task wrote or changed (markdown under docs/ or at the repo root), readable in place.
 const props = defineProps<{ taskId: number; files: ChangedFile[]; head: string | null; isPath?: (p: string) => boolean }>();
 const emit = defineEmits<{ open: [path: string]; path: [path: string, line: number | null] }>();
 
@@ -21,7 +20,6 @@ const { text, load } = useFileText(
   () => props.head,
 );
 
-// Open the first document; reload when the branch moves.
 watch(
   [() => props.head, () => docs.value[0]?.path],
   () => {

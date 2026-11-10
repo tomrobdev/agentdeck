@@ -34,12 +34,11 @@ function setup() {
   return { db, repo, add };
 }
 
-/** Move a queued task to `status` through its events. */
 function bring(db: Db, id: TaskId, status: TaskStatus): void {
   const claim = () => assert.ok(db.applyEvent(id, { type: 'claim' }));
   switch (status) {
     case 'queued':
-    case 'proposed': // added as a proposal by the caller
+    case 'proposed':
       return;
     case 'running':
       return claim();
@@ -139,7 +138,6 @@ test('markDone names the status when it is refused, and keeps the note', () => {
   db.close();
 });
 
-// A dependency per status, pr_state, pr_mode and done_by: the SQL claim rule and the domain rule must agree.
 test('the SQL and the domain agree on when a dependency is met', () => {
   const STATUSES: TaskStatus[] = ['queued', 'running', 'done', 'blocked', 'failed', 'cancelled'];
   const PR_STATES = [null, 'open', 'merged', 'closed', 'failed'] as const;
@@ -152,7 +150,6 @@ test('the SQL and the domain agree on when a dependency is met', () => {
           db.updateRepo(repo.id, { pr_mode });
           const dep = add();
           const later = add(dep.id);
-          // Put the dependency in the state under test; `later` stays queued behind it.
           advance(db, dep.id, status, { pr: pr_state, doneBy: done_by });
           const d = db.getTask(dep.id)!;
           const sqlMet = db.hasQueued() && db.claimNextTask()?.id === later.id;
@@ -177,7 +174,7 @@ test('a task after a person-done task starts unless that task has an open PR', a
 
   const dep2 = add();
   const later2 = add(dep2.id);
-  advance(db, dep2.id, 'failed', { pr: 'open' }); // a retry that failed keeps the PR it had
+  advance(db, dep2.id, 'failed', { pr: 'open' });
   markDone(db, dep2.id);
   assert.equal(db.claimNextTask(), undefined, 'person-done with an open PR waits for the merge');
   settlePr(db, dep2.id, 'merged');

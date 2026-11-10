@@ -4,7 +4,6 @@ import type { TaskSummary } from '../../../api/types';
 import { hasOpenPr } from '../../../../../daemon/src/domain/work/index.ts';
 import ConfirmDialog from '../../ui/ConfirmDialog.vue';
 
-// Asks before a person says a blocked or failed task is done. The board asks without a note; the task page takes one.
 const props = defineProps<{ task: Pick<TaskSummary, 'id' | 'title' | 'pr_url' | 'pr_state'>; withNote?: boolean; busy?: boolean }>();
 const emit = defineEmits<{ close: []; confirm: [note: string] }>();
 

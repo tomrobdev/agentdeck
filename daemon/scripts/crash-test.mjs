@@ -1,23 +1,5 @@
 #!/usr/bin/env node
 // Crash test: SIGKILL the daemon in one phase of a task's life, restart it, check invariants.
-// Usage: node scripts/crash-test.mjs [iterations=10]
-// Exits 1 if any invariant failed, 0 otherwise. Temp homes are removed on success.
-//
-// Each iteration's repo has a bare origin, a fake gh on PATH (scripts/fake-gh.mjs) and pr_mode ready, so every done task
-// pushes its branch and opens a PR. Iteration i kills in PHASES[(i - 1) % PHASES.length], in turn, so 5 iterations kill
-// in each phase once:
-//   running  a work run's claude is running
-//   tests    the repo's test command is running
-//   pr       `gh pr create` is running, after the push: before GitHub has the PR, or after it has it and before the
-//            daemon records it (the two take turns)
-//   sync     the sync before a run is inside a clean `git merge` (its pre-merge-commit hook), so the kill leaves the
-//            merge half done in the worktree
-//   resolve  a resolve run's claude is settling the sync's conflicts
-// Each phase is reached by waiting for its marker: a claude phase for the fake claude's start event (then a random
-// moment into the run), any other for the hang record of the fake that stands in for it (scripts/crash-hooks.mjs,
-// scripts/fake-gh.mjs), which waits until the daemon is killed. The setup command gives one task a sync to do, which
-// conflicts in the resolve phase, merges cleanly in the sync phase, and takes turns otherwise. A CLI process adds a task
-// and edits two while the first daemon runs. Odd iterations use a streaming fake claude (FAKE_STREAM=1), even ones a quiet fake.
 import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -39,7 +21,6 @@ const ROOT = process.env.CRASH_ROOT ?? mkdtempSync(join(tmpdir(), 'agentdeck-cra
 mkdirSync(ROOT, { recursive: true });
 const TASKS = 3;
 const PHASES = ['running', 'tests', 'pr', 'sync', 'resolve'];
-/** The phases a fake claude's start event marks; the others are marked by a hang record. */
 const CLAUDE_PHASES = new Set(['running', 'resolve']);
 const MARKER_TIMEOUT_MS = 30_000;
 const DRAIN_TIMEOUT_MS = 30_000;
@@ -95,7 +76,6 @@ let orphanTotal = 0,
   orphanCommitsAfterKill = 0,
   orphanEpipe = 0;
 
-/** Run the CLI in its own process, as a person would while the daemon runs. Resolves with its output; never rejects. */
 function cliAsync(env, ...args) {
   return new Promise((r) => {
     const p = spawn(process.execPath, [CLI, ...args], { env, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -106,7 +86,6 @@ function cliAsync(env, ...args) {
   });
 }
 
-/** A repo with a bare origin whose post-receive hook logs every push, and a pre-merge-commit hook the sync phase hangs in. */
 function makeRepo(home) {
   const git = (cwd, ...a) => execFileSync('git', a, { cwd, stdio: 'ignore' });
   const origin = join(home, 'origin.git');
@@ -125,7 +104,6 @@ function makeRepo(home) {
     `#!/bin/sh\nexec ${quote(process.execPath)} ${quote(HOOKS)} merge-hook ${quote(home)}\n`,
     { mode: 0o755 },
   );
-  // Where the setup command pushes the base's new commit from.
   git(home, 'clone', '-q', origin, join(home, 'pusher'));
   return repo;
 }
@@ -134,7 +112,6 @@ for (let i = 1; i <= N; i++) {
   const stream = i % 2 === 1;
   const phase = PHASES[(i - 1) % PHASES.length];
   const syncMode = phase === 'resolve' ? 'conflict' : phase === 'sync' ? 'clean' : i % 2 ? 'conflict' : 'clean';
-  // The pr phase takes turns: GitHub has the PR when the daemon dies (the stronger case) first, then not yet.
   const prWhen = kills.pr % 2 === 0 ? 'after' : 'before';
   const home = mkdtempSync(join(ROOT, `it${i}-`));
   const bin = join(home, 'bin');
@@ -161,13 +138,11 @@ for (let i = 1; i <= N; i++) {
   writeFileSync(join(home, 'sync-mode'), syncMode);
   if (!CLAUDE_PHASES.has(phase)) writeFileSync(join(home, `hang-${phase}`), phase === 'pr' ? prWhen : '');
 
-  // First daemon: kill -9 once it is in the phase.
   const evPath = join(home, 'fake-events.jsonl');
   const d1 = spawn(process.execPath, [CLI, 'run-once'], { env, stdio: ['ignore', 'pipe', 'pipe'] });
   let d1out = '';
   d1.stdout.on('data', (b) => (d1out += b));
   d1.stderr.on('data', (b) => (d1out += b));
-  // A person adds a task and edits two while the daemon runs.
   const cliWrites = (async () => {
     const added = await cliAsync(env, 'add', '--repo', 'demo', 'added while the daemon runs');
     const id = /#(\d+)/.exec(added.out)?.[1];
@@ -185,7 +160,6 @@ for (let i = 1; i <= N; i++) {
   const t0 = Date.now();
   while (!reached() && Date.now() - t0 < MARKER_TIMEOUT_MS && d1.exitCode === null) await sleep(25);
   const inPhase = reached();
-  // A claude run is killed some way into it (the fake runs 0.8-2s); a hung command at once.
   if (inPhase && CLAUDE_PHASES.has(phase)) await sleep(Math.random() * 600);
   const killAt = Date.now() - t0;
   const killTime = Date.now();
@@ -194,7 +168,6 @@ for (let i = 1; i <= N; i++) {
   else fails.l_phase_not_reached.push(`it${i}: the daemon never reached the ${phase} phase`);
   await sleep(200);
   writeFileSync(join(home, 'daemon1.log'), d1out);
-  // The hung commands are the daemon's children, which a SIGKILL leaves running: stop them as the crash would.
   for (const h of readJsonl(join(home, 'hangs.jsonl'))) {
     try {
       process.kill(h.pid, 'SIGKILL');
@@ -204,9 +177,6 @@ for (let i = 1; i <= N; i++) {
   await sleep(100);
   const wtDir = join(home, 'worktrees', 'demo');
   const worktrees = () => (existsSync(wtDir) ? readdirSync(wtDir) : []);
-  // The worktrees the kill left half merged, which the restart must undo: a conflicted merge, or (the sync phase) a clean
-  // one git staged and never committed. Git dies writing to the dead daemon before it writes MERGE_HEAD, so the second
-  // has none.
   const halfMerged = worktrees().filter((d) => mergeInProgress(join(wtDir, d)) || staged(join(wtDir, d))).length;
   for (const err of await cliWrites) fails.k_cli_write_failed.push(`it${i}: ${err}`);
   const evs1 = readJsonl(evPath);
@@ -215,13 +185,11 @@ for (let i = 1; i <= N; i++) {
   const orphans = started.filter((e) => !ended.has(e.pid) && alive(e.pid));
   orphanTotal += orphans.length;
 
-  // Restart and drain.
   const t2 = Date.now();
   const d2 = spawn(process.execPath, [CLI, 'run-once'], { env, stdio: ['ignore', 'pipe', 'pipe'] });
   let d2out = '';
   d2.stdout.on('data', (b) => (d2out += b));
   d2.stderr.on('data', (b) => (d2out += b));
-  // Record when each orphan dies: a killed process writes no 'end' event of its own.
   const diedAt = new Map();
   const watch = setInterval(() => {
     for (const o of orphans) if (!diedAt.has(o.pid) && !alive(o.pid)) diedAt.set(o.pid, Date.now());
@@ -248,7 +216,6 @@ for (let i = 1; i <= N; i++) {
   const evs = readJsonl(evPath);
   for (const o of orphans) {
     if (evs.some((e) => e.pid === o.pid && e.kind === 'committed' && e.t > killTime)) orphanCommitsAfterKill++;
-    // Only a commit after a new agent started in the same worktree mixes two agents' work.
     const next = evs.find((e) => e.kind === 'start' && e.pid !== o.pid && e.cwd === o.cwd && e.t > killTime);
     if (next && evs.some((e) => e.pid === o.pid && e.kind === 'committed' && e.t > next.t))
       fails.c_orphan_commit_after_restart.push(
@@ -269,14 +236,12 @@ for (let i = 1; i <= N; i++) {
     : [];
   for (const t of tasks) {
     if (!TERMINAL.has(t.status)) fails.a_nonterminal.push(`it${i}: task ${t.id} ${t.status}`);
-    // A run a restart cut off ends 'interrupted' and uses no attempt; the next run resumes it.
     const runs = db.prepare("SELECT * FROM runs WHERE task_id = ? AND kind = 'work' AND outcome IS NOT 'interrupted'").all(t.id);
     if (runs.length > t.max_attempts)
       fails.b_too_many_runs.push(`it${i}: task ${t.id} ${runs.length} real runs > max_attempts ${t.max_attempts}`);
     if (t.attempts < 0 || t.attempts > t.max_attempts || (t.status === 'done' && t.attempts < 1))
       fails.e_attempts_insane.push(`it${i}: task ${t.id} attempts=${t.attempts} status=${t.status}`);
 
-    // A done task's PR is recorded, or its failure is, and the PR refresh opens it again.
     if (t.status === 'done' && !t.pr_url) {
       const events = db.prepare('SELECT * FROM task_events WHERE task_id = ? ORDER BY id').all(t.id);
       const retry = prRetryFor(
@@ -288,18 +253,15 @@ for (let i = 1; i <= N; i++) {
       if (!retry || retry.state === 'person')
         fails.g_done_without_pr.push(`it${i}: task ${t.id} is done with no PR (pr_state ${t.pr_state}, retry ${retry?.state ?? 'none'})`);
     }
-    // Every PR GitHub has for the branch is the one the task records, and it opened once.
     const own = prs.filter((p) => p.head === t.branch);
     const url = (p) => `https://github.com/demo/demo/pull/${prs.indexOf(p) + 1}`;
     if (own.length > 1) fails.g_pr_opened_twice.push(`it${i}: task ${t.id} has ${own.length} PRs: ${own.map(url).join(', ')}`);
     for (const p of own)
       if (t.pr_url !== url(p)) fails.g_pr_lost.push(`it${i}: task ${t.id} records ${t.pr_url} but GitHub has ${url(p)} for ${t.branch}`);
-    // Each done run's follow-up pushes the branch once; pushing it again changes nothing on the remote, so logs nothing.
     const doneRuns = db.prepare("SELECT COUNT(*) AS n FROM runs WHERE task_id = ? AND kind = 'work' AND outcome = 'done'").get(t.id).n;
     const pushed = t.branch ? pushes.filter((ref) => ref === `refs/heads/${t.branch}`).length : 0;
     if (pushed > doneRuns)
       fails.h_pushed_twice.push(`it${i}: task ${t.id}'s branch was pushed ${pushed} times for ${doneRuns} done run(s)`);
-    // A sync the kill cut off is undone, never left half merged.
     if (t.worktree && existsSync(t.worktree) && mergeInProgress(t.worktree))
       fails.i_merge_in_progress.push(`it${i}: task ${t.id} (${t.status}) has a merge in progress in its worktree`);
   }
@@ -308,7 +270,6 @@ for (let i = 1; i <= N; i++) {
     fails.j_follow_ups_pending.push(
       `it${i}: ${pending.map((e) => `task ${e.task_id} ${e.type}`).join(', ')} still pending after the restart`,
     );
-  // Overlapping fake-claude processes in the same worktree.
   const spans = new Map();
   for (const e of evs) {
     if (e.kind === 'start') spans.set(e.pid, { cwd: e.cwd, task: e.task, s: e.t, e: Infinity });
@@ -328,7 +289,6 @@ for (let i = 1; i <= N; i++) {
         );
       }
     }
-  // Worktrees on disk vs tasks.
   const onDisk = new Set(worktrees());
   const expected = new Set(tasks.filter((t) => t.worktree).map((t) => t.worktree.split('/').pop()));
   const extra = [...onDisk].filter((d) => !expected.has(d)),
@@ -341,7 +301,6 @@ for (let i = 1; i <= N; i++) {
   );
 }
 
-// Every phase is killed in at least once whenever there are iterations enough for each.
 if (N >= PHASES.length)
   for (const p of PHASES) if (kills[p] === 0) fails.l_phase_not_reached.push(`no iteration killed the daemon in the ${p} phase`);
 

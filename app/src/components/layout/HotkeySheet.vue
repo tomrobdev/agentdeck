@@ -2,8 +2,6 @@
 import { keyCaps, registeredKeys, sheetGroups } from '../../lib/shared/hotkeys';
 import Modal from '../ui/Modal.vue';
 
-// The keys in force: read from what the open page registered (useHotkeys) when the sheet opens. No key can be bound or
-// unbound while it is open, since a modal turns the single keys off.
 const emit = defineEmits<{ close: [] }>();
 const groups = sheetGroups(registeredKeys());
 </script>

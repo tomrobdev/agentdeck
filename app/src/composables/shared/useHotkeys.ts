@@ -1,6 +1,3 @@
-// Single-key shortcuts. Each component lists its keys with a label and a scope; `hotkeyApplies` owns when a press counts and
-// `resolveKey` what it means (a key, or the second key of a sequence such as `g q`). The keys bound are registered while the
-// component is mounted, so the `?` sheet lists the keys in force (lib/hotkeys.ts).
 import { onBeforeUnmount, onMounted } from 'vue';
 import { hotkeyApplies } from '../../lib/shared/hotkey-applies';
 import { type HotkeyDef, type HotkeyScope, type PendingKey, registerKeys, resolveKey } from '../../lib/shared/hotkeys';

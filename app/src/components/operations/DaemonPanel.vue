@@ -1,6 +1,4 @@
 <script setup lang="ts">
-// The daemon's health, opened from the status bar: the commit it loaded against HEAD, uptime, a reload that is
-// pending or blocked, the failing checks of `agentdeck doctor` with their fix, its warnings, and the end of the log.
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { isOffline } from '../../api/http';
@@ -22,7 +20,6 @@ const state = computed(() => stateQ.data.value ?? null);
 const health = computed(() => healthQ.data.value ?? null);
 const down = computed(() => isOffline(stateQ.error.value));
 
-// Uptime ticks on its own; the daemon only says when it started.
 const now = ref(Date.now());
 const tick = setInterval(() => (now.value = Date.now()), 1000);
 onBeforeUnmount(() => clearInterval(tick));
@@ -31,7 +28,6 @@ const asked = ref(false);
 const confirming = ref(false);
 const requeued = ref<{ id: number; title: string }[]>([]);
 
-// A restarted daemon is a new process: read its health again.
 watch(
   () => state.value?.pid,
   (pid, was) => {
@@ -52,7 +48,6 @@ const commits = computed(() => {
 });
 
 const runningIds = computed(() => (health.value?.running ?? []).map((t) => t.id));
-/** What a pending reload waits for, with the tasks named when they are known. */
 const reloadLine = computed(() => {
   const r = state.value?.reload;
   if (!r?.pending) return null;
@@ -72,7 +67,6 @@ async function restartWhenIdle() {
 }
 
 function askRestartNow() {
-  // Read the running tasks afresh, so the question names what is running now.
   void healthQ.refetch();
   confirming.value = true;
 }

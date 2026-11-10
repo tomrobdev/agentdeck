@@ -8,7 +8,6 @@ const person = (type: string, to_status: string | null = null, reason: string | 
 
 test('the person variant words a sync as a sync', () => {
   assert.deepEqual(person('sync'), { text: 'synced with the base branch' });
-  // The reason is the sentence for a sync, so it is not shown again beside it.
   assert.deepEqual(person('sync', null, 'synced with main'), { text: 'synced with main' });
   assert.deepEqual(person('conflict', 'blocked', 'CONFLICT in a.ts'), {
     text: "the sync hit conflicts it couldn't settle; blocked",

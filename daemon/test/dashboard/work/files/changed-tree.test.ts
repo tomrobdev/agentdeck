@@ -1,5 +1,3 @@
-// The Changes tab's file tree, built from a task's changed files. The dashboard has no test runner, so its pure helpers are
-// tested here.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { ChangedFile } from '../../../../src/api/contract/files.ts';

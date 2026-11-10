@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { CheckboxIndicator, CheckboxRoot } from 'reka-ui';
 
-// A box that is on or off, with its label beside it (the slot). Without a slot, give it a `label` for screen readers.
 defineProps<{ label?: string }>();
 const model = defineModel<boolean>({ required: true });
 </script>

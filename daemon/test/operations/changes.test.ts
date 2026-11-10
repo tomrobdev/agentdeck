@@ -54,7 +54,7 @@ test('with no writes, rev stays put across several intervals', async () => {
   const live = new ChangeWatcher(db);
   live.start(5);
   const before = live.rev;
-  await sleep(60); // time passes: several intervals
+  await sleep(60);
   live.stop();
   assert.equal(live.rev, before);
 });

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-// The selected task beside the list, behind a separator that resizes it. Its width is remembered.
 import { ref } from 'vue';
 import { useResize } from '../../../composables/shared/useResize';
 import { loadSetting, saveSetting } from '../../../lib/shared/storage';

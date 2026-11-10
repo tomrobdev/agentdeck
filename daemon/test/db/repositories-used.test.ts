@@ -1,5 +1,3 @@
-// The repository interfaces in application/ports/repositories/ list what the use cases call and no more, and the
-// database's stores satisfy them.
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -12,10 +10,8 @@ import { readSources } from '../../scripts/lib/sources.ts';
 
 const SRC = join(import.meta.dirname, '../../src');
 
-/** Compile-time: what `openDb` returns satisfies `Repositories`. */
 export const satisfied = (db: Db): Repositories => db;
 
-/** Compile-time: what `compose.ts` builds is the App the use cases take, and the ComposedApp the entry points are given. */
 export const composed = (app: ReturnType<typeof composeApp>): ComposedApp & App => app;
 
 test('[layers] every method an interface declares is called by a use case', () => {
@@ -24,7 +20,6 @@ test('[layers] every method an interface declares is called by a use case', () =
     .filter((f) => f.endsWith('.ts'))
     .map((f) => readFileSync(join(dir, f), 'utf8'))
     .join('\n');
-  // Interface members are the lines at two spaces' indent that name a method: `name(` or `name<`.
   const declared = [...ports.matchAll(/^export interface (\w+Repository) \{([\s\S]*?)^\}/gm)].flatMap((m) =>
     [...m[2].matchAll(/^  (\w+)[(<]/gm)].map((n) => ({ repository: m[1], name: n[1] })),
   );

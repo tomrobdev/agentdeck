@@ -1,12 +1,5 @@
 #!/usr/bin/env node
 // The crash test's stand-ins for a repo's commands and git hooks: `node crash-hooks.mjs <what> <home>`.
-//   setup       the repo's setup command. The first task to run it (and only that one) gets a sync to do: it commits
-//               shared.txt on the task's branch and pushes a commit to origin's base, which conflicts with it when
-//               <home>/sync-mode says `conflict` (a resolve run) and merges cleanly when it says `clean`.
-//   test        the repo's test command: passes.
-//   merge-hook  the repo's pre-merge-commit hook, which git runs inside a clean merge, before the merge commit.
-// While <home>/hang-<phase> exists (`tests` for `test`, `sync` for `merge-hook`), the command appends its pid to
-// <home>/hangs.jsonl and waits, so the test can kill the daemon there; once the file is gone it fails, as if killed.
 import { execFileSync } from 'node:child_process';
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -29,7 +22,7 @@ function setup() {
   try {
     writeFileSync(join(home, 'base-moved'), process.cwd(), { flag: 'wx' });
   } catch {
-    return; // another task has the sync, or this one's setup ran already
+    return;
   }
   const git = (cwd, ...args) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...args], { cwd, stdio: 'ignore' });
   writeFileSync('shared.txt', 'task side\n');

@@ -1,5 +1,4 @@
 // GLOSSARY.md's `_Avoid_:` words appear nowhere in code, logs or UI (daemon/src and app/src), except on lines the allow list names.
-// "hold" is one of them: it is the governor's word alone (domain/usage/, the scheduler's announcement, the `hold` notification kind).
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -13,7 +12,6 @@ const JOB = "GitHub's word: a job in a workflow run";
 const OTHER_JOB = 'plain English: a unit of async work, or a duty';
 type Allowed = { file: string; line: RegExp; why: string };
 
-/** Lines that may say an avoid-word. Paths are under daemon/src/, or app/src/ when prefixed. */
 const ALLOWED: Allowed[] = [
   { file: 'domain/operations/notification.ts', line: /governor hold|'hold'/, why: 'the `hold` notification kind' },
   { file: 'api/contract/operations.ts', line: /rate limit or a hold ends/, why: "the governor's hold" },
@@ -35,14 +33,8 @@ const ALLOWED: Allowed[] = [
   { file: 'app/src/lib/operations/daemon-wording.ts', line: /On hold/, why: "the governor's state, shown" },
   { file: 'app/src/lib/work/work-wording.ts', line: /On hold/, why: "the governor's wait, shown" },
   { file: 'app/src/components/layout/StatusBar.vue', line: /On hold/, why: "the governor's state, shown" },
-  { file: 'app/src/api/operations.ts', line: /hold lifting/, why: "the governor's hold lifting" },
   { file: 'domain/runs/prompt.ts', line: /holds the same comments|already holds the task|files hold conflict markers/, why: PLAIN },
   { file: 'domain/operations/health.ts', line: /another daemon holds port/, why: PLAIN },
-  { file: 'app/src/lib/shared/forms.ts', line: /panels only hold the form/, why: PLAIN },
-  { file: 'app/src/components/work/task/TaskView.vue', line: /Dialogs hold the Escape key/, why: PLAIN },
-  { file: 'app/src/composables/work/files/useFilePatches.ts', line: /only hold what/, why: PLAIN },
-  { file: 'app/src/lib/work/queue/queue-display.ts', line: /Done now, which holds the finished history/, why: PLAIN },
-  { file: 'app/src/platform/native.ts', line: /`copied` holds the key/, why: PLAIN },
   { file: 'domain/landing/pull-request/checks.ts', line: /\bjobs?\b/i, why: JOB },
   { file: 'adapters/github/github.ts', line: /\bjobs?\b/i, why: JOB },
   { file: 'application/landing/pull-request/check-failures.ts', line: /\bjobs?\b/i, why: JOB },
@@ -52,12 +44,11 @@ const ALLOWED: Allowed[] = [
   { file: 'application/operations/notifications.ts', line: /\bjobs\b/, why: OTHER_JOB },
 ];
 
-/** The lines of `files` (path → text) that say an avoid-word and are not allowed, and the allowed entries that matched. */
 function scan(files: Map<string, string>, words: string[], allowed: Allowed[]) {
   const found: string[] = [];
   const used = new Set<Allowed>();
   for (const [path, text] of files) {
-    if (path.startsWith('domain/capacity/')) continue; // the governor's own module
+    if (path.startsWith('domain/capacity/')) continue;
     for (const l of avoidedLines(text, words)) {
       const ok = allowed.find((a) => a.file === path && a.line.test(l.text));
       if (ok) used.add(ok);

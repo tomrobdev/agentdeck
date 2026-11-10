@@ -1,5 +1,3 @@
-// What every view of a task shows besides its title (app/src/lib/work/task-badges.ts). The dashboard has no test runner, so its
-// badge rules are tested here, like the board's move rule.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { TaskSummary } from '../../../src/api/contract/work.ts';

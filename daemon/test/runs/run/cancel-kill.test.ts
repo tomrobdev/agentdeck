@@ -27,7 +27,6 @@ test('a cancel kills a group that ignores SIGTERM once the grace period is over'
   const r = await run('FAKE_SLOW FAKE_IGNORE_TERM', { shouldCancel: () => true, cancelGraceMs: 500 });
   const took = Date.now() - started;
   assert.ok(r.cancelled);
-  // The cancel poll (2 s) plus the grace period plus a margin; the fake would sleep 30 s.
   assert.ok(took < 2_000 + 500 + 3_000, `ended in ${took} ms`);
 });
 
@@ -43,10 +42,9 @@ test('a run that exits on its own sends no SIGKILL later', async () => {
     return real(pid, sig as any);
   }) as typeof process.kill;
   try {
-    // SIGTERM ends this one at once, so the timer must be cleared on close; wait past the grace period to see.
     const r = await run('FAKE_SLOW', { shouldCancel: () => true, cancelGraceMs: 300 });
     assert.ok(r.cancelled);
-    await sleep(800); // time passes: past the 300 ms grace period
+    await sleep(800);
     assert.deepEqual(kills, []);
   } finally {
     process.kill = real;

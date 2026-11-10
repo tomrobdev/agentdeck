@@ -1,5 +1,3 @@
-// A PR GitHub has for a task's branch ends up recorded on the task, however the daemon stopped while opening it: a crash
-// between `gh pr create` and recording it (gh then refuses to open it again), and a retry while it opened.
 import assert from 'node:assert/strict';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -83,7 +81,6 @@ function setup() {
   const db = testApp(openDb(':memory:'), { codeHost });
   const repo = db.addRepo({ name: 'demo', path: '/tmp/demo', base_branch: 'main' });
   db.updateRepo(repo.id, { pr_mode: 'ready' });
-  /** A running task with its branch, as a run leaves it before it finishes. */
   const running = () => {
     const task = db.addTask({ repo_id: repo.id, title: 'work', prompt: 'p' });
     assert.equal(db.claimNextTask()?.id, task.id);
@@ -91,7 +88,6 @@ function setup() {
     db.setCheckout(task.id, { branch });
     return { task, branch };
   };
-  /** A task that finished done, as a daemon that died before its follow-ups leaves it: the row pending. */
   const finishedDone = () => {
     const t = running();
     assert.ok(db.applyEvent(t.task.id, { type: 'finish', outcome: 'done' }));
@@ -171,7 +167,6 @@ test('a retry between the push and gh pr create: the PR is recorded on the task,
   const pushed = new Promise<void>((r) => (release = r));
   codeHost.push = () => pushed;
   const settling = settle(db, task.id, { type: 'finish', outcome: 'done' });
-  // A person retries the task while the daemon pushes its branch.
   assert.ok(db.applyEvent(task.id, { type: 'retry' }, { reason: 'one more thing' }));
   release();
   await settling;
@@ -182,7 +177,6 @@ test('a retry between the push and gh pr create: the PR is recorded on the task,
   assert.equal(retried.pr?.url, 'https://example.test/pull/1');
   assert.equal(notes(task.id).length, 0, 'a task that moved on is not told about as done');
 
-  // Its next run finishes done: the PR is the one recorded, pushed again, not opened a second time.
   codeHost.push = async () => {};
   assert.equal(db.claimNextTask()?.id, task.id);
   const done = await settle(db, task.id, { type: 'finish', outcome: 'done' });

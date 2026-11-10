@@ -28,7 +28,6 @@ test('expired windows are ignored', () => {
 });
 
 test('weekly pacing allows linear spend plus slack', () => {
-  // 3.5 days in: allowance = 0.8 * 0.5 + 0.1 = 0.5
   const ok = decide([week(0.45, 3.5)], DEFAULT_BUDGET, 2, NOW);
   assert.equal(ok.allow, true);
   assert.ok(Math.abs(ok.weekly_allowed! - 0.5) < 1e-9);
@@ -36,7 +35,6 @@ test('weekly pacing allows linear spend plus slack', () => {
   const ahead = decide([week(0.6, 3.5)], DEFAULT_BUDGET, 2, NOW);
   assert.equal(ahead.allow, false);
   assert.match(ahead.reason!, /ahead of pace/);
-  // Catch-up: 0.8 * f + 0.1 = 0.6 → f = 0.625 → 4.375 days in, i.e. 0.875 days from now.
   assert.equal(ahead.until, NOW + Math.ceil(0.875 * DAY));
 });
 

@@ -18,7 +18,7 @@ test('a block on uncommitted changes lifts within the rate limit once they are c
   );
   await block.refresh();
   assert.equal(block.reason, 'db/schema.ts has uncommitted changes');
-  dirty = false; // committed: no file changed
+  dirty = false;
   t += 1000;
   block.recheck();
   await settle();
@@ -47,9 +47,9 @@ test('a refresh that resolves after a newer one is dropped', async () => {
   const block = reloadBlock(() => new Promise<string | null>((r) => pending.push(r)));
   const first = block.refresh();
   const second = block.refresh();
-  pending[1](null); // the newer answer arrives first
+  pending[1](null);
   await second;
-  pending[0]('stale'); // the older one arrives late
+  pending[0]('stale');
   await first;
   assert.equal(block.reason, null);
 });

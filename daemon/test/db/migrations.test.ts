@@ -22,7 +22,6 @@ function tableInfo(db: DatabaseSync): Record<string, unknown[]> {
   return Object.fromEntries(tables.map(({ name }) => [name, db.prepare(`PRAGMA table_info(${name})`).all()]));
 }
 
-// The first-release schema: no auto_approve/planned_at/source/restarts/pid columns.
 const OLD_SCHEMA = `
 CREATE TABLE repos (
   id INTEGER PRIMARY KEY,
@@ -107,7 +106,6 @@ test('a database from an earlier release upgrades to the fresh schema', () => {
   try {
     const legacy = new DatabaseSync(old.path);
     legacy.exec(OLD_SCHEMA);
-    // An in-between release that already had some of the added columns.
     legacy.exec('ALTER TABLE repos ADD COLUMN auto_approve INTEGER NOT NULL DEFAULT 0');
     legacy.exec("INSERT INTO repos (name, path) VALUES ('r', '/r')");
     legacy.close();
@@ -192,7 +190,7 @@ test('opening an up-to-date database runs no steps', () => {
     } finally {
       db.close();
     }
-    openDb(t.path).close(); // real second open still works
+    openDb(t.path).close();
   } finally {
     t.cleanup();
   }
@@ -214,7 +212,6 @@ test('a failing step rolls back and leaves user_version unchanged', () => {
       assert.equal(version(db), 0);
       assert.deepEqual(tableInfo(db), {});
 
-      // A later, fixed attempt succeeds from scratch.
       assert.equal(migrate(db, [steps[0], 'CREATE TABLE two (id INTEGER)']), 2);
       assert.equal(version(db), 2);
     } finally {
