@@ -1,6 +1,4 @@
-// Tables against their domain types, as Drizzle infers each row from tables.ts, so a column added to one and not the other fails
-// `pnpm typecheck`. Tasks, repos and runs are read through a mapper (mappers.ts), so each row is checked against its mapper; the other
-// tables' rows must still equal their domain type. Columns a domain type leaves out on purpose are named in the Omit.
+// Tables against their domain types, as Drizzle infers each row from tables.ts, so a column added to one and not the other fails `pnpm typecheck`.
 import type { PlannerOutcome, PlannerRun } from '../domain/proposals/index.ts';
 import type { MergeMethod, PrMode } from '../domain/repos/index.ts';
 import type { PrState } from '../domain/landing/index.ts';
@@ -33,20 +31,13 @@ import type {
 } from './mappers.ts';
 import type { plannerRuns, repos, reviewComments, reviews, runs, taskEvents, taskLinks, tasks } from './tables.ts';
 
-/** The task columns the mapper folds into `pr`, `checkout`, `plan` and the task's state, which a `Task` has only once narrowed. */
 type FoldedColumn = PrColumn | CheckoutColumn | PlanColumn | StateColumn;
 
 type Equals<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
-/** Compares the keys and whether each is nullable; unions such as PrMode narrow string columns. */
 type Shape<T> = { [K in keyof T]-?: null extends T[K] ? 'nullable' : 'required' };
 type Same<Row, Domain> = Equals<Shape<Row>, Shape<Domain>>;
 export const check = <T extends true>(): T => true as T;
 
-/**
- * Whether `Mapper` accounts for every column of `Row`: it takes them all but the `Unread` ones, and each one it takes is a field of the
- * model it returns, or is named in `Folded` (read into a field of another name). What the model's fields contain, and any field with no
- * column of its name, the mapper's own return type checks.
- */
 type Maps<Row, Mapper extends (row: never) => unknown, Unread extends keyof Row = never, Folded = never> =
   Equals<Exclude<keyof Row, Unread>, keyof Parameters<Mapper>[0]> extends true
     ? [Exclude<keyof Parameters<Mapper>[0], keyof ReturnType<Mapper> | Folded>] extends [never]
@@ -59,20 +50,17 @@ check<Maps<Omit<typeof tasks.$inferSelect, 'prompt'>, typeof toTaskSummary, Lega
 check<Maps<typeof repos.$inferSelect, typeof toRepo>>();
 check<Maps<typeof runs.$inferSelect, typeof toRun>>();
 
-// A column added to tables.ts and absent from the mapper fails: the mapper doesn't take it, or takes it and its model has no such field.
 type WithNewColumn = TaskRow & { new_column: string | null };
 check<Equals<Maps<WithNewColumn, typeof toTask>, false>>();
 check<Equals<Maps<WithNewColumn, (row: WithNewColumn) => Task>, false>>();
 check<Maps<WithNewColumn, (row: WithNewColumn) => Task, never, FoldedColumn | 'new_column'>>();
 
 check<Same<typeof plannerRuns.$inferSelect, PlannerRun>>();
-// follow_up_pending is the outbox's flag, read only by pendingFollowUps: a history row as the timeline reads it leaves it out.
 check<Same<Omit<typeof taskEvents.$inferSelect, 'follow_up_pending'>, TaskEventRow>>();
 check<Equals<(typeof taskEvents.$inferSelect)['follow_up_pending'], number>>();
 check<Same<typeof reviews.$inferSelect, Review>>();
 check<Same<typeof reviewComments.$inferSelect, ReviewComment>>();
 
-// The narrowed text columns carry exactly their domain union.
 check<Equals<TaskRow['status'], TaskStatus>>();
 check<Equals<TaskRow['source'], TaskSource>>();
 check<Equals<TaskRow['pr_state'], PrState | null>>();
@@ -89,7 +77,6 @@ check<Equals<(typeof taskEvents.$inferSelect)['to_status'], TaskStatus | null>>(
 check<Equals<(typeof repos.$inferSelect)['pr_mode'], PrMode>>();
 check<Equals<(typeof repos.$inferSelect)['merge_method'], MergeMethod>>();
 
-// A task's state has every status and nothing else, and each field it carries is the column's own.
 check<Equals<TaskState['status'], TaskStatus>>();
 check<
   Equals<
@@ -98,7 +85,6 @@ check<
   >
 >();
 
-// A field of a status can't be read until the task is narrowed to that status.
 export const narrowed = (task: Task) => {
   // @ts-expect-error needs is only on a blocked task
   void task.needs;

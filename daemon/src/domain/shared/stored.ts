@@ -1,7 +1,5 @@
-// A task or run as its columns, and the API, keep it: JSON text for the documents, 1 or 0 for the flags. Pure, so db/ (the columns)
-// and api/ (the wire shape) share it without either importing the other.
+// A task or run as its columns, and the API, keep it: JSON text for the documents, 1 or 0 for the flags.
 
-/** The task fields stored as JSON text. */
 const JSON_FIELDS = [
   'needs',
   'question',
@@ -24,10 +22,6 @@ type Stored<T> = {
       : T[K];
 };
 
-/**
- * The fields of a task or run as the columns (and the API, which keeps the stored shape) store them: a `Needs`, a question or
- * step ids as JSON, a flag as 1 or 0. A field not present stays absent; one present as undefined or null becomes null.
- */
 export function stored<T extends object>(fields: T): Stored<T> {
   const f = fields as Record<string, unknown>;
   const out: Record<string, unknown> = { ...f };

@@ -1,7 +1,6 @@
 // Reads the end of the daemon's log file.
 import { closeSync, existsSync, fstatSync, openSync, readSync } from 'node:fs';
 
-/** The lines of the last `maxBytes` of the file, or null when there is no file. */
 export function readLogTail(path: string, maxBytes = 4 * 1024 * 1024): string[] | null {
   if (!existsSync(path)) return null;
   const fd = openSync(path, 'r');
@@ -11,7 +10,6 @@ export function readLogTail(path: string, maxBytes = 4 * 1024 * 1024): string[] 
     const buf = Buffer.alloc(length);
     readSync(fd, buf, 0, length, size - length);
     const lines = buf.toString('utf8').split('\n');
-    // A cut at the start leaves half a line.
     return size > length ? lines.slice(1) : lines;
   } finally {
     closeSync(fd);

@@ -6,19 +6,16 @@ import type { Task } from '../../domain/work/index.ts';
 import { plural } from '../../domain/shared/index.ts';
 import { notifyLater } from '../operations/notifications.ts';
 
-/** A task as a link's other end: its state, its repo's pr_mode and its own links. */
 export function targetOf(app: App, id: TaskId): LinkTarget | undefined {
   const dep = app.getTask(id);
   if (!dep) return undefined;
   return { ...dep, pr_mode: app.getRepo(dep.repo_id)?.pr_mode ?? 'off', links: app.linksOf(id) };
 }
 
-/** Link lookups that each query the database when asked. */
 export function liveLinks(app: App): LinkIndex {
   return { linksOf: (id) => app.linksOf(id), dependentsOf: (id) => app.dependentsOf(id), target: (id) => targetOf(app, id) };
 }
 
-/** Link lookups from one read of every link and of the tasks at their ends: a fixed number of queries however many tasks and links. */
 export function loadedLinks(app: App): LinkIndex {
   const byTask = new Map<TaskId, Link[]>();
   const byOn = new Map<TaskId, Link[]>();
@@ -46,17 +43,14 @@ export function loadedLinks(app: App): LinkIndex {
   };
 }
 
-/** The tasks of `refs`, in full, for their titles; one that was deleted meanwhile is left out. */
 function tasksOf(app: App, refs: { id: TaskId }[]): Task[] {
   return refs.flatMap((r) => app.getTask(r.id) ?? []);
 }
 
-/** The queued tasks that building on task `id` alone keeps from starting: merging `id` lets them start. */
 export function dependentsReleased(app: App, id: TaskId): Task[] {
   return tasksOf(app, releasedBy(id, liveLinks(app)));
 }
 
-/** One notification naming queued tasks a link leaves without what they wait for: a title and closing line for `n` of them. */
 function notifyDependents(
   app: App,
   tasks: Task[],
@@ -69,12 +63,6 @@ function notifyDependents(
   notifyLater(app, { kind: 'blocked', title, body: [...tasks.map((t) => `• #${t.id} ${t.title}`), ending].join('\n'), task_id });
 }
 
-/**
- * Call after task `id` changes in a way that may strand the tasks waiting on it (it failed, was blocked
- * or cancelled, or its PR was closed). If so, notify once, naming every queued task that can no longer start
- * because of it, however many builds-on links down. They stay queued: retrying `id` releases them, so failing them would
- * throw that plan away.
- */
 export function warnStuckDependents(app: App, id: TaskId): void {
   const state = linkState({ on: id, kind: 'builds_on' }, targetOf(app, id));
   if (state.kind !== 'stuck') return;
@@ -84,10 +72,6 @@ export function warnStuckDependents(app: App, id: TaskId): void {
   }));
 }
 
-/**
- * The queued tasks in other repos that build on one of repo `repoId`'s tasks `taskIds` that is not merged. Deleting the
- * repo takes those links with it, so they would start without that work: read them before, warn about them after.
- */
 export function buildersOnRepo(app: App, repoId: RepoId, taskIds: TaskId[]): Task[] {
   const builders = new Map<TaskId, Task>();
   for (const on of taskIds) {
@@ -100,7 +84,6 @@ export function buildersOnRepo(app: App, repoId: RepoId, taskIds: TaskId[]): Tas
   return [...builders.values()].sort((a, b) => a.id - b.id);
 }
 
-/** Notify once about the tasks `buildersOnRepo` found, now that repo `repo` is deleted and they start without that work. */
 export function warnBuildersOnDeleted(app: App, repo: string, tasks: Task[]): void {
   notifyDependents(app, tasks, null, (n) => ({
     title: `${plural(n, 'task')} lost what ${n === 1 ? 'it builds' : 'they build'} on: ${repo} was deleted`,
@@ -111,7 +94,6 @@ export function warnBuildersOnDeleted(app: App, repo: string, tasks: Task[]): vo
   }));
 }
 
-/** The after links whose other task has not landed: task `id`'s merge waits for them, each with why. */
 export function landsAfter(app: App, id: TaskId): { on: TaskId; reason: string }[] {
   return unlandedAfter(app.linksOf(id), (on) => targetOf(app, on));
 }

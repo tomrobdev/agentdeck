@@ -8,7 +8,6 @@ import { pickRun } from '../domain/runs/index.ts';
 
 const LOG_POLL_MS = 500;
 
-/** Stream a run's log as SSE: everything so far, then new lines until the run ends. */
 export function streamLog(
   db: ComposedApp,
   req: IncomingMessage,
@@ -25,8 +24,6 @@ export function streamLog(
 
   let offset = 0;
   let partial = '';
-  // Runs from a timer, so a throw here (EMFILE, a log removed under us) would be uncaught and stop the daemon:
-  // end the stream instead.
   const pump = () => {
     try {
       tail();

@@ -1,5 +1,4 @@
-// Runs one headless `claude -p` process with stream-json output: logs every line,
-// reports the usage windows it sees, and returns the final result event.
+// Runs one headless `claude -p` process with stream-json output: logs every line, reports the usage windows it sees, and returns the final result event.
 import { spawn } from 'node:child_process';
 import { accessSync, constants, type WriteStream } from 'node:fs';
 import { delimiter, isAbsolute, join } from 'node:path';
@@ -17,7 +16,6 @@ function executable(path: string): boolean {
   }
 }
 
-/** Where the claude binary is, or null. A bare name is looked up on PATH. */
 export function findClaude(): string | null {
   const bin = claudeBin();
   if (isAbsolute(bin) || bin.includes('/')) return executable(bin) ? bin : null;
@@ -30,7 +28,6 @@ export function findClaude(): string | null {
 const STDERR_TAIL = 4_000;
 
 const CANCEL_POLL_MS = 2_000;
-/** After a cancel's SIGTERM, how long the process group has to exit before SIGKILL. */
 export const CANCEL_GRACE_MS = 10_000;
 
 export async function runClaude(opts: {
@@ -39,17 +36,11 @@ export async function runClaude(opts: {
   log: WriteStream;
   env?: Record<string, string>;
   shouldCancel?: () => boolean;
-  /** How long a cancelled group may take to exit after SIGTERM before it gets SIGKILL. */
   cancelGraceMs?: number;
-  /** Called with the pid (= process group id) so it can be recorded for crash recovery. */
   onSpawn?: (pid: number) => void;
-  /** Called for each usage window a rate_limit_event reports. */
   onUsage?: (w: UsageWindow) => void;
-  /** Called with each parsed event of the stream. */
   onEvent?: (ev: any) => void;
-  /** Called once with the session id from claude's init line, so a run a restart ends can be resumed. */
   onSession?: (sessionId: string) => void;
-  /** Called once with the exact model id from claude's init line (such as claude-sonnet-5-5), so the run records it. */
   onModel?: (modelId: string) => void;
 }): Promise<ClaudeRun> {
   const { log } = opts;
@@ -57,7 +48,7 @@ export async function runClaude(opts: {
     cwd: opts.cwd,
     env: withToolchainPath({ ...process.env, ...opts.env }) as NodeJS.ProcessEnv,
     stdio: ['ignore', 'pipe', 'pipe'],
-    detached: true, // own process group, so the whole tree can be stopped together
+    detached: true,
   });
   activeChildren.add(child);
   if (child.pid) opts.onSpawn?.(child.pid);
@@ -77,7 +68,6 @@ export async function runClaude(opts: {
         if (!run.cancelled && opts.shouldCancel!()) {
           run.cancelled = true;
           killGroup(child.pid);
-          // A group that ignores SIGTERM would keep the task in cancel_requested, so follow with SIGKILL.
           killTimer = setTimeout(() => killGroup(child.pid, 'SIGKILL'), opts.cancelGraceMs ?? CANCEL_GRACE_MS);
         }
       }, CANCEL_POLL_MS)
@@ -119,7 +109,7 @@ export async function runClaude(opts: {
     child.on('close', (code) => resolve(code ?? -1));
   });
   clearInterval(cancelTimer);
-  clearTimeout(killTimer); // the group is gone: its id may be reused
+  clearTimeout(killTimer);
   activeChildren.delete(child);
 
   if (run.result?.api_error_status === 429 && !run.rateLimitedUntil) run.rateLimitedUntil = Math.floor(Date.now() / 1000) + 15 * 60;

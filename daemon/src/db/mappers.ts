@@ -1,5 +1,4 @@
-// From a row to its domain type: the one place a store's reads of tasks, repos and runs go through, so the domain type need not equal
-// its row. `types-check.ts` checks each row against its mapper, and rule:models-not-rows checks the stores use them.
+// From a row to its domain type: the one place a store's reads of tasks, repos and runs go through, so the domain type need not equal its row.
 import { getColumns } from 'drizzle-orm';
 import { type AutoMergeCheck, DEFAULT_AUTO_MERGE_SKIP, type MergeReason } from '../domain/landing/index.ts';
 import type { CheckCounts, StoredChecks } from '../domain/landing/index.ts';
@@ -12,13 +11,10 @@ import { type StateFields, type Task, type TaskState, type TaskSummary, stateFie
 import { parseTextList, stored } from '../domain/shared/index.ts';
 import { repos, runs, tasks } from './tables.ts';
 
-/** Legacy task columns, which nothing reads or writes: `after_task` went to task_links in migration 18, and `plan_path` stopped being written in 24. */
 export type LegacyTaskColumn = 'after_task' | 'plan_path';
 
-/** A task's columns, without the legacy ones. */
 const { after_task: _after_task, plan_path: _plan_path, ...taskColumns } = getColumns(tasks);
 export const TASK_COLUMNS = taskColumns;
-/** Every column but the prompt, for lists. */
 const { prompt: _prompt, ...summaryColumns } = taskColumns;
 export const SUMMARY_COLUMNS = summaryColumns;
 
@@ -27,7 +23,6 @@ export type TaskSummaryRow = Omit<TaskRow, 'prompt'>;
 export type RepoRow = typeof repos.$inferSelect;
 export type RunRow = typeof runs.$inferSelect;
 
-/** A stored JSON document, parsed; undefined when it is missing or malformed. */
 function parseJson(json: string | null): unknown {
   if (!json) return undefined;
   try {
@@ -37,32 +32,27 @@ function parseJson(json: string | null): unknown {
   }
 }
 
-/** A task's `needs` column: null when it has none or it is malformed. */
 function readNeeds(json: string | null): Needs | null {
   const n = parseJson(json);
   return isNeeds(n) ? n : null;
 }
 
-/** A task's `question` column: null when it has none or it is malformed. */
 function readQuestion(json: string | null): UnblockQuestion | null {
   const q = parseJson(json) as Partial<UnblockQuestion> | null | undefined;
   return q && typeof q.question === 'string' && Array.isArray(q.options) ? { question: q.question, options: q.options.map(String) } : null;
 }
 
-/** A task's `plan_steps` column: null when it names none (every unfinished step) or is malformed. */
 export function readSteps(json: string | null): string[] | null {
   const ids = parseJson(json);
   return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string') : null;
 }
 
-/** One stored reason of a check: a `{ kind, text }`, or a plain string as checks were stored before reasons had kinds. */
 function readReason(raw: unknown): MergeReason | null {
   if (typeof raw === 'string') return { kind: 'other', text: raw };
   const r = raw as Partial<MergeReason> | null;
   return r && typeof r === 'object' && typeof r.kind === 'string' && typeof r.text === 'string' ? { kind: r.kind, text: r.text } : null;
 }
 
-/** A stored auto-merge or merge request check: null when there is none or it is malformed. A malformed reason is left out. */
 export function readCheck(json: string | null): AutoMergeCheck | null {
   const v = parseJson(json) as (Omit<Partial<AutoMergeCheck>, 'reasons'> & { reasons?: unknown }) | null | undefined;
   if (!v || !['merge', 'wait', 'never'].includes(v.verdict as string) || !Array.isArray(v.reasons)) return null;
@@ -72,14 +62,12 @@ export function readCheck(json: string | null): AutoMergeCheck | null {
   return check;
 }
 
-/** A stored `pr_checks` column: null when there is none or it is malformed. */
 function readStoredChecks(json: string | null): StoredChecks | null {
   const raw = parseJson(json) as Partial<StoredChecks> | null | undefined;
   if (!raw || !Array.isArray(raw.checks) || typeof raw.read_at !== 'string') return null;
   return { read_at: raw.read_at, head: raw.head ?? null, checks: raw.checks, notified: raw.notified === true };
 }
 
-/** A stored count of a PR's checks (`pr_checks_opened`, `pr_checks_merged`): null when there is none or it is malformed. */
 export function readCounts(json: string | null): CheckCounts | null {
   const c = parseJson(json) as Partial<CheckCounts> | null | undefined;
   if (!c || typeof c.total !== 'number' || typeof c.failing !== 'number' || typeof c.pending !== 'number') return null;
@@ -91,19 +79,14 @@ export function readCounts(json: string | null): CheckCounts | null {
   return { total: c.total, failing: c.failing, pending: c.pending, ...(failures ? { failures } : {}) };
 }
 
-/** The task columns the pull request is made of: a task has them as `pr`, not as fields. */
 export type PrColumn = keyof PrFields;
 
-/** The task columns the checkout is made of: a task has them as `checkout`. */
 export type CheckoutColumn = keyof Checkout;
 
-/** The task columns the plan link is made of: a task has them as `plan`. */
 export type PlanColumn = 'plan_task' | 'plan_steps';
 
-/** The task columns only some statuses carry: a task has them in its state, and no other status reads them. */
 export type StateColumn = keyof StateFields;
 
-/** A row without the columns that make up its pull request, checkout, plan link and state. */
 function withoutValueColumns<R extends TaskSummaryRow>(row: R): Omit<R, PrColumn | CheckoutColumn | PlanColumn | StateColumn | 'status'> {
   const {
     status: _status,
@@ -132,10 +115,6 @@ function withoutValueColumns<R extends TaskSummaryRow>(row: R): Omit<R, PrColumn
   return rest;
 }
 
-/**
- * The state a row is in: its status and the columns that status carries. A column of another status is ignored, so a row an older
- * daemon left with one (needs and a question on a cancelled task) reads like any other.
- */
 function taskState(row: Pick<TaskSummaryRow, 'status' | StateColumn>): TaskState {
   const { status, stop_reason } = row;
   switch (status) {
@@ -151,10 +130,8 @@ function taskState(row: Pick<TaskSummaryRow, 'status' | StateColumn>): TaskState
   }
 }
 
-/** The columns a task's state is stored in: the way back from `taskState`, with the columns of the other statuses cleared. */
 export const stateColumns = (state: TaskState) => stored(stateFields(state));
 
-/** The task columns that carry a value, as the domain type has them, and the pull request they make up. */
 const taskValues = (row: TaskSummaryRow) => ({
   checkout: checkoutOf({ branch: row.branch, worktree: row.worktree, syncing_since: row.syncing_since }),
   plan: row.plan_task === null ? null : { task: row.plan_task, steps: readSteps(row.plan_steps) },
@@ -171,10 +148,6 @@ const taskValues = (row: TaskSummaryRow) => ({
 
 export const toTask = (row: TaskRow): Task => ({ ...withoutValueColumns(row), ...taskValues(row), ...taskState(row) });
 export const toTaskSummary = (row: TaskSummaryRow): TaskSummary => ({ ...withoutValueColumns(row), ...taskValues(row), ...taskState(row) });
-/**
- * A repo's row as a `Repo`: the flags are booleans and the JSON columns arrays. A malformed list reads as its default, which for the
- * repo's own tool rules is none (not the generic defaults, which could allow more than the repo meant).
- */
 export const toRepo = (row: RepoRow): Repo => ({
   ...row,
   allowed_tools: row.allowed_tools === null ? null : parseTextList(row.allowed_tools),
@@ -189,7 +162,6 @@ export const toRepo = (row: RepoRow): Repo => ({
   auto_merge_skip: parseTextList(row.auto_merge_skip, DEFAULT_AUTO_MERGE_SKIP),
 });
 
-/** The columns `fields` of a repo are stored in: the way back from `toRepo`. */
 export function repoColumns(fields: Partial<Repo>): Partial<RepoRow> {
   const {
     allowed_tools,
@@ -225,6 +197,5 @@ const flag = (v: number | null): boolean | null => (v === null ? null : v === 1)
 
 export const toRun = (row: RunRow): Run => ({ ...row, tests_passed: flag(row.tests_passed), last_test_failed: flag(row.last_test_failed) });
 
-/** What a `.get()` goes through: its row mapped, if there was one. */
 export const mapFound = <Row, Model>(row: Row | undefined, toModel: (row: Row) => Model): Model | undefined =>
   row === undefined ? undefined : toModel(row);

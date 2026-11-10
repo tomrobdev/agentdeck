@@ -4,7 +4,7 @@ import type { Review } from '../../contract/landing.ts';
 import { type ApiContext, type Route, reviewIdParam, route, taskIdParam } from '../../http.ts';
 
 export function routes({ db }: ApiContext): Route[] {
-  const n = Number; // a comment's id is not branded
+  const n = Number;
   return [
     route<Review[]>('GET', /^\/api\/tasks\/(\d+)\/reviews$/, ({ params: [id] }) => actions.taskReviews(db, taskIdParam(id))),
     route<Review>('POST', /^\/api\/tasks\/(\d+)\/reviews$/, ({ params: [id] }) => actions.startReview(db, taskIdParam(id))),

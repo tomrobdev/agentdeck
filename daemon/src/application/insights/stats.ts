@@ -7,22 +7,13 @@ import { type FailureReport, failureReport } from '../../domain/insights/index.t
 import { type ModelMeasures, measureByModel } from '../../domain/insights/index.ts';
 import { ActionError } from '../shared/input.ts';
 
-/** The first-run measures and the rest of the scorecard (interventions, times, quota, PR checks). */
 export interface PilotReport extends StatsReport {
   scorecard: Scorecard;
-  /** The first-run measures per week, oldest first; empty unless `by` is week. */
   weeks: { week: string; measures: Measures }[];
-  /** The measures per model the work runs ran on, with runs of unknown model last; empty unless `by` is model. */
   models: ModelMeasures[];
-  /** What failures are made of per week and repo, and the top causes: CI failures by step, failed runs by how they ended. */
   failures: FailureReport;
 }
 
-/**
- * The measures of each repo with work runs and of all of them; with `repo` (name or id), only that repo. With `since`
- * (a sqlite stamp) only what began then; with `by` week the scorecard also has a row per week, with `by` model the
- * report has a row per model.
- */
 export function pilotStats(app: App, opts: { repo?: string; since?: string; by?: 'week' | 'model' } = {}): PilotReport {
   const only = opts.repo === undefined ? undefined : app.findRepo(opts.repo);
   if (opts.repo !== undefined && !only) throw new ActionError(`no repo "${opts.repo}"`);

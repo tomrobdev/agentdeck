@@ -7,7 +7,7 @@ async function mergeBase(repoPath: string, a: string, b: string): Promise<string
   try {
     return (await git(repoPath, 'merge-base', a, b)) || null;
   } catch {
-    return null; // no common history
+    return null;
   }
 }
 
@@ -20,11 +20,6 @@ async function isAncestor(repoPath: string, a: string, b: string): Promise<boole
   }
 }
 
-/**
- * Where `head` left the base branch: its merge base with the local base and with origin's copy,
- * whichever is newer (a task branch starts from either, see startPoint). Doesn't fetch.
- * Null when neither base ref exists or shares history with `head`.
- */
 export async function diffBase(repoPath: string, base: string, head: string): Promise<{ ref: string; sha: string } | null> {
   const candidates = await Promise.all(
     [
@@ -42,10 +37,6 @@ export async function diffBase(repoPath: string, base: string, head: string): Pr
   return (await isAncestor(repoPath, local.sha, remote.sha)) ? remote : local;
 }
 
-/**
- * Who makes mergeCommit's commits, at a fixed time, so the same merge is always the same commit and needs no git identity.
- * The commits are on no ref: git's gc removes them in time.
- */
 const MERGE_ENV = {
   ...READ_ENV,
   GIT_AUTHOR_NAME: 'AgentDeck',
@@ -56,10 +47,6 @@ const MERGE_ENV = {
   GIT_COMMITTER_DATE: '@0 +0000',
 };
 
-/**
- * `ours` and `theirs` merged, as a commit with both as parents, made from git objects alone (`git merge-tree --write-tree`,
- * then `commit-tree`): no checkout or ref changes. `ours` itself when it already has `theirs`. Null when they conflict.
- */
 export async function mergeCommit(repoPath: string, ours: string, theirs: string): Promise<string | null> {
   if (await isAncestor(repoPath, theirs, ours)) return ours;
   let tree: string;
@@ -67,7 +54,7 @@ export async function mergeCommit(repoPath: string, ours: string, theirs: string
     const { stdout } = await exec('git', ['merge-tree', '--write-tree', '--no-messages', ours, theirs], { cwd: repoPath, env: MERGE_ENV });
     tree = stdout.split('\n')[0].trim();
   } catch (err) {
-    if ((err as { code?: unknown }).code === 1) return null; // conflicts
+    if ((err as { code?: unknown }).code === 1) return null;
     throw err;
   }
   const { stdout } = await exec('git', ['commit-tree', tree, '-p', ours, '-p', theirs, '-m', 'Merge for a diff'], {
@@ -77,11 +64,6 @@ export async function mergeCommit(repoPath: string, ours: string, theirs: string
   return stdout.trim();
 }
 
-/**
- * The patch-id of `head`'s changes against the base: `git patch-id --stable` of the diff from where `head` left the base
- * (`diffBase`) to `head`. It ignores line numbers and whitespace, so the same changes on a branch that has since brought
- * in the base keep their id. Null when there is no base to diff against or nothing changed. Doesn't fetch.
- */
 export async function diffHash(repoPath: string, base: string, head: string): Promise<string | null> {
   const from = await diffBase(repoPath, base, head);
   if (!from) return null;
@@ -90,7 +72,6 @@ export async function diffHash(repoPath: string, base: string, head: string): Pr
   return (await gitWithInput(repoPath, diff, ['patch-id', '--stable'])).trim().split(/\s+/)[0] || null;
 }
 
-/** Files changed between two commits, renames detected. */
 export async function changedFiles(repoPath: string, base: string, head: string): Promise<ChangedFile[]> {
   const [nameStatus, numstat] = await Promise.all([
     gitRead(repoPath, 'diff', ...DIFF_FLAGS, '-M', '-z', '--name-status', base, head, '--'),
@@ -99,7 +80,6 @@ export async function changedFiles(repoPath: string, base: string, head: string)
   return mergeChanges(nameStatus, numstat);
 }
 
-/** The unified diff of one file between two commits. Pass both paths of a rename so git pairs them. */
 export async function filePatch(
   repoPath: string,
   base: string,
@@ -111,7 +91,6 @@ export async function filePatch(
   return { patch: text, truncated };
 }
 
-/** What `path` is at `commit`: a blob (file) or tree (folder), or null if nothing is there. '' is the root. */
 export async function objectAt(
   repoPath: string,
   commit: string,
@@ -122,17 +101,14 @@ export async function objectAt(
   return entry && entry.path === path ? { type: entry.type, size: entry.size } : null;
 }
 
-/** Every file path at `commit`, repo-relative. */
 export async function listFiles(repoPath: string, commit: string): Promise<string[]> {
   return (await gitRead(repoPath, 'ls-tree', '-r', '--name-only', '-z', commit)).split('\0').filter(Boolean);
 }
 
-/** One level of the folder `dir` ('' for the root) at `commit`: folders first, then by name. */
 export async function listTree(repoPath: string, commit: string, dir: string): Promise<TreeEntry[]> {
   return treeEntries(await gitRead(repoPath, 'ls-tree', '-l', '-z', commit, '--', ...(dir ? [`${dir}/`] : [])));
 }
 
-/** The file at `path` in `commit`, at most `limit` bytes of it, or null if no file is there. */
 export async function readFile(
   repoPath: string,
   commit: string,

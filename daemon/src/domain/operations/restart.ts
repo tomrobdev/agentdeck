@@ -16,7 +16,6 @@ export interface Activity {
   verifies?: number;
 }
 
-/** What a graceful restart is waiting for, or null when nothing is active. */
 export function restartWait({ tasks, planner, resolves, unblocks = 0, reviews = 0, verifies = 0 }: Activity): string | null {
   const parts = [];
   if (tasks) parts.push(plural(tasks, 'running task'));
@@ -28,7 +27,6 @@ export function restartWait({ tasks, planner, resolves, unblocks = 0, reviews = 
   return parts.length ? parts.join(' and ') : null;
 }
 
-/** A source change must sit this long without another one before the daemon restarts onto it. */
 export const RELOAD_QUIET_MS = 1500;
 
 export interface ReloadInput {
@@ -55,7 +53,6 @@ export interface ReloadDecision {
   reason: string;
 }
 
-/** Why a reload is blocked, worded for the log and for `agentdeck doctor`, which tells the two apart by these. */
 export const SCHEMA_DIRTY = 'db/schema.ts has uncommitted changes';
 export const offMain = (branch: string): string => `the checkout is on ${branch}, not main`;
 
@@ -82,7 +79,6 @@ export function reloadState(i: ReloadInput): ReloadState {
     pending: d.pending,
     reason: d.reason || null,
     waiting: d.pending && !d.exit ? restartWait(i.activity) : null,
-    // A requested restart goes ahead whatever blocks a reload on change.
     blocked: !i.requested && i.enabled && i.changed.length ? (i.blocked ?? null) : null,
     changed: i.changed.length,
   };

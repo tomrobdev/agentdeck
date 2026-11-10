@@ -8,7 +8,6 @@ import { type DigestTask, digest } from '../../domain/operations/index.ts';
 import { status } from './settings.ts';
 import { repoReviewDue } from './review-due.ts';
 
-/** What the session is shown, and the cursor to pass as `after` next time. */
 export interface LiveContext {
   lines: string[];
   cursor: number;
@@ -24,7 +23,6 @@ const real = (path: string): string => {
 
 const within = (dir: string, root: string) => dir === root || dir.startsWith(root + sep);
 
-/** The registered repo a directory is in: its checkout, or one of its task worktrees. The deepest match wins. */
 export function repoForPath(app: App, dir: string): Repo | undefined {
   const here = real(dir);
   let best: { repo: Repo; depth: number } | undefined;
@@ -36,16 +34,11 @@ export function repoForPath(app: App, dir: string): Repo | undefined {
   return best?.repo;
 }
 
-/**
- * The repo's queue (`open` is its open tasks, which Work reads): the header, what changed after event `after` (none when `after` is null), and the open tasks when
- * something changed or `full` is set. `cursor` is the newest event now, whatever repo it belongs to.
- */
 export async function digestContext(
   app: App,
   opts: { repo: Repo; after: number | null; full: boolean; open: DigestTask[] },
 ): Promise<LiveContext> {
   const cursor = app.lastEventId();
-  // A cursor above the newest event is from other ids (a repo deleted, a restored database): it is no cursor.
   const after = opts.after !== null && opts.after > cursor ? null : opts.after;
   const events = after === null ? [] : app.eventsAfter(after, cursor, opts.repo.id);
   const st = status(app);

@@ -2,7 +2,6 @@
 import type { RepoId, TaskId } from '../../../domain/shared/index.ts';
 import type { Repo } from '../../../domain/repos/index.ts';
 
-/** A repo to register. */
 export interface NewRepo {
   name: string;
   path: string;
@@ -13,7 +12,6 @@ export interface NewRepo {
   setup_cmd?: string | null;
 }
 
-/** The repo fields that can be updated. */
 export type RepoUpdate = Partial<
   Pick<
     Repo,

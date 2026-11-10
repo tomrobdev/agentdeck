@@ -1,5 +1,4 @@
-// The tables as Drizzle sees them, mirroring the migrated schema in schema.ts. The stores query through them, and
-// drizzle-kit reads this for Studio (pnpm db:studio) and the schema check (pnpm db:check). Keys are column names, as in the domain types.
+// The tables as Drizzle sees them, mirroring the migrated schema in schema.ts.
 import { sql } from 'drizzle-orm';
 import type { PlannerRunId, RepoId, ReviewId, RunId, TaskId } from '../domain/shared/index.ts';
 import type { PlannerOutcome } from '../domain/proposals/index.ts';
@@ -72,9 +71,9 @@ export const tasks = sqliteTable(
     restarts: integer().default(0).notNull(),
     pr_url: text(),
     pr_state: text().$type<PrState>(),
-    after_task: integer(), // legacy: migration 18 copied it into task_links; nothing reads or writes it
+    after_task: integer(),
     merge_method: text().$type<MergeMethod>(),
-    plan_path: text(), // legacy: no longer written since migration 24, and nothing reads it
+    plan_path: text(),
     plan_steps: text(),
     needs: text(),
     done_by: text().$type<'person'>(),
@@ -142,7 +141,6 @@ export const usageWindows = sqliteTable('usage_windows', {
   observed_at: text().default(NOW_DEFAULT).notNull(),
 });
 
-/** Every change of a usage window's reading, appended beside the latest in usage_windows. */
 export const usageSamples = sqliteTable(
   'usage_samples',
   {
@@ -194,7 +192,6 @@ export const taskEvents = sqliteTable(
     to_status: text().$type<TaskStatus>(),
     reason: text(),
     at: text().default(NOW_DEFAULT).notNull(),
-    /** 1 while the status change's follow-ups are still to run (the outbox); 0 once they ran, or when it has none. */
     follow_up_pending: integer().default(0).notNull(),
   },
   (table) => [index('task_events_task').on(table.task_id, table.id)],

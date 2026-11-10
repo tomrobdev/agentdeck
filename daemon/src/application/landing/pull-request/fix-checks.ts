@@ -18,16 +18,9 @@ import { readFailure } from './check-failures.ts';
 import { retryTask } from '../person-events.ts';
 
 export interface FixChecksResult {
-  /** The failing checks sent to the worker, by name. */
   checks: string[];
 }
 
-/**
- * Retry a done task whose open PR has failing checks, with a note naming each one. A GitHub Actions check brings its
- * failed step and the excerpt of that step's log (`failureExcerpt`): the one the PR refresh kept for this head, or read
- * now when it kept none; any other check its name and link. The worker continues on the same branch, and the PR updates
- * when it is done. Refused when the task isn't done with an open PR, or no check is failing.
- */
 export async function fixChecks(app: App, id: TaskId): Promise<FixChecksResult> {
   const task = requireTask(app, id);
   if (task.status !== 'done') throw new ActionError(`#${id} is ${task.status}; only a done task's checks can be sent back`);
@@ -41,7 +34,6 @@ export async function fixChecks(app: App, id: TaskId): Promise<FixChecksResult> 
   const failing = failingChecks(checks);
   if (!failing.length) throw new ActionError(`no check is failing on #${id}'s PR`);
 
-  // Each Actions check's share of the note's log budget; checks of one job share one read.
   const fromActions = failing.filter((c) => actionsRun(c.url)).length;
   const budget = Math.floor(LOG_TAIL_BYTES / Math.max(fromActions, 1));
   const reads = new Map<string, Promise<PrCheck>>();
@@ -58,7 +50,6 @@ export async function fixChecks(app: App, id: TaskId): Promise<FixChecksResult> 
         : { name: c.name, url: c.url, step: read.step ?? null, log_error: read.excerpt_error ?? 'gh printed no failed steps' };
     }),
   );
-  // The reads took a while: a PR merged or closed meanwhile, or a task that left done, is not requeued.
   const now = requireTask(app, id);
   if (now.status !== 'done' || !openPrUrl(now.pr))
     throw new ActionError(`#${id} changed while its checks were read; its PR is no longer open`);

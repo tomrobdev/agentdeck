@@ -18,7 +18,6 @@ const propose: Command = async ({ db, rest, repoName }) => {
   if (res.tasks.some((t) => t.status === 'proposed')) console.log('approve with `agentdeck approve <id>`');
 };
 
-/** Which tool rules a repo's workers run with, for a line of output. */
 const fmtToolRules = (repo: ReturnType<typeof actions.repoView>): string =>
   repo.tools_source === 'own'
     ? `the repo's own: ${(JSON.parse(repo.allowed_tools ?? '[]') as string[]).join(', ')}`
@@ -42,7 +41,6 @@ export const repoCommands: Record<string, Command> = {
       console.log(
         `added repo "${repo.name}" (${repo.path}, base ${repo.base_branch}, toolchain ${repo.toolchain ?? 'unknown'}${repo.setup_cmd ? `, setup: ${repo.setup_cmd}` : ''}${repo.test_cmd ? `, tests: ${repo.test_cmd}` : ''})`,
       );
-      // The repo is added either way; a failed doctor pauses it and says so, without failing the command.
       printDoctor(await actions.doctorRepo(db, repo.id));
     } else if (sub === 'doctor') {
       if (!path) die('usage: agentdeck repo doctor <repo>');
@@ -59,7 +57,6 @@ export const repoCommands: Record<string, Command> = {
     } else if (sub === 'delete') {
       if (!path) die('usage: agentdeck repo delete <repo> [--yes]');
       const p = actions.repoDeletionPreview(db, path);
-      // An unarchived repo skips the confirmation: deleteRepo refuses it below.
       if (p.archived) {
         console.log(
           `${p.repo}: will delete ${p.tasks} tasks, ${p.runs} runs and ${p.worktrees} worktrees, with their logs and the goals file.`,
@@ -72,7 +69,6 @@ export const repoCommands: Record<string, Command> = {
       for (const l of res.leftover) console.log(`could not remove: ${l}`);
     } else if (sub === 'set') {
       const [, name, key, value = ''] = rest;
-      // No repo name means no key either, so the patch is what says how to use the command.
       const patch = repoSettingPatch(name && key, value);
       const repo = actions.updateRepo(db, name, patch);
       if (key === 'tools') console.log(`${name}: tools ${fmtToolRules(repo)}`);
@@ -94,6 +90,5 @@ export const repoCommands: Record<string, Command> = {
     console.log(r.goals.trim() || '(empty: write the outcomes you want, priorities, and what not to touch)');
   },
   propose,
-  // `plan` is the old name of `propose`.
   plan: propose,
 };

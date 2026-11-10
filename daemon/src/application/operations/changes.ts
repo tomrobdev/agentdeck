@@ -1,9 +1,7 @@
-// Tells subscribers when the database changed. The revision it counts is what the dashboard's event stream sends.
-// An instance made in daemon.ts, not module state.
+// Tells subscribers when the database changed.
 import type { App } from '../ports/app.ts';
 
 export class ChangeWatcher {
-  /** Moves by one whenever the database changed, whoever wrote. Starts at 1. */
   rev = 1;
   private readonly subscribers = new Set<(rev: number) => void>();
   private readonly otherProcess = new Set<() => void>();
@@ -17,7 +15,6 @@ export class ChangeWatcher {
     this.last = app.changeCounters();
   }
 
-  /** Check the counters every `intervalMs` on a timer that does not keep the process alive. */
   start(intervalMs = 250): void {
     this.stop();
     this.last = this.app.changeCounters();
@@ -30,18 +27,15 @@ export class ChangeWatcher {
     this.timer = undefined;
   }
 
-  /** Called with the new revision on every change. Returns the unsubscribe. */
   subscribe(fn: (rev: number) => void): () => void {
     this.subscribers.add(fn);
     return () => void this.subscribers.delete(fn);
   }
 
-  /** Called when another process wrote (not this daemon's own writes). */
   onOtherProcess(fn: () => void): void {
     this.otherProcess.add(fn);
   }
 
-  /** Read the counters once and notify if they moved. */
   check(): void {
     const now = this.app.changeCounters();
     const other = now.dataVersion !== this.last.dataVersion;

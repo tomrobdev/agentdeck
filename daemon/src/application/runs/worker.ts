@@ -32,7 +32,6 @@ import { settle } from '../landing/settle.ts';
 import { recordAnswers, reviewForRun } from '../landing/review/address.ts';
 import { escalateAfter } from '../work/escalate.ts';
 
-/** Run one attempt of a task that the scheduler has already claimed (status = running). */
 export async function runTask(app: App, task: Task): Promise<WorkerResult> {
   ensureDirs();
   const repo = app.getRepo(task.repo_id);
@@ -50,19 +49,15 @@ export async function runTask(app: App, task: Task): Promise<WorkerResult> {
   try {
     return await runOpened(app, task, repo, wt, opened);
   } catch (err) {
-    // Whatever threw, the row ends failed (a no-op if it already ended) and the scheduler settles the task.
     await endTaskRun(app, opened, 'failed', errorMessage(err), {}, summaryContext(app, task));
     throw err;
   }
 }
 
-/** The attempt's run once its row is open: everything up to the outcome, which `finish` records. */
 async function runOpened(app: App, task: Task, repo: Repo, wt: Checkout, opened: OpenedRun): Promise<WorkerResult> {
   const { runId, log } = opened;
   const ws = app.workspace;
   const previousRuns = app.runsForTask(task.id).filter((r) => r.id !== runId);
-  // A daemon restart cut the attempt's last run off: continue its claude session (with `prompt` as the fallback),
-  // unless the prompt or plan was edited since, which the session never saw.
   let session = resumableSession(task, previousRuns);
   if (session) {
     const owner = otherPlanOwner(task);
@@ -79,8 +74,6 @@ async function runOpened(app: App, task: Task, repo: Repo, wt: Checkout, opened:
       session = null;
     }
   }
-  // A run a restart cut off never gave its plan file back, even if a person ended the task since and retried it: keep
-  // what it got done before the file is written afresh. After a run that did give it back, this changes nothing.
   await giveBackPlan(app, task, wt.path, log);
   let plan: PromptPlan | null = null;
   try {
@@ -94,7 +87,6 @@ async function runOpened(app: App, task: Task, repo: Repo, wt: Checkout, opened:
   const prompt = buildPrompt(task, previousRuns, note, plan, review?.prompt ?? null, escalationSince(events, previousRuns));
   const resume = session ? { session, prompt: buildResumePrompt(task), maxTurns: resumeMaxTurns(task, previousRuns) } : undefined;
 
-  // Install dependencies before the agent starts: it isn't allowed to install them itself.
   const setUp = async (): Promise<WorkerResult | null> => {
     if (!repo.setup_cmd) return null;
     const setup = await ws.runCommand(repo.setup_cmd, wt.path, SETUP_TIMEOUT_MS);
@@ -110,14 +102,12 @@ async function runOpened(app: App, task: Task, repo: Repo, wt: Checkout, opened:
   const setupFailure = await setUp();
   if (setupFailure) return setupFailure;
 
-  // Sync the branch with the latest base, on retries too, so the agent builds on current code.
   const synced = await markSyncing(app, task.id, () =>
     syncBranch(app, task, repo, wt.path, { allowResolve: repo.auto_resolve, runTests: false }),
   );
   app.runLog.event(log, { type: 'agentdeck_sync', ...synced });
   if (synced.kind === 'clean' || synced.kind === 'resolved') {
     app.recordSync(task.id, syncSummary(repo.base_branch, synced.kind, synced.kind === 'resolved' ? synced.files : []));
-    // The merge may have changed what the setup installs.
     const resetupFailure = await setUp();
     if (resetupFailure) return resetupFailure;
   } else if (synced.kind === 'failed') {
@@ -128,14 +118,12 @@ async function runOpened(app: App, task: Task, repo: Repo, wt: Checkout, opened:
     return finish(app, task, opened, { outcome: 'cancelled' });
   }
 
-  // The plan goes in the worktree's plan file, which git ignores, for the worker to set its steps' statuses in.
   try {
     await ws.writePlanFile(wt.path, plan?.html ?? null);
   } catch (err) {
     app.runLog.event(log, { type: 'agentdeck_error', text: `write plan file: ${errorMessage(err)}` });
   }
 
-  // Written after setup: setup runs here in the daemon, outside the sandbox, so installs keep the network.
   let ran: TaskRunEnd;
   try {
     ran = await startTaskRun(app, task, { kind: 'work', repo, worktree: wt.path, prompt, note, opened, resume });
@@ -150,14 +138,12 @@ async function runOpened(app: App, task: Task, repo: Repo, wt: Checkout, opened:
   } catch (err) {
     app.runLog.event(log, { type: 'agentdeck_error', text: `commit leftovers: ${errorMessage(err)}` });
   }
-  // Files the worker may not edit itself (under .claude/) and wrote to the edits folder instead: committed before the tests.
   try {
     const edits = await ws.applyProtectedEdits(wt.path);
     if (edits.applied.length || edits.refused.length) app.runLog.event(log, { type: 'agentdeck_protected_edits', ...edits });
   } catch (err) {
     app.runLog.event(log, { type: 'agentdeck_error', text: `apply protected edits: ${errorMessage(err)}` });
   }
-  // What the worker did to the plan is stored, whatever the outcome.
   await giveBackPlan(app, task, wt.path, log);
 
   const denials = result?.permission_denials ?? [];
@@ -167,7 +153,6 @@ async function runOpened(app: App, task: Task, repo: Repo, wt: Checkout, opened:
   let ahead: number | null = null;
   if (end.kind === 'finished') {
     status = parseStatus(end.result.result);
-    // The answers to the review's comments are stored whatever the status; comments with none are named in the run's summary.
     if (review && runFields.result_text) runFields.result_text = recordAnswers(app, review.comments, runFields.result_text);
     if (!status.blocked && repo.test_cmd) {
       const tests = await ws.runCommand(repo.test_cmd, wt.path, TEST_TIMEOUT_MS);
@@ -179,7 +164,6 @@ async function runOpened(app: App, task: Task, repo: Repo, wt: Checkout, opened:
   }
   const { result: outcome, pause } = runOutcome({ end, status, testsPassed, commitsAhead: ahead, denials: denials.length });
 
-  // A done run that left linked plan steps unfinished is a warning, not a change of outcome.
   if (outcome.outcome === 'done' && hasPlanLink(task)) {
     try {
       const left = unfinishedSteps(followedSteps(app, task) ?? []);
@@ -193,7 +177,6 @@ async function runOpened(app: App, task: Task, repo: Repo, wt: Checkout, opened:
   return finish(app, task, opened, outcome, runFields);
 }
 
-/** Store what a run left in the worktree's plan file (takePlanFile). A failure is logged, never fatal. */
 async function giveBackPlan(app: App, task: Task, worktree: string, log: OpenedRun['log']): Promise<void> {
   try {
     await takePlanFile(app, task, worktree);
@@ -202,12 +185,10 @@ async function giveBackPlan(app: App, task: Task, worktree: string, log: OpenedR
   }
 }
 
-/** What `runSummary` needs to read a work run's log: the repo's test command and the task's turn limit. */
 function summaryContext(app: App, task: Task): SummaryContext {
   return { testCmd: app.getRepo(task.repo_id)?.test_cmd ?? null, maxTurns: task.max_turns };
 }
 
-/** End the run (when there is one) and move the task to its next state (including retry). */
 async function finish(
   app: App,
   task: Task,
@@ -216,7 +197,6 @@ async function finish(
   runFields: Partial<Run> = {},
 ): Promise<WorkerResult> {
   if (opened) await endTaskRun(app, opened, res.outcome, res.reason, runFields, summaryContext(app, task));
-  // If cancel was requested while the run was ending, the lifecycle makes every outcome end 'cancelled'.
   const reason = { reason: res.reason ?? null };
   switch (res.outcome) {
     case 'done':
@@ -224,7 +204,6 @@ async function finish(
       await settle(app, task.id, { type: 'finish', outcome: res.outcome }, reason);
       break;
     case 'blocked':
-      // The environment, not the task, is to blame: the attempt is given back.
       await settle(
         app,
         task.id,
@@ -233,12 +212,9 @@ async function finish(
       );
       break;
     case 'rate_limited':
-      // Not the task's fault: give the attempt back and requeue.
       await settle(app, task.id, { type: 'rate_limited' });
       break;
     case 'failed': {
-      // The lifecycle requeues it while it has attempts left. The next attempt may run one model up: the model changes while
-      // the task is still running, before the requeue.
       const run = attemptsLeft(task) && opened ? app.runsForTask(task.id).find((r) => r.id === opened.runId) : undefined;
       if (run) escalateAfter(app, task, run, { reason: res.reason ?? null, needs: res.needs ?? null }, ['running']);
       await settle(app, task.id, { type: 'finish', outcome: 'failed' }, reason);

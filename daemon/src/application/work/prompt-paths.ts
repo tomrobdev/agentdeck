@@ -7,20 +7,12 @@ import type { Task } from '../../domain/work/index.ts';
 import { targetOf } from './dependencies.ts';
 import { requireTask, requireTaskRepo } from '../shared/input.ts';
 
-/**
- * Warnings (never errors) for each path the task's prompt names that is not in the commit the worker starts from
- * (origin's base when the repo has one) and that no task it builds on adds: a worker told to follow a file that isn't
- * there blocks. A path found only under a subfolder gets its own note, to be written in full. A task it builds on that is not merged yet
- * counts through its branch; with no branch yet, the path "may come from it". Checks the saved task, so call it after
- * addTask or editTask. Git trouble (no base commit, an unreadable repo) means no warnings, not a failure.
- */
 export async function promptWarnings(app: App, id: TaskId): Promise<string[]> {
   const task = requireTask(app, id);
   const paths = pathsNamedIn(task.prompt);
   if (!paths.length) return [];
   try {
     const repo = requireTaskRepo(app, task);
-    // The commit a worker starts from (see startPoint), not the local base: a plan committed but not pushed isn't there.
     const start = await app.workspace.filesAt(repo.path, { base: repo.base_branch });
     if (!start) return [];
     const { ref, files: baseFiles } = start;
@@ -57,7 +49,6 @@ export async function promptWarnings(app: App, id: TaskId): Promise<string[]> {
   }
 }
 
-/** The tasks the task builds on, directly or down the chain, whose work is not on the base branch yet. */
 function unmergedBuiltOn(app: App, task: Task): Task[] {
   const seen = new Set<TaskId>([task.id]);
   const found: Task[] = [];

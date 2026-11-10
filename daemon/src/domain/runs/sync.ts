@@ -1,5 +1,4 @@
-// How a sync (merging the base branch into a task's branch) is worded, and what it comes to. How a resolve run's end settles
-// it is the Runs context's (domain/runs/resolve.ts). Pure: no I/O.
+// How a sync (merging the base branch into a task's branch) is worded, and what it comes to.
 import { plural } from '../shared/index.ts';
 
 /** How a sync that changed the branch went. */
@@ -21,14 +20,12 @@ export type SyncResult =
 
 const fileCount = (n: number) => plural(n, 'file');
 
-/** The task timeline's line for a sync that changed the branch: "Synced with main: clean". */
 export function syncSummary(base: string, kind: SyncKind, conflictFiles: string[]): string {
   return kind === 'clean' ? `Synced with ${base}: clean` : `Resolved conflicts in ${fileCount(conflictFiles.length)}`;
 }
 
 const LISTED_FILES = 5;
 
-/** The stop reason when a conflict could not be settled: names the files. */
 export function conflictReason(base: string, conflictFiles: string[], why?: string): string {
   const shown = conflictFiles.slice(0, LISTED_FILES).join(', ');
   const more = conflictFiles.length > LISTED_FILES ? ` and ${conflictFiles.length - LISTED_FILES} more` : '';
@@ -38,7 +35,6 @@ export function conflictReason(base: string, conflictFiles: string[], why?: stri
   return why ? `${list} (${why})` : list;
 }
 
-/** The sync's result once its resolve run has ended as `outcome` (`done`: the conflicts are resolved). */
 export function syncResultOf(
   outcome: 'done' | 'cancelled' | 'rate_limited' | 'failed' | 'blocked',
   conflictFiles: string[],
@@ -56,7 +52,6 @@ export function syncResultOf(
   }
 }
 
-/** Whether a stop reason is a conflict's (`conflictReason`): a sync that could not be settled. */
 export function isConflictReason(reason: string | null | undefined): boolean {
   return /^(conflicts with \S+ in \d+ files?: |could not sync with )/.test(reason ?? '');
 }

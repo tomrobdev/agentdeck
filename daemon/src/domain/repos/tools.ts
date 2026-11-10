@@ -1,11 +1,7 @@
-// Which tools a worker may use in a repo. Pure: no I/O.
+// Which tools a worker may use in a repo.
 import type { Repo } from './repo.ts';
 import { detectToolchain, isToolchain, toolchainTools } from './toolchain.ts';
 
-/**
- * Generic tools every worker may use unless the repo overrides them. No push, no network installs.
- * Build and test rules come from the repo's toolchain (toolchain.ts).
- */
 export const DEFAULT_ALLOWED_TOOLS = [
   'Read',
   'Edit',
@@ -19,7 +15,6 @@ export const DEFAULT_ALLOWED_TOOLS = [
   'Bash(git commit*)',
   'Bash(ls*)',
   'Bash(cat*)',
-  // Read-only helpers agents chain into one command (`cd app && ls; wc -l …`): one refused part refuses it all.
   'Bash(cd *)',
   'Bash(pwd*)',
   'Bash(wc *)',
@@ -35,10 +30,6 @@ export type ToolRulesSource = 'own' | 'detected';
 
 export const toolRulesSource = (repo: Pick<Repo, 'allowed_tools'>): ToolRulesSource => (repo.allowed_tools ? 'own' : 'detected');
 
-/**
- * Tool rules as a person types them: one per line or comma-separated. A comma inside parentheses belongs to its rule
- * (`Bash(echo a, b)`). Blanks and repeats are dropped, so an empty text is no rules: the detected ones.
- */
 export function parseToolRules(text: string): string[] {
   const rules: string[] = [];
   let cur = '';
@@ -55,10 +46,6 @@ export function parseToolRules(text: string): string[] {
   return [...new Set(rules.map((r) => r.trim()).filter(Boolean))];
 }
 
-/**
- * The repo's own rules if it has them, otherwise the generic defaults plus its toolchain's rules.
- * Repos registered before toolchain detection have no toolchain, so it is detected from `root`.
- */
 export function allowedTools(repo: Pick<Repo, 'allowed_tools' | 'toolchain'>, root: { files: string[]; scripts: string[] }): string[] {
   if (repo.allowed_tools) return repo.allowed_tools;
   const toolchain = isToolchain(repo.toolchain) ? repo.toolchain : detectToolchain(root.files, root.scripts)?.toolchain;

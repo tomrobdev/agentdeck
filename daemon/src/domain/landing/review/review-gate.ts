@@ -1,5 +1,4 @@
 // Auto-merge's review gate, in a repo with auto_review on: the review run's judgement of the PR's changes, or a person's.
-// Pure: no I/O.
 import { cut, oneLine, plural } from '../../shared/index.ts';
 import type { MergeReasons } from '../merge/merge.ts';
 import { BLOCKING_PREFIX, type ReviewComment, type ReviewWithComments, commentLocation, submittedRequests } from './review.ts';
@@ -11,16 +10,10 @@ export interface ReviewRunRead {
   outcome: string | null;
 }
 
-/**
- * The outcomes that end a review run without it counting: a rate limit or a daemon restart stopped it before it
- * answered, so another starts for the same changes.
- */
 const GIVEN_BACK = ['rate_limited', 'interrupted'];
 
-/** Whether a review run that ended `outcome` (null while it runs) counts as the review run of its changes. */
 export const reviewRunCounts = (outcome: string | null): boolean => !GIVEN_BACK.includes(outcome ?? '');
 
-/** The review runs that read, or are reading, the changes whose patch-id is `diffHash`, oldest first. */
 export function countedReviewRuns<R extends ReviewRunRead>(runs: R[], diffHash: string): R[] {
   return runs.filter((r) => r.kind === 'review' && r.diff_hash === diffHash && reviewRunCounts(r.outcome));
 }
@@ -35,38 +28,21 @@ export interface ReviewFacts {
   runs: ReviewRunRead[];
 }
 
-/** A comment's ask in a few words: where it points and what it says, without the review run's "Blocking: ". */
 const askText = (c: Pick<ReviewComment, 'path' | 'line' | 'side' | 'body'>): string =>
   `${commentLocation(c)}: ${cut(oneLine(c.body.startsWith(BLOCKING_PREFIX) ? c.body.slice(BLOCKING_PREFIX.length) : c.body), 200)}`;
 
-/** What a Request changes review asks first: its first blocking line comment, else its note. */
 function firstAsk(review: ReviewWithComments): string {
   const blocking = review.by === 'review_run' ? review.comments.filter((c) => c.body.startsWith(BLOCKING_PREFIX)) : review.comments;
   const first = blocking[0];
   return first ? askText(first) : cut(oneLine(review.body), 200) || 'no note';
 }
 
-/**
- * The asks of earlier changes a worker left open: the open line comments of Request changes reviews of other changes
- * than `diffHash` (a worker ran on them since), a person's every comment and a review run's blocking ones. A review
- * run's comment that does not block is a suggestion, and does not wait for an answer.
- */
 export function unansweredAsks(reviews: ReviewWithComments[], diffHash: string): ReviewComment[] {
   return submittedRequests(reviews)
     .filter((r) => r.diff_hash !== diffHash)
     .flatMap((r) => r.comments.filter((c) => c.state === 'open' && (r.by === 'person' || c.body.startsWith(BLOCKING_PREFIX))));
 }
 
-/**
- * What the review gate adds to auto-merge's check, in a repo with auto_review on. A person's submitted review of these
- * changes counts over the review run's: theirs decides, clean when it is a Comment. Otherwise the latest review run's
- * review of these changes: one that asked for changes needs a person, its first finding told; a clean one adds nothing.
- * With no review yet, the gate waits while a review run is to start or is reading the changes; one that ended with no
- * review (it failed, answered garbage or was stopped) needs a person, since no other starts for the same changes.
- * Changes whose patch-id could not be worked out can't be read by a review run, so they need a person too. And the
- * open asks of earlier reviews a worker left unanswered (`unansweredAsks`) need a person: a clean review run of the new
- * changes never saw them.
- */
 export function reviewGate({ diff_hash, reviews, runs }: ReviewFacts): MergeReasons {
   const gate: MergeReasons = { never: [], wait: [] };
   if (!diff_hash) {

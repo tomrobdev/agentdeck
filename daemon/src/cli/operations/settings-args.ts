@@ -5,7 +5,6 @@ import { MERGE_METHODS, type MergeMethod, PR_MODES, type PrMode } from '../../do
 import { BUDGET_KEYS } from '../../domain/capacity/index.ts';
 import { MODELS } from '../../domain/work/index.ts';
 
-/** The patch `agentdeck set <key> <value>` stands for. Throws ActionError for a key it does not know. */
 export function settingPatch(key: string | undefined, value: string): SettingsPatch {
   if (key === 'max_concurrent') return { max_concurrent: Number(value) };
   if (key && (BUDGET_KEYS as string[]).includes(key)) return { budget: { [key]: Number(value) } };
@@ -31,7 +30,6 @@ export function settingPatch(key: string | undefined, value: string): SettingsPa
 
 const REPO_SETTING_USAGE = `usage: agentdeck repo set <repo> auto_approve on|off | auto_resolve on|off | auto_unblock on|off | auto_review on|off | escalate on|off | base_branch <branch> | test_cmd "<cmd>" | setup_cmd "<cmd>" | pr_mode ${PR_MODES.join('|')} | merge_method ${MERGE_METHODS.join('|')} | sandbox on|off | network "<hosts>" | auto_merge on|off | auto_merge_max_lines <n> | auto_merge_skip "<prefixes>" | model ${MODELS.join('|')}|"" | tools "<rules>"`;
 
-/** The patch `agentdeck repo set <repo> <key> <value>` stands for. Throws ActionError for a key it does not know. */
 export function repoSettingPatch(key: string | undefined, value: string): RepoPatch {
   if (key === 'pr_mode') return { pr_mode: value as PrMode };
   if (key === 'merge_method') return { merge_method: value as MergeMethod };
@@ -49,7 +47,6 @@ export function repoSettingPatch(key: string | undefined, value: string): RepoPa
   if (key === 'setup_cmd') return { setup_cmd: value };
   if (key === 'test_cmd') return { test_cmd: value };
   if (key === 'model') return { model: value || null };
-  // "" goes back to the rules detected from the toolchain.
   if (key === 'tools') return { allowed_tools: value };
   throw new ActionError(REPO_SETTING_USAGE);
 }

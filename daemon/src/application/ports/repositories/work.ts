@@ -25,40 +25,30 @@ import type {
   UnblockQuestion,
 } from '../../../domain/work/index.ts';
 
-/** The fields of a task a person may change while it is editable. */
 export type TaskEdit = Partial<Pick<Task, 'title' | 'prompt' | 'priority' | 'model' | 'max_turns' | 'max_attempts'>> & {
   plan_task?: TaskId | null;
   plan_steps?: string[] | null;
 };
 
-/** A task to add. */
 export interface NewTask {
   repo_id: RepoId;
   title: string;
   prompt: string;
   priority?: number;
-  /** Decided by the caller (`newTaskModel`): the store has no default of its own. */
   model: string;
   max_turns?: number;
   max_attempts?: number;
   status?: 'queued' | 'proposed';
   source?: 'manual' | 'planner';
-  /** Links the task starts with; the caller has checked them (a new task can't make a cycle). */
   links?: { on: TaskId; kind: LinkKind }[];
-  /** The task whose plan this one follows. */
   plan_task?: TaskId | null;
   plan_steps?: string[] | null;
-  /** A plan for the new task to own and follow (the caller has parsed it): stored under its numbered name, and linked. */
   own_plan?: string;
 }
 
 export interface TaskRepository {
   addTask(n: NewTask): Task;
   getTask(id: TaskId): Task | undefined;
-  /**
-   * A status change: the task as it is after, its domain events, and the ids of their history rows written pending (those
-   * with follow-ups). Only application/landing/settle.ts calls it.
-   */
   applyEvent: (
     id: TaskId,
     event: TaskEvent,
@@ -108,7 +98,6 @@ export interface TaskRepository {
 
 export interface TaskEventRepository {
   eventsForTask(task_id: TaskId): TaskEventRow[];
-  /** The outbox: history rows whose follow-ups are still to run, oldest first. */
   pendingFollowUps(): PendingFollowUp[];
   markFollowedUp(ids: number[]): void;
   lastEventId(): number;

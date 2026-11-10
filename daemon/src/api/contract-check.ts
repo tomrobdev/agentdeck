@@ -1,7 +1,4 @@
-// Each route names the contract type it answers with (route<T> in http.ts), so a use case whose return type drifts from
-// what the dashboard reads fails `pnpm typecheck` there. This file checks the rest: each request type the dashboard sends
-// must fit the parameter the use case takes, and the parts of a response checked on their own so a drift is reported
-// where it is. The contract may name fewer fields than the use case returns.
+// Each route names the contract type it answers with (route<T> in http.ts), so a use case whose return type drifts from what the dashboard reads fails `pnpm typecheck` there.
 import type { LogEntry as DomainLogEntry } from '../domain/runs/index.ts';
 import * as actions from '../application/actions.ts';
 import type { NewRepo, RepoPatch } from './contract/repos.ts';
@@ -22,14 +19,11 @@ import type {
 import type { LogEntry } from './contract/files.ts';
 import type { SettingsPatch } from './contract/operations.ts';
 
-/** What a use case resolves to, whether it is async or not. */
 type Out<F extends (...args: never[]) => unknown> = Awaited<ReturnType<F>>;
-/** The `n`th parameter of a use case. */
 type In<F extends (...args: never[]) => unknown, N extends number> = Parameters<F>[N];
 export const check = <_T extends true>(): true => true;
 type Fits<Actual, Contract> = [Actual] extends [Contract] ? true : false;
 
-// Parts of responses
 check<Fits<DomainLogEntry, LogEntry>>();
 check<Fits<NonNullable<Out<typeof actions.taskViews>[number]['live']>, LiveView>>();
 check<Fits<NonNullable<Out<typeof actions.taskViews>[number]['sync']>, SyncView>>();
@@ -40,7 +34,6 @@ check<Fits<NonNullable<Out<typeof actions.taskDetail>['check_list']>['checks'][n
 check<Fits<NonNullable<Out<typeof actions.taskDetail>['runs'][number]['summary']>, RunSummary>>();
 check<Fits<Awaited<Out<typeof actions.startVerify>['done']>, NonNullable<VerifyResult['report']>>>();
 
-// Requests
 check<Fits<NewRepo, In<typeof actions.addRepo, 1>>>();
 check<Fits<RepoPatch, In<typeof actions.updateRepo, 2>>>();
 check<Fits<NewTask, In<typeof actions.addTask, 1>>>();

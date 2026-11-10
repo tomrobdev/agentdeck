@@ -1,5 +1,4 @@
-// Reading a task's code from git: the shapes the API returns, path checks, size limits and the
-// parsing of git's -z output. Pure: no I/O. The git calls are in adapters/git.ts.
+// Reading a task's code from git: the shapes the API returns, path checks, size limits and the parsing of git's -z output.
 import { sqliteUtc } from '../../shared/index.ts';
 import type { SincePoint } from './since.ts';
 
@@ -75,16 +74,10 @@ export interface FileContent {
 
 export const PATCH_LIMIT = 256 * 1024;
 export const TEXT_LIMIT = 512 * 1024;
-/** Like git, a file is binary if a NUL byte shows up this early. */
 export const BINARY_SNIFF = 8000;
 
 export type PathCheck = { ok: true; path: string } | { ok: false; error: string };
 
-/**
- * A repo-relative path from a client, checked before it reaches git: no absolute paths, no `..`,
- * no NUL, nothing git could read as an option. Trailing slashes are dropped. The empty path (the
- * repo root) is allowed only with `allowRoot`.
- */
 export function checkPath(input: string | null | undefined, opts: { allowRoot?: boolean } = {}): PathCheck {
   const raw = input ?? '';
   if (raw.includes('\0')) return { ok: false, error: 'path contains a NUL byte' };
@@ -98,21 +91,15 @@ export function checkPath(input: string | null | undefined, opts: { allowRoot?: 
   return { ok: true, path };
 }
 
-/** Whether these bytes look binary: a NUL byte in the first BINARY_SNIFF bytes. */
 export function isBinary(bytes: Uint8Array): boolean {
   const end = Math.min(bytes.length, BINARY_SNIFF);
   for (let i = 0; i < end; i++) if (bytes[i] === 0) return true;
   return false;
 }
 
-/**
- * Cut `bytes` to at most `limit`, on a UTF-8 character boundary, and at the last newline when
- * `wholeLines` (so a patch keeps whole lines). Returns the text and whether anything was cut.
- */
 export function capText(bytes: Uint8Array, limit: number, opts: { wholeLines?: boolean } = {}): { text: string; truncated: boolean } {
   if (bytes.length <= limit) return { text: new TextDecoder().decode(bytes), truncated: false };
   let end = limit;
-  // Back up over continuation bytes (10xxxxxx) so a character isn't split.
   while (end > 0 && (bytes[end] & 0xc0) === 0x80) end--;
   if (opts.wholeLines) {
     const nl = bytes.lastIndexOf(0x0a, end - 1);
@@ -127,7 +114,6 @@ const tokens = (z: string): string[] => {
   return parts;
 };
 
-/** `git diff --numstat -z` output. Binary files show `-` counts. A rename is `a\td\t\0old\0new\0`. */
 export function parseNumstat(
   z: string,
 ): { path: string; old_path: string | null; additions: number; deletions: number; binary: boolean }[] {
@@ -148,7 +134,6 @@ export function parseNumstat(
   return out;
 }
 
-/** `git diff --name-status -z` output: `M\0path\0`, or `R087\0old\0new\0` for a rename (and copy). */
 export function parseNameStatus(z: string): { status: ChangeStatus; path: string; old_path: string | null }[] {
   const out: { status: ChangeStatus; path: string; old_path: string | null }[] = [];
   const t = tokens(z);
@@ -160,14 +145,12 @@ export function parseNameStatus(z: string): { status: ChangeStatus; path: string
       out.push({ status: code === 'R' ? 'R' : 'A', path, old_path: code === 'R' ? old_path : null });
     } else {
       const path = t[++i];
-      // T (type change) and anything unexpected read as a modification.
       out.push({ status: code === 'A' || code === 'D' ? code : 'M', path, old_path: null });
     }
   }
   return out;
 }
 
-/** Join name-status (what happened) with numstat (how much), by path, in git's order. */
 export function mergeChanges(nameStatus: string, numstat: string): ChangedFile[] {
   const counts = new Map(parseNumstat(numstat).map((n) => [n.path, n]));
   return parseNameStatus(nameStatus).map((s) => {
@@ -183,7 +166,6 @@ export function mergeChanges(nameStatus: string, numstat: string): ChangedFile[]
   });
 }
 
-/** Separators for `git log --format`: unit (field) and record. */
 export const LOG_FORMAT = '%H%x1f%s%x1f%an%x1f%aI%x1f%cI%x1e';
 
 export function parseLog(out: string): Commit[] {
@@ -197,10 +179,6 @@ export function parseLog(out: string): Commit[] {
     });
 }
 
-/**
- * `git ls-tree -l -z` output: `<mode> <type> <object> <size>\t<path>\0`, size `-` for trees.
- * Submodules (type commit) are left out: their contents aren't in this repo.
- */
 export function parseLsTree(z: string): { type: 'blob' | 'tree'; object: string; size: number | null; path: string }[] {
   const out: { type: 'blob' | 'tree'; object: string; size: number | null; path: string }[] = [];
   for (const rec of tokens(z)) {
@@ -213,7 +191,6 @@ export function parseLsTree(z: string): { type: 'blob' | 'tree'; object: string;
   return out;
 }
 
-/** One folder's entries from parseLsTree: folders first, then by name. */
 export function treeEntries(z: string): TreeEntry[] {
   return parseLsTree(z)
     .map((e): TreeEntry => {

@@ -1,5 +1,4 @@
 // Syncs task branches with their base branch; a conflict starts a resolve run.
-// The daemon does the git work in the task's worktree (agents cannot fetch); only a real conflict starts a claude run.
 import { TEST_TIMEOUT_MS } from '../../config.ts';
 import type { App } from '../ports/app.ts';
 import type { SyncFinish } from '../ports/workspace.ts';
@@ -20,18 +19,10 @@ import { settle } from '../landing/settle.ts';
 import { isMergeLocked, isSyncLocked, isSyncing, lockSync, markSyncing, unlockSync } from '../work/checkout-locks.ts';
 
 interface SyncOptions {
-  /** A resolve run may start when the merge conflicts. */
   allowResolve: boolean;
-  /** Run the repo's test command on the merged result (a done task's branch; a run about to start will be tested later). */
   runTests: boolean;
 }
 
-/**
- * Merge the latest base into the task's branch in its worktree: fetch, then merge origin/<base> (the local base
- * when the repo has no origin). Clean: git commits it. Conflicts: the markers stay and a resolve run (its own kind
- * of run, which uses no attempt) fixes them. If that fails, the merge is aborted and the branch is left as it was.
- * Never throws.
- */
 export async function syncBranch(app: App, task: Task, repo: Repo, worktree: string, opts: SyncOptions): Promise<SyncResult> {
   const ws = app.workspace;
   let before: string | undefined;
@@ -66,7 +57,6 @@ export async function syncBranch(app: App, task: Task, repo: Repo, worktree: str
   }
 }
 
-/** The merge is in progress with conflicts: run claude on it, check what it left, and keep or undo the merge. */
 async function resolveConflicts(
   app: App,
   task: Task,
@@ -85,7 +75,6 @@ async function resolveConflicts(
   let outcome: Outcome;
   let reason = '';
   try {
-    // Throws if the run cannot start (no settings, no worktree): the row still ends below, failed.
     const ran = await startTaskRun(app, task, { kind: 'resolve', repo, worktree, prompt, opened });
     fields = ran.fields;
     const settled = resolveOutcome(ran.end);
@@ -113,7 +102,6 @@ async function resolveConflicts(
   return syncResultOf(outcome, files, reason);
 }
 
-/** What is wrong with a merge a resolve run said it settled, or '' when nothing is. */
 function resolutionProblem(finish: SyncFinish): string {
   switch (finish.kind) {
     case 'markers':
@@ -128,16 +116,13 @@ function resolutionProblem(finish: SyncFinish): string {
 }
 
 export interface SyncReport {
-  /** `skipped`: conflicts, but auto_resolve is off. `deferred`: the usage limit, or a cancel, stopped it. */
   outcome: 'up_to_date' | 'clean' | 'resolved' | 'blocked' | 'skipped' | 'deferred' | 'error';
   files: string[];
   reason?: string;
-  /** The branch was pushed, so the PR has it. */
   pushed: boolean;
   push_error?: string;
 }
 
-/** Push the branch if the task has an open PR that does not have its latest commits yet. Returns an error message, if any. */
 async function pushIfNeeded(
   app: App,
   task: Task,
@@ -148,7 +133,6 @@ async function pushIfNeeded(
   const branch = task.checkout?.branch;
   if (!branch || !openPrUrl(task.pr)) return { pushed: false };
   try {
-    // A branch that was merged but not pushed (the push failed last time) still needs pushing.
     if (!changed && !(await app.workspace.unpushedCommits(worktree, branch))) return { pushed: false };
     await app.codeHost.push(repo.path, branch);
     return { pushed: true };
@@ -159,12 +143,6 @@ async function pushIfNeeded(
   }
 }
 
-/**
- * Sync a done task's branch with the base: the merge, the repo's tests, and a push to its open PR; a conflict
- * starts a resolve run. The task stays done. If the conflicts cannot be resolved, or the tests fail on the merged
- * branch, the merge is undone and the task becomes blocked with the conflicting files as the reason.
- * `manual` is a person asking (it ignores the repo's auto_resolve and throws what an automatic call only reports).
- */
 export async function syncTask(app: App, id: TaskId, opts: { manual: boolean }): Promise<SyncReport> {
   const task = requireTask(app, id);
   const repo = requireTaskRepo(app, task);
@@ -214,19 +192,12 @@ async function syncMarked(app: App, task: Task, repo: Repo, opts: { manual: bool
   }
 }
 
-/** A person asked (`agentdeck sync`, the dashboard's sync button): the repo's auto_resolve does not apply. */
 export const syncNow = (app: App, id: TaskId): Promise<SyncReport> => syncTask(app, id, { manual: true });
 
-/** Whether the governor lets a resolve run start now: not paused, not rate limited, inside the usage windows, a slot free. */
 export function canStartResolve(app: App): boolean {
   return queueWait(app).free > 0;
 }
 
-/**
- * Sync the open PRs that GitHub reports as conflicting with the base, one at a time, as far as the governor allows.
- * The rest are left for the next refresh. A repo with auto_resolve off is not touched: its tasks wait for a person's
- * sync, said once per conflict while `told` is kept between calls. Never throws.
- */
 export async function resolveConflicting(
   app: App,
   ids: TaskId[],

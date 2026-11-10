@@ -1,4 +1,4 @@
-// Use cases for tasks: add, edit, list them and remove their worktrees. A person's lifecycle events are in landing/person-events.ts.
+// Use cases for tasks: add, edit, list them and remove their worktrees.
 import type { App } from '../ports/app.ts';
 import type { TaskId } from '../../domain/shared/index.ts';
 import { archivedRepoError, maxAttemptsError, maxTurnsError, modelError, priorityError } from '../../domain/work/index.ts';
@@ -11,7 +11,6 @@ import { ActionError, flag, object, refuse, requireTask, requireTaskRepo, text, 
 import { checkFollowers } from './plans.ts';
 import { checkPlanLink, planRequest, stepList } from './plan-link.ts';
 
-/** Add a task. One without a model takes its repo's, else the default_model setting's; `model_source` says which. */
 export async function addTask(
   app: App,
   input: {
@@ -22,16 +21,11 @@ export async function addTask(
     model?: string;
     max_turns?: number;
     max_attempts?: number;
-    /** Tasks this one builds on (it starts once they are done and merged). */
     builds_on?: TaskId[];
-    /** Tasks this one lands after (it runs at once; only its merge waits). */
     after?: TaskId[];
-    /** The task whose plan this one follows (that task's own plan, or the one it follows), in the same repo. */
     plan_task?: TaskId;
-    /** A plan for the new task to own and follow, stored as `<task id>-<slug>.html`. Not with plan_task. */
     plan_html?: string;
     plan_steps?: string[] | string;
-    /** File it as a proposal, waiting for a person to approve it, instead of queueing it. */
     propose?: boolean;
   },
 ): Promise<Task & { model_source: ModelSource }> {
@@ -75,13 +69,6 @@ export async function addTask(
   return { ...task, model_source: chosen.source };
 }
 
-/**
- * Change a waiting or unsuccessful task's title, prompt, priority, model, turn limit, attempt limit or plan link.
- * `plan_task` null clears the link to another task's plan (and its steps), refused for a task that follows its own plan,
- * which can only be replaced; a new link, by `plan_task` or `plan_html` (which becomes the task's
- * own plan, replacing any it had), drops the old steps unless `plan_steps` names some; `plan_steps` null or '' means
- * every unfinished step.
- */
 export async function editTask(
   app: App,
   id: TaskId,
@@ -120,7 +107,6 @@ export async function editTask(
   if (planAsked !== undefined || patch.plan_steps !== undefined) {
     const steps = patch.plan_steps !== undefined ? stepList(patch.plan_steps) : planAsked === undefined ? (task.plan?.steps ?? null) : null;
     const asked = planAsked ?? { task: task.plan?.task ?? null };
-    // A null link means "follow its own plan", so clearing it would keep the plan and widen its steps to all of them.
     if (planAsked !== undefined && 'task' in asked && asked.task === null && planOwnerOf(task) === id && app.ownPlan(id)) {
       throw new ActionError(
         `#${id} has a plan of its own, which can't be cleared: replace it with --plan <file>, or follow another task's plan with --plan <task number>`,
@@ -129,7 +115,6 @@ export async function editTask(
     const checked = checkPlanLink(app, () => requireTaskRepo(app, task), asked, steps);
     let link: TaskId | null;
     if ('ownPlan' in checked) {
-      // The task's own steps are the ones just checked; the tasks following its plan keep theirs.
       checkFollowers(app, id, checked.plan, id);
       link = id;
       ownPlan = checked.ownPlan;
@@ -139,7 +124,6 @@ export async function editTask(
   }
 
   if (!Object.keys(fields).length) throw new ActionError('nothing to change');
-  // The task's own plan is stored in the same guarded write, so a task the daemon claimed meanwhile keeps its plan.
   const edited = app.editTask(id, fields, { ownPlan });
   if (!edited) {
     const now = app.getTask(id)?.status ?? task.status;
@@ -148,7 +132,6 @@ export async function editTask(
   return edited;
 }
 
-/** Remove a task's worktree; its branch is kept. Not while the task is running, or queued (it is about to run in it). */
 export async function removeTaskWorktree(app: App, id: TaskId): Promise<{ branch: string | null }> {
   const t = requireTask(app, id);
   if (!WORKTREE_REMOVABLE_STATUSES.includes(t.status)) throw new ActionError(t.status === 'queued' ? 'task is queued' : 'task is running');
@@ -160,14 +143,10 @@ export async function removeTaskWorktree(app: App, id: TaskId): Promise<{ branch
   return { branch: t.checkout?.branch ?? null };
 }
 
-/** A task by id, or undefined. */
 export const findTask = (app: App, id: TaskId): Task | undefined => app.getTask(id);
 
-/** A task's runs, oldest first. */
 export const taskRuns = (app: App, id: TaskId) => app.runsForTask(id);
 
-/** Every task. */
 export const listTasks = (app: App): Task[] => app.listTasks();
 
-/** The tasks with an open pull request. */
 export const openPrTasks = (app: App): Task[] => app.openPrTasks();

@@ -10,13 +10,11 @@ const exec = promisify(execFile);
 
 export const LABEL = 'dev.agentdeck.daemon';
 export const PLIST_PATH = join(homedir(), 'Library/LaunchAgents', `${LABEL}.plist`);
-// The installed plist runs this path, so the entry point stays at src/cli.ts.
 const CLI_PATH = resolve(import.meta.dirname, '../../cli.ts');
 const domain = () => `gui/${userInfo().uid}`;
 
 const xml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-/** launchd gives agents a bare PATH; spell out where node, git and claude live. */
 export function servicePath(): string {
   const dirs = [
     dirname(process.execPath),
@@ -32,11 +30,6 @@ export function servicePath(): string {
   return [...new Set(dirs)].join(':');
 }
 
-/**
- * Toolchain choices a person makes in their shell profile, which launchd never reads. Carried from the shell that
- * installs the service, so workers build the way that shell does (a pinned SDKROOT, for example, when the newest
- * macOS SDK doesn't link).
- */
 export const SHELL_TOOLCHAIN_VARS = ['SDKROOT', 'DEVELOPER_DIR'];
 
 export function renderPlist(): string {
@@ -93,22 +86,15 @@ export async function serviceStatus(): Promise<ServiceStatus> {
   }
 }
 
-/**
- * Unload the service and wait until launchd has let it go: launchd stops the daemon after `bootout` returns, and a
- * `bootstrap` before then fails with "Bootstrap failed: 5: Input/output error".
- */
 async function bootout(): Promise<void> {
   try {
     await exec('launchctl', ['bootout', `${domain()}/${LABEL}`]);
-  } catch {
-    // not loaded
-  }
+  } catch {}
   for (let i = 0; i < 50 && (await serviceStatus()).loaded; i++) await new Promise((r) => setTimeout(r, 100));
 }
 
 export const DAEMON_LOG = join(LOG_DIR, 'daemon.log');
 
-/** Print the last `lines` of the daemon log to stdout; with `follow`, keep printing until interrupted. */
 export function tailLog(lines: number, follow: boolean): Promise<void> {
   if (!existsSync(DAEMON_LOG)) throw new Error(`no log yet at ${DAEMON_LOG}`);
   return new Promise((resolve, reject) => {
@@ -118,7 +104,6 @@ export function tailLog(lines: number, follow: boolean): Promise<void> {
   });
 }
 
-/** Load the installed plist without rewriting it. */
 export async function start(): Promise<ServiceStatus> {
   if (!existsSync(PLIST_PATH)) throw new Error('the service is not installed; run `agentdeck install`');
   if ((await serviceStatus()).loaded) throw new Error('the service is already started');
@@ -126,13 +111,11 @@ export async function start(): Promise<ServiceStatus> {
   return waitRunning();
 }
 
-/** Unload the service so the daemon stops, keeping the plist (it starts again at login or with `service start`). */
 export async function stop(): Promise<void> {
   if (!(await serviceStatus()).loaded) throw new Error('the service is not running');
   await bootout();
 }
 
-/** Kill the daemon and let launchd start it again on whatever code is on disk. */
 export async function restart(): Promise<ServiceStatus> {
   const st = await serviceStatus();
   if (!st.installed) throw new Error('the service is not installed; run `agentdeck install`');
@@ -141,7 +124,6 @@ export async function restart(): Promise<ServiceStatus> {
   return waitRunning();
 }
 
-// launchd reports a transient spawn state for a moment; wait briefly for "running".
 async function waitRunning(): Promise<ServiceStatus> {
   for (let i = 0; i < 20; i++) {
     const st = await serviceStatus();
@@ -151,7 +133,6 @@ async function waitRunning(): Promise<ServiceStatus> {
   return serviceStatus();
 }
 
-/** Write the plist and (re)load it. The daemon starts right away and at every login. */
 export async function install(): Promise<ServiceStatus> {
   ensureDirs();
   mkdirSync(dirname(PLIST_PATH), { recursive: true });

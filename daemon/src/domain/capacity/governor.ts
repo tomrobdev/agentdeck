@@ -1,12 +1,4 @@
-// Decides whether the scheduler may start new work, from the utilization Claude
-// reports in rate_limit_event (five_hour and seven_day windows, 0..1).
-//
-// - 5-hour window: throttle to one task above the soft limit, hold above the cap.
-//   Headroom below 100% stays free for your own interactive Claude use.
-// - 7-day window: pace spending evenly across the week. The allowance grows
-//   linearly from 0 at the window start to weekly_max at reset, plus some slack,
-//   so a busy morning can't burn the whole week.
-// Running tasks are never interrupted; this only gates new starts.
+// Decides whether the scheduler may start new work, from the utilization Claude reports in rate_limit_event (five_hour and seven_day windows, 0..1).
 
 import { wholeNumberError } from '../shared/index.ts';
 
@@ -45,7 +37,6 @@ export interface Decision {
 
 const WEEK = 7 * 86400;
 
-/** Utilization still counts only until its window resets. */
 function current(windows: WindowObs[], name: string, now: number): WindowObs | null {
   const w = windows.find((x) => x.window === name);
   return w && w.resets_at > now ? w : null;
@@ -77,7 +68,6 @@ export function decide(windows: WindowObs[], budget: Budget, maxConcurrent: numb
     if (week.utilization >= budget.weekly_max) {
       holds.push({ reason: `7d usage ${pct(week.utilization)} ≥ cap ${pct(budget.weekly_max)}`, until: week.resets_at });
     } else if (week.utilization > weeklyAllowed) {
-      // When does the linear allowance catch up with what has been used?
       const catchUp = start + ((week.utilization - budget.pace_slack) / budget.weekly_max) * WEEK;
       holds.push({
         reason: `7d usage ${pct(week.utilization)} is ahead of pace (${pct(weeklyAllowed)} allowed now)`,
@@ -87,7 +77,6 @@ export function decide(windows: WindowObs[], budget: Budget, maxConcurrent: numb
   }
 
   if (holds.length) {
-    // The latest-lifting hold is the one that matters.
     const h = holds.reduce((a, b) => (b.until > a.until ? b : a));
     return {
       allow: false,
@@ -108,5 +97,4 @@ export function validateBudget(b: Budget): string | null {
   return null;
 }
 
-/** The slot count (`max_concurrent`) must be a whole number from 1 to 8. */
 export const validateSlots = (value: unknown): string | null => wholeNumberError('max_concurrent', value, 1, 8);

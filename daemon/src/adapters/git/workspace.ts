@@ -1,5 +1,4 @@
-// Adapter for the Workspace port (application/ports/workspace.ts): git, the shell and a worktree's files, grouped into the
-// operations the use cases need, on git.ts, shell.ts, plan-file.ts, protected-edits.ts and repo-root.ts.
+// Adapter for the Workspace port (application/ports/workspace.ts): git, the shell and a worktree's files, grouped into the operations the use cases need, on git.ts, shell.ts, plan-file.ts, protected-edits.ts and repo-root.ts.
 import type { Repo } from '../../domain/repos/index.ts';
 import { errorMessage } from '../../domain/shared/index.ts';
 import type { Task } from '../../domain/work/index.ts';
@@ -45,7 +44,6 @@ import { applyProtectedEdits } from '../local/protected-edits.ts';
 import { rootInfo } from './repo-root.ts';
 import { runCommand, runProgram } from '../process/shell.ts';
 
-/** Run `step` after a merge started at `before`; if it throws, put the branch back first. */
 async function orUndo<T>(worktree: string, before: string, step: () => Promise<T>): Promise<T> {
   try {
     return await step();
@@ -61,7 +59,7 @@ export const workspace = {
   async removeCheckout(repo: Repo, checkout: { worktree?: string | null; branch?: string | null }): Promise<void> {
     if (checkout.worktree) await removeWorktree(repo, checkout.worktree);
     if (checkout.branch) await deleteBranch(repo.path, checkout.branch);
-    await pruneWorktrees(repo.path).catch(() => {}); // the repo's folder may be gone; nothing to prune then
+    await pruneWorktrees(repo.path).catch(() => {});
   },
 
   async withScratchCheckout<T>(repo: Repo, use: (checkout: { path: string } | { error: string }) => Promise<T>): Promise<T> {
@@ -86,7 +84,6 @@ export const workspace = {
     if (!(await isGitRepo(path))) return null;
     const has = (ref: string) => (base ? refExists(path, ref) : Promise.resolve(false));
     const [branch, origin, local, remote] = await Promise.all([
-      // A repo with no commits yet has no HEAD to name, only the branch it is on.
       currentBranch(path).catch(async () => (await checkedOutBranch(path)) ?? 'HEAD'),
       hasOrigin(path),
       has(`refs/heads/${base}`),
@@ -118,7 +115,6 @@ export const workspace = {
   applyProtectedEdits: (worktree: string) => applyProtectedEdits(worktree),
 
   async startSync(repo: Repo, worktree: string, leftovers: string) {
-    // A merge left half done by a crash would otherwise be committed with its markers.
     if (await mergeInProgress(worktree)) await abortMerge(worktree, await headCommit(worktree));
     await commitLeftovers(worktree, leftovers);
     const ref = await startPoint(repo.path, repo.base_branch);
@@ -161,7 +157,7 @@ export const workspace = {
     try {
       return await diffHash(repoPath, base, head);
     } catch {
-      return null; // no such commit, or git refused: the review is stored without it
+      return null;
     }
   },
 

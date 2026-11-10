@@ -1,4 +1,4 @@
-// How a task's history rows are worded, for an agent (terse, in the digest) and for a person (the timeline). Pure: no I/O.
+// How a task's history rows are worded, for an agent (terse, in the digest) and for a person (the timeline).
 import { type TaskEventRow, isAutoMergeReason, isPrOpenedReason, isRequestedMergeReason, prSeenState } from '../lifecycle/history.ts';
 import { short } from '../../shared/index.ts';
 
@@ -15,7 +15,6 @@ const REASON_MAX = 80;
 const withReason = (what: string, reason: string | null) => (reason ? `${what}: ${short(reason, REASON_MAX)}` : what);
 
 function agentText(e: EventFields): string {
-  // Whatever the trigger (a usage limit, a restart, the environment), a task that ended cancelled was cancelled.
   if (e.to_status === 'cancelled' && e.type !== 'reject') return 'cancelled';
   switch (e.type) {
     case 'created':
@@ -51,13 +50,11 @@ function agentText(e: EventFields): string {
     case 'pr_merged':
       return 'PR merged';
     case 'merge':
-      // The reason is how: "auto-merged (squash)" or "requested (squash)" from the daemon, "squash merge" from a person.
       if (e.reason && isAutoMergeReason(e.reason)) return `PR ${short(e.reason, REASON_MAX)}`;
       if (e.reason && isRequestedMergeReason(e.reason)) return `PR merged as ${short(e.reason, REASON_MAX)}`;
       return e.reason ? `PR merged (${short(e.reason, REASON_MAX)})` : 'PR merged';
     case 'pr': {
       if (isPrOpenedReason(e.reason)) return 'PR opened';
-      // The daemon words a PR found changed as "PR is merged".
       const seen = prSeenState(e.reason);
       if (seen !== null) return `PR ${short(seen, REASON_MAX)}`;
       return withReason('PR', e.reason);
@@ -79,7 +76,6 @@ function agentText(e: EventFields): string {
   }
 }
 
-/** Rows whose sentence already says what the reason says, so the timeline does not repeat it. */
 const REASON_IN_TEXT = new Set<string>(['sync', 'pr', 'pr_closed', 'plan_unfinished', 'pr_merged']);
 
 function personText(e: EventFields): PersonEventText | null {
@@ -131,9 +127,7 @@ function personText(e: EventFields): PersonEventText | null {
   }
 }
 
-/** What one history row says happened, in the domain language: a line for an agent. */
 export function describeEvent(e: EventFields, reader?: 'agent'): string;
-/** What the timeline shows for a row, or null for a row it leaves out. */
 export function describeEvent(e: EventFields, reader: 'person'): PersonEventText | null;
 export function describeEvent(e: EventFields, reader: 'agent' | 'person' = 'agent'): string | PersonEventText | null {
   return reader === 'person' ? personText(e) : agentText(e);

@@ -1,6 +1,4 @@
-// The verify run of a proposed or queued task, started by a person: claude reads the base in a scratch checkout with
-// read-only tools and checks each claim the task's prompt makes about the code. The run stores its findings as its result,
-// with the commit it read. It takes a slot, uses no attempt and changes nothing (domain/runs/verify.ts).
+// The verify run of a proposed or queued task, started by a person: claude reads the base in a scratch checkout with read-only tools and checks each claim the task's prompt makes about the code.
 import type { App } from '../ports/app.ts';
 import type { RunId, TaskId } from '../../domain/shared/index.ts';
 import { errorMessage } from '../../domain/shared/index.ts';
@@ -21,35 +19,23 @@ import { queueWait } from '../capacity/gate.ts';
 import { refuse, requireTask, requireTaskRepo } from '../shared/input.ts';
 import { type OpenedRun, endTaskRun, openTaskRun, startTaskRun } from './claude-run.ts';
 
-/**
- * What a verify run came to. `done`: it stored its findings; `garbage`: its answer could not be read; `cancelled`: the
- * task stopped being proposed or queued (rejected, cancelled or claimed) while it ran.
- */
 export interface VerifyReport {
   outcome: 'done' | 'garbage' | 'failed' | 'rate_limited' | 'cancelled';
   findings: VerifyFinding[];
-  /** The base commit it read; null when the checkout could not be made. */
   commit: string | null;
   reason?: string;
 }
 
-/** A verify run that has started: its row, and its end, which never rejects. */
 export interface VerifyStart {
   run_id: RunId;
   done: Promise<VerifyReport>;
 }
 
-/** Whether the task is still one a verify run reads for: proposed or queued. */
 const stillChecked = (app: App, id: TaskId): boolean => {
   const status = app.getTask(id)?.status;
   return status !== undefined && CHECKED_STATUSES.includes(status);
 };
 
-/**
- * Start a verify run for a proposed or queued task. Refused when the task is in another status, already has one going,
- * or no work may start now (paused, rate limited, the governor says wait, or every slot in use). The row opens before anything is
- * awaited, so a second call finds it going. `done` never rejects: a failure ends the row failed.
- */
 export function startVerify(app: App, id: TaskId): VerifyStart {
   const task = requireTask(app, id);
   refuse(verifyRefusal(task, app.runsForTask(id)));
@@ -82,7 +68,6 @@ function runOpened(app: App, task: Task, repo: Repo, opened: OpenedRun): Promise
       tools: VERIFY_TOOLS,
       disallowed: VERIFY_DENIED_TOOLS,
       args: verifySchemaArgs(),
-      // Rejected, cancelled or claimed: the prompt it checks is no longer waiting for approval.
       cancelled: () => !stillChecked(app, task.id),
     });
     const { end } = ran;
@@ -102,7 +87,6 @@ function runOpened(app: App, task: Task, repo: Repo, opened: OpenedRun): Promise
       await endTaskRun(app, opened, 'failed', reason, { ...fields, result_text: reason });
       return { outcome: 'garbage', findings: [], commit, reason };
     }
-    // Its result is its findings, as JSON: the Runs tab and `agentdeck show` read them back (runFindings).
     await endTaskRun(app, opened, 'done', undefined, { ...fields, result_text: JSON.stringify(answer) });
     return { outcome: 'done', findings: answer.findings, commit };
   });

@@ -1,26 +1,16 @@
-// The verify run: a claude run a person starts on a proposed or queued task, which reads the base in a scratch checkout and
-// checks each claim the task's prompt makes about the code, answering with findings in VERIFY_ANSWER_SCHEMA. It uses no
-// attempt, takes the review model and changes nothing: what to do about its findings is a person's call. Pure: no I/O.
+// The verify run: a claude run a person starts on a proposed or queued task, which reads the base in a scratch checkout and checks each claim the task's prompt makes about the code, answering with findings in VERIFY_ANSWER_SCHEMA.
 import type { RunId } from '../shared/index.ts';
 import { plural } from '../shared/index.ts';
 import { CHECKED_STATUSES, type Task } from '../work/index.ts';
 import { REVIEW_DENIED_TOOLS, answerValue, isRecord } from './review.ts';
 import type { Run } from './run.ts';
 
-/** A verify run reads; it does not do the task. */
 export const VERIFY_MAX_TURNS = 30;
 
-/** The tools a verify run is given in place of the repo's: it reads the files and the history, and runs nothing else. */
 export const VERIFY_TOOLS = ['Read', 'Grep', 'Glob', 'Bash(git log*)', 'Bash(git show*)', 'Bash(git grep*)'];
 
-/** Denied outright, as for a review run: the run's settings file allows Edit in its checkout. */
 export const VERIFY_DENIED_TOOLS = REVIEW_DENIED_TOOLS;
 
-/**
- * What a verify run found of a claim: `true` when the code bears it out, `false` when the code says otherwise, `stale`
- * when it was true once but the code moved on (a file moved, a function renamed, the work already done), `partly` when only
- * part of it is true.
- */
 export const CLAIM_VERDICTS = ['true', 'false', 'stale', 'partly'] as const;
 export type ClaimVerdict = (typeof CLAIM_VERDICTS)[number];
 
@@ -44,7 +34,6 @@ export interface VerifyAnswer {
   findings: VerifyFinding[];
 }
 
-/** The JSON schema of a verify run's answer, passed to claude with --json-schema. */
 export const VERIFY_ANSWER_SCHEMA = {
   type: 'object',
   properties: {
@@ -72,12 +61,10 @@ export const VERIFY_ANSWER_SCHEMA = {
   required: ['findings'],
 };
 
-/** The claude arguments that make a verify run answer in VERIFY_ANSWER_SCHEMA. */
 export function verifySchemaArgs(): string[] {
   return ['--json-schema', JSON.stringify(VERIFY_ANSWER_SCHEMA)];
 }
 
-/** Appended to the verify run's system prompt in place of the worker's. */
 export function verifySystemPrompt(): string {
   return `You are running unattended as an AgentDeck verify run, inside a throwaway checkout of the repo's base branch.
 - You check; you do not change anything. Never edit files, commit, push or switch branches.
@@ -91,10 +78,6 @@ export interface VerifyContext {
   commit: string;
 }
 
-/**
- * The prompt of a verify run: the task's whole prompt, the commit of the base it reads, then which claims to check and how
- * to answer each.
- */
 export function buildVerifyPrompt(task: Pick<Task, 'id' | 'title' | 'prompt'>, ctx: VerifyContext): string {
   return [
     `AgentDeck verify run for task #${task.id}: "${task.title}".`,
@@ -118,7 +101,6 @@ export function buildVerifyPrompt(task: Pick<Task, 'id' | 'title' | 'prompt'>, c
 
 const text = (v: unknown): string => (typeof v === 'string' ? v.trim() : '');
 
-/** One finding, or null when it names no claim or a verdict that is not one of CLAIM_VERDICTS. */
 function parseFinding(v: unknown): VerifyFinding | null {
   if (!isRecord(v)) return null;
   const claim = text(v.claim);
@@ -135,18 +117,12 @@ function parseFinding(v: unknown): VerifyFinding | null {
   };
 }
 
-/**
- * A verify run's answer, from its structured output or its stored result. Null when it is garbage: not an object, or no
- * list of findings. A partial answer keeps what it can: a finding with no claim or an unknown verdict is left out, and
- * one with no file, line, evidence or fix keeps the rest.
- */
 export function parseVerifyAnswer(raw: unknown): VerifyAnswer | null {
   const v = answerValue(raw);
   if (!isRecord(v) || !Array.isArray(v.findings)) return null;
   return { findings: v.findings.map(parseFinding).filter((f): f is VerifyFinding => f !== null) };
 }
 
-/** Why a verify run may not start for `task` now (`runs` is its runs), or null when it may. */
 export function verifyRefusal(task: Pick<Task, 'id' | 'status'>, runs: Pick<Run, 'kind' | 'ended_at'>[]): string | null {
   if (!CHECKED_STATUSES.includes(task.status)) return `#${task.id} is ${task.status}: a verify run is for a proposed or queued task`;
   if (runs.some((r) => r.kind === 'verify' && r.ended_at === null)) return `#${task.id} already has a verify run going`;
@@ -169,18 +145,12 @@ export interface VerifyView {
   ended_at: string | null;
 }
 
-/** A verify run's findings, read from its stored result; null for another kind or a run that left none. */
 export function runFindings(run: Pick<Run, 'kind' | 'outcome' | 'result_text'>): VerifyFinding[] | null {
   if (run.kind !== 'verify' || run.outcome !== 'done') return null;
   return parseVerifyAnswer(run.result_text)?.findings ?? null;
 }
 
-/**
- * The task's latest verify run (`runs` oldest first), or null when it has none. `base` is the commit the base is at now
- * (null when unknown): findings read at another commit are stale.
- */
 export function latestVerify(
-  // `base_commit` may be missing from a daemon that predates it (the dashboard's Run).
   runs: (Pick<Run, 'id' | 'kind' | 'outcome' | 'result_text' | 'started_at' | 'ended_at'> & { base_commit?: string | null })[],
   base: string | null,
 ): VerifyView | null {
@@ -201,7 +171,6 @@ export function latestVerify(
   };
 }
 
-/** The findings in one line: "4 claims: 2 true, 1 false, 1 stale", or "No claims about the code" for none. */
 export function verifyLine(findings: Pick<VerifyFinding, 'verdict'>[]): string {
   if (!findings.length) return 'No claims about the code';
   const counts = CLAIM_VERDICTS.flatMap((v) => {
@@ -211,6 +180,5 @@ export function verifyLine(findings: Pick<VerifyFinding, 'verdict'>[]): string {
   return `${plural(findings.length, 'claim')}: ${counts.join(', ')}`;
 }
 
-/** Where a finding points: "src/a.ts:12", "src/a.ts", or null. */
 export const findingPlace = (f: Pick<VerifyFinding, 'path' | 'line'>): string | null =>
   f.path ? (f.line ? `${f.path}:${f.line}` : f.path) : null;

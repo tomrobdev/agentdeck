@@ -1,5 +1,4 @@
-// Plans: stored in AgentDeck per task, named after the task they belong to (`112-plans-in-agentdeck.html`). A task
-// follows its linked plan (plan_task) or else its own; each run gets it in the worktree's plan file and gives it back.
+// Plans: stored in AgentDeck per task, named after the task they belong to (`112-plans-in-agentdeck.html`).
 import type { App } from '../ports/app.ts';
 import {
   type OwnPlan,
@@ -19,7 +18,6 @@ import { hasPlanLink, otherPlanOwner } from '../../domain/work/index.ts';
 import { PLAN_ATTACHABLE_STATUSES, type Task } from '../../domain/work/index.ts';
 import { ActionError, object, requireTask } from '../shared/input.ts';
 
-/** HTML a person gives as a plan: refused unless it is a plan and small enough. */
 export function readPlanInput(html: unknown): { html: string; plan: ParsedPlan } {
   if (typeof html !== 'string' || !html.trim()) throw new ActionError('the plan is empty');
   if (Buffer.byteLength(html) > PLAN_LIMIT) throw new ActionError(`a plan can be at most ${PLAN_LIMIT / 1024} KB`);
@@ -28,7 +26,6 @@ export function readPlanInput(html: unknown): { html: string; plan: ParsedPlan }
   return { html, plan };
 }
 
-/** The plan a task follows: the linked task's plan, or else its own. `steps` are the linked step ids, null for every step. */
 export function followedPlan(app: App, task: Pick<Task, 'id' | 'plan'>): (OwnPlan & { steps: string[] | null }) | null {
   if (task.plan !== null) {
     const plan = app.ownPlan(task.plan.task);
@@ -38,19 +35,12 @@ export function followedPlan(app: App, task: Pick<Task, 'id' | 'plan'>): (OwnPla
   return own ? { ...own, steps: null } : null;
 }
 
-/** The plan a run follows, for its prompt. A linked plan that is gone comes back with html null. */
 export function planForRun(app: App, task: Task): PromptPlan | null {
   const plan = followedPlan(app, task);
   if (plan) return { name: plan.name, html: plan.html, steps: plan.steps };
   return task.plan !== null ? { name: `#${task.plan.task}'s plan`, html: null, steps: task.plan.steps } : null;
 }
 
-/**
- * After a run, whatever its outcome, and before every run (in case a restart cut the last one off before it got here):
- * store what the worker left in the plan file. What the stored plan becomes is planAfterRun's to decide: the whole file, or only the
- * linked steps the run changed. A task with no plan that wrote one gets it as its own plan. What was taken is then
- * recorded as the given copy, so taking the same file again changes nothing. Returns whether a plan changed.
- */
 export async function takePlanFile(app: App, task: Task, worktree: string): Promise<boolean> {
   const { written, given } = await app.workspace.readPlanFiles(worktree);
   if (written === null || !parsePlan(written)) return false;
@@ -59,7 +49,6 @@ export async function takePlanFile(app: App, task: Task, worktree: string): Prom
   return changed;
 }
 
-/** Store a plan file a run left: no await, so the read, merge and write of the stored plan happen in one go. */
 function storeWrittenPlan(app: App, task: Task, written: string, given: string | null): boolean {
   const plan = followedPlan(app, task);
   if (plan) {
@@ -69,16 +58,11 @@ function storeWrittenPlan(app: App, task: Task, written: string, given: string |
     app.updatePlanHtml(plan.id, html);
     return true;
   }
-  if (hasPlanLink(task)) return false; // linked to a plan that is gone: nothing to write back into
+  if (hasPlanLink(task)) return false;
   app.saveOwnPlan(task.id, written, 'worker');
   return true;
 }
 
-/**
- * Refuse `plan` as the new plan of task `owner` when a task following its plan (and not yet done or cancelled) links a
- * step id the new plan doesn't have: that task would be left with no steps to do. `skip` leaves out a task whose
- * steps are checked on their own.
- */
 export function checkFollowers(app: App, owner: TaskId, plan: ParsedPlan, skip?: TaskId): void {
   const followers = app
     .planFollowers(owner)
@@ -91,20 +75,17 @@ export function checkFollowers(app: App, owner: TaskId, plan: ParsedPlan, skip?:
   }
 }
 
-/** The linked steps of the plan a task follows, as AgentDeck stores them. Null when it follows none. */
 export function followedSteps(app: App, task: Task): ReturnType<typeof linkedSteps> {
   const plan = followedPlan(app, task);
   return plan && linkedSteps(plan.html, plan.steps);
 }
 
-/** The plan a task follows and its linked steps, for the PR body. Null when it follows none. */
 export function prPlanFor(app: App, task: Task): PrPlan | null {
   const plan = followedPlan(app, task);
   const steps = followedSteps(app, task);
   return plan && steps ? { name: plan.name, steps } : null;
 }
 
-/** The plans a task shows: the plan it follows when that belongs to another task, then its own, oldest first. */
 export function plansShown(app: App, task: Pick<Task, 'id' | 'plan'>): TaskPlan[] {
   const own = app.plansForTask(task.id);
   const owner = otherPlanOwner(task);
@@ -112,11 +93,6 @@ export function plansShown(app: App, task: Pick<Task, 'id' | 'plan'>): TaskPlan[
   return linked ? [toPlan(linked), ...own] : own;
 }
 
-/**
- * Store or replace a task's own plan, under its numbered name (`<task id>-<slug>.html`). Not while the task runs: its
- * run's end would write the old plan back over it. The store checks that in the same write as the plan and the edit
- * it records, which tells a cut-off follower to start afresh.
- */
 export function attachPlan(app: App, id: TaskId, input: { html?: unknown }): TaskPlan {
   const task = requireTask(app, id);
   const notNow = (status: string) => new ActionError(`#${id} is ${status}; a plan can't be attached while it runs`);
@@ -128,7 +104,6 @@ export function attachPlan(app: App, id: TaskId, input: { html?: unknown }): Tas
   return saved;
 }
 
-/** One plan's HTML, for the dashboard to show in full. */
 export function planHtml(app: App, id: TaskId, planId: number): { html: string } {
   const html = app.planHtml(id, planId);
   if (html === undefined) throw new ActionError('no such plan');

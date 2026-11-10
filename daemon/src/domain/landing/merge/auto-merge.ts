@@ -1,4 +1,4 @@
-// Whether the daemon may merge a done task's PR without a person (docs/plans/auto-merge.html). Pure: no I/O.
+// Whether the daemon may merge a done task's PR without a person (docs/plans/auto-merge.html).
 import type { Repo } from '../../repos/index.ts';
 import { PROTECTED_PREFIXES, isProtectedPath } from '../../repos/index.ts';
 import { wholeNumberError } from '../../shared/index.ts';
@@ -7,7 +7,6 @@ import { type AutoMergeCheck, type MergeInput, type MergeReason, type MergeReaso
 import type { PullRequest } from '../pull-request/pr.ts';
 import { type ReviewFacts, reviewGate } from '../review/review-gate.ts';
 
-/** The label a PR carries while the daemon may merge it. Removing it on GitHub opts that PR out. */
 export const AUTO_MERGE_LABEL = {
   name: 'agentdeck:auto-merge',
   description: 'AgentDeck merges this PR once its checks pass',
@@ -22,10 +21,6 @@ export interface AutoMergeSetting {
   source: string;
 }
 
-/**
- * Whether auto-merge is on for a task: its own setting, else its repo's. A planner proposal only takes the repo's
- * setting when a person approved it (the repo has auto_approve off), so no work reaches the base unseen.
- */
 export function autoMergeOn(task: AutoMergeSetting, repo: Pick<Repo, 'auto_merge' | 'auto_approve'>): boolean {
   if (task.auto_merge !== null) return task.auto_merge;
   return repo.auto_merge && (task.source !== 'planner' || !repo.auto_approve);
@@ -33,10 +28,6 @@ export function autoMergeOn(task: AutoMergeSetting, repo: Pick<Repo, 'auto_merge
 
 const someOf = (paths: string[]) => `${paths.slice(0, 3).join(', ')}${paths.length > 3 ? ` and ${paths.length - 3} more` : ''}`;
 
-/**
- * Why changed `paths` keep a PR from auto-merging: protected files (under .claude/, whatever the repo's skip list says),
- * which instruct every later agent, and the repo's `auto_merge_skip` prefixes. Empty when none are touched.
- */
 export function pathReasons(paths: string[], skip: string[]): MergeReason[] {
   const protectedPaths = paths.filter(isProtectedPath);
   const skipped = paths.filter((path) => !isProtectedPath(path) && skip.some((prefix) => path.startsWith(prefix)));
@@ -66,20 +57,12 @@ export interface AutoMergeFacts {
   review?: ReviewFacts | null;
 }
 
-/**
- * Whether the daemon may merge this PR now, for a task with auto-merge on: the merge dialog's findings as a merge request
- * reads them (`unattendedVerdict`), plus what only auto-merge asks, in the order below. Something must have tested it: the last tested run passed, or the repo has no test command and
- * a CI check ran on the PR (passed or failed; skipped and neutral ones tested nothing). It must carry the label, stay
- * under the repo's limits, and nothing may be paused. The size is `measured` from git when the branch could be measured
- * at the PR's head; otherwise it is GitHub's, whose file list stops at 100, so a longer one needs a person.
- */
 export function autoMergeCheck(input: MergeInput & AutoMergeFacts): AutoMergeCheck {
   const { repo, pr, tests_passed, measured } = input;
   const never: MergeReason[] = [];
   const add = (kind: MergeReasonKind, text: string) => never.push({ kind, text });
   if (!pr.labels.includes(AUTO_MERGE_LABEL.name)) add('no_label', `the PR has no ${AUTO_MERGE_LABEL.name} label`);
   if (repo.test_cmd && tests_passed === null) add('tests_not_run', 'the tests have not run');
-  // A check that ran counts, not one skipped or neutral; one still running is the wait its finding says.
   if (!repo.test_cmd && tests_passed === null && !checksRan(pr) && !pr.checks.pending)
     add('untested', 'nothing tested it: the repo has no test command and no check ran on the PR');
   const lines = measured ? measured.lines : pr.additions + pr.deletions;
@@ -116,16 +99,10 @@ export interface AutoMergeView {
   limits: { max_lines: number; skip: string[]; tests: string; review: string | null };
 }
 
-/** What the review gate asks, as the limits say it. */
 const REVIEW_LIMIT = 'a review run must read the changes and find nothing blocking, unless a person reviewed them';
 
 const LABELS = { off: 'auto-merge off', on: 'auto-merge on', merge: 'will auto-merge' };
 
-/**
- * What every view says about a task's auto-merge, from its setting, the check the PR refresh stored (counted only
- * while the PR is open) and its repo's limits. `measured`, for a branch with no open PR, adds how it stands against
- * the limits now. Pure: the CLI and the dashboard word it the same way.
- */
 export function autoMergeView(
   task: AutoMergeSetting & { pr: PullRequest | null },
   repo: Pick<Repo, 'auto_merge' | 'auto_approve' | 'test_cmd' | 'auto_merge_max_lines' | 'auto_merge_skip' | 'auto_review'>,

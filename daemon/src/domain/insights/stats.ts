@@ -1,4 +1,4 @@
-// The pilot scorecard's measures (docs/pilot/scorecard.md), computed from plain run rows. Pure: no I/O.
+// The pilot scorecard's measures (docs/pilot/scorecard.md), computed from plain run rows.
 import type { RepoId, TaskId } from '../shared/index.ts';
 import { minutesBetween, weekOf } from '../shared/index.ts';
 import { num, pct, table } from './report-text.ts';
@@ -54,7 +54,6 @@ export interface Measures {
 
 const Z_95 = 1.96;
 
-/** The Wilson score interval for `successes` out of `n` at 95%. null when n is 0. */
 export function wilson(successes: number, n: number, z = Z_95): Interval | null {
   if (n <= 0) return null;
   const p = successes / n;
@@ -65,7 +64,6 @@ export function wilson(successes: number, n: number, z = Z_95): Interval | null 
   return { low: Math.max(0, center - half), high: Math.min(1, center + half) };
 }
 
-/** The measures over a set of work runs. A run a daemon restart cut off is no verdict, so it is not a first run. */
 export function measure(rows: StatRun[]): Measures {
   const taskIds = new Set(rows.map((r) => r.task_id));
   const firstRuns = rows.filter((r) => r.attempt === 1 && r.outcome !== null && r.outcome !== INTERRUPTED);
@@ -90,7 +88,6 @@ export function measure(rows: StatRun[]): Measures {
   };
 }
 
-/** The measures of each repo that has work runs, by repo id. */
 export function measureByRepo(rows: StatRun[]): Map<RepoId, Measures> {
   const groups = new Map<RepoId, StatRun[]>();
   for (const r of rows) groups.set(r.repo_id, [...(groups.get(r.repo_id) ?? []), r]);
@@ -102,14 +99,12 @@ export interface StatsReport {
   total: Measures;
 }
 
-/** "80% (n=10, 49–94%)", or "–" with no finished first run. */
 export function fmtFirstRun(m: Measures): string {
   if (m.first_run_rate === null || !m.first_run_interval) return '–';
   const { low, high } = m.first_run_interval;
   return `${pct(m.first_run_rate)} (${m.first_run_done}/${m.first_runs}, 95% ${pct(low)}–${pct(high)})`;
 }
 
-/** The first-run measures of each week with work runs, oldest first. A task goes by the week its first run began. */
 export function measureByWeek(rows: StatRun[]): { week: string; measures: Measures }[] {
   const firstStart = new Map<number, string>();
   for (const r of rows) {
@@ -124,7 +119,6 @@ export function measureByWeek(rows: StatRun[]): { week: string; measures: Measur
   return [...groups].map(([week, group]) => ({ week, measures: measure(group) })).sort((a, b) => a.week.localeCompare(b.week));
 }
 
-/** The report as an aligned table, one row per repo and a total row. */
 export function statsTable(report: StatsReport): string {
   const head = ['repo', 'tasks', 'runs', 'first run done', 'denials/run', 'cost/done task', 'min/done task'];
   const row = (name: string, m: Measures) => [

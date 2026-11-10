@@ -1,4 +1,4 @@
-// What a worker's claude is told and allowed. Pure: no I/O.
+// What a worker's claude is told and allowed.
 import { PLAN_FILE, parsePlanWithText } from '../work/index.ts';
 import { PR_SUMMARY_FORMAT } from '../landing/index.ts';
 import { ALWAYS_DISALLOWED_TOOLS } from '../repos/index.ts';
@@ -10,10 +10,6 @@ import { INTERRUPTED, type Run } from './run.ts';
 import { UNBLOCK_NOTE } from './unblock.ts';
 import { REVIEW_NOTE } from './review.ts';
 
-/**
- * Appended to every worker's system prompt; the worker parses the STATUS line. `testCmd` is the command
- * AgentDeck runs after the agent finishes: naming it lets the agent pass it first.
- */
 export function workerSystemPrompt(testCmd: string | null): string {
   return `You are running unattended as an AgentDeck worker inside a git worktree on your own branch.
 - Complete the task fully, keeping changes focused on it.
@@ -52,11 +48,6 @@ export interface PromptPlan {
   steps: string[] | null;
 }
 
-/**
- * The block after the task's prompt that carries the plan's steps: the linked steps (`plan.steps`, or every step when
- * none are named) that are not yet done or skipped, with their text and done criteria. The plan itself is in
- * PLAN_FILE, where the worker sets their statuses.
- */
 export function planPromptBlock(plan: PromptPlan): string {
   const parsed = plan.html === null ? null : parsePlanWithText(plan.html);
   if (!parsed) {
@@ -86,12 +77,6 @@ export function planPromptBlock(plan: PromptPlan): string {
   return lines.join('\n');
 }
 
-/**
- * `reviewNote` is what the person asked to change when they sent the task back from review. `plan` is the plan the task
- * carries out, if any: its steps go after the task's prompt. `review` is the review being addressed, comment by comment;
- * it takes the place of `reviewNote` only when that is the review's own retry (`ownRetry`, which holds the same comments,
- * flattened); a later retry's note goes under it. `escalated` is why this attempt runs one model up (`escalationSince`), if it does.
- */
 export function buildPrompt(
   task: Task,
   previousRuns: Run[],
@@ -104,8 +89,6 @@ export function buildPrompt(
   const last = work.at(-1);
   const base = plan ? `${task.prompt}\n\n${planPromptBlock(plan)}` : task.prompt;
   if (!last) return base;
-  // A restart's run was cut off, not finished: it has no verdict or final message to pass on, so the verdict, tests and
-  // final message are the newest finished run's.
   const interrupted = last.outcome === INTERRUPTED;
   const finished = work.findLast((r) => r.outcome !== INTERRUPTED);
   const verdict = !finished
@@ -115,12 +98,10 @@ export function buildPrompt(
       : finished.attempt < task.attempts
         ? `Before that, the previous attempt ended as "${finished.outcome}".`
         : `Before that, a run of this attempt ended as "${finished.outcome}".`;
-  // An unblock or review run's note names itself (UNBLOCK_NOTE, REVIEW_NOTE); a person's is what they asked to change.
   const named = reviewNote !== null && (reviewNote.startsWith(UNBLOCK_NOTE) || reviewNote.startsWith(REVIEW_NOTE));
   const note = reviewNote === null ? '' : named ? `${reviewNote}\n` : `Changes requested in review:\n${reviewNote}\n`;
   return [
     review ? `${reviewPromptBlock(review)}\n` : '',
-    // The review's own retry note is the review block; any other note (Fix checks, an unblock run) goes under it.
     review?.ownRetry ? '' : note,
     base,
     '',
@@ -135,11 +116,6 @@ export function buildPrompt(
     .join('\n');
 }
 
-/**
- * The prompt of a run that resumes the claude session a daemon restart cut off (`resumableSession`). The session
- * already holds the task and its plan; this says what happened and that the worktree may have moved on since: the
- * sync before every run commits what was left uncommitted and may merge the base branch in.
- */
 export function buildResumePrompt(task: Pick<Task, 'id' | 'title'>): string {
   const leftovers = leftoversMessage(task).split('\n')[0];
   return [
@@ -152,7 +128,6 @@ export function buildResumePrompt(task: Pick<Task, 'id' | 'title'>): string {
   ].join('\n');
 }
 
-/** How many commit messages of each side the resolve prompt quotes. */
 const SIDE_COMMITS = 15;
 
 export interface ResolveContext {
@@ -175,10 +150,6 @@ const bullets = (subjects: string[]) =>
       ].join('\n')
     : '- (none)';
 
-/**
- * The prompt of a resolve run: the merge of the base into the task's branch is under way in the worktree and has
- * conflicts. It names the files, both sides' commit messages and the task's goal, and asks for the intent of both sides.
- */
 export function buildResolvePrompt(task: Pick<Task, 'id' | 'title' | 'prompt'>, ctx: ResolveContext): string {
   return [
     `AgentDeck conflict resolution for task #${task.id}: "${task.title}".`,
@@ -206,14 +177,6 @@ export function buildResolvePrompt(task: Pick<Task, 'id' | 'title' | 'prompt'>, 
   ].join('\n');
 }
 
-/**
- * `settings` is the run's settings file (sandbox and worktree-only file rules, domain/runs/translate/sandbox.ts). `resume` is a
- * claude session to continue (`resumableSession`), with `maxTurns` the turns it has left (`resumeMaxTurns`); everything
- * else, the system prompt and tool rules included, is the same as for a fresh run. `systemPrompt` is the worker's unless
- * the run is another kind (an unblock run ends with UNBLOCK lines, not a STATUS line). `run.model` is the model the run
- * starts with (`runModel`: the task's for a work run, the support model for the others). `extra` adds tools denied on top of
- * the ones always denied (a review run's `REVIEW_DENIED_TOOLS`) and arguments at the end (its `reviewSchemaArgs`).
- */
 export function claudeArgs(
   run: { model: string; max_turns: number },
   allowed: string[],
@@ -240,13 +203,9 @@ export function claudeArgs(
     String(maxTurns),
     '--permission-mode',
     'dontAsk',
-    // No MCP servers or connectors from the person's own config: a run's tools are the same on every machine.
     '--strict-mcp-config',
-    // One argv entry per rule: patterns like "Bash(npm test*)" contain spaces.
     '--allowedTools',
-    // Edit and Write come from the settings file, limited to the worktree.
     ...withoutUnscopedFileTools(allowed),
-    // Kept on top of the sandbox: the agent never pushes, sandbox or not.
     '--disallowedTools',
     ...ALWAYS_DISALLOWED_TOOLS,
     ...(extra.disallowed ?? []),

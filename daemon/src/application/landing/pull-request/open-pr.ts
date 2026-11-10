@@ -11,32 +11,23 @@ import { prPlanFor } from '../../work/plans.ts';
 import { notifyLater } from '../../operations/notifications.ts';
 import { ActionError, requireTask, requireTaskRepo } from '../../shared/input.ts';
 
-/** Record a PR event on the task's latest run log, where `agentdeck log` and the dashboard show it. */
 export function logPrEvent(app: App, taskId: TaskId, event: { url?: string; error?: string }): void {
   const run = app.runsForTask(taskId).at(-1);
   if (run) app.runLog.append(run.log_path, { type: 'agentdeck_pr', ...event });
 }
 
-/** Make sure the repo has the auto-merge label, so a PR can carry it. Throws if gh fails. */
 export function ensureAutoMergeLabel(app: App, cwd: string): Promise<void> {
   return app.codeHost.ensureLabel(cwd, AUTO_MERGE_LABEL);
 }
 
-/**
- * For a task that has just finished done: push its branch and open a PR if its repo's pr_mode asks for one.
- * Never throws and never changes the task's status: a failure is logged as an `agentdeck_pr` event and returned.
- */
 export async function openPullRequest(app: App, task: Task): Promise<{ url?: string; error?: string }> {
   const repo = app.getRepo(task.repo_id);
   const branch = task.checkout?.branch;
   if (!repo || repo.pr_mode === 'off' || !branch) return {};
   try {
     await app.codeHost.push(repo.path, branch);
-    // A task retried while its PR is still open keeps that PR; the push above updated it.
-    // Once that PR is merged or closed, the new commits need a new PR.
     const open = openPrUrl(task.pr);
     if (open) return { url: open };
-    // A PR the daemon may merge carries the label. If the repo can't have it, the PR opens without it and waits for a person.
     const labelled =
       autoMergeOn(task, repo) &&
       (await ensureAutoMergeLabel(app, repo.path).then(
@@ -58,24 +49,17 @@ export async function openPullRequest(app: App, task: Task): Promise<{ url?: str
         (url) => ({ url, state: 'open' as const }),
         (err) => existingPrOf(app, cwd, branch, err),
       );
-    // Recorded whatever the task's status: GitHub has the PR even if the task was retried while it opened.
     for (const event of prEventsOf(pr)) app.recordPr(task.id, event);
     logPrEvent(app, task.id, { url: pr.url });
     return { url: pr.url };
   } catch (err) {
     const error = errorMessage(err);
-    // Tell dependents the PR won't appear on its own. A PR that is already open stays open.
     app.recordPr(task.id, { type: 'failed', error });
     logPrEvent(app, task.id, { error });
     return { error };
   }
 }
 
-/**
- * `gh pr create` failed with `err`. When that is because the branch has a PR already (a daemon stopped between opening it
- * and recording it, or a retry while it opened kept it from being recorded), the PR GitHub has. Otherwise, or when GitHub
- * can't say which PR, throws `err`.
- */
 async function existingPrOf(app: App, cwd: string, branch: string, err: unknown): Promise<BranchPr> {
   if (!isPrExistsError(errorMessage(err))) throw err;
   const found = existingPr(await app.codeHost.prsForBranch(cwd, branch).catch(() => []));
@@ -83,20 +67,10 @@ async function existingPrOf(app: App, cwd: string, branch: string, err: unknown)
   return found;
 }
 
-/**
- * For a done task whose PR failed to open, in a repo with a PR mode: whether the PR refresh opens it again at `now`, from the
- * failures its history records since it finished. Null for any other task.
- */
 function prRetryOf(app: App, task: Task, now: number): PrRetry | null {
   return prRetryFor(task, app.getRepo(task.repo_id), app.eventsForTask(task.id), now);
 }
 
-/**
- * On the PR refresh: open again each done task's PR that failed to open, once its wait is over (`prRetry`: at most
- * PR_OPEN_RETRIES times, each wait twice the last). When the last retry fails, a person is told, with its error; the task
- * then needs a person (`agentdeck open-pr`). A PR that failed to open before the task finished is not counted: a task that
- * finishes again opens its PR as its follow-up. Returns how many opened.
- */
 export async function retryFailedPrs(app: App, log: (msg: string) => void = () => {}, now: number = Date.now()): Promise<number> {
   let opened = 0;
   for (const task of app.failedPrTasks()) {
@@ -116,16 +90,10 @@ export async function retryFailedPrs(app: App, log: (msg: string) => void = () =
   return opened;
 }
 
-/** What a person's `open-pr` came to: the PR's url. */
 export interface OpenTaskPrResult {
   url: string;
 }
 
-/**
- * A person opens a done task's PR: one that failed to open (whether or not the PR refresh still retries it), never opened, or
- * was closed. Pushes the branch first, as when the task finished. Refused when the repo's PR mode is off, the PR is open or
- * merged, or the task has no branch; a failure is recorded on the task like any other and comes back as the error.
- */
 export async function openTaskPr(app: App, id: TaskId): Promise<OpenTaskPrResult> {
   const task = requireTask(app, id);
   if (task.status !== 'done') throw new ActionError(`#${id} is ${task.status}; only a done task's PR can be opened`);

@@ -1,8 +1,7 @@
-// Delivers a notification on the desktop (osascript) and to ntfy. Recording it is the caller's job.
+// Delivers a notification on the desktop (osascript) and to ntfy.
 import { execFile } from 'node:child_process';
 import type { Notification, NotifySettings } from '../../domain/operations/index.ts';
 
-/** AppleScript string literal. */
 const q = (s: string) => `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 
 export function desktop(n: Notification): Promise<void> {
@@ -25,7 +24,6 @@ const NTFY_TAGS: Record<Notification['kind'], string> = {
 };
 
 export async function ntfy(s: NotifySettings, n: Notification): Promise<void> {
-  // JSON publishing keeps titles UTF-8 safe (headers would not be).
   const res = await fetch(s.ntfy_server.replace(/\/$/, ''), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

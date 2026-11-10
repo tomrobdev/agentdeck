@@ -1,4 +1,4 @@
-// A run's stream-json log reduced to what a person wants to read. Pure: no I/O.
+// A run's stream-json log reduced to what a person wants to read.
 import { cut, oneLine } from '../../shared/index.ts';
 
 /** An edit in numbers and a little text, for a small diff. */
@@ -48,22 +48,16 @@ export type LogEntry = LogMeta &
       }
   );
 
-/** The characters of an edit's old and new text the log keeps; a text this long was cut. */
 export const CHANGE_MAX = 2048;
 const OUTPUT_MAX = 4096;
 const PROMPT_MAX = 65536;
 const SUMMARY_MAX = 200;
 
-/**
- * What a run cost at API prices, as the CLI and the dashboard say it: "$2.10 equiv", "<$0.01 equiv", or "–" for none
- * (claude reports no cost under a subscription's quota, or the run had no result).
- */
 export function costText(usd: number): string {
   if (!(usd > 0)) return '–';
   return usd < 0.01 ? '<$0.01 equiv' : `$${usd.toFixed(2)} equiv`;
 }
 
-/** What the daemon's `agentdeck_sync` event (the sync with the base branch before a run) says in the log. */
 const SYNC_TEXT: Record<string, string> = {
   clean: 'Synced the branch with the base branch: clean merge.',
   resolved: 'Synced the branch with the base branch: resolved the conflicts.',
@@ -71,13 +65,11 @@ const SYNC_TEXT: Record<string, string> = {
   error: 'Could not sync with the base branch; working on the branch as it is.',
 };
 
-/** The file a tool call names (Read, Edit, Write: file_path; Glob, Grep: path; NotebookEdit: notebook_path). */
 function toolFile(input: any): string | undefined {
   const file = input?.file_path ?? input?.path ?? input?.notebook_path;
   return typeof file === 'string' && file ? file : undefined;
 }
 
-/** The call in a line, by tool; what the log and the live line both say. Empty when the input has nothing to say. */
 export function toolSummary(name: string, input: unknown): string {
   const i = (input && typeof input === 'object' ? input : {}) as Record<string, unknown>;
   const str = (v: unknown): string => (typeof v === 'string' ? oneLine(v) : '');
@@ -119,20 +111,17 @@ export function toolSummary(name: string, input: unknown): string {
   return cut(text, SUMMARY_MAX);
 }
 
-/** A call's summary with the file it names shortened to the file's name; unchanged for a call that names no file. */
 export function shortFile(summary: string, input: unknown): string {
   const i = (input && typeof input === 'object' ? input : {}) as Record<string, unknown>;
   const isFile = (typeof i.file_path === 'string' && i.file_path) || (typeof i.notebook_path === 'string' && i.notebook_path);
   return isFile ? summary.split('/').pop()! : summary;
 }
 
-/** Lines in a text: none for an empty one, and a trailing newline starts no line. */
 function countLines(text: string): number {
   if (!text) return 0;
   return text.replace(/\n$/, '').split('\n').length;
 }
 
-/** What an Edit, MultiEdit or Write changes; undefined for any other tool or an input that does not say. */
 function toolChange(name: string, input: any): LogChange | undefined {
   const text = (v: unknown): string => (typeof v === 'string' ? v : '');
   let pairs: [string, string][];
@@ -151,7 +140,6 @@ function toolChange(name: string, input: any): LogChange | undefined {
   };
 }
 
-/** A tool result's content as text: a string as it is, a list of blocks with its text joined and each image written `[image]`. */
 function resultText(content: unknown): string {
   if (typeof content === 'string') return content;
   if (!Array.isArray(content)) return '';

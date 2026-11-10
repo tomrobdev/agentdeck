@@ -1,4 +1,4 @@
-// The repo entity. Pure: no I/O.
+// The repo entity.
 import type { RepoId } from '../shared/index.ts';
 
 /** What the daemon does when a task is done: nothing, open a draft PR, or open a ready PR. */
@@ -12,7 +12,6 @@ export const DEFAULT_MERGE_METHOD: MergeMethod = 'squash';
 
 export const isMergeMethod = (value: unknown): value is MergeMethod => MERGE_METHODS.includes(value as MergeMethod);
 
-/** The folder in a task's worktree where AgentDeck keeps its files for the run: its plan and its protected edits. Git ignores it. */
 export const AGENTDECK_FOLDER = '.agentdeck';
 
 export interface Repo {
@@ -57,7 +56,6 @@ export interface Repo {
   created_at: string;
 }
 
-/** Why work on a repo stops on its own: the daemon's pause first, then the repo's. Null when neither is paused. */
 export function pausedReason(daemonPaused: boolean, repo: Pick<Repo, 'paused_reason'>): string | null {
   if (daemonPaused) return 'AgentDeck is paused';
   return repo.paused_reason ? `the repo is paused: ${repo.paused_reason}` : null;

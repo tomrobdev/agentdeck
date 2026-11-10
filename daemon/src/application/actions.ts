@@ -1,6 +1,4 @@
-// The use cases the CLI and the HTTP API share, and the only application module they import. They throw ActionError on bad input.
-// Everything is named: nothing here is `export *`, and nothing comes from adapters/ or db/.
-// The launchd service the daemon runs under, for the CLI's daemon commands, and a run's log.
+// The use cases the CLI and the HTTP API share, and the only application module they import.
 export {
   installService,
   readLog,
