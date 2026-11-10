@@ -1,7 +1,41 @@
-import { reactive } from 'vue';
+// The dashboard's routes on Vue Router with hash history, and go, openTask and route over it for the callers that use Route.
+import { computed } from 'vue';
+import {
+  type LocationQuery,
+  type LocationQueryValue,
+  type RouteLocationNormalizedLoaded,
+  type RouteLocationRaw,
+  type RouteRecordInfo,
+  createRouter,
+  createWebHashHistory,
+} from 'vue-router';
+import TrayView from './components/layout/TrayView.vue';
+import { TASK_TABS, type TaskTab } from './lib/shared/app-url';
+import InsightsPage from './pages/InsightsPage.vue';
+import QueuePage from './pages/QueuePage.vue';
+import TaskPage from './pages/TaskPage.vue';
 
-export type TaskTab = 'overview' | 'runs' | 'changes' | 'code';
-const TASK_TABS: TaskTab[] = ['overview', 'runs', 'changes', 'code'];
+export type { TaskTab };
+
+type NoParams = Record<never, never>;
+
+interface RouteNamedMap {
+  queue: RouteRecordInfo<'queue', '/', NoParams, NoParams>;
+  insights: RouteRecordInfo<'insights', '/insights', NoParams, NoParams>;
+  task: RouteRecordInfo<
+    'task',
+    '/tasks/:id(\\d+)/:tab(overview|runs|changes|code)?',
+    { id: string | number; tab?: TaskTab | null },
+    { id: string; tab?: TaskTab }
+  >;
+  tray: RouteRecordInfo<'tray', '/tray', NoParams, NoParams>;
+}
+
+declare module 'vue-router' {
+  interface TypesConfig {
+    RouteNamedMap: RouteNamedMap;
+  }
+}
 
 export type Route =
   | { name: 'queue'; states?: string[] }
@@ -9,57 +43,55 @@ export type Route =
   | { name: 'tray' }
   | { name: 'task'; id: number; tab: TaskTab; query: Record<string, string> };
 
-export function parseHash(hash: string): Route {
-  const [path, qs = ''] = hash.replace(/^#/, '').split('?');
-  const m = path.match(/^\/tasks\/(\d+)(?:\/(\w+))?\/?$/);
-  if (path === '/insights') return { name: 'insights' };
-  if (path === '/tray') return { name: 'tray' };
-  if (!m) {
-    const states = new URLSearchParams(qs).get('states')?.split(',').filter(Boolean);
-    return states?.length ? { name: 'queue', states } : { name: 'queue' };
-  }
-  const tab = (TASK_TABS as string[]).includes(m[2] ?? '') ? (m[2] as TaskTab) : 'overview';
-  return { name: 'task', id: Number(m[1]), tab, query: Object.fromEntries(new URLSearchParams(qs)) };
+const text = (v: LocationQueryValue | LocationQueryValue[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? '';
+const queryOf = (q: LocationQuery): Record<string, string> => Object.fromEntries(Object.entries(q).map(([k, v]) => [k, text(v)]));
+const tabOf = (v: unknown): TaskTab => ((TASK_TABS as unknown[]).includes(v) ? (v as TaskTab) : 'overview');
+
+function taskProps(to: { params: Record<string, unknown>; query: LocationQuery }) {
+  return { id: Number(to.params.id), tab: tabOf(to.params.tab), query: queryOf(to.query) };
 }
 
-export type AppLink = Route | { name: 'new' } | { name: 'palette' } | { name: 'panel'; panel: 'settings' | 'repos' | 'daemon' };
+export const router = createRouter({
+  history: createWebHashHistory(),
+  routes: [
+    { name: 'queue', path: '/', component: QueuePage },
+    { name: 'insights', path: '/insights', component: InsightsPage },
+    { name: 'task', path: '/tasks/:id(\\d+)/:tab(overview|runs|changes|code)?', component: TaskPage, props: taskProps },
+    { name: 'tray', path: '/tray', component: TrayView },
+    {
+      path: '/tasks/:id(\\d+)/:other',
+      redirect: (to) => ({ path: to.path.replace(/[^/]+\/?$/, 'overview'), query: to.query }),
+    },
+    { path: '/:unknown(.*)*', redirect: (to) => ({ path: '/', query: to.query }) },
+  ],
+});
 
-export function parseAppUrl(url: string): AppLink | null {
-  const m = url.trim().match(/^agentdeck:\/\/([^?#]*)(?:[?#].*)?$/i);
-  if (!m) return null;
-  const parts = m[1].split('/').filter(Boolean);
-  if (parts.length === 0 || (parts.length === 1 && parts[0] === 'queue')) return { name: 'queue' };
-  if (parts.length === 1 && parts[0] === 'new') return { name: 'new' };
-  if (parts.length === 1 && parts[0] === 'insights') return { name: 'insights' };
-  if (parts.length === 1 && parts[0] === 'palette') return { name: 'palette' };
-  if (parts.length === 1 && (parts[0] === 'settings' || parts[0] === 'repos' || parts[0] === 'daemon'))
-    return { name: 'panel', panel: parts[0] };
-  if (parts[0] !== 'tasks' || parts.length > 3 || !/^\d+$/.test(parts[1] ?? '')) return null;
-  const tab = parts[2] ?? 'overview';
-  if (!(TASK_TABS as string[]).includes(tab)) return null;
-  return { name: 'task', id: Number(parts[1]), tab: tab as TaskTab, query: {} };
+function toRoute(r: RouteLocationNormalizedLoaded): Route {
+  if (r.name === 'insights') return { name: 'insights' };
+  if (r.name === 'tray') return { name: 'tray' };
+  if (r.name === 'task') return { name: 'task', ...taskProps(r) };
+  const states = text(r.query.states).split(',').filter(Boolean);
+  return states.length ? { name: 'queue', states } : { name: 'queue' };
 }
 
-export const taskUrl = (id: number) => `agentdeck://tasks/${id}`;
-
-export function hashFor(route: Route): string {
-  if (route.name === 'insights') return '#/insights';
-  if (route.name === 'tray') return '#/tray';
-  if (route.name === 'queue') return route.states?.length ? `#/?states=${route.states.join(',')}` : '#/';
-  const qs = new URLSearchParams(route.query).toString();
-  return `#/tasks/${route.id}/${route.tab}${qs ? `?${qs}` : ''}`;
+function locationOf(to: Route): RouteLocationRaw {
+  if (to.name === 'queue') return { name: 'queue', query: to.states?.length ? { states: to.states.join(',') } : {} };
+  if (to.name === 'task') return { name: 'task', params: { id: to.id, tab: to.tab }, query: to.query };
+  return { name: to.name };
 }
 
-export const route = reactive<{ current: Route }>({ current: parseHash(location.hash) });
+const current = computed(() => toRoute(router.currentRoute.value));
 
-window.addEventListener('hashchange', () => (route.current = parseHash(location.hash)));
+export const route: { readonly current: Route } = {
+  get current() {
+    return current.value;
+  },
+};
+
+export const hashFor = (to: Route): string => router.resolve(locationOf(to)).href;
 
 export function go(to: Route, opts: { replace?: boolean } = {}): void {
-  const hash = hashFor(to);
-  if (hash === location.hash) return;
-  if (opts.replace) history.replaceState(null, '', hash);
-  else history.pushState(null, '', hash);
-  route.current = parseHash(hash);
+  void (opts.replace ? router.replace(locationOf(to)) : router.push(locationOf(to)));
 }
 
 export const openTask = (id: number, tab: TaskTab = 'overview', query: Record<string, string> = {}) => go({ name: 'task', id, tab, query });

@@ -12,9 +12,10 @@ export interface DaemonOptions {
   db: ComposedApp;
   once: boolean;
   log?: (line: string) => void;
+  exit: (code: number) => void;
 }
 
-export async function runDaemon({ db, once, log = () => {} }: DaemonOptions): Promise<void> {
+export async function runDaemon({ db, once, log = () => {}, exit }: DaemonOptions): Promise<void> {
   if (once) {
     const refusal = runOnceRefusal(await db.service.daemonState(API_PORT), API_PORT);
     if (refusal) throw new Error(refusal);
@@ -56,7 +57,7 @@ export async function runDaemon({ db, once, log = () => {} }: DaemonOptions): Pr
             blocked: block.reason,
           });
         },
-        exit: () => process.exit(0),
+        exit: () => exit(0),
       };
   const scheduler = new Scheduler(db, { once, keepAwake: !once, reload });
   const changes = once ? undefined : new ChangeWatcher(db);
@@ -67,7 +68,7 @@ export async function runDaemon({ db, once, log = () => {} }: DaemonOptions): Pr
       stamped(`${sig}: stopping workers; their tasks will be requeued on next start`);
       changes?.stop();
       scheduler.stop();
-      process.exit(0);
+      exit(0);
     });
   }
   if (!once) {
