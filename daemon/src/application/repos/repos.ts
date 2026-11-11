@@ -7,7 +7,7 @@ import { autoMergeMaxLinesError, codeCommentMaxLinesError, codeCommentMaxPercent
 import { MERGE_METHODS, type MergeMethod, PR_MODES, type PrMode, type Repo, isMergeMethod } from '../../domain/repos/index.ts';
 import { goalsError, networkError, parseToolRules, repoNameError, toolRulesError } from '../../domain/repos/index.ts';
 import { detectToolchain } from '../../domain/repos/index.ts';
-import { textList } from '../../domain/shared/index.ts';
+import { present, textList } from '../../domain/shared/index.ts';
 import { modelError } from '../../domain/work/index.ts';
 import { type Check, runDoctor } from './doctor.ts';
 import { repoView } from './repo-view.ts';
@@ -162,7 +162,7 @@ export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch
 export function resumeRepo(app: App, nameOrId: string | number): Repo {
   const repo = requireRepo(app, nameOrId);
   app.setRepoPaused(repo.id, null);
-  return app.getRepo(repo.id)!;
+  return present(app.getRepo(repo.id), `repo ${repo.name}`);
 }
 
 export function archiveRepo(app: App, nameOrId: string | number): Repo {
@@ -171,13 +171,13 @@ export function archiveRepo(app: App, nameOrId: string | number): Repo {
   if (app.repoHasRunning(repo.id))
     throw new ActionError(`${repo.name} has a task running; cancel it or wait for it to finish, then archive`);
   app.setRepoArchived(repo.id, true);
-  return app.getRepo(repo.id)!;
+  return present(app.getRepo(repo.id), `repo ${repo.name}`);
 }
 
 export function unarchiveRepo(app: App, nameOrId: string | number): Repo {
   const repo = requireRepo(app, nameOrId);
   app.setRepoArchived(repo.id, false);
-  return app.getRepo(repo.id)!;
+  return present(app.getRepo(repo.id), `repo ${repo.name}`);
 }
 
 export function repoDeletionPreview(app: App, nameOrId: string | number) {
@@ -235,7 +235,7 @@ export async function doctorRepo(app: App, nameOrId: string | number): Promise<D
   const failed = checks.find((c) => !c.ok);
   if (failed) pauseRepo(app, repo, `doctor: ${failed.name}`, { replace: true });
   else app.setRepoPaused(repo.id, null);
-  return { repo: repo.name, ok: !failed, checks, paused_reason: app.getRepo(repo.id)!.paused_reason };
+  return { repo: repo.name, ok: !failed, checks, paused_reason: present(app.getRepo(repo.id), `repo ${repo.name}`).paused_reason };
 }
 
 export const listRepos = (app: App, opts: { archived?: boolean } = {}): Repo[] => app.listRepos(opts);

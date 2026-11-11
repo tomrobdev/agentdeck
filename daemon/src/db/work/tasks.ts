@@ -2,7 +2,7 @@
 import { and, eq, inArray } from 'drizzle-orm';
 import type { DatabaseSync } from 'node:sqlite';
 import { DEFAULTS } from '../../config.ts';
-import { type RepoId, type TaskId, asTaskId, stored } from '../../domain/shared/index.ts';
+import { type RepoId, type TaskId, asTaskId, present, stored } from '../../domain/shared/index.ts';
 import {
   DEFAULT_MODEL,
   EDITABLE_STATUSES,
@@ -90,7 +90,7 @@ export function taskStore(db: DatabaseSync, orm: Orm) {
         recordEvent(orm, id, 'created', null, status);
         return id;
       });
-      return getTask(id)!;
+      return present(getTask(id), `task #${id}`);
     },
     recordQuestion(id: TaskId, question: UnblockQuestion, reason: string): boolean {
       return atomically(db, () => {

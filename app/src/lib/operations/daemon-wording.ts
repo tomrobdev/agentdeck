@@ -45,7 +45,7 @@ export function describeState(s: Status | null, offline: boolean): { label: stri
       return { label: until ? `On hold · until ${when(until)}` : 'On hold', cls: 's-blocked', title: `Usage budget: ${g.reason}` };
     case 'working':
       return { label: 'Working', cls: 's-running', title: g.reason ?? '' };
-    default:
+    case 'idle':
       return { label: 'Idle', cls: 's-done', title: g.reason ?? '' };
   }
 }

@@ -20,8 +20,8 @@ export function queueWaits(app: App): { wait: QueueWait | null; paused_repos: Pa
     wait: queueWait(app).wait,
     paused_repos: app
       .listRepos()
-      .filter((r) => r.paused_reason)
-      .map((r) => ({ id: r.id, name: r.name, reason: r.paused_reason!, queued: queued.get(r.id) ?? 0 })),
+      .filter((r): r is Repo & { paused_reason: string } => !!r.paused_reason)
+      .map((r) => ({ id: r.id, name: r.name, reason: r.paused_reason, queued: queued.get(r.id) ?? 0 })),
   };
 }
 

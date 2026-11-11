@@ -62,7 +62,10 @@ function standing(on: TaskId, dependency: Dependency | undefined): Standing {
       return stuck(`${id} is blocked`, 'which is blocked');
     case 'cancelled':
       return stuck(`${id} was cancelled`, 'which was cancelled');
-    default:
+    case 'proposed':
+    case 'queued':
+    case 'running':
+    case 'cancel_requested':
       return { kind: 'waiting', on, reason: `${id} is not done yet` };
   }
 }
@@ -114,8 +117,8 @@ export function startState(task: { id: TaskId }, links: Link[], lookup: (id: Tas
   const root = (on: TaskId, via: TaskId[], dep: LinkTarget | undefined, s: Standing): { on: TaskId; reason: string } | null => {
     if (s.kind === 'stuck')
       return { on, reason: via.length ? `waits on #${on} (via ${via.map((v) => `#${v}`).join(', ')}), ${s.which}` : s.reason };
-    const target = dep!;
-    if (s.kind === 'met' || target.status === 'done' || visited.has(on)) return null;
+    const target = dep;
+    if (!target || s.kind === 'met' || target.status === 'done' || visited.has(on)) return null;
     visited.add(on);
     for (const next of target.links) {
       if (next.kind !== 'builds_on') continue;
@@ -166,8 +169,8 @@ export function stuckOn(id: TaskId, l: LinkIndex): Builder[] {
   const stuck: Builder[] = [];
   const seen = new Set<TaskId>([id]);
   const stack = [id];
-  while (stack.length) {
-    for (const t of buildingOn(stack.pop()!, l)) {
+  for (let next = stack.pop(); next !== undefined; next = stack.pop()) {
+    for (const t of buildingOn(next, l)) {
       if (seen.has(t.id)) continue;
       seen.add(t.id);
       if (t.status === 'queued') {
@@ -193,8 +196,7 @@ export function linkError(task: TaskId, on: TaskId, links: Link[]): string | nul
   if (links.some((l) => l.task_id === task && l.on === on)) return `#${task} is already linked to #${on}`;
   const seen = new Set<TaskId>();
   const stack = [on];
-  while (stack.length) {
-    const at = stack.pop()!;
+  for (let at = stack.pop(); at !== undefined; at = stack.pop()) {
     if (at === task) return `linking #${task} to #${on} would make a cycle`;
     if (seen.has(at)) continue;
     seen.add(at);

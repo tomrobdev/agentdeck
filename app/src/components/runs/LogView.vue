@@ -103,7 +103,7 @@ async function scrollToMoment(at: string) {
   const target = Date.parse(at);
   let row: HTMLElement | null = null;
   for (const r of el.querySelectorAll<HTMLElement>('[data-at]')) {
-    if (Date.parse(r.dataset.at!) > target) break;
+    if (Date.parse(r.dataset.at ?? '') > target) break;
     row = r;
   }
   row ??= el.querySelector<HTMLElement>('[data-at]');

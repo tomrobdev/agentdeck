@@ -8,7 +8,7 @@ import { readFailure } from './check-failures.ts';
 import { checksFailedNotification, mergeFailedNotification } from '../../../domain/operations/index.ts';
 import { type Repo, pausedReason } from '../../../domain/repos/index.ts';
 import type { PrEvent, Task } from '../../../domain/work/index.ts';
-import { errorMessage } from '../../../domain/shared/index.ts';
+import { errorMessage, present } from '../../../domain/shared/index.ts';
 import { landsAfter } from '../../work/dependencies.ts';
 import { measureBranch } from '../../work/files.ts';
 import { endMergeRequest, movePr } from '../moves.ts';
@@ -95,7 +95,9 @@ function dropRequest(app: App, task: Task, move: 'dropped' | 'refused', why: str
 
 async function refreshOne(app: App, task: Task, log: (msg: string) => void): Promise<PrFound | null> {
   const repo = app.getRepo(task.repo_id);
-  const pr = await app.codeHost.prDetails(task.pr!.url!, prCwd(app, task), { withFiles: !!repo && autoMergeOn(task, repo) });
+  const pr = await app.codeHost.prDetails(present(task.pr?.url, `#${task.id}'s pull request`), prCwd(app, task), {
+    withFiles: !!repo && autoMergeOn(task, repo),
+  });
   const state = pr.state;
   if (state !== task.pr?.state) {
     const event: PrEvent = state === 'closed' ? { type: 'closed' } : { type: 'seen', state };

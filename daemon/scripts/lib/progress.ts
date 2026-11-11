@@ -13,6 +13,8 @@ export const LONG_FILES: string[] = [];
 
 export const UNPLACED_FOLDERS: string[] = [];
 
+export const STRICTNESS_EXCEPTIONS: string[] = [];
+
 export const cycleKey = (c: FolderCycle) => c.folders.join(', ');
 
 const tie = (t: FolderCycle['imports'][number]) => `${t.file}:${t.line} (${t.from} → ${t.to}${t.typeOnly ? ', type-only' : ''})`;
@@ -51,7 +53,7 @@ export const PLAIN_TASK_WRITES: Record<string, string> = {
 };
 
 export const COVERAGE_FLOORS: Record<string, Floor> = {
-  adapters: { lines: 88, branches: 83 },
+  adapters: { lines: 88, branches: 85 },
   api: { lines: 99, branches: 94 },
   application: { lines: 100, branches: 100 },
   'application/capacity': { lines: 100, branches: 100 },
@@ -59,14 +61,14 @@ export const COVERAGE_FLOORS: Record<string, Floor> = {
   'application/landing': { lines: 99, branches: 90 },
   'application/operations': { lines: 98, branches: 93 },
   'application/proposals': { lines: 92, branches: 82 },
-  'application/repos': { lines: 98, branches: 88 },
+  'application/repos': { lines: 98, branches: 90 },
   'application/runs': { lines: 94, branches: 82 },
   'application/scheduler': { lines: 97, branches: 91 },
   'application/shared': { lines: 100, branches: 97 },
-  'application/work': { lines: 99, branches: 92 },
+  'application/work': { lines: 99, branches: 94 },
   cli: { lines: 72, branches: 62 },
   db: { lines: 99, branches: 94 },
-  'domain/capacity': { lines: 100, branches: 94 },
+  'domain/capacity': { lines: 100, branches: 97 },
   'domain/insights': { lines: 100, branches: 98 },
   'domain/landing': { lines: 100, branches: 97 },
   'domain/operations': { lines: 100, branches: 97 },
@@ -162,6 +164,7 @@ export function progress(sources: Source[]): Progress {
       { name: 'OVERSIZED_FOLDERS (`scripts/lib/progress.ts`)', size: OVERSIZED_FOLDERS.length },
       { name: 'LONG_FILES (`scripts/lib/progress.ts`)', size: LONG_FILES.length },
       { name: 'UNPLACED_FOLDERS (`scripts/lib/progress.ts`)', size: UNPLACED_FOLDERS.length },
+      { name: 'STRICTNESS_EXCEPTIONS (`scripts/lib/progress.ts`)', size: STRICTNESS_EXCEPTIONS.length },
       { name: 'ROW_SHAPED_FIELDS (`scripts/lib/progress.ts`)', size: ROW_SHAPED_FIELDS.length },
       { name: 'PLAIN_TASK_WRITES (`scripts/lib/progress.ts`)', size: Object.keys(PLAIN_TASK_WRITES).length },
     ],

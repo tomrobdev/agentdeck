@@ -28,7 +28,8 @@ export function useBulkEdit(run: (fn: () => Promise<unknown>) => Promise<unknown
           if (edit === 'priority') await workApi.editTask(id, { priority: value as number });
           else if (edit === 'model') await workApi.editTask(id, { model: value as string });
           else if (edit === 'auto_merge') await landingApi.autoMerge(id, { auto_merge: value as boolean | null });
-          else await workApi.linkTask(id, { on: on!, kind: edit });
+          else if (on !== undefined) await workApi.linkTask(id, { on, kind: edit });
+          else throw new Error('no task to link to');
           results.push({ id });
         } catch (e) {
           results.push({ id, error: errorMessage(e) });

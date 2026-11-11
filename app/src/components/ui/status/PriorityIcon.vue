@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { PRIORITY_LEVELS, priorityLevel } from '../../../lib/work/task-view';
+import { levelOf, priorityLevel } from '../../../lib/work/task-view';
 
 const props = defineProps<{ priority: number }>();
 
 const level = computed(() => priorityLevel(props.priority));
 const bars = computed(() => ({ none: 0, low: 1, medium: 2, high: 3, urgent: 3 })[level.value]);
-const title = computed(() => `${PRIORITY_LEVELS.find((l) => l.key === level.value)!.label} · priority ${props.priority}`);
+const title = computed(() => `${levelOf(level.value).label} · priority ${props.priority}`);
 </script>
 
 <template>

@@ -115,10 +115,9 @@ export const daemonCommands: Record<string, Command> = {
   },
   status: ({ db }) => {
     const st = actions.status(db);
-    const limited = st.rate_limited_until && st.rate_limited_until * 1000 > Date.now();
-    console.log(
-      `state      ${st.paused ? 'PAUSED' : 'active'}${limited ? ` (rate limited, resumes in ${relTime(st.rate_limited_until!)})` : ''}`,
-    );
+    const until = st.rate_limited_until;
+    const limited = until && until * 1000 > Date.now() ? ` (rate limited, resumes in ${relTime(until)})` : '';
+    console.log(`state      ${st.paused ? 'PAUSED' : 'active'}${limited}`);
     console.log(`slots      ${st.running}/${st.max_concurrent} running`);
     if (st.governor.reason)
       console.log(

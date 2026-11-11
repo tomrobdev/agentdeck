@@ -50,13 +50,13 @@ export function graphTasks(all: TaskSummary[], shown: TaskSummary[], showFinishe
   const parent = new Map<number, number>();
   const find = (x: number): number => {
     let r = x;
-    while (parent.has(r) && parent.get(r) !== r) r = parent.get(r)!;
+    for (let up = parent.get(r); up !== undefined && up !== r; up = parent.get(r)) r = up;
     return r;
   };
   for (const t of all) parent.set(t.id, t.id);
   for (const e of edgesOf(all)) parent.set(find(e.from), find(e.to));
   const alive = new Set<number>();
-  for (const t of all) if (!isFinished(byId.get(t.id)!)) alive.add(find(t.id));
+  for (const t of all) if (!isFinished(byId.get(t.id) ?? t)) alive.add(find(t.id));
   return linked.filter((t) => alive.has(find(t.id)));
 }
 
@@ -80,8 +80,7 @@ export function chainOf(id: number, edges: GraphEdge[]): Set<number> {
   const out = new Set<number>([id]);
   for (const dir of ['up', 'down'] as const) {
     const stack = [id];
-    while (stack.length) {
-      const at = stack.pop()!;
+    for (let at = stack.pop(); at !== undefined; at = stack.pop()) {
       for (const e of edges) {
         const next = dir === 'up' ? (e.to === at ? e.from : null) : e.from === at ? e.to : null;
         if (next !== null && !out.has(next)) {
@@ -104,8 +103,8 @@ export function layoutGraph(ids: number[], allEdges: GraphEdge[], size: GraphSiz
     succs.set(id, []);
   }
   for (const e of edges) {
-    preds.get(e.to)!.push(e.from);
-    succs.get(e.from)!.push(e.to);
+    preds.get(e.to)?.push(e.from);
+    succs.get(e.from)?.push(e.to);
   }
 
   const seen = new Set<number>();
@@ -115,10 +114,9 @@ export function layoutGraph(ids: number[], allEdges: GraphEdge[], size: GraphSiz
     const comp: number[] = [];
     const stack = [id];
     seen.add(id);
-    while (stack.length) {
-      const at = stack.pop()!;
+    for (let at = stack.pop(); at !== undefined; at = stack.pop()) {
       comp.push(at);
-      for (const n of [...preds.get(at)!, ...succs.get(at)!]) {
+      for (const n of [...(preds.get(at) ?? []), ...(succs.get(at) ?? [])]) {
         if (!seen.has(n)) {
           seen.add(n);
           stack.push(n);
@@ -133,9 +131,9 @@ export function layoutGraph(ids: number[], allEdges: GraphEdge[], size: GraphSiz
   let width = 0;
   for (const comp of components) {
     const layerOf = layers(comp, preds);
-    const depth = Math.max(...comp.map((id) => layerOf.get(id)!)) + 1;
+    const depth = Math.max(...comp.map((id) => layerOf.get(id) ?? 0)) + 1;
     const columns: number[][] = Array.from({ length: depth }, () => []);
-    for (const id of comp) columns[layerOf.get(id)!].push(id);
+    for (const id of comp) columns[layerOf.get(id) ?? 0].push(id);
     order(columns, preds, succs);
     const rows = Math.max(...columns.map((c) => c.length));
     columns.forEach((col, layer) => {
@@ -155,9 +153,10 @@ function layers(comp: number[], preds: Map<number, number[]>): Map<number, numbe
   for (let pass = 0; pass < comp.length; pass++) {
     let changed = false;
     for (const id of comp) {
-      for (const p of preds.get(id)!) {
-        if (layer.get(p)! + 1 > layer.get(id)!) {
-          layer.set(id, layer.get(p)! + 1);
+      for (const p of preds.get(id) ?? []) {
+        const next = (layer.get(p) ?? 0) + 1;
+        if (next > (layer.get(id) ?? 0)) {
+          layer.set(id, next);
           changed = true;
         }
       }
@@ -172,8 +171,8 @@ function order(columns: number[][], preds: Map<number, number[]>, succs: Map<num
   const index = () => columns.forEach((col) => col.forEach((id, i) => position.set(id, i)));
   index();
   const mean = (id: number, near: Map<number, number[]>, fallback: number) => {
-    const ns = near.get(id)!.filter((n) => position.has(n));
-    return ns.length ? ns.reduce((s, n) => s + position.get(n)!, 0) / ns.length : fallback;
+    const ns = (near.get(id) ?? []).filter((n) => position.has(n));
+    return ns.length ? ns.reduce((s, n) => s + (position.get(n) ?? 0), 0) / ns.length : fallback;
   };
   for (let sweep = 0; sweep < SWEEPS; sweep++) {
     const down = sweep % 2 === 0;

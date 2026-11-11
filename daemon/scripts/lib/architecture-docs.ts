@@ -12,6 +12,7 @@ import { adapterUse, contextMap } from './graphs.ts';
 import { modelsBody, stateMachinesBody, useCasesBody } from './model-docs.ts';
 import { COVERAGE_FLOORS, progress } from './progress.ts';
 import { UNCHECKED } from './rules.ts';
+import { readStrictnessOffences } from './strictness.ts';
 import { type Source, readSources } from './sources.ts';
 
 const SRC = join(import.meta.dirname, '../../src');
@@ -133,6 +134,18 @@ export function adapterUseBody(sources: Source[]): string {
   );
 }
 
+function strictnessRows(): string[][] {
+  const offences = readStrictnessOffences();
+  const count = (rule: string) => offences.filter((o) => o.rule === rule);
+  const where = (list: { file: string }[]) => [...new Set(list.map((o) => `\`${o.file}\``))].join(', ');
+  const strict = count('strict-types');
+  const deterministic = count('domain-deterministic');
+  return [
+    ['Explicit `any`, non-null `!` and open switches in `daemon/src` and `app/src`', String(strict.length), where(strict)],
+    ['Clock, randomness and `process` reads in `domain/`', String(deterministic.length), where(deterministic)],
+  ];
+}
+
 export function progressBody(sources: Source[]): string {
   const p = progress(sources);
   const lists = [...p.lists, { name: 'UNCHECKED rules (`scripts/lib/rules.ts`)', size: Object.keys(UNCHECKED).length }];
@@ -150,6 +163,7 @@ export function progressBody(sources: Source[]): string {
       String(p.cycles.length),
       p.cycles.map((c) => `${c.layer}: ${c.folders.length} folders`).join('; '),
     ],
+    ...strictnessRows(),
   ];
   const cycleLines = p.cycles.map((c) => `- \`${c.layer}/\`: ${c.folders.map((f) => `\`${f}\``).join(', ')}`);
   return [

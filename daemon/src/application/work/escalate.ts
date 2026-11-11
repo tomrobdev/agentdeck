@@ -2,6 +2,7 @@
 import type { App } from '../ports/app.ts';
 import { type Run, escalation, escalationReason, runSummary } from '../../domain/runs/index.ts';
 import type { Needs, Task, TaskStatus } from '../../domain/work/index.ts';
+import { present } from '../../domain/shared/index.ts';
 
 export function escalateAfter(
   app: App,
@@ -10,7 +11,7 @@ export function escalateAfter(
   stop: { reason: string | null; needs: Needs | null },
   statuses: TaskStatus[],
 ): string | null {
-  const repo = app.getRepo(task.repo_id)!;
+  const repo = present(app.getRepo(task.repo_id), `#${task.id}'s repo`);
   const e = escalation(task, run, { ...stop, outcome: run.outcome, denials: run.denials, turns: run.num_turns ?? run.live_turns }, repo);
   if (!e) return null;
   const events = app.runLog.events(run.log_path);

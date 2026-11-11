@@ -47,7 +47,8 @@ export function syncResultOf(
       return { kind: 'cancelled' };
     case 'rate_limited':
       return { kind: 'rate_limited', reason };
-    default:
+    case 'failed':
+    case 'blocked':
       return { kind: 'failed', files: conflictFiles, reason };
   }
 }

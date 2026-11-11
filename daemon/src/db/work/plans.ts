@@ -1,6 +1,7 @@
 // Plans attached to tasks: the HTML as written, parsed into steps when read.
 import { and, asc, desc, eq, ne, notInArray, sql } from 'drizzle-orm';
 import type { TaskId } from '../../domain/shared/index.ts';
+import { present } from '../../domain/shared/index.ts';
 import { type OwnPlan, type PlanSource, type TaskPlan, parsePlan, planFileName, toPlan } from '../../domain/work/index.ts';
 import type { PlanFollower } from '../../domain/work/index.ts';
 import { readSteps } from '../mappers.ts';
@@ -51,7 +52,7 @@ export function saveOwnPlan(db: DatabaseSync, orm: Orm, task_id: TaskId, html: s
         orm.update(taskPlans).set({ name, source, html, updated_at: NOW_SQL }).where(eq(taskPlans.id, old.id)).run();
       }
     }
-    return toPlan(ownPlanRow(orm, task_id)!);
+    return toPlan(present(ownPlanRow(orm, task_id), `#${task_id}'s plan`));
   });
 }
 

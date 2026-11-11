@@ -45,7 +45,7 @@ const DIFF_SIGN = { ctx: ' ', del: '−', add: '+' } as const;
 const DIFF_TONE = { ctx: 'text-muted', del: 'text-failed', add: 'text-done' } as const;
 const cutText = (t: string) => (props.cut ? props.cut(t) : t);
 const parts = (c: CallItem) =>
-  outputParts(cutText(c.result!.output), {
+  outputParts(cutText(c.result?.output ?? ''), {
     grep: c.call.name === 'Grep' ? c.call.input : undefined,
     file: props.repoPath(c.call.file),
     isPath: props.isPath,
