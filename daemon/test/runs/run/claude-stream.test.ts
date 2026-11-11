@@ -5,7 +5,7 @@ import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, test } from 'node:test';
-import { asRepoId, testApp } from '../../fixtures/fixtures.ts';
+import { asRepoId, testApp } from '#test/fixtures/fixtures.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-stream-'));
 process.env.AGENTDECK_HOME = home;
@@ -14,10 +14,10 @@ const fake = join(import.meta.dirname, '../../fixtures/fake-claude.mjs');
 chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
 
-const { openDb } = await import('../../../src/db/index.ts');
-const { Scheduler } = await import('../../../src/application/scheduler/scheduler.ts');
-const { parseLogLine } = await import('../../../src/domain/runs/index.ts');
-const { retryTask } = await import('../../../src/application/actions.ts');
+const { openDb } = await import('#db/index.ts');
+const { Scheduler } = await import('#application/scheduler/scheduler.ts');
+const { parseLogLine } = await import('#domain/runs/index.ts');
+const { retryTask } = await import('#application/actions.ts');
 
 const REPO = asRepoId(1);
 const repoPath = join(home, 'demo');

@@ -7,10 +7,10 @@ import { test } from 'node:test';
 
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-model-'));
 
-const { openDb } = await import('../../fixtures/open-db.ts');
-const { addTask, editTask } = await import('../../../src/application/work/tasks.ts');
-const { isModel } = await import('../../../src/domain/work/task/task.ts');
-const { allowedTools } = await import('../../../src/domain/repos/tools.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const { addTask, editTask } = await import('#application/work/tasks.ts');
+const { isModel } = await import('#domain/work/task/task.ts');
+const { allowedTools } = await import('#domain/repos/tools.ts');
 
 test('a model is an alias or a full claude model id', () => {
   for (const m of ['haiku', 'sonnet', 'opus', 'claude-sonnet-5-5', 'claude-3.5-haiku']) assert.ok(isModel(m), m);

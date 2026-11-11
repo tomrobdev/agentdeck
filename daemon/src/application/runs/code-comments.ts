@@ -1,15 +1,9 @@
 // Measuring the code comments a work run's branch adds, against its repo's limits, into the run log.
-import type { App } from '../ports/app.ts';
-import type { Repo } from '../../domain/repos/index.ts';
-import type { Run } from '../../domain/runs/index.ts';
-import {
-  type CodeCommentCount,
-  codeCommentLimitOn,
-  codeCommentsOver,
-  codeCommentsText,
-  countCodeComments,
-} from '../../domain/landing/index.ts';
-import type { OpenedRun } from './claude-run.ts';
+import type { App } from '#application/ports/app.ts';
+import type { Repo } from '#domain/repos/index.ts';
+import type { Run } from '#domain/runs/index.ts';
+import { type CodeCommentCount, codeCommentLimitOn, codeCommentsOver, codeCommentsText, countCodeComments } from '#domain/landing/index.ts';
+import type { OpenedRun } from '#application/runs/claude-run.ts';
 
 export async function measureCodeComments(
   app: App,

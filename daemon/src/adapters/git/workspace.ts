@@ -1,7 +1,7 @@
 // Adapter for the Workspace port (application/ports/workspace.ts): git, the shell and a worktree's files, grouped into the operations the use cases need, on git.ts, shell.ts, plan-file.ts, protected-edits.ts and repo-root.ts.
-import type { Repo } from '../../domain/repos/index.ts';
-import { errorMessage } from '../../domain/shared/index.ts';
-import type { Task } from '../../domain/work/index.ts';
+import type { Repo } from '#domain/repos/index.ts';
+import { errorMessage } from '#domain/shared/index.ts';
+import type { Task } from '#domain/work/index.ts';
 import {
   abortMerge,
   addDetachedWorktree,
@@ -20,7 +20,7 @@ import {
   pruneWorktrees,
   removeTempDir,
   removeWorktree,
-} from './worktrees.ts';
+} from '#adapters/git/worktrees.ts';
 import {
   aheadOfRemote,
   branchCommit,
@@ -37,12 +37,23 @@ import {
   resolveCommit,
   reviewFacts,
   startPoint,
-} from './refs.ts';
-import { addedLines, changedFiles, diffBase, diffHash, filePatch, listFiles, listTree, mergeCommit, objectAt, readFile } from './diffs.ts';
-import { readGivenPlan, readPlanFile, writeGivenPlan, writePlanFile } from '../local/plan-file.ts';
-import { applyProtectedEdits } from '../local/protected-edits.ts';
-import { rootInfo } from './repo-root.ts';
-import { runCommand, runProgram } from '../process/shell.ts';
+} from '#adapters/git/refs.ts';
+import {
+  addedLines,
+  changedFiles,
+  diffBase,
+  diffHash,
+  filePatch,
+  listFiles,
+  listTree,
+  mergeCommit,
+  objectAt,
+  readFile,
+} from '#adapters/git/diffs.ts';
+import { readGivenPlan, readPlanFile, writeGivenPlan, writePlanFile } from '#adapters/local/plan-file.ts';
+import { applyProtectedEdits } from '#adapters/local/protected-edits.ts';
+import { rootInfo } from '#adapters/git/repo-root.ts';
+import { runCommand, runProgram } from '#adapters/process/shell.ts';
 
 async function orUndo<T>(worktree: string, before: string, step: () => Promise<T>): Promise<T> {
   try {

@@ -1,9 +1,9 @@
 // The command that opens an interactive claude session for a task that needs a person.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { fixTaskCommand } from '../../../../app/src/lib/runs/terminal.ts';
-import { canFix } from '../../../../app/src/lib/work/task-view.ts';
-import { fixReason } from '../../../../app/src/lib/work/task-badges.ts';
+import { fixTaskCommand } from '#app/lib/runs/terminal.ts';
+import { canFix } from '#app/lib/work/task-view.ts';
+import { fixReason } from '#app/lib/work/task-badges.ts';
 
 test('a done task in review opens /review-task with its id and why', () => {
   const task = { id: 287, status: 'done', pr_state: 'open' } as const;

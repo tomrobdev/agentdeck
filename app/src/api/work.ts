@@ -1,8 +1,8 @@
 // Work: tasks, their links, plans, changes and files, and what a person may do to a task.
 import { queryOptions } from '@tanstack/vue-query';
-import { asTaskId } from '../../../daemon/src/domain/shared/index.ts';
-import type { PersonEvent } from '../../../daemon/src/domain/work/index.ts';
-import { atCommit, del, get, post, qs } from './http.ts';
+import { asTaskId } from '#daemon/domain/shared/index.ts';
+import type { PersonEvent } from '#daemon/domain/work/index.ts';
+import { atCommit, del, get, post, qs } from '#api/http.ts';
 import type {
   CancelResult,
   Changes,
@@ -20,7 +20,7 @@ import type {
   TaskSaved,
   TaskSummary,
   TreeListing,
-} from './types.ts';
+} from '#api/types.ts';
 
 type NewTaskInput = Omit<NewTask, 'builds_on' | 'after' | 'plan_task'> & { builds_on?: number[]; after?: number[]; plan_task?: number };
 const brandNewTask = ({ builds_on, after, plan_task, ...rest }: NewTaskInput): NewTask => ({

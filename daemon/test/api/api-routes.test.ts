@@ -5,23 +5,23 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, test } from 'node:test';
-import type { Run as ContractRun } from '../../src/api/contract/runs.ts';
-import type { Route } from '../../src/api/http.ts';
-import type { Service, ServiceStatus } from '../../src/application/ports/service.ts';
-import type { Workspace } from '../../src/application/ports/workspace.ts';
-import type { RepoId, TaskId } from '../../src/domain/shared/id.ts';
-import { READY_PR, fakeAgent, fakeCodeHost } from '../fixtures/fakes.ts';
-import { blockedTask, doneTask, failedTask, queuedTask, testApp } from '../fixtures/fixtures.ts';
+import type { Run as ContractRun } from '#api/contract/runs.ts';
+import type { Route } from '#api/http.ts';
+import type { Service, ServiceStatus } from '#application/ports/service.ts';
+import type { Workspace } from '#application/ports/workspace.ts';
+import type { RepoId, TaskId } from '#domain/shared/id.ts';
+import { READY_PR, fakeAgent, fakeCodeHost } from '#test/fixtures/fakes.ts';
+import { blockedTask, doneTask, failedTask, queuedTask, testApp } from '#test/fixtures/fixtures.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-routes-'));
 process.env.AGENTDECK_HOME = home;
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../../src/db/index.ts');
-const { startApi } = await import('../../src/api/server.ts');
-const { realWorkspace } = await import('../../src/compose.ts');
-const { ensureWorktree } = await import('../../src/adapters/git/worktrees.ts');
-const actions = await import('../../src/application/actions.ts');
+const { openDb } = await import('#db/index.ts');
+const { startApi } = await import('#api/server.ts');
+const { realWorkspace } = await import('#src/compose.ts');
+const { ensureWorktree } = await import('#adapters/git/worktrees.ts');
+const actions = await import('#application/actions.ts');
 
 const SERVICE: ServiceStatus = { installed: true, loaded: true, pid: 4242, state: 'running', plist: '/x.plist', program: '/x' };
 const restarts: number[] = [];

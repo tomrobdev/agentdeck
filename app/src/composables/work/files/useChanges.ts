@@ -1,7 +1,7 @@
 import { type Ref, computed, shallowRef, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { changesQuery } from '../../../api/work';
-import type { Changes, TaskDetail } from '../../../api/types';
+import { changesQuery } from '#api/work.ts';
+import type { Changes, TaskDetail } from '#api/types.ts';
 
 const RUNNING_POLL_MS = 10_000;
 

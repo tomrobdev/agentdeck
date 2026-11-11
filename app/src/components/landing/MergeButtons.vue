@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { landingApi } from '../../api/landing';
-import type { TaskSummary } from '../../api/types';
-import { useActions } from '../../composables/shared/useActions';
-import { canStartMerge, isReview } from '../../../../daemon/src/domain/work/index.ts';
+import { landingApi } from '#api/landing.ts';
+import type { TaskSummary } from '#api/types.ts';
+import { useActions } from '#composables/shared/useActions.ts';
+import { canStartMerge, isReview } from '#daemon/domain/work/index.ts';
 
 const props = defineProps<{ task: TaskSummary; sync?: boolean }>();
 const emit = defineEmits<{ merge: [id: number]; sync: [id: number] }>();

@@ -1,7 +1,7 @@
 // Every rule in CLAUDE.md is named by a test or on the unchecked list (daemon/scripts/lib/rules.ts), and every test names real rules.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { SCRIPT_CHECKS, UNCHECKED, readRuleLines, readRules, readTestTags } from '../../scripts/lib/rules.ts';
+import { SCRIPT_CHECKS, UNCHECKED, readRuleLines, readRules, readTestTags } from '#scripts/lib/rules.ts';
 
 test('every bullet in Boundaries and Rules has a rule id', () => {
   const missing = readRuleLines()

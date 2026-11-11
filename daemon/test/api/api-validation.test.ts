@@ -10,9 +10,9 @@ const home = mkdtempSync(join(tmpdir(), 'agentdeck-validation-'));
 process.env.AGENTDECK_HOME = home;
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../fixtures/open-db.ts');
-const { startApi } = await import('../../src/api/server.ts');
-const { pilotStats } = await import('../../src/application/actions.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const { startApi } = await import('#api/server.ts');
+const { pilotStats } = await import('#application/actions.ts');
 
 const db = openDb(join(home, 'test.db'));
 const server = await startApi({ db, port: 0 });

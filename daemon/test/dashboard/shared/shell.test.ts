@@ -1,8 +1,8 @@
 // The shell's decisions: where a go target leads, and which key opens the command palette (app/src/lib/shared/shell.ts).
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { GO_KEYS } from '../../../../app/src/lib/shared/hotkeys.ts';
-import { goMove, isPaletteKey } from '../../../../app/src/lib/shared/shell.ts';
+import { GO_KEYS } from '#app/lib/shared/hotkeys.ts';
+import { goMove, isPaletteKey } from '#app/lib/shared/shell.ts';
 
 test('settings and repos open their panels; the queue and insights are pages', () => {
   assert.deepEqual(goMove('settings'), { panel: 'settings' });

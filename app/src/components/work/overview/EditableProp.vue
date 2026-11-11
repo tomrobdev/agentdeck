@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import InlineEdit from '../../ui/form/InlineEdit.vue';
-import { input, name, prop, row, rowButton, rowButtonEditable } from '../task/sidebar-style';
+import InlineEdit from '#components/ui/form/InlineEdit.vue';
+import { input, name, prop, row, rowButton, rowButtonEditable } from '#components/work/task/sidebar-style.ts';
 
 defineProps<{ label: string; value: string; editable: boolean; type?: 'number' }>();
 const emit = defineEmits<{ submit: [value: string] }>();

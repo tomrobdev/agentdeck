@@ -1,6 +1,6 @@
 // Repos' repository: the registered repos and their settings.
-import type { RepoId, TaskId } from '../../../domain/shared/index.ts';
-import type { Repo } from '../../../domain/repos/index.ts';
+import type { RepoId, TaskId } from '#domain/shared/index.ts';
+import type { Repo } from '#domain/repos/index.ts';
 
 export interface NewRepo {
   name: string;

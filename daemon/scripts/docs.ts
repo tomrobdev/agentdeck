@@ -1,7 +1,7 @@
 // pnpm docs:gen: rewrites the generated block of docs/architecture.md and the files of docs/reference/ from the code.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { DOCS_PATH, REFERENCE_DIR, generateReference, readDocs, renderDocs } from './lib/architecture-docs.ts';
+import { DOCS_PATH, REFERENCE_DIR, generateReference, readDocs, renderDocs } from '#scripts/lib/architecture-docs.ts';
 
 const changed: string[] = [];
 

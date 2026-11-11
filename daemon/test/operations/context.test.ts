@@ -4,16 +4,16 @@ import { mkdirSync, mkdtempSync, readFileSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { asTaskId } from '../../src/domain/shared/id.ts';
+import { asTaskId } from '#domain/shared/id.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-context-'));
 process.env.AGENTDECK_HOME = home;
 
-const { openDb } = await import('../fixtures/open-db.ts');
-const { liveContext, repoForPath } = await import('../../src/application/actions.ts');
-const { describeEvent } = await import('../../src/domain/work/index.ts');
-const { DIGEST_LIMIT, digest } = await import('../../src/domain/operations/digest.ts');
-const { WORKTREE_DIR } = await import('../../src/config.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const { liveContext, repoForPath } = await import('#application/actions.ts');
+const { describeEvent } = await import('#domain/work/index.ts');
+const { DIGEST_LIMIT, digest } = await import('#domain/operations/digest.ts');
+const { WORKTREE_DIR } = await import('#src/config.ts');
 
 const CLI = join(import.meta.dirname, '../../src/cli.ts');
 

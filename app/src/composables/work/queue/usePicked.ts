@@ -1,6 +1,6 @@
 // The picked tasks, shared by every view, the bulk bar and the palette: one selection for the whole queue.
 import { ref } from 'vue';
-import { idRange, keepPicked, pickAll, toggleGroupPicks } from '../../../lib/work/queue/bulk';
+import { idRange, keepPicked, pickAll, toggleGroupPicks } from '#lib/work/queue/bulk.ts';
 
 const picked = ref<number[]>([]);
 const anchor = ref<number | null>(null);

@@ -1,7 +1,7 @@
 // Pure tests of a task's history, the changes its non-status writes make, and the check of a proposal against the base.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { asTaskId } from '../../src/domain/shared/index.ts';
+import { asTaskId } from '#domain/shared/index.ts';
 import {
   type ProposalCheck,
   autoMergeCheckChanges,
@@ -27,7 +27,7 @@ import {
   proposalCheckLine,
   questionChanges,
   staleness,
-} from '../../src/domain/work/index.ts';
+} from '#domain/work/index.ts';
 
 const cleared = {
   auto_merge_check: null,

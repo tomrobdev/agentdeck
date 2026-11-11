@@ -32,7 +32,13 @@
     "check:fast": "pnpm format:check && pnpm typecheck && pnpm db:check && pnpm coverage",
     "check": "pnpm check:fast && node daemon/scripts/crash-test.mjs \"${CRASH_ITERATIONS:-10}\"",
     "check:task": "node scripts/check-task.mjs",
-    "check:stack": "node scripts/check-stack.mjs"
+    "check:stack": "node scripts/check-stack.mjs",
+    "imports:fix": "pnpm --filter agentdeck-daemon imports:fix"
+  },
+  "exports": {
+    "./app/lib/*": "./app/src/lib/*",
+    "./app/api/types.ts": "./app/src/api/types.ts",
+    "./docs/plans/*": "./docs/plans/*"
   },
   "devDependencies": {
     "prettier": "3.9.10"

@@ -1,7 +1,7 @@
-import type { MergeResult } from '../../api/types';
-import type { Actions } from '../shared/useActions';
-import { merging } from '../shared/useShell';
-import { useOpenNext } from './queue/useOpenNext';
+import type { MergeResult } from '#api/types.ts';
+import type { Actions } from '#composables/shared/useActions.ts';
+import { merging } from '#composables/shared/useShell.ts';
+import { useOpenNext } from '#composables/work/queue/useOpenNext.ts';
 
 export function useMergeDialog({ refresh, flash }: Pick<Actions, 'refresh' | 'flash'>) {
   const { nextAfter, openNext } = useOpenNext();

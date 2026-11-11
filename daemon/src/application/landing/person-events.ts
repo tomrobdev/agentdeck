@@ -1,11 +1,11 @@
 // Use cases for a person's lifecycle events: approve, reject, retry, cancel and mark done.
-import type { App } from '../ports/app.ts';
-import type { TaskId } from '../../domain/shared/index.ts';
-import { type TaskStatus, fromStatuses, modelError } from '../../domain/work/index.ts';
-import { refuseWhileSyncing } from '../work/checkout-locks.ts';
-import { escalateOnRetry } from '../work/escalate.ts';
-import { ActionError, requireTask } from '../shared/input.ts';
-import { applyPersonEvent } from './settle.ts';
+import type { App } from '#application/ports/app.ts';
+import type { TaskId } from '#domain/shared/index.ts';
+import { type TaskStatus, fromStatuses, modelError } from '#domain/work/index.ts';
+import { refuseWhileSyncing } from '#application/work/checkout-locks.ts';
+import { escalateOnRetry } from '#application/work/escalate.ts';
+import { ActionError, requireTask } from '#application/shared/input.ts';
+import { applyPersonEvent } from '#application/landing/settle.ts';
 
 export function cancelTask(app: App, id: TaskId): 'cancelled' | 'stopping' {
   const t = applyPersonEvent(app, id, { type: 'cancel' });

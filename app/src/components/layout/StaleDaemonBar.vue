@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { operationsApi } from '../../api/operations';
-import { describeStaleDaemon } from '../../lib/operations/daemon-wording';
-import type { Status } from '../../api/types';
-import { appCommit } from '../../platform/build';
-import { useActions } from '../../composables/shared/useActions';
+import { operationsApi } from '#api/operations.ts';
+import { describeStaleDaemon } from '#lib/operations/daemon-wording.ts';
+import type { Status } from '#api/types.ts';
+import { appCommit } from '#platform/build.ts';
+import { useActions } from '#composables/shared/useActions.ts';
 
 const props = defineProps<{ status: Status | null }>();
 const { run } = useActions();

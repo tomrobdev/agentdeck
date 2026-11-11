@@ -1,7 +1,7 @@
 // pnpm check:task's path rules (daemon/scripts/lib/check-task.ts): which extra checks a branch's changed paths call for.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { extraChecks, reasonLine, skipLine, EXTRA_CHECKS } from '../../scripts/lib/check-task.ts';
+import { extraChecks, reasonLine, skipLine, EXTRA_CHECKS } from '#scripts/lib/check-task.ts';
 
 const names = (paths: string[]) => extraChecks(paths).map((c) => c.name);
 

@@ -4,9 +4,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
-import { MIGRATIONS, migrate, openDb } from '../../src/db/index.ts';
-import { asTaskId } from '../../src/domain/shared/id.ts';
-import { stopReasonOf } from '../../src/domain/work/task/task.ts';
+import { MIGRATIONS, migrate, openDb } from '#db/index.ts';
+import { asTaskId } from '#domain/shared/id.ts';
+import { stopReasonOf } from '#domain/work/task/task.ts';
 
 function tmpPath(): { path: string; cleanup: () => void } {
   const dir = mkdtempSync(join(tmpdir(), 'agentdeck-mig-'));

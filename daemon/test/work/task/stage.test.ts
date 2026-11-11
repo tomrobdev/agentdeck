@@ -11,10 +11,10 @@ import {
   isWaiting,
   stageOf,
   statusGroup,
-} from '../../../src/domain/work/index.ts';
-import type { TaskStatus, Waiting } from '../../../src/domain/work/index.ts';
-import type { PrState } from '../../../src/domain/landing/index.ts';
-import { asTaskId } from '../../fixtures/fixtures.ts';
+} from '#domain/work/index.ts';
+import type { TaskStatus, Waiting } from '#domain/work/index.ts';
+import type { PrState } from '#domain/landing/index.ts';
+import { asTaskId } from '#test/fixtures/fixtures.ts';
 
 const ON_ITS_WAY: Waiting = { on: [asTaskId(1)], stuck: null };
 const STUCK: Waiting = { on: [asTaskId(1)], stuck: '#1 was cancelled' };

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { plural } from '../../../../daemon/src/domain/shared/index.ts';
-import type { PromptEntry, TouchedFile } from '../../lib/runs/context';
-import Delta from '../ui/status/Delta.vue';
+import { plural } from '#daemon/domain/shared/index.ts';
+import type { PromptEntry, TouchedFile } from '#lib/runs/context.ts';
+import Delta from '#components/ui/status/Delta.vue';
 
 defineProps<{
   prompts: PromptEntry[];

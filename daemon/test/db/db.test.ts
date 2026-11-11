@@ -8,7 +8,7 @@ import { after, test } from 'node:test';
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-db-'));
 process.env.AGENTDECK_HOME = home;
 
-const { openDb } = await import('../../src/db/index.ts');
+const { openDb } = await import('#db/index.ts');
 const db = openDb(join(home, 'test.db'));
 
 after(() => db.close());
@@ -67,7 +67,7 @@ test('a database already at version 1 gets the runs_task index on open', async (
   const { mkdtempSync } = await import('node:fs');
   const { tmpdir } = await import('node:os');
   const { join } = await import('node:path');
-  const { MIGRATIONS, migrate } = await import('../../src/db/index.ts');
+  const { MIGRATIONS, migrate } = await import('#db/index.ts');
   const path = join(mkdtempSync(join(tmpdir(), 'agentdeck-db-')), 'v1.db');
   const v1 = new DatabaseSync(path);
   migrate(v1, MIGRATIONS.slice(0, 1));
@@ -113,7 +113,7 @@ test('atomically: processes that read and then write at once all land, waiting o
 });
 
 test('atomically: inside a transaction it is a savepoint, so a failure rolls back only its own writes', async () => {
-  const { atomically } = await import('../../src/db/sql.ts');
+  const { atomically } = await import('#db/sql.ts');
   const keys = () =>
     (db.raw.prepare("SELECT key FROM settings WHERE key IN ('outer', 'inner')").all() as { key: string }[]).map((r) => r.key);
   db.raw.exec('BEGIN');

@@ -13,7 +13,7 @@ import {
   repoNameError,
   toolRulesError,
   toolRulesSource,
-} from '../../src/domain/repos/index.ts';
+} from '#domain/repos/index.ts';
 
 test('a repo name may use letters, digits, dot, underscore and dash, and must not start with a dot or dash or be all digits', () => {
   assert.equal(repoNameError('my-repo_1.x'), null);

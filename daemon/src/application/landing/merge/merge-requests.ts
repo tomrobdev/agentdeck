@@ -1,11 +1,11 @@
 // Merge requests: a person's Merge, recorded on the task and carried out by the daemon once the PR is ready (docs/plans/merge-requests.html; the carrying out is `refreshPrStates` and `autoMerge`).
-import { API_PORT } from '../../../config.ts';
-import type { App } from '../../ports/app.ts';
-import type { TaskId } from '../../../domain/shared/index.ts';
-import { MERGE_METHODS, type MergeMethod, isMergeMethod } from '../../../domain/repos/index.ts';
-import { ActionError, object, requireTask, text } from '../../shared/input.ts';
-import { mergeable, mergePreview } from './merge.ts';
-import { endMergeRequest } from '../moves.ts';
+import { API_PORT } from '#src/config.ts';
+import type { App } from '#application/ports/app.ts';
+import type { TaskId } from '#domain/shared/index.ts';
+import { MERGE_METHODS, type MergeMethod, isMergeMethod } from '#domain/repos/index.ts';
+import { ActionError, object, requireTask, text } from '#application/shared/input.ts';
+import { mergeable, mergePreview } from '#application/landing/merge/merge.ts';
+import { endMergeRequest } from '#application/landing/moves.ts';
 
 export interface MergeRequestedResult {
   method: MergeMethod;

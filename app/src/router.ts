@@ -1,8 +1,8 @@
 // The dashboard's routes on Vue Router with hash history.
 import { type LocationQuery, type LocationQueryValue, type RouteRecordInfo, createRouter, createWebHashHistory } from 'vue-router';
-import TrayView from './components/layout/TrayView.vue';
-import { TASK_TABS, type TaskTab } from './lib/shared/app-url';
-import QueuePage from './pages/QueuePage.vue';
+import TrayView from '#components/layout/TrayView.vue';
+import { TASK_TABS, type TaskTab } from '#lib/shared/app-url.ts';
+import QueuePage from '#pages/QueuePage.vue';
 
 type NoParams = Record<never, never>;
 
@@ -55,11 +55,11 @@ export const router = createRouter({
   history: createWebHashHistory(),
   routes: [
     { name: 'queue', path: '/', component: QueuePage, meta: { title: 'Queue' } },
-    { name: 'insights', path: '/insights', component: () => import('./pages/InsightsPage.vue'), meta: { title: 'Insights' } },
+    { name: 'insights', path: '/insights', component: () => import('#pages/InsightsPage.vue'), meta: { title: 'Insights' } },
     {
       name: 'task',
       path: '/tasks/:id(\\d+)/:tab(overview|runs|changes|code)?',
-      component: () => import('./pages/TaskPage.vue'),
+      component: () => import('#pages/TaskPage.vue'),
       props: taskProps,
     },
     { name: 'tray', path: '/tray', component: TrayView },

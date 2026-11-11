@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, beforeEach, test } from 'node:test';
 import { setTimeout as sleep } from 'node:timers/promises';
-import { type TaskId, asTaskId } from '../../../src/domain/shared/id.ts';
+import { type TaskId, asTaskId } from '#domain/shared/id.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-conflicts-'));
 process.env.AGENTDECK_HOME = home;
@@ -15,19 +15,19 @@ const fake = join(import.meta.dirname, '../../fixtures/fake-claude.mjs');
 chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
 
-const { openDb } = await import('../../../src/db/index.ts');
-const { Scheduler } = await import('../../../src/application/scheduler/scheduler.ts');
-const { github } = await import('../../../src/adapters/github/github.ts');
-const { startApi } = await import('../../../src/api/server.ts');
-const { refreshPrStates } = await import('../../../src/application/landing/pull-request/refresh.ts');
-const { doneTask: doneTaskWithPr, testApp, waitFor } = await import('../../fixtures/fixtures.ts');
-const { resolveConflicting } = await import('../../../src/application/runs/sync.ts');
-const { ActionError, mergeTask, syncNow, retryTask, updateRepo } = await import('../../../src/application/actions.ts');
-const { isConflicting, isMergeabilityUnknown } = await import('../../../src/domain/landing/merge/conflict.ts');
-const { conflictReason, syncSummary } = await import('../../../src/domain/runs/sync.ts');
-const { buildPrBody } = await import('../../../src/domain/landing/pull-request/pr.ts');
-const { buildPrompt, buildResolvePrompt } = await import('../../../src/domain/runs/prompt.ts');
-type PrDetails = import('../../../src/domain/landing/merge/merge.ts').PrDetails;
+const { openDb } = await import('#db/index.ts');
+const { Scheduler } = await import('#application/scheduler/scheduler.ts');
+const { github } = await import('#adapters/github/github.ts');
+const { startApi } = await import('#api/server.ts');
+const { refreshPrStates } = await import('#application/landing/pull-request/refresh.ts');
+const { doneTask: doneTaskWithPr, testApp, waitFor } = await import('#test/fixtures/fixtures.ts');
+const { resolveConflicting } = await import('#application/runs/sync.ts');
+const { ActionError, mergeTask, syncNow, retryTask, updateRepo } = await import('#application/actions.ts');
+const { isConflicting, isMergeabilityUnknown } = await import('#domain/landing/merge/conflict.ts');
+const { conflictReason, syncSummary } = await import('#domain/runs/sync.ts');
+const { buildPrBody } = await import('#domain/landing/pull-request/pr.ts');
+const { buildPrompt, buildResolvePrompt } = await import('#domain/runs/prompt.ts');
+type PrDetails = import('#domain/landing/merge/merge.ts').PrDetails;
 
 const db = testApp(openDb(join(home, 'test.db')));
 db.setSetting('max_concurrent', '1');
@@ -212,7 +212,7 @@ test('a clean merge is committed, tested and pushed without a claude run', async
 
 test('a sync with no base ref ends as an error, not up to date', async () => {
   const t = await doneTask();
-  const { syncBranch } = await import('../../../src/application/runs/sync.ts');
+  const { syncBranch } = await import('#application/runs/sync.ts');
   const task = db.getTask(t.id)!;
   const res = await syncBranch(db, task, { ...repo, base_branch: 'no-such-branch' }, t.wt, { allowResolve: false, runTests: false });
   assert.equal(res.kind, 'error');
@@ -391,7 +391,7 @@ test('auto_resolve off: clean merges still happen, conflicts wait for a person',
 });
 
 const syncAuto = async (id: TaskId) => {
-  const { syncTask } = await import('../../../src/application/runs/sync.ts');
+  const { syncTask } = await import('#application/runs/sync.ts');
   return syncTask(db, id, { manual: false });
 };
 
@@ -624,7 +624,7 @@ test('POST /api/tasks/:id/sync syncs with the base and returns the task', async 
 });
 
 test('the merge preview says when the conflict is something a resolve run can fix', async () => {
-  const { mergePreview } = await import('../../../src/application/actions.ts');
+  const { mergePreview } = await import('#application/actions.ts');
   const t = await doneTask();
   assert.equal((await mergePreview(db, t.id)).conflicting, false);
   details[db.getTask(t.id)!.pr!.url!] = { ...cleanDetails, mergeable: 'CONFLICTING' };
@@ -635,7 +635,7 @@ test('the merge preview says when the conflict is something a resolve run can fi
 });
 
 test("with auto_resolve off, the merge preview's problems name the sync, as its merge request does", async () => {
-  const { mergePreview } = await import('../../../src/application/actions.ts');
+  const { mergePreview } = await import('#application/actions.ts');
   const t = await doneTask();
   details[db.getTask(t.id)!.pr!.url!] = { ...cleanDetails, mergeable: 'CONFLICTING' };
   updateRepo(db, 'demo', { auto_resolve: false });

@@ -1,6 +1,6 @@
 // Operations: the daemon's status, its restarts and health, the launchd service, settings and notifications.
 import { queryOptions } from '@tanstack/vue-query';
-import { get, isOffline, post } from './http.ts';
+import { get, isOffline, post } from '#api/http.ts';
 import type {
   DaemonHealth,
   DaemonState,
@@ -11,7 +11,7 @@ import type {
   SettingsPatch,
   Status,
   TestNotifyResult,
-} from './types.ts';
+} from '#api/types.ts';
 
 export const operationsApi = {
   status: () => get<Status>('/api/status'),

@@ -1,5 +1,5 @@
 // The import graphs behind docs/reference/context-map.md and adapter-use.md, worked out from `Source`s. Pure: no file reads.
-import type { Source } from './sources.ts';
+import type { Source } from '#scripts/lib/sources.ts';
 
 export function contextOf(path: string): string | null {
   const parts = path.split('/');

@@ -1,19 +1,19 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
-import { runsApi } from '../../api/runs';
-import { parseTime } from '../../lib/shared/time';
-import type { LogEntry, Run } from '../../api/types';
-import { useHotkeys } from '../../composables/shared/useHotkeys';
-import { LOG_FILTERS, type LogFilter, failureKeys, failureStep, filterItems, parseLogFilter } from '../../lib/runs/log-filter';
-import { type LiveSource, runHeader, timeline } from '../../lib/runs/run-live';
-import { loadSetting, saveSetting } from '../../lib/shared/storage';
-import SegmentedControl from '../ui/form/SegmentedControl.vue';
-import { buildTranscript, cutRoot } from '../../lib/runs/transcript';
-import LogItem from './LogItem.vue';
-import RunHeader from './RunHeader.vue';
-import RunTimeline from './RunTimeline.vue';
-import { filesTouched, promptsOf, withoutPrompts } from '../../lib/runs/context';
-import RunContext from './RunContext.vue';
+import { runsApi } from '#api/runs.ts';
+import { parseTime } from '#lib/shared/time.ts';
+import type { LogEntry, Run } from '#api/types.ts';
+import { useHotkeys } from '#composables/shared/useHotkeys.ts';
+import { LOG_FILTERS, type LogFilter, failureKeys, failureStep, filterItems, parseLogFilter } from '#lib/runs/log-filter.ts';
+import { type LiveSource, runHeader, timeline } from '#lib/runs/run-live.ts';
+import { loadSetting, saveSetting } from '#lib/shared/storage.ts';
+import SegmentedControl from '#components/ui/form/SegmentedControl.vue';
+import { buildTranscript, cutRoot } from '#lib/runs/transcript.ts';
+import LogItem from '#components/runs/LogItem.vue';
+import RunHeader from '#components/runs/RunHeader.vue';
+import RunTimeline from '#components/runs/RunTimeline.vue';
+import { filesTouched, promptsOf, withoutPrompts } from '#lib/runs/context.ts';
+import RunContext from '#components/runs/RunContext.vue';
 
 const props = defineProps<{
   taskId: number;

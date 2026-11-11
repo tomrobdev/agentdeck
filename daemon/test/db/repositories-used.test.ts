@@ -2,11 +2,11 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import type { App, ComposedApp } from '../../src/application/ports/app.ts';
-import type { Repositories } from '../../src/application/ports/repositories/index.ts';
-import type { composeApp } from '../../src/compose.ts';
-import type { Db } from '../../src/db/index.ts';
-import { readSources } from '../../scripts/lib/sources.ts';
+import type { App, ComposedApp } from '#application/ports/app.ts';
+import type { Repositories } from '#application/ports/repositories/index.ts';
+import type { composeApp } from '#src/compose.ts';
+import type { Db } from '#db/index.ts';
+import { readSources } from '#scripts/lib/sources.ts';
 
 const SRC = join(import.meta.dirname, '../../src');
 

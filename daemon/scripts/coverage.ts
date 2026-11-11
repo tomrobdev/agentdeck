@@ -1,8 +1,8 @@
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { RAISE_MARGIN, groupCoverage, judgeCoverage, parseLcov, percent, showPercent, withUnloaded } from './lib/coverage.ts';
-import { COVERAGE_FLOORS } from './lib/progress.ts';
+import { RAISE_MARGIN, groupCoverage, judgeCoverage, parseLcov, percent, showPercent, withUnloaded } from '#scripts/lib/coverage.ts';
+import { COVERAGE_FLOORS } from '#scripts/lib/progress.ts';
 
 const DAEMON = join(import.meta.dirname, '..');
 const given = process.argv.indexOf('--lcov');

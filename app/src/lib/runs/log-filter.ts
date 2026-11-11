@@ -1,6 +1,6 @@
 // The run log's filter, its failures and how long each call took. Pure, so the dashboard's rules are tested from daemon/test.
-import { clock, isTestCall } from './run-live.ts';
-import { type CallItem, type Item, fold, toolKind } from './transcript.ts';
+import { clock, isTestCall } from '#lib/runs/run-live.ts';
+import { type CallItem, type Item, fold, toolKind } from '#lib/runs/transcript.ts';
 
 export type LogFilter = 'all' | 'text' | 'edits' | 'commands' | 'failures';
 

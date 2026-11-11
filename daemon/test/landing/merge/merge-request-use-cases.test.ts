@@ -1,6 +1,6 @@
 // Merge requests (docs/plans/merge-requests.html): recording one, and the daemon carrying it out on its PR refresh with a fake github adapter.
 import assert from 'node:assert/strict';
-import { asTaskId } from '../../../src/domain/shared/id.ts';
+import { asTaskId } from '#domain/shared/id.ts';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -11,11 +11,11 @@ const home = mkdtempSync(join(tmpdir(), 'agentdeck-mergereq-'));
 process.env.AGENTDECK_HOME = home;
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../../../src/db/index.ts');
-const { doneTask, queuedTask, testApp } = await import('../../fixtures/fixtures.ts');
-const { github } = await import('../../../src/adapters/github/github.ts');
-const { refreshPrStates } = await import('../../../src/application/landing/pull-request/refresh.ts');
-const { autoMerge } = await import('../../../src/application/landing/merge/auto-merge.ts');
+const { openDb } = await import('#db/index.ts');
+const { doneTask, queuedTask, testApp } = await import('#test/fixtures/fixtures.ts');
+const { github } = await import('#adapters/github/github.ts');
+const { refreshPrStates } = await import('#application/landing/pull-request/refresh.ts');
+const { autoMerge } = await import('#application/landing/merge/auto-merge.ts');
 const {
   ActionError,
   cancelMergeRequest,
@@ -29,9 +29,9 @@ const {
   submitReview,
   taskDetail,
   updateRepo,
-} = await import('../../../src/application/actions.ts');
-type PrDetails = import('../../../src/domain/landing/merge/merge.ts').PrDetails;
-type TaskId = import('../../../src/domain/shared/id.ts').TaskId;
+} = await import('#application/actions.ts');
+type PrDetails = import('#domain/landing/merge/merge.ts').PrDetails;
+type TaskId = import('#domain/shared/id.ts').TaskId;
 
 const db = testApp(openDb(join(home, 'test.db')));
 after(() => db.close());

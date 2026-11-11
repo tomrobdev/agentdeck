@@ -1,5 +1,5 @@
 // A merge from the merge dialog: #3 is in review with its checks passed and auto-merge off, so only a person merges it.
-import { expandGroup, expect, group, open, row, rowIds, test } from '../fixtures';
+import { expandGroup, expect, group, open, row, rowIds, test } from '#e2e/fixtures.ts';
 
 test('a merge from the merge dialog lands the pull request', async ({ page }) => {
   await open(page, '#/');

@@ -1,10 +1,10 @@
 // The daemon, settings, status, context and stats commands run in process.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import type { Service } from '../../src/application/ports/service.ts';
-import { fakeCodeHost } from '../fixtures/fakes.ts';
-import { doneTask, queuedTask } from '../fixtures/fixtures.ts';
-import { scratchCli, scratchRepo } from './cli-run.ts';
+import type { Service } from '#application/ports/service.ts';
+import { fakeCodeHost } from '#test/fixtures/fakes.ts';
+import { doneTask, queuedTask } from '#test/fixtures/fixtures.ts';
+import { scratchCli, scratchRepo } from '#test/cli/cli-run.ts';
 
 const status = { installed: true, loaded: true, pid: 4242, state: 'running', plist: '/x.plist', program: '/x' };
 const service: Service = {
@@ -20,7 +20,7 @@ const service: Service = {
 };
 const { db, run } = scratchCli({ codeHost: fakeCodeHost(), service });
 const path = scratchRepo('gamma');
-const repo = await (await import('../../src/application/actions.ts')).addRepo(db, { path, test: 'true' });
+const repo = await (await import('#application/actions.ts')).addRepo(db, { path, test: 'true' });
 
 test('pause and resume stop and start the queue, and status says which', async () => {
   assert.match((await run('pause')).out, /^paused: running tasks finish/);

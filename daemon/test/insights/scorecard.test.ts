@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { pilotStats } from '../../src/application/actions.ts';
-import { openDb } from '../fixtures/open-db.ts';
+import { pilotStats } from '#application/actions.ts';
+import { openDb } from '#test/fixtures/open-db.ts';
 import {
   type ScorecardEvent,
   type ScorecardTask,
@@ -13,11 +13,11 @@ import {
   parseSince,
   scorecardText,
   summarizeChecks,
-} from '../../src/domain/insights/scorecard.ts';
-import { countInterventions } from '../../src/domain/insights/interventions.ts';
-import { type StatRun, measureByWeek } from '../../src/domain/insights/stats.ts';
-import { quotaSpends } from '../../src/domain/capacity/quota.ts';
-import { asRepoId, asTaskId, doneTask, queuedTask } from '../fixtures/fixtures.ts';
+} from '#domain/insights/scorecard.ts';
+import { countInterventions } from '#domain/insights/interventions.ts';
+import { type StatRun, measureByWeek } from '#domain/insights/stats.ts';
+import { quotaSpends } from '#domain/capacity/quota.ts';
+import { asRepoId, asTaskId, doneTask, queuedTask } from '#test/fixtures/fixtures.ts';
 
 const near = (actual: number | null | undefined, expected: number, eps = 1e-9) =>
   assert.ok(actual !== undefined && actual !== null && Math.abs(actual - expected) < eps, `${actual} is not ${expected}`);

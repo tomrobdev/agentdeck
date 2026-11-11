@@ -6,9 +6,9 @@ import { test } from 'node:test';
 
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-cli-help-'));
 
-const { COMMANDS } = await import('../../src/cli/commands.ts');
-const { HELP } = await import('../../src/cli/help.ts');
-const { NOTIFY_KINDS } = await import('../../src/domain/operations/notification.ts');
+const { COMMANDS } = await import('#cli/commands.ts');
+const { HELP } = await import('#cli/help.ts');
+const { NOTIFY_KINDS } = await import('#domain/operations/notification.ts');
 
 test('every command is in the help', () => {
   const missing = Object.keys(COMMANDS).filter((name) => !new RegExp(`(^|[^\\w-])${name}([^\\w-]|$)`).test(HELP));

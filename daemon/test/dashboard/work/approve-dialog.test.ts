@@ -1,7 +1,7 @@
 // When approving opens the dialog. The dashboard has no test runner, so its rule is tested here.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { approveDialog, asApproveDialogSetting, hasSomethingToShow } from '../../../../app/src/lib/work/approve-dialog.ts';
+import { approveDialog, asApproveDialogSetting, hasSomethingToShow } from '#app/lib/work/approve-dialog.ts';
 
 const clean = { staleness: null, notes: [], overlaps: [] };
 const stale = { staleness: { ref: 'main', base: 'abc', commits: 4, changed: [] }, notes: [], overlaps: [] };

@@ -1,12 +1,12 @@
 // Whether a PR can be merged, and how.
-import { isConflicting, isMergeabilityUnknown } from './conflict.ts';
-import { type PrState, parsePrState } from '../pull-request/pr.ts';
-import { type CheckCounts, type PrCheck, countOf, parseChecks } from '../pull-request/checks.ts';
-import { type JobStep, failingChecks, failureLine, failureRead } from '../pull-request/check-failures.ts';
-import { type JobStart, ciNotRunMessages, ciNotRunText } from '../pull-request/ci-not-run.ts';
-import { plural } from '../../shared/index.ts';
+import { isConflicting, isMergeabilityUnknown } from '#domain/landing/merge/conflict.ts';
+import { type PrState, parsePrState } from '#domain/landing/pull-request/pr.ts';
+import { type CheckCounts, type PrCheck, countOf, parseChecks } from '#domain/landing/pull-request/checks.ts';
+import { type JobStep, failingChecks, failureLine, failureRead } from '#domain/landing/pull-request/check-failures.ts';
+import { type JobStart, ciNotRunMessages, ciNotRunText } from '#domain/landing/pull-request/ci-not-run.ts';
+import { plural } from '#domain/shared/index.ts';
 
-export { type CheckCounts, checksSettled, countChecks } from '../pull-request/checks.ts';
+export { type CheckCounts, checksSettled, countChecks } from '#domain/landing/pull-request/checks.ts';
 
 /** A pull request to open. */
 export interface CreatePr {

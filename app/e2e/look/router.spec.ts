@@ -1,5 +1,5 @@
 // The router: unknown paths and tabs redirect, the window title follows the route, and Back restores the queue's scroll.
-import { expect, open, row, test } from '../fixtures';
+import { expect, open, row, test } from '#e2e/fixtures.ts';
 
 test('an unknown path lands on the queue', async ({ page }) => {
   await open(page, '#/nowhere/at/all');

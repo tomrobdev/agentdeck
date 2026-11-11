@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { tasksQuery, taskQuery } from '../api/work';
-import StaleDaemonBar from '../components/layout/StaleDaemonBar.vue';
-import TaskView from '../components/work/task/TaskView.vue';
-import { useActions } from '../composables/shared/useActions';
-import { usePause } from '../composables/shared/usePause';
-import { selectedId } from '../composables/shared/useShell';
-import { useApprovals } from '../composables/work/useApprovals';
-import { useTaskActs } from '../composables/work/usePaletteCommands';
-import type { TaskTab } from '../lib/shared/app-url';
+import { tasksQuery, taskQuery } from '#api/work.ts';
+import StaleDaemonBar from '#components/layout/StaleDaemonBar.vue';
+import TaskView from '#components/work/task/TaskView.vue';
+import { useActions } from '#composables/shared/useActions.ts';
+import { usePause } from '#composables/shared/usePause.ts';
+import { selectedId } from '#composables/shared/useShell.ts';
+import { useApprovals } from '#composables/work/useApprovals.ts';
+import { useTaskActs } from '#composables/work/usePaletteCommands.ts';
+import type { TaskTab } from '#lib/shared/app-url.ts';
 
 const props = defineProps<{ id: number; tab: TaskTab; query: Record<string, string> }>();
 const { status } = usePause();

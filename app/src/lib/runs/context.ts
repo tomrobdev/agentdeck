@@ -1,5 +1,5 @@
 // What a run was told and the files it touched, read from its log. Pure, so the dashboard's rules are tested from daemon/test.
-import type { LogEntry } from '../../../../daemon/src/api/contract/files.ts';
+import type { LogEntry } from '#daemon/api/contract/files.ts';
 
 export type PromptEntry = Extract<LogEntry, { kind: 'prompt' }>;
 

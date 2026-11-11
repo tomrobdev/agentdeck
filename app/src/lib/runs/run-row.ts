@@ -1,8 +1,8 @@
 // What a row of the run list says about a run besides its outcome: its kind as an icon, and its cost with its tokens.
-import type { Run } from '../../../../daemon/src/api/contract/runs.ts';
+import type { Run } from '#daemon/api/contract/runs.ts';
 
 type RunKind = Run['kind'];
-import { costText } from '../../../../daemon/src/domain/runs/index.ts';
+import { costText } from '#daemon/domain/runs/index.ts';
 
 export const RUN_KIND_ICONS: Record<RunKind, { icon: string; label: string }> = {
   work: { icon: '▶', label: 'Work run' },

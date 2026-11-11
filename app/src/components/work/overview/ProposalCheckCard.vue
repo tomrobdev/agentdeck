@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { CHECKED_STATUSES, proposalCheckLine } from '../../../../../daemon/src/domain/work/index.ts';
-import { proposalCheckQuery, workApi } from '../../../api/work';
-import { ago } from '../../../lib/shared/time';
-import type { TaskStatus } from '../../../api/types';
+import { CHECKED_STATUSES, proposalCheckLine } from '#daemon/domain/work/index.ts';
+import { proposalCheckQuery, workApi } from '#api/work.ts';
+import { ago } from '#lib/shared/time.ts';
+import type { TaskStatus } from '#api/types.ts';
 import { RouterLink } from 'vue-router';
-import { statusLabel } from '../../../lib/work/task-view';
-import { useAction } from '../../../composables/shared/useActions';
+import { statusLabel } from '#lib/work/task-view.ts';
+import { useAction } from '#composables/shared/useActions.ts';
 
 const props = defineProps<{ task: { id: number; status: TaskStatus } }>();
 const { pending, run } = useAction();

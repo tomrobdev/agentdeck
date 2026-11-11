@@ -11,9 +11,9 @@ import {
   parseLcov,
   showPercent,
   withUnloaded,
-} from '../../scripts/lib/coverage.ts';
-import { COVERAGE_FLOORS } from '../../scripts/lib/progress.ts';
-import { parseSource, readSources } from '../../scripts/lib/sources.ts';
+} from '#scripts/lib/coverage.ts';
+import { COVERAGE_FLOORS } from '#scripts/lib/progress.ts';
+import { parseSource, readSources } from '#scripts/lib/sources.ts';
 
 const SRC = join(import.meta.dirname, '../../src');
 
@@ -121,7 +121,10 @@ test('coverage: a group below its floor fails, one beaten by more than 2 points 
 test('coverage: a percent shows rounded down, and a file of types alone has no group', () => {
   assert.equal(showPercent(99.96), '99.9%');
   assert.equal(showPercent(100), '100.0%');
-  const types = parseSource('domain/x/types.ts', "import type { A } from './a.ts';\nexport interface B { a: A }\nexport type C = B;\n");
+  const types = parseSource(
+    'domain/x/types.ts',
+    "import type { A } from '#domain/x/a.ts';\nexport interface B { a: A }\nexport type C = B;\n",
+  );
   const code = parseSource('domain/y/code.ts', 'export const one = 1;\n');
   assert.deepEqual(groupsWithCode([types, code]), ['domain/y']);
 });

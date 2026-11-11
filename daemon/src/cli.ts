@@ -1,10 +1,10 @@
 // The `agentdeck` command.
-import { repoName as nameOfRepo } from './application/actions.ts';
-import { COMMANDS } from './cli/commands.ts';
-import { die } from './cli/format.ts';
-import { HELP } from './cli/help.ts';
-import { type CommandContext, parseCommandLine } from './cli/context.ts';
-import { composeApp } from './compose.ts';
+import { repoName as nameOfRepo } from '#application/actions.ts';
+import { COMMANDS } from '#cli/commands.ts';
+import { die } from '#cli/format.ts';
+import { HELP } from '#cli/help.ts';
+import { type CommandContext, parseCommandLine } from '#cli/context.ts';
+import { composeApp } from '#src/compose.ts';
 
 async function main(argv: string[]): Promise<void> {
   const { values: flags, positionals } = parseCommandLine(argv);

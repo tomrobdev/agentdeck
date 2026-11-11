@@ -1,8 +1,8 @@
 // A task's pull request as a value, and what goes into one.
-import { STATUS_TAIL } from '../../shared/index.ts';
-import type { AutoMergeCheck } from '../merge/merge.ts';
-import type { CheckCounts, StoredChecks } from './checks.ts';
-import type { MergeMethod } from '../../repos/index.ts';
+import { STATUS_TAIL } from '#domain/shared/index.ts';
+import type { AutoMergeCheck } from '#domain/landing/merge/merge.ts';
+import type { CheckCounts, StoredChecks } from '#domain/landing/pull-request/checks.ts';
+import type { MergeMethod } from '#domain/repos/index.ts';
 
 /** `failed` is the daemon's own: the task finished but its PR could not be opened (`FailedPullRequest`). */
 export type PrState = 'open' | 'merged' | 'closed' | 'failed';

@@ -1,6 +1,6 @@
 // The RunLog port: a run's log and settings files on disk.
 import type { WriteStream } from 'node:fs';
-import type { LogEntry } from '../../domain/runs/index.ts';
+import type { LogEntry } from '#domain/runs/index.ts';
 
 export type LogEvent = { type: string } & Record<string, unknown>;
 

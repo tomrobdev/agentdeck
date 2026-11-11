@@ -2,8 +2,8 @@
 import { type SQL, and, asc, desc, eq, exists, inArray, isNotNull, isNull, ne, notExists, or } from 'drizzle-orm';
 import { type AnySQLiteColumn, alias } from 'drizzle-orm/sqlite-core';
 import type { DatabaseSync } from 'node:sqlite';
-import type { TaskId } from '../../domain/shared/index.ts';
-import { INTERRUPTED, type RunOutcome } from '../../domain/runs/index.ts';
+import type { TaskId } from '#domain/shared/index.ts';
+import { INTERRUPTED, type RunOutcome } from '#domain/runs/index.ts';
 import {
   type DomainEvent,
   RUNNING_STATUSES,
@@ -14,13 +14,13 @@ import {
   followUpsOf,
   fromStatuses,
   transition,
-} from '../../domain/work/index.ts';
-import { TASK_COLUMNS, mapFound, stateColumns, toTask } from '../mappers.ts';
-import type { Orm } from '../orm.ts';
-import { NOW_SQL, atomically } from '../sql.ts';
-import { plannerRuns, repos, runs, taskLinks, tasks } from '../tables.ts';
-import { recordEvent } from './task-events.ts';
-import { columns } from './tasks-columns.ts';
+} from '#domain/work/index.ts';
+import { TASK_COLUMNS, mapFound, stateColumns, toTask } from '#db/mappers.ts';
+import type { Orm } from '#db/orm.ts';
+import { NOW_SQL, atomically } from '#db/sql.ts';
+import { plannerRuns, repos, runs, taskLinks, tasks } from '#db/tables.ts';
+import { recordEvent } from '#db/work/task-events.ts';
+import { columns } from '#db/work/tasks-columns.ts';
 
 const prStateAsRead = (task: Task): SQL | undefined =>
   task.pr ? eq(tasks.pr_state, task.pr.state) : or(isNull(tasks.pr_state), and(isNull(tasks.pr_url), ne(tasks.pr_state, 'failed')));

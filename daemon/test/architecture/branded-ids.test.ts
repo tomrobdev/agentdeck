@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import ts from 'typescript';
-import { type PlannerRunId, type RepoId, type TaskId, asRepoId, asTaskId, parseId } from '../../src/domain/shared/id.ts';
-import { lineOf, readSources } from '../../scripts/lib/sources.ts';
+import { type PlannerRunId, type RepoId, type TaskId, asRepoId, asTaskId, parseId } from '#domain/shared/id.ts';
+import { lineOf, readSources } from '#scripts/lib/sources.ts';
 
 const SRC = join(import.meta.dirname, '../../src');
 

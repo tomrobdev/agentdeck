@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
-import { repoQuery, reposApi } from '../../../api/repos';
-import { workApi } from '../../../api/work';
-import type { Needs, TaskDetail } from '../../../api/types';
-import { canInstallWith } from '../../../../../daemon/src/domain/work/index.ts';
-import { depsAreDev, depsPackages, withHost } from '../../../lib/work/task-view';
-import { useAction, useActions } from '../../../composables/shared/useActions';
-import ConfirmDialog from '../../ui/ConfirmDialog.vue';
+import { repoQuery, reposApi } from '#api/repos.ts';
+import { workApi } from '#api/work.ts';
+import type { Needs, TaskDetail } from '#api/types.ts';
+import { canInstallWith } from '#daemon/domain/work/index.ts';
+import { depsAreDev, depsPackages, withHost } from '#lib/work/task-view.ts';
+import { useAction, useActions } from '#composables/shared/useActions.ts';
+import ConfirmDialog from '#components/ui/ConfirmDialog.vue';
 
 const props = defineProps<{ task: TaskDetail; needs: Needs }>();
 const emit = defineEmits<{ retry: [] }>();

@@ -3,31 +3,31 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import type { RunningTaskFact } from '../../src/domain/operations/health.ts';
-import { type TaskId, asTaskId } from '../../src/domain/shared/id.ts';
+import type { RunningTaskFact } from '#domain/operations/health.ts';
+import { type TaskId, asTaskId } from '#domain/shared/id.ts';
 
 type LooseTaskFact = Omit<RunningTaskFact, 'id'> & { id: number };
 const withTaskId = (f: LooseTaskFact): RunningTaskFact => ({ ...f, id: asTaskId(f.id) });
 
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-health-'));
 
-const h = await import('../../src/domain/operations/health.ts');
-const { SCHEMA_DIRTY, offMain, reloadState } = await import('../../src/domain/operations/restart.ts');
-const { daemonReport, gatherHealth, restartNow } = await import('../../src/application/operations/doctor.ts');
-const { openDb } = await import('../fixtures/open-db.ts');
-const { waitFor } = await import('../fixtures/fixtures.ts');
+const h = await import('#domain/operations/health.ts');
+const { SCHEMA_DIRTY, offMain, reloadState } = await import('#domain/operations/restart.ts');
+const { daemonReport, gatherHealth, restartNow } = await import('#application/operations/doctor.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const { waitFor } = await import('#test/fixtures/fixtures.ts');
 
 const NOW = Date.parse('2026-11-01T12:00:00Z');
 const running = { installed: true, loaded: true, pid: 100, state: 'running' };
 const idleReload = { enabled: true, pending: false, reason: null, waiting: null, blocked: null, changed: 0 };
-const state = (over: Partial<import('../../src/domain/operations/health.ts').DaemonState> = {}) => ({
+const state = (over: Partial<import('#domain/operations/health.ts').DaemonState> = {}) => ({
   commit: 'a'.repeat(40),
   started_at: '2026-11-01T09:00:00Z',
   pid: 100,
   reload: idleReload,
   ...over,
 });
-const facts = (over: Partial<import('../../src/domain/operations/health.ts').HealthFacts> = {}) => ({
+const facts = (over: Partial<import('#domain/operations/health.ts').HealthFacts> = {}) => ({
   now: NOW,
   service: running,
   port: 4317,

@@ -6,8 +6,8 @@ import {
   mergeRequestStateOf,
   mergeRequestStatesFor,
   nextMergeRequestState,
-} from '../../../src/domain/landing/merge/merge-request.ts';
-import type { MergeRequestMove, MergeRequestState } from '../../../src/domain/landing/merge/merge-request.ts';
+} from '#domain/landing/merge/merge-request.ts';
+import type { MergeRequestMove, MergeRequestState } from '#domain/landing/merge/merge-request.ts';
 
 const MOVES: [MergeRequestMove, MergeRequestState, MergeRequestState][] = [
   ['asked', 'none', 'requested'],

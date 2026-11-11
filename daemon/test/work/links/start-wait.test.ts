@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { describeWait, startDecision, startWait, waitingFor } from '../../../src/domain/work/task/start.ts';
-import type { Decision } from '../../../src/domain/capacity/governor.ts';
-import type { StartState } from '../../../src/domain/work/links/link.ts';
-import { asTaskId } from '../../fixtures/fixtures.ts';
+import { describeWait, startDecision, startWait, waitingFor } from '#domain/work/task/start.ts';
+import type { Decision } from '#domain/capacity/governor.ts';
+import type { StartState } from '#domain/work/links/link.ts';
+import { asTaskId } from '#test/fixtures/fixtures.ts';
 
 const allow: Decision = { allow: true, max_concurrent: 2, reason: null, until: null, weekly_allowed: null };
 const held: Decision = { ...allow, allow: false, reason: '5h window at 92%', until: 2000 };

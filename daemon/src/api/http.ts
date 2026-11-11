@@ -7,10 +7,10 @@ import {
   type DaemonInfo,
   type ReloadFacts,
   type Scheduler,
-} from '../application/actions.ts';
-import { API_ALLOWED_ORIGINS } from '../config.ts';
-import { type RepoId, type ReviewId, type TaskId, parseId } from '../domain/shared/index.ts';
-import { parseTaskIds } from '../domain/work/index.ts';
+} from '#application/actions.ts';
+import { API_ALLOWED_ORIGINS } from '#src/config.ts';
+import { type RepoId, type ReviewId, type TaskId, parseId } from '#domain/shared/index.ts';
+import { parseTaskIds } from '#domain/work/index.ts';
 
 export type ApiScheduler = Pick<Scheduler, 'wake' | 'track'>;
 

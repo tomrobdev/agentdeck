@@ -1,6 +1,6 @@
 // Decides whether the scheduler may start new work, from the utilization Claude reports in rate_limit_event (five_hour and seven_day windows, 0..1).
 
-import { wholeNumberError } from '../shared/index.ts';
+import { wholeNumberError } from '#domain/shared/index.ts';
 
 export interface Budget {
   five_hour_max: number;

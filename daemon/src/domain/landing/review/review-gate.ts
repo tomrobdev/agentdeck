@@ -1,7 +1,13 @@
 // Auto-merge's review gate, in a repo with auto_review on: the review run's judgement of the PR's changes, or a person's.
-import { cut, oneLine, plural } from '../../shared/index.ts';
-import type { MergeReasons } from '../merge/merge.ts';
-import { BLOCKING_PREFIX, type ReviewComment, type ReviewWithComments, commentLocation, submittedRequests } from './review.ts';
+import { cut, oneLine, plural } from '#domain/shared/index.ts';
+import type { MergeReasons } from '#domain/landing/merge/merge.ts';
+import {
+  BLOCKING_PREFIX,
+  type ReviewComment,
+  type ReviewWithComments,
+  commentLocation,
+  submittedRequests,
+} from '#domain/landing/review/review.ts';
 
 /** A run of the task as the gate reads it: its kind, the changes it was started to read, and how it ended (null while it runs). */
 export interface ReviewRunRead {

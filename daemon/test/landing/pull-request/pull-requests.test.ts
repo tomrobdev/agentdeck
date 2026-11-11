@@ -6,8 +6,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, beforeEach, test } from 'node:test';
 import { setTimeout as sleep } from 'node:timers/promises';
-import { type TaskId, asTaskId } from '../../../src/domain/shared/id.ts';
-import { stopReasonOf } from '../../../src/domain/work/task/task.ts';
+import { type TaskId, asTaskId } from '#domain/shared/id.ts';
+import { stopReasonOf } from '#domain/work/task/task.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-pr-'));
 process.env.AGENTDECK_HOME = home;
@@ -16,27 +16,27 @@ const fake = join(import.meta.dirname, '../../fixtures/fake-claude.mjs');
 chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
 
-const { openDb } = await import('../../fixtures/open-db.ts');
-const { blockedTask, doneTask, failedTask, openPr, rerun, settlePr, waitFor } = await import('../../fixtures/fixtures.ts');
-const { Scheduler } = await import('../../../src/application/scheduler/scheduler.ts');
-const { github } = await import('../../../src/adapters/github/github.ts');
-const { refreshPrStates } = await import('../../../src/application/landing/pull-request/refresh.ts');
-const { followUpPending } = await import('../../../src/application/landing/settle.ts');
-const { addTask, ActionError, closeTaskPr, retryTask, updateRepo } = await import('../../../src/application/actions.ts');
-const { buildPrompt } = await import('../../../src/domain/runs/prompt.ts');
-const { latestReviewNote } = await import('../../../src/domain/work/lifecycle/history.ts');
-const { mergePreview, mergeTask } = await import('../../../src/application/actions.ts');
-const { testApp } = await import('../../fixtures/fixtures.ts');
-const { prCommands } = await import('../../../src/cli/landing/pull-requests.ts');
-const { mergeCheck, parsePrDetails } = await import('../../../src/domain/landing/merge/merge.ts');
-type PrDetails = import('../../../src/domain/landing/merge/merge.ts').PrDetails;
-const { liveLinks } = await import('../../../src/application/work/dependencies.ts');
-const { startState, waitingFor } = await import('../../../src/domain/work/index.ts');
-const waiting = (t: import('../../../src/domain/work/task/task.ts').Task) => {
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const { blockedTask, doneTask, failedTask, openPr, rerun, settlePr, waitFor } = await import('#test/fixtures/fixtures.ts');
+const { Scheduler } = await import('#application/scheduler/scheduler.ts');
+const { github } = await import('#adapters/github/github.ts');
+const { refreshPrStates } = await import('#application/landing/pull-request/refresh.ts');
+const { followUpPending } = await import('#application/landing/settle.ts');
+const { addTask, ActionError, closeTaskPr, retryTask, updateRepo } = await import('#application/actions.ts');
+const { buildPrompt } = await import('#domain/runs/prompt.ts');
+const { latestReviewNote } = await import('#domain/work/lifecycle/history.ts');
+const { mergePreview, mergeTask } = await import('#application/actions.ts');
+const { testApp } = await import('#test/fixtures/fixtures.ts');
+const { prCommands } = await import('#cli/landing/pull-requests.ts');
+const { mergeCheck, parsePrDetails } = await import('#domain/landing/merge/merge.ts');
+type PrDetails = import('#domain/landing/merge/merge.ts').PrDetails;
+const { liveLinks } = await import('#application/work/dependencies.ts');
+const { startState, waitingFor } = await import('#domain/work/index.ts');
+const waiting = (t: import('#domain/work/task/task.ts').Task) => {
   const links = liveLinks(db);
   return waitingFor(t, startState(t, links.linksOf(t.id), links.target));
 };
-const { cancelTask } = await import('../../../src/application/actions.ts');
+const { cancelTask } = await import('#application/actions.ts');
 
 const db = openDb(join(home, 'test.db'));
 db.setSetting('max_concurrent', '1');

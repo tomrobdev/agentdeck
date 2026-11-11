@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { taskQuery, tasksQuery } from '../../../api/work';
-import { editRefusal } from '../../../lib/work/queue/bulk';
-import { MODELS } from '../../../../../daemon/src/domain/work/index.ts';
-import { useActions } from '../../../composables/shared/useActions';
-import type { EditKeys, KeyEdit } from '../../../composables/work/useEditKeys';
-import Modal from '../../ui/Modal.vue';
+import { taskQuery, tasksQuery } from '#api/work.ts';
+import { editRefusal } from '#lib/work/queue/bulk.ts';
+import { MODELS } from '#daemon/domain/work/index.ts';
+import { useActions } from '#composables/shared/useActions.ts';
+import type { EditKeys, KeyEdit } from '#composables/work/useEditKeys.ts';
+import Modal from '#components/ui/Modal.vue';
 
 const props = defineProps<{ kind: KeyEdit; keys: EditKeys }>();
 const { flash } = useActions();

@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import { fileSize } from '../../../lib/work/work-wording';
-import { type ChangedFile, type NewReviewComment, PATCH_LIMIT } from '../../../api/types';
-import type { PatchState } from '../../../composables/work/files/useFilePatches';
-import type { ShownComment } from '../../../composables/landing/useReviews';
-import { CHANGE_LABEL } from '../../../lib/work/files/changed-tree';
-import { isMarkdown } from '../../../lib/shared/render';
-import DiffView from './DiffView.vue';
-import Markdown from '../../ui/Markdown.vue';
-import Checkbox from '../../ui/form/Checkbox.vue';
-import Delta from '../../ui/status/Delta.vue';
-import Disclosure from '../../ui/disclosure/Disclosure.vue';
-import DisclosureContent from '../../ui/disclosure/DisclosureContent.vue';
-import DisclosureTrigger from '../../ui/disclosure/DisclosureTrigger.vue';
+import { fileSize } from '#lib/work/work-wording.ts';
+import { type ChangedFile, type NewReviewComment, PATCH_LIMIT } from '#api/types.ts';
+import type { PatchState } from '#composables/work/files/useFilePatches.ts';
+import type { ShownComment } from '#composables/landing/useReviews.ts';
+import { CHANGE_LABEL } from '#lib/work/files/changed-tree.ts';
+import { isMarkdown } from '#lib/shared/render.ts';
+import DiffView from '#components/work/files/DiffView.vue';
+import Markdown from '#components/ui/Markdown.vue';
+import Checkbox from '#components/ui/form/Checkbox.vue';
+import Delta from '#components/ui/status/Delta.vue';
+import Disclosure from '#components/ui/disclosure/Disclosure.vue';
+import DisclosureContent from '#components/ui/disclosure/DisclosureContent.vue';
+import DisclosureTrigger from '#components/ui/disclosure/DisclosureTrigger.vue';
 
 defineProps<{
   file: ChangedFile;

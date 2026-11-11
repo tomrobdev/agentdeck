@@ -1,8 +1,8 @@
 // Tasks: one store merged from its reads (tasks-queries.ts), its status changes (tasks-status.ts, every one through applyEvent, the claim included, guarded by the current status) and its PR writes (tasks-pr.ts), with the other writes here.
 import { and, eq, inArray } from 'drizzle-orm';
 import type { DatabaseSync } from 'node:sqlite';
-import { DEFAULTS } from '../../config.ts';
-import { type RepoId, type TaskId, asTaskId, present, stored } from '../../domain/shared/index.ts';
+import { DEFAULTS } from '#src/config.ts';
+import { type RepoId, type TaskId, asTaskId, present, stored } from '#domain/shared/index.ts';
 import {
   DEFAULT_MODEL,
   EDITABLE_STATUSES,
@@ -14,18 +14,18 @@ import {
   type UnblockQuestion,
   modelChanges,
   questionChanges,
-} from '../../domain/work/index.ts';
-import { TASK_COLUMNS, mapFound, toTask } from '../mappers.ts';
-import type { Orm } from '../orm.ts';
-import { NOW_SQL, atomically } from '../sql.ts';
-import { tasks } from '../tables.ts';
-import { insertOwnPlan, saveOwnPlan } from './plans.ts';
-import { recordEvent } from './task-events.ts';
-import { insertLinks } from './task-links.ts';
-import { columns, given } from './tasks-columns.ts';
-import { taskPrStore } from './tasks-pr.ts';
-import { taskQueries } from './tasks-queries.ts';
-import { taskStatusStore } from './tasks-status.ts';
+} from '#domain/work/index.ts';
+import { TASK_COLUMNS, mapFound, toTask } from '#db/mappers.ts';
+import type { Orm } from '#db/orm.ts';
+import { NOW_SQL, atomically } from '#db/sql.ts';
+import { tasks } from '#db/tables.ts';
+import { insertOwnPlan, saveOwnPlan } from '#db/work/plans.ts';
+import { recordEvent } from '#db/work/task-events.ts';
+import { insertLinks } from '#db/work/task-links.ts';
+import { columns, given } from '#db/work/tasks-columns.ts';
+import { taskPrStore } from '#db/work/tasks-pr.ts';
+import { taskQueries } from '#db/work/tasks-queries.ts';
+import { taskStatusStore } from '#db/work/tasks-status.ts';
 
 export function taskStore(db: DatabaseSync, orm: Orm) {
   const queries = taskQueries(orm);

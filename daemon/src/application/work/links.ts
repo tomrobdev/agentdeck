@@ -1,9 +1,9 @@
 // Use cases for task links: add one, remove one, and check the lists a new task names.
-import type { App } from '../ports/app.ts';
-import type { RepoId, TaskId } from '../../domain/shared/index.ts';
-import { present } from '../../domain/shared/index.ts';
-import { type Link, type LinkKind, buildsOnError, buildsOnRepoError, linkError } from '../../domain/work/index.ts';
-import { ActionError, refuse, requireTask } from '../shared/input.ts';
+import type { App } from '#application/ports/app.ts';
+import type { RepoId, TaskId } from '#domain/shared/index.ts';
+import { present } from '#domain/shared/index.ts';
+import { type Link, type LinkKind, buildsOnError, buildsOnRepoError, linkError } from '#domain/work/index.ts';
+import { ActionError, refuse, requireTask } from '#application/shared/input.ts';
 
 export const BUILDS_ON_STARTED = 'builds_on_started';
 

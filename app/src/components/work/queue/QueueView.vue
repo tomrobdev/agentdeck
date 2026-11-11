@@ -1,20 +1,20 @@
 <script setup lang="ts">
-import type { TaskSummary } from '../../../api/types';
-import { useQueueView } from '../../../composables/work/queue/useQueueView';
-import type { PersonEvent } from '../../../../../daemon/src/domain/work/index.ts';
-import { emptyFilters, hasFilters } from '../../../lib/work/task-view';
-import BulkMergeDialog from '../../landing/BulkMergeDialog.vue';
-import EditKeyDialog from '../task/EditKeyDialog.vue';
-import MergeDialog from '../../landing/MergeDialog.vue';
-import SegmentedControl from '../../ui/form/SegmentedControl.vue';
-import BoardView from './BoardView.vue';
-import BulkBar from './BulkBar.vue';
-import DisplayMenu from './DisplayMenu.vue';
-import FilterBar from './FilterBar.vue';
-import GraphView from './GraphView.vue';
-import ListView from './ListView.vue';
-import PeekPane from './PeekPane.vue';
-import QueueFooter from './QueueFooter.vue';
+import type { TaskSummary } from '#api/types.ts';
+import { useQueueView } from '#composables/work/queue/useQueueView.ts';
+import type { PersonEvent } from '#daemon/domain/work/index.ts';
+import { emptyFilters, hasFilters } from '#lib/work/task-view.ts';
+import BulkMergeDialog from '#components/landing/BulkMergeDialog.vue';
+import EditKeyDialog from '#components/work/task/EditKeyDialog.vue';
+import MergeDialog from '#components/landing/MergeDialog.vue';
+import SegmentedControl from '#components/ui/form/SegmentedControl.vue';
+import BoardView from '#components/work/queue/BoardView.vue';
+import BulkBar from '#components/work/queue/BulkBar.vue';
+import DisplayMenu from '#components/work/queue/DisplayMenu.vue';
+import FilterBar from '#components/work/queue/FilterBar.vue';
+import GraphView from '#components/work/queue/GraphView.vue';
+import ListView from '#components/work/queue/ListView.vue';
+import PeekPane from '#components/work/queue/PeekPane.vue';
+import QueueFooter from '#components/work/queue/QueueFooter.vue';
 
 const props = defineProps<{ tasks: TaskSummary[] }>();
 const selected = defineModel<number | null>('selected', { required: true });

@@ -1,7 +1,7 @@
 // The merge confirm, opened from a row's button or `m`. After a merge the selection moves to the next row.
 import { type Ref, ref } from 'vue';
-import type { MergeResult, TaskSummary } from '../../api/types';
-import { useActions } from '../shared/useActions';
+import type { MergeResult, TaskSummary } from '#api/types.ts';
+import { useActions } from '#composables/shared/useActions.ts';
 
 export function useMergeConfirm(order: Ref<TaskSummary[]>, selected: Ref<number | null>) {
   const { refresh, flash } = useActions();

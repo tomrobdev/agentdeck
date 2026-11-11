@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { MODES, THEMES, mode, setMode, setTheme, theme } from '../../../platform/theme';
-import { approveDialogSetting, setApproveDialogSetting } from '../../../composables/work/useApprovals';
-import { APPROVE_DIALOG_SETTINGS, asApproveDialogSetting } from '../../../lib/work/approve-dialog';
-import RadioGroup from '../../ui/form/RadioGroup.vue';
-import SegmentedControl from '../../ui/form/SegmentedControl.vue';
+import { MODES, THEMES, mode, setMode, setTheme, theme } from '#platform/theme.ts';
+import { approveDialogSetting, setApproveDialogSetting } from '#composables/work/useApprovals.ts';
+import { APPROVE_DIALOG_SETTINGS, asApproveDialogSetting } from '#lib/work/approve-dialog.ts';
+import RadioGroup from '#components/ui/form/RadioGroup.vue';
+import SegmentedControl from '#components/ui/form/SegmentedControl.vue';
 </script>
 
 <template>

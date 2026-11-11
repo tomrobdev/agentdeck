@@ -1,8 +1,8 @@
 // Work's repositories: tasks, their history, their links and their plans.
-import type { RepoId, TaskId } from '../../../domain/shared/index.ts';
-import type { AutoMergeCheck, CheckCounts, MergeRequestMove, StoredChecks } from '../../../domain/landing/index.ts';
-import type { AttentionCandidate } from '../../../domain/operations/index.ts';
-import type { MergeMethod } from '../../../domain/repos/index.ts';
+import type { RepoId, TaskId } from '#domain/shared/index.ts';
+import type { AutoMergeCheck, CheckCounts, MergeRequestMove, StoredChecks } from '#domain/landing/index.ts';
+import type { AttentionCandidate } from '#domain/operations/index.ts';
+import type { MergeMethod } from '#domain/repos/index.ts';
 import type {
   BlockedTask,
   Dependent,
@@ -23,7 +23,7 @@ import type {
   TaskStatus,
   TaskSummary,
   UnblockQuestion,
-} from '../../../domain/work/index.ts';
+} from '#domain/work/index.ts';
 
 export type TaskEdit = Partial<Pick<Task, 'title' | 'prompt' | 'priority' | 'model' | 'max_turns' | 'max_attempts'>> & {
   plan_task?: TaskId | null;

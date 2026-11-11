@@ -1,19 +1,19 @@
 // Use cases for the daemon as a whole: pause, status, and settings.
-import type { App } from '../ports/app.ts';
-import { type NotifyKind, type NotifySettings, notifyEventsError, ntfyServerError, ntfyTopicError } from '../../domain/operations/index.ts';
-import { type PlannerSettings, plannerIntervalError, plannerMaxTasksError, plannerModelError } from '../../domain/proposals/index.ts';
-import { BUDGET_KEYS, type Budget, validateBudget, validateSlots } from '../../domain/capacity/index.ts';
-import { ATTENTION_LIMIT, headline } from '../../domain/operations/index.ts';
-import type { DaemonState } from '../../domain/operations/index.ts';
-import { type ReloadInput, reloadState, restartWait } from '../../domain/operations/index.ts';
-import type { ReviewDueSettings, Settings } from '../../domain/operations/index.ts';
-import { reviewDueDaysError, reviewDueLinesError } from '../../domain/operations/index.ts';
-import { modelError } from '../../domain/work/index.ts';
-import { flag, list, number, object, refuse, text, whole } from '../shared/input.ts';
-import { startGate } from '../capacity/gate.ts';
-import { notify } from './notifications.ts';
-import { queueWaits } from '../capacity/queue.ts';
-import { runningActivity } from './restart.ts';
+import type { App } from '#application/ports/app.ts';
+import { type NotifyKind, type NotifySettings, notifyEventsError, ntfyServerError, ntfyTopicError } from '#domain/operations/index.ts';
+import { type PlannerSettings, plannerIntervalError, plannerMaxTasksError, plannerModelError } from '#domain/proposals/index.ts';
+import { BUDGET_KEYS, type Budget, validateBudget, validateSlots } from '#domain/capacity/index.ts';
+import { ATTENTION_LIMIT, headline } from '#domain/operations/index.ts';
+import type { DaemonState } from '#domain/operations/index.ts';
+import { type ReloadInput, reloadState, restartWait } from '#domain/operations/index.ts';
+import type { ReviewDueSettings, Settings } from '#domain/operations/index.ts';
+import { reviewDueDaysError, reviewDueLinesError } from '#domain/operations/index.ts';
+import { modelError } from '#domain/work/index.ts';
+import { flag, list, number, object, refuse, text, whole } from '#application/shared/input.ts';
+import { startGate } from '#application/capacity/gate.ts';
+import { notify } from '#application/operations/notifications.ts';
+import { queueWaits } from '#application/capacity/queue.ts';
+import { runningActivity } from '#application/operations/restart.ts';
 
 export function setPaused(app: App, paused: boolean): void {
   app.setPaused(paused);

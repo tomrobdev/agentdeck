@@ -9,9 +9,9 @@ const home = mkdtempSync(join(tmpdir(), 'agentdeck-run-summary-'));
 process.env.AGENTDECK_HOME = home;
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { isTestCommand, runSummary } = await import('../../../src/domain/runs/translate/summary.ts');
-const { openDb } = await import('../../fixtures/open-db.ts');
-const { taskDetail } = await import('../../../src/application/actions.ts');
+const { isTestCommand, runSummary } = await import('#domain/runs/translate/summary.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const { taskDetail } = await import('#application/actions.ts');
 
 const FIXTURES = join(import.meta.dirname, '../../fixtures/claude');
 const recorded = (name: string): unknown[] =>

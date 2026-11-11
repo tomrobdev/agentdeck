@@ -1,5 +1,5 @@
 // The Service port: the launchd service the daemon runs under, and what can be read of a daemon from outside.
-import type { DaemonState } from '../../domain/operations/index.ts';
+import type { DaemonState } from '#domain/operations/index.ts';
 
 export interface ServiceStatus {
   installed: boolean;

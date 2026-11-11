@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import type { TaskSummary } from '../../../api/types';
-import { hasOpenPr } from '../../../../../daemon/src/domain/work/index.ts';
-import ConfirmDialog from '../../ui/ConfirmDialog.vue';
+import type { TaskSummary } from '#api/types.ts';
+import { hasOpenPr } from '#daemon/domain/work/index.ts';
+import ConfirmDialog from '#components/ui/ConfirmDialog.vue';
 
 const props = defineProps<{ task: Pick<TaskSummary, 'id' | 'title' | 'pr_url' | 'pr_state'>; withNote?: boolean; busy?: boolean }>();
 const emit = defineEmits<{ close: []; confirm: [note: string] }>();

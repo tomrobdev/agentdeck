@@ -1,19 +1,19 @@
 import { type Ref, ref } from 'vue';
-import { runsApi } from '../../../api/runs';
-import type { TaskSummary } from '../../../api/types';
-import { syncLine } from '../../../lib/landing/landing-wording';
-import type { BoardMove } from '../../../lib/work/queue/board-move';
-import { buildsOnChain } from '../../../lib/work/queue/bulk';
-import { stepSelection } from '../../../lib/work/queue/selection';
-import { quickRetry } from '../../../lib/work/task-view';
-import { type PersonEvent, canStartMerge, personEvents } from '../../../../../daemon/src/domain/work/index.ts';
-import { useMergeConfirm } from '../../landing/useMergeConfirm';
-import { useActions } from '../../shared/useActions';
-import { useHotkeys } from '../../shared/useHotkeys';
-import { openPanel } from '../../shared/useShell';
-import { useEditKeys } from '../useEditKeys';
-import { useBulkPick } from './useBulkPick';
-import { useQueueDisplay } from './useQueueDisplay';
+import { runsApi } from '#api/runs.ts';
+import type { TaskSummary } from '#api/types.ts';
+import { syncLine } from '#lib/landing/landing-wording.ts';
+import type { BoardMove } from '#lib/work/queue/board-move.ts';
+import { buildsOnChain } from '#lib/work/queue/bulk.ts';
+import { stepSelection } from '#lib/work/queue/selection.ts';
+import { quickRetry } from '#lib/work/task-view.ts';
+import { type PersonEvent, canStartMerge, personEvents } from '#daemon/domain/work/index.ts';
+import { useMergeConfirm } from '#composables/landing/useMergeConfirm.ts';
+import { useActions } from '#composables/shared/useActions.ts';
+import { useHotkeys } from '#composables/shared/useHotkeys.ts';
+import { openPanel } from '#composables/shared/useShell.ts';
+import { useEditKeys } from '#composables/work/useEditKeys.ts';
+import { useBulkPick } from '#composables/work/queue/useBulkPick.ts';
+import { useQueueDisplay } from '#composables/work/queue/useQueueDisplay.ts';
 
 interface QueueEmit {
   (e: 'open', id: number): void;

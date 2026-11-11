@@ -1,8 +1,8 @@
 // Adapter for local git: diffs and compares, and reading trees and files at a commit.
-import { PATCH_LIMIT, type ChangedFile, type TreeEntry, capText, mergeChanges, parseLsTree, treeEntries } from '../../domain/work/index.ts';
-import { type AddedLines, parseAddedLines } from '../../domain/landing/index.ts';
-import { DIFF_FLAGS, READ_ENV, exec, git, gitCapped, gitRead, gitWithInput } from './exec.ts';
-import { resolveCommit } from './refs.ts';
+import { PATCH_LIMIT, type ChangedFile, type TreeEntry, capText, mergeChanges, parseLsTree, treeEntries } from '#domain/work/index.ts';
+import { type AddedLines, parseAddedLines } from '#domain/landing/index.ts';
+import { DIFF_FLAGS, READ_ENV, exec, git, gitCapped, gitRead, gitWithInput } from '#adapters/git/exec.ts';
+import { resolveCommit } from '#adapters/git/refs.ts';
 
 async function mergeBase(repoPath: string, a: string, b: string): Promise<string | null> {
   try {

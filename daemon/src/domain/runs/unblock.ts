@@ -1,13 +1,13 @@
 // The unblock run: a short claude run that reads why a blocked task stopped and either sends it back to work with a note or leaves it blocked with a question and options for a person.
-import { isConflictReason } from './sync.ts';
-import { attemptsLeft, parsePlanWithText } from '../work/index.ts';
-import type { Repo } from '../repos/index.ts';
-import type { UnblockQuestion } from '../work/index.ts';
-import type { BlockedTask, Task, TaskState } from '../work/index.ts';
-import { lastLine } from '../shared/index.ts';
-import type { PromptPlan } from './prompt.ts';
-import type { Run } from './run.ts';
-import { isSetupFailure } from './run-result.ts';
+import { isConflictReason } from '#domain/runs/sync.ts';
+import { attemptsLeft, parsePlanWithText } from '#domain/work/index.ts';
+import type { Repo } from '#domain/repos/index.ts';
+import type { UnblockQuestion } from '#domain/work/index.ts';
+import type { BlockedTask, Task, TaskState } from '#domain/work/index.ts';
+import { lastLine } from '#domain/shared/index.ts';
+import type { PromptPlan } from '#domain/runs/prompt.ts';
+import type { Run } from '#domain/runs/run.ts';
+import { isSetupFailure } from '#domain/runs/run-result.ts';
 
 export const UNBLOCK_NOTE = 'Unblock run: ';
 

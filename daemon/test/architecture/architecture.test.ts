@@ -6,9 +6,9 @@ import { join, relative } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
 import ts from 'typescript';
-import { checkContextImports, checkContextIndexes, checkUnusedIndexExports } from '../../scripts/lib/contexts.ts';
-import { LAYERS, layerOf, mayImport } from '../../scripts/lib/layers.ts';
-import { type LayoutFile, checkContextFolders, checkFileSize, checkFolderSize, readLayout } from '../../scripts/lib/layout.ts';
+import { checkContextImports, checkContextIndexes, checkUnusedIndexExports } from '#scripts/lib/contexts.ts';
+import { LAYERS, layerOf, mayImport } from '#scripts/lib/layers.ts';
+import { type LayoutFile, checkContextFolders, checkFileSize, checkFolderSize, readLayout } from '#scripts/lib/layout.ts';
 import {
   LONG_FILES,
   OVERSIZED_FOLDERS,
@@ -16,9 +16,9 @@ import {
   UNPLACED_FOLDERS,
   checkFolderCycles,
   checkRowShapedFields,
-} from '../../scripts/lib/progress.ts';
-import { type Source, lineOf, parseSource, readSources } from '../../scripts/lib/sources.ts';
-import { MIGRATIONS, migrate } from '../../src/db/index.ts';
+} from '#scripts/lib/progress.ts';
+import { type Source, lineOf, parseSource, readSources } from '#scripts/lib/sources.ts';
+import { MIGRATIONS, migrate } from '#db/index.ts';
 
 const SRC = join(import.meta.dirname, '../../src');
 
@@ -52,10 +52,10 @@ test('[ports] application/ imports only itself and domain/, and only compose.ts 
 
 test('[ports] a sample where application/ imports adapters/git.ts or db/ fails', () => {
   const sample = [
-    parseSource('application/work/x.ts', "import { git } from '../../adapters/git/exec.ts';\nexport const x = git;\n"),
-    parseSource('application/work/y.ts', "import { openDb } from '../../db/index.ts';\nexport const y = openDb;\n"),
-    parseSource('api/z.ts', "import { openDb } from '../db/index.ts';\nexport const z = openDb;\n"),
-    parseSource('compose.ts', "import { openDb } from './db/index.ts';\nexport const c = openDb;\n"),
+    parseSource('application/work/x.ts', "import { git } from '#adapters/git/exec.ts';\nexport const x = git;\n"),
+    parseSource('application/work/y.ts', "import { openDb } from '#db/index.ts';\nexport const y = openDb;\n"),
+    parseSource('api/z.ts', "import { openDb } from '#db/index.ts';\nexport const z = openDb;\n"),
+    parseSource('compose.ts', "import { openDb } from '#db/index.ts';\nexport const c = openDb;\n"),
   ];
   assert.equal(layerViolations(sample).length, 3);
 });
@@ -151,17 +151,17 @@ test('[contexts] an index exports only what something outside its context import
 test('[contexts] a sample that reaches into another context, or has a bare or starred index, fails', () => {
   const sample = [
     parseSource('domain/work/lifecycle/lifecycle.ts', 'export const RULES = 1;\n'),
-    parseSource('domain/work/index.ts', "export { RULES } from './lifecycle.ts';\n"),
-    parseSource('domain/runs/run.ts', "import { RULES } from '../work/lifecycle.ts';\nexport const r = RULES;\n"),
-    parseSource('domain/runs/index.ts', "export * from './run.ts';\n"),
-    parseSource('domain/capacity/quota.ts', "import { RULES } from '../work/index.ts';\nexport const q = RULES;\n"),
+    parseSource('domain/work/index.ts', "export { RULES } from '#domain/work/lifecycle.ts';\n"),
+    parseSource('domain/runs/run.ts', "import { RULES } from '#domain/work/lifecycle.ts';\nexport const r = RULES;\n"),
+    parseSource('domain/runs/index.ts', "export * from '#domain/runs/run.ts';\n"),
+    parseSource('domain/capacity/quota.ts', "import { RULES } from '#domain/work/index.ts';\nexport const q = RULES;\n"),
   ];
   const found = [...checkContextIndexes(sample), ...checkContextImports(sample)];
   assert.equal(found.length, 3);
   assert.match(found.join('\n'), /domain\/runs\/run\.ts:1 imports domain\/work\/lifecycle\.ts/);
   assert.match(found.join('\n'), /domain\/runs\/index\.ts:1 must be/);
   assert.match(found.join('\n'), /domain\/capacity\/ has no index\.ts/);
-  const dash = [parseSource('x.ts', "import { PATCH_LIMIT } from '../../daemon/src/domain/work/read/files.ts';\n")];
+  const dash = [parseSource('x.ts', "import { PATCH_LIMIT } from '#daemon/domain/work/read/files.ts';\n")];
   assert.equal(checkContextImports(sample, dash).filter((m) => m.startsWith('x.ts:1')).length, 1);
   assert.deepEqual(checkUnusedIndexExports(sample), []);
   assert.match(checkUnusedIndexExports(sample.slice(0, 2)).join('\n'), /domain\/work\/index\.ts exports RULES/);
@@ -180,8 +180,11 @@ test('[no-export-star] nothing in daemon/src or app/src re-exports with `export 
 
 test('[no-export-star] a sample with `export *` fails, naming the line; a named re-export passes', () => {
   const sample = [
-    parseSource('api/index.ts', "// the api\nexport * from './client.ts';\n"),
-    parseSource('lib/view.ts', "export { boardMove, type BoardMove } from './board-move.ts';\nexport * as moves from './moves.ts';\n"),
+    parseSource('api/index.ts', "// the api\nexport * from '#api/client.ts';\n"),
+    parseSource(
+      'lib/view.ts',
+      "export { boardMove, type BoardMove } from '#lib/board-move.ts';\nexport * as moves from '#lib/moves.ts';\n",
+    ),
   ];
   assert.deepEqual(exportStars(sample), ['api/index.ts:2: name what it re-exports']);
 });
@@ -193,9 +196,9 @@ test('[folder-cycles] domain/ and application/ folders form no cycle beyond the 
 
 test('[folder-cycles] a sample with a new folder cycle fails, naming the folders and files; a stale entry fails too', () => {
   const sample = [
-    parseSource('domain/a/a.ts', "import { b } from '../b/b.ts';\nexport const a = b;\n"),
-    parseSource('domain/b/b.ts', "import type { a } from '../a/a.ts';\nexport const b = 1 as typeof a;\n"),
-    parseSource('domain/c/c.ts', "import { a } from '../a/a.ts';\nexport const c = a;\n"),
+    parseSource('domain/a/a.ts', "import { b } from '#domain/b/b.ts';\nexport const a = b;\n"),
+    parseSource('domain/b/b.ts', "import type { a } from '#domain/a/a.ts';\nexport const b = 1 as typeof a;\n"),
+    parseSource('domain/c/c.ts', "import { a } from '#domain/a/a.ts';\nexport const c = a;\n"),
   ];
   const fresh = checkFolderCycles(sample, {});
   assert.equal(fresh.found.length, 1);
@@ -498,7 +501,7 @@ function findTaskWrites(source: string): TaskWrite[] {
   const ast = ts.createSourceFile('sample.ts', source, ts.ScriptTarget.Latest, true);
   const fromDomainNames = new Set<string>();
   for (const st of ast.statements) {
-    if (ts.isImportDeclaration(st) && ts.isStringLiteral(st.moduleSpecifier) && /(^|\/)domain\//.test(st.moduleSpecifier.text)) {
+    if (ts.isImportDeclaration(st) && ts.isStringLiteral(st.moduleSpecifier) && st.moduleSpecifier.text.startsWith('#domain/')) {
       const named = st.importClause?.namedBindings;
       if (named && ts.isNamedImports(named)) for (const e of named.elements) if (e.name.text !== 'stored') fromDomainNames.add(e.name.text);
     }
@@ -546,8 +549,7 @@ function checkTaskWrites(source: string, plain: Record<string, string>): { found
 }
 
 test('[task-writes] the finder fails a write that is neither from the domain nor on the list', () => {
-  const sample =
-    "import { prChanges } from '../domain/work/index.ts';\nfunction a() { orm.update(tasks).set({ ...prChanges(e) }).run(); }\n";
+  const sample = "import { prChanges } from '#domain/work/index.ts';\nfunction a() { orm.update(tasks).set({ ...prChanges(e) }).run(); }\n";
   assert.deepEqual(checkTaskWrites(sample, {}), { found: [], used: [] });
   const bare = 'function setTitle() { orm.update(tasks).set({ title }).where(x).run(); }';
   assert.equal(checkTaskWrites(bare, {}).found.length, 1);

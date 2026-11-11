@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import type { ChangedFile } from '../../../api/types';
-import { useFileText } from '../../../composables/work/files/useFileText';
-import { isMarkdown } from '../../../lib/shared/render';
-import Markdown from '../../ui/Markdown.vue';
-import Accordion from '../../ui/disclosure/Accordion.vue';
-import AccordionItem from '../../ui/disclosure/AccordionItem.vue';
-import AccordionTrigger from '../../ui/disclosure/AccordionTrigger.vue';
+import type { ChangedFile } from '#api/types.ts';
+import { useFileText } from '#composables/work/files/useFileText.ts';
+import { isMarkdown } from '#lib/shared/render.ts';
+import Markdown from '#components/ui/Markdown.vue';
+import Accordion from '#components/ui/disclosure/Accordion.vue';
+import AccordionItem from '#components/ui/disclosure/AccordionItem.vue';
+import AccordionTrigger from '#components/ui/disclosure/AccordionTrigger.vue';
 
 const props = defineProps<{ taskId: number; files: ChangedFile[]; head: string | null; isPath?: (p: string) => boolean }>();
 const emit = defineEmits<{ open: [path: string]; path: [path: string, line: number | null] }>();

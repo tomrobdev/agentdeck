@@ -1,6 +1,6 @@
 // Linked plan steps a run leaves unfinished: a warning event, a badge flag, and a checklist in the PR body.
 import assert from 'node:assert/strict';
-import type { TaskId } from '../../../src/domain/shared/id.ts';
+import type { TaskId } from '#domain/shared/id.ts';
 import { execFileSync } from 'node:child_process';
 import { chmodSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -14,12 +14,12 @@ const fake = join(import.meta.dirname, '../../fixtures/fake-claude.mjs');
 chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
 
-const { openDb } = await import('../../fixtures/open-db.ts');
-const { Scheduler } = await import('../../../src/application/scheduler/scheduler.ts');
-const { github } = await import('../../../src/adapters/github/github.ts');
-const { updateRepo } = await import('../../../src/application/actions.ts');
-const { linkedSteps, unfinishedSteps, unfinishedSummary } = await import('../../../src/domain/work/plans/plan.ts');
-const { buildPrBody } = await import('../../../src/domain/landing/pull-request/pr.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const { Scheduler } = await import('#application/scheduler/scheduler.ts');
+const { github } = await import('#adapters/github/github.ts');
+const { updateRepo } = await import('#application/actions.ts');
+const { linkedSteps, unfinishedSteps, unfinishedSummary } = await import('#domain/work/plans/plan.ts');
+const { buildPrBody } = await import('#domain/landing/pull-request/pr.ts');
 
 const plan = (a: string, b: string) => `<!doctype html>
 <html data-agentdeck-plan="1"><head><title>Cache plan</title></head><body>

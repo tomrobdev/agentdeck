@@ -4,25 +4,25 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, beforeEach, test } from 'node:test';
-import { asTaskId } from '../../../src/domain/shared/id.ts';
+import { asTaskId } from '#domain/shared/id.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-amview-'));
 process.env.AGENTDECK_HOME = home;
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../../fixtures/open-db.ts');
-const { doneTask } = await import('../../fixtures/fixtures.ts');
-const { github } = await import('../../../src/adapters/github/github.ts');
-const { AUTO_MERGE_LABEL, autoMergeView } = await import('../../../src/domain/landing/merge/auto-merge.ts');
-const { prFields, pullRequestOf } = await import('../../../src/domain/landing/pull-request/pr.ts');
-const { refreshPrStates } = await import('../../../src/application/landing/pull-request/refresh.ts');
-const { autoMerge } = await import('../../../src/application/landing/merge/auto-merge.ts');
-const { setAutoMerge, taskDetail, updateRepo } = await import('../../../src/application/actions.ts');
-const { measureBranch } = await import('../../../src/application/work/files.ts');
-const { digest } = await import('../../../src/domain/operations/digest.ts');
-const { fmtAutoMerge, fmtTask } = await import('../../../src/cli/format.ts');
-type PrDetails = import('../../../src/domain/landing/merge/merge.ts').PrDetails;
-type Task = import('../../../src/domain/work/task/task.ts').Task;
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const { doneTask } = await import('#test/fixtures/fixtures.ts');
+const { github } = await import('#adapters/github/github.ts');
+const { AUTO_MERGE_LABEL, autoMergeView } = await import('#domain/landing/merge/auto-merge.ts');
+const { prFields, pullRequestOf } = await import('#domain/landing/pull-request/pr.ts');
+const { refreshPrStates } = await import('#application/landing/pull-request/refresh.ts');
+const { autoMerge } = await import('#application/landing/merge/auto-merge.ts');
+const { setAutoMerge, taskDetail, updateRepo } = await import('#application/actions.ts');
+const { measureBranch } = await import('#application/work/files.ts');
+const { digest } = await import('#domain/operations/digest.ts');
+const { fmtAutoMerge, fmtTask } = await import('#cli/format.ts');
+type PrDetails = import('#domain/landing/merge/merge.ts').PrDetails;
+type Task = import('#domain/work/task/task.ts').Task;
 
 const db = openDb(join(home, 'test.db'));
 after(() => db.close());
@@ -131,7 +131,7 @@ const taskRow = (o: Partial<Task> = {}): Pick<Task, 'auto_merge' | 'source' | 'p
   pr: null,
   ...o,
 });
-type PrFields = import('../../../src/domain/landing/pull-request/pr.ts').PrFields;
+type PrFields = import('#domain/landing/pull-request/pr.ts').PrFields;
 const checked = (verdict: 'merge' | 'wait' | 'never', reasons: string[], o: Partial<PrFields> = {}) =>
   taskRow({
     pr: pullRequestOf({

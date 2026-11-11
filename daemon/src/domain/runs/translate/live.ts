@@ -1,8 +1,8 @@
 // What a running task is doing right now, read from the events of its run's stream.
 
-import { cut } from '../../shared/index.ts';
-import { shortFile, toolSummary } from './log.ts';
-import { fields } from './fields.ts';
+import { cut } from '#domain/shared/index.ts';
+import { shortFile, toolSummary } from '#domain/runs/translate/log.ts';
+import { fields } from '#domain/runs/translate/fields.ts';
 
 /** What the daemon keeps of a live run: the turns so far and the last tool call in a few words. */
 export interface LiveState {

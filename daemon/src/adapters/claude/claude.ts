@@ -3,9 +3,9 @@ import { spawn } from 'node:child_process';
 import { accessSync, constants, type WriteStream } from 'node:fs';
 import { delimiter, isAbsolute, join } from 'node:path';
 import { createInterface } from 'node:readline';
-import { claudeBin, withToolchainPath } from '../../config.ts';
-import type { ClaudeResult, ClaudeRun, UsageWindow } from '../../domain/runs/index.ts';
-import { activeChildren, killGroup } from '../process/processes.ts';
+import { claudeBin, withToolchainPath } from '#src/config.ts';
+import type { ClaudeResult, ClaudeRun, UsageWindow } from '#domain/runs/index.ts';
+import { activeChildren, killGroup } from '#adapters/process/processes.ts';
 
 function executable(path: string): boolean {
   try {

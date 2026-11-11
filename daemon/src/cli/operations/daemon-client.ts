@@ -1,7 +1,7 @@
 // Calls the running daemon's HTTP API.
 import { request } from 'node:http';
-import { API_PORT } from '../../config.ts';
-import { die } from '../format.ts';
+import { API_PORT } from '#src/config.ts';
+import { die } from '#cli/format.ts';
 
 export function callDaemon<T>(method: string, path: string, body?: unknown, port = API_PORT): Promise<T> {
   return new Promise<T>((resolve) => {

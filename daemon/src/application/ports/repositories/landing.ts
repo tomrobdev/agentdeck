@@ -1,6 +1,6 @@
 // Landing's repository: reviews and their line comments.
-import type { ReviewId, TaskId } from '../../../domain/shared/index.ts';
-import type { CommentState, Review, ReviewComment, ReviewKind, ReviewWithComments, ReviewedDiff } from '../../../domain/landing/index.ts';
+import type { ReviewId, TaskId } from '#domain/shared/index.ts';
+import type { CommentState, Review, ReviewComment, ReviewKind, ReviewWithComments, ReviewedDiff } from '#domain/landing/index.ts';
 
 export interface ReviewRepository {
   createReview(task_id: TaskId): Review;

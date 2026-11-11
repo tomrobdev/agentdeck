@@ -1,11 +1,11 @@
 // Task links: a task depends on any number of others, each link a kind.
 
-import type { TaskId } from '../../shared/index.ts';
-import type { PullRequest } from '../../landing/index.ts';
-import type { PrMode } from '../../repos/index.ts';
-import type { TaskStatus } from '../lifecycle/lifecycle.ts';
-import { isReview, stageOf } from '../task/stage.ts';
-import type { DoneState } from '../task/task.ts';
+import type { TaskId } from '#domain/shared/index.ts';
+import type { PullRequest } from '#domain/landing/index.ts';
+import type { PrMode } from '#domain/repos/index.ts';
+import type { TaskStatus } from '#domain/work/lifecycle/lifecycle.ts';
+import { isReview, stageOf } from '#domain/work/task/stage.ts';
+import type { DoneState } from '#domain/work/task/task.ts';
 
 export type LinkKind = 'builds_on' | 'after';
 

@@ -1,7 +1,7 @@
 // Records notifications and sends them on the enabled channels.
-import type { App } from '../ports/app.ts';
-import type { Notifier } from '../ports/notifier.ts';
-import { type Notification, appDelivers } from '../../domain/operations/index.ts';
+import type { App } from '#application/ports/app.ts';
+import type { Notifier } from '#application/ports/notifier.ts';
+import { type Notification, appDelivers } from '#domain/operations/index.ts';
 
 export type Channels = Notifier;
 

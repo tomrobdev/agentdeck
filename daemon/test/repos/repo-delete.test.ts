@@ -9,11 +9,11 @@ import { after, test } from 'node:test';
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-delete-'));
 process.env.AGENTDECK_HOME = home;
 
-const { openDb } = await import('../fixtures/open-db.ts');
-const actions = await import('../../src/application/actions.ts');
-const { ensureWorktree } = await import('../../src/adapters/git/worktrees.ts');
-const { writeGoals, goalsPath } = await import('../../src/adapters/local/goals.ts');
-const { settingsPath } = await import('../../src/domain/runs/translate/sandbox.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const actions = await import('#application/actions.ts');
+const { ensureWorktree } = await import('#adapters/git/worktrees.ts');
+const { writeGoals, goalsPath } = await import('#adapters/local/goals.ts');
+const { settingsPath } = await import('#domain/runs/translate/sandbox.ts');
 const db = openDb(join(home, 'test.db'));
 
 after(() => db.close());

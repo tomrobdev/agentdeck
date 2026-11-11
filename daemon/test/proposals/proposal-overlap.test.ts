@@ -9,11 +9,11 @@ import { test } from 'node:test';
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-overlap-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../fixtures/open-db.ts');
-const { addTask, proposalCheck } = await import('../../src/application/actions.ts');
-const { mayOverlap, overlaps, proposalCheckLine } = await import('../../src/domain/work/task/proposal-check.ts');
-const { asTaskId } = await import('../../src/domain/shared/id.ts');
-const { doneTask, runningTask } = await import('../fixtures/fixtures.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const { addTask, proposalCheck } = await import('#application/actions.ts');
+const { mayOverlap, overlaps, proposalCheckLine } = await import('#domain/work/task/proposal-check.ts');
+const { asTaskId } = await import('#domain/shared/id.ts');
+const { doneTask, runningTask } = await import('#test/fixtures/fixtures.ts');
 
 const candidate = (id: number, paths: string[], linked = false) => ({
   id: asTaskId(id),

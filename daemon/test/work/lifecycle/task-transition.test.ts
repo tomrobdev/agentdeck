@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { asTaskId } from '../../../src/domain/shared/id.ts';
+import { asTaskId } from '#domain/shared/id.ts';
 import {
   type DomainEvent,
   type DomainEventType,
@@ -13,12 +13,12 @@ import {
   type TransitionTask,
   ruleKey,
   transition,
-} from '../../../src/domain/work/lifecycle/lifecycle.ts';
-import type { PullRequest } from '../../../src/domain/landing/pull-request/pr.ts';
-import type { TaskEventType } from '../../../src/domain/work/lifecycle/history.ts';
-import type { Needs } from '../../../src/domain/work/task/needs.ts';
-import type { TaskState } from '../../../src/domain/work/task/task.ts';
-import { type TaskChanges, noMergeRequestChanges } from '../../../src/domain/work/lifecycle/task-writes.ts';
+} from '#domain/work/lifecycle/lifecycle.ts';
+import type { PullRequest } from '#domain/landing/pull-request/pr.ts';
+import type { TaskEventType } from '#domain/work/lifecycle/history.ts';
+import type { Needs } from '#domain/work/task/needs.ts';
+import type { TaskState } from '#domain/work/task/task.ts';
+import { type TaskChanges, noMergeRequestChanges } from '#domain/work/lifecycle/task-writes.ts';
 
 const SET_ASIDE: TaskChanges = {
   pr_state: null,

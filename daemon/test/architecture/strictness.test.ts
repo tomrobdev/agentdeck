@@ -1,14 +1,8 @@
 // Strict types under daemon/src and app/src, and a deterministic domain, checked with the TypeScript compiler (daemon/scripts/lib/strictness.ts).
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { STRICTNESS_EXCEPTIONS } from '../../scripts/lib/progress.ts';
-import {
-  type StrictFile,
-  checkStrictness,
-  projectOptions,
-  readStrictnessOffences,
-  strictnessOffences,
-} from '../../scripts/lib/strictness.ts';
+import { STRICTNESS_EXCEPTIONS } from '#scripts/lib/progress.ts';
+import { type StrictFile, checkStrictness, projectOptions, readStrictnessOffences, strictnessOffences } from '#scripts/lib/strictness.ts';
 
 const offences = readStrictnessOffences();
 

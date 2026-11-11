@@ -5,8 +5,8 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, test } from 'node:test';
-import { asTaskId } from '../../src/domain/shared/id.ts';
-import { waitFor } from '../fixtures/fixtures.ts';
+import { asTaskId } from '#domain/shared/id.ts';
+import { waitFor } from '#test/fixtures/fixtures.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-api-'));
 process.env.AGENTDECK_HOME = home;
@@ -15,9 +15,9 @@ const fake = join(import.meta.dirname, '../fixtures/fake-claude.mjs');
 chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
 
-const { openDb } = await import('../fixtures/open-db.ts');
-const { startApi } = await import('../../src/api/server.ts');
-const { Scheduler } = await import('../../src/application/scheduler/scheduler.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const { startApi } = await import('#api/server.ts');
+const { Scheduler } = await import('#application/scheduler/scheduler.ts');
 
 const db = openDb(join(home, 'test.db'));
 const server = await startApi({ db, port: 0 });

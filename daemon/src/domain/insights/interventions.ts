@@ -1,7 +1,7 @@
 // What counts as an intervention in the pilot scorecard (docs/pilot/scorecard.md).
-import { isAutoMergeReason } from '../work/index.ts';
-import { INSTALL_NOTE } from '../work/index.ts';
-import type { ScorecardEvent, ScorecardTask } from './scorecard.ts';
+import { isAutoMergeReason } from '#domain/work/index.ts';
+import { INSTALL_NOTE } from '#domain/work/index.ts';
+import type { ScorecardEvent, ScorecardTask } from '#domain/insights/scorecard.ts';
 
 /**
  * An intervention is something a person did that changed how a task turned out, which the pilot wants to bring to

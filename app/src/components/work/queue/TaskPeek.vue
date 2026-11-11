@@ -1,22 +1,22 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { type PersonEvent, planProgress, promptGoal } from '../../../../../daemon/src/domain/work/index.ts';
-import { describeWait } from '../../../lib/work/work-wording';
-import { taskQuery } from '../../../api/work';
-import type { PlanStep } from '../../../api/types';
-import { linkParts, modelLine, neededBy, ownSteps, peekActions, peekProps } from '../../../lib/work/queue/peek';
-import { readNeeds, readTaskQuestion } from '../../../lib/work/task-view';
-import Markdown from '../../ui/Markdown.vue';
-import FinalMessage from '../../runs/FinalMessage.vue';
-import LogView from '../../runs/LogView.vue';
-import ProposalCheckCard from '../overview/ProposalCheckCard.vue';
-import PullRequestCard from '../../landing/PullRequestCard.vue';
-import QuestionCallout from '../overview/QuestionCallout.vue';
-import RunSummaryCard from '../../runs/RunSummaryCard.vue';
-import StatusPill from '../../ui/status/StatusPill.vue';
-import TaskBadges from '../../ui/status/TaskBadges.vue';
-import TaskStatusLine from '../../ui/status/TaskStatusLine.vue';
+import { type PersonEvent, planProgress, promptGoal } from '#daemon/domain/work/index.ts';
+import { describeWait } from '#lib/work/work-wording.ts';
+import { taskQuery } from '#api/work.ts';
+import type { PlanStep } from '#api/types.ts';
+import { linkParts, modelLine, neededBy, ownSteps, peekActions, peekProps } from '#lib/work/queue/peek.ts';
+import { readNeeds, readTaskQuestion } from '#lib/work/task-view.ts';
+import Markdown from '#components/ui/Markdown.vue';
+import FinalMessage from '#components/runs/FinalMessage.vue';
+import LogView from '#components/runs/LogView.vue';
+import ProposalCheckCard from '#components/work/overview/ProposalCheckCard.vue';
+import PullRequestCard from '#components/landing/PullRequestCard.vue';
+import QuestionCallout from '#components/work/overview/QuestionCallout.vue';
+import RunSummaryCard from '#components/runs/RunSummaryCard.vue';
+import StatusPill from '#components/ui/status/StatusPill.vue';
+import TaskBadges from '#components/ui/status/TaskBadges.vue';
+import TaskStatusLine from '#components/ui/status/TaskStatusLine.vue';
 
 const props = defineProps<{ id: number }>();
 const emit = defineEmits<{ open: []; close: []; act: [kind: PersonEvent, id: number]; merge: [id: number]; peek: [id: number] }>();

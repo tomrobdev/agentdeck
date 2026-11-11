@@ -1,7 +1,7 @@
 import { type InjectionKey, type Ref, inject, provide, ref } from 'vue';
 import type { QueryClient } from '@tanstack/vue-query';
-import { errorMessage } from '../../../../daemon/src/domain/shared/index.ts';
-import { PERSON_CALLS, proposalCheckQuery } from '../../api/work';
+import { errorMessage } from '#daemon/domain/shared/index.ts';
+import { PERSON_CALLS, proposalCheckQuery } from '#api/work.ts';
 import {
   type ApproveDialogSetting,
   type ApproveItem,
@@ -9,10 +9,10 @@ import {
   DEFAULT_APPROVE_DIALOG,
   approveDialog,
   asApproveDialogSetting,
-} from '../../lib/work/approve-dialog';
-import { type BulkResult, bulkMessage } from '../../lib/work/queue/bulk';
-import { loadSetting, saveSetting } from '../../lib/shared/storage';
-import type { Actions } from '../shared/useActions';
+} from '#lib/work/approve-dialog.ts';
+import { type BulkResult, bulkMessage } from '#lib/work/queue/bulk.ts';
+import { loadSetting, saveSetting } from '#lib/shared/storage.ts';
+import type { Actions } from '#composables/shared/useActions.ts';
 
 export type Approvals = {
   approve: (ids: number[]) => Promise<BulkResult[] | null>;

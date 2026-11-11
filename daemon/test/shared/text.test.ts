@@ -1,7 +1,7 @@
 // domain/text: the helpers shared by the daemon's wording.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { cut, errorMessage, oneLine, plural } from '../../src/domain/shared/text.ts';
+import { cut, errorMessage, oneLine, plural } from '#domain/shared/text.ts';
 
 test('errorMessage: an Error gives its message, anything else its text', () => {
   assert.equal(errorMessage(new Error('boom')), 'boom');

@@ -1,8 +1,8 @@
 // Pure tests of a task's branch, checkout, ids, stage, start waits and state.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { prNeedsPerson, prRetry } from '../../src/domain/landing/index.ts';
-import { asTaskId } from '../../src/domain/shared/index.ts';
+import { prNeedsPerson, prRetry } from '#domain/landing/index.ts';
+import { asTaskId } from '#domain/shared/index.ts';
 import {
   type Task,
   type TaskState,
@@ -29,7 +29,7 @@ import {
   stateFields,
   stopReasonOf,
   waitingFor,
-} from '../../src/domain/work/index.ts';
+} from '#domain/work/index.ts';
 
 const id = asTaskId;
 const governor = { allow: true, max_concurrent: 3, reason: null, until: null, weekly_allowed: null };

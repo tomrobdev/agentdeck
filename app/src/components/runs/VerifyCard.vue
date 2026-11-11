@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { CHECKED_STATUSES } from '../../../../daemon/src/domain/work/index.ts';
-import { latestVerify } from '../../../../daemon/src/domain/runs/index.ts';
-import { runsApi } from '../../api/runs';
-import { proposalCheckQuery } from '../../api/work';
-import type { TaskDetail } from '../../api/types';
-import { useAction } from '../../composables/shared/useActions';
-import VerifyFindings from './VerifyFindings.vue';
+import { CHECKED_STATUSES } from '#daemon/domain/work/index.ts';
+import { latestVerify } from '#daemon/domain/runs/index.ts';
+import { runsApi } from '#api/runs.ts';
+import { proposalCheckQuery } from '#api/work.ts';
+import type { TaskDetail } from '#api/types.ts';
+import { useAction } from '#composables/shared/useActions.ts';
+import VerifyFindings from '#components/runs/VerifyFindings.vue';
 
 const props = defineProps<{ task: Pick<TaskDetail, 'id' | 'status' | 'runs'> }>();
 const emit = defineEmits<{ path: [path: string, line: number | null] }>();

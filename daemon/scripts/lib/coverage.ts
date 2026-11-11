@@ -1,5 +1,5 @@
 import ts from 'typescript';
-import type { Source } from './sources.ts';
+import type { Source } from '#scripts/lib/sources.ts';
 
 export interface Floor {
   lines: number;

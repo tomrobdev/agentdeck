@@ -1,22 +1,22 @@
 // Merging a done task's PR, as a person asked or on its own, and closing one.
-import type { App } from '../../ports/app.ts';
-import { type MergeFailure, type PrDetails, mergeCheck, mergeFailure, mergeFindings } from '../../../domain/landing/index.ts';
-import { MERGE_METHODS, type MergeMethod, isMergeMethod } from '../../../domain/repos/index.ts';
-import { type MergeVerdictView, autoMergeOn, verdictView } from '../../../domain/landing/index.ts';
-import type { CheckCounts } from '../../../domain/landing/index.ts';
-import { carryFailures, countWithSteps, isConflicting, withCheckList } from '../../../domain/landing/index.ts';
-import { mergeRequestCheck, mergesNow } from '../../../domain/landing/index.ts';
-import { buildPrBody, openPrUrl } from '../../../domain/landing/index.ts';
-import { mergeReason } from '../../../domain/work/index.ts';
-import type { TaskId } from '../../../domain/shared/index.ts';
-import type { Task } from '../../../domain/work/index.ts';
-import { errorMessage, present } from '../../../domain/shared/index.ts';
-import { ActionError, flag, object, requireTask, requireTaskRepo, text } from '../../shared/input.ts';
-import { prPlanFor } from '../../work/plans.ts';
-import { dependentsReleased } from '../../work/dependencies.ts';
-import { isMergeLocked, isSyncing, lockMerge, unlockMerge } from '../../work/checkout-locks.ts';
-import { autoMergeFor, mergeInputFor, prCwd } from '../pull-request/refresh.ts';
-import { movePr } from '../moves.ts';
+import type { App } from '#application/ports/app.ts';
+import { type MergeFailure, type PrDetails, mergeCheck, mergeFailure, mergeFindings } from '#domain/landing/index.ts';
+import { MERGE_METHODS, type MergeMethod, isMergeMethod } from '#domain/repos/index.ts';
+import { type MergeVerdictView, autoMergeOn, verdictView } from '#domain/landing/index.ts';
+import type { CheckCounts } from '#domain/landing/index.ts';
+import { carryFailures, countWithSteps, isConflicting, withCheckList } from '#domain/landing/index.ts';
+import { mergeRequestCheck, mergesNow } from '#domain/landing/index.ts';
+import { buildPrBody, openPrUrl } from '#domain/landing/index.ts';
+import { mergeReason } from '#domain/work/index.ts';
+import type { TaskId } from '#domain/shared/index.ts';
+import type { Task } from '#domain/work/index.ts';
+import { errorMessage, present } from '#domain/shared/index.ts';
+import { ActionError, flag, object, requireTask, requireTaskRepo, text } from '#application/shared/input.ts';
+import { prPlanFor } from '#application/work/plans.ts';
+import { dependentsReleased } from '#application/work/dependencies.ts';
+import { isMergeLocked, isSyncing, lockMerge, unlockMerge } from '#application/work/checkout-locks.ts';
+import { autoMergeFor, mergeInputFor, prCwd } from '#application/landing/pull-request/refresh.ts';
+import { movePr } from '#application/landing/moves.ts';
 
 export async function closePullRequest(app: App, task: Task): Promise<void> {
   await app.codeHost.closePr(present(task.pr?.url, `#${task.id}'s pull request`), prCwd(app, task));

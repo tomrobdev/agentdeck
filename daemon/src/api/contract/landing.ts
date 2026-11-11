@@ -1,8 +1,8 @@
 // Landing: checks, reviews, auto-merge and merging.
-import type { ReviewId, TaskId } from '../../domain/shared/index.ts';
-import type { AutoMergeState, CheckState, ReviewAuthor } from '../../domain/landing/index.ts';
-import type { MergeMethod } from '../../domain/repos/index.ts';
-import type { TaskDetail } from './work.ts';
+import type { ReviewId, TaskId } from '#domain/shared/index.ts';
+import type { AutoMergeState, CheckState, ReviewAuthor } from '#domain/landing/index.ts';
+import type { MergeMethod } from '#domain/repos/index.ts';
+import type { TaskDetail } from '#api/contract/work.ts';
 
 /** One check on a PR's head commit: a GitHub check run or a commit status. NEUTRAL and SKIPPED conclusions are `skipped`. */
 export interface PrCheck {

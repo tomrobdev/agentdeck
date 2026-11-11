@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { reposApi } from '../../api/repos';
-import type { Repo } from '../../api/types';
-import { useActions } from '../../composables/shared/useActions';
-import { isNative, pickFolder } from '../../platform/native';
+import { reposApi } from '#api/repos.ts';
+import type { Repo } from '#api/types.ts';
+import { useActions } from '#composables/shared/useActions.ts';
+import { isNative, pickFolder } from '#platform/native.ts';
 
 const emit = defineEmits<{ added: [repo: Repo] }>();
 const { run } = useActions();

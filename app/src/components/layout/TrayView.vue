@@ -1,19 +1,19 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
-import { isOffline, refreshAll } from '../../api/http';
-import { liveStatusQuery, operationsApi } from '../../api/operations';
-import { tasksQuery } from '../../api/work';
-import { ATTENTION_LABELS, describeState } from '../../lib/operations/daemon-wording';
-import { describeLive } from '../../lib/runs/run-wording';
-import type { Status, TaskSummary } from '../../api/types';
-import { createActions, trackPending } from '../../composables/shared/useActions';
-import { useChangeStream } from '../../composables/shared/useChangeStream';
-import { isNative, openFromTray, startDaemon } from '../../platform/native';
-import { taskUrl } from '../../lib/shared/app-url';
+import { isOffline, refreshAll } from '#api/http.ts';
+import { liveStatusQuery, operationsApi } from '#api/operations.ts';
+import { tasksQuery } from '#api/work.ts';
+import { ATTENTION_LABELS, describeState } from '#lib/operations/daemon-wording.ts';
+import { describeLive } from '#lib/runs/run-wording.ts';
+import type { Status, TaskSummary } from '#api/types.ts';
+import { createActions, trackPending } from '#composables/shared/useActions.ts';
+import { useChangeStream } from '#composables/shared/useChangeStream.ts';
+import { isNative, openFromTray, startDaemon } from '#platform/native.ts';
+import { taskUrl } from '#lib/shared/app-url.ts';
 import { type RouteLocationRaw, useRouter } from 'vue-router';
-import AppProvider from '../ui/AppProvider.vue';
-import Chip from '../ui/Chip.vue';
+import AppProvider from '#components/ui/AppProvider.vue';
+import Chip from '#components/ui/Chip.vue';
 
 const statusQ = useQuery(liveStatusQuery());
 const tasksQ = useQuery(tasksQuery());

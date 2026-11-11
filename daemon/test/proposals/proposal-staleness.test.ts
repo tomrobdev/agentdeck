@@ -9,11 +9,11 @@ const home = mkdtempSync(join(tmpdir(), 'agentdeck-staleness-'));
 process.env.AGENTDECK_HOME = home;
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../fixtures/open-db.ts');
-const { addTask, proposalCheck } = await import('../../src/application/actions.ts');
-const { parseBaseLog, proposalCheckLine, staleness } = await import('../../src/domain/work/task/proposal-check.ts');
-const { sqliteMs } = await import('../../src/domain/shared/time.ts');
-const { blockedTask } = await import('../fixtures/fixtures.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const { addTask, proposalCheck } = await import('#application/actions.ts');
+const { parseBaseLog, proposalCheckLine, staleness } = await import('#domain/work/task/proposal-check.ts');
+const { sqliteMs } = await import('#domain/shared/time.ts');
+const { blockedTask } = await import('#test/fixtures/fixtures.ts');
 
 const commit = (sha: string, paths: string[]) => ({ sha, subject: `change ${sha}`, at: '2026-11-01 10:00:00', paths });
 

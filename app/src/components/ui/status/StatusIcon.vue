@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { TaskSummary } from '../../../api/types';
-import { isStuck, isWaiting } from '../../../../../daemon/src/domain/work/index.ts';
+import type { TaskSummary } from '#api/types.ts';
+import { isStuck, isWaiting } from '#daemon/domain/work/index.ts';
 
 const props = defineProps<{ task: Pick<TaskSummary, 'status' | 'waiting'>; size?: number }>();
 

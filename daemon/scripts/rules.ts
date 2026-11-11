@@ -1,5 +1,5 @@
 // pnpm rules: each rule in CLAUDE.md with the tests and the script that enforce it, or "unchecked: reason".
-import { readRules } from './lib/rules.ts';
+import { readRules } from '#scripts/lib/rules.ts';
 
 for (const rule of readRules()) {
   console.log(rule.id);

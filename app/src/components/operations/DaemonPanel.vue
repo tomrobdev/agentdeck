@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { isOffline } from '../../api/http';
-import { daemonHealthQuery, daemonQuery, operationsApi } from '../../api/operations';
-import { uptime } from '../../lib/shared/time';
-import { taskList } from '../../lib/work/work-wording';
-import { useAction } from '../../composables/shared/useActions';
-import ConfirmDialog from '../ui/ConfirmDialog.vue';
-import Modal from '../ui/Modal.vue';
+import { isOffline } from '#api/http.ts';
+import { daemonHealthQuery, daemonQuery, operationsApi } from '#api/operations.ts';
+import { uptime } from '#lib/shared/time.ts';
+import { taskList } from '#lib/work/work-wording.ts';
+import { useAction } from '#composables/shared/useActions.ts';
+import ConfirmDialog from '#components/ui/ConfirmDialog.vue';
+import Modal from '#components/ui/Modal.vue';
 
 defineEmits<{ close: [] }>();
 const { run, pending } = useAction();

@@ -1,5 +1,5 @@
 // The Claude Code settings each worker run gets with `--settings`.
-import { textList } from '../../shared/index.ts';
+import { textList } from '#domain/shared/index.ts';
 
 export interface WorkerSettings {
   sandbox: {

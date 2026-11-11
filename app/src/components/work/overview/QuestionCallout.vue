@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { workApi } from '../../../api/work';
-import type { TaskDetail } from '../../../api/types';
-import type { UnblockQuestion } from '../../../../../daemon/src/domain/work/index.ts';
-import { answerNote } from '../../../lib/work/task-view';
-import { useAction } from '../../../composables/shared/useActions';
+import { workApi } from '#api/work.ts';
+import type { TaskDetail } from '#api/types.ts';
+import type { UnblockQuestion } from '#daemon/domain/work/index.ts';
+import { answerNote } from '#lib/work/task-view.ts';
+import { useAction } from '#composables/shared/useActions.ts';
 
 const props = defineProps<{ task: TaskDetail; question: UnblockQuestion }>();
 const { pending, run } = useAction();

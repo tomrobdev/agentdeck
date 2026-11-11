@@ -1,8 +1,8 @@
 // A task's history: one row per status change.
-import type { TaskId } from '../../shared/index.ts';
-import type { MergeMethod } from '../../repos/index.ts';
-import { type BranchPr, type PrMove, type PrOpenFailures, type PrRetry, type PrState, prRetry, seenMove } from '../../landing/index.ts';
-import type { TaskEvent, TaskStatus } from './lifecycle.ts';
+import type { TaskId } from '#domain/shared/index.ts';
+import type { MergeMethod } from '#domain/repos/index.ts';
+import { type BranchPr, type PrMove, type PrOpenFailures, type PrRetry, type PrState, prRetry, seenMove } from '#domain/landing/index.ts';
+import type { TaskEvent, TaskStatus } from '#domain/work/lifecycle/lifecycle.ts';
 
 /**
  * `created` when the task was added, `edit` when a person changed its fields (the status stays as it was), `merge` when its PR was merged from the app and `sync` when a sync

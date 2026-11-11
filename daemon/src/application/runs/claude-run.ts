@@ -1,14 +1,14 @@
 // The sequence every task-bound claude run shares: log, run row, settings, the process, and what its end means.
 import { createWriteStream, type WriteStream } from 'node:fs';
 import { join } from 'node:path';
-import { LOG_DIR, ensureDirs } from '../../config.ts';
-import type { App } from '../ports/app.ts';
-import type { RunId } from '../../domain/shared/index.ts';
-import type { Repo } from '../../domain/repos/index.ts';
-import { allowedTools } from '../../domain/repos/index.ts';
-import { type ClaudeResult, type ClaudeRun, type UsageWindow, START_LIVE, nextLive } from '../../domain/runs/index.ts';
-import { claudeArgs } from '../../domain/runs/index.ts';
-import { settingsPath, workerSettings } from '../../domain/runs/index.ts';
+import { LOG_DIR, ensureDirs } from '#src/config.ts';
+import type { App } from '#application/ports/app.ts';
+import type { RunId } from '#domain/shared/index.ts';
+import type { Repo } from '#domain/repos/index.ts';
+import { allowedTools } from '#domain/repos/index.ts';
+import { type ClaudeResult, type ClaudeRun, type UsageWindow, START_LIVE, nextLive } from '#domain/runs/index.ts';
+import { claudeArgs } from '#domain/runs/index.ts';
+import { settingsPath, workerSettings } from '#domain/runs/index.ts';
 import {
   type Outcome,
   type Run,
@@ -21,9 +21,9 @@ import {
   runEndOf,
   runModel,
   runSummary,
-} from '../../domain/runs/index.ts';
-import type { Task } from '../../domain/work/index.ts';
-import { lastLine } from '../../domain/shared/index.ts';
+} from '#domain/runs/index.ts';
+import type { Task } from '#domain/work/index.ts';
+import { lastLine } from '#domain/shared/index.ts';
 
 export function runSettings(app: App, repo: Repo, worktree: string, logPath: string): string {
   const path = settingsPath(logPath);

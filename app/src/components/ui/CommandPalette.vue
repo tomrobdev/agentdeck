@@ -13,7 +13,7 @@ import {
   DialogRoot,
   DialogTitle,
 } from 'reka-ui';
-import { type PaletteItem, searchPalette } from '../../lib/work/palette';
+import { type PaletteItem, searchPalette } from '#lib/work/palette.ts';
 
 const props = defineProps<{ items: PaletteItem[] }>();
 const emit = defineEmits<{ close: [] }>();

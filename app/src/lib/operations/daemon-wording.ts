@@ -1,6 +1,6 @@
 // How the dashboard words the daemon: its state, a stale daemon, the notification kinds and the attention list.
-import type { NotifyKind, Status } from '../../api/types.ts';
-import { relTime, when } from '../shared/time.ts';
+import type { NotifyKind, Status } from '#api/types.ts';
+import { relTime, when } from '#lib/shared/time.ts';
 
 export const NOTIFY_LABELS: Record<NotifyKind, string> = {
   blocked: 'Task blocked',

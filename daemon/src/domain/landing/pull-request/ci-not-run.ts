@@ -1,6 +1,6 @@
 // A GitHub Actions job that never started (a billing stop, a spending limit, a disabled workflow): told apart from one that failed, with GitHub's message.
-import { withoutFailure } from './check-failures.ts';
-import type { PrCheck } from './checks.ts';
+import { withoutFailure } from '#domain/landing/pull-request/check-failures.ts';
+import type { PrCheck } from '#domain/landing/pull-request/checks.ts';
 
 /** What GitHub's job API says about whether a job started: the runner it got and how many steps it ran. */
 export interface JobStart {

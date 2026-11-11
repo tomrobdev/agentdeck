@@ -1,7 +1,7 @@
 // The review run of a done task: claude reads the task's changes against its Goal, Definition of done and linked plan steps with read-only tools, and answers with a summary and findings.
-import type { App } from '../ports/app.ts';
-import type { TaskId } from '../../domain/shared/index.ts';
-import type { PromptPlan } from '../../domain/runs/index.ts';
+import type { App } from '#application/ports/app.ts';
+import type { TaskId } from '#domain/shared/index.ts';
+import type { PromptPlan } from '#domain/runs/index.ts';
 import {
   REVIEW_DENIED_TOOLS,
   REVIEW_MAX_TURNS,
@@ -13,12 +13,12 @@ import {
   reviewSchemaArgs,
   reviewSystemPrompt,
   reviewable,
-} from '../../domain/runs/index.ts';
-import type { Task } from '../../domain/work/index.ts';
-import { errorMessage } from '../../domain/shared/index.ts';
-import { type OpenedRun, endTaskRun, openTaskRun, startTaskRun } from './claude-run.ts';
-import { planForRun } from '../work/plans.ts';
-import { settle } from '../landing/settle.ts';
+} from '#domain/runs/index.ts';
+import type { Task } from '#domain/work/index.ts';
+import { errorMessage } from '#domain/shared/index.ts';
+import { type OpenedRun, endTaskRun, openTaskRun, startTaskRun } from '#application/runs/claude-run.ts';
+import { planForRun } from '#application/work/plans.ts';
+import { settle } from '#application/landing/settle.ts';
 
 export interface ReviewReport {
   outcome: 'clean' | 'retried' | 'left' | 'garbage' | 'stale' | 'failed' | 'rate_limited' | 'cancelled';

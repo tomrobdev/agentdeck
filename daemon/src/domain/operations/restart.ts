@@ -1,5 +1,5 @@
 // When the daemon may be restarted: by `agentdeck restart` (from outside) and by reload_on_change (from inside).
-import { plural } from '../shared/index.ts';
+import { plural } from '#domain/shared/index.ts';
 
 export interface Activity {
   /** Tasks with a live run. */

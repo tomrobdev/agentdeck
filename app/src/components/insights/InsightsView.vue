@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { statsQuery } from '../../api/insights';
-import { reposQuery } from '../../api/repos';
-import { hasData, seriesOf, thisWeek, weekLabel } from '../../lib/insights/insights';
-import TrendChart from './TrendChart.vue';
+import { statsQuery } from '#api/insights.ts';
+import { reposQuery } from '#api/repos.ts';
+import { hasData, seriesOf, thisWeek, weekLabel } from '#lib/insights/insights.ts';
+import TrendChart from '#components/insights/TrendChart.vue';
 
 const repo = ref<string | null>(null);
 const reposQ = useQuery(reposQuery());

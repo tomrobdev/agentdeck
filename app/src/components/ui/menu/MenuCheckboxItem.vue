@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { DropdownMenuCheckboxItem, DropdownMenuItemIndicator } from 'reka-ui';
-import { MENU_ITEM } from './menu';
+import { MENU_ITEM } from '#components/ui/menu/menu.ts';
 
 const checked = defineModel<boolean>('checked', { default: false });
 </script>

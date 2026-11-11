@@ -1,6 +1,6 @@
 // Send a PR's failing checks back to the worker: each failed step and what its log says go into a retry's note.
-import type { App } from '../../ports/app.ts';
-import type { TaskId } from '../../../domain/shared/index.ts';
+import type { App } from '#application/ports/app.ts';
+import type { TaskId } from '#domain/shared/index.ts';
 import {
   type FailedCheck,
   LOG_TAIL_BYTES,
@@ -10,12 +10,12 @@ import {
   failingChecks,
   fixChecksNote,
   headBytes,
-} from '../../../domain/landing/index.ts';
-import { openPrUrl } from '../../../domain/landing/index.ts';
-import { errorMessage } from '../../../domain/shared/index.ts';
-import { ActionError, requireTask, requireTaskRepo } from '../../shared/input.ts';
-import { readFailure } from './check-failures.ts';
-import { retryTask } from '../person-events.ts';
+} from '#domain/landing/index.ts';
+import { openPrUrl } from '#domain/landing/index.ts';
+import { errorMessage } from '#domain/shared/index.ts';
+import { ActionError, requireTask, requireTaskRepo } from '#application/shared/input.ts';
+import { readFailure } from '#application/landing/pull-request/check-failures.ts';
+import { retryTask } from '#application/landing/person-events.ts';
 
 export interface FixChecksResult {
   checks: string[];

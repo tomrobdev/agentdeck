@@ -1,11 +1,11 @@
 // Tasks as the API sends them.
-import * as actions from '../application/actions.ts';
-import type { ComposedApp } from '../application/actions.ts';
-import { type TaskId, stored } from '../domain/shared/index.ts';
-import { type PullRequest, prFields } from '../domain/landing/index.ts';
-import type { Checkout } from '../domain/work/index.ts';
-import type { PlanLink } from '../domain/work/index.ts';
-import { type TaskState, stateFields } from '../domain/work/index.ts';
+import * as actions from '#application/actions.ts';
+import type { ComposedApp } from '#application/actions.ts';
+import { type TaskId, stored } from '#domain/shared/index.ts';
+import { type PullRequest, prFields } from '#domain/landing/index.ts';
+import type { Checkout } from '#domain/work/index.ts';
+import type { PlanLink } from '#domain/work/index.ts';
+import { type TaskState, stateFields } from '#domain/work/index.ts';
 
 const flat = <T extends TaskState & { pr: PullRequest | null; checkout: Checkout | null; plan: PlanLink | null }>(task: T) => {
   const { pr, checkout, plan, ...fields } = task;

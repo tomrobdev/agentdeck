@@ -1,9 +1,9 @@
 // The command palette's matcher and rows. The dashboard has no test runner, so its pure helpers are tested here.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { bestScore, fuzzyScore, rank } from '../../../../app/src/lib/shared/fuzzy.ts';
-import { FILTER_STATES } from '../../../src/domain/work/index.ts';
-import { type PaletteHandlers, type PaletteTask, paletteItems, searchPalette } from '../../../../app/src/lib/work/palette.ts';
+import { bestScore, fuzzyScore, rank } from '#app/lib/shared/fuzzy.ts';
+import { FILTER_STATES } from '#domain/work/index.ts';
+import { type PaletteHandlers, type PaletteTask, paletteItems, searchPalette } from '#app/lib/work/palette.ts';
 
 test('every query character must appear in order, ignoring case', () => {
   assert.notEqual(fuzzyScore('rtry', 'Retry #5'), null);

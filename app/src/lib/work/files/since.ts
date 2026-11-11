@@ -1,4 +1,4 @@
-import type { SincePoint } from '../../../../../daemon/src/api/contract/files.ts';
+import type { SincePoint } from '#daemon/api/contract/files.ts';
 
 export const SINCE_BASE = 'base';
 

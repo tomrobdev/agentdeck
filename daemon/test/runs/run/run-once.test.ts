@@ -6,7 +6,7 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
-import { runOnceRefusal } from '../../../src/domain/operations/index.ts';
+import { runOnceRefusal } from '#domain/operations/index.ts';
 
 const CLI = join(import.meta.dirname, '../../../src/cli.ts');
 const servers: Server[] = [];

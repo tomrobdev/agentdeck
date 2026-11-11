@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import type { TaskId } from '../../../src/domain/shared/id.ts';
+import type { TaskId } from '#domain/shared/id.ts';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -8,12 +8,11 @@ import { test } from 'node:test';
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-records-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../../fixtures/open-db.ts');
-const { addTask, attachPlan, editTask, linkTasks, taskDetail, taskViews, unlinkTasks } =
-  await import('../../../src/application/actions.ts');
-const { editsSinceCutOff } = await import('../../../src/domain/runs/run.ts');
-const { MAX_RESTARTS } = await import('../../../src/domain/work/lifecycle/lifecycle.ts');
-const { advance, doneTask } = await import('../../fixtures/fixtures.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const { addTask, attachPlan, editTask, linkTasks, taskDetail, taskViews, unlinkTasks } = await import('#application/actions.ts');
+const { editsSinceCutOff } = await import('#domain/runs/run.ts');
+const { MAX_RESTARTS } = await import('#domain/work/lifecycle/lifecycle.ts');
+const { advance, doneTask } = await import('#test/fixtures/fixtures.ts');
 
 type Db = ReturnType<typeof openDb>;
 

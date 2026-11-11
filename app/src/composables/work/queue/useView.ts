@@ -1,8 +1,8 @@
 // Requests from the command palette to whatever page is mounted: switch the queue's view (list, board or graph), edit, or a bulk action.
 import { ref } from 'vue';
-import type { BulkAction } from '../../../lib/work/queue/bulk';
-import type { EditRequest } from '../../../lib/shared/hotkeys';
-import type { ViewMode } from '../../../lib/work/palette';
+import type { BulkAction } from '#lib/work/queue/bulk.ts';
+import type { EditRequest } from '#lib/shared/hotkeys.ts';
+import type { ViewMode } from '#lib/work/palette.ts';
 
 export const requestedView = ref<ViewMode | null>(null);
 

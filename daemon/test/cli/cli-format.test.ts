@@ -1,7 +1,7 @@
 // How the CLI words tasks, checks, auto-merge, runs, findings and doctor reports, and how it reads ids.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { asTaskId } from '../../src/domain/shared/index.ts';
+import { asTaskId } from '#domain/shared/index.ts';
 import {
   fmtAutoMerge,
   fmtChecks,
@@ -17,7 +17,7 @@ import {
   relTime,
   taskId,
   taskIds,
-} from '../../src/cli/format.ts';
+} from '#cli/format.ts';
 
 const capture = (fn: () => void): string[] => {
   const lines: string[] = [];
