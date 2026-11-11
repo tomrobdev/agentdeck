@@ -7,6 +7,7 @@ import type { MergeResult, TaskDetail } from '../../../api/types';
 import { canOpenPr, canStartMerge, isReview, personEvents } from '../../../../../daemon/src/domain/work/index.ts';
 import { canFixChecks } from '../../../lib/work/task-view';
 import { useAction, useActions } from '../../../composables/shared/useActions';
+import { useFixTask } from '../../../composables/work/useFixTask';
 import { useOpenNext } from '../../../composables/work/queue/useOpenNext';
 import ConfirmDialog from '../../ui/ConfirmDialog.vue';
 import MarkDoneDialog from './MarkDoneDialog.vue';
@@ -17,6 +18,7 @@ const emit = defineEmits<{ act: [kind: 'approve' | 'reject' | 'retry' | 'cancel'
 const { refresh, flash } = useActions();
 const { pending, run } = useAction();
 
+const { canFixHere, fix } = useFixTask();
 const events = computed(() => personEvents(props.task));
 
 const closing = ref(false);
@@ -68,6 +70,7 @@ function onRequested(next: boolean) {
       <button @click="emit('review')">↻ Request changes</button>
     </template>
     <button v-else-if="events.includes('retry')" @click="emit('act', 'retry')">↻ Retry</button>
+    <button v-if="canFixHere(task)" title="Open an interactive claude session for this task" @click="fix(task)">Fix with Claude</button>
     <button v-if="canFixChecks(task)" :disabled="pending" @click="fixChecks">Fix failing checks</button>
     <button
       v-if="canOpenPr(task)"

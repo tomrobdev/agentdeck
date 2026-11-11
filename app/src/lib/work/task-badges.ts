@@ -155,6 +155,17 @@ export function taskBadges(t: Viewed, opts: BadgeOptions = {}): Badges {
 export const statusText = (t: Pick<TaskSummary, 'status' | 'pr_state'>): string =>
   isReview(t) ? 'in review' : t.status === 'cancel_requested' ? 'stopping' : t.status;
 
+export function fixReason(t: Pick<TaskSummary, 'status' | 'pr_state' | 'stop_reason' | 'auto_merge_view'>): string {
+  const am = isReview(t) ? t.auto_merge_view : null;
+  const parts = [
+    `It is ${statusText(t)}.`,
+    t.status === 'blocked' || t.status === 'failed' ? t.stop_reason : null,
+    am?.label,
+    ...(am?.reasons ?? []),
+  ];
+  return parts.filter((p): p is string => !!p).join(' ');
+}
+
 export const TONE_TEXT: Record<Tone, string> = {
   muted: 'text-muted',
   accent: 'text-accent',

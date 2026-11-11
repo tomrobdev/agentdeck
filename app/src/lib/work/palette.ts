@@ -2,10 +2,12 @@ import type { TaskSummary } from '../../../../daemon/src/api/contract/work.ts';
 import { FILTER_STATES, personEvents } from '../../../../daemon/src/domain/work/index.ts';
 import { CHECKED_STATUSES, canStartMerge, isReview } from '../../../../daemon/src/domain/work/index.ts';
 import { rank } from '../shared/fuzzy.ts';
+import { canFix } from './task-view.ts';
 import { type BulkAction, bulkActions } from './queue/bulk.ts';
 import { type EditRequest, GO_KEYS, type GoTarget, PRIORITY_KEYS, keyCaps } from '../shared/hotkeys.ts';
 
 export type PaletteTask = Pick<TaskSummary, 'id' | 'title' | 'status' | 'pr_state' | 'sync' | 'merge_request'> & {
+  waiting?: TaskSummary['waiting'];
   repo?: string | null;
   branch?: string | null;
 };
@@ -16,6 +18,7 @@ export interface PaletteHandlers {
   act: (kind: 'approve' | 'retry' | 'cancel' | 'mark_done', id: number) => void;
   merge: (id: number) => void;
   verify: (id: number) => void;
+  fix: { terminal: string; run: (id: number) => void } | null;
   copyLink: (id: number) => void;
   newTask: () => void;
   togglePause: () => void;
@@ -64,6 +67,19 @@ function selectedActions(t: PaletteTask, h: PaletteHandlers): PaletteItem[] {
   if (canStartMerge(t)) out.push(mine('merge', 'Merge', () => h.merge(t.id), 'm'));
   if (events.includes('approve')) out.push(mine('approve', 'Approve', () => h.act('approve', t.id), 'a'));
   if (CHECKED_STATUSES.includes(t.status)) out.push(mine('verify', 'Verify', () => h.verify(t.id)));
+  if (h.fix && canFix(t)) {
+    const fix = h.fix;
+    const label = `Fix #${t.id} in ${fix.terminal}`;
+    out.push({
+      key: 'selected:fix',
+      label,
+      detail: t.title,
+      kind: 'command',
+      forSelected: true,
+      fields: [label, 'Fix with Claude', t.title],
+      run: () => fix.run(t.id),
+    });
+  }
   if (events.includes('retry') && !isReview(t)) out.push(mine('retry', 'Retry', () => h.act('retry', t.id), 'r'));
   if (events.includes('mark_done')) out.push(mine('mark_done', 'Mark done', () => h.act('mark_done', t.id)));
   if (events.includes('cancel')) out.push(mine('cancel', t.status === 'running' ? 'Stop' : 'Cancel', () => h.act('cancel', t.id)));

@@ -63,6 +63,7 @@ const handlers: PaletteHandlers = {
   act: (kind, id) => calls.push(`${kind} ${id}`),
   merge: (id) => calls.push(`merge ${id}`),
   verify: (id) => calls.push(`verify ${id}`),
+  fix: null,
   copyLink: (id) => calls.push(`copy ${id}`),
   newTask: noop,
   togglePause: noop,
@@ -125,6 +126,25 @@ test('a task in review that is syncing or has a merge request offers no Merge', 
   assert.ok(!labels(syncing).includes('Merge #6'));
   assert.ok(!labels(requested).includes('Merge #7'));
   assert.ok(!labels(syncing).includes('Retry #6'), 'still in review, so still no plain retry');
+});
+
+test('Fix in the terminal is offered only for a task that needs a person, and only with a terminal', () => {
+  const withFix: PaletteHandlers = { ...handlers, fix: { terminal: 'cmux', run: (id) => calls.push(`fix ${id}`) } };
+  const labels = (t: PaletteTask, h: PaletteHandlers) =>
+    paletteItems({ tasks: [t], selected: t, paused: false, handlers: h })
+      .filter((i) => i.forSelected)
+      .map((i) => i.label);
+  assert.ok(labels(task(287, 'blocked'), withFix).includes('Fix #287 in cmux'));
+  assert.ok(labels(task(288, 'failed'), withFix).includes('Fix #288 in cmux'));
+  assert.ok(labels(task(289, 'done', { pr_state: 'open' }), withFix).includes('Fix #289 in cmux'));
+  assert.ok(!labels(task(290, 'queued'), withFix).some((l) => l.startsWith('Fix')));
+  assert.ok(!labels(task(291, 'running'), withFix).some((l) => l.startsWith('Fix')));
+  assert.ok(!labels(task(287, 'blocked'), handlers).some((l) => l.startsWith('Fix')));
+  calls.length = 0;
+  paletteItems({ tasks: [], selected: task(287, 'blocked'), paused: false, handlers: withFix })
+    .find((i) => i.label === 'Fix #287 in cmux')
+    ?.run();
+  assert.deepEqual(calls, ['fix 287']);
 });
 
 test('commands are listed, and the daemon toggle follows its state', () => {
