@@ -167,7 +167,7 @@ export const COVERAGE_FLOORS: Record<string, Floor> = {
   'application/scheduler': { lines: 97, branches: 91 },
   'application/shared': { lines: 100, branches: 97 },
   'application/work': { lines: 99, branches: 94 },
-  cli: { lines: 91, branches: 82 },
+  cli: { lines: 91, branches: 84 },
   'dashboard/lib/insights': { lines: 100, branches: 100 },
   'dashboard/lib/landing': { lines: 100, branches: 96 },
   'dashboard/lib/operations': { lines: 92, branches: 87 },

@@ -70,11 +70,13 @@ export {
   mergeCheck,
   mergeFailure,
   mergeFindings,
+  mergeSyncsFirst,
   parseAnnotations,
   parseBranchPrs,
   parseJobStart,
   parseJobSteps,
   parsePrDetails,
+  syncingFirstLine,
   verdictView,
 } from './merge/merge.ts';
 export type {

@@ -51,6 +51,7 @@ async function onMerged(result: MergeResult, next: boolean) {
   merging.value = false;
   if (next) openNext(props.task.id);
   await refresh();
+  if (result.syncing) flash(result.syncing);
   if (result.cleanup_error) flash(`Merged, but cleanup failed: ${result.cleanup_error}`);
 }
 function onRequested(next: boolean) {

@@ -19,7 +19,7 @@ The least line and branch coverage each group of `daemon/src/` may have (`COVERA
 | `application/scheduler`    | `application/scheduler/`                                                                 | 97%   | 91%      |
 | `application/shared`       | `application/shared/`                                                                    | 100%  | 97%      |
 | `application/work`         | `application/work/`                                                                      | 99%   | 94%      |
-| `cli`                      | `cli/`                                                                                   | 91%   | 82%      |
+| `cli`                      | `cli/`                                                                                   | 91%   | 84%      |
 | `dashboard/lib/insights`   | `dashboard/lib/insights/`                                                                | 100%  | 100%     |
 | `dashboard/lib/landing`    | `dashboard/lib/landing/`                                                                 | 100%  | 96%      |
 | `dashboard/lib/operations` | `dashboard/lib/operations/`                                                              | 92%   | 87%      |

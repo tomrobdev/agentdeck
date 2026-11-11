@@ -4,11 +4,12 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { fakeCodeHost } from '../fixtures/fakes.ts';
+import { READY_PR, fakeCodeHost } from '../fixtures/fakes.ts';
 import { blockedTask, doneTask, failedTask, queuedTask } from '../fixtures/fixtures.ts';
 import { scratchCli, scratchRepo } from './cli-run.ts';
 
-const { db, run } = scratchCli({ codeHost: fakeCodeHost() });
+const codeHost = fakeCodeHost();
+const { db, run } = scratchCli({ codeHost });
 const repo = await (await import('../../src/application/actions.ts')).addRepo(db, { path: scratchRepo('beta'), test: 'true' });
 
 const PLAN =
@@ -134,6 +135,25 @@ test('show of a blocked task prints its needs and question, and of a done task i
   assert.match(view.out, /PR open: https:\/\/x\/pull\//);
   assert.match(view.out, /branch {3}agentdeck\/x/);
   assert.match((await run('ls', '--status', 'review')).out, new RegExp(`#${done.id} `));
+});
+
+test('merge of a conflicting PR records a merge request, says it is syncing and exits 0; with auto_resolve off it refuses', async () => {
+  const conflicted = doneTask(db, repo, { pr: 'open', url: 'https://x/pull/conflict', branch: 'agentdeck/conflict' });
+  codeHost.details['https://x/pull/conflict'] = { ...READY_PR, mergeable: 'CONFLICTING', merge_state: 'DIRTY' };
+  const res = await run('merge', String(conflicted.id), '--yes');
+  assert.equal(res.exit, null);
+  assert.match(res.out, /^conflicts with main: syncing, it merges once the sync is clean and the tests pass$/m);
+  assert.ok(db.getTask(conflicted.id)?.pr?.merge_request);
+  assert.deepEqual(codeHost.merged, []);
+
+  db.recordPr(conflicted.id, { type: 'closed' });
+  const other = doneTask(db, repo, { pr: 'open', url: 'https://x/pull/conflict-off', branch: 'agentdeck/conflict-off' });
+  codeHost.details['https://x/pull/conflict-off'] = { ...READY_PR, mergeable: 'CONFLICTING', merge_state: 'DIRTY' };
+  await run('repo', 'set', 'beta', 'auto_resolve', 'off');
+  const refused = await run('merge', String(other.id), '--yes');
+  assert.equal(refused.exit, 1);
+  assert.match(refused.out, /problem: the branch has conflicts with the base branch, and the repo has auto_resolve off/);
+  await run('repo', 'set', 'beta', 'auto_resolve', 'on');
 });
 
 test('review says there are none, log and attach refuse what they cannot do, and attach stores a plan', async () => {

@@ -112,6 +112,8 @@ export interface MergePreview {
   warnings: string[];
   /** One of the problems is a conflict with the base branch, which a resolve run can fix. */
   conflicting: boolean;
+  /** The conflict is the only problem and the repo has auto_resolve on: merging records a merge request and syncs first. */
+  syncs_first: boolean;
   /** Queued tasks that merging this one lets start (one still waiting on another task too is left out). */
   unblocks: { id: TaskId; title: string }[];
   /** Whether the daemon will merge it on its own and why not yet; null when auto-merge is off. */
@@ -233,5 +235,7 @@ export interface MergeResult {
   unblocked: number[];
   /** Set when the merge went through but removing the branch or worktree did not. */
   cleanup_error?: string;
+  /** Set when the PR conflicted with the base: nothing merged yet, a merge request waits on the sync. Says so. */
+  syncing?: string;
   task: TaskDetail;
 }

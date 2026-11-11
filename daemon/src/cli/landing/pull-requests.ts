@@ -55,9 +55,10 @@ export const prCommands: Record<string, Command> = {
     if (preview.unblocks.length) console.log(`unblocks ${preview.unblocks.map((t) => `#${t.id}`).join(', ')}`);
     for (const w of preview.warnings) console.log(`warning: ${w}`);
     for (const p of preview.problems) console.log(`problem: ${p}`);
-    if (preview.problems.length) die(`can't merge #${id}`);
+    if (preview.problems.length && !preview.syncs_first) die(`can't merge #${id}`);
     if (!flags.yes && !(await confirm(`merge into ${preview.base} with ${method}?`))) return void console.log('not merged');
     const res = await actions.mergeTask(db, id, { method, delete_branch: !flags['keep-branch'] });
+    if (res.syncing) return void console.log(res.syncing);
     console.log(
       `merged #${id} (${res.method})${res.unblocked.length ? `; ${res.unblocked.map((n) => `#${n}`).join(', ')} can start` : ''}`,
     );
