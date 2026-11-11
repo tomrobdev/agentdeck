@@ -73,6 +73,50 @@ stateDiagram-v2
 | `resolve` | open → resolved, answered → resolved |
 | `reopen`  | answered → open, resolved → open     |
 
+## Pull request
+
+The rule table is `PR_MOVES` in `domain/landing/pull-request/pr-moves.ts`. States: `none`, `open`, `merged`, `closed`, `failed`.
+
+```mermaid
+stateDiagram-v2
+  none --> open: opened
+  none --> failed: open_failed
+  open --> merged: merged
+  open --> closed: closed
+  merged --> open: opened
+  merged --> failed: open_failed
+  closed --> open: opened
+  closed --> failed: open_failed
+  failed --> open: opened
+  failed --> failed: open_failed
+```
+
+| Move          | Moves                                                            |
+| ------------- | ---------------------------------------------------------------- |
+| `opened`      | none → open, merged → open, closed → open, failed → open         |
+| `merged`      | open → merged                                                    |
+| `closed`      | open → closed                                                    |
+| `reopened`    | none: ignored from every state                                   |
+| `open_failed` | none → failed, merged → failed, closed → failed, failed → failed |
+
+## Merge request
+
+The rule table is `MERGE_REQUEST_MOVES` in `domain/landing/merge/merge-request.ts`. States: `none`, `requested`.
+
+```mermaid
+stateDiagram-v2
+  none --> requested: asked
+  requested --> none: carried_out, dropped, refused
+  requested --> requested: asked
+```
+
+| Move          | Moves                                   |
+| ------------- | --------------------------------------- |
+| `asked`       | none → requested, requested → requested |
+| `carried_out` | requested → none                        |
+| `dropped`     | requested → none                        |
+| `refused`     | requested → none                        |
+
 ## Follow-ups
 
 What the daemon does after a task's status changes: each domain event `transition` makes, the moves that make it (event, from which statuses) and its follow-ups. The table is `FOLLOW_UPS` in `domain/work/lifecycle/follow-ups.ts`, run by `application/landing/settle.ts`. `task_events` is the outbox: a change whose event has follow-ups writes its row pending in the same transaction, `settle` runs the daemon's at once and marks the row, and the daemon's tick runs whatever is still pending: a person's events (only the daemon follows up), crash recovery's, and any a crash cut off.
@@ -94,14 +138,12 @@ What the daemon does after a task's status changes: each domain event `transitio
 
 State types in `domain/` that no rule table drives, and why.
 
-| State type         | Why                                                                                                                                                                                                            |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AutoMergeState`   | a verdict computed from the pull request each time (in a repo with auto_review on, with the review run of its changes: it waits for one, and needs a person when it asked for changes), not a state with moves |
-| `ChangeStatus`     | a git file change letter, read from git                                                                                                                                                                        |
-| `CheckState`       | a value read from GitHub for each check, not a state a thing moves through                                                                                                                                     |
-| `HeadlineState`    | computed from the daemon and queue each time, not a state with moves                                                                                                                                           |
-| `LinkState`        | computed from the linked task each time, not a state with moves                                                                                                                                                |
-| `MergeRequestView` | a merge request is set, cleared and read as columns (domain/landing/merge/merge-request.ts), not a state type with a table yet                                                                                 |
-| `PlanStepStatus`   | set from the plan page by a person or worker; any step may take any status                                                                                                                                     |
-| `PrState`          | a pull request moves by what GitHub reports (domain/landing/pull-request/pr.ts), not by an event table yet                                                                                                     |
-| `StartState`       | computed from a task's links each time, not a state with moves                                                                                                                                                 |
+| State type       | Why                                                                                                                                                                                                            |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AutoMergeState` | a verdict computed from the pull request each time (in a repo with auto_review on, with the review run of its changes: it waits for one, and needs a person when it asked for changes), not a state with moves |
+| `ChangeStatus`   | a git file change letter, read from git                                                                                                                                                                        |
+| `CheckState`     | a value read from GitHub for each check, not a state a thing moves through                                                                                                                                     |
+| `HeadlineState`  | computed from the daemon and queue each time, not a state with moves                                                                                                                                           |
+| `LinkState`      | computed from the linked task each time, not a state with moves                                                                                                                                                |
+| `PlanStepStatus` | set from the plan page by a person or worker; any step may take any status                                                                                                                                     |
+| `StartState`     | computed from a task's links each time, not a state with moves                                                                                                                                                 |

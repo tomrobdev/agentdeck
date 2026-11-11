@@ -7,10 +7,11 @@ import { carryFailures, checksSettled, countOfKept, nextChecks } from '../../../
 import { readFailure } from './check-failures.ts';
 import { checksFailedNotification, mergeFailedNotification } from '../../../domain/operations/index.ts';
 import { type Repo, pausedReason } from '../../../domain/repos/index.ts';
-import type { Task } from '../../../domain/work/index.ts';
+import type { PrEvent, Task } from '../../../domain/work/index.ts';
 import { errorMessage } from '../../../domain/shared/index.ts';
 import { landsAfter } from '../../work/dependencies.ts';
 import { measureBranch } from '../../work/files.ts';
+import { endMergeRequest, movePr } from '../moves.ts';
 import { settle } from '../settle.ts';
 import { notifyLater } from '../../operations/notifications.ts';
 
@@ -86,9 +87,9 @@ interface PrFound {
   polling: boolean;
 }
 
-function dropRequest(app: App, id: TaskId, why: string, log: (msg: string) => void): boolean {
-  if (!app.clearMergeRequest(id)) return false;
-  log(`task ${id}: merge request dropped: ${why}`);
+function dropRequest(app: App, task: Task, move: 'dropped' | 'refused', why: string, log: (msg: string) => void): boolean {
+  if (!endMergeRequest(app, task, move, log)) return false;
+  log(`task ${task.id}: merge request dropped: ${why}`);
   return true;
 }
 
@@ -97,7 +98,8 @@ async function refreshOne(app: App, task: Task, log: (msg: string) => void): Pro
   const pr = await app.codeHost.prDetails(task.pr!.url!, prCwd(app, task), { withFiles: !!repo && autoMergeOn(task, repo) });
   const state = pr.state;
   if (state !== task.pr?.state) {
-    const applied = state === 'closed' ? app.recordPr(task.id, { type: 'closed' }) : app.recordPr(task.id, { type: 'seen', state });
+    const event: PrEvent = state === 'closed' ? { type: 'closed' } : { type: 'seen', state };
+    const applied = movePr(app, task, event, log) !== null;
     if (applied) log(`task ${task.id}: PR is ${state}`);
     if (
       applied &&
@@ -108,7 +110,8 @@ async function refreshOne(app: App, task: Task, log: (msg: string) => void): Pro
       log(`task ${task.id}: PR merged, task is done`);
   }
   if (state !== 'open' || task.status !== 'done') {
-    if (task.pr?.merge_request) dropRequest(app, task.id, state !== 'open' ? `the PR is ${state}` : `the task is ${task.status}`, log);
+    if (task.pr?.merge_request)
+      dropRequest(app, task, 'dropped', state !== 'open' ? `the PR is ${state}` : `the task is ${task.status}`, log);
     return null;
   }
   const kept = await keepChecks(app, task, pr);
@@ -119,7 +122,7 @@ async function refreshOne(app: App, task: Task, log: (msg: string) => void): Pro
   const verdict = refreshVerdict({ input: mergeInputFor(app, task, repo, judged), requested, auto });
   app.setAutoMergeCheck(task.id, verdict.auto_merge_check);
   if (verdict.drop !== null) {
-    if (dropRequest(app, task.id, verdict.drop, log)) notifyLater(app, mergeFailedNotification(task.id, verdict.drop));
+    if (dropRequest(app, task, 'refused', verdict.drop, log)) notifyLater(app, mergeFailedNotification(task.id, verdict.drop));
     return null;
   }
   if (verdict.request_check) app.setMergeRequestCheck(task.id, verdict.request_check);

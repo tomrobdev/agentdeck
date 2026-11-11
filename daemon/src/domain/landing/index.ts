@@ -47,8 +47,18 @@ export {
 } from './merge/code-comments.ts';
 export type { AddedLines } from './merge/code-comments.ts';
 export { isConflicting } from './merge/conflict.ts';
-export { conflictsWithBase, mergeRequestCheck, mergeRequestView, mergesNow } from './merge/merge-request.ts';
-export type { MergeRequestView } from './merge/merge-request.ts';
+export {
+  conflictsWithBase,
+  mergeRequestCheck,
+  mergeRequestStateOf,
+  mergeRequestStatesFor,
+  mergeRequestView,
+  mergesNow,
+  nextMergeRequestState,
+} from './merge/merge-request.ts';
+export type { MergeRequestMove, MergeRequestView } from './merge/merge-request.ts';
+export { nextPrState, prFrom, prStatesFor, seenMove } from './pull-request/pr-moves.ts';
+export type { PrFrom, PrMove } from './pull-request/pr-moves.ts';
 export { mergeCheck, mergeFailure, mergeFindings, parseBranchPrs, parseJobSteps, parsePrDetails, verdictView } from './merge/merge.ts';
 export type {
   AutoMergeCheck,

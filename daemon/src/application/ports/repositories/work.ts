@@ -1,6 +1,6 @@
 // Work's repositories: tasks, their history, their links and their plans.
 import type { RepoId, TaskId } from '../../../domain/shared/index.ts';
-import type { AutoMergeCheck, CheckCounts, StoredChecks } from '../../../domain/landing/index.ts';
+import type { AutoMergeCheck, CheckCounts, MergeRequestMove, StoredChecks } from '../../../domain/landing/index.ts';
 import type { AttentionCandidate } from '../../../domain/operations/index.ts';
 import type { MergeMethod } from '../../../domain/repos/index.ts';
 import type {
@@ -79,7 +79,7 @@ export interface TaskRepository {
   setAutoMerge(id: TaskId, value: boolean | null): Task | undefined;
   setAutoMergeCheck(id: TaskId, check: AutoMergeCheck | null): boolean;
   requestMerge(id: TaskId, method: MergeMethod): boolean;
-  clearMergeRequest(id: TaskId): boolean;
+  clearMergeRequest(id: TaskId, move?: Exclude<MergeRequestMove, 'asked'>): boolean;
   setMergeRequestCheck(id: TaskId, check: AutoMergeCheck): boolean;
   recordPrChecksOpened(id: TaskId, checks: CheckCounts): boolean;
   setPrChecks(id: TaskId, checks: StoredChecks): boolean;

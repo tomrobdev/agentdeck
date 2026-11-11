@@ -1,8 +1,9 @@
 // The writes to a task's pull request: its state, its checks, the auto-merge setting and check, and a person's merge request.
-import { type SQL, and, eq, isNotNull, isNull, ne, not, or } from 'drizzle-orm';
+import { type SQL, and, eq, inArray, isNotNull, isNull, or } from 'drizzle-orm';
 import type { DatabaseSync } from 'node:sqlite';
 import type { TaskId } from '../../domain/shared/index.ts';
-import type { AutoMergeCheck, CheckCounts, StoredChecks } from '../../domain/landing/index.ts';
+import type { AutoMergeCheck, CheckCounts, MergeRequestMove, PrFrom, StoredChecks } from '../../domain/landing/index.ts';
+import { mergeRequestStatesFor, prStatesFor } from '../../domain/landing/index.ts';
 import type { MergeMethod } from '../../domain/repos/index.ts';
 import {
   type PrEvent,
@@ -18,13 +19,25 @@ import {
   prChecksChanges,
   prChecksOpenedChanges,
   prEventReason,
+  prMoveOf,
 } from '../../domain/work/index.ts';
 import { TASK_COLUMNS, mapFound, toTask } from '../mappers.ts';
 import type { Orm } from '../orm.ts';
 import { NOW_SQL, atomically, changed } from '../sql.ts';
 import { tasks } from '../tables.ts';
 import { recordEvent } from './task-events.ts';
-import { columns, inReview, prOpen } from './tasks-columns.ts';
+import { columns, inReview } from './tasks-columns.ts';
+
+function prStateIn(states: PrFrom[]): SQL | undefined {
+  const known = states.filter((s) => s !== 'none');
+  return or(...(states.includes('none') ? [isNull(tasks.pr_state)] : []), ...(known.length ? [inArray(tasks.pr_state, known)] : []));
+}
+
+function mergeRequestIn(move: MergeRequestMove): SQL | undefined {
+  const states = mergeRequestStatesFor(move);
+  if (states.length === 2) return undefined;
+  return states[0] === 'requested' ? isNotNull(tasks.merge_requested_at) : isNull(tasks.merge_requested_at);
+}
 
 export function taskPrStore(db: DatabaseSync, orm: Orm) {
   return {
@@ -51,15 +64,15 @@ export function taskPrStore(db: DatabaseSync, orm: Orm) {
       const res = orm
         .update(tasks)
         .set({ ...columns(mergeRequestChanges(method)), updated_at: NOW_SQL })
-        .where(and(eq(tasks.id, id), inReview))
+        .where(and(eq(tasks.id, id), inReview, mergeRequestIn('asked')))
         .run();
       return changed(res);
     },
-    clearMergeRequest(id: TaskId): boolean {
+    clearMergeRequest(id: TaskId, move: Exclude<MergeRequestMove, 'asked'> = 'dropped'): boolean {
       const res = orm
         .update(tasks)
         .set({ ...columns(noMergeRequestChanges()), updated_at: NOW_SQL })
-        .where(and(eq(tasks.id, id), isNotNull(tasks.merge_requested_at)))
+        .where(and(eq(tasks.id, id), mergeRequestIn(move)))
         .run();
       return changed(res);
     },
@@ -88,17 +101,10 @@ export function taskPrStore(db: DatabaseSync, orm: Orm) {
       return changed(res);
     },
     recordPr(id: TaskId, e: PrEvent): boolean {
-      const notOpen = or(isNull(tasks.pr_state), not(prOpen));
-      const isOpen = prOpen;
+      const from = prStatesFor(prMoveOf(e));
+      if (!from.length) return false;
       const reason = prEventReason(e);
-      const guard: SQL | undefined =
-        e.type === 'opened'
-          ? notOpen
-          : e.type === 'failed'
-            ? and(notOpen, eq(tasks.status, 'done'))
-            : e.type === 'closed'
-              ? isOpen
-              : and(isOpen, ne(tasks.pr_state, e.state));
+      const guard = and(prStateIn(from), e.type === 'failed' ? eq(tasks.status, 'done') : undefined);
       return atomically(db, () => {
         const row = orm
           .update(tasks)
