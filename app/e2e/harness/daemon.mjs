@@ -100,6 +100,8 @@ function seed() {
     ['pr_mode', 'ready'],
     ['auto_merge', 'on'],
     ['auto_unblock', 'on'],
+    ['code_comment_max_lines', '0'],
+    ['code_comment_max_percent', '0'],
   ])
     cli('repo', 'set', 'demo', key, value);
   for (const [key, value] of [

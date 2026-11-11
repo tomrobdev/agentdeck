@@ -172,7 +172,7 @@ export function mergeCheck(input: MergeInput): MergeCheck {
 
 /**
  * What a reason a merge waits or needs a person is about: a merge finding's kind, GitHub still working out mergeability,
- * one of the rules only auto-merge asks (`no_label`, `tests_not_run`, `untested`, `too_many_lines`, `files_unlisted`,
+ * one of the rules only auto-merge asks (`no_label`, `tests_not_run`, `untested`, `too_many_lines`, `too_many_code_comments`, `files_unlisted`,
  * `protected_paths`, `skipped_paths`, `paused`), its review gate in a repo with auto_review on (`review_pending`,
  * `review_blocking`, `review_failed`, `review_unread`, `review_unanswered`: review-gate.ts), or `other`: a reason stored
  * before reasons had kinds.
@@ -184,6 +184,7 @@ export type MergeReasonKind =
   | 'tests_not_run'
   | 'untested'
   | 'too_many_lines'
+  | 'too_many_code_comments'
   | 'files_unlisted'
   | 'protected_paths'
   | 'skipped_paths'
@@ -199,6 +200,8 @@ export type MergeReasonKind =
 export interface MergeReason {
   kind: MergeReasonKind;
   text: string;
+  /** A short tag for a list row, where the reason has one (`code comments +12 (8%)`). */
+  tag?: string;
 }
 
 /** The reasons a merge needs a person (`never`) and those it waits for (`wait`), each in the order they are told. */

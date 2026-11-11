@@ -139,6 +139,8 @@ export interface AutoMergeView {
   source: 'task' | 'repo' | 'planner';
   /** When the PR refresh made the check (UTC, `YYYY-MM-DD HH:MM:SS`); null when no check counts. */
   checked_at: string | null;
+  /** The tag for a branch over the repo's code comment limits (`code comments +12 (8%)`); null when it is not over. Missing from a daemon that predates it. */
+  code_comments?: string | null;
   /**
    * `review`: what the review gate asks, in a repo with auto_review on; null when it is off. Missing from a daemon that
    * predates it.

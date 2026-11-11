@@ -92,7 +92,11 @@ function makeRepo(autoReview: boolean) {
   updateRepo(db, name, { pr_mode: 'draft', auto_review: autoReview });
   return { ...repo, path: dir };
 }
-const drain = () => new Scheduler(db, { once: true, tickMs: 50, log: () => {} }).run();
+const drainOnce = () => new Scheduler(db, { once: true, tickMs: 50, log: () => {} }).run();
+const drain = async () => {
+  await drainOnce();
+  await drainOnce();
+};
 const fakeArgs = (): string[][] =>
   readFileSync(join(home, 'fake-claude-args.log'), 'utf8')
     .split('\n')

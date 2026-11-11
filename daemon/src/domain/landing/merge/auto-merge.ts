@@ -2,6 +2,7 @@
 import type { Repo } from '../../repos/index.ts';
 import { PROTECTED_PREFIXES, isProtectedPath } from '../../repos/index.ts';
 import { wholeNumberError } from '../../shared/index.ts';
+import { type CodeCommentCount, type CodeCommentLimits, codeCommentsOver, codeCommentsTag, codeCommentsText } from './code-comments.ts';
 import { checksRan } from '../pull-request/checks.ts';
 import { type AutoMergeCheck, type MergeInput, type MergeReason, type MergeReasonKind, reasonTexts, unattendedVerdict } from './merge.ts';
 import type { PullRequest } from '../pull-request/pr.ts';
@@ -26,6 +27,11 @@ export function autoMergeOn(task: AutoMergeSetting, repo: Pick<Repo, 'auto_merge
   return repo.auto_merge && (task.source !== 'planner' || !repo.auto_approve);
 }
 
+const commentLimits = (repo: Partial<CodeCommentLimits>): CodeCommentLimits => ({
+  code_comment_max_lines: repo.code_comment_max_lines ?? 0,
+  code_comment_max_percent: repo.code_comment_max_percent ?? 0,
+});
+
 const someOf = (paths: string[]) => `${paths.slice(0, 3).join(', ')}${paths.length > 3 ? ` and ${paths.length - 3} more` : ''}`;
 
 export function pathReasons(paths: string[], skip: string[]): MergeReason[] {
@@ -45,7 +51,7 @@ export const autoMergeMaxLinesError = (value: unknown): string | null => wholeNu
 
 /** What only auto-merge's check reads, beside the merge input: the repo's limits, a pause, and the branch as measured. */
 export interface AutoMergeFacts {
-  repo: Pick<Repo, 'test_cmd' | 'auto_merge_max_lines' | 'auto_merge_skip'>;
+  repo: Pick<Repo, 'test_cmd' | 'auto_merge_max_lines' | 'auto_merge_skip'> & Partial<CodeCommentLimits>;
   /** Why the daemon or the repo is paused; null when neither is. */
   paused: string | null;
   /** The branch measured locally (`git diff --numstat` against the base); null or missing when it couldn't be. */
@@ -69,6 +75,10 @@ export function autoMergeCheck(input: MergeInput & AutoMergeFacts): AutoMergeChe
   const paths = measured ? measured.paths : pr.paths;
   if (lines > repo.auto_merge_max_lines) add('too_many_lines', `${lines} lines changed, over the limit of ${repo.auto_merge_max_lines}`);
   if (!measured && pr.paths.length < pr.files) add('files_unlisted', `GitHub listed ${pr.paths.length} of ${pr.files} changed files`);
+  const comments = measured?.code_comments;
+  const limits = commentLimits(repo);
+  if (comments && codeCommentsOver(comments, limits))
+    never.push({ kind: 'too_many_code_comments', text: codeCommentsText(comments, limits), tag: codeCommentsTag(comments) });
   never.push(...pathReasons(paths, repo.auto_merge_skip));
   const gate = input.review ? reviewGate(input.review) : { never: [], wait: [] };
   never.push(...gate.never);
@@ -83,6 +93,8 @@ export type AutoMergeState = 'off' | 'on' | 'merge' | 'wait' | 'never';
 export interface AutoMergeMeasured {
   lines: number;
   paths: string[];
+  /** The code comment lines the branch adds; null or missing when they couldn't be read. */
+  code_comments?: CodeCommentCount | null;
 }
 
 export interface AutoMergeView {
@@ -95,6 +107,8 @@ export interface AutoMergeView {
   source: 'task' | 'repo' | 'planner';
   /** When the PR refresh made the check; null when no check counts. */
   checked_at: string | null;
+  /** The tag for a branch over the repo's code comment limits (`code comments +12 (8%)`); null when it is not over or not measured. */
+  code_comments: string | null;
   /** `review`: what the review gate asks, in a repo with auto_review on; null when it is off. */
   limits: { max_lines: number; skip: string[]; tests: string; review: string | null };
 }
@@ -105,7 +119,8 @@ const LABELS = { off: 'auto-merge off', on: 'auto-merge on', merge: 'will auto-m
 
 export function autoMergeView(
   task: AutoMergeSetting & { pr: PullRequest | null },
-  repo: Pick<Repo, 'auto_merge' | 'auto_approve' | 'test_cmd' | 'auto_merge_max_lines' | 'auto_merge_skip' | 'auto_review'>,
+  repo: Pick<Repo, 'auto_merge' | 'auto_approve' | 'test_cmd' | 'auto_merge_max_lines' | 'auto_merge_skip' | 'auto_review'> &
+    Partial<CodeCommentLimits>,
   measured?: AutoMergeMeasured | null,
 ): AutoMergeView {
   const on = autoMergeOn(task, repo);
@@ -118,7 +133,7 @@ export function autoMergeView(
     tests: repo.test_cmd ? 'the last run must pass the tests' : 'the PR must have passing checks (the repo has no test command)',
     review: repo.auto_review ? REVIEW_LIMIT : null,
   };
-  if (!on) return { state: 'off', label: LABELS.off, reasons: [], source, checked_at: null, limits };
+  if (!on) return { state: 'off', label: LABELS.off, reasons: [], source, checked_at: null, code_comments: null, limits };
 
   const open = task.pr?.state === 'open' ? task.pr : null;
   const check = open?.auto_merge_check;
@@ -131,14 +146,21 @@ export function autoMergeView(
         : check.verdict === 'wait'
           ? `auto-merge waiting${first ? `: ${first}` : ''}`
           : `needs a person to merge${first ? `: ${first}` : ''}`;
-    return { state: check.verdict, label, reasons, source, checked_at: open.auto_merge_checked_at, limits };
+    const code_comments = check.reasons.find((r) => r.kind === 'too_many_code_comments')?.tag ?? null;
+    return { state: check.verdict, label, reasons, source, checked_at: open.auto_merge_checked_at, code_comments, limits };
   }
 
   const reasons: string[] = [];
+  let code_comments: string | null = null;
   if (measured) {
     const n = (value: number) => value.toLocaleString('en-US');
     if (measured.lines > limits.max_lines) reasons.push(`now ${n(measured.lines)} lines, over the limit of ${n(limits.max_lines)}`);
+    const comments = measured.code_comments;
+    if (comments && codeCommentsOver(comments, commentLimits(repo))) {
+      reasons.push(`now ${codeCommentsText(comments, commentLimits(repo))}`);
+      code_comments = codeCommentsTag(comments);
+    }
     reasons.push(...reasonTexts(pathReasons(measured.paths, skip)));
   }
-  return { state: 'on', label: LABELS.on, reasons, source, checked_at: null, limits };
+  return { state: 'on', label: LABELS.on, reasons, source, checked_at: null, code_comments, limits };
 }
