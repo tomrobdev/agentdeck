@@ -138,6 +138,9 @@ export function codeCommentsText(count: Pick<CodeCommentCount, 'lines' | 'percen
   return `${plural(count.lines, 'code comment line')} added (${Math.round(count.percent)}%), ${side} the limit of ${codeCommentLimitText(limits)}`;
 }
 
+export const codeCommentsTag = (count: Pick<CodeCommentCount, 'lines' | 'percent'>): string =>
+  `code comments +${count.lines} (${Math.round(count.percent)}%)`;
+
 export const codeCommentMaxLinesError = (value: unknown): string | null => wholeNumberError('code_comment_max_lines', value, 0, 10_000);
 
 export const codeCommentMaxPercentError = (value: unknown): string | null => wholeNumberError('code_comment_max_percent', value, 0, 100);

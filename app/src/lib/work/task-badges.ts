@@ -105,6 +105,8 @@ export function taskBadges(t: Viewed, opts: BadgeOptions = {}): Badges {
     attention.push({ label: 'conflicts', title: 'The PR conflicts with the base branch: sync the task to settle it', tone: 'failed' });
   else if (am?.state === 'never' && !t.merge_request)
     attention.push({ label: "won't auto-merge", title: [am.label, ...am.reasons].join('\n'), tone: 'failed' });
+  if (am?.code_comments)
+    attention.push({ label: am.code_comments, title: "Over the repo's code comment limits: a person needs to merge it", tone: 'blocked' });
   const checks = t.pr_state === 'open' ? t.checks : null;
   if (checks && checks.total > 0 && checks.failing > 0) {
     const n = checks.failing;

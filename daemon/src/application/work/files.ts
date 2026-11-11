@@ -16,7 +16,7 @@ import {
   isBinary,
   sincePoints,
 } from '../../domain/work/index.ts';
-import type { AutoMergeMeasured } from '../../domain/landing/index.ts';
+import { type AutoMergeMeasured, countCodeComments } from '../../domain/landing/index.ts';
 import type { Repo } from '../../domain/repos/index.ts';
 import { ActionError, requireTask, requireTaskRepo } from '../shared/input.ts';
 
@@ -125,10 +125,14 @@ export async function measureBranch(app: App, repo: Repo, branch: string, at?: s
     const head = await app.workspace.branchHead(repo.path, branch);
     if (!head || (at && head !== at)) return null;
     const base = await baseOf(app, repo, head);
-    const files = await changedFilesCached(app, repo.path, base.sha, head);
+    const [files, added] = await Promise.all([
+      changedFilesCached(app, repo.path, base.sha, head),
+      app.workspace.addedLines(repo.path, repo.base_branch, head),
+    ]);
     return {
       lines: files.reduce((sum, f) => sum + f.additions + f.deletions, 0),
       paths: files.flatMap((f) => (f.old_path ? [f.path, f.old_path] : [f.path])),
+      code_comments: added ? countCodeComments(added) : null,
     };
   } catch {
     return null;

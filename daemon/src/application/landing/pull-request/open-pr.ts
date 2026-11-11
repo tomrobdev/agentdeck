@@ -1,7 +1,15 @@
 // Opening a task's pull request: when it finishes done, again on the PR refresh after it failed to, and when a person asks.
 import type { App } from '../../ports/app.ts';
 import type { TaskId } from '../../../domain/shared/index.ts';
-import { AUTO_MERGE_LABEL, autoMergeOn, prFrom } from '../../../domain/landing/index.ts';
+import {
+  AUTO_MERGE_LABEL,
+  autoMergeOn,
+  codeCommentsOver,
+  codeCommentsText,
+  countCodeComments,
+  prFrom,
+} from '../../../domain/landing/index.ts';
+import type { Repo } from '../../../domain/repos/index.ts';
 import { buildPrBody, existingPr, isPrExistsError, openPrUrl } from '../../../domain/landing/index.ts';
 import type { BranchPr, PrRetry } from '../../../domain/landing/index.ts';
 import { prNeedsPersonNotification } from '../../../domain/operations/index.ts';
@@ -21,11 +29,18 @@ export function ensureAutoMergeLabel(app: App, cwd: string): Promise<void> {
   return app.codeHost.ensureLabel(cwd, AUTO_MERGE_LABEL);
 }
 
+async function commentsOver(app: App, repo: Repo, branch: string): Promise<string | null> {
+  const added = await app.workspace.addedLines(repo.path, repo.base_branch, branch);
+  const comments = added && countCodeComments(added);
+  return comments && codeCommentsOver(comments, repo) ? codeCommentsText(comments, repo) : null;
+}
+
 export async function openPullRequest(app: App, task: Task): Promise<{ url?: string; error?: string }> {
   const repo = app.getRepo(task.repo_id);
   const branch = task.checkout?.branch;
   if (!repo || repo.pr_mode === 'off' || !branch) return {};
   try {
+    const over = commentsOver(app, repo, branch).catch(() => null);
     await app.codeHost.push(repo.path, branch);
     const open = openPrUrl(task.pr);
     if (open) return { url: open };
@@ -42,7 +57,7 @@ export async function openPullRequest(app: App, task: Task): Promise<{ url?: str
         base: repo.base_branch,
         head: branch,
         title: task.title,
-        body: buildPrBody(task, app.runsForTask(task.id), prPlanFor(app, task)),
+        body: buildPrBody(task, app.runsForTask(task.id), prPlanFor(app, task), await over),
         draft: repo.pr_mode === 'draft',
         labels: labelled ? [AUTO_MERGE_LABEL.name] : [],
       })
