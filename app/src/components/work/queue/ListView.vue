@@ -66,7 +66,7 @@ watch(
 </script>
 
 <template>
-  <div class="min-h-0 flex-1 overflow-y-auto" role="list">
+  <div class="min-h-0 flex-1 overflow-y-auto" role="list" data-scroll="queue">
     <template v-for="g in groups" :key="g.key">
       <section v-if="g.tasks.length || showEmpty">
         <div v-if="groupBy !== 'none'" class="sticky top-0 z-1 flex items-center border-b border-border bg-panel-2 pr-4">

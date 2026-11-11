@@ -21,6 +21,13 @@ watch(
   (id) => (selectedId.value = id),
   { immediate: true },
 );
+watch(
+  () => taskQ.data.value,
+  (task) => {
+    if (task && task.id === props.id) document.title = `#${task.id} ${task.title} — AgentDeck`;
+  },
+  { immediate: true },
+);
 </script>
 
 <template>

@@ -2,9 +2,7 @@
 import { type LocationQuery, type LocationQueryValue, type RouteRecordInfo, createRouter, createWebHashHistory } from 'vue-router';
 import TrayView from './components/layout/TrayView.vue';
 import { TASK_TABS, type TaskTab } from './lib/shared/app-url';
-import InsightsPage from './pages/InsightsPage.vue';
 import QueuePage from './pages/QueuePage.vue';
-import TaskPage from './pages/TaskPage.vue';
 
 type NoParams = Record<never, never>;
 
@@ -21,6 +19,9 @@ interface RouteNamedMap {
 }
 
 declare module 'vue-router' {
+  interface RouteMeta {
+    title?: string;
+  }
   interface TypesConfig {
     RouteNamedMap: RouteNamedMap;
   }
@@ -34,12 +35,33 @@ function taskProps(to: { params: Record<string, unknown>; query: LocationQuery }
   return { id: Number(to.params.id), tab: tabOf(to.params.tab), query: queryOf(to.query) };
 }
 
+const QUEUE_SCROLL = '[data-scroll="queue"]';
+let queueScrollTop = 0;
+
+function restoreQueueScroll(): Promise<false> {
+  return new Promise((resolve) => {
+    let frames = 0;
+    const tick = () => {
+      const list = document.querySelector(QUEUE_SCROLL);
+      if (list && (list.scrollHeight > queueScrollTop || frames > 60)) list.scrollTop = queueScrollTop;
+      else if (frames++ <= 60) return void requestAnimationFrame(tick);
+      resolve(false);
+    };
+    tick();
+  });
+}
+
 export const router = createRouter({
   history: createWebHashHistory(),
   routes: [
-    { name: 'queue', path: '/', component: QueuePage },
-    { name: 'insights', path: '/insights', component: InsightsPage },
-    { name: 'task', path: '/tasks/:id(\\d+)/:tab(overview|runs|changes|code)?', component: TaskPage, props: taskProps },
+    { name: 'queue', path: '/', component: QueuePage, meta: { title: 'Queue' } },
+    { name: 'insights', path: '/insights', component: () => import('./pages/InsightsPage.vue'), meta: { title: 'Insights' } },
+    {
+      name: 'task',
+      path: '/tasks/:id(\\d+)/:tab(overview|runs|changes|code)?',
+      component: () => import('./pages/TaskPage.vue'),
+      props: taskProps,
+    },
     { name: 'tray', path: '/tray', component: TrayView },
     {
       path: '/tasks/:id(\\d+)/:other',
@@ -47,4 +69,17 @@ export const router = createRouter({
     },
     { path: '/:unknown(.*)*', redirect: (to) => ({ path: '/', query: to.query }) },
   ],
+  scrollBehavior: (to, _from, saved) => {
+    if (to.name === 'queue' && saved) return restoreQueueScroll();
+    return { top: 0 };
+  },
+});
+
+router.beforeEach((_to, from) => {
+  if (from.name === 'queue') queueScrollTop = document.querySelector(QUEUE_SCROLL)?.scrollTop ?? 0;
+});
+
+router.afterEach((to) => {
+  const title = to.meta.title ?? (to.name === 'task' ? `#${to.params.id}` : undefined);
+  document.title = title ? `${title} — AgentDeck` : 'AgentDeck';
 });
