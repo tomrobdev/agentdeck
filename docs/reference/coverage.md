@@ -6,7 +6,7 @@ The least line and branch coverage each group of `daemon/src/` may have (`COVERA
 
 | Group                    | Holds                                                                                    | Lines | Branches |
 | ------------------------ | ---------------------------------------------------------------------------------------- | ----- | -------- |
-| `adapters`               | `adapters/`                                                                              | 88%   | 83%      |
+| `adapters`               | `adapters/`                                                                              | 88%   | 85%      |
 | `api`                    | `api/`                                                                                   | 99%   | 94%      |
 | `application`            | the files directly in `application/` (`actions.ts`)                                      | 100%  | 100%     |
 | `application/capacity`   | `application/capacity/`                                                                  | 100%  | 100%     |
@@ -14,14 +14,14 @@ The least line and branch coverage each group of `daemon/src/` may have (`COVERA
 | `application/landing`    | `application/landing/`                                                                   | 99%   | 90%      |
 | `application/operations` | `application/operations/`                                                                | 98%   | 93%      |
 | `application/proposals`  | `application/proposals/`                                                                 | 92%   | 82%      |
-| `application/repos`      | `application/repos/`                                                                     | 98%   | 88%      |
+| `application/repos`      | `application/repos/`                                                                     | 98%   | 90%      |
 | `application/runs`       | `application/runs/`                                                                      | 94%   | 82%      |
 | `application/scheduler`  | `application/scheduler/`                                                                 | 97%   | 91%      |
 | `application/shared`     | `application/shared/`                                                                    | 100%  | 97%      |
-| `application/work`       | `application/work/`                                                                      | 99%   | 92%      |
+| `application/work`       | `application/work/`                                                                      | 99%   | 94%      |
 | `cli`                    | `cli/`                                                                                   | 72%   | 62%      |
 | `db`                     | `db/`                                                                                    | 99%   | 94%      |
-| `domain/capacity`        | `domain/capacity/`                                                                       | 100%  | 94%      |
+| `domain/capacity`        | `domain/capacity/`                                                                       | 100%  | 97%      |
 | `domain/insights`        | `domain/insights/`                                                                       | 100%  | 98%      |
 | `domain/landing`         | `domain/landing/`                                                                        | 100%  | 97%      |
 | `domain/operations`      | `domain/operations/`                                                                     | 100%  | 97%      |

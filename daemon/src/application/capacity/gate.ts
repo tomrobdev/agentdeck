@@ -7,7 +7,7 @@ export function startGate(app: App): QueueState {
   return {
     paused: app.isPaused(),
     rate_limited_until: app.rateLimitedUntil(),
-    governor: decide(app.usageWindows(), app.budget(), app.maxConcurrent()),
+    governor: decide(app.usageWindows(), app.budget(), app.maxConcurrent(), Date.now() / 1000),
   };
 }
 

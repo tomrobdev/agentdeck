@@ -24,7 +24,10 @@ const activity = useActivity(
 const { pending: cancelling, run } = useAction();
 const router = useRouter();
 const open = (item: ActivityItem) => item.taskId !== null && router.push({ name: 'task', params: { id: item.taskId, tab: item.tab } });
-const cancelMerge = (item: ActivityItem) => item.taskId !== null && run(() => landingApi.cancelMergeRequest(item.taskId!));
+const cancelMerge = (item: ActivityItem) => {
+  const id = item.taskId;
+  return id !== null && run(() => landingApi.cancelMergeRequest(id));
+};
 
 const state = computed(() => describeState(props.status, props.offline));
 

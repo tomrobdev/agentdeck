@@ -140,7 +140,7 @@ export function outputParts(output: string, opts: { grep?: string; file?: string
   const ok = (p: string) => !!opts.isPath?.(p);
   const norm = (p: string) => p.replace(/^\.\//, '');
   const grep = opts.grep !== undefined;
-  const mode = grep ? inputOf(opts.grep!).output_mode : undefined;
+  const mode = opts.grep !== undefined ? inputOf(opts.grep).output_mode : undefined;
   const bare = grep && (mode === undefined || mode === 'files_with_matches');
   const lines = output.split('\n');
   const parts: OutputPart[] = [];

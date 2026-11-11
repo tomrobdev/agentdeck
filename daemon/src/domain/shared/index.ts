@@ -14,5 +14,6 @@ export {
   textList,
   wholeNumberError,
 } from './text.ts';
+export { present } from './present.ts';
 export { stored } from './stored.ts';
 export { median, minutesBetween, sqliteMs, sqliteUtc, weekOf } from './time.ts';

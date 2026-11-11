@@ -89,7 +89,7 @@ export const workspace = {
       has(`refs/heads/${base}`),
       has(`refs/remotes/origin/${base}`),
     ]);
-    return { branch, origin, base: local ? base! : remote ? `origin/${base}` : null };
+    return { branch, origin, base: local && base ? base : remote ? `origin/${base}` : null };
   },
 
   rootInfo: async (dir: string) => rootInfo(dir),

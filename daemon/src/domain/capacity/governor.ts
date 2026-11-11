@@ -44,7 +44,7 @@ function current(windows: WindowObs[], name: string, now: number): WindowObs | n
 
 const pct = (x: number) => `${Math.round(x * 100)}%`;
 
-export function decide(windows: WindowObs[], budget: Budget, maxConcurrent: number, now = Date.now() / 1000): Decision {
+export function decide(windows: WindowObs[], budget: Budget, maxConcurrent: number, now: number): Decision {
   const holds: { reason: string; until: number }[] = [];
   let max = maxConcurrent;
   let throttle: string | null = null;

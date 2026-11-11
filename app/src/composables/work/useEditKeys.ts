@@ -5,7 +5,7 @@ import { tasksQuery, workApi } from '../../api/work';
 import type { TaskSummary } from '../../api/types';
 import { type BulkEdit } from '../../lib/work/queue/bulk';
 import { type EditRequest, PRIORITY_KEYS } from '../../lib/shared/hotkeys';
-import { PRIORITY_LEVELS, levelPriority } from '../../lib/work/task-view';
+import { levelOf, levelPriority } from '../../lib/work/task-view';
 import { useAction, useActions } from '../shared/useActions';
 import { useBulkEdit } from './queue/useBulkEdit';
 import { type HotkeyBinding } from '../shared/useHotkeys';
@@ -40,7 +40,7 @@ export function useEditKeys(scope: 'queue' | 'task', current: () => number | nul
     dialog.value = kind;
   }
   function setPriority(level: EditPriority) {
-    const l = PRIORITY_LEVELS.find((x) => x.key === level)!;
+    const l = levelOf(level);
     return edit(targets.value, 'priority', levelPriority(l), l.label.toLowerCase(), undefined, fromPicks());
   }
   const setModel = (model: string) => edit(targets.value, 'model', model, model, undefined, fromPicks());

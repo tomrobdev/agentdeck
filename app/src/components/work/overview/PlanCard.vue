@@ -60,7 +60,7 @@ function onFrameLoad() {
   scrollTo = null;
   if (!step) return;
   doc.defaultView?.scrollTo({ top: step.getBoundingClientRect().top + doc.defaultView.scrollY - 12 });
-  frame.value!.scrollIntoView({ block: 'nearest' });
+  frame.value?.scrollIntoView({ block: 'nearest' });
 }
 </script>
 

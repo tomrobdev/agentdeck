@@ -122,7 +122,12 @@ function personText(e: EventFields): PersonEventText | null {
       return say('hit the usage limit; back in the queue without using an attempt');
     case 'recover':
       return say(e.to_status === 'failed' ? 'failed after repeated daemon restarts' : 'requeued after a daemon restart');
-    default:
+    case 'created':
+    case 'unblock_ask':
+    case 'claim':
+    case 'finish':
+    case 'unblock_retry':
+    case 'review_retry':
       return null;
   }
 }

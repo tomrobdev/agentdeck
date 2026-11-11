@@ -56,7 +56,8 @@ function compareCached(app: App, repoPath: string, base: string, head: string): 
   if (hit) changedCache.delete(key);
   else hit = app.workspace.compare(repoPath, base, head).catch((err) => (changedCache.delete(key), Promise.reject(err)));
   changedCache.set(key, hit);
-  if (changedCache.size > CHANGED_CACHE_SIZE) changedCache.delete(changedCache.keys().next().value!);
+  const [changedCacheOldest] = changedCache.keys();
+  if (changedCache.size > CHANGED_CACHE_SIZE) changedCache.delete(changedCacheOldest);
   return hit;
 }
 
@@ -89,7 +90,8 @@ function mergeCached(app: App, repoPath: string, ours: string, theirs: string): 
   if (hit) mergeCache.delete(key);
   else hit = app.workspace.mergeCommit(repoPath, ours, theirs).catch((err) => (mergeCache.delete(key), Promise.reject(err)));
   mergeCache.set(key, hit);
-  if (mergeCache.size > MERGE_CACHE_SIZE) mergeCache.delete(mergeCache.keys().next().value!);
+  const [mergeCacheOldest] = mergeCache.keys();
+  if (mergeCache.size > MERGE_CACHE_SIZE) mergeCache.delete(mergeCacheOldest);
   return hit;
 }
 

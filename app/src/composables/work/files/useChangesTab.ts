@@ -75,7 +75,10 @@ export function useChangesTab(props: { task: TaskDetail; changes: Changes | null
     { immediate: true },
   );
   function togglePreview(path: string) {
-    if (previewOn.has(path)) return previewOn.delete(path);
+    if (previewOn.has(path)) {
+      previewOn.delete(path);
+      return;
+    }
     previewOn.add(path);
     void loadPreview(path);
   }

@@ -83,9 +83,11 @@ async function confirm() {
   const saveFailed = new Set<number>();
   try {
     for (const id of editedIds.value) {
+      const draft = drafts.get(id);
+      if (draft === undefined) continue;
       try {
-        await workApi.editTask(id, { prompt: drafts.get(id) });
-        saved.set(id, drafts.get(id)!);
+        await workApi.editTask(id, { prompt: draft });
+        saved.set(id, draft);
         checks.set(id, await workApi.proposalCheck(id).catch(() => checks.get(id) ?? null));
       } catch (e) {
         saveFailed.add(id);

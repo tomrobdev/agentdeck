@@ -38,7 +38,8 @@ async function stalenessOf(app: App, repo: Repo, task: Task): Promise<Staleness 
       (err) => (stalenessCache.delete(key), Promise.reject(err)),
     );
   stalenessCache.set(key, hit);
-  if (stalenessCache.size > STALENESS_CACHE_SIZE) stalenessCache.delete(stalenessCache.keys().next().value!);
+  const [stalenessCacheOldest] = stalenessCache.keys();
+  if (stalenessCache.size > STALENESS_CACHE_SIZE) stalenessCache.delete(stalenessCacheOldest);
   return hit;
 }
 

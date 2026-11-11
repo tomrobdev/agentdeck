@@ -20,8 +20,9 @@ export function changedTree(files: readonly ChangedFile[]): Map<string, TreeNode
     const parts = p.split('/');
     let d = root;
     for (const part of parts.slice(0, -1)) {
-      if (!d.dirs.has(part)) d.dirs.set(part, { dirs: new Map(), files: [] });
-      d = d.dirs.get(part)!;
+      const next: Dir = d.dirs.get(part) ?? { dirs: new Map(), files: [] };
+      d.dirs.set(part, next);
+      d = next;
     }
     d.files.push(p);
   }
@@ -43,9 +44,10 @@ export function changedTree(files: readonly ChangedFile[]): Map<string, TreeNode
       walk(d, path);
     }
     for (const p of [...dir.files].sort()) {
-      const f = byPath.get(p)!;
+      const f = byPath.get(p);
+      if (!f) continue;
       nodes.push({
-        name: p.split('/').pop()!,
+        name: p.slice(p.lastIndexOf('/') + 1),
         path: p,
         type: 'file',
         badge: f.status,

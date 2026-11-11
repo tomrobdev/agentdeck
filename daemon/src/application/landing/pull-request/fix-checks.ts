@@ -39,11 +39,13 @@ export async function fixChecks(app: App, id: TaskId): Promise<FixChecksResult> 
   const reads = new Map<string, Promise<PrCheck>>();
   const failed = await Promise.all(
     failing.map(async (c): Promise<FailedCheck> => {
-      if (!actionsRun(c.url)) return { name: c.name, url: c.url };
+      const url = c.url;
+      if (!url || !actionsRun(url)) return { name: c.name, url: c.url };
       let read: PrCheck = c;
       if (!c.excerpt) {
-        if (!reads.has(c.url!)) reads.set(c.url!, readFailure(app, repo.path, c, budget));
-        read = await reads.get(c.url!)!;
+        const pending = reads.get(url) ?? readFailure(app, repo.path, c, budget);
+        reads.set(url, pending);
+        read = await pending;
       }
       return read.excerpt
         ? { name: c.name, url: c.url, step: read.step ?? null, excerpt: headBytes(read.excerpt, budget) }

@@ -83,9 +83,9 @@ async function add(on: number) {
 
 function submit() {
   const q = query.value.trim().replace(/^#/, '');
-  if (/^\d+$/.test(q)) return add(Number(q));
-  if (matches.value.length === 1) return add(matches.value[0].id);
-  error.value = 'Type a #id, or pick a task from the list.';
+  if (/^\d+$/.test(q)) void add(Number(q));
+  else if (matches.value.length === 1) void add(matches.value[0].id);
+  else error.value = 'Type a #id, or pick a task from the list.';
 }
 
 async function remove(on: number) {

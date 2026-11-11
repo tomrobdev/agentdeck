@@ -53,8 +53,8 @@ export function buildsOnChain(shown: Pick<TaskSummary, 'id' | 'status' | 'links'
   if (!byId.has(id)) return [id];
   const seen = new Set<number>([id]);
   const stack = [id];
-  while (stack.length) {
-    const t = byId.get(stack.pop()!);
+  for (let at = stack.pop(); at !== undefined; at = stack.pop()) {
+    const t = byId.get(at);
     for (const l of t?.links ?? []) {
       const dep = byId.get(l.on);
       if (l.kind !== 'builds_on' || !dep || dep.status === 'done' || seen.has(dep.id)) continue;

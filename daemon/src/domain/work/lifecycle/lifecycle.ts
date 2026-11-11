@@ -84,17 +84,14 @@ export const RULES: Record<RuleKey, Partial<Record<TaskStatus, TaskStatus>>> = {
 export type RuleCounters = Partial<Pick<TaskCore, 'restarts' | 'attempts' | 'max_attempts'>>;
 
 export function ruleKey(e: TaskEvent, counters: RuleCounters = {}): RuleKey {
-  switch (e.type) {
-    case 'finish':
-      if (e.outcome !== 'failed') return `finish:${e.outcome}`;
-      return e.retry !== false && attemptsLeft({ attempts: counters.attempts ?? 0, max_attempts: counters.max_attempts ?? 0 })
-        ? 'finish:failed:retry'
-        : 'finish:failed';
-    case 'recover':
-      return restartsExhausted(counters.restarts ?? 0) ? 'recover:exhausted' : 'recover';
-    default:
-      return e.type;
+  if (e.type === 'finish') {
+    if (e.outcome !== 'failed') return `finish:${e.outcome}`;
+    return e.retry !== false && attemptsLeft({ attempts: counters.attempts ?? 0, max_attempts: counters.max_attempts ?? 0 })
+      ? 'finish:failed:retry'
+      : 'finish:failed';
   }
+  if (e.type === 'recover') return restartsExhausted(counters.restarts ?? 0) ? 'recover:exhausted' : 'recover';
+  return e.type;
 }
 
 export function nextStatus(from: TaskStatus, event: TaskEvent, counters: RuleCounters = {}): TaskStatus | undefined {
@@ -223,7 +220,10 @@ function nextState(from: TaskState, to: TaskStatus, event: TaskEvent, opts: Tran
       return { status: to, stop_reason: reason };
     case 'cancelled':
       return { status: to, stop_reason: stopReasonOf(from) };
-    default:
+    case 'proposed':
+    case 'queued':
+    case 'running':
+    case 'cancel_requested':
       return { status: to };
   }
 }

@@ -29,7 +29,8 @@ function onOver(e: MouseEvent) {
   clearTimeout(timer);
   const mine = ++generation;
   timer = window.setTimeout(async () => {
-    const path = a.dataset.path!;
+    const path = a.dataset.path;
+    if (!path) return;
     const line = Number(a.dataset.line);
     const text = await fileText(path);
     if (text === null || mine !== generation || !a.isConnected) return;

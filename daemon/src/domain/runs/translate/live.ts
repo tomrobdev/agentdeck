@@ -2,6 +2,7 @@
 
 import { cut } from '../../shared/index.ts';
 import { shortFile, toolSummary } from './log.ts';
+import { fields } from './fields.ts';
 
 /** What the daemon keeps of a live run: the turns so far and the last tool call in a few words. */
 export interface LiveState {
@@ -64,11 +65,13 @@ export function toolText(name: string, input: unknown): string {
   return cut(detail ? `${name} ${detail}` : name, TOOL_TEXT_MAX);
 }
 
-export function nextLive(state: LiveState, ev: any): LiveState {
-  if (ev?.type !== 'assistant' || ev.parent_tool_use_id) return state;
-  const id = typeof ev.message?.id === 'string' ? ev.message.id : null;
+export function nextLive(state: LiveState, event: unknown): LiveState {
+  const ev = fields(event);
+  if (ev.type !== 'assistant' || ev.parent_tool_use_id) return state;
+  const message = fields(ev.message);
+  const id = typeof message.id === 'string' ? message.id : null;
   const turns = id !== null && id === state.message ? state.turns : state.turns + 1;
-  const uses = (Array.isArray(ev.message?.content) ? ev.message.content : []).filter((c: any) => c?.type === 'tool_use');
+  const uses = (Array.isArray(message.content) ? message.content : []).map(fields).filter((c) => c.type === 'tool_use');
   const last = uses.at(-1);
   return { turns, message: id, tool: last ? toolText(String(last.name), last.input) : state.tool };
 }

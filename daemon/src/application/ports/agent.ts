@@ -10,7 +10,7 @@ export interface AgentSession {
   shouldCancel?: () => boolean;
   onSpawn?: (pid: number) => void;
   onUsage?: (w: UsageWindow) => void;
-  onEvent?: (ev: any) => void;
+  onEvent?: (ev: unknown) => void;
   onSession?: (sessionId: string) => void;
   onModel?: (modelId: string) => void;
 }

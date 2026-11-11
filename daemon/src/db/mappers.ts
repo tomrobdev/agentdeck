@@ -55,9 +55,10 @@ function readReason(raw: unknown): MergeReason | null {
 
 export function readCheck(json: string | null): AutoMergeCheck | null {
   const v = parseJson(json) as (Omit<Partial<AutoMergeCheck>, 'reasons'> & { reasons?: unknown }) | null | undefined;
-  if (!v || !['merge', 'wait', 'never'].includes(v.verdict as string) || !Array.isArray(v.reasons)) return null;
+  const verdict = v?.verdict;
+  if (!v || !verdict || !['merge', 'wait', 'never'].includes(verdict) || !Array.isArray(v.reasons)) return null;
   const reasons = v.reasons.map(readReason).filter((r): r is MergeReason => r !== null);
-  const check: AutoMergeCheck = { verdict: v.verdict!, reasons };
+  const check: AutoMergeCheck = { verdict, reasons };
   if (v.conflict === true) check.conflict = true;
   return check;
 }
@@ -125,7 +126,10 @@ function taskState(row: Pick<TaskSummaryRow, 'status' | StateColumn>): TaskState
     case 'failed':
     case 'cancelled':
       return { status, stop_reason };
-    default:
+    case 'proposed':
+    case 'queued':
+    case 'running':
+    case 'cancel_requested':
       return { status };
   }
 }
