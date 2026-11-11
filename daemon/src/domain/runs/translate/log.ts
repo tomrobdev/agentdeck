@@ -11,8 +11,11 @@ export interface LogChange {
   new: string;
 }
 
+/** What every entry from a claude event may carry besides its own fields. */
 interface LogMeta {
+  /** The event's timestamp. */
   at?: string;
+  /** The `tool_use` id of the subagent call this entry comes from. */
   parent?: string;
 }
 

@@ -62,7 +62,7 @@ test('[code-comments] a migration step keeps its heading', () => {
   );
 });
 
-test('[code-comments] an exported type and its fields keep their comments in domain/ and api/contract/, and nowhere else', () => {
+test('[code-comments] a type and its fields keep their comments in domain/ and api/contract/, and nowhere else', () => {
   const src = [
     '// The file.',
     '/** A thing. */',
@@ -79,7 +79,7 @@ test('[code-comments] an exported type and its fields keep their comments in dom
   ].join('\n');
   assert.deepEqual(
     commentViolations('daemon/src/domain/x.ts', src).map((v) => v.line),
-    [8, 10],
+    [10],
   );
   assert.deepEqual(
     commentViolations('daemon/src/application/x.ts', src).map((v) => v.line),

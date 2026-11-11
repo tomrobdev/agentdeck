@@ -6,7 +6,9 @@ import type { Waiting } from './start.ts';
 type Stage = {
   status: TaskStatus;
   pr_state: PrState | null;
+  /** What a queued task waits for on its builds-on links, as `waitingFor` (start.ts) reports it. */
   waiting?: Waiting | null;
+  /** For a done task whose PR failed to open: whether the PR refresh opens it again, or a person must. */
   pr_retry?: Pick<PrRetry, 'state'> | null;
 };
 

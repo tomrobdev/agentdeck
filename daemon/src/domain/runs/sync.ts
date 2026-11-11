@@ -1,6 +1,7 @@
 // How a sync (merging the base branch into a task's branch) is worded, and what it comes to.
 import { plural } from '../shared/index.ts';
 
+/** How a sync that changed the branch went. */
 type SyncKind = 'clean' | 'resolved';
 
 /** What a sync of a task's branch came to. A merge that did not stick is already undone. */

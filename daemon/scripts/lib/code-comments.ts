@@ -51,7 +51,6 @@ function typeDocSpans(path: string, ast: ts.SourceFile): [number, number][] {
   const spans: [number, number][] = [];
   for (const stmt of ast.statements) {
     if (!ts.isInterfaceDeclaration(stmt) && !ts.isTypeAliasDeclaration(stmt)) continue;
-    if (!stmt.modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword)) continue;
     const lineEnd = ast.text.indexOf('\n', stmt.getEnd());
     spans.push([stmt.getFullStart(), lineEnd === -1 ? ast.text.length : lineEnd]);
   }
