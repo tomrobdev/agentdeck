@@ -100,7 +100,7 @@ async function remove(on: number) {
 }
 
 const rowCls = 'flex min-w-0 items-center gap-2 px-3.5 py-1.5';
-const open = 'btn-ghost flex min-w-0 flex-1 items-center gap-2 text-left hover:text-accent';
+const open = 'btn btn-ghost flex min-w-0 flex-1 items-center gap-2 text-left hover:text-accent';
 const heading = 'px-3.5 pt-2 pb-0.5 text-sm text-muted';
 </script>
 

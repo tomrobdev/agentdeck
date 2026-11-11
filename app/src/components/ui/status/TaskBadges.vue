@@ -27,7 +27,7 @@ const tags = (ids: number[]) => ids.map((id) => `#${id}`).join(' ');
         v-for="id in b.up"
         :key="id"
         :to="{ name: 'task', params: { id } }"
-        class="cursor-pointer font-[inherit] text-inherit hover:text-text"
+        class="btn cursor-pointer border-0 bg-transparent p-0 font-[inherit] text-inherit hover:text-text"
         @click.stop
       >
         #{{ id }}
@@ -43,7 +43,7 @@ const tags = (ids: number[]) => ids.map((id) => `#${id}`).join(' ');
         v-for="id in b.down"
         :key="id"
         :to="{ name: 'task', params: { id } }"
-        class="cursor-pointer font-[inherit] text-inherit hover:underline"
+        class="btn cursor-pointer border-0 bg-transparent p-0 font-[inherit] text-inherit hover:underline"
         @click.stop
       >
         #{{ id }}

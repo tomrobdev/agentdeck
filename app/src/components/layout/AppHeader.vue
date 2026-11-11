@@ -16,9 +16,9 @@ const needYou = computed(() => needYouCount(props.status));
   <header class="flex items-center gap-1 border-b border-border bg-panel px-4 py-2">
     <div class="mr-4 flex items-center gap-1.5 text-md font-[650] tracking-[-0.01em]"><BrandMark /><span>agentdeck</span></div>
     <nav class="flex gap-1" aria-label="Main">
-      <RouterLink class="nav" active-class="on" :to="{ name: 'queue' }">Queue</RouterLink>
+      <RouterLink class="btn nav" active-class="on" :to="{ name: 'queue' }">Queue</RouterLink>
       <button v-if="offline" class="nav" disabled title="The pilot scorecard over time">Insights</button>
-      <RouterLink v-else class="nav" active-class="on" :to="{ name: 'insights' }" title="The pilot scorecard over time"
+      <RouterLink v-else class="btn nav" active-class="on" :to="{ name: 'insights' }" title="The pilot scorecard over time"
         >Insights</RouterLink
       >
       <button class="nav" :disabled="offline" @click="openPanel('repos')">Repos</button>
@@ -27,7 +27,7 @@ const needYou = computed(() => needYouCount(props.status));
     <div class="spacer" />
     <RouterLink
       v-if="needYou && !offline"
-      class="nav mr-2"
+      class="btn nav mr-2"
       title="Proposals, blocked tasks and PRs waiting for review"
       :to="{ name: 'queue', query: { states: NEED_YOU_STATES.join(',') } }"
     >
@@ -39,16 +39,8 @@ const needYou = computed(() => needYouCount(props.status));
 
 <style scoped>
 .nav {
-  display: inline-block;
-  border: 1px solid transparent;
-  border-radius: var(--r-ctl, 6px);
+  border-color: transparent;
   background: transparent;
-  padding: 4px 10px;
-  white-space: nowrap;
-}
-a.nav:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
 }
 .nav:hover:not(:disabled),
 .nav.on {

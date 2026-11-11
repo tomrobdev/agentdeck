@@ -140,13 +140,7 @@ const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel
       <button v-if="task.wait.kind === 'daemon-paused'" class="primary" @click="resumeDaemon">▶ Resume</button>
       <button v-else-if="task.wait.kind === 'repo-paused'" class="primary" @click="resumeRepo">▶ Resume {{ task.repo }}</button>
       <template v-else-if="task.wait.kind === 'dependency'">
-        <RouterLink
-          v-for="on in task.wait.on"
-          :key="on"
-          class="rounded-md border border-border bg-panel-2 px-2.5 py-1 whitespace-nowrap hover:border-muted"
-          :to="{ name: 'task', params: { id: on } }"
-          >Open #{{ on }}</RouterLink
-        >
+        <RouterLink v-for="on in task.wait.on" :key="on" class="btn" :to="{ name: 'task', params: { id: on } }">Open #{{ on }}</RouterLink>
       </template>
     </div>
     <div v-else-if="s === 'proposed'" class="callout s-proposed">

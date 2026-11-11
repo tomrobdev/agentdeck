@@ -56,7 +56,7 @@ const heading = 'px-3.5 pt-2 pb-0.5 text-sm text-muted';
         <div :class="heading">Touches the same files</div>
         <div v-for="o in check.overlaps" :key="o.id" :class="row">
           <RouterLink
-            class="btn-ghost flex min-w-0 items-baseline gap-2 text-left hover:text-accent"
+            class="btn btn-ghost flex min-w-0 items-baseline gap-2 text-left hover:text-accent"
             :to="{ name: 'task', params: { id: o.id } }"
           >
             <span class="font-mono text-muted">#{{ o.id }}</span>

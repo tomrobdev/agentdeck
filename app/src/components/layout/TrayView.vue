@@ -55,7 +55,7 @@ function open(url: string, browser: RouteLocationRaw) {
   if (isNative) openFromTray(url).catch((e) => (error.value = String(e)));
   else window.open(router.resolve(browser).href, '_blank');
 }
-const openTaskFrom = (id: number) => open(taskUrl(id), { name: 'task', params: { id, tab: 'overview' } });
+const showTask = (id: number) => open(taskUrl(id), { name: 'task', params: { id, tab: 'overview' } });
 const openQueue = () => open('agentdeck://queue', { name: 'queue' });
 </script>
 
@@ -80,7 +80,7 @@ const openQueue = () => open('agentdeck://queue', { name: 'queue' });
           <p v-if="!running.length" class="text-muted m-0 px-1.5 text-xs">Nothing is running.</p>
           <ul class="m-0 flex list-none flex-col gap-0.5 p-0">
             <li v-for="t in running" :key="t.id">
-              <button class="row" @click="openTaskFrom(t.id)">
+              <button class="row" @click="showTask(t.id)">
                 <span class="truncate"
                   ><span class="text-muted">#{{ t.id }}</span> {{ t.title }}</span
                 >
@@ -95,7 +95,7 @@ const openQueue = () => open('agentdeck://queue', { name: 'queue' });
           <p v-if="!attention.length" class="text-muted m-0 px-1.5 text-xs">Nothing needs you.</p>
           <ul class="m-0 flex list-none flex-col gap-0.5 p-0">
             <li v-for="t in attention" :key="t.id">
-              <button class="row" @click="openTaskFrom(t.id)">
+              <button class="row" @click="showTask(t.id)">
                 <span class="truncate"
                   ><span class="text-muted">#{{ t.id }}</span> {{ t.title }}</span
                 >
