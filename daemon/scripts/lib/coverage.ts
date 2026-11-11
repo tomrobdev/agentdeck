@@ -22,8 +22,11 @@ export interface GroupCoverage extends Counts {
 
 export const RAISE_MARGIN = 2;
 
+export const DASHBOARD_LIB = 'dashboard/lib/';
+
 export function groupOf(path: string): string {
   const parts = path.split('/');
+  if (path.startsWith(DASHBOARD_LIB)) return `${DASHBOARD_LIB}${parts[2]}`;
   if (parts.length === 1) return 'src';
   if ((parts[0] === 'domain' || parts[0] === 'application') && parts.length > 2) return `${parts[0]}/${parts[1]}`;
   return parts[0];
@@ -31,6 +34,8 @@ export function groupOf(path: string): string {
 
 function srcPath(file: string): string | null {
   const normal = file.replace(/\\/g, '/');
+  const lib = normal.lastIndexOf('app/src/lib/');
+  if (lib >= 0) return `${DASHBOARD_LIB}${normal.slice(lib + 'app/src/lib/'.length)}`;
   const at = normal.lastIndexOf('daemon/src/');
   if (at >= 0) return normal.slice(at + 'daemon/src/'.length);
   return normal.startsWith('src/') ? normal.slice('src/'.length) : null;
@@ -58,6 +63,18 @@ export function parseLcov(text: string): FileCoverage[] {
     }
   }
   return files;
+}
+
+export function withUnloaded(files: FileCoverage[], lib: { path: string; lines: number }[]): FileCoverage[] {
+  const seen = new Set(files.map((f) => f.path));
+  const missing = lib
+    .map((f) => ({ path: `${DASHBOARD_LIB}${f.path}`, lines: { hit: 0, found: f.lines }, branches: { hit: 0, found: 0 } }))
+    .filter((f) => !seen.has(f.path) && f.lines.found > 0);
+  return [...files, ...missing];
+}
+
+export function dashboardLibGroups(paths: string[]): string[] {
+  return [...new Set(paths.map((p) => groupOf(`${DASHBOARD_LIB}${p}`)))].sort();
 }
 
 export function groupCoverage(files: FileCoverage[]): GroupCoverage[] {
