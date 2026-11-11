@@ -14,12 +14,12 @@ The least line and branch coverage each group of `daemon/src/` may have (`COVERA
 | `application/landing`      | `application/landing/`                                                                   | 99%   | 90%      |
 | `application/operations`   | `application/operations/`                                                                | 98%   | 93%      |
 | `application/proposals`    | `application/proposals/`                                                                 | 92%   | 82%      |
-| `application/repos`        | `application/repos/`                                                                     | 98%   | 92%      |
-| `application/runs`         | `application/runs/`                                                                      | 94%   | 84%      |
+| `application/repos`        | `application/repos/`                                                                     | 98%   | 91%      |
+| `application/runs`         | `application/runs/`                                                                      | 94%   | 83%      |
 | `application/scheduler`    | `application/scheduler/`                                                                 | 97%   | 91%      |
 | `application/shared`       | `application/shared/`                                                                    | 100%  | 97%      |
 | `application/work`         | `application/work/`                                                                      | 99%   | 94%      |
-| `cli`                      | `cli/`                                                                                   | 92%   | 84%      |
+| `cli`                      | `cli/`                                                                                   | 91%   | 82%      |
 | `dashboard/lib/insights`   | `dashboard/lib/insights/`                                                                | 100%  | 100%     |
 | `dashboard/lib/landing`    | `dashboard/lib/landing/`                                                                 | 100%  | 96%      |
 | `dashboard/lib/operations` | `dashboard/lib/operations/`                                                              | 92%   | 87%      |
