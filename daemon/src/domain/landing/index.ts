@@ -64,7 +64,17 @@ export {
 export type { MergeRequestMove, MergeRequestView } from './merge/merge-request.ts';
 export { nextPrState, prFrom, prStatesFor, seenMove } from './pull-request/pr-moves.ts';
 export type { PrFrom, PrMove } from './pull-request/pr-moves.ts';
-export { mergeCheck, mergeFailure, mergeFindings, parseBranchPrs, parseJobSteps, parsePrDetails, verdictView } from './merge/merge.ts';
+export {
+  mergeCheck,
+  mergeFailure,
+  mergeFindings,
+  mergeSyncsFirst,
+  parseBranchPrs,
+  parseJobSteps,
+  parsePrDetails,
+  syncingFirstLine,
+  verdictView,
+} from './merge/merge.ts';
 export type {
   AutoMergeCheck,
   BranchPr,

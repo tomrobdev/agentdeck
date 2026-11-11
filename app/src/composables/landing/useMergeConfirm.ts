@@ -16,6 +16,7 @@ export function useMergeConfirm(order: Ref<TaskSummary[]>, selected: Ref<number 
     merging.value = null;
     selected.value = next;
     await refresh();
+    if (result.syncing) flash(result.syncing);
     if (result.cleanup_error) flash(`Merged, but cleanup failed: ${result.cleanup_error}`);
   }
   function onRequested() {

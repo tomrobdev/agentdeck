@@ -5,7 +5,7 @@ import { MERGE_METHODS, type MergeMethod, isMergeMethod } from '../../../domain/
 import { type MergeVerdictView, autoMergeOn, verdictView } from '../../../domain/landing/index.ts';
 import type { CheckCounts } from '../../../domain/landing/index.ts';
 import { countWithSteps, isConflicting } from '../../../domain/landing/index.ts';
-import { mergeRequestCheck, mergesNow } from '../../../domain/landing/index.ts';
+import { mergeRequestCheck, mergeSyncsFirst, mergesNow, syncingFirstLine } from '../../../domain/landing/index.ts';
 import { buildPrBody, openPrUrl } from '../../../domain/landing/index.ts';
 import { mergeReason } from '../../../domain/work/index.ts';
 import type { TaskId } from '../../../domain/shared/index.ts';
@@ -49,6 +49,7 @@ export interface MergePreview {
   problems: string[];
   warnings: string[];
   conflicting: boolean;
+  syncs_first: boolean;
   unblocks: { id: TaskId; title: string }[];
   auto_merge: MergeVerdictView | null;
   request: MergeVerdictView;
@@ -98,6 +99,7 @@ export async function mergePreview(app: App, id: TaskId): Promise<MergePreview> 
     checks: pr.checks,
     ...mergeCheck(input),
     conflicting: isConflicting(pr),
+    syncs_first: mergeSyncsFirst(input),
     unblocks: dependentsReleased(app, id).map((t) => ({ id: t.id, title: t.title })),
     auto_merge: auto_merge && verdictView(auto_merge),
     request: verdictView(request),
@@ -110,6 +112,7 @@ export interface MergeResult {
   unblocked: TaskId[];
   cleanup_error?: string;
   elsewhere?: true;
+  syncing?: string;
 }
 
 export async function mergeTask(app: App, id: TaskId, opts: { method?: string; delete_branch?: boolean } = {}): Promise<MergeResult> {
@@ -123,7 +126,13 @@ export async function mergeTask(app: App, id: TaskId, opts: { method?: string; d
   const pr = await app.codeHost.prDetails(url, cwd).catch((err) => {
     throw new ActionError(`could not read the PR: ${errorMessage(err)}`);
   });
-  const found = mergeFindings(mergeInputFor(app, task, repo, pr));
+  const input = mergeInputFor(app, task, repo, pr);
+  if (mergeSyncsFirst(input)) {
+    if (!app.requestMerge(id, method)) throw new ActionError(`#${id} is no longer a done task with an open PR`);
+    app.requestPrCheck();
+    return { method, unblocked: [], syncing: syncingFirstLine(repo.base_branch) };
+  }
+  const found = mergeFindings(input);
   const problems = found.filter((f) => f.problem);
   if (problems.length) throw new ActionError(`can't merge #${id}: ${problems.map((f) => f.text).join('; ')}`);
   return mergeOpenPr(app, { task, repo, url, cwd }, pr, { method, deleteBranch, reason: mergeReason('person', method) });
