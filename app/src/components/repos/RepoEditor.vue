@@ -144,6 +144,15 @@ async function archive() {
         <input v-model="form.autoMergeSkip" placeholder=".github/, db/schema.ts" />
       </label>
     </div>
+    <Switch v-if="form.autoMerge" v-model="form.ciNotRunOk" class="flex-none" data-testid="repo-ci-not-run-ok">
+      <span
+        >Merge when CI did not run
+        <span class="text-muted"
+          >(a GitHub check that never started, such as a billing stop or a spending limit, doesn't stop auto-merge when the last run passed
+          the tests)</span
+        ></span
+      >
+    </Switch>
     <div class="flex gap-3">
       <label class="field flex-1">
         <span>Code comment lines <span class="text-muted">(a branch adding more is over the limit; 0 = off)</span></span>

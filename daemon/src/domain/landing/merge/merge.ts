@@ -3,6 +3,7 @@ import { isConflicting, isMergeabilityUnknown } from './conflict.ts';
 import { type PrState, parsePrState } from '../pull-request/pr.ts';
 import { type CheckCounts, type PrCheck, countOf, parseChecks } from '../pull-request/checks.ts';
 import { type JobStep, failingChecks, failureLine, failureRead } from '../pull-request/check-failures.ts';
+import { type JobStart, ciNotRunMessages, ciNotRunText } from '../pull-request/ci-not-run.ts';
 import { plural } from '../../shared/index.ts';
 
 export { type CheckCounts, checksSettled, countChecks } from '../pull-request/checks.ts';
@@ -78,6 +79,23 @@ export function parseJobSteps(json: string): JobStep[] {
     }));
 }
 
+export function parseJobStart(json: string): JobStart {
+  const raw = JSON.parse(json) as { runner_name?: unknown; steps?: unknown };
+  return {
+    runner_name: typeof raw.runner_name === 'string' && raw.runner_name ? raw.runner_name : null,
+    steps: Array.isArray(raw.steps) ? raw.steps.length : 0,
+  };
+}
+
+export function parseAnnotations(json: string): string[] {
+  const raw = JSON.parse(json) as unknown;
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((a) => {
+    const message = (a as Record<string, unknown> | null)?.message;
+    return typeof message === 'string' && message.trim() ? [message.trim()] : [];
+  });
+}
+
 /** A PR `gh pr list --head <branch>` lists. */
 export interface BranchPr {
   url: string;
@@ -96,7 +114,17 @@ export function parseBranchPrs(json: string): BranchPr[] {
 
 /** One fact about a PR that bears on merging it. A problem stops any merge; anything else is a warning a person may wave through. */
 export interface MergeFinding {
-  kind: 'not_open' | 'lands_after' | 'conflict' | 'draft' | 'behind' | 'blocked' | 'tests_failed' | 'checks_failing' | 'checks_pending';
+  kind:
+    | 'not_open'
+    | 'lands_after'
+    | 'conflict'
+    | 'draft'
+    | 'behind'
+    | 'blocked'
+    | 'tests_failed'
+    | 'checks_failing'
+    | 'checks_pending'
+    | 'ci_not_run';
   problem: boolean;
   text: string;
 }
@@ -117,7 +145,15 @@ export interface MergeInput {
   lands_after?: { on: number; reason: string }[];
   /** False when the repo has auto_resolve off: no sync starts on its own, so a conflict needs a person. Missing means on. */
   auto_resolve?: boolean;
+  /**
+   * The repo's ci_not_run_ok: when on and the last tested run passed, a GitHub check that never started does not stop a
+   * merge without a person. Missing means off.
+   */
+  ci_not_run_ok?: boolean;
 }
+
+const ciNotRunWaived = (input: Pick<MergeInput, 'ci_not_run_ok' | 'tests_passed'>): boolean =>
+  input.ci_not_run_ok === true && input.tests_passed === true;
 
 export const conflictNeedsPerson = (input: Pick<MergeInput, 'auto_resolve'>): boolean => input.auto_resolve === false;
 
@@ -146,6 +182,8 @@ export function mergeFindings({ pr_state, pr, tests_passed, lands_after = [], au
   if (tests_passed === false) add('tests_failed', 'tests failed on the last run');
   if (pr.checks.failing) add('checks_failing', `${plural(pr.checks.failing, 'check')} failing on GitHub${failingDetail(pr.check_list)}`);
   if (pr.checks.pending) add('checks_pending', `${plural(pr.checks.pending, 'check')} still running on GitHub`);
+  const notRun = ciNotRunMessages(pr.check_list ?? []);
+  if (notRun.length) add('ci_not_run', ciNotRunText(notRun));
   return found;
 }
 
@@ -240,9 +278,11 @@ const UNATTENDED: Record<MergeFinding['kind'], 'never' | 'wait' | null> = {
   tests_failed: 'never',
   checks_failing: 'never',
   checks_pending: 'wait',
+  ci_not_run: 'never',
 };
 
 function unattended(f: MergeFinding, input: MergeInput): 'never' | 'wait' | null {
+  if (f.kind === 'ci_not_run' && ciNotRunWaived(input)) return null;
   if (f.kind === 'blocked' && input.pr.checks.pending) return null;
   if (f.kind === 'conflict' && conflictNeedsPerson(input)) return 'never';
   return UNATTENDED[f.kind];

@@ -129,6 +129,7 @@ test('checksSummary: only an open PR with checks has a summary', () => {
     pending: 0,
     failing_names: ['test'],
     failing_lines: ['test'],
+    not_run: [],
     read_at: latest.read_at,
   });
 });

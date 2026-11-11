@@ -212,10 +212,34 @@ github.jobSteps = async (_cwd, job) => {
   ];
 };
 
+const STARTED = { job: { runner_name: 'GitHub Actions 2', steps: 4 }, annotations: [] };
+let starts: Record<string, { job: { runner_name: string | null; steps: number }; annotations: string[] }>;
+github.jobStart = async (_cwd, job) => starts[job] ?? STARTED;
+
 beforeEach(() => {
   details = {};
   logs = [];
   stepReads = [];
+  starts = {};
+});
+
+test('a refresh reads a failed job that never started as CI did not run, once, and keeps its message', async () => {
+  const billing = 'The job was not started because recent account payments have failed or your spending limit needs to be increased.';
+  const url = 'https://github.com/acme/demo/pull/40';
+  const t = doneTask(db, repo, { title: 'Billing stop', pr: 'open', url });
+  details[url] = failingDetails;
+  starts['2'] = { job: { runner_name: null, steps: 0 }, annotations: [billing] };
+
+  await refreshPrStates(db);
+  await refreshPrStates(db);
+  assert.deepEqual(logs, [], 'no log is read for a job that never started');
+  const kept = db.getTask(t.id)!.pr!.checks.latest!.checks.find((c) => c.name === 'test')!;
+  assert.equal(kept.state, 'not_run');
+  assert.equal(kept.not_run, billing);
+  const view = taskViews(db, { limit: 50 }).find((v) => v.id === t.id)!;
+  assert.equal(view.checks?.failing, 1, 'only the commit status still fails');
+  assert.deepEqual(view.checks?.not_run, [billing]);
+  assert.equal(checkNotices(t.id)[0]?.body, '1 check failing on Billing stop: ci/circleci');
 });
 
 const checkNotices = (id: number) => db.recentNotifications(50).filter((n) => n.task_id === id && n.kind === 'checks_failed');
@@ -242,6 +266,7 @@ test('a refresh that finds checks newly failing keeps them and notifies once', a
       pending: 1,
       failing_names: ['test', 'ci/circleci'],
       failing_lines: ['test › Run tests: AssertionError: expected 2 to equal 3', 'ci/circleci'],
+      not_run: [],
       read_at: undefined,
     },
   );

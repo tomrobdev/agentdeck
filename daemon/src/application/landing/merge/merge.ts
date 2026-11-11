@@ -4,7 +4,7 @@ import { type MergeFailure, type PrDetails, mergeCheck, mergeFailure, mergeFindi
 import { MERGE_METHODS, type MergeMethod, isMergeMethod } from '../../../domain/repos/index.ts';
 import { type MergeVerdictView, autoMergeOn, verdictView } from '../../../domain/landing/index.ts';
 import type { CheckCounts } from '../../../domain/landing/index.ts';
-import { countWithSteps, isConflicting } from '../../../domain/landing/index.ts';
+import { carryFailures, countWithSteps, isConflicting, withCheckList } from '../../../domain/landing/index.ts';
 import { mergeRequestCheck, mergesNow } from '../../../domain/landing/index.ts';
 import { buildPrBody, openPrUrl } from '../../../domain/landing/index.ts';
 import { mergeReason } from '../../../domain/work/index.ts';
@@ -76,9 +76,10 @@ export function mergeable(app: App, id: TaskId) {
 
 export async function mergePreview(app: App, id: TaskId): Promise<MergePreview> {
   const { task, repo, url, cwd } = mergeable(app, id);
-  const pr = await app.codeHost.prDetails(url, cwd, { withFiles: autoMergeOn(task, repo) }).catch((err) => {
+  const read = await app.codeHost.prDetails(url, cwd, { withFiles: autoMergeOn(task, repo) }).catch((err) => {
     throw new ActionError(`could not read the PR: ${errorMessage(err)}`);
   });
+  const pr = withCheckList(read, carryFailures(task.pr?.checks.latest ?? null, read.head ?? null, read.check_list ?? []).checks);
   const input = mergeInputFor(app, task, repo, pr);
   const { tests_passed } = input;
   const request = mergeRequestCheck(input);

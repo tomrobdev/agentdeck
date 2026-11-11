@@ -3,7 +3,7 @@ import type { App } from '../../ports/app.ts';
 import type { TaskId } from '../../../domain/shared/index.ts';
 import type { AutoMergeFacts, MergeInput, PrCheck, PrDetails, PrPlace, ReviewFacts } from '../../../domain/landing/index.ts';
 import { type AutoMergeCheck, autoMergeCheck, autoMergeOn, refreshVerdict } from '../../../domain/landing/index.ts';
-import { carryFailures, checksSettled, countOfKept, nextChecks } from '../../../domain/landing/index.ts';
+import { carryFailures, checksSettled, countOfKept, nextChecks, withCheckList } from '../../../domain/landing/index.ts';
 import { readFailure } from './check-failures.ts';
 import { checksFailedNotification, mergeFailedNotification } from '../../../domain/operations/index.ts';
 import { type Repo, pausedReason } from '../../../domain/repos/index.ts';
@@ -33,6 +33,7 @@ export function mergeInputFor(app: App, task: Task, repo: Repo | undefined, pr: 
     tests_passed: lastTestsPassed(app, task.id),
     lands_after: landsAfter(app, task.id),
     auto_resolve: repo ? repo.auto_resolve : true,
+    ci_not_run_ok: repo?.ci_not_run_ok ?? false,
   };
 }
 
@@ -118,7 +119,7 @@ async function refreshOne(app: App, task: Task, log: (msg: string) => void): Pro
   }
   const kept = await keepChecks(app, task, pr);
   if (checksSettled(pr.checks)) app.recordPrChecksOpened(task.id, pr.check_list ? countOfKept(kept) : pr.checks);
-  const judged = pr.check_list ? { ...pr, check_list: kept } : pr;
+  const judged = withCheckList(pr, kept);
   const requested = !!task.pr?.merge_request;
   const auto = requested || !repo ? null : await autoMergeFacts(app, task, repo, judged);
   const verdict = refreshVerdict({ input: mergeInputFor(app, task, repo, judged), requested, auto });

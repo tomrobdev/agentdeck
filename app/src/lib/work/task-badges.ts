@@ -119,6 +119,8 @@ export function taskBadges(t: Viewed, opts: BadgeOptions = {}): Badges {
       tone: 'failed',
     });
   }
+  const notRun = checks?.not_run ?? [];
+  if (notRun.length) attention.push({ label: 'CI did not run', title: `CI did not run: ${notRun.join('; ')}`, tone: 'blocked' });
   if (t.plan_unfinished) attention.push({ label: 'steps unfinished', title: 'The run left linked plan steps unfinished', tone: 'blocked' });
 
   const up = t.links.filter((l) => l.kind === 'builds_on' && l.state !== 'met').map((l) => l.on);
@@ -126,7 +128,7 @@ export function taskBadges(t: Viewed, opts: BadgeOptions = {}): Badges {
   const facts: Fact[] = [];
   if (t.attempts > 1) facts.push({ label: `try ${t.attempts}`, title: `Attempt ${t.attempts} of ${t.max_attempts}` });
   if (t.source === 'planner') facts.push({ label: 'planner', title: 'Proposed by the planner' });
-  if (checks && checks.total > 0 && checks.failing === 0) {
+  if (checks && checks.total > 0 && checks.failing === 0 && !notRun.length) {
     if (checks.pending)
       facts.push({
         label: `● checks ${checks.total - checks.pending}/${checks.total}`,
