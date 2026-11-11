@@ -106,26 +106,6 @@ if (prompt.startsWith('AgentDeck unblock run')) {
   result(
     '## Overview\n- `greet()` greets everyone when no name is given, and `greetAll()` greets a list.\n- Checked with `src/greet.test.ts`.\n\nSTATUS: DONE',
   );
-} else if (prompt.includes('UI_COMMENTS')) {
-  writeFileSync(
-    'src/pop.ts',
-    [
-      '// Takes the oldest item off a queue.',
-      '// An empty queue has no oldest item,',
-      '// so the answer is undefined, not an error.',
-      '// A caller that needs to tell the two apart',
-      '// checks the length first.',
-      '// The queue is not copied.',
-      '// Nothing here is async.',
-      'export function popOrNothing(items: string[]): string | undefined {',
-      '  return items.shift();',
-      '}',
-      '',
-    ].join('\n'),
-  );
-  commit('Say when the queue is empty');
-  say('popOrNothing() answers undefined for an empty queue.');
-  result('## Overview\n- `popOrNothing()` answers undefined for an empty queue.\n\nSTATUS: DONE');
 } else if (prompt.includes('UI_QUEUE')) {
   edit(
     'src/queue.ts',

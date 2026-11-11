@@ -143,6 +143,17 @@ test("auto-merge that needs a person is a won't auto-merge chip, unless a merge 
   assert.equal(statusLine(requested)?.cancelMerge, false);
 });
 
+test('a branch over the code comment limits shows its stored tag as a chip, and one under them shows none', () => {
+  const over = autoMerge({ state: 'never', label: 'needs a person to merge', code_comments: 'code comments +12 (8%)' });
+  const b = taskBadges(review({ auto_merge_view: over }));
+  assert.deepEqual(
+    b.attention.map((a) => a.label),
+    ["won't auto-merge", 'code comments +12 (8%)'],
+  );
+  assert.match(b.attention[1].title, /a person needs to merge it/);
+  assert.deepEqual(taskBadges(review({ auto_merge_view: autoMerge({ code_comments: null }) })).attention, []);
+});
+
 test('a queued task built on two unmerged tasks shows ↑ both', () => {
   const t = task({
     links: [
