@@ -1,6 +1,6 @@
 // Counting the code comment lines a branch adds, and the repo's limits on them.
 import type { Repo } from '../../repos/index.ts';
-import { wholeNumberError } from '../../shared/index.ts';
+import { plural, wholeNumberError } from '../../shared/index.ts';
 
 /** The lines a diff adds, per path. */
 export type AddedLines = Record<string, string[]>;
@@ -124,6 +124,15 @@ export function codeCommentsOver(count: Pick<CodeCommentCount, 'lines' | 'percen
   const { code_comment_max_lines: maxLines, code_comment_max_percent: maxPercent } = limits;
   return (maxLines > 0 && count.lines > maxLines) || (maxPercent > 0 && count.percent > maxPercent);
 }
+
+const limitText = ({ code_comment_max_lines: lines, code_comment_max_percent: percent }: CodeCommentLimits): string =>
+  [lines > 0 ? `${lines}` : null, percent > 0 ? `${percent}%` : null].filter(Boolean).join(' or ');
+
+export const codeCommentsText = (count: Pick<CodeCommentCount, 'lines' | 'percent'>, limits: CodeCommentLimits): string =>
+  `${plural(count.lines, 'code comment line')} added (${Math.round(count.percent)}%), over the limit of ${limitText(limits)}`;
+
+export const codeCommentsTag = (count: Pick<CodeCommentCount, 'lines' | 'percent'>): string =>
+  `code comments +${count.lines} (${Math.round(count.percent)}%)`;
 
 export const codeCommentMaxLinesError = (value: unknown): string | null => wholeNumberError('code_comment_max_lines', value, 0, 10_000);
 

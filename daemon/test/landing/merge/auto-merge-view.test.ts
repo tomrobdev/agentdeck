@@ -151,6 +151,7 @@ test('autoMergeView: each state with its label and reasons', () => {
     reasons: [],
     source: 'repo',
     checked_at: null,
+    code_comments: null,
     limits: { max_lines: 1000, skip: ['.github/'], tests: 'the last run must pass the tests', review: null },
   });
   assert.equal(
@@ -225,7 +226,11 @@ test('measureBranch counts the lines and paths a branch changed against the base
   sh('commit', '-q', '-m', 'work');
   sh('checkout', '-q', 'main');
 
-  assert.deepEqual(await measureBranch(db, repo, 'agentdeck/measured'), { lines: 4, paths: ['.github/ci.yml', 'a.ts'] });
+  assert.deepEqual(await measureBranch(db, repo, 'agentdeck/measured'), {
+    lines: 4,
+    paths: ['.github/ci.yml', 'a.ts'],
+    code_comments: { files: [], lines: 0, added: 4, percent: 0 },
+  });
   assert.equal(await measureBranch(db, repo, 'agentdeck/nope'), null);
 
   const t = doneTask(db, repo, { branch: 'agentdeck/measured' });

@@ -1,4 +1,4 @@
-// A merge from the merge dialog: #3 is in review with its checks passed and auto-merge off, so only a person merges it.
+// A merge from the merge dialog: #3 is in review with its checks passed and too many code comments, so only a person merges it.
 import { expandGroup, expect, group, open, row, rowIds, test } from '../fixtures';
 
 test('a merge from the merge dialog lands the pull request', async ({ page }) => {

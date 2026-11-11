@@ -111,12 +111,15 @@ function seed() {
     cli('set', key, value);
   cli('add', 'UI_QUEUE: push() returns the new length', '--repo', 'demo', '--title', 'Say how long the queue is');
   cli('add', 'UI_GREET: greet everyone when no name is given', '--repo', 'demo', '--title', 'Greet everyone', '--plan', PLAN);
-  cli('add', 'UI_QUEUE: pop() says when the queue is empty', '--repo', 'demo', '--title', 'Document pop()');
+  cli('add', 'UI_COMMENTS: pop() says when the queue is empty', '--repo', 'demo', '--title', 'Document pop()');
   cli('add', 'UI_BLOCKED: keep the queue on disk', '--repo', 'demo', '--title', 'Keep the queue on disk');
-  cli('auto-merge', '3', 'off');
   prView(1, { statusCheckRollup: [check('COMPLETED', 'SUCCESS')] });
   prView(2, { statusCheckRollup: [check('IN_PROGRESS', '')] });
-  prView(3, { statusCheckRollup: [check('COMPLETED', 'SUCCESS')], labels: [], mergeStateStatus: 'CLEAN' });
+  prView(3, {
+    statusCheckRollup: [check('COMPLETED', 'SUCCESS')],
+    labels: [{ name: 'agentdeck:auto-merge' }],
+    mergeStateStatus: 'CLEAN',
+  });
   if (process.env.UI_DAEMON_VERBOSE) log(cli('status'));
   log('working the queue once');
   const worked = cli('run-once');

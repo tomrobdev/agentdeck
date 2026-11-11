@@ -19,7 +19,7 @@ const { mergeFailure, verdictView } = await import('../../../src/domain/landing/
 const { mergeRequestCheck } = await import('../../../src/domain/landing/merge/merge-request.ts');
 const { cancelMergeRequest, requestMerge } = await import('../../../src/application/actions.ts');
 const { github } = await import('../../../src/adapters/github/github.ts');
-const { AUTO_MERGE_LABEL, autoMergeCheck, autoMergeOn } = await import('../../../src/domain/landing/merge/auto-merge.ts');
+const { AUTO_MERGE_LABEL, autoMergeCheck, autoMergeOn, autoMergeView } = await import('../../../src/domain/landing/merge/auto-merge.ts');
 const { isMergeLocked } = await import('../../../src/application/work/checkout-locks.ts');
 const { refreshPrStates } = await import('../../../src/application/landing/pull-request/refresh.ts');
 const { autoMerge } = await import('../../../src/application/landing/merge/auto-merge.ts');
@@ -262,6 +262,39 @@ test('autoMergeCheck: the findings come first, then what only auto-merge asks, i
     wait.reasons.map((r) => r.kind),
     ['checks_pending', 'mergeability_unknown', 'paused'],
   );
+});
+
+const comments = (lines: number, added: number) => ({ files: [], lines, added, percent: (lines / added) * 100 });
+const measuredWith = (code_comments: ReturnType<typeof comments>) => ({ lines: 35, paths: ['src/a.ts'], code_comments });
+const limited = { ...repoRow, code_comment_max_lines: 5, code_comment_max_percent: 5 };
+const withComments = (code_comments: ReturnType<typeof comments>, repo = limited) =>
+  autoMergeCheck({ repo, pr_state: 'open', pr: ready, tests_passed: true, paused: null, measured: measuredWith(code_comments) });
+
+test("autoMergeCheck: a branch over the repo's code comment limits needs a person, and one under them does not", () => {
+  const over = withComments(comments(12, 150));
+  assert.equal(over.verdict, 'never');
+  assert.deepEqual(over.reasons, [
+    { kind: 'too_many_code_comments', text: '12 code comment lines added (8%), over the limit of 5 or 5%', tag: 'code comments +12 (8%)' },
+  ]);
+  assert.equal(withComments(comments(12, 1000)).verdict, 'never');
+  assert.equal(withComments(comments(4, 150)).verdict, 'merge');
+  assert.equal(withComments(comments(40, 150), { ...limited, code_comment_max_lines: 0, code_comment_max_percent: 0 }).verdict, 'merge');
+});
+
+test('the PR body says in one line that a person needs to merge a branch over the code comment limits', async () => {
+  const { buildPrBody } = await import('../../../src/domain/landing/pull-request/pr.ts');
+  const text = '12 code comment lines added (8%), over the limit of 5 or 5%';
+  assert.ok(buildPrBody({ id: 7 }, [], null, text).includes(`A person needs to merge this: ${text}.`));
+  assert.ok(!buildPrBody({ id: 7 }, []).includes('code comment'));
+});
+
+test('autoMergeView: the tag comes from the measurement before a PR', () => {
+  const repoView = { ...limited, auto_merge: true, auto_approve: false, auto_review: false };
+  const task = { auto_merge: null, source: 'manual', pr: null };
+  const view = autoMergeView(task, repoView, measuredWith(comments(12, 150)));
+  assert.equal(view.code_comments, 'code comments +12 (8%)');
+  assert.ok(view.reasons.includes('now 12 code comment lines added (8%), over the limit of 5 or 5%'));
+  assert.equal(autoMergeView(task, repoView, measuredWith(comments(2, 150))).code_comments, null);
 });
 
 test('a merge request reads the findings as auto-merge does, without what only auto-merge asks', () => {

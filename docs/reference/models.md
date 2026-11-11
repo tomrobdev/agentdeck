@@ -323,21 +323,22 @@ Whether a merge goes ahead, waits or needs a person, and why: auto-merge's check
 
 What only auto-merge's check reads, beside the merge input: the repo's limits, a pause, and the branch as measured.
 
-| Field       | Type                                                                    | Comment                                                                                                                                                                                      |
-| ----------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `repo`      | `Pick<Repo, "test_cmd" \| "auto_merge_max_lines" \| "auto_merge_skip">` |                                                                                                                                                                                              |
-| `paused`    | `string \| null`                                                        | Why the daemon or the repo is paused; null when neither is.                                                                                                                                  |
-| `measured?` | `AutoMergeMeasured \| null \| undefined`                                | The branch measured locally (`git diff --numstat` against the base); null or missing when it couldn't be.                                                                                    |
-| `review?`   | `ReviewFacts \| null \| undefined`                                      | What the review gate reads (`reviewGate`), in a repo with auto_review on; null or missing when it is off. Only auto-merge waits on review runs: a person's merge and a merge request do not. |
+| Field       | Type                                                                                                 | Comment                                                                                                                                                                                      |
+| ----------- | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `repo`      | `Pick<Repo, "test_cmd" \| "auto_merge_max_lines" \| "auto_merge_skip"> & Partial<CodeCommentLimits>` |                                                                                                                                                                                              |
+| `paused`    | `string \| null`                                                                                     | Why the daemon or the repo is paused; null when neither is.                                                                                                                                  |
+| `measured?` | `AutoMergeMeasured \| null \| undefined`                                                             | The branch measured locally (`git diff --numstat` against the base); null or missing when it couldn't be.                                                                                    |
+| `review?`   | `ReviewFacts \| null \| undefined`                                                                   | What the review gate reads (`reviewGate`), in a repo with auto_review on; null or missing when it is off. Only auto-merge waits on review runs: a person's merge and a merge request do not. |
 
 ### AutoMergeMeasured
 
 A branch measured locally against the limits: the lines it changed against the base and the paths it touches.
 
-| Field   | Type       | Comment |
-| ------- | ---------- | ------- |
-| `lines` | `number`   |         |
-| `paths` | `string[]` |         |
+| Field            | Type                                    | Comment                                                                             |
+| ---------------- | --------------------------------------- | ----------------------------------------------------------------------------------- |
+| `lines`          | `number`                                |                                                                                     |
+| `paths`          | `string[]`                              |                                                                                     |
+| `code_comments?` | `CodeCommentCount \| null \| undefined` | The code comment lines the branch adds; null or missing when they couldn't be read. |
 
 ### AutoMergeSetting
 
@@ -350,14 +351,15 @@ What a task says about its own auto-merge: its setting (null follows the repo) a
 
 ### AutoMergeView
 
-| Field        | Type                                                                            | Comment                                                                                                                    |
-| ------------ | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `state`      | `AutoMergeState`                                                                |                                                                                                                            |
-| `label`      | `string`                                                                        | One short phrase for a list row: "will auto-merge", "needs a person to merge: …".                                          |
-| `reasons`    | `string[]`                                                                      | Why it waits or needs a person; for a task with no open PR, how the branch measures against the limits.                    |
-| `source`     | `"repo" \| "task" \| "planner"`                                                 | Where on or off comes from: the task's own setting, its repo's, or (planner) off because the repo auto-approves proposals. |
-| `checked_at` | `string \| null`                                                                | When the PR refresh made the check; null when no check counts.                                                             |
-| `limits`     | `{ max_lines: number; skip: string[]; tests: string; review: string \| null; }` | `review`: what the review gate asks, in a repo with auto_review on; null when it is off.                                   |
+| Field           | Type                                                                            | Comment                                                                                                                        |
+| --------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `state`         | `AutoMergeState`                                                                |                                                                                                                                |
+| `label`         | `string`                                                                        | One short phrase for a list row: "will auto-merge", "needs a person to merge: …".                                              |
+| `reasons`       | `string[]`                                                                      | Why it waits or needs a person; for a task with no open PR, how the branch measures against the limits.                        |
+| `source`        | `"repo" \| "task" \| "planner"`                                                 | Where on or off comes from: the task's own setting, its repo's, or (planner) off because the repo auto-approves proposals.     |
+| `checked_at`    | `string \| null`                                                                | When the PR refresh made the check; null when no check counts.                                                                 |
+| `code_comments` | `string \| null`                                                                | The tag for a branch over the repo's code comment limits (`code comments +12 (8%)`); null when it is not over or not measured. |
+| `limits`        | `{ max_lines: number; skip: string[]; tests: string; review: string \| null; }` | `review`: what the review gate asks, in a repo with auto_review on; null when it is off.                                       |
 
 ### BranchPr
 
@@ -501,10 +503,11 @@ One fact about a PR that bears on merging it. A problem stops any merge; anythin
 
 One reason a merge waits or needs a person: what it is about, and how a person reads it.
 
-| Field  | Type              | Comment |
-| ------ | ----------------- | ------- |
-| `kind` | `MergeReasonKind` |         |
-| `text` | `string`          |         |
+| Field  | Type                  | Comment                                                                          |
+| ------ | --------------------- | -------------------------------------------------------------------------------- |
+| `kind` | `MergeReasonKind`     |                                                                                  |
+| `text` | `string`              |                                                                                  |
+| `tag?` | `string \| undefined` | A short tag for a list row, where the reason has one (`code comments +12 (8%)`). |
 
 ### MergeReasons
 

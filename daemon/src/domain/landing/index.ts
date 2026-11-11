@@ -43,6 +43,9 @@ export {
   DEFAULT_CODE_COMMENT_MAX_PERCENT,
   codeCommentMaxLinesError,
   codeCommentMaxPercentError,
+  codeCommentsOver,
+  codeCommentsText,
+  countCodeComments,
   parseAddedLines,
 } from './merge/code-comments.ts';
 export type { AddedLines } from './merge/code-comments.ts';
