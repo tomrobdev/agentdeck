@@ -61,3 +61,37 @@ test('[code-comments] a migration step keeps its heading', () => {
     [5],
   );
 });
+
+test('[code-comments] an exported type and its fields keep their comments in domain/ and api/contract/, and nowhere else', () => {
+  const src = [
+    '// The file.',
+    '/** A thing. */',
+    'export interface Thing {',
+    '  /** Its name. */',
+    '  name: string;',
+    '  size: number; // in bytes',
+    '}',
+    '/** Private. */',
+    'type Hidden = string;',
+    '/** A table. */',
+    'export const TABLE = {};',
+    '',
+  ].join('\n');
+  assert.deepEqual(
+    commentViolations('daemon/src/domain/x.ts', src).map((v) => v.line),
+    [8, 10],
+  );
+  assert.deepEqual(
+    commentViolations('daemon/src/application/x.ts', src).map((v) => v.line),
+    [2, 4, 6, 8, 10],
+  );
+});
+
+test('[code-comments] a guard comment on raw sql stays in db/ only', () => {
+  const src = ['// The file.', '// guard: the builder has no CASE', 'export const q = 1;', ''].join('\n');
+  assert.deepEqual(commentViolations('daemon/src/db/x.ts', src), []);
+  assert.deepEqual(
+    commentViolations('daemon/src/application/x.ts', src).map((v) => v.line),
+    [2],
+  );
+});

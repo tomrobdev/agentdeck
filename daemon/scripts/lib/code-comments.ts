@@ -44,6 +44,20 @@ function migrationComments(ast: ts.SourceFile): Set<number> {
   return positions;
 }
 
+const DOCUMENTED_TYPES = ['daemon/src/domain/', 'daemon/src/api/contract/'];
+
+function typeDocSpans(path: string, ast: ts.SourceFile): [number, number][] {
+  if (!DOCUMENTED_TYPES.some((dir) => path.startsWith(dir))) return [];
+  const spans: [number, number][] = [];
+  for (const stmt of ast.statements) {
+    if (!ts.isInterfaceDeclaration(stmt) && !ts.isTypeAliasDeclaration(stmt)) continue;
+    if (!stmt.modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword)) continue;
+    const lineEnd = ast.text.indexOf('\n', stmt.getEnd());
+    spans.push([stmt.getFullStart(), lineEnd === -1 ? ast.text.length : lineEnd]);
+  }
+  return spans;
+}
+
 function scriptComments(path: string, code: string): { comment: CodeComment; why: string | null }[] {
   const ast = ts.createSourceFile(path.replace(/\.vue$/, '.vue.ts'), code, ts.ScriptTarget.Latest, true, kindOf(path));
   const seen = new Set<number>();
@@ -67,12 +81,15 @@ function scriptComments(path: string, code: string): { comment: CodeComment; why
   visit(ast);
   ranges.sort((a, b) => a.pos - b.pos);
   const migrations = path === MIGRATIONS_FILE ? migrationComments(ast) : new Set<number>();
+  const typeDocs = typeDocSpans(path, ast);
   const shebang = code.startsWith('#!') ? code.indexOf('\n') + 1 : 0;
   return ranges.map((r, i) => {
     const text = code.slice(r.pos, r.end);
     const line = ast.getLineAndCharacterOfPosition(r.pos).line + 1;
     const comment = { path, line, text };
     if (migrations.has(r.pos)) return { comment, why: null };
+    if (path.startsWith('daemon/src/db/') && /^\/\/ guard: \S/.test(text)) return { comment, why: null };
+    if (typeDocs.some(([from, to]) => r.pos >= from && r.pos < to)) return { comment, why: null };
     if (/^\/\/\/\s*<reference\s/.test(text)) return { comment, why: null };
     if (/^\/\/\s*@ts-expect-error\s+\S/.test(text)) return { comment, why: null };
     if (/^\/\/\s*@ts-expect-error\s*$/.test(text)) return { comment, why: '@ts-expect-error needs a reason after it' };
@@ -92,7 +109,6 @@ function templateComments(path: string, text: string): CodeComment[] {
   return found;
 }
 
-/** The code comments of one file that no tool reads: the file's leading one-line comment, a `@ts-expect-error` with its reason, a triple-slash reference, a shebang and a migration step's heading stay. */
 export function commentViolations(path: string, text: string): Violation[] {
   const script = path.endsWith('.vue') ? vueScript(text) : text;
   const out: Violation[] = scriptComments(path, script)

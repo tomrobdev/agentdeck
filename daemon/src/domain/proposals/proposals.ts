@@ -146,7 +146,6 @@ const norm = (s: string) =>
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
 
-/** One entry of the planner's answer before it is checked: any field may be missing or of another type. */
 type RawProposal = { title?: unknown; prompt?: unknown; priority?: unknown; model?: unknown };
 
 export function selectProposals(raw: unknown[], existingTitles: string[], max: number): { accepted: Proposal[]; skipped: string[] } {

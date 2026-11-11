@@ -16,7 +16,6 @@ export interface Link {
   kind: LinkKind;
 }
 
-/** A dependency's status, and who finished it if it is done: all a link reads of a task's state. */
 type DependencyState = DoneState | { status: Exclude<TaskStatus, 'done'> };
 
 /** `pr_mode` is that of the dependency's repo: a done task in a repo that opens PRs isn't met until its PR is merged. */
@@ -35,10 +34,6 @@ export type LinkedTask = Dependency & { id: TaskId };
 /** A dependency, and the links it has itself (stuck spreads down its builds-on links). */
 export type LinkTarget = Dependency & { links: Link[] };
 
-/**
- * Where a link's other task stands. Mirrors `notWaiting` in db/work/tasks-status.ts. A stuck one carries its reason twice: as a
- * sentence ("#10 failed") and as the clause that follows a mention of it ("which failed"), for a chained reason.
- */
 type Standing =
   { kind: 'met' } | { kind: 'waiting'; on: TaskId; reason: string } | { kind: 'stuck'; on: TaskId; reason: string; which: string };
 
@@ -157,7 +152,6 @@ export interface LinkIndex {
   target: (id: TaskId) => LinkTarget | undefined;
 }
 
-/** A task that builds on another: one of LinkIndex's dependents through a builds-on link. */
 type Builder = { id: TaskId; status: string };
 
 const buildingOn = (id: TaskId, l: LinkIndex): Builder[] => l.dependentsOf(id).filter((d) => d.kind === 'builds_on');

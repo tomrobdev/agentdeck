@@ -13,7 +13,6 @@ const JSON_FIELDS = [
 type JsonField =
   'needs' | 'question' | 'plan_steps' | 'auto_merge_check' | 'merge_request_check' | 'pr_checks' | 'pr_checks_opened' | 'pr_checks_merged';
 
-/** A task or run value as its column stores it: the type of `T` with its parsed fields turned back. */
 type Stored<T> = {
   [K in keyof T]: K extends JsonField
     ? Extract<T[K], null | undefined> | string
