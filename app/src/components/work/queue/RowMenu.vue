@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue';
 import { landingApi } from '../../../api/landing';
 import { workApi } from '../../../api/work';
 import type { LinkKind, TaskSummary } from '../../../api/types';
+import { useFixTask } from '../../../composables/work/useFixTask';
 import { useActions } from '../../../composables/shared/useActions';
 import { openExternal, useCopy } from '../../../platform/native';
 import {
@@ -25,6 +26,7 @@ const props = defineProps<{ task: TaskSummary; x: number; y: number }>();
 const emit = defineEmits<{ close: []; open: [id: number]; act: [kind: PersonEvent, id: number]; merge: [id: number] }>();
 const { run, flash } = useActions();
 const { copy } = useCopy();
+const { canFixHere, fix } = useFixTask();
 
 const open = ref(true);
 watch(open, (isOpen) => !isOpen && emit('close'));
@@ -101,8 +103,9 @@ async function link(kind: LinkKind, e?: Event) {
     <MenuItem @select="copyText(branchName({ id: task.id, checkout: { branch: task.branch } }), 'branch name')">Copy branch name</MenuItem>
     <MenuItem @select="copyText(`#${task.id}`, `#${task.id}`)">Copy #{{ task.id }}</MenuItem>
 
-    <template v-if="events.length || isReview(task)">
+    <template v-if="events.length || isReview(task) || canFixHere(task)">
       <MenuSeparator />
+      <MenuItem v-if="canFixHere(task)" @select="done(() => fix(task))">Fix with Claude</MenuItem>
       <MenuItem v-for="e in events" :key="e" @select="done(() => emit('act', e, task.id))">{{ LABELS[e] }}</MenuItem>
       <MenuItem v-if="isReview(task)" :disabled="!canStartMerge(task)" @select="done(() => emit('merge', task.id))"> Merge… </MenuItem>
       <MenuItem v-if="isReview(task) && task.merge_request" @select="done(cancelMerge)">Cancel merge</MenuItem>
