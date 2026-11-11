@@ -50,6 +50,8 @@ _Avoid_: bring in
 
 **Review**: a read of a task's changes, by a person or a review run, with line comments that go back to the worker as a note. A submitted review records the head it read and the patch-id of the task's changes against the base, so a sync that only brings in the base needs no new review.
 
+**Code comment**: a comment in a file's code, which a branch's diff may add, counted against the repo's two limits: `code_comment_max_lines` lines, or `code_comment_max_percent` percent of the lines it adds. Always "code comment", never a bare "comment": that is a review's line comment.
+
 **Area review**: a person's review of one part of a repo across everything merged into it since its last, marked by `refs/reviewed/<area>`. A repo is **due** for one when its oldest mark is older than `review_due_days`, or more than `review_due_lines` lines have merged since it.
 
 ## Capacity

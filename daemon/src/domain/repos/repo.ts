@@ -49,6 +49,10 @@ export interface Repo {
   auto_merge_max_lines: number; // a PR changing more lines (additions + deletions) needs a person
   /** Path prefixes; a PR touching one needs a person. */
   auto_merge_skip: string[];
+  /** A branch adding more code comment lines than this is over the limit; 0 turns this limit off. */
+  code_comment_max_lines: number;
+  /** A branch whose added lines are a greater share of code comments than this percent is over the limit; 0 turns this limit off. */
+  code_comment_max_percent: number;
   /** The model a new task of this repo takes when it names none; null follows the default_model setting. */
   model: string | null;
   /** A retry after a failure a stronger model may fix runs one model up (domain/runs/escalate.ts); on by default. */

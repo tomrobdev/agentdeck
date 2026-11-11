@@ -1,5 +1,9 @@
 import type { MergeMethod, NotifyKind, RepoDetail, RepoPatch, Settings, SettingsPatch } from '../../api/types';
-import { DEFAULT_AUTO_MERGE_SKIP } from '../../../../daemon/src/domain/landing/index.ts';
+import {
+  DEFAULT_AUTO_MERGE_SKIP,
+  DEFAULT_CODE_COMMENT_MAX_LINES,
+  DEFAULT_CODE_COMMENT_MAX_PERCENT,
+} from '../../../../daemon/src/domain/landing/index.ts';
 import { parseToolRules } from '../../../../daemon/src/domain/repos/index.ts';
 import { parseTextList, textList } from '../../../../daemon/src/domain/shared/index.ts';
 import { MODELS } from '../../../../daemon/src/domain/work/index.ts';
@@ -14,6 +18,8 @@ export type RepoForm = {
   autoMerge: boolean;
   autoMergeMaxLines: number;
   autoMergeSkip: string;
+  codeCommentMaxLines: number;
+  codeCommentMaxPercent: number;
   sandbox: boolean;
   network: string;
   model: string;
@@ -34,6 +40,8 @@ export function toRepoForm(d: RepoDetail): RepoForm {
     autoMerge: !!d.auto_merge,
     autoMergeMaxLines: d.auto_merge_max_lines,
     autoMergeSkip: parseTextList(d.auto_merge_skip, DEFAULT_AUTO_MERGE_SKIP).join(', '),
+    codeCommentMaxLines: d.code_comment_max_lines ?? DEFAULT_CODE_COMMENT_MAX_LINES,
+    codeCommentMaxPercent: d.code_comment_max_percent ?? DEFAULT_CODE_COMMENT_MAX_PERCENT,
     sandbox: !!d.sandbox,
     network: parseTextList(d.network).join(', '),
     model: d.model ?? '',
@@ -52,6 +60,8 @@ export function toRepoPatch(f: RepoForm): RepoPatch {
     auto_merge: f.autoMerge,
     auto_merge_max_lines: f.autoMergeMaxLines,
     auto_merge_skip: textList(f.autoMergeSkip),
+    code_comment_max_lines: f.codeCommentMaxLines,
+    code_comment_max_percent: f.codeCommentMaxPercent,
     sandbox: f.sandbox,
     network: textList(f.network),
     model: f.model || null,

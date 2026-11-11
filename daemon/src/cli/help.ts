@@ -1,5 +1,11 @@
 import { NOTIFY_KINDS } from '../domain/operations/index.ts';
-import { DEFAULT_AUTO_MERGE_MAX_LINES, DEFAULT_AUTO_MERGE_SKIP, PR_OPEN_RETRIES } from '../domain/landing/index.ts';
+import {
+  DEFAULT_AUTO_MERGE_MAX_LINES,
+  DEFAULT_AUTO_MERGE_SKIP,
+  DEFAULT_CODE_COMMENT_MAX_LINES,
+  DEFAULT_CODE_COMMENT_MAX_PERCENT,
+  PR_OPEN_RETRIES,
+} from '../domain/landing/index.ts';
 import { MODELS } from '../domain/work/index.ts';
 
 export const HELP = `agentdeck: always-on Claude Code task queue
@@ -30,7 +36,11 @@ Repos
                                                   planner proposals only when auto_approve is off)
   agentdeck repo set <repo> auto_merge_max_lines <n>  a PR changing more lines needs a person (default ${DEFAULT_AUTO_MERGE_MAX_LINES})
   agentdeck repo set <repo> auto_merge_skip "<prefixes>"  a PR touching these paths needs a person (default "${DEFAULT_AUTO_MERGE_SKIP.join(',')}")
-  agentdeck repo set <repo> sandbox on|off        run the agent's shell commands in Claude Code's sandbox (default on)
+  agentdeck repo set <repo> code_comment_max_lines <n>  a branch adding more code comment lines is over the limit
+                                                  (0 to 10000, 0 turns it off; default ${DEFAULT_CODE_COMMENT_MAX_LINES})
+  agentdeck repo set <repo> code_comment_max_percent <n>  a branch whose added lines are a greater share of code comments
+                                                  is over the limit (0 to 100, 0 turns it off; default ${DEFAULT_CODE_COMMENT_MAX_PERCENT})
+  agentdeck repo set <repo> sandbox on|off       run the agent's shell commands in Claude Code's sandbox (default on)
   agentdeck repo set <repo> network "<hosts>"     hosts sandboxed commands may reach, e.g. "registry.npmjs.org,github.com" ("" for none)
   agentdeck repo set <repo> model ${MODELS.join('|')}|""  the model a new task of the repo takes when it names none
                                                   ("" follows the default_model setting)

@@ -38,6 +38,14 @@ export {
 export type { FailedCheck, JobStep } from './pull-request/check-failures.ts';
 export { checksSettled, checksSummary, countOfKept, countWithSteps, nextChecks } from './pull-request/checks.ts';
 export type { CheckCounts, CheckState, ChecksSummary, PrCheck, StoredChecks } from './pull-request/checks.ts';
+export {
+  DEFAULT_CODE_COMMENT_MAX_LINES,
+  DEFAULT_CODE_COMMENT_MAX_PERCENT,
+  codeCommentMaxLinesError,
+  codeCommentMaxPercentError,
+  parseAddedLines,
+} from './merge/code-comments.ts';
+export type { AddedLines } from './merge/code-comments.ts';
 export { isConflicting } from './merge/conflict.ts';
 export { conflictsWithBase, mergeRequestCheck, mergeRequestView, mergesNow } from './merge/merge-request.ts';
 export type { MergeRequestView } from './merge/merge-request.ts';

@@ -144,6 +144,16 @@ async function archive() {
         <input v-model="form.autoMergeSkip" placeholder=".github/, db/schema.ts" />
       </label>
     </div>
+    <div class="flex gap-3">
+      <label class="field flex-1">
+        <span>Code comment lines <span class="text-muted">(a branch adding more is over the limit; 0 = off)</span></span>
+        <NumberInput v-model="form.codeCommentMaxLines" data-testid="repo-code-comment-lines" />
+      </label>
+      <label class="field flex-1">
+        <span>Code comment share <span class="text-muted">(% of the added lines; 0 = off)</span></span>
+        <NumberInput v-model="form.codeCommentMaxPercent" data-testid="repo-code-comment-percent" />
+      </label>
+    </div>
     <Switch v-model="form.sandbox" class="flex-none">
       <span
         >Run the agent's shell commands in the sandbox

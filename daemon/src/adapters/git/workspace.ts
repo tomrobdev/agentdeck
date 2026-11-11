@@ -38,7 +38,7 @@ import {
   reviewFacts,
   startPoint,
 } from './refs.ts';
-import { changedFiles, diffBase, diffHash, filePatch, listFiles, listTree, mergeCommit, objectAt, readFile } from './diffs.ts';
+import { addedLines, changedFiles, diffBase, diffHash, filePatch, listFiles, listTree, mergeCommit, objectAt, readFile } from './diffs.ts';
 import { readGivenPlan, readPlanFile, writeGivenPlan, writePlanFile } from '../local/plan-file.ts';
 import { applyProtectedEdits } from '../local/protected-edits.ts';
 import { rootInfo } from './repo-root.ts';
@@ -167,6 +167,14 @@ export const workspace = {
   },
 
   filePatch: (repoPath: string, base: string, head: string, paths: string[]) => filePatch(repoPath, base, head, paths),
+
+  async addedLines(repoPath: string, base: string, head: string) {
+    try {
+      return await addedLines(repoPath, base, head);
+    } catch {
+      return null;
+    }
+  },
 
   mergeCommit: (repoPath: string, ours: string, theirs: string) => mergeCommit(repoPath, ours, theirs),
 
