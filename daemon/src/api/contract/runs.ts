@@ -60,6 +60,10 @@ export interface Run {
    * Null for other kinds. Missing from a daemon that predates it.
    */
   base_commit?: string | null;
+  /** The code comment lines a work run's branch adds, as last measured; null when not measured. Missing from a daemon that predates it. */
+  code_comment_lines?: number | null;
+  /** Those lines as a share of the lines the branch adds, from 0 to 100; null when not measured. */
+  code_comment_percent?: number | null;
   /** For a failed or blocked run: its turns, time, tools and tests summed up from its log, with a verdict line. Null otherwise. */
   summary?: RunSummary | null;
 }
@@ -80,6 +84,8 @@ export interface RunSummary {
   /** The tail of the last failing output the run saw. */
   excerpt: string | null;
   final_message: string | null;
+  /** The last measurement of the code comments the branch adds; null when not measured. Missing from a daemon that predates it. */
+  code_comments?: string | null;
   /** The summary in one line, e.g. "used 60 of 60 turns, 14 of them running tests that kept failing". */
   verdict: string;
 }

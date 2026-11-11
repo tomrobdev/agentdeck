@@ -108,6 +108,8 @@ erDiagram
     text run_end "nullable"
     integer last_test_failed "nullable"
     text base_commit "nullable"
+    integer code_comment_lines "nullable"
+    real code_comment_percent "nullable"
   }
   settings {
     text key PK
