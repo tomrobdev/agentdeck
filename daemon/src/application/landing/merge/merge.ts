@@ -16,10 +16,11 @@ import { prPlanFor } from '../../work/plans.ts';
 import { dependentsReleased } from '../../work/dependencies.ts';
 import { isMergeLocked, isSyncing, lockMerge, unlockMerge } from '../../work/checkout-locks.ts';
 import { autoMergeFor, mergeInputFor, prCwd } from '../pull-request/refresh.ts';
+import { movePr } from '../moves.ts';
 
 export async function closePullRequest(app: App, task: Task): Promise<void> {
   await app.codeHost.closePr(task.pr!.url!, prCwd(app, task));
-  app.recordPr(task.id, { type: 'closed' });
+  movePr(app, task, { type: 'closed' });
 }
 
 export async function closeTaskPr(app: App, id: TaskId): Promise<void> {

@@ -5,6 +5,7 @@ import type { TaskId } from '../../../domain/shared/index.ts';
 import { MERGE_METHODS, type MergeMethod, isMergeMethod } from '../../../domain/repos/index.ts';
 import { ActionError, object, requireTask, text } from '../../shared/input.ts';
 import { mergeable, mergePreview } from './merge.ts';
+import { endMergeRequest } from '../moves.ts';
 
 export interface MergeRequestedResult {
   method: MergeMethod;
@@ -67,6 +68,6 @@ export async function requestAllMerges(app: App, input: { ids: TaskId[] }): Prom
 }
 
 export function cancelMergeRequest(app: App, id: TaskId): { cancelled: boolean } {
-  requireTask(app, id);
-  return { cancelled: app.clearMergeRequest(id) };
+  const task = requireTask(app, id);
+  return { cancelled: endMergeRequest(app, task, 'dropped', () => {}) };
 }

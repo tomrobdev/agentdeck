@@ -1,7 +1,7 @@
 // A task's history: one row per status change.
 import type { TaskId } from '../../shared/index.ts';
 import type { MergeMethod } from '../../repos/index.ts';
-import { type BranchPr, type PrOpenFailures, type PrRetry, type PrState, prRetry } from '../../landing/index.ts';
+import { type BranchPr, type PrMove, type PrOpenFailures, type PrRetry, type PrState, prRetry, seenMove } from '../../landing/index.ts';
 import type { TaskEvent, TaskStatus } from './lifecycle.ts';
 
 /**
@@ -37,6 +37,12 @@ export const prEventsOf = (pr: BranchPr): PrEvent[] =>
         { type: 'opened', url: pr.url },
         { type: 'seen', state: pr.state },
       ];
+
+export function prMoveOf(e: PrEvent): PrMove {
+  if (e.type === 'failed') return 'open_failed';
+  if (e.type === 'seen') return seenMove(e.state);
+  return e.type;
+}
 
 export function prEventReason(e: PrEvent): string {
   switch (e.type) {

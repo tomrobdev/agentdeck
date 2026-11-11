@@ -9,6 +9,7 @@ export {
   mergeReason,
   prEventReason,
   prEventsOf,
+  prMoveOf,
   prRetryFor,
 } from './lifecycle/history.ts';
 export type { PendingFollowUp, PrEvent, TaskEventRow, TaskEventType } from './lifecycle/history.ts';

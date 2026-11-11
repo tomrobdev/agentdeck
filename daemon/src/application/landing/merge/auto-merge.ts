@@ -11,6 +11,7 @@ import { notifyLater } from '../../operations/notifications.ts';
 import { isMergeLocked } from '../../work/checkout-locks.ts';
 import { ensureAutoMergeLabel } from '../pull-request/open-pr.ts';
 import { MergeFailed, mergeable, mergeOpenPr } from './merge.ts';
+import { endMergeRequest } from '../moves.ts';
 import type { ReadyPr } from '../pull-request/refresh.ts';
 
 export async function autoMerge(
@@ -52,7 +53,7 @@ export async function autoMerge(
         told.set(id, error);
         continue;
       }
-      if (requested ? !app.clearMergeRequest(id) : told.get(id) === error) continue;
+      if (requested ? !endMergeRequest(app, target.task, 'refused', log) : told.get(id) === error) continue;
       told.set(id, error);
       log(`task ${id}: ${requested ? 'requested merge' : 'auto-merge'} failed: ${error}`);
       notifyLater(app, mergeFailedNotification(id, error));

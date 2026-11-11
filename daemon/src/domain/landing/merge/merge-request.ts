@@ -4,6 +4,32 @@ import { DEFAULT_MERGE_METHOD, type MergeMethod } from '../../repos/index.ts';
 import { type AutoMergeCheck, type MergeInput, reasonTexts, unattendedVerdict } from './merge.ts';
 import type { PullRequest } from '../pull-request/pr.ts';
 
+export const MERGE_REQUEST_STATES = ['none', 'requested'] as const;
+/** Whether a task has a person's merge request on its PR. */
+export type MergeRequestState = (typeof MERGE_REQUEST_STATES)[number];
+
+/** What happens to a merge request: a person asks (again, with a new method), the daemon merges the PR, a person or the PR's end drops it, or its check or the merge says it needs a person. */
+export type MergeRequestMove = 'asked' | 'carried_out' | 'dropped' | 'refused';
+
+/** Each move, from which states and to which. `carried_out` clears the request with the merge itself. */
+export const MERGE_REQUEST_MOVES: Record<MergeRequestMove, Partial<Record<MergeRequestState, MergeRequestState>>> = {
+  asked: { none: 'requested', requested: 'requested' },
+  carried_out: { requested: 'none' },
+  dropped: { requested: 'none' },
+  refused: { requested: 'none' },
+};
+
+export const mergeRequestStateOf = (pr: Pick<PullRequest, 'merge_request'> | null): MergeRequestState =>
+  pr?.merge_request ? 'requested' : 'none';
+
+export function nextMergeRequestState(from: MergeRequestState, move: MergeRequestMove): MergeRequestState | null {
+  return MERGE_REQUEST_MOVES[move][from] ?? null;
+}
+
+export function mergeRequestStatesFor(move: MergeRequestMove): MergeRequestState[] {
+  return MERGE_REQUEST_STATES.filter((s) => MERGE_REQUEST_MOVES[move][s] !== undefined);
+}
+
 export const mergeRequestCheck = (input: MergeInput): AutoMergeCheck => unattendedVerdict(input);
 
 export const mergesNow = (

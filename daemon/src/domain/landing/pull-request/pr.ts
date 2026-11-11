@@ -7,6 +7,8 @@ import type { MergeMethod } from '../../repos/index.ts';
 /** `failed` is the daemon's own: the task finished but its PR could not be opened (`FailedPullRequest`). */
 export type PrState = 'open' | 'merged' | 'closed' | 'failed';
 
+export const PR_STATES: readonly PrState[] = ['open', 'merged', 'closed', 'failed'];
+
 /** A PR's checks: the latest ones read, and the counts kept from when they first settled and from when it merged. */
 export interface PrChecks {
   latest: StoredChecks | null;

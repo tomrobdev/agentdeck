@@ -1,5 +1,7 @@
 import { join } from 'node:path';
 import ts from 'typescript';
+import { MERGE_REQUEST_MOVES, MERGE_REQUEST_STATES } from '../../src/domain/landing/merge/merge-request.ts';
+import { PR_FROM, PR_MOVES } from '../../src/domain/landing/pull-request/pr-moves.ts';
 import { COMMENT_MOVES, COMMENT_STATES } from '../../src/domain/landing/review/review.ts';
 import { FOLLOW_UPS } from '../../src/domain/work/lifecycle/follow-ups.ts';
 import {
@@ -190,6 +192,7 @@ export function useCasesBody(): string {
 export interface StateMachine {
   name: string;
   source: { file: string; constant: string };
+  stateType: string;
   moves: string;
   states: readonly string[];
   rules: Record<string, Partial<Record<string, string>>>;
@@ -199,6 +202,7 @@ export const STATE_MACHINES: StateMachine[] = [
   {
     name: 'Task lifecycle',
     source: { file: 'domain/work/lifecycle/lifecycle.ts', constant: 'RULES' },
+    stateType: 'TaskStatus',
     moves: 'event',
     states: TASK_STATUSES,
     rules: RULES,
@@ -206,16 +210,30 @@ export const STATE_MACHINES: StateMachine[] = [
   {
     name: 'Review comment',
     source: { file: 'domain/landing/review/review.ts', constant: 'COMMENT_MOVES' },
+    stateType: 'CommentState',
     moves: 'action',
     states: COMMENT_STATES,
     rules: COMMENT_MOVES,
   },
+  {
+    name: 'Pull request',
+    source: { file: 'domain/landing/pull-request/pr-moves.ts', constant: 'PR_MOVES' },
+    stateType: 'PrState',
+    moves: 'move',
+    states: PR_FROM,
+    rules: PR_MOVES,
+  },
+  {
+    name: 'Merge request',
+    source: { file: 'domain/landing/merge/merge-request.ts', constant: 'MERGE_REQUEST_MOVES' },
+    stateType: 'MergeRequestState',
+    moves: 'move',
+    states: MERGE_REQUEST_STATES,
+    rules: MERGE_REQUEST_MOVES,
+  },
 ];
 
 export const NOT_YET_TABLES: Record<string, string> = {
-  PrState: 'a pull request moves by what GitHub reports (domain/landing/pull-request/pr.ts), not by an event table yet',
-  MergeRequestView:
-    'a merge request is set, cleared and read as columns (domain/landing/merge/merge-request.ts), not a state type with a table yet',
   CheckState: 'a value read from GitHub for each check, not a state a thing moves through',
   AutoMergeState:
     'a verdict computed from the pull request each time (in a repo with auto_review on, with the review run of its changes: it waits for one, and needs a person when it asked for changes), not a state with moves',
@@ -224,9 +242,7 @@ export const NOT_YET_TABLES: Record<string, string> = {
   StartState: "computed from a task's links each time, not a state with moves",
   PlanStepStatus: 'set from the plan page by a person or worker; any step may take any status',
   ChangeStatus: 'a git file change letter, read from git',
-  TaskStatus: 'the states of the Task lifecycle table',
   TaskState: 'the states of the Task lifecycle table, with what a task carries in each',
-  CommentState: 'the states of the Review comment table',
 };
 
 export function stateMachinesBody(): string {
@@ -250,7 +266,7 @@ export function stateMachinesBody(): string {
       code(move),
       Object.entries(rule)
         .map(([from, to]) => `${from} → ${to}`)
-        .join(', '),
+        .join(', ') || 'none: ignored from every state',
     ]);
     sections.push(
       `## ${m.name}`,
@@ -285,7 +301,7 @@ export function stateMachinesBody(): string {
     table(
       ['State type', 'Why'],
       Object.entries(NOT_YET_TABLES)
-        .filter(([name]) => !['TaskStatus', 'TaskState', 'CommentState'].includes(name))
+        .filter(([name]) => name !== 'TaskState')
         .sort((a, b) => cmp(a[0], b[0]))
         .map(([name, why]) => [code(name), why]),
     ),
@@ -304,7 +320,7 @@ export function readStateTypes(): { states: string[]; tables: { file: string; co
     for (const stmt of file.statements) {
       if (ts.isTypeAliasDeclaration(stmt) || ts.isInterfaceDeclaration(stmt)) {
         const name = stmt.name.text;
-        const isState = ts.isTypeAliasDeclaration(stmt) ? /(State|Status)$/.test(name) : name === 'MergeRequestView';
+        const isState = ts.isTypeAliasDeclaration(stmt) && /(State|Status)$/.test(name);
         const exported = ts.getModifiers(stmt)?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
         if (isState && exported) states.push(name);
       }

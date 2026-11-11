@@ -95,7 +95,18 @@ test('[state-as-data] every rule table in domain/ is listed by the generator, an
   assert.deepEqual(unlisted, [], 'add these rule tables to STATE_MACHINES in daemon/scripts/lib/model-docs.ts');
   const missing = listed.filter((l) => !tables.some((t) => `${t.file}:${t.constant}` === l));
   assert.deepEqual(missing, [], 'STATE_MACHINES names rule tables that are not in domain/');
-  const undecided = states.filter((s) => !(s in NOT_YET_TABLES));
+  const tabled = STATE_MACHINES.map((m) => m.stateType);
+  assert.deepEqual(
+    tabled.filter((s) => !states.includes(s)),
+    [],
+    'STATE_MACHINES names state types that are not in domain/',
+  );
+  assert.deepEqual(
+    tabled.filter((s) => s in NOT_YET_TABLES),
+    [],
+    'a state type a rule table drives has no entry in NOT_YET_TABLES',
+  );
+  const undecided = states.filter((s) => !(s in NOT_YET_TABLES) && !tabled.includes(s));
   assert.deepEqual(undecided, [], 'a state type needs a rule table in STATE_MACHINES, or an entry in NOT_YET_TABLES with its reason');
   const stale = Object.keys(NOT_YET_TABLES).filter((s) => !states.includes(s));
   assert.deepEqual(stale, [], 'NOT_YET_TABLES names state types that no longer exist');

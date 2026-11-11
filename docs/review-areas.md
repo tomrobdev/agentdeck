@@ -76,6 +76,7 @@ Status changes and what follows them: domain events, the follow-ups table, task_
 - daemon/src/domain/work/lifecycle/task-writes.ts
 - daemon/src/application/landing/settle.ts
 - daemon/src/application/landing/person-events.ts
+- daemon/src/application/landing/moves.ts
 - daemon/src/db/work/task-events.ts
 - docs/adr/0004-task-events-outbox.md
 
@@ -151,6 +152,7 @@ Pull requests, checks, merge requests, merging and auto-merge.
 - daemon/src/domain/landing/merge/merge.ts
 - daemon/src/domain/landing/pull-request/refresh.ts
 - daemon/src/domain/landing/pull-request/pr.ts
+- daemon/src/domain/landing/pull-request/pr-moves.ts
 - daemon/src/domain/landing/pull-request/pr-retry.ts
 - daemon/src/domain/landing/pull-request/summary.ts
 - daemon/src/application/landing/merge/auto-merge.ts
