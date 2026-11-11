@@ -32,6 +32,14 @@ export function resultFields(result: ResultLike | undefined, exitCode: number, s
   };
 }
 
+const SUMMED = ['input_tokens', 'output_tokens', 'cache_read_tokens', 'cache_write_tokens', 'cost_usd'] as const;
+
+export function withTurnUsage(fields: Partial<Run>, turn: Partial<Run>): Partial<Run> {
+  const sum = Object.fromEntries(SUMMED.map((k) => [k, (fields[k] ?? 0) + (turn[k] ?? 0)]));
+  const turns = fields.num_turns == null && turn.num_turns == null ? null : (fields.num_turns ?? 0) + (turn.num_turns ?? 0);
+  return { ...fields, ...sum, num_turns: turns };
+}
+
 /** The final `result` event of a claude session. */
 export interface ClaudeResult {
   subtype?: string;

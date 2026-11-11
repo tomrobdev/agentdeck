@@ -79,6 +79,10 @@ export interface Run {
   run_end: RunEnd | null;
   /** Whether the last test run of that run failed; null with no test run, and for a run with no `run_end`. */
   last_test_failed: boolean | null;
+  /** The code comment lines a work run's branch adds, as last measured before it ended; null when its repo has no limit on, or it was not measured. */
+  code_comment_lines: number | null;
+  /** Those lines as a share of the lines the branch adds, from 0 to 100; null when `code_comment_lines` is. */
+  code_comment_percent: number | null;
 }
 
 export const DEFAULT_SUPPORT_MODEL = 'sonnet';

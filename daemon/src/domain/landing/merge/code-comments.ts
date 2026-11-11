@@ -1,6 +1,6 @@
 // Counting the code comment lines a branch adds, and the repo's limits on them.
 import type { Repo } from '../../repos/index.ts';
-import { wholeNumberError } from '../../shared/index.ts';
+import { plural, wholeNumberError } from '../../shared/index.ts';
 
 /** The lines a diff adds, per path. */
 export type AddedLines = Record<string, string[]>;
@@ -123,6 +123,19 @@ export type CodeCommentLimits = Pick<Repo, 'code_comment_max_lines' | 'code_comm
 export function codeCommentsOver(count: Pick<CodeCommentCount, 'lines' | 'percent'>, limits: CodeCommentLimits): boolean {
   const { code_comment_max_lines: maxLines, code_comment_max_percent: maxPercent } = limits;
   return (maxLines > 0 && count.lines > maxLines) || (maxPercent > 0 && count.percent > maxPercent);
+}
+
+export const codeCommentLimitOn = (limits: CodeCommentLimits): boolean =>
+  limits.code_comment_max_lines > 0 || limits.code_comment_max_percent > 0;
+
+export function codeCommentLimitText(limits: CodeCommentLimits): string {
+  const { code_comment_max_lines: maxLines, code_comment_max_percent: maxPercent } = limits;
+  return [maxLines > 0 ? plural(maxLines, 'line') : null, maxPercent > 0 ? `${maxPercent}%` : null].filter(Boolean).join(' or ');
+}
+
+export function codeCommentsText(count: Pick<CodeCommentCount, 'lines' | 'percent'>, limits: CodeCommentLimits): string {
+  const side = codeCommentsOver(count, limits) ? 'over' : 'within';
+  return `${plural(count.lines, 'code comment line')} added (${Math.round(count.percent)}%), ${side} the limit of ${codeCommentLimitText(limits)}`;
 }
 
 export const codeCommentMaxLinesError = (value: unknown): string | null => wholeNumberError('code_comment_max_lines', value, 0, 10_000);

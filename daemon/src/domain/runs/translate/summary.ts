@@ -25,6 +25,8 @@ export interface RunSummary {
   excerpt: string | null;
   /** Its final message: the result's text, else the main loop's last text. */
   final_message: string | null;
+  /** The last measurement of the code comments the branch adds, such as "12 code comment lines added (8%), over the limit of 5 lines or 5%"; null when not measured. */
+  code_comments: string | null;
   /** The summary in one line, such as "used 60 of 60 turns, 14 of them running tests that kept failing". */
   verdict: string;
 }
@@ -121,6 +123,7 @@ export function runSummary(events: unknown[], ctx: SummaryContext): RunSummary {
   let failStreak = 0;
   let testFailure: string | null = null;
   let anyFailure: string | null = null;
+  let codeComments: string | null = null;
 
   for (const raw of events) {
     const ev = raw as any;
@@ -130,6 +133,7 @@ export function runSummary(events: unknown[], ctx: SummaryContext): RunSummary {
       first ??= at;
       last = at;
     }
+    if (ev.type === 'agentdeck_code_comments' && typeof ev.text === 'string') codeComments = ev.text;
     if (ev.type === 'result') result = ev;
     else if (ev.type === 'system' && ev.subtype === 'permission_denied') deniedEvents++;
     if (ev.parent_tool_use_id) continue;
@@ -183,6 +187,8 @@ export function runSummary(events: unknown[], ctx: SummaryContext): RunSummary {
     refused: Array.isArray(result?.permission_denials) ? result.permission_denials.length : deniedEvents,
     excerpt: excerpt === null ? null : tail(excerpt),
     final_message: finalText === null ? null : cut(finalText, FINAL_MAX),
+    code_comments: codeComments,
   };
-  return { ...summary, verdict: verdictOf(summary, failStreak, subtype || 'an error') };
+  const verdict = verdictOf(summary, failStreak, subtype || 'an error');
+  return { ...summary, verdict: codeComments ? `${verdict}; ${codeComments}` : verdict };
 }

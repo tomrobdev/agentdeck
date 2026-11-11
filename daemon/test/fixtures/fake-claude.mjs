@@ -96,7 +96,20 @@ const toolCall = (name, input, output, { error = false, id = `toolu_fake_${++too
 };
 const readme = () => toolCall('Read', { file_path: join(process.cwd(), 'README.md') }, '1\t# README\n');
 
-if (prompt.startsWith('AgentDeck verify run')) {
+const commented = 'commented.ts';
+if (given.startsWith('AgentDeck counted the code comments')) {
+  if (!prompt.includes('FAKE_COMMENTS_STAY')) {
+    const kept = readFileSync(commented, 'utf8')
+      .split('\n')
+      .filter((l) => !l.trim().startsWith('//'))
+      .join('\n');
+    writeFileSync(commented, kept);
+  }
+  if (prompt.includes('FAKE_COMMENTS_BREAK')) writeFileSync('broken.txt', 'tests fail now\n');
+  execFileSync('git', ['add', '-A']);
+  execFileSync('git', ['commit', '-q', '--allow-empty', '-m', 'fake: delete code comments']);
+  result('Deleted them.\nSTATUS: DONE');
+} else if (prompt.startsWith('AgentDeck verify run')) {
   if (prompt.includes('FAKE_VERIFY_SLOW')) await sleep(30_000);
   readme();
   const answer = prompt.includes('FAKE_VERIFY_GARBAGE')
@@ -257,6 +270,10 @@ if (prompt.startsWith('AgentDeck verify run')) {
     toolCall('Write', { file_path: file, content: output }, `File created successfully at: ${file}`);
   }
   writeFileSync('fake-output.txt', output);
+  if (prompt.includes('FAKE_COMMENTS')) {
+    const lines = Array.from({ length: 10 }, (_, i) => `// note ${i}\nexport const v${i} = ${i};`);
+    writeFileSync(commented, `${lines.join('\n')}\n`);
+  }
   execFileSync('git', ['add', '-A']);
   execFileSync('git', ['commit', '-q', '-m', 'fake: add output']);
   assistant([{ type: 'text', text: 'Wrote fake-output.txt' }]);
