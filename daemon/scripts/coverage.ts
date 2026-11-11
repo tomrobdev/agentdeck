@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { RAISE_MARGIN, groupCoverage, judgeCoverage, parseLcov, percent, showPercent } from './lib/coverage.ts';
+import { RAISE_MARGIN, groupCoverage, judgeCoverage, parseLcov, percent, showPercent, withUnloaded } from './lib/coverage.ts';
 import { COVERAGE_FLOORS } from './lib/progress.ts';
 
 const DAEMON = join(import.meta.dirname, '..');
@@ -22,6 +22,7 @@ if (given >= 0) {
       '--test-timeout=60000',
       '--experimental-test-coverage',
       '--test-coverage-include=src/**',
+      '--test-coverage-include=../app/src/lib/**',
       '--test-reporter=dot',
       '--test-reporter-destination=stdout',
       '--test-reporter=lcov',
@@ -33,7 +34,16 @@ if (given >= 0) {
   testsFailed = run.status !== 0;
 }
 
-const groups = groupCoverage(parseLcov(readFileSync(lcov, 'utf8')));
+const libRoot = join(DAEMON, '../app/src/lib');
+const libFiles = readdirSync(libRoot, { recursive: true, encoding: 'utf8' })
+  .filter((f) => f.endsWith('.ts'))
+  .map((path) => ({
+    path,
+    lines: readFileSync(join(libRoot, path), 'utf8')
+      .split('\n')
+      .filter((l) => l.trim()).length,
+  }));
+const groups = groupCoverage(withUnloaded(parseLcov(readFileSync(lcov, 'utf8')), libFiles));
 const cell = (c: { hit: number; found: number }) => showPercent(percent(c));
 const floor = (group: string, metric: 'lines' | 'branches') => (COVERAGE_FLOORS[group] ? `${COVERAGE_FLOORS[group][metric]}%` : '-');
 const rows = [

@@ -1,7 +1,17 @@
 import assert from 'node:assert/strict';
+import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { groupCoverage, groupOf, groupsWithCode, judgeCoverage, parseLcov, showPercent } from '../../scripts/lib/coverage.ts';
+import {
+  dashboardLibGroups,
+  groupCoverage,
+  groupOf,
+  groupsWithCode,
+  judgeCoverage,
+  parseLcov,
+  showPercent,
+  withUnloaded,
+} from '../../scripts/lib/coverage.ts';
 import { COVERAGE_FLOORS } from '../../scripts/lib/progress.ts';
 import { parseSource, readSources } from '../../scripts/lib/sources.ts';
 
@@ -10,8 +20,11 @@ const SRC = join(import.meta.dirname, '../../src');
 const record = (file: string, lf: number, lh: number, brf: number, brh: number) =>
   [`SF:${file}`, 'DA:1,1', `LF:${lf}`, `LH:${lh}`, `BRF:${brf}`, `BRH:${brh}`, 'end_of_record'].join('\n');
 
-test('[coverage-floors] COVERAGE_FLOORS names every group of daemon/src that has code, and nothing else', () => {
-  const groups = groupsWithCode(readSources(SRC));
+const LIB = join(import.meta.dirname, '../../../app/src/lib');
+
+test('[coverage-floors] COVERAGE_FLOORS names every group of daemon/src and app/src/lib that has code, and nothing else', () => {
+  const lib = readdirSync(LIB, { recursive: true, encoding: 'utf8' }).filter((f) => f.endsWith('.ts'));
+  const groups = [...groupsWithCode(readSources(SRC)), ...dashboardLibGroups(lib)].sort();
   const floors = Object.keys(COVERAGE_FLOORS).sort();
   assert.deepEqual(
     groups.filter((g) => !floors.includes(g)),
@@ -43,6 +56,29 @@ test('coverage: a file belongs to its context, its layer, or the top of src', ()
   assert.equal(groupOf('db/tasks.ts'), 'db');
   assert.equal(groupOf('api/routes/tasks.ts'), 'api');
   assert.equal(groupOf('compose.ts'), 'src');
+});
+
+test('coverage: a dashboard lib file is counted per context, and one no test loads counts as uncovered lines', () => {
+  assert.equal(groupOf('dashboard/lib/work/queue/x.ts'), 'dashboard/lib/work');
+  assert.equal(groupOf('dashboard/lib/shared/time.ts'), 'dashboard/lib/shared');
+  const files = parseLcov(record('/r/app/src/lib/work/a.ts', 10, 9, 2, 1));
+  assert.deepEqual(
+    files.map((f) => f.path),
+    ['dashboard/lib/work/a.ts'],
+  );
+  const all = withUnloaded(files, [
+    { path: 'work/a.ts', lines: 10 },
+    { path: 'runs/b.ts', lines: 20 },
+    { path: 'runs/empty.ts', lines: 0 },
+  ]);
+  assert.deepEqual(
+    all.map((f) => [f.path, f.lines.hit, f.lines.found]),
+    [
+      ['dashboard/lib/work/a.ts', 9, 10],
+      ['dashboard/lib/runs/b.ts', 0, 20],
+    ],
+  );
+  assert.deepEqual(dashboardLibGroups(['work/a.ts', 'work/q/b.ts', 'runs/c.ts']), ['dashboard/lib/runs', 'dashboard/lib/work']);
 });
 
 test('coverage: an lcov report is read per file under daemon/src and summed per group', () => {
