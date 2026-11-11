@@ -18,6 +18,7 @@ import {
 } from '../../domain/work/index.ts';
 import { type AutoMergeMeasured, countCodeComments } from '../../domain/landing/index.ts';
 import type { Repo } from '../../domain/repos/index.ts';
+import { promiseCache } from '../shared/cache.ts';
 import { ActionError, requireTask, requireTaskRepo } from '../shared/input.ts';
 
 async function resolveHead(app: App, id: TaskId): Promise<{ repo: Repo; head: string }> {
@@ -48,18 +49,9 @@ async function resolveRef(app: App, id: TaskId, ref: FileRef): Promise<{ repo: R
   return { repo, sha: base.sha };
 }
 
-const changedCache = new Map<string, Promise<{ files: ChangedFile[]; commits: Commit[] }>>();
-const CHANGED_CACHE_SIZE = 16;
-function compareCached(app: App, repoPath: string, base: string, head: string): Promise<{ files: ChangedFile[]; commits: Commit[] }> {
-  const key = `${repoPath}\0${base}..${head}`;
-  let hit = changedCache.get(key);
-  if (hit) changedCache.delete(key);
-  else hit = app.workspace.compare(repoPath, base, head).catch((err) => (changedCache.delete(key), Promise.reject(err)));
-  changedCache.set(key, hit);
-  const [changedCacheOldest] = changedCache.keys();
-  if (changedCache.size > CHANGED_CACHE_SIZE) changedCache.delete(changedCacheOldest);
-  return hit;
-}
+const changedCache = promiseCache<{ files: ChangedFile[]; commits: Commit[] }>(16);
+const compareCached = (app: App, repoPath: string, base: string, head: string): Promise<{ files: ChangedFile[]; commits: Commit[] }> =>
+  changedCache(`${repoPath}\0${base}..${head}`, () => app.workspace.compare(repoPath, base, head));
 
 const changedFilesCached = async (app: App, repoPath: string, base: string, head: string): Promise<ChangedFile[]> =>
   (await compareCached(app, repoPath, base, head)).files;
@@ -82,18 +74,9 @@ export function parseSince(input: string | null | undefined): string | null {
   return input;
 }
 
-const mergeCache = new Map<string, Promise<string | null>>();
-const MERGE_CACHE_SIZE = 16;
-function mergeCached(app: App, repoPath: string, ours: string, theirs: string): Promise<string | null> {
-  const key = `${repoPath}\0${ours}\0${theirs}`;
-  let hit = mergeCache.get(key);
-  if (hit) mergeCache.delete(key);
-  else hit = app.workspace.mergeCommit(repoPath, ours, theirs).catch((err) => (mergeCache.delete(key), Promise.reject(err)));
-  mergeCache.set(key, hit);
-  const [mergeCacheOldest] = mergeCache.keys();
-  if (mergeCache.size > MERGE_CACHE_SIZE) mergeCache.delete(mergeCacheOldest);
-  return hit;
-}
+const mergeCache = promiseCache<string | null>(16);
+const mergeCached = (app: App, repoPath: string, ours: string, theirs: string): Promise<string | null> =>
+  mergeCache(`${repoPath}\0${ours}\0${theirs}`, () => app.workspace.mergeCommit(repoPath, ours, theirs));
 
 async function sinceFrom(
   app: App,

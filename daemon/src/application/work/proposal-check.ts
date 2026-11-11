@@ -17,30 +17,26 @@ import {
 import type { Repo } from '../../domain/repos/index.ts';
 import { measureBranch } from './files.ts';
 import { promptWarnings } from './prompt-paths.ts';
+import { promiseCache } from '../shared/cache.ts';
 import { requireTask, requireTaskRepo } from '../shared/input.ts';
 
 const COMMIT_LIMIT = 500;
 
-const stalenessCache = new Map<string, Promise<Staleness>>();
-const STALENESS_CACHE_SIZE = 32;
+const stalenessCache = promiseCache<Staleness>(32);
 
 async function stalenessOf(app: App, repo: Repo, task: Task): Promise<Staleness | null> {
   const since = sqliteMs(task.created_at);
   if (!Number.isFinite(since)) return null;
   const start = await app.workspace.startCommit(repo.path, repo.base_branch);
   if (!start) return null;
-  const key = `${task.id}\0${start.sha}\0${task.prompt}`;
-  let hit = stalenessCache.get(key);
-  if (hit) stalenessCache.delete(key);
-  else
-    hit = app.workspace.commitsSince(repo.path, start.sha, since, COMMIT_LIMIT).then(
-      ({ count, commits }) => ({ ref: start.ref, base: start.sha, ...staleness(pathsNamedIn(task.prompt), commits), commits: count }),
-      (err) => (stalenessCache.delete(key), Promise.reject(err)),
-    );
-  stalenessCache.set(key, hit);
-  const [stalenessCacheOldest] = stalenessCache.keys();
-  if (stalenessCache.size > STALENESS_CACHE_SIZE) stalenessCache.delete(stalenessCacheOldest);
-  return hit;
+  return stalenessCache(`${task.id}\0${start.sha}\0${task.prompt}`, () =>
+    app.workspace.commitsSince(repo.path, start.sha, since, COMMIT_LIMIT).then(({ count, commits }) => ({
+      ref: start.ref,
+      base: start.sha,
+      ...staleness(pathsNamedIn(task.prompt), commits),
+      commits: count,
+    })),
+  );
 }
 
 async function pathsOf(app: App, repo: Repo, task: Task): Promise<string[]> {

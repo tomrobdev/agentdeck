@@ -815,7 +815,12 @@ test('[no-module-state] application/ keeps no module-level state except a lock o
           !!init &&
           (ts.isArrayLiteralExpression(init) ||
             (ts.isNewExpression(init) && ['Map', 'Set', 'WeakMap', 'WeakSet', 'Array'].includes(init.expression.getText(s.ast))));
-        if (isLet) {
+        const isCache = !!init && ts.isCallExpression(init) && init.expression.getText(s.ast) === 'promiseCache';
+        if (isCache) {
+          if (ALLOWED_MODULE_STATE[key]) used.add(key);
+          else
+            found.push(`${at(s, lineOf(s.ast, d))} declares module-level cache ${d.name.text}: put it on the allow list with its reason`);
+        } else if (isLet) {
           if (ALLOWED_MODULE_STATE[key]) used.add(key);
           else
             found.push(
