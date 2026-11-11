@@ -100,8 +100,9 @@ export function failureReport(input: FailureInput): FailureReport {
     const week = weekOf(stamp);
     if (!week) return null;
     const key = `${week}/${repo}`;
-    if (!cells.has(key)) cells.set(key, { week, repo, opened: [], merged: [], runs: [] });
-    return cells.get(key)!;
+    const found = cells.get(key) ?? { week, repo, opened: [], merged: [], runs: [] };
+    cells.set(key, found);
+    return found;
   };
   for (const t of input.tasks) {
     if (since !== undefined && t.created_at < since) continue;

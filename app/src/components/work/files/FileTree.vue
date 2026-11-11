@@ -27,12 +27,9 @@ const filterBox = ref<HTMLInputElement | null>(null);
 const pending = new Map<string, Promise<void>>();
 function ensure(dir: string): Promise<void> {
   if (children.has(dir)) return Promise.resolve();
-  if (!pending.has(dir))
-    pending.set(
-      dir,
-      fetchDir(dir).finally(() => pending.delete(dir)),
-    );
-  return pending.get(dir)!;
+  const loading = pending.get(dir) ?? fetchDir(dir).finally(() => pending.delete(dir));
+  pending.set(dir, loading);
+  return loading;
 }
 async function fetchDir(dir: string) {
   const load = props.load;

@@ -28,7 +28,10 @@ export function useFilePatches(taskId: Ref<number>, head: Ref<string | null>, si
 
   const observer = new IntersectionObserver(
     (entries) => {
-      for (const e of entries) if (e.isIntersecting) loadPatch((e.target as HTMLElement).dataset.path!);
+      for (const e of entries) {
+        const path = (e.target as HTMLElement).dataset.path;
+        if (e.isIntersecting && path) loadPatch(path);
+      }
     },
     { rootMargin: '600px 0px' },
   );

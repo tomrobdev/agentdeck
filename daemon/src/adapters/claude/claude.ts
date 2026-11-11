@@ -4,7 +4,7 @@ import { accessSync, constants, type WriteStream } from 'node:fs';
 import { delimiter, isAbsolute, join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { claudeBin, withToolchainPath } from '../../config.ts';
-import type { ClaudeRun, UsageWindow } from '../../domain/runs/index.ts';
+import type { ClaudeResult, ClaudeRun, UsageWindow } from '../../domain/runs/index.ts';
 import { activeChildren, killGroup } from '../process/processes.ts';
 
 function executable(path: string): boolean {
@@ -27,6 +27,9 @@ export function findClaude(): string | null {
 
 const STDERR_TAIL = 4_000;
 
+const fields = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' ? (v as Record<string, unknown>) : {});
+const numberOr = <T>(v: unknown, or: T): number | T => (typeof v === 'number' ? v : or);
+
 const CANCEL_POLL_MS = 2_000;
 export const CANCEL_GRACE_MS = 10_000;
 
@@ -39,7 +42,7 @@ export async function runClaude(opts: {
   cancelGraceMs?: number;
   onSpawn?: (pid: number) => void;
   onUsage?: (w: UsageWindow) => void;
-  onEvent?: (ev: any) => void;
+  onEvent?: (ev: unknown) => void;
   onSession?: (sessionId: string) => void;
   onModel?: (modelId: string) => void;
 }): Promise<ClaudeRun> {
@@ -63,9 +66,10 @@ export async function runClaude(opts: {
   };
 
   let killTimer: NodeJS.Timeout | undefined;
-  const cancelTimer = opts.shouldCancel
+  const shouldCancel = opts.shouldCancel;
+  const cancelTimer = shouldCancel
     ? setInterval(() => {
-        if (!run.cancelled && opts.shouldCancel!()) {
+        if (!run.cancelled && shouldCancel()) {
           run.cancelled = true;
           killGroup(child.pid);
           killTimer = setTimeout(() => killGroup(child.pid, 'SIGKILL'), opts.cancelGraceMs ?? CANCEL_GRACE_MS);
@@ -75,25 +79,28 @@ export async function runClaude(opts: {
 
   createInterface({ input: child.stdout }).on('line', (line) => {
     log.write(line + '\n');
-    let ev: any;
+    let parsed: unknown;
     try {
-      ev = JSON.parse(line);
+      parsed = JSON.parse(line);
     } catch {
       return;
     }
-    opts.onEvent?.(ev);
+    opts.onEvent?.(parsed);
+    const ev = fields(parsed);
     if (ev.type === 'system' && ev.subtype === 'init' && typeof ev.session_id === 'string' && run.sessionId === undefined) {
       run.sessionId = ev.session_id;
       opts.onSession?.(ev.session_id);
       if (typeof ev.model === 'string' && ev.model) opts.onModel?.(ev.model);
     }
-    if (ev.type === 'result') run.result = ev;
+    if (ev.type === 'result') run.result = ev as ClaudeResult;
     if (ev.type === 'rate_limit_event') {
-      const info = ev.rate_limit_info ?? {};
-      for (const [window, w] of Object.entries<any>(info.unifiedWindows ?? {})) {
-        opts.onUsage?.({ window, utilization: w.utilization ?? 0, resets_at: w.resetsAt ?? 0, status: info.status ?? null });
+      const info = fields(ev.rate_limit_info);
+      const status = typeof info.status === 'string' ? info.status : null;
+      for (const [window, raw] of Object.entries(fields(info.unifiedWindows))) {
+        const w = fields(raw);
+        opts.onUsage?.({ window, utilization: numberOr(w.utilization, 0), resets_at: numberOr(w.resetsAt, 0), status });
       }
-      if (info.status === 'rejected') run.rateLimitedUntil = info.resetsAt;
+      if (status === 'rejected') run.rateLimitedUntil = numberOr(info.resetsAt, undefined);
     }
   });
   child.stderr.on('data', (d: Buffer) => {

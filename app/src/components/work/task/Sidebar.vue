@@ -7,7 +7,7 @@ import type { TaskDetail } from '../../../api/types';
 import AutoMergeMark from '../../ui/status/AutoMergeMark.vue';
 import { isNative, openExternal, revealInFinder, runTemplate, useCopy } from '../../../platform/native';
 import { editorArgv, editorTemplate } from '../../../lib/runs/terminal';
-import { PRIORITY_LEVELS, canEdit, priorityLevel, statusLabel } from '../../../lib/work/task-view';
+import { canEdit, levelOf, priorityLevel, statusLabel } from '../../../lib/work/task-view';
 import { useActions } from '../../../composables/shared/useActions';
 import { useTerminal } from '../../../composables/runs/useTerminal';
 import PriorityIcon from '../../ui/status/PriorityIcon.vue';
@@ -65,7 +65,7 @@ async function setAutoMerge(select: HTMLSelectElement) {
 
 const AUTO_MERGE_TEXT = { off: 'text-muted', on: 'text-muted', merge: 'text-done', wait: 'text-blocked', never: 'text-failed' } as const;
 
-const levelLabel = computed(() => PRIORITY_LEVELS.find((l) => l.key === priorityLevel(props.task.priority))!.label);
+const levelLabel = computed(() => levelOf(priorityLevel(props.task.priority)).label);
 </script>
 
 <template>

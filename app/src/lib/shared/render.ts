@@ -85,7 +85,7 @@ const BY_EXTENSION: Record<string, string> = {
 };
 
 export function languageFor(path: string): string | null {
-  const name = path.split('/').pop()!.toLowerCase();
+  const name = path.slice(path.lastIndexOf('/') + 1).toLowerCase();
   if (name === 'dockerfile' || name === 'makefile') return 'bash';
   return BY_EXTENSION[name.split('.').pop() ?? ''] ?? null;
 }
@@ -138,9 +138,9 @@ const md = new MarkdownIt({
 
 const PATH_LIKE = /^((?:[\w.@-]+\/)*[\w.@-]+\.\w+)(?::(\d+))?$/;
 
-const codeInline = md.renderer.rules.code_inline!;
+const codeInline = md.renderer.rules.code_inline;
 md.renderer.rules.code_inline = (tokens, idx, options, env, self) => {
-  const html = codeInline(tokens, idx, options, env, self);
+  const html = codeInline ? codeInline(tokens, idx, options, env, self) : self.renderToken(tokens, idx, options);
   const isPath = (env as { isPath?: (path: string) => boolean } | undefined)?.isPath;
   const m = tokens[idx].content.match(PATH_LIKE);
   if (!m || !isPath?.(m[1])) return html;

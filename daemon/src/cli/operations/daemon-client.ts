@@ -21,13 +21,14 @@ export function callDaemon<T>(method: string, path: string, body?: unknown, port
         res.on('error', (err) => die(`lost the daemon's answer: ${err.message}`));
         res.on('end', () => {
           const text = Buffer.concat(chunks).toString('utf8');
-          let data: any;
+          let data: unknown;
           try {
             data = text ? JSON.parse(text) : {};
           } catch {
             return die(`the daemon answered ${res.statusCode} with something that is not JSON`);
           }
-          if (data?.error) return die(String(data.error));
+          const error = data && typeof data === 'object' && 'error' in data ? data.error : undefined;
+          if (error) return die(String(error));
           if ((res.statusCode ?? 500) >= 400) return die(`the daemon answered ${res.statusCode}`);
           resolve(data as T);
         });

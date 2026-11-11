@@ -59,7 +59,7 @@ function createdAt(text: string, at: number): boolean {
   const words = text
     .slice(0, at)
     .split('\n')
-    .pop()!
+    .slice(-1)[0]
     .toLowerCase()
     .split(/\s+/)
     .map((w) => w.replace(/[^a-z]/g, ''))

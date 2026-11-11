@@ -59,11 +59,10 @@ export function sincePoints(
   const onBranch = new Set(commits.map((c) => c.sha));
   const behind = (sha: string | null): sha is string => !!sha && sha !== head && onBranch.has(sha);
   const lastReview = reviews
-    .filter((r) => r.by === 'person' && r.submitted_at)
-    .reduce<ReviewRead | null>((last, r) => (!last || sqliteMs(r.submitted_at!) > sqliteMs(last.submitted_at!) ? r : last), null);
+    .flatMap((r) => (r.by === 'person' && r.submitted_at ? [{ sha: r.head_commit, at: r.submitted_at }] : []))
+    .reduce<{ sha: string | null; at: string } | null>((last, r) => (!last || sqliteMs(r.at) > sqliteMs(last.at) ? r : last), null);
   const points: SincePoint[] = [];
-  if (lastReview && behind(lastReview.head_commit))
-    points.push({ kind: 'review', sha: lastReview.head_commit, attempt: null, at: lastReview.submitted_at! });
+  if (lastReview && behind(lastReview.sha)) points.push({ kind: 'review', sha: lastReview.sha, attempt: null, at: lastReview.at });
   for (const end of attemptEnds(commits, runs).reverse())
     if (behind(end.sha)) points.push({ kind: 'attempt', sha: end.sha, attempt: end.attempt, at: end.at });
   return points;

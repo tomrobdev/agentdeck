@@ -152,11 +152,12 @@ export class Scheduler {
 
   private tick(): void {
     if (this.stopped) return;
-    const reload = this.reload?.check(this.activity);
-    if (reload?.exit) {
+    const watcher = this.reload;
+    const reload = watcher?.check(this.activity);
+    if (watcher && reload?.exit) {
       this.opts.log(reload.reason);
       this.stop();
-      this.reload!.exit();
+      watcher.exit();
       return;
     }
     if (reload?.pending && reload.reason !== this.lastReload) this.opts.log(reload.reason);
@@ -234,10 +235,10 @@ export class Scheduler {
         this.recheckAt = Date.now() + PR_RECHECK_MS;
         this.requestPollAt = found.polling ? Date.now() + MERGE_REQUEST_POLL_MS : 0;
         if (found.conflicting.length) this.resolveConflicts(found.conflicting);
-        if (found.mergeable.length)
-          return autoMerge(this.app, found.mergeable, { log: this.opts.log, told: this.autoMergeErrors }).then((merged) => {
-            if (merged) this.tick();
-          });
+        if (!found.mergeable.length) return undefined;
+        return autoMerge(this.app, found.mergeable, { log: this.opts.log, told: this.autoMergeErrors }).then((merged) => {
+          if (merged) this.tick();
+        });
       })
       .catch((err) => this.opts.log(`pr refresh crashed: ${err?.stack ?? err}`))
       .finally(() => {

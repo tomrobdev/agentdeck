@@ -56,7 +56,7 @@ const commentsOn = (...lines: (DiffLine | null)[]) =>
 const composing = ref<string | null>(null);
 const composingOn = (...lines: (DiffLine | null)[]) => lines.some((l) => l && anchorKey(anchorOf(l)) === composing.value);
 const composeAt = (l: DiffLine | null) => (composing.value = l ? anchorKey(anchorOf(l)) : null);
-const saveAt = (l: DiffLine | null) => (body: string) => (l ? props.add!(anchorOf(l), body) : Promise.resolve(false));
+const saveAt = (l: DiffLine | null) => (body: string) => (l && props.add ? props.add(anchorOf(l), body) : Promise.resolve(false));
 const rowLines = (r: { left: DiffLine | null; right: DiffLine | null }) => (r.left === r.right ? [r.left] : [r.left, r.right]);
 
 const splitHunks = computed(() => hunks.value.map((h) => ({ header: h.header, rows: splitRows(h.lines) })));

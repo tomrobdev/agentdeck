@@ -25,7 +25,11 @@ export type PriorityLevel = (typeof PRIORITY_LEVELS)[number]['key'];
 
 export const levelPriority = (l: (typeof PRIORITY_LEVELS)[number]): number => (Number.isFinite(l.min) ? l.min : 0);
 
-export const priorityLevel = (p: number): PriorityLevel => PRIORITY_LEVELS.find((l) => p >= l.min)!.key;
+const NO_PRIORITY = PRIORITY_LEVELS[PRIORITY_LEVELS.length - 1];
+
+export const priorityLevel = (p: number): PriorityLevel => (PRIORITY_LEVELS.find((l) => p >= l.min) ?? NO_PRIORITY).key;
+
+export const levelOf = (key: PriorityLevel): (typeof PRIORITY_LEVELS)[number] => PRIORITY_LEVELS.find((l) => l.key === key) ?? NO_PRIORITY;
 
 export const autoMergeTip = (v: AutoMergeView): string => [v.label, ...v.reasons].join('\n');
 
@@ -75,7 +79,7 @@ export function groupTasks(tasks: TaskSummary[], by: GroupBy, sort: string): Gro
         (t) => t.repo ?? '?',
       );
     }
-    default:
+    case 'none':
       return [{ key: 'all', label: 'All tasks', tasks: sorted }];
   }
 }

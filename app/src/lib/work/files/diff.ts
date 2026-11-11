@@ -61,7 +61,7 @@ export function splitRows(lines: DiffLine[]): SplitRow[] {
 }
 
 export function anchorOf(l: DiffLine): { side: 'old' | 'new'; line: number } {
-  return l.type === 'del' ? { side: 'old', line: l.old! } : { side: 'new', line: l.new! };
+  return l.type === 'del' ? { side: 'old', line: l.old ?? 0 } : { side: 'new', line: l.new ?? 0 };
 }
 
 export const anchorKey = (a: { side: string; line: number }) => `${a.side}:${a.line}`;

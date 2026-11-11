@@ -37,8 +37,9 @@ const pos = computed(() => new Map(layout.value.nodes.map((n) => [n.id, n])));
 const lit = computed(() => (hover.value === null ? null : chainOf(hover.value, layout.value.edges)));
 
 function path(from: number, to: number): string {
-  const a = pos.value.get(from)!;
-  const b = pos.value.get(to)!;
+  const a = pos.value.get(from);
+  const b = pos.value.get(to);
+  if (!a || !b) return '';
   const x1 = a.x + W + PAD;
   const y1 = a.y + H / 2 + PAD;
   const x2 = b.x + PAD;

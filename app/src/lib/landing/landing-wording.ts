@@ -23,7 +23,9 @@ export function syncLine(r: Pick<SyncResult, 'outcome' | 'files' | 'reason'>): s
       return 'The branch is already synced with the base branch.';
     case 'blocked':
       return `Blocked: ${r.reason ?? 'the conflicts could not be settled'}`;
-    default:
+    case 'skipped':
+    case 'deferred':
+    case 'error':
       return r.reason ?? r.outcome;
   }
 }

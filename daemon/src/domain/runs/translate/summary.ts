@@ -1,5 +1,6 @@
 // A finished run's claude stream summed up for a person: how it spent its turns and time, how its tests went, and what it was doing when it stopped.
 import { cut, plural } from '../../shared/index.ts';
+import { fields, text } from './fields.ts';
 
 /** How the run's claude ended: out of turns, on its own, on another error, or cut off before a result. */
 export type RunEnd = 'max_turns' | 'ended' | 'error' | 'cut_off';
@@ -61,7 +62,7 @@ function resultText(content: unknown): string {
   if (typeof content === 'string') return content;
   if (!Array.isArray(content)) return '';
   return content
-    .map((b: any) => (typeof b?.text === 'string' ? b.text : ''))
+    .map((b) => text(fields(b).text))
     .filter(Boolean)
     .join('\n');
 }
@@ -110,7 +111,7 @@ export function runSummary(events: unknown[], ctx: SummaryContext): RunSummary {
   let turns = 0;
   let message: string | null = null;
   let lastText: string | null = null;
-  let result: any = null;
+  let result: Record<string, unknown> | null = null;
   let deniedEvents = 0;
   let first: number | null = null;
   let last: number | null = null;
@@ -126,8 +127,8 @@ export function runSummary(events: unknown[], ctx: SummaryContext): RunSummary {
   let codeComments: string | null = null;
 
   for (const raw of events) {
-    const ev = raw as any;
-    if (!ev || typeof ev !== 'object') continue;
+    if (!raw || typeof raw !== 'object') continue;
+    const ev = fields(raw);
     const at = ms(ev.timestamp);
     if (at !== null) {
       first ??= at;
@@ -137,17 +138,19 @@ export function runSummary(events: unknown[], ctx: SummaryContext): RunSummary {
     if (ev.type === 'result') result = ev;
     else if (ev.type === 'system' && ev.subtype === 'permission_denied') deniedEvents++;
     if (ev.parent_tool_use_id) continue;
-    const content = Array.isArray(ev.message?.content) ? ev.message.content : [];
+    const said = fields(ev.message);
+    const content = Array.isArray(said.content) ? said.content.map(fields) : [];
     if (ev.type === 'assistant') {
-      const id = typeof ev.message?.id === 'string' ? ev.message.id : null;
+      const id = typeof said.id === 'string' ? said.id : null;
       if (id === null || id !== message) turns++;
       message = id;
       for (const c of content) {
-        if (c?.type === 'text' && typeof c.text === 'string' && c.text.trim()) lastText = c.text.trim();
-        if (c?.type !== 'tool_use') continue;
+        if (c.type === 'text' && typeof c.text === 'string' && c.text.trim()) lastText = c.text.trim();
+        if (c.type !== 'tool_use') continue;
         const name = String(c.name);
         tools.set(name, (tools.get(name) ?? 0) + 1);
-        if (name === 'Bash' && typeof c.input?.command === 'string' && isTestCommand(c.input.command, ctx.testCmd)) {
+        const command = fields(c.input).command;
+        if (name === 'Bash' && typeof command === 'string' && isTestCommand(command, ctx.testCmd)) {
           pending.set(String(c.id), { at, turn: turns });
           testTurnSet.add(turns);
           testRuns++;
@@ -155,7 +158,7 @@ export function runSummary(events: unknown[], ctx: SummaryContext): RunSummary {
       }
     } else if (ev.type === 'user') {
       for (const c of content) {
-        if (c?.type !== 'tool_result') continue;
+        if (c.type !== 'tool_result') continue;
         const output = resultText(c.content);
         if (c.is_error && output.trim()) anyFailure = output;
         const test = pending.get(String(c.tool_use_id));

@@ -4,13 +4,15 @@
 
 How far the move to a domain model has come, counted from the code. Each number should fall to zero.
 
-| Measure                                                 | Count | Where |
-| ------------------------------------------------------- | ----- | ----- |
-| Flags left in domain entities (stored as numbers)       | 0     |       |
-| JSON fields left in domain entities (stored as strings) | 0     |       |
-| Runtime imports of adapters from `application/`         | 0     |       |
-| Store calls (`db.…`) in `api/` and `cli/`               | 0     |       |
-| Folder cycles in `domain/` and `application/`           | 0     |       |
+| Measure                                                                      | Count | Where |
+| ---------------------------------------------------------------------------- | ----- | ----- |
+| Flags left in domain entities (stored as numbers)                            | 0     |       |
+| JSON fields left in domain entities (stored as strings)                      | 0     |       |
+| Runtime imports of adapters from `application/`                              | 0     |       |
+| Store calls (`db.…`) in `api/` and `cli/`                                    | 0     |       |
+| Folder cycles in `domain/` and `application/`                                | 0     |       |
+| Explicit `any`, non-null `!` and open switches in `daemon/src` and `app/src` | 0     |       |
+| Clock, randomness and `process` reads in `domain/`                           | 0     |       |
 
 ## Shrinking lists
 
@@ -22,6 +24,7 @@ Each list can only shrink: an entry that stops applying fails `pnpm test`.
 | OVERSIZED_FOLDERS (`scripts/lib/progress.ts`)     | 0       |
 | LONG_FILES (`scripts/lib/progress.ts`)            | 0       |
 | UNPLACED_FOLDERS (`scripts/lib/progress.ts`)      | 0       |
+| STRICTNESS_EXCEPTIONS (`scripts/lib/progress.ts`) | 0       |
 | ROW_SHAPED_FIELDS (`scripts/lib/progress.ts`)     | 0       |
 | PLAIN_TASK_WRITES (`scripts/lib/progress.ts`)     | 7       |
 | UNCHECKED rules (`scripts/lib/rules.ts`)          | 3       |

@@ -4,7 +4,7 @@ import type { TaskId } from '../../../domain/shared/index.ts';
 import { AUTO_MERGE_LABEL, autoMergeOn } from '../../../domain/landing/index.ts';
 import { mergeReason } from '../../../domain/work/index.ts';
 import { openPrUrl } from '../../../domain/landing/index.ts';
-import { errorMessage } from '../../../domain/shared/index.ts';
+import { errorMessage, present } from '../../../domain/shared/index.ts';
 import { canStart, mergeFailedNotification, mergedNotification } from '../../../domain/operations/index.ts';
 import { ActionError, object, requireTask, requireTaskRepo } from '../../shared/input.ts';
 import { notifyLater } from '../../operations/notifications.ts';
@@ -70,7 +70,7 @@ export async function setAutoMerge(
   const value = object(patch).auto_merge;
   if (value !== null && typeof value !== 'boolean') throw new ActionError('auto_merge must be true, false or null');
   requireTask(app, id);
-  const task = app.setAutoMerge(id, value)!;
+  const task = present(app.setAutoMerge(id, value), `task #${id}`);
   const repo = requireTaskRepo(app, task);
   const on = autoMergeOn(task, repo);
   const url = openPrUrl(task.pr);

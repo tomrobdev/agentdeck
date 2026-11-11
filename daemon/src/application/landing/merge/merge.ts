@@ -10,7 +10,7 @@ import { buildPrBody, openPrUrl } from '../../../domain/landing/index.ts';
 import { mergeReason } from '../../../domain/work/index.ts';
 import type { TaskId } from '../../../domain/shared/index.ts';
 import type { Task } from '../../../domain/work/index.ts';
-import { errorMessage } from '../../../domain/shared/index.ts';
+import { errorMessage, present } from '../../../domain/shared/index.ts';
 import { ActionError, flag, object, requireTask, requireTaskRepo, text } from '../../shared/input.ts';
 import { prPlanFor } from '../../work/plans.ts';
 import { dependentsReleased } from '../../work/dependencies.ts';
@@ -19,7 +19,7 @@ import { autoMergeFor, mergeInputFor, prCwd } from '../pull-request/refresh.ts';
 import { movePr } from '../moves.ts';
 
 export async function closePullRequest(app: App, task: Task): Promise<void> {
-  await app.codeHost.closePr(task.pr!.url!, prCwd(app, task));
+  await app.codeHost.closePr(present(task.pr?.url, `#${task.id}'s pull request`), prCwd(app, task));
   movePr(app, task, { type: 'closed' });
 }
 

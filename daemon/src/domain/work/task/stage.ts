@@ -54,7 +54,9 @@ export function statusGroup(t: Stage): StatusGroup {
       return 'running';
     case 'done':
       return isReview(t) ? 'review' : prNeedsPerson(t) ? 'needs-you' : 'done';
-    default:
+    case 'proposed':
+    case 'running':
+    case 'cancelled':
       return t.status;
   }
 }
