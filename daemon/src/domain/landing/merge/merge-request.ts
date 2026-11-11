@@ -11,7 +11,6 @@ export type MergeRequestState = (typeof MERGE_REQUEST_STATES)[number];
 /** What happens to a merge request: a person asks (again, with a new method), the daemon merges the PR, a person or the PR's end drops it, or its check or the merge says it needs a person. */
 export type MergeRequestMove = 'asked' | 'carried_out' | 'dropped' | 'refused';
 
-/** Each move, from which states and to which. `carried_out` clears the request with the merge itself. */
 export const MERGE_REQUEST_MOVES: Record<MergeRequestMove, Partial<Record<MergeRequestState, MergeRequestState>>> = {
   asked: { none: 'requested', requested: 'requested' },
   carried_out: { requested: 'none' },

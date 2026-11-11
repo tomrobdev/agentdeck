@@ -9,7 +9,6 @@ export type PrFrom = PrState | 'none';
 
 export const PR_FROM: readonly PrFrom[] = ['none', ...PR_STATES];
 
-/** Each move, from which states and to which. `reopened` has no move: the refresh reads only open PRs, so a closed PR seen open again is ignored. */
 export const PR_MOVES: Record<PrMove, Partial<Record<PrFrom, PrState>>> = {
   opened: { none: 'open', merged: 'open', closed: 'open', failed: 'open' },
   merged: { open: 'merged' },
