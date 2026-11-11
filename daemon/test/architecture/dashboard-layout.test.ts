@@ -99,6 +99,47 @@ test('[dashboard-layout] vue-router is imported only by the router, the entry fi
     assert.equal(layoutViolations([use(path)]).length, 1, path);
 });
 
+export function routerViolations(sources: Source[]): string[] {
+  const found: string[] = [];
+  for (const s of sources) {
+    const visit = (node: ts.Node): void => {
+      const at = `${s.path}:${lineOf(s.ast, node)}`;
+      if (ts.isPropertyAccessExpression(node)) {
+        const object = node.expression.getText(s.ast);
+        const name = node.name.text;
+        if (/(^|\.)location$/.test(object) && name === 'hash') found.push(`${at} reads location.hash: use the router`);
+        if (/(^|\.)history$/.test(object) && (name === 'pushState' || name === 'replaceState'))
+          found.push(`${at} calls history.${name}: use the router`);
+      }
+      if (ts.isStringLiteralLike(node) && node.text === 'hashchange') found.push(`${at} listens to hashchange: use the router`);
+      if (
+        ts.isCallExpression(node) &&
+        ts.isIdentifier(node.expression) &&
+        node.expression.text === 'createRouter' &&
+        s.path !== 'router.ts'
+      )
+        found.push(`${at} calls createRouter: only router.ts does`);
+      ts.forEachChild(node, visit);
+    };
+    visit(s.ast);
+  }
+  return found;
+}
+
+test('[dashboard-router] nothing under app/src/ touches the hash or history by hand, and only router.ts creates the router', () => {
+  assert.deepEqual(routerViolations(sources), []);
+});
+
+test('[dashboard-router] the router check fails on the hash, history, hashchange and a second router', () => {
+  const bad = (path: string, code: string) => routerViolations([parseSource(path, code)]).length;
+  assert.equal(bad('lib/shared/x.ts', 'const h = window.location.hash;'), 1);
+  assert.equal(bad('lib/shared/x.ts', 'history.pushState(null, "", "#/");'), 1);
+  assert.equal(bad('lib/shared/x.ts', 'window.history.replaceState(null, "", "#/");'), 1);
+  assert.equal(bad('lib/shared/x.ts', 'window.addEventListener("hashchange", f);'), 1);
+  assert.equal(bad('lib/shared/x.ts', 'const r = createRouter({});'), 1);
+  assert.equal(bad('router.ts', 'const r = createRouter({});'), 0);
+});
+
 export function reExports(s: Source): { name: string; line: number }[] {
   const imported = new Set<string>();
   for (const st of s.ast.statements) {
