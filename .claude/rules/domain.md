@@ -8,4 +8,4 @@ How-to only. The rule statements (pure, no imports from other layers) are in CLA
 - Use the words in CLAUDE.md's Domain language in names and in user-facing text built here.
 - A test calls the function with plain values; no database, no fakes. Name the rule it checks. Every function a context's `index.ts` exports needs one such pure test (`rule:domain-tests`): a test file that imports nothing from `db/`, `application/`, `adapters/`, `test/fixtures/`, `node:fs` or `node:child_process`. A test that needs one of those does not count, so keep the pure cases in a file of their own.
 - Changing a type used by a table or by `api/contract/`: follow the `model-change` skill.
-- Write no code comment but the file's leading one-line comment (`rule:code-comments`): put the reason in a name, a type or a test.
+- Write no code comment but the file's leading one-line comment and the comments on a type and its fields, which the model docs print (`rule:code-comments`): put any other reason in a name, a type or a test.
