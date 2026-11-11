@@ -1,6 +1,13 @@
 // What a worker's claude is told and allowed.
 import { PLAN_FILE, parsePlanWithText } from '../work/index.ts';
-import { PR_SUMMARY_FORMAT } from '../landing/index.ts';
+import {
+  type CodeCommentCount,
+  type CodeCommentLimits,
+  PR_SUMMARY_FORMAT,
+  codeCommentLimitOn,
+  codeCommentLimitText,
+  codeCommentsText,
+} from '../landing/index.ts';
 import { ALWAYS_DISALLOWED_TOOLS } from '../repos/index.ts';
 import { type ReviewPrompt, reviewPromptBlock } from '../landing/index.ts';
 import { NEVER_APPLIED, PROTECTED_PREFIXES, editPathFor } from '../repos/index.ts';
@@ -10,16 +17,20 @@ import { INTERRUPTED, type Run } from './run.ts';
 import { UNBLOCK_NOTE } from './unblock.ts';
 import { REVIEW_NOTE } from './review.ts';
 
-export function workerSystemPrompt(testCmd: string | null): string {
+export function workerSystemPrompt(testCmd: string | null, limits: CodeCommentLimits | null = null): string {
+  const codeComments =
+    limits && codeCommentLimitOn(limits)
+      ? `- Write no code comments beyond what this repo's own rules ask for: AgentDeck counts the ones your branch adds, and sends a branch that adds more than ${codeCommentLimitText(limits)} back to you to delete them.\n`
+      : '';
   return `You are running unattended as an AgentDeck worker inside a git worktree on your own branch.
 - Complete the task fully, keeping changes focused on it.
 - Change files with the Edit and Write tools, not shell redirection or sed.
-${
-  testCmd
-    ? `- Before you finish, run \`${testCmd}\` and fix what fails, including formatting. AgentDeck runs it after you, and the task fails if it doesn't pass.
+${codeComments}${
+    testCmd
+      ? `- Before you finish, run \`${testCmd}\` and fix what fails, including formatting. AgentDeck runs it after you, and the task fails if it doesn't pass.
 - Your shell commands run in a sandbox, and AgentDeck runs \`${testCmd}\` again outside it. A test that fails only because the sandbox refused something (EPERM, "operation not permitted", a refused host or port, a blocked \`ps\`) is not a reason to stop: fix every other failure, then finish with STATUS: DONE and name those tests in your final message.`
-    : "- Run the project's tests if there are any, and fix failures you caused."
-}
+      : "- Run the project's tests if there are any, and fix failures you caused."
+  }
 - Some commands are refused by AgentDeck's tool rules. A refusal covers only that one command: try a simpler command or another tool (Read, Glob, Grep instead of cat, find, grep), and keep working.
 - Commit your work with clear messages. Never push, never switch branches.
 - If the task asks for a plan, or is big enough to need one, and the prompt gives you none, write it to ${PLAN_FILE}. AgentDeck keeps it as the task's plan after the run; git ignores that file, so never commit it or copy it elsewhere in the repo. AgentDeck reads it from these attributes:
@@ -125,6 +136,23 @@ export function buildResumePrompt(task: Pick<Task, 'id' | 'title'>): string {
     '- `git status` and `git diff` for uncommitted changes.',
     `- \`git log\`: before resuming you, AgentDeck commits whatever was left uncommitted as "${leftovers}", and may have merged the base branch in.`,
     'Then finish the task as instructed before, and end with the STATUS line.',
+  ].join('\n');
+}
+
+export const CODE_COMMENTS_NOTE = 'AgentDeck counted the code comments your branch adds';
+
+export const CODE_COMMENTS_MAX_TURNS = 20;
+
+export function buildCodeCommentsPrompt(count: CodeCommentCount, limits: CodeCommentLimits, testCmd: string | null): string {
+  return [
+    `${CODE_COMMENTS_NOTE}: ${codeCommentsText(count, limits)}.`,
+    '',
+    'Files:',
+    ...count.files.map((f) => `- ${f.path}: ${f.lines}`),
+    '',
+    "Delete the code comments you added in these files, keeping only the kinds this repo's own rules (CLAUDE.md and the like) ask for. Change nothing else.",
+    testCmd ? `Then run \`${testCmd}\`, fix what fails, and commit.` : 'Then run the tests if there are any, and commit.',
+    'AgentDeck keeps your earlier final message as the pull request body, so end with just the STATUS line.',
   ].join('\n');
 }
 

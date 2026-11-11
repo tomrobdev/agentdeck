@@ -274,6 +274,8 @@ export const MIGRATIONS: Migration[] = [
   'ALTER TABLE runs ADD COLUMN base_commit TEXT;',
   `ALTER TABLE repos ADD COLUMN code_comment_max_lines INTEGER NOT NULL DEFAULT 5;
    ALTER TABLE repos ADD COLUMN code_comment_max_percent INTEGER NOT NULL DEFAULT 5;`,
+  `ALTER TABLE runs ADD COLUMN code_comment_lines INTEGER;
+   ALTER TABLE runs ADD COLUMN code_comment_percent REAL;`,
 ];
 
 export function migrate(db: DatabaseSync, steps: Migration[] = MIGRATIONS): number {

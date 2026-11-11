@@ -41,6 +41,8 @@ export type { CheckCounts, CheckState, ChecksSummary, PrCheck, StoredChecks } fr
 export {
   DEFAULT_CODE_COMMENT_MAX_LINES,
   DEFAULT_CODE_COMMENT_MAX_PERCENT,
+  codeCommentLimitOn,
+  codeCommentLimitText,
   codeCommentMaxLinesError,
   codeCommentMaxPercentError,
   codeCommentsOver,
@@ -48,7 +50,7 @@ export {
   countCodeComments,
   parseAddedLines,
 } from './merge/code-comments.ts';
-export type { AddedLines } from './merge/code-comments.ts';
+export type { AddedLines, CodeCommentCount, CodeCommentLimits } from './merge/code-comments.ts';
 export { isConflicting } from './merge/conflict.ts';
 export {
   conflictsWithBase,

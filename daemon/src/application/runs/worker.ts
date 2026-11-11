@@ -4,7 +4,17 @@ import type { App } from '../ports/app.ts';
 import type { Checkout } from '../ports/workspace.ts';
 import { conflictReason, syncSummary } from '../../domain/runs/index.ts';
 import { unfinishedSteps, unfinishedSummary } from '../../domain/work/index.ts';
-import { type PromptPlan, type SummaryContext, buildPrompt, buildResumePrompt } from '../../domain/runs/index.ts';
+import {
+  CODE_COMMENTS_MAX_TURNS,
+  type PromptPlan,
+  type SummaryContext,
+  buildCodeCommentsPrompt,
+  buildPrompt,
+  buildResumePrompt,
+  withTurnUsage,
+  workerSystemPrompt,
+} from '../../domain/runs/index.ts';
+import { codeCommentFields, measureCodeComments } from './code-comments.ts';
 import { latestReviewNote } from '../../domain/work/index.ts';
 import {
   type Run,
@@ -124,27 +134,38 @@ async function runOpened(app: App, task: Task, repo: Repo, wt: Checkout, opened:
     app.runLog.event(log, { type: 'agentdeck_error', text: `write plan file: ${errorMessage(err)}` });
   }
 
+  const systemPrompt = workerSystemPrompt(repo.test_cmd, repo);
   let ran: TaskRunEnd;
   try {
-    ran = await startTaskRun(app, task, { kind: 'work', repo, worktree: wt.path, prompt, note, opened, resume });
+    ran = await startTaskRun(app, task, { kind: 'work', repo, worktree: wt.path, prompt, note, opened, resume, systemPrompt });
   } catch (err) {
     return finish(app, task, opened, { outcome: 'failed', reason: `settings:${errorMessage(err)}` });
   }
   const { result, end } = ran;
-  const runFields: Partial<Run> = ran.fields;
+  let runFields: Partial<Run> = ran.fields;
 
-  try {
-    await ws.commit(wt.path, leftoversMessage(task));
-  } catch (err) {
-    app.runLog.event(log, { type: 'agentdeck_error', text: `commit leftovers: ${errorMessage(err)}` });
-  }
-  try {
-    const edits = await ws.applyProtectedEdits(wt.path);
-    if (edits.applied.length || edits.refused.length) app.runLog.event(log, { type: 'agentdeck_protected_edits', ...edits });
-  } catch (err) {
-    app.runLog.event(log, { type: 'agentdeck_error', text: `apply protected edits: ${errorMessage(err)}` });
-  }
-  await giveBackPlan(app, task, wt.path, log);
+  const afterClaude = async (): Promise<void> => {
+    try {
+      await ws.commit(wt.path, leftoversMessage(task));
+    } catch (err) {
+      app.runLog.event(log, { type: 'agentdeck_error', text: `commit leftovers: ${errorMessage(err)}` });
+    }
+    try {
+      const edits = await ws.applyProtectedEdits(wt.path);
+      if (edits.applied.length || edits.refused.length) app.runLog.event(log, { type: 'agentdeck_protected_edits', ...edits });
+    } catch (err) {
+      app.runLog.event(log, { type: 'agentdeck_error', text: `apply protected edits: ${errorMessage(err)}` });
+    }
+    await giveBackPlan(app, task, wt.path, log);
+  };
+  const runTests = async (): Promise<boolean | null> => {
+    if (!repo.test_cmd) return null;
+    const tests = await ws.runCommand(repo.test_cmd, wt.path, TEST_TIMEOUT_MS);
+    app.runLog.event(log, { type: 'agentdeck_tests', passed: tests.passed, output: tests.output });
+    runFields.tests_passed = tests.passed;
+    return tests.passed;
+  };
+  await afterClaude();
 
   const denials = result?.permission_denials ?? [];
   runFields.denials = denials.length;
@@ -154,15 +175,33 @@ async function runOpened(app: App, task: Task, repo: Repo, wt: Checkout, opened:
   if (end.kind === 'finished') {
     status = parseStatus(end.result.result);
     if (review && runFields.result_text) runFields.result_text = recordAnswers(app, review.comments, runFields.result_text);
-    if (!status.blocked && repo.test_cmd) {
-      const tests = await ws.runCommand(repo.test_cmd, wt.path, TEST_TIMEOUT_MS);
-      app.runLog.event(log, { type: 'agentdeck_tests', passed: tests.passed, output: tests.output });
-      runFields.tests_passed = tests.passed;
-      testsPassed = tests.passed;
-    }
+    if (!status.blocked) testsPassed = await runTests();
     if (!status.blocked && testsPassed !== false) ahead = await ws.commitsAhead(wt.path, repo.base_branch);
   }
-  const { result: outcome, pause } = runOutcome({ end, status, testsPassed, commitsAhead: ahead, denials: denials.length });
+  let { result: outcome, pause } = runOutcome({ end, status, testsPassed, commitsAhead: ahead, denials: denials.length });
+
+  const measured = outcome.outcome === 'done' ? await measureCodeComments(app, repo, wt.path, log) : null;
+  if (measured) Object.assign(runFields, codeCommentFields(measured.count));
+  if (measured?.over && runFields.session_id) {
+    const turnPrompt = buildCodeCommentsPrompt(measured.count, repo, repo.test_cmd);
+    const maxTurns = Math.min(CODE_COMMENTS_MAX_TURNS, task.max_turns);
+    const turn = await startTaskRun(app, task, {
+      kind: 'work',
+      repo,
+      worktree: wt.path,
+      prompt: turnPrompt,
+      opened,
+      resume: { session: runFields.session_id, prompt: turnPrompt, maxTurns },
+      systemPrompt,
+    });
+    runFields = withTurnUsage(runFields, turn.fields);
+    if (turn.end.kind === 'cancelled') return finish(app, task, opened, { outcome: 'cancelled' }, runFields);
+    await afterClaude();
+    testsPassed = await runTests();
+    const again = await measureCodeComments(app, repo, wt.path, log);
+    if (again) Object.assign(runFields, codeCommentFields(again.count));
+    ({ result: outcome, pause } = runOutcome({ end, status, testsPassed, commitsAhead: ahead, denials: denials.length }));
+  }
 
   if (outcome.outcome === 'done' && hasPlanLink(task)) {
     try {

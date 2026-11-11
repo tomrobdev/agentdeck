@@ -1,5 +1,13 @@
 // The runs context's interface: what other contexts and the layers above import.
-export { buildPrompt, buildResolvePrompt, buildResumePrompt, claudeArgs } from './prompt.ts';
+export {
+  CODE_COMMENTS_MAX_TURNS,
+  buildCodeCommentsPrompt,
+  buildPrompt,
+  buildResolvePrompt,
+  buildResumePrompt,
+  claudeArgs,
+  workerSystemPrompt,
+} from './prompt.ts';
 export type { PromptPlan } from './prompt.ts';
 export { escalation, escalationReason, escalationSince } from './escalate.ts';
 export { resolveOutcome } from './resolve.ts';
@@ -25,6 +33,7 @@ export {
   resultFields,
   resumeFailed,
   runOutcome,
+  withTurnUsage,
   setupFailedReason,
 } from './run-result.ts';
 export type { ClaudeResult, ClaudeRun, RunClass, UsageWindow, WorkerResult } from './run-result.ts';

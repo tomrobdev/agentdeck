@@ -125,11 +125,18 @@ export function codeCommentsOver(count: Pick<CodeCommentCount, 'lines' | 'percen
   return (maxLines > 0 && count.lines > maxLines) || (maxPercent > 0 && count.percent > maxPercent);
 }
 
-const limitText = ({ code_comment_max_lines: lines, code_comment_max_percent: percent }: CodeCommentLimits): string =>
-  [lines > 0 ? `${lines}` : null, percent > 0 ? `${percent}%` : null].filter(Boolean).join(' or ');
+export const codeCommentLimitOn = (limits: CodeCommentLimits): boolean =>
+  limits.code_comment_max_lines > 0 || limits.code_comment_max_percent > 0;
 
-export const codeCommentsText = (count: Pick<CodeCommentCount, 'lines' | 'percent'>, limits: CodeCommentLimits): string =>
-  `${plural(count.lines, 'code comment line')} added (${Math.round(count.percent)}%), over the limit of ${limitText(limits)}`;
+export function codeCommentLimitText(limits: CodeCommentLimits): string {
+  const { code_comment_max_lines: maxLines, code_comment_max_percent: maxPercent } = limits;
+  return [maxLines > 0 ? plural(maxLines, 'line') : null, maxPercent > 0 ? `${maxPercent}%` : null].filter(Boolean).join(' or ');
+}
+
+export function codeCommentsText(count: Pick<CodeCommentCount, 'lines' | 'percent'>, limits: CodeCommentLimits): string {
+  const side = codeCommentsOver(count, limits) ? 'over' : 'within';
+  return `${plural(count.lines, 'code comment line')} added (${Math.round(count.percent)}%), ${side} the limit of ${codeCommentLimitText(limits)}`;
+}
 
 export const codeCommentsTag = (count: Pick<CodeCommentCount, 'lines' | 'percent'>): string =>
   `code comments +${count.lines} (${Math.round(count.percent)}%)`;

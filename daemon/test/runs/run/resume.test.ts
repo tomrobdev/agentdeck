@@ -56,6 +56,8 @@ const run = (o: Partial<Run>): Run => ({
   base_commit: null,
   run_end: null,
   last_test_failed: null,
+  code_comment_lines: null,
+  code_comment_percent: null,
   ...o,
 });
 
