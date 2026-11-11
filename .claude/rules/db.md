@@ -9,3 +9,4 @@ How-to only. The rule statements (queries only here, guarded status updates, app
 - Never edit a shipped step in `schema.ts`: append a new one. `pnpm db:generate` prints the SQL; `pnpm db:check` and `pnpm typecheck` (`types-check.ts`) say when `tables.ts`, the migrations, the mappers and the domain types disagree.
 - Once a step is final, append its hash to `daemon/test/db/migrations.lock`.
 - Tests use a scratch database (`daemon/scripts/scratch-db.ts`), never `~/.agentdeck`.
+- A new step in `schema.ts` gets a one-line heading comment (`// 12: what it does.`), which the docs print; no other code comment (`rule:code-comments`).
