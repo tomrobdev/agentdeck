@@ -1,12 +1,15 @@
 // A PR's checks on GitHub, one by one: what `statusCheckRollup` says about each, and what is kept on the task.
 import { carryFailures, failingChecks, failureLine } from './check-failures.ts';
+import { ciNotRunMessages } from './ci-not-run.ts';
 import type { PullRequest } from './pr.ts';
 
 /**
  * How one check stands. NEUTRAL and SKIPPED conclusions are `skipped`; only SUCCESS passed. Anything GitHub may add or
  * that this code does not know (STALE, an empty conclusion on a finished run) is `pending`: it never counts as a pass.
+ * `not_run`: GitHub reported a failure for an Actions job that never started (no runner and no steps, or GitHub's "was
+ * not started" annotation: a billing stop, a spending limit, a disabled workflow); it is neither a pass nor a failure.
  */
-export type CheckState = 'pass' | 'fail' | 'pending' | 'skipped';
+export type CheckState = 'pass' | 'fail' | 'pending' | 'skipped' | 'not_run';
 
 /** One check on a PR's head commit: a GitHub check run (Actions or an app) or a commit status. */
 export interface PrCheck {
@@ -26,6 +29,8 @@ export interface PrCheck {
   excerpt?: string;
   /** Why the log could not be read, in place of the excerpt. */
   excerpt_error?: string;
+  /** GitHub's message for a job that never started (`not_run`), read once for the head it was reported on. */
+  not_run?: string;
 }
 
 /** What GitHub reports about a PR's checks, counted. */
@@ -55,6 +60,8 @@ export interface ChecksSummary extends CheckCounts {
   failing_names: string[];
   /** Each failing check in a line (`failureLine`): its name, the failed step and what failed. */
   failing_lines: string[];
+  /** GitHub's messages for the jobs that never started, each once (`ciNotRunMessages`); empty when every job started. */
+  not_run: string[];
   read_at: string;
 }
 
@@ -122,6 +129,12 @@ export function countWithSteps(
   return countOfKept(carryFailures(stored, pr.head ?? null, pr.check_list).checks);
 }
 
+export function withCheckList<T extends { check_list?: PrCheck[]; checks: CheckCounts }>(pr: T, kept: PrCheck[]): T {
+  if (!pr.check_list) return pr;
+  const notRun = countOf(pr.check_list).failing - countOf(kept).failing;
+  return { ...pr, check_list: kept, checks: { ...pr.checks, failing: Math.max(0, pr.checks.failing - notRun) } };
+}
+
 export const countChecks = (rollup: unknown): CheckCounts => countOf(parseChecks(rollup));
 
 export const checksSettled = (checks: CheckCounts): boolean => checks.total > 0 && checks.pending === 0;
@@ -148,6 +161,7 @@ export function checksSummary(pr: PullRequest | null): ChecksSummary | null {
     ...countOf(stored.checks),
     failing_names: failing.map((c) => c.name),
     failing_lines: failing.map(failureLine),
+    not_run: ciNotRunMessages(stored.checks),
     read_at: stored.read_at,
   };
 }

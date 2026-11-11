@@ -39,6 +39,11 @@ export interface Repo {
   auto_merge_max_lines: number;
   /** JSON array of path prefixes; a PR touching one needs a person. */
   auto_merge_skip: string;
+  /**
+   * 1 = a GitHub check that never started (a billing stop, a spending limit) does not stop auto-merge when the last tested
+   * run passed (off by default). Missing from a daemon that predates it.
+   */
+  ci_not_run_ok?: number;
   /** A branch adding more code comment lines is over the limit; 0 turns this limit off. Missing from a daemon that predates it. */
   code_comment_max_lines?: number;
   /** A branch whose added lines are a greater share of code comments, in percent, is over the limit; 0 turns this limit off. Missing from a daemon that predates it. */
@@ -87,6 +92,7 @@ export interface RepoPatch {
   auto_merge?: boolean;
   auto_merge_max_lines?: number;
   auto_merge_skip?: string[];
+  ci_not_run_ok?: boolean;
   code_comment_max_lines?: number;
   code_comment_max_percent?: number;
   /** A model alias or claude-… id; null or "" clears it. */

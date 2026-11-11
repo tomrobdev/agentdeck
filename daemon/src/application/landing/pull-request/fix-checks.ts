@@ -47,6 +47,7 @@ export async function fixChecks(app: App, id: TaskId): Promise<FixChecksResult> 
         reads.set(url, pending);
         read = await pending;
       }
+      if (read.state === 'not_run') return { name: c.name, url: c.url, log_error: `CI did not run: ${read.not_run ?? 'it never started'}` };
       return read.excerpt
         ? { name: c.name, url: c.url, step: read.step ?? null, excerpt: headBytes(read.excerpt, budget) }
         : { name: c.name, url: c.url, step: read.step ?? null, log_error: read.excerpt_error ?? 'gh printed no failed steps' };

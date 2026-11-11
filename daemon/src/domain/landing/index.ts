@@ -36,7 +36,9 @@ export {
   withoutFailure,
 } from './pull-request/check-failures.ts';
 export type { FailedCheck, JobStep } from './pull-request/check-failures.ts';
-export { checksSettled, checksSummary, countOfKept, countWithSteps, nextChecks } from './pull-request/checks.ts';
+export { checksSettled, checksSummary, countOfKept, countWithSteps, nextChecks, withCheckList } from './pull-request/checks.ts';
+export { asNotRun, notStartedMessage } from './pull-request/ci-not-run.ts';
+export type { JobStart } from './pull-request/ci-not-run.ts';
 export type { CheckCounts, CheckState, ChecksSummary, PrCheck, StoredChecks } from './pull-request/checks.ts';
 export {
   DEFAULT_CODE_COMMENT_MAX_LINES,
@@ -64,7 +66,17 @@ export {
 export type { MergeRequestMove, MergeRequestView } from './merge/merge-request.ts';
 export { nextPrState, prFrom, prStatesFor, seenMove } from './pull-request/pr-moves.ts';
 export type { PrFrom, PrMove } from './pull-request/pr-moves.ts';
-export { mergeCheck, mergeFailure, mergeFindings, parseBranchPrs, parseJobSteps, parsePrDetails, verdictView } from './merge/merge.ts';
+export {
+  mergeCheck,
+  mergeFailure,
+  mergeFindings,
+  parseAnnotations,
+  parseBranchPrs,
+  parseJobStart,
+  parseJobSteps,
+  parsePrDetails,
+  verdictView,
+} from './merge/merge.ts';
 export type {
   AutoMergeCheck,
   BranchPr,

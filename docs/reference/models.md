@@ -389,6 +389,7 @@ A task's checks in a line's worth: the counts and the failing checks' names.
 | --------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `failing_names` | `string[]`                                               |                                                                                                                                                                                                             |
 | `failing_lines` | `string[]`                                               | Each failing check in a line (`failureLine`): its name, the failed step and what failed.                                                                                                                    |
+| `not_run`       | `string[]`                                               | GitHub's messages for the jobs that never started, each once (`ciNotRunMessages`); empty when every job started.                                                                                            |
 | `read_at`       | `string`                                                 |                                                                                                                                                                                                             |
 | `total`         | `number`                                                 |                                                                                                                                                                                                             |
 | `failing`       | `number`                                                 |                                                                                                                                                                                                             |
@@ -462,6 +463,15 @@ The task finished but its PR could not be opened. `url` is the PR an earlier att
 | `auto_merge_checked_at` | `string \| null`         | when that check was made                                      |
 | `merge_request`         | `PrMergeRequest \| null` |                                                               |
 
+### JobStart
+
+What GitHub's job API says about whether a job started: the runner it got and how many steps it ran.
+
+| Field         | Type             | Comment                                                |
+| ------------- | ---------------- | ------------------------------------------------------ |
+| `runner_name` | `string \| null` | The runner's name; null when GitHub gave the job none. |
+| `steps`       | `number`         |                                                        |
+
 ### JobStep
 
 One step of a GitHub Actions job, as `gh api repos/{owner}/{repo}/actions/jobs/<id>` lists it.
@@ -483,21 +493,22 @@ One step of a GitHub Actions job, as `gh api repos/{owner}/{repo}/actions/jobs/<
 
 One fact about a PR that bears on merging it. A problem stops any merge; anything else is a warning a person may wave through.
 
-| Field     | Type                                                                                                                                      | Comment |
-| --------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| `kind`    | `"not_open" \| "lands_after" \| "conflict" \| "draft" \| "behind" \| "blocked" \| "tests_failed" \| "checks_failing" \| "checks_pending"` |         |
-| `problem` | `boolean`                                                                                                                                 |         |
-| `text`    | `string`                                                                                                                                  |         |
+| Field     | Type                                                                                                                                                      | Comment |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `kind`    | `"not_open" \| "lands_after" \| "conflict" \| "draft" \| "behind" \| "blocked" \| "tests_failed" \| "checks_failing" \| "checks_pending" \| "ci_not_run"` |         |
+| `problem` | `boolean`                                                                                                                                                 |         |
+| `text`    | `string`                                                                                                                                                  |         |
 
 ### MergeInput
 
-| Field           | Type                                             | Comment                                                                                                              |
-| --------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
-| `pr_state`      | `PrState \| null`                                |                                                                                                                      |
-| `pr`            | `PrDetails`                                      |                                                                                                                      |
-| `tests_passed`  | `boolean \| null`                                | Whether the last run that ran the tests passed them; null when none did.                                             |
-| `lands_after?`  | `{ on: number; reason: string; }[] \| undefined` | The tasks this one lands after that have not landed (`unlandedAfter`), each with why. Missing means none.            |
-| `auto_resolve?` | `boolean \| undefined`                           | False when the repo has auto_resolve off: no sync starts on its own, so a conflict needs a person. Missing means on. |
+| Field            | Type                                             | Comment                                                                                                                                                        |
+| ---------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pr_state`       | `PrState \| null`                                |                                                                                                                                                                |
+| `pr`             | `PrDetails`                                      |                                                                                                                                                                |
+| `tests_passed`   | `boolean \| null`                                | Whether the last run that ran the tests passed them; null when none did.                                                                                       |
+| `lands_after?`   | `{ on: number; reason: string; }[] \| undefined` | The tasks this one lands after that have not landed (`unlandedAfter`), each with why. Missing means none.                                                      |
+| `auto_resolve?`  | `boolean \| undefined`                           | False when the repo has auto_resolve off: no sync starts on its own, so a conflict needs a person. Missing means on.                                           |
+| `ci_not_run_ok?` | `boolean \| undefined`                           | The repo's ci_not_run_ok: when on and the last tested run passed, a GitHub check that never started does not stop a merge without a person. Missing means off. |
 
 ### MergeReason
 
@@ -568,6 +579,7 @@ One check on a PR's head commit: a GitHub check run (Actions or an app) or a com
 | `step_url?`      | `string \| null \| undefined` |                                                                                                                                                                                            |
 | `excerpt?`       | `string \| undefined`         | The lines of the failed step's log that say why (`failureExcerpt`).                                                                                                                        |
 | `excerpt_error?` | `string \| undefined`         | Why the log could not be read, in place of the excerpt.                                                                                                                                    |
+| `not_run?`       | `string \| undefined`         | GitHub's message for a job that never started (`not_run`), read once for the head it was reported on.                                                                                      |
 
 ### PrChecks
 
@@ -1159,35 +1171,36 @@ A task in running (or being cancelled) and the process of its unfinished run, if
 
 ### Repo
 
-| Field                      | Type               | Comment                                                                                                                                                        |
-| -------------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`                       | `RepoId`           |                                                                                                                                                                |
-| `name`                     | `string`           |                                                                                                                                                                |
-| `path`                     | `string`           |                                                                                                                                                                |
-| `base_branch`              | `string`           |                                                                                                                                                                |
-| `test_cmd`                 | `string \| null`   |                                                                                                                                                                |
-| `allowed_tools`            | `string[] \| null` | Tool rules the repo set itself; null = the generic defaults plus the toolchain's rules.                                                                        |
-| `auto_approve`             | `boolean`          | Planner tasks skip approval.                                                                                                                                   |
-| `proposed_at`              | `string \| null`   |                                                                                                                                                                |
-| `toolchain`                | `string \| null`   | pnpm \| yarn \| npm \| cargo \| uv \| go, null = not detected                                                                                                  |
-| `setup_cmd`                | `string \| null`   | run in each worktree before claude                                                                                                                             |
-| `paused_reason`            | `string \| null`   | set = no task of this repo is claimed until `repo resume` or a passing doctor                                                                                  |
-| `pr_mode`                  | `PrMode`           |                                                                                                                                                                |
-| `merge_method`             | `MergeMethod`      | how a PR is merged from the app unless the person picks another                                                                                                |
-| `auto_resolve`             | `boolean`          | The daemon starts a resolve run on its own when a branch conflicts with the base.                                                                              |
-| `auto_unblock`             | `boolean`          | The daemon starts an unblock run on its own when a task blocks (domain/runs/unblock.ts); off by default.                                                       |
-| `auto_review`              | `boolean`          | The daemon starts a review run on its own when a task is done (domain/runs/review.ts), and a clean verdict may stand in for a person's review; off by default. |
-| `sandbox`                  | `boolean`          | The agent's Bash commands run in Claude Code's sandbox (the default).                                                                                          |
-| `archived_at`              | `string \| null`   | set = hidden everywhere and its work stopped, until `repo unarchive`                                                                                           |
-| `network`                  | `string[]`         | Hosts sandboxed commands may reach; none = empty.                                                                                                              |
-| `auto_merge`               | `boolean`          | The daemon merges a done task's PR on its own when it passes the auto-merge check.                                                                             |
-| `auto_merge_max_lines`     | `number`           | a PR changing more lines (additions + deletions) needs a person                                                                                                |
-| `auto_merge_skip`          | `string[]`         | Path prefixes; a PR touching one needs a person.                                                                                                               |
-| `code_comment_max_lines`   | `number`           | A branch adding more code comment lines than this is over the limit; 0 turns this limit off.                                                                   |
-| `code_comment_max_percent` | `number`           | A branch whose added lines are a greater share of code comments than this percent is over the limit; 0 turns this limit off.                                   |
-| `model`                    | `string \| null`   | The model a new task of this repo takes when it names none; null follows the default_model setting.                                                            |
-| `escalate`                 | `boolean`          | A retry after a failure a stronger model may fix runs one model up (domain/runs/escalate.ts); on by default.                                                   |
-| `created_at`               | `string`           |                                                                                                                                                                |
+| Field                      | Type               | Comment                                                                                                                                                                                     |
+| -------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                       | `RepoId`           |                                                                                                                                                                                             |
+| `name`                     | `string`           |                                                                                                                                                                                             |
+| `path`                     | `string`           |                                                                                                                                                                                             |
+| `base_branch`              | `string`           |                                                                                                                                                                                             |
+| `test_cmd`                 | `string \| null`   |                                                                                                                                                                                             |
+| `allowed_tools`            | `string[] \| null` | Tool rules the repo set itself; null = the generic defaults plus the toolchain's rules.                                                                                                     |
+| `auto_approve`             | `boolean`          | Planner tasks skip approval.                                                                                                                                                                |
+| `proposed_at`              | `string \| null`   |                                                                                                                                                                                             |
+| `toolchain`                | `string \| null`   | pnpm \| yarn \| npm \| cargo \| uv \| go, null = not detected                                                                                                                               |
+| `setup_cmd`                | `string \| null`   | run in each worktree before claude                                                                                                                                                          |
+| `paused_reason`            | `string \| null`   | set = no task of this repo is claimed until `repo resume` or a passing doctor                                                                                                               |
+| `pr_mode`                  | `PrMode`           |                                                                                                                                                                                             |
+| `merge_method`             | `MergeMethod`      | how a PR is merged from the app unless the person picks another                                                                                                                             |
+| `auto_resolve`             | `boolean`          | The daemon starts a resolve run on its own when a branch conflicts with the base.                                                                                                           |
+| `auto_unblock`             | `boolean`          | The daemon starts an unblock run on its own when a task blocks (domain/runs/unblock.ts); off by default.                                                                                    |
+| `auto_review`              | `boolean`          | The daemon starts a review run on its own when a task is done (domain/runs/review.ts), and a clean verdict may stand in for a person's review; off by default.                              |
+| `sandbox`                  | `boolean`          | The agent's Bash commands run in Claude Code's sandbox (the default).                                                                                                                       |
+| `archived_at`              | `string \| null`   | set = hidden everywhere and its work stopped, until `repo unarchive`                                                                                                                        |
+| `network`                  | `string[]`         | Hosts sandboxed commands may reach; none = empty.                                                                                                                                           |
+| `auto_merge`               | `boolean`          | The daemon merges a done task's PR on its own when it passes the auto-merge check.                                                                                                          |
+| `auto_merge_max_lines`     | `number`           | a PR changing more lines (additions + deletions) needs a person                                                                                                                             |
+| `auto_merge_skip`          | `string[]`         | Path prefixes; a PR touching one needs a person.                                                                                                                                            |
+| `ci_not_run_ok`            | `boolean`          | A GitHub check that never started (a billing stop, a spending limit, a disabled workflow) does not stop auto-merge when the last tested run passed the repo's test command; off by default. |
+| `code_comment_max_lines`   | `number`           | A branch adding more code comment lines than this is over the limit; 0 turns this limit off.                                                                                                |
+| `code_comment_max_percent` | `number`           | A branch whose added lines are a greater share of code comments than this percent is over the limit; 0 turns this limit off.                                                                |
+| `model`                    | `string \| null`   | The model a new task of this repo takes when it names none; null follows the default_model setting.                                                                                         |
+| `escalate`                 | `boolean`          | A retry after a failure a stronger model may fix runs one model up (domain/runs/escalate.ts); on by default.                                                                                |
+| `created_at`               | `string`           |                                                                                                                                                                                             |
 
 ### ToolchainInfo
 

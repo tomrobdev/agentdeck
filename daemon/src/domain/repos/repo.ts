@@ -49,6 +49,11 @@ export interface Repo {
   auto_merge_max_lines: number; // a PR changing more lines (additions + deletions) needs a person
   /** Path prefixes; a PR touching one needs a person. */
   auto_merge_skip: string[];
+  /**
+   * A GitHub check that never started (a billing stop, a spending limit, a disabled workflow) does not stop auto-merge when
+   * the last tested run passed the repo's test command; off by default.
+   */
+  ci_not_run_ok: boolean;
   /** A branch adding more code comment lines than this is over the limit; 0 turns this limit off. */
   code_comment_max_lines: number;
   /** A branch whose added lines are a greater share of code comments than this percent is over the limit; 0 turns this limit off. */

@@ -37,6 +37,7 @@ const ALLOWED: Allowed[] = [
   { file: 'domain/operations/health.ts', line: /another daemon holds port/, why: PLAIN },
   { file: 'domain/landing/pull-request/checks.ts', line: /\bjobs?\b/i, why: JOB },
   { file: 'domain/landing/pull-request/check-failures.ts', line: /\bjobs?\b/i, why: JOB },
+  { file: 'domain/landing/pull-request/ci-not-run.ts', line: /\bjobs?\b/i, why: JOB },
   { file: 'adapters/github/github.ts', line: /\bjobs?\b/i, why: JOB },
   { file: 'application/landing/pull-request/check-failures.ts', line: /\bjobs?\b/i, why: JOB },
   { file: 'application/ports/code-host.ts', line: /\bjobs?\b/i, why: JOB },

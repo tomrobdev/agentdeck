@@ -18,6 +18,7 @@ export type RepoForm = {
   autoMerge: boolean;
   autoMergeMaxLines: number;
   autoMergeSkip: string;
+  ciNotRunOk: boolean;
   codeCommentMaxLines: number;
   codeCommentMaxPercent: number;
   sandbox: boolean;
@@ -40,6 +41,7 @@ export function toRepoForm(d: RepoDetail): RepoForm {
     autoMerge: !!d.auto_merge,
     autoMergeMaxLines: d.auto_merge_max_lines,
     autoMergeSkip: parseTextList(d.auto_merge_skip, DEFAULT_AUTO_MERGE_SKIP).join(', '),
+    ciNotRunOk: !!d.ci_not_run_ok,
     codeCommentMaxLines: d.code_comment_max_lines ?? DEFAULT_CODE_COMMENT_MAX_LINES,
     codeCommentMaxPercent: d.code_comment_max_percent ?? DEFAULT_CODE_COMMENT_MAX_PERCENT,
     sandbox: !!d.sandbox,
@@ -60,6 +62,7 @@ export function toRepoPatch(f: RepoForm): RepoPatch {
     auto_merge: f.autoMerge,
     auto_merge_max_lines: f.autoMergeMaxLines,
     auto_merge_skip: textList(f.autoMergeSkip),
+    ci_not_run_ok: f.ciNotRunOk,
     code_comment_max_lines: f.codeCommentMaxLines,
     code_comment_max_percent: f.codeCommentMaxPercent,
     sandbox: f.sandbox,

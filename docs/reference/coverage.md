@@ -23,9 +23,9 @@ The least line and branch coverage each group of `daemon/src/` may have (`COVERA
 | `dashboard/lib/insights`   | `dashboard/lib/insights/`                                                                | 100%  | 100%     |
 | `dashboard/lib/landing`    | `dashboard/lib/landing/`                                                                 | 100%  | 96%      |
 | `dashboard/lib/operations` | `dashboard/lib/operations/`                                                              | 92%   | 87%      |
-| `dashboard/lib/runs`       | `dashboard/lib/runs/`                                                                    | 89%   | 88%      |
+| `dashboard/lib/runs`       | `dashboard/lib/runs/`                                                                    | 92%   | 88%      |
 | `dashboard/lib/shared`     | `dashboard/lib/shared/`                                                                  | 72%   | 95%      |
-| `dashboard/lib/work`       | `dashboard/lib/work/`                                                                    | 91%   | 92%      |
+| `dashboard/lib/work`       | `dashboard/lib/work/`                                                                    | 97%   | 92%      |
 | `db`                       | `db/`                                                                                    | 99%   | 94%      |
 | `domain/capacity`          | `domain/capacity/`                                                                       | 100%  | 97%      |
 | `domain/insights`          | `domain/insights/`                                                                       | 100%  | 98%      |

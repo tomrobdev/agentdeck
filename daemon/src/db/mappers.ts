@@ -163,6 +163,7 @@ export const toRepo = (row: RepoRow): Repo => ({
   sandbox: row.sandbox !== 0,
   network: parseTextList(row.network),
   auto_merge: row.auto_merge === 1,
+  ci_not_run_ok: row.ci_not_run_ok === 1,
   auto_merge_skip: parseTextList(row.auto_merge_skip, DEFAULT_AUTO_MERGE_SKIP),
 });
 
@@ -177,6 +178,7 @@ export function repoColumns(fields: Partial<Repo>): Partial<RepoRow> {
     sandbox,
     network,
     auto_merge,
+    ci_not_run_ok,
     auto_merge_skip,
     ...same
   } = fields;
@@ -193,6 +195,7 @@ export function repoColumns(fields: Partial<Repo>): Partial<RepoRow> {
     sandbox: bit(sandbox),
     network: json(network) ?? undefined,
     auto_merge: bit(auto_merge),
+    ci_not_run_ok: bit(ci_not_run_ok),
     auto_merge_skip: json(auto_merge_skip) ?? undefined,
   };
   return Object.fromEntries(Object.entries(columns).filter(([, v]) => v !== undefined));
