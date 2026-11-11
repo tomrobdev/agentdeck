@@ -1,5 +1,5 @@
 // The CodeHost port: pull requests and the pushes that go with them.
-import type { BranchPr, CreatePr, JobStep, PrDetails } from '../../domain/landing/index.ts';
+import type { BranchPr, CreatePr, JobStart, JobStep, PrDetails } from '../../domain/landing/index.ts';
 import type { MergeMethod } from '../../domain/repos/index.ts';
 
 export interface CodeHost {
@@ -13,6 +13,7 @@ export interface CodeHost {
   prDetails(url: string, cwd: string, opts?: { withFiles?: boolean }): Promise<PrDetails>;
   failedLog(cwd: string, run: string, check?: string | null): Promise<string>;
   jobSteps(cwd: string, job: string): Promise<JobStep[]>;
+  jobStart(cwd: string, job: string): Promise<{ job: JobStart; annotations: string[] }>;
   markReady(url: string, cwd: string): Promise<void>;
   merge(pr: { url: string; cwd: string; method: MergeMethod; head: string; message?: { subject: string; body: string } }): Promise<void>;
   deleteRemoteBranch(repoPath: string, branch: string): Promise<void>;

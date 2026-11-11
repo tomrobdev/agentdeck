@@ -4,8 +4,10 @@ import {
   EXCERPT_BYTES,
   type PrCheck,
   actionsRun,
+  asNotRun,
   failedStep,
   failureExcerpt,
+  notStartedMessage,
   stepUrl,
   withoutFailure,
 } from '../../../domain/landing/index.ts';
@@ -14,6 +16,11 @@ import { errorMessage } from '../../../domain/shared/index.ts';
 export async function readFailure(app: App, cwd: string, check: PrCheck, bytes = EXCERPT_BYTES): Promise<PrCheck> {
   const run = actionsRun(check.url);
   if (!run) return check;
+  if (run.job) {
+    const start = await app.codeHost.jobStart(cwd, run.job).catch(() => null);
+    const notRun = start && notStartedMessage(start.job, start.annotations);
+    if (notRun) return asNotRun(check, notRun);
+  }
   const [steps, log] = await Promise.allSettled([
     run.job ? app.codeHost.jobSteps(cwd, run.job) : Promise.resolve([]),
     app.codeHost.failedLog(cwd, run.run, run.job),

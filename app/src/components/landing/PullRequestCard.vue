@@ -16,9 +16,10 @@ const { pending, run } = useAction();
 
 const summary = computed(() => finalMessage(props.task.runs));
 
-const ORDER: Record<PrCheck['state'], number> = { fail: 0, pending: 1, pass: 2, skipped: 3 };
+const ORDER: Record<PrCheck['state'], number> = { fail: 0, not_run: 1, pending: 2, pass: 3, skipped: 4 };
 const ICON: Record<PrCheck['state'], { icon: string; cls: string; label: string }> = {
   fail: { icon: '✗', cls: 'text-failed', label: 'failed' },
+  not_run: { icon: '⊘', cls: 'text-blocked', label: 'did not run' },
   pending: { icon: '●', cls: 'text-accent', label: 'running' },
   pass: { icon: '✓', cls: 'text-done', label: 'passed' },
   skipped: { icon: '–', cls: 'text-muted', label: 'skipped' },
@@ -34,6 +35,7 @@ const checks = computed(() =>
 const fixable = computed(() => canFixChecks(props.task));
 
 function failure(c: PrCheck): string | null {
+  if (c.state === 'not_run') return `CI did not run: ${c.not_run ?? 'the job never started'}`;
   if (c.state !== 'fail') return null;
   const headline = c.excerpt ? failureHeadline(c.excerpt) : '';
   const what = headline || (c.excerpt_error ? `log not read: ${c.excerpt_error}` : '');

@@ -36,7 +36,9 @@ export {
   withoutFailure,
 } from './pull-request/check-failures.ts';
 export type { FailedCheck, JobStep } from './pull-request/check-failures.ts';
-export { checksSettled, checksSummary, countOfKept, countWithSteps, nextChecks } from './pull-request/checks.ts';
+export { checksSettled, checksSummary, countOfKept, countWithSteps, nextChecks, withCheckList } from './pull-request/checks.ts';
+export { asNotRun, notStartedMessage } from './pull-request/ci-not-run.ts';
+export type { JobStart } from './pull-request/ci-not-run.ts';
 export type { CheckCounts, CheckState, ChecksSummary, PrCheck, StoredChecks } from './pull-request/checks.ts';
 export {
   DEFAULT_CODE_COMMENT_MAX_LINES,
@@ -69,7 +71,9 @@ export {
   mergeFailure,
   mergeFindings,
   mergeSyncsFirst,
+  parseAnnotations,
   parseBranchPrs,
+  parseJobStart,
   parseJobSteps,
   parsePrDetails,
   syncingFirstLine,

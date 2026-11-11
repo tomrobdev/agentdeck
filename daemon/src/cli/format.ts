@@ -130,11 +130,12 @@ export function fmtAutoMerge(v: AutoMergeView): string[] {
 
 export function fmtChecks(c: ChecksSummary, id?: TaskId): string {
   const running = c.pending ? `, ${c.pending} running` : '';
-  if (!c.failing) return `checks   ${c.total} on the PR, none failing${running}`;
+  const notRun = c.not_run?.length ? [`         CI did not run: ${c.not_run.join('; ')}`] : [];
+  if (!c.failing) return [`checks   ${c.total} on the PR, none failing${running}`, ...notRun].join('\n');
   const fix = id === undefined ? '' : `  (agentdeck fix-checks ${id})`;
   const head = `checks   ${c.failing} of ${c.total} failing: ${c.failing_names.join(', ')}${running}${fix}`;
   const details = c.failing_lines.filter((line, i) => line !== c.failing_names[i]);
-  return [head, ...details.map((line) => `         - ${line}`)].join('\n');
+  return [head, ...details.map((line) => `         - ${line}`), ...notRun].join('\n');
 }
 
 export function printDoctor(report: DoctorReport): DoctorReport {

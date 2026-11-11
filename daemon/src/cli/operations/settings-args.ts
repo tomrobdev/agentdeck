@@ -28,7 +28,7 @@ export function settingPatch(key: string | undefined, value: string): SettingsPa
   throw new ActionError(`unknown setting "${key}"; see agentdeck help`);
 }
 
-const REPO_SETTING_USAGE = `usage: agentdeck repo set <repo> auto_approve on|off | auto_resolve on|off | auto_unblock on|off | auto_review on|off | escalate on|off | base_branch <branch> | test_cmd "<cmd>" | setup_cmd "<cmd>" | pr_mode ${PR_MODES.join('|')} | merge_method ${MERGE_METHODS.join('|')} | sandbox on|off | network "<hosts>" | auto_merge on|off | auto_merge_max_lines <n> | auto_merge_skip "<prefixes>" | code_comment_max_lines <n> | code_comment_max_percent <n> | model ${MODELS.join('|')}|"" | tools "<rules>"`;
+const REPO_SETTING_USAGE = `usage: agentdeck repo set <repo> auto_approve on|off | auto_resolve on|off | auto_unblock on|off | auto_review on|off | escalate on|off | base_branch <branch> | test_cmd "<cmd>" | setup_cmd "<cmd>" | pr_mode ${PR_MODES.join('|')} | merge_method ${MERGE_METHODS.join('|')} | sandbox on|off | network "<hosts>" | auto_merge on|off | auto_merge_max_lines <n> | auto_merge_skip "<prefixes>" | ci_not_run_ok on|off | code_comment_max_lines <n> | code_comment_max_percent <n> | model ${MODELS.join('|')}|"" | tools "<rules>"`;
 
 export function repoSettingPatch(key: string | undefined, value: string): RepoPatch {
   if (key === 'pr_mode') return { pr_mode: value as PrMode };
@@ -41,6 +41,7 @@ export function repoSettingPatch(key: string | undefined, value: string): RepoPa
   if (key === 'auto_merge') return { auto_merge: onOff(key, value) };
   if (key === 'auto_merge_max_lines') return { auto_merge_max_lines: Number(value) };
   if (key === 'auto_merge_skip') return { auto_merge_skip: value };
+  if (key === 'ci_not_run_ok') return { ci_not_run_ok: onOff(key, value) };
   if (key === 'code_comment_max_lines') return { code_comment_max_lines: Number(value) };
   if (key === 'code_comment_max_percent') return { code_comment_max_percent: Number(value) };
   if (key === 'sandbox') return { sandbox: onOff(key, value) };

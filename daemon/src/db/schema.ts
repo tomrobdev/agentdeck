@@ -276,6 +276,9 @@ export const MIGRATIONS: Migration[] = [
    ALTER TABLE repos ADD COLUMN code_comment_max_percent INTEGER NOT NULL DEFAULT 5;`,
   `ALTER TABLE runs ADD COLUMN code_comment_lines INTEGER;
    ALTER TABLE runs ADD COLUMN code_comment_percent REAL;`,
+  // 39: repos.ci_not_run_ok (domain/landing/pull-request/ci-not-run.ts): a GitHub check that never started does not stop
+  // auto-merge when the last tested run passed (off by default).
+  'ALTER TABLE repos ADD COLUMN ci_not_run_ok INTEGER NOT NULL DEFAULT 0;',
 ];
 
 export function migrate(db: DatabaseSync, steps: Migration[] = MIGRATIONS): number {

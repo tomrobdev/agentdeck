@@ -4,9 +4,12 @@ import { promisify } from 'node:util';
 import {
   type BranchPr,
   type CreatePr,
+  type JobStart,
   type JobStep,
   type PrDetails,
+  parseAnnotations,
   parseBranchPrs,
+  parseJobStart,
   parseJobSteps,
   parsePrDetails,
 } from '../../domain/landing/index.ts';
@@ -111,6 +114,14 @@ export const github = {
 
   async jobSteps(cwd: string, job: string): Promise<JobStep[]> {
     return parseJobSteps(await gh(['api', `repos/{owner}/{repo}/actions/jobs/${job}`], { cwd }));
+  },
+
+  async jobStart(cwd: string, job: string): Promise<{ job: JobStart; annotations: string[] }> {
+    const [start, annotations] = await Promise.all([
+      gh(['api', `repos/{owner}/{repo}/actions/jobs/${job}`], { cwd }),
+      gh(['api', `repos/{owner}/{repo}/check-runs/${job}/annotations`], { cwd }).catch(() => '[]'),
+    ]);
+    return { job: parseJobStart(start), annotations: parseAnnotations(annotations) };
   },
 
   async markReady(url: string, cwd: string): Promise<void> {

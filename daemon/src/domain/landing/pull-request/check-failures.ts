@@ -158,7 +158,7 @@ export function failureLine(c: Pick<PrCheck, 'name' | 'step' | 'excerpt'>): stri
 export const failureRead = (c: PrCheck): boolean => c.excerpt !== undefined || c.excerpt_error !== undefined;
 
 export function withoutFailure(c: PrCheck): PrCheck {
-  const { step: _step, step_url: _url, excerpt: _excerpt, excerpt_error: _error, ...check } = c;
+  const { step: _step, step_url: _url, excerpt: _excerpt, excerpt_error: _error, not_run: _notRun, ...check } = c;
   return check;
 }
 
@@ -168,9 +168,12 @@ export function carryFailures(
   checks: PrCheck[],
 ): { checks: PrCheck[]; unread: PrCheck[] } {
   const before = previous && previous.head === head ? previous.checks : [];
-  const kept = checks.map((c) => {
+  const kept = checks.map((c): PrCheck => {
     if (c.state !== 'fail') return c;
-    const known = before.find((b) => b.name === c.name && b.url === c.url && b.state === 'fail' && failureRead(b));
+    const known = before.find(
+      (b) => b.name === c.name && b.url === c.url && ((b.state === 'fail' && failureRead(b)) || b.state === 'not_run'),
+    );
+    if (known?.state === 'not_run') return { ...withoutFailure(c), state: 'not_run', ...(known.not_run ? { not_run: known.not_run } : {}) };
     return known ? { ...known, ...withoutFailure(c) } : c;
   });
   return { checks: kept, unread: kept.filter((c) => c.state === 'fail' && !failureRead(c) && actionsRun(c.url)) };

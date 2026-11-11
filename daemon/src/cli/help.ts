@@ -36,6 +36,8 @@ Repos
                                                   planner proposals only when auto_approve is off)
   agentdeck repo set <repo> auto_merge_max_lines <n>  a PR changing more lines needs a person (default ${DEFAULT_AUTO_MERGE_MAX_LINES})
   agentdeck repo set <repo> auto_merge_skip "<prefixes>"  a PR touching these paths needs a person (default "${DEFAULT_AUTO_MERGE_SKIP.join(',')}")
+  agentdeck repo set <repo> ci_not_run_ok on|off  a GitHub check that never started (a billing stop, a spending limit) doesn't
+                                                  stop auto-merge when the last run passed the tests (default off)
   agentdeck repo set <repo> code_comment_max_lines <n>  a branch adding more code comment lines is over the limit
                                                   (0 to 10000, 0 turns it off; default ${DEFAULT_CODE_COMMENT_MAX_LINES})
   agentdeck repo set <repo> code_comment_max_percent <n>  a branch whose added lines are a greater share of code comments

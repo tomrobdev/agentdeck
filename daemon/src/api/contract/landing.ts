@@ -18,6 +18,8 @@ export interface PrCheck {
   excerpt?: string;
   /** Why the log could not be read, in place of the excerpt. */
   excerpt_error?: string;
+  /** GitHub's message for a check that never started (`not_run`: a billing stop, a spending limit, a disabled workflow). */
+  not_run?: string;
 }
 
 /** An open PR's checks in a line's worth: counted, with the failing ones' names. `read_at` is when the PR refresh read them. */
@@ -28,6 +30,8 @@ export interface ChecksSummary {
   failing_names: string[];
   /** Each failing check in a line: "check › tests and coverage: cli: branches 53.6% is below its floor of 54%". */
   failing_lines: string[];
+  /** GitHub's messages for the checks that never started, each once; they count neither as passing nor failing. Missing from a daemon that predates it. */
+  not_run?: string[];
   read_at: string;
 }
 
