@@ -11,6 +11,7 @@ import { mode, setMode } from '../../platform/theme';
 import { taskUrl } from '../../lib/shared/app-url';
 import type { Actions } from '../shared/useActions';
 import { openPanel, showKeys, startMerge, useShell } from '../shared/useShell';
+import { useFixTask } from './useFixTask';
 import type { Approvals } from './useApprovals';
 import { requestedBulk, requestedEdit, requestedView } from './queue/useView';
 
@@ -43,6 +44,14 @@ export function usePaletteCommands(input: PaletteInput, actions: Actions, approv
   const router = useRouter();
   const { goPage, goTo } = useShell();
   const { actOn, openFromQueue } = useTaskActs(input.tasks, actions, approvals);
+  const fixTask = useFixTask();
+  const fixHandler = () => ({
+    terminal: fixTask.terminalName(),
+    run: (id: number) => {
+      const t = input.tasks().find((x) => x.id === id);
+      if (t) void fixTask.fix(t);
+    },
+  });
   return computed(() =>
     paletteItems({
       tasks: input.tasks(),
@@ -54,6 +63,7 @@ export function usePaletteCommands(input: PaletteInput, actions: Actions, approv
         act: actOn,
         merge: startMerge,
         verify: (id) => run(() => runsApi.verify(id), { done: `Verify run started on #${id}` }),
+        fix: fixTask.available.value ? fixHandler() : null,
         copyLink: (id) => {
           navigator.clipboard.writeText(taskUrl(id)).then(
             () => flash(`Copied ${taskUrl(id)}`),

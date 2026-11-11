@@ -10,6 +10,7 @@ import { editorArgv, editorTemplate } from '../../../lib/runs/terminal';
 import { canEdit, levelOf, priorityLevel, statusLabel } from '../../../lib/work/task-view';
 import { useActions } from '../../../composables/shared/useActions';
 import { useTerminal } from '../../../composables/runs/useTerminal';
+import { useFixTask } from '../../../composables/work/useFixTask';
 import PriorityIcon from '../../ui/status/PriorityIcon.vue';
 import StatusIcon from '../../ui/status/StatusIcon.vue';
 import EditableProp from '../overview/EditableProp.vue';
@@ -21,6 +22,7 @@ const { run, flash } = useActions();
 const editable = computed(() => canEdit(props.task));
 const { copied, copy } = useCopy();
 const terminal = useTerminal();
+const { canFixHere, fix } = useFixTask();
 
 function openWorktree() {
   const dir = props.task.worktree;
@@ -73,6 +75,7 @@ const levelLabel = computed(() => levelOf(priorityLevel(props.task.priority)).la
     <div :class="prop">
       <div :class="name">Status</div>
       <div :class="row"><StatusIcon :task="task" /> {{ statusLabel(task.status) }}</div>
+      <button v-if="canFixHere(task)" class="mt-1 px-1.5 py-0 text-xs" @click="fix(task)">Fix with Claude</button>
     </div>
     <EditableProp label="Priority" type="number" :value="String(task.priority)" :editable="editable" @submit="(v) => save('priority', v)">
       <PriorityIcon :priority="task.priority" /> {{ levelLabel }} <span class="text-muted">{{ task.priority }}</span>
