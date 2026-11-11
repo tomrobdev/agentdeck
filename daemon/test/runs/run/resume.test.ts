@@ -21,8 +21,8 @@ const { openDb } = await import('../../fixtures/open-db.ts');
 const { DB_PATH, LOG_DIR } = await import('../../../src/config.ts');
 const { Scheduler } = await import('../../../src/application/scheduler/scheduler.ts');
 const { MAX_RESTARTS } = await import('../../../src/domain/work/lifecycle/lifecycle.ts');
-const { INTERRUPTED, editsSinceCutOff, pickRun, resultFields, resumableSession, resumeFailed, resumeMaxTurns } =
-  await import('../../../src/domain/runs/run.ts');
+const { INTERRUPTED, editsSinceCutOff, pickRun, resumableSession, resumeMaxTurns } = await import('../../../src/domain/runs/run.ts');
+const { resultFields, resumeFailed } = await import('../../../src/domain/runs/run-result.ts');
 const { buildPrompt, buildResumePrompt, claudeArgs } = await import('../../../src/domain/runs/prompt.ts');
 
 let ids = 0;

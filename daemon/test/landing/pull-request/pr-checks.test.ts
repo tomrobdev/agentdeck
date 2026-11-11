@@ -17,9 +17,10 @@ const { refreshPrStates } = await import('../../../src/application/landing/pull-
 const { ActionError, fixChecks, taskDetail, taskViews } = await import('../../../src/application/actions.ts');
 const { latestReviewNote } = await import('../../../src/domain/work/lifecycle/history.ts');
 const { parsePrDetails } = await import('../../../src/domain/landing/merge/merge.ts');
-const { actionsRun, carryFailures, countChecks, failedStep, failureExcerpt, failureHeadline, failureLine, headBytes, logLines, logTail } =
-  await import('../../../src/domain/landing/pull-request/checks.ts');
-const { fixChecksNote, nextChecks, parseChecks, stepUrl } = await import('../../../src/domain/landing/pull-request/checks.ts');
+const { actionsRun, carryFailures, failedStep, failureExcerpt, failureHeadline, failureLine, headBytes, logLines, logTail } =
+  await import('../../../src/domain/landing/pull-request/check-failures.ts');
+const { countChecks, nextChecks, parseChecks } = await import('../../../src/domain/landing/pull-request/checks.ts');
+const { fixChecksNote, stepUrl } = await import('../../../src/domain/landing/pull-request/check-failures.ts');
 const { parseJobSteps } = await import('../../../src/domain/landing/merge/merge.ts');
 const { checksFailedNotification } = await import('../../../src/domain/operations/notification.ts');
 const { fmtChecks } = await import('../../../src/cli/format.ts');

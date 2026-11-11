@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { runClaude } from '../../../src/adapters/claude/claude.ts';
 import { LOG_TAIL_BYTES, actionsRun, parsePrDetails, type PrDetails } from '../../../src/domain/landing/index.ts';
-import { logTail } from '../../../src/domain/landing/pull-request/checks.ts';
+import { logTail } from '../../../src/domain/landing/pull-request/check-failures.ts';
 import {
   type ClaudeRun,
   type LogEntry,
@@ -17,7 +17,7 @@ import {
   parseLogLine,
   resultFields,
 } from '../../../src/domain/runs/index.ts';
-import type { UsageWindow } from '../../../src/domain/runs/run.ts';
+import type { UsageWindow } from '../../../src/domain/runs/run-result.ts';
 import { fakeCodeHost } from '../../fixtures/fakes.ts';
 
 const FIXTURES = join(import.meta.dirname, '../../fixtures');

@@ -19,7 +19,7 @@ process.env.AGENTDECK_CLAUDE_BIN = fake;
 
 const { openDb } = await import('../../src/db/index.ts');
 const { Scheduler } = await import('../../src/application/scheduler/scheduler.ts');
-const { parseStatus } = await import('../../src/domain/runs/run.ts');
+const { parseStatus } = await import('../../src/domain/runs/run-result.ts');
 
 const repoPath = join(home, 'demo');
 const db = testApp(openDb(join(home, 'test.db')));

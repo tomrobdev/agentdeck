@@ -6,7 +6,8 @@ import type { UnblockQuestion } from '../work/index.ts';
 import type { BlockedTask, Task, TaskState } from '../work/index.ts';
 import { lastLine } from '../shared/index.ts';
 import type { PromptPlan } from './prompt.ts';
-import { type Run, isSetupFailure } from './run.ts';
+import type { Run } from './run.ts';
+import { isSetupFailure } from './run-result.ts';
 
 export const UNBLOCK_NOTE = 'Unblock run: ';
 

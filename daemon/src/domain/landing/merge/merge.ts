@@ -1,16 +1,8 @@
 // Whether a PR can be merged, and how.
 import { isConflicting, isMergeabilityUnknown } from './conflict.ts';
 import { type PrState, parsePrState } from '../pull-request/pr.ts';
-import {
-  type CheckCounts,
-  type JobStep,
-  type PrCheck,
-  countOf,
-  failingChecks,
-  failureLine,
-  failureRead,
-  parseChecks,
-} from '../pull-request/checks.ts';
+import { type CheckCounts, type PrCheck, countOf, parseChecks } from '../pull-request/checks.ts';
+import { type JobStep, failingChecks, failureLine, failureRead } from '../pull-request/check-failures.ts';
 import { plural } from '../../shared/index.ts';
 
 export { type CheckCounts, checksSettled, countChecks } from '../pull-request/checks.ts';

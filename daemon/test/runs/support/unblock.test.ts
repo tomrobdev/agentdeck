@@ -24,7 +24,7 @@ const { repoSettingPatch } = await import('../../../src/cli/operations/settings-
 const { restartWait } = await import('../../../src/domain/operations/restart.ts');
 const { describeEvent } = await import('../../../src/domain/work/index.ts');
 const { conflictReason } = await import('../../../src/domain/runs/sync.ts');
-const { setupFailedReason } = await import('../../../src/domain/runs/run.ts');
+const { setupFailedReason } = await import('../../../src/domain/runs/run-result.ts');
 const { UNBLOCK_NOTE, buildUnblockPrompt, parseUnblock, unblockDecision, unblockable } =
   await import('../../../src/domain/runs/unblock.ts');
 
