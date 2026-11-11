@@ -94,6 +94,7 @@ Status changes and what follows them: domain events, the follow-ups table, task_
 The run's lifecycle: the worker, the claude process, resuming, prompts, logs, the live view, unblock runs, review runs and escalation.
 
 - daemon/src/domain/runs/run.ts
+- daemon/src/domain/runs/run-result.ts
 - daemon/src/domain/runs/prompt.ts
 - daemon/src/domain/runs/unblock.ts
 - daemon/src/domain/runs/review.ts
@@ -144,6 +145,7 @@ Pull requests, checks, merge requests, merging and auto-merge.
 
 - daemon/src/domain/landing/merge/auto-merge.ts
 - daemon/src/domain/landing/pull-request/checks.ts
+- daemon/src/domain/landing/pull-request/check-failures.ts
 - daemon/src/domain/landing/merge/conflict.ts
 - daemon/src/domain/landing/merge/merge-request.ts
 - daemon/src/domain/landing/merge/merge.ts

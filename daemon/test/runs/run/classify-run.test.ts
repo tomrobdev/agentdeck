@@ -1,7 +1,7 @@
 // What a claude process's end means: a cancel wins, a rate limit beats a failure, a missing result is a failure.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { type ClaudeRunLike, classifyRun } from '../../../src/domain/runs/run.ts';
+import { type ClaudeRunLike, classifyRun } from '../../../src/domain/runs/run-result.ts';
 
 const base: ClaudeRunLike = { result: { result: 'ok' }, exitCode: 0, rateLimitedUntil: undefined, cancelled: false, stderr: '' };
 
