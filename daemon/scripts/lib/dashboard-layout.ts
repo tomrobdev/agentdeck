@@ -35,8 +35,8 @@ export interface AreaRule {
 
 const BELOW: Record<string, string[]> = {
   lib: ['api'],
-  composables: ['api', 'platform', 'router'],
-  components: ['api', 'platform', 'router'],
+  composables: ['api', 'platform'],
+  components: ['api', 'platform'],
 };
 
 const areasOf = (layer: string) => {
@@ -64,14 +64,14 @@ function contextRules(): Record<string, AreaRule> {
 }
 
 const ALL_COMPONENTS = areasOf('components');
-const ALL_BELOW_PAGES = [...CONTEXT_LAYERS.flatMap((l) => areasOf(l.layer)), 'api', 'platform', 'router'];
+const ALL_BELOW_PAGES = [...CONTEXT_LAYERS.flatMap((l) => areasOf(l.layer)), 'api', 'platform'];
 
 export const MAY_IMPORT: Record<string, AreaRule> = {
   api: { areas: ['api'], why: 'api/ is the base: types, calls and query options' },
   platform: { areas: ['platform', 'lib/shared'], why: 'platform/ is the Tauri shell, build commit and theme' },
   router: {
     areas: ['api', 'lib/shared', 'pages', 'components/layout'],
-    why: "the router names each route's page (and the tray window), and is otherwise below the composables and components",
+    why: "the router names each route's page (and the tray window), and nothing below the pages imports it",
   },
   ...contextRules(),
   'components/layout': { areas: ['components/layout', ...ALL_BELOW_PAGES], why: "layout/ is the app's frame, so it combines contexts" },

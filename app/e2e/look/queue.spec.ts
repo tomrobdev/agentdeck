@@ -20,7 +20,7 @@ test('the queue lists each stage in its group', async ({ page }) => {
 test('"need you" opens the tasks that need a person', async ({ page }) => {
   await open(page, '#/');
   await queueSettled(page);
-  const needYou = page.getByRole('banner').getByRole('button', { name: /need you/ });
+  const needYou = page.getByRole('banner').getByRole('link', { name: /need you/ });
   await expect(needYou).toContainText('4');
   await needYou.click();
 

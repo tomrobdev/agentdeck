@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/vue-query';
 import { tasksQuery, workApi } from '../../../api/work';
 import type { LinkKind, TaskDetail, TaskLink, TaskSummary } from '../../../api/types';
 import { errorMessage } from '../../../../../daemon/src/domain/shared/index.ts';
-import { openTask } from '../../../router';
+import { RouterLink } from 'vue-router';
 import { statusLabel } from '../../../lib/work/task-view';
 import { useActions } from '../../../composables/shared/useActions';
 import Combobox from '../../ui/form/Combobox.vue';
@@ -100,7 +100,7 @@ async function remove(on: number) {
 }
 
 const rowCls = 'flex min-w-0 items-center gap-2 px-3.5 py-1.5';
-const open = 'btn-ghost flex min-w-0 flex-1 items-center gap-2 text-left hover:text-accent';
+const open = 'btn btn-ghost flex min-w-0 flex-1 items-center gap-2 text-left hover:text-accent';
 const heading = 'px-3.5 pt-2 pb-0.5 text-sm text-muted';
 </script>
 
@@ -154,12 +154,12 @@ const heading = 'px-3.5 pt-2 pb-0.5 text-sm text-muted';
       <template v-if="group.items.length">
         <div :class="heading">{{ group.label }}</div>
         <div v-for="l in group.items" :key="l.on" :class="rowCls">
-          <button :class="open" @click="openTask(l.on)">
+          <RouterLink :class="open" :to="{ name: 'task', params: { id: l.on } }">
             <StatusIcon v-if="byId.get(l.on)" :task="byId.get(l.on)!" />
             <span class="font-mono text-muted">#{{ l.on }}</span>
             <span class="truncate">{{ byId.get(l.on)?.title ?? '' }}</span>
             <span class="ml-auto flex-none whitespace-nowrap" :class="STATE_CLASS[l.state]">{{ linkText(l) }}</span>
-          </button>
+          </RouterLink>
           <button class="px-1.5 py-0 text-sm" :aria-label="`Remove the link to #${l.on}`" title="Remove link" @click="remove(l.on)">
             ✕
           </button>
@@ -170,7 +170,7 @@ const heading = 'px-3.5 pt-2 pb-0.5 text-sm text-muted';
     <template v-if="dependents.length">
       <div :class="heading">Waiting on this</div>
       <div v-for="d in dependents" :key="d.id" :class="rowCls">
-        <button :class="open" @click="openTask(d.id)">
+        <RouterLink :class="open" :to="{ name: 'task', params: { id: d.id } }">
           <StatusIcon v-if="byId.get(d.id)" :task="byId.get(d.id)!" />
           <span class="font-mono text-muted">#{{ d.id }}</span>
           <span class="truncate">{{ byId.get(d.id)?.title ?? '' }}</span>
@@ -180,7 +180,7 @@ const heading = 'px-3.5 pt-2 pb-0.5 text-sm text-muted';
               >· <span :class="STATE_CLASS[dependentLink(d.id, d.kind)!.state]">{{ dependentLink(d.id, d.kind)!.state }}</span></template
             >
           </span>
-        </button>
+        </RouterLink>
       </div>
     </template>
   </article>

@@ -8,7 +8,8 @@ import type { TaskDetail } from '../../../api/types';
 import { plural } from '../../../../../daemon/src/domain/shared/index.ts';
 import { useEditKeys } from '../../../composables/work/useEditKeys';
 import { useHotkeys } from '../../../composables/shared/useHotkeys';
-import { type TaskTab, go, openTask } from '../../../router';
+import { RouterLink, useRouter } from 'vue-router';
+import type { TaskTab } from '../../../lib/shared/app-url';
 import { readNeeds, readTaskQuestion } from '../../../lib/work/task-view';
 import { useActions } from '../../../composables/shared/useActions';
 import { openPanel } from '../../../composables/shared/useShell';
@@ -59,8 +60,14 @@ const TABS = computed(() => [
 const wide = computed(() => props.tab === 'changes' || props.tab === 'code');
 
 const runId = computed(() => (props.query.run ? Number(props.query.run) : null));
+const router = useRouter();
 const openFile = (path: string, line: number | null = null) =>
-  openTask(props.task.id, 'code', { ref: 'head', path, ...(line ? { L: String(line) } : {}) });
+  router.push({
+    name: 'task',
+    params: { id: props.task.id, tab: 'code' },
+    query: { ref: 'head', path, ...(line ? { L: String(line) } : {}) },
+  });
+const tabTo = (tab: TaskTab) => ({ name: 'task' as const, params: { id: props.task.id, tab } });
 
 const s = computed(() => props.task.status);
 const needs = computed(() => readNeeds(props.task));
@@ -68,7 +75,7 @@ const question = computed(() => readTaskQuestion(props.task));
 
 const edits = useEditKeys('task', () => props.task.id);
 useHotkeys({
-  Escape: { label: 'Back to the queue', scope: 'task', run: () => go({ name: 'queue' }) },
+  Escape: { label: 'Back to the queue', scope: 'task', run: () => router.push({ name: 'queue' }) },
   c: { label: 'New task', scope: 'task', run: () => openPanel('new') },
   ...edits.keys,
 });
@@ -82,7 +89,7 @@ const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel
     <EditKeyDialog v-if="edits.dialog.value" :kind="edits.dialog.value" :keys="edits" />
     <SnippetPopover v-if="pageEl" :task-id="task.id" :root="pageEl" />
     <header class="flex items-start gap-3 px-6 pt-4 pb-3">
-      <button class="mt-0.5" title="Back to the queue (Esc)" @click="go({ name: 'queue' })">←</button>
+      <button class="mt-0.5" title="Back to the queue (Esc)" @click="router.push({ name: 'queue' })">←</button>
       <div class="min-w-0 flex-1">
         <TaskTitle :task="task" />
         <div class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
@@ -106,7 +113,7 @@ const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel
     </header>
 
     <div class="flex items-end border-b border-border px-6">
-      <TabBar class="min-w-0" label="Task" :tabs="TABS" :model-value="tab" @update:model-value="(key) => openTask(task.id, key)" />
+      <TabBar class="min-w-0" label="Task" :tabs="TABS" :model-value="tab" :to="tabTo" />
       <div class="ml-auto self-center py-1 pl-3">
         <TaskActions :task="task" @act="(kind) => emit('act', kind)" @review="requesting = true" />
       </div>
@@ -133,7 +140,7 @@ const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel
       <button v-if="task.wait.kind === 'daemon-paused'" class="primary" @click="resumeDaemon">▶ Resume</button>
       <button v-else-if="task.wait.kind === 'repo-paused'" class="primary" @click="resumeRepo">▶ Resume {{ task.repo }}</button>
       <template v-else-if="task.wait.kind === 'dependency'">
-        <button v-for="on in task.wait.on" :key="on" @click="openTask(on)">Open #{{ on }}</button>
+        <RouterLink v-for="on in task.wait.on" :key="on" class="btn" :to="{ name: 'task', params: { id: on } }">Open #{{ on }}</RouterLink>
       </template>
     </div>
     <div v-else-if="s === 'proposed'" class="callout s-proposed">
@@ -152,7 +159,7 @@ const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel
           :task="task"
           :changes="changes"
           :is-path="isPath"
-          @run="(id) => openTask(task.id, 'runs', { run: String(id) })"
+          @run="(id) => router.push({ name: 'task', params: { id: task.id, tab: 'runs' }, query: { run: String(id) } })"
           @path="openFile"
         />
         <RunsTab
@@ -160,7 +167,7 @@ const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel
           :task="task"
           :run-id="runId"
           :is-path="isPath"
-          @select="(id) => go({ name: 'task', id: task.id, tab: 'runs', query: { run: String(id) } }, { replace: true })"
+          @select="(id) => router.replace({ name: 'task', params: { id: task.id, tab: 'runs' }, query: { run: String(id) } })"
           @path="openFile"
         />
         <ChangesTab v-else-if="tab === 'changes'" :task="task" :changes="changes" :error="changesError" @open="openFile" />

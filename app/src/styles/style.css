@@ -95,7 +95,8 @@
     background: var(--bg);
   }
 
-  button {
+  button,
+  a.btn {
     font: inherit;
     color: inherit;
     background: var(--panel-2);
@@ -105,7 +106,13 @@
     cursor: pointer;
     white-space: nowrap;
   }
-  button:hover:not(:disabled) {
+  a.btn {
+    display: inline-block;
+    text-align: center;
+    text-decoration: none;
+  }
+  button:hover:not(:disabled),
+  a.btn:hover {
     border-color: var(--muted);
   }
   button:disabled {
@@ -117,7 +124,8 @@
     border-color: var(--accent);
     color: var(--accent-fg);
   }
-  button:focus-visible {
+  button:focus-visible,
+  a.btn:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 1px;
   }

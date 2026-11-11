@@ -1,14 +1,14 @@
 // The window's ways in from outside the page: the app's keys (`g` then a key, `?`), the browser's ⌘K, and agentdeck:// links.
 import { onBeforeUnmount, onMounted } from 'vue';
+import { type Router, useRouter } from 'vue-router';
 import { GO_KEYS } from '../../lib/shared/hotkeys';
 import { isPaletteKey } from '../../lib/shared/shell';
 import { isNative, onOpenUrl } from '../../platform/native';
 import { parseAppUrl } from '../../lib/shared/app-url';
-import { router } from '../../router';
 import { useHotkeys } from './useHotkeys';
-import { closePanel, goTo, openPanel, showKeys, togglePalette } from './useShell';
+import { closePanel, openPanel, showKeys, togglePalette, useShell } from './useShell';
 
-function openLink(url: string) {
+function openLink(url: string, router: Router) {
   const to = parseAppUrl(url);
   if (!to) return;
   if (to.name === 'palette') togglePalette();
@@ -27,6 +27,8 @@ function onPaletteKey(e: KeyboardEvent) {
 }
 
 export function useAppLinks() {
+  const router = useRouter();
+  const { goTo } = useShell();
   useHotkeys({
     ...Object.fromEntries(GO_KEYS.map((g) => [g.key, { label: g.label, scope: 'app' as const, run: () => goTo(g.to) }])),
     '?': { label: 'Show the keys', scope: 'app', run: showKeys },
@@ -36,7 +38,7 @@ export function useAppLinks() {
   let unmounted = false;
   onMounted(() => {
     window.addEventListener('keydown', onPaletteKey);
-    onOpenUrl(openLink).then((stop) => (unmounted ? stop() : (stopOpenUrl = stop)));
+    onOpenUrl((url) => openLink(url, router)).then((stop) => (unmounted ? stop() : (stopOpenUrl = stop)));
   });
   onBeforeUnmount(() => {
     unmounted = true;

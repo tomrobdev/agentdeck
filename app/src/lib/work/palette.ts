@@ -22,7 +22,7 @@ export interface PaletteHandlers {
   restartDaemon: () => void;
   view: (mode: ViewMode) => void;
   toggleTheme: () => void;
-  go: (to: GoTarget) => void;
+  goTo: (to: GoTarget) => void;
   showKeys: () => void;
   showStates: (states: string[]) => void;
   edit: (request: EditRequest) => void;
@@ -134,7 +134,7 @@ export function paletteItems({ tasks, selected, picked = [], paused, handlers: h
     command('view-graph', 'Show graph', () => h.view('graph')),
     command('theme', 'Toggle light and dark', h.toggleTheme),
     ...FILTER_STATES.map((s) => command(`show-${s.key}`, `Show ${s.label.toLowerCase()}`, () => h.showStates([s.key]))),
-    ...GO_KEYS.map((g) => command(`go-${g.to}`, g.label, () => h.go(g.to), keyCaps(g.key).join(' then '))),
+    ...GO_KEYS.map((g) => command(`go-${g.to}`, g.label, () => h.goTo(g.to), keyCaps(g.key).join(' then '))),
     command('keys', 'Show keyboard shortcuts', h.showKeys, '?'),
   );
   items.push(...edits);

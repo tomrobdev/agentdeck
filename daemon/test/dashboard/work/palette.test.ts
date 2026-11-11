@@ -69,7 +69,7 @@ const handlers: PaletteHandlers = {
   restartDaemon: noop,
   view: noop,
   toggleTheme: noop,
-  go: noop,
+  goTo: noop,
   showKeys: noop,
   showStates: noop,
   edit: noop,

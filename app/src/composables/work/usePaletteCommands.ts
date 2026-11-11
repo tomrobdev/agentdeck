@@ -1,4 +1,5 @@
 import { computed } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { operationsApi } from '../../api/operations';
 import { runsApi } from '../../api/runs';
 import { PERSON_CALLS } from '../../api/work';
@@ -8,13 +9,13 @@ import { type PaletteTask, paletteItems } from '../../lib/work/palette';
 import { openingTab } from '../../lib/work/task-view';
 import { mode, setMode } from '../../platform/theme';
 import { taskUrl } from '../../lib/shared/app-url';
-import { go, openTask, route } from '../../router';
 import type { Actions } from '../shared/useActions';
-import { goPage, goTo, openPanel, showKeys, startMerge } from '../shared/useShell';
+import { openPanel, showKeys, startMerge, useShell } from '../shared/useShell';
 import type { Approvals } from './useApprovals';
 import { requestedBulk, requestedEdit, requestedView } from './queue/useView';
 
 export function useTaskActs(tasks: () => TaskSummary[], { run, defer }: Pick<Actions, 'run' | 'defer'>, { approve }: Approvals) {
+  const router = useRouter();
   const actOn = (kind: PersonEvent, id: number) =>
     kind === 'reject'
       ? defer(`Rejected #${id}`, () => PERSON_CALLS.reject(id))
@@ -23,7 +24,7 @@ export function useTaskActs(tasks: () => TaskSummary[], { run, defer }: Pick<Act
         : run(() => PERSON_CALLS[kind](id));
   function openFromQueue(id: number) {
     const t = tasks().find((x) => x.id === id);
-    openTask(id, t ? openingTab(t) : 'overview');
+    void router.push({ name: 'task', params: { id, tab: t ? openingTab(t) : 'overview' } });
   }
   return { actOn, openFromQueue };
 }
@@ -38,6 +39,9 @@ export interface PaletteInput {
 
 export function usePaletteCommands(input: PaletteInput, actions: Actions, approvals: Approvals) {
   const { run, flash } = actions;
+  const route = useRoute();
+  const router = useRouter();
+  const { goPage, goTo } = useShell();
   const { actOn, openFromQueue } = useTaskActs(input.tasks, actions, approvals);
   return computed(() =>
     paletteItems({
@@ -65,18 +69,18 @@ export function usePaletteCommands(input: PaletteInput, actions: Actions, approv
           }),
         view: (m) => {
           requestedView.value = m;
-          go({ name: 'queue' });
+          void router.push({ name: 'queue' });
         },
         toggleTheme: () => setMode(mode.value === 'dark' ? 'light' : 'dark'),
-        go: goTo,
+        goTo,
         showKeys,
-        showStates: (states) => goPage({ name: 'queue', states }),
+        showStates: (states) => goPage({ name: 'queue', query: { states: states.join(',') } }),
         edit: (request) => {
-          if (route.current.name !== 'queue' && route.current.name !== 'task') go({ name: 'queue' });
+          if (route.name !== 'queue' && route.name !== 'task') void router.push({ name: 'queue' });
           requestedEdit.value = request;
         },
         bulk: (action) => {
-          if (route.current.name !== 'queue') go({ name: 'queue' });
+          if (route.name !== 'queue') void router.push({ name: 'queue' });
           requestedBulk.value = action;
         },
       },
