@@ -1,6 +1,6 @@
 // Counting the code comment lines a branch adds, and the repo's limits on them.
-import type { Repo } from '../../repos/index.ts';
-import { plural, wholeNumberError } from '../../shared/index.ts';
+import type { Repo } from '#domain/repos/index.ts';
+import { plural, wholeNumberError } from '#domain/shared/index.ts';
 
 /** The lines a diff adds, per path. */
 export type AddedLines = Record<string, string[]>;

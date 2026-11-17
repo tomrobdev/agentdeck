@@ -1,6 +1,6 @@
 // Restarting the daemon without losing work: stop claiming, wait for the runs to end, restart, then put pause back.
-import type { App } from '../ports/app.ts';
-import { type Activity, restartWait } from '../../domain/operations/index.ts';
+import type { App } from '#application/ports/app.ts';
+import { type Activity, restartWait } from '#domain/operations/index.ts';
 
 export function runningActivity(app: App): Activity {
   return {

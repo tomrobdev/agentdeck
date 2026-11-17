@@ -6,20 +6,20 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
-import type { ProposalResult } from '../../src/domain/proposals/index.ts';
-import { fakeAgent, fakeCodeHost } from '../fixtures/fakes.ts';
-import { asRepoId, asTaskId, testApp, waitFor } from '../fixtures/fixtures.ts';
+import type { ProposalResult } from '#domain/proposals/index.ts';
+import { fakeAgent, fakeCodeHost } from '#test/fixtures/fakes.ts';
+import { asRepoId, asTaskId, testApp, waitFor } from '#test/fixtures/fixtures.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-client-'));
 process.env.AGENTDECK_HOME = home;
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../../src/db/index.ts');
-const { startApi } = await import('../../src/api/server.ts');
-const { apiToken } = await import('../../src/config.ts');
-const { ensureWorktree } = await import('../../src/adapters/git/worktrees.ts');
-const { callDaemon } = await import('../../src/cli/operations/daemon-client.ts');
-type SyncReport = import('../../src/application/actions.ts').SyncReport;
+const { openDb } = await import('#db/index.ts');
+const { startApi } = await import('#api/server.ts');
+const { apiToken } = await import('#src/config.ts');
+const { ensureWorktree } = await import('#adapters/git/worktrees.ts');
+const { callDaemon } = await import('#cli/operations/daemon-client.ts');
+type SyncReport = import('#application/actions.ts').SyncReport;
 
 const app = testApp(openDb(join(home, 'test.db')), { agent: fakeAgent(), codeHost: fakeCodeHost() });
 const server = await startApi({ db: app, token: apiToken(), port: 0 });

@@ -1,6 +1,6 @@
 // What the daemon does after a task's status changes: one table, from each domain event to its follow-ups.
-import type { TaskEventType } from './history.ts';
-import { type DomainEvent, type DomainEventType, type TaskStatus, domainEventOfRow } from './lifecycle.ts';
+import type { TaskEventType } from '#domain/work/lifecycle/history.ts';
+import { type DomainEvent, type DomainEventType, type TaskStatus, domainEventOfRow } from '#domain/work/lifecycle/lifecycle.ts';
 
 /**
  * - `open_pr`: open the task's pull request (agents cannot push), if it is still done

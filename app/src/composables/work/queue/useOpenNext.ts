@@ -2,11 +2,11 @@
 import { useQuery } from '@tanstack/vue-query';
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { tasksQuery } from '../../../api/work';
-import { type Display, boardGroups, normalizeDisplay, rowOrder } from '../../../lib/work/queue/queue-display';
-import { nextInReview } from '../../../lib/work/queue/review-nav';
-import { loadSetting } from '../../../lib/shared/storage';
-import { type Filters, applyFilters, emptyFilters, groupTasks } from '../../../lib/work/task-view';
+import { tasksQuery } from '#api/work.ts';
+import { type Display, boardGroups, normalizeDisplay, rowOrder } from '#lib/work/queue/queue-display.ts';
+import { nextInReview } from '#lib/work/queue/review-nav.ts';
+import { loadSetting } from '#lib/shared/storage.ts';
+import { type Filters, applyFilters, emptyFilters, groupTasks } from '#lib/work/task-view.ts';
 
 export function useOpenNext() {
   const router = useRouter();

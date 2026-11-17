@@ -1,7 +1,7 @@
 // "Viewed" is per task and file, and clears itself when the file's change counts move.
 import { type Ref, computed, ref, watch } from 'vue';
-import type { ChangedFile } from '../../../api/types';
-import { loadSetting, saveSetting } from '../../../lib/shared/storage';
+import type { ChangedFile } from '#api/types.ts';
+import { loadSetting, saveSetting } from '#lib/shared/storage.ts';
 
 export function useViewed(taskId: Ref<number>) {
   const viewedKey = computed(() => `viewed.${taskId.value}`);

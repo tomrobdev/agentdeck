@@ -1,5 +1,5 @@
 // Reviews of a task's changes: a draft a person builds up in the dashboard, then submits as a comment or a request for changes, or the review a review run leaves (domain/runs/review.ts).
-import type { ReviewId, TaskId } from '../../shared/index.ts';
+import type { ReviewId, TaskId } from '#domain/shared/index.ts';
 
 export const REVIEW_KINDS = ['comment', 'request_changes'] as const;
 export type ReviewKind = (typeof REVIEW_KINDS)[number];

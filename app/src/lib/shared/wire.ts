@@ -1,4 +1,4 @@
-import { type Needs, type UnblockQuestion, isNeeds } from '../../../../daemon/src/domain/work/index.ts';
+import { type Needs, type UnblockQuestion, isNeeds } from '#daemon/domain/work/index.ts';
 
 function parse(json: string | null): unknown {
   if (!json) return null;

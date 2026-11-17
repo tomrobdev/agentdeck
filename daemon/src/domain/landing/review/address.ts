@@ -1,6 +1,12 @@
 // How a run addresses a review: the comments as the worker is shown them, and the answers it gives back.
-import { STATUS_TAIL, cut, plural } from '../../shared/index.ts';
-import { type CommentSide, type ReviewComment, type ReviewWithComments, commentLocation, submittedRequests } from './review.ts';
+import { STATUS_TAIL, cut, plural } from '#domain/shared/index.ts';
+import {
+  type CommentSide,
+  type ReviewComment,
+  type ReviewWithComments,
+  commentLocation,
+  submittedRequests,
+} from '#domain/landing/review/review.ts';
 
 export const REVIEW_PROMPT_BUDGET = 16000;
 export const HUNK_RADIUS = 3;

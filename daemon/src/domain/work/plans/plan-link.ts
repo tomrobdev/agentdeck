@@ -1,5 +1,5 @@
 // Which plan a task follows.
-import type { TaskId } from '../../shared/index.ts';
+import type { TaskId } from '#domain/shared/index.ts';
 
 /**
  * A task's link to a plan: the task whose plan it follows (itself when its own plan was given with --plan) and the linked step

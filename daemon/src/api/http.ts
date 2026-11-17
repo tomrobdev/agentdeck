@@ -8,12 +8,12 @@ import {
   type DaemonInfo,
   type ReloadFacts,
   type Scheduler,
-} from '../application/actions.ts';
+} from '#application/actions.ts';
 import { timingSafeEqual } from 'node:crypto';
-import type { ApiErrorBody } from './contract/errors.ts';
-import { API_ALLOWED_ORIGINS, API_TOKEN_PATH, bearer } from '../config.ts';
-import { type RepoId, type ReviewId, type TaskId, parseId } from '../domain/shared/index.ts';
-import { parseTaskIds } from '../domain/work/index.ts';
+import type { ApiErrorBody } from '#api/contract/errors.ts';
+import { API_ALLOWED_ORIGINS, API_TOKEN_PATH, bearer } from '#src/config.ts';
+import { type RepoId, type ReviewId, type TaskId, parseId } from '#domain/shared/index.ts';
+import { parseTaskIds } from '#domain/work/index.ts';
 
 export type ApiScheduler = Pick<Scheduler, 'wake' | 'track'>;
 

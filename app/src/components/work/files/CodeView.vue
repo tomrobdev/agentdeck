@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
-import { highlightLines, languageFor } from '../../../lib/shared/render';
+import { highlightLines, languageFor } from '#lib/shared/render.ts';
 
 export interface LineRange {
   from: number;

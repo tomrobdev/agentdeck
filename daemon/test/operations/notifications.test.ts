@@ -4,15 +4,15 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import type { Notification } from '../../src/domain/operations/notification.ts';
+import type { Notification } from '#domain/operations/notification.ts';
 
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-notifications-'));
 delete process.env.AGENTDECK_NO_NOTIFY;
 
-const { appDelivers } = await import('../../src/domain/operations/notification.ts');
-const { notify } = await import('../../src/application/operations/notifications.ts');
-const { appSeen } = await import('../../src/application/actions.ts');
-const { openDb } = await import('../fixtures/open-db.ts');
+const { appDelivers } = await import('#domain/operations/notification.ts');
+const { notify } = await import('#application/operations/notifications.ts');
+const { appSeen } = await import('#application/actions.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
 
 const NOW = 1_793_707_200_000;
 

@@ -1,8 +1,8 @@
 // In-memory fakes of the Agent and CodeHost ports, for tests that need no `claude` binary and no `gh`:
-import type { Agent, AgentSession } from '../../src/application/ports/agent.ts';
-import type { CodeHost } from '../../src/application/ports/code-host.ts';
-import type { BranchPr, CreatePr, PrDetails } from '../../src/domain/landing/index.ts';
-import type { ClaudeResult, ClaudeRun } from '../../src/domain/runs/index.ts';
+import type { Agent, AgentSession } from '#application/ports/agent.ts';
+import type { CodeHost } from '#application/ports/code-host.ts';
+import type { BranchPr, CreatePr, PrDetails } from '#domain/landing/index.ts';
+import type { ClaudeResult, ClaudeRun } from '#domain/runs/index.ts';
 
 export interface FakeAgent extends Agent {
   sessions: AgentSession[];

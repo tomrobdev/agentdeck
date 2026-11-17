@@ -13,12 +13,12 @@ const fake = join(import.meta.dirname, '../../fixtures/fake-claude.mjs');
 chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
 
-const { openDb } = await import('../../fixtures/open-db.ts');
-const { Scheduler } = await import('../../../src/application/scheduler/scheduler.ts');
-const { syncBranch } = await import('../../../src/application/runs/sync.ts');
-const { endTaskRun, openTaskRun } = await import('../../../src/application/runs/claude-run.ts');
-const { updateRepo } = await import('../../../src/application/actions.ts');
-const { LOG_DIR } = await import('../../../src/config.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const { Scheduler } = await import('#application/scheduler/scheduler.ts');
+const { syncBranch } = await import('#application/runs/sync.ts');
+const { endTaskRun, openTaskRun } = await import('#application/runs/claude-run.ts');
+const { updateRepo } = await import('#application/actions.ts');
+const { LOG_DIR } = await import('#src/config.ts');
 
 const db = openDb(join(home, 'test.db'));
 db.setSetting('max_concurrent', '1');

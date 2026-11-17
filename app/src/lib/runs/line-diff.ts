@@ -1,6 +1,6 @@
 // An Edit's old and new text as a line diff, for the run log. Hand-written: each text is at most CHANGE_MAX characters.
-import type { LogChange } from '../../../../daemon/src/api/contract/files.ts';
-import { CHANGE_MAX } from '../../../../daemon/src/domain/runs/index.ts';
+import type { LogChange } from '#daemon/api/contract/files.ts';
+import { CHANGE_MAX } from '#daemon/domain/runs/index.ts';
 
 export type EditDiffRow = { type: 'ctx' | 'del' | 'add'; text: string } | { type: 'cut'; side: 'old' | 'new' };
 

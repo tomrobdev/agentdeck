@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { PR_FROM, PR_MOVES, nextPrState, prFrom, prStatesFor, seenMove } from '../../../src/domain/landing/pull-request/pr-moves.ts';
-import type { PrFrom, PrMove } from '../../../src/domain/landing/pull-request/pr-moves.ts';
-import type { PrState } from '../../../src/domain/landing/index.ts';
-import { prMoveOf } from '../../../src/domain/work/index.ts';
+import { PR_FROM, PR_MOVES, nextPrState, prFrom, prStatesFor, seenMove } from '#domain/landing/pull-request/pr-moves.ts';
+import type { PrFrom, PrMove } from '#domain/landing/pull-request/pr-moves.ts';
+import type { PrState } from '#domain/landing/index.ts';
+import { prMoveOf } from '#domain/work/index.ts';
 
 const MOVES: [PrMove, PrFrom, PrState][] = [
   ['opened', 'none', 'open'],

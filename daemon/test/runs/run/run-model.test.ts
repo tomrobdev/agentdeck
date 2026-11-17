@@ -12,19 +12,19 @@ const fake = join(import.meta.dirname, '../../fixtures/fake-claude.mjs');
 chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
 
-const { openDb } = await import('../../../src/db/index.ts');
-const { Scheduler } = await import('../../../src/application/scheduler/scheduler.ts');
-const { addTask, editTask, pilotStats, syncNow, updateRepo, updateSettings } = await import('../../../src/application/actions.ts');
-const { DEFAULT_MODEL, modelSourceText, newTaskModel } = await import('../../../src/domain/work/index.ts');
-const { DEFAULT_REVIEW_MODEL, DEFAULT_SUPPORT_MODEL, runModel } = await import('../../../src/domain/runs/index.ts');
-const { measureByModel } = await import('../../../src/domain/insights/index.ts');
-const { UNKNOWN_MODEL, interventionModel } = await import('../../../src/domain/insights/by-model.ts');
-const { repoCommands } = await import('../../../src/cli/repos/repos.ts');
-const { statsCommands } = await import('../../../src/cli/insights/stats.ts');
-const { taskCommands } = await import('../../../src/cli/work/tasks.ts');
-const { daemonCommands } = await import('../../../src/cli/operations/daemon.ts');
-const { asRepoId, asTaskId, testApp } = await import('../../fixtures/fixtures.ts');
-const { fakeCodeHost } = await import('../../fixtures/fakes.ts');
+const { openDb } = await import('#db/index.ts');
+const { Scheduler } = await import('#application/scheduler/scheduler.ts');
+const { addTask, editTask, pilotStats, syncNow, updateRepo, updateSettings } = await import('#application/actions.ts');
+const { DEFAULT_MODEL, modelSourceText, newTaskModel } = await import('#domain/work/index.ts');
+const { DEFAULT_REVIEW_MODEL, DEFAULT_SUPPORT_MODEL, runModel } = await import('#domain/runs/index.ts');
+const { measureByModel } = await import('#domain/insights/index.ts');
+const { UNKNOWN_MODEL, interventionModel } = await import('#domain/insights/by-model.ts');
+const { repoCommands } = await import('#cli/repos/repos.ts');
+const { statsCommands } = await import('#cli/insights/stats.ts');
+const { taskCommands } = await import('#cli/work/tasks.ts');
+const { daemonCommands } = await import('#cli/operations/daemon.ts');
+const { asRepoId, asTaskId, testApp } = await import('#test/fixtures/fixtures.ts');
+const { fakeCodeHost } = await import('#test/fixtures/fakes.ts');
 
 test('newTaskModel: the model asked for, else the repo’s, else the default_model setting', () => {
   assert.deepEqual(newTaskModel('haiku', { model: 'opus' }, 'sonnet'), { model: 'haiku', source: 'asked' });

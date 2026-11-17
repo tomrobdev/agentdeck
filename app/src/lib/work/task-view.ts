@@ -1,12 +1,12 @@
-import type { AutoMergeView, Needs, Status, TaskStatus, TaskSummary } from '../../api/types.ts';
-import { personEvents } from '../../../../daemon/src/domain/work/index.ts';
-import { DECISION_STATES, FILTER_STATES, SORT_OPTIONS, filterTasks } from '../../../../daemon/src/domain/work/index.ts';
-import { type UnblockQuestion, depsRequest } from '../../../../daemon/src/domain/work/index.ts';
-import { STATUS_GROUPS, isReview, statusGroup } from '../../../../daemon/src/domain/work/index.ts';
-import { EDITABLE_STATUSES } from '../../../../daemon/src/domain/work/index.ts';
-import { parseTextList } from '../../../../daemon/src/domain/shared/index.ts';
-import type { GroupBy } from './queue/queue-display.ts';
-import { needsOf, questionOf } from '../shared/wire.ts';
+import type { AutoMergeView, Needs, Status, TaskStatus, TaskSummary } from '#api/types.ts';
+import { personEvents } from '#daemon/domain/work/index.ts';
+import { DECISION_STATES, FILTER_STATES, SORT_OPTIONS, filterTasks } from '#daemon/domain/work/index.ts';
+import { type UnblockQuestion, depsRequest } from '#daemon/domain/work/index.ts';
+import { STATUS_GROUPS, isReview, statusGroup } from '#daemon/domain/work/index.ts';
+import { EDITABLE_STATUSES } from '#daemon/domain/work/index.ts';
+import { parseTextList } from '#daemon/domain/shared/index.ts';
+import type { GroupBy } from '#lib/work/queue/queue-display.ts';
+import { needsOf, questionOf } from '#lib/shared/wire.ts';
 
 export const openingTab = (t: TaskSummary): 'overview' | 'changes' | 'runs' =>
   t.status === 'running' || t.sync?.resolving ? 'runs' : isReview(t) ? 'changes' : 'overview';

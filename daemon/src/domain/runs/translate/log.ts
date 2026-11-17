@@ -1,6 +1,6 @@
 // A run's stream-json log reduced to what a person wants to read.
-import { cut, oneLine } from '../../shared/index.ts';
-import { fields, text } from './fields.ts';
+import { cut, oneLine } from '#domain/shared/index.ts';
+import { fields, text } from '#domain/runs/translate/fields.ts';
 
 /** An edit in numbers and a little text, for a small diff. */
 export interface LogChange {

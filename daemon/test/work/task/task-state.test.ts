@@ -3,13 +3,13 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { type StateFields, stateFields } from '../../../src/domain/work/task/task.ts';
+import { type StateFields, stateFields } from '#domain/work/task/task.ts';
 
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-task-state-'));
 
-const { openDb } = await import('../../fixtures/open-db.ts');
-const { taskDetail, taskViews } = await import('../../../src/api/wire.ts');
-const { TASK_STATUSES } = await import('../../../src/domain/work/lifecycle/lifecycle.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const { taskDetail, taskViews } = await import('#api/wire.ts');
+const { TASK_STATUSES } = await import('#domain/work/lifecycle/lifecycle.ts');
 
 type Db = ReturnType<typeof openDb>;
 

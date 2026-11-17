@@ -1,12 +1,12 @@
 // The window's ways in from outside the page: the app's keys (`g` then a key, `?`), the browser's ⌘K, and agentdeck:// links.
 import { onBeforeUnmount, onMounted } from 'vue';
 import { type Router, useRouter } from 'vue-router';
-import { GO_KEYS } from '../../lib/shared/hotkeys';
-import { isPaletteKey } from '../../lib/shared/shell';
-import { isNative, onOpenUrl } from '../../platform/native';
-import { parseAppUrl } from '../../lib/shared/app-url';
-import { useHotkeys } from './useHotkeys';
-import { closePanel, openPanel, showKeys, togglePalette, useShell } from './useShell';
+import { GO_KEYS } from '#lib/shared/hotkeys.ts';
+import { isPaletteKey } from '#lib/shared/shell.ts';
+import { isNative, onOpenUrl } from '#platform/native.ts';
+import { parseAppUrl } from '#lib/shared/app-url.ts';
+import { useHotkeys } from '#composables/shared/useHotkeys.ts';
+import { closePanel, openPanel, showKeys, togglePalette, useShell } from '#composables/shared/useShell.ts';
 
 function openLink(url: string, router: Router) {
   const to = parseAppUrl(url);

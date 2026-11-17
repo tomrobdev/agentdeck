@@ -1,8 +1,8 @@
 // Pure tests of plans: parsing, file names, progress, the steps a task links, and the paths a prompt names.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { asTaskId } from '../../src/domain/shared/index.ts';
-import type { ListedTask } from '../../src/domain/work/read/listing.ts';
+import { asTaskId } from '#domain/shared/index.ts';
+import type { ListedTask } from '#domain/work/read/listing.ts';
 import {
   filterTasks,
   hasPlanLink,
@@ -22,7 +22,7 @@ import {
   toPlan,
   unfinishedSteps,
   unfinishedSummary,
-} from '../../src/domain/work/index.ts';
+} from '#domain/work/index.ts';
 
 const html = (steps: string) =>
   `<html data-agentdeck-plan="1"><head><title>My plan</title></head><body><p data-plan-summary>Why</p>${steps}</body></html>`;

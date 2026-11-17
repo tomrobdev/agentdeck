@@ -11,8 +11,8 @@ import {
   reviewDueDaysError,
   reviewDueLinesError,
   reviewDueNotification,
-} from '../../../src/domain/operations/index.ts';
-import { asRepoId } from '../../../src/domain/shared/index.ts';
+} from '#domain/operations/index.ts';
+import { asRepoId } from '#domain/shared/index.ts';
 
 const idle = { tasks: 0, planner: 0, resolves: 0 };
 const input = { enabled: true, changed: ['a.ts'], lastChangeAt: 0, now: 10_000, activity: idle };

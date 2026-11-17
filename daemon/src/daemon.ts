@@ -1,12 +1,12 @@
 // The daemon's composition root: wires the source watcher, the API and the scheduler together and runs until stopped.
-import { startApi } from './api/server.ts';
+import { startApi } from '#api/server.ts';
 import { join } from 'node:path';
-import { type ComposedApp, isPaused, maxConcurrent, reloadOnChange } from './application/actions.ts';
-import { ChangeWatcher } from './application/operations/changes.ts';
-import { reloadBlock } from './application/operations/reload-block.ts';
-import { Scheduler } from './application/scheduler/scheduler.ts';
-import { API_PORT, DEFAULTS, apiToken } from './config.ts';
-import { type Activity, SCHEMA_DIRTY, offMain, reloadDecision, runOnceRefusal } from './domain/operations/index.ts';
+import { type ComposedApp, isPaused, maxConcurrent, reloadOnChange } from '#application/actions.ts';
+import { ChangeWatcher } from '#application/operations/changes.ts';
+import { reloadBlock } from '#application/operations/reload-block.ts';
+import { Scheduler } from '#application/scheduler/scheduler.ts';
+import { API_PORT, DEFAULTS, apiToken } from '#src/config.ts';
+import { type Activity, SCHEMA_DIRTY, offMain, reloadDecision, runOnceRefusal } from '#domain/operations/index.ts';
 
 export interface DaemonOptions {
   db: ComposedApp;

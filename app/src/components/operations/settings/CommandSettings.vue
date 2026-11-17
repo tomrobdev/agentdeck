@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CMUX_TEMPLATE, EDITOR_PRESETS } from '../../../lib/runs/terminal';
+import { CMUX_TEMPLATE, EDITOR_PRESETS } from '#lib/runs/terminal.ts';
 
 const terminal = defineModel<string>('terminal', { required: true });
 const editor = defineModel<string>('editor', { required: true });

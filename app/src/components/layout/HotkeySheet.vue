@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { keyCaps, registeredKeys, sheetGroups } from '../../lib/shared/hotkeys';
-import Modal from '../ui/Modal.vue';
+import { keyCaps, registeredKeys, sheetGroups } from '#lib/shared/hotkeys.ts';
+import Modal from '#components/ui/Modal.vue';
 
 const emit = defineEmits<{ close: [] }>();
 const groups = sheetGroups(registeredKeys());

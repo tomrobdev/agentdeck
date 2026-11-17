@@ -1,22 +1,14 @@
 // A run's log as a transcript: pairing, nesting, folding, the time gutter and colour codes. The dashboard has no test runner, so it is tested here.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import type { Run } from '../../../../app/src/api/types.ts';
-import { parseAnsi } from '../../../../app/src/lib/runs/ansi.ts';
-import {
-  callDuration,
-  durationLabel,
-  failureKeys,
-  failureStep,
-  filterItems,
-  isSlow,
-  parseLogFilter,
-} from '../../../../app/src/lib/runs/log-filter.ts';
-import { clock, liveSource, placeSegment, runHeader, timeline } from '../../../../app/src/lib/runs/run-live.ts';
-import { CHANGE_MAX, REVIEW_MAX_TURNS, UNBLOCK_MAX_TURNS, parseLogLine } from '../../../src/domain/runs/index.ts';
-import { filesTouched, promptsOf, withoutPrompts } from '../../../../app/src/lib/runs/context.ts';
-import { isCut, lineDiff } from '../../../../app/src/lib/runs/line-diff.ts';
-import { RUN_KIND_ICONS, runCost } from '../../../../app/src/lib/runs/run-row.ts';
+import type { Run } from '#app/api/types.ts';
+import { parseAnsi } from '#app/lib/runs/ansi.ts';
+import { callDuration, durationLabel, failureKeys, failureStep, filterItems, isSlow, parseLogFilter } from '#app/lib/runs/log-filter.ts';
+import { clock, liveSource, placeSegment, runHeader, timeline } from '#app/lib/runs/run-live.ts';
+import { CHANGE_MAX, REVIEW_MAX_TURNS, UNBLOCK_MAX_TURNS, parseLogLine } from '#domain/runs/index.ts';
+import { filesTouched, promptsOf, withoutPrompts } from '#app/lib/runs/context.ts';
+import { isCut, lineDiff } from '#app/lib/runs/line-diff.ts';
+import { RUN_KIND_ICONS, runCost } from '#app/lib/runs/run-row.ts';
 import {
   type CallItem,
   buildTranscript,
@@ -26,7 +18,7 @@ import {
   readRange,
   resultHidden,
   toolKind,
-} from '../../../../app/src/lib/runs/transcript.ts';
+} from '#app/lib/runs/transcript.ts';
 
 const callOf = (name: string, input: unknown, res: { ok?: boolean; lines?: number; output?: string }): CallItem => {
   const [item] = buildTranscript([

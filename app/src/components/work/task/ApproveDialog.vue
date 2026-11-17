@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useQueries } from '@tanstack/vue-query';
-import { runsApi } from '../../../api/runs';
-import { PERSON_CALLS, taskQuery, workApi } from '../../../api/work';
-import type { ProposalCheck } from '../../../api/types';
-import { errorMessage, plural } from '../../../../../daemon/src/domain/shared/index.ts';
-import { proposalCheckLine } from '../../../../../daemon/src/domain/work/index.ts';
-import { latestVerify } from '../../../../../daemon/src/domain/runs/index.ts';
-import { type BulkResult, bulkMessage, summarizeBulk } from '../../../lib/work/queue/bulk';
-import { useActions } from '../../../composables/shared/useActions';
-import Checkbox from '../../ui/form/Checkbox.vue';
-import ConfirmDialog from '../../ui/ConfirmDialog.vue';
-import VerifyFindings from '../../runs/VerifyFindings.vue';
+import { runsApi } from '#api/runs.ts';
+import { PERSON_CALLS, taskQuery, workApi } from '#api/work.ts';
+import type { ProposalCheck } from '#api/types.ts';
+import { errorMessage, plural } from '#daemon/domain/shared/index.ts';
+import { proposalCheckLine } from '#daemon/domain/work/index.ts';
+import { latestVerify } from '#daemon/domain/runs/index.ts';
+import { type BulkResult, bulkMessage, summarizeBulk } from '#lib/work/queue/bulk.ts';
+import { useActions } from '#composables/shared/useActions.ts';
+import Checkbox from '#components/ui/form/Checkbox.vue';
+import ConfirmDialog from '#components/ui/ConfirmDialog.vue';
+import VerifyFindings from '#components/runs/VerifyFindings.vue';
 
 const props = defineProps<{
   rows: { id: number; title: string; check: ProposalCheck | null }[];

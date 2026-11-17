@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { withBaseStyle } from '../../../../app/src/lib/work/plan-page.ts';
+import { withBaseStyle } from '#app/lib/work/plan-page.ts';
 
 const CSS = '.plan { color: red; }';
 

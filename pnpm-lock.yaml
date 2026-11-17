@@ -184,6 +184,12 @@ importers:
       '@tauri-apps/plugin-opener':
         specifier: ^2
         version: 2.7.2
+      agentdeck:
+        specifier: workspace:*
+        version: link:..
+      agentdeck-daemon:
+        specifier: workspace:*
+        version: link:../daemon
       dompurify:
         specifier: 3.4.17
         version: 3.4.17
@@ -240,6 +246,9 @@ importers:
       '@types/node':
         specifier: ^24.0.0
         version: 24.19.2
+      agentdeck:
+        specifier: workspace:*
+        version: link:..
       c8:
         specifier: ^12.0.0
         version: 12.0.0

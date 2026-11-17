@@ -2,8 +2,8 @@
 import { inArray, isNull, sql } from 'drizzle-orm';
 import type { AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
 import type { DatabaseSync } from 'node:sqlite';
-import type { Orm } from './orm.ts';
-import { repos } from './tables.ts';
+import type { Orm } from '#db/orm.ts';
+import { repos } from '#db/tables.ts';
 
 // guard: SQLite's clock; the builder has no "now", and a column default does not apply to an update
 export const NOW_SQL = sql.raw("datetime('now')");

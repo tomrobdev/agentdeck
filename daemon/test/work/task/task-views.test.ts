@@ -1,6 +1,6 @@
 // What building the task list and a task's detail costs: queries that don't grow with the tasks, and no git for a running task.
 import assert from 'node:assert/strict';
-import type { TaskId } from '../../../src/domain/shared/id.ts';
+import type { TaskId } from '#domain/shared/id.ts';
 import { chmodSync, existsSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -9,12 +9,12 @@ import { test } from 'node:test';
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-views-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../../fixtures/open-db.ts');
-const { taskDetail, taskViews } = await import('../../../src/application/actions.ts');
-const { liveLinks, loadedLinks } = await import('../../../src/application/work/dependencies.ts');
-const { dependentViews } = await import('../../../src/domain/work/links/link.ts');
-const { withViews } = await import('../../../src/application/work/task-views.ts');
-const { doneTask, runningTask } = await import('../../fixtures/fixtures.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const { taskDetail, taskViews } = await import('#application/actions.ts');
+const { liveLinks, loadedLinks } = await import('#application/work/dependencies.ts');
+const { dependentViews } = await import('#domain/work/links/link.ts');
+const { withViews } = await import('#application/work/task-views.ts');
+const { doneTask, runningTask } = await import('#test/fixtures/fixtures.ts');
 
 type TestDb = ReturnType<typeof openDb>;
 

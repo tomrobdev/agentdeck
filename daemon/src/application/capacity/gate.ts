@@ -1,7 +1,7 @@
 // May new work start? The pause flag, the rate limit and the governor's decision, read once.
-import type { App } from '../ports/app.ts';
-import { decide } from '../../domain/capacity/index.ts';
-import { type QueueState, type QueueWait, startDecision } from '../../domain/work/index.ts';
+import type { App } from '#application/ports/app.ts';
+import { decide } from '#domain/capacity/index.ts';
+import { type QueueState, type QueueWait, startDecision } from '#domain/work/index.ts';
 
 export function startGate(app: App): QueueState {
   return {

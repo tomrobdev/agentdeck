@@ -6,11 +6,11 @@ import { test } from 'node:test';
 
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-ownership-'));
 
-const { ActionError, retryTask } = await import('../../src/application/actions.ts');
-const { Scheduler } = await import('../../src/application/scheduler/scheduler.ts');
-const { callDaemon } = await import('../../src/cli/operations/daemon-client.ts');
-const { RELOAD_QUIET_MS, reloadDecision, restartWait } = await import('../../src/domain/operations/restart.ts');
-const { openDb } = await import('../fixtures/open-db.ts');
+const { ActionError, retryTask } = await import('#application/actions.ts');
+const { Scheduler } = await import('#application/scheduler/scheduler.ts');
+const { callDaemon } = await import('#cli/operations/daemon-client.ts');
+const { RELOAD_QUIET_MS, reloadDecision, restartWait } = await import('#domain/operations/restart.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
 
 const base = { enabled: true, changed: ['a.ts'], lastChangeAt: 0, now: RELOAD_QUIET_MS + 1 };
 

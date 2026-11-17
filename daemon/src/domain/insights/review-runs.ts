@@ -1,7 +1,7 @@
 // What the scorecard counts of review runs: how many ran, how many asked for changes, and how many of those a person then merged unchanged, so their judgement can be weighed against a person's.
-import { reviewRunCounts } from '../landing/index.ts';
-import type { RepoId, TaskId } from '../shared/index.ts';
-import type { ScorecardEvent } from './scorecard.ts';
+import { reviewRunCounts } from '#domain/landing/index.ts';
+import type { RepoId, TaskId } from '#domain/shared/index.ts';
+import type { ScorecardEvent } from '#domain/insights/scorecard.ts';
 
 /** A review run, with its task's repo, as the scorecard reads it. */
 export interface ScorecardReviewRun {

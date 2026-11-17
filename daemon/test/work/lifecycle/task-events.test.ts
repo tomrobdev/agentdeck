@@ -4,13 +4,13 @@ import { mkdtempSync, readFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import type { TaskId } from '../../../src/domain/shared/id.ts';
-import { MAX_RESTARTS } from '../../../src/domain/work/lifecycle/lifecycle.ts';
-import { asTaskId } from '../../fixtures/fixtures.ts';
+import type { TaskId } from '#domain/shared/id.ts';
+import { MAX_RESTARTS } from '#domain/work/lifecycle/lifecycle.ts';
+import { asTaskId } from '#test/fixtures/fixtures.ts';
 
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-events-'));
 
-const { openDb } = await import('../../../src/db/index.ts');
+const { openDb } = await import('#db/index.ts');
 type Db = ReturnType<typeof openDb>;
 
 function setup() {
@@ -178,7 +178,7 @@ test('eventsForTask uses the task_events_task index', () => {
 
 test('PR and merge event reasons are written and read through the history functions, byte for byte', async () => {
   const { prEventReason, mergeReason, isAutoMergeReason, isRequestedMergeReason, isPrOpenedReason, prSeenState } =
-    await import('../../../src/domain/work/lifecycle/history.ts');
+    await import('#domain/work/lifecycle/history.ts');
   assert.equal(prEventReason({ type: 'opened', url: 'https://x/pull/1' }), 'opened https://x/pull/1');
   assert.equal(prEventReason({ type: 'failed', error: 'gh broke' }), 'could not open the PR: gh broke');
   assert.equal(prEventReason({ type: 'closed' }), 'closed without merging');

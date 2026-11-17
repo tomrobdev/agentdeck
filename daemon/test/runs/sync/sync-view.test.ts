@@ -8,9 +8,9 @@ import { test } from 'node:test';
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-syncview-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../../fixtures/open-db.ts');
-const { taskViews } = await import('../../../src/application/actions.ts');
-const { doneTask } = await import('../../fixtures/fixtures.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const { taskViews } = await import('#application/actions.ts');
+const { doneTask } = await import('#test/fixtures/fixtures.ts');
 
 test('taskViews gives a done task with an unfinished resolve run its sync view, and the others none', () => {
   const db = openDb(':memory:');

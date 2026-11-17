@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useResize } from '../../../composables/shared/useResize';
-import { loadSetting, saveSetting } from '../../../lib/shared/storage';
-import type { PersonEvent } from '../../../../../daemon/src/domain/work/index.ts';
-import TaskPeek from './TaskPeek.vue';
+import { useResize } from '#composables/shared/useResize.ts';
+import { loadSetting, saveSetting } from '#lib/shared/storage.ts';
+import type { PersonEvent } from '#daemon/domain/work/index.ts';
+import TaskPeek from '#components/work/queue/TaskPeek.vue';
 
 defineProps<{ id: number }>();
 const emit = defineEmits<{ open: []; close: []; act: [kind: PersonEvent, id: number]; merge: [id: number]; peek: [id: number] }>();

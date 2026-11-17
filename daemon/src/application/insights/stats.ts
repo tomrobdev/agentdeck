@@ -1,11 +1,11 @@
 // The pilot scorecard measures per repo, read from the database.
-import type { App } from '../ports/app.ts';
-import type { RepoId } from '../../domain/shared/index.ts';
-import { type Scorecard, buildScorecard } from '../../domain/insights/index.ts';
-import { type Measures, type StatsReport, measure, measureByRepo, measureByWeek } from '../../domain/insights/index.ts';
-import { type FailureReport, failureReport } from '../../domain/insights/index.ts';
-import { type ModelMeasures, measureByModel } from '../../domain/insights/index.ts';
-import { ActionError } from '../shared/input.ts';
+import type { App } from '#application/ports/app.ts';
+import type { RepoId } from '#domain/shared/index.ts';
+import { type Scorecard, buildScorecard } from '#domain/insights/index.ts';
+import { type Measures, type StatsReport, measure, measureByRepo, measureByWeek } from '#domain/insights/index.ts';
+import { type FailureReport, failureReport } from '#domain/insights/index.ts';
+import { type ModelMeasures, measureByModel } from '#domain/insights/index.ts';
+import { ActionError } from '#application/shared/input.ts';
 
 export interface PilotReport extends StatsReport {
   scorecard: Scorecard;

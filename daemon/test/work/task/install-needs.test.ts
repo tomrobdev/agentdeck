@@ -5,8 +5,8 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from '
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { asTaskId } from '../../../src/domain/shared/id.ts';
-import { stateFields } from '../../../src/domain/work/task/task.ts';
+import { asTaskId } from '#domain/shared/id.ts';
+import { stateFields } from '#domain/work/task/task.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-install-'));
 process.env.AGENTDECK_HOME = home;
@@ -26,9 +26,9 @@ echo junk > stray.txt
 chmodSync(join(bin, 'pnpm'), 0o755);
 process.env.PATH = `${bin}:${process.env.PATH}`;
 
-const { openDb } = await import('../../fixtures/open-db.ts');
-const { ensureWorktree } = await import('../../../src/adapters/git/worktrees.ts');
-const { installNeeds } = await import('../../../src/application/actions.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const { ensureWorktree } = await import('#adapters/git/worktrees.ts');
+const { installNeeds } = await import('#application/actions.ts');
 
 const sh = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
 const dir = join(home, 'demo');

@@ -1,18 +1,18 @@
 // The rest of the pilot scorecard (docs/pilot/scorecard.md), computed from plain rows: interventions, time queued, running and in review, quota spent and PRs green on CI.
-import type { RepoId, TaskId } from '../shared/index.ts';
-import type { CheckCounts } from '../landing/index.ts';
-import { type QuotaSample, quotaSpends } from '../capacity/index.ts';
-import { isAutoMergeReason } from '../work/index.ts';
-import { median, minutesBetween, sqliteMs, weekOf } from '../shared/index.ts';
-import { type InterventionCount, INTERVENTION_KINDS, countInterventions } from './interventions.ts';
-import { num, pct, table } from './report-text.ts';
+import type { RepoId, TaskId } from '#domain/shared/index.ts';
+import type { CheckCounts } from '#domain/landing/index.ts';
+import { type QuotaSample, quotaSpends } from '#domain/capacity/index.ts';
+import { isAutoMergeReason } from '#domain/work/index.ts';
+import { median, minutesBetween, sqliteMs, weekOf } from '#domain/shared/index.ts';
+import { type InterventionCount, INTERVENTION_KINDS, countInterventions } from '#domain/insights/interventions.ts';
+import { num, pct, table } from '#domain/insights/report-text.ts';
 import {
   type ReviewRunMeasures,
   type ScorecardReviewRun,
   type ScorecardRunReview,
   measureReviewRuns,
   reviewRunsText,
-} from './review-runs.ts';
+} from '#domain/insights/review-runs.ts';
 
 export const SCORECARD_TARGETS = { first_run_rate: 0.8, interventions: 0, pr_green_rate: 1, quota_points: 15 } as const;
 

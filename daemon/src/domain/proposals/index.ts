@@ -7,5 +7,5 @@ export {
   plannerMaxTasksError,
   plannerModelError,
   selectProposals,
-} from './proposals.ts';
-export type { PlannerOutcome, PlannerRun, PlannerSettings, ProposalResult } from './proposals.ts';
+} from '#domain/proposals/proposals.ts';
+export type { PlannerOutcome, PlannerRun, PlannerSettings, ProposalResult } from '#domain/proposals/proposals.ts';

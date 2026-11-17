@@ -1,10 +1,10 @@
 import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import type { TaskSummary } from '../../../api/types';
-import { type Display, boardGroups, normalizeDisplay, rowOrder } from '../../../lib/work/queue/queue-display';
-import { loadSetting, saveSetting } from '../../../lib/shared/storage';
-import { type Filters, applyFilters, emptyFilters, groupTasks } from '../../../lib/work/task-view';
-import { requestedView } from './useView';
+import type { TaskSummary } from '#api/types.ts';
+import { type Display, boardGroups, normalizeDisplay, rowOrder } from '#lib/work/queue/queue-display.ts';
+import { loadSetting, saveSetting } from '#lib/shared/storage.ts';
+import { type Filters, applyFilters, emptyFilters, groupTasks } from '#lib/work/task-view.ts';
+import { requestedView } from '#composables/work/queue/useView.ts';
 
 const MODES: Display['mode'][] = ['list', 'board', 'graph'];
 

@@ -1,7 +1,7 @@
 // domain/shared/present: a value the code knows is there, checked in place of a non-null assertion.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { present } from '../../src/domain/shared/index.ts';
+import { present } from '#domain/shared/index.ts';
 
 test('present: a value is returned as it is, 0 and the empty string included', () => {
   assert.equal(present(3, 'the count'), 3);

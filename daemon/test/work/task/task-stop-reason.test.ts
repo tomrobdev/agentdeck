@@ -1,11 +1,11 @@
 // A task going to queued has no stop reason; the timeline keeps the history.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { openDb } from '../../../src/db/index.ts';
-import { asTaskId } from '../../../src/domain/shared/id.ts';
-import { type TaskEvent, transition } from '../../../src/domain/work/lifecycle/lifecycle.ts';
-import { buildPlannerPrompt } from '../../../src/domain/proposals/proposals.ts';
-import { type TaskState, stopReasonOf } from '../../../src/domain/work/task/task.ts';
+import { openDb } from '#db/index.ts';
+import { asTaskId } from '#domain/shared/id.ts';
+import { type TaskEvent, transition } from '#domain/work/lifecycle/lifecycle.ts';
+import { buildPlannerPrompt } from '#domain/proposals/proposals.ts';
+import { type TaskState, stopReasonOf } from '#domain/work/task/task.ts';
 
 function setup() {
   const db = openDb(':memory:');

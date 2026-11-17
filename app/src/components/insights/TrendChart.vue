@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { type Series, weekLabel } from '../../lib/insights/insights';
+import { type Series, weekLabel } from '#lib/insights/insights.ts';
 
 const props = defineProps<{ series: Series }>();
 

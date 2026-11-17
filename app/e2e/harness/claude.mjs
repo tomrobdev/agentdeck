@@ -99,7 +99,7 @@ if (prompt.startsWith('AgentDeck unblock run')) {
   );
   writeFileSync(
     'src/greet.test.ts',
-    "import { greet } from './greet.ts';\n\nif (greet() !== 'Hello, everyone!') throw new Error('greet() without a name');\n",
+    "import { greet } from '#src/greet.ts';\n\nif (greet() !== 'Hello, everyone!') throw new Error('greet() without a name');\n",
   );
   commit('Greet everyone when no name is given');
   say('greet() now falls back to everyone, and greetAll() greets a list.');

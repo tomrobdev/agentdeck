@@ -1,5 +1,5 @@
 // The daemon's headline: what state it is in, and what needs a person.
-import type { TaskId } from '../shared/index.ts';
+import type { TaskId } from '#domain/shared/index.ts';
 
 export type HeadlineState = 'paused' | 'rate_limited' | 'hold' | 'working' | 'idle';
 /** Why a task needs a person, in the order the attention list shows them. */

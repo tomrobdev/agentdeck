@@ -1,6 +1,12 @@
 // How a task's history rows are worded, for an agent (terse, in the digest) and for a person (the timeline).
-import { type TaskEventRow, isAutoMergeReason, isPrOpenedReason, isRequestedMergeReason, prSeenState } from '../lifecycle/history.ts';
-import { short } from '../../shared/index.ts';
+import {
+  type TaskEventRow,
+  isAutoMergeReason,
+  isPrOpenedReason,
+  isRequestedMergeReason,
+  prSeenState,
+} from '#domain/work/lifecycle/history.ts';
+import { short } from '#domain/shared/index.ts';
 
 type EventFields = Pick<TaskEventRow, 'type' | 'to_status' | 'reason'>;
 

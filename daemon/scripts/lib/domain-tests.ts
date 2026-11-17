@@ -2,8 +2,8 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import ts from 'typescript';
-import { projectOptions } from './strictness.ts';
-import { type Source, parseSource } from './sources.ts';
+import { projectOptions } from '#scripts/lib/strictness.ts';
+import { type Source, parseSource } from '#scripts/lib/sources.ts';
 
 const ROOT = join(import.meta.dirname, '../../..');
 const DOMAIN = join(ROOT, 'daemon/src/domain');
@@ -21,7 +21,7 @@ export interface TestFile {
 
 export const exportKey = (e: DomainExport) => `${e.context}/${e.name}`;
 
-const IMPURE_SPEC = /(^|\/)src\/(db|application|adapters)(\/|$)|(^|\/)fixtures(\/|$)|^(node:)?(fs|fs\/promises|child_process)$/;
+const IMPURE_SPEC = /^#(db|application|adapters)\/|^#test\/(.+\/)?fixtures\/|^(node:)?(fs|fs\/promises|child_process)$/;
 
 export function impureImports(source: Source): string[] {
   return source.imports.filter((i) => IMPURE_SPEC.test(i.spec)).map((i) => i.spec);
@@ -65,7 +65,7 @@ export function domainNamesUsed(source: Source): Set<string> {
   for (const stmt of source.ast.statements) {
     if (!ts.isImportDeclaration(stmt) || !ts.isStringLiteral(stmt.moduleSpecifier)) continue;
     const clause = stmt.importClause;
-    if (!clause || clause.isTypeOnly || !stmt.moduleSpecifier.text.includes('src/domain/')) continue;
+    if (!clause || clause.isTypeOnly || !stmt.moduleSpecifier.text.startsWith('#domain/')) continue;
     const bindings = clause.namedBindings;
     if (bindings && ts.isNamespaceImport(bindings)) spaces.add(bindings.name.text);
     else if (bindings) {

@@ -1,19 +1,19 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { type PersonEventText, describeEvent } from '../../../../../daemon/src/domain/work/index.ts';
-import { fmtTokens, runLabel, totalTokens } from '../../../lib/runs/run-wording';
-import { ago, runDuration } from '../../../lib/shared/time';
-import type { Changes, Run, TaskDetail, TaskEventRow } from '../../../api/types';
-import Markdown from '../../ui/Markdown.vue';
-import DependenciesCard from './DependenciesCard.vue';
-import DocumentsCard from './DocumentsCard.vue';
-import FinalMessage from '../../runs/FinalMessage.vue';
-import PlanCard from './PlanCard.vue';
-import ProposalCheckCard from './ProposalCheckCard.vue';
-import PullRequestCard from '../../landing/PullRequestCard.vue';
-import VerifyCard from '../../runs/VerifyCard.vue';
-import VerifyFindings from '../../runs/VerifyFindings.vue';
-import { latestVerify } from '../../../../../daemon/src/domain/runs/index.ts';
+import { type PersonEventText, describeEvent } from '#daemon/domain/work/index.ts';
+import { fmtTokens, runLabel, totalTokens } from '#lib/runs/run-wording.ts';
+import { ago, runDuration } from '#lib/shared/time.ts';
+import type { Changes, Run, TaskDetail, TaskEventRow } from '#api/types.ts';
+import Markdown from '#components/ui/Markdown.vue';
+import DependenciesCard from '#components/work/overview/DependenciesCard.vue';
+import DocumentsCard from '#components/work/overview/DocumentsCard.vue';
+import FinalMessage from '#components/runs/FinalMessage.vue';
+import PlanCard from '#components/work/overview/PlanCard.vue';
+import ProposalCheckCard from '#components/work/overview/ProposalCheckCard.vue';
+import PullRequestCard from '#components/landing/PullRequestCard.vue';
+import VerifyCard from '#components/runs/VerifyCard.vue';
+import VerifyFindings from '#components/runs/VerifyFindings.vue';
+import { latestVerify } from '#daemon/domain/runs/index.ts';
 
 const props = defineProps<{ task: TaskDetail; changes: Changes | null; isPath?: (p: string) => boolean }>();
 const emit = defineEmits<{ run: [runId: number]; path: [path: string, line: number | null] }>();

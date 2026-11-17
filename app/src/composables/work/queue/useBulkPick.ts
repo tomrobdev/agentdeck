@@ -1,14 +1,14 @@
 import { type Ref, computed, ref, watch } from 'vue';
-import { PERSON_CALLS } from '../../../api/work';
-import type { TaskSummary } from '../../../api/types';
-import { errorMessage } from '../../../../../daemon/src/domain/shared/index.ts';
-import { type BulkAction, type BulkEdit, type BulkResult, bulkActions, bulkMessage } from '../../../lib/work/queue/bulk';
-import { canStartMerge } from '../../../../../daemon/src/domain/work/index.ts';
-import { useAction, useActions } from '../../shared/useActions';
-import { useApprovals } from '../useApprovals';
-import { type BulkEditValue, useBulkEdit } from './useBulkEdit';
-import { usePicked } from './usePicked';
-import { requestedBulk } from './useView';
+import { PERSON_CALLS } from '#api/work.ts';
+import type { TaskSummary } from '#api/types.ts';
+import { errorMessage } from '#daemon/domain/shared/index.ts';
+import { type BulkAction, type BulkEdit, type BulkResult, bulkActions, bulkMessage } from '#lib/work/queue/bulk.ts';
+import { canStartMerge } from '#daemon/domain/work/index.ts';
+import { useAction, useActions } from '#composables/shared/useActions.ts';
+import { useApprovals } from '#composables/work/useApprovals.ts';
+import { type BulkEditValue, useBulkEdit } from '#composables/work/queue/useBulkEdit.ts';
+import { usePicked } from '#composables/work/queue/usePicked.ts';
+import { requestedBulk } from '#composables/work/queue/useView.ts';
 
 const VERB: Record<BulkAction, string> = { approve: 'Approve', reject: 'Reject', retry: 'Retry', merge: 'Merge', cancel: 'Cancel' };
 

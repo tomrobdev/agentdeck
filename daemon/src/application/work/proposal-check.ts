@@ -1,7 +1,7 @@
 // What a person should know before approving a proposed or queued task: how far the base moved since it was added, which paths it names are gone (promptWarnings), and which open tasks touch the same files.
-import type { App } from '../ports/app.ts';
-import type { TaskId } from '../../domain/shared/index.ts';
-import { sqliteMs } from '../../domain/shared/index.ts';
+import type { App } from '#application/ports/app.ts';
+import type { TaskId } from '#domain/shared/index.ts';
+import { sqliteMs } from '#domain/shared/index.ts';
 import {
   CHECKED_STATUSES,
   type Overlap,
@@ -13,12 +13,12 @@ import {
   overlaps,
   pathsNamedIn,
   staleness,
-} from '../../domain/work/index.ts';
-import type { Repo } from '../../domain/repos/index.ts';
-import { measureBranch } from './files.ts';
-import { promptWarnings } from './prompt-paths.ts';
-import { promiseCache } from '../shared/cache.ts';
-import { requireTask, requireTaskRepo } from '../shared/input.ts';
+} from '#domain/work/index.ts';
+import type { Repo } from '#domain/repos/index.ts';
+import { measureBranch } from '#application/work/files.ts';
+import { promptWarnings } from '#application/work/prompt-paths.ts';
+import { promiseCache } from '#application/shared/cache.ts';
+import { requireTask, requireTaskRepo } from '#application/shared/input.ts';
 
 const COMMIT_LIMIT = 500;
 

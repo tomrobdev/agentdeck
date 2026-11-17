@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { workApi } from '../../../api/work';
-import type { TaskDetail } from '../../../api/types';
-import { canEdit } from '../../../lib/work/task-view';
-import { useActions } from '../../../composables/shared/useActions';
-import InlineEdit from '../../ui/form/InlineEdit.vue';
+import { workApi } from '#api/work.ts';
+import type { TaskDetail } from '#api/types.ts';
+import { canEdit } from '#lib/work/task-view.ts';
+import { useActions } from '#composables/shared/useActions.ts';
+import InlineEdit from '#components/ui/form/InlineEdit.vue';
 
 const props = defineProps<{ task: TaskDetail }>();
 const { run } = useActions();

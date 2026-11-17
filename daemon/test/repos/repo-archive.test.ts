@@ -8,10 +8,10 @@ import { after, test } from 'node:test';
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-archive-'));
 process.env.AGENTDECK_HOME = home;
 
-const { openDb } = await import('../fixtures/open-db.ts');
-const { openPr } = await import('../fixtures/fixtures.ts');
-const actions = await import('../../src/application/actions.ts');
-const { plannerDue } = await import('../../src/application/proposals/planner.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const { openPr } = await import('#test/fixtures/fixtures.ts');
+const actions = await import('#application/actions.ts');
+const { plannerDue } = await import('#application/proposals/planner.ts');
 const db = openDb(join(home, 'test.db'));
 
 after(() => db.close());

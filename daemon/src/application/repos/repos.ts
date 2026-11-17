@@ -1,20 +1,20 @@
 // Use cases for repos: register, configure, check, pause and resume.
-import { normalizeNetwork, settingsPath } from '../../domain/runs/index.ts';
+import { normalizeNetwork, settingsPath } from '#domain/runs/index.ts';
 import { existsSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
-import type { App } from '../ports/app.ts';
-import { autoMergeMaxLinesError, codeCommentMaxLinesError, codeCommentMaxPercentError } from '../../domain/landing/index.ts';
-import { MERGE_METHODS, type MergeMethod, PR_MODES, type PrMode, type Repo, isMergeMethod } from '../../domain/repos/index.ts';
-import { goalsError, networkError, parseToolRules, repoNameError, toolRulesError } from '../../domain/repos/index.ts';
-import { detectToolchain } from '../../domain/repos/index.ts';
-import { present, textList } from '../../domain/shared/index.ts';
-import { modelError } from '../../domain/work/index.ts';
-import { type Check, runDoctor } from './doctor.ts';
-import { repoView } from './repo-view.ts';
-import { ActionError, flag, list, object, refuse, requireRepo, text, textOrNull, whole } from '../shared/input.ts';
-import { pauseRepo } from './pause.ts';
-import { buildersOnRepo, liveLinks, warnBuildersOnDeleted } from '../work/dependencies.ts';
-import { prModeOffError, startState } from '../../domain/work/index.ts';
+import type { App } from '#application/ports/app.ts';
+import { autoMergeMaxLinesError, codeCommentMaxLinesError, codeCommentMaxPercentError } from '#domain/landing/index.ts';
+import { MERGE_METHODS, type MergeMethod, PR_MODES, type PrMode, type Repo, isMergeMethod } from '#domain/repos/index.ts';
+import { goalsError, networkError, parseToolRules, repoNameError, toolRulesError } from '#domain/repos/index.ts';
+import { detectToolchain } from '#domain/repos/index.ts';
+import { present, textList } from '#domain/shared/index.ts';
+import { modelError } from '#domain/work/index.ts';
+import { type Check, runDoctor } from '#application/repos/doctor.ts';
+import { repoView } from '#application/repos/repo-view.ts';
+import { ActionError, flag, list, object, refuse, requireRepo, text, textOrNull, whole } from '#application/shared/input.ts';
+import { pauseRepo } from '#application/repos/pause.ts';
+import { buildersOnRepo, liveLinks, warnBuildersOnDeleted } from '#application/work/dependencies.ts';
+import { prModeOffError, startState } from '#domain/work/index.ts';
 
 export async function addRepo(
   app: App,

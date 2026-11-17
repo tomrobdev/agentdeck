@@ -1,6 +1,6 @@
 // What the peek pane and the queue's rows say of a task's model, properties and links, as plain values.
-import type { PlanStep, TaskLink, TaskSummary } from '../../../../../daemon/src/api/contract/work.ts';
-import { canStartMerge, personEvents, statusGroup } from '../../../../../daemon/src/domain/work/index.ts';
+import type { PlanStep, TaskLink, TaskSummary } from '#daemon/api/contract/work.ts';
+import { canStartMerge, personEvents, statusGroup } from '#daemon/domain/work/index.ts';
 
 type Modeled = Pick<TaskSummary, 'model' | 'run_model'>;
 

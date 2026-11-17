@@ -1,9 +1,9 @@
 // The status bar's activity list: what counts as under way, and what each row says. The dashboard has no test runner.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { activityItems } from '../../../../app/src/lib/operations/activity.ts';
-import type { Status, TaskSummary } from '../../../../app/src/api/types.ts';
-import { asTaskId } from '../../fixtures/fixtures.ts';
+import { activityItems } from '#app/lib/operations/activity.ts';
+import type { Status, TaskSummary } from '#app/api/types.ts';
+import { asTaskId } from '#test/fixtures/fixtures.ts';
 
 const NOW = Date.parse('2026-11-01T12:10:00Z');
 

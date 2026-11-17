@@ -1,7 +1,7 @@
 // How the dashboard words a pull request's path to merging: auto-merge, a merge request, opening the PR and a sync.
-import type { AutoMergeCheck, MergeRequestView, PrRetry, SyncResult } from '../../api/types.ts';
-import { plural } from '../../../../daemon/src/domain/shared/index.ts';
-import { parseTime } from '../shared/time.ts';
+import type { AutoMergeCheck, MergeRequestView, PrRetry, SyncResult } from '#api/types.ts';
+import { plural } from '#daemon/domain/shared/index.ts';
+import { parseTime } from '#lib/shared/time.ts';
 
 export function autoMergeLine(c: AutoMergeCheck): string {
   if (c.verdict === 'merge') return 'on; merges on the next PR refresh';

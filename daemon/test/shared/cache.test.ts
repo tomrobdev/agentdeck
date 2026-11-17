@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { promiseCache } from '../../src/application/shared/cache.ts';
+import { promiseCache } from '#application/shared/cache.ts';
 
 function counted(): { make: (value: string) => () => Promise<string>; calls: () => number } {
   let calls = 0;

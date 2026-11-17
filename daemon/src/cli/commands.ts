@@ -1,11 +1,11 @@
 // The command table: every `agentdeck <command>`, by name.
-import { contextCommands } from './operations/agent-context.ts';
-import type { Command } from './context.ts';
-import { daemonCommands } from './operations/daemon.ts';
-import { prCommands } from './landing/pull-requests.ts';
-import { repoCommands } from './repos/repos.ts';
-import { statsCommands } from './insights/stats.ts';
-import { taskCommands } from './work/tasks.ts';
+import { contextCommands } from '#cli/operations/agent-context.ts';
+import type { Command } from '#cli/context.ts';
+import { daemonCommands } from '#cli/operations/daemon.ts';
+import { prCommands } from '#cli/landing/pull-requests.ts';
+import { repoCommands } from '#cli/repos/repos.ts';
+import { statsCommands } from '#cli/insights/stats.ts';
+import { taskCommands } from '#cli/work/tasks.ts';
 
 export const COMMANDS: Record<string, Command> = {
   ...repoCommands,

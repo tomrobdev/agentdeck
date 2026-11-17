@@ -1,8 +1,8 @@
 // How far a proposed or queued task's prompt is behind its base, and which open tasks touch the same files.
-import type { TaskId } from '../../shared/index.ts';
-import { plural, sqliteUtc } from '../../shared/index.ts';
-import type { PullRequest } from '../../landing/index.ts';
-import type { TaskStatus } from '../lifecycle/lifecycle.ts';
+import type { TaskId } from '#domain/shared/index.ts';
+import { plural, sqliteUtc } from '#domain/shared/index.ts';
+import type { PullRequest } from '#domain/landing/index.ts';
+import type { TaskStatus } from '#domain/work/lifecycle/lifecycle.ts';
 
 export const CHECKED_STATUSES: readonly TaskStatus[] = ['proposed', 'queued'];
 

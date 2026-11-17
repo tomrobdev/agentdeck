@@ -7,11 +7,11 @@ import { test } from 'node:test';
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-sync-marker-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../../fixtures/open-db.ts');
-const { installNeeds, removeTaskWorktree, retryTask, syncNow } = await import('../../../src/application/actions.ts');
-const { isSyncing, markSyncing } = await import('../../../src/application/work/checkout-locks.ts');
-const { advance, doneTask } = await import('../../fixtures/fixtures.ts');
-const { TASK_STATUSES, WORKTREE_REMOVABLE_STATUSES } = await import('../../../src/domain/work/index.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const { installNeeds, removeTaskWorktree, retryTask, syncNow } = await import('#application/actions.ts');
+const { isSyncing, markSyncing } = await import('#application/work/checkout-locks.ts');
+const { advance, doneTask } = await import('#test/fixtures/fixtures.ts');
+const { TASK_STATUSES, WORKTREE_REMOVABLE_STATUSES } = await import('#domain/work/index.ts');
 type TaskStatus = (typeof TASK_STATUSES)[number];
 
 function setup() {

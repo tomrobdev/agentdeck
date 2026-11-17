@@ -1,10 +1,10 @@
 // Tasks waiting on another through a builds-on link: why they wait, and telling a human when they're stuck.
-import type { App } from '../ports/app.ts';
-import type { RepoId, TaskId } from '../../domain/shared/index.ts';
-import { type Link, type LinkIndex, type LinkTarget, linkState, releasedBy, stuckOn, unlandedAfter } from '../../domain/work/index.ts';
-import type { Task } from '../../domain/work/index.ts';
-import { plural } from '../../domain/shared/index.ts';
-import { notifyLater } from '../operations/notifications.ts';
+import type { App } from '#application/ports/app.ts';
+import type { RepoId, TaskId } from '#domain/shared/index.ts';
+import { type Link, type LinkIndex, type LinkTarget, linkState, releasedBy, stuckOn, unlandedAfter } from '#domain/work/index.ts';
+import type { Task } from '#domain/work/index.ts';
+import { plural } from '#domain/shared/index.ts';
+import { notifyLater } from '#application/operations/notifications.ts';
 
 export function targetOf(app: App, id: TaskId): LinkTarget | undefined {
   const dep = app.getTask(id);

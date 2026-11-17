@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { landingApi } from '../../api/landing';
-import type { RequestMergesResult, TaskSummary } from '../../api/types';
-import { errorMessage, plural } from '../../../../daemon/src/domain/shared/index.ts';
-import { useActions } from '../../composables/shared/useActions';
-import ConfirmDialog from '../ui/ConfirmDialog.vue';
+import { landingApi } from '#api/landing.ts';
+import type { RequestMergesResult, TaskSummary } from '#api/types.ts';
+import { errorMessage, plural } from '#daemon/domain/shared/index.ts';
+import { useActions } from '#composables/shared/useActions.ts';
+import ConfirmDialog from '#components/ui/ConfirmDialog.vue';
 
 const props = defineProps<{ tasks: TaskSummary[] }>();
 const emit = defineEmits<{ close: []; done: [requested: number[]] }>();

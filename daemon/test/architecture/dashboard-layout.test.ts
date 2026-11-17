@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import ts from 'typescript';
-import { MAY_IMPORT, PACKAGE_AREAS, areaOf } from '../../scripts/lib/dashboard-layout.ts';
-import { type Source, lineOf, parseSource, readSources } from '../../scripts/lib/sources.ts';
-import { TASK_STATUSES } from '../../src/domain/work/lifecycle/lifecycle.ts';
+import { MAY_IMPORT, PACKAGE_AREAS, areaOf } from '#scripts/lib/dashboard-layout.ts';
+import { type Source, lineOf, parseSource, readSources } from '#scripts/lib/sources.ts';
+import { TASK_STATUSES } from '#domain/work/lifecycle/lifecycle.ts';
 
 const APP_SRC = join(import.meta.dirname, '../../../app/src');
 const sources = readSources(APP_SRC, { vue: true });
@@ -29,6 +29,8 @@ export function layoutViolations(sources: Source[]): string[] {
       continue;
     }
     for (const i of s.imports) {
+      if (!i.target && i.spec.startsWith('#'))
+        found.push(`${s.path}:${i.line} imports ${i.spec}, which names no file: the daemon exports only its domain/ and api/contract/`);
       if (!i.target) continue;
       const to = areaOf(i.target);
       const at = `${s.path}:${i.line} imports ${i.target}`;
@@ -50,43 +52,47 @@ test('[dashboard-layout] each folder of app/src imports only the folders below i
 test('[dashboard-layout] the layout check fails when components/ui/ imports from a context', () => {
   const bad = parseSource(
     'components/ui/Chip.vue',
-    `<script setup lang="ts">\nimport Card from '../work/overview/PlanCard.vue';\n</script>`,
+    `<script setup lang="ts">\nimport Card from '#components/work/overview/PlanCard.vue';\n</script>`,
   );
   assert.deepEqual(layoutViolations([bad]), [
     'components/ui/Chip.vue:2 imports components/work/overview/PlanCard.vue: components/ui/ is shared by every context, so it imports none of them in its layer',
   ]);
   const ok = parseSource(
     'components/work/overview/PlanCard.vue',
-    `import Chip from '../../ui/Chip.vue';\nimport PrCard from '../../landing/PullRequestCard.vue';\nimport { x } from '../../../lib/work/task-view';`,
+    `import Chip from '#components/ui/Chip.vue';\nimport PrCard from '#components/landing/PullRequestCard.vue';\nimport { x } from '#lib/work/task-view.ts';`,
   );
   assert.deepEqual(layoutViolations([ok]), []);
-  const daemon = parseSource('lib/shared/x.ts', `import { a } from '../../../../daemon/src/db/index.ts';`);
-  assert.equal(layoutViolations([daemon]).length, 1);
+  const daemon = parseSource('lib/shared/x.ts', `import { a } from '#daemon/db/index.ts';`, 'app/src');
+  assert.deepEqual(layoutViolations([daemon]), [
+    'lib/shared/x.ts:1 imports #daemon/db/index.ts, which names no file: the daemon exports only its domain/ and api/contract/',
+  ]);
+  const domain = parseSource('lib/shared/x.ts', `import { a } from '#daemon/domain/work/index.ts';`, 'app/src');
+  assert.deepEqual(layoutViolations([domain]), []);
 });
 
 test('[dashboard-layout] the layout check fails when one context imports another', () => {
   const repos = parseSource(
     'components/repos/RepoEditor.vue',
-    `<script setup lang="ts">\nimport Peek from '../work/queue/TaskPeek.vue';\n</script>`,
+    `<script setup lang="ts">\nimport Peek from '#components/work/queue/TaskPeek.vue';\n</script>`,
   );
   assert.deepEqual(layoutViolations([repos]), [
     'components/repos/RepoEditor.vue:2 imports components/work/queue/TaskPeek.vue: a context imports no other context',
   ]);
-  const runs = parseSource('lib/runs/verify.ts', `import { taskBadges } from '../work/task-badges.ts';`);
+  const runs = parseSource('lib/runs/verify.ts', `import { taskBadges } from '#lib/work/task-badges.ts';`);
   assert.deepEqual(layoutViolations([runs]), ['lib/runs/verify.ts:1 imports lib/work/task-badges.ts: a context imports no other context']);
   for (const context of ['work', 'runs', 'landing', 'repos', 'operations', 'insights']) {
-    const shared = parseSource('lib/shared/forms.ts', `import { x } from '../${context}/x.ts';`);
+    const shared = parseSource('lib/shared/forms.ts', `import { x } from '#lib/${context}/x.ts';`);
     assert.equal(layoutViolations([shared]).length, 1, `lib/shared/ importing lib/${context}/`);
   }
 });
 
 test('[dashboard-layout] the layout check fails when a component imports from pages/, and only App uses a page', () => {
   const vue = (from: string) => `<script setup lang="ts">\nimport Page from '${from}';\n</script>`;
-  const layout = parseSource('components/layout/Overlays.vue', vue('../../pages/TaskPage.vue'));
+  const layout = parseSource('components/layout/Overlays.vue', vue('#pages/TaskPage.vue'));
   assert.equal(layoutViolations([layout]).length, 1, 'components/layout/ importing a page');
-  const task = parseSource('components/work/task/TaskView.vue', vue('../../../pages/TaskPage.vue'));
+  const task = parseSource('components/work/task/TaskView.vue', vue('#pages/TaskPage.vue'));
   assert.equal(layoutViolations([task]).length, 1, 'a context component importing a page');
-  const app = parseSource('App.vue', vue('./pages/TaskPage.vue'));
+  const app = parseSource('App.vue', vue('#pages/TaskPage.vue'));
   assert.deepEqual(layoutViolations([app]), []);
 });
 
@@ -170,10 +176,10 @@ test('[dashboard-layout] the re-export finder sees an imported name exported, an
   const s = parseSource(
     'lib/work/view.ts',
     [
-      `import { a, type B } from './x.ts';`,
-      `import { c } from './y.ts';`,
+      `import { a, type B } from '#lib/work/x.ts';`,
+      `import { c } from '#lib/work/y.ts';`,
       `export { a, type B };`,
-      `export { d } from './z.ts';`,
+      `export { d } from '#lib/work/z.ts';`,
       `const e = c + 1;`,
       `export { e };`,
       `export const f = 1;`,

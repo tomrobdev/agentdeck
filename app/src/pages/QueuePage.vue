@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { reposQuery } from '../api/repos';
-import { tasksQuery } from '../api/work';
-import StaleDaemonBar from '../components/layout/StaleDaemonBar.vue';
-import WaitBar from '../components/layout/WaitBar.vue';
-import QueueView from '../components/work/queue/QueueView.vue';
-import { useActions } from '../composables/shared/useActions';
-import { openPanel, selectedId } from '../composables/shared/useShell';
-import { usePause } from '../composables/shared/usePause';
-import { useApprovals } from '../composables/work/useApprovals';
-import { useTaskActs } from '../composables/work/usePaletteCommands';
+import { reposQuery } from '#api/repos.ts';
+import { tasksQuery } from '#api/work.ts';
+import StaleDaemonBar from '#components/layout/StaleDaemonBar.vue';
+import WaitBar from '#components/layout/WaitBar.vue';
+import QueueView from '#components/work/queue/QueueView.vue';
+import { useActions } from '#composables/shared/useActions.ts';
+import { openPanel, selectedId } from '#composables/shared/useShell.ts';
+import { usePause } from '#composables/shared/usePause.ts';
+import { useApprovals } from '#composables/work/useApprovals.ts';
+import { useTaskActs } from '#composables/work/usePaletteCommands.ts';
 
 const { status, pausing, resumeDaemon, resumeRepo } = usePause();
 const tasksQ = useQuery(tasksQuery());

@@ -1,8 +1,8 @@
 // What the Runs tab shows of a run as it goes: the live header and the timeline strip. Pure, so daemon/test tests them.
-import { REVIEW_MAX_TURNS, UNBLOCK_MAX_TURNS, VERIFY_MAX_TURNS, isTestCommand } from '../../../../daemon/src/domain/runs/index.ts';
-import { parseTime } from '../shared/time.ts';
-import type { LogEntry, Run, TaskDetail } from '../../api/types.ts';
-import { type Item, toolKind } from './transcript.ts';
+import { REVIEW_MAX_TURNS, UNBLOCK_MAX_TURNS, VERIFY_MAX_TURNS, isTestCommand } from '#daemon/domain/runs/index.ts';
+import { parseTime } from '#lib/shared/time.ts';
+import type { LogEntry, Run, TaskDetail } from '#api/types.ts';
+import { type Item, toolKind } from '#lib/runs/transcript.ts';
 
 export interface LiveSource {
   turns: number;

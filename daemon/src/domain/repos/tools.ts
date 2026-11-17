@@ -1,6 +1,6 @@
 // Which tools a worker may use in a repo.
-import type { Repo } from './repo.ts';
-import { detectToolchain, isToolchain, toolchainTools } from './toolchain.ts';
+import type { Repo } from '#domain/repos/repo.ts';
+import { detectToolchain, isToolchain, toolchainTools } from '#domain/repos/toolchain.ts';
 
 export const DEFAULT_ALLOWED_TOOLS = [
   'Read',

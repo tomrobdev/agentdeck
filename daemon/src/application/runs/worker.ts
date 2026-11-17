@@ -1,9 +1,9 @@
 // Runs one attempt of a claimed task: worktree, setup, claude, tests, then the task's next status.
-import { SETUP_TIMEOUT_MS, TEST_TIMEOUT_MS, ensureDirs } from '../../config.ts';
-import type { App } from '../ports/app.ts';
-import type { Checkout } from '../ports/workspace.ts';
-import { conflictReason, syncSummary } from '../../domain/runs/index.ts';
-import { unfinishedSteps, unfinishedSummary } from '../../domain/work/index.ts';
+import { SETUP_TIMEOUT_MS, TEST_TIMEOUT_MS, ensureDirs } from '#src/config.ts';
+import type { App } from '#application/ports/app.ts';
+import type { Checkout } from '#application/ports/workspace.ts';
+import { conflictReason, syncSummary } from '#domain/runs/index.ts';
+import { unfinishedSteps, unfinishedSummary } from '#domain/work/index.ts';
 import {
   CODE_COMMENTS_MAX_TURNS,
   type PromptPlan,
@@ -13,9 +13,9 @@ import {
   buildResumePrompt,
   withTurnUsage,
   workerSystemPrompt,
-} from '../../domain/runs/index.ts';
-import { codeCommentFields, measureCodeComments } from './code-comments.ts';
-import { latestReviewNote } from '../../domain/work/index.ts';
+} from '#domain/runs/index.ts';
+import { codeCommentFields, measureCodeComments } from '#application/runs/code-comments.ts';
+import { latestReviewNote } from '#domain/work/index.ts';
 import {
   type Run,
   type WorkerResult,
@@ -28,19 +28,19 @@ import {
   resumeMaxTurns,
   runOutcome,
   setupFailedReason,
-} from '../../domain/runs/index.ts';
-import { hasPlanLink, otherPlanOwner } from '../../domain/work/index.ts';
-import { type Task, attemptsLeft, leftoversMessage } from '../../domain/work/index.ts';
-import { errorMessage } from '../../domain/shared/index.ts';
-import { type OpenedRun, type TaskRunEnd, endTaskRun, openTaskRun, startTaskRun } from './claude-run.ts';
-import type { Repo } from '../../domain/repos/index.ts';
-import { syncBranch } from './sync.ts';
-import { pauseRepo } from '../repos/pause.ts';
-import { markSyncing } from '../work/checkout-locks.ts';
-import { followedSteps, planForRun, takePlanFile } from '../work/plans.ts';
-import { settle } from '../landing/settle.ts';
-import { recordAnswers, reviewForRun } from '../landing/review/address.ts';
-import { escalateAfter } from '../work/escalate.ts';
+} from '#domain/runs/index.ts';
+import { hasPlanLink, otherPlanOwner } from '#domain/work/index.ts';
+import { type Task, attemptsLeft, leftoversMessage } from '#domain/work/index.ts';
+import { errorMessage } from '#domain/shared/index.ts';
+import { type OpenedRun, type TaskRunEnd, endTaskRun, openTaskRun, startTaskRun } from '#application/runs/claude-run.ts';
+import type { Repo } from '#domain/repos/index.ts';
+import { syncBranch } from '#application/runs/sync.ts';
+import { pauseRepo } from '#application/repos/pause.ts';
+import { markSyncing } from '#application/work/checkout-locks.ts';
+import { followedSteps, planForRun, takePlanFile } from '#application/work/plans.ts';
+import { settle } from '#application/landing/settle.ts';
+import { recordAnswers, reviewForRun } from '#application/landing/review/address.ts';
+import { escalateAfter } from '#application/work/escalate.ts';
 
 export async function runTask(app: App, task: Task): Promise<WorkerResult> {
   ensureDirs();

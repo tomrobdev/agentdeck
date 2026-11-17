@@ -1,5 +1,5 @@
 // What a worker's claude is told and allowed.
-import { PLAN_FILE, parsePlanWithText } from '../work/index.ts';
+import { PLAN_FILE, parsePlanWithText } from '#domain/work/index.ts';
 import {
   type CodeCommentCount,
   type CodeCommentLimits,
@@ -7,15 +7,15 @@ import {
   codeCommentLimitOn,
   codeCommentLimitText,
   codeCommentsText,
-} from '../landing/index.ts';
-import { ALWAYS_DISALLOWED_TOOLS } from '../repos/index.ts';
-import { type ReviewPrompt, reviewPromptBlock } from '../landing/index.ts';
-import { NEVER_APPLIED, PROTECTED_PREFIXES, editPathFor } from '../repos/index.ts';
-import { withoutUnscopedFileTools } from './translate/sandbox.ts';
-import { type Task, leftoversMessage } from '../work/index.ts';
-import { INTERRUPTED, type Run } from './run.ts';
-import { UNBLOCK_NOTE } from './unblock.ts';
-import { REVIEW_NOTE } from './review.ts';
+} from '#domain/landing/index.ts';
+import { ALWAYS_DISALLOWED_TOOLS } from '#domain/repos/index.ts';
+import { type ReviewPrompt, reviewPromptBlock } from '#domain/landing/index.ts';
+import { NEVER_APPLIED, PROTECTED_PREFIXES, editPathFor } from '#domain/repos/index.ts';
+import { withoutUnscopedFileTools } from '#domain/runs/translate/sandbox.ts';
+import { type Task, leftoversMessage } from '#domain/work/index.ts';
+import { INTERRUPTED, type Run } from '#domain/runs/run.ts';
+import { UNBLOCK_NOTE } from '#domain/runs/unblock.ts';
+import { REVIEW_NOTE } from '#domain/runs/review.ts';
 
 export function workerSystemPrompt(testCmd: string | null, limits: CodeCommentLimits | null = null): string {
   const codeComments =

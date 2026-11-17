@@ -1,4 +1,4 @@
-import { drizzleKitOnScratch } from './scratch-db.ts';
+import { drizzleKitOnScratch } from '#scripts/scratch-db.ts';
 
 const { status, out } = drizzleKitOnScratch(['push', '--explain']);
 if (status === 0 && /No changes detected/.test(out)) {

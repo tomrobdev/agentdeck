@@ -1,8 +1,8 @@
 // The live state of a repo's queue in a few lines, for an agent: what changed since it last looked, and what is open.
-import type { TaskId } from '../shared/index.ts';
-import { short } from '../shared/index.ts';
-import type { PrState } from '../landing/index.ts';
-import { type TaskEventRow, type TaskStatus, type Waiting, describeEvent, statusGroup } from '../work/index.ts';
+import type { TaskId } from '#domain/shared/index.ts';
+import { short } from '#domain/shared/index.ts';
+import type { PrState } from '#domain/landing/index.ts';
+import { type TaskEventRow, type TaskStatus, type Waiting, describeEvent, statusGroup } from '#domain/work/index.ts';
 
 /** A history row with its task's title. */
 export type DigestEvent = Pick<TaskEventRow, 'id' | 'task_id' | 'type' | 'from_status' | 'to_status' | 'reason'> & { title: string };

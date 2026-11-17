@@ -1,5 +1,5 @@
 // The queue: every stage the seed made is in its group, and "need you" opens the tasks that wait on a person.
-import { expandGroup, expect, group, open, queueSettled, row, rowIds, test } from '../fixtures';
+import { expandGroup, expect, group, open, queueSettled, row, rowIds, test } from '#e2e/fixtures.ts';
 
 test('the queue lists each stage in its group', async ({ page }) => {
   await open(page, '#/');

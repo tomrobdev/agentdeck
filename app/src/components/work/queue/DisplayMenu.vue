@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { SORT_OPTIONS } from '../../../../../daemon/src/domain/work/index.ts';
-import type { GroupBy } from '../../../lib/work/queue/queue-display';
-import { GROUP_BYS } from '../../../lib/work/task-view';
-import type { Display, ShowProps } from '../../../lib/work/queue/queue-display';
-import ChipToggle from '../../ui/form/ChipToggle.vue';
-import Popover from '../../ui/Popover.vue';
+import { SORT_OPTIONS } from '#daemon/domain/work/index.ts';
+import type { GroupBy } from '#lib/work/queue/queue-display.ts';
+import { GROUP_BYS } from '#lib/work/task-view.ts';
+import type { Display, ShowProps } from '#lib/work/queue/queue-display.ts';
+import ChipToggle from '#components/ui/form/ChipToggle.vue';
+import Popover from '#components/ui/Popover.vue';
 
 const display = defineModel<Display>({ required: true });
 const set = (patch: Partial<Display>) => (display.value = { ...display.value, ...patch });

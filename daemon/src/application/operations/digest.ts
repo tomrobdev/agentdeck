@@ -1,12 +1,12 @@
 // The live state of a repo's queue for an agent's session (`agentdeck context`, run by Claude Code's hooks).
 import { realpathSync } from 'node:fs';
 import { join, sep } from 'node:path';
-import { WORKTREE_DIR } from '../../config.ts';
-import type { App } from '../ports/app.ts';
-import type { Repo } from '../../domain/repos/index.ts';
-import { type DigestTask, digest } from '../../domain/operations/index.ts';
-import { status } from './settings.ts';
-import { repoReviewDue } from './review-due.ts';
+import { WORKTREE_DIR } from '#src/config.ts';
+import type { App } from '#application/ports/app.ts';
+import type { Repo } from '#domain/repos/index.ts';
+import { type DigestTask, digest } from '#domain/operations/index.ts';
+import { status } from '#application/operations/settings.ts';
+import { repoReviewDue } from '#application/operations/review-due.ts';
 
 export interface LiveContext {
   lines: string[];

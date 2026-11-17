@@ -1,10 +1,10 @@
 // The writes to a task's pull request: its state, its checks, the auto-merge setting and check, and a person's merge request.
 import { type SQL, and, eq, inArray, isNotNull, isNull, or } from 'drizzle-orm';
 import type { DatabaseSync } from 'node:sqlite';
-import type { TaskId } from '../../domain/shared/index.ts';
-import type { AutoMergeCheck, CheckCounts, MergeRequestMove, PrFrom, StoredChecks } from '../../domain/landing/index.ts';
-import { mergeRequestStatesFor, prStatesFor } from '../../domain/landing/index.ts';
-import type { MergeMethod } from '../../domain/repos/index.ts';
+import type { TaskId } from '#domain/shared/index.ts';
+import type { AutoMergeCheck, CheckCounts, MergeRequestMove, PrFrom, StoredChecks } from '#domain/landing/index.ts';
+import { mergeRequestStatesFor, prStatesFor } from '#domain/landing/index.ts';
+import type { MergeMethod } from '#domain/repos/index.ts';
 import {
   type PrEvent,
   type Task,
@@ -20,13 +20,13 @@ import {
   prChecksOpenedChanges,
   prEventReason,
   prMoveOf,
-} from '../../domain/work/index.ts';
-import { TASK_COLUMNS, mapFound, toTask } from '../mappers.ts';
-import type { Orm } from '../orm.ts';
-import { NOW_SQL, atomically, changed } from '../sql.ts';
-import { tasks } from '../tables.ts';
-import { recordEvent } from './task-events.ts';
-import { columns, inReview } from './tasks-columns.ts';
+} from '#domain/work/index.ts';
+import { TASK_COLUMNS, mapFound, toTask } from '#db/mappers.ts';
+import type { Orm } from '#db/orm.ts';
+import { NOW_SQL, atomically, changed } from '#db/sql.ts';
+import { tasks } from '#db/tables.ts';
+import { recordEvent } from '#db/work/task-events.ts';
+import { columns, inReview } from '#db/work/tasks-columns.ts';
 
 function prStateIn(states: PrFrom[]): SQL | undefined {
   const known = states.filter((s) => s !== 'none');

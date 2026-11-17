@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { landingApi, mergePreviewQuery } from '../../api/landing';
-import { autoMergeLine } from '../../lib/landing/landing-wording';
-import { type MergeMethod, type MergeResult, MERGE_METHODS } from '../../api/types';
-import { errorMessage, plural } from '../../../../daemon/src/domain/shared/index.ts';
-import { useActions } from '../../composables/shared/useActions';
-import Chip from '../ui/Chip.vue';
-import ConfirmDialog from '../ui/ConfirmDialog.vue';
-import Delta from '../ui/status/Delta.vue';
-import RadioGroup from '../ui/form/RadioGroup.vue';
+import { landingApi, mergePreviewQuery } from '#api/landing.ts';
+import { autoMergeLine } from '#lib/landing/landing-wording.ts';
+import { type MergeMethod, type MergeResult, MERGE_METHODS } from '#api/types.ts';
+import { errorMessage, plural } from '#daemon/domain/shared/index.ts';
+import { useActions } from '#composables/shared/useActions.ts';
+import Chip from '#components/ui/Chip.vue';
+import ConfirmDialog from '#components/ui/ConfirmDialog.vue';
+import Delta from '#components/ui/status/Delta.vue';
+import RadioGroup from '#components/ui/form/RadioGroup.vue';
 
 const props = defineProps<{ taskId: number; hasNext?: boolean }>();
 const emit = defineEmits<{ close: []; merged: [result: MergeResult, openNext: boolean]; requested: [openNext: boolean] }>();

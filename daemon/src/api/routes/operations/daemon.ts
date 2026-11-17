@@ -1,6 +1,6 @@
 // The daemon as a whole: the change stream, status, stats, pause and resume, restart, health, the service, a test notification and the desktop app saying it is running.
-import * as actions from '../../../application/actions.ts';
-import { parseSince } from '../../../domain/insights/index.ts';
+import * as actions from '#application/actions.ts';
+import { parseSince } from '#domain/insights/index.ts';
 import type {
   AppSeenResult,
   ChangeEvent,
@@ -11,9 +11,9 @@ import type {
   ServiceStatus,
   Status,
   TestNotifyResult,
-} from '../../contract/operations.ts';
-import type { Stats } from '../../contract/insights.ts';
-import { type ApiContext, BadRequest, type Route, route } from '../../http.ts';
+} from '#api/contract/operations.ts';
+import type { Stats } from '#api/contract/insights.ts';
+import { type ApiContext, BadRequest, type Route, route } from '#api/http.ts';
 
 const PING_MS = 25_000;
 

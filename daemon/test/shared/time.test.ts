@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { median, minutesBetween, sqliteMs, sqliteUtc, weekOf } from '../../src/domain/shared/time.ts';
+import { median, minutesBetween, sqliteMs, sqliteUtc, weekOf } from '#domain/shared/time.ts';
 
 test('sqliteMs reads a sqlite stamp as UTC', () => {
   assert.equal(sqliteMs('2026-10-01 10:00:00'), Date.UTC(2026, 9, 1, 10));

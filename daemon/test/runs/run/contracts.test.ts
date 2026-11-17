@@ -4,9 +4,9 @@ import { chmodSync, mkdtempSync, readFileSync, writeFileSync, type WriteStream }
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { runClaude } from '../../../src/adapters/claude/claude.ts';
-import { LOG_TAIL_BYTES, actionsRun, parsePrDetails, type PrDetails } from '../../../src/domain/landing/index.ts';
-import { logTail } from '../../../src/domain/landing/pull-request/check-failures.ts';
+import { runClaude } from '#adapters/claude/claude.ts';
+import { LOG_TAIL_BYTES, actionsRun, parsePrDetails, type PrDetails } from '#domain/landing/index.ts';
+import { logTail } from '#domain/landing/pull-request/check-failures.ts';
 import {
   type ClaudeRun,
   type LogEntry,
@@ -16,9 +16,9 @@ import {
   nextLive,
   parseLogLine,
   resultFields,
-} from '../../../src/domain/runs/index.ts';
-import type { UsageWindow } from '../../../src/domain/runs/run-result.ts';
-import { fakeCodeHost } from '../../fixtures/fakes.ts';
+} from '#domain/runs/index.ts';
+import type { UsageWindow } from '#domain/runs/run-result.ts';
+import { fakeCodeHost } from '#test/fixtures/fakes.ts';
 
 const FIXTURES = join(import.meta.dirname, '../../fixtures');
 const FAKE = join(import.meta.dirname, '../../fixtures/fake-claude.mjs');

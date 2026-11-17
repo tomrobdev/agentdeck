@@ -1,8 +1,8 @@
 // The goals file of each repo, `<GOALS_DIR>/<repo name>.md`, read by the planner.
 import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { GOALS_DIR, ensureDirs } from '../../config.ts';
-import type { Repo } from '../../domain/repos/index.ts';
+import { GOALS_DIR, ensureDirs } from '#src/config.ts';
+import type { Repo } from '#domain/repos/index.ts';
 
 export function goalsPath(repo: Pick<Repo, 'name'>): string {
   return join(GOALS_DIR, `${repo.name}.md`);

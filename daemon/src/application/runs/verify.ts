@@ -1,7 +1,7 @@
 // The verify run of a proposed or queued task, started by a person: claude reads the base in a scratch checkout with read-only tools and checks each claim the task's prompt makes about the code.
-import type { App } from '../ports/app.ts';
-import type { RunId, TaskId } from '../../domain/shared/index.ts';
-import { errorMessage } from '../../domain/shared/index.ts';
+import type { App } from '#application/ports/app.ts';
+import type { RunId, TaskId } from '#domain/shared/index.ts';
+import { errorMessage } from '#domain/shared/index.ts';
 import {
   VERIFY_DENIED_TOOLS,
   VERIFY_MAX_TURNS,
@@ -12,12 +12,12 @@ import {
   verifyRefusal,
   verifySchemaArgs,
   verifySystemPrompt,
-} from '../../domain/runs/index.ts';
-import { CHECKED_STATUSES, type Task, describeWait } from '../../domain/work/index.ts';
-import type { Repo } from '../../domain/repos/index.ts';
-import { queueWait } from '../capacity/gate.ts';
-import { refuse, requireTask, requireTaskRepo } from '../shared/input.ts';
-import { type OpenedRun, endTaskRun, openTaskRun, startTaskRun } from './claude-run.ts';
+} from '#domain/runs/index.ts';
+import { CHECKED_STATUSES, type Task, describeWait } from '#domain/work/index.ts';
+import type { Repo } from '#domain/repos/index.ts';
+import { queueWait } from '#application/capacity/gate.ts';
+import { refuse, requireTask, requireTaskRepo } from '#application/shared/input.ts';
+import { type OpenedRun, endTaskRun, openTaskRun, startTaskRun } from '#application/runs/claude-run.ts';
 
 export interface VerifyReport {
   outcome: 'done' | 'garbage' | 'failed' | 'rate_limited' | 'cancelled';

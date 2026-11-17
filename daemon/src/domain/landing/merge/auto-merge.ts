@@ -1,12 +1,25 @@
 // Whether the daemon may merge a done task's PR without a person (docs/plans/auto-merge.html).
-import type { Repo } from '../../repos/index.ts';
-import { PROTECTED_PREFIXES, isProtectedPath } from '../../repos/index.ts';
-import { wholeNumberError } from '../../shared/index.ts';
-import { type CodeCommentCount, type CodeCommentLimits, codeCommentsOver, codeCommentsTag, codeCommentsText } from './code-comments.ts';
-import { checksRan } from '../pull-request/checks.ts';
-import { type AutoMergeCheck, type MergeInput, type MergeReason, type MergeReasonKind, reasonTexts, unattendedVerdict } from './merge.ts';
-import type { PullRequest } from '../pull-request/pr.ts';
-import { type ReviewFacts, reviewGate } from '../review/review-gate.ts';
+import type { Repo } from '#domain/repos/index.ts';
+import { PROTECTED_PREFIXES, isProtectedPath } from '#domain/repos/index.ts';
+import { wholeNumberError } from '#domain/shared/index.ts';
+import {
+  type CodeCommentCount,
+  type CodeCommentLimits,
+  codeCommentsOver,
+  codeCommentsTag,
+  codeCommentsText,
+} from '#domain/landing/merge/code-comments.ts';
+import { checksRan } from '#domain/landing/pull-request/checks.ts';
+import {
+  type AutoMergeCheck,
+  type MergeInput,
+  type MergeReason,
+  type MergeReasonKind,
+  reasonTexts,
+  unattendedVerdict,
+} from '#domain/landing/merge/merge.ts';
+import type { PullRequest } from '#domain/landing/pull-request/pr.ts';
+import { type ReviewFacts, reviewGate } from '#domain/landing/review/review-gate.ts';
 
 export const AUTO_MERGE_LABEL = {
   name: 'agentdeck:auto-merge',

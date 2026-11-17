@@ -1,9 +1,9 @@
 // `agentdeck doctor`: gathers the facts about the daemon (launchd, the API, git, the processes of runs, the log, gh) and has domain/operations/health.ts judge them.
-import { API_PORT, CHECKOUT_ROOT } from '../../config.ts';
-import type { App } from '../ports/app.ts';
-import { type Check, type DaemonState, type HealthFacts, judgeHealth, logFacts } from '../../domain/operations/index.ts';
-import { sqliteMs } from '../../domain/shared/index.ts';
-import { reviewsDue } from './review-due.ts';
+import { API_PORT, CHECKOUT_ROOT } from '#src/config.ts';
+import type { App } from '#application/ports/app.ts';
+import { type Check, type DaemonState, type HealthFacts, judgeHealth, logFacts } from '#domain/operations/index.ts';
+import { sqliteMs } from '#domain/shared/index.ts';
+import { reviewsDue } from '#application/operations/review-due.ts';
 
 export interface Probes {
   service: () => Promise<HealthFacts['service']>;

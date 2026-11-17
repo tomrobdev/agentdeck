@@ -1,7 +1,7 @@
 // How the dashboard words what a task waits for, a list of tasks and the size of a changed file.
-import type { StartWait } from '../../api/types.ts';
-import { oneLine } from '../../../../daemon/src/domain/shared/index.ts';
-import { relTime, when } from '../shared/time.ts';
+import type { StartWait } from '#api/types.ts';
+import { oneLine } from '#daemon/domain/shared/index.ts';
+import { relTime, when } from '#lib/shared/time.ts';
 
 export function describeWait(h: StartWait): string {
   switch (h.kind) {

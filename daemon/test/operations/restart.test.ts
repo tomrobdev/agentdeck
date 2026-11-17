@@ -6,11 +6,11 @@ import { test } from 'node:test';
 
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-restart-'));
 
-const { ActionError, gracefulRestart } = await import('../../src/application/actions.ts');
-const { logsOptions, restartOptions, serviceAction } = await import('../../src/cli/operations/daemon-args.ts');
-const { parseCommandLine } = await import('../../src/cli/context.ts');
-const { RELOAD_QUIET_MS, reloadDecision, restartWait } = await import('../../src/domain/operations/restart.ts');
-const { openDb } = await import('../fixtures/open-db.ts');
+const { ActionError, gracefulRestart } = await import('#application/actions.ts');
+const { logsOptions, restartOptions, serviceAction } = await import('#cli/operations/daemon-args.ts');
+const { parseCommandLine } = await import('#cli/context.ts');
+const { RELOAD_QUIET_MS, reloadDecision, restartWait } = await import('#domain/operations/restart.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
 
 const flagsOf = (...argv: string[]) => parseCommandLine(argv).values;
 

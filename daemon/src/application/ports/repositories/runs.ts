@@ -1,6 +1,6 @@
 // Runs' repository: one row per claude process of a task.
-import type { TaskId } from '../../../domain/shared/index.ts';
-import type { PidRun, Run, RunKind, RunningTaskRun } from '../../../domain/runs/index.ts';
+import type { TaskId } from '#domain/shared/index.ts';
+import type { PidRun, Run, RunKind, RunningTaskRun } from '#domain/runs/index.ts';
 
 export interface RunRepository {
   startRun(task_id: TaskId, attempt: number, log_path: string, kind?: RunKind, model?: string | null, diff_hash?: string | null): Run['id'];

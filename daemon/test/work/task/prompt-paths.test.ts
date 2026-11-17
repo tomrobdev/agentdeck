@@ -9,9 +9,9 @@ import { test } from 'node:test';
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-promptpaths-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../../fixtures/open-db.ts');
-const { addTask, editTask, promptWarnings } = await import('../../../src/application/actions.ts');
-const { pathsNamedIn } = await import('../../../src/domain/work/plans/prompt-paths.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const { addTask, editTask, promptWarnings } = await import('#application/actions.ts');
+const { pathsNamedIn } = await import('#domain/work/plans/prompt-paths.ts');
 
 test('paths in backticks and bare paths are picked, once each', () => {
   assert.deepEqual(pathsNamedIn('Follow `docs/plans/ink-rebrand.html` and read src/domain/ first. See `package.json`.'), [

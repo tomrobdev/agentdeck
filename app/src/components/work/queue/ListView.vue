@@ -1,21 +1,21 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { ago } from '../../../lib/shared/time';
-import { mergeAllIds } from '../../../lib/work/queue/bulk';
-import { openExternal } from '../../../platform/native';
-import MergeButtons from '../../landing/MergeButtons.vue';
-import RowMenu from './RowMenu.vue';
-import { personEvents } from '../../../../../daemon/src/domain/work/index.ts';
-import type { BoardMove } from '../../../lib/work/queue/board-move';
-import type { GroupBy } from '../../../lib/work/queue/queue-display';
-import { type Group, quickRetry, statusLabel } from '../../../lib/work/task-view';
-import Checkbox from '../../ui/form/Checkbox.vue';
-import ModelChip from '../../ui/status/ModelChip.vue';
-import PriorityIcon from '../../ui/status/PriorityIcon.vue';
-import StatusIcon from '../../ui/status/StatusIcon.vue';
-import TaskBadges from '../../ui/status/TaskBadges.vue';
-import TaskStatusLine from '../../ui/status/TaskStatusLine.vue';
-import type { ShowProps } from '../../../lib/work/queue/queue-display';
+import { ago } from '#lib/shared/time.ts';
+import { mergeAllIds } from '#lib/work/queue/bulk.ts';
+import { openExternal } from '#platform/native.ts';
+import MergeButtons from '#components/landing/MergeButtons.vue';
+import RowMenu from '#components/work/queue/RowMenu.vue';
+import { personEvents } from '#daemon/domain/work/index.ts';
+import type { BoardMove } from '#lib/work/queue/board-move.ts';
+import type { GroupBy } from '#lib/work/queue/queue-display.ts';
+import { type Group, quickRetry, statusLabel } from '#lib/work/task-view.ts';
+import Checkbox from '#components/ui/form/Checkbox.vue';
+import ModelChip from '#components/ui/status/ModelChip.vue';
+import PriorityIcon from '#components/ui/status/PriorityIcon.vue';
+import StatusIcon from '#components/ui/status/StatusIcon.vue';
+import TaskBadges from '#components/ui/status/TaskBadges.vue';
+import TaskStatusLine from '#components/ui/status/TaskStatusLine.vue';
+import type { ShowProps } from '#lib/work/queue/queue-display.ts';
 
 const props = defineProps<{
   groups: Group[];

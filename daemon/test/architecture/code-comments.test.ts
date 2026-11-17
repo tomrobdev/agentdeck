@@ -1,7 +1,7 @@
 // Code comments stay only where a tool reads them: a file's leading one-line comment, a reasoned @ts-expect-error, a reference directive and a migration's heading.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { commentViolations, readViolations } from '../../scripts/lib/code-comments.ts';
+import { commentViolations, readViolations } from '#scripts/lib/code-comments.ts';
 
 test('[code-comments] daemon/src, app/src, daemon/test and daemon/scripts hold no code comment outside the allowed kinds', () => {
   const found = readViolations().map((v) => `${v.path}:${v.line} ${v.why} (rule code-comments): ${v.text.slice(0, 60)}`);

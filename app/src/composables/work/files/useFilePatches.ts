@@ -1,8 +1,8 @@
 import { type Ref, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import { useQueryClient } from '@tanstack/vue-query';
-import { diffQuery } from '../../../api/work';
-import type { FilePatch } from '../../../api/types';
-import { errorMessage } from '../../../../../daemon/src/domain/shared/index.ts';
+import { diffQuery } from '#api/work.ts';
+import type { FilePatch } from '#api/types.ts';
+import { errorMessage } from '#daemon/domain/shared/index.ts';
 
 export type PatchState = { state: 'loading' } | { state: 'error'; error: string } | { state: 'ok'; patch: FilePatch };
 

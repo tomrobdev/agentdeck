@@ -7,10 +7,10 @@ import {
   mergeRequestPolls,
   mergeRequestView,
   mergesNow,
-} from '../../../src/domain/landing/merge/merge-request.ts';
-import { AUTO_MERGE_LABEL } from '../../../src/domain/landing/merge/auto-merge.ts';
-import { type PrDetails, verdictView } from '../../../src/domain/landing/merge/merge.ts';
-import { type PrFields, prFields, pullRequestOf } from '../../../src/domain/landing/pull-request/pr.ts';
+} from '#domain/landing/merge/merge-request.ts';
+import { AUTO_MERGE_LABEL } from '#domain/landing/merge/auto-merge.ts';
+import { type PrDetails, verdictView } from '#domain/landing/merge/merge.ts';
+import { type PrFields, prFields, pullRequestOf } from '#domain/landing/pull-request/pr.ts';
 
 const openPr = (o: Partial<PrFields> = {}) => pullRequestOf({ ...prFields(null), pr_url: 'https://x/pull/1', pr_state: 'open', ...o });
 

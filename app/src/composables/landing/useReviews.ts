@@ -1,8 +1,8 @@
 // A task's reviews: the draft being built, and every comment of every review for the diff to show.
 import { type Ref, computed } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { reviewsQuery } from '../../api/landing';
-import type { Review, ReviewComment } from '../../api/types';
+import { reviewsQuery } from '#api/landing.ts';
+import type { Review, ReviewComment } from '#api/types.ts';
 
 export type ShownComment = ReviewComment & { draft: boolean; by: Review['by'] };
 

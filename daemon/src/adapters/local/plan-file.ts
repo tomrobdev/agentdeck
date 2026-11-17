@@ -1,8 +1,8 @@
 // The plan file in a task's worktree (PLAN_FILE): where a run's plan is put for the worker and read back after it, with the copy the run was given beside it (PLAN_GIVEN_FILE).
 import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { AGENTDECK_FOLDER } from '../../domain/repos/index.ts';
-import { PLAN_FILE, PLAN_GIVEN_FILE, PLAN_LIMIT } from '../../domain/work/index.ts';
+import { AGENTDECK_FOLDER } from '#domain/repos/index.ts';
+import { PLAN_FILE, PLAN_GIVEN_FILE, PLAN_LIMIT } from '#domain/work/index.ts';
 
 async function ensurePlanFolder(worktree: string): Promise<void> {
   const dir = join(worktree, AGENTDECK_FOLDER);

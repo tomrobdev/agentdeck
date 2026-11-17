@@ -11,7 +11,7 @@ import {
   registeredKeys,
   resolveKey,
   sheetGroups,
-} from '../../../../app/src/lib/shared/hotkeys.ts';
+} from '#app/lib/shared/hotkeys.ts';
 
 const BINDINGS = [...GO_KEYS.map((g) => g.key), ...PRIORITY_KEYS.map((p) => `p ${p.key}`), 'j', 'c', 'e'];
 

@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { NOTIFY_LABELS } from '../../../lib/operations/daemon-wording';
-import { NOTIFY_KINDS } from '../../../../../daemon/src/domain/operations/index.ts';
-import type { SettingsForm } from '../../../lib/shared/forms';
-import Switch from '../../ui/form/Switch.vue';
+import { NOTIFY_LABELS } from '#lib/operations/daemon-wording.ts';
+import { NOTIFY_KINDS } from '#daemon/domain/operations/index.ts';
+import type { SettingsForm } from '#lib/shared/forms.ts';
+import Switch from '#components/ui/form/Switch.vue';
 
 defineProps<{ form: SettingsForm }>();
 </script>

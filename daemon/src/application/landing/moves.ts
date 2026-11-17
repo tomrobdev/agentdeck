@@ -1,8 +1,8 @@
 // Moving a task's pull request and merge request by their rule tables: a move the table doesn't allow is logged and ignored, never written.
-import type { App } from '../ports/app.ts';
-import type { MergeRequestMove, PrFrom, PrState } from '../../domain/landing/index.ts';
-import { mergeRequestStateOf, nextMergeRequestState, nextPrState, prFrom } from '../../domain/landing/index.ts';
-import { type PrEvent, type Task, prMoveOf } from '../../domain/work/index.ts';
+import type { App } from '#application/ports/app.ts';
+import type { MergeRequestMove, PrFrom, PrState } from '#domain/landing/index.ts';
+import { mergeRequestStateOf, nextMergeRequestState, nextPrState, prFrom } from '#domain/landing/index.ts';
+import { type PrEvent, type Task, prMoveOf } from '#domain/work/index.ts';
 
 const logError = (msg: string) => console.error(msg);
 

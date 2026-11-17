@@ -1,9 +1,9 @@
 // Each route names the contract type it answers with (route<T> in http.ts), so a use case whose return type drifts from what the dashboard reads fails `pnpm typecheck` there.
-import type { LogEntry as DomainLogEntry } from '../domain/runs/index.ts';
-import * as actions from '../application/actions.ts';
-import type { NewRepo, RepoPatch } from './contract/repos.ts';
-import type { MarkDoneRequest, NewLink, NewTask, RetryRequest, TaskPatch, TaskSummary } from './contract/work.ts';
-import type { LiveView, RunSummary, SyncView, VerifyResult } from './contract/runs.ts';
+import type { LogEntry as DomainLogEntry } from '#domain/runs/index.ts';
+import * as actions from '#application/actions.ts';
+import type { NewRepo, RepoPatch } from '#api/contract/repos.ts';
+import type { MarkDoneRequest, NewLink, NewTask, RetryRequest, TaskPatch, TaskSummary } from '#api/contract/work.ts';
+import type { LiveView, RunSummary, SyncView, VerifyResult } from '#api/contract/runs.ts';
 import type {
   AutoMergeRequest,
   ChecksSummary,
@@ -15,9 +15,9 @@ import type {
   RequestMergesRequest,
   ReviewPatch,
   SubmitReview,
-} from './contract/landing.ts';
-import type { LogEntry } from './contract/files.ts';
-import type { SettingsPatch } from './contract/operations.ts';
+} from '#api/contract/landing.ts';
+import type { LogEntry } from '#api/contract/files.ts';
+import type { SettingsPatch } from '#api/contract/operations.ts';
 
 type Out<F extends (...args: never[]) => unknown> = Awaited<ReturnType<F>>;
 type In<F extends (...args: never[]) => unknown, N extends number> = Parameters<F>[N];

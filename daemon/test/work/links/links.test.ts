@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
-import { MIGRATIONS, migrate, openDb } from '../../../src/db/index.ts';
-import { asTaskId } from '../../fixtures/fixtures.ts';
-import { parseTaskIds } from '../../../src/domain/work/task/ids.ts';
+import { MIGRATIONS, migrate, openDb } from '#db/index.ts';
+import { asTaskId } from '#test/fixtures/fixtures.ts';
+import { parseTaskIds } from '#domain/work/task/ids.ts';
 import {
   type Dependency,
   type Link,
@@ -18,8 +18,8 @@ import {
   startState,
   stuckOn,
   unlandedAfter,
-} from '../../../src/domain/work/links/link.ts';
-import { transition } from '../../../src/domain/work/lifecycle/lifecycle.ts';
+} from '#domain/work/links/link.ts';
+import { transition } from '#domain/work/lifecycle/lifecycle.ts';
 
 const done: Dependency = { status: 'done', pr: null, pr_mode: 'off', done_by: null };
 const t1 = asTaskId(1);

@@ -1,7 +1,7 @@
 import ts from 'typescript';
-import type { Floor } from './coverage.ts';
-import { type FolderCycle, folderCycles } from './graphs.ts';
-import { type Source, lineOf } from './sources.ts';
+import type { Floor } from '#scripts/lib/coverage.ts';
+import { type FolderCycle, folderCycles } from '#scripts/lib/graphs.ts';
+import { type Source, lineOf } from '#scripts/lib/sources.ts';
 
 export const CYCLE_LAYERS = ['domain', 'application'];
 

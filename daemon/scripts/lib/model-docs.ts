@@ -1,9 +1,9 @@
 import { join } from 'node:path';
 import ts from 'typescript';
-import { MERGE_REQUEST_MOVES, MERGE_REQUEST_STATES } from '../../src/domain/landing/merge/merge-request.ts';
-import { PR_FROM, PR_MOVES } from '../../src/domain/landing/pull-request/pr-moves.ts';
-import { COMMENT_MOVES, COMMENT_STATES } from '../../src/domain/landing/review/review.ts';
-import { FOLLOW_UPS } from '../../src/domain/work/lifecycle/follow-ups.ts';
+import { MERGE_REQUEST_MOVES, MERGE_REQUEST_STATES } from '#domain/landing/merge/merge-request.ts';
+import { PR_FROM, PR_MOVES } from '#domain/landing/pull-request/pr-moves.ts';
+import { COMMENT_MOVES, COMMENT_STATES } from '#domain/landing/review/review.ts';
+import { FOLLOW_UPS } from '#domain/work/lifecycle/follow-ups.ts';
 import {
   DOMAIN_EVENT_TYPES,
   RULES,
@@ -11,8 +11,8 @@ import {
   TASK_STATUSES,
   type TaskStatus,
   domainEventType,
-} from '../../src/domain/work/lifecycle/lifecycle.ts';
-import { type Source, readSources } from './sources.ts';
+} from '#domain/work/lifecycle/lifecycle.ts';
+import { type Source, readSources } from '#scripts/lib/sources.ts';
 
 const SRC = join(import.meta.dirname, '../../src');
 const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);

@@ -3,18 +3,18 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import type { TaskId } from '../../../src/domain/shared/id.ts';
-import { fakeCodeHost } from '../../fixtures/fakes.ts';
-import { asTaskId, testApp } from '../../fixtures/fixtures.ts';
+import type { TaskId } from '#domain/shared/id.ts';
+import { fakeCodeHost } from '#test/fixtures/fakes.ts';
+import { asTaskId, testApp } from '#test/fixtures/fixtures.ts';
 
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-outbox-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../../../src/db/index.ts');
-const { Scheduler } = await import('../../../src/application/scheduler/scheduler.ts');
-const { followUpPending, settle } = await import('../../../src/application/landing/settle.ts');
-const { openPullRequest } = await import('../../../src/application/landing/pull-request/open-pr.ts');
-const { cancelTask } = await import('../../../src/application/actions.ts');
+const { openDb } = await import('#db/index.ts');
+const { Scheduler } = await import('#application/scheduler/scheduler.ts');
+const { followUpPending, settle } = await import('#application/landing/settle.ts');
+const { openPullRequest } = await import('#application/landing/pull-request/open-pr.ts');
+const { cancelTask } = await import('#application/actions.ts');
 
 function setup() {
   const codeHost = fakeCodeHost();

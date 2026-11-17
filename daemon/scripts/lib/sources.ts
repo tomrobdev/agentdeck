@@ -1,7 +1,8 @@
 // Reads a source tree with the TypeScript compiler: every file's AST and its imports, with target, line and type-only flag.
 import { readFileSync, readdirSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, posix, relative, sep } from 'node:path';
 import ts from 'typescript';
+import { REPO, packageOf, resolveAlias } from '#scripts/lib/imports.ts';
 
 export interface Import {
   spec: string;
@@ -32,25 +33,32 @@ export function vueScript(text: string): string {
   return out + blank(text.slice(last));
 }
 
-export function parseSource(path: string, text: string): Source {
+export function parseSource(path: string, text: string, root?: string): Source {
   const code = path.endsWith('.vue') ? vueScript(text) : text;
   const ast = ts.createSourceFile(path.replace(/\.vue$/, '.vue.ts'), code, ts.ScriptTarget.Latest, true);
-  return { path, ast, imports: importsOf(path, ast) };
+  return { path, ast, imports: importsOf(path, ast, root) };
 }
 
 export function readSources(root: string, opts: { vue?: boolean } = {}): Source[] {
+  const repoRoot = relative(REPO, root).split(sep).join('/');
   return readdirSync(root, { recursive: true, encoding: 'utf8' })
     .filter((f) => f.endsWith('.ts') || (opts.vue && f.endsWith('.vue')))
     .sort()
-    .map((path) => parseSource(path, readFileSync(join(root, path), 'utf8')));
+    .map((path) => parseSource(path, readFileSync(join(root, path), 'utf8'), repoRoot));
 }
 
-function importsOf(path: string, ast: ts.SourceFile): Import[] {
+export function targetOf(path: string, spec: string, root?: string): string | null {
+  if (spec.startsWith('.')) return join(dirname(path), spec);
+  if (!spec.startsWith('#')) return null;
+  const hit = resolveAlias(spec, root ? packageOf(`${root}/`) : null);
+  return hit && posix.relative(root ?? `${hit.alias.pkg}/src`, hit.path);
+}
+
+function importsOf(path: string, ast: ts.SourceFile, root?: string): Import[] {
   const out: Import[] = [];
-  const add = (node: ts.Node, spec: ts.Expression, typeOnly: boolean) => {
+  const add = (node: ts.Node, spec: ts.Node, typeOnly: boolean) => {
     if (!ts.isStringLiteral(spec)) return;
-    const target = spec.text.startsWith('.') ? join(dirname(path), spec.text) : null;
-    out.push({ spec: spec.text, target, line: lineOf(ast, node), typeOnly });
+    out.push({ spec: spec.text, target: targetOf(path, spec.text, root), line: lineOf(ast, node), typeOnly });
   };
   const visit = (node: ts.Node) => {
     if (ts.isImportDeclaration(node)) {
@@ -66,6 +74,8 @@ function importsOf(path: string, ast: ts.SourceFile): Import[] {
       add(node, node.moduleSpecifier, allTypes);
     } else if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword && node.arguments[0]) {
       add(node, node.arguments[0], false);
+    } else if (ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument)) {
+      add(node, node.argument.literal, true);
     }
     ts.forEachChild(node, visit);
   };

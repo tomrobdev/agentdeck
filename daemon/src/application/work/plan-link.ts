@@ -1,11 +1,11 @@
 // The plan link a task request asks for: its steps, the plan it follows, and the checks on both.
-import type { App } from '../ports/app.ts';
-import { type TaskId, parseId } from '../../domain/shared/index.ts';
-import { type ParsedPlan, parsePlan } from '../../domain/work/index.ts';
-import type { Repo } from '../../domain/repos/index.ts';
-import { stepsNeedPlanError } from '../../domain/work/index.ts';
-import { ActionError, refuse } from '../shared/input.ts';
-import { readPlanInput } from './plans.ts';
+import type { App } from '#application/ports/app.ts';
+import { type TaskId, parseId } from '#domain/shared/index.ts';
+import { type ParsedPlan, parsePlan } from '#domain/work/index.ts';
+import type { Repo } from '#domain/repos/index.ts';
+import { stepsNeedPlanError } from '#domain/work/index.ts';
+import { ActionError, refuse } from '#application/shared/input.ts';
+import { readPlanInput } from '#application/work/plans.ts';
 
 export function stepList(value: unknown): string[] | null {
   if (value === undefined || value === null) return null;

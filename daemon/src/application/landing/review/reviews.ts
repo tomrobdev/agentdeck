@@ -1,6 +1,6 @@
 // Use cases for reviews: a person builds a draft of line comments and an overall note on a task, submits it as a Comment or as Request changes, and comments are answered and resolved.
-import type { App } from '../../ports/app.ts';
-import type { ReviewId, TaskId } from '../../../domain/shared/index.ts';
+import type { App } from '#application/ports/app.ts';
+import type { ReviewId, TaskId } from '#domain/shared/index.ts';
 import {
   type CommentAction,
   type ReviewComment,
@@ -16,9 +16,9 @@ import {
   nextCommentState,
   reviewKindError,
   reviewReason,
-} from '../../../domain/landing/index.ts';
-import { ActionError, number, object, refuse, requireTask, text } from '../../shared/input.ts';
-import { retryTask } from '../person-events.ts';
+} from '#domain/landing/index.ts';
+import { ActionError, number, object, refuse, requireTask, text } from '#application/shared/input.ts';
+import { retryTask } from '#application/landing/person-events.ts';
 
 function requireReview(app: App, id: ReviewId): ReviewWithComments {
   const review = app.reviewWithComments(id);

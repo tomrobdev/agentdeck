@@ -1,7 +1,7 @@
 import { ref } from 'vue';
 import { type RouteLocationRaw, useRouter } from 'vue-router';
-import { type Panel, goMove } from '../../lib/shared/shell';
-import type { GoTarget } from '../../lib/shared/hotkeys';
+import { type Panel, goMove } from '#lib/shared/shell.ts';
+import type { GoTarget } from '#lib/shared/hotkeys.ts';
 
 export const panel = ref<Panel | null>(null);
 export const palette = ref(false);

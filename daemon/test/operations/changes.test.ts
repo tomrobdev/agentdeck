@@ -6,13 +6,13 @@ import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { after, test } from 'node:test';
 import { setTimeout as sleep } from 'node:timers/promises';
-import { waitFor } from '../fixtures/fixtures.ts';
+import { waitFor } from '#test/fixtures/fixtures.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-changes-'));
 process.env.AGENTDECK_HOME = home;
 
-const { openDb } = await import('../../src/db/index.ts');
-const { ChangeWatcher } = await import('../../src/application/operations/changes.ts');
+const { openDb } = await import('#db/index.ts');
+const { ChangeWatcher } = await import('#application/operations/changes.ts');
 
 const file = join(home, 'test.db');
 const db = openDb(file);

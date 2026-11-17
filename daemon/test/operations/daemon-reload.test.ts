@@ -6,9 +6,9 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
-import type { Source } from '../../src/application/ports/source.ts';
-import { fakeAgent, fakeCodeHost } from '../fixtures/fakes.ts';
-import { testApp, waitFor } from '../fixtures/fixtures.ts';
+import type { Source } from '#application/ports/source.ts';
+import { fakeAgent, fakeCodeHost } from '#test/fixtures/fakes.ts';
+import { testApp, waitFor } from '#test/fixtures/fixtures.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-reload-'));
 process.env.AGENTDECK_HOME = home;
@@ -19,9 +19,9 @@ const port = (free.address() as AddressInfo).port;
 await new Promise<void>((resolve) => free.close(() => resolve()));
 process.env.AGENTDECK_PORT = String(port);
 
-const { openDb } = await import('../../src/db/index.ts');
-const { runDaemon } = await import('../../src/daemon.ts');
-const { realProcesses } = await import('../../src/compose.ts');
+const { openDb } = await import('#db/index.ts');
+const { runDaemon } = await import('#src/daemon.ts');
+const { realProcesses } = await import('#src/compose.ts');
 
 let onChange: ((file: string) => void) | null = null;
 const source: Source = {

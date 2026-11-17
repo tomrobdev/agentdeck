@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { describeWait } from '../../lib/work/work-wording';
-import type { Status } from '../../api/types';
-import { oneLine, plural } from '../../../../daemon/src/domain/shared/index.ts';
-import { openPanel } from '../../composables/shared/useShell';
+import { describeWait } from '#lib/work/work-wording.ts';
+import type { Status } from '#api/types.ts';
+import { oneLine, plural } from '#daemon/domain/shared/index.ts';
+import { openPanel } from '#composables/shared/useShell.ts';
 
 const props = defineProps<{ status: Status | null; busy: boolean }>();
 const emit = defineEmits<{ resume: []; resumeRepo: [id: number] }>();

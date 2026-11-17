@@ -1,7 +1,7 @@
 <script setup lang="ts" generic="K extends string">
 import { TabsList, TabsRoot, TabsTrigger } from 'reka-ui';
 import { type RouteLocationRaw, RouterLink } from 'vue-router';
-import Chip from './Chip.vue';
+import Chip from '#components/ui/Chip.vue';
 
 defineProps<{ tabs: { key: K; label: string; count: number | null }[]; label: string; to: (key: K) => RouteLocationRaw }>();
 const model = defineModel<K>({ required: true });

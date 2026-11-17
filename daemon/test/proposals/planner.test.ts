@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { after, before, test } from 'node:test';
-import { asRepoId } from '../fixtures/fixtures.ts';
+import { asRepoId } from '#test/fixtures/fixtures.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-planner-'));
 process.env.AGENTDECK_HOME = home;
@@ -15,12 +15,12 @@ const fake = join(import.meta.dirname, '../fixtures/fake-claude.mjs');
 chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
 
-const { openDb } = await import('../fixtures/open-db.ts');
-const { Scheduler } = await import('../../src/application/scheduler/scheduler.ts');
-const actions = await import('../../src/application/actions.ts');
-const { plannerDue } = await import('../../src/application/proposals/planner.ts');
-const { buildPlannerPrompt } = await import('../../src/domain/proposals/proposals.ts');
-const { renderPlist, servicePath, LABEL } = await import('../../src/adapters/macos/service.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const { Scheduler } = await import('#application/scheduler/scheduler.ts');
+const actions = await import('#application/actions.ts');
+const { plannerDue } = await import('#application/proposals/planner.ts');
+const { buildPlannerPrompt } = await import('#domain/proposals/proposals.ts');
+const { renderPlist, servicePath, LABEL } = await import('#adapters/macos/service.ts');
 
 const db = openDb(join(home, 'test.db'));
 

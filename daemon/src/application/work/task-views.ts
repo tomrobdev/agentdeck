@@ -1,25 +1,25 @@
 // Tasks as the dashboard and the CLI show them: a task plus what the queue says about it.
-import type { App } from '../ports/app.ts';
-import type { TaskId } from '../../domain/shared/index.ts';
-import { type AutoMergeView, autoMergeOn, autoMergeView } from '../../domain/landing/index.ts';
-import { type ChecksSummary, checksSummary } from '../../domain/landing/index.ts';
-import { type MergeRequestView, conflictsWithBase, mergeRequestView } from '../../domain/landing/index.ts';
-import { isMergeLocked, isSyncLocked } from './checkout-locks.ts';
-import { type LiveView, type SyncView, liveView, syncView } from '../../domain/runs/index.ts';
-import { type Run, type RunSummary, runSummary } from '../../domain/runs/index.ts';
-import { type PrRetry, openPrUrl } from '../../domain/landing/index.ts';
-import { prRetryFor } from '../../domain/work/index.ts';
-import type { Repo } from '../../domain/repos/index.ts';
-import type { StartWait, Waiting } from '../../domain/work/index.ts';
-import { measureBranch } from './files.ts';
-import type { TaskStatus } from '../../domain/work/index.ts';
-import type { Task } from '../../domain/work/index.ts';
-import { liveLinks, loadedLinks } from './dependencies.ts';
-import { type LinkView, dependentViews, linkViews, startState, unblocksOf, waitingFor } from '../../domain/work/index.ts';
-import type { LinkIndex, LinkKind } from '../../domain/work/index.ts';
-import { requireTask } from '../shared/input.ts';
-import { plansShown } from './plans.ts';
-import { startWaits } from '../capacity/queue.ts';
+import type { App } from '#application/ports/app.ts';
+import type { TaskId } from '#domain/shared/index.ts';
+import { type AutoMergeView, autoMergeOn, autoMergeView } from '#domain/landing/index.ts';
+import { type ChecksSummary, checksSummary } from '#domain/landing/index.ts';
+import { type MergeRequestView, conflictsWithBase, mergeRequestView } from '#domain/landing/index.ts';
+import { isMergeLocked, isSyncLocked } from '#application/work/checkout-locks.ts';
+import { type LiveView, type SyncView, liveView, syncView } from '#domain/runs/index.ts';
+import { type Run, type RunSummary, runSummary } from '#domain/runs/index.ts';
+import { type PrRetry, openPrUrl } from '#domain/landing/index.ts';
+import { prRetryFor } from '#domain/work/index.ts';
+import type { Repo } from '#domain/repos/index.ts';
+import type { StartWait, Waiting } from '#domain/work/index.ts';
+import { measureBranch } from '#application/work/files.ts';
+import type { TaskStatus } from '#domain/work/index.ts';
+import type { Task } from '#domain/work/index.ts';
+import { liveLinks, loadedLinks } from '#application/work/dependencies.ts';
+import { type LinkView, dependentViews, linkViews, startState, unblocksOf, waitingFor } from '#domain/work/index.ts';
+import type { LinkIndex, LinkKind } from '#domain/work/index.ts';
+import { requireTask } from '#application/shared/input.ts';
+import { plansShown } from '#application/work/plans.ts';
+import { startWaits } from '#application/capacity/queue.ts';
 
 export interface TaskView {
   repo: string | null;

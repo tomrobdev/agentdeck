@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { ServiceStatus } from '../../../api/types';
-import type { SettingsForm } from '../../../lib/shared/forms';
-import { isNative } from '../../../platform/native';
-import Chip from '../../ui/Chip.vue';
-import Switch from '../../ui/form/Switch.vue';
+import type { ServiceStatus } from '#api/types.ts';
+import type { SettingsForm } from '#lib/shared/forms.ts';
+import { isNative } from '#platform/native.ts';
+import Chip from '#components/ui/Chip.vue';
+import Switch from '#components/ui/form/Switch.vue';
 
 defineProps<{ form: SettingsForm; service: ServiceStatus | null; appAtLogin: boolean | null }>();
 defineEmits<{ toggleAppAtLogin: [] }>();

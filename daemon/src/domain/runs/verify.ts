@@ -1,9 +1,9 @@
 // The verify run: a claude run a person starts on a proposed or queued task, which reads the base in a scratch checkout and checks each claim the task's prompt makes about the code, answering with findings in VERIFY_ANSWER_SCHEMA.
-import type { RunId } from '../shared/index.ts';
-import { plural } from '../shared/index.ts';
-import { CHECKED_STATUSES, type Task } from '../work/index.ts';
-import { REVIEW_DENIED_TOOLS, answerValue, isRecord } from './review.ts';
-import type { Run } from './run.ts';
+import type { RunId } from '#domain/shared/index.ts';
+import { plural } from '#domain/shared/index.ts';
+import { CHECKED_STATUSES, type Task } from '#domain/work/index.ts';
+import { REVIEW_DENIED_TOOLS, answerValue, isRecord } from '#domain/runs/review.ts';
+import type { Run } from '#domain/runs/run.ts';
 
 export const VERIFY_MAX_TURNS = 30;
 

@@ -1,7 +1,7 @@
 // The reads of tasks: listings, counts, the attention list and the candidates for unblock and review runs.
 import { type SQL, and, asc, count, desc, eq, inArray, isNotNull, isNull, lt, or, sql } from 'drizzle-orm';
 import type { AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
-import type { RepoId, TaskId } from '../../domain/shared/index.ts';
+import type { RepoId, TaskId } from '#domain/shared/index.ts';
 import {
   type BlockedTask,
   OPEN_STATUSES,
@@ -10,13 +10,13 @@ import {
   type TaskStatus,
   type TaskSummary,
   isBlocked,
-} from '../../domain/work/index.ts';
-import type { AttentionCandidate, AttentionWhy } from '../../domain/operations/index.ts';
-import { SUMMARY_COLUMNS, TASK_COLUMNS, mapFound, toTask, toTaskSummary } from '../mappers.ts';
-import type { Orm } from '../orm.ts';
-import { inActiveRepo as inActiveRepoOf } from '../sql.ts';
-import { repos, tasks } from '../tables.ts';
-import { inReview, prOpen } from './tasks-columns.ts';
+} from '#domain/work/index.ts';
+import type { AttentionCandidate, AttentionWhy } from '#domain/operations/index.ts';
+import { SUMMARY_COLUMNS, TASK_COLUMNS, mapFound, toTask, toTaskSummary } from '#db/mappers.ts';
+import type { Orm } from '#db/orm.ts';
+import { inActiveRepo as inActiveRepoOf } from '#db/sql.ts';
+import { repos, tasks } from '#db/tables.ts';
+import { inReview, prOpen } from '#db/work/tasks-columns.ts';
 
 export function taskQueries(orm: Orm) {
   const inActiveRepo = (col: AnySQLiteColumn) => inActiveRepoOf(orm, col);
