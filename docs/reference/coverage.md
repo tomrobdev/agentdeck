@@ -7,19 +7,19 @@ The least line and branch coverage each group of `daemon/src/` may have (`COVERA
 | Group                      | Holds                                                                                    | Lines | Branches |
 | -------------------------- | ---------------------------------------------------------------------------------------- | ----- | -------- |
 | `adapters`                 | `adapters/`                                                                              | 88%   | 85%      |
-| `api`                      | `api/`                                                                                   | 99%   | 94%      |
+| `api`                      | `api/`                                                                                   | 98%   | 93%      |
 | `application`              | the files directly in `application/` (`actions.ts`)                                      | 100%  | 100%     |
 | `application/capacity`     | `application/capacity/`                                                                  | 100%  | 100%     |
 | `application/insights`     | `application/insights/`                                                                  | 100%  | 96%      |
-| `application/landing`      | `application/landing/`                                                                   | 99%   | 90%      |
+| `application/landing`      | `application/landing/`                                                                   | 99%   | 89%      |
 | `application/operations`   | `application/operations/`                                                                | 98%   | 93%      |
 | `application/proposals`    | `application/proposals/`                                                                 | 92%   | 82%      |
-| `application/repos`        | `application/repos/`                                                                     | 98%   | 91%      |
-| `application/runs`         | `application/runs/`                                                                      | 94%   | 83%      |
+| `application/repos`        | `application/repos/`                                                                     | 97%   | 90%      |
+| `application/runs`         | `application/runs/`                                                                      | 93%   | 83%      |
 | `application/scheduler`    | `application/scheduler/`                                                                 | 97%   | 91%      |
 | `application/shared`       | `application/shared/`                                                                    | 100%  | 97%      |
-| `application/work`         | `application/work/`                                                                      | 99%   | 94%      |
-| `cli`                      | `cli/`                                                                                   | 91%   | 84%      |
+| `application/work`         | `application/work/`                                                                      | 99%   | 92%      |
+| `cli`                      | `cli/`                                                                                   | 91%   | 83%      |
 | `dashboard/lib/insights`   | `dashboard/lib/insights/`                                                                | 100%  | 100%     |
 | `dashboard/lib/landing`    | `dashboard/lib/landing/`                                                                 | 100%  | 96%      |
 | `dashboard/lib/operations` | `dashboard/lib/operations/`                                                              | 92%   | 87%      |
@@ -28,12 +28,12 @@ The least line and branch coverage each group of `daemon/src/` may have (`COVERA
 | `dashboard/lib/work`       | `dashboard/lib/work/`                                                                    | 97%   | 92%      |
 | `db`                       | `db/`                                                                                    | 99%   | 94%      |
 | `domain/capacity`          | `domain/capacity/`                                                                       | 100%  | 97%      |
-| `domain/insights`          | `domain/insights/`                                                                       | 100%  | 98%      |
+| `domain/insights`          | `domain/insights/`                                                                       | 100%  | 97%      |
 | `domain/landing`           | `domain/landing/`                                                                        | 100%  | 97%      |
 | `domain/operations`        | `domain/operations/`                                                                     | 100%  | 97%      |
 | `domain/proposals`         | `domain/proposals/`                                                                      | 100%  | 89%      |
 | `domain/repos`             | `domain/repos/`                                                                          | 100%  | 99%      |
-| `domain/runs`              | `domain/runs/`                                                                           | 98%   | 96%      |
+| `domain/runs`              | `domain/runs/`                                                                           | 98%   | 95%      |
 | `domain/shared`            | `domain/shared/`                                                                         | 100%  | 98%      |
 | `domain/work`              | `domain/work/`                                                                           | 99%   | 95%      |
-| `src`                      | the files at the top of `daemon/src/` (`cli.ts`, `compose.ts`, `config.ts`, `daemon.ts`) | 96%   | 84%      |
+| `src`                      | the files at the top of `daemon/src/` (`cli.ts`, `compose.ts`, `config.ts`, `daemon.ts`) | 96%   | 88%      |

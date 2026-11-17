@@ -48,9 +48,15 @@ jobs:
       - name: db
         run: pnpm db:check
 
+  # `pnpm coverage` split across three runners: each runs a third of the test files (balanced by
+  # daemon/scripts/lib/test-weights.json) and keeps V8's raw counts, and `coverage` merges them and judges the floors.
   tests:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -60,8 +66,34 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: git config --global user.name ci && git config --global user.email ci@example.com
-      - name: tests and coverage
-        run: pnpm coverage
+      - name: tests
+        run: pnpm coverage --shard ${{ matrix.shard }}/3
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.shard }}
+          path: daemon/coverage/v8/
+          if-no-files-found: error
+          retention-days: 1
+
+  coverage:
+    needs: tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-*
+          path: daemon/coverage/v8/
+          merge-multiple: true
+      - name: coverage
+        run: pnpm coverage --merge
 
   crash:
     needs: plan

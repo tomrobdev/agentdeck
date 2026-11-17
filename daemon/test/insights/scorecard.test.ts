@@ -162,12 +162,13 @@ test('PR checks: green is some checks, none failing or pending', () => {
   assert.deepEqual(summarizeChecks([]), { recorded: 0, green: 0, rate: null });
 });
 
-test('quotaSpends: rises add up, a reset counts what the new window shows', () => {
+test('quotaSpends: rises add up, a reading that has not moved spends nothing, a reset counts what the new window shows', () => {
   const sample = (utilization: number, resets_at: number, observed_at: string) => ({ utilization, resets_at, observed_at });
   const spends = quotaSpends([
     sample(0.1, 100, '2026-10-05 10:00:00'),
     sample(0.25, 100, '2026-10-05 11:00:00'),
     sample(0.4, 100, '2026-10-05 12:00:00'),
+    sample(0.4, 100, '2026-10-05 12:30:00'),
     sample(0.05, 200, '2026-10-12 09:00:00'),
     sample(0.12, 200, '2026-10-12 10:00:00'),
   ]);
