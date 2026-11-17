@@ -6,6 +6,8 @@ import type { TaskId } from '../domain/shared/index.ts';
 import { parseLogLine } from '../domain/runs/index.ts';
 import { pickRun } from '../domain/runs/index.ts';
 
+import { errorText } from './http.ts';
+
 const LOG_POLL_MS = 500;
 
 export function streamLog(
@@ -13,7 +15,8 @@ export function streamLog(
   req: IncomingMessage,
   res: ServerResponse,
   taskId: TaskId,
-  pick: { attempt?: number; run?: number } = {},
+  pick: { attempt?: number; run?: number },
+  log: (line: string) => void,
 ): void {
   const run = pickRun(taskRuns(db, taskId), pick);
   res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
@@ -29,7 +32,7 @@ export function streamLog(
       tail();
     } catch (err) {
       clearInterval(timer);
-      console.error(err);
+      log(`api GET ${req.url?.split('?')[0]} log stream failed: ${errorText(err)}`);
       if (!res.writableEnded) {
         res.write('event: end\ndata: {}\n\n');
         res.end();

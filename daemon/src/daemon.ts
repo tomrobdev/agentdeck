@@ -81,6 +81,7 @@ export async function runDaemon({ db, once, log = () => {}, exit }: DaemonOption
       db,
       port: API_PORT,
       token: apiToken(),
+      log: stamped,
       scheduler,
       changes,
       daemon: { info, requestRestart, reloadFacts },

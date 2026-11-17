@@ -2,7 +2,7 @@
 import { type Server, createServer } from 'node:http';
 import { API_PORT } from '../config.ts';
 import type { ComposedApp } from '../application/actions.ts';
-import { type ApiContext, type ApiScheduler, dispatch } from './http.ts';
+import { type ApiContext, type ApiScheduler, dispatch, errorText } from './http.ts';
 import * as daemonRoutes from './routes/operations/daemon.ts';
 import * as filesRoutes from './routes/work/files.ts';
 import * as plansRoutes from './routes/work/plans.ts';
@@ -23,11 +23,13 @@ export interface ApiOptions {
   scheduler?: ApiScheduler;
   changes?: ApiContext['changes'];
   daemon?: ApiContext['daemon'];
+  log?: ApiContext['log'];
 }
 
 export function startApi(options: ApiOptions): Promise<Server> {
   const ctx: ApiContext = {
     db: options.db,
+    log: options.log ?? (() => {}),
     scheduler: options.scheduler ?? idleScheduler,
     changes: options.changes ?? idleChanges,
     daemon: options.daemon ?? {
@@ -53,8 +55,8 @@ export function startApi(options: ApiOptions): Promise<Server> {
         if (res.statusCode >= 200 && res.statusCode < 300) ctx.scheduler.wake();
       });
     }
-    return dispatch(routes, req, res, options.token).catch((err) => {
-      console.error(err);
+    return dispatch(routes, req, res, options.token, ctx.log).catch((err) => {
+      ctx.log(`api ${req.method} ${req.url?.split('?')[0]} failed: ${errorText(err)}`);
       res.destroy();
     });
   });
