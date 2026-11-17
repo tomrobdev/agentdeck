@@ -100,7 +100,9 @@ export function routes({ db, scheduler, log }: ApiContext): Route[] {
         {
           attempt: Number(query.get('attempt')) || undefined,
           run: Number(query.get('run')) || undefined,
+          from: query.get('from'),
         },
+        undefined,
         log,
       );
       return undefined;
