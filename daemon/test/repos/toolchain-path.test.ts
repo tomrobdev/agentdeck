@@ -1,7 +1,7 @@
 // Workers and test runs find cargo: rustup's directories join their PATH when they exist.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { RUST_DIRS, rustDirs, withToolchainPath } from '../../src/config.ts';
+import { RUST_DIRS, msFrom, rustDirs, withToolchainPath } from '../../src/config.ts';
 
 test('an existing rustup directory is added to PATH, a missing one is left out', () => {
   const [cargoBin, brewBin] = RUST_DIRS;
@@ -24,4 +24,9 @@ test('an existing rustup directory is added to PATH, a missing one is left out',
 test('a directory already on PATH is not added twice', () => {
   const env = withToolchainPath({ PATH: `${RUST_DIRS[1]}:/usr/bin` }, () => true);
   assert.equal(env.PATH, `${RUST_DIRS[1]}:/usr/bin:${RUST_DIRS[0]}`);
+});
+
+test('a timing set from the environment takes a positive number of milliseconds, else the default', () => {
+  assert.equal(msFrom('50', 2_000), 50);
+  for (const text of [undefined, '', '0', '-5', 'soon']) assert.equal(msFrom(text, 2_000), 2_000, String(text));
 });

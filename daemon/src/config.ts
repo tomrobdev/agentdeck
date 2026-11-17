@@ -65,12 +65,19 @@ export function withToolchainPath(
   return { ...env, PATH: dirs.join(':') };
 }
 
+export const msFrom = (text: string | undefined, fallback: number): number => {
+  const ms = Number(text);
+  return Number.isFinite(ms) && ms > 0 ? ms : fallback;
+};
+
 export const DEFAULTS = {
   maxConcurrent: 2,
   maxTurns: 40,
   maxAttempts: 2,
-  tickMs: 5_000,
+  tickMs: msFrom(process.env.AGENTDECK_TICK_MS, 5_000),
 };
+
+export const CANCEL_POLL_MS = msFrom(process.env.AGENTDECK_CANCEL_POLL_MS, 2_000);
 
 export const SETUP_TIMEOUT_MS = 10 * 60_000;
 export const TEST_TIMEOUT_MS = 15 * 60_000;

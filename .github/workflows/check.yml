@@ -6,10 +6,32 @@ on:
   push:
     branches: [main]
 
+# Each job has its own runner, so the slow ones run side by side. The crash test runs on a pull request only when
+# `pnpm check:task` would run it for its changes (the `plan` job asks it); on main, and when a workflow or the rules
+# themselves change, it always runs. The dashboard end to end (`pnpm test:ui`) is not run here: check:task runs it on a
+# task's branch that changes the dashboard. daemon/test/tooling/ci-parity.test.ts keeps every check step to what
+# `pnpm check:task` runs.
 jobs:
-  check:
+  plan:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 5
+    outputs:
+      crash: ${{ steps.plan.outputs.crash }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+      - id: plan
+        env:
+          CI_RUN_ALL: ${{ github.event_name != 'pull_request' }}
+        run: node scripts/check-task.mjs --ci-plan
+
+  static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -18,24 +40,23 @@ jobs:
           node-version: 26
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: git config --global user.name ci && git config --global user.email ci@example.com
-      # One named step per check, so a failure names what failed. daemon/test/tooling/ci-parity.test.ts keeps these to what
-      # `pnpm check:task`, a task's own check, runs.
+      # One named step per check, so a failure names what failed.
       - name: format
         run: pnpm format:check
       - name: typecheck
         run: pnpm typecheck
       - name: db
         run: pnpm db:check
-      - name: tests and coverage
-        run: pnpm coverage
-      - name: crash test
-        run: node daemon/scripts/crash-test.mjs 5
 
-  # The dashboard end to end (app/e2e/): Playwright against the Vite dev server and a seeded scratch daemon.
-  ui:
+  # `pnpm coverage` split across three runners: each runs a third of the test files (balanced by
+  # daemon/scripts/lib/test-weights.json) and keeps V8's raw counts, and `coverage` merges them and judges the floors.
+  tests:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -45,17 +66,82 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: git config --global user.name ci && git config --global user.email ci@example.com
-      - run: pnpm --filter agentdeck-app exec playwright install --with-deps chromium
-      - name: dashboard end to end
-        run: pnpm test:ui
-      # The screenshots CI compared or, on Linux's first run, wrote (commit those under app/e2e/screenshots/), and the
-      # failures' traces and diffs.
+      - name: tests
+        run: pnpm coverage --shard ${{ matrix.shard }}/3
       - uses: actions/upload-artifact@v4
-        if: always()
         with:
-          name: ui-screenshots
-          path: |
-            app/e2e/screenshots/
-            app/e2e/results/
-            app/e2e/report/
-          if-no-files-found: ignore
+          name: coverage-${{ matrix.shard }}
+          path: daemon/coverage/v8/
+          if-no-files-found: error
+          retention-days: 1
+
+  coverage:
+    needs: tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-*
+          path: daemon/coverage/v8/
+          merge-multiple: true
+      - name: coverage
+        run: pnpm coverage --merge
+
+  crash:
+    needs: plan
+    if: needs.plan.outputs.crash == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: git config --global user.name ci && git config --global user.email ci@example.com
+      - name: crash test
+        run: node daemon/scripts/crash-test.mjs 5
+
+  # The dashboard end to end (app/e2e/): Playwright against the Vite dev server and a seeded scratch daemon.
+  # ui:
+  #   needs: plan
+  #   if: needs.plan.outputs.ui == 'true'
+  #   runs-on: ubuntu-latest
+  #   timeout-minutes: 15
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: pnpm/action-setup@v4
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 26
+  #         cache: pnpm
+  #     - run: pnpm install --frozen-lockfile
+  #     - run: git config --global user.name ci && git config --global user.email ci@example.com
+  #     - uses: actions/cache@v4
+  #       with:
+  #         path: ~/.cache/ms-playwright
+  #         key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+  #     - run: pnpm --filter agentdeck-app exec playwright install --with-deps chromium
+  #     - name: dashboard end to end
+  #       run: pnpm test:ui
+  #     # The screenshots CI compared or, on Linux's first run, wrote (commit those under app/e2e/screenshots/), and the
+  #     # failures' traces and diffs.
+  #     - uses: actions/upload-artifact@v4
+  #       if: always()
+  #       with:
+  #         name: ui-screenshots
+  #         path: |
+  #           app/e2e/screenshots/
+  #           app/e2e/results/
+  #           app/e2e/report/
+  #         if-no-files-found: ignore

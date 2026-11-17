@@ -14,10 +14,10 @@
     "start": "node src/cli.ts daemon",
     "dev": "node --watch-path=src src/cli.ts daemon",
     "typecheck": "tsc",
-    "test": "AGENTDECK_NO_NOTIFY=1 node --test --test-timeout=60000 test/",
+    "test": "AGENTDECK_NO_NOTIFY=1 AGENTDECK_CANCEL_POLL_MS=50 node --test --test-timeout=60000 test/",
     "test:crash": "node scripts/crash-test.mjs",
     "coverage": "node scripts/coverage.ts",
-    "test:watch": "AGENTDECK_NO_NOTIFY=1 node --test --test-timeout=60000 --watch test/",
+    "test:watch": "AGENTDECK_NO_NOTIFY=1 AGENTDECK_CANCEL_POLL_MS=50 node --test --test-timeout=60000 --watch test/",
     "db:studio": "drizzle-kit studio",
     "db:check": "node scripts/db-check.ts",
     "docs:gen": "node scripts/docs.ts",
@@ -29,6 +29,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
+    "c8": "^12.0.0",
     "drizzle-kit": "1.0.0-rc.5",
     "typescript": "^5.9.0"
   }
