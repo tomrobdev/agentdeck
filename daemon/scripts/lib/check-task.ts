@@ -22,7 +22,11 @@ export const EXTRA_CHECKS: ExtraCheck[] = [
     ],
   },
   { name: 'check:rust', command: ['pnpm', 'check:rust'], prefixes: ['app/src-tauri/'] },
-  { name: 'test:ui', command: ['pnpm', 'test:ui'], prefixes: ['app/src/', 'app/e2e/', 'app/playwright.config.ts'] },
+  {
+    name: 'test:ui',
+    command: ['pnpm', 'test:ui'],
+    prefixes: ['app/src/', 'app/e2e/', 'app/playwright.config.ts', 'daemon/src/api/contract/', 'daemon/src/api/routes/'],
+  },
 ];
 
 export type ChosenCheck = ExtraCheck & {
