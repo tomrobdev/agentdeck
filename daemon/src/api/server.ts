@@ -12,7 +12,7 @@ import * as reviewsRoutes from '#api/routes/landing/reviews.ts';
 import * as settingsRoutes from '#api/routes/operations/settings.ts';
 import * as tasksRoutes from '#api/routes/work/tasks.ts';
 
-const idleScheduler: ApiScheduler = { wake: () => {}, track: (p) => p };
+const idleScheduler: ApiScheduler = { wake: () => {}, track: (p) => p, request: () => () => {} };
 
 const idleChanges: ApiContext['changes'] = { rev: 1, subscribe: () => () => {} };
 
@@ -49,6 +49,7 @@ export function startApi(options: ApiOptions): Promise<Server> {
 
   const server = createServer((req, res) => {
     if (req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS') {
+      res.once('close', ctx.scheduler.request());
       res.once('finish', () => {
         if (res.statusCode >= 200 && res.statusCode < 300) ctx.scheduler.wake();
       });

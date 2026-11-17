@@ -746,7 +746,7 @@ async function collectRoutes(): Promise<Route[]> {
   const dir = join(import.meta.dirname, '../../src/api/routes');
   const ctx = {
     db: app,
-    scheduler: { wake: () => {}, track: <T>(p: Promise<T>) => p },
+    scheduler: { wake: () => {}, track: <T>(p: Promise<T>) => p, request: () => () => {} },
     changes: { rev: 1, subscribe: () => () => {} },
     daemon: {
       info: { commit: null, started_at: '', pid: 0 },

@@ -1,5 +1,6 @@
 // The daemon's composition root: wires the source watcher, the API and the scheduler together and runs until stopped.
 import { startApi } from '#api/server.ts';
+import type { Server } from 'node:http';
 import { join } from 'node:path';
 import { type ComposedApp, isPaused, maxConcurrent, reloadOnChange } from '#application/actions.ts';
 import { ChangeWatcher } from '#application/operations/changes.ts';
@@ -7,6 +8,9 @@ import { reloadBlock } from '#application/operations/reload-block.ts';
 import { Scheduler } from '#application/scheduler/scheduler.ts';
 import { API_PORT, DEFAULTS, apiToken } from '#src/config.ts';
 import { type Activity, SCHEMA_DIRTY, offMain, reloadDecision, runOnceRefusal } from '#domain/operations/index.ts';
+
+const DRAIN_MS = 10_000;
+const DRAIN_POLL_MS = 50;
 
 export interface DaemonOptions {
   db: ComposedApp;
@@ -63,12 +67,39 @@ export async function runDaemon({ db, once, log = () => {}, exit }: DaemonOption
   const changes = once ? undefined : new ChangeWatcher(db);
   changes?.onOtherProcess(() => scheduler.wake());
   changes?.start();
+  let api: Server | undefined;
+  let stopping = false;
+  let stopped = false;
+  let endDrain = (): void => {};
+  const stopNow = () => {
+    if (stopped) return;
+    stopped = true;
+    endDrain();
+    changes?.stop();
+    scheduler.stop();
+    exit(0);
+  };
   for (const sig of ['SIGINT', 'SIGTERM'] as const) {
     process.on(sig, () => {
-      stamped(`${sig}: stopping workers; their tasks will be requeued on next start`);
-      changes?.stop();
-      scheduler.stop();
-      exit(0);
+      if (stopping || !api) {
+        stamped(`${sig}: stopping workers; their tasks will be requeued on next start`);
+        stopNow();
+        return;
+      }
+      const server = api;
+      stopping = true;
+      stamped(`${sig}: no new requests; waiting up to ${DRAIN_MS / 1000}s for those in flight, then stopping workers`);
+      server.close();
+      const giveUp = setTimeout(stopNow, DRAIN_MS);
+      const answered = setInterval(() => {
+        if (scheduler.requestsInFlight > 0) return;
+        stamped('requests answered; stopping workers (their tasks will be requeued on next start)');
+        stopNow();
+      }, DRAIN_POLL_MS);
+      endDrain = () => {
+        clearTimeout(giveUp);
+        clearInterval(answered);
+      };
     });
   }
   if (!once) {
@@ -77,7 +108,7 @@ export async function runDaemon({ db, once, log = () => {}, exit }: DaemonOption
       setTimeout(() => scheduler.wake(), 200);
     };
     const reloadFacts = () => ({ changed, lastChangeAt, requested: restartRequested, blocked: block.reason });
-    const api = await startApi({
+    api = await startApi({
       db,
       port: API_PORT,
       token: apiToken(),
@@ -90,7 +121,8 @@ export async function runDaemon({ db, once, log = () => {}, exit }: DaemonOption
       throw err;
     });
     stamped(`api        http://127.0.0.1:${API_PORT}`);
-    process.on('exit', () => api.close());
+    const started = api;
+    process.on('exit', () => started.close());
   }
   stamped(
     `agentdeck ${once ? 'run-once' : 'daemon'} ${info.commit ? info.commit.slice(0, 7) : 'no commit'} (pid ${info.pid}): ${isPaused(db) && !once ? 'PAUSED (agentdeck resume to start)' : 'active'}, max ${maxConcurrent(db)} concurrent, tick ${DEFAULTS.tickMs / 1000}s`,

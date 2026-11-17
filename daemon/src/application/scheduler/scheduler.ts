@@ -51,6 +51,7 @@ export class Scheduler {
   private lastHold: string | null = null;
   private lastReload: string | null = null;
   private proposingRuns = 0;
+  private apiRequests = 0;
   private readonly awake: KeepAwake;
   private lastPrRefresh = 0;
   private refreshingPrs = false;
@@ -116,6 +117,21 @@ export class Scheduler {
     return p;
   }
 
+  get requestsInFlight(): number {
+    return this.apiRequests;
+  }
+
+  request(): () => void {
+    this.apiRequests++;
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      this.apiRequests--;
+      this.tick();
+    };
+  }
+
   private takeSlot(p: Promise<unknown>, kind: 'sync' | 'verify'): void {
     this.running.add(p);
     (kind === 'sync' ? this.resolves : this.verifies).add(p);
@@ -143,6 +159,7 @@ export class Scheduler {
       reviews: this.reviews.size,
       verifies: this.verifies.size,
       planner: this.proposingRuns,
+      requests: this.apiRequests,
     };
   }
 
