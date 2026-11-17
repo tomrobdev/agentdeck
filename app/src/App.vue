@@ -2,7 +2,8 @@
 import { computed } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
 import { RouterView } from 'vue-router';
-import { isOffline, refreshAll } from './api/http';
+import { isOffline } from './api/api-error';
+import { refreshAll } from './api/http';
 import { liveStatusQuery } from './api/operations';
 import { tasksQuery } from './api/work';
 import AppHeader from './components/layout/AppHeader.vue';

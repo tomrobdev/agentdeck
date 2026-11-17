@@ -29,7 +29,7 @@ export async function closeTaskPr(app: App, id: TaskId): Promise<void> {
   try {
     await closePullRequest(app, t);
   } catch (err) {
-    throw new ActionError(`could not close the PR: ${errorMessage(err)}`);
+    throw new ActionError(`could not close the PR: ${errorMessage(err)}`, undefined, 'upstream');
   }
 }
 
@@ -71,14 +71,15 @@ export function mergeable(app: App, id: TaskId) {
   if (!task.pr?.url) throw new ActionError(`#${id} has no pull request`);
   const url = openPrUrl(task.pr);
   if (!url) throw new ActionError(`#${id}'s PR is ${task.pr.state}`);
-  if (isSyncing(app, id)) throw new ActionError(`#${id} is syncing with its base branch; try again when that is done`);
+  if (isSyncing(app, id))
+    throw new ActionError(`#${id} is syncing with its base branch; try again when that is done`, undefined, 'conflict');
   return { task, repo, url, cwd: repo.path };
 }
 
 export async function mergePreview(app: App, id: TaskId): Promise<MergePreview> {
   const { task, repo, url, cwd } = mergeable(app, id);
   const read = await app.codeHost.prDetails(url, cwd, { withFiles: autoMergeOn(task, repo) }).catch((err) => {
-    throw new ActionError(`could not read the PR: ${errorMessage(err)}`);
+    throw new ActionError(`could not read the PR: ${errorMessage(err)}`, undefined, 'upstream');
   });
   const pr = withCheckList(read, carryFailures(task.pr?.checks.latest ?? null, read.head ?? null, read.check_list ?? []).checks);
   const input = mergeInputFor(app, task, repo, pr);
@@ -125,11 +126,11 @@ export async function mergeTask(app: App, id: TaskId, opts: { method?: string; d
   if (!isMergeMethod(method)) throw new ActionError(`method must be one of ${MERGE_METHODS.join(', ')}`);
 
   const pr = await app.codeHost.prDetails(url, cwd).catch((err) => {
-    throw new ActionError(`could not read the PR: ${errorMessage(err)}`);
+    throw new ActionError(`could not read the PR: ${errorMessage(err)}`, undefined, 'upstream');
   });
   const input = mergeInputFor(app, task, repo, pr);
   if (mergeSyncsFirst(input)) {
-    if (!app.requestMerge(id, method)) throw new ActionError(`#${id} is no longer a done task with an open PR`);
+    if (!app.requestMerge(id, method)) throw new ActionError(`#${id} is no longer a done task with an open PR`, undefined, 'conflict');
     app.requestPrCheck();
     return { method, unblocked: [], syncing: syncingFirstLine(repo.base_branch) };
   }

@@ -115,7 +115,7 @@ test('a log that cannot be read ends the stream instead of stopping the daemon',
 
 test('cancel and retry', async () => {
   const done = await api('/api/tasks/1/cancel', { method: 'POST' });
-  assert.equal(done.status, 400, 'done tasks cannot be cancelled');
+  assert.equal(done.status, 409, 'done tasks cannot be cancelled');
   const retried = await (await api('/api/tasks/1/retry', { method: 'POST' })).json();
   assert.equal(retried.status, 'queued');
   const cancelled = await (await api('/api/tasks/1/cancel', { method: 'POST' })).json();
@@ -173,7 +173,7 @@ test('POST /api/tasks/:id edits a task; bad edits are 400', async () => {
   assert.match((await bad.json()).error, /max_turns/);
   await api(`/api/tasks/${task.id}/cancel`, { method: 'POST' });
   const cancelled = await api(`/api/tasks/${task.id}`, { method: 'POST', json: { prompt: 'again' } });
-  assert.equal(cancelled.status, 400, 'cancelled tasks are not editable');
+  assert.equal(cancelled.status, 409, 'cancelled tasks are not editable');
 });
 
 test('POST /api/repos/:id/doctor reports checks and pauses; resume clears the pause', async () => {

@@ -4,33 +4,37 @@ import type { TaskId } from '../../domain/shared/index.ts';
 import type { Repo } from '../../domain/repos/index.ts';
 import type { Task } from '../../domain/work/index.ts';
 
+export type ActionErrorKind = 'invalid' | 'not_found' | 'conflict' | 'upstream';
+
 export class ActionError extends Error {
   code?: string;
-  constructor(message: string, code?: string) {
+  kind: ActionErrorKind;
+  constructor(message: string, code?: string, kind: ActionErrorKind = 'invalid') {
     super(message);
     this.code = code;
+    this.kind = kind;
   }
 }
 
-export function refuse(message: string | null, code?: string): void {
-  if (message) throw new ActionError(message, code);
+export function refuse(message: string | null, code?: string, kind?: ActionErrorKind): void {
+  if (message) throw new ActionError(message, code, kind);
 }
 
 export function requireTask(app: App, id: TaskId): Task {
   const task = app.getTask(id);
-  if (!task) throw new ActionError('no such task');
+  if (!task) throw new ActionError('no such task', undefined, 'not_found');
   return task;
 }
 
 export function requireRepo(app: App, nameOrId: string | number): Repo {
   const repo = app.findRepo(String(nameOrId));
-  if (!repo) throw new ActionError(`no repo "${nameOrId}"`);
+  if (!repo) throw new ActionError(`no repo "${nameOrId}"`, undefined, 'not_found');
   return repo;
 }
 
 export function requireTaskRepo(app: App, task: Task): Repo {
   const repo = app.getRepo(task.repo_id);
-  if (!repo) throw new ActionError('the task has no repo');
+  if (!repo) throw new ActionError('the task has no repo', undefined, 'not_found');
   return repo;
 }
 

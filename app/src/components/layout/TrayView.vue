@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
-import { isOffline, refreshAll } from '../../api/http';
+import { isOffline } from '../../api/api-error';
+import { refreshAll } from '../../api/http';
 import { liveStatusQuery, operationsApi } from '../../api/operations';
 import { tasksQuery } from '../../api/work';
 import { ATTENTION_LABELS, describeState } from '../../lib/operations/daemon-wording';
