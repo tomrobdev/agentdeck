@@ -184,7 +184,7 @@ export const COVERAGE_FLOORS: Record<string, Floor> = {
   'domain/runs': { lines: 98, branches: 96 },
   'domain/shared': { lines: 100, branches: 98 },
   'domain/work': { lines: 99, branches: 95 },
-  src: { lines: 96, branches: 81 },
+  src: { lines: 96, branches: 84 },
 };
 
 export function checkRowShapedFields(sources: Source[], allowed: string[] = ROW_SHAPED_FIELDS): { found: string[]; stale: string[] } {

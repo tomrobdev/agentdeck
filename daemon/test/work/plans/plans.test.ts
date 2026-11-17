@@ -225,7 +225,7 @@ test('the store keeps a task’s own plan under its numbered name, replacing it 
 });
 
 const db = openDb(join(home, 'agentdeck.db'));
-const server = await startApi({ db, port: 0 });
+const server = await startApi({ db, token: null, port: 0 });
 const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 after(() => {
   server.close();

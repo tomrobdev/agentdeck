@@ -19,6 +19,7 @@ const idleChanges: ApiContext['changes'] = { rev: 1, subscribe: () => () => {} }
 export interface ApiOptions {
   db: ComposedApp;
   port?: number;
+  token: string | null;
   scheduler?: ApiScheduler;
   changes?: ApiContext['changes'];
   daemon?: ApiContext['daemon'];
@@ -52,7 +53,7 @@ export function startApi(options: ApiOptions): Promise<Server> {
         if (res.statusCode >= 200 && res.statusCode < 300) ctx.scheduler.wake();
       });
     }
-    return dispatch(routes, req, res).catch((err) => {
+    return dispatch(routes, req, res, options.token).catch((err) => {
       console.error(err);
       res.destroy();
     });

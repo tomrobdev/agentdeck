@@ -16,12 +16,13 @@ process.env.AGENTDECK_NO_NOTIFY = '1';
 
 const { openDb } = await import('../../src/db/index.ts');
 const { startApi } = await import('../../src/api/server.ts');
+const { apiToken } = await import('../../src/config.ts');
 const { ensureWorktree } = await import('../../src/adapters/git/worktrees.ts');
 const { callDaemon } = await import('../../src/cli/operations/daemon-client.ts');
 type SyncReport = import('../../src/application/actions.ts').SyncReport;
 
 const app = testApp(openDb(join(home, 'test.db')), { agent: fakeAgent(), codeHost: fakeCodeHost() });
-const server = await startApi({ db: app, port: 0 });
+const server = await startApi({ db: app, token: apiToken(), port: 0 });
 const port = (server.address() as AddressInfo).port;
 const others: Server[] = [];
 

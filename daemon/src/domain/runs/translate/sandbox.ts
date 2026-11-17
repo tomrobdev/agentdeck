@@ -7,8 +7,9 @@ export interface WorkerSettings {
     failIfUnavailable?: boolean;
     allowUnsandboxedCommands?: boolean;
     network?: { allowedDomains: string[]; strictAllowlist: boolean; allowLocalBinding: boolean };
+    filesystem?: { denyRead: string[] };
   };
-  permissions: { allow: string[] };
+  permissions: { allow: string[]; deny: string[] };
 }
 
 export function worktreeFileRules(worktree: string): string[] {
@@ -16,8 +17,12 @@ export function worktreeFileRules(worktree: string): string[] {
   return [`Edit(/${root}/**)`];
 }
 
-export function workerSettings(opts: { worktree: string; sandbox: boolean; network: string[] }): WorkerSettings {
-  const permissions = { allow: worktreeFileRules(opts.worktree) };
+function secretReadRules(secrets: string[]): string[] {
+  return secrets.map((path) => `Read(/${path})`);
+}
+
+export function workerSettings(opts: { worktree: string; sandbox: boolean; network: string[]; secrets: string[] }): WorkerSettings {
+  const permissions = { allow: worktreeFileRules(opts.worktree), deny: secretReadRules(opts.secrets) };
   if (!opts.sandbox) return { sandbox: { enabled: false }, permissions };
   return {
     sandbox: {
@@ -25,6 +30,7 @@ export function workerSettings(opts: { worktree: string; sandbox: boolean; netwo
       failIfUnavailable: true,
       allowUnsandboxedCommands: false,
       network: { allowedDomains: [...opts.network], strictAllowlist: true, allowLocalBinding: true },
+      filesystem: { denyRead: [...opts.secrets] },
     },
     permissions,
   };

@@ -13,8 +13,10 @@ import { normalizeNetwork, settingsPath, workerSettings, worktreeFileRules } fro
 import type { Task } from '../../../src/domain/work/task/task.ts';
 import { openDb } from '../../../src/db/index.ts';
 import { testApp } from '../../fixtures/fixtures.ts';
+import { API_TOKEN_PATH } from '../../../src/config.ts';
 
 const wt = '/Users/me/.agentdeck/worktrees/demo/task-7';
+const token = '/Users/me/.agentdeck/api-token';
 
 test('file rules cover the worktree by absolute path (// prefix)', () => {
   assert.deepEqual(worktreeFileRules(wt), [`Edit(/${wt}/**)`]);
@@ -23,16 +25,17 @@ test('file rules cover the worktree by absolute path (// prefix)', () => {
 });
 
 test('sandbox on: enabled, no fallback, strict allowlist from the repo', () => {
-  assert.deepEqual(workerSettings({ worktree: wt, sandbox: true, network: [] }), {
+  assert.deepEqual(workerSettings({ worktree: wt, sandbox: true, network: [], secrets: [token] }), {
     sandbox: {
       enabled: true,
       failIfUnavailable: true,
       allowUnsandboxedCommands: false,
       network: { allowedDomains: [], strictAllowlist: true, allowLocalBinding: true },
+      filesystem: { denyRead: [token] },
     },
-    permissions: { allow: [`Edit(/${wt}/**)`] },
+    permissions: { allow: [`Edit(/${wt}/**)`], deny: [`Read(/${token})`] },
   });
-  const net = workerSettings({ worktree: wt, sandbox: true, network: ['registry.npmjs.org', '*.github.com'] });
+  const net = workerSettings({ worktree: wt, sandbox: true, network: ['registry.npmjs.org', '*.github.com'], secrets: [] });
   assert.deepEqual(net.sandbox.network, {
     allowedDomains: ['registry.npmjs.org', '*.github.com'],
     strictAllowlist: true,
@@ -40,11 +43,14 @@ test('sandbox on: enabled, no fallback, strict allowlist from the repo', () => {
   });
 });
 
-test('sandbox off: disabled, file tools still limited to the worktree', () => {
-  assert.deepEqual(workerSettings({ worktree: wt, sandbox: false, network: ['github.com'] }), {
+test('sandbox off: disabled, file tools still limited to the worktree and kept off the secrets', () => {
+  assert.deepEqual(workerSettings({ worktree: wt, sandbox: false, network: ['github.com'], secrets: [token] }), {
     sandbox: { enabled: false },
-    permissions: { allow: [`Edit(/${wt}/**)`] },
+    permissions: { allow: [`Edit(/${wt}/**)`], deny: [`Read(/${token})`] },
   });
+  assert.ok(
+    workerSettings({ worktree: wt, sandbox: false, network: [], secrets: [token] }).permissions.deny[0].startsWith('Read(//Users/'),
+  );
 });
 
 test('network lists normalize', () => {
@@ -94,7 +100,8 @@ test('the settings file is written next to the run log with the repo’s sandbox
   const app = testApp(openDb(':memory:'));
 
   const on = JSON.parse(readFileSync(runSettings(app, repo, wt, log), 'utf8'));
-  assert.deepEqual(on, workerSettings({ worktree: wt, sandbox: true, network: ['registry.npmjs.org'] }));
+  assert.deepEqual(on, workerSettings({ worktree: wt, sandbox: true, network: ['registry.npmjs.org'], secrets: [API_TOKEN_PATH] }));
+  assert.deepEqual(on.sandbox.filesystem, { denyRead: [API_TOKEN_PATH] });
   const off = JSON.parse(readFileSync(runSettings(app, { ...repo, sandbox: false }, wt, log), 'utf8'));
   assert.deepEqual(off.sandbox, { enabled: false });
 });
