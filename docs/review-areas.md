@@ -272,6 +272,7 @@ The App object, the ports and repositories, the composition root and the entry p
 - daemon/src/db/orm.ts
 - daemon/src/db/sql.ts
 - daemon/src/db/types-check.ts
+- daemon/src/api/contract/errors.ts
 - daemon/src/api/contract/files.ts
 - daemon/src/api/contract/insights.ts
 - daemon/src/api/contract/landing.ts

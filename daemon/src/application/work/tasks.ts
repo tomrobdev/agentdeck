@@ -44,7 +44,12 @@ export async function addTask(
   const links = newLinks(app, input);
   const repos = app.listRepos();
   const repo = repoName ? app.findRepo(repoName) : repos.length === 1 ? repos[0] : undefined;
-  if (!repo) throw new ActionError(repoName ? `no repo "${repoName}"` : 'choose a repo (more than one is registered)');
+  if (!repo)
+    throw new ActionError(
+      repoName ? `no repo "${repoName}"` : 'choose a repo (more than one is registered)',
+      undefined,
+      repoName ? 'not_found' : 'invalid',
+    );
   refuse(archivedRepoError(repo));
   const steps = stepList(input.plan_steps);
   const checked = checkPlanLink(app, () => repo, planAsked ?? { task: null }, steps);
@@ -127,14 +132,15 @@ export async function editTask(
   const edited = app.editTask(id, fields, { ownPlan });
   if (!edited) {
     const now = app.getTask(id)?.status ?? task.status;
-    throw new ActionError(`#${id} is ${now}; only ${EDITABLE_STATUSES.join(', ')} tasks can be edited`);
+    throw new ActionError(`#${id} is ${now}; only ${EDITABLE_STATUSES.join(', ')} tasks can be edited`, undefined, 'conflict');
   }
   return edited;
 }
 
 export async function removeTaskWorktree(app: App, id: TaskId): Promise<{ branch: string | null }> {
   const t = requireTask(app, id);
-  if (!WORKTREE_REMOVABLE_STATUSES.includes(t.status)) throw new ActionError(t.status === 'queued' ? 'task is queued' : 'task is running');
+  if (!WORKTREE_REMOVABLE_STATUSES.includes(t.status))
+    throw new ActionError(t.status === 'queued' ? 'task is queued' : 'task is running', undefined, 'conflict');
   const worktree = t.checkout?.worktree;
   if (!worktree) throw new ActionError('task has no worktree');
   refuseWhileSyncing(app, id);

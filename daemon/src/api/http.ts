@@ -2,6 +2,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import {
   ActionError,
+  type ActionErrorKind,
   type ChangeWatcher,
   type ComposedApp,
   type DaemonInfo,
@@ -9,6 +10,7 @@ import {
   type Scheduler,
 } from '../application/actions.ts';
 import { timingSafeEqual } from 'node:crypto';
+import type { ApiErrorBody } from './contract/errors.ts';
 import { API_ALLOWED_ORIGINS, API_TOKEN_PATH, bearer } from '../config.ts';
 import { type RepoId, type ReviewId, type TaskId, parseId } from '../domain/shared/index.ts';
 import { parseTaskIds } from '../domain/work/index.ts';
@@ -77,6 +79,10 @@ export type ApiLog = (line: string) => void;
 export const errorText = (err: unknown): string => (err instanceof Error ? (err.stack ?? err.message) : String(err));
 
 const answeredErrors = new WeakMap<ServerResponse, string>();
+
+const STATUS_OF_KIND: Record<ActionErrorKind, number> = { invalid: 400, not_found: 404, conflict: 409, upstream: 502 };
+
+const errorBody = (err: ActionError): ApiErrorBody => (err.code ? { error: err.message, code: err.code } : { error: err.message });
 
 export function send(res: ServerResponse, code: number, data: unknown): void {
   if (code >= 400 && typeof data === 'object' && data !== null && 'error' in data) answeredErrors.set(res, String(data.error));
@@ -171,13 +177,19 @@ export async function dispatch(
         return void res.destroy();
       }
       if (err instanceof PayloadTooLarge) send(res, 413, { error: err.message });
-      else if (err instanceof ActionError || err instanceof BadRequest) send(res, 400, { error: err.message });
+      else if (err instanceof ActionError) send(res, STATUS_OF_KIND[err.kind], errorBody(err));
+      else if (err instanceof BadRequest) send(res, 400, { error: err.message });
       else {
         log(`api ${req.method} ${path} failed: ${errorText(err)}`);
         send(res, 500, { error: 'internal error' });
       }
     }
     return;
+  }
+  const allowed = [...new Set(routes.filter((r) => path.match(r.path)).map((r) => r.method))];
+  if (allowed.length) {
+    res.setHeader('Allow', allowed.join(', '));
+    return send(res, 405, { error: `${req.method} is not allowed here; use ${allowed.join(' or ')}` });
   }
   send(res, 404, { error: 'not found' });
 }
