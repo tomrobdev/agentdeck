@@ -12,8 +12,12 @@ const SETUP: Record<string, string> = {
   'git config --global user.name ci && git config --global user.email ci@example.com': 'tests commit in temporary repos',
   'cargo fetch --locked': 'check:rust runs with --offline, so CI fetches the crates first',
   'mkdir -p app/dist': 'tauri::generate_context! needs app/dist to exist to compile',
-  'pnpm --filter agentdeck-app exec playwright install --with-deps chromium':
-    'test:ui needs a Chromium; on a Mac it was installed by hand, and a worker cannot download it',
+  'node scripts/check-task.mjs --ci-plan': 'asks check:task which extra jobs a pull request needs; it runs no check itself',
+};
+
+const SPLIT: Record<string, string> = {
+  'pnpm coverage --shard ${{ matrix.shard }}/3': 'pnpm coverage',
+  'pnpm coverage --merge': 'pnpm coverage',
 };
 
 function runSteps(): { file: string; line: number; command: string }[] {
@@ -38,7 +42,7 @@ const taskCommands = (): string[] => [...checkFastParts(), ...EXTRA_CHECKS.map((
 
 test('[ci-parity] every CI step is a check pnpm check:task runs, or setup with a reason', () => {
   const task = taskCommands();
-  const extra = runSteps().filter((s) => !task.includes(s.command) && !SETUP[s.command]);
+  const extra = runSteps().filter((s) => !task.includes(SPLIT[s.command] ?? s.command) && !SETUP[s.command]);
   assert.deepEqual(
     extra.map((s) => `.github/workflows/${s.file}:${s.line}: ${s.command}`),
     [],
@@ -46,10 +50,14 @@ test('[ci-parity] every CI step is a check pnpm check:task runs, or setup with a
   );
 });
 
-test('[ci-parity] CI runs every part of check:fast', () => {
+test('[ci-parity] CI runs every part of check:fast, or every piece of one it splits across runners', () => {
   const ci = runSteps().map((s) => s.command);
+  const runs = (part: string) => {
+    const pieces = Object.keys(SPLIT).filter((piece) => SPLIT[piece] === part);
+    return ci.includes(part) || (pieces.length > 0 && pieces.every((piece) => ci.includes(piece)));
+  };
   assert.deepEqual(
-    checkFastParts().filter((c) => !ci.includes(c)),
+    checkFastParts().filter((c) => !runs(c)),
     [],
     'parts of check:fast no workflow runs: add a named step for each to .github/workflows/check.yml',
   );

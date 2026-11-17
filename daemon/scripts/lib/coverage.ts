@@ -144,3 +144,32 @@ function hasRuntimeCode(source: Source): boolean {
 export function groupsWithCode(sources: Source[]): string[] {
   return [...new Set(sources.filter(hasRuntimeCode).map((s) => groupOf(s.path)))].sort();
 }
+
+export function parseShard(text: string): { index: number; count: number } {
+  const m = /^(\d+)\/(\d+)$/.exec(text);
+  const index = Number(m?.[1]);
+  const count = Number(m?.[2]);
+  if (!m || count < 1 || index < 1 || index > count) throw new Error(`--shard takes <index>/<count>, such as 2/3, not ${text}`);
+  return { index, count };
+}
+
+export function balanceShards(files: readonly string[], weights: Readonly<Record<string, number>>, count: number): string[][] {
+  const known = files
+    .map((f) => weights[f])
+    .filter((w) => w !== undefined)
+    .sort((a, b) => a - b);
+  const typical = known.length ? known[Math.floor(known.length / 2)] : 1;
+  const weighed = files.map((file) => ({ file, weight: weights[file] ?? typical }));
+  weighed.sort((a, b) => b.weight - a.weight || (a.file < b.file ? -1 : 1));
+  const shards = Array.from({ length: count }, () => ({ files: [] as string[], weight: 0 }));
+  for (const { file, weight } of weighed) {
+    const lightest = shards.reduce((min, s) => (s.weight < min.weight ? s : min));
+    lightest.files.push(file);
+    lightest.weight += weight;
+  }
+  return shards.map((s) => s.files.sort());
+}
+
+export function ownScripts<T extends { url: string }>(scripts: readonly T[], roots: readonly string[]): T[] {
+  return scripts.filter((s) => roots.some((root) => s.url.startsWith(root)));
+}

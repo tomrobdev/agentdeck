@@ -3,12 +3,15 @@ import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import {
+  balanceShards,
   dashboardLibGroups,
   groupCoverage,
   groupOf,
   groupsWithCode,
   judgeCoverage,
+  ownScripts,
   parseLcov,
+  parseShard,
   showPercent,
   withUnloaded,
 } from '#scripts/lib/coverage.ts';
@@ -127,4 +130,34 @@ test('coverage: a percent shows rounded down, and a file of types alone has no g
   );
   const code = parseSource('domain/y/code.ts', 'export const one = 1;\n');
   assert.deepEqual(groupsWithCode([types, code]), ['domain/y']);
+});
+
+test('coverage: shards split the test files by their durations, a new file weighing what a typical one does', () => {
+  const weights = { 'a.test.ts': 900, 'b.test.ts': 500, 'c.test.ts': 400, 'd.test.ts': 100, 'e.test.ts': 100 };
+  const files = [...Object.keys(weights), 'new.test.ts'];
+  const shards = balanceShards(files, weights, 2);
+  assert.deepEqual(shards, [
+    ['a.test.ts', 'new.test.ts'],
+    ['b.test.ts', 'c.test.ts', 'd.test.ts', 'e.test.ts'],
+  ]);
+  assert.deepEqual(shards.flat().sort(), [...files].sort());
+  assert.deepEqual(balanceShards(['x.test.ts', 'y.test.ts'], {}, 3), [['x.test.ts'], ['y.test.ts'], []]);
+});
+
+test('coverage: --shard takes an index and a count, the index from 1', () => {
+  assert.deepEqual(parseShard('2/3'), { index: 2, count: 3 });
+  for (const bad of ['0/3', '4/3', '3', 'a/b', '1/0']) assert.throws(() => parseShard(bad), /--shard takes/);
+});
+
+test("coverage: only the measured sources' scripts are kept from V8's raw coverage", () => {
+  const scripts = [
+    { url: 'file:///r/daemon/src/a.ts' },
+    { url: 'node:fs' },
+    { url: 'file:///r/daemon/test/a.test.ts' },
+    { url: 'file:///r/app/src/lib/b.ts' },
+  ];
+  assert.deepEqual(
+    ownScripts(scripts, ['file:///r/daemon/src/', 'file:///r/app/src/lib/']).map((s) => s.url),
+    ['file:///r/daemon/src/a.ts', 'file:///r/app/src/lib/b.ts'],
+  );
 });

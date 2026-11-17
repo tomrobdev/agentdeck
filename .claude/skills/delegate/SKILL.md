@@ -62,4 +62,4 @@ When the repo is AgentDeck, the launchd daemon runs the main checkout's `daemon/
 - **Do daemon changes in this session only when they're small and urgent.** Otherwise delegate them, and try them from the task's worktree.
 - **Try a branch away from the live daemon:**
   - Dashboard-only change: from the worktree, run the dashboard's dev server against the live daemon on port 4317.
-  - Daemon change: from the worktree, start a separate daemon with its own home and port (`AGENTDECK_HOME=$(mktemp -d) AGENTDECK_PORT=4318 node daemon/src/cli.ts daemon`), and run the dashboard with `VITE_AGENTDECK_API=http://127.0.0.1:4318`. Never point a branch's daemon at `~/.agentdeck`.
+  - Daemon change: from the worktree, start a separate daemon with its own home and port (`AGENTDECK_HOME=$(mktemp -d) AGENTDECK_PORT=4318 node daemon/src/cli.ts daemon`), and run the dashboard with `VITE_AGENTDECK_API=http://127.0.0.1:4318` and the same `AGENTDECK_HOME`, so the dev server finds that daemon's API token. Never point a branch's daemon at `~/.agentdeck`.

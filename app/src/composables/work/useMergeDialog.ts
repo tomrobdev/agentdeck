@@ -13,6 +13,7 @@ export function useMergeDialog({ refresh, flash }: Pick<Actions, 'refresh' | 'fl
   async function onMerged(result: MergeResult, next: boolean) {
     onRequested(next);
     await refresh();
+    if (result.syncing) flash(result.syncing);
     if (result.cleanup_error) flash(`Merged, but cleanup failed: ${result.cleanup_error}`);
   }
   const close = () => (merging.value = null);

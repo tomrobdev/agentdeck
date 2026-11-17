@@ -157,6 +157,14 @@ const ciNotRunWaived = (input: Pick<MergeInput, 'ci_not_run_ok' | 'tests_passed'
 
 export const conflictNeedsPerson = (input: Pick<MergeInput, 'auto_resolve'>): boolean => input.auto_resolve === false;
 
+export const mergeSyncsFirst = (input: MergeInput): boolean => {
+  const problems = mergeFindings(input).filter((f) => f.problem);
+  return problems.length > 0 && problems.every((f) => f.kind === 'conflict') && !conflictNeedsPerson(input);
+};
+
+export const syncingFirstLine = (base: string): string =>
+  `conflicts with ${base}: syncing, it merges once the sync is clean and the tests pass`;
+
 function failingDetail(checks: PrCheck[] | undefined): string {
   const failing = failingChecks(checks ?? []);
   return failing.some(failureRead) ? `: ${failing.map(failureLine).join('; ')}` : '';

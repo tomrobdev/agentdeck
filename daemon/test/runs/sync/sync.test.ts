@@ -31,7 +31,7 @@ type PrDetails = import('#domain/landing/merge/merge.ts').PrDetails;
 
 const db = testApp(openDb(join(home, 'test.db')));
 db.setSetting('max_concurrent', '1');
-const api = await startApi({ db, port: 0 });
+const api = await startApi({ db, token: null, port: 0 });
 after(() => {
   api.close();
   db.close();

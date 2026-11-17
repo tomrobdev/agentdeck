@@ -30,6 +30,7 @@ const env = {
   AGENTDECK_HOME: home,
   AGENTDECK_CLAUDE_BIN: CLAUDE,
   AGENTDECK_NO_NOTIFY: '1',
+  AGENTDECK_TICK_MS: '500',
   AGENTDECK_PORT: opts.port,
   AGENTDECK_ORIGINS: opts.origin,
   FAKE_GH_DIR: home,

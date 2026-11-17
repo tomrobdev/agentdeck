@@ -27,7 +27,7 @@ git('commit', '-q', '-m', 'init');
 
 const db = openDb(join(home, 'test.db'));
 const events: string[] = [];
-const server = await startApi({ db, port: 0, scheduler: { wake: () => events.push('wake'), track: (p) => p } });
+const server = await startApi({ db, token: null, port: 0, scheduler: { wake: () => events.push('wake'), track: (p) => p } });
 const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 
 after(() => {

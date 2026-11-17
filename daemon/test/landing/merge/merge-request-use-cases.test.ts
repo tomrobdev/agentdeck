@@ -22,6 +22,7 @@ const {
   fixChecks,
   linkTasks,
   mergePreview,
+  mergeTask,
   requestMerge,
   requestMerges,
   retryTask,
@@ -253,6 +254,50 @@ test('two requests where one lands after the other merge in that order', async (
     merged.map((m) => m.url),
     [first.url, second.url],
   );
+});
+
+test('a person merging a conflicting PR records a merge request, and the daemon merges once the sync is clean', async () => {
+  const a = tested();
+  details[a.url] = { ...ready, mergeable: 'CONFLICTING', merge_state: 'DIRTY' };
+  const res = await mergeTask(db, a.id, {});
+  assert.equal(res.syncing, 'conflicts with main: syncing, it merges once the sync is clean and the tests pass');
+  assert.deepEqual(res.unblocked, []);
+  assert.deepEqual(merged, []);
+  assert.ok(db.getTask(a.id)!.pr!.merge_request);
+  const found = await refreshPrStates(db);
+  assert.deepEqual(found.conflicting, [a.id]);
+  assert.equal((await mergePreview(db, a.id)).syncs_first, true);
+
+  details[a.url] = { ...ready };
+  const after = await refreshPrStates(db);
+  assert.deepEqual(
+    after.mergeable.map((m) => m.id),
+    [a.id],
+  );
+  assert.equal(await autoMerge(db, after.mergeable), a.id);
+  assert.deepEqual(merged, [{ url: a.url, method: 'squash' }]);
+});
+
+test('a sync that ends in a conflict drops the merge request a conflicting merge recorded', async () => {
+  const a = tested();
+  details[a.url] = { ...ready, mergeable: 'CONFLICTING', merge_state: 'DIRTY' };
+  await mergeTask(db, a.id, {});
+  db.applyEvent(a.id, { type: 'conflict' }, { reason: 'conflict' });
+  await refreshPrStates(db);
+  assert.equal(db.getTask(a.id)!.pr?.merge_request ?? null, null);
+  assert.equal(db.getTask(a.id)!.status, 'blocked');
+});
+
+test('with auto_resolve off a conflicting merge is refused as before, and no request is recorded', async () => {
+  const a = tested();
+  details[a.url] = { ...ready, mergeable: 'CONFLICTING', merge_state: 'DIRTY' };
+  updateRepo(db, 'demo', { auto_resolve: false });
+  try {
+    await assert.rejects(mergeTask(db, a.id, {}), /conflicts with the base branch, and the repo has auto_resolve off/);
+    assert.equal(db.getTask(a.id)!.pr?.merge_request ?? null, null);
+  } finally {
+    updateRepo(db, 'demo', { auto_resolve: true });
+  }
 });
 
 test('a conflicting request goes to be synced and stays; one whose task or PR moved on is cleared', async () => {

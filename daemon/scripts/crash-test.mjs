@@ -124,6 +124,7 @@ for (let i = 1; i <= N; i++) {
     AGENTDECK_HOME: home,
     AGENTDECK_CLAUDE_BIN: FAKE,
     AGENTDECK_NO_NOTIFY: '1',
+    AGENTDECK_TICK_MS: '500',
     FAKE_STREAM: stream ? '1' : '0',
     FAKE_GH_DIR: home,
     AGENTDECK_PORT: '0',

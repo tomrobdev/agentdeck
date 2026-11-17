@@ -700,7 +700,9 @@ test('a task merged with rebase, retried and given a new PR, previews and merges
 test('mergeTask refuses what cannot be merged and leaves the task as it was', async () => {
   const conflicted = prTask(104);
   details[conflicted.url] = { ...cleanDetails, mergeable: 'CONFLICTING' };
+  updateRepo(db, 'demo', { auto_resolve: false });
   await assert.rejects(mergeTask(db, conflicted.id), /conflicts/);
+  updateRepo(db, 'demo', { auto_resolve: true });
 
   const t = prTask(105);
   await assert.rejects(mergeTask(db, t.id, { method: 'fast-forward' }), /method must be one of/);

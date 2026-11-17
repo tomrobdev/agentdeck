@@ -4,7 +4,7 @@
 // The `look` specs only read: the screenshots and the contrast check, then what each page shows. The `act` specs change
 // the seeded tasks (a merge, an approval), so they run after every `look` spec, one at a time.
 import { defineConfig } from '@playwright/test';
-import { APP_PORT, APP_URL as APP, DAEMON_PORT, DAEMON_URL as DAEMON } from './e2e/ports';
+import { API_TOKEN, APP_PORT, APP_URL as APP, DAEMON_PORT, DAEMON_URL as DAEMON } from './e2e/ports';
 
 export default defineConfig({
   testDir: 'e2e',
@@ -47,7 +47,7 @@ export default defineConfig({
       url: APP,
       timeout: 60_000,
       reuseExistingServer: false,
-      env: { VITE_AGENTDECK_API: DAEMON },
+      env: { VITE_AGENTDECK_API: DAEMON, AGENTDECK_API_TOKEN: API_TOKEN },
     },
   ],
 });

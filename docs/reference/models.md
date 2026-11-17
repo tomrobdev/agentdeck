@@ -1602,10 +1602,10 @@ How a work run ended, as far as the escalation reads it: its outcome, the stop r
 
 ### WorkerSettings
 
-| Field         | Type                                                                                                                                                                                                                           | Comment |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- |
-| `sandbox`     | `{ enabled: boolean; failIfUnavailable?: boolean \| undefined; allowUnsandboxedCommands?: boolean \| undefined; network?: { allowedDomains: string[]; strictAllowlist: boolean; allowLocalBinding: boolean; } \| undefined; }` |         |
-| `permissions` | `{ allow: string[]; }`                                                                                                                                                                                                         |         |
+| Field         | Type                                                                                                                                                                                                                                                                              | Comment |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `sandbox`     | `{ enabled: boolean; failIfUnavailable?: boolean \| undefined; allowUnsandboxedCommands?: boolean \| undefined; network?: { allowedDomains: string[]; strictAllowlist: boolean; allowLocalBinding: boolean; } \| undefined; filesystem?: { denyRead: string[]; } \| undefined; }` |         |
+| `permissions` | `{ allow: string[]; deny: string[]; }`                                                                                                                                                                                                                                            |         |
 
 ## `domain/work/`
 

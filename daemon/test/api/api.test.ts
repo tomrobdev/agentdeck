@@ -20,7 +20,7 @@ const { startApi } = await import('#api/server.ts');
 const { Scheduler } = await import('#application/scheduler/scheduler.ts');
 
 const db = openDb(join(home, 'test.db'));
-const server = await startApi({ db, port: 0 });
+const server = await startApi({ db, token: null, port: 0 });
 const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 const repoPath = join(home, 'demo');
 
@@ -240,7 +240,7 @@ test('status reports which code the daemon runs, and restart waits while work ru
   const info = { commit: 'abc1234def', started_at: '2026-10-19T14:02:00.000Z', pid: 4242 };
   let requested = 0;
   const reloadFacts = () => ({ changed: ['a.ts'], lastChangeAt: 0, blocked: 'the checkout is on x, not main' });
-  const server2 = await startApi({ db, port: 0, daemon: { info, requestRestart: () => requested++, reloadFacts } });
+  const server2 = await startApi({ db, token: null, port: 0, daemon: { info, requestRestart: () => requested++, reloadFacts } });
   const url = `http://127.0.0.1:${(server2.address() as AddressInfo).port}`;
   try {
     db.setSetting('reload_on_change', '1');
@@ -271,7 +271,7 @@ test('GET /api/events sends the current rev, then each new one, and unsubscribes
     rev: 7,
     subscribe: (fn: (rev: number) => void) => (subscribers.add(fn), () => void subscribers.delete(fn)),
   };
-  const server2 = await startApi({ db, port: 0, changes });
+  const server2 = await startApi({ db, token: null, port: 0, changes });
   const url = `http://127.0.0.1:${(server2.address() as AddressInfo).port}`;
   const ctl = new AbortController();
   try {

@@ -3,15 +3,19 @@
 // that need them (the rules are in daemon/scripts/lib/check-task.ts). It prints which extra checks it ran and why.
 // `pnpm check` and CI keep running everything.
 //
-// Usage: pnpm check:task [--base origin/main] [--dry-run]
+// Usage: pnpm check:task [--base origin/main] [--dry-run] [--ci-plan]
 //   --base     what the branch is compared with (default origin/main, else main)
 //   --dry-run  only print which checks would run and why
+//   --ci-plan  only print, and write to $GITHUB_OUTPUT, which of CI's extra jobs run (all with CI_RUN_ALL=true)
 // The changed paths are those between the merge base and the working tree, untracked files included.
 import { execFileSync, spawnSync } from 'node:child_process';
 import { parseArgs } from 'node:util';
-import { EXTRA_CHECKS, extraChecks, reasonLine, skipLine } from '../daemon/scripts/lib/check-task.ts';
+import { appendFileSync } from 'node:fs';
+import { EXTRA_CHECKS, ciJobs, extraChecks, reasonLine, skipLine } from '../daemon/scripts/lib/check-task.ts';
 
-const { values: opts } = parseArgs({ options: { base: { type: 'string' }, 'dry-run': { type: 'boolean', default: false } } });
+const { values: opts } = parseArgs({
+  options: { base: { type: 'string' }, 'dry-run': { type: 'boolean', default: false }, 'ci-plan': { type: 'boolean', default: false } },
+});
 
 const root = execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
 const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
@@ -58,6 +62,13 @@ for (const check of EXTRA_CHECKS) {
   else console.log(picked ? `  + ${reasonLine(picked)}` : `  - ${skipLine(check)}`);
 }
 if (changed && !chosen.length) console.log(`  check:fast alone: nothing the branch changes against ${base} needs more`);
+if (opts['ci-plan']) {
+  const jobs = ciJobs(process.env.CI_RUN_ALL === 'true' ? null : changed);
+  const lines = Object.entries(jobs).map(([job, on]) => `${job}=${on}`);
+  console.log(`CI jobs: ${lines.join(' ')}`);
+  if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, lines.join('\n') + '\n');
+  process.exit(0);
+}
 if (opts['dry-run']) process.exit(0);
 
 const steps = [{ name: 'check:fast', command: ['pnpm', 'check:fast'] }, ...chosen];

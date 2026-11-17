@@ -1,6 +1,6 @@
 // Calls the running daemon's HTTP API.
 import { request } from 'node:http';
-import { API_PORT } from '#src/config.ts';
+import { API_PORT, apiToken, bearer } from '#src/config.ts';
 import { die } from '#cli/format.ts';
 
 export function callDaemon<T>(method: string, path: string, body?: unknown, port = API_PORT): Promise<T> {
@@ -12,7 +12,10 @@ export function callDaemon<T>(method: string, path: string, body?: unknown, port
         port,
         method,
         path,
-        headers: payload === undefined ? {} : { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) },
+        headers: {
+          Authorization: bearer(apiToken()),
+          ...(payload === undefined ? {} : { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }),
+        },
         timeout: 0,
       },
       (res) => {

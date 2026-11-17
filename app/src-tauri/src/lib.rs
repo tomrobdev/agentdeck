@@ -41,6 +41,7 @@ pub fn run() {
         .manage(open::PendingUrl::default())
         .manage(tray_window::LastBlur::default())
         .invoke_handler(tauri::generate_handler![
+            daemon_client::api_token,
             dialogs::pick_folder,
             open::take_open_url,
             service::start_daemon,

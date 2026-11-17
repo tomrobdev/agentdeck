@@ -92,6 +92,46 @@ pub fn base_url() -> String {
     format!("http://127.0.0.1:{port}")
 }
 
+/// Where the daemon keeps its API token, as `API_TOKEN_PATH` in `daemon/src/config.ts`: `$AGENTDECK_HOME/api-token`,
+/// else `~/.agentdeck/api-token`.
+fn token_path(agentdeck_home: Option<String>, home: Option<String>) -> Option<std::path::PathBuf> {
+    let dir = agentdeck_home
+        .map(std::path::PathBuf::from)
+        .or_else(|| home.map(|h| std::path::Path::new(&h).join(".agentdeck")))?;
+    Some(dir.join("api-token"))
+}
+
+/// The token every write to the API must carry: `$AGENTDECK_API_TOKEN`, else the daemon's token file. None until the
+/// daemon has made the file.
+fn read_api_token() -> Option<String> {
+    if let Ok(token) = std::env::var("AGENTDECK_API_TOKEN")
+        && !token.is_empty()
+    {
+        return Some(token);
+    }
+    let path = token_path(
+        std::env::var("AGENTDECK_HOME").ok(),
+        std::env::var("HOME").ok(),
+    )?;
+    let token = std::fs::read_to_string(path).ok()?.trim().to_string();
+    (!token.is_empty()).then_some(token)
+}
+
+/// The dashboard's writes carry the token too; it asks the shell for it (`app/src/api/http.ts`).
+#[tauri::command]
+pub fn api_token() -> Option<String> {
+    read_api_token()
+}
+
+/// A POST to the API with the token, as every write must be.
+fn post(path: &str) -> ureq::RequestBuilder<ureq::typestate::WithBody> {
+    let request = agent(Some(REQUEST_TIMEOUT)).post(format!("{}{path}", base_url()));
+    match read_api_token() {
+        Some(token) => request.header("Authorization", format!("Bearer {token}")),
+        None => request,
+    }
+}
+
 fn agent(timeout: Option<Duration>) -> ureq::Agent {
     ureq::Agent::config_builder()
         .proxy(None)
@@ -115,8 +155,7 @@ fn read_status(agent: &ureq::Agent, base: &str) -> Result<Status, String> {
 /// Pause the daemon (`POST /api/pause`), or resume it (`POST /api/resume`).
 pub fn set_paused(paused: bool) -> Result<(), String> {
     let path = if paused { "pause" } else { "resume" };
-    agent(Some(REQUEST_TIMEOUT))
-        .post(format!("{}/api/{path}", base_url()))
+    post(&format!("/api/{path}"))
         .send_empty()
         .map(|_| ())
         .map_err(|e| e.to_string())
@@ -124,8 +163,7 @@ pub fn set_paused(paused: bool) -> Result<(), String> {
 
 /// Restart the daemon (`POST /api/daemon/restart`); it waits for running tasks to finish first.
 pub fn restart() -> Result<(), String> {
-    agent(Some(REQUEST_TIMEOUT))
-        .post(format!("{}/api/daemon/restart", base_url()))
+    post("/api/daemon/restart")
         .send_empty()
         .map(|_| ())
         .map_err(|e| e.to_string())
@@ -138,8 +176,7 @@ pub fn app_seen() -> Result<bool, String> {
     struct AppSeen {
         desktop: bool,
     }
-    let body = agent(Some(REQUEST_TIMEOUT))
-        .post(format!("{}/api/app/seen", base_url()))
+    let body = post("/api/app/seen")
         .send_empty()
         .map_err(|e| e.to_string())?
         .body_mut()
@@ -284,6 +321,19 @@ pub fn watch(mut on_read: impl FnMut(Read) + Send + 'static) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_token_file_is_in_the_daemons_home() {
+        assert_eq!(
+            token_path(Some("/tmp/scratch".into()), Some("/Users/me".into())),
+            Some(std::path::PathBuf::from("/tmp/scratch/api-token"))
+        );
+        assert_eq!(
+            token_path(None, Some("/Users/me".into())),
+            Some(std::path::PathBuf::from("/Users/me/.agentdeck/api-token"))
+        );
+        assert_eq!(token_path(None, None), None);
+    }
 
     #[test]
     fn parses_a_rev_event() {

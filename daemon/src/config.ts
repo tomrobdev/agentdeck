@@ -1,6 +1,7 @@
-import { existsSync, mkdirSync } from 'node:fs';
+import { randomBytes } from 'node:crypto';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 
 export const HOME = resolve(process.env.AGENTDECK_HOME ?? join(homedir(), '.agentdeck'));
 export const CHECKOUT_ROOT = resolve(import.meta.dirname, '../..');
@@ -18,6 +19,24 @@ export const API_ALLOWED_ORIGINS = new Set([
   'http://127.0.0.1:1420',
   ...(process.env.AGENTDECK_ORIGINS ?? '').split(',').filter(Boolean),
 ]);
+
+export const API_TOKEN_PATH = join(HOME, 'api-token');
+
+export function apiToken(path = API_TOKEN_PATH, env = process.env.AGENTDECK_API_TOKEN): string {
+  if (env) return env;
+  const read = () => (existsSync(path) ? readFileSync(path, 'utf8').trim() : '');
+  const found = read();
+  if (found) return found;
+  mkdirSync(dirname(path), { recursive: true });
+  try {
+    writeFileSync(path, `${randomBytes(32).toString('hex')}\n`, { mode: 0o600, flag: 'wx' });
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err;
+  }
+  return read();
+}
+
+export const bearer = (token: string): string => `Bearer ${token}`;
 
 export function ensureDirs(): void {
   for (const dir of [HOME, LOG_DIR, WORKTREE_DIR, GOALS_DIR]) mkdirSync(dir, { recursive: true });
@@ -46,12 +65,19 @@ export function withToolchainPath(
   return { ...env, PATH: dirs.join(':') };
 }
 
+export const msFrom = (text: string | undefined, fallback: number): number => {
+  const ms = Number(text);
+  return Number.isFinite(ms) && ms > 0 ? ms : fallback;
+};
+
 export const DEFAULTS = {
   maxConcurrent: 2,
   maxTurns: 40,
   maxAttempts: 2,
-  tickMs: 5_000,
+  tickMs: msFrom(process.env.AGENTDECK_TICK_MS, 5_000),
 };
+
+export const CANCEL_POLL_MS = msFrom(process.env.AGENTDECK_CANCEL_POLL_MS, 2_000);
 
 export const SETUP_TIMEOUT_MS = 10 * 60_000;
 export const TEST_TIMEOUT_MS = 15 * 60_000;

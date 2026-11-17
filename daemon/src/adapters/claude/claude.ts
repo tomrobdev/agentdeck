@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 import { accessSync, constants, type WriteStream } from 'node:fs';
 import { delimiter, isAbsolute, join } from 'node:path';
 import { createInterface } from 'node:readline';
-import { claudeBin, withToolchainPath } from '#src/config.ts';
+import { CANCEL_POLL_MS, claudeBin, withToolchainPath } from '#src/config.ts';
 import type { ClaudeResult, ClaudeRun, UsageWindow } from '#domain/runs/index.ts';
 import { activeChildren, killGroup } from '#adapters/process/processes.ts';
 
@@ -30,7 +30,6 @@ const STDERR_TAIL = 4_000;
 const fields = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' ? (v as Record<string, unknown>) : {});
 const numberOr = <T>(v: unknown, or: T): number | T => (typeof v === 'number' ? v : or);
 
-const CANCEL_POLL_MS = 2_000;
 export const CANCEL_GRACE_MS = 10_000;
 
 export async function runClaude(opts: {

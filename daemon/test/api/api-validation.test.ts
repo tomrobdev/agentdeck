@@ -15,7 +15,7 @@ const { startApi } = await import('#api/server.ts');
 const { pilotStats } = await import('#application/actions.ts');
 
 const db = openDb(join(home, 'test.db'));
-const server = await startApi({ db, port: 0 });
+const server = await startApi({ db, token: null, port: 0 });
 const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 const repoPath = join(home, 'demo');
 
