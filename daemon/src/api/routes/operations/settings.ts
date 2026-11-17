@@ -1,7 +1,7 @@
 // The settings page.
-import * as actions from '../../../application/actions.ts';
-import type { Settings } from '../../contract/operations.ts';
-import { type ApiContext, type Route, route } from '../../http.ts';
+import * as actions from '#application/actions.ts';
+import type { Settings } from '#api/contract/operations.ts';
+import { type ApiContext, type Route, route } from '#api/http.ts';
 
 export function routes({ db }: ApiContext): Route[] {
   return [

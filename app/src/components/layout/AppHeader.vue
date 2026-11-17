@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { Status } from '../../api/types';
+import type { Status } from '#api/types.ts';
 import { RouterLink } from 'vue-router';
-import { openPanel } from '../../composables/shared/useShell';
-import { NEED_YOU_STATES, needYouCount } from '../../lib/work/task-view';
-import BrandMark from '../ui/BrandMark.vue';
-import Chip from '../ui/Chip.vue';
+import { openPanel } from '#composables/shared/useShell.ts';
+import { NEED_YOU_STATES, needYouCount } from '#lib/work/task-view.ts';
+import BrandMark from '#components/ui/BrandMark.vue';
+import Chip from '#components/ui/Chip.vue';
 
 const props = defineProps<{ status: Status | null; offline: boolean }>();
 

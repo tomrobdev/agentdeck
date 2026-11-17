@@ -5,8 +5,8 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileS
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
-import type { TaskId } from '../../../src/domain/shared/id.ts';
-import { stopReasonOf } from '../../../src/domain/work/task/task.ts';
+import type { TaskId } from '#domain/shared/id.ts';
+import { stopReasonOf } from '#domain/work/task/task.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-planruns-'));
 process.env.AGENTDECK_HOME = home;
@@ -15,14 +15,14 @@ const fake = join(import.meta.dirname, '../../fixtures/fake-claude.mjs');
 chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
 
-const { openDb } = await import('../../fixtures/open-db.ts');
-const { Scheduler } = await import('../../../src/application/scheduler/scheduler.ts');
-const { commitLeftovers, ensureWorktree } = await import('../../../src/adapters/git/worktrees.ts');
-const { readPlanFile, writePlanFile } = await import('../../../src/adapters/local/plan-file.ts');
-const { parsePlan } = await import('../../../src/domain/work/plans/plan.ts');
-const { planForRun, takePlanFile } = await import('../../../src/application/work/plans.ts');
-const { LOG_DIR } = await import('../../../src/config.ts');
-const { MAX_RESTARTS } = await import('../../../src/domain/work/lifecycle/lifecycle.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const { Scheduler } = await import('#application/scheduler/scheduler.ts');
+const { commitLeftovers, ensureWorktree } = await import('#adapters/git/worktrees.ts');
+const { readPlanFile, writePlanFile } = await import('#adapters/local/plan-file.ts');
+const { parsePlan } = await import('#domain/work/plans/plan.ts');
+const { planForRun, takePlanFile } = await import('#application/work/plans.ts');
+const { LOG_DIR } = await import('#src/config.ts');
+const { MAX_RESTARTS } = await import('#domain/work/lifecycle/lifecycle.ts');
 
 const plan = `<!doctype html>
 <html data-agentdeck-plan="1"><head><title>Shared plan</title></head><body>

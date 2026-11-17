@@ -1,5 +1,5 @@
 import ts from 'typescript';
-import { type Source, exportedNames } from './sources.ts';
+import { type Source, exportedNames } from '#scripts/lib/sources.ts';
 
 export const contextOf = (path: string): string | null => path.match(/^domain\/([^/]+)\//)?.[1] ?? null;
 

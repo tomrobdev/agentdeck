@@ -1,6 +1,6 @@
 // Use cases for reading a task's code: what its branch changed, and its files at head or base.
-import type { App } from '../ports/app.ts';
-import type { TaskId } from '../../domain/shared/index.ts';
+import type { App } from '#application/ports/app.ts';
+import type { TaskId } from '#domain/shared/index.ts';
 import {
   type ChangedFile,
   type Changes,
@@ -15,11 +15,11 @@ import {
   checkPath,
   isBinary,
   sincePoints,
-} from '../../domain/work/index.ts';
-import { type AutoMergeMeasured, countCodeComments } from '../../domain/landing/index.ts';
-import type { Repo } from '../../domain/repos/index.ts';
-import { promiseCache } from '../shared/cache.ts';
-import { ActionError, requireTask, requireTaskRepo } from '../shared/input.ts';
+} from '#domain/work/index.ts';
+import { type AutoMergeMeasured, countCodeComments } from '#domain/landing/index.ts';
+import type { Repo } from '#domain/repos/index.ts';
+import { promiseCache } from '#application/shared/cache.ts';
+import { ActionError, requireTask, requireTaskRepo } from '#application/shared/input.ts';
 
 async function resolveHead(app: App, id: TaskId): Promise<{ repo: Repo; head: string }> {
   const task = requireTask(app, id);

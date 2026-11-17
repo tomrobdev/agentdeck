@@ -10,12 +10,12 @@ const home = mkdtempSync(join(tmpdir(), 'agentdeck-pilot-'));
 process.env.AGENTDECK_HOME = home;
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../../fixtures/open-db.ts');
-const { doneTask } = await import('../../fixtures/fixtures.ts');
-const { github } = await import('../../../src/adapters/github/github.ts');
-const { mergeTask } = await import('../../../src/application/landing/merge/merge.ts');
-const { refreshPrStates } = await import('../../../src/application/landing/pull-request/refresh.ts');
-type PrDetails = import('../../../src/domain/landing/merge/merge.ts').PrDetails;
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const { doneTask } = await import('#test/fixtures/fixtures.ts');
+const { github } = await import('#adapters/github/github.ts');
+const { mergeTask } = await import('#application/landing/merge/merge.ts');
+const { refreshPrStates } = await import('#application/landing/pull-request/refresh.ts');
+type PrDetails = import('#domain/landing/merge/merge.ts').PrDetails;
 
 const db = openDb(join(home, 'test.db'));
 after(() => db.close());

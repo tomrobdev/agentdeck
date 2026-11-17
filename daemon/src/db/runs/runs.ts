@@ -1,12 +1,12 @@
 // Task runs: one row per worker claude process.
 import { and, asc, count, countDistinct, eq, gt, inArray, isNotNull, isNull, max, notInArray, or, sql } from 'drizzle-orm';
-import { type PlannerRunId, type RunId, type TaskId, stored } from '../../domain/shared/index.ts';
-import type { PidRun, Run, RunKind, RunningTaskRun } from '../../domain/runs/index.ts';
-import { RUNNING_STATUSES } from '../../domain/work/index.ts';
-import { toRun } from '../mappers.ts';
-import type { Orm } from '../orm.ts';
-import { NOW_SQL } from '../sql.ts';
-import { plannerRuns, runs, tasks } from '../tables.ts';
+import { type PlannerRunId, type RunId, type TaskId, stored } from '#domain/shared/index.ts';
+import type { PidRun, Run, RunKind, RunningTaskRun } from '#domain/runs/index.ts';
+import { RUNNING_STATUSES } from '#domain/work/index.ts';
+import { toRun } from '#db/mappers.ts';
+import type { Orm } from '#db/orm.ts';
+import { NOW_SQL } from '#db/sql.ts';
+import { plannerRuns, runs, tasks } from '#db/tables.ts';
 
 const SIDE_KINDS: RunKind[] = ['resolve', 'unblock', 'review', 'verify'];
 

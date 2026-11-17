@@ -1,8 +1,8 @@
 // A merge request: a person's Merge, which the daemon carries out once the PR is ready (docs/plans/merge-requests.html).
-import { isMergeabilityUnknown } from './conflict.ts';
-import { DEFAULT_MERGE_METHOD, type MergeMethod } from '../../repos/index.ts';
-import { type AutoMergeCheck, type MergeInput, reasonTexts, unattendedVerdict } from './merge.ts';
-import type { PullRequest } from '../pull-request/pr.ts';
+import { isMergeabilityUnknown } from '#domain/landing/merge/conflict.ts';
+import { DEFAULT_MERGE_METHOD, type MergeMethod } from '#domain/repos/index.ts';
+import { type AutoMergeCheck, type MergeInput, reasonTexts, unattendedVerdict } from '#domain/landing/merge/merge.ts';
+import type { PullRequest } from '#domain/landing/pull-request/pr.ts';
 
 export const MERGE_REQUEST_STATES = ['none', 'requested'] as const;
 /** Whether a task has a person's merge request on its PR. */

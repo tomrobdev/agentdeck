@@ -1,19 +1,19 @@
 // The PR refresh: keep the state of open PRs fresh, and say which ones conflict or are ready to merge.
-import type { App } from '../../ports/app.ts';
-import type { TaskId } from '../../../domain/shared/index.ts';
-import type { AutoMergeFacts, MergeInput, PrCheck, PrDetails, PrPlace, ReviewFacts } from '../../../domain/landing/index.ts';
-import { type AutoMergeCheck, autoMergeCheck, autoMergeOn, refreshVerdict } from '../../../domain/landing/index.ts';
-import { carryFailures, checksSettled, countOfKept, nextChecks, withCheckList } from '../../../domain/landing/index.ts';
-import { readFailure } from './check-failures.ts';
-import { checksFailedNotification, mergeFailedNotification } from '../../../domain/operations/index.ts';
-import { type Repo, pausedReason } from '../../../domain/repos/index.ts';
-import type { PrEvent, Task } from '../../../domain/work/index.ts';
-import { errorMessage, present } from '../../../domain/shared/index.ts';
-import { landsAfter } from '../../work/dependencies.ts';
-import { measureBranch } from '../../work/files.ts';
-import { endMergeRequest, movePr } from '../moves.ts';
-import { settle } from '../settle.ts';
-import { notifyLater } from '../../operations/notifications.ts';
+import type { App } from '#application/ports/app.ts';
+import type { TaskId } from '#domain/shared/index.ts';
+import type { AutoMergeFacts, MergeInput, PrCheck, PrDetails, PrPlace, ReviewFacts } from '#domain/landing/index.ts';
+import { type AutoMergeCheck, autoMergeCheck, autoMergeOn, refreshVerdict } from '#domain/landing/index.ts';
+import { carryFailures, checksSettled, countOfKept, nextChecks, withCheckList } from '#domain/landing/index.ts';
+import { readFailure } from '#application/landing/pull-request/check-failures.ts';
+import { checksFailedNotification, mergeFailedNotification } from '#domain/operations/index.ts';
+import { type Repo, pausedReason } from '#domain/repos/index.ts';
+import type { PrEvent, Task } from '#domain/work/index.ts';
+import { errorMessage, present } from '#domain/shared/index.ts';
+import { landsAfter } from '#application/work/dependencies.ts';
+import { measureBranch } from '#application/work/files.ts';
+import { endMergeRequest, movePr } from '#application/landing/moves.ts';
+import { settle } from '#application/landing/settle.ts';
+import { notifyLater } from '#application/operations/notifications.ts';
 
 export const PR_REFRESH_MS = 3 * 60_000;
 export const MERGE_REQUEST_POLL_MS = 30_000;

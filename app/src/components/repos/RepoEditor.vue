@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
-import { repoQuery, reposApi } from '../../api/repos';
-import { MODEL_LABELS } from '../../lib/runs/run-wording';
-import { ago } from '../../lib/shared/time';
-import { MERGE_METHODS, type Repo } from '../../api/types';
-import { type RepoForm, modelChoices, toRepoForm, toRepoPatch } from '../../lib/shared/forms';
-import { useActions } from '../../composables/shared/useActions';
-import { plural } from '../../../../daemon/src/domain/shared/index.ts';
-import NumberInput from '../ui/form/NumberInput.vue';
-import Switch from '../ui/form/Switch.vue';
+import { repoQuery, reposApi } from '#api/repos.ts';
+import { MODEL_LABELS } from '#lib/runs/run-wording.ts';
+import { ago } from '#lib/shared/time.ts';
+import { MERGE_METHODS, type Repo } from '#api/types.ts';
+import { type RepoForm, modelChoices, toRepoForm, toRepoPatch } from '#lib/shared/forms.ts';
+import { useActions } from '#composables/shared/useActions.ts';
+import { plural } from '#daemon/domain/shared/index.ts';
+import NumberInput from '#components/ui/form/NumberInput.vue';
+import Switch from '#components/ui/form/Switch.vue';
 
 const props = defineProps<{ repo: Repo }>();
 const emit = defineEmits<{ archived: [] }>();

@@ -3,13 +3,13 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { taskDetail, taskViews } from '../../../src/api/wire.ts';
-import { openDb } from '../../fixtures/open-db.ts';
-import { type TaskRow, toTask } from '../../../src/db/mappers.ts';
-import { stored } from '../../../src/domain/shared/index.ts';
-import { checksSummary } from '../../../src/domain/landing/pull-request/checks.ts';
-import { type PrFields, type PrState, type PullRequest, prFields, pullRequestOf } from '../../../src/domain/landing/pull-request/pr.ts';
-import { doneTask } from '../../fixtures/fixtures.ts';
+import { taskDetail, taskViews } from '#api/wire.ts';
+import { openDb } from '#test/fixtures/open-db.ts';
+import { type TaskRow, toTask } from '#db/mappers.ts';
+import { stored } from '#domain/shared/index.ts';
+import { checksSummary } from '#domain/landing/pull-request/checks.ts';
+import { type PrFields, type PrState, type PullRequest, prFields, pullRequestOf } from '#domain/landing/pull-request/pr.ts';
+import { doneTask } from '#test/fixtures/fixtures.ts';
 
 const check = { verdict: 'wait' as const, reasons: [{ kind: 'checks_pending' as const, text: '2 checks still running on GitHub' }] };
 const conflict = {
@@ -155,6 +155,6 @@ test('the pull request value in domain/landing/pull-request/pr.ts does not impor
   const dir = join(import.meta.dirname, '../../../src/domain/landing/pull-request');
   for (const file of ['pr.ts']) {
     const text = readFileSync(join(dir, file), 'utf8');
-    assert.doesNotMatch(text, /from '\.\.\/\.\.\/work\/task/, `${file} imports Task`);
+    assert.doesNotMatch(text, /from '#domain\/work\/task/, `${file} imports Task`);
   }
 });

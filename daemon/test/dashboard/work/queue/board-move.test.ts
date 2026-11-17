@@ -1,8 +1,8 @@
 // Which drop on the board means which lifecycle event. The dashboard has no test runner, so its move rule is tested here.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { boardMove } from '../../../../../app/src/lib/work/queue/board-move.ts';
-import { statusGroup } from '../../../../src/domain/work/task/stage.ts';
+import { boardMove } from '#app/lib/work/queue/board-move.ts';
+import { statusGroup } from '#domain/work/task/stage.ts';
 
 const task = (status: string, extra: Record<string, unknown> = {}) => ({ id: 1, status, pr_state: null, waiting: null, ...extra }) as never;
 

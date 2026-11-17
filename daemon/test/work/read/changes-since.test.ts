@@ -4,16 +4,16 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
-import { attemptEnds, sincePoints } from '../../../src/domain/work/read/since.ts';
-import type { TaskId } from '../../../src/domain/shared/id.ts';
-import { SINCE_BASE, shownSince, sinceKey, sinceLabel } from '../../../../app/src/lib/work/files/since.ts';
+import { attemptEnds, sincePoints } from '#domain/work/read/since.ts';
+import type { TaskId } from '#domain/shared/id.ts';
+import { SINCE_BASE, shownSince, sinceKey, sinceLabel } from '#app/lib/work/files/since.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-since-'));
 process.env.AGENTDECK_HOME = home;
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../../fixtures/open-db.ts');
-const actions = await import('../../../src/application/actions.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const actions = await import('#application/actions.ts');
 
 const db = openDb(join(home, 'test.db'));
 after(() => db.close());

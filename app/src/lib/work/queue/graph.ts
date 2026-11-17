@@ -1,7 +1,7 @@
 // The queue's graph mode: which tasks form the graph and where each is drawn. Pure; the drawing is components/work/queue/GraphView.vue.
-import type { LinkKind } from '../../../../../daemon/src/domain/work/index.ts';
-import type { TaskSummary } from '../../../../../daemon/src/api/contract/work.ts';
-import { isMerged, isStuck } from '../../../../../daemon/src/domain/work/index.ts';
+import type { LinkKind } from '#daemon/domain/work/index.ts';
+import type { TaskSummary } from '#daemon/api/contract/work.ts';
+import { isMerged, isStuck } from '#daemon/domain/work/index.ts';
 
 export interface GraphEdge {
   from: number;

@@ -1,4 +1,4 @@
-import type { ChangedFile } from '../../../../../daemon/src/api/contract/files.ts';
+import type { ChangedFile } from '#daemon/api/contract/files.ts';
 
 export interface TreeNode {
   name: string;

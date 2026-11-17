@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { syncResultOf } from '../../../src/domain/runs/sync.ts';
-import { resolveOutcome } from '../../../src/domain/runs/resolve.ts';
+import { syncResultOf } from '#domain/runs/sync.ts';
+import { resolveOutcome } from '#domain/runs/resolve.ts';
 
 const finished = (result: string) => ({ kind: 'finished' as const, result: { result } });
 

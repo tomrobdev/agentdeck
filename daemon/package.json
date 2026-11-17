@@ -7,6 +7,22 @@
   "bin": {
     "agentdeck": "bin/agentdeck.js"
   },
+  "exports": {
+    "./domain/*": "./src/domain/*",
+    "./api/contract/*": "./src/api/contract/*"
+  },
+  "imports": {
+    "#domain/*": "./src/domain/*",
+    "#application/*": "./src/application/*",
+    "#db/*": "./src/db/*",
+    "#adapters/*": "./src/adapters/*",
+    "#api/*": "./src/api/*",
+    "#cli/*": "./src/cli/*",
+    "#src/*": "./src/*",
+    "#test/*": "./test/*",
+    "#scripts/*": "./scripts/*",
+    "#app/*": "agentdeck/app/*"
+  },
   "engines": {
     "node": ">=24"
   },
@@ -22,13 +38,15 @@
     "db:check": "node scripts/db-check.ts",
     "docs:gen": "node scripts/docs.ts",
     "rules": "node scripts/rules.ts",
-    "db:generate": "node scripts/db-generate.ts"
+    "db:generate": "node scripts/db-generate.ts",
+    "imports:fix": "node scripts/absolute-imports.ts"
   },
   "dependencies": {
     "drizzle-orm": "1.0.0-rc.5"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
+    "agentdeck": "workspace:*",
     "c8": "^12.0.0",
     "drizzle-kit": "1.0.0-rc.5",
     "typescript": "^5.9.0"

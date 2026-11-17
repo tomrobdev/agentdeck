@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { openDb } from '../src/db/index.ts';
+import { openDb } from '#db/index.ts';
 
 export function drizzleKitOnScratch(args: string[]): { status: number | null; out: string } {
   const dir = mkdtempSync(join(tmpdir(), 'agentdeck-db-'));

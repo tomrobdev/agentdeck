@@ -1,10 +1,10 @@
-import type { TaskSummary } from '../../../../daemon/src/api/contract/work.ts';
-import { FILTER_STATES, personEvents } from '../../../../daemon/src/domain/work/index.ts';
-import { CHECKED_STATUSES, canStartMerge, isReview } from '../../../../daemon/src/domain/work/index.ts';
-import { rank } from '../shared/fuzzy.ts';
-import { canFix } from './task-view.ts';
-import { type BulkAction, bulkActions } from './queue/bulk.ts';
-import { type EditRequest, GO_KEYS, type GoTarget, PRIORITY_KEYS, keyCaps } from '../shared/hotkeys.ts';
+import type { TaskSummary } from '#daemon/api/contract/work.ts';
+import { FILTER_STATES, personEvents } from '#daemon/domain/work/index.ts';
+import { CHECKED_STATUSES, canStartMerge, isReview } from '#daemon/domain/work/index.ts';
+import { rank } from '#lib/shared/fuzzy.ts';
+import { canFix } from '#lib/work/task-view.ts';
+import { type BulkAction, bulkActions } from '#lib/work/queue/bulk.ts';
+import { type EditRequest, GO_KEYS, type GoTarget, PRIORITY_KEYS, keyCaps } from '#lib/shared/hotkeys.ts';
 
 export type PaletteTask = Pick<TaskSummary, 'id' | 'title' | 'status' | 'pr_state' | 'sync' | 'merge_request'> & {
   waiting?: TaskSummary['waiting'];

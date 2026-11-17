@@ -1,7 +1,7 @@
 // Reads of the task's branch from git objects.
-import * as actions from '../../../application/actions.ts';
-import type { Changes, FileContent, FilePatch, ProposalCheck, TreeListing } from '../../contract/files.ts';
-import { type ApiContext, type Route, route, taskIdParam } from '../../http.ts';
+import * as actions from '#application/actions.ts';
+import type { Changes, FileContent, FilePatch, ProposalCheck, TreeListing } from '#api/contract/files.ts';
+import { type ApiContext, type Route, route, taskIdParam } from '#api/http.ts';
 
 export function routes({ db }: ApiContext): Route[] {
   return [

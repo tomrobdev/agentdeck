@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { tasksQuery, workApi } from '../../../api/work';
-import type { LinkKind, TaskDetail, TaskLink, TaskSummary } from '../../../api/types';
-import { errorMessage } from '../../../../../daemon/src/domain/shared/index.ts';
+import { tasksQuery, workApi } from '#api/work.ts';
+import type { LinkKind, TaskDetail, TaskLink, TaskSummary } from '#api/types.ts';
+import { errorMessage } from '#daemon/domain/shared/index.ts';
 import { RouterLink } from 'vue-router';
-import { statusLabel } from '../../../lib/work/task-view';
-import { useActions } from '../../../composables/shared/useActions';
-import Combobox from '../../ui/form/Combobox.vue';
-import SegmentedControl from '../../ui/form/SegmentedControl.vue';
-import StatusIcon from '../../ui/status/StatusIcon.vue';
+import { statusLabel } from '#lib/work/task-view.ts';
+import { useActions } from '#composables/shared/useActions.ts';
+import Combobox from '#components/ui/form/Combobox.vue';
+import SegmentedControl from '#components/ui/form/SegmentedControl.vue';
+import StatusIcon from '#components/ui/status/StatusIcon.vue';
 
 const props = defineProps<{ task: TaskDetail }>();
 const { run } = useActions();

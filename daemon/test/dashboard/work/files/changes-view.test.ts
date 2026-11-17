@@ -1,7 +1,7 @@
 // What the Changes tab derives from its files and comments.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { totalLines, visibleComments } from '../../../../../app/src/lib/work/files/changes-view.ts';
+import { totalLines, visibleComments } from '#app/lib/work/files/changes-view.ts';
 
 test('the lines of every file are added up', () => {
   assert.deepEqual(totalLines([]), { add: 0, del: 0 });

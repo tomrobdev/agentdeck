@@ -1,26 +1,19 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { landingApi } from '../../../api/landing';
-import { workApi } from '../../../api/work';
-import type { LinkKind, TaskSummary } from '../../../api/types';
-import { useFixTask } from '../../../composables/work/useFixTask';
-import { useActions } from '../../../composables/shared/useActions';
-import { openExternal, useCopy } from '../../../platform/native';
-import {
-  type PersonEvent,
-  MODELS,
-  branchName,
-  canStartMerge,
-  isReview,
-  personEvents,
-} from '../../../../../daemon/src/domain/work/index.ts';
-import { PRIORITY_LEVELS, canEdit, levelPriority, priorityLevel } from '../../../lib/work/task-view';
-import Menu from '../../ui/menu/Menu.vue';
-import MenuItem from '../../ui/menu/MenuItem.vue';
-import MenuRadioGroup from '../../ui/menu/MenuRadioGroup.vue';
-import MenuRadioItem from '../../ui/menu/MenuRadioItem.vue';
-import MenuSeparator from '../../ui/menu/MenuSeparator.vue';
-import MenuSub from '../../ui/menu/MenuSub.vue';
+import { landingApi } from '#api/landing.ts';
+import { workApi } from '#api/work.ts';
+import type { LinkKind, TaskSummary } from '#api/types.ts';
+import { useFixTask } from '#composables/work/useFixTask.ts';
+import { useActions } from '#composables/shared/useActions.ts';
+import { openExternal, useCopy } from '#platform/native.ts';
+import { type PersonEvent, MODELS, branchName, canStartMerge, isReview, personEvents } from '#daemon/domain/work/index.ts';
+import { PRIORITY_LEVELS, canEdit, levelPriority, priorityLevel } from '#lib/work/task-view.ts';
+import Menu from '#components/ui/menu/Menu.vue';
+import MenuItem from '#components/ui/menu/MenuItem.vue';
+import MenuRadioGroup from '#components/ui/menu/MenuRadioGroup.vue';
+import MenuRadioItem from '#components/ui/menu/MenuRadioItem.vue';
+import MenuSeparator from '#components/ui/menu/MenuSeparator.vue';
+import MenuSub from '#components/ui/menu/MenuSub.vue';
 
 const props = defineProps<{ task: TaskSummary; x: number; y: number }>();
 const emit = defineEmits<{ close: []; open: [id: number]; act: [kind: PersonEvent, id: number]; merge: [id: number] }>();

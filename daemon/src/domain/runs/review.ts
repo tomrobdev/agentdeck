@@ -1,10 +1,17 @@
 // The review run: a claude run that reads a done task's changes against its Goal, Definition of done and linked plan steps, and answers with a summary and findings in REVIEW_ANSWER_SCHEMA.
-import { BLOCKING_PREFIX, COMMENT_SIDES, type CommentSide, type ReviewKind, countedReviewRuns, reviewReason } from '../landing/index.ts';
-import type { Repo } from '../repos/index.ts';
-import { parsePlanWithText } from '../work/index.ts';
-import type { Task, TaskEventRow } from '../work/index.ts';
-import type { PromptPlan } from './prompt.ts';
-import type { Run } from './run.ts';
+import {
+  BLOCKING_PREFIX,
+  COMMENT_SIDES,
+  type CommentSide,
+  type ReviewKind,
+  countedReviewRuns,
+  reviewReason,
+} from '#domain/landing/index.ts';
+import type { Repo } from '#domain/repos/index.ts';
+import { parsePlanWithText } from '#domain/work/index.ts';
+import type { Task, TaskEventRow } from '#domain/work/index.ts';
+import type { PromptPlan } from '#domain/runs/prompt.ts';
+import type { Run } from '#domain/runs/run.ts';
 
 export const REVIEW_NOTE = 'Review run: ';
 

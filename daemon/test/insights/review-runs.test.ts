@@ -6,9 +6,9 @@ import {
   measureReviewRuns,
   mergedUnchanged,
   reviewRunsText,
-} from '../../src/domain/insights/review-runs.ts';
-import { type ScorecardEvent, buildScorecard, scorecardText } from '../../src/domain/insights/scorecard.ts';
-import { asRepoId, asTaskId } from '../fixtures/fixtures.ts';
+} from '#domain/insights/review-runs.ts';
+import { type ScorecardEvent, buildScorecard, scorecardText } from '#domain/insights/scorecard.ts';
+import { asRepoId, asTaskId } from '#test/fixtures/fixtures.ts';
 
 const ev = (o: Partial<ScorecardEvent> & { type: string; at: string }): ScorecardEvent => ({
   task_id: asTaskId(1),

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { waitFor } from './fixtures.ts';
+import { waitFor } from '#test/fixtures/fixtures.ts';
 
 test('waitFor returns what the check returned once it is truthy', async () => {
   let polls = 0;

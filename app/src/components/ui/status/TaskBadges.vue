@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { TaskSummary } from '../../../api/types';
+import type { TaskSummary } from '#api/types.ts';
 import { RouterLink } from 'vue-router';
-import { TONE_CHIP, taskBadges } from '../../../lib/work/task-badges';
-import Chip from '../Chip.vue';
+import { TONE_CHIP, taskBadges } from '#lib/work/task-badges.ts';
+import Chip from '#components/ui/Chip.vue';
 
 const props = defineProps<{ task: TaskSummary; repo?: boolean; pr?: boolean; nowrap?: boolean }>();
 const b = computed(() => taskBadges(props.task, { repo: props.repo, pr: props.pr }));

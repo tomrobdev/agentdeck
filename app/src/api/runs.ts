@@ -1,6 +1,6 @@
 // Runs: syncing a task's branch, verify runs and the run log.
-import { API_BASE, post, qs } from './http.ts';
-import type { SyncResult, VerifyResult } from './types.ts';
+import { API_BASE, post, qs } from '#api/http.ts';
+import type { SyncResult, VerifyResult } from '#api/types.ts';
 
 export const runsApi = {
   sync: (id: number) => post<SyncResult>(`/api/tasks/${id}/sync`),

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { openExternal } from '../../platform/native';
-import { markdownHtml } from '../../lib/shared/render';
+import { openExternal } from '#platform/native.ts';
+import { markdownHtml } from '#lib/shared/render.ts';
 
 const props = defineProps<{ text: string; isPath?: (p: string) => boolean }>();
 const emit = defineEmits<{ path: [path: string, line: number | null] }>();

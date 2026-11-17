@@ -4,7 +4,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { scratchCli, scratchRepo } from './cli-run.ts';
+import { scratchCli, scratchRepo } from '#test/cli/cli-run.ts';
 
 const { run } = scratchCli();
 const path = scratchRepo('alpha');

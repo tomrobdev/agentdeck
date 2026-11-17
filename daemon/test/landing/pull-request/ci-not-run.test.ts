@@ -12,9 +12,9 @@ import {
   parseAnnotations,
   parseJobStart,
   withCheckList,
-} from '../../../src/domain/landing/index.ts';
-import type { PrCheck, PrDetails, PullRequest, StoredChecks } from '../../../src/domain/landing/index.ts';
-import { countOf } from '../../../src/domain/landing/pull-request/checks.ts';
+} from '#domain/landing/index.ts';
+import type { PrCheck, PrDetails, PullRequest, StoredChecks } from '#domain/landing/index.ts';
+import { countOf } from '#domain/landing/pull-request/checks.ts';
 
 const BILLING =
   "The job was not started because recent account payments have failed or your spending limit needs to be increased. Please check the 'Billing & plans' section in your settings";

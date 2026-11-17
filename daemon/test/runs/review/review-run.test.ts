@@ -5,7 +5,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { asTaskId } from '../../../src/domain/shared/id.ts';
+import { asTaskId } from '#domain/shared/id.ts';
 import {
   REVIEW_ANSWER_SCHEMA,
   buildReviewPrompt,
@@ -15,8 +15,8 @@ import {
   reviewRecord,
   reviewSchemaArgs,
   reviewVerdict,
-} from '../../../src/domain/runs/review.ts';
-import { diffHash } from '../../../src/adapters/git/diffs.ts';
+} from '#domain/runs/review.ts';
+import { diffHash } from '#adapters/git/diffs.ts';
 
 const PROMPT = `## Goal
 Count the words in a file.

@@ -6,35 +6,34 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, beforeEach, test } from 'node:test';
 import { setTimeout as sleep } from 'node:timers/promises';
-import type { TaskId } from '../../../src/domain/shared/id.ts';
+import type { TaskId } from '#domain/shared/id.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-automerge-'));
 process.env.AGENTDECK_HOME = home;
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../../fixtures/open-db.ts');
-const { doneTask, testApp, waitFor } = await import('../../fixtures/fixtures.ts');
-const { READY_PR, fakeCodeHost } = await import('../../fixtures/fakes.ts');
-const { mergeFailure, verdictView } = await import('../../../src/domain/landing/merge/merge.ts');
-const { mergeRequestCheck } = await import('../../../src/domain/landing/merge/merge-request.ts');
-const { cancelMergeRequest, requestMerge } = await import('../../../src/application/actions.ts');
-const { github } = await import('../../../src/adapters/github/github.ts');
-const { AUTO_MERGE_LABEL, autoMergeCheck, autoMergeOn, autoMergeView } = await import('../../../src/domain/landing/merge/auto-merge.ts');
-const { isMergeLocked } = await import('../../../src/application/work/checkout-locks.ts');
-const { refreshPrStates } = await import('../../../src/application/landing/pull-request/refresh.ts');
-const { autoMerge } = await import('../../../src/application/landing/merge/auto-merge.ts');
-const { openPullRequest } = await import('../../../src/application/landing/pull-request/open-pr.ts');
-const { ActionError, addTask, mergePreview, mergeTask, setAutoMerge, syncNow, updateRepo } =
-  await import('../../../src/application/actions.ts');
-const { resolveConflicting } = await import('../../../src/application/runs/sync.ts');
-const { repoSettingPatch } = await import('../../../src/cli/operations/settings-args.ts');
-const { liveLinks } = await import('../../../src/application/work/dependencies.ts');
-const { startState, waitingFor } = await import('../../../src/domain/work/index.ts');
-const waiting = (t: import('../../../src/domain/work/task/task.ts').Task) => {
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const { doneTask, testApp, waitFor } = await import('#test/fixtures/fixtures.ts');
+const { READY_PR, fakeCodeHost } = await import('#test/fixtures/fakes.ts');
+const { mergeFailure, verdictView } = await import('#domain/landing/merge/merge.ts');
+const { mergeRequestCheck } = await import('#domain/landing/merge/merge-request.ts');
+const { cancelMergeRequest, requestMerge } = await import('#application/actions.ts');
+const { github } = await import('#adapters/github/github.ts');
+const { AUTO_MERGE_LABEL, autoMergeCheck, autoMergeOn, autoMergeView } = await import('#domain/landing/merge/auto-merge.ts');
+const { isMergeLocked } = await import('#application/work/checkout-locks.ts');
+const { refreshPrStates } = await import('#application/landing/pull-request/refresh.ts');
+const { autoMerge } = await import('#application/landing/merge/auto-merge.ts');
+const { openPullRequest } = await import('#application/landing/pull-request/open-pr.ts');
+const { ActionError, addTask, mergePreview, mergeTask, setAutoMerge, syncNow, updateRepo } = await import('#application/actions.ts');
+const { resolveConflicting } = await import('#application/runs/sync.ts');
+const { repoSettingPatch } = await import('#cli/operations/settings-args.ts');
+const { liveLinks } = await import('#application/work/dependencies.ts');
+const { startState, waitingFor } = await import('#domain/work/index.ts');
+const waiting = (t: import('#domain/work/task/task.ts').Task) => {
   const links = liveLinks(db);
   return waitingFor(t, startState(t, links.linksOf(t.id), links.target));
 };
-type PrDetails = import('../../../src/domain/landing/merge/merge.ts').PrDetails;
+type PrDetails = import('#domain/landing/merge/merge.ts').PrDetails;
 
 const db = openDb(join(home, 'test.db'));
 after(() => db.close());
@@ -107,7 +106,7 @@ function tested(o: { source?: 'manual' | 'planner'; title?: string } = {}) {
 }
 
 const repoRow = { test_cmd: 'pnpm test', auto_merge_max_lines: 400, auto_merge_skip: ['.github/'] };
-type ReviewFacts = import('../../../src/domain/landing/review/review-gate.ts').ReviewFacts;
+type ReviewFacts = import('#domain/landing/review/review-gate.ts').ReviewFacts;
 type CheckOptions = { tests_passed?: boolean | null; paused?: string | null; test_cmd?: string | null; review?: ReviewFacts | null };
 const raw = (pr: Partial<PrDetails> = {}, o: CheckOptions = {}) =>
   autoMergeCheck({
@@ -286,7 +285,7 @@ test("autoMergeCheck: a branch over the repo's code comment limits needs a perso
 });
 
 test('the PR body says in one line that a person needs to merge a branch over the code comment limits', async () => {
-  const { buildPrBody } = await import('../../../src/domain/landing/pull-request/pr.ts');
+  const { buildPrBody } = await import('#domain/landing/pull-request/pr.ts');
   const text = '12 code comment lines added (8%), over the limit of 5 lines or 5%';
   assert.ok(buildPrBody({ id: 7 }, [], null, text).includes(`A person needs to merge this: ${text}.`));
   assert.ok(!buildPrBody({ id: 7 }, []).includes('code comment'));
@@ -311,7 +310,7 @@ test('a merge request reads the findings as auto-merge does, without what only a
   assert.equal(autoMergeCheck({ ...input, repo: repoRow, paused: null }).verdict, 'never');
 });
 
-type ReviewWithComments = import('../../../src/domain/landing/review/review.ts').ReviewWithComments;
+type ReviewWithComments = import('#domain/landing/review/review.ts').ReviewWithComments;
 let reviewIds = 0;
 const reviewOf = (
   kind: 'comment' | 'request_changes',
@@ -804,7 +803,7 @@ test('setAutoMerge overrides the repo for one task and moves the label on its op
 });
 
 test('the scheduler merges a ready PR on its own refresh, and tells a merge that keeps failing once', async () => {
-  const { Scheduler } = await import('../../../src/application/scheduler/scheduler.ts');
+  const { Scheduler } = await import('#application/scheduler/scheduler.ts');
   const stuck = tested({ title: 'refused' });
   mergeError = 'the base branch policy prohibits the merge';
   const told = () => db.recentNotifications(50).filter((x) => x.task_id === stuck.id).length;

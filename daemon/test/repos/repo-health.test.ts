@@ -5,8 +5,8 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, writeFileSy
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
-import { type TaskId, asTaskId } from '../../src/domain/shared/id.ts';
-import type { TaskEvent } from '../../src/domain/work/lifecycle/lifecycle.ts';
+import { type TaskId, asTaskId } from '#domain/shared/id.ts';
+import type { TaskEvent } from '#domain/work/lifecycle/lifecycle.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-health-'));
 process.env.AGENTDECK_HOME = home;
@@ -15,10 +15,10 @@ const fake = join(import.meta.dirname, '../fixtures/fake-claude.mjs');
 chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
 
-const { openDb } = await import('../fixtures/open-db.ts');
-const { Scheduler } = await import('../../src/application/scheduler/scheduler.ts');
-const { doctorRepo, editTask, resumeRepo, ActionError } = await import('../../src/application/actions.ts');
-const { runDoctor } = await import('../../src/application/repos/doctor.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const { Scheduler } = await import('#application/scheduler/scheduler.ts');
+const { doctorRepo, editTask, resumeRepo, ActionError } = await import('#application/actions.ts');
+const { runDoctor } = await import('#application/repos/doctor.ts');
 
 const db = openDb(join(home, 'test.db'));
 db.setSetting('max_concurrent', '1');

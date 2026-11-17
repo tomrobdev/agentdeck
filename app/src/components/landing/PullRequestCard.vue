@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { landingApi } from '../../api/landing';
-import { checkDuration } from '../../lib/shared/time';
-import type { PrCheck, TaskDetail } from '../../api/types';
-import { failureHeadline, finalMessage } from '../../../../daemon/src/domain/landing/index.ts';
-import { canFixChecks } from '../../lib/work/task-view';
-import { useAction } from '../../composables/shared/useActions';
-import { openExternal } from '../../platform/native';
-import Markdown from '../ui/Markdown.vue';
-import Tooltip from '../ui/Tooltip.vue';
+import { landingApi } from '#api/landing.ts';
+import { checkDuration } from '#lib/shared/time.ts';
+import type { PrCheck, TaskDetail } from '#api/types.ts';
+import { failureHeadline, finalMessage } from '#daemon/domain/landing/index.ts';
+import { canFixChecks } from '#lib/work/task-view.ts';
+import { useAction } from '#composables/shared/useActions.ts';
+import { openExternal } from '#platform/native.ts';
+import Markdown from '#components/ui/Markdown.vue';
+import Tooltip from '#components/ui/Tooltip.vue';
 
 const props = defineProps<{ task: TaskDetail; isPath?: (p: string) => boolean }>();
 const emit = defineEmits<{ path: [path: string, line: number | null] }>();

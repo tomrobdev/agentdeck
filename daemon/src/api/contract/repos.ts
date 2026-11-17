@@ -1,8 +1,8 @@
 // Repos: the registered repos, their settings and health, and the planner's proposals.
-import type { PlannerRunId, RepoId } from '../../domain/shared/index.ts';
-import type { PlannerOutcome } from '../../domain/proposals/index.ts';
-import type { MergeMethod, PrMode, ToolRulesSource } from '../../domain/repos/index.ts';
-import type { Task } from './work.ts';
+import type { PlannerRunId, RepoId } from '#domain/shared/index.ts';
+import type { PlannerOutcome } from '#domain/proposals/index.ts';
+import type { MergeMethod, PrMode, ToolRulesSource } from '#domain/repos/index.ts';
+import type { Task } from '#api/contract/work.ts';
 
 export interface Repo {
   id: RepoId;

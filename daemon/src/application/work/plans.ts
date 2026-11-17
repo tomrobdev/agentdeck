@@ -1,5 +1,5 @@
 // Plans: stored in AgentDeck per task, named after the task they belong to (`112-plans-in-agentdeck.html`).
-import type { App } from '../ports/app.ts';
+import type { App } from '#application/ports/app.ts';
 import {
   type OwnPlan,
   PLAN_LIMIT,
@@ -10,13 +10,13 @@ import {
   parsePlan,
   planAfterRun,
   toPlan,
-} from '../../domain/work/index.ts';
-import type { TaskId } from '../../domain/shared/index.ts';
-import type { PrPlan } from '../../domain/landing/index.ts';
-import type { PromptPlan } from '../../domain/runs/index.ts';
-import { hasPlanLink, otherPlanOwner } from '../../domain/work/index.ts';
-import { PLAN_ATTACHABLE_STATUSES, type Task } from '../../domain/work/index.ts';
-import { ActionError, object, requireTask } from '../shared/input.ts';
+} from '#domain/work/index.ts';
+import type { TaskId } from '#domain/shared/index.ts';
+import type { PrPlan } from '#domain/landing/index.ts';
+import type { PromptPlan } from '#domain/runs/index.ts';
+import { hasPlanLink, otherPlanOwner } from '#domain/work/index.ts';
+import { PLAN_ATTACHABLE_STATUSES, type Task } from '#domain/work/index.ts';
+import { ActionError, object, requireTask } from '#application/shared/input.ts';
 
 export function readPlanInput(html: unknown): { html: string; plan: ParsedPlan } {
   if (typeof html !== 'string' || !html.trim()) throw new ActionError('the plan is empty');

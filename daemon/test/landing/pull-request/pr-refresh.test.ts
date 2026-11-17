@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { AUTO_MERGE_LABEL } from '../../../src/domain/landing/merge/auto-merge.ts';
-import type { AutoMergeFacts, MergeInput, PrDetails } from '../../../src/domain/landing/index.ts';
-import { refreshVerdict } from '../../../src/domain/landing/index.ts';
+import { AUTO_MERGE_LABEL } from '#domain/landing/merge/auto-merge.ts';
+import type { AutoMergeFacts, MergeInput, PrDetails } from '#domain/landing/index.ts';
+import { refreshVerdict } from '#domain/landing/index.ts';
 
 const ready: PrDetails = {
   state: 'open',

@@ -1,6 +1,6 @@
 import { onMounted, ref } from 'vue';
-import { addTaskCommand, CMUX_TEMPLATE, terminalArgv, terminalTemplate } from '../../lib/runs/terminal';
-import { cmuxInstalled, isNative, runTemplate } from '../../platform/native';
+import { addTaskCommand, CMUX_TEMPLATE, terminalArgv, terminalTemplate } from '#lib/runs/terminal.ts';
+import { cmuxInstalled, isNative, runTemplate } from '#platform/native.ts';
 
 export function useTerminal() {
   const available = ref(false);

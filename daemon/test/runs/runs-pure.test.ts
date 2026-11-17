@@ -25,8 +25,8 @@ import {
   parseUnblock,
   unblockSystemPrompt,
   withTurnUsage,
-} from '../../src/domain/runs/index.ts';
-import { asTaskId } from '../../src/domain/shared/index.ts';
+} from '#domain/runs/index.ts';
+import { asTaskId } from '#domain/shared/index.ts';
 
 const run = (over: Record<string, unknown>) =>
   ({ kind: 'work', attempt: 1, outcome: null, live_turns: 0, num_turns: null, ...over }) as unknown as Run;

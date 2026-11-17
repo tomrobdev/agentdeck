@@ -1,6 +1,6 @@
 // Work, a task's code: its changed files, the base's drift and the repo's files.
-import type { ChangeStatus, FileRef, SinceKind, TaskStatus } from '../../domain/work/index.ts';
-import type { TaskId } from '../../domain/shared/index.ts';
+import type { ChangeStatus, FileRef, SinceKind, TaskStatus } from '#domain/work/index.ts';
+import type { TaskId } from '#domain/shared/index.ts';
 
 export interface ChangedFile {
   path: string;

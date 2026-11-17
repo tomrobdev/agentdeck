@@ -1,9 +1,9 @@
 // Which repos are due for an area review (domain/operations/review-due.ts decides it from the refs/reviewed/* marks), and the reminder: the daemon's tick stores what is due for the headline and tells a person at most once a day per repo.
-import type { App } from '../ports/app.ts';
-import { type ReviewDue, remindReviewDue, reviewDue, reviewDueNotification } from '../../domain/operations/index.ts';
-import type { Repo } from '../../domain/repos/index.ts';
-import { sqliteMs } from '../../domain/shared/index.ts';
-import { notify } from './notifications.ts';
+import type { App } from '#application/ports/app.ts';
+import { type ReviewDue, remindReviewDue, reviewDue, reviewDueNotification } from '#domain/operations/index.ts';
+import type { Repo } from '#domain/repos/index.ts';
+import { sqliteMs } from '#domain/shared/index.ts';
+import { notify } from '#application/operations/notifications.ts';
 
 export const REVIEW_CHECK_MS = 60_000;
 

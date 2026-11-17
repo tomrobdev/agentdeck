@@ -14,9 +14,9 @@ import {
   reviewPromptBlock,
   unansweredNote,
   withNote,
-} from '../../../src/domain/landing/review/address.ts';
-import { buildPrompt, workerSystemPrompt } from '../../../src/domain/runs/prompt.ts';
-import type { Task } from '../../../src/domain/work/task/task.ts';
+} from '#domain/landing/review/address.ts';
+import { buildPrompt, workerSystemPrompt } from '#domain/runs/prompt.ts';
+import type { Task } from '#domain/work/task/task.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-review-address-'));
 process.env.AGENTDECK_HOME = home;
@@ -25,9 +25,9 @@ const fake = join(import.meta.dirname, '../../fixtures/fake-claude.mjs');
 chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
 
-const { openDb } = await import('../../fixtures/open-db.ts');
-const { Scheduler } = await import('../../../src/application/scheduler/scheduler.ts');
-const actions = await import('../../../src/application/actions.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const { Scheduler } = await import('#application/scheduler/scheduler.ts');
+const actions = await import('#application/actions.ts');
 
 const patchA = [
   'diff --git a/src/a.ts b/src/a.ts',

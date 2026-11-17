@@ -1,7 +1,7 @@
 // Reading a run's result: what claude left behind, how it classifies, and what the run came to.
-import { STATUS_WORD, lastLine, oneLine } from '../shared/index.ts';
-import { type Needs, parseNeeds } from '../work/index.ts';
-import type { Outcome, Run } from './run.ts';
+import { STATUS_WORD, lastLine, oneLine } from '#domain/shared/index.ts';
+import { type Needs, parseNeeds } from '#domain/work/index.ts';
+import type { Outcome, Run } from '#domain/runs/run.ts';
 
 /** The parts of claude's final `result` event that a run records. */
 export interface ResultLike {

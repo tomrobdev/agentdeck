@@ -1,23 +1,23 @@
 // The daemon's loop: claims queued tasks into free slots when the governor allows, runs the planner when a queue runs dry, opens again the PRs that failed to open, and refreshes open PRs, merging those that pass the auto-merge check.
-import { DEFAULTS } from '../../config.ts';
-import type { TaskId } from '../../domain/shared/index.ts';
-import { MAX_RESTARTS } from '../../domain/work/index.ts';
-import { describeWait } from '../../domain/work/index.ts';
-import { queueWait } from '../capacity/gate.ts';
-import { notifyLater } from '../operations/notifications.ts';
-import { REVIEW_CHECK_MS, checkReviewsDue } from '../operations/review-due.ts';
-import { proposeNow, plannerDue } from '../proposals/planner.ts';
-import { resolveConflicting } from '../runs/sync.ts';
-import { autoMerge } from '../landing/merge/auto-merge.ts';
-import { MERGE_REQUEST_POLL_MS, PR_REFRESH_MS, refreshPrStates } from '../landing/pull-request/refresh.ts';
-import { followUpPending, hasFollowUpsToRun } from '../landing/settle.ts';
-import { retryFailedPrs } from '../landing/pull-request/open-pr.ts';
-import { nextUnblockable } from '../runs/unblock.ts';
-import { nextReviewable } from '../runs/review.ts';
-import { startReview, startUnblock, startWork } from './start-runs.ts';
-import type { App } from '../ports/app.ts';
-import type { KeepAwake } from '../ports/processes.ts';
-import type { Activity, ReloadDecision } from '../../domain/operations/index.ts';
+import { DEFAULTS } from '#src/config.ts';
+import type { TaskId } from '#domain/shared/index.ts';
+import { MAX_RESTARTS } from '#domain/work/index.ts';
+import { describeWait } from '#domain/work/index.ts';
+import { queueWait } from '#application/capacity/gate.ts';
+import { notifyLater } from '#application/operations/notifications.ts';
+import { REVIEW_CHECK_MS, checkReviewsDue } from '#application/operations/review-due.ts';
+import { proposeNow, plannerDue } from '#application/proposals/planner.ts';
+import { resolveConflicting } from '#application/runs/sync.ts';
+import { autoMerge } from '#application/landing/merge/auto-merge.ts';
+import { MERGE_REQUEST_POLL_MS, PR_REFRESH_MS, refreshPrStates } from '#application/landing/pull-request/refresh.ts';
+import { followUpPending, hasFollowUpsToRun } from '#application/landing/settle.ts';
+import { retryFailedPrs } from '#application/landing/pull-request/open-pr.ts';
+import { nextUnblockable } from '#application/runs/unblock.ts';
+import { nextReviewable } from '#application/runs/review.ts';
+import { startReview, startUnblock, startWork } from '#application/scheduler/start-runs.ts';
+import type { App } from '#application/ports/app.ts';
+import type { KeepAwake } from '#application/ports/processes.ts';
+import type { Activity, ReloadDecision } from '#domain/operations/index.ts';
 
 const REVIEW_LOOK_MS = 30_000;
 

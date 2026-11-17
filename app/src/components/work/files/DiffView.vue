@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { type DiffLine, anchorOf, anchorKey, parsePatch, splitRows } from '../../../lib/work/files/diff';
-import { highlightLines, languageFor } from '../../../lib/shared/render';
-import type { NewReviewComment } from '../../../api/types';
-import type { ShownComment } from '../../../composables/landing/useReviews';
-import CommentBox from '../../landing/CommentBox.vue';
-import CommentThread from '../../landing/CommentThread.vue';
+import { type DiffLine, anchorOf, anchorKey, parsePatch, splitRows } from '#lib/work/files/diff.ts';
+import { highlightLines, languageFor } from '#lib/shared/render.ts';
+import type { NewReviewComment } from '#api/types.ts';
+import type { ShownComment } from '#composables/landing/useReviews.ts';
+import CommentBox from '#components/landing/CommentBox.vue';
+import CommentThread from '#components/landing/CommentThread.vue';
 
 const props = defineProps<{
   path: string;

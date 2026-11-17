@@ -11,14 +11,14 @@ import {
   readRange,
   resultHidden,
   toolKind,
-} from '../../lib/runs/transcript';
-import { parseAnsi } from '../../lib/runs/ansi';
-import { CHANGE_MAX } from '../../../../daemon/src/domain/runs/index.ts';
-import { lineDiff } from '../../lib/runs/line-diff';
-import { callDuration, durationLabel, isSlow } from '../../lib/runs/log-filter';
-import Markdown from '../ui/Markdown.vue';
-import Delta from '../ui/status/Delta.vue';
-import LogItem from './LogItem.vue';
+} from '#lib/runs/transcript.ts';
+import { parseAnsi } from '#lib/runs/ansi.ts';
+import { CHANGE_MAX } from '#daemon/domain/runs/index.ts';
+import { lineDiff } from '#lib/runs/line-diff.ts';
+import { callDuration, durationLabel, isSlow } from '#lib/runs/log-filter.ts';
+import Markdown from '#components/ui/Markdown.vue';
+import Delta from '#components/ui/status/Delta.vue';
+import LogItem from '#components/runs/LogItem.vue';
 
 const props = defineProps<{
   items: Item[];

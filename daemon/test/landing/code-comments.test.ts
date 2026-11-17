@@ -10,11 +10,11 @@ const home = mkdtempSync(join(tmpdir(), 'agentdeck-code-comments-'));
 process.env.AGENTDECK_HOME = home;
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { codeCommentsOver, countCodeComments, parseAddedLines } = await import('../../src/domain/landing/merge/code-comments.ts');
-const { ActionError, updateRepo } = await import('../../src/application/actions.ts');
-const { repoSettingPatch } = await import('../../src/cli/operations/settings-args.ts');
-const { repoCommands } = await import('../../src/cli/repos/repos.ts');
-const { openDb } = await import('../fixtures/open-db.ts');
+const { codeCommentsOver, countCodeComments, parseAddedLines } = await import('#domain/landing/merge/code-comments.ts');
+const { ActionError, updateRepo } = await import('#application/actions.ts');
+const { repoSettingPatch } = await import('#cli/operations/settings-args.ts');
+const { repoCommands } = await import('#cli/repos/repos.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
 
 const commentsIn = (path: string, lines: string[]): number => countCodeComments({ [path]: lines }).lines;
 

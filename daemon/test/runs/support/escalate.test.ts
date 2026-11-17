@@ -12,15 +12,15 @@ const fake = join(import.meta.dirname, '../../fixtures/fake-claude.mjs');
 chmodSync(fake, 0o755);
 process.env.AGENTDECK_CLAUDE_BIN = fake;
 
-const { openDb } = await import('../../../src/db/index.ts');
-const { Scheduler } = await import('../../../src/application/scheduler/scheduler.ts');
-const { addTask, retryTask, updateRepo } = await import('../../../src/application/actions.ts');
-const { escalation, escalationReason, escalationSince, hardFailure, strongerModel } = await import('../../../src/domain/runs/escalate.ts');
-const { TESTS_FAILED, TURN_LIMIT, NO_CHANGE } = await import('../../../src/domain/runs/run-result.ts');
-const { repoSettingPatch } = await import('../../../src/cli/operations/settings-args.ts');
-const { taskCommands } = await import('../../../src/cli/work/tasks.ts');
-const { testApp } = await import('../../fixtures/fixtures.ts');
-const { fakeCodeHost } = await import('../../fixtures/fakes.ts');
+const { openDb } = await import('#db/index.ts');
+const { Scheduler } = await import('#application/scheduler/scheduler.ts');
+const { addTask, retryTask, updateRepo } = await import('#application/actions.ts');
+const { escalation, escalationReason, escalationSince, hardFailure, strongerModel } = await import('#domain/runs/escalate.ts');
+const { TESTS_FAILED, TURN_LIMIT, NO_CHANGE } = await import('#domain/runs/run-result.ts');
+const { repoSettingPatch } = await import('#cli/operations/settings-args.ts');
+const { taskCommands } = await import('#cli/work/tasks.ts');
+const { testApp } = await import('#test/fixtures/fixtures.ts');
+const { fakeCodeHost } = await import('#test/fixtures/fakes.ts');
 
 const end = (fields: Partial<Parameters<typeof hardFailure>[0]> = {}) => ({
   outcome: 'failed' as const,

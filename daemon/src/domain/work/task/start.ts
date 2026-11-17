@@ -1,8 +1,8 @@
 // What a queued task waits for, in the order the scheduler checks.
-import type { TaskId } from '../../shared/index.ts';
-import type { Decision } from '../../capacity/index.ts';
-import type { TaskStatus } from '../lifecycle/lifecycle.ts';
-import type { StartState } from '../links/link.ts';
+import type { TaskId } from '#domain/shared/index.ts';
+import type { Decision } from '#domain/capacity/index.ts';
+import type { TaskStatus } from '#domain/work/lifecycle/lifecycle.ts';
+import type { StartState } from '#domain/work/links/link.ts';
 
 /** What every queued task waits for: the daemon is paused, Claude rate-limited us, or the governor holds. */
 export type QueueWait =

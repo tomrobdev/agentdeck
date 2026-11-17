@@ -1,7 +1,7 @@
 // Where a task stands, derived from its status, its pull request and what it waits for.
-import { type PrRetry, type PrState, prNeedsPerson } from '../../landing/index.ts';
-import type { TaskStatus } from '../lifecycle/lifecycle.ts';
-import type { Waiting } from './start.ts';
+import { type PrRetry, type PrState, prNeedsPerson } from '#domain/landing/index.ts';
+import type { TaskStatus } from '#domain/work/lifecycle/lifecycle.ts';
+import type { Waiting } from '#domain/work/task/start.ts';
 
 type Stage = {
   status: TaskStatus;

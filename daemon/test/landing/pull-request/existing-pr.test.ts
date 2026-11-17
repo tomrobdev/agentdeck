@@ -3,18 +3,18 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import type { BranchPr } from '../../../src/domain/landing/index.ts';
-import type { TaskId } from '../../../src/domain/shared/id.ts';
-import { fakeCodeHost } from '../../fixtures/fakes.ts';
-import { testApp } from '../../fixtures/fixtures.ts';
+import type { BranchPr } from '#domain/landing/index.ts';
+import type { TaskId } from '#domain/shared/id.ts';
+import { fakeCodeHost } from '#test/fixtures/fakes.ts';
+import { testApp } from '#test/fixtures/fixtures.ts';
 
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-existing-pr-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../../../src/db/index.ts');
-const { followUpPending, settle } = await import('../../../src/application/landing/settle.ts');
-const { existingPr, isPrExistsError, parseBranchPrs } = await import('../../../src/domain/landing/index.ts');
-const { prEventsOf } = await import('../../../src/domain/work/index.ts');
+const { openDb } = await import('#db/index.ts');
+const { followUpPending, settle } = await import('#application/landing/settle.ts');
+const { existingPr, isPrExistsError, parseBranchPrs } = await import('#domain/landing/index.ts');
+const { prEventsOf } = await import('#domain/work/index.ts');
 
 const EXISTS = 'a pull request for branch "agentdeck/task-1" into branch "main" already exists: https://github.com/o/r/pull/41';
 const open = (n: number): BranchPr => ({ url: `https://github.com/o/r/pull/${n}`, state: 'open' });

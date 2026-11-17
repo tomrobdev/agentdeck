@@ -1,8 +1,8 @@
 // Whether a repo is due for an area review: a person's review of one part of a repo across everything merged into it since its last, marked by refs/reviewed/<area> (the review-area skill's marks).
-import type { RepoId } from '../shared/index.ts';
-import { plural, wholeNumberError } from '../shared/index.ts';
-import type { Check } from './health.ts';
-import type { Notification } from './notification.ts';
+import type { RepoId } from '#domain/shared/index.ts';
+import { plural, wholeNumberError } from '#domain/shared/index.ts';
+import type { Check } from '#domain/operations/health.ts';
+import type { Notification } from '#domain/operations/notification.ts';
 
 /** One area's mark: the area's name and when the base commit it points at was committed (ms since the epoch). */
 export interface ReviewMark {

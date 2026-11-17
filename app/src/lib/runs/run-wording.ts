@@ -1,6 +1,6 @@
 // How the dashboard words a run: its name, what it did, what a running task or a sync under way is doing, and its tokens.
-import type { LiveView, Run, SyncView } from '../../api/types.ts';
-import { parseTime } from '../shared/time.ts';
+import type { LiveView, Run, SyncView } from '#api/types.ts';
+import { parseTime } from '#lib/shared/time.ts';
 
 export const MODEL_LABELS: Record<string, string> = { haiku: 'Haiku', sonnet: 'Sonnet', opus: 'Opus' };
 export const MODEL_HINTS: Record<string, string> = { haiku: 'cheap, simple', sonnet: 'most tasks', opus: 'hard tasks' };

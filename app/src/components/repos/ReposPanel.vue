@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import type { Repo } from '../../api/types';
-import Accordion from '../ui/disclosure/Accordion.vue';
-import AccordionItem from '../ui/disclosure/AccordionItem.vue';
-import AccordionTrigger from '../ui/disclosure/AccordionTrigger.vue';
-import Modal from '../ui/Modal.vue';
-import AddRepoForm from './AddRepoForm.vue';
-import ArchivedRepos from './ArchivedRepos.vue';
-import RepoEditor from './RepoEditor.vue';
+import type { Repo } from '#api/types.ts';
+import Accordion from '#components/ui/disclosure/Accordion.vue';
+import AccordionItem from '#components/ui/disclosure/AccordionItem.vue';
+import AccordionTrigger from '#components/ui/disclosure/AccordionTrigger.vue';
+import Modal from '#components/ui/Modal.vue';
+import AddRepoForm from '#components/repos/AddRepoForm.vue';
+import ArchivedRepos from '#components/repos/ArchivedRepos.vue';
+import RepoEditor from '#components/repos/RepoEditor.vue';
 
 const props = defineProps<{ repos: Repo[] }>();
 defineEmits<{ close: [] }>();

@@ -1,5 +1,5 @@
 // The launchd service the daemon runs under, for the CLI's daemon commands and the API: each call goes to the app's Service port.
-import type { App } from '../ports/app.ts';
+import type { App } from '#application/ports/app.ts';
 
 export const serviceStatus = (app: App) => app.service.status();
 export const startService = (app: App) => app.service.start();

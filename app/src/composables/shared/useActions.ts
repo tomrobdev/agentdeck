@@ -1,5 +1,5 @@
 import { type InjectionKey, type Ref, computed, inject, provide, ref } from 'vue';
-import { errorMessage } from '../../../../daemon/src/domain/shared/index.ts';
+import { errorMessage } from '#daemon/domain/shared/index.ts';
 
 export type RunOptions = {
   done?: string;

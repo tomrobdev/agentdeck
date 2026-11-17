@@ -8,9 +8,9 @@ import { test } from 'node:test';
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-slots-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../fixtures/open-db.ts');
-const { startWaits } = await import('../../src/application/capacity/queue.ts');
-const { canStartResolve } = await import('../../src/application/runs/sync.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const { startWaits } = await import('#application/capacity/queue.ts');
+const { canStartResolve } = await import('#application/runs/sync.ts');
 
 function setup() {
   const db = openDb(':memory:');

@@ -1,18 +1,18 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { landingApi } from '../../api/landing';
-import { describeState } from '../../lib/operations/daemon-wording';
-import { relTime } from '../../lib/shared/time';
-import type { Status, TaskSummary } from '../../api/types';
-import { useActivity } from '../../composables/operations/useActivity';
-import { type ActivityItem, KIND_LABEL } from '../../lib/operations/activity';
-import { useAction } from '../../composables/shared/useActions';
+import { landingApi } from '#api/landing.ts';
+import { describeState } from '#lib/operations/daemon-wording.ts';
+import { relTime } from '#lib/shared/time.ts';
+import type { Status, TaskSummary } from '#api/types.ts';
+import { useActivity } from '#composables/operations/useActivity.ts';
+import { type ActivityItem, KIND_LABEL } from '#lib/operations/activity.ts';
+import { useAction } from '#composables/shared/useActions.ts';
 import { useRouter } from 'vue-router';
-import { openPanel } from '../../composables/shared/useShell';
-import Chip from '../ui/Chip.vue';
-import Popover from '../ui/Popover.vue';
-import Progress from '../ui/status/Progress.vue';
-import Tooltip from '../ui/Tooltip.vue';
+import { openPanel } from '#composables/shared/useShell.ts';
+import Chip from '#components/ui/Chip.vue';
+import Popover from '#components/ui/Popover.vue';
+import Progress from '#components/ui/status/Progress.vue';
+import Tooltip from '#components/ui/Tooltip.vue';
 
 const props = defineProps<{ status: Status | null; tasks: TaskSummary[]; offline: boolean; busy: boolean }>();
 defineEmits<{ toggle: [] }>();

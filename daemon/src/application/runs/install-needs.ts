@@ -1,13 +1,13 @@
 // Install the packages a blocked task asked for, on a person's request.
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import type { App } from '../ports/app.ts';
-import type { TaskId } from '../../domain/shared/index.ts';
-import { INSTALL_NOTE, LOCKFILES, canInstallWith, depsRequest, depsRequestError, installArgs } from '../../domain/work/index.ts';
-import { errorMessage, lastLine } from '../../domain/shared/index.ts';
-import { ActionError, refuse, requireTask, requireTaskRepo } from '../shared/input.ts';
-import { refuseWhileSyncing } from '../work/checkout-locks.ts';
-import { retryTask } from '../landing/person-events.ts';
+import type { App } from '#application/ports/app.ts';
+import type { TaskId } from '#domain/shared/index.ts';
+import { INSTALL_NOTE, LOCKFILES, canInstallWith, depsRequest, depsRequestError, installArgs } from '#domain/work/index.ts';
+import { errorMessage, lastLine } from '#domain/shared/index.ts';
+import { ActionError, refuse, requireTask, requireTaskRepo } from '#application/shared/input.ts';
+import { refuseWhileSyncing } from '#application/work/checkout-locks.ts';
+import { retryTask } from '#application/landing/person-events.ts';
 
 const INSTALL_TIMEOUT_MS = 10 * 60_000;
 

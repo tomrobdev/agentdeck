@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { type Segment, type SegmentKind, type Tick, placeSegment, stripShare } from '../../lib/runs/run-live';
+import { type Segment, type SegmentKind, type Tick, placeSegment, stripShare } from '#lib/runs/run-live.ts';
 
 const props = defineProps<{ segments: Segment[]; ticks: Tick[]; start: number; end: number }>();
 const emit = defineEmits<{ jump: [at: string] }>();

@@ -1,8 +1,8 @@
 // Is the daemon healthy? Judges facts gathered elsewhere (launchd, the API, git, ps, the log) into one verdict per check, and for each failure the command that fixes it.
-import type { TaskId } from '../shared/index.ts';
-import { plural } from '../shared/index.ts';
-import { type ReloadState, SCHEMA_DIRTY } from './restart.ts';
-import { type ReviewDue, checkReviews } from './review-due.ts';
+import type { TaskId } from '#domain/shared/index.ts';
+import { plural } from '#domain/shared/index.ts';
+import { type ReloadState, SCHEMA_DIRTY } from '#domain/operations/restart.ts';
+import { type ReviewDue, checkReviews } from '#domain/operations/review-due.ts';
 
 /** What the daemon says about itself on GET /api/daemon. */
 export interface DaemonState {

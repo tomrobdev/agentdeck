@@ -1,11 +1,11 @@
 // What failures are made of, per week and repo (`agentdeck stats --failures`): the steps CI failed on, and how failed or blocked work runs ended.
-import type { RepoId } from '../shared/index.ts';
-import { weekOf } from '../shared/index.ts';
-import type { CheckCounts } from '../landing/index.ts';
-import type { RunEnd } from '../runs/index.ts';
-import { table } from './report-text.ts';
-import type { ScorecardTaskRow } from './scorecard.ts';
-import type { StatRun } from './stats.ts';
+import type { RepoId } from '#domain/shared/index.ts';
+import { weekOf } from '#domain/shared/index.ts';
+import type { CheckCounts } from '#domain/landing/index.ts';
+import type { RunEnd } from '#domain/runs/index.ts';
+import { table } from '#domain/insights/report-text.ts';
+import type { ScorecardTaskRow } from '#domain/insights/scorecard.ts';
+import type { StatRun } from '#domain/insights/stats.ts';
 
 export const UNKNOWN_STEP = 'unknown step';
 export const UNKNOWN_END = 'unknown end';

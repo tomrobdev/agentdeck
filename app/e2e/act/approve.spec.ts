@@ -1,5 +1,5 @@
 // Approving a proposal queues it. The only slot is #6's, so #5 stays queued instead of starting.
-import { expect, group, open, row, rowIds, test } from '../fixtures';
+import { expect, group, open, row, rowIds, test } from '#e2e/fixtures.ts';
 
 test('approving a proposal queues it', async ({ page }) => {
   await open(page, '#/');

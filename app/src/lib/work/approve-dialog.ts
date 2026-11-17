@@ -1,5 +1,5 @@
-import type { ProposalCheck } from '../../../../daemon/src/api/contract/files.ts';
-import { proposalCheckLine } from '../../../../daemon/src/domain/work/index.ts';
+import type { ProposalCheck } from '#daemon/api/contract/files.ts';
+import { proposalCheckLine } from '#daemon/domain/work/index.ts';
 
 export type ApproveDialogSetting = 'always' | 'needed' | 'never';
 export const APPROVE_DIALOG_SETTINGS: { key: ApproveDialogSetting; label: string }[] = [

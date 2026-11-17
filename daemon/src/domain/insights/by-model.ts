@@ -1,8 +1,8 @@
 // The pilot measures per model (`agentdeck stats --by model`), read from the model each work run recorded.
-import { countInterventions } from './interventions.ts';
-import { num, table } from './report-text.ts';
-import { type ScorecardEvent, type ScorecardTaskRow, resolveAutoMerge } from './scorecard.ts';
-import { type Measures, type StatRun, fmtFirstRun, measure } from './stats.ts';
+import { countInterventions } from '#domain/insights/interventions.ts';
+import { num, table } from '#domain/insights/report-text.ts';
+import { type ScorecardEvent, type ScorecardTaskRow, resolveAutoMerge } from '#domain/insights/scorecard.ts';
+import { type Measures, type StatRun, fmtFirstRun, measure } from '#domain/insights/stats.ts';
 
 export const UNKNOWN_MODEL = 'unknown';
 

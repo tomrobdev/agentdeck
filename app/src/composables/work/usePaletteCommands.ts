@@ -1,19 +1,19 @@
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { operationsApi } from '../../api/operations';
-import { runsApi } from '../../api/runs';
-import { PERSON_CALLS } from '../../api/work';
-import type { TaskSummary } from '../../api/types';
-import { type PersonEvent } from '../../../../daemon/src/domain/work/index.ts';
-import { type PaletteTask, paletteItems } from '../../lib/work/palette';
-import { openingTab } from '../../lib/work/task-view';
-import { mode, setMode } from '../../platform/theme';
-import { taskUrl } from '../../lib/shared/app-url';
-import type { Actions } from '../shared/useActions';
-import { openPanel, showKeys, startMerge, useShell } from '../shared/useShell';
-import { useFixTask } from './useFixTask';
-import type { Approvals } from './useApprovals';
-import { requestedBulk, requestedEdit, requestedView } from './queue/useView';
+import { operationsApi } from '#api/operations.ts';
+import { runsApi } from '#api/runs.ts';
+import { PERSON_CALLS } from '#api/work.ts';
+import type { TaskSummary } from '#api/types.ts';
+import { type PersonEvent } from '#daemon/domain/work/index.ts';
+import { type PaletteTask, paletteItems } from '#lib/work/palette.ts';
+import { openingTab } from '#lib/work/task-view.ts';
+import { mode, setMode } from '#platform/theme.ts';
+import { taskUrl } from '#lib/shared/app-url.ts';
+import type { Actions } from '#composables/shared/useActions.ts';
+import { openPanel, showKeys, startMerge, useShell } from '#composables/shared/useShell.ts';
+import { useFixTask } from '#composables/work/useFixTask.ts';
+import type { Approvals } from '#composables/work/useApprovals.ts';
+import { requestedBulk, requestedEdit, requestedView } from '#composables/work/queue/useView.ts';
 
 export function useTaskActs(tasks: () => TaskSummary[], { run, defer }: Pick<Actions, 'run' | 'defer'>, { approve }: Approvals) {
   const router = useRouter();

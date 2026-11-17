@@ -2,7 +2,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import ts from 'typescript';
-import { vueScript } from './sources.ts';
+import { vueScript } from '#scripts/lib/sources.ts';
 
 export interface CodeComment {
   path: string;

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { errorMessage } from '../../../../daemon/src/domain/shared/index.ts';
-import { isNative, startDaemon } from '../../platform/native';
+import { errorMessage } from '#daemon/domain/shared/index.ts';
+import { isNative, startDaemon } from '#platform/native.ts';
 
 const emit = defineEmits<{ started: [] }>();
 

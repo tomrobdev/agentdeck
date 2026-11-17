@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { anchorKey, anchorOf, parsePatch, splitRows } from '../../../../../app/src/lib/work/files/diff.ts';
+import { anchorKey, anchorOf, parsePatch, splitRows } from '#app/lib/work/files/diff.ts';
 
 const PATCH = [
   'diff --git a/a.ts b/a.ts',

@@ -1,8 +1,8 @@
 // The settings a person can change.
-import type { NotifySettings } from './notification.ts';
-import type { PlannerSettings } from '../proposals/index.ts';
-import type { Budget } from '../capacity/index.ts';
-import type { ReviewDueSettings } from './review-due.ts';
+import type { NotifySettings } from '#domain/operations/notification.ts';
+import type { PlannerSettings } from '#domain/proposals/index.ts';
+import type { Budget } from '#domain/capacity/index.ts';
+import type { ReviewDueSettings } from '#domain/operations/review-due.ts';
 
 export interface Settings {
   max_concurrent: number;

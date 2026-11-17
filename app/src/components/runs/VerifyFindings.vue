@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { VerifyView } from '../../api/types';
-import { findingPlace } from '../../../../daemon/src/domain/runs/index.ts';
-import { VERDICT_MARKS, sortFindings, verifyHeadline } from '../../lib/runs/verify';
+import type { VerifyView } from '#api/types.ts';
+import { findingPlace } from '#daemon/domain/runs/index.ts';
+import { VERDICT_MARKS, sortFindings, verifyHeadline } from '#lib/runs/verify.ts';
 
 const props = defineProps<{ view: VerifyView }>();
 const emit = defineEmits<{ path: [path: string, line: number | null] }>();

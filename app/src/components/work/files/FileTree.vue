@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
-import { errorMessage } from '../../../../../daemon/src/domain/shared/index.ts';
-import { useHotkeys } from '../../../composables/shared/useHotkeys';
-import type { TreeNode } from '../../../lib/work/files/changed-tree';
-import { fuzzyScore } from '../../../lib/shared/fuzzy';
-import Delta from '../../ui/status/Delta.vue';
+import { errorMessage } from '#daemon/domain/shared/index.ts';
+import { useHotkeys } from '#composables/shared/useHotkeys.ts';
+import type { TreeNode } from '#lib/work/files/changed-tree.ts';
+import { fuzzyScore } from '#lib/shared/fuzzy.ts';
+import Delta from '#components/ui/status/Delta.vue';
 
 const props = defineProps<{
   load: (dir: string) => Promise<TreeNode[]>;

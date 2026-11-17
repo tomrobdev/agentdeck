@@ -1,8 +1,8 @@
 // Escalation: a retry after a failure a stronger model may fix runs one model up (domain/runs/escalate.ts decides).
-import type { App } from '../ports/app.ts';
-import { type Run, escalation, escalationReason, runSummary } from '../../domain/runs/index.ts';
-import type { Needs, Task, TaskStatus } from '../../domain/work/index.ts';
-import { present } from '../../domain/shared/index.ts';
+import type { App } from '#application/ports/app.ts';
+import { type Run, escalation, escalationReason, runSummary } from '#domain/runs/index.ts';
+import type { Needs, Task, TaskStatus } from '#domain/work/index.ts';
+import { present } from '#domain/shared/index.ts';
 
 export function escalateAfter(
   app: App,

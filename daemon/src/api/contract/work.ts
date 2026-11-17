@@ -1,10 +1,10 @@
 // Work: tasks, their links and waits, events and plans.
-import type { RepoId, TaskId } from '../../domain/shared/index.ts';
-import type { LinkKind, NeedsKind, PlanSource, PlanStepStatus, TaskSource, TaskStatus } from '../../domain/work/index.ts';
-import type { MergeMethod } from '../../domain/repos/index.ts';
-import type { PrRetry, PrState } from '../../domain/landing/index.ts';
-import type { LiveView, SyncView, Run } from './runs.ts';
-import type { PrCheck, ChecksSummary, AutoMergeView, MergeRequestView } from './landing.ts';
+import type { RepoId, TaskId } from '#domain/shared/index.ts';
+import type { LinkKind, NeedsKind, PlanSource, PlanStepStatus, TaskSource, TaskStatus } from '#domain/work/index.ts';
+import type { MergeMethod } from '#domain/repos/index.ts';
+import type { PrRetry, PrState } from '#domain/landing/index.ts';
+import type { LiveView, SyncView, Run } from '#api/contract/runs.ts';
+import type { PrCheck, ChecksSummary, AutoMergeView, MergeRequestView } from '#api/contract/landing.ts';
 
 /** What a worker said it needs when it blocked. */
 export interface Needs {

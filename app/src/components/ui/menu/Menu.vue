@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { DropdownMenuContent, DropdownMenuPortal, DropdownMenuRoot, DropdownMenuTrigger } from 'reka-ui';
-import { MENU_CONTENT } from './menu';
+import { MENU_CONTENT } from '#components/ui/menu/menu.ts';
 
 const props = defineProps<{ label: string; at?: { x: number; y: number }; align?: 'left' | 'right' }>();
 const open = defineModel<boolean>('open', { default: false });

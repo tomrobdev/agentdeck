@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { RunSummary } from '../../api/types';
+import type { RunSummary } from '#api/types.ts';
 
 defineProps<{ summary: RunSummary }>();
 </script>

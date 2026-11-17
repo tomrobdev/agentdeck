@@ -1,5 +1,5 @@
 // A run addressing a review: what the worker is shown of it, and what its answers do to the comments afterwards.
-import type { App } from '../../ports/app.ts';
+import type { App } from '#application/ports/app.ts';
 import {
   type ReviewPrompt,
   hunkAround,
@@ -8,10 +8,10 @@ import {
   matchAnswers,
   unansweredNote,
   withNote,
-} from '../../../domain/landing/index.ts';
-import { type ReviewComment, commentStatesFor, commentsToAddress } from '../../../domain/landing/index.ts';
-import type { Repo } from '../../../domain/repos/index.ts';
-import { type Task, latestRetryAt } from '../../../domain/work/index.ts';
+} from '#domain/landing/index.ts';
+import { type ReviewComment, commentStatesFor, commentsToAddress } from '#domain/landing/index.ts';
+import type { Repo } from '#domain/repos/index.ts';
+import { type Task, latestRetryAt } from '#domain/work/index.ts';
 
 export async function reviewForRun(
   app: App,

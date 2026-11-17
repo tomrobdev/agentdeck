@@ -1,5 +1,5 @@
 // Protected edits: files a worker may not edit itself (under .claude/), which it writes out to the worktree's edits folder for the daemon to commit after the run.
-import { AGENTDECK_FOLDER } from './repo.ts';
+import { AGENTDECK_FOLDER } from '#domain/repos/repo.ts';
 
 export const PROTECTED_PREFIXES = ['.claude/'];
 

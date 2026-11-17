@@ -1,8 +1,8 @@
 // Latest utilization of each usage window, as reported by Claude's rate_limit_event, and the history of its changes.
 import { asc, eq } from 'drizzle-orm';
-import type { Orm } from '../orm.ts';
-import { NOW_SQL } from '../sql.ts';
-import { usageSamples, usageWindows } from '../tables.ts';
+import type { Orm } from '#db/orm.ts';
+import { NOW_SQL } from '#db/sql.ts';
+import { usageSamples, usageWindows } from '#db/tables.ts';
 
 export function usageStore(orm: Orm) {
   return {

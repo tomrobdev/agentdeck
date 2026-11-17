@@ -1,5 +1,5 @@
-import type { ClaimVerdict, VerifyFinding, VerifyView } from '../../../../daemon/src/domain/runs/index.ts';
-import { verifyLine } from '../../../../daemon/src/domain/runs/index.ts';
+import type { ClaimVerdict, VerifyFinding, VerifyView } from '#daemon/domain/runs/index.ts';
+import { verifyLine } from '#daemon/domain/runs/index.ts';
 
 export interface VerdictMark {
   label: string;

@@ -1,6 +1,6 @@
 // What a person may ask of a task: the limits on its fields and the checks on how it is added.
-import { wholeNumberError } from '../../shared/index.ts';
-import { MODELS, isModel } from './task.ts';
+import { wholeNumberError } from '#domain/shared/index.ts';
+import { MODELS, isModel } from '#domain/work/task/task.ts';
 
 export const priorityError = (value: unknown): string | null => wholeNumberError('priority', value, -1000, 1000);
 export const maxTurnsError = (value: unknown): string | null => wholeNumberError('max_turns', value, 1, 500);

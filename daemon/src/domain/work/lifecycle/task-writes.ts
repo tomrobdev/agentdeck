@@ -1,9 +1,9 @@
 // The changes a task's non-status writes make, where a rule decides them (rule:task-writes).
-import type { AutoMergeCheck, CheckCounts, PrState, PullRequest, StoredChecks } from '../../landing/index.ts';
-import type { MergeMethod } from '../../repos/index.ts';
-import type { PrEvent } from './history.ts';
-import type { TaskStatus } from './lifecycle.ts';
-import type { UnblockQuestion } from '../task/needs.ts';
+import type { AutoMergeCheck, CheckCounts, PrState, PullRequest, StoredChecks } from '#domain/landing/index.ts';
+import type { MergeMethod } from '#domain/repos/index.ts';
+import type { PrEvent } from '#domain/work/lifecycle/history.ts';
+import type { TaskStatus } from '#domain/work/lifecycle/lifecycle.ts';
+import type { UnblockQuestion } from '#domain/work/task/needs.ts';
 
 /** The fields of a task a write sets, named as its columns are; the store stores the documents as JSON. `'now'` is a timestamp it fills in. */
 export interface TaskChanges {

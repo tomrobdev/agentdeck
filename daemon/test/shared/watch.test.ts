@@ -3,8 +3,8 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { watchSource } from '../../src/adapters/macos/watch.ts';
-import { waitFor } from '../fixtures/fixtures.ts';
+import { watchSource } from '#adapters/macos/watch.ts';
+import { waitFor } from '#test/fixtures/fixtures.ts';
 
 const MARK = 'zz-mark-';
 let marks = 0;

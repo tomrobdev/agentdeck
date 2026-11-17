@@ -1,8 +1,8 @@
 // Pure tests of task links: where a link stands, when a task may start, and who it releases or leaves stuck.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { asTaskId } from '../../src/domain/shared/index.ts';
-import type { Dependency } from '../../src/domain/work/links/link.ts';
+import { asTaskId } from '#domain/shared/index.ts';
+import type { Dependency } from '#domain/work/links/link.ts';
 import {
   type Link,
   type LinkIndex,
@@ -24,7 +24,7 @@ import {
   stuckOn,
   unblocksOf,
   unlandedAfter,
-} from '../../src/domain/work/index.ts';
+} from '#domain/work/index.ts';
 
 const id = asTaskId;
 const merged: Dependency = { status: 'done', done_by: null, pr: { state: 'merged' }, pr_mode: 'ready' };

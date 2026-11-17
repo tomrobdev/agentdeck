@@ -1,7 +1,7 @@
 // A person's merge of a PR that conflicts with the base (the pure part): it syncs first only when the conflict is the one problem and the repo resolves its own conflicts.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { type MergeInput, type PrDetails, mergeSyncsFirst, syncingFirstLine } from '../../../src/domain/landing/merge/merge.ts';
+import { type MergeInput, type PrDetails, mergeSyncsFirst, syncingFirstLine } from '#domain/landing/merge/merge.ts';
 
 const clean: PrDetails = {
   state: 'open',

@@ -1,18 +1,18 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { ago } from '../../../lib/shared/time';
-import { planHtmlQuery } from '../../../api/work';
-import type { PlanStep, TaskPlan } from '../../../api/types';
-import { planProgress } from '../../../../../daemon/src/domain/work/index.ts';
-import { plural } from '../../../../../daemon/src/domain/shared/index.ts';
-import { mode } from '../../../platform/theme';
-import { withBaseStyle } from '../../../lib/work/plan-page';
-import planCss from '../../../../../docs/plans/plan.css?raw';
-import Disclosure from '../../ui/disclosure/Disclosure.vue';
-import DisclosureContent from '../../ui/disclosure/DisclosureContent.vue';
-import DisclosureTrigger from '../../ui/disclosure/DisclosureTrigger.vue';
-import Progress from '../../ui/status/Progress.vue';
+import { ago } from '#lib/shared/time.ts';
+import { planHtmlQuery } from '#api/work.ts';
+import type { PlanStep, TaskPlan } from '#api/types.ts';
+import { planProgress } from '#daemon/domain/work/index.ts';
+import { plural } from '#daemon/domain/shared/index.ts';
+import { mode } from '#platform/theme.ts';
+import { withBaseStyle } from '#lib/work/plan-page.ts';
+import planCss from '#docs/plans/plan.css?raw';
+import Disclosure from '#components/ui/disclosure/Disclosure.vue';
+import DisclosureContent from '#components/ui/disclosure/DisclosureContent.vue';
+import DisclosureTrigger from '#components/ui/disclosure/DisclosureTrigger.vue';
+import Progress from '#components/ui/status/Progress.vue';
 
 const props = defineProps<{ taskId: number; plan: TaskPlan }>();
 const emit = defineEmits<{ open: [path: string] }>();

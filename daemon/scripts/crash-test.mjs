@@ -5,7 +5,7 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, 
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { prRetryFor } from '../src/domain/work/index.ts';
+import { prRetryFor } from '#domain/work/index.ts';
 
 const N = process.argv[2] === undefined ? 10 : Number(process.argv[2]);
 if (!Number.isInteger(N) || N < 1) {

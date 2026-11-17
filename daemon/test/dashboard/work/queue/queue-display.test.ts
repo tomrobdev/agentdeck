@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { DEFAULT_DISPLAY, boardGroups, normalizeDisplay, rowOrder } from '../../../../../app/src/lib/work/queue/queue-display.ts';
+import { DEFAULT_DISPLAY, boardGroups, normalizeDisplay, rowOrder } from '#app/lib/work/queue/queue-display.ts';
 
 const group = (key: string, ...ids: number[]) => ({ key, label: key, tasks: ids.map((id) => ({ id })) }) as never;
 const ids = (tasks: { id: number }[]) => tasks.map((t) => t.id);

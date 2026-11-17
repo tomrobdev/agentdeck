@@ -3,19 +3,19 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { fakeCodeHost } from '../../fixtures/fakes.ts';
-import { doneTask, testApp } from '../../fixtures/fixtures.ts';
+import { fakeCodeHost } from '#test/fixtures/fakes.ts';
+import { doneTask, testApp } from '#test/fixtures/fixtures.ts';
 
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-pr-retry-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../../../src/db/index.ts');
-const { followUpPending } = await import('../../../src/application/landing/settle.ts');
-const { retryFailedPrs } = await import('../../../src/application/landing/pull-request/open-pr.ts');
-const { ActionError, openTaskPr, taskDetail } = await import('../../../src/application/actions.ts');
-const { PR_OPEN_RETRIES, prRetry } = await import('../../../src/domain/landing/index.ts');
-const { prOpenFailures } = await import('../../../src/domain/work/lifecycle/history.ts');
-const { canOpenPr, stageOf, statusGroup } = await import('../../../src/domain/work/task/stage.ts');
+const { openDb } = await import('#db/index.ts');
+const { followUpPending } = await import('#application/landing/settle.ts');
+const { retryFailedPrs } = await import('#application/landing/pull-request/open-pr.ts');
+const { ActionError, openTaskPr, taskDetail } = await import('#application/actions.ts');
+const { PR_OPEN_RETRIES, prRetry } = await import('#domain/landing/index.ts');
+const { prOpenFailures } = await import('#domain/work/lifecycle/history.ts');
+const { canOpenPr, stageOf, statusGroup } = await import('#domain/work/task/stage.ts');
 
 const MIN = 60_000;
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Toggle } from 'reka-ui';
-import type { Tone } from '../../../lib/shared/tone';
-import Chip from '../Chip.vue';
+import type { Tone } from '#lib/shared/tone.ts';
+import Chip from '#components/ui/Chip.vue';
 
 defineProps<{ tone?: Tone }>();
 const on = defineModel<boolean>({ required: true });

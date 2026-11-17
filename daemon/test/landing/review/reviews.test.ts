@@ -4,17 +4,17 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { asReviewId, asTaskId } from '../../../src/domain/shared/id.ts';
-import { commentsToAddress, nextCommentState, reviewReason } from '../../../src/domain/landing/review/review.ts';
-import type { ReviewComment, ReviewWithComments } from '../../../src/domain/landing/review/review.ts';
+import { asReviewId, asTaskId } from '#domain/shared/id.ts';
+import { commentsToAddress, nextCommentState, reviewReason } from '#domain/landing/review/review.ts';
+import type { ReviewComment, ReviewWithComments } from '#domain/landing/review/review.ts';
 
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-reviews-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../../fixtures/open-db.ts');
-const actions = await import('../../../src/application/actions.ts');
-const { recordAnswers } = await import('../../../src/application/landing/review/address.ts');
-const { doneTask, runningTask } = await import('../../fixtures/fixtures.ts');
+const { openDb } = await import('#test/fixtures/open-db.ts');
+const actions = await import('#application/actions.ts');
+const { recordAnswers } = await import('#application/landing/review/address.ts');
+const { doneTask, runningTask } = await import('#test/fixtures/fixtures.ts');
 
 function setup() {
   const db = openDb(':memory:');

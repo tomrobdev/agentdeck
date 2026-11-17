@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { landingApi } from '../../../api/landing';
-import type { TaskSummary } from '../../../api/types';
-import { useAction } from '../../../composables/shared/useActions';
-import { type StatusLine, TONE_TEXT, statusLine } from '../../../lib/work/task-badges';
+import { landingApi } from '#api/landing.ts';
+import type { TaskSummary } from '#api/types.ts';
+import { useAction } from '#composables/shared/useActions.ts';
+import { type StatusLine, TONE_TEXT, statusLine } from '#lib/work/task-badges.ts';
 
 const props = withDefaults(
   defineProps<{ task: TaskSummary; fit?: 'line' | 'two' | 'full'; cancel?: boolean; hide?: StatusLine['kind'][] }>(),

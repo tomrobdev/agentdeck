@@ -1,16 +1,16 @@
 // The edit keys on the queue and a task page: `e` the prompt, `p` then a digit the priority, `M` the model, `l` a link.
 import { computed, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { tasksQuery, workApi } from '../../api/work';
-import type { TaskSummary } from '../../api/types';
-import { type BulkEdit } from '../../lib/work/queue/bulk';
-import { type EditRequest, PRIORITY_KEYS } from '../../lib/shared/hotkeys';
-import { levelOf, levelPriority } from '../../lib/work/task-view';
-import { useAction, useActions } from '../shared/useActions';
-import { useBulkEdit } from './queue/useBulkEdit';
-import { type HotkeyBinding } from '../shared/useHotkeys';
-import { usePicked } from './queue/usePicked';
-import { requestedEdit } from './queue/useView';
+import { tasksQuery, workApi } from '#api/work.ts';
+import type { TaskSummary } from '#api/types.ts';
+import { type BulkEdit } from '#lib/work/queue/bulk.ts';
+import { type EditRequest, PRIORITY_KEYS } from '#lib/shared/hotkeys.ts';
+import { levelOf, levelPriority } from '#lib/work/task-view.ts';
+import { useAction, useActions } from '#composables/shared/useActions.ts';
+import { useBulkEdit } from '#composables/work/queue/useBulkEdit.ts';
+import { type HotkeyBinding } from '#composables/shared/useHotkeys.ts';
+import { usePicked } from '#composables/work/queue/usePicked.ts';
+import { requestedEdit } from '#composables/work/queue/useView.ts';
 
 export type KeyEdit = 'prompt' | 'model' | 'link';
 type EditPriority = Extract<EditRequest, { kind: 'priority' }>['level'];

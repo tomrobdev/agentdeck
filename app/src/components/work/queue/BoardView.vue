@@ -1,19 +1,19 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import type { TaskSummary } from '../../../api/types';
-import { type StatusGroup, isReview } from '../../../../../daemon/src/domain/work/index.ts';
-import { ago } from '../../../lib/shared/time';
-import { type BoardMove, boardMove } from '../../../lib/work/queue/board-move';
-import { mergeAllIds } from '../../../lib/work/queue/bulk';
-import type { Group } from '../../../lib/work/task-view';
-import Checkbox from '../../ui/form/Checkbox.vue';
-import MarkDoneDialog from '../task/MarkDoneDialog.vue';
-import MergeButtons from '../../landing/MergeButtons.vue';
-import ModelChip from '../../ui/status/ModelChip.vue';
-import PriorityIcon from '../../ui/status/PriorityIcon.vue';
-import StatusIcon from '../../ui/status/StatusIcon.vue';
-import TaskBadges from '../../ui/status/TaskBadges.vue';
-import TaskStatusLine from '../../ui/status/TaskStatusLine.vue';
+import type { TaskSummary } from '#api/types.ts';
+import { type StatusGroup, isReview } from '#daemon/domain/work/index.ts';
+import { ago } from '#lib/shared/time.ts';
+import { type BoardMove, boardMove } from '#lib/work/queue/board-move.ts';
+import { mergeAllIds } from '#lib/work/queue/bulk.ts';
+import type { Group } from '#lib/work/task-view.ts';
+import Checkbox from '#components/ui/form/Checkbox.vue';
+import MarkDoneDialog from '#components/work/task/MarkDoneDialog.vue';
+import MergeButtons from '#components/landing/MergeButtons.vue';
+import ModelChip from '#components/ui/status/ModelChip.vue';
+import PriorityIcon from '#components/ui/status/PriorityIcon.vue';
+import StatusIcon from '#components/ui/status/StatusIcon.vue';
+import TaskBadges from '#components/ui/status/TaskBadges.vue';
+import TaskStatusLine from '#components/ui/status/TaskStatusLine.vue';
 
 const props = defineProps<{
   groups: Group[];

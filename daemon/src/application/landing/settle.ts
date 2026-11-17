@@ -1,14 +1,14 @@
 // Every status change and its follow-ups: the daemon's own events that end a run or a wait (settling), and a person's.
-import type { App } from '../ports/app.ts';
-import type { TaskId } from '../../domain/shared/index.ts';
-import { finalNotification } from '../../domain/operations/index.ts';
-import type { PersonEvent, TaskEvent, TaskStatus } from '../../domain/work/index.ts';
-import type { Needs } from '../../domain/work/index.ts';
-import type { Task } from '../../domain/work/index.ts';
-import { type FollowUp, followUpsOf, followUpsOfRow } from '../../domain/work/index.ts';
-import { warnStuckDependents } from '../work/dependencies.ts';
-import { notifyLater } from '../operations/notifications.ts';
-import { openPullRequest } from './pull-request/open-pr.ts';
+import type { App } from '#application/ports/app.ts';
+import type { TaskId } from '#domain/shared/index.ts';
+import { finalNotification } from '#domain/operations/index.ts';
+import type { PersonEvent, TaskEvent, TaskStatus } from '#domain/work/index.ts';
+import type { Needs } from '#domain/work/index.ts';
+import type { Task } from '#domain/work/index.ts';
+import { type FollowUp, followUpsOf, followUpsOfRow } from '#domain/work/index.ts';
+import { warnStuckDependents } from '#application/work/dependencies.ts';
+import { notifyLater } from '#application/operations/notifications.ts';
+import { openPullRequest } from '#application/landing/pull-request/open-pr.ts';
 
 const following = new Set<number>();
 

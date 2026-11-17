@@ -4,13 +4,13 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { READY_PR, fakeCodeHost } from '../fixtures/fakes.ts';
-import { blockedTask, doneTask, failedTask, queuedTask } from '../fixtures/fixtures.ts';
-import { scratchCli, scratchRepo } from './cli-run.ts';
+import { READY_PR, fakeCodeHost } from '#test/fixtures/fakes.ts';
+import { blockedTask, doneTask, failedTask, queuedTask } from '#test/fixtures/fixtures.ts';
+import { scratchCli, scratchRepo } from '#test/cli/cli-run.ts';
 
 const codeHost = fakeCodeHost();
 const { db, run } = scratchCli({ codeHost });
-const repo = await (await import('../../src/application/actions.ts')).addRepo(db, { path: scratchRepo('beta'), test: 'true' });
+const repo = await (await import('#application/actions.ts')).addRepo(db, { path: scratchRepo('beta'), test: 'true' });
 
 const PLAN =
   '<html data-agentdeck-plan="1"><head><title>P</title></head><body><section data-plan-step id="s1" data-status="todo"><h2>One</h2></section></body></html>';

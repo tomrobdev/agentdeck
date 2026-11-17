@@ -1,15 +1,8 @@
 // The queue's graph layout. The dashboard has no test runner, so its pure layout is tested here.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import {
-  DEFAULT_SIZE,
-  type GraphEdge,
-  chainOf,
-  graphTasks,
-  layoutGraph as layout,
-  stuckSet,
-} from '../../../../../app/src/lib/work/queue/graph.ts';
-import { asTaskId } from '../../../fixtures/fixtures.ts';
+import { DEFAULT_SIZE, type GraphEdge, chainOf, graphTasks, layoutGraph as layout, stuckSet } from '#app/lib/work/queue/graph.ts';
+import { asTaskId } from '#test/fixtures/fixtures.ts';
 
 const e = (from: number, to: number, kind: 'builds_on' | 'after' = 'builds_on'): GraphEdge => ({
   from: asTaskId(from),

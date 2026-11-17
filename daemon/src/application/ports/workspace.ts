@@ -1,8 +1,8 @@
 // The Workspace port: git, the shell and a worktree's files, in the operations the use cases need.
-import type { AddedLines } from '../../domain/landing/index.ts';
-import type { ReviewFacts } from '../../domain/operations/index.ts';
-import type { Repo } from '../../domain/repos/index.ts';
-import type { BaseCommit, ChangedFile, Commit, Task, TreeEntry } from '../../domain/work/index.ts';
+import type { AddedLines } from '#domain/landing/index.ts';
+import type { ReviewFacts } from '#domain/operations/index.ts';
+import type { Repo } from '#domain/repos/index.ts';
+import type { BaseCommit, ChangedFile, Commit, Task, TreeEntry } from '#domain/work/index.ts';
 
 export interface Checkout {
   branch: string;

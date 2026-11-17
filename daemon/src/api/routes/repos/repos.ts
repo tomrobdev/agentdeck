@@ -1,7 +1,7 @@
 // Repos: register, configure, check, pause, archive and delete.
-import * as actions from '../../../application/actions.ts';
-import type { DoctorReport, ProposalResult, Repo, RepoDeleted, RepoDeletion, RepoDetail } from '../../contract/repos.ts';
-import { type ApiContext, type Route, repoIdParam, route } from '../../http.ts';
+import * as actions from '#application/actions.ts';
+import type { DoctorReport, ProposalResult, Repo, RepoDeleted, RepoDeletion, RepoDetail } from '#api/contract/repos.ts';
+import { type ApiContext, type Route, repoIdParam, route } from '#api/http.ts';
 
 export function routes({ db, scheduler }: ApiContext): Route[] {
   return [

@@ -1,11 +1,11 @@
 // The dashboard's small helpers: stored view settings, fuzzy ranking, chip tones, forms and the wire documents.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { bestScore, fuzzyScore, rank } from '../../../../app/src/lib/shared/fuzzy.ts';
-import { loadSetting, saveSetting } from '../../../../app/src/lib/shared/storage.ts';
-import { statusTone } from '../../../../app/src/lib/shared/tone.ts';
-import { needsOf, questionOf } from '../../../../app/src/lib/shared/wire.ts';
-import { describeState, describeStaleDaemon } from '../../../../app/src/lib/operations/daemon-wording.ts';
+import { bestScore, fuzzyScore, rank } from '#app/lib/shared/fuzzy.ts';
+import { loadSetting, saveSetting } from '#app/lib/shared/storage.ts';
+import { statusTone } from '#app/lib/shared/tone.ts';
+import { needsOf, questionOf } from '#app/lib/shared/wire.ts';
+import { describeState, describeStaleDaemon } from '#app/lib/operations/daemon-wording.ts';
 
 const memory = new Map<string, string>();
 Object.assign(globalThis, {

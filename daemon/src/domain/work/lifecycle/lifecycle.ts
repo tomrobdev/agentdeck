@@ -1,10 +1,10 @@
 // The task state machine, as data.
-import type { TaskId } from '../../shared/index.ts';
-import type { PullRequest } from '../../landing/index.ts';
-import type { TaskEventType } from './history.ts';
-import type { Needs } from '../task/needs.ts';
-import { type TaskCore, type TaskState, attemptsLeft, stopReasonOf } from '../task/task.ts';
-import { type TaskChanges, statusChangePrChanges } from './task-writes.ts';
+import type { TaskId } from '#domain/shared/index.ts';
+import type { PullRequest } from '#domain/landing/index.ts';
+import type { TaskEventType } from '#domain/work/lifecycle/history.ts';
+import type { Needs } from '#domain/work/task/needs.ts';
+import { type TaskCore, type TaskState, attemptsLeft, stopReasonOf } from '#domain/work/task/task.ts';
+import { type TaskChanges, statusChangePrChanges } from '#domain/work/lifecycle/task-writes.ts';
 
 export type TaskStatus =
   | 'proposed' // suggested by the planner, waiting for approval

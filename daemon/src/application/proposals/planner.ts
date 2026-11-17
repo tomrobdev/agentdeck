@@ -1,16 +1,16 @@
 // Runs the planner: turns a repo's goals file into task proposals (see domain/proposals/proposals.ts).
 import { type WriteStream, createWriteStream } from 'node:fs';
 import { join } from 'node:path';
-import { LOG_DIR, ensureDirs } from '../../config.ts';
-import type { App } from '../ports/app.ts';
-import type { PlannerRunId, RepoId } from '../../domain/shared/index.ts';
-import { type ProposalResult, buildPlannerPrompt, plannerArgs, plannerDueReason, selectProposals } from '../../domain/proposals/index.ts';
-import type { Repo } from '../../domain/repos/index.ts';
-import { lastLine, plural } from '../../domain/shared/index.ts';
-import { newTaskModel } from '../../domain/work/index.ts';
-import { recordRateLimit, usageRecorder } from '../runs/claude-run.ts';
-import { ActionError, requireRepo } from '../shared/input.ts';
-import { notifyLater } from '../operations/notifications.ts';
+import { LOG_DIR, ensureDirs } from '#src/config.ts';
+import type { App } from '#application/ports/app.ts';
+import type { PlannerRunId, RepoId } from '#domain/shared/index.ts';
+import { type ProposalResult, buildPlannerPrompt, plannerArgs, plannerDueReason, selectProposals } from '#domain/proposals/index.ts';
+import type { Repo } from '#domain/repos/index.ts';
+import { lastLine, plural } from '#domain/shared/index.ts';
+import { newTaskModel } from '#domain/work/index.ts';
+import { recordRateLimit, usageRecorder } from '#application/runs/claude-run.ts';
+import { ActionError, requireRepo } from '#application/shared/input.ts';
+import { notifyLater } from '#application/operations/notifications.ts';
 
 const EXISTING_TASKS_SHOWN = 100;
 

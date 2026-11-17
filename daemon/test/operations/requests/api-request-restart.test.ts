@@ -6,17 +6,17 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
 import { setTimeout as sleep } from 'node:timers/promises';
-import { fakeCodeHost } from '../../fixtures/fakes.ts';
-import { doneTask, openPr, testApp, waitFor } from '../../fixtures/fixtures.ts';
+import { fakeCodeHost } from '#test/fixtures/fakes.ts';
+import { doneTask, openPr, testApp, waitFor } from '#test/fixtures/fixtures.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-request-restart-'));
 process.env.AGENTDECK_HOME = home;
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../../../src/db/index.ts');
-const { startApi } = await import('../../../src/api/server.ts');
-const { Scheduler } = await import('../../../src/application/scheduler/scheduler.ts');
-const { reloadDecision } = await import('../../../src/domain/operations/index.ts');
+const { openDb } = await import('#db/index.ts');
+const { startApi } = await import('#api/server.ts');
+const { Scheduler } = await import('#application/scheduler/scheduler.ts');
+const { reloadDecision } = await import('#domain/operations/index.ts');
 
 let release!: () => void;
 const gate = new Promise<void>((resolve) => (release = resolve));
@@ -29,7 +29,7 @@ codeHost.closePr = async () => {
 
 const app = testApp(openDb(join(home, 'test.db')), {
   codeHost,
-  processes: { ...(await import('../../../src/compose.ts')).realProcesses(), keepAwake: () => ({ set: () => {} }) },
+  processes: { ...(await import('#src/compose.ts')).realProcesses(), keepAwake: () => ({ set: () => {} }) },
   notifier: { desktop: async () => {}, ntfy: async () => {} },
 });
 

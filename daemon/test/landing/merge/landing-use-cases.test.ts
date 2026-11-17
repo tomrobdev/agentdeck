@@ -5,21 +5,21 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { after, beforeEach, test } from 'node:test';
-import { READY_PR, fakeAgent, fakeCodeHost } from '../../fixtures/fakes.ts';
+import { READY_PR, fakeAgent, fakeCodeHost } from '#test/fixtures/fakes.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-landing-'));
 process.env.AGENTDECK_HOME = home;
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../../../src/db/index.ts');
-const { asTaskId, blockedTask, doneTask, failedTask, queuedTask, testApp } = await import('../../fixtures/fixtures.ts');
-const { refreshPrStates } = await import('../../../src/application/landing/pull-request/refresh.ts');
-const actions = await import('../../../src/application/actions.ts');
+const { openDb } = await import('#db/index.ts');
+const { asTaskId, blockedTask, doneTask, failedTask, queuedTask, testApp } = await import('#test/fixtures/fixtures.ts');
+const { refreshPrStates } = await import('#application/landing/pull-request/refresh.ts');
+const actions = await import('#application/actions.ts');
 const { ActionError, cancelMergeRequest, closeTaskPr, fixChecks, linkTasks, markDone, requestAllMerges, requestMerges, taskDetail } =
   actions;
-const { latestReviewNote } = await import('../../../src/domain/work/lifecycle/history.ts');
-const { parseJobSteps } = await import('../../../src/domain/landing/index.ts');
-const { fmtChecks } = await import('../../../src/cli/format.ts');
+const { latestReviewNote } = await import('#domain/work/lifecycle/history.ts');
+const { parseJobSteps } = await import('#domain/landing/index.ts');
+const { fmtChecks } = await import('#cli/format.ts');
 const ghFixture = (name: string) => readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../../fixtures', 'gh', name), 'utf8');
 
 const host = fakeCodeHost();

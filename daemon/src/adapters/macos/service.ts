@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir, userInfo } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { promisify } from 'node:util';
-import { HOME, LOG_DIR, ensureDirs, rustDirs } from '../../config.ts';
+import { HOME, LOG_DIR, ensureDirs, rustDirs } from '#src/config.ts';
 
 const exec = promisify(execFile);
 

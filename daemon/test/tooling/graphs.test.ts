@@ -1,15 +1,15 @@
 // The context map and the adapter-use table, on small sample sources.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { adapterUseBody, contextMapBody } from '../../scripts/lib/architecture-docs.ts';
-import { adapterUse, contextMap } from '../../scripts/lib/graphs.ts';
-import { parseSource } from '../../scripts/lib/sources.ts';
+import { adapterUseBody, contextMapBody } from '#scripts/lib/architecture-docs.ts';
+import { adapterUse, contextMap } from '#scripts/lib/graphs.ts';
+import { parseSource } from '#scripts/lib/sources.ts';
 
 const src = (path: string, text: string) => parseSource(path, text);
 
 test('context map: a type-only edge is drawn dotted, a runtime one solid', () => {
   const sources = [
-    src('domain/task/a.ts', "import { x } from '../repo/b.ts';\nimport type { Y } from '../run/c.ts';\nexport const a = 1;"),
+    src('domain/task/a.ts', "import { x } from '#domain/repo/b.ts';\nimport type { Y } from '#domain/run/c.ts';\nexport const a = 1;"),
     src('domain/repo/b.ts', 'export const x = 1;'),
     src('domain/run/c.ts', 'export type Y = 1;'),
   ];
@@ -29,9 +29,9 @@ test('context map: a type-only edge is drawn dotted, a runtime one solid', () =>
 
 test('context map: a cycle is marked, a runtime import beside a type-only one makes the edge runtime', () => {
   const sources = [
-    src('domain/task/a.ts', "import { b } from '../repo/b.ts';\nimport type { B } from '../repo/b.ts';\nexport const a = 1;"),
-    src('domain/repo/b.ts', "import type { A } from '../task/a.ts';\nexport const b = 1;"),
-    src('domain/run/c.ts', "import { a } from '../task/a.ts';\nexport const c = 1;"),
+    src('domain/task/a.ts', "import { b } from '#domain/repo/b.ts';\nimport type { B } from '#domain/repo/b.ts';\nexport const a = 1;"),
+    src('domain/repo/b.ts', "import type { A } from '#domain/task/a.ts';\nexport const b = 1;"),
+    src('domain/run/c.ts', "import { a } from '#domain/task/a.ts';\nexport const c = 1;"),
   ];
   const map = contextMap(sources);
   assert.deepEqual(map.cycles, [['domain/repo', 'domain/task']]);
@@ -51,10 +51,10 @@ test('context map: a cycle is marked, a runtime import beside a type-only one ma
 
 test('adapter use: each application area lists the adapters it imports', () => {
   const sources = [
-    src('application/run/worker.ts', "import { a } from '../../adapters/git.ts';\nimport { b } from '../../adapters/claude.ts';"),
-    src('application/run/other.ts', "import { a } from '../../adapters/git.ts';"),
-    src('application/planner.ts', "import { c } from '../adapters/claude.ts';\nimport { d } from '../db/index.ts';"),
-    src('application/settings.ts', "import { d } from '../db/index.ts';"),
+    src('application/run/worker.ts', "import { a } from '#adapters/git.ts';\nimport { b } from '#adapters/claude.ts';"),
+    src('application/run/other.ts', "import { a } from '#adapters/git.ts';"),
+    src('application/planner.ts', "import { c } from '#adapters/claude.ts';\nimport { d } from '#db/index.ts';"),
+    src('application/settings.ts', "import { d } from '#db/index.ts';"),
   ];
   assert.deepEqual(adapterUse(sources), [
     { area: 'planner.ts', adapters: [{ adapter: 'claude.ts', imports: 1 }] },

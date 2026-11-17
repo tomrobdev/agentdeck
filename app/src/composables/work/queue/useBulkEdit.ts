@@ -1,11 +1,11 @@
 // An edit made to several tasks through the same calls as one task's edit: the bar's Edit menu, and the edit keys (p, M, l).
-import { landingApi } from '../../../api/landing';
-import { workApi } from '../../../api/work';
-import type { TaskSummary } from '../../../api/types';
-import { errorMessage } from '../../../../../daemon/src/domain/shared/index.ts';
-import { type BulkEdit, type BulkResult, bulkEditMessage, planBulkEdit } from '../../../lib/work/queue/bulk';
-import { useActions } from '../../shared/useActions';
-import { usePicked } from './usePicked';
+import { landingApi } from '#api/landing.ts';
+import { workApi } from '#api/work.ts';
+import type { TaskSummary } from '#api/types.ts';
+import { errorMessage } from '#daemon/domain/shared/index.ts';
+import { type BulkEdit, type BulkResult, bulkEditMessage, planBulkEdit } from '#lib/work/queue/bulk.ts';
+import { useActions } from '#composables/shared/useActions.ts';
+import { usePicked } from '#composables/work/queue/usePicked.ts';
 
 export type BulkEditValue = number | string | boolean | null;
 

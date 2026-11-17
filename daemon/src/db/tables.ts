@@ -1,14 +1,14 @@
 // The tables as Drizzle sees them, mirroring the migrated schema in schema.ts.
 import { sql } from 'drizzle-orm';
-import type { PlannerRunId, RepoId, ReviewId, RunId, TaskId } from '../domain/shared/index.ts';
-import type { PlannerOutcome } from '../domain/proposals/index.ts';
-import type { MergeMethod, PrMode } from '../domain/repos/index.ts';
-import type { PrState, ReviewAuthor } from '../domain/landing/index.ts';
-import type { RunEnd, RunKind, RunOutcome } from '../domain/runs/index.ts';
-import type { TaskEventType } from '../domain/work/index.ts';
-import type { LinkKind } from '../domain/work/index.ts';
-import type { TaskStatus } from '../domain/work/index.ts';
-import type { TaskSource } from '../domain/work/index.ts';
+import type { PlannerRunId, RepoId, ReviewId, RunId, TaskId } from '#domain/shared/index.ts';
+import type { PlannerOutcome } from '#domain/proposals/index.ts';
+import type { MergeMethod, PrMode } from '#domain/repos/index.ts';
+import type { PrState, ReviewAuthor } from '#domain/landing/index.ts';
+import type { RunEnd, RunKind, RunOutcome } from '#domain/runs/index.ts';
+import type { TaskEventType } from '#domain/work/index.ts';
+import type { LinkKind } from '#domain/work/index.ts';
+import type { TaskStatus } from '#domain/work/index.ts';
+import type { TaskSource } from '#domain/work/index.ts';
 import { index, integer, primaryKey, real, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
 
 // guard: a column default is an expression SQLite evaluates on insert, which the builder can only take as raw SQL

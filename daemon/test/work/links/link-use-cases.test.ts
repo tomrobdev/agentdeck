@@ -1,6 +1,6 @@
 // Linking and unlinking, adding with links, the merge gate for after links and the one warning for a stuck chain.
 import assert from 'node:assert/strict';
-import { type TaskId, asTaskId } from '../../../src/domain/shared/id.ts';
+import { type TaskId, asTaskId } from '#domain/shared/id.ts';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -9,13 +9,13 @@ import { test } from 'node:test';
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-linkuse-'));
 process.env.AGENTDECK_NO_NOTIFY = '1';
 
-const { openDb } = await import('../../../src/db/index.ts');
+const { openDb } = await import('#db/index.ts');
 const { ActionError, addTask, updateRepo, linkTasks, unlinkTasks, taskDetail, cancelTask, deleteRepo } =
-  await import('../../../src/application/actions.ts');
-const { doneTask, failedTask, queuedTask, runningTask, settlePr, testApp } = await import('../../fixtures/fixtures.ts');
-const { landsAfter, warnStuckDependents } = await import('../../../src/application/work/dependencies.ts');
-const { mergeCheck } = await import('../../../src/domain/landing/merge/merge.ts');
-const { autoMergeCheck } = await import('../../../src/domain/landing/merge/auto-merge.ts');
+  await import('#application/actions.ts');
+const { doneTask, failedTask, queuedTask, runningTask, settlePr, testApp } = await import('#test/fixtures/fixtures.ts');
+const { landsAfter, warnStuckDependents } = await import('#application/work/dependencies.ts');
+const { mergeCheck } = await import('#domain/landing/merge/merge.ts');
+const { autoMergeCheck } = await import('#domain/landing/merge/auto-merge.ts');
 
 function setup() {
   const db = testApp(openDb(':memory:'));

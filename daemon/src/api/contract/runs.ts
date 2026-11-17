@@ -1,7 +1,7 @@
 // Runs: a task's attempts, live state, syncs and verify runs.
-import type { RunId } from '../../domain/shared/index.ts';
-import type { RunKind, VerifyFinding } from '../../domain/runs/index.ts';
-import type { TaskDetail } from './work.ts';
+import type { RunId } from '#domain/shared/index.ts';
+import type { RunKind, VerifyFinding } from '#domain/runs/index.ts';
+import type { TaskDetail } from '#api/contract/work.ts';
 
 /** A running task's live state. `since` is UTC `YYYY-MM-DD HH:MM:SS`; `tool` is a few words, e.g. "Edit worker.ts". */
 export interface LiveView {

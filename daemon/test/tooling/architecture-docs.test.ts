@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { REFERENCE_DIR, generateReference, readDocs, renderDocs, section } from '../../scripts/lib/architecture-docs.ts';
-import { NOT_YET_TABLES, STATE_MACHINES, readModels, readStateTypes, readUseCases } from '../../scripts/lib/model-docs.ts';
-import { exportedNames, readSources } from '../../scripts/lib/sources.ts';
+import { REFERENCE_DIR, generateReference, readDocs, renderDocs, section } from '#scripts/lib/architecture-docs.ts';
+import { NOT_YET_TABLES, STATE_MACHINES, readModels, readStateTypes, readUseCases } from '#scripts/lib/model-docs.ts';
+import { exportedNames, readSources } from '#scripts/lib/sources.ts';
 
 const SRC = join(import.meta.dirname, '../../src');
 const fix = 'run `pnpm docs:gen` and commit the result';
@@ -81,7 +81,7 @@ test('docs/reference/models.md lists every field of Task', () => {
 });
 
 test('docs/reference/use-cases.md lists every export of actions.ts', async () => {
-  const actions = await import('../../src/application/actions.ts');
+  const actions = await import('#application/actions.ts');
   const doc = readFileSync(join(REFERENCE_DIR, 'use-cases.md'), 'utf8');
   const names = [...new Set([...Object.keys(actions), ...readUseCases().map((u) => u.name)])];
   const missing = names.filter((n) => !doc.includes(`\`${n}\``));

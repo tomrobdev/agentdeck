@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/vue-query';
-import { reposQuery } from '../../api/repos';
-import type { TaskSummary } from '../../api/types';
-import { fixTaskCommand } from '../../lib/runs/terminal';
-import { fixReason } from '../../lib/work/task-badges';
-import { canFix } from '../../lib/work/task-view';
-import { useTerminal } from '../runs/useTerminal';
-import { useActions } from '../shared/useActions';
+import { reposQuery } from '#api/repos.ts';
+import type { TaskSummary } from '#api/types.ts';
+import { fixTaskCommand } from '#lib/runs/terminal.ts';
+import { fixReason } from '#lib/work/task-badges.ts';
+import { canFix } from '#lib/work/task-view.ts';
+import { useTerminal } from '#composables/runs/useTerminal.ts';
+import { useActions } from '#composables/shared/useActions.ts';
 
 type Fixable = Pick<TaskSummary, 'id' | 'title' | 'status' | 'pr_state' | 'stop_reason' | 'auto_merge_view' | 'worktree' | 'repo_id'>;
 

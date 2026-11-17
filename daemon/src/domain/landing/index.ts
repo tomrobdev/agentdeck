@@ -7,8 +7,8 @@ export {
   reviewPromptBlock,
   unansweredNote,
   withNote,
-} from './review/address.ts';
-export type { ReviewPrompt } from './review/address.ts';
+} from '#domain/landing/review/address.ts';
+export type { ReviewPrompt } from '#domain/landing/review/address.ts';
 export {
   AUTO_MERGE_LABEL,
   DEFAULT_AUTO_MERGE_MAX_LINES,
@@ -17,8 +17,8 @@ export {
   autoMergeMaxLinesError,
   autoMergeOn,
   autoMergeView,
-} from './merge/auto-merge.ts';
-export type { AutoMergeFacts, AutoMergeMeasured, AutoMergeState, AutoMergeView } from './merge/auto-merge.ts';
+} from '#domain/landing/merge/auto-merge.ts';
+export type { AutoMergeFacts, AutoMergeMeasured, AutoMergeState, AutoMergeView } from '#domain/landing/merge/auto-merge.ts';
 export {
   EXCERPT_BYTES,
   LOG_TAIL_BYTES,
@@ -34,12 +34,19 @@ export {
   headBytes,
   stepUrl,
   withoutFailure,
-} from './pull-request/check-failures.ts';
-export type { FailedCheck, JobStep } from './pull-request/check-failures.ts';
-export { checksSettled, checksSummary, countOfKept, countWithSteps, nextChecks, withCheckList } from './pull-request/checks.ts';
-export { asNotRun, notStartedMessage } from './pull-request/ci-not-run.ts';
-export type { JobStart } from './pull-request/ci-not-run.ts';
-export type { CheckCounts, CheckState, ChecksSummary, PrCheck, StoredChecks } from './pull-request/checks.ts';
+} from '#domain/landing/pull-request/check-failures.ts';
+export type { FailedCheck, JobStep } from '#domain/landing/pull-request/check-failures.ts';
+export {
+  checksSettled,
+  checksSummary,
+  countOfKept,
+  countWithSteps,
+  nextChecks,
+  withCheckList,
+} from '#domain/landing/pull-request/checks.ts';
+export { asNotRun, notStartedMessage } from '#domain/landing/pull-request/ci-not-run.ts';
+export type { JobStart } from '#domain/landing/pull-request/ci-not-run.ts';
+export type { CheckCounts, CheckState, ChecksSummary, PrCheck, StoredChecks } from '#domain/landing/pull-request/checks.ts';
 export {
   DEFAULT_CODE_COMMENT_MAX_LINES,
   DEFAULT_CODE_COMMENT_MAX_PERCENT,
@@ -51,9 +58,9 @@ export {
   codeCommentsText,
   countCodeComments,
   parseAddedLines,
-} from './merge/code-comments.ts';
-export type { AddedLines, CodeCommentCount, CodeCommentLimits } from './merge/code-comments.ts';
-export { isConflicting } from './merge/conflict.ts';
+} from '#domain/landing/merge/code-comments.ts';
+export type { AddedLines, CodeCommentCount, CodeCommentLimits } from '#domain/landing/merge/code-comments.ts';
+export { isConflicting } from '#domain/landing/merge/conflict.ts';
 export {
   conflictsWithBase,
   mergeRequestCheck,
@@ -62,10 +69,10 @@ export {
   mergeRequestView,
   mergesNow,
   nextMergeRequestState,
-} from './merge/merge-request.ts';
-export type { MergeRequestMove, MergeRequestView } from './merge/merge-request.ts';
-export { nextPrState, prFrom, prStatesFor, seenMove } from './pull-request/pr-moves.ts';
-export type { PrFrom, PrMove } from './pull-request/pr-moves.ts';
+} from '#domain/landing/merge/merge-request.ts';
+export type { MergeRequestMove, MergeRequestView } from '#domain/landing/merge/merge-request.ts';
+export { nextPrState, prFrom, prStatesFor, seenMove } from '#domain/landing/pull-request/pr-moves.ts';
+export type { PrFrom, PrMove } from '#domain/landing/pull-request/pr-moves.ts';
 export {
   mergeCheck,
   mergeFailure,
@@ -78,7 +85,7 @@ export {
   parsePrDetails,
   syncingFirstLine,
   verdictView,
-} from './merge/merge.ts';
+} from '#domain/landing/merge/merge.ts';
 export type {
   AutoMergeCheck,
   BranchPr,
@@ -88,15 +95,23 @@ export type {
   MergeReason,
   MergeVerdictView,
   PrDetails,
-} from './merge/merge.ts';
-export { refreshVerdict } from './pull-request/refresh.ts';
-export type { PrPlace } from './pull-request/refresh.ts';
-export { buildPrBody, existingPr, finalMessage, isPrExistsError, openPrUrl, prFields, pullRequestOf } from './pull-request/pr.ts';
-export { PR_OPEN_RETRIES, prNeedsPerson, prRetry } from './pull-request/pr-retry.ts';
-export type { PrOpenFailures, PrRetry } from './pull-request/pr-retry.ts';
-export type { PrFields, PrPlan, PrState, PullRequest } from './pull-request/pr.ts';
-export { countedReviewRuns, reviewRunCounts } from './review/review-gate.ts';
-export type { ReviewFacts } from './review/review-gate.ts';
+} from '#domain/landing/merge/merge.ts';
+export { refreshVerdict } from '#domain/landing/pull-request/refresh.ts';
+export type { PrPlace } from '#domain/landing/pull-request/refresh.ts';
+export {
+  buildPrBody,
+  existingPr,
+  finalMessage,
+  isPrExistsError,
+  openPrUrl,
+  prFields,
+  pullRequestOf,
+} from '#domain/landing/pull-request/pr.ts';
+export { PR_OPEN_RETRIES, prNeedsPerson, prRetry } from '#domain/landing/pull-request/pr-retry.ts';
+export type { PrOpenFailures, PrRetry } from '#domain/landing/pull-request/pr-retry.ts';
+export type { PrFields, PrPlan, PrState, PullRequest } from '#domain/landing/pull-request/pr.ts';
+export { countedReviewRuns, reviewRunCounts } from '#domain/landing/review/review-gate.ts';
+export type { ReviewFacts } from '#domain/landing/review/review-gate.ts';
 export {
   BLOCKING_PREFIX,
   COMMENT_SIDES,
@@ -111,7 +126,7 @@ export {
   nextCommentState,
   reviewKindError,
   reviewReason,
-} from './review/review.ts';
+} from '#domain/landing/review/review.ts';
 export type {
   CommentAction,
   CommentSide,
@@ -122,5 +137,5 @@ export type {
   ReviewKind,
   ReviewWithComments,
   ReviewedDiff,
-} from './review/review.ts';
-export { PR_SUMMARY_FORMAT } from './pull-request/summary.ts';
+} from '#domain/landing/review/review.ts';
+export { PR_SUMMARY_FORMAT } from '#domain/landing/pull-request/summary.ts';

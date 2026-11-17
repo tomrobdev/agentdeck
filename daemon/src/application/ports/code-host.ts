@@ -1,6 +1,6 @@
 // The CodeHost port: pull requests and the pushes that go with them.
-import type { BranchPr, CreatePr, JobStart, JobStep, PrDetails } from '../../domain/landing/index.ts';
-import type { MergeMethod } from '../../domain/repos/index.ts';
+import type { BranchPr, CreatePr, JobStart, JobStep, PrDetails } from '#domain/landing/index.ts';
+import type { MergeMethod } from '#domain/repos/index.ts';
 
 export interface CodeHost {
   auth(): Promise<{ ok: boolean; output: string }>;

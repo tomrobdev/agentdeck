@@ -1,11 +1,11 @@
 // What queued tasks wait for: what stops the whole queue, and what each task waits for.
-import type { App } from '../ports/app.ts';
-import type { RepoId } from '../../domain/shared/index.ts';
-import type { Repo } from '../../domain/repos/index.ts';
-import type { StartState } from '../../domain/work/index.ts';
-import { type QueueWait, type StartWait, startWait } from '../../domain/work/index.ts';
-import type { Task } from '../../domain/work/index.ts';
-import { queueWait } from './gate.ts';
+import type { App } from '#application/ports/app.ts';
+import type { RepoId } from '#domain/shared/index.ts';
+import type { Repo } from '#domain/repos/index.ts';
+import type { StartState } from '#domain/work/index.ts';
+import { type QueueWait, type StartWait, startWait } from '#domain/work/index.ts';
+import type { Task } from '#domain/work/index.ts';
+import { queueWait } from '#application/capacity/gate.ts';
 
 export interface PausedRepo {
   id: RepoId;

@@ -1,4 +1,4 @@
-import { expect, open, row, test } from '../fixtures';
+import { expect, open, row, test } from '#e2e/fixtures.ts';
 
 const findings = [
   { claim: 'greet() lives in src/greet.ts', verdict: 'true', path: 'src/greet.ts', line: 2, evidence: 'It is there.', fix: null },

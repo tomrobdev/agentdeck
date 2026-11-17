@@ -1,9 +1,9 @@
 // Sent notifications, kept for the dashboard (the newest 200).
 import { desc, lte, sql } from 'drizzle-orm';
-import type { TaskId } from '../../domain/shared/index.ts';
-import type { Notification } from '../../domain/operations/index.ts';
-import type { Orm } from '../orm.ts';
-import { notifications } from '../tables.ts';
+import type { TaskId } from '#domain/shared/index.ts';
+import type { Notification } from '#domain/operations/index.ts';
+import type { Orm } from '#db/orm.ts';
+import { notifications } from '#db/tables.ts';
 
 export function notificationStore(orm: Orm) {
   return {

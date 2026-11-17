@@ -1,7 +1,7 @@
 // The locks on a task's checkout in this process: a sync of its branch (`runs/sync.ts`) and a merge of its PR (`landing/merge.ts`).
-import type { App } from '../ports/app.ts';
-import type { TaskId } from '../../domain/shared/index.ts';
-import { ActionError } from '../shared/input.ts';
+import type { App } from '#application/ports/app.ts';
+import type { TaskId } from '#domain/shared/index.ts';
+import { ActionError } from '#application/shared/input.ts';
 
 const merging = new Set<TaskId>();
 

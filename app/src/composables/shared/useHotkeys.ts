@@ -1,6 +1,6 @@
 import { onBeforeUnmount, onMounted } from 'vue';
-import { hotkeyApplies } from '../../lib/shared/hotkey-applies';
-import { type HotkeyDef, type HotkeyScope, type PendingKey, registerKeys, resolveKey } from '../../lib/shared/hotkeys';
+import { hotkeyApplies } from '#lib/shared/hotkey-applies.ts';
+import { type HotkeyDef, type HotkeyScope, type PendingKey, registerKeys, resolveKey } from '#lib/shared/hotkeys.ts';
 
 export interface HotkeyBinding {
   label: string;

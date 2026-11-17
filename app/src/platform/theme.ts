@@ -1,6 +1,6 @@
 // The dashboard's theme (a set of colours, styles/themes.css) and mode (system, light or dark).
 import { ref } from 'vue';
-import { loadSetting, saveSetting } from '../lib/shared/storage';
+import { loadSetting, saveSetting } from '#lib/shared/storage.ts';
 
 export const THEMES = [
   { key: 'warm', label: 'Warm', hint: 'Neutral greys, terracotta accent' },

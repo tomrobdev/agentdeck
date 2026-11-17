@@ -1,5 +1,5 @@
 // A task page: its Overview with the plan, its run log (a finished run and a live one), and its diff in both layouts.
-import { expect, open, test } from '../fixtures';
+import { expect, open, test } from '#e2e/fixtures.ts';
 
 test("a task page's Overview shows the prompt, the pull request and the plan", async ({ page }) => {
   await open(page, '#/tasks/2/overview');
