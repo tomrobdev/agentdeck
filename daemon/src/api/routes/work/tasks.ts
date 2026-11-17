@@ -95,6 +95,7 @@ export function routes({ db, scheduler }: ApiContext): Route[] {
       streamLog(db, req, res, taskIdParam(id), {
         attempt: Number(query.get('attempt')) || undefined,
         run: Number(query.get('run')) || undefined,
+        from: query.get('from'),
       });
       return undefined;
     }),

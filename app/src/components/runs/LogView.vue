@@ -34,6 +34,7 @@ function repoPath(file: string | undefined): string | null {
   return root && file.startsWith(root) ? file.slice(root.length) : null;
 }
 
+const MAX_RECONNECTS = 3;
 const cut = computed(() => (props.worktree ? cutRoot(props.worktree) : undefined));
 const entries = ref<LogEntry[]>([]);
 const streaming = ref(false);
@@ -130,8 +131,10 @@ function open() {
   if (!props.runId) return;
   following.value = true;
   streaming.value = true;
+  let failures = 0;
   source = new EventSource(runsApi.logUrl(props.taskId, props.runId));
   source.onmessage = async (e) => {
+    failures = 0;
     entries.value.push(...(JSON.parse(e.data) as LogEntry[]));
     if (following.value) {
       await nextTick();
@@ -139,7 +142,10 @@ function open() {
     }
   };
   source.addEventListener('end', close);
-  source.onerror = close;
+  source.onerror = () => {
+    failures += 1;
+    if (failures >= MAX_RECONNECTS || source?.readyState === EventSource.CLOSED) close();
+  };
 }
 
 function onScroll() {

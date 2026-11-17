@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { chmodSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -17,6 +18,7 @@ process.env.AGENTDECK_CLAUDE_BIN = fake;
 
 const { openDb } = await import('#test/fixtures/open-db.ts');
 const { startApi } = await import('#api/server.ts');
+const { streamLog } = await import('#api/log-stream.ts');
 const { Scheduler } = await import('#application/scheduler/scheduler.ts');
 
 const db = openDb(join(home, 'test.db'));
@@ -111,6 +113,57 @@ test('a log that cannot be read ends the stream instead of stopping the daemon',
   db.finishRun(runId, { outcome: 'failed' });
   const st = await api('/api/status');
   assert.equal(st.status, 200, 'the daemon still answers');
+});
+
+const textLine = (text: string) => JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text }] } });
+const texts = (body: string) =>
+  [...body.matchAll(/^data: (\[.*)$/gm)].flatMap((m) => (JSON.parse(m[1]) as { text?: string }[]).map((e) => e.text));
+
+test('a log stream resumes from the last event id with no entry repeated, even across a split line', async () => {
+  const logPath = join(home, 'resume-log');
+  const second = textLine('second');
+  writeFileSync(logPath, `${textLine('first')}\n${second.slice(0, 20)}`);
+  const runId = db.startRun(asTaskId(1), 1, logPath);
+
+  const controller = new AbortController();
+  const live = await api(`/api/tasks/1/log?run=${runId}`, { signal: controller.signal });
+  const reader = (live.body as ReadableStream<Uint8Array>).getReader();
+  let seen = '';
+  while (!/^id: \d+$/m.test(seen)) seen += new TextDecoder().decode((await reader.read()).value);
+  controller.abort();
+  assert.deepEqual(texts(seen), ['first']);
+  const lastId = /^id: (\d+)$/m.exec(seen)?.[1] ?? '';
+  assert.equal(Number(lastId), Buffer.byteLength(`${textLine('first')}\n`));
+
+  writeFileSync(logPath, `${second.slice(20)}\n${textLine('third')}\n`, { flag: 'a' });
+  db.finishRun(runId, { outcome: 'failed' });
+  const resumed = await (await api(`/api/tasks/1/log?run=${runId}`, { headers: { 'Last-Event-ID': lastId } })).text();
+  assert.deepEqual(texts(resumed), ['second', 'third']);
+  assert.match(resumed, /event: end/);
+  const fromQuery = await (await api(`/api/tasks/1/log?run=${runId}&from=${lastId}`)).text();
+  assert.deepEqual(texts(fromQuery), ['second', 'third']);
+  const all = await (await api(`/api/tasks/1/log?run=${runId}`)).text();
+  assert.deepEqual(texts(all), ['first', 'second', 'third']);
+});
+
+test('a live run stream sends a ping', async () => {
+  const logPath = join(home, 'ping-log');
+  writeFileSync(logPath, '');
+  const runId = db.startRun(asTaskId(1), 1, logPath);
+  const pinged = await new Promise<boolean>((resolve) => {
+    const pingServer = createServer((req, res) => streamLog(db, req, res, asTaskId(1), { run: runId }, 20)).listen(0, async () => {
+      const controller = new AbortController();
+      const res = await fetch(`http://127.0.0.1:${(pingServer.address() as AddressInfo).port}/`, { signal: controller.signal });
+      const reader = (res.body as ReadableStream<Uint8Array>).getReader();
+      let seen = '';
+      while (!seen.includes(': ping')) seen += new TextDecoder().decode((await reader.read()).value);
+      controller.abort();
+      pingServer.close();
+      resolve(true);
+    });
+  });
+  db.finishRun(runId, { outcome: 'failed' });
+  assert.equal(pinged, true);
 });
 
 test('cancel and retry', async () => {
