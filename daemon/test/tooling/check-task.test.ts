@@ -36,7 +36,7 @@ test('paths beside the crash-test ones do not call for it', () => {
     'daemon/src/domain/runs/run.ts',
     'daemon/test/db.test.ts',
   ]) {
-    assert.ok(!names([path]).includes('crash test'), path);
+    assert.deepEqual(names([path]), [], path);
   }
 });
 
@@ -45,26 +45,25 @@ test('a branch changing app/src-tauri/ runs check:rust', () => {
   assert.deepEqual(names(['app/src-tauri/tauri.conf.json']), ['check:rust']);
 });
 
-test("a branch changing the dashboard, its end-to-end tests, or the API and domain it reads runs test:ui, and the Tauri shell's doesn't", () => {
-  for (const path of [
-    'app/src/App.vue',
-    'app/src/lib/work/files/diff.ts',
-    'app/e2e/look/queue.spec.ts',
-    'app/playwright.config.ts',
-    'app/vite.config.ts',
-    'daemon/src/api/http.ts',
-    'daemon/src/domain/work/task/task.ts',
-  ]) {
+test("a branch changing the dashboard or its end-to-end tests runs test:ui, and the Tauri shell's doesn't", () => {
+  for (const path of ['app/src/App.vue', 'app/src/lib/work/files/diff.ts', 'app/e2e/look/queue.spec.ts', 'app/playwright.config.ts']) {
     assert.deepEqual(names([path]), ['test:ui'], path);
   }
   for (const path of [
     'app/src-tauri/src/main.rs',
     'app/package.json',
-    'daemon/src/application/work/tasks.ts',
-    'daemon/src/cli/work/tasks.ts',
+    'app/vite.config.ts',
+    'daemon/src/api/http.ts',
+    'daemon/src/domain/work/task/task.ts',
   ]) {
     assert.ok(!names([path]).includes('test:ui'), path);
   }
+});
+
+test('CI also runs the dashboard end to end for the API and domain the dashboard reads, which a task skips to stay fast', () => {
+  for (const path of ['app/vite.config.ts', 'daemon/src/api/http.ts', 'daemon/src/domain/work/task/task.ts'])
+    assert.deepEqual(ciJobs([path]), { crash: false, rust: false, ui: true }, path);
+  assert.deepEqual(ciJobs(['daemon/src/cli/work/tasks.ts']), { crash: false, rust: false, ui: false });
 });
 
 test("CI runs a pull request's extra jobs as check:task would, and every job when it cannot tell or the rules change", () => {

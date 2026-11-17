@@ -1,12 +1,10 @@
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, readdirSync } from 'node:fs';
-import { availableParallelism } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { RAISE_MARGIN, groupCoverage, judgeCoverage, parseLcov, percent, showPercent, withUnloaded } from './lib/coverage.ts';
 import { COVERAGE_FLOORS } from './lib/progress.ts';
 
 const DAEMON = join(import.meta.dirname, '..');
-const TEST_CONCURRENCY = Math.max(2, availableParallelism() - 1);
 const given = process.argv.indexOf('--lcov');
 let lcov = join(DAEMON, 'coverage/lcov.info');
 let testsFailed = false;
@@ -22,7 +20,6 @@ if (given >= 0) {
     [
       '--test',
       '--test-timeout=60000',
-      `--test-concurrency=${TEST_CONCURRENCY}`,
       '--experimental-test-coverage',
       '--test-coverage-include=src/**',
       '--test-coverage-include=../app/src/lib/**',

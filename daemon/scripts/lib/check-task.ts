@@ -22,11 +22,7 @@ export const EXTRA_CHECKS: ExtraCheck[] = [
     ],
   },
   { name: 'check:rust', command: ['pnpm', 'check:rust'], prefixes: ['app/src-tauri/'] },
-  {
-    name: 'test:ui',
-    command: ['pnpm', 'test:ui'],
-    prefixes: ['app/src/', 'app/e2e/', 'app/playwright.config.ts', 'app/vite.config.ts', 'daemon/src/api/', 'daemon/src/domain/'],
-  },
+  { name: 'test:ui', command: ['pnpm', 'test:ui'], prefixes: ['app/src/', 'app/e2e/', 'app/playwright.config.ts'] },
 ];
 
 export type ChosenCheck = ExtraCheck & {
@@ -59,8 +55,14 @@ export const CI_JOB_OF: Record<ExtraCheck['name'], string> = { 'crash test': 'cr
 
 export const RUN_ALL_PREFIXES = ['.github/', 'scripts/check-task.mjs', 'daemon/scripts/lib/check-task.ts'];
 
+export const CI_ALSO: Partial<Record<ExtraCheck['name'], string[]>> = {
+  'test:ui': ['app/vite.config.ts', 'daemon/src/api/', 'daemon/src/domain/'],
+};
+
 export function ciJobs(changed: readonly string[] | null): Record<string, boolean> {
   const all = changed === null || changed.some((p) => RUN_ALL_PREFIXES.some((prefix) => matches(p, prefix)));
   const chosen = new Set(all ? EXTRA_CHECKS.map((c) => c.name) : extraChecks(changed).map((c) => c.name));
+  for (const [name, prefixes] of Object.entries(CI_ALSO))
+    if (changed?.some((p) => prefixes.some((prefix) => matches(p, prefix)))) chosen.add(name as ExtraCheck['name']);
   return Object.fromEntries(EXTRA_CHECKS.map((c) => [CI_JOB_OF[c.name], chosen.has(c.name)]));
 }
