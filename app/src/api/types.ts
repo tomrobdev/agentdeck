@@ -1,6 +1,7 @@
 // The daemon's API types come from its contract (daemon/src/api/contract/<context>.ts), which the daemon checks against its use cases.
 import type { MergeMethod } from '../../../daemon/src/domain/repos/index.ts';
 
+export type { ApiErrorBody } from '../../../daemon/src/api/contract/errors.ts';
 export type { PrRetry, PrState } from '../../../daemon/src/domain/landing/index.ts';
 export type { ClaimVerdict, VerifyFinding, VerifyView } from '../../../daemon/src/domain/runs/index.ts';
 export type { FileRef, LinkKind, TaskStatus } from '../../../daemon/src/domain/work/index.ts';

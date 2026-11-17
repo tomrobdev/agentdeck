@@ -148,8 +148,8 @@ export async function syncTask(app: App, id: TaskId, opts: { manual: boolean }):
   const repo = requireTaskRepo(app, task);
   if (task.status !== 'done') throw new ActionError(`#${id} is ${task.status}; only a done task's branch is synced this way`);
   if (!task.checkout?.branch) throw new ActionError(`#${id} has no branch`);
-  if (isSyncLocked(id) || app.hasSyncMarker(id)) throw new ActionError(`#${id} is already syncing`);
-  if (isMergeLocked(id)) throw new ActionError(`#${id} is being merged; try again when that is done`);
+  if (isSyncLocked(id) || app.hasSyncMarker(id)) throw new ActionError(`#${id} is already syncing`, undefined, 'conflict');
+  if (isMergeLocked(id)) throw new ActionError(`#${id} is being merged; try again when that is done`, undefined, 'conflict');
 
   lockSync(id);
   try {
@@ -187,7 +187,7 @@ async function syncMarked(app: App, task: Task, repo: Repo, opts: { manual: bool
     case 'cancelled':
       return { outcome: 'deferred', files: [], reason: 'cancelled', pushed: false };
     case 'error':
-      if (opts.manual) throw new ActionError(`could not sync with ${repo.base_branch}: ${res.reason}`);
+      if (opts.manual) throw new ActionError(`could not sync with ${repo.base_branch}: ${res.reason}`, undefined, 'conflict');
       return { outcome: 'error', files: [], reason: res.reason, pushed: false };
   }
 }

@@ -20,7 +20,7 @@ export function newLinks(app: App, input: { builds_on?: TaskId[]; after?: TaskId
   return [...builds_on.map((on) => ({ on, kind: 'builds_on' as const })), ...after.map((on) => ({ on, kind: 'after' as const }))].map(
     (link) => {
       const target = app.getTask(link.on);
-      if (!target) throw new ActionError(`can't ${verb[link.kind]} #${link.on}: no such task`);
+      if (!target) throw new ActionError(`can't ${verb[link.kind]} #${link.on}: no such task`, undefined, 'not_found');
       if (link.kind === 'builds_on') refuse(buildsOnTargetError(app, target));
       return link;
     },
@@ -29,9 +29,9 @@ export function newLinks(app: App, input: { builds_on?: TaskId[]; after?: TaskId
 
 export function linkTasks(app: App, id: TaskId, { on, kind }: { on: TaskId; kind: LinkKind }): Link {
   const task = requireTask(app, id);
-  if (!app.getTask(on)) throw new ActionError(`no task #${on}`);
+  if (!app.getTask(on)) throw new ActionError(`no task #${on}`, undefined, 'not_found');
   if (kind === 'builds_on') {
-    refuse(buildsOnError(id, task.status, on), BUILDS_ON_STARTED);
+    refuse(buildsOnError(id, task.status, on), BUILDS_ON_STARTED, 'conflict');
     refuse(buildsOnTargetError(app, requireTask(app, on)));
   }
   refuse(linkError(id, on, app.allLinks()));
@@ -42,5 +42,5 @@ export function linkTasks(app: App, id: TaskId, { on, kind }: { on: TaskId; kind
 
 export function unlinkTasks(app: App, id: TaskId, on: TaskId): void {
   requireTask(app, id);
-  if (!app.removeLink(id, on)) throw new ActionError(`#${id} is not linked to #${on}`);
+  if (!app.removeLink(id, on)) throw new ActionError(`#${id} is not linked to #${on}`, undefined, 'not_found');
 }

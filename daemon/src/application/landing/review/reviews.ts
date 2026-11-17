@@ -22,13 +22,13 @@ import { retryTask } from '../person-events.ts';
 
 function requireReview(app: App, id: ReviewId): ReviewWithComments {
   const review = app.reviewWithComments(id);
-  if (!review) throw new ActionError('no such review');
+  if (!review) throw new ActionError('no such review', undefined, 'not_found');
   return review;
 }
 
 function requireComment(app: App, id: number): ReviewComment {
   const comment = app.getComment(id);
-  if (!comment) throw new ActionError('no such comment');
+  if (!comment) throw new ActionError('no such comment', undefined, 'not_found');
   return comment;
 }
 
@@ -47,9 +47,9 @@ export function startReview(app: App, taskId: TaskId): ReviewWithComments {
 
 export function editReview(app: App, id: ReviewId, input: { body?: string }): ReviewWithComments {
   const review = requireReview(app, id);
-  refuse(draftError(review));
+  refuse(draftError(review), undefined, 'conflict');
   const body = text(object(input), 'body', { empty: true, raw: true });
-  if (body !== undefined && !app.setReviewBody(id, body)) throw new ActionError('the review is already submitted');
+  if (body !== undefined && !app.setReviewBody(id, body)) throw new ActionError('the review is already submitted', undefined, 'conflict');
   return requireReview(app, id);
 }
 
@@ -59,7 +59,7 @@ export function addReviewComment(
   input: { path: string; line: number; side: string; head_commit: string; body: string },
 ): ReviewWithComments {
   const review = requireReview(app, reviewId);
-  refuse(draftError(review));
+  refuse(draftError(review), undefined, 'conflict');
   const body = object(input);
   const path = text(body, 'path');
   const head_commit = text(body, 'head_commit');
@@ -76,7 +76,7 @@ export function addReviewComment(
 
 export function deleteReviewComment(app: App, commentId: number): ReviewWithComments {
   const review = reviewOf(app, commentId);
-  refuse(draftError(review));
+  refuse(draftError(review), undefined, 'conflict');
   app.deleteComment(commentId);
   return requireReview(app, review.id);
 }
@@ -92,7 +92,7 @@ async function reviewedDiff(app: App, taskId: TaskId): Promise<ReviewedDiff> {
 
 export async function submitReview(app: App, id: ReviewId, input: { kind: string; body?: string }): Promise<ReviewWithComments> {
   const review = requireReview(app, id);
-  refuse(draftError(review));
+  refuse(draftError(review), undefined, 'conflict');
   const fields = object(input);
   refuse(reviewKindError(fields.kind));
   const kind = fields.kind as ReviewKind;
@@ -100,17 +100,18 @@ export async function submitReview(app: App, id: ReviewId, input: { kind: string
   refuse(emptyReviewError(note, review.comments.length));
   const read = await reviewedDiff(app, review.task_id);
   if (kind === 'request_changes') retryTask(app, review.task_id, { note: reviewReason(note, review.comments) });
-  if (!app.submitReview(id, kind, note, read)) throw new ActionError('the review is already submitted');
+  if (!app.submitReview(id, kind, note, read)) throw new ActionError('the review is already submitted', undefined, 'conflict');
   return requireReview(app, id);
 }
 
 function moveComment(app: App, commentId: number, action: CommentAction, answer?: string): ReviewWithComments {
   const comment = requireComment(app, commentId);
   const review = requireReview(app, comment.review_id);
-  if (!review.submitted_at) throw new ActionError('the review is still a draft; submit it first');
-  refuse(commentActionError(comment.state, action));
+  if (!review.submitted_at) throw new ActionError('the review is still a draft; submit it first', undefined, 'conflict');
+  refuse(commentActionError(comment.state, action), undefined, 'conflict');
   const to = nextCommentState(comment.state, action) as NonNullable<ReturnType<typeof nextCommentState>>;
-  if (!app.moveComment(commentId, commentStatesFor(action), to, answer)) throw new ActionError(`the comment is no longer ${comment.state}`);
+  if (!app.moveComment(commentId, commentStatesFor(action), to, answer))
+    throw new ActionError(`the comment is no longer ${comment.state}`, undefined, 'conflict');
   return requireReview(app, review.id);
 }
 
