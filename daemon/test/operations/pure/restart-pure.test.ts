@@ -25,6 +25,11 @@ test('restartWait names what is still running, and is null when nothing is', () 
   );
 });
 
+test('restartWait names API requests still being carried out', () => {
+  assert.equal(restartWait({ ...idle, requests: 1 }), '1 API request');
+  assert.equal(restartWait({ ...idle, tasks: 1, requests: 2 }), '1 running task and 2 API requests');
+});
+
 test('a requested restart waits for running work, else exits at once, whatever the setting says', () => {
   const busy = reloadDecision({ ...input, enabled: false, changed: [], requested: true, activity: { ...idle, tasks: 2 } });
   assert.deepEqual([busy.pending, busy.exit], [true, false]);
