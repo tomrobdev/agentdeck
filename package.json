@@ -38,6 +38,7 @@
   "exports": {
     "./app/lib/*": "./app/src/lib/*",
     "./app/api/types.ts": "./app/src/api/types.ts",
+    "./app/api/api-error.ts": "./app/src/api/api-error.ts",
     "./docs/plans/*": "./docs/plans/*"
   },
   "devDependencies": {

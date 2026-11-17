@@ -1,7 +1,7 @@
 // The dashboard retries a failed query only when asking again could help: not offline, not a 4xx.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { ApiError, OfflineError, retryQuery } from '../../../../app/src/api/api-error.ts';
+import { ApiError, OfflineError, retryQuery } from '#app/api/api-error.ts';
 
 test('a query that gets a 4xx is not retried, a 5xx or an unknown failure is retried twice', () => {
   assert.equal(retryQuery(0, new ApiError('no such task', 404)), false);
