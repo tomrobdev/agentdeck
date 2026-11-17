@@ -9,16 +9,16 @@ import { applyPersonEvent } from '#application/landing/settle.ts';
 
 export function cancelTask(app: App, id: TaskId): 'cancelled' | 'stopping' {
   const t = applyPersonEvent(app, id, { type: 'cancel' });
-  if (!t) throw new ActionError(`#${id} can't be cancelled from its current state`);
+  if (!t) throw new ActionError(`#${id} can't be cancelled from its current state`, undefined, 'conflict');
   return t.status === 'cancel_requested' ? 'stopping' : 'cancelled';
 }
 
 export function approveTask(app: App, id: TaskId): void {
-  if (!applyPersonEvent(app, id, { type: 'approve' })) throw new ActionError(`#${id} is not a proposal`);
+  if (!applyPersonEvent(app, id, { type: 'approve' })) throw new ActionError(`#${id} is not a proposal`, undefined, 'conflict');
 }
 
 export function rejectTask(app: App, id: TaskId): void {
-  if (!applyPersonEvent(app, id, { type: 'reject' })) throw new ActionError(`#${id} is not a proposal`);
+  if (!applyPersonEvent(app, id, { type: 'reject' })) throw new ActionError(`#${id} is not a proposal`, undefined, 'conflict');
 }
 
 export interface RetryInput {
@@ -35,12 +35,12 @@ export function retryTask(app: App, id: TaskId, input: RetryInput = {}, onlyFrom
   const badModel = model === '' ? 'model must not be empty' : modelError(model);
   if (badModel) throw new ActionError(badModel);
   const from = fromStatuses({ type: 'retry' }).filter((s) => !onlyFrom || onlyFrom.includes(s));
-  if (!from.includes(t.status)) throw new ActionError(`#${id} is ${t.status}`);
+  if (!from.includes(t.status)) throw new ActionError(`#${id} is ${t.status}`, undefined, 'conflict');
   const escalated = model === undefined ? escalateOnRetry(app, t) : null;
   if (model !== undefined && model !== t.model && !app.changeModel(id, { from: t.model, to: model }, { type: 'edit' }, from))
-    throw new ActionError(`#${id} changed meanwhile; try again`);
+    throw new ActionError(`#${id} changed meanwhile; try again`, undefined, 'conflict');
   const retried = applyPersonEvent(app, id, { type: 'retry' }, { reason: note?.trim() || null, onlyFrom });
-  if (!retried) throw new ActionError(`#${id} is ${app.getTask(id)?.status ?? t.status}`);
+  if (!retried) throw new ActionError(`#${id} is ${app.getTask(id)?.status ?? t.status}`, undefined, 'conflict');
   return { model: retried.model, escalated: escalated !== null };
 }
 
@@ -48,5 +48,9 @@ export function markDone(app: App, id: TaskId, note?: string): void {
   const t = requireTask(app, id);
   if (note !== undefined && typeof note !== 'string') throw new ActionError('note must be text');
   if (!applyPersonEvent(app, id, { type: 'mark_done' }, { reason: note?.trim() || null }))
-    throw new ActionError(`#${id} is ${app.getTask(id)?.status ?? t.status}; only blocked or failed tasks can be marked done`);
+    throw new ActionError(
+      `#${id} is ${app.getTask(id)?.status ?? t.status}; only blocked or failed tasks can be marked done`,
+      undefined,
+      'conflict',
+    );
 }

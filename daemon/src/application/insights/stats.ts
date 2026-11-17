@@ -16,7 +16,7 @@ export interface PilotReport extends StatsReport {
 
 export function pilotStats(app: App, opts: { repo?: string; since?: string; by?: 'week' | 'model' } = {}): PilotReport {
   const only = opts.repo === undefined ? undefined : app.findRepo(opts.repo);
-  if (opts.repo !== undefined && !only) throw new ActionError(`no repo "${opts.repo}"`);
+  if (opts.repo !== undefined && !only) throw new ActionError(`no repo "${opts.repo}"`, undefined, 'not_found');
   const all = app.statRuns(only?.id);
   const rows = all.filter((r) => opts.since === undefined || r.started_at >= opts.since);
   const repoName = (id: RepoId) => app.getRepo(id)?.name ?? `repo${id}`;

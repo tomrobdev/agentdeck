@@ -5,7 +5,7 @@ import TrayView from '#components/layout/TrayView.vue';
 import '#styles/themes.css';
 import '#styles/style.css';
 import { initTheme } from '#platform/theme.ts';
-import { retryQuery } from '#api/http.ts';
+import { retryQuery } from '#api/api-error.ts';
 import { router } from '#src/router.ts';
 
 initTheme();

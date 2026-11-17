@@ -1,6 +1,7 @@
 // Operations: the daemon's status, its restarts and health, the launchd service, settings and notifications.
 import { queryOptions } from '@tanstack/vue-query';
-import { get, isOffline, post } from '#api/http.ts';
+import { isOffline } from '#api/api-error.ts';
+import { get, post } from '#api/http.ts';
 import type {
   DaemonHealth,
   DaemonState,

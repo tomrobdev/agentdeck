@@ -170,7 +170,8 @@ test('GET /api/stats serves what `agentdeck stats --by week --json` prints', asy
   assert.deepEqual(stats, JSON.parse(JSON.stringify(pilotStats(db, { repo: 'demo', by: 'week' }))));
   assert.deepEqual(stats.weeks, []);
   assert.equal(stats.scorecard.by, 'week');
-  for (const bad of ['by=day', 'since=soon', 'repo=nope']) assert.equal((await fetch(`${base}/api/stats?${bad}`)).status, 400, bad);
+  for (const bad of ['by=day', 'since=soon']) assert.equal((await fetch(`${base}/api/stats?${bad}`)).status, 400, bad);
+  assert.equal((await fetch(`${base}/api/stats?repo=nope`)).status, 404);
 });
 
 test('a body over 2 MB answers 413', async () => {

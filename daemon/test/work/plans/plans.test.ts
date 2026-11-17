@@ -390,8 +390,8 @@ test('attach stores or replaces the task’s own plan under its numbered name, a
   const bad = await call(`/api/tasks/${t.id}/plans`, { html: '<html><body>hi</body></html>' });
   assert.equal(bad.status, 400);
   assert.match(bad.body.error, /data-agentdeck-plan/);
-  assert.equal((await call(`/api/tasks/9999/plans`, { html: PLAN })).status, 400);
-  assert.equal((await call(`/api/tasks/${t.id}/plans/9999`)).status, 400);
+  assert.equal((await call(`/api/tasks/9999/plans`, { html: PLAN })).status, 404);
+  assert.equal((await call(`/api/tasks/${t.id}/plans/9999`)).status, 404);
 });
 
 test('attach refuses a running task: its run’s end would write the old plan back', async () => {
@@ -403,7 +403,7 @@ test('attach refuses a running task: its run’s end would write the old plan ba
       new RegExp(`#${t.id} is ${status}; a plan can't be attached while it runs`),
     );
     const viaApi = await call(`/api/tasks/${t.id}/plans`, { html: PLAN });
-    assert.equal(viaApi.status, 400);
+    assert.equal(viaApi.status, 409);
   }
   assert.equal(db.ownPlan(t.id)!.html, PLAN, 'the plan is untouched');
 });

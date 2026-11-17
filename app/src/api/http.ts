@@ -1,16 +1,9 @@
 import type { QueryClient } from '@tanstack/vue-query';
 import { invoke } from '@tauri-apps/api/core';
+import { ApiError, OfflineError } from '#api/api-error.ts';
+import type { ApiErrorBody } from '#api/types.ts';
 
 export const API_BASE: string = import.meta.env.VITE_AGENTDECK_API ?? 'http://127.0.0.1:4317';
-
-export class ApiError extends Error {}
-export class OfflineError extends ApiError {
-  constructor() {
-    super('offline');
-  }
-}
-
-export const isOffline = (e: unknown) => e instanceof OfflineError;
 
 async function readToken(): Promise<string | null> {
   try {
@@ -43,7 +36,10 @@ async function call<T>(method: string, path: string, json?: unknown): Promise<T>
   let res = await send(method, path, json, false);
   if (res.status === 401) res = await send(method, path, json, true);
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new ApiError(data.error ?? `HTTP ${res.status}`);
+  if (!res.ok) {
+    const body: Partial<ApiErrorBody> = data;
+    throw new ApiError(body.error ?? `HTTP ${res.status}`, res.status, body.code);
+  }
   return data as T;
 }
 export const get = <T>(path: string) => call<T>('GET', path);
@@ -59,5 +55,3 @@ const isImmutable = (key: readonly unknown[]) => key[0] === 'at' && key[1] !== n
 export const atCommit = (commit: string | null) => (commit ? Infinity : 0);
 
 export const refreshAll = (queryClient: QueryClient) => queryClient.invalidateQueries({ predicate: (q) => !isImmutable(q.queryKey) });
-
-export const retryQuery = (failures: number, e: unknown) => !isOffline(e) && failures < 2;

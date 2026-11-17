@@ -28,7 +28,7 @@ export async function fixChecks(app: App, id: TaskId): Promise<FixChecksResult> 
   if (!url) throw new ActionError(`#${id} has no open pull request`);
   const repo = requireTaskRepo(app, task);
   const pr = await app.codeHost.prDetails(url, repo.path).catch((err) => {
-    throw new ActionError(`could not read the PR: ${errorMessage(err)}`);
+    throw new ActionError(`could not read the PR: ${errorMessage(err)}`, undefined, 'upstream');
   });
   const { checks } = carryFailures(task.pr?.checks.latest ?? null, pr.head ?? null, pr.check_list ?? []);
   const failing = failingChecks(checks);
@@ -55,7 +55,7 @@ export async function fixChecks(app: App, id: TaskId): Promise<FixChecksResult> 
   );
   const now = requireTask(app, id);
   if (now.status !== 'done' || !openPrUrl(now.pr))
-    throw new ActionError(`#${id} changed while its checks were read; its PR is no longer open`);
+    throw new ActionError(`#${id} changed while its checks were read; its PR is no longer open`, undefined, 'conflict');
   retryTask(app, id, { note: fixChecksNote(failed) }, ['done']);
   return { checks: failed.map((c) => c.name) };
 }

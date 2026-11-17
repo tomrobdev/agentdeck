@@ -95,7 +95,7 @@ export function plansShown(app: App, task: Pick<Task, 'id' | 'plan'>): TaskPlan[
 
 export function attachPlan(app: App, id: TaskId, input: { html?: unknown }): TaskPlan {
   const task = requireTask(app, id);
-  const notNow = (status: string) => new ActionError(`#${id} is ${status}; a plan can't be attached while it runs`);
+  const notNow = (status: string) => new ActionError(`#${id} is ${status}; a plan can't be attached while it runs`, undefined, 'conflict');
   if (!PLAN_ATTACHABLE_STATUSES.includes(task.status)) throw notNow(task.status);
   const { html, plan } = readPlanInput(object(input).html);
   checkFollowers(app, id, plan);
@@ -106,6 +106,6 @@ export function attachPlan(app: App, id: TaskId, input: { html?: unknown }): Tas
 
 export function planHtml(app: App, id: TaskId, planId: number): { html: string } {
   const html = app.planHtml(id, planId);
-  if (html === undefined) throw new ActionError('no such plan');
+  if (html === undefined) throw new ActionError('no such plan', undefined, 'not_found');
   return { html };
 }

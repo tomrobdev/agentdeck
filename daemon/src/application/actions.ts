@@ -14,7 +14,7 @@ export { type VerifyReport, type VerifyStart, startVerify } from '#application/r
 export { daemonHealth, daemonReport, restartNow } from '#application/operations/doctor.ts';
 export type { Check as HealthCheck } from '#domain/operations/index.ts';
 export type { ComposedApp } from '#application/ports/app.ts';
-export { ActionError, onOff } from '#application/shared/input.ts';
+export { ActionError, type ActionErrorKind, onOff } from '#application/shared/input.ts';
 export { measureBranch, parseFileRef, taskChanges, taskDiff, taskFile, taskTree } from '#application/work/files.ts';
 export { type LiveContext, repoForPath } from '#application/operations/digest.ts';
 export { liveContext } from '#application/work/live-context.ts';

@@ -236,7 +236,7 @@ test('a task with no branch, or a branch that is gone, answers 400 task has no b
       assert.deepEqual(body, { error: 'task has no branch yet' });
     }
   }
-  assert.equal((await get('/api/tasks/9999/changes')).status, 400);
+  assert.equal((await get('/api/tasks/9999/changes')).status, 404);
 });
 
 test('the base is the newer merge base of the local base branch and origin/<base>', async () => {
