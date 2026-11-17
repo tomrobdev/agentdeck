@@ -26,7 +26,8 @@ export const unlockSync = (id: TaskId): void => void syncing.delete(id);
 export const isSyncing = (app: App, id: TaskId): boolean => app.hasSyncMarker(id);
 
 export function refuseWhileSyncing(app: App, id: TaskId): void {
-  if (isSyncing(app, id)) throw new ActionError(`#${id} is syncing with its base branch; try again when that is done`);
+  if (isSyncing(app, id))
+    throw new ActionError(`#${id} is syncing with its base branch; try again when that is done`, undefined, 'conflict');
 }
 
 export async function markSyncing<T>(app: App, id: TaskId, fn: () => Promise<T>): Promise<T> {

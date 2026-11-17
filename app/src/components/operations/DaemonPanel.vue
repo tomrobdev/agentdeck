@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { isOffline } from '../../api/http';
+import { isOffline } from '../../api/api-error';
 import { daemonHealthQuery, daemonQuery, operationsApi } from '../../api/operations';
 import { uptime } from '../../lib/shared/time';
 import { taskList } from '../../lib/work/work-wording';

@@ -120,6 +120,6 @@ export async function openTaskPr(app: App, id: TaskId): Promise<OpenTaskPrResult
   if (task.pr?.state === 'merged') throw new ActionError(`#${id}'s PR is merged`);
   if (!task.checkout?.branch) throw new ActionError(`#${id} has no branch`);
   const { url, error } = await openPullRequest(app, task);
-  if (!url) throw new ActionError(`could not open the PR: ${error ?? 'unknown error'}`);
+  if (!url) throw new ActionError(`could not open the PR: ${error ?? 'unknown error'}`, undefined, 'upstream');
   return { url };
 }
