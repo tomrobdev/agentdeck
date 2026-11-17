@@ -13,3 +13,4 @@ export const DAEMON_PORT = Number(process.env.UI_DAEMON_PORT);
 export const APP_PORT = Number(process.env.UI_APP_PORT);
 export const DAEMON_URL = `http://127.0.0.1:${DAEMON_PORT}`;
 export const APP_URL = `http://127.0.0.1:${APP_PORT}`;
+export const API_TOKEN: string = (process.env.AGENTDECK_API_TOKEN ||= 'ui-test-token');

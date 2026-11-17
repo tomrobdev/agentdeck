@@ -5,7 +5,7 @@ import { type ComposedApp, isPaused, maxConcurrent, reloadOnChange } from './app
 import { ChangeWatcher } from './application/operations/changes.ts';
 import { reloadBlock } from './application/operations/reload-block.ts';
 import { Scheduler } from './application/scheduler/scheduler.ts';
-import { API_PORT, DEFAULTS } from './config.ts';
+import { API_PORT, DEFAULTS, apiToken } from './config.ts';
 import { type Activity, SCHEMA_DIRTY, offMain, reloadDecision, runOnceRefusal } from './domain/operations/index.ts';
 
 export interface DaemonOptions {
@@ -77,7 +77,14 @@ export async function runDaemon({ db, once, log = () => {}, exit }: DaemonOption
       setTimeout(() => scheduler.wake(), 200);
     };
     const reloadFacts = () => ({ changed, lastChangeAt, requested: restartRequested, blocked: block.reason });
-    const api = await startApi({ db, port: API_PORT, scheduler, changes, daemon: { info, requestRestart, reloadFacts } }).catch((err) => {
+    const api = await startApi({
+      db,
+      port: API_PORT,
+      token: apiToken(),
+      scheduler,
+      changes,
+      daemon: { info, requestRestart, reloadFacts },
+    }).catch((err) => {
       if (err?.code === 'EADDRINUSE')
         throw new Error(`port ${API_PORT} is in use: another agentdeck daemon is probably running (see \`agentdeck service\`)`);
       throw err;

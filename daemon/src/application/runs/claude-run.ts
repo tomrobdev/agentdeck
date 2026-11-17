@@ -1,7 +1,7 @@
 // The sequence every task-bound claude run shares: log, run row, settings, the process, and what its end means.
 import { createWriteStream, type WriteStream } from 'node:fs';
 import { join } from 'node:path';
-import { LOG_DIR, ensureDirs } from '../../config.ts';
+import { API_TOKEN_PATH, LOG_DIR, ensureDirs } from '../../config.ts';
 import type { App } from '../ports/app.ts';
 import type { RunId } from '../../domain/shared/index.ts';
 import type { Repo } from '../../domain/repos/index.ts';
@@ -27,7 +27,7 @@ import { lastLine } from '../../domain/shared/index.ts';
 
 export function runSettings(app: App, repo: Repo, worktree: string, logPath: string): string {
   const path = settingsPath(logPath);
-  app.runLog.writeSettings(path, workerSettings({ worktree, sandbox: repo.sandbox, network: repo.network }));
+  app.runLog.writeSettings(path, workerSettings({ worktree, sandbox: repo.sandbox, network: repo.network, secrets: [API_TOKEN_PATH] }));
   return path;
 }
 

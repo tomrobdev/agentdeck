@@ -325,7 +325,7 @@ const settingsCalls = () => readFileSync(join(home, 'fake-claude-settings.log'),
 
 test('each run gets a sandbox settings file outside its worktree', async () => {
   const { updateRepo } = await import('../../src/application/actions.ts');
-  const { LOG_DIR } = await import('../../src/config.ts');
+  const { API_TOKEN_PATH, LOG_DIR } = await import('../../src/config.ts');
   db.setRepoPaused(REPO, null);
   assert.equal(db.getRepo(REPO)!.sandbox, true, 'sandbox is on by default');
   assert.deepEqual(db.getRepo(REPO)!.network, [], 'no hosts by default');
@@ -344,8 +344,10 @@ test('each run gets a sandbox settings file outside its worktree', async () => {
       failIfUnavailable: true,
       allowUnsandboxedCommands: false,
       network: { allowedDomains: ['registry.npmjs.org', 'github.com'], strictAllowlist: true, allowLocalBinding: true },
+      filesystem: { denyRead: [API_TOKEN_PATH] },
     });
     assert.deepEqual(settings.permissions.allow, [`Edit(/${t.checkout?.worktree}/**)`]);
+    assert.deepEqual(settings.permissions.deny, [`Read(/${API_TOKEN_PATH})`], 'the agent cannot read the API token');
 
     updateRepo(db, REPO, { sandbox: false });
     const off = db.addTask({ repo_id: REPO, title: 'unsandboxed', prompt: 'FAKE_DONE without the sandbox' });

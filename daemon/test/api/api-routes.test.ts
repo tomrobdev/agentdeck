@@ -61,6 +61,7 @@ const app = testApp(openDb(join(home, 'test.db')), {
 const restartRequests: number[] = [];
 const server = await startApi({
   db: app,
+  token: null,
   port: 0,
   daemon: {
     info: { commit: null, started_at: new Date().toISOString(), pid: process.pid },

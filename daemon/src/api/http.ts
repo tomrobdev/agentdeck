@@ -8,7 +8,8 @@ import {
   type ReloadFacts,
   type Scheduler,
 } from '../application/actions.ts';
-import { API_ALLOWED_ORIGINS } from '../config.ts';
+import { timingSafeEqual } from 'node:crypto';
+import { API_ALLOWED_ORIGINS, API_TOKEN_PATH, bearer } from '../config.ts';
 import { type RepoId, type ReviewId, type TaskId, parseId } from '../domain/shared/index.ts';
 import { parseTaskIds } from '../domain/work/index.ts';
 
@@ -97,7 +98,22 @@ export async function readBody(req: IncomingMessage): Promise<Record<string, unk
   return parsed as Record<string, unknown>;
 }
 
-export async function dispatch(routes: Route[], req: IncomingMessage, res: ServerResponse): Promise<void> {
+const LOCAL_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]']);
+
+const READS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
+export function isLocalHost(host: string | undefined): boolean {
+  return host !== undefined && LOCAL_HOSTS.has(host.replace(/:\d+$/, '').toLowerCase());
+}
+
+export function hasToken(authorization: string | undefined, token: string): boolean {
+  const given = Buffer.from(authorization ?? '');
+  const wanted = Buffer.from(bearer(token));
+  return given.length === wanted.length && timingSafeEqual(given, wanted);
+}
+
+export async function dispatch(routes: Route[], req: IncomingMessage, res: ServerResponse, token: string | null): Promise<void> {
+  if (!isLocalHost(req.headers.host)) return send(res, 403, { error: 'host not allowed: call the API as 127.0.0.1 or localhost' });
   const origin = req.headers.origin;
   if (origin) {
     if (!API_ALLOWED_ORIGINS.has(origin)) return send(res, 403, { error: 'origin not allowed' });
@@ -105,9 +121,14 @@ export async function dispatch(routes: Route[], req: IncomingMessage, res: Serve
     res.setHeader('Vary', 'Origin');
   }
   if (req.method === 'OPTIONS') {
-    res.writeHead(204, { 'Access-Control-Allow-Methods': 'GET, POST, DELETE', 'Access-Control-Allow-Headers': 'Content-Type' });
+    res.writeHead(204, {
+      'Access-Control-Allow-Methods': 'GET, POST, DELETE',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    });
     return void res.end();
   }
+  if (token !== null && !READS.has(req.method ?? '') && !hasToken(req.headers.authorization, token))
+    return send(res, 401, { error: `this needs the API token: send "Authorization: Bearer <token>", the token in ${API_TOKEN_PATH}` });
 
   const path = new URL(req.url ?? '/', 'http://x').pathname;
   for (const r of routes) {

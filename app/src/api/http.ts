@@ -1,4 +1,5 @@
 import type { QueryClient } from '@tanstack/vue-query';
+import { invoke } from '@tauri-apps/api/core';
 
 export const API_BASE: string = import.meta.env.VITE_AGENTDECK_API ?? 'http://127.0.0.1:4317';
 
@@ -11,17 +12,36 @@ export class OfflineError extends ApiError {
 
 export const isOffline = (e: unknown) => e instanceof OfflineError;
 
-async function call<T>(method: string, path: string, json?: unknown): Promise<T> {
-  let res: Response;
+async function readToken(): Promise<string | null> {
   try {
-    res = await fetch(API_BASE + path, {
-      method,
-      headers: json !== undefined ? { 'Content-Type': 'application/json' } : undefined,
-      body: json !== undefined ? JSON.stringify(json) : undefined,
-    });
+    if ('__TAURI_INTERNALS__' in window) return await invoke<string | null>('api_token');
+    const res = await fetch('/__agentdeck/token');
+    return res.ok ? ((await res.json()) as { token: string | null }).token : null;
+  } catch {
+    return null;
+  }
+}
+
+let token: Promise<string | null> | undefined;
+const apiToken = (fresh: boolean) => (fresh || !token ? (token = readToken()) : token);
+
+async function send(method: string, path: string, json: unknown, freshToken: boolean): Promise<Response> {
+  const headers: Record<string, string> = {};
+  if (json !== undefined) headers['Content-Type'] = 'application/json';
+  if (method !== 'GET') {
+    const t = await apiToken(freshToken);
+    if (t) headers.Authorization = `Bearer ${t}`;
+  }
+  try {
+    return await fetch(API_BASE + path, { method, headers, body: json !== undefined ? JSON.stringify(json) : undefined });
   } catch {
     throw new OfflineError();
   }
+}
+
+async function call<T>(method: string, path: string, json?: unknown): Promise<T> {
+  let res = await send(method, path, json, false);
+  if (res.status === 401) res = await send(method, path, json, true);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new ApiError(data.error ?? `HTTP ${res.status}`);
   return data as T;

@@ -36,4 +36,4 @@ The least line and branch coverage each group of `daemon/src/` may have (`COVERA
 | `domain/runs`              | `domain/runs/`                                                                           | 98%   | 96%      |
 | `domain/shared`            | `domain/shared/`                                                                         | 100%  | 98%      |
 | `domain/work`              | `domain/work/`                                                                           | 99%   | 95%      |
-| `src`                      | the files at the top of `daemon/src/` (`cli.ts`, `compose.ts`, `config.ts`, `daemon.ts`) | 96%   | 81%      |
+| `src`                      | the files at the top of `daemon/src/` (`cli.ts`, `compose.ts`, `config.ts`, `daemon.ts`) | 96%   | 84%      |
