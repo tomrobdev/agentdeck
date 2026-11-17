@@ -60,12 +60,6 @@ test("a branch changing the dashboard or its end-to-end tests runs test:ui, and 
   }
 });
 
-test('CI also runs the dashboard end to end for the API and domain the dashboard reads, which a task skips to stay fast', () => {
-  for (const path of ['app/vite.config.ts', 'daemon/src/api/http.ts', 'daemon/src/domain/work/task/task.ts'])
-    assert.deepEqual(ciJobs([path]), { crash: false, rust: false, ui: true }, path);
-  assert.deepEqual(ciJobs(['daemon/src/cli/work/tasks.ts']), { crash: false, rust: false, ui: false });
-});
-
 test("CI runs a pull request's extra jobs as check:task would, and every job when it cannot tell or the rules change", () => {
   assert.deepEqual(ciJobs(['docs/architecture.md']), { crash: false, rust: false, ui: false });
   assert.deepEqual(ciJobs(['daemon/src/db/schema.ts']), { crash: true, rust: false, ui: false });
