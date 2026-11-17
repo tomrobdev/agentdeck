@@ -10,6 +10,7 @@ import { API_PORT, DEFAULTS, apiToken } from './config.ts';
 import { type Activity, SCHEMA_DIRTY, offMain, reloadDecision, runOnceRefusal } from './domain/operations/index.ts';
 
 const DRAIN_MS = 10_000;
+const DRAIN_POLL_MS = 50;
 
 export interface DaemonOptions {
   db: ComposedApp;
@@ -69,9 +70,11 @@ export async function runDaemon({ db, once, log = () => {}, exit }: DaemonOption
   let api: Server | undefined;
   let stopping = false;
   let stopped = false;
+  let endDrain = (): void => {};
   const stopNow = () => {
     if (stopped) return;
     stopped = true;
+    endDrain();
     changes?.stop();
     scheduler.stop();
     exit(0);
@@ -86,12 +89,17 @@ export async function runDaemon({ db, once, log = () => {}, exit }: DaemonOption
       const server = api;
       stopping = true;
       stamped(`${sig}: no new requests; waiting up to ${DRAIN_MS / 1000}s for those in flight, then stopping workers`);
-      const timer = setTimeout(stopNow, DRAIN_MS);
-      server.close(() => {
-        clearTimeout(timer);
+      server.close();
+      const giveUp = setTimeout(stopNow, DRAIN_MS);
+      const answered = setInterval(() => {
+        if (scheduler.requestsInFlight > 0) return;
         stamped('requests answered; stopping workers (their tasks will be requeued on next start)');
         stopNow();
-      });
+      }, DRAIN_POLL_MS);
+      endDrain = () => {
+        clearTimeout(giveUp);
+        clearInterval(answered);
+      };
     });
   }
   if (!once) {

@@ -117,6 +117,10 @@ export class Scheduler {
     return p;
   }
 
+  get requestsInFlight(): number {
+    return this.apiRequests;
+  }
+
   request(): () => void {
     this.apiRequests++;
     let released = false;

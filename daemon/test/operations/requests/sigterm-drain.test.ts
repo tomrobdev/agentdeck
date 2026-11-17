@@ -7,8 +7,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
 import { setTimeout as sleep } from 'node:timers/promises';
-import { fakeCodeHost } from '../fixtures/fakes.ts';
-import { doneTask, openPr, testApp, waitFor } from '../fixtures/fixtures.ts';
+import { fakeCodeHost } from '../../fixtures/fakes.ts';
+import { doneTask, openPr, testApp, waitFor } from '../../fixtures/fixtures.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'agentdeck-sigterm-'));
 process.env.AGENTDECK_HOME = home;
@@ -20,9 +20,9 @@ const port = (free.address() as AddressInfo).port;
 await new Promise<void>((resolve) => free.close(() => resolve()));
 process.env.AGENTDECK_PORT = String(port);
 
-const { openDb } = await import('../../src/db/index.ts');
-const { runDaemon } = await import('../../src/daemon.ts');
-const { realProcesses } = await import('../../src/compose.ts');
+const { openDb } = await import('../../../src/db/index.ts');
+const { runDaemon } = await import('../../../src/daemon.ts');
+const { realProcesses } = await import('../../../src/compose.ts');
 
 let release!: () => void;
 const gate = new Promise<void>((resolve) => (release = resolve));
@@ -66,6 +66,22 @@ after(() => {
   for (const event of ['exit', 'SIGINT', 'SIGTERM']) for (const l of added(event)) process.off(event as 'exit', l);
   console.log = realLog;
   app.close();
+});
+
+test('SIGTERM with only a change stream open exits without waiting for it', async () => {
+  const exited: number[] = [];
+  const ran = runDaemon({ db: app, once: false, log: (line) => logs.push(line), exit: (code) => void exited.push(code) });
+  await waitFor(() => logs.some((l) => l.includes('agentdeck daemon')), { what: 'the daemon to start' });
+  const stream = new AbortController();
+  const events = await fetch(`http://127.0.0.1:${port}/api/events`, { signal: stream.signal });
+  assert.equal(events.status, 200);
+  const mine = added('SIGTERM');
+  for (const stop of mine) stop();
+  await waitFor(() => exited.length > 0, { timeoutMs: 2000, what: 'the daemon to exit with the stream still open' });
+  stream.abort();
+  for (const event of ['exit', 'SIGINT', 'SIGTERM']) for (const l of added(event)) process.off(event as 'exit', l);
+  logs.length = 0;
+  await ran;
 });
 
 test('SIGTERM lets a request in flight answer before the daemon exits', async () => {
