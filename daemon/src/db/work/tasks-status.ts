@@ -1,5 +1,6 @@
 // A task's status changes only here: through applyEvent, the claim and crash recovery included, guarded by the current status.
-import { type SQL, and, asc, desc, eq, exists, inArray, isNotNull, isNull, ne, notExists, or } from 'drizzle-orm';
+import { type SQL, and, asc, desc, eq, exists, inArray, isNotNull, isNull, ne, notExists, notInArray, or } from 'drizzle-orm';
+import { type Draining, NOT_DRAINING } from '#domain/capacity/index.ts';
 import { type AnySQLiteColumn, alias } from 'drizzle-orm/sqlite-core';
 import type { DatabaseSync } from 'node:sqlite';
 import type { TaskId } from '#domain/shared/index.ts';
@@ -74,7 +75,19 @@ export function taskStatusStore(db: DatabaseSync, orm: Orm, getTask: (id: TaskId
         .from(runs)
         .where(and(eq(runs.task_id, t.id), inArray(runs.kind, ['unblock', 'review', 'resolve']), isNull(runs.ended_at))),
     );
-  const claimable = () => and(inArray(t.status, fromStatuses({ type: 'claim' })), notWaiting(), noRunBeside(), inOpenRepo(t.repo_id));
+  const hasRun = () =>
+    exists(
+      orm
+        .select({ id: runs.id })
+        .from(runs)
+        .where(and(eq(runs.task_id, t.id), eq(runs.kind, 'work'))),
+    );
+  const outsideDrain = (d: Draining) => {
+    if (d.daemon) return hasRun();
+    return d.repos.length ? or(hasRun(), notInArray(t.repo_id, d.repos)) : undefined;
+  };
+  const claimable = (d: Draining) =>
+    and(inArray(t.status, fromStatuses({ type: 'claim' })), notWaiting(), noRunBeside(), inOpenRepo(t.repo_id), outsideDrain(d));
 
   const applyEvent = (
     id: TaskId,
@@ -128,12 +141,12 @@ export function taskStatusStore(db: DatabaseSync, orm: Orm, getTask: (id: TaskId
 
   return {
     applyEvent,
-    hasQueued(): boolean {
-      return !!orm.select({ id: t.id }).from(t).where(claimable()).limit(1).get();
+    hasQueued(draining: Draining = NOT_DRAINING): boolean {
+      return !!orm.select({ id: t.id }).from(t).where(claimable(draining)).limit(1).get();
     },
-    claimNextTask(): Task | undefined {
+    claimNextTask(draining: Draining = NOT_DRAINING): Task | undefined {
       return atomically(db, () => {
-        const ids = orm.select({ id: t.id }).from(t).where(claimable()).orderBy(desc(t.priority), asc(t.id)).all();
+        const ids = orm.select({ id: t.id }).from(t).where(claimable(draining)).orderBy(desc(t.priority), asc(t.id)).all();
         for (const { id } of ids) {
           const claimed = applyEvent(id, { type: 'claim' });
           if (claimed) return claimed.task;

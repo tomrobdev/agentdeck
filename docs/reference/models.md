@@ -25,6 +25,28 @@ The exported interfaces and object types of `domain/`, grouped by folder, with t
 | `until`          | `number \| null` | When a hold is expected to lift (unix seconds).                     |
 | `weekly_allowed` | `number \| null` | Weekly pacing: how much of the 7d window the plan allows right now. |
 
+### Draining
+
+What is draining: the whole daemon, or some repos.
+
+| Field    | Type       | Comment |
+| -------- | ---------- | ------- |
+| `daemon` | `boolean`  |         |
+| `repos`  | `RepoId[]` |         |
+
+### InFlight
+
+The work still in flight in a drain's scope, which the drain waits for before it pauses.
+
+| Field        | Type     | Comment                                                                            |
+| ------------ | -------- | ---------------------------------------------------------------------------------- |
+| `runs`       | `number` | Tasks running, and runs of any kind not yet ended.                                 |
+| `retries`    | `number` | Queued tasks that have run before: their next attempt starts while draining.       |
+| `planner`    | `number` | Planner runs under way.                                                            |
+| `follow_ups` | `number` | Status changes whose follow-ups (opening a PR, telling a person) have not run yet. |
+| `unblocks`   | `number` | Blocked tasks waiting for their unblock run.                                       |
+| `reviews`    | `number` | Done tasks waiting for their review run.                                           |
+
 ### QuotaSample
 
 A reading of the 7-day window, as kept in `usage_samples`: utilization is 0..1.

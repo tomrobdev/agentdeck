@@ -114,7 +114,15 @@ test('waitingFor: only a queued task waits, on the builds-on links that are on t
 });
 
 test('startWait checks the queue, the repo pause, the links, an unblock run and the slots, in that order', () => {
-  const ctx = { queue: null, repoPaused: null, dependency: { kind: 'none' } as const, unblocking: false, running: 0, max: 2 };
+  const ctx = {
+    queue: null,
+    repoPaused: null,
+    draining: null,
+    dependency: { kind: 'none' } as const,
+    unblocking: false,
+    running: 0,
+    max: 2,
+  };
   const queued = { status: 'queued' } as const;
   assert.equal(startWait({ status: 'running' }, ctx), null);
   assert.equal(startWait(queued, ctx), null);
