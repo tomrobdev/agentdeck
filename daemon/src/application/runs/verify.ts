@@ -76,9 +76,10 @@ function runOpened(app: App, task: Task, repo: Repo, opened: OpenedRun): Promise
       await endTaskRun(app, opened, 'cancelled', 'the task is no longer proposed or queued', fields);
       return { outcome: 'cancelled', findings: [], commit };
     }
-    if (end.kind === 'rate_limited' || end.kind === 'failed') {
-      await endTaskRun(app, opened, end.kind, end.reason, fields);
-      return { outcome: end.kind, findings: [], commit, reason: end.reason };
+    if (end.kind === 'rate_limited' || end.kind === 'failed' || end.kind === 'timed_out') {
+      const outcome = end.kind === 'rate_limited' ? end.kind : 'failed';
+      await endTaskRun(app, opened, outcome, end.reason, fields);
+      return { outcome, findings: [], commit, reason: end.reason };
     }
     const answer = parseVerifyAnswer(end.result.structured_output ?? end.result.result);
     if (!answer) {

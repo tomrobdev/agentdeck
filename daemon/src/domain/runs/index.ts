@@ -24,6 +24,8 @@ export {
   resumeMaxTurns,
   runModel,
 } from '#domain/runs/run.ts';
+export { advanceClock, heardLine, limitReached, limitReason, startClock } from '#domain/runs/run-limit.ts';
+export type { RunLimits } from '#domain/runs/run-limit.ts';
 export type { Outcome, PidRun, Run, RunKind, RunOutcome, RunningTaskRun } from '#domain/runs/run.ts';
 export {
   classifyRun,

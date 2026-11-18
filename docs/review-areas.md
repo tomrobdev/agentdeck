@@ -97,6 +97,7 @@ The run's lifecycle: the worker, the claude process, resuming, prompts, logs, th
 
 - daemon/src/domain/runs/run.ts
 - daemon/src/domain/runs/run-result.ts
+- daemon/src/domain/runs/run-limit.ts
 - daemon/src/domain/runs/prompt.ts
 - daemon/src/domain/runs/unblock.ts
 - daemon/src/domain/runs/review.ts

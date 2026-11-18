@@ -3,8 +3,9 @@ import { spawn } from 'node:child_process';
 import { accessSync, constants, type WriteStream } from 'node:fs';
 import { delimiter, isAbsolute, join } from 'node:path';
 import { createInterface } from 'node:readline';
-import { CANCEL_POLL_MS, claudeBin, withToolchainPath } from '#src/config.ts';
-import type { ClaudeResult, ClaudeRun, UsageWindow } from '#domain/runs/index.ts';
+import { CANCEL_POLL_MS, RUN_MAX_MS, RUN_STALL_MS, claudeBin, withToolchainPath } from '#src/config.ts';
+import type { ClaudeResult, ClaudeRun, RunLimits, UsageWindow } from '#domain/runs/index.ts';
+import { advanceClock, heardLine, limitReached, limitReason, startClock } from '#domain/runs/index.ts';
 import { activeChildren, killGroup } from '#adapters/process/processes.ts';
 
 function executable(path: string): boolean {
@@ -32,6 +33,12 @@ const numberOr = <T>(v: unknown, or: T): number | T => (typeof v === 'number' ? 
 
 export const CANCEL_GRACE_MS = 10_000;
 
+export const runLimits = (): RunLimits => ({
+  stallMs: RUN_STALL_MS,
+  maxMs: RUN_MAX_MS,
+  checkMs: Math.min(CANCEL_POLL_MS, Math.ceil(RUN_STALL_MS / 4)),
+});
+
 export async function runClaude(opts: {
   args: string[];
   cwd: string;
@@ -44,6 +51,8 @@ export async function runClaude(opts: {
   onEvent?: (ev: unknown) => void;
   onSession?: (sessionId: string) => void;
   onModel?: (modelId: string) => void;
+  limits?: RunLimits;
+  now?: () => number;
 }): Promise<ClaudeRun> {
   const { log } = opts;
   if (!isAbsolute(opts.cwd)) throw new Error(`claude needs an absolute working directory, not "${opts.cwd}"`);
@@ -66,18 +75,30 @@ export async function runClaude(opts: {
   };
 
   let killTimer: NodeJS.Timeout | undefined;
-  const shouldCancel = opts.shouldCancel;
-  const cancelTimer = shouldCancel
-    ? setInterval(() => {
-        if (!run.cancelled && shouldCancel()) {
-          run.cancelled = true;
-          killGroup(child.pid);
-          killTimer = setTimeout(() => killGroup(child.pid, 'SIGKILL'), opts.cancelGraceMs ?? CANCEL_GRACE_MS);
-        }
-      }, CANCEL_POLL_MS)
-    : undefined;
+  const stop = () => {
+    killGroup(child.pid);
+    killTimer = setTimeout(() => killGroup(child.pid, 'SIGKILL'), opts.cancelGraceMs ?? CANCEL_GRACE_MS);
+  };
+  const limits = opts.limits ?? runLimits();
+  const now = opts.now ?? Date.now;
+  let clock = startClock(now());
+  const checkTimer = setInterval(() => {
+    if (run.cancelled || run.timedOut) return;
+    if (opts.shouldCancel?.()) {
+      run.cancelled = true;
+      stop();
+      return;
+    }
+    clock = advanceClock(clock, now(), limits);
+    const reached = limitReached(clock, limits);
+    if (!reached) return;
+    run.timedOut = reached;
+    log.write(JSON.stringify({ type: 'agentdeck_error', text: limitReason(reached) }) + '\n');
+    stop();
+  }, limits.checkMs);
 
   createInterface({ input: child.stdout }).on('line', (line) => {
+    clock = heardLine(clock, now(), limits);
     log.write(line + '\n');
     let parsed: unknown;
     try {
@@ -115,7 +136,7 @@ export async function runClaude(opts: {
     });
     child.on('close', (code) => resolve(code ?? -1));
   });
-  clearInterval(cancelTimer);
+  clearInterval(checkTimer);
   clearTimeout(killTimer);
   activeChildren.delete(child);
 
