@@ -14,6 +14,7 @@ import {
   mergeReason,
   mergeRequestChanges,
   mergeRequestCheckChanges,
+  maxTurnsChanges,
   mergedPrChanges,
   modelChanges,
   overlaps,
@@ -95,6 +96,7 @@ test('the latest retry is the last retry, unblock retry or review retry event, w
 
 test('the writes of a model, a question and the merge settings change only their own fields, and clear what they make stale', () => {
   assert.deepEqual(modelChanges('opus'), { model: 'opus' });
+  assert.deepEqual(maxTurnsChanges(80), { max_turns: 80 });
   assert.deepEqual(questionChanges({ question: 'q', options: ['a'] }), { question: { question: 'q', options: ['a'] } });
   assert.deepEqual(autoMergeSettingChanges(true), { auto_merge: true, auto_merge_check: null, auto_merge_checked_at: null });
   assert.deepEqual(autoMergeCheckChanges(null), { auto_merge_check: null, auto_merge_checked_at: null });

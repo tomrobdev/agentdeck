@@ -83,8 +83,8 @@ Tasks
                                   open work by the planner; list them with \`agentdeck ls --status parked\`
   agentdeck lift <id>...          bring parked tasks back to proposed
   agentdeck cancel <id>
-  agentdeck retry <id> [--note "…"] [--model <model>]   another attempt; the note goes first in its prompt (changes
-                                  requested in review). It runs on --model if given; without it, a blocked or failed task whose
+  agentdeck retry <id> [--note "…"] [--model <model>] [--max-turns n]   another attempt; the note goes first in its prompt (changes
+                                  requested in review). It runs on --model and --max-turns if given; without --model, a blocked or failed task whose
                                   last run hit the turn limit, failing tests, an error or no change runs one model up (repo escalate)
   agentdeck done <id> [--note "…"]   mark a blocked or failed task done (you finished the work); tasks waiting on it start
   agentdeck install-needs <id> [--yes]   install the packages a blocked task asked for (NEEDS deps) on its branch, then retry

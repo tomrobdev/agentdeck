@@ -243,6 +243,8 @@ export interface RetryRequest {
   note?: string;
   /** The model the next attempt runs on; a retry that names one is never escalated. */
   model?: string;
+  /** The turn limit the next attempt runs with, set in the same guarded write as the retry. */
+  max_turns?: number;
 }
 
 /** POST /api/tasks/:id/park: `reason` says why the proposal waits, and for what. */

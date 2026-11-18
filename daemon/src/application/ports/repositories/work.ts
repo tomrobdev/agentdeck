@@ -96,6 +96,7 @@ export interface TaskRepository {
     row: { type: 'escalate'; reason: string } | { type: 'edit' },
     statuses: TaskStatus[],
   ): boolean;
+  changeMaxTurns(id: TaskId, to: number, statuses: TaskStatus[]): boolean;
   recoverOrphans(): { requeued: number; failed: TaskId[] };
 }
 

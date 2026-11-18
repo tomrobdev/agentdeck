@@ -2222,6 +2222,7 @@ The fields of a task a write sets, named as its columns are; the store stores th
 | Field                    | Type                                   | Comment |
 | ------------------------ | -------------------------------------- | ------- |
 | `model?`                 | `string \| undefined`                  |         |
+| `max_turns?`             | `number \| undefined`                  |         |
 | `question?`              | `UnblockQuestion \| null \| undefined` |         |
 | `auto_merge?`            | `boolean \| null \| undefined`         |         |
 | `auto_merge_check?`      | `AutoMergeCheck \| null \| undefined`  |         |

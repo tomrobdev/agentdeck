@@ -19,6 +19,7 @@ export {
   autoMergeSettingChanges,
   mergedPrChanges,
   modelChanges,
+  maxTurnsChanges,
   mergeRequestChanges,
   mergeRequestCheckChanges,
   noMergeRequestChanges,
