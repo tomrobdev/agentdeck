@@ -30,6 +30,8 @@ const EVENT_OF: Record<RuleKey, TaskEvent> = {
   cancel: { type: 'cancel' },
   approve: { type: 'approve' },
   reject: { type: 'reject' },
+  park: { type: 'park' },
+  lift: { type: 'lift' },
   retry: { type: 'retry' },
   unblock_retry: { type: 'unblock_retry' },
   review_retry: { type: 'review_retry' },
@@ -57,6 +59,8 @@ const stateIn = (status: TaskStatus): TaskState => {
     case 'failed':
     case 'cancelled':
       return { status, stop_reason: null };
+    case 'parked':
+      return { status, park_reason: null };
     default:
       return { status };
   }
@@ -65,7 +69,7 @@ const stateIn = (status: TaskStatus): TaskState => {
 function before(key: RuleKey, to: TaskStatus): FollowUp[] {
   if (key === 'claim') return [];
   if (key === 'cancel' || key === 'reject') return ['warn_dependents'];
-  if (key === 'approve' || key === 'retry' || key === 'mark_done') return [];
+  if (key === 'approve' || key === 'retry' || key === 'mark_done' || key === 'park' || key === 'lift') return [];
   if ((key === 'recover' || key === 'recover:exhausted') && to !== 'failed') return [];
   const openPr = to === 'done' && key !== 'pr_merged' && key !== 'recover:exhausted';
   const notifies = to === 'done' || to === 'blocked' || to === 'failed';
@@ -75,7 +79,7 @@ function before(key: RuleKey, to: TaskStatus): FollowUp[] {
 const WARNS_NO_ONE: Exclude<TaskStatus, 'done'>[] = ['queued', 'running', 'cancel_requested'];
 const warnsNoOne = (s: TaskStatus) => (WARNS_NO_ONE as TaskStatus[]).includes(s);
 
-const BY_PERSON: RuleKey[] = ['approve', 'reject', 'retry', 'cancel', 'mark_done'];
+const BY_PERSON: RuleKey[] = ['approve', 'reject', 'park', 'lift', 'retry', 'cancel', 'mark_done'];
 
 function now(key: RuleKey, from: TaskStatus): FollowUp[] {
   return followUpsOf(transition(taskFor(key, from), EVENT_OF[key])!.event);

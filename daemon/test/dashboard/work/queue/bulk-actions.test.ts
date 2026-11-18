@@ -118,7 +118,7 @@ test('priority and model are left out of tasks that are not editable, with the r
     plan.left.map((l) => l.id),
     [3, 4],
   );
-  assert.match(plan.left[0].reason, /is running; only proposed, queued, blocked, failed/);
+  assert.match(plan.left[0].reason, /is running; only proposed, parked, queued, blocked, failed/);
   assert.deepEqual(planBulkEdit(picked, 'model').allowed, [1, 2]);
 });
 

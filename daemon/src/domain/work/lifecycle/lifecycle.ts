@@ -184,7 +184,7 @@ export function domainEventType(cause: RuleKey, to: TaskStatus): DomainEventType
 
 export function domainEventOfRow(row: { type: TaskEventType; to_status: TaskStatus | null }): DomainEventType | null {
   if (row.type === 'pr_closed') return 'TaskPrClosed';
-  if (!row.to_status || row.to_status === 'proposed') return null;
+  if (!row.to_status || (row.to_status === 'proposed' && row.type !== 'lift')) return null;
   return eventTypeOf(row.to_status, row.type === 'pr_merged' || row.type === 'mark_done' ? row.type : 'finished');
 }
 

@@ -17,7 +17,7 @@ export type Listable = Pick<
   'id' | 'repo_id' | 'title' | 'status' | 'priority' | 'model' | 'source' | 'waiting' | 'updated_at'
 > & {
   stop_reason: string | null;
-  park_reason?: string | null;
+  park_reason: string | null;
   pr_url: string | null;
   pr_state: PrState | null;
   branch: string | null;

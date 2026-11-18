@@ -13,6 +13,7 @@ function task(id: number, fields: Partial<Listable> = {}): Listable {
     model: 'sonnet',
     branch: null,
     stop_reason: null,
+    park_reason: null,
     source: 'manual',
     pr_url: null,
     pr_state: null,
@@ -37,6 +38,7 @@ const TASKS = [
   task(11, { status: 'done', pr_url: 'https://x/11', pr_state: 'merged' }),
   task(12, { status: 'cancelled' }),
   task(13, { status: 'done', pr_url: 'https://x/13', pr_state: 'closed' }),
+  task(14, { status: 'parked', park_reason: 'phase 3 compliance' }),
 ];
 
 const ids = (filter: Partial<Parameters<typeof filterTasks>[1]>) =>
@@ -55,6 +57,12 @@ test('states pick out waiting and stuck tasks, and PR states of done tasks', () 
 test('groups match the dashboard: a stuck task needs you and is not active', () => {
   assert.deepEqual(ids({ states: ['active'] }), [7, 6, 5]);
   assert.deepEqual(ids({ states: ['needs-you'] }), [4, 3]);
+});
+
+test('parked tasks are listed on their own, and found by their reason', () => {
+  assert.deepEqual(ids({ states: ['parked'] }), [14]);
+  assert.deepEqual(ids({ states: ['proposed'] }), [8]);
+  assert.deepEqual(ids({ search: 'compliance' }), [14]);
 });
 
 test('repo and search narrow the list', () => {

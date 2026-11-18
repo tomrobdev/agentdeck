@@ -18,11 +18,13 @@ const STALE: StateFields = {
   needs: { kind: 'deps', items: ['zod'] },
   question: { question: 'Which?', options: ['a'] },
   done_by: 'person',
+  park_reason: 'phase 3',
 };
-const NONE: StateFields = { stop_reason: null, needs: null, question: null, done_by: null };
+const NONE: StateFields = { stop_reason: null, needs: null, question: null, done_by: null, park_reason: null };
 
 const ON_TASK: Record<(typeof TASK_STATUSES)[number], Partial<StateFields>> = {
   proposed: {},
+  parked: { park_reason: STALE.park_reason },
   queued: {},
   running: {},
   cancel_requested: {},
@@ -41,8 +43,8 @@ function setup() {
 
 const writeRow = (db: Db, id: number, status: string, needs: string, question: string) =>
   db.raw
-    .prepare('UPDATE tasks SET status = ?, stop_reason = ?, needs = ?, question = ?, done_by = ? WHERE id = ?')
-    .run(status, STALE.stop_reason, needs, question, STALE.done_by, id);
+    .prepare('UPDATE tasks SET status = ?, stop_reason = ?, needs = ?, question = ?, done_by = ?, park_reason = ? WHERE id = ?')
+    .run(status, STALE.stop_reason, needs, question, STALE.done_by, STALE.park_reason, id);
 
 const onTask = (task: object) => Object.fromEntries(Object.entries(task).filter(([key]) => key in NONE));
 
@@ -92,6 +94,7 @@ const API_FIELDS = [
   'merge_requested_at',
   'model',
   'needs',
+  'park_reason',
   'plan_steps',
   'plan_task',
   'plan_unfinished',
@@ -152,5 +155,19 @@ test('applyEvent clears the columns of the status the task left', () => {
   assert.ok(db.recordQuestion(id, { question: 'Which?', options: [] }, 'Which?'));
   assert.ok(db.applyEvent(id, { type: 'cancel' }));
   assert.deepEqual({ ...(columns() as object) }, { stop_reason: 'stuck', needs: null, question: null, done_by: null });
+  db.close();
+});
+
+test('park stores its reason and lift clears it', () => {
+  const { db, id } = setup();
+  const parkReason = () =>
+    (db.raw.prepare('SELECT park_reason FROM tasks WHERE id = ?').get(id) as { park_reason: string | null }).park_reason;
+  db.raw.prepare("UPDATE tasks SET status = 'proposed' WHERE id = ?").run(id);
+  assert.ok(db.applyEvent(id, { type: 'park' }, { reason: 'phase 3' }));
+  assert.equal(parkReason(), 'phase 3');
+  assert.equal(db.applyEvent(id, { type: 'approve' }), null);
+  assert.ok(db.applyEvent(id, { type: 'lift' }));
+  assert.equal(parkReason(), null);
+  assert.equal(db.getTask(id)?.status, 'proposed');
   db.close();
 });

@@ -1847,24 +1847,24 @@ A task at the end of a link: what its link states are read from.
 
 ### Listable
 
-| Field          | Type                                                                                                                      | Comment |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------- | ------- |
-| `repo_id`      | `RepoId`                                                                                                                  |         |
-| `id`           | `TaskId`                                                                                                                  |         |
-| `waiting`      | `Waiting \| null`                                                                                                         |         |
-| `title`        | `string`                                                                                                                  |         |
-| `source`       | `TaskSource`                                                                                                              |         |
-| `updated_at`   | `string`                                                                                                                  |         |
-| `priority`     | `number`                                                                                                                  |         |
-| `model`        | `string`                                                                                                                  |         |
-| `status`       | `"failed" \| "blocked" \| "proposed" \| "parked" \| "queued" \| "running" \| "done" \| "cancel_requested" \| "cancelled"` |         |
-| `stop_reason`  | `string \| null`                                                                                                          |         |
-| `park_reason?` | `string \| null \| undefined`                                                                                             |         |
-| `pr_url`       | `string \| null`                                                                                                          |         |
-| `pr_state`     | `PrState \| null`                                                                                                         |         |
-| `branch`       | `string \| null`                                                                                                          |         |
-| `repo?`        | `string \| null \| undefined`                                                                                             |         |
-| `unblocks?`    | `number[] \| undefined`                                                                                                   |         |
+| Field         | Type                                                                                                                      | Comment |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `repo_id`     | `RepoId`                                                                                                                  |         |
+| `id`          | `TaskId`                                                                                                                  |         |
+| `waiting`     | `Waiting \| null`                                                                                                         |         |
+| `title`       | `string`                                                                                                                  |         |
+| `source`      | `TaskSource`                                                                                                              |         |
+| `updated_at`  | `string`                                                                                                                  |         |
+| `priority`    | `number`                                                                                                                  |         |
+| `model`       | `string`                                                                                                                  |         |
+| `status`      | `"failed" \| "blocked" \| "proposed" \| "parked" \| "queued" \| "running" \| "done" \| "cancel_requested" \| "cancelled"` |         |
+| `stop_reason` | `string \| null`                                                                                                          |         |
+| `park_reason` | `string \| null`                                                                                                          |         |
+| `pr_url`      | `string \| null`                                                                                                          |         |
+| `pr_state`    | `PrState \| null`                                                                                                         |         |
+| `branch`      | `string \| null`                                                                                                          |         |
+| `repo?`       | `string \| null \| undefined`                                                                                             |         |
+| `unblocks?`   | `number[] \| undefined`                                                                                                   |         |
 
 ### ListedTask
 

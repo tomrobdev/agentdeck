@@ -399,6 +399,29 @@ const ROWS: Row[] = [
   },
   {
     method: 'POST',
+    path: '/api/tasks/:task/park',
+    params: task(proposed),
+    body: { reason: 'phase 3' },
+    shape: TASK_DETAIL,
+    check: (t) => {
+      assert.equal(t.status, 'parked');
+      assert.equal(t.park_reason, 'phase 3');
+    },
+  },
+  bad('POST', '/api/tasks/:task/park', { reason: 3 }, task(proposed)),
+  {
+    method: 'POST',
+    path: '/api/tasks/:task/lift',
+    params: task(() => {
+      const id = proposed();
+      actions.parkTask(app, id, 'later');
+      return id;
+    }),
+    shape: TASK_DETAIL,
+    check: (t) => assert.equal(t.status, 'proposed'),
+  },
+  {
+    method: 'POST',
     path: '/api/tasks/:task/cancel',
     params: task(queued),
     shape: ['result'],

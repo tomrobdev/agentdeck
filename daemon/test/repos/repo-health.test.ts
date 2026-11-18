@@ -294,7 +294,7 @@ test('edit refuses other statuses, unknown tasks, empty edits and invalid values
 
   db.claimNextTask();
   assert.equal(db.getTask(task.id)!.status, 'running');
-  await refuses(task.id, { title: 'x' }, /is running; only proposed, queued, blocked, failed tasks can be edited/);
+  await refuses(task.id, { title: 'x' }, /is running; only proposed, parked, queued, blocked, failed tasks can be edited/);
   db.applyEvent(task.id, { type: 'finish', outcome: 'done' });
   await refuses(task.id, { title: 'x' }, /is done/);
   db.applyEvent(task.id, { type: 'retry' });
