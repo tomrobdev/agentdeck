@@ -144,6 +144,8 @@ export async function removeTaskWorktree(app: App, id: TaskId): Promise<{ branch
   const worktree = t.checkout?.worktree;
   if (!worktree) throw new ActionError('task has no worktree');
   refuseWhileSyncing(app, id);
+  if (app.runsForTask(id).some((r) => !r.ended_at))
+    throw new ActionError(`#${id} has a run going in its worktree; try again when it has ended`, undefined, 'conflict');
   await app.workspace.removeCheckout(requireTaskRepo(app, t), { worktree });
   app.setCheckout(t.id, { worktree: null });
   return { branch: t.checkout?.branch ?? null };

@@ -490,6 +490,24 @@ test('transition: the domain events of every entry in RULES', () => {
   }
 });
 
+test('transition: a retry never takes attempts away', () => {
+  const counters = (attempts: number, max_attempts: number, event: TaskEvent, status: TaskStatus = 'blocked') =>
+    transition({ ...stateIn(status), id, attempts, max_attempts, restarts: 0, pr: null }, event)?.counters.max_attempts;
+  assert.equal(counters(0, 3, { type: 'retry' }, 'cancelled'), 3, 'cancelled before it ran');
+  assert.equal(counters(0, 3, { type: 'retry' }), 3, 'blocked by the environment, its attempt given back');
+  assert.equal(counters(1, 3, { type: 'retry' }), 3);
+  assert.equal(counters(3, 3, { type: 'retry' }, 'failed'), 4, 'out of attempts: one more');
+  assert.equal(counters(2, 3, { type: 'review_retry' }, 'done'), 3);
+  assert.equal(counters(3, 3, { type: 'review_retry' }, 'done'), 4);
+});
+
+test('transition: a review run cannot send a merged task back to work', () => {
+  const done = { ...stateIn('done'), id, attempts: 1, max_attempts: 1, restarts: 0 };
+  assert.equal(transition({ ...done, pr: { state: 'merged' } }, { type: 'review_retry' }), null);
+  assert.equal(transition({ ...done, pr: { state: 'open' } }, { type: 'review_retry' })?.state.status, 'queued');
+  assert.equal(transition({ ...done, pr: { state: 'merged' } }, { type: 'retry' })?.state.status, 'queued', 'a person still can');
+});
+
 test('transition: null where the event is refused', () => {
   assert.equal(transition({ ...stateIn('done'), id, attempts: 1, max_attempts: 1, restarts: 0, pr: null }, { type: 'claim' }), null);
   assert.equal(
