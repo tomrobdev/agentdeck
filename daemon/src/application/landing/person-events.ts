@@ -1,4 +1,4 @@
-// Use cases for a person's lifecycle events: approve, reject, park, lift, retry, cancel and mark done.
+// Use cases for a person's lifecycle events: approve, reject, retry, cancel and mark done.
 import type { App } from '#application/ports/app.ts';
 import type { TaskId } from '#domain/shared/index.ts';
 import { type TaskStatus, fromStatuses, modelError } from '#domain/work/index.ts';

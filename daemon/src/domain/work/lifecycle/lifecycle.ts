@@ -8,7 +8,7 @@ import { type TaskChanges, statusChangePrChanges } from '#domain/work/lifecycle/
 
 export type TaskStatus =
   | 'proposed' // suggested by the planner, waiting for approval
-  | 'parked' // a proposal kept for later: off Attention, not approvable until lifted
+  | 'parked'
   | 'queued'
   | 'running'
   | 'done'
@@ -40,8 +40,8 @@ export type TaskEvent =
   | { type: 'cancel' }
   | { type: 'approve' } // accept a planner proposal
   | { type: 'reject' } // decline a planner proposal
-  | { type: 'park' } // keep a proposal for later, with a reason
-  | { type: 'lift' } // bring a parked task back to proposed
+  | { type: 'park' }
+  | { type: 'lift' }
   | { type: 'retry' } // a human asks for another attempt
   | { type: 'unblock_retry' } // an unblock run sent a blocked task back with a note; its attempts stay as they are
   | { type: 'review_retry' } // a review run asked for changes to a done task; one attempt is added, as a person's retry adds

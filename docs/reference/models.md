@@ -1951,10 +1951,10 @@ A task's own plan with its HTML: the one stored under the task's numbered name.
 
 A proposal kept for later: off Attention and not approvable until a person lifts it back to proposed.
 
-| Field         | Type             | Comment                    |
-| ------------- | ---------------- | -------------------------- |
-| `status`      | `"parked"`       |                            |
-| `park_reason` | `string \| null` | why it waits, and for what |
+| Field         | Type             | Comment |
+| ------------- | ---------------- | ------- |
+| `status`      | `"parked"`       |         |
+| `park_reason` | `string \| null` |         |
 
 ### ParsedPlan
 

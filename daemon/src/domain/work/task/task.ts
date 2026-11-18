@@ -38,7 +38,7 @@ export interface OpenState {
 /** A proposal kept for later: off Attention and not approvable until a person lifts it back to proposed. */
 export interface ParkedState {
   status: 'parked';
-  park_reason: string | null; // why it waits, and for what
+  park_reason: string | null;
 }
 
 /** A finished task, and whether a person finished it. */
