@@ -114,10 +114,18 @@ export function classifyRun<R extends ResultLike>(run: ClaudeRunLike<R>): RunCla
   if (!result || result.is_error || exitCode !== 0) {
     const why = stderr.trim() ? `: ${lastLine(stderr)}` : '';
     const stopped = exitCode === 0 ? NO_RESULT[0] : `${NO_RESULT[1]}${exitCode}`;
-    return { kind: 'failed', reason: result?.subtype ?? `${stopped}${why}` };
+    return { kind: 'failed', reason: errorSubtype(result) ?? errorText(result) ?? `${stopped}${why}` };
   }
   return { kind: 'finished', result };
 }
+
+type ErrorMarks = ResultLike & { is_error?: boolean; subtype?: string };
+
+const errorSubtype = (result: ErrorMarks | undefined): string | undefined =>
+  result?.subtype && result.subtype !== 'success' ? result.subtype : undefined;
+
+const errorText = (result: ErrorMarks | undefined): string | undefined =>
+  result?.is_error && result.result?.trim() ? oneLine(lastLine(result.result)).slice(0, 200) : undefined;
 
 const NO_RESULT = ['claude ended without a result', 'claude exited with code '];
 
@@ -184,15 +192,17 @@ function baseOutcome(r: RunCameTo): WorkerResult {
   return { outcome: 'done' };
 }
 
-const STATUS_LINE = new RegExp(String.raw`^${STATUS_WORD}(?::\s*(.*))?$`, 'i');
+const STATUS_LINE = new RegExp(String.raw`^${STATUS_WORD}\b[\s:.\-–—]*(.*)$`, 'i');
+
+const MARKDOWN_AROUND = /^[\s>*_`#-]+|[\s*_`]+$/g;
 
 export function parseStatus(text: string | undefined): { blocked: boolean; reason?: string; declared: boolean; needs?: Needs } {
   const lines = (text ?? '').trim().split('\n').reverse();
   for (const line of lines) {
-    const m = line.trim().match(STATUS_LINE);
+    const m = line.replace(MARKDOWN_AROUND, '').match(STATUS_LINE);
     if (m) {
       const blocked = m[1].toUpperCase() === 'BLOCKED';
-      const reason = m[2]?.trim();
+      const reason = m[2].trim() || undefined;
       const needs = blocked ? parseNeeds(reason) : undefined;
       return { blocked, reason, declared: true, ...(needs ? { needs } : {}) };
     }

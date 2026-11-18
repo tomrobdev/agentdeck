@@ -193,7 +193,7 @@ test('a blocking answer retries the task with the review as its note; a second b
     ],
   );
   assert.equal(t.attempts, 2);
-  assert.equal(t.max_attempts, 2, 'the retry gave one attempt on top of those used, as a person’s does');
+  assert.equal(t.max_attempts, 3, 'the retry took no attempt away');
 
   const retries = db.eventsForTask(task.id).filter((e) => e.type === 'review_retry');
   assert.equal(retries.length, 1, 'only once per task');
