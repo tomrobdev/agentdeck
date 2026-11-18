@@ -15,28 +15,23 @@ Ask what should change and why, in one question. Then stop asking and read: the 
 
 Find the files the change starts from, the code it must fit (rules in the repo's CLAUDE.md, existing helpers, tests), and anything related in the queue (`agentdeck ls <search>`). Ask the person only what the code can't answer: a product choice, a trade-off, what done looks like when the code doesn't say.
 
-## 3. Write the six sections
+## 3. Write the four sections
 
-Write the prompt in these sections, in this order, each headed by its name (`PROMPT_SECTIONS` in `daemon/src/domain/work/task/task.ts` of the AgentDeck repo). Leave out a section only when it would be empty. It should read well as a ticket.
+Write the prompt in these sections, in this order, each as a `## ` heading (`PROMPT_SECTIONS` in `daemon/src/domain/work/task/prompt.ts` of the AgentDeck repo). Current problem and Expected outcome are required; leave out Out of scope or Constraints only when it would be empty. It should read well as a ticket. Say what is wrong and what done looks like, not how to do it: the worker reads the code and decides the how.
 
 ```
-## Goal
-What the task achieves, in a sentence or two.
+## Current problem
+What is wrong or missing today, and where: the files, functions and screens.
 
-## Context
-The files to start from, why it is needed, related tasks or plans.
-
-## Change
-What to do.
+## Expected outcome
+- What a reviewer can check once it is done, one bullet each.
+- The last bullet: the repo's test command passes.
 
 ## Out of scope
 What not to touch.
 
 ## Constraints
 Limits the agent must keep to, such as no new dependencies or no changes to package.json.
-
-## Definition of done
-The test command passing, plus concrete checks a reviewer can confirm.
 ```
 
 - **Paths in full, from the repo root:** `daemon/src/domain/work/task/task.ts`, not `domain/work/task/task.ts`. `agentdeck add` warns about every path the prompt names that isn't on the base branch, and a shortened path gives a false warning.
@@ -60,4 +55,4 @@ agentdeck add "<prompt>" --repo <repo> --title "<title>" --model <sonnet|opus> [
 
 If they ask to file it for later, or for someone else to approve, add `--propose`: it lands in `proposed` and waits for `agentdeck approve <id>`.
 
-Read `agentdeck add`'s notes. A path warning means the prompt or the base branch is wrong: fix it with `agentdeck edit <id> --prompt "…"` before the task starts. Then tell the person the task id and stop. Don't poll it: AgentDeck notifies the person when it needs them.
+Read `agentdeck add`'s output. AgentDeck stores the prompt with its sections as `## ` headings in the order above, and a `warning:` line means Current problem or Expected outcome is missing: add it with `agentdeck edit <id> --prompt "…"`. A path note means the prompt or the base branch is wrong: fix it the same way before the task starts. Then tell the person the task id and stop. Don't poll it: AgentDeck notifies the person when it needs them.

@@ -22,7 +22,7 @@ paths:
     - `insights/`: the scorecard and what is counted over time.
     - `shared/`: `text.ts`, `time.ts`, `id.ts`.
   - The contexts import each other one way: proposals, runs → work → landing → repos, with capacity below and insights and operations above, reading the others.
-  - A task's `Needs` are in `work/task/needs.ts` and its prompt sections (`PROMPT_SECTIONS`) in `work/task/task.ts`; shared text helpers such as `lastLine` are in `shared/text.ts`.
+  - A task's `Needs` are in `work/task/needs.ts`, and its prompt sections (`PROMPT_SECTIONS`) and the one parser that reads them in either style (`parsePrompt`, `promptSection`, `shapePrompt`) in `work/task/prompt.ts`; shared text helpers such as `lastLine` are in `shared/text.ts`.
 - **A deterministic domain.** `domain/` reads no clock (`Date.now()`, `new Date()` without arguments), no randomness (`Math.random()`, `crypto`) and no `process`: the time and random values are arguments. Checked with the strict types, on the same list. (`rule:domain-deterministic`)
 - **Every domain function has a pure test.** (`rule:domain-tests`)
   - Each function a context's `index.ts` under `daemon/src/domain/` exports is used in at least one pure test: a test file that imports nothing from `daemon/src/db`, `application` or `adapters`, `daemon/test/fixtures/`, `node:fs` or `node:child_process`.
