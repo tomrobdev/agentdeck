@@ -45,6 +45,12 @@ paths:
   - An `_Avoid_:` word in `GLOSSARY.md` appears nowhere in `daemon/src` or `app/src`.
   - "Hold" (hold, holds, held, holding) is the governor's word alone (`domain/capacity/`, the scheduler's announcement, the `hold` notification kind); a repo or the daemon is paused, and anywhere else say wait or keep.
   - Other uses are on the check's allow-list, each with its reason.
+- **No folder cycles.** Folders in `domain/` and in `application/` import each other without cycles, counting runtime and type imports. The cycles there today are on `ALLOWED_FOLDER_CYCLES`, a list that only shrinks. (`rule:folder-cycles`)
+- **No folder over 12 files.** A folder under `daemon/src`, `app/src` or `daemon/test` has at most 12 files directly in it (subfolders do not count). Today's folders over the limit are on `OVERSIZED_FOLDERS`, a list that only shrinks. A listed folder may grow while it is listed. (`rule:folder-size`)
+- **No source file over 400 lines.** A `.ts` or `.vue` file under `daemon/src` or `app/src` has at most 400 lines. Today's long files are on `LONG_FILES`, a list that only shrinks. (`rule:file-size`)
+- **No `export *`.** A file that re-exports names what it re-exports, so a reader sees where each name comes from, and there are no barrel files: the dashboard imports `api/work` or `api/http`, not `api/`. A context's `index.ts` is its interface, not a barrel. (`rule:no-export-star`)
+- **Every source file is in a review area.** `docs/review-areas.md` maps `daemon/src/` and `app/src/` into the areas the `review-area` skill reviews; a new file goes under its area, and a moved one is moved there too. (`rule:review-areas`)
+- **No new runtime dependencies** without a reason. The one there is, `drizzle-orm`, is pinned at exactly `1.0.0-rc.5` (no caret); use only its core query builder, not the relational query API. `pnpm db:studio` browses the live database. (`rule:no-runtime-deps`)
 
 ## How to
 

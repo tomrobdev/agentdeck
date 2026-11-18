@@ -35,7 +35,7 @@ Use the words in the glossary in code, logs and UI. Plans are named `<task id>-<
 
 ## Where the detail is
 
-Each rule below is stated in a line. Its detail, and how to work in that part of the code, is in a file under `.claude/rules/` that loads when you open a file it covers. Read the file yourself before planning a change you have not opened a file for.
+Each rule below is one line. Its detail and the how-to are in a file under `.claude/rules/`, which loads when you open a file it covers. Read it yourself before planning a change to code you have not opened.
 
 | Working in                                            | Read                            |
 | ----------------------------------------------------- | ------------------------------- |
@@ -76,7 +76,7 @@ The map of the code is `docs/architecture.md`.
 
 - **Entry points are `api/` and `cli/`. They import `application/actions.ts`, `domain/` and the contract, never `db/` or `adapters/`: every store call is a use case.** <!-- rule:entry-points -->
 - **The CLI calls the use cases in its own process, so it works while the daemon is down.** <!-- rule:cli-in-process -->
-- **The database is the only state the processes share: application code keeps no module-level state other than a lock or a cache of immutable results.** A CLI change reaches the scheduler on its next tick. <!-- rule:no-module-state -->
+- **The database is the only state the processes share**: application code keeps no module-level state other than a lock or a cache of immutable results. <!-- rule:no-module-state -->
 
 ### Composition root
 
@@ -85,33 +85,31 @@ The map of the code is `docs/architecture.md`.
 ### Dashboard
 
 - **The API's request and response types are in `api/contract/<context>.ts`, which import only types, and only from `domain/` and each other.** <!-- rule:contract-types -->
-- **`app/src/` is grouped by the daemon's bounded contexts, as the daemon is**, in the layers `pages/` → `components/` → `composables/` → `lib/` → `api/`. `MAY_IMPORT` in `daemon/scripts/lib/dashboard-layout.ts` is the rule. <!-- rule:dashboard-layout -->
+- **`app/src/` is grouped by the daemon's bounded contexts, as the daemon is**, in the layers `pages/` → `components/` → `composables/` → `lib/` → `api/`. <!-- rule:dashboard-layout -->
 
 ## Rules
 
-`daemon/test/architecture/architecture.test.ts` checks the Boundaries above, plus the dependency, migration and process-group rules below. Each failure names the file, line and rule. The map of the code is `docs/architecture.md`. A new rule gets a check, or goes on the unchecked list with its reason (`daemon/scripts/lib/rules.ts`); `pnpm rules` prints each rule with its checks.
-
-Several rules keep a list of today's exceptions in `daemon/scripts/lib/progress.ts`. Each such list **only shrinks**: a new entry fails, and so does an entry that no longer applies. `docs/reference/progress.md` counts what is left.
+`daemon/test/architecture/architecture.test.ts` checks the Boundaries above and the rules below; each failure names the file, line and rule. `pnpm rules` prints each rule with its checks. A list of today's exceptions in `daemon/scripts/lib/progress.ts` only shrinks: fix the code rather than adding an entry.
 
 ### Structure
 
-- **No folder cycles.** Folders in `domain/` and in `application/` import each other without cycles, counting runtime and type imports. The cycles there today are on `ALLOWED_FOLDER_CYCLES`, a list that only shrinks. <!-- rule:folder-cycles -->
-- **No folder over 12 files.** A folder under `daemon/src`, `app/src` or `daemon/test` has at most 12 files directly in it (subfolders do not count). Today's folders over the limit are on `OVERSIZED_FOLDERS`, a list that only shrinks. A listed folder may grow while it is listed. <!-- rule:folder-size -->
-- **No source file over 400 lines.** A `.ts` or `.vue` file under `daemon/src` or `app/src` has at most 400 lines. Today's long files are on `LONG_FILES`, a list that only shrinks. <!-- rule:file-size -->
+- **No folder cycles** between the folders in `domain/` or in `application/`, type imports included. <!-- rule:folder-cycles -->
+- **No folder over 12 files** directly in it, under `daemon/src`, `app/src` or `daemon/test`. <!-- rule:folder-size -->
+- **No source file over 400 lines** (`.ts`, `.vue`) under `daemon/src` or `app/src`. <!-- rule:file-size -->
 - **Files sit in context folders.** A file in `daemon/src/db`, `daemon/src/adapters`, `daemon/src/api/routes`, `daemon/src/cli` or `daemon/test` sits in a folder named for a context. <!-- rule:context-folders -->
 - **Contexts are imported through their `index.ts`**, a file of named exports; nothing outside a context reaches into its files. <!-- rule:contexts -->
 - **Imports are absolute.** Every import, same-folder ones included, uses the `#` prefix of its layer and names its file with its extension, never `./` or `../`. `pnpm imports:fix` rewrites them. <!-- rule:absolute-imports -->
-- **No `export *`.** A file that re-exports names what it re-exports, so a reader sees where each name comes from, and there are no barrel files: the dashboard imports `api/work` or `api/http`, not `api/`. A context's `index.ts` is its interface, not a barrel. <!-- rule:no-export-star -->
-- **Every source file is in a review area.** `docs/review-areas.md` maps `daemon/src/` and `app/src/` into the areas the `review-area` skill reviews; a new file goes under its area, and a moved one is moved there too. <!-- rule:review-areas -->
+- **No `export *`** and no barrel files: a file that re-exports names what it re-exports. <!-- rule:no-export-star -->
+- **Every source file is in a review area** in `docs/review-areas.md`: add a new file there, and move a moved one. <!-- rule:review-areas -->
 
 ### Code
 
-- **Code comments only where a tool reads them.** In `daemon/src`, `app/src`, `daemon/test` and `daemon/scripts`, write no comment but a file's leading one-line `//` comment and the few other kinds a tool reads. Say the rest in a name, a type, a test or the docs. <!-- rule:code-comments -->
+- **Code comments only where a tool reads them.** Write none but a file's leading one-line `//` comment; say the rest in a name, a type, a test or the docs. <!-- rule:code-comments -->
 - **Strict types.** No explicit `any`, no non-null assertion `!`, and every `switch` on a union of literals covers every member or ends in a default that assigns the value to `never`. <!-- rule:strict-types -->
-- **A deterministic domain.** `domain/` reads no clock (`Date.now()`, `new Date()` without arguments), no randomness (`Math.random()`, `crypto`) and no `process`: the time and random values are arguments. Checked with the strict types, on the same list. <!-- rule:domain-deterministic -->
-- **Every domain function has a pure test.** Each function a context's `index.ts` exports is used in a test file that imports nothing from `db/`, `application/`, `adapters/`, the fixtures, `node:fs` or `node:child_process`. <!-- rule:domain-tests -->
+- **A deterministic domain.** `domain/` reads no clock, no randomness and no `process`: the time and random values are arguments. <!-- rule:domain-deterministic -->
+- **Every domain function has a pure test**: a test file that imports nothing from `db/`, `application/`, `adapters/`, the fixtures, `node:fs` or `node:child_process`. <!-- rule:domain-tests -->
 - **Erasable TypeScript only.** Node runs `.ts` directly, so no enums, namespaces or constructor parameter properties. <!-- rule:erasable-ts -->
-- **No new runtime dependencies** without a reason. The one there is, `drizzle-orm`, is pinned at exactly `1.0.0-rc.5` (no caret); use only its core query builder, not the relational query API. `pnpm db:studio` browses the live database. <!-- rule:no-runtime-deps -->
+- **No new runtime dependencies** without a reason. `drizzle-orm` is pinned at exactly `1.0.0-rc.5`; use only its core query builder. <!-- rule:no-runtime-deps -->
 - **Use the glossary's words.** An `_Avoid_:` word in `GLOSSARY.md` appears nowhere in `daemon/src` or `app/src`, and "hold" is the governor's word alone. <!-- rule:vocabulary -->
 
 ### Model and database
@@ -120,13 +118,13 @@ Several rules keep a list of today's exceptions in `daemon/scripts/lib/progress.
 - **Models, not rows.** A store reads a whole row of `tasks`, `repos` or `runs` only through `db/mappers.ts`. <!-- rule:models-not-rows -->
 - **A task write with a rule is a domain function** in `domain/work/lifecycle/task-writes.ts`; the task store only persists it under its guard. <!-- rule:task-writes -->
 - **Ids are branded** (`TaskId`, `RepoId`, `RunId`, `ReviewId`, `PlannerRunId`): an entry point parses an id once, and a field named `…_id` or `…Id` is never typed `number`. <!-- rule:branded-ids -->
-- **A state machine is a rule table in `domain/`** (`RULES` in `work/lifecycle/lifecycle.ts`, `COMMENT_MOVES` in `landing/review/review.ts`), and `pnpm docs:gen` lists it in `docs/reference/state-machines.md`. A state type no table drives is on the allow-list in `daemon/scripts/lib/model-docs.ts` with its reason; pull request state and merge requests are there until they are tables. <!-- rule:state-as-data -->
+- **A state machine is a rule table in `domain/`**, which `pnpm docs:gen` lists in `docs/reference/state-machines.md`. <!-- rule:state-as-data -->
 
 ### Checks and working here
 
 - **Coverage floors only rise.** `pnpm coverage` fails when a group drops below its floor on `COVERAGE_FLOORS`; never lower one. <!-- rule:coverage-floors -->
-- **CI runs nothing a task's check skips.** Every `run:` step in `.github/workflows/` is a part of `check:fast` or an extra check of `pnpm check:task` (`daemon/scripts/lib/check-task.ts`), or setup listed with its reason, and each check step is named. A new CI check goes into `check:task` too, so a worker whose tests passed isn't failed by one it never ran. <!-- rule:ci-parity -->
+- **CI runs nothing a task's check skips.** A new CI check goes into `pnpm check:task` too. <!-- rule:ci-parity -->
 - **Every `claude` runs in its own process group** with its pid recorded on the run, so crash recovery can stop it. <!-- rule:claude-process-group -->
 - **Keep this checkout on `main`.** The installed daemon runs its `daemon/src/cli.ts`, so switching branches here swaps the live daemon's code. Try task branches from their worktrees. <!-- rule:main-checkout -->
-- **The router is the only navigation.** Nothing under `app/src/` reads `location.hash`, calls `history.pushState` or `history.replaceState`, or listens to `hashchange`, and `createRouter` is called only in `app/src/router.ts`. <!-- rule:dashboard-router -->
+- **The router is the only navigation** in `app/src/`: nothing else reads `location.hash`, calls `history.pushState` or listens to `hashchange`. <!-- rule:dashboard-router -->
 - **Delegating to AgentDeck:** when to queue a task instead of doing it here, how to write it, and how to work in a task's worktree are in the `delegate` skill (`.claude/skills/delegate/SKILL.md`). <!-- rule:delegate-skill -->

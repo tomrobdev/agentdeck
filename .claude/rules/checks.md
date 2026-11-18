@@ -25,4 +25,5 @@ paths:
 - **`pnpm test:ui`** runs Playwright specs, light and dark screenshots and a contrast check in `app/e2e/`, against the Vite dev server and a daemon on a scratch home seeded with a task in every stage. `check:task` runs it; CI does not.
 - **`pnpm test:github`** runs the whole lifecycle on a throwaway GitHub repo named by `AGENTDECK_GITHUB_E2E_REPO`. Opt-in, run by a person, never in CI: `docs/github-e2e.md`.
 - **The lists that only shrink** are in `daemon/scripts/lib/progress.ts`: a new entry fails, and so does an entry that no longer applies. `docs/reference/progress.md` counts what is left.
+- **`daemon/test/architecture/architecture.test.ts`** checks the Boundaries in `CLAUDE.md`, plus the dependency, migration and process-group rules. Each failure names the file, line and rule.
 - **A new rule** gets a line with its id in `CLAUDE.md` and a test named `[its-id]`, or goes on `UNCHECKED` in `daemon/scripts/lib/rules.ts` with its reason. `pnpm rules` prints each rule with its checks.
