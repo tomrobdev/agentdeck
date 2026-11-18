@@ -151,6 +151,7 @@ export const PLAIN_TASK_WRITES: Record<string, string> = {
   setCheckout: 'where the work is checked out; a fact the worker reports, no decision',
   setSyncing: 'marks that a sync is running; a lock, no decision',
   recoverOrphans: 'clears the sync marks a crash left; a lock, no decision',
+  clearSyncMarkers: 'clears the sync marks of the syncs a stop cuts off; a lock, no decision',
 };
 
 export const COVERAGE_FLOORS: Record<string, Floor> = {

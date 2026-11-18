@@ -19,7 +19,7 @@ export {
   ntfyTopicError,
 } from '#domain/operations/notification.ts';
 export type { Notification, NotifyKind, NotifySettings } from '#domain/operations/notification.ts';
-export { SCHEMA_DIRTY, offMain, reloadDecision, reloadState, restartWait } from '#domain/operations/restart.ts';
+export { SCHEMA_DIRTY, offMain, reloadDecision, reloadState, restartWait, restartWaiting } from '#domain/operations/restart.ts';
 export type { Activity, ReloadDecision, ReloadInput } from '#domain/operations/restart.ts';
 export type { Settings } from '#domain/operations/settings.ts';
 export {

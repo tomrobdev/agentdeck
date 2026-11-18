@@ -90,6 +90,7 @@ export async function runDaemon({ db, once, log = () => {}, exit }: DaemonOption
       stopping = true;
       stamped(`${sig}: no new requests; waiting up to ${DRAIN_MS / 1000}s for those in flight, then stopping workers`);
       server.close();
+      scheduler.drain();
       const giveUp = setTimeout(stopNow, DRAIN_MS);
       const answered = setInterval(() => {
         if (scheduler.requestsInFlight > 0) return;

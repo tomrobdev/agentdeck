@@ -7,6 +7,10 @@ import { test } from 'node:test';
 process.env.AGENTDECK_HOME = mkdtempSync(join(tmpdir(), 'agentdeck-restart-'));
 
 const { ActionError, gracefulRestart } = await import('#application/actions.ts');
+const { releaseRestartPause } = await import('#application/operations/restart.ts');
+const { Scheduler } = await import('#application/scheduler/scheduler.ts');
+const { RESTART_PAUSE_FRESH_MS } = await import('#domain/operations/restart.ts');
+const { doneTask } = await import('#test/fixtures/fixtures.ts');
 const { logsOptions, restartOptions, serviceAction } = await import('#cli/operations/daemon-args.ts');
 const { parseCommandLine } = await import('#cli/context.ts');
 const { RELOAD_QUIET_MS, reloadDecision, restartWait } = await import('#domain/operations/restart.ts');
@@ -96,6 +100,77 @@ test('graceful restart restores the pause state when the restart fails', async (
   );
   assert.equal(db.isPaused(), true);
   db.close();
+});
+
+test('a second restart is refused while the first still waits, and both leave the daemon as it was', async () => {
+  const db = openDb(':memory:');
+  db.setSetting('paused', '0');
+  const repo = db.addRepo({ name: 'r', path: '/tmp/r', base_branch: 'main' });
+  const planner = db.startPlannerRun(repo.id, '/tmp/log');
+  let second: Promise<unknown> | undefined;
+  await gracefulRestart(db, {
+    restart: async () => {},
+    log: () => {},
+    pollMs: 0,
+    sleep: async () => {
+      second ??= gracefulRestart(db, { restart: async () => assert.fail('the second restart ran'), log: () => {}, pollMs: 0 });
+      db.finishPlannerRun(planner, 'nothing', 0, null);
+    },
+  });
+  await assert.rejects(
+    second ?? Promise.resolve(),
+    (err) => err instanceof ActionError && /another `agentdeck restart` is waiting/.test(err.message),
+  );
+  assert.equal(db.isPaused(), false, 'the pause the first restart took is given back');
+  assert.equal(db.restartPauseAt(), null);
+  db.close();
+});
+
+test('a restart that was cut off leaves a pause the next restart does not take for a person’s', async () => {
+  const db = openDb(':memory:');
+  db.setPaused(true);
+  db.setRestartPauseAt(Date.now() - RESTART_PAUSE_FRESH_MS - 1);
+  await gracefulRestart(db, { restart: async () => {}, log: () => {}, pollMs: 0, sleep: async () => {} });
+  assert.equal(db.isPaused(), false);
+  assert.equal(db.restartPauseAt(), null);
+  db.close();
+});
+
+test('a daemon that starts lifts the pause of a restart that was cut off, and no other', () => {
+  const db = openDb(':memory:');
+  const now = Date.now();
+  db.setPaused(true);
+  assert.equal(releaseRestartPause(db, now), false, 'a person’s pause stays');
+  assert.equal(db.isPaused(), true);
+  db.setRestartPauseAt(now - 1000);
+  assert.equal(releaseRestartPause(db, now), false, 'that restart is still waiting, and gives the pause back itself');
+  assert.equal(db.isPaused(), true);
+  db.setRestartPauseAt(now - RESTART_PAUSE_FRESH_MS);
+  assert.equal(releaseRestartPause(db, now), true);
+  assert.equal(db.isPaused(), false);
+  assert.equal(db.restartPauseAt(), null);
+  db.close();
+});
+
+test('a scheduler that stops clears the marks of the syncs it cuts off', () => {
+  const db = openDb(':memory:');
+  const repo = db.addRepo({ name: 'r', path: '/tmp/r', base_branch: 'main' });
+  const task = doneTask(db, repo, { pr: 'open' });
+  db.setSyncing(task.id, true);
+  db.processes = { ...db.processes, keepAwake: () => ({ set: () => {} }), stopAll: () => {} };
+  const logs: string[] = [];
+  const scheduler = new Scheduler(db, { log: (m) => logs.push(m) });
+  scheduler.stop();
+  assert.equal(db.hasSyncMarker(task.id), false);
+  db.setSyncing(task.id, true);
+  scheduler.stop();
+  assert.equal(db.hasSyncMarker(task.id), true, 'a second stop cuts nothing off');
+  assert.equal(logs.length, 0);
+
+  const closed = new Scheduler(db, { log: (m) => logs.push(m) });
+  db.close();
+  closed.stop();
+  assert.match(logs[0], /sync marks not cleared \(the next start clears them\)/);
 });
 
 test('a requested restart exits once nothing is running, and waits otherwise', () => {

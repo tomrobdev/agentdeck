@@ -21,6 +21,8 @@ export interface SettingsRepository {
   writeSettings(s: Settings): void;
   isPaused(): boolean;
   setPaused(paused: boolean): void;
+  restartPauseAt(): number | null;
+  setRestartPauseAt(at: number | null): void;
   rateLimitedUntil(): number | null;
   setRateLimitedUntil(until: number): void;
   reloadOnChange(): boolean;

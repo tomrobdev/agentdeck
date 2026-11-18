@@ -107,6 +107,7 @@ fn why_label(why: AttentionWhy) -> &'static str {
         AttentionWhy::Blocked => "blocked",
         AttentionWhy::Review => "in review",
         AttentionWhy::Proposed => "proposed",
+        AttentionWhy::Other => "needs you",
     }
 }
 

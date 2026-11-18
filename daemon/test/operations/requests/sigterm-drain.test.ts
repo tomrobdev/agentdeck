@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { request } from 'node:http';
 import { createServer } from 'node:net';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -24,9 +25,14 @@ const { openDb } = await import('#db/index.ts');
 const { runDaemon } = await import('#src/daemon.ts');
 const { realProcesses } = await import('#src/compose.ts');
 
-let release!: () => void;
-const gate = new Promise<void>((resolve) => (release = resolve));
+let release = (): void => {};
+let gate = Promise.resolve();
 let closing = false;
+const keepRequestsOpen = (): void => {
+  closing = false;
+  gate = new Promise<void>((resolve) => (release = resolve));
+};
+keepRequestsOpen();
 const codeHost = fakeCodeHost();
 codeHost.closePr = async () => {
   closing = true;
@@ -101,9 +107,45 @@ test('SIGTERM lets a request in flight answer before the daemon exits', async ()
   assert.deepEqual(exits, [], 'the daemon waits for the request');
   assert.ok(logs.some((l) => /SIGTERM: no new requests/.test(l)));
 
+  const late = app.addTask({ repo_id: repo.id, title: 'queued while stopping', prompt: 'p' });
   release();
   assert.equal((await answer).status, 200, 'the request is answered');
   await waitFor(() => exits.length > 0, { what: 'the daemon to exit once the request is answered' });
   assert.deepEqual(exits, [0]);
+  assert.equal(app.getTask(late.id)?.status, 'queued', 'a daemon that is stopping claims nothing');
+  await stopped;
+  app.setPaused(true);
+  for (const event of ['exit', 'SIGINT', 'SIGTERM']) for (const l of added(event)) process.off(event as 'exit', l);
+  logs.length = 0;
+});
+
+test('SIGTERM waits for a write whose client hung up, not only for its socket', async () => {
+  keepRequestsOpen();
+  const task = doneTask(app, repo);
+  openPr(app, task.id);
+  const exited: number[] = [];
+  const stopped = runDaemon({ db: app, once: false, log: (line) => logs.push(line), exit: (code) => void exited.push(code) });
+  await waitFor(() => logs.some((l) => l.includes('agentdeck daemon')), { what: 'the daemon to start' });
+
+  const client = request({
+    host: '127.0.0.1',
+    port,
+    path: `/api/tasks/${task.id}/close-pr`,
+    method: 'POST',
+    headers: { Authorization: 'Bearer drain-token' },
+    agent: false,
+  });
+  client.on('error', () => {});
+  client.end();
+  await waitFor(() => closing, { what: 'the request to be in flight' });
+  client.destroy();
+  await sleep(100);
+  for (const stop of added('SIGTERM')) stop();
+  await sleep(300);
+  assert.deepEqual(exited, [], 'the write is still being carried out');
+
+  release();
+  await waitFor(() => exited.length > 0, { what: 'the daemon to exit once the write is done' });
+  assert.deepEqual(exited, [0]);
   await stopped;
 });

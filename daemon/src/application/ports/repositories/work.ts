@@ -76,6 +76,7 @@ export interface TaskRepository {
   setCheckout(id: TaskId, fields: { branch?: string | null; worktree?: string | null }): void;
   setSyncing(id: TaskId, on: boolean): void;
   hasSyncMarker(id: TaskId): boolean;
+  clearSyncMarkers(): void;
   setAutoMerge(id: TaskId, value: boolean | null): Task | undefined;
   setAutoMergeCheck(id: TaskId, check: AutoMergeCheck | null): boolean;
   requestMerge(id: TaskId, method: MergeMethod): boolean;

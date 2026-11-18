@@ -24,6 +24,8 @@ const SETTING_MEANINGS: Record<string, string> = {
   pr_check_requested: 'Set to 1 to have the scheduler check open pull requests on its next tick',
   app_seen_at:
     'When the desktop app last said it is running (ms since the epoch); within 90 s of it the app shows desktop notifications and osascript is skipped',
+  restart_pause_at:
+    'When an `agentdeck restart` waiting for work to end last renewed its pause (ms since the epoch); 0 for none. One not renewed for 30 s was cut off, and the next daemon start lifts its pause',
   reload_on_change: 'Restart the daemon onto new code when daemon/src changes and nothing is running',
   max_concurrent: 'Slots: how many tasks may run at once',
   notify_desktop: 'Show desktop notifications',

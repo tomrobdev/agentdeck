@@ -6,6 +6,7 @@ import { describeWait } from '#domain/work/index.ts';
 import { queueWait } from '#application/capacity/gate.ts';
 import { notifyLater } from '#application/operations/notifications.ts';
 import { REVIEW_CHECK_MS, checkReviewsDue } from '#application/operations/review-due.ts';
+import { releaseRestartPause } from '#application/operations/restart.ts';
 import { proposeNow, plannerDue } from '#application/proposals/planner.ts';
 import { resolveConflicting } from '#application/runs/sync.ts';
 import { autoMerge } from '#application/landing/merge/auto-merge.ts';
@@ -47,6 +48,7 @@ export class Scheduler {
   private reviewIdleUntil = 0;
   private timer: NodeJS.Timeout | undefined;
   private stopped = false;
+  private draining = false;
   private drained: (() => void) | undefined;
   private lastHold: string | null = null;
   private lastReload: string | null = null;
@@ -83,6 +85,8 @@ export class Scheduler {
   run(): Promise<void> {
     const reaped = this.app.processes.reapOrphans(this.app.unfinishedPids());
     if (reaped) this.opts.log(`stopped ${reaped} claude process(es) left running by a previous daemon`);
+    if (releaseRestartPause(this.app, Date.now()))
+      this.opts.log('resumed: an `agentdeck restart` that never finished had left the daemon paused');
     const { requeued, failed } = this.app.recoverOrphans();
     if (requeued) this.opts.log(`requeued ${requeued} task(s) left running by a previous daemon`);
     if (failed.length) this.opts.log(`failed ${failed.length} task(s) interrupted by ${MAX_RESTARTS} daemon restarts`);
@@ -93,11 +97,25 @@ export class Scheduler {
   }
 
   stop(): void {
+    if (!this.stopped) this.clearMarksOfSyncsCutOff();
     this.stopped = true;
     clearTimeout(this.timer);
     this.awake.set(false);
     this.app.processes.stopAll();
     this.drained?.();
+  }
+
+  private clearMarksOfSyncsCutOff(): void {
+    try {
+      this.app.clearSyncMarkers();
+    } catch (err) {
+      this.opts.log(`sync marks not cleared (the next start clears them): ${err}`);
+    }
+  }
+
+  drain(): void {
+    this.draining = true;
+    clearTimeout(this.timer);
   }
 
   wake(): void {
@@ -168,7 +186,7 @@ export class Scheduler {
   }
 
   private tick(): void {
-    if (this.stopped) return;
+    if (this.stopped || this.draining) return;
     const watcher = this.reload;
     const reload = watcher?.check(this.activity);
     if (watcher && reload?.exit) {
