@@ -72,7 +72,6 @@ export interface ClaudeRun {
   stderr: string;
   /** The session claude's first `system`/`init` line named; undefined if claude stopped before it. */
   sessionId: string | undefined;
-  /** The limit that stopped claude, when one did. */
   timedOut?: LimitStop;
 }
 

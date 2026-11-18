@@ -1243,7 +1243,7 @@ What a claude session left behind: its result, how the process ended, and why it
 | `cancelled`        | `boolean`                   |                                                                                               |
 | `stderr`           | `string`                    | The end of what claude wrote to stderr, e.g. why it refused to start.                         |
 | `sessionId`        | `string \| undefined`       | The session claude's first `system`/`init` line named; undefined if claude stopped before it. |
-| `timedOut?`        | `LimitStop \| undefined`    | The limit that stopped claude, when one did.                                                  |
+| `timedOut?`        | `LimitStop \| undefined`    |                                                                                               |
 
 ### ClaudeRunLike
 

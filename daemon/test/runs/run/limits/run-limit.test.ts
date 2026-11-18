@@ -1,4 +1,3 @@
-// A claude that stops printing, or runs past the total limit, is stopped: the run fails naming the limit, and its group and slot are freed.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { chmodSync, createWriteStream, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';

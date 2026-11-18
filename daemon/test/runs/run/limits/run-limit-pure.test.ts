@@ -1,4 +1,3 @@
-// The run limits counted in time awake, the timed_out end kind, and the failed outcome a work run gets from it.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
