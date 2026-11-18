@@ -165,7 +165,7 @@ test('a scheduler that stops clears the marks of the syncs it cuts off', () => {
   db.setSyncing(task.id, true);
   scheduler.stop();
   assert.equal(db.hasSyncMarker(task.id), true, 'a second stop cuts nothing off');
-  assert.deepEqual(logs, []);
+  assert.equal(logs.length, 0);
 
   const closed = new Scheduler(db, { log: (m) => logs.push(m) });
   db.close();
