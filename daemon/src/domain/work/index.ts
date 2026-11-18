@@ -158,7 +158,7 @@ export {
   stateFields,
   stopReasonOf,
 } from '#domain/work/task/task.ts';
-export { PROMPT_SECTIONS, promptGoal, promptSection, shapePrompt } from '#domain/work/task/prompt.ts';
+export { PROMPT_SECTIONS, promptBrief, promptGoal, promptSection, shapePrompt } from '#domain/work/task/prompt.ts';
 export type {
   BlockedState,
   BlockedTask,

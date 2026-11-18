@@ -2074,6 +2074,13 @@ A task's link to a plan: the task whose plan it follows (itself when its own pla
 | `status` | `PlanStepStatus` |                                                                        |
 | `done`   | `string[]`       | the done criteria, one per <li> of the step's [data-plan-done] element |
 
+### PromptBrief
+
+| Field      | Type                                | Comment |
+| ---------- | ----------------------------------- | ------- |
+| `sections` | `{ name: string; body: string; }[]` |         |
+| `rest`     | `string`                            |         |
+
 ### PromptSection
 
 | Field     | Type     | Comment |

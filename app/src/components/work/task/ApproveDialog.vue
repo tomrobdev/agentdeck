@@ -11,6 +11,7 @@ import { type BulkResult, bulkMessage, summarizeBulk } from '#lib/work/queue/bul
 import { useActions } from '#composables/shared/useActions.ts';
 import Checkbox from '#components/ui/form/Checkbox.vue';
 import ConfirmDialog from '#components/ui/ConfirmDialog.vue';
+import TaskBrief from '#components/work/overview/TaskBrief.vue';
 import VerifyFindings from '#components/runs/VerifyFindings.vue';
 
 const props = defineProps<{
@@ -174,6 +175,9 @@ async function confirm() {
           </ul>
         </template>
         <VerifyFindings v-if="verifyOf(r.id)" class="pl-6" :view="verifyOf(r.id)!" />
+        <div v-if="saved.has(r.id) && !editing.has(r.id) && !results" class="max-h-56 overflow-y-auto pl-6 text-sm" data-approve-brief>
+          <TaskBrief :prompt="saved.get(r.id) ?? ''" />
+        </div>
         <textarea
           v-if="editing.has(r.id) && !results"
           class="ml-6 min-h-32 font-mono text-sm"
