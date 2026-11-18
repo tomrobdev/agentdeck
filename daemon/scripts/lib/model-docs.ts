@@ -4,6 +4,7 @@ import { MERGE_REQUEST_MOVES, MERGE_REQUEST_STATES } from '#domain/landing/merge
 import { PR_FROM, PR_MOVES } from '#domain/landing/pull-request/pr-moves.ts';
 import { COMMENT_MOVES, COMMENT_STATES } from '#domain/landing/review/review.ts';
 import { FOLLOW_UPS } from '#domain/work/lifecycle/follow-ups.ts';
+import { PLAN_BRANCH_MOVES, PLAN_BRANCH_STATUSES } from '#domain/work/plans/plan-branch.ts';
 import {
   DOMAIN_EVENT_TYPES,
   RULES,
@@ -230,6 +231,14 @@ export const STATE_MACHINES: StateMachine[] = [
     moves: 'move',
     states: MERGE_REQUEST_STATES,
     rules: MERGE_REQUEST_MOVES,
+  },
+  {
+    name: 'Plan branch',
+    source: { file: 'domain/work/plans/plan-branch.ts', constant: 'PLAN_BRANCH_MOVES' },
+    stateType: 'PlanBranchStatus',
+    moves: 'move',
+    states: PLAN_BRANCH_STATUSES,
+    rules: PLAN_BRANCH_MOVES,
   },
 ];
 

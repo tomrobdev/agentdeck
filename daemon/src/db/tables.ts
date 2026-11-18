@@ -9,7 +9,8 @@ import type { TaskEventType } from '#domain/work/index.ts';
 import type { LinkKind } from '#domain/work/index.ts';
 import type { TaskStatus } from '#domain/work/index.ts';
 import type { TaskSource } from '#domain/work/index.ts';
-import { index, integer, primaryKey, real, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
+import type { PlanBranchStatus } from '#domain/work/index.ts';
+import { index, integer, primaryKey, real, sqliteTable, text, unique, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 // guard: a column default is an expression SQLite evaluates on insert, which the builder can only take as raw SQL
 const NOW_DEFAULT = sql`datetime('now')`;
@@ -230,6 +231,29 @@ export const taskPlans = sqliteTable('task_plans', {
   created_at: text().default(NOW_DEFAULT).notNull(),
   updated_at: text().default(NOW_DEFAULT).notNull(),
 });
+
+export const planBranches = sqliteTable(
+  'plan_branches',
+  {
+    id: integer().primaryKey(),
+    plan_task: integer()
+      .$type<TaskId>()
+      .notNull()
+      .references(() => tasks.id),
+    repo_id: integer()
+      .$type<RepoId>()
+      .notNull()
+      .references(() => repos.id),
+    name: text().notNull(),
+    base: text().notNull(),
+    status: text().$type<PlanBranchStatus>().default('open').notNull(),
+    head_commit: text(),
+    pr_url: text(),
+    created_at: text().default(NOW_DEFAULT).notNull(),
+    updated_at: text().default(NOW_DEFAULT).notNull(),
+  },
+  (table) => [uniqueIndex('plan_branches_plan_repo').on(table.plan_task, table.repo_id)],
+);
 
 export const reviews = sqliteTable(
   'reviews',

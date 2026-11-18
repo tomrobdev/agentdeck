@@ -18,7 +18,7 @@ export { ActionError, type ActionErrorKind, onOff } from '#application/shared/in
 export { measureBranch, parseFileRef, taskChanges, taskDiff, taskFile, taskTree } from '#application/work/files.ts';
 export { type LiveContext, repoForPath } from '#application/operations/digest.ts';
 export { liveContext } from '#application/work/live-context.ts';
-export { attachPlan, planHtml } from '#application/work/plans.ts';
+export { abandonPlanBranch, attachPlan, openPlanBranch, planHtml } from '#application/work/plans.ts';
 export { proposeNow } from '#application/proposals/planner.ts';
 export { pilotStats } from '#application/insights/stats.ts';
 export { closeTaskPr, mergePreview, mergeTask } from '#application/landing/merge/merge.ts';

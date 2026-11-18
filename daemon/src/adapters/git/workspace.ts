@@ -9,6 +9,7 @@ import {
   commitLeftovers,
   concludeMerge,
   conflictedFiles,
+  cutBranch,
   deleteBranch,
   ensureWorktree,
   filesWithMarkers,
@@ -66,6 +67,8 @@ async function orUndo<T>(worktree: string, before: string, step: () => Promise<T
 
 export const workspace = {
   prepareCheckout: (repo: Repo, task: Task, target: string) => ensureWorktree(repo, task, target),
+
+  cutBranch: (repoPath: string, branch: string, from: string) => cutBranch(repoPath, branch, from),
 
   async removeCheckout(repo: Repo, checkout: { worktree?: string | null; branch?: string | null }): Promise<void> {
     if (checkout.worktree) await removeWorktree(repo, checkout.worktree);

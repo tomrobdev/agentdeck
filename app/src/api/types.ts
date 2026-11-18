@@ -26,6 +26,8 @@ export type {
   ParkRequest,
   NewLink,
   NewTask,
+  OpenedPlanBranch,
+  PlanBranch,
   PlanHtml,
   PlanStep,
   QueueWait,

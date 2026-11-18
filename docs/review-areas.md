@@ -8,10 +8,13 @@ Groups for a session: **work** is task-use-cases, task-events, task-store and ta
 
 - daemon/src/domain/work/plans/plan.ts
 - daemon/src/domain/work/plans/plan-link.ts
+- daemon/src/domain/work/plans/plan-branch.ts
 - daemon/src/application/work/plans.ts
 - daemon/src/application/work/plan-link.ts
 - daemon/src/adapters/local/plan-file.ts
 - daemon/src/db/work/plans.ts
+- daemon/src/db/work/plan-branches.ts
+- daemon/src/cli/work/plan-branches.ts
 - daemon/src/api/routes/work/plans.ts
 - app/src/components/work/overview/PlanCard.vue
 - docs/plan-format.md

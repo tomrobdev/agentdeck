@@ -18,7 +18,7 @@ import { liveLinks, loadedLinks } from '#application/work/dependencies.ts';
 import { type LinkView, dependentViews, linkViews, startState, unblocksOf, waitingFor } from '#domain/work/index.ts';
 import type { LinkIndex, LinkKind } from '#domain/work/index.ts';
 import { requireTask } from '#application/shared/input.ts';
-import { plansShown } from '#application/work/plans.ts';
+import { plansShown, shownPlanBranch } from '#application/work/plans.ts';
 import { startWaits } from '#application/capacity/queue.ts';
 
 export interface TaskView {
@@ -100,6 +100,7 @@ export async function taskDetail(app: App, id: TaskId) {
     runs: app.runsForTask(id).map((run) => ({ ...run, summary: summaryOf(app, run, task, repo) })),
     events: app.eventsForTask(id),
     plans: plansShown(app, task),
+    plan_branch: shownPlanBranch(app, task),
   };
 }
 

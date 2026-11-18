@@ -122,6 +122,34 @@ stateDiagram-v2
 | `dropped`     | requested → none                        |
 | `refused`     | requested → none                        |
 
+## Plan branch
+
+The rule table is `PLAN_BRANCH_MOVES` in `domain/work/plans/plan-branch.ts`. States: `open`, `active`, `conflict`, `landing`, `landed`, `abandoned`, `partly_landed`.
+
+```mermaid
+stateDiagram-v2
+  open --> active: cut
+  open --> abandoned: abandon
+  active --> conflict: conflict
+  active --> landing: open_pr
+  active --> abandoned: abandon
+  conflict --> active: resolve
+  conflict --> abandoned: abandon
+  landing --> active: close_pr
+  landing --> landed: land
+  landing --> abandoned: abandon
+```
+
+| Move       | Moves                                                                           |
+| ---------- | ------------------------------------------------------------------------------- |
+| `cut`      | open → active                                                                   |
+| `conflict` | active → conflict                                                               |
+| `resolve`  | conflict → active                                                               |
+| `open_pr`  | active → landing                                                                |
+| `close_pr` | landing → active                                                                |
+| `land`     | landing → landed                                                                |
+| `abandon`  | open → abandoned, active → abandoned, conflict → abandoned, landing → abandoned |
+
 ## Follow-ups
 
 What the daemon does after a task's status changes: each domain event `transition` makes, the moves that make it (event, from which statuses) and its follow-ups. The table is `FOLLOW_UPS` in `domain/work/lifecycle/follow-ups.ts`, run by `application/landing/settle.ts`. `task_events` is the outbox: a change whose event has follow-ups writes its row pending in the same transaction, `settle` runs the daemon's at once and marks the row, and the daemon's tick runs whatever is still pending: a person's events (only the daemon follows up), crash recovery's, and any a crash cut off.

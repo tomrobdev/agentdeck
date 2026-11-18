@@ -1,6 +1,6 @@
 // Work: tasks, their links and waits, events and plans.
 import type { RepoId, TaskId } from '#domain/shared/index.ts';
-import type { LinkKind, NeedsKind, PlanSource, PlanStepStatus, TaskSource, TaskStatus } from '#domain/work/index.ts';
+import type { LinkKind, NeedsKind, PlanBranchStatus, PlanSource, PlanStepStatus, TaskSource, TaskStatus } from '#domain/work/index.ts';
 import type { MergeMethod } from '#domain/repos/index.ts';
 import type { PrRetry, PrState } from '#domain/landing/index.ts';
 import type { LiveView, SyncView, Run } from '#api/contract/runs.ts';
@@ -182,12 +182,34 @@ export interface TaskPlan {
   updated_at: string;
 }
 
+export interface PlanBranch {
+  id: number;
+  plan_task: TaskId;
+  repo_id: RepoId;
+  name: string;
+  base: string;
+  status: PlanBranchStatus;
+  head_commit: string | null;
+  pr_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OpenedPlanBranch extends PlanBranch {
+  targeted: TaskId[];
+}
+
+export interface AbandonedPlanBranch extends PlanBranch {
+  moved: TaskId[];
+}
+
 export interface TaskDetail extends Task {
   /** The PR's latest checks, one by one, and when they were read; null when none were read. */
   check_list: { read_at: string; checks: PrCheck[] } | null;
   runs: Run[];
   events: TaskEventRow[];
   plans: TaskPlan[];
+  plan_branch: PlanBranch | null;
 }
 
 /** The reply to adding or editing a task: the task, and what is worth a second look in its prompt (the task is saved either way). */

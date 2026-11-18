@@ -14,9 +14,21 @@ import {
 import type { TaskId } from '#domain/shared/index.ts';
 import type { PrPlan } from '#domain/landing/index.ts';
 import type { PromptPlan } from '#domain/runs/index.ts';
-import { hasPlanLink, otherPlanOwner } from '#domain/work/index.ts';
-import { PLAN_ATTACHABLE_STATUSES, type Task } from '#domain/work/index.ts';
-import { ActionError, object, requireTask } from '#application/shared/input.ts';
+import { hasPlanLink, otherPlanOwner, planOwnerOf } from '#domain/work/index.ts';
+import { PLAN_ATTACHABLE_STATUSES, RUNNING_STATUSES, type Task } from '#domain/work/index.ts';
+import {
+  type PlanBranch,
+  type PlanBranchTask,
+  isLivePlanBranch,
+  needsCut,
+  planBranchMoveError,
+  planBranchName,
+  planBranchOpenError,
+  planBranchTarget,
+  tasksToTarget,
+} from '#domain/work/index.ts';
+import type { Repo } from '#domain/repos/index.ts';
+import { ActionError, object, refuse, requireTask, requireTaskRepo } from '#application/shared/input.ts';
 
 export function readPlanInput(html: unknown): { html: string; plan: ParsedPlan } {
   if (typeof html !== 'string' || !html.trim()) throw new ActionError('the plan is empty');
@@ -102,6 +114,65 @@ export function attachPlan(app: App, id: TaskId, input: { html?: unknown }): Tas
   const saved = app.attachOwnPlan(id, html);
   if (!saved) throw notNow(app.getTask(id)?.status ?? task.status);
   return saved;
+}
+
+function planBranchTasks(app: App, owner: Task): PlanBranchTask[] {
+  const ids = new Set([owner.id, ...app.planFollowers(owner.id).map((f) => f.id)]);
+  return [...ids].flatMap((id) => {
+    const t = app.getTask(id);
+    if (!t || t.repo_id !== owner.repo_id || t.status === 'done' || t.status === 'cancelled') return [];
+    return [{ id: t.id, target: t.target, started: !!t.checkout?.branch, running: RUNNING_STATUSES.includes(t.status) }];
+  });
+}
+
+function planOwnerTask(app: App, id: TaskId): { owner: Task; plan: OwnPlan } {
+  const owner = requireTask(app, planOwnerOf(requireTask(app, id)));
+  const plan = app.ownPlan(owner.id);
+  if (!plan) throw new ActionError(`#${id} has no plan`, undefined, 'not_found');
+  return { owner, plan };
+}
+
+export function openPlanBranch(app: App, id: TaskId): PlanBranch & { targeted: TaskId[] } {
+  const { owner, plan } = planOwnerTask(app, id);
+  const repo = requireTaskRepo(app, owner);
+  refuse(planBranchOpenError(owner.id, app.planBranchOf(owner.id, repo.id)), undefined, 'conflict');
+  const name = planBranchName(owner.id, parsePlan(plan.html)?.title ?? '');
+  const { opened, targeted } = app.openPlanBranch(
+    { plan_task: owner.id, repo_id: repo.id, name, base: repo.base_branch },
+    tasksToTarget(planBranchTasks(app, owner)),
+  );
+  return { ...opened, targeted };
+}
+
+export function abandonPlanBranch(app: App, id: TaskId): PlanBranch & { moved: TaskId[] } {
+  const { owner } = planOwnerTask(app, id);
+  const branch = app.planBranchOf(owner.id, owner.repo_id);
+  if (!branch) throw new ActionError(`#${owner.id}'s plan has no plan branch`, undefined, 'not_found');
+  refuse(planBranchMoveError(branch, 'abandon'), undefined, 'conflict');
+  const outcome = app.abandonPlanBranch(branch);
+  if (!outcome) throw new ActionError(`${branch.name} changed while it was being abandoned; try again`, undefined, 'conflict');
+  if ('refused' in outcome) throw new ActionError(outcome.refused, undefined, 'conflict');
+  return { ...outcome.abandoned, moved: outcome.moved };
+}
+
+export async function cutPlanBranch(app: App, repo: Repo, task: Pick<Task, 'target'>): Promise<void> {
+  const branch = task.target === null ? undefined : app.planBranchNamed(repo.id, task.target);
+  if (!branch || !needsCut(branch)) return;
+  const cut = await app.workspace.cutBranch(repo.path, branch.name, branch.base);
+  if (cut.origin) await app.codeHost.push(repo.path, branch.name);
+  app.cutPlanBranch(branch.id, cut.sha);
+}
+
+export const shownPlanBranch = (app: App, task: Pick<Task, 'id' | 'plan' | 'repo_id'>): PlanBranch | null =>
+  app.planBranchOf(planOwnerOf(task), task.repo_id) ?? null;
+
+export function planBranchTargetFor(app: App, repo: Pick<Repo, 'id'>, owner: TaskId | null): string | null {
+  return owner === null ? null : planBranchTarget(app.planBranchOf(owner, repo.id));
+}
+
+export function isPlanBranchName(app: App, repo: Pick<Repo, 'id'>, name: string): boolean {
+  const branch = app.planBranchNamed(repo.id, name);
+  return !!branch && isLivePlanBranch(branch);
 }
 
 export function planHtml(app: App, id: TaskId, planId: number): { html: string } {

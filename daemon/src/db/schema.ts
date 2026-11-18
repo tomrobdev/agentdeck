@@ -283,6 +283,20 @@ export const MIGRATIONS: Migration[] = [
   'ALTER TABLE tasks ADD COLUMN park_reason TEXT;',
   // 41: tasks.target (domain/work/task/target.ts), the branch a task's work starts from and lands on; NULL is the repo's base.
   'ALTER TABLE tasks ADD COLUMN target TEXT;',
+  // 42: plan_branches (domain/work/plans/plan-branch.ts), a branch a plan owns in a repo, one per (plan task, repo).
+  `CREATE TABLE plan_branches (
+     id INTEGER PRIMARY KEY,
+     plan_task INTEGER NOT NULL REFERENCES tasks(id),
+     repo_id INTEGER NOT NULL REFERENCES repos(id),
+     name TEXT NOT NULL,
+     base TEXT NOT NULL,
+     status TEXT NOT NULL DEFAULT 'open',
+     head_commit TEXT,
+     pr_url TEXT,
+     created_at TEXT NOT NULL DEFAULT (datetime('now')),
+     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+   );
+   CREATE UNIQUE INDEX plan_branches_plan_repo ON plan_branches(plan_task, repo_id);`,
 ];
 
 export function migrate(db: DatabaseSync, steps: Migration[] = MIGRATIONS): number {

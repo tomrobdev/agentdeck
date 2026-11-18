@@ -22,6 +22,7 @@ export interface TaskChanges {
   pr_checks_opened?: CheckCounts | null;
   pr_checks_merged?: CheckCounts | null;
   merge_method?: MergeMethod;
+  target?: string | null;
 }
 
 const NO_MERGE_REQUEST = { merge_requested_at: null, merge_request_method: null, merge_request_check: null } as const;
@@ -30,6 +31,8 @@ const NO_AUTO_MERGE_CHECK = { auto_merge_check: null, auto_merge_checked_at: nul
 export const modelChanges = (to: string): TaskChanges => ({ model: to });
 
 export const maxTurnsChanges = (to: number): TaskChanges => ({ max_turns: to });
+
+export const planBranchTargetChanges = (planBranch: string | null): TaskChanges => ({ target: planBranch });
 
 export const questionChanges = (question: UnblockQuestion): TaskChanges => ({ question });
 

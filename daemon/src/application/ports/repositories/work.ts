@@ -14,6 +14,7 @@ import type {
   Needs,
   OwnPlan,
   PendingFollowUp,
+  PlanBranch,
   PlanFollower,
   PlanSource,
   PrEvent,
@@ -116,6 +117,23 @@ export interface TaskLinkRepository {
   linkedTasks(): LinkedTask[];
   addLink(link: Link): void;
   removeLink(task_id: TaskId, on: TaskId): boolean;
+}
+
+export interface NewPlanBranch {
+  plan_task: TaskId;
+  repo_id: RepoId;
+  name: string;
+  base: string;
+}
+
+export interface PlanBranchRepository {
+  planBranchOf(plan_task: TaskId, repo_id: RepoId): PlanBranch | undefined;
+  planBranchNamed(repo_id: RepoId, name: string): PlanBranch | undefined;
+  openPlanBranch(branch: NewPlanBranch, retarget: TaskId[]): { opened: PlanBranch; targeted: TaskId[] };
+  cutPlanBranch(id: number, head_commit: string): PlanBranch | undefined;
+  abandonPlanBranch(
+    branch: Pick<PlanBranch, 'id' | 'repo_id' | 'name'>,
+  ): { abandoned: PlanBranch; moved: TaskId[] } | { refused: string } | undefined;
 }
 
 export interface PlanRepository {

@@ -23,6 +23,7 @@ export {
   mergeRequestChanges,
   mergeRequestCheckChanges,
   noMergeRequestChanges,
+  planBranchTargetChanges,
   prChanges,
   prChecksChanges,
   prChecksOpenedChanges,
@@ -79,6 +80,20 @@ export {
 } from '#domain/work/plans/plan.ts';
 export type { OwnPlan, ParsedPlan, PlanSource, PlanStepStatus, TaskPlan } from '#domain/work/plans/plan.ts';
 export { matchPath, pathsNamedIn } from '#domain/work/plans/prompt-paths.ts';
+export {
+  abandonRunningError,
+  isLivePlanBranch,
+  needsCut,
+  nextPlanBranchStatus,
+  planBranchMoveError,
+  planBranchName,
+  planBranchOpenError,
+  planBranchStatusesFor,
+  planBranchTarget,
+  tasksBackToBase,
+  tasksToTarget,
+} from '#domain/work/plans/plan-branch.ts';
+export type { PlanBranch, PlanBranchMove, PlanBranchStatus, PlanBranchTask } from '#domain/work/plans/plan-branch.ts';
 export {
   BASE_LOG_FORMAT,
   CHECKED_STATUSES,
