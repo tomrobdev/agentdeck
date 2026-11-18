@@ -97,12 +97,11 @@ export class Scheduler {
   }
 
   stop(): void {
-    const first = !this.stopped;
+    if (!this.stopped) this.clearMarksOfSyncsCutOff();
     this.stopped = true;
     clearTimeout(this.timer);
     this.awake.set(false);
     this.app.processes.stopAll();
-    if (first) this.clearMarksOfSyncsCutOff();
     this.drained?.();
   }
 
@@ -110,7 +109,7 @@ export class Scheduler {
     try {
       this.app.clearSyncMarkers();
     } catch (err) {
-      this.opts.log(`sync marks not cleared (the next start clears them): ${err instanceof Error ? err.message : String(err)}`);
+      this.opts.log(`sync marks not cleared (the next start clears them): ${err}`);
     }
   }
 

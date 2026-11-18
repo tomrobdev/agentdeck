@@ -158,9 +158,19 @@ test('a scheduler that stops clears the marks of the syncs it cuts off', () => {
   const task = doneTask(db, repo, { pr: 'open' });
   db.setSyncing(task.id, true);
   db.processes = { ...db.processes, keepAwake: () => ({ set: () => {} }), stopAll: () => {} };
-  new Scheduler(db, { log: () => {} }).stop();
+  const logs: string[] = [];
+  const scheduler = new Scheduler(db, { log: (m) => logs.push(m) });
+  scheduler.stop();
   assert.equal(db.hasSyncMarker(task.id), false);
+  db.setSyncing(task.id, true);
+  scheduler.stop();
+  assert.equal(db.hasSyncMarker(task.id), true, 'a second stop cuts nothing off');
+  assert.deepEqual(logs, []);
+
+  const closed = new Scheduler(db, { log: (m) => logs.push(m) });
   db.close();
+  closed.stop();
+  assert.match(logs[0], /sync marks not cleared \(the next start clears them\)/);
 });
 
 test('a requested restart exits once nothing is running, and waits otherwise', () => {
