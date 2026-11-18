@@ -1,16 +1,12 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { promptGoal } from '#domain/work/index.ts';
-import { promptSections } from '#domain/work/task/task.ts';
 import { linkParts, modelChip, modelLine, ownSteps, peekActions, peekProps } from '#app/lib/work/queue/peek.ts';
 
-test('a prompt with sections shows its Goal, cut to a few lines', () => {
-  const prompt = '## Goal\nShip the peek.\n\n## Context\nSee TaskPeek.vue.';
-  assert.deepEqual(promptSections(prompt), [
-    { heading: 'Goal', body: 'Ship the peek.' },
-    { heading: 'Context', body: 'See TaskPeek.vue.' },
-  ]);
-  assert.equal(promptGoal(prompt), 'Ship the peek.');
+test('a prompt with sections shows its Current problem, or an old one its Goal, cut to a few lines', () => {
+  assert.equal(promptGoal('## Goal\nShip the peek.\n\n## Context\nSee TaskPeek.vue.'), 'Ship the peek.');
+  assert.equal(promptGoal('## Current problem\nNo peek.\n\n## Expected outcome\n- a peek'), 'No peek.');
+  assert.equal(promptGoal('Goal: Ship the peek.\nContext: TaskPeek.vue'), 'Ship the peek.');
   assert.equal(promptGoal(`## Goal\n${'x\n'.repeat(20)}## Change\ny`, 3), 'x\nx\nx');
 });
 

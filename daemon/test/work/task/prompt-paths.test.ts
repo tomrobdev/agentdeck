@@ -65,6 +65,16 @@ function setup() {
   return { db, repo, path };
 }
 
+test('add and edit store a prompt with its sections as ## headings in the new order, and one with none as written', async () => {
+  const { db } = setup();
+  const t = await addTask(db, { repo: 'demo', prompt: 'Definition of done:\n- it works\nGoal: Fix the parser.' });
+  assert.equal(t.prompt, '## Current problem\nFix the parser.\n\n## Expected outcome\n- it works');
+  assert.equal(t.title, 'Fix the parser');
+  const edited = await editTask(db, t.id, { prompt: '## Constraints\nnone\n## Context\nsrc/a.ts' });
+  assert.equal(edited.prompt, '## Current problem\nsrc/a.ts\n\n## Constraints\nnone');
+  assert.equal((await editTask(db, t.id, { prompt: 'Just fix it.' })).prompt, 'Just fix it.');
+});
+
 test('a prompt naming an uncommitted file warns, on add and on edit; a committed one does not', async () => {
   const { db, path } = setup();
   writeFileSync(join(path, 'docs/dirty.md'), 'not committed');

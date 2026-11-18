@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import * as actions from '#application/actions.ts';
 import { type TaskId, asTaskId, parseId } from '#domain/shared/index.ts';
-import { isOwnPlanName, modelSourceText, planProgress } from '#domain/work/index.ts';
+import { isOwnPlanName, modelSourceText, planProgress, shapePrompt } from '#domain/work/index.ts';
 import { commentLocation } from '#domain/landing/index.ts';
 import { latestVerify, pickRun, runFindings } from '#domain/runs/index.ts';
 import { CHECKED_STATUSES, TASK_STATUSES } from '#domain/work/index.ts';
@@ -92,6 +92,7 @@ export const taskCommands: Record<string, Command> = {
       console.log(`plan     ${planName}${other === null ? '' : ` (#${other}'s plan)`}`);
     }
     if (waiting?.stuck) console.log(`note: ${waiting.stuck}, so this task won't start until ${idsText(waiting.on)} is retried`);
+    for (const w of shapePrompt(t.prompt).warnings) console.log(`warning: ${w}`);
     for (const w of await actions.promptWarnings(db, t.id)) console.log(`note: ${w}`);
     if (t.status === 'proposed') console.log(`note: it waits for \`agentdeck approve ${t.id}\` before it can run`);
     else if (actions.isPaused(db)) console.log('note: the daemon is paused; run `agentdeck resume` to start working');
@@ -136,6 +137,7 @@ export const taskCommands: Record<string, Command> = {
     });
     console.log(fmtTask(t, repoName(t.repo_id)));
     console.log(`model ${t.model}, attempts ${t.attempts}/${t.max_attempts}, max turns ${t.max_turns}`);
+    if (flags.prompt !== undefined) for (const w of shapePrompt(t.prompt).warnings) console.log(`warning: ${w}`);
     for (const w of await actions.promptWarnings(db, t.id)) console.log(`note: ${w}`);
   },
   ls: ({ db, flags, rest, repoName }) => {

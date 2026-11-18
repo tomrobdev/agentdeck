@@ -69,7 +69,7 @@ Propose at most ${maxTasks} new tasks that move the goals forward. An unattended
 
 Each task must be:
 - small enough for one focused session, and independent of the other proposals
-- testable, with a concrete definition of done
+- testable, with a concrete expected outcome
 - not already covered by an open, parked or recent task below, and not something the goals rule out (a parked task is kept for later on purpose: don't propose it again)
 Prefer the highest-value next step. Use haiku for mechanical work, sonnet by default, opus only for genuinely hard tasks.
 If nothing is worth doing right now, return an empty list and say why in "note".

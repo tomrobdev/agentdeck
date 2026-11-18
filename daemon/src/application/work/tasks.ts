@@ -4,7 +4,7 @@ import type { TaskId } from '#domain/shared/index.ts';
 import { archivedRepoError, maxAttemptsError, maxTurnsError, modelError, priorityError } from '#domain/work/index.ts';
 import { planOwnerOf } from '#domain/work/index.ts';
 import { type ModelSource, newTaskModel } from '#domain/work/index.ts';
-import { EDITABLE_STATUSES, type Task, WORKTREE_REMOVABLE_STATUSES, defaultTitle } from '#domain/work/index.ts';
+import { EDITABLE_STATUSES, type Task, WORKTREE_REMOVABLE_STATUSES, defaultTitle, promptGoal, shapePrompt } from '#domain/work/index.ts';
 import { refuseWhileSyncing } from '#application/work/checkout-locks.ts';
 import { newLinks } from '#application/work/links.ts';
 import { ActionError, flag, object, refuse, requireTask, requireTaskRepo, text, whole } from '#application/shared/input.ts';
@@ -31,8 +31,9 @@ export async function addTask(
 ): Promise<Task & { model_source: ModelSource }> {
   const body = object(input);
   const propose = flag(body, 'propose');
-  const prompt = text(body, 'prompt', { empty: true });
-  if (!prompt) throw new ActionError('a prompt is required');
+  const written = text(body, 'prompt', { empty: true });
+  if (!written) throw new ActionError('a prompt is required');
+  const prompt = shapePrompt(written).prompt;
   const title = text(body, 'title', { empty: true });
   const model = text(body, 'model', { empty: true });
   refuse(modelError(model));
@@ -59,7 +60,7 @@ export async function addTask(
   const chosen = newTaskModel(model, repo, app.modelSettings().default_model);
   const task = app.addTask({
     repo_id: repo.id,
-    title: title || defaultTitle(prompt),
+    title: title || defaultTitle(promptGoal(prompt) || prompt),
     prompt,
     priority,
     model: chosen.model,
@@ -97,6 +98,7 @@ export async function editTask(
     const value = text(body, key);
     if (value !== undefined) fields[key] = value;
   }
+  if (fields.prompt) fields.prompt = shapePrompt(fields.prompt).prompt;
   refuse(modelError(fields.model));
   for (const [key, rule] of [
     ['priority', priorityError],

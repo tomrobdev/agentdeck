@@ -179,12 +179,13 @@ test('prompt lists open and recent tasks', () => {
 
 test('the planner asks for prompts with markdown section headings, shown below its own headings', () => {
   const prompt = buildPlannerPrompt(db.getRepo(repoId)!, 'ship it', [], 3);
-  for (const name of ['Goal', 'Context', 'Change', 'Out of scope', 'Constraints', 'Definition of done']) {
+  for (const name of ['Current problem', 'Expected outcome', 'Out of scope', 'Constraints']) {
     assert.match(prompt, new RegExp(`^### ${name}$`, 'm'));
     assert.doesNotMatch(prompt, new RegExp(`^## ${name}$`, 'm'));
   }
   assert.match(prompt, /^## Goals$/m);
   assert.match(prompt, /"##" heading/);
+  assert.doesNotMatch(prompt, /^### (Goal|Definition of done)$/m);
   assert.doesNotMatch(prompt, /^Goal:/m);
   assert.doesNotMatch(prompt, /--plan/, 'the planner proposes no plans');
 });

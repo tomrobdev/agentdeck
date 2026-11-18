@@ -50,6 +50,7 @@ What a session or worker is told about a task: the agent context digest, prompt 
 The task entity, its lifecycle, and the person-facing use cases, CLI and routes.
 
 - daemon/src/domain/work/task/task.ts
+- daemon/src/domain/work/task/prompt.ts
 - daemon/src/domain/work/lifecycle/lifecycle.ts
 - daemon/src/domain/work/lifecycle/history.ts
 - daemon/src/domain/work/task/checkout.ts

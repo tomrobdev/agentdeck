@@ -10,7 +10,6 @@ import {
   REVIEW_ANSWER_SCHEMA,
   buildReviewPrompt,
   parseReviewAnswer,
-  promptSection,
   reviewDiffCommand,
   reviewRecord,
   reviewSchemaArgs,
@@ -42,18 +41,11 @@ const PLAN = `<!doctype html>
 const task = { id: asTaskId(7), title: 'Count words', prompt: PROMPT };
 const ctx = { plan: { name: '1-counting.html', html: PLAN, steps: ['words'] }, from: 'abc123', head: 'def456' };
 
-test('promptSection reads one ## section of a task prompt, or null', () => {
-  assert.equal(promptSection(PROMPT, 'Goal'), 'Count the words in a file.');
-  assert.equal(promptSection(PROMPT, 'definition of done'), "- count('a b') is 2\n- the test command passes");
-  assert.equal(promptSection(PROMPT, 'Change'), null);
-  assert.equal(promptSection('## Goal\n\n## Change\nx', 'Goal'), null, 'an empty section is none');
-});
-
-test("the prompt has the task's Goal, Definition of done, linked plan steps with their done criteria, and the diff command", () => {
+test("an old prompt's Goal and Definition of done are read as its Current problem and Expected outcome", () => {
   const prompt = buildReviewPrompt(task, ctx);
   assert.match(prompt, /^AgentDeck review run for task #7: "Count words"\./);
-  assert.match(prompt, /## Goal\nCount the words in a file\./);
-  assert.match(prompt, /## Definition of done\n- count\('a b'\) is 2\n- the test command passes/);
+  assert.match(prompt, /## Current problem\nCount the words in a file\.\n/);
+  assert.match(prompt, /## Expected outcome\n- count\('a b'\) is 2\n- the test command passes/);
   assert.match(prompt, /## Plan steps\nThe task's plan steps \(1-counting\.html\):/);
   assert.match(
     prompt,
@@ -65,10 +57,19 @@ test("the prompt has the task's Goal, Definition of done, linked plan steps with
   assert.doesNotMatch(prompt, /## Context|src\/count\.ts/, 'only what the changes are judged against');
 });
 
-test('a prompt with no Goal reads the whole task; no plan and no Definition of done leave their sections out', () => {
+test('a new prompt is judged against its Current problem and Expected outcome', () => {
+  const prompt = buildReviewPrompt(
+    { ...task, prompt: '## Current problem\nNo word count.\n\n## Expected outcome\n- count works\n\n## Constraints\nNo deps.' },
+    ctx,
+  );
+  assert.match(prompt, /## Current problem\nNo word count\.\n\n## Expected outcome\n- count works\n/);
+  assert.doesNotMatch(prompt, /No deps/);
+});
+
+test('a prompt with no sections reads the whole task; no plan and no Expected outcome leave their sections out', () => {
   const prompt = buildReviewPrompt({ ...task, prompt: 'Just fix the typo.' }, { ...ctx, plan: null });
-  assert.match(prompt, /## Goal\nJust fix the typo\./);
-  assert.doesNotMatch(prompt, /## Definition of done|## Plan steps/);
+  assert.match(prompt, /## Current problem\nJust fix the typo\./);
+  assert.doesNotMatch(prompt, /## Expected outcome|## Plan steps/);
   const unread = buildReviewPrompt(task, { ...ctx, plan: { name: 'x.html', html: null, steps: null } });
   assert.match(unread, /follows the plan x\.html, which could not be read/);
 });

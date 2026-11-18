@@ -1993,6 +1993,15 @@ A proposal kept for later: off Attention and not approvable until a person lifts
 | `summary` | `string \| null` |         |
 | `steps`   | `PlanStep[]`     |         |
 
+### ParsedPrompt
+
+A task prompt read into its sections, with the text before the first one.
+
+| Field      | Type              | Comment |
+| ---------- | ----------------- | ------- |
+| `preamble` | `string`          |         |
+| `sections` | `PromptSection[]` |         |
+
 ### PendingFollowUp
 
 A history row whose status change's follow-ups are still to run (the outbox): what the daemon's tick reads to run them.
@@ -2048,6 +2057,16 @@ A task's link to a plan: the task whose plan it follows (itself when its own pla
 | `title`  | `string`         |                                                                        |
 | `status` | `PlanStepStatus` |                                                                        |
 | `done`   | `string[]`       | the done criteria, one per <li> of the step's [data-plan-done] element |
+
+### PromptSection
+
+One section of a task prompt.
+
+| Field     | Type     | Comment                                                                                                                                                             |
+| --------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`    | `string` | The section's name in the current format (Goal and Context read as Current problem, Definition of done as Expected outcome); an unknown `##` heading keeps its own. |
+| `heading` | `string` | The heading as the prompt wrote it.                                                                                                                                 |
+| `body`    | `string` |                                                                                                                                                                     |
 
 ### ProposalCheck
 
