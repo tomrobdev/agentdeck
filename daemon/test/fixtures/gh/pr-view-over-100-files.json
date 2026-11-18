@@ -627,6 +627,7 @@
    "changeType": "MODIFIED"
   }
  ],
+ "body": "## Merge Danger\n\nDoor: one-way",
  "headRefOid": "d2598cf857a0b5e3f9e9abb50af2727a22d84fac",
  "isDraft": false,
  "labels": [

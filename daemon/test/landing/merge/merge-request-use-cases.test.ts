@@ -218,7 +218,7 @@ test("a request over auto-merge's line limit, without its label, merges", async 
 test('a request is ahead of auto-merges in the refresh', async () => {
   updateRepo(db, 'demo', { auto_merge: true, auto_approve: false });
   const auto = tested();
-  details[auto.url] = { ...ready, labels: ['agentdeck:auto-merge'] };
+  details[auto.url] = { ...ready, labels: ['agentdeck:auto-merge'], body: 'Door: two-way' };
   const asked = tested();
   requestMerge(db, asked.id);
   const found = await refreshPrStates(db);
