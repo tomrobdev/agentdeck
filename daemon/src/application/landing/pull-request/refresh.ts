@@ -7,7 +7,7 @@ import { carryFailures, checksSettled, countOfKept, nextChecks, withCheckList } 
 import { readFailure } from '#application/landing/pull-request/check-failures.ts';
 import { checksFailedNotification, mergeFailedNotification } from '#domain/operations/index.ts';
 import { type Repo, pausedReason } from '#domain/repos/index.ts';
-import type { PrEvent, Task } from '#domain/work/index.ts';
+import { type PrEvent, type Task, targetOf } from '#domain/work/index.ts';
 import { errorMessage, present } from '#domain/shared/index.ts';
 import { landsAfter } from '#application/work/dependencies.ts';
 import { measureBranch } from '#application/work/files.ts';
@@ -41,14 +41,14 @@ async function autoMergeFacts(app: App, task: Task, repo: Repo, pr: PrDetails): 
   if (!autoMergeOn(task, repo)) return null;
   const branch = task.checkout?.branch;
   const [measured, review] = await Promise.all([
-    branch && pr.head ? measureBranch(app, repo, branch, pr.head) : null,
+    branch && pr.head ? measureBranch(app, repo, task, branch, pr.head) : null,
     repo.auto_review ? reviewFacts(app, task, repo, pr) : null,
   ]);
   return { repo, paused: pausedReason(app.isPaused(), repo), measured, review };
 }
 
 async function reviewFacts(app: App, task: Task, repo: Repo, pr: PrDetails): Promise<ReviewFacts> {
-  const diff_hash = pr.head ? await app.workspace.diffHash(repo.path, repo.base_branch, pr.head).catch(() => null) : null;
+  const diff_hash = pr.head ? await app.workspace.diffHash(repo.path, targetOf(task, repo), pr.head).catch(() => null) : null;
   return { diff_hash, reviews: app.reviewsForTask(task.id), runs: app.runsForTask(task.id) };
 }
 

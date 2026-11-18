@@ -183,7 +183,7 @@ test('the step statuses a run marked before a restart cut it off survive when it
   const t = db.addTask({ repo_id: repo.id, title: 'cut off', prompt: 'FAKE_DONE after a restart', own_plan: plan });
   const claimed = db.claimNextTask()!;
   assert.equal(claimed.id, t.id);
-  const wt = await ensureWorktree(repo, claimed);
+  const wt = await ensureWorktree(repo, claimed, repo.base_branch);
   db.setCheckout(t.id, { branch: wt.branch, worktree: wt.path });
   db.startRun(t.id, claimed.attempts, join(LOG_DIR, `task-${t.id}-attempt-1.jsonl`));
   await writePlanFile(wt.path, planForRun(db, claimed)?.html ?? null);
@@ -214,7 +214,7 @@ test('the step statuses a cut-off run marked survive when the restarts fail the 
   for (let i = 0; i < MAX_RESTARTS; i++) {
     const claimed = db.claimNextTask()!;
     assert.equal(claimed.id, t.id);
-    const wt = await ensureWorktree(repo, claimed);
+    const wt = await ensureWorktree(repo, claimed, repo.base_branch);
     db.setCheckout(t.id, { branch: wt.branch, worktree: wt.path });
     db.startRun(t.id, claimed.attempts, join(LOG_DIR, `task-${t.id}-attempt-${claimed.attempts}.jsonl`));
     await writePlanFile(wt.path, planForRun(db, claimed)?.html ?? null);

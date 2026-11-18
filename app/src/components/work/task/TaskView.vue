@@ -80,7 +80,7 @@ useHotkeys({
   ...edits.keys,
 });
 
-const base = computed(() => changes.value?.base_ref ?? 'base');
+const base = computed(() => changes.value?.base_ref ?? props.task.target ?? 'base');
 const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel))] px-1.5 py-px';
 </script>
 

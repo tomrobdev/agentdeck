@@ -8,7 +8,7 @@ import { isMergeLocked, isSyncLocked } from '#application/work/checkout-locks.ts
 import { type LiveView, type SyncView, liveView, syncView } from '#domain/runs/index.ts';
 import { type Run, type RunSummary, runSummary } from '#domain/runs/index.ts';
 import { type PrRetry, openPrUrl } from '#domain/landing/index.ts';
-import { prRetryFor } from '#domain/work/index.ts';
+import { prRetryFor, targetOf } from '#domain/work/index.ts';
 import type { Repo } from '#domain/repos/index.ts';
 import type { StartWait, Waiting } from '#domain/work/index.ts';
 import { measureBranch } from '#application/work/files.ts';
@@ -39,7 +39,7 @@ export interface TaskView {
   pr_retry: PrRetry | null;
 }
 
-type Viewed = Pick<Task, 'id' | 'repo_id' | 'status' | 'max_turns' | 'auto_merge' | 'source' | 'pr'>;
+type Viewed = Pick<Task, 'id' | 'repo_id' | 'status' | 'max_turns' | 'auto_merge' | 'source' | 'pr' | 'target'>;
 
 export function withViews<T extends Viewed>(app: App, tasks: T[], links: LinkIndex = loadedLinks(app)): (T & TaskView)[] {
   const repos = new Map(app.listRepos().map((r) => [r.id, r]));
@@ -55,7 +55,7 @@ export function withViews<T extends Viewed>(app: App, tasks: T[], links: LinkInd
     return {
       ...t,
       live: liveView(t, liveRuns.get(t.id)),
-      sync: syncView(t, repo?.base_branch ?? null, isSyncLocked(t.id), resolves.get(t.id)),
+      sync: syncView(t, repo ? targetOf(t, repo) : null, isSyncLocked(t.id), resolves.get(t.id)),
       merge_request: mergeRequestView(t.pr, isMergeLocked(t.id)),
       checks: checksSummary(t.pr),
       conflicting: conflictsWithBase(t.pr),
@@ -91,7 +91,7 @@ export async function taskDetail(app: App, id: TaskId) {
   const [view] = withViews(app, [task], liveLinks(app));
   const branch = task.checkout?.branch;
   if (repo && task.status === 'done' && branch && !openPrUrl(task.pr) && task.pr?.state !== 'merged' && autoMergeOn(task, repo)) {
-    const measured = await measureBranch(app, repo, branch);
+    const measured = await measureBranch(app, repo, task, branch);
     if (measured) view.auto_merge_view = autoMergeView(task, repo, measured);
   }
   return {

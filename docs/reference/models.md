@@ -1697,6 +1697,7 @@ A task stopped until something changes.
 | `pr`           | `PullRequest \| null`     | the task's pull request, as one value                                                                               |
 | `plan`         | `PlanLink \| null`        | the plan this task follows and its linked steps (domain/work/plans/plan-link.ts); null follows its own plan, if any |
 | `auto_merge`   | `boolean \| null`         | overrides the repo's auto_merge; null = the repo's (domain/landing/merge/auto-merge.ts)                             |
+| `target`       | `string \| null`          | the branch the task's work starts from and lands on; null = the repo's base (domain/work/task/target.ts)            |
 | `created_at`   | `string`                  |                                                                                                                     |
 | `updated_at`   | `string`                  |                                                                                                                     |
 | `status`       | `"blocked"`               |                                                                                                                     |
@@ -1934,6 +1935,7 @@ A task as listed: with where it stands on its builds-on links (as waitingFor rep
 | `model`        | `string`                                                                                                                  |                                                                                                                     |
 | `checkout`     | `Checkout \| null`                                                                                                        | the branch and worktree the work is on, and a running sync                                                          |
 | `plan`         | `PlanLink \| null`                                                                                                        | the plan this task follows and its linked steps (domain/work/plans/plan-link.ts); null follows its own plan, if any |
+| `target`       | `string \| null`                                                                                                          | the branch the task's work starts from and lands on; null = the repo's base (domain/work/task/target.ts)            |
 | `status`       | `"failed" \| "blocked" \| "proposed" \| "parked" \| "queued" \| "running" \| "done" \| "cancel_requested" \| "cancelled"` |                                                                                                                     |
 | `waiting`      | `Waiting \| null`                                                                                                         |                                                                                                                     |
 | `unblocks`     | `number[]`                                                                                                                |                                                                                                                     |
@@ -2170,6 +2172,21 @@ The fields a state carries, each null where its status has none: how the columns
 | `done_by`     | `"person" \| null`        |         |
 | `park_reason` | `string \| null`          |         |
 
+### TargetEnd
+
+| Field         | Type             | Comment |
+| ------------- | ---------------- | ------- |
+| `id`          | `TaskId \| null` |         |
+| `repo_id`     | `RepoId`         |         |
+| `base_branch` | `string`         |         |
+| `target`      | `string \| null` |         |
+
+### TargetOwner
+
+| Field    | Type             | Comment |
+| -------- | ---------------- | ------- |
+| `target` | `string \| null` |         |
+
 ### Task
 
 | Field          | Type                                                                                                                      | Comment                                                                                                             |
@@ -2189,6 +2206,7 @@ The fields a state carries, each null where its status has none: how the columns
 | `pr`           | `PullRequest \| null`                                                                                                     | the task's pull request, as one value                                                                               |
 | `plan`         | `PlanLink \| null`                                                                                                        | the plan this task follows and its linked steps (domain/work/plans/plan-link.ts); null follows its own plan, if any |
 | `auto_merge`   | `boolean \| null`                                                                                                         | overrides the repo's auto_merge; null = the repo's (domain/landing/merge/auto-merge.ts)                             |
+| `target`       | `string \| null`                                                                                                          | the branch the task's work starts from and lands on; null = the repo's base (domain/work/task/target.ts)            |
 | `created_at`   | `string`                                                                                                                  |                                                                                                                     |
 | `updated_at`   | `string`                                                                                                                  |                                                                                                                     |
 | `status`       | `"failed" \| "blocked" \| "proposed" \| "parked" \| "queued" \| "running" \| "done" \| "cancel_requested" \| "cancelled"` |                                                                                                                     |
@@ -2236,6 +2254,7 @@ What every task has, whatever its status.
 | `pr`           | `PullRequest \| null` | the task's pull request, as one value                                                                               |
 | `plan`         | `PlanLink \| null`    | the plan this task follows and its linked steps (domain/work/plans/plan-link.ts); null follows its own plan, if any |
 | `auto_merge`   | `boolean \| null`     | overrides the repo's auto_merge; null = the repo's (domain/landing/merge/auto-merge.ts)                             |
+| `target`       | `string \| null`      | the branch the task's work starts from and lands on; null = the repo's base (domain/work/task/target.ts)            |
 | `created_at`   | `string`              |                                                                                                                     |
 | `updated_at`   | `string`              |                                                                                                                     |
 
@@ -2298,6 +2317,7 @@ A stored plan as the API returns it: parsed, without its HTML.
 | `model`        | `string`                                                                                                                  |                                                                                                                     |
 | `checkout`     | `Checkout \| null`                                                                                                        | the branch and worktree the work is on, and a running sync                                                          |
 | `plan`         | `PlanLink \| null`                                                                                                        | the plan this task follows and its linked steps (domain/work/plans/plan-link.ts); null follows its own plan, if any |
+| `target`       | `string \| null`                                                                                                          | the branch the task's work starts from and lands on; null = the repo's base (domain/work/task/target.ts)            |
 | `status`       | `"failed" \| "blocked" \| "proposed" \| "parked" \| "queued" \| "running" \| "done" \| "cancel_requested" \| "cancelled"` |                                                                                                                     |
 
 ### Transition

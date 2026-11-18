@@ -17,6 +17,7 @@ import {
   reviewKindError,
   reviewReason,
 } from '#domain/landing/index.ts';
+import { targetOf } from '#domain/work/index.ts';
 import { ActionError, number, object, refuse, requireTask, text } from '#application/shared/input.ts';
 import { retryTask } from '#application/landing/person-events.ts';
 
@@ -87,7 +88,7 @@ async function reviewedDiff(app: App, taskId: TaskId): Promise<ReviewedDiff> {
   const branch = task.checkout?.branch;
   const head = repo && branch ? await app.workspace.branchHead(repo.path, branch) : null;
   if (!repo || !head) return { head_commit: null, diff_hash: null };
-  return { head_commit: head, diff_hash: await app.workspace.diffHash(repo.path, repo.base_branch, head) };
+  return { head_commit: head, diff_hash: await app.workspace.diffHash(repo.path, targetOf(task, repo), head) };
 }
 
 export async function submitReview(app: App, id: ReviewId, input: { kind: string; body?: string }): Promise<ReviewWithComments> {

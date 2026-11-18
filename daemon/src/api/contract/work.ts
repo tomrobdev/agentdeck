@@ -74,6 +74,7 @@ export interface TaskSummary {
   park_reason: string | null;
   /** 1 or 0 overrides the repo's auto_merge; null follows it. */
   auto_merge: number | null;
+  target: string | null;
   /** Whether the PR will merge on its own and why not. Null when the repo is gone. */
   auto_merge_view: AutoMergeView | null;
   /** The person's merge request, while the daemon is to merge the PR when it is ready; null with none. */
@@ -202,6 +203,7 @@ export interface NewTask {
   model?: string;
   priority?: number;
   max_turns?: number;
+  target?: string | null;
   /** Tasks this one builds on: it starts once they are done and merged. */
   builds_on?: TaskId[];
   /** Tasks this one lands after: it runs at once, only its merge waits. */
@@ -221,6 +223,7 @@ export interface TaskPatch {
   model?: string;
   max_turns?: number;
   max_attempts?: number;
+  target?: string | null;
   /** The task whose plan this one follows; null clears the link. */
   plan_task?: TaskId | null;
   /** null means every unfinished step. */

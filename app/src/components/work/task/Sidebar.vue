@@ -127,6 +127,12 @@ const levelLabel = computed(() => levelOf(priorityLevel(props.task.priority)).la
         </span>
       </div>
     </div>
+    <div v-if="task.target" :class="prop" data-target>
+      <div :class="name">Target</div>
+      <div :class="rowMono">
+        <span class="flex-1 truncate" :title="`Starts from and lands on ${task.target}, not the repo's base`">{{ task.target }}</span>
+      </div>
+    </div>
     <div v-if="task.branch" :class="prop">
       <div :class="name">Branch</div>
       <div :class="rowMono">

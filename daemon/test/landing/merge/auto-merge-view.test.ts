@@ -227,12 +227,12 @@ test('measureBranch counts the lines and paths a branch changed against the base
   sh('commit', '-q', '-m', 'work');
   sh('checkout', '-q', 'main');
 
-  assert.deepEqual(await measureBranch(db, repo, 'agentdeck/measured'), {
+  assert.deepEqual(await measureBranch(db, repo, { target: null }, 'agentdeck/measured'), {
     lines: 4,
     paths: ['.github/ci.yml', 'a.ts'],
     code_comments: { files: [], lines: 0, added: 4, percent: 0 },
   });
-  assert.equal(await measureBranch(db, repo, 'agentdeck/nope'), null);
+  assert.equal(await measureBranch(db, repo, { target: null }, 'agentdeck/nope'), null);
 
   const t = doneTask(db, repo, { branch: 'agentdeck/measured' });
   const view = (await taskDetail(db, t.id)).auto_merge_view!;

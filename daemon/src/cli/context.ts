@@ -22,6 +22,7 @@ export function parseCommandLine(argv: string[]) {
       attempts: { type: 'string' },
       after: { type: 'string' },
       'builds-on': { type: 'string' },
+      target: { type: 'string' },
       plan: { type: 'string' },
       steps: { type: 'string' },
       status: { type: 'string', short: 's' },

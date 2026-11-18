@@ -14,30 +14,32 @@ import {
   capText,
   checkPath,
   isBinary,
+  type Task,
   sincePoints,
+  targetOf,
 } from '#domain/work/index.ts';
 import { type AutoMergeMeasured, countCodeComments } from '#domain/landing/index.ts';
 import type { Repo } from '#domain/repos/index.ts';
 import { promiseCache } from '#application/shared/cache.ts';
 import { ActionError, requireTask, requireTaskRepo } from '#application/shared/input.ts';
 
-async function resolveHead(app: App, id: TaskId): Promise<{ repo: Repo; head: string }> {
+async function resolveHead(app: App, id: TaskId): Promise<{ repo: Repo; head: string; target: string }> {
   const task = requireTask(app, id);
   const repo = requireTaskRepo(app, task);
   const head = task.checkout?.branch ? await app.workspace.branchHead(repo.path, task.checkout.branch) : null;
   if (!head) throw new ActionError('task has no branch yet');
-  return { repo, head };
+  return { repo, head, target: targetOf(task, repo) };
 }
 
-async function baseOf(app: App, repo: Repo, head: string): Promise<{ ref: string; sha: string }> {
-  const base = await app.workspace.diffBase(repo.path, repo.base_branch, head);
-  if (!base) throw new ActionError(`no common history with base branch "${repo.base_branch}"`);
+async function baseOf(app: App, repo: Repo, target: string, head: string): Promise<{ ref: string; sha: string }> {
+  const base = await app.workspace.diffBase(repo.path, target, head);
+  if (!base) throw new ActionError(`no common history with target branch "${target}"`);
   return base;
 }
 
 async function taskRefs(app: App, id: TaskId): Promise<{ repo: Repo; head: string; base: { ref: string; sha: string } }> {
-  const { repo, head } = await resolveHead(app, id);
-  return { repo, head, base: await baseOf(app, repo, head) };
+  const { repo, head, target } = await resolveHead(app, id);
+  return { repo, head, base: await baseOf(app, repo, target, head) };
 }
 
 async function resolveRef(app: App, id: TaskId, ref: FileRef): Promise<{ repo: Repo; sha: string }> {
@@ -103,14 +105,21 @@ export async function taskChanges(app: App, id: TaskId, rawSince?: string | null
   return { ...changes, since, base_may_show, files, commits };
 }
 
-export async function measureBranch(app: App, repo: Repo, branch: string, at?: string | null): Promise<AutoMergeMeasured | null> {
+export async function measureBranch(
+  app: App,
+  repo: Repo,
+  task: Pick<Task, 'target'>,
+  branch: string,
+  at?: string | null,
+): Promise<AutoMergeMeasured | null> {
   try {
     const head = await app.workspace.branchHead(repo.path, branch);
     if (!head || (at && head !== at)) return null;
-    const base = await baseOf(app, repo, head);
+    const target = targetOf(task, repo);
+    const base = await baseOf(app, repo, target, head);
     const [files, added] = await Promise.all([
       changedFilesCached(app, repo.path, base.sha, head),
-      app.workspace.addedLines(repo.path, repo.base_branch, head),
+      app.workspace.addedLines(repo.path, target, head),
     ]);
     return {
       lines: files.reduce((sum, f) => sum + f.additions + f.deletions, 0),

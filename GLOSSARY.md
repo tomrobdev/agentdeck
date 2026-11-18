@@ -23,6 +23,11 @@ _Avoid_: ticket, tickets, job, jobs
 
 **Worktree**: the separate checkout of the repo where one task's work happens, on its own branch.
 
+**Target**: the branch a task's work starts from, syncs with and lands on: its pull request's base. A task names one, or takes its repo's base. It must exist locally or on origin, and is fixed once the task has a branch. A task can only build on one with the same target; an after link may cross targets.
+
+**Plan branch**: a branch a plan owns in a repo, which its tasks target and which lands on the base as one pull request.
+_Avoid_: feature branch
+
 ## Runs
 
 **Run**: one attempt at a task, one `claude` process. A task has at most `max_attempts` runs, and a retry continues on the same branch. A **resolve run** is another kind: the `claude` part of a sync, settling its conflicts. It uses no attempt. An **unblock run** is the third: in a repo with `auto_unblock` on, a short run that reads why a task blocked and either retries it with a note or leaves it blocked with a **question** and options. It uses no attempt, takes a slot, and is not a resolve run.

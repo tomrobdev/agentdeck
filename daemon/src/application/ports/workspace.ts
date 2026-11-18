@@ -46,9 +46,9 @@ export interface AppliedEdits {
 }
 
 export interface Workspace {
-  prepareCheckout(repo: Repo, task: Task): Promise<Checkout>;
+  prepareCheckout(repo: Repo, task: Task, target: string): Promise<Checkout>;
   removeCheckout(repo: Repo, checkout: { worktree?: string | null; branch?: string | null }): Promise<void>;
-  withScratchCheckout<T>(repo: Repo, use: (checkout: { path: string } | { error: string }) => Promise<T>): Promise<T>;
+  withScratchCheckout<T>(repo: Repo, branch: string, use: (checkout: { path: string } | { error: string }) => Promise<T>): Promise<T>;
 
   inspectRepo(path: string, base?: string): Promise<RepoFacts | null>;
   rootInfo(dir: string): Promise<RootInfo>;
@@ -61,7 +61,7 @@ export interface Workspace {
   commit(worktree: string, message: string, only?: string[]): Promise<boolean>;
   applyProtectedEdits(worktree: string): Promise<AppliedEdits>;
 
-  startSync(repo: Repo, worktree: string, leftovers: string): Promise<SyncStart>;
+  startSync(repo: Repo, target: string, worktree: string, leftovers: string): Promise<SyncStart>;
   finishSync(worktree: string, files: string[], before: string, leftovers: string): Promise<SyncFinish>;
   undoSync(worktree: string, before: string): Promise<void>;
 

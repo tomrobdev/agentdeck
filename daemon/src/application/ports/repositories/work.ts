@@ -26,7 +26,7 @@ import type {
   UnblockQuestion,
 } from '#domain/work/index.ts';
 
-export type TaskEdit = Partial<Pick<Task, 'title' | 'prompt' | 'priority' | 'model' | 'max_turns' | 'max_attempts'>> & {
+export type TaskEdit = Partial<Pick<Task, 'title' | 'prompt' | 'priority' | 'model' | 'max_turns' | 'max_attempts' | 'target'>> & {
   plan_task?: TaskId | null;
   plan_steps?: string[] | null;
 };
@@ -41,6 +41,7 @@ export interface NewTask {
   max_attempts?: number;
   status?: 'queued' | 'proposed';
   source?: 'manual' | 'planner';
+  target?: string | null;
   links?: { on: TaskId; kind: LinkKind }[];
   plan_task?: TaskId | null;
   plan_steps?: string[] | null;

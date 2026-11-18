@@ -65,7 +65,7 @@ async function orUndo<T>(worktree: string, before: string, step: () => Promise<T
 }
 
 export const workspace = {
-  prepareCheckout: (repo: Repo, task: Task) => ensureWorktree(repo, task),
+  prepareCheckout: (repo: Repo, task: Task, target: string) => ensureWorktree(repo, task, target),
 
   async removeCheckout(repo: Repo, checkout: { worktree?: string | null; branch?: string | null }): Promise<void> {
     if (checkout.worktree) await removeWorktree(repo, checkout.worktree);
@@ -73,12 +73,16 @@ export const workspace = {
     await pruneWorktrees(repo.path).catch(() => {});
   },
 
-  async withScratchCheckout<T>(repo: Repo, use: (checkout: { path: string } | { error: string }) => Promise<T>): Promise<T> {
+  async withScratchCheckout<T>(
+    repo: Repo,
+    branch: string,
+    use: (checkout: { path: string } | { error: string }) => Promise<T>,
+  ): Promise<T> {
     const tmp = makeTempDir(repo, 'scratch');
     let made = false;
     try {
       try {
-        await addDetachedWorktree(repo, tmp.worktree, await startPoint(repo.path, repo.base_branch));
+        await addDetachedWorktree(repo, tmp.worktree, await startPoint(repo.path, branch));
         made = true;
       } catch (err) {
         return await use({ error: errorMessage(err) });
@@ -125,10 +129,10 @@ export const workspace = {
 
   applyProtectedEdits: (worktree: string) => applyProtectedEdits(worktree),
 
-  async startSync(repo: Repo, worktree: string, leftovers: string) {
+  async startSync(repo: Repo, target: string, worktree: string, leftovers: string) {
     if (await mergeInProgress(worktree)) await abortMerge(worktree, await headCommit(worktree));
     await commitLeftovers(worktree, leftovers);
-    const ref = await startPoint(repo.path, repo.base_branch);
+    const ref = await startPoint(repo.path, target);
     if (!(await refExists(worktree, ref))) return { kind: 'no_base' as const, ref };
     const before = await headCommit(worktree);
     return orUndo(worktree, before, async () => {

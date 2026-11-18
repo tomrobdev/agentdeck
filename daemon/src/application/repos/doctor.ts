@@ -76,7 +76,7 @@ export async function runDoctor(app: App, repo: Repo): Promise<Check[]> {
 
   if (!base) await inCheckout(null, `not run: base branch ${repo.base_branch} is missing`);
   else
-    await ws.withScratchCheckout(repo, async (checkout) => {
+    await ws.withScratchCheckout(repo, repo.base_branch, async (checkout) => {
       if ('error' in checkout) add('worktree', false, `could not check out ${repo.base_branch}: ${lastLine(checkout.error)}`);
       await inCheckout('path' in checkout ? checkout.path : null, 'not run: no worktree');
     });

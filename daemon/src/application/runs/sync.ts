@@ -10,7 +10,7 @@ import { resolveOutcome } from '#domain/runs/index.ts';
 import type { Outcome, Run } from '#domain/runs/index.ts';
 import { errorMessage, lastLine } from '#domain/shared/index.ts';
 import { openPrUrl } from '#domain/landing/index.ts';
-import { type Task, leftoversMessage } from '#domain/work/index.ts';
+import { type Task, leftoversMessage, targetOf } from '#domain/work/index.ts';
 import { endTaskRun, openTaskRun, startTaskRun } from '#application/runs/claude-run.ts';
 import { ActionError, requireTask, requireTaskRepo } from '#application/shared/input.ts';
 import { queueWait } from '#application/capacity/gate.ts';
@@ -27,7 +27,7 @@ export async function syncBranch(app: App, task: Task, repo: Repo, worktree: str
   const ws = app.workspace;
   let before: string | undefined;
   try {
-    const merge = await ws.startSync(repo, worktree, leftoversMessage(task));
+    const merge = await ws.startSync(repo, targetOf(task, repo), worktree, leftoversMessage(task));
     if (merge.kind === 'no_base') {
       const reason = `there is no ${merge.ref} to sync with`;
       console.error(`task ${task.id}: ${reason}`);
@@ -40,7 +40,7 @@ export async function syncBranch(app: App, task: Task, repo: Repo, worktree: str
         const tests = await ws.runCommand(repo.test_cmd, worktree, TEST_TIMEOUT_MS);
         if (!tests.passed) {
           await ws.undoSync(worktree, before);
-          return { kind: 'failed', files: [], reason: `tests failed after merging ${repo.base_branch}: ${lastLine(tests.output)}` };
+          return { kind: 'failed', files: [], reason: `tests failed after merging ${targetOf(task, repo)}: ${lastLine(tests.output)}` };
         }
       }
       return { kind: 'clean' };
@@ -67,7 +67,7 @@ async function resolveConflicts(
   runTests: boolean,
 ): Promise<SyncResult> {
   const { files } = conflict;
-  const prompt = buildResolvePrompt(task, { base: repo.base_branch, ...conflict, testCmd: repo.test_cmd });
+  const prompt = buildResolvePrompt(task, { base: targetOf(task, repo), ...conflict, testCmd: repo.test_cmd });
   const opened = openTaskRun(app, task, 'resolve');
   const { log } = opened;
   let fields: Partial<Run> = {};
@@ -161,7 +161,8 @@ export async function syncTask(app: App, id: TaskId, opts: { manual: boolean }):
 
 async function syncMarked(app: App, task: Task, repo: Repo, opts: { manual: boolean }): Promise<SyncReport> {
   const id = task.id;
-  const wt = await app.workspace.prepareCheckout(repo, task);
+  const target = targetOf(task, repo);
+  const wt = await app.workspace.prepareCheckout(repo, task, target);
   if (wt.path !== task.checkout?.worktree) app.setCheckout(id, { worktree: wt.path });
   const res = await syncBranch(app, task, repo, wt.path, { allowResolve: opts.manual || repo.auto_resolve, runTests: true });
   switch (res.kind) {
@@ -170,7 +171,7 @@ async function syncMarked(app: App, task: Task, repo: Repo, opts: { manual: bool
     case 'resolved': {
       const changed = res.kind !== 'up_to_date';
       if (res.kind !== 'up_to_date') {
-        app.recordSync(id, syncSummary(repo.base_branch, res.kind, res.kind === 'resolved' ? res.files : []));
+        app.recordSync(id, syncSummary(target, res.kind, res.kind === 'resolved' ? res.files : []));
       }
       const push = await pushIfNeeded(app, task, repo, wt.path, changed);
       return { outcome: res.kind, files: res.kind === 'resolved' ? res.files : [], pushed: push.pushed, push_error: push.error };
@@ -178,7 +179,7 @@ async function syncMarked(app: App, task: Task, repo: Repo, opts: { manual: bool
     case 'needs_resolution':
       return { outcome: 'skipped', files: res.files, reason: 'the repo has auto_resolve off', pushed: false };
     case 'failed': {
-      const reason = conflictReason(repo.base_branch, res.files, res.reason);
+      const reason = conflictReason(target, res.files, res.reason);
       await settle(app, id, { type: 'conflict' }, { reason });
       return { outcome: 'blocked', files: res.files, reason, pushed: false };
     }
@@ -187,7 +188,7 @@ async function syncMarked(app: App, task: Task, repo: Repo, opts: { manual: bool
     case 'cancelled':
       return { outcome: 'deferred', files: [], reason: 'cancelled', pushed: false };
     case 'error':
-      if (opts.manual) throw new ActionError(`could not sync with ${repo.base_branch}: ${res.reason}`, undefined, 'conflict');
+      if (opts.manual) throw new ActionError(`could not sync with ${target}: ${res.reason}`, undefined, 'conflict');
       return { outcome: 'error', files: [], reason: res.reason, pushed: false };
   }
 }
@@ -209,23 +210,24 @@ export async function resolveConflicting(
     const task = app.getTask(id);
     const repo = task && app.getRepo(task.repo_id);
     if (!task || !repo || task.status !== 'done' || repo.paused_reason || isSyncing(app, id) || isMergeLocked(id)) continue;
+    const target = targetOf(task, repo);
     if (!repo.auto_resolve) {
       if (!told.has(id)) {
         told.add(id);
-        log(`task ${id}: PR conflicts with ${repo.base_branch}; auto_resolve is off, so it waits for a sync (agentdeck sync ${id})`);
+        log(`task ${id}: PR conflicts with ${target}; auto_resolve is off, so it waits for a sync (agentdeck sync ${id})`);
       }
       continue;
     }
     if (!canStartResolve(app)) {
-      log(`task ${id}: PR conflicts with ${repo.base_branch}; waiting for the governor before syncing`);
+      log(`task ${id}: PR conflicts with ${target}; waiting for the governor before syncing`);
       return;
     }
-    log(`task ${id}: PR conflicts with ${repo.base_branch}; syncing it with ${repo.base_branch}`);
+    log(`task ${id}: PR conflicts with ${target}; syncing it with ${target}`);
     try {
       const r = await syncTask(app, id, { manual: false });
       log(`task ${id}: ${r.outcome}${r.reason ? ` (${r.reason})` : ''}${r.push_error ? `; push failed: ${r.push_error}` : ''}`);
     } catch (err) {
-      log(`task ${id}: could not sync with ${repo.base_branch}: ${errorMessage(err)}`);
+      log(`task ${id}: could not sync with ${target}: ${errorMessage(err)}`);
     }
   }
 }

@@ -26,6 +26,7 @@ export interface TaskCore {
   pr: PullRequest | null; // the task's pull request, as one value
   plan: PlanLink | null; // the plan this task follows and its linked steps (domain/work/plans/plan-link.ts); null follows its own plan, if any
   auto_merge: boolean | null; // overrides the repo's auto_merge; null = the repo's (domain/landing/merge/auto-merge.ts)
+  target: string | null; // the branch the task's work starts from and lands on; null = the repo's base (domain/work/task/target.ts)
   created_at: string;
   updated_at: string;
 }

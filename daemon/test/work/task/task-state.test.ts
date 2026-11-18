@@ -114,6 +114,7 @@ const API_FIELDS = [
   'stop_reason',
   'sync',
   'syncing_since',
+  'target',
   'title',
   'unblocks',
   'updated_at',

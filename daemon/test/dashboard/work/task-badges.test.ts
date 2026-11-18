@@ -28,6 +28,7 @@ const task = (extra: Partial<TaskSummary> = {}): TaskSummary => ({
   status: 'queued',
   priority: 0,
   model: 'opus',
+  target: null,
   max_turns: 40,
   attempts: 1,
   max_attempts: 3,

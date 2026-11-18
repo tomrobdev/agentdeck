@@ -55,7 +55,9 @@ Repos
 Tasks
   agentdeck add "<prompt>" --repo <name> [--title t] [--priority n] [--model ${MODELS.join('|')}] [--max-turns n] [--attempts n]
                       without --model: the repo's model, else the default_model setting
+                      [--target <branch>]       start from and land on that branch (local or on origin), not the base
                       [--builds-on <tasks>]     start once those tasks (12,14) are done and merged
+                                                (refused when they have a different target)
                       [--after <tasks>]         run at once; the PR waits to merge until those tasks have landed
                       [--plan <file|task>] [--steps a,b]   carry out steps of a plan: a plan file anywhere on disk
                                                       (stored as this task's plan) or a task number (follow that
@@ -63,6 +65,7 @@ Tasks
                       [--propose]               file it as a proposal that waits for \`agentdeck approve\`, like the planner's
   agentdeck edit <id> [--title t] [--prompt p] [--priority n] [--model m] [--max-turns n] [--attempts n]
                       [--plan <file|task>] [--steps a,b]   change the plan link ("" clears it)
+                      [--target <branch>]       change the target ("" is the base); refused once the task has a branch
                                   for proposed, parked, queued, blocked or failed tasks
   agentdeck link <id> --builds-on <task>   or --after <task>: make a task depend on another (cycles are refused)
   agentdeck unlink <id> <task>    remove that link

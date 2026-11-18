@@ -14,7 +14,7 @@ import {
   reviewSystemPrompt,
   reviewable,
 } from '#domain/runs/index.ts';
-import type { Task } from '#domain/work/index.ts';
+import { type Task, targetOf } from '#domain/work/index.ts';
 import { errorMessage } from '#domain/shared/index.ts';
 import { type OpenedRun, endTaskRun, openTaskRun, startTaskRun } from '#application/runs/claude-run.ts';
 import { planForRun } from '#application/work/plans.ts';
@@ -39,8 +39,8 @@ async function reviewTarget(app: App, task: Task): Promise<ReviewTarget | null> 
   const head = await app.workspace.branchHead(repo.path, branch);
   if (!head) return null;
   const [base, diffHash] = await Promise.all([
-    app.workspace.diffBase(repo.path, repo.base_branch, head),
-    app.workspace.diffHash(repo.path, repo.base_branch, head),
+    app.workspace.diffBase(repo.path, targetOf(task, repo), head),
+    app.workspace.diffHash(repo.path, targetOf(task, repo), head),
   ]);
   return base && diffHash ? { task, head, from: base.sha, diffHash } : null;
 }
@@ -79,7 +79,7 @@ async function runOpened(app: App, target: ReviewTarget, opened: OpenedRun): Pro
   const { log } = opened;
   const repo = app.getRepo(task.repo_id);
   if (!repo) throw new Error(`repo ${task.repo_id} not found`);
-  const wt = await app.workspace.prepareCheckout(repo, task);
+  const wt = await app.workspace.prepareCheckout(repo, task, targetOf(task, repo));
   if (wt.path !== task.checkout?.worktree) app.setCheckout(task.id, { branch: wt.branch, worktree: wt.path });
 
   let plan: PromptPlan | null = null;

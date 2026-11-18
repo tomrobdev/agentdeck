@@ -70,6 +70,7 @@ export const taskCommands: Record<string, Command> = {
       model: flags.model,
       max_turns: flags['max-turns'] ? Number(flags['max-turns']) : undefined,
       max_attempts: flags.attempts ? Number(flags.attempts) : undefined,
+      target: flags.target,
       builds_on: taskIds(flags['builds-on'], '--builds-on'),
       after: taskIds(flags.after, '--after'),
       plan_task: plan.plan_task ?? undefined,
@@ -81,7 +82,7 @@ export const taskCommands: Record<string, Command> = {
     const { waiting, links } = detail;
     const source = modelSourceText(t.model_source);
     console.log(
-      `${t.status === 'proposed' ? 'proposed' : 'queued'} task #${t.id} on ${repoName(t.repo_id)} (${t.model}${source ? `: ${source}` : ''}, ${t.max_turns} turns max${links
+      `${t.status === 'proposed' ? 'proposed' : 'queued'} task #${t.id} on ${repoName(t.repo_id)}${t.target ? ` targeting ${t.target}` : ''} (${t.model}${source ? `: ${source}` : ''}, ${t.max_turns} turns max${links
         .map(fmtLink)
         .map((l) => `, ${l}`)
         .join('')})`,
@@ -132,11 +133,13 @@ export const taskCommands: Record<string, Command> = {
       model: flags.model,
       max_turns: num(flags['max-turns']),
       max_attempts: num(flags.attempts),
+      target: flags.target,
       ...planFlag(flags.plan),
       plan_steps: flags.steps,
     });
     console.log(fmtTask(t, repoName(t.repo_id)));
     console.log(`model ${t.model}, attempts ${t.attempts}/${t.max_attempts}, max turns ${t.max_turns}`);
+    if (flags.target !== undefined) console.log(`target ${t.target ?? "the repo's base"}`);
     if (flags.prompt !== undefined) for (const w of shapePrompt(t.prompt).warnings) console.log(`warning: ${w}`);
     for (const w of await actions.promptWarnings(db, t.id)) console.log(`note: ${w}`);
   },
