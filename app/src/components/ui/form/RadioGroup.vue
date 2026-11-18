@@ -23,9 +23,9 @@ const model = defineModel<K>({ required: true });
         class="grid size-3.5 flex-none place-items-center rounded-full border border-border bg-transparent p-0 focus-visible:outline-2 focus-visible:outline-accent"
         :class="[cards ? '' : 'mt-1', model === o.key ? 'border-accent bg-accent' : '']"
       />
-      <span v-if="cards">
-        <b>{{ o.label }}</b
-        ><small v-if="o.hint" class="text-muted text-xs"> {{ o.hint }}</small>
+      <span v-if="cards" class="flex min-w-0 flex-col">
+        <b>{{ o.label }}</b>
+        <small v-if="o.hint" class="text-muted text-xs leading-snug">{{ o.hint }}</small>
       </span>
       <span v-else class="flex flex-col">
         <span>{{ o.label }}</span>

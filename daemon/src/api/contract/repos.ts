@@ -82,6 +82,7 @@ export interface RepoPatch {
   auto_approve?: boolean;
   test_cmd?: string | null;
   setup_cmd?: string | null;
+  base_branch?: string;
   pr_mode?: PrMode;
   merge_method?: MergeMethod;
   auto_resolve?: boolean;

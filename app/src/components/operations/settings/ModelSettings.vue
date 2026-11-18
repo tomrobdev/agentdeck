@@ -2,54 +2,44 @@
 import { MODEL_LABELS } from '#lib/runs/run-wording.ts';
 import { type SettingsForm, modelChoices } from '#lib/shared/forms.ts';
 import { MODELS } from '#daemon/domain/work/index.ts';
+import FieldRow from '#components/ui/form/FieldRow.vue';
+import FieldSection from '#components/ui/form/FieldSection.vue';
+import SwitchRow from '#components/ui/form/SwitchRow.vue';
 import NumberInput from '#components/ui/form/NumberInput.vue';
-import Switch from '#components/ui/form/Switch.vue';
 
 defineProps<{ form: SettingsForm }>();
 </script>
 
 <template>
-  <section class="flex flex-col gap-2.5">
-    <h4 class="m-0">Models</h4>
-    <div class="grid grid-cols-2 gap-x-4 gap-y-3">
-      <label class="field">
-        <span>Default model <span class="text-muted">(a new task's, unless it or its repo names one)</span></span>
-        <select v-model="form.default_model">
-          <option v-for="m in modelChoices(form.default_model)" :key="m" :value="m">{{ MODEL_LABELS[m] ?? m }}</option>
-        </select>
-      </label>
-      <label class="field">
-        <span>Support model <span class="text-muted">(resolve and unblock runs)</span></span>
-        <select v-model="form.support_model">
-          <option v-for="m in modelChoices(form.support_model)" :key="m" :value="m">{{ MODEL_LABELS[m] ?? m }}</option>
-        </select>
-      </label>
-    </div>
-  </section>
+  <FieldSection id="settings-models" title="Models">
+    <FieldRow label="Default model" hint="A new task's, unless it or its repo names one.">
+      <select v-model="form.default_model">
+        <option v-for="m in modelChoices(form.default_model)" :key="m" :value="m">{{ MODEL_LABELS[m] ?? m }}</option>
+      </select>
+    </FieldRow>
+    <FieldRow label="Support model" hint="Resolve and unblock runs.">
+      <select v-model="form.support_model">
+        <option v-for="m in modelChoices(form.support_model)" :key="m" :value="m">{{ MODEL_LABELS[m] ?? m }}</option>
+      </select>
+    </FieldRow>
+  </FieldSection>
 
-  <section class="flex flex-col gap-2.5">
-    <h4 class="m-0">Planner</h4>
-    <p class="text-muted m-0 text-sm">
-      When a repo with goals has nothing queued, the planner reads its goals and code and proposes the next tasks. Write goals under Repos.
-    </p>
-    <Switch v-model="form.planner_enabled">Propose tasks automatically when a queue runs dry</Switch>
-    <div class="grid grid-cols-3 gap-x-4 gap-y-3">
-      <label class="field">
-        <span>At most every</span>
-        <span class="flex items-center gap-1.5 [&_input]:w-20"
-          ><NumberInput v-model="form.planner_interval_hours" :step="0.25" />hours</span
-        >
-      </label>
-      <label class="field">
-        <span>Tasks per proposal run</span>
-        <NumberInput v-model="form.planner_max_tasks" />
-      </label>
-      <label class="field">
-        <span>Planner model</span>
-        <select v-model="form.planner_model">
-          <option v-for="m in MODELS" :key="m" :value="m">{{ MODEL_LABELS[m] ?? m }}</option>
-        </select>
-      </label>
-    </div>
-  </section>
+  <FieldSection
+    id="settings-planner"
+    title="Planner"
+    hint="When a repo with goals has nothing queued, the planner reads its goals and code and proposes the next tasks. Write goals under Repos."
+  >
+    <SwitchRow v-model="form.planner_enabled" label="Propose automatically" hint="When a queue runs dry." />
+    <FieldRow label="At most every">
+      <span class="flex items-center gap-1.5"><NumberInput class="w-24" v-model="form.planner_interval_hours" :step="0.25" />hours</span>
+    </FieldRow>
+    <FieldRow label="Tasks per proposal run">
+      <NumberInput class="w-24" v-model="form.planner_max_tasks" />
+    </FieldRow>
+    <FieldRow label="Planner model">
+      <select v-model="form.planner_model">
+        <option v-for="m in MODELS" :key="m" :value="m">{{ MODEL_LABELS[m] ?? m }}</option>
+      </select>
+    </FieldRow>
+  </FieldSection>
 </template>

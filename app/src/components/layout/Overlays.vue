@@ -64,8 +64,8 @@ function onCreated(task: TaskDetail) {
 <template>
   <NewTaskForm v-if="panel === 'new'" :repos="repos" @close="closePanel" @created="onCreated" />
   <ReposPanel v-if="panel === 'repos'" :repos="repos" @close="closePanel" />
-  <SettingsPanel v-if="panel === 'settings'" :notifications="status?.notifications ?? []" @close="closePanel" />
-  <DaemonPanel v-if="panel === 'daemon'" @close="closePanel" />
+  <SettingsPanel v-if="panel === 'settings'" @close="closePanel" />
+  <DaemonPanel v-if="panel === 'daemon'" :notifications="status?.notifications ?? []" @close="closePanel" />
 
   <MergeDialog
     v-if="merging !== null"

@@ -1,4 +1,4 @@
-import type { MergeMethod, NotifyKind, RepoDetail, RepoPatch, Settings, SettingsPatch } from '#api/types.ts';
+import type { MergeMethod, NotifyKind, PrMode, RepoDetail, RepoPatch, Settings, SettingsPatch } from '#api/types.ts';
 import { DEFAULT_AUTO_MERGE_SKIP, DEFAULT_CODE_COMMENT_MAX_LINES, DEFAULT_CODE_COMMENT_MAX_PERCENT } from '#daemon/domain/landing/index.ts';
 import { parseToolRules } from '#daemon/domain/repos/index.ts';
 import { parseTextList, textList } from '#daemon/domain/shared/index.ts';
@@ -7,10 +7,14 @@ import { MODELS } from '#daemon/domain/work/index.ts';
 export type RepoForm = {
   goals: string;
   autoApprove: boolean;
+  baseBranch: string;
+  setupCmd: string;
   testCmd: string;
+  prMode: PrMode;
   mergeMethod: MergeMethod;
   autoResolve: boolean;
   autoUnblock: boolean;
+  autoReview: boolean;
   autoMerge: boolean;
   autoMergeMaxLines: number;
   autoMergeSkip: string;
@@ -30,10 +34,14 @@ export function toRepoForm(d: RepoDetail): RepoForm {
   return {
     goals: d.goals,
     autoApprove: !!d.auto_approve,
+    baseBranch: d.base_branch,
+    setupCmd: d.setup_cmd ?? '',
     testCmd: d.test_cmd ?? '',
+    prMode: d.pr_mode,
     mergeMethod: d.merge_method,
     autoResolve: !!d.auto_resolve,
     autoUnblock: !!d.auto_unblock,
+    autoReview: !!d.auto_review,
     autoMerge: !!d.auto_merge,
     autoMergeMaxLines: d.auto_merge_max_lines,
     autoMergeSkip: parseTextList(d.auto_merge_skip, DEFAULT_AUTO_MERGE_SKIP).join(', '),
@@ -51,10 +59,14 @@ export function toRepoPatch(f: RepoForm): RepoPatch {
   return {
     goals: f.goals,
     auto_approve: f.autoApprove,
+    base_branch: f.baseBranch.trim(),
+    setup_cmd: f.setupCmd,
     test_cmd: f.testCmd,
+    pr_mode: f.prMode,
     merge_method: f.mergeMethod,
     auto_resolve: f.autoResolve,
     auto_unblock: f.autoUnblock,
+    auto_review: f.autoReview,
     auto_merge: f.autoMerge,
     auto_merge_max_lines: f.autoMergeMaxLines,
     auto_merge_skip: textList(f.autoMergeSkip),
