@@ -1,4 +1,4 @@
-// Merge requests (docs/plans/merge-requests.html): recording one, and the daemon carrying it out on its PR refresh with a fake github adapter.
+// Merge requests: recording one, and the daemon carrying it out on its PR refresh with a fake github adapter.
 import assert from 'node:assert/strict';
 import { asTaskId } from '#domain/shared/id.ts';
 import { execFileSync } from 'node:child_process';

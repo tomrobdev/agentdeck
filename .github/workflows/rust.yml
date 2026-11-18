@@ -12,6 +12,9 @@ on:
       - 'app/src-tauri/**'
       - '.github/workflows/rust.yml'
 
+permissions:
+  contents: read
+
 jobs:
   rust:
     # macOS only: mac-notification-sys isn't limited to a target in Cargo.toml, and the app is macOS only.

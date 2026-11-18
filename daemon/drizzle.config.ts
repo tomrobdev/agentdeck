@@ -1,6 +1,6 @@
 // drizzle-kit (dev only): Studio on the live database, and the schema check and db:generate against a freshly
 // migrated one. The daemon's stores query with drizzle-orm at runtime, being ported one at a time
-// (docs/plans/drizzle.html); migrations are still the steps in db/schema.ts, and src/db/tables.ts mirrors them.
+//; migrations are still the steps in db/schema.ts, and src/db/tables.ts mirrors them.
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { defineConfig } from 'drizzle-kit';

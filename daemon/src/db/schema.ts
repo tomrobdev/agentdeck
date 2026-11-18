@@ -141,28 +141,28 @@ export const MIGRATIONS: Migration[] = [
   // 10: worker sandbox (docs/adr/0001-worker-sandbox.md). network is a JSON array of hosts sandboxed commands may reach.
   `ALTER TABLE repos ADD COLUMN sandbox INTEGER NOT NULL DEFAULT 1;
    ALTER TABLE repos ADD COLUMN network TEXT NOT NULL DEFAULT '[]';`,
-  // 11: a task can name the plan and steps it carries out (docs/plans/plan-linked-tasks.html). plan_path is
+  // 11: a task can name the plan and steps it carries out. plan_path is
   // repo-relative under docs/plans/; plan_steps is a JSON array of step ids, NULL for every unfinished step.
   `ALTER TABLE tasks ADD COLUMN plan_path TEXT;
    ALTER TABLE tasks ADD COLUMN plan_steps TEXT;`,
-  // 12: archiving a repo (docs/plans/repo-archive.html). archived_at is when it was archived, NULL while it is active.
+  // 12: archiving a repo. archived_at is when it was archived, NULL while it is active.
   'ALTER TABLE repos ADD COLUMN archived_at TEXT;',
-  // 13: what a blocked worker said it needs (docs/plans/fewer-blocks.html): JSON { kind, items }, NULL when nothing.
+  // 13: what a blocked worker said it needs: JSON { kind, items }, NULL when nothing.
   'ALTER TABLE tasks ADD COLUMN needs TEXT;',
-  // 14: who said a task is done (docs/plans/manual-moves.html): 'person' when mark_done set it, NULL otherwise.
+  // 14: who said a task is done: 'person' when mark_done set it, NULL otherwise.
   'ALTER TABLE tasks ADD COLUMN done_by TEXT;',
-  // 15: the stop reason, named for the domain language (docs/plans/domain-model.html).
+  // 15: the stop reason, named for the domain language.
   'ALTER TABLE tasks RENAME COLUMN blocked_reason TO stop_reason;',
   // 16: a paused repo notifies with its own kind, `paused`, instead of `hold`. Whoever listened for `hold` keeps hearing both.
   `UPDATE settings SET value = value || ',paused'
    WHERE key = 'notify_events' AND ',' || value || ',' LIKE '%,hold,%' AND ',' || value || ',' NOT LIKE '%,paused,%';`,
-  // 17: auto-merge (docs/plans/auto-merge.html). auto_merge_skip is a JSON array of path prefixes that need a person;
+  // 17: auto-merge. auto_merge_skip is a JSON array of path prefixes that need a person;
   // a task's auto_merge is NULL (its repo's), 0 or 1.
   `ALTER TABLE repos ADD COLUMN auto_merge INTEGER NOT NULL DEFAULT 0;
    ALTER TABLE repos ADD COLUMN auto_merge_max_lines INTEGER NOT NULL DEFAULT 400;
    ALTER TABLE repos ADD COLUMN auto_merge_skip TEXT NOT NULL DEFAULT '[".github/"]';
    ALTER TABLE tasks ADD COLUMN auto_merge INTEGER;`,
-  // 18: task links (docs/plans/task-links.html). kind is builds_on | after. after_task is copied in and no longer read.
+  // 18: task links. kind is builds_on | after. after_task is copied in and no longer read.
   `CREATE TABLE task_links (
      task_id INTEGER NOT NULL REFERENCES tasks(id),
      on_task INTEGER NOT NULL REFERENCES tasks(id),
@@ -172,11 +172,11 @@ export const MIGRATIONS: Migration[] = [
    );
    CREATE INDEX task_links_on ON task_links(on_task);
    INSERT INTO task_links (task_id, on_task, kind) SELECT id, after_task, 'builds_on' FROM tasks WHERE after_task IS NOT NULL;`,
-  // 19: the latest auto-merge check of a done task's open PR (docs/plans/auto-merge-view.html): JSON { verdict, reasons },
+  // 19: the latest auto-merge check of a done task's open PR: JSON { verdict, reasons },
   // NULL when none; auto_merge_checked_at is when the PR refresh made it.
   `ALTER TABLE tasks ADD COLUMN auto_merge_check TEXT;
    ALTER TABLE tasks ADD COLUMN auto_merge_checked_at TEXT;`,
-  // 20: reviews made in the dashboard (docs/plans/review-merge.html). A review is a draft until submitted_at is set; kind is
+  // 20: reviews made in the dashboard. A review is a draft until submitted_at is set; kind is
   // comment | request_changes. A comment's state is open | answered | resolved; side is old | new.
   `CREATE TABLE reviews (
      id INTEGER PRIMARY KEY,
@@ -216,7 +216,7 @@ export const MIGRATIONS: Migration[] = [
    CREATE INDEX usage_samples_window ON usage_samples(window, id);
    ALTER TABLE tasks ADD COLUMN pr_checks_opened TEXT;
    ALTER TABLE tasks ADD COLUMN pr_checks_merged TEXT;`,
-  // 23: merge requests (docs/plans/merge-requests.html). merge_requested_at is when a person asked the daemon to merge the
+  // 23: merge requests. merge_requested_at is when a person asked the daemon to merge the
   // task's PR once it is ready (NULL: no request); merge_request_check is the last check's JSON { verdict, reasons }.
   `ALTER TABLE tasks ADD COLUMN merge_requested_at TEXT;
    ALTER TABLE tasks ADD COLUMN merge_request_method TEXT;

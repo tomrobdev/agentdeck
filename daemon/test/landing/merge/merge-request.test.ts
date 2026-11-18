@@ -1,4 +1,4 @@
-// Merge requests (docs/plans/merge-requests.html), the pure part: what each finding means to a request, and the view of one.
+// Merge requests, the pure part: what each finding means to a request, and the view of one.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {

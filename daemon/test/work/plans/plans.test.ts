@@ -75,10 +75,10 @@ test('parsePlan reads a step’s done criteria: a list, plain text, none, and no
   );
 });
 
-test('this plan’s own steps all carry done criteria', () => {
-  const html = readFileSync(new URL('../../../../docs/plans/plan-linked-tasks.html', import.meta.url), 'utf8');
+test('the example plan’s steps all carry done criteria', () => {
+  const html = readFileSync(new URL('../../../../docs/plans/sync-in-dashboard.html', import.meta.url), 'utf8');
   const plan = parsePlan(html)!;
-  assert.equal(plan.steps.length, 4);
+  assert.equal(plan.steps.length, 3);
   for (const s of plan.steps) assert.ok(s.done.length > 0, `${s.id} has criteria`);
 });
 

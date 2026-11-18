@@ -11,6 +11,9 @@ on:
 # themselves change, it always runs. The dashboard end to end (`pnpm test:ui`) is not run here: check:task runs it on a
 # task's branch that changes the dashboard. daemon/test/tooling/ci-parity.test.ts keeps every check step to what
 # `pnpm check:task` runs.
+permissions:
+  contents: read
+
 jobs:
   plan:
     runs-on: ubuntu-latest

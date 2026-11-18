@@ -1,4 +1,4 @@
-// Auto-merge: the daemon merges a done task's PR on its own when it passes the auto-merge check (docs/plans/auto-merge.html), and a person turns it on or off for one task.
+// Auto-merge: the daemon merges a done task's PR on its own when it passes the auto-merge check, and a person turns it on or off for one task.
 import type { App } from '#application/ports/app.ts';
 import type { TaskId } from '#domain/shared/index.ts';
 import { AUTO_MERGE_LABEL, autoMergeOn } from '#domain/landing/index.ts';

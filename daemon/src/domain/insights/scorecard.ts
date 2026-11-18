@@ -1,4 +1,4 @@
-// The rest of the pilot scorecard (docs/pilot/scorecard.md), computed from plain rows: interventions, time queued, running and in review, quota spent and PRs green on CI.
+// The rest of the pilot scorecard, computed from plain rows: interventions, time queued, running and in review, quota spent and PRs green on CI.
 import type { RepoId, TaskId } from '#domain/shared/index.ts';
 import type { CheckCounts } from '#domain/landing/index.ts';
 import { type QuotaSample, quotaSpends } from '#domain/capacity/index.ts';

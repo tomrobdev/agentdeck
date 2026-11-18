@@ -2,9 +2,19 @@
 
 Always-on agent manager for macOS. A background daemon works through a queue of coding tasks with Claude Code (`claude -p`), one git worktree per task, paced to stay within your subscription usage. A Tauri + Vue app is the control panel.
 
+![The queue in the dashboard](app/e2e/screenshots/queue-light-darwin.png)
+
+This is a personal project, shared as it is: it changes often, and there is no support. Issues and pull requests are welcome but may wait. It is under the [MIT licence](LICENSE).
+
+## What it does on your machine
+
+- It runs `claude` unattended in the repos you register, and that spends your Claude subscription's usage. The [usage governor](#usage-governor) paces it.
+- Each task works in its own git worktree and branch, never in your checkout, and a worker's shell commands run in Claude Code's sandbox: writes stay in the worktree, and the network is off except for the hosts you allow.
+- It opens pull requests and merges them only in repos where you turn that on. See [Safety defaults](#safety-defaults) and [SECURITY.md](SECURITY.md).
+
 ## Quick start
 
-Needs Node 24+ (runs the TypeScript directly), git, and a logged-in `claude` CLI.
+Needs macOS, Node 24+ (runs the TypeScript directly), pnpm, git, and a logged-in `claude` CLI. Opening pull requests also needs a logged-in `gh` CLI.
 
 ```sh
 pnpm install                             # whole workspace (app + daemon)
@@ -44,7 +54,7 @@ The dashboard has the queue (Active / Needs you / Done), task detail with every 
 2. The task gets a worktree at `~/.agentdeck/worktrees/<repo>/task-<id>` on branch `agentdeck/task-<id>`.
 3. `claude -p` runs there with `--permission-mode dontAsk`, the repo's allowed tools, and a turn limit. The stream-json output goes to `~/.agentdeck/logs/`.
 4. Uncommitted leftovers get committed, then the repo's test command runs.
-5. The outcome is **done** (branch ready to review), **blocked** (the agent ended with `STATUS: BLOCKED: …`, or changed nothing), or **failed** (retried until `max_attempts`). A retry reuses the branch, and the new prompt includes the last attempt's result.
+5. The outcome is **done** (the branch is ready to review, and in a repo with a PR mode its pull request is opened), **blocked** (the agent ended with `STATUS: BLOCKED: …`, or changed nothing), or **failed** (retried until `max_attempts`). A retry reuses the branch, and the new prompt includes the last attempt's result.
 6. A rate-limit rejection requeues the task without spending an attempt and holds the queue until the window resets.
 
 ## Repo doctor and paused repos
@@ -118,7 +128,10 @@ The daemon sends a notification when a task finishes as done, blocked or failed 
 ```
 daemon/   Node + TypeScript: SQLite queue, scheduler, workers, CLI, local API
 app/      Tauri 2 + Vue 3 dashboard
+docs/     the architecture, the decisions (adr/) and the generated reference
 ```
+
+`docs/architecture.md` is the map of the code, `GLOSSARY.md` the words it uses, and `CLAUDE.md` the rules a change must keep.
 
 `pnpm test` runs the end-to-end tests with real git worktrees and a fake `claude` binary.
 
@@ -126,24 +139,20 @@ app/      Tauri 2 + Vue 3 dashboard
 
 ```sh
 pnpm check:fast                                    # format check + typecheck + db:check + tests (the repo's test_cmd)
-pnpm check                                         # check:fast + crash test (CRASH_ITERATIONS, default 10); what CI runs
+pnpm check                                         # check:fast + crash test (CRASH_ITERATIONS, default 10)
+pnpm check:task                                    # what a branch must pass: check:fast, plus the crash test, check:rust and test:ui when its changes call for them
 pnpm format                                        # Prettier, whole repo
-pnpm check:rust                                    # cargo fmt, clippy and test on the Tauri shell (offline; not in CI, which has no crate cache or Tauri system libraries)
+pnpm check:rust                                    # cargo fmt, clippy and test on the Tauri shell (CI runs it when app/src-tauri changes)
 pnpm test:ui                                       # the dashboard end to end: Playwright, light and dark screenshots, contrast
 ```
 
 `pnpm test:ui` (`app/e2e/`) starts a daemon on a scratch home (`app/e2e/harness/daemon.mjs`) seeded with a repo and a task in every stage, with a fake `claude` and a fake `gh`, and the Vite dev server pointed at it, on ports of their own (4391 and 1430). It needs a Chromium: `pnpm --filter agentdeck-app exec playwright install chromium`. The screenshots are stored per platform in `app/e2e/screenshots/`: a platform's first run writes them and passes, and later runs compare with them. After a change that is meant to change the look, delete the images and run it again. CI's are in its `ui-screenshots` artifact.
 
-## Milestones
-
-1. ~~Daemon core + CLI (queue, worker, worktrees)~~
-2. ~~Tauri + Vue dashboard~~
-3. ~~Usage governor + notifications~~
-4. ~~Planner + always-on (launchd, launch at login)~~
-
 ## Safety defaults
 
-- Max 2 concurrent tasks
-- Never pushes or merges; branches are left for review
-- Per-repo allowed-tools list, no `--dangerously-skip-permissions`
-- Daemon starts paused
+- The daemon starts paused, and runs at most 2 tasks at once.
+- Workers run with a per-repo list of allowed tools inside Claude Code's sandbox, never with `--dangerously-skip-permissions`.
+- A new repo opens no pull requests: finished branches are left for you to review (`pr_mode` is `off`). Set a PR mode to have them opened.
+- Nothing merges on its own until you turn on the repo's `auto_merge`, and then only pull requests that pass its auto-merge check.
+- The planner's proposals wait for your approval unless you turn on the repo's `auto_approve`.
+- A repo whose doctor fails, or whose run was refused a tool, is paused until you look.

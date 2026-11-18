@@ -1,4 +1,4 @@
-// The pilot scorecard's measures (docs/pilot/scorecard.md), computed from plain run rows.
+// The pilot scorecard's measures, computed from plain run rows.
 import type { RepoId, TaskId } from '#domain/shared/index.ts';
 import { minutesBetween, weekOf } from '#domain/shared/index.ts';
 import { num, pct, table } from '#domain/insights/report-text.ts';
