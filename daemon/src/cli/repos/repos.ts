@@ -50,6 +50,10 @@ export const repoCommands: Record<string, Command> = {
       if (!path) die('usage: agentdeck repo resume <repo>');
       const repo = actions.resumeRepo(db, path);
       console.log(`${repo.name}: resumed`);
+    } else if (sub === 'drain') {
+      if (!path) die('usage: agentdeck repo drain <repo>');
+      const repo = actions.drainRepo(db, path);
+      console.log(`${repo.name}: draining: no new task starts, the work in flight finishes, then it pauses`);
     } else if (sub === 'archive' || sub === 'unarchive') {
       if (!path) die(`usage: agentdeck repo ${sub} <repo>`);
       const repo = sub === 'archive' ? actions.archiveRepo(db, path) : actions.unarchiveRepo(db, path);

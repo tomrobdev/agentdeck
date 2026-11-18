@@ -69,6 +69,10 @@ async function restartWhenIdle() {
   });
 }
 
+async function drain() {
+  await run(() => operationsApi.drain());
+}
+
 function askRestartNow() {
   void healthQ.refetch();
   confirming.value = true;
@@ -171,6 +175,13 @@ function refresh() {
     <div class="flex items-center gap-2">
       <button :disabled="pending || down" @click="refresh">Refresh</button>
       <div class="spacer" />
+      <button
+        :disabled="pending || down"
+        title="Start no new task, finish the work in flight, then pause and send a 'drained' notification"
+        @click="drain"
+      >
+        Drain
+      </button>
       <button :disabled="pending || down || asked" :title="'Pause new work, wait for running tasks, then restart'" @click="restartWhenIdle">
         {{ asked ? 'Waiting…' : 'Restart when idle' }}
       </button>

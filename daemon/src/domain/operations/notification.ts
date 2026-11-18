@@ -4,13 +4,15 @@ import type { TaskId } from '#domain/shared/index.ts';
 import { plural } from '#domain/shared/index.ts';
 import type { Task, TaskState } from '#domain/work/index.ts';
 
-export type NotifyKind = 'done' | 'blocked' | 'failed' | 'hold' | 'paused' | 'proposed' | 'merged' | 'checks_failed' | 'review_due';
+export type NotifyKind =
+  'done' | 'blocked' | 'failed' | 'hold' | 'paused' | 'drained' | 'proposed' | 'merged' | 'checks_failed' | 'review_due';
 export const NOTIFY_KINDS: NotifyKind[] = [
   'done',
   'blocked',
   'failed',
   'hold',
   'paused',
+  'drained',
   'proposed',
   'merged',
   'checks_failed',

@@ -20,6 +20,9 @@ export const DOCS_PATH = join(import.meta.dirname, '../../../docs/architecture.m
 
 const SETTING_MEANINGS: Record<string, string> = {
   paused: 'The daemon starts no new work while this is 1; it starts paused until someone resumes it',
+  draining:
+    'Set to 1 while the daemon drains: no queued task that never ran starts, and once nothing is in flight it pauses and sends a drained notification',
+  draining_repos: 'A JSON list of the repo ids draining on their own; each ends paused once nothing is in flight in it',
   rate_limited_until: 'Unix seconds until which a run that hit the usage limit keeps new work from starting; 0 for none',
   pr_check_requested: 'Set to 1 to have the scheduler check open pull requests on its next tick',
   app_seen_at:

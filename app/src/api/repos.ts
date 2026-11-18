@@ -12,6 +12,7 @@ export const reposApi = {
   propose: (id: number) => post<ProposalResult>(`/api/repos/${id}/propose`),
   doctor: (id: number) => post<DoctorReport>(`/api/repos/${id}/doctor`),
   resumeRepo: (id: number) => post<Repo>(`/api/repos/${id}/resume`),
+  drainRepo: (id: number) => post<Repo>(`/api/repos/${id}/drain`),
   archiveRepo: (id: number) => post<Repo>(`/api/repos/${id}/archive`),
   unarchiveRepo: (id: number) => post<Repo>(`/api/repos/${id}/unarchive`),
   repoDeletion: (id: number) => get<RepoDeletion>(`/api/repos/${id}/deletion`),

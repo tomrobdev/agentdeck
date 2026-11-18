@@ -1,6 +1,7 @@
 // What queued tasks wait for: what stops the whole queue, and what each task waits for.
 import type { App } from '#application/ports/app.ts';
-import type { RepoId } from '#domain/shared/index.ts';
+import type { RepoId, TaskId } from '#domain/shared/index.ts';
+import { mayStart } from '#domain/capacity/index.ts';
 import type { Repo } from '#domain/repos/index.ts';
 import type { StartState } from '#domain/work/index.ts';
 import { type QueueWait, type StartWait, startWait } from '#domain/work/index.ts';
@@ -29,10 +30,15 @@ export function startWaits(app: App): (task: Pick<Task, 'id' | 'status' | 'repo_
   const { wait: queue, used, max } = queueWait(app);
   const repos = new Map<RepoId, Repo>(app.listRepos().map((r) => [r.id, r]));
   const unblocks = app.liveRuns('unblock');
+  const draining = app.draining();
+  const ran = draining.daemon || draining.repos.length ? app.queuedThatRan() : new Set<TaskId>();
+  const drainOf = (task: Pick<Task, 'id' | 'repo_id'>) =>
+    mayStart(draining, { repo_id: task.repo_id, has_run: ran.has(task.id) }) ? null : draining.daemon ? 'daemon' : 'repo';
   return (task, dependency) =>
     startWait(task, {
       queue,
       repoPaused: repos.get(task.repo_id)?.paused_reason ?? null,
+      draining: drainOf(task),
       dependency,
       unblocking: unblocks.has(task.id),
       running: used,

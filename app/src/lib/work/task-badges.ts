@@ -85,6 +85,7 @@ export function statusLine(t: Viewed): StatusLine | null {
   if (t.wait?.kind === 'repo-paused')
     return line('cant_start', `Can't start: ${t.repo ?? 'the repo'} is paused`, 'blocked', { title: describeWait(t.wait) });
   if (t.wait?.kind === 'daemon-paused') return line('cant_start', `Can't start: ${describeWait(t.wait)}`, 'blocked');
+  if (t.wait?.kind === 'draining') return line('cant_start', describeWait(t.wait), 'muted');
   const am = t.auto_merge_view;
   if (am && isReview(t)) {
     const title = [am.label, ...am.reasons].join('\n');

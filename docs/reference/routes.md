@@ -11,12 +11,14 @@ The dashboard's routes, and the use case each calls.
 | POST   | `/api/daemon/restart-now`          | `actions.restartNow`, `actions.restartService` |
 | POST   | `/api/daemon/restart`              | `actions.restartDaemon`                        |
 | GET    | `/api/daemon`                      | `actions.daemonState`                          |
+| POST   | `/api/drain`                       | `actions.drain`, `actions.status`              |
 | GET    | `/api/events`                      |                                                |
 | POST   | `/api/notify/test`                 | `actions.sendTestNotification`                 |
 | POST   | `/api/pause`                       | `actions.setPaused`, `actions.status`          |
 | POST   | `/api/repos/:id/archive`           | `actions.repoView`, `actions.archiveRepo`      |
 | GET    | `/api/repos/:id/deletion`          | `actions.repoDeletionPreview`                  |
 | POST   | `/api/repos/:id/doctor`            | `actions.doctorRepo`                           |
+| POST   | `/api/repos/:id/drain`             | `actions.repoView`, `actions.drainRepo`        |
 | POST   | `/api/repos/:id/propose`           | `actions.proposeNow`                           |
 | POST   | `/api/repos/:id/resume`            | `actions.repoView`, `actions.resumeRepo`       |
 | POST   | `/api/repos/:id/unarchive`         | `actions.repoView`, `actions.unarchiveRepo`    |

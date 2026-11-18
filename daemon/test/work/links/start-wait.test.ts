@@ -7,7 +7,15 @@ import { asTaskId } from '#test/fixtures/fixtures.ts';
 
 const allow: Decision = { allow: true, max_concurrent: 2, reason: null, until: null, weekly_allowed: null };
 const held: Decision = { ...allow, allow: false, reason: '5h window at 92%', until: 2000 };
-const free = { queue: null, repoPaused: null, dependency: { kind: 'none' } as const, unblocking: false, running: 0, max: 2 };
+const free = {
+  queue: null,
+  repoPaused: null,
+  draining: null,
+  dependency: { kind: 'none' } as const,
+  unblocking: false,
+  running: 0,
+  max: 2,
+};
 
 test('startDecision checks pause, then rate limit, then the governor', () => {
   const at = (q: Parameters<typeof startDecision>[0]) => startDecision(q, { ignorePause: false, used: 0, now: 1000 });
@@ -81,6 +89,13 @@ test('startWait: a queued task waits for its unblock run to stop, after its depe
   );
   assert.equal(startWait({ status: 'queued' }, { ...free, unblocking: true, repoPaused: 'refused' })?.kind, 'repo-paused');
   assert.equal(startWait({ status: 'blocked' }, { ...free, unblocking: true }), null, 'only a queued task waits to start');
+});
+
+test('startWait: a task that never ran waits out a drain, after a pause and before its links', () => {
+  const draining = { ...free, draining: 'repo' as const, dependency: { kind: 'waiting' as const, on: [asTaskId(3)] } };
+  assert.deepEqual(startWait({ status: 'queued' }, draining), { kind: 'draining', repo: true });
+  assert.deepEqual(startWait({ status: 'queued' }, { ...free, draining: 'daemon' }), { kind: 'draining', repo: false });
+  assert.equal(startWait({ status: 'queued' }, { ...draining, repoPaused: 'refused' })?.kind, 'repo-paused');
 });
 
 test('waitingFor: only a queued task waits on its builds-on links', () => {

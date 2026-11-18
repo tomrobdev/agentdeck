@@ -18,6 +18,7 @@ export const operationsApi = {
   status: () => get<Status>('/api/status'),
   pause: () => post<Status>('/api/pause'),
   resume: () => post<Status>('/api/resume'),
+  drain: () => post<Status>('/api/drain'),
   restartDaemon: () => post<RestartResult>('/api/daemon/restart'),
   restartDaemonNow: () => post<RestartNowResult>('/api/daemon/restart-now'),
   daemonState: () => get<DaemonState>('/api/daemon'),

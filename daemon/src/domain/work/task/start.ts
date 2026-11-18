@@ -26,6 +26,7 @@ export function waitingOf(state: StartState): Waiting | null {
 export type StartWait =
   | QueueWait
   | { kind: 'repo-paused'; reason: string }
+  | { kind: 'draining'; repo: boolean }
   | ({ kind: 'dependency' } & Waiting)
   | { kind: 'unblocking' }
   | { kind: 'slots'; running: number; max: number };
@@ -71,6 +72,7 @@ export function startWait(
   ctx: {
     queue: QueueWait | null;
     repoPaused: string | null;
+    draining: 'daemon' | 'repo' | null;
     dependency: StartState;
     unblocking: boolean;
     running: number;
@@ -80,6 +82,7 @@ export function startWait(
   if (!waitsToStart(task)) return null;
   if (ctx.queue) return ctx.queue;
   if (ctx.repoPaused) return { kind: 'repo-paused', reason: ctx.repoPaused };
+  if (ctx.draining) return { kind: 'draining', repo: ctx.draining === 'repo' };
   const waiting = waitingOf(ctx.dependency);
   if (waiting) return { kind: 'dependency', ...waiting };
   if (ctx.unblocking) return { kind: 'unblocking' };

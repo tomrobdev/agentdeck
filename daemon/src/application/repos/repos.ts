@@ -165,7 +165,18 @@ export function updateRepo(app: App, nameOrId: string | number, patch: RepoPatch
 export function resumeRepo(app: App, nameOrId: string | number): Repo {
   const repo = requireRepo(app, nameOrId);
   app.setRepoPaused(repo.id, null);
+  const draining = app.draining();
+  app.setDraining({ ...draining, repos: draining.repos.filter((id) => id !== repo.id) });
   return present(app.getRepo(repo.id), `repo ${repo.name}`);
+}
+
+export function drainRepo(app: App, nameOrId: string | number): Repo {
+  const repo = requireRepo(app, nameOrId);
+  if (repo.archived_at) throw new ActionError(`${repo.name} is archived`);
+  if (repo.paused_reason) throw new ActionError(`${repo.name} is paused already: nothing new starts in it`);
+  const draining = app.draining();
+  app.setDraining({ ...draining, repos: [...draining.repos, repo.id] });
+  return repo;
 }
 
 export function archiveRepo(app: App, nameOrId: string | number): Repo {

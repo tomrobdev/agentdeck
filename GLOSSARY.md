@@ -65,6 +65,8 @@ _Avoid_: bring in
 **Pause**: a repo or the daemon told by a person not to start work.
 _Avoid_: hold, holds, holding, held
 
+**Drain**: a repo or the daemon told by a person to finish the work in flight, then pause. While it **drains**, no queued task that has never run starts, but a task that has run carries on to an end: its retries, and its resolve, unblock and review runs. Once nothing is in flight it ends paused, and a person gets a **drained** notification. A resume ends a drain. Not a pause, a hold or a wait.
+
 ## Proposals
 
 **Planner**: proposes tasks from a repo's goals when its queue runs dry. What it produces are **proposals** (tasks in `proposed`), never plans.
