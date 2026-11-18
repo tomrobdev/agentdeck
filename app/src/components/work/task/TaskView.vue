@@ -146,6 +146,9 @@ const code = 'rounded-[5px] bg-[color-mix(in_srgb,var(--running)_10%,var(--panel
     <div v-else-if="s === 'proposed'" class="callout s-proposed">
       The planner suggested this task. Read the prompt, then approve it to queue it or reject it.
     </div>
+    <div v-else-if="task.status === 'parked'" class="callout s-parked">
+      <strong>Parked for later.</strong> {{ task.park_reason ?? 'No reason given.' }} Lift it to proposed before approving it.
+    </div>
 
     <div
       class="flex min-h-0 flex-1 gap-7 px-6 pt-4 max-md:flex-col"

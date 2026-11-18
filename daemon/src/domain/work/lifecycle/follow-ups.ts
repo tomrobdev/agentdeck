@@ -22,6 +22,8 @@ export const FOLLOW_UPS: Record<DomainEventType, FollowUp[]> = {
   TaskFailed: ['warn_dependents', 'notify'],
   TaskCancelRequested: [],
   TaskCancelled: ['warn_dependents'],
+  TaskParked: [],
+  TaskLifted: [],
 };
 
 export function followUpsOf(event: Pick<DomainEvent, 'type'>): FollowUp[] {

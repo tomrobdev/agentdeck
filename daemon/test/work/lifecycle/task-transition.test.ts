@@ -50,12 +50,31 @@ const stateIn = (status: TaskStatus): TaskState => {
     case 'failed':
     case 'cancelled':
       return { status, stop_reason: null };
+    case 'parked':
+      return { status, park_reason: null };
     default:
       return { status };
   }
 };
 
 const CASES: Case[] = [
+  {
+    name: 'park keeps a proposal for later, with its reason',
+    from: 'proposed',
+    event: { type: 'park' },
+    opts: { reason: 'phase 3' },
+    to: { status: 'parked', park_reason: 'phase 3' },
+    counters: {},
+    history: 'park',
+  },
+  {
+    name: 'lift brings a parked task back to proposed and drops its reason',
+    from: 'parked',
+    event: { type: 'lift' },
+    to: { status: 'proposed' },
+    counters: {},
+    history: 'lift',
+  },
   {
     name: 'claim',
     from: 'queued',
@@ -430,6 +449,8 @@ const EVENT_OF: Record<RuleKey, TaskEvent> = {
   cancel: { type: 'cancel' },
   approve: { type: 'approve' },
   reject: { type: 'reject' },
+  park: { type: 'park' },
+  lift: { type: 'lift' },
   retry: { type: 'retry' },
   unblock_retry: { type: 'unblock_retry' },
   review_retry: { type: 'review_retry' },
@@ -462,7 +483,9 @@ const EVENTS: Record<RuleKey, Partial<Record<TaskStatus, DomainEventType>>> = {
     running: 'TaskCancelRequested',
   },
   approve: { proposed: 'TaskQueued' },
-  reject: { proposed: 'TaskCancelled' },
+  reject: { proposed: 'TaskCancelled', parked: 'TaskCancelled' },
+  park: { proposed: 'TaskParked' },
+  lift: { parked: 'TaskLifted' },
   retry: { blocked: 'TaskQueued', failed: 'TaskQueued', cancelled: 'TaskQueued', done: 'TaskQueued' },
   unblock_retry: { blocked: 'TaskQueued' },
   review_retry: { done: 'TaskQueued' },

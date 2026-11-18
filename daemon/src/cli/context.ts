@@ -28,6 +28,7 @@ export function parseCommandLine(argv: string[]) {
       sort: { type: 'string' },
       attempt: { type: 'string' },
       note: { type: 'string' },
+      reason: { type: 'string' },
       raw: { type: 'boolean' },
       archived: { type: 'boolean' },
       method: { type: 'string' },

@@ -32,6 +32,13 @@ test('the other moves are unchanged', () => {
   assert.equal(boardMove(task('proposed'), 'queued'), 'approve');
 });
 
+test('a proposal dropped on Parked is parked, and a parked one dropped on Proposed is lifted', () => {
+  assert.equal(boardMove(task('proposed'), 'parked'), 'park');
+  assert.equal(boardMove(task('parked'), 'proposed'), 'lift');
+  assert.equal(boardMove(task('parked'), 'queued'), null, 'a parked task is never approved');
+  assert.equal(statusGroup(task('parked')), 'parked');
+});
+
 test('every finished task is in Done, whatever its PR; an open PR is in Review', () => {
   assert.equal(statusGroup(task('done', { pr_state: 'merged', pr_url: 'u' })), 'done');
   assert.equal(statusGroup(task('done', { pr_state: 'closed', pr_url: 'u' })), 'done');

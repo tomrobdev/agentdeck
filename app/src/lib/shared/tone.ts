@@ -4,6 +4,7 @@ export type Tone = (typeof TONES)[number];
 
 const STATUS_TONE: Record<string, Tone> = {
   proposed: 'accent',
+  parked: 'cancelled',
   queued: 'queued',
   interrupted: 'queued',
   running: 'running',

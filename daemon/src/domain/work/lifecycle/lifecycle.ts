@@ -8,6 +8,7 @@ import { type TaskChanges, statusChangePrChanges } from '#domain/work/lifecycle/
 
 export type TaskStatus =
   | 'proposed' // suggested by the planner, waiting for approval
+  | 'parked'
   | 'queued'
   | 'running'
   | 'done'
@@ -16,7 +17,17 @@ export type TaskStatus =
   | 'cancel_requested'
   | 'cancelled';
 
-export const TASK_STATUSES: TaskStatus[] = ['proposed', 'queued', 'running', 'done', 'blocked', 'failed', 'cancel_requested', 'cancelled'];
+export const TASK_STATUSES: TaskStatus[] = [
+  'proposed',
+  'parked',
+  'queued',
+  'running',
+  'done',
+  'blocked',
+  'failed',
+  'cancel_requested',
+  'cancelled',
+];
 
 /** What happened to a task. Everything that changes a status is one of these. */
 export type TaskEvent =
@@ -29,6 +40,8 @@ export type TaskEvent =
   | { type: 'cancel' }
   | { type: 'approve' } // accept a planner proposal
   | { type: 'reject' } // decline a planner proposal
+  | { type: 'park' }
+  | { type: 'lift' }
   | { type: 'retry' } // a human asks for another attempt
   | { type: 'unblock_retry' } // an unblock run sent a blocked task back with a note; its attempts stay as they are
   | { type: 'review_retry' } // a review run asked for changes to a done task; one attempt is added, as a person's retry adds
@@ -48,6 +61,8 @@ export type RuleKey =
   | 'cancel'
   | 'approve'
   | 'reject'
+  | 'park'
+  | 'lift'
   | 'retry'
   | 'unblock_retry'
   | 'review_retry'
@@ -67,7 +82,9 @@ export const RULES: Record<RuleKey, Partial<Record<TaskStatus, TaskStatus>>> = {
   conflict: { done: 'blocked' },
   cancel: { proposed: 'cancelled', queued: 'cancelled', blocked: 'cancelled', failed: 'cancelled', running: 'cancel_requested' },
   approve: { proposed: 'queued' },
-  reject: { proposed: 'cancelled' },
+  reject: { proposed: 'cancelled', parked: 'cancelled' },
+  park: { proposed: 'parked' },
+  lift: { parked: 'proposed' },
   retry: { blocked: 'queued', failed: 'queued', cancelled: 'queued', done: 'queued' },
   unblock_retry: { blocked: 'queued' },
   review_retry: { done: 'queued' },
@@ -103,8 +120,8 @@ export function canApply(from: TaskStatus, event: TaskEvent): boolean {
 }
 
 /** The events a person can ask for. */
-export type PersonEvent = 'approve' | 'reject' | 'retry' | 'cancel' | 'mark_done';
-const PERSON_EVENTS: PersonEvent[] = ['approve', 'reject', 'retry', 'cancel', 'mark_done'];
+export type PersonEvent = 'approve' | 'reject' | 'park' | 'lift' | 'retry' | 'cancel' | 'mark_done';
+const PERSON_EVENTS: PersonEvent[] = ['approve', 'reject', 'park', 'lift', 'retry', 'cancel', 'mark_done'];
 
 export function personEvents(t: { status: TaskStatus }): PersonEvent[] {
   return PERSON_EVENTS.filter((type) => canApply(t.status, { type }) && !(type === 'cancel' && t.status === 'proposed'));
@@ -129,7 +146,9 @@ export type DomainEventType =
   | 'TaskBlocked'
   | 'TaskFailed'
   | 'TaskCancelRequested'
-  | 'TaskCancelled';
+  | 'TaskCancelled'
+  | 'TaskParked'
+  | 'TaskLifted';
 
 export const DOMAIN_EVENT_TYPES: DomainEventType[] = [
   'TaskStarted',
@@ -142,6 +161,8 @@ export const DOMAIN_EVENT_TYPES: DomainEventType[] = [
   'TaskFailed',
   'TaskCancelRequested',
   'TaskCancelled',
+  'TaskParked',
+  'TaskLifted',
 ];
 
 /** The status change of one task. `applyEvent` (db/work/tasks-status.ts) records it as a task_events row and returns it. */
@@ -163,7 +184,7 @@ export function domainEventType(cause: RuleKey, to: TaskStatus): DomainEventType
 
 export function domainEventOfRow(row: { type: TaskEventType; to_status: TaskStatus | null }): DomainEventType | null {
   if (row.type === 'pr_closed') return 'TaskPrClosed';
-  if (!row.to_status || row.to_status === 'proposed') return null;
+  if (!row.to_status || (row.to_status === 'proposed' && row.type !== 'lift')) return null;
   return eventTypeOf(row.to_status, row.type === 'pr_merged' || row.type === 'mark_done' ? row.type : 'finished');
 }
 
@@ -183,8 +204,10 @@ function eventTypeOf(to: TaskStatus, done: 'pr_merged' | 'mark_done' | 'finished
       return 'TaskCancelRequested';
     case 'cancelled':
       return 'TaskCancelled';
+    case 'parked':
+      return 'TaskParked';
     case 'proposed':
-      throw new Error('no rule moves a task to proposed');
+      return 'TaskLifted';
   }
 }
 
@@ -220,6 +243,8 @@ function nextState(from: TaskState, to: TaskStatus, event: TaskEvent, opts: Tran
       return { status: to, stop_reason: reason };
     case 'cancelled':
       return { status: to, stop_reason: stopReasonOf(from) };
+    case 'parked':
+      return { status: to, park_reason: reason };
     case 'proposed':
     case 'queued':
     case 'running':

@@ -6,8 +6,11 @@ Every status change a task can make, and the events that cause it.
 
 ```mermaid
 stateDiagram-v2
+  proposed --> parked: park
   proposed --> queued: approve
   proposed --> cancelled: cancel, reject
+  parked --> proposed: lift
+  parked --> cancelled: reject
   queued --> running: claim
   queued --> cancelled: cancel
   running --> queued: finish/failed/retry, rate_limited, recover

@@ -167,6 +167,7 @@ export type {
   DoneState,
   FailedState,
   ModelSource,
+  ParkedState,
   StateFields,
   Task,
   TaskSource,

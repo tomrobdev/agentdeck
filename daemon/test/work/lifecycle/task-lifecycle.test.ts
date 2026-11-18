@@ -27,6 +27,8 @@ const EVENTS: Record<string, TaskEvent> = {
   cancel: { type: 'cancel' },
   approve: { type: 'approve' },
   reject: { type: 'reject' },
+  park: { type: 'park' },
+  lift: { type: 'lift' },
   retry: { type: 'retry' },
   mark_done: { type: 'mark_done' },
   pr_merged: { type: 'pr_merged' },
@@ -53,7 +55,9 @@ const ALLOWED: Record<string, Partial<Record<TaskStatus, TaskStatus>>> = {
   conflict: { done: 'blocked' },
   cancel: { proposed: 'cancelled', queued: 'cancelled', blocked: 'cancelled', failed: 'cancelled', running: 'cancel_requested' },
   approve: { proposed: 'queued' },
-  reject: { proposed: 'cancelled' },
+  reject: { proposed: 'cancelled', parked: 'cancelled' },
+  park: { proposed: 'parked' },
+  lift: { parked: 'proposed' },
   retry: { blocked: 'queued', failed: 'queued', cancelled: 'queued', done: 'queued' },
   mark_done: { blocked: 'done', failed: 'done' },
   pr_merged: { blocked: 'done', failed: 'done' },
@@ -74,7 +78,8 @@ for (const [name, event] of Object.entries(EVENTS)) {
 
 test('personEvents: what a person may do in every status', () => {
   const EXPECTED: Record<TaskStatus, PersonEvent[]> = {
-    proposed: ['approve', 'reject'],
+    proposed: ['approve', 'reject', 'park'],
+    parked: ['reject', 'lift'],
     queued: ['cancel'],
     running: ['cancel'],
     cancel_requested: [],
@@ -88,7 +93,8 @@ test('personEvents: what a person may do in every status', () => {
 
 test('RULES move a status to the statuses it can reach', () => {
   const reach = (from: TaskStatus) => [...new Set(Object.values(RULES).flatMap((r) => (r[from] ? [r[from]] : [])))].sort();
-  assert.deepEqual(reach('proposed'), ['cancelled', 'queued']);
+  assert.deepEqual(reach('proposed'), ['cancelled', 'parked', 'queued']);
+  assert.deepEqual(reach('parked'), ['cancelled', 'proposed']);
   assert.deepEqual(reach('running'), ['blocked', 'cancel_requested', 'cancelled', 'done', 'failed', 'queued']);
 });
 

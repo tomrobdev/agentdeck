@@ -95,6 +95,29 @@ test('approve queues a proposal, reject cancels it, neither works twice', () => 
   db.applyEvent(a.id, { type: 'cancel' });
 });
 
+test('a parked proposal is off Attention, not approvable, not open work, and lifts back to proposed', () => {
+  const t = db.addTask({ repo_id: repoId, title: 'Phase 3 KYC', prompt: 'x', status: 'proposed' });
+  assert.ok(db.attentionTasks(100).some((a) => a.id === t.id));
+  actions.parkTask(db, t.id, ' waits for phase 3 ');
+  const parked = db.getTask(t.id)!;
+  assert.equal(parked.status, 'parked');
+  assert.equal(parked.status === 'parked' && parked.park_reason, 'waits for phase 3');
+  assert.ok(!db.attentionTasks(100).some((a) => a.id === t.id));
+  assert.throws(() => actions.approveTask(db, t.id), /parked; lift it/);
+  assert.throws(() => actions.parkTask(db, t.id), /only a proposed task can be parked/);
+  db.updateRepo(repoId, { proposed_at: null });
+  assert.equal(plannerDue(db, db.getRepo(repoId)!), 'queue is empty');
+  assert.match(
+    buildPlannerPrompt(db.getRepo(repoId)!, 'g', db.tasksForRepo(repoId), 3),
+    /## Parked for later\n- #\d+ \[parked\] Phase 3 KYC \(waits for phase 3\)/,
+  );
+
+  actions.liftTask(db, t.id);
+  assert.equal(db.getTask(t.id)!.status, 'proposed');
+  assert.throws(() => actions.liftTask(db, t.id), /not parked/);
+  db.applyEvent(t.id, { type: 'reject' });
+});
+
 test('an empty plan is recorded as nothing', async () => {
   actions.updateRepo(db, repoId, { goals: 'FAKE_PLAN_EMPTY' });
   const res = await actions.proposeNow(db, repoId);

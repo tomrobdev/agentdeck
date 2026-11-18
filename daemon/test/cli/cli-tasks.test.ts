@@ -125,6 +125,20 @@ test('approve, reject, cancel, retry and done move a task and say so', async () 
   assert.equal((await run('done', String(blocked.id), '--note', 'by hand')).out, `marked #${blocked.id} done`);
 });
 
+test('park keeps a proposal for later with a reason, ls lists it, approve refuses it, and lift brings it back', async () => {
+  const later = await run('add', '--repo', 'beta', '--propose', 'Phase 3 KYC');
+  const id = /proposed task #(\d+)/.exec(later.out)?.[1] ?? '';
+  assert.match((await run('park', id, '--reason', 'waits for phase 3')).out, new RegExp(`parked #${id}; \`agentdeck lift ${id}\``));
+  assert.match((await run('ls', '--status', 'parked')).out, new RegExp(`#${id} .*Phase 3 KYC.*— waits for phase 3`));
+  assert.match((await run('approve', id)).err, /parked; lift it before approving it/);
+  assert.match((await run('park', id)).err, /only a proposed task can be parked/);
+  assert.match((await run('park')).err, /usage: agentdeck park <id>/);
+  assert.equal((await run('lift', id)).out, `lifted #${id}; it is proposed again`);
+  assert.match((await run('lift', id)).err, /not parked/);
+  assert.match((await run('lift')).err, /usage: agentdeck lift <id>/);
+  assert.match((await run('reject', id)).out, new RegExp(`rejected #${id}`));
+});
+
 test('show of a blocked task prints its needs and question, and of a done task its PR and checks', async () => {
   assert.equal((await run('merge', '--all')).out, 'no pull requests in review');
   const blocked = blockedTask(db, repo);

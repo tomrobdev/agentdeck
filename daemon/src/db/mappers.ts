@@ -95,6 +95,7 @@ function withoutValueColumns<R extends TaskSummaryRow>(row: R): Omit<R, PrColumn
     needs: _needs,
     question: _question,
     done_by: _done_by,
+    park_reason: _park_reason,
     branch: _branch,
     worktree: _worktree,
     syncing_since: _syncing_since,
@@ -126,6 +127,8 @@ function taskState(row: Pick<TaskSummaryRow, 'status' | StateColumn>): TaskState
     case 'failed':
     case 'cancelled':
       return { status, stop_reason };
+    case 'parked':
+      return { status, park_reason: row.park_reason };
     case 'proposed':
     case 'queued':
     case 'running':

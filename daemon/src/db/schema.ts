@@ -279,6 +279,8 @@ export const MIGRATIONS: Migration[] = [
   // 39: repos.ci_not_run_ok (domain/landing/pull-request/ci-not-run.ts): a GitHub check that never started does not stop
   // auto-merge when the last tested run passed (off by default).
   'ALTER TABLE repos ADD COLUMN ci_not_run_ok INTEGER NOT NULL DEFAULT 0;',
+  // 40: tasks.park_reason, why a parked task (a proposal kept for later) waits; NULL in every other status.
+  'ALTER TABLE tasks ADD COLUMN park_reason TEXT;',
 ];
 
 export function migrate(db: DatabaseSync, steps: Migration[] = MIGRATIONS): number {

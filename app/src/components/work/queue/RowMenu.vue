@@ -29,6 +29,8 @@ const editable = computed(() => canEdit(props.task));
 
 const LABELS: Record<PersonEvent, string> = {
   approve: 'Approve',
+  park: 'Park for later',
+  lift: 'Lift to proposed',
   reject: 'Reject',
   retry: 'Retry',
   cancel: 'Cancel task',

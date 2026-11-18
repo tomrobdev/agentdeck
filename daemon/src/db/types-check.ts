@@ -7,7 +7,17 @@ import type { RunKind, RunOutcome } from '#domain/runs/index.ts';
 import type { TaskEventRow, TaskEventType } from '#domain/work/index.ts';
 import type { TaskStatus } from '#domain/work/index.ts';
 import type { LinkKind } from '#domain/work/index.ts';
-import type { BlockedState, CancelledState, DoneState, FailedState, StateFields, Task, TaskSource, TaskState } from '#domain/work/index.ts';
+import type {
+  BlockedState,
+  CancelledState,
+  DoneState,
+  FailedState,
+  ParkedState,
+  StateFields,
+  Task,
+  TaskSource,
+  TaskState,
+} from '#domain/work/index.ts';
 import type {
   CheckoutColumn,
   LegacyTaskColumn,
@@ -72,7 +82,7 @@ check<Equals<TaskState['status'], TaskStatus>>();
 check<
   Equals<
     keyof StateFields,
-    Exclude<keyof TaskRow & (keyof BlockedState | keyof CancelledState | keyof DoneState | keyof FailedState), 'status'>
+    Exclude<keyof TaskRow & (keyof BlockedState | keyof CancelledState | keyof DoneState | keyof FailedState | keyof ParkedState), 'status'>
   >
 >();
 
@@ -96,6 +106,7 @@ export const narrowed = (task: Task) => {
     return task.done_by;
   }
   if (task.status === 'blocked') return [task.stop_reason, task.needs, task.question];
+  if (task.status === 'parked') return task.park_reason;
   // @ts-expect-error a task waiting or running carries nothing about how it ended
   return task.stop_reason;
 };

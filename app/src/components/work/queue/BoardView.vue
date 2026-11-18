@@ -66,6 +66,8 @@ function end() {
 }
 const LABELS: Record<BoardMove, string> = {
   approve: 'Drop to approve',
+  park: 'Drop to park',
+  lift: 'Drop to lift',
   reject: 'Drop to reject',
   retry: 'Drop to retry',
   cancel: 'Drop to cancel',

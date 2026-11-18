@@ -48,6 +48,7 @@ The dashboard's routes, and the use case each calls.
 | GET    | `/api/tasks/:id/file`              | `actions.taskFile`                             |
 | POST   | `/api/tasks/:id/fix-checks`        | `actions.fixChecks`                            |
 | POST   | `/api/tasks/:id/install-needs`     | `actions.installNeeds`                         |
+| POST   | `/api/tasks/:id/lift`              | `actions.liftTask`                             |
 | DELETE | `/api/tasks/:id/links/:id2`        | `actions.unlinkTasks`                          |
 | POST   | `/api/tasks/:id/links`             | `actions.linkTasks`                            |
 | GET    | `/api/tasks/:id/log`               | `streamLog`, `taskIdParam`                     |
@@ -56,6 +57,7 @@ The dashboard's routes, and the use case each calls.
 | GET    | `/api/tasks/:id/merge`             | `actions.mergePreview`                         |
 | POST   | `/api/tasks/:id/merge`             | `actions.mergeTask`                            |
 | POST   | `/api/tasks/:id/open-pr`           | `actions.openTaskPr`                           |
+| POST   | `/api/tasks/:id/park`              | `actions.parkTask`                             |
 | GET    | `/api/tasks/:id/plans/:id2`        | `actions.planHtml`                             |
 | POST   | `/api/tasks/:id/plans`             | `actions.attachPlan`                           |
 | GET    | `/api/tasks/:id/proposal-check`    | `actions.proposalCheck`                        |

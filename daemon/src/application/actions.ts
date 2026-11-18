@@ -76,7 +76,7 @@ export {
 } from '#application/operations/settings.ts';
 export { type TaskView, taskDetail, taskViews, withViews } from '#application/work/task-views.ts';
 export { addTask, editTask, findTask, listTasks, openPrTasks, removeTaskWorktree, taskRuns } from '#application/work/tasks.ts';
-export { approveTask, cancelTask, markDone, rejectTask, retryTask } from '#application/landing/person-events.ts';
+export { approveTask, cancelTask, liftTask, markDone, parkTask, rejectTask, retryTask } from '#application/landing/person-events.ts';
 export { installNeeds } from '#application/runs/install-needs.ts';
 export { promptWarnings } from '#application/work/prompt-paths.ts';
 export { proposalCheck } from '#application/work/proposal-check.ts';

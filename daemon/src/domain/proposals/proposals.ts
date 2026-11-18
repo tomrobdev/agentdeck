@@ -58,9 +58,10 @@ const PLANNER_DENIED = ['Edit', 'Write', 'NotebookEdit', 'Bash(git push*)', 'Bas
 
 export function buildPlannerPrompt(repo: Repo, goals: string, tasks: Task[], maxTasks: number): string {
   const open = tasks.filter((t) => OPEN_STATUSES.includes(t.status));
-  const recent = tasks.filter((t) => !OPEN_STATUSES.includes(t.status)).slice(0, 15);
+  const parked = tasks.filter((t) => t.status === 'parked');
+  const recent = tasks.filter((t) => !OPEN_STATUSES.includes(t.status) && t.status !== 'parked').slice(0, 15);
   const line = (t: Task) => {
-    const reason = stopReasonOf(t);
+    const reason = t.status === 'parked' ? t.park_reason : stopReasonOf(t);
     return `- #${t.id} [${t.status}] ${t.title}${reason ? ` (${reason.slice(0, 120)})` : ''}`;
   };
   return `You are the planner for the repository "${repo.name}". Read the goals below and look around the code (you are read-only).
@@ -69,7 +70,7 @@ Propose at most ${maxTasks} new tasks that move the goals forward. An unattended
 Each task must be:
 - small enough for one focused session, and independent of the other proposals
 - testable, with a concrete definition of done
-- not already covered by an open or recent task below, and not something the goals rule out
+- not already covered by an open, parked or recent task below, and not something the goals rule out (a parked task is kept for later on purpose: don't propose it again)
 Prefer the highest-value next step. Use haiku for mechanical work, sonnet by default, opus only for genuinely hard tasks.
 If nothing is worth doing right now, return an empty list and say why in "note".
 
@@ -81,6 +82,9 @@ ${goals.trim()}
 
 ## Open tasks
 ${open.map(line).join('\n') || '(none)'}
+
+## Parked for later
+${parked.map(line).join('\n') || '(none)'}
 
 ## Recently finished
 ${recent.map(line).join('\n') || '(none)'}`;

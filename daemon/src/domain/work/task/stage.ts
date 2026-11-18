@@ -41,6 +41,7 @@ export const STATUS_GROUPS = [
   { key: 'running', label: 'Running' },
   { key: 'queued', label: 'Queued' },
   { key: 'done', label: 'Done' },
+  { key: 'parked', label: 'Parked' },
   { key: 'cancelled', label: 'Cancelled' },
 ] as const;
 export type StatusGroup = (typeof STATUS_GROUPS)[number]['key'];
@@ -57,6 +58,7 @@ export function statusGroup(t: Stage): StatusGroup {
     case 'done':
       return isReview(t) ? 'review' : prNeedsPerson(t) ? 'needs-you' : 'done';
     case 'proposed':
+    case 'parked':
     case 'running':
     case 'cancelled':
       return t.status;

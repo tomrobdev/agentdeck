@@ -23,6 +23,7 @@ export type {
   CancelResult,
   MarkDoneRequest,
   Needs,
+  ParkRequest,
   NewLink,
   NewTask,
   PlanHtml,

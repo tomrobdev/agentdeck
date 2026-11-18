@@ -62,7 +62,7 @@ Tasks
                       [--propose]               file it as a proposal that waits for \`agentdeck approve\`, like the planner's
   agentdeck edit <id> [--title t] [--prompt p] [--priority n] [--model m] [--max-turns n] [--attempts n]
                       [--plan <file|task>] [--steps a,b]   change the plan link ("" clears it)
-                                  for proposed, queued, blocked or failed tasks
+                                  for proposed, parked, queued, blocked or failed tasks
   agentdeck link <id> --builds-on <task>   or --after <task>: make a task depend on another (cycles are refused)
   agentdeck unlink <id> <task>    remove that link
   agentdeck ls [<search>] [--status s,…] [--repo r] [--sort attention|updated|newest|oldest|priority]
@@ -75,6 +75,9 @@ Tasks
                                   <id>-<slug>.html after the task and the plan's title
   agentdeck approve <id>...       queue planner proposals
   agentdeck reject <id>...
+  agentdeck park <id>... [--reason "…"]   keep proposals for later: off Attention, not approvable, not counted as
+                                  open work by the planner; list them with \`agentdeck ls --status parked\`
+  agentdeck lift <id>...          bring parked tasks back to proposed
   agentdeck cancel <id>
   agentdeck retry <id> [--note "…"] [--model <model>]   another attempt; the note goes first in its prompt (changes
                                   requested in review). It runs on --model if given; without it, a blocked or failed task whose

@@ -21,6 +21,19 @@ const { pending, run } = useAction();
 const { canFixHere, fix } = useFixTask();
 const events = computed(() => personEvents(props.task));
 
+const parking = ref(false);
+const parkReason = ref('');
+async function park() {
+  if (pending.value) return;
+  await run(() => workApi.park(props.task.id, parkReason.value.trim() || undefined));
+  parking.value = false;
+  parkReason.value = '';
+}
+async function lift() {
+  if (pending.value) return;
+  await run(() => workApi.lift(props.task.id));
+}
+
 const closing = ref(false);
 async function closePr() {
   if (pending.value) return;
@@ -62,6 +75,8 @@ function onRequested(next: boolean) {
 
 <template>
   <div class="flex flex-none gap-1.5">
+    <button v-if="events.includes('lift')" class="primary" :disabled="pending" @click="lift">Lift to proposed</button>
+    <button v-if="events.includes('park')" title="Keep it for later: off Attention and not approvable" @click="parking = true">Park</button>
     <template v-if="events.includes('approve')">
       <button @click="emit('act', 'reject')">Reject</button>
       <button class="primary" @click="emit('act', 'approve')">✓ Approve</button>
@@ -104,6 +119,19 @@ function onRequested(next: boolean) {
     @merged="onMerged"
     @requested="onRequested"
   />
+
+  <ConfirmDialog
+    v-if="parking"
+    title="Park this proposal"
+    confirm-label="Park"
+    focus="field"
+    :busy="pending"
+    @cancel="parking = false"
+    @confirm="park"
+  >
+    <p>Keep #{{ task.id }} for later. It leaves Attention and can't be approved until you lift it.</p>
+    <input v-model="parkReason" class="w-full" placeholder="Why it waits, and for what (optional)" @keydown.enter="park" />
+  </ConfirmDialog>
 
   <ConfirmDialog
     v-if="closing"

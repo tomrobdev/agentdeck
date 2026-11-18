@@ -235,6 +235,22 @@ export const taskCommands: Record<string, Command> = {
   },
   approve: approveOrReject,
   reject: approveOrReject,
+  park: ({ db, flags, rest }) => {
+    if (!rest.length) die('usage: agentdeck park <id>... [--reason <text>]');
+    for (const arg of rest) {
+      const id = taskId(arg);
+      actions.parkTask(db, id, flags.reason);
+      console.log(`parked #${id}; \`agentdeck lift ${id}\` brings it back`);
+    }
+  },
+  lift: ({ db, rest }) => {
+    if (!rest.length) die('usage: agentdeck lift <id>...');
+    for (const arg of rest) {
+      const id = taskId(arg);
+      actions.liftTask(db, id);
+      console.log(`lifted #${id}; it is proposed again`);
+    }
+  },
   cancel: ({ db, rest }) => {
     const id = taskId(rest[0]);
     console.log(actions.cancelTask(db, id) === 'cancelled' ? `cancelled #${id}` : `stopping #${id}…`);

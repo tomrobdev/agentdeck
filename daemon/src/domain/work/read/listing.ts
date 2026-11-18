@@ -17,6 +17,7 @@ export type Listable = Pick<
   'id' | 'repo_id' | 'title' | 'status' | 'priority' | 'model' | 'source' | 'waiting' | 'updated_at'
 > & {
   stop_reason: string | null;
+  park_reason: string | null;
   pr_url: string | null;
   pr_state: PrState | null;
   branch: string | null;
@@ -27,6 +28,7 @@ export type Listable = Pick<
 export const listable = <T extends TaskState & { pr: PullRequest | null; checkout: Checkout | null }>(t: T) => ({
   ...t,
   stop_reason: stopReasonOf(t),
+  park_reason: t.status === 'parked' ? t.park_reason : null,
   branch: t.checkout?.branch ?? null,
   pr_url: t.pr?.url ?? null,
   pr_state: t.pr?.state ?? null,
@@ -45,6 +47,7 @@ export const FILTER_STATES: { key: string; label: string; test: Test }[] = [
   { key: 'waiting', label: 'Waiting', test: isWaiting },
   { key: 'stuck', label: 'Stuck', test: isStuck },
   { key: 'proposed', label: 'Proposed', test: is('proposed') },
+  { key: 'parked', label: 'Parked', test: is('parked') },
   { key: 'blocked', label: 'Blocked', test: is('blocked') },
   { key: 'failed', label: 'Failed', test: is('failed') },
   { key: 'review', label: 'Review', test: isReview },
@@ -112,7 +115,7 @@ function matchesSearch(t: Listable, text: string): boolean {
   if (!q) return true;
   const id = q.replace(/^#/, '');
   if (/^\d+$/.test(id)) return String(t.id).startsWith(id) || t.title.toLowerCase().includes(q);
-  return [t.title, t.repo, t.branch, t.model, t.stop_reason].some((s) => s?.toLowerCase().includes(q));
+  return [t.title, t.repo, t.branch, t.model, t.stop_reason, t.park_reason].some((s) => s?.toLowerCase().includes(q));
 }
 
 export function filterTasks<T extends Listable>(tasks: T[], filter: ListFilter): T[] {

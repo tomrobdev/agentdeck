@@ -44,6 +44,7 @@ const task = (extra: Partial<TaskSummary> = {}): TaskSummary => ({
   needs: null,
   question: null,
   done_by: null,
+  park_reason: null,
   auto_merge: null,
   auto_merge_view: null,
   merge_request: null,

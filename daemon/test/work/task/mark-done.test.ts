@@ -83,8 +83,10 @@ test('mark_done moves blocked and failed tasks to done, clears the reason and ne
 test('mark_done is refused from every other status', () => {
   for (const from of TASK_STATUSES.filter((s) => s !== 'blocked' && s !== 'failed')) {
     const { db, add } = setup();
-    const t = from === 'proposed' ? db.addTask({ repo_id: db.listRepos()[0].id, title: 't', prompt: 'p', status: 'proposed' }) : add();
-    bring(db, t.id, from);
+    const proposal = from === 'proposed' || from === 'parked';
+    const t = proposal ? db.addTask({ repo_id: db.listRepos()[0].id, title: 't', prompt: 'p', status: 'proposed' }) : add();
+    if (from === 'parked') db.applyEvent(t.id, { type: 'park' });
+    else bring(db, t.id, from);
     assert.equal(db.applyEvent(t.id, { type: 'mark_done' }), undefined, from);
     assert.equal(db.getTask(t.id)!.status, from);
     assert.equal(stateFields(db.getTask(t.id)!).done_by, null);

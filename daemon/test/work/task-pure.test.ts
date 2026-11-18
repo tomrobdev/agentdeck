@@ -158,8 +158,9 @@ test('a state carries only its own fields: stop reason, needs, question and who 
   assert.equal(stopReasonOf(blocked), 'no deps');
   assert.equal(stopReasonOf(done), null);
   assert.equal(stopReasonOf({ status: 'failed', stop_reason: 'out of attempts' }), 'out of attempts');
-  assert.deepEqual(stateFields(blocked), { stop_reason: 'no deps', needs: null, question: null, done_by: null });
-  assert.deepEqual(stateFields(done), { stop_reason: null, needs: null, question: null, done_by: 'person' });
+  assert.deepEqual(stateFields(blocked), { stop_reason: 'no deps', needs: null, question: null, done_by: null, park_reason: null });
+  assert.deepEqual(stateFields(done), { stop_reason: null, needs: null, question: null, done_by: 'person', park_reason: null });
+  assert.equal(stateFields({ status: 'parked', park_reason: 'phase 3' }).park_reason, 'phase 3');
   assert.ok(isBlocked({ status: 'blocked' } as unknown as Task));
   assert.ok(!isBlocked({ status: 'done' } as unknown as Task));
 });
