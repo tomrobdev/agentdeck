@@ -4,22 +4,22 @@ macOS daemon that works through a queue of coding tasks with `claude -p`, one gi
 
 ## Commands
 
-| Command                                 | What it runs                                                                                                                                      |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm test`                             | The daemon's tests.                                                                                                                               |
-| `pnpm typecheck`                        | `tsc` on the daemon and the app.                                                                                                                  |
-| `pnpm format`                           | Prettier, whole repo.                                                                                                                             |
-| `pnpm check:fast`                       | `format:check`, `typecheck`, `db:check`, `coverage`.                                                                                              |
-| `pnpm check`                            | `check:fast`, then the SIGKILL crash test (`CRASH_ITERATIONS` runs, default 10).                                                                  |
-| `pnpm check:task`                       | The one check a task's branch must pass, and the AgentDeck repo's `test_cmd`. See below.                                                          |
-| `pnpm coverage`                         | The tests with V8's coverage, reported by `c8`, against the floors. See below.                                                                    |
-| `pnpm check:rust`                       | fmt, clippy and tests of `app/src-tauri`. Not part of `pnpm check`; CI runs it via `.github/workflows/rust.yml` whenever `app/src-tauri` changes. |
-| `pnpm test:ui`                          | The dashboard end to end. See below.                                                                                                              |
-| `pnpm test:github`                      | The whole lifecycle on a throwaway GitHub repo named by `AGENTDECK_GITHUB_E2E_REPO`. Opt-in, run by a person, never in CI: `docs/github-e2e.md`.  |
-| `node daemon/scripts/crash-test.mjs 10` | The crash test alone.                                                                                                                             |
-| `pnpm docs:gen`                         | Generate the architecture docs.                                                                                                                   |
-| `pnpm imports:fix`                      | Rewrite relative imports to their `#` form (rule:absolute-imports).                                                                               |
-| `pnpm rules`                            | Print each rule with its checks.                                                                                                                  |
+| Command                                 | What it runs                                                                               |
+| --------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `pnpm test`                             | The daemon's tests.                                                                        |
+| `pnpm typecheck`                        | `tsc` on the daemon and the app.                                                           |
+| `pnpm format`                           | Prettier, whole repo.                                                                      |
+| `pnpm check:fast`                       | `format:check`, `typecheck`, `db:check`, `coverage`.                                       |
+| `pnpm check`                            | `check:fast`, then the SIGKILL crash test (`CRASH_ITERATIONS` runs, default 10).           |
+| `pnpm check:task`                       | The one check a task's branch must pass, and the repo's `test_cmd`. See below.             |
+| `pnpm coverage`                         | The tests with coverage, against the floors; `check:fast` runs it in place of `pnpm test`. |
+| `pnpm check:rust`                       | fmt, clippy and tests of `app/src-tauri`. Not part of `pnpm check`.                        |
+| `pnpm test:ui`                          | The dashboard end to end (Playwright, in `app/e2e/`). `check:task` runs it; CI does not.   |
+| `pnpm test:github`                      | The whole lifecycle on a throwaway GitHub repo. Opt-in, never in CI: `docs/github-e2e.md`. |
+| `node daemon/scripts/crash-test.mjs 10` | The crash test alone.                                                                      |
+| `pnpm docs:gen`                         | Generate the architecture docs.                                                            |
+| `pnpm imports:fix`                      | Rewrite relative imports to their `#` form (rule:absolute-imports).                        |
+| `pnpm rules`                            | Print each rule with its checks.                                                           |
 
 **`pnpm check:task`** runs `check:fast`, then, against `origin/main`:
 
@@ -29,13 +29,26 @@ macOS daemon that works through a queue of coding tasks with `claude -p`, one gi
 
 It prints which it ran and why. The rules are in `daemon/scripts/lib/check-task.ts`.
 
-**`pnpm coverage`** is what `check:fast` runs in place of `pnpm test`. CI splits it across three runners with `--shard <i>/3` and judges the merged counts with `--merge`. `--weigh` re-measures each test file's duration in `daemon/scripts/lib/test-weights.json`, which balances the shards.
-
-**`pnpm test:ui`** runs Playwright specs, light and dark screenshots and a contrast check in `app/e2e/`, against the Vite dev server and a daemon on a scratch home seeded with a task in every stage. `check:task` runs it; CI does not.
-
 @GLOSSARY.md
 
 Use the words in the glossary in code, logs and UI. Plans are named `<task id>-<slug>.html` (`docs/plan-format.md`); attach one with `agentdeck add --plan <file>` (any path) or `agentdeck attach`, and other tasks follow it with `--plan <task number>`.
+
+## Where the detail is
+
+Each rule below is stated in a line. Its detail, and how to work in that part of the code, is in a file under `.claude/rules/` that loads when you open a file it covers. Read the file yourself before planning a change you have not opened a file for.
+
+| Working in                                            | Read                            |
+| ----------------------------------------------------- | ------------------------------- |
+| any code                                              | `.claude/rules/code.md`         |
+| `daemon/src/domain/`                                  | `.claude/rules/domain.md`       |
+| `daemon/src/db/`                                      | `.claude/rules/db.md`           |
+| `daemon/src/adapters/`                                | `.claude/rules/adapters.md`     |
+| `daemon/src/application/`, `compose.ts`, `daemon.ts`  | `.claude/rules/application.md`  |
+| `daemon/src/api/`, `daemon/src/cli/`                  | `.claude/rules/entry-points.md` |
+| `app/src/`, `app/e2e/`                                | `.claude/rules/dashboard.md`    |
+| `daemon/scripts/`, the architecture tests, `.github/` | `.claude/rules/checks.md`       |
+
+The map of the code is `docs/architecture.md`.
 
 ## Boundaries
 
@@ -44,93 +57,35 @@ Use the words in the glossary in code, logs and UI. Plans are named `<task id>-<
 ### `domain/`
 
 - **`domain/` is pure: no I/O and no imports from other layers.** <!-- rule:domain-pure -->
-  - It holds the entities (`Repo`, `Task`, `Run`, `PlannerRun`) and the decisions: task lifecycle, governor, prompts, tool rules, toolchain detection, planner proposals, plan parsing and PR bodies.
-  - One folder per bounded context (see Contexts in `GLOSSARY.md`):
-    - `work/`: tasks, links, stages, branch names, `plan.ts`; `work/read/` for listings and a task's changed files.
-    - `runs/`: runs, prompts, unblock runs, `sync.ts` (how a sync is worded) and `resolve.ts` (how a resolve run's end settles it); `runs/translate/` for the run log, live state and sandbox settings.
-    - `landing/`: pull requests, checks, merging, and reviews with their line comments and how a comment's state moves.
-    - `repos/`: repos with their PR mode and merge method, tool rules, toolchain detection, protected edits.
-    - `capacity/`: the usage windows and the governor.
-    - `proposals/`: the planner's proposals.
-    - `operations/`: the daemon's health, headline and restart, notification kinds, settings and `digest.ts` (the live state of a repo's queue for an agent).
-    - `insights/`: the scorecard and what is counted over time.
-    - `shared/`: `text.ts`, `time.ts`, `id.ts`.
-  - The contexts import each other one way: proposals, runs → work → landing → repos, with capacity below and insights and operations above, reading the others.
-  - A task's `Needs` are in `work/task/needs.ts` and its prompt sections (`PROMPT_SECTIONS`) in `work/task/task.ts`; shared text helpers such as `lastLine` are in `shared/text.ts`.
 
 ### `db/`
 
 - **Queries live only in `db/`, through Drizzle** (raw `sql` only where the builder hides a guard). <!-- rule:sql-in-db -->
-  - One store per table group, in a folder per context (`db/work/`, `db/runs/` and the rest), merged into one `Db` in `db/index.ts`.
-  - The tables are in `db/tables.ts`, the migrations in `db/schema.ts`.
 - **Every task status change is a guarded `UPDATE … WHERE status IN (…)`** (`applyEvent` in `db/work/tasks-status.ts`, the claim included), never a raw status write. <!-- rule:guarded-status -->
 
 ### `adapters/`
 
-- **`adapters/` hold the I/O, in a folder per system they talk to.** <!-- rule:adapters-io -->
-  - The folders: `claude/` (claude, run logs), `process/` (process groups, the shell), `git/` (git, split into `exec`, `refs`, `diffs` and `worktrees`, and the workspace), `github/`, `macos/` (keep-awake, notify, launchd, source watcher) and `local/` (goals, plan and protected-edit files, the daemon's own API and log).
-  - They import `domain/` and `config.ts` only, never `db/` or `application/`: they report through callbacks like `runClaude`'s `onUsage`.
-  - A git or `gh` call that reaches a remote never prompts (a credential prompt would hold a slot forever) and times out.
-  - A sync is always a merge, never a rebase.
-  - An error never quotes a command's arguments.
+- **`adapters/` hold the I/O, in a folder per system they talk to.** They import `domain/` and `config.ts` only, and report through callbacks. <!-- rule:adapters-io -->
 
 ### `application/`
 
 - **`application/` holds the use cases and imports only itself, `domain/` and `config.ts`.** <!-- rule:ports -->
-  - It reaches the database through the repository interfaces it declares in `ports/repositories/`: one file per context, re-exported by its `index.ts`, in domain types. `db/` implements them, and an interface lists only what use cases call.
-  - It reaches the I/O through the other ports in `ports/` (`Agent`, `CodeHost`, `Workspace`, `Source` and the rest), whose real adapters `compose.ts` builds. Only `compose.ts` names `db/` and `adapters/`.
-  - Every use case takes `app: App` (`ports/app.ts`: the repositories and the ports, one object).
-  - It is in one folder per context, as in `domain/`, with `scheduler/scheduler.ts` and `actions.ts` above them and `shared/input.ts` below them:
-    - `runs/worker.ts`, and `runs/sync.ts` (syncing task branches with the base branch, and its resolve run).
-    - `proposals/planner.ts`.
-    - `landing/merge/merge.ts` and `landing/pull-request/refresh.ts`: merging a PR, and keeping open PRs' state fresh.
-    - `landing/settle.ts`: every status change and its follow-ups (`FOLLOW_UPS` in `domain/work/lifecycle/follow-ups.ts`); the only caller of `applyEvent`.
-    - `work/plans.ts`, and `work/checkout-locks.ts` (the sync and merge locks).
-    - `repos/doctor.ts`.
-    - `operations/digest.ts`: the digest, run by `agentdeck context`; `work/live-context.ts` reads the open tasks for it.
-    - `operations/doctor.ts`: `agentdeck doctor`, the daemon's health, judged in `domain/operations/health.ts`.
-    - The person-facing use cases: `repos/repos.ts`, `work/tasks.ts`, `landing/person-events.ts` (a person's lifecycle events, through `settle.ts`), `landing/review/reviews.ts` and `operations/settings.ts`.
-  - The contexts import each other one way: proposals → runs → landing, repos → work → operations → capacity, and insights only `shared/`.
-  - Request parsing and `ActionError` are in `shared/input.ts`.
 - **`actions.ts` re-exports the use cases for the CLI and the API; it is the only application module they import.** <!-- rule:actions-only -->
 
 ### Entry points
 
 - **Entry points are `api/` and `cli/`. They import `application/actions.ts`, `domain/` and the contract, never `db/` or `adapters/`: every store call is a use case.** <!-- rule:entry-points -->
-  - `api/` is the dashboard's HTTP API, its routes in a folder per context.
-  - `cli/` has one file per command group, in a folder per context.
-  - `src/cli.ts` stays put: the installed launchd plist runs it.
 - **The CLI calls the use cases in its own process, so it works while the daemon is down.** <!-- rule:cli-in-process -->
-  - Only work that starts `claude` (propose, a sync that may start a resolve run) goes to the daemon over HTTP (`cli/operations/daemon-client.ts`). Which use cases those are is worked out from the code, by what reaches the `Agent` port's `run` (`daemon/scripts/lib/claude-starters.ts`).
-  - Each entry point parses its own input (flags, request bodies) into the use case's typed input.
 - **The database is the only state the processes share: application code keeps no module-level state other than a lock or a cache of immutable results.** A CLI change reaches the scheduler on its next tick. <!-- rule:no-module-state -->
 
 ### Composition root
 
 - **`src/compose.ts` builds the `App` on the database and the real adapters, for the CLI and the daemon. Nothing else builds an `App`.** <!-- rule:composition-root -->
-  - Tests build theirs with `testApp` in `daemon/test/fixtures/fixtures.ts`.
-  - `src/daemon.ts` (`runDaemon`) wires the source watcher (the `Source` port), the API and the scheduler on the App it is given. It logs and exits through callbacks and throws; `cli/operations/daemon.ts` prints and exits.
 
 ### Dashboard
 
 - **The API's request and response types are in `api/contract/<context>.ts`, which import only types, and only from `domain/` and each other.** <!-- rule:contract-types -->
-  - The dashboard imports each from its own file, through `app/src/api/types.ts`.
-  - Each route names the type it answers with (`route<T>` in `api/http.ts`), and `api/contract-check.ts` checks the request types against the use cases, so `pnpm typecheck` fails when a use case's type drifts from them.
-- **`app/src/` is grouped by the daemon's bounded contexts, as the daemon is.** `MAY_IMPORT` in `daemon/scripts/lib/dashboard-layout.ts` is the rule, and the Dashboard section of `docs/architecture.md` is generated from it. <!-- rule:dashboard-layout -->
-  - Not split by context:
-    - `api/`: `types.ts`; `http.ts` for the request helpers, `refreshAll` and `retryQuery`; and one file per context (`work.ts`, `runs.ts`, `landing.ts`, `repos.ts`, `operations.ts`, `insights.ts`), each with its calls object (`workApi` and the like) and the query options for those calls, each imported by its own name.
-    - `platform/`: the Tauri shell, build commit, theme.
-    - `styles/`.
-  - The layers `lib/`, `composables/` and `components/` each have the same context folders (`work/`, `runs/`, `landing/`, `repos/`, `operations/`, `insights/`) plus what they share:
-    - `lib/`: pure helpers in kebab-case files, and the wording of each context in its `<context>-wording.ts` or `run-wording.ts`; times in `shared/time.ts`. Rules come from the daemon's `domain/`, never copied, and a file re-exports no name it imports. Shared: `lib/shared/`.
-    - `composables/`: `useX` functions. Shared: `composables/shared/`.
-    - `components/`. Shared: `components/ui/` (with `menu/`, `disclosure/`, `form/` and `status/`).
-  - A context has a sub-folder only where it has the same one in every layer that needs it (`work/queue/`, `work/files/`).
-  - `pages/` holds one component per route (`QueuePage`, `TaskPage`, `InsightsPage`, each reading its own queries), and `components/layout/` the app's frame and `Overlays.vue` (the panels, dialogs, key sheet, palette and toaster, shown from `useShell`'s state). Both combine the contexts.
-  - `App.vue` is only the frame: providers, header, the `RouterView`, status bar and overlays.
-  - `router.ts` is the route table (Vue Router, hash history, typed named routes, each page's props from its route). Nothing but it imports a page, and `vue-router` is imported only there, in `App.vue`, `main.ts`, composables and components (`PACKAGE_AREAS`).
-  - `composables/shared/useShell.ts` is the window's shared state (open panel, palette, key sheet, merge dialog, selected task), so any component opens a panel itself instead of emitting up to App.
-  - Imports point down `pages/` → `components/` → `composables/` → `lib/` → `api/`. Within a layer a context imports only itself and the shared folder, except that `work/` may import `runs/` and `landing/` (the queue and the task overview show a run's summary, a pull request and the merge buttons).
+- **`app/src/` is grouped by the daemon's bounded contexts, as the daemon is**, in the layers `pages/` → `components/` → `composables/` → `lib/` → `api/`. `MAY_IMPORT` in `daemon/scripts/lib/dashboard-layout.ts` is the rule. <!-- rule:dashboard-layout -->
 
 ## Rules
 
@@ -143,83 +98,33 @@ Several rules keep a list of today's exceptions in `daemon/scripts/lib/progress.
 - **No folder cycles.** Folders in `domain/` and in `application/` import each other without cycles, counting runtime and type imports. The cycles there today are on `ALLOWED_FOLDER_CYCLES`, a list that only shrinks. <!-- rule:folder-cycles -->
 - **No folder over 12 files.** A folder under `daemon/src`, `app/src` or `daemon/test` has at most 12 files directly in it (subfolders do not count). Today's folders over the limit are on `OVERSIZED_FOLDERS`, a list that only shrinks. A listed folder may grow while it is listed. <!-- rule:folder-size -->
 - **No source file over 400 lines.** A `.ts` or `.vue` file under `daemon/src` or `app/src` has at most 400 lines. Today's long files are on `LONG_FILES`, a list that only shrinks. <!-- rule:file-size -->
-- **Files sit in context folders.** <!-- rule:context-folders -->
-  - Files in `daemon/src/db`, `daemon/src/adapters`, `daemon/src/api/routes`, `daemon/src/cli` and `daemon/test` sit in a folder named for a context. For adapters that is an external system; for tests also `architecture`, `tooling`, `e2e`, `fixtures`, `api`, `cli`, `db`, `dashboard`.
-  - The exception is the shared files `PLACED_FOLDERS` lists with a reason (`daemon/scripts/lib/layout.ts`).
-  - Folders that still have loose files are on `UNPLACED_FOLDERS`, a list that only shrinks.
-- **Contexts are imported through their `index.ts`.** <!-- rule:contexts -->
-  - Each folder under `domain/` has an `index.ts` of named exports, no `export *`.
-  - Another context, the layers above and the dashboard import a context only through it, so nothing outside a context reaches into its files or into `read/` or `translate/`.
-  - An export nothing outside the context imports is removed.
-- **Imports are absolute.** <!-- rule:absolute-imports -->
-  - Every import in `daemon/src`, `daemon/test`, `daemon/scripts`, `app/src` and `app/e2e`, same-folder ones included, uses the `#` prefix of its layer from its package's `imports` (`package.json`), never `./` or `../`, and names its file with its extension.
-  - In the daemon: `#domain/`, `#application/`, `#db/`, `#adapters/`, `#api/`, `#cli/`, `#src/` (`compose.ts`, `config.ts`, `daemon.ts`, `cli.ts`), `#test/`, `#scripts/` and `#app/` (the dashboard's `lib/` and `api/types.ts`, for the daemon's tests).
-  - In the app: `#api/`, `#lib/`, `#composables/`, `#components/`, `#pages/`, `#platform/`, `#styles/`, `#assets/`, `#src/`, `#e2e/`, `#daemon/` and `#docs/`.
-  - `#daemon/` reaches only what `daemon/package.json` exports, its `domain/` and `api/contract/`; `#app/` and `#docs/` go through the root package's exports. Node, TypeScript, Vite and Playwright resolve them natively.
-  - `pnpm imports:fix` (`daemon/scripts/absolute-imports.ts`) rewrites a relative import to its `#` form, and `daemon/test/architecture/absolute-imports.test.ts` fails on one, naming its file and line.
+- **Files sit in context folders.** A file in `daemon/src/db`, `daemon/src/adapters`, `daemon/src/api/routes`, `daemon/src/cli` or `daemon/test` sits in a folder named for a context. <!-- rule:context-folders -->
+- **Contexts are imported through their `index.ts`**, a file of named exports; nothing outside a context reaches into its files. <!-- rule:contexts -->
+- **Imports are absolute.** Every import, same-folder ones included, uses the `#` prefix of its layer and names its file with its extension, never `./` or `../`. `pnpm imports:fix` rewrites them. <!-- rule:absolute-imports -->
 - **No `export *`.** A file that re-exports names what it re-exports, so a reader sees where each name comes from, and there are no barrel files: the dashboard imports `api/work` or `api/http`, not `api/`. A context's `index.ts` is its interface, not a barrel. <!-- rule:no-export-star -->
 - **Every source file is in a review area.** `docs/review-areas.md` maps `daemon/src/` and `app/src/` into the areas the `review-area` skill reviews; a new file goes under its area, and a moved one is moved there too. <!-- rule:review-areas -->
 
 ### Code
 
-- **Code comments only where a tool reads them.** <!-- rule:code-comments -->
-  - This covers `daemon/src`, `app/src`, `daemon/test` and `daemon/scripts` (`.ts`, `.vue` script and template, `.mjs`).
-  - The only comments are:
-    - a file's leading one-line `//` comment (the architecture docs print it);
-    - a `// @ts-expect-error` with its reason;
-    - a `/// <reference>` directive;
-    - a shebang;
-    - the heading above a step of `MIGRATIONS` in `db/schema.ts` (the docs print it);
-    - the comments on a type or interface and its fields in `domain/` and `api/contract/` (`pnpm docs:gen` prints them in the model docs);
-    - a `// guard:` comment on raw `sql` in `db/` (rule:sql-in-db reads it).
-  - Say the rest in a name, a type, a test or the docs.
-  - No allow-list: `daemon/test/architecture/code-comments.test.ts` fails on any other comment, naming the file and line.
-  - A repo's own limits on the code comments a task adds are `code_comment_max_lines` and `code_comment_max_percent`.
-- **Strict types.** <!-- rule:strict-types -->
-  - `daemon/tsconfig.json` and the app's tsconfigs turn on `noFallthroughCasesInSwitch`, `noImplicitReturns` and `noImplicitOverride` beyond `strict`.
-  - Under `daemon/src` and `app/src` there is no explicit `any` (a type or `as any`: use `unknown` and narrow it) and no non-null assertion `!` (narrow the value, or `present` from `domain/shared/`).
-  - Every `switch` on a union of literals covers every member or ends in a default that assigns the value to `never`.
-  - `daemon/scripts/lib/strictness.ts` checks it with the TypeScript compiler; today's exceptions are on `STRICTNESS_EXCEPTIONS`, a list that only shrinks.
+- **Code comments only where a tool reads them.** In `daemon/src`, `app/src`, `daemon/test` and `daemon/scripts`, write no comment but a file's leading one-line `//` comment and the few other kinds a tool reads. Say the rest in a name, a type, a test or the docs. <!-- rule:code-comments -->
+- **Strict types.** No explicit `any`, no non-null assertion `!`, and every `switch` on a union of literals covers every member or ends in a default that assigns the value to `never`. <!-- rule:strict-types -->
 - **A deterministic domain.** `domain/` reads no clock (`Date.now()`, `new Date()` without arguments), no randomness (`Math.random()`, `crypto`) and no `process`: the time and random values are arguments. Checked with the strict types, on the same list. <!-- rule:domain-deterministic -->
-- **Every domain function has a pure test.** <!-- rule:domain-tests -->
-  - Each function a context's `index.ts` under `daemon/src/domain/` exports is used in at least one pure test: a test file that imports nothing from `daemon/src/db`, `application` or `adapters`, `daemon/test/fixtures/`, `node:fs` or `node:child_process`.
-  - The exports with none are on `UNTESTED_DOMAIN_EXPORTS`, a list that only shrinks: a new one fails, naming the function and its file, and so does an entry that now has a test.
+- **Every domain function has a pure test.** Each function a context's `index.ts` exports is used in a test file that imports nothing from `db/`, `application/`, `adapters/`, the fixtures, `node:fs` or `node:child_process`. <!-- rule:domain-tests -->
 - **Erasable TypeScript only.** Node runs `.ts` directly, so no enums, namespaces or constructor parameter properties. <!-- rule:erasable-ts -->
 - **No new runtime dependencies** without a reason. The one there is, `drizzle-orm`, is pinned at exactly `1.0.0-rc.5` (no caret); use only its core query builder, not the relational query API. `pnpm db:studio` browses the live database. <!-- rule:no-runtime-deps -->
-- **Use the glossary's words.** <!-- rule:vocabulary -->
-  - An `_Avoid_:` word in `GLOSSARY.md` appears nowhere in `daemon/src` or `app/src`.
-  - "Hold" (hold, holds, held, holding) is the governor's word alone (`domain/capacity/`, the scheduler's announcement, the `hold` notification kind); a repo or the daemon is paused, and anywhere else say wait or keep.
-  - Other uses are on the check's allow-list, each with its reason.
+- **Use the glossary's words.** An `_Avoid_:` word in `GLOSSARY.md` appears nowhere in `daemon/src` or `app/src`, and "hold" is the governor's word alone. <!-- rule:vocabulary -->
 
 ### Model and database
 
 - **Schema changes are appended as new migration steps.** Never edit a step that has shipped. <!-- rule:migrations-append -->
-  - To add a column:
-    1. Add it to its table in `db/tables.ts` and to the domain type.
-    2. Run `pnpm db:generate`, which prints the SQL that makes a migrated database match `tables.ts`.
-    3. Append that SQL as a new step in `db/schema.ts`.
-    4. Run `pnpm db:check` and `pnpm typecheck` (`db/types-check.ts`), which fail until `tables.ts`, the migrations and the domain type agree.
-    5. Use the column in the store's queries.
-    6. Once the step is final, append the hash the test prints to `daemon/test/db/migrations.lock`.
-  - A new step only adds, never renames or drops: the CLI migrates as soon as it runs on pulled code, while a daemon on older code may still be running.
-- **Models, not rows.** <!-- rule:models-not-rows -->
-  - A store reads a whole row of `tasks`, `repos` or `runs` only through `db/mappers.ts` (`toTask`, `toRepo`, `toRun`), so a domain type need not equal its row: `db/types-check.ts` fails when a mapper leaves a column unaccounted for.
-  - The flags and JSON documents left on domain entities are on `ROW_SHAPED_FIELDS`, a list that only shrinks.
-- **A task write with a rule is a domain function.** <!-- rule:task-writes -->
-  - A write to `tasks` other than a status change (PR state and checks, merge requests, auto-merge, a question) takes its changes from a pure function in `domain/work/lifecycle/task-writes.ts`; the task store in `db/work/` only persists them under its guard.
-  - A plain write (the checkout, an edit, a lock) stays in the store and is on `PLAIN_TASK_WRITES` with its reason, a list that `docs/reference/progress.md` counts: a new `.update(tasks)` that is neither fails.
-- **Ids are branded.** <!-- rule:branded-ids -->
-  - `TaskId`, `RepoId`, `RunId`, `ReviewId` and `PlannerRunId` (`domain/shared/id.ts`) are numbers the compiler keeps apart, erased at runtime.
-  - An entry point parses an id once (`parseId`, `parseTaskIds`); stores return branded ids (the table columns say so in `db/tables.ts`), and use cases take them.
-  - A domain or contract field named `…_id` or `…Id` is never typed `number`. A test makes an id with `asTaskId` and the like.
+- **Models, not rows.** A store reads a whole row of `tasks`, `repos` or `runs` only through `db/mappers.ts`. <!-- rule:models-not-rows -->
+- **A task write with a rule is a domain function** in `domain/work/lifecycle/task-writes.ts`; the task store only persists it under its guard. <!-- rule:task-writes -->
+- **Ids are branded** (`TaskId`, `RepoId`, `RunId`, `ReviewId`, `PlannerRunId`): an entry point parses an id once, and a field named `…_id` or `…Id` is never typed `number`. <!-- rule:branded-ids -->
 - **A state machine is a rule table in `domain/`** (`RULES` in `work/lifecycle/lifecycle.ts`, `COMMENT_MOVES` in `landing/review/review.ts`), and `pnpm docs:gen` lists it in `docs/reference/state-machines.md`. A state type no table drives is on the allow-list in `daemon/scripts/lib/model-docs.ts` with its reason; pull request state and merge requests are there until they are tables. <!-- rule:state-as-data -->
 
 ### Checks and working here
 
-- **Coverage floors only rise.** <!-- rule:coverage-floors -->
-  - `pnpm coverage` runs the daemon tests with coverage and prints line and branch coverage per group: `domain/<context>`, `db`, `adapters`, `application/<context>`, `api`, `cli`.
-  - It fails when a group drops below its floor on `COVERAGE_FLOORS` (`daemon/scripts/lib/progress.ts`), and says to raise a floor beaten by more than 2 points; never lower one.
-  - A new group gets a floor at its numbers rounded down. `docs/reference/coverage.md` lists the floors; CI runs `pnpm coverage`.
+- **Coverage floors only rise.** `pnpm coverage` fails when a group drops below its floor on `COVERAGE_FLOORS`; never lower one. <!-- rule:coverage-floors -->
 - **CI runs nothing a task's check skips.** Every `run:` step in `.github/workflows/` is a part of `check:fast` or an extra check of `pnpm check:task` (`daemon/scripts/lib/check-task.ts`), or setup listed with its reason, and each check step is named. A new CI check goes into `check:task` too, so a worker whose tests passed isn't failed by one it never ran. <!-- rule:ci-parity -->
 - **Every `claude` runs in its own process group** with its pid recorded on the run, so crash recovery can stop it. <!-- rule:claude-process-group -->
 - **Keep this checkout on `main`.** The installed daemon runs its `daemon/src/cli.ts`, so switching branches here swaps the live daemon's code. Try task branches from their worktrees. <!-- rule:main-checkout -->
